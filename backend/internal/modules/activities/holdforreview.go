@@ -104,7 +104,9 @@ func (s *Store) holdForReviewTx(ctx context.Context, origin SendOrigin, in SendE
 		// by anybody.
 		return ids.UUID{}, errNoSchedulingUser
 	}
-	payload, err := json.Marshal(freezePayload(in))
+	frozen := freezePayload(in)
+	frozen.PendingDraftID = idText(in.MailDraftID)
+	payload, err := json.Marshal(frozen)
 	if err != nil {
 		return ids.UUID{}, fmt.Errorf("held send: freezing the refused message: %w", err)
 	}

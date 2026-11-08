@@ -30,7 +30,17 @@ export function ContactCaseReview({
   contactId,
   open,
   onClose,
-}: Readonly<{ contactId: string; open: boolean; onClose: () => void }>) {
+  chosen = true,
+}: Readonly<{
+  contactId: string;
+  open: boolean;
+  onClose: () => void;
+  /**
+   * The reader opened the review from this contact, so it starts ticked.
+   * False where the server picked the contact, which nobody chose.
+   */
+  chosen?: boolean;
+}>) {
   const t = useT();
   const headingId = useId();
   return (
@@ -40,15 +50,22 @@ export function ContactCaseReview({
           {t("contactCase.title")}
         </Heading>
       </DrawerHead>
-      {open && <CaseReviewBody contactId={contactId} onClose={onClose} />}
+      {open && (
+        <CaseReviewBody
+          contactId={contactId}
+          chosen={chosen}
+          onClose={onClose}
+        />
+      )}
     </Modal>
   );
 }
 
 function CaseReviewBody({
   contactId,
+  chosen,
   onClose,
-}: Readonly<{ contactId: string; onClose: () => void }>) {
+}: Readonly<{ contactId: string; chosen: boolean; onClose: () => void }>) {
   const t = useT();
   const query = useContactCase(contactId);
   const [stale, setStale] = useState(false);
@@ -93,7 +110,7 @@ function CaseReviewBody({
     <CaseForm
       key={contactCase.revision}
       contactCase={contactCase}
-      startId={contactId}
+      startId={chosen ? contactId : undefined}
       stale={stale}
       onClose={onClose}
       onStale={() => {

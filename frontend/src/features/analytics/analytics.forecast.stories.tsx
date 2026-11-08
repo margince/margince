@@ -45,9 +45,9 @@ const SELECTION: AnalyticsSelection = {
 function readings(over: Partial<Readings> = {}): Readings {
   return {
     period_start: "2026-07-01",
+    qualification_mode: "off",
     period_end: "2026-09-30",
     scope_kind: "workspace",
-    qualification_mode: "off",
     won_minor: 92_000_00,
     evidence_minor: 148_000_00,
     likely_threshold: 90,
@@ -136,6 +136,38 @@ export const SomeDealsUnpriced: Story = {
       </StoryProviders>
     );
   },
+};
+
+// Where the quarter lands, beside the sheet: the landing and the modelled
+// range stand in the rail above the receipt.
+export const WithLanding: Story = {
+  render: () => {
+    const landed = readings({
+      range_low_minor: 180_000_00,
+      range_high_minor: 310_000_00,
+    });
+    installFetchStub(
+      routes({
+        ...landed,
+        landing: {
+          amount_minor: landed.won_minor + landed.evidence_minor,
+          measure: "likely",
+          won_minor: landed.won_minor,
+          remaining_minor: landed.evidence_minor,
+        },
+      }),
+    );
+    return (
+      <StoryProviders>
+        <ForecastView selection={SELECTION} canSubmit={false} />
+      </StoryProviders>
+    );
+  },
+};
+
+export const WithLandingDark: Story = {
+  ...WithLanding,
+  globals: { theme: "dark" },
 };
 
 // Recording what somebody believes will close, opened. The editor is a panel of

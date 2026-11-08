@@ -126,16 +126,6 @@ type ForecastReadingsResult struct {
 	// forecast_movement takes. Empty is a real answer: nothing was frozen.
 	Snapshots []ForecastSnapshotRefResult `json:"snapshots"`
 
-	// Qualified is the readings restricted to deals the customer still
-	// supports. Absent while the installation does not enforce viability
-	// reviews, which means no qualified reading exists, not that it equals the
-	// figures above.
-	Qualified *ForecastQualifiedResult `json:"qualified,omitempty"`
-	// QualificationMode is "enforcing" while viability reviews gate the
-	// qualified block, else "off". An enforced scope with no deals sends a zero
-	// block rather than none.
-	QualificationMode string `json:"qualification_mode"`
-
 	// Landing is where the period finishes, the answer GET /forecast gives. The
 	// range below sits beside it. Absent for managed teams, as on the endpoint.
 	Landing *ForecastLandingResult `json:"landing,omitempty"`
@@ -195,21 +185,6 @@ type ForecastContributionResult struct {
 	AppliedProbability int                    `json:"applied_probability"`
 }
 
-// ForecastQualifiedResult mirrors the qualified readings on GET /forecast.
-type ForecastQualifiedResult struct {
-	EvidenceMinor int64 `json:"evidence_minor"`
-	WeightedMinor int64 `json:"weighted_minor"`
-	ExcludedMinor int64 `json:"excluded_minor"`
-	UnknownMinor  int64 `json:"unknown_minor"`
-	ExcludedCount int   `json:"excluded_count"`
-	UnknownCount  int   `json:"unknown_count"`
-	// The part of the excluded money with no review behind it.
-	UnsupportedMinor int64 `json:"unsupported_minor"`
-	UnsupportedCount int   `json:"unsupported_count"`
-	// AmountsPartial says some left-out deal had no amount the reader can see.
-	AmountsPartial bool `json:"amounts_partial"`
-}
-
 // ForecastSnapshotRefResult is one frozen state a movement can start or end at.
 type ForecastSnapshotRefResult struct {
 	ID      string `json:"id"`
@@ -248,7 +223,7 @@ func (t forecastMovement) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","required":["from","to"],"properties":{
 			"from":{"type":"string","format":"uuid","description":"The opening snapshot."},
 			"to":{"type":"string","format":"uuid","description":"The closing snapshot."},
-			"reading":{"type":"string","enum":["open","weighted","evidence","qualified_evidence","qualified_weighted"],"description":"Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. The qualified_ readings count only deals the customer still supports."}},
+			"reading":{"type":"string","enum":["open","weighted","evidence"],"description":"Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total."}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ForecastMovementResult](),
 	}
@@ -265,7 +240,10 @@ func (t forecastMovement) Handle(ctx context.Context, in json.RawMessage) (json.
 
 // ForecastMovementResult is what forecast_movement answers with.
 type ForecastMovementResult struct {
-	Reading      string `json:"reading"`
+	Reading string `json:"reading"`
+	// BaseCurrency is what every amount here, the buckets' and deals' too, was
+	// converted to when the snapshots were frozen.
+	BaseCurrency string `json:"base_currency"`
 	OpeningMinor int64  `json:"opening_minor"`
 	ClosingMinor int64  `json:"closing_minor"`
 	// Buckets is a COMPLETE account: opening plus every entry equals closing.
@@ -350,8 +328,8 @@ type ForecastAssuranceResult struct {
 
 // ForecastAssuranceFreshnessResult is what changed after the run read it.
 type ForecastAssuranceFreshnessResult struct {
-	// State is current, out_of_date, or unknown when no run has recorded what
-	// it read since changes were first tracked.
+	// State is current, out_of_date, or unknown while committed inputs
+	// have not been read by a complete check or the freshness consumer.
 	State            string `json:"state"`
 	ChangedDeals     int    `json:"changed_deals"`
 	ChangedSignals   int    `json:"changed_signals"`

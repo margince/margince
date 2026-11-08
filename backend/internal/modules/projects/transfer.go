@@ -103,12 +103,8 @@ func TransferProjectOwnershipTx(ctx context.Context, tx pgx.Tx, in TransferProje
 // ensureActiveOwner refuses a receiver who could not be handed a project by a
 // single update either.
 //
-// auth.EnsureAssignee is that question, asked once for every record kind: an
-// active, unarchived, non-agent seat that can write, inside the caller's own
-// write scope. This function keeps its name and its own error so the handover
-// contract's 422 is unchanged, and delegates the rule rather than keeping a
-// second, weaker copy of it — the copy here checked status and archival only,
-// so it admitted an agent seat and a read seat.
+// auth.EnsureAssignee is that question, asked once for every record kind. This
+// function keeps its own error so the handover contract's 422 is unchanged.
 func ensureActiveOwner(ctx context.Context, tx pgx.Tx, owner ids.UserID) error {
 	if err := auth.EnsureAssignee(ctx, tx, owner.UUID); err != nil {
 		if errors.As(err, new(*auth.AssigneeNotAllowedError)) {

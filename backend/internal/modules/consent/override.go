@@ -176,7 +176,7 @@ func (s *Store) allowAdmittedTx(
 	}
 	// The vouch serves the reps of the recorder's own entity and no other, so
 	// a colleague of another legal entity never sends on it.
-	entity, err := sendingEntityTx(ctx, tx, senderOf(ctx))
+	entity, err := sendingEntityOf(ctx, tx)
 	if err != nil {
 		return ids.UUID{}, err
 	}
@@ -373,9 +373,10 @@ func (s *Store) revokeOverrideAdmittedTx(
 	// may act on a peer admin's row, because admin is the top human authority and
 	// no higher seat exists to reach an admin-recorded override. A subject-level
 	// decision stays beyond every seat — CanRevoke keeps that square closed.
-	if !level.CanRevoke(commsauthz.AuthorityLevel(decided)) {
-		return fmt.Errorf(
-			"this override was recorded at a level you may not revoke: %w", apperrors.ErrPermissionDenied)
+	// An override holds a user's or an admin's level, and a user's revokes
+	// neither. So the admin gate asks the same question, and records it.
+	if err := auth.RequireAdmin(ctx); err != nil || !level.CanRevoke(commsauthz.AuthorityLevel(decided)) {
+		return fmt.Errorf("this override was recorded at a level you may not revoke: %w", apperrors.ErrPermissionDenied)
 	}
 
 	revoked, err := revokeOverrideChain(ctx, tx, root, in.OverrideID)

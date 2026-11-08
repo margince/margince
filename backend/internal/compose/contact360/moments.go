@@ -112,7 +112,7 @@ func (s *Service) momentsSection(ctx context.Context, tx pgx.Tx, contactID ids.C
 		return err
 	}
 	moment := said.deriveMomentPast(ctx, now, out, dismissed, said.proposer(ctx, out, followUps, dismissed))
-	momentaction.Withhold(ctx, string(said.Lang()), &moment)
+	momentaction.WithholdContact(ctx, string(said.Lang()), &moment, out.Contact.Attachable != nil && *out.Contact.Attachable)
 	out.Moment = &moment
 	return nil
 }
@@ -339,20 +339,12 @@ func (said momentCopy) reEngagedMoment(_ context.Context, now time.Time, page *c
 		//
 		// The interval itself is real; only its owner was wrong. It is the age
 		// of OUR last message, which is the fact this rung fires on anyway.
-		Headline:    fmt.Sprintf(said.Say(momentWords.Replied), sinceWeWrote),
-		WhyNow:      said.Say(momentWords.RepliedWhy),
-		Confidence:  crmcontracts.ContactMomentConfidenceObservedFact,
-		Evidence:    evidence,
-		FreshnessAt: &inbound,
-		RecommendedAction: crmcontracts.ContactMomentAction{
-			Kind:  crmcontracts.ContactMomentActionKindDraftReply,
-			Label: said.Say(momentWords.Reply),
-			State: crmcontracts.ContactMomentActionStateWillConfirm,
-			Destination: &crmcontracts.ContactMomentDestination{
-				Surface: crmcontracts.ContactMomentDestinationSurfaceComposer,
-				Prefill: new(map[string]string{prefillIntent: "reply"}),
-			},
-		},
+		Headline:          fmt.Sprintf(said.Say(momentWords.Replied), sinceWeWrote),
+		WhyNow:            said.Say(momentWords.RepliedWhy),
+		Confidence:        crmcontracts.ContactMomentConfidenceObservedFact,
+		Evidence:          evidence,
+		FreshnessAt:       &inbound,
+		RecommendedAction: said.replyAction(said.Say(momentWords.Reply), "reply", page.LastLiveInboundActivityId),
 	}, true
 }
 
@@ -384,19 +376,11 @@ func (said momentCopy) goneQuietMoment(_ context.Context, now time.Time, page *c
 		Headline:            fmt.Sprintf(said.Say(momentWords.Quiet), waiting),
 		WhyNow: fmt.Sprintf(said.Say(momentWords.QuietWhy),
 			waiting, goneQuietAfterDays),
-		Confidence:  crmcontracts.ContactMomentConfidenceObservedFact,
-		Evidence:    evidence,
-		FreshnessAt: &outbound,
-		RecommendedAction: crmcontracts.ContactMomentAction{
-			Kind:  crmcontracts.ContactMomentActionKindDraftReply,
-			Label: said.Say(momentWords.FollowUp),
-			State: crmcontracts.ContactMomentActionStateWillConfirm,
-			Destination: &crmcontracts.ContactMomentDestination{
-				Surface: crmcontracts.ContactMomentDestinationSurfaceComposer,
-				Prefill: new(map[string]string{prefillIntent: "follow_up"}),
-			},
-		},
-		SecondaryActions: &[]crmcontracts.ContactMomentAction{said.askColleague()},
+		Confidence:        crmcontracts.ContactMomentConfidenceObservedFact,
+		Evidence:          evidence,
+		FreshnessAt:       &outbound,
+		RecommendedAction: said.replyAction(said.Say(momentWords.FollowUp), "follow_up", page.LastOutboundActivityId),
+		SecondaryActions:  &[]crmcontracts.ContactMomentAction{said.askColleague()},
 	}, true
 }
 

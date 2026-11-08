@@ -240,7 +240,8 @@
     "basis";
   align-content: start;
   row-gap: var(--space-1);
-  padding: var(--space-3) var(--space-4);
+  /* The card's own inset, so a cell's words start where the card's do. */
+  padding: var(--space-3) var(--padCard);
   border: 0;
   border-inline-end: 1px solid var(--borderSubtle);
   border-radius: 0;
@@ -248,6 +249,17 @@
   box-shadow: none;
   backdrop-filter: none;
   min-block-size: 0;
+}
+/* The cells share the strip's three rows, so a label that wraps lowers every
+   figure in its row with it and the figures stay on one line. A wrapped cell
+   takes the same three rows, so the next cell still lands beside it. */
+.stat-strip[data-density="plate"] > * {
+  grid-row: span 3;
+}
+/* Not the lead cell: its size container would cut it off from the rows. */
+.stat-strip[data-density="plate"]:not([data-lead]) > .stat-card,
+.stat-strip[data-lead] > .stat-card:not(:first-child) {
+  grid-template-rows: subgrid;
 }
 .stat-strip[data-density="plate"] > :last-child,
 .stat-strip[data-density="plate"] > :last-child > .stat-card {
@@ -268,7 +280,11 @@
 /* The whole cell is the door, and the label keeps the cell's full width: the
    door's word stays its accessible name, and only its arrow shows, in the
    corner, while the cell is pointed at or holds focus. */
-.stat-strip[data-density="plate"] .stat-card-foot {
+.stat-strip[data-density="plate"] .stat-card > .stat-card-foot {
+  /* A folded cell places its foot in a named area at the start edge. An
+     absolute box placed there shrinks to its content, which here is none. */
+  grid-area: auto;
+  justify-self: stretch;
   position: absolute;
   inset: 0;
   margin: 0;
@@ -281,7 +297,11 @@
   inset-block-start: var(--space-2);
   inset-inline-end: var(--space-2);
 }
+/* The door fills the cell, so its own box is the target a pointer and a
+   reader's tools find, not an empty line around an arrow. */
 .stat-strip[data-density="plate"] .stat-card-open {
+  position: absolute;
+  inset: 0;
   color: transparent;
 }
 .stat-strip[data-density="plate"] .stat-card-open-word {
@@ -298,4 +318,98 @@
 }
 .stat-strip[data-density="plate"] .stat-card:has(.stat-card-open):hover {
   background: var(--groundHover);
+}
+
+/* A LEAD plate heads its card and stands on the card's own ground, so it draws
+   neither a deeper rung nor a rule above it. Its figure sizes are the tile's
+   (atoms.css). */
+.stat-strip[data-density="plate"][data-lead] {
+  background: none;
+  grid-template-columns: minmax(200px, 1.5fr) repeat(
+      auto-fit,
+      minmax(150px, 1fr)
+    );
+  border-block-start: 0;
+}
+/* Where two cells no longer fit, a lead plate stacks like any other row of
+   readings, its lead first. So does a plate whose cells asked to fold. */
+@container (max-width: 40rem) {
+  .stat-strip[data-density="plate"]:is(
+    [data-lead],
+    :has(.stat-card-narrow-row, .stat-card-narrow-stack)
+  ) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* Stacked cells part with a rule across, never one down the edge. */
+  .stat-strip[data-density="plate"]:is(
+    [data-lead],
+    :has(.stat-card-narrow-row, .stat-card-narrow-stack)
+  ) > .stat-card,
+  .stat-strip[data-density="plate"]:is(
+      [data-lead],
+      :has(.stat-card-narrow-row, .stat-card-narrow-stack)
+    )
+    > *
+    > .stat-card {
+    border-inline-end: 0;
+  }
+  .stat-strip[data-density="plate"]:is(
+      [data-lead],
+      :has(.stat-card-narrow-row, .stat-card-narrow-stack)
+    )
+    > *
+    + .stat-card,
+  .stat-strip[data-density="plate"]:is(
+      [data-lead],
+      :has(.stat-card-narrow-row, .stat-card-narrow-stack)
+    )
+    > *
+    + *
+    > .stat-card {
+    border-block-start: 1px solid var(--borderSubtle);
+  }
+  /* A plate keeps its cells' column shape when they fold, so the figure
+     stays under its name rather than flying to the trailing edge. */
+  .stat-strip[data-density="plate"]
+    :is(.stat-card-narrow-row, .stat-card-narrow-stack)
+    > .stat-card-value {
+    text-align: start;
+  }
+}
+/* A lead plate's cells are narrow, so the receipt keeps its word for the
+   screen reader and shows a small mark in its place. The button keeps the
+   24px pressable floor; the mark inside it is drawn at 1rem. */
+.stat-strip[data-lead] .stat-card-basis {
+  --receipt-hit: 24px;
+  position: relative;
+  display: inline-block;
+  inline-size: var(--receipt-hit);
+  block-size: var(--receipt-hit);
+  margin: calc((1rem - var(--receipt-hit)) / 2);
+  overflow: hidden;
+  white-space: nowrap;
+  color: transparent;
+  text-decoration: none;
+  border-radius: var(--r-full);
+  corner-shape: round;
+}
+@media (pointer: coarse) {
+  .stat-strip[data-lead] .stat-card-basis {
+    --receipt-hit: 44px;
+  }
+}
+.stat-strip[data-lead] .stat-card-basis::before {
+  content: "i" / "";
+  position: absolute;
+  inset: calc((var(--receipt-hit) - 1rem) / 2);
+  display: grid;
+  place-items: center;
+  color: var(--textSecondary);
+  border: 1px solid var(--borderStrong);
+  border-radius: var(--r-full);
+  corner-shape: round;
+}
+.stat-strip[data-lead] .stat-card-basis:hover::before {
+  border-color: var(--accent);
+  color: var(--accentText);
 }

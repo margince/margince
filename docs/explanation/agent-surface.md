@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/agents/registry.go backend/internal/compose/agentgate.go backend/internal/modules/agents/runner backend/internal/modules/ai/selectbrain.go backend/internal/modules/ai/router.go backend/internal/modules/ai/budget.go backend/tools/gen-agentcontract backend/internal/compose/agentbundle -->
+<!-- describes: backend/internal/modules/agents/registry.go backend/internal/modules/agents/toollist.go backend/internal/modules/agents/inputrequired.go backend/internal/compose/agentgate.go backend/internal/modules/agents/runner backend/internal/modules/ai/selectbrain.go backend/internal/modules/ai/router.go backend/internal/modules/ai/budget.go backend/tools/gen-agentcontract backend/internal/compose/agentbundle backend/internal/platform/workarea backend/internal/compose/workareaseam.go -->
 # The agent surface & the model runtime
 
 How AI agents *act* inside Margince, and what *runs the model* behind them. The write path covers how
@@ -98,6 +98,28 @@ the run is marked as data to read, never as orders to follow (a guard against pr
 runner reaches records only through the registry, so the gate decides read or write; the loop
 itself does not.
 
+## Who asks first
+
+Some acts cannot be taken back from the chat, such as a send, a merge or an archive. The contract marks
+their tool `ask_user_first`. Who acts on that mark depends on the surface.
+
+- **An MCP client (Surface A).** `DescribeForClient` (`internal/modules/agents/toollist.go`) adds a
+  line to the tool's description: get the user's yes before the call, unless they asked for it. The
+  server cannot check that the model asked. A change to many records also asks for its go-ahead in a
+  chat form, when the client can show one ([mcp-protocol.md](../reference/mcp-protocol.md)).
+- **The runner (Surface B).** No one is there to answer, so the run is never told to ask. Its tool list
+  carries each tool's own text, with no line from `DescribeForClient`. It calls `Registry.Invoke`
+  directly, and only the MCP server sets a call up for a form. So no form can reach a run, and a change
+  to many records goes ahead as it does for a client that cannot show one.
+
+Three things bound a run instead. Its passport holds its scopes, the work it may touch, and its user's
+grants and seat. Its catalog entry names its tools, and the tier decides the rest. A run acts on its
+user's passport, so a 🟡 verb runs at once, as it would for that user. A tool marked
+`WaitsEvenForItsUser`, such as `enrich`, still stages and pauses the run.
+
+`TestTheLoopAgentIsNeverToldToAskItsUser` (`internal/compose/agentaskfirst_test.go`) runs the runner
+over the registry with every tool that asks first, and fails if that line reaches the model.
+
 ## The model runtime
 
 Behind the `ports/model` seam (`Client { Complete / Stream / Embed / Caps }`), config sets the model
@@ -138,9 +160,32 @@ choice. `internal/modules/ai/` owns it:
   workflow engine itself is in [who reads the events](write-backbone.md#5-the-consumer-side--groups--dedupe).)
 - **MCP** serves the tool surface at `/mcp` on the api: one registry, one admission gate, one audit
   stream, one transport.
-  `tools/list` is filtered on **scope** per caller. So the list shows the passport's scopes,
-  and does not promise that every listed tool will run. The seat limit and object RBAC are checked
-  again at each call, so either one can still refuse a listed tool.
+  `tools/list` is filtered per caller on the passport's **scopes**, the **seat** of its user and
+  that user's **grants**. A read seat is offered only read tools. A tool, or one action of a router,
+  is offered only when the user holds every check its call was measured to ask
+  ([mcp-tool-roles.md](../reference/mcp-tool-roles.md#what-each-call-needs)).
+
+  A router that picks its action from an `action` list has that list, its tier, description,
+  arguments and result shape cut to the actions left. A router that reads its action from the
+  arguments has no list to cut. It stays listed whole while one of its actions is left. A router with
+  none left is not listed, and a verb with no measured row stays offered.
+
+  The filter changes only the list. A scheduled run may choose any tool its passport's scopes and its
+  user's seat allow, whatever the user's grants. The gate still checks each call: the grants, row
+  scope and the arguments.
+
+  The list also drops a tool, or a router action, in a group the passport's `work_areas` leave off.
+
+- **`work_areas`** hold a passport to the groups of work its human chose, checked in three places.
+  `Gate.Admit` checks them after its per-call read of the passport, so a change binds a run or a
+  session from its next call. A verb whose operations sit in several groups is admitted while one of
+  them is on. The record type a call names then narrows it to one group.
+
+  The REST gate holds each route to its one operation's group, and that includes a tool's own
+  in-process call. Work an agent queued is made again with the passport's `work_areas` as they stand
+  when it runs. The table is `backend/internal/platform/workarea/workareas.json`, written by the
+  test that writes [mcp-parity.md](../reference/mcp-parity.md).
+
   The catalog itself: [reference/agent-tools.md](../reference/agent-tools.md).
   Connecting: [how-to/connect-an-mcp-client.md](../how-to/connect-an-mcp-client.md);
   making the passport: [how-to/mint-a-passport.md](../how-to/mint-a-passport.md).

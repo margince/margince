@@ -46,6 +46,9 @@ import (
 // installation that delegates the first has not thereby delegated the second.
 const entityCommunicationException = "communication_exception"
 
+// entityCommunicationReview names the review a refused direction is recorded on.
+const entityCommunicationReview = "communication_review"
+
 // EntityCommunicationException is the same object, exported because compose
 // decides which action to OFFER a refused caller and that decision turns on
 // this grant. Two spellings would let the offer and the door disagree about
@@ -159,11 +162,11 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 			return err
 		}
 		if !directableBy(ctx, review.Refusals) {
-			return apperrors.ErrPermissionDenied
+			return refuseDirection(ctx, review.Refusals)
 		}
 		// Recorded so the re-check at staging and dispatch knows which
 		// refusals this exception may answer (DecisionSet.ExceptionMayAnswer).
-		givenByAdmin := auth.RequireAdmin(ctx) == nil
+		givenByAdmin := auth.AdminGranted(ctx)
 		// THE FACTS ARE THE REVIEW'S, not the clock's. An instruction says "on
 		// what this review recorded, send anyway", and dating it from now would
 		// claim it was taken on facts nobody has looked at.
@@ -455,8 +458,9 @@ func isDuplicateInstruction(err error) bool {
 	return ok && strings.Contains(constraint, "review_id")
 }
 
-// servedWarningVersion reports whether this build published the wording a
-// caller says they were shown.
+// servedWarningVersion reports whether a new instruction may name this
+// version: only the one this build serves now. A retired version still reads
+// back through OverrideWarningFor, for the records that name it.
 func servedWarningVersion(version string) bool {
 	return strings.TrimSpace(version) == OverrideWarningVersion
 }

@@ -1,12 +1,5 @@
-import {
-  type QueryKey,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
 import { type ReactNode, useId, useRef } from "react";
-import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { ifMatch, requireVersion } from "../api/version";
 import {
   Badge,
   Button,
@@ -26,14 +19,13 @@ import { formatActivityWhen } from "../format/activitywhen";
 import { calendarDay } from "../format/calendarday";
 import { isoOrBlank } from "../format/datepattern";
 import { formatDue } from "../format/format";
-import { dueTimeOf } from "../format/timezone";
+import { dueTimeOf, startOfDayInZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { taskDueFields } from "../lib/activitybody";
 import { useCanWriteRecord } from "../lib/capability";
-import { problemCodeOf, unwrap } from "../lib/problem";
-import { EntityRef } from "./entityref";
 import { TaskTimeField } from "./followuptaskfields";
 import { mostSpecificFirst, RecordLinks } from "./recordlinks";
+import { TaskAssignee } from "./taskassignee";
 import "./taskactions.css";
 import { ErrorLine } from "../design-system/errorline";
 import { useActivity } from "../lib/activityread";
@@ -45,7 +37,7 @@ import { CallLogInline, useCallLogFor } from "./calllog.host";
 import { useCompleteTask } from "./taskcomplete";
 import { TaskNextSteps } from "./tasknextsteps";
 import { taskOriginKey } from "./taskorigin";
-import { refetchAfterWrite } from "./taskwritefollowup";
+import type { useTaskUpdate } from "./taskwrite";
 
 // Acting on a task from the record it belongs to. The tasks screen owns the
 // standing work queue; this is the same two verbs (complete, snooze) offered
@@ -61,87 +53,22 @@ export {
   useMeetingOutcome,
   useNoticeRead,
 } from "./taskactions.rowwrites";
+export { useTaskDone, useTaskUpdate } from "./taskwrite";
 
 type Activity = components["schemas"]["Activity"];
 
-type TaskPatch = {
-  id: string;
-  // The version the press was decided against. Every verb on a task goes
-  // through this one mutation, so pinning it here pins all four at once — and
-  // an unpinned tick is a task two contacts can complete, each told it worked.
-  version: number | undefined;
-  body: { is_done?: boolean; due_at?: string; remind_at?: string | null };
-};
-
-export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (input: TaskPatch) => {
-      const data = unwrap(
-        await api.PATCH("/activities/{id}", {
-          params: {
-            path: { id: input.id },
-            ...ifMatch(requireVersion(input.version)),
-          },
-          body: input.body,
-        }),
-        t,
-      );
-      // The version the write PRODUCED, answered so a follow-on press has one.
-      // An undo re-sending the version the row was drawn at would be refused as
-      // skew by the very write it is undoing.
-      return data?.version;
-    },
-    // Returned, so the mutation stays pending until the reads have landed. The
-    // row the press came from stays drawn at the version it was fetched at
-    // until then, and a second press in that window re-sends it and is
-    // refused as skew by the write that has just succeeded.
-    onSuccess: (_data, input) =>
-      refetchAfterWrite(queryClient, invalidateKeys, input.id),
-    // A stale press is not a failed one: the task moved on under it, so the
-    // reads are refreshed to show where it is now.
-    onError: (error, input) => {
-      if (problemCodeOf(error) === "version_skew") {
-        return refetchAfterWrite(queryClient, invalidateKeys, input.id);
-      }
-    },
-  });
-}
-
-/**
- * The due fields one snooze away, or null for a task that has no date to
- * move. A task with a time of day keeps that time on the next day, so one
- * snooze does not drop the hour the rep agreed; a task due by a day stays a
- * day.
- *
- * A snooze moves the task to the NEXT CALENDAR DAY, which is not the same as
- * adding twenty-four hours. A local day is not always that long: on Europe's
- * spring-forward day, adding a day to the 28th at 23:59:59 lands at 00:59:59
- * on the 30th, so a rep pressing "tomorrow" skips the 29th entirely. The
- * accept path warns about exactly this arithmetic where it stamps a deadline;
- * this writer was doing it.
- *
- * Read and re-minted through the calendar helpers, in the zone the deadline
- * belongs to, so a snooze lands on the day it names for every colleague.
- */
+/** Keep the agreed wall time while moving at least as far as tomorrow. */
 export function snoozedDueAt(
   dueAt: string | null | undefined,
   hasTime: boolean | undefined,
   zone: string,
+  now = new Date(),
 ): { due_at: string; due_has_time: boolean } | null {
-  if (!dueAt) {
-    return null;
-  }
-  const today = calendarDay(new Date(dueAt), zone);
-  const [year = Number.NaN, month = Number.NaN, day = Number.NaN] = today
-    .split("-")
-    .map(Number);
-  // Through UTC parts, which is a pure calendar step: no zone reading happens
-  // here, so no DST transition can shorten or lengthen the day being counted.
-  const next = new Date(Date.UTC(year, month - 1, day + 1))
-    .toISOString()
-    .slice(0, "yyyy-mm-dd".length);
+  if (!dueAt) return null;
+  const dueDay = calendarDay(new Date(dueAt), zone);
+  const today = calendarDay(now, zone);
+  const base = dueDay > today ? dueDay : today;
+  const next = calendarDay(new Date(startOfDayInZone(base, zone, 1)), zone);
   return taskDueFields(next, dueTimeOf(dueAt, hasTime, zone), zone);
 }
 
@@ -207,7 +134,6 @@ export function TaskQuickActions({
 }>) {
   const t = useT();
   const readerZone = useViewerZone();
-  const nextDue = snoozedDueAt(dueAt, dueHasTime, readerZone);
   const pending = update.isPending && update.variables?.id === activityId;
   const complete = useCompleteTask(update);
   return (
@@ -221,16 +147,14 @@ export function TaskQuickActions({
           {t("tasks.complete")}
         </Button>
       )}
-      {nextDue && (
+      {dueAt && (
         <Button
           disabled={pending}
-          onClick={() =>
-            update.mutate({
-              id: activityId,
-              version,
-              body: nextDue,
-            })
-          }
+          onClick={() => {
+            const nextDue = snoozedDueAt(dueAt, dueHasTime, readerZone);
+            if (nextDue)
+              update.mutate({ id: activityId, version, body: nextDue });
+          }}
         >
           {t("tasks.snooze")}
         </Button>
@@ -248,15 +172,7 @@ export function TaskQuickActions({
   );
 }
 
-// Moving a task to a day the reader names.
-//
-// Beside the snooze, not instead of it. Snooze adds a day to the task's own due
-// date, so a task three days overdue only moves to two days overdue.
-//
-// It is offered on an UNDATED task too, where the snooze is not. A task with no
-// day has nothing to move but is exactly the one a rep wants to put a date on,
-// and the button above is hidden for it — snoozedDueAt returns null, because
-// one day after nothing is nothing.
+// The picker also dates tasks that have no deadline to snooze.
 function TaskDueDatePick({
   activityId,
   version,
@@ -430,9 +346,7 @@ export function TaskDetailDialog({
                 {task.is_done && (
                   <Badge tone="success">{t("tasks.isDone")}</Badge>
                 )}
-                {task.assignee_id && (
-                  <EntityRef kind="user" id={task.assignee_id} />
-                )}
+                <TaskAssignee id={task.assignee_id} />
                 {/* A task an agent wrote says so, so a reader knows it was
                   read out of a conversation rather than typed by a colleague. */}
                 {provenanceOf(task.captured_by).kind === "agent" && (

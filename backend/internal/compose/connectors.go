@@ -105,6 +105,7 @@ type connectorHandlers struct {
 	// extOAuthGrants opens one unit's OAuth grants; nil reads them through the
 	// process's extension runtime binding, as the unit's Runtime does.
 	extOAuthGrants func(unit string) extOAuthGrants
+	picture        connectPicture
 }
 
 // wired reports whether the Gmail OAuth app is composed for this role.
@@ -224,10 +225,19 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 	if !ok {
 		return
 	}
-	authURL := h.mintConsent(w, app, connectState{
+	st := connectState{
 		Workspace: ws, User: actor.UserID, Provider: string(provider),
 		ReturnTo: ask.returnTo, Then: ask.then, WindowMonths: ask.windowMonths,
-	})
+		SharedConsent: sharesConsent(string(provider), ask.then),
+	}
+	authURL := h.mintConsent(w, app, st)
+	if st.SharedConsent {
+		var err error
+		if authURL, err = withCalendarScopes(authURL, st.Then); err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ConnectConnectorResponse{AuthorizeUrl: &authURL})
 }
 
@@ -316,7 +326,11 @@ func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http
 		return
 	}
 
-	auth, err := app.authenticate(runCtx, *params.Code, h.callbackURL(string(provider)))
+	consent := newConsentCode(*params.Code, h.callbackURL(string(provider)))
+	if st.SharedConsent {
+		consent.alsoAsked = sharedConsentCalendars[st.Then].scopes()
+	}
+	auth, err := app.authenticate(runCtx, consent)
 	if err != nil {
 		logConnectFailure(ctx, string(provider), err)
 		land(connectFailureOutcome(string(provider), err))
@@ -328,7 +342,8 @@ func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http
 		land(outcomeError)
 		return
 	}
-	h.chainAfterConnect(runCtx, w, r, st)
+	h.offerConnectPicture(runCtx, st.User, consent, auth)
+	h.chainAfterConnect(runCtx, w, r, st, consent)
 }
 
 // signedInHuman answers the human starting a consent and their workspace, or

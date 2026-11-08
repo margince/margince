@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/capture/health.go frontend/src/app/capturehealthbanner.tsx frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/features/capture/connection-service.tsx -->
+<!-- describes: backend/internal/modules/capture/health.go frontend/src/app/capturehealthbanner.tsx frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/features/capture/connection-service.tsx backend/internal/compose/connectors_sharedconsent.go backend/internal/compose/connectors_picture.go -->
 # Connecting your mailbox and calendar
 
 Capture reads mail and meetings only from an account you connect. This page
@@ -17,6 +17,8 @@ To connect your Gmail or Outlook mailbox to Margince, open **Settings → Connec
 You land back on Connections with a note such as "Google connected" and "Mail and Calendar are syncing." An agent cannot connect a mailbox for you.
 If the account says "{provider} is not configured on this installation.", an administrator has to set it up first.
 Also called: hook up Google Mail, link my inbox, email sync, Outlook sync, Office 365.
+
+Google also shares your account's picture. If that Google account is the address you sign in with, colleagues see its picture next to your name. A picture you uploaded or removed stays as it is. A shared mailbox, such as sales@, sets no one's picture.
 
 ### How do I connect an IMAP mailbox?
 To connect any other mail host to Margince, open **Settings → Connections**, choose **Add account** and pick **Another mail host**. Then fill in the **Connect IMAP mailbox** form.
@@ -49,7 +51,7 @@ To connect your calendar to Margince, tick **Calendar** when you connect your Go
 1. Open **Settings**, then **Connections**.
 2. For a new account, choose **Connect Google** or **Connect Microsoft 365** and keep **Calendar** ticked.
 3. For an account already connected with mail only, choose **Connect calendar** in its **Calendar** row. Or choose **Change what it brings in** in the account's menu.
-4. Approve access on the provider's screen. With Mail and Calendar both ticked, the provider asks twice: once for mail, then once for your calendar.
+4. Approve access on the provider's screen. Google asks once for **Mail** and **Calendar** added together, and Microsoft 365 asks once for each.
 If the calendar is refused, mail still connects and the note says so, with **Connect calendar** to try again.
 A calendar brings meetings from 90 days back to one year from now, and the window moves forward on its own. There is no history import for a calendar.
 Also called: calendar sync, sync meetings, link my agenda.
@@ -57,6 +59,8 @@ Also called: calendar sync, sync meetings, link my agenda.
 ### Who a meeting from your calendar shows
 
 A meeting from your calendar names every guest on the invitation under **Attendees**, whether they accepted, declined or did not answer yet. A guest who is a contact links to their record. A guest who is not a contact yet shows by the name or address on the invitation. Colleagues show under **Colleagues**. A booked room is not a guest.
+
+If you say no to an invitation, the meeting stays on for colleagues who are still going. It is called off for everyone only when the colleague who set it up calls it off.
 
 Each guest's answer shows next to their name: **Declined**, **Maybe** or **No answer**. A guest who accepted shows no label. The next calendar sync updates an answer that changed.
 
@@ -233,6 +237,11 @@ Before it runs, it counts the messages in the window, without reading what they
 say, and shows what the AI work will likely cost. It counts up to 20,000
 messages. A larger mailbox is shown as "{count} emails or more. Counting stopped
 there." and not as a made-up guess.
+
+Internal mail is left out unless an Admin has authorized its source and history
+range. You must also choose to include that scope in a new run. Read the scope before
+starting. [Who can see an email](who-can-see-an-email.md) explains the separate
+admin and mailbox-owner choices.
 
 You can stop it with **Stop**: "Everything imported so far is kept."
 

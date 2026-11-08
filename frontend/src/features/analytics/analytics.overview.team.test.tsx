@@ -3,11 +3,12 @@
 
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, screen, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { forgetSeat } from "../../lib/storage";
 import { jsonResponse } from "../../testing/story-utils";
+import { outlookFor } from "./analytics.assessment.fixtures";
 import {
   metric,
   openOverview as open,
@@ -226,13 +227,15 @@ describe("Team prospecting", () => {
     const asked = open(TEAM_ADDRESS, teamEvaluation, { template: "sdr" });
     const panel = await standing();
     await user.click(panel.getByRole("button", { name: "Show leads" }));
-    expect(
-      asked.some(
-        ({ url }) =>
-          url.pathname.endsWith("/analytics/evidence") &&
-          url.searchParams.get("metric") === "leads_awaiting_response_now",
-      ),
-    ).toBe(true);
+    await waitFor(() =>
+      expect(
+        asked.some(
+          ({ url }) =>
+            url.pathname.endsWith("/analytics/evidence") &&
+            url.searchParams.get("metric") === "leads_awaiting_response_now",
+        ),
+      ).toBe(true),
+    );
   });
 
   it("gives a handoff team its handoff columns, in name order, with what each counts", async () => {
@@ -488,6 +491,8 @@ describe("Team prospecting", () => {
   it("withholds the figures a lone colleague makes up", async () => {
     open(TEAM_ADDRESS, teamEvaluation, {
       template: "sdr",
+      // Offered and answered, so only the withheld team keeps it away.
+      assessment: () => jsonResponse(outlookFor("team", teamEvaluation())),
       team: served(
         teamReview({
           withheld: true,
@@ -506,6 +511,7 @@ describe("Team prospecting", () => {
     expect(
       screen.queryByRole("region", { name: "Where the team stands" }),
     ).toBeNull();
+    expect(screen.queryByText("Team prospecting outlook")).toBeNull();
   });
 });
 

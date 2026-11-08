@@ -215,7 +215,7 @@ const SIGNATURES: Readonly<
     team: shows(/Most often: Wrong territory/),
   },
   trueZero: {
-    sales: shows("0 EUR"),
+    sales: shows("€0"),
     prospecting: async () => {
       await shows("No meetings recorded as held this week")();
       expect(screen.queryByText("Nothing needs you right now")).toBeNull();

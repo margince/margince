@@ -71,7 +71,7 @@ func TestSendRendersTheMessageIDWithBracketsFromAnUnbracketedInput(t *testing.T)
 	srv := sendCapture(t, &raw)
 	defer srv.Close()
 
-	c := New(fakeOAuth{access: "access-token"}, NewAPI(srv.Client(), srv.URL))
+	c := New(fakeOAuth{access: "access-token"}, newTestAPI(t, srv.Client(), srv.URL))
 	got, err := c.SendEmail(context.Background(), authFixture(t, SendScope), connector.EmailMessage{
 		To: []string{"buyer@example.com"}, Cc: []string{"cc@example.com"},
 		Subject: "Re: pricing", Body: "As discussed.",
@@ -115,7 +115,7 @@ func TestSendOmitsUnsubscribeHeadersForATransactionalPurpose(t *testing.T) {
 	srv := sendCapture(t, &raw)
 	defer srv.Close()
 
-	c := New(fakeOAuth{access: "access-token"}, NewAPI(srv.Client(), srv.URL))
+	c := New(fakeOAuth{access: "access-token"}, newTestAPI(t, srv.Client(), srv.URL))
 	if _, err := c.SendEmail(context.Background(), authFixture(t, SendScope), connector.EmailMessage{
 		To: []string{"buyer@example.com"}, Subject: "Invoice", Body: "Attached.",
 		MessageID: "inv@margince.test",
@@ -139,7 +139,7 @@ func TestSendStripsCRLFFromHeaderValues(t *testing.T) {
 	srv := sendCapture(t, &raw)
 	defer srv.Close()
 
-	c := New(fakeOAuth{access: "access-token"}, NewAPI(srv.Client(), srv.URL))
+	c := New(fakeOAuth{access: "access-token"}, newTestAPI(t, srv.Client(), srv.URL))
 	if _, err := c.SendEmail(context.Background(), authFixture(t, SendScope), connector.EmailMessage{
 		To: []string{"b@example.com"}, Body: "hi", MessageID: "x@t",
 		Subject: "ok\r\nBcc: attacker@evil.test",
@@ -177,7 +177,7 @@ func TestSendOnARetryReturnsThePriorReceiptWithoutTransmitting(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := New(fakeOAuth{access: "access-token"}, NewAPI(srv.Client(), srv.URL))
+	c := New(fakeOAuth{access: "access-token"}, newTestAPI(t, srv.Client(), srv.URL))
 	got, err := c.SendEmail(context.Background(), authFixture(t, SendScope), connector.EmailMessage{
 		To: []string{"buyer@example.com"}, Subject: "Re: pricing", Body: "As discussed.",
 		MessageID: "abc@margince.test", Attempt: 1,
@@ -205,7 +205,7 @@ func TestSendOnTheFirstAttemptDoesNotLookUp(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := New(fakeOAuth{access: "access-token"}, NewAPI(srv.Client(), srv.URL))
+	c := New(fakeOAuth{access: "access-token"}, newTestAPI(t, srv.Client(), srv.URL))
 	if _, err := c.SendEmail(context.Background(), authFixture(t, SendScope), connector.EmailMessage{
 		To: []string{"b@example.com"}, Subject: "s", Body: "b",
 		MessageID: "first@margince.test", Attempt: 0,
@@ -218,7 +218,7 @@ func TestSendOnTheFirstAttemptDoesNotLookUp(t *testing.T) {
 }
 
 func TestSendRefusesWhenTheGrantLacksTheSendScope(t *testing.T) {
-	c := New(fakeOAuth{access: "access-token"}, NewAPI(nil, "http://unused.invalid"))
+	c := New(fakeOAuth{access: "access-token"}, newTestAPI(t, nil, "http://unused.invalid"))
 	_, err := c.SendEmail(context.Background(),
 		authFixture(t, "https://www.googleapis.com/auth/gmail.readonly"),
 		connector.EmailMessage{To: []string{"b@example.com"}, Subject: "s", Body: "b", MessageID: "x@t"})
@@ -241,7 +241,7 @@ func TestTheMessageIDSurvivesARoundTripThroughMailmap(t *testing.T) {
 	srv := sendCapture(t, &raw)
 	defer srv.Close()
 
-	c := New(fakeOAuth{access: "access-token"}, NewAPI(srv.Client(), srv.URL))
+	c := New(fakeOAuth{access: "access-token"}, newTestAPI(t, srv.Client(), srv.URL))
 	const want = "abc@margince.test"
 	if _, err := c.SendEmail(context.Background(), authFixture(t, SendScope), connector.EmailMessage{
 		To: []string{"buyer@example.com"}, Subject: "Re: pricing",
@@ -281,7 +281,7 @@ func TestSendRefusesAMessageWithNoUsableIdentityBeforeAnyProviderCall(t *testing
 			srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { calls++ }))
 			defer srv.Close()
 
-			c := New(fakeOAuth{access: "access-token"}, NewAPI(srv.Client(), srv.URL))
+			c := New(fakeOAuth{access: "access-token"}, newTestAPI(t, srv.Client(), srv.URL))
 			_, err := c.SendEmail(context.Background(), authFixture(t, SendScope), connector.EmailMessage{
 				To: []string{"buyer@example.com"}, Subject: "Re: pricing",
 				Body: "As discussed.", MessageID: tc.id,
@@ -305,7 +305,7 @@ func TestSendTrimsTheAddressesItRenders(t *testing.T) {
 	srv := sendCapture(t, &raw)
 	defer srv.Close()
 
-	c := New(fakeOAuth{access: "access-token"}, NewAPI(srv.Client(), srv.URL))
+	c := New(fakeOAuth{access: "access-token"}, newTestAPI(t, srv.Client(), srv.URL))
 	if _, err := c.SendEmail(context.Background(), authFixture(t, SendScope), connector.EmailMessage{
 		To: []string{" buyer@example.com ", ""}, Cc: []string{"\tcc@example.com"},
 		Subject: "Re: pricing", Body: "As discussed.", MessageID: "abc@margince.test",
@@ -358,7 +358,7 @@ func sentMessage(messageID string) string {
 
 func sendOne(t *testing.T, srv *httptest.Server) (connector.SendReceipt, error) {
 	t.Helper()
-	c := New(fakeOAuth{access: "access-token"}, NewAPI(srv.Client(), srv.URL))
+	c := New(fakeOAuth{access: "access-token"}, newTestAPI(t, srv.Client(), srv.URL))
 	return c.SendEmail(context.Background(), authFixture(t, SendScope), connector.EmailMessage{
 		To: []string{"buyer@example.com"}, Subject: "pricing", Body: "As discussed.",
 		MessageID: "minted@margince.test",
@@ -468,7 +468,7 @@ func TestSendOnRetryFindsThePriorSendAndReadsNothingBack(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := New(fakeOAuth{access: "access-token"}, NewAPI(srv.Client(), srv.URL))
+	c := New(fakeOAuth{access: "access-token"}, newTestAPI(t, srv.Client(), srv.URL))
 	got, err := c.SendEmail(context.Background(), authFixture(t, SendScope), connector.EmailMessage{
 		To: []string{"buyer@example.com"}, Subject: "pricing", Body: "As discussed.",
 		MessageID: "minted@margince.test", Attempt: 1,

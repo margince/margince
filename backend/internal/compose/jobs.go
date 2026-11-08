@@ -12,6 +12,7 @@ package compose
 // module's own pass River-agnostic.
 
 import (
+	"errors"
 	"log/slog"
 	"slices"
 	"time"
@@ -25,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/geocode"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -200,6 +202,10 @@ type JobRunnerConfig struct {
 	// owed until somebody ticks its reminder, because a reply alone has never
 	// settled one.
 	SettlementBrain completer
+	// DealVerdictBrain is the lane the nightly close-date pass reads each open
+	// deal's evidence with. Nil = no AI configured: dates, amounts and
+	// probabilities change only by hand and by the close-date sweep.
+	DealVerdictBrain completer
 	// TagSuggestBrain is the tag_suggest lane, which reads captured items
 	// against the suggestible tags' descriptions. Nil = the tag scout matches
 	// description phrases instead.
@@ -309,17 +315,15 @@ type JobRunnerConfig struct {
 	// ImportUploadCap is the deployment's ceiling for an import upload, so a
 	// commit reads a stored ZIP under the limits its upload was accepted with.
 	ImportUploadCap int64
+	// ImportTestReadBudget caps one test run's read, counted from its claim.
+	// Zero leaves the job's own timeout, which production runs under.
+	ImportTestReadBudget time.Duration
 	// Embedder is the retrieval embed lane (ModelPath.Embedder) both embed
-	// passes re-embed under, and it is the one field whose two kinds take
-	// OPPOSITE postures — for a reason that is about who enqueues them.
-	//
-	// The REINDEX workers register even with a nil embedder, DeepReadBrain's
-	// posture: a human's confirm at the transport is what enqueues a reindex,
-	// so a row can already be waiting, and it should fail clearly
-	// (jobs_embedreindex.go) rather than sit queued behind a job no one works.
-	// The DRIFT sweep registers nothing, because nothing but its own tick ever
-	// enqueues it: there is no queued row to fail loudly on, and a tick that
-	// could only ever enqueue failures is noise rather than a signal.
+	// passes re-embed under. The REINDEX workers register even when it is nil.
+	// A human's confirm enqueues a reindex, so a waiting row should fail
+	// clearly (jobs_embedreindex.go) instead of sitting queued. The DRIFT sweep
+	// registers nothing, because only its own tick enqueues it, and a tick that
+	// could only enqueue failures is noise.
 	Embedder search.Embedder
 	// VoiceBrain is the voice-build model lane (the worker's
 	// modelPath.VoiceBuild). May be nil: the build worker still registers,
@@ -354,20 +358,16 @@ type JobRunnerConfig struct {
 // which is why they read as one list rather than as a schedule hidden inside
 // each block. They are leader-elected, so replicas never double-dispatch.
 func NewJobRunner(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobs.Runner, error) {
+	if pool != nil && database.WorkerSessionCapacity(pool.Config().MaxConns) == 0 {
+		return nil, errors.New("worker pool needs at least four pooled connections for session-locked work")
+	}
 	reg, periodic := wireJobs(pool, log, cfg)
 
-	// A kind this role would work but api/jobs.yaml does not declare has no
-	// timeout, no attempt cap and no queue anyone chose — it would run at
-	// River's silent one-minute default. Refusing the boot is the point: an
-	// undeclared kind is indistinguishable from the default this contract
-	// exists to remove, and a process that started anyway would hide it.
+	// An undeclared kind would otherwise inherit River's scheduling defaults.
 	if err := jobs.MustBeTotal(reg.kinds); err != nil {
 		return nil, err
 	}
-	// Totality says every kind this role works is declared; it does not say
-	// each is worked by the args type its declaration names. A Kind() that
-	// returns another declared kind's string passes the check above and runs
-	// under that kind's timeout, queue and attempt cap.
+	// A kind name alone cannot catch an args type that impersonates another declaration.
 	if err := reg.everyKindIsRegisteredWithItsDeclaredType(); err != nil {
 		return nil, err
 	}
@@ -388,12 +388,16 @@ func NewJobRunner(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*j
 // nothing to do with a database.
 func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRegistry, []*river.PeriodicJob) {
 	reg := newJobRegistry()
+	if pool != nil {
+		reg.sessionSlots = make(chan struct{}, database.WorkerSessionCapacity(pool.Config().MaxConns))
+	}
+
 	// The workers, in the groups their gating and their concern make: each
 	// helper registers its own and states what an absent dependency costs
 	// them. The schedules that drive them are the list below, because a
 	// cadence is the declaration's and not the group's.
 	addModelLaneJobs(reg, pool, cfg, log)
-	addDatabaseOnlySweepJobs(reg, pool, log, cfg.BriefMail)
+	addDatabaseOnlySweepJobs(reg, pool, log, cfg.BriefMail, cfg.DealVerdictBrain)
 	addCapturePipelineJobs(reg, pool, cfg, log)
 	addStoredObjectJobs(reg, pool, cfg, log)
 	addSuppressionJournalJobs(reg, pool, cfg, log)

@@ -181,7 +181,7 @@ func moduleLocalDir(importPath string) (string, bool) {
 // That is the same fail-short direction this helper exists to close, and a
 // wrong name is not an absent one.
 func packageClauseIn(dir string) (string, bool) {
-	entries, err := os.ReadDir(dir)
+	entries, err := ReadDir(dir)
 	if err != nil {
 		return "", false
 	}
@@ -225,7 +225,7 @@ func moduleRootAndPath() (dir, modPath string, ok bool) {
 			// a gate that could not read its own module root would be a census
 			// resolving nothing.
 			//nolint:gosec // G304: the path is Getwd plus a fixed filename, never an input
-			if body, readErr := os.ReadFile(candidate); readErr == nil {
+			if body, readErr := ReadFile(candidate); readErr == nil {
 				for line := range strings.SplitSeq(string(body), "\n") {
 					if rest, found := strings.CutPrefix(strings.TrimSpace(line), "module "); found {
 						moduleDir, modulePath, moduleOK = dir, strings.TrimSpace(rest), true

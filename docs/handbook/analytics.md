@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/analytics backend/internal/modules/reporting backend/internal/modules/forecasting backend/internal/compose/accountcoverage.go -->
+<!-- describes: frontend/src/features/analytics backend/internal/modules/reporting backend/internal/modules/forecasting backend/internal/modules/assurance backend/internal/compose/accountcoverage.go -->
 # Analytics and forecasting
 
 **Analytics** in Margince is the reporting screen. It shows forecast, pipeline reports, sales performance, time in stage, your own outcomes, delivery and data coverage. It is in the sidebar under **Insights**. It answers two different kinds of question and keeps them apart: what the records say, and what somebody expects will happen.
@@ -10,15 +10,14 @@
 1. Click **Analytics**, then **Forecast** under **Analytics sections**.
 2. Choose the **Period**: **Quarter**, **Month** or **Week**.
 3. Read the **Period forecast** and what it is made of: **Already won**, **Likely** and **Weighted**.
-   The forecast gap sets the manager’s total against won sales plus Likely deals.
-   Review **Checks before the call**; source details are under **Data and evidence checked**.
-A manager records a call with **Update forecast**. Also called: sales forecast, projected revenue, quarter forecast, landing.
+   The forecast gap sets the manager’s total against won sales plus Likely deals. Review **Checks before the call**; source details are under **Data and evidence checked**.
+
+If Margince cannot confirm that a check still matches the records, it says so. Wait for an update or choose **Check again**. A manager records a call with **Update forecast**. Also called: sales forecast, projected revenue, quarter forecast, landing.
 
 ### How do I see my team's pipeline?
 To see your team's pipeline in Margince, open **Analytics** and pick the team in the **Record scope** picker above the numbers.
 Every seat is offered **Whole company**, every live team and its own records; a seat whose scope is its teams also gets **My teams** first.
-Totals are the same for everyone. You can read a team's totals without being in it, but only the owners you may measure show by name.
-A rep opens on their own records.
+Totals are the same for everyone. You can read a team's totals without being in it, but only the owners you may measure show by name. A rep opens on their own records.
 
 ### How do I see my pipeline report?
 1. Click **Analytics**, then the **Pipeline** tab.
@@ -33,23 +32,28 @@ The **Forecast** section is where this period will land. The **Pipeline** sectio
 
 The list names up to five open forecast checks for the records you picked. Each shows the deal, what the check found, the owner and the money in question. High checks come first, then the largest amounts. **Review** opens the forecast review. When there are more checks, one line counts them all.
 
+On **Sales review**, the selected filters also narrow checks about deals. Forecast figures and checks about other records cover the whole selected group. The Forecast page states this when those filters are set.
+
 A check is **Out of date** when a record it read changed after it ran. It reads deals with their offers, contracts and activities, buying signals with their company, stages and forecast calls. The verdict and findings stay as the check left them, with the mark beside them, and the verdict loses its colour. **Check again** reads the changes now, and the next nightly check reads them too. A check that could not read every source, the mailbox included, clears no mark. Until a check reads every source, the review says it cannot tell whether anything changed.
 
 A change to one deal also starts a check of that deal alone. When it lands, it clears that deal's mark, and the screen does not wait for it. A manager forecast is checked against the pipeline it was recorded over. **Forecast call needs review** names the call and the deals that moved.
 
-A deal moved if its amount changed, it entered or left the period, or it left or came back to the qualified forecast. Age alone never flags a call. If the team, base currency or financial year changed since, the finding says the call cannot be compared. A call recorded before Margince kept what it was made against says that what moved since cannot be said.
+A deal moved if its amount changed or it entered or left the period. Age alone never flags a call. If the team, base currency or financial year changed since, the finding says the call cannot be compared. A call recorded before Margince kept what it was made against says that what moved since cannot be said.
 
-The **Reports** section lists saved reports, and **New custom report** opens the report builder. Above them, **Prepared reports** offers ready reports to **Preview**, **Save a copy** of, or **Open** where they already live. A seat that cannot read saved reports gets a **Custom reports** button there instead. A custom report on deals can also group and filter by a deal or company field. An admin turns such a field on under **In reports** in Settings → **Fields**. **Your saved questions**, under a new custom report, lists the custom reports you saved, newest first, each named by what it asks.
+The **Reports** section lists saved reports, and **New custom report** opens the report builder. Below them, **Prepared reports** offers ready reports to **Preview**, **Save a copy** of, or **Open** where they already live. **Product sales** and **Sales initiatives** sit beside them.
+
+A seat that cannot read saved reports gets a **Custom reports** button there instead. A custom report on deals can also group and filter by a deal or company field. An admin turns such a field on under **In reports** in Settings → **Fields**. **Your saved questions**, under a new custom report, lists the custom reports you saved, newest first, each named by what it asks.
 
 A company field shows as its name with "(company)", and groups each deal by its company's value. A deal whose company you cannot open is left out of that grouping. Under **Group by**, the report says how many of the deals you can read have a value in each such field. A grouping by a field few deals hold puts most deals in the empty group. If an admin turns the field off or retires it, a saved report that uses it says so instead of showing numbers. Ask again without the field, or ask an admin to turn it back on.
+
+A custom answer keeps the base currency and rate reference date used when it ran. Changing the page's currency keeps the currency on that answer. When a field hidden by your role leaves records you can read out of the answer, the answer says how many.
 
 A deal's own amount is in that deal's currency, and amounts in two currencies cannot be added. So a custom report that totals, averages, or takes the smallest, largest or middle deal amount must group by currency or filter to one currency. For one total across currencies, measure the amount in the base currency, which converts each deal at its own rate. A deal whose currency has no rate is left out of that total. A count of the base amount says how many deals it covers. A saved report that adds amounts across currencies says so when you open it, instead of showing a number.
 
 The **My outcomes** section shows your own targets, open deals and meetings, for a rep only. The **Data coverage** section shows which sources the nightly check could read, for a seat allowed to see it. The **Delivery** section holds the project reports. Also called: reports, dashboards.
 
 ### How do I share a report view?
-To share a forecast view in Margince, open **Analytics** → **Forecast** and press **Share view**. Choose **Live view** or **Snapshot**, press **Create link**, then **Copy link**.
-The link is shown only once and stops working after 30 days. Whoever opens it must sign in, and sees only what their own access allows.
+To share a forecast view in Margince, open **Analytics** → **Forecast** and press **Share view**. Choose **Live view** or **Snapshot**, press **Create link**, then **Copy link**. The link is shown only once and stops working after 30 days. Whoever opens it must sign in, and sees only what their own access allows.
 
 Only the Forecast section has **Share view**; Performance and saved sales reports offer CSV export. Opening a link shows the shared forecast under the current permissions of whoever opens it. Also called: send a report, share dashboard, report link.
 
@@ -59,8 +63,7 @@ To close a forecast link in Margince before its 30 days run out, open **Analytic
    It also shows when the link was created and when it expires.
 2. Press **Close link** on the link's row, then **Close link** again in **Close this link?**.
 
-The row leaves the list, and anyone who opens the link is refused. Only you see and close the links you issued. Right after **Create link**, **Close link** in the **Your link** dialog does the same.
-A link also stops on its own after 30 days, or when you lose forecast access. Also called: revoke a share, cancel a report link, stop sharing, see my shared links.
+The row leaves the list, and anyone who opens the link is refused. Only you see and close the links you issued. Right after **Create link**, **Close link** in the **Your link** dialog does the same. A link also stops on its own after 30 days, or when you lose forecast access. Also called: revoke a share, cancel a report link, stop sharing, see my shared links.
 
 ### How do I see a win rate or export a report?
 **Performance** offers a closed win rate with a smallest group size, and a CSV export under its rules; see [Performance and saved sales reports](sales-reporting.md).
@@ -78,13 +81,15 @@ Two sections appear only for some seats. **My outcomes** is for a seat that sees
 
 Analytics opens on **Overview**. The opening view follows your work and the view you last chose.
 
-**Sales review** opens with compact readings for sales won, the applicable forecast, the modelled range and pipeline due this quarter. Sales won carries its target when a matching target is available. A forecast label says whether the figure is a manager call, won sales plus confirmed committed deals, or a weighted estimate. A manager call shows its date. The modelled range is separate from that forecast.
+**Sales review** opens with one card of readings: sales won first and largest, then the applicable forecast, the modelled range and pipeline due this quarter. Each reading has one short line under it, such as the target or how far the forecast falls short of it. The small **i** beside a reading opens what it rests on. Sales won carries its target when a matching target is available. When its basis is recorded, the forecast’s label names it, such as **Manager’s call**, **Won + Likely deals** or **Won + weighted open deals**. A manager call shows its date.
 
-**Quarter outlook** explains the quarter in paragraphs, using the figures and evidence for the selected view. **Supporting records** opens its sources. Available actions stay usable while the text loads or cannot be written. Empty summaries and empty decision sections are left out.
+The modelled range is separate from that forecast. A chart under the readings shows sales won so far, with the target as a line across when there is one. While the period is still running and the forecast can be shown, the chart carries it on to the period's end as a broken line. With it, the modelled range shows as a band that opens from today to its low and high ends, when both are set.
+
+**Quarter outlook** sits beside the readings, with **Needs your attention** under it. It leads with one sentence on where the quarter stands, followed by the rest of that paragraph; **Read the full outlook** opens the later paragraphs. It uses the figures and evidence for the selected view. **Supporting records** opens its sources. Available actions stay usable while the text loads or cannot be written. Empty summaries and empty decision sections are left out.
 
 **Needs your attention** names the three most urgent open forecast checks. Each says which deal to review and why, who owns it (or **Unassigned**), when it was found and how much money it puts in question. **Answer** opens that check on the forecast review, and a seat that may only read it gets **Open**. Below, all open checks are counted by kind, in checks and in deals, and **Show** lists one kind. The checks cover every pipeline and close date of the record scope. A data source the last check could not read shows as **Connection maintenance**, apart from the checks.
 
-**All open pipeline** follows these words and decisions, then the open pipeline by stage and sales won by team member, in name order. With **Show individual performance** off, the team member chart shows no names. **Since the last capture** shows how the open pipeline moved and needs two captures before it can compare.
+The open pipeline by stage follows these words and decisions, with **All open pipeline** and its count of deals in its heading. Sales won by team member follows, in name order. Two colleagues who share a name show their email after it. With **Show individual performance** off, the team member chart shows no names. **Since the last capture** shows how the open pipeline moved and needs two captures before it can compare.
 
 **My prospecting** counts **Accepted handoffs** this week when an SDR hands prospects on, and **Leads qualified** when nobody does. When Margince cannot read which applies, it says so and offers **Retry**. Beside the figure, your last six weeks show one column each, empty where a week has no reading, and **Monthly targets** below names its month. The readings below separate leads still waiting for a reply from those that came in during the selected period. They include **Meetings held**, **First response time** with the leads still waiting, and **Booked meetings** for 14 days. A qualification counts whether it joins an existing deal or opens a new one.
 
@@ -92,7 +97,7 @@ A zero, a hidden figure, a failed one and a day that cannot be read each say so 
 
 Under details, **How your outcomes developed** shows more weekly history, and **What happened to your handoffs** follows the ones you sent in the period. **Save view** keeps the view as a report under **Reports** without changing Overview, and **Report templates** opens prepared reports such as **My prospecting progress**.
 
-**Team prospecting** has the record scope, a **Date range** of this or last week or month, and **More**. Its readings lead with accepted handoffs where the company uses SDR handoffs, and with first qualifications where it does not. **Where the team stands** says how the rounds handed on in the period ended so far. Qualification totals count first qualifications in the selected period. A handoff share shows only when enough rounds are behind it.
+**Team prospecting** has the record scope, a **Date range** of this or last week or month, and **More**. Its readings lead with accepted handoffs where the company uses SDR handoffs, and with first qualifications where it does not. The readings and **Members** fill the page; the **Team prospecting outlook** and **Where the team stands** sit beside them. **Where the team stands** says how the rounds handed on in the period ended so far. Qualification totals count first qualifications in the selected period. A handoff share shows only when enough rounds are behind it.
 
 Under it come what holds the team up: waiting handoffs, handoffs sent back or turned down, and leads waiting for a reply. Each opens its own list, and the reasons count the decisions made in the period.
 
@@ -161,7 +166,7 @@ report cards.
 ## Deals
 
 The **Pipeline** section of Analytics holds the pipeline reports, under totals
-for the whole open pipeline.
+for the whole open pipeline. **Forecast by probability** sits beside the tables.
 
 **Open deals by stage**: one row per stage, in pipeline order. It shows the
 stage, how many deals, and the value without and with weighting. Every figure
@@ -192,7 +197,7 @@ Where not every deal has an amount, a note says "{priced} of {total} priced".
 
 ## Performance
 
-**Performance** shows sales won, target progress when targets are set, trends and pipeline charts. **View records**, at the foot of every chart, opens its evidence, and each chart offers a table of numbers. Small groups are held back rather than shown as zero. See [Performance and saved sales reports](sales-reporting.md).
+**Performance** shows sales won, target progress when targets are set, trends and pipeline charts. The figures and charts sit on one sheet, and progress to target for each member sits beside them. The **Filters** chip holds **Product**, **Sales initiative**, **Country · company address**, **Industry** and **Value basis**, and opens by itself when one of them is set. **View records**, at the foot of each chart with data, opens its evidence, and each chart offers a table of numbers. Small groups are held back rather than shown as zero. See [Performance and saved sales reports](sales-reporting.md).
 
 The default **SDR outcomes** tab follows your workflow: first qualifications without handoffs, or accepted handoffs when used. It also shows held meetings, first response time and leads still waiting for a reply. The period’s count includes only leads that came in during that period. Saved reports keep their chosen figures.
 
@@ -252,8 +257,7 @@ Problems with single records are shown in the review of the Forecast section.
 
 ## Forecast
 
-The **Forecast** section of Analytics answers one question (where will this
-period land?) and keeps three kinds of claim apart.
+The **Forecast** section of Analytics answers one question (where will this period land?) and keeps three kinds of claim apart. The forecast, the checks before the call, the deals and the charts sit on one sheet. **Where the period lands** and **Data and evidence checked** sit beside it.
 
 | Reading | What kind of claim it is |
 |---|---|
@@ -312,17 +316,14 @@ means is the **Projection basis** installation setting, and the card names it:
 
 - **Likely**: deals at the Likely threshold or above, with confirmed close dates. The strictest.
 - **Weighted**: every open deal at its probability ([how it is set](forecast-learning.md)).
-- **Supported Likely**, **Supported weighted**: the same, for deals the customer supports.
 - **Manager’s call**: the recorded number *replaces* the projection rather than adding to what is already won. **From the deal records** shows won plus Likely beside it, never added.
 
-With no basis chosen, the card uses supported Likely while **Count only deals the customer supports** is on. A chosen basis stays chosen.
-No deal is counted in both parts.
+With no basis chosen, the card uses Likely. No deal is counted in both parts.
 
-The card tells you about three caveats under **Landing has a caveat**:
+The card tells you about two caveats under **Landing has a caveat**:
 
 - "No call recorded for this period, so this shows the Likely deals."
 - "The call is below the amount already won. It is shown as recorded, not corrected."
-- "The count of supported deals is off, so this shows all deals."
 
 ### Deal value needed
 
@@ -348,7 +349,7 @@ pipeline with all it needs:
 Neither the landing nor this figure is shown under **My teams**. A total of
 teams that made their own calls would describe none of them.
 
-A deal whose customer stopped answering gets a review here, whatever its close
+Margince closes a deal whose customer stopped answering, whatever its close
 date: see [Deals the customer still supports](deals-the-customer-supports.md).
 
 ### The receipt

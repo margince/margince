@@ -20,10 +20,10 @@ package gates
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/collections"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -33,7 +33,7 @@ const (
 
 func TestEveryCoreFilterFieldHasAWordOnTheBuilder(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile(frontendFilterFieldLabels)
+	source, err := gatekit.ReadFile(frontendFilterFieldLabels)
 	if err != nil {
 		t.Fatalf("reading the filter builder's labels: %v", err)
 	}

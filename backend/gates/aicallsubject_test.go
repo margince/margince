@@ -7,7 +7,6 @@ package gates
 
 import (
 	"go/ast"
-	"os"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -69,6 +68,10 @@ var namesItsSubject = map[string]subjectClaim{
 	"internal/compose/replydraftmodel.go:completeWith": {
 		"internal/compose/replydraftvoice.go",
 		"the message being answered, named once so the critic retry cites what the first draft did",
+	},
+	"internal/compose/dealverdictjudge.go:judge": {
+		"internal/compose/dealverdictjudge.go",
+		"the open deal whose evidence the nightly verdict reads",
 	},
 	"internal/compose/captureenrich.go:readSignature": {
 		"internal/compose/captureenrich.go",
@@ -240,7 +243,7 @@ func assertWitnessNamesASubject(t *testing.T, site string, claim subjectClaim) {
 	if claim.names == "" {
 		t.Errorf("%s claims a subject and does not say what it names", site)
 	}
-	raw, err := os.ReadFile(claim.witness)
+	raw, err := gatekit.ReadFile(claim.witness)
 	if err != nil {
 		t.Errorf("%s names %s as the file that cites its subject, and it cannot be read: %v", site, claim.witness, err)
 		return

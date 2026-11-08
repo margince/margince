@@ -46,8 +46,11 @@ const mcpParityMethod = `## How an operation gets its group
 The answer for ` + "`rep`" + ` comes from these places, in this order:
 
 - ` + "`decided_by: measured`" + `: [mcp-tool-roles.json](mcp-tool-roles.json) ran the real tool on that role. Only a verb that
-  serves one operation counts, because a row for a shared verb says nothing about any one route.
-- ` + "`decided_by: grant_checks`" + `: the checks the handler makes, against [rbac-matrix.md](rbac-matrix.md). The gate walks from
+  serves one operation counts, because a row for a shared verb says nothing about any one route. ` + "`refused_by`" + ` is then the
+  first grant in the sweep's tool checks table that the rep lacks, or every alternative of a check the rep holds none of.
+  A row-scope check is no grant, so it is never named there.
+- ` + "`decided_by: grant_checks`" + `: for an operation no swept verb serves alone, the checks the handler makes, against
+  [rbac-matrix.md](rbac-matrix.md). The gate walks from
   the method ` + "`compose.Server`" + ` serves the operation with, and follows ` + "`auth.Require`" + `, ` + "`auth.RequireAny`" + `,
   ` + "`auth.RequireAdmin`" + ` and ` + "`auth.RequireCoach`" + `. A boolean read such as ` + "`auth.Allows`" + ` or ` + "`auth.ReadGranted`" + `
   refuses nobody by itself, so it counts as conditional.
@@ -57,6 +60,10 @@ The answer for ` + "`rep`" + ` comes from these places, in this order:
   answer, and a missing one where it cannot.
 
 Each operation's group, area, state and how it was decided are in [mcp-parity.json](mcp-parity.json).
+
+The same test writes ` + "`backend/internal/platform/workarea/workareas.json`" + `, which the server reads to hold a passport to the
+areas its user chose. The Passport area column says which switch admits a group's calls. Agent governance is admitted on every
+passport, and operator work follows the Admin settings switch. No agent acts in the public group, whatever its passport.
 
 `
 
@@ -94,9 +101,29 @@ func renderMCPParityPage(report parityReport) []byte {
 		renderParityGroup(&b, group)
 	}
 	b.WriteString(mcpParityMethod)
+	renderParityOperationAreas(&b, report)
 	b.WriteString(mcpParityMisses)
 	b.WriteString(mcpParityRegenerate)
 	return b.Bytes()
+}
+
+// renderParityOperationAreas lists every operation an agent can call under the
+// passport area that admits it, so a reader finds one call's area here.
+func renderParityOperationAreas(b *bytes.Buffer, report parityReport) {
+	b.WriteString("## Each agent operation's passport area\n\n" +
+		"An operation an agent can call, by the passport area that admits it. A passport set to all areas reaches each one.\n\n")
+	for _, group := range report.Groups {
+		var rows []string
+		for _, op := range report.Operations {
+			if op.Group == group.Key && op.Verb != "" {
+				rows = append(rows, fmt.Sprintf("| `%s` | `%s %s` | `%s` |\n", op.OperationID, op.Method, op.Path, op.Verb))
+			}
+		}
+		if len(rows) == 0 {
+			continue
+		}
+		fmt.Fprintf(b, "### %s: %s\n\n| Operation | Route | Verb |\n|---|---|---|\n%s\n", group.Title, group.PassportArea, strings.Join(rows, ""))
+	}
 }
 
 func renderParityHeadline(b *bytes.Buffer, report parityReport) {
@@ -124,16 +151,17 @@ func renderParityGroupSummary(b *bytes.Buffer, report parityReport) {
 	b.WriteString("## The groups\n\nEach operation is in one group. Ask first is a part of Open, so leave it out of a sum. The other state " +
 		"columns can then add up to less than a row's operations, for two reasons. The operations in the public group are in no state an " +
 		"agent has, and the sign-out step is under Password, sessions and second factor.\n\n")
-	b.WriteString("| Group | Operations | Open | Ask first | Pending | Security | Covered | Web app calls | Parity (web app) | Parity (signed-in) |\n")
-	b.WriteString("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
+	b.WriteString("| Group | Passport area | Operations | Open | Ask first | Pending | Security | Covered | Web app calls | Parity (web app) | Parity (signed-in) |\n")
+	b.WriteString("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
 	for _, group := range report.Groups {
-		fmt.Fprintf(b, "| [%s](#%s) | %s |\n", group.Title, markdownAnchor(group.Title), parityRowCells(group.parityCounts, group.Key))
+		fmt.Fprintf(b, "| [%s](#%s) | %s | %s |\n", group.Title, markdownAnchor(group.Title), group.PassportArea,
+			parityRowCells(group.parityCounts, group.Key))
 	}
 	b.WriteString("\n")
 }
 
 func renderParityGroup(b *bytes.Buffer, group parityGroupRow) {
-	fmt.Fprintf(b, "## %s\n\n%s\n\n", group.Title, group.What)
+	fmt.Fprintf(b, "## %s\n\n%s\n\nPassport area: %s.\n\n", group.Title, group.What, group.PassportArea)
 	b.WriteString("| Area | Operations | Open | Ask first | Pending | Security | Covered | Web app calls | Parity (web app) | Parity (signed-in) |\n")
 	b.WriteString("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
 	for _, area := range group.Areas {

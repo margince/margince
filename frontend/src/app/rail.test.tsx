@@ -54,26 +54,10 @@ vi.mock("@composition/extensions", () => ({
   ],
 }));
 
-// B-EP09.4 acceptance, for the SIDEBAR — the left-hand panel and nothing else.
-//
-// It is destinations only: the canonical nav in order (AC-shell-1b —
-// Automations left it for Settings → AI while the filter builder took a row and
-// the duplicate queue is a lane inside Today, a UI divergence on the founder's
-// back-fill list), at most one active item tracking the route (AC-shell-2),
-// badges only on the attention screens and only from live counts (AC-shell-1e),
-// collapsed rows on the expanded rows' own geometry with a dismissible tooltip
-// (AC-shell-1d), and the phone bar with its More sheet. It carries no search
-// row, no collapse control, no Settings door and no account block any more — each of those moved to the top bar
-// (topbar.test.tsx).
-//
-// The second suite is the panel's own DEPTH: a section route replaces the
-// destinations with that section's entries, one level at a time, with the way
-// back up in the panel. A few of those cases drive the whole Shell, because
-// where the reader walked down FROM is remembered above the rail and a rail on
-// its own always answers "brief".
-//
-// What the shell composes around this panel — the page title, the top bar's
-// mounting — is shell.test.tsx's, and sign-out is shell.signout.test.tsx's.
+// What the sidebar promises: the destinations in order, one active row,
+// badges, the collapsed tooltip, and the phone bar with its More menu.
+// The second suite is a section route, whose entries replace the destinations.
+// The shell around the panel is tested in shell.test.tsx.
 
 // Only what a level hides needs the shell's real stylesheet in the document
 // (see mountShellStyles); it outlives cleanup(), so it is taken down here.
@@ -123,6 +107,27 @@ const levelLabels = () => {
     .getAllByRole("link")
     .map((link) => link.getAttribute("aria-label"));
 };
+
+const BAR = ["Home", "Contacts", "Deals"];
+const OFF_BAR = [
+  "Companies",
+  "Leads",
+  "Projects",
+  "Filters and views",
+  "Analytics",
+];
+
+const linksIn = (selector: string) => {
+  const region = document.querySelector<HTMLElement>(selector);
+  if (!region) {
+    throw new Error(`the rail drew no ${selector}`);
+  }
+  return within(region)
+    .getAllByRole("link")
+    .filter((link) => link.classList.contains("navitem"))
+    .map((link) => link.getAttribute("aria-label"));
+};
+const menuLabels = () => linksIn(".railmenu");
 
 // What a level does to the rail's head is CSS, and nothing applies a stylesheet
 // in this environment unless it is in the document. It is the SHELL's own
@@ -332,9 +337,6 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     expect(tip.parentElement).toBe(deals);
   });
 
-  // On a phone the four bar tabs are the only rows rendered, so a route living
-  // in the More sheet has nothing to carry the current-destination state. More
-  // carries it instead, or the bar shows no active tab at all.
   it("marks More as the active tab for a destination the phone bar hides", () => {
     const sheeted = render(<WorkspaceRail route={{ screen: "analytics" }} />);
     const more = sheeted.container.querySelector(".railmore.active");
@@ -369,14 +371,11 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     expect(more?.getAttribute("aria-current")).toBe(claim);
   });
 
-  // Open, the sheet renders the real row for that route, which carries
+  // Open, the menu renders the real row for that route, which carries
   // aria-current itself. Two elements claiming the current page is worse than
   // the visual-only state this replaced.
-  it("hands the current-page claim back to the real row once the sheet is open", async () => {
+  it("hands the current-page claim back to the real row once the menu is open", async () => {
     const user = userEvent.setup();
-    // The sheet exists only at phone width — the control that opens it is not
-    // rendered above the breakpoint, and the rail closes any sheet it finds
-    // itself holding there.
     stubPhoneViewport();
     const { container } = render(
       <WorkspaceRail route={{ screen: "analytics" }} />,
@@ -398,7 +397,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     const { container } = render(<WorkspaceRail route={{ screen: "home" }} />);
     const nav = container.querySelector(".rail");
     const cells = [
-      ...(nav?.querySelectorAll(".navwrap.primary, .arblock, .railmore") ?? []),
+      ...(nav?.querySelectorAll(".navwrap, .arblock, .railmore") ?? []),
     ].map((cell) =>
       cell.classList.contains("navwrap")
         ? (cell.querySelector(".navitem")?.getAttribute("aria-label") ?? "")
@@ -412,18 +411,14 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
   it("keeps Brief on the phone bar and omits the duplicate Worklist destination", async () => {
     const user = userEvent.setup();
     stubPhoneViewport();
-    const { container } = render(<WorkspaceRail route={{ screen: "home" }} />);
-    expect(container.querySelectorAll(".navwrap.primary")).toHaveLength(3);
+    render(<WorkspaceRail route={{ screen: "home" }} />);
+    expect(levelLabels()).toEqual(BAR);
     await user.click(screen.getByRole("button", { name: "More" }));
-    expect(levelLabels()).toContain("Home");
-    expect(levelLabels()).not.toContain("Worklist");
+    expect(menuLabels()).not.toContain("Home");
+    expect(menuLabels()).not.toContain("Worklist");
   });
 
-  // The agent is a cell of the BAR, and the bar is not on screen while the sheet
-  // is. It is not re-parented into the sheet either: a row for it in a list of
-  // ten places would file the agent as an eleventh place to go, which is what
-  // taking it out of that list was for. One block, still mounted, still one Core.
-  it("keeps exactly one agent when the sheet takes the bar's place", async () => {
+  it("keeps exactly one agent, in the bar, while the menu is open", async () => {
     const user = userEvent.setup();
     stubPhoneViewport();
     const { container } = render(<WorkspaceRail route={{ screen: "home" }} />);
@@ -431,41 +426,130 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
 
     await user.click(screen.getByRole("button", { name: "More" }));
     expect(container.querySelectorAll(".arblock")).toHaveLength(1);
+    expect(container.querySelector(".railmenu .arblock")).toBeNull();
   });
 
-  // The sheet is the phone's whole sidebar, and it is navigation and nothing
-  // else: the account menu lives in the top bar, which is on screen at this
-  // width too. A second copy of it down here would be two account affordances
-  // one scroll apart, which is what the sidebar's own foot used to be.
-  it("opens a sheet of destinations and no second account affordance", async () => {
+  // The account menu lives in the top bar, which is on screen at this width too.
+  it("opens a menu of the destinations off the bar and no second account affordance", async () => {
     const user = userEvent.setup();
     stubPhoneViewport();
     const { container } = render(<WorkspaceRail route={{ screen: "home" }} />);
 
     await user.click(screen.getByRole("button", { name: "More" }));
-    expect(levelLabels()).toEqual(CANONICAL_ORDER);
+    expect(menuLabels()).toEqual(OFF_BAR);
+    expect(
+      [...container.querySelectorAll(".rail > .navlevel .navitem")].map((row) =>
+        row.getAttribute("aria-label"),
+      ),
+    ).toEqual(BAR);
+    const menu = container.querySelector<HTMLElement>(".railmenu");
+    expect(
+      [...(menu?.querySelectorAll('[role="group"]') ?? [])].map((group) =>
+        group.getAttribute("aria-labelledby"),
+      ),
+    ).toEqual([
+      "navgroup-nav.group.records",
+      "navgroup-nav.group.work",
+      "navgroup-nav.group.intelligence",
+    ]);
+    // The top bar carries the company's mark at this width, so the menu does not.
+    expect(container.querySelector(".railmenu .railhead")).toBeNull();
     expect(container.querySelector(".accountrows")).toBeNull();
     expect(screen.queryByRole("button", { name: /Account$/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
   });
 
-  // The sheet takes focus when it opens, so dismissing it from INSIDE (Escape, a
-  // click outside) leaves focus on a row that is about to be gone. It goes back
-  // to the control that opened it rather than onto <body> — and only then: a rail
-  // that merely mounts with a row focused must keep that focus where it is.
-  it("hands focus back to More when the sheet is dismissed from inside it", async () => {
+  it("closes the menu when More is pressed again, and keeps focus on it", async () => {
+    const user = userEvent.setup();
+    stubPhoneViewport();
+    const { container } = render(<WorkspaceRail route={{ screen: "home" }} />);
+    const more = screen.getByRole("button", { name: "More" });
+    expect(more.getAttribute("aria-expanded")).toBe("false");
+
+    await user.click(more);
+    expect(more.getAttribute("aria-expanded")).toBe("true");
+    expect(more.getAttribute("aria-label")).toBe("Close");
+
+    await user.click(more);
+    expect(container.querySelector(".railmenu")).toBeNull();
+    expect(more.getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(more);
+  });
+
+  // The menu took focus, so focus lost with it goes back to More, not to <body>.
+  it("hands focus back to More when the menu is dismissed by Escape", async () => {
     const user = userEvent.setup();
     stubPhoneViewport();
     render(<WorkspaceRail route={{ screen: "home" }} />);
     await user.click(screen.getByRole("button", { name: "More" }));
     expect(document.activeElement).toBe(
-      screen.getByRole("link", { name: "Home" }),
+      screen.getByRole("link", { name: "Companies" }),
     );
 
     await user.keyboard("{Escape}");
+    expect(screen.queryByRole("link", { name: "Companies" })).toBeNull();
     expect(document.activeElement).toBe(
       screen.getByRole("button", { name: "More" }),
     );
+  });
+
+  it("closes the menu on a press on the scrim, and hands focus to More", async () => {
+    const user = userEvent.setup();
+    stubPhoneViewport();
+    const { container } = render(<WorkspaceRail route={{ screen: "home" }} />);
+    await user.click(screen.getByRole("button", { name: "More" }));
+    const scrim = container.querySelector(".railscrim");
+    if (!(scrim instanceof HTMLElement)) {
+      throw new Error("the open menu drew no scrim");
+    }
+
+    await user.click(scrim);
+    expect(container.querySelector(".railmenu")).toBeNull();
+    expect(container.querySelector(".railscrim")).toBeNull();
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "More" }),
+    );
+  });
+
+  // The agent's panel would otherwise open under the scrim. The press keeps the
+  // focus it gave its own control, so More does not take it back.
+  it.each([
+    ["a bar destination", () => screen.getByRole("link", { name: "Deals" })],
+    [
+      "the agent",
+      () => {
+        const orb = document.querySelector(".rail .artoggle");
+        if (!(orb instanceof HTMLElement)) {
+          throw new Error("the bar drew no agent");
+        }
+        return orb;
+      },
+    ],
+  ])("closes the menu on a press on %s", async (_, target) => {
+    const user = userEvent.setup();
+    stubPhoneViewport();
+    const { container } = render(<WorkspaceRail route={{ screen: "home" }} />);
+    await user.click(screen.getByRole("button", { name: "More" }));
+
+    const pressed = await waitFor(target);
+    await user.click(pressed);
+    expect(container.querySelector(".railmenu")).toBeNull();
+    expect(container.querySelector(".railscrim")).toBeNull();
+    expect(document.activeElement).toBe(pressed);
+  });
+
+  it("tabs through the menu's rows and then the bar's", async () => {
+    const user = userEvent.setup();
+    stubPhoneViewport();
+    render(<WorkspaceRail route={{ screen: "home" }} />);
+    await user.click(screen.getByRole("button", { name: "More" }));
+
+    const walked = [document.activeElement?.getAttribute("aria-label")];
+    for (let step = 0; step < OFF_BAR.length; step++) {
+      await user.tab();
+      walked.push(document.activeElement?.getAttribute("aria-label"));
+    }
+    expect(walked).toEqual([...OFF_BAR, "Home"]);
   });
 });
 
@@ -784,7 +868,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
         section={fixtureSection("account")}
       />,
     );
-    expect(levelLabels()).toEqual(CANONICAL_ORDER);
+    expect(levelLabels()).toEqual(BAR);
     // No level at all: no entries, no way back up, and no `leveled` arrangement
     // for the bar to be rearranged by.
     expect(
@@ -795,10 +879,10 @@ describe("Rail levels (a section's entries as the second level)", () => {
       screen.getByRole("navigation", { name: "Primary navigation" }).className,
     ).not.toContain("leveled");
 
-    // And the sheet is what it was before levels existed: every destination, and
+    // And the menu holds the destinations off the bar, and
     // still no entry of the section the reader is standing in.
     await user.click(screen.getByRole("button", { name: "More" }));
-    expect(levelLabels()).toEqual(CANONICAL_ORDER);
+    expect(menuLabels()).toEqual(OFF_BAR);
     expect(
       screen.queryByRole("link", { name: "Privacy and retention" }),
     ).toBeNull();

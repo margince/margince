@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -124,4 +125,36 @@ func TestAReceiptReplayCannotCreateAnotherTaskAfterItsFirstTaskIsCompleted(t *te
 	if err != nil || created || replay.Id != first.Id || e.WsCount(t, "SELECT count(*) FROM activity WHERE kind='task'") != before {
 		t.Fatalf("receipt replay minted another task: original=%s replay=%s created=%t err=%v", first.Id, replay.Id, created, err)
 	}
+}
+
+// A follow-up accepted from a suggestion carries no date, and still shows in
+// its reader's own task lane: the lane Home and the Worklist read.
+func TestAnUndatedAcceptedFollowUpShowsWithTheReadersTasks(t *testing.T) {
+	e := setupVerdicts(t)
+	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	at := time.Date(2026, 10, 12, 9, 0, 0, 0, time.UTC)
+	cards := newDealStatusService(e.Pool, func() time.Time { return at })
+	card, err := cards.ReadFacts(reader, ids.From[ids.DealKind](e.calm))
+	if err != nil || card.Next == nil {
+		t.Fatalf("initial recommendation: %+v, %v", card.Next, err)
+	}
+	store := activities.NewStore(e.DB()).WithClock(func() time.Time { return at }).WithTaskRecommendation(taskRecommendationFrom(cards))
+	task, created, err := store.LogActivity(reader, suggestedTaskInput(t, card.Next))
+	if err != nil || !created || task.DueAt != nil {
+		t.Fatalf("accepting the suggestion: created=%t due=%v err=%v, want one undated task", created, task.DueAt, err)
+	}
+	in, ok := openTasksDueBy(reader, at, at.Add(24*time.Hour), attention.TasksMine, ids.UUID{}, nil)
+	if !ok {
+		t.Fatal("no reader to answer for")
+	}
+	rows, _, err := store.ListActivities(reader, in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range rows {
+		if row.Id == task.Id {
+			return
+		}
+	}
+	t.Fatalf("the accepted follow-up %s is missing from the reader's tasks (%d rows)", task.Id, len(rows))
 }

@@ -428,14 +428,14 @@ describe("a response that arrives late", () => {
     );
     await waitFor(() => expect(releaseDefault).toBeDefined());
     await chooseAllPipelines(user);
-    expect(await screen.findByText("990,000 EUR")).toBeVisible();
+    expect(await screen.findByText("€990,000")).toBeVisible();
 
     releaseDefault?.();
     await waitFor(() =>
       expect(salesAsked(asked)[0].signal?.aborted).toBe(true),
     );
-    expect(screen.getByText("990,000 EUR")).toBeVisible();
-    expect(screen.queryByText("110,000 EUR")).toBeNull();
+    expect(screen.getByText("€990,000")).toBeVisible();
+    expect(screen.queryByText("€110,000")).toBeNull();
   });
 });
 

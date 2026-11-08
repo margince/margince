@@ -44,7 +44,8 @@ type Story = StoryObj<typeof BriefSuggestions>;
 export const StoredRun: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByText(en["brief.suggestions.review"]));
+    // The opener waits for the run and counts the deals with a finding.
+    await userEvent.click(await canvas.findByText("Review 1 deal suggestion"));
     await expect(
       await canvas.findByRole("link", { name: "Acme rollout" }),
     ).toBeVisible();
@@ -79,7 +80,10 @@ export const NotAnnotated: Story = {
   ],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByText(en["brief.suggestions.review"]));
+    // No deal has a finding, so the opener names no count.
+    await userEvent.click(
+      await canvas.findByText(en["brief.suggestions.review"]),
+    );
     await expect(
       await canvas.findByText(en["brief.suggestions.notAnnotated"]),
     ).toBeVisible();

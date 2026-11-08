@@ -60,6 +60,7 @@ export function agentClientList(
     data: [...data],
     page: { next_cursor: nextCursor, has_more: nextCursor !== null },
     registration,
+    client_check: false,
   };
 }
 

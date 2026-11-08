@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 )
 
 // dealImportParts maps a deals file's header onto the targets of the same
@@ -74,7 +75,7 @@ func dealNamed(t *testing.T, e *apptest.AppEnv, name string) importedDeal {
 
 // importDeals uploads a deals file (with any other files), stages it, commits
 // it and answers the finished report.
-func importDeals(t *testing.T, e *apptest.AppEnv, files map[string]string, parts []AnyMap) (importRunDTO, importReportDTO) {
+func importDeals(t *testing.T, e *apptest.AppEnv, files map[string]string, parts []AnyMap) (importjobtest.Run, importReportDTO) {
 	t.Helper()
 	run := stageBundle(t, e, uploadZip(t, e, "crm.zip", zipBytes(t, files)).SourceRef, "crm", parts)
 	approveAndRead(t, e, run.ID)

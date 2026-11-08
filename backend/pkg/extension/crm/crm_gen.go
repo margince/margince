@@ -288,6 +288,24 @@ func (e ActivityAuthorKind) Valid() bool {
 	}
 }
 
+// Defines values for ActivityDealFilingRecordType.
+const (
+	ActivityDealFilingRecordTypeCompany ActivityDealFilingRecordType = "company"
+	ActivityDealFilingRecordTypeContact ActivityDealFilingRecordType = "contact"
+)
+
+// Valid indicates whether the value is a known member of the ActivityDealFilingRecordType enum.
+func (e ActivityDealFilingRecordType) Valid() bool {
+	switch e {
+	case ActivityDealFilingRecordTypeCompany:
+		return true
+	case ActivityDealFilingRecordTypeContact:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityEmailTargetEntityType.
 const (
 	ActivityEmailTargetEntityTypeCompany ActivityEmailTargetEntityType = "company"
@@ -1688,6 +1706,9 @@ type Activity struct {
 	// CallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.
 	CallOutcome *ActivityCallOutcome `json:"call_outcome,omitempty"`
 
+	// CanShareInternal Whether this caller may replace selected individual readers of this internal operational message. Absent for ordinary or withheld activities.
+	CanShareInternal *bool `json:"can_share_internal,omitempty"`
+
 	// CaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
 	CaptureLabel *ActivityCaptureLabel `json:"capture_label,omitempty"`
 
@@ -1743,7 +1764,7 @@ type Activity struct {
 	Guests *[]MeetingGuest `json:"guests,omitempty"`
 
 	// GuestsLeftOut Meeting only: how many outside guests of a meeting past the party cap are not listed, because a crowded meeting keeps at most 200 by address. Filled and withheld like `guests`.
-	GuestsLeftOut *int `json:"guests_left_out,omitempty"`
+	GuestsLeftOut *int `json:"guests_left_out,omitempty" minimum:"0"`
 
 	// HostUserId Meeting only: the member of this company who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
 	HostUserId *string `json:"host_user_id,omitempty"`
@@ -1807,7 +1828,7 @@ type Activity struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
 	// Voice Who wrote this activity and what part the page's contact had in it. Filled on list, detail and 360 reads. Withheld with the content: absent whenever `content_state` is `withheld`.
 	Voice *ActivityVoice `json:"voice,omitempty"`
@@ -1875,6 +1896,20 @@ type ActivityAuthor struct {
 
 // ActivityAuthorKind `colleague` is a seat in this workspace, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
 type ActivityAuthorKind string
+
+// ActivityDealFiling defines model for ActivityDealFiling.
+type ActivityDealFiling struct {
+	// DealId Explicitly selected deal; omitted for automatic filing.
+	DealId     *string                      `json:"deal_id,omitempty"`
+	RecordId   string                       `json:"record_id"`
+	RecordType ActivityDealFilingRecordType `json:"record_type"`
+
+	// Skip True explicitly chooses no deal. Otherwise the one-open-deal rule applies unless links already name a deal.
+	Skip *bool `json:"skip,omitempty"`
+}
+
+// ActivityDealFilingRecordType defines model for ActivityDealFilingRecordType.
+type ActivityDealFilingRecordType string
 
 // ActivityEmailTarget The record an email about this call, meeting, note or task goes to. It is the row's one linked contact. A task with no single contact goes on to its one live linked lead, and then to its one linked company; two live leads name nobody. A task whose only lead is closed and that names no company gets that lead, refused. Absent where the row names no target, on the same rows `offers_email` is always false for, and for a record this caller may not read. A client offers Write email or Draft email when this is present without `refusal`, and says the refusal otherwise.
 type ActivityEmailTarget struct {
@@ -2040,7 +2075,10 @@ type Company struct {
 
 	// AddressCountryMismatch Present only when the stored address country is none of the countries the postal code and city resolve to. Absent when one of them matches, when the address has not been checked yet, or when it carries no postal code, city or assigned country code.
 	AddressCountryMismatch *AddressCountryMismatch `json:"address_country_mismatch,omitempty"`
-	ArchivedAt             *time.Time              `json:"archived_at,omitempty"`
+
+	// Archivable Whether THIS caller may archive THIS company: the row write gate `writable` asks, plus the `company:delete` grant or being the company's owner with `company:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
+	Archivable *bool      `json:"archivable,omitempty"`
+	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
 	// AssessAgainstEntityId The legal entity whose offering the growth fit judges this company against. Null means the main offering.
 	AssessAgainstEntityId *string `json:"assess_against_entity_id,omitempty"`
@@ -2058,7 +2096,7 @@ type Company struct {
 	ComputedFields *[]ComputedField `json:"computed_fields,omitempty"`
 
 	// ContactCount How many distinct live contacts THE CALLER MAY SEE hold a current job at this account (PO-EXT-10; AC-companies-2/3's Contacts column). Counted under the caller's contact row scope, exactly as the contact list is: a count is a read, and a number that moved when a colleague captured a private contact would disclose that contact. Present, zero included, on `listCompanies` and `getCompany` — the reads that render the column, and ABSENT entirely for a role without `contact:read` OR without `relationship:read` (the object grants come first, as on the contact list) — the number is a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the employment list; write responses (create, update, archive, merge) omit it. Never client-supplied.
-	ContactCount *int      `json:"contact_count,omitempty"`
+	ContactCount *int      `json:"contact_count,omitempty" minimum:"0"`
 	CreatedAt    time.Time `json:"created_at"`
 
 	// CreatedBy Who created the company, from its earliest create audit row, read the way
@@ -2116,7 +2154,7 @@ type Company struct {
 	MergedIntoId *string `json:"merged_into_id,omitempty"`
 
 	// OpenDealCount How many open, live deals belong to this account (PO-EXT-10; AC-companies-2/3's Open deals column), counted across the WHOLE workspace — the same population the account's `computed_fields` open-pipeline row sums (founder decision 2026-08-18: a pipeline figure on an account is a fact about the account, not about who may open each deal). The key is ABSENT entirely, not 0, for a role without `deal:read` or without `computed_field:read` (STATE-4, the `computed_fields` gate). Present on `listCompanies` and `getCompany`; write responses omit it.
-	OpenDealCount *int    `json:"open_deal_count,omitempty"`
+	OpenDealCount *int    `json:"open_deal_count,omitempty" minimum:"0"`
 	OwnerId       *string `json:"owner_id,omitempty"`
 
 	// ParentCompanyId Single-level hierarchy FK; no cycles.
@@ -2148,7 +2186,7 @@ type Company struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
 	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
 	Visibility *CompanyVisibility `json:"visibility,omitempty"`
@@ -2243,6 +2281,7 @@ type CreateActivityRequest struct {
 	// `422 code: field_not_valid_for_kind`. Must name a provider this installation has
 	// registered.
 	ChannelProvider *ProviderRef                    `json:"channel_provider,omitempty"`
+	DealFiling      *ActivityDealFiling             `json:"deal_filing,omitempty"`
 	Direction       *CreateActivityRequestDirection `json:"direction,omitempty"`
 	DueAt           *time.Time                      `json:"due_at,omitempty"`
 
@@ -2432,7 +2471,7 @@ type Deal struct {
 	StageId *string `json:"stage_id"`
 
 	// StageWinProbability The probability of the deal's current stage, so a client can show it beside a probability set on the deal.
-	StageWinProbability *int `json:"stage_win_probability,omitempty"`
+	StageWinProbability *int `json:"stage_win_probability,omitempty" maximum:"100" minimum:"0"`
 
 	// Stalled Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off.
 	Stalled   *bool      `json:"stalled,omitempty"`
@@ -2444,13 +2483,19 @@ type Deal struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
 	// WaitUntil 'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag.
 	WaitUntil *string `json:"wait_until,omitempty"`
 
 	// WinProbability The chance this deal is won, in percent: the deal's own probability where somebody set one, else its stage's. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability.
-	WinProbability *int `json:"win_probability,omitempty"`
+	WinProbability *int `json:"win_probability,omitempty" maximum:"100" minimum:"0"`
+
+	// WinProbabilitySetByName The display name of `win_probability_set_by_user_id`, so the deal can say who set its probability.
+	WinProbabilitySetByName *string `json:"win_probability_set_by_name,omitempty"`
+
+	// WinProbabilitySetByUserId The colleague who set `win_probability`, read from the newest change of it: the member who typed it, or the member an agent set it for. Absent unless `win_probability_source` is `human`, and when that member's seat no longer exists.
+	WinProbabilitySetByUserId *string `json:"win_probability_set_by_user_id,omitempty"`
 
 	// WinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
 	WinProbabilitySource *DealWinProbabilitySource `json:"win_probability_source,omitempty"`
@@ -2739,10 +2784,10 @@ type Partner struct {
 	PartnerFitOverrideReason *string `json:"partner_fit_override_reason,omitempty"`
 
 	// PartnerFitScore Current partner-fit score; if partner_fit_override_reason is non-null this is the Commercial Judgement value.
-	PartnerFitScore *int `json:"partner_fit_score,omitempty"`
+	PartnerFitScore *int `json:"partner_fit_score,omitempty" maximum:"100" minimum:"0"`
 
 	// PartnerFitScoreComputed Retained machine-computed partner-fit value while a Commercial Judgement override is in force.
-	PartnerFitScoreComputed *int `json:"partner_fit_score_computed,omitempty"`
+	PartnerFitScoreComputed *int `json:"partner_fit_score_computed,omitempty" maximum:"100" minimum:"0"`
 
 	// PartnerKinds What the partner does with us, one or more kinds, sorted and without repeats. Empty only on a partner recorded before kinds existed with no role.
 	PartnerKinds *[]PartnerKind `json:"partner_kinds,omitempty"`
@@ -2775,7 +2820,7 @@ type Partner struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 }
 
 // PartnerActivationBasis What activated the partner; a partner stands on a stage meaning `active` only once this is set. `recorded_before_ladder` marks a partner that already stood on an active or dormant stage when the stage list was introduced.
@@ -2866,14 +2911,14 @@ type RelationshipStrength struct {
 
 	// Factors The 0..1 sub-scores the composite was built from (the explanation).
 	Factors struct {
-		Direction   float32 `json:"direction"`
-		Frequency   float32 `json:"frequency"`
-		Recency     float32 `json:"recency"`
-		Reciprocity float32 `json:"reciprocity"`
+		Direction   float32 `json:"direction" maximum:"1" minimum:"0"`
+		Frequency   float32 `json:"frequency" maximum:"1" minimum:"0"`
+		Recency     float32 `json:"recency" maximum:"1" minimum:"0"`
+		Reciprocity float32 `json:"reciprocity" maximum:"1" minimum:"0"`
 	} `json:"factors"`
 
 	// Inbound90d Count of qualifying inbound interactions in the trailing 90-day window.
-	Inbound90d *int `json:"inbound_90d,omitempty"`
+	Inbound90d *int `json:"inbound_90d,omitempty" minimum:"0"`
 
 	// LastEngaged The newest interaction the contact took part in: a message they sent, or a meeting or call that took place. Recency counts from it, so our own unanswered send does not move it. Null when the contact never took part.
 	LastEngaged *time.Time `json:"last_engaged,omitempty"`
@@ -2882,10 +2927,10 @@ type RelationshipStrength struct {
 	LastInteraction *time.Time `json:"last_interaction,omitempty"`
 
 	// Outbound90d Count of qualifying outbound interactions in the trailing 90-day window.
-	Outbound90d *int `json:"outbound_90d,omitempty"`
+	Outbound90d *int `json:"outbound_90d,omitempty" minimum:"0"`
 
 	// Score 0..100 composite.
-	Score int `json:"score"`
+	Score int `json:"score" maximum:"100" minimum:"0"`
 }
 
 // RelationshipStrengthBucket Coarse band derived from score for display — the same vocabulary every strength band on the wire uses.
@@ -2954,7 +2999,7 @@ type Signal struct {
 	// says how it stands now. Every append is kept, and an audit reader
 	// is where the earlier ones belong.
 	Resolution           *SignalResolution `json:"resolution,omitempty"`
-	ResolutionConfidence *float32          `json:"resolution_confidence,omitempty"`
+	ResolutionConfidence *float32          `json:"resolution_confidence,omitempty" maximum:"1" minimum:"0"`
 
 	// ResolutionState The raw→entity match outcome: an ambiguous match is `low_confidence` (surfaced, never silently asserted); an unattributable one is `dropped`.
 	ResolutionState SignalResolutionState `json:"resolution_state"`
@@ -2982,7 +3027,7 @@ type Signal struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty"`
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 }
 
 // SignalEntityType The subject record the signal is about; null until a raw signal resolves (both entity fields set together).
@@ -3091,10 +3136,10 @@ type SourceAuthor struct {
 // SourceQuoteProof A source span whose words are reconstructed only after source content authorization. Offsets count UTF-8 bytes after collapsing whitespace; the digest covers the entire normalized source message.
 type SourceQuoteProof struct {
 	// Cut How the source message was cut before it was hashed, so a proof verifies against the same text. Absent on a proof stored before cuts were named.
-	Cut    *int   `json:"cut,omitempty"`
-	End    int    `json:"end"`
+	Cut    *int   `json:"cut,omitempty" minimum:"0"`
+	End    int    `json:"end" minimum:"1"`
 	Sha256 string `json:"sha256"`
-	Start  int    `json:"start"`
+	Start  int    `json:"start" minimum:"0"`
 }
 
 // WebFormConsent The consent box the form showed. Absent when the form shows none.
@@ -3287,6 +3332,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'call_outcome': %w", err)
 		}
 		delete(object, "call_outcome")
+	}
+
+	if raw, found := object["can_share_internal"]; found {
+		err = json.Unmarshal(raw, &a.CanShareInternal)
+		if err != nil {
+			return fmt.Errorf("error reading 'can_share_internal': %w", err)
+		}
+		delete(object, "can_share_internal")
 	}
 
 	if raw, found := object["capture_label"]; found {
@@ -3755,6 +3808,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["call_outcome"], err = json.Marshal(a.CallOutcome)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'call_outcome': %w", err)
+		}
+	}
+
+	if a.CanShareInternal != nil {
+		object["can_share_internal"], err = json.Marshal(a.CanShareInternal)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'can_share_internal': %w", err)
 		}
 	}
 
@@ -4241,6 +4301,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "address_country_mismatch")
 	}
 
+	if raw, found := object["archivable"]; found {
+		err = json.Unmarshal(raw, &a.Archivable)
+		if err != nil {
+			return fmt.Errorf("error reading 'archivable': %w", err)
+		}
+		delete(object, "archivable")
+	}
+
 	if raw, found := object["archived_at"]; found {
 		err = json.Unmarshal(raw, &a.ArchivedAt)
 		if err != nil {
@@ -4586,6 +4654,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.Archivable != nil {
+		object["archivable"], err = json.Marshal(a.Archivable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'archivable': %w", err)
+		}
+	}
+
 	if a.ArchivedAt != nil {
 		object["archived_at"], err = json.Marshal(a.ArchivedAt)
 		if err != nil {
@@ -4921,6 +4996,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "channel_provider")
 	}
 
+	if raw, found := object["deal_filing"]; found {
+		err = json.Unmarshal(raw, &a.DealFiling)
+		if err != nil {
+			return fmt.Errorf("error reading 'deal_filing': %w", err)
+		}
+		delete(object, "deal_filing")
+	}
+
 	if raw, found := object["direction"]; found {
 		err = json.Unmarshal(raw, &a.Direction)
 		if err != nil {
@@ -5188,6 +5271,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["channel_provider"], err = json.Marshal(a.ChannelProvider)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'channel_provider': %w", err)
+		}
+	}
+
+	if a.DealFiling != nil {
+		object["deal_filing"], err = json.Marshal(a.DealFiling)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'deal_filing': %w", err)
 		}
 	}
 
@@ -5786,6 +5876,22 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "win_probability")
 	}
 
+	if raw, found := object["win_probability_set_by_name"]; found {
+		err = json.Unmarshal(raw, &a.WinProbabilitySetByName)
+		if err != nil {
+			return fmt.Errorf("error reading 'win_probability_set_by_name': %w", err)
+		}
+		delete(object, "win_probability_set_by_name")
+	}
+
+	if raw, found := object["win_probability_set_by_user_id"]; found {
+		err = json.Unmarshal(raw, &a.WinProbabilitySetByUserId)
+		if err != nil {
+			return fmt.Errorf("error reading 'win_probability_set_by_user_id': %w", err)
+		}
+		delete(object, "win_probability_set_by_user_id")
+	}
+
 	if raw, found := object["win_probability_source"]; found {
 		err = json.Unmarshal(raw, &a.WinProbabilitySource)
 		if err != nil {
@@ -6145,6 +6251,20 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["win_probability"], err = json.Marshal(a.WinProbability)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'win_probability': %w", err)
+		}
+	}
+
+	if a.WinProbabilitySetByName != nil {
+		object["win_probability_set_by_name"], err = json.Marshal(a.WinProbabilitySetByName)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'win_probability_set_by_name': %w", err)
+		}
+	}
+
+	if a.WinProbabilitySetByUserId != nil {
+		object["win_probability_set_by_user_id"], err = json.Marshal(a.WinProbabilitySetByUserId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'win_probability_set_by_user_id': %w", err)
 		}
 	}
 

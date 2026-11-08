@@ -255,13 +255,6 @@ export const AiAccessDevelopersOpen: Story = {
   play: async ({ canvasElement }) => openDevelopers(canvasElement),
 };
 
-export const AiAccessCodingAgents: Story = {
-  name: "AI access — coding agents",
-  render: tab("agents", aiAccessRoutes),
-  play: async ({ canvasElement }) =>
-    openDevelopers(canvasElement, "Coding agents"),
-};
-
 export const AiAccessAgentRules: Story = {
   name: "AI access — agent rules",
   render: tab("agents", aiAccessRoutes),
@@ -269,16 +262,14 @@ export const AiAccessAgentRules: Story = {
     openDevelopers(canvasElement, "Agent rules"),
 };
 
-// The connector switched off: the picker and the coding-agents card both say so
-// and say what still works. It is the state a default install is in.
+// The connector switched off: the picker says so and what still works. It is
+// the state a default install is in.
 export const AiAccessConnectorOff: Story = {
   name: "AI access — connector off",
   render: tab("agents", {
     ...aiAccessRoutes,
     "GET /.well-known/oauth-protected-resource": connectorOff,
   }),
-  play: async ({ canvasElement }) =>
-    openDevelopers(canvasElement, "Coding agents"),
 };
 
 // The row's menu opens the revoke confirm, left open here so the guarded
@@ -660,7 +651,6 @@ export const TeamsPage: Story = catalogPage("teams");
 export const RolesPage: Story = catalogPage("roles");
 export const SeatsPage: Story = catalogPage("seats");
 export const PipelinesPage: Story = catalogPage("pipelines");
-export const StageautomationPage: Story = catalogPage("stageautomation");
 export const LeadsPage: Story = catalogPage("leads");
 export const AcquisitionPage: Story = catalogPage("acquisition");
 export const LossreasonsPage: Story = catalogPage("lossreasons");

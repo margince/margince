@@ -4,16 +4,9 @@ import { useT } from "../i18n";
 import {
   setThemeChoice,
   THEME_CHOICES,
-  type ThemeChoice,
+  THEME_LABEL_KEYS,
   useThemeChoice,
 } from "../lib/theme";
-
-/** The appearance choices, in the order the submenu shows them, named. */
-export const THEME_LABEL_KEYS = {
-  light: "theme.light",
-  dark: "theme.dark",
-  system: "theme.system",
-} as const satisfies Record<ThemeChoice, string>;
 
 /**
  * Light / Dark / System: one question with three answers, so it is built on

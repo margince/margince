@@ -22,42 +22,67 @@ import (
 // ListStops reads the live stops on a contact, each with the lift verdict this
 // caller would get from Lift.
 func (s *Store) ListStops(ctx context.Context, contactID ids.ContactID) ([]crmcontracts.ContactStop, error) {
-	if err := auth.Require(ctx, entityContact, principal.ActionRead); err != nil {
+	return s.stopsOfSubject(ctx, RecordInput{ContactID: contactID})
+}
+
+// ListLeadStops is ListStops for a lead.
+func (s *Store) ListLeadStops(ctx context.Context, leadID ids.LeadID) ([]crmcontracts.ContactStop, error) {
+	return s.stopsOfSubject(ctx, RecordInput{LeadID: leadID})
+}
+
+func (s *Store) stopsOfSubject(ctx context.Context, in RecordInput) ([]crmcontracts.ContactStop, error) {
+	sub, err := consentSubject(in)
+	if err != nil {
+		return nil, err
+	}
+	if err := requireReadOnSubject(ctx, sub.entityType); err != nil {
 		return nil, err
 	}
 	caller := lifterOf(ctx)
 	var out []crmcontracts.ContactStop
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureReadable(ctx, tx, entityContact, contactID.UUID); err != nil {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := auth.EnsureReadable(ctx, tx, sub.entityType, sub.id); err != nil {
 			return err
 		}
-		admitted, err := mayLiftOn(ctx, tx, contactID.UUID)
+		admitted, err := mayLiftOn(ctx, tx, sub)
 		if err != nil {
 			return err
 		}
+		where, addressArgs, err := liveStopsOf(ctx, tx, sub)
+		if err != nil {
+			return err
+		}
+		// The colleague is named only while the carry chain still reaches the
+		// row they typed. A chain whose first row is gone ends at a copy, whose
+		// captured_by is whoever merged.
 		rows, err := tx.Query(ctx, `
 			WITH live AS (
 			  SELECT s.id, s.kind, s.decided_by_level, s.source, s.recorded_at, s.address,
-			         s.contact_id IS NULL AS pinned, s.purpose_id,
+			         s.`+sub.column+` IS NULL AS pinned, s.purpose_id, s.recorded_through,
 			         `+originColumnSQL("s", "captured_by")+` AS origin,
 			         `+originColumnSQL("s", "source")+` AS origin_source
 			    FROM communication_suppression s
-			   WHERE `+contactLiveStopsSQL+`)
+			   WHERE `+where+`)
 			SELECT live.id, live.kind, live.decided_by_level, live.source, live.recorded_at,
-			       live.address, live.pinned, cp.key, live.origin, live.origin_source, u.display_name
+			       live.address, live.pinned, cp.key, live.recorded_through,
+			       CASE WHEN live.recorded_through IN ($5, $7) AND NOT starts_with(live.origin_source, $6)
+			            THEN u.display_name END
 			  FROM live
 			  LEFT JOIN consent_purpose cp ON cp.id = live.purpose_id
-			  LEFT JOIN app_user u ON live.origin = $2 || u.id::text
+			  LEFT JOIN passport p ON live.origin = $8 || p.id::text
+			  LEFT JOIN app_user u ON live.origin = $4 || u.id::text OR u.id = p.on_behalf_of
 			 ORDER BY live.recorded_at DESC, live.id`,
-			contactID, principal.HumanIDPrefix)
+			append([]any{sub.id}, append(addressArgs,
+				principal.HumanIDPrefix, string(commsauthz.RecordedByColleague), carriedSourceMark,
+				string(commsauthz.RecordedByAgent), passportAgentPrefix)...)...)
 		if err != nil {
-			return fmt.Errorf("consent: reading the contact's stops: %w", err)
+			return fmt.Errorf("consent: reading the subject's stops: %w", err)
 		}
 		out, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (crmcontracts.ContactStop, error) {
 			return scanStop(row, caller, admitted)
 		})
 		if err != nil {
-			return fmt.Errorf("consent: reading the contact's stops: %w", err)
+			return fmt.Errorf("consent: reading the subject's stops: %w", err)
 		}
 		return nil
 	})
@@ -69,22 +94,21 @@ func (s *Store) ListStops(ctx context.Context, contactID ids.ContactID) ([]crmco
 
 func scanStop(row pgx.CollectableRow, caller lifter, admitted bool) (crmcontracts.ContactStop, error) {
 	var (
-		id                     ids.UUID
-		kind, decided, source  string
-		origin, originSource   string
-		recordedAt             time.Time
-		address, purpose, name *string
-		pinned                 bool
+		id                             ids.UUID
+		kind, decided, source, through string
+		recordedAt                     time.Time
+		address, purpose, name         *string
+		pinned                         bool
 	)
 	if err := row.Scan(&id, &kind, &decided, &source, &recordedAt,
-		&address, &pinned, &purpose, &origin, &originSource, &name); err != nil {
+		&address, &pinned, &purpose, &through, &name); err != nil {
 		return crmcontracts.ContactStop{}, err
 	}
 	verdict := liftVerdict{blockedBy: crmcontracts.ContactStopLiftBlockedByPermission}
 	if admitted {
 		verdict = judgeLift(caller, stopFacts{
 			kind: kind, decided: commsauthz.AuthorityLevel(decided),
-			origin: origin, originSource: originSource, pinned: pinned,
+			through: commsauthz.RecordedThrough(through), pinned: pinned,
 		})
 	}
 	stop := crmcontracts.ContactStop{
@@ -95,7 +119,7 @@ func scanStop(row pgx.CollectableRow, caller lifter, admitted bool) (crmcontract
 		Address:             address,
 		Reason:              reasonFromSource(source),
 		RecordedAt:          recordedAt,
-		RecordedByColleague: strings.HasPrefix(origin, principal.HumanIDPrefix),
+		RecordedByColleague: recordedForASeat(commsauthz.RecordedThrough(through)),
 		RecordedByName:      name,
 		MayLift:             verdict.may,
 		Correction:          verdict.correction,

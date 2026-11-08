@@ -30,6 +30,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Markup with placeholders, which is the same in every language.
   // Only placeholders and punctuation, with no word to translate.
   "compose.aboutWhen",
+  "changes.check.outcome",
   "captureConcern.title",
   "companyReach.functionCount",
   "deal.committee.seatSub",
@@ -227,7 +228,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "analytics.sectionPipeline",
   "reporting.pipeline",
   "lead.qualify.pipeline",
-  "stageAutomation.pipeline",
   "review.colDeal",
   "worklist.category.leads",
   "filters.sentence.ref.pipeline_one",
@@ -312,6 +312,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "search.kind.lead",
   // The same loanword, naming the record an approval's evidence came from.
   "decision.evidenceSource.deal",
+  "worklist.pane.deal",
 
   // "Cc" is the mail header itself, which vi writes as the Latin abbreviation
   // exactly as en does. Translating it would name a field no mail client
@@ -538,8 +539,10 @@ const OWNER_WORD: Record<string, string> = {
 describe("the owner and the responsibility roles", () => {
   it("names the owner's word for every locale, as its label says it", () => {
     for (const [locale, catalog] of Object.entries(catalogs)) {
+      const owner = catalog["list.owner"];
+      if (!owner) throw new Error("The locale catalog was not loaded");
       expect(
-        catalog["list.owner"].toLowerCase(),
+        owner.toLowerCase(),
         `${locale}: the owner's word is missing`,
       ).toContain(OWNER_WORD[locale]);
     }

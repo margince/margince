@@ -27,9 +27,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
-// LiftInput names the suppression to take back and why.
+// LiftInput names the suppression to take back and why. It names one subject,
+// a contact or a lead.
 type LiftInput struct {
 	ContactID ids.ContactID
+	LeadID    ids.LeadID
 	// SuppressionID is the row, not the contact: a subject may carry more than
 	// one stop, and lifting "the suppression" would silently take back whichever
 	// the query happened to return first.
@@ -55,7 +57,7 @@ func (s *Store) Lift(ctx context.Context, in LiftInput) error {
 
 // admitLift settles what is decidable before a connection is taken.
 func admitLift(ctx context.Context, in LiftInput) (subject, lifter, error) {
-	sub, err := consentSubject(RecordInput{ContactID: in.ContactID})
+	sub, err := consentSubject(RecordInput{ContactID: in.ContactID, LeadID: in.LeadID})
 	if err != nil {
 		return subject{}, lifter{}, err
 	}
@@ -68,23 +70,24 @@ func admitLift(ctx context.Context, in LiftInput) (subject, lifter, error) {
 	if err := requireReason(in.Reason, "taking back a stop"); err != nil {
 		return subject{}, lifter{}, err
 	}
-	if err := admitLifter(ctx); err != nil {
+	if err := admitLifter(ctx, sub.entityType); err != nil {
 		return subject{}, lifter{}, err
 	}
 	return sub, lifterOf(ctx), nil
 }
 
-// admitLifter is the caller half of a lift, which the list of stops asks too:
-// a colleague, or an agent on their passport, holding contact:update.
-// auth.RequireHuman would admit the system and connector principals, and
-// authorityOf reads an admin role off any principal, so the type is asked here.
-func admitLifter(ctx context.Context) error {
+// admitLifter is the caller half of a lift, which the list of stops asks too.
+// The caller is a colleague, or an agent on their passport, holding update on
+// the subject's object. auth.RequireHuman would admit the system and connector
+// principals, and authorityOf reads an admin role off any principal, so the
+// type is asked here.
+func admitLifter(ctx context.Context, entityType string) error {
 	p, ok := principal.Actor(ctx)
 	if !ok || !p.HumanOrItsAgent() {
 		return fmt.Errorf("only a colleague, or an agent working for one, takes back a stop: %w",
 			apperrors.ErrPermissionDenied)
 	}
-	return auth.Require(ctx, "contact", principal.ActionUpdate)
+	return requireUpdateOnSubject(ctx, entityType)
 }
 
 // lifterOf reads who asks to lift. It returns their level, and whether a human
@@ -94,12 +97,12 @@ func lifterOf(ctx context.Context) lifter {
 	return lifter{level: authorityOf(ctx), human: ok && p.Type == principal.PrincipalHuman}
 }
 
-// mayLiftOn answers the caller half of a lift for one contact without failing
+// mayLiftOn answers the caller half of a lift for one subject without failing
 // the read: false where Lift would refuse with a 403 or 404.
-func mayLiftOn(ctx context.Context, tx pgx.Tx, contact ids.UUID) (bool, error) {
-	err := admitLifter(ctx)
+func mayLiftOn(ctx context.Context, tx pgx.Tx, sub subject) (bool, error) {
+	err := admitLifter(ctx, sub.entityType)
 	if err == nil {
-		err = auth.EnsureRetractable(ctx, tx, entityContact, contact)
+		err = auth.EnsureRetractable(ctx, tx, sub.entityType, sub.id)
 	}
 	switch {
 	case err == nil:
@@ -185,13 +188,12 @@ func (s *Store) liftAdmittedTx(
 	// only ever narrow which rows this matches, and the id already picks
 	// exactly one — there is nothing left for a purpose filter to do except
 	// occasionally answer not-found for a row that does exist.
-	var decided, kind, origin, originSource string
+	var decided, kind, through string
 	err = tx.QueryRow(ctx, `
-		SELECT s.decided_by_level, s.kind, `+originColumnSQL("s", "captured_by")+`,
-		       `+originColumnSQL("s", "source")+`
+		SELECT s.decided_by_level, s.kind, s.recorded_through
 		  FROM communication_suppression s
-		 WHERE s.id = $1 AND s.contact_id = $2 AND s.revoked_at IS NULL
-		 FOR UPDATE`, in.SuppressionID, sub.id).Scan(&decided, &kind, &origin, &originSource)
+		 WHERE s.id = $1 AND s.`+sub.column+` = $2 AND s.revoked_at IS NULL
+		 FOR UPDATE`, in.SuppressionID, sub.id).Scan(&decided, &kind, &through)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// A row that is already revoked, belongs to another subject, or never
 		// existed all answer alike: a caller learns nothing about rows they were
@@ -203,10 +205,11 @@ func (s *Store) liftAdmittedTx(
 	}
 
 	verdict := judgeLift(caller, stopFacts{
-		kind: kind, decided: commsauthz.AuthorityLevel(decided), origin: origin, originSource: originSource,
+		kind: kind, decided: commsauthz.AuthorityLevel(decided), through: commsauthz.RecordedThrough(through),
 	})
 	if !verdict.may {
-		return fmt.Errorf("%s: %w", liftRefusal(verdict.blockedBy), apperrors.ErrPermissionDenied)
+		return auth.RefuseRow(ctx, "communication_suppression",
+			fmt.Errorf("%s: %w", liftRefusal(verdict.blockedBy), apperrors.ErrPermissionDenied))
 	}
 
 	if _, err = tx.Exec(ctx, `
@@ -243,10 +246,7 @@ func (s *Store) liftAdmittedTx(
 	// stops than exist is the one error this field must not make: it is the
 	// direction that resumes mail.
 	//
-	// liveSuppression carries a third arm, lead_id, because it is called with
-	// either a contact or a lead. This is not: LiftInput takes a ContactID and
-	// consentSubject resolves it, so a lead arm here would be a clause that can
-	// never match — the appearance of mirroring the engine without the fact.
+	// A stop kept as the hash of an address counts too (liveStopsOf).
 	//
 	// PURPOSE-AGNOSTIC on the same reasoning as the row lookup above: this asks
 	// whether ANY live stop remains, and a narrow one bound to a single
@@ -258,10 +258,14 @@ func (s *Store) liftAdmittedTx(
 	// direction this field must not fail: the direction that resumes mail.
 	//
 	// Held by TestALiftReportsAnAddressPinnedStopAsStanding.
+	where, addressArgs, err := liveStopsOf(ctx, tx, sub)
+	if err != nil {
+		return err
+	}
 	var remaining int
 	if err = tx.QueryRow(ctx, `
-		SELECT count(*) FROM communication_suppression s
-		 WHERE `+contactLiveStopsSQL, sub.id).Scan(&remaining); err != nil {
+		SELECT count(*) FROM communication_suppression s WHERE `+where,
+		append([]any{sub.id}, addressArgs...)...).Scan(&remaining); err != nil {
 		return fmt.Errorf("consent: counting the stops still standing: %w", err)
 	}
 
@@ -281,20 +285,39 @@ func (s *Store) liftAdmittedTx(
 	if err != nil {
 		return err
 	}
+	// A contact only: consent.suppression_lifted is declared with
+	// x-entity-type contact, the reason CarryStopsTx gives for a lead survivor.
+	// The send check reads the table, so a lead's lift is in force without it.
+	if sub.entityType != entityContact {
+		return nil
+	}
 	return storekit.EmitEvent(ctx, tx, auditID, sub.id,
 		suppressionLiftedPayload(in.SuppressionID, decided, caller.level, remaining))
 }
 
-// contactLiveStopsSQL selects the live stops of the contact in $1, over the
-// suppression aliased `s`. It takes the contact's own rows and the rows held on
-// one of its live addresses. The lift's count and the list of stops share it.
-const contactLiveStopsSQL = `s.revoked_at IS NULL
-		   AND (s.contact_id = $1
-		        OR (s.address IS NOT NULL AND EXISTS (
-		              SELECT 1 FROM contact_email pe
-		               WHERE pe.contact_id = $1
-		                 AND pe.archived_at IS NULL
-		                 AND pe.email = lower(s.address))))`
+// liveStopsOf answers the predicate that selects the live stops of one subject,
+// over the suppression aliased `s`. It also answers the arguments for $2 and
+// $3; the subject is $1. It takes the subject's own rows and the rows held on one
+// of its live addresses (storekit.StopOnAddressesSQL). The lift's count and the
+// list share it.
+func liveStopsOf(ctx context.Context, tx pgx.Tx, sub subject) (string, []any, error) {
+	addresses := `SELECT pe.email FROM contact_email pe WHERE pe.contact_id = $1 AND pe.archived_at IS NULL`
+	if sub.entityType != entityContact {
+		addresses = `SELECT l.email FROM lead l WHERE l.id = $1 AND l.email IS NOT NULL`
+	}
+	rows, err := tx.Query(ctx, addresses, sub.id)
+	if err != nil {
+		return "", nil, fmt.Errorf("consent: reading the subject's addresses: %w", err)
+	}
+	held, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return "", nil, fmt.Errorf("consent: reading the subject's addresses: %w", err)
+	}
+	lowered, hashes := storekit.StopAddressArgs(held...)
+	return `s.revoked_at IS NULL
+		   AND (s.` + sub.column + ` = $1 OR ` + storekit.StopOnAddressesSQL("s", "$2", "$3") + `)`,
+		[]any{lowered, hashes}, nil
+}
 
 // auditFieldLiftBasis marks a lift that corrected a stop recorded by mistake,
 // so the history can tell it from an ordinary lift.
@@ -348,4 +371,31 @@ func suppressionLiftedPayload(
 		RemainingSuppressions: &remaining,
 		StillSuppressed:       &stands,
 	}
+}
+
+// requireUpdateOnSubject and requireReadOnSubject ask the object gate of a
+// stop's subject. Each names its object and verb as literals, so the grant scan
+// sees which door it is.
+func requireUpdateOnSubject(ctx context.Context, entityType string) error {
+	switch entityType {
+	case entityContact:
+		return auth.Require(ctx, "contact", principal.ActionUpdate)
+	case entityLead:
+		return auth.Require(ctx, "lead", principal.ActionUpdate)
+	}
+	return unknownStopSubject(entityType)
+}
+
+func requireReadOnSubject(ctx context.Context, entityType string) error {
+	switch entityType {
+	case entityContact:
+		return auth.Require(ctx, "contact", principal.ActionRead)
+	case entityLead:
+		return auth.Require(ctx, "lead", principal.ActionRead)
+	}
+	return unknownStopSubject(entityType)
+}
+
+func unknownStopSubject(entityType string) error {
+	return fmt.Errorf("a stop's subject is a contact or a lead, not %q: %w", entityType, apperrors.ErrPermissionDenied)
 }

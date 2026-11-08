@@ -8,7 +8,7 @@ import {
   reportingStoryFramework,
   reportingStoryScope,
 } from "../src/testing/reporting.fixtures";
-import { mockApi } from "./seed";
+import { mockApi, servePrincipal } from "./seed";
 
 test.use({ locale: "en-GB" });
 for (const colorScheme of ["light", "dark"] satisfies ("light" | "dark")[]) {
@@ -21,19 +21,18 @@ for (const colorScheme of ["light", "dark"] satisfies ("light" | "dark")[]) {
       // when the evidence drawer has closed, and axe would read the blend.
       await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
       await mockApi(page);
-      await page.route("**/v1/me", (route) =>
-        route.fulfill({
-          json: meFixture({
-            rowScope: "all",
-            allow: {
-              deal: ["read"],
-              forecast: ["read"],
-              pipeline: ["read"],
-              report_definition: ["read", "create"],
-              reporting_framework: ["read"],
-              installation_settings: ["read"],
-            },
-          }),
+      await servePrincipal(
+        page,
+        meFixture({
+          rowScope: "all",
+          allow: {
+            deal: ["read"],
+            forecast: ["read"],
+            pipeline: ["read"],
+            report_definition: ["read", "create"],
+            reporting_framework: ["read"],
+            installation_settings: ["read"],
+          },
         }),
       );
       await page.route("**/v1/analytics/context", (route) =>
@@ -80,7 +79,7 @@ for (const colorScheme of ["light", "dark"] satisfies ("light" | "dark")[]) {
       });
       await expect(graph).toBeVisible();
       await expect(page.locator(".stat-card-value").first()).toHaveText(
-        "216,000 EUR",
+        "€216,000",
       );
       const bounds = await page
         .locator(".report-chart-line")

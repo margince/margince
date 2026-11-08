@@ -43,9 +43,7 @@ type ListUsersInput struct {
 	// place, because two ways to spell one authorization decision is how the
 	// two come to disagree.
 	IncludeInactive bool
-	// IncludeInvited widens the roster to invited seats for any member. The
-	// responsibility picker asks for it, because an invited colleague may be
-	// given work before their first sign-in. Each row carries its status.
+	// IncludeInvited retains the deprecated roster option for older clients.
 	IncludeInvited bool
 	// Actor is the human asking, when one is. The management view carries each
 	// member's allowed actions for a human caller only, because every member
@@ -84,11 +82,16 @@ type userRow struct {
 	// ServiceExtension names the extension unit a service member serves; nil
 	// for every other seat.
 	ServiceExtension *string
-	// Assignable is whether the caller may make this member a record's owner;
-	// nil when the read did not ask.
+	// Assignable is whether the caller may name this member as an automation's
+	// owner. That owner must lie inside the caller's write scope. Nil when unasked.
 	Assignable *bool
+	// CanOwnRecords is whether the seat may own records at all: the check a
+	// record's owner change runs, the same for every caller.
+	CanOwnRecords *bool
 	// ConnectedMailboxes counts live capture connections; nil when not read.
 	ConnectedMailboxes *int
+	// AvatarKey is where the member's picture bytes live, nil when they have none.
+	AvatarKey *string
 }
 
 // roleKeys aggregates the member's assigned role keys, sorted so a member
@@ -124,7 +127,7 @@ const lastActive = `CASE WHEN $1::boolean THEN
 
 var userColumns = `id, email, display_name, status, is_agent, seat_type, ` +
 	roleKeys + `, ` + teamIDs + `, ` + lastActive + `, created_at, service_extension, updated_at, ` + mergedAccounts + `, ` + unusedMemberSQL("app_user") +
-	`, ` + inviteMailState
+	`, ` + inviteMailState + `, avatar_object_key`
 
 // $1 is the "read role keys?" flag on every user query below, so the aggregate
 // stays inside ONE fixed query string instead of two the caller picks between.
@@ -194,7 +197,7 @@ func scanUser(r pgx.Row) (userRow, error) {
 	var u userRow
 	err := r.Scan(&u.ID, &u.Email, &u.DisplayName, &u.Status, &u.IsAgent, &u.SeatType,
 		&u.Roles, &u.TeamIDs, &u.LastActiveAt, &u.CreatedAt, &u.ServiceExtension, &u.UpdatedAt, &u.MergedFrom, &u.Unused,
-		&u.InviteMailState)
+		&u.InviteMailState, &u.AvatarKey)
 	return u, err
 }
 
@@ -261,7 +264,7 @@ func (s *Service) ListUsers(ctx context.Context, in ListUsersInput) (RosterPage,
 	if err := auth.RequireMember(ctx); err != nil {
 		return RosterPage{}, err
 	}
-	mayManage := auth.Require(ctx, objectUserAdmin, principal.ActionRead) == nil
+	mayManage := auth.Allows(ctx, objectUserAdmin, principal.ActionRead)
 	plain, filtered := listUsersQuery, listUsersFilteredQuery
 	switch {
 	case mayManage && in.IncludeInactive:
@@ -302,7 +305,7 @@ func (s *Service) ListUsers(ctx context.Context, in ListUsersInput) (RosterPage,
 // withholdActivity clears last-active wherever the caller could not list the member's sessions:
 // no human caller, no user_admin read, or a target beyond ListUserSessions' ceiling.
 func withholdActivity(ctx context.Context, actor *Identity, rows []userRow, grants map[ids.UUID]seatGrants) {
-	mayList := actor != nil && auth.Require(ctx, objectUserAdmin, principal.ActionRead) == nil
+	mayList := actor != nil && auth.Allows(ctx, objectUserAdmin, principal.ActionRead)
 	for i := range rows {
 		if !mayList || callerOutranks(*actor, grants[rows[i].ID], reachDenial) != nil {
 			rows[i].LastActiveAt = nil

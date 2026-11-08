@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go frontend/src/features/settings/settingssignaturerow.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go -->
+<!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go frontend/src/features/settings/settingssignaturerow.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go frontend/src/app/setup-reminder.tsx frontend/src/app/account.tsx backend/internal/modules/identity/avatar.go backend/internal/modules/identity/providerpicture.go backend/internal/modules/identity/federatedidentity.go backend/internal/compose/avatarprovider.go backend/internal/compose/connectors_picture.go -->
 # Your own settings
 
 Your own settings in Margince are the pages under **You** in Settings: **Account**, **Meetings**, **Writing voice**, **AI access**, **Notifications**, **Connections** and **Capture activity**. Everything here changes your own seat and nobody else's.
@@ -14,9 +14,9 @@ You can also press ⌘K (Ctrl+K) and type the page name, or a word such as "pass
 Also called: my profile, my account, preferences, user settings.
 
 ### How do I finish setting up Margince?
-To see what is left of your setup in Margince, open Settings and look at **Your setup** on **Overview**.
-It lists the steps: connect your mail, connect your calendar, add writing samples and turn on your booking link. Each step has a button, such as **Connect mail** or **Turn on**.
-While steps are open, **Finish setup** at the top of every screen shows how many are done. Choose **Hide until next sign-in** to put it away for now.
+To see what is left of your setup in Margince, open Settings and look at **Your setup** on **Overview**. It lists the steps: connect your mail, connect your calendar, add writing samples and turn on your booking link.
+
+While steps are open, **Finish setup** at the top of the screen shows how many are done, and **Hide until next sign-in** puts it away. Once every step is done, **Your setup** and **Finish setup** are gone, and each step's page stays on **Overview**. If a step comes undone, **Your setup** comes back, and so does **Finish setup** unless you chose **Hide until next sign-in**. On a phone, **Finish setup** is a row in the account menu, right after **Help and feedback**. It opens the page of your next step.
 Also called: setup list, getting started, onboarding steps.
 
 The writing voice step names what is next for your voice: **Add samples**, **Build voice** or **View progress**. After a failed build it shows the reason and **Try again**. When a build needs your review it shows **Review voice**, which opens the review on **Writing voice**. Your first version is never used on its own. The step is done once you choose **Use this version**. After **Discard this version**, add more samples and build again.
@@ -52,17 +52,10 @@ Also called: email notifications, turn off emails, alerts, daily digest, browser
 
 ## Account
 
-The Account page in Settings has three panels. **Profile** holds who you are,
-your display and greeting names, and your email signature. **Security** holds your
-password and two-step sign-in, and **Sign out**. **Language and appearance**
-holds which language the product uses with you (English, Deutsch or Tiếng
-Việt), and how it looks.
-**Appearance** is here as well as in the account menu, where it is called
-**Theme**. Both change the same setting.
+The Account page in Settings has three panels. **Profile** holds who you are: your picture, your display and greeting names, and your email signature. **Security** holds your password and two-step sign-in, and **Sign out**. **Language and appearance** holds which language the product uses with you (English, Deutsch or Tiếng Việt), and how it looks.
+**Appearance** is here as well as in the account menu, where it is called **Theme**. Both change the same setting.
 
-Where your browser can add Margince to this device as an app, a fourth panel
-shows: **This device**. It offers **Install**, says how to add the app, or says
-**Installed**.
+Where your browser can add Margince to this device as an app, a fourth panel shows: **This device**. It offers **Install**, says how to add the app, or says **Installed**.
 
 ### How do I change my password?
 <!-- opens: settings/account -->
@@ -125,6 +118,13 @@ To change your display name in Margince, open Settings → **Account**, edit the
 Your display name is what colleagues see on records you edit, in pickers and in the audit log.
 It cannot be empty, and it can be up to 255 characters long. Your email address shows under it, and you do not change it here.
 Also called: my name, profile name, rename myself.
+
+### How do I change my profile picture?
+<!-- opens: settings/account -->
+To change your profile picture in Margince, open Settings → **Account** and choose **Upload picture** in the **Profile picture** row. Pick a PNG, JPEG or WebP file of up to 5 MB. Margince cuts the middle square out of it, and colleagues see it next to your name.
+Also called: photo, avatar, profile photo.
+
+Colleagues see a picture you uploaded first. Without one, they see the picture of the Google account you sign in with. It updates at each sign-in, and each time you connect that same account for mail or calendar. Without either, they see the first letters of your name. **Remove picture** takes the picture off for good, even after a later sign-in with Google. Only a new upload brings a picture back.
 
 ### How do I add an email signature?
 <!-- opens: settings/account -->
@@ -356,7 +356,7 @@ The cards, in order:
 To connect your mailbox and calendar to Margince, open Settings → **Connections** and choose **Connect Google** or **Connect Microsoft 365** in **Mail and calendar**. Once one account is connected, choose **Add account**.
 1. **Add account** asks which account first: **Google**, **Microsoft 365** or **Another mail host**.
 2. Under **What to bring in**, tick **Mail**, **Calendar** or both, and pick how much past email to import, or **None**. Choose **Continue**.
-3. Sign in at Google or Microsoft and allow each permission it lists. With both ticked it asks twice: once for mail, then once for your calendar.
+3. Sign in at Google or Microsoft and allow each permission it lists. With both ticked, Google asks once and Microsoft asks twice.
 You land back on Connections, where a note says, for example, "Google connected" and "Mail and Calendar are syncing."
 Also called: link my email, sync Gmail, sync Outlook, connect my calendar.
 

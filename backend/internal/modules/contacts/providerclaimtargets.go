@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -66,23 +67,30 @@ func insertSocialHandle(ctx context.Context, tx pgx.Tx, contactID ids.UUID, plat
 // schema permits it and nothing dedupes it — so matching on one would attach a
 // contact's employment to whichever row sorted first, which is a false
 // statement about where somebody works. A domain is unique by constraint.
+//
+// The constraint is per spelling, so an older estate can hold the Unicode and
+// the punycode spelling on two companies. That domain resolves to neither: a
+// guess between them is the same false statement as a match on name.
 func companyByDomain(ctx context.Context, tx pgx.Tx, domain string) (ids.CompanyID, bool, error) {
-	var company ids.CompanyID
-	err := tx.QueryRow(ctx, `
-		SELECT d.company_id
+	rows, err := tx.Query(ctx, `
+		SELECT DISTINCT d.company_id
 		  FROM company_domain d
 		  JOIN company o ON o.id = d.company_id
-		 WHERE lower(d.domain) = lower($1)
+		 WHERE d.domain = ANY($1)
 		   AND d.archived_at IS NULL
 		   AND o.archived_at IS NULL
-		 LIMIT 1`, domain).Scan(&company)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return ids.CompanyID{}, false, nil
-	}
+		 LIMIT 2`, owndomain.Spellings(domain))
 	if err != nil {
 		return ids.CompanyID{}, false, fmt.Errorf("contacts: resolving a bought employer's domain: %w", err)
 	}
-	return company, true, nil
+	holders, err := pgx.CollectRows(rows, pgx.RowTo[ids.CompanyID])
+	if err != nil {
+		return ids.CompanyID{}, false, fmt.Errorf("contacts: resolving a bought employer's domain: %w", err)
+	}
+	if len(holders) != 1 {
+		return ids.CompanyID{}, false, nil
+	}
+	return holders[0], true, nil
 }
 
 // plantProviderEmploymentEdge attaches a contact to a company a provider named,

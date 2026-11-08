@@ -40,8 +40,12 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 		order = requestPriorityOrder
 	}
 
+	columns, err := activityColumns(ctx, content, func(v any) int { args = append(args, v); return len(args) })
+	if err != nil {
+		return nil, storekit.Page{}, err
+	}
 	rows, err := tx.Query(ctx,
-		`SELECT `+activityColumns(content)+sorted.CursorKeySuffix()+
+		`SELECT `+columns+sorted.CursorKeySuffix()+
 			` FROM activity a WHERE `+strings.Join(where, " AND ")+
 			order+sprintf(" LIMIT %d", limit+1),
 		waitingListArgs(in, args)...)

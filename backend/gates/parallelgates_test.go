@@ -34,7 +34,6 @@ package gates
 import (
 	"go/ast"
 	"go/build"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -62,6 +61,7 @@ var parallelExempt = gatekit.Waive(map[string]string{
 	// process-wide, so Go refuses the combination rather than letting one
 	// test's variable leak into another's.
 	"TestTheSchemaAndTheParserAgreeOnEveryInputDeclaration": "calls t.Setenv, which Go forbids in a parallel test",
+	"TestAnExportedGitDirDoesNotSteerTheCensus":             "calls t.Setenv, which Go forbids in a parallel test",
 	// Rewrites ../docs/reference/gate-inventory.md under -update-gate-inventory.
 	// The gates that walk ../docs — link targets, rulebook direction, page
 	// length — read that file.
@@ -96,7 +96,7 @@ func TestEveryGateRunsInParallelWithTheOthers(t *testing.T) {
 	var serial, exemptButParallel []string
 	seen := 0
 	for _, path := range activeGateSources(t) {
-		source, err := os.ReadFile(path)
+		source, err := gatekit.ReadFile(path)
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}

@@ -169,7 +169,7 @@ this file.
 
 The block does not decide which routes may carry a file at all. That list is declared in source
 (`internal/compose/bodyceiling.go`). It stops a route that carries no file from getting the file
-limit by sending a multipart header. To add to it is a code change, with two fitness gates over it.
+limit by sending a multipart header. To add to it is a code change, with fitness gates over it.
 
 ## security.txt
 

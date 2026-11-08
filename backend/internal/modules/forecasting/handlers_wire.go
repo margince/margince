@@ -21,6 +21,7 @@ func ReadingsToWire(
 	period Period, scope Scope, in Readings, baseCurrency string, asOf time.Time,
 ) crmcontracts.ForecastReadings {
 	out := crmcontracts.ForecastReadings{
+		QualificationMode:  crmcontracts.ForecastReadingsQualificationModeOff,
 		PeriodStart:        openapi_types.Date{Time: period.StartDate},
 		PeriodEnd:          openapi_types.Date{Time: period.EndDate},
 		ScopeKind:          crmcontracts.ForecastReadingsScopeKind(scope.Kind),
@@ -37,7 +38,6 @@ func ReadingsToWire(
 		AsOf:               asOf,
 		Timezone:           period.Zone.String(),
 		BaseCurrency:       baseCurrency,
-		QualificationMode:  crmcontracts.ForecastReadingsQualificationMode(in.QualificationMode()),
 	}
 	if scope.ID != nil {
 		id := openapi_types.UUID(*scope.ID)
@@ -45,15 +45,6 @@ func ReadingsToWire(
 	}
 	if in.Range != nil {
 		out.RangeLowMinor, out.RangeHighMinor = &in.Range.LowMinor, &in.Range.HighMinor
-	}
-	if q := in.Qualified; q != nil {
-		out.Qualified = &crmcontracts.ForecastQualifiedReadings{
-			EvidenceMinor: q.EvidenceMinor, WeightedMinor: q.WeightedMinor,
-			ExcludedMinor: q.ExcludedMinor, UnknownMinor: q.UnknownMinor,
-			ExcludedCount: q.ExcludedCount, UnknownCount: q.UnknownCount,
-			UnsupportedMinor: q.UnsupportedMinor, UnsupportedCount: q.UnsupportedCount,
-			AmountsPartial: &q.AmountsPartial,
-		}
 	}
 	return out
 }
@@ -108,10 +99,7 @@ func derefString(s *string) string {
 func (h Handlers) GetForecastMovement(
 	w http.ResponseWriter, r *http.Request, params crmcontracts.GetForecastMovementParams,
 ) {
-	reading := ReadingOpen
-	if params.Reading != nil {
-		reading = Reading(*params.Reading)
-	}
+	reading := movementReading(params.Reading)
 	out, err := h.store.Movement(r.Context(), reading,
 		ids.UUID(params.From), ids.UUID(params.To))
 	if err != nil {
@@ -121,9 +109,27 @@ func (h Handlers) GetForecastMovement(
 	httperr.WriteJSON(w, http.StatusOK, movementToWire(reading, out))
 }
 
+// movementReading is the reading a request asks for. Each deprecated qualified
+// reading answers as the reading it was built on, and any other value goes to
+// the store as sent.
+func movementReading(sent *crmcontracts.GetForecastMovementParamsReading) Reading {
+	if sent == nil {
+		return ReadingOpen
+	}
+	switch *sent {
+	case crmcontracts.GetForecastMovementParamsReadingQualifiedEvidence:
+		return ReadingEvidence
+	case crmcontracts.GetForecastMovementParamsReadingQualifiedWeighted:
+		return ReadingWeighted
+	default:
+		return Reading(*sent)
+	}
+}
+
 func movementToWire(reading Reading, in Movement) crmcontracts.ForecastMovement {
 	out := crmcontracts.ForecastMovement{
 		Reading:      crmcontracts.ForecastMovementReading(reading),
+		BaseCurrency: in.BaseCurrency,
 		OpeningMinor: in.OpeningMinor,
 		ClosingMinor: in.ClosingMinor,
 		// Empty, never nil. "Nothing moved" is a real answer and arrives shaped

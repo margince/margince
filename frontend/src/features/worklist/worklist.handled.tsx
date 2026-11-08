@@ -21,6 +21,7 @@
 // checked. It wears the team board's chrome for the same reason every other
 // panel here does: one shape, so a reader learns it once.
 
+import { BundleUndo } from "../../components/marginchanges";
 import { ReceiptDetail } from "../../components/receiptdetail";
 import { ReceiptReview } from "../../components/receiptreview";
 import { ReceiptsMore } from "../../components/receiptsmore";
@@ -30,19 +31,26 @@ import { DataTable } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
+import {
+  shownUndoable,
+  usePendingMarginceChanges,
+} from "../../lib/marginchanges";
+import { receiptBasis, receiptSummary } from "../../lib/receiptcopy";
+import { isReviewableReceipt, receiptAuditId } from "../../lib/receiptreview";
 import { useViewerZone } from "../../lib/viewerzone";
 import { listReadState } from "../../lib/worklist.listread";
 import { subjectHref } from "../../lib/worklistcopy";
 import { AFTER_THE_DAY } from "./worklist.layout";
 import { type Receipt, useHandledForYou } from "./worklist.queries";
-import { receiptBasis, receiptSummary } from "./worklist.receiptcopy";
 
 export function HandledForYouPanel() {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const readerZone = useViewerZone();
   const handled = useHandledForYou();
+  const pendingChanges = usePendingMarginceChanges().data;
   const receipts = handled.data?.receipts;
   // Off the LIST, not off the query's flags alone. `receipts` is empty on most
   // days — the contract says so — and a state read from `isPending`/`isError`
@@ -53,6 +61,17 @@ export function HandledForYouPanel() {
   // A day with nothing done draws no panel: the empty sentence sat beside the
   // queue's own on every quiet day. A failed read still shows, with its retry.
   if (state === "empty") return null;
+  // Undo sends only the changes this list shows that the server still allows.
+  const shown = new Set(
+    (receipts ?? [])
+      .filter(isReviewableReceipt)
+      .map(receiptAuditId)
+      .filter((id): id is string => id !== undefined),
+  );
+  const undoable = (pendingChanges?.bundles ?? []).flatMap((bundle) => {
+    const audits = shownUndoable(bundle, shown);
+    return audits.length > 0 ? [{ ...bundle, audit_log_ids: audits }] : [];
+  });
   return (
     <Panel
       className={AFTER_THE_DAY}
@@ -96,6 +115,14 @@ export function HandledForYouPanel() {
               would take the page down with a type error, and calling it a quiet
               day would report a clear receipt over an answer nobody could
               read. */}
+          {undoable.length > 0 && (
+            <BundleUndo
+              bundles={undoable}
+              label={plural("changes.undoDeals", undoable.length, {
+                count: formatNumber(undoable.length, locale),
+              })}
+            />
+          )}
           {receipts && (
             <Disclosure summary={t("worklist.handled.showHistory")}>
               <DataTable

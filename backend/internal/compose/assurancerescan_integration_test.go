@@ -77,6 +77,11 @@ func TestAOneDealPassCannotClearAnotherDealsFindings(t *testing.T) {
 	if err := e.run(t); err != nil {
 		t.Fatalf("the pass over every deal: %v", err)
 	}
+	// The worker creates follow-up tasks after scanning; read those inputs
+	// before checking which later deal edits the one-deal pass clears.
+	if err := e.scan(t); err != nil {
+		t.Fatalf("reading the follow-up work: %v", err)
+	}
 	before := e.findingsOf(t, e.healthy)
 	if len(before) == 0 || len(e.findingsOf(t, e.faulted)) == 0 {
 		t.Fatal("the fixture needs open findings on both deals")

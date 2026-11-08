@@ -73,6 +73,9 @@ var taskSourceWriters = map[string][]string{
 	"modules/deals/handlers_deal.go:ListDeals":                            {writesNoTask},
 	"compose/dealroomtimeline.go:write":                                   {writesNoTask},
 	"compose/dealcloselost.go:recordOnTimeline":                           {writesNoTask},
+	"compose/dealscoutopen.go:recordOnTimeline":                           {writesNoTask},
+	"compose/dealscoutrevive.go:recordRevivalOnTimeline":                  {writesNoTask},
+	"compose/dealverdictjudge.go:recordOnTimeline":                        {writesNoTask},
 	"compose/webformleads.go:Land":                                        {writesNoTask},
 	"compose/assurancebundletask.go:writeBundleTask":                      {provenance.AssuranceTaskSource},
 	"compose/leadworktasks.go:repliedTaskInput":                           {provenance.LeadRepliedSource},
@@ -92,9 +95,11 @@ var taskSourceWriters = map[string][]string{
 	"modules/activities/provider.go:Create":                               {writesCallerSource},
 	"modules/activities/activity.go:logActivityAndReadTranscript":         {writesForItsCaller},
 	"modules/activities/channelsend.go:SendMessage":                       {writesNoTask},
+	"modules/activities/dealfiling.go:fileUpdatedActivity":                {writesCallerSource},
 	"modules/activities/sendcore.go:SendPreparedTx":                       {writesNoTask},
 	"compose/controllermail.go:QueueConfirmationTx":                       {writesNoTask},
 	"compose/extractionaccept.go:auditAcceptedFieldsTx":                   {writesNoTask},
+	"modules/activities/chatcapture.go:writeChatActivity":                 {writesNoTask},
 	"modules/activities/channelsend.go:activity":                          {writesNoTask},
 	"modules/activities/extraction.go:RequestAttachmentAccess":            {writesNoTask},
 	"modules/activities/reviewresponse.go:WriteOutcomeReviewTx":           {writesNoTask},
@@ -161,7 +166,7 @@ func scanTaskCensus(t *testing.T, root string, planted map[string]string) taskCe
 		byDir[dir] = append(byDir[dir], file)
 		names[file] = filepath.ToSlash(rel)
 	}
-	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 			strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") || isIntegrationTagged(path) {
 			return err
@@ -170,7 +175,7 @@ func scanTaskCensus(t *testing.T, root string, planted map[string]string) taskCe
 		if err != nil || strings.HasPrefix(rel, "contracts") {
 			return err
 		}
-		body, err := os.ReadFile(path) // #nosec G304 -- a *.go file from walking the trusted backend tree
+		body, err := gatekit.ReadFile(path) // #nosec G304 -- a *.go file from walking the trusted backend tree
 		if err != nil {
 			return err
 		}
@@ -222,9 +227,14 @@ func censusPackage(root string, consts packageConsts, files []*ast.File, names m
 			}
 			facts := fnFacts{key: names[file] + ":" + fn.Name.Name}
 			values := taskValues(consts, gatekit.ParsedFile{Path: filepath.Join(root, names[file]), File: file}, fn)
-			visibleConsts := maps.Clone(sqlConsts)
+			visibleConsts, copied := sqlConsts, false
 			for name := range declaredNames(fn) {
-				delete(visibleConsts, name)
+				if _, shadowed := sqlConsts[name]; shadowed && !copied {
+					visibleConsts, copied = maps.Clone(sqlConsts), true
+				}
+				if copied {
+					delete(visibleConsts, name)
+				}
 			}
 			statements := gatekit.SQLStatementsWithConstants(fn.Body, visibleConsts)
 			text := strings.Join(statements, "\n")

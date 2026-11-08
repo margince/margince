@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The generator lives in the tools module, so it runs under the root
@@ -55,7 +56,7 @@ func TestEveryShippedConfigValidatesAgainstTheSchema(t *testing.T) {
 		t.Fatal("no config/margince*.yaml found; the corpus moved and this gate checks nothing")
 	}
 	for _, path := range paths {
-		raw, err := os.ReadFile(path) // #nosec G304 -- a fixed glob in the trusted source tree
+		raw, err := gatekit.ReadFile(path) // #nosec G304 -- a fixed glob in the trusted source tree
 		if err != nil {
 			t.Fatalf("read %s: %v", path, err)
 		}

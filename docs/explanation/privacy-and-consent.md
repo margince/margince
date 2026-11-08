@@ -7,9 +7,6 @@ outbound message may go, and keeps a record of why. The **privacy engines** (era
 access, retention) do the work a granted request asks for. The product refuses to fill records by
 scraping in the first place.
 
-Two modules work together: `consent` owns the engine and the case queue, and `privacy` owns the
-code that does the work. They are connected at the composition root, never by a sibling import.
-
 ## The authorization engine (`consent`)
 
 `consent` owns two things a reader can take for one. **Consent** is a subject's answer to a question
@@ -30,10 +27,10 @@ the **proof** that category needs, and records a **decision** per recipient sayi
   notice, an opt-out, a note that confirms consent or a record. So only the installation
   itself writes to someone in its own name.
 - **The basis is proof.** A reply is allowed by the thread the subject opened, and only for this
-  recipient on that thread; being a reply is not enough. An invoice is allowed by a live invoice that
-  reaches this recipient through a current job at the customer. That is a real test. Say a contact handles money for the customer, but nobody linked them to the
-  customer record: they get `review`, not a refusal. Marketing is the case that needs
-  consent, and that consent holds for one purpose only.
+  recipient on that thread. An invoice or a contract notice goes to the company's billing contact,
+  else to the buyer on the deal. A recipient the record does not name gets `review`. Service,
+  account and security mail goes to a contact at a company with an active contract or a won deal.
+  Marketing needs consent, for one purpose only.
 - **The decision is recorded twice, before sending.** It is made once when the message is staged.
   It is made again right before the provider gets anything, into `communication_decision`, one row per
   recipient. The row holds the category, the verdict, the reason, the basis and a fingerprint of the
@@ -271,14 +268,14 @@ since rotated.
 - **A stop records its maker and its reach.** An Article 21 objection to direct marketing and a
   request to stop all contact are different legal acts with different reach. The objection binds
   marketing alone; the request binds everything but the three categories above.
-  `communication_suppression` records which kind, its `source`, the seat that captured it, and the
-  authority level that decided it. `lift.go` refuses any lift that the level of the user who lifts it cannot override.
+  `communication_suppression` records the kind, `source`, seat, deciding level and `recorded_through`,
+  which every copy keeps. `lift.go` refuses any lift that the level of the user who lifts it cannot override.
 
   A passed-on **marketing objection** is marked `decided_by_level='subject'`, because Article 21 is
   the subject's own act. An admin may still correct one a user typed in error, with a reason the
   audit row keeps (`stopcorrection.go`). One the subject pressed on a mailed link stays theirs. A
   passed-on **subject request** keeps the seat's level, so an admin can fix a wrong "stop
-  everything" note a user typed from a call. `GET /contacts/{id}/consent/stops` shows each user
+  everything" note a user typed from a call. `GET /{contacts,leads}/{id}/consent/stops` shows each user
   which stops they may lift. Nobody lifts a limit on processing here, because that owes the subject
   notice first, and Margince sends none yet.
 - **A public fix or erasure opens a case.** A subject who types into a confirm link opens a
@@ -333,50 +330,53 @@ category refusing mail the old gate would have allowed.
 `data_subject_request` rows and their HTTP surface). The composition root injects privacy's engines
 into consent's handlers.
 
-- **Article 17 erasure** (`Eraser.EraseContact`) removes the personal values from the normal rows in
-  place, and deletes raw capture, embeddings and attachment bytes. It proves the work with an **audit
-  tombstone with no PII**, all in **one transaction per record**, and that transaction *is* the
-  promise. It refuses a subject under `legal_hold`.
-- **The suppression list** holds a hash of each erased address and handle. No later capture, import
-  or typed create can store one again. A booking on the public booking page still can, because a
-  refusal there would show which addresses were erased.
-- **Article 15 subject access** (`AssembleSAR`) is one read that needs more rights. It needs the
-  `contact.delete` grant **and** a row scope with no limit. It puts everything held about a contact
-  into one export package: channels, deals, leads, activities, attachments, consent and its proof log,
-  raw capture, field sources. The export is itself audited (`action=export`).
+- **Article 17 erasure** (`Eraser.EraseContact`) clears personal values from domain rows and audit
+  images, removes raw capture, embeddings and attachment bytes, and cancels kept outbox copies.
+  Audit IDs, actors, actions and times stay fixed. One transaction per subject records the proof
+  and audit marker. A subject under `legal_hold` cannot be erased.
+
+  Background tasks use earlier proofs and stored links to clear old copies while keeping later
+  edits and held content. Request references go after their linked copies.
+
+  Weekly items cleared in full also match their erased label. A user can edit that label, so it
+  can match the wrong copy. Closed requests whose identifiers the machine retired match too. Any hold, a case with
+  `dispute_open` set, or a conflicting CRM write defers these fixes. Nightly retention retries them.
+
+  Full names and addresses are removed from notes without contact or lead links. Other text stays.
+  Restricted or held notes, possible name matches, descriptions, signatures and matching uploaded
+  files get a notice for a human review. Files and search copies are kept as they are. Possible text
+  matches do not go into subject exports. If no one can review them, an admin must restore review
+  access before retrying.
+- **The suppression list** hashes each erased address and handle. Capture, import and typed creates
+  refuse a later match. Public booking can still create one; refusal there would reveal erasures.
+- **Article 15 subject access** (`AssembleSAR`) requires `contact.delete` and full row scope.
+  One audited export (`action=export`) includes the subject's records, channels, deals, leads,
+  activities, attachments and consent. It also includes raw capture, field sources, kept audit
+  payloads, linked room comments, introduction notes and other kept copies. Private mailbox content stays hidden.
 - **The daily retention check** (`RetentionService.EvaluateInstallation`) runs as one River job per
-  workspace. The `privacy_retention` dispatcher in `cmd/worker` starts it, by default every `24h`. It
-  checks **one** workspace's live policies. It takes each policy's single action on records past
-  their time, in **one audited transaction per record**.
+  workspace. The `privacy_retention` dispatcher in `cmd/worker` starts it every `24h` by default.
+  Each enabled policy takes its single action in one audited transaction per overdue record.
 
-  A tenant whose pass fails fails its own job
-  row. The machine never acts on `legal_hold` rows. An activity is held too when any linked contact,
-  company or deal is held. A policy whose scope the engine does not understand is **skipped, with an
-  error in the log**, never run in part.
+  Each workspace's failure stays on its own job. Held records and activities linked to held
+  contacts, companies or deals are kept as they are. An unknown policy scope is skipped with a logged error.
 
-  The policies a new installation starts with come from `consent.SeedDefaultRetentionTx`. None of
-  them destroys a record because it is old. Each one archives, and an archived record can be brought
-  back. Or it erases a second copy, or data built from a record. Those are the raw provider original
-  (`raw_capture`, 90 days from import), AI call payloads and the deal-risk day rows.
+  `consent.SeedDefaultRetentionTx` supplies the defaults. Time alone archives rather than destroys
+  domain records, so they can be restored. Other defaults erase copies or derived data: raw provider
+  originals (`raw_capture`, 90 days from import), AI call payloads and deal-risk day rows.
 
-  `activity/transcript` and `contact/no_consent_no_deal` start with no row, and an admin can still
-  write one. So a transcript is archived under the `activity` row, and only an Article 17 request
-  destroys a contact's data. `backend/gates/retentionseedcoverage_test.go` records why each scope
-  with no row has none.
+  `activity/transcript` and `contact/no_consent_no_deal` start with no policy row; an admin can add
+  one. Transcripts follow the activity archive policy. Only Article 17 destroys contact data.
+  `backend/gates/retentionseedcoverage_test.go` records why each scope without a row has none.
 
-  No retention action deletes a stop. The `anonymize` action copies a stop for the whole record onto
-  each of its addresses (`privacy/retentionstops.go`). It writes a marketing withdrawal as an
-  objection on each address. So a subject who comes back on a new record is still stopped.
+  Retention never deletes a stop. `anonymize` binds stops and withdrawals to address hashes
+  (`address_hash`, `privacy/retentionstops.go`), keeping no addresses. A merge first binds each stop
+  to its own record's addresses. Later stops use `contact.anonymized_address_hashes`.
 
 ## The single-transaction cross-store exception
 
-`privacy` owns one table (`erasure_suppression`), yet erasure and retention **write tables they do
-not own**. The list: `contact`, `contact_email`/`_phone`/`_social`, `contact_channel_identity`,
-`lead`, `activity`, `activity_participant`, `graph_interaction_edge`, `linkedin_connection`,
-`comms_outbound`, `deal`, `attachment`, `embedding`, `raw_capture`, `field_provenance`,
-`preference_token`, `capture_pending_counterparty`, `voice_learning_signal`, `ai_call` and
-`ai_call_payload`. The agreed list is the cross-writer map `crossStoreWrites` in
-`backend/gates/tableownershipwaivers_test.go`, and `backend/gates/tableownership_test.go` gates it. That file, not this page, is the authority.
+`privacy` writes tables it does not own when a transaction must erase a subject.
+The allowed writes and their reasons are in `crossStoreWrites` in
+`backend/gates/tableownershipwaivers_test.go`. The table ownership gate holds each one.
 
 Four of those show *why* nothing else can reach them:
 
@@ -459,19 +459,19 @@ it down.
   that of their current primary employer. A lead takes the one of the company it is filed under. A
   free-text value that is not a two-letter code is skipped.
 - **Data protection follows the sending legal entity's jurisdiction.** This covers the controller
-  identity and privacy contact at the foot of the mail. The user who sends belongs to an entity
-  through their legal-entity membership. A user with no entity, and the installation's own mail, send
-  for the default entity, whose jurisdiction is `installation.country`. An installation with one
-  entity sets nothing more.
+  identity and privacy contact at the foot of the mail. `storekit.LegalEntityOf` reads the sending
+  user's membership; none, or an archived entity, gives `installation.country`. A further entity
+  puts its own legal name and address in the foot. Staging stores the entity.
 
 A recipient whose record states no jurisdiction, or one no pack covers, gets the baseline: no pack
 duties. Marketing still needs consent, because the verdict asks for it everywhere, and the send path
 adds the unsubscribe link in every case. The email domain, the jurisdiction of the user who sends
 and the least strict pack never stand in for the recipient's jurisdiction.
 
-Each decision row records the ruleset that judged its recipient (`ruleset_codes`, `ruleset_version`).
-`CheckMessage` reads those codes back, so the advertising label is owed if any recipient's pack asks
-for it. One message goes to every recipient, so its foot carries each recipient's marketing duties.
+Each decision row records its recipient's ruleset (`ruleset_codes`, `ruleset_version`) and the
+`data_protection_country` of the user who sends. `CheckMessage` reads the codes back, so the advertising label is
+owed if any recipient's pack asks for it. One message goes to every recipient, so its foot carries
+each recipient's marketing duties.
 
 ### Request deadlines
 
@@ -577,22 +577,22 @@ version the build sends.
 
 ## Mail from the contact
 
-Mail from a contact shows that they gave their own details. For `bulk_mail_attested`,
-`inbound_sender_authenticated` must also be true.
+Mail from a contact shows that they gave their own details; for `bulk_mail_attested`,
+`inbound_sender_authenticated` must also be true. Before closing old cases, the data task reads
+the stored mail with capture's parser and checks that proof. Mail with no proof stays unknown.
 
-Before closing old cases, the data task reads the stored mail with capture's parser and checks
-the same proof. Mail with no proof keeps its unknown source.
+An unknown source needs review. It has no legal deadline and no send route. A missing mail, a
+reply from our team, or a capture date cannot prove where the details came from. A source with a
+notice duty keeps that duty when its date is unknown. The capture date gives the latest possible
+deadline; the notice may already be due.
 
-An unknown source needs review. It has no legal deadline and no send route. A missing mail,
-a reply from our team, or a capture date cannot prove where the details came from.
+A user with privacy access answers how the details came in and gives the proof, in **Settings →
+Privacy** or a drawer on the contact page. Both sit under the same access check. Each answer maps
+to one existing source kind and changes only the notice duty and the disclosure text.
 
-A source with a notice duty keeps that duty when its date is unknown. The capture date
-gives the latest possible deadline; the notice may already be due.
-
-In **Settings → Privacy**, a user with privacy access records the source and its proof. The
-contact page shows the review under the same access check. If the contact gave the details,
-no separate notice is needed. A date is optional: a known past date is used as given, and a
-missing date uses the original capture date as a bound. The clock never starts again at review.
+Send permission reads the original source record, so a confirmed source never lets a send through.
+A contact who gave the details needs no separate notice. A known past date is used as given; a
+missing one uses the capture date as a bound. The clock never starts again at review.
 
 A data task moves live cases with an unknown source to review. It keeps their audit history,
 finished decisions and mail already on its way. If a send fails, the source is checked again.

@@ -11,11 +11,11 @@ package gates
 // the other lacks.
 
 import (
-	"os"
 	"regexp"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -28,7 +28,7 @@ var (
 
 func TestTheFrontendCurrencyListMatchesTheGoOne(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile(frontendAssignedCurrencies)
+	source, err := gatekit.ReadFile(frontendAssignedCurrencies)
 	if err != nil {
 		t.Fatalf("reading the frontend currency list: %v", err)
 	}

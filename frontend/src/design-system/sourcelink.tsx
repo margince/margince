@@ -32,6 +32,7 @@ export function SourceLink({
   return (
     <Button
       variant="link"
+      align="start"
       className="btn-valuelabel source-link"
       onClick={onOpen}
     >

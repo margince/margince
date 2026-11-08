@@ -14,11 +14,12 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { STORAGE_KEYS, writeStored } from "../lib/storage";
+import { openViewStep } from "../testing/listview.testkit";
 import { type ListColumn, ListTable } from "./listtable";
 import { orderedColumns } from "./listtable.order";
 
-// Column order in the Display menu. The reader moves a column by its grip and
-// the grid follows. The order holds between visits under the table's name.
+// Column order in the Columns step: a grip moves a column, the grid follows,
+// and the order holds between visits under the table's name.
 
 afterEach(() => {
   cleanup();
@@ -63,7 +64,7 @@ describe("column order", () => {
   it("moves a column by keyboard on its grip, and the grid follows", async () => {
     const user = userEvent.setup();
     render(grid());
-    await user.click(screen.getByRole("button", { name: "Display" }));
+    await openViewStep(user, "Columns");
 
     const grip = screen.getByRole("button", { name: "Move Stage, 2 of 2" });
     grip.focus();
@@ -78,7 +79,7 @@ describe("column order", () => {
   it("keeps the order after a remount under the same table name", async () => {
     const user = userEvent.setup();
     const first = render(grid("order-test"));
-    await user.click(screen.getByRole("button", { name: "Display" }));
+    await openViewStep(user, "Columns");
     screen.getByRole("button", { name: "Move Stage, 2 of 2" }).focus();
     await user.keyboard("{ArrowUp}");
     first.unmount();

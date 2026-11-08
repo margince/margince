@@ -65,7 +65,9 @@ func mailFacts(review Review, words mailcopy.Copy) []emailview.Fact {
 			rows = append(rows, emailview.Fact{Label: words.WeeklyWonRevenue, Value: figures.value(figures.set.Deals, figures.won(words.Money(review.Money.WonMinor, review.Money.Currency)))})
 		}
 	}
-	if c.LeadsRouted+c.LeadsAnsweredInTarget+c.LeadsBreached > 0 {
+	if review.LeadsWithheld {
+		rows = append(rows, emailview.Fact{Label: words.WeeklyLeads, Value: words.WeeklyUnavailable})
+	} else if c.LeadsRouted+c.LeadsAnsweredInTarget+c.LeadsBreached > 0 {
 		rows = append(rows, emailview.Fact{Label: words.WeeklyLeads, Value: figures.value(figures.set.Leads, strconv.Itoa(c.LeadsRouted))}, emailview.Fact{Label: words.WeeklyAnswered, Value: figures.value(figures.set.Leads, strconv.Itoa(c.LeadsAnsweredInTarget))}, emailview.Fact{Label: words.WeeklyBreached, Value: figures.value(figures.set.Leads, strconv.Itoa(c.LeadsBreached))})
 	}
 	if c.MeetingsHeld+c.MeetingsWithNextStep > 0 {

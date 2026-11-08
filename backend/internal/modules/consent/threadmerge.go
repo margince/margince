@@ -8,6 +8,8 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // ThreadMergeTx moves the grounds recorded for thread `from` onto thread `to`,
@@ -20,6 +22,9 @@ import (
 func ThreadMergeTx(ctx context.Context, tx pgx.Tx, from, to string) error {
 	if from == "" || to == "" || from == to {
 		return nil
+	}
+	if err := storekit.LockThreadKeysTx(ctx, tx, from, to); err != nil {
+		return err
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE communication_basis SET thread_key = $2 WHERE thread_key = $1`, from, to); err != nil {

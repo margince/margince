@@ -120,6 +120,10 @@ function code(path: string, source: string): string {
 // output moved with the machine it ran on would assert nothing.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "features/booking/meeting-availability.refusal.test.tsx",
+    why: "Feeds the working-hours card the zone a host stores with their hours: the API sends that zone as data, so the fixture carries a real stored value.",
+  },
+  {
     file: "components/bulktask.test.tsx",
     why: "Proves the bulk writer mints the day's end on the RECORD's clock: only a named record zone that differs from the runner's and the fallback's tells that apart from the viewer's zone.",
   },
@@ -142,6 +146,10 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "features/privacy/noticesource.test.tsx",
     why: "Pins the acquisition calendar to prove that the submitted civil date converts to the intended UTC instant.",
+  },
+  {
+    file: "features/analytics/analytics.overview.trajectory.test.ts",
+    why: "Month ticks fall on the company's month starts. Only a zone whose local month starts on another UTC date tells that apart from UTC.",
   },
   {
     file: "features/analytics/reporting.questioncard.test.tsx",
@@ -208,6 +216,18 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The days-late count takes the zone its date is drawn in; the fixture pins UTC so the expected count does not move with the test machine.",
   },
   {
+    file: "features/brief/brief.taskcard.words.test.ts",
+    why: "A task card counts the days a task is late in the zone it is given; the fixture pins UTC so the count does not move with the test machine.",
+  },
+  {
+    file: "features/companies/companynextbar.late.test.tsx",
+    why: "A promise 35 hours late is one elapsed day and two midnights only in a named zone; the badge and the sentence must both say two.",
+  },
+  {
+    file: "features/contacts/contacttoday.late.test.tsx",
+    why: "A promise 35 hours late is one elapsed day and two midnights only in a named zone; the contact's badge and sentence must both say two.",
+  },
+  {
     file: "features/deals/deals.columns.test.tsx",
     why: "The close column draws its day in the zone it is given; the fixture pins UTC so the expected day does not move with the test machine.",
   },
@@ -240,7 +260,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Weekday names are generated from fixed Monday-through-Sunday UTC instants; these are locale labels, not event or record dates.",
   },
   {
-    file: "features/automations/connect-ai-tool.test.tsx",
+    file: "components/connect-ai-tool.test.tsx",
     why: "The admin guide dates a calendar day; a viewer at UTC+14 is where a day handled as an instant would print the next one.",
   },
   {

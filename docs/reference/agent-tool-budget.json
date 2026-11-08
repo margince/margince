@@ -29,11 +29,11 @@
     }
   ],
   "catalog": {
-    "tools": 47,
+    "tools": 48,
     "system_frame_tokens": 592,
-    "tokens": 35742,
+    "tokens": 39638,
     "median_tool_tokens": 620,
-    "mean_tool_tokens": 760
+    "mean_tool_tokens": 825
   },
   "agents": [
     {
@@ -46,18 +46,18 @@
         "read_brief",
         "read_record"
       ],
-      "of_served_tools": 47,
-      "tokens": 4319,
-      "listing_tokens": 2134,
-      "step_schema_tokens": 1592,
+      "of_served_tools": 48,
+      "tokens": 4340,
+      "listing_tokens": 2131,
+      "step_schema_tokens": 1617,
       "percent_of_ceiling": 13,
-      "headroom_tokens": 18891,
+      "headroom_tokens": 18870,
       "dangling_cross_references": [],
       "temptation_weight": 5
     },
     {
       "name": "overnight_at_risk_sweep",
-      "goal": "Sweep this workspace's open deals for risk: deals with no activity in 14+ days, stakeholders gone quiet, or missing next steps. First call whats_slipping_this_week: it returns the at-risk deals across the whole workspace. A deal the retrieved context mentions is one example, not the sweep, so do not read or log on it before that list. Then read each listed deal and log ONE note activity per at-risk deal summarizing the risk and the evidence (cite the records you read). Do not advance stages, send anything, or archive anything.",
+      "goal": "Sweep the open deals your member owns for risk: deals with no activity in 14+ days, stakeholders gone quiet, or missing next steps. First call whats_slipping_this_week: in this run it returns only the at-risk deals your member owns. Each other member's run sweeps that member's deals, and a deal whose owner has not granted this sweep is swept by nobody, so do not read or log on a deal outside that list. A deal the retrieved context mentions is one example, not the sweep, so do not read or log on it before that list. Then read each listed deal and log ONE note activity per at-risk deal summarizing the risk and the evidence (cite the records you read). Do not advance stages, send anything, or archive anything.",
       "tools": [
         "at_risk_relationships",
         "catch_me_up_on",
@@ -67,12 +67,12 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "of_served_tools": 47,
-      "tokens": 6422,
-      "listing_tokens": 3373,
-      "step_schema_tokens": 2457,
-      "percent_of_ceiling": 19,
-      "headroom_tokens": 16788,
+      "of_served_tools": 48,
+      "tokens": 6576,
+      "listing_tokens": 3436,
+      "step_schema_tokens": 2548,
+      "percent_of_ceiling": 20,
+      "headroom_tokens": 16634,
       "dangling_cross_references": [
         "at_risk_relationships → read_relationships",
         "log_activity → draft_outbound",
@@ -85,87 +85,91 @@
   "tool_cost": [
     {
       "name": "read_reports",
-      "tokens": 2492
+      "tokens": 2692
     },
     {
       "name": "read_workspace",
-      "tokens": 2061
-    },
-    {
-      "name": "change_state",
-      "tokens": 1896
-    },
-    {
-      "name": "change_activities",
-      "tokens": 1878
-    },
-    {
-      "name": "find_records",
-      "tokens": 1874
+      "tokens": 2687
     },
     {
       "name": "read_details",
-      "tokens": 1662
+      "tokens": 2167
+    },
+    {
+      "name": "change_activities",
+      "tokens": 1957
+    },
+    {
+      "name": "find_records",
+      "tokens": 1949
+    },
+    {
+      "name": "change_state",
+      "tokens": 1930
+    },
+    {
+      "name": "change_settings",
+      "tokens": 1710
     },
     {
       "name": "send_outbound",
-      "tokens": 1453
+      "tokens": 1680
     },
     {
       "name": "change_reports",
-      "tokens": 1286
+      "tokens": 1264
     },
     {
-      "name": "read_view",
-      "tokens": 1008
+      "name": "change_capture",
+      "tokens": 1080
     },
     {
       "name": "preview_import",
-      "tokens": 1001
+      "tokens": 1012
     },
     {
       "name": "read_forecast",
-      "tokens": 929
+      "tokens": 978
     },
     {
       "name": "read_analytics",
       "tokens": 927
     },
     {
-      "name": "change_capture",
-      "tokens": 865
+      "name": "change_attention",
+      "tokens": 899
     },
     {
-      "name": "change_attention",
-      "tokens": 807
+      "name": "create_record",
+      "tokens": 873
     },
     {
       "name": "change_compliance",
-      "tokens": 799
+      "tokens": 834
     },
     {
       "name": "bulk_update_records",
       "tokens": 798
     },
     {
-      "name": "create_record",
-      "tokens": 794
-    },
-    {
       "name": "read_lists",
       "tokens": 788
     },
     {
-      "name": "change_settings",
-      "tokens": 764
+      "name": "run_research",
+      "tokens": 776
     },
     {
       "name": "change_access",
-      "tokens": 656
+      "tokens": 706
     },
     {
       "name": "change_offers",
-      "tokens": 628
+      "tokens": 678
+    },
+    {
+      "name": "read_view",
+      "tokens": 638
     },
     {
       "name": "update_record",
@@ -181,7 +185,11 @@
     },
     {
       "name": "resolve_duplicates",
-      "tokens": 613
+      "tokens": 618
+    },
+    {
+      "name": "change_my_settings",
+      "tokens": 601
     },
     {
       "name": "change_tags",
@@ -193,11 +201,15 @@
     },
     {
       "name": "change_relationships",
-      "tokens": 494
+      "tokens": 472
     },
     {
       "name": "decide_approvals",
       "tokens": 429
+    },
+    {
+      "name": "schedule_meeting",
+      "tokens": 420
     },
     {
       "name": "annotate_brief",
@@ -208,14 +220,6 @@
       "tokens": 413
     },
     {
-      "name": "schedule_meeting",
-      "tokens": 409
-    },
-    {
-      "name": "run_research",
-      "tokens": 408
-    },
-    {
       "name": "list_approvals",
       "tokens": 401
     },
@@ -224,12 +228,16 @@
       "tokens": 395
     },
     {
+      "name": "read_attention",
+      "tokens": 365
+    },
+    {
       "name": "read_relationships",
       "tokens": 359
     },
     {
       "name": "read_tags",
-      "tokens": 351
+      "tokens": 358
     },
     {
       "name": "check_availability",
@@ -240,16 +248,12 @@
       "tokens": 331
     },
     {
-      "name": "read_attention",
-      "tokens": 326
-    },
-    {
       "name": "read_record",
       "tokens": 324
     },
     {
       "name": "read_project",
-      "tokens": 307
+      "tokens": 314
     },
     {
       "name": "archive_record",

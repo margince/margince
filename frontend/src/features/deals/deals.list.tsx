@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import { usePageName } from "../../app/pagemeta";
+import { BULK_MAX_ITEMS } from "../../components/bulkchangeapi";
 import { searchCompanyTargets } from "../../components/companyform";
 import { CreateAction } from "../../components/create";
 import {
@@ -18,13 +19,14 @@ import { mineEmptyNote, standardViews } from "../../components/recordlist";
 import { useOwnerPicker } from "../../components/recordowners";
 import { RefusedFiltersNote } from "../../components/refusedfiltersnote";
 import { ErrorLine } from "../../design-system/errorline";
+import { useRowSelection } from "../../design-system/listselection";
 import { currencyOptions } from "../../format/currencychoices";
-import { formatNumber } from "../../format/format";
-import { translatePlural, useLocale, useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
 import { useCan } from "../../lib/capability";
 import { maskRefusedDialOf } from "../../lib/dealranges";
 import {
+  type DealFilters,
   totalsRefusedBecause,
   totalsWithheldBecause,
   useDeals,
@@ -36,7 +38,11 @@ import { throwProblem, unwrap } from "../../lib/problem";
 import { useReReadMeWhen } from "../../lib/refusedfilters";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
-import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
+import {
+  SavedViewsFailure,
+  SaveViewAction,
+  useSavedViewTabs,
+} from "../lists/savedviews";
 import { LegalReviewQueueLink } from "../privacy/legalreviews";
 import {
   type ClosedDeal,
@@ -48,6 +54,7 @@ import {
   ConfirmAdvanceModal,
   type PendingAdvance,
 } from "./deal360/confirmadvance";
+import { useStageColumns } from "./dealboard.queries";
 import {
   dealProjectFields,
   resolveDealProject,
@@ -55,6 +62,7 @@ import {
 } from "./dealproject";
 import type { Deal, Pipeline, Stage } from "./deals";
 import {
+  BoardHeadCount,
   DealBoardBody,
   useAdvanceDeal,
   useBoardInteractions,
@@ -62,8 +70,8 @@ import {
 import { dealColumns } from "./deals.columns";
 import { partnerFields, usePartnerOptions } from "./deals.fields";
 import {
-  DealViewTools,
   dealRowSelection,
+  dealViewDials,
   savableDealQuery,
   useDealChips,
   useDealScreenDials,
@@ -201,6 +209,23 @@ function DealCreateAction({
   );
 }
 
+// Each surface reads only while it shows, so neither pays for the other.
+function useSurfaceReads(
+  f: DealFilters,
+  stages: readonly Stage[],
+  view: "board" | "table",
+  refused: boolean,
+) {
+  const dealsQuery = useDeals(f, view === "table" && !refused);
+  const stageColumns = useStageColumns(
+    f,
+    stages.map((stage) => stage.id),
+    view === "board" && !refused,
+  );
+  const readError = view === "board" ? stageColumns.error : dealsQuery.error;
+  return { dealsQuery, stageColumns, readError };
+}
+
 export function DealsScreen({
   startCreating = false,
 }: Readonly<{ startCreating?: boolean }>) {
@@ -255,14 +280,19 @@ export function DealsScreen({
   });
   // A refused dial the list can name is named, and no wider list is asked for.
   const roleRefusal = nameRefusal(refusedDials);
-  const dealsQuery = useDeals(dealFilters, !roleRefusal);
+  const { dealsQuery, stageColumns, readError } = useSurfaceReads(
+    dealFilters,
+    stages,
+    view,
+    Boolean(roleRefusal),
+  );
   // A dial the role's mask refused, which a current snapshot would have
   // withheld. Reading /me again withholds it and the list reloads without it.
-  const maskRefused = maskRefusedDialOf(dealsQuery.error);
+  const maskRefused = maskRefusedDialOf(readError);
   useReReadMeWhen(Boolean(maskRefused));
   const refusal = nameRefusal([...refusedDials, maskRefused]);
   // The board's column totals: a per-stage server aggregate over every
-  // matching deal, not only the capped page useDeals fetches. Built from the
+  // matching deal, not only the pages the columns have read. Built from the
   // same filter dials, so cards and totals agree on which deals are in view.
   const stageTotalsQuery = useStageTotals(dealFilters, !roleRefusal);
   // The same answer the query keys its `enabled` on, so the column explains the
@@ -275,27 +305,21 @@ export function DealsScreen({
   // from `pending`, which is the question before the close; this is the offer
   // after one landed, and the close dialog is already gone by then.
   const [closed, setClosed] = useState<ClosedDeal | null>(null);
-  // Bulk selection, by deal id. Cleared after any bulk run except for the rows
-  // that refused, since every other row's version has moved.
-  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
 
   const advance = useAdvanceDeal();
 
   const stageName = new Map(stages.map((stage) => [stage.id, stage.name]));
-  // Every page walked so far, in one list. The board draws its columns from
-  // this and the table renders it directly, so both surfaces grow together as
-  // the reader asks for more.
   const loadedDeals = (dealsQuery.data?.pages ?? []).flatMap(
     (page) => page.data,
   );
-  // Only ids the list holds now count as selected. A row that left the result
-  // set (refetched away, filtered out, archived by this run) must not linger
-  // as an invisible selection nobody can clear.
-  const selectedRows = loadedDeals.filter((deal) => selected.has(deal.id));
-  const liveSelection = new Set(selectedRows.map((deal) => deal.id));
+  // Cleared after any bulk run except for the rows that refused, since every
+  // other row's version has moved.
+  const chosen = useRowSelection({
+    rows: loadedDeals,
+    keyOf: (deal) => deal.id,
+    limit: BULK_MAX_ITEMS,
+  });
 
-  // The table's own dials over the same keyset walk the board reads, so
-  // "load more" on either surface advances both.
   const dealsListState: ListState<Deal> = {
     rows: loadedDeals,
     query,
@@ -315,7 +339,12 @@ export function DealsScreen({
   const openStages = stages.filter((stage) => stage.semantic === "open");
 
   const { openDeal, cardDragHandlers, columnDropHandlers } =
-    useBoardInteractions({ stages, loadedDeals, advance, setPending });
+    useBoardInteractions({
+      stages,
+      loadedDeals: stageColumns.deals,
+      advance,
+      setPending,
+    });
 
   // Shared between the board and the table surface: whichever view is
   // showing, the action lives in the surface's own header, not a wrap sibling.
@@ -332,16 +361,15 @@ export function DealsScreen({
   const pipelineId = effectivePipeline?.id ?? "";
   // The board/table switch and the pipeline picker are shared, so the reader
   // sees the same dials either way.
-  const tools = (
-    <DealViewTools
-      view={view}
-      setView={setView}
-      pipelines={pipelinesQuery.data ?? []}
-      pipelineId={pipelineId}
-      setPipelineId={setPipelineId}
-      setQuery={setQuery}
-    />
-  );
+  const { layout, viewRows } = dealViewDials({
+    view,
+    setView,
+    pipelines: pipelinesQuery.data ?? [],
+    pipelineId,
+    setPipelineId,
+    setQuery,
+    t,
+  });
   // Saving is not shared. A view holds a sort as well as its filters. The
   // board offers no way to see or change one: its order is the pipeline's
   // stage order. Saving from there would pin an ordering the reader never
@@ -349,7 +377,7 @@ export function DealsScreen({
   const saveView = view === "table" && (
     <SaveViewAction
       resource="deals"
-      query={savableDealQuery(dealsListState.query, pipelineId)}
+      state={{ query: savableDealQuery(dealsListState.query, pipelineId) }}
     />
   );
   const listState: ListState<Deal> = refusal
@@ -364,31 +392,20 @@ export function DealsScreen({
   const tagChips = useTagChips();
   const rowSelection = dealRowSelection({
     view,
-    liveSelection,
-    selectedRows,
+    chosen,
     stages,
-    setSelected,
     t,
   });
 
-  // The board is the surface's alternate body, not a surface of its own. The
-  // saved views, the chips and the archived toggle all describe the one query
-  // both views read. A board that replaced the surface would take them along,
-  // leaving a narrowed pipeline with nothing saying what narrowed it.
-  //
-  // It carries its own continuation control, because `bodyOwnsPaging` withholds
-  // the surface's. That belongs to the paged grid this body does not draw, and
-  // the board holds every card loaded so far at once. Its count still goes to
-  // the surface's head (`bodyCount`). A reader looks for how much is here beside
-  // the page's name; under the toolbar it would read as a caption on the dials.
+  // The board is the surface's body, so the dials that narrow it stay in view.
+  // Each column pages itself, so `bodyOwnsPaging` withholds the grid's pager.
   const boardBody =
     view === "board" && !refusal ? (
       <DealBoardBody
-        dealsQuery={dealsQuery}
+        stageColumns={stageColumns}
         pipelinesQuery={pipelinesQuery}
         effectivePipeline={effectivePipeline}
         dealFilters={dealFilters}
-        loadedDeals={loadedDeals}
         stageTotalsQuery={stageTotalsQuery}
         totalsWithheld={totalsWithheld}
         companies={companiesQuery.data?.data ?? []}
@@ -414,16 +431,21 @@ export function DealsScreen({
             {createAction}
           </>
         }
-        tools={tools}
+        layout={layout}
+        viewRows={viewRows}
         saveView={saveView}
+        notice={<SavedViewsFailure resource="deals" />}
         body={boardBody}
         bodyOwnsPaging={boardBody !== undefined}
+        countScope={effectivePipeline?.name}
         bodyCount={
-          view === "board" &&
-          dealsQuery.data &&
-          translatePlural(locale, "board.count", loadedDeals.length, {
-            count: formatNumber(loadedDeals.length, locale),
-          })
+          boardBody && (
+            <BoardHeadCount
+              pipeline={effectivePipeline}
+              stageColumns={stageColumns}
+              stageTotalsQuery={stageTotalsQuery}
+            />
+          )
         }
         // The pipeline picker is screen state, not a filter, so switching it
         // changes every row without touching `filters`. Naming it here is

@@ -4,8 +4,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
-import { THEME_LABEL_KEYS } from "../../app/account";
-import { Avatar, Button, SegmentedControl } from "../../design-system/atoms";
+import {
+  Avatar,
+  Badge,
+  Button,
+  SegmentedControl,
+} from "../../design-system/atoms";
 import { describedByIds } from "../../design-system/describedby";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
@@ -31,6 +35,7 @@ import { useLogout, useMe } from "../../lib/session";
 import {
   setThemeChoice,
   THEME_CHOICES,
+  THEME_LABEL_KEYS,
   type ThemeChoice,
   useThemeChoice,
 } from "../../lib/theme";
@@ -38,6 +43,7 @@ import { useSaveMyTimezone, useViewerZone } from "../../lib/viewerzone";
 import { MfaSettingRow } from "../sign-in/mfacard";
 import { PasswordSettingRow } from "../sign-in/passwordcard";
 import { reloadReaderLanguageReads } from "./languagereads";
+import { ProfilePictureRow } from "./profilepicture";
 import { NameSettingRows, useAccountNames } from "./settings-names";
 import { SignatureSettingRow } from "./settingssignaturerow";
 import { InstallSettingRow } from "./thisdevice";
@@ -76,6 +82,7 @@ function ProfilePanel({ toast }: Readonly<{ toast: Toast }>) {
                 size="lg"
                 identity={me.user.id}
                 name={me.user.display_name || me.user.email || ""}
+                photo={me.user.avatar_url}
               />
               <div className="settings-identity-id">
                 <div className="settings-identity-name">
@@ -96,6 +103,9 @@ function ProfilePanel({ toast }: Readonly<{ toast: Toast }>) {
         </QueryGate>
       </PanelBody>
       <SettingList bleed="settings">
+        {query.data && (
+          <ProfilePictureRow user={query.data.user} toast={toast} />
+        )}
         <NameSettingRows names={names} />
         <SignatureSettingRow toast={toast} />
       </SettingList>
@@ -240,11 +250,17 @@ function TimeZoneSettingRow() {
   // Drawn once /me has answered, so the row never shows a guess first.
   if (!me.data) return null;
   return (
-    <TimeZoneSettingControl stored={me.data.user.timezone ?? readerZone} />
+    <TimeZoneSettingControl
+      stored={me.data.user.timezone ?? readerZone}
+      setByAgent={Boolean(me.data.user.timezone_set_by)}
+    />
   );
 }
 
-function TimeZoneSettingControl({ stored }: Readonly<{ stored: string }>) {
+function TimeZoneSettingControl({
+  stored,
+  setByAgent,
+}: Readonly<{ stored: string; setByAgent: boolean }>) {
   const t = useT();
   const save = useSaveMyTimezone();
   const [draft, setDraft] = useState<string | null>(null);
@@ -277,6 +293,9 @@ function TimeZoneSettingControl({ stored }: Readonly<{ stored: string }>) {
             value={shown}
             onChange={setDraft}
           />
+          {setByAgent && (
+            <Badge tone="ai">{t("account.timezoneSetByAgent")}</Badge>
+          )}
           <ErrorLine id={refusalId}>
             {save.isError ? problemMessageOf(save.error, t) : null}
           </ErrorLine>

@@ -14,17 +14,12 @@ import { useCompanyZone } from "../../lib/companyzone";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { useAnalyticsContext } from "./analytics.context";
 import { AnalyticsScopePicker } from "./analytics.scope";
-import { DimensionFilters } from "./reporting.dimensions";
+import { DimensionFilters, FoldedDimensions } from "./reporting.dimensions";
 import type { ReportingSelection } from "./reporting.model";
 
-export const REPORTING_PERIODS: readonly ReportingSelection["period"][] = [
-  "this_week",
-  "this_month",
-  "last_month",
-  "last_week",
-  "this_quarter",
-  "custom",
-];
+import { REPORTING_PERIODS } from "./reporting.selection";
+
+export { REPORTING_PERIODS } from "./reporting.selection";
 
 export function ReportingFilters({
   selection,
@@ -43,8 +38,9 @@ export function ReportingFilters({
   showPipeline?: boolean;
   showTargets?: boolean;
   showCloseWindow?: boolean;
-  // The product, country, industry and value basis dials, for a deal view.
-  showDimensions?: boolean;
+  // The product, country, industry and value basis dials, for a deal view;
+  // folded keeps them behind one toggle.
+  showDimensions?: boolean | "folded";
   dates?: Readonly<{
     from: string;
     through: string;
@@ -212,8 +208,12 @@ export function ReportingFilters({
           )}
         </Field>
       )}
-      {showDimensions && (
-        <DimensionFilters selection={selection} onChange={onChange} />
+      {showDimensions === "folded" ? (
+        <FoldedDimensions selection={selection} onChange={onChange} />
+      ) : (
+        showDimensions && (
+          <DimensionFilters selection={selection} onChange={onChange} />
+        )
       )}
       <ErrorLine error={context.error ?? pipelines.error} />
     </div>

@@ -19,13 +19,14 @@ import (
 	"go/token"
 	"go/types"
 	"maps"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -448,15 +449,29 @@ func (w *grantWalk) call(call *ast.CallExpr, info *types.Info, bound map[types.O
 		}
 		return
 	}
+	if isAuthAllows(used) {
+		w.recordRefusal(used.Name(), call, info, bound, false)
+		return
+	}
 	for _, callee := range w.source.graph.callees(used) {
 		w.function(callee, boundArguments(callee, call, info, bound), mainLine)
 	}
+}
+
+func isAuthAllows(fn *types.Func) bool {
+	sig, ok := fn.Type().(*types.Signature)
+	return ok && sig.Recv() == nil && fn.Pkg() != nil && fn.Pkg().Path() == authPackagePath && fn.Name() == authAllows
 }
 
 // refusingChecks are the auth functions the walk records by name, because each one
 // refuses by itself. Every other auth function is walked through to these or to
 // isPermissionsAllows, so a new wrapper cannot hide a grant.
 var refusingChecks = map[string]bool{"Require": true, "RequireAny": true, "RequireAdmin": true, "RequireCoach": true}
+
+// authAllows is Require read as a boolean, so the walk records it by name as a
+// conditional check. Its object and action reach the primitive inside a Check,
+// where the walk cannot bind them.
+const authAllows = "Allows"
 
 func isPermissionsAllows(fn *types.Func) bool {
 	sig, ok := fn.Type().(*types.Signature)
@@ -539,7 +554,7 @@ var (
 // internal to identity, which this gate cannot import.
 func readRoleGrants(t *testing.T) roleGrants {
 	t.Helper()
-	body, err := os.ReadFile(rbacMatrixPage)
+	body, err := gatekit.ReadFile(rbacMatrixPage)
 	if err != nil {
 		t.Fatalf("reading the seeded role matrix: %v", err)
 	}

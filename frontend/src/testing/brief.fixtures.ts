@@ -251,6 +251,28 @@ export function report(rows: unknown[], excluded = 0): Response {
 
 export const NOT_FOUND = { title: "Not Found", code: "no_digest_yet" };
 
+/**
+ * `GET /deal-corrections/pending` on a night Margince changed no deal. Home
+ * reads `bundles` off it beside the receipts, and the contract marks `bundles`
+ * required. So the stub's fallback list page (`{data, page}`) is no stand-in
+ * for it: the panel fails on it in a way no server could produce.
+ */
+export const noMarginceChanges: components["schemas"]["MarginceChangeSummary"] =
+  {
+    as_of: "2026-09-13T08:00:00Z",
+    deals: 0,
+    closed: 0,
+    redated: 0,
+    revalued: 0,
+    probabilities: 0,
+    moved: 0,
+    opened: 0,
+    revived: 0,
+    base_currency: "EUR",
+    bundles: [],
+    truncated: false,
+  };
+
 // ── The readings strip ──────────────────────────────────────────────────────
 
 export type WeeklyReview = components["schemas"]["WeeklyReview"];
@@ -328,6 +350,24 @@ export const narratedWeek: WeeklyReview = {
   pipeline: weeklyPipeline,
   narrative: "Weber signed on Thursday; two promises slipped into this week.",
   narrated_at: "2026-07-06T06:01:00Z",
+  // Thursday is the busiest and the meetings sum to counts.meetings_held.
+  // Saturday's one email puts a weekend day on the chart.
+  daily_activity: (
+    [
+      ["2026-06-29", 14, 3, 1],
+      ["2026-06-30", 18, 4, 2],
+      ["2026-07-01", 9, 2, 0],
+      ["2026-07-02", 22, 5, 2],
+      ["2026-07-03", 11, 1, 0],
+      ["2026-07-04", 1, 0, 0],
+      ["2026-07-05", 0, 0, 0],
+    ] as const
+  ).map(([day, emails_sent, calls_logged, meetings_held]) => ({
+    day,
+    emails_sent,
+    calls_logged,
+    meetings_held,
+  })),
   prior: {
     local_week_start: PRIOR_WEEK_START,
     // Deliberately uneven against the week above: one figure up, one down and

@@ -27,7 +27,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -44,15 +43,10 @@ const localeField = "locale"
 // the same reason — holding a seat is the whole authority needed to choose the
 // language you read in.
 func (s *Service) SaveMyLocale(ctx context.Context, locale string) (Seat, error) {
-	// Deliberately NOT actingHuman: that resolves the human an agent is acting
-	// UNDER, which is right for attributing work and wrong here. A display
-	// language is a preference about a contact's own screen, and an agent
-	// carrying its grantor's authority must not change what its grantor reads.
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
-		return Seat{}, apperrors.ErrPermissionDenied
+	human, err := ownSettingsSeat(ctx)
+	if err != nil {
+		return Seat{}, err
 	}
-	human := actor.UserID
 	if !textlang.Known(locale) {
 		// The catalogs are the limit, not a policy: a locale the product ships
 		// no messages for renders as raw message keys, which is worse than
@@ -60,15 +54,18 @@ func (s *Service) SaveMyLocale(ctx context.Context, locale string) (Seat, error)
 		return Seat{}, &UnknownLocaleError{Locale: locale}
 	}
 	seat := Seat{UserID: ids.From[ids.UserKind](human), Locale: locale}
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var before *string
 		if err := tx.QueryRow(ctx,
-			`SELECT email, display_name, locale, greeting_name
+			`SELECT email, display_name, locale, greeting_name, avatar_object_key
 			   FROM app_user WHERE id = $1 AND archived_at IS NULL`,
-			human).Scan(&seat.Email, &seat.DisplayName, &before, &seat.GreetingName); err != nil {
+			human).Scan(&seat.Email, &seat.DisplayName, &before, &seat.GreetingName, &seat.AvatarKey); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return apperrors.ErrNotFound
 			}
+			return err
+		}
+		if err := readSeatZone(ctx, tx, &seat); err != nil {
 			return err
 		}
 		if before != nil && *before == locale {
@@ -114,6 +111,9 @@ type Seat struct {
 	// whether the user picked it themselves.
 	Timezone       string
 	TimezoneChosen bool
+	TimezoneSetBy  *string
+	// AvatarKey is where the seat's picture bytes live, nil when it has none.
+	AvatarKey *string
 }
 
 // localeImage renders one side of the audit's before/after pair.

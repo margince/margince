@@ -190,6 +190,11 @@ export function stubBackend(
     const request = input instanceof Request ? input : null;
     const url = String(request ? request.url : input);
     const method = request ? request.method : (init?.method ?? "GET");
+    // The deal's products, in the list-and-tag shape the card reads. Without
+    // this the deal's own route answers it with the deal record.
+    if (/\/deals\/[^/]+\/products$/.test(new URL(url, "http://x").pathname)) {
+      return jsonResponse({ data: [], tag: "empty" });
+    }
     if (method === "GET" && url.includes("/commitments")) {
       return jsonResponse({ complete: true, has_more: false, data: [] });
     }
@@ -385,18 +390,30 @@ export function stubBackend(
     }
     if (url.includes("/deals") && !url.includes("/outcome-reviews")) {
       opts.onDealsUrl?.(url);
+      // A board column asks for one stage, and the server answers only it.
+      const stageId = new URL(url, "https://test.local").searchParams.get(
+        "stage_id",
+      );
+      const inStage = (rows: Deal[]) =>
+        stageId ? rows.filter((row) => row.stage_id === stageId) : rows;
       if (opts.nextPage) {
         return url.includes("cursor=")
           ? jsonResponse({
-              data: opts.nextPage,
+              data: inStage(opts.nextPage),
               page: { next_cursor: null, has_more: false },
             })
           : jsonResponse({
-              data: deals,
-              page: { next_cursor: "cur-2", has_more: true },
+              data: inStage(deals),
+              page: {
+                next_cursor: "cur-2",
+                has_more: inStage(opts.nextPage).length > 0,
+              },
             });
       }
-      return jsonResponse({ data: deals, page: { next_cursor: null } });
+      return jsonResponse({
+        data: inStage(deals),
+        page: { next_cursor: null },
+      });
     }
     return jsonResponse({ data: [], page: { next_cursor: null } });
   });

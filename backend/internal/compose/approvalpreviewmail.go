@@ -38,7 +38,7 @@ func (r approvalPreviewReader) mailPreview(ctx context.Context, approval crmcont
 	if approval.Kind == previewSendCompanyEmail && len(message.Links) == 0 {
 		return out, nil
 	}
-	links, err := r.mailPreviewLinks(ctx, approval, message)
+	origin, links, err := r.mailPreviewOrigin(ctx, approval, message)
 	if previewUnavailable(err) {
 		return out, nil
 	}
@@ -53,7 +53,7 @@ func (r approvalPreviewReader) mailPreview(ctx context.Context, approval crmcont
 	}
 	appendMailSchedule(message, out)
 	out.Effects = &[]string{"authorize_message_send"}
-	if err := r.appendMailPresentation(ctx, approval, input, out); err != nil {
+	if err := r.appendMailPresentation(ctx, approval, origin, links, input, out); err != nil {
 		if previewUnavailable(err) {
 			return out, nil
 		}
@@ -63,18 +63,24 @@ func (r approvalPreviewReader) mailPreview(ctx context.Context, approval crmcont
 	return out, r.currentEvidence(ctx, approval, out)
 }
 
-func (r approvalPreviewReader) mailPreviewLinks(ctx context.Context, approval crmcontracts.Approval, message crmcontracts.SendCompanyEmailRequest) ([]activities.ActivityLinkInput, error) {
+// mailPreviewOrigin is where the held message would be sent from, and the
+// records that origin files it under.
+func (r approvalPreviewReader) mailPreviewOrigin(ctx context.Context, approval crmcontracts.Approval, message crmcontracts.SendCompanyEmailRequest) (activities.SendOrigin, []activities.ActivityLinkInput, error) {
+	var origin activities.SendOrigin
 	if approval.Kind == previewSendEmail {
 		if approval.TargetEntityType == nil || *approval.TargetEntityType != string(recordTypeActivity) || approval.TargetEntityId == nil {
-			return nil, apperrors.ErrInvalidArgument
+			return activities.SendOrigin{}, nil, apperrors.ErrInvalidArgument
 		}
-		return activities.FromActivity(ids.From[ids.ActivityKind](ids.UUID(*approval.TargetEntityId))).Resolve(ctx, r.activities)
+		origin = activities.FromActivity(ids.From[ids.ActivityKind](ids.UUID(*approval.TargetEntityId)))
+	} else {
+		links := make([]activities.ActivityLinkInput, 0, len(message.Links))
+		for _, link := range message.Links {
+			links = append(links, activities.ActivityLinkInput{EntityType: string(link.EntityType), EntityID: ids.UUID(link.EntityId)})
+		}
+		origin = activities.FromAccount(links)
 	}
-	links := make([]activities.ActivityLinkInput, 0, len(message.Links))
-	for _, link := range message.Links {
-		links = append(links, activities.ActivityLinkInput{EntityType: string(link.EntityType), EntityID: ids.UUID(link.EntityId)})
-	}
-	return activities.FromAccount(links).Resolve(ctx, r.activities)
+	links, err := origin.Resolve(ctx, r.activities)
+	return origin, links, err
 }
 
 func mailPreviewDetails(message crmcontracts.SendCompanyEmailRequest, input activities.SendEmailInput, to []string) []crmcontracts.ApprovalPreviewDetail {
@@ -94,8 +100,10 @@ func mailPreviewDetails(message crmcontracts.SendCompanyEmailRequest, input acti
 	return details
 }
 
-func (r approvalPreviewReader) appendMailFooter(ctx context.Context, in activities.SendEmailInput, out *crmcontracts.ApprovalPreview) error {
-	footer, err := r.activities.PreviewMailFooter(ctx, in)
+// appendMailFooter previews the footer under the category the send will use,
+// which the consent engine may widen to marketing for one recipient.
+func (r approvalPreviewReader) appendMailFooter(ctx context.Context, origin activities.SendOrigin, links []activities.ActivityLinkInput, in activities.SendEmailInput, out *crmcontracts.ApprovalPreview) error {
+	footer, err := r.activities.PreviewMailFooter(ctx, origin, links, in, consentGateOn(r.db))
 	if err != nil {
 		return err
 	}

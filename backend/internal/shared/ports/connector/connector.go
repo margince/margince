@@ -289,7 +289,8 @@ type NormalizedRecord struct {
 	// and a connector may not import it.
 	CrossDoorIdentity CrossDoorIdentity
 	OwnerDomainOnly   string // the calendar owner's domain when every party is on it; the sink judges it
-	PartiesIncomplete bool   // the provider may have left parties out of Addresses, so they cannot prove it internal
+	CalendarAnswer    *CalendarAnswer
+	PartiesIncomplete bool // the provider may have left parties out of Addresses, so they cannot prove it internal
 
 	// The address the RECEIVING infrastructure recorded delivery to, empty when
 	// no such claim could be trusted. It is how a forwarding alias is
@@ -345,14 +346,8 @@ type NormalizedRecord struct {
 	// is not mail.
 	ReplyTo []string
 
-	// The FURTHER parties beyond the mailbox owner and Counterparty — CCs, a
-	// meeting's attendees and organizer. Additive rather than a replacement,
-	// because direction is defined against the two ENDS of the exchange and
-	// everyone else is present without being either.
-	//
-	// Addresses, not records: resolving one is capture's job at stamping time,
-	// and one that resolves to nobody is still kept — an attendee without a
-	// record is a fact about the meeting.
+	// Participants holds the parties beyond the mailbox owner and counterparty.
+	// Capture resolves them; an unresolved invitee stays recorded by address.
 	Participants []MessageParticipant
 
 	// The parties the MaxParticipants cap withheld from Participants. Capture

@@ -80,7 +80,7 @@ func TestAPreviewOfAStoredSourceAdvancesItsDraft(t *testing.T) {
 		t.Fatalf("runs = %+v, want only the draft the stored source opened, %s", runs, preview.Run.RunID)
 	}
 
-	var retested importRunDTO
+	var retested importjobtest.Run
 	if status := d.e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
 		"connector": "csv", "object": "company", "source_ref": runs[0].SourceRef,
 		"mapping": map[string]string{"name": "display_name"}, "on_duplicate": "skip",

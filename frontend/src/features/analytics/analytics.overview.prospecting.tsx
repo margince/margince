@@ -3,8 +3,10 @@
 
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { Suspense } from "react";
 import type { components } from "../../api/schema";
 import { AppLink } from "../../design-system/applink";
+import { PendingBody } from "../../design-system/atoms";
 import { Disclosure } from "../../design-system/disclosure";
 import { ErrorLine } from "../../design-system/errorline";
 import { FilterBar } from "../../design-system/filterbar";
@@ -16,8 +18,9 @@ import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { useCompanyZone } from "../../lib/companyzone";
 import { problemCodeOf } from "../../lib/problem";
-import { AssessmentPanel } from "./analytics.assessment";
+import { AnalyticsBoard, AnalyticsSheet } from "./analytics.board";
 import { scopeKey } from "./analytics.context";
+import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import { useSdrSummary, WaitingOnOthers } from "./analytics.outcomes.sdr";
 import { DoNext } from "./analytics.overview.donext";
 import { MonthlyTargets } from "./analytics.overview.monthly";
@@ -27,31 +30,31 @@ import {
   ProspectingResults,
 } from "./analytics.overview.prospectinghero";
 import {
-  OutcomeHistory,
   type ProspectingOutcome,
   useProspectingWeeks,
-} from "./analytics.overview.prospectingweeks";
+} from "./analytics.overview.prospectingweeks.queries";
 import {
-  HandoffCohort,
-  UpcomingMeetings,
-} from "./analytics.overview.prospectingwork";
+  OVERVIEW_DEFAULT_PERIOD,
+  prospectingQuestion,
+  prospectingScope,
+  prospectingTemplate,
+} from "./analytics.overview.questions";
 import { OverviewSaveActions } from "./analytics.overview.readings";
+import {
+  AssessmentPanel,
+  HandoffCohort,
+  OutcomeHistory,
+  UpcomingMeetings,
+} from "./analytics.overview.work";
 import { periodCaption } from "./analytics.period";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
 import { ReportingFilters } from "./reporting.filters";
 import type {
   ReportingEvaluation,
   ReportingEvidenceRef,
-  ReportingSelection,
 } from "./reporting.model";
-import {
-  customInterval,
-  useOverviewFilters,
-  validDateRange,
-} from "./reporting.overview";
 import { useReportingEvaluation } from "./reporting.queries";
-import { viewRequest, workflowMetrics } from "./reporting.views";
+import { useOverviewFilters, validDateRange } from "./reporting.selection";
 
 type Catalog = components["schemas"]["ReportingCatalog"];
 type AnalyticsContext = components["schemas"]["AnalyticsContext"];
@@ -66,7 +69,7 @@ function workflowOf(
   summary: ReturnType<typeof useSdrSummary>,
 ): WorkflowState {
   if (framework.data)
-    return framework.data.definition.template === "sdr"
+    return prospectingTemplate(framework.data.definition.template) === "sdr"
       ? "handoff"
       : "qualification";
   if (summary.data) return summary.data.workflow;
@@ -93,29 +96,18 @@ export function MyProspecting({
   const t = useT();
   const { locale } = useLocale();
   const zone = useCompanyZone();
-  const self = context.allowed_scopes.find((scope) => scope.kind === "owner");
-  const filters = useOverviewFilters([], "this_week");
+  const self = prospectingScope(context);
+  const filters = useOverviewFilters([], OVERVIEW_DEFAULT_PERIOD.prospecting);
   const readsLeads = useCan("lead", "read");
   const summary = useSdrSummary(self?.id ?? "", !!self?.id && readsLeads);
-  const { metrics: offered, blocks: sdrBlocks } = viewRequest(
-    "sdr",
+  const { selection, sdrBlocks } = prospectingQuestion(
     catalog,
-    filters.period,
-  );
-  const metrics = workflowMetrics(
-    offered,
+    self,
+    filters,
+    zone,
     workflowTemplate(workflowOf(framework, summary)),
   );
-  const selection: ReportingSelection = {
-    scope: { kind: "owner", id: self?.id, label: self?.label },
-    period: filters.period,
-    interval: customInterval(filters.period, filters.start, filters.end, zone),
-    // The strip compares each target with its own month, whatever the period.
-    target_basis: "month",
-    close_window: "all_open",
-    metrics,
-    blocks: [],
-  };
+  const { metrics } = selection;
   const validDates = validDateRange(filters.period, filters.start, filters.end);
   const workflow = workflowOf(framework, summary);
   useOverviewNavigation("prospecting", selection, {
@@ -165,6 +157,7 @@ export function MyProspecting({
       <FilterBar
         label={t("analytics.filters")}
         quiet
+        labels="inside"
         actions={
           <OverviewSaveActions
             selection={
@@ -204,61 +197,64 @@ export function MyProspecting({
       {problemCodeOf(query.error) === "reporting_interval_invalid" && (
         <ErrorLine error={query.error} />
       )}
-      {/* The results and the first moves share the first screen; on a narrow
-          one the moves come straight after the results, before any history. */}
-      <div className="analytics-lead">
-        <div className="analytics-column">
-          <QueryGate
-            query={query}
-            pendingLabel={t("analytics.overview.prospecting")}
-          >
-            {(evaluation) => (
-              <>
-                <ProspectingResults
-                  evaluation={evaluation}
-                  outcome={outcome}
-                  workflowState={known ? "known" : workflow}
-                  weeks={weeks}
-                  onEvidence={openFrom}
-                  onRetryWorkflow={retryWorkflow}
-                  aside={
-                    <MonthlyTargets
-                      evaluation={evaluation}
-                      ownScope={scopeKey(self)}
-                    />
-                  }
-                />
-                <ProspectingReadings
-                  evaluation={evaluation}
-                  summary={summary}
-                  onEvidence={openFrom}
-                />
-              </>
-            )}
-          </QueryGate>
-        </div>
-        <DoNext />
-      </div>
-      <ProspectingWork
-        self={self.id}
-        workflow={workflow}
-        summary={summary}
-        week={query.data}
-        weeks={weeks}
-        onEvidence={openFrom}
-        outlook={
-          query.data &&
-          known &&
-          !query.isError && (
-            <AssessmentPanel
-              view="prospecting"
-              work={summary.data}
-              workPending={summary.isLoading}
-              selection={query.data.selection}
-              evaluation={query.data}
+      <AnalyticsBoard
+        railLabel={t("analytics.board.rail")}
+        main={
+          <AnalyticsSheet>
+            <QueryGate
+              query={query}
+              pendingLabel={t("analytics.overview.prospecting")}
+            >
+              {(evaluation) => (
+                <>
+                  <ProspectingResults
+                    evaluation={evaluation}
+                    outcome={outcome}
+                    workflowState={known ? "known" : workflow}
+                    weeks={weeks}
+                    onEvidence={openFrom}
+                    onRetryWorkflow={retryWorkflow}
+                    aside={
+                      <MonthlyTargets
+                        evaluation={evaluation}
+                        ownScope={scopeKey(self)}
+                      />
+                    }
+                  />
+                  <ProspectingReadings
+                    evaluation={evaluation}
+                    summary={summary}
+                    onEvidence={openFrom}
+                  />
+                </>
+              )}
+            </QueryGate>
+            <ProspectingWork
+              self={self.id}
+              workflow={workflow}
+              summary={summary}
+              week={query.data}
+              weeks={weeks}
               onEvidence={openFrom}
             />
-          )
+          </AnalyticsSheet>
+        }
+        rail={
+          <>
+            {query.data && known && !query.isError && (
+              <Suspense fallback={<PendingBody label={t("common.loading")} />}>
+                <AssessmentPanel
+                  view="prospecting"
+                  work={summary.data}
+                  workPending={summary.isLoading}
+                  selection={query.data.selection}
+                  evaluation={query.data}
+                  onEvidence={openFrom}
+                />
+              </Suspense>
+            )}
+            <DoNext />
+          </>
         }
       />
       {evidence && query.data && (
@@ -273,7 +269,8 @@ export function MyProspecting({
   );
 }
 
-// Meetings and waiting work precede interpretation; outcome history follows it.
+// The work around the outcome, each a section of the sheet: what waits on
+// others, the meetings ahead, then how the outcome developed.
 function ProspectingWork({
   self,
   workflow,
@@ -281,9 +278,7 @@ function ProspectingWork({
   week,
   weeks,
   onEvidence,
-  outlook,
 }: Readonly<{
-  outlook: ReactNode;
   self: string;
   workflow: WorkflowState;
   summary: ReturnType<typeof useSdrSummary>;
@@ -294,8 +289,8 @@ function ProspectingWork({
   const t = useT();
   return (
     <>
-      <div className="analytics-pair">
-        {workflow === "handoff" && <Waiting self={self} summary={summary} />}
+      {workflow === "handoff" && <Waiting self={self} summary={summary} />}
+      <Suspense fallback={<PendingBody label={t("common.loading")} />}>
         <UpcomingMeetings
           self={self}
           summary={summary}
@@ -305,18 +300,19 @@ function ProspectingWork({
               : "analytics.prospect.upcomingTitle",
           )}
         />
-      </div>
-      {outlook}
+      </Suspense>
+      {workflow === "handoff" && week && (
+        <Suspense fallback={<PendingBody label={t("common.loading")} />}>
+          <HandoffCohort self={self} evaluation={week} />
+        </Suspense>
+      )}
       {workflow === "qualification" && <QualificationNote />}
       {week && (
-        <div className="analytics-pair">
-          <Disclosure summary={t("analytics.prospect.historyTitle")}>
+        <Disclosure summary={t("analytics.prospect.historyTitle")}>
+          <Suspense fallback={<PendingBody label={t("common.loading")} />}>
             <OutcomeHistory weeks={weeks} onEvidence={onEvidence} />
-          </Disclosure>
-          {workflow === "handoff" && (
-            <HandoffCohort self={self} evaluation={week} />
-          )}
-        </div>
+          </Suspense>
+        </Disclosure>
       )}
     </>
   );

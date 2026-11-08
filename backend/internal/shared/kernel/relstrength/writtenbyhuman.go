@@ -83,7 +83,7 @@ func WrittenByHumanSQL(alias string) string {
 }
 
 // DirectionClockSQL admits a row to a "they last wrote" or "we last wrote"
-// clock: any directed kind, not a called-off meeting, written by a human.
-func DirectionClockSQL(alias string) string {
-	return "(" + NotCalledOffSQL(alias) + " AND " + WrittenByHumanSQL(alias) + ")"
+// clock read at now. It must be contact we had (HadContactSQL), written by a human.
+func DirectionClockSQL(alias, now string) string {
+	return "(" + HadContactSQL(alias, now) + " AND " + WrittenByHumanSQL(alias) + ")"
 }

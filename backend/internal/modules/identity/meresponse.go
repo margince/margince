@@ -57,6 +57,7 @@ func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeRe
 			Id:           openapi_types.UUID(id.UserID.UUID),
 			Email:        openapi_types.Email(id.Email),
 			DisplayName:  id.DisplayName,
+			AvatarUrl:    AvatarURL(id.UserID.UUID, id.AvatarKey),
 			GreetingName: id.GreetingName,
 			Status:       "active",
 			Locale:       contractLocale(id.Locale),
@@ -69,6 +70,7 @@ func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeRe
 			// margince/margince#26.
 			Timezone:       optionalString(id.Timezone),
 			TimezoneChosen: timezoneChosenFlag(id.Timezone, id.TimezoneChosen),
+			TimezoneSetBy:  id.TimezoneSetBy,
 		},
 		Roles:                   roles,
 		Teams:                   teams,

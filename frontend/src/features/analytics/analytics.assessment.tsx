@@ -8,22 +8,23 @@ import type { components } from "../../api/schema";
 import { WrittenBy } from "../../components/citations.list";
 import { EntityRef } from "../../components/entityref";
 import { AiPending } from "../../design-system/aipending";
-import { Button } from "../../design-system/atoms";
+import { Button, Disclosure } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { Panel, PanelBody } from "../../design-system/panel";
-import { formatAnalyticsNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { isVersionSkewOf, problemFieldErrors, unwrap } from "../../lib/problem";
 import { reloadReportingFigures } from "../../lib/reportingfigures";
 import {
+  assessmentResidue,
   assessmentText,
   readableQuantities,
 } from "./analytics.assessment.text";
 import { RecordDecisionDialog } from "./analytics.decisions";
 import { metricOf } from "./analytics.overview.readings";
+import { OverviewActions } from "./analytics.overviewactions";
 import type {
   ReportingEvaluation,
   ReportingEvidenceRef,
@@ -180,7 +181,12 @@ export function AssessmentPanel({
       onEvidence={onEvidence}
     />
   );
-  if (empty || workPending || (view !== "sales" && !supported)) return actions;
+  // Without the written outlook its record doors still stand on a card.
+  const framedActions = (
+    <OverviewActions evaluation={evaluation} onEvidence={onEvidence} framed />
+  );
+  if (empty || workPending || (view !== "sales" && !supported))
+    return framedActions;
   const upcoming = assessment?.cells?.find(
     (cell) => cell.id === "work:upcoming",
   );
@@ -192,7 +198,7 @@ export function AssessmentPanel({
   )
     return (
       <>
-        {actions}
+        {framedActions}
         <ErrorLine>{t("reporting.evidenceStale")}</ErrorLine>
         <Button onClick={() => void reloadReportingFigures(client)}>
           {t("common.retry")}
@@ -211,25 +217,23 @@ export function AssessmentPanel({
         actions={actions}
       />
     );
-  if (!query.isFetching && !query.isError) return actions;
+  if (!query.isFetching && !query.isError) return framedActions;
   return (
-    <>
-      <Panel title={t(outlookTitle(view, evaluation))} flatHead>
-        <PanelBody>
-          {query.isFetching ? (
-            <AiPending label={t(outlookTitle(view, evaluation))} lines={3} />
-          ) : (
-            <>
-              <ErrorLine error={query.error} />
-              <Button variant="ghost" onClick={refresh}>
-                {t("analytics.assessment.retry")}
-              </Button>
-            </>
-          )}
-        </PanelBody>
-      </Panel>
-      {actions}
-    </>
+    <Panel title={t(outlookTitle(view, evaluation))} flatHead>
+      <PanelBody>
+        {query.isFetching ? (
+          <AiPending label={t(outlookTitle(view, evaluation))} lines={3} />
+        ) : (
+          <>
+            <ErrorLine error={query.error} />
+            <Button variant="ghost" onClick={refresh}>
+              {t("analytics.assessment.retry")}
+            </Button>
+          </>
+        )}
+        {actions}
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -240,6 +244,20 @@ function outlookTitle(view: View, evaluation: ReportingEvaluation) {
       : "analytics.outlook.selectedSales";
   if (view === "team") return "analytics.outlook.team";
   return "analytics.outlook.prospecting";
+}
+
+// The decision is kept only when every figure in it comes from a cell. The
+// check reads the model's own text, before amounts gain their currency sign.
+function proposedDecision(assessment: SalesAssessment, locale: Locale) {
+  const decision = assessment.next_decision;
+  if (!decision) return undefined;
+  const line = {
+    text: decision.text,
+    cells: assessment.cells.map((cell) => cell.id),
+  };
+  if (!readableQuantities(assessmentResidue(line, assessment, locale)))
+    return undefined;
+  return { ...decision, text: assessmentText(line, assessment, locale) };
 }
 
 function WrittenAssessment({
@@ -262,63 +280,46 @@ function WrittenAssessment({
   const [reading, setReading] = useState(false);
   const [deciding, setDeciding] = useState(false);
   const canDecide = useCanWrite("activity", "create");
-  const proposed = assessment.next_decision
-    ? {
-        ...assessment.next_decision,
-        text: assessmentText(
-          {
-            text: assessment.next_decision.text,
-            cells: assessment.cells.map((cell) => cell.id),
-          },
-          assessment,
-          locale,
-        ),
-      }
-    : undefined;
-  const next =
-    proposed && readableQuantities(proposed.text) ? proposed : undefined;
+  const next = proposedDecision(assessment, locale);
   return (
     <>
       <Panel
         title={t(outlookTitle(view, evaluation))}
         tone="ai"
         flatHead
+        className="analytics-outlook"
         titleAction={
           <Button variant="ghost" onClick={refresh}>
             {t("analytics.assessment.refresh")}
           </Button>
         }
-        footer={<WrittenBy by={assessment.generated_by} />}
-      >
-        <PanelBody>
-          <div className="analytics-outlook-prose">
-            {assessmentParagraphs(assessment).map((paragraph) => (
-              <p key={paragraph.map((s) => s.text).join(" ")}>
-                {paragraph
-                  .map((line) => assessmentText(line, assessment, locale))
-                  .join(" ")}
-              </p>
-            ))}
-          </div>
-          <div className="actions">
+        footer={
+          <>
+            <WrittenBy by={assessment.generated_by} />
             <Button variant="link" onClick={() => setReading(true)}>
               {t("analytics.outlook.records")}
             </Button>
-            {next && (
+          </>
+        }
+      >
+        <PanelBody>
+          <OutlookProse assessment={assessment} />
+          {actions}
+          {next && (
+            <div className="actions">
               <p>
                 {next.text} <EntityRef kind="deal" id={next.deal_id} />{" "}
                 <EntityRef kind="user" id={next.owner_id} />
               </p>
-            )}
-            {next && canDecide && (
-              <Button variant="ghost" onClick={() => setDeciding(true)}>
-                {t("analytics.decisions.record")}
-              </Button>
-            )}
-          </div>
+              {canDecide && (
+                <Button variant="ghost" onClick={() => setDeciding(true)}>
+                  {t("analytics.decisions.record")}
+                </Button>
+              )}
+            </div>
+          )}
         </PanelBody>
       </Panel>
-      {actions}
       {reading && (
         <InterpretationDrawer
           assessment={assessment}
@@ -341,38 +342,31 @@ function WrittenAssessment({
   );
 }
 
-function OverviewActions({
-  evaluation,
-  order,
-  onEvidence,
-}: Readonly<{
-  evaluation: ReportingEvaluation;
-  order?: readonly string[];
-  onEvidence: (reference: ReportingEvidenceRef) => void;
-}>) {
+// The first sentence leads, the rest of its paragraph follows, and the
+// remaining paragraphs fold behind one door, so the rail reads at a glance.
+function OutlookProse({
+  assessment,
+}: Readonly<{ assessment: SalesAssessment }>) {
+  const t = useT();
   const { locale } = useLocale();
-  const candidates = evaluation.overview_actions ?? [];
-  const actions = order?.length
-    ? [...candidates].sort((a, b) => {
-        const rank = (id: string) => {
-          const at = order.indexOf(id);
-          return at < 0 ? order.length : at;
-        };
-        return rank(a.id) - rank(b.id);
-      })
-    : candidates;
-  if (!actions.length) return null;
+  const [first = [], ...later] = assessmentParagraphs(assessment).map(
+    (paragraph) =>
+      paragraph.map((line) => assessmentText(line, assessment, locale)),
+  );
+  const [lead, ...rest] = first;
+  // A paragraph the model repeats is said once, so each keys itself.
+  const more = [...new Set(later.map((paragraph) => paragraph.join(" ")))];
   return (
-    <div className="actions">
-      {actions.map((action) => (
-        <Button
-          key={action.id}
-          variant="ghost"
-          onClick={() => onEvidence(action.evidence)}
-        >
-          {action.label} ({formatAnalyticsNumber(action.count, locale)})
-        </Button>
-      ))}
+    <div className="analytics-outlook-prose">
+      {lead && <p className="analytics-outlook-lead">{lead}</p>}
+      {rest.length > 0 && <p>{rest.join(" ")}</p>}
+      {more.length > 0 && (
+        <Disclosure summary={t("analytics.outlook.more")}>
+          {more.map((paragraph) => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
+        </Disclosure>
+      )}
     </div>
   );
 }
@@ -458,7 +452,9 @@ function readableAssessment(
   return assessmentParagraphs(assessment)
     .flat()
     .every((line) => {
-      const text = assessmentText(line, assessment, locale);
-      return !unsupported.test(text) && readableQuantities(text);
+      return (
+        !unsupported.test(assessmentText(line, assessment, locale)) &&
+        readableQuantities(assessmentResidue(line, assessment, locale))
+      );
     });
 }

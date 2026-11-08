@@ -1,3 +1,4 @@
+import type { RecordTabId } from "./recordtaborder";
 import type { Route } from "./router";
 
 // The account record's tabs, and the ONE way to address one.
@@ -33,7 +34,7 @@ export const COMPANY_TABS = [
   "documents",
   "profile",
   "partner",
-] as const;
+] as const satisfies readonly RecordTabId[];
 
 export type CompanyTab = (typeof COMPANY_TABS)[number];
 

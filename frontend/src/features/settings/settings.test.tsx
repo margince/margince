@@ -160,7 +160,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     // underneath it. `setThemeChoice` publishes to `useSyncExternalStore`
     // subscribers, and this is one of them.
     await user.click(screen.getByRole("button", { name: "Account" }));
-    await user.click(screen.getByRole("menuitem", { name: "Theme" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Theme" }));
     expect(screen.getByRole("radio", { name: "Dark" })).toBeChecked();
   });
 
@@ -705,13 +705,12 @@ describe("SettingsScreen restructured pages", () => {
     expect(developers.textContent).toContain("Passports");
     await userEvent.setup().click(screen.getByText("For developers"));
     expect(developers.open).toBe(true);
-    // API keys open first: the passports, not the coding agents.
+    // API keys open first: the passports, not the agent rules.
     expect(
       screen
         .getByRole("button", { name: "API keys" })
         .getAttribute("aria-pressed"),
     ).toBe("true");
-    expect(screen.queryByRole("heading", { name: "Coding agents" })).toBeNull();
   });
 
   it("renders the consent registry on Privacy, and the trail on its own page", async () => {

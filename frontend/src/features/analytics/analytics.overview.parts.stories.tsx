@@ -14,7 +14,7 @@ import { StockCharts } from "./analytics.overview.board";
 import { ForecastCoverage } from "./analytics.overview.decision";
 import { DoNext } from "./analytics.overview.donext";
 import { ADMIN_GRANTS, SELF } from "./analytics.overview.fixtures";
-import { HeroAside } from "./analytics.overview.hero";
+import { HeroAside, heroReceipt } from "./analytics.overview.hero";
 import { InterventionPanel } from "./analytics.overview.interventions";
 import { SalesOverviewMetrics } from "./analytics.overview.metrics";
 import { MonthlyTargets } from "./analytics.overview.monthly";
@@ -39,6 +39,7 @@ import {
   overviewAddress,
 } from "./analytics.overview.scenarios.fixtures";
 import { installOverviewServer } from "./analytics.overview.server.fixtures";
+import { QuarterTrajectory } from "./analytics.overview.trajectory";
 import { EvidenceRecords } from "./reporting.evidencerecords";
 import {
   useReportingCatalog,
@@ -122,9 +123,16 @@ function SalesReadings({
       aside={
         <HeroAside
           evaluation={evaluation}
-          charts={evaluation}
           onApply={() => {}}
           targetSetup={null}
+        />
+      }
+      receipt={heroReceipt(evaluation, evaluation)}
+      trajectory={
+        <QuarterTrajectory
+          evaluation={evaluation}
+          charts={evaluation}
+          onEvidence={() => {}}
         />
       }
     />
@@ -303,8 +311,13 @@ export const MyProspectingPageOnPhone = {
 export const IncompletePipelineReadings: Story = {
   ...story("sales", <SalesReadings evaluation={gaps} />),
   play: async ({ canvasElement }) => {
+    const label = await within(canvasElement).findByText(
+      "Pipeline due this quarter",
+    );
+    const card = label.closest("section");
+    if (!card) throw new Error("the pipeline reading drew no card");
     await userEvent.click(
-      within(canvasElement).getByRole("button", { name: "Evidence" }),
+      within(card).getByRole("button", { name: "Evidence" }),
     );
     const body = within(document.body);
     await expect(body.getByText(/2 deals with no amount/)).toBeVisible();

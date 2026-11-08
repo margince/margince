@@ -8,31 +8,42 @@ package consent
 //
 // The ladder in commsauthz answers most of it. A marketing objection is stamped
 // at the subject's level whoever typed it (levelFor). An admin may correct one
-// a colleague typed by mistake. One the contact pressed on a mailed link stays
+// a colleague or their agent recorded by mistake. One the contact pressed on a mailed link stays
 // theirs: the product, not a seat, wrote its first row.
 
 import (
-	"strings"
+	"context"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
+const passportAgentPrefix = "agent:"
+
 // kindProcessingRestriction is the Art. 18 stop. Lifting one owes the contact
 // notice before it happens, and Margince has no such notice, so no seat lifts
 // one here at any level.
 const kindProcessingRestriction = "processing_restriction"
 
+// recordedThroughOf names how the signed-in principal records a stop through
+// Suppress.
+func recordedThroughOf(ctx context.Context) commsauthz.RecordedThrough {
+	p, ok := principal.Actor(ctx)
+	switch {
+	case ok && p.Type == principal.PrincipalHuman:
+		return commsauthz.RecordedByColleague
+	case ok && p.Type == principal.PrincipalAgent:
+		return commsauthz.RecordedByAgent
+	}
+	return commsauthz.RecordedByMachine
+}
+
 // stopFacts is what the lift rule reads off one stop.
 type stopFacts struct {
 	kind    string
 	decided commsauthz.AuthorityLevel
-	// origin and originSource are the captured_by and source of the first row
-	// of the stop's carry chain. A merge copies a stop and stamps the merger,
-	// so the copy's own captured_by would make the contact's press look typed.
-	origin       string
-	originSource string
+	through commsauthz.RecordedThrough
 	// pinned is a stop held on an address rather than on the contact. It
 	// clears when the address works again, not through this lift.
 	pinned bool
@@ -74,21 +85,19 @@ func judgeLift(caller lifter, stop stopFacts) liftVerdict {
 	return liftVerdict{blockedBy: crmcontracts.ContactStopLiftBlockedByLevel}
 }
 
-// typedObjection reports a subject-level objection a seat typed through
-// Suppress. It is an allow-list. An agent, a connector, an import, the product
-// and a copy whose original is gone all count as the contact's own act.
+// typedObjection reports a subject-level objection a seat recorded through
+// Suppress, by hand or through its passport agent. It is an allow-list. Automated
+// work with no passport, a connector, an import, the product and a stop of
+// unknown origin all count as the contact's own act.
 func typedObjection(stop stopFacts) bool {
 	return stop.kind == commsauthz.ReasonObjection &&
 		stop.decided == commsauthz.LevelSubject &&
-		strings.HasPrefix(stop.origin, principal.HumanIDPrefix) &&
-		recordedThroughSuppress(stop.originSource)
+		recordedForASeat(stop.through)
 }
 
-// recordedThroughSuppress reports a source suppressionSource wrote. A carried
-// copy's source starts with carriedSourceMark, so a copy whose original was
-// deleted (carried_from set to NULL) fails here.
-func recordedThroughSuppress(source string) bool {
-	return source == seatSourcePrefix || strings.HasPrefix(source, seatSourcePrefix+": ")
+// recordedForASeat reports a stop typed by a seat or by an agent on its passport.
+func recordedForASeat(through commsauthz.RecordedThrough) bool {
+	return through == commsauthz.RecordedByColleague || through == commsauthz.RecordedByAgent
 }
 
 // carriedSourceMark opens the source of every stop a merge copied.

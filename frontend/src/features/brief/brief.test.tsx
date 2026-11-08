@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
@@ -113,4 +113,25 @@ it("opens a bundle's effects together from the ranked row", async () => {
   await userEvent.click(await screen.findByText("Show 2 items"));
   expect(screen.getByText("Second effect")).toBeTruthy();
   expect(writes(calls)).toEqual([]);
+});
+
+it("offers a retry when the work that needs you did not load", async () => {
+  let fails = true;
+  stubApi({
+    "GET /worklist": () =>
+      fails
+        ? jsonResponse({ title: "Unavailable" }, 503)
+        : jsonResponse(readingsDay({}, [taskRow("t", "Follow up with Weber")])),
+  });
+  const user = userEvent.setup();
+  render(<BriefScreen />);
+  const section = await screen.findByRole("region", {
+    name: en["brief.first.title"],
+  });
+  const retry = await within(section).findByRole("button", {
+    name: en["state.retry"],
+  });
+  fails = false;
+  await user.click(retry);
+  expect(await within(section).findByText("Follow up with Weber")).toBeTruthy();
 });

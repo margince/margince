@@ -9,7 +9,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { ListChecks, Sparkles } from "lucide-react";
+import { ListChecks } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -154,6 +154,17 @@ export function MoveButton({
   });
 
   const taskBody = move.arguments;
+  // The task the press wrote stays named here, with the way into it, even
+  // after the refreshed advice moves on. The reader sees what they made.
+  if (createTask.data) {
+    return (
+      <CreatedFollowUp
+        taskId={createTask.data.id}
+        readOnly={!canUpdateTask}
+        update={taskUpdate}
+      />
+    );
+  }
   switch (move.action) {
     case "open_task":
       if (!activityId) return null;
@@ -232,7 +243,6 @@ export function MoveButton({
               })
             }
           >
-            <Sparkles aria-hidden />
             {t("deal360.openBrief")}
           </Button>
           <ErrorLine error={openBrief.error} />
@@ -290,7 +300,6 @@ function FollowUpDraft({
           })
         }
       >
-        <Sparkles aria-hidden />
         {t("worklist.verb.draft_follow_up_now")}
       </Button>
       <ErrorLine error={check.error} />
@@ -313,6 +322,36 @@ function FollowUpDraft({
             }
             void queryClient.invalidateQueries({ queryKey: ["worklist"] });
           }}
+        />
+      )}
+    </>
+  );
+}
+
+/** The follow-up a press just wrote, named, with the way into it. */
+function CreatedFollowUp({
+  taskId,
+  readOnly,
+  update,
+}: Readonly<{
+  taskId: string;
+  readOnly: boolean;
+  update: ReturnType<typeof useTaskUpdate>;
+}>) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <span role="status">{t("deal360.followUpCreated")}</span>
+      <Button variant="link" onClick={() => setOpen(true)}>
+        {t("deal360.openTask")}
+      </Button>
+      {open && (
+        <TaskDetailModal
+          activityId={taskId}
+          readOnly={readOnly}
+          onClose={() => setOpen(false)}
+          update={update}
         />
       )}
     </>

@@ -167,14 +167,14 @@ func reviveTruncatedBackfillTx(ctx context.Context, tx pgx.Tx, connectionID ids.
 		return err
 	}
 	_, err := tx.Exec(ctx, `
-		UPDATE capture_backfill SET status = 'queued', completed_at = NULL`+resetInflightProgress+`
+		UPDATE capture_backfill SET status = 'queued', completed_at = NULL`+clearBackfillAdmission+resetInflightProgress+`
 		 WHERE id = (
-		         SELECT id FROM capture_backfill
-		          WHERE connection_id = $1
-		            AND status = 'error'
-		            AND last_error_class = ANY($2)
-		            AND cursor IS NOT NULL
-		          ORDER BY started_at DESC
+		         SELECT b.id FROM capture_backfill b JOIN capture_connection c ON c.id=b.connection_id
+		          WHERE b.connection_id = $1
+		            AND b.status = 'error'
+		            AND b.last_error_class = ANY($2)
+		            AND b.cursor IS NOT NULL AND `+backfillMatchesAccount+`
+		          ORDER BY b.started_at DESC
 		          LIMIT 1)
 		   AND NOT EXISTS (
 		         SELECT 1 FROM capture_backfill

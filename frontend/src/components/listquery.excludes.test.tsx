@@ -14,6 +14,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ListChip } from "../design-system/listsurface";
 import { LocaleProvider } from "../i18n";
+import { openFilterValues } from "../testing/listquery.testkit";
 import {
   type ListPage,
   type ListQuery,
@@ -108,8 +109,7 @@ describe("the Owner and Team dials", () => {
     );
     await screen.findByRole("group", { name: "Owner: Anna Becker" });
 
-    await user.click(screen.getByRole("button", { name: "Add filter" }));
-    await user.click(screen.getByRole("button", { name: "Team" }));
+    await openFilterValues(user, "Team");
     await user.click(screen.getByRole("radio", { name: "Region West" }));
 
     await waitFor(() =>
@@ -130,8 +130,7 @@ describe("the Owner and Team dials", () => {
     );
     await screen.findByRole("group", { name: "Team: Region West" });
 
-    await user.click(screen.getByRole("button", { name: "Add filter" }));
-    await user.click(screen.getByRole("button", { name: "Owner" }));
+    await openFilterValues(user, "Owner");
     await user.click(screen.getByRole("radio", { name: "Unassigned" }));
 
     await waitFor(() =>
@@ -145,8 +144,7 @@ describe("the Owner and Team dials", () => {
     const user = userEvent.setup();
     render(<Harness fetchPage={stubPage()} initialFilters={{}} />);
 
-    await user.click(await screen.findByRole("button", { name: "Filter" }));
-    await user.click(screen.getByRole("button", { name: "Owner" }));
+    await openFilterValues(user, "Owner");
     await user.type(screen.getByPlaceholderText(/Owner/), "anna");
 
     expect(screen.getByRole("radio", { name: "Anna Becker" })).toBeTruthy();

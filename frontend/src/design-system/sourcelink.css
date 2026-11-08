@@ -1,14 +1,12 @@
-/* `.btn` centres a label because a verb is one short line; a source's name is
-   a run of prose, and centred over two lines it reads as a heading. */
+/* A name that wraps reads from the start edge; the button form gets that from
+   `Button align="start"`. */
 .source-link,
 .btn.btn-link.source-link {
   display: inline-flex;
   align-items: flex-start;
-  justify-content: flex-start;
   gap: var(--space-1);
   min-inline-size: 0;
   max-inline-size: 100%;
-  text-align: start;
 }
 /* No inset, so a wrapped name lines up with the sentence it ends. */
 .btn.btn-link.source-link {

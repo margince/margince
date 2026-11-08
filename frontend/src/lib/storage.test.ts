@@ -107,6 +107,7 @@ describe("a stored value", () => {
       "margince.pageAside.collapsed",
       "margince.edgeLight",
       "margince.worklist.drawerWide",
+      "margince.documents.view",
       "margince.table.widths.v2.*",
       "margince.table.order.*",
       "margince.agent.faults-seen",

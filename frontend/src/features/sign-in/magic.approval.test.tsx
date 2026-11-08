@@ -162,6 +162,38 @@ it("shows each active receipt once without suppressing other changes to the same
   expect(screen.queryByText(/deal sits in a later stage/i)).toBeNull();
 });
 
+it("drops a grouped line only when every change it stands for is shown elsewhere", async () => {
+  stub(
+    receipt({
+      done: [
+        {
+          ...wonProposal,
+          id: "covered-group",
+          count: 2,
+          receipt_ids: ["a", "b"],
+          lane: "done",
+          approval_preview: undefined,
+          summary: { key: "magic.action.advance_stage" },
+        },
+        {
+          ...wonProposal,
+          id: "half-covered-group",
+          count: 2,
+          receipt_ids: ["a", "c"],
+          lane: "done",
+          approval_preview: undefined,
+          summary: { key: "magic.action.advance_stage" },
+          consequence: "magic.consequence.stage_moved",
+        },
+      ],
+    }),
+  );
+  renderMagic("en", undefined, { visibleReceiptIds: ["a", "b"] });
+  // The covered group would repeat two rows Done for you already shows; the
+  // half-covered one still holds a change shown nowhere else, so two remain.
+  expect(await screen.findByText("All 2 changes, one by one")).toBeTruthy();
+});
+
 it("retains a bounded lane's floor after hiding a duplicate receipt", async () => {
   const rows = Array.from({ length: MAGIC_PAGE_LINES }, (_, index) => ({
     ...wonProposal,

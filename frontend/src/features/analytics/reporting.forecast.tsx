@@ -9,9 +9,9 @@ import { useLocale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import type { AnalyticsScope } from "./analytics.context";
+import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import { ForecastShareActions } from "./analytics.share";
 import { ReportingCharts } from "./reporting.charts";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
 import {
   type ReportingEvaluation,
@@ -21,7 +21,12 @@ import {
 
 export function ReportingForecastGraphs({
   scope,
-}: Readonly<{ scope: AnalyticsScope }>) {
+  inSheet = false,
+}: Readonly<{
+  scope: AnalyticsScope;
+  // Drawn as sections of the page's sheet rather than as cards of their own.
+  inSheet?: boolean;
+}>) {
   const t = useT();
   const showCharts = useCan("report_definition", "read");
   const [snapshot, setSnapshot] = useState("latest");
@@ -49,7 +54,7 @@ export function ReportingForecastGraphs({
   );
   const evaluated = showCharts ? query.data : undefined;
   return (
-    <div className="reporting-results">
+    <div className={inSheet ? "reporting-results-part" : "reporting-results"}>
       {/* The snapshot and the verbs that share it, as one row: the choice only
           means something to the share beside it. */}
       <div className="reporting-toolbar reporting-share-bar">
@@ -76,6 +81,7 @@ export function ReportingForecastGraphs({
             <>
               <ReportingCharts
                 evaluation={evaluation}
+                board={inSheet && "sheet"}
                 onEvidence={openEvidence}
               />
               {evidence && (

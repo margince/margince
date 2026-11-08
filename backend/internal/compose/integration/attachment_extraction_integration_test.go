@@ -22,6 +22,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -42,7 +43,7 @@ func TestGetAttachmentExtractionOfAnUnreadDocumentIs404(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/attachments/"+att.Id.String()+"/extraction", nil).WithContext(ctx)
-	h.GetAttachmentExtraction(rec, req, att.Id)
+	h.GetAttachmentExtraction(rec, req, att.Id, crmcontracts.GetAttachmentExtractionParams{})
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404 (body %s)", rec.Code, rec.Body.String())
 	}
@@ -69,7 +70,7 @@ func TestGetAttachmentExtractionPartitionsAStoredReading(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/attachments/"+att.Id.String()+"/extraction", nil).WithContext(ctx)
-	h.GetAttachmentExtraction(rec, req, att.Id)
+	h.GetAttachmentExtraction(rec, req, att.Id, crmcontracts.GetAttachmentExtractionParams{})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200 (body %s)", rec.Code, rec.Body.String())
 	}
@@ -104,7 +105,7 @@ func TestGetAttachmentExtractionReadsAnyEntityType(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/attachments/"+att.Id.String()+"/extraction", nil).WithContext(ctx)
-	h.GetAttachmentExtraction(rec, req, att.Id)
+	h.GetAttachmentExtraction(rec, req, att.Id, crmcontracts.GetAttachmentExtractionParams{})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("non-deal attachment extraction read: status %d, want 200 (body %s)", rec.Code, rec.Body.String())
 	}
@@ -151,7 +152,7 @@ func TestGetAttachmentExtractionHidesAnInvisibleParent(t *testing.T) {
 	repCtx := e.As(e.Rep3, []ids.UUID{e.Team2}, ownContactPerms())
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/attachments/"+att.Id.String()+"/extraction", nil).WithContext(repCtx)
-	h.GetAttachmentExtraction(rec, req, att.Id)
+	h.GetAttachmentExtraction(rec, req, att.Id, crmcontracts.GetAttachmentExtractionParams{})
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("extraction read through an invisible parent: status %d, want 404", rec.Code)
 	}
@@ -159,7 +160,7 @@ func TestGetAttachmentExtractionHidesAnInvisibleParent(t *testing.T) {
 	missing := openapi_types.UUID(ids.NewV7())
 	missRec := httptest.NewRecorder()
 	missReq := httptest.NewRequest(http.MethodGet, "/v1/attachments/x/extraction", nil).WithContext(adminCtx)
-	h.GetAttachmentExtraction(missRec, missReq, missing)
+	h.GetAttachmentExtraction(missRec, missReq, missing, crmcontracts.GetAttachmentExtractionParams{})
 	if missRec.Code != http.StatusNotFound {
 		t.Errorf("extraction read of a missing attachment: status %d, want 404", missRec.Code)
 	}
@@ -234,7 +235,7 @@ func TestRequestAttachmentAccessHidesAnInvisibleParent(t *testing.T) {
 // non-deal/deal-scoped extraction tests need their own parent kind.
 func uploadAttachmentAs(ctx context.Context, t *testing.T, h activities.Handlers, entityType string, entityID ids.UUID, filename string, data []byte) crmcontracts.Attachment {
 	t.Helper()
-	body, ctype := multipartAttachment(t, entityType, entityID.String(), filename, data)
+	body, ctype := apptest.MultipartAttachment(t, entityType, entityID.String(), filename, data)
 	req := httptest.NewRequest(http.MethodPost, "/v1/attachments", body).WithContext(ctx)
 	req.Header.Set("Content-Type", ctype)
 	rec := httptest.NewRecorder()
