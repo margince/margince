@@ -10,16 +10,15 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/consent"
-	"github.com/margince/margince/backend/internal/platform/clocktest"
-
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -96,7 +95,7 @@ func newMailSight(t *testing.T) *promotionSight {
 	s.agentOn(actor.PassportID)
 	for _, address := range []string{"buyer@example.test", "buyer@masked.test"} {
 		contact, err := s.e.Contacts.CreateContact(s.e.Admin(), contacts.CreateContactInput{
-			FullName: "Buyer", Source: "manual", OwnerID: new(ids.From[ids.UserKind](s.e.Rep1)),
+			FullName: "Buyer", Source: "manual", OwnerID: new(ids.From[ids.UserKind](s.e.Rep2)),
 			Emails: []contacts.ContactEmailInput{{Email: address, EmailType: "work", IsPrimary: true}},
 		})
 		if err != nil {
