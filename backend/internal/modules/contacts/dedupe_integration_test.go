@@ -380,6 +380,44 @@ func TestABoughtEmployersDomainResolvesAcrossSpellings(t *testing.T) {
 	}
 }
 
+// An older estate can hold the two spellings of one domain on two companies,
+// since the constraint keys each spelling apart. Such a domain resolves to
+// neither: guessing between them states an employment nobody observed.
+func TestABoughtEmployersSplitDomainResolvesToNoCompany(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	if _, err := e.store.CreateCompany(ctx, CreateCompanyInput{
+		DisplayName: "B\u00fccher GmbH", Source: "manual",
+		Domains: []CompanyDomainInput{{Domain: "xn--bcher-kva.example", IsPrimary: true}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	twin, err := e.store.CreateCompany(ctx, CreateCompanyInput{DisplayName: "B\u00fccher AG", Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Written as the estate held it before writers refused a rival spelling.
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			INSERT INTO company_domain (company_id, domain, domain_folded, is_primary, source, captured_by)
+			VALUES ($1, $2, 'xn--bcher-kva.example', true, 'manual', 'human:seed')`, twin.Id, "b\u00fccher.example")
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the twin spelling: %v", err)
+	}
+
+	var found bool
+	if err := e.store.tx(ctx, func(tx pgx.Tx) (err error) {
+		_, found, err = companyByDomain(ctx, tx, "b\u00fccher.example")
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if found {
+		t.Error("a domain two companies hold resolved to one of them, so a bought employment lands on a guess")
+	}
+}
+
 // Capture's employer inference arrives with whatever the mail header spelled,
 // and a company is filed under whatever its site was read as. The two spellings
 // of one internationalized domain are one domain, so the exact tier must route

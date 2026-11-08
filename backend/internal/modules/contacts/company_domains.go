@@ -356,10 +356,14 @@ func reconcileCompanyDomains(ctx context.Context, tx pgx.Tx, companyID ids.Compa
 		}
 	}
 	if primary != "" && primary != currentPrimary {
+		// One row, because the company may hold both spellings and the unique
+		// primary index admits only one. The spelling elected wins the tie.
 		if _, err := tx.Exec(ctx,
 			`UPDATE company_domain SET is_primary = true
-			 WHERE company_id = $1 AND domain = ANY($2) AND archived_at IS NULL`,
-			companyID, owndomain.Spellings(primary)); err != nil {
+			 WHERE id = (SELECT id FROM company_domain
+			              WHERE company_id = $1 AND domain = ANY($2) AND archived_at IS NULL
+			              ORDER BY domain = $3 DESC, created_at, id LIMIT 1)`,
+			companyID, owndomain.Spellings(primary), primary); err != nil {
 			return nil, fmt.Errorf("set primary domain: %w", err)
 		}
 	}
