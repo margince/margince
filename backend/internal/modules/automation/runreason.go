@@ -4,8 +4,10 @@
 package automation
 
 import (
+	"net/http"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -48,10 +50,13 @@ const genericFailureText = "the action could not be completed"
 const unconfirmedWriteText = "the system of record did not confirm the change, so it may have landed; " +
 	"check the record before running the action again"
 
-// WriteRefused reports whether err is one of the refusals failureReasons names.
-// Each is an answer from the writer, so the write did not land.
+// WriteRefused reports whether err is a refusal the writer answered with, so
+// the write did not land. That is any error the shared classifier places in
+// the caller's 4xx range without an infrastructure cause.
 func WriteRefused(err error) bool {
-	return sanitizedReason(err) != genericFailureText
+	fault, ok := httperr.Classify(err)
+	return ok && fault.InfraCause == nil &&
+		fault.Status >= http.StatusBadRequest && fault.Status < http.StatusInternalServerError
 }
 
 // RunReasonCodes lists every code a troubled run can carry, so a client's
