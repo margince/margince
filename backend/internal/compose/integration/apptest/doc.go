@@ -24,10 +24,10 @@
 // illegal Go, so a helper a suite keeps for itself is a function taking *AppEnv,
 // not a method on it.
 //
-// It also holds the fixtures more than one suite package needs: InWorkspace,
-// EarlyPool, PassportBearer, AppDSN, and the seeded-pipeline scenario in
-// pipeline.go. They are here for a structural reason and not because the package
-// is a dumping ground — two of them, in fact:
+// It also holds the fixtures more than one suite package needs, such as
+// InWorkspace, EarlyPool, PassportBearer, AppDSN and the seeded-pipeline
+// scenario in pipeline.go. They are here for a structural reason and not because
+// the package is a dumping ground. There are two such reasons:
 //
 //   - A fixture taking *AppEnv cannot live in integration's ordinary files, since
 //     those may not import this package, and a subpackage cannot reach

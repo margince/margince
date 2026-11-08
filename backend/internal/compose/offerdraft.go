@@ -199,17 +199,18 @@ func (d offerDrafter) DraftOfferLines(ctx context.Context, offerID ids.OfferID) 
 		return DraftResult{}, err
 	}
 
-	catalog, err := d.rateCardCatalog(ctx)
+	language := d.offerLanguage(ctx, before)
+	catalog, err := d.rateCardCatalog(ctx, language)
 	if err != nil {
 		return DraftResult{}, err
 	}
 
-	candidates, err := d.draftCandidates(ctx, dealContext, catalog)
+	candidates, err := d.draftCandidates(ctx, dealContext, catalog, language)
 	if err != nil {
 		return DraftResult{}, err
 	}
 
-	lines, err := d.groundOfferLines(ctx, candidates, dealContext, before.Currency)
+	lines, err := d.groundOfferLines(ctx, candidates, dealContext, before.Currency, language)
 	if err != nil {
 		return DraftResult{}, err
 	}
@@ -314,8 +315,8 @@ func offerDraftRequest(dealContext []dealContextItem, catalog []crmcontracts.Pro
 
 // draftCandidates asks the model for offer-line candidates over the
 // gathered context and the rate card the caller read for it.
-func (d offerDrafter) draftCandidates(ctx context.Context, dealContext []dealContextItem, catalog []crmcontracts.Product) ([]offerLineCandidate, error) {
-	req := offerDraftRequest(dealContext, catalog, identity.BaseLanguageForPrompt(ctx, d.pool))
+func (d offerDrafter) draftCandidates(ctx context.Context, dealContext []dealContextItem, catalog []crmcontracts.Product, language string) ([]offerLineCandidate, error) {
+	req := offerDraftRequest(dealContext, catalog, language)
 
 	resp, err := ai.Ask(ctx, d.brain, req, offerDraftShapeValid)
 	if err != nil {
@@ -329,15 +330,38 @@ func (d offerDrafter) draftCandidates(ctx context.Context, dealContext []dealCon
 	return lines, nil
 }
 
+// offerLanguage is the language the offer's lines are drafted in: the offer's
+// own, or the installation's base language for an offer that has none.
+func (d offerDrafter) offerLanguage(ctx context.Context, offer crmcontracts.Offer) string {
+	if offer.Language != nil && *offer.Language != "" {
+		return *offer.Language
+	}
+	return identity.BaseLanguageForPrompt(ctx, d.pool)
+}
+
 // rateCardCatalog reads a bounded page of the workspace's active products
-// as the reference data a candidate's product_id can cite — the SAME
-// read GetProduct below re-verifies before ever trusting a match.
-func (d offerDrafter) rateCardCatalog(ctx context.Context) ([]crmcontracts.Product, error) {
+// as the reference data a candidate's product_id can cite. GetProduct below
+// re-verifies that same read before it trusts a match. Each product is named
+// in the offer's language, as a line added by hand is.
+func (d offerDrafter) rateCardCatalog(ctx context.Context, language string) ([]crmcontracts.Product, error) {
 	active := true
 	limit := offerDraftCatalogItems
 	products, _, err := d.deals.ListProducts(ctx, deals.ListProductsInput{Active: &active, Limit: &limit})
 	if err != nil {
 		return nil, err
+	}
+	productIDs := make([]ids.UUID, 0, len(products))
+	for _, p := range products {
+		productIDs = append(productIDs, ids.UUID(p.Id))
+	}
+	names, err := d.deals.ProductNamesIn(ctx, language, productIDs)
+	if err != nil {
+		return nil, err
+	}
+	for i := range products {
+		if name, ok := names[ids.UUID(products[i].Id)]; ok {
+			products[i].Name = name
+		}
 	}
 	return products, nil
 }
@@ -379,7 +403,7 @@ func renderCatalogBlock(products []crmcontracts.Product) string {
 // conversation, then rate card, then the honest zero sentinel. A
 // resolvePrice error is a lookup FAULT, not a grounding verdict, and
 // aborts the whole draft rather than being swallowed into a line drop.
-func (d offerDrafter) groundOfferLines(ctx context.Context, candidates []offerLineCandidate, dealContext []dealContextItem, currency string) ([]deals.StagedOfferLineInput, error) {
+func (d offerDrafter) groundOfferLines(ctx context.Context, candidates []offerLineCandidate, dealContext []dealContextItem, currency, language string) ([]deals.StagedOfferLineInput, error) {
 	bySource := make(map[string]string, len(dealContext))
 	for _, item := range dealContext {
 		bySource[item.SourceID] = item.Snippet
@@ -416,7 +440,7 @@ func (d offerDrafter) groundOfferLines(ctx context.Context, candidates []offerLi
 			TaxRate:     taxRate,
 			Evidence:    deals.StagedOfferLineEvidence{Snippet: snippet, SourceID: sourceID},
 		}
-		if err := d.resolvePrice(ctx, c, snippet, currency, &line); err != nil {
+		if err := d.resolvePrice(ctx, c, snippet, currency, language, &line); err != nil {
 			return nil, err
 		}
 		// The store's own figures check: a line it would refuse is dropped

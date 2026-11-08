@@ -15,8 +15,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
-func (s *Store) controllerView(ctx context.Context, tx pgx.Tx, rendered Rendered, category commsauthz.Category) (Rendered, error) {
-	lines, err := s.DisclosuresFor(ctx, tx, category)
+// controllerView completes the installation's own mail to one recipient. The
+// installation sends it, so the default legal entity is the sender.
+func (s *Store) controllerView(ctx context.Context, tx pgx.Tx, rendered Rendered, category commsauthz.Category, recipient string) (Rendered, error) {
+	lines, err := s.DisclosuresFor(ctx, tx, DisclosureQuery{Category: category, Recipients: []string{recipient}})
 	if err != nil {
 		return Rendered{}, err
 	}

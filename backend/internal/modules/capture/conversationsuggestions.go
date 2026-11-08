@@ -112,7 +112,7 @@ func (s *Sink) suggestionsOnActivityTx(ctx context.Context, tx pgx.Tx, activity 
 		return nil, err
 	}
 	args := []any{activity.ID}
-	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT DISTINCT lower(p.address),coalesce(p.display_name,'') FROM activity_participant p JOIN activity a ON a.id=p.activity_id WHERE p.activity_id=$%d AND p.role IN ('to','cc') AND p.user_id IS NULL AND p.contact_id IS NULL AND NOT p.past_party_cap AND nullif(p.address,'') IS NOT NULL AND `+auth.ParticipantStandsSQL("p", "a")+` AND `+auth.ActivityAvailableClause("a")+` ORDER BY 1,2`, len(args)), args...)
+	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT DISTINCT lower(p.address),coalesce(p.display_name,'') FROM activity_participant p JOIN activity a ON a.id=p.activity_id WHERE p.activity_id=$%d AND p.role IN ('to','cc') AND p.user_id IS NULL AND p.contact_id IS NULL AND NOT p.past_party_cap AND nullif(p.address,'') IS NOT NULL AND `+auth.ParticipantStandsSQL("p", "a")+` AND `+auth.ActivityExternalEvidenceClause("a")+` ORDER BY 1,2`, len(args)), args...)
 	if err != nil {
 		return nil, err
 	}

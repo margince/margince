@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { CalendarDays, History, Mail } from "lucide-react";
+import { ArrowRight, CalendarDays, History, Mail } from "lucide-react";
 import { Button } from "./atoms";
 import { Meter } from "./readings";
 import { ServiceList, ServiceRow } from "./servicerow";
@@ -82,6 +82,25 @@ export const NeedsAttention: Story = {
         status={{ tone: "danger", label: "Failed" }}
         reason="The last sync failed. Margince tries again in a few minutes."
       />
+    </ServiceList>
+  ),
+};
+
+// A connected calendar links onward under its caption, on the caption's edge.
+export const LinkOnward: Story = {
+  render: () => (
+    <ServiceList label="What this account brings in">
+      <ServiceRow
+        icon={CalendarDays}
+        name="Calendar"
+        caption="Meetings show on contacts and deals. Synced 2 minutes ago."
+        status={{ tone: "success", label: "Up to date" }}
+      >
+        <Button variant="link">
+          Set up your booking link
+          <ArrowRight aria-hidden="true" />
+        </Button>
+      </ServiceRow>
     </ServiceList>
   ),
 };

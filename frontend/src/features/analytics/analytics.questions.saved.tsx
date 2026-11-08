@@ -11,8 +11,8 @@ import { QueryGate } from "../../design-system/querystates";
 import { formatDate } from "../../format/format.dates";
 import { type Translator, useLocale, useT } from "../../i18n";
 import { openSavedQuestion } from "../../lib/analytics.address";
+import { useCompanyZone } from "../../lib/companyzone";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import {
   type AnalyticsQuery,
   analyticsFieldLabel,
@@ -82,7 +82,7 @@ export function savedQuestionLabel(
 export function SavedQuestions() {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const saved = useSavedQuestions();
   const schema = useAnalyticsSchema();
   const fields = customLabels(t, schema.data?.entities ?? []);

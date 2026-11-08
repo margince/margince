@@ -191,6 +191,26 @@ type Story = StoryObj<typeof ContactMemory>;
 
 /** Three kinds under the strip: a retained email, a meeting and a note. */
 export const WithRows: Story = { render: card([email, meeting, note]) };
+export const RecentNoteContext: Story = {
+  render: card([
+    {
+      ...note,
+      occurred_at: "2026-08-30T08:00:00Z",
+      voice: {
+        author: {
+          kind: "colleague",
+          display_name: "Ada Colleague",
+          is_reader: false,
+        },
+      },
+    },
+    email,
+  ]),
+};
+export const RecentNoteContextDark: Story = {
+  ...RecentNoteContext,
+  globals: { theme: "dark" },
+};
 
 /** A logged call on a contact with a phone offers Call, beside its pill. */
 export const WithCall: Story = { render: card([call, email], reachable) };

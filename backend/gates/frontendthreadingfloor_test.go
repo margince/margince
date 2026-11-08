@@ -11,12 +11,12 @@ package gates
 // the card asks for a contact the deal already has.
 
 import (
-	"os"
 	"regexp"
 	"strconv"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/network"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const frontendThreadingFloor = "../frontend/src/features/deals/deal360/dealoverviewrows.ts"
@@ -27,7 +27,7 @@ var tsThreadingFloor = regexp.MustCompile(`const THREADING_FLOOR\s*=\s*(\d+)\b`)
 func TestFrontendMirrorsTheThreadingFloor(t *testing.T) {
 	t.Parallel()
 
-	source, err := os.ReadFile(frontendThreadingFloor)
+	source, err := gatekit.ReadFile(frontendThreadingFloor)
 	if err != nil {
 		t.Fatalf("read %s: %v", frontendThreadingFloor, err)
 	}

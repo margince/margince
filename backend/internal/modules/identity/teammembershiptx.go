@@ -65,11 +65,11 @@ func LiveTeamMembersAmongTx(ctx context.Context, tx pgx.Tx, team ids.UUID, candi
 }
 
 func teamMembershipHuman(ctx context.Context) (ids.UUID, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return ids.Nil, err
 	}
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
+	if !ok || !actor.HumanOrItsAgent() || actor.UserID.IsZero() {
 		return ids.Nil, apperrors.ErrPermissionDenied
 	}
 	return actor.UserID, nil

@@ -195,7 +195,7 @@ func TestTheContactFirstTouchArmsAnswerExactlyWhatTheFlatOnesDo(t *testing.T) {
 
 	t.Run("response spread", func(t *testing.T) {
 		statement := fmt.Sprintf(firstResponseSQL, scopeUnbounded, liveRecord(openDealPredicate, "d"),
-			liveRecord(workingLeadPredicate, "ld"), ownDomainSenderSQL("inbound", 3), slowPercentile)
+			liveRecord(workingLeadPredicate, "ld"), ownDomainSenderSQL("inbound", 3), slowPercentile, everyMessage)
 		now := time.Now()
 		read := func(sql string) [2]int64 {
 			var spread [2]int64

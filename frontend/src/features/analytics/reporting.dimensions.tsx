@@ -2,15 +2,25 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
+import { ChevronDown } from "lucide-react";
+import { useState } from "react";
 import { api } from "../../api/client";
-import { Badge, Field } from "../../design-system/atoms";
+import { Badge, Button, Field } from "../../design-system/atoms";
 import { Select } from "../../design-system/select";
 import { TokenList } from "../../design-system/tokeninput";
 import { countryOptions } from "../../format/assignedcountries";
+import { formatAnalyticsNumber } from "../../format/format";
 import { INDUSTRY_CODES, industryLabelKey } from "../../format/industry";
 import { type Translator, useLocale, useT } from "../../i18n";
-import { useSalesInitiatives } from "./reporting.initiatives";
+import { useSalesInitiatives } from "./reporting.initiatives.queries";
 import type { ReportingSelection } from "./reporting.model";
+import { VALUE_BASES, valueBasisOf } from "./reporting.selection";
+
+export {
+  VALUE_BASES,
+  type ValueBasis,
+  valueBasisOf,
+} from "./reporting.selection";
 
 /**
  * The product, country, industry and value basis of a selection: the dials
@@ -19,13 +29,44 @@ import type { ReportingSelection } from "./reporting.model";
  * figure that ignores it.
  */
 
-export type ValueBasis = NonNullable<ReportingSelection["value_basis"]>;
+/** The dials that narrow a report to a product or a market. */
+export type Dimensions = Pick<
+  ReportingSelection,
+  "product_id" | "initiative_id" | "country" | "industry" | "value_basis"
+>;
 
-export const VALUE_BASES: readonly ValueBasis[] = [
-  "all",
-  "software",
-  "implementation",
-];
+export function dimensionsOf(selection: ReportingSelection): Dimensions {
+  return {
+    product_id: selection.product_id,
+    initiative_id: selection.initiative_id,
+    country: selection.country,
+    industry: selection.industry,
+    value_basis: selection.value_basis,
+  };
+}
+
+function sameDimensions(a: Dimensions, b: Dimensions): boolean {
+  return (
+    a.product_id === b.product_id &&
+    a.initiative_id === b.initiative_id &&
+    a.country === b.country &&
+    a.industry === b.industry &&
+    (a.value_basis ?? "all") === (b.value_basis ?? "all")
+  );
+}
+
+/** Moves the dimension dials to `next` when the selection changed them. */
+export function applyDimensions(
+  filters: Readonly<{
+    dimensions: Dimensions;
+    setDimensions: (next: Dimensions) => void;
+  }>,
+  next: ReportingSelection,
+): void {
+  const wanted = dimensionsOf(next);
+  if (!sameDimensions(filters.dimensions, wanted))
+    filters.setDimensions(wanted);
+}
 
 const DIMENSION_KEYS = [
   "product_id",
@@ -55,15 +96,18 @@ export function useProductOptions(enabled = true) {
   });
 }
 
+/** How many dimensions the selection narrows by. */
+export function dimensionCount(selection: ReportingSelection): number {
+  return DIMENSION_KEYS.filter((key) =>
+    key === "value_basis"
+      ? !!selection.value_basis && selection.value_basis !== "all"
+      : !!selection[key],
+  ).length;
+}
+
 /** Whether the selection narrows by any dimension. */
 export function dimensioned(selection: ReportingSelection): boolean {
-  return (
-    !!selection.product_id ||
-    !!selection.initiative_id ||
-    !!selection.country ||
-    !!selection.industry ||
-    (!!selection.value_basis && selection.value_basis !== "all")
-  );
+  return dimensionCount(selection) > 0;
 }
 
 /** The selection with every dimension cleared; period, scope and pipeline stay. */
@@ -73,10 +117,6 @@ export function withoutDimensions(
   const next = { ...selection };
   for (const key of DIMENSION_KEYS) delete next[key];
   return next;
-}
-
-export function valueBasisOf(value: string): ValueBasis {
-  return VALUE_BASES.find((basis) => basis === value) ?? "all";
 }
 
 export function DimensionFilters({
@@ -179,6 +219,37 @@ export function DimensionFilters({
           />
         )}
       </Field>
+    </>
+  );
+}
+
+/**
+ * The dimension dials behind one toggle, so a page's line of chips holds its
+ * main dials. A selection that already narrows opens folded out, so no active
+ * filter hides.
+ */
+export function FoldedDimensions({
+  selection,
+  onChange,
+}: Readonly<{
+  selection: ReportingSelection;
+  onChange: (selection: ReportingSelection) => void;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const active = dimensionCount(selection);
+  const [open, setOpen] = useState(active > 0);
+  return (
+    <>
+      <Button aria-expanded={open} onClick={() => setOpen(!open)}>
+        {active > 0
+          ? t("reporting.filtersActive", {
+              active: formatAnalyticsNumber(active, locale),
+            })
+          : t("reporting.filtersMore")}
+        <ChevronDown aria-hidden />
+      </Button>
+      {open && <DimensionFilters selection={selection} onChange={onChange} />}
     </>
   );
 }

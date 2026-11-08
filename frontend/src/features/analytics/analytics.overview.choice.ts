@@ -93,3 +93,9 @@ export function openingView(
   }
   return recommended;
 }
+
+export function readsOverview(
+  can: Readonly<{ reports: boolean; framework: boolean }>,
+): boolean {
+  return can.reports && can.framework;
+}

@@ -8,7 +8,9 @@ import { providerName } from "../../format/connectorprovider";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
+import { approvalHref } from "../../lib/approvalhref";
 import { approvalKindLabel } from "../../lib/approvalkindlabel";
+import { runOutcomeWord, runReasonWords } from "../../lib/automationrun";
 import { ENTITY, isEntityKind } from "../../lib/entity";
 import type { MagicLane, MagicLine } from "../../lib/magic.queries";
 import {
@@ -18,7 +20,6 @@ import {
   magicWhyKey,
 } from "../../lib/magickeys";
 import { routeHash } from "../../lib/router";
-import { approvalHref } from "../automations/approvaldrawer";
 import { MagicApproval } from "./magic.approval";
 import { axisLabel, markKind } from "./magic.marks";
 import { LineRecordsOpener } from "./magic.records";
@@ -252,7 +253,7 @@ function LineWhen({
   const began = line.summary.values?.failing_since;
   if (line.lane === "watching" && began) {
     return (
-      <span className="t-caption magic-line-when">
+      <span className="t-caption magic-line-when magic-line-since">
         {t("magic.failingSince", { when: formatDateTime(began, locale, zone) })}
       </span>
     );
@@ -408,5 +409,9 @@ function readableValues(
     ...values,
     ...(values.kind && { kind: approvalKindLabel(values.kind, t) }),
     ...(values.provider && { provider: providerName(values.provider, t) }),
+    ...(values.outcome && { outcome: runOutcomeWord(values.outcome, t) }),
+    ...(values.reason_code && {
+      reason: runReasonWords(values.reason_code, t),
+    }),
   };
 }

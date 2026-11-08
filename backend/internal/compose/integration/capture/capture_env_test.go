@@ -107,7 +107,7 @@ func (m *mailBatchConnector) Sync(ctx context.Context, _ connector.Auth, _ conne
 		// owner's outgoing mail without the test forging a From header — which
 		// is precisely what the attestation must not be derivable from.
 		msg = msg.AttestSentByOwner(m.sent[msg.ID()])
-		rec := msg.ToRecord("gmail", raw)
+		rec := msg.ToRecord(m.Descriptor().Name, raw)
 		for _, dealID := range m.deals[msg.ID()] {
 			rec.Links = append(rec.Links, datasource.EntityRef{Type: datasource.EntityDeal, ID: dealID})
 		}
@@ -273,7 +273,7 @@ func seedCaptureRole(t *testing.T, e *integration.SearchEnv) {
 		if err := tx.QueryRow(context.Background(), `
 			INSERT INTO role (key, name, permissions)
 			VALUES ('capture_rep', 'Capture Rep',
-			        '{"objects":{"activity":{"create":true,"read":true,"update":true},"contact":{"create":true,"read":true},"company":{"create":true,"read":true},"project":{"read":true},"deal":{"read":true}},"row_scope":"all"}'::jsonb)
+			        '{"objects":{"activity":{"create":true,"read":true,"update":true},"contact":{"create":true,"read":true},"lead":{"create":true,"read":true},"company":{"create":true,"read":true},"project":{"read":true},"deal":{"read":true}},"row_scope":"all"}'::jsonb)
 			RETURNING id`).Scan(&roleID); err != nil {
 			return err
 		}

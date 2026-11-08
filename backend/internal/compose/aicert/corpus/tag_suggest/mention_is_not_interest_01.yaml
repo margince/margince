@@ -4,25 +4,22 @@ site: interest
 source: hand_authored
 sanitized_by: hand_authored/claude-opus-5
 # Both items name the offer and neither shows the counterparty wanting it. The
-# first carries our own advertising line in a quoted signature; the second is a
-# note that the buyer is content with what they have. A model that tags on the
-# words alone tags both.
+# first is a meeting where our own advertising line was on screen; the second is
+# a note that the buyer is content with what they have. A model that tags on the
+# words alone tags both. A mail's quoted signature never reaches the model, so
+# the advertising line sits in meeting notes, which are shown whole.
 fixture:
   tags:
     - key: ledger_migration
       name: 'Ledger migration'
       description: 'wants to move their bookkeeping off spreadsheets'
   items:
-    - kind: email
-      subject: 'Re: Thursday'
+    - kind: meeting
+      subject: 'Thursday catch-up'
       body: |
-        Thursday at 10 works, see you then.
-
-        > On Monday, Jan Weber wrote:
-        > Could we move our call to Thursday?
-        > --
-        > Jan Weber, Nordwind Systems
-        > Ledger migration: move your books off spreadsheets in a week.
+        Moved the rollout call to Thursday at 10. Our closing slide was on
+        screen at the end: "Ledger migration: move your books off
+        spreadsheets in a week." Nobody on their side picked it up.
     - kind: note
       subject: 'Call with Steinbach'
       body: |

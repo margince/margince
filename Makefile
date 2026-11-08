@@ -1,3 +1,5 @@
+include scripts/composition-profile.mk
+
 # Thin delegator: the real Makefile lives in backend/ (the Go module root).
 # `make check` is the merge gate; `make dev` boots everything.
 # The frontend lane is separate (`make frontend-check`) — it needs node+pnpm,
@@ -12,18 +14,18 @@
 # one target here that invokes the compiler directly instead of delegating.
 GO ?= go
 
-# The deterministic script gates `check-backend` fans out. One list, one
-# consumer — see the comment on check-backend for why they are not that
+# The deterministic script gates `check-root-gates` fans out. One list, one
+# consumer — see the comment on check-root-gates for why they are not that
 # target's prerequisites.
 ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-env-local test-api-entrypoint \
   test-dev-cleanup test-disk-headroom \
-  test-golangci-guard test-scheduled-report test-renovate-liveness test-ci-verdict test-merge-verdict \
+  test-golangci-guard test-scheduled-report test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict \
   test-review-coverage \
-  test-laneorder check-image-pins check-host-ports ci-doc-parity \
-  make-target-parity test-make-target-parity contract-breaking-check contract-frontend-drift \
+  test-laneorder test-lane-binaries check-image-pins check-host-ports ci-doc-parity \
+  make-target-parity test-make-target-parity contract-breaking-check \
   test-contract-frontend-drift migration-versions test-migration-versions \
   test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-test-budget rls-store-path \
-  comment-budget test-comment-budget comment-density \
+  comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes test-phase-timer test-check-lane-end \
   check-extension-modules go-work-sum \
   no-jurisdiction test-no-jurisdiction \
   pkg-freeze \
@@ -31,7 +33,7 @@ ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-en
   test-release-version-stamped test-closing-declaration test-release-patch-base \
   test-docs-describing \
   test-craft-review test-release-tag-version test-release-license-stamped \
-  test-release-notes
+  test-release-notes test-release-bundle embedded-binary-licenses
 
 # How wide the gate fan-out runs: the machine's online core count, so a 4-core
 # CI runner and an 18-core laptop each get the width they have without anybody
@@ -68,7 +70,7 @@ MINIO_PORT ?= 29000
 # called inside another command's argument would fail unnoticed.
 
 .PHONY: gate-timings
-.PHONY: help help-all install dev-fresh check check-config check-all check-backend check-q check-go check-gates check-fe dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev seed-analytics verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check bench-home e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules go-work-sum contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-test-budget comment-budget test-comment-budget comment-density comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-release-tag-version test-release-license-stamped test-release-notes test-release-version-stamped test-closing-declaration test-release-patch-base docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign sbom-check sbom-gate
+.PHONY: help help-all install dev-fresh check check-config check-all check-backend check-root-gates check-lane-craft check-lane-gates check-lane-backend check-lane-fe check-q check-go check-gates check-fe dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev seed-analytics verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check bench-home e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict test-review-coverage test-laneorder test-lane-binaries secret-scan test-secret-scan test-sbom-sign release-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules go-work-sum contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-input-census-judge test-test-budget comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes test-check-lane-end test-phase-timer comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-release-tag-version test-release-license-stamped test-release-notes test-release-bundle test-release-version-stamped test-closing-declaration test-release-patch-base docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign release-sign sbom-check sbom-gate
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
 
@@ -121,51 +123,105 @@ install: fe-install tools hooks
 ## otherwise catch a stranded frontend schema. On a pull request CI covers the
 ## same ground from the other side, through fe-quality's fe-drift.
 ##
+## contract-frontend-drift runs first and alone, because it rewrites
+## frontend/src/api/schema.d.ts and public-events.ts, and the gates in the
+## fan-out read the frontend tree.
+##
+## Each phase is bracketed by scripts/phase-timer.sh, so a green run ends with a
+## table of where its time went. The backend gate is NOT bracketed here. It
+## times its own phases, and a phase around them would be their sum counted
+## twice. PHASE_TIMER_OWNED tells it this target owns the ledger, so it adds its
+## rows to this table instead of resetting and printing one of its own — which
+## is what it does when somebody runs it directly (`make check-go`).
+check-backend:
+	@bash scripts/phase-timer.sh reset
+	@bash scripts/phase-timer.sh start "frontend contract types (gen:api)"
+	$(MAKE) contract-frontend-drift
+	@bash scripts/phase-timer.sh stop
+	PHASE_TIMER_OWNED=1 $(MAKE) check-root-gates
+	PHASE_TIMER_OWNED=1 $(MAKE) -C backend check
+	@bash scripts/phase-timer.sh report
+
+## check-root-gates — the root deterministic script gates, side by side.
+##
 ## The gates run as a FAN-OUT rather than as a prerequisite list. Every one of
 ## them is a reader — each either walks the tree and judges what it finds, or
 ## builds its fixtures under mktemp — so nothing but the list itself ever
 ## ordered them, and serially they were 191 s of this target (measured, 8-core
-## darwin, warm caches). Four alone were 130 s of that, and those four are gone:
-## the money-scale and one-spelling censuses are Go and TypeScript tests now,
-## walking the tree once inside a lane that was already walking it.
+## darwin, warm caches).
 ##
 ## Named in ROOT_SCRIPT_GATES rather than left as prerequisites here, because a
 ## prerequisite list AND a sub-make over the same names would run each gate
-## twice — the fan-out has to be the only place they are asked for.
-## Each phase is bracketed by scripts/phase-timer.sh, so a green run ends with a
-## table of where its time went. Two things about the bracketing:
+## twice — the fan-out has to be the only place they are asked for. The fan-out
+## line stays a bare `$(MAKE)` line, because
+## backend/gates/frontendlaneparity_test.go reads those lines to find the legs,
+## and a wrapper would hide all of them.
 ##
-##   - The brackets are separate recipe lines, not a wrapper around the
-##     sub-make. The fan-out line has to STAY a bare `$(MAKE)` line, because
-##     backend/gates/frontendlaneparity_test.go reads those lines to find the
-##     legs and a wrapper would hide all thirty of them.
-##   - The backend gate is NOT bracketed here. It times its own four phases, and
-##     a phase around them would be their sum counted twice. PHASE_TIMER_OWNED
-##     tells it this target owns the ledger, so it adds its rows to this table
-##     instead of resetting and printing one of its own — which is what it does
-##     when somebody runs it directly (`make check-go`). This target reads the
-##     same variable for the same reason: under `make check` the frontend half
-##     still has rows to add, and a report here would print without them.
-check-backend:
+## Run alone, it owns the timing ledger; under check-backend or a `make check`
+## lane, PHASE_TIMER_OWNED leaves the ledger to the caller.
+check-root-gates:
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh reset
 	@bash scripts/phase-timer.sh start "root script gates (x$(words $(ROOT_SCRIPT_GATES)), -j$(GATE_JOBS))"
 	$(MAKE) -j$(GATE_JOBS) $(ROOT_SCRIPT_GATES)
 	@bash scripts/phase-timer.sh stop
-	PHASE_TIMER_OWNED=1 $(MAKE) -C backend check
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh report
 
+# The steps of `make check` that rewrite files another step reads, measured
+# step by step: the frontend install (frontend/node_modules), composition
+# (build/composition/), drift (the generated Go, config and docs files) and
+# contract-frontend-drift (frontend/src/api/). They run first, one at a time.
+CHECK_WRITERS := fe-install composition drift contract-frontend-drift
+
+# The lanes `make check` runs side by side once the writers are done. Under
+# CHECK_WRITERS_RAN no lane reaches a writer: composition and fe-drift print a
+# line and do nothing, and the backend gate leaves out drift.
+CHECK_LANES := check-lane-craft check-lane-gates check-lane-backend check-lane-fe
+
+# How many lanes run at once: all of them by default. vitest and go test each
+# use every core, so on a machine that is already busy the lanes slow each
+# other until tests hit their timeouts. `CHECK_LANE_JOBS=1 make check` runs the
+# lanes one after the other and keeps the writers first.
+CHECK_LANE_JOBS ?= $(words $(CHECK_LANES))
+
+# Make 3.81, which macOS ships, has no --output-sync, so each lane writes its
+# own log. scripts/check-lane-end.sh prints the log of a lane that failed. A
+# dry run of `make check` from inside a lane (make-target-parity) points this
+# folder somewhere else, so it does not write over the logs of the real run.
+CHECK_LANE_LOGS ?= .tmp/check-lanes
+
 ## check — the full merge gate: both halves, plus the craft bar CI's
-## craftsmanship job holds. Spelled as recipe lines rather than prerequisites
-## because it owns the timing ledger, and a prerequisite would record a phase
-## before the reset. check-fe needs `make install` first.
+## craftsmanship job holds. The writers run first, then four lanes side by
+## side: craft static, the root script gates, the backend gate and check-fe.
+## Spelled as recipe lines rather than prerequisites because it owns the timing
+## ledger, and a prerequisite would record a phase before the reset. check-fe
+## needs `make install` first.
 check:
-	@bash scripts/phase-timer.sh reset
-	@bash scripts/phase-timer.sh start "craft static (strict)"
-	@$(MAKE) craft-static
+	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh reset
+	@bash scripts/phase-timer.sh start "writers ($(CHECK_WRITERS))"
+	$(MAKE) -j1 $(CHECK_WRITERS)
 	@bash scripts/phase-timer.sh stop
-	@PHASE_TIMER_OWNED=1 $(MAKE) check-backend
-	@PHASE_TIMER_OWNED=1 $(MAKE) check-fe
-	@bash scripts/phase-timer.sh report
+	@rm -rf "$(CHECK_LANE_LOGS)"
+	@echo "check: $(words $(CHECK_LANES)) lanes, $(CHECK_LANE_JOBS) at a time, each logs to $(CHECK_LANE_LOGS)/<lane>.log"
+	@CHECK_WRITERS_RAN=1 PHASE_TIMER_OWNED=1 $(MAKE) -j$(CHECK_LANE_JOBS) $(CHECK_LANES)
+	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh report
+
+# One lane each. PHASE_LANE puts the lane's phases in a lane of their own in
+# the timing table, because they overlap the other lanes' phases. The log
+# folder is made on the same line as the sub-make, because `make -n` runs a
+# line that holds $(MAKE) and only prints the others.
+check-lane-craft:
+	@PHASE_LANE=craft bash scripts/phase-timer.sh start "craft static (strict)"
+	@mkdir -p "$(CHECK_LANE_LOGS)" && PHASE_LANE=craft $(MAKE) craft-static >"$(CHECK_LANE_LOGS)/craft.log" 2>&1; bash scripts/check-lane-end.sh craft $$? "$(CHECK_LANE_LOGS)/craft.log"
+	@PHASE_LANE=craft bash scripts/phase-timer.sh stop
+
+check-lane-gates:
+	@mkdir -p "$(CHECK_LANE_LOGS)" && PHASE_LANE=gates $(MAKE) check-root-gates >"$(CHECK_LANE_LOGS)/gates.log" 2>&1; bash scripts/check-lane-end.sh gates $$? "$(CHECK_LANE_LOGS)/gates.log"
+
+check-lane-backend:
+	@mkdir -p "$(CHECK_LANE_LOGS)" && PHASE_LANE=backend $(MAKE) -C backend check >"$(CHECK_LANE_LOGS)/backend.log" 2>&1; bash scripts/check-lane-end.sh backend $$? "$(CHECK_LANE_LOGS)/backend.log"
+
+check-lane-fe:
+	@mkdir -p "$(CHECK_LANE_LOGS)" && PHASE_LANE=fe $(MAKE) check-fe >"$(CHECK_LANE_LOGS)/fe.log" 2>&1; bash scripts/check-lane-end.sh fe $$? "$(CHECK_LANE_LOGS)/fe.log"
 
 ## check-all — `check` plus the integration lane. `check` reaches that lane
 ## NOT AT ALL: its `test` target is `go test ./...`, and every integration file
@@ -176,11 +232,7 @@ check:
 ## packages a change touches. This target is for wanting the whole lane locally.
 check-all:
 	@bash scripts/phase-timer.sh reset
-	@bash scripts/phase-timer.sh start "craft static (strict)"
-	@$(MAKE) craft-static
-	@bash scripts/phase-timer.sh stop
-	@PHASE_TIMER_OWNED=1 $(MAKE) check-backend
-	@PHASE_TIMER_OWNED=1 $(MAKE) check-fe
+	@PHASE_TIMER_OWNED=1 $(MAKE) check
 	@bash scripts/phase-timer.sh start "backend: integration lane (real Postgres)"
 	@PHASE_TIMER_OWNED=1 $(MAKE) -C backend test-integration
 	@bash scripts/phase-timer.sh stop
@@ -309,10 +361,12 @@ FORCE:
 
 # The match-anything rule above would otherwise try to remake this file.
 Makefile: ;
+scripts/composition-profile.mk: ;
 
-## check-fe — the frontend half of the gate (part of `make check`). Fails loudly
-## if the frontend deps are missing rather than skipping — a set-up worktree has
-## run `make install`, which installs them. The CI frontend job runs this too.
+## check-fe — the frontend half of the gate (part of `make check`). Its first
+## leg, fe-typecheck-composed, installs the frontend deps, and the check below
+## fails loudly if they are still missing after that. The CI frontend job runs
+## this too.
 check-fe: fe-typecheck-composed
 	@[ -d frontend/node_modules ] || { echo "check-fe: frontend/node_modules missing — run 'make install' (or 'make fe-install') first" >&2; exit 1; }
 	@bash scripts/phase-timer.sh start "frontend: core suite (ds-gates, drift, lint, unit, build)"
@@ -555,9 +609,19 @@ fe-ds-gates:
 ## the script, so the two lanes cannot come to disagree about what a contract
 ## change owes. The script skips only when pnpm is absent, which cannot happen
 ## on this lane — check-fe fails first if the frontend deps are missing.
+##
+## Under CHECK_WRITERS_RAN the script does not run: `make check` ran it before
+## its lanes, and a second run here would rewrite the types while the other
+## lanes read them.
 fe-drift:
+ifdef CHECK_WRITERS_RAN
+	@echo "fe-drift: make check's writers phase ran check-contract-frontend-drift.sh before this lane"
+else
 	cd frontend && pnpm install --frozen-lockfile
 	@./scripts/check-contract-frontend-drift.sh
+	cd frontend && pnpm gen:approval-reading --check
+endif
+	cd frontend && pnpm gen:essential-copy --check
 
 ## fe-unit — the vitest suite. FE_COVERAGE=1 instruments the run so it also
 ## writes frontend/coverage/lcov.info for the `sonarcloud` job — ONE execution
@@ -597,6 +661,7 @@ FE_SHARD ?=
 ## between majors (.vitest-reports → .vitest/blob); the upload step reads it too.
 FE_BLOB_DIR := .vitest-reports
 fe-unit:
+	node --test scripts/ensure-pnpm.test.mjs
 	bash frontend/scripts/check-lcov-paths.test.sh
 	bash frontend/scripts/check-shard-union.test.sh
 	cd frontend && pnpm install --frozen-lockfile && pnpm exec vitest run \
@@ -678,6 +743,7 @@ fe-storybook:
 ## fe-install — install the frontend deps (pnpm, frozen lockfile). The FE half
 ## of `make install`; also what `fe-uat` / `dev` assume has run.
 fe-install:
+	node scripts/ensure-pnpm.mjs
 	cd frontend && pnpm install --frozen-lockfile
 
 ## fe-typecheck — TypeScript typecheck of the frontend (tsc project build, no
@@ -815,13 +881,13 @@ E2E_SHOT_DIR ?= /tmp/e2e-company
 ## bad run is the weather and two is a defect. Never touches :8080; it boots,
 ## seeds and tears down its own DEV_SLUG stack.
 ## A scenario stops once its verdict is settled; E2E_LLM_ALL_RUNS=1 makes every run.
-## SCENARIO=<name> runs one. E2E_LLM_KEEP=1 leaves the stack up.
+## SCENARIO=<name> runs one, or several names in quotes. E2E_LLM_KEEP=1 leaves the stack up.
 ##
-## THE CANDIDATE IS CHOSEN: E2E_LLM_CANDIDATE=claude|gpt|mistral, each pinned
+## THE CANDIDATE IS CHOSEN: E2E_LLM_CANDIDATE=claude|gpt|gemini|mistral, each pinned
 ## to the model its consumer app defaults to (e2e/llm/candidates.json), and
 ## E2E_LLM_VIA=api|openrouter|cli. api and openrouter run e2e/llm/drive.py, the
 ## neutral bridge that offers every vendor the same tools under the server's own
-## instructions — the comparable route. cli runs `claude -p` or `codex exec`,
+## instructions — the comparable route. cli runs `claude -p`, `codex exec` or `agy -p`,
 ## each with its own system prompt, filed apart under <model>@<cli>. The judge
 ## is reached by E2E_LLM_JUDGE_VIA=cli|api|openrouter. Codex reports no list of
 ## the tools it offered, so its run is held against the lane's own tools/list;
@@ -913,6 +979,7 @@ storybook:
 ## changed story the build didn't register, or on a changed component with no
 ## story. Artifact: .tmp/fe-uat/manifest.json. Deliberately NOT in `make check`
 ## — it is the fe-only UAT lane a coordinator runs instead of the full stack.
+## FE_UAT_BASE_REF chooses the PR base (origin/main by default).
 ## Optional: ARGS="--allow-missing"; ARGS="--all-stories" renders every story
 ## the build registers instead of the diff's (scheduled.yml runs it daily).
 fe-uat:
@@ -953,8 +1020,8 @@ fe-edge-padding:
 ## BLOCKER and MAJOR findings both fail it. The code checks judge every
 ## hand-written Go file, and they are green because the backlog was cleared to
 ## arm them. The comment checks read Go and TypeScript and judge only the lines
-## added since origin/main, so old comments improve as files are touched; with
-## no origin/main the gate fails instead of judging nothing. `make check` runs
+## added since CHECK_BASE_REF (origin/main unless set), so old comments improve as
+## files are touched; with no such ref the gate fails instead of judging nothing. `make check` runs
 ## it locally.
 ##
 ## extensions/ and fixtures/ are their own Go modules, so `./...` never reaches
@@ -963,7 +1030,7 @@ fe-edge-padding:
 ## pinned binary (scripts/craft-pin.sh), and the paths are written from the
 ## repository root, where it runs.
 craft-static: test-craft-pin
-	@"$$(./scripts/craft-pin.sh)" static --strict --diff-base origin/main \
+	@"$$(./scripts/craft-pin.sh)" static --strict --diff-base "$(CHECK_BASE_REF)" \
 		backend extensions fixtures frontend tools
 
 ## craft-review — the OPT-IN model-driven arm of the craftsmanship gate: send
@@ -1072,7 +1139,9 @@ test-sbom-license-parity:
 ## says nothing about compiled code it carries: a `.wasm` is a build output, so
 ## the SBOM sees the Go module and never what the wasm was built from. The
 ## corpus is the packages `go list -json -deps ./cmd/...` reports, so a new
-## dependency is covered the day it is added.
+## dependency is covered the day it is added. It is a root script gate as well:
+## the license gate runs only on a manifest change, and a file embedded under
+## backend/ changes no manifest.
 embedded-binary-licenses:
 	@./scripts/embedded-binary-licenses.sh
 
@@ -1168,6 +1237,12 @@ test-scheduled-report:
 test-renovate-liveness:
 	@./scripts/check-renovate-liveness.test.sh
 
+## test-pace-workflow — prove the pacer starts a workflow when a run is due and
+## holds off when one is not. On main it answers only for the pushes that happen,
+## so a pacer that never starts looks the same as a quiet day.
+test-pace-workflow:
+	@./scripts/pace-workflow.test.sh
+
 ## test-ci-verdict — prove the single required check still refuses to read a
 ## skipped job as a passing one on the merge queue. GitHub counts a skipped
 ## required check as passing, so that rule is the only reason nine required
@@ -1200,6 +1275,13 @@ test-review-coverage:
 ## baseline a fresh clone orders by, which has no measurements to fall back on.
 test-laneorder:
 	@./scripts/test-laneorder.sh
+
+## test-lane-binaries — prove the integration build empties only a directory it
+## made, and that a shard refuses binaries compiled from other source than its
+## checkout. Neither fails on its own: one deletes files, the other tests old
+## code and reports green.
+test-lane-binaries:
+	@./scripts/test-lane-binaries.sh
 
 ## check-image-pins — every `uses:` in .github/workflows/, every container
 ## `image:` (workflow service containers + docker-compose.dev.yml) AND every
@@ -1241,13 +1323,16 @@ make-target-parity:
 ## test-make-target-parity — the gate's own test: the shipped Makefiles pass and
 ## each planted forwarding mistake fails.
 test-make-target-parity:
+	@bash scripts/test-composition-profile.sh
 	@./scripts/check-make-target-parity.test.sh
 
-## contract-breaking-check — oasdiff severity gate on backend/api/crm.yaml vs
-## origin/main: a breaking change (removed op, narrowed type…) fails; additive
-## changes pass. A deliberate spec re-sync runs with CONTRACT_STABILITY=pre-live.
+## contract-breaking-check — strict compatibility against CHECK_BASE_REF
+## (origin/main by default). Set origin/develop when that is the target branch.
+## A deliberate spec resync uses CONTRACT_STABILITY=pre-live.
+CHECK_BASE_REF ?= origin/main
 contract-breaking-check:
-	@./scripts/check-contract-breaking.sh
+	@bash scripts/check-contract-breaking.test.sh
+	@CONTRACT_BREAKING_REQUIRE_BASE="$(if $(filter file,$(origin CHECK_BASE_REF)),$(CONTRACT_BREAKING_REQUIRE_BASE),1)" ./scripts/check-contract-breaking.sh "$(CHECK_BASE_REF)"
 
 ## contract-frontend-drift — the THIRD regeneration a crm.yaml change owes.
 ## `make gen` covers the Go artifacts and a unit test covers the MCP surface
@@ -1264,11 +1349,12 @@ test-contract-frontend-drift:
 	@./scripts/check-contract-frontend-drift.test.sh
 
 ## migration-versions — a migration this branch adds claims a version no
-## migration on origin/main already claims, and sorts after all of them. Two
+## migration on CHECK_BASE_REF (origin/main by default) already claims, and sorts
+## after all of them. Two
 ## PRs numbering against the same main is how core 0240 (and then 0248) ended
 ## up claimed twice, which the per-tree loader test cannot see.
 migration-versions:
-	@./scripts/check-migration-versions.sh
+	@MIGRATION_VERSIONS_REQUIRE_BASE="$(if $(filter file,$(origin CHECK_BASE_REF)),$(MIGRATION_VERSIONS_REQUIRE_BASE),1)" ./scripts/check-migration-versions.sh "$(CHECK_BASE_REF)"
 
 ## test-migration-versions — prove the version gate fires on each defect it
 ## names and, above all, that a DECLARED baseline reset is admitted only when the
@@ -1276,6 +1362,22 @@ migration-versions:
 ## merely reports, and the declaration lives permanently in ci.yml.
 test-migration-versions:
 	@./scripts/test-migration-versions.sh
+
+## test-keep-unchanged-mtimes — keep-unchanged-mtimes.sh's own test: a file
+## rewritten with its own bytes keeps its mtime, and a changed or hand-edited
+## one does not, so Go's test cache never replays a stale result.
+test-keep-unchanged-mtimes:
+	@bash scripts/keep-unchanged-mtimes.test.sh
+
+## test-phase-timer — phase-timer.sh's own test: phases in one lane do not
+## nest, lanes overlap, and the report gives the wall time next to the sum.
+test-phase-timer:
+	@bash scripts/phase-timer.test.sh
+
+## test-check-lane-end — check-lane-end.sh's own test: a failed `make check`
+## lane is named, the end of its log is printed, and make check fails.
+test-check-lane-end:
+	@bash scripts/check-lane-end.test.sh
 
 ## test-lanes — hermetic-unit-lane enforcement: no untagged test may open a
 ## real Postgres/Redis; real-infra suites carry //go:build integration.
@@ -1334,13 +1436,21 @@ test-budget:
 ## test-input-census — every cached unit-test package that reads a file outside
 ## its module also reads that file's tree digest, or a replayed pass outlives an
 ## edit to it. Judged on a real run, since such paths are mostly built at run
-## time; a failing test does not decide it. CI's backend-lint job and
-## cache-warm both run it.
+## time; a failing test does not decide it. cache-warm runs it.
 test-input-census:
 	@set -e; logs="$$(mktemp -d)"; trap 'rm -rf "$$logs"' EXIT; \
 	if ! TESTLOG_DIR="$$logs" $(MAKE) -C backend -k test-cached test-extensions TEST_EXEC="$(CURDIR)/scripts/testlog-exec.sh"; then \
 	  echo "test-input-census: a test failed under the census; its inputs are judged all the same" >&2; \
 	fi; \
+	TESTLOG_DIR="$$logs" $(MAKE) --no-print-directory test-input-census-judge
+
+## test-input-census-judge — the judging half of test-input-census, over logs a
+## pass run with TEST_EXEC=scripts/testlog-exec.sh left in TESTLOG_DIR. CI's
+## deterministic-gates (unit) leg logs its own test pass and judges it here, so
+## the census costs no second run of the tests.
+test-input-census-judge:
+	@set -e; logs="$(TESTLOG_DIR)"; \
+	[ -d "$$logs" ] || { echo "test-input-census-judge: TESTLOG_DIR must name the logs a testlog-exec.sh pass wrote" >&2; exit 2; }; \
 	./scripts/ci-stable-mtimes.sh --names > "$$logs/names.tsv"; \
 	cd backend && GOWORK="$(CURDIR)/go.work" go run ./tools/check-test-inputs -logs "$$logs" -names "$$logs/names.tsv"
 
@@ -1478,6 +1588,12 @@ test-release-license-stamped:
 ## Its one caller is a tag push, like the tag reader's.
 test-release-notes:
 	@./scripts/release-notes.test.sh
+
+## test-release-bundle — the server bundle packer's own test: what each Linux
+## tarball holds (programs, VERSION, a web.conf off the api's port), and the
+## missing platform or program it refuses. Its one caller is a tag push.
+test-release-bundle:
+	@./scripts/release-bundle.test.sh
 
 ## no-jurisdiction — pack-boundary fitness gate: no country-specific
 ## regulatory identifier (XRechnung/ZUGFeRD/DATEV/…) or ISO-3166 code appears
@@ -1775,6 +1891,24 @@ sbom-sign: $(SBOM_SIGN_DEPS)
 	  $(COSIGN) sign-blob --yes --bundle "$$f.cosign.bundle" "$$f"; \
 	done
 	@echo "signed: $(addsuffix .cosign.bundle,$(SBOM_FILES))"
+
+## release-sign — keyless-sign a tagged release: each image by digest, and the
+## SHA256SUMS that covers every file on the release page, so one signature
+## vouches for the bundles and the SBOMs. CI only: it needs the OIDC token, and
+## release-tag.yml runs it after the build. The images are signed with the
+## registry login the job wrote under $(COSIGN_HOME), because cosign runs in its
+## own container and sees no other.
+RELEASE_DIR ?= dist/release
+COSIGN_REGISTRY ?= $(DOCKER_SBOM) -u $(shell id -u):$(shell id -g) -e HOME=/src/$(COSIGN_HOME) -e DOCKER_CONFIG=/src/$(COSIGN_HOME)/docker -e SIGSTORE_ID_TOKEN -e ACTIONS_ID_TOKEN_REQUEST_URL -e ACTIONS_ID_TOKEN_REQUEST_TOKEN $(COSIGN_IMAGE)
+release-sign:
+	@test -s $(RELEASE_DIR)/SHA256SUMS || { echo "FAIL: no $(RELEASE_DIR)/SHA256SUMS; the release build writes it"; exit 1; }
+	@test -s $(RELEASE_DIR)/images.txt || { echo "FAIL: no $(RELEASE_DIR)/images.txt; the release build writes it"; exit 1; }
+	@mkdir -p $(COSIGN_HOME)
+	$(COSIGN) sign-blob --yes --bundle $(RELEASE_DIR)/SHA256SUMS.cosign.bundle $(RELEASE_DIR)/SHA256SUMS
+	@set -e; while read -r ref; do \
+	  echo "signing $$ref"; \
+	  $(COSIGN_REGISTRY) sign --yes "$$ref"; \
+	done < $(RELEASE_DIR)/images.txt
 
 ## sbom-check — license gate: grant fails if any bundled dependency uses a non-allowed license (.grant.yaml).
 sbom-check:

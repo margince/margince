@@ -43,7 +43,7 @@ func TestTheProofBackfillRebuildsWhatTheRecordsHoldAndReplaysSafely(t *testing.T
 	e := setupProofs(t)
 	contact := e.SeedContact(t, "Earlier Subject", nil)
 	erasure := e.openRequest(t, "erasure", contact.String())
-	e.patch(t, erasure, `{"status":"fulfilled","resolution":"erased","identity_check":"id_document"}`)
+	e.patch(t, erasure, `{"status":"fulfilled","identity_check":"id_document"}`)
 	access := e.closeAccess(t, "earlier@proof.test")
 	erased := e.proofCounts(t, erasure)
 
@@ -124,7 +124,7 @@ func TestTheProofBackfillFindsTheErasureOfARequestWhoseReferenceIsTombstoned(t *
 	contact := e.SeedContact(t, "Long Ago Subject", nil)
 	e.seedNoteFor(t, contact, "Bitte loeschen", "Bitte loeschen Sie alles")
 	request := e.openRequest(t, "erasure", contact.String())
-	e.patch(t, request, `{"status":"fulfilled","resolution":"erased","identity_check":"id_document"}`)
+	e.patch(t, request, `{"status":"fulfilled","identity_check":"id_document"}`)
 	erased := e.proofCounts(t, request)
 	e.answerProofAt(t, request, time.Date(2025, 3, 1, 9, 0, 0, 0, time.UTC))
 	e.expire(t, time.Date(2029, 1, 3, 3, 0, 0, 0, time.UTC))

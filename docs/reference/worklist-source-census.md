@@ -53,12 +53,12 @@ seam or lane cuts after reading.
 | `approval` | `modules/approvals` `Service.ListWire` and `CountPending` | `batchScanDepth` = 200 (Go, over 200-row SQL batches) | Requested-for arms judged in Go per batch, then the decidable check |
 | `dedupe_candidate` | `modules/contacts` `ListDedupeCandidates` | `batchScanDepth` asked, clamped to `dedupeQueueMaxLimit` = 100 (SQL) | Both sides visible; no owner predicate; not read for `mine` or a named owner |
 | `contact_case` | `contacts` `ListContactCases` | `contactCaseListMax` = 50 per call; the seam pages to `batchScanDepth` | Case scope mine, unassigned or all; filtered again in Go |
-| `deal_suggestion` | `deals` `ListSuggestions` | `suggestionMaxLimit` = 200 (SQL) | Company row scope; not read for `mine` or a named owner |
+| `deal_suggestion` | `deals` `ListSuggestions` | `suggestionMaxLimit` = 200 (SQL) | `storekit.OwnerSetClause` on the company owner in SQL, as `deal_at_risk`; the evidence visibility rule |
 | `tag_suggestion` | `modules/collections` `OpenTagSuggestions` | `tagSuggestionMaxLimit` = 200 (SQL) | Row scope and `tag` read; not read for `mine` or a named owner |
 | `relationship_decay` | `modules/search` quiet contacts, through `compose/attentionlanesseam.go` | `decayCandidateCap` = 40 times `decayCandidatePages` = 3 candidates (SQL), then `decayLaneCap` = 5 (Go) | Contact `owner_id` for `mine` and a named owner; no live owner for `unassigned`; none for `team` and `all` |
 | `domain_question` | `contacts` `OpenDomainQuestionsForOwner` | `DomainQuestionLimit` = 100 (SQL) | The reader decides the question |
 | `introduction_request` | `modules/introductions` `AwaitingMyAnswer` | `doneCap` = 8 (SQL) | The reader is the introducer |
-| `failed_approval`, `dsr`, `notice_case`, `capture_health`, `ai_work_health`, `automation_run`, `bounce`, `undelivered`, `notice` | See [System sources](#system-sources) | `doneCap` = 8 (SQL), except `capture_health`, which has none | See [System sources](#system-sources) |
+| `failed_approval`, `dsr`, `notice_case`, `capture_health`, `booking_health`, `ai_work_health`, `automation_run`, `bounce`, `undelivered`, `notice` | See [System sources](#system-sources) | `doneCap` = 8 (SQL), except `capture_health` and `booking_health`, which have none | See [System sources](#system-sources) |
 
 The decision lane cuts its producers together: `interleave` in `suggestionlane.go` takes `batchScanDepth` rows across
 cases, pairs, approvals and both suggestion kinds.
@@ -182,7 +182,7 @@ Their categories stay a floor when their lane is cut, and scrolling ends at the 
 
 `categoryOfSource` in `reach.go` files every source it does not name under `system` (`categorySystem` in
 `batches.go`). Ownership depends on the classifier. Among the rows `classifySystem` draws, `systemRowOwner` in
-`classifydelivery.go` makes `notice` and `capture_health` the reader's and the rest unowned, so step C drops
+`classifydelivery.go` makes `notice`, `capture_health` and `booking_health` the reader's and the rest unowned, so step C drops
 those from `mine`. `bounce`, `undelivered` and `failed_approval` are the reader's. `dsr` and `notice_case` belong
 to their assignee (`classifylegal.go`).
 
@@ -192,6 +192,7 @@ to their assignee (`classifylegal.go`).
 | `dsr` | `modules/consent` `OpenDSRsDueSoonest`: `privacy_request` read | Every `privacy_request` reader, on `unassigned`, `team` and `all` only | A `privacy_request` holder |
 | `notice_case` | `consent` `OpenNoticeCasesDueSoonest`: `privacy_request` and `contact` read, owner from the case or contact | Holders whose scope reaches the case owner | A holder who can open the contact |
 | `capture_health` | `modules/capture` `Registry.HealthConcerns`: the reader's own connections | The mailbox owner | The mailbox owner, by reconnecting |
+| `booking_health` | `modules/activities` `Store.BookingPageConcern`: the reader's own page, switched on, used, and paused by its calendar | The host | The host, in booking settings |
 | `ai_work_health` | `modules/aiactivity` `Store.Troubled`: `actor_user_id` is the reader | The actor, but only on `unassigned`, `team` and `all`, because the row is unowned | The actor |
 | `automation_run` | `modules/automation` `TroubledRuns`: `automation` read, every run in the workspace | Every `automation` reader, on `unassigned`, `team` and `all` | An `automation` editor |
 | `bounce`, `undelivered` | `modules/comms` send lanes: the reader sent it | The sender | The sender |
@@ -199,7 +200,7 @@ to their assignee (`classifylegal.go`).
 
 No system source states an exact total. Each one's reason:
 
-- `automation_run`, `ai_work_health`, `capture_health`, `bounce`, `undelivered`, `dsr` and `notice_case`: step F
+- `automation_run`, `ai_work_health`, `capture_health`, `booking_health`, `bounce`, `undelivered`, `dsr` and `notice_case`: step F
   drops the reader's Done marks in Go.
 - `notice`: the lane drops a notice whose approval the reader can still decide (`noticesWithoutDecisions` in
   `noticefold.go`). The approval engine judges that per batch in Go, so no SQL count can apply it.

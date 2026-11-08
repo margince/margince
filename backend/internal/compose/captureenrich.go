@@ -24,6 +24,7 @@ import (
 	"log/slog"
 	"slices"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -124,6 +125,7 @@ type CaptureEnricher struct {
 	// test sets it small so it can drive that boundary with a handful of
 	// contacts rather than a hundred.
 	limit int
+	now   func() time.Time
 }
 
 // NewCaptureEnricher builds the pass over the pool and one model lane.
@@ -134,6 +136,7 @@ func NewCaptureEnricher(pool *pgxpool.Pool, brain completer, log *slog.Logger) *
 		brain: brain,
 		log:   log,
 		limit: enrichPassLimit,
+		now:   time.Now,
 	}
 }
 
@@ -287,7 +290,7 @@ func (e *CaptureEnricher) enrichOne(ctx context.Context, cand contacts.Signature
 			return err
 		}
 	}
-	return e.store.MarkSignatureRead(ctx, cand.ContactID, cand.ActivityID, signatureHistoryDepth)
+	return e.store.MarkSignatureRead(ctx, cand.ContactID, cand.ActivityID, signatureHistoryDepth, contacts.SignatureWork{ContactID: cand.ContactID, Generation: cand.Generation, Snapshot: cand.Snapshot})
 }
 
 type signatureReadOptions struct {

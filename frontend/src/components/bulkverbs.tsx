@@ -4,6 +4,7 @@
 import { type ReactNode, useId, useState } from "react";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
+import { useRowSelection } from "../design-system/listselection";
 import type { ListSelection } from "../design-system/listtable";
 import { Select } from "../design-system/select";
 import { stable } from "../format/collate";
@@ -16,6 +17,7 @@ import {
   type BulkChangeResult,
   type BulkRow,
 } from "./bulkchange";
+import { BULK_MAX_ITEMS } from "./bulkchangeapi";
 import { ShortlistVerb } from "./bulkshortlist";
 import { TagVerbs } from "./bulktag";
 import { TaskVerb } from "./bulktask";
@@ -175,8 +177,7 @@ export type BulkSelectable = Readonly<{
 
 /**
  * Row selection plus the bulk bar, for a record list whose only bulk verbs are
- * `BulkVerbs`. Only rows the list currently holds count as selected, so a row
- * that left the result set cannot linger as a selection nobody can clear.
+ * `BulkVerbs`.
  */
 export function useBulkSelection<Row extends BulkSelectable>({
   rows,
@@ -188,33 +189,28 @@ export function useBulkSelection<Row extends BulkSelectable>({
   labelOf: (row: Row) => string;
 }>): ListSelection<Row> {
   const t = useT();
-  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
-  const selectedRows = rows.filter((row) => selected.has(row.id));
+  const chosen = useRowSelection({
+    rows,
+    keyOf: (row) => row.id,
+    limit: BULK_MAX_ITEMS,
+  });
   return {
-    selected: new Set(selectedRows.map((row) => row.id)),
+    selected: chosen.selected,
+    limit: chosen.limit,
     // An archived row takes neither verb: it has no owner to move and is
     // already archived.
     selectable: (row) => row.archived_at == null,
-    onToggle: (row) =>
-      setSelected((prev) => {
-        const next = new Set(prev);
-        if (next.has(row.id)) {
-          next.delete(row.id);
-        } else {
-          next.add(row.id);
-        }
-        return next;
-      }),
+    onChange: chosen.onChange,
     label: (row) => t("bulk.selectRow", { name: labelOf(row) }),
     bar: (
       <BulkVerbs
         recordType={recordType}
-        rows={selectedRows.map((row) => ({
+        rows={chosen.selectedRows.map((row) => ({
           id: row.id,
           version: row.version,
           label: labelOf(row),
         }))}
-        onDone={() => setSelected(new Set())}
+        onDone={chosen.clear}
       />
     ),
   };

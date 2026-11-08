@@ -222,7 +222,11 @@ describe("an address to write to", () => {
     const builders = productSources(srcRoot)
       .filter((path) => /mailto:\$\{/.test(readFileSync(path, "utf8")))
       .map((path) => relative(srcRoot, path));
-    expect(builders).toEqual(["design-system/contactlink.tsx"]);
+    expect(builders).toEqual([
+      "design-system/contactlink.tsx",
+      // A link the writer puts in their own message, opened by the recipient.
+      "design-system/richtext-html.ts",
+    ]);
   });
 });
 

@@ -55,7 +55,7 @@ func TestAnOfferAcceptedAfterTheSenderBecameALeadMakesNoContact(t *testing.T) {
 	activityID := seedCapturedMail(t, e, address, "about your services")
 	dispositionID := seedPendingDisposition(t, e, address, "leadco.example", activityID)
 	retireToUnsure(t, e, dispositionID)
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
 	if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("staging reviews: %v", err)

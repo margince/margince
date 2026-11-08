@@ -281,7 +281,7 @@ func identsIn(expr ast.Node) map[string]bool {
 func waiverSubjectText(fset *token.FileSet, expr ast.Expr) string {
 	start := fset.Position(expr.Pos())
 	end := fset.Position(expr.End())
-	source, err := os.ReadFile(start.Filename)
+	source, err := gatekit.ReadFile(start.Filename)
 	if err != nil || end.Offset > len(source) {
 		return start.Filename
 	}
@@ -306,7 +306,7 @@ func waiverLineNumber(n int) string {
 func waiverCensusFiles(t *testing.T) []string {
 	t.Helper()
 	var paths []string
-	err := filepath.WalkDir(".", func(path string, entry os.DirEntry, err error) error {
+	err := gatekit.WalkDir(".", func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

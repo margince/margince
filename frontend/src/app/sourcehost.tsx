@@ -1,12 +1,20 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useCallback, useState } from "react";
-import { OpenEmailDrawer } from "../features/mail/openemaildrawer";
-import { OpenActivityDrawer } from "../features/voice-knowledge/activitydrawer";
-import { viewerZone } from "../format/timezone";
+import { type ReactNode, Suspense, useCallback, useState } from "react";
+import { lazy } from "../i18n/lazy";
+
+const OpenEmailDrawer = lazy(async () => ({
+  default: (await import("../features/mail/openemaildrawer")).OpenEmailDrawer,
+}));
+const OpenActivityDrawer = lazy(async () => ({
+  default: (await import("../features/voice-knowledge/activitydrawer"))
+    .OpenActivityDrawer,
+}));
+
 import { useActivity } from "../lib/activityread";
 import { OpenSourceProvider } from "../lib/opensource";
+import { useViewerZone } from "../lib/viewerzone";
 
 /** The shell's drawer for a source opened anywhere under it. */
 export function SourceHost({ children }: Readonly<{ children: ReactNode }>) {
@@ -37,9 +45,9 @@ function SourceDrawer({
   const read = useActivity(activityId);
   const answered = read.data !== undefined || read.isError;
   const email = read.data?.kind === "email";
-  const zone = viewerZone();
+  const zone = useViewerZone();
   return (
-    <>
+    <Suspense fallback={null}>
       <OpenEmailDrawer
         activityId={answered && email ? activityId : null}
         zone={zone}
@@ -52,6 +60,6 @@ function SourceDrawer({
         onClose={onClose}
         activity={read.data}
       />
-    </>
+    </Suspense>
   );
 }

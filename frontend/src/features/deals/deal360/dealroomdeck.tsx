@@ -20,7 +20,7 @@ import { Heading } from "../../../design-system/heading";
 import { Panel, PanelBody } from "../../../design-system/panel";
 import { formatDateAbbrev, formatNumber } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
-import { useRecordZone } from "../../../lib/recordzone";
+import { useViewerZone } from "../../../lib/viewerzone";
 import { useParticipants, useRoomAttendance } from "../dealroomaccess";
 import { useRoomThreads } from "../dealroomconversation";
 import { useRoomDocuments } from "../dealroomdocuments";
@@ -117,7 +117,7 @@ export function StateBanner({
 }: Readonly<{ room: DealRoom; action?: ReactNode }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const notice = (claim: string, tone?: CalloutTone, withAction = true) => (
     <Callout
       tone={tone}
@@ -139,7 +139,7 @@ export function StateBanner({
       return room.expires_at
         ? notice(
             t("roompage.banner.liveUntil", {
-              when: formatDateAbbrev(room.expires_at, locale, recordZone),
+              when: formatDateAbbrev(room.expires_at, locale, readerZone),
             }),
             undefined,
             false,
@@ -222,7 +222,7 @@ export function RoomSetup({
 export function RoomFacts({ room }: Readonly<{ room: DealRoom }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const { invited, active, lastSeen, counted } = useRoomAttendance(room.id);
   if (!counted) {
     return null;
@@ -238,7 +238,7 @@ export function RoomFacts({ room }: Readonly<{ room: DealRoom }>) {
       {lastSeen ? (
         <span>
           {t("room.card.lastSeen", {
-            when: formatDateAbbrev(lastSeen, locale, recordZone),
+            when: formatDateAbbrev(lastSeen, locale, readerZone),
           })}
         </span>
       ) : null}

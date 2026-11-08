@@ -1,5 +1,11 @@
 import { Sparkles } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ComponentProps,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Badge,
   Button,
@@ -10,7 +16,7 @@ import {
 } from "../design-system/atoms";
 import { useBackdropDismiss } from "../design-system/backdrop";
 import { Callout } from "../design-system/callout";
-import { liveDialogs, useDialogFocus } from "../design-system/dialogfocus";
+import { useDialogFocus } from "../design-system/dialogfocus";
 import { Eyebrow } from "../design-system/eyebrow";
 import { usePresence } from "../design-system/presence";
 import { holdsEveryWord, searchWords } from "../format/collate";
@@ -20,8 +26,8 @@ import { isImeCommit } from "../lib/imecommit";
 import { navigate, type Route } from "../lib/router";
 import { SEARCH_HIT_KIND_KEY, searchHitHasCard } from "../lib/searchkinds";
 import { openAsk, type UrlParams } from "../lib/urlstate";
-import { modifierCap } from "./hotkeys";
 import { PaletteAnswer, usePaletteAsk } from "./paletteanswer";
+import { useBuiltinCommands } from "./palettecommands";
 import { useConfigurationCommand } from "./paletteconfiguration";
 import { usePaletteRecents } from "./paletterecents";
 import { type RecentEntry, recentIdentity } from "./paletterecents.storage";
@@ -410,36 +416,10 @@ function paletteSelection(
   return Math.max(named, 0);
 }
 
-const PALETTE_KEY = "k";
+export { paletteHotkeyCaps, usePaletteHotkey } from "./palettehotkey";
 
-/**
- * The ⌘K / Ctrl K chord as one cap per key. Both modifiers work, but a surface
- * shows only the one the reader's keyboard has. Pure in `platform`, so a test
- * needs no stub.
- */
-export function paletteHotkeyCaps(platform: string): readonly string[] {
-  return [modifierCap(platform), PALETTE_KEY.toUpperCase()];
-}
-
-export function usePaletteHotkey(
-  open: boolean,
-  setOpen: (open: boolean) => void,
+export function BuiltinCommandPalette(
+  props: Omit<ComponentProps<typeof CommandPalette>, "commands">,
 ) {
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (
-        (event.metaKey || event.ctrlKey) &&
-        event.key.toLowerCase() === PALETTE_KEY
-      ) {
-        event.preventDefault();
-        // An open dialog makes the rest of the app unreachable, the palette with
-        // it; asked only while closed, so the palette's own box never blocks it.
-        if (open || liveDialogs().length === 0) {
-          setOpen(!open);
-        }
-      }
-    };
-    globalThis.addEventListener("keydown", onKey);
-    return () => globalThis.removeEventListener("keydown", onKey);
-  }, [open, setOpen]);
+  return <CommandPalette {...props} commands={useBuiltinCommands()} />;
 }

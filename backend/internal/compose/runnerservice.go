@@ -340,6 +340,11 @@ func (s *RunnerService) executeJob(ctx context.Context, job runner.QueuedJob) {
 	// trace that ties a routed model call back to the Surface-B run it
 	// served.
 	runCtx = principal.WithAgentRunID(runCtx, runID)
+	if closed, ok := s.closeWhenNothingSlips(runCtx, spec, runID); ok {
+		s.landOutcome(runCtx, runID, job.TriggerRef, closed, nil)
+		s.finishJob(ctx, job.ID, &runID, "")
+		return
+	}
 
 	bounded, cancel := context.WithTimeout(runCtx, RunWallClock)
 	defer cancel()

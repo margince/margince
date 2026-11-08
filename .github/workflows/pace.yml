@@ -1,0 +1,52 @@
+# Holds two workflows to their cadence while main is moving: main-health every
+# two hours, cache-warm every three.
+#
+# GitHub's scheduler can run a cron hours late or not at all, with no record of a
+# run it skipped. A push is delivered, and each of these only needs a new run once
+# something has landed on main. A cold cache-warm slows every pull request's lanes.
+#
+# A dispatch through GITHUB_TOKEN does start a workflow, unlike a push made with it.
+name: pace
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# One at a time, so a push arriving just after a dispatch reads that run rather
+# than racing it. Only the newest waiting push matters: all of them ask one question.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  pace:
+    name: pace ${{ matrix.workflow }}
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    # One job per workflow, so a failed read for one does not hold back the other.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - workflow: main-health.yml
+            interval: 7200
+          - workflow: cache-warm.yml
+            interval: 10800
+    permissions:
+      contents: read
+      # To read the workflow's last run and to dispatch the next one.
+      actions: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Start ${{ matrix.workflow }} if it is due
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          WORKFLOW: ${{ matrix.workflow }}
+          INTERVAL: ${{ matrix.interval }}
+        run: ./scripts/pace-workflow.sh "$WORKFLOW" "$INTERVAL"

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -77,6 +78,23 @@ func (r *Registry) GrantedScopesFor(ctx context.Context, userID ids.UserID, prov
 	return granted, nil
 }
 
+// ReconnectedSince reports whether the user's live connection to provider was
+// granted again after since. A grant restamps connected_at; a token refresh
+// does not, so only the human's own reconnect counts.
+func (r *Registry) ReconnectedSince(ctx context.Context, userID ids.UserID, provider string, since time.Time) (bool, error) {
+	var connected time.Time
+	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT connected_at FROM capture_connection`+sendableConnection, userID, provider).Scan(&connected)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("capture: reading when the connection was granted: %w", err)
+	}
+	return connected.After(since), nil
+}
+
 // SenderFor resolves the transmitting connection for one user and provider:
 // the connector's EmailSender seam, its unsealed credential, and the scopes
 // the PROVIDER says the grant holds. It is the send path's entry point, which
@@ -125,15 +143,16 @@ func (r *Registry) SenderFor(ctx context.Context, userID ids.UserID, provider st
 	return sender, auth, granted, nil
 }
 
-// Connections refuses delegated user ids so only humans read their mailbox connections.
+// Connections lists the caller's own mailbox connections, for a user or their
+// agent. It carries status and cursors, never the credential.
 func (r *Registry) Connections(ctx context.Context) ([]ConnectionView, error) {
 	return r.connectionViews(ctx, true)
 }
 
 func (r *Registry) connectionViews(ctx context.Context, includeBackfill bool) ([]ConnectionView, error) {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
-		return nil, fmt.Errorf("capture: only a human lists their connections: %w", apperrors.ErrPermissionDenied)
+	if !ok || !actor.HumanOrItsAgent() {
+		return nil, fmt.Errorf("capture: only a user or their agent lists their connections: %w", apperrors.ErrPermissionDenied)
 	}
 	var out []ConnectionView
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -218,8 +237,8 @@ func (r *Registry) connectionViews(ctx context.Context, includeBackfill bool) ([
 // (keyvault contract), so the retry is safe.
 func (r *Registry) Disconnect(ctx context.Context, name string) error {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
-		return fmt.Errorf("capture: only a human disconnects a connector: %w", apperrors.ErrPermissionDenied)
+	if !ok || !actor.HumanOrItsAgent() {
+		return fmt.Errorf("capture: only a user or their agent disconnects a connector: %w", apperrors.ErrPermissionDenied)
 	}
 	ws, ok := principal.WorkspaceID(ctx)
 	if !ok {

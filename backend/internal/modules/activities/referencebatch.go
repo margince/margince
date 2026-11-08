@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -116,7 +117,9 @@ func ReferencesByID(
 	// Rows must be closed first: this runs a second statement on the same
 	// transaction.
 	rows.Close()
-	if err := attachEmailSummaries(ctx, tx, out); err != nil {
+	// A reference names its activity for a score's receipt; no reading clock
+	// reaches it, so its move is judged now, as it always was.
+	if err := attachEmailSummaries(ctx, tx, out, time.Now()); err != nil {
 		return nil, err
 	}
 	return out, nil
@@ -129,7 +132,7 @@ func ReferencesByID(
 // the statement on ids that can only come back absent — the same filtering the
 // waiting lane does before its own call.
 func attachEmailSummaries(
-	ctx context.Context, tx pgx.Tx, refs map[ids.UUID]crmcontracts.ActivityReference,
+	ctx context.Context, tx pgx.Tx, refs map[ids.UUID]crmcontracts.ActivityReference, asOf time.Time,
 ) error {
 	var emails []ids.UUID
 	for id, ref := range refs {
@@ -140,7 +143,7 @@ func attachEmailSummaries(
 	if len(emails) == 0 {
 		return nil
 	}
-	summaries, err := EmailSummariesByIDBatch(ctx, tx, emails)
+	summaries, err := EmailSummariesByIDBatch(ctx, tx, emails, asOf)
 	if err != nil {
 		return err
 	}

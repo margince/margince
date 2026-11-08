@@ -14,6 +14,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 
@@ -23,6 +24,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -161,14 +163,30 @@ func TestAPromiseWhoseSourceTheReaderCannotReadIsNotTheirsToTake(t *testing.T) {
 	}
 }
 
-func TestAnAgentCannotTakeOverAPromise(t *testing.T) {
+func TestAnAgentTakesOverAPromiseForItsUser(t *testing.T) {
 	f := setupTakeOver(t)
 	agent := f.e.AgentFor(t, f.e.Rep2, []ids.UUID{f.e.Team1}, integration.AdminPerms)
-	if _, err := f.h.TakeOver(agent, f.claim); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Fatalf("an agent got %v, want permission denied", err)
+	if _, err := f.h.TakeOver(agent, f.claim); err != nil {
+		t.Fatalf("the agent's take over: %v", err)
+	}
+	if n := f.tasks(t); n != 1 {
+		t.Errorf("the take over wrote %d tasks, want 1", n)
+	}
+}
+
+// Passportless work acts for nobody, so no promise is its to take.
+func TestPassportlessWorkCannotTakeOverAPromise(t *testing.T) {
+	f := setupTakeOver(t)
+	actor, ok := principal.Actor(f.priya)
+	if !ok {
+		t.Fatal("no actor")
+	}
+	actor.Type, actor.ID = principal.PrincipalAgent, "agent:deal-scout"
+	if _, err := f.h.TakeOver(principal.WithActor(f.priya, actor), f.claim); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("passportless work got %v, want permission denied", err)
 	}
 	if n := f.tasks(t); n != 0 {
-		t.Errorf("an agent's take over wrote %d tasks", n)
+		t.Errorf("passportless work's take over wrote %d tasks", n)
 	}
 }
 
@@ -257,5 +275,68 @@ func TestAPromiseTheScanCouldNotPlaceIsStillTakenOver(t *testing.T) {
 		`SELECT id::text FROM conversation_claim WHERE evidence_fingerprint = $1`, locator))
 	if _, err := f.h.TakeOver(f.priya, claim); err != nil {
 		t.Fatalf("taking over a promise nobody was asked to keep: %v", err)
+	}
+}
+
+// The task records whose hands took the promise: a colleague's or their agent's.
+func TestATakenOverPromiseIsATaskOfWhoeverTookIt(t *testing.T) {
+	for name, tc := range map[string]struct {
+		as   func(takeOverFixture) context.Context
+		want string
+	}{
+		"a colleague": {func(f takeOverFixture) context.Context { return f.priya }, activities.OriginHuman},
+		"their agent": {func(f takeOverFixture) context.Context { return agentReading(f.priya, t, principal.ScopeWrite) }, activities.OriginAgent},
+	} {
+		t.Run(name, func(t *testing.T) {
+			f := setupTakeOver(t)
+			if _, err := f.h.TakeOver(tc.as(f), f.claim); err != nil {
+				t.Fatal(err)
+			}
+			origin := f.e.WsScalar(t, `SELECT origin FROM activity WHERE kind = 'task' AND source_system = $1`, activities.CommitmentTaskSource)
+			if origin != tc.want {
+				t.Errorf("the task's origin = %q, want %q", origin, tc.want)
+			}
+		})
+	}
+}
+
+// A promise an agent records for its user is current work, as the user's own is.
+// One a product pass stamped under its own name still waits for its admission.
+func TestAPromiseAnAgentRecordedIsOpenOnItsContact(t *testing.T) {
+	f := setupTakeOver(t)
+	body := "I will send the price list on Monday"
+	message, _, err := f.e.Activities.LogActivity(f.e.Admin(), activities.LogActivityInput{
+		Kind: "email", Subject: &body, Body: &body, Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: f.contact}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	agent := agentReading(f.priya, t, principal.ScopeWrite)
+	claim, err := f.h.claims.RecordConversationClaim(agent, contacts.ClaimInput{
+		ContactID: ids.From[ids.ContactKind](f.contact), Kind: "commitment_ours", Body: body,
+		ActivityID: ids.UUID(message.Id), Quote: body, Source: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	isOpen := func() bool {
+		t.Helper()
+		var open []crmcontracts.ConversationClaim
+		if err := database.WithWorkspaceTx(f.priya, f.e.Pool, func(tx pgx.Tx) error {
+			var err error
+			open, err = f.h.claims.OpenCommitmentsForContact(f.priya, tx, ids.From[ids.ContactKind](f.contact), nil, 50)
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return slices.ContainsFunc(open, func(c crmcontracts.ConversationClaim) bool { return c.Id == claim.Id })
+	}
+	if !isOpen() {
+		t.Error("the promise its agent recorded is missing from the contact's open commitments")
+	}
+	f.e.WsExec(t, `UPDATE conversation_claim SET captured_by = 'agent:deal-scout' WHERE id = $1`, ids.UUID(claim.Id))
+	if isOpen() {
+		t.Error("a claim a product pass stamped was admitted as an agent acting for its user")
 	}
 }

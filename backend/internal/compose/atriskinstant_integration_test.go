@@ -30,7 +30,9 @@ import (
 func TestTheSweepAndTheTailJudgeQuietAtOneInstant(t *testing.T) {
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
-	asOf := clocktest.Now(t).Add(-2 * time.Hour).Truncate(time.Microsecond)
+	// In UTC, so the days back are whole days on a machine whose zone
+	// crosses a daylight-saving change in that span.
+	asOf := clocktest.Now(t).UTC().Add(-2 * time.Hour).Truncate(time.Microsecond)
 	threshold := asOf.AddDate(0, 0, -deals.QuietThresholdDays)
 	idle := map[string]time.Time{
 		"quiet":    threshold.Add(-time.Minute),
@@ -88,7 +90,7 @@ func TestDoneRefusesADealTheBriefRowReportsAbove(t *testing.T) {
 	}
 	owner := ids.From[ids.UserKind](e.Rep1)
 	amount, currency, closes := int64(90000000), "EUR", today.AddDate(0, 0, 3)
-	row, err := e.Deals.WithClock(clock).CreateDeal(ctx, deals.CreateDealInput{
+	row, err := e.Deals.SetClock(clock).CreateDeal(ctx, deals.CreateDealInput{
 		Name: "Briefed past the sweep", PipelineID: pipeline, StageID: stage, OwnerID: &owner,
 		AmountMinor: &amount, Currency: &currency, ExpectedClose: &closes, Source: "manual",
 	})

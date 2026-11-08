@@ -39,7 +39,7 @@ func TestScanFailuresKeepTheirWrittenLanguage(t *testing.T) {
 			if got.State != crmcontracts.CompanyScanStateDegraded || got.DegradeReason == nil || !strings.HasPrefix(*got.DegradeReason, tc.worker) {
 				t.Fatalf("no-worker result: %+v", got)
 			}
-			seedInboundAsk(t, e, company.UUID, "workspace")
+			seedInboundAsk(t, e, company.UUID, "workspace", at)
 			lane := &failingLane{}
 			var queued []companyscan.Queued
 			svc := scanClocked(e, lane, &queued, now)

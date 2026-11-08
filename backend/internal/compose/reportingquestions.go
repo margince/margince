@@ -116,10 +116,7 @@ func (q reportingQuestions) Capture(ctx context.Context, tx pgx.Tx, card reporti
 		}
 		out.Sources[i] = append(out.Sources[i], reporting.QuestionSource{Type: sourceType, ID: id})
 	}
-	out.Answer = crmcontracts.AnalyticsAnswer{
-		Columns: answer.Columns, Rows: answer.Rows, Withheld: answer.Withheld, TotalSafe: answer.TotalSafe,
-		SchemaVersion: answer.SchemaVersion, PopulationNarrowed: populationNarrowedWire(answer.PopulationNarrowed),
-	}
+	out.Answer = keptAnalyticsAnswer(analyticsAnswerWire(answer))
 	return out, nil
 }
 
@@ -197,7 +194,7 @@ func (q reportingQuestions) Reveal(ctx context.Context, tx pgx.Tx, card reportin
 			return crmcontracts.AnalyticsAnswer{}, false, nil
 		}
 	}
-	out := kept.Answer
+	out := keptAnalyticsAnswer(kept.Answer)
 	out.Labels = idLabelsWire(analyticsIDLabels(ctx, q.names, query, out.Rows))
 	return out, true, nil
 }
@@ -280,7 +277,7 @@ func analyticsSources(ctx context.Context, tx pgx.Tx, query analyticsquery.Query
 		return "", nil, err
 	}
 	var narrowed string
-	plan, err := analyticsquery.CompileSources(query, schema, analyticsScope(ctx, tx, spec, query, &narrowed), filter, maxQuestionSources+1)
+	plan, err := analyticsquery.CompileSources(query, schema, analyticsScope(ctx, tx, spec, query, &narrowed, nil), filter, maxQuestionSources+1)
 	if err != nil {
 		return "", nil, err
 	}

@@ -103,7 +103,7 @@ type aiUsageTask = struct {
 	Tier          string `json:"tier"`
 	TokensIn      int    `json:"tokens_in"`
 	TokensOut     int    `json:"tokens_out"`
-	UnpricedCalls *int   `json:"unpriced_calls,omitempty"`
+	UnpricedCalls *int   `json:"unpriced_calls,omitempty" minimum:"0"`
 }
 
 // microUSDPerMinor converts ADR-0067's micro-USD price grain to wire

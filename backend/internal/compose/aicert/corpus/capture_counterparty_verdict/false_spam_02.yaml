@@ -29,18 +29,8 @@ fixture:
 expect:
   outcome: accepted
   answer: contact
-  rubric: >
-    The guard on the quoted-history rule that spam_02 forced. spam_02 says a
-    thread of the sender chasing their own unanswered mail is not a
-    conversation; this is the case that keeps that from swallowing every reply.
-    The quoted block is written by somebody at THIS business, and the sender is
-    answering it: a delivery time was asked and given, accepted, and an order
-    follows. That is the ordinary correspondence a CRM exists to file.
-    A verdict of "contact" scores high. "spam" scores zero, and it is the costly
-    direction — a spam verdict suppresses the sender's whole domain
-    workspace-wide, so reading a genuine customer reply as a pitch would hide
-    an active supplier relationship from every colleague.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The answer is one closed kind, and the check requires it exactly.
+    The rubric only ranked the other kinds by the harm each does, and
+    "spam", the answer this scenario exists to catch, fails the check outright.

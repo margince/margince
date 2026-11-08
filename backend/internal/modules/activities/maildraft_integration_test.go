@@ -13,6 +13,7 @@ package activities
 import (
 	"context"
 	"errors"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -20,7 +21,9 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -460,5 +463,93 @@ func TestAStaleBacklogDeeperThanOnePassDrainsOldestFirst(t *testing.T) {
 		if e.draftExists(t, id) {
 			t.Errorf("draft %s survived the passes that drained the backlog", id)
 		}
+	}
+}
+
+func TestDraftEditorStateSurvivesSaveReadAndReplacement(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	anchor := replyAnchor(e.seedAnchor(t, "", ""))
+	content := typedDraft()
+	content.EditorState = crmcontracts.MailDraftEditorState{
+		Intent: new("Ask about the revised scope"), AiGenerated: new(true),
+		AiDisclosure: new(draftfloor.AIProvenanceNotice("en")), VoiceProfileVersion: new(3),
+		ServedBody: new(content.Body),
+	}
+	saved, err := draftStore(e).SaveMailDraft(ctx, anchor, content, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := draftStore(e).GetMailDraft(ctx, anchor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Content.EditorState.Intent == nil || *got.Content.EditorState.Intent != *content.EditorState.Intent ||
+		got.Content.EditorState.AiGenerated == nil || !*got.Content.EditorState.AiGenerated ||
+		got.Content.EditorState.ServedBody == nil || *got.Content.EditorState.ServedBody != content.Body {
+		t.Fatalf("draft lost its editor state: %+v", got.Content.EditorState)
+	}
+	content.EditorState = crmcontracts.MailDraftEditorState{Intent: new("A different purpose")}
+	replaced, err := draftStore(e).SaveMailDraft(ctx, anchor, content, &saved.Version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if replaced.Content.EditorState.AiGenerated != nil ||
+		replaced.Content.EditorState.Intent == nil || *replaced.Content.EditorState.Intent != "A different purpose" {
+		t.Fatalf("replacement retained state belonging to older words: %+v", replaced.Content.EditorState)
+	}
+}
+
+// A draft saved while the sweep waits on it is fresh again, so the sweep leaves it and
+// counts nothing it did not delete.
+func TestTheRetentionSweepLeavesADraftSavedWhileItWaited(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	draft := saveDraft(ctx, t, e, replyAnchor(e.seedAnchor(t, "", "")))
+	if _, err := e.owner.Exec(context.Background(), `UPDATE mail_draft SET updated_at = $2 WHERE id = $1`,
+		draft.ID, draftClock.Add(-MailDraftRetention-time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	saver, err := pgx.Connect(context.Background(), os.Getenv("MARGINCE_TEST_DSN"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := saver.Close(context.Background()); err != nil {
+			t.Errorf("closing the saver: %v", err)
+		}
+	})
+	save, err := saver.Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var pid int32
+	if err := save.QueryRow(context.Background(), `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := save.Exec(context.Background(), `UPDATE mail_draft SET updated_at = $2 WHERE id = $1`, draft.ID, draftClock); err != nil {
+		t.Fatal(err)
+	}
+	system := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:test"})
+	returned := make(chan struct{})
+	var purged int
+	var swept error
+	go func() {
+		defer close(returned)
+		purged, swept = draftStore(e).PurgeStaleMailDrafts(system, 10)
+	}()
+	t.Cleanup(func() {
+		if err := save.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("releasing the held row: %v", err)
+		}
+		<-returned
+	})
+	testdb.AwaitQueuedBehind(t, e.owner, pid, 1, returned, "the sweep")
+	if err := save.Commit(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	<-returned
+	if swept != nil || purged != 0 || !e.draftExists(t, draft.ID) {
+		t.Errorf("the sweep purged %d (%v), draft kept %v; want the saved draft left and nothing counted", purged, swept, e.draftExists(t, draft.ID))
 	}
 }

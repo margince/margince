@@ -188,7 +188,7 @@ func TestUpStampsTheDigestOfWhatItApplied(t *testing.T) {
 		t.Fatalf("%s recorded no row for the migration that was just applied", table)
 	}
 	if row.digest == "" {
-		t.Fatal("dbmigrate.Up recorded no content digest — every clone would then read as unverifiable and rebuild")
+		t.Fatal("dbmigrate.Up recorded no content digest — every clone would then be refused as unverifiable")
 	}
 	if want := dbmigrate.Digest(probe); row.digest != want {
 		t.Fatalf("Up stamped %s where Digest computes %s — the probe compares two different things", row.digest, want)
@@ -284,6 +284,9 @@ func TestAPopulatedCloneIsNeverReused(t *testing.T) {
 	}
 	if !strings.Contains(reason, "public.workspace") {
 		t.Errorf("the refusal does not name what it found: %q", reason)
+	}
+	if !strings.Contains(reason, "PreservedReferenceTables") || strings.Contains(reason, "make test-db-up") {
+		t.Errorf("a populated clone needs a data or reference-table fix: %s", reason)
 	}
 
 	// And through the whole probe, not only its emptiness step: a version that
@@ -400,7 +403,7 @@ func TestTheLaneRunsOnTheCloneItDeclares(t *testing.T) {
 		t.Fatalf("probing: %v", err)
 	}
 	if !reusable {
-		t.Fatalf("the lane's own clone was refused, so every package in this run pays a full schema rebuild it does not need: %s\n"+
+		t.Fatalf("the lane's own clone was refused: %s\n"+
 			"A template migrated before content digests existed reads this way; `make test-db-up` rebuilds it.", reason)
 	}
 }
@@ -466,6 +469,9 @@ func TestACloneCarryingARowRuleIsNeverReused(t *testing.T) {
 	}
 	if !strings.Contains(reason, planted) {
 		t.Errorf("the refusal does not name what it found: %q", reason)
+	}
+	if !strings.Contains(reason, "Remove those row rules") || strings.Contains(reason, "make test-db-up") {
+		t.Errorf("a row-rule refusal needs a schema fix: %s", reason)
 	}
 
 	if _, err := owner.Exec(ctx, `DROP TABLE `+planted); err != nil {

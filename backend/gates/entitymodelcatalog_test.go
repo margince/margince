@@ -19,12 +19,13 @@ package gates
 // complete, which is the under-recognition AGENTS.md rule 8 is about.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // Floors for the parse, set below today's counts so they catch a walk that
@@ -101,7 +102,7 @@ var (
 // catalogRecords joins the file's lines back into one record each.
 func catalogRecords(t *testing.T) []string {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join(repoRoot, headCatalogPath))
+	raw, err := gatekit.ReadFile(filepath.Join(repoRoot, headCatalogPath))
 	if err != nil {
 		t.Fatalf("reading %s: %v", headCatalogPath, err)
 	}

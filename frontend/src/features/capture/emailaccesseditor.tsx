@@ -38,12 +38,12 @@ import {
 } from "../../lib/audienceservice";
 import { problemMessageOf } from "../../lib/problem";
 import {
-  AUDIENCE_CHOICES,
   AUDIENCE_HINT,
   AUDIENCE_LABEL,
   AUDIENCE_REASON_LABEL,
   AudienceMembers,
   memberKey,
+  messageAudienceChoices,
   useAudienceCandidates,
 } from "../lists/audiencemembers";
 import "./emailaccesseditor.css";
@@ -254,12 +254,16 @@ function MessageAudience({
 }: Readonly<{ presentation: EmailPresentation }>) {
   const t = useT();
   const { access } = presentation;
+  const internal = access.explanation === "internal_operational";
   const current: ActivityAudience = access.audience ?? "workspace";
   const standing = access.selected_members ?? [];
   const [open, setOpen] = useState(false);
   const [choice, setChoice] = useState<ActivityAudience>(current);
   const [members, setMembers] = useState<AudienceMember[]>(standing);
-  const candidates = useAudienceCandidates(open && choice === "selected");
+  const candidates = useAudienceCandidates(
+    open && choice === "selected",
+    internal,
+  );
   const mutation = useMessageAudience({
     invalidate: () => [emailDetailKey(presentation.id)],
     onSettled: () => setOpen(false),
@@ -308,7 +312,7 @@ function MessageAudience({
             legend={t("compose.audienceLegend")}
             value={choice}
             onChange={setChoice}
-            choices={AUDIENCE_CHOICES.map((value) => ({
+            choices={messageAudienceChoices(internal).map((value) => ({
               value,
               label: t(AUDIENCE_LABEL[value]),
               description: t(AUDIENCE_HINT[value]),
@@ -319,12 +323,15 @@ function MessageAudience({
                 refuses an empty set rather than writing it. */}
           {choice === "selected" && (
             <AudienceMembers
+              usersOnly={internal}
               candidates={candidates}
               chosen={members}
               onChange={setMembers}
             />
           )}
-          <p className="t-caption">{t("compose.audienceNote")}</p>
+          <p className="t-caption">
+            {t(internal ? "internalMail.shareNote" : "compose.audienceNote")}
+          </p>
         </div>
       </ConfirmModal>
     </span>

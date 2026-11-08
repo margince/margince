@@ -36,7 +36,7 @@ type ListRuleUse struct {
 // RulesOnList answers the active rules that watch or write a list the caller
 // can find, oldest first.
 func (s *AutomationStore) RulesOnList(ctx context.Context, listID ids.UUID) ([]ListRuleUse, error) {
-	named := auth.Require(ctx, "automation", principal.ActionRead) == nil
+	named := auth.Allows(ctx, "automation", principal.ActionRead)
 	var out []ListRuleUse
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// A list the caller cannot find has no rules to tell them about.

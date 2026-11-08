@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { type Locale, translate, translatePlural } from "../../i18n";
 import { de } from "../../i18n/de";
 import { en as enCatalog } from "../../i18n/en";
@@ -29,7 +29,7 @@ function wordsIn(locale: Locale): SentenceWords {
       translatePlural(locale, base, count, params),
     locale,
     // A calendar day reads as the same day in every zone, so the viewer's will do.
-    zone: viewerZone(),
+    zone: browserZone(),
   };
 }
 

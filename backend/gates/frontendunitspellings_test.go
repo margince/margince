@@ -15,12 +15,12 @@ package gates
 
 import (
 	"maps"
-	"os"
 	"regexp"
 	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const frontendUnitTable = "../frontend/src/format/productunit.ts"
@@ -34,7 +34,7 @@ var (
 
 func readFrontendUnitTable(t *testing.T) (spellings map[string]string, keys []string) {
 	t.Helper()
-	source, err := os.ReadFile(frontendUnitTable)
+	source, err := gatekit.ReadFile(frontendUnitTable)
 	if err != nil {
 		t.Fatalf("reading the frontend unit table: %v", err)
 	}

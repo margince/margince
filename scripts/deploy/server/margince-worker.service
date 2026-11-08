@@ -1,0 +1,25 @@
+# The worker on a server. It refuses to start until the api has recorded the
+# release, so it starts after the api and restarts until then.
+[Unit]
+Description=Margince worker
+Wants=network-online.target
+After=network-online.target margince-api.service
+
+[Service]
+Type=exec
+User=margince
+Group=margince
+WorkingDirectory=/var/lib/margince
+EnvironmentFile=/etc/margince/margince.env
+Environment=PATH=/opt/margince/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/opt/margince/deploy/worker-entrypoint.sh
+Restart=on-failure
+RestartSec=5s
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/margince
+
+[Install]
+WantedBy=multi-user.target

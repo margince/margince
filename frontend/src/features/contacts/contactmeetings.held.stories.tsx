@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import type { components } from "../../api/schema";
-import { RecordZoneProvider } from "../../lib/recordzone";
+import { CompanyZoneProvider } from "../../lib/companyzone";
 import {
   installFetchStub,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { HeldMeetingsTable } from "./contactmeetings.held";
+import { HeldMeetingsList } from "./contactmeetings.held";
 
 type Activity = components["schemas"]["Activity"];
 
@@ -35,25 +35,25 @@ const held: Activity = {
   updated_at: "2026-09-01T09:00:00Z",
 };
 
-const meta: Meta<typeof HeldMeetingsTable> = {
+const meta: Meta<typeof HeldMeetingsList> = {
   title: "Records/Contact 360/Held meetings",
-  component: HeldMeetingsTable,
+  component: HeldMeetingsList,
   args: { verbs: () => null },
   decorators: [
     (Story) => {
       installFetchStub({ "GET /me": meRoute({ activity: ["read"] }) });
       return (
         <StoryProviders>
-          <RecordZoneProvider zone={RECORD_ZONE}>
+          <CompanyZoneProvider zone={RECORD_ZONE}>
             <Story />
-          </RecordZoneProvider>
+          </CompanyZoneProvider>
         </StoryProviders>
       );
     },
   ],
 };
 export default meta;
-type Story = StoryObj<typeof HeldMeetingsTable>;
+type Story = StoryObj<typeof HeldMeetingsList>;
 
 export const Held: Story = { args: { held: [held] } };
 
@@ -74,7 +74,7 @@ export const DayOnly: Story = {
   },
   play: async ({ canvasElement }) => {
     const title = await within(canvasElement).findByText("Site visit");
-    const row = title.closest("tr");
+    const row = title.closest(".pe-meeting");
     await expect(row).not.toBeNull();
     await expect(row?.textContent).toMatch(/24 Sept? 2026/);
     await expect(row?.textContent).not.toMatch(/\d{1,2}:\d{2}/);
