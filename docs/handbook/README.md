@@ -142,9 +142,8 @@ Records, deals and mail in Margince, by page:
   tiers and where the line falls. Why sending is not held behind a confirmation,
   and what protects it instead. The rule that your edits win field by field,
   what an agent is refused outright, and passports.
-- [How much an agent may do](agent-allowances.md): the allowances per window,
-  how they differ by role, the Admin preset, and what an agent is told when it
-  stops.
+- [How much an agent may do](agent-allowances.md): the allowances per window
+  and how they differ by role. What an agent is told when it stops.
 - [Approvals](approvals.md): what a staged action looks like, and the kinds
   that reach the inbox. How to accept, edit or reject one, and who is allowed to
   decide. The 72-hour expiry, and the one kind that never expires.

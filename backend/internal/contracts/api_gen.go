@@ -31600,6 +31600,10 @@ type AgentRoleAllowance struct {
 	AgentEgressPerWindow AgentRoleAllowanceValue `json:"agent_egress_per_window"`
 	AgentWritesPerWindow AgentRoleAllowanceValue `json:"agent_writes_per_window"`
 
+	// HoldsPreset True for the built-in Admin role, which the Admin preset is for, whether or not the
+	// preset binds a count now. Left out of a save, this role returns to the preset.
+	HoldsPreset bool `json:"holds_preset"`
+
 	// RoleKey The role's key: its identity, which a rename leaves alone.
 	RoleKey  string `json:"role_key"`
 	RoleName string `json:"role_name"`
@@ -31610,14 +31614,14 @@ type AgentRoleAllowance struct {
 
 // AgentRoleAllowanceSet One role's own allowances in a save. `0` for a count uses the installation value.
 type AgentRoleAllowanceSet struct {
-	// AgentCallsPerWindow 0, or 50 to 20000.
-	AgentCallsPerWindow int `json:"agent_calls_per_window" maximum:"20000" minimum:"0"`
+	// AgentCallsPerWindow 0, or 50 to 20000, the installation bounds.
+	AgentCallsPerWindow int `json:"agent_calls_per_window" minimum:"0"`
 
-	// AgentEgressPerWindow 0, or 1 to 200.
-	AgentEgressPerWindow int `json:"agent_egress_per_window" maximum:"200" minimum:"0"`
+	// AgentEgressPerWindow 0, or 1 to 200, the installation bounds.
+	AgentEgressPerWindow int `json:"agent_egress_per_window" minimum:"0"`
 
-	// AgentWritesPerWindow 0, or 10 to 5000.
-	AgentWritesPerWindow int `json:"agent_writes_per_window" maximum:"5000" minimum:"0"`
+	// AgentWritesPerWindow 0, or 10 to 5000, the installation bounds.
+	AgentWritesPerWindow int `json:"agent_writes_per_window" minimum:"0"`
 
 	// RoleKey The key of a live role.
 	RoleKey string `json:"role_key"`

@@ -103,8 +103,6 @@ export type RoleAllowanceSet = components["schemas"]["AgentRoleAllowanceSet"];
 export type RoleDraft = Readonly<Record<Counts, string>>;
 export type RoleDrafts = Readonly<Record<string, RoleDraft>>;
 
-export const ADMIN_ROLE = "admin";
-
 // A count the role inherits starts empty; its own value or the Admin preset
 // starts typed, so the box shows what binds.
 export function roleDraftOf(role: RoleAllowance): RoleDraft {
@@ -191,11 +189,11 @@ export function roleChangesOf(
   const out: RoleAllowanceSet[] = [];
   for (const role of allowances.roles) {
     const draft = drafts[role.role_key] ?? roleDraftOf(role);
-    const isAdmin = role.role_key === ADMIN_ROLE;
-    if (isAdmin && sameRoleDraft(draft, adminPresetDraft(allowances))) {
+    const holdsPreset = role.holds_preset;
+    if (holdsPreset && sameRoleDraft(draft, adminPresetDraft(allowances))) {
       continue;
     }
-    if (!isAdmin && sameRoleDraft(draft, EMPTY_ROLE_DRAFT)) {
+    if (!holdsPreset && sameRoleDraft(draft, EMPTY_ROLE_DRAFT)) {
       continue;
     }
     const parsed = parseRoleDraft(draft);

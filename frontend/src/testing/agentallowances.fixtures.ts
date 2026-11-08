@@ -25,21 +25,29 @@ export function roleAllowance(
     >
   > = {},
   system = true,
+  holds_preset = false,
 ): RoleAllowance {
   return {
     role_key,
     role_name,
     system,
+    holds_preset,
     agent_writes_per_window: values.agent_writes_per_window ?? inherited(200),
     agent_egress_per_window: values.agent_egress_per_window ?? inherited(20),
     agent_calls_per_window: values.agent_calls_per_window ?? inherited(1_000),
   };
 }
 
-const adminAtPreset = roleAllowance("admin", "Admin", {
-  agent_calls_per_window: { value: 20_000, source: "admin_preset" },
-  agent_writes_per_window: { value: 2_000, source: "admin_preset" },
-});
+const adminAtPreset = roleAllowance(
+  "admin",
+  "Admin",
+  {
+    agent_calls_per_window: { value: 20_000, source: "admin_preset" },
+    agent_writes_per_window: { value: 2_000, source: "admin_preset" },
+  },
+  true,
+  true,
+);
 
 // The allowances an installation nobody has tuned reads back, for the stories
 // and tests that answer the installation-settings read.

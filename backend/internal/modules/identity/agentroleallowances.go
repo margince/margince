@@ -67,17 +67,15 @@ func (r RoleValues) Roles() map[string]agentvolume.Limits {
 	return out
 }
 
-// readRoleValues reads the three role maps through read, the gated or the
-// machinery reader, and applies the preset against installation.
-func readRoleValues(c *config.Config, installation agentvolume.Limits,
-	read func(*config.Setting[map[string]int]) (map[string]int, error),
-) (RoleValues, error) {
+// savedRoleMaps is the three role maps as read, by counter.
+type savedRoleMaps map[agentvolume.Counter]map[string]int
+
+// roleValuesOf folds the saved role maps into each role's values and applies
+// the preset against installation.
+func roleValuesOf(c *config.Config, installation agentvolume.Limits, maps savedRoleMaps) RoleValues {
 	out := RoleValues{Own: map[string]agentvolume.Limits{}}
 	for _, count := range allowanceCounts {
-		saved, err := read(count.byRole)
-		if err != nil {
-			return RoleValues{}, err
-		}
+		saved := maps[count.counter]
 		for role, value := range saved {
 			if value > 0 {
 				out.Own[role] = out.Own[role].With(count.counter, value)
@@ -87,7 +85,7 @@ func readRoleValues(c *config.Config, installation agentvolume.Limits,
 			out.Preset = out.Preset.With(count.counter, AdminAllowancePreset.Of(count.counter))
 		}
 	}
-	return out, nil
+	return out
 }
 
 // presetBinds reports whether the Admin preset applies to one count: nobody
@@ -170,8 +168,11 @@ func refuseRoleSet(roles []liveRole, seen map[string]bool, key string) error {
 type RoleAllowance struct {
 	Key, Name string
 	System    bool
-	Own       agentvolume.Limits
-	Preset    agentvolume.Limits
+	// HoldsPreset marks the built-in Admin role, which the preset is for,
+	// whether or not the preset binds any count now.
+	HoldsPreset bool
+	Own         agentvolume.Limits
+	Preset      agentvolume.Limits
 }
 
 // liveRole is a role a user can hold, in the order the role list shows them.
@@ -215,7 +216,7 @@ func roleAllowances(roles []liveRole, held RoleValues) []RoleAllowance {
 	for _, r := range roles {
 		allowance := RoleAllowance{Key: r.key, Name: r.name, System: r.system, Own: held.Own[r.key]}
 		if r.key == adminRoleKey {
-			allowance.Preset = held.Preset
+			allowance.HoldsPreset, allowance.Preset = true, held.Preset
 		}
 		out = append(out, allowance)
 	}

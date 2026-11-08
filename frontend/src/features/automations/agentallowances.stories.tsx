@@ -99,10 +99,16 @@ export const AdminOnAChosenInstallationValue: Story = {
     ...defaultAgentAllowances,
     agent_calls_per_window: 5_000,
     roles: [
-      roleAllowance("admin", "Admin", {
-        agent_calls_per_window: { value: 5_000, source: "installation" },
-        agent_writes_per_window: { value: 2_000, source: "admin_preset" },
-      }),
+      roleAllowance(
+        "admin",
+        "Admin",
+        {
+          agent_calls_per_window: { value: 5_000, source: "installation" },
+          agent_writes_per_window: { value: 2_000, source: "admin_preset" },
+        },
+        true,
+        true,
+      ),
       roleAllowance("rep", "User", {
         agent_calls_per_window: { value: 5_000, source: "installation" },
       }),

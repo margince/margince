@@ -27059,6 +27059,11 @@ export interface components {
             role_name: string;
             /** @description True for a role Margince ships. */
             system: boolean;
+            /**
+             * @description True for the built-in Admin role, which the Admin preset is for, whether or not the
+             *     preset binds a count now. Left out of a save, this role returns to the preset.
+             */
+            holds_preset: boolean;
             agent_writes_per_window: components["schemas"]["AgentRoleAllowanceValue"];
             agent_egress_per_window: components["schemas"]["AgentRoleAllowanceValue"];
             agent_calls_per_window: components["schemas"]["AgentRoleAllowanceValue"];
@@ -27079,11 +27084,11 @@ export interface components {
         AgentRoleAllowanceSet: {
             /** @description The key of a live role. */
             role_key: string;
-            /** @description 0, or 10 to 5000. */
+            /** @description 0, or 10 to 5000, the installation bounds. */
             agent_writes_per_window: number;
-            /** @description 0, or 1 to 200. */
+            /** @description 0, or 1 to 200, the installation bounds. */
             agent_egress_per_window: number;
-            /** @description 0, or 50 to 20000. */
+            /** @description 0, or 50 to 20000, the installation bounds. */
             agent_calls_per_window: number;
         };
         /**

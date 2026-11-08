@@ -39892,11 +39892,16 @@ components:
       type: object
       additionalProperties: false
       description: One live role and the allowance its users' agents get for each count.
-      required: [role_key, role_name, system, agent_writes_per_window, agent_egress_per_window, agent_calls_per_window]
+      required: [role_key, role_name, system, holds_preset, agent_writes_per_window, agent_egress_per_window, agent_calls_per_window]
       properties:
         role_key: { type: string, description: 'The role''s key: its identity, which a rename leaves alone.' }
         role_name: { type: string }
         system: { type: boolean, description: True for a role Margince ships. }
+        holds_preset:
+          type: boolean
+          description: |
+            True for the built-in Admin role, which the Admin preset is for, whether or not the
+            preset binds a count now. Left out of a save, this role returns to the preset.
         agent_writes_per_window: { $ref: '#/components/schemas/AgentRoleAllowanceValue' }
         agent_egress_per_window: { $ref: '#/components/schemas/AgentRoleAllowanceValue' }
         agent_calls_per_window: { $ref: '#/components/schemas/AgentRoleAllowanceValue' }
@@ -39923,9 +39928,9 @@ components:
       required: [role_key, agent_writes_per_window, agent_egress_per_window, agent_calls_per_window]
       properties:
         role_key: { type: string, minLength: 1, description: The key of a live role. }
-        agent_writes_per_window: { type: integer, minimum: 0, maximum: 5000, description: '0, or 10 to 5000.' }
-        agent_egress_per_window: { type: integer, minimum: 0, maximum: 200, description: '0, or 1 to 200.' }
-        agent_calls_per_window: { type: integer, minimum: 0, maximum: 20000, description: '0, or 50 to 20000.' }
+        agent_writes_per_window: { type: integer, minimum: 0, description: '0, or 10 to 5000, the installation bounds.' }
+        agent_egress_per_window: { type: integer, minimum: 0, description: '0, or 1 to 200, the installation bounds.' }
+        agent_calls_per_window: { type: integer, minimum: 0, description: '0, or 50 to 20000, the installation bounds.' }
 
     AgentAllowanceSettings:
       type: object

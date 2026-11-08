@@ -20,7 +20,7 @@ nothing.
 
 A connected app's passports share one allowance: a renewed passport goes on
 counting where the last one stopped. MCP tool calls and API calls count against
-the same allowance. A person working in the browser is never counted.
+the same allowance. Your own work in the browser is never counted.
 
 ## Allowances by role
 
@@ -29,15 +29,17 @@ shows its value for each kind and where the value comes from. **Set for this
 role** is a value an administrator chose. **Installation** is the value at the
 top of the card, which a role with no value of its own uses. For each kind, an
 agent gets the highest value among the roles of the user who connected it.
-Roles you made yourself work the same way. To set a value, press **Edit
+Roles you made yourself work the same way.
+
+To set a value, press **Edit
 allowances**, type it in the role's box, and press **Save**. Leave a box empty,
 or press **Use the installation value**, to give the role the installation value
 again.
 
 The built-in Admin role starts with more: 20,000 calls in total and 2,000
 changes, shown as **Admin preset**. Calls that go out stay at the installation
-value, because a large task is no reason to send more mail. The preset applies
-to a kind only while that kind's installation value is still the default. If
+value, because a large task is no reason to send more mail. These higher values
+apply to a kind only while that kind's installation value is still the default. If
 your installation already had its own value before, Admin keeps that value until
 you set one for Admin.
 
@@ -45,7 +47,7 @@ A role chooses how much, never what: an Admin's agent still needs the same
 permissions and the same approvals. A change of role or value resets nothing.
 An agent keeps what it used this window, and a lower value refuses it on its
 next call. Take Admin away from a user, and their agents drop to the lower value
-on their next call. Archive a role, and its value binds nobody.
+on their next call. Archive a role, and its value no longer applies to anyone.
 
 ## When an allowance runs out
 

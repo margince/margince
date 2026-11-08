@@ -26,7 +26,6 @@ import { problemMessageOf } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { useUpdateInstallationSettings } from "../sign-in/installation-settings";
 import {
-  ADMIN_ROLE,
   AGENT_ALLOWANCE_BOUNDS,
   type Allowances,
   adminPresetDraft,
@@ -430,9 +429,7 @@ function defaultRoleDrafts(allowances: Allowances): RoleDrafts {
   return Object.fromEntries(
     allowances.roles.map((role) => [
       role.role_key,
-      role.role_key === ADMIN_ROLE
-        ? adminPresetDraft(allowances)
-        : EMPTY_ROLE_DRAFT,
+      role.holds_preset ? adminPresetDraft(allowances) : EMPTY_ROLE_DRAFT,
     ]),
   );
 }

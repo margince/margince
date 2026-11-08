@@ -340,9 +340,9 @@ that could grant itself lasting authority would be deciding its own rights.
 
 ### Allowances per window
 
-Each passport may do only so much in each window, and the amount can differ by
-role. [How much an agent may do](agent-allowances.md) says what is counted and
-what an agent is told when it stops.
+Each passport may do only so much in each window. The amount can differ by
+role. See [How much an agent may do](agent-allowances.md) for what is counted
+and what an agent is told when it stops.
 
 ## Files and agents
 

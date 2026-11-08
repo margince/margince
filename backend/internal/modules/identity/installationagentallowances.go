@@ -98,15 +98,47 @@ func AgentPolicyTx(ctx context.Context, tx pgx.Tx, c *config.Config) (agentvolum
 	if values[5], err = settings.ApplyTx(ctx, tx, AgentWindowNextFrom); err != nil {
 		return agentvolume.Policy{}, err
 	}
-	policy := values.policy(c)
-	held, err := readRoleValues(c, policy.Limits, func(s *config.Setting[map[string]int]) (map[string]int, error) {
-		return config.StoredApplyTx(ctx, tx, c, s)
-	})
+	maps, err := applyRoleMapsTx(ctx, tx, c)
 	if err != nil {
 		return agentvolume.Policy{}, err
 	}
-	policy.Roles = held.Roles()
+	policy := values.policy(c)
+	policy.Roles = roleValuesOf(c, policy.Limits, maps).Roles()
 	return policy, nil
+}
+
+// applyRoleMapsTx is the machinery read of the three role maps.
+func applyRoleMapsTx(ctx context.Context, tx pgx.Tx, c *config.Config) (savedRoleMaps, error) {
+	writes, err := config.StoredApplyTx(ctx, tx, c, AgentRoleWritesPerWindow)
+	if err != nil {
+		return nil, err
+	}
+	egress, err := config.StoredApplyTx(ctx, tx, c, AgentRoleEgressPerWindow)
+	if err != nil {
+		return nil, err
+	}
+	calls, err := config.StoredApplyTx(ctx, tx, c, AgentRoleCallsPerWindow)
+	if err != nil {
+		return nil, err
+	}
+	return savedRoleMaps{agentvolume.Writes: writes, agentvolume.Egress: egress, agentvolume.Calls: calls}, nil
+}
+
+// readRoleMapsTx is the gated read of the three role maps, for the page.
+func readRoleMapsTx(ctx context.Context, tx pgx.Tx, c *config.Config) (savedRoleMaps, error) {
+	writes, err := config.StoredValTx(ctx, tx, c, AgentRoleWritesPerWindow)
+	if err != nil {
+		return nil, err
+	}
+	egress, err := config.StoredValTx(ctx, tx, c, AgentRoleEgressPerWindow)
+	if err != nil {
+		return nil, err
+	}
+	calls, err := config.StoredValTx(ctx, tx, c, AgentRoleCallsPerWindow)
+	if err != nil {
+		return nil, err
+	}
+	return savedRoleMaps{agentvolume.Writes: writes, agentvolume.Egress: egress, agentvolume.Calls: calls}, nil
 }
 
 // readAgentPolicy reads the allowances and every live role's values for the
@@ -130,13 +162,12 @@ func (s *InstallationSettingsStore) readAgentPolicy(ctx context.Context) (agentv
 		if values[5], err = settings.GetTx(ctx, tx, AgentWindowNextFrom); err != nil {
 			return err
 		}
-		policy = values.policy(s.config)
-		held, err := readRoleValues(s.config, policy.Limits, func(setting *config.Setting[map[string]int]) (map[string]int, error) {
-			return config.StoredValTx(ctx, tx, s.config, setting)
-		})
+		maps, err := readRoleMapsTx(ctx, tx, s.config)
 		if err != nil {
 			return err
 		}
+		policy = values.policy(s.config)
+		held := roleValuesOf(s.config, policy.Limits, maps)
 		live, err := liveRolesTx(ctx, tx)
 		if err != nil {
 			return err

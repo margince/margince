@@ -69,7 +69,7 @@ type InstallationSettings struct {
 	// AgentAllowances is what one agent passport may do per window
 	// (installationagentallowances.go).
 	AgentAllowances agentvolume.Policy
-	// AgentRoleAllowances is every live role and what it holds apart from the
+	// AgentRoleAllowances lists the live roles and what each holds apart from the
 	// installation value (agentroleallowances.go).
 	AgentRoleAllowances []RoleAllowance
 }

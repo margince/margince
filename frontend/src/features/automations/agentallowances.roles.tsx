@@ -9,7 +9,6 @@ import { PanelBody } from "../../design-system/panel";
 import { formatNumber } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import {
-  ADMIN_ROLE,
   type Allowances,
   COUNTS,
   type Counts,
@@ -185,7 +184,7 @@ export function RolesForm({
   return (
     <>
       <RolesHead editing />
-      {allowances.roles.some((role) => role.role_key === ADMIN_ROLE) && (
+      {allowances.roles.some((role) => role.holds_preset) && (
         <PanelBody>
           <p className="t-caption">
             {t("agentAllowances.roles.preset", {

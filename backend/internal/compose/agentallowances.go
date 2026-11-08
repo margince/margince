@@ -56,7 +56,7 @@ func toRoleAllowances(installation agentvolume.Limits, roles []identity.RoleAllo
 			}
 		}
 		out = append(out, crmcontracts.AgentRoleAllowance{
-			RoleKey: r.Key, RoleName: r.Name, System: r.System,
+			RoleKey: r.Key, RoleName: r.Name, System: r.System, HoldsPreset: r.HoldsPreset,
 			AgentWritesPerWindow: value(agentvolume.Writes),
 			AgentEgressPerWindow: value(agentvolume.Egress),
 			AgentCallsPerWindow:  value(agentvolume.Calls),
