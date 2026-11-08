@@ -465,7 +465,7 @@ func TestRenewedEvidenceKeepsTheOnePromiseItRenews(t *testing.T) {
 		body: "Please send the account plan.", at: o.now.Add(-2 * time.Hour),
 		messageID: ids.NewV7().String() + "@customer.example",
 	})
-	if _, err := o.e.Activities.SetCaptureLabel(o.judge(), first, "commitment"); err != nil {
+	if _, err := o.e.LabelCapture(o.judge(), first, "commitment"); err != nil {
 		t.Fatal(err)
 	}
 	runOwedWorker(t, o.e, &owedBrainStub{verdict: activities.OwedVerdictAsksUs, confidence: .99})
