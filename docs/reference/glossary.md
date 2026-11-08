@@ -20,6 +20,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | changelog | A file listing the changes of each release, which this repository does not keep. |
 | CI | Continuous integration: the checks GitHub runs on every pull request. |
 | CIMD | Client ID Metadata Document: an AI tool's ID that is the URL of a file describing it. |
+| CLS | Cumulative Layout Shift: how far content moves on screen while a page loads. |
 | Compose | Docker Compose, which starts Postgres and Redis for local work. |
 | Conventional | Conventional Commits, a format for commit messages. |
 | Copilot | Microsoft's AI assistant, whose Copilot Studio builds agents that connect to Margince. |
@@ -55,6 +56,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | JPEG | A common photo file format, saved as .jpg or .jpeg. |
 | Jurisdiction | The settings page where an admin chooses the law an installation follows. |
 | Langdock | A service that serves OpenAI, Gemini and Claude models on one key. |
+| LCP | Largest Contentful Paint: when a page has drawn its largest block of content. |
 | LICENSE | The file at the repository root that holds the license text. |
 | LinkedIn | The professional network whose contact export Margince can import. |
 | locale | The date or time format of the reader's language, as a setting value. |

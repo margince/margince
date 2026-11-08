@@ -237,8 +237,7 @@ changes ──┬─> deterministic-gates
           │                  fe-unit (×4) ├─> fan-in (+ merge)   │   │
           │                  fe-bundle    ┘                     │   │
           ├─> uat  (`frontend` scope, beside the lane)          │   │
-          ├─> live-boot                                         │   │
-          ├─> home-budget  (advisory, skips when Home is out of reach)
+          ├─> live-boot, home-budget                            │   │
           v                                                     v   v
  deterministic-gates + integration + frontend ──> sonarcloud
   craft-residue  (every non-draft change, independent)
@@ -305,8 +304,6 @@ job links each package's test binary with the shards' flags, and each shard runs
 the package directory. A compile error fails the build job, so no shard starts. Each shard still pays
 start-up, the fetch and its own template, so size the matrix from `scripts/integration-test-timing.txt`.
 
-
-
 ### The `ci` aggregate is the only required build context
 
 A **ruleset** requires two checks: **`ci`**, and **`cla`**, which asks an author outside the Margince
@@ -339,9 +336,8 @@ These jobs are not in `needs`:
 - `fe-quality`, `fe-unit`, `fe-bundle`: taken in by the `frontend` fan-in.
 - `integration-build`, `integration-shards`, `integration-unit-coverage`: the `integration` fan-in checks them.
 - `sonarcloud`: not blocking, by decision. Listing it here would make it required in a hidden way.
-- `home-budget`: advisory while the numbers on CI runners show whether its budgets hold.
-- `vuln`, `live-boot`: advisory. They are the plain next ones to add, since each runs on every change
-  that counts, and a red one does not stop a merge.
+- `vuln`, `live-boot`, `home-budget`: advisory. They are the plain next ones to add, since each runs on every change
+  that counts, and a red one does not stop a merge. `home-budget` waits for runs that show its budgets hold.
   - The batch is the reason to wait. Under a merge queue, a flaky job does not cost one more run. It
     fails the whole group it was checked in, and every entry in that group is queued again.
   - Nothing has tested these two under a blocking gate. Make them block once the queue has a measured
@@ -509,14 +505,8 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md).
   needed about `340s`, of which vitest alone needed about `207s`.
 - **`live-boot`** exists because the integration shards never boot the api or run the seed script.
   Without it, the seed that runs through the API and the boot proof would break with no one seeing.
-- **`home-budget`** runs `make home-budget`: the `p95` of Home's reads, cold and warm, on a small
-  corpus of its own, then main-content LCP and CLS of a production bundle against an api booted the
-  way `live-boot` boots it. On a pull request its first step, `scripts/home-budget-scope.sh`, skips
-  the rest unless the diff holds a Go file or migration under `backend/`, a dependency Home shares,
-  a file of the check, or a frontend file Home's first load imports
-  (`frontend/scripts/home-reach.ts`). It runs on every PR, `develop` included, and is not in the
-  `ci` fan-in until its budgets have held on enough runs. The job summary holds each half's wall
-  time, every API row and the vitals line.
+- **`home-budget`** holds Home to its fixed budgets on every PR that can reach Home, `develop` included.
+  What it runs and when it skips: [ci-jobs.md](../reference/ci-jobs.md).
 
 ### What `secret-scan` runs
 
