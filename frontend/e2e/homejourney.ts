@@ -11,6 +11,7 @@ import {
   type HomeRead,
   RequestLedger,
   readOf,
+  type Vitals,
 } from "../src/testing/homejourney.judge";
 
 /**
@@ -251,4 +252,67 @@ export function worklistFetches(page: Page, from: number) {
         })),
     from,
   );
+}
+
+const VITALS_KEY = "__homeVitals";
+
+/**
+ * Records, from the start of every document the page loads, each
+ * largest-contentful-paint entry and each layout shift. Whether a paint sits
+ * inside `main` is read when it happens, while its element is still there.
+ */
+export async function recordVitals(page: Page): Promise<void> {
+  await page.addInitScript((key) => {
+    const vitals: Vitals = { paints: [], shifts: [] };
+    Object.assign(window, { [key]: vitals });
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        if (!(entry instanceof LargestContentfulPaint)) continue;
+        const inMain = entry.element?.closest("main") != null;
+        vitals.paints.push({ at: entry.startTime, inMain });
+      }
+    }).observe({ type: "largest-contentful-paint", buffered: true });
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        const value = "value" in entry ? entry.value : undefined;
+        const input = "hadRecentInput" in entry && entry.hadRecentInput;
+        if (typeof value !== "number") continue;
+        vitals.shifts.push({
+          at: entry.startTime,
+          value,
+          input: input === true,
+        });
+      }
+    }).observe({ type: "layout-shift", buffered: true });
+  }, VITALS_KEY);
+}
+
+/** What the current document has painted and shifted so far. */
+export async function readVitals(page: Page): Promise<Vitals> {
+  const vitals: Vitals | null = await page.evaluate(
+    (key) => Reflect.get(window, key) ?? null,
+    VITALS_KEY,
+  );
+  if (vitals === null) {
+    throw new Error(
+      "the page holds no vitals: call recordVitals before it loads",
+    );
+  }
+  return vitals;
+}
+
+/**
+ * The fixed profile the vitals budgets hold on: a desktop CPU slowed twofold,
+ * and a 40 ms, 10 Mbit/s link. Fixed, so two runs measure the same machine.
+ */
+export async function fixedProfile(page: Page): Promise<void> {
+  const session = await page.context().newCDPSession(page);
+  await session.send("Emulation.setCPUThrottlingRate", { rate: 2 });
+  await session.send("Network.enable");
+  await session.send("Network.emulateNetworkConditions", {
+    offline: false,
+    latency: 40,
+    downloadThroughput: (10 * 1024 * 1024) / 8,
+    uploadThroughput: (5 * 1024 * 1024) / 8,
+  });
 }

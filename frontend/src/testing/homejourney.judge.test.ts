@@ -12,12 +12,15 @@ import {
   framesLostAfterReturn,
   type Journey,
   longestLoss,
+  mainContentLcp,
   outcomeOf,
   QUERY_RETRIES,
   RequestLedger,
   readerFrom,
   readOf,
+  sessionWindowCls,
   tally,
+  vitalsReasons,
   withheldSources,
 } from "./homejourney.judge";
 import { BUSY_NIGHT } from "./magic.fixtures";
@@ -303,5 +306,56 @@ describe("RequestLedger", () => {
     ledger.finished("magic", ledger.started("magic"), 501);
     ledger.release("load-1");
     expect(ledger.busy("load-1")).toBe(false);
+  });
+});
+
+describe("Home's browser vitals", () => {
+  const paint = (at: number, inMain = true) => ({ at, inMain });
+  const shift = (at: number, value: number, input = false) => ({
+    at,
+    value,
+    input,
+  });
+
+  it("takes the last paint inside main as the main-content LCP", () => {
+    expect(mainContentLcp([paint(100), paint(400, false), paint(300)])).toBe(
+      300,
+    );
+  });
+
+  it("fails a load with no paint inside main rather than passing it", () => {
+    expect(vitalsReasons({ paints: [paint(200, false)], shifts: [] })).toEqual([
+      "no largest contentful paint inside main",
+    ]);
+  });
+
+  it("passes an LCP of exactly the budget and fails one past it", () => {
+    expect(vitalsReasons({ paints: [paint(1_000)], shifts: [] })).toEqual([]);
+    expect(vitalsReasons({ paints: [paint(1_001)], shifts: [] })).toEqual([
+      "main-content LCP 1001 ms is over 1000 ms",
+    ]);
+  });
+
+  it("sums shifts within one session window and keeps the worst window", () => {
+    const shifts = [shift(0, 0.04), shift(500, 0.04), shift(3_000, 0.05)];
+    expect(sessionWindowCls(shifts)).toBeCloseTo(0.08);
+  });
+
+  it("closes a session window at five seconds even without a gap", () => {
+    const steady = [0, 900, 1_800, 2_700, 3_600, 4_500, 5_400].map((at) =>
+      shift(at, 0.02),
+    );
+    expect(sessionWindowCls(steady)).toBeCloseTo(0.12);
+  });
+
+  it("ignores a shift that input caused", () => {
+    expect(sessionWindowCls([shift(0, 0.3, true)])).toBe(0);
+  });
+
+  it("fails a load whose shifts add up past 0.1", () => {
+    const shifts = [shift(0, 0.06), shift(200, 0.06)];
+    expect(vitalsReasons({ paints: [paint(300)], shifts })).toEqual([
+      "CLS 0.120 is over 0.1",
+    ]);
   });
 });

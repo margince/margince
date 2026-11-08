@@ -355,3 +355,61 @@ export class RequestLedger {
     }
   }
 }
+
+/** One largest-contentful-paint entry, and whether its element sits in `main`. */
+export type Paint = { at: number; inMain: boolean };
+/** One layout shift; `input` marks a shift right after user input. */
+export type Shift = { at: number; value: number; input: boolean };
+/** What one document load painted and shifted, as the page recorded it. */
+export type Vitals = { paints: Paint[]; shifts: Shift[] };
+
+/** Home's fixed-profile browser budgets: both are "at most". */
+export const VITALS_BUDGET = { lcpMs: 1_000, cls: 0.1 };
+
+/**
+ * Main-content LCP: the last LCP entry whose element sits inside `main`, or
+ * null when none does. The shell's rail paints first and says nothing of Home.
+ */
+export function mainContentLcp(paints: readonly Paint[]): number | null {
+  const inMain = paints.filter((paint) => paint.inMain);
+  return inMain.at(-1)?.at ?? null;
+}
+
+// A session window closes after a 1 s gap or at 5 s long, as Chrome's CLS does.
+const SHIFT_GAP_MS = 1_000;
+const SHIFT_WINDOW_MS = 5_000;
+
+/** CLS as the largest session window of shifts no input caused. */
+export function sessionWindowCls(shifts: readonly Shift[]): number {
+  let worst = 0;
+  let current = 0;
+  let first = Number.NEGATIVE_INFINITY;
+  let last = Number.NEGATIVE_INFINITY;
+  for (const shift of shifts) {
+    if (shift.input) continue;
+    if (shift.at - last < SHIFT_GAP_MS && shift.at - first < SHIFT_WINDOW_MS) {
+      current += shift.value;
+    } else {
+      current = shift.value;
+      first = shift.at;
+    }
+    last = shift.at;
+    worst = Math.max(worst, current);
+  }
+  return worst;
+}
+
+/** Why one load breaks the vitals budget; empty when it keeps it. */
+export function vitalsReasons(vitals: Vitals): string[] {
+  const reasons: string[] = [];
+  const lcp = mainContentLcp(vitals.paints);
+  if (lcp === null) reasons.push("no largest contentful paint inside main");
+  else if (lcp > VITALS_BUDGET.lcpMs)
+    reasons.push(
+      `main-content LCP ${Math.round(lcp)} ms is over ${VITALS_BUDGET.lcpMs} ms`,
+    );
+  const cls = sessionWindowCls(vitals.shifts);
+  if (cls > VITALS_BUDGET.cls)
+    reasons.push(`CLS ${cls.toFixed(3)} is over ${VITALS_BUDGET.cls}`);
+  return reasons;
+}
