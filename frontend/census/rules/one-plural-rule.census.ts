@@ -19,15 +19,20 @@
 
 import { join, relative, sep } from "node:path";
 import ts from "typescript";
-import { parseSource } from "../../scripts/lib/source-tree";
+import {
+  extensionFrontendFiles,
+  parseSource,
+} from "../../scripts/lib/source-tree";
 import { en } from "../../src/i18n/en";
-import { type CensusRule, frontendRoot, srcDir } from "../tree";
+import { type CensusRule, extensionsDir, frontendRoot, srcDir } from "../tree";
 
 // The home of the rule, so the one directory allowed to compare a count
 // against 1 to reach a key. `format/plural.ts` owns the locale's categories and
 // `i18n/index.tsx` owns the catalogue lookup; both implement the rule.
 const ruleHome = join(srcDir, "i18n");
 const pluralModule = join(srcDir, "format", "plural.ts");
+
+const BUDGETED_CORPUS_FILES = 5_500;
 
 const CATALOG_KEYS: ReadonlySet<string> = new Set(Object.keys(en));
 
@@ -160,12 +165,25 @@ export const rule: CensusRule = {
         file.path !== pluralModule,
     ),
   // Fail closed. A walk pointed at the wrong tree reports PASS over nothing.
-  floors: (corpus) => [
-    ...(corpus.length > 100 ? [] : ["fewer than 100 files were read"]),
-    ...(corpus.some((file) => file.area === "extensions")
-      ? []
-      : ["the census read no extension frontend layer"]),
-  ],
+  floors: (corpus) => {
+    const read = new Set(corpus.map((file) => file.path));
+    return [
+      ...(corpus.length > 100 ? [] : ["fewer than 100 files were read"]),
+      // The rule's run time was budgeted for a corpus up to this size. A tree
+      // that outgrows it fails here by count, not as a slow run.
+      ...(corpus.length <= BUDGETED_CORPUS_FILES
+        ? []
+        : [
+            `${corpus.length} files were read, past the ${BUDGETED_CORPUS_FILES} this rule was budgeted for; measure its run time again before raising the ceiling`,
+          ]),
+      ...extensionFrontendFiles(extensionsDir)
+        .filter((path) => !read.has(path))
+        .map(
+          (path) =>
+            `${path} is an extension frontend file the census did not read`,
+        ),
+    ];
+  },
   visit: (file) =>
     findingsIn(file.path, file.text).map(
       (f) => `${f.file}:${f.line} — ${f.text}`,

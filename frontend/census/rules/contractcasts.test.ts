@@ -4,8 +4,8 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parseSource } from "../../scripts/lib/source-tree";
-import { srcDir } from "../tree";
-import { castsIn, castsToUnknown } from "./contractcasts.census";
+import { plantedFindings, srcDir } from "../tree";
+import { castsIn, castsToUnknown, rule } from "./contractcasts.census";
 
 // The detector, asked about every shape it has to read.
 //
@@ -117,6 +117,17 @@ describe("what counts as a contract type cast", () => {
       ),
     ).toEqual([
       "`contract:cast` with no reason beside `as unknown as Worklist`",
+    ]);
+  });
+});
+
+describe("the contractcasts rule", () => {
+  it("reports a planted cast through its own corpus and visit", () => {
+    const path = join(srcDir, "features", "planted.ts");
+    const text =
+      'type Deal = components["schemas"]["Deal"];\nconst d = {} as unknown as Deal;\n';
+    expect(plantedFindings(rule, [{ path, area: "src", text }])).toEqual([
+      "src/features/planted.ts:2 `as unknown as Deal`",
     ]);
   });
 });

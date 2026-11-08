@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { deriveDateHosts } from "../../scripts/lib/input-type";
-import { srcDir } from "../tree";
+import { plantedFindings, srcDir } from "../tree";
 import {
   clearedSpreads,
   dateHosts,
@@ -20,6 +20,7 @@ import {
   nativeControls,
   notHosts,
   prefilter,
+  rule,
   worthParsing,
 } from "./native-controls.census";
 
@@ -603,5 +604,15 @@ describe("the native-control detector sees what it claims to", () => {
       false,
     );
     expect(worthParsing("const html = `<input type=\n date>`;")).toBe(true);
+  });
+});
+
+describe("the native-controls rule", () => {
+  it("reports a planted dropdown through its own corpus and visit", () => {
+    const path = join(srcDir, "features", "planted.tsx");
+    const text = "export const A = () => <select />;\n";
+    expect(plantedFindings(rule, [{ path, area: "src", text }])).toEqual([
+      "src/features/planted.tsx:1: <select>",
+    ]);
   });
 });

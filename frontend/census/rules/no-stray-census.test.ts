@@ -4,8 +4,15 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parseSource } from "../../scripts/lib/source-tree";
-import { srcDir } from "../tree";
-import { ownWalks, readWaivers, strayImports } from "./no-stray-census.census";
+import { plantedFindings, srcDir } from "../tree";
+import {
+  ownWalks,
+  readWaivers,
+  rule,
+  strayImports,
+  WAIVED_FILES,
+  waiverCount,
+} from "./no-stray-census.census";
 
 const planted = join(srcDir, "features", "planted.test.ts");
 const found = (code: string) =>
@@ -83,5 +90,31 @@ describe("a test file that writes its own walk", () => {
     expect(
       walks('const pages = ls("docs"); import.meta.glob("./*.json");'),
     ).toEqual([]);
+  });
+});
+
+describe("the waiver list", () => {
+  const listOf = (size: number) =>
+    new Set(Array.from({ length: size }, (_, at) => `src/w${at}.test.ts`));
+
+  it("fails when it grows past its pin, and asks for a lower pin when it shrinks", () => {
+    expect(waiverCount(listOf(WAIVED_FILES))).toEqual([]);
+    expect(waiverCount(listOf(WAIVED_FILES + 1))).toHaveLength(1);
+    expect(waiverCount(listOf(WAIVED_FILES - 1))).toHaveLength(1);
+  });
+
+  it("is read by the rule itself, which fails a stray it does not list", () => {
+    const stray = join(srcDir, "features", "planted-stray.test.ts");
+    expect(
+      plantedFindings(rule, [
+        {
+          path: stray,
+          area: "src",
+          text: 'import { filesUnder } from "../../scripts/lib/source-tree";\n',
+        },
+      ]),
+    ).toContain(
+      "src/features/planted-stray.test.ts: imports filesUnder from scripts/lib/source-tree.ts",
+    );
   });
 });

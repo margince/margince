@@ -86,20 +86,47 @@ function walk(): { path: string; area: Area }[] {
   ];
 }
 
-export function buildTree(): CensusTree {
-  const files = walk().map(({ path, area }): CensusFile => {
-    const text = sourceTextAt(path);
-    return {
+/** A tree over the given files: the walked tree, or a rule's planted one. */
+export function treeOf(
+  entries: readonly { path: string; area: Area; text: string }[],
+): CensusTree {
+  const files = entries.map(
+    ({ path, area, text }): CensusFile => ({
       path,
       rel: relative(frontendRoot, path).split(sep).join("/"),
       area,
       text,
       source: MODULE_FILE.test(path) ? parseSource(path, text) : undefined,
-    };
-  });
+    }),
+  );
   const byPath = new Map(files.map((file) => [file.path, file]));
   return { files, at: (path) => byPath.get(path) };
 }
+
+export function buildTree(): CensusTree {
+  return treeOf(
+    walk().map(({ path, area }) => ({ path, area, text: sourceTextAt(path) })),
+  );
+}
+
+/** What a rule finds over its corpus, by `visit` or `across`. */
+export function ruleFindings(
+  rule: CensusRule,
+  corpus: readonly CensusFile[],
+  tree: CensusTree,
+): readonly string[] {
+  if ("visit" in rule) return corpus.flatMap((file) => rule.visit(file, tree));
+  return rule.across(corpus, tree);
+}
+
+/** A rule run over a planted tree, the way the runner runs it. */
+export const plantedFindings = (
+  rule: CensusRule,
+  planted: readonly { path: string; area: Area; text: string }[],
+): readonly string[] => {
+  const tree = treeOf(planted);
+  return ruleFindings(rule, rule.corpus(tree), tree);
+};
 
 /**
  * The files git knows under the same roots, by the same pattern, from the

@@ -238,6 +238,27 @@ export function ownWalks(source: ts.SourceFile): string[] {
   return found;
 }
 
+// The waiver list's length. It may only fall: a move deletes a line and lowers
+// this number in the same change.
+export const WAIVED_FILES = 97;
+
+export function waiverCount(
+  waived: ReadonlySet<string>,
+  pinned = WAIVED_FILES,
+): string[] {
+  if (waived.size > pinned) {
+    return [
+      `census/stray-census-waivers.txt lists ${waived.size} files and the pin is ${pinned}; the list only shrinks, so move the census instead`,
+    ];
+  }
+  if (waived.size < pinned) {
+    return [
+      `census/stray-census-waivers.txt lists ${waived.size} files; lower WAIVED_FILES in no-stray-census.census.ts to ${waived.size}`,
+    ];
+  }
+  return [];
+}
+
 const strays = (file: CensusFile) =>
   file.source
     ? [...strayImports(file.path, file.source), ...ownWalks(file.source)]
@@ -270,7 +291,7 @@ export const rule: CensusRule = {
     const found = corpus
       .filter((file) => !waived.has(file.rel))
       .flatMap((file) => strays(file).map((what) => `${file.rel}: ${what}`));
-    return [...found, ...stale];
+    return [...waiverCount(waived), ...found, ...stale];
   },
   advice:
     "A test file outside census/ walks the tree. Move the census into a rule in " +

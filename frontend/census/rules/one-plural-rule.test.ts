@@ -4,8 +4,8 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { en } from "../../src/i18n/en";
-import { srcDir as srcRoot } from "../tree";
-import { findingsIn } from "./one-plural-rule.census";
+import { plantedFindings, srcDir as srcRoot } from "../tree";
+import { findingsIn, rule } from "./one-plural-rule.census";
 
 describe("one plural rule", () => {
   // The gate's own census. A gate that matches a shape the defect does not take
@@ -105,5 +105,16 @@ describe("one plural rule", () => {
       `    : t("${second}");`,
     ].join("\n");
     expect(findingsIn(join(srcRoot, "planted.ts"), source)).toHaveLength(0);
+  });
+});
+
+describe("the one-plural-rule rule", () => {
+  it("reports a planted count choice through its own corpus and visit", () => {
+    const [first, second] = Object.keys(en).slice(0, 2);
+    const path = join(srcRoot, "features", "planted.ts");
+    const text = `const label = n === 1 ? "${first}" : "${second}";\n`;
+    expect(plantedFindings(rule, [{ path, area: "src", text }])).toEqual([
+      `src/features/planted.ts:1 — ${first} / ${second}`,
+    ]);
   });
 });

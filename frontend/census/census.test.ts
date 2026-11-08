@@ -13,11 +13,11 @@ import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   buildTree,
-  type CensusFile,
   type CensusRule,
   type CensusTree,
   gitListedFiles,
   repoRoot,
+  ruleFindings,
 } from "./tree";
 
 const rulesDir = join(dirname(fileURLToPath(import.meta.url)), "rules");
@@ -49,15 +49,6 @@ for (const name of ruleFiles) {
   rules.push(loaded);
 }
 
-function findings(
-  rule: CensusRule,
-  corpus: readonly CensusFile[],
-  tree: CensusTree,
-): readonly string[] {
-  if ("visit" in rule) return corpus.flatMap((file) => rule.visit(file, tree));
-  return rule.across(corpus, tree);
-}
-
 describe("census", () => {
   let tree: CensusTree;
   beforeAll(() => {
@@ -81,7 +72,7 @@ describe("census", () => {
       const corpus = rule.corpus(tree);
       expect(corpus.length, `${rule.name} read no file`).toBeGreaterThan(0);
       expect(rule.floors?.(corpus, tree) ?? []).toEqual([]);
-      expect(findings(rule, corpus, tree), rule.advice).toEqual([]);
+      expect(ruleFindings(rule, corpus, tree), rule.advice).toEqual([]);
     });
   }
 });

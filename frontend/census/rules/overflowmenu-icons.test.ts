@@ -4,8 +4,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { srcDir } from "../tree";
-import { glyphsInMenus, MENU } from "./overflowmenu-icons.census";
+import { plantedFindings, srcDir } from "../tree";
+import { glyphsInMenus, MENU, rule } from "./overflowmenu-icons.census";
 
 describe("an item in an overflow menu carries words, not glyphs", () => {
   it("names a menu the design system still exports", () => {
@@ -54,5 +54,15 @@ describe("an item in an overflow menu carries words, not glyphs", () => {
     expect(
       found(`<div><Mail /><${MENU}><Button>Write</Button></${MENU}></div>`),
     ).toEqual([]);
+  });
+});
+
+describe("the overflowmenu-icons rule", () => {
+  it("reports a planted glyph through its own corpus and visit", () => {
+    const path = join(srcDir, "features", "planted.tsx");
+    const text = `import { Mail } from "lucide-react";\nexport const F = () => <${MENU}><Mail /></${MENU}>;\n`;
+    expect(plantedFindings(rule, [{ path, area: "src", text }])).toEqual([
+      "src/features/planted.tsx:2: `Mail` is a glyph from lucide-react",
+    ]);
   });
 });

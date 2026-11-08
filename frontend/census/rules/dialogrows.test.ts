@@ -26,6 +26,8 @@ import {
   sourceTextAt,
 } from "../../scripts/lib/source-tree";
 import { classVariants } from "../../src/testing/classnames";
+import { plantedFindings } from "../tree";
+import { rule } from "./dialogrows.census";
 
 const once = <T>(make: () => T) => {
   let made: { value: T } | undefined;
@@ -512,5 +514,19 @@ export const Named = Pick;`,
     expect(plantedRows(jsx, sheet ? ownersIn([sheet]) : owners())).toBe(
       verdict,
     );
+  });
+});
+
+describe("the dialogrows rule", () => {
+  it("reports a planted flush row through its own corpus and across", () => {
+    const path = join(srcDir, "features", "planted", "planted.tsx");
+    const text = `import { Modal } from "../../design-system/modal";
+import { Field } from "../../design-system/atoms";
+export const A = () => <Modal intent="form"><p /><Field /></Modal>;
+`;
+    const found = plantedFindings(rule, [{ path, area: "src", text }]);
+    expect(found.filter((line) => line.endsWith(" flush"))).toEqual([
+      "features/planted/planted.tsx:3 flush",
+    ]);
   });
 });
