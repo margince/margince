@@ -850,6 +850,14 @@
   /* Unselectable, for `.checkfield`'s reason. */
   user-select: none;
 }
+/* A phone is where the strip wraps: each line's options then share its width,
+   so no option sits alone on a half-empty line. */
+@media (max-width: 720px) {
+  .segmented button {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+}
 .segmented button:hover:where(:not(:disabled)) {
   background: var(--groundHover);
 }
@@ -900,7 +908,9 @@
   color: var(--accentText);
   background: transparent;
   border: 0;
-  padding: 2px 4px;
+  /* No inline inset: the label starts on the edge of the column it sits in,
+     like the text above and below it. The focus ring's offset gives it air. */
+  padding: 2px 0;
   border-radius: var(--r-sm);
   cursor: pointer;
   /* The two floors `.btn` keeps so a short verb still reads as a pressable box.
@@ -1043,6 +1053,15 @@
 .recordpicker > .input-icon {
   display: flex;
   width: 100%;
+}
+/* On a phone a search field standing on its own line spans that line, so it
+ * ends on the card's edge like the rows under it. In a toolbar row it still
+ * shrinks to fit. */
+@media (max-width: 720px) {
+  :is(.panel-body, form) > .input-icon {
+    display: flex;
+    width: 100%;
+  }
 }
 
 /* RecordPicker: a pick is never silent. The current selection shows as an
