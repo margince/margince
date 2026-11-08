@@ -71,19 +71,43 @@ async function settleAnimations(page: Page) {
   // allSettled rather than all: a cancelled animation REJECTS `finished`, and
   // that is a settled outcome here — the animation is over, which is all this
   // waits for.
-  await page.evaluate(async () => {
+  //
+  // One look is not enough: a boot transition can start after it. So the wait
+  // repeats until a pass finds no finite clock-driven animation running. The
+  // round count is a backstop against a page that keeps starting new ones.
+  // Hitting it names them rather than handing them on as a finding.
+  const unsettled = await page.evaluate(async () => {
     const lands = (animation: Animation) =>
+      animation.timeline instanceof DocumentTimeline &&
       Number.isFinite(
         animation.effect?.getComputedTiming().activeDuration ?? Infinity,
       );
-    await Promise.allSettled(
+    const landing = () =>
       document
         .getAnimations()
         .filter((animation) => animation.playState === "running")
-        .filter(lands)
-        .map((animation) => animation.finished),
-    );
+        .filter(lands);
+    for (let round = 0; round < 50; round++) {
+      const running = landing();
+      if (running.length === 0) {
+        return [];
+      }
+      await Promise.allSettled(running.map((animation) => animation.finished));
+    }
+    return landing().map((animation) => {
+      const target =
+        animation.effect instanceof KeyframeEffect
+          ? animation.effect.target
+          : null;
+      return target
+        ? `${target.tagName.toLowerCase()}.${target.className}`
+        : "?";
+    });
   });
+  expect(
+    unsettled,
+    "finite animations kept starting through 50 rounds of waiting for them to land",
+  ).toEqual([]);
   const motion = await page.evaluate(() => {
     const describe = (element: Element) =>
       `${element.tagName.toLowerCase()}.${element.className}`;

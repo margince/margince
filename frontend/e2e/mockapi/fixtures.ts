@@ -612,6 +612,12 @@ export const agentUsageByUser = {
       egress: usageCounter(2, 20),
       calls: usageCounter(160, 1_000),
       state: "ok",
+      roles: [{ role_key: "rep", role_name: "User" }],
+      allowance: {
+        writes: { limit: 200, role_key: null },
+        egress: { limit: 20, role_key: null },
+        calls: { limit: 1_000, role_key: null },
+      },
     },
   ],
 };
