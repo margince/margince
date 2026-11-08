@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -107,5 +108,41 @@ func TestAChosenMessageIDCannotReuseAnotherSeatsHeaderRoot(t *testing.T) {
 	captureThreadMail(t, e, e.Rep1, threadMail(seatAddress(t, e, e.Rep1), "future@example.test", "Tue, 02 Jun 2026 08:00:00 +0000", ""))
 	if threadKeyOfMessage(t, e, "foreign@example.test") == threadKeyOfMessage(t, e, "future@example.test") {
 		t.Error("a chosen Message-ID joined another seat's existing header root")
+	}
+}
+
+func TestAReplyToAnIsolatedMessageKeepsItsConversation(t *testing.T) {
+	e := integration.Setup(t)
+	captureThreadMail(t, e, e.Rep2, threadMail(seatAddress(t, e, e.Rep2), "foreign@example.test", "Mon, 01 Jun 2026 08:00:00 +0000", "future@example.test", "future@example.test"))
+	captureThreadMail(t, e, e.Rep1, threadMail(seatAddress(t, e, e.Rep1), "future@example.test", "Tue, 02 Jun 2026 08:00:00 +0000", ""))
+	key := threadKeyOfMessage(t, e, "future@example.test")
+	anchor, err := ids.Parse(e.WsScalar(t, `SELECT id::text FROM activity WHERE source_id='future@example.test'`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	adapter := newCommsAdapter(e.Pool, nil, SendPath{PublicBaseURL: toolSurfaceBaseURL, Delivery: &recordingStager{}})
+	sent, err := adapter.SendEmail(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms), anchor, agents.SendEmailArgs{To: []string{"pat@counterparty.example"}, Subject: "Re: Angebot", Body: "I will send the draft.", ConsentPurpose: "transactional"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := e.WsScalar(t, `SELECT thread_key FROM activity WHERE id=$1`, sent.ActivityID); got != key {
+		t.Fatalf("reply moved from %s to %s", key, got)
+	}
+}
+
+func TestAConversationWithAnUnheldPrivateReplyStaysSeparate(t *testing.T) {
+	e := integration.Setup(t)
+	both := seatAddress(t, e, e.Rep1) + ", " + seatAddress(t, e, e.Rep2)
+	raw := threadMail(both, "shared@example.test", "Mon, 01 Jun 2026 08:00:00 +0000", "")
+	for _, seat := range []ids.UUID{e.Rep1, e.Rep2} {
+		captureThreadMail(t, e, seat, raw)
+	}
+	captureThreadMail(t, e, e.Rep2, threadMail(seatAddress(t, e, e.Rep2), "private@example.test", "Tue, 02 Jun 2026 08:00:00 +0000", "shared@example.test", "shared@example.test"))
+	captureThreadMail(t, e, e.Rep1, threadMail(seatAddress(t, e, e.Rep1), "later@example.test", "Wed, 03 Jun 2026 08:00:00 +0000", "shared@example.test", "shared@example.test"))
+	if threadKeyOfMessage(t, e, "shared@example.test") == threadKeyOfMessage(t, e, "later@example.test") {
+		t.Fatal("a partial member joined the whole conversation")
+	}
+	if threadReadableBy(t, e, e.Rep1, "private@example.test") {
+		t.Fatal("partial membership exposed the private reply")
 	}
 }

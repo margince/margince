@@ -67,7 +67,7 @@ func (s *Sink) admittedNewThreadKeyTx(ctx context.Context, tx pgx.Tx, seat ids.U
 	}
 	// A sender may choose a Message-ID another thread already uses as a root.
 	// A fresh internal key cannot be steered by another header naming that root.
-	separate := "isolated:" + ids.NewV7().String()
+	separate := ids.NewV7().String() + "@isolated.invalid"
 	if err := storekit.LockThreadKeysTx(ctx, tx, separate); err != nil {
 		return "", err
 	}
