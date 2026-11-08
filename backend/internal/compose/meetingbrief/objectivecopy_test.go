@@ -46,7 +46,7 @@ func TestObjectiveLanguageKeepsRecommendationsAndEvidence(t *testing.T) {
 		if by != crmcontracts.WrittenByDeterministic || !reflect.DeepEqual(noModel, floor) {
 			t.Fatal("missing model changed the floor")
 		}
-		parsed, err := ParsePlan(`{"objective":{"text":"A grounded objective.","nature":"recommendation","evidence":[{"entity_type":"activity","entity_id":"`+activityID+`"}]}}`, in, floor)
+		parsed, err := parsePlan(`{"objective":{"text":"A grounded objective.","nature":"recommendation","evidence":[{"entity_type":"activity","entity_id":"`+activityID+`"}]}}`, in, floor)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -349,7 +349,7 @@ type meetingPlanCase struct {
 
 func (c *meetingPlanCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
 	floor := meetingbrief.DeterministicPlanFor(c.in)
-	req := meetingbrief.PlanRequest(meetingbrief.PlanPromptFor(c.in, floor), "en")
+	req := meetingbrief.PlanRequest(c.in, floor, "en")
 	trace := aitasks.Trace{Requests: []model.Request{req}}
 	resp, err := completer.Complete(ctx, req)
 	if err != nil {
