@@ -280,10 +280,16 @@ function UserUsageTable({ rows }: Readonly<{ rows: readonly UserUsage[] }>) {
   );
 }
 
+// A server older than this screen answers a user without their roles.
+function rolesOf(row: UserUsage): UserUsage["roles"] {
+  return row.roles ?? [];
+}
+
 function roleNames(row: UserUsage, t: ReturnType<typeof useT>): string {
-  return row.roles.length === 0
+  const roles = rolesOf(row);
+  return roles.length === 0
     ? t("agentUsage.noRole")
-    : row.roles.map((role) => role.role_name).join(", ");
+    : roles.map((role) => role.role_name).join(", ");
 }
 
 // What one user's agents may do per window, count by count, and the role each
@@ -293,11 +299,11 @@ function AllowanceCheck({ rows }: Readonly<{ rows: readonly UserUsage[] }>) {
   const { locale } = useLocale();
   const [chosen, setChosen] = useState(rows[0]?.user_id ?? "");
   const row = rows.find((candidate) => candidate.user_id === chosen) ?? rows[0];
-  if (row === undefined) {
+  if (row?.allowance == null) {
     return null;
   }
   const from = (roleKey: string | null) => {
-    const role = row.roles.find((r) => r.role_key === roleKey);
+    const role = rolesOf(row).find((r) => r.role_key === roleKey);
     return role === undefined
       ? t("agentUsage.check.fromInstallation")
       : t("agentUsage.check.fromRole", { role: role.role_name });

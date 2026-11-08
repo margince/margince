@@ -161,31 +161,37 @@ export function roleChangesOf(
   allowances: Allowances,
   drafts: RoleDrafts,
 ): RoleAllowanceSet[] | undefined {
-  const out: RoleAllowanceSet[] = [];
-  for (const role of allowances.roles) {
-    const before = roleDraftOf(role);
-    const after = drafts[role.role_key] ?? before;
-    const set: RoleAllowanceSet = { role_key: role.role_key };
-    const unset: Counts[] = [];
-    for (const { property } of COUNTS) {
-      if (before[property].trim() === after[property].trim()) {
-        continue;
-      }
-      const value = parseRoleCell(property, after[property]);
-      if (value === undefined) {
-        unset.push(property);
-      } else if (value !== null) {
-        set[property] = value;
-      }
+  const out = allowances.roles.flatMap((role) => {
+    const change = roleChange(role, drafts[role.role_key]);
+    return change === undefined ? [] : [change];
+  });
+  return out.length > 0 ? out : undefined;
+}
+
+// One role's moved boxes as a save, or undefined when none moved.
+function roleChange(
+  role: RoleAllowance,
+  draft: RoleDraft | undefined,
+): RoleAllowanceSet | undefined {
+  const before = roleDraftOf(role);
+  const after = draft ?? before;
+  const set: RoleAllowanceSet = { role_key: role.role_key };
+  const unset: Counts[] = [];
+  for (const { property } of COUNTS) {
+    if (before[property].trim() === after[property].trim()) {
+      continue;
     }
-    if (unset.length > 0) {
-      set.unset = unset;
-    }
-    if (Object.keys(set).length > 1) {
-      out.push(set);
+    const value = parseRoleCell(property, after[property]);
+    if (value === undefined) {
+      unset.push(property);
+    } else if (value !== null) {
+      set[property] = value;
     }
   }
-  return out.length > 0 ? out : undefined;
+  if (unset.length > 0) {
+    set.unset = unset;
+  }
+  return Object.keys(set).length > 1 ? set : undefined;
 }
 
 export function hasRoleRefusal(drafts: RoleDrafts): boolean {

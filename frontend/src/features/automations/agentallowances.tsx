@@ -65,7 +65,11 @@ export function AgentAllowancesCard() {
           }
           return (
             <AllowancesBody
-              allowances={settings.agent_allowances}
+              allowances={{
+                ...settings.agent_allowances,
+                // A server older than this screen answers without the roles.
+                roles: settings.agent_allowances.roles ?? [],
+              }}
               locks={settings.locks}
               canManage={canManage}
             />

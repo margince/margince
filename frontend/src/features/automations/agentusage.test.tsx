@@ -129,6 +129,21 @@ describe("AgentUsageByUserCard", () => {
     expect(within(check).getAllByText("Installation value")).toHaveLength(2);
   });
 
+  it("still draws a user row from a server older than the roles", async () => {
+    const { roles: _roles, allowance: _allowance, ...older } = PAGE.data[0];
+    vi.stubGlobal(
+      "fetch",
+      backendFor({ ai_diagnostics: ["read"] }, () =>
+        jsonResponse({ ...PAGE, data: [older] }),
+      ),
+    );
+    render(<AgentUsageByUserCard />);
+
+    expect(await screen.findByText("Minh Tran")).toBeTruthy();
+    expect(screen.getByText("No role")).toBeTruthy();
+    expect(screen.queryByTestId("allowance-check")).toBeNull();
+  });
+
   it("asks for nothing and says why when the seat may not read AI usage", async () => {
     const fetchMock = backendFor({}, () => jsonResponse(PAGE));
     vi.stubGlobal("fetch", fetchMock);

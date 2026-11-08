@@ -300,13 +300,20 @@ func mcpEdge(next http.Handler, lim mcpLimiters, allowedOrigin string) http.Hand
 	})
 }
 
+// limitDetailKey and limitKindKey are where a refusal's details name the limit
+// that refused it, as the agent allowances' refusals name theirs.
+const (
+	limitDetailKey = "limit"
+	limitKindKey   = "kind"
+)
+
 // writeMCPRateLimited answers an MCP edge ceiling with the ceiling named and the
 // wait a client needs, so it does not have to guess a backoff.
 func writeMCPRateLimited(w http.ResponseWriter, r *http.Request, bucket *ratelimit.Limiter, what string) {
 	wait := bucket.RetryAfterSeconds()
 	// Named as pacing, apart from the window allowances, because waiting the
 	// seconds ends it and it spends none of the allowance.
-	pacing := map[string]any{"limit": map[string]any{"kind": "pacing", "ceiling": bucket.Limit()}}
+	pacing := map[string]any{limitDetailKey: map[string]any{limitKindKey: "pacing", "ceiling": bucket.Limit()}}
 	writeMCPWait(w, r, wait, pacing, fmt.Sprintf("too many %s: the limit is %d every %d seconds. Wait %d seconds and send the request again.",
 		what, bucket.Limit(), wait, wait))
 }

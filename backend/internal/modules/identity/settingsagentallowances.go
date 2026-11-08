@@ -52,10 +52,9 @@ var AgentCallsPerWindow = config.DefineStored(config.Spec[int]{
 	Doc:     "Calls of any kind, tool or API, one agent passport may make per window.",
 }, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true})
 
-// AgentRoleWritesPerWindow, AgentRoleEgressPerWindow and AgentRoleCallsPerWindow
-// are each role's own value for one count. They are keyed by role key, which a
-// rename leaves alone. A role absent from a map, or set to 0, uses the
-// installation value.
+// AgentRoleWritesPerWindow is each role's own changing calls per window. The
+// role maps are keyed by role key, which a rename leaves alone. A role absent
+// from a map, or set to 0, uses the installation value.
 var AgentRoleWritesPerWindow = config.DefineStored(config.Spec[map[string]int]{
 	Key:      "installation.agent_role_writes_per_window",
 	Env:      "MARGINCE_INSTALLATION_AGENT_ROLE_WRITES_PER_WINDOW",
@@ -64,6 +63,7 @@ var AgentRoleWritesPerWindow = config.DefineStored(config.Spec[map[string]int]{
 	Doc:      "Changing calls one agent passport may make per window, by the role key of the user who connected it, as role:count pairs; 0 uses the installation value.",
 }, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true})
 
+// AgentRoleEgressPerWindow is each role's own calls leaving the workspace per window.
 var AgentRoleEgressPerWindow = config.DefineStored(config.Spec[map[string]int]{
 	Key:      "installation.agent_role_egress_per_window",
 	Env:      "MARGINCE_INSTALLATION_AGENT_ROLE_EGRESS_PER_WINDOW",
@@ -72,6 +72,7 @@ var AgentRoleEgressPerWindow = config.DefineStored(config.Spec[map[string]int]{
 	Doc:      "Calls that send something out of the workspace one agent passport may make per window, by the role key of the user who connected it, as role:count pairs; 0 uses the installation value.",
 }, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true})
 
+// AgentRoleCallsPerWindow is each role's own calls of any kind per window.
 var AgentRoleCallsPerWindow = config.DefineStored(config.Spec[map[string]int]{
 	Key:      "installation.agent_role_calls_per_window",
 	Env:      "MARGINCE_INSTALLATION_AGENT_ROLE_CALLS_PER_WINDOW",
