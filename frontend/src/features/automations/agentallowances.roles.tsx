@@ -56,8 +56,12 @@ function countColumns(
   t: Translator,
   cell: (role: RoleAllowance, row: CountRow) => ReactNode,
 ): DataTableColumn<RoleAllowance>[] {
-  // Calls first, as the readout leads with the ceiling every count sits under.
-  return [...COUNTS].reverse().map((row) => ({
+  // Calls first: the ceiling every other count sits under.
+  const order = ["calls", "writes", "egress"];
+  const rows = [...COUNTS].sort(
+    (a, b) => order.indexOf(a.copy) - order.indexOf(b.copy),
+  );
+  return rows.map((row) => ({
     key: row.property,
     header: t(`agentAllowances.${row.copy}.label`),
     align: "end" as const,
