@@ -262,7 +262,7 @@ func homeReadsGaps(source []byte, timed []string) []string {
 		return []string{"declares no HOME_READS list this check can read"}
 	}
 	var reads, gaps []string
-	for _, read := range strings.Split(string(declared[1]), ",") {
+	for read := range strings.SplitSeq(string(declared[1]), ",") {
 		if read = strings.Trim(strings.TrimSpace(read), `"`); read != "" {
 			reads = append(reads, read)
 		}
