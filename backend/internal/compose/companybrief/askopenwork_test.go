@@ -299,3 +299,21 @@ func TestTheAskPromptCarriesTheOpenWorkRule(t *testing.T) {
 		t.Error("the ask prompt lacks the open-work rule")
 	}
 }
+
+func TestACommitmentIsCitedByItsMessageNotItsClaimID(t *testing.T) {
+	for name, system := range map[string]string{
+		"ask":   AskRequest(crmcontracts.CompanyQuestionWhatsOpen, Input{}, "en").System,
+		"brief": BriefRequest(Input{}, "en").System,
+	} {
+		if !strings.Contains(system, "by its activity_id, never by its id") {
+			t.Errorf("the %s prompt does not say which id cites a commitment", name)
+		}
+	}
+	in := taskAndCommitment()
+	byClaimID := replyOf(
+		citing("Send the quote is open.", "activity", taskActivity),
+		citing("We promised the security audit.", "activity", in.OpenCommitments[0].ID))
+	if _, by := answerOpen(t, byClaimID, in); by != crmcontracts.WrittenByDeterministic {
+		t.Errorf("generated_by = %q, want the floor: the claim id is not a citable record", by)
+	}
+}

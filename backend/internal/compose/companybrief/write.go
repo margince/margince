@@ -112,7 +112,7 @@ If the summary names sections_omitted, say nothing about those subjects at all â
 
 // openWorkRule explains the summary's open work to every prompt that reads it,
 // so the brief and the answers never call a commitment a task.
-const openWorkRule = `In the summary, open_tasks are tasks somebody filed. open_commitments are promises read out of conversations and are not tasks: side says whose promise it is ("ours" or "theirs"), and holder names the contact who made a promise to us. A commitment on our side has no holder: say it is ours and name nobody. When open_work_capped or open_work_withheld is true, the lists are not the whole of what is open. Name each open item with its name, its holder and its due date wherever the summary gives them.`
+const openWorkRule = `In the summary, open_tasks are tasks somebody filed. open_commitments are promises read out of conversations and are not tasks: side says whose promise it is ("ours" or "theirs"), and holder names the contact who made a promise to us. A commitment on our side has no holder: say it is ours and name nobody. When open_work_capped or open_work_withheld is true, the lists are not the whole of what is open. Name each open item with its name, its holder and its due date wherever the summary gives them. Cite an open commitment as an activity by its activity_id, never by its id.`
 
 // briefSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 //
