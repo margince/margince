@@ -95,7 +95,7 @@ func (h Handlers) ListPassports(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	now := time.Now()
-	usage := h.liveUsage(r.Context(), rows, now)
+	usage := h.liveUsage(r.Context(), rows, identity.Roles, now)
 	data := make([]crmcontracts.PassportSummary, 0, len(rows))
 	for _, p := range rows {
 		summary := passportSummary(p)

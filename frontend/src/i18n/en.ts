@@ -15990,7 +15990,7 @@ export const en = {
   "agentAllowances.window.help":
     "How long one allowance lasts. A new length starts at the next reset, so no passport gets a fresh allowance early.",
   "agentAllowances.burst":
-    "Fixed limits on the MCP connection: {calls} calls and {streams} stream opens a minute per passport.",
+    "Fixed limits on the MCP connection: {calls} calls and {streams} stream opens a minute per passport, the same for every role.",
   "agentAllowances.pending.title": "Window change waiting",
   "agentAllowances.pending.body":
     "Each window lasts {interval} from {date} UTC. Until then the current window keeps counting.",
@@ -16012,6 +16012,35 @@ export const en = {
     "A count applies within a minute, in the window that is running. An agent already past a lowered count is refused on its next call.",
   "agentAllowances.diff.window":
     "Window {from} → {to}, starting at the next reset.",
+  "agentAllowances.installation.title": "Installation value",
+  "agentAllowances.installation.sub":
+    "Used by every role that has no value of its own, apart from the Admin preset.",
+  "agentAllowances.roles.title": "By role",
+  "agentAllowances.roles.rule":
+    "For each kind, an agent gets the highest value among its user’s roles. A role with no value of its own uses the installation value, and Admin may take its preset instead.",
+  "agentAllowances.roles.col.role": "Role",
+  "agentAllowances.roles.builtIn": "Built-in",
+  "agentAllowances.roles.source.role": "Set for this role",
+  "agentAllowances.roles.source.admin_preset": "Admin preset",
+  "agentAllowances.roles.source.installation": "Installation",
+  "agentAllowances.roles.source.installation_kept": "Kept on installation",
+  "agentAllowances.roles.editHelp":
+    "Leave a box empty to give the role’s value up; its placeholder shows the value that then applies. Type 0 to keep Admin on the installation value. Calls 50 to 20,000, changes 10 to 5,000, sends 1 to 200.",
+  "agentAllowances.roles.preset":
+    "Admin gets {calls} calls and {changes} changes while neither Admin nor the installation has a value set for that kind. The preset leaves sends as they are.",
+  "agentAllowances.roles.inherits": "Inherits {value}",
+  "agentAllowances.roles.presetValue": "Admin preset {value}",
+  "agentAllowances.roles.inputLabel": "{kind} for {role}",
+  "agentAllowances.roles.useInstallation": "Use the installation value",
+  "agentAllowances.roles.refusal":
+    "Enter a whole number in the range, or leave the box empty.",
+  "agentAllowances.diff.role": "{role}, {label} {from} → {to}",
+  "agentAllowances.diff.inherited": "installation value",
+  "agentAllowances.diff.toDefaults":
+    "Every allowance goes back to what Margince ships, the Admin preset included. A value set in the server configuration stays.",
+  "agentAllowances.diff.preset": "Admin preset",
+  "agentAllowances.diff.roles":
+    "What agents already used in this window still counts. Nothing resets.",
   "agentUsage.title": "Agent usage by user",
   "agentUsage.sub":
     "This window, summed over each user’s passports and connections. It shows how much, never which passports or what they read.",
@@ -16028,6 +16057,19 @@ export const en = {
   "agentUsage.state.ok": "Working",
   "agentUsage.state.near": "Near a limit",
   "agentUsage.state.stopped": "Stopped",
+  "agentUsage.noRole": "No role",
+  "agentUsage.check.title": "What one user’s agents get",
+  "agentUsage.check.label": "User",
+  "agentUsage.check.fromRole": "From {role}",
+  "agentUsage.check.fromInstallation": "Installation value",
+  "agentUsage.check.note":
+    "Each passport or connection counts on its own against these values, tool calls and API requests together.",
+  "agentUsage.stopped.calls":
+    "Stopped by the calls in total limit: {used} of {limit}. It may call again when the window resets, {date} UTC.",
+  "agentUsage.stopped.egress":
+    "Stopped by the sends limit: {used} of {limit}. Emails and other calls that leave Margince, website reads included, are refused until the window resets, {date} UTC.",
+  "agentUsage.stopped.writes":
+    "Stopped by the changes limit: {used} of {limit}. Its owner may be asked to approve more. Otherwise it may change records again when the window resets, {date} UTC.",
   "settings.passportColWindow": "This window",
   "settings.passportUsageToggle": "Show this window’s usage for {name}",
   "settings.passportsShowRevoked_one": "Show {count} revoked passport",

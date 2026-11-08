@@ -308,7 +308,7 @@ func (g *Gate) AdmitRead(ctx context.Context) error {
 		return nil
 	}
 	if reading := g.volume.Read(ctx, agentvolume.Calls); reading.Exceeded {
-		return &VolumeExceededError{Reading: reading}
+		return refusalOf("", reading)
 	}
 	return nil
 }

@@ -38330,6 +38330,22 @@ components:
         agent_writes_per_window: { type: integer, minimum: 10, maximum: 5000, description: 'Set the value `AgentAllowanceSettings.agent_writes_per_window` describes. Applies within a minute, in the running window.' }
         agent_egress_per_window: { type: integer, minimum: 1, maximum: 200, description: 'Set the value `AgentAllowanceSettings.agent_egress_per_window` describes. Applies within a minute, in the running window.' }
         agent_calls_per_window: { type: integer, minimum: 50, maximum: 20000, description: 'Set the value `AgentAllowanceSettings.agent_calls_per_window` describes. Applies within a minute, in the running window.' }
+        agent_allowances_to_defaults:
+          type: boolean
+          description: |
+            Put the agent counts and every role's values back to what Margince ships: their stored
+            values are removed, so they read as the defaults and the built-in Admin role takes its
+            preset again. A value a boot source sets stays. Applied before the other fields of the
+            same patch, so a count sent beside it is saved as a choice again.
+        agent_role_allowances:
+          type: array
+          maxItems: 256
+          items: { $ref: '#/components/schemas/AgentRoleAllowanceSet' }
+          description: |
+            Change some roles' own allowances. Each item names a live role by its `role_key` and
+            says which counts it sets and which it gives up; everything else is left as it is,
+            the values of a role that is archived now included. Applies within a minute, in the
+            running window, and resets no count.
         agent_window_hours:
           type: integer
           minimum: 1
@@ -39925,12 +39941,80 @@ components:
       type: object
       additionalProperties: false
       description: What each agent allowance is before an admin changes it, so a screen never restates them.
-      required: [agent_writes_per_window, agent_egress_per_window, agent_calls_per_window, agent_window_hours]
+      required: [agent_writes_per_window, agent_egress_per_window, agent_calls_per_window, agent_window_hours, admin_writes_per_window, admin_calls_per_window]
       properties:
         agent_writes_per_window: { type: integer }
         agent_egress_per_window: { type: integer }
         agent_calls_per_window: { type: integer }
         agent_window_hours: { type: integer }
+        admin_writes_per_window: { type: integer, description: 'The Admin preset for changing calls.' }
+        admin_calls_per_window: { type: integer, description: 'The Admin preset for calls of any kind. The preset leaves sends at the installation value.' }
+
+    AgentRoleAllowance:
+      type: object
+      additionalProperties: false
+      description: One live role and the allowance its users' agents get for each count.
+      required: [role_key, role_name, system, holds_preset, agent_writes_per_window, agent_egress_per_window, agent_calls_per_window]
+      properties:
+        role_key: { type: string, description: 'The role''s key: its identity, which a rename leaves alone.' }
+        role_name: { type: string }
+        system: { type: boolean, description: True for a role Margince ships. }
+        holds_preset:
+          type: boolean
+          description: |
+            True for the built-in Admin role, which the Admin preset is for, whether or not the
+            preset binds a count now. Left out of a save, this role returns to the preset.
+        agent_writes_per_window: { $ref: '#/components/schemas/AgentRoleAllowanceValue' }
+        agent_egress_per_window: { $ref: '#/components/schemas/AgentRoleAllowanceValue' }
+        agent_calls_per_window: { $ref: '#/components/schemas/AgentRoleAllowanceValue' }
+
+    AgentRoleAllowanceValue:
+      type: object
+      additionalProperties: false
+      required: [value, source, if_unset]
+      properties:
+        value: { type: integer, minimum: 1, description: The allowance this role gives for the count. }
+        source:
+          type: string
+          enum: [role, admin_preset, installation, installation_kept]
+          description: |
+            Where the value comes from. `role` is a value saved for this role. `admin_preset` is the
+            Admin preset, which binds the built-in Admin role for a count while nobody saved an
+            Admin value for it and nobody chose the installation value. `installation` is the
+            installation value, which the role inherits. `installation_kept` is the installation
+            value saved for the role as `0`, which keeps Admin off the preset for that count.
+        if_unset: { $ref: '#/components/schemas/AgentRoleAllowanceFallback' }
+
+    AgentRoleAllowanceFallback:
+      type: object
+      additionalProperties: false
+      description: What the count would give once the role's own value is given up (`unset`).
+      required: [value, source]
+      properties:
+        value: { type: integer, minimum: 1 }
+        source: { type: string, enum: [admin_preset, installation] }
+
+    AgentRoleAllowanceSet:
+      type: object
+      additionalProperties: false
+      description: |
+        One role's changes in a save. A count sent is saved for the role; `0` saves the
+        installation value, which for the built-in Admin role turns the preset off for that count.
+        A count named in `unset` loses the role's value: the role uses the installation value
+        again, and Admin returns to the preset. A count neither sent nor unset is left as it is.
+      required: [role_key]
+      properties:
+        role_key: { type: string, minLength: 1, description: The key of a live role. }
+        agent_writes_per_window: { type: integer, minimum: 0, description: '0, or 10 to 5000, the installation bounds.' }
+        agent_egress_per_window: { type: integer, minimum: 0, description: '0, or 1 to 200, the installation bounds.' }
+        agent_calls_per_window: { type: integer, minimum: 0, description: '0, or 50 to 20000, the installation bounds.' }
+        unset:
+          type: array
+          maxItems: 3
+          items:
+            type: string
+            enum: [agent_writes_per_window, agent_egress_per_window, agent_calls_per_window]
+          description: The counts whose saved value this role gives up. A count may not be both sent and unset.
 
     AgentAllowanceSettings:
       type: object
@@ -39944,7 +40028,13 @@ components:
         a count applies within a minute, in the window that is running: a raised count gives
         headroom within that minute, and a lowered one refuses an agent already past it on its
         next call. The per-minute limits are fixed by the build and shown here read-only.
-      required: [agent_writes_per_window, agent_egress_per_window, agent_calls_per_window, agent_window_hours, agent_window_resets_at, defaults, mcp_calls_per_minute, mcp_stream_opens_per_minute]
+
+        The three counts here are the installation value. `roles` lists what each live role gives.
+        An agent gets, for each count, the highest allowance among the live roles of the user who
+        connected it, where a role with no value of its own gives the installation value. Roles
+        choose the limit only: the count is still one per passport or connection, for tool calls
+        and API requests together, and a change of role or value resets nothing.
+      required: [agent_writes_per_window, agent_egress_per_window, agent_calls_per_window, agent_window_hours, agent_window_resets_at, defaults, roles, mcp_calls_per_minute, mcp_stream_opens_per_minute]
       properties:
         agent_writes_per_window: { type: integer, minimum: 10, maximum: 5000, description: 'How many changing calls one passport or connection may make per window. Default 200.' }
         agent_egress_per_window: { type: integer, minimum: 1, maximum: 200, description: 'How many calls that send something out of the workspace one passport or connection may make per window. Default 20.' }
@@ -39973,6 +40063,10 @@ components:
             is at least a minute away. Null when no change is waiting. The first window under the
             new length may be shorter than that length, never longer.
         defaults: { $ref: '#/components/schemas/AgentAllowanceDefaults' }
+        roles:
+          type: array
+          items: { $ref: '#/components/schemas/AgentRoleAllowance' }
+          description: Every live role, the seeded ones first in their order, then the others by name.
         mcp_calls_per_minute: { type: integer, description: 'How many tool calls one passport may make per minute. Fixed by the build.' }
         mcp_stream_opens_per_minute: { type: integer, description: 'How many streams one passport may open per minute. Fixed by the build.' }
 
@@ -43945,6 +44039,11 @@ components:
           description: |
             Structured machine context — e.g. `existing_id` on 409 duplicate, or an
             `errors` array of `{ field, code, message }` on 422 validation.
+
+            A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
+            `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
+            `ceiling` is the limit in force, and a window allowance adds `used` and `resets_at`.
+            The `Retry-After` header says how many seconds until the call can succeed.
 
     # ---- pagination envelope ----
     PageInfo:
@@ -72377,10 +72476,11 @@ components:
     AgentUserUsage:
       type: object
       description: |
-        One user's agents in the running window. Each count and allowance is the sum over
-        their live passports and connections, so a user with two passports has twice the
-        allowance. `state` is the worst state of any one of them.
-      required: [user_id, display_name, passport_count, writes, egress, calls, state]
+        One user's agents in the running window. Each count is the sum over their live
+        passports and connections, so a user with two passports has twice the limit there.
+        `allowance` is what one of those passports may do, and is not summed. `state` is the
+        worst state of any one of them.
+      required: [user_id, display_name, passport_count, writes, egress, calls, state, roles, allowance]
       properties:
         user_id: { type: string, format: uuid }
         display_name: { type: string }
@@ -72389,6 +72489,43 @@ components:
         egress: { $ref: '#/components/schemas/AgentCounterUsage' }
         calls: { $ref: '#/components/schemas/AgentCounterUsage' }
         state: { $ref: '#/components/schemas/AgentUsageState' }
+        roles:
+          type: array
+          items: { $ref: '#/components/schemas/AgentUserRole' }
+          description: The user's live roles, which choose their agents' allowance, by name.
+        allowance: { $ref: '#/components/schemas/AgentRoleResolvedAllowance' }
+
+    AgentUserRole:
+      type: object
+      additionalProperties: false
+      required: [role_key, role_name]
+      properties:
+        role_key: { type: string }
+        role_name: { type: string }
+
+    AgentRoleResolvedAllowance:
+      type: object
+      additionalProperties: false
+      description: |
+        What each one of this user's passports or connections may do per window, before any release,
+        and the role each count comes from.
+      required: [writes, egress, calls]
+      properties:
+        writes: { $ref: '#/components/schemas/AgentAllowanceFrom' }
+        egress: { $ref: '#/components/schemas/AgentAllowanceFrom' }
+        calls: { $ref: '#/components/schemas/AgentAllowanceFrom' }
+
+    AgentAllowanceFrom:
+      type: object
+      additionalProperties: false
+      required: [limit, role_key]
+      properties:
+        limit: { type: integer, minimum: 1 }
+        role_key:
+          type: [string, 'null']
+          description: |
+            The role whose own value, or the Admin preset, gives this count: the highest among the
+            user's roles. Null when it is the installation value.
 
     AgentCounterUsage:
       type: object
@@ -72400,8 +72537,8 @@ components:
           type: integer
           minimum: 0
           description: |
-            The allowance in force: the installation's value, plus one more allowance for each
-            release a user granted in this window.
+            The allowance in force: what the roles of the user who connected the agent give, plus
+            one more allowance for each release a user granted in this window.
         released: { type: integer, minimum: 0, description: How many times a user released more in this window. }
 
     AgentUsageState:
