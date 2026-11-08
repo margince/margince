@@ -279,7 +279,7 @@ func TestAContactOnlyADecidedPlansFootprintNamesIsExportedAndErased(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !slices.ContainsFunc(pkg.StagedMessages, func(row map[string]any) bool { return fmt.Sprint(row["id"]) == id.UUID.String() }) {
+	if !slices.ContainsFunc(pkg.StagedMessages, func(row map[string]any) bool { return fmt.Sprint(row["id"]) == id.String() }) {
 		t.Fatalf("the export lists %d staged proposals and not the one whose plan touched the subject", len(pkg.StagedMessages))
 	}
 	if err := privacy.NewEraser(s.e.DB()).EraseContact(s.e.Admin(), contact, "subject request"); err != nil {
