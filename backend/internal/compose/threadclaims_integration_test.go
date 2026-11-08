@@ -152,3 +152,20 @@ func TestAConversationWithAnUnheldPrivateReplyStaysOneConversation(t *testing.T)
 		t.Fatal("joining the conversation exposed the private reply")
 	}
 }
+
+// A reply whose header root is another seat's conversation still joins the
+// parent its seat holds, and leaves the other conversation where it was.
+func TestAReplyToAHeldParentUnderAForeignRootJoinsTheParent(t *testing.T) {
+	e := integration.Setup(t)
+	captureThreadMail(t, e, e.Rep2, threadMail(seatAddress(t, e, e.Rep2), "foreign@example.test", "Mon, 01 Jun 2026 08:00:00 +0000", ""))
+	captureThreadMail(t, e, e.Rep1, threadMail(seatAddress(t, e, e.Rep1), "mine@example.test", "Tue, 02 Jun 2026 08:00:00 +0000", ""))
+	captureThreadMail(t, e, e.Rep1, threadMail(seatAddress(t, e, e.Rep1), "reply@example.test", "Wed, 03 Jun 2026 08:00:00 +0000",
+		"mine@example.test", "foreign@example.test", "mine@example.test"))
+
+	if got, want := threadKeyOfMessage(t, e, "reply@example.test"), threadKeyOfMessage(t, e, "mine@example.test"); got != want {
+		t.Errorf("the reply is filed under %q, want its held parent's conversation %q", got, want)
+	}
+	if got := threadKeyOfMessage(t, e, "foreign@example.test"); got != "foreign@example.test" {
+		t.Errorf("the other seat's conversation moved to %q", got)
+	}
+}

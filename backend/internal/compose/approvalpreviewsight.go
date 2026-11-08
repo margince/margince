@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -16,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/finance"
 	"github.com/margince/margince/backend/internal/platform/approvalplan"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -118,7 +120,11 @@ func (r approvalPreviewReader) viewerClears(ctx context.Context, approval crmcon
 	if !ok {
 		return false, apperrors.ErrPermissionDenied
 	}
-	masked := maskedFieldsFor(viewer, approvalTargetType(approval), footprint.Objects)
+	writable, err := r.viewerWritesTarget(ctx, viewer, approval)
+	if err != nil {
+		return false, err
+	}
+	masked := maskedFieldsFor(viewer, approvalTargetType(approval), writable, footprint.Objects)
 	if slices.ContainsFunc(footprint.Fields, func(field string) bool { return slices.Contains(masked, field) }) {
 		return false, nil
 	}
@@ -127,6 +133,27 @@ func (r approvalPreviewReader) viewerClears(ctx context.Context, approval crmcon
 		return false, err
 	}
 	return r.viewerSendsFiles(ctx, footprint.Files)
+}
+
+// viewerWritesTarget answers whether the viewer may still write the approval's
+// target. Only then does a mask conditioned on write authority lift, because a
+// reader who lost that authority after deciding must not see the value again.
+func (r approvalPreviewReader) viewerWritesTarget(ctx context.Context, viewer principal.Principal, approval crmcontracts.Approval) (bool, error) {
+	target := approvalTargetType(approval)
+	if target == "" || approval.TargetEntityId == nil {
+		return false, nil
+	}
+	if slices.Equal(auth.MaskedFields(viewer, target, true), auth.MaskedFields(viewer, target, false)) {
+		return true, nil
+	}
+	id := ids.UUID(*approval.TargetEntityId)
+	var writable map[ids.UUID]bool
+	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		writable, err = auth.WritableSubset(ctx, tx, target, []ids.UUID{id})
+		return err
+	})
+	return writable[id], err
 }
 
 // recording makes every record a label or a record read resolves count as

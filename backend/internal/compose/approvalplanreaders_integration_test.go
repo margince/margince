@@ -108,6 +108,33 @@ func TestAFailedDecisionKeepsItsPlanBackOnceItsDeciderMayNotSeeIt(t *testing.T) 
 	}
 }
 
+// Rep2's role masks the deal field outside the deals they may write. While the
+// deal is theirs, their failed decision shows its plan. Once the deal moves to
+// Rep1, the mask holds again, though Rep2 can still read the deal.
+func TestAFailedDecisionKeepsItsPlanBackOnceItsDeciderMayNoLongerWriteTheTarget(t *testing.T) {
+	s := newKindSight(t)
+	s.svc.WithEffect(toolUpdateRecord, func(context.Context, ids.ApprovalID, json.RawMessage, string) error {
+		return errors.New("the record store refused the update")
+	})
+	deal := s.deal("Harbor expansion", s.e.Rep2)
+	company := s.company("Visible Holdings", s.e.Rep2, "")
+	id := s.stageCall(s.rep2(), approvals.StageInput{Kind: toolUpdateRecord, TargetType: "deal", TargetID: deal, Summary: "Move Harbor expansion to Visible Holdings"},
+		fmt.Sprintf(`{"record_type":"deal","id":%q,"fields":{"company_id":%q}}`, deal, company))
+	if _, err := s.svc.Decide(s.rep2(), id, true, nil); err == nil {
+		t.Fatal("the failing work was reported as done")
+	}
+	viewer, _ := principal.Actor(s.rep2())
+	viewer.Permissions.FieldMasks = []principal.FieldMask{{Object: "deal", Field: "company_id", Condition: principal.MaskOutsideWriteAuthority}}
+	masked := principal.WithActor(s.rep2(), viewer)
+	if shown := s.failedDecision(masked, id); shown.Approval.ProposedChange == nil {
+		t.Fatalf("the decider who may still write the deal lost its plan: %+v", shown.Approval)
+	}
+
+	s.e.WsExec(t, `UPDATE deal SET owner_id = $2 WHERE id = $1`, deal, s.e.Rep1)
+
+	requireCarriesNoPlan(t, s.failedDecision(masked, id).Approval, "Visible Holdings", company.String())
+}
+
 // A decided mail's file is later withheld. The stored plan is then checked by
 // the rule a send applies, which refuses a withheld file, as the pending plan was.
 func TestADecidedPlanWhoseFileIsWithheldStaysBack(t *testing.T) {

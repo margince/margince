@@ -357,6 +357,9 @@ var evidenceCitesSubjectActivity = `
 // is no text left to match against, and the quote is the only place those words
 // still exist.
 //
+// Every matched row's token is spent as the subject scrub spends it, because
+// redemption never reads the blanked payload.
+//
 // Pending rows are expired for the reason the subject scrub expires them — a
 // blanked card left decidable is one a colleague can still approve, and
 // approving it would run its effect against an empty payload.
@@ -387,7 +390,8 @@ func redactApprovalsCitingActivities(ctx context.Context, tx pgx.Tx, activities 
 		   SET `+blankStagedProposal+`,
 		       status          = CASE WHEN status = 'pending' THEN 'expired' ELSE status END,
 		       decision_reason = CASE WHEN status = 'pending' THEN $2 ELSE decision_reason END,
-		       decided_at      = CASE WHEN status = 'pending' THEN now() ELSE decided_at END
+		       decided_at      = CASE WHEN status = 'pending' THEN now() ELSE decided_at END,
+		       consumed_at     = coalesce(consumed_at, now())
 		 WHERE `+approvalCitesActivity+` RETURNING id`, cited, reason)
 	if err != nil {
 		return fmt.Errorf("emptying the proposals quoting the destroyed records: %w", err)
