@@ -5,6 +5,7 @@ package capture
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 
@@ -121,6 +122,17 @@ func asMailboxRun(ctx context.Context) context.Context {
 	return context.WithValue(ctx, mailboxRunKey{}, true)
 }
 
+type mailboxConnectionKey struct{}
+
+type mailboxConnection struct {
+	ID         ids.UUID
+	Generation int
+}
+
+func withMailboxConnection(ctx context.Context, id ids.UUID, generation int) context.Context {
+	return context.WithValue(ctx, mailboxConnectionKey{}, mailboxConnection{ID: id, Generation: generation})
+}
+
 func isMailboxRun(ctx context.Context) bool {
 	run, ok := ctx.Value(mailboxRunKey{}).(bool)
 	return ok && run
@@ -159,6 +171,20 @@ func (s *Sink) captureAllowedTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (
 func (s *Sink) mailboxRunAllowedTx(ctx context.Context, tx pgx.Tx) (context.Context, error) {
 	if !isMailboxRun(ctx) {
 		return ctx, nil
+	}
+	// An archived mailbox births held mail without provider keys. The lock still
+	// excludes writes from a different account generation.
+	if connection, bound := ctx.Value(mailboxConnectionKey{}).(mailboxConnection); bound {
+		var generation int
+		err := tx.QueryRow(ctx, `SELECT generation FROM capture_connection
+ WHERE id=@id AND generation=@account_generation FOR SHARE`,
+			pgx.NamedArgs{"id": connection.ID, "account_generation": connection.Generation}).Scan(&generation)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ctx, apperrors.ErrPermissionDenied
+		}
+		if err != nil {
+			return ctx, err
+		}
 	}
 	_, owner := capturePrincipal(ctx)
 	return s.captureAllowedTx(ctx, tx, owner)

@@ -203,8 +203,8 @@ type MeetingMover interface {
 // answers. A connector that decided it would be deciding for mailboxes it
 // cannot see.
 type MessageRemover interface {
-	// RemoveMessage reports that the message captured under this natural key
-	// was deleted at the provider, by the owner of the mailbox it arrived in.
+	// RemoveMessage names the provider and its mailbox-specific message id,
+	// not the stored email Message-ID. The owning mailbox comes from ctx.
 	//
 	// Whose mailbox comes from the principal on ctx, the way every other write
 	// a sync makes resolves its seat — a connector that passed an owner would
@@ -310,6 +310,9 @@ type NormalizedRecord struct {
 	// sender cannot set it the way they set a Date header. Zero when the
 	// transport states none, and a zero time proves nothing about arrival.
 	ProviderReceivedAt time.Time
+
+	// ProviderMessageID comes from the mailbox API, never the message headers.
+	ProviderMessageID string
 
 	// The provider's own filing places, each qualified by its namespace:
 	// "gmail:<labelId>", "graph:<folderId>", "imap:<mailbox>". Qualified rather

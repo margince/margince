@@ -229,18 +229,9 @@ func (a *httpAPI) Delta(ctx context.Context, accessToken, deltaLink string) ([]M
 	if err != nil {
 		return nil, nil, "", err
 	}
-	return fetchableEntries(entries), removedIDs(entries), next, nil
-}
-
-// removedIDs names the messages Graph tombstoned in this round.
-func removedIDs(entries []deltaEntry) []string {
-	var out []string
-	for _, e := range entries {
-		if e.removed {
-			out = append(out, e.id)
-		}
-	}
-	return out
+	// Folder tombstones include archive moves, which change even immutable ids.
+	// They cannot authorize irreversible deletion.
+	return fetchableEntries(entries), nil, next, nil
 }
 
 // deltaWalk follows a delta round from startURL through every nextLink until
