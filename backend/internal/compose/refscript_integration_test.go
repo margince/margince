@@ -105,7 +105,7 @@ func refHolding(req model.Request, key, text string) string {
 			return nearest
 		}
 	}
-	for _, line := range strings.Split(prompt.String(), "\n") {
+	for line := range strings.SplitSeq(prompt.String(), "\n") {
 		if _, after, found := strings.Cut(line, key+" "); found && strings.Contains(line, text) {
 			ref, _, _ := strings.Cut(after, ",")
 			return strings.TrimRight(ref, ")")

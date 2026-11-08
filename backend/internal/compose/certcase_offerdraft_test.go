@@ -97,6 +97,8 @@ func offerDraftSupportExpected(t *testing.T) json.RawMessage {
 
 // offerDraftSourceRefs is the ref the prompt shows for each fixture context
 // item, in fixture order.
+//
+// gatekit:fixture the ref the offer prompt mints for each fixture source — expected data, not a waived cost
 var offerDraftSourceRefs = map[string]string{offerDraftKickoffSource: "s1", offerDraftSupportSource: "s2"}
 
 // draftedLine renders one candidate as the prompt demands it, citing the

@@ -10,7 +10,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-func TestRefWhereFindsTheRecordByAFieldInAnyPayloadTheRequestCarries(t *testing.T) {
+func TestRefWhereFindsTheRecordByAFieldWhereverTheRequestShowsIt(t *testing.T) {
 	t.Parallel()
 	req := model.Request{Messages: []model.Message{{
 		Content: `<span>{"deal":{"id":"d1"},"timeline":[{"id":"a1","subject":"Kickoff"},{"id":"a2","subject":"Scope"}]}</span>` +
