@@ -2746,6 +2746,7 @@ export const en = {
   "shell.help.resources": "Help and resources",
   "shell.help.shortcuts": "Keyboard shortcuts",
   "shell.help.releaseNotes": "Release notes",
+  "shell.help.licenses": "Web app licenses",
   "shell.help.devBuild": "Development build",
   "shell.shortcuts.anywhere": "Anywhere",
   "shell.shortcuts.search": "Open search",
