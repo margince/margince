@@ -23,7 +23,6 @@ package gates
 // underscore, because a bare `sum` also matches `import_run.resume_count`.
 
 import (
-	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -161,7 +160,7 @@ func boundedQuantityColumns(t *testing.T, catalog string) []string {
 
 func headCatalog(t *testing.T) string {
 	t.Helper()
-	raw, err := os.ReadFile("migrations/testdata/head_catalog.txt")
+	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
 	}
