@@ -1,14 +1,14 @@
 SET LOCAL lock_timeout = '3s';
 
-CREATE FUNCTION audit_redaction_actions() RETURNS text[] LANGUAGE sql IMMUTABLE
+CREATE OR REPLACE FUNCTION audit_redaction_actions() RETURNS text[] LANGUAGE sql IMMUTABLE
 AS $$SELECT ARRAY['erase','anonymize','expire','release']::text[]$$;
 
-CREATE FUNCTION audit_redaction_boundary(payload jsonb) RETURNS uuid LANGUAGE sql IMMUTABLE
+CREATE OR REPLACE FUNCTION audit_redaction_boundary(payload jsonb) RETURNS uuid LANGUAGE sql IMMUTABLE
 AS $$SELECT CASE WHEN jsonb_typeof(payload->'boundary')='string'
  AND payload->>'boundary' ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
  THEN (payload->>'boundary')::uuid END$$;
 
-CREATE FUNCTION audit_evidence_after_erasure(verb text, before_image jsonb, after_image jsonb, payload jsonb)
+CREATE OR REPLACE FUNCTION audit_evidence_after_erasure(verb text, before_image jsonb, after_image jsonb, payload jsonb)
 RETURNS jsonb LANGUAGE sql IMMUTABLE
 AS $$SELECT audit_redacted_evidence(
  (verb=ANY(audit_redaction_actions()) OR verb IN ('pin','restrict'))

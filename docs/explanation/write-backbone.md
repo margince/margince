@@ -124,7 +124,7 @@ Set up in `backend/migrations/core/0001_baseline.up.sql`; later migrations only 
 
 The row's ID, actor, action and time cannot change. The app role cannot delete an audit row.
 It can update only `before`, `after` and `evidence`, and the trigger allows only a fixed change.
-The trigger and column grants are in [the audit change](../../backend/migrations/core/1794066141_privacy_certificates_allow_payload_redaction.up.sql).
+The trigger and column grants are in [the audit change](../../backend/migrations/core/1794074311_privacy_certificates_allow_payload_redaction.up.sql).
 
 `storekit.RedactAuditHistory` needs a privacy proof written in the same transaction.
 It keeps fixed states and dates, removes personal fields and marks the erasure. A proof keeps typed
