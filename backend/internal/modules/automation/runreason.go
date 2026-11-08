@@ -44,6 +44,16 @@ var failureReasons = []failureReason{
 
 const genericFailureText = "the action could not be completed"
 
+// unconfirmedWriteText is a released write that got no answer it could read.
+const unconfirmedWriteText = "the system of record did not confirm the change, so it may have landed; " +
+	"check the record before running the action again"
+
+// WriteRefused reports whether err is one of the refusals failureReasons names.
+// Each is an answer from the writer, so the write did not land.
+func WriteRefused(err error) bool {
+	return sanitizedReason(err) != genericFailureText
+}
+
 // RunReasonCodes lists every code a troubled run can carry, so a client's
 // translation table can be checked against it.
 func RunReasonCodes() []string {

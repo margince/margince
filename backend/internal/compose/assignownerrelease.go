@@ -28,6 +28,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/automation"
@@ -43,30 +46,22 @@ import (
 // a later human edit must still read as stronger than it.
 const assignOwnerReleaseActor = "system:assign-owner-release"
 
+// runFailureMarkTimeout bounds marking a run failed after a remote write. The
+// mark is detached from the request, because a timed-out request is the case
+// it records.
+const runFailureMarkTimeout = 30 * time.Second
+
 // assignOwnerReleaseEffect executes an approved at-scale reassignment and
-// finishes the run that waited for it.
+// finishes its run. The write carries the approval's version pin.
 //
-// Redeem-then-execute, like every 🟡 executor here, and the version pin is why
-// it cannot be the other way round. The redemption re-checks that the target
-// still carries the version the staging pinned; performing the write first
-// would bump that version and the redemption would then refuse the very write
-// it had just authorized. Ordering is not a preference here — one order does
-// not work.
+// With recordUpdaterTx, redemption, write and run completion share one
+// transaction. A failed write leaves the approval unconsumed, so deciding again
+// re-drives it.
 //
-// The version the redemption returns is carried straight into the write as
-// IfVersion, which is what closes the gap the ordering opens. Between the
-// redemption committing and the provider being called, the record is
-// unprotected; pinning the write to the version the approval was granted
-// against means anything that moved it in that window makes the write refuse
-// rather than silently overwrite somebody.
-//
-// A write that fails leaves the approval spent — the accepted trade of the
-// redeem-then-execute discipline, and the reason Decide reports the executor's
-// cause to its caller rather than swallowing it. What must not happen is the
-// run reporting success: the transition runs only after the write returns, so a
-// failed reassignment leaves its run parked and honest.
+// Any other provider is another system, so the approval is redeemed before the
+// write is sent. A failed or unanswered write is never re-sent. The run is
+// marked failed, and the decider learns whether the change may have landed.
 func assignOwnerReleaseEffect(svc *approvals.Service, provider datasource.SystemOfRecordProvider, db *database.DB) approvals.ApprovedEffect {
-	kind := string(workflow.ActionAssignOwner)
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
 		entityType, entityID, err := svc.StagedTarget(ctx, approvalID)
 		if err != nil {
@@ -76,33 +71,90 @@ func assignOwnerReleaseEffect(svc *approvals.Service, provider datasource.System
 		if !ok {
 			return errors.New("compose: assign_owner release without a deciding principal")
 		}
-		version, pinned, err := svc.Redeem(ctx, approvalID, kind, diffHash)
-		if err != nil {
-			return err
-		}
+		// The redemption runs as the decider and the write as the system actor.
 		execCtx := principal.WithActor(ctx, principal.Principal{
 			Type:       principal.PrincipalSystem,
 			ID:         assignOwnerReleaseActor,
 			UserID:     decider.UserID,
 			OnBehalfOf: decider.UserID,
 		})
-		var ifVersion *int64
-		if pinned {
-			ifVersion = &version
+		release := ownerRelease{
+			svc: svc, db: db, approvalID: approvalID, diffHash: diffHash,
+			// The patch is handed over as staged. The provider owns which fields
+			// an entity type accepts, so compose does not re-encode it.
+			in: datasource.UpdateInput{
+				Ref:    datasource.EntityRef{Type: datasource.EntityType(entityType), ID: entityID},
+				Patch:  proposedChange,
+				Source: assignOwnerReleaseActor,
+			},
 		}
-		// The patch is handed over exactly as staged — the canonical form of the
-		// action's own args — rather than decoded and re-encoded here. The
-		// provider owns which fields an entity type accepts, and unpacking the
-		// payload at this layer would be compose forming a second opinion about
-		// that, which is how the released write stops being the same write.
-		if _, err := provider.Update(execCtx, datasource.UpdateInput{
-			Ref:       datasource.EntityRef{Type: datasource.EntityType(entityType), ID: entityID},
-			Patch:     proposedChange,
-			Source:    assignOwnerReleaseActor,
-			IfVersion: ifVersion,
-		}); err != nil {
-			return fmt.Errorf("compose: applying the approved reassignment: %w", err)
+		if local, ok := provider.(recordUpdaterTx); ok {
+			return releaseInOneTransaction(ctx, execCtx, release, local)
 		}
-		return automation.CompleteApprovedRun(execCtx, db, approvalID)
+		return releaseThenWrite(ctx, execCtx, release, provider)
 	}
+}
+
+// ownerRelease is one approved reassignment on its way to the record.
+type ownerRelease struct {
+	svc        *approvals.Service
+	db         *database.DB
+	approvalID ids.ApprovalID
+	diffHash   string
+	in         datasource.UpdateInput
+}
+
+// releaseInOneTransaction redeems, writes and completes the run in one
+// transaction.
+func releaseInOneTransaction(ctx, execCtx context.Context, r ownerRelease, local recordUpdaterTx) error {
+	write, err := local.PrepareUpdateTx(execCtx, r.in.Ref.Type)
+	if err != nil {
+		return fmt.Errorf("compose: preparing the approved reassignment: %w", err)
+	}
+	return r.svc.RedeemAndApplyPinned(ctx, r.approvalID, string(workflow.ActionAssignOwner), r.diffHash,
+		func(tx pgx.Tx, version int64, pinned bool) error {
+			if _, err := write(execCtx, tx, r.pinnedTo(version, pinned)); err != nil {
+				return fmt.Errorf("compose: applying the approved reassignment: %w", err)
+			}
+			return automation.CompleteApprovedRunTx(execCtx, tx, r.approvalID)
+		})
+}
+
+// releaseThenWrite spends the approval, then sends the write to a system whose
+// transaction it cannot join.
+func releaseThenWrite(ctx, execCtx context.Context, r ownerRelease, provider datasource.SystemOfRecordProvider) error {
+	version, pinned, err := r.svc.Redeem(ctx, r.approvalID, string(workflow.ActionAssignOwner), r.diffHash)
+	if err != nil {
+		return err
+	}
+	if _, err := provider.Update(execCtx, r.pinnedTo(version, pinned)); err != nil {
+		return r.remoteWriteFailed(execCtx, err)
+	}
+	return automation.CompleteApprovedRun(execCtx, r.db, r.approvalID)
+}
+
+// remoteWriteFailed records a write that failed after its approval was spent.
+// A refusal changed nothing. Any other error may have come after the write
+// landed, so it is reported as unconfirmed and never re-sent.
+func (r ownerRelease) remoteWriteFailed(execCtx context.Context, cause error) error {
+	failure := fmt.Errorf("compose: the system of record refused the approved reassignment: %w", cause)
+	if !automation.WriteRefused(cause) {
+		failure = fmt.Errorf("compose: the approved reassignment was sent and not confirmed: %w: %w",
+			approvals.ErrEffectUnconfirmed, cause)
+	}
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(execCtx), runFailureMarkTimeout)
+	defer cancel()
+	if err := automation.FailApprovedRun(ctx, r.db, r.approvalID, cause); err != nil {
+		return errors.Join(failure, fmt.Errorf("compose: marking the reassignment's run failed: %w", err))
+	}
+	return failure
+}
+
+// pinnedTo is the release's input bound to the version the approval pinned.
+func (r ownerRelease) pinnedTo(version int64, pinned bool) datasource.UpdateInput {
+	in := r.in
+	if pinned {
+		in.IfVersion = &version
+	}
+	return in
 }

@@ -222,15 +222,9 @@ func TestApprovingAReassignmentMovesTheOwnerAndCompletesItsRun(t *testing.T) {
 	}
 }
 
-// The ordering argument, stated as a test: a write that FAILS must not leave a
-// run claiming the work happened.
-//
-// The approval is spent either way — redeem-then-execute is the discipline every
-// 🟡 executor here follows, and the version pin makes the reverse order
-// impossible (the write would bump the version its own redemption checks). What
-// the ordering does buy is an honest run: the transition runs only after the
-// provider returns, so a failed reassignment leaves its firing parked rather
-// than reporting an owner change that never happened.
+// A write that FAILS must not leave a run claiming the work happened. The run
+// completes in the write's own transaction, so a failed reassignment leaves its
+// firing parked.
 func TestAFailedReassignmentDoesNotMarkItsRunApplied(t *testing.T) {
 	e := integration.Setup(t)
 	svc := NewApprovalsServiceWithEffects(e.Pool)
