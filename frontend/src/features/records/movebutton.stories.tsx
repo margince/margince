@@ -106,12 +106,48 @@ export const CreateTaskRefused: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Add task" }),
+      await canvas.findByRole("button", { name: "Create follow-up" }),
     );
     await expect(await canvas.findByRole("alert")).toHaveTextContent(
       "The deal this task names is archived.",
     );
   },
+};
+
+// The press wrote the task. The verb gives way to a line that names it and
+// links to it, so the reader sees what they made.
+export const CreateTaskCreated: Story = {
+  beforeEach: () => {
+    installFetchStub({
+      "GET /me": meRoute({ activity: ["read", "create", "update"] }),
+      "POST /tasks": () =>
+        jsonResponse(
+          { id: "task-9", subject: "Send the revised offer", deal_id: "d-1" },
+          201,
+        ),
+    });
+  },
+  args: CREATE_TASK,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Create follow-up" }),
+    );
+    await expect(await canvas.findByRole("status")).toHaveTextContent(
+      "Follow-up created",
+    );
+    await expect(
+      canvas.getByRole("button", { name: "Open task" }),
+    ).toBeVisible();
+    await expect(
+      canvas.queryByRole("button", { name: "Create follow-up" }),
+    ).toBeNull();
+  },
+};
+
+export const CreateTaskCreatedDark: Story = {
+  ...CreateTaskCreated,
+  globals: { theme: "dark" },
 };
 
 export const RecommendationChangedDark: Story = {

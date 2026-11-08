@@ -50,7 +50,7 @@ a separate relay moves it to the bus later. A crash between commit and relay lea
 tables and SQL; the rules that must always hold live here. These functions carry the write shape:
 
 ```go
-// Writes the append-only audit_log row inside the mutation's tx; RETURNS its id
+// Writes the audit_log row inside the mutation's tx; RETURNS its id
 // so the paired event can carry it as trace.audit_log_id.
 func Audit(ctx, tx, action, entityType string, entityID ids.UUID, before, after any) (ids.UUID, error)
 
@@ -104,7 +104,7 @@ event stay one story.
 
 ---
 
-## 2. `audit_log`: the record that never changes
+## 2. `audit_log`: a record of who did what
 
 Set up in `backend/migrations/core/0001_baseline.up.sql`; later migrations only add to it.
 
@@ -122,15 +122,20 @@ Set up in `backend/migrations/core/0001_baseline.up.sql`; later migrations only 
 | `evidence` | data about the action (`jsonb`) |
 | `occurred_at` | `timestamptz DEFAULT now()` |
 
-**Add-only, held in two ways.** A trigger returns an error on any change. The app role also holds
-only `SELECT` and `INSERT` on the table (in the first migration). So an attempt to change a row *fails*
-with an error, and never does nothing without a word:
+The row's ID, actor, action and time cannot change. The app role cannot delete an audit row.
+It can update only `before`, `after` and `evidence`, and the trigger allows only a fixed change.
+The trigger and column grants are in [the audit change](../../backend/migrations/core/1794074311_privacy_certificates_allow_payload_redaction.up.sql).
 
-```sql
-CREATE TRIGGER trg_audit_no_mutate BEFORE UPDATE OR DELETE ON audit_log
-  FOR EACH ROW EXECUTE FUNCTION audit_log_immutable();   -- RAISE EXCEPTION … ERRCODE 'check_violation'
--- and the baseline grants margince_app only: GRANT SELECT,INSERT ON TABLE audit_log TO margince_app;
-```
+`storekit.RedactAuditHistory` needs a privacy proof written in the same transaction.
+It keeps fixed states and dates, removes personal fields and marks the erasure. A proof keeps typed
+counts, retention metadata and a valid request reference. Contact erasure reasons cannot copy names or addresses. Hold and release decisions keep the reason and name of the one who decided.
+It cancels kept outbox copies, including those whose audit entry names the erased record
+while their event names a parent record.
+
+The background task uses each earlier proof as its last entry to erase. Its new audit entry records
+payload erasure on that proof, so later allowed edits keep their values and history.
+A task for linked copies names one audit row. Its proof keeps the domain boundary fixed.
+It removes the first request audit entry's private values last, after that entry has guided the other changes.
 
 The actor columns mirror the envelope's `Actor` (see *The envelope*): the same kinds of actor. A
 fitness test keeps the two in step, so a new kind cannot reach the bus and break the mirror.

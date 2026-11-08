@@ -13,6 +13,17 @@ const RECORD_PATH = new RegExp(
   `^/r/(deals|companies|contacts)/(${IDENTIFIER})$`,
 );
 
+/**
+ * Whether a pathname is one this module publishes or restores: a record, a
+ * booking page or the consent screen.
+ *
+ * Exported so the served-path check reads this notion rather than keeping a
+ * second copy. Two copies disagree the first time one gains an address.
+ */
+export function namesAnAppAddress(pathname: string): boolean {
+  return isMirroredPath(pathname) || pathname === CONSENT_PATH;
+}
+
 export function appHref(href: string): string;
 export function appHref(href: string | undefined): string | undefined;
 export function appHref(href: string | undefined): string | undefined {

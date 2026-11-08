@@ -189,6 +189,8 @@ describe("the receipt draws every lane it promises", () => {
     expect(
       screen.queryByText("Some activity could not be counted."),
     ).toBeNull();
+    // Housekeeping is left out without a count.
+    expect(screen.queryByText(/12 changes are not shown/)).toBeNull();
   });
 
   it("does not call an empty receipt clear when entity kinds cannot be placed", async () => {

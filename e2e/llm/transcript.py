@@ -7,6 +7,7 @@ tests/test_transcript.py fails on one.
 """
 
 import json
+import os
 import re
 
 SERVER = "margince_e2e_llm"
@@ -211,25 +212,42 @@ _AGY_RESOURCE_HELPERS = {"list_resources", "read_resource"}
 _AGY_SCHEMA_DIR = f"/mcp/{SERVER}/"
 # A long tool result is not put in the model's context: agy writes it to this
 # file of the conversation and the model reads it back.
-_AGY_SPILL = re.compile(r"/brain/[^/]+/\.system_generated/steps/(\d+)/[a-z0-9_]+\.txt$")
+_AGY_SPILL = re.compile(r"/\.gemini/antigravity-cli/brain/([^/]+)/\.system_generated/steps/\d+/[a-z0-9_]+\.txt$")
 
 
-def _agy_tool(out, step, lane_steps):
+# The run's own folder holds nothing but the agent file, so a look into it
+# reads no answer; a look anywhere else stops the run.
+_AGY_LOOKS = {"read_file", "view_file", "list_dir", "find_by_name", "grep_search"}
+
+
+def _inside(workspace, params):
+    paths = [os.path.realpath(v) for v in params.values() if isinstance(v, str) and v.startswith("/")]
+    root = os.path.realpath(workspace) if workspace else ""
+    return bool(root and paths) and all(p == root or p.startswith(root + os.sep) for p in paths)
+
+
+def _agy_tool(out, step, conversation, workspace=""):
     """Write one finished agy tool step; return why the run must stop, or ""."""
     name = step.get("tool_name")
     info = step.get("tool_info") or {}
     params = info.get("parameters") or {}
     path = str(params.get("Path") or "")
+    if name in _AGY_LOOKS and _inside(workspace, params):
+        return ""
     if name == "read_file" and _AGY_SCHEMA_DIR in path:
         return ""
-    spill = _AGY_SPILL.search(path)
-    if name == "read_file" and spill and int(spill.group(1)) in lane_steps:
+    spill = _AGY_SPILL.search(os.path.realpath(path)) if path else None
+    # Every step of this conversation is one the lane allows, since any other
+    # stops the run, so a file agy spilled for it holds nothing from outside.
+    if name == "read_file" and spill and conversation and spill.group(1) == conversation:
         return ""
     if name in _AGY_RESOURCE_HELPERS and params.get("ServerName") == SERVER:
-        lane_steps.add(step.get("step_index"))
+        return ""
+    # A call that names no server, or another, and ended in an error reached
+    # nothing; a successful one would have brought data from outside.
+    if name == "call_mcp_tool" and params.get("ServerName") != SERVER and step.get("state") == "ERROR":
         return ""
     if name == "call_mcp_tool" and params.get("ServerName") == SERVER:
-        lane_steps.add(step.get("step_index"))
         call_id = f"agy_{step.get('step_index')}"
         arguments = params.get("Arguments")
         out.assistant("", [(call_id, params.get("ToolName") or "", arguments if isinstance(arguments, dict) else {})])
@@ -255,13 +273,13 @@ def _agy_usage(usage):
     }
 
 
-def from_agy(lines, path, model, driver, offered):
+def from_agy(lines, path, model, driver, offered, workspace=""):
     """Write an `agy -p --output-format stream-json` run as a transcript: 0 when it ran, 3 when not.
 
     agy's init lists its whole tool registry, not what the model was offered, so
     `offered` is the lane's own tools/list over the same passport.
     """
-    texts, lane_steps, result = {}, set(), None
+    texts, conversation, result = {}, "", None
     with Transcript(path) as out:
         out.init(model, driver, "cli-default", "listed-by-lane", offered)
         for line in lines:
@@ -273,6 +291,7 @@ def from_agy(lines, path, model, driver, offered):
                 result = event.get("result") or {}
                 continue
             step = event.get("step_update") or {}
+            conversation = conversation or event.get("conversation_id") or step.get("conversation_id") or ""
             kind, state = step.get("step_type"), step.get("state")
             if kind == "agent_response":
                 texts[step.get("step_index")] = texts.get(step.get("step_index"), "") + (step.get("text_delta") or "")
@@ -281,7 +300,7 @@ def from_agy(lines, path, model, driver, offered):
                 if state == "DONE" and texts.get(step.get("step_index")):
                     out.assistant(texts.pop(step.get("step_index")))
             elif step.get("tool_name") and state in ("DONE", "ERROR"):
-                stop = _agy_tool(out, step, lane_steps)
+                stop = _agy_tool(out, step, conversation, workspace)
                 if stop:
                     out.finish(True, f"HARNESS: {stop}", 0)
                     return 3

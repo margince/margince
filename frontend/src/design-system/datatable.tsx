@@ -351,10 +351,11 @@ function foldPlace<Row>(
 }
 
 // Both choices are a cell's own, so the heading and every row wear the same
-// class and cannot come apart.
+// class and cannot come apart. A column of verbs (no drawn heading) sits on the
+// end edge too, so the last control of every table lines up with the card's.
 function columnClass<Row>(column: DataTableColumn<Row>): string | undefined {
   const classes = [
-    column.align === "end" ? "datatable-end" : "",
+    column.align === "end" || column.headerHidden ? "datatable-end" : "",
     column.grow ? "datatable-grow" : "",
     column.key === GRIP_COLUMN ? "datatable-grip" : "",
     column.fold === "only" ? "datatable-fold-only" : "",

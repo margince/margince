@@ -3,14 +3,13 @@
 
 // Why a row is on the list and what it asks, where its details open.
 //
-// A row's reasons are a phrase line sized for scanning, and its consequence is
-// drawn nowhere on it. A details view that leaves both out shows a title and a
-// date. That says neither what the work is nor what to do about it.
+// A row says one current reason. Its details list every concrete fact behind
+// it, and leave out how the row ranks against the rest of the queue.
 
 import { Panel, PanelBody } from "../../design-system/panel";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useViewerZone } from "../../lib/viewerzone";
-import { partyName, reasonText } from "../../lib/worklistcopy";
+import { factReasons, partyName, reasonText } from "../../lib/worklistcopy";
 import { askKey } from "./worklist.ask";
 import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import type { WorklistItem } from "./worklist.queries";
@@ -62,12 +61,6 @@ export function WorklistWhy({
             ) : (
               <p>{detail}</p>
             ))}
-          {item.consequence !== "none" && (
-            <p className="worklist-why-if">
-              <span className="t-caption">{t("worklist.why.consequence")}</span>{" "}
-              {consequenceText(item.consequence, partyName(item), t)}
-            </p>
-          )}
           {answer && <RowVerbs item={item} />}
         </div>
       </PanelBody>
@@ -101,19 +94,8 @@ function whyReasons(
   zone: string,
 ): string[] {
   // A reason said twice is read once, and the text is then its own key.
-  const said = item.because
+  const said = factReasons(item)
     .map((reason) => reasonText(reason, t, locale, zone, partyName(item)))
     .filter((text): text is string => text !== null);
   return [...new Set(said)];
-}
-
-// The cost of waiting names who waits, when the row knows them.
-function consequenceText(
-  consequence: Exclude<WorklistItem["consequence"], "none">,
-  party: string | undefined,
-  t: Translator,
-): string {
-  if (consequence === "buyer_waits" && party)
-    return t("worklist.consequence.buyer_waits.named", { name: party });
-  return t(`worklist.consequence.${consequence}`);
 }

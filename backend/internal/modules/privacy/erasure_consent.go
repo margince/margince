@@ -308,14 +308,15 @@ func tombstoneExceptionExplanations(ctx context.Context, tx pgx.Tx, contactID id
 // (consent/dsr.go) clears it in the same statement that closes it, which is the
 // only place that can: no other transaction may touch a row this one holds.
 func retireRightsCases(ctx context.Context, tx pgx.Tx, contactID ids.UUID, fulfilling ids.UUID) error {
-	if _, err := tombstoneRightsCases(ctx, tx, `
+	cleared, err := tombstoneRightsCases(ctx, tx, `
 		id IN (SELECT id FROM data_subject_request
 		        WHERE (contact_id = $1 OR subject_ref = $1::text)
-		          AND id IS DISTINCT FROM $2
-		        FOR UPDATE)`, contactID, fulfilling); err != nil {
+		          AND id IS DISTINCT FROM $2 AND NOT dispute_open
+		        FOR UPDATE)`, contactID, fulfilling)
+	if err != nil {
 		return fmt.Errorf("privacy: retiring the subject's rights cases: %w", err)
 	}
-	return nil
+	return tombstoneCollateralScrubs(ctx, tx, "data_subject_request", cleared, subjectRedactionReason, subjectRedactionCause)
 }
 
 // RetireExpiredRightsCaseTx takes the requester off one closed case whose
@@ -326,13 +327,13 @@ func RetireExpiredRightsCaseTx(ctx context.Context, tx pgx.Tx, caseID ids.UUID) 
 		return false, err
 	}
 	retired, err := tombstoneRightsCases(ctx, tx, `id = $1 AND NOT dispute_open`, caseID)
-	return retired == 1, err
+	return len(retired) == 1, err
 }
 
 // tombstoneRightsCases writes a rights case's tombstone for both callers above:
 // the cases the predicate selects lose their reference and prose.
-func tombstoneRightsCases(ctx context.Context, tx pgx.Tx, predicate string, args ...any) (int64, error) {
-	tag, err := tx.Exec(ctx, `
+func tombstoneRightsCases(ctx context.Context, tx pgx.Tx, predicate string, args ...any) ([]ids.UUID, error) {
+	return scrubbedIDs(ctx, tx, `
 		UPDATE data_subject_request
 		   SET subject_ref = 'erased+' || id,
 		       resolution = CASE WHEN resolution IS NULL THEN NULL ELSE 'erased' END,
@@ -343,8 +344,7 @@ func tombstoneRightsCases(ctx context.Context, tx pgx.Tx, predicate string, args
 		       -- case nothing will resolve it again, so the link goes.
 		       contact_id = CASE WHEN status IN ('open', 'in_progress')
 		                         THEN contact_id ELSE NULL END
-		 WHERE `+predicate, args...)
-	return tag.RowsAffected(), err
+		 WHERE (`+predicate+`) AND NOT dispute_open RETURNING id`, args...)
 }
 
 // fulfillingCase answers which rights case this erasure is being run to fulfil,

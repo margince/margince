@@ -70,7 +70,7 @@ func (h marginceChangeHandlers) GetPendingMarginceChanges(w http.ResponseWriter,
 	out := crmcontracts.MarginceChangeSummary{
 		AsOf: h.now(), Deals: summary.Deals, Closed: summary.Closed, Redated: summary.Redated,
 		Revalued: summary.Revalued, Probabilities: summary.Probabilities, Moved: summary.Moved, Opened: summary.Opened, Revived: summary.Revived,
-		BaseCurrency: summary.BaseCurrency, Truncated: summary.Truncated,
+		BaseCurrency: summary.BaseCurrency, Truncated: summary.Truncated, UndoableDeals: &summary.UndoableDeals,
 		Bundles: make([]crmcontracts.MarginceChangeBundle, 0, len(summary.Bundles)),
 	}
 	for _, b := range summary.Bundles {
@@ -80,7 +80,8 @@ func (h marginceChangeHandlers) GetPendingMarginceChanges(w http.ResponseWriter,
 		}
 		out.Bundles = append(out.Bundles, crmcontracts.MarginceChangeBundle{
 			DealId: openapi_types.UUID(b.DealID.UUID), DealName: b.DealName, Version: b.Version,
-			AuditLogIds: wireUUIDs(b.AuditLogIDs), Kinds: kinds, ValueBaseMinor: b.ValueBaseMinor, LatestAt: b.LatestAt,
+			AuditLogIds: wireUUIDs(b.AuditLogIDs), UndoableAuditLogIds: new(wireUUIDs(b.UndoableAuditLogIDs)),
+			Kinds: kinds, ValueBaseMinor: b.ValueBaseMinor, LatestAt: b.LatestAt,
 		})
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)

@@ -62,6 +62,7 @@ export function WorklistBody({
   onSelect,
   onOpenEmail,
   cursor,
+  complete,
   loadingMore,
   moreFailed,
   onMore,
@@ -86,8 +87,10 @@ export function WorklistBody({
   // one's copy goes stale once a reader pages.
   walk: WorklistWalk | undefined;
   onRefresh: () => void;
-  // Where the next batch starts; absent once the view is wholly loaded.
+  // Where the next batch starts; absent once nothing more can be paged.
   cursor: string | undefined;
+  // The last page says the list is whole, so its end may say "all loaded".
+  complete: boolean;
   loadingMore: boolean;
   moreFailed: boolean;
   onMore: () => void;
@@ -292,7 +295,7 @@ export function WorklistBody({
             loading={loadingMore}
             failed={moreFailed}
             onLoadMore={onMore}
-            end={queue.length > 0 ? t(`worklist.end.${view}`) : undefined}
+            end={endLine(t, view, queue.length > 0 && complete)}
           />
           {view === "today" && filter === "all" && (
             <UpcomingSection
@@ -413,4 +416,13 @@ function PageZonesWhenPaned({
       main={queue}
     />
   );
+}
+
+// "All loaded" only over rows the last page says are the whole list.
+function endLine(
+  t: ReturnType<typeof useT>,
+  view: WorklistView,
+  wholeList: boolean,
+): string | undefined {
+  return wholeList ? t(`worklist.end.${view}`) : undefined;
 }

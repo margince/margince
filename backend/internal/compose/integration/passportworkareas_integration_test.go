@@ -106,7 +106,7 @@ func TestAPassportIsHeldToTheAreasItsUserChose(t *testing.T) {
 		t.Fatalf("read_workspace lists topics %v; want %s and not %s", topics, salesTopic, adminTopic)
 	}
 	refusal := client.CallRefused(t, "read_workspace", AnyMap{"topic": adminTopic})
-	if !strings.Contains(refusal, "“Admin settings”") || !strings.Contains(refusal, "Settings → AI access") {
+	if !strings.Contains(refusal, "“Admin settings”") || !strings.Contains(refusal, "Settings → AI assistants") {
 		t.Fatalf("MCP read_workspace %s refused with %q; want the area and where to turn it on", adminTopic, refusal)
 	}
 	client.CallOK(t, "read_workspace", AnyMap{"topic": salesTopic})

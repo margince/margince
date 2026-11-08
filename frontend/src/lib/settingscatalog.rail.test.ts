@@ -55,16 +55,14 @@ describe("what the rail carries and what it leaves behind", () => {
   it("gives a rep the pages they work in, and only those", () => {
     const reach = settingsReach(seededRep);
     expect(reach.acts.map((page) => page.id)).toEqual([
-      // Their own six, minus Voice — a rep holds voice_profile create and
-      // update, so Voice IS theirs; it is here for that reason and not because
-      // the page sits under their own heading.
+      // Their own six, Voice included. A rep holds voice_profile create and
+      // update, so Voice is theirs by grant, not by its heading.
       "account",
+      "notifications",
       "meetings",
       "voice",
       "agents",
-      "notifications",
       "connections",
-      "capture-activity",
       // Products and offer templates: a rep authors both.
       "products",
       // Capture rules, because a rep holds `company:update` and
@@ -78,23 +76,13 @@ describe("what the rail carries and what it leaves behind", () => {
   it("leaves the pages a rep can only read out of the rail, not out of reach", () => {
     const reach = settingsReach(seededRep);
     expect(reach.looksUp.map((page) => page.id)).toEqual([
-      "pipelines",
+      // Pipelines and the deal vocabularies: a rep reads the stages, picks a
+      // source or a loss reason and answers the review, and changes none.
+      "deals",
       "leads",
-      // The acquisition-source catalog, gated on custom_field like the lead
-      // vocabulary beside it: a rep reads the channels and changes none.
-      "acquisition",
-      // The loss reasons, gated the same way: a rep picks one when a deal is
-      // lost and changes the list nowhere.
-      "lossreasons",
       "partners",
-      // The outcome-review questions: a rep is asked them when a deal closes
-      // and reads them here, but editing them is custom_field update.
-      "reviewtemplates",
-      // The responsibility-role vocabulary, gated the same way: a rep reads
-      // the roles and changes none.
-      "recordroles",
-      "fields",
-      "tags",
+      // Fields, tags and responsibility roles, read and never edited by a rep.
+      "records",
       "knowledge",
     ]);
     // Integrations and Automations are absent from BOTH halves, and that is

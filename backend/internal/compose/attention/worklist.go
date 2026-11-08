@@ -139,7 +139,7 @@ func (s *Service) worklistIn(
 	// must not sit on the shared service, for the reason feed.go's assembleDay
 	// gives about the findings.
 	withPins = withPins.readingScores(beside.night.scores, beside.night.cutoff)
-	withPins = withPins.readingBacklog(ctx, day, beside.until, beside.zone, token == "")
+	withPins = withPins.readingBacklog(ctx, day, beside, token == "")
 	withPins, planErr := withPins.readingPlan(ctx, resolved, day.AsOf)
 	withPins, awaitingErrs := withPins.readingAwaiting(ctx, day.AsOf, beside.zone)
 	horizon := reader.meetingHorizon(ctx, day, beside.until)

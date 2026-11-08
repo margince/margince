@@ -116,6 +116,7 @@ func (r attentionReceipts) RecentWithMore(ctx context.Context, since time.Time, 
 // the date moved. The recorded basis explains why the sweep acted.
 func correctionReceipt(c deals.CorrectionReceipt) attention.Receipt {
 	receipt := correctionReceiptOfKind(c)
+	receipt.Source, receipt.AuditLogID = attention.ReceiptFromCorrection, c.AuditLogID
 	receipt.Reason = c.Basis
 	receipt.CustomerQuote = quotedFacts(c.Evidence).Quote
 	if receipt.Reason == "" && receipt.CustomerQuote == "" {
@@ -242,6 +243,7 @@ func receiptsWithin(rows []crmcontracts.Approval, since time.Time) []attention.R
 			summary = *row.Summary
 		}
 		receipt := attention.Receipt{
+			Source:           attention.ReceiptFromApproval,
 			ID:               ids.UUID(row.Id),
 			Kind:             row.Kind,
 			Summary:          summary,

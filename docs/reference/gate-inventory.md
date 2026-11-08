@@ -353,6 +353,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `lintbuildtagreach_test.go` | H2 | Every Go file in this repository is compiled by a pass the merge gate runs, analysed by one that lints, and read by both lint configs or neither. |
 | `listedmailfilesingle_test.go` | H2 | The rules that keep a mail file off a Documents list are spelled once. |
 | `machineryapplied_test.go` | H2 | Every setting read through an ungated machinery reader (settings.ApplyTx or settings.ApplyManyTx) is declared MachineryApplied. |
+| `magicfieldcensus_test.go` | H2 | Every column of a record a reader edits is shown on a receipt or declared internal. |
 | `mailboxproofwriters_test.go` | H2 | A MailboxProof is set in one place, and that place spends the token that earns it. |
 | `maillanguagereader_test.go` | H2 | One reader of the installation's base language. |
 | `makefilepaths_test.go` | H1 | Every config file the Makefiles name is a config file that exists. |
@@ -436,6 +437,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `rulebookdelegation_test.go` | H3 | AGENTS.md is the rulebook, at the root and in any directory that needs one of its own. |
 | `runledgerretention_test.go` | H3 | Every ledger of executions either states its window or says why it has none. |
 | `satellite_lifecycle_test.go` | H2 | Every table with a contact\_id column is reached by the retention anonymizer, the merge relink and the archive cascade, or says why not. |
+| `scorecolumnbounds_test.go` | H2 | Every column holding a bounded quantity states the bound in the schema. |
 | `scrubbedentitytypes_test.go` | H2 | Which record types a scrub verb is ever written against. |
 | `scrubverbs_test.go` | H2 | Every verb the privacy module writes is judged a scrub or ratified as not one. |
 | `seatemploymentwriters_test.go` | H2 | Every function in a module that infers an employment edge asks whether the contact is a workspace seat first. |
@@ -694,6 +696,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `historyfieldlabelsfalsify_test.go` | H3 | The label census, falsified. |
 | `jobfleetwideshapes_test.go` | H2 | The FleetWide gate's own falsification: every dispatch shape the tree uses is proven accepted, and the shapes it exists to reject (a dispatcher doing a tenant's work, and a fan-out built around the chokepoints) are proven rejected. |
 | `jobkindgate_test.go` | H2 | Registration probes compile the real generated constraint through a source overlay. |
+| `magicfieldcensusfalsify_test.go` | H3 | The receipt field census, falsified: each finding it reports, planted. |
 | `piicolumnreading_test.go` | H3 | Which way the PII census fails when it cannot read a statement. |
 | `piisqlreader_test.go` | H2 | Reading the SQL the PII census judges: where one statement ends and the next begins, which table a write lands on, which columns its SET clause names, and which of those the reader could not read at all. |
 | `rbacbaselineerafixture_test.go` | H3 | The pre-state the RBAC composition gate replays over must not be hand-editable. |

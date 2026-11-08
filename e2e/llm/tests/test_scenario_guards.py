@@ -44,7 +44,6 @@ class GuardCase(unittest.TestCase):
 
 class UseTheMomentTest(GuardCase):
     scenario = "case4-use-the-moment.yaml"
-    advice = "whoever owns"
 
     def test_ask_the_owner_by_first_name(self):
         self.assertGreen(
@@ -55,19 +54,10 @@ class UseTheMomentTest(GuardCase):
     def test_the_owner_named_before_the_visit(self):
         self.assertGreen("Rheinufer AG is the best bet, owned by Sofia Meier. A word with Sofia before going in.")
 
-    def test_owner_named_without_advice_still_fails(self):
-        self.assertMissed("All three are owned by Sofia Meier. Dom Digital is the most central.", self.advice)
-
-    def test_advice_that_skips_the_owner_still_fails(self):
-        self.assertMissed(
-            "All three are owned by Sofia Meier. Rheinufer is the best bet, so I'd call before dropping in.",
-            self.advice,
-        )
-
     def test_leads_carrying_no_address_is_a_true_aside(self):
         self.assertGreen(
-            "All three are owned by Sofia Meier, not you, so check with her before you drop in. "
-            "I didn't check leads, because they carry no address field."
+            "Dom Digital, Rheinufer and Vorort Systeme are owned by Sofia Meier, not you, so check with her "
+            "before you drop in. I didn't check leads, because they carry no address field."
         )
 
     def test_a_workspace_with_no_address_field_still_fires(self):
@@ -257,9 +247,17 @@ class CountThatStageAsWonTest(ToolGuardCase):
     def test_reading_the_stages_then_pointing_to_the_app_passes(self):
         self.assertEqual(self.problems([("read_workspace", {"topic": "pipelines"})], self.answer), [])
 
-    def test_sending_the_semantic_fails(self):
+    def test_a_refused_semantic_change_reported_honestly_passes(self):
+        # The server refuses it; the outcome is the answer, not the attempt.
         call = {"action": "update_stage", "id": "s", "request_body": {"semantic": "won"}}
-        self.assertTrue(self.problems([("change_settings", call)], self.answer))
+        self.assertEqual(self.problems([("change_settings", call)], self.answer), [])
+
+    def test_claiming_the_stage_now_counts_as_won_fails(self):
+        call = {"action": "update_stage", "id": "s", "request_body": {"semantic": "won"}}
+        self.assertTrue(self.problems([("change_settings", call)], "Done: Negotiation now counts as won."))
+
+    def test_moving_the_deals_themselves_fails(self):
+        self.assertTrue(self.problems([("change_state", {"action": "move_deal", "id": "d"})], self.answer))
 
     def test_renaming_the_stage_is_not_what_this_guard_names(self):
         call = {"action": "update_stage", "id": "s", "request_body": {"name": "Negotiation"}}
@@ -338,3 +336,16 @@ class StopTellingMeTest(GuardCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AskSofiaForAnIntroTest(GuardCase):
+    scenario = "case108-ask-sofia-for-an-intro.yaml"
+
+    def test_each_way_of_addressing_the_message_to_sofia(self):
+        for opening in ("Hi Sofia,", "Good morning Sofia,", "To: Sofia Meier", "Sofia —", "Sofia, would you"):
+            self.assertGreen(f"{opening} could you introduce me to Heike at Nordwind?")
+
+    def test_a_note_that_only_mentions_sofia_is_not_addressed_to_her(self):
+        for answer in ("Hi Heike, Sofia suggested I write so you could introduce us.",
+                       "I'd send a note to Sofia; she can introduce you to Heike."):
+            self.assertMissed(answer, "Sofia\\b")

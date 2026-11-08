@@ -358,7 +358,7 @@ export function WorkspaceRail({
           // the foot of a column that is not there. It sits in the row stream,
           // so a thumb and a Tab key read the bar in the same order. One Core
           // either way: the foot below renders only above the breakpoint.
-          centre={phone ? <AgentRail route={route} bar={nav} /> : undefined}
+          centre={phone ? <AgentRail bar={nav} /> : undefined}
         />
         {/* Carries the active state for every destination the menu holds, so
             the closed bar always shows where you are. */}
@@ -401,7 +401,7 @@ export function WorkspaceRail({
             cell above, and two would be two Cores. */}
         {!phone && (
           <div className="railagent">
-            <AgentRail route={route} />
+            <AgentRail />
           </div>
         )}
       </nav>

@@ -3,26 +3,13 @@
 
 import type { Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { type Route, routeHash } from "../../lib/router";
+import { routeHash } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
 import { hashWithParams } from "../../lib/urlstate";
-import type { SettingsHit } from "./settingssearch";
-import { SETTINGS_SECTIONS } from "./settingssections";
-
-export function settingsSearchRoute(hit: SettingsHit, t: Translator): Route {
-  const route = settingsHref(hit.page.id);
-  if (hit.page.id !== "system-health" || !hit.section) return route;
-  const key = SETTINGS_SECTIONS["system-health"].find(
-    (key) => t(key) === hit.section,
-  );
-  return {
-    ...route,
-    id2: key?.startsWith("operations.") ? "configuration" : "diagnostics",
-  };
-}
+import { settingsSectionKeys } from "./settingssections";
 
 export function healthSectionKey(section: string | undefined, t: Translator) {
-  return SETTINGS_SECTIONS["system-health"].find(
+  return settingsSectionKeys("system-health").find(
     (key) => key === section || t(key) === section,
   );
 }

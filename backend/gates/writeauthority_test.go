@@ -100,6 +100,7 @@ const (
 // the probe is actually deciding, because that is always the answer: the probe
 // is not this mutation's own row gate.
 var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
+	"internal/modules/privacy:sarRetainedCopySections":     "This pure subject-export query builder uses read predicates only in SELECT subqueries over the subject contact and lead twins. It performs no database writes, even when a notice caller builds its sections inside a write transaction. Domain mutations retain their own write gates.",
 	"internal/modules/consent:holdReviewedContact":         "a source review writes the notice case, not the contact. When the answer records a meeting on the contact it takes auth.HoldWritableLive instead; this visibility probe only hides a contact the reviewer cannot see",
 	"internal/modules/consent:sourceContactReadable":       "resolves the evidence a reviewer picks for a notice case. The row that changes is the notice case, behind the privacy-request gate; nothing on the contact changes",
 	"internal/modules/initiatives:visibleRecords":          "narrows a pick or an exclusion to the records the caller may read. The row that changes is the initiative's, behind its own update gate and row scope; no lead or deal row changes",

@@ -2,11 +2,13 @@ import { CheckSquare, FileText, Search, Send, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { useActivityGate } from "../../components/activitygate";
+import { interactionIcon } from "../../components/interactionchrome";
 import { RecordNextBar } from "../../components/latestinbound";
 import { taskLine, useTaskHolder } from "../../components/taskassignee";
 import { TaskCallAction } from "../../components/tasknextsteps";
 import { Button, type ButtonVariant } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
+import { SourceLink } from "../../design-system/sourcelink";
 import { formatDue } from "../../format/format";
 import { daysPast } from "../../format/lateness";
 import { useLocale, usePlural, useT } from "../../i18n";
@@ -231,14 +233,9 @@ function MomentSource({
   return (
     <>
       <span>{t("co.suggest.basedOn")}</span>{" "}
-      <Button
-        variant="link"
-        align="start"
-        className="btn-valuelabel"
-        onClick={open}
-      >
+      <SourceLink icon={interactionIcon(activity?.kind)} onOpen={open}>
         {item.label}
-      </Button>
+      </SourceLink>
     </>
   );
 }

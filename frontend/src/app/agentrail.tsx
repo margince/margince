@@ -20,7 +20,6 @@ import { usePrefersReducedMotion } from "../design-system/motion";
 import { formatMoney } from "../format/format";
 import { useNow } from "../format/now";
 import { type Translator, useLocale, usePlural, useT } from "../i18n";
-import type { Route } from "../lib/router";
 import { usePhoneViewport } from "../lib/viewport";
 import { clearAgentEdge, publishAgentEdge } from "./agent-edge-signal";
 import { useAgentFault } from "./agent-fault";
@@ -32,7 +31,6 @@ import {
   type RailWords,
   railWords,
   restingReadings,
-  restingTips,
   stillNews,
   useRestingLine,
 } from "./agentrail-resting";
@@ -221,10 +219,8 @@ export function RailSaying({ line }: Readonly<{ line: SpokenLine }>) {
 }
 
 export function AgentRail({
-  route,
   bar,
 }: Readonly<{
-  route: Route;
   /**
    * The bottom bar this block is a cell of, at phone width.
    *
@@ -312,7 +308,6 @@ export function AgentRail({
       },
       said,
     ),
-    restingTips(route.screen, t, navigator.platform),
   );
 
   // Two things can hold the line, and this is their order: whatever the state

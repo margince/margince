@@ -65,15 +65,17 @@ type CreateContactInput struct {
 	// gap visible instead of leaving the question unasked.
 	Acquisition Acquisition
 	FullName    string
-	FirstName   *string
-	LastName    *string
-	Title       *string
-	OwnerID     *ids.UserID
-	Social      map[string]any
-	Address     *crmcontracts.Address
-	Emails      []ContactEmailInput
-	Phones      []ContactPhoneInput
-	Source      string
+	// CreatedFromActivityID is the record this create was read out of.
+	CreatedFromActivityID *ids.UUID
+	FirstName             *string
+	LastName              *string
+	Title                 *string
+	OwnerID               *ids.UserID
+	Social                map[string]any
+	Address               *crmcontracts.Address
+	Emails                []ContactEmailInput
+	Phones                []ContactPhoneInput
+	Source                string
 	// SourceSystem names the system an import took this contact from; nil
 	// for one created here, which is what makes it unattributable.
 	SourceSystem *string
@@ -117,6 +119,9 @@ func (s *Store) CreateContact(ctx context.Context, in CreateContactInput) (crmco
 
 	var out crmcontracts.Contact
 	err = s.tx(ctx, func(tx pgx.Tx) error {
+		if err := refuseUnreadableSource(ctx, tx, in.CreatedFromActivityID); err != nil {
+			return err
+		}
 		var err error
 		out, err = s.createContactInTx(ctx, tx, in, by, active)
 		return err
@@ -139,6 +144,9 @@ func (s *Store) CreateContactTx(ctx context.Context, tx pgx.Tx, in CreateContact
 	}
 	by, err := s.readyContactCreate(ctx, &in)
 	if err != nil {
+		return crmcontracts.Contact{}, err
+	}
+	if err := refuseUnreadableSource(ctx, tx, in.CreatedFromActivityID); err != nil {
 		return crmcontracts.Contact{}, err
 	}
 	return s.createContactInTx(ctx, tx, in, by, cols.cols)
@@ -181,9 +189,10 @@ func (s *Store) createContactInTx(ctx context.Context, tx pgx.Tx, in CreateConta
 		// which is the honest answer for a contact somebody typed in without
 		// saying why — and the answer that makes the gap visible rather than
 		// leaving the question unasked.
-		Acquisition:      acquisitionForCreate(in),
-		Employer:         in.Employer,
-		EmployerAttached: in.EmployerResult,
+		Acquisition:           acquisitionForCreate(in),
+		Employer:              in.Employer,
+		EmployerAttached:      in.EmployerResult,
+		CreatedFromActivityID: in.CreatedFromActivityID,
 		// A typed create publishes to the workspace, whoever typed it. An agent
 		// creating a contact on a rep's behalf is doing the rep's filing, and a
 		// contact only its creator can see is not in the CRM in any useful
@@ -349,4 +358,21 @@ func (s *Store) EnsureContactByEmail(ctx context.Context, fullName, email, sourc
 		}
 	}
 	return ids.Nil, err
+}
+
+// refuseUnreadableSource refuses a create that names a record the caller
+// cannot read. It sits at the two doors that assert the create right, because
+// capture and lead conversion share the creation path and never name a source.
+//
+// Both refusals are not found, as the contract promises, so neither says the
+// record exists. The row half is the activity content probe every note reader
+// passes, and the live probe refuses an id no row holds.
+func refuseUnreadableSource(ctx context.Context, tx pgx.Tx, source *ids.UUID) error {
+	if source == nil {
+		return nil
+	}
+	if !auth.ReadGranted(ctx, "activity") {
+		return apperrors.ErrNotFound
+	}
+	return auth.EnsureActivityContentVisibleLive(ctx, tx, *source)
 }

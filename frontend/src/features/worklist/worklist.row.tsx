@@ -198,9 +198,10 @@ export function WorklistRow({
   const reasons = phrasedReasons(item, when !== null)
     .map((reason) => reasonText(reason, t, locale, zone, partyName(item)))
     .filter((phrase): phrase is string => phrase !== null);
-  const said = [...new Set(reasons)].filter(
-    (reason) => reason !== detail && reason !== item.verdict?.line,
-  );
+  // The row says its one current reason; the rest are facts its Details lists.
+  const said = [...new Set(reasons)]
+    .filter((reason) => reason !== detail && reason !== item.verdict?.line)
+    .slice(0, 1);
   // How this row NAMES ITSELF: the canonical email row when there is a message
   // AND somewhere to open it, the title line otherwise. Held as the opener
   // rather than as a flag, so the row cannot be drawn without one — a caller

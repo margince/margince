@@ -17,7 +17,8 @@ import transcript  # noqa: E402
 # and answers. Only the operator's home and the workspace path were rewritten.
 SAMPLE = os.path.join(HERE, "testdata", "agy", "echo-and-sum.jsonl")
 OFFERED = ["echo", "get-sum"]
-SPILL = "/home/operator/.gemini/antigravity-cli/brain/97ade4ad/.system_generated/steps/{}/{}"
+SPILL = "/home/operator/.gemini/antigravity-cli/brain/97ade4ad-ef66-4233-91c4-2852503da362/.system_generated/steps/{}/{}"
+OTHER_SPILL = "/home/operator/.gemini/antigravity-cli/brain/0000-other/.system_generated/steps/{}/{}"
 
 
 def convert(lines):
@@ -88,9 +89,29 @@ class FromAgyTest(unittest.TestCase):
         lines = before_answer(sample(), tool_step(9, "search_web", state="ERROR", query="margince"))
         self.assertEqual(convert(lines)[0], 3)
 
+    def test_a_failed_call_that_names_no_server_reached_nothing(self):
+        lines = before_answer(sample(), tool_step(9, "call_mcp_tool", state="ERROR", ToolName="echo"))
+        self.assertEqual(convert(lines)[0], 0)
+
     def test_another_servers_tool_stops_the_run(self):
         lines = before_answer(sample(), tool_step(9, "call_mcp_tool", ServerName="github", ToolName="search"))
         self.assertEqual(convert(lines)[0], 3)
+
+    def test_a_look_into_the_runs_own_folder_is_allowed(self):
+        # The folder holds only the agent file; nothing in it answers a case.
+        lines = before_answer(sample(), tool_step(9, "list_dir", DirectoryPath="/tmp/e2e-llm-agy.ws"),
+                              tool_step(10, "read_file", Path="/tmp/e2e-llm-agy.ws/README.md"))
+        out = tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False).name
+        code = transcript.from_agy(lines, out, "gemini-3.8-flash-medium", "gemini:cli", OFFERED,
+                                   workspace="/tmp/e2e-llm-agy.ws")
+        self.assertEqual(code, 0)
+
+    def test_a_look_past_the_runs_own_folder_still_stops_the_run(self):
+        lines = before_answer(sample(), tool_step(9, "read_file", Path="/tmp/e2e-llm-agy.ws/../secret.md"))
+        out = tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False).name
+        code = transcript.from_agy(lines, out, "gemini-3.8-flash-medium", "gemini:cli", OFFERED,
+                                   workspace="/tmp/e2e-llm-agy.ws")
+        self.assertEqual(code, 3)
 
     def test_reading_a_file_outside_agys_own_tool_files_stops_the_run(self):
         lines = before_answer(sample(), tool_step(9, "read_file", Path="/repo/e2e/llm/scenarios/case4.yaml"))
@@ -109,8 +130,15 @@ class FromAgyTest(unittest.TestCase):
                               tool_step(10, "read_file", Path=SPILL.format(9, "resource_0.txt")))
         self.assertEqual(convert(lines)[0], 0)
 
-    def test_reading_a_spill_of_a_step_that_was_no_lane_call_stops_the_run(self):
-        lines = before_answer(sample(), tool_step(9, "read_file", Path=SPILL.format(2, "output.txt")))
+    def test_a_spill_shaped_path_outside_agys_home_stops_the_run(self):
+        conversation = SPILL.split("/brain/")[1].split("/")[0]
+        for path in (f"/tmp/elsewhere/brain/{conversation}/.system_generated/steps/5/output.txt",
+                     SPILL.replace(conversation, f"0000-other/../{conversation}/../0000-other").format(5, "output.txt")):
+            lines = before_answer(sample(), tool_step(9, "read_file", Path=path))
+            self.assertEqual(convert(lines)[0], 3, path)
+
+    def test_reading_a_spill_of_another_conversation_stops_the_run(self):
+        lines = before_answer(sample(), tool_step(9, "read_file", Path=OTHER_SPILL.format(5, "output.txt")))
         self.assertEqual(convert(lines)[0], 3)
 
     def test_a_failed_lane_call_reaches_the_transcript_as_an_error(self):
@@ -237,8 +265,14 @@ class RunAgyTest(unittest.TestCase):
         self.assertEqual(list(seen["agents"]), ["margince-e2e-llm.md"])
 
     def test_an_agy_killed_at_the_wall_clock_is_a_harness_fault_even_with_a_complete_stream(self):
-        with unittest.mock.patch.object(self.drive, "AGY_GRACE", 0.5):
-            code, _out, _seen = self.run_agy(timeout=0, FAKE_AGY_HANG="5")
+        import candidates
+        out = tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False).name
+        # Only the exit is asserted: under load the fake can be killed before it
+        # writes what it saw, and the kill is what this test is about.
+        with unittest.mock.patch.object(self.drive, "AGY_GRACE", 0.5), \
+                unittest.mock.patch.dict(os.environ, dict(self.env, FAKE_AGY_HANG="5")):
+            code = self.drive.run_agy(candidates.resolve("gemini", "cli"), self.mcp.url,
+                                      "MARGINCE_E2E_TOKEN", "Echo pelican.", out, timeout=0)
         self.assertEqual(code, self.drive.HARNESS)
 
     def test_an_effort_the_model_id_does_not_carry_is_refused_before_agy_runs(self):

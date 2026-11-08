@@ -12,6 +12,10 @@ import (
 
 // Receipt is one completed autonomous act, reported rather than asked about.
 type Receipt struct {
+	// Source says which identity ID is; AuditLogID is the correction's audit
+	// entry, kept apart from Undo because a receipt without Undo still has one.
+	Source          ReceiptSource
+	AuditLogID      ids.UUID
 	CloseDateChange *crmcontracts.CloseDateChange
 	Review          *crmcontracts.AppliedDealChangeReview
 	ID              ids.UUID
@@ -64,3 +68,13 @@ type ReceiptUndo struct {
 	// landed.
 	Reversed bool
 }
+
+// ReceiptSource names the producer whose identity a receipt's ID is.
+type ReceiptSource string
+
+// The two producers: a deal correction Margince applied, and an approval a
+// reader decided.
+const (
+	ReceiptFromCorrection ReceiptSource = "correction"
+	ReceiptFromApproval   ReceiptSource = "approval"
+)

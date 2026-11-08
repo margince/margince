@@ -55,7 +55,7 @@ func redactIntroductionRequests(ctx context.Context, tx pgx.Tx, subject ids.Cont
 	// Only an OPEN ask is closed. closed_at is NULL for the completed outcomes too —
 	// introduced, name_dropped, replied — so closing on that column would rewrite what
 	// actually happened into "cancelled" and destroy the record this scrub spares.
-	if _, err := tx.Exec(ctx, `
+	scrubbed, err := scrubbedIDs(ctx, tx, `
 		UPDATE intro_request
 		   SET forwardable_note = '',
 		       value_for_target = '',
@@ -65,10 +65,12 @@ func redactIntroductionRequests(ctx context.Context, tx pgx.Tx, subject ids.Cont
 		       closed_at        = CASE WHEN status = ANY($3) THEN now() ELSE closed_at END,
 		       version          = version + 1
 		 WHERE contact_id = $1
-		    OR through_contact_id = $1`, subject, erasedMention, OpenIntroStatuses()); err != nil {
+		    OR through_contact_id = $1
+		 RETURNING id`, subject, erasedMention, OpenIntroStatuses())
+	if err != nil {
 		return fmt.Errorf("redact introduction requests of an erased subject: %w", err)
 	}
-	return nil
+	return tombstoneCollateralScrubs(ctx, tx, "intro_request", scrubbed, subjectRedactionReason, subjectRedactionCause)
 }
 
 // OpenIntroStatuses are the statuses an introduction can still be acted from, and the

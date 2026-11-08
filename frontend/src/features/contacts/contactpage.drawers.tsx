@@ -111,7 +111,7 @@ export function runContactMomentAction(
     case "privacy_notice":
       if (destination.entity_id) {
         navigate(
-          settingsHref("privacy"),
+          settingsHref("privacy", "duties"),
           new Map([[NOTICE_CASE_PARAM, destination.entity_id]]),
         );
       }

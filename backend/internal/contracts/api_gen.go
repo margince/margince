@@ -8319,6 +8319,7 @@ func (e ContactMomentMayBeDonePromiseType) Valid() bool {
 
 // Defines values for ContactMomentRule.
 const (
+	ContactMomentRuleAwaitingReply    ContactMomentRule = "awaiting_reply"
 	ContactMomentRuleGoneQuiet        ContactMomentRule = "gone_quiet"
 	ContactMomentRuleJobChange        ContactMomentRule = "job_change"
 	ContactMomentRuleMeetingPrep      ContactMomentRule = "meeting_prep"
@@ -8335,6 +8336,8 @@ const (
 // Valid indicates whether the value is a known member of the ContactMomentRule enum.
 func (e ContactMomentRule) Valid() bool {
 	switch e {
+	case ContactMomentRuleAwaitingReply:
+		return true
 	case ContactMomentRuleGoneQuiet:
 		return true
 	case ContactMomentRuleJobChange:
@@ -16018,6 +16021,63 @@ func (e MagicActorType) Valid() bool {
 	}
 }
 
+// Defines values for MagicFieldChangePrecision.
+const (
+	MagicFieldChangePrecisionDay     MagicFieldChangePrecision = "day"
+	MagicFieldChangePrecisionInstant MagicFieldChangePrecision = "instant"
+)
+
+// Valid indicates whether the value is a known member of the MagicFieldChangePrecision enum.
+func (e MagicFieldChangePrecision) Valid() bool {
+	switch e {
+	case MagicFieldChangePrecisionDay:
+		return true
+	case MagicFieldChangePrecisionInstant:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MagicFieldChangeType.
+const (
+	MagicFieldChangeTypeBoolean   MagicFieldChangeType = "boolean"
+	MagicFieldChangeTypeDate      MagicFieldChangeType = "date"
+	MagicFieldChangeTypeEnum      MagicFieldChangeType = "enum"
+	MagicFieldChangeTypeMember    MagicFieldChangeType = "member"
+	MagicFieldChangeTypeMoney     MagicFieldChangeType = "money"
+	MagicFieldChangeTypeNumber    MagicFieldChangeType = "number"
+	MagicFieldChangeTypeReference MagicFieldChangeType = "reference"
+	MagicFieldChangeTypeStage     MagicFieldChangeType = "stage"
+	MagicFieldChangeTypeText      MagicFieldChangeType = "text"
+)
+
+// Valid indicates whether the value is a known member of the MagicFieldChangeType enum.
+func (e MagicFieldChangeType) Valid() bool {
+	switch e {
+	case MagicFieldChangeTypeBoolean:
+		return true
+	case MagicFieldChangeTypeDate:
+		return true
+	case MagicFieldChangeTypeEnum:
+		return true
+	case MagicFieldChangeTypeMember:
+		return true
+	case MagicFieldChangeTypeMoney:
+		return true
+	case MagicFieldChangeTypeNumber:
+		return true
+	case MagicFieldChangeTypeReference:
+		return true
+	case MagicFieldChangeTypeStage:
+		return true
+	case MagicFieldChangeTypeText:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MagicLineLane.
 const (
 	MagicLineLaneMagicLaneCouldNotComplete MagicLineLane = "could_not_complete"
@@ -18289,6 +18349,24 @@ func (e ProductTaxCategory) Valid() bool {
 	}
 }
 
+// Defines values for ProgressDealRequestSettle.
+const (
+	ProgressDealRequestSettleComplete ProgressDealRequestSettle = "complete"
+	ProgressDealRequestSettleKeep     ProgressDealRequestSettle = "keep"
+)
+
+// Valid indicates whether the value is a known member of the ProgressDealRequestSettle enum.
+func (e ProgressDealRequestSettle) Valid() bool {
+	switch e {
+	case ProgressDealRequestSettleComplete:
+		return true
+	case ProgressDealRequestSettleKeep:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ProgressDealRequestWonWithoutContractReason.
 const (
 	ProgressDealRequestWonWithoutContractReasonImported       ProgressDealRequestWonWithoutContractReason = "imported"
@@ -18820,6 +18898,24 @@ func (e ReaderCalendar) Valid() bool {
 	case ReaderCalendarNotConnected:
 		return true
 	case ReaderCalendarUnreadable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReceiptSource.
+const (
+	ReceiptSourceApproval   ReceiptSource = "approval"
+	ReceiptSourceCorrection ReceiptSource = "correction"
+)
+
+// Valid indicates whether the value is a known member of the ReceiptSource enum.
+func (e ReceiptSource) Valid() bool {
+	switch e {
+	case ReceiptSourceApproval:
+		return true
+	case ReceiptSourceCorrection:
 		return true
 	default:
 		return false
@@ -41067,7 +41163,10 @@ type Contact struct {
 	// absent value and never "System". Served only to a human session, never to an
 	// agent, and never with `passport_id`.
 	CreatedBy *PrincipalAttribution `json:"created_by,omitempty"`
-	Emails    *[]ContactEmail       `json:"emails,omitempty"`
+
+	// CreatedFromActivityId The note, mail or quick capture this contact was read out of, where one was named at creation. Absent on a contact a member typed, and absent to a reader who may not open that record, so the contact still reads rather than being refused.
+	CreatedFromActivityId *openapi_types.UUID `json:"created_from_activity_id,omitempty"`
+	Emails                *[]ContactEmail     `json:"emails,omitempty"`
 
 	// Employer Where this contact works TODAY: their current primary employment edge, resolved to the account it names. History is not here — the full career ribbon is `contact_360.employments`, and a past employer never appears in this field. Absent is not "works nowhere": the field is also absent when the caller may not read relationship edges (an edge discloses its endpoints as a PAIR, which the grant on the contact does not cover) or when the employer sits outside their company row scope. A reader is told who somebody works for or nothing at all, never a company they have no grant for.
 	Employer  *ContactEmployer `json:"employer,omitempty"`
@@ -43189,15 +43288,18 @@ type CreateContactRequest struct {
 	// into the contact in the same write, and a conversion the server refuses fails the
 	// whole write. An agent sending this field is refused with 422
 	// `convert_needs_a_human`: an agent converts with `promote_lead`.
-	ConvertLeadIds *[]openapi_types.UUID   `json:"convert_lead_ids,omitempty"`
-	Emails         *[]ContactEmailInput    `json:"emails,omitempty"`
-	FirstName      *string                 `json:"first_name,omitempty"`
-	FullName       string                  `json:"full_name"`
-	LastName       *string                 `json:"last_name,omitempty"`
-	OwnerId        *openapi_types.UUID     `json:"owner_id,omitempty"`
-	Phones         *[]ContactPhoneInput    `json:"phones,omitempty"`
-	Social         *map[string]interface{} `json:"social,omitempty"`
-	Source         string                  `json:"source"`
+	ConvertLeadIds *[]openapi_types.UUID `json:"convert_lead_ids,omitempty"`
+
+	// CreatedFromActivityId The note, mail or quick capture this contact was read out of. An agent that creates a contact from a record names it here, so a reader can check where the name and title came from. The caller must be able to read it (404 `not_found` otherwise, never 403).
+	CreatedFromActivityId *openapi_types.UUID     `json:"created_from_activity_id,omitempty"`
+	Emails                *[]ContactEmailInput    `json:"emails,omitempty"`
+	FirstName             *string                 `json:"first_name,omitempty"`
+	FullName              string                  `json:"full_name"`
+	LastName              *string                 `json:"last_name,omitempty"`
+	OwnerId               *openapi_types.UUID     `json:"owner_id,omitempty"`
+	Phones                *[]ContactPhoneInput    `json:"phones,omitempty"`
+	Social                *map[string]interface{} `json:"social,omitempty"`
+	Source                string                  `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -45109,6 +45211,16 @@ type DealNextBestActionEvidence struct {
 	// OccurredPrecision How to read `occurred_at`, from the activity it names. `day` means only its date is known, its UTC date, so a client draws no time. `instant` on a row with no such time.
 	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 	Text              string            `json:"text"`
+}
+
+// DealOpenTask One task still open on a deal that just closed.
+type DealOpenTask struct {
+	// DueAt When it is due, absent on a task nobody dated.
+	DueAt *time.Time         `json:"due_at,omitempty"`
+	Id    openapi_types.UUID `json:"id"`
+
+	// Subject What the task says to do.
+	Subject string `json:"subject"`
 }
 
 // DealProbabilitySet defines model for DealProbabilitySet.
@@ -52321,17 +52433,44 @@ type MagicEntityRef struct {
 	Type  string  `json:"type"`
 }
 
-// MagicFieldChange defines model for MagicFieldChange.
+// MagicFieldChange One field a change moved. Only fields a reader can understand are listed: a
+// field of the record's update request, a custom field, or a stored column the
+// server declares as readable. Internal columns are never listed.
+//
+// `before` and `after` keep the stored value (minor units, ids, enum codes).
+// The optional fields beside them say how to read it. A client that does not
+// know `type` must not print a raw value.
 type MagicFieldChange struct {
 	// After The value after the change; absent when the change cleared it.
 	After interface{} `json:"after,omitempty"`
 
+	// AfterLabel The name of the stage or member `after` names, where the reader may read it. Absent rather than guessed.
+	AfterLabel *string `json:"after_label,omitempty"`
+
 	// Before The value before the change; absent when the field was empty.
 	Before interface{} `json:"before,omitempty"`
 
+	// BeforeLabel The name of the stage or member `before` names, where the reader may read it. Absent rather than guessed.
+	BeforeLabel *string `json:"before_label,omitempty"`
+
+	// Currency The ISO 4217 code a `money` value is in. Absent when the server cannot tell which currency the record held at the change; a client then shows no amount.
+	Currency *string `json:"currency,omitempty"`
+
 	// Field The field's key as the record stores it (`industry`, `legal_name`).
 	Field string `json:"field"`
+
+	// Precision For a `date`, whether the value is a calendar day or an instant.
+	Precision *MagicFieldChangePrecision `json:"precision,omitempty"`
+
+	// Type How to read `before` and `after`. `money` is an integer in minor units of `currency`. `stage` and `member` are ids named by `before_label` and `after_label`. `enum` is a code of the field's own value set. `reference` is an id of another record, never printed. Absent for a custom field or a structured value; such a value is not printable as text.
+	Type *MagicFieldChangeType `json:"type,omitempty"`
 }
+
+// MagicFieldChangePrecision For a `date`, whether the value is a calendar day or an instant.
+type MagicFieldChangePrecision string
+
+// MagicFieldChangeType How to read `before` and `after`. `money` is an integer in minor units of `currency`. `stage` and `member` are ids named by `before_label` and `after_label`. `enum` is a code of the field's own value set. `reference` is an id of another record, never printed. Absent for a custom field or a structured value; such a value is not printable as text.
+type MagicFieldChangeType string
 
 // MagicLine One thing the machinery did, needs, could not finish, or is watching.
 //
@@ -52739,12 +52878,15 @@ type MailLanguage string
 
 // MarginceChangeBundle Every open change Margince made to one deal. Its Undo takes them all back.
 type MarginceChangeBundle struct {
-	// AuditLogIds The changes, newest first.
+	// AuditLogIds The changes the list shows for this deal, newest first.
 	AuditLogIds []openapi_types.UUID        `json:"audit_log_ids"`
 	DealId      openapi_types.UUID          `json:"deal_id"`
 	DealName    string                      `json:"deal_name"`
 	Kinds       []MarginceChangeBundleKinds `json:"kinds"`
 	LatestAt    time.Time                   `json:"latest_at"`
+
+	// UndoableAuditLogIds The part of `audit_log_ids` that Undo can still take back, newest first. A change edited since is listed but never named here, so an Undo of the bundle cannot send it. Absent on older responses.
+	UndoableAuditLogIds *[]openapi_types.UUID `json:"undoable_audit_log_ids,omitempty"`
 
 	// ValueBaseMinor The deal's value in the base currency, in minor units. Absent when the deal has no amount or no rate.
 	ValueBaseMinor *int64 `json:"value_base_minor,omitempty"`
@@ -52771,7 +52913,7 @@ type MarginceChangeSummary struct {
 	// Closed Deals Margince closed as lost.
 	Closed int `json:"closed"`
 
-	// Deals Deals with at least one open change.
+	// Deals Deals the changes list shows: each has an open change that Undo can still take back, or one edited since that was made in the last 14 days. An edited change older than that leaves this count and stays in the deal's history.
 	Deals int `json:"deals"`
 
 	// Moved Deals Margince moved to a later stage.
@@ -52794,6 +52936,9 @@ type MarginceChangeSummary struct {
 
 	// Truncated True when more bundles exist than were returned. The counts are never cut.
 	Truncated bool `json:"truncated"`
+
+	// UndoableDeals Deals among `deals` with at least one change Undo can still take back. Absent on older responses.
+	UndoableDeals *int `json:"undoable_deals,omitempty"`
 }
 
 // MeResponse defines model for MeResponse.
@@ -54223,11 +54368,15 @@ type NotificationItem struct {
 	Target *struct {
 		Id openapi_types.UUID `json:"id"`
 
-		// Type A record's class, as its own endpoint spells it, or one of two non-record targets:
+		// Type A record's class, as its own endpoint spells it, or a non-record review target:
 		// `approval` (a pending decision, `id` is the approval) and `data_task` (a
 		// background correction run, `id` is the `run_id` that failed). A client opens the
 		// corrections list rather than that run: a manual re-run replaces the `run_id`, so the
-		// one a notice names may no longer be listed.
+		// one a notice names may no longer be listed. Manual privacy reviews use
+		// `knowledge_document` (download the retained file), `email_signature` (the
+		// recipient's own account settings), `activity` (open the retained note in its
+		// drawer), `legal_entity` (Company settings), or `signature_template` (Company
+		// settings; `id` identifies the erasure whose review flagged the workspace template).
 		Type string `json:"type"`
 	} `json:"target,omitempty"`
 }
@@ -55685,6 +55834,9 @@ type ProgressDealRequest struct {
 	// Note Logged as a note on the deal's timeline after the move.
 	Note *string `json:"note,omitempty"`
 
+	// Settle What becomes of the deal's open tasks when this move closes it. Omitted keeps them.
+	Settle *ProgressDealRequestSettle `json:"settle,omitempty"`
+
 	// ToStageId The stage to move to. Its semantic decides whether the move is confirm-first.
 	ToStageId openapi_types.UUID `json:"to_stage_id"`
 
@@ -55694,6 +55846,9 @@ type ProgressDealRequest struct {
 	// WonWithoutContractReason Why a win has no contract behind it. Omit it when the deal has a signed contract with its paper attached.
 	WonWithoutContractReason *ProgressDealRequestWonWithoutContractReason `json:"won_without_contract_reason,omitempty"`
 }
+
+// ProgressDealRequestSettle What becomes of the deal's open tasks when this move closes it. Omitted keeps them.
+type ProgressDealRequestSettle string
 
 // ProgressDealRequestWonWithoutContractReason Why a win has no contract behind it. Omit it when the deal has a signed contract with its paper attached.
 type ProgressDealRequestWonWithoutContractReason string
@@ -55706,8 +55861,14 @@ type ProgressDealResult struct {
 	// NoteActivityId The note logged on the deal, absent when the call carried none.
 	NoteActivityId *openapi_types.UUID `json:"note_activity_id,omitempty"`
 
+	// OpenTasks The deal's tasks still open after a move that closed it. Absent when the move left it open, or when the call settled them.
+	OpenTasks *[]DealOpenTask `json:"open_tasks,omitempty"`
+
 	// ProbabilityNote The probability the move set from the new stage, as one sentence. Absent when the move changed no stage.
 	ProbabilityNote *string `json:"probability_note,omitempty"`
+
+	// SettledTaskIds The tasks this call completed, present only when it asked to settle them.
+	SettledTaskIds *[]openapi_types.UUID `json:"settled_task_ids,omitempty"`
 }
 
 // Project A project — the body of work a client relationship is made of. Mirrors the `project` table.
@@ -56805,6 +56966,9 @@ type Receipt struct {
 	// Actor Who did it: the member or agent that proposed an applied decision, or the job that made a correction. Absent on older responses.
 	Actor *ReceiptActor `json:"actor,omitempty"`
 
+	// AuditLogId The audit entry a `correction` wrote, present whether or not an Undo is offered, so a client matches this receipt to a change list or a bundle by this id and never by `id` alone. Absent on an approval and on older responses.
+	AuditLogId *openapi_types.UUID `json:"audit_log_id,omitempty"`
+
 	// Changes Every field the act moved, old value to new, read from the audit rows it wrote and masked to what the reader may see on the record. Values travel whole, never cut short. Absent when no audit row of the act can be read, which is not the same as an act that moved nothing (an empty list).
 	Changes *[]MagicFieldChange `json:"changes,omitempty"`
 
@@ -56832,6 +56996,9 @@ type Receipt struct {
 	// Review The recorded automatic change and its current review state.
 	Review *AppliedDealChangeReview `json:"review,omitempty"`
 
+	// Source What kind of act `id` names: a change Margince applied itself (`correction`, where `id` is its audit entry) or an approval the system decided (`approval`, where `id` is the approval). Absent on older responses.
+	Source *ReceiptSource `json:"source,omitempty"`
+
 	// SourceRecord The email, thread or meeting the act was read from, where it names one. Checked against the reader's access on every read: a source the reader may not open is left out, not named. Absent also when the act cites no message.
 	SourceRecord *AttentionSubject `json:"source_record,omitempty"`
 
@@ -56848,6 +57015,9 @@ type Receipt struct {
 	// A receipt for an approval the system decided carries none: that decision is revisitable through the record it named. A change made without asking — the close-date sweep's corrections — has this receipt as its only telling, so the way back travels with it.
 	Undo *AppliedUndo `json:"undo,omitempty"`
 }
+
+// ReceiptSource What kind of act `id` names: a change Margince applied itself (`correction`, where `id` is its audit entry) or an approval the system decided (`approval`, where `id` is the approval). Absent on older responses.
+type ReceiptSource string
 
 // ReceiptActor Who did the act, and on whose behalf.
 //
@@ -66295,12 +66465,13 @@ type WorkingHours struct {
 // there too, but the totals the first page stated stay as they were: they still count
 // the rows that source holds, and the list stops short of them.
 //
-// **Traversal.** Only the first rows are ranked. Past them, the tasks, waiting customers
-// and deals at risk that the ranked rows left out continue as a tail, merged in one
-// order (oldest due date, arrival or expected close first) and reached through
-// `next_cursor` to their end. Items past the read limit of any other source are not
-// reachable through `next_cursor`. They join a later read as the items in front of
-// them are handled.
+// **Traversal.** Only the first rows are ranked. Past them, the tasks, waiting customers,
+// deals at risk and staged approvals that the ranked rows left out continue as a tail,
+// merged in one order and reached through `next_cursor` to their end. The order is the
+// oldest due date, arrival or expected close first. Approvals carry no date in it, so
+// they come after the dated rows, newest staged first. Items past the read limit of any
+// other source are not reachable through `next_cursor`. They join a later read as the
+// items in front of them are handled.
 type Worklist struct {
 	// AsOf The instant every source below was read at.
 	AsOf time.Time `json:"as_of"`
@@ -67640,9 +67811,10 @@ type WorklistPromiseRecipientStatus string
 // `considered` is how many candidates were read and ranked. It is NOT a total: when
 // `more_available` is true there are candidates past the bound that this read never
 // saw, and no field here claims to know how many; `counts[].total` is the exact figure
-// per category where one exists. For tasks, waiting customers and deals at risk the
-// rest is reached through `next_cursor`. For any other source a reader who needs the
-// rest narrows the queue or opens that source's own screen, which pages its own data.
+// per category where one exists. For tasks, waiting customers, deals at risk and
+// approvals the rest is reached through `next_cursor`. For any other source a reader
+// who needs the rest narrows the queue or opens that source's own screen, which pages
+// its own data.
 //
 // `shown` is how many of those candidates survived filtering and the page cut, so
 // `shown` under `considered` means the rest were folded, filtered or below the cut —
@@ -79294,6 +79466,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "created_by")
 	}
 
+	if raw, found := object["created_from_activity_id"]; found {
+		err = json.Unmarshal(raw, &a.CreatedFromActivityId)
+		if err != nil {
+			return fmt.Errorf("error reading 'created_from_activity_id': %w", err)
+		}
+		delete(object, "created_from_activity_id")
+	}
+
 	if raw, found := object["emails"]; found {
 		err = json.Unmarshal(raw, &a.Emails)
 		if err != nil {
@@ -79597,6 +79777,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 		object["created_by"], err = json.Marshal(a.CreatedBy)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'created_by': %w", err)
+		}
+	}
+
+	if a.CreatedFromActivityId != nil {
+		object["created_from_activity_id"], err = json.Marshal(a.CreatedFromActivityId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'created_from_activity_id': %w", err)
 		}
 	}
 
@@ -81164,6 +81351,14 @@ func (a *CreateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "convert_lead_ids")
 	}
 
+	if raw, found := object["created_from_activity_id"]; found {
+		err = json.Unmarshal(raw, &a.CreatedFromActivityId)
+		if err != nil {
+			return fmt.Errorf("error reading 'created_from_activity_id': %w", err)
+		}
+		delete(object, "created_from_activity_id")
+	}
+
 	if raw, found := object["emails"]; found {
 		err = json.Unmarshal(raw, &a.Emails)
 		if err != nil {
@@ -81312,6 +81507,13 @@ func (a CreateContactRequest) MarshalJSON() ([]byte, error) {
 		object["convert_lead_ids"], err = json.Marshal(a.ConvertLeadIds)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'convert_lead_ids': %w", err)
+		}
+	}
+
+	if a.CreatedFromActivityId != nil {
+		object["created_from_activity_id"], err = json.Marshal(a.CreatedFromActivityId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'created_from_activity_id': %w", err)
 		}
 	}
 

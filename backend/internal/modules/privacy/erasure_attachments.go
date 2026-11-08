@@ -63,11 +63,7 @@ func (e *Eraser) eraseAttachments(ctx context.Context, tx pgx.Tx, reason, cause,
 		}
 		destroyedOutside(tx, armAttachmentObject)
 	}
-	// RETURNING, because the rows are gone after this and the audit images they
-	// left behind are not. An attachment's create image carries the FILENAME the
-	// uploader typed, which routinely names the subject; audit_log is
-	// append-only, so the only thing that puts that name out of reach is a
-	// tombstone the spine's readers stop at.
+	// Keep the deleted IDs so their retained audit and event copies go too.
 	scrubbed, err := scrubbedIDs(ctx, tx, `DELETE FROM attachment WHERE `+where+` RETURNING id`, args...)
 	if err != nil {
 		return err

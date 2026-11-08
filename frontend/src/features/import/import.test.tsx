@@ -468,7 +468,7 @@ describe("the import page", () => {
       legacy: false,
     });
     stubRoutes();
-    render(tabContent("import", route));
+    render(tabContent("import", "", route));
 
     expect(
       await screen.findByRole("link", { name: "Back to data import" }),

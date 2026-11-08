@@ -31,8 +31,13 @@ type Automation = components["schemas"]["Automation"];
 // a field; `seq` re-keys the form so every open re-seeds it.
 type StagedTemplate = { entry: CatalogEntry; seq: number; open: boolean };
 
+/** Which tab of the Automations page is open. */
+export type AutomationsView = "mine" | "library";
+
 // One section of Settings → AI: the page owns the reading column and the h1.
-export function AutomationsAdmin() {
+export function AutomationsAdmin({
+  view = "mine",
+}: Readonly<{ view?: AutomationsView }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const [staged, setStaged] = useState<StagedTemplate | null>(null);
@@ -104,36 +109,50 @@ export function AutomationsAdmin() {
 
   return (
     <div data-automations-admin className="auto-admin">
-      <Panel title={<span id={instancesHeading}>{t("auto.instances")}</span>}>
-        <InstancesSection
-          intro={
-            <>
-              <PanelIntro>{t("auto.sub")}</PanelIntro>
-              {/* Bound to `update`, the grant the row's Switch asks for. */}
-              {me.isSuccess && !canEdit && (
-                <PanelIntro>{t("auto.readOnly")}</PanelIntro>
-              )}
-            </>
-          }
-          focusAfterDelete={() => focusable(instancesHeading)}
-          instances={instances}
-          me={me}
-          entryFor={entryFor}
-          canViewRuns={canViewRuns}
-          canCreate={canCreate}
-          canEdit={canEdit}
-          canDelete={canDelete}
-        />
-        {/* Under the list the new row lands in: by then the dialog is gone. */}
-        {create.isSuccess && (
-          <PanelBody>
-            <p role="status">{t("auto.createdPaused")}</p>
-          </PanelBody>
-        )}
-      </Panel>
-      <Panel title={t("auto.catalog")}>
-        <StarterLibrary catalog={catalog} canCreate={canCreate} onUse={stage} />
-      </Panel>
+      {view === "mine" && (
+        <Panel title={<span id={instancesHeading}>{t("auto.instances")}</span>}>
+          <InstancesSection
+            intro={
+              <>
+                <PanelIntro>{t("auto.sub")}</PanelIntro>
+                {/* Bound to `update`, the grant the row's Switch asks for. */}
+                {me.isSuccess && !canEdit && (
+                  <PanelIntro>{t("auto.readOnly")}</PanelIntro>
+                )}
+              </>
+            }
+            focusAfterDelete={() => focusable(instancesHeading)}
+            instances={instances}
+            me={me}
+            entryFor={entryFor}
+            canViewRuns={canViewRuns}
+            canCreate={canCreate}
+            canEdit={canEdit}
+            canDelete={canDelete}
+          />
+          {/* Under the list the new row lands in: by then the dialog is gone. */}
+          {create.isSuccess && (
+            <PanelBody>
+              <p role="status">{t("auto.createdPaused")}</p>
+            </PanelBody>
+          )}
+        </Panel>
+      )}
+      {view === "library" && (
+        <Panel title={t("auto.catalog")}>
+          <StarterLibrary
+            catalog={catalog}
+            canCreate={canCreate}
+            onUse={stage}
+          />
+          {/* The new row lands on the other tab, so this says where. */}
+          {create.isSuccess && (
+            <PanelBody>
+              <p role="status">{t("auto.createdPausedLibrary")}</p>
+            </PanelBody>
+          )}
+        </Panel>
+      )}
       {staged && (
         <AutomationDialog
           key={staged.seq}

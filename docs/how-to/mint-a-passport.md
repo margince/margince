@@ -85,7 +85,7 @@ checked there. See [connect-an-mcp-client.md](connect-an-mcp-client.md).
 ## Give the passport to an AI tool
 
 An AI tool such as Claude Code, Codex or Antigravity learns the API from the Margince skill. Download it
-from **Settings → AI access**, under **For developers** (**Download skill**), or with your session:
+from **Settings → AI assistants**, under **For developers** (**Download skill**), or with your session:
 
 ```sh
 curl http://localhost:8080/v1/agent-bundle \

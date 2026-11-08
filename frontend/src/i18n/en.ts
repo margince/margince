@@ -917,6 +917,7 @@ export const en = {
   "reporting.movement.stage_weight": "Stage weight changes",
   "reporting.movement.record_changed": "Chance moved by recorded outcomes",
   "installationSettings.selfCorrectingTitle": "Forecast",
+  "installationSettings.forecastTitle": "Forecast rules",
   "installationSettings.selfCorrecting": "Let the forecast correct itself",
   "installationSettings.selfCorrectingHint":
     "Each stage starts at the chance you typed. As deals recorded from a stage close, the forecast moves that stage’s chance toward how they ended, counting your typed chance as 20 deals. Imported stage moves never count.",
@@ -2170,8 +2171,7 @@ export const en = {
   "brief.plan.period": "Current plan · week of {date}",
   "brief.coverage.retry": "Refresh brief",
   "brief.reply.owed": "Customer awaiting your reply",
-  "brief.changes.superseded":
-    "This deal changed again. Open the deal to review its current state.",
+  "brief.changes.superseded": "Changed since this update",
   "brief.changes.undone": "Undone",
   "brief.updates.title": "Updates",
   "brief.task.undated": "No due date",
@@ -2231,6 +2231,7 @@ export const en = {
   // a colleague who left years ago is on a row this installation holds.
   "trust.loggedInByVia": "Logged in {via} by {name}",
   "trust.loggedInBy": "Logged by {name}",
+  "contact.readFromARecord": "Read from a record.",
   "trust.sourceUnknown": "Source not recorded",
   "trust.imported": "Imported",
   "trust.importedFrom": "Imported from {uploadName}",
@@ -2305,6 +2306,7 @@ export const en = {
   "systemJob.client_check_read": "AI tool check switch read",
   "systemJob.client_registration_read": "AI tool registration read",
   "systemJob.erasure_replay": "Erasure replay after a restore",
+  "systemJob.privacy_review": "Privacy review after an erasure",
   "systemJob.extension_inventory": "Extension inventory",
   "systemJob.extraction_activity_reannounce": "Extracted activity repair",
   "systemJob.forecast_snapshot": "Daily forecast snapshot",
@@ -2610,6 +2612,7 @@ export const en = {
   "history.field.first_name": "First name",
   "history.field.full_name": "Name",
   "history.field.win_probability": "Probability",
+  "history.field.stage_id": "Stage",
   "history.field.win_probability_override": "Probability set on the deal",
   "history.field.win_probability_set_by": "Probability set by",
   "history.field.fx_rate_date": "FX rate date",
@@ -3606,7 +3609,7 @@ export const en = {
 
   "company.reject": "Not a company",
   "company.rejectConfirm":
-    "This archives “{name}” and blocks {domain} as a company, so later messages from that domain do not create it again. An administrator can unblock the domain in Settings under Capture.",
+    "This archives “{name}” and blocks {domain} as a company, so later messages from that domain do not create it again. An administrator can unblock the domain in Settings under Mail capture.",
   "company.rejectReasonLabel": "Reason this is not a company",
   "company.rejectReasonHint":
     "A reason a reviewer of blocked domains can act on. The block outlasts the record.",
@@ -5381,7 +5384,7 @@ export const en = {
   "tags.createdNotApplied":
     "{name} was created but not added to this record: {reason} Pick it in the list to add it again.",
   "tags.whoAdds":
-    "Need another tag? An administrator or operations user can add one in Settings → Tags.",
+    "Need another tag? An administrator or operations user can add one in Settings → Records and fields, on the Tags tab.",
   "tags.noMatch":
     "No tag with that name. An administrator or operations user can add one.",
   "tagResult.gone":
@@ -6095,9 +6098,6 @@ export const en = {
   "acqSources.renameTitle": "Rename source",
   "acqSources.duplicate":
     "A source with this name or key already exists. Choose another name.",
-  "settings.page.reviewtemplates.sub":
-    "Questions a rep answers when a deal is won or lost.",
-  "settings.tab.reviewtemplates": "Outcome reviews",
   "reviewTemplates.question": "Question",
   "reviewTemplates.addQuestion": "Add question",
   "reviewTemplates.edit": "Edit questions",
@@ -6522,7 +6522,7 @@ export const en = {
   "decision.versionSkew":
     "This record changed after it was staged. Stage it again before deciding.",
   "decision.fxRateMoved":
-    "The exchange rate changed after this was proposed, so it was not applied. Refresh the rates from their sources in Settings → Company profile for a current proposal.",
+    "The exchange rate changed after this was proposed, so it was not applied. Refresh the rates from their sources in Settings → Company profile, on the Money tab, for a current proposal.",
   "decision.reRead": "Reload",
   "decision.alreadyDecided": "Already decided. Nothing left to do.",
   "decision.expired": "Expired",
@@ -6567,9 +6567,6 @@ export const en = {
   "brief.weekly.learnings.experiment": "Experiment",
   // Two empty states, never one: a week nobody read and a week that held no
   // lesson are different facts, and only one of them is about the week.
-  "brief.weekly.learnings.notRun": "This week has not been analyzed yet.",
-  "brief.weekly.learnings.insufficient":
-    "Not enough recorded evidence for useful observations.",
   // How WELL the week went, beside what happened in it. Each block is drawn only
   // when the server sent it: a rep who carried no leads did not score zero on
   // the funnel, and an empty row would read as failure at something nobody
@@ -6610,7 +6607,7 @@ export const en = {
     "Affected by an erasure · counts are minimums",
   // The week ahead. The frozen review says what happened; this is the only part
   // of that page anybody can still change.
-  "plan.title": "Plan for week {week}",
+  "plan.title": "Plan · {dates}",
   "plan.titleThisWeek": "Plan for this week",
   // The Brief's two dials. Which brief, and whose.
   "brief.view.label": "Home view",
@@ -6621,7 +6618,7 @@ export const en = {
   "brief.briefedAt": "Briefed by Margince at {time}",
   "brief.task.done": "Mark done: {title}",
   "brief.task.reply": "Reply to {name}: {subject}",
-  "brief.first.title": "Your tasks",
+  "brief.first.title": "Needs you",
   "brief.intro.waiting": "Waiting on you",
   "brief.intro.meetings": "Meetings today",
   "brief.intro.urgent": "Urgent",
@@ -6745,8 +6742,9 @@ export const en = {
   "brief.report.chapter.forecast": "Forecast",
   "brief.report.chapter.closed": "Closed deals",
   "brief.report.chapter.movement": "Pipeline movement",
-  "brief.report.chapter.commitments": "The week ahead",
   "brief.report.chapter.figures": "Figures",
+  "brief.report.breakdown": "Scorecard and all figures",
+  "brief.report.howCounted": "How this is counted",
   "brief.report.chapter.observations": "What the week taught",
   "brief.report.closedTotal": "Won {won} · Lost {lost}",
   "brief.report.weeks": "Weeks",
@@ -6799,7 +6797,8 @@ export const en = {
   "brief.glance.nightAnon": "Working late",
   "brief.glance.introWeekly": "Review results and plan your next steps.",
   "brief.suggestions.review": "Review deal suggestions",
-  "brief.suggestions.empty": "No deal suggestions in this brief.",
+  "brief.suggestions.reviewCount_one": "Review {count} deal suggestion",
+  "brief.suggestions.reviewCount_other": "Review {count} deal suggestions",
   "brief.suggestions.notAnnotated":
     "Ranked for today. The overnight review has not written an assessment for these deals yet.",
   "brief.suggestions.noAssessment":
@@ -6851,7 +6850,7 @@ export const en = {
   // company's rather than this reader's, whose deals they are.
   "brief.snooze.done": "Snoozed until {at}",
   "brief.snooze.undo": "Undo",
-  "brief.readings.meetings": "Upcoming meetings",
+  "brief.readings.meetings": "Meetings today",
   "brief.readings.meetingsBasis": "Remaining on today’s calendar",
   "brief.readings.needsPrep_one": "1 needs prep",
   "brief.readings.needsPrep_other": "{count} need prep",
@@ -6863,8 +6862,8 @@ export const en = {
   "brief.readings.calendarUnreadable": "Not syncing",
   "brief.readings.calendarUnreadableWhy":
     "Reconnect your calendar to count meetings.",
-  "brief.readings.nextMeeting": "Next: {date} · {subject}",
-  "brief.readings.nextMeetingUntitled": "Next: {date}",
+  "brief.readings.nextMeeting": "Next meeting: {date} · {subject}",
+  "brief.readings.nextMeetingUntitled": "Next meeting: {date}",
   "brief.readings.leads": "Prospecting",
   "brief.readings.leadsBasis": "Planned tasks for prospects",
   "brief.readings.leadsDue": "Next due {value}",
@@ -8855,7 +8854,7 @@ export const en = {
     "Areas added later, and tools an extension adds, stay off for it.",
   "passportAreas.refusalTitle": "What an agent is told when an area is off",
   "passportAreas.refusal":
-    "This passport may not work in the “{area}” area. Ask the user to turn that area on for this passport in Settings → AI access, under Your passports or Your connections.",
+    "This passport may not work in the “{area}” area. Ask the user to turn that area on for this passport in Settings → AI assistants, under Your passports or Your connections.",
   "passportAreas.cancel": "Cancel",
   "passportAreas.save": "Save areas",
   "passportAreas.saving": "Saving areas…",
@@ -9066,7 +9065,7 @@ export const en = {
   // panel opened on a broken installation said "error" at a reader in the
   // product's voice. The sentence beside these says what is HAPPENING; these
   // say what the agent is. One word each, because they sit beside a dot.
-  "agent.state.idle": "Idle",
+  "agent.state.idle": "Agent idle",
   "agent.state.ingest": "Capturing",
   "agent.state.working": "Working",
   "agent.state.warning": "Warning",
@@ -9132,10 +9131,6 @@ export const en = {
   // The four things the agent says once it has run out of news. None claims the
   // agent did anything: they are standing facts about the product, which is
   // what lets them be written here rather than read from the installation.
-  "agent.tip.day": "Tasks, approvals and duplicates are on {name}.",
-  "agent.tip.ask": "Ask the agent with {chord}.",
-  "agent.tip.recap": "Open the agent panel for today’s activity.",
-  "agent.tip.edge": "The screen edge lights up while the agent works.",
   // What the line under the orb names while this tab reads or writes, keyed
   // from `agentrail-copy.ts`. A named variant puts the record's name in.
   "agent.ticker.read.activities": "Loading activities",
@@ -9415,7 +9410,7 @@ export const en = {
   "aiAccess.gemini.adminLine":
     "Your Gemini Enterprise admin adds Margince once for your company.",
   "aiAccess.gemini.admin1":
-    "Ask a Margince admin for a client ID and secret. In Settings → MCP → MCP clients, they choose “Register a client”, answer that the tool needs a secret, and add the redirect URI https://vertexaisearch.cloud.google.com/oauth-redirect.",
+    "Ask a Margince admin for a client ID and secret. In Settings → AI tool access → MCP clients, they choose “Register a client”, answer that the tool needs a secret, and add the redirect URI https://vertexaisearch.cloud.google.com/oauth-redirect.",
   "aiAccess.gemini.admin2":
     "In Gemini Enterprise, open “Manage team”, then “Connected apps”, and choose “Add MCP Server”.",
   "aiAccess.gemini.admin3":
@@ -9502,9 +9497,9 @@ export const en = {
   "aiAccess.other.signIn":
     "OAuth in your browser. Most tools start it the first time they connect.",
   "aiAccess.other.apiKey":
-    "No sign-in in the tool? Create an API key in Settings under AI access, For developers, and send it as the header “Authorization: Bearer” followed by the key.",
+    "No sign-in in the tool? Create an API key in Settings under AI assistants, For developers, and send it as the header “Authorization: Bearer” followed by the key.",
   "aiAccess.other.notAllowed":
-    "If sign-in says the tool is not allowed, an administrator chooses which tools may connect in Settings under MCP.",
+    "If sign-in says the tool is not allowed, an administrator chooses which tools may connect in Settings under AI tool access.",
   "setup.step.ai": "Connect your AI tool",
   "setup.caption.ai":
     "Use Margince from Claude, ChatGPT, Copilot or your editor.",
@@ -11546,7 +11541,7 @@ export const en = {
     "Every colleague who can see a contact can read its captured mail. Single messages can be limited afterwards.",
   "mailSharing.danger":
     "With email sharing off, the CRM is hard to use. New mail is visible only to the people on each message.",
-  "mailSharing.posture.where": "Change in Capture rules",
+  "mailSharing.posture.where": "Change in Mail capture",
   "mailSharing.sharedPosture.label": "Allow mailboxes to share on arrival",
   "mailSharing.sharedPosture.help":
     "Lets a colleague set their mailbox to shared, so captured mail is readable by the team on arrival, before any classification. Off by default.",
@@ -11691,7 +11686,7 @@ export const en = {
   "connectors.oauthRoleCannotCapture":
     "Your role does not let Margince capture your mail, so nothing was connected. Ask an admin to change your role.",
   "connectors.oauthBadClient":
-    "The provider refused this installation’s app credentials. An administrator must check the client ID and secret in Settings under Sign-in and apps; reconnecting does not fix this.",
+    "The provider refused this installation’s app credentials. An administrator must check the client ID and secret in Settings under Sign-in and security; reconnecting does not fix this.",
   "connectors.dismissOutcome": "Dismiss",
   "connectors.oauthConnected": "Connected",
   "connectors.oauthNotConnected": "Nothing was connected",
@@ -12876,7 +12871,8 @@ export const en = {
   "deal360.rewrite": "Regenerate",
   "deal360.readFull": "Read full brief",
   "deal360.openTask": "Open task",
-  "deal360.createTask": "Add task",
+  "deal360.createTask": "Create follow-up",
+  "deal360.followUpCreated": "Follow-up created",
   "deal360.openBrief": "Open meeting brief",
   "deal360.unreadable":
     "This brief did not load. Reload the page, or regenerate it.",
@@ -12980,6 +12976,8 @@ export const en = {
   "auto.name": "Name",
   "auto.create": "Create",
   "auto.createdPaused": "Created paused. Nothing runs until it is enabled.",
+  "auto.createdPausedLibrary":
+    "Created paused. Turn it on under Your automations.",
   "auto.delete": "Delete",
   "auto.statusEnabled": "Enabled",
   "auto.statusPaused": "Paused",
@@ -13249,9 +13247,7 @@ export const en = {
   "settings.page.notifications.sub":
     "Which notices reach you and how, plus the Morning brief and Weekly review by email.",
   "settings.page.connections.sub":
-    "Mailboxes and addresses this seat reads from.",
-  "settings.page.capture-activity.sub":
-    "What capture did with your mail, and why.",
+    "Mailboxes, calendar and accounts Margince reads for you, and what it did with them.",
   "settings.page.company.sub":
     "Brand, business context, and the currency and calendar every report uses.",
   "settings.page.authentication.sub":
@@ -13265,24 +13261,12 @@ export const en = {
     "Seats in use against this installation’s entitlement.",
   "settings.page.stageautomation.sub":
     "The track record of each stage transition before it moves deals automatically.",
-  "settings.page.pipelines.sub":
-    "Stages a deal moves through, for the whole company.",
-  "settings.page.acquisition.sub":
-    "Business channels a deal can be attributed to.",
-  "settings.page.lossreasons.sub":
-    "Why deals are lost, and which reason older notes count as.",
-  "settings.page.recordroles.sub":
-    "Labels for what a colleague or team looks after on a record, such as account manager. A role grants no access; the owner and sharing decide who can edit.",
   "settings.page.leads.sub":
     "Where leads come from, why they are disqualified, and how fast they get a first reply.",
-  "settings.page.fields.sub":
-    "Custom fields this company adds to the standard fields.",
-  "settings.page.tags.sub":
-    "Shared tags. Renaming a tag here renames it on every record.",
   "settings.page.products.sub":
     "Products this company sells, and offer templates.",
   "settings.page.capture.sub":
-    "Which mail becomes a record and which is ignored.",
+    "Which mail becomes a record, which is ignored, and who can read it.",
   "settings.page.integrations.sub":
     "Systems this installation exchanges records with.",
   "settings.page.knowledge.sub": "Documents that drafts and answers may use.",
@@ -13323,24 +13307,18 @@ export const en = {
   "settings.search.none": "No settings page matches.",
   "settings.search.count": "Matching settings pages: {n}",
   "settings.tab.company": "Company profile",
-  "settings.tab.authentication": "Sign-in and apps",
+  "settings.tab.authentication": "Sign-in and security",
   "settings.tab.members": "Members",
   "settings.tab.teams": "Teams",
   "settings.tab.roles": "Roles and permissions",
   "settings.tab.seats": "Seats and license",
-  "settings.tab.pipelines": "Pipelines",
-  "settings.tab.acquisition": "Acquisition sources",
-  "settings.tab.lossreasons": "Loss reasons",
-  "settings.tab.recordroles": "Responsibility roles",
-  "settings.tab.leads": "Lead handling",
-  "settings.tab.fields": "Fields",
-  "settings.tab.tags": "Tags",
+  "settings.tab.leads": "Leads",
   "settings.tab.products": "Products and offers",
   "settings.tab.import": "Data import",
   "settings.tab.models": "AI models",
   "settings.tab.automations": "Automations",
   "settings.tab.usage": "AI usage",
-  "settings.tab.mcp": "MCP",
+  "settings.tab.mcp": "AI tool access",
   "settings.tab.model-calls": "AI call log",
   "settings.tab.audit": "Audit log",
   "settings.tab.system-health": "System health",
@@ -13385,6 +13363,63 @@ export const en = {
   "configuration.scope.outside": "Set outside the app",
   "settings.tab.reset": "Reset data",
   "settings.group.me": "You",
+  "settings.group.compliance": "Compliance",
+  "settings.group.system": "System",
+  "settings.tab.deals": "Deals",
+  "settings.page.deals.sub":
+    "How deals move, where they come from, and why they are won or lost.",
+  "settings.tab.records": "Records and fields",
+  "settings.page.records.sub":
+    "Custom fields, shared tags and the responsibility roles records carry.",
+  "settings.partsLabel": "Parts of this page",
+  "settings.part.meetings.links": "Booking links",
+  "settings.part.meetings.availability": "Availability",
+  "settings.part.meetings.guests": "Guest page",
+  "settings.part.connections.mail": "Mail and calendar",
+  "settings.part.connections.addresses": "Other addresses",
+  "settings.part.connections.linkedin": "LinkedIn",
+  "settings.part.connections.accounts": "Other accounts",
+  "settings.part.connections.activity": "Activity",
+  "settings.part.company.profile": "Profile",
+  "settings.part.company.entities": "Legal entities",
+  "settings.part.company.regional": "Regional and calendar",
+  "settings.part.company.money": "Money",
+  "settings.part.company.email": "Email defaults",
+  "settings.part.authentication.methods": "Sign-in methods",
+  "settings.part.authentication.apps": "Sign-in apps",
+  "settings.part.authentication.grants": "Group role grants",
+  "settings.part.deals.pipelines": "Pipelines",
+  "settings.part.deals.sources": "Acquisition sources",
+  "settings.part.deals.loss": "Loss reasons",
+  "settings.part.deals.reviews": "Outcome reviews",
+  "settings.part.deals.legal": "Legal review",
+  "settings.part.deals.forecast": "Forecast",
+  "settings.part.records.fields": "Fields",
+  "settings.part.records.tags": "Tags",
+  "settings.part.records.roles": "Responsibility roles",
+  "settings.part.capture.sharing": "Sharing and sync",
+  "settings.part.capture.domains": "Domains",
+  "settings.part.capture.enrichment": "Enrichment",
+  "settings.part.capture.internal": "Internal mail",
+  "settings.part.integrations.contact": "Contact data",
+  "settings.part.integrations.accounting": "Accounting",
+  "settings.part.integrations.webhooks": "Webhooks",
+  "settings.part.integrations.telegram": "Telegram bot",
+  "settings.part.integrations.units": "Other services",
+  "settings.part.models.providers": "Providers",
+  "settings.part.models.tiers": "Model tiers",
+  "settings.part.models.tasks": "AI tasks",
+  "settings.part.models.prices": "Prices",
+  "settings.part.usage.allowance": "Allowance",
+  "settings.part.usage.agents": "Agent limits",
+  "settings.part.usage.spend": "Spend",
+  "settings.part.automations.mine": "Your automations",
+  "settings.part.automations.library": "Starter library",
+  "settings.part.privacy.consent": "Consent",
+  "settings.part.privacy.customers": "Existing customers",
+  "settings.part.privacy.retention": "Retention",
+  "settings.part.privacy.requests": "Requests",
+  "settings.part.privacy.duties": "Disclosure duties",
   "settings.group.company": "Company",
   "settings.group.people": "People",
   "settings.group.sales": "Sales",
@@ -13393,7 +13428,7 @@ export const en = {
   "settings.group.governance": "Governance",
   "settings.tab.account": "Account",
   "settings.tab.voice": "Writing voice",
-  "settings.tab.agents": "AI access",
+  "settings.tab.agents": "AI assistants",
   "settings.tab.notifications": "Notifications",
   "settings.tab.connections": "Connections",
   "settings.tab.extensions": "Extensions",
@@ -13495,7 +13530,7 @@ export const en = {
   "privacy.requestsEmpty": "No privacy requests yet.",
   "settings.tab.integrations": "Integrations",
   "settings.tab.web-forms": "Website forms",
-  "settings.tab.capture": "Capture rules",
+  "settings.tab.capture": "Mail capture",
   "settings.tab.knowledge": "Knowledge",
   "corpusAsk.title": "Ask your documents",
   "corpusAsk.sub":
@@ -13598,7 +13633,6 @@ export const en = {
   "knowledge.searchable": "Searchable",
   "knowledge.reindexingBadge": "Reindexing",
   "settings.tab.privacy": "Privacy and retention",
-  "settings.tab.capture-activity": "Capture activity",
   "verdictPass.subject.senders": "Senders",
   "verdictPass.subject.threads": "Threads",
   "verdictPass.every_one": "{subject} are checked every minute.",
@@ -15339,13 +15373,13 @@ export const en = {
   "connectors.accountSettings": "Who sees mail from {account}",
   "connectors.heldPointer.label": "Held threads and sender decisions",
   "connectors.heldPointer.some_one":
-    "{count} thread is held back from the team right now. Review it, and every sender your mailbox brought in, in Capture activity.",
+    "{count} thread is held back from the team right now. Review it, and every sender your mailbox brought in, in Connections, on the Activity tab.",
   "connectors.heldPointer.some_other":
-    "{count} threads are held back from the team right now. Review them, and every sender your mailbox brought in, in Capture activity.",
+    "{count} threads are held back from the team right now. Review them, and every sender your mailbox brought in, in Connections, on the Activity tab.",
   "connectors.heldPointer.none":
-    "Nothing is held back from the team right now. Every sender your mailbox brought in is listed in Capture activity.",
+    "Nothing is held back from the team right now. Every sender your mailbox brought in is listed in Connections, on the Activity tab.",
   "connectors.heldPointer.unknown":
-    "Threads held back from the team, and every sender your mailbox brought in, are listed in Capture activity.",
+    "Threads held back from the team, and every sender your mailbox brought in, are listed in Connections, on the Activity tab.",
   "connectors.heldPointer.review": "Review",
   "connectors.advanced": "Advanced",
   "connectors.advancedCount_one": "{count} setting",
@@ -17015,7 +17049,7 @@ export const en = {
   "consent.scopeNote.send": "sends messages as you, without asking first",
   "consent.scopeNote.enrich": "runs AI work and buys contact data",
   "consent.ceiling":
-    "Never more than your own permissions. You can disconnect at any time in Settings under AI access.",
+    "Never more than your own permissions. You can disconnect at any time in Settings under AI assistants.",
   "consent.preset.label": "Assistant permissions",
   "consent.preset.readDraft": "Read and draft",
   "consent.preset.full": "Full assistant",
@@ -17498,6 +17532,7 @@ export const en = {
   "contact.moment.rule.job_change": "Changed jobs",
   "contact.moment.rule.overdue_promise": "Commitment overdue",
   "contact.moment.rule.gone_quiet": "Gone quiet",
+  "contact.moment.rule.awaiting_reply": "Waiting on them",
   "contact.moment.rule.open_promise": "Commitment due",
   "contact.moment.rule.public_signal": "In the news",
   "contact.moment.rule.missing_next_step": "No next step",
@@ -18660,6 +18695,7 @@ export const en = {
   "worklist.emptyPage": "Nothing in this batch yet. More loads as you scroll.",
   "worklist.clear": "Nothing is waiting on you.",
   "worklist.clearFor": "Nothing is waiting on {name}.",
+  "worklist.clearOfUrgent": "No urgent work.",
   "worklist.clearOfTasksToday":
     "No tasks due today or overdue. Later tasks are under Upcoming and backlog.",
   "worklist.clearOfWhatWasRead": "No items in the sources that loaded.",
@@ -18710,7 +18746,6 @@ export const en = {
   "worklist.pane.deal": "Deal",
   "worklist.why.title": "Why this needs attention",
   "worklist.why.reasons": "Reasons",
-  "worklist.why.consequence": "If nothing is done",
   "worklist.why.detail": "Detail",
   "worklist.ask.approval":
     "An agent proposed a change and is waiting for a decision. Approve it or turn it down.",
@@ -18769,23 +18804,6 @@ export const en = {
     "Nothing was sent after this meeting. Send the attendees a follow-up.",
   "worklist.ask.batch":
     "Several routine decisions that read alike are grouped here. Review them together.",
-  "worklist.consequence.buyer_waits": "They keep waiting.",
-  "worklist.consequence.buyer_waits.named": "{name} keeps waiting.",
-  "worklist.consequence.promise_breaks": "A commitment is broken.",
-  "worklist.consequence.deal_drifts": "The deal keeps drifting.",
-  "worklist.consequence.deal_slips_past_close":
-    "The deal slips past its close date.",
-  "worklist.consequence.meeting_unprepared":
-    "The meeting starts before you said you are ready.",
-  "worklist.consequence.task_slips": "The task slips past its due date.",
-  "worklist.consequence.work_blocked": "Work that waits on this stays blocked.",
-  "worklist.consequence.customer_never_received":
-    "The customer never gets the message.",
-  "worklist.consequence.you_believe_it_happened":
-    "An approved action stays undone while it looks done.",
-  "worklist.consequence.legal_deadline_missed": "A legal deadline is missed.",
-  "worklist.consequence.mailbox_blind": "Mail stops being captured.",
-  "worklist.consequence.data_drifts": "Records go out of date.",
   "worklist.band.now": "Now",
   "worklist.dueGroup.tomorrow": "Due tomorrow",
   "worklist.dueGroup.this_week": "Due this week",
@@ -19156,8 +19174,8 @@ export const en = {
   "worklist.because.below_material.value":
     "{value}, not above typical at-risk deal value",
   "worklist.because.quiet_days": "gone quiet",
-  "worklist.because.quiet_days.value_one": "quiet for {value} day",
-  "worklist.because.quiet_days.value_other": "quiet for {value} days",
+  "worklist.because.quiet_days.value_one": "no activity for {value} day",
+  "worklist.because.quiet_days.value_other": "no activity for {value} days",
   "worklist.because.no_next_step": "no next step recorded",
   "worklist.because.no_champion": "no champion",
   "worklist.because.champion_unknown": "champion unknown",
@@ -19212,7 +19230,7 @@ export const en = {
   "worklist.verdict.blocked": "Blocked",
   "worklist.verdict.cold": "Cold",
   "worklist.verdict.believes": "Earlier assessment",
-  "worklist.verdict.asOf": "As of {when}",
+  "worklist.verdict.earlierOn": "Earlier assessment · {date}",
   "worklist.untitled.approval": "Approval waiting",
   "worklist.untitled.dedupe_candidate": "Possible duplicate records",
   "worklist.untitled.task": "Untitled task",
@@ -19289,22 +19307,23 @@ export const en = {
   "worklist.verb.promiseSettleFailed":
     "Commitment was not marked as kept. Retry.",
   // Updating opens the composer; cancellation is recorded directly by the card.
+  "worklist.verb.meetingHowDidItGo": "How did it go?",
   "worklist.verb.meetingAddNotes": "Add notes",
   "worklist.verb.meetingUpdateTitle": "Meeting",
   "worklist.verb.meetingReading": "Loading meeting…",
   "worklist.verb.meetingWhatHappened": "Meeting notes",
   "worklist.verb.meetingBodyHint":
     "Discussion and next steps. Calendar notes can be edited here.",
-  "worklist.verb.meetingHeld": "Held",
+  "worklist.verb.meetingHeld": "It happened",
   "worklist.verb.meetingNoShow": "No-show",
-  "worklist.verb.meetingCanceled": "Mark as canceled",
+  "worklist.verb.meetingCanceled": "Did not happen",
   "worklist.verb.meetingOutcomeRecorded": "Meeting outcome recorded",
   "worklist.verb.meetingOutcomeFailed": "Outcome was not recorded. Retry.",
   "worklist.verb.meetingDayMissing":
     "That date does not exist in the company’s time zone. Pick another date.",
   "worklist.verb.meetingAddNotesFor": "Add notes to {subject}",
-  "worklist.verb.meetingHeldFor": "Held: {subject}",
-  "worklist.verb.meetingCanceledFor": "Mark as canceled: {subject}",
+  "worklist.verb.meetingHeldFor": "It happened: {subject}",
+  "worklist.verb.meetingCanceledFor": "Did not happen: {subject}",
   "worklist.verb.meetingCancelInCalendar":
     "The calendar invitation keeps this meeting. Cancel it through the invitation.",
   "worklist.verb.meetingCalendarManaged":
@@ -19858,6 +19877,10 @@ export const en = {
   "magic.aboutCountAtLeast_one": "at least {count} record",
   "magic.aboutCountAtLeast_other": "at least {count} records",
   "magic.aboutNamedAtLeast": "{label}, and possibly others",
+  "magic.viewChanges_one": "View {count} change",
+  "magic.viewChanges_other": "View {count} changes",
+  "magic.viewChangesAtLeast_one": "View at least {count} change",
+  "magic.viewChangesAtLeast_other": "View at least {count} changes",
   "magic.action.mail_filed": "Filed captured email under this contact",
   "magic.action.company_profile_read": "Read the company’s technical profile",
   "magic.action.fields_changed": "Changed {fields}",
@@ -19921,6 +19944,7 @@ export const en = {
   "magic.records.empty": "None of these records is in view any more.",
   "magic.records.more": "Show more",
   "magic.records.fromTo": "{from} → {to}",
+  "magic.records.hidden_value": "hidden",
   "magic.records.empty_value": "empty",
   "magic.records.count_one": "{count} record",
   "magic.records.count_other": "{count} records",
@@ -19930,7 +19954,6 @@ export const en = {
     "This installation has not checked whether this can be put back.",
   "magic.notShown_one": "{count} change is not shown: {reason}",
   "magic.notShown_other": "{count} changes are not shown: {reason}",
-  "magic.notShown.unadmittedAction": "housekeeping with nothing to tell you",
   "magic.notShown.unknownEntityType": "a record type this page cannot place",
   "magic.notShown.outOfScope": "outside your own records",
   "magic.visibleScope": "Only changes visible to you are shown.",
@@ -20146,7 +20169,7 @@ export const en = {
   "scheduling.setup.step1Help":
     "Sign in with the account your calendar belongs to. Takes about a minute.",
   "scheduling.connectCalendar": "Connect calendar",
-  "scheduling.setup.step2": "Check your hours below",
+  "scheduling.setup.step2": "Check your hours under Availability",
   "scheduling.setup.step2Help":
     "Guests are offered 09:00 to 17:00, Monday to Friday, until you save your own.",
   "scheduling.setup.step2Done": "Your hours are saved.",
@@ -20949,12 +20972,6 @@ export const en = {
   "health.filteredFinding_other": "Showing 1 of {count} problems",
   "health.showAllFindings": "Show all problems",
   "health.jobDelayed": "{kind}: delayed",
-  "health.checkNumbers": "Show check counts",
-  "health.checkResults": "Check results",
-  "health.checksFailed": "Failed checks",
-  "health.checksReview": "Need a decision",
-  "health.checksPassing": "Passing checks",
-  "health.checksPending": "Awaiting a result",
   "health.askOwner": "Ask a mailbox owner",
   "health.mailReviewOwners": "Mailbox decisions",
   "health.reviewOwnersIntro":
@@ -20975,7 +20992,6 @@ export const en = {
   "health.senderReviewCount_other": "{count} sender decisions waiting",
   "health.threadReviewCount_one": "{count} conversation waiting",
   "health.threadReviewCount_other": "{count} conversations waiting",
-  "health.views": "System health views",
   "health.overview": "Overview",
   "health.diagnostics": "Diagnostics",
   "health.configurationWithheld":
@@ -21039,6 +21055,45 @@ export const en = {
   "health.prioritiesChanged":
     "Priorities changed. Refresh to apply the new order.",
   "health.capabilities": "All checks",
+  "health.group.setup": "Not set up yet",
+  "health.group.waiting": "Not confirmed yet",
+  "health.group.passing": "Passing",
+  "health.checkPassing": "Passing",
+  "health.whatHappened": "What happened",
+  "health.whyItMatters": "Why it matters",
+  "health.whatToDo": "What to do",
+  "health.notSetUpCount_one": "{count} not set up",
+  "health.notSetUpCount_other": "{count} not set up",
+  "health.passingCount_one": "{count} passing",
+  "health.passingCount_other": "{count} passing",
+  "health.setup.providersMissing.happened":
+    "No AI provider has a key, so AI work cannot reach a model.",
+  "health.setup.providersMissing.matters":
+    "Drafts, briefs and research cannot run until a provider is connected.",
+  "health.setup.providersMissing.todo":
+    "Add a key for a provider under AI models, then send a test call.",
+  "health.setup.providersMissing.action": "Add a provider key",
+  "health.setup.providersSilent.happened":
+    "A provider is set up, but none has answered a request yet.",
+  "health.setup.providersSilent.matters":
+    "Until one answers, nothing shows that AI work reaches a model.",
+  "health.setup.providersSilent.todo":
+    "Send a test call from AI models, or wait for the next AI task to run.",
+  "health.setup.providersSilent.action": "Open AI models",
+  "health.setup.search.happened":
+    "Search has no embedding model, so it only matches exact words.",
+  "health.setup.search.matters":
+    "Similar records, answers from Knowledge documents and AI research stay limited to keyword matches.",
+  "health.setup.search.todo":
+    "Pick an embedding model under AI models, Model tiers. Margince then builds the search index in the background.",
+  "health.setup.search.action": "Choose an embedding model",
+  "health.setup.recovery.happened":
+    "Nobody has recorded a restore drill. Backups run outside Margince, so it only learns of a restore when someone records one.",
+  "health.setup.recovery.matters":
+    "Until a backup has been restored once, nothing shows your data can be brought back in time.",
+  "health.setup.recovery.todo":
+    "Ask whoever runs your server to restore a recent backup to a spare database and record the drill.",
+  "health.setup.recovery.action": "Read the restore guide",
   "health.unknown": "Not recorded",
   "health.stale": "Last known evidence; the latest check did not complete.",
   "health.failed": "This source could not be read",
@@ -21092,7 +21147,7 @@ export const en = {
   "health.recovery.automatic":
     "Review routing outcomes over a sufficiently large sample.",
   "health.ownerHandoff":
-    "Mailbox owners accept or decline proposed contacts in Worklist → Decisions. Held conversations are reviewed in Capture activity.",
+    "Mailbox owners accept or decline proposed contacts in Worklist → Decisions. Held conversations are reviewed in Connections, on the Activity tab.",
   "health.operatorHandoff":
     "A technical operator must investigate. Copy the diagnostic summary for the handoff.",
   "health.copy": "Copy technical report",
@@ -21210,13 +21265,17 @@ export const en = {
   "changes.undoDeals_other": "Undo changes on {count} deals",
   "brief.done.undoChanges_one": "Undo {count} change",
   "brief.done.undoChanges_other": "Undo {count} changes",
+  "brief.done.viewChanges_one": "View {count} change",
+  "brief.done.viewChanges_other": "View {count} changes",
+  "brief.done.showNew": "Show new changes",
   "brief.done.history": "View change history",
   "brief.done.dealsLabel": "Deals Margince changed",
-  "brief.done.noReason": "Margince recorded no reason you can read.",
+  "brief.done.noReason": "Reason unavailable",
+  "brief.done.markedLost": "Marked lost",
   "brief.done.customerWrote": "The customer wrote:",
   "brief.changes.markReviewed": "Mark reviewed",
   "brief.changes.reviewed": "Reviewed",
-  "magic.lane.doneOther": "Other finished work",
+  "magic.lane.doneOther": "Other updates",
   "changes.bulk.undone_one": "Undone on {count} deal.",
   "changes.bulk.undone_other": "Undone on {count} deals.",
   "changes.bulk.partly_one": "{count} deal was partly undone.",
@@ -21229,7 +21288,9 @@ export const en = {
     "{count} deals need your confirmation. Undo each on its own row.",
   "changes.bulk.unsent_one": "{count} deal was not sent.",
   "changes.bulk.unsent_other": "{count} deals were not sent.",
+  "changes.bulk.confirmOnDeal": "Open the deal to confirm its Undo.",
   "changes.bulk.retry": "Send again",
+  "changes.bulk.unfinished": "Deals not fully undone",
 } as const;
 
 export type MessageKey = keyof typeof en;

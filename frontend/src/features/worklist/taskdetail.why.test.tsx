@@ -87,7 +87,22 @@ test("a reminder an automation wrote says which one and what it asks", async () 
     en["worklist.because.due_today"],
     en["worklist.because.unassigned"],
   ]);
-  expect(screen.getByText(en["worklist.consequence.task_slips"])).toBeTruthy();
+});
+
+test("the details leave out how the row ranks against the queue", async () => {
+  openTask(QUIET_REMINDER, {
+    ...ROW,
+    because: [{ kind: "due_today" }, { kind: "material" }, { kind: "routine" }],
+  });
+
+  const reasons = await screen.findByRole("list", {
+    name: en["worklist.why.reasons"],
+  });
+  expect(
+    within(reasons)
+      .getAllByRole("listitem")
+      .map((reason) => reason.textContent),
+  ).toEqual([en["worklist.because.due_today"]]);
 });
 
 test("an automation with no family of its own still says it was one", async () => {
