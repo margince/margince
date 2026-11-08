@@ -158,6 +158,7 @@ When a calendar reports an event is gone, its event id finds the meeting through
 Only the syncing seat's own ids count. Older mail with no id stays until a normal sync sees it again.
 
 A colleague's copy, mail sent from Margince and the law can keep a message.
+A hold or an open request to erase data can keep it too.
 Changes to a folder in Outlook do not delete the copy in Margince.
 A move to an archive can look like mail gone for good, so Outlook mail stays.
 
