@@ -71,7 +71,7 @@ func (s *Store) RevertBundle(
 				reverted, err = s.revertCorrectionTx(ctx, nested, undo.CorrectionID, nil, undo.Evidence, active, archiveConfirmedFor)
 				return true, err
 			})
-			if err != nil && !keepsOneChange(err) && !(movedByBundle && movedSince(err)) {
+			if err != nil && !keepsOneChange(err) && (!movedByBundle || !movedSince(err)) {
 				return err
 			}
 			out.Refusals[i] = err

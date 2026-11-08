@@ -12,6 +12,7 @@ package magic
 // backend/gates/magicfieldcensus_test.go fails until someone classifies it.
 
 import (
+	"maps"
 	"reflect"
 	"slices"
 	"strings"
@@ -68,11 +69,9 @@ func derivePresentedFields() map[string]map[string]fieldReading {
 			if name == "" || name == "-" {
 				continue
 			}
-			fields[name] = readingOf(name, field.Type)
+			fields[name] = readingOfType(name, field.Type)
 		}
-		for name, reading := range storedColumns[entityType] {
-			fields[name] = reading
-		}
+		maps.Copy(fields, storedColumns[entityType])
 		out[entityType] = fields
 	}
 	return out
@@ -86,19 +85,24 @@ var (
 	contractPackage = reflect.TypeFor[crmcontracts.MagicFieldChange]().PkgPath()
 )
 
-// readingOf reads a request property's Go type. An enum is a string type the
+// timeReadings are the two calendar types a request property can carry.
+var timeReadings = map[reflect.Type]fieldReading{
+	dateType: {kind: crmcontracts.MagicFieldChangeTypeDate, precision: crmcontracts.MagicFieldChangePrecisionDay},
+	instant:  {kind: crmcontracts.MagicFieldChangeTypeDate, precision: crmcontracts.MagicFieldChangePrecisionInstant},
+}
+
+// readingOfType reads a request property's Go type. An enum is a string type the
 // contract package defines; any other named string, such as an email, is text.
-func readingOf(name string, t reflect.Type) fieldReading {
+func readingOfType(name string, t reflect.Type) fieldReading {
 	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
+	}
+	if reading, ok := timeReadings[t]; ok {
+		return reading
 	}
 	switch {
 	case strings.HasSuffix(name, values.MinorAmountSuffix) && t.Kind() == reflect.Int64:
 		return fieldReading{kind: crmcontracts.MagicFieldChangeTypeMoney}
-	case t == dateType:
-		return fieldReading{kind: crmcontracts.MagicFieldChangeTypeDate, precision: crmcontracts.MagicFieldChangePrecisionDay}
-	case t == instant:
-		return fieldReading{kind: crmcontracts.MagicFieldChangeTypeDate, precision: crmcontracts.MagicFieldChangePrecisionInstant}
 	case t == uuidType && memberColumns[name]:
 		return fieldReading{kind: crmcontracts.MagicFieldChangeTypeMember}
 	case t == uuidType:

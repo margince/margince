@@ -72,6 +72,8 @@ type ReceiptUndo struct {
 // ReceiptSource names the producer whose identity a receipt's ID is.
 type ReceiptSource string
 
+// The two producers: a deal correction Margince applied, and an approval a
+// reader decided.
 const (
 	ReceiptFromCorrection ReceiptSource = "correction"
 	ReceiptFromApproval   ReceiptSource = "approval"

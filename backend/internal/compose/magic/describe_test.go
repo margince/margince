@@ -46,9 +46,9 @@ func auditRow(actor, before, after, evidence string, at time.Time) entry {
 	return e
 }
 
-// companyRow is one machine update of a company.
-func companyRow(actor, before, after, evidence string, at time.Time) entry {
-	e := auditRow(actor, before, after, evidence, at)
+// companyRow is one update of a company by the site-reading agent.
+func companyRow(before, after, evidence string, at time.Time) entry {
+	e := auditRow("agent:deepread", before, after, evidence, at)
 	e.EntityType = typeCompany
 	return e
 }
@@ -89,7 +89,7 @@ func TestAFieldChangeNamesTheFieldsAndTheSource(t *testing.T) {
 // The website reader records the page it read as source_url, which is the
 // shape every live row carries.
 func TestASiteReadNamesTheSiteItRecordedAsSourceURL(t *testing.T) {
-	line, _, ok := lineOf(unmasked(t), companyRow("agent:deepread",
+	line, _, ok := lineOf(unmasked(t), companyRow(
 		`{"industry": null}`, `{"industry": "Legal services"}`,
 		`{"source": "site_read", "source_url": "https://www.studiolegal.de/de/about"}`, time.Now()))
 	if !ok {
@@ -104,7 +104,7 @@ func TestASiteReadNamesTheSiteItRecordedAsSourceURL(t *testing.T) {
 // the site would be wrong, so the reason says the company's website instead.
 func TestALogoReadDoesNotNameTheImageHostAsTheSite(t *testing.T) {
 	logo := "https://cdn.prod.website-files.com/66ded54b/webclip.png"
-	line, _, ok := lineOf(unmasked(t), companyRow("agent:deepread",
+	line, _, ok := lineOf(unmasked(t), companyRow(
 		`{"industry": null, "logo": null}`, `{"industry": "Legal services", "logo": "`+logo+`"}`,
 		`{"source": "site_read", "source_url": "`+logo+`"}`, time.Now()))
 	if !ok {
@@ -125,7 +125,7 @@ func TestASiteReadOverManyRecordsIsOneLineWithoutOneSite(t *testing.T) {
 		if i == 2 {
 			after = `{"industry": "Software", "logo": "` + site + `"}`
 		}
-		entries = append(entries, companyRow("agent:deepread", `{"industry": null}`, after,
+		entries = append(entries, companyRow(`{"industry": null}`, after,
 			`{"source": "site_read", "source_url": "`+site+`"}`, now.Add(-time.Duration(i)*time.Second)))
 	}
 	lines, _ := linesOf(unmasked(t), entries, nil, 100)
@@ -147,7 +147,7 @@ func TestASiteReadOverManyRecordsIsOneLineWithoutOneSite(t *testing.T) {
 // One record read from two sites names neither, rather than the newer alone.
 func TestOneRecordReadFromTwoSitesNamesNeither(t *testing.T) {
 	now := time.Now()
-	first := companyRow("agent:deepread", `{"industry": null}`, `{"industry": "Software"}`,
+	first := companyRow(`{"industry": null}`, `{"industry": "Software"}`,
 		`{"source": "site_read", "source_url": "https://a.example/about"}`, now)
 	second := first
 	second.ID = ids.NewV7()
@@ -163,7 +163,7 @@ func TestOneRecordReadFromTwoSitesNamesNeither(t *testing.T) {
 // the logo's address is an image rather than a page.
 func TestAWebsiteReadThatWritesTheWebsiteNamesTheSite(t *testing.T) {
 	site := "https://www.studiolegal.de"
-	line, _, ok := lineOf(unmasked(t), companyRow("agent:deepread",
+	line, _, ok := lineOf(unmasked(t), companyRow(
 		`{"website": null, "industry": null}`, `{"website": "`+site+`", "industry": "Legal services"}`,
 		`{"source": "site_read", "source_url": "`+site+`"}`, time.Now()))
 	if !ok || line.Reason == nil || line.Reason.Key != "magic.why.site_read" || (*line.Reason.Values)["site"] != "studiolegal.de" {

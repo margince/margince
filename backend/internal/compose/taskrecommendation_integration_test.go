@@ -8,10 +8,10 @@ package compose
 import (
 	"encoding/json"
 	"errors"
-	"github.com/margince/margince/backend/internal/compose/attention"
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
