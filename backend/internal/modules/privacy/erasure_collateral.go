@@ -61,15 +61,49 @@ const (
 // its retained audit and event payloads in the same transaction.
 func tombstoneCollateralScrubs(ctx context.Context, tx pgx.Tx, entityType string, records []ids.UUID, reason, cause string) error {
 	for _, id := range records {
-		auditID, err := storekit.AuditWithEvidence(ctx, tx, actionErase, entityType, id, nil, nil, map[string]any{
-			evidenceKeyReason: reason, evidenceKeyCause: cause,
-		})
-		if err != nil {
-			return fmt.Errorf("tombstoning scrubbed %s: %w", entityType, err)
-		}
-		if err := storekit.RedactAuditHistory(ctx, tx, auditID); err != nil {
+		if _, err := certifyCollateralScrub(ctx, tx, entityType, id, reason, cause); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func certifyCollateralScrub(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID, reason, cause string) (ids.UUID, error) {
+	proof, err := storekit.AuditWithEvidence(ctx, tx, actionErase, entityType, id, nil, nil, map[string]any{evidenceKeyReason: reason, evidenceKeyCause: cause})
+	if err != nil {
+		return ids.UUID{}, fmt.Errorf("tombstoning scrubbed %s: %w", entityType, err)
+	}
+	return proof, storekit.RedactAuditHistory(ctx, tx, proof)
+}
+
+func (e *Eraser) redactSubjectActivities(ctx context.Context, tx pgx.Tx, subject ids.ContactID, keys subjectKeys, floor FloorPolicy, reason string) ([]ids.UUID, []ids.UUID, error) {
+	// Lock before checking the floor so another writer cannot change the erase-or-hold decision.
+	if err := lockSubjectTimeline(ctx, tx, subject, keys.emails, channelActivityKeys(keys.identities)); err != nil {
+		return nil, nil, err
+	}
+	activitiesRedacted, err := e.redactSubjectTimeline(ctx, tx, subject, keys.emails, channelActivityKeys(keys.identities), floor, reason)
+	if err != nil {
+		return nil, nil, err
+	}
+	notesRedacted, err := redactUnlinkedNotes(ctx, tx, keys)
+	if err != nil {
+		return nil, nil, err
+	}
+	// The same floor assigns each timeline row to erasure or restricted retention.
+	activitiesHeld, err := holdShieldedTimeline(ctx, tx, subject, keys.emails, channelActivityKeys(keys.identities), floor, e.payloads)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := e.purgeRedactedActivityTraces(ctx, tx, activitiesRedacted, activitiesHeld, reason); err != nil {
+		return nil, nil, err
+	}
+	if err := purgeActivityTraces(ctx, tx, notesRedacted, e.payloads); err != nil {
+		return nil, nil, err
+	}
+	if err := e.purgeTextCopies(ctx, tx, notesRedacted); err != nil {
+		return nil, nil, err
+	}
+	activitiesRedacted = append(activitiesRedacted, notesRedacted...)
+
+	return activitiesRedacted, activitiesHeld, nil
 }

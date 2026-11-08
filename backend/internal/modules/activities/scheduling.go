@@ -180,7 +180,7 @@ func (s *Store) Availability(ctx context.Context, host ids.UserID, from, to time
 			  AND a.meeting_status IS DISTINCT FROM 'canceled'
  AND NOT %[6]s
 			  AND %[5]s
-			ORDER BY a.occurred_at`, hostPos, fromPos, toPos, storekit.MeetingResponsibilitySQL("a", fmt.Sprintf("$%d", hostPos)), scope, auth.MeetingSeatDeclinedSQL("a", fmt.Sprintf("$%d", hostPos)), auth.MeetingHasCalendarRosterSQL("a")), args...)
+			ORDER BY a.occurred_at`, hostPos, fromPos, toPos, storekit.MeetingResponsibilitySQL("a", fmt.Sprintf("$%d", hostPos)), scope, auth.MeetingSeatDeclinedSQL("a", fmt.Sprintf("$%d", hostPos)), storekit.MeetingHasCalendarRosterSQL("a")), args...)
 		if err != nil {
 			return err
 		}

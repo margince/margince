@@ -21,6 +21,13 @@ const (
 	rightsRequestEntity     = "data_subject_request"
 )
 
+const markerHoldSQL = `SELECT EXISTS(SELECT 1 FROM contact WHERE legal_hold)
+ OR EXISTS(SELECT 1 FROM lead WHERE legal_hold) OR EXISTS(SELECT 1 FROM company WHERE legal_hold)
+ OR EXISTS(SELECT 1 FROM deal WHERE legal_hold) OR EXISTS(SELECT 1 FROM project WHERE legal_hold)
+ OR EXISTS(SELECT 1 FROM data_subject_request WHERE dispute_open)`
+
+const markerHoldLockSQL = `LOCK TABLE company,contact,deal,lead,project,data_subject_request IN SHARE MODE NOWAIT`
+
 // HistoricalAuditPage counts changes and the inspected keys for cursor progress.
 type HistoricalAuditPage struct {
 	Scanned []ids.UUID

@@ -68,6 +68,8 @@ var contactGate = objectGate{
 // grants do not cover â so a read projecting r.contact_id with the contact
 // joined for liveness and row scope has taken the grant its payload sits behind.
 var predicateContactReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/notementionlocks.go:lockNoteMentions":                   "the contact-delete-authorized eraser locks records linked to candidate notes so their legal-hold flags cannot change during erasure. IDs are consumed inside the transaction and no record content is disclosed",
+	"internal/modules/privacy/historicalaudit.go:markerHoldSQL":                       "system-only marker correction reads existence of a legal hold to refuse destruction. No record field leaves the transaction; SHARE locks keep the hold decision stable",
 	"internal/modules/privacy/entityfloor.go:activityRecordOwnersSQL":                 "the owner_id, a USER id, of the contacts a message is filed under, so the retention floor follows that user's legal entity. Nothing of the contact leaves the statement; it only picks which floor keeps the message",
 	"internal/modules/search/graphedgetargets.go:liveContactSQL":                      "whether the contact an edge names is archived, so an edge fold skips it. The contact appears only inside NOT EXISTS; nothing is selected, and removing the condition could only fold more edges for readers already gated on the graph",
 	"internal/modules/capture/suggestioneligibility.go:suggestiblePartiesTx":          "An existence-only uniqueness check suppresses already registered addresses from a content-authorized suggestion. No contact identity or field leaves it, including when a different owner holds the existing contact.",

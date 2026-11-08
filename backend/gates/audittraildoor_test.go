@@ -48,6 +48,7 @@ import (
 var auditTrailReaders = gatekit.Waive(map[string]string{
 	"linkedhistoricalaudit.go": "system-only correction returning audit IDs and flags. Current holds and floors are checked before a per-entry metadata proof removes personal values; no image leaves the database",
 	"linkedhistoricalscope.go": "resolves existing record links and privacy certificates to identify historical copies. It returns record kinds and UUIDs, never images, and bounds linked copies by the original certificate",
+	"markedaudit.go":           "system-only marker correction reads pending audit metadata, never its images. Any legal hold or open dispute defers correction; table locks keep that decision stable",
 	"historicalaudit.go":       "system-only payload cleanup. It reads audit metadata and nullness, then checks current legal holds, disputes and the shared correspondence floor. No images leave the database, and older certificates bound the cleanup so later edits survive",
 	"sarretainedcopies.go":     "exports contact and lead audit images only, pinned by literal entity types and subject references. It never selects an activity audit image; the separate thread-verdict section requires a workspace-visible, unrestricted source activity",
 	"erasure_tombstone.go":     "reads the evidence column of a contact's erase tombstone, by its reason, to answer the account a request's erasure already certified. It selects no before/after image, so no activity's subject or body passes through it",

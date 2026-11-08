@@ -31,11 +31,17 @@ func linkedAuditRedactionDataTask() datatask.Task {
 	identities := auditRedactionSteps(privacy.RedactLinkedHistoricalIdentitiesPageTx)[0]
 	identities.Name = "request_identity_images"
 	steps = append(steps, identities)
-	return datatask.Task{
-		ID: "core/1794076293_linked_erased_audit_payloads", Version: 1,
-		Title:    "Removing linked payloads left by earlier privacy erasures",
-		Requires: []string{"core/1794066141", "core/1794067376", "core/1794076293"}, Steps: steps,
-	}
+	return datatask.Task{ID: "core/1794076293_linked_erased_audit_payloads", Version: 1, Title: "Removing linked payloads left by earlier privacy erasures", Requires: []string{"core/1794066141", "core/1794067376", "core/1794076293"}, Steps: steps}
+}
+
+func markedAuditRedactionDataTask() datatask.Task {
+	weekly := auditRedactionSteps(privacy.RedactMarkedWeeklyAuditPageTx)[0]
+	weekly.Name = "marked_weekly_images"
+	weekly.Limit = privacy.MarkerAuditPageSize
+	requests := auditRedactionSteps(privacy.RedactRetiredRequestAuditPageTx)[0]
+	requests.Name = "retired_request_images"
+	requests.Limit = privacy.MarkerAuditPageSize
+	return datatask.Task{ID: "core/1794076293_marked_erased_audit_payloads", Version: 1, Title: "Removing copies of already-cleared weekly items and privacy requests", Requires: []string{"core/1794066141", "core/1794067376", "core/1794076293"}, Steps: []datatask.Step{weekly, requests}}
 }
 
 func auditRedactionSteps(correct auditRedactionPage) []datatask.Step {
