@@ -378,27 +378,6 @@ type QualifyLeadResult struct {
 	Gaps     []string                  `json:"gaps"`
 }
 
-// ProgressDealResult is what progress_deal answers: the deal as it now stands,
-// and the note it left if it left one.
-type ProgressDealResult struct {
-	Deal wireRecord `json:"deal"`
-	// ProbabilityNote says the probability the move set from the new stage,
-	// absent when the move changed no stage.
-	ProbabilityNote string `json:"probability_note,omitempty"`
-	// OpenTasks are the deal's tasks still open after the move. Closing a deal
-	// never settles them silently. So a caller is told what it left behind, and
-	// can settle it with the settle argument.
-	OpenTasks []crmcontracts.DealOpenTask `json:"open_tasks,omitempty"`
-	// SettledTaskIDs are the tasks this call completed, present only when the
-	// caller asked for that. Empty and absent are the same claim here, which is
-	// why it carries no count beside it.
-	SettledTaskIDs []ids.UUID `json:"settled_task_ids,omitempty"`
-	// NoteActivityID is absent when the call carried no note. It is a pointer
-	// rather than a zero uuid because "no note was asked for" and "a note whose
-	// id is all zeroes" are different claims, and only one of them is true.
-	NoteActivityID *ids.UUID `json:"note_activity_id,omitempty"`
-}
-
 // SlippingEvidence is one reason a deal is reported as slipping, named by the
 // field it was read off.
 type SlippingEvidence struct {
