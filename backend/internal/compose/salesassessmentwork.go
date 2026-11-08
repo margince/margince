@@ -65,6 +65,13 @@ func displayAssessmentCells(in *salesassessment.Input, evaluation crmcontracts.R
 			cell.Display = salesassessment.DisplayQuantity(value, cell.Unit, language)
 		}
 	}
+	for i := range in.Candidates {
+		candidate := &in.Candidates[i]
+		number, unit, _ := strings.Cut(candidate.Amount, " ")
+		if value, err := strconv.ParseFloat(number, 64); err == nil {
+			candidate.Display = salesassessment.DisplayQuantity(value, unit, language)
+		}
+	}
 }
 
 func assessmentWorthExplaining(in salesassessment.Input) bool {

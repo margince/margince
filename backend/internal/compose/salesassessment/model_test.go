@@ -4,6 +4,7 @@
 package salesassessment
 
 import (
+	"slices"
 	"strings"
 	"testing"
 )
@@ -127,5 +128,76 @@ func TestParagraphsCannotKeepAnUnsupportedClaimOrInventAnAction(t *testing.T) {
 	in.Cells[1].Coverage = "failed"
 	if _, err := Parse(`{"paragraphs":[[{"text":"The pipeline is 370000 EUR.","cells":["metric:open_pipeline"]}]]}`, in); err == nil {
 		t.Fatal("failed reading supported a claim")
+	}
+}
+
+func decisionInput() Input {
+	return Input{
+		Frame: FrameIn{Scope: "Whole company", Period: "this_quarter", Currency: "EUR", Today: "2026-11-03"},
+		Cells: []CellIn{
+			{ID: "metric:bookings_won", Label: "bookings_won", Value: "0 EUR", Unit: "EUR", Coverage: "ok"},
+			{ID: "metric:open_pipeline", Label: "open_pipeline", Value: "37000 EUR", Unit: "EUR", Coverage: "ok"},
+		},
+		Candidates: []CandidateIn{{ID: "deal-globex", Name: "Globex renewal", Amount: "25000 EUR", Display: "25,000 EUR", OwnerID: "user-1"}},
+		Decisions:  []DecisionIn{{ID: "decision-1", Text: "Call the buyer about the budget owner", Deal: "deal-globex", OwnerID: "user-1", ReviewOn: "2026-11-17", Status: "open"}},
+	}
+}
+
+func TestParagraphsKeepSentencesThatReadADecisionAndADealAmount(t *testing.T) {
+	reply := `{"paragraphs":[` +
+		`[{"text":"Nothing is won yet against {{metric:open_pipeline}} open.","kind":"observation","cells":["metric:bookings_won","metric:open_pipeline"]}],` +
+		`[{"text":"An open decision to call the buyer about the budget owner, due 2026-11-17, still covers the Globex renewal.","kind":"claim","cells":["metric:open_pipeline"],"records":["decision-1"]}],` +
+		`[{"text":"The Globex renewal at 25000 EUR carries most of the open pipeline.","kind":"hypothesis","cells":["metric:open_pipeline"],"records":["deal-globex"]},` +
+		`{"text":"Its {{deal-globex}} is the figure to protect.","kind":"hypothesis","cells":["metric:open_pipeline"],"records":["deal-globex"]}]` +
+		`],"next_decision":null}`
+	written, err := Parse(reply, decisionInput())
+	if err != nil {
+		t.Fatalf("a reply acknowledging the open decision and quoting the deal's amount was refused: %v", err)
+	}
+	if len(written.Paragraphs) != 3 {
+		t.Fatalf("kept %+v, want all three paragraphs", written.Paragraphs)
+	}
+	for _, sentence := range written.Paragraphs[2] {
+		if !strings.Contains(sentence.Text, "25,000 EUR") || !slices.Equal(sentence.Cells, []string{"metric:open_pipeline"}) {
+			t.Fatalf("kept %+v, want the deal's display amount and only the cell among its cells", sentence)
+		}
+	}
+}
+
+func TestParseDropsARecordSentenceWhoseNumberTheCitedRecordDoesNotCarry(t *testing.T) {
+	won := `{"text":"Nothing is won yet at 0 EUR.","kind":"observation","cells":["metric:bookings_won"]}`
+	for name, line := range map[string]string{
+		"an amount the decision never held":     `{"text":"The open decision on the Globex renewal is worth 30000 EUR.","cells":["metric:open_pipeline"],"records":["decision-1"]}`,
+		"a delay the decision never held":       `{"text":"The open decision is 5 days late.","cells":["metric:open_pipeline"],"records":["decision-1"]}`,
+		"the deal's amount without citing it":   `{"text":"The Globex renewal is worth 25000 EUR.","cells":["metric:open_pipeline"]}`,
+		"a decision cited with no cell to read": `{"text":"A call to the buyer about the budget owner is still owed.","cells":[],"records":["decision-1"]}`,
+	} {
+		written, err := Parse(`{"sentences":[`+won+`,`+line+`],"next_decision":null}`, decisionInput())
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if len(written.Sentences) != 1 {
+			t.Fatalf("%s: kept %+v, want only the sentence its cell carries", name, written.Sentences)
+		}
+	}
+}
+
+func TestParseRefusesARecordIDSpelledInText(t *testing.T) {
+	for _, text := range []string{"The deal deal-globex is still open.", "The decision decision-1 is still owed."} {
+		reply := `{"sentences":[{"text":"` + text + `","cells":["metric:open_pipeline"],"records":["deal-globex","decision-1"]}],"next_decision":null}`
+		if _, err := Parse(reply, decisionInput()); err == nil {
+			t.Fatalf("a reply spelling a record id was kept: %s", text)
+		}
+	}
+}
+
+func TestParseKeepsADecisionQuotingItsDealsAmount(t *testing.T) {
+	won := `{"sentences":[{"text":"Nothing is won yet at 0 EUR.","kind":"observation","cells":["metric:bookings_won"]}],`
+	written, err := Parse(won+`"next_decision":{"deal_id":"deal-globex","text":"Decide who signs off the 25000 EUR renewal."}}`, decisionInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if written.Next == nil || !strings.Contains(written.Next.Text, "25,000 EUR") {
+		t.Fatalf("the decision was %+v, want it kept with the deal's display amount", written.Next)
 	}
 }
