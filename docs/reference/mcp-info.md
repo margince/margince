@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 228.0 KB |
+| Tool catalog | 228.1 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 59777 |
+| Approx. wire tokens | 59786 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,7 +34,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 50.6 KB | 22% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 53.8 KB | 23% | Yes, every step |
-| Input schemas | 111.7 KB | 49% | Yes, every step |
+| Input schemas | 111.8 KB | 49% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
 | **Description + input schema** | **165.6 KB** | **72%** | **the recurring cost** |
 
@@ -105,7 +105,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2692 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
 | [`read_view`](#read_view) | Read a view | yes |  | 638 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2756 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2765 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 776 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 420 |
@@ -11558,7 +11558,7 @@ deal. Take every name verbatim; a custom field is spelled cf_<slug>.
       "type": "string"
     },
     "from": {
-      "description": "ai_calls, ai_usage, audit_log, fx_rates, held_threads only",
+      "description": "ai_calls, ai_usage, ai_usage_summary, audit_log, fx_rates, held_threads only",
       "type": "string"
     },
     "group": {
@@ -11794,7 +11794,7 @@ deal. Take every name verbatim; a custom field is spelled cf_<slug>.
       "type": "string"
     },
     "to": {
-      "description": "ai_calls, ai_usage, audit_log, held_threads only",
+      "description": "ai_calls, ai_usage, ai_usage_summary, audit_log, held_threads only",
       "type": "string"
     },
     "to_user_id": {
