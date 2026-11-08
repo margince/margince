@@ -6,10 +6,13 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/salesassessment"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -26,17 +29,29 @@ const salesAssessmentFixtureJSON = `{
   "decisions": []
 }`
 
-// minted names the ids one preparation minted, so a reply is written
-// against the prepared input rather than typed by hand.
-type minted struct{ c *salesAssessmentCase }
+// minted names what one preparation showed the model, so a reply is written
+// against the prepared request rather than typed by hand: a cell by its id,
+// a deal and its owner by the refs the request showed.
+type minted struct {
+	t   *testing.T
+	c   *salesAssessmentCase
+	req model.Request
+}
 
 func (m minted) cell(label string) string { return m.c.labels[label] }
-func (m minted) deal(label string) string { return m.c.labels[label] }
-func (m minted) owner(label string) string {
+func (m minted) deal(label string) string {
 	for _, candidate := range m.c.in.Candidates {
 		if candidate.ID == m.c.labels[label] {
-			return candidate.OwnerID
+			return refBeside(m.t, m.req, candidate.Name)
 		}
+	}
+	return ""
+}
+
+func (m minted) owner(label string) string {
+	shown := regexp.MustCompile(`"id":"` + m.deal(label) + `"[^{}]*?"owner_id":"([a-z]+[0-9]+)"`)
+	if found := shown.FindStringSubmatch(m.req.Messages[0].Content); found != nil {
+		return found[1]
 	}
 	return ""
 }
@@ -51,7 +66,8 @@ func runSalesAssessment(t *testing.T, expected string, build func(ids minted) st
 	if !ok {
 		t.Fatalf("prepared a %T, want the sales assessment case", prepared)
 	}
-	trace, err := prepared.Run(context.Background(), &replyBrainStub{response: model.Response{Text: build(minted{c})}})
+	shown := minted{t: t, c: c, req: salesassessment.Request(c.in, string(textlang.English))}
+	trace, err := prepared.Run(context.Background(), &replyBrainStub{response: model.Response{Text: build(shown)}})
 	if err != nil {
 		t.Fatalf("running the case: %v", err)
 	}

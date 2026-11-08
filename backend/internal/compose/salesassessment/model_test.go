@@ -48,7 +48,7 @@ func TestParseDropsASentenceQuotingANumberNoCitedCellCarries(t *testing.T) {
 }
 
 func TestParseDropsADecisionQuotingANumberNoCellCarries(t *testing.T) {
-	written, err := Parse(`{"sentences":[{"text":"Sales won stand at 216000 EUR.","kind":"observation","cells":["metric:bookings_won"]}],"next_decision":{"deal_id":"deal-1","text":"Offer a 15 percent discount."},"confidence":"low"}`, assessmentInput())
+	written, err := parseCited(`{"sentences":[{"text":"Sales won stand at 216000 EUR.","kind":"observation","cells":["metric:bookings_won"]}],"next_decision":{"deal_id":"deal-1","text":"Offer a 15 percent discount."},"confidence":"low"}`, assessmentInput())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func TestParseRefusesAReplyWithNoGroundedSentence(t *testing.T) {
 
 func TestParseKeepsOnlyADecisionOnACandidateWithItsOwner(t *testing.T) {
 	kept := `{"sentences":[{"text":"Sales won stand at 216000 EUR.","kind":"observation","cells":["metric:bookings_won"]}],"next_decision":{"deal_id":"deal-1","text":"Ask for the budget owner."},"confidence":"low"}`
-	written, err := Parse(kept, assessmentInput())
+	written, err := parseCited(kept, assessmentInput())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func TestParseKeepsOnlyADecisionOnACandidateWithItsOwner(t *testing.T) {
 		"another deal":  `{"sentences":[{"text":"Sales won stand at 216000 EUR.","kind":"observation","cells":["metric:bookings_won"]}],"next_decision":{"deal_id":"deal-9","text":"Call them."}}`,
 		"another owner": `{"sentences":[{"text":"Sales won stand at 216000 EUR.","kind":"observation","cells":["metric:bookings_won"]}],"next_decision":{"deal_id":"deal-1","owner_id":"user-2","text":"Call them."}}`,
 	} {
-		written, err := Parse(reply, assessmentInput())
+		written, err := parseCited(reply, assessmentInput())
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
@@ -150,7 +150,7 @@ func TestParagraphsKeepSentencesThatReadADecisionAndADealAmount(t *testing.T) {
 		`[{"text":"The Globex renewal at 25000 EUR carries most of the open pipeline.","kind":"hypothesis","cells":["metric:open_pipeline"],"records":["deal-globex"]},` +
 		`{"text":"The Globex renewal's {{deal-globex}} is the figure to protect.","kind":"hypothesis","cells":["metric:open_pipeline"],"records":["deal-globex"]}]` +
 		`],"next_decision":null}`
-	written, err := Parse(reply, decisionInput())
+	written, err := parseCited(reply, decisionInput())
 	if err != nil {
 		t.Fatalf("a reply acknowledging the open decision and quoting the deal's amount was refused: %v", err)
 	}
@@ -172,7 +172,7 @@ func TestParseDropsARecordSentenceWhoseNumberTheCitedRecordDoesNotCarry(t *testi
 		"the deal's amount without citing it":   `{"text":"The Globex renewal is worth 25000 EUR.","cells":["metric:open_pipeline"]}`,
 		"a decision cited with no cell to read": `{"text":"A call to the buyer about the budget owner is still owed.","cells":[],"records":["decision-1"]}`,
 	} {
-		written, err := Parse(`{"sentences":[`+won+`,`+line+`],"next_decision":null}`, decisionInput())
+		written, err := parseCited(`{"sentences":[`+won+`,`+line+`],"next_decision":null}`, decisionInput())
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
@@ -193,7 +193,7 @@ func TestParseRefusesARecordIDSpelledInText(t *testing.T) {
 
 func TestParseKeepsADecisionQuotingItsDealsAmount(t *testing.T) {
 	won := `{"sentences":[{"text":"Nothing is won yet at 0 EUR.","kind":"observation","cells":["metric:bookings_won"]}],`
-	written, err := Parse(won+`"next_decision":{"deal_id":"deal-globex","text":"Decide who signs off the 25000 EUR renewal."}}`, decisionInput())
+	written, err := parseCited(won+`"next_decision":{"deal_id":"deal-globex","text":"Decide who signs off the 25000 EUR renewal."}}`, decisionInput())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -212,7 +212,7 @@ func TestADealQuantityStandsOnlyForTheAmountOfADealTheSentenceNames(t *testing.T
 		"The Globex renewal still owes the decision to {{decision-1}}.":                           false,
 		"The Globex renewal at {{deal-globex}} sits inside {{metric:open_pipeline}} of pipeline.": true,
 	} {
-		written, err := Parse(`{"sentences":[{"text":"Nothing is won yet at 0 EUR.","cells":["metric:bookings_won"]},{"text":"`+text+`"`+cited+`],"next_decision":null}`, decisionInput())
+		written, err := parseCited(`{"sentences":[{"text":"Nothing is won yet at 0 EUR.","cells":["metric:bookings_won"]},{"text":"`+text+`"`+cited+`],"next_decision":null}`, decisionInput())
 		if err != nil {
 			t.Fatalf("%q: %v", text, err)
 		}
@@ -220,11 +220,55 @@ func TestADealQuantityStandsOnlyForTheAmountOfADealTheSentenceNames(t *testing.T
 			t.Errorf("%q: kept %v, want %v", text, got, kept)
 		}
 	}
-	written, err := Parse(`{"sentences":[{"text":"Nothing is won yet at 0 EUR.","cells":["metric:bookings_won"]}],"next_decision":{"deal_id":"deal-globex","text":"Ask {{deal-globex}} for the budget owner."}}`, decisionInput())
+	written, err := parseCited(`{"sentences":[{"text":"Nothing is won yet at 0 EUR.","cells":["metric:bookings_won"]}],"next_decision":{"deal_id":"deal-globex","text":"Ask {{deal-globex}} for the budget owner."}}`, decisionInput())
 	if err != nil {
 		t.Fatal(err)
 	}
 	if written.Next != nil {
 		t.Fatalf("a decision printing the amount where the deal's name belongs was kept: %+v", written.Next)
+	}
+}
+
+// parseCited parses a reply scripted with the input's record ids as the model
+// would write it: each id spelled as the ref the request showed for it.
+func parseCited(reply string, in Input) (Written, error) {
+	_, refs := asShown(in)
+	var pairs []string
+	for _, candidate := range in.Candidates {
+		pairs = append(pairs, candidate.ID, refs.deals.For(candidate.ID), candidate.OwnerID, refs.owners.For(candidate.OwnerID))
+	}
+	for _, decision := range in.Decisions {
+		pairs = append(pairs, decision.ID, refs.decisions.For(decision.ID))
+	}
+	return Parse(strings.NewReplacer(pairs...).Replace(reply), in)
+}
+
+// The request shows each deal, decision and owner by its ref; the reply's refs
+// read back to the next decision's deal and owner. The ids the request never
+// showed, and a ref it never minted, name nothing.
+func TestTheAssessmentNamesRecordsByTheRefsItShowed(t *testing.T) {
+	in := decisionInput()
+	shown := Request(in, "en").Messages[0].Content
+	for _, id := range []string{"deal-globex", "decision-1", "user-1"} {
+		if strings.Contains(shown, id) {
+			t.Errorf("the request shows the record id %s", id)
+		}
+	}
+	won := `{"sentences":[{"text":"Nothing is won yet at 0 EUR.","cells":["metric:bookings_won"]}],`
+	for deal, want := range map[string]string{"d1": "deal-globex", "deal-globex": "", "d2": ""} {
+		written, err := Parse(won+`"next_decision":{"deal_id":"`+deal+`","owner_id":"u1","text":"Decide who signs off."}}`, in)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := ""
+		if written.Next != nil {
+			got = written.Next.DealID + "/" + written.Next.OwnerID
+		}
+		if wantGot := want + "/user-1"; (want == "" && got != "") || (want != "" && got != wantGot) {
+			t.Errorf("a next decision on %q read back as %q, want %q", deal, got, want)
+		}
+	}
+	if _, err := Parse(won[:len(won)-2]+`,{"text":"The renewal d1 is open.","cells":["metric:bookings_won"]}],"next_decision":null}`, in); err == nil {
+		t.Error("a reply writing a ref into reader text was kept")
 	}
 }

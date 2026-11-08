@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
@@ -27,7 +28,7 @@ import (
 
 // PromptVersion changes when the prompt or the reply shape changes, so a
 // cached assessment written under an older prompt is not served as current.
-const PromptVersion = "2026-11-08.2"
+const PromptVersion = "2026-11-08.3"
 
 // Bounds apply before grounding, so malformed replies cannot grow the reading.
 const (
@@ -111,9 +112,9 @@ The source context states which period and population each figure covers. Never 
 Every next action must come from "actions". You may prioritise them through "action_ids" but cannot invent a subset, route, count or action. Do not rank deals solely by stage or amount. Respect the difference between historical outcomes and current work. Only discuss changes when cells carry a comparable baseline.
 
 Return ONLY a JSON object with these keys:
-{"paragraphs":[[{"text":"...","kind":"observation|claim|hypothesis","cells":["<cell id>", ...],"records":["<candidate deal id or decision id>", ...]}, ...]],"action_ids":["<supplied action id>"],"next_decision":{"deal_id":"...","owner_id":"...","text":"..."} or null,"confidence":"low|medium|high"}
+{"paragraphs":[[{"text":"...","kind":"observation|claim|hypothesis","cells":["<cell id>", ...],"records":["<candidate deal or decision id, such as d1 or r1>", ...]}, ...]],"action_ids":["<supplied action id>"],"next_decision":{"deal_id":"...","owner_id":"...","text":"..."} or null,"confidence":"low|medium|high"}
 Each paragraph has at most six sentences of at most 240 characters. Each sentence cites in "cells" the cell ids it rests on, at least one: a sentence citing no cell is dropped, and a dropped sentence refuses the whole reply. A sentence that speaks of a candidate deal or a decision also cites that id in "records", beside the cell it bears on, such as the open pipeline the candidate deals sit in. Connect the reasoning across sentences. "kind" says what the sentence is: "observation" reads a figure as it is; "claim" repeats what a source reported; "hypothesis" is your reading of why, and says so.
-Write each quantity as {{cell id}}, for example {{metric:bookings_won}}, and cite that cell. Name a candidate deal by its "name" in plain text; {{deal id}} stands only for that deal's amount, at most once, in a sentence that names the deal and cites it in "records". Say what a decision decided in plain words, never as {{ }}. The application substitutes its whole-number display. Never write count as a unit, raw basis/status codes, an assurance that you checked something, or a list of clean checks. Do not add, divide or round figures yourself. Literal numbers must match a cited value. Never write a record id in text outside {{ }}.
+Write each quantity as {{cell id}}, for example {{metric:bookings_won}}, and cite that cell. Name a candidate deal by its "name" in plain text; {{deal id}}, such as {{d1}}, stands only for that deal's amount, at most once, in a sentence that names the deal and cites it in "records". Say what a decision decided in plain words, never as {{ }}. The application substitutes its whole-number display. Never write count as a unit, raw basis/status codes, an assurance that you checked something, or a list of clean checks. Do not add, divide or round figures yourself. Literal numbers must match a cited value. Never write a deal, decision or owner id in text outside {{ }}.
 "next_decision" names the one deal to act on, from "candidate_deals" only, with that deal's "owner_id", and says in one sentence what to decide. Choose a candidate deal no open decision covers. Return null only when there is no candidate deal or every one already has an open decision.
 "decisions" are what earlier reviews decided. A done one with a "result" is work that happened; an open one is still owed. Acknowledge them, citing each in "records", before you recommend again, and never recommend what an open decision already covers.
 Coverage "withheld", "failed" or "unsupported" prohibits a conclusion from that cell. Do not turn this into boilerplate caveats. Partial coverage permits only the stated covered population. "not measured" is never zero.
@@ -132,7 +133,8 @@ func Request(in Input, lang string) model.Request {
 }
 
 func encode(in Input) string {
-	encoded, err := json.Marshal(in)
+	shown, _ := asShown(in)
+	encoded, err := json.Marshal(shown)
 	if err != nil {
 		return fmt.Sprintf("{%q:%q}", "encoding_error", err.Error())
 	}
@@ -190,13 +192,18 @@ var (
 // no known cell, or quoting a number nothing it cites holds, is dropped. A
 // next decision naming a deal outside the candidates is dropped. A reply left
 // with no sentence is refused, and the caller serves the deterministic floor.
+// The reply is read in the refs the request showed; only the next decision
+// carries record ids out.
 func Parse(reply string, in Input) (Written, error) {
 	var parsed replyShape
 	if err := json.Unmarshal([]byte(ai.Unfence(reply)), &parsed); err != nil {
 		return Written{}, fmt.Errorf("parse assessment: %w", err)
 	}
-	ev := evidenceOf(in)
+	// Reader text may spell neither a record's id nor the ref it was shown by.
 	known := knownIDs(in)
+	in, refs := asShown(in)
+	ev := evidenceOf(in)
+	maps.Copy(known, knownIDs(in))
 	out := Written{Confidence: "low"}
 	if len(parsed.Paragraphs) > maxParagraphs {
 		return Written{}, errors.New("too many assessment paragraphs")
@@ -230,27 +237,16 @@ func Parse(reply string, in Input) (Written, error) {
 			out.Paragraphs = append(out.Paragraphs, accepted)
 		}
 	}
-	for _, id := range parsed.ActionIDs {
-		found := false
-		for _, action := range in.Actions {
-			if action.ID == id {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return Written{}, errors.New("assessment names an unsupported action")
-		}
-		if len(out.ActionIDs) == 3 {
-			return Written{}, errors.New("too many assessment actions")
-		}
-		out.ActionIDs = append(out.ActionIDs, id)
+	actionIDs, err := keepActions(parsed.ActionIDs, in.Actions)
+	if err != nil {
+		return Written{}, err
 	}
+	out.ActionIDs = actionIDs
 	if len(out.Sentences) == 0 {
 		return Written{}, errors.New("assessment reply reads no figure")
 	}
 	if parsed.Next != nil {
-		out.Next = keepDecision(parsed.Next.DealID, parsed.Next.OwnerID, parsed.Next.Text, in, ev, known)
+		out.Next = refs.recordIDs(keepDecision(parsed.Next.DealID, parsed.Next.OwnerID, parsed.Next.Text, in, ev, known))
 	}
 	if confidences[parsed.Confidence] {
 		out.Confidence = parsed.Confidence
@@ -258,40 +254,33 @@ func Parse(reply string, in Input) (Written, error) {
 	return out, nil
 }
 
+// keepActions keeps the prioritised actions, refusing the reply when it names
+// one the request did not supply or more than three.
+func keepActions(ids []string, supplied []ActionIn) ([]string, error) {
+	var kept []string
+	for _, id := range ids {
+		if !slices.ContainsFunc(supplied, func(action ActionIn) bool { return action.ID == id }) {
+			return nil, errors.New("assessment names an unsupported action")
+		}
+		if len(kept) == 3 {
+			return nil, errors.New("too many assessment actions")
+		}
+		kept = append(kept, id)
+	}
+	return kept, nil
+}
+
+// keepSentence keeps a sentence whose prose passes, whose citations allow a
+// reading, and whose quantities its citations carry. An error refuses the
+// whole reply.
 func keepSentence(line replySentence, ev evidence, known map[string]bool) (Sentence, bool, error) {
 	text := strings.TrimSpace(line.Text)
-	if machineWording(text) {
-		return Sentence{}, false, nil
-	}
-	if text == "" {
-		return Sentence{}, false, nil
-	}
-	if len([]rune(text)) > maxSentenceRune {
-		return Sentence{}, false, errors.New("a sentence exceeds the assessment's bounds")
-	}
-	if err := refuseIDs(factToken.ReplaceAllString(text, ""), known); err != nil {
+	if refused, err := refusedProse(text, ev, known); refused || err != nil {
 		return Sentence{}, false, err
 	}
-	if !ev.quantitiesFit(text) {
+	kept, cited, usable := citedSources(slices.Concat(line.Cells, line.Records), ev)
+	if !usable {
 		return Sentence{}, false, nil
-	}
-	kind := line.Kind
-	if !sentenceKinds[kind] {
-		kind = "observation"
-	}
-	var kept, cited []string
-	for _, id := range slices.Concat(line.Cells, line.Records) {
-		source, ok := ev.sources[id]
-		if !ok {
-			continue
-		}
-		if ev.cells[id] {
-			if source.Coverage == "failed" || source.Coverage == "withheld" || source.Coverage == "unsupported" || source.Value == "not measured" {
-				return Sentence{}, false, nil
-			}
-			kept = append(kept, id)
-		}
-		cited = append(cited, id)
 	}
 	raw, displayed, valid := renderQuantities(text, cited, ev.sources)
 	if !valid {
@@ -303,7 +292,51 @@ func keepSentence(line replySentence, ev evidence, known map[string]bool) (Sente
 	if len(kept) == 0 || !numbersCarried(raw, cited, ev.sources) {
 		return Sentence{}, false, nil
 	}
-	return Sentence{Text: displayed, Kind: kind, Cells: kept}, true, nil
+	return Sentence{Text: displayed, Kind: sentenceKind(line.Kind), Cells: kept}, true, nil
+}
+
+// refusedProse says whether a sentence's own words already rule it out, and
+// errs when they refuse the whole reply: past the bound, or spelling an id.
+func refusedProse(text string, ev evidence, known map[string]bool) (bool, error) {
+	if machineWording(text) || text == "" {
+		return true, nil
+	}
+	if len([]rune(text)) > maxSentenceRune {
+		return true, errors.New("a sentence exceeds the assessment's bounds")
+	}
+	if err := refuseIDs(factToken.ReplaceAllString(text, ""), known); err != nil {
+		return true, err
+	}
+	return !ev.quantitiesFit(text), nil
+}
+
+// citedSources splits what a sentence cites into the cells that ground it and
+// every source its figures may come from. It is not usable when a cited cell's
+// coverage allows no reading; an unknown citation is skipped.
+func citedSources(citations []string, ev evidence) (kept, cited []string, usable bool) {
+	for _, id := range citations {
+		source, ok := ev.sources[id]
+		if !ok {
+			continue
+		}
+		if ev.cells[id] {
+			if source.Coverage == "failed" || source.Coverage == "withheld" || source.Coverage == "unsupported" || source.Value == "not measured" {
+				return nil, nil, false
+			}
+			kept = append(kept, id)
+		}
+		cited = append(cited, id)
+	}
+	return kept, cited, true
+}
+
+// sentenceKind is the kind a sentence declared, or observation when it
+// declared none the vocabulary holds.
+func sentenceKind(kind string) string {
+	if !sentenceKinds[kind] {
+		return "observation"
+	}
+	return kind
 }
 
 // keepDecision keeps a decision on a candidate deal, for that deal's owner,
