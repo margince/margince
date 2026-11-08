@@ -53,6 +53,7 @@ Label every sentence. A FACT restates what the summary says. An ASSESSMENT is a 
 Cite the refs the summary gave you, in evidence only. A ref must never appear in the text a reader sees.
 When a sentence rests on one message, name that message by its subject in the text, so the reader can find the thread.
 A sentence that names a message cites that message's id in its evidence.
+Build the brief around the conversation this meeting is about: the message an open commitment or question came from, named by its subject wherever a sentence rests on it. A newer message on another subject is at most one company_context fact.
 Never open with "Absolutely", "Great question", "I'd be happy to", "Based on the provided context", or any greeting. No exclamation marks. No praise. No summary of what the reader already knows.
 Say plainly when something is uncertain or missing rather than filling the gap. If a section has nothing real to say, omit the section.
 `
