@@ -114,7 +114,7 @@ export const CreateTaskRefused: Story = {
   },
 };
 
-// The press wrote the task: the verb gives way to a line naming it, with the
+// The press wrote the task. The verb gives way to a line naming it, with the
 // way into it, so the reader sees what they made.
 export const CreateTaskCreated: Story = {
   beforeEach: () => {

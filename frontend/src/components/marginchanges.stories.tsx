@@ -39,8 +39,8 @@ const BUNDLES = [
   bundle(4, "Depot rollout"),
 ];
 
-// One deal undone, and one of each way a deal is not: partly undone, kept
-// because it changed since, and an archive the reader must confirm.
+// One deal undone, and one of each way a deal is not. One is partly undone,
+// one was kept because it changed since, and one archive needs confirming.
 const ANSWER = {
   results: [
     {
