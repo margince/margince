@@ -5,19 +5,7 @@
 
 package compose
 
-// The one-off pass that closes meetings captured before the calendar's RSVP was
-// read.
-//
-// The fixtures are the shape found on a real installation: of 467 captured
-// Google meetings, twelve stored originals carried a decline nobody had read —
-// seven where the calendar OWNER declined (genuinely stale rows, all reading as
-// booked) and five where only a guest did (correctly still on). Both arms are
-// modelled here, because a pass that closed the second kind would take meetings
-// a rep is actually attending off their schedule.
-//
-// Every meeting is seeded THROUGH THE REAL SINK, which is what writes the
-// raw_capture row this pass re-reads. Hand-inserting the payload would prove the
-// pass works against bytes nothing in production produces.
+// Stored invitations use the same cancellation decision as live capture.
 
 import (
 	"context"
@@ -142,9 +130,7 @@ func runRSVPBackfill(t *testing.T, e *integration.Env) int {
 	return n
 }
 
-// The case from the field, and the one the report was about: the owner declined,
-// nothing read it, and the meeting has been reading as booked ever since.
-func TestTheBackfillClosesAMeetingTheOwnerHadDeclined(t *testing.T) {
+func TestTheBackfillKeepsAMeetingTheOwnerHadDeclined(t *testing.T) {
 	e := integration.Setup(t)
 	seedCalendarConnection(t, e)
 	starts := time.Now().Add(48 * time.Hour).UTC().Truncate(time.Second)
@@ -160,17 +146,14 @@ func TestTheBackfillClosesAMeetingTheOwnerHadDeclined(t *testing.T) {
 	if n := runRSVPBackfill(t, e); n == 0 {
 		t.Fatal("the backfill settled nothing, so the stale meeting was never offered")
 	}
-	if status, set := readMeetingStatus(t, e, id); !set || status != "canceled" {
-		t.Errorf("meeting_status = %q (set=%v), want canceled", status, set)
+	if status, set := readMeetingStatus(t, e, id); set {
+		t.Errorf("meeting_status = %q, want the shared meeting kept booked", status)
 	}
-	if outcome, ok := backfillOutcome(t, e, id); !ok || outcome != rsvpBackfillClosed {
-		t.Errorf("outcome = %q (recorded=%v), want %q", outcome, ok, rsvpBackfillClosed)
+	if outcome, ok := backfillOutcome(t, e, id); !ok || outcome != rsvpBackfillStillOn {
+		t.Errorf("outcome = %q (recorded=%v), want %q", outcome, ok, rsvpBackfillStillOn)
 	}
 }
 
-// A GUEST declining is not the owner declining. Five of the twelve declines on
-// the real installation were this, and closing them would take meetings the rep
-// is attending off their schedule.
 func TestTheBackfillLeavesAMeetingOnlyAGuestDeclined(t *testing.T) {
 	e := integration.Setup(t)
 	seedCalendarConnection(t, e)
@@ -189,10 +172,7 @@ func TestTheBackfillLeavesAMeetingOnlyAGuestDeclined(t *testing.T) {
 	}
 }
 
-// A meeting somebody ANSWERED for keeps their answer, and the pass says so
-// rather than reporting it closed. The writer refuses it; this proves the pass
-// records that refusal honestly instead of counting it as a cancellation.
-func TestTheBackfillKeepsAnAnsweredOutcome(t *testing.T) {
+func TestTheBackfillKeepsAnAnsweredMeetingWhenAnAttendeeDeclined(t *testing.T) {
 	e := integration.Setup(t)
 	seedCalendarConnection(t, e)
 	starts := time.Now().Add(-48 * time.Hour).UTC().Truncate(time.Second)
@@ -212,8 +192,8 @@ func TestTheBackfillKeepsAnAnsweredOutcome(t *testing.T) {
 	if status, _ := readMeetingStatus(t, e, id); status != "held" {
 		t.Errorf("meeting_status = %q, want the recorded held kept", status)
 	}
-	if outcome, ok := backfillOutcome(t, e, id); !ok || outcome != rsvpBackfillAnswered {
-		t.Errorf("outcome = %q (recorded=%v), want %q", outcome, ok, rsvpBackfillAnswered)
+	if outcome, ok := backfillOutcome(t, e, id); !ok || outcome != rsvpBackfillStillOn {
+		t.Errorf("outcome = %q (recorded=%v), want %q", outcome, ok, rsvpBackfillStillOn)
 	}
 }
 

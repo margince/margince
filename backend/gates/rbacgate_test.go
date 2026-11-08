@@ -419,7 +419,6 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{
 	"internal/modules/contacts:OlderSignatureSources":        "the same sweep's read of one candidate's older readable mail, under the workspace GUC with no human principal; it applies the candidate query's own mail tests and returns only IDs of sources the pass may already read",
 	"internal/modules/contacts:MarkSignatureRead":            "the same sweep's read cursor: it records WHICH mail the model was already shown for a contact, so the pass stops paying for the same empty signature nightly — a bookkeeping row with no record data, written under the workspace GUC with no human principal to admit",
 	"internal/modules/contacts:CompanyNameCandidates":        "promotion-backlog read driven by the nightly sweep under the workspace GUC, no human principal (PO-F-2a); reads only provisionally-named companies and the signature evidence naming them",
-	"internal/modules/privacy:EvaluateInstallation":          "the retention pass: its one production caller is the privacy-retention River worker (compose/jobs_privacyretention.go), which builds a PrincipalSystem actor onto the context before the call, so no human principal exists here to admit. Gating it on one would be wrong rather than merely redundant — a retention obligation outlives any seat, and an installation whose reviewer lost access must still age out the data it promised to",
 
 	// comms: delivery machinery, not the message. StageTx runs in the caller's
 	// transaction, beside an activity write that passed activity:create. That

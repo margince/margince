@@ -89,6 +89,9 @@ func tombstoneContactErasure(ctx context.Context, tx pgx.Tx, subject ids.Contact
 	if err != nil {
 		return err
 	}
+	if err := storekit.RedactAuditHistory(ctx, tx, auditID); err != nil {
+		return err
+	}
 	return storekit.EmitEventForEntity(ctx, tx, auditID, "contact", subject.UUID, retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, &reason))
 }
 

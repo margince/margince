@@ -2327,6 +2327,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.client_check_read": "Đọc công tắc kiểm tra công cụ AI",
   "systemJob.client_registration_read": "Đọc cách đăng ký công cụ AI",
   "systemJob.erasure_replay": "Xóa lại dữ liệu sau khi khôi phục",
+  "systemJob.privacy_review": "Kiểm tra quyền riêng tư sau khi xóa",
   "systemJob.extension_inventory": "Kiểm kê tiện ích mở rộng",
   "systemJob.extraction_activity_reannounce": "Sửa hoạt động đã trích xuất",
   "systemJob.forecast_snapshot": "Ảnh chụp dự báo hằng ngày",

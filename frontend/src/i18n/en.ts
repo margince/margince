@@ -2306,6 +2306,7 @@ export const en = {
   "systemJob.client_check_read": "AI tool check switch read",
   "systemJob.client_registration_read": "AI tool registration read",
   "systemJob.erasure_replay": "Erasure replay after a restore",
+  "systemJob.privacy_review": "Privacy review after an erasure",
   "systemJob.extension_inventory": "Extension inventory",
   "systemJob.extraction_activity_reannounce": "Extracted activity repair",
   "systemJob.forecast_snapshot": "Daily forecast snapshot",

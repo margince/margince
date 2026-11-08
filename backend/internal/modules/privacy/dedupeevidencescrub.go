@@ -40,7 +40,7 @@ func scrubDedupeEvidence(ctx context.Context, tx pgx.Tx, contacts, leads []ids.U
 		return fmt.Errorf("privacy: reading pending duplicate matches: %w", err)
 	}
 	args["empty"] = emptyDedupeEvidence
-	if _, err := tx.Exec(ctx, `
+	scrubbed, err := scrubbedIDs(ctx, tx, `
 		UPDATE dedupe_candidate
 		   SET evidence = @empty::jsonb,
 		       archived_at = CASE WHEN disposition = 'open' THEN coalesce(archived_at, now()) ELSE archived_at END,
@@ -48,9 +48,13 @@ func scrubDedupeEvidence(ctx context.Context, tx pgx.Tx, contacts, leads []ids.U
 		 WHERE (left_contact_id = ANY(@contacts) OR right_contact_id = ANY(@contacts)
 		    OR left_lead_id = ANY(@leads) OR right_lead_id = ANY(@leads))
 		   AND (evidence IS DISTINCT FROM @empty::jsonb
-		        OR (disposition = 'open' AND archived_at IS NULL))`,
-		args); err != nil {
+		        OR (disposition = 'open' AND archived_at IS NULL)) RETURNING id`,
+		args)
+	if err != nil {
 		return fmt.Errorf("privacy: destroying the subject's duplicate-pair evidence: %w", err)
+	}
+	if err := tombstoneCollateralScrubs(ctx, tx, "dedupe_candidate", scrubbed, subjectRedactionReason, subjectRedactionCause); err != nil {
+		return err
 	}
 	for _, id := range closed {
 		if _, err := storekit.Audit(ctx, tx, "archive", "dedupe_candidate", id,

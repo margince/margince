@@ -139,14 +139,12 @@ func decode(ev rawEvent) meetingmap.Event {
 		})
 	}
 	return meetingmap.Event{
-		ID:        ev.ID,
-		Private:   ev.Sensitivity != "" && ev.Sensitivity != "normal",
-		ICalUID:   strings.TrimSpace(ev.ICalUID),
-		Cancelled: ev.IsCancelled || ev.Removed != nil,
-		// Only "declined". A tentative answer is an attendance somebody may yet
-		// make and "notResponded" is an invitation nobody has read, so neither
-		// takes the meeting off the schedule.
-		OwnerDeclined: strings.EqualFold(strings.TrimSpace(ev.ResponseStatus.Response), "declined"),
+		ID:            ev.ID,
+		Private:       ev.Sensitivity != "" && ev.Sensitivity != "normal",
+		ICalUID:       strings.TrimSpace(ev.ICalUID),
+		Cancelled:     ev.IsCancelled,
+		Removed:       ev.Removed != nil && !ev.IsCancelled,
+		OwnerResponse: guestResponse(ev.ResponseStatus.Response),
 		Subject:       ev.Subject,
 		Description:   ev.BodyPreview,
 		StartsAt:      parseStart(ev.Start, ev.IsAllDay),

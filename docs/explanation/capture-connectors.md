@@ -454,7 +454,7 @@ roster manages an existing connection.
 
 The mapping rules are **shared with Google Calendar** (`capture/meetingmap`). They decide which meetings
 are worth logging, whether a room set on the meeting counts as a guest, and which addresses reach the writer. Each
-connector owns only the decode for its vendor.
+connector owns only the decode for its vendor. A guest who says no changes their own answer. The shared meeting is called off only when the colleague who set it up calls it off. The guest's own current answer wins over another guest's copy.
 
 ## Where each part runs
 
