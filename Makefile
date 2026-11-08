@@ -443,8 +443,7 @@ fe-test-ext: composition
 	@# persistent runner, or a laptop with CI set. The root install above keeps
 	@# --frozen-lockfile, which is the property this whole change buys.
 	cd build/composition-frontend/workspace && pnpm install --no-frozen-lockfile
-	cd frontend && pnpm build && \
-		MARGINCE_COMPOSITION_FRONTEND=../build/composition/frontend pnpm test:ext \
+	cd frontend && MARGINCE_COMPOSITION_FRONTEND=../build/composition/frontend pnpm test:ext \
 		$(if $(FE_COVERAGE),--coverage.enabled)
 	@# The same acceptance test the core report gets, on the report that is
 	@# about to be uploaded beside it. An lcov whose records name paths the
