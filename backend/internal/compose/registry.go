@@ -115,8 +115,16 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterEnrichTool(registry, provider, enricher)
 	agents.RegisterPipelineTool(registry, pipelineLister(pool))
 	agents.RegisterApprovalTools(registry, approvalQueue(approvalsSvc))
-	registerReportingTools(registry, db)
+	agents.RegisterReportTool(registry, reportToolRunner(newReportEngine(pool)), reportToolCatalog(), reportPlanVocabulary())
+	agents.RegisterReportVocabularyTool(registry, agents.NewReportVocabularyResource(reportToolCatalog()))
+	agents.RegisterReportingTool(registry, reportingReader(pool))
+	agents.RegisterReportDraftTool(registry, reportDrafter(pool))
+	agents.RegisterAnalyticsReportTool(registry, analyticsReportComposer(pool, analyticsquery.DefaultFloor))
+	// The UI and tools share calculation engines and current-reader disclosure rules.
+	agents.RegisterAnalyticsQueryTool(registry, analyticsQueryToolRunner(InstallationDB(pool)))
+	agents.RegisterAnalyticsVocabularyTool(registry, analyticsVocabularyReader{db: db})
 	agents.RegisterRecordFieldsTool(registry, agents.RecordFieldsResource{})
+	agents.RegisterReportBlocksTool(registry, agents.NewReportBlocksResource(reportBlockGrammar()))
 	agents.RegisterForecastTool(registry, forecastToolReader(pool))
 	agents.RegisterMovementTool(registry, movementToolReader(pool))
 	agents.RegisterAssuranceTool(registry, assuranceToolReader(pool))
@@ -163,21 +171,6 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterRouters(registry)
 	registerComposedTools(registry)
 	return registry
-}
-
-// registerReportingTools binds the report, reporting and analytics tools. The
-// UI and the tools share these engines and the current reader's disclosure
-// rules, so a tool answers what the screen would.
-func registerReportingTools(registry *agents.Registry, db *database.DB) {
-	pool := db.Pool()
-	agents.RegisterReportTool(registry, reportToolRunner(newReportEngine(pool)), reportToolCatalog(), reportPlanVocabulary())
-	agents.RegisterReportVocabularyTool(registry, agents.NewReportVocabularyResource(reportToolCatalog()))
-	agents.RegisterReportingTool(registry, reportingReader(pool))
-	agents.RegisterReportDraftTool(registry, reportDrafter(pool))
-	agents.RegisterAnalyticsReportTool(registry, analyticsReportComposer(pool, analyticsquery.DefaultFloor))
-	agents.RegisterAnalyticsQueryTool(registry, analyticsQueryToolRunner(InstallationDB(pool)))
-	agents.RegisterAnalyticsVocabularyTool(registry, analyticsVocabularyReader{db: db})
-	agents.RegisterReportBlocksTool(registry, agents.NewReportBlocksResource(reportBlockGrammar()))
 }
 
 // reportToolRunner adapts the engine to the tool seam: decode the
