@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 227.5 KB |
+| Tool catalog | 227.7 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 59652 |
+| Approx. wire tokens | 59695 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 50.6 KB | 22% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 53.8 KB | 23% | Yes, every step |
-| Input schemas | 111.3 KB | 48% | Yes, every step |
+| Input schemas | 111.4 KB | 48% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **165.1 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **165.2 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -79,7 +79,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 472 |
 | [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 1264 |
 | [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 1710 |
-| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1888 |
+| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1930 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 562 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 342 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 275 |
@@ -3421,6 +3421,14 @@ requires passport scope "write".)
     "request_body": {
       "description": "correct_close_day, correct_project_health, decide_commission, decide_legal_review, link_lead_company, record_project_health, request_legal_review, review_outcome, set_lead_signal, transfer_projects only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
+    },
+    "settle": {
+      "description": "move_deal only: What becomes of the deal's open tasks when this move closes it. Omitted keeps them",
+      "enum": [
+        "complete",
+        "keep"
+      ],
+      "type": "string"
     },
     "source_id": {
       "description": "merge_member_accounts only",

@@ -97,7 +97,8 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 		agents.WithBaseLanguage(installationLanguage(pool)),
 		agents.WithSeatNamer(seatNamer(identity.NewServiceFor(db))), agents.WithActivityListCalendar(activityListCalendar(captureHealthRegistry(db))),
 		agents.WithChangeWords(agentChangeWords(db)),
-		agents.WithContactCaseMerger(contactCaseMergerSeam(db)))
+		agents.WithContactCaseMerger(contactCaseMergerSeam(db)),
+		agents.WithDealTaskSettler(newDealCloseTasks(activities.NewStore(db), db)))
 	// Approval decisions need the same registered effects as the HTTP path.
 	approvalsSvc := decidingApprovalsService(pool, send, log)
 	registry := agents.NewRegistry(approvalsAdapter{svc: approvalsSvc}, gate, opts...)
@@ -118,15 +119,12 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterReportVocabularyTool(registry, agents.NewReportVocabularyResource(reportToolCatalog()))
 	agents.RegisterReportingTool(registry, reportingReader(pool))
 	agents.RegisterReportDraftTool(registry, reportDrafter(pool))
-	agents.RegisterAnalyticsReportTool(registry,
-		analyticsReportComposer(pool, analyticsquery.DefaultFloor))
+	agents.RegisterAnalyticsReportTool(registry, analyticsReportComposer(pool, analyticsquery.DefaultFloor))
 	// The UI and tools share calculation engines and current-reader disclosure rules.
-	agents.RegisterAnalyticsQueryTool(registry,
-		analyticsQueryToolRunner(InstallationDB(pool)))
+	agents.RegisterAnalyticsQueryTool(registry, analyticsQueryToolRunner(InstallationDB(pool)))
 	agents.RegisterAnalyticsVocabularyTool(registry, analyticsVocabularyReader{db: db})
 	agents.RegisterRecordFieldsTool(registry, agents.RecordFieldsResource{})
-	agents.RegisterReportBlocksTool(registry,
-		agents.NewReportBlocksResource(reportBlockGrammar()))
+	agents.RegisterReportBlocksTool(registry, agents.NewReportBlocksResource(reportBlockGrammar()))
 	agents.RegisterForecastTool(registry, forecastToolReader(pool))
 	agents.RegisterMovementTool(registry, movementToolReader(pool))
 	agents.RegisterAssuranceTool(registry, assuranceToolReader(pool))
