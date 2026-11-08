@@ -62,7 +62,8 @@ message’s words that establish the need. An explicit report of a named partici
 can identify that participant as the buyer; their presence in Cc alone cannot.
 Use supplier, partner or provider only when the source establishes that specific relationship.
 Merely relaying an unidentified company’s need does not establish a partnership: use unknown.
-A meeting invitation alone establishes no buying intent.
+A meeting invitation alone establishes no buying intent. Neither does a pitch: a supplier offering
+us its product or price, when no one states a need for it, is no event at all.
 Every field is always present. A text field that does not apply to the kind is "", recipient_refs is [],
 commercial_role is unknown, and commitment is always the object.
 A conversation can state several events in different messages. Report each one. An event in a later
