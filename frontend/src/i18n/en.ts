@@ -9067,7 +9067,7 @@ export const en = {
   // panel opened on a broken installation said "error" at a reader in the
   // product's voice. The sentence beside these says what is HAPPENING; these
   // say what the agent is. One word each, because they sit beside a dot.
-  "agent.state.idle": "Idle",
+  "agent.state.idle": "Agent idle",
   "agent.state.ingest": "Capturing",
   "agent.state.working": "Working",
   "agent.state.warning": "Warning",
@@ -9133,10 +9133,6 @@ export const en = {
   // The four things the agent says once it has run out of news. None claims the
   // agent did anything: they are standing facts about the product, which is
   // what lets them be written here rather than read from the installation.
-  "agent.tip.day": "Tasks, approvals and duplicates are on {name}.",
-  "agent.tip.ask": "Ask the agent with {chord}.",
-  "agent.tip.recap": "Open the agent panel for today’s activity.",
-  "agent.tip.edge": "The screen edge lights up while the agent works.",
   // What the line under the orb names while this tab reads or writes, keyed
   // from `agentrail-copy.ts`. A named variant puts the record's name in.
   "agent.ticker.read.activities": "Loading activities",

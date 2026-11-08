@@ -8,14 +8,12 @@ import { cleanup, render, renderHook, waitFor } from "@testing-library/react";
 import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { LOCALES, LocaleProvider, translate, translatePlural } from "../i18n";
+import { LocaleProvider, translatePlural } from "../i18n";
 import { en, type MessageKey } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
 import { AgentRail } from "./agentrail";
-import { TIPS } from "./agentrail-copy";
 import {
   restingReadings,
-  restingTips,
   stillNews,
   useRestingLine,
 } from "./agentrail-resting";
@@ -49,18 +47,6 @@ function run(finishedAgo: number, at = 0) {
 function said(line: SpokenLine): string {
   return spokenText(line);
 }
-
-/**
- * The real English catalog, not a stub.
- *
- * The tips' sentences are a thing this file has to hold rather than assume: the
- * one that names a destination is split on a `{name}` slot the copy has to
- * carry, and a fake translator answering with the key would let that slot go
- * missing from the catalog with every case here still green — the link would
- * simply stop being a link.
- */
-const t = (key: MessageKey, params?: Record<string, string>) =>
-  translate("en", key, params);
 
 afterEach(() => {
   cleanup();
@@ -178,64 +164,8 @@ describe("restingReadings", () => {
   });
 });
 
-describe("restingTips", () => {
-  it("offers every tip in the catalog on a screen none of them names", () => {
-    expect(restingTips("deals", t, "Win32")).toHaveLength(TIPS.length);
-  });
-
-  // A rail telling somebody on Home to go to Home is the one line that would
-  // cost it the other three.
-  it("drops the tip that names the screen the reader is standing on", () => {
-    const here = restingTips("home", t, "Win32").map(
-      (line) => line.subject?.route,
-    );
-    expect(here).not.toContainEqual({ screen: "home" });
-    expect(here).toHaveLength(TIPS.length - 1);
-  });
-
-  // The palette's shortcut is named in the keys the reader's keyboard has: a
-  // Windows reader told to press ⌘ is told to press a key that is not there.
-  it("names the palette's shortcut the way this keyboard spells it", () => {
-    const lines = restingTips("deals", t, "Win32").map(said);
-    expect(lines).toContain("Ask the agent with Ctrl K.");
-    expect(lines.join(" ")).not.toContain("⌘");
-    const mac = restingTips("deals", t, "MacIntel").map(said);
-    expect(mac).toContain("Ask the agent with ⌘ K.");
-  });
-
-  /**
-   * The longest a tip may be.
-   *
-   * The rail clamps its line to TWO lines in a box about 200px wide (`.arline`
-   * in agentrail.css), so a sentence much past this is a sentence whose end no
-   * reader ever sees — and the half that gets cut is the half carrying the
-   * point. The number is an approximation of a typographic bound and is
-   * deliberately generous: what it has to catch is a translation that ran away,
-   * not one that ran a word over.
-   */
-  const CEILING = 60;
-
-  // Held in EVERY locale, not only the one these sentences were written in. A
-  // German compound and a rail column are exactly the pair that overflows, and
-  // the English original passing says nothing about it.
-  it.each(LOCALES)(
-    "keeps every tip inside the rail's two lines in %s",
-    (locale) => {
-      const tips = restingTips(
-        "deals",
-        (key, params) => translate(locale, key, params),
-        "Win32",
-      );
-      expect(tips.map(said).filter((line) => line.length > CEILING)).toEqual(
-        [],
-      );
-    },
-  );
-});
-
 describe("useRestingLine", () => {
   const READINGS = [plain("one"), plain("two")];
-  const TIP_LINES = [plain("tip A"), plain("tip B")];
 
   /** Runs the rotation forward far enough for the next line to take over. */
   function advance(ms: number) {
@@ -244,66 +174,31 @@ describe("useRestingLine", () => {
     });
   }
 
-  it("walks the readings and then ONE tip, and a new tip next pass", () => {
+  it("walks the readings in turn and starts over", () => {
     vi.useFakeTimers();
-    const { result } = renderHook(() => useRestingLine(READINGS, TIP_LINES));
+    const { result } = renderHook(() => useRestingLine(READINGS));
     const seen = [said(result.current)];
-    // Six steps: two full passes of "reading, reading, tip" plus the start of
-    // the third, which is what shows the tip has MOVED rather than repeated.
-    for (let step = 0; step < 6; step += 1) {
-      advance(10_000);
+    for (let step = 0; step < 3; step += 1) {
+      advance(6_000);
       seen.push(said(result.current));
     }
-    expect(seen).toEqual(["one", "two", "tip A", "one", "two", "tip B", "one"]);
+    expect(seen).toEqual(["one", "two", "one", "two"]);
   });
 
-  // The pacing the surface is priced at: a reading is a glance, a tip is a
-  // sentence, and the tip gets longer because it has more to be read.
-  it("holds a tip longer than a reading", () => {
+  // A rail with one reading holds it rather than flickering against itself.
+  it("stands still on a single reading", () => {
     vi.useFakeTimers();
-    const { result } = renderHook(() => useRestingLine(READINGS, TIP_LINES));
-    advance(5_000);
-    expect(said(result.current)).toBe("one");
-    advance(1_000);
-    expect(said(result.current)).toBe("two");
-    advance(6_000);
-    expect(said(result.current)).toBe("tip A");
-    advance(8_000);
-    expect(said(result.current)).toBe("tip A");
-    advance(1_000);
-    expect(said(result.current)).toBe("one");
-  });
-
-  // An installation with one true thing to say is the case the tips were added
-  // for: before them the rail stood on that sentence all day.
-  it("still moves when there is only one reading to report", () => {
-    vi.useFakeTimers();
-    const { result } = renderHook(() =>
-      useRestingLine([plain("Nothing needs attention")], TIP_LINES),
-    );
-    expect(said(result.current)).toBe("Nothing needs attention");
-    advance(10_000);
-    expect(said(result.current)).toBe("tip A");
-  });
-
-  // Nothing to rotate through is still a line, and a rail with one reading and
-  // no tips holds it rather than flickering against itself.
-  it("stands still on one reading when there are no tips", () => {
-    vi.useFakeTimers();
-    const { result } = renderHook(() =>
-      useRestingLine([plain("only this")], []),
-    );
+    const { result } = renderHook(() => useRestingLine([plain("only this")]));
     advance(60_000);
     expect(said(result.current)).toBe("only this");
   });
 
-  // Both lists can shorten under the rotation when a read answers, and an index
+  // The readings can shorten under the rotation when a read answers, and an index
   // left pointing past the end would blank the line.
   it("keeps saying something when the readings shorten under it", () => {
     vi.useFakeTimers();
     const { rerender, result } = renderHook(
-      ({ lines }: { lines: readonly SpokenLine[] }) =>
-        useRestingLine(lines, []),
+      ({ lines }: { lines: readonly SpokenLine[] }) => useRestingLine(lines),
       { initialProps: { lines: [plain("a"), plain("b"), plain("c")] } },
     );
     advance(6_000);
@@ -384,7 +279,6 @@ function stubRail(recent: readonly AiActivityItem[]) {
   );
 }
 
-/** Mounted on a screen no tip names, so the catalog arrives whole. */
 function mountRail() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -392,7 +286,7 @@ function mountRail() {
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider>
-        <AgentRail route={{ screen: "companies" }} />
+        <AgentRail />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -436,21 +330,16 @@ describe("the rail's resting line", () => {
     expect(await walk(container, 4)).not.toContain(SUMMARY_LINE);
   });
 
-  // And what it says instead. An installation with nothing to report used to
-  // stand on one sentence for the whole day; the tips are what give it somewhere
-  // to go, and this is the case that holds them WIRED rather than merely
-  // written.
-  it("moves off the all-clear onto a tip when there is no news", async () => {
+  // A quiet installation says only the all-clear: no standing advice joins the
+  // rotation while the reader works.
+  it("holds the all-clear when there is no news", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     stubRail([]);
     const { container } = mountRail();
     await waitFor(() =>
       expect(shown(container)).toBe(en["agent.line.allClear"]),
     );
-    const tips = restingTips("companies", t, navigator.platform).map(said);
-    await act(async () => {
-      vi.advanceTimersByTime(7_000);
-    });
-    expect(tips).toContain(shown(container));
+    const later = (await walk(container, 3)).slice(1);
+    expect(later).toEqual(Array(3).fill(en["agent.line.allClear"]));
   });
 });
