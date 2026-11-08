@@ -51,9 +51,7 @@ A task leads your Worklist and **Needs you** on **Home** when you hold it and it
 Only the colleague who holds the task is reminded. A colleague who opens your queue sees the task in its usual place, and a task nobody holds reminds nobody. A reminder stays at the top for 30 days after its time. Also called: reminder, remind me, notify me.
 
 ### Why is this on my list?
-The open card under **Needs you** on **Home** says what the row asks of you and its one current reason. **View details** adds the messages, contact and deal. **Why this needs attention** lists every fact behind the row and the next step.
-
-A meeting with no outcome opens the meeting itself and asks **How did it go?** If you may change the meeting, it offers **It happened**, **Add notes** and **Did not happen**. A task Margince made for you says what made it. A reminder about a quiet contact, company, deal or lead says so, and asks you to get in touch and then press **Done**. Also called: what is this task, where did this task come from.
+The open card under **Needs you** on **Home** says what the row asks of you and its one current reason. **View details** adds the messages, contact, deal and every fact behind the row. A meeting with no outcome asks **How did it go?** with **It happened**, **Add notes** and **Did not happen**. A task Margince made for you says what made it. A reminder about a quiet contact, company, deal or lead says so, and asks you to get in touch and then press **Done**. Also called: what is this task, where did this task come from.
 
 ### How do I hand a task on to a colleague?
 To hand a task on in Margince, press **More actions** on its Worklist row and choose **Reassign**.
@@ -182,9 +180,7 @@ The work counts come from the current Worklist read. The greeting's email count 
 **Since your last brief** says when some activity could not be counted. Its count then says how much it could count, and an empty list does not mean nothing happened. A change that covers several records lists each record with its time and its full values, before and after. Each record keeps the review its change allows: **Mark reviewed** or **Undo**.
 
 ### Done for you
-**Done for you**, on **Today**, shows what Margince finished for you. The deals it changed come first, under a count of those that wait for your review, then **Other updates**. Each deal lists every change: what moved and when, and why Margince did it. A deal Margince closed reads **Marked lost**.
-
-When a change rests on the customer's own words, they show under "The customer wrote:". A closed deal with no reason you may read says "Reason unavailable"; any other change without a reason shows no reason line. Only the deal's owner reads why.
+**Done for you**, on **Today**, shows what Margince finished for you. The deals it changed come first, under a count of those that wait for your review, then **Other updates**. Each deal lists every change: what moved and when, and why Margince did it. When a change rests on the customer's own words, they show under "The customer wrote:". A deal Margince closed reads **Marked lost**, and "Reason unavailable" when you may not read why. Only the deal's owner reads why.
 
 **Details** shows who made the change and each value before and after. It also names the email, call or meeting it came from, unless you cannot open it. **Mark reviewed** says you have seen a change. It does not run the change again or make an estimate a customer promise, and the change keeps its **Undo**. **Undo** puts the deal back. A deal with two or more waiting changes also offers **Undo 2 changes**, which takes back the changes listed and none that arrived since.
 
