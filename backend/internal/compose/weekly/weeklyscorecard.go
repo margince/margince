@@ -24,6 +24,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -232,6 +233,7 @@ func scoreLeads(
 		     AND `+meetingIsTheirsSQL("$%[3]d")+`
 		     AND m.archived_at IS NULL
 		     AND h.effective_at >= $%[1]d AND h.effective_at < $%[2]d
+		     AND NOT `+activities.ReversedCancellationSQL("h")+`
 		     AND (%[6]s))
 		SELECT
 		  (SELECT count(*) FROM moved WHERE move = '`+LeadMoveAdvanced+`'),

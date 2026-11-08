@@ -99,9 +99,9 @@ func heldMeetingSource(ctx context.Context, b *reportingBindings, at, from, to t
 	// their own figures; a team counts it once, because it is one row here.
 	// A recorded transition keeps the host it recorded.
 	return heldMeeting{
-		from: `activity a LEFT JOIN LATERAL(SELECT h.* FROM activity_meeting_history h WHERE h.activity_id=a.id AND h.effective_at<=` + b.add(at) + ` ORDER BY h.effective_at DESC,h.id DESC LIMIT 1) held ON true`,
+		from: `activity a LEFT JOIN LATERAL(SELECT h.* FROM activity_meeting_history h WHERE h.activity_id=a.id AND h.effective_at<=` + b.add(at) + ` AND NOT ` + activities.ReversedCancellationSQL("h") + ` ORDER BY h.effective_at DESC,h.id DESC LIMIT 1) held ON true`,
 		where: `a.kind='meeting' AND a.archived_at IS NULL
- AND (held.id IS NOT NULL OR NOT EXISTS(SELECT 1 FROM activity_meeting_history future WHERE future.activity_id=a.id))
+ AND (held.id IS NOT NULL OR NOT EXISTS(SELECT 1 FROM activity_meeting_history future WHERE future.activity_id=a.id AND NOT ` + activities.ReversedCancellationSQL("future") + `))
  AND COALESCE(held.status,a.meeting_status)='` + meetingoutcome.Held + `' AND (` + eligible + `)
  AND ` + within + " AND " + orUnnarrowed(visible) + " AND " + fieldScope,
 		seats:      storekit.MeetingCreditedSeatsAtChangeSQL("a", legacy, "held.host_id_at_change"),
