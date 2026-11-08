@@ -8,8 +8,8 @@ package gates
 // Every column holding a bounded quantity states the bound in the schema.
 //
 // A clamp in Go protects the rows that one writer writes. A `CHECK` protects
-// the column, so an import and a repair script meet the same rule. Eleven
-// columns state a range today and nothing held them to it.
+// the column, so an import and a repair script meet the same rule. The
+// columns that state a range today had nothing holding them to it.
 //
 // The subject derives from the head catalog. A new bounded column fails here
 // until it carries a range `CHECK` or a waiver. A waiver for a column that has
@@ -32,12 +32,26 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// boundedQuantityColumn reads a catalog column line for the integer family.
-// A bounded quantity is stored as a whole number here; a numeric column states
-// its range through precision and scale instead.
+// boundedQuantityColumn reads a catalog column line for the integer and the
+// numeric families. Precision and scale bound a numeric's magnitude, not its
+// floor, so a numeric column owes the same CHECK as an integer one.
 var boundedQuantityColumn = regexp.MustCompile(
-	`^public\.(\w+)\.(\w*(?:score|probability|percent|points|_rate|rate_bps|_sum)\w*) (smallint|integer|bigint)\b`,
+	`^public\.(\w+)\.(\w*(?:score|probability|percent|points|_rate|rate_bps|_sum)\w*) ` +
+		`(smallint|integer|bigint|numeric|real|double precision)\b`,
 )
+
+// readsABoundedQuantity answers the "table.column" a catalog line names when
+// that column holds a bounded quantity.
+//
+// An exchange rate is left out by name: it is a ratio between two currencies,
+// with no ceiling to state. Every `_rate` that is a share stays in.
+func readsABoundedQuantity(line string) (string, bool) {
+	m := boundedQuantityColumn.FindStringSubmatch(strings.TrimSpace(line))
+	if m == nil || strings.HasPrefix(m[2], "fx_rate") {
+		return "", false
+	}
+	return m[1] + "." + m[2], true
+}
 
 // unboundedOnPurpose records each bounded-sounding column that carries no range,
 // with why. It is what makes a new column fail: an unlisted one has neither a
@@ -45,11 +59,22 @@ var boundedQuantityColumn = regexp.MustCompile(
 var unboundedOnPurpose = gatekit.Waive(map[string]string{
 	"lead_manual_signal.points": "a rep's own signal, which can subtract. The scorer's own " +
 		"fitLowIntentSourcePenalty is -5, so a lower bound of zero would refuse a penalty.",
+	"lead_score_history.raw_sum": "the unrounded sum the score is read from, before the " +
+		"clamp, so it is open by construction like rounded_sum beside it.",
+	"deal_line_item.tax_rate":  taxRateCeiling,
+	"offer_line_item.tax_rate": taxRateCeiling,
+	"product.default_tax_rate": taxRateCeiling,
 	"lead_score_history.rounded_sum": "the value from before the clamp, so a raw 100.6 " +
 		"stores 101 and the cap acts after it. Its range is open by construction, and " +
 		"leadscore.go names the two steps. Listed rather than left outside the corpus: " +
 		"a waiver says so if it ever gains a bound, and prose does not.",
 })
+
+// taxRateCeiling is why a tax rate states a floor and no ceiling. A duty can
+// exceed the price it is charged on, as a vehicle registration tax or an
+// excise duty does, so a ceiling of 100 would refuse a real rate.
+const taxRateCeiling = "a CHECK holds it at zero or above. A tax can exceed 100 percent " +
+	"of the price, as some registration and excise duties do, so no ceiling is stated."
 
 // checksByTable groups every CHECK definition in the catalog by its table.
 func checksByTable(catalog string) map[string][]string {
@@ -128,8 +153,8 @@ func boundedQuantityColumns(t *testing.T, catalog string) []string {
 	t.Helper()
 	var columns []string
 	for line := range strings.SplitSeq(catalog, "\n") {
-		if m := boundedQuantityColumn.FindStringSubmatch(strings.TrimSpace(line)); m != nil {
-			columns = append(columns, m[1]+"."+m[2])
+		if column, ok := readsABoundedQuantity(line); ok {
+			columns = append(columns, column)
 		}
 	}
 	sort.Strings(columns)
@@ -202,9 +227,14 @@ func TestTheBoundedQuantityReaderSeesEachShape(t *testing.T) {
 		{"public.import_run.resume_count integer NOT NULL gen=- def=0", false},
 		{"public.stage.win_probability smallint NOT NULL gen=- def=-", true},
 		{"public.lead.score_override_reason text gen=- def=-", false},
+		// Numeric columns are read: precision and scale state no floor.
+		{"public.lead_score_history.raw_sum numeric(8,3) NOT NULL gen=- def=-", true},
+		{"public.product.default_tax_rate numeric(5,2) NOT NULL gen=- def=0", true},
+		// An exchange rate is a ratio with no ceiling, in either spelling.
 		{"public.deal.fx_rate_to_base numeric(20,10) gen=- def=-", false},
+		{"public.deal_stage_history.fx_rate_at_change numeric gen=- def=-", false},
 	} {
-		if got := boundedQuantityColumn.MatchString(c.line); got != c.want {
+		if _, got := readsABoundedQuantity(c.line); got != c.want {
 			t.Errorf("the bounded-quantity reader matched %q = %v, want %v", c.line, got, c.want)
 		}
 	}
