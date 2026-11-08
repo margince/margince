@@ -205,8 +205,8 @@ func (s *Service) recordEffectRan(ctx context.Context, id ids.ApprovalID) {
 	}
 }
 
-// serverProposed reports whether this staging was minted by a SERVER-SIDE
-// proposal flow rather than by an agent asserting a passport.
+// serverProposed reports whether a server flow owns the proposal's effect.
+// A human agreement keeps that flow when an agent files the request.
 //
 // The effect table is keyed by the kind string alone, and a kind is not a
 // namespace: the REST admission gate stages under the operation's TOOL name,
@@ -219,12 +219,9 @@ func (s *Service) recordEffectRan(ctx context.Context, id ids.ApprovalID) {
 // the approval could never be redeemed again, and the audit row asserted a
 // redemption for an effect that never ran.
 //
-// Provenance is the discriminator, because it is the thing that actually
-// differs: a server-side proposal is staged by the system or by a human, and
-// carries no passport. An agent-minted staging is redeemed the way ADR-0055
-// says — by repeating the identical call with the approval token — and needs
-// no server-side executor at all.
-func serverProposed(a row) bool { return a.PassportID == nil }
+// Ordinary agent calls are retried under their passport. A human agreement's
+// passport records who asked; its human decider authorizes the effect.
+func serverProposed(a row) bool { return a.PassportID == nil || humanAcceptedKinds[a.Kind] }
 
 // decideInTx runs the decision inside the caller's transaction: the
 // decide-authority + row-scope gate, the pending guard, the optional

@@ -364,7 +364,7 @@ func TestEverySendingKindIsAKindWhoseReleaseIsAMessage(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s is named as a sending kind but this module governs no such kind: %v", kind, err)
 		}
-		if !slices.ContainsFunc(grants, func(g grantRequirement) bool { return g.Object == objectActivity }) {
+		if !slices.ContainsFunc(grants, func(g DecisionGrant) bool { return g.Object == objectActivity }) {
 			t.Errorf("%s is named as a sending kind but deciding it takes no %s grant, so the two rules "+
 				"disagree about what its release does", kind, objectActivity)
 		}

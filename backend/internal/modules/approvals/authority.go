@@ -45,10 +45,10 @@ const targetImportRun = "import_run"
 // tool verb, which is how every other confirm-first verb is keyed here.
 const KindImportCommit = "commit_import"
 
-// grantRequirement is one RBAC pair approving a staged kind requires. Named
+// DecisionGrant is one RBAC pair approving a staged kind requires. Named
 // rather than anonymous because the derivation below appends to the set and the
 // composition layer's satisfiability gate reads the objects back out of it.
-type grantRequirement struct {
+type DecisionGrant struct {
 	Object string
 	Action principal.Action
 }
@@ -114,7 +114,7 @@ const objectCommunicationException = "communication_exception"
 // targetResolvedGrants, and approving then requires the UNION — no kind needs
 // both today, and decisionGrantsFor combines them so one that grows a second half
 // gains authority rather than silently losing the first.
-var decisionGrants = map[string][]grantRequirement{
+var decisionGrants = map[string][]DecisionGrant{
 	"merge_members": {{objectUserAdmin, principal.ActionDelete}},
 	// A held message asks its rep to try again or give up. Both answers move the
 	// message's own state — reschedule and cancel — which the store gates on
@@ -423,7 +423,7 @@ func requireDecisionGrants(p principal.Principal, a row) error {
 // Archiving a record type whose owner may archive it without delete takes
 // update at the object level. Whether this row is the decider's own to archive
 // is the row half, which decidableRows asks with auth.EnsureArchivable.
-func mayArchiveOwnRecord(p principal.Principal, a row, g grantRequirement) bool {
+func mayArchiveOwnRecord(p principal.Principal, a row, g DecisionGrant) bool {
 	if a.Kind != kindArchiveRecord || g.Action != principal.ActionDelete {
 		return false
 	}
@@ -436,7 +436,7 @@ func mayArchiveOwnRecord(p principal.Principal, a row, g grantRequirement) bool 
 // that type's. An unmapped kind, and a target-resolved kind staged with no
 // target type, both error: neither can be decided by anyone, and answering an
 // empty grant set for either would make them decidable by everyone.
-func decisionGrantsFor(kind string, targetType *string) ([]grantRequirement, error) {
+func decisionGrantsFor(kind string, targetType *string) ([]DecisionGrant, error) {
 	fixed, hasFixed := decisionGrants[kind]
 	action, resolvedFromTarget := targetResolvedGrants[kind]
 	if !hasFixed && !resolvedFromTarget {
@@ -446,7 +446,7 @@ func decisionGrantsFor(kind string, targetType *string) ([]grantRequirement, err
 		// it takes. Consulted only AFTER the static maps, so a unit can never
 		// answer for a core kind.
 		if ext, registered := RegisteredExtensionKind(kind); registered {
-			return []grantRequirement{{ext.RbacObject, ext.RbacAction}}, nil
+			return []DecisionGrant{{ext.RbacObject, ext.RbacAction}}, nil
 		}
 		return nil, fmt.Errorf("crmapprovals: kind %q has no decision-grant mapping", kind)
 	}
@@ -458,7 +458,13 @@ func decisionGrantsFor(kind string, targetType *string) ([]grantRequirement, err
 	}
 	// Cloned, not appended in place: fixed is the map's own slice, and appending
 	// into its spare capacity would rewrite what the next caller reads.
-	return append(slices.Clone(fixed), grantRequirement{*targetType, action}), nil
+	return append(slices.Clone(fixed), DecisionGrant{*targetType, action}), nil
+}
+
+// DecisionGrants exposes the same requirements staging and decisions enforce.
+func DecisionGrants(kind, targetType string) ([]DecisionGrant, error) {
+	grants, err := decisionGrantsFor(kind, &targetType)
+	return slices.Clone(grants), err
 }
 
 // DecisionGrantObjects reports the RBAC objects approving a staging of this kind
