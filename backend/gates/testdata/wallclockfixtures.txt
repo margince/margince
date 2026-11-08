@@ -153,6 +153,8 @@ internal/compose/integration/fieldhistoryclient_integration_test.go 1
 internal/compose/integration/fxrate_integration_test.go 1
 internal/compose/integration/grants_integration_test.go 3
 internal/compose/integration/growthfit_e2e_integration_test.go 1
+internal/compose/integration/home_budget_bench_test.go 2
+internal/compose/integration/home_budget_seed_bench_test.go 2
 internal/compose/integration/idempotency_integration_test.go 2
 internal/compose/integration/installation_integration_test.go 1
 internal/compose/integration/installationseam_integration_test.go 1
