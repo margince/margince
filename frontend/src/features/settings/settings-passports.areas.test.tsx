@@ -226,7 +226,7 @@ describe("PassportCard: changing areas", () => {
     ).toBeInTheDocument();
     expect(
       within(drawer).getByText(
-        "This passport may not work in the “Compliance and privacy” area. Ask the user to turn that area on for this passport in Settings → AI access, under Your passports or Your connections.",
+        "This passport may not work in the “Compliance and privacy” area. Ask the user to turn that area on for this passport in Settings → AI assistants, under Your passports or Your connections.",
       ),
     ).toBeInTheDocument();
 

@@ -2,14 +2,14 @@
 <!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go frontend/src/features/settings/settingssignaturerow.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go frontend/src/app/setup-reminder.tsx frontend/src/app/account.tsx backend/internal/modules/identity/avatar.go backend/internal/modules/identity/providerpicture.go backend/internal/modules/identity/federatedidentity.go backend/internal/compose/avatarprovider.go backend/internal/compose/connectors_picture.go -->
 # Your own settings
 
-Your own settings in Margince are the pages under **You** in Settings: **Account**, **Meetings**, **Writing voice**, **AI access**, **Notifications**, **Connections** and **Capture activity**. Everything here changes your own seat and nobody else's.
-Capture activity also carries one card that holds for the whole company: the company's rules for what capture keeps out, beside your own. Connections only shows the company's email sharing rule, on a row marked **Whole company**, and changes nothing for anyone else.
+Your own settings in Margince are the pages under **You** in Settings: **Account**, **Notifications**, **Meetings**, **Writing voice**, **AI assistants** and **Connections**. Everything here changes your own seat and nobody else's.
+The **Activity** tab of Connections also carries one card that holds for the whole company. It holds the company's rules for what capture keeps out, beside your own. Connections only shows the company's email sharing rule, on a row marked **Whole company**, and changes nothing for anyone else.
 
 For everything else, see [Settings](settings.md).
 
 ### How do I open my own settings?
 To open your own settings in Margince, open the account menu at the top right and choose **Settings**, then pick a page under **You**.
-The pages are **Account**, **Meetings**, **Writing voice**, **AI access**, **Notifications**, **Connections** and **Capture activity**. **Account** holds your name, password, signature, language and look. **Meetings** holds your booking link, calendar, working hours and what guests see.
+The pages are **Account**, **Notifications**, **Meetings**, **Writing voice**, **AI assistants** and **Connections**. **Account** holds your name, password, signature, language and look, and whether Margince prepares your Morning brief overnight. **Meetings** holds your booking link, calendar, working hours and what guests see.
 You can also press ⌘K (Ctrl+K) and type the page name, or a word such as "password", "language", "theme" or "mailbox".
 Also called: my profile, my account, preferences, user settings.
 
@@ -151,24 +151,21 @@ Also called: dark mode, light mode, appearance, colour scheme.
 
 ## Meetings
 
-The Meetings page in Settings is where customers book time with you. It is a
-stack of cards in this order: **Booking links**, **Calendar**,
-**When people can book** and **What guests see**. While no Google or
-Microsoft 365 calendar is connected, a card
-**Connect a calendar to take bookings** comes first.
+The Meetings page in Settings is where customers book time with you. It has three tabs: **Booking links**, with your links and the calendar, **Availability**, with **When people can book**, and **Guest page**, with **What guests see**.
+While no Google or Microsoft 365 calendar is connected, a card **Connect a calendar to take bookings** comes first on **Booking links**.
 
 ### How do I set up bookings?
 <!-- opens: settings/meetings -->
 To let customers book time with you in Margince, open Settings → **Meetings** and follow **Connect a calendar to take bookings**.
 1. Choose **Connect calendar** and sign in with Google or Microsoft 365. You come back to Meetings, where a note says how the connection went.
-2. Check your hours under **When people can book** and choose **Save availability**.
+2. Check your hours on the **Availability** tab and choose **Save availability**.
 3. Under **Booking links**, turn on **Accept bookings** and choose **Copy link** to share it.
 The setup card goes away once a calendar is connected.
 Also called: booking page, scheduling link, book a meeting with me.
 
 ### How do I set my bookable hours?
 <!-- opens: settings/meetings -->
-To set when customers can book time with you in Margince, open Settings → **Meetings** and fill in **When people can book**.
+To set when customers can book time with you in Margince, open Settings → **Meetings**, then **Availability**, and fill in **When people can book**.
 1. Pick your **Working days**.
 2. Set **From** and **Until**. They are read in your own time zone, which you set under Settings → **Account**. Guests see the hours in their own zone.
 3. Under **Booking rules**, set **Minimum notice**, **Break between meetings** and **How far ahead**. Pick one of the given times, or **Other**.
@@ -299,9 +296,9 @@ Under that share, the file counts as plain text and is taken whole. So an email
 with a line that opens with a heading and a colon, such as "Frage: …", is not
 asked about.
 
-## AI access
+## AI assistants
 
-The AI access page in Settings is where you connect your AI tool, such as
+The AI assistants page in Settings is where you connect your AI tool, such as
 Claude or ChatGPT, to Margince. Under **For developers** you also make and take
 back **passports**: the keys that let a script or your own code work as you.
 Every member can open this page.
@@ -310,7 +307,7 @@ To connect your AI tool, see [How do I connect my AI tool to Margince?](agents-a
 
 ### How do I create an agent passport?
 <!-- opens: settings/agents -->
-To create an agent passport, open Settings → **AI access**, then **For developers**, and see [How do I give an agent access to Margince?](agents-and-passports.md#how-do-i-give-an-agent-access-to-margince).
+To create an agent passport, open Settings → **AI assistants**, then **For developers**, and see [How do I give an agent access to Margince?](agents-and-passports.md#how-do-i-give-an-agent-access-to-margince).
 Also called: API key, access token, connect an AI agent.
 
 **Your connections** lists each AI tool you connected. Under **For developers**,
@@ -324,28 +321,26 @@ do](agents-and-passports.md#passports-how-an-agent-is-connected).
 
 ## Connections
 
-The Connections page in Settings holds what *you* connected. That is your mail
-and calendar account, your other email addresses, your overnight Morning brief
-and your LinkedIn network. **Integrations** is the other side: what the *installation* is
-connected to, such as webhooks and the company's Telegram bot.
+The Connections page in Settings holds what *you* connected. That is your mail and calendar account, your other email addresses and your LinkedIn network.
+Its **Activity** tab shows what those connections did with your mail. **Integrations** is the other side: what the *installation* is connected to, such as webhooks and the company's Telegram bot.
 
-The cards, in order:
+The tabs, in order:
 
 - **Mail and calendar**: one row per account: Google, Microsoft 365, or a mail
   host connected over IMAP. What it brings in is listed under it: **New
   mail**, **Past email** and **Calendar**. Each account has a block **Who sees
   mail from {account}** with **Mail visibility**, a pointer to held threads in
-  Capture activity, and **Advanced** settings. A row at the foot, marked
+  the **Activity** tab, and **Advanced** settings. A row at the foot, marked
   **Whole company**, shows the company's email sharing rule.
-- **Your other email addresses**: other names for your mailbox, a private domain
+- **Other addresses**: other names for your mailbox, a private domain
   or an address you forward from. Margince counts them as you, so mail between them is not
   captured and never creates a contact.
-- **Overnight preparation**: whether Margince prepares your Morning brief
-  overnight. When it is off, the card says **Off** and explains that the brief is
-  not made before you start; nothing else stops working.
-- **LinkedIn network**: import your **LinkedIn connections** from
-  Connections.csv, set your LinkedIn profile URL, and see which companies on file
-  you know someone at.
+- **LinkedIn**: import your **LinkedIn connections** from Connections.csv, set your LinkedIn profile URL, and see which companies on file you know someone at.
+- **Other accounts**: services an add-on connects with your own credential, shown only where the installation has such an add-on.
+- **Activity**: what your connected mail turned into. See below.
+
+**Overnight preparation**, on **Account**, says whether Margince prepares your Morning brief overnight.
+When it is off, the card says **Off** and explains that the brief is not made before you start; nothing else stops working.
 
 **What your connections found** counts what they brought in: **Senders**,
 **Waiting on a decision** (only while a sender waits), **Held threads** and
@@ -363,9 +358,9 @@ Also called: link my email, sync Gmail, sync Outlook, connect my calendar.
 All the detail (IMAP settings, importing past mail, reconnecting, and what
 capture files where) is in [Connecting your mailbox and calendar](connecting-mail-and-calendars.md#what-you-can-connect).
 
-## Capture activity
+## Connection activity
 
-The Capture activity page in Settings says what your connected mail turned into,
+The **Activity** tab of Connections says what your connected mail turned into,
 and holds the decisions you make about it. The cards, in order:
 
 **Held threads.** Threads your mailbox is holding back from the team right now,
@@ -392,7 +387,7 @@ turned this off, the page says so above the rows.
 each, and your own answer where there is one. Only you see this list. **Exclude** on a sender destroys their mail. Margince still receives what they send later, but hides and destroys it, so it never shows. **Capture exclusions** work earlier: they stop new mail before it is stored.
 
 ### Why did an email not show up in Margince?
-To find out why an email did not show up in Margince, open Settings → **Capture activity** and look in **Messages** for the last 24 hours.
+To find out why an email did not show up in Margince, open Settings → **Connections**, then **Activity**, and look in **Messages** for the last 24 hours.
 1. Click an **Outcomes** count, such as **Internal** or **No contact created**, to narrow the list.
 2. Open a row's steps to see where that message stopped, and why.
 

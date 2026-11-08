@@ -56,9 +56,18 @@ const CARDS_THE_REGISTER_REACHED = [
   "ExtensionAccessCard",
   "UsersAdminCard",
   "TeamsCard",
-  "ConnectionsTab",
+  // ConnectionsTab and IntegrationsTab were wrappers; their cards are named
+  // one by one now that each sits on a tab of its own.
+  "ConnectorsCard",
+  "OwnerIdentitiesCard",
+  "OvernightGrantCard",
+  "LinkedInNetworkPanel",
+  "ExtensionUnitsCard",
   "CaptureActivityTab",
-  "IntegrationsTab",
+  "ProviderCard",
+  "FinanceSourceCard",
+  "WebhooksCard",
+  "TelegramConnectorsPanel",
   "OwnDomainsCard",
   "CaptureSettingsCard",
   "ConsumerMailDomainsCard",
@@ -126,7 +135,7 @@ describe("the split lost no card", () => {
     /** One tab function's body, for a page whose case dispatches to one. */
     function bodyOf(fn: string, file = "settings.tsx"): string {
       const text = readFileSync(join(here, file), "utf8");
-      const start = text.indexOf(`function ${fn}()`);
+      const start = text.indexOf(`function ${fn}(`);
       if (start < 0) {
         throw new Error(`${file} has no ${fn}`);
       }
@@ -142,8 +151,9 @@ describe("the split lost no card", () => {
     }
     // The mail-sharing switch writes the WORKSPACE's posture. It belongs with
     // the rest of the capture rules, not among the reader's own mailboxes.
-    expect(cardsOn("capture")).toContain("<MailSharingCard />");
-    expect(cardsOn("connections")).not.toContain("<MailSharingCard />");
+    expect(cardsOn("capture")).toContain("captureTab(tab)");
+    expect(bodyOf("captureTab")).toContain("<MailSharingCard />");
+    expect(bodyOf("connectionsTab")).not.toContain("<MailSharingCard />");
     // And the personal autonomy choice belongs on the page about agents
     // deciding without you, under the tier reference it is written in terms of.
     // `agents` dispatches to a tab FUNCTION, so the case body names the
@@ -158,11 +168,8 @@ describe("the split lost no card", () => {
     expect(aiAccess).toContain("<AutonomySettingsCard />");
     expect(aiAccess).toContain("<ConnectAiToolCard />");
     expect(aiAccess).toContain("<PassportCard />");
-    // The same for the card that left Connections, which is also a tab
-    // function: gone from the tab, not merely gone from the case line.
-    expect(bodyOf("ConnectionsTab")).not.toContain("<MailSharingCard />");
-    // What it says stays here, as the plate under the mail card.
-    expect(bodyOf("ConnectionsTab")).toContain("<ConnectorsCard />");
+    // The mailbox list stays the first thing Connections draws.
+    expect(bodyOf("connectionsTab")).toContain("<ConnectorsCard />");
   });
 
   it("names enough cards to make that meaningful", () => {

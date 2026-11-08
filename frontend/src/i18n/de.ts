@@ -966,6 +966,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.movement.record_changed":
     "Chance durch erfasste Abschlüsse verschoben",
   "installationSettings.selfCorrectingTitle": "Prognose",
+  "installationSettings.forecastTitle": "Prognoseregeln",
   "installationSettings.selfCorrecting": "Prognose selbst korrigieren lassen",
   "installationSettings.selfCorrectingHint":
     "Jede Phase beginnt mit der eingetragenen Chance. Sobald aus einer Phase erfasste Deals abgeschlossen sind, rückt die Prognose die Chance dieser Phase an deren Ergebnis heran; die eingetragene Chance zählt dabei wie 20 Deals. Importierte Phasenwechsel zählen nie.",
@@ -3665,7 +3666,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   "company.reject": "Kein Unternehmen",
   "company.rejectConfirm":
-    "Damit wird „{name}“ archiviert und {domain} als Unternehmen gesperrt, sodass spätere Nachrichten von dieser Domain das Unternehmen nicht erneut erstellen. Ein Admin kann die Domain in den Einstellungen unter Capture-Regeln wieder freigeben.",
+    "Damit wird „{name}“ archiviert und {domain} als Unternehmen gesperrt, sodass spätere Nachrichten von dieser Domain das Unternehmen nicht erneut erstellen. Ein Admin kann die Domain in den Einstellungen unter E-Mail-Erfassung wieder freigeben.",
   "company.rejectReasonLabel": "Grund, warum das kein Unternehmen ist",
   "company.rejectReasonHint":
     "Ein Grund, mit dem jemand, der gesperrte Domains prüft, arbeiten kann. Die Sperre besteht über den Datensatz hinaus.",
@@ -5431,7 +5432,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tags.createdNotApplied":
     "{name} wurde angelegt, aber nicht zu diesem Datensatz hinzugefügt: {reason} Wähle es in der Liste, um es erneut hinzuzufügen.",
   "tags.whoAdds":
-    "Ein weiteres Tag nötig? Admins und Operations können es unter Einstellungen → Tags anlegen.",
+    "Ein weiteres Tag nötig? Admins und Operations können es unter Einstellungen → Datensätze und Felder im Bereich Tags anlegen.",
   "tags.noMatch":
     "Kein Tag mit diesem Namen. Admins und Operations können eines erstellen.",
   "tagResult.gone":
@@ -6124,9 +6125,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "acqSources.renameTitle": "Quelle umbenennen",
   "acqSources.duplicate":
     "Eine Quelle mit diesem Namen oder Schlüssel gibt es schon. Wähle einen anderen Namen.",
-  "settings.page.reviewtemplates.sub":
-    "Fragen, die Vertriebsmitarbeitende zu einem gewonnenen oder verlorenen Deal beantworten.",
-  "settings.tab.reviewtemplates": "Deal-Rückblicke",
   "reviewTemplates.question": "Frage",
   "reviewTemplates.addQuestion": "Frage hinzufügen",
   "reviewTemplates.edit": "Fragen bearbeiten",
@@ -6553,7 +6551,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "decision.versionSkew":
     "Der Datensatz wurde nach dem Vormerken geändert. Merke den Datensatz erneut vor, bevor du entscheidest.",
   "decision.fxRateMoved":
-    "Der Vorschlag wurde nicht übernommen, da sich der Wechselkurs seit dem Vorschlag geändert hat. Aktualisiere für einen aktuellen Vorschlag die Kurse aus ihren Quellen unter Einstellungen → Unternehmensprofil.",
+    "Der Vorschlag wurde nicht übernommen, da sich der Wechselkurs seit dem Vorschlag geändert hat. Aktualisiere für einen aktuellen Vorschlag die Kurse aus ihren Quellen unter Einstellungen → Unternehmensprofil im Bereich Geld.",
   "decision.reRead": "Neu laden",
   "decision.alreadyDecided":
     "Bereits entschieden. Hier ist nichts mehr zu tun.",
@@ -8887,7 +8885,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "passportAreas.refusalTitle":
     "Was ein Agent erfährt, wenn ein Bereich deaktiviert ist",
   "passportAreas.refusal":
-    "Dieser Passport darf im Bereich „{area}“ nicht arbeiten. Lass diesen Bereich für diesen Passport in Einstellungen → KI-Zugang aktivieren.",
+    "Dieser Passport darf im Bereich „{area}“ nicht arbeiten. Lass diesen Bereich für diesen Passport in Einstellungen → KI-Assistenten aktivieren.",
   "passportAreas.cancel": "Abbrechen",
   "passportAreas.save": "Bereiche speichern",
   "passportAreas.saving": "Bereiche werden gespeichert…",
@@ -9401,7 +9399,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAccess.gemini.adminLine":
     "Dein Gemini-Enterprise-Admin fügt Margince einmal für dein Unternehmen hinzu.",
   "aiAccess.gemini.admin1":
-    "Lass dir von einem Margince-Admin eine Client-ID und ein Secret geben. Unter Einstellungen → MCP → MCP-Clients wählt der Admin „Client registrieren“, gibt an, dass das Tool ein Secret braucht, und fügt die Weiterleitungs-URI https://vertexaisearch.cloud.google.com/oauth-redirect hinzu.",
+    "Lass dir von einem Margince-Admin eine Client-ID und ein Secret geben. Unter Einstellungen → Zugang für KI-Tools → MCP-Clients wählt der Admin „Client registrieren“, gibt an, dass das Tool ein Secret braucht, und fügt die Weiterleitungs-URI https://vertexaisearch.cloud.google.com/oauth-redirect hinzu.",
   "aiAccess.gemini.admin2":
     "Öffne in Gemini Enterprise „Manage team“, dann „Connected apps“, und wähle „Add MCP Server“.",
   "aiAccess.gemini.admin3":
@@ -9491,9 +9489,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAccess.other.signIn":
     "OAuth im Browser. Die meisten Tools starten sie bei der ersten Verbindung.",
   "aiAccess.other.apiKey":
-    "Kein Anmelden im Tool möglich? Erstelle in den Einstellungen unter KI-Zugang, Für die Entwicklung, einen API-Schlüssel und sende ihn als Header „Authorization: Bearer“ mit dem Schlüssel dahinter.",
+    "Kein Anmelden im Tool möglich? Erstelle in den Einstellungen unter KI-Assistenten, Für die Entwicklung, einen API-Schlüssel und sende ihn als Header „Authorization: Bearer“ mit dem Schlüssel dahinter.",
   "aiAccess.other.notAllowed":
-    "Meldet die Anmeldung, dass das Tool nicht erlaubt ist, legt ein Admin in den Einstellungen unter MCP fest, welche Tools sich verbinden dürfen.",
+    "Meldet die Anmeldung, dass das Tool nicht erlaubt ist, legt ein Admin in den Einstellungen unter Zugang für KI-Tools fest, welche Tools sich verbinden dürfen.",
   "setup.step.ai": "KI-Tool verbinden",
   "setup.caption.ai":
     "Nutze Margince aus Claude, ChatGPT, Copilot oder deinem Editor.",
@@ -11574,7 +11572,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Alle Teammitglieder, die einen Kontakt sehen können, lesen seine erfassten E-Mails. Einzelne Nachrichten lassen sich nachträglich einschränken.",
   "mailSharing.danger":
     "Ohne das Teilen von E-Mails ist das CRM schwer zu nutzen. Neue E-Mails sind dann nur für die Beteiligten der jeweiligen Nachricht sichtbar.",
-  "mailSharing.posture.where": "In den Capture-Regeln ändern",
+  "mailSharing.posture.where": "In der E-Mail-Erfassung ändern",
   "mailSharing.sharedPosture.label":
     "Teilen beim Eingang für Postfächer erlauben",
   "mailSharing.sharedPosture.help":
@@ -11723,7 +11721,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.oauthRoleCannotCapture":
     "Deine Rolle erlaubt Margince nicht, deine E-Mails zu erfassen, darum wurde nichts verbunden. Wende dich an einen Admin, um deine Rolle ändern zu lassen.",
   "connectors.oauthBadClient":
-    "Der Anbieter hat die App-Zugangsdaten dieser Installation abgelehnt. Ein Admin muss Client-ID und Clientschlüssel in den Einstellungen unter Anmeldung und Apps prüfen. Erneutes Verbinden behebt das nicht.",
+    "Der Anbieter hat die App-Zugangsdaten dieser Installation abgelehnt. Ein Admin muss Client-ID und Clientschlüssel in den Einstellungen unter Anmeldung und Sicherheit prüfen. Erneutes Verbinden behebt das nicht.",
   "connectors.dismissOutcome": "Schließen",
   "connectors.oauthConnected": "Verbunden",
   "connectors.oauthNotConnected": "Nichts verbunden",
@@ -13001,6 +12999,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.create": "Erstellen",
   "auto.createdPaused":
     "Pausiert erstellt. Nichts läuft, bis die Automatisierung aktiviert ist.",
+  "auto.createdPausedLibrary":
+    "Pausiert erstellt. Schalte sie unter „Deine Automatisierungen“ ein.",
   "auto.delete": "Löschen",
   "auto.statusEnabled": "Aktiv",
   "auto.statusPaused": "Pausiert",
@@ -13273,9 +13273,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.page.notifications.sub":
     "Welche Benachrichtigungstypen dich wie erreichen, dazu Morgenbericht und Wochenrückblick per E-Mail.",
   "settings.page.connections.sub":
-    "Postfächer und Adressen, die für diesen Platz gelesen werden.",
-  "settings.page.capture-activity.sub":
-    "Was die Erfassung mit deinen E-Mails gemacht hat, und warum.",
+    "Postfächer, Kalender und Konten, die Margince für dich liest, und was es damit gemacht hat.",
   "settings.page.company.sub":
     "Marke, Geschäftskontext sowie Währung und Kalender für alle Berichte.",
   "settings.page.authentication.sub":
@@ -13290,24 +13288,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Belegte Plätze im Verhältnis zum Lizenzumfang dieser Installation.",
   "settings.page.stageautomation.sub":
     "Die bisherige Bilanz jedes Phasenübergangs, bevor er Deals automatisch verschiebt.",
-  "settings.page.pipelines.sub":
-    "Phasen, die ein Deal durchläuft, für das ganze Unternehmen.",
-  "settings.page.acquisition.sub":
-    "Vertriebskanäle, denen ein Deal zugeordnet werden kann.",
-  "settings.page.lossreasons.sub":
-    "Warum Deals verloren gehen, und als welcher Grund ältere Notizen zählen.",
-  "settings.page.recordroles.sub":
-    "Bezeichnungen dafür, worum sich ein Teammitglied oder Team bei einem Datensatz kümmert, etwa die Kundenbetreuung. Eine Zuständigkeit gewährt keinen Zugriff; wer bearbeiten darf, hängt von der Verantwortung und vom Teilen ab.",
   "settings.page.leads.sub":
     "Woher Leads kommen, warum sie disqualifiziert werden und wie schnell sie eine erste Antwort bekommen.",
-  "settings.page.fields.sub":
-    "Eigene Felder, die dieses Unternehmen zu den Standardfeldern hinzufügt.",
-  "settings.page.tags.sub":
-    "Gemeinsame Tags. Wird ein Tag hier umbenannt, ändert sich sein Name auf jedem Datensatz.",
   "settings.page.products.sub":
     "Produkte, die dieses Unternehmen verkauft, und Angebotsvorlagen.",
   "settings.page.capture.sub":
-    "Welche E-Mails zu einem Datensatz werden und welche ignoriert werden.",
+    "Welche E-Mails zu einem Datensatz werden, welche ignoriert werden und wer sie lesen kann.",
   "settings.page.integrations.sub":
     "Systeme, mit denen diese Installation Datensätze austauscht.",
   "settings.page.knowledge.sub":
@@ -13352,24 +13338,18 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.search.none": "Keine passende Einstellungsseite.",
   "settings.search.count": "Passende Einstellungsseiten: {n}",
   "settings.tab.company": "Unternehmensprofil",
-  "settings.tab.authentication": "Anmeldung und Apps",
+  "settings.tab.authentication": "Anmeldung und Sicherheit",
   "settings.tab.members": "Mitglieder",
   "settings.tab.teams": "Teams",
   "settings.tab.roles": "Rollen und Berechtigungen",
   "settings.tab.seats": "Plätze und Lizenz",
-  "settings.tab.pipelines": "Pipelines",
-  "settings.tab.acquisition": "Akquisitionsquellen",
-  "settings.tab.lossreasons": "Verlustgründe",
-  "settings.tab.recordroles": "Zuständigkeiten",
-  "settings.tab.leads": "Lead-Bearbeitung",
-  "settings.tab.fields": "Felder",
-  "settings.tab.tags": "Tags",
+  "settings.tab.leads": "Leads",
   "settings.tab.products": "Produkte und Angebote",
   "settings.tab.import": "Datenimport",
   "settings.tab.models": "KI-Modelle",
   "settings.tab.automations": "Automatisierungen",
   "settings.tab.usage": "KI-Nutzung",
-  "settings.tab.mcp": "MCP",
+  "settings.tab.mcp": "Zugang für KI-Tools",
   "settings.tab.model-calls": "KI-Aufrufprotokoll",
   "settings.tab.audit": "Audit-Log",
   "settings.tab.system-health": "Systemzustand",
@@ -13414,6 +13394,63 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "configuration.scope.outside": "Außerhalb der App gesetzt",
   "settings.tab.reset": "Daten zurücksetzen",
   "settings.group.me": "Du",
+  "settings.group.compliance": "Compliance",
+  "settings.group.system": "System",
+  "settings.tab.deals": "Deals",
+  "settings.page.deals.sub":
+    "Wie Deals laufen, woher sie kommen und warum sie gewonnen oder verloren werden.",
+  "settings.tab.records": "Datensätze und Felder",
+  "settings.page.records.sub":
+    "Eigene Felder, gemeinsame Tags und die Zuständigkeiten, die Datensätze tragen.",
+  "settings.partsLabel": "Bereiche dieser Seite",
+  "settings.part.meetings.links": "Buchungslinks",
+  "settings.part.meetings.availability": "Verfügbarkeit",
+  "settings.part.meetings.guests": "Gastseite",
+  "settings.part.connections.mail": "E-Mail und Kalender",
+  "settings.part.connections.addresses": "Weitere Adressen",
+  "settings.part.connections.linkedin": "LinkedIn",
+  "settings.part.connections.accounts": "Weitere Konten",
+  "settings.part.connections.activity": "Aktivität",
+  "settings.part.company.profile": "Profil",
+  "settings.part.company.entities": "Rechtsträger",
+  "settings.part.company.regional": "Region und Kalender",
+  "settings.part.company.money": "Geld",
+  "settings.part.company.email": "E-Mail-Vorgaben",
+  "settings.part.authentication.methods": "Anmeldemethoden",
+  "settings.part.authentication.apps": "Anmelde-Apps",
+  "settings.part.authentication.grants": "Rollen für Gruppen",
+  "settings.part.deals.pipelines": "Pipelines",
+  "settings.part.deals.sources": "Akquisitionsquellen",
+  "settings.part.deals.loss": "Verlustgründe",
+  "settings.part.deals.reviews": "Abschlussrückblicke",
+  "settings.part.deals.legal": "Rechtsprüfung",
+  "settings.part.deals.forecast": "Prognose",
+  "settings.part.records.fields": "Felder",
+  "settings.part.records.tags": "Tags",
+  "settings.part.records.roles": "Zuständigkeiten",
+  "settings.part.capture.sharing": "Freigabe und Abgleich",
+  "settings.part.capture.domains": "Domains",
+  "settings.part.capture.enrichment": "Anreicherung",
+  "settings.part.capture.internal": "Interne E-Mails",
+  "settings.part.integrations.contact": "Kontaktdaten",
+  "settings.part.integrations.accounting": "Buchhaltung",
+  "settings.part.integrations.webhooks": "Webhooks",
+  "settings.part.integrations.telegram": "Telegram-Bot",
+  "settings.part.integrations.units": "Weitere Dienste",
+  "settings.part.models.providers": "Anbieter",
+  "settings.part.models.tiers": "Modellstufen",
+  "settings.part.models.tasks": "KI-Aufgaben",
+  "settings.part.models.prices": "Preise",
+  "settings.part.usage.allowance": "Kontingent",
+  "settings.part.usage.agents": "Agentenlimits",
+  "settings.part.usage.spend": "Ausgaben",
+  "settings.part.automations.mine": "Deine Automatisierungen",
+  "settings.part.automations.library": "Vorlagenbibliothek",
+  "settings.part.privacy.consent": "Einwilligung",
+  "settings.part.privacy.customers": "Bestandskunden",
+  "settings.part.privacy.retention": "Aufbewahrung",
+  "settings.part.privacy.requests": "Anfragen",
+  "settings.part.privacy.duties": "Informationspflichten",
   "settings.group.company": "Unternehmen",
   "settings.group.people": "Personen",
   "settings.group.sales": "Sales",
@@ -13422,7 +13459,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.group.governance": "Governance",
   "settings.tab.account": "Nutzerkonto",
   "settings.tab.voice": "Schreibstil",
-  "settings.tab.agents": "KI-Zugang",
+  "settings.tab.agents": "KI-Assistenten",
   "settings.tab.notifications": "Benachrichtigungen",
   "settings.tab.connections": "Verbindungen",
   "settings.tab.extensions": "Erweiterungen",
@@ -13526,7 +13563,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.requestsEmpty": "Noch keine Datenschutzanfragen.",
   "settings.tab.integrations": "Anbindungen",
   "settings.tab.web-forms": "Website-Formulare",
-  "settings.tab.capture": "Capture-Regeln",
+  "settings.tab.capture": "E-Mail-Erfassung",
   "settings.tab.knowledge": "Wissen",
   "corpusAsk.title": "Deine Dokumente befragen",
   "corpusAsk.sub":
@@ -13633,7 +13670,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "knowledge.searchable": "Durchsuchbar",
   "knowledge.reindexingBadge": "Wird neu indexiert",
   "settings.tab.privacy": "Datenschutz und Aufbewahrung",
-  "settings.tab.capture-activity": "Capture-Aktivität",
   "verdictPass.subject.senders": "Absendeadressen",
   "verdictPass.subject.threads": "Threads",
   "verdictPass.every_one": "{subject} werden jede Minute geprüft.",
@@ -15430,13 +15466,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.accountSettings": "Wer E-Mails von {account} sieht",
   "connectors.heldPointer.label": "Zurückgehaltene Threads und Absendeadressen",
   "connectors.heldPointer.some_one":
-    "{count} Thread wird gerade vor dem Team zurückgehalten. Prüfe ihn und jede Absendeadresse, die dein Postfach eingebracht hat, unter Capture-Aktivität.",
+    "{count} Thread wird gerade vor dem Team zurückgehalten. Prüfe ihn und jede Absendeadresse, die dein Postfach eingebracht hat, unter Verbindungen im Bereich Aktivität.",
   "connectors.heldPointer.some_other":
-    "{count} Threads werden gerade vor dem Team zurückgehalten. Prüfe sie und jede Absendeadresse, die dein Postfach eingebracht hat, unter Capture-Aktivität.",
+    "{count} Threads werden gerade vor dem Team zurückgehalten. Prüfe sie und jede Absendeadresse, die dein Postfach eingebracht hat, unter Verbindungen im Bereich Aktivität.",
   "connectors.heldPointer.none":
-    "Gerade wird nichts vor dem Team zurückgehalten. Jede Absendeadresse, die dein Postfach eingebracht hat, findest du unter Capture-Aktivität.",
+    "Gerade wird nichts vor dem Team zurückgehalten. Jede Absendeadresse, die dein Postfach eingebracht hat, findest du unter Verbindungen im Bereich Aktivität.",
   "connectors.heldPointer.unknown":
-    "Threads, die vor dem Team zurückgehalten werden, und jede Absendeadresse, die dein Postfach eingebracht hat, findest du unter Capture-Aktivität.",
+    "Threads, die vor dem Team zurückgehalten werden, und jede Absendeadresse, die dein Postfach eingebracht hat, findest du unter Verbindungen im Bereich Aktivität.",
   "connectors.heldPointer.review": "Prüfen",
   "connectors.advanced": "Erweitert",
   "connectors.advancedCount_one": "{count} Einstellung",
@@ -17179,7 +17215,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "sendet Nachrichten in deinem Namen, ohne vorher zu fragen",
   "consent.scopeNote.enrich": "führt KI-Arbeit aus und kauft Kontaktdaten",
   "consent.ceiling":
-    "Nie mehr als deine eigenen Berechtigungen. Du kannst die Verbindung jederzeit in den Einstellungen unter KI-Zugang trennen.",
+    "Nie mehr als deine eigenen Berechtigungen. Du kannst die Verbindung jederzeit in den Einstellungen unter KI-Assistenten trennen.",
   "consent.preset.label": "Assistentenrechte",
   "consent.preset.readDraft": "Lesen und entwerfen",
   "consent.preset.full": "Voller Assistent",
@@ -20346,7 +20382,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.setup.step1Help":
     "Melde dich mit dem Konto an, zu dem dein Kalender gehört. Dauert etwa eine Minute.",
   "scheduling.connectCalendar": "Kalender verbinden",
-  "scheduling.setup.step2": "Prüfe unten deine Zeiten",
+  "scheduling.setup.step2": "Prüfe deine Zeiten unter Verfügbarkeit",
   "scheduling.setup.step2Help":
     "Gästen werden 09:00 bis 17:00 Uhr, Montag bis Freitag, angeboten, bis du deine eigenen speicherst.",
   "scheduling.setup.step2Done": "Deine Zeiten sind gespeichert.",
@@ -21178,12 +21214,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.filteredFinding_other": "1 von {count} Problemen angezeigt",
   "health.showAllFindings": "Alle Probleme anzeigen",
   "health.jobDelayed": "{kind}: verzögert",
-  "health.checkNumbers": "Prüfzahlen anzeigen",
-  "health.checkResults": "Prüfergebnisse",
-  "health.checksFailed": "Fehlgeschlagene Prüfungen",
-  "health.checksReview": "Entscheidung nötig",
-  "health.checksPassing": "Erfolgreiche Prüfungen",
-  "health.checksPending": "Ergebnis ausstehend",
   "health.askOwner": "Postfachinhaber fragen",
   "health.mailReviewOwners": "Postfachentscheidungen",
   "health.reviewOwnersIntro":
@@ -21204,7 +21234,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.senderReviewCount_other": "{count} Absenderentscheidungen offen",
   "health.threadReviewCount_one": "{count} Gespräch wartet",
   "health.threadReviewCount_other": "{count} Gespräche warten",
-  "health.views": "Ansichten des Systemzustands",
   "health.overview": "Übersicht",
   "health.diagnostics": "Diagnose",
   "health.configurationWithheld":
@@ -21268,6 +21297,45 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.prioritiesChanged":
     "Die Prioritäten haben sich geändert. Aktualisieren, um die neue Reihenfolge zu übernehmen.",
   "health.capabilities": "Alle Prüfungen",
+  "health.group.setup": "Noch nicht eingerichtet",
+  "health.group.waiting": "Noch nicht bestätigt",
+  "health.group.passing": "In Ordnung",
+  "health.checkPassing": "In Ordnung",
+  "health.whatHappened": "Was passiert ist",
+  "health.whyItMatters": "Warum es wichtig ist",
+  "health.whatToDo": "Was zu tun ist",
+  "health.notSetUpCount_one": "{count} nicht eingerichtet",
+  "health.notSetUpCount_other": "{count} nicht eingerichtet",
+  "health.passingCount_one": "{count} in Ordnung",
+  "health.passingCount_other": "{count} in Ordnung",
+  "health.setup.providersMissing.happened":
+    "Kein KI-Anbieter hat einen Schlüssel, daher erreicht KI-Arbeit kein Modell.",
+  "health.setup.providersMissing.matters":
+    "Entwürfe, Briefings und Recherchen laufen erst, wenn ein Anbieter verbunden ist.",
+  "health.setup.providersMissing.todo":
+    "Hinterlege unter KI-Modelle einen Schlüssel für einen Anbieter und sende dann einen Testaufruf.",
+  "health.setup.providersMissing.action": "Anbieterschlüssel hinzufügen",
+  "health.setup.providersSilent.happened":
+    "Ein Anbieter ist eingerichtet, hat aber noch auf keine Anfrage geantwortet.",
+  "health.setup.providersSilent.matters":
+    "Bis einer antwortet, zeigt nichts, dass KI-Arbeit ein Modell erreicht.",
+  "health.setup.providersSilent.todo":
+    "Sende unter KI-Modelle einen Testaufruf oder warte auf die nächste KI-Aufgabe.",
+  "health.setup.providersSilent.action": "KI-Modelle öffnen",
+  "health.setup.search.happened":
+    "Die Suche hat kein Embedding-Modell und findet daher nur exakte Wörter.",
+  "health.setup.search.matters":
+    "Ähnliche Datensätze, Antworten aus Wissensdokumenten und KI-Recherchen bleiben auf Stichworttreffer beschränkt.",
+  "health.setup.search.todo":
+    "Wähle unter KI-Modelle, Modellstufen ein Embedding-Modell. Margince baut den Suchindex dann im Hintergrund auf.",
+  "health.setup.search.action": "Embedding-Modell wählen",
+  "health.setup.recovery.happened":
+    "Niemand hat eine Wiederherstellungsprobe erfasst. Backups laufen außerhalb von Margince, daher erfährt es nur von einer Wiederherstellung, wenn jemand sie erfasst.",
+  "health.setup.recovery.matters":
+    "Solange kein Backup einmal wiederhergestellt wurde, zeigt nichts, dass deine Daten rechtzeitig zurückkommen.",
+  "health.setup.recovery.todo":
+    "Frag die Person, die deinen Server betreibt, ob sie ein aktuelles Backup in eine Ersatzdatenbank wiederherstellt und die Probe erfasst.",
+  "health.setup.recovery.action": "Anleitung zur Wiederherstellung lesen",
   "health.unknown": "Nicht aufgezeichnet",
   "health.stale":
     "Letzter bekannter Stand; die aktuelle Prüfung wurde nicht abgeschlossen.",
@@ -21322,7 +21390,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.recovery.automatic":
     "Die Ergebnisse der Zuweisung anhand einer ausreichend großen Stichprobe prüfen.",
   "health.ownerHandoff":
-    "Postfachinhaber nehmen vorgeschlagene Kontakte unter Worklist → Entscheidungen an oder lehnen sie ab. Zurückgehaltene Gespräche werden unter Capture-Aktivität geprüft.",
+    "Postfachinhaber nehmen vorgeschlagene Kontakte unter Worklist → Entscheidungen an oder lehnen sie ab. Zurückgehaltene Gespräche werden unter Verbindungen im Bereich Aktivität geprüft.",
   "health.operatorHandoff":
     "Ein technischer Betreiber muss den Fall prüfen. Die Diagnoseübersicht für die Übergabe kopieren.",
   "health.copy": "Technischen Bericht kopieren",

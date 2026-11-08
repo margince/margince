@@ -12,7 +12,7 @@ import {
 import { InternalMailFolders } from "./internalmailfolders";
 
 const meta = {
-  title: "Settings/Data/Capture rules/Folder scope",
+  title: "Settings/Data/Mail capture/Folder scope",
   component: InternalMailFolders,
 } satisfies Meta<typeof InternalMailFolders>;
 export default meta;

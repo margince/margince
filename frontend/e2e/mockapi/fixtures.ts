@@ -1153,7 +1153,7 @@ export const installationLicense = {
   checked_at: "2026-08-20T09:00:00Z",
 };
 
-// Settings, Capture activity, both scopes. `funnel` is required by
+// Settings, Connections activity, both scopes. `funnel` is required by
 // CaptureActivityResponse, and the window reads it straight into its counters.
 //
 // One entry per outcome, so each of the funnel's five counters has a row and

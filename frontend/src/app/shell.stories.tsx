@@ -502,7 +502,7 @@ const SETTINGS_SECTION: NavSection = {
           children: [
             {
               id: "data-model",
-              labelKey: "settings.tab.fields",
+              labelKey: "settings.tab.records",
               icon: Wrench,
             },
           ],

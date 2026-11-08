@@ -468,12 +468,12 @@ path that later deletes content, and only after the undo window.
 When either cap is reached, a `capture_deferral_capped` log row records **which** one. So "the queue
 is full" and "one domain is filling it" are never read as the same thing.
 
-## 7. Where to see it: Capture activity
+## 7. Where to see it: Connection activity
 
-Every decision above can be read, per user, in **Settings → Capture activity**.
+Every decision above can be read, per user, in **Settings → Connections → Activity**.
 
 The tab holds two things. First, **Keep out of capture**: the addresses and domains whose mail never
-comes into the CRM. It lives here instead of under the admin's Capture settings. Blocking a sender is
+comes into the CRM. It lives here instead of under the admin's **Mail capture** settings. Blocking a sender is
 how the reader answers what this page reports. It is no setting for the whole
 installation.
 

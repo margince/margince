@@ -15,8 +15,8 @@ There is one rule under everything here:
 ## Connecting and controlling agents
 
 ### How do I connect my AI tool to Margince?
-To connect your AI tool to Margince, open **Settings → AI access** and answer the questions on the **Connect your AI tool** card. It shows only the steps for your AI and where you use it, such as Claude Code, Codex, Cursor or Visual Studio. Where AI tools can connect, onboarding offers the same card, and **Finish setup** lists it until a tool signs in. Microsoft Copilot on a personal account cannot connect; the card says so. Gemini through work or school needs [an admin to register it first](settings.md#how-do-i-let-gemini-through-work-or-school-connect). If the card says AI tools "cannot connect to Margince yet", an administrator or operations user must turn it on first.
-1. Open the account menu, choose **Settings**, then **AI access**.
+To connect your AI tool to Margince, open **Settings → AI assistants** and answer the questions on the **Connect your AI tool** card. It shows only the steps for your AI and where you use it, such as Claude Code, Codex, Cursor or Visual Studio. Where AI tools can connect, onboarding offers the same card, and **Finish setup** lists it until a tool signs in. Microsoft Copilot on a personal account cannot connect; the card says so. Gemini through work or school needs [an admin to register it first](settings.md#how-do-i-let-gemini-through-work-or-school-connect). If the card says AI tools "cannot connect to Margince yet", an administrator or operations user must turn it on first.
+1. Open the account menu, choose **Settings**, then **AI assistants**.
 2. Under **Which AI do you use?**, choose your AI. For a tool not listed, choose **Another AI tool**: the card gives the address and how it signs in.
 3. If the card asks **Where do you use it?**, choose the app, editor or terminal.
 4. For a chat app, under **Whose plan is it?**, choose **My company’s** or **My own**. If the card says "First, your admin.", choose **Download guide for your admin** and send them the file. It holds their steps and your Margince address.
@@ -29,12 +29,12 @@ Also called: connect Claude, let Claude access my CRM, connect ChatGPT, Copilot,
 
 ### What is an agent passport?
 An agent passport in Margince is your personal access token: whatever uses it, an AI tool or your own code, acts as you. It carries your own seat, permissions and record visibility, cut down to the **Agent permissions** you tick.
-Those are **Read records**, **Draft messages**, **Change records**, **Send messages** and **Use AI and buy data**. An agent can never do more than you can. You create and revoke passports yourself in **Settings → AI access**, under **For developers**.
+Those are **Read records**, **Draft messages**, **Change records**, **Send messages** and **Use AI and buy data**. An agent can never do more than you can. You create and revoke passports yourself in **Settings → AI assistants**, under **For developers**.
 Also called: API key, token, agent credential, access token.
 
 ### How do I give an agent access to Margince?
-To give a script or your own code access to Margince, open **Settings → AI access**, then **For developers**. Choose **New passport** on the **API keys** tab.
-1. Open the account menu, choose **Settings**, then **AI access**.
+To give a script or your own code access to Margince, open **Settings → AI assistants**, then **For developers**. Choose **New passport** on the **API keys** tab.
+1. Open the account menu, choose **Settings**, then **AI assistants**.
 2. Open **For developers**.
 3. Choose **New passport**.
 4. Fill **Agent name**.
@@ -47,7 +47,7 @@ Also called: create an API key, script access, integrate an agent.
 
 ### How do I use a passport in my AI tool?
 To use a passport in an AI tool such as Claude Code, Codex or Antigravity, download the Margince skill. Then save your passport where the tool can find it.
-1. Open **Settings → AI access**, then **For developers**.
+1. Open **Settings → AI assistants**, then **For developers**.
 2. On the **API keys** tab, under **In a script or another AI tool**, choose **Download skill**.
 3. Open `margince-skill.zip`. It holds one folder, `margince`.
 4. For Claude Code, move the folder to `~/.claude/skills/margince`. For Claude Desktop, add the zip file as a skill in the app's settings.
@@ -63,7 +63,7 @@ The `openapi.yaml` file in the skill lists every call a passport can make.
 Also called: REST API, API key, script, access token, integration.
 
 ### How do I connect a coding agent to Margince?
-For Claude Code, Codex, GitHub Copilot in an editor, Cursor or Antigravity, use the **Connect your AI tool** card in **Settings → AI access**. Choose the AI, then where you use it, for example **Claude Code in Visual Studio**.
+For Claude Code, Codex, GitHub Copilot in an editor, Cursor or Antigravity, use the **Connect your AI tool** card in **Settings → AI assistants**. Choose the AI, then where you use it, for example **Claude Code in Visual Studio**.
 Do what the card shows: run the command, or add the text to the file it names. Then sign in in the browser and choose **Authorize** on **Authorize access**; no passport is needed.
 If the page says AI tools "cannot connect to Margince yet", an administrator or operations user must turn it on first.
 Also called: MCP client, MCP server, command line, AI assistant integration.
@@ -91,11 +91,11 @@ Also called: two contacts with the same name, name that matches twice, pick the 
 ### How do I choose where an agent may work?
 A passport or connection also says where an agent may work, such as **Sales work** or **Admin settings**. You choose it under **Where it may work** on **Authorize access** or in **New passport**. **All areas**, the default, covers each area your role reaches and areas added later. **Choose areas** covers only the areas you tick, and an area added later starts off. You see only the areas your role reaches: a sales rep sees all but **Admin settings**, and a role with one area sees no choice. Running the installation counts as **Admin settings**, and approvals are in no area, so every passport keeps them.
 
-To change it later, open **Settings → AI access**, then the **…** menu on the row, and choose **Change areas**. The **Areas** column shows what each one has. Before you choose **Save areas**, the panel says what the agent gets or loses, and a change holds from its next call. An agent that calls into an area that is off is refused and told the area's name. It is told to ask you to turn it on in **Settings → AI access**, under **Your passports** or **Your connections**.
+To change it later, open **Settings → AI assistants**, then the **…** menu on the row, and choose **Change areas**. The **Areas** column shows what each one has. Before you choose **Save areas**, the panel says what the agent gets or loses, and a change holds from its next call. An agent that calls into an area that is off is refused and told the area's name. It is told to ask you to turn it on in **Settings → AI assistants**, under **Your passports** or **Your connections**.
 Also called: work areas, limit an agent to sales, keep an agent out of admin settings, restrict where Claude works.
 
 ### How do I revoke an agent's access?
-To stop an agent, open **Settings → AI access**. For a passport, open **For developers**, then the **…** menu on its row, and choose **Revoke**: "The passport’s credential is invalidated immediately. The agent loses access on its next call."
+To stop an agent, open **Settings → AI assistants**. For a passport, open **For developers**, then the **…** menu on its row, and choose **Revoke**: "The passport’s credential is invalidated immediately. The agent loses access on its next call."
 For a connected AI tool, open the **…** menu on its row under **Your connections** and choose **Disconnect**, which ends the whole connection. Turning off a user revokes all their passports at once.
 Also called: kill switch, remove an agent, disconnect, delete an API key.
 
@@ -152,7 +152,7 @@ relinking it away does not remove that. A member can take the filing back with
 **Undo filing**; an agent cannot. See
 [Capture](capture.md#filing-under-a-project-starts-a-retention-clock).
 
-The **Autonomy tiers** card in **Settings → AI access**, on the **Agent rules** tab under **For developers**, states the same rule.
+The **Autonomy tiers** card in **Settings → AI assistants**, on the **Agent rules** tab under **For developers**, states the same rule.
 It reads "Send email, book meetings, update a contact or deal: runs immediately if the
 agent has that permission. Granting the permission is the approval." and
 "Enrichment from the web: waits in Approvals."
@@ -281,7 +281,7 @@ enrichment and the confirm-first actions above.
 ## Passports: how an agent is connected
 
 A **passport** is the credential that ties one agent to one colleague. You
-create it yourself in **Settings → AI access**, under **For developers**, and you
+create it yourself in **Settings → AI assistants**, under **For developers**, and you
 can revoke it yourself. Revoking cuts off that one agent. The **Passports** card
 says: "A passport is your personal credential for scripts and your own code.
 Whatever uses it acts as you, with the permissions you tick, and never more."
@@ -364,7 +364,7 @@ running. Raise one, and a stopped agent can go on. Lower one, and an agent
 already past it is refused on its next call. A new window size waits for the
 next reset, so no agent starts over early; the card says when it starts.
 
-In **Settings → AI access**, each row under **Your connections** and **Passports**
+In **Settings → AI assistants**, each row under **Your connections** and **Passports**
 shows the allowance closest to running out. Open a row to see all three. Revoked passports are hidden; the button under the list shows them.
 **AI usage › Agent usage by user** shows how much each user's agents used, never
 which passport or what it read. Administrators, Management and operations users see it.

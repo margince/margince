@@ -26,7 +26,7 @@ describe("every page round-trips through its own address", () => {
   });
 });
 
-describe("the ten ids that did not change are not aliases", () => {
+describe("the nine ids that did not change are not aliases", () => {
   // The classification an earlier draft of this got backwards. These survived
   // the regroup as canonical page ids; resolving them as legacy would rewrite
   // the address bar on arrival for every one of them, for nothing.
@@ -35,7 +35,6 @@ describe("the ten ids that did not change are not aliases", () => {
     "voice",
     "agents",
     "connections",
-    "capture-activity",
     "privacy",
     "capture",
     "integrations",
@@ -57,7 +56,7 @@ describe("the six ids that did change resolve and say so", () => {
     ["general", "company"],
     ["users", "members"],
     ["contacts", "members"],
-    ["data-model", "fields"],
+    ["data-model", "records"],
     ["ai", "models"],
     ["maintenance", "system-health"],
     ["license", "seats"],
@@ -67,6 +66,64 @@ describe("the six ids that did change resolve and say so", () => {
       page: now,
       legacy: true,
     });
+  });
+});
+
+describe("a page merged into another lands on the tab that holds it", () => {
+  it.each([
+    ["capture-activity", "connections", "activity"],
+    ["pipelines", "deals", undefined],
+    ["acquisition", "deals", "sources"],
+    ["lossreasons", "deals", "loss"],
+    ["reviewtemplates", "deals", "reviews"],
+    ["fields", "records", undefined],
+    ["tags", "records", "tags"],
+    ["recordroles", "records", "roles"],
+  ] as const)("%s → %s %s", (old, page, tab) => {
+    const target = settingsRouteTarget({ screen: SETTINGS_SCREEN, id: old });
+    expect(target).toEqual(
+      tab === undefined
+        ? { kind: "page", page, legacy: true }
+        : { kind: "page", page, tab, legacy: true },
+    );
+  });
+});
+
+describe("a tab is an address of its own", () => {
+  const tabbed = SETTINGS_PAGES.flatMap((page) =>
+    "tabs" in page ? page.tabs.map((tab) => [page.id, tab.id] as const) : [],
+  );
+
+  it.each(tabbed)("%s/%s round-trips", (page, tab) => {
+    expect(settingsRouteTarget(settingsHref(page, tab))).toEqual({
+      kind: "page",
+      page,
+      tab,
+      legacy: false,
+    });
+  });
+
+  it("reads a tab the page does not have as unknown", () => {
+    expect(
+      settingsRouteTarget({
+        screen: SETTINGS_SCREEN,
+        id: "deals",
+        id2: "junk",
+      }),
+    ).toEqual({ kind: "unknown" });
+  });
+
+  it("keeps the OAuth landing on the first tab of the pages it returns to", () => {
+    for (const page of ["connections", "meetings"] as const) {
+      expect(
+        settingsRouteTarget({
+          screen: SETTINGS_SCREEN,
+          id: page,
+          id2: "ok",
+          id3: "google",
+        }),
+      ).toEqual({ kind: "page", page, legacy: false });
+    }
   });
 });
 

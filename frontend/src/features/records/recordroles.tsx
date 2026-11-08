@@ -266,7 +266,10 @@ function AddRoleDialog({
 // retires it. Where a role applies is set at creation only.
 export function RecordRolesCard() {
   const t = useT();
-  const { canCreate, canEdit, refusal } = useVocabGrants("recordroles");
+  const { canCreate, canEdit, refusal } = useVocabGrants({
+    page: "records",
+    tab: "roles",
+  });
   const query = useRecordRoles();
   const create = useCreateRecordRole();
   const update = useUpdateRecordRole();

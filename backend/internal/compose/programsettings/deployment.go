@@ -31,11 +31,11 @@ var (
 	// registers by hand is always allowed while the connector is on.
 	MCPDynamicRegistration = config.Define(config.Spec[bool]{
 		Key: "mcp.client_registration.dynamic", Env: "MARGINCE_MCP_CLIENT_REGISTRATION_DYNAMIC", Type: config.Bool, Default: config.Some(true), Roles: apiOnly,
-		Doc: "Let AI tools register their own OAuth client at /oauth/register (DCR); false keeps it off whatever the admin's switch in Settings > MCP says.",
+		Doc: "Let AI tools register their own OAuth client at /oauth/register (DCR); false keeps it off whatever the admin's switch in Settings > AI tool access says.",
 	})
 	MCPMetadataDocument = config.Define(config.Spec[bool]{
 		Key: "mcp.client_registration.metadata_document", Env: "MARGINCE_MCP_CLIENT_REGISTRATION_METADATA_DOCUMENT", Type: config.Bool, Default: config.Some(true), Roles: apiOnly,
-		Doc: "Accept a client ID that is the URL of the tool's published metadata document (CIMD); false keeps it off whatever the admin's switch in Settings > MCP says.",
+		Doc: "Accept a client ID that is the URL of the tool's published metadata document (CIMD); false keeps it off whatever the admin's switch in Settings > AI tool access says.",
 	})
 	AnalyticsPerformance = config.Define(config.Spec[bool]{
 		Key: "analytics.performance_enabled", Env: "MARGINCE_ANALYTICS_PERFORMANCE_ENABLED", Type: config.Bool, Default: config.Some(false), Roles: both,
