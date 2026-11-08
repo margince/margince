@@ -21,9 +21,9 @@ import (
 func CarryMeetingImportTx(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.ActivityID, seat ids.UUID) error {
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO capture_import (activity_id, user_id, posture_at_import, verdict_status, verdict_reason, verdict_reasons,
-		                            imported_at, provider_received_at, source_occurred_at, delivered_by, bcc_only)
+		                            imported_at, provider_received_at, source_occurred_at, delivered_by, bcc_only, provider_message_ids)
 		SELECT $2, user_id, posture_at_import, verdict_status, verdict_reason, verdict_reasons,
-		       imported_at, provider_received_at, source_occurred_at, delivered_by, bcc_only
+		       imported_at, provider_received_at, source_occurred_at, delivered_by, bcc_only, provider_message_ids
 		  FROM capture_import WHERE activity_id = $1 AND user_id = $3
 		ON CONFLICT (activity_id, user_id) DO NOTHING`, duplicate, survivor, seat); err != nil {
 		return fmt.Errorf("capture: carrying a duplicate meeting's importers: %w", err)

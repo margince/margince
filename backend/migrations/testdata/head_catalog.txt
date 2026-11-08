@@ -2193,6 +2193,7 @@ public.capture_import.home_read_fence_capture_import_removed CREATE TRIGGER home
 public.capture_import.id uuid NOT NULL gen=- def=uuidv7()
 public.capture_import.imported_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_import.posture_at_import text gen=- def=-
+public.capture_import.provider_message_ids text[] NOT NULL gen=- def='{}'::text[]
 public.capture_import.provider_received_at timestamp with time zone gen=- def=-
 public.capture_import.source_occurred_at timestamp with time zone gen=- def=-
 public.capture_import.user_id uuid NOT NULL gen=- def=-
@@ -5477,6 +5478,7 @@ public.idx_capture_backfill_conn CREATE INDEX idx_capture_backfill_conn ON publi
 public.idx_capture_connection CREATE INDEX idx_capture_connection ON public.capture_connection USING btree (provider, status) WHERE (archived_at IS NULL)
 public.idx_capture_exclusion_user CREATE INDEX idx_capture_exclusion_user ON public.capture_exclusion USING btree (user_id)
 public.idx_capture_exclusion_value CREATE INDEX idx_capture_exclusion_value ON public.capture_exclusion USING btree (kind, value)
+public.idx_capture_import_provider_messages CREATE INDEX idx_capture_import_provider_messages ON public.capture_import USING gin (provider_message_ids)
 public.idx_capture_pending_counterparty_activity CREATE INDEX idx_capture_pending_counterparty_activity ON public.capture_pending_counterparty USING btree (activity_id)
 public.idx_capture_pending_counterparty_due CREATE INDEX idx_capture_pending_counterparty_due ON public.capture_pending_counterparty USING btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)
 public.idx_capture_pending_counterparty_live CREATE UNIQUE INDEX idx_capture_pending_counterparty_live ON public.capture_pending_counterparty USING btree (email) WHERE (status = ANY (ARRAY['pending'::text, 'unsure'::text]))

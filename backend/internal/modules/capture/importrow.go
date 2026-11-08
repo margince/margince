@@ -40,7 +40,7 @@ import (
 func recordImportTx(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 	ownerUserID ids.UUID, provider string, birth birthDecision, receivedAt, sourceAt time.Time,
-	bccOnly *bool,
+	bccOnly *bool, providerMessageID string,
 ) error {
 	if ownerUserID == ids.Nil {
 		// No identifiable seat behind this capture. Nothing to attribute the
@@ -61,26 +61,30 @@ func recordImportTx(
 	if !sourceAt.IsZero() && datasource.InstantInRange(sourceAt) {
 		occurred = &sourceAt
 	}
-	var args []any
-	arg := func(value any) int { args = append(args, value); return len(args) }
-	query := fmt.Sprintf(`
-		INSERT INTO capture_import (activity_id, user_id, posture_at_import, verdict_status, verdict_reason, verdict_reasons,
-		                            provider_received_at, source_occurred_at, delivered_by, bcc_only)
-		VALUES ($%[1]d, $%[2]d, NULLIF($%[3]d, ''), NULLIF($%[4]d, ''), NULLIF($%[5]d, ''), $%[6]d, $%[7]d, $%[8]d,
-		        ARRAY(SELECT c.provider || ':' || c.generation FROM capture_connection c WHERE c.user_id = $%[2]d AND c.provider = $%[9]d),
-		        $%[10]d)
-		ON CONFLICT (activity_id, user_id) DO UPDATE SET
-		 provider_received_at = coalesce(capture_import.provider_received_at, EXCLUDED.provider_received_at),
-		 source_occurred_at = coalesce(capture_import.source_occurred_at, EXCLUDED.source_occurred_at),
-		 delivered_by = ARRAY(SELECT DISTINCT unnest(capture_import.delivered_by || EXCLUDED.delivered_by) ORDER BY 1),
-		 bcc_only = coalesce(capture_import.bcc_only, EXCLUDED.bcc_only)
-		WHERE (capture_import.provider_received_at IS NULL AND EXCLUDED.provider_received_at IS NOT NULL)
-		   OR (capture_import.source_occurred_at IS NULL AND EXCLUDED.source_occurred_at IS NOT NULL)
-		   OR (capture_import.bcc_only IS NULL AND EXCLUDED.bcc_only IS NOT NULL)
-		   OR NOT (EXCLUDED.delivered_by <@ capture_import.delivered_by)`,
-		arg(activityID), arg(ownerUserID), arg(birth.posture), arg(birth.verdictStatus), arg(birth.reason), arg(birth.reasons), arg(received), arg(occurred), arg(provider),
-		arg(bccOnly))
-	if _, err := tx.Exec(ctx, query, args...); err != nil {
+	query := `
+        INSERT INTO capture_import (activity_id, user_id, posture_at_import, verdict_status, verdict_reason, verdict_reasons,
+                                    provider_received_at, source_occurred_at, delivered_by, bcc_only, provider_message_ids)
+        VALUES (@activity, @seat, NULLIF(@import_posture, ''), NULLIF(@verdict_status, ''), NULLIF(@verdict_reason, ''), @verdict_reasons, @received, @occurred,
+                ARRAY(SELECT c.provider || ':' || c.generation FROM capture_connection c WHERE c.user_id = @seat AND c.provider = @delivering_provider),
+                @bcc, ` + providerMessageKeysSQL("@seat", "@delivering_provider", "@message") + `)
+        ON CONFLICT (activity_id, user_id) DO UPDATE SET
+         provider_received_at = coalesce(capture_import.provider_received_at, EXCLUDED.provider_received_at),
+         source_occurred_at = coalesce(capture_import.source_occurred_at, EXCLUDED.source_occurred_at),
+         delivered_by = ARRAY(SELECT DISTINCT unnest(capture_import.delivered_by || EXCLUDED.delivered_by) ORDER BY 1),
+         bcc_only = coalesce(capture_import.bcc_only, EXCLUDED.bcc_only),
+         provider_message_ids = ARRAY(SELECT DISTINCT unnest(capture_import.provider_message_ids || EXCLUDED.provider_message_ids) ORDER BY 1)
+        WHERE (capture_import.provider_received_at IS NULL AND EXCLUDED.provider_received_at IS NOT NULL)
+           OR (capture_import.source_occurred_at IS NULL AND EXCLUDED.source_occurred_at IS NOT NULL)
+           OR (capture_import.bcc_only IS NULL AND EXCLUDED.bcc_only IS NOT NULL)
+           OR NOT (EXCLUDED.delivered_by <@ capture_import.delivered_by)
+           OR NOT (EXCLUDED.provider_message_ids <@ capture_import.provider_message_ids)`
+	args := pgx.NamedArgs{
+		"activity": activityID, "seat": ownerUserID, "import_posture": birth.posture,
+		"verdict_status": birth.verdictStatus, "verdict_reason": birth.reason, "verdict_reasons": birth.reasons,
+		"received": received, "occurred": occurred, "delivering_provider": provider,
+		"bcc": bccOnly, "message": providerMessageID,
+	}
+	if _, err := tx.Exec(ctx, query, args); err != nil {
 		return fmt.Errorf("capture: recording the import of %s: %w", activityID, err)
 	}
 	return nil
@@ -185,7 +189,7 @@ func (s *Sink) recordThisImport(
 		sourceAt = original.OccurredAt
 	}
 	if err := recordImportTx(ctx, tx, id, owner, deliveringConnector(ctx), birth, rec.ProviderReceivedAt, sourceAt,
-		fields.judged.bccOnly); err != nil {
+		fields.judged.bccOnly, rec.ProviderMessageID); err != nil {
 		return err
 	}
 	if err := stampMessageEnds(ctx, tx, id, owner, fields, rec); err != nil {

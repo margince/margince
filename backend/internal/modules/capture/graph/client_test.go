@@ -264,13 +264,8 @@ func TestDeltaResumeCollectsAddedAndReportsRemoved(t *testing.T) {
 	if strings.Join(messageIDs(ids), ",") != "m3" {
 		t.Errorf("ids = %v, want [m3] (the tombstoned entry is not fetched)", ids)
 	}
-	// The tombstone travels its OWN way rather than being dropped. A @removed
-	// entry carries no message fields, so there is nothing to fetch — but it is
-	// the owner saying they deleted their copy, and this workspace may be
-	// holding one. Discarding it here is the bug this return value fixed, and
-	// asserting only the fetched ids would not notice it coming back.
-	if strings.Join(removed, ",") != "tombstone" {
-		t.Errorf("removed = %v, want [tombstone] — the deletion was dropped on the floor", removed)
+	if len(removed) != 0 {
+		t.Errorf("folder tombstones cannot prove permanent deletion: %v", removed)
 	}
 	if !strings.Contains(delta, "d2") {
 		t.Errorf("advanced deltaLink = %q, want the d2 link", delta)
