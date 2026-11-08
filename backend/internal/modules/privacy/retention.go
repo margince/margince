@@ -167,6 +167,9 @@ type RetentionService struct {
 	// fallback path, so the erase action refuses when it is nil rather than
 	// skipping it.
 	purgeRawCaptures RawCapturePurger
+	// unreadOutboxTypes are the event types the assurance check reads from
+	// the outbox, which keeps them until it has.
+	unreadOutboxTypes []string
 }
 
 // NewRetentionService wires the nightly evaluator.
@@ -236,12 +239,16 @@ func (s *RetentionService) WithEdgeInvalidator(fn EdgeInvalidator) *RetentionSer
 // activities' text, such as a voice sample read from sent mail. It rides the
 // same seam because every path that destroys the original destroys them too.
 // PurgeTextNamingTx empties those copies that name an erased subject by full
-// name or address, whatever text they were taken from.
+// name or address, whatever text they were taken from. The three delivery
+// methods reach the webhook bodies rendered from a record (retentioncopies.go).
 type RawCapturePurger interface {
 	PurgeRawCaptureTx(context.Context, pgx.Tx, []ids.UUID) error
 	PurgePartySourcesForEmailsTx(context.Context, pgx.Tx, []string) error
 	PurgeTextCopiesTx(context.Context, pgx.Tx, []ids.UUID) error
 	PurgeTextNamingTx(ctx context.Context, tx pgx.Tx, fullName string, emails []string) error
+	DeliveryCopiesPastTx(ctx context.Context, tx pgx.Tx, cutoff time.Time, after ids.UUID, limit int) ([]RecordCopy, error)
+	ClearDeliveryCopiesTx(ctx context.Context, tx pgx.Tx, deliveries []ids.UUID) error
+	ScrubDeliveryCopiesTx(ctx context.Context, tx pgx.Tx, entityType string, records []ids.UUID) error
 }
 
 // ErrRetentionSeamMissing is the refusal a pass makes when it was built without
@@ -341,6 +348,11 @@ func (s *RetentionService) EvaluateInstallation(ctx context.Context) error {
 		return err
 	}
 	if err := s.evaluateEmbedCallRetention(ctx, retainOnly); err != nil {
+		return err
+	}
+	if retainOnly {
+		s.log.Info("retention: retain-only posture keeps published events and webhook bodies")
+	} else if err := s.pruneRecordCopies(ctx); err != nil {
 		return err
 	}
 	if retainOnly {

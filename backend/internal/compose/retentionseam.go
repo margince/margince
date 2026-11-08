@@ -29,10 +29,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/modules/webhooks"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -48,6 +50,7 @@ import (
 func NewRetentionServiceFor(db *database.DB, blob blobstore.Store, log *slog.Logger) *privacy.RetentionService {
 	return privacy.NewRetentionService(db, blob, log, RawCapturePurgerFor(db)).
 		WithCountry(identity.CountryForDecision).
+		WithOutboxReaders(assurance.MarkingEventTypes()).
 		WithEdgeInvalidator(func(ctx context.Context, tx pgx.Tx, activityID ids.UUID) error {
 			return search.RecomputeEdgesForActivities(ctx, tx, []ids.UUID{activityID})
 		})
@@ -86,6 +89,29 @@ func (capturedTextPurger) PurgeTextCopiesTx(ctx context.Context, tx pgx.Tx, acti
 // PurgeTextNamingTx empties the voice samples that name an erased subject.
 func (capturedTextPurger) PurgeTextNamingTx(ctx context.Context, tx pgx.Tx, fullName string, emails []string) error {
 	return ai.EraseSamplesNamingTx(ctx, tx, fullName, emails, time.Now().UTC())
+}
+
+// DeliveryCopiesPastTx pages the webhook bodies whose delivery ended before cutoff.
+func (capturedTextPurger) DeliveryCopiesPastTx(ctx context.Context, tx pgx.Tx, cutoff time.Time, after ids.UUID, limit int) ([]privacy.RecordCopy, error) {
+	bodies, err := webhooks.DeliveryBodiesPastTx(ctx, tx, cutoff, after, limit)
+	if err != nil {
+		return nil, err
+	}
+	copies := make([]privacy.RecordCopy, len(bodies))
+	for i, body := range bodies {
+		copies[i] = privacy.RecordCopy{ID: body.ID, EntityType: body.EntityType, EntityID: body.EntityID}
+	}
+	return copies, nil
+}
+
+// ClearDeliveryCopiesTx empties those bodies.
+func (capturedTextPurger) ClearDeliveryCopiesTx(ctx context.Context, tx pgx.Tx, deliveries []ids.UUID) error {
+	return webhooks.ClearDeliveryBodiesTx(ctx, tx, deliveries)
+}
+
+// ScrubDeliveryCopiesTx empties the bodies rendered from erased records.
+func (capturedTextPurger) ScrubDeliveryCopiesTx(ctx context.Context, tx pgx.Tx, entityType string, records []ids.UUID) error {
+	return webhooks.ScrubSubjectDeliveriesTx(ctx, tx, entityType, records)
 }
 
 //nolint:ireturn // privacy owns the purge seam; compose supplies the vault adapter.
