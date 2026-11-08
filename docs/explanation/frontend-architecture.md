@@ -116,7 +116,7 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   So a new string lands in all three catalogs in one change. A string in one
   catalog alone is a red build, never missing text on the screen of a reader.
   A count takes its text from the `Intl.PluralRules` kind of the language the
-  reader uses (`format/plural.ts`). `one-plural-rule.test.ts` refuses a
+  reader uses (`format/plural.ts`). The census rule `one-plural-rule` refuses a
   `count === 1` that chooses a message key in any file outside this folder.
 
   `catalogs.ts` loads the language in use. `bootstrap.ts` starts that read while the app loads.

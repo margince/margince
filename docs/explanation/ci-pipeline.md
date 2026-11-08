@@ -498,7 +498,7 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md).
   level makes a path skip report as passing. The copy of the gate in `sbom.yml` fires just before a
   signing run.
 - **`fe-quality`** is the only frontend job with a Go toolchain, because the composed lane needs the
-  output of `gen-composition`, which nothing else makes.
+  output of `gen-composition`, which nothing else makes. It also runs `make fe-census`.
 - **`fe-unit` uploads a blob report, not an lcov.** One part measures only the part of the tree its
   tests loaded, until the four are added up. Four is where the measure stops paying off; the comment
   above the job holds the math. The parts are cut by expected cost, not by a hash of the path. A few
