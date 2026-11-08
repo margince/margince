@@ -280,6 +280,19 @@
   block-size: 1lh;
   align-items: center;
 }
+/* Under a thumb the door is 44px tall, so every row grows to hold it and taps
+   never land on the row next to it. */
+@media (pointer: coarse) {
+  .brief-rail .stat-strip:has(.stat-card-narrow-row) .stat-card-narrow-row {
+    min-block-size: calc(max(var(--controlHeight), 44px) + 2 * var(--space-2));
+  }
+  .brief-rail
+    .stat-strip:has(.stat-card-narrow-row)
+    .stat-card-narrow-row
+    > .stat-card-foot {
+    block-size: auto;
+  }
+}
 /* The arrow alone opens the lane here; its word stays for a screen reader. */
 .brief-rail .stat-card-narrow-row .stat-card-open-word {
   position: absolute;
