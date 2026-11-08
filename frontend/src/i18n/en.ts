@@ -21221,6 +21221,7 @@ export const en = {
   "changes.bulk.unsent_other": "{count} deals were not sent.",
   "changes.bulk.confirmOnDeal": "Open the deal to confirm its Undo.",
   "changes.bulk.retry": "Send again",
+  "changes.bulk.unfinished": "Deals not fully undone",
 } as const;
 
 export type MessageKey = keyof typeof en;

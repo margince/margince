@@ -232,7 +232,7 @@ function UnfinishedDeals({
   );
   if (unfinished.length === 0) return null;
   return (
-    <ul className="changes-bulk-unfinished">
+    <ul aria-label={t("changes.bulk.unfinished")}>
       {unfinished.map((result) => (
         <li key={result.deal_id}>
           <EntityRef

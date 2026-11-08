@@ -307,7 +307,7 @@ it("names each deal a review-all left partly undone, linked to it", async () => 
       }),
   );
   const user = userEvent.setup();
-  const { container } = render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={null} />);
   await user.click(
     await screen.findByRole("button", { name: "Review all 2 deals" }),
   );
@@ -315,12 +315,8 @@ it("names each deal a review-all left partly undone, linked to it", async () => 
   await user.click(
     within(drawer).getByRole("button", { name: "Undo changes on 2 deals" }),
   );
-  const list = await waitFor(() => {
-    const found = container.ownerDocument.querySelector<HTMLElement>(
-      ".changes-bulk-unfinished",
-    );
-    expect(found).toBeTruthy();
-    return found as HTMLElement;
+  const list = await screen.findByRole("list", {
+    name: "Deals not fully undone",
   });
   const links = within(list).getAllByRole("link");
   expect(links.map((link) => link.textContent)).toEqual(["Deal 1"]);
