@@ -366,7 +366,8 @@ export default defineConfig({
     // Rebinds jsdom's Web Storage over the Node ≥23 global stub — see the file.
     setupFiles: ["./vitest.setup.ts"],
     // Playwright owns e2e/ — vitest must not collect its specs
-    exclude: ["**/node_modules/**", "e2e/**"],
+    // census/ is its own lane, `make fe-census`: one parse serves every rule.
+    exclude: ["**/node_modules/**", "e2e/**", "census/**"],
     // The lcov report is written for ONE reader, the SonarCloud scanner, and
     // the scanner resolves an `SF:` path against ITS base directory — the repo
     // root. Vitest's root is frontend/, so the default report says

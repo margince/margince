@@ -27,7 +27,7 @@
 // `RAIL_LESS_SCREENS` in app/nav.ts. It asserts the first two agree, so a
 // destination cannot be added and go unjudged. This is the same approach as
 // testing/mutation-variable-coverage.test.ts and
-// design-system/native-controls.test.ts. The reason is the same: the rule is
+// census/rules/native-controls.census.ts. The reason is the same: the rule is
 // one sentence about the source, and the TypeScript parser already knows the
 // language.
 //

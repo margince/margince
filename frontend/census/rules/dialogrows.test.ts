@@ -6,44 +6,27 @@ import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import ts from "typescript";
 import { afterAll, describe, expect, it } from "vitest";
-import {
-  FIELD_ROWS,
-  labelledIn,
-  NOT_ROWS,
-} from "../../scripts/lib/dialogfields";
+import { labelledIn } from "../../scripts/lib/dialogfields";
 import {
   defOf,
   descendants,
   dialogSet,
-  elementsIn,
-  keyOf,
-  markupFiles,
   modalBoxes,
   ownersIn,
-  primitiveKey,
-  sheetTexts,
   srcDir,
   textCensus,
   type Values,
   weightOf,
-  whereOf,
 } from "../../scripts/lib/dialoglayout";
+import { rowsAcross, SCOPE_CAP } from "../../scripts/lib/dialogrows";
 import {
-  dialogsIn,
-  hints,
-  rowsAcross,
-  SCOPE_CAP,
-} from "../../scripts/lib/dialogrows";
-import {
+  filesMatching,
   parseSource,
   sourceFileAt,
   sourceTextAt,
 } from "../../scripts/lib/source-tree";
-import { classVariants } from "../testing/classnames";
+import { classVariants } from "../../src/testing/classnames";
 
-// Whichever test asks first builds the census: 28s to 65s on CI runners 2.3x apart.
-// This leaves the slowest runner room for that spread again: 65 × 65 / 28.
-const TREE_BUILD = 152_000;
 const once = <T>(make: () => T) => {
   let made: { value: T } | undefined;
   return () => {
@@ -51,11 +34,19 @@ const once = <T>(make: () => T) => {
     return made.value;
   };
 };
-const files = once(markupFiles);
-const sources = once(() => files().map((f) => sourceFileAt(f)));
-const owners = once(() => ownersIn(sheetTexts()));
-const tree = once(() => rowsAcross(sources(), owners(), dialogSet()));
-const census = once(() => textCensus(files().map((f) => sourceTextAt(f))));
+// The planted cases read the design system's own dialogs and stylesheets, not
+// the tree: the census rule in dialogrows.census.ts walks that.
+const designSystem = join(srcDir, "design-system");
+const designDialogs = once(() =>
+  dialogSet(
+    filesMatching(designSystem, /\.tsx$/)
+      .filter((f) => !/\.(test|stories)\.tsx$/.test(f))
+      .map((f) => sourceFileAt(f)),
+  ),
+);
+const owners = once(() =>
+  ownersIn(filesMatching(designSystem, /\.css$/).map((f) => sourceTextAt(f))),
+);
 
 const AT = join(srcDir, "design-system", "planted.tsx");
 const PRELUDE = `import { Modal } from "./modal";
@@ -135,7 +126,7 @@ function Destr(props) { const { className } = props; return <div className="s"><
 const LzModal = lazy(() => import("./modal").then((m) => ({ default: m.Modal })));
 const LzRouted = lazy(routed(() => import("./modal").then((m) => ({ default: m.Modal }))));
 export { Modal as Pane };`;
-const keysOf = (source: ts.SourceFile) => dialogSet([source], dialogSet());
+const keysOf = (source: ts.SourceFile) => dialogSet([source], designDialogs());
 // Fixture text writes an interpolation as `#{…}`, so no string here reads as one.
 const interpolated = (text: string) => text.replaceAll("#{", "${");
 const plantedRows = (jsx: string, own = owners()) => {
@@ -221,56 +212,6 @@ describe("a dialog's field rows have an owner for the space between them", () =>
     for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true });
   });
 
-  it(
-    "walks every dialog the text spells, wrappers included",
-    () => {
-      expect(tree().dialogs).toBe(census().dialogs);
-      expect(dialogSet().keys.size).toBeGreaterThan(1);
-      expect(tree().rows.length).toBeGreaterThan(0);
-      expect(tree().depth).toBeGreaterThan(1);
-    },
-    TREE_BUILD,
-  );
-
-  it(
-    "judges every component a dialog renders",
-    () => {
-      const { keys } = dialogSet();
-      const fields = new Set(
-        [...FIELD_ROWS].map(([name, file]) => primitiveKey(file, name)),
-      );
-      const shown = sources().flatMap((s) =>
-        dialogsIn(s, keys).flatMap((d) =>
-          elementsIn(d).flatMap((e) => defOf(e) ?? []),
-        ),
-      );
-      const skipped = (def: ts.Node) =>
-        keys.has(keyOf(def)) ||
-        fields.has(keyOf(def)) ||
-        tree().judged.has(def);
-      expect(
-        [...new Set(shown)].filter((d) => !skipped(d)).map(whereOf),
-      ).toEqual([]);
-    },
-    TREE_BUILD,
-  );
-
-  it(
-    "would count short of the text with only Modal and ConfirmModal",
-    () => {
-      const cut = new Set([
-        dialogSet().modal,
-        primitiveKey("confirmmodal", "ConfirmModal"),
-      ]);
-      const walked = sources().reduce(
-        (n, s) => n + dialogsIn(s, cut).length,
-        0,
-      );
-      expect(walked).toBeLessThan(census().dialogs);
-    },
-    TREE_BUILD,
-  );
-
   it("spells a wrapper's wrapper, an alias and a role as dialogs", () => {
     const text = `import { Modal as Pane } from "./modal";
 function Sheet({ children }) { return <Pane>{children}</Pane>; }
@@ -314,27 +255,22 @@ function Moon() { return null; }`;
     expect(plantedAcross("<B />", stack, scoped).verdicts).toBe("flush");
   });
 
-  it(
-    "refuses a guest fan-out past its scope cap",
-    () => {
-      const levels = Math.floor(Math.log2(SCOPE_CAP + 1)) + 1;
-      const level = (i: number) =>
-        `function L${i}() { return <><div className="a"><L${i + 1} /></div><div className="b"><L${i + 1} /></div></>; }`;
-      const chain = Array.from({ length: levels }, (_, i) => level(i));
-      const text = `${PRELUDE}\nconst A = () => <Modal intent="form"><L0 /></Modal>;\n${chain.join("\n")}`;
-      const lineOf = (name: string) =>
-        text.split("\n").findIndex((l) => l.startsWith(`function ${name}(`)) +
-        1;
-      const source = parseSource(AT, text);
-      const boxed = ownersIn([`.a ${STACK} .b ${STACK}`]);
-      expect(() => rowsAcross([source], boxed, keysOf(source))).toThrow(
-        new RegExp(
-          `planted.tsx:${lineOf("L0")}: more than \\d+ guest scopes to judge in the components this one calls, last at design-system/planted.tsx:${lineOf(`L${levels - 1}`)}; call them`,
-        ),
-      );
-    },
-    TREE_BUILD,
-  );
+  it("refuses a guest fan-out past its scope cap", () => {
+    const levels = Math.floor(Math.log2(SCOPE_CAP + 1)) + 1;
+    const level = (i: number) =>
+      `function L${i}() { return <><div className="a"><L${i + 1} /></div><div className="b"><L${i + 1} /></div></>; }`;
+    const chain = Array.from({ length: levels }, (_, i) => level(i));
+    const text = `${PRELUDE}\nconst A = () => <Modal intent="form"><L0 /></Modal>;\n${chain.join("\n")}`;
+    const lineOf = (name: string) =>
+      text.split("\n").findIndex((l) => l.startsWith(`function ${name}(`)) + 1;
+    const source = parseSource(AT, text);
+    const boxed = ownersIn([`.a ${STACK} .b ${STACK}`]);
+    expect(() => rowsAcross([source], boxed, keysOf(source))).toThrow(
+      new RegExp(
+        `planted.tsx:${lineOf("L0")}: more than \\d+ guest scopes to judge in the components this one calls, last at design-system/planted.tsx:${lineOf(`L${levels - 1}`)}; call them`,
+      ),
+    );
+  });
 
   it("judges a component once whatever text its calls hand it", () => {
     const scopes = (n: number) => {
@@ -359,14 +295,7 @@ function Moon() { return null; }`;
     expect(scopes(two)).toBe(scopes('<Cfgd tone="t" />'));
   });
 
-  it("names every design-system control that draws its own label", () => {
-    const ds = files().filter(
-      (f) => f.includes("/design-system/") && !f.endsWith(".stories.tsx"),
-    );
-    const found = ds.flatMap((f) => labelledIn(sourceFileAt(f)));
-    expect(found.sort()).toEqual(
-      [...FIELD_ROWS.keys(), ...NOT_ROWS.keys()].sort(),
-    );
+  it("names a control that draws its own label, through an alias", () => {
     const planted = parseSource(
       AT,
       `export function Pick() { return <label><input /></label>; }
@@ -584,16 +513,4 @@ export const Named = Pick;`,
       verdict,
     );
   });
-
-  it(
-    "spaces every field row in the tree",
-    () => {
-      const loose = tree().rows.filter((r) => r.verdict !== "spaced");
-      expect(
-        loose.map((r) => `${r.where} ${r.verdict}${r.by ? ` by ${r.by}` : ""}`),
-        `flush: ${hints.flush}; doubled: ${hints.doubled}; unplaced: ${hints.unplaced}`,
-      ).toEqual([]);
-    },
-    TREE_BUILD,
-  );
 });
