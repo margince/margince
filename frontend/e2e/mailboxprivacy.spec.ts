@@ -92,7 +92,7 @@ test("AC-mailbox-2: narrowing the posture offers to narrow the history too", asy
 test("AC-mailbox-3: the admin opt-in states what turning it on asserts", async ({
   page,
 }) => {
-  // The switch that binds the whole workspace is CHANGED on Capture rules;
+  // The switch that binds the whole workspace is CHANGED on Mail capture;
   // the reader's own Connections page only states the rule it sets.
   await page.goto("/#/settings/capture");
   const toggle = page.getByTestId("shared-posture-allowed-toggle");
@@ -108,9 +108,9 @@ test("AC-mailbox-3: the admin opt-in states what turning it on asserts", async (
   await expect(page.getByText(/Margince prüft das nicht/)).toBeVisible();
 });
 
-// The senders list opens in a drawer from its summary row on Capture activity.
+// The senders list opens in a drawer from its summary row on the Activity tab.
 async function openSenders(page: Page) {
-  await page.goto("/#/settings/capture-activity");
+  await page.goto("/#/settings/connections/activity");
   await page
     .getByRole("button", {
       name: de["connectionOutcomes.viewNamed"].replace(

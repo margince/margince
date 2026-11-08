@@ -296,7 +296,7 @@ describe("what the ranked queue tells a reader", () => {
     });
     const dsr = "01a05500-0000-7000-8000-00000000dddd";
     expect(request.getAttribute("href")).toBe(
-      `/#/settings/privacy?case=${dsr}`,
+      `/#/settings/privacy/requests?case=${dsr}`,
     );
   });
 

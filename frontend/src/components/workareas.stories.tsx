@@ -32,7 +32,7 @@ function Choice({
 }
 
 const meta: Meta<typeof WorkAreasChoice> = {
-  title: "Settings/You/AI access/Work areas",
+  title: "Settings/You/AI assistants/Work areas",
   component: WorkAreasChoice,
 };
 export default meta;

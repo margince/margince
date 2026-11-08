@@ -9,7 +9,7 @@ import { HeldCounts } from "./held-threads.counts";
 // reads apart from real holds.
 
 const meta: Meta = {
-  title: "Settings/You/Capture activity/Held thread counts",
+  title: "Settings/You/Connections/Held thread counts",
   parameters: { layout: "padded" },
 };
 export default meta;

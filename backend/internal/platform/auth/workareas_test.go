@@ -35,7 +35,7 @@ func TestAPassportIsRefusedACallInAnAreaItLeavesOff(t *testing.T) {
 		t.Fatalf("a call in an area left off → %v, want an AreaOffError naming admin_settings on the 403 row", err)
 	}
 	_, message := off.MessageFault()
-	if !strings.Contains(message, "“Admin settings”") || !strings.Contains(message, "Settings → AI access") {
+	if !strings.Contains(message, "“Admin settings”") || !strings.Contains(message, "Settings → AI assistants") {
 		t.Errorf("the refusal reads %q; it should name the area as the user knows it and where to turn it on", message)
 	}
 }

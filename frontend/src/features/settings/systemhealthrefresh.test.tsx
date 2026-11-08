@@ -77,9 +77,7 @@ it("keeps last-known findings visible after bounded read failures", async () => 
   });
   render(<SystemHealthPage />);
   await settle();
-  expect(
-    screen.getByRole("region", { name: "Check results" }),
-  ).toBeInTheDocument();
+  expect(screen.getByRole("list", { name: "Passing" })).toBeInTheDocument();
   const refresh = screen.getByRole("button", { name: "Refresh" });
   refresh.focus();
   failed = true;
@@ -88,7 +86,7 @@ it("keeps last-known findings visible after bounded read failures", async () => 
   expect(
     screen.getByRole("heading", { name: "Refresh needed" }),
   ).toBeInTheDocument();
-  expect(screen.queryByRole("region", { name: "Check results" })).toBeNull();
+  expect(screen.queryByRole("list", { name: "Passing" })).toBeNull();
   expect(
     screen.getByText("Last known evidence; the latest check did not complete."),
   ).toBeInTheDocument();

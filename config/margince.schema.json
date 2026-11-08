@@ -1657,7 +1657,7 @@
           "additionalProperties": false,
           "properties": {
             "dynamic": {
-              "description": "Let AI tools register their own OAuth client at /oauth/register (DCR); false keeps it off whatever the admin's switch in Settings \u003e MCP says.",
+              "description": "Let AI tools register their own OAuth client at /oauth/register (DCR); false keeps it off whatever the admin's switch in Settings \u003e AI tool access says.",
               "type": [
                 "boolean",
                 "null"
@@ -1665,7 +1665,7 @@
               "default": true
             },
             "metadata_document": {
-              "description": "Accept a client ID that is the URL of the tool's published metadata document (CIMD); false keeps it off whatever the admin's switch in Settings \u003e MCP says.",
+              "description": "Accept a client ID that is the URL of the tool's published metadata document (CIMD); false keeps it off whatever the admin's switch in Settings \u003e AI tool access says.",
               "type": [
                 "boolean",
                 "null"

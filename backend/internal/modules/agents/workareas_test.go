@@ -158,7 +158,7 @@ func TestTheAreasOfferedAreTheOnesTheGrantsReach(t *testing.T) {
 func TestTheAgentIsToldWhichAreaToAskFor(t *testing.T) {
 	srv := NewDispatcher(nil, nil, "t", "0")
 	got := srv.explain(adminVerb, &auth.AreaOffError{Tool: adminVerb, Area: "admin_settings"})
-	if !strings.Contains(got, "“Admin settings”") || !strings.Contains(got, "Settings → AI access") || strings.Contains(got, "scope") {
+	if !strings.Contains(got, "“Admin settings”") || !strings.Contains(got, "Settings → AI assistants") || strings.Contains(got, "scope") {
 		t.Fatalf("the agent reads %q", got)
 	}
 }

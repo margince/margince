@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect } from "react";
+import type { ReactNode } from "react";
 import { CaptureSettingsCard } from "../../components/capture-settings";
 import { MailSharingCard } from "../../components/mail-sharing";
 import { Callout } from "../../design-system/callout";
@@ -8,7 +8,7 @@ import {
   ReviewActionsContext,
   useReviewActions,
 } from "../../lib/reviewactions";
-import { navigateReplacing, type Route } from "../../lib/router";
+import type { Route } from "../../lib/router";
 import { AiBudgetCard } from "../ai/ai-admin";
 import { ModelPricesCard } from "../ai/ai-price-sync";
 import { AiProviderKeysCard } from "../ai/ai-provider-keys";
@@ -59,6 +59,7 @@ import { FollowUpSettingsCard } from "./followupsettings";
 import { InstallationConfigurationPage } from "./installation-configuration";
 import { InternalMailCaptureCard } from "./internalmailsettings";
 import { LegalEntitiesCard } from "./legalentities";
+import { LegalReviewSettingsCard } from "./legalreviewsettings";
 import { LicenseCard } from "./license";
 import { LegacyLossReasonsCard, LossReasonsCard } from "./lossreasons";
 import { NotificationSettingsCard } from "./notification-settings";
@@ -80,9 +81,9 @@ import { WebFormsCard } from "./webforms";
 import { WebhooksCard } from "./webhooks";
 import "./settings.css";
 
-import { readsOnly, type SettingsPageId } from "../../lib/settingscatalog";
-import { settingsHref, settingsRouteTarget } from "../../lib/settingsrouting";
+import type { SettingsPageId } from "../../lib/settingscatalog";
 import { ResetDataCard } from "./settings.reset";
+import { useSettingsDestination } from "./settingsdestination";
 import { SettingsBoundary, SettingsHome } from "./settingshome";
 import {
   ADMIN_SEGMENT,
@@ -92,9 +93,9 @@ import {
   settingsRouteTab,
   useSettingsReach,
   useSettingsSection,
-  useVisibleSettingsPages,
 } from "./settingsnav";
 import { SettingsSavePage } from "./settingssavepage";
+import { SettingsTabStrip } from "./settingstabs";
 
 // Re-exported so this module's own consumers — the tests, the stories, the
 // testkit — keep asking one module for both halves. Splitting their imports
@@ -117,17 +118,22 @@ export {
 // and the automations the installation runs unattended. EP09 renders
 // governance; it never authors policy.
 
-export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
+export function tabContent(
+  id: SettingsPageId,
+  tab: string,
+  route?: Route,
+): ReactNode {
   switch (id) {
     // ---- me ----
     case "account":
-      return <AccountSettings />;
-    case "meetings":
-      return <MeetingSettings />;
-    case "voice":
-      return <VoiceDnaCard />;
-    case "agents":
-      return <AiAccessTab />;
+      return (
+        <>
+          <AccountSettings />
+          {/* Personal AI work that runs as the reader: their own switch, so it
+              sits with their account rather than the company's automations. */}
+          <OvernightGrantCard />
+        </>
+      );
     case "notifications":
       return (
         <>
@@ -135,50 +141,38 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
           <BriefDeliveryPanel />
         </>
       );
+    case "meetings":
+      return <MeetingSettings part={meetingsPart(tab)} />;
+    case "voice":
+      return <VoiceDnaCard />;
+    case "agents":
+      return <AiAccessTab />;
     case "connections":
-      return <ConnectionsTab />;
-    // Beside `connections` and after it on purpose: that page says what you are
-    // connected to, this one says what those connections did with your mail.
-    case "capture-activity":
-      return <CaptureActivityTab />;
+      return connectionsTab(tab);
 
     // ---- company ----
     case "company":
-      // The company first (brand, business context and the website that context
-      // is read from), then the installation's own facts. The currency pair stays
-      // ADJACENT: the base currency is declared in InstallationSettingsCard and
-      // every rate below converts to it.
-      return (
-        <>
-          <CompanyContextCard />
-          <LegalEntitiesCard />
-          <InstallationSettingsCard />
-          <FxRatesCard />
-          <TaxRatesCard />
-          <FollowUpSettingsCard />
-          <SignatureTemplateCard />
-        </>
-      );
+      return companyTab(tab);
     case "authentication":
       // Who may sign in, and how: one vendor OAuth app serves sign-in and mail.
-      // The apps come first, since no provider reaches the sign-in screen
-      // before its app exists. Apps an extension unit declares follow.
+      if (tab === "apps")
+        return (
+          <>
+            <OAuthAppsCard />
+            <UnitOAuthAppCards />
+          </>
+        );
       return (
-        <>
-          <OAuthAppsCard />
-          <SignInMethodsCard />
-          <UnitOAuthAppCards />
-        </>
+        <SignInMethodsCard part={tab === "grants" ? "grants" : "methods"} />
       );
 
-    // ---- contacts ----
+    // ---- members, teams, roles and seats ----
     case "members":
       return <UsersAdminCard />;
     case "teams":
-      // Its own page rather than a second card under members. Teams are share
-      // targets and a way to address a group, but Team Lead is team-scoped
-      // (RowScopeTeam) — so this is also where an admin decides whose records a
-      // Team Lead's membership hands over, which is not the roster's question.
+      // Its own page rather than a second card under members. Team Lead is
+      // team-scoped, so this is also where an admin decides whose records a
+      // Team Lead's membership hands over.
       return <TeamsCard />;
     case "roles":
       // Who may merge a colleague's duplicate of a contact is a question of
@@ -193,8 +187,8 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
       return <LicenseCard />;
 
     // ---- sales ----
-    case "pipelines":
-      return <PipelinesCard />;
+    case "deals":
+      return dealsTab(tab);
     case "leads":
       return (
         <>
@@ -203,25 +197,12 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
           <LeadHandlingCard />
         </>
       );
-    case "acquisition":
-      return <AcquisitionSourcesCard />;
-    case "lossreasons":
-      return (
-        <>
-          <LossReasonsCard />
-          <LegacyLossReasonsCard />
-        </>
-      );
     case "partners":
       return <PartnerStagesCard />;
-    case "reviewtemplates":
-      return <ReviewTemplatesCard />;
-    case "recordroles":
-      return <RecordRolesCard />;
-    case "fields":
+    case "records":
+      if (tab === "tags") return <TagVocabularyCard />;
+      if (tab === "roles") return <RecordRolesCard />;
       return <CustomFieldsAdmin />;
-    case "tags":
-      return <TagVocabularyCard />;
     case "products":
       return (
         <>
@@ -232,20 +213,9 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
 
     // ---- data ----
     case "capture":
-      return (
-        <>
-          {/* The rules in the order mail meets them, then their outcome:
-              which domains ended up refused a company. */}
-          <MailSharingCard />
-          <OwnDomainsCard />
-          <CaptureSettingsCard />
-          <InternalMailCaptureCard />
-          <ConsumerMailDomainsCard />
-          <BlockedDomainsCard />
-        </>
-      );
+      return captureTab(tab);
     case "integrations":
-      return <IntegrationsTab />;
+      return integrationsTab(tab);
     case "web-forms":
       return <WebFormsCard />;
     case "knowledge":
@@ -254,46 +224,37 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
       return <ImportCard subpage={route?.id2} />;
 
     // ---- ai ----
-    // Each AI page is its own address. The unsaved guard watches addresses, so
-    // it sees a move between them, and each card claims it itself.
     case "models":
-      return (
-        <>
-          <AiProviderKeysCard />
-          {/* The prices those vendors charge, below the keys that decide which vendors are priced. */}
-          <ModelPricesCard />
-          <AiRoutingCard />
-          <AiTasksCard />
-        </>
-      );
-    case "automations":
-      return <AutomationsAdmin />;
-    case "usage":
-      return (
-        <>
-          {/* The allowance, each agent's limits and use, then the spend. */}
-          <AiBudgetCard />
-          <AgentAllowancesCard />
-          <AgentUsageByUserCard />
-          <AiUsageCard />
-        </>
-      );
+      return modelsTab(tab);
     case "mcp":
       return <McpCards />;
+    case "usage":
+      if (tab === "agents")
+        return (
+          <>
+            <AgentAllowancesCard />
+            <AgentUsageByUserCard />
+          </>
+        );
+      return tab === "spend" ? <AiUsageCard /> : <AiBudgetCard />;
     case "model-calls":
       return <AiCallsCard />;
+    case "automations":
+      return <AutomationsAdmin view={tab === "library" ? "library" : "mine"} />;
 
-    // ---- governance ----
+    // ---- compliance ----
     case "privacy":
-      return <PrivacyLanes />;
+      return <PrivacyLanes tab={tab} />;
     case "jurisdiction":
       return <JurisdictionCard />;
     case "audit":
       // Its own page: it answers to `audit_log`, where the privacy page answers
       // to consent and retention, and one reader can hold one without the other.
       return <AuditLogCard />;
+
+    // ---- system ----
     case "system-health":
-      return <SystemHealthPage view={route?.id2} />;
+      return <SystemHealthPage view={tab} />;
     case "configuration":
       return <InstallationConfigurationPage />;
     case "extensions":
@@ -305,52 +266,139 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
   }
 }
 
-// What you are connected to. The mail connector list is scoped to the calling
-// human server-side and the LinkedIn surface reads `/me`. So this is personal
-// and needs no grant. What those mailboxes brought in and what is held back
-// is on Capture activity.
-function ConnectionsTab() {
-  return (
-    <>
-      <ConnectorsCard />
-      {/* Per seat, not per connection: an address declared here is the same
-          contact, so mail among them never becomes a conversation. */}
-      <OwnerIdentitiesCard />
-      <OvernightGrantCard />
-      <LinkedInNetworkPanel />
-      {/* Last, and only when the installation composed a unit whose credential
-          is the member's OWN — that is what a `user`-scoped secret is, and it
-          is the same thing every card above it holds. A unit is offered here
-          rather than from the rail because enabling one adds something to
-          configure, not a destination. */}
-      <ExtensionUnitsCard scope="user" />
-    </>
-  );
+function meetingsPart(tab: string) {
+  if (tab === "availability" || tab === "guests") return tab;
+  return "links";
 }
 
-// What the INSTALLATION is wired to: one shared contact-data credential, the
-// outbound subscriptions and the workspace's Telegram bot. Each is shared by
-// everybody, which is why they sit under the company heading and the personal
-// connections do not.
-function IntegrationsTab() {
-  return (
-    <>
-      <ProviderCard />
-      <FinanceSourceCard />
-      <WebhooksCard />
-      <TelegramConnectorsPanel />
-      {/* A unit whose secret is `workspace`-scoped holds the installation's
-          credential, like the cards above, so it is offered here. Which page a
-          unit lands on is its manifest's decision, never this file's. */}
-      <ExtensionUnitsCard scope="workspace" />
-    </>
-  );
+// What you are connected to, and what those connections did with your mail.
+// The connector list is scoped to the calling human server-side and LinkedIn
+// reads `/me`, so every tab is personal and needs no grant.
+function connectionsTab(tab: string): ReactNode {
+  switch (tab) {
+    case "addresses":
+      // Per seat, not per connection: an address declared here is the same
+      // contact, so mail among them never becomes a conversation.
+      return <OwnerIdentitiesCard />;
+    case "linkedin":
+      return <LinkedInNetworkPanel />;
+    case "accounts":
+      // Units whose credential is the member's own, offered here rather than
+      // from the rail because enabling one adds something to configure.
+      return <ExtensionUnitsCard scope="user" />;
+    case "activity":
+      return <CaptureActivityTab />;
+    default:
+      return <ConnectorsCard />;
+  }
 }
 
-// The shape a record takes: which fields it carries, which stages it moves
-// through, and the priced things that go on an offer. Four surfaces that were
-// three separate screens behind door-cards and one editor inline — a door is
-// not a section, and the doors are gone.
+// The company itself, then the installation's own facts. The base currency is
+// declared on Regional and every rate on Money converts to it.
+function companyTab(tab: string): ReactNode {
+  switch (tab) {
+    case "entities":
+      return <LegalEntitiesCard />;
+    case "regional":
+      return <InstallationSettingsCard part="regional" />;
+    case "money":
+      return (
+        <>
+          <FxRatesCard />
+          <TaxRatesCard />
+        </>
+      );
+    case "email":
+      return (
+        <>
+          <FollowUpSettingsCard />
+          <SignatureTemplateCard />
+        </>
+      );
+    default:
+      return <CompanyContextCard />;
+  }
+}
+
+// How deals move, where they come from, and why they are won or lost.
+function dealsTab(tab: string): ReactNode {
+  switch (tab) {
+    case "sources":
+      return <AcquisitionSourcesCard />;
+    case "loss":
+      return (
+        <>
+          <LossReasonsCard />
+          <LegacyLossReasonsCard />
+        </>
+      );
+    case "reviews":
+      return <ReviewTemplatesCard />;
+    case "legal":
+      // Whether a stage may wait for legal is a pipeline question.
+      return <LegalReviewSettingsCard />;
+    case "forecast":
+      return <InstallationSettingsCard part="forecast" />;
+    default:
+      return <PipelinesCard />;
+  }
+}
+
+// The rules in the order mail meets them, then their outcome: which domains
+// ended up refused a company.
+function captureTab(tab: string): ReactNode {
+  switch (tab) {
+    case "domains":
+      return (
+        <>
+          <OwnDomainsCard />
+          <ConsumerMailDomainsCard />
+          <BlockedDomainsCard />
+        </>
+      );
+    case "enrichment":
+      return <CaptureSettingsCard />;
+    case "internal":
+      return <InternalMailCaptureCard />;
+    default:
+      return <MailSharingCard />;
+  }
+}
+
+// What the INSTALLATION is wired to. Each is shared by everybody, which is why
+// they sit under the company heading and the personal connections do not.
+function integrationsTab(tab: string): ReactNode {
+  switch (tab) {
+    case "accounting":
+      return <FinanceSourceCard />;
+    case "webhooks":
+      return <WebhooksCard />;
+    case "telegram":
+      return <TelegramConnectorsPanel />;
+    case "units":
+      // A unit whose secret is `workspace`-scoped holds the installation's
+      // credential. Which page a unit lands on is its manifest's decision.
+      return <ExtensionUnitsCard scope="workspace" />;
+    default:
+      return <ProviderCard />;
+  }
+}
+
+// Each AI tab is its own address. The unsaved guard watches addresses, so it
+// sees a move between them, and each card claims it itself.
+function modelsTab(tab: string): ReactNode {
+  switch (tab) {
+    case "tiers":
+      return <AiRoutingCard />;
+    case "tasks":
+      return <AiTasksCard />;
+    case "prices":
+      return <ModelPricesCard />;
+    default:
+      return <AiProviderKeysCard />;
+  }
+}
+
 /**
  * The settings screen: one page of the catalog, chosen by the address.
  *
@@ -366,56 +414,8 @@ export function SettingsScreen({
 }: Readonly<{ route: Route; reviewActions?: ReviewActions }>) {
   const inheritedReviewActions = useReviewActions();
   const t = useT();
-  const target = settingsRouteTarget(route);
-  const visible = useVisibleSettingsPages();
-  // The same pages, partitioned. `visible` still decides the BOUNDARY — may
-  // this reader open the address at all — and the partition decides only how
-  // the page presents itself once opened.
+  const address = useSettingsDestination(route);
   const reach = useSettingsReach();
-  // The page the address names, if this reader may open it.
-  const named =
-    target.kind === "page"
-      ? visible.find((page) => page.id === target.page)
-      : undefined;
-  // An address this reader may not open, or one nothing answers, is a BOUNDARY
-  // — not a redirect to Account.
-  //
-  // The fallback it replaces was silent in the worst way: it rewrote the URL to
-  // the page it had chosen, so a reader who followed a colleague's link saw
-  // Account, saw an address saying Account, and had no way to tell that the
-  // link had gone somewhere else. They would report the link as broken, and the
-  // sender would open it and find it worked.
-  //
-  // The URL is left EXACTLY as typed. That is the whole affordance: the reader
-  // can read what they asked for, copy it, and ask the colleague who has it.
-  const boundary =
-    target.kind === "unknown"
-      ? "unknown"
-      : target.kind === "page" && named === undefined
-        ? "denied"
-        : undefined;
-  const active = named ?? visible[0];
-  // Only a page this reader actually reached can be rewritten to. A legacy
-  // address they may not open is a boundary, and rewriting it would replace the
-  // address they need to quote with one that is not theirs either.
-  const legacy = target.kind === "page" && target.legacy && named !== undefined;
-  // Whether this page is one the reader consults rather than one they work in.
-  // Read off the same partition the rail is built from, so a page that left the
-  // rail for being read-only is the page that explains itself here.
-  const readOnlyPage = active !== undefined && readsOnly(reach, active.id);
-  // A legacy admin address is answered AND rewritten: the reader gets the page
-  // they asked for, and the URL bar then says where that page lives, so the
-  // link they copy from it is the current one. Replaced rather than pushed, or
-  // Back would land on the address that redirects and trap them there.
-  //
-  // Keyed on the entry the route RESOLVED to rather than on the segment it
-  // carried, so a rewrite never invents an address: a legacy link to a page the
-  // reader may not open is left as typed, and the boundary answers it.
-  useEffect(() => {
-    if (legacy && active) {
-      navigateReplacing(settingsHref(active.id));
-    }
-  }, [legacy, active]);
   // No nav column and no heading of its own: the entries are the sidebar's second
   // level now, and the shell's page head names the entry, so the page is that
   // entry's own content across the whole reading column.
@@ -428,22 +428,21 @@ export function SettingsScreen({
   // it once is the difference between every page spacing correctly and every
   // page having to remember to. Width is owned the same way and is the same for
   // all of them, so there is nothing here to branch on.
-  if (target.kind === "home") {
+  if (address.kind === "home") {
     return (
       <div className="wrap">
         <SettingsHome reach={reach} />
       </div>
     );
   }
-
-  if (boundary) {
+  if (address.kind === "boundary") {
     return (
       <div className="wrap">
-        <SettingsBoundary kind={boundary} />
+        <SettingsBoundary kind={address.boundary} />
       </div>
     );
   }
-  if (active === undefined) return null;
+  const { page, tabs, tab } = address;
 
   return (
     <div className="wrap">
@@ -453,19 +452,22 @@ export function SettingsScreen({
           was safe from one tab to the next and still discarded without a word the
           moment the reader clicked Contacts. The cards below hand their drafts
           to the page's one save bar, which claims for them. */}
+      {tabs.length > 1 && (
+        <SettingsTabStrip page={page} tabs={tabs} current={tab} />
+      )}
       <SettingsSavePage>
-        <div className="settings-stack arrive-stack">
+        <div key={tab} className="settings-stack arrive-stack">
           {/* Said once, at the top, and only for a page with no open control: the
               `looksUp` half of the partition. A reader who can change nothing would
               otherwise infer it from a screenful of disabled cards, and a banner over
               a control that works is worse than silence. */}
-          {readOnlyPage && (
+          {address.readOnly && (
             <Callout kind="standing" title={t("settings.readOnlyPageTitle")}>
               {t("settings.readOnlyPage")}
             </Callout>
           )}
           <ReviewActionsContext value={reviewActions ?? inheritedReviewActions}>
-            {tabContent(active.id, route)}
+            {tabContent(page.id, tab, route)}
           </ReviewActionsContext>
         </div>
       </SettingsSavePage>

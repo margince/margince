@@ -128,7 +128,7 @@ function drawer(dsr: DataSubjectRequest, allow: GrantSpec = WORKS) {
 }
 
 const meta: Meta<typeof DsrDetail> = {
-  title: "Settings/Governance/Privacy and retention/Subject request",
+  title: "Settings/Compliance/Privacy and retention/Subject request",
   component: DsrDetail,
 };
 export default meta;

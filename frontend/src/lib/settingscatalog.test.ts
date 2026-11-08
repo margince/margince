@@ -11,7 +11,10 @@ import {
   SETTINGS_PAGES,
   type SettingsPageId,
   type SettingsScope,
+  settingsReach,
+  tabReadsOnly,
   visibleSettingsPages,
+  visibleSettingsTabs,
 } from "./settingscatalog";
 
 // The catalog is the single answer four surfaces resolve from, so what it says
@@ -69,8 +72,6 @@ describe("the scope each page declares", () => {
     voice: "self",
     agents: "self",
     notifications: "self",
-    // The mail-sharing plate has its own "Whole company" badge; Telegram is on Integrations.
-    connections: "self",
 
     // Pages whose cards split across two scopes. `integrations` is one:
     // PATCH /integrations/settings is "the installation's provider-lookup
@@ -79,7 +80,9 @@ describe("the scope each page declares", () => {
     // CaptureExclusionsCard's workspace rules keep a correspondent out of the
     // CRM for everybody.
     integrations: "mixed",
-    "capture-activity": "mixed",
+    // The reader's own mailboxes beside the capture log, whose workspace
+    // exclusions keep a correspondent out of the CRM for everybody.
+    connections: "mixed",
 
     // The installation's own facts, by their contract summaries.
     company: "installation",
@@ -103,15 +106,10 @@ describe("the scope each page declares", () => {
     teams: "workspace",
     // PATCH /roles/{key} and its siblings — one workspace's roles.
     roles: "workspace",
-    pipelines: "workspace",
+    deals: "workspace",
     leads: "workspace",
-    acquisition: "workspace",
-    lossreasons: "workspace",
     partners: "workspace",
-    reviewtemplates: "workspace",
-    recordroles: "workspace",
-    fields: "workspace",
-    tags: "workspace",
+    records: "workspace",
     products: "workspace",
     capture: "workspace",
     "web-forms": "workspace",
@@ -181,6 +179,8 @@ describe("what each page lets a reader change", () => {
         return `flag:${expression.flag}`;
       case "units":
         return `units:${expression.scope}`;
+      case "company-context":
+        return "company-context";
       case "any":
         return `any(${expression.of.map(render).join(", ")})`;
       case "all":
@@ -198,7 +198,6 @@ describe("what each page lets a reader change", () => {
     agents: "always",
     notifications: "always",
     connections: "always",
-    "capture-activity": "always",
     // Under the reader's own heading and still a grant: voice-dna.tsx asks the
     // write, so a read-only seat consults this page.
     voice:
@@ -219,29 +218,20 @@ describe("what each page lets a reader change", () => {
       "all(full-seat, any(any(role_admin:update, role_admin:create), role_admin:delete))",
     seats: "same-as-requires",
 
-    pipelines:
-      "all(full-seat, any(any(pipeline:update, pipeline:create), pipeline:delete))",
+    // The forecast tab writes the installation's forward measure, so the page
+    // carries that write beside the pipeline and vocabulary ones.
+    deals:
+      "all(full-seat, any(any(pipeline:update, pipeline:create), pipeline:delete, any(custom_field:update, custom_field:create), any(installation_settings:update)))",
     // The report is read-only, but the per-transition switches beneath it are
     // not: turning a transition on is a pipeline write, so a rep who may only
     // READ pipelines opens the page and finds every switch refused.
     leads:
       "all(full-seat, any(any(custom_field:update, custom_field:create), custom_field:delete))",
-    // No delete arm: a source is retired through its switch, never removed.
-    acquisition:
-      "all(full-seat, any(any(custom_field:update, custom_field:create)))",
-    lossreasons:
-      "all(full-seat, any(any(custom_field:update, custom_field:create)))",
     partners:
       "all(full-seat, any(any(custom_field:update, custom_field:create), custom_field:delete))",
-    // Edit questions is the one write, and the server gates it on update.
-    reviewtemplates: "all(full-seat, any(any(custom_field:update)))",
-    // No delete arm either: a role is retired through its switch, because an
-    // assignment that carried it has to stay resolvable.
-    recordroles:
-      "all(full-seat, any(any(custom_field:update, custom_field:create)))",
-    fields:
-      "all(full-seat, any(any(custom_field:update, custom_field:create)))",
-    tags: "all(full-seat, any(any(tag:update, tag:create), tag:delete))",
+    // No delete arm on fields or roles: each is retired through its switch.
+    records:
+      "all(full-seat, any(any(custom_field:update, custom_field:create), any(tag:update, tag:create), tag:delete))",
     products:
       "all(full-seat, any(any(product:update, product:create), product:delete, any(offer_template:update, offer_template:create), offer_template:delete))",
 
@@ -384,12 +374,11 @@ describe("who may open what", () => {
     // first paint.
     expect(visibleIds(nobody)).toEqual([
       "account",
+      "notifications",
       "meetings",
       "voice",
       "agents",
-      "notifications",
       "connections",
-      "capture-activity",
     ]);
   });
 
@@ -450,10 +439,9 @@ describe("who may open what", () => {
     // check while the API answered a rep 200 on every one of them.
     const seen = visibleIds(rep);
     for (const id of [
-      "pipelines",
+      "deals",
       "leads",
-      "fields",
-      "tags",
+      "records",
       "products",
       "capture",
       "knowledge",
@@ -574,6 +562,47 @@ describe("who reaches the company page", () => {
     expect(visibleSettingsPages(operator).map((p) => p.id)).toContain(
       "company",
     );
+  });
+});
+
+describe("the tabs a reader is offered", () => {
+  const tabsFor = (page: SettingsPageId, allow: GrantSpec) => {
+    const reader = meFixture({ roles: ["rep"], allow });
+    const row = SETTINGS_PAGES.find((each) => each.id === page);
+    return row === undefined
+      ? []
+      : visibleSettingsTabs(row, reader).map((tab) => tab.id);
+  };
+
+  // A tab whose only card draws nothing must not open as a blank page.
+  it("offers the allowance only to a reader of the AI budget", () => {
+    expect(tabsFor("usage", { ai_diagnostics: ["read"] })).toEqual([
+      "agents",
+      "spend",
+    ]);
+    expect(tabsFor("usage", { ai_budget: ["read"] })).toContain("allowance");
+  });
+
+  it("offers the customer notices only to a reader of the consent setup", () => {
+    expect(tabsFor("privacy", { retention_policy: ["read"] })).not.toContain(
+      "customers",
+    );
+    expect(
+      tabsFor("privacy", {
+        retention_policy: ["read"],
+        consent_config: ["read"],
+      }),
+    ).toContain("customers");
+  });
+
+  it("marks a company tab read-only on its own cards' grants", () => {
+    const rater = meFixture({
+      roles: ["rep"],
+      allow: { fx_rate: ["read", "create", "update"] },
+    });
+    const reach = settingsReach(rater);
+    expect(tabReadsOnly(reach, "company", "money", rater)).toBe(false);
+    expect(tabReadsOnly(reach, "company", "regional", rater)).toBe(true);
   });
 });
 

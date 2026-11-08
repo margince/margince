@@ -50,7 +50,7 @@ function story(settings?: Settings) {
   };
 }
 const meta = {
-  title: "Settings/Data/Capture rules/Internal operational mail",
+  title: "Settings/Data/Mail capture/Internal operational mail",
   component: InternalMailCaptureCard,
   parameters: { layout: "padded" },
 } satisfies Meta<typeof InternalMailCaptureCard>;

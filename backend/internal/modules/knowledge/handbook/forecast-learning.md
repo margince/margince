@@ -8,7 +8,7 @@ where that probability comes from and how it changes as your deals close.
 ## Each stage starts where you typed it
 
 Each stage starts at the win probability typed on it under **Settings →
-Pipelines**. With no closed deal from a stage yet, the forecast uses that
+Deals**, on the **Pipelines** tab. With no closed deal from a stage yet, the forecast uses that
 probability as it is.
 
 As deals recorded entering a stage close, the forecast moves that stage's
@@ -27,7 +27,7 @@ that loses them.
 The count stops at the start of today. So a deal that closes today counts from
 tomorrow. This keeps a frozen forecast the same when it is worked out again.
 
-**Settings → Pipelines** shows this beside each stage, for example "Typed 90% · 40
+**Settings → Deals** shows this beside each stage, for example "Typed 90% · 40
 recorded deals from here closed, 55% won · Forecast uses 62%". A stage with none
 says "No recorded deal from here has closed before today".
 

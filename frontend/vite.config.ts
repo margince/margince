@@ -13,7 +13,7 @@ import {
 import { serveMcpApps } from "./scripts/vite-inline-views.ts";
 import { thirdPartyNotices } from "./scripts/vite-licenses.ts";
 import { pwa } from "./scripts/vite-pwa.ts";
-import { CostSequencer } from "./scripts/vitest-shards.ts";
+import { CostSequencer, compilerTests } from "./scripts/vitest-shards.ts";
 import { TEST_TIMEOUT_MS } from "./vitest.budget.ts";
 
 // The composition alias — the runtime half of the two-lane type story whose
@@ -100,6 +100,10 @@ const analyticsPreparation = entryChunks(
   15,
 );
 const analytics = entryChunks("analytics", entries.analytics);
+
+// Classifying the suite reads every test file, so only a test run pays for it.
+const sourceScans = process.env.VITEST ? await compilerTests(frontendRoot) : [];
+const testExclude = ["**/node_modules/**", "e2e/**"];
 
 export default defineConfig({
   build: {
@@ -366,7 +370,20 @@ export default defineConfig({
     // Rebinds jsdom's Web Storage over the Node ≥23 global stub — see the file.
     setupFiles: ["./vitest.setup.ts"],
     // Playwright owns e2e/ — vitest must not collect its specs
-    exclude: ["**/node_modules/**", "e2e/**"],
+    exclude: testExclude,
+    // The files that load the TypeScript compiler run unisolated. A worker then
+    // loads the compiler and fills the scripts/lib parse caches once, not per
+    // file. Every other file keeps its own module graph.
+    projects: [
+      {
+        extends: true,
+        test: { name: "unit", exclude: [...testExclude, ...sourceScans] },
+      },
+      {
+        extends: true,
+        test: { name: "source-scan", include: sourceScans, isolate: false },
+      },
+    ],
     // The lcov report is written for ONE reader, the SonarCloud scanner, and
     // the scanner resolves an `SF:` path against ITS base directory — the repo
     // root. Vitest's root is frontend/, so the default report says

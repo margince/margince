@@ -64,7 +64,7 @@ function story(passports: Record<string, unknown>[]) {
 }
 
 const meta: Meta<typeof ConnectedAgentsCard> = {
-  title: "Settings/You/AI access/Your connections",
+  title: "Settings/You/AI assistants/Your connections",
   component: ConnectedAgentsCard,
 };
 export default meta;
