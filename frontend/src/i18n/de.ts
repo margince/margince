@@ -2853,6 +2853,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.help.resources": "Hilfe und Ressourcen",
   "shell.help.shortcuts": "Tastenkürzel",
   "shell.help.releaseNotes": "Versionshinweise",
+  "shell.help.licenses": "Lizenzen der Web-App",
   "shell.help.devBuild": "Entwicklungs-Build",
   "shell.shortcuts.anywhere": "Überall",
   "shell.shortcuts.search": "Suche öffnen",

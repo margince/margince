@@ -246,6 +246,7 @@ jobs:
               - 'SECURITY.md'
               - 'SUPPORT.md'
             frontend:
+              - 'third-party-files.txt'
               - 'frontend/**'
               - 'backend/api/**'
               # The frontend job runs BOTH SPA lanes (ADR-0120), and the
@@ -359,6 +360,10 @@ jobs:
               # Its corpus is the build's own package list, so a dependency
               # change can add a binary without either file being touched; the
               # `deps` filter below covers that side.
+              - 'third-party-files.txt'
+              - 'scripts/third_party_files.py'
+              - 'scripts/third-party-files.sh'
+              - 'scripts/test-third-party-files.sh'
               - 'embedded-binaries.txt'
               - 'scripts/embedded-binary-licenses.sh'
               - 'scripts/test-embedded-binary-licenses.sh'
