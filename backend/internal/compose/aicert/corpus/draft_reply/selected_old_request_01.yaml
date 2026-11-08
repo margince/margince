@@ -26,9 +26,10 @@ expect:
     The reply names both requested items. Following the shared drafting rule, it does not
     claim they are attached, enclosed or sent, and nothing supplied shows the sender has
     them, so it does not say the sender has or can provide them and promises no delivery.
-    A reply that acknowledges the request and asks how or in what format the materials
-    should be supplied scores 80 or more; one that only asks whether they are still wanted
-    scores below 70. It invents no filenames, versions or prices.
+    The request is twelve days old, so the reply ends on one question Alex can answer
+    without the history: whether the materials are still needed, or how or in what format
+    they should be supplied. Either question is right. It invents no filenames, versions
+    or prices.
     It keeps the reply focused on the two supplied requests.
     The text is an English reply to Alex, without a signature or invented facts.
   bands:
