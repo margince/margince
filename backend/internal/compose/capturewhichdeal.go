@@ -51,9 +51,17 @@ var (
 )
 
 // whichDealAsker writes the question as a task through the activities store.
+// The deals it offers are recorded on the task, so "none of them" declines
+// those and no others.
 type whichDealAsker struct {
 	tasks *activities.Store
+	deals offeredDeals
 	now   func() time.Time
+}
+
+// offeredDeals reads the open deals a question offers, from the deals module.
+type offeredDeals interface {
+	OfferedDeals(ctx context.Context, tx pgx.Tx, projectID, companyID ids.UUID) ([]ids.UUID, error)
 }
 
 // Ask raises the question at most once per thread. The task is keyed on the
@@ -104,6 +112,12 @@ func (a whichDealAsker) Ask(ctx context.Context, tx pgx.Tx, q capture.WhichDeal)
 			in.Links = append(in.Links, activities.ActivityLinkInput{EntityType: string(record.kind), EntityID: record.id})
 		}
 	}
+	offered, err := a.deals.OfferedDeals(ctx, tx, q.ProjectID, q.CompanyID)
+	if err != nil {
+		return err
+	}
+	raw := map[string]any{provenance.WhichDealOfferedKey: append([]ids.UUID{}, offered...)}
+	in.Raw = &raw
 	in.AdmitInvitedAssignee()
 	if !shared {
 		in.VisibleOnlyTo(seat)

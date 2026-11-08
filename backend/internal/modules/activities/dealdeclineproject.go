@@ -48,13 +48,13 @@ func unfileDealProject(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deal
 }
 
 // projectCameFromDeal answers whether the message's project link is the
-// deal's own project, written by capture after the deal link, and never
-// filed by a colleague. A project capture filed first is evidence of its own,
-// and the deal may have come from it.
+// deal's own project, written by capture's deal rung, and never filed by a
+// colleague. A link with no rung on record is kept, since nothing proves it
+// came from the deal.
 func projectCameFromDeal(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deal ids.UUID) (bool, error) {
 	var args []any
 	arg := func(v any) string { args = append(args, v); return fmt.Sprintf("$%d", len(args)) }
-	mailArg, dealArg := arg(mail), arg(deal)
+	mailArg, dealArg, rungArg := arg(mail), arg(deal), arg(provenance.ProjectRungDeal)
 	var derived bool
 	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity_link l JOIN deal d ON d.project_id = l.project_id
 		 WHERE l.activity_id = `+mailArg+` AND l.entity_type = 'project' AND d.id = `+dealArg+`
@@ -63,10 +63,7 @@ func projectCameFromDeal(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, de
 		     WHERE p.entity_type = 'activity' AND p.entity_id = l.activity_id AND p.action = 'activity_relink'
 		       AND p.after->>'entity_type' = 'project' AND p.after->>'entity_id' = l.project_id::text
 		       AND p.actor_type IN ('connector', 'system')
-		       AND EXISTS (SELECT 1 FROM audit_log k
-		         WHERE k.entity_type = 'activity' AND k.entity_id = l.activity_id AND k.action = 'activity_relink'
-		           AND k.after->>'entity_type' = 'deal' AND k.after->>'entity_id' = d.id::text
-		           AND NOT `+provenance.DeclineRowSQL("k")+` AND k.id < p.id)))`, args...).Scan(&derived)
+		       AND p.evidence->>'`+provenance.ProjectRungKey+`' = `+rungArg+`))`, args...).Scan(&derived)
 	if err != nil {
 		return false, fmt.Errorf("activities: reading whether the project came from the deal: %w", err)
 	}

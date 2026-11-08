@@ -59,10 +59,11 @@ func (s *Store) DeclineDeal(ctx context.Context, id ids.ActivityID, deal *ids.UU
 	return out, err
 }
 
-// declineEveryOfferedDeal is "none of them". A deal the caller cannot see is
-// not declined, and the question is done all the same.
+// declineEveryOfferedDeal is "none of them" to the questions the caller may
+// read and mark done. A deal the caller cannot see is not declined, and the
+// question is done all the same.
 func (s *Store) declineEveryOfferedDeal(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, out *crmcontracts.ActivityDealDecline) error {
-	questions, err := openWhichDealQuestions(ctx, tx, mail)
+	questions, err := answerableWhichDealQuestions(ctx, tx, mail)
 	if err != nil {
 		return err
 	}
@@ -155,12 +156,37 @@ func declineDealTx(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deal ids
 	return !already, removed, err
 }
 
-// offeredDeals is the open deals the questions offered: those of the
-// question's project, else those of its company, as the caller may read them.
+// answerableWhichDealQuestions is the open deal questions of mail's
+// conversation whose content the caller may read and which they may mark done.
+func answerableWhichDealQuestions(ctx context.Context, tx pgx.Tx, mail ids.ActivityID) ([]ids.UUID, error) {
+	questions, err := openWhichDealQuestions(ctx, tx, mail)
+	if err != nil || len(questions) == 0 {
+		return nil, err
+	}
+	visible, err := VisibleTasks(ctx, tx, questions)
+	if err != nil {
+		return nil, err
+	}
+	writable, err := auth.ActivityWritableSubset(ctx, tx, questions)
+	if err != nil {
+		return nil, err
+	}
+	answerable := questions[:0]
+	for _, question := range questions {
+		if visible[question] && writable[question] {
+			answerable = append(answerable, question)
+		}
+	}
+	return answerable, nil
+}
+
+// offeredDeals is the deals the questions recorded as offered, as the caller
+// may read them. A question raised before questions recorded their deals
+// offers the open deals of its project, else of its company, read now.
 func offeredDeals(ctx context.Context, tx pgx.Tx, questions []ids.UUID) ([]ids.UUID, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	questionsArg := arg(questions)
+	questionsArg, keyArg := arg(questions), arg(provenance.WhichDealOfferedKey)
 	scope, err := auth.ScopeClauseFor(ctx, linkEntityDeal, "d", arg)
 	if err != nil {
 		return nil, err
@@ -168,10 +194,15 @@ func offeredDeals(ctx context.Context, tx pgx.Tx, questions []ids.UUID) ([]ids.U
 	if scope == "" {
 		scope = sqlTrue
 	}
-	return threadIDs(ctx, tx, `SELECT DISTINCT d.id FROM activity_link ql
-		  JOIN deal d ON (ql.entity_type = 'project' AND d.project_id = ql.project_id)
-		    OR (ql.entity_type = 'company' AND d.company_id = ql.company_id
-		        AND NOT EXISTS (SELECT 1 FROM activity_link qp WHERE qp.activity_id = ql.activity_id AND qp.entity_type = 'project'))
-		 WHERE ql.activity_id = ANY($`+fmt.Sprint(questionsArg)+`) AND d.status = 'open' AND d.archived_at IS NULL AND (`+scope+`)
+	recorded := fmt.Sprintf(`q.raw->$%d`, keyArg)
+	return threadIDs(ctx, tx, `SELECT DISTINCT d.id FROM activity q JOIN deal d ON CASE
+		   WHEN jsonb_typeof(`+recorded+`) = 'array'
+		     THEN d.id::text IN (SELECT jsonb_array_elements_text(`+recorded+`))
+		   ELSE d.status = 'open' AND d.archived_at IS NULL AND EXISTS (SELECT 1 FROM activity_link ql
+		     WHERE ql.activity_id = q.id AND ((ql.entity_type = 'project' AND d.project_id = ql.project_id)
+		       OR (ql.entity_type = 'company' AND d.company_id = ql.company_id
+		           AND NOT EXISTS (SELECT 1 FROM activity_link qp WHERE qp.activity_id = q.id AND qp.entity_type = 'project'))))
+		   END
+		 WHERE q.id = ANY($`+fmt.Sprint(questionsArg)+`) AND (`+scope+`)
 		 ORDER BY d.id`, args...)
 }
