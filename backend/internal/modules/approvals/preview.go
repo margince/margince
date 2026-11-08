@@ -109,6 +109,12 @@ func (s *Service) readDecisionContext(ctx context.Context, rows []crmcontracts.A
 	if err := s.readAssignmentStates(ctx, rows); err != nil {
 		return err
 	}
+	return s.readPlans(ctx, rows, subjects)
+}
+
+// readPlans attaches each approval's preview and keeps back the plan its
+// reader may not see. Every reader of approvals in the contract shape calls it.
+func (s *Service) readPlans(ctx context.Context, rows []crmcontracts.Approval, subjects []row) error {
 	if s.preview == nil {
 		return nil
 	}
