@@ -34,7 +34,7 @@ func ApplySystemTagTx(ctx context.Context, tx pgx.Tx, name, entityType string, e
 	if tagID.UUID == ids.Nil {
 		return 0, nil
 	}
-	// Maintenance must not reverse a person's explicit removal.
+	// Maintenance must not reverse a user's explicit removal.
 	rows, err := tx.Query(ctx, `SELECT candidate FROM unnest(@ids::uuid[]) candidate
  WHERE NOT EXISTS (SELECT 1 FROM audit_log a WHERE a.entity_type = 'tag'
  AND a.entity_id = @tag AND a.actor_type NOT IN ('system', 'connector')
