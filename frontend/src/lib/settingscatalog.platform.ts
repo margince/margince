@@ -1,4 +1,5 @@
-// The settings pages of the data, ai and governance groups, in strip order.
+// The settings pages of the data, ai, compliance and system groups, in strip
+// order.
 // SETTINGS_PAGES in settingscatalog.ts joins them after the business pages.
 
 import {
@@ -29,6 +30,12 @@ export const PLATFORM_PAGES = [
       writes("capture_settings", ["update"]),
       writes("company", ["update"]),
     ),
+    tabs: [
+      { id: "sharing" },
+      { id: "domains" },
+      { id: "enrichment" },
+      { id: "internal" },
+    ],
   },
   {
     id: "integrations",
@@ -68,6 +75,13 @@ export const PLATFORM_PAGES = [
       ),
       composedUnits("workspace"),
     ),
+    tabs: [
+      { id: "contact" },
+      { id: "accounting" },
+      { id: "webhooks" },
+      { id: "telegram" },
+      { id: "units", requires: composedUnits("workspace") },
+    ],
   },
   {
     id: "web-forms",
@@ -104,15 +118,6 @@ export const PLATFORM_PAGES = [
   },
 
   {
-    id: "usage",
-    group: "ai",
-    scope: "workspace",
-    // The spend card reads on `ai_diagnostics`, the allowance on `ai_budget`.
-    requires: anyOf(reads("ai_diagnostics"), reads("ai_budget")),
-    // The allowance is the one write here; the spend is a read.
-    changes: acts(writes("ai_budget", ["update"])),
-  },
-  {
     id: "models",
     group: "ai",
     // Installation, not workspace: `PUT /ai/routing` re-points which vendor
@@ -133,6 +138,12 @@ export const PLATFORM_PAGES = [
     // a provider sheet, on the `ai_model_rate` upsert (removal is admitted on
     // update).
     changes: acts(writes("ai_routing", ["update"]), writes("ai_model_rate")),
+    tabs: [
+      { id: "providers" },
+      { id: "tiers" },
+      { id: "tasks" },
+      { id: "prices" },
+    ],
   },
   {
     id: "mcp",
@@ -144,6 +155,16 @@ export const PLATFORM_PAGES = [
       destroys("agent_client"),
       writes("installation_settings", ["update"]),
     ),
+  },
+  {
+    id: "usage",
+    group: "ai",
+    scope: "workspace",
+    // The spend card reads on `ai_diagnostics`, the allowance on `ai_budget`.
+    requires: anyOf(reads("ai_diagnostics"), reads("ai_budget")),
+    // The allowance is the one write here; the spend is a read.
+    changes: acts(writes("ai_budget", ["update"])),
+    tabs: [{ id: "allowance" }, { id: "agents" }, { id: "spend" }],
   },
   {
     id: "model-calls",
@@ -166,11 +187,12 @@ export const PLATFORM_PAGES = [
     // automation grants that the page is theirs to work in. The card offers
     // delete as well.
     changes: acts(writes("automation"), destroys("automation")),
+    tabs: [{ id: "mine" }, { id: "library" }],
   },
 
   {
     id: "privacy",
-    group: "governance",
+    group: "compliance",
     // Installation: both retention endpoints the card writes are
     // installation-wide, so what this page destroys, it destroys everywhere.
     scope: "installation",
@@ -198,10 +220,17 @@ export const PLATFORM_PAGES = [
       writes("privacy_request", ["update"]),
       writes("contact", ["update"]),
     ),
+    tabs: [
+      { id: "consent" },
+      { id: "customers" },
+      { id: "retention" },
+      { id: "requests" },
+      { id: "duties" },
+    ],
   },
   {
     id: "jurisdiction",
-    group: "governance",
+    group: "compliance",
     scope: "installation",
     // The update, as on Company: every role holds `installation_settings:read`.
     requires: writes("installation_settings", ["update"]),
@@ -213,7 +242,7 @@ export const PLATFORM_PAGES = [
   },
   {
     id: "audit",
-    group: "governance",
+    group: "compliance",
     scope: "workspace",
     // The trail's own object, which the card asks for too. A role edited to
     // carry `audit_log:read` reaches it and one without it does not. The admin
@@ -225,7 +254,7 @@ export const PLATFORM_PAGES = [
   },
   {
     id: "system-health",
-    group: "governance",
+    group: "system",
     scope: "installation",
     // Any card's grant, so a reader holding one finds that card and the others
     // withheld. The schedules answer to the settings editor's grant, not the
@@ -244,10 +273,16 @@ export const PLATFORM_PAGES = [
       acts(writes("installation_settings", ["update"])),
       reads("job_health"),
     ),
+    tabs: [
+      { id: "overview" },
+      { id: "diagnostics" },
+      // The schedules and send pacing are installation settings.
+      { id: "configuration", requires: reads("installation_settings") },
+    ],
   },
   {
     id: "configuration",
-    group: "governance",
+    group: "system",
     scope: "installation",
     // The update, as on Company: the endpoint answers only that grant.
     requires: writes("installation_settings", ["update"]),
@@ -255,7 +290,7 @@ export const PLATFORM_PAGES = [
   },
   {
     id: "extensions",
-    group: "governance",
+    group: "system",
     // Workspace, though the page reads the installation's unit inventory. Scope
     // names whose state a page changes, and the only write here is
     // `PATCH /roles/{key}/objects/{object}`: one workspace's role grants.
@@ -271,7 +306,7 @@ export const PLATFORM_PAGES = [
   },
   {
     id: "reset",
-    group: "governance",
+    group: "system",
     scope: "installation",
     // The grant and the deployment's consent. `system_reset:delete` says this
     // reader may wipe an installation that permits wiping. `data_reset_available`

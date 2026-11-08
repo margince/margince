@@ -10,41 +10,49 @@
 // circulation.
 
 import type { Route } from "./router";
-import { SETTINGS_PAGES, type SettingsPageId } from "./settingscatalog";
+import {
+  SETTINGS_PAGES,
+  type SettingsPageId,
+  type SettingsPageRow,
+} from "./settingscatalog";
 
 /** The screen this module addresses, named once. */
 export const SETTINGS_SCREEN = "settings";
 
+/** Where an old address now lands: a page, and the tab that holds its part. */
+type RenamedPage = Readonly<{ page: SettingsPageId; tab?: string }>;
+
 /**
- * Old ids that are GENUINELY renamed, and the page each now names.
+ * Old ids that are GENUINELY renamed or merged, and where each now lands.
  *
- * The distinction this map turns on is easy to get wrong in the other
- * direction, so it is worth stating: ten of the sixteen old ids are still
- * CANONICAL page ids — `account`, `voice`, `agents`, `connections`,
- * `capture-activity`, `privacy`, `capture`, `integrations`, `knowledge`,
- * `extensions`. They are not aliases and must not resolve as legacy, or every
- * one of them would rewrite the address bar on arrival for no reason.
+ * Most old ids are still CANONICAL page ids (`account`, `privacy`, `capture`
+ * and the rest). They are not aliases and must not resolve as legacy, or each
+ * would rewrite the address bar on arrival for no reason.
  *
- * Only these six lost their names. Each points at the page carrying the part a
- * reader following an old link was most likely after — `general` had the
- * company profile and the sign-in policy, and the profile is what the id was
- * named for.
+ * The rest lost their names. A page merged into another lands on the tab that
+ * holds what it was; a split one lands on the part its id was named for.
  */
-const RENAMED_PAGES: Readonly<Record<string, SettingsPageId>> = Object.assign(
+const RENAMED_PAGES: Readonly<Record<string, RenamedPage>> = Object.assign(
   // Prototype-free, because the lookups below take an id straight off the
-  // address bar. On an ordinary object `#/settings/constructor` and
-  // `#/settings/toString` resolve to an INHERITED function rather than to
-  // undefined, so the address would be reported as a renamed page whose `page`
-  // is a function — a crash or a malformed redirect wherever this is consumed.
-  Object.create(null) as Record<string, SettingsPageId>,
+  // address bar: on an ordinary object `#/settings/constructor` would resolve
+  // to an inherited function rather than to undefined.
+  Object.create(null) as Record<string, RenamedPage>,
   {
-    general: "company",
-    users: "members",
-    contacts: "members",
-    "data-model": "fields",
-    ai: "models",
-    maintenance: "system-health",
-    license: "seats",
+    general: { page: "company" },
+    users: { page: "members" },
+    contacts: { page: "members" },
+    "data-model": { page: "records" },
+    ai: { page: "models" },
+    maintenance: { page: "system-health" },
+    license: { page: "seats" },
+    "capture-activity": { page: "connections", tab: "activity" },
+    pipelines: { page: "deals" },
+    acquisition: { page: "deals", tab: "sources" },
+    lossreasons: { page: "deals", tab: "loss" },
+    reviewtemplates: { page: "deals", tab: "reviews" },
+    fields: { page: "records" },
+    tags: { page: "records", tab: "tags" },
+    recordroles: { page: "records", tab: "roles" },
   },
 );
 
@@ -79,19 +87,38 @@ export const IMPORT_RUN_SUBPAGE = "run";
 export const IMPORT_TEMPLATE_SUBPAGE = "template";
 
 // A page listed here answers only these segments under it, one level deep; any
-// other is unknown. An unlisted page ignores the segments, which the connections
-// callback rides on.
+// other is unknown. A page with tabs answers its tab ids the same way.
 const SUBPAGES: Readonly<Partial<Record<SettingsPageId, readonly string[]>>> = {
   import: [IMPORT_RUN_SUBPAGE, IMPORT_TEMPLATE_SUBPAGE],
-  "system-health": ["diagnostics", "configuration"],
 };
 
-function answersSubpage(page: SettingsPageId, route: Route) {
+// The OAuth return lands on `#/settings/<page>/{outcome}/{provider}`, so these
+// two pages also answer segments that are not tabs, on their first tab.
+const OAUTH_LANDINGS: readonly SettingsPageId[] = ["connections", "meetings"];
+
+function tabIds(page: SettingsPageId): readonly string[] {
+  const row: SettingsPageRow | undefined = SETTINGS_PAGES.find(
+    (each) => each.id === page,
+  );
+  return row?.tabs?.map((tab) => tab.id) ?? [];
+}
+
+/** The tab a route names, `undefined` for the page's first, or `null` for none. */
+function routeTab(
+  page: SettingsPageId,
+  route: Route,
+): string | undefined | null {
+  if (route.id2 === undefined) return undefined;
+  const tabs = tabIds(page);
+  if (route.id3 === undefined && tabs.includes(route.id2)) return route.id2;
+  if (OAUTH_LANDINGS.includes(page)) return undefined;
   const subpages = SUBPAGES[page];
-  if (subpages === undefined || route.id2 === undefined) {
-    return true;
+  if (subpages !== undefined) {
+    return route.id3 === undefined && subpages.includes(route.id2)
+      ? undefined
+      : null;
   }
-  return route.id3 === undefined && subpages.includes(route.id2);
+  return tabs.length > 0 ? null : undefined;
 }
 
 /** What an address resolves to. */
@@ -100,6 +127,8 @@ export type SettingsTarget =
   | {
       readonly kind: "page";
       readonly page: SettingsPageId;
+      /** The tab the address names; absent means the page's first. */
+      readonly tab?: string;
       /** True when the address the reader used is not the current spelling. */
       readonly legacy: boolean;
     }
@@ -127,13 +156,11 @@ export function settingsRouteTarget(route: Route): SettingsTarget {
     }
     const renamed = RENAMED_PAGES[route.id2];
     if (renamed !== undefined) {
-      return { kind: "page", page: renamed, legacy: true };
+      return { kind: "page", ...renamed, legacy: true };
     }
     const current = pageFor(route.id2);
     // Every id in LEGACY_ADMIN_IDS is either renamed above or still a page, so
-    // this cannot miss — but resolving it explicitly keeps the list and the
-    // catalog independent, so adding an id to one without the other is an
-    // unknown address rather than a crash.
+    // this cannot miss; resolving it explicitly keeps the two lists independent.
     return current === undefined
       ? { kind: "unknown" }
       : { kind: "page", page: current, legacy: true };
@@ -141,13 +168,16 @@ export function settingsRouteTarget(route: Route): SettingsTarget {
 
   const renamed = RENAMED_PAGES[route.id];
   if (renamed !== undefined) {
-    return { kind: "page", page: renamed, legacy: true };
+    return { kind: "page", ...renamed, legacy: true };
   }
 
   const current = pageFor(route.id);
-  return current === undefined || !answersSubpage(current, route)
-    ? { kind: "unknown" }
-    : { kind: "page", page: current, legacy: false };
+  if (current === undefined) return { kind: "unknown" };
+  const tab = routeTab(current, route);
+  if (tab === null) return { kind: "unknown" };
+  return tab === undefined
+    ? { kind: "page", page: current, legacy: false }
+    : { kind: "page", page: current, tab, legacy: false };
 }
 
 /**
@@ -157,6 +187,8 @@ export function settingsRouteTarget(route: Route): SettingsTarget {
  * address does not depend on which group it sits in — moving a page between
  * groups is then a catalog edit and not a broken bookmark.
  */
-export function settingsHref(page?: SettingsPageId): Route {
-  return { screen: SETTINGS_SCREEN, id: page };
+export function settingsHref(page?: SettingsPageId, tab?: string): Route {
+  return tab === undefined
+    ? { screen: SETTINGS_SCREEN, id: page }
+    : { screen: SETTINGS_SCREEN, id: page, id2: tab };
 }

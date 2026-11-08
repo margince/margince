@@ -29,7 +29,7 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { BookingScreen } from "./book";
-import { MeetingSettings } from "./meeting-settings";
+import { MeetingSettings, type MeetingsPart } from "./meeting-settings";
 
 afterEach(() => {
   cleanup();
@@ -342,7 +342,7 @@ it("shows calendar errors and retries the authenticated availability read", asyn
   expect(screen.getByRole("button", { name: slotName(1) })).toBeTruthy();
 });
 
-function Journey() {
+function Journey({ part }: Readonly<{ part?: MeetingsPart }>) {
   const [preview, setPreview] = useState(true);
   return (
     <>
@@ -353,7 +353,7 @@ function Journey() {
         <BookingScreen hostSlug="preview" />
       ) : (
         <SavePageProvider>
-          <MeetingSettings />
+          <MeetingSettings part={part} />
           <PageSaveBar />
         </SavePageProvider>
       )}
@@ -445,7 +445,7 @@ it("refreshes cached preview times after saving working hours", async () => {
   render(
     <StoryProviders>
       <QueryClientProvider client={client}>
-        <Journey />
+        <Journey part="availability" />
       </QueryClientProvider>
     </StoryProviders>,
   );

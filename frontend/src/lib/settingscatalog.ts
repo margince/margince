@@ -53,6 +53,9 @@ export type CapabilityExpression =
   // settings live on the page below and there is no other route to them, so a
   // page that ignored this would strand an installation's only way in.
   | { kind: "units"; scope: UnitSecretScope }
+  // Whether the company-context card draws for this reader: it asks the admin
+  // role and the rollout, neither of which a grant can spell.
+  | { kind: "company-context" }
   | { kind: "any"; of: readonly CapabilityExpression[] }
   | { kind: "all"; of: readonly CapabilityExpression[] }
   // Only ever a page's `changes`, and only `settingsReach` resolves it — it
@@ -96,6 +99,8 @@ export function holds(
       // build time and identical for every reader. Absent context means none,
       // which fails closed the same way every other arm does.
       return (context.composedUnitScopes ?? []).includes(expression.scope);
+    case "company-context":
+      return context.companyContextShown ?? false;
     case "any":
       return expression.of.some((each) => holds(each, snapshot, context));
     case "all":
@@ -114,7 +119,7 @@ export function holds(
 }
 
 /**
- * The seven groups, in the order they are shown.
+ * The eight groups, in the order they are shown.
  *
  * They replace the two-audience split ("you" and "admin"), which encoded who a
  * page was FOR rather than what it was ABOUT — and so hid every installation
@@ -127,7 +132,10 @@ export const SETTINGS_GROUPS = [
   "sales",
   "data",
   "ai",
-  "governance",
+  // Compliance answers to the law and System to whoever runs the install: one
+  // "Governance" group mixed the two jobs and their readers.
+  "compliance",
+  "system",
 ] as const;
 export type SettingsGroupId = (typeof SETTINGS_GROUPS)[number];
 
@@ -174,6 +182,7 @@ export type UnitSecretScope = "workspace" | "user";
  */
 export type CatalogContext = {
   composedUnitScopes?: readonly UnitSecretScope[];
+  companyContextShown?: boolean;
 };
 
 // The shorthand the page tables are written in. Re-exported because a dozen
@@ -224,6 +233,24 @@ export type SettingsPageRow = {
   scope: SettingsScope;
   requires: CapabilityExpression;
   changes: CapabilityExpression;
+  // A long page's parts, in strip order. The first tab the reader may open is
+  // the page's bare address; every other tab is one more path segment.
+  tabs?: readonly SettingsTabRow[];
+};
+
+/**
+ * One tab of a page. `requires` narrows the page's own: a tab that was a page
+ * of its own keeps that page's grant, so merging pages hides nothing that was
+ * hidden and opens nothing that was closed. A tab without one is a part of a
+ * page that was always one page, and shows to whoever may open it.
+ */
+export type SettingsTabRow = {
+  id: string;
+  requires?: CapabilityExpression;
+  // Whether the reader can act on this tab, when that differs from the page:
+  // a merged page is actionable if any tab is, and a tab that was its own page
+  // still says it is read-only by its own verbs.
+  changes?: CapabilityExpression;
 };
 
 export const SETTINGS_PAGES = [
@@ -280,6 +307,35 @@ export function settingsReach(
     (holds(expression, snapshot, context) ? acts : looksUp).push(page);
   }
   return { acts, looksUp };
+}
+
+/** The tabs of one page this snapshot may open, in strip order. */
+export function visibleSettingsTabs(
+  page: SettingsPage,
+  snapshot: AccessSnapshot,
+  context: CatalogContext = {},
+): readonly SettingsTabRow[] {
+  const tabs: readonly SettingsTabRow[] = "tabs" in page ? page.tabs : [];
+  return tabs.filter(
+    (tab) =>
+      tab.requires === undefined || holds(tab.requires, snapshot, context),
+  );
+}
+
+/** Whether one tab is only consulted by this reader. */
+export function tabReadsOnly(
+  reach: SettingsReach,
+  page: SettingsPageId,
+  tab: string | undefined,
+  snapshot: AccessSnapshot,
+  context: CatalogContext = {},
+): boolean {
+  const row = SETTINGS_PAGES.find((each) => each.id === page);
+  const tabs: readonly SettingsTabRow[] = row && "tabs" in row ? row.tabs : [];
+  const changes = tabs.find((each) => each.id === tab)?.changes;
+  return changes === undefined
+    ? readsOnly(reach, page)
+    : !holds(changes, snapshot, context);
 }
 
 export const readsOnly = (reach: SettingsReach, page: SettingsPageId) =>

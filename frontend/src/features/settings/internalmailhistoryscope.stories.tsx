@@ -7,7 +7,7 @@ import { expect, userEvent, within } from "storybook/test";
 import { InternalMailHistoryScope } from "./internalmailhistoryscope";
 
 const meta = {
-  title: "Settings/Data/Capture rules/History scope",
+  title: "Settings/Data/Mail capture/History scope",
   component: InternalMailHistoryScope,
 } satisfies Meta<typeof InternalMailHistoryScope>;
 export default meta;

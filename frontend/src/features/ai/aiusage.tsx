@@ -333,7 +333,7 @@ export function AiUsageCard() {
         canReadPrices && (
           <AppLink
             className="link-button"
-            href={routeHash(settingsHref("models"))}
+            href={routeHash(settingsHref("models", "prices"))}
           >
             {t("aiusage.pricesLink")}
           </AppLink>

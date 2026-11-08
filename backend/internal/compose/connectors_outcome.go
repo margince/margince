@@ -106,7 +106,7 @@ func writeConnectorUnavailable(w http.ResponseWriter, r *http.Request, provider 
 	}
 	httperr.NotImplementedBecause(w, r,
 		"no "+provider+" OAuth app is configured for this installation — "+
-			"add one under Settings → General, or supply it in the environment")
+			"add one under Settings → Sign-in and security, or supply it in the environment")
 }
 
 // disabledProviderAPI reports whether the failure is a provider API that was

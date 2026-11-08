@@ -41,7 +41,7 @@ function story(
 const MAPPED = { "crm-admins": "admin", "field-sales": "rep" };
 
 const meta = {
-  title: "Settings/Company/Sign-in and apps/Group role grants",
+  title: "Settings/Company/Sign-in and security/Group role grants",
   component: GroupRoleGrants,
   parameters: { layout: "padded" },
   args: { initial: {}, canManage: true, lock: { disabled: false } },

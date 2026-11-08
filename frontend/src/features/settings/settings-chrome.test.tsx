@@ -56,7 +56,9 @@ describe("SettingsScreen page layout", () => {
     expect(navGroupNames(nav)[0]).toBe("Settings");
     // The granted pages appear once the /me probe resolves the grant map.
     await waitFor(() =>
-      expect(screen.getByRole("link", { name: "Fields" })).toBeTruthy(),
+      expect(
+        screen.getByRole("link", { name: "Records and fields" }),
+      ).toBeTruthy(),
     );
     // The subjects the level carries, after the group naming the level. A group
     // with no visible member is dropped rather than printed empty, so this
@@ -66,20 +68,20 @@ describe("SettingsScreen page layout", () => {
       "You",
       "People",
       "Sales",
-      "Governance",
+      "Compliance",
     ]);
     // And the name is one the accessibility tree computes, not only one this
     // file can read off an attribute: the role and the name have to find the
     // same box.
-    expect(within(nav).getByRole("group", { name: "Governance" })).toBeTruthy();
+    expect(within(nav).getByRole("group", { name: "Compliance" })).toBeTruthy();
     for (const label of [
       "Account",
       "Writing voice",
-      "AI access",
+      "AI assistants",
       "Connections",
       "Members",
-      "Fields",
-      "Pipelines",
+      "Records and fields",
+      "Deals",
       "Privacy and retention",
     ]) {
       expect(screen.getByRole("link", { name: label })).toBeTruthy();
@@ -91,8 +93,10 @@ describe("SettingsScreen page layout", () => {
     // keep the link a reader bookmarked.
     expect(account.getAttribute("href")).toBe("/#/settings/account");
     expect(
-      screen.getByRole("link", { name: "Fields" }).getAttribute("href"),
-    ).toBe("/#/settings/fields");
+      screen
+        .getByRole("link", { name: "Records and fields" })
+        .getAttribute("href"),
+    ).toBe("/#/settings/records");
   });
 
   it("renders only the active page's cards — the passport is off the Account page", async () => {
@@ -102,8 +106,8 @@ describe("SettingsScreen page layout", () => {
     expect(screen.queryByText("Scout")).toBeNull();
   });
 
-  it("renders the custom-field editor itself on the Fields page, never a door to it", async () => {
-    render(<SettingsScreen route={settingsHref("fields")} />);
+  it("renders the custom-field editor itself on the Records and fields page, never a door to it", async () => {
+    render(<SettingsScreen route={settingsHref("records")} />);
     // Visible once /me resolves the custom_field read grant.
     expect(
       await screen.findByRole("heading", { name: "Custom fields" }),
@@ -113,7 +117,7 @@ describe("SettingsScreen page layout", () => {
   });
 
   it("renders the pipeline designer inline on its own page, never a door to it", async () => {
-    render(<SettingsScreen route={settingsHref("pipelines")} />);
+    render(<SettingsScreen route={settingsHref("deals")} />);
     expect(
       await screen.findByRole("heading", {
         name: translate("en", "pipeline.catalog"),
@@ -171,10 +175,10 @@ describe("the scope a settings page publishes", () => {
   // would still pass. Their scope values are held by the pure catalog cases
   // instead, where there is no in-flight state to race.
   //
-  // `pipelines` is safe for the opposite reason: it opens on a GRANT, every
+  // `deals` is safe for the opposite reason: it opens on a GRANT, every
   // grant predicate reads false against an unresolved snapshot, so its row
   // cannot appear until /me has answered.
-  it.each([["pipelines", "settings.scope.workspace"]] as const)(
+  it.each([["deals", "settings.scope.workspace"]] as const)(
     "says whose state %s changes",
     async (page, key) => {
       vi.stubGlobal("fetch", settingsBackend());

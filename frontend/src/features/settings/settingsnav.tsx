@@ -12,22 +12,26 @@ import { CardBoundary } from "../../design-system/cardboundary";
 // it is the property settings-imports.test.ts holds.
 
 import { House } from "lucide-react";
-import { Suspense } from "react";
+import { Suspense, useCallback } from "react";
 import type { NavLevelEntry, NavLevelGroup, NavSection } from "../../app/nav";
 import { lazy } from "../../i18n/lazy";
+import { useCompanyContextShown } from "../../lib/companycontextreach";
 import { unitsForSecretScope } from "../../lib/extensions";
 import type { Route } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import {
   SETTINGS_GROUPS as CATALOG_GROUPS,
+  type CatalogContext,
   groupHeadingKey,
-  readsOnly,
   SETTINGS_PAGES,
   type SettingsPage,
   type SettingsPageId,
   type SettingsReach,
+  type SettingsTabRow,
   settingsReach,
+  tabReadsOnly,
   visibleSettingsPages,
+  visibleSettingsTabs,
 } from "../../lib/settingscatalog";
 import { settingsRouteTarget } from "../../lib/settingsrouting";
 import { PAGE_ICONS } from "./settingsnavicons";
@@ -249,6 +253,7 @@ export function useSettingsSection(route: Route): NavSection {
   // The rail carries what this reader can act on; a read-only page stays
   // reachable from the settings home and from search.
   const reach = useSettingsReach();
+  const opensTab = useOpensSettingsTab();
   const pages = reach.acts;
   // Everything this reader may open, rail or not. A page reached from the home
   // or from a search hit is still the current one, and search offers them all.
@@ -304,14 +309,18 @@ export function useSettingsSection(route: Route): NavSection {
     // readable page unfindable by the one affordance built to find it.
     lead: (
       <Suspense fallback={null}>
-        <SettingsSearchBox pages={openable} />
+        <SettingsSearchBox pages={openable} opensTab={opensTab} />
       </Suspense>
     ),
     // The same box for the phone drawer, which has to dismiss itself once the
     // box has moved the reader — see NavSection.leadFor.
     leadFor: (onPick) => (
       <Suspense fallback={null}>
-        <SettingsSearchBox pages={openable} onPick={onPick} />
+        <SettingsSearchBox
+          pages={openable}
+          opensTab={opensTab}
+          onPick={onPick}
+        />
       </Suspense>
     ),
     // No row is current on a route that is not one of the tabs. An extension
@@ -347,15 +356,36 @@ export function useSettingsSection(route: Route): NavSection {
  * one table through one evaluator and cannot disagree about which pages exist.
  */
 export function useVisibleSettingsPages(): readonly SettingsPage[] {
+  return visibleSettingsPages(useMe().data, catalogContext());
+}
+
+/** The tabs of one page this reader may open, in strip order. */
+export function useVisibleSettingsTabs(
+  page: SettingsPage | undefined,
+): readonly SettingsTabRow[] {
   const snapshot = useMe().data;
-  return visibleSettingsPages(snapshot, {
-    // Read HERE rather than inside the catalog: the extensions registry reaches
-    // `@composition/screens`, and importing it there would drag React and a
-    // build alias into a module whose whole purpose is being importable from
-    // anywhere. The catalog takes the answer instead of fetching it.
-    composedUnitScopes:
-      unitsForSecretScope("workspace").length > 0 ? ["workspace"] : [],
-  });
+  const context = useTabContext();
+  return page === undefined ? [] : visibleSettingsTabs(page, snapshot, context);
+}
+
+// A tab can also ask whether the company-context card draws, which is a query
+// rather than a fact of the build, so only the tab hooks carry it.
+function useTabContext(): CatalogContext {
+  return {
+    ...catalogContext(),
+    companyContextShown: useCompanyContextShown(),
+  };
+}
+
+// Which extension units this build composed. Read HERE rather than inside the
+// catalog: the extensions registry reaches `@composition/screens`, and
+// importing it there would drag React into a module importable from anywhere.
+export function catalogContext(): CatalogContext {
+  return {
+    composedUnitScopes: (["workspace", "user"] as const).filter(
+      (scope) => unitsForSecretScope(scope).length > 0,
+    ),
+  };
 }
 
 /**
@@ -367,14 +397,44 @@ export function useVisibleSettingsPages(): readonly SettingsPage[] {
  * partition rather than each deciding "can this contact act?" for itself.
  */
 export function useSettingsReach(): SettingsReach {
-  const snapshot = useMe().data;
-  return settingsReach(snapshot, {
-    composedUnitScopes:
-      unitsForSecretScope("workspace").length > 0 ? ["workspace"] : [],
-  });
+  return settingsReach(useMe().data, catalogContext());
 }
 
-// A card on a page the reader only consults leaves the why to the page's notice.
-export function usePageReadOnly(page: SettingsPageId): boolean {
-  return readsOnly(useSettingsReach(), page);
+/** Whether this reader may open one tab of a page, for search to ask. */
+export function useOpensSettingsTab(): (
+  page: SettingsPageId,
+  tab: string,
+) => boolean {
+  const snapshot = useMe().data;
+  const companyContextShown = useCompanyContextShown();
+  // Stable per snapshot, so the palette's memo does not rebuild every render.
+  return useCallback(
+    (page: SettingsPageId, tab: string) => {
+      const row = SETTINGS_PAGES.find((each) => each.id === page);
+      const context = { ...catalogContext(), companyContextShown };
+      return (
+        row !== undefined &&
+        visibleSettingsTabs(row, snapshot, context).some(
+          (each) => each.id === tab,
+        )
+      );
+    },
+    [snapshot, companyContextShown],
+  );
+}
+
+/**
+ * Whether this reader only consults a page, or one tab of it. A card there
+ * leaves the why to the page's notice.
+ */
+export function usePageReadOnly(
+  page: SettingsPageId | undefined,
+  tab?: string,
+): boolean {
+  const reach = useSettingsReach();
+  const snapshot = useMe().data;
+  return (
+    page !== undefined &&
+    tabReadsOnly(reach, page, tab, snapshot, catalogContext())
+  );
 }

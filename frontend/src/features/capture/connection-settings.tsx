@@ -125,7 +125,7 @@ function HeldPointerRow() {
       control={
         <Button
           variant="link"
-          onClick={() => navigate(settingsHref("capture-activity"))}
+          onClick={() => navigate(settingsHref("connections", "activity"))}
         >
           {t("connectors.heldPointer.review")}
           <ArrowRight aria-hidden="true" />

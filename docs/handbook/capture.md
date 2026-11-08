@@ -9,7 +9,7 @@ Email gets into Margince through a mailbox you connect at **Settings → Connect
 There is no address to forward to and no step to copy and paste. Mail between colleagues is not stored by default.
 
 An admin can choose sources for [internal mail about work](who-can-see-an-email.md#mail-between-colleagues). Other mail follows the usual rules, and senders judged to be newsletters, automated tools or spam create no contact.
-For older mail, choose **Import older email** in the account's menu; to see what happened to one message, open **Settings → Capture activity**.
+For older mail, choose **Import older email** in the account's menu; to see what happened to one message, open **Settings → Connections → Activity**.
 
 ### How do I see emails I sent from Outlook or Gmail in Margince?
 Emails you send from Outlook or Gmail itself are captured into Margince too. A connected Gmail or Outlook mailbox is read in your inbox and your sent mail. So each sent message lands on the contact timelines of its recipients, marked **Sent**.
@@ -39,14 +39,14 @@ When Margince captures a message, it stores passwords, PINs, access keys and tok
 
 **4. Deciding about the sender.** See the ladder below.
 
-You can watch all of this in **Settings → Capture activity**, in **Last 24
+You can watch all of this in **Settings → Connections → Activity**, in **Last 24
 hours**. Under **Messages**, press a message's row, or its **Show every
 processing step** button. **How this
 message was handled** lists every step in order, each marked Done, Skipped,
 Waiting, Failed, Not applicable, or Unknown.
 
 ### Why was my email not captured?
-To find out why an email is missing, open **Settings → Capture activity**, find it under **Messages** and press its row.
+To find out why an email is missing, open **Settings → Connections → Activity**, find it under **Messages** and press its row.
 **How this message was handled** marks each step Done, Skipped, Waiting, Failed, Not applicable or Unknown, with the reason.
 Common causes: every address was on your own domains and the source was not allowed to capture internal mail, so it was not stored. Or the sender is on your **Capture exclusions**, the sender was judged a newsletter or automated tool, or the mailbox shows **Needs reconnect**.
 The log keeps 24 hours and shows only your own connections.
@@ -72,7 +72,7 @@ Create no contact and no company.
 **Have we already decided about this address?** Use that decision again.
 
 **Is it a consumer mail domain?** These are personal mailboxes, and Margince ships with a long
-list of them; the Capture rules screen shows the count. A sender on one never makes a company.
+list of them; the **Mail capture** settings page shows the count. A sender on one never makes a company.
 They become a contact at once after a meeting, or after mail both ways, with someone at your company.
 An older decision that let them in also counts. If not, they become a contact only once Margince has
 sorted them.
@@ -289,7 +289,7 @@ provider. The record says why it was kept.
 **Mail between colleagues is skipped by default.** If every address belongs to
 an own domain, Margince drops the message before storing its content. An Admin
 can add a mailbox and its folders under **Internal operational mail** in
-**Settings → Capture rules**. The source still follows **Capture exclusions**.
+**Settings → Mail capture**. The source still follows **Capture exclusions**.
 See [Who can see an email](who-can-see-an-email.md) for setup, history and
 sharing.
 
@@ -330,8 +330,8 @@ agreement requires it. There is no switch in the app, so no member can change it
 for their colleagues. When it is off, the log says so once, above its entries.
 
 ### How do I stop capturing emails from a domain or address?
-To stop Margince capturing mail from a domain or address, open **Settings → Capture activity** and press **New exclusion** in **Capture exclusions**. Enter the address or domain, and press **Exclude**.
-1. Open **Settings**, then **Capture activity**.
+To stop Margince capturing mail from a domain or address, open **Settings → Connections → Activity** and press **New exclusion** in **Capture exclusions**. Enter the address or domain, and press **Exclude**.
+1. Open **Settings**, then **Connections**, then **Activity**.
 2. In **Capture exclusions**, press **New exclusion**.
 3. Choose **Applies to** (**Your mailboxes** or **Whole company**) and the **Kind** (**Address**, **Domain**, or **Label, folder or mailbox**).
 4. Enter the value and press **Exclude**.
@@ -339,8 +339,8 @@ It applies from the next message; captured mail stays. **Whole company** rules b
 Also called: block a sender, ignore a domain, blacklist, do not log.
 
 ### How do I tell Margince a sender is business, or exclude one?
-To correct what Margince decided about a sender, open **Settings → Capture activity** and find the address in **Senders**. In its **…** (**Actions**) menu, choose **Mark as business** to let it back in, or **Exclude** to hide its mail for good.
-1. Open **Settings**, then **Capture activity**, and go down to **Senders**.
+To correct what Margince decided about a sender, open **Settings → Connections → Activity** and find the address in **Senders**. In its **…** (**Actions**) menu, choose **Mark as business** to let it back in, or **Exclude** to hide its mail for good.
+1. Open **Settings**, then **Connections**, then **Activity**, and go down to **Senders**.
 2. Find the address; the **Decision** column shows what was decided. **Contact** opens the contact that holds the address. **Messages** counts your stored mail with it. **Last seen** is when the newest of those arrived or went out.
 3. Open its **…** (**Actions**) menu and choose **Mark as business**, or choose **Exclude** and confirm **Exclude and destroy**.
 **Exclude** creates no contact and destroys the mail that sender sent into your mailbox; copies a colleague imported stay theirs. Margince still receives their later mail, but hides and destroys it, so it never shows. **Capture exclusions** work earlier: they stop new mail before it is stored. What Margince sorts by itself never writes over a decision you make.
@@ -348,7 +348,7 @@ Also called: mark as not spam, whitelist a sender.
 
 ## Things you control yourself
 
-**Own email domains** (Settings → Capture rules): the domains that belong to your company. A sales
+**Own email domains** (Settings → Mail capture): the domains that belong to your company. A sales
 seat can add one; changing or removing an entry is for Admin and Ops. This is what makes internal
 mail internal. Adding one cannot be taken back for mail already skipped: "Mail skipped while
 registered is never offered again by any mailbox."
@@ -358,15 +358,15 @@ read, an address you forward from. Mail between them is not captured and never c
 Private to you. Removing one takes effect at once, and **Undo** on the notice puts it back. Removing
 an address Margince found also stops Margince finding it again.
 
-**Capture exclusions** (Settings → Capture activity): addresses and domains whose messages never
+**Capture exclusions** (Settings → Connections → Activity): addresses and domains whose messages never
 enter the CRM. Your own rules cover only the mailboxes you connected. The company's rules cover
 everyone, and only an administrator may change one of those. A rule a member added names that
 member. "Applies from the next message. Messages already captured stay."
 
-**Consumer mail domains** (Settings → Capture rules): which domains count as personal mailboxes.
+**Consumer mail domains** (Settings → Mail capture): which domains count as personal mailboxes.
 [Who the message belongs to](#who-the-message-belongs-to) says what happens to their senders.
 
-**Refused domains** (Settings → Capture rules): the domains this installation will not create a
+**Refused domains** (Settings → Mail capture): the domains this installation will not create a
 company for. Each shows what decided it: an AI model, a fixed rule, or a human. Letting a domain
 back in asks the company question again.
 
@@ -379,7 +379,7 @@ company** makes it the company of the contacts on the domain; contacts at anothe
 **Choose another** opens the question with a company search and **Create company**. **Not now** puts
 it off until new mail arrives. **Stop capturing in your mailboxes** stops saving mail from the domain.
 
-**Senders** (Settings → Capture activity): every address that came in through your mailbox, and
+**Senders** (Settings → Connections → Activity): every address that came in through your mailbox, and
 what Margince decided about each. That is a contact, a role mailbox, an
 automated tool, a newsletter, an advisor, or personal. You can change any of them.
 
@@ -388,12 +388,12 @@ later ([how](#how-do-i-tell-margince-a-sender-is-business-or-exclude-one)). **Wa
 list, names the contacts only you see until their sender is decided. An administrator sees only
 how many there are.
 
-**Held threads** (Settings → Capture activity): the threads your mailbox is holding
+**Held threads** (Settings → Connections → Activity): the threads your mailbox is holding
 back right now, with the reason and the outside addresses on each. **Share with
 the team** releases one.
 
 Three settings decide who may read captured mail. **Mail visibility** is in
 each mailbox's settings in Settings → Connections. **Private correspondence** is on a
-contact's or company's page. **Mail sharing and sync** is in Settings → Capture rules,
+contact's or company's page. **Mail sharing and sync** is in Settings → Mail capture,
 for administrators only. They are explained in [Who can see an email](who-can-see-an-email.md),
 together with whose capture activity you can see.

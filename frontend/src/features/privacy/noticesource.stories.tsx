@@ -24,7 +24,7 @@ const unconfirmed = {
 } satisfies NoticeCase;
 
 const meta: Meta<typeof NoticeSourceReview> = {
-  title: "Settings/Governance/Privacy and retention/Source review",
+  title: "Settings/Compliance/Privacy and retention/Source review",
   component: NoticeSourceReview,
   decorators: [
     (Story) => {

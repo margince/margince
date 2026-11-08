@@ -917,6 +917,7 @@ export const en = {
   "reporting.movement.stage_weight": "Stage weight changes",
   "reporting.movement.record_changed": "Chance moved by recorded outcomes",
   "installationSettings.selfCorrectingTitle": "Forecast",
+  "installationSettings.forecastTitle": "Forecast rules",
   "installationSettings.selfCorrecting": "Let the forecast correct itself",
   "installationSettings.selfCorrectingHint":
     "Each stage starts at the chance you typed. As deals recorded from a stage close, the forecast moves that stage’s chance toward how they ended, counting your typed chance as 20 deals. Imported stage moves never count.",
@@ -3608,7 +3609,7 @@ export const en = {
 
   "company.reject": "Not a company",
   "company.rejectConfirm":
-    "This archives “{name}” and blocks {domain} as a company, so later messages from that domain do not create it again. An administrator can unblock the domain in Settings under Capture.",
+    "This archives “{name}” and blocks {domain} as a company, so later messages from that domain do not create it again. An administrator can unblock the domain in Settings under Mail capture.",
   "company.rejectReasonLabel": "Reason this is not a company",
   "company.rejectReasonHint":
     "A reason a reviewer of blocked domains can act on. The block outlasts the record.",
@@ -5383,7 +5384,7 @@ export const en = {
   "tags.createdNotApplied":
     "{name} was created but not added to this record: {reason} Pick it in the list to add it again.",
   "tags.whoAdds":
-    "Need another tag? An administrator or operations user can add one in Settings → Tags.",
+    "Need another tag? An administrator or operations user can add one in Settings → Records and fields, on the Tags tab.",
   "tags.noMatch":
     "No tag with that name. An administrator or operations user can add one.",
   "tagResult.gone":
@@ -6097,9 +6098,6 @@ export const en = {
   "acqSources.renameTitle": "Rename source",
   "acqSources.duplicate":
     "A source with this name or key already exists. Choose another name.",
-  "settings.page.reviewtemplates.sub":
-    "Questions a rep answers when a deal is won or lost.",
-  "settings.tab.reviewtemplates": "Outcome reviews",
   "reviewTemplates.question": "Question",
   "reviewTemplates.addQuestion": "Add question",
   "reviewTemplates.edit": "Edit questions",
@@ -6524,7 +6522,7 @@ export const en = {
   "decision.versionSkew":
     "This record changed after it was staged. Stage it again before deciding.",
   "decision.fxRateMoved":
-    "The exchange rate changed after this was proposed, so it was not applied. Refresh the rates from their sources in Settings → Company profile for a current proposal.",
+    "The exchange rate changed after this was proposed, so it was not applied. Refresh the rates from their sources in Settings → Company profile, on the Money tab, for a current proposal.",
   "decision.reRead": "Reload",
   "decision.alreadyDecided": "Already decided. Nothing left to do.",
   "decision.expired": "Expired",
@@ -8856,7 +8854,7 @@ export const en = {
     "Areas added later, and tools an extension adds, stay off for it.",
   "passportAreas.refusalTitle": "What an agent is told when an area is off",
   "passportAreas.refusal":
-    "This passport may not work in the “{area}” area. Ask the user to turn that area on for this passport in Settings → AI access, under Your passports or Your connections.",
+    "This passport may not work in the “{area}” area. Ask the user to turn that area on for this passport in Settings → AI assistants, under Your passports or Your connections.",
   "passportAreas.cancel": "Cancel",
   "passportAreas.save": "Save areas",
   "passportAreas.saving": "Saving areas…",
@@ -9412,7 +9410,7 @@ export const en = {
   "aiAccess.gemini.adminLine":
     "Your Gemini Enterprise admin adds Margince once for your company.",
   "aiAccess.gemini.admin1":
-    "Ask a Margince admin for a client ID and secret. In Settings → MCP → MCP clients, they choose “Register a client”, answer that the tool needs a secret, and add the redirect URI https://vertexaisearch.cloud.google.com/oauth-redirect.",
+    "Ask a Margince admin for a client ID and secret. In Settings → AI tool access → MCP clients, they choose “Register a client”, answer that the tool needs a secret, and add the redirect URI https://vertexaisearch.cloud.google.com/oauth-redirect.",
   "aiAccess.gemini.admin2":
     "In Gemini Enterprise, open “Manage team”, then “Connected apps”, and choose “Add MCP Server”.",
   "aiAccess.gemini.admin3":
@@ -9499,9 +9497,9 @@ export const en = {
   "aiAccess.other.signIn":
     "OAuth in your browser. Most tools start it the first time they connect.",
   "aiAccess.other.apiKey":
-    "No sign-in in the tool? Create an API key in Settings under AI access, For developers, and send it as the header “Authorization: Bearer” followed by the key.",
+    "No sign-in in the tool? Create an API key in Settings under AI assistants, For developers, and send it as the header “Authorization: Bearer” followed by the key.",
   "aiAccess.other.notAllowed":
-    "If sign-in says the tool is not allowed, an administrator chooses which tools may connect in Settings under MCP.",
+    "If sign-in says the tool is not allowed, an administrator chooses which tools may connect in Settings under AI tool access.",
   "setup.step.ai": "Connect your AI tool",
   "setup.caption.ai":
     "Use Margince from Claude, ChatGPT, Copilot or your editor.",
@@ -11543,7 +11541,7 @@ export const en = {
     "Every colleague who can see a contact can read its captured mail. Single messages can be limited afterwards.",
   "mailSharing.danger":
     "With email sharing off, the CRM is hard to use. New mail is visible only to the people on each message.",
-  "mailSharing.posture.where": "Change in Capture rules",
+  "mailSharing.posture.where": "Change in Mail capture",
   "mailSharing.sharedPosture.label": "Allow mailboxes to share on arrival",
   "mailSharing.sharedPosture.help":
     "Lets a colleague set their mailbox to shared, so captured mail is readable by the team on arrival, before any classification. Off by default.",
@@ -11688,7 +11686,7 @@ export const en = {
   "connectors.oauthRoleCannotCapture":
     "Your role does not let Margince capture your mail, so nothing was connected. Ask an admin to change your role.",
   "connectors.oauthBadClient":
-    "The provider refused this installation’s app credentials. An administrator must check the client ID and secret in Settings under Sign-in and apps; reconnecting does not fix this.",
+    "The provider refused this installation’s app credentials. An administrator must check the client ID and secret in Settings under Sign-in and security; reconnecting does not fix this.",
   "connectors.dismissOutcome": "Dismiss",
   "connectors.oauthConnected": "Connected",
   "connectors.oauthNotConnected": "Nothing was connected",
@@ -12978,6 +12976,8 @@ export const en = {
   "auto.name": "Name",
   "auto.create": "Create",
   "auto.createdPaused": "Created paused. Nothing runs until it is enabled.",
+  "auto.createdPausedLibrary":
+    "Created paused. Turn it on under Your automations.",
   "auto.delete": "Delete",
   "auto.statusEnabled": "Enabled",
   "auto.statusPaused": "Paused",
@@ -13247,9 +13247,7 @@ export const en = {
   "settings.page.notifications.sub":
     "Which notices reach you and how, plus the Morning brief and Weekly review by email.",
   "settings.page.connections.sub":
-    "Mailboxes and addresses this seat reads from.",
-  "settings.page.capture-activity.sub":
-    "What capture did with your mail, and why.",
+    "Mailboxes, calendar and accounts Margince reads for you, and what it did with them.",
   "settings.page.company.sub":
     "Brand, business context, and the currency and calendar every report uses.",
   "settings.page.authentication.sub":
@@ -13263,24 +13261,12 @@ export const en = {
     "Seats in use against this installation’s entitlement.",
   "settings.page.stageautomation.sub":
     "The track record of each stage transition before it moves deals automatically.",
-  "settings.page.pipelines.sub":
-    "Stages a deal moves through, for the whole company.",
-  "settings.page.acquisition.sub":
-    "Business channels a deal can be attributed to.",
-  "settings.page.lossreasons.sub":
-    "Why deals are lost, and which reason older notes count as.",
-  "settings.page.recordroles.sub":
-    "Labels for what a colleague or team looks after on a record, such as account manager. A role grants no access; the owner and sharing decide who can edit.",
   "settings.page.leads.sub":
     "Where leads come from, why they are disqualified, and how fast they get a first reply.",
-  "settings.page.fields.sub":
-    "Custom fields this company adds to the standard fields.",
-  "settings.page.tags.sub":
-    "Shared tags. Renaming a tag here renames it on every record.",
   "settings.page.products.sub":
     "Products this company sells, and offer templates.",
   "settings.page.capture.sub":
-    "Which mail becomes a record and which is ignored.",
+    "Which mail becomes a record, which is ignored, and who can read it.",
   "settings.page.integrations.sub":
     "Systems this installation exchanges records with.",
   "settings.page.knowledge.sub": "Documents that drafts and answers may use.",
@@ -13321,24 +13307,18 @@ export const en = {
   "settings.search.none": "No settings page matches.",
   "settings.search.count": "Matching settings pages: {n}",
   "settings.tab.company": "Company profile",
-  "settings.tab.authentication": "Sign-in and apps",
+  "settings.tab.authentication": "Sign-in and security",
   "settings.tab.members": "Members",
   "settings.tab.teams": "Teams",
   "settings.tab.roles": "Roles and permissions",
   "settings.tab.seats": "Seats and license",
-  "settings.tab.pipelines": "Pipelines",
-  "settings.tab.acquisition": "Acquisition sources",
-  "settings.tab.lossreasons": "Loss reasons",
-  "settings.tab.recordroles": "Responsibility roles",
-  "settings.tab.leads": "Lead handling",
-  "settings.tab.fields": "Fields",
-  "settings.tab.tags": "Tags",
+  "settings.tab.leads": "Leads",
   "settings.tab.products": "Products and offers",
   "settings.tab.import": "Data import",
   "settings.tab.models": "AI models",
   "settings.tab.automations": "Automations",
   "settings.tab.usage": "AI usage",
-  "settings.tab.mcp": "MCP",
+  "settings.tab.mcp": "AI tool access",
   "settings.tab.model-calls": "AI call log",
   "settings.tab.audit": "Audit log",
   "settings.tab.system-health": "System health",
@@ -13383,6 +13363,63 @@ export const en = {
   "configuration.scope.outside": "Set outside the app",
   "settings.tab.reset": "Reset data",
   "settings.group.me": "You",
+  "settings.group.compliance": "Compliance",
+  "settings.group.system": "System",
+  "settings.tab.deals": "Deals",
+  "settings.page.deals.sub":
+    "How deals move, where they come from, and why they are won or lost.",
+  "settings.tab.records": "Records and fields",
+  "settings.page.records.sub":
+    "Custom fields, shared tags and the responsibility roles records carry.",
+  "settings.partsLabel": "Parts of this page",
+  "settings.part.meetings.links": "Booking links",
+  "settings.part.meetings.availability": "Availability",
+  "settings.part.meetings.guests": "Guest page",
+  "settings.part.connections.mail": "Mail and calendar",
+  "settings.part.connections.addresses": "Other addresses",
+  "settings.part.connections.linkedin": "LinkedIn",
+  "settings.part.connections.accounts": "Other accounts",
+  "settings.part.connections.activity": "Activity",
+  "settings.part.company.profile": "Profile",
+  "settings.part.company.entities": "Legal entities",
+  "settings.part.company.regional": "Regional and calendar",
+  "settings.part.company.money": "Money",
+  "settings.part.company.email": "Email defaults",
+  "settings.part.authentication.methods": "Sign-in methods",
+  "settings.part.authentication.apps": "Sign-in apps",
+  "settings.part.authentication.grants": "Group role grants",
+  "settings.part.deals.pipelines": "Pipelines",
+  "settings.part.deals.sources": "Acquisition sources",
+  "settings.part.deals.loss": "Loss reasons",
+  "settings.part.deals.reviews": "Outcome reviews",
+  "settings.part.deals.legal": "Legal review",
+  "settings.part.deals.forecast": "Forecast",
+  "settings.part.records.fields": "Fields",
+  "settings.part.records.tags": "Tags",
+  "settings.part.records.roles": "Responsibility roles",
+  "settings.part.capture.sharing": "Sharing and sync",
+  "settings.part.capture.domains": "Domains",
+  "settings.part.capture.enrichment": "Enrichment",
+  "settings.part.capture.internal": "Internal mail",
+  "settings.part.integrations.contact": "Contact data",
+  "settings.part.integrations.accounting": "Accounting",
+  "settings.part.integrations.webhooks": "Webhooks",
+  "settings.part.integrations.telegram": "Telegram bot",
+  "settings.part.integrations.units": "Other services",
+  "settings.part.models.providers": "Providers",
+  "settings.part.models.tiers": "Model tiers",
+  "settings.part.models.tasks": "AI tasks",
+  "settings.part.models.prices": "Prices",
+  "settings.part.usage.allowance": "Allowance",
+  "settings.part.usage.agents": "Agent limits",
+  "settings.part.usage.spend": "Spend",
+  "settings.part.automations.mine": "Your automations",
+  "settings.part.automations.library": "Starter library",
+  "settings.part.privacy.consent": "Consent",
+  "settings.part.privacy.customers": "Existing customers",
+  "settings.part.privacy.retention": "Retention",
+  "settings.part.privacy.requests": "Requests",
+  "settings.part.privacy.duties": "Disclosure duties",
   "settings.group.company": "Company",
   "settings.group.people": "People",
   "settings.group.sales": "Sales",
@@ -13391,7 +13428,7 @@ export const en = {
   "settings.group.governance": "Governance",
   "settings.tab.account": "Account",
   "settings.tab.voice": "Writing voice",
-  "settings.tab.agents": "AI access",
+  "settings.tab.agents": "AI assistants",
   "settings.tab.notifications": "Notifications",
   "settings.tab.connections": "Connections",
   "settings.tab.extensions": "Extensions",
@@ -13493,7 +13530,7 @@ export const en = {
   "privacy.requestsEmpty": "No privacy requests yet.",
   "settings.tab.integrations": "Integrations",
   "settings.tab.web-forms": "Website forms",
-  "settings.tab.capture": "Capture rules",
+  "settings.tab.capture": "Mail capture",
   "settings.tab.knowledge": "Knowledge",
   "corpusAsk.title": "Ask your documents",
   "corpusAsk.sub":
@@ -13596,7 +13633,6 @@ export const en = {
   "knowledge.searchable": "Searchable",
   "knowledge.reindexingBadge": "Reindexing",
   "settings.tab.privacy": "Privacy and retention",
-  "settings.tab.capture-activity": "Capture activity",
   "verdictPass.subject.senders": "Senders",
   "verdictPass.subject.threads": "Threads",
   "verdictPass.every_one": "{subject} are checked every minute.",
@@ -15337,13 +15373,13 @@ export const en = {
   "connectors.accountSettings": "Who sees mail from {account}",
   "connectors.heldPointer.label": "Held threads and sender decisions",
   "connectors.heldPointer.some_one":
-    "{count} thread is held back from the team right now. Review it, and every sender your mailbox brought in, in Capture activity.",
+    "{count} thread is held back from the team right now. Review it, and every sender your mailbox brought in, in Connections, on the Activity tab.",
   "connectors.heldPointer.some_other":
-    "{count} threads are held back from the team right now. Review them, and every sender your mailbox brought in, in Capture activity.",
+    "{count} threads are held back from the team right now. Review them, and every sender your mailbox brought in, in Connections, on the Activity tab.",
   "connectors.heldPointer.none":
-    "Nothing is held back from the team right now. Every sender your mailbox brought in is listed in Capture activity.",
+    "Nothing is held back from the team right now. Every sender your mailbox brought in is listed in Connections, on the Activity tab.",
   "connectors.heldPointer.unknown":
-    "Threads held back from the team, and every sender your mailbox brought in, are listed in Capture activity.",
+    "Threads held back from the team, and every sender your mailbox brought in, are listed in Connections, on the Activity tab.",
   "connectors.heldPointer.review": "Review",
   "connectors.advanced": "Advanced",
   "connectors.advancedCount_one": "{count} setting",
@@ -17013,7 +17049,7 @@ export const en = {
   "consent.scopeNote.send": "sends messages as you, without asking first",
   "consent.scopeNote.enrich": "runs AI work and buys contact data",
   "consent.ceiling":
-    "Never more than your own permissions. You can disconnect at any time in Settings under AI access.",
+    "Never more than your own permissions. You can disconnect at any time in Settings under AI assistants.",
   "consent.preset.label": "Assistant permissions",
   "consent.preset.readDraft": "Read and draft",
   "consent.preset.full": "Full assistant",
@@ -20132,7 +20168,7 @@ export const en = {
   "scheduling.setup.step1Help":
     "Sign in with the account your calendar belongs to. Takes about a minute.",
   "scheduling.connectCalendar": "Connect calendar",
-  "scheduling.setup.step2": "Check your hours below",
+  "scheduling.setup.step2": "Check your hours under Availability",
   "scheduling.setup.step2Help":
     "Guests are offered 09:00 to 17:00, Monday to Friday, until you save your own.",
   "scheduling.setup.step2Done": "Your hours are saved.",
@@ -20935,12 +20971,6 @@ export const en = {
   "health.filteredFinding_other": "Showing 1 of {count} problems",
   "health.showAllFindings": "Show all problems",
   "health.jobDelayed": "{kind}: delayed",
-  "health.checkNumbers": "Show check counts",
-  "health.checkResults": "Check results",
-  "health.checksFailed": "Failed checks",
-  "health.checksReview": "Need a decision",
-  "health.checksPassing": "Passing checks",
-  "health.checksPending": "Awaiting a result",
   "health.askOwner": "Ask a mailbox owner",
   "health.mailReviewOwners": "Mailbox decisions",
   "health.reviewOwnersIntro":
@@ -20961,7 +20991,6 @@ export const en = {
   "health.senderReviewCount_other": "{count} sender decisions waiting",
   "health.threadReviewCount_one": "{count} conversation waiting",
   "health.threadReviewCount_other": "{count} conversations waiting",
-  "health.views": "System health views",
   "health.overview": "Overview",
   "health.diagnostics": "Diagnostics",
   "health.configurationWithheld":
@@ -21025,6 +21054,45 @@ export const en = {
   "health.prioritiesChanged":
     "Priorities changed. Refresh to apply the new order.",
   "health.capabilities": "All checks",
+  "health.group.setup": "Not set up yet",
+  "health.group.waiting": "Not confirmed yet",
+  "health.group.passing": "Passing",
+  "health.checkPassing": "Passing",
+  "health.whatHappened": "What happened",
+  "health.whyItMatters": "Why it matters",
+  "health.whatToDo": "What to do",
+  "health.notSetUpCount_one": "{count} not set up",
+  "health.notSetUpCount_other": "{count} not set up",
+  "health.passingCount_one": "{count} passing",
+  "health.passingCount_other": "{count} passing",
+  "health.setup.providersMissing.happened":
+    "No AI provider has a key, so AI work cannot reach a model.",
+  "health.setup.providersMissing.matters":
+    "Drafts, briefs and research cannot run until a provider is connected.",
+  "health.setup.providersMissing.todo":
+    "Add a key for a provider under AI models, then send a test call.",
+  "health.setup.providersMissing.action": "Add a provider key",
+  "health.setup.providersSilent.happened":
+    "A provider is set up, but none has answered a request yet.",
+  "health.setup.providersSilent.matters":
+    "Until one answers, nothing shows that AI work reaches a model.",
+  "health.setup.providersSilent.todo":
+    "Send a test call from AI models, or wait for the next AI task to run.",
+  "health.setup.providersSilent.action": "Open AI models",
+  "health.setup.search.happened":
+    "Search has no embedding model, so it only matches exact words.",
+  "health.setup.search.matters":
+    "Similar records, answers from Knowledge documents and AI research stay limited to keyword matches.",
+  "health.setup.search.todo":
+    "Pick an embedding model under AI models, Model tiers. Margince then builds the search index in the background.",
+  "health.setup.search.action": "Choose an embedding model",
+  "health.setup.recovery.happened":
+    "Nobody has recorded a restore drill. Backups run outside Margince, so it only learns of a restore when someone records one.",
+  "health.setup.recovery.matters":
+    "Until a backup has been restored once, nothing shows your data can be brought back in time.",
+  "health.setup.recovery.todo":
+    "Ask whoever runs your server to restore a recent backup to a spare database and record the drill.",
+  "health.setup.recovery.action": "Read the restore guide",
   "health.unknown": "Not recorded",
   "health.stale": "Last known evidence; the latest check did not complete.",
   "health.failed": "This source could not be read",
@@ -21078,7 +21146,7 @@ export const en = {
   "health.recovery.automatic":
     "Review routing outcomes over a sufficiently large sample.",
   "health.ownerHandoff":
-    "Mailbox owners accept or decline proposed contacts in Worklist → Decisions. Held conversations are reviewed in Capture activity.",
+    "Mailbox owners accept or decline proposed contacts in Worklist → Decisions. Held conversations are reviewed in Connections, on the Activity tab.",
   "health.operatorHandoff":
     "A technical operator must investigate. Copy the diagnostic summary for the handoff.",
   "health.copy": "Copy technical report",

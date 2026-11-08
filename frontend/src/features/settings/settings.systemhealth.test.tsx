@@ -267,9 +267,9 @@ it("limits a partial capture check to the categories it actually read", async ()
   });
   render(<SystemHealthPage />);
   await user.click(await screen.findByText("All checks"));
-  expect(screen.getByText(/Mail capture/)).toHaveTextContent(
-    "No capture action needed in checked categories",
-  );
+  expect(
+    screen.getByText(/Mail capture/, { selector: ".disclosure-label" }),
+  ).toHaveTextContent("No capture action needed in checked categories");
   expect(screen.queryByText("Working normally")).toBeNull();
 });
 
@@ -291,9 +291,9 @@ it("shows what a successful refusal check established about connector activity",
   });
   render(<SystemHealthPage />);
   await user.click(await screen.findByText("All checks"));
-  expect(screen.getByText(/Connector intake/)).toHaveTextContent(
-    "activity is not verified",
-  );
+  expect(
+    screen.getByText(/Connector intake/, { selector: ".disclosure-label" }),
+  ).toHaveTextContent("activity is not verified");
   expect(screen.queryByText("Working normally")).toBeNull();
 });
 

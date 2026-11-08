@@ -330,7 +330,7 @@ describe("the add-tag picker", () => {
     await panel.findByRole("option", { name: "Key Account" });
     expect(
       await panel.findByRole("link", { name: en["tags.manage"] }),
-    ).toHaveAttribute("href", "/#/settings/tags");
+    ).toHaveAttribute("href", "/#/settings/records/tags");
 
     await user.type(panel.getByRole("combobox"), "Spring campaign");
     await user.click(
