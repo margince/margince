@@ -29,7 +29,7 @@ func sarSections(ctx context.Context, pkg *SARPackage, contactID ids.ContactID, 
 	}
 	sections = append(sections, retained...)
 	sections = append(sections, sarReportingSections(pkg), sarQuestionSection(pkg, contactID, emails), sarBindingSection(pkg, contactID, emails))
-	sections = append(sections, sarRecordSections(pkg)...)
+	sections = append(sections, sarRecordSections(pkg, contactID, leads)...)
 	sections = append(sections, sarMessagingSections(pkg, contactID, emails, leads)...)
 	sections = append(sections, sarConsentSections(pkg)...)
 	sections = append(sections, sarRequestSections(pkg, contactID)...)
@@ -132,7 +132,10 @@ func sarIdentitySections(pkg *SARPackage) []sarSection {
 // sarRecordSections gather the business records the subject appears in: who
 // they are connected to, the deals they hold a stake in, the leads they came
 // from, and their timeline with the files hanging off it.
-func sarRecordSections(pkg *SARPackage) []sarSection {
+//
+// The leads are subjectReach's, so the section lists every lead whose history
+// the retained copies export.
+func sarRecordSections(pkg *SARPackage, contactID ids.ContactID, leads []ids.UUID) []sarSection {
 	return []sarSection{
 		{&pkg.Relationships, `SELECT kind, company_id, deal_id, role, started_at, ended_at
 		   FROM relationship WHERE contact_id = $1 AND archived_at IS NULL`, nil},
@@ -141,10 +144,9 @@ func sarRecordSections(pkg *SARPackage) []sarSection {
 		   WHERE r.kind = 'deal_stakeholder' AND r.contact_id = $1 AND r.archived_at IS NULL`, nil},
 		{&pkg.Leads, `SELECT l.id, l.full_name, l.email, l.title, l.company_name, l.status, l.created_at
 		   FROM lead l
-		   WHERE l.promoted_contact_id = $1
-		      OR l.id IN (SELECT converted_from_lead_id FROM contact WHERE id = $1 AND converted_from_lead_id IS NOT NULL)
-		      OR (l.email IS NOT NULL AND EXISTS (
-		            SELECT 1 FROM contact_email pe WHERE pe.contact_id = $1 AND pe.email = lower(l.email)))`, nil},
+		   WHERE l.id = ANY($2::uuid[])
+		      OR l.id IN (SELECT converted_from_lead_id FROM contact WHERE id = $1 AND converted_from_lead_id IS NOT NULL)`,
+			[]any{contactID.UUID, leads}},
 		// Art. 15 reaches a record the statutory floor is HOLDING about this
 		// subject, and does so deliberately: the restriction bars further
 		// PROCESSING of the record, not the subject's own access to what is

@@ -203,3 +203,49 @@ func TestRetainedHistoryReachesMergedRecordsAndAddressMatchedLeads(t *testing.T)
 		}
 	}
 }
+
+// The Leads section lists every lead the export reaches. Here that is a lead
+// never promoted, holding an address left on a record merged into the subject.
+// Mutation: match leads by the survivor's own addresses only, and it is missing.
+func TestTheLeadsSectionListsALeadHoldingAMergedRecordsAddress(t *testing.T) {
+	ctx := principal.SystemActing(context.Background(), "privacy_test")
+	tx := subjectColumnsTx(ctx, t)
+	subject, _, _ := seedDedupePairs(ctx, t, tx)
+	predecessor, priorLead, strangerLead := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	mustExec(ctx, t, tx, `INSERT INTO contact (id, full_name, source, captured_by, merged_into_id)
+ VALUES (@id, 'Hedda Before', 'manual', 'system:privacy_test', @subject)`,
+		pgx.StrictNamedArgs{"id": predecessor, "subject": subject.contact})
+	mustExec(ctx, t, tx, `INSERT INTO contact_email (contact_id, email, source, captured_by)
+ VALUES (@id, 'hedda.before@prior.example', 'manual', 'system:privacy_test')`,
+		pgx.StrictNamedArgs{"id": predecessor})
+	mustExec(ctx, t, tx, `INSERT INTO lead (id, full_name, email, source, captured_by) VALUES
+ (@prior, 'Hedda Lead', 'hedda.before@prior.example', 'manual', 'system:privacy_test'),
+ (@stranger, 'Someone Else', 'someone@else.example', 'manual', 'system:privacy_test')`,
+		pgx.StrictNamedArgs{"prior": priorLead, "stranger": strangerLead})
+	emails, leads, _, err := subjectReach(ctx, tx, subject.contact)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var pkg SARPackage
+	listed := map[string]bool{}
+	for _, section := range sarRecordSections(&pkg, subject.contact, leads) {
+		if section.dest != &pkg.Leads {
+			continue
+		}
+		rows, err := rowMaps(ctx, tx, section.query, section.args...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, row := range rows {
+			if id, ok := row["id"].(string); ok {
+				listed[id] = true
+			}
+		}
+	}
+	if !listed[priorLead.String()] {
+		t.Errorf("the lead holding %v is missing from the Leads section", emails)
+	}
+	if listed[strangerLead.String()] {
+		t.Error("the Leads section lists a lead with no tie to the subject")
+	}
+}

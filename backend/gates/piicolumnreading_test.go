@@ -52,6 +52,10 @@ func TestAStatementTheCensusCannotReadIsNotReadAsClean(t *testing.T) {
 		// closes it, so the open string runs over the next assignment. The
 		// column the second marker stands over then reads as quoted text.
 		"a quote the value closes": {"UPDATE contact SET note = '" + unresolved + ", " + unresolved + " = NULL WHERE id = $1", false},
+		// A keyword inside a literal is part of the value, so the clause runs
+		// on past it to the assignment the marker stands over.
+		"a keyword in a literal":        {"UPDATE contact SET note = 'where it came from', " + unresolved + " = NULL WHERE id = $1", false},
+		"a value before a quoted where": {"UPDATE contact SET note = " + unresolved + ", reason = 'where' WHERE id = $1", true},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -228,6 +232,7 @@ func TestTheColumnCensusDoesNotCountConditionsOrQuotedAssignmentsAsWrites(t *tes
 	for _, statement := range []string{
 		`UPDATE intro_request SET "origin" = ''`,
 		`UPDATE intro_request SET ("origin", internal_reason) = ('', '')`,
+		`UPDATE intro_request SET internal_reason = 'where it came from', origin = NULL`,
 	} {
 		if !assignsColumn(statement, "origin") {
 			t.Errorf("the real origin assignment disappeared: %s", statement)

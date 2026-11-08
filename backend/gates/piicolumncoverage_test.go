@@ -605,7 +605,7 @@ func executedSQL(n ast.Node, forwarders map[string]int) (ast.Expr, bool) {
 // assignmentsAreReadable reports whether every SET clause in a statement
 // rendered whole. One that did not hides the very thing this census counts.
 func assignmentsAreReadable(statement string) bool {
-	clauses := setClause.FindAllStringSubmatch(statement, -1)
+	clauses := setClauses(statement)
 	// NO CLAUSE AT ALL is unreadable, not readable. The caller has already
 	// decided this statement assigns something; a SET the scan cannot find is
 	// therefore a SET that the marker swallowed whole — `"UPDATE contact " +
@@ -617,12 +617,12 @@ func assignmentsAreReadable(statement string) bool {
 		return false
 	}
 	for _, clause := range clauses {
-		if !strings.Contains(clause[1], unresolved) {
+		if !strings.Contains(clause, unresolved) {
 			continue
 		}
 		// A string or comment that never closes runs over every assignment
 		// after it, so nothing past its start was read.
-		assignments, closed := splitSetClause(clause[1])
+		assignments, closed := splitSetClause(clause)
 		if !closed {
 			return false
 		}
@@ -778,7 +778,7 @@ func erasureRedactedColumns(t *testing.T, columns map[string]map[string]string, 
 			// nothing, and registering it made an empty judged entry — which
 			// then demanded a baseline for every text column of a table the
 			// cascade may never redact at all.
-			if !setClause.MatchString(w.text) {
+			if len(setClauses(w.text)) == 0 {
 				continue
 			}
 			// REGISTERED ON SIGHT of the clause, before any column matches. A
@@ -802,8 +802,8 @@ func erasureRedactedColumns(t *testing.T, columns map[string]map[string]string, 
 // assignsColumn reads the targets on the left of SET assignments. Conditions
 // and quoted values do not assign the columns they mention.
 func assignsColumn(statement, column string) bool {
-	for _, clause := range setClause.FindAllStringSubmatch(statement, -1) {
-		assignments, _ := splitSetClause(clause[1])
+	for _, clause := range setClauses(statement) {
+		assignments, _ := splitSetClause(clause)
 		for _, assignment := range assignments {
 			left, _, assigned := strings.Cut(assignment, "=")
 			if !assigned {
