@@ -17,7 +17,7 @@ import (
 
 // fullGrowthFit is a reply naming every key growthFitClaims decodes.
 func fullGrowthFit(in Input, angle string) string {
-	cite := `[{"entity_type":"profile_field","entity_id":"` + in.ProfileFields[0].Id.String() + `"}]`
+	cite := `[{"entity_type":"profile_field","entity_id":"` + firstFieldRef + `"}]`
 	claim := func(nature string) string {
 		return `{"text":"They sell load-shifting software.","nature":"` + nature + `","evidence":` + cite + `}`
 	}

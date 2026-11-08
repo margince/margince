@@ -95,15 +95,20 @@ func offerDraftSupportExpected(t *testing.T) json.RawMessage {
 	})
 }
 
-// draftedLine renders one candidate as the prompt demands it, plus whichever of
-// the two optional price fields a caller puts on it.
+// offerDraftSourceRefs is the ref the prompt shows for each fixture context
+// item, in fixture order.
+var offerDraftSourceRefs = map[string]string{offerDraftKickoffSource: "s1", offerDraftSupportSource: "s2"}
+
+// draftedLine renders one candidate as the prompt demands it, citing the
+// source by its ref, plus whichever of the two optional price fields a caller
+// puts on it.
 func draftedLine(description, evidence, sourceID string, priceFields ...string) string {
 	fields := []string{
 		`"description":"` + description + `"`,
 		`"quantity":"1"`,
 		`"tax_rate":"19.00"`,
 		`"evidence_snippet":"` + evidence + `"`,
-		`"source_id":"` + sourceID + `"`,
+		`"source_id":"` + offerDraftSourceRefs[sourceID] + `"`,
 	}
 	return "{" + strings.Join(append(fields, priceFields...), ",") + "}"
 }

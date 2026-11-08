@@ -59,6 +59,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -85,12 +86,12 @@ const (
 // candidate is re-verified against the actual context text below, so a
 // model that lies about its own citation gains nothing.
 const offerDraftSystem = `You draft offer line items for a CRM from a sales deal's own captured context.
-Return ONLY a JSON object: {"lines":[{"description":...,"quantity":"1","tax_rate":"19.00","evidence_snippet":...,"source_id":...,"conversation_price_minor":12300,"product_id":"..."}]}.
+Return ONLY a JSON object: {"lines":[{"description":...,"quantity":"1","tax_rate":"19.00","evidence_snippet":...,"source_id":"s1","conversation_price_minor":12300,"product_id":"p1"}]}.
 - description, quantity, tax_rate, evidence_snippet, source_id are required for every line.
-- evidence_snippet MUST be text copied VERBATIM from the numbered context items below, and source_id MUST be that item's id.
+- evidence_snippet MUST be text copied VERBATIM from the context items below, and source_id MUST be that item's reference (s1, s2, ...).
 - conversation_price_minor is an INTEGER count of minor currency units (e.g. cents) and is set ONLY when the evidence itself states a price the customer discussed — omit it otherwise.
 - conversation_price_minor is the price of ONE unit of the line's quantity; the line's total is quantity × conversation_price_minor.
-- product_id is set ONLY when a rate-card product below is the clear match for the line — omit it otherwise.
+- product_id is the reference (p1, p2, ...) of a rate-card product below, set ONLY when it is the clear match for the line — omit it otherwise.
 - Never invent a price: a line with neither a conversation price nor a matching product is still returned, just without either field.
 - OMIT any line you cannot evidence — never guess a line into existence.`
 
@@ -302,11 +303,12 @@ func offerDraftRequest(dealContext []dealContextItem, catalog []crmcontracts.Pro
 	// blocks go inside the same span: separately wrapped, the seam between them
 	// is a boundary two halves of a marker could be assembled across.
 	fence := promptfence.New()
+	refs := newOfferDraftRefs(dealContext, catalog)
 	return model.Request{
 		System: offerDraftSystemFor(fence, lang),
 		Messages: []model.Message{{
 			Role:    "user",
-			Content: fence.Wrap(renderContextBlock(dealContext) + "\n" + renderCatalogBlock(catalog)),
+			Content: fence.Wrap(renderContextBlock(dealContext, refs) + "\n" + renderCatalogBlock(catalog, refs)),
 		}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
@@ -327,7 +329,7 @@ func (d offerDrafter) draftCandidates(ctx context.Context, dealContext []dealCon
 	if err != nil {
 		return nil, fmt.Errorf("compose: offer draft: %w", err)
 	}
-	return lines, nil
+	return newOfferDraftRefs(dealContext, catalog).read(lines), nil
 }
 
 // offerLanguage is the language the offer's lines are drafted in: the offer's
@@ -366,28 +368,59 @@ func (d offerDrafter) rateCardCatalog(ctx context.Context, language string) ([]c
 	return products, nil
 }
 
-func renderContextBlock(items []dealContextItem) string {
+func renderContextBlock(items []dealContextItem, refs offerDraftRefs) string {
 	if len(items) == 0 {
 		return "Deal context: (none captured yet)"
 	}
 	var b strings.Builder
-	b.WriteString("Deal context (id: text):\n")
+	b.WriteString("Deal context (reference: text):\n")
 	for _, it := range items {
-		fmt.Fprintf(&b, "[%s] %s\n", it.SourceID, it.Snippet)
+		fmt.Fprintf(&b, "[%s] %s\n", refs.sources.For(it.SourceID), it.Snippet)
 	}
 	return b.String()
 }
 
-func renderCatalogBlock(products []crmcontracts.Product) string {
+func renderCatalogBlock(products []crmcontracts.Product, refs offerDraftRefs) string {
 	if len(products) == 0 {
 		return "Rate card: (no active products)"
 	}
 	var b strings.Builder
-	b.WriteString("Rate card (id: name @ unit price minor units):\n")
+	b.WriteString("Rate card (reference: name @ unit price minor units):\n")
 	for _, p := range products {
-		fmt.Fprintf(&b, "[%s] %s @ %d\n", p.Id, p.Name, p.UnitPriceMinor)
+		fmt.Fprintf(&b, "[%s] %s @ %d\n", refs.products.For(p.Id.String()), p.Name, p.UnitPriceMinor)
 	}
 	return b.String()
+}
+
+// offerDraftRefs names the context items s1, s2, … and the rate-card products
+// p1, p2, … in the order the prompt shows them.
+type offerDraftRefs struct {
+	sources  *promptref.Refs
+	products *promptref.Refs
+}
+
+func newOfferDraftRefs(dealContext []dealContextItem, catalog []crmcontracts.Product) offerDraftRefs {
+	refs := offerDraftRefs{sources: promptref.New("s"), products: promptref.New("p")}
+	for _, item := range dealContext {
+		refs.sources.For(item.SourceID)
+	}
+	for _, product := range catalog {
+		refs.products.For(product.Id.String())
+	}
+	return refs
+}
+
+// read turns each candidate's refs into the ids they name. A source the call
+// never showed reads as none, which the evidence gate drops; a product it never
+// showed reads as none, which prices the line at the zero sentinel.
+func (r offerDraftRefs) read(candidates []offerLineCandidate) []offerLineCandidate {
+	out := make([]offerLineCandidate, len(candidates))
+	for i, c := range candidates {
+		c.SourceID = shownID(r.sources, c.SourceID)
+		c.ProductID = shownID(r.products, c.ProductID)
+		out[i] = c
+	}
+	return out
 }
 
 // groundOfferLines is the no-guess gate: an accepted candidate must carry

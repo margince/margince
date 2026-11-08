@@ -25,20 +25,16 @@ import (
 //
 // gatekit:fixture the sites not yet moved to promptref — expected data the gate checks still holds, not a waived cost
 var stillShowsRecordIDs = map[string]string{
-	"account_scan/company_scan":              "contact ids in the account JSON and the schema",
 	"agent_loop/morning_brief":               "seed context record ids, passed back to tools",
 	"agent_loop/overnight_at_risk_sweep":     "seed context record ids, passed back to tools",
 	"brief_ranking/rank":                     "candidate ids",
 	"capture_confidentiality_verdict/thread": "the thread id on its one span; integration fakes key on it",
 	"capture_counterparty_verdict/verdict":   "the sender id on its one span; integration fakes key on it",
 	"corpus_ask/corpus_ask":                  "passage ids",
-	"deal_health/deal_status":                "the deal JSON ids; integration fakes reply with them",
 	"deal_verdict/deal_verdict":              "activity, stage and criterion ids; integration fakes reply with them",
 	"draft_reply/account":                    "the recipient id",
 	"draft_reply/contact":                    "the recipient id",
 	"enrich/signature":                       "the source activity id on its span",
-	"growth_fit/growth_fit":                  "profile field ids",
-	"offer_draft/draft":                      "product ids in the catalog",
 	"report_interpret/sales_assessment":      "candidate deal ids",
 	"report_setup/custom_report_setup":       "catalog ids",
 	"report_setup/initiative_setup":          "catalog product ids",
@@ -52,7 +48,6 @@ var stillShowsRecordIDs = map[string]string{
 	"summarize/meeting_brief":                "activity ids in the meeting JSON",
 	"summarize/meeting_plan":                 "deal and contact ids in the plan JSON",
 	"tag_suggest/interest":                   "the source record id on each span",
-	"weekly_learnings/learn":                 "deal ids in the week JSON",
 }
 
 // A model is never shown a record UUID: it copies one wrong, cites it in the

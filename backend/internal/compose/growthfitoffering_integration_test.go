@@ -32,7 +32,7 @@ import (
 type offeringLane struct {
 	provider *companyContextProvider
 	prompts  []string
-	reply    string
+	reply    func(model.Request) string
 }
 
 func (l *offeringLane) Complete(ctx context.Context, req model.Request) (model.Response, error) {
@@ -45,7 +45,7 @@ func (l *offeringLane) Complete(ctx context.Context, req model.Request) (model.R
 		prompt.WriteString(m.Content)
 	}
 	l.prompts = append(l.prompts, prompt.String())
-	return model.Response{Text: l.reply}, nil
+	return model.Response{Text: l.reply(req)}, nil
 }
 
 type offeringEnv struct {
@@ -97,8 +97,8 @@ func (o *offeringEnv) secondOffering(t *testing.T, icp *string) crmcontracts.Leg
 	return contacts.LegalEntityWire(entity)
 }
 
-// customer is complete enough that the model is asked, and returns the id of
-// one profile field the reply can cite.
+// customer is complete enough that the model is asked, and returns the value
+// of one profile field the reply can cite.
 func (o *offeringEnv) customer(t *testing.T, name string) (ids.CompanyID, string) {
 	t.Helper()
 	created, err := o.Contacts.CreateCompany(o.ctx, contacts.CreateCompanyInput{
@@ -121,13 +121,15 @@ func (o *offeringEnv) customer(t *testing.T, name string) (ids.CompanyID, string
 	if err != nil || len(fields) == 0 {
 		t.Fatalf("read the profile fields of %s: %v", name, err)
 	}
-	return id, fields[0].Id.String()
+	return id, fields[0].Value
 }
 
-func (o *offeringEnv) judge(t *testing.T, id ids.CompanyID, citedField string) crmcontracts.CompanyGrowthFit {
+func (o *offeringEnv) judge(t *testing.T, id ids.CompanyID, citedValue string) crmcontracts.CompanyGrowthFit {
 	t.Helper()
-	o.lane.reply = `{"band":"strong","positive_factors":[{"text":"They run hot processes.","nature":"fact",
-		"evidence":[{"entity_type":"profile_field","entity_id":"` + citedField + `"}]}]}`
+	o.lane.reply = func(req model.Request) string {
+		return `{"band":"strong","positive_factors":[{"text":"They run hot processes.","nature":"fact",
+		"evidence":[{"entity_type":"profile_field","entity_id":"` + promptRecordRef(t, req, "value", citedValue) + `"}]}]}`
+	}
 	fit, err := o.service.Get(o.ctx, id, false)
 	if err != nil {
 		t.Fatalf("growth fit: %v", err)

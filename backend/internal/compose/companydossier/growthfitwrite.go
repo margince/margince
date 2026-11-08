@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -45,16 +46,16 @@ type Completer interface {
 const growthFitSystem = `You assess how well one company fits what WE sell, from a JSON summary of that company and a description of our own offering.
 The summary describes THEM: its offer_summary, icp and industry say what THEY sell and to whom. What WE sell is the confirmed company context, and nothing in the summary describes us.
 Return ONLY a JSON object: {"band":"strong|moderate|weak","sub_scores":[SUBSCORE],"positive_factors":[CLAIM],"negative_factors":[CLAIM],"whitespace":[CLAIM],"objections":[CLAIM],"recommended_angle":CLAIM}.
-A CLAIM is {"text":"...","nature":"fact|assessment|recommendation","evidence":[{"entity_type":"company|fact|profile_field","entity_id":"..."}]}.
-A record's entity_type is the key the summary lists it under: profile_field or fact.
+A CLAIM is {"text":"...","nature":"fact|assessment|recommendation","evidence":[{"entity_type":"company|fact|profile_field","entity_id":"f1"}]}.
+A record's entity_type is the key the summary lists it under: profile_field or fact. Its entity_id is the record's "id" there, such as p1 or f2.
 A SUBSCORE is {"dimension":"industry_fit|company_size|transformation_need|access","score":0-100,"reason":"...","evidence":[...]}.
 Give exactly those four dimensions, once each, and no others. Each cites the records its reason reads. industry_fit reads their offer_summary, icp and industry against our icp: how well what they are matches who we sell to. What they sell and who they sell to both decide it, so it cites their offer_summary and their icp. company_size is whether they are the size we serve. transformation_need is how much they appear to need what we do, read from what they sell and the technology they run. access is how reachable the decision-makers are.
 A sub-score is the band taken apart, not a second opinion: score each dimension from the same evidence, and give the reason in one sentence. Never total them — a separate step decides the band.
 Judge only on evidence. Do NOT report a band of "unknown" and do not comment on how much data you were given — a separate step counts that and can overrule your band. Give the band the evidence you have actually supports.
 Label every claim. A FACT restates something the summary says and cites the record it came from. An ASSESSMENT is a judgment you draw by reading their facts against our offering — every sentence that compares them with us is one, never a fact — say it plainly and cite THEIR records. A RECOMMENDATION is one concrete move.
 positive_factors and negative_factors are why they do or do not fit. whitespace is what we sell that they do not appear to buy yet; when you see none, return an empty whitespace list, never a claim saying you found none. objections are what they are likely to push back with. recommended_angle is the single best approach, and is always a recommendation.
-Our offering is never a fact about THEM and never a citation: cite only ids the company summary gave you. Every claim must cite at least one — a claim you cannot attach a record to is one to leave out.
-Put ids ONLY in evidence. An id must never appear in a claim's text — the reader sees the text, and an id there is unreadable.
+Our offering is never a fact about THEM and never a citation: cite only references the company summary gave you. Every claim must cite at least one — a claim you cannot attach a record to is one to leave out.
+Put references ONLY in evidence. A reference such as p1 must never appear in a claim's text — the reader sees the text, and a reference there is unreadable.
 Never invent a fact. If the summary does not say it, you may still ASSESS it, but then it is an assessment and must be labelled one.
 Write one claim per sentence.
 Every claim's text and every sub-score reason is a plain statement with no speaker: no "I", "me" or "my", in whatever language you write. State the finding itself. Write a recommendation as the move: "Focus on their plant managers", never "I suggest you focus on their plant managers". "We" and "our" name the company the reader works for.`
@@ -75,7 +76,7 @@ func GrowthFitRequest(in Input, lang string) model.Request {
 	fence := promptfence.New()
 	return model.Request{
 		System:   growthFitSystemFor(fence, lang),
-		Messages: []model.Message{{Role: "user", Content: fence.Wrap(encodeInput(in, lang))}},
+		Messages: []model.Message{{Role: "user", Content: fence.Wrap(promptref.Rewrite(encodeInput(in, lang), growthFitRefs(in).Tables()...))}},
 		// Our own offering is what makes this a FIT rather than a description, so
 		// the task contract declares the company block UNCONDITIONAL here and
 		// there is no flag to set: a growth fit written without it is the guess
@@ -278,6 +279,7 @@ func ParseGrowthFit(reply string, in Input) (crmcontracts.GrowthFitBand, GrowthF
 	if err := json.Unmarshal([]byte(ai.Unfence(reply)), &parsed); err != nil {
 		return "", GrowthFitClaims{}, fmt.Errorf("parse the growth-fit reply: %w", err)
 	}
+	parsed = parsed.readRefs(growthFitRefs(in))
 	proposed := crmcontracts.GrowthFitBand(parsed.Band)
 	if _, known := bandRank[proposed]; !known {
 		return "", GrowthFitClaims{}, fmt.Errorf("the growth-fit reply named no band this contract knows: %q", parsed.Band)
