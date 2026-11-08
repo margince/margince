@@ -12,6 +12,7 @@ import { PageZones } from "../../design-system/pagezones";
 import { greetingNameOf } from "../../format/greetingname";
 import { useNow } from "../../format/now";
 import { useT } from "../../i18n";
+import { useCanWrite } from "../../lib/capability";
 import { markJourney } from "../../lib/journeymarks";
 import { useMagic } from "../../lib/magic.queries";
 import { usePendingMarginceChanges } from "../../lib/marginchanges";
@@ -227,7 +228,11 @@ function PersonalMorning({
   const handled = useHandledForYou();
   const [selected, setSelected] = useState("");
   const [params] = useUrlParams();
-  const update = useTaskUpdate([worklistKey]);
+  // Finishing a task also changes the advice on its deal and contact.
+  const update = useTaskUpdate([worklistKey, ["deal-status"], ["contact360"]]);
+  // A linked task may sit beyond the loaded queue; its own read says whether
+  // this reader may change it, as the Worklist drawer asks.
+  const canUpdateTask = useCanWrite("activity", "update");
   const day = briefDay(query.data?.pages);
   const rows = dayRows(day, query.data?.pages);
   // A row named by the address opens as a click on it does; mail links there.
@@ -349,7 +354,7 @@ function PersonalMorning({
         <TaskDetailModal
           activityId={linkedTask}
           item={linkedRow}
-          readOnly={!linkedRow?.actions.includes("complete")}
+          readOnly={!canUpdateTask}
           update={update}
           onClose={() => replaceDial(TASK_PARAM, undefined)}
         />
