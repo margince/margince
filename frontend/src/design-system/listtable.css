@@ -952,9 +952,16 @@
   border-radius: var(--r-sm);
 }
 
-.lt-num {
+/* Header and cells both: a figure's label ends where its figures end. Scoped
+ * to the table so it outranks the header row's own `text-align: left`. */
+.lt-table .lt-num {
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+/* The hidden arrow slot leads, so the label itself sits on the right edge. */
+.lt-table th.lt-num .lt-sort {
+  flex-direction: row-reverse;
+  margin-inline-end: 0;
 }
 
 /* A row's "…" menu column: the cell lets the trigger's focus ring past its
@@ -1335,8 +1342,10 @@
   /* A field with no value has nothing to label: on a desktop row the empty cell
    * holds the grid together, but in a card it would read as a missing answer to
    * a question nobody asked. A cell renderer may wrap nothing in an element, so
-   * a cell counts as empty when nothing in it holds text or draws itself. */
-  .lt-table td:not(:has(:not(:empty), img, svg, input)) {
+   * a cell counts as empty when nothing in it holds text or draws itself. Bare
+   * text (the empty list's own line) counts as content. */
+  .lt-table
+  td:is(:empty, :not(:has(:not(:empty), img, svg, input)):has(> :empty)) {
     display: none;
   }
 

@@ -189,6 +189,10 @@ func stampSiblingsTx(
 // unbounded run. The delay is what keeps a pass's cost proportional to the
 // threads it claimed.
 //
+// The answer it held was about the message it read, and the reopened question
+// carries none of it. A classification left beside the new pointer would read
+// as an answer about a message nobody has judged.
+//
 // A CLASSIFIER's answer only. An owner who shared their own thread ended the
 // question — no later pass re-asks, because a classifier that could overturn
 // them would make the click advisory, which is not what somebody pressing
@@ -201,6 +205,7 @@ func reopenAtSiblingTx(
 	_, err := tx.Exec(ctx, `
 		UPDATE capture_thread_verdict
 		   SET status = $4, first_activity_id = $3,
+		       kind = NULL, confidence = NULL, disposition_reason = NULL,
 		       resolved_at = NULL, next_attempt_at = now() + interval '1 minute',
 		       claimed_until = NULL, claimed_by = NULL, updated_at = now()
 		 WHERE thread_key = $1 AND user_id = $2

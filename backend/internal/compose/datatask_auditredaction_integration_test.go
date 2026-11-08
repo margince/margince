@@ -85,6 +85,7 @@ func TestHistoricalAuditTaskRollsBackAndRejectsMalformedCursors(t *testing.T) {
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	task := auditRedactionDataTask()
 	batch := task.Steps[0].Batch
+	interrupted := false
 	task.Steps[0].Batch = func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
 		out, err := batch(ctx, tx, in)
 		if err != nil {
@@ -93,9 +94,15 @@ func TestHistoricalAuditTaskRollsBackAndRejectsMalformedCursors(t *testing.T) {
 		if out.Changed == 0 {
 			t.Error("the rollback fixture did not redact its legacy history")
 		}
+		interrupted = true
 		return out, errors.New("interrupt after audit redaction")
 	}
 	runMachineAddressTask(ctx, t, e, task)
+	// A batch that failed on its own never redacted anything, and the image
+	// below would survive without any rollback to prove.
+	if !interrupted {
+		t.Fatal("the batch failed before its redaction, so no rollback was tested")
+	}
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id=$1
 	 AND after->>'full_name'='Legacy Personal Name'`, contact); n != 1 {
 		t.Fatalf("rollback lost %d original images, want 1 still present", n)

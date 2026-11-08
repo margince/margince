@@ -127,7 +127,7 @@ func retireInferredEmploymentEdge(ctx context.Context, tx pgx.Tx, edge inferredE
 	if err != nil {
 		return false, fmt.Errorf("contacts: retiring an inferred employment: %w", err)
 	}
-	evidence := map[string]any{"data_task_run": runID, auditKeyReason: reason}
+	evidence := map[string]any{evidenceKeyDataTaskRun: runID, auditKeyReason: reason}
 	if err := emitRelationshipChangeWithEvidence(ctx, tx, "archive", nil, archived, evidence); err != nil {
 		return false, fmt.Errorf("contacts: recording a retired employment: %w", err)
 	}

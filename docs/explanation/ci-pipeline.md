@@ -181,8 +181,7 @@ What follows from this:
   prose run, and the sharded integration fleet does not. `docs/**` is in `backend`, and not in
   `backend_db`, for that reason.
   - `make ci-doc-parity` holds the table above to the filters in `ci.yml`, and it runs in
-    `deterministic-gates`. So an edit to this file alone still runs the gate that can tell it has gone
-    stale.
+    `deterministic-gates`. So an edit to this file alone still runs the gate that can tell it is stale.
   - A prose PR that touches nothing under `docs/` (the root `README.md`, say) still matches `backend`,
     because the root Markdown files are in that scope. With the queue on, the prose entry is also gated
     against the full tree it merges into.
@@ -208,13 +207,10 @@ What follows from this:
     boot no Postgres shard. They still match `backend` (through `.github/**`) and `deps` (through
     `.github/workflows/**`). So the Go gates and the license gate run on them.
   - Neither workflow proves itself on a schedule, since both only run by hand. The next user to start
-    one finds a change that made it fail. So a PR that touches either is worth starting from its own branch
-    before merging.
+    one finds a change that made it fail. So start a PR that touches either from its branch before merging.
 - A **PR into `develop`** skips `integration`, `uat`, `live-boot`, `images` and `sonarcloud`, plus the
-  test-input census. The
-  `full_lane` output of `changes` is false only there. The `develop` into `main` pull request runs
-  them under the usual path filters:
-  [land-through-develop.md](../how-to/land-through-develop.md).
+  test-input census. The `full_lane` output of `changes` is false only there. The `develop` into `main`
+  pull request runs them under the usual path filters: [land-through-develop.md](../how-to/land-through-develop.md).
 - **A draft PR runs nothing** until marked ready (`draft == false` guards every job). That is because the
   many agents push many commits while the work is not done.
 - `craft-residue` and `secret-scan` are the exceptions: both run on **every** change that is not a
@@ -414,7 +410,7 @@ not for the outside actions it calls. Those would come in with nobody reading th
 
 ### The lint caches are saved on `main`, and the golangci one on `develop` too
 
-Two smaller caches follow the same rule: `ci.yml` loads them and never saves them. An entry that a PR
+Three smaller caches follow the same rule: `ci.yml` loads them and never saves them. An entry that a PR
 saves can be read by that PR alone. It still counts against the 10 GB cache quota of the repository,
 and there it pushes out the `main` entries that every PR loads.
 
@@ -422,6 +418,7 @@ and there it pushes out the `main` entries that every PR loads.
 |---|---|---|
 | Gate binaries, `~/go/bin` | [`gate-binaries`](../../.github/actions/gate-binaries/action.yml): the `make -n tools` recipe with its pins filled in, plus `go env GOVERSION` | `cache-warm.yml`, `main-health.yml` and `scheduled.yml`, on a miss on `main` |
 | golangci analysis, `~/.cache/golangci-lint` | [`golangci-cache-key`](../../.github/actions/golangci-cache-key/action.yml): `go.mod`, `go.sum`, both lint configs, then the commit | `cache-warm.yml` job `plain`, and [`lint-cache.yml`](../../.github/workflows/lint-cache.yml) after each push to `main` or `develop` |
+| Type check and compiler lint, under `frontend/node_modules` | [`frontend-cache-key`](../../.github/actions/frontend-cache-key/action.yml): `pnpm-lock.yaml`, `frontend/eslint.config.js`, then the commit | `cache-warm.yml` job `frontend`; `fe-quality` and `fe-bundle` load it |
 
 - **The gate binaries key reads the recipe.** An edit elsewhere in `backend/Makefile` keeps the
   key, and a new tool or pin in `make tools` changes it.
@@ -435,6 +432,8 @@ and there it pushes out the `main` entries that every PR loads.
   Lint keeps the result of each package whose inputs did not change; the job then deletes older entries.
 - **A new dependency or lint config lints cold.** The key prefix of such a PR matches no `main`
   entry until `cache-warm` runs after the merge.
+- **An old frontend entry is never wrong.** tsc checks the hash of each input against what it stored.
+  The compiler lint checks the hash of each file and its own version, so the lockfile is in the key.
 
 ### Test results replay only on a stable mtime
 
@@ -502,7 +501,8 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md).
   output of `gen-composition`, which nothing else makes.
 - **`fe-unit` uploads a blob report, not an lcov.** One part measures only the part of the tree its
   tests loaded, until the four are added up. Four is where the measure stops paying off; the comment
-  above the job holds the math.
+  above the job holds the math. The parts are cut by expected cost, not by a hash of the path. A few
+  files type-check the whole tree for minutes each, so an even file count does not give even times.
 - **The SPA jobs run at the same time**, because they share no state. One after the other, the lane
   needed about `340s`, of which vitest alone needed about `207s`.
 - **`live-boot`** exists because the integration shards never boot the api or run the seed script.
