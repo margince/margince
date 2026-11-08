@@ -46,7 +46,7 @@ const editTimezone = (page: Page) =>
 // navigated by the old spelling would be asserting the guard against an address
 // the app rewrites out from under it.
 const typeAndCloseDialog = async (page: Page, zone: string) => {
-  await page.goto("/#/settings/company");
+  await page.goto("/#/settings/company/regional");
   await editTimezone(page).click();
   await timezone(page).fill(zone);
   await page.keyboard.press("Escape");
