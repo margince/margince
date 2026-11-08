@@ -207,6 +207,8 @@ func TestABouncedNoticeDeletesTheLeadAndLeavesARecordNamingNobody(t *testing.T) 
 		"proposal details": `SELECT count(*) FROM approval
 			WHERE (proposed_change::text || summary || coalesce(evidence::text, '')) ILIKE '%anna%'`,
 		"site read entry":            `SELECT count(*) FROM site_read WHERE contacts::text ILIKE '%anna%'`,
+		"proposal history":           approvalHistoryNamingAnna,
+		"proposal events":            approvalEventsNamingAnna,
 		"notice row naming the lead": `SELECT count(*) FROM lead_privacy_notice n WHERE row_to_json(n)::text ~* 'anna|muster|acme'`,
 	} {
 		if n := e.WsCount(t, query); n != 0 {
@@ -238,7 +240,21 @@ func TestAWebsiteLeadWithoutAPublishedAddressIsNeverKept(t *testing.T) {
 	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE id = $1 AND proposed_change = '{}'::jsonb`, id); n != 1 {
 		t.Fatal("the proposal still carries the contact's details after they could not be told")
 	}
+	for what, query := range map[string]string{"proposal history": approvalHistoryNamingAnna, "proposal events": approvalEventsNamingAnna} {
+		if n := e.WsCount(t, query); n != 0 {
+			t.Errorf("%d %s rows still name the contact who could not be told, want 0", n, what)
+		}
+	}
 }
+
+// The proposal's history and events carry the name it was staged under, so an
+// emptied proposal still names the contact until both are redacted.
+const (
+	approvalHistoryNamingAnna = `SELECT count(*) FROM audit_log WHERE entity_type = 'approval'
+		AND concat(before::text, after::text, evidence::text) ILIKE '%anna%'`
+	approvalEventsNamingAnna = `SELECT count(*) FROM event_outbox
+		WHERE envelope->'entity'->>'type' = 'approval' AND envelope::text ILIKE '%anna%'`
+)
 
 func TestANoticeTheEngineRefusesKeepsNoLead(t *testing.T) {
 	l := setupNoticeLane(t)

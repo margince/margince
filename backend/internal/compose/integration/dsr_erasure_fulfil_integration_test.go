@@ -144,6 +144,30 @@ func TestFulfillErasureHTTPIsIdempotentAcrossTwoFulfilments(t *testing.T) {
 	}
 }
 
+// A dispute opened by the fulfilment itself holds the request's history as
+// evidence, as one opened before it does. Mutation: read only the dispute the
+// request held before the update, and the creation image is redacted.
+func TestAnErasureThatOpensADisputeKeepsTheRequestHistory(t *testing.T) {
+	e := Setup(t)
+	contactID := e.SeedContact(t, "Disputed Erasure Subject", nil)
+	h, _, id := setupErasureDSR(t, e, contactID.String())
+
+	w := fulfilErasureDSR(t, e, h, id, `{"status":"fulfilled","identity_check":"in_person","dispute_open":true}`)
+	if w.Code != http.StatusOK {
+		t.Fatalf("fulfilling while opening a dispute must succeed, got %d: %s", w.Code, w.Body)
+	}
+	var kept bool
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(e.Admin(), `SELECT after IS NOT NULL FROM audit_log
+		 WHERE entity_type='data_subject_request' AND entity_id=$1 AND action='create'`, id).Scan(&kept)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if !kept {
+		t.Fatal("the fulfilment opened a dispute and still redacted the request's history")
+	}
+}
+
 func erasureAnswerOf(t *testing.T, e *Env, store *consent.Store, id ids.UUID) string {
 	t.Helper()
 	read, err := store.GetDSR(e.Admin(), id)
