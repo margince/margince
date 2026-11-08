@@ -53683,6 +53683,10 @@ components:
         undo: {$ref: '#/components/schemas/MagicUndo'}
     MagicFieldChange:
       type: object
+      description: |-
+        One field a change moved. Only fields a reader can understand are listed: a
+        field of the record's update request, a custom field, or a stored column the
+        server declares as readable. Internal columns are never listed.
       required: [field]
       properties:
         field:
@@ -53692,6 +53696,27 @@ components:
           description: The value before the change; absent when the field was empty.
         after:
           description: The value after the change; absent when the change cleared it.
+        type:
+          type: string
+          enum: [money, date, stage, member, enum, text, number, boolean, reference]
+          description: >-
+            How to read `before` and `after`. `money` is an integer in minor units of `currency`. `stage` and `member` are ids named by `before_label` and `after_label`. `enum` is a code of the field's own value set. `reference` is an id of another record, never printed. Absent for a custom field or a structured value; such a value is not printable as text.
+        currency:
+          type: string
+          description: >-
+            The ISO 4217 code a `money` value is in. Absent when the server cannot tell which currency the record held at the change; a client then shows no amount.
+        precision:
+          type: string
+          enum: [day, instant]
+          description: For a `date`, whether the value is a calendar day or an instant.
+        before_label:
+          type: string
+          description: >-
+            The name of the stage or member `before` names, where the reader may read it. Absent rather than guessed.
+        after_label:
+          type: string
+          description: >-
+            The name of the stage or member `after` names, where the reader may read it. Absent rather than guessed.
     MagicEntityRef:
       type: object
       description: The record this line is about, where it names one.

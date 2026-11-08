@@ -57358,6 +57358,15 @@ export interface components {
             changes: components["schemas"]["MagicFieldChange"][];
             undo: components["schemas"]["MagicUndo"];
         };
+        /**
+         * @description One field a change moved. Only fields a reader can understand are listed: a
+         *     field of the record's update request, a custom field, or a stored column the
+         *     server declares as readable. Internal columns are never listed.
+         *
+         *     `before` and `after` keep the stored value (minor units, ids, enum codes).
+         *     The optional fields beside them say how to read it. A client that does not
+         *     know `type` must not print a raw value.
+         */
         MagicFieldChange: {
             /** @description The field's key as the record stores it (`industry`, `legal_name`). */
             field: string;
@@ -57365,6 +57374,22 @@ export interface components {
             before?: unknown;
             /** @description The value after the change; absent when the change cleared it. */
             after?: unknown;
+            /**
+             * @description How to read `before` and `after`. `money` is an integer in minor units of `currency`. `stage` and `member` are ids named by `before_label` and `after_label`. `enum` is a code of the field's own value set. `reference` is an id of another record, never printed. Absent for a custom field or a structured value; such a value is not printable as text.
+             * @enum {string}
+             */
+            type?: "money" | "date" | "stage" | "member" | "enum" | "text" | "number" | "boolean" | "reference";
+            /** @description The ISO 4217 code a `money` value is in. Absent when the server cannot tell which currency the record held at the change; a client then shows no amount. */
+            currency?: string;
+            /**
+             * @description For a `date`, whether the value is a calendar day or an instant.
+             * @enum {string}
+             */
+            precision?: "day" | "instant";
+            /** @description The name of the stage or member `before` names, where the reader may read it. Absent rather than guessed. */
+            before_label?: string;
+            /** @description The name of the stage or member `after` names, where the reader may read it. Absent rather than guessed. */
+            after_label?: string;
         };
         /** @description The record this line is about, where it names one. */
         MagicEntityRef: {

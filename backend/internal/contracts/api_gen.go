@@ -16018,6 +16018,63 @@ func (e MagicActorType) Valid() bool {
 	}
 }
 
+// Defines values for MagicFieldChangePrecision.
+const (
+	MagicFieldChangePrecisionDay     MagicFieldChangePrecision = "day"
+	MagicFieldChangePrecisionInstant MagicFieldChangePrecision = "instant"
+)
+
+// Valid indicates whether the value is a known member of the MagicFieldChangePrecision enum.
+func (e MagicFieldChangePrecision) Valid() bool {
+	switch e {
+	case MagicFieldChangePrecisionDay:
+		return true
+	case MagicFieldChangePrecisionInstant:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MagicFieldChangeType.
+const (
+	MagicFieldChangeTypeBoolean   MagicFieldChangeType = "boolean"
+	MagicFieldChangeTypeDate      MagicFieldChangeType = "date"
+	MagicFieldChangeTypeEnum      MagicFieldChangeType = "enum"
+	MagicFieldChangeTypeMember    MagicFieldChangeType = "member"
+	MagicFieldChangeTypeMoney     MagicFieldChangeType = "money"
+	MagicFieldChangeTypeNumber    MagicFieldChangeType = "number"
+	MagicFieldChangeTypeReference MagicFieldChangeType = "reference"
+	MagicFieldChangeTypeStage     MagicFieldChangeType = "stage"
+	MagicFieldChangeTypeText      MagicFieldChangeType = "text"
+)
+
+// Valid indicates whether the value is a known member of the MagicFieldChangeType enum.
+func (e MagicFieldChangeType) Valid() bool {
+	switch e {
+	case MagicFieldChangeTypeBoolean:
+		return true
+	case MagicFieldChangeTypeDate:
+		return true
+	case MagicFieldChangeTypeEnum:
+		return true
+	case MagicFieldChangeTypeMember:
+		return true
+	case MagicFieldChangeTypeMoney:
+		return true
+	case MagicFieldChangeTypeNumber:
+		return true
+	case MagicFieldChangeTypeReference:
+		return true
+	case MagicFieldChangeTypeStage:
+		return true
+	case MagicFieldChangeTypeText:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MagicLineLane.
 const (
 	MagicLineLaneMagicLaneCouldNotComplete MagicLineLane = "could_not_complete"
@@ -52339,17 +52396,44 @@ type MagicEntityRef struct {
 	Type  string  `json:"type"`
 }
 
-// MagicFieldChange defines model for MagicFieldChange.
+// MagicFieldChange One field a change moved. Only fields a reader can understand are listed: a
+// field of the record's update request, a custom field, or a stored column the
+// server declares as readable. Internal columns are never listed.
+//
+// `before` and `after` keep the stored value (minor units, ids, enum codes).
+// The optional fields beside them say how to read it. A client that does not
+// know `type` must not print a raw value.
 type MagicFieldChange struct {
 	// After The value after the change; absent when the change cleared it.
 	After interface{} `json:"after,omitempty"`
 
+	// AfterLabel The name of the stage or member `after` names, where the reader may read it. Absent rather than guessed.
+	AfterLabel *string `json:"after_label,omitempty"`
+
 	// Before The value before the change; absent when the field was empty.
 	Before interface{} `json:"before,omitempty"`
 
+	// BeforeLabel The name of the stage or member `before` names, where the reader may read it. Absent rather than guessed.
+	BeforeLabel *string `json:"before_label,omitempty"`
+
+	// Currency The ISO 4217 code a `money` value is in. Absent when the server cannot tell which currency the record held at the change; a client then shows no amount.
+	Currency *string `json:"currency,omitempty"`
+
 	// Field The field's key as the record stores it (`industry`, `legal_name`).
 	Field string `json:"field"`
+
+	// Precision For a `date`, whether the value is a calendar day or an instant.
+	Precision *MagicFieldChangePrecision `json:"precision,omitempty"`
+
+	// Type How to read `before` and `after`. `money` is an integer in minor units of `currency`. `stage` and `member` are ids named by `before_label` and `after_label`. `enum` is a code of the field's own value set. `reference` is an id of another record, never printed. Absent for a custom field or a structured value; such a value is not printable as text.
+	Type *MagicFieldChangeType `json:"type,omitempty"`
 }
+
+// MagicFieldChangePrecision For a `date`, whether the value is a calendar day or an instant.
+type MagicFieldChangePrecision string
+
+// MagicFieldChangeType How to read `before` and `after`. `money` is an integer in minor units of `currency`. `stage` and `member` are ids named by `before_label` and `after_label`. `enum` is a code of the field's own value set. `reference` is an id of another record, never printed. Absent for a custom field or a structured value; such a value is not printable as text.
+type MagicFieldChangeType string
 
 // MagicLine One thing the machinery did, needs, could not finish, or is watching.
 //
