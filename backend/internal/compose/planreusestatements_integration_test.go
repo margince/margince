@@ -38,8 +38,9 @@ func (s *sentStatements) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data 
 func (*sentStatements) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {}
 
 // predicateSpelling strips what a partial-index predicate says besides its
-// columns: literals, casts, null tests and calls.
-var predicateSpelling = regexp.MustCompile(`'(?:[^']|'')*'|::\w+(?:\[\])?|\b\w+\s+IS\s+(?:NOT\s+)?NULL\b|\b\w+\s*\(`)
+// columns: literals, casts, null tests (of a column or a call) and calls. A
+// bound strict comparison proves the null test, so the generic plan keeps it.
+var predicateSpelling = regexp.MustCompile(`'(?:[^']|'')*'|::\w+(?:\[\])?|\b\w+\s*\([^()]*\)\s+IS\s+(?:NOT\s+)?NULL\b|\b\w+\s+IS\s+(?:NOT\s+)?NULL\b|\b\w+\s*\(`)
 
 // predicateWords are the SQL words left in a predicate once predicateSpelling ran.
 var predicateWords = map[string]bool{
@@ -173,7 +174,7 @@ func capturedPartyPlanStatements(t *testing.T, e *integration.Env, pool *pgxpool
 		if strings.HasPrefix(query, "SELECT set_config('plan_cache_mode', $1") {
 			generic = false
 		}
-		if strings.Contains(query, "SELECT a.occurred_at, coalesce(a.subject,'')") {
+		if strings.Contains(query, "SELECT a.id, a.occurred_at, coalesce(a.subject,'')") {
 			if !generic {
 				t.Fatal("party proof did not run under generic plans")
 			}
