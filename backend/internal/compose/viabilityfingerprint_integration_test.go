@@ -64,6 +64,44 @@ func TestEveryInputTheAssessmentReadsMovesTheFingerprint(t *testing.T) {
 		}
 	})
 
+	t.Run("an edit to an address that is not the newest", func(t *testing.T) {
+		v := setupViability(t)
+		contact := v.contactOnTheDeal(t, v.supported)
+		older, newer := ids.NewV7(), ids.NewV7()
+		for _, row := range []struct {
+			id      ids.UUID
+			address string
+		}{{older, "first@customer.example"}, {newer, "second@customer.example"}} {
+			v.WsExec(t, `INSERT INTO contact_email (id, contact_id, email, email_type, is_primary, source, captured_by)
+				 VALUES ($1, $2, $3, 'work', false, 'manual', 'human:x')`, row.id, contact, row.address)
+		}
+		// The newer row is edited past the older one, so the edit below changes
+		// neither the count of rows nor the highest version.
+		for range 3 {
+			v.WsExec(t, `UPDATE contact_email SET email_type = email_type WHERE id = $1`, newer)
+		}
+		before := v.fingerprintOf(t, v.supported)
+		v.WsExec(t, `UPDATE contact_email SET email = 'first.moved@customer.example' WHERE id = $1`, older)
+		if after := v.fingerprintOf(t, v.supported); after == before {
+			t.Error("an edit to an address below the highest version left the fingerprint where it was")
+		}
+	})
+
+	t.Run("a party known by its address alone", func(t *testing.T) {
+		v := setupViability(t)
+		activity := v.WsScalar(t, `SELECT fl.activity_id::text FROM activity_link fl
+			 JOIN activity fa ON fa.id = fl.activity_id
+			WHERE fl.deal_id = $1 AND fa.archived_at IS NULL LIMIT 1`, v.supported)
+		party := ids.NewV7()
+		v.WsExec(t, `INSERT INTO activity_participant (id, activity_id, address, role)
+			 VALUES ($1, $2, 'one@outside.example', 'cc')`, party, activity)
+		before := v.fingerprintOf(t, v.supported)
+		v.WsExec(t, `UPDATE activity_participant SET address = 'another@outside.example' WHERE id = $1`, party)
+		if after := v.fingerprintOf(t, v.supported); after == before {
+			t.Error("swapping one address-only party for another left the fingerprint where it was")
+		}
+	})
+
 	t.Run("a guest's response", func(t *testing.T) {
 		v := setupViability(t)
 		contact := v.contactOnTheDeal(t, v.supported)
