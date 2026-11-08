@@ -6849,7 +6849,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.readings.decisionsBlocking_other": "{count} blockieren Kundenarbeit",
   "brief.snooze.done": "Zurückgestellt bis {at}",
   "brief.snooze.undo": "Rückgängig",
-  "brief.readings.meetings": "Anstehende Termine",
+  "brief.readings.meetings": "Termine heute",
   "brief.readings.meetingsBasis": "Heute noch im Kalender",
   "brief.readings.needsPrep_one": "1 braucht Vorbereitung",
   "brief.readings.needsPrep_other": "{count} brauchen Vorbereitung",

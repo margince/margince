@@ -6852,7 +6852,7 @@ export const en = {
   // company's rather than this reader's, whose deals they are.
   "brief.snooze.done": "Snoozed until {at}",
   "brief.snooze.undo": "Undo",
-  "brief.readings.meetings": "Upcoming meetings",
+  "brief.readings.meetings": "Meetings today",
   "brief.readings.meetingsBasis": "Remaining on today’s calendar",
   "brief.readings.needsPrep_one": "1 needs prep",
   "brief.readings.needsPrep_other": "{count} need prep",
@@ -6864,8 +6864,8 @@ export const en = {
   "brief.readings.calendarUnreadable": "Not syncing",
   "brief.readings.calendarUnreadableWhy":
     "Reconnect your calendar to count meetings.",
-  "brief.readings.nextMeeting": "Next: {date} · {subject}",
-  "brief.readings.nextMeetingUntitled": "Next: {date}",
+  "brief.readings.nextMeeting": "Next meeting: {date} · {subject}",
+  "brief.readings.nextMeetingUntitled": "Next meeting: {date}",
   "brief.readings.leads": "Prospecting",
   "brief.readings.leadsBasis": "Planned tasks for prospects",
   "brief.readings.leadsDue": "Next due {value}",
