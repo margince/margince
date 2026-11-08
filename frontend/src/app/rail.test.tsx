@@ -780,7 +780,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
         section={fixtureSection("deep")}
       />,
     );
-    expect(levelLabels()).toEqual(["Fields"]);
+    expect(levelLabels()).toEqual(["Records and fields"]);
     expect(document.querySelectorAll('[aria-current="page"]')).toHaveLength(0);
     expect(navGroupNames()).toEqual(["Privacy and retention"]);
   });
@@ -793,9 +793,11 @@ describe("Rail levels (a section's entries as the second level)", () => {
       />,
     );
     // The child level: only the entry's children, addressed under it.
-    expect(levelLabels()).toEqual(["Fields"]);
+    expect(levelLabels()).toEqual(["Records and fields"]);
     expect(
-      screen.getByRole("link", { name: "Fields" }).getAttribute("href"),
+      screen
+        .getByRole("link", { name: "Records and fields" })
+        .getAttribute("href"),
     ).toBe("/#/settings/deep/deeper");
     expect(navGroupNames()).toEqual(["Privacy and retention"]);
   });

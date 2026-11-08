@@ -114,7 +114,7 @@ function story(
 }
 
 const meta: Meta<typeof JurisdictionReading> = {
-  title: "Settings/Governance/Jurisdiction/Page",
+  title: "Settings/Compliance/Jurisdiction/Page",
   component: JurisdictionReading,
 };
 export default meta;

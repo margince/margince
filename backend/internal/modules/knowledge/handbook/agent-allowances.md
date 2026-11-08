@@ -77,7 +77,7 @@ next reset, so no agent starts over early; the card says when it starts.
 
 ## Where to see usage
 
-In **Settings → AI access**, each row under **Your connections** and **Passports**
+In **Settings → AI assistants**, each row under **Your connections** and **Passports**
 shows the allowance closest to running out. Open a row to see all three, and,
 for a stopped passport, which limit stopped it. Revoked passports are hidden;
 the button under the list shows them.

@@ -5,7 +5,7 @@ import { translate } from "../../i18n";
 import { parseHash, routeHash } from "../../lib/router";
 import { SETTINGS_PAGES, type SettingsPageId } from "../../lib/settingscatalog";
 import { settingsHref, settingsRouteTarget } from "../../lib/settingsrouting";
-import { meFixture } from "../../testing/mefixture";
+import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   jsonResponse,
   readOn,
@@ -179,7 +179,7 @@ describe("the nav rows a reader actually clicks", () => {
     renderNav();
     // The granted rows arrive with the /me answer, so waiting on one of them is
     // waiting for the level to be complete.
-    await screen.findByRole("link", { name: "Fields" });
+    await screen.findByRole("link", { name: "Records and fields" });
     const rows = screen
       .getAllByRole("link")
       .map((link) => ({
@@ -210,7 +210,12 @@ describe("the nav rows a reader actually clicks", () => {
 // happens on a page the reader can actually see — a fallback rewrites to where
 // they LANDED, not to where they asked — so a fixture that cannot open `company`
 // would make both cases below about the fallback instead of about the rewrite.
-function companyReaderBackend() {
+function companyReaderBackend(
+  allow: GrantSpec = {
+    ...readOn("installation_settings"),
+    installation_settings: ["read", "update"],
+  },
+) {
   return vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input instanceof Request ? input.url : input);
     if (url.endsWith("/v1/me")) {
@@ -220,10 +225,7 @@ function companyReaderBackend() {
           // The UPDATE, which is what Company profile asks: the read is held by
           // every seat and no longer opens the page. These cases are about the
           // address rewrite, so they hold the grant that reaches the page.
-          allow: {
-            ...readOn("installation_settings"),
-            installation_settings: ["read", "update"],
-          },
+          allow,
         }),
       );
     }
@@ -247,7 +249,7 @@ describe("a legacy address is answered and rewritten in place", () => {
     // They get the page they asked for — the rewrite is not a detour through
     // somewhere else.
     expect(
-      await screen.findByRole("heading", { name: "Installation" }),
+      await screen.findByRole("button", { name: "Profile", pressed: true }),
     ).toBeTruthy();
     await waitFor(() => expect(globalThis.location.hash).toBe(CURRENT_ADDRESS));
     // REPLACED, not pushed: a pushed redirect leaves the address that redirects
@@ -267,9 +269,41 @@ describe("a legacy address is answered and rewritten in place", () => {
     render(<SettingsScreen route={parseHash(CURRENT_ADDRESS)} />);
 
     expect(
-      await screen.findByRole("heading", { name: "Installation" }),
+      await screen.findByRole("button", { name: "Profile", pressed: true }),
     ).toBeTruthy();
     expect(globalThis.location.hash).toBe(CURRENT_ADDRESS);
     expect(globalThis.history.length).toBe(entriesBefore);
+  });
+
+  it("lands a page that became a tab on that tab", async () => {
+    vi.stubGlobal(
+      "fetch",
+      companyReaderBackend({ ...readOn("custom_field"), pipeline: ["read"] }),
+    );
+    globalThis.location.hash = "#/settings/lossreasons";
+
+    render(<SettingsScreen route={parseHash("#/settings/lossreasons")} />);
+
+    expect(
+      await screen.findByRole("button", {
+        name: "Loss reasons",
+        pressed: true,
+      }),
+    ).toBeTruthy();
+    await waitFor(() =>
+      expect(globalThis.location.hash).toBe("#/settings/deals/loss"),
+    );
+  });
+
+  it("keeps the query of the old address, so a link to one pipeline still opens it", async () => {
+    vi.stubGlobal("fetch", companyReaderBackend({ pipeline: ["read"] }));
+    const legacy = "#/settings/pipelines?pipeline=p-1";
+    globalThis.location.hash = legacy;
+
+    render(<SettingsScreen route={parseHash(legacy)} />);
+
+    await waitFor(() =>
+      expect(globalThis.location.hash).toBe("#/settings/deals?pipeline=p-1"),
+    );
   });
 });

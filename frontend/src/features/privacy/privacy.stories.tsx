@@ -165,7 +165,7 @@ function findRow(subjectRef: string): Promise<HTMLElement> {
 }
 
 const meta = {
-  title: "Settings/Governance/Privacy and retention/Subject requests",
+  title: "Settings/Compliance/Privacy and retention/Subject requests",
   component: RequestsPanel,
 } satisfies Meta<typeof RequestsPanel>;
 export default meta;

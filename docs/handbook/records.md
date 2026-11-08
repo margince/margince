@@ -340,7 +340,7 @@ Also called: edit conflict, simultaneous editing, someone overwrote my change.
 Custom fields in Margince are fields your company adds to the ones every Margince has. The types are **text**, **number**, **date**, **currency**, **picklist**, **multiple choice** and **yes/no**, on contacts, companies, deals, leads, projects, contracts and activities. A field of many choices holds many answers at once, and a filter finds the record by any one of them.
 
 ### How do I add a custom field?
-To add a custom field in Margince, open Settings → **Fields**, pick the **Object**, and choose **New field**.
+To add a custom field in Margince, open Settings → **Records and fields**, pick the **Object**, and choose **New field**.
 1. Choose the **Object**: Deal, Company, Contact, Lead, Project, Contract or Activity.
 2. Choose **New field**, enter a **Label** and pick a **Type**. A picklist needs its choices, and a currency field needs its currency. Untick **In create forms** to keep the field out of the dialog that creates a record.
 3. Confirm with **Add field**.
@@ -366,7 +366,7 @@ To tag a contact, company or deal in Margince, open the record, find its **Tags*
 
 To see who put a tag on a record and when, point at the tag or move to it with the keyboard.
 
-Anyone can put a tag on a record, but only Admin and Ops users can create, rename or retire one, in **Settings → Tags**. If no tag matches, an Admin or Ops user gets **Create tag {name}**, also in a bulk change. It creates the tag and adds it, or makes it the tag of the bulk change. If the tag is created but not added, the picker says so, and you can pick it in the list again. Others are told who can add a tag, and with lists on, a seat that may create lists also gets **Add to a Shortlist instead**.
+Anyone can put a tag on a record; only Admin and Ops users create, rename or retire one, in **Settings → Records and fields → Tags**. If no tag matches, an Admin or Ops user gets **Create tag {name}**, also in a bulk change. It creates the tag and adds it, or makes it the tag of the bulk change. If the tag is created but not added, the picker says so, and you can pick it in the list again. Others are told who can add a tag, and with lists on, a seat that may create lists also gets **Add to a Shortlist instead**.
 Also called: label, add a label, categorise a record.
 
 Renaming a tag renames it everywhere, because every record shares the one tag.
@@ -383,7 +383,7 @@ Renaming a tag renames it everywhere, because every record shares the one tag.
 ### Can Margince suggest a tag from mail and meeting notes?
 Yes, for tags an admin marks as suggested. Margince never adds such a tag by itself: you accept or dismiss each suggestion.
 
-1. In **Settings → Tags**, choose **Edit** on the tag.
+1. In **Settings → Records and fields → Tags**, choose **Edit** on the tag.
 2. Under **What shows interest**, describe it in plain words, for example "asks about pricing or a demo of Product X".
 3. Tick "Suggest this tag when mail, meetings, notes or calls show this interest" and save.
 

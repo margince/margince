@@ -7,7 +7,7 @@ a boot error, and so is a value its setting does not take.
 
 A limit an admin changes while the product runs is a setting, not configuration. The daily cap on
 automatic web page reads, the limits per read and how often Margince reads a mailbox are on
-Settings → Capture rules. How long a connector access token lasts is on Settings → MCP. How often
+Settings → Mail capture. How long a connector access token lasts is on Settings → MCP. How often
 each scheduled run starts, how early Margince renews a mail subscription and how fast one mailbox
 sends are on Settings → System health. Each applies on its next use with no restart; a running
 worker checks the schedules again every minute.
@@ -186,7 +186,7 @@ the same transaction. `PATCH /installation/settings` refuses a different `name`.
 
 **Legal review.** Legal review on deals is on by default, as the setting `deals.legal_review_enabled`.
 `seeds.legal_review: false` starts a new installation with it off. An admin changes it later under
-Settings → Pipelines, or through `PUT /v1/legal-reviews/settings`. Off hides the request, the reviewer
+Settings → Deals, or through `PUT /v1/legal-reviews/settings`. Off hides the request, the reviewer
 queue and the `legal_reviewed` criterion kind, and a stage stops waiting for legal. Reviews already
 recorded are kept.
 
@@ -457,8 +457,8 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
-| `mcp.client_registration.dynamic` | `MARGINCE_MCP_CLIENT_REGISTRATION_DYNAMIC` | — | `bool` | `true` | api | Let AI tools register their own OAuth client at `/oauth/register` (DCR); false keeps it off whatever the admin's switch in Settings > MCP says. |
-| `mcp.client_registration.metadata_document` | `MARGINCE_MCP_CLIENT_REGISTRATION_METADATA_DOCUMENT` | — | `bool` | `true` | api | Accept a client ID that is the URL of the tool's published metadata document (CIMD); false keeps it off whatever the admin's switch in Settings > MCP says. |
+| `mcp.client_registration.dynamic` | `MARGINCE_MCP_CLIENT_REGISTRATION_DYNAMIC` | — | `bool` | `true` | api | Let AI tools register their own OAuth client at `/oauth/register` (DCR); false keeps it off whatever the admin's switch in Settings > AI tool access says. |
+| `mcp.client_registration.metadata_document` | `MARGINCE_MCP_CLIENT_REGISTRATION_METADATA_DOCUMENT` | — | `bool` | `true` | api | Accept a client ID that is the URL of the tool's published metadata document (CIMD); false keeps it off whatever the admin's switch in Settings > AI tool access says. |
 | `mcp.connector_enabled` | `MARGINCE_MCP_CONNECTOR_ENABLED` | — | `bool` | `false` | api | Serve `/mcp` and the OAuth authorization server to outside agent clients; needs `--public-base-url`. |
 
 ### `operations`

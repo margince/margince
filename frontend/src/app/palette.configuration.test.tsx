@@ -113,12 +113,12 @@ describe("the palette, by a setting's name", () => {
 
   it("neither offers nor reads the settings for a reader without the grant", async () => {
     const user = userEvent.setup();
-    // The witness: Capture rules proves /me has answered before the absence
+    // The witness: Mail capture proves /me has answered before the absence
     // below is read.
     const fetch = mount({ capture_settings: ["read"] });
     const box = screen.getByRole("searchbox");
     await user.type(box, "capture");
-    await screen.findByRole("button", { name: /^Capture rules/ });
+    await screen.findByRole("button", { name: /^Mail capture/ });
     await user.clear(box);
     await user.type(box, "MARGINCE_HTTP_PORT");
 

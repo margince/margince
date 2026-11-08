@@ -57,7 +57,12 @@ export function noticeAction(
   }
   if (target.type === "legal_entity" || target.type === "signature_template") {
     return {
-      href: routeHash(settingsHref("company")),
+      href: routeHash(
+        settingsHref(
+          "company",
+          target.type === "legal_entity" ? "entities" : "email",
+        ),
+      ),
       label: "signatureTemplate.title",
     };
   }

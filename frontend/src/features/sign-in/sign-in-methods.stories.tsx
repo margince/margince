@@ -18,7 +18,7 @@ import { SignInMethodsCard } from "./sign-in-methods";
 // the DEPLOYMENT composed and what the admin chose of it.
 
 const meta: Meta<typeof SignInMethodsCard> = {
-  title: "Settings/Company/Sign-in and apps/Sign-in methods",
+  title: "Settings/Company/Sign-in and security/Sign-in methods",
   component: SignInMethodsCard,
   parameters: { layout: "padded" },
 };

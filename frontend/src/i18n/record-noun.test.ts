@@ -296,6 +296,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "co.aside.visibleOnlyOwner",
     "contact.card.committee_one",
     "contact.card.committee_other",
+    // The person who runs the server restores the backup.
+    "health.setup.recovery.todo",
   ],
   vi: [
     // These messages name actual readers and participants, not contact records.
@@ -729,7 +731,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "import.problem.unknown_owner",
     "auto.action.assignOwner",
     "cf.retire.lists",
-    "settings.page.recordroles.sub",
     "roles.scope.ownSub",
     "roles.scope.teamSub",
     "webhooks.event.deal.updated.when",
@@ -760,6 +761,9 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contact.aside.ownerGone",
     "lead.signal.setBy",
     "worklist.scope.unassignedHint",
+    // The person who runs the server restores the backup.
+    "health.setup.recovery.happened",
+    "health.setup.recovery.todo",
   ],
 };
 

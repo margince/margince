@@ -943,6 +943,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.movement.record_changed":
     "Tỷ lệ thay đổi theo kết quả đã ghi nhận",
   "installationSettings.selfCorrectingTitle": "Dự báo",
+  "installationSettings.forecastTitle": "Quy tắc dự báo",
   "installationSettings.selfCorrecting": "Cho dự báo tự điều chỉnh",
   "installationSettings.selfCorrectingHint":
     "Mỗi giai đoạn bắt đầu với tỷ lệ bạn đã nhập. Khi các giao dịch được ghi nhận từ một giai đoạn kết thúc, dự báo dịch tỷ lệ của giai đoạn đó về phía kết quả thực tế, coi tỷ lệ bạn nhập như 20 giao dịch. Các lần chuyển giai đoạn do nhập dữ liệu không bao giờ được tính.",
@@ -3552,7 +3553,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "company.reject": "Không phải công ty",
   "company.rejectConfirm":
-    "Thao tác này sẽ chuyển “{name}” vào kho lưu trữ và chặn tạo công ty từ {domain}, nên thư sau này từ tên miền đó sẽ không tạo lại công ty này. Quản trị viên có thể bỏ chặn tên miền trong Cài đặt, mục Quy tắc thu thập.",
+    "Thao tác này sẽ chuyển “{name}” vào kho lưu trữ và chặn tạo công ty từ {domain}, nên thư sau này từ tên miền đó sẽ không tạo lại công ty này. Quản trị viên có thể bỏ chặn tên miền trong Cài đặt, mục Thu thập thư.",
   "company.rejectReasonLabel": "Lý do đây không phải công ty",
   "company.rejectReasonHint":
     "Lý do đủ rõ để người xem lại các tên miền bị chặn có thể xử lý. Lệnh chặn vẫn có hiệu lực kể cả khi hồ sơ không còn.",
@@ -5291,7 +5292,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tags.createdNotApplied":
     "Đã tạo {name} nhưng chưa thêm vào bản ghi này: {reason} Chọn thẻ trong danh sách để thêm lại.",
   "tags.whoAdds":
-    "Cần thêm thẻ? Quản trị viên hoặc thành viên Vận hành có thể thêm trong Cài đặt → Thẻ.",
+    "Cần thêm thẻ? Quản trị viên hoặc thành viên Vận hành có thể thêm trong Cài đặt → Bản ghi và trường, phần Thẻ.",
   "tags.noMatch":
     "Không có thẻ nào tên như vậy. Quản trị viên hoặc thành viên Vận hành có thể thêm thẻ.",
   "tagResult.gone":
@@ -5973,9 +5974,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "acqSources.renameTitle": "Đổi tên nguồn",
   "acqSources.duplicate":
     "Đã có nguồn mang tên hoặc khóa này. Hãy chọn tên khác.",
-  "settings.page.reviewtemplates.sub":
-    "Câu hỏi nhân viên kinh doanh trả lời khi deal thắng hoặc thua.",
-  "settings.tab.reviewtemplates": "Đánh giá kết quả",
   "reviewTemplates.question": "Câu hỏi",
   "reviewTemplates.addQuestion": "Thêm câu hỏi",
   "reviewTemplates.edit": "Sửa câu hỏi",
@@ -6395,7 +6393,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "decision.versionSkew":
     "Hồ sơ này đã thay đổi sau khi xếp chờ duyệt. Xếp chờ duyệt lại trước khi quyết định.",
   "decision.fxRateMoved":
-    "Tỷ giá đã thay đổi sau khi đề xuất này được tạo, nên đề xuất không được áp dụng. Để có đề xuất mới, cập nhật tỷ giá từ nguồn trong Cài đặt, mục Hồ sơ công ty.",
+    "Tỷ giá đã thay đổi sau khi đề xuất này được tạo, nên đề xuất không được áp dụng. Để có đề xuất mới, cập nhật tỷ giá từ nguồn trong Cài đặt, mục Hồ sơ công ty, phần Tiền tệ.",
   "decision.reRead": "Tải lại",
   "decision.alreadyDecided": "Đã quyết định. Không còn gì phải làm.",
   "decision.expired": "Đã hết hạn",
@@ -8656,7 +8654,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Các khu vực thêm sau và công cụ do tiện ích mở rộng thêm vẫn tắt với nó.",
   "passportAreas.refusalTitle": "Agent được báo gì khi một khu vực bị tắt",
   "passportAreas.refusal":
-    "Passport này không được làm việc ở khu vực “{area}”. Hãy đề nghị bật khu vực đó cho passport này trong Cài đặt → Quyền truy cập AI, mục Passport của bạn hoặc Kết nối của bạn.",
+    "Passport này không được làm việc ở khu vực “{area}”. Hãy đề nghị bật khu vực đó cho passport này trong Cài đặt → Trợ lý AI, mục Passport của bạn hoặc Kết nối của bạn.",
   "passportAreas.cancel": "Hủy",
   "passportAreas.save": "Lưu khu vực",
   "passportAreas.saving": "Đang lưu khu vực…",
@@ -9143,7 +9141,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAccess.gemini.adminLine":
     "Quản trị viên Gemini Enterprise thêm Margince một lần cho cả công ty.",
   "aiAccess.gemini.admin1":
-    "Đề nghị quản trị viên Margince cấp Client ID và khóa bí mật. Trong Cài đặt, mục MCP, phần MCP client, họ chọn “Đăng ký ứng dụng”, trả lời rằng công cụ cần khóa bí mật và thêm URI chuyển hướng https://vertexaisearch.cloud.google.com/oauth-redirect.",
+    "Đề nghị quản trị viên Margince cấp Client ID và khóa bí mật. Trong Cài đặt, mục Quyền cho công cụ AI, phần MCP client, họ chọn “Đăng ký ứng dụng”, trả lời rằng công cụ cần khóa bí mật và thêm URI chuyển hướng https://vertexaisearch.cloud.google.com/oauth-redirect.",
   "aiAccess.gemini.admin2":
     "Trong Gemini Enterprise, mở “Manage team”, rồi “Connected apps”, và chọn “Add MCP Server”.",
   "aiAccess.gemini.admin3":
@@ -9232,9 +9230,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAccess.other.signIn":
     "OAuth trong trình duyệt. Hầu hết công cụ tự bắt đầu ở lần kết nối đầu tiên.",
   "aiAccess.other.apiKey":
-    "Công cụ không đăng nhập được? Tạo khóa API trong Cài đặt, mục Quyền truy cập AI, Dành cho nhà phát triển, rồi gửi nó trong header “Authorization: Bearer” kèm khóa phía sau.",
+    "Công cụ không đăng nhập được? Tạo khóa API trong Cài đặt, mục Trợ lý AI, Dành cho nhà phát triển, rồi gửi nó trong header “Authorization: Bearer” kèm khóa phía sau.",
   "aiAccess.other.notAllowed":
-    "Nếu khi đăng nhập có thông báo công cụ không được phép, quản trị viên chọn các công cụ được phép kết nối trong Cài đặt, mục MCP.",
+    "Nếu khi đăng nhập có thông báo công cụ không được phép, quản trị viên chọn các công cụ được phép kết nối trong Cài đặt, mục Quyền cho công cụ AI.",
   "setup.step.ai": "Kết nối công cụ AI của bạn",
   "setup.caption.ai":
     "Dùng Margince từ Claude, ChatGPT, Copilot hoặc trình soạn thảo của bạn.",
@@ -11273,7 +11271,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Mọi đồng nghiệp xem được liên hệ đều đọc được thư đã thu thập của liên hệ đó. Có thể giới hạn từng thư sau đó.",
   "mailSharing.danger":
     "Khi tắt chia sẻ email, CRM khó sử dụng. Email mới chỉ hiển thị với những người có trong từng email.",
-  "mailSharing.posture.where": "Thay đổi trong Quy tắc thu thập",
+  "mailSharing.posture.where": "Thay đổi trong Thu thập thư",
   "mailSharing.sharedPosture.label": "Cho phép hộp thư chia sẻ ngay khi nhận",
   "mailSharing.sharedPosture.help":
     "Cho phép đồng nghiệp chuyển hộp thư của chính mình sang chế độ chia sẻ, để cả nhóm đọc được email thu thập ngay khi đến, trước mọi bước phân loại. Mặc định tắt.",
@@ -11418,7 +11416,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "connectors.oauthRoleCannotCapture":
     "Vai trò của bạn không cho phép Margince thu thập thư của bạn, nên chưa có gì được kết nối. Liên hệ quản trị viên để đổi vai trò của bạn.",
   "connectors.oauthBadClient":
-    "Nhà cung cấp từ chối thông tin xác thực ứng dụng của bản cài đặt này. Quản trị viên cần kiểm tra client ID và khóa bí mật trong Cài đặt, mục Đăng nhập và ứng dụng; kết nối lại sẽ không khắc phục lỗi này.",
+    "Nhà cung cấp từ chối thông tin xác thực ứng dụng của bản cài đặt này. Quản trị viên cần kiểm tra client ID và khóa bí mật trong Cài đặt, mục Đăng nhập và bảo mật; kết nối lại sẽ không khắc phục lỗi này.",
   "connectors.dismissOutcome": "Bỏ qua",
   "connectors.oauthConnected": "Đã kết nối",
   "connectors.oauthNotConnected": "Chưa kết nối được gì",
@@ -12654,6 +12652,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "auto.create": "Tạo",
   "auto.createdPaused":
     "Đã tạo ở trạng thái tạm dừng. Không có gì chạy cho đến khi bật.",
+  "auto.createdPausedLibrary":
+    "Đã tạo ở trạng thái tạm dừng. Bật nó trong mục Tự động hóa của bạn.",
   "auto.delete": "Xóa",
   "auto.statusEnabled": "Đang bật",
   "auto.statusPaused": "Đã tạm dừng",
@@ -12922,9 +12922,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.page.notifications.sub":
     "Loại thông báo nào đến với bạn và theo cách nào, cùng bản tin sáng và tổng kết tuần qua email.",
   "settings.page.connections.sub":
-    "Các hộp thư và địa chỉ mà tài khoản này đọc.",
-  "settings.page.capture-activity.sub":
-    "Thu thập đã xử lý thư thế nào, và vì sao.",
+    "Hộp thư, lịch và tài khoản Margince đọc cho bạn, và Margince đã làm gì với chúng.",
   "settings.page.company.sub":
     "Thương hiệu, bối cảnh kinh doanh, cùng loại tiền và lịch mà mọi báo cáo dùng.",
   "settings.page.authentication.sub":
@@ -12938,22 +12936,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Số tài khoản đang dùng so với số tài khoản bản cài đặt này được cấp phép.",
   "settings.page.stageautomation.sub":
     "Thành tích của từng bước chuyển giai đoạn trước khi bước đó tự động chuyển deal.",
-  "settings.page.pipelines.sub":
-    "Các giai đoạn deal đi qua, áp dụng cho cả công ty.",
-  "settings.page.acquisition.sub": "Các kênh kinh doanh mà deal có thể quy về.",
-  "settings.page.lossreasons.sub":
-    "Vì sao deal bị thua, và ghi chú cũ được tính theo lý do nào.",
-  "settings.page.recordroles.sub":
-    "Những gì một đồng nghiệp hoặc nhóm lo trên một hồ sơ, ví dụ quản lý khách hàng. Vai trò không cấp quyền truy cập; quyền sửa đến từ người chịu trách nhiệm hồ sơ và việc chia sẻ.",
   "settings.page.leads.sub":
     "Nguồn lead, lý do loại lead và thời gian phản hồi đầu tiên.",
-  "settings.page.fields.sub":
-    "Trường tùy chỉnh mà công ty thêm vào ngoài các trường chuẩn.",
-  "settings.page.tags.sub":
-    "Thẻ dùng chung. Đổi tên thẻ ở đây sẽ đổi tên thẻ trên mọi hồ sơ.",
   "settings.page.products.sub": "Sản phẩm công ty đang bán, và mẫu báo giá.",
   "settings.page.capture.sub":
-    "Thư nào được lưu vào CRM, và thư nào bị bỏ qua.",
+    "Thư nào được lưu vào CRM, thư nào bị bỏ qua, và ai đọc được.",
   "settings.page.integrations.sub":
     "Các hệ thống trao đổi hồ sơ với bản cài đặt này.",
   "settings.page.knowledge.sub":
@@ -12998,24 +12985,18 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Kh\u00f4ng c\u00f3 trang c\u00e0i \u0111\u1eb7t n\u00e0o kh\u1edbp.",
   "settings.search.count": "Trang cài đặt khớp: {n}",
   "settings.tab.company": "Hồ sơ công ty",
-  "settings.tab.authentication": "Đăng nhập và ứng dụng",
+  "settings.tab.authentication": "Đăng nhập và bảo mật",
   "settings.tab.members": "Thành viên",
   "settings.tab.teams": "Nhóm",
   "settings.tab.roles": "Vai trò và quyền",
   "settings.tab.seats": "Tài khoản và giấy phép",
-  "settings.tab.pipelines": "Pipeline",
-  "settings.tab.acquisition": "Nguồn tiếp cận",
-  "settings.tab.lossreasons": "Lý do thua",
-  "settings.tab.recordroles": "Vai tr\u00f2 ph\u1ee5 tr\u00e1ch",
-  "settings.tab.leads": "Quản lý lead",
-  "settings.tab.fields": "Trường",
-  "settings.tab.tags": "Thẻ",
+  "settings.tab.leads": "Lead",
   "settings.tab.products": "Sản phẩm và báo giá",
   "settings.tab.import": "Nhập dữ liệu",
   "settings.tab.models": "Mô hình AI",
   "settings.tab.automations": "Tự động hóa",
   "settings.tab.usage": "Mức sử dụng AI",
-  "settings.tab.mcp": "MCP",
+  "settings.tab.mcp": "Quyền cho công cụ AI",
   "settings.tab.model-calls": "Nhật ký lượt gọi AI",
   "settings.tab.audit": "Nhật ký hoạt động",
   "settings.tab.system-health": "Tình trạng hệ thống",
@@ -13059,6 +13040,63 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "configuration.scope.outside": "Đã đặt bên ngoài ứng dụng",
   "settings.tab.reset": "Đặt lại dữ liệu",
   "settings.group.me": "Cá nhân",
+  "settings.group.compliance": "Tuân thủ",
+  "settings.group.system": "Hệ thống",
+  "settings.tab.deals": "Deal",
+  "settings.page.deals.sub":
+    "Deal đi qua các giai đoạn nào, đến từ đâu, và vì sao thắng hay thua.",
+  "settings.tab.records": "Bản ghi và trường",
+  "settings.page.records.sub":
+    "Trường tùy chỉnh, thẻ dùng chung và vai trò phụ trách gắn với bản ghi.",
+  "settings.partsLabel": "Các phần của trang này",
+  "settings.part.meetings.links": "Liên kết đặt lịch",
+  "settings.part.meetings.availability": "Thời gian rảnh",
+  "settings.part.meetings.guests": "Trang cho khách",
+  "settings.part.connections.mail": "Email và lịch",
+  "settings.part.connections.addresses": "Địa chỉ khác",
+  "settings.part.connections.linkedin": "LinkedIn",
+  "settings.part.connections.accounts": "Tài khoản khác",
+  "settings.part.connections.activity": "Hoạt động",
+  "settings.part.company.profile": "Hồ sơ",
+  "settings.part.company.entities": "Pháp nhân",
+  "settings.part.company.regional": "Khu vực và lịch",
+  "settings.part.company.money": "Tiền tệ",
+  "settings.part.company.email": "Mặc định email",
+  "settings.part.authentication.methods": "Cách đăng nhập",
+  "settings.part.authentication.apps": "Ứng dụng đăng nhập",
+  "settings.part.authentication.grants": "Vai trò theo nhóm",
+  "settings.part.deals.pipelines": "Pipeline",
+  "settings.part.deals.sources": "Nguồn tiếp cận",
+  "settings.part.deals.loss": "Lý do thua",
+  "settings.part.deals.reviews": "Đánh giá kết quả",
+  "settings.part.deals.legal": "Xem xét pháp lý",
+  "settings.part.deals.forecast": "Dự báo",
+  "settings.part.records.fields": "Trường",
+  "settings.part.records.tags": "Thẻ",
+  "settings.part.records.roles": "Vai trò phụ trách",
+  "settings.part.capture.sharing": "Chia sẻ và đồng bộ",
+  "settings.part.capture.domains": "Tên miền",
+  "settings.part.capture.enrichment": "Bổ sung dữ liệu",
+  "settings.part.capture.internal": "Thư nội bộ",
+  "settings.part.integrations.contact": "Dữ liệu liên hệ",
+  "settings.part.integrations.accounting": "Kế toán",
+  "settings.part.integrations.webhooks": "Webhook",
+  "settings.part.integrations.telegram": "Bot Telegram",
+  "settings.part.integrations.units": "Dịch vụ khác",
+  "settings.part.models.providers": "Nhà cung cấp",
+  "settings.part.models.tiers": "Cấp mô hình",
+  "settings.part.models.tasks": "Tác vụ AI",
+  "settings.part.models.prices": "Giá",
+  "settings.part.usage.allowance": "Hạn mức",
+  "settings.part.usage.agents": "Giới hạn agent",
+  "settings.part.usage.spend": "Chi phí",
+  "settings.part.automations.mine": "Tự động hóa của bạn",
+  "settings.part.automations.library": "Thư viện khởi đầu",
+  "settings.part.privacy.consent": "Đồng ý",
+  "settings.part.privacy.customers": "Khách hàng hiện có",
+  "settings.part.privacy.retention": "Lưu giữ",
+  "settings.part.privacy.requests": "Yêu cầu",
+  "settings.part.privacy.duties": "Nghĩa vụ thông báo",
   "settings.group.company": "Công ty",
   "settings.group.people": "Nhân sự",
   "settings.group.sales": "Bán hàng",
@@ -13067,7 +13105,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.group.governance": "Quản trị",
   "settings.tab.account": "Tài khoản",
   "settings.tab.voice": "Giọng văn",
-  "settings.tab.agents": "Quyền truy cập AI",
+  "settings.tab.agents": "Trợ lý AI",
   "settings.tab.notifications": "Thông báo",
   "settings.tab.connections": "Kết nối",
   "settings.tab.extensions": "Tiện ích mở rộng",
@@ -13168,7 +13206,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacy.requestsEmpty": "Chưa có yêu cầu nào về quyền riêng tư.",
   "settings.tab.integrations": "Tích hợp",
   "settings.tab.web-forms": "Biểu mẫu trang web",
-  "settings.tab.capture": "Quy tắc thu thập",
+  "settings.tab.capture": "Thu thập thư",
   "settings.tab.knowledge": "Tài liệu",
   "corpusAsk.title": "Hỏi tài liệu",
   "corpusAsk.sub":
@@ -13269,7 +13307,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "knowledge.searchable": "Tìm kiếm được",
   "knowledge.reindexingBadge": "Đang lập lại chỉ mục",
   "settings.tab.privacy": "Quyền riêng tư và lưu trữ",
-  "settings.tab.capture-activity": "Hoạt động thu thập",
   "verdictPass.subject.senders": "Người gửi",
   "verdictPass.subject.threads": "Chuỗi thư",
   "verdictPass.every_one": "{subject} được kiểm tra mỗi phút.",
@@ -15032,13 +15069,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "connectors.heldPointer.label":
     "Chuỗi thư đang giữ lại và quyết định về người gửi",
   "connectors.heldPointer.some_one":
-    "{count} chuỗi thư đang được giữ lại khỏi nhóm. Xem lại chúng, cùng mọi người gửi mà hộp thư của bạn đưa vào, trong Hoạt động thu thập.",
+    "{count} chuỗi thư đang được giữ lại khỏi nhóm. Xem lại chúng, cùng mọi người gửi mà hộp thư của bạn đưa vào, trong Kết nối, phần Hoạt động.",
   "connectors.heldPointer.some_other":
-    "{count} chuỗi thư đang được giữ lại khỏi nhóm. Xem lại chúng, cùng mọi người gửi mà hộp thư của bạn đưa vào, trong Hoạt động thu thập.",
+    "{count} chuỗi thư đang được giữ lại khỏi nhóm. Xem lại chúng, cùng mọi người gửi mà hộp thư của bạn đưa vào, trong Kết nối, phần Hoạt động.",
   "connectors.heldPointer.none":
-    "Hiện không có gì bị giữ lại khỏi nhóm. Mọi người gửi mà hộp thư của bạn đưa vào đều có trong Hoạt động thu thập.",
+    "Hiện không có gì bị giữ lại khỏi nhóm. Mọi người gửi mà hộp thư của bạn đưa vào đều có trong Kết nối, phần Hoạt động.",
   "connectors.heldPointer.unknown":
-    "Các chuỗi thư bị giữ lại khỏi nhóm, cùng mọi người gửi mà hộp thư của bạn đưa vào, đều có trong Hoạt động thu thập.",
+    "Các chuỗi thư bị giữ lại khỏi nhóm, cùng mọi người gửi mà hộp thư của bạn đưa vào, đều có trong Kết nối, phần Hoạt động.",
   "connectors.heldPointer.review": "Xem lại",
   "connectors.advanced": "Nâng cao",
   "connectors.advancedCount_one": "{count} cài đặt",
@@ -16777,7 +16814,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "gửi tin nhắn với danh nghĩa của bạn, không hỏi trước",
   "consent.scopeNote.enrich": "chạy việc AI và mua dữ liệu liên hệ",
   "consent.ceiling":
-    "Không bao giờ vượt quá quyền của chính bạn. Có thể ngắt kết nối bất cứ lúc nào trong Cài đặt, mục Quyền truy cập AI.",
+    "Không bao giờ vượt quá quyền của chính bạn. Có thể ngắt kết nối bất cứ lúc nào trong Cài đặt, mục Trợ lý AI.",
   "consent.preset.label": "Quyền của trợ lý",
   "consent.preset.readDraft": "Đọc và soạn nháp",
   "consent.preset.full": "Trợ lý đầy đủ",
@@ -19857,7 +19894,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.setup.step1Help":
     "Đăng nhập bằng tài khoản chứa lịch của bạn. Mất khoảng một phút.",
   "scheduling.connectCalendar": "Kết nối lịch",
-  "scheduling.setup.step2": "Kiểm tra giờ của bạn bên dưới",
+  "scheduling.setup.step2": "Kiểm tra giờ của bạn ở mục Thời gian rảnh",
   "scheduling.setup.step2Help":
     "Khách được đề nghị 09:00 đến 17:00, thứ Hai đến thứ Sáu, cho đến khi bạn lưu giờ riêng.",
   "scheduling.setup.step2Done": "Giờ của bạn đã được lưu.",
@@ -20665,12 +20702,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "health.filteredFinding_other": "Đang hiển thị 1 trong {count} vấn đề",
   "health.showAllFindings": "Hiển thị mọi vấn đề",
   "health.jobDelayed": "{kind}: bị chậm",
-  "health.checkNumbers": "Hiển thị số lần kiểm tra",
-  "health.checkResults": "Kết quả kiểm tra",
-  "health.checksFailed": "Kiểm tra có lỗi",
-  "health.checksReview": "Cần quyết định",
-  "health.checksPassing": "Kiểm tra đạt",
-  "health.checksPending": "Đang chờ kết quả",
   "health.askOwner": "Hỏi chủ hộp thư",
   "health.mailReviewOwners": "Quyết định hộp thư",
   "health.reviewOwnersIntro":
@@ -20691,7 +20722,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "health.senderReviewCount_other": "{count} đề xuất liên hệ đang chờ",
   "health.threadReviewCount_one": "{count} hội thoại đang chờ",
   "health.threadReviewCount_other": "{count} hội thoại đang chờ",
-  "health.views": "Chế độ xem tình trạng hệ thống",
   "health.overview": "Tổng quan",
   "health.diagnostics": "Chẩn đoán",
   "health.configurationWithheld":
@@ -20755,6 +20785,45 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "health.prioritiesChanged":
     "Mức ưu tiên đã thay đổi. Làm mới để áp dụng thứ tự mới.",
   "health.capabilities": "Tất cả kiểm tra",
+  "health.group.setup": "Chưa thiết lập",
+  "health.group.waiting": "Chưa xác nhận",
+  "health.group.passing": "Đạt",
+  "health.checkPassing": "Đạt",
+  "health.whatHappened": "Chuyện gì đã xảy ra",
+  "health.whyItMatters": "Vì sao điều này quan trọng",
+  "health.whatToDo": "Cần làm gì",
+  "health.notSetUpCount_one": "{count} chưa thiết lập",
+  "health.notSetUpCount_other": "{count} chưa thiết lập",
+  "health.passingCount_one": "{count} đạt",
+  "health.passingCount_other": "{count} đạt",
+  "health.setup.providersMissing.happened":
+    "Chưa nhà cung cấp AI nào có khóa, nên công việc AI không đến được mô hình nào.",
+  "health.setup.providersMissing.matters":
+    "Bản nháp, bản tóm tắt và nghiên cứu chỉ chạy được khi đã kết nối một nhà cung cấp.",
+  "health.setup.providersMissing.todo":
+    "Thêm khóa cho một nhà cung cấp trong Mô hình AI, rồi gửi một lệnh gọi thử.",
+  "health.setup.providersMissing.action": "Thêm khóa nhà cung cấp",
+  "health.setup.providersSilent.happened":
+    "Đã thiết lập một nhà cung cấp, nhưng chưa có nhà cung cấp nào trả lời yêu cầu.",
+  "health.setup.providersSilent.matters":
+    "Cho đến khi có phản hồi, không có gì cho thấy công việc AI đến được mô hình.",
+  "health.setup.providersSilent.todo":
+    "Gửi một lệnh gọi thử trong Mô hình AI, hoặc chờ tác vụ AI tiếp theo chạy.",
+  "health.setup.providersSilent.action": "Mở Mô hình AI",
+  "health.setup.search.happened":
+    "Tìm kiếm chưa có mô hình embedding, nên chỉ khớp đúng từ.",
+  "health.setup.search.matters":
+    "Bản ghi tương tự, câu trả lời từ tài liệu Kiến thức và nghiên cứu AI chỉ giới hạn ở kết quả theo từ khóa.",
+  "health.setup.search.todo":
+    "Chọn một mô hình embedding trong Mô hình AI, Cấp mô hình. Margince sau đó sẽ xây chỉ mục tìm kiếm ở chế độ nền.",
+  "health.setup.search.action": "Chọn mô hình embedding",
+  "health.setup.recovery.happened":
+    "Chưa ai ghi lại một lần diễn tập khôi phục. Bản sao lưu chạy bên ngoài Margince, nên Margince chỉ biết về một lần khôi phục khi có người ghi lại.",
+  "health.setup.recovery.matters":
+    "Cho đến khi một bản sao lưu được khôi phục ít nhất một lần, không có gì cho thấy dữ liệu của bạn có thể lấy lại kịp thời.",
+  "health.setup.recovery.todo":
+    "Nhờ người vận hành máy chủ khôi phục một bản sao lưu gần đây vào cơ sở dữ liệu dự phòng và ghi lại lần diễn tập.",
+  "health.setup.recovery.action": "Đọc hướng dẫn khôi phục",
   "health.unknown": "Chưa ghi nhận",
   "health.stale": "Bằng chứng gần nhất; lần kiểm tra mới chưa hoàn tất.",
   "health.failed": "Không đọc được nguồn này",
@@ -20807,7 +20876,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Ghi nhận diễn tập khôi phục thành công trong mục tiêu thời gian và mức mất dữ liệu.",
   "health.recovery.automatic": "Đánh giá kết quả phân công trên mẫu đủ lớn.",
   "health.ownerHandoff":
-    "Chủ hộp thư chấp nhận hoặc từ chối liên hệ được đề xuất trong Danh sách công việc → Quyết định. Hội thoại bị giữ được xem xét trong Hoạt động thu thập.",
+    "Chủ hộp thư chấp nhận hoặc từ chối liên hệ được đề xuất trong Danh sách công việc → Quyết định. Hội thoại bị giữ được xem xét trong Kết nối, phần Hoạt động.",
   "health.operatorHandoff":
     "Người vận hành kỹ thuật cần kiểm tra. Sao chép bản tóm tắt chẩn đoán để bàn giao.",
   "health.copy": "Sao chép báo cáo kỹ thuật",

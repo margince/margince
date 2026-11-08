@@ -1106,7 +1106,7 @@ OAuthApps: []extension.OAuthApp{{
 
 What the core does:
 
-1. **Settings → Sign-in and apps** shows a card for the app, named by its `Title`. An admin stores the
+1. **Settings → Sign-in and security** shows a card for the app, named by its `Title`. An admin stores the
    client ID and secret there, and registers the redirect URI the card shows at the vendor.
 2. Your screen starts the sign-in with `POST /v1/ext-oauth/books/connect`, and sends the browser to the
    `authorize_url` it gets back. Only a user who may add an integration can start it.

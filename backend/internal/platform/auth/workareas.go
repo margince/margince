@@ -44,7 +44,7 @@ func AreaRefusal(p principal.Principal, spec mcp.ToolSpec) error {
 
 // turnOnWhere is where a passport's areas are changed, as the screens name it.
 // The passport panel shows the same refusal, held by a gate on its copy.
-const turnOnWhere = "Settings → AI access, under Your passports or Your connections"
+const turnOnWhere = "Settings → AI assistants, under Your passports or Your connections"
 
 // areaOffCode is the sentinel's code, which a missing scope answers too.
 const areaOffCode = "scope_exceeds_grantor"

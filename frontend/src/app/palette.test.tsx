@@ -592,10 +592,8 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       expect(screen.getByText("Floor scrubber")).toBeTruthy(),
     );
     await user.click(screen.getByText("Floor scrubber"));
-    // `fields`, the current spelling of the entry that carries products today.
-    // The catalog splits it into fields/tags/products; this follows when the
-    // screen renders those pages rather than the combined one.
-    expect(window.location.hash).toContain("fields");
+    // The catalog page that edits products and offers.
+    expect(window.location.hash).toBe("#/settings/products");
   });
 
   // Two projects called "Rollout" are told apart by their key and their
@@ -872,14 +870,14 @@ describe("useBuiltinCommands", () => {
       roles: ["rep"],
       allow: {
         company: ["create", "read", "update"],
-        // The witness: Capture rules proves /me has answered before the
+        // The witness: Mail capture proves /me has answered before the
         // absence below is read.
         capture_settings: ["read"],
       },
     });
     const box = screen.getByRole("searchbox");
     await user.type(box, "capture");
-    await screen.findByText("Capture rules");
+    await screen.findByText("Mail capture");
     await user.clear(box);
     await user.type(box, "general");
     expect(screen.queryByText("Company profile")).toBeNull();

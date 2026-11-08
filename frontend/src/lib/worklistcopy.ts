@@ -60,7 +60,7 @@ export function subjectHref(
 
 // Sources without record pages link to their existing work surface.
 const SOURCE_QUEUE: Partial<Record<WorklistItem["source"], string>> = {
-  dsr: routeHash(settingsHref("privacy")),
+  dsr: routeHash(settingsHref("privacy", "requests")),
   capture_health: routeHash(settingsHref("connections")),
   booking_health: routeHash({ screen: "book" }),
   // A rule that failed, and the page that lists the rules.
