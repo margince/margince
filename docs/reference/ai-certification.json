@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 55,
-    "sites_best_current": 37,
+    "sites_best_current": 40,
     "sites_best_partial": 0,
-    "sites_best_stale": 18,
+    "sites_best_stale": 15,
     "sites_absent": 0,
     "scenarios": 291,
     "records": 363,
@@ -1558,7 +1558,7 @@
             },
             "same_model": false,
             "band": "not_supported",
-            "state": "stale"
+            "state": "current"
           },
           "abandoned": 0,
           "runs": 18,
@@ -1575,8 +1575,8 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "band": "not_supported",
-          "state": "stale",
+          "band": "certified",
+          "state": "current",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -1587,13 +1587,13 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "stale"
+            "state": "current"
           },
           "abandoned": 0,
-          "runs": 27,
-          "passed": 20,
-          "cases_failing_often": 1,
-          "cases_below_quality_bar": 1
+          "runs": 12,
+          "passed": 12,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
         },
         {
           "task": "request_settlement",
@@ -1605,7 +1605,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "stale",
+          "state": "current",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -1615,11 +1615,11 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "stale"
+            "state": "current"
           },
           "abandoned": 0,
-          "runs": 30,
-          "passed": 29,
+          "runs": 27,
+          "passed": 27,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
@@ -1910,9 +1910,9 @@
         }
       ],
       "bands": {
-        "certified": 24,
+        "certified": 25,
         "supported_degraded": 9,
-        "not_supported": 2
+        "not_supported": 1
       },
       "untested": 0,
       "unbound": 0,
@@ -2731,7 +2731,7 @@
             },
             "same_model": false,
             "band": "not_supported",
-            "state": "stale",
+            "state": "current",
             "measured_on": {
               "provider": "gemini",
               "model": "gemini-3.1-flash-lite",
@@ -2759,8 +2759,8 @@
             "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "band": "not_supported",
-          "state": "stale",
+          "band": "certified",
+          "state": "current",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -2771,7 +2771,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "stale",
+            "state": "current",
             "measured_on": {
               "provider": "gemini",
               "model": "gemini-3.6-flash",
@@ -2780,10 +2780,10 @@
             }
           },
           "abandoned": 0,
-          "runs": 27,
-          "passed": 20,
-          "cases_failing_often": 1,
-          "cases_below_quality_bar": 1,
+          "runs": 12,
+          "passed": 12,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0,
           "measured_on": {
             "provider": "gemini",
             "model": "gemini-3.1-flash-lite",
@@ -2800,7 +2800,7 @@
             "env": "eu_hosted"
           },
           "band": "certified",
-          "state": "stale",
+          "state": "current",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -2810,7 +2810,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "stale",
+            "state": "current",
             "measured_on": {
               "provider": "gemini",
               "model": "gemini-3.1-flash-lite",
@@ -2818,8 +2818,8 @@
             }
           },
           "abandoned": 0,
-          "runs": 30,
-          "passed": 29,
+          "runs": 27,
+          "passed": 27,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0,
           "measured_on": {
@@ -3220,9 +3220,9 @@
         }
       ],
       "bands": {
-        "certified": 24,
+        "certified": 25,
         "supported_degraded": 9,
-        "not_supported": 2
+        "not_supported": 1
       },
       "untested": 0,
       "unbound": 0,
@@ -7930,10 +7930,10 @@
       "answer": "mostly",
       "sites_shipped": 55,
       "sites_measured": 55,
-      "ready": 40,
-      "usable_with_care": 12,
+      "ready": 39,
+      "usable_with_care": 13,
       "not_reliable_yet": 3,
-      "recheck_pending": 18,
+      "recheck_pending": 15,
       "models": [
         {
           "binding": {
@@ -7942,17 +7942,17 @@
             "env": "cloud_frontier"
           },
           "sites": 48,
-          "sites_current": 31,
+          "sites_current": 35,
           "sites_partial": 0,
-          "sites_stale": 17,
-          "runs": 753,
-          "passed": 707,
-          "reliability": 0.9389110225763613,
+          "sites_stale": 13,
+          "runs": 729,
+          "passed": 695,
+          "reliability": 0.953360768175583,
           "slowest_p95_ms": 24754,
           "bands": {
-            "certified": 24,
-            "supported_degraded": 19,
-            "not_supported": 5
+            "certified": 23,
+            "supported_degraded": 21,
+            "not_supported": 4
           }
         },
         {
@@ -7963,9 +7963,9 @@
             "thinking_level": "low"
           },
           "sites": 47,
-          "sites_current": 31,
+          "sites_current": 33,
           "sites_partial": 0,
-          "sites_stale": 16,
+          "sites_stale": 14,
           "runs": 921,
           "passed": 893,
           "reliability": 0.9695982627578719,
@@ -8443,10 +8443,10 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "band": "certified",
-          "state": "stale",
-          "runs": 12,
-          "passed": 12,
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 6,
+          "passed": 6,
           "records": 2
         },
         {
@@ -8454,12 +8454,11 @@
           "task": "report_setup",
           "best": {
             "provider": "gemini",
-            "model": "gemini-3.6-flash",
-            "env": "cloud_frontier",
-            "thinking_level": "low"
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
           },
           "band": "supported_degraded",
-          "state": "stale",
+          "state": "current",
           "runs": 6,
           "passed": 6,
           "records": 2
@@ -8473,9 +8472,9 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "stale",
-          "runs": 30,
-          "passed": 29,
+          "state": "current",
+          "runs": 27,
+          "passed": 27,
           "records": 1
         },
         {
@@ -11535,17 +11534,17 @@
         "env": "cloud_frontier"
       },
       "sites": 51,
-      "sites_current": 31,
+      "sites_current": 35,
       "sites_partial": 0,
-      "sites_stale": 20,
-      "runs": 912,
-      "passed": 849,
-      "reliability": 0.930921052631579,
+      "sites_stale": 16,
+      "runs": 888,
+      "passed": 837,
+      "reliability": 0.9425675675675675,
       "slowest_p95_ms": 24754,
       "bands": {
-        "certified": 25,
-        "supported_degraded": 19,
-        "not_supported": 7
+        "certified": 24,
+        "supported_degraded": 21,
+        "not_supported": 6
       }
     },
     {
@@ -11617,9 +11616,9 @@
         "thinking_level": "low"
       },
       "sites": 47,
-      "sites_current": 31,
+      "sites_current": 33,
       "sites_partial": 0,
-      "sites_stale": 16,
+      "sites_stale": 14,
       "runs": 921,
       "passed": 893,
       "reliability": 0.9695982627578719,
@@ -23379,32 +23378,22 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "not_supported",
-          "scenarios_measured": 0,
+          "scenarios_measured": 2,
           "scenarios_total": 2,
-          "runs": 18,
-          "passed": 3,
-          "reliability": 0.16666666666666666,
-          "latency_p50_ms": 1649,
-          "latency_p95_ms": 2206,
+          "runs": 12,
+          "passed": 1,
+          "reliability": 0.08333333333333333,
+          "latency_p50_ms": 1693,
+          "latency_p95_ms": 2461,
           "reported": {
-            "accepted": 3,
-            "wrong_answer": 2,
-            "invalid": 13,
+            "accepted": 1,
+            "wrong_answer": 1,
+            "invalid": 10,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): sales_assessment_acknowledges_an_open_decision, sales_assessment_names_the_deal_no_decision_covers",
-          "stale_cause": {
-            "prompt_changed": [
-              "sales_assessment_acknowledges_an_open_decision",
-              "sales_assessment_names_the_deal_no_decision_covers"
-            ],
-            "grader_changed": [
-              "sales_assessment_acknowledges_an_open_decision",
-              "sales_assessment_names_the_deal_no_decision_covers"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -23438,8 +23427,17 @@
       "key": "report_setup/custom_report_setup",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "gemini",
+          "model": "gemini-3.1-flash-lite",
+          "env": "cloud_frontier"
+        },
+        "band": "supported_degraded",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "custom_report_setup_names_back_a_measure_it_cannot_express",
@@ -23461,32 +23459,22 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "stale",
-          "band": "certified",
-          "scenarios_measured": 0,
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 2,
           "scenarios_total": 2,
-          "runs": 12,
-          "passed": 12,
+          "runs": 6,
+          "passed": 6,
           "reliability": 1,
-          "latency_p50_ms": 1099,
-          "latency_p95_ms": 1289,
+          "latency_p50_ms": 1088,
+          "latency_p95_ms": 1299,
           "reported": {
-            "accepted": 12,
+            "accepted": 6,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): custom_report_setup_names_back_a_measure_it_cannot_express, custom_report_setup_picks_metrics_and_the_charts_they_draw",
-          "stale_cause": {
-            "prompt_changed": [
-              "custom_report_setup_names_back_a_measure_it_cannot_express",
-              "custom_report_setup_picks_metrics_and_the_charts_they_draw"
-            ],
-            "grader_changed": [
-              "custom_report_setup_names_back_a_measure_it_cannot_express",
-              "custom_report_setup_picks_metrics_and_the_charts_they_draw"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -23495,32 +23483,22 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "state": "stale",
+          "state": "current",
           "band": "supported_degraded",
-          "scenarios_measured": 0,
+          "scenarios_measured": 2,
           "scenarios_total": 2,
           "runs": 6,
           "passed": 6,
           "reliability": 1,
-          "latency_p50_ms": 1904,
-          "latency_p95_ms": 2106,
+          "latency_p50_ms": 1703,
+          "latency_p95_ms": 1929,
           "reported": {
             "accepted": 6,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): custom_report_setup_names_back_a_measure_it_cannot_express, custom_report_setup_picks_metrics_and_the_charts_they_draw",
-          "stale_cause": {
-            "prompt_changed": [
-              "custom_report_setup_names_back_a_measure_it_cannot_express",
-              "custom_report_setup_picks_metrics_and_the_charts_they_draw"
-            ],
-            "grader_changed": [
-              "custom_report_setup_names_back_a_measure_it_cannot_express",
-              "custom_report_setup_picks_metrics_and_the_charts_they_draw"
-            ]
-          }
+          "stale_reason": ""
         }
       ]
     },
@@ -23530,8 +23508,17 @@
       "key": "report_setup/initiative_setup",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "gemini",
+          "model": "gemini-3.1-flash-lite",
+          "env": "cloud_frontier"
+        },
+        "band": "supported_degraded",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "initiative_setup_asks_about_a_target_the_words_leave_open",
@@ -23553,32 +23540,22 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "stale",
-          "band": "not_supported",
-          "scenarios_measured": 0,
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 2,
           "scenarios_total": 2,
-          "runs": 15,
-          "passed": 8,
-          "reliability": 0.5333333333333333,
-          "latency_p50_ms": 1099,
-          "latency_p95_ms": 1289,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 1088,
+          "latency_p95_ms": 1299,
           "reported": {
-            "accepted": 8,
-            "wrong_answer": 7,
+            "accepted": 6,
+            "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): initiative_setup_asks_about_a_target_the_words_leave_open, initiative_setup_reads_a_goal_with_a_target_and_deadline",
-          "stale_cause": {
-            "prompt_changed": [
-              "initiative_setup_asks_about_a_target_the_words_leave_open",
-              "initiative_setup_reads_a_goal_with_a_target_and_deadline"
-            ],
-            "grader_changed": [
-              "initiative_setup_asks_about_a_target_the_words_leave_open",
-              "initiative_setup_reads_a_goal_with_a_target_and_deadline"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -23587,32 +23564,22 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "state": "stale",
+          "state": "current",
           "band": "supported_degraded",
-          "scenarios_measured": 0,
+          "scenarios_measured": 2,
           "scenarios_total": 2,
           "runs": 6,
           "passed": 6,
           "reliability": 1,
-          "latency_p50_ms": 1904,
-          "latency_p95_ms": 2106,
+          "latency_p50_ms": 1703,
+          "latency_p95_ms": 1929,
           "reported": {
             "accepted": 6,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): initiative_setup_asks_about_a_target_the_words_leave_open, initiative_setup_reads_a_goal_with_a_target_and_deadline",
-          "stale_cause": {
-            "prompt_changed": [
-              "initiative_setup_asks_about_a_target_the_words_leave_open",
-              "initiative_setup_reads_a_goal_with_a_target_and_deadline"
-            ],
-            "grader_changed": [
-              "initiative_setup_asks_about_a_target_the_words_leave_open",
-              "initiative_setup_reads_a_goal_with_a_target_and_deadline"
-            ]
-          }
+          "stale_reason": ""
         }
       ]
     },
@@ -23622,8 +23589,17 @@
       "key": "request_settlement/request_settle",
       "scope": "single_call",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "gemini",
+          "model": "gemini-3.1-flash-lite",
+          "env": "cloud_frontier"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "a_reply_that_says_nothing_either_way_is_answered_unsure",
@@ -23687,41 +23663,22 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": 0,
+          "scenarios_measured": 9,
           "scenarios_total": 9,
-          "runs": 30,
-          "passed": 29,
-          "reliability": 0.9666666666666667,
-          "latency_p50_ms": 1098,
-          "latency_p95_ms": 1235,
+          "runs": 27,
+          "passed": 27,
+          "reliability": 1,
+          "latency_p50_ms": 1047,
+          "latency_p95_ms": 1365,
           "reported": {
-            "accepted": 29,
-            "wrong_answer": 1,
+            "accepted": 27,
+            "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "9 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague and 3 more",
-          "stale_cause": {
-            "prompt_changed": [
-              "a_reply_that_says_nothing_either_way_is_answered_unsure",
-              "an_answer_off_the_thread_can_leave_the_request_owed",
-              "an_answer_off_the_thread_settles_a_request",
-              "an_answer_settles_a_request_and_an_acknowledgement_does_not",
-              "answering_one_of_two_asks_leaves_the_other_owed",
-              "declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
-              "delivering_feedback_then_asking_them_does_not_reverse_the_duty",
-              "partial_delivery_keeps_the_remaining_invoice_vi",
-              "signature_completion_requires_the_matching_document"
-            ],
-            "grader_changed": [
-              "an_answer_off_the_thread_can_leave_the_request_owed",
-              "an_answer_settles_a_request_and_an_acknowledgement_does_not",
-              "answering_one_of_two_asks_leaves_the_other_owed",
-              "delivering_feedback_then_asking_them_does_not_reverse_the_duty"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
