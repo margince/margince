@@ -39,7 +39,7 @@ func newWorkFixture(t *testing.T) *workFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &workFixture{e: e, approvals: approvalsServiceWithEffects(e.Pool), source: ids.UUID(meeting.Id)}
+	return &workFixture{e: e, approvals: NewApprovalsServiceWithEffects(e.Pool), source: ids.UUID(meeting.Id)}
 }
 
 // promiseTask files a task for a promise the way the extractor does.

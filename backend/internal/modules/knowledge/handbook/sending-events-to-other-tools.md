@@ -43,6 +43,13 @@ Also called: webhook log, failed webhook, resend, retry, delivery history.
 To stop a webhook for a while, choose **Edit** and set **State** to **Paused**; nothing is sent until you set it back to **Active**. To stop it for good, choose **Archive** in the row's **⋯** menu.
 Also called: turn off webhook, disable notifications, delete subscription.
 
+### Why did a webhook stop when a colleague left?
+A webhook runs as the colleague in **Runs as**: it sends only what they may see. When they are deactivated, it sends nothing, and its row shows **Stopped: owner deactivated** in place of **Active**.
+1. Choose **Edit** on the subscription.
+2. Pick a colleague in **Runs as** and save. The signing secret stays the same. **Runs as** shows only if you may manage members, because a webhook sends what its owner may see.
+**Hand over work** on the colleague's row in **Settings → Members** moves their webhooks too, and the deactivate dialog counts them. Set an integration up as an account that stays active.
+Also called: webhook stopped, owner left, webhook owner, change webhook owner.
+
 ### What is the signing secret?
 The signing secret is shown once, when you create a subscription. A system that receives your messages can use it to check that a message came from Margince. Copy it then, because you cannot see it again. **Rotate secret** in the **⋯** menu makes a new one.
 Also called: webhook secret, signing key.

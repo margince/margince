@@ -7,6 +7,7 @@ import {
   TaskCompleteCheck,
   type useTaskUpdate,
 } from "../../components/taskactions";
+import { taskLine, useTaskHolder } from "../../components/taskassignee";
 import { AppLink } from "../../design-system/applink";
 import { Badge, Button } from "../../design-system/atoms";
 import {
@@ -16,13 +17,13 @@ import {
 } from "../../design-system/overviewcard";
 import { RecordCardList } from "../../design-system/recordcard";
 import { formatMoneyWhole, formatNumber } from "../../format/format";
-import { formatDayMonth } from "../../format/format.dates";
+import { formatDayMonth, formatDueCompact } from "../../format/format.dates";
 import { PHASE_LABEL } from "../../format/projectphase";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { CompanyTab } from "../../lib/companytab";
 import { usePipelines } from "../../lib/pipelines.queries";
-import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import { recordNamesIn } from "./company360";
 import { CompanyContactCard } from "./companycontactcard";
 import { LatestCard } from "./companyoverviewlatest";
@@ -68,7 +69,7 @@ export function CompanyOverviewCards({
   return (
     <div className="co-overview-grid">
       <div className="co-overview-column">
-        <AlsoOnYourList
+        <OtherOpenTasks
           view={view}
           shownTaskId={shownTaskId}
           taskUpdate={taskUpdate}
@@ -99,7 +100,7 @@ function emptyWords(
     : undefined;
 }
 
-function AlsoOnYourList({
+function OtherOpenTasks({
   view,
   shownTaskId,
   taskUpdate,
@@ -116,7 +117,7 @@ function AlsoOnYourList({
   const steps = otherOpenTasks(view, shownTaskId);
   return (
     <OverviewCard
-      title={t("co.overview.alsoOnList")}
+      title={t("co.overview.otherOpen")}
       action={
         <Button variant="link" onClick={() => onOpenTab("tasks")}>
           {t("record.allTasks")}
@@ -157,19 +158,21 @@ function TaskRow({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const nameOf = recordNamesIn(view);
   const linked =
     (step.linked_deal_id && nameOf("deal", step.linked_deal_id)) ||
     (step.linked_contact_id && nameOf("contact", step.linked_contact_id)) ||
     undefined;
-  const sub = [
+  const holder = useTaskHolder(step.assignee_id, step.assignee_name);
+  const sub = taskLine([
+    holder,
     step.due_at &&
-      t("co.next.due", { when: formatDayMonth(step.due_at, locale, zone) }),
+      t("co.next.due", {
+        when: formatDueCompact(step.due_at, step.due_has_time, locale, zone),
+      }),
     linked && t("co.overview.for", { name: linked }),
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  ]);
   return (
     <OverviewRow
       lead={
@@ -190,7 +193,7 @@ function TaskRow({
           {step.subject}
         </button>
       }
-      sub={sub || undefined}
+      sub={sub}
       right={<TaskStandingMark step={step} asOf={view.as_of} />}
     />
   );
@@ -205,7 +208,7 @@ export function TaskStandingMark({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const standing = taskStanding(step, asOf, zone);
   switch (standing.kind) {
     case "late":
@@ -274,7 +277,7 @@ function DealItem({
 }: Readonly<{ deal: Extract<WorkRow, { kind: "deal" }>["deal"] }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const pipelines = usePipelines();
   const rank = stageRank(deal.stage_id, pipelines.data);
   const sub = [
@@ -318,7 +321,7 @@ function ProjectItem({
 }: Readonly<{ project: Extract<WorkRow, { kind: "project" }>["project"] }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const sub = [
     t("co.overview.project"),
     t(PHASE_LABEL[project.phase]),

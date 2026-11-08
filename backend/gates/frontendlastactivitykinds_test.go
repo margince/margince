@@ -10,12 +10,12 @@ package gates
 // timeline. A kind only one side counts shows two dates for one lead.
 
 import (
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -41,7 +41,7 @@ func TestTheFrontendLastActivityKindsMatchTheGoOnes(t *testing.T) {
 // the quoted entries and commas are gone is an entry this parser cannot see.
 func tsLastActivityKinds(t *testing.T) []string {
 	t.Helper()
-	source, err := os.ReadFile(frontendLastActivity)
+	source, err := gatekit.ReadFile(frontendLastActivity)
 	if err != nil {
 		t.Fatalf("reading the frontend last-activity kinds: %v", err)
 	}

@@ -20,6 +20,7 @@ package contacts
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
@@ -153,4 +154,64 @@ func countProof(t *testing.T, tx pgx.Tx, column consentSubject, subject ids.UUID
 		t.Fatal(err)
 	}
 	return n
+}
+
+// A withdrawal that flips the survivor's grant keeps the addresses it was bound
+// to, because the retiring record's subject withdrew. Two withdrawals of one
+// purpose keep the addresses of both.
+//
+// Mutation: drop recorded_for_addresses from the flip, or the joined update
+// from dropCollidingConsent, and its case fails.
+func TestACarriedWithdrawalKeepsTheAddressesItWasBoundTo(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		survivor string
+		want     []string
+	}{
+		{"it flips the survivor's grant", "granted", []string{"retiring@carry.test"}},
+		{"the survivor withdrew too", "withdrawn", []string{"retiring@carry.test", "survivor@carry.test"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := setupPromoteConsent(t)
+			ctx := context.Background()
+			retiring := e.seedConsentSubject(t, consentSubjectContact)
+			survivor := e.seedConsentSubject(t, consentSubjectContact)
+			for _, row := range []struct {
+				subject ids.UUID
+				state   string
+				address string
+			}{
+				{retiring, "withdrawn", "retiring@carry.test"},
+				{survivor, tc.survivor, "survivor@carry.test"},
+			} {
+				if _, err := e.owner.Exec(ctx, `
+					INSERT INTO contact_consent (contact_id, purpose_id, state, captured_at, source, recorded_for_addresses)
+					VALUES ($1, $2, $3, now(), 'form', ARRAY[$4::text])`,
+					row.subject, e.newsletter, row.state, row.address); err != nil {
+					t.Fatal(err)
+				}
+			}
+			tx, err := e.owner.Begin(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() {
+				if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
+					t.Errorf("rolling back the carry: %v", err)
+				}
+			}()
+			if err := carryConsent(ctx, tx, consentCarryContactMerge, retiring, survivor, "human:gate"); err != nil {
+				t.Fatalf("carrying consent: %v", err)
+			}
+			var bound []string
+			if err := tx.QueryRow(ctx, `
+				SELECT recorded_for_addresses FROM contact_consent WHERE contact_id = $1 AND purpose_id = $2`,
+				survivor, e.newsletter).Scan(&bound); err != nil {
+				t.Fatalf("reading the survivor's withdrawal: %v", err)
+			}
+			if !slices.Equal(bound, tc.want) {
+				t.Errorf("the survivor's withdrawal is bound to %v, want %v", bound, tc.want)
+			}
+		})
+	}
 }

@@ -76,12 +76,12 @@ func TestTheReadersCalendarSaysWhetherItFeedsTheMeetingsCount(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		seed []connection
-		want crmcontracts.WorklistCalendar
+		want crmcontracts.ReaderCalendar
 	}{
-		{"none", nil, crmcontracts.WorklistCalendarNotConnected},
-		{"only a mailbox", []connection{{"gmail", "connected", false}}, crmcontracts.WorklistCalendarNotConnected},
-		{"connected", []connection{{"gcal", "connected", false}}, crmcontracts.WorklistCalendarConnected},
-		{"sync failing", []connection{{"gcal", "connected", true}}, crmcontracts.WorklistCalendarUnreadable},
+		{"none", nil, crmcontracts.ReaderCalendarNotConnected},
+		{"only a mailbox", []connection{{"gmail", "connected", false}}, crmcontracts.ReaderCalendarNotConnected},
+		{"connected", []connection{{"gcal", "connected", false}}, crmcontracts.ReaderCalendarConnected},
+		{"sync failing", []connection{{"gcal", "connected", true}}, crmcontracts.ReaderCalendarUnreadable},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := integration.Setup(t)

@@ -17,7 +17,6 @@ import (
 	"go/token"
 	"maps"
 	"os"
-	"path/filepath"
 	"slices"
 	"sort"
 	"strings"
@@ -46,6 +45,8 @@ var nullIgnoredByHandler = gatekit.Waive(map[string]string{
 	"UpdateSalesInitiative": "the PATCH replaces every field of the definition from the body, so an " +
 		"absent and an explicit null both write NULL; nothing of the row is kept.",
 
+	"UpdateDealLine": "reads the nulls with NullKeysOf in updateDealLineInput, where a null " +
+		"quantity or price makes it unknown again and a null classification clears it",
 	"UpdateOfferLineItem": "reads the nulls with NullKeysOf in updateLineInput, " +
 		"which the agent tool shares; an explicit null clears there.",
 	"SetLeadManualSignal": wholeReplace,
@@ -217,7 +218,7 @@ func handlerTypeCalls(t *testing.T) map[string]map[string]bool {
 func methodCalls(t *testing.T, accept func(recv string) bool) map[string]map[string]bool {
 	t.Helper()
 	out := map[string]map[string]bool{}
-	err := filepath.WalkDir("internal", func(path string, d os.DirEntry, err error) error {
+	err := gatekit.WalkDir("internal", func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
 			return err
 		}

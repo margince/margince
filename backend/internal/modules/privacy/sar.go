@@ -85,6 +85,7 @@ type SARPackage struct {
 	// meant a subject who asked to be erased, and was refused, could not see
 	// that the refusal existed — the one thing they would need to appeal it.
 	RightsRequests []map[string]any `json:"rights_requests"`
+	RequestProofs  []map[string]any `json:"request_proofs"`
 	// The unsubscribe links minted for this subject, which are capabilities
 	// over their own record and live two years.
 	//
@@ -268,12 +269,7 @@ func AssembleSAR(ctx context.Context, db *database.DB, contactID ids.ContactID) 
 		}
 		sections := sarSections(&pkg, contactID, emails, leads, identities, authored)
 
-		subject, err := rowMaps(ctx, tx, `
-			SELECT p.id, p.full_name, p.first_name, p.last_name, p.title,
-			       (SELECT jsonb_object_agg(ps.platform, ps.handle) FROM contact_social ps WHERE ps.contact_id = p.id) AS social,
-			       p.address_line1, p.address_line2, p.address_city, p.address_region, p.address_postal_code, p.address_country,
-			       p.source, p.created_at
-			FROM contact p WHERE p.id = $1`, contactID)
+		subject, err := rowMaps(ctx, tx, sarSubjectQuery, contactID)
 		if err != nil {
 			return err
 		}
@@ -307,6 +303,15 @@ func AssembleSAR(ctx context.Context, db *database.DB, contactID ids.ContactID) 
 	})
 	return pkg, err
 }
+
+// sarSubjectQuery is the subject's own row as the export hands it over. The
+// privacy notice page reads the same row to name the kinds it holds.
+const sarSubjectQuery = `
+	SELECT p.id, p.full_name, p.first_name, p.last_name, p.title,
+	       (SELECT jsonb_object_agg(ps.platform, ps.handle) FROM contact_social ps WHERE ps.contact_id = p.id) AS social,
+	       p.address_line1, p.address_line2, p.address_city, p.address_region, p.address_postal_code, p.address_country,
+	       p.source, p.created_at
+	FROM contact p WHERE p.id = $1`
 
 // appendSubjectCustomValues merges the subject's stored cf_ values into
 // the export's subject map, keyed by column name. The column set comes
@@ -472,25 +477,6 @@ func subjectIdentities(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) 
 			return nil, err
 		}
 		out = append(out, id)
-	}
-	return out, rows.Err()
-}
-
-// subjectStrings runs a one-column text query into a slice. The contact is $1,
-// and any further arguments follow it.
-func subjectStrings(ctx context.Context, tx pgx.Tx, query string, contactID ids.ContactID, more ...any) ([]string, error) {
-	rows, err := tx.Query(ctx, query, append([]any{contactID.UUID}, more...)...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []string{}
-	for rows.Next() {
-		var v string
-		if err := rows.Scan(&v); err != nil {
-			return nil, err
-		}
-		out = append(out, v)
 	}
 	return out, rows.Err()
 }

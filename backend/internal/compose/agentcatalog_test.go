@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // Total in both directions. Either half alone is a half-answer: an agent the
@@ -186,5 +187,39 @@ func TestNoAgentLoopAttachesAToolThatCarriesAFile(t *testing.T) {
 	}
 	if lists == 0 {
 		t.Fatal("api/ai-tasks.yaml declares no agent tool list, so this gate checked nothing")
+	}
+}
+
+// A scheduled run has no one to answer an approval, so every tool an agent loop
+// attaches must run without one. The tier is the declared one, no contract floor
+// tightens it, and no router stands in for a verb whose own tier is unknown.
+func TestEveryAgentLoopToolRunsWithoutApproval(t *testing.T) {
+	registry := NewRegistry(nil, SendPath{})
+	attached := 0
+	for _, task := range ai.AllTasks() {
+		for _, agent := range ai.AgentsFor(task) {
+			for _, tool := range agent.Tools {
+				attached++
+				spec, registered := registry.Spec(tool)
+				if !registered {
+					t.Errorf("agent %q attaches %s, which is not registered", agent.Name, tool)
+					continue
+				}
+				if _, isRouter := registry.RouteTargets(tool); isRouter {
+					t.Errorf("agent %q attaches the router %s, whose verbs hold their own tiers", agent.Name, tool)
+				}
+				if spec.Tier != mcp.TierAutoExecute {
+					t.Errorf("agent %q attaches %s at a tier that waits for approval, which no run can give", agent.Name, tool)
+				}
+				for pair := range contractTierFloors {
+					if pair.tool == tool {
+						t.Errorf("agent %q attaches %s, which the contract makes confirm-first for %s", agent.Name, tool, pair.recordType)
+					}
+				}
+			}
+		}
+	}
+	if attached == 0 {
+		t.Fatal("api/ai-tasks.yaml attaches no agent tool, so this gate checked nothing")
 	}
 }

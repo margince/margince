@@ -187,7 +187,7 @@ func recordHistoryEntry(row recordAuditRow, mask entityFieldMask) RecordHistoryE
 }
 
 // admitRecordHistoryRead is the object-level half of this read's gate stack:
-// a human session, a known entity kind, and the read grant on it. The ROW-level
+// a user or their agent, a known entity kind, and the read grant on it. The ROW-level
 // half runs inside the transaction, because visibility is a statement.
 //
 // Separated from ListRecordHistory so the admission rules read as one list
@@ -195,7 +195,7 @@ func recordHistoryEntry(row recordAuditRow, mask entityFieldMask) RecordHistoryE
 // one function doing two.
 func admitRecordHistoryRead(ctx context.Context, f RecordHistoryFilter) error {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
+	if !ok || !actor.HumanOrItsAgent() {
 		return apperrors.ErrPermissionDenied
 	}
 	if !fieldHistoryEntityTypes[f.EntityType] {

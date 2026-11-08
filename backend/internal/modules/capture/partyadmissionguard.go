@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -205,6 +206,33 @@ func partyAdmissionHasRoomTx(ctx context.Context, tx pgx.Tx, activity ids.Activi
 	return count+needed <= maxDerivedMeetingLinks-(postCommitLinkReservation-1), nil
 }
 
+// holdPartyAuthorityTx takes the user's authority locks before the ensure locks
+// any record. A member's removal takes them first too, so the admission's later
+// authority read cannot close a lock cycle with it.
+func (s *Sink) holdPartyAuthorityTx(ctx context.Context, tx pgx.Tx, user ids.UUID) error {
+	if s.partyAuthority == nil {
+		return nil
+	}
+	_, _, err := s.partyAuthority.EffectiveAuthorityTx(ctx, tx, user)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		// The admission refuses a member who is not live; the lock is held either way.
+		return nil
+	}
+	return err
+}
+
+// holdEnsureLocksTx takes the authority locks, then the activity, before an
+// ensure writes. The ensure's link insert shares the activity through a trigger.
+// Locking it only after that share would wait on a colleague's import whose
+// audience recompute waits on the share.
+func (s *Sink) holdEnsureLocksTx(ctx context.Context, tx pgx.Tx, user ids.UUID, activity ids.ActivityID) error {
+	if err := s.holdPartyAuthorityTx(ctx, tx, user); err != nil {
+		return err
+	}
+	_, err := storekit.LockRow(ctx, tx, "activity", activity.UUID, storekit.LiveOnly)
+	return err
+}
+
 func (s *Sink) partyActorTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (context.Context, error) {
 	if s.partyAuthority == nil {
 		return ctx, errors.Join(apperrors.ErrPermissionDenied, errPartyAuthorityChanged)
@@ -216,13 +244,10 @@ func (s *Sink) partyActorTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (cont
 	if !seat.CanMutate() {
 		return ctx, errors.Join(apperrors.ErrPermissionDenied, errPartyAuthorityChanged)
 	}
-	actor, ok := principal.Actor(ctx)
-	if !ok {
-		return ctx, errors.Join(apperrors.ErrPermissionDenied, errPartyAuthorityChanged)
+	if ctx, err = withAuthority(ctx, rbac, seat); err != nil {
+		return ctx, errors.Join(err, errPartyAuthorityChanged)
 	}
-	actor.Permissions, actor.TeamIDs, actor.SeatType = rbac.Permissions, rbac.TeamIDs, seat
-	ctx = principal.WithActor(ctx, actor)
-	if err := auth.Require(ctx, "contact", principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, capturedContactObject, principal.ActionCreate); err != nil {
 		return ctx, errors.Join(err, errPartyAuthorityChanged)
 	}
 	return ctx, nil

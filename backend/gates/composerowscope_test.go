@@ -885,7 +885,7 @@ func projectedBytes(sql string) []bool {
 // something other than the referenced record itself.
 func boundToCallerArgument(sql, column string) bool {
 	return compiledPattern(
-		`\b(?:[A-Za-z_][\w]*\.)?` + column + `\s*(?:=|IN)\s*(?:ANY\s*\(\s*)?\$\d+`).MatchString(sql)
+		`\b(?:[A-Za-z_][\w]*\.)?` + column + `\s*(?:=|IN)\s*(?:ANY\s*\(\s*)?(?:\$\d+|@[A-Za-z_][\w]*)`).MatchString(sql)
 }
 
 // selectSpan locates one SELECT: [from, to) is its projection, and [to, stop)
@@ -978,7 +978,7 @@ func tierFiles(t *testing.T, root string) []tierFile {
 	t.Helper()
 	fset := gatekit.SourceFileSet()
 	var files []tierFile
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 			strings.HasSuffix(path, "_test.go") || isIntegrationTagged(path) {
 			return err

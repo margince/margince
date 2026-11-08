@@ -31,7 +31,7 @@ func TestAMeteredQueryCountsOneStatementAndItsTime(t *testing.T) {
 	traced := tracer.TraceQueryStart(ctx, nil, pgx.TraceQueryStartData{SQL: "SELECT 1"})
 	tracer.TraceQueryEnd(traced, nil, pgx.TraceQueryEndData{})
 
-	if got := meter.Cost(); got != (StatementCost{Statements: 1, DBTime: 5 * time.Millisecond}) {
+	if got := meter.Cost(); got != (StatementCost{Statements: 1, Exchanges: 1, DBTime: 5 * time.Millisecond}) {
 		t.Fatalf("cost = %+v, want one statement of 5ms", got)
 	}
 }
@@ -68,8 +68,23 @@ func TestABatchCountsEachQueryPgxReadAndEachThatFailed(t *testing.T) {
 	tracer.TraceBatchQuery(traced, nil, pgx.TraceBatchQueryData{Err: failed})
 	tracer.TraceBatchEnd(traced, nil, pgx.TraceBatchEndData{Err: failed})
 
-	if got := meter.Cost(); got != (StatementCost{Statements: 2, Failed: 1, DBTime: 2 * time.Millisecond}) {
+	if got := meter.Cost(); got != (StatementCost{Statements: 2, Exchanges: 1, Failed: 1, DBTime: 2 * time.Millisecond}) {
 		t.Fatalf("cost = %+v, want the two queries read, one failure, one round trip of 2ms", got)
+	}
+}
+
+func TestABeginCountsATransactionAndASavepointDoesNot(t *testing.T) {
+	t.Parallel()
+	tracer := statementTracer{now: steppedClock(time.Millisecond)}
+	ctx, meter := WithStatementMeter(context.Background())
+
+	for _, sql := range []string{"begin", "BEGIN ISOLATION LEVEL REPEATABLE READ", "savepoint sp_1", "SELECT 'begin'", "beginning"} {
+		traced := tracer.TraceQueryStart(ctx, nil, pgx.TraceQueryStartData{SQL: sql})
+		tracer.TraceQueryEnd(traced, nil, pgx.TraceQueryEndData{})
+	}
+
+	if got := meter.Cost(); got.Transactions != 2 || got.Exchanges != 5 {
+		t.Fatalf("cost = %+v, want the two begins as transactions out of five exchanges", got)
 	}
 }
 
@@ -98,8 +113,11 @@ func TestAnExplicitPrepareCountsAndOneInsideAQueryDoesNot(t *testing.T) {
 	tracer.TracePrepareEnd(inner, nil, pgx.TracePrepareEndData{})
 	tracer.TraceQueryEnd(query, nil, pgx.TraceQueryEndData{})
 
-	if got := meter.Cost(); got.Statements != 2 {
-		t.Fatalf("cost = %+v, want the explicit prepare and the query", got)
+	if got := meter.Cost(); got.Statements != 2 || got.Prepares != 2 {
+		t.Fatalf("cost = %+v, want two calls and two server preparations", got)
+	}
+	if got := meter.Cost().Minus(StatementCost{Prepares: 1}); got.Prepares != 1 {
+		t.Fatalf("preparation delta = %d want 1", got.Prepares)
 	}
 }
 
@@ -111,7 +129,7 @@ func TestACopyFromCountsOneStatement(t *testing.T) {
 	traced := tracer.TraceCopyFromStart(ctx, nil, pgx.TraceCopyFromStartData{})
 	tracer.TraceCopyFromEnd(traced, nil, pgx.TraceCopyFromEndData{})
 
-	if got := meter.Cost(); got != (StatementCost{Statements: 1, DBTime: 4 * time.Millisecond}) {
+	if got := meter.Cost(); got != (StatementCost{Statements: 1, Exchanges: 1, DBTime: 4 * time.Millisecond}) {
 		t.Fatalf("cost = %+v, want one statement of 4ms", got)
 	}
 }
@@ -179,4 +197,16 @@ func BenchmarkStatementTracer(b *testing.B) {
 		ctx, _ := WithStatementMeter(context.Background())
 		run(b, ctx)
 	})
+}
+
+func TestCachedAndFailedPreparesDoNotCountAsNewPlans(t *testing.T) {
+	tracer := statementTracer{now: steppedClock(time.Millisecond)}
+	ctx, meter := WithStatementMeter(context.Background())
+	cached := tracer.TracePrepareStart(ctx, nil, pgx.TracePrepareStartData{})
+	tracer.TracePrepareEnd(cached, nil, pgx.TracePrepareEndData{AlreadyPrepared: true})
+	failed := tracer.TracePrepareStart(ctx, nil, pgx.TracePrepareStartData{})
+	tracer.TracePrepareEnd(failed, nil, pgx.TracePrepareEndData{Err: errors.New("cannot prepare")})
+	if got := meter.Cost(); got.Prepares != 0 || got.Failed != 1 {
+		t.Fatalf("prepare cost=%+v", got)
+	}
 }

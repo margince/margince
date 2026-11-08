@@ -4,6 +4,7 @@
 package provenance
 
 import (
+	"fmt"
 	"slices"
 	"sort"
 	"strings"
@@ -85,6 +86,17 @@ const WebsiteLeadSource = "siteread"
 // the form and the submission's key, so a sender's retry lands once. That
 // holds only while no client can spell it.
 const WebFormSource = "web_form"
+
+// WebFormSourceID is a website form submission's source_id: the form, then the
+// submission's own part. WebFormIDSQL reads the form back out of it.
+func WebFormSourceID(form, submission string) string { return form + ":" + submission }
+
+// WebFormIDSQL is the form a row under alias came through, as text, or NULL
+// for a row no website form wrote.
+func WebFormIDSQL(alias string) string {
+	return fmt.Sprintf(`CASE WHEN %[1]s.source_system = '%[2]s' THEN split_part(%[1]s.source_id, ':', 1) END`,
+		alias, WebFormSource)
+}
 
 // internalSourceSystems are the exact identities only an internal writer may
 // spell. Exact names rather than a second prefix: these are already written

@@ -47,6 +47,21 @@ type CaptureConcern struct {
 	SubjectMovedAt *time.Time
 }
 
+// BookingHealth reads the reader's own booking page when it takes no bookings.
+// Only a page that is switched on and was used counts. A principal without a
+// human is refused, and its lane renders as withheld.
+type BookingHealth interface {
+	BookingConcerns(ctx context.Context) ([]BookingConcern, error)
+}
+
+// BookingConcern is the reader's paused booking page and why it is paused.
+type BookingConcern struct {
+	PageID ids.UUID
+	// Blocker is the profile's own reason: no_calendar, calendar_read_only or
+	// calendar_unavailable.
+	Blocker string
+}
+
 // AIWork is the reader's own AI runs that went wrong — failed inside the
 // window the feed asks about, or live past the lease their source declared.
 // Read from the AI-task projection, so it claims only AI work; the other
@@ -158,6 +173,8 @@ type TroubledAutomationRun struct {
 	// Outcome is the contract's failed/blocked vocabulary.
 	Outcome string
 	// Reason is the engine's own recorded why, when it left one.
-	Reason     string
+	Reason string
+	// ReasonCode is Reason in automation.RunReasonCodes, for any language.
+	ReasonCode string
 	OccurredAt time.Time
 }

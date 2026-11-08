@@ -21,7 +21,7 @@ func measured(won, evidence, weighted int64) Readings {
 
 func TestCommitLandingIsWonPlusRemainingCommit(t *testing.T) {
 	t.Parallel()
-	got, err := ProjectLanding(measured(400_00, 250_00, 180_00), MeasureCommitEvidence, nil)
+	got, err := ProjectLanding(measured(400_00, 250_00, 180_00), MeasureLikely, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +103,7 @@ func TestAManagerCallMeasureWithNoCallFallsBackToCommitAndSaysSo(t *testing.T) {
 	if got.AmountMinor != 650_00 {
 		t.Fatalf("landing = %d, want the commit projection of 65000", got.AmountMinor)
 	}
-	if got.Measure != MeasureCommitEvidence {
+	if got.Measure != MeasureLikely {
 		t.Fatalf("measure = %q, want the one actually used", got.Measure)
 	}
 	if got.Caveat != CaveatCallAbsent {
@@ -118,7 +118,7 @@ func TestAManagerCallMeasureWithNoCallFallsBackToCommitAndSaysSo(t *testing.T) {
 func TestACallIsIgnoredUnderTheOtherTwoMeasures(t *testing.T) {
 	t.Parallel()
 	call := int64(999_00)
-	for _, measure := range []ForwardMeasure{MeasureCommitEvidence, MeasureWeighted} {
+	for _, measure := range []ForwardMeasure{MeasureLikely, MeasureWeighted} {
 		got, err := ProjectLanding(measured(400_00, 250_00, 180_00), measure, &call)
 		if err != nil {
 			t.Fatal(err)
@@ -134,7 +134,7 @@ func TestACallIsIgnoredUnderTheOtherTwoMeasures(t *testing.T) {
 // reported a week as a quarter one file over.
 func TestAnUnknownForwardMeasureIsRefused(t *testing.T) {
 	t.Parallel()
-	if _, err := ProjectLanding(measured(1, 1, 1), ForwardMeasure("best_case"), nil); err == nil {
+	if _, err := ProjectLanding(measured(1, 1, 1), ForwardMeasure("best_guess"), nil); err == nil {
 		t.Fatal("an unrecognised measure produced a landing, which is some other measure's number")
 	}
 }
@@ -145,7 +145,7 @@ func TestALandingThatCannotBeRepresentedIsRefused(t *testing.T) {
 	t.Parallel()
 	readings := measured(math.MaxInt64-10, 1_000, 0)
 
-	if _, err := ProjectLanding(readings, MeasureCommitEvidence, nil); err == nil {
+	if _, err := ProjectLanding(readings, MeasureLikely, nil); err == nil {
 		t.Fatal("a landing past the representable range answered instead of refusing — " +
 			"a wrapped total reads as a negative quarter and still looks like money")
 	}
@@ -163,7 +163,7 @@ func TestAManagerCallLandingCarriesTheRecordsProjectionBesideIt(t *testing.T) {
 	if got.SystemMinor == nil || *got.SystemMinor != 650_00 {
 		t.Fatalf("system = %v, want won plus commit evidence, 65000", got.SystemMinor)
 	}
-	for _, measure := range []ForwardMeasure{MeasureCommitEvidence, MeasureWeighted} {
+	for _, measure := range []ForwardMeasure{MeasureLikely, MeasureWeighted} {
 		other, err := ProjectLanding(measured(400_00, 250_00, 180_00), measure, nil)
 		if err != nil {
 			t.Fatal(err)
@@ -191,7 +191,7 @@ func TestEachMeasureLandsOnItsOwnBasisAndNoneAddsTheCall(t *testing.T) {
 	for _, tc := range []struct {
 		measure ForwardMeasure
 		want    int64
-	}{{MeasureCommitEvidence, 140}, {MeasureWeighted, 170}, {MeasureManagerCall, 190}} {
+	}{{MeasureLikely, 140}, {MeasureWeighted, 170}, {MeasureManagerCall, 190}} {
 		got, err := ProjectLanding(readings, tc.measure, &call)
 		if err != nil {
 			t.Fatal(err)
@@ -211,7 +211,7 @@ func TestAMissingOrLowCallNamesItsBasisAndWarns(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if absent.AmountMinor != 140 || absent.Measure != MeasureCommitEvidence || absent.Caveat != CaveatCallAbsent {
+	if absent.AmountMinor != 140 || absent.Measure != MeasureLikely || absent.Caveat != CaveatCallAbsent {
 		t.Fatalf("no call lands %+v, want 140 by commit evidence with the call_absent caveat", absent)
 	}
 	low := int64(90)

@@ -17,7 +17,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"slices"
 	"strings"
 	"time"
@@ -43,7 +42,7 @@ const candidateCompanyKey = "candidate_company_key"
 // RoutingRule assigns leads whose field matches a literal value to one
 // named owner — territory/segment/source routing in its V1 shape.
 type RoutingRule struct {
-	Field   string     `json:"field"` // one of RoutableLeadFields; an unknown name never matches
+	Field   string     `json:"field"` // one of RoutableLeadFields; an unknown name stops routing
 	Equals  string     `json:"equals"`
 	OwnerID ids.UserID `json:"owner_id"`
 }
@@ -70,9 +69,8 @@ type RoutingConfig struct {
 // Held by: TestEveryRoutableLeadFieldResolvesToItsOwnFact (backend/internal/modules/contacts/leadroutingvocab_test.go)
 var RoutableLeadFields = []string{leadOriginColumn, leadCompanyColumn, candidateCompanyKey}
 
-// staleRuleFields are the fields of rules that name something routing no
-// longer reads. Such a rule never applies: reading it as an empty fact would let
-// a rule that wants an empty value match every lead.
+// Stale fields stop the whole configuration so a saved rule cannot silently
+// give its leads to the round-robin pool.
 func (c RoutingConfig) staleRuleFields() []string {
 	var stale []string
 	for _, rule := range c.Rules {
@@ -137,6 +135,9 @@ func (f leadRoutingFacts) field(name string) string {
 // disqualified lead frees capacity, and the distribution stays within
 // ±1 across eligible owners.
 func chooseOwner(cfg RoutingConfig, lead leadRoutingFacts, openLoad map[ids.UserID]int, active map[ids.UserID]bool) (ids.UserID, string, bool) {
+	if len(cfg.staleRuleFields()) > 0 {
+		return ids.UserID{}, "stale_rules", false
+	}
 	underCap := func(id ids.UserID) bool {
 		return cfg.CapPerOwner <= 0 || openLoad[id] < cfg.CapPerOwner
 	}
@@ -161,7 +162,7 @@ func chooseOwner(cfg RoutingConfig, lead leadRoutingFacts, openLoad map[ids.User
 		}
 	}
 	if chosen.IsZero() {
-		return ids.UserID{}, "", false
+		return ids.UserID{}, "no_capacity", false
 	}
 	return chosen, "round_robin", true
 }
@@ -228,7 +229,7 @@ func (s *Store) RouteLead(ctx context.Context, leadID ids.LeadID, cfg RoutingCon
 
 		chosen, reason, ok := chooseOwner(cfg, facts, openLoad, active)
 		if !ok {
-			decision = RoutingDecision{Reason: "no_capacity"}
+			decision = RoutingDecision{Reason: reason}
 			_, err := storekit.Audit(ctx, tx, "assign", "lead", leadID.UUID,
 				map[string]any{"owner_id": nil},
 				map[string]any{"owner_id": nil, "routed": false, "reason": decision.Reason})
@@ -406,9 +407,6 @@ func (w leadRouting) Apply(ctx context.Context, ev workflow.Event, eff workflow.
 	if err != nil {
 		return workflow.RunResult{}, err
 	}
-	if stale := cfg.staleRuleFields(); len(stale) > 0 {
-		slog.WarnContext(ctx, "lead routing skipped rules on fields it no longer reads", "fields", stale)
-	}
 	decision, err := w.store.RouteLead(ctx, ids.From[ids.LeadKind](ev.Entity.ID), cfg)
 	if err != nil {
 		return workflow.RunResult{}, err
@@ -441,6 +439,8 @@ func (leadRouting) IdempotencyKey(ev workflow.Event) string {
 // added later cannot leak an internal spelling by being forgotten here.
 func routingDeclineReason(reason string) string {
 	switch reason {
+	case "stale_rules":
+		return "routing stopped: a saved rule uses an unsupported field. Replace source with origin where needed; assign this lead by hand, then new leads can route."
 	case "no_capacity":
 		return "no eligible owner had capacity for this lead"
 	case "already_owned":

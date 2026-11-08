@@ -21,7 +21,7 @@ import (
 func TestEveryAnalyticsReaderRequiresThePopulationGrant(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
-	e.seedOpenDeal(t, "Restricted population", 20, &e.Rep1, &amount, nil)
+	e.seedOpenDeal(t, "Restricted population", 20, &e.Rep1, &amount)
 	ctx := e.reportReaderCtx()
 	actor, ok := principal.Actor(ctx)
 	if !ok {

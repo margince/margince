@@ -7,6 +7,7 @@ import { TagsPanel } from "../../components/tagspanel";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 
@@ -40,6 +41,7 @@ function Panel({
   canEdit = true,
 }: Readonly<{ tags: PanelTag[]; withheld?: boolean; canEdit?: boolean }>) {
   installFetchStub({
+    "GET /me": meRoute(withheld ? {} : { tag: ["read"] }),
     [`GET /records/company/${COMPANY}/tags`]: () =>
       jsonResponse({ data: tags, withheld }),
   });

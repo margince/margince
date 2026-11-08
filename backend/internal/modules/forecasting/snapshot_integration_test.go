@@ -130,7 +130,7 @@ func mixedPopulation(t *testing.T) Readings {
 
 	rows := []Contribution{priced, unpriced, unconvertible}
 	return Readings{
-		OpenMinor: 100_000, EvidenceMinor: 100_000, BestCaseMinor: 100_000,
+		OpenMinor: 100_000, EvidenceMinor: 100_000, LikelyThreshold: 90,
 		WeightedMinor: 50_000,
 		EligibleCount: len(rows), PricedCount: 2,
 		ConfirmedDateCount: len(rows), FxMissingCount: 1,

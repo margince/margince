@@ -205,7 +205,7 @@ function findingsIn(path: string, source: string): Finding[] {
 // Static constants keep the timeout auditable by the test-budget gate.
 const PARSE_BUDGET_PER_FILE_MS = 40;
 // Headroom for source growth; the census below fails before the scan outgrows it.
-const BUDGETED_CORPUS_FILES = 5_000;
+const BUDGETED_CORPUS_FILES = 5_500;
 const SCAN_TIMEOUT_MS = BUDGETED_CORPUS_FILES * PARSE_BUDGET_PER_FILE_MS;
 
 describe("one plural rule", () => {

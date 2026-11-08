@@ -24,7 +24,6 @@ package gates
 // cover it here, rather than a second reader of what a range CHECK looks like.
 
 import (
-	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -48,7 +47,7 @@ var notAConfidenceScore = gatekit.Waive(map[string]string{})
 // confidenceColumns derives the corpus, mapping "table.column" to its type.
 func confidenceColumns(t *testing.T) map[string]string {
 	t.Helper()
-	raw, err := os.ReadFile("migrations/testdata/head_catalog.txt")
+	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
 	}

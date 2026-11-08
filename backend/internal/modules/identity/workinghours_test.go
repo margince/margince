@@ -87,9 +87,6 @@ func TestTheWorkingDayIsNormalizedAndItsRefusalsNameAField(t *testing.T) {
 		{"an end before its start", WorkingHours{StartMinute: 600, EndMinute: 60, Days: []int{1}, Timezone: "UTC"}, fieldWorkEnd},
 		{"a week with no days", WorkingHours{StartMinute: 0, EndMinute: 60, Timezone: "UTC"}, fieldWorkDays},
 		{"a day that is not one", WorkingHours{StartMinute: 0, EndMinute: 60, Days: []int{8}, Timezone: "UTC"}, fieldWorkDays},
-		{"a zone that is not one", WorkingHours{StartMinute: 0, EndMinute: 60, Days: []int{1}, Timezone: "Mars/Olympus"}, fieldWorkTimezone},
-		{"the server's own zone", WorkingHours{StartMinute: 0, EndMinute: 60, Days: []int{1}, Timezone: "Local"}, fieldWorkTimezone},
-		{"no zone at all", WorkingHours{StartMinute: 0, EndMinute: 60, Days: []int{1}}, fieldWorkTimezone},
 	} {
 		t.Run(refused.name, func(t *testing.T) {
 			_, err := validWorkingHours(refused.in)

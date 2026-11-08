@@ -76,7 +76,7 @@ func (s *reportSetups) withLane(lane completer) *reportSetups {
 // grant is asked first, so a reader who could not save the result never
 // spends a model call on it.
 func (s *reportSetups) ProposeSetup(ctx context.Context, req crmcontracts.ReportSetupRequest) (crmcontracts.ReportSetupProposal, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.ReportSetupProposal{}, err
 	}
 	if err := requireSetupCreate(ctx, req.Site); err != nil {

@@ -24,8 +24,9 @@ import { stable } from "../../format/collate";
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { CfObject, CfType } from "../../lib/customfields.logic";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { AuditEntryLine } from "../settings/audit";
+import { ActivityKindsSelect } from "./customfields.kinds";
 import { objectLabels } from "./customfields.labels";
 import "./customfields.css";
 
@@ -76,6 +77,7 @@ export function FieldTable({
   onRename,
   onArchive,
   onSetting,
+  onKinds,
   savingField,
 }: Readonly<{
   object: CfObject;
@@ -88,13 +90,15 @@ export function FieldTable({
   onRename: (field: CustomField) => void;
   onArchive: (field: CustomField) => void;
   onSetting: (field: CustomField, setting: FieldSetting, on: boolean) => void;
+  // The activity types an activity field shows on, written on each change.
+  onKinds: (field: CustomField, kinds: string[]) => void;
   // The id of the field whose settings are being written. Both its switches
   // wait, so a second flip cannot send a version the first one moved.
   savingField?: string;
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
 
   const typeWord = (field: CustomField): string => {
     const base = t(`cf.type.${field.type}`);
@@ -129,6 +133,27 @@ export function FieldTable({
         />
       ),
     },
+    ...(object === "activity"
+      ? [
+          {
+            key: "kinds",
+            header: t("cf.activityKinds"),
+            render: (field: CustomField) => (
+              <ActivityKindsSelect
+                aria-label={t("cf.activityKindsFor", { label: field.label })}
+                values={field.activity_kinds ?? []}
+                disabled={
+                  !canEdit ||
+                  field.status !== "active" ||
+                  field.id === STAGED_ID ||
+                  savingField === field.id
+                }
+                onChange={(kinds) => onKinds(field, kinds)}
+              />
+            ),
+          },
+        ]
+      : []),
     ...(REPORTED_OBJECTS.has(object)
       ? [
           {
@@ -159,7 +184,7 @@ export function FieldTable({
             <EntityRef kind="user" id={field.created_by} />
           )}
           <span className="t-caption">
-            {formatDate(field.created_at, locale, recordZone)}
+            {formatDate(field.created_at, locale, readerZone)}
           </span>
         </CellStack>
       ),

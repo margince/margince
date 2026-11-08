@@ -40,10 +40,11 @@ package gates
 // PENDING WRITER entry left over there.
 
 import (
-	"os"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // pendingWriterTables are the tables whose FK classification says no writer
@@ -120,7 +121,7 @@ func TestNoPendingWriterHasAWriter(t *testing.T) {
 func TestEveryPendingWriterTableIsStillClassified(t *testing.T) {
 	t.Parallel()
 	const classification = "migrations/schema_fitness_integration_test.go"
-	source, err := os.ReadFile(classification)
+	source, err := gatekit.ReadFile(classification)
 	if err != nil {
 		t.Fatalf("reading %s: %v", classification, err)
 	}

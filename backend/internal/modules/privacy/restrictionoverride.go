@@ -53,7 +53,9 @@ const (
 // this code.
 func (e *Eraser) ReleaseRestriction(ctx context.Context, activityID ids.UUID, reason StatedReason) error {
 	return e.db.Tx(ctx, func(tx pgx.Tx) error {
-		decision, err := admitRestrictionDecision(ctx, tx, reason)
+		decision, err := admitRestrictionDecision(ctx, tx, reason, func(p principal.Principal) bool {
+			return p.Type == principal.PrincipalHuman
+		})
 		if err != nil {
 			return err
 		}
@@ -131,7 +133,7 @@ func releaseFoundNothing(ctx context.Context, tx pgx.Tx, activityID ids.UUID) er
 // is actually answered.
 func (e *Eraser) PinToFloor(ctx context.Context, activityID ids.UUID, reason StatedReason) error {
 	return e.db.Tx(ctx, func(tx pgx.Tx) error {
-		decision, err := admitRestrictionDecision(ctx, tx, reason)
+		decision, err := admitRestrictionDecision(ctx, tx, reason, principal.Principal.HumanOrItsAgent)
 		if err != nil {
 			return err
 		}
@@ -142,7 +144,7 @@ func (e *Eraser) PinToFloor(ctx context.Context, activityID ids.UUID, reason Sta
 			return err
 		}
 		floorCurrent, floorCarried := floor.sqlArgs()
-		if err := auth.EnsureActivityVisible(ctx, tx, activityID); err != nil {
+		if err := auth.EnsureActivityRetentionTargetTx(ctx, tx, activityID); err != nil {
 			// A held record reads as gone to every reader (A165 §2), so a
 			// not-found here is ambiguous on its own. pinRefusalFor says which
 			// it was: a record that is not there, or one already held.
@@ -288,19 +290,22 @@ func ParseStatedReason(reason string) (StatedReason, error) {
 // which is what makes "a reason was stated" a type rather than a convention.
 func (s StatedReason) String() string { return s.text }
 
-// admitRestrictionDecision is the gate both operations share: a human session
-// (an agent never decides what the installation keeps, even carrying an
-// admin's passport) and the retention authority's UPDATE — the same object
-// that governs the ladder, held admin-only by the seeded roles.
+// admitRestrictionDecision is the gate both operations share: who may decide,
+// which the operation names, and the retention authority's UPDATE. That is the
+// same object that governs the ladder, held admin-only by the seeded roles.
+// Releasing erases, so only a user's own session does it. An agent may pin, and
+// its evidence names it as the agent of the user it acts for.
 //
 // The deciding user's DISPLAY NAME is read here and frozen into the evidence,
 // because a deactivated or deleted account must not turn an attributed
 // decision into an anonymous one (A167/ADR-0116 §3). Reading it needs the
 // transaction, so the caller passes one.
-func admitRestrictionDecision(ctx context.Context, tx pgx.Tx, reason StatedReason) (restrictionDecision, error) {
+func admitRestrictionDecision(
+	ctx context.Context, tx pgx.Tx, reason StatedReason, mayDecide func(principal.Principal) bool,
+) (restrictionDecision, error) {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
-		return restrictionDecision{}, fmt.Errorf("only a named human decides what a statutory obligation holds: %w", apperrors.ErrPermissionDenied)
+	if !ok || !mayDecide(actor) {
+		return restrictionDecision{}, fmt.Errorf("only a named user decides what a statutory obligation holds: %w", apperrors.ErrPermissionDenied)
 	}
 	if err := auth.Require(ctx, retentionPolicyObject, principal.ActionUpdate); err != nil {
 		return restrictionDecision{}, err
@@ -318,6 +323,9 @@ func admitRestrictionDecision(ctx context.Context, tx pgx.Tx, reason StatedReaso
 	}
 	if err != nil {
 		return restrictionDecision{}, err
+	}
+	if actor.Type == principal.PrincipalAgent {
+		name = "Agent for " + name
 	}
 	return restrictionDecision{userID: actor.UserID, name: name, reason: reason.text}, nil
 }

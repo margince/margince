@@ -25,14 +25,13 @@ fi
 BUDGET="${TEST_PACKAGE_BUDGET:-120}"
 WAIVERS="${TEST_BUDGET_WAIVERS:-$(dirname "$0")/test-budget-waivers.txt}"
 # The margin a measurement must clear the budget by before its waiver is
-# called stale. It is the one the ceilings are already sized with, named in
-# the waiver file's own header.
+# called stale, named in the waiver file's own header.
 #
-# Without it the two sides disagree. A ceiling carries 1.2x of headroom while
-# the removal demand fired on a single sample at the budget itself, so a
-# package whose time straddles the budget was told to drop its waiver on a
-# lucky run and told it was too slow on the next. Neither state is green.
-REMOVAL_MARGIN="${TEST_BUDGET_REMOVAL_MARGIN:-1.2}"
+# Without it, one fast sample decides. A package whose time straddles the
+# budget is told to drop its waiver on a lucky run and told it is too slow on
+# the next, and neither state is green. The spread of one package on one
+# runner, not the ceilings' 1.2x headroom, sets how big the margin must be.
+REMOVAL_MARGIN="${TEST_BUDGET_REMOVAL_MARGIN:-2.5}"
 
 awk -v budget="$BUDGET" -v waivers="$WAIVERS" -v margin="$REMOVAL_MARGIN" '
 BEGIN {

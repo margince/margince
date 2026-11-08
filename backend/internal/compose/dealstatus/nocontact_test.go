@@ -44,3 +44,30 @@ func TestRecentHistoryDoesNotClaimThatNoContactEverHappened(t *testing.T) {
 		})
 	}
 }
+
+// A past meeting nobody called off is the deal's last contact, whether or not
+// anyone reported it held. A meeting still to come, a canceled one and a
+// no-show are not.
+func TestAPastMeetingNobodyCalledOffIsTheLastContact(t *testing.T) {
+	status := func(s crmcontracts.ActivityMeetingStatus, at time.Time) crmcontracts.Activity {
+		a := act(crmcontracts.ActivityKindMeeting, at)
+		a.MeetingStatus = &s
+		return a
+	}
+	past, ahead := testNow.AddDate(0, 0, -2), testNow.AddDate(0, 0, 3)
+	for name, tc := range map[string]struct {
+		meeting crmcontracts.Activity
+		want    bool
+	}{
+		"a past meeting nobody reported": {act(crmcontracts.ActivityKindMeeting, past), true},
+		"a held meeting":                 {status(crmcontracts.ActivityMeetingStatusHeld, past), true},
+		"a meeting still to come":        {status(crmcontracts.ActivityMeetingStatusBooked, ahead), false},
+		"a canceled meeting":             {status(crmcontracts.ActivityMeetingStatusCanceled, past), false},
+		"a no-show":                      {status(crmcontracts.ActivityMeetingStatusNoShow, past), false},
+	} {
+		f := facts{deal: openDeal(), now: testNow, loc: time.UTC, timeline: []crmcontracts.Activity{tc.meeting}}
+		if _, got := lastContact(f); got != tc.want {
+			t.Errorf("%s is the last contact: %v, want %v", name, got, tc.want)
+		}
+	}
+}

@@ -10,16 +10,17 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func TestEveryRelayEntryPointRemainsVisibleToTheCensus(t *testing.T) {
 	t.Parallel()
 	directory := "internal/platform/mailer"
-	entries, err := os.ReadDir(directory)
+	entries, err := gatekit.ReadDir(directory)
 	if err != nil {
 		t.Fatal(err)
 	}

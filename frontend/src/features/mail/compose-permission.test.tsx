@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { writeMessage } from "../../design-system/richtext-testing";
 import { LocaleProvider } from "../../i18n";
 import {
   allowedPreview,
@@ -266,9 +267,11 @@ describe("the composer asks before anybody presses Send", () => {
   it("shows a quiet mark once the engine has allowed the message", async () => {
     stubEngine(allowedPreview);
     await openReplyAndAddress("anna@example.test");
+    // The reply carries its subject; the words are what the form still needs.
+    writeMessage("Body", "Thanks, here it is.");
 
     expect(
-      await screen.findByRole("button", { name: /ready to send/i }),
+      await screen.findByRole("button", { name: /recipients checked/i }),
     ).toBeInTheDocument();
   });
 
@@ -286,6 +289,8 @@ describe("the composer asks before anybody presses Send", () => {
       />,
     );
     await screen.findByText(/Replying to “The quote”/);
-    expect(screen.queryByRole("button", { name: /ready to send/i })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /recipients checked/i }),
+    ).toBeNull();
   });
 });

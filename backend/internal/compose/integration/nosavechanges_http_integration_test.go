@@ -269,6 +269,8 @@ func TestADealRoomExpirySetToItsStoredValueChangesNothing(t *testing.T) {
 //
 // gatekit:fixture the routes an HTTP probe covers and the test that probes each, expected data checked against the contract
 var noOpProbedRoutes = map[string]string{
+	"PATCH /acquisition-sources/{id}":   "TestACatalogRowSavedAsItAlreadyIsChangesNothing",
+	"PATCH /loss-reasons/{id}":          "TestACatalogRowSavedAsItAlreadyIsChangesNothing",
 	"PATCH /contacts/{id}":              "TestTheFullFormPayloadOfAnUntouchedRecordChangesNothing",
 	"PATCH /companies/{id}":             "TestTheFullFormPayloadOfAnUntouchedRecordChangesNothing",
 	"PUT /companies/{id}/partner":       "TestASaveOfTheStoredValuesChangesNothing",
@@ -297,6 +299,24 @@ func TestTheProbeTableListsOnlySaveRoutes(t *testing.T) {
 		if !strings.HasPrefix(probe, "Test") {
 			t.Errorf("%s names %q, which is not a test", route, probe)
 		}
+	}
+}
+
+func TestACatalogRowSavedAsItAlreadyIsChangesNothing(t *testing.T) {
+	e := setupRelationships(t)
+	for _, route := range []string{"/v1/loss-reasons", "/v1/acquisition-sources"} {
+		t.Run(route, func(t *testing.T) {
+			var row versionedWire
+			if status := e.Call(t, "POST", route, AnyMap{"label": "Trade fair"}, nil, &row); status != http.StatusCreated {
+				t.Fatalf("creating the row -> %d", status)
+			}
+			assertSaveChangesNothing(t, e.AppEnv, "PATCH", route+"/"+row.ID, AnyMap{"label": "Trade fair"}, row.ID, row.Version)
+			if status := e.Call(t, "PATCH", route+"/"+row.ID, AnyMap{"label": "Fair"},
+				map[string]string{"If-Match": strconv.FormatInt(row.Version+1, 10)}, nil); status != http.StatusConflict &&
+				status != http.StatusPreconditionFailed {
+				t.Errorf("a stale If-Match -> %d, want a version conflict", status)
+			}
+		})
 	}
 }
 

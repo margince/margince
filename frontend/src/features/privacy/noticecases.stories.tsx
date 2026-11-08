@@ -10,6 +10,7 @@ import {
   type RouteMap,
   StoryProviders,
   stubWithSession,
+  visibleDialog,
 } from "../../testing/story-utils";
 import { mailPreview } from "./controllermail.fixtures";
 import { NoticeCasesCard } from "./noticecases";
@@ -333,6 +334,6 @@ export const SourceReviewQueue: Story = {
     const choice = choices.at(-1);
     if (!choice) throw new Error("Source assessment action was not offered");
     await userEvent.click(choice);
-    await expect(await screen.findByRole("dialog")).toBeVisible();
+    await visibleDialog();
   },
 };

@@ -23,7 +23,6 @@ package gates
 // decision and an oversight.
 
 import (
-	"os"
 	"regexp"
 	"slices"
 	"testing"
@@ -58,7 +57,7 @@ var selectorKeyRE = regexp.MustCompile("(?m)^\\t\"([a-z_]+/[a-z_]*)\": `")
 // loudly, because a reader that finds nothing passes over everything.
 func actionableScopes(t *testing.T) []string {
 	t.Helper()
-	src, err := os.ReadFile("internal/modules/privacy/retentionselectors.go")
+	src, err := gatekit.ReadFile("internal/modules/privacy/retentionselectors.go")
 	if err != nil {
 		t.Fatalf("reading the selector table: %v", err)
 	}
@@ -76,7 +75,7 @@ func actionableScopes(t *testing.T) []string {
 // `object_type/category` with an empty category for a NULL.
 func seededScopes(t *testing.T) map[string]bool {
 	t.Helper()
-	src, err := os.ReadFile("internal/modules/consent/retention.go")
+	src, err := gatekit.ReadFile("internal/modules/consent/retention.go")
 	if err != nil {
 		t.Fatalf("reading the seed: %v", err)
 	}

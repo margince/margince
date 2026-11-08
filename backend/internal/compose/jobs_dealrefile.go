@@ -52,11 +52,13 @@ type capturedDealRefileWorker struct {
 	db      *database.DB
 	repair  capture.DealRepair
 	cohorts *contacts.Store
+	// page is how many candidates one pass inspects before it snoozes.
+	page int
 }
 
 func newCapturedDealRefileWorker(pool *pgxpool.Pool) *capturedDealRefileWorker {
 	db := InstallationDB(pool)
-	return &capturedDealRefileWorker{db: db, repair: mailDealRepair(pool), cohorts: cohortRepairStore(contacts.NewStore(db))}
+	return &capturedDealRefileWorker{db: db, repair: mailDealRepair(pool), cohorts: cohortRepairStore(contacts.NewStore(db)), page: capture.DealRefileLimit}
 }
 
 type dealRefileCursor struct {
@@ -133,7 +135,7 @@ func (w *capturedDealRefileWorker) refilePage(ctx context.Context, args Captured
 	var scanned []ids.UUID
 	err := w.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		scanned, err = w.repair.RefileCandidatesTx(ctx, tx, args.Scope, args.AsOf, after, args.Ceiling)
+		scanned, err = w.repair.RefileCandidatesTx(ctx, tx, args.Scope, args.AsOf, after, args.Ceiling, w.page)
 		return err
 	})
 	if err != nil {
@@ -155,7 +157,7 @@ func (w *capturedDealRefileWorker) refilePage(ctx context.Context, args Captured
 	if len(scanned) == 0 {
 		return after, false, nil
 	}
-	return scanned[len(scanned)-1], len(scanned) == capture.DealRefileLimit, nil
+	return scanned[len(scanned)-1], len(scanned) == w.page, nil
 }
 
 type capturedDealRefileSweepWorker struct {
@@ -179,5 +181,5 @@ func (w *capturedDealRefileSweepWorker) scheduleWorkspace(ctx context.Context, w
 	if err != nil {
 		return err
 	}
-	return dispatchOne(ctx, args, nil)
+	return dispatchOne(ctx, w.pool, args, nil)
 }

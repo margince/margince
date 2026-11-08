@@ -38,28 +38,18 @@ fixture:
 expect:
   outcome: accepted
   # We promised two reports by Friday and nine days later he is asking where
-  # they are. A correct scan rests on the promise (commitment_unmet) or on
-  # the nudge (question_unanswered); either way the nudge is the message a
-  # reader must be shown, because it is what needs an answer today.
+  # they are. The scan never raises the promise itself, so a correct scan
+  # rests a question_unanswered finding on his nudge.
   answer: [his_nudge]
   bands:
     certified_min: 70
     degraded_min: 50
     floor: 40
-  # The two findings are not offered as equally correct: the nudge is the
-  # urgent one, and a rubric accepting either would contradict the expected
-  # answer and stop testing the prioritisation.
   rubric: >
     The finding that most needs a contact is the one resting on THEIR NUDGE:
     they are waiting, their team meets Thursday, and nothing has answered them.
     Score whether the scan raises a finding on that message — question_unanswered
     is its kind — quoting it verbatim, with the action draft_reply.
-
-    Our own unkept promise is also true of this account, and a scan that raises
-    commitment_unmet on the outbound promise INSTEAD has picked the less urgent
-    of two real findings. Score it below one that surfaces the nudge. The site
-    asks for the finding that most needs a contact first, so choosing between
-    them is the thing being measured here.
 
     A scan that invents a delivery date for the reports, or a reason they were
     held up, states something no message says and scores below one that only

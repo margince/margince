@@ -80,13 +80,14 @@ func seedThread(ctx context.Context, t *testing.T, tx pgx.Tx, th seatThread) ids
 	if th.archived {
 		archivedAt = "now()"
 	}
-	at, precision := clocktest.Now(t), "instant"
+	// Yesterday, so a meeting has taken place and counts as an interaction.
+	at, precision := clocktest.Now(t).AddDate(0, 0, -1), "instant"
 	if th.day {
 		at, precision = occurredday.AnchorIn(at, time.UTC), "day"
 	}
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO activity (kind, occurred_at, occurred_precision, direction, source, captured_by, audience, archived_at)
-		VALUES ($1, $3, $4, 'inbound', 'imap', 'connector:imap', $2, `+archivedAt+`)
+		INSERT INTO activity (kind, occurred_at, occurred_precision, direction, source, captured_by, audience, meeting_status, archived_at)
+		VALUES ($1, $3, $4, 'inbound', 'imap', 'connector:imap', $2, CASE WHEN $1 = 'meeting' THEN 'held' END, `+archivedAt+`)
 		RETURNING id`, th.kind, th.audience, at, precision).Scan(&activityID); err != nil {
 		t.Fatalf("seeding activity: %v", err)
 	}

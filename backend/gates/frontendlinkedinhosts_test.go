@@ -27,13 +27,13 @@ package gates
 // own copy, and it fails in both directions.
 
 import (
-	"os"
 	"regexp"
 	"sort"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const frontendWebURL = "../frontend/src/format/weburl.ts"
@@ -51,7 +51,7 @@ var tsHostComment = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
 
 func TestTheFrontendLinkedInHostsMatchTheGoDeclaration(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile(frontendWebURL)
+	source, err := gatekit.ReadFile(frontendWebURL)
 	if err != nil {
 		t.Fatalf("reading the frontend link gate: %v", err)
 	}
