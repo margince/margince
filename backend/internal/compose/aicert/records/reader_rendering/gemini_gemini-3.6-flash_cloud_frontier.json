@@ -3,35 +3,35 @@
   "provider": "gemini",
   "served_model": "gemini-3.6-flash",
   "env_class": "cloud_frontier",
-  "prompt_version": "p4e6177e516493affd83e50d497c53a30",
+  "prompt_version": "pc2c7205366e0c11e9697c34d8981fcd8",
   "corpus_version": "v1",
-  "verdict": "not_supported",
+  "verdict": "certified",
   "runs": 27,
-  "passed": 24,
-  "reliability": 0.8888888888888888,
-  "reported_accepted": 24,
+  "passed": 27,
+  "reliability": 1,
+  "reported_accepted": 27,
   "reported_wrong_answer": 0,
-  "reported_invalid": 3,
+  "reported_invalid": 0,
   "reported_abstained": 0,
   "certified_scope": "full_invocation",
   "context_applied": false,
   "context_scopes": null,
   "judge_score_p50": 97,
-  "judge_score_min": 92,
-  "latency_p50": 1593,
-  "latency_p95": 2656,
-  "mean_tokens": 680,
-  "mean_tokens_in": 583,
-  "mean_tokens_out": 97,
+  "judge_score_min": 85,
+  "latency_p50": 1230,
+  "latency_p95": 1868,
+  "mean_tokens": 677,
+  "mean_tokens_in": 585,
+  "mean_tokens_out": 92,
   "mean_cached_tokens": 0,
   "mean_cache_write_tokens": 0,
-  "est_cost_microusd": 801,
+  "est_cost_microusd": 783,
   "judge_served_model": "claude-sonnet-4-6",
   "judge_provider": "claude_cli",
   "self_judged": false,
   "served_identity_source": "response",
   "thinking_level": "low",
-  "ran_at": "2026-11-08T01:09:53Z",
+  "ran_at": "2026-11-08T20:34:18Z",
   "scenarios": [
     {
       "scenario": "reader_rendering_keeps_a_commitment_whole",
@@ -65,9 +65,9 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
+        100,
         97,
-        97,
-        98
+        97
       ],
       "bands": {
         "certified_min": 80,
@@ -111,9 +111,9 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
+        100,
         97,
-        97,
-        95
+        97
       ],
       "bands": {
         "certified_min": 80,
@@ -134,9 +134,9 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        100,
-        100,
-        95
+        97,
+        97,
+        97
       ],
       "bands": {
         "certified_min": 80,
@@ -157,9 +157,9 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
+        95,
         97,
-        97,
-        97
+        100
       ],
       "bands": {
         "certified_min": 80,
@@ -180,9 +180,9 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        97,
         100,
-        100
+        100,
+        95
       ],
       "bands": {
         "certified_min": 80,
@@ -197,14 +197,14 @@
     {
       "scenario": "reader_rendering_renders_vietnamese_into_german",
       "site": "activity_text",
-      "stamp": "06dc8155e99500de77a62d5dc58374953c07e02deaf2fb4c579c699a1729b501c1d6d3949606b0842b08789abe4a56acf3d9b230f561d68672fb81872297717878551086f80894641e97ae07ba4a32abd36571823ea51d4d9780b020e1ab3802",
-      "verdict": "not_supported",
+      "stamp": "d08e6e8b6abb840a3b00e010b8f351e4e8b9abd776dc4069758720cb2bf7cffac1d6d3949606b0842b08789abe4a56acf3d9b230f561d68672fb8187229771780ad3ad14422a14c04d44fb65195a09c93dedeffb6965473bfba705d99689e88b",
+      "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
-      "passed": 0,
+      "passed": 3,
       "judge_scores": [
-        97,
-        92,
+        96,
+        85,
         97
       ],
       "bands": {
@@ -212,9 +212,9 @@
         "degraded_min": 60,
         "floor": 50
       },
-      "reported_accepted": 0,
+      "reported_accepted": 3,
       "reported_wrong_answer": 0,
-      "reported_invalid": 3,
+      "reported_invalid": 0,
       "reported_abstained": 0
     },
     {

@@ -3,7 +3,7 @@
   "provider": "gemini",
   "served_model": "gemini-3.1-flash-lite",
   "env_class": "cloud_frontier",
-  "prompt_version": "p1c6cb071b2385583e38088d1f4c00106",
+  "prompt_version": "p9fe8796fda3d0d0695509f5b27b126f2",
   "corpus_version": "v1",
   "verdict": "certified",
   "runs": 12,
@@ -16,34 +16,34 @@
   "certified_scope": "full_invocation",
   "context_applied": false,
   "context_scopes": null,
-  "judge_score_p50": 97,
-  "judge_score_min": 90,
-  "latency_p50": 1122,
-  "latency_p95": 1459,
-  "mean_tokens": 1302,
-  "mean_tokens_in": 1087,
-  "mean_tokens_out": 214,
+  "judge_score_p50": 95,
+  "judge_score_min": 95,
+  "latency_p50": 1051,
+  "latency_p95": 1784,
+  "mean_tokens": 1161,
+  "mean_tokens_in": 1002,
+  "mean_tokens_out": 159,
   "mean_cached_tokens": 0,
   "mean_cache_write_tokens": 0,
-  "est_cost_microusd": 592,
+  "est_cost_microusd": 489,
   "judge_served_model": "claude-sonnet-4-6",
   "judge_provider": "claude_cli",
   "self_judged": false,
   "served_identity_source": "response",
-  "ran_at": "2026-11-07T21:49:39Z",
+  "ran_at": "2026-11-08T18:08:04Z",
   "scenarios": [
     {
       "scenario": "a_verbal_yes_names_the_price_and_moves_the_chances",
       "site": "deal_verdict",
-      "stamp": "c2fc31bf68bddd0652fb6cfea4c0b6c98c579928b24c9bf11f813ff683b50c6079b4d151ce3654e7db80e8999de26a75c57d41fb61c365caf970047db82437211a3a20aded21a3b96c19f6fe9c85aa93a87081682ed06290045d0395a7bdcb6a",
+      "stamp": "c2fc31bf68bddd0652fb6cfea4c0b6c98c579928b24c9bf11f813ff683b50c60f00585daf7729efb0400902bbdcf7bde984681a78fd03ef38afbb07cab4b2ba7144ce51b2dc345cc2c8f32d0216a8fd5d20d265c55efa6f78d33db42e26da3bc",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        97,
-        90,
-        97
+        95,
+        95,
+        95
       ],
       "bands": {
         "certified_min": 70,
@@ -58,7 +58,7 @@
     {
       "scenario": "a_friendly_check_in_changes_nothing",
       "site": "deal_verdict",
-      "stamp": "d0da7adf07d4f5177bdce05b0ee90feaf35d480db0a679cb7281c0b4a420bc6d6abfa98ef3be08d91bcf7f02af3a50d8f8f28efca1eadaab72ea12e0110a5f8a18b23b234dc58d61eb8a66d640e734be4d743f517e9bd89735fb9a28764ad940",
+      "stamp": "d0da7adf07d4f5177bdce05b0ee90feaf35d480db0a679cb7281c0b4a420bc6d369e238d10c80fbfce5669781f5fc85563ba50f92ffe9754a9aa45577a27617218b23b234dc58d61eb8a66d640e734be4d743f517e9bd89735fb9a28764ad940",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -72,15 +72,15 @@
     {
       "scenario": "the_buyer_asks_for_the_contract_and_the_deal_moves_on",
       "site": "deal_verdict",
-      "stamp": "8eeed6ba537be7d3dc784f296f3a33d8f0586f43262db95f891330448ed07be5c8c10b1c203f92009bb3e1cd6d7b5cf35156d3b652323f2beb40bd45db1d111179c6e6b450911db8af23be7163a3c7f77cabdedfdd008028bda56631f42faf8e",
+      "stamp": "8eeed6ba537be7d3dc784f296f3a33d8f0586f43262db95f891330448ed07be5a36966b378ad13b86a08b9815cd5ac43f1b1e2e0514f07ad3b27eed9ca47b1446fb9d66e6be3d94ba5fdf98de14e761f7a785c4686379c5d5aeed44814fa3bea",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
+        97,
         95,
-        95,
-        97
+        95
       ],
       "bands": {
         "certified_min": 70,
@@ -95,14 +95,14 @@
     {
       "scenario": "the_customer_names_a_new_signing_date",
       "site": "deal_verdict",
-      "stamp": "549713924ea60853d41d5d3a5d8b2eb6b979fed4fb4626762ef84f4dad5c26a9b63f09471f40f652e110a266937aa83f654df5c80f5357887c6bde093057de2c8824729176748b342b18927e5e677a476c6e95ee610fcb70202c69e04fb99f0e",
+      "stamp": "549713924ea60853d41d5d3a5d8b2eb6b979fed4fb4626762ef84f4dad5c26a9f13cf759bd26971f089fec226168682d07a6a01dfd9699907781d5902ae2c77c9901feff8799cf782afdc36b5d25304cd1ac232b0734ab4912a3d8c2aa98031e",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
         97,
-        100,
+        97,
         97
       ],
       "bands": {
