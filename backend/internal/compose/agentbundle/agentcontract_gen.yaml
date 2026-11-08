@@ -34012,7 +34012,7 @@ components:
         Named in the response so the same evidence cannot render differently across clients.
         Ties break by consequence, then nearest deadline, then most recent evidence, then
         stable id.
-      enum: [privacy_notice_due, meeting_prep, re_engaged, job_change, overdue_promise, gone_quiet, open_promise, public_signal, missing_next_step, thin_relationship, nothing_needed]
+      enum: [privacy_notice_due, meeting_prep, re_engaged, job_change, overdue_promise, gone_quiet, awaiting_reply, open_promise, public_signal, missing_next_step, thin_relationship, nothing_needed]
     ContactMomentEvidence:
       type: object
       description: One thing that actually happened, which the reader can open.

@@ -17691,6 +17691,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.moment.rule.job_change": "Stelle gewechselt",
   "contact.moment.rule.overdue_promise": "Zusage überfällig",
   "contact.moment.rule.gone_quiet": "Verstummt",
+  "contact.moment.rule.awaiting_reply": "Wartet auf Antwort des Kontakts",
   "contact.moment.rule.open_promise": "Zusage fällig",
   "contact.moment.rule.public_signal": "In den Nachrichten",
   "contact.moment.rule.missing_next_step": "Kein nächster Schritt",
