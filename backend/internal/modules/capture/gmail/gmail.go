@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 
 	"golang.org/x/sync/semaphore"
 
@@ -188,7 +187,9 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 	// re-delivered within one history span — and reporting first is the safe
 	// half: the re-delivery re-captures it, where the other order would destroy
 	// the copy that had just arrived.
-	reportRemovals(ctx, sink, deleted)
+	if err := reportRemovals(ctx, sink, deleted); err != nil {
+		return nil, err
+	}
 
 	for _, id := range ids {
 		msg, err := c.api.GetRaw(ctx, access, id)
@@ -300,6 +301,7 @@ func captureOne(ctx context.Context, fetched Message, sink connector.Sink, bounc
 	msg = msg.AttestSentByOwner(fetched.FiledAsSent)
 	rec := msg.ToRecord(connectorName, fetched.RFC822)
 	rec.ProviderReceivedAt = fetched.ReceivedAt
+	rec.ProviderMessageID = fetched.ID
 	// Where Gmail filed it, so an owner who keeps a label out of the CRM is
 	// answered before the message is stored. Set here rather than in
 	// mailmap.ToRecord because a label is provider metadata off the
@@ -431,37 +433,8 @@ func labelContainers(labels []string) []string {
 	return out
 }
 
-// reportRemovals tells the sink which messages the owner deleted at Gmail.
-//
-// A Sink that cannot take removals is not a fault: connector.MessageRemover is
-// optional by design, so a fixture implementing only Upsert behaves exactly as
-// this connector did before — the deletions are dropped. Silently, because
-// there is nothing for an operator to fix.
-//
-// Graph has the same eight lines (graph.go), deliberately not shared: a
-// connector package owns its whole conversation with one provider and imports
-// no sibling, which leaves the connector port to host a shared helper — the
-// seam every provider implements, not a place for one caller's loop. Growing
-// it for them would be the larger coupling, so the duty is asserted on both
-// sides instead.
-//
-// A failure on one removal does not stop the pull. Losing a round of new mail
-// over a message that is already gone from the mailbox trades a real capture
-// for a cleanup the next history span reports again anyway.
-func reportRemovals(ctx context.Context, sink connector.Sink, deleted []string) {
-	if len(deleted) == 0 {
-		return
-	}
-	remover, ok := sink.(connector.MessageRemover)
-	if !ok {
-		return
-	}
-	for _, id := range deleted {
-		key := connector.NaturalKey{SourceSystem: connectorName, SourceID: id}
-		if err := remover.RemoveMessage(ctx, key); err != nil {
-			slog.WarnContext(ctx, "gmail: a mailbox-side deletion was not acted on", "error", err)
-		}
-	}
+func reportRemovals(ctx context.Context, sink connector.Sink, removed []string) error {
+	return connector.ReportMessageRemovals(ctx, sink, connectorName, removed)
 }
 
 // ListContainers returns the mailbox's labels, satisfying

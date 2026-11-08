@@ -1,3 +1,4 @@
+import { SenderCorrections } from "./capture-sendercorrections";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -24,7 +25,6 @@ import {
 } from "../import/linkedin-reach";
 import {
   AwaitingContacts,
-  SenderDecisions,
   useAwaitingDecision,
   useSenders,
 } from "./capture-senders";
@@ -59,7 +59,7 @@ export function ConnectionOutcomesCard() {
   const waitingCount = waiting.data?.data.length ?? 0;
   const reachCount = reach.data?.accounts_total;
   const counts: Record<Outcome, number | undefined> = {
-    senders: senders.data?.data.length,
+    senders: senders.data?.total ?? senders.data?.data.length,
     waiting: waitingCount,
     held: held.data?.pages[0] && heldTotal(held.data.pages[0]),
     reach: reachCount,
@@ -137,7 +137,7 @@ export function ConnectionOutcomesCard() {
           {senders.data.data.length === 0 ? (
             <EmptyState>{t("senders.emptyBody")}</EmptyState>
           ) : (
-            <SenderDecisions rows={senders.data.data} />
+            <SenderCorrections />
           )}
         </OutcomeDrawer>
       )}

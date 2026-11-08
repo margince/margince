@@ -88,6 +88,8 @@ type Service struct {
 	contextPins map[string]ContextPin
 	// effectActor is who an agent's proposal runs as (effectactor.go).
 	effectActor EffectActor
+	// planSight checks a reader against what a plan no longer pending touched.
+	planSight PlanSight
 }
 
 const (

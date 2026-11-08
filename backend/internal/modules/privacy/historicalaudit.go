@@ -13,7 +13,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/retentionscope"
 )
 
 const (
@@ -115,26 +114,14 @@ func redactHistoricalRecord(ctx context.Context, tx pgx.Tx, original ids.UUID, k
 func historicalAuditUnderHold(ctx context.Context, tx pgx.Tx, original ids.UUID, kind string, entity ids.UUID, floor FloorPolicy) (bool, error) {
 	var held bool
 	var err error
-	entityArgs := pgx.StrictNamedArgs{"entity": entity}
-	switch kind {
-	case contactObject:
-		err = tx.QueryRow(ctx, `SELECT legal_hold FROM contact WHERE id=@entity FOR UPDATE`, entityArgs).Scan(&held)
-	case "lead":
-		err = tx.QueryRow(ctx, `SELECT legal_hold FROM lead WHERE id=@entity FOR UPDATE`, entityArgs).Scan(&held)
-	case rightsRequestEntity:
-		err = tx.QueryRow(ctx, `SELECT dispute_open FROM data_subject_request WHERE id=@entity FOR UPDATE`, entityArgs).Scan(&held)
-	case "privacy_request_proof":
+	if kind == "privacy_request_proof" {
 		err = tx.QueryRow(ctx, `SELECT d.dispute_open FROM data_subject_request d
    JOIN audit_log certificate ON certificate.evidence->>'request_id'=d.id::text
    WHERE certificate.id=@original FOR UPDATE OF d`, pgx.StrictNamedArgs{"original": original}).Scan(&held)
-	case reportingDeal:
-		err = tx.QueryRow(ctx, `SELECT legal_hold FROM deal WHERE id=@entity FOR UPDATE`, entityArgs).Scan(&held)
-	case "activity":
-		current, carried := floor.sqlArgs()
-		args := []any{entity, current, carried}
-		err = tx.QueryRow(ctx, `SELECT a.restricted_at IS NOT NULL OR `+
-			retentionscope.HeldThroughAnyLink("a.id")+` OR (`+handelsbriefShielded(len(args)-1, len(args))+`)
-			 FROM activity a WHERE a.id=`+storekit.SQLf("$%d", len(args)-2)+` FOR UPDATE`, args...).Scan(&held)
+	} else if rule, ok := heldRecordRule(kind); ok {
+		args := rule.args(floor, entity)
+		err = tx.QueryRow(ctx, `SELECT `+rule.predicate+rule.from+` WHERE a.id=`+
+			storekit.SQLf("$%d", len(args))+` FOR UPDATE`, args...).Scan(&held)
 	}
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil

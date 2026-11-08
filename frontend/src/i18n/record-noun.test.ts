@@ -661,8 +661,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "email.detail.bccWithheld",
     "extAccess.versionSkew",
     "files.originUnknown",
-    "heldThreads.heldByOthers_one",
-    "heldThreads.heldByOthers_other",
     "lead.boardCountsOwnerNotMeasurable",
     "lead.bulkOwnerPick",
     "log.transcriptHint",

@@ -2,10 +2,15 @@
 <!-- describes: frontend/src/features/worklist frontend/src/features/brief backend/internal/compose/attention backend/internal/compose/briefs backend/internal/compose/worklistsnap backend/internal/compose/morningmailview.go -->
 # Your day
 
-**Home** is where a day starts in Margince. It has two views, **Today** and **Weekly**. The week,
-its review and its plan are in [Your week](your-week.md).
+**Home** is where a day starts in Margince. It has two views, **Today** and **Weekly**. The week, its review and its plan are in [Your week](your-week.md).
 
 The Worklist is the ranked to-do list in Margince: one list of everything waiting on you, in the order Margince ranks them. That is buyers to answer, tasks due, promises made, deals at risk and items to check. It lives on **Home**. Press **Show Worklist** to open it as a panel over the page; **Hide Worklist** closes it. It has no sidebar row of its own.
+
+Move through the task card by dragging it or using the **Previous task** and **Next task** buttons. The arrow keys work on those buttons. Moving between tasks changes only which task you see.
+
+When you email a task's contact after the task was created, Margince marks the task done and shows a receipt in **Done for you**. Bulk mail and a contact named only in Bcc do not count. **Undo** reopens the task; the same email will not close it again. This includes tasks from website requests.
+
+Open a task's details and choose **Log what happened** to record the outcome and attach files. **Mark task done** starts selected. Clear it to keep the task open after logging the outcome.
 
 ## Daily tasks
 
@@ -76,8 +81,7 @@ A follow-up, meeting, deal risk or system problem can offer **Done** to clear yo
 
 To clear several rows, press **Select** and tick them. **Complete** finishes ticked tasks and promises; **Take off my list** clears the rest. One **Undo** brings them all back. **Cancel** ends the choice and puts you back on **Select**.
 
-**Done** and **Not mine** clear your own list only. **Not mine** shows only on a row someone else
-owns, or nobody owns. **Not a customer** removes the whole thread for everyone, and does not run out. Also called: dismiss, delete from worklist, hide, not relevant, mark as done, handled.
+**Done** and **Not mine** clear your own list only. **Not mine** shows only on a row someone else owns, or nobody owns. **Not a customer** removes the whole thread for everyone, and does not run out. Also called: dismiss, delete from worklist, hide, not relevant, mark as done, handled.
 
 Captured mail needs a reply only when Margince finds a request or you keep it as work. A request nobody kept stops needing a reply once it is too old for your worklist, on the contact page too. Other mail stays on the record. Archiving a contact removes their waiting messages; restoring them brings those messages back. A message stays if another contact you can see is still live, or none of its contacts are visible.
 
@@ -101,8 +105,7 @@ To complete a task in Margince, press **Done** on its Worklist row, or on the ta
 3. Not ready yet? Press **Snooze 1 day** to move its due date a day later. Or open the task and pick
    a day under **Move to**.
 
-**Snooze 1 day** moves the due date one day later, or to tomorrow if that is later, keeping its time. A task with no date does not show it. If
-it fails: "Task was not completed. Retry." Also called: tick off, mark done, close a task.
+**Snooze 1 day** moves the due date one day later, or to tomorrow if that is later, keeping its time. A task with no date does not show it. If it fails: "Task was not completed. Retry." Also called: tick off, mark done, close a task.
 
 ### How do I mark a meeting ready?
 To tell Margince you are ready for a meeting, press **I’m ready** on its Worklist row. The note says "Marked you ready for this meeting." and offers **Undo**.
@@ -208,15 +211,11 @@ by who made it.
 - A task you archived, a proposal you refused and a customer promise you dismissed do not come back
   when Margince reads the conversation again.
 
-When Margince reads old mail, it checks newer messages before it creates work. Work already done and offers to help create no new task. Neither does work that depends on something which has not happened yet.
-A request alone does not mean someone agreed to do it. **Commitment review** on the source shows why no task was made.
-Words such as "next week" set no due day; "this week" sets the last day the promiser works that week.
+When Margince reads old mail, it checks newer messages before it creates work. Work already done and offers to help create no new task. Neither does work that depends on something which has not happened yet. A request alone does not mean someone agreed to do it. **Commitment review** on the source shows why no task was made. Words such as "next week" set no due day; "this week" sets the last day the promiser works that week.
 
 A future deadline can keep an old promise current. If later context has not been read, Margince does not create the task.
 
-Check the quoted words and any later replies before adding a follow-up from the linked record.
-A reply alone does not show that a promise was kept. Tasks you edited, reopened or pinned remain yours.
-When you later write to that contact on the promise's thread, the card asks **You may have done this** with **Done** and **Not yet**.
+Check the quoted words and any later replies before adding a follow-up from the linked record. A conversation promise can ask **You may have done this** after a later reply. Choose **Done** or **Not yet**. A task linked to the contact follows the automatic rule above, with **Undo**.
 
 Also called: action items, follow-ups from a meeting, commitments in an email.
 
@@ -236,10 +235,7 @@ Also called: customer request, email nobody answered, email to-do.
 
 ## The Worklist
 
-A lead record does not come into the Worklist because someone created it, imported it or set its
-owner. A planned task linked to a lead, or a request that came in, can come in through the list of
-tasks or of waiting messages. Choose prospects in
-**Leads**, then plan when to reach out.
+A lead record does not come into the Worklist because someone created it, imported it or set its owner. A planned task linked to a lead, or a request that came in, can come in through the list of tasks or of waiting messages. Choose prospects in **Leads**, then plan when to reach out.
 
 The Worklist is one ranked list. Margince sets the order, and the screen never changes it.
 
@@ -253,27 +249,21 @@ Worklist items are in bands, shown in this order:
 | **Keep momentum** | "No agreed work is drifting." |
 | **Prospecting** | "No prospecting work waiting." |
 
-The views are **Today** (your work), **Decisions** (choices someone must make) and **System** (problems Margince reports). Each shows its own count and categories. **Upcoming and backlog**, at
-the end of **Today**, holds tasks due in the next 14 days; see [Where are tasks due later?](#where-are-tasks-due-later). Possible duplicate contacts share one card in **Decisions**, and each of their owners finds it in their own Worklist. Contacts with no owner show under **Unassigned**. **Review** on the card opens the merge; see [merging duplicate contacts](records.md#how-do-i-merge-duplicate-contacts).
+The views are **Today** (your work), **Decisions** (choices someone must make) and **System** (problems Margince reports). Each shows its own count and categories. **Upcoming and backlog**, at the end of **Today**, holds tasks due in the next 14 days; see [Where are tasks due later?](#where-are-tasks-due-later). Possible duplicate contacts share one card in **Decisions**, and each of their owners finds it in their own Worklist. Contacts with no owner show under **Unassigned**. **Review** on the card opens the merge; see [merging duplicate contacts](records.md#how-do-i-merge-duplicate-contacts).
 
 A possible deal also waits in **Decisions**, in the Worklist of the company's owner. It sits below customer replies, promises and your planned tasks, and above routine work on records. A company with no owner shows its possible deal under **Unassigned**. If the company gets a new owner, the possible deal moves to them. See [How do I review a possible deal?](leads-deals-and-projects.md#how-do-i-review-a-possible-deal)
 
 A band you have cleared still shows its heading and says so, but only when the whole day is loaded.
 
-Inside a band, work due tomorrow, this week or later has its own heading. Late work and today's work
-sit under the band heading, because that is what the band already means.
+Inside a band, work due tomorrow, this week or later has its own heading. Late work and today's work sit under the band heading, because that is what the band already means.
 
-A row that does not fit moves down, never up. When one band fills, the rows that do not fit drop to
-Keep momentum. They never go before work that was already urgent.
+A row that does not fit moves down, never up. When one band fills, the rows that do not fit drop to Keep momentum. They never go before work that was already urgent.
 
 ### Which mail is mine?
 Mine shows reply work addressed to you. Owning a contact does not make every message to that contact your work.
 Being copied alone does not assign a reply. Team shows shared work under the access you already have.
 
-Old automatic findings without a current check stay with their source for review.
-On a contact, **Review conversation findings** shows their words, source and date without calling them overdue.
-Tasks you typed, changed or reopened keep their own state. An import does not count as such a change.
-An email on another subject does not mean a promise was kept.
+Old automatic findings without a current check stay with their source for review. On a contact, **Review conversation findings** shows their words, source and date without calling them overdue. Tasks you typed, changed or reopened keep their own state. An import does not count as such a change. An email on another subject does not mean a promise was kept.
 
 ### Why an item needs attention
 Each item shows its record, the current facts that call for action, and the action it offers.
@@ -303,28 +293,19 @@ Taking an item off the Worklist uses four choices, and they reach different numb
 | **Not mine** | "Removed from your list. It comes back if the record changes hands." | **Your list only** |
 | **Not a customer** | "Removed from every list." | **Everybody** |
 
-**Done** is for a message you handled another way: by phone, in a meeting, or with no reply
-owed. It does not count as a reply sent.
+**Done** is for a message you handled another way: by phone, in a meeting, or with no reply owed. It does not count as a reply sent.
 
-On any other row, **Done** says "Marked done for you. It comes back if something new happens on
-it." A deal comes back after new activity or once its close date passes. A system or delivery row
-comes back when it fails again.
+On any other row, **Done** says "Marked done for you. It comes back if something new happens on it." A deal comes back after new activity or once its close date passes. A system or delivery row comes back when it fails again.
 
-**Not mine** shows only on a row someone else owns, or nobody owns. Point at it to read what it
-does. The record keeps its owner, and nobody is told.
+**Not mine** shows only on a row someone else owns, or nobody owns. Point at it to read what it does. The record keeps its owner, and nobody is told.
 
-"Not a customer" is judged on the **thread**, not the message, so the next reply in it comes in
-already judged.
+"Not a customer" is judged on the **thread**, not the message, so the next reply in it comes in already judged.
 
-Each says what it did ("Back on your list tomorrow.", "Back on your list when they reply.") and each
-offers **Undo**. The undo reaches as far as the choice did. Clearing your own snooze never lets back
-in a thread a colleague ruled out for the whole company.
+Each says what it did ("Back on your list tomorrow.", "Back on your list when they reply.") and each offers **Undo**. The undo reaches as far as the choice did. Clearing your own snooze never lets back in a thread a colleague ruled out for the whole company.
 
 ### "New priorities available"
 
-The Worklist holds still while you work through it. Something may come in, or someone may deal with
-something while you work. Then a notice headed **New priorities available** says which: "{arrived}
-new since you opened the list. Refresh to add them." **Refresh list** updates the rows and totals.
+The Worklist holds still while you work through it. Something may come in, or someone may deal with something while you work. Then a notice headed **New priorities available** says which: "{arrived} new since you opened the list. Refresh to add them." **Refresh list** updates the rows and totals.
 
 ### How complete is this?
 The Worklist counts items, not cards: 8 possible duplicates are one card. There is no **Load more** button. More rows load as you move down the list, until it says "All of today’s work is loaded." ("All decisions loaded." and "All issues loaded." in the other views). If the next rows fail to load as a whole, the list says "Could not load more." with **Retry**.
@@ -358,18 +339,13 @@ When there is nothing: "No actions taken on your behalf today."
 
 ## For a team lead
 
-On **Home → Team** you get the team board and the coaching suggestions. The rest lives in the
-Worklist panel, which has its own **Whose work** switch (**Mine**,
-**Unassigned**, **Team**, **All**). **Hidden from the Worklist** appears only at **All**, with no teammate selected.
+On **Home → Team** you get the team board and the coaching suggestions. The rest lives in the Worklist panel, which has its own **Whose work** switch (**Mine**, **Unassigned**, **Team**, **All**). **Hidden from the Worklist** appears only at **All**, with no teammate selected.
 
-**Team exceptions** shows money at risk, work nobody has taken, or the same thing failing again. Each row names **what it was judged against**,
-so you can see the bar instead of guessing it. You can take a row on from here.
+**Team exceptions** shows money at risk, work nobody has taken, or the same thing failing again. Each row names **what it was judged against**, so you can see the bar instead of guessing it. You can take a row on from here.
 
-Your brief and digest stay personal. **Team**, **All**, and teammate views show shared work you may read,
-not a colleague's private messages or personal notices. A teammate's decision keeps its owner; it is not yours.
+Your brief and digest stay personal. **Team**, **All**, and teammate views show shared work you may read, not a colleague's private messages or personal notices. A teammate's decision keeps its owner; it is not yours.
 
-**Team work needing attention** has a row per teammate: waiting on a reply, deals at risk, past due,
-promises due. Unassigned work gets its own row. **Changes by Margince on your team** counts, per teammate and kind, the deals Margince changed this week, their value and how many were undone.
+**Team work needing attention** has a row per teammate: waiting on a reply, deals at risk, past due, promises due. Unassigned work gets its own row. **Changes by Margince on your team** counts, per teammate and kind, the deals Margince changed this week, their value and how many were undone.
 
 **Coaching suggestions** has at most one suggestion per teammate: the most urgent kind, not the one with the most work.
 
@@ -390,11 +366,8 @@ It names your next customer actions and their context from Home, even without an
 
 When Margince changed your deals, it says "Margince changed 2 of your deals last night" and names up to five with links. It counts the changes since your last morning email, or the last 24 hours before your first one. **Undo or view all** opens Home. Such a morning is sent even with nothing else. A change you undo first is left out.
 
-Under Settings → Notifications, choose email, your working hours or a whole hour, and whether to combine your daily digest. Mail follows your working days and local clock, with a three-hour window that can end on the next day.
-A missed window leaves the work on Home. If choices cannot be read, the email waits.
+Under Settings → Notifications, choose email, your working hours or a whole hour, and whether to combine your daily digest. Mail follows your working days and local clock, with a three-hour window that can end on the next day. A missed window leaves the work on Home. If choices cannot be read, the email waits.
 
-A weekly day you do not work moves to the next working day. Results keep the company's reporting week. Older chosen morning hours use the company clock until you choose a personal time or turn combining on.
-Combining includes only content you enabled. Turning morning email off also keeps morning actions out of combined weekly mail.
+A weekly day you do not work moves to the next working day. Results keep the company's reporting week. Older chosen morning hours use the company clock until you choose a personal time or turn combining on. Combining includes only content you enabled. Turning morning email off also keeps morning actions out of combined weekly mail.
 
-Account, privacy and immediate decision mail follow their own rules. Choose a team only when you may read its review. Access is checked again before sending.
-If access is lost, personal work remains with a note about the missing team view. Turning email off keeps work on Home.
+Account, privacy and immediate decision mail follow their own rules. Choose a team only when you may read its review. Access is checked again before sending. If access is lost, personal work remains with a note about the missing team view. Turning email off keeps work on Home.

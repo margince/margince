@@ -35,6 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
@@ -211,6 +212,9 @@ func openInstallation(ctx context.Context, cfg apiConfig) (*pgxpool.Pool, keyvau
 		return nil, nil, err
 	}
 	vault, err := keyvault.ForRole(ctx, "api", pool, cfg.settings)
+	if err == nil {
+		err = storekit.RefuseForeignSuppressionKey(ctx, pool)
+	}
 	if err != nil {
 		pool.Close()
 		return nil, nil, err

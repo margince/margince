@@ -13951,6 +13951,9 @@ paths:
           in: query
           schema: {type: string, format: uuid}
           description: Only the threads with this contact. A contact you may not read, or one that is archived, answers 404.
+        - {name: from, in: query, schema: {type: string, format: date-time}}
+        - {name: to, in: query, schema: {type: string, format: date-time}}
+        - {name: reason, in: query, schema: {type: string, maxLength: 200}}
       responses:
         '200':
           description: The caller's held threads, pending first.
@@ -13971,12 +13974,19 @@ paths:
         yours where you gave one. A product that decides silently and shows nobody is one you have
         to trust rather than check, and the whole posture rests on being able to check.
       security: [{bearerAuth: []}]
+      parameters:
+        - {name: q, in: query, schema: {type: string, maxLength: 200}}
+        - {name: decision, in: query, schema: {type: string, maxLength: 80}}
+        - {name: overrides, in: query, schema: {type: boolean}}
+        - {name: cursor, in: query, schema: {type: string, maxLength: 512}}
+        - $ref: '#/components/parameters/Limit'
       responses:
         '200':
           description: The caller's senders.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/CaptureSenderListResponse'}
+        '422': {$ref: '#/components/responses/ValidationError'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
   /capture/contacts-awaiting-decision:
@@ -27137,6 +27147,8 @@ components:
       type: object
       required: [data]
       properties:
+        next_cursor: {type: string}
+        total: {type: integer}
         data:
           type: array
           items: {$ref: '#/components/schemas/CaptureSenderDecision'}
@@ -38126,6 +38138,12 @@ components:
         calendar_id: {type: string, maxLength: 512}
         blocking_calendars: {type: array, maxItems: 10, items: {type: string, maxLength: 512}}
         duration_minutes: {type: integer, minimum: 15, maximum: 480}
+        offered_lengths:
+          type: array
+          maxItems: 16
+          uniqueItems: true
+          items: {type: integer, minimum: 15, maximum: 480}
+          description: Additional meeting lengths offered by this host. The default duration is always offered.
         notice_minutes: {type: integer, minimum: 0, maximum: 10080}
         horizon_days: {type: integer, minimum: 1, maximum: 90}
         buffer_minutes: {type: integer, minimum: 0, maximum: 120}
@@ -38755,7 +38773,7 @@ components:
           type: string
           format: uuid
           description: >-
-            The non-task activity this task follows from, including email and messages. The caller and assignee need access to the source content. The task preserves its audience and inherits its visible links when no links are supplied. This reference does not accept or settle a request.
+            For a task, the conversation or note it follows from. The caller and assignee need access to that source. The task preserves its audience and inherits its visible links when no links are supplied. For a logged note, call or meeting, the task whose outcome is being recorded. This reference alone does not complete that task or accept a request.
         follow_up_task:
           $ref: '#/components/schemas/ActivityFollowUpTask'
           description: >-
@@ -43005,9 +43023,9 @@ components:
             instant. Every member is in exactly one outcome, so the counts add
             up to `observations`. `unresolved` members have not reached an
             outcome yet and are never counted as lost; `history_partial`
-            members left by a move an import brought in, which does not show
-            how the team sells, or by a move recorded before Margince kept the
-            stage order, so its direction is unknown.
+            members left by a move an import brought in or another CRM synced
+            in, which does not show how the team sells, or by a move recorded
+            before Margince kept the stage order, so its direction is unknown.
           items:
             $ref: '#/components/schemas/ReportingCohortCount'
         entries:
@@ -51615,7 +51633,8 @@ components:
         One stage where the rep converts differently from the team. Entries and conversions are
         attributed to the owner at the time of each move. "Converted" is a later move to a won
         stage or to a later stage, compared by the stage order as it was configured when the
-        week was assembled. Moves an import brought in neither enter nor convert a deal.
+        week was assembled. Moves an import brought in or another CRM synced in neither enter nor
+        convert a deal.
       required: [pipeline_id, pipeline_name, stage_id, stage_name, rep_entered, rep_converted, team_entered, team_converted, deviation_bp]
       properties:
         pipeline_id: {type: string, format: uuid}

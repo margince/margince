@@ -81,6 +81,11 @@ func ResolveIdentity(ctx context.Context, tx pgx.Tx, kind, key string) (ids.Acti
 	if key == "" {
 		return ids.ActivityID{}, false, nil
 	}
+	if kind == IdentityKindMail {
+		if err := storekit.LockThreadKeysTx(ctx, tx, key); err != nil {
+			return ids.ActivityID{}, false, err
+		}
+	}
 	var id ids.ActivityID
 	err := tx.QueryRow(ctx,
 		`SELECT activity_id FROM activity_identity WHERE identity_kind = $1 AND identity_key = $2`,
@@ -252,39 +257,8 @@ func BindableTo(ctx context.Context, tx pgx.Tx, incumbent ids.ActivityID) (bool,
 // capture.SeatProvedAddressTx, which is where that is argued and enforced.
 type AddressProver func(ctx context.Context, tx pgx.Tx, seat ids.UUID, address string) (bool, error)
 
-// attributableTo reports whether an IMPORTED row belongs to the arriving seat,
-// on the strength of an address the import states AND the seat has proven.
-//
-// This is the cross-seat case: an admin imports the company's history and the
-// rep whose mailbox actually held those messages syncs them afterwards. Under
-// the same-seat rule alone the two never bind and every message in the overlap
-// is filed twice.
-//
-// THE DIRECTION IS THE WHOLE THING, and it looks exactly like a design that was
-// rejected twice, so it is spelled out here rather than left to be re-derived.
-// The addresses this reads are the IMPORTER'S OWN TEXT — participantlog.go
-// writes activity_participant.address from the request body — and are therefore
-// forgeable. They are used only as a LOOKUP KEY. The ANSWER comes from the
-// arriving seat's proven set, which the importer cannot write. So:
-//
-//   - A forged address that names nobody resolves to nothing, and nothing binds.
-//   - A forged address that names a COLLEAGUE does not help the forger either:
-//     it can only ever attribute the row to that colleague, never to the forger,
-//     because the proof is asked of the ARRIVING seat and about THEIR addresses.
-//
-// What an importer can still do is cause a row they filed to be joined by the
-// colleague whose address they named. That colleague sees their own mail either
-// way; what changes is whether they see it once or twice. It buys the importer
-// no reach into anything.
-//
-// For mail only an ASSERTED incumbent is attributable. A captured mail's
-// addresses are the sender's headers. Widening this to observed mail would let
-// one mailbox join another's captured copy on a stated address.
-//
-// A MEETING is attributable whichever door stored it. A captured meeting's
-// guests are the calendar provider's list for the seat that synced it, which
-// the arriving seat cannot write. A colleague's calendar naming this seat as
-// a guest is the proof that both seats reached one meeting.
+// attributableTo uses an import's participant addresses as lookup keys into the
+// arriving seat's independently proven addresses. Header text alone is no proof.
 func attributableTo(
 	ctx context.Context, tx pgx.Tx, kind string, incumbent ids.ActivityID, proved AddressProver,
 ) (bool, error) {
@@ -430,26 +404,23 @@ func trailingIDOf(capturedBy string) (string, bool) {
 // tell "somebody else holds this" from "nothing holds this" would have an
 // existence oracle over colleagues' mail, keyed on a header they can type.
 func ResolveBindableIdentity(ctx context.Context, tx pgx.Tx, kind, key string) (ids.ActivityID, bool, error) {
-	return bindableIdentityUnder(ctx, tx, kind, key, nil)
+	return bindableIdentityUnder(ctx, tx, kind, key, nil, nil)
 }
 
 // ResolveBindableIdentityProving is ResolveBindableIdentity with the cross-seat
 // arm armed: an imported row also binds when it states an address the arriving
 // seat has PROVEN is theirs (attributableTo).
 //
-// Two entry points rather than a changed signature, because the import door and
-// the capture door want different answers to the same question. An import
-// resolving its own write has no mailbox behind it and nothing to prove, so it
-// keeps the same-seat rule alone; a mailbox sync is exactly the case the proof
-// is for. Compose injects the prover into the capture seam only.
+// Capture supplies proof for the arriving mailbox; imports supply the stated
+// addresses for the mailbox that already holds the message.
 func ResolveBindableIdentityProving(proved AddressProver) func(context.Context, pgx.Tx, string, string) (ids.ActivityID, bool, error) {
 	return func(ctx context.Context, tx pgx.Tx, kind, key string) (ids.ActivityID, bool, error) {
-		return bindableIdentityUnder(ctx, tx, kind, key, proved)
+		return bindableIdentityUnder(ctx, tx, kind, key, proved, nil)
 	}
 }
 
 func bindableIdentityUnder(
-	ctx context.Context, tx pgx.Tx, kind, key string, proved AddressProver,
+	ctx context.Context, tx pgx.Tx, kind, key string, proved AddressProver, incoming []string,
 ) (ids.ActivityID, bool, error) {
 	incumbent, found, err := ResolveIdentity(ctx, tx, kind, key)
 	if err != nil || !found {
@@ -464,6 +435,12 @@ func bindableIdentityUnder(
 		// only one: the incumbent states an address this seat has proven is
 		// theirs (attributableTo). Everything else still refuses.
 		bindable, err = attributableTo(ctx, tx, kind, incumbent, proved)
+		if err != nil {
+			return ids.ActivityID{}, false, err
+		}
+		if !bindable && kind == IdentityKindMail && len(incoming) > 0 {
+			bindable, err = importNamesIncumbentSeat(ctx, tx, incumbent, proved, incoming)
+		}
 		if err != nil || !bindable {
 			return ids.ActivityID{}, false, err
 		}

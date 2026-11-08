@@ -115,7 +115,7 @@ func TestAFollowUpTheMorningOfAnUndatedDayMeetingCounts(t *testing.T) {
 	e := setupWeekly(t)
 	anchor := time.Date(2026, 9, 16, 12, 0, 0, 0, time.UTC)
 	morning := anchor.Add(-4 * time.Hour)
-	held := storekit.MeetingHeldAsOfSQL("m", "'infinity'::timestamptz")
+	held := storekit.MeetingHeldAsOfSQL("m", "'infinity'::timestamptz", activities.ReversedCancellationSQL)
 	instant := occurredday.StartAtSQL(held.Start, "'instant'")
 	var counts, wouldHaveCounted bool
 	if err := database.WithWorkspaceTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {

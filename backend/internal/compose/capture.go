@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/offlinedemo"
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
 	"github.com/margince/margince/backend/internal/modules/capture/testmailbox"
-	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -265,7 +264,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 	}
 	return capture.NewSink(InstallationDB(pool)).
 		WithPartyAuthority(identity.NewServiceFor(InstallationDB(pool))).
-		WithPartyReceiptSettlement(comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool))).SettlePartyAdmission).
+		WithPartyReceiptSettlement(sentPartySettlement(pool)).
 		WithMessagePurger(purgeRemoved).
 		// The files a captured message carried, written by the module that owns
 		// the attachment table. Built here, from the store, so every role that

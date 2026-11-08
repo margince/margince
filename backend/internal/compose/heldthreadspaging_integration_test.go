@@ -107,17 +107,16 @@ func TestTheHeldListPagesEachThreadOnceInOrder(t *testing.T) {
 	}
 }
 
-// A search matches the parties a hold saw, so a thread whose message was erased
-// is still found by who it was with. A status narrows the list.
-func TestASearchFindsAThreadByItsPartyEvenWhenItsMessageIsGone(t *testing.T) {
+// Searches and counts include only threads with readable messages.
+func TestASearchOmitsThreadsWhoseMessagesAreGone(t *testing.T) {
 	e := integration.Setup(t)
 	day := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
 	seedHeldThread(t, e, e.Rep1, "erased-with-lena", "held", 1, day, true, "lena@prospect.test")
 	seedHeldThread(t, e, e.Rep1, "about-the-renewal", "pending", 0, day, false, "sam@northwind.test")
 
 	found := heldPage(t, e, e.Rep1, capture.HeldThreadQuery{Q: "LENA@prospect"})
-	if len(found.Threads) != 1 || found.Threads[0].ThreadKey != "erased-with-lena" {
-		t.Errorf("searching a party's address found %+v, want the erased thread", found.Threads)
+	if len(found.Threads) != 0 {
+		t.Errorf("searching a party's address found %+v, want no erased thread", found.Threads)
 	}
 	bySubject := heldPage(t, e, e.Rep1, capture.HeldThreadQuery{Q: "about-the-renewal"})
 	if len(bySubject.Threads) != 1 || bySubject.Threads[0].ThreadKey != "about-the-renewal" {
@@ -127,7 +126,7 @@ func TestASearchFindsAThreadByItsPartyEvenWhenItsMessageIsGone(t *testing.T) {
 	if len(pending.Threads) != 1 || pending.Threads[0].ThreadKey != "about-the-renewal" {
 		t.Errorf("the pending filter listed %+v, want the pending thread alone", pending.Threads)
 	}
-	if pending.Counts != (capture.HeldThreadCounts{Pending: 1, Held: 1}) {
+	if pending.Counts != (capture.HeldThreadCounts{Pending: 1}) {
 		t.Errorf("a filtered page counted %+v, want the whole list", pending.Counts)
 	}
 }
@@ -150,7 +149,7 @@ func TestASearchMatchesTheParticipantsOfAReadableMessage(t *testing.T) {
 }
 
 // A message the reader may not read keeps its parties from every filter, or a
-// match would confirm who is on it. The row itself stays theirs to see.
+// match would confirm who is on it.
 func TestAFilterCannotTestThePartiesOfAWithheldMessage(t *testing.T) {
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Hidden Party", &e.Rep1)
@@ -164,8 +163,8 @@ func TestAFilterCannotTestThePartiesOfAWithheldMessage(t *testing.T) {
 	e.WsExec(t, `INSERT INTO capture_thread_verdict (thread_key, user_id, status, attempts, first_activity_id, seen_addresses)
 		VALUES ('withheld', $1, 'held', 1, $2, ARRAY['hidden@party.test'])`, e.Rep1, message)
 
-	if page := heldPage(t, e, e.Rep1, capture.HeldThreadQuery{}); len(page.Threads) != 1 {
-		t.Fatalf("listed %d threads, want the reader's own row", len(page.Threads))
+	if page := heldPage(t, e, e.Rep1, capture.HeldThreadQuery{}); len(page.Threads) != 0 || page.Counts.Held != 0 {
+		t.Fatalf("unreadable threads or counts: %+v", page)
 	}
 	for _, query := range []capture.HeldThreadQuery{{Q: "hidden@party"}, {Q: "Hidden Party"}, {ContactID: &contact}} {
 		if page := heldPage(t, e, e.Rep1, query); len(page.Threads) != 0 {
@@ -204,8 +203,8 @@ func TestAnErasedAddressIsNoLongerSearchable(t *testing.T) {
 	if page := heldPage(t, e, e.Rep1, capture.HeldThreadQuery{Q: "lena"}); len(page.Threads) != 0 {
 		t.Errorf("a search found an erased address: %+v", page.Threads)
 	}
-	if page := heldPage(t, e, e.Rep1, capture.HeldThreadQuery{Q: "sam@northwind"}); len(page.Threads) != 1 {
-		t.Errorf("erasing one party lost the other: %+v", page.Threads)
+	if page := heldPage(t, e, e.Rep1, capture.HeldThreadQuery{Q: "sam@northwind"}); len(page.Threads) != 0 {
+		t.Errorf("an erased message remains searchable: %+v", page.Threads)
 	}
 }
 
@@ -261,7 +260,8 @@ func TestTheContactFilterKeepsTheThreadsWithThatContact(t *testing.T) {
 	day := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
 	lena := e.SeedContact(t, "Lena Prospect", &e.Rep1)
 	e.WsExec(t, `INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by) VALUES ($1, 'lena@prospect.test', true, 'manual', 'human:x')`, lena)
-	seedHeldThread(t, e, e.Rep1, "with-lena", "held", 1, day, true, "Lena@Prospect.test")
+	message := seedHeldThread(t, e, e.Rep1, "with-lena", "held", 1, day, false)
+	e.WsExec(t, `INSERT INTO activity_participant(activity_id,contact_id,address,role) VALUES($1,$2,'lena@prospect.test','from')`, message, lena)
 	seedHeldThread(t, e, e.Rep1, "with-sam", "held", 1, day, false, "sam@northwind.test")
 
 	page := heldPage(t, e, e.Rep1, capture.HeldThreadQuery{ContactID: &lena})
@@ -289,5 +289,17 @@ func TestTheContactFilterKeepsTheThreadsWithThatContact(t *testing.T) {
 	_, err = capture.HeldThreadsFor(purgeCtx(e, e.Rep1), InstallationDB(e.Pool), capture.HeldThreadQuery{ContactID: &lena})
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("filtering by an archived contact answered %v, want not found", err)
+	}
+}
+
+func TestHeldSearchUsesAnotherReadableMessageAfterTheOpeningIsErased(t *testing.T) {
+	e := integration.Setup(t)
+	key := "surviving-thread"
+	seedHeldThread(t, e, e.Rep1, key, "held", 1, time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC), true)
+	message := ids.NewV7()
+	e.WsExec(t, `INSERT INTO activity(id,kind,subject,occurred_at,source,captured_by,audience,thread_key) VALUES($1,'email','Still readable','2026-09-02T09:00:00Z','gmail',$2,'participants',$3)`, message, "human:"+e.Rep1.String(), key)
+	page := heldPage(t, e, e.Rep1, capture.HeldThreadQuery{Q: "Still readable"})
+	if len(page.Threads) != 1 || page.Threads[0].ActivityID == nil || *page.Threads[0].ActivityID != message || page.Counts.Held != 1 {
+		t.Fatalf("surviving message: %+v", page)
 	}
 }

@@ -21,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -28,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // approvalStatusApproved is the decided status a receipt is read from. Spelled
@@ -45,6 +47,7 @@ const approvalStatusApproved = "approved"
 // Filtering on status alone would do the same thing to every reader's own
 // approvals, which is the one claim this lane exists to make.
 type attentionReceipts struct {
+	tasks *activities.Store
 	svc   *approvals.Service
 	deals *deals.Store
 }
@@ -89,6 +92,29 @@ func (r attentionReceipts) RecentWithMore(ctx context.Context, since time.Time, 
 	}
 	for _, correction := range corrections {
 		decided = append(decided, correctionReceipt(correction))
+	}
+	if r.tasks != nil {
+		completions, err := r.tasks.RecentTaskCompletions(ctx, since, limit+1)
+		if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
+			return nil, false, err
+		}
+		if len(completions) > limit {
+			completions, more = completions[:limit], true
+		}
+		for _, completed := range completions {
+			var undo *attention.ReceiptUndo
+			if completed.Writable {
+				undo = &attention.ReceiptUndo{AuditLogID: completed.AuditID, Version: completed.Version}
+			}
+			actor, _ := principal.Actor(ctx)
+			said := approvalSummaryCopyFor(textlang.Lang(actor.Locale))
+			contact := completed.Contact
+			if contact == "" {
+				contact = said.taskContact
+			}
+			reason := fmt.Sprintf(said.taskCompleted, contact, completed.WrittenAt.Format(time.DateOnly))
+			decided = append(decided, attention.Receipt{Source: attention.ReceiptFromCorrection, ID: completed.AuditID, AuditLogID: completed.AuditID, Kind: "task_completed", Summary: reason, Headline: completed.Subject, Reason: reason, OccurredAt: completed.At, TargetType: string(recordTypeActivity), TargetID: completed.ID, Actor: attention.ReceiptActor{Type: systemActor}, Undo: undo})
+		}
 	}
 	decided, err = r.withChangeReviews(ctx, decided)
 	if err != nil {

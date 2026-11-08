@@ -135,8 +135,8 @@ type API interface {
 	// message ids added/changed since plus the advanced deltaLink;
 	// ErrDeltaGone if Graph no longer honors the link.
 	// Delta returns the ids added or changed since deltaLink, the ids Graph
-	// TOMBSTONED in the same round, and the link to resume from. A tombstone is
-	// the mailbox owner deleting their own copy; it carries no message.
+	// permanently deleted in the same round, and the link to resume from.
+	// Folder moves remain available through their immutable message ids.
 	Delta(ctx context.Context, accessToken, deltaLink string) (messages []MessageRef, removed []string, newDeltaLink string, err error)
 	// EnsureSubscription registers or renews the Graph change-notification
 	// subscription pointing at notificationURL, carrying clientState, and
@@ -319,6 +319,7 @@ func (a *httpAPI) GetMIME(ctx context.Context, accessToken, folderID, msgID stri
 		return nil, fmt.Errorf("graph: building message request: %w", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Prefer", immutableMessageIDs)
 	resp, err := a.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("graph: message %s: %w", msgID, ErrUnreachable)

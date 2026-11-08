@@ -33,7 +33,7 @@ import (
 func TestAReplyPublishesAContactKeptOnlyBecauseNobodyHadAnswered(t *testing.T) {
 	e := setupWithOwnMailbox(t)
 	const email = "buyer@coldlead.example"
-	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-cold"))
+	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Intro", "outbound", "thr-cold"))
 	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
 
 	captureInboundThroughRealSink(t, e, e.Rep1, "reply-cold", email, "thr-cold")
@@ -57,7 +57,7 @@ func TestAReplyPublishesAContactKeptOnlyBecauseNobodyHadAnswered(t *testing.T) {
 func TestAReplyOnAHeldThreadDoesNotPublish(t *testing.T) {
 	e := setupWithOwnMailbox(t)
 	const email = "buyer@heldreply.example"
-	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-reply-held"))
+	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Intro", "outbound", "thr-reply-held"))
 	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
 	seedThreadHold(t, e, "thr-reply-held", "held")
 
@@ -72,10 +72,10 @@ func TestAReplyOnAHeldThreadDoesNotPublish(t *testing.T) {
 func TestAReplyToAColleaguePublishesAContactNobodyHadAnswered(t *testing.T) {
 	e := setupWithSecondMailbox(t)
 	const email = "buyer@twoseats.example"
-	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-two-seats"))
+	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Intro", "outbound", "thr-two-seats"))
 	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
 
-	seedThreadedMail(t, e, email, "Our offer", "outbound", "thr-colleague")
+	seedThreadedMailHeldBy(t, e, e.Rep2, email, "Our offer", "outbound", "thr-colleague")
 	captureInboundThroughRealSinkAs(mailboxOwnerCtx(e, e.Rep2), t, e, "b@authz.test",
 		"reply-two-seats", email, "thr-colleague")
 
@@ -90,8 +90,8 @@ func TestAReplyToAColleaguePublishesAContactNobodyHadAnswered(t *testing.T) {
 func TestTheVerdictPassPublishesAContactWhoseAddressAnsweredAColleague(t *testing.T) {
 	e := setupWithSecondMailbox(t)
 	const email = "buyer@colleaguesreply.example"
-	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-col"))
-	seedThreadedMail(t, e, email, "Our offer", "outbound", "thr-col-b")
+	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Intro", "outbound", "thr-col"))
+	seedThreadedMailHeldBy(t, e, e.Rep2, email, "Our offer", "outbound", "thr-col-b")
 	captureInboundThroughRealSinkAs(withoutContactUpdate(mailboxOwnerCtx(e, e.Rep2)), t, e, "b@authz.test",
 		"reply-col", email, "thr-col-b")
 	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
@@ -108,9 +108,9 @@ func TestTheVerdictPassPublishesAContactWhoseAddressAnsweredAColleague(t *testin
 func TestAVerdictDoesNotCountAReplyOnAHeldThread(t *testing.T) {
 	e := setupWithOwnMailbox(t)
 	const email = "buyer@heldanswer.example"
-	activity := seedThreadedMail(t, e, email, "Intro", "outbound", "thr-open-intro")
-	seedThreadedMail(t, e, email, "Terms", "outbound", "thr-held-answer")
-	seedThreadedMail(t, e, email, "Re: Terms", "inbound", "thr-held-answer")
+	activity := seedThreadedMailHeldBy(t, e, e.Rep1, email, "Intro", "outbound", "thr-open-intro")
+	seedThreadedMailHeldBy(t, e, e.Rep1, email, "Terms", "outbound", "thr-held-answer")
+	seedThreadedMailHeldBy(t, e, e.Rep1, email, "Re: Terms", "inbound", "thr-held-answer")
 	seedThreadHold(t, e, "thr-held-answer", "held")
 
 	judge(t, e, email, capture.KindContact, activity)
@@ -124,7 +124,7 @@ func TestAReplyInTheOwnersHeldMailboxDoesNotPublish(t *testing.T) {
 	e := integration.Setup(t)
 	connectSeatMailbox(t, e, e.Rep1, "a@authz.test", "held")
 	const email = "buyer@ownerheld.example"
-	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-owner-held"))
+	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Intro", "outbound", "thr-owner-held"))
 
 	captureInboundThroughRealSink(t, e, e.Rep1, "reply-owner-held", email, "thr-owner-held")
 
@@ -136,8 +136,8 @@ func TestAReplyInAColleaguesHeldMailboxDoesNotPublish(t *testing.T) {
 	e := setupWithOwnMailbox(t)
 	connectSeatMailbox(t, e, e.Rep2, "b@authz.test", "held")
 	const email = "buyer@colleagueheldbox.example"
-	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-col-box"))
-	seedThreadedMail(t, e, email, "Our offer", "outbound", "thr-col-box-b")
+	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Intro", "outbound", "thr-col-box"))
+	seedThreadedMailHeldBy(t, e, e.Rep2, email, "Our offer", "outbound", "thr-col-box-b")
 
 	captureInboundThroughRealSinkAs(mailboxOwnerCtx(e, e.Rep2), t, e, "b@authz.test",
 		"reply-col-box", email, "thr-col-box-b")
@@ -151,7 +151,7 @@ func TestAReplyImportedWhileHeldStaysNoEvidenceOnceTheMailboxOpens(t *testing.T)
 	e := integration.Setup(t)
 	connectSeatMailbox(t, e, e.Rep1, "a@authz.test", "held")
 	const email = "buyer@heldthenshared.example"
-	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-held-then"))
+	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Intro", "outbound", "thr-held-then"))
 	captureInboundThroughRealSink(t, e, e.Rep1, "reply-held-then", email, "thr-held-then")
 
 	e.WsExec(t, `UPDATE capture_connection SET mail_posture = 'shared' WHERE user_id = $1`, e.Rep1)
@@ -164,7 +164,7 @@ func TestAReplyImportedWhileHeldStaysNoEvidenceOnceTheMailboxOpens(t *testing.T)
 func TestAReplyInAMailboxHeldSinceItsImportIsNoEvidence(t *testing.T) {
 	e := setupWithOwnMailbox(t)
 	const email = "buyer@sharedthenheld.example"
-	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-shared-then"))
+	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Intro", "outbound", "thr-shared-then"))
 	captureInboundThroughRealSinkAs(withoutContactUpdate(mailboxOwnerCtx(e, e.Rep1)), t, e, "a@authz.test",
 		"reply-shared-then", email, "thr-shared-then")
 
@@ -178,10 +178,10 @@ func TestAReplyInAMailboxHeldSinceItsImportIsNoEvidence(t *testing.T) {
 func TestAReplyToAColleagueDoesNotPublishAnAdvisor(t *testing.T) {
 	e := setupWithSecondMailbox(t)
 	const email = "taxadvisor@colleague.example"
-	judge(t, e, email, capture.KindAdvisor, seedThreadedMail(t, e, email, "Your return", "inbound", "thr-adv-col"))
+	judge(t, e, email, capture.KindAdvisor, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Your return", "inbound", "thr-adv-col"))
 	requireNarrowed(t, e, email, contacts.NarrowedAdvisor)
 
-	seedThreadedMail(t, e, email, "A question", "outbound", "thr-adv-col-b")
+	seedThreadedMailHeldBy(t, e, e.Rep2, email, "A question", "outbound", "thr-adv-col-b")
 	captureInboundThroughRealSinkAs(mailboxOwnerCtx(e, e.Rep2), t, e, "b@authz.test",
 		"reply-adv-col", email, "thr-adv-col-b")
 
@@ -193,8 +193,8 @@ func TestAReplyToAColleagueDoesNotPublishAnAdvisor(t *testing.T) {
 func TestAReplyToAColleagueOnAHeldThreadDoesNotPublish(t *testing.T) {
 	e := setupWithSecondMailbox(t)
 	const email = "buyer@colleagueheld.example"
-	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-col-held"))
-	seedThreadedMail(t, e, email, "Our offer", "outbound", "thr-col-held-b")
+	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Intro", "outbound", "thr-col-held"))
+	seedThreadedMailHeldBy(t, e, e.Rep2, email, "Our offer", "outbound", "thr-col-held-b")
 	seedThreadHold(t, e, "thr-col-held-b", "held")
 
 	captureInboundThroughRealSinkAs(mailboxOwnerCtx(e, e.Rep2), t, e, "b@authz.test",
@@ -209,7 +209,7 @@ func TestAReplyToAColleagueOnAHeldThreadDoesNotPublish(t *testing.T) {
 func TestAReplyDoesNotPublishAContactAHoldNarrowedEvenOnceTheHoldIsLifted(t *testing.T) {
 	e := setupWithOwnMailbox(t)
 	const email = "counsel@heldmatter.example"
-	activity := seedThreadedMail(t, e, email, "The matter", "inbound", "thr-hold")
+	activity := seedThreadedMailHeldBy(t, e, e.Rep1, email, "The matter", "inbound", "thr-hold")
 	seedThreadHold(t, e, "thr-hold", "held")
 	judge(t, e, email, capture.KindContact, activity)
 	requireNarrowed(t, e, email, contacts.NarrowedConfidentialityHold)
@@ -225,7 +225,7 @@ func TestAReplyDoesNotPublishAContactAHoldNarrowedEvenOnceTheHoldIsLifted(t *tes
 func TestOutboundMailOnAHeldThreadRecordsTheHold(t *testing.T) {
 	e := setupWithOwnMailbox(t)
 	const email = "partner@heldoutbound.example"
-	activity := seedThreadedMail(t, e, email, "Terms", "outbound", "thr-held-out")
+	activity := seedThreadedMailHeldBy(t, e, e.Rep1, email, "Terms", "outbound", "thr-held-out")
 	seedThreadHold(t, e, "thr-held-out", "held")
 	judge(t, e, email, capture.KindContact, activity)
 
@@ -235,7 +235,7 @@ func TestOutboundMailOnAHeldThreadRecordsTheHold(t *testing.T) {
 func TestAReplyDoesNotPublishAnAdvisor(t *testing.T) {
 	e := setupWithOwnMailbox(t)
 	const email = "taxadvisor@ownbooks.example"
-	judge(t, e, email, capture.KindAdvisor, seedThreadedMail(t, e, email, "Your return", "inbound", "thr-adv"))
+	judge(t, e, email, capture.KindAdvisor, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Your return", "inbound", "thr-adv"))
 	requireNarrowed(t, e, email, contacts.NarrowedAdvisor)
 
 	replyOnFreshThread(t, e, email, "thr-adv-reply")
@@ -246,7 +246,7 @@ func TestAReplyDoesNotPublishAnAdvisor(t *testing.T) {
 func TestAReplyDoesNotPublishAContactAHumanMadePrivate(t *testing.T) {
 	e := setupWithOwnMailbox(t)
 	const email = "friend@ownchoice.example"
-	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Hello", "inbound", "thr-human"))
+	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Hello", "inbound", "thr-human"))
 	if visibility, _ := contactVisibility(t, e, email); visibility != "workspace" {
 		t.Fatalf("the verdict left the contact %q, want workspace before the human narrows it", visibility)
 	}
@@ -267,7 +267,7 @@ func TestAReplyDoesNotPublishAContactAHumanMadePrivate(t *testing.T) {
 func TestAVerdictRecordsItsReasonOnTheRecordTheSinkMintedFirst(t *testing.T) {
 	e := setupWithOwnMailbox(t)
 	const email = "notary@ownaffairs.example"
-	seedAttestedOutbound(t, e, "sink-first-out", email, "thr-sink-first")
+	seatHoldsSeeded(t, e, e.Rep1, seedAttestedOutbound(t, e, "sink-first-out", email, "thr-sink-first"))
 	captureInboundThroughRealSink(t, e, e.Rep1, "sink-first-in", email, "thr-sink-first")
 	if reason := narrowingReasonOf(t, e, email); reason == nil || *reason != string(contacts.NarrowedAwaitingVerdict) {
 		t.Fatalf("the sink recorded %v on a sender nothing has judged yet, want awaiting_verdict", reason)
@@ -289,7 +289,7 @@ func TestAVerdictRecordsItsReasonOnTheRecordTheSinkMintedFirst(t *testing.T) {
 func TestAReplyDoesNotPublishAContactThatRecordsNoReason(t *testing.T) {
 	e := setupWithOwnMailbox(t)
 	const email = "prospect@beforethecolumn.example"
-	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-legacy"))
+	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Intro", "outbound", "thr-legacy"))
 	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
 	e.WsExec(t, `UPDATE contact SET narrowing_reason = NULL WHERE id = $1`, contactIDFor(t, e, email))
 
@@ -305,7 +305,7 @@ func TestAReplyDoesNotPublishAContactThatRecordsNoReason(t *testing.T) {
 func TestAHeldReplyDoesNotPublishOnALaterUnheldMessage(t *testing.T) {
 	e := setupWithOwnMailbox(t)
 	const email = "buyer@heldthenopen.example"
-	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-held-first"))
+	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Intro", "outbound", "thr-held-first"))
 	seedThreadHold(t, e, "thr-held-first", "held")
 	captureInboundThroughRealSink(t, e, e.Rep1, "reply-held-first", email, "thr-held-first")
 
@@ -417,7 +417,7 @@ func TestThePassStartsOverAndRetriesASkippedContact(t *testing.T) {
 // gate and the contact is left owed publication.
 func loseTheLivePromotion(t *testing.T, e *integration.Env, email, thread string) {
 	t.Helper()
-	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", thread))
+	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Intro", "outbound", thread))
 	captureInboundThroughRealSinkAs(withoutContactUpdate(mailboxOwnerCtx(e, e.Rep1)), t, e, "a@authz.test",
 		"reply-"+thread, email, thread)
 	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
@@ -440,11 +440,11 @@ func withoutContactUpdate(ctx context.Context) context.Context {
 func TestALegacyNarrowingIsNotPublishedByALaterVerdict(t *testing.T) {
 	e := setupWithOwnMailbox(t)
 	const email = "counsel@legacyhold.example"
-	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-legacy-v"))
+	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Intro", "outbound", "thr-legacy-v"))
 	e.WsExec(t, `UPDATE contact SET narrowing_reason = NULL WHERE id = $1`, contactIDFor(t, e, email))
 	// The same inbound verdict publishes an ordinary contact; see
 	// TestAReplyDoesNotPublishAContactAHumanMadePrivate's first step.
-	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Re: matter", "inbound", "thr-legacy-v2"))
+	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Re: matter", "inbound", "thr-legacy-v2"))
 
 	if visibility, _ := contactVisibility(t, e, email); visibility != "owner" {
 		t.Errorf("a later verdict published a legacy narrowed contact: visibility %q", visibility)
@@ -456,10 +456,10 @@ func TestALegacyNarrowingIsNotPublishedByALaterVerdict(t *testing.T) {
 func TestALegacyNarrowingKeepsItsUnknownReason(t *testing.T) {
 	e := setupWithOwnMailbox(t)
 	const email = "counsel@legacyreason.example"
-	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-legacy-r"))
+	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Intro", "outbound", "thr-legacy-r"))
 	e.WsExec(t, `UPDATE contact SET narrowing_reason = NULL WHERE id = $1`, contactIDFor(t, e, email))
 
-	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Again", "outbound", "thr-legacy-r2"))
+	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Again", "outbound", "thr-legacy-r2"))
 
 	if reason := narrowingReasonOf(t, e, email); reason != nil {
 		t.Errorf("a later verdict wrote %q over a legacy row's unknown reason", *reason)
@@ -520,7 +520,7 @@ func judge(t *testing.T, e *integration.Env, email, kind string, activity ids.UU
 // holds, the same shape that publishes in the first test above.
 func replyOnFreshThread(t *testing.T, e *integration.Env, email, thread string) {
 	t.Helper()
-	seedThreadedMail(t, e, email, "Following up", "outbound", thread)
+	seedThreadedMailHeldBy(t, e, e.Rep1, email, "Following up", "outbound", thread)
 	captureInboundThroughRealSink(t, e, e.Rep1, "reply-"+thread, email, thread)
 }
 
@@ -567,7 +567,7 @@ func narrowingReasonOf(t *testing.T, e *integration.Env, email string) *string {
 func TestOnlyAContactNobodyHadAnsweredAwaitsAnAnswer(t *testing.T) {
 	e := setupWithOwnMailbox(t)
 	const email = "buyer@awaits.example"
-	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-awaits"))
+	judge(t, e, email, capture.KindContact, seedThreadedMailHeldBy(t, e, e.Rep1, email, "Intro", "outbound", "thr-awaits"))
 	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
 	// awaitsAfter asks after one change to the row, then rolls the change back.
 	awaitsAfter := func(change string, args ...any) bool {
@@ -615,3 +615,12 @@ func TestOnlyAContactNobodyHadAnsweredAwaitsAnAnswer(t *testing.T) {
 }
 
 var errRolledBack = errors.New("rolled back on purpose")
+
+// seedThreadedMailHeldBy seeds mail the way seat's own mailbox holds it, so a
+// reply captured for that seat joins the thread.
+func seedThreadedMailHeldBy(t *testing.T, e *integration.Env, seat ids.UUID, counterparty, subject, direction, threadKey string) ids.UUID {
+	t.Helper()
+	id := seedThreadedMail(t, e, counterparty, subject, direction, threadKey)
+	seatHoldsSeeded(t, e, seat, id)
+	return id
+}
