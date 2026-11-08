@@ -23,9 +23,10 @@ const (
 
 const markerHoldSQL = `SELECT EXISTS(SELECT 1 FROM contact WHERE legal_hold)
  OR EXISTS(SELECT 1 FROM lead WHERE legal_hold) OR EXISTS(SELECT 1 FROM company WHERE legal_hold)
- OR EXISTS(SELECT 1 FROM deal WHERE legal_hold) OR EXISTS(SELECT 1 FROM project WHERE legal_hold)`
+ OR EXISTS(SELECT 1 FROM deal WHERE legal_hold) OR EXISTS(SELECT 1 FROM project WHERE legal_hold)
+ OR EXISTS(SELECT 1 FROM data_subject_request WHERE dispute_open)`
 
-const markerHoldLockSQL = `LOCK TABLE company,contact,deal,lead,project IN SHARE MODE`
+const markerHoldLockSQL = `LOCK TABLE company,contact,deal,lead,project,data_subject_request IN SHARE MODE NOWAIT`
 
 // HistoricalAuditPage counts changes and the inspected keys for cursor progress.
 type HistoricalAuditPage struct {
@@ -128,17 +129,6 @@ func historicalAuditUnderHold(ctx context.Context, tx pgx.Tx, original ids.UUID,
    WHERE certificate.id=@original FOR UPDATE OF d`, pgx.StrictNamedArgs{"original": original}).Scan(&held)
 	case reportingDeal:
 		err = tx.QueryRow(ctx, `SELECT legal_hold FROM deal WHERE id=@entity FOR UPDATE`, entityArgs).Scan(&held)
-	case "weekly_plan_commitment":
-		// Marker-only rows have no subject link. Shared table locks prevent a
-		// hold being added between this conservative check and the correction.
-
-		if err := tx.QueryRow(ctx, markerHoldSQL).Scan(&held); err != nil || held {
-			return held, err
-		}
-		if _, err := tx.Exec(ctx, markerHoldLockSQL); err != nil {
-			return false, err
-		}
-		err = tx.QueryRow(ctx, markerHoldSQL).Scan(&held)
 	case "activity":
 		current, carried := floor.sqlArgs()
 		args := []any{entity, current, carried}

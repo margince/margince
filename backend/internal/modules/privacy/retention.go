@@ -333,6 +333,9 @@ func (s *RetentionService) EvaluateInstallation(ctx context.Context) error {
 	if err := s.evaluateHeldCommitments(ctx); err != nil {
 		return err
 	}
+	if err := s.retryMarkedAuditCopies(ctx); err != nil {
+		return err
+	}
 	retainOnly, err := s.retainOnly(ctx)
 	if err != nil {
 		return err
@@ -487,11 +490,6 @@ func (s *RetentionService) retainOnly(ctx context.Context) (bool, error) {
 func isDestructive(action string) bool {
 	return action == actionAnonymize || action == actionErase
 }
-
-// voiceSignalRetention note: the deadline itself is stamped per row
-// (voice_learning_signal.retention_until, set at capture); this sweep only
-// honors it — the window is the ai module's fixed operational floor, not a
-// policy-configurable domain record.
 
 // WithPayloadVault lets destructive actions retire sealed booking capabilities.
 func (s *RetentionService) WithPayloadVault(payloads PayloadPurger) *RetentionService {

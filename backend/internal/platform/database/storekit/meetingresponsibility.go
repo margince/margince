@@ -146,3 +146,11 @@ func knownHostExpressionSQL(meeting, host string) string {
        AND host_statement.evidence->>'%[4]s'=(%[2]s)::text)
  THEN NULL ELSE %[2]s END)`, meeting, host, provenance.ReservedSourceSystemPrefix, ExplicitMeetingHostEvidence)
 }
+
+// MeetingHasCalendarRosterSQL distinguishes invitation evidence from legacy
+// calendar-owner fallback when deciding whose time a meeting blocks.
+func MeetingHasCalendarRosterSQL(meeting string) string {
+	return fmt.Sprintf(`EXISTS (SELECT 1 FROM activity_participant roster
+ WHERE roster.activity_id=%s.id AND roster.roster_seat IS NOT NULL
+ AND roster.role IN (`+MeetingAttendingRolesSQL+`))`, meeting)
+}

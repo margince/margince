@@ -145,12 +145,12 @@ func TestMarkerCleanupChecksAndLocksEveryTableCarryingLegalHold(t *testing.T) {
 	if len(held) < 4 {
 		t.Fatalf("short legal-hold census: %v", held)
 	}
-	lock := regexp.MustCompile(`(?i)^LOCK TABLE ([a-z_,]+) IN SHARE MODE$`).FindStringSubmatch(markerHoldLockSQL)
+	lock := regexp.MustCompile(`(?i)^LOCK TABLE ([a-z_,]+) IN SHARE MODE NOWAIT$`).FindStringSubmatch(markerHoldLockSQL)
 	if len(lock) != 2 {
 		t.Fatal("marker cleanup must take shared locks on the checked hold tables")
 	}
 	locked := map[string]bool{}
-	for _, table := range strings.Split(lock[1], ",") {
+	for table := range strings.SplitSeq(lock[1], ",") {
 		locked[table] = true
 	}
 	for table := range held {
@@ -159,8 +159,11 @@ func TestMarkerCleanupChecksAndLocksEveryTableCarryingLegalHold(t *testing.T) {
 			t.Errorf("marker cleanup must check and lock held table %s", table)
 		}
 	}
+	if !locked["data_subject_request"] || !strings.Contains(markerHoldSQL, "FROM data_subject_request WHERE dispute_open") {
+		t.Error("marker cleanup must preserve and lock disputed requests")
+	}
 	for table := range locked {
-		if !held[table] {
+		if !held[table] && table != "data_subject_request" {
 			t.Errorf("marker cleanup locks %s without a legal_hold column", table)
 		}
 	}

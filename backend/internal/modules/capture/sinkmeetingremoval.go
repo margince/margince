@@ -5,9 +5,11 @@ package capture
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/margince/margince/backend/internal/platform/auth"
 
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -28,8 +30,8 @@ func (s *Sink) RemoveCalendarMeeting(ctx context.Context, key connector.NaturalK
 			return err
 		}
 		var organizer bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM activity_participant
-   WHERE activity_id=@activity AND user_id=@seat AND role=@organizer)`, pgx.StrictNamedArgs{
+		if err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT EXISTS(SELECT 1 FROM activity_participant organizer_row JOIN activity a ON a.id=organizer_row.activity_id
+ WHERE organizer_row.activity_id=@activity AND organizer_row.user_id=@seat AND organizer_row.role=@organizer AND %s)`, auth.ParticipantStandsSQL("organizer_row", "a")), pgx.StrictNamedArgs{
 			capturedActivityObject: id, rosterSeatArg: actorUserID(ctx), "organizer": connector.ParticipantRoleOrganizer,
 		}).Scan(&organizer); err != nil {
 			return err

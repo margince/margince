@@ -104,7 +104,7 @@ func EraseSamplesNamingTx(ctx context.Context, tx pgx.Tx, fullName string, email
 // mark beside it, such as markdown or brackets, still matches. A missed
 // erasure costs more than one extra emptied sample.
 func wholeAddressPattern(email string) string {
-	return values.EmailTextPattern(email)
+	return values.MarkdownEmailTextPattern(email)
 }
 
 // wholeNamePattern is the regular expression a full name is found by: every

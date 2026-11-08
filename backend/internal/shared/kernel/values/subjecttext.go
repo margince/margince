@@ -11,7 +11,16 @@ import (
 // EmailTextPattern matches an address without matching a longer address.
 // The result is a PostgreSQL regular expression for case-insensitive matching.
 func EmailTextPattern(email string) string {
-	return `(?<![[:alnum:]._%+-])` + regexp.QuoteMeta(strings.TrimSpace(email)) + `(?=$|[^[:alnum:].-]|\.(?:$|[^[:alnum:]]))`
+	return emailTextPattern(email, `[[:alnum:]._%+-]`)
+}
+
+// MarkdownEmailTextPattern keeps the voice-corpus policy that underscores can delimit formatting.
+func MarkdownEmailTextPattern(email string) string {
+	return emailTextPattern(email, `[[:alnum:].+-]`)
+}
+
+func emailTextPattern(email, preceding string) string {
+	return `(?<!` + preceding + `)` + regexp.QuoteMeta(strings.TrimSpace(email)) + `(?=$|[^[:alnum:].-]|\.(?:$|[^[:alnum:]]))`
 }
 
 // FullNameTextPattern matches whole words with flexible spacing. Callers choose
@@ -25,5 +34,5 @@ func FullNameTextPattern(fullName string, minimumWords int) (string, bool) {
 	for _, word := range words {
 		quoted = append(quoted, regexp.QuoteMeta(word))
 	}
-	return `\m` + strings.Join(quoted, `\s+`) + `\M`, true
+	return `(?<![[:alnum:]_])` + strings.Join(quoted, `\s+`) + `(?![[:alnum:]_])`, true
 }

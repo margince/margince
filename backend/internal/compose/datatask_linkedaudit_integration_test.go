@@ -8,6 +8,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -125,7 +126,7 @@ func TestMarkedWeeklyTaskClearsOldCopiesKeepsLaterWorkAndReplays(t *testing.T) {
 	cleared := legacyWeeklyCopies(t, e, "")
 	changed := legacyWeeklyCopies(t, e, "New authorized work")
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
-	task := linkedAuditRedactionDataTask()
+	task := markedAuditRedactionDataTask()
 	for i := range task.Steps {
 		task.Steps[i].Limit = 1
 	}
@@ -158,7 +159,7 @@ func TestMarkedWeeklyTaskKeepsCopiesWhileAnySubjectIsHeld(t *testing.T) {
 	contact := e.SeedContact(t, "Held Contact", nil)
 	e.WsExec(t, `UPDATE contact SET legal_hold=true WHERE id=$1`, contact)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
-	runMachineAddressTask(ctx, t, e, linkedAuditRedactionDataTask())
+	runMachineAddressTask(ctx, t, e, markedAuditRedactionDataTask())
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='weekly_plan_commitment' AND entity_id=$1 AND after->>'label'='Private Contact'`, commitment); n != 1 {
 		t.Fatalf("held marker history was removed: %d", n)
 	}
@@ -168,7 +169,7 @@ func TestMarkedWeeklyCorrectionRollsBackWithItsProgress(t *testing.T) {
 	e := integration.Setup(t)
 	record := legacyWeeklyCopies(t, e, "")
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
-	task := linkedAuditRedactionDataTask()
+	task := markedAuditRedactionDataTask()
 	for i := range task.Steps {
 		if task.Steps[i].Name != "marked_weekly_images" {
 			continue
@@ -194,5 +195,31 @@ func TestMarkedWeeklyCorrectionRollsBackWithItsProgress(t *testing.T) {
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='weekly_plan_commitment' AND entity_id=$1 AND action='erase'`, record); n != 0 {
 		t.Fatalf("rollback kept %d erasure proofs", n)
+	}
+}
+
+func TestRetiredRequestMarkerCleanupKeepsDisputesAndLaterAnswers(t *testing.T) {
+	e := integration.Setup(t)
+	cleared, disputed, later := legacyRequestAuditCopies(t, e), legacyRequestAuditCopies(t, e), legacyRequestAuditCopies(t, e)
+	e.WsExec(t, `UPDATE data_subject_request SET dispute_open=true WHERE id=$1`, disputed)
+	e.WsExec(t, `UPDATE data_subject_request SET resolution='Later authorized answer' WHERE id=$1`, later)
+	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+	runMachineAddressTask(ctx, t, e, markedAuditRedactionDataTask())
+	for _, id := range []ids.UUID{cleared, disputed, later} {
+		if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='data_subject_request' AND entity_id=$1 AND after->>'email'='private@example.test'`, id); n != 2 {
+			t.Fatalf("dispute must defer all marker copies, got %d", n)
+		}
+	}
+	e.WsExec(t, `UPDATE data_subject_request SET dispute_open=false WHERE id=$1`, disputed)
+	if err := NewRetentionServiceFor(e.DB(), nil, slog.Default()).EvaluateInstallation(ctx); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []ids.UUID{cleared, disputed} {
+		if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='data_subject_request' AND entity_id=$1 AND after->>'email'='private@example.test'`, id); n != 0 {
+			t.Fatalf("retry kept %d old request images", n)
+		}
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='data_subject_request' AND entity_id=$1 AND after->>'email'='private@example.test'`, later); n != 2 {
+		t.Fatalf("later answer lost history: %d", n)
 	}
 }

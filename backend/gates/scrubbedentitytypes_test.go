@@ -52,6 +52,7 @@ import (
 var scrubTombstoneWriters = map[string]bool{
 	// Carries the verb itself; every call is a scrub.
 	"tombstoneCollateralScrubs": true,
+	"certifyCollateralScrub":    true,
 	// Generic audit doors, which are scrub sites only when the verb they are
 	// handed is one.
 	"AuditWithEvidence": true,
@@ -170,7 +171,7 @@ func scrubbedTypesInPrivacy(t *testing.T) (map[string]bool, []string) {
 		var insideCollateralWriter bool
 		ast.Inspect(file, func(n ast.Node) bool {
 			if fn, ok := n.(*ast.FuncDecl); ok {
-				insideCollateralWriter = fn.Name.Name == "tombstoneCollateralScrubs"
+				insideCollateralWriter = fn.Name.Name == "tombstoneCollateralScrubs" || fn.Name.Name == "certifyCollateralScrub"
 				return true
 			}
 			call, ok := n.(*ast.CallExpr)
@@ -263,7 +264,7 @@ func isScrubTombstoneCall(call *ast.CallExpr) bool {
 	if !scrubTombstoneWriters[name] {
 		return false
 	}
-	if name == "tombstoneCollateralScrubs" {
+	if name == "tombstoneCollateralScrubs" || name == "certifyCollateralScrub" {
 		return true
 	}
 	for _, arg := range call.Args {
