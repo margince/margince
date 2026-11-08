@@ -18984,6 +18984,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.promiseSettled": "Đã đánh dấu hoàn thành",
   "worklist.verb.promiseSettleFailed":
     "Không thể đánh dấu cam kết là đã hoàn thành. Thử lại.",
+  "worklist.verb.meetingHowDidItGo": "Cuộc họp thế nào?",
   "worklist.verb.meetingAddNotes": "Thêm ghi chú",
   "worklist.verb.meetingUpdateTitle": "Cuộc họp",
   "worklist.verb.meetingReading": "Đang tải cuộc họp…",
@@ -18992,14 +18993,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Nội dung trao đổi và bước tiếp theo. Có thể sửa ghi chú từ lịch tại đây.",
   "worklist.verb.meetingHeld": "Đã diễn ra",
   "worklist.verb.meetingNoShow": "Vắng mặt",
-  "worklist.verb.meetingCanceled": "Đánh dấu đã hủy",
+  "worklist.verb.meetingCanceled": "Không diễn ra",
   "worklist.verb.meetingOutcomeRecorded": "Đã ghi nhận kết quả cuộc họp",
   "worklist.verb.meetingOutcomeFailed": "Không thể ghi nhận kết quả. Thử lại.",
   "worklist.verb.meetingDayMissing":
     "Ngày này không có trong múi giờ của công ty. Chọn ngày khác.",
   "worklist.verb.meetingAddNotesFor": "Thêm ghi chú: {subject}",
   "worklist.verb.meetingHeldFor": "Đã diễn ra: {subject}",
-  "worklist.verb.meetingCanceledFor": "Đánh dấu đã hủy: {subject}",
+  "worklist.verb.meetingCanceledFor": "Không diễn ra: {subject}",
   "worklist.verb.meetingCancelInCalendar":
     "Lời mời trên lịch quản lý cuộc họp này. Hủy cuộc họp qua lời mời.",
   "worklist.verb.meetingCalendarManaged":

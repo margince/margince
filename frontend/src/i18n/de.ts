@@ -19469,23 +19469,24 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.promiseSettled": "Als eingehalten markiert",
   "worklist.verb.promiseSettleFailed":
     "Die Zusage konnte nicht als eingehalten markiert werden. Bitte versuche es erneut.",
+  "worklist.verb.meetingHowDidItGo": "Wie lief es?",
   "worklist.verb.meetingAddNotes": "Notizen hinzufügen",
   "worklist.verb.meetingUpdateTitle": "Termin",
   "worklist.verb.meetingReading": "Termin wird geladen…",
   "worklist.verb.meetingWhatHappened": "Terminnotizen",
   "worklist.verb.meetingBodyHint":
     "Besprochenes und nächste Schritte. Kalendernotizen lassen sich hier bearbeiten.",
-  "worklist.verb.meetingHeld": "Stattgefunden",
+  "worklist.verb.meetingHeld": "Hat stattgefunden",
   "worklist.verb.meetingNoShow": "Nicht erschienen",
-  "worklist.verb.meetingCanceled": "Als abgesagt markieren",
+  "worklist.verb.meetingCanceled": "Hat nicht stattgefunden",
   "worklist.verb.meetingOutcomeRecorded": "Terminergebnis erfasst",
   "worklist.verb.meetingOutcomeFailed":
     "Das Ergebnis konnte nicht erfasst werden. Bitte versuche es erneut.",
   "worklist.verb.meetingDayMissing":
     "Dieses Datum gibt es in der Zeitzone des Unternehmens nicht. Wähle ein anderes Datum.",
   "worklist.verb.meetingAddNotesFor": "Notizen hinzufügen: {subject}",
-  "worklist.verb.meetingHeldFor": "Stattgefunden: {subject}",
-  "worklist.verb.meetingCanceledFor": "Als abgesagt markieren: {subject}",
+  "worklist.verb.meetingHeldFor": "Hat stattgefunden: {subject}",
+  "worklist.verb.meetingCanceledFor": "Hat nicht stattgefunden: {subject}",
   "worklist.verb.meetingCancelInCalendar":
     "Die Kalendereinladung führt diesen Termin. Sag ihn über die Einladung ab.",
   "worklist.verb.meetingCalendarManaged":
