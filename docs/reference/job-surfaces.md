@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/platform/jobs/health.go backend/internal/platform/jobs/healthassessment.go backend/internal/platform/jobs/healthhistory.go backend/internal/compose/jobhealth.go backend/internal/compose/jobhealthhistory.go -->
+<!-- describes: backend/internal/platform/jobs/health.go backend/internal/platform/jobs/healthassessment.go backend/internal/platform/jobs/healthhistory.go backend/internal/compose/jobhealth.go backend/internal/compose/jobmetrics.go backend/internal/compose/jobhealthhistory.go -->
 # Job surfaces
 
 The two readers of the job table: the `/metrics` families and `GET /v1/admin/job-health`. The other
@@ -18,8 +18,8 @@ reports on the process, not the fleet.
 
 | Family | Labels | Meaning |
 |---|---|---|
-| `margince_job_queue_depth` | `queue`, `workspace_id` | `available` + `scheduled` + `retryable` + `pending`: work nobody has done yet |
-| `margince_job_running` | `queue`, `workspace_id` | running now |
+| `margince_job_queue_depth` | `kind`, `queue`, `workspace_id` | `available` + `scheduled` + `retryable` + `pending`: work nobody has done yet |
+| `margince_job_running` | `kind`, `queue`, `workspace_id` | running now |
 | `margince_job_discarded` | `kind`, `workspace_id` | all its runs used up; will never run unless someone steps in |
 | `margince_job_cancelled` | `kind`, `workspace_id` | stopped by request, before all its runs were used. Counted separately from discarded because the operator does something else about it. The sweep pair counts either as a missed workspace |
 | `margince_job_oldest_queued_age_seconds` | `queue`, `workspace_id` | how long the oldest job that can run and that no worker holds has waited |

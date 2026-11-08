@@ -87,3 +87,14 @@ function CompactDemo() {
 // In a dialog's head the select's value names it: no visible label, and no
 // scope line under it.
 export const Compact: Story = { render: () => <CompactDemo /> };
+
+export const WithoutProjects: Story = {
+  render: () => (
+    <ProjectPicker projects={[]} projectId="" onChange={() => {}} compact />
+  ),
+};
+
+export const WithoutProjectsDark: Story = {
+  ...WithoutProjects,
+  globals: { theme: "dark" },
+};

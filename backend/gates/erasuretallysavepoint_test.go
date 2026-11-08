@@ -6,10 +6,11 @@
 package gates
 
 import (
-	"os"
 	"regexp"
 	"sort"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The erasure counts its work on a tallyTx (privacy/erasuretally.go), and a
@@ -26,7 +27,7 @@ func TestTheErasureCascadeOpensNoSavepoint(t *testing.T) {
 	}
 	var opening []string
 	for path := range reached {
-		source, err := os.ReadFile(path)
+		source, err := gatekit.ReadFile(path)
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}

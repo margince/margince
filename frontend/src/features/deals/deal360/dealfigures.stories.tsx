@@ -8,6 +8,7 @@ import { en } from "../../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../../testing/story-utils";
 import { DealFigures, DealTimeline } from "./dealfigures";
@@ -83,6 +84,7 @@ function inputs(activities: Activity[]): DealStandingInputs {
 function render(read: DealStandingInputs) {
   return () => {
     installFetchStub({
+      "GET /me": meRoute({ deal: ["read"] }),
       "GET /field-history": () =>
         jsonResponse({
           data: [],

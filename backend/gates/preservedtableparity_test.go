@@ -31,7 +31,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -202,7 +201,7 @@ func preservedInSweep(t *testing.T) map[string]bool {
 // missing file read as an empty list.
 func readGate(t *testing.T, path string) []byte {
 	t.Helper()
-	src, err := os.ReadFile(path)
+	src, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

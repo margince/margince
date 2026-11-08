@@ -26,6 +26,7 @@ import { LicenseBanner } from "./licensebanner";
 import { type NavCounts, RAIL_LESS_SCREENS } from "./nav";
 import { NavWalkProvider, useNavWalk } from "./navlevel";
 import { useReadingColumn } from "./readingcolumn";
+import { usePublishedScrollerHeight } from "./scrollerheight";
 import { TopBar } from "./topbar";
 import "./shell.css";
 
@@ -151,6 +152,7 @@ export function Shell({
   // column grows. A list restores its rows a moment after the address arrives,
   // so a single assignment lands on a column still short and gets clamped.
   useScrollMemory(scroller, address);
+  usePublishedScrollerHeight(scroller, railless ? "railless" : "workspace");
 
   const toggle = useCallback(() => {
     setCollapsed((current) => {

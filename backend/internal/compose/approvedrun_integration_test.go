@@ -83,7 +83,7 @@ func runStatus(t *testing.T, e *integration.Env, handler string) string {
 // service the HTTP surface asks.
 func TestAnAutomationStagedActionIsVisibleAndDecidable(t *testing.T) {
 	e := integration.Setup(t)
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	contact := e.SeedContact(t, "Reassignment Target", nil)
 
 	for _, kind := range automation.StageableKinds() {
@@ -100,7 +100,7 @@ func TestAnAutomationStagedActionIsVisibleAndDecidable(t *testing.T) {
 // asking: request_approval's yes is the outcome, so the run finishes.
 func TestApprovingAnAskingOnlyStagingCompletesItsRun(t *testing.T) {
 	e := integration.Setup(t)
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	contact := e.SeedContact(t, "Asked About", nil)
 	kind := string(workflow.ActionEmitFlowEvent)
 	id, handler := parkedRun(t, e, svc, kind, contact, `{"note":"needs a human"}`)
@@ -122,7 +122,7 @@ func TestApprovingAnAskingOnlyStagingCompletesItsRun(t *testing.T) {
 // first is asserted beside the arm that was added.
 func TestRefusingAnAskingOnlyStagingStillBlocksItsRun(t *testing.T) {
 	e := integration.Setup(t)
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	contact := e.SeedContact(t, "Asked About", nil)
 	kind := string(workflow.ActionEmitFlowEvent)
 	id, handler := parkedRun(t, e, svc, kind, contact, `{"note":"needs a human"}`)
@@ -152,7 +152,7 @@ func TestRefusingAnAskingOnlyStagingStillBlocksItsRun(t *testing.T) {
 // approved event — the one ordering the predicate exists to refuse.
 func TestACompletionDoesNotReviveABlockedRun(t *testing.T) {
 	e := integration.Setup(t)
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	contact := e.SeedContact(t, "Asked About", nil)
 	kind := string(workflow.ActionEmitFlowEvent)
 	id, handler := parkedRun(t, e, svc, kind, contact, `{"note":"needs a human"}`)
@@ -200,7 +200,7 @@ func decidedEnvelope(t *testing.T, id ids.ApprovalID, verdict, kind string) keve
 // spent on nothing, with the run still reading as waiting for it.
 func TestApprovingAReassignmentMovesTheOwnerAndCompletesItsRun(t *testing.T) {
 	e := integration.Setup(t)
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	newOwner := e.Rep1
 	contact := e.SeedContact(t, "Reassigned At Scale", nil)
 	id, handler := parkedRun(t, e, svc, string(workflow.ActionAssignOwner), contact,
@@ -233,7 +233,7 @@ func TestApprovingAReassignmentMovesTheOwnerAndCompletesItsRun(t *testing.T) {
 // than reporting an owner change that never happened.
 func TestAFailedReassignmentDoesNotMarkItsRunApplied(t *testing.T) {
 	e := integration.Setup(t)
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	contact := e.SeedContact(t, "Reassignment Fails", nil)
 	// The create stamps the seeding seat as owner; the test wants an unowned
 	// record so the failed write's footprint is unmistakable.
@@ -268,7 +268,7 @@ func TestAFailedReassignmentDoesNotMarkItsRunApplied(t *testing.T) {
 // says which kinds it covered.
 func TestApprovingAnyStageableKindLeavesItsRunTerminal(t *testing.T) {
 	e := integration.Setup(t)
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	registered := map[string]bool{}
 	for _, kind := range svc.EffectKinds() {
 		registered[kind] = true

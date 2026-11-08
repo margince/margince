@@ -126,7 +126,7 @@ func indexPackageFunctions(t *testing.T, roots []string) funcIndex {
 	idx := funcIndex{}
 	counted := 0
 	for _, root := range roots {
-		err := filepath.WalkDir(filepath.Join(tree, root),
+		err := gatekit.WalkDir(filepath.Join(tree, root),
 			func(p string, d fs.DirEntry, err error) error {
 				if err != nil || d.IsDir() || !strings.HasSuffix(p, ".go") ||
 					strings.HasSuffix(p, "_test.go") {

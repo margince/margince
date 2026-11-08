@@ -11,6 +11,7 @@ package activities
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -44,7 +45,7 @@ func storedHorizonTx(t *testing.T) (context.Context, pgx.Tx, *Store) {
 
 func readHorizon(ctx context.Context, t *testing.T, tx pgx.Tx, store *Store) int {
 	t.Helper()
-	got, err := store.waitingHorizonFor(ctx, tx)
+	got, err := store.waitingHorizonFor(ctx, tx, store.now())
 	if err != nil {
 		t.Fatalf("reading the horizon: %v", err)
 	}
@@ -120,5 +121,96 @@ func TestAFailedMeasurementKeepsThePreviousStoredHorizon(t *testing.T) {
 	}
 	if got := readHorizon(ctx, t, tx, store); got != 21 {
 		t.Fatalf("after a failed pass a read answered %d, want the previous 21", got)
+	}
+}
+
+// The measurement judges a bounded, repeatable sample of the year's mail. It
+// reads no more answers than the sample holds, and the same reading on every
+// pass. Under the generic plan a worker reuses, the answer read runs for the
+// sampled messages only.
+func TestTheHorizonMeasurementJudgesABoundedRepeatableSample(t *testing.T) {
+	ctx, tx, store := storedHorizonTx(t)
+	asOf := store.now()
+	whole, err := store.waitingHorizonSpreadTx(ctx, tx, asOf, waitingHorizonSample)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const small = 40
+	if whole.Answered <= small {
+		t.Fatalf("the seeded mailbox has %d answers, too few to tell a sample of %d from all of them", whole.Answered, small)
+	}
+	first, err := store.waitingHorizonSpreadTx(ctx, tx, asOf, small)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.Answered == 0 || first.Answered > small {
+		t.Fatalf("a sample of %d judged %d answers", small, first.Answered)
+	}
+	for pass := range 4 {
+		again, err := store.waitingHorizonSpreadTx(ctx, tx, asOf, small)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if again != first {
+			t.Fatalf("pass %d over the same mail read %+v, the first %+v", pass+2, again, first)
+		}
+	}
+	if loops := answerReadLoops(ctx, t, tx, store, small); loops > small {
+		t.Fatalf("the answer read ran %v times for a sample of %d", loops, small)
+	}
+}
+
+// answerReadLoops is how many times the measurement ran its answer read, by
+// EXPLAIN ANALYZE of the statement under a forced generic plan.
+func answerReadLoops(ctx context.Context, t *testing.T, tx pgx.Tx, store *Store, sample int) float64 {
+	t.Helper()
+	query, args, err := store.waitingHorizonStatement(ctx, tx, store.now(), sample)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.Exec(ctx, `SET LOCAL plan_cache_mode = force_generic_plan`); err != nil {
+		t.Fatal(err)
+	}
+	var raw string
+	if err := tx.QueryRow(ctx, "EXPLAIN (ANALYZE, FORMAT JSON) "+query, args...).Scan(&raw); err != nil {
+		t.Fatalf("explaining the measurement: %v", err)
+	}
+	var plans []struct {
+		Plan planNode `json:"Plan"` //nolint:tagliatelle // fixed by the server's plan format
+	}
+	if err := json.Unmarshal([]byte(raw), &plans); err != nil || len(plans) != 1 {
+		t.Fatalf("reading the plan: %v (%d plans)", err, len(plans))
+	}
+	loops := -1.0
+	plans[0].Plan.walk(func(n planNode) {
+		if n.Alias == "reply" {
+			loops = max(loops, n.ActualLoops)
+		}
+	})
+	if loops < 0 {
+		t.Fatal("the plan has no answer read named reply")
+	}
+	return loops
+}
+
+// A sample with too few answers to speak is measured again over the whole
+// window, so a mailbox that answers rarely keeps its learned horizon.
+func TestASparseHorizonSampleIsMeasuredOverTheWholeWindow(t *testing.T) {
+	ctx, tx, store := storedHorizonTx(t)
+	asOf := store.now()
+	whole, err := store.waitingHorizonSpreadTx(ctx, tx, asOf, wholeWindow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if whole.Answered < waitingHorizonMinSample {
+		t.Fatalf("the seeded mailbox has %d answers, too few for the derivation to speak at all", whole.Answered)
+	}
+	const sparse = 10
+	got, err := store.horizonSpreadTx(ctx, tx, asOf, sparse)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != whole {
+		t.Fatalf("a sample of %d read %+v, want the whole window's %+v", sparse, got, whole)
 	}
 }

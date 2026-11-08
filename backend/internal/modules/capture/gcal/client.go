@@ -30,15 +30,23 @@ import (
 const calendarAPIBase = "https://www.googleapis.com/calendar/v3"
 
 // Default Google OAuth endpoints; overridable via OAuthConfig for tests. The
-// calendar connector authorizes against the same Google identity platform as
-// Gmail, but as its OWN authorization (calendar scope only).
+// calendar connector authorizes against the same Google identity platform as Gmail.
+// Its grant is its own: the calendar scopes and the profile scope, and no mail scope.
 const (
 	googleAuthURL  = "https://accounts.google.com/o/oauth2/v2/auth"
 	googleTokenURL = "https://oauth2.googleapis.com/token" //nolint:gosec // G101 false positive: Google's public OAuth token *endpoint URL*, not a credential
 )
 
-// calendarReadonlyScope covers capture and occupancy reads.
-const calendarReadonlyScope = "https://www.googleapis.com/auth/calendar.readonly"
+// ReadScope covers capture and occupancy reads. A grant without it cannot
+// sync, so it is the scope that decides whether a calendar was granted at all.
+const ReadScope = "https://www.googleapis.com/auth/calendar.readonly"
+
+// ConsentScopes are what a calendar consent asks Google for: the read scope,
+// and write access to the events this calendar creates (bookings). A mail
+// consent that connects the calendar on the same screen asks for these too.
+func ConsentScopes() []string {
+	return []string{ReadScope, "https://www.googleapis.com/auth/calendar.events.owned"}
+}
 
 // initialBackfillDays bounds the first sync's window so a long calendar history
 // does not stream unbounded on connect: only events starting within this many
@@ -100,12 +108,12 @@ func NewOAuth(cfg OAuthConfig) OAuth {
 		Provider:     connectorName,
 		ClientID:     cfg.ClientID,
 		ClientSecret: cfg.ClientSecret,
-		Scopes:       []string{calendarReadonlyScope, "https://www.googleapis.com/auth/calendar.events.owned"},
+		Scopes:       append(ConsentScopes(), googleconn.ProfileScope),
 		AuthURL:      cfg.AuthURL,
 		TokenURL:     cfg.TokenURL,
 		// Google needs offline access + a forced consent prompt to return a
-		// refresh token. No include_granted_scopes: keep this credential scoped
-		// to the calendar alone.
+		// refresh token. No include_granted_scopes: keep the mail scopes out of
+		// this credential.
 		AuthParams: map[string]string{
 			"access_type": "offline",
 			"prompt":      "consent",

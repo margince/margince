@@ -60,6 +60,7 @@ func domainQuestionItem(q DomainQuestion) crmcontracts.AttentionItem {
 		Source:           sourceDomainQuestion,
 		DomainReasonCode: &reasonCode,
 		DomainNote:       note,
+		DomainContext:    DomainQuestionContextWire(q.Context),
 		Title:            &domain,
 		Detail:           &reason,
 		OccurredAt:       &asked,

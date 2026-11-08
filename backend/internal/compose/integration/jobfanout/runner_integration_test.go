@@ -223,8 +223,40 @@ func (re *runnerEnv) runRowWithReason(t *testing.T, trigger string) (status, rea
 	return status, reason, approvalID
 }
 
+// seedSlippingDeal gives the session user an open deal quiet for 90 days. The
+// sweep then has a deal of theirs to judge and goes on to its model loop.
+func (re *runnerEnv) seedSlippingDeal(t *testing.T) {
+	t.Helper()
+	deal := apptest.CreateOpenDeal(t, re.AppEnv, apptest.DiscoverSeededPipeline(t, re.AppEnv))
+	if _, err := re.Owner.Exec(context.Background(),
+		`UPDATE deal SET created_at = now() - interval '90 days', last_activity_at = now() - interval '90 days' WHERE id = $1`,
+		deal); err != nil {
+		t.Fatalf("aging the deal: %v", err)
+	}
+}
+
+// A sweep whose member owns nothing slipping is closed before its first model
+// call: the run completes, and the model is never asked.
+func TestASweepWithNothingSlippingMakesNoModelCall(t *testing.T) {
+	re := setupRunner(t)
+	trigger := "overnight_at_risk_sweep:e2e-nothing-slips"
+	re.brain.Script(`{"final":{"summary":"the model was asked"}}`)
+	re.enqueue(t, "overnight_at_risk_sweep", trigger, &re.passportID)
+	re.tick(t)
+
+	if status, trace, _ := re.runRow(t, trigger); status != "completed" || len(trace) != 0 {
+		t.Fatalf("run = %s with steps %+v, want completed with none", status, trace)
+	}
+	for _, call := range re.brain.Calls() {
+		if call.Op != "embed" {
+			t.Fatalf("a sweep with nothing to judge made a %s model call, want none", call.Op)
+		}
+	}
+}
+
 func TestRunnerFullLoopWritesAsGovernedAgent(t *testing.T) {
 	re := setupRunner(t)
+	re.seedSlippingDeal(t)
 	trigger := "overnight_at_risk_sweep:e2e-full"
 
 	// The model proposes one governed write, then finishes.
@@ -507,6 +539,7 @@ func TestRunnerResumeIsClaimedSoARedeliveryIsANoOp(t *testing.T) {
 // parking, no approval is staged, and the target is untouched.
 func TestTheSweepMayNotArchiveEvenWithAModelThatTriesTo(t *testing.T) {
 	re := setupRunner(t)
+	re.seedSlippingDeal(t)
 
 	var contact struct {
 		ID string `json:"id"`

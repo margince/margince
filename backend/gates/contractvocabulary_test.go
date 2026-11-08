@@ -36,7 +36,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -67,7 +66,7 @@ var deliberateSelections = gatekit.Waive(map[string]string{
 func contractEnumIndex(t *testing.T) (byName map[string]string, byEnum map[string][]string) {
 	t.Helper()
 	byName, byEnum = map[string]string{}, map[string][]string{}
-	entries, err := os.ReadDir(contractsPkgDir)
+	entries, err := gatekit.ReadDir(contractsPkgDir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", contractsPkgDir, err)
 	}

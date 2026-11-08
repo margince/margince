@@ -133,11 +133,12 @@ func checkHorizonPlan(t *testing.T, shape mailboxShape) {
 		liveRecord(openDealPredicate, "d"),
 		liveRecord(workingLeadPredicate, "ld"),
 		ownDomainSenderSQL("inbound", 3),
-		slowPercentile)
+		slowPercentile,
+		sampledMessages(4))
 	now := time.Now()
 	var raw string
 	if err := tx.QueryRow(ctx, "EXPLAIN (FORMAT JSON) "+statement,
-		now.AddDate(0, 0, -waitingHorizonWindowDays), now, []string{"mine.example"}).Scan(&raw); err != nil {
+		now.AddDate(0, 0, -waitingHorizonWindowDays), now, []string{"mine.example"}, waitingHorizonSample).Scan(&raw); err != nil {
 		t.Fatalf("planning the horizon measurement: %v", err)
 	}
 	var plans []struct {

@@ -24,7 +24,6 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -46,7 +45,7 @@ const (
 // restated here, so a new one is picked up by existing.
 func declaredSentinels(t *testing.T) map[string]bool {
 	t.Helper()
-	entries, err := os.ReadDir(apperrorsDir)
+	entries, err := gatekit.ReadDir(apperrorsDir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", apperrorsDir, err)
 	}

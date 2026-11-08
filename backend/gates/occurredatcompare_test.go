@@ -41,7 +41,6 @@ import (
 	"go/token"
 	"io/fs"
 	"maps"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -123,7 +122,7 @@ func TestWhetherAnActivityHappenedIsAskedOfItsOwner(t *testing.T) {
 		if strings.HasPrefix(filepath.Clean(src.Path), occurredAtOwner) {
 			continue
 		}
-		text, err := os.ReadFile(filepath.Join(root, src.Path)) // #nosec G304 -- a swept file of the trusted module tree
+		text, err := gatekit.ReadFile(filepath.Join(root, src.Path)) // #nosec G304 -- a swept file of the trusted module tree
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -142,7 +141,7 @@ func TestWhetherAnActivityHappenedIsAskedOfItsOwner(t *testing.T) {
 		Exempt:  gatekit.Waive(map[string]string{}),
 	}
 	for _, src := range callers.Files(t) {
-		text, err := os.ReadFile(filepath.Join(root, src.Path)) // #nosec G304 -- a swept file of the trusted module tree
+		text, err := gatekit.ReadFile(filepath.Join(root, src.Path)) // #nosec G304 -- a swept file of the trusted module tree
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -350,7 +349,7 @@ func orderedAliases(line string) []string {
 
 // matchedAlias is the alias an occurredAtColumn match at names, "" for none.
 func matchedAlias(text string, at []int) string {
-	for _, group := range []int{2, 4, 6} {
+	for group := 2; group+1 < len(at); group += 2 {
 		if at[group] >= 0 {
 			return strings.ToLower(text[at[group]:at[group+1]])
 		}
@@ -492,11 +491,11 @@ type sqlBody struct{ where, text, args string }
 func TestNoMigrationBodyAsksWhetherAnActivityHappenedRaw(t *testing.T) {
 	t.Parallel()
 	byDir := map[string][]sqlFile{}
-	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".sql") || strings.HasSuffix(path, ".down.sql") {
 			return err
 		}
-		raw, err := os.ReadFile(path) // #nosec G304 G122 -- a .sql file from walking the trusted module tree
+		raw, err := gatekit.ReadFile(path) // #nosec G304 G122 -- a .sql file from walking the trusted module tree
 		byDir[filepath.Dir(path)] = append(byDir[filepath.Dir(path)], sqlFile{path: path, text: string(raw)})
 		return err
 	})
@@ -771,9 +770,10 @@ func TestTheCensusSeesARawTimeAHelperHandsBack(t *testing.T) {
 		source string
 		want   int
 	}{
-		"ordered after it":      {raw + "func f(b string) string { return ` AND ` + cited(\"x\") + ` > ` + b }\n", 1},
-		"ordered before it":     {raw + "func f(b string) string { return ` AND ` + b + ` <= ` + x.cited(\"x\") }\n", 1},
-		"selected, not ordered": {raw + "func f() string { return `SELECT ` + cited(\"x\") + ` AS at` }\n", 0},
+		"unaliased aggregate ordered after it": {"package p\nfunc cited() string { return `(SELECT max(occurred_at) FROM activity)` }\nfunc f(b string) string { return cited() + ` > ` + b }\n", 1},
+		"ordered after it":                     {raw + "func f(b string) string { return ` AND ` + cited(\"x\") + ` > ` + b }\n", 1},
+		"ordered before it":                    {raw + "func f(b string) string { return ` AND ` + b + ` <= ` + x.cited(\"x\") }\n", 1},
+		"selected, not ordered":                {raw + "func f() string { return `SELECT ` + cited(\"x\") + ` AS at` }\n", 0},
 		"another table's time": {"package p\nfunc cited() string { return `(SELECT max(au.occurred_at) FROM audit_log au)` }\n" +
 			"func f(b string) string { return cited() + ` > ` + b }\n", 0},
 		"placed by the owner": {placed + "func f(b string) string { return cited(\"x\") + ` > ` + b }\n", 0},

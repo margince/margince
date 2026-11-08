@@ -25,6 +25,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -105,36 +106,25 @@ func (s *Sink) joinThread(
 	return s.holdFromJoinedThreadTx(ctx, tx, id)
 }
 
-// mergeLockStatement is one workspace-wide lock for every thread merge. It is
-// spelled once because two callers take it: takeMergeLockFirst before a row is
-// written, and mergeLinkedThreads where the merge happens. Two spellings of one
-// lock name are two locks, and the deadlock ordering would be lost.
-//
-// Held by: TestTheMergeLockHasOneSpelling (backend/gates/mergelockordering_test.go)
-const mergeLockStatement = `SELECT pg_advisory_xact_lock(hashtextextended('thread_merge', 0))`
-
 // mergeLinkedThreads merges the thread keys a held email's reply links reach,
 // under the rules joinThread states.
 func (s *Sink) mergeLinkedThreads(
 	ctx context.Context, tx pgx.Tx, seat ids.UUID, id ids.ActivityID, neighbours []ids.ActivityID, created bool,
 ) error {
-	// Read once without the lock. Nearly every capture finds one key and stops.
-	// A replay that already holds its own row lock must not then wait on the
-	// merge lock for nothing.
+	// Most messages already belong to one component and require no rewrite.
 	keys, err := s.keysToMerge(ctx, tx, seat, id, neighbours, created)
 	if err != nil || len(keys) < 2 {
 		return err
 	}
-	// One lock for every merge in the workspace, and the keys read again under
-	// it. So a concurrent merge cannot retire a key between the read and the
-	// rewrite. takeMergeLockFirst usually holds it already, and an advisory xact
-	// lock is re-entrant within one transaction. Correctness rests on this call;
-	// the probe only decides whether the cost is paid early.
-	if _, err := tx.Exec(ctx, mergeLockStatement); err != nil {
-		return fmt.Errorf("capture: locking the thread merge: %w", err)
+	if err := storekit.LockThreadKeysTx(ctx, tx, keys...); err != nil {
+		return err
 	}
+	lockedKeys := keys
 	if keys, err = s.keysToMerge(ctx, tx, seat, id, neighbours, created); err != nil || len(keys) < 2 {
 		return err
+	}
+	if !slices.Equal(lockedKeys, keys) {
+		return storekit.RetryThreadTransaction(ctx, tx)
 	}
 	into, err := s.threadJoin.Earliest(ctx, tx, keys)
 	if err != nil || into == "" {

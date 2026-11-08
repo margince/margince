@@ -16,6 +16,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/company360"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/momentaction"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -165,7 +166,46 @@ func TestANotYetForOneRecipientHoldsUntilWeWriteToAnyRecipientAgain(t *testing.T
 	}
 }
 
-func TestAnAgentReadingTheWorklistIsAskedNothing(t *testing.T) {
+// A user's agent reads the question its user reads, and their Not yet holds for
+// it as it does on the contact page.
+func TestAUsersAgentIsAskedAsTheyAreAndSharesTheirNotYet(t *testing.T) {
+	e := integration.Setup(t)
+	p := seedPromiseThread(t, e)
+	task := promiseTask(t, e, p)
+	logThreadMail(e.Admin(), t, e, p.contact, "thread-listing", p.address, "outbound", p.sentAt.AddDate(0, 0, 6))
+	at := p.sentAt.AddDate(0, 0, 7)
+	agent := e.AgentFor(t, e.AdminUser, nil, integration.AdminPerms)
+	service := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return at })
+	question := func() *crmcontracts.WorklistMayBeDone {
+		t.Helper()
+		day, err := service.Worklist(agent, "mine", "", ids.UUID{}, 100, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, row := range day.Queue {
+			if row.Source == "task" && row.Id == task.String() {
+				return row.MayBeDone
+			}
+		}
+		t.Fatal("the promise task is not on the agent's Worklist")
+		return nil
+	}
+	asked := question()
+	if asked == nil {
+		t.Fatal("the agent's Worklist did not ask what its user's asks")
+	}
+	if err := pageAsOf(e, at).DismissMoment(e.Admin(), p.contact, crmcontracts.DismissContactMomentRequest{
+		ClaimKey: asked.ClaimKey, EvidenceFingerprint: asked.EvidenceFingerprint,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if again := question(); again != nil {
+		t.Errorf("the agent's Worklist asked again after its user's Not yet: %+v", again)
+	}
+}
+
+// Automatic work has no user to answer for.
+func TestAutomaticWorkReadingTheWorklistIsAskedNothing(t *testing.T) {
 	e := integration.Setup(t)
 	p := seedPromiseThread(t, e)
 	task := promiseTask(t, e, p)
@@ -186,7 +226,40 @@ func TestAnAgentReadingTheWorklistIsAskedNothing(t *testing.T) {
 	}
 	for _, row := range day.Queue {
 		if row.Id == task.String() && row.MayBeDone != nil {
-			t.Fatalf("an agent was asked a question only a human answers: %+v", row.MayBeDone)
+			t.Fatalf("automatic work was asked a question only a user answers: %+v", row.MayBeDone)
 		}
+	}
+}
+
+// The company page asks about a promise task kept by mail as the Worklist does.
+// It names the same contact, mail, key and fingerprint, so one Not yet holds on both.
+func TestTheCompanyPageAsksDoneAsTheWorklistDoes(t *testing.T) {
+	e := integration.Setup(t)
+	p := seedPromiseThread(t, e)
+	task := promiseTask(t, e, p)
+	company := e.SeedCompany(t, "Kunde GmbH", nil)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
+		VALUES ('employment', $1, $2, 'manual', 'human:x')`, p.contact.UUID, company)
+	at := p.sentAt.AddDate(0, 0, 7)
+	logThreadMail(e.Admin(), t, e, p.contact, "thread-listing", p.address, "outbound", p.sentAt.AddDate(0, 0, 6))
+
+	page, err := company360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects,
+		approvals.NewService(InstallationDB(e.Pool)), func() time.Time { return at }).Assemble(e.Admin(), ids.From[ids.CompanyKind](company))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var asked *crmcontracts.WorklistMayBeDone
+	for _, step := range page.NextSteps.Data {
+		if ids.UUID(step.ActivityId) == task {
+			asked = step.MayBeDone
+		}
+	}
+	want := worklistQuestion(t, e, task, at)
+	if asked == nil || want == nil {
+		t.Fatalf("company page asked %+v, Worklist asked %+v, want one question on both", asked, want)
+	}
+	if asked.ClaimKey != want.ClaimKey || asked.EvidenceFingerprint != want.EvidenceFingerprint ||
+		asked.EmailActivityId != want.EmailActivityId || asked.ContactId != want.ContactId {
+		t.Errorf("company page asked %+v, Worklist asked %+v", asked, want)
 	}
 }

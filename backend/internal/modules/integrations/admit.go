@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
@@ -39,6 +40,39 @@ type admittedConnection struct {
 // admit resolves the connection and refuses the triggers its policy does not
 // admit. A connection that is not connected cannot spend anything, and a
 // trigger the customer switched off must not spend on their behalf.
+// The refusals of a run an agent asks for, which a user pressing the button
+// does not meet. Nobody is at the screen to weigh the spend.
+var (
+	ErrAgentNeedsDailyLimit         = errors.New("integrations: an agent buys contact details only under a daily run limit; ask an administrator to set one on the connection")
+	ErrConnectionNotHealthyForAgent = errors.New("integrations: the provider connection is out of credits, rate limited, failing or holds a key the provider refused, so an agent does not buy from it now")
+)
+
+// runIsAnAgents reports a run an agent asks for. It keeps the checks a user's
+// press skips, because nobody weighed this purchase at a screen.
+func runIsAnAgents(ctx context.Context) bool {
+	actor, ok := principal.Actor(ctx)
+	return ok && actor.Type == principal.PrincipalAgent
+}
+
+// notAdmitted says why no connection admitted the run. An agent is told the
+// connection is unwell rather than absent, because the answer sends it elsewhere.
+func (s *Store) notAdmitted(ctx context.Context, tx pgx.Tx, name string, byAgent bool) error {
+	if !byAgent {
+		return provider.ErrNotConnected
+	}
+	var degraded bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM provider_connection
+		                WHERE provider = $1 AND status IN ('rate_limited', 'insufficient_credits', 'provider_error', 'invalid_credentials'))`,
+		name).Scan(&degraded); err != nil {
+		return fmt.Errorf("integrations: reading the connection: %w", err)
+	}
+	if degraded {
+		return ErrConnectionNotHealthyForAgent
+	}
+	return provider.ErrNotConnected
+}
+
 func (s *Store) admit(ctx context.Context, tx pgx.Tx, name string, trigger provider.Trigger) (admittedConnection, error) {
 	var c admittedConnection
 	// A MANUAL run is admitted on a degraded connection; an automatic one is
@@ -58,7 +92,8 @@ func (s *Store) admit(ctx context.Context, tx pgx.Tx, name string, trigger provi
 	// this needs — they chose to spend it, and their run is what heals the
 	// connection for everybody else.
 	statuses := []string{"connected"}
-	if !trigger.Automatic() {
+	byAgent := runIsAnAgents(ctx)
+	if !trigger.Automatic() && !byAgent {
 		statuses = append(statuses, "rate_limited", "insufficient_credits", "provider_error")
 	}
 	err := tx.QueryRow(ctx, `
@@ -70,10 +105,13 @@ func (s *Store) admit(ctx context.Context, tx pgx.Tx, name string, trigger provi
 		Scan(&c.id, &c.version, &c.epoch, &c.mode, &c.autoCreate,
 			&c.autoImport, &c.categories, &c.refreshAge, &c.dailyLimit)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return admittedConnection{}, provider.ErrNotConnected
+		return admittedConnection{}, s.notAdmitted(ctx, tx, name, byAgent)
 	}
 	if err != nil {
 		return admittedConnection{}, fmt.Errorf("integrations: reading the connection: %w", err)
+	}
+	if byAgent && c.dailyLimit == nil {
+		return admittedConnection{}, ErrAgentNeedsDailyLimit
 	}
 
 	// One installation-wide answer governs every automatic trigger, in place of

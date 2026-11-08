@@ -114,7 +114,7 @@ func openShareRequest(t *testing.T, e *integration.Env, held ids.ContactID) ids.
 func shareRequestsInInbox(reader context.Context, t *testing.T, e *integration.Env) int {
 	t.Helper()
 	kind := contactShareKind
-	rows, _, err := approvalsServiceWithEffects(e.Pool).ListWire(reader, approvals.ListInput{Kind: &kind})
+	rows, _, err := NewApprovalsServiceWithEffects(e.Pool).ListWire(reader, approvals.ListInput{Kind: &kind})
 	if err != nil {
 		t.Fatalf("reading the Review queue: %v", err)
 	}
@@ -124,7 +124,7 @@ func shareRequestsInInbox(reader context.Context, t *testing.T, e *integration.E
 func decideAsRep1(t *testing.T, e *integration.Env, request ids.ApprovalID, approve bool) {
 	t.Helper()
 	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms)
-	if _, err := approvalsServiceWithEffects(e.Pool).Decide(rep1, request, approve, nil); err != nil {
+	if _, err := NewApprovalsServiceWithEffects(e.Pool).Decide(rep1, request, approve, nil); err != nil {
 		t.Fatalf("Rep1 deciding the share request (approve=%v): %v", approve, err)
 	}
 }
@@ -255,7 +255,7 @@ func TestEveryCreateDoorAsksTheColleagueWhoHoldsTheAddress(t *testing.T) {
 			if err := vcardCreateStager(e.Pool)(reviewer, card, nil); err != nil {
 				return err
 			}
-			svc := approvalsServiceWithEffects(e.Pool)
+			svc := NewApprovalsServiceWithEffects(e.Pool)
 			status, kind := "pending", vcardCreateKind
 			rows, _, err := svc.ListWire(reviewer, approvals.ListInput{Status: &status, Kind: &kind, Limit: 10})
 			if err != nil || len(rows) != 1 {

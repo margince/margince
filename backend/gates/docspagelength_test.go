@@ -41,6 +41,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // docsPageCeiling returns the budget for a page, by the directory that owns it.
@@ -169,7 +171,7 @@ func isGeneratedDoc(t *testing.T, path string) bool {
 
 func readDocsWaivers(t *testing.T) map[string]bool {
 	t.Helper()
-	raw, err := os.ReadFile(docsWaiverFile)
+	raw, err := gatekit.ReadFile(docsWaiverFile)
 	if err != nil {
 		t.Fatalf("read %s: %v", docsWaiverFile, err)
 	}
@@ -233,7 +235,7 @@ func handWrittenPagesRootedAt(t *testing.T, treeRoot string, tracked map[string]
 	var pages []string
 	docsTreeRoot := treeRoot
 	root := filepath.Join(docsTreeRoot, tree)
-	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -286,7 +288,7 @@ func handWrittenPagesRootedAt(t *testing.T, treeRoot string, tracked map[string]
 
 func docsPageLineCount(t *testing.T, rel string) int {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join(docsTreeRoot, rel))
+	raw, err := gatekit.ReadFile(filepath.Join(docsTreeRoot, rel))
 	if err != nil {
 		t.Fatalf("read %s: %v", rel, err)
 	}

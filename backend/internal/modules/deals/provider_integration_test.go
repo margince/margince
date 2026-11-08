@@ -36,7 +36,23 @@ func eurInstallation() Installation {
 		IssuerLegalName:     func(context.Context, pgx.Tx) (string, error) { return "Margince Test GmbH", nil },
 		StampCorrespondence: func(context.Context, pgx.Tx, ids.DealID, string) error { return nil },
 		ContractVisible:     func(context.Context, string, func(any) int) (string, error) { return "FALSE", nil },
+		AuthorEntity:        defaultEntityAuthor,
+		IssuerEntity:        defaultEntityIssuer,
 	}
+}
+
+// defaultEntityAuthor and defaultEntityIssuer answer every offer with the
+// default legal entity, the one these suites' installations have. The real
+// resolver is contacts', proven through installseam in compose/integration.
+func defaultEntityAuthor(ctx context.Context, tx pgx.Tx, _ ids.UserID) (ids.LegalEntityID, error) {
+	entity, err := defaultEntityIssuer(ctx, tx, nil)
+	return entity.ID, err
+}
+
+func defaultEntityIssuer(ctx context.Context, tx pgx.Tx, _ *ids.LegalEntityID) (IssuerEntity, error) {
+	entity := IssuerEntity{IsDefault: true, Live: true}
+	err := tx.QueryRow(ctx, `SELECT id FROM legal_entity WHERE is_default`).Scan(&entity.ID)
+	return entity, err
 }
 
 type seamEnv struct {

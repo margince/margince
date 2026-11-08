@@ -19,10 +19,11 @@ import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { TASK_PARAM } from "../../lib/taskreminders";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
-import { pillCount } from "../../lib/worklistcounts";
+import { readerTask } from "../../lib/worklistcopy";
+import { pillFigure } from "../../lib/worklistcounts";
 import { DEFAULT_VIEW } from "../../lib/worklistviews";
 import { LinkedApprovalDrawer } from "../automations/approvaldrawer";
-import { MagicPanel } from "../sign-in/magic";
+import { MagicPanel, WAITING_LANES } from "../sign-in/magic";
 import {
   MeetingDetailModal,
   TaskDetailModal,
@@ -35,16 +36,23 @@ import {
   type WorklistItem,
   worklistKey,
 } from "../worklist/worklist.queries";
-import { readerTask } from "../worklist/worklist.reader";
 import { changedSinceBrief } from "./brief.changed";
-import { BriefChanges } from "./brief.changes";
 import { BriefDials } from "./brief.dials";
+import { DoneForYou } from "./brief.doneforyou";
 import { briefDay } from "./brief.facts";
 import { BriefFeed } from "./brief.feed";
+import {
+  dayRows,
+  FOCUS_PARAM,
+  identity,
+  rowByKey,
+  useStaleFocusCleared,
+} from "./brief.focuslink";
 import { BriefGlance } from "./brief.glance";
 import { BriefIntro } from "./brief.intro";
 import { homeJourneyMarks } from "./brief.journey";
 import { PlanSection } from "./brief.plan";
+import { PlanConstraints } from "./brief.plan.contract";
 import { useMorningBrief, useWeeklyReview } from "./brief.queries";
 import { BriefQueue } from "./brief.queue";
 import { BriefReadingsPending, BriefReadingsStrip } from "./brief.readings";
@@ -52,6 +60,7 @@ import { SchedulePanel } from "./brief.schedule";
 import { BriefSuggestions } from "./brief.suggestions";
 import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
 import { WeeklySection, WeekStepper } from "./brief.weekly";
+import { useWeeklyRailShown, WeeklyRail } from "./brief.weekly.rail";
 import { BriefCoverage } from "./briefcoverage";
 import "./brief.css";
 
@@ -111,7 +120,7 @@ export function BriefScreen() {
     <PageAsideToggle
       controlled={{
         open: drawerOpen,
-        count: queuedDay ? pillCount(queuedDay, "all", drawer.view) : undefined,
+        ...(queuedDay && pillFigure(queuedDay, "all", drawer.view)),
         labels: {
           show: t("brief.queue.show"),
           hide: t("brief.queue.hide"),
@@ -182,16 +191,28 @@ function BriefBody({
   query: ReturnType<typeof useWorklist>;
   queueToggle: ReactNode;
 }>) {
-  if (address.view === "weekly")
-    return (
-      <PageZones
-        shape="single"
-        panes
-        mainClassName="brief-weekly-page"
-        main={<WeeklySection plan={<PlanSection />} />}
-      />
-    );
+  if (address.view === "weekly") return <WeeklyPage />;
   return <PersonalMorning query={query} queueToggle={queueToggle} />;
+}
+
+function WeeklyPage() {
+  const t = useT();
+  // An aside handed over empty still draws its column and landmark.
+  const railShown = useWeeklyRailShown();
+  return (
+    <PageZones
+      shape="aside"
+      panes
+      className="brief-weekly-page"
+      mainClassName="brief-main"
+      asideClassName="brief-rail"
+      asideLabel={t("brief.weekly.rail")}
+      main={<WeeklySection plan={<PlanSection withContract={false} />} />}
+      aside={
+        railShown ? <WeeklyRail constraints={<PlanConstraints />} /> : undefined
+      }
+    />
+  );
 }
 
 function PersonalMorning({
@@ -208,17 +229,22 @@ function PersonalMorning({
   const [params] = useUrlParams();
   const update = useTaskUpdate([worklistKey]);
   const day = briefDay(query.data?.pages);
-  const context = day?.focus?.items.find(
-    (item) => `${item.source}-${item.id}` === selected,
+  const rows = dayRows(day, query.data?.pages);
+  // A row named by the address opens as a click on it does; mail links there.
+  const linkedFocus = params.get(FOCUS_PARAM);
+  const context = rowByKey(rows, linkedFocus || selected);
+  useStaleFocusCleared(
+    linkedFocus,
+    context,
+    query.isSuccess && !query.isFetching,
   );
   // A task named by the address, as a reminder notification opens it. It
   // opens whether or not the day lists it, and writes only where a row the
   // reader holds offers `complete`.
   const linkedTask = context ? undefined : params.get(TASK_PARAM);
-  const linkedRow = [
-    ...(day?.focus?.items ?? []),
-    ...(query.data?.pages.flatMap((page) => page.queue) ?? []),
-  ].find((item) => item.source === "task" && item.id === linkedTask);
+  const linkedRow = linkedTask
+    ? rowByKey(rows, identity({ source: "task", id: linkedTask }))
+    : undefined;
   const state = query.isPending
     ? "loading"
     : query.isError && !day
@@ -237,8 +263,8 @@ function PersonalMorning({
   }, [state, day, settled, magic.data]);
   return (
     <>
-      {/* The brief and the work it names in one column; beside it, the
-          figures and the meetings the work is read against. */}
+      {/* The work in one column; beside it, the meetings and the figures
+          the work is read against. */}
       <PageZones
         shape="aside"
         panes
@@ -250,15 +276,33 @@ function PersonalMorning({
           <>
             <BriefFeed
               day={day}
-              onContext={(item) => setSelected(`${item.source}-${item.id}`)}
+              onContext={(item) => setSelected(identity(item))}
               state={state}
               changed={changedSinceBrief(day)}
               refreshFailed={query.isRefetchError}
               onRetry={() => void query.refetch()}
               queueToggle={queueToggle}
             />
+            {/* What Margince finished stands with the work, where a reader
+                reviews or undoes it, not in the rail beside it. */}
+            <DoneForYou
+              completed={
+                <MagicPanel
+                  lanes={["done"]}
+                  embedded
+                  visibleReceiptIds={
+                    handled.isSuccess && !handled.isRefetchError
+                      ? handled.data.receipts
+                          ?.filter(isReviewableReceipt)
+                          .map((receipt) => receipt.id)
+                      : []
+                  }
+                />
+              }
+            />
             <BriefSuggestions />
             <MagicPanel
+              lanes={WAITING_LANES}
               visibleApprovalIds={day?.focus?.items
                 .filter(
                   (item) =>
@@ -266,18 +310,13 @@ function PersonalMorning({
                     item.actions.includes("decide"),
                 )
                 .map((item) => item.id)}
-              visibleReceiptIds={
-                handled.isSuccess && !handled.isRefetchError
-                  ? handled.data.receipts
-                      ?.filter(isReviewableReceipt)
-                      .map((receipt) => receipt.id)
-                  : []
-              }
             />
           </>
         }
         aside={
           <>
+            {/* The day's meetings first: the work is read against them. */}
+            <SchedulePanel day={day} state={state} />
             {day && (
               <div className="brief-overview">
                 <Eyebrow as="h2" className="brief-section-label">
@@ -291,9 +330,7 @@ function PersonalMorning({
                 />
               </div>
             )}
-            {/* The figures stand above the meetings, so their wait holds
-                their place rather than letting the meetings rise and fall. */}
-            {/* Hidden from a screen reader: the meetings below already
+            {/* Hidden from a screen reader: the meetings above already
                 announce the wait. */}
             {state === "loading" && (
               <div className="brief-overview" aria-hidden="true">
@@ -303,8 +340,6 @@ function PersonalMorning({
                 <BriefReadingsPending />
               </div>
             )}
-            <SchedulePanel day={day} state={state} />
-            <BriefChanges />
           </>
         }
       />
@@ -321,7 +356,10 @@ function PersonalMorning({
         <FocusDetails
           item={context}
           update={update}
-          onClose={() => setSelected("")}
+          onClose={() => {
+            setSelected("");
+            if (linkedFocus) replaceDial(FOCUS_PARAM, undefined);
+          }}
         />
       )}
     </>
@@ -356,14 +394,15 @@ function FocusDetails({
     );
   }
   return (
-    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
+    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer" fit>
       <DrawerHead>
         <Heading size="large" id={titleId} className="t-h2">
           {t("brief.focus.context")}
         </Heading>
       </DrawerHead>
-      <DrawerBody>
-        <WorklistPane item={item} />
+      <DrawerBody className="form-stack">
+        {/* The drawer covers the card, so it answers the row in place. */}
+        <WorklistPane item={item} answer />
       </DrawerBody>
     </Modal>
   );

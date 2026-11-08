@@ -55,7 +55,7 @@ func (s *Service) edition(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontr
 	if err != nil {
 		return out, nil, err
 	}
-	visible, withheld, err := s.authority.Visible(ctx, tx, facts)
+	visible, withheld, err := s.authority.Visible(ctx, tx, out.Evaluation.Context, facts)
 	if err != nil {
 		return out, nil, err
 	}
@@ -76,6 +76,9 @@ func (s *Service) edition(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontr
 		if err != nil {
 			return out, nil, err
 		}
+	}
+	if err := distinguishOwnerNames(ctx, tx, out.Evaluation.Charts); err != nil {
+		return out, nil, err
 	}
 	return out, visible, nil
 }

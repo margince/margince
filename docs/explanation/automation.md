@@ -211,6 +211,14 @@ plain error while a human can still see and fix it, not days later in run histor
 request body. The only way to reach the gate with a `NULL` owner is the trusted path that seeds the
 system.
 
+## A rule an agent set up
+
+A rule names the passport of the agent that created it or turned it on, in `setter_passport_id`. `runOne` asks `workforce.LiveSetterSQL` before it matches and again before it claims the run.
+
+A passport with no grant is live until it is revoked or expires. A connected passport follows its connection, so a refresh leaves it live. A revoked grant ends it, and so does an admin turning the client off. A connection also ends when no passport on it is still in date and it cannot refresh. So an expired access token on a grant that can refresh is live.
+
+When the setter is not live, the rule pauses with the reason `passport_revoked` and the firing does not run. Its owner gets a notice, and the audit row records `expired` or `revoked`. A user enabling or editing the rule clears the setter, so no passport stands behind it. Its owner stays who it was. A seeded rule names no setter, except a draft starter an agent turned on, because it spends a model call each time it fires.
+
 ## The actor and context boundary of a run
 
 Every firing runs under a **principal context made for it**, with no HTTP request or signed in user

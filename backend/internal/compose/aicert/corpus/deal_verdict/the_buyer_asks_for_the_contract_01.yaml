@@ -1,0 +1,64 @@
+name: the_buyer_asks_for_the_contract_and_the_deal_moves_on
+task: deal_verdict
+site: deal_verdict
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# The buyer writes that the board approved the budget and asks for the
+# contract draft. That meets the exit criterion of the deal's stage, so the
+# deal moves to the next one. It does not skip to Contract sent: that means
+# leaving Negotiation, whose criterion, a held legal call, has not happened.
+fixture:
+  today: "2026-11-04"
+  deal:
+    name: "Route planning for the regional depots"
+    stage: "Proposal sent"
+    amount: 48000
+    currency: EUR
+    close_date: "2026-12-15"
+    probability: 50
+    later:
+      - name: "Negotiation"
+        probability: 70
+      - name: "Contract sent"
+        probability: 85
+    exit_criteria:
+      - label: "Buyer confirmed the budget"
+        kind: buyer_confirmed
+      - stage: "Negotiation"
+        label: "Legal call held"
+        kind: event_held
+  activities:
+    - kind: email
+      direction: outbound
+      at: "2026-10-27"
+      subject: "Proposal for the regional depots"
+      body: |
+        Hi Mara, attached is our proposal for route planning at all eight
+        regional depots, 48,000 EUR a year.
+    - kind: email
+      direction: inbound
+      at: "2026-11-03"
+      subject: "Re: Proposal for the regional depots"
+      body: |
+        The board approved the budget for the depots yesterday. Send over
+        the contract draft so our legal team can start their review.
+expect:
+  outcome: accepted
+  answer:
+    - kind: move_stage
+      stage: "Negotiation"
+  rubric: >
+    The buyer's own mail confirms the budget and asks for the contract draft,
+    which meets the exit criterion of Proposal sent. The deal moves to
+    Negotiation, citing that mail for the criterion with its words. Contract
+    sent is out of reach: leaving Negotiation needs the legal call, which has
+    not been held. The deal already sits at its raise limit of 50%, so the
+    prompt rules out a probability raise; the move itself brings the
+    Negotiation stage's probability.
+    Score high for move_stage to Negotiation with the budget criterion cited.
+    Score at the floor for a move to Contract sent, a move with no criterion
+    cited, or any other change.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

@@ -67,18 +67,16 @@ const seededDefaults = "../../../migrations/testdata/rbac_seeded_defaults.json"
 // records it as "foundation". Such a database cannot be repaired forward; the
 // migrator says so and tells the operator to rebuild.
 //
-// DERIVED, not hand-written, and checked elsewhere: backend's
-// rbacbaselineerafixture_test.go pins this file to `git show <baseline>:<the
-// seeded-matrix fixture>` on every unit pass. That matters because the pre-state
-// is exactly what an unwilling author would edit — move the object into the
-// starting state and the convergence a broken backfill never delivered is
-// already there, with nothing else changed to give it away.
+// DERIVED, not hand-written, and checked elsewhere. In deterministic-gates,
+// backend's rbacbaselineerafixture_test.go pins this file to `git show
+// <baseline>:<the seeded-matrix fixture>`. The pre-state is what an unwilling
+// author would edit. Move the object into the starting state, and the
+// convergence a broken backfill never delivered is already there.
 //
-// The derivation is checked THERE and not here because it needs full history and
-// this lane does not have it: _lane-integration.yml gives
-// integration-unit-coverage `fetch-depth: 0` while the integration SHARDS check
-// out shallow. Same split as rbac_seeded_defaults.json — identity renders it,
-// this package reads it.
+// The derivation is checked in backend/gates, not here, because it needs full
+// history. ci.yml gives that to deterministic-gates, while the integration
+// shards check out shallow. rbac_seeded_defaults.json uses the same split:
+// identity renders it and this package reads it.
 const baselineEraDefaults = "../../../migrations/testdata/rbac_baseline_era_defaults.json"
 
 // controlRole is a role the seeded matrix does not name, carrying a document of

@@ -6,19 +6,11 @@ export function Menu({
   open,
   head,
   align = "left",
-  back,
   children,
 }: Readonly<{
   open: boolean;
   head: string;
   align?: "left" | "right";
-  /**
-   * The step this menu can return to, for a menu that has more than one. The
-   * label and the handler arrive together. A head drawn as a button still owes
-   * a reader the word "back". Its face is the step's own name, which says where
-   * you are rather than what pressing it does.
-   */
-  back?: { label: string; onBack: () => void };
   children: ReactNode;
 }>) {
   return (
@@ -32,30 +24,37 @@ export function Menu({
       inert={!open}
       aria-label={head}
     >
-      {back ? (
-        <button
-          type="button"
-          className="lt-mhead lt-mback"
-          onClick={back.onBack}
-        >
-          <ChevronLeft
-            className="lt-caret"
-            strokeWidth={1.8}
-            aria-hidden="true"
-          />
-          {head}
-          {/* Beside the step's own name, never instead of it: an `aria-label`
-              here replaced "Status" with words nothing on screen says, so a
-              reader speaking what they see asked for a control by a name it
-              did not answer to (WCAG 2.5.3). Visible text first, for the same
-              reader. */}
-          <span className="sr-only"> {back.label}</span>
-        </button>
-      ) : (
-        <div className="lt-mhead">{head}</div>
-      )}
+      <MenuHead head={head} />
       {children}
     </fieldset>
+  );
+}
+
+/** What a menu or a step of the View panel asks, or the way back from it. */
+export function MenuHead({
+  head,
+  back,
+}: Readonly<{
+  head: string;
+  /** The level above. The face stays the step's name; the label, a clause
+   * after it ("back to all filters"), says "back" to one who cannot see the arrow. */
+  back?: { label: string; onBack: () => void };
+}>) {
+  if (!back) {
+    return <div className="lt-mhead">{head}</div>;
+  }
+  return (
+    <button
+      type="button"
+      className="lt-mhead lt-mback"
+      // Opens on the visible name, so a reader speaking what they see can say
+      // "Status" (WCAG 2.5.3); the clause after it says where Back goes.
+      aria-label={`${head}, ${back.label}`}
+      onClick={back.onBack}
+    >
+      <ChevronLeft className="lt-caret" strokeWidth={1.8} aria-hidden="true" />
+      {head}
+    </button>
   );
 }
 
@@ -122,7 +121,11 @@ export function useCloseOnOutsideClick(close: () => void) {
       if (!target.isConnected) {
         return;
       }
-      if (target.closest(".lt-menu-wrap, .lt-menu") || inPopupOfAMenu(target)) {
+      if (
+        target.closest(".lt-menu-wrap, .lt-menu, .lt-vpopover") ||
+        inViewSheet(target) ||
+        inPopupOfAMenu(target)
+      ) {
         return;
       }
       latest.current();
@@ -132,14 +135,20 @@ export function useCloseOnOutsideClick(close: () => void) {
   }, []);
 }
 
-// A control inside a menu may open its own modal popup in a portal, as a date
-// field's calendar does. A press there belongs to the menu beneath it. A modal
-// that holds a list of its own is a page, and its presses close as before.
+// A press in a calendar modal raised from a menu or the View panel belongs to
+// that menu. A modal that holds a list of its own does not.
 function inPopupOfAMenu(target: Element): boolean {
   const modal = target.closest('[aria-modal="true"]');
   return (
     modal !== null &&
-    modal.querySelector(".lt-menu") === null &&
-    document.querySelector(".lt-menu.open") !== null
+    modal.querySelector(".lt-menu, .lt-vpanel") === null &&
+    document.querySelector(".lt-menu.open, .lt-vpanel") !== null
   );
+}
+
+// The View panel's phone sheet is a modal around the panel, and its heading
+// and its edges are the panel's too.
+function inViewSheet(target: Element): boolean {
+  const sheet = target.closest('[aria-modal="true"]');
+  return sheet !== null && sheet.querySelector(".lt-vpanel") !== null;
 }

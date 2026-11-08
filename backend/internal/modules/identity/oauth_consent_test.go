@@ -156,7 +156,7 @@ func bindsHumanPrincipalType(body *ast.BlockStmt) bool {
 }
 
 func TestConsentPayloadOffersTheWholeVocabulary(t *testing.T) {
-	got := consentRequestPayload("Claude Code", true)
+	got := consentRequestPayload("Claude Code", true, nil)
 
 	if got.ClientName != "Claude Code" || !got.Offline {
 		t.Fatalf("client name and offline must survive the mapping, got %+v", got)

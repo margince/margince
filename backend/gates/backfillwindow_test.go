@@ -31,7 +31,6 @@ package gates
 
 import (
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -41,6 +40,8 @@ import (
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -103,12 +104,12 @@ func noOtherGoFileStatesTheSet(t *testing.T, months []int) {
 	for _, m := range months {
 		spellings = append(spellings, strconv.Quote(strconv.Itoa(m)+"m"))
 	}
-	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 			strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") {
 			return err
 		}
-		src, readErr := os.ReadFile(path)
+		src, readErr := gatekit.ReadFile(path)
 		if readErr != nil {
 			return readErr
 		}
@@ -145,7 +146,7 @@ func sameMonths(a, b []int) bool {
 // api/crm.yaml as a sorted month list.
 func contractWindowSets(t *testing.T) map[string][]int {
 	t.Helper()
-	raw, err := os.ReadFile(contractPath)
+	raw, err := gatekit.ReadFile(contractPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -205,7 +206,7 @@ var (
 // checking anything.
 func validatorWindowSet(t *testing.T) []int {
 	t.Helper()
-	src, err := os.ReadFile(backfillValidatorSource)
+	src, err := gatekit.ReadFile(backfillValidatorSource)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,7 +223,7 @@ func validatorWindowSet(t *testing.T) []int {
 // additive and the last statement is the effective one.
 func checkConstraintWindowSet(t *testing.T) []int {
 	t.Helper()
-	entries, err := os.ReadDir(backfillCheckGlob)
+	entries, err := gatekit.ReadDir(backfillCheckGlob)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -235,7 +236,7 @@ func checkConstraintWindowSet(t *testing.T) []int {
 	sort.Strings(names)
 	var effective string
 	for _, name := range names {
-		src, err := os.ReadFile(backfillCheckGlob + "/" + name)
+		src, err := gatekit.ReadFile(backfillCheckGlob + "/" + name)
 		if err != nil {
 			t.Fatal(err)
 		}

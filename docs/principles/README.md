@@ -20,6 +20,7 @@ shows what the code does today: fix one or the other, and say which.
 | [Every mutation leaves a trace](every-mutation-leaves-a-trace.md) | Why the domain row, the audit row and the event commit together, and what each of the two denials means. | *The write shape* |
 | [Code a reader can follow](legibility-is-the-product.md) | Why craftsmanship is a gate and not what a reviewer likes, and what harm each anti-tell keeps out. | *Craftsmanship* |
 | [Derive the obligation](derive-the-obligation.md) | Why a gate must hold a rule, not a human, and how to write a gate that holds instead of one that shows green over its own bug. It also covers the two ways a gate becomes the second copy it exists to stop. [reference/gate-patterns.md](../reference/gate-patterns.md) lists the shapes a gate comes in, and [reference/gate-inventory.md](../reference/gate-inventory.md) is the generated list of every gate. | *Rules learned from the review loop* |
+| [An agent does what its user does](an-agent-does-what-its-user-does.md) | Which actions an agent may take, why a closed one needs a security reason, and when it must ask first. | *What decides a question* |
 | [Nothing here is private](nothing-here-is-private.md) | Who the public reader is, what never shows in the tree, and why a working attack takes the private path. | *This repository is public* |
 
 ## Adding a principle

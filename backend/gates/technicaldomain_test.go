@@ -17,11 +17,12 @@ package gates
 // So the two gates below fail when one appears.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // technicalDomainReaders matches a SQL statement that SELECTS the domain
@@ -47,7 +48,7 @@ var technicalDomainReaders = regexp.MustCompile(`(?s)SELECT\s+domain\s`)
 func TestTheTechnicalLookupReadsTheDomainFromTheRecordAlone(t *testing.T) {
 	t.Parallel()
 	const technicalFiles = "internal/modules/contacts"
-	entries, err := os.ReadDir(technicalFiles)
+	entries, err := gatekit.ReadDir(technicalFiles)
 	if err != nil {
 		t.Fatalf("reading the contacts module: %v", err)
 	}
@@ -60,7 +61,7 @@ func TestTheTechnicalLookupReadsTheDomainFromTheRecordAlone(t *testing.T) {
 		if strings.HasSuffix(name, "_test.go") {
 			continue
 		}
-		body, err := os.ReadFile(filepath.Join(technicalFiles, name))
+		body, err := gatekit.ReadFile(filepath.Join(technicalFiles, name))
 		if err != nil {
 			t.Fatalf("reading %s: %v", name, err)
 		}
@@ -84,7 +85,7 @@ func TestTheTechnicalLookupTakesNoDomainFromACaller(t *testing.T) {
 		{"internal/compose/jobs_techenrich.go", "the queued job's arguments"},
 		{"internal/compose/techenrichtransport.go", "the HTTP request"},
 	} {
-		body, err := os.ReadFile(subject.path)
+		body, err := gatekit.ReadFile(subject.path)
 		if err != nil {
 			t.Fatalf("reading %s: %v", subject.path, err)
 		}
@@ -108,7 +109,7 @@ func TestTheTechnicalLookupTakesNoDomainFromACaller(t *testing.T) {
 // nothing of what that lane reads.
 func TestEveryTechnicalLaneIsDerivedFromItsFields(t *testing.T) {
 	t.Parallel()
-	body, err := os.ReadFile("internal/modules/contacts/companytechnical.go")
+	body, err := gatekit.ReadFile("internal/modules/contacts/companytechnical.go")
 	if err != nil {
 		t.Fatalf("reading the technical apply: %v", err)
 	}

@@ -5,6 +5,7 @@ import { Clock, MapPin, Video } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { InvitationBadge } from "../../components/booking-meeting-parts";
+import { MeetingOthers } from "../../components/meetingothers";
 import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
 import { AvatarStack } from "../../design-system/avatarstack";
@@ -17,12 +18,12 @@ import {
   type OccurredPrecision,
 } from "../../format/activitywhen";
 import { dateTileParts } from "../../format/datetile";
-import { formatNumber } from "../../format/format";
+import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { PROVIDER_VIDEO_APP, VIDEO_APP_NAME } from "../../lib/booking-video";
 import { useMeetingInvitation } from "../../lib/meeting-invitation-query";
-import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 
 type Activity = components["schemas"]["Activity"];
 type Invitation = components["schemas"]["MeetingInvitation"];
@@ -61,7 +62,7 @@ function useMeetingSpan(
   precision: OccurredPrecision,
 ): string | null {
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   return activityTimeSpan(start, end, precision, locale, zone);
 }
 
@@ -71,7 +72,7 @@ function DateTile({
   precision,
 }: Readonly<{ at: string; precision: OccurredPrecision }>) {
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const tile = activityDay(at, precision, locale, zone, dateTileParts);
   return (
     <time className="pe-meeting-date" dateTime={at}>
@@ -98,7 +99,7 @@ function DaysAway({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const days = activityDaysAway(at, precision, Date.parse(asOf), zone, zone);
   if (days < 0) return null;
   const label =
@@ -177,20 +178,41 @@ export function MeetingStatus({
 export function MeetingRow({
   activity,
   asOf,
+  host,
   verbs,
 }: Readonly<{
   activity: Activity;
   // The read's own clock, for a meeting still ahead: it then says how far off.
   asOf?: string;
+  // The colleague who hosted a meeting already held. A held row also writes
+  // its date out in full, since its calendar page names no year.
+  host?: string;
   verbs?: ReactNode;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const zone = useViewerZone();
   const span = useMeetingSpan(
     activity.occurred_at,
     endOf(activity),
     activity.occurred_precision,
   );
   const title = meetingSubject(activity, t);
+  const meta = [
+    asOf
+      ? null
+      : activityDay(
+          activity.occurred_at,
+          activity.occurred_precision,
+          locale,
+          zone,
+          formatDateAbbrev,
+        ),
+    span,
+    host ? t("contact.meetings.hostedBy", { name: host }) : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   return (
     <PanelRow>
       <article className="pe-meeting">
@@ -218,7 +240,7 @@ export function MeetingRow({
               invitation={activity.invitation_status}
             />
           </div>
-          {span && <p className="t-caption t-num pe-meeting-meta">{span}</p>}
+          {meta && <p className="t-caption t-num pe-meeting-meta">{meta}</p>}
         </div>
         <div className="pe-meeting-verbs">{verbs}</div>
       </article>
@@ -316,7 +338,9 @@ export function NextMeetingCard({
             )}
             {invitation && <JoinCall invitation={invitation} />}
           </ul>
-          {attendees.length > 0 && (
+          {(attendees.length > 0 ||
+            next.other_participants ||
+            next.participants_more) && (
             <div className="pe-meeting-attendees">
               <AvatarStack
                 contacts={attendees.map((who) => ({
@@ -326,6 +350,11 @@ export function NextMeetingCard({
               />
               <span className="t-caption">
                 {attendees.map((who) => who.full_name).join(", ")}
+                <MeetingOthers
+                  others={next.other_participants}
+                  more={next.participants_more}
+                  afterContacts={attendees.length > 0}
+                />
               </span>
             </div>
           )}

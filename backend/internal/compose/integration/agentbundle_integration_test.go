@@ -167,7 +167,7 @@ func TestTheSkillReadmeLeadsWithTheConnectorAddressWhileItIsOn(t *testing.T) {
 		t.Fatalf("human GET /v1/agent-bundle → %d, want 200", status)
 	}
 	readme := zipFile(t, body, "margince/README.md")
-	if !strings.Contains(readme, "claude mcp add --transport http margince "+resource) {
+	if !strings.Contains(readme, "claude mcp add --transport http --scope user margince "+resource) {
 		t.Errorf("README.md does not lead the reader to the connector at %s", resource)
 	}
 }

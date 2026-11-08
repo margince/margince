@@ -36,11 +36,12 @@ package gates
 
 import (
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const shellGateDir = "../scripts"
@@ -72,7 +73,7 @@ func TestNoShellGateReadsAVerdictThroughAPipeThatCanBreak(t *testing.T) {
 	// reports a pass over the part it read, and the empty-tree guard below
 	// cannot see the difference between "nothing there" and "nothing looked at".
 	var scripts []string
-	err := filepath.WalkDir(shellGateDir, func(path string, entry fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(shellGateDir, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -101,7 +102,7 @@ func TestNoShellGateReadsAVerdictThroughAPipeThatCanBreak(t *testing.T) {
 	}
 	judged := 0
 	for _, path := range scripts {
-		body, err := os.ReadFile(path)
+		body, err := gatekit.ReadFile(path)
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}
