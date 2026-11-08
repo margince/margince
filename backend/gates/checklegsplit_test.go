@@ -87,6 +87,28 @@ func TestTheTwoBackendJobsRunEveryCheckLeg(t *testing.T) {
 	}
 }
 
+// CHECK_TREE_GATES=off drops the root script gates, drift and composition
+// reproducibility from a check-backend leg. Off in every leg, they run nowhere.
+func TestOneBackendLegRunsTheTreeGates(t *testing.T) {
+	t.Parallel()
+	raw, err := gatekit.ReadFile(aggregateWorkflow) // #nosec G304 -- a fixed repo-relative path
+	if err != nil {
+		t.Fatalf("reading %s: %v", aggregateWorkflow, err)
+	}
+	var wf stepRuns
+	if err := yaml.Unmarshal(raw, &wf); err != nil {
+		t.Fatalf("%s: %v", aggregateWorkflow, err)
+	}
+	values, ok := legsRunBy(t, wf, testLegsJob, "check-backend", "CHECK_TREE_GATES", []string{"on"})
+	if !ok {
+		t.Fatalf("job %q has no `make check-backend` step, so this test cannot tell where the tree gates run", testLegsJob)
+	}
+	if !slices.ContainsFunc(values, func(v string) bool { return v != "off" }) {
+		t.Errorf("every %s leg passes CHECK_TREE_GATES=off (%v), so the root script gates, drift and "+
+			"composition reproducibility run in no leg of CI", testLegsJob, values)
+	}
+}
+
 // backendCheckLegs reads CHECK_LEGS and the legs check-static runs, both
 // expanded through the Makefile's literal variables.
 func backendCheckLegs(t *testing.T) (all, static []string) {
