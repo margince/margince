@@ -252,7 +252,7 @@ func (c *Connector) syncStanding(ctx context.Context, auth connector.Auth, curso
 		}), nil
 	}
 
-	cur, err = c.syncIncremental(ctx, client, creds, cur, sink, st)
+	cur, err = c.syncIncremental(ctx, client, creds, cur, selData.UIDNext, sink, st)
 	if err != nil {
 		return nil, err
 	}
@@ -294,25 +294,32 @@ func sentAttr(entries []*imapv2.ListData, mailbox string) bool {
 	return false
 }
 
-// syncIncremental pulls above the watermark: enumerate first (UIDs only, no
-// bodies on the wire), then body-fetch just the oldest MaxMessages — a burst
-// beyond that window simply continues next sync from the new watermark (the
-// capture key makes any overlap a no-op).
-func (c *Connector) syncIncremental(ctx context.Context, client *imapclient.Client, creds Credentials, cur imapCursor, sink connector.Sink, st *syncState) (imapCursor, error) {
+// syncIncremental pulls above the watermark: list a bounded page of new UIDs
+// (no bodies on the wire), then body-fetch just those. A burst beyond that page
+// continues next sync from the new watermark (the capture key makes any
+// overlap a no-op).
+//
+// The watermark is the highest UID processed. The one exception is a range
+// the listing proved empty below UIDNEXT. No message can ever take a UID there,
+// so the watermark moves past it rather than listing it again on every pull.
+func (c *Connector) syncIncremental(ctx context.Context, client *imapclient.Client, creds Credentials, cur imapCursor, uidNext imapv2.UID, sink connector.Sink, st *syncState) (imapCursor, error) {
 	if cur.LastUID == math.MaxUint32 {
 		// The 32-bit UID space is exhausted: +1 would wrap to 0 and rescan
 		// the mailbox. Hold the watermark until UIDVALIDITY rolls over.
 		return cur, nil
 	}
-	newUIDs, err := c.listNewUIDs(client, cur.LastUID+1, creds.MaxMessages)
+	page, err := listNewUIDs(ctx, client, cur.LastUID+1, uint32(uidNext), boundedWindow(creds.MaxMessages))
 	if err != nil {
 		return cur, err
 	}
-	if len(newUIDs) == 0 {
+	if len(page.uids) == 0 {
+		if page.emptyThrough > cur.LastUID {
+			cur.LastUID = page.emptyThrough
+		}
 		return cur, nil
 	}
 	var uids imapv2.UIDSet
-	for _, u := range newUIDs {
+	for _, u := range page.uids {
 		uids.AddNum(u)
 	}
 	maxUID, err := c.pullSet(ctx, client, uids, 0, sink, st)
@@ -323,46 +330,6 @@ func (c *Connector) syncIncremental(ctx context.Context, client *imapclient.Clie
 		cur.LastUID = maxUID
 	}
 	return cur, nil
-}
-
-// listNewUIDs enumerates the UIDs at or above from, ascending, fetching no
-// bodies — the pre-flight that lets the incremental pull bound how many
-// messages actually stream.
-func (c *Connector) listNewUIDs(client *imapclient.Client, from uint32, retain int) ([]imapv2.UID, error) {
-	var set imapv2.UIDSet
-	set.AddRange(imapv2.UID(from), 0) // 0 = *
-	cmd := client.Fetch(set, &imapv2.FetchOptions{UID: true})
-	var uids []imapv2.UID
-	for {
-		msg := cmd.Next()
-		if msg == nil {
-			break
-		}
-		for {
-			item := msg.Next()
-			if item == nil {
-				break
-			}
-			if it, ok := item.(imapclient.FetchItemDataUID); ok && uint32(it.UID) >= from {
-				uids = append(uids, it.UID)
-			}
-		}
-		// Retention stays bounded however large the backlog: keep only the
-		// LOWEST retain UIDs (the oldest mail syncs first; the watermark
-		// walks forward through the rest on later pulls).
-		if retain > 0 && len(uids) > 2*retain {
-			slices.Sort(uids)
-			uids = uids[:retain]
-		}
-	}
-	if err := cmd.Close(); err != nil {
-		return nil, fmt.Errorf("imap: listing new mail: %w", errors.Join(ErrUnreachable, err))
-	}
-	slices.Sort(uids)
-	if retain > 0 && len(uids) > retain {
-		uids = uids[:retain]
-	}
-	return uids, nil
 }
 
 // pullWindow captures the most recent window by sequence numbers (the
