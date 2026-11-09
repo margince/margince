@@ -168,11 +168,9 @@ func purgeDealRoomSeatTraces(ctx context.Context, tx pgx.Tx, seats []ids.UUID) e
 // opened. A comment's body must not be empty, so it cannot be blanked. A thread
 // must name one author, so its seat link cannot be cut. The seller's replies in
 // such a thread go with it; the seller's own threads stay.
-//
-// The threads are locked first, as a reply locks its thread. A seller reply
-// that lands after the comments are read would otherwise go in the thread's
-// cascade without an erase tombstone.
 func purgeDealRoomSeatConversation(ctx context.Context, tx pgx.Tx, seats []ids.UUID) error {
+	// Locked as a reply locks its thread, so no reply lands after the comments
+	// are read and goes in the thread's cascade without a tombstone.
 	if _, err := tx.Exec(ctx,
 		`SELECT id FROM deal_room_thread WHERE author_participant_id = ANY($1) FOR UPDATE`, seats); err != nil {
 		return fmt.Errorf("lock the deal room threads of an erased subject: %w", err)
