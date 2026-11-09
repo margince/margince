@@ -1701,8 +1701,8 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
           },
           "deal_id": {
             "enum": [
-              "<id minted for this call>",
-              "<id minted for this call>"
+              "d1",
+              "d2"
             ],
             "type": "string"
           },

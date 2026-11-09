@@ -86,7 +86,7 @@ func partyKind(party commitmentParty) string {
 	case party.Seat != nil:
 		return "colleague"
 	case party.Contact != nil:
-		return "contact"
+		return string(recordTypeContact)
 	}
 	return ""
 }

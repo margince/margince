@@ -1423,8 +1423,8 @@
                 },
                 "deal_id": {
                   "enum": [
-                    "\u003cid minted for this call\u003e",
-                    "\u003cid minted for this call\u003e"
+                    "d1",
+                    "d2"
                   ],
                   "type": "string"
                 },

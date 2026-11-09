@@ -84,8 +84,8 @@ type CommentIn struct {
 	// AuthorID is the buyer seat that wrote it, so the brief cites who set a
 	// condition instead of guessing from the buyer list.
 	AuthorID string `json:"author_id,omitempty"`
-	On      string `json:"on"`
-	Body    string `json:"body"`
+	On       string `json:"on"`
+	Body     string `json:"body"`
 }
 
 // FromRoom folds the room's reads into the input.

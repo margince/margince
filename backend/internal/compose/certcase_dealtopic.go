@@ -17,6 +17,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/margince/margince/backend/internal/compose/dealtopicprompt"
+
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -127,7 +129,7 @@ func (c *dealTopicCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: msg}
 	}
 	judged := make(map[string]string, len(payload.Results))
-	for _, r := range payload.Results {
+	for _, r := range resolveBatchRefs(payload.Results, dealtopicprompt.Refs(c.in)) {
 		judged[r.DealID] = r.Verdict
 	}
 	var wrong []string
