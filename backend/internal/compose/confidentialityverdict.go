@@ -235,8 +235,9 @@ func (e *ConfidentialityVerdictEngine) judgeOne(
 		return fmt.Errorf("confidentiality: unknown kind for thread %s", row.ID)
 	}
 	kind := answer.Verdict
-	if status == capture.VerdictCleared && !confidentialityOpens(answer, read.DocumentsOmitted) {
-		// Below the floor the OPENING answer is discarded and the thread holds.
+	if status == capture.VerdictCleared && !confidentialityOpens(answer, read) {
+		// An opening answer the rule does not believe is discarded, and the
+		// thread holds: below the floor, or with a document nobody read.
 		// The kind is kept as the model gave it, because "the model thought
 		// this was ordinary and was not sure" is what a human reviewing the
 		// backlog needs to see.

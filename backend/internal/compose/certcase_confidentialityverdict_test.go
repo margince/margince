@@ -12,6 +12,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/modules/capture"
 )
 
 // heldCase is a thread whose scenario expects it held, ready to grade replies.
@@ -102,7 +103,27 @@ func TestEveryDocumentScenarioReachesTheModel(t *testing.T) {
 				filepath.Base(path), !isIncident, isIncident)
 		}
 	}
-	if checked < 5 {
-		t.Fatalf("checked %d scenarios with documents, want every one of the five", checked)
+	if checked < 4 {
+		t.Fatalf("checked %d scenarios with documents, want every one of the four", checked)
+	}
+}
+
+// A confident "ordinary" opens a thread only when every document in it was
+// read: what an unread file holds is unknown, whatever the model believed.
+func TestAThreadWithAnUnreadDocumentNeverOpens(t *testing.T) {
+	sure := confidentialityResult{Verdict: confidentialityOrdinary, Confidence: 0.95}
+	readable := capture.ThreadDocument{Filename: "invoice.pdf", Excerpt: "Total 1,594.60 EUR"}
+	unreadable := capture.ThreadDocument{Filename: "scan_0042.pdf", Unreadable: true}
+	for name, tc := range map[string]struct {
+		thread capture.PendingThread
+		opens  bool
+	}{
+		"every document read":     {capture.PendingThread{Documents: []capture.ThreadDocument{readable}}, true},
+		"one could not be read":   {capture.PendingThread{Documents: []capture.ThreadDocument{readable, unreadable}}, false},
+		"one was left out unread": {capture.PendingThread{Documents: []capture.ThreadDocument{readable}, DocumentsOmitted: 1}, false},
+	} {
+		if got := confidentialityOpens(sure, tc.thread); got != tc.opens {
+			t.Errorf("%s: opens = %v, want %v", name, got, tc.opens)
+		}
 	}
 }

@@ -210,7 +210,7 @@ func (c *confidentialityCase) EvaluateDecision(a decision.Answer) aitasks.Outcom
 // heldOutcome grades a "held" scenario by the engine's own opening rule, so an
 // answer passes when production would keep the thread private, and only then.
 func (c *confidentialityCase) heldOutcome(answer confidentialityResult, who string) aitasks.Outcome {
-	if confidentialityOpens(answer, c.row.DocumentsOmitted) {
+	if confidentialityOpens(answer, c.row) {
 		return aitasks.Outcome{
 			Result: aitasks.OutcomeWrongAnswer,
 			Detail: fmt.Sprintf("%s opened the thread as %q at confidence %.2f where the scenario expects it held",
