@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -159,12 +160,30 @@ func runHomeCold(t *testing.T, e *apptest.AppEnv, in dailyInput) []dailyRow {
 		warmHomePlans(t, e, booted, s, timed)
 		since := forgetHomeAnswers(t, e, s)
 		for i, call := range timed {
+			before := booted.Pool.Stat()
+			var ms0, ms1 runtime.MemStats
+			runtime.ReadMemStats(&ms0)
+			cpu0, _ := os.ReadFile("/proc/stat")
 			status, body, elapsed := s.Get(t, booted, call.Path)
+			cpu1, _ := os.ReadFile("/proc/stat")
+			load, _ := os.ReadFile("/proc/loadavg")
+			runtime.ReadMemStats(&ms1)
+			after := booted.Pool.Stat()
+			t.Logf("DIAGCPU %s before=%q after=%q load=%q", call.Name, firstLine(cpu0), firstLine(cpu1), strings.TrimSpace(string(load)))
+			t.Logf("DIAG %s %dms total=%d->%d newconns=%d->%d acquires=%d emptywait=%d gcs=%d gcpause=%s heap=%dMB", call.Name, elapsed.Milliseconds(),
+				before.TotalConns(), after.TotalConns(), before.NewConnsCount(), after.NewConnsCount(),
+				after.AcquireCount()-before.AcquireCount(), after.EmptyAcquireCount()-before.EmptyAcquireCount(),
+				ms1.NumGC-ms0.NumGC, time.Duration(ms1.PauseTotalNs-ms0.PauseTotalNs), ms1.HeapAlloc>>20)
 			if err := f.admit(dailyResponse{call, status, body}, &tallies[i]); err != nil {
 				t.Fatalf("cold %s: %v", call.Name, err)
 			}
 			samples[i] = append(samples[i], elapsed)
 		}
+		var av string
+		_ = e.Owner.QueryRow(context.Background(), `SELECT coalesce(string_agg(datname||':'||left(query,60), ' | '),'none') FROM pg_stat_activity WHERE backend_type = 'autovacuum worker'`).Scan(&av)
+		var stats string
+		_ = e.Owner.QueryRow(context.Background(), `SELECT coalesce(string_agg(relname||' av='||coalesce(to_char(last_autovacuum,'HH24:MI:SS'),'-')||' aa='||coalesce(to_char(last_autoanalyze,'HH24:MI:SS'),'-')||' mod='||n_mod_since_analyze||' dead='||n_dead_tup, '; ' ORDER BY relname),'') FROM pg_stat_user_tables WHERE last_autovacuum IS NOT NULL OR last_autoanalyze IS NOT NULL OR n_mod_since_analyze > 50`).Scan(&stats)
+		t.Logf("DIAGAV now=%s workers=%s stats=%s", time.Now().Format("15:04:05"), av, stats)
 		booted.Close()
 		if missed := cacheHits(t, e, s, timed, since); len(missed) > 0 {
 			t.Fatalf("cold reads %v were served from home_read_cache, so they timed no assembly", missed)
@@ -184,7 +203,13 @@ func warmHomePlans(t *testing.T, e *apptest.AppEnv, booted *apptest.AppEnv, s Se
 	t.Helper()
 	forgetHomeAnswers(t, e, s)
 	for _, call := range timed {
-		if status, _, _ := s.Get(t, booted, call.Path); status != http.StatusOK {
+		before := booted.Pool.Stat()
+		status, _, el := s.Get(t, booted, call.Path)
+		after := booted.Pool.Stat()
+		t.Logf("DIAGWARM %s %dms total=%d->%d newconns=%d->%d acquires=%d", call.Name, el.Milliseconds(),
+			before.TotalConns(), after.TotalConns(), before.NewConnsCount(), after.NewConnsCount(),
+			after.AcquireCount()-before.AcquireCount())
+		if status != http.StatusOK {
 			t.Fatalf("warming %s answered %d", call.Name, status)
 		}
 	}
@@ -252,6 +277,11 @@ func coldBoot(t *testing.T, e *apptest.AppEnv) *apptest.AppEnv {
 		}
 	}
 	return booted
+}
+
+func firstLine(b []byte) string {
+	line, _, _ := strings.Cut(string(b), "\n")
+	return line
 }
 
 // homeReadsDeclaration is HOME_READS in the frontend's Home judge, the reads the
