@@ -5,21 +5,26 @@ import { useState } from "react";
 
 // An ended row can do nothing more, so it waits behind a toggle. One ended from
 // this view (`keep`, once the end succeeded) stays, struck, so focus has its row
-// to land on.
+// to land on, until the reader hides the ended rows.
 export function useEndedRows<Row extends { id: string }>(
   rows: readonly Row[],
   isEnded: (row: Row) => boolean,
 ) {
-  const [showing, setShowing] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const [endedHere, setEndedHere] = useState<ReadonlySet<string>>(new Set());
-  const hidden = rows.filter((row) => isEnded(row) && !endedHere.has(row.id));
+  const ended = rows.filter(isEnded);
+  const hidden = showAll ? [] : ended.filter((row) => !endedHere.has(row.id));
   const hiddenIds = new Set(hidden.map((row) => row.id));
-  const shown = showing ? rows : rows.filter((row) => !hiddenIds.has(row.id));
+  const showing = ended.length > hidden.length;
   return {
-    shown,
+    shown: rows.filter((row) => !hiddenIds.has(row.id)),
+    ended,
     hidden,
     showing,
-    toggle: () => setShowing((on) => !on),
+    toggle: () => {
+      setShowAll(!showing);
+      setEndedHere(new Set());
+    },
     keep: (id: string) => setEndedHere((ids) => new Set(ids).add(id)),
   };
 }

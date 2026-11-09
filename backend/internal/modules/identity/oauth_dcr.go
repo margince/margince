@@ -7,8 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
-
-	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // oauthGrantTypesSupported is what discovery advertises and what a
@@ -35,16 +33,11 @@ type dcrRequest struct {
 // dcrRefusal is a refusal RFC 7591 §3.2.2 names: the code is the error
 // member, the message its description. A concrete type rather than an error,
 // so the endpoint cannot answer anything but an RFC 7591 document.
+//
+// member names what was refused and is all the log keeps: a description can
+// quote a redirect URI the caller sent, credentials and all.
 type dcrRefusal struct {
-	code, description string
-}
-
-// dcrLoggedReasonBytes bounds the logged reason: a description can quote a
-// redirect URI the caller sent, and the body may be 1 MiB.
-const dcrLoggedReasonBytes = 200
-
-func (r *dcrRefusal) logged() string {
-	return textcut.BytesMarked(r.description, dcrLoggedReasonBytes, "…")
+	code, description, member string
 }
 
 // parseDCR ignores every member it does not read: a client registering with
@@ -80,16 +73,20 @@ func (req dcrRequest) validate() *dcrRefusal {
 			oauthErrInvalidClientMetadata,
 			fmt.Sprintf("token_endpoint_auth_method: %q is not served here; register with %q",
 				req.TokenEndpointAuthMethod, oauthAuthMethodNone),
+			"token_endpoint_auth_method",
 		}
 	}
 	if req.ClientName == "" || len(req.RedirectURIs) == 0 {
-		return &dcrRefusal{oauthErrInvalidClientMetadata, "client_name and redirect_uris are required"}
+		return &dcrRefusal{
+			oauthErrInvalidClientMetadata, "client_name and redirect_uris are required", "client_name, redirect_uris",
+		}
 	}
 	for _, raw := range req.RedirectURIs {
 		if !validRedirectURI(raw) {
 			return &dcrRefusal{
 				oauthErrInvalidRedirectURI,
 				fmt.Sprintf("%q: redirect uris must be https, or http on localhost", raw),
+				"redirect_uris",
 			}
 		}
 	}
@@ -99,6 +96,7 @@ func (req dcrRequest) validate() *dcrRefusal {
 		return &dcrRefusal{
 			oauthErrInvalidClientMetadata,
 			"grant_types: every connection begins with authorization_code, so the list must include it",
+			"grant_types",
 		}
 	}
 	for _, grant := range req.GrantTypes {
@@ -106,6 +104,7 @@ func (req dcrRequest) validate() *dcrRefusal {
 			return &dcrRefusal{
 				oauthErrInvalidClientMetadata,
 				fmt.Sprintf("grant_types: %q is not issued here; supported: %v", grant, oauthGrantTypesSupported),
+				"grant_types",
 			}
 		}
 	}
@@ -114,6 +113,7 @@ func (req dcrRequest) validate() *dcrRefusal {
 			return &dcrRefusal{
 				oauthErrInvalidClientMetadata,
 				fmt.Sprintf("response_types: %q is not served here; only %q is", responseType, oauthResponseTypeCode),
+				"response_types",
 			}
 		}
 	}
@@ -155,6 +155,7 @@ func dcrMember[T any](members map[string]json.RawMessage, name string) (T, *dcrR
 		return value, &dcrRefusal{
 			oauthErrInvalidClientMetadata,
 			fmt.Sprintf("%s: the value has the wrong type for this member", name),
+			name,
 		}
 	}
 	return value, nil

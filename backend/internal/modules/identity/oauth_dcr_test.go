@@ -10,7 +10,6 @@ import (
 	"slices"
 	"strings"
 	"testing"
-	"unicode/utf8"
 )
 
 // thirdPartyRegistration is the document a general-purpose MCP client sends:
@@ -228,15 +227,12 @@ func TestRegisterEndpointRefusesAnOversizedDocument(t *testing.T) {
 	}
 }
 
-func TestRegistrationRefusalLogsABoundedReason(t *testing.T) {
-	long := `{"client_name":"x","redirect_uris":["http://c.example/` + strings.Repeat("é", 400) + `"]}`
-	_, refusal := parseDocument(t, long)
+func TestRegistrationRefusalNamesTheMemberAndNotTheValue(t *testing.T) {
+	_, refusal := parseDocument(t, `{"client_name":"x","redirect_uris":["http://c.example/cb?token=secret"]}`)
 	if refusal == nil {
 		t.Fatal("parseDCR accepted a plain-http redirect")
 	}
-	logged := refusal.logged()
-	if len(logged) > dcrLoggedReasonBytes+len("…") || !utf8.ValidString(logged) {
-		t.Errorf("logged reason is %d bytes (valid UTF-8: %v), want at most %d and valid",
-			len(logged), utf8.ValidString(logged), dcrLoggedReasonBytes)
+	if refusal.member != "redirect_uris" || strings.Contains(refusal.member, "secret") {
+		t.Errorf("member = %q, want redirect_uris", refusal.member)
 	}
 }

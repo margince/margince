@@ -73,7 +73,7 @@ export function PassportCard() {
   const [changingAreas, setChangingAreas] = useState<PassportSummary | null>(
     null,
   );
-  const { shown, hidden, showing, toggle, keep } = useEndedRows(
+  const { shown, ended, hidden, showing, toggle, keep } = useEndedRows(
     minted,
     (passport) => passport.revoked_at != null,
   );
@@ -114,7 +114,7 @@ export function PassportCard() {
         </PanelBody>
       )}
       <PanelBody className="form-stack">
-        {hidden.length > 0 && (
+        {ended.length > 0 && (
           <span>
             <Button variant="link" onClick={toggle}>
               {showing

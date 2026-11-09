@@ -462,6 +462,32 @@ describe("ConnectedAgentsCard: disconnected tools", () => {
     expect(screen.queryByText("Old Gemini")).toBeNull();
   });
 
+  it("lets a tool disconnected from this view be hidden, even when it is the only one", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backend({ passports: [CONNECTED], keepRevoked: true }),
+    );
+    render(<ConnectedAgentsCard />);
+    const user = userEvent.setup();
+    await openActions("Claude Code");
+    await user.click(
+      screen.getByRole("button", { name: "Disconnect Claude Code" }),
+    );
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Disconnect",
+      }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByText("Claude Code")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Hide disconnected" }));
+    expect(screen.queryByText("Claude Code")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Show 1 disconnected tool" }),
+    ).toBeTruthy();
+  });
+
   it("says no tool is connected when every tool is disconnected, and still offers them", async () => {
     vi.stubGlobal("fetch", backend({ passports: [DISCONNECTED] }));
     render(<ConnectedAgentsCard />);

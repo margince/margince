@@ -349,7 +349,7 @@ export function ConnectedAgentsCard() {
   );
   const now = useExpiryClock(connections);
   // A lapsed connection stays out in the open: its grant still needs ending.
-  const { shown, hidden, showing, toggle, keep } = useEndedRows(
+  const { shown, ended, hidden, showing, toggle, keep } = useEndedRows(
     connections,
     (connection) => connection.revoked_at != null,
   );
@@ -379,7 +379,7 @@ export function ConnectedAgentsCard() {
           onChangeAreas={setChangingAreas}
         />
       )}
-      {list.isSuccess && hidden.length > 0 && (
+      {list.isSuccess && ended.length > 0 && (
         <PanelBody>
           <Button variant="link" onClick={toggle}>
             {showing

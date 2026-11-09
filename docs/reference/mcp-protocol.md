@@ -186,7 +186,7 @@ tries a client it was given first, then a metadata document, then dynamic regist
 
   It registers public clients only. A request for `client_secret_basic` or `client_secret_post` is registered as
   `none`, as RFC 7591 §3.2.1 allows, and the answer says `none`. The Gemini app asks for a secret method. Any other
-  method is refused. When the document itself is refused, the API logs the reason, cut to 200 bytes.
+  method is refused. Each refused registration is logged with its error code and the member it refuses, never the value sent.
 
 **Client authentication.** `token_endpoint_auth_methods_supported` and `revocation_endpoint_auth_methods_supported`
 list `none`, `client_secret_basic` and `client_secret_post`, with `none` first: Claude and Codex pick a metadata
