@@ -76,3 +76,34 @@ func TestAnEventThatDoesNotListTheOwnerIsNotAnswered(t *testing.T) {
 		})
 	}
 }
+
+// answeringAPI is the provider API with the answer verb, recording what the
+// connector passed it.
+type answeringAPI struct {
+	fakeAPI
+	token, uid, response string
+}
+
+func (a *answeringAPI) Respond(_ context.Context, token, uid, response string) error {
+	a.token, a.uid, a.response = token, uid, response
+	return nil
+}
+
+func TestTheConnectorAnswersWithTheOwnersFreshToken(t *testing.T) {
+	api := &answeringAPI{}
+	c := New(fakeOAuth{access: "access-1"}, api)
+	if err := c.CalendarRespond(context.Background(), authBytes(t), "kickoff@example.com", connector.ResponseDeclined); err != nil {
+		t.Fatalf("CalendarRespond: %v", err)
+	}
+	if api.token != "access-1" || api.uid != "kickoff@example.com" || api.response != connector.ResponseDeclined {
+		t.Errorf("the API was asked %+v, want the declined answer with the refreshed token", api)
+	}
+}
+
+func TestAnAPIThatCannotAnswerIsUnreachable(t *testing.T) {
+	c := New(fakeOAuth{access: "access-1"}, &fakeAPI{})
+	err := c.CalendarRespond(context.Background(), authBytes(t), "kickoff@example.com", connector.ResponseAccepted)
+	if !errors.Is(err, connector.ErrUnreachable) {
+		t.Errorf("CalendarRespond = %v, want ErrUnreachable", err)
+	}
+}

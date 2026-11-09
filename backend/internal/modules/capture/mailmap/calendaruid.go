@@ -46,7 +46,3 @@ func (c calendarPart) uid() string {
 	}
 	return ""
 }
-
-// CalendarUID is the iCalendar UID of the event this message's calendar part
-// names, or "" when it names none.
-func (m Message) CalendarUID() string { return m.calendarUID }

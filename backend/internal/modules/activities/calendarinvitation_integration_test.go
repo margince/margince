@@ -6,15 +6,22 @@
 package activities
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
+
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // answeringCalendar records what an answer asked of the provider. The embedded
@@ -24,11 +31,12 @@ type answeringCalendar struct {
 	host     ids.UserID
 	uid      string
 	response string
+	refusal  error
 }
 
 func (c *answeringCalendar) Respond(_ context.Context, host ids.UserID, uid, response string) error {
 	c.host, c.uid, c.response = host, uid, response
-	return nil
+	return c.refusal
 }
 
 // emailedInvitation seeds an invitation the rep's mailbox received and the
@@ -67,6 +75,23 @@ func openInvitationsFor(t *testing.T, e *loadEnv, reader ids.UUID, message ids.U
 	return open
 }
 
+// answerOverHTTP sends the answer through the route a client calls.
+func answerOverHTTP(t *testing.T, handlers Handlers, ctx context.Context, message ids.UUID, response string) crmcontracts.EmailCalendarInvitation {
+	t.Helper()
+	body, err := json.Marshal(map[string]string{"response": response})
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest(http.MethodPut, "/calendar-response", bytes.NewReader(body)).WithContext(ctx)
+	recorder := httptest.NewRecorder()
+	handlers.AnswerCalendarInvitation(recorder, request, openapi_types.UUID(message))
+	var answer crmcontracts.EmailCalendarInvitation
+	if recorder.Code != http.StatusOK || json.Unmarshal(recorder.Body.Bytes(), &answer) != nil {
+		t.Fatalf("answering: %d %s", recorder.Code, recorder.Body.String())
+	}
+	return answer
+}
+
 func TestAnInvitationIsOpenOnlyToTheSeatItWasSentTo(t *testing.T) {
 	e := setupLoad(t)
 	message, _, _ := emailedInvitation(t, e, 24*time.Hour)
@@ -93,11 +118,7 @@ func TestAnsweringAnInvitationRecordsItAndTakesItOffTheReadersList(t *testing.T)
 	calendar := &answeringCalendar{}
 	store := handledStore(e).WithSchedulingCalendar(calendar).WithClock(func() time.Time { return clocktest.Now(t) })
 
-	got, err := store.AnswerCalendarInvitation(e.asSeat(e.rep), ids.From[ids.ActivityKind](message),
-		crmcontracts.AnswerCalendarInvitationRequestResponseTentative)
-	if err != nil {
-		t.Fatalf("answering: %v", err)
-	}
+	got := answerOverHTTP(t, Handlers{store: store}, e.asSeat(e.rep), message, "tentative")
 	if got.Response != crmcontracts.EmailCalendarInvitationResponseTentative {
 		t.Errorf("answered %q, want tentative", got.Response)
 	}
@@ -158,6 +179,66 @@ func TestAnInvitationThatAsksUsFilesNoReminderTask(t *testing.T) {
 		}
 		if got != want {
 			t.Fatalf("message %s filed %d reminder tasks, want %d", message, got, want)
+		}
+	}
+}
+
+// A refused answer names what the reader can do, and records nothing.
+func TestARefusedAnswerTellsTheReaderWhyAndRecordsNothing(t *testing.T) {
+	cases := map[string]struct {
+		refusal  error
+		response crmcontracts.AnswerCalendarInvitationRequestResponse
+		code     string
+	}{
+		"event on another calendar": {connector.ErrCalendarEventMissing, "accepted", "event_not_on_calendar"},
+		"no calendar connected":     {connector.ErrAuthRejected, "accepted", codeRequired},
+		"an answer with no meaning": {nil, "perhaps", "unknown_response"},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			e := setupLoad(t)
+			message, meeting, _ := emailedInvitation(t, e, 24*time.Hour)
+			store := handledStore(e).WithSchedulingCalendar(&answeringCalendar{refusal: c.refusal}).WithClock(func() time.Time { return clocktest.Now(t) })
+			_, err := store.AnswerCalendarInvitation(e.asSeat(e.rep), ids.From[ids.ActivityKind](message), c.response)
+			if code := refusalCode(err); code != c.code {
+				t.Errorf("answer = %v (code %q), want %q", err, code, c.code)
+			}
+			var stored string
+			if err := e.owner.QueryRow(context.Background(), `SELECT response FROM activity_participant
+				 WHERE activity_id = $1 AND user_id = $2`, meeting, e.rep).Scan(&stored); err != nil {
+				t.Fatal(err)
+			}
+			if stored != "needs_action" {
+				t.Errorf("a refused answer still stored %q on the meeting", stored)
+			}
+		})
+	}
+}
+
+func refusalCode(err error) string {
+	var parse *values.ParseError
+	if errors.As(err, &parse) {
+		return parse.Code
+	}
+	var scheduling *SchedulingArgumentError
+	if errors.As(err, &scheduling) {
+		return scheduling.Code
+	}
+	return ""
+}
+
+// The mail drawer offers the invited reader the answers, and nobody else.
+func TestTheMailDrawerOffersAnswersOnlyToTheInvitedReader(t *testing.T) {
+	e := setupLoad(t)
+	message, _, _ := emailedInvitation(t, e, 24*time.Hour)
+	store := storeKnowing(e).WithClock(func() time.Time { return clocktest.Now(t) })
+	for reader, want := range map[ids.UUID]bool{e.rep: true, e.other: false} {
+		drawer, err := store.GetEmailPresentation(e.asSeat(reader), ids.From[ids.ActivityKind](message), nil)
+		if err != nil {
+			t.Fatalf("reading the drawer: %v", err)
+		}
+		if got := drawer.Summary.CalendarInvitation != nil; got != want {
+			t.Errorf("reader %s sees an invitation to answer: %v, want %v", reader, got, want)
 		}
 	}
 }
