@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // dedupeScanRequiredMigration supplies the company name-key indexes that keep
@@ -26,7 +27,7 @@ const dedupeScanRequiredMigration = "core/1792855916"
 func dedupeScanDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792855917_dedupe_scan", Version: 1,
-		Title: "Finding duplicates among existing records", Requires: []string{dedupeScanRequiredMigration},
+		Title: systemtext.Literal("datatask.title.core.1792855917_dedupe_scan"), Requires: []string{dedupeScanRequiredMigration},
 		Steps: []datatask.Step{
 			dedupeScanStep("companies", contacts.DedupeScanCompanies),
 			dedupeScanStep("contacts", contacts.DedupeScanContacts),
@@ -45,7 +46,7 @@ const gmailBaseRequiredMigration = "core/1793778536"
 func gmailDedupeScanDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1793778537_gmail_dedupe_scan", Version: 1,
-		Title: "Finding contacts on two spellings of one Gmail address", Requires: []string{gmailBaseRequiredMigration},
+		Title: systemtext.Literal("datatask.title.core.1793778537_gmail_dedupe_scan"), Requires: []string{gmailBaseRequiredMigration},
 		Steps: []datatask.Step{dedupeScanStep("contacts", contacts.DedupeScanContacts)},
 	}
 }

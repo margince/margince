@@ -45,7 +45,20 @@ func (h Handlers) RenderActivityForReader(w http.ResponseWriter, r *http.Request
 		chosen := string(*req.Locale)
 		locale = &chosen
 	}
-	out, err := h.svc.Render(r.Context(), ids.From[ids.ActivityKind](ids.UUID(id)), locale)
+	if req.Part != nil && req.ExpectedSourceVersion == nil {
+		httperr.Write(w, r, httperr.Validation("expected_source_version", "required", "selecting a generated component requires its source version"))
+		return
+	}
+	var part *string
+	if req.Part != nil {
+		if !req.Part.Valid() {
+			httperr.Write(w, r, httperr.Validation("part", "invalid_enum", "part must be subject or body"))
+			return
+		}
+		selected := string(*req.Part)
+		part = &selected
+	}
+	out, err := h.svc.RenderPart(r.Context(), ids.From[ids.ActivityKind](ids.UUID(id)), locale, part, req.ExpectedSourceVersion)
 	switch {
 	case errors.Is(err, ErrNoModel):
 		httperr.Write(w, r, &httperr.DetailedError{

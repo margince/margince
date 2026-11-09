@@ -31,6 +31,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -64,7 +65,8 @@ func (r logActivityResolver) Subject(ctx context.Context, cmd LogActivityCommand
 	said := summaryIn(ctx, r.language)
 	return StageInfo{
 		TargetType: string(datasource.EntityActivity),
-		Summary:    describeGenericWrite(said, fmt.Sprintf(said.logHead, said.noun(string(datasource.EntityActivity))), cmd.Fields),
+		Summary:    describeGenericWrite(said, systemtext.Sentence("agent.logHead", systemtext.NounArgument(string(datasource.EntityActivity))), cmd.Fields),
+		SystemText: genericWriteMetadata(systemtext.Sentence("agent.logHead", systemtext.NounArgument(string(datasource.EntityActivity))), cmd.Fields),
 	}, nil
 }
 
@@ -113,6 +115,7 @@ func (r *draftEmailResolver) Subject(ctx context.Context, cmd DraftEmailCommand)
 		TargetType:    string(datasource.EntityActivity),
 		TargetID:      cmd.ActivityID,
 		TargetVersion: &rec.Version,
+		SystemText:    &systemtext.Message{Subject: systemtext.Sentence("agent.draftReply", systemtext.Text(fmt.Sprint(cmd.ActivityID)))},
 		Summary:       fmt.Sprintf(summaryIn(ctx, r.language).draftReply, cmd.ActivityID),
 	}, nil
 }
@@ -320,6 +323,7 @@ func (r *relinkActivityResolver) Subject(ctx context.Context, cmd RelinkActivity
 		TargetType:    string(datasource.EntityActivity),
 		TargetID:      cmd.ActivityID,
 		TargetVersion: &rec.Version,
+		SystemText:    &systemtext.Message{Subject: systemtext.Sentence("agent.relinkActivity", systemtext.Label(fmt.Sprint(recordLabel(rec))), systemtext.NounArgument(fmt.Sprint(cmd.EntityType)), systemtext.Text(fmt.Sprint(cmd.EntityID)))},
 		Summary:       fmt.Sprintf(said.relinkActivity, recordLabel(rec), said.noun(cmd.EntityType), cmd.EntityID),
 	}, nil
 }
@@ -388,7 +392,10 @@ type decideApprovalResolver struct {
 // target stays absent, the way runReportResolver's does for a report key.
 func (r decideApprovalResolver) Subject(ctx context.Context, cmd DecideApprovalCommand) (StageInfo, error) {
 	said := summaryIn(ctx, r.language)
-	return StageInfo{Summary: fmt.Sprintf(said.decideApproval, verdictWord(said, cmd.Approve), cmd.ApprovalID)}, nil
+	return StageInfo{
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.decideApproval", systemtext.MessageArgument(verdictCode(cmd.Approve)), systemtext.Text(fmt.Sprint(cmd.ApprovalID)))},
+		Summary:    fmt.Sprintf(said.decideApproval, verdictWord(said, cmd.Approve), cmd.ApprovalID),
+	}, nil
 }
 
 // Guards stands down: what may be decided is the approvals engine's own
@@ -422,7 +429,10 @@ type decideBundleResolver struct {
 // is nothing here to pin either.
 func (r decideBundleResolver) Subject(ctx context.Context, cmd DecideBundleCommand) (StageInfo, error) {
 	said := summaryIn(ctx, r.language)
-	return StageInfo{Summary: fmt.Sprintf(said.decideBundle, verdictWord(said, cmd.Approve), cmd.BundleID)}, nil
+	return StageInfo{
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.decideBundle", systemtext.MessageArgument(verdictCode(cmd.Approve)), systemtext.Text(fmt.Sprint(cmd.BundleID)))},
+		Summary:    fmt.Sprintf(said.decideBundle, verdictWord(said, cmd.Approve), cmd.BundleID),
+	}, nil
 }
 
 // Guards stands down for decideApprovalResolver's reason, per member.
@@ -432,10 +442,14 @@ func (decideBundleResolver) Guards(_ context.Context, _ DecideBundleCommand) err
 
 // verdictWord is the one spelling of a verdict in a summary a human reads.
 func verdictWord(said summaryCopy, approve bool) string {
+	return systemtext.Copy(verdictCode(approve), said.lang)
+}
+
+func verdictCode(approve bool) string {
 	if approve {
-		return said.approveWord
+		return "agent.approveWord"
 	}
-	return said.rejectWord
+	return "agent.rejectWord"
 }
 
 // AnnotateBriefCommand is the overnight pass's findings, staged.
@@ -471,6 +485,7 @@ func (r annotateBriefResolver) Subject(ctx context.Context, cmd AnnotateBriefCom
 	return StageInfo{
 		TargetType: "brief",
 		Summary:    describeAnnotation(summaryIn(ctx, r.language), cmd),
+		SystemText: &systemtext.Message{Subject: annotationComponent(cmd)},
 	}, nil
 }
 
@@ -480,18 +495,4 @@ func (r annotateBriefResolver) Subject(ctx context.Context, cmd AnnotateBriefCom
 // is.
 func (annotateBriefResolver) Guards(_ context.Context, _ AnnotateBriefCommand) error {
 	return nil
-}
-
-// describeAnnotation says what the pass wrote, in counts.
-func describeAnnotation(said summaryCopy, cmd AnnotateBriefCommand) string {
-	switch {
-	case cmd.Items == 0 && !cmd.Narrative:
-		return said.annotateNothing
-	case cmd.Items == 0:
-		return said.annotateNarrative
-	case cmd.Narrative:
-		return fmt.Sprintf(said.annotateBoth, cmd.Items)
-	default:
-		return fmt.Sprintf(said.annotateFindings, cmd.Items)
-	}
 }

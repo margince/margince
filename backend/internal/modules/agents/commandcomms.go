@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -104,6 +105,7 @@ func (r *sendEmailResolver) Subject(ctx context.Context, cmd SendEmailCommand) (
 		TargetID:      cmd.ActivityID,
 		TargetVersion: &rec.Version,
 		Summary:       describeSend(summaryIn(ctx, r.language), cmd),
+		SystemText:    &systemtext.Message{Subject: sendComponent(cmd)},
 	}, nil
 }
 
@@ -133,11 +135,7 @@ func (r *sendEmailResolver) Guards(ctx context.Context, cmd SendEmailCommand) er
 // describeSend is the one line the inbox shows for a mail send: who it
 // reaches, cc included, and what it says it is about.
 func describeSend(said summaryCopy, cmd SendEmailCommand) string {
-	summary := fmt.Sprintf(said.sendEmail, strings.Join(cmd.To, ", "))
-	if len(cmd.Cc) > 0 {
-		summary += fmt.Sprintf(said.cc, strings.Join(cmd.Cc, ", "))
-	}
-	return summary + fmt.Sprintf(said.sendSubject, cmd.Subject)
+	return systemtext.Canonical(sendComponent(cmd), said.lang)
 }
 
 // SendMessageCommand is one channel reply, whichever door asked for it.
@@ -186,6 +184,7 @@ func (r *sendMessageResolver) Subject(ctx context.Context, cmd SendMessageComman
 		TargetType:    string(datasource.EntityActivity),
 		TargetID:      cmd.ActivityID,
 		TargetVersion: &rec.Version,
+		SystemText:    &systemtext.Message{Subject: systemtext.Sentence("agent.sendMessage", systemtext.Text(fmt.Sprint(cmd.Body)))},
 		Summary:       fmt.Sprintf(summaryIn(ctx, r.language).sendMessage, cmd.Body),
 	}, nil
 }

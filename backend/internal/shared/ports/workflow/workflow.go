@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -184,9 +185,10 @@ func AllActionKinds() []ActionKind {
 }
 
 type Action struct {
-	Kind   ActionKind
-	Target datasource.EntityRef
-	Args   json.RawMessage
+	SystemText *systemtext.Message `json:"system_text,omitempty"`
+	Kind       ActionKind
+	Target     datasource.EntityRef
+	Args       json.RawMessage
 
 	// Deduplicated marks a create the effect-level claim folded: a sibling
 	// instance's identical firing performed the write, so this action was

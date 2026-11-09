@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -156,27 +157,32 @@ func dealStageSemantic(
 // A stage it cannot resolve degrades to naming the destination rather than
 // failing: the approval is already the safe answer, and refusing to describe it
 // would turn a readable-enough decision into no decision at all.
-func dealMoveSummary(ctx context.Context, said summaryCopy, stages StageResolver, rec datasource.Record, target string) string {
+func dealMoveSummary(ctx context.Context, said summaryCopy, stages StageResolver, rec datasource.Record, target string) (string, *systemtext.Component) {
 	label := recordLabel(rec)
 	var fields struct {
 		StageID ids.UUID `json:"stage_id"`
 	}
 	if err := json.Unmarshal(rec.Fields, &fields); err != nil || fields.StageID.IsZero() {
-		return fmt.Sprintf(said.dealMove, label, target)
+		return dealSummaryParts(said, "agent.dealMove", systemtext.Label(label), systemtext.Reference("stage."+target, target))
 	}
 	source, _, err := stages.StageSemantic(ctx, fields.StageID)
 	switch {
 	case err != nil || source == "":
-		return fmt.Sprintf(said.dealMove, label, target)
+		return dealSummaryParts(said, "agent.dealMove", systemtext.Label(label), systemtext.Reference("stage."+target, target))
 	case source == stageSemanticOpen && target == stageSemanticOpen:
 		// Reachable even though the tier gate calls this transition 🟢: a
 		// passportless agent stages it, and the human then reads this line
 		// about a routine move.
-		return fmt.Sprintf(said.dealMoveOpen, label)
+		return dealSummaryParts(said, "agent.dealMoveOpen", systemtext.Label(label))
 	case source != stageSemanticOpen && target == stageSemanticOpen:
-		return fmt.Sprintf(said.dealReopen, label, source)
+		return dealSummaryParts(said, "agent.dealReopen", systemtext.Label(label), systemtext.Reference("stage."+source, source))
 	case source != stageSemanticOpen:
-		return fmt.Sprintf(said.dealChange, label, source, target)
+		return dealSummaryParts(said, "agent.dealChange", systemtext.Label(label), systemtext.Reference("stage."+source, source), systemtext.Reference("stage."+target, target))
 	}
-	return fmt.Sprintf(said.dealClose, label, target)
+	return dealSummaryParts(said, "agent.dealClose", systemtext.Label(label), systemtext.Reference("stage."+target, target))
+}
+
+func dealSummaryParts(said summaryCopy, code string, args ...systemtext.Argument) (string, *systemtext.Component) {
+	component := systemtext.Sentence(code, args...)
+	return systemtext.Canonical(component, said.lang), component
 }

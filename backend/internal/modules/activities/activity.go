@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -44,6 +45,7 @@ func activityCapturedPayload(ctx context.Context, kind, channelProvider string) 
 }
 
 type LogActivityInput struct {
+	SystemText         *systemtext.Message
 	identityProver     AddressProver
 	DealFiling         *crmcontracts.ActivityDealFiling
 	dealFilingResolver DealFilingResolver
@@ -291,129 +293,6 @@ func meetingHost(ctx context.Context, in LogActivityInput) *ids.UserID {
 // logActivityInTx is LogActivity's transactional body, shared by the
 // store-opened (LogActivity) and caller-opened (LogActivityTx) entry
 // points.
-func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmcontracts.Activity, bool, error) {
-	if err := prepareLoggedActivity(ctx, tx, &in); err != nil {
-		return crmcontracts.Activity{}, false, err
-	}
-	by, err := storekit.CapturedBy(ctx)
-	if err != nil {
-		return crmcontracts.Activity{}, false, err
-	}
-	assignee, err := checkedTaskAssignee(ctx, tx, in)
-	if err != nil {
-		return crmcontracts.Activity{}, false, err
-	}
-	host := meetingHost(ctx, in)
-
-	if replayed, found, err := replayLanding(ctx, tx, in); err != nil || found {
-		return replayed, false, err
-	}
-	if prior, found, err := scheduledRunNoteLanding(ctx, tx, &in); err != nil || found {
-		return prior, false, err
-	}
-	if bound, found, err := recognizedMessage(ctx, tx, in); err != nil || found {
-		return bound, false, err
-	}
-	if err := refuseLoggedOutcomeBeforeStart(ctx, tx, in); err != nil {
-		return crmcontracts.Activity{}, false, err
-	}
-	if err := applyLoggedDealFiling(ctx, tx, &in); err != nil {
-		return crmcontracts.Activity{}, false, err
-	}
-
-	id := ids.New[ids.ActivityKind]()
-	origin := in.Origin
-	if origin == "" {
-		origin = OriginHuman
-	}
-	counterparty, err := counterpartyFor(ctx, tx, in)
-	if err != nil {
-		return crmcontracts.Activity{}, false, err
-	}
-	if err := lockCorrespondenceForAttestedSend(ctx, tx, in, counterparty); err != nil {
-		return crmcontracts.Activity{}, false, err
-	}
-	if err := storekit.RefuseUnknownSeat(ctx, tx, in.Author); err != nil {
-		return crmcontracts.Activity{}, false, err
-	}
-	authorCols, authorHolders, args := storekit.AuthorInsertFragments(in.Author, []any{
-		// NULLIF on channel_provider: the column FKs into channel_provider, and
-		// '' names no provider, so anything without a transport stores NULL.
-		id, in.Kind, in.ChannelProvider, in.Subject, in.Body, in.OccurredAt, in.Direction, in.MeetingStatus,
-		in.DueAt, in.RemindAt, assignee, host, in.ClaimsHostSlot, in.SourceSystem, in.SourceID, in.Source, by,
-		in.ThreadKey, counterparty, in.CounterpartyOutboundAttested, origin,
-		in.SourceActivityID, in.Raw, in.DurationSeconds, loggedSenderIsMachine(in), in.DueHasTime, in.CallOutcome,
-	})
-	precisionCol, precisionHolder, args := precisionInsertFragment(in.OccurredPrecision, args)
-	languageCol, languageHolder, args := languageInsertFragment(in, args)
-	cfCols, cfHolders, args, err := storekit.InsertFragments(in.customColumns, in.CustomFields, args)
-	if err != nil {
-		return crmcontracts.Activity{}, false, err
-	}
-	// An undated activity takes the transaction's now(): the last-activity clock
-	// counts only occurred_at <= now(), and a Go clock read here runs ahead of it.
-	var occurredAt time.Time
-	err = tx.QueryRow(ctx,
-		`INSERT INTO activity (id, kind, channel_provider, subject, body, occurred_at, direction, meeting_status,
-		                       due_at, remind_at, assignee_id, host_user_id, claims_host_slot, booking_interval_exact, source_system, source_id, source, captured_by,
-		                       thread_key, counterparty_email, counterparty_outbound_attested, origin,
-		                       source_activity_id, raw, duration_seconds, sender_is_machine, due_has_time, call_outcome`+authorCols+precisionCol+languageCol+cfCols+`)
-		 VALUES ($1, $2, NULLIF($3, ''), $4, $5, coalesce($6, now()), $7, $8, $9, $10, $11, $12, $13, $13, $14, $15, $16, $17, NULLIF($18, ''),
-		         NULLIF($19, ''), $20, $21, $22, $23, $24, $25, $26, $27`+authorHolders+precisionHolder+languageHolder+cfHolders+`) RETURNING occurred_at`,
-		args...).Scan(&occurredAt)
-	if err != nil {
-		if storekit.IsUniqueViolation(err) {
-			return crmcontracts.Activity{}, false, apperrors.ErrConflict
-		}
-		return crmcontracts.Activity{}, false, err
-	}
-
-	if err := writeActivitySatellites(ctx, tx, id, in, occurredAt.UTC(), by); err != nil {
-		return crmcontracts.Activity{}, false, err
-	}
-	out, err := readActivityAt(ctx, tx, id, storekit.LiveOnly, orWallClock(in.recordedAt))
-	if err != nil {
-		return crmcontracts.Activity{}, false, err
-	}
-	return out, true, nil
-}
-
-// writeActivitySatellites writes the rows that ride with a new activity and
-// have no meaning without it: its first meeting transition, its links, who was
-// in it, where it came from, and the first-touch stamp. All in the caller's
-// transaction, because an activity that reached the timeline without them is a
-// row nobody can read properly.
-func writeActivitySatellites(
-	ctx context.Context, tx pgx.Tx, id ids.ActivityID, in LogActivityInput,
-	occurredAt time.Time, by string,
-) error {
-	if err := insertActivityLinks(ctx, tx, id, in.Kind, in.Links, in.LinksFromRequest); err != nil {
-		return err
-	}
-	// The first transition, where this capture named a status. A meeting
-	// arrives `booked` far more often than not, and that booking is the fact
-	// every "how many did we book this period" question counts.
-	if err := recordMeetingTransition(ctx, tx, meetingTransition{
-		RecordedAt:   in.recordedAt,
-		ActivityID:   id,
-		Status:       meetingStatusOrNone(in.MeetingStatus),
-		Scheduled:    scheduledAs(occurredAt, storedPrecision(in.OccurredPrecision)),
-		SourceSystem: in.SourceSystem,
-		SourceID:     in.SourceID,
-	}); err != nil {
-		return err
-	}
-	// Who was in it (ACT-DDL-3). After the links, because the counterparty is
-	// whichever contact they name — and they have just been through the
-	// row-scope gate, so nothing here needs to re-check them.
-	if err := stampLoggedParticipants(ctx, tx, id, in); err != nil {
-		return err
-	}
-	if err := recordImportedProvenance(ctx, tx, id, in, by); err != nil {
-		return err
-	}
-	return recordInitialActivity(ctx, tx, id, in)
-}
 
 // replayedActivity resolves the (source_system, source_id) idempotency
 // key: replaying a capture returns the existing activity. The replay
@@ -444,20 +323,6 @@ func writeActivitySatellites(
 // Moving the status changes a row that already exists, so it asks for the
 // update grant a PATCH asks for. The create grant that admitted the log only
 // covers a replay that changes nothing.
-func replayMovedTheMeeting(
-	ctx context.Context, tx pgx.Tx, replay crmcontracts.Activity, in LogActivityInput,
-) (crmcontracts.Activity, error) {
-	if in.MeetingStatus == nil || *in.MeetingStatus == meetingStatusString(replay.MeetingStatus) {
-		return replay, nil
-	}
-	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	return updateActivityInTx(ctx, tx, ids.From[ids.ActivityKind](ids.UUID(replay.Id)), UpdateActivityInput{
-		recordedAt:    in.recordedAt,
-		MeetingStatus: in.MeetingStatus,
-	})
-}
 
 func replayedActivity(ctx context.Context, tx pgx.Tx, in LogActivityInput) (*crmcontracts.Activity, error) {
 	if in.SourceSystem == nil || in.SourceID == nil {

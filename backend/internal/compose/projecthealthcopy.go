@@ -10,6 +10,7 @@ package compose
 
 import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -32,31 +33,31 @@ type projectHealthCopy struct {
 
 var projectHealthByLang = map[textlang.Lang]projectHealthCopy{
 	textlang.English: {
-		quiet:           "Nothing has been filed on this project for at least %d days.",
-		overdue:         "An open task on this project is past its due date.",
-		quietAndOverdue: "Nothing has been filed on this project for at least %d days, and an open task on it is past its due date.",
-		active:          "Activity is being filed on this project and no open task is past its due date.",
-		noticeSubject:   "%s is now %s",
-		noticeUndo:      "The AI set this from the project's activity. Open the project to undo it.",
-		onTrack:         "on track", atRisk: "at risk", offTrack: "off track",
+		quiet:           systemtext.Copy("project.quiet", textlang.English),
+		overdue:         systemtext.Copy("project.overdue", textlang.English),
+		quietAndOverdue: systemtext.Copy("project.quietAndOverdue", textlang.English),
+		active:          systemtext.Copy("project.active", textlang.English),
+		noticeSubject:   systemtext.Copy("project.noticeSubject", textlang.English),
+		noticeUndo:      systemtext.Copy("project.noticeUndo", textlang.English),
+		onTrack:         systemtext.Copy("project.onTrack", textlang.English), atRisk: systemtext.Copy("project.atRisk", textlang.English), offTrack: systemtext.Copy("project.offTrack", textlang.English),
 	},
 	textlang.German: {
-		quiet:           "Zu diesem Projekt wurde seit mindestens %d Tagen nichts abgelegt.",
-		overdue:         "Eine offene Aufgabe in diesem Projekt ist überfällig.",
-		quietAndOverdue: "Zu diesem Projekt wurde seit mindestens %d Tagen nichts abgelegt, und eine offene Aufgabe darin ist überfällig.",
-		active:          "Zu diesem Projekt wird Aktivität abgelegt, und keine offene Aufgabe ist überfällig.",
-		noticeSubject:   "%s ist jetzt %s",
-		noticeUndo:      "Die KI hat das aus der Aktivität des Projekts abgeleitet. Öffne das Projekt, um es rückgängig zu machen.",
-		onTrack:         "im Plan", atRisk: "gefährdet", offTrack: "außer Plan",
+		quiet:           systemtext.Copy("project.quiet", textlang.German),
+		overdue:         systemtext.Copy("project.overdue", textlang.German),
+		quietAndOverdue: systemtext.Copy("project.quietAndOverdue", textlang.German),
+		active:          systemtext.Copy("project.active", textlang.German),
+		noticeSubject:   systemtext.Copy("project.noticeSubject", textlang.German),
+		noticeUndo:      systemtext.Copy("project.noticeUndo", textlang.German),
+		onTrack:         systemtext.Copy("project.onTrack", textlang.German), atRisk: systemtext.Copy("project.atRisk", textlang.German), offTrack: systemtext.Copy("project.offTrack", textlang.German),
 	},
 	textlang.Vietnamese: {
-		quiet:           "Không có gì được lưu cho dự án này trong ít nhất %d ngày.",
-		overdue:         "Một công việc đang mở của dự án này đã quá hạn.",
-		quietAndOverdue: "Không có gì được lưu cho dự án này trong ít nhất %d ngày, và một công việc đang mở của dự án đã quá hạn.",
-		active:          "Dự án này vẫn có hoạt động được lưu và không có công việc đang mở nào quá hạn.",
-		noticeSubject:   "%s hiện %s",
-		noticeUndo:      "AI đã đặt tình trạng này dựa trên hoạt động của dự án. Mở dự án để hoàn tác.",
-		onTrack:         "đúng kế hoạch", atRisk: "có rủi ro", offTrack: "chệch kế hoạch",
+		quiet:           systemtext.Copy("project.quiet", textlang.Vietnamese),
+		overdue:         systemtext.Copy("project.overdue", textlang.Vietnamese),
+		quietAndOverdue: systemtext.Copy("project.quietAndOverdue", textlang.Vietnamese),
+		active:          systemtext.Copy("project.active", textlang.Vietnamese),
+		noticeSubject:   systemtext.Copy("project.noticeSubject", textlang.Vietnamese),
+		noticeUndo:      systemtext.Copy("project.noticeUndo", textlang.Vietnamese),
+		onTrack:         systemtext.Copy("project.onTrack", textlang.Vietnamese), atRisk: systemtext.Copy("project.atRisk", textlang.Vietnamese), offTrack: systemtext.Copy("project.offTrack", textlang.Vietnamese),
 	},
 }
 

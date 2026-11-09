@@ -224,7 +224,7 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 		publicEdge = srv.routesForTest(publicEdge)
 	}
 	mux.Handle("/v1/", boundByResponseDeadline(httpserver.Correlate(
-		httpserver.AccessLog(log, publicRecordPreviews(srv, identitySvc)(authH.Middleware(publicEdge))))))
+		httpserver.AccessLog(log, publicRecordPreviews(srv, identitySvc)(authH.Middleware(readerDisplayLocale(pool)(publicEdge)))))))
 	// The remote MCP connector, mounted as ONE group behind the deployment
 	// gate: the A2 transport, the A2 authorization server (ADR-0013) and
 	// both discovery documents. They belong together because RFC 9728

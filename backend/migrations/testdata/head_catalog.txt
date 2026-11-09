@@ -55,6 +55,8 @@ public.activity.activity_sent_by_colleague_fkey FOREIGN KEY (sent_by_colleague) 
 public.activity.activity_source_activity_id_fkey FOREIGN KEY (source_activity_id) REFERENCES activity(id) ON DELETE SET NULL
 public.activity.activity_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.activity.activity_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
+public.activity.activity_system_text_retire CREATE TRIGGER activity_system_text_retire BEFORE UPDATE ON public.activity FOR EACH ROW EXECUTE FUNCTION retire_changed_system_text()
+public.activity.activity_system_text_shape CHECK (((system_text IS NULL) OR ((jsonb_typeof(system_text) = 'object'::text) AND (((system_text ->> 'schema_version'::text) = '1'::text) IS TRUE) AND (octet_length((system_text)::text) <= 8192))))
 public.activity.activity_task_fields CHECK (((kind = 'task'::text) OR ((due_at IS NULL) AND (assignee_id IS NULL) AND (is_done = false) AND (remind_at IS NULL))))
 public.activity.activity_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.activity.advance_activity_domain_evidence_version CREATE TRIGGER advance_activity_domain_evidence_version BEFORE UPDATE OF occurred_at, occurred_precision, archived_at, restricted_at ON public.activity FOR EACH ROW EXECUTE FUNCTION advance_activity_domain_evidence_version()
@@ -133,6 +135,7 @@ public.activity.source_author_name text gen=- def=-
 public.activity.source_id text gen=- def=-
 public.activity.source_system text gen=- def=-
 public.activity.subject text gen=- def=-
+public.activity.system_text jsonb gen=- def=-
 public.activity.thread_key text gen=- def=-
 public.activity.trg_activity_updated CREATE TRIGGER trg_activity_updated BEFORE UPDATE ON public.activity FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.activity.updated_at timestamp with time zone NOT NULL gen=- def=now()
@@ -6846,6 +6849,8 @@ public.notice.notice_email_error_bounded CHECK ((length(email_error) <= 500))
 public.notice.notice_pkey PRIMARY KEY (id)
 public.notice.notice_recipient_user_id_fkey FOREIGN KEY (recipient_user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.notice.notice_subject_present CHECK ((subject <> ''::text))
+public.notice.notice_system_text_retire CREATE TRIGGER notice_system_text_retire BEFORE UPDATE ON public.notice FOR EACH ROW EXECUTE FUNCTION retire_changed_system_text()
+public.notice.notice_system_text_shape CHECK (((system_text IS NULL) OR ((jsonb_typeof(system_text) = 'object'::text) AND (((system_text ->> 'schema_version'::text) = '1'::text) IS TRUE) AND (octet_length((system_text)::text) <= 8192))))
 public.notice.notice_target_paired CHECK (((target_type IS NULL) = (target_id IS NULL)))
 public.notice.origin jsonb gen=- def=-
 public.notice.read_at timestamp with time zone gen=- def=-
@@ -6853,6 +6858,7 @@ public.notice.recipient_user_id uuid NOT NULL gen=- def=-
 public.notice.retracted_at timestamp with time zone gen=- def=-
 public.notice.subject text NOT NULL gen=- def=-
 public.notice.subject_parts jsonb gen=- def=-
+public.notice.system_text jsonb gen=- def=-
 public.notice.target_id uuid gen=- def=-
 public.notice.target_type text gen=- def=-
 public.notice_dedupe_key CREATE INDEX notice_dedupe_key ON public.notice USING btree (dedupe_key) WHERE (dedupe_key IS NOT NULL)
@@ -8078,6 +8084,20 @@ public.retention_policy.retention_policy_retain_days_check CHECK (((retain_days 
 public.retention_policy.retention_policy_unique UNIQUE NULLS NOT DISTINCT (object_type, category)
 public.retention_policy_pkey CREATE UNIQUE INDEX retention_policy_pkey ON public.retention_policy USING btree (id)
 public.retention_policy_unique CREATE UNIQUE INDEX retention_policy_unique ON public.retention_policy USING btree (object_type, category) NULLS NOT DISTINCT
+public.retire_changed_system_text() secdef=false cfg=- acl=- 
+BEGIN
+ IF NEW.subject IS DISTINCT FROM OLD.subject AND
+    NEW.system_text->'subject'->>'digest' IS DISTINCT FROM encode(sha256(convert_to(coalesce(NEW.subject, ''), 'UTF8')), 'hex') THEN
+  NEW.system_text := NEW.system_text - 'subject';
+ END IF;
+ IF NEW.body IS DISTINCT FROM OLD.body AND
+    NEW.system_text->'body'->>'digest' IS DISTINCT FROM encode(sha256(convert_to(coalesce(NEW.body, ''), 'UTF8')), 'hex') THEN
+  NEW.system_text := NEW.system_text - 'body';
+ END IF;
+ IF NOT (NEW.system_text ? 'subject' OR NEW.system_text ? 'body') THEN NEW.system_text := NULL; END IF;
+ RETURN NEW;
+END;
+
 public.retire_raw_original_object() secdef=false cfg=- acl=- BEGIN
     IF TG_OP = 'UPDATE' THEN
         IF OLD.payload_object IS NOT NULL

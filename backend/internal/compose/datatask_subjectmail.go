@@ -16,12 +16,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 func subjectMailDataTask(now func() time.Time) datatask.Task {
 	return datatask.Task{
 		ID: "core/1793502625_direct_sender_notice_duties", Version: 2,
-		Title: "Closing notice duties for direct senders", Requires: []string{"core/1792474140", "core/1793514621"},
+		Title: systemtext.Literal("datatask.title.core.1793502625_direct_sender_notice_duties"), Requires: []string{"core/1792474140", "core/1793514621"},
 		Steps: []datatask.Step{{
 			Name: "restore_bulk_sender_proof", Limit: 50, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{Reason: "capture stamps the same derived sender authentication on new mail without a separate audit"},

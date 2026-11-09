@@ -203,7 +203,7 @@ func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 // last_touch is the newest conversation with that attendee that has happened
 // by now. The first-time flag reads it: null means we have never exchanged
 // anything with them, which is "you have not met".
-const meetingQuery = `
+var meetingQuery = `
 	SELECT a.id, a.occurred_at, a.occurred_precision = 'day', a.subject,
 	       d.id, COALESCE(d.name, ''), d.stage_name, d.amount_minor, d.currency, d.expected_close_date,
 	       pr.id, COALESCE(pr.name, ''), COALESCE(pr.key, ''), COALESCE(pr.phase, ''), pr.target_end_date,
@@ -220,7 +220,7 @@ const meetingQuery = `
 	                    WHERE pp.contact_id = p.id AND pa.archived_at IS NULL
 	                      AND pa.id <> a.id AND pa.occurred_at <= a.occurred_at -- occurred_at raw: a touch before this meeting, an ordering of rows
 	                      AND %[9]s
-	                      AND pa.audience = 'workspace'
+	                      AND ` + auth.WorkspaceAudienceSQL("pa") + `
 	                      AND %[4]s
 	                      -- Workspace-visible messages only. A brief is read by
 	                      -- colleagues who were not on the mail, and a last-touch

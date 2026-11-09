@@ -2868,6 +2868,7 @@ export const en = {
   "action.newDeal": "New deal",
   "action.booking": "Booking page",
 
+  "common.fieldInvalid": "Check this value and try again.",
   "common.undo": "Undo",
   "common.close": "Close",
   "common.unknownValue": "Other",

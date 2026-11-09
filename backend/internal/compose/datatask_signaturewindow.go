@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // signatureWindowDataTask takes back signature fields the writer would refuse
@@ -22,7 +23,7 @@ import (
 func signatureWindowDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792842314_signature_fields_outside_the_senders_text", Version: 2,
-		Title: "Taking back contact details read from quoted mail", Requires: []string{introductionValidationMigration},
+		Title: systemtext.Literal("datatask.title.core.1792842314_signature_fields_outside_the_senders_text"), Requires: []string{introductionValidationMigration},
 		Steps: []datatask.Step{{
 			Name: "signature_fields", Limit: 200, MinLimit: 10,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

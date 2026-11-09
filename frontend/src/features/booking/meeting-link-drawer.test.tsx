@@ -95,12 +95,14 @@ it("clears a legacy address when the video app is saved, and leaves it out of a 
   };
   expect(linkChanges(legacy, draft)).toEqual({
     title: "Intro call",
+    use_default_title: false,
     video_call: true,
     location: "",
   });
   const app = { ...legacy, video_call: true, location: "" };
   expect(linkChanges(app, { ...draft, location: "" })).toEqual({
     title: "Intro call",
+    use_default_title: false,
   });
 });
 

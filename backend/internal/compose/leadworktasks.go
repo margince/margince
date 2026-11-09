@@ -29,6 +29,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -36,10 +38,10 @@ import (
 const leadRepliedActor = "system:lead-replied"
 
 // The task titles. A lead's name fills the first verb.
-const (
-	leadRepliedSubject    = "Review qualification for %s"
-	leadBookedSubject     = "Review qualification for %s after booking"
-	leadForContactSubject = "%s came in as a new lead, and is already your contact"
+var (
+	leadRepliedSubject    = systemtext.Copy("lead.reply", textlang.English)
+	leadBookedSubject     = systemtext.Copy("lead.booked", textlang.English)
+	leadForContactSubject = systemtext.Copy("lead.existing_contact", textlang.English)
 )
 
 // leadWorkTasks writes both tasks. One writer, so a reply and a booking ask the
@@ -90,11 +92,19 @@ func (w leadWorkTasks) askToQualifyTx(ctx context.Context, tx pgx.Tx, lead ids.L
 	if strings.TrimSpace(name) == "" && email != nil {
 		name = *email
 	}
+	nameArgument := systemtext.Label(strings.TrimSpace(name))
 	if strings.TrimSpace(name) == "" {
-		name = "A lead"
+		name = systemtext.Literal("lead.unnamed")
+		nameArgument = systemtext.MessageArgument("lead.unnamed")
 	}
 	title := fmt.Sprintf(subject, strings.TrimSpace(name))
-	return w.logSystemTaskTx(ctx, tx, w.repliedTaskInput(lead, arrival, title, owner))
+	in := w.repliedTaskInput(lead, arrival, title, owner)
+	code := "lead.reply"
+	if subject == leadBookedSubject {
+		code = "lead.booked"
+	}
+	in.SystemText = &systemtext.Message{Version: 1, Subject: systemtext.Sentence(code, nameArgument)}
+	return w.logSystemTaskTx(ctx, tx, in)
 }
 
 // FileTx is the contacts store's LeadArrivals port: the task for the owner of
@@ -106,27 +116,48 @@ func (w leadWorkTasks) FileTx(ctx context.Context, tx pgx.Tx, arrival contacts.L
 		name = arrival.Fields.Email
 	}
 	title := fmt.Sprintf(leadForContactSubject, name)
-	return w.logSystemTaskTx(ctx, tx, w.arrivalTaskInput(arrival, title, leadArrivalBody(arrival)))
+	in := w.arrivalTaskInput(arrival, title, leadArrivalBody(arrival), nil)
+	in.SystemText = &systemtext.Message{Version: 1, Subject: systemtext.Sentence("lead.existing_contact", systemtext.Label(name)), Body: leadArrivalComponent(arrival)}
+	return w.logSystemTaskTx(ctx, tx, in)
 }
 
 // leadArrivalBody lists what arrived, where from, and what to do with it.
 func leadArrivalBody(arrival contacts.LeadArrival) string {
 	var b strings.Builder
-	for _, field := range []struct{ label, value string }{
-		{"Name", arrival.Fields.FullName},
-		{"Email", arrival.Fields.Email},
-		{"Phone", arrival.Fields.Phone},
-		{"Title", arrival.Fields.Title},
-		{"Company", arrival.Fields.CompanyName},
-		{"LinkedIn", arrival.Fields.LinkedInURL},
-	} {
+	for _, field := range leadArrivalFields(arrival) {
 		if field.value != "" {
-			fmt.Fprintf(&b, "%s: %s\n", field.label, field.value)
+			fmt.Fprintf(&b, systemtext.Copy(field.code, textlang.English)+"\n", field.value)
 		}
 	}
-	fmt.Fprintf(&b, "Came from: %s\n\n", arrival.Origin)
-	b.WriteString("No lead was created. If this is a new opportunity, open a deal with the contact.")
+	fmt.Fprintf(&b, systemtext.Copy("lead.arrival_origin", textlang.English)+"\n", arrival.Origin)
+	b.WriteString(systemtext.Literal("lead.arrival_next"))
 	return b.String()
+}
+
+type leadArrivalField struct{ code, value string }
+
+func leadArrivalFields(arrival contacts.LeadArrival) []leadArrivalField {
+	return []leadArrivalField{
+		{"lead.arrival_name", arrival.Fields.FullName},
+		{"lead.arrival_email", arrival.Fields.Email},
+		{"lead.arrival_phone", arrival.Fields.Phone},
+		{"lead.arrival_title", arrival.Fields.Title},
+		{"lead.arrival_company", arrival.Fields.CompanyName},
+		{"lead.arrival_linkedin", arrival.Fields.LinkedInURL},
+	}
+}
+
+func leadArrivalComponent(arrival contacts.LeadArrival) *systemtext.Component {
+	var parts []*systemtext.Component
+	for _, field := range leadArrivalFields(arrival) {
+		if field.value != "" {
+			parts = append(parts, systemtext.Sentence(field.code, systemtext.Text(field.value)))
+		}
+	}
+	parts = append(parts, systemtext.Sentence("lead.arrival_origin", systemtext.Text(arrival.Origin)), systemtext.Sentence("lead.arrival_next"))
+	component := systemtext.Sequence(parts[0], parts[1:]...)
+	component.Layout = "lines"
+	return component
 }
 
 // repliedTaskInput is the ask to qualify a lead who wrote or booked.
@@ -134,7 +165,7 @@ func (w leadWorkTasks) repliedTaskInput(lead ids.LeadID, arrival ids.UUID, title
 	at := w.now().UTC()
 	source, key := provenance.LeadRepliedSource, arrival.String()
 	return activities.LogActivityInput{
-		Kind: activityKindTask, Subject: &title, OccurredAt: &at,
+		SystemText: &systemtext.Message{Subject: systemtext.Prose(systemtext.Quote, "")}, Kind: activityKindTask, Subject: &title, OccurredAt: &at,
 		SourceSystem: &source, SourceID: &key, SourceActivityID: &arrival,
 		Links:      []activities.ActivityLinkInput{{EntityType: entityLead, EntityID: lead.UUID}},
 		Source:     systemActor,
@@ -144,11 +175,11 @@ func (w leadWorkTasks) repliedTaskInput(lead ids.LeadID, arrival ids.UUID, title
 }
 
 // arrivalTaskInput tells a contact's owner about a lead that arrived for them.
-func (w leadWorkTasks) arrivalTaskInput(arrival contacts.LeadArrival, title, body string) activities.LogActivityInput {
+func (w leadWorkTasks) arrivalTaskInput(arrival contacts.LeadArrival, title, body string, metadata *systemtext.Message) activities.LogActivityInput {
 	at := w.now().UTC()
 	source, key := provenance.LeadForContactSource, arrival.Key
 	return activities.LogActivityInput{
-		Kind: activityKindTask, Subject: &title, Body: &body, OccurredAt: &at,
+		SystemText: metadata, Kind: activityKindTask, Subject: &title, Body: &body, OccurredAt: &at,
 		SourceSystem: &source, SourceID: &key,
 		Links:      []activities.ActivityLinkInput{{EntityType: entityContact, EntityID: arrival.ContactID.UUID}},
 		Source:     systemActor,
@@ -208,7 +239,7 @@ func (t contactArrivalTeller) TellContactOwner(ctx context.Context, contact ids.
 		FullName: &fields.FullName, Email: &fields.Email, CompanyName: &fields.CompanyName, Title: &fields.Title,
 		SourceSystem: &rec.NaturalKey.SourceSystem, SourceID: &rec.NaturalKey.SourceID,
 	}
-	origin := "the " + rec.NaturalKey.SourceSystem + " connector"
+	origin := rec.NaturalKey.SourceSystem
 	if _, err := t.store.TellContactOwnerOfArrival(ctx, contact, in, origin); err != nil {
 		t.log.ErrorContext(ctx, "capture: telling a contact's owner about a captured lead failed",
 			"contact", contact.String(), "err", err)

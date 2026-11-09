@@ -30793,6 +30793,7 @@ export interface components {
         };
         /** @description One durable line addressed to one contact, as the raising call returns it. */
         Notice: {
+            system_display?: components["schemas"]["SystemDisplay"];
             /** Format: uuid */
             id: string;
             kind: components["schemas"]["NoticeKind"];
@@ -30852,6 +30853,7 @@ export interface components {
          *     whether they have already answered it.
          */
         NotificationItem: {
+            system_display?: components["schemas"]["SystemDisplay"];
             /** Format: uuid */
             id: string;
             /**
@@ -39663,6 +39665,8 @@ export interface components {
             horizon_days: number;
             buffer_minutes: number;
             title: string;
+            /** @description Use the built-in meeting title. Explicitly false preserves the supplied title as custom wording. */
+            use_default_title?: boolean;
             location: string;
             /** @description Derived from the host account display name; request values are ignored. Names longer than 200 characters are abbreviated for this profile. */
             host_name?: string;
@@ -39920,6 +39924,7 @@ export interface components {
          *     `withheld`.
          */
         Activity: {
+            system_display?: components["schemas"]["SystemDisplay"];
             /** @description Whether this caller may replace selected individual readers of this internal operational message. Absent for ordinary or withheld activities. */
             readonly can_share_internal?: boolean;
             /** @description Whether THIS caller may change THIS activity: the same question the server's write gate answers on a mutation — an `activity:update` grant, plus authorship, assignment or a linked record the caller may change, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
@@ -43848,7 +43853,20 @@ export interface components {
             /** @description Opaque cursor for the next page, or null if none. */
             next_cursor?: string | null;
         };
+        SystemDisplay: {
+            /** @enum {string} */
+            locale: "en" | "de" | "vi";
+            subject?: string;
+            body?: string;
+            generated_parts?: ("subject" | "body")[];
+            /** Format: int64 */
+            source_version?: number;
+        };
         ActivityReaderRenderingRequest: {
+            /** @enum {string} */
+            part?: "subject" | "body";
+            /** Format: int64 */
+            expected_source_version?: number;
             /**
              * @description The language to show the text in, normally the reader's interface language.
              *     Absent means the language the reader chose for their seat, else the
@@ -43862,6 +43880,10 @@ export interface components {
          *     nowhere.
          */
         ActivityReaderRendering: {
+            /** Format: int64 */
+            source_version?: number;
+            /** @enum {string} */
+            part?: "subject" | "body";
             /** Format: uuid */
             activity_id: string;
             /**
@@ -45741,6 +45763,8 @@ export interface components {
             pipelines?: components["schemas"]["Pipeline"][];
         };
         MeResponse: {
+            /** @description Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request. */
+            reader_rendering_available?: boolean;
             analytics_startup?: components["schemas"]["AnalyticsStartup"];
             user: components["schemas"]["User"];
             /** @description The installation's company name (the installation.name setting). Shown as the typed-confirmation target of the "Reset data" action — the exact string that endpoint validates. */
@@ -49954,6 +49978,7 @@ export interface components {
         };
         /** @description A staged 🟡 confirm-first action awaiting human decision. */
         Approval: {
+            system_display?: components["schemas"]["SystemDisplay"];
             preview?: components["schemas"]["ApprovalPreview"];
             /** @description For a pending commitment, whether its named task assignee cannot receive the task. True for deactivated, archived, missing, or agent seats. An invited colleague can. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee. */
             readonly assignee_inactive?: boolean;
@@ -55457,6 +55482,7 @@ export interface components {
          *     adds none.
          */
         AttentionItem: {
+            system_display?: components["schemas"]["SystemDisplay"];
             /** @description Sent as true on a task whose reminder is due for the reader, who is its assignee and reads their own work. Absent otherwise. */
             reminder_due?: boolean;
             /** @description Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open. Absent when there is no such mail or the reader answered Not yet to this mail. */
@@ -56323,6 +56349,7 @@ export interface components {
          *     client draws the summary alone rather than inventing something to open.
          */
         Receipt: {
+            system_display?: components["schemas"]["SystemDisplay"];
             close_date_change?: components["schemas"]["CloseDateChange"];
             /**
              * Format: uuid
@@ -57100,6 +57127,7 @@ export interface components {
          *     browser does not.
          */
         WorklistItem: {
+            system_display?: components["schemas"]["SystemDisplay"];
             /** @description On an approval, its title taken apart, so the row shows the sentence as its title and the proposed values as its supporting line. Absent when the title is a sentence alone. */
             summary_parts?: components["schemas"]["ApprovalSummaryParts"];
             /** @description Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open. Absent when there is no such mail or the reader answered Not yet to this mail. */

@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -102,7 +103,7 @@ func (s *Store) ClaimEmailAttempt(ctx context.Context, id ids.UUID) (EmailAttemp
 
 // claimedNoticeColumns is what a claim returns about each notice it took.
 const claimedNoticeColumns = `id, recipient_user_id, kind, subject, body,
-	target_type, target_id, created_at, origin, email_attempted_at, coalesce(dedupe_key,'')`
+	target_type, target_id, created_at, origin, email_attempted_at, coalesce(dedupe_key,''), system_text`
 
 // scanClaimedNotice reads one row of claimedNoticeColumns.
 func scanClaimedNotice(row pgx.Row) (EmailAttempt, time.Time, error) {
@@ -116,7 +117,7 @@ func scanClaimedNotice(row pgx.Row) (EmailAttempt, time.Time, error) {
 	var targetID *ids.UUID
 	if err := row.Scan(&id, &recipient, &attempt.Notice.Kind, &attempt.Notice.Subject,
 		&attempt.Notice.Body, &targetType, &targetID, &attempt.Notice.CreatedAt,
-		&attempt.Notice.Origin, &claimedAt, &noticeKey); err != nil {
+		&attempt.Notice.Origin, &claimedAt, &noticeKey, &attempt.Notice.SystemText); err != nil {
 		return attempt, claimedAt, err
 	}
 	if approval, ok := approvalOfNoticeKey(attempt.Notice.Kind, noticeKey); ok {

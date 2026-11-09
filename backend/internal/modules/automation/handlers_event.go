@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/leadsource"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -111,7 +112,8 @@ func (w stageChangeCreateTask) Plan(ctx context.Context, ev workflow.Event) (wor
 	// resolves to "deal" — the same value this map hardcoded before the
 	// shared builder existed. The deal's owner is who the next step belongs
 	// to; without them the task reaches nobody's own queue.
-	return ownedTaskEffectNoKey(ctx, w.ex, ev, "Plan the next step after the stage change",
+	ctx = systemtext.WithMessage(ctx, &systemtext.Message{Version: 1, Subject: systemtext.Sentence("automation.stage_change")})
+	return ownedTaskEffectNoKey(ctx, w.ex, ev, systemtext.Literal("automation.stage_change"),
 		ev.OccurredAt.AddDate(0, 0, dueInDays))
 }
 
@@ -198,7 +200,8 @@ func (w routeLeadCreateTask) Plan(ctx context.Context, ev workflow.Event) (workf
 	if err != nil {
 		return workflow.Effect{}, err
 	}
-	return ownedTaskEffectNoKey(ctx, w.ex, ev, "Follow up with the new lead",
+	ctx = systemtext.WithMessage(ctx, &systemtext.Message{Version: 1, Subject: systemtext.Sentence("automation.new_lead")})
+	return ownedTaskEffectNoKey(ctx, w.ex, ev, systemtext.Literal("automation.new_lead"),
 		ev.OccurredAt.AddDate(0, 0, dueInDays))
 }
 
@@ -274,11 +277,13 @@ func (w stageChangeNotify) Plan(ctx context.Context, ev workflow.Event) (workflo
 		(strings.EqualFold(ev.Actor.ID, ownerID) || strings.EqualFold(ev.Actor.ID, principal.HumanIDPrefix+ownerID)) {
 		return workflow.Effect{}, declineFiring("the owner made this stage change")
 	}
+	metadata := &systemtext.Message{Body: systemtext.Sentence("automation.stage_unavailable")}
 	dealName := deal.Name
 	if dealName == "" {
-		dealName = "Deal"
+		dealName = systemtext.Literal("automation.unnamed_deal")
+		metadata.Subject = systemtext.Sentence("automation.unnamed_deal")
 	}
-	body := "Stage changed. The previous and new stages are unavailable."
+	body := systemtext.Literal("automation.stage_unavailable")
 	var change crmcontracts.PublicEventDealStageChanged
 	if len(ev.Payload) > 0 {
 		if err := json.Unmarshal(ev.Payload, &change); err != nil {
@@ -286,6 +291,7 @@ func (w stageChangeNotify) Plan(ctx context.Context, ev workflow.Event) (workflo
 		}
 		if change.FromStageName != nil && change.ToStageName != nil {
 			body = fmt.Sprintf("%s → %s", *change.FromStageName, *change.ToStageName)
+			metadata.Body = nil
 		}
 	}
 	origin := noticeOrigin(ev)
@@ -306,7 +312,7 @@ func (w stageChangeNotify) Plan(ctx context.Context, ev workflow.Event) (workflo
 		return workflow.Effect{}, fmt.Errorf("automation: encoding the notify action: %w", err)
 	}
 	return workflow.Effect{Actions: []workflow.Action{{
-		Kind: workflow.ActionNotify, Target: ev.Entity, Args: args,
+		Kind: workflow.ActionNotify, Target: ev.Entity, Args: args, SystemText: metadata,
 	}}}, nil
 }
 

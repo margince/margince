@@ -98,12 +98,9 @@ func (s Server) contactRecordPreview(ctx context.Context, id ids.UUID) (recordPr
 }
 
 func recordCard(kind string, id ids.UUID, name, label string, details ...string) recordPreview {
-	if strings.TrimSpace(name) == "" {
-		name = label
-	}
 	summary := strings.Join(slices.DeleteFunc(details, func(value string) bool { return strings.TrimSpace(value) == "" }), " · ")
-	if summary == "" {
-		summary = label + " in Margince"
-	}
-	return recordPreview{Title: "Margince · " + label + ": " + name, Summary: summary, Href: "/#/" + kind + "/" + id.String()}
+	preview := recordPreview{kind: kind, name: strings.TrimSpace(name), genericSummary: summary == "", Summary: summary, Href: "/#/" + kind + "/" + id.String()}
+	card := recordPreviewCard(preview)
+	preview.Title, preview.Summary = card.Title, card.Summary
+	return preview
 }

@@ -20,11 +20,11 @@ package capture
 import (
 	"context"
 	"fmt"
-	"slices"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/threadverdict"
 )
 
 // ThreadOutcome is what applying one verdict to a thread changed.
@@ -115,11 +115,6 @@ func (s *ThreadVerdictStore) RecordOutcomeOnWholeThreadTx(
 	}
 }
 
-// closingVerdicts are the thread verdicts that close the messages of the thread
-// this seat had already opened. "This conversation is private" is true of every
-// message in it, including those an earlier answer published.
-var closingVerdicts = []string{VerdictHeld, VerdictUnsure, VerdictHeldByOwner}
-
 // openedVerdicts are the import statuses a closing verdict overwrites besides
 // an undecided one.
 var openedVerdicts = []string{VerdictCleared, VerdictSharedByOwner}
@@ -127,7 +122,7 @@ var openedVerdicts = []string{VerdictCleared, VerdictSharedByOwner}
 // ClosesOpenMessages reports whether a thread verdict closes the seat's
 // messages the thread had already opened.
 func ClosesOpenMessages(status string) bool {
-	return slices.Contains(closingVerdicts, status)
+	return threadverdict.Holds(status)
 }
 
 // siblingStatusesTaken lists the import statuses a thread verdict overwrites on

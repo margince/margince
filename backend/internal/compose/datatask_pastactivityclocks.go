@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // pastActivityClocksDataTask moves back the stored clocks the rule before
@@ -21,7 +22,7 @@ func pastActivityClocksDataTask() datatask.Task {
 	audit := datatask.AuditPolicy{Reason: "the last-activity triggers move the same derived clock without an audit"}
 	return datatask.Task{
 		ID: "core/1792656701_past_activity_clocks", Version: 1,
-		Title: "Move last-activity dates back to what has happened", Requires: []string{"core/1792656701"},
+		Title: systemtext.Literal("datatask.title.core.1792656701_past_activity_clocks"), Requires: []string{"core/1792656701"},
 		Steps: []datatask.Step{
 			futureClockStep("contacts", storekit.ClockContacts, audit),
 			futureClockStep("companies", storekit.ClockCompanies, audit),

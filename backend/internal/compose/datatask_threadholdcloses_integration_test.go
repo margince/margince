@@ -12,7 +12,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/datatask"
@@ -56,7 +55,9 @@ func seedOpenedUnderVerdict(t *testing.T, e *integration.Env, threadKey, ledgerS
 			 WHERE id = $1`, question, ledgerStatus); err != nil {
 			return err
 		}
-		return activities.RecomputeAudiencesTx(e.Admin(), tx, asActivityIDs(messages))
+		// Recreate legacy persisted visibility; the current writer already honors the ledger.
+		_, err := tx.Exec(context.Background(), "UPDATE activity SET audience='workspace', audience_reason=NULL WHERE id=ANY($1)", messages)
+		return err
 	}); err != nil {
 		t.Fatalf("settling the thread: %v", err)
 	}

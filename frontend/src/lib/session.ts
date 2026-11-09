@@ -60,7 +60,9 @@ export function useMe(enabled = true) {
     const previous = previousScope.current;
     if (previous !== undefined && previous !== scope)
       client.removeQueries({
-        predicate: (entry) => entry.queryKey.includes(previous),
+        predicate: (entry) =>
+          entry.queryKey.includes(previous) ||
+          entry.queryKey[0] === "reader-rendering",
       });
     previousScope.current = scope;
   }, [client, scope]);

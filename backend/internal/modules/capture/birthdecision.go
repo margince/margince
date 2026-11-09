@@ -283,7 +283,7 @@ func standingHoldsTx(
 }
 
 // Settled holds apply to every sibling; pending has not judged the conversation.
-// The list is closingVerdicts, so a hold here and a closing sibling stamp agree.
+// The shared rule also controls sibling stamps and reader authorization.
 func holdingVerdict(status string) bool {
 	return ClosesOpenMessages(status)
 }

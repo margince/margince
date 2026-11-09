@@ -12,6 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // phaseHistoryLinksDataTask links each project phase move written before the
@@ -21,7 +22,7 @@ import (
 func phaseHistoryLinksDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792842001_phase_history_audit_links", Version: 1,
-		Title: "Linking project phase moves to the record of who made them", Requires: []string{"core/1792842001"},
+		Title: systemtext.Literal("datatask.title.core.1792842001_phase_history_audit_links"), Requires: []string{"core/1792842001"},
 		Steps: []datatask.Step{{
 			Name: "link_phase_history", Limit: 500, MinLimit: 10,
 			Audit:    datatask.AuditPolicy{Reason: "projects.recordPhaseTransition stamps the same link in the transaction that writes the move, without a separate audit row"},

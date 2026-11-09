@@ -62,6 +62,7 @@ import (
 // being read on its own: "a sweep runs it" is not one, "no row leaves this
 // call" is.
 var ungatedEntryPoints = gatekit.Waive(map[string]string{
+	"internal/modules/activities:DefaultMeetingSubject":   "reads only the installation language to render the built-in booking caption, which anonymous booking pages already publish; it reads and returns no activity or account data",
 	"internal/modules/identity:EffectiveAuthorityTx":      "The same current identity authority snapshot as EffectiveAuthority, inside a caller transaction. This supplies RBAC to an admission gate, so gating it on itself would recurse; the service method also serializes the live member with mutation.",
 	"internal/modules/identity:HeldAuthorityTx":           "The same authority snapshot as EffectiveAuthorityTx, under the shared authorization lock and with no member row lock. It supplies RBAC to the capture admission check, so gating it on itself would recurse; every role, team, seat and deactivation change takes that lock exclusively.",
 	"internal/modules/contacts:TellContactOwnerOfLead":    "the follow-up to a refusal the caller's own gated lead write produced: it acts only on a ContactHoldsIdentityError that a create behind auth.Require(lead, create) returned, and files a task for the contact's owner as the system. It reads and returns no record; the caller learns only whether the owner was told",

@@ -127,12 +127,13 @@ func liftAndEraseHeldRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, due str
 		UPDATE activity a
 		   SET internal_mail_authorization = `+erasedInternalMailAuthorizationSQL+`,
  restricted_at = NULL, restricted_reason = NULL, restricted_until = NULL,
-		       subject = NULL, body = NULL, raw = NULL, agenda_fingerprint = NULL, counterparty_email = NULL,
+		       subject = NULL, body = NULL, system_text = NULL, raw = NULL, agenda_fingerprint = NULL, counterparty_email = NULL,
 		       source_author_name = NULL, language = NULL,
 		       reply_verdict = NULL, reply_verdict_at = NULL, reply_verdict_by = NULL,
 		       redacted_fields = a.redacted_fields || ARRAY(SELECT c FROM unnest(ARRAY[
 		           CASE WHEN a.subject IS NOT NULL THEN 'subject' END,
-		           CASE WHEN a.body IS NOT NULL THEN 'body' END]) AS c
+		           CASE WHEN a.body IS NOT NULL THEN 'body' END,
+CASE WHEN a.system_text IS NOT NULL THEN 'system_text' END]) AS c
 		         WHERE c IS NOT NULL),
 		       archived_at = coalesce(a.archived_at, now())
 		 WHERE a.id = $1 AND a.restricted_at IS NOT NULL `+due+`

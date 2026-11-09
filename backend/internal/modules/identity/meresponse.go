@@ -43,6 +43,8 @@ func TeamWeekOf(ctx context.Context) crmcontracts.TeamWeekReach {
 func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeResponse {
 	adminPasswordLink := h.canIssuePasswordLink(ctx, id)
 	confirmRequests := h.canRequestConfirmation(ctx, id)
+	readerContext := actorCtx(ctx, id)
+	readerRendering := h.readerRenderingAvailable && auth.RequireHuman(readerContext) == nil && auth.Require(readerContext, "activity", principal.ActionRead) == nil
 	reportingAvailable := true
 	roles := id.Roles
 	if roles == nil {
@@ -72,14 +74,15 @@ func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeRe
 			TimezoneChosen: timezoneChosenFlag(id.Timezone, id.TimezoneChosen),
 			TimezoneSetBy:  id.TimezoneSetBy,
 		},
-		Roles:                   roles,
-		Teams:                   teams,
-		TeamWeek:                new(TeamWeekOf(actorCtx(ctx, id))),
-		WorkspaceName:           id.WorkspaceName,
-		NonProduction:           h.nonProduction,
-		DataResetAvailable:      &h.dataResetAvailable,
-		AdminPasswordLink:       adminPasswordLink,
-		ConfirmRequestsSendable: &confirmRequests,
+		Roles:                    roles,
+		Teams:                    teams,
+		TeamWeek:                 new(TeamWeekOf(actorCtx(ctx, id))),
+		WorkspaceName:            id.WorkspaceName,
+		NonProduction:            h.nonProduction,
+		DataResetAvailable:       &h.dataResetAvailable,
+		AdminPasswordLink:        adminPasswordLink,
+		ConfirmRequestsSendable:  &confirmRequests,
+		ReaderRenderingAvailable: &readerRendering,
 		Authorization: &crmcontracts.Authorization{
 			SeatType: contractSeatType(id.SeatType),
 			Objects:  contractObjectGrants(id.Permissions.Objects),

@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // takeEmailRequest is the explicit review path for historical or unassigned
@@ -144,7 +145,7 @@ func emailRequestTask(ctx context.Context, tx pgx.Tx, source crmcontracts.Activi
 func readMailSharedWithWorkspace(ctx context.Context, tx pgx.Tx, message ids.UUID) (bool, error) {
 	var shared bool
 	if err := tx.QueryRow(ctx, `
-		SELECT audience = 'workspace' AND restricted_at IS NULL FROM activity WHERE id = $1`, message).Scan(&shared); err != nil {
+		SELECT `+auth.WorkspaceAudienceSQL("a")+` AND a.restricted_at IS NULL FROM activity a WHERE a.id = $1`, message).Scan(&shared); err != nil {
 		return false, fmt.Errorf("activities: reading who may read a request: %w", err)
 	}
 	return shared, nil
@@ -227,14 +228,17 @@ func requesterLinks(filed requestFiling) []ActivityLinkInput {
 }
 
 func emailRequestTaskInput(source crmcontracts.Activity, links []ActivityLinkInput, userID ids.UUID, asOf time.Time, shared bool) LogActivityInput {
-	subject := "Reply to email"
+	subject := systemtext.Literal("task.reply_to_email")
+	metadata := &systemtext.Message{Subject: systemtext.Sentence("task.reply_to_email")}
 	if source.Subject != nil && strings.TrimSpace(*source.Subject) != "" {
 		subject = *source.Subject
+		metadata.Subject = systemtext.Prose(systemtext.Quote, "")
 	}
 	sourceSystem, sourceID := EmailRequestTaskSource, source.Id.String()
 	messageID, assignee := ids.UUID(source.Id), ids.From[ids.UserKind](userID)
 	in := LogActivityInput{
-		Kind: string(crmcontracts.ActivityKindTask), Subject: &subject, OccurredAt: &asOf, AssigneeID: &assignee,
+		SystemText: metadata,
+		Kind:       string(crmcontracts.ActivityKindTask), Subject: &subject, OccurredAt: &asOf, AssigneeID: &assignee,
 		SourceSystem: &sourceSystem, SourceID: &sourceID, SourceActivityID: &messageID,
 		Source: EmailRequestTaskSource, Origin: OriginSystemRemediation, Links: links,
 	}
