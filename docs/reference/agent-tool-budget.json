@@ -47,11 +47,11 @@
         "read_record"
       ],
       "of_served_tools": 48,
-      "tokens": 4351,
-      "listing_tokens": 2130,
+      "tokens": 4345,
+      "listing_tokens": 2124,
       "step_schema_tokens": 1629,
       "percent_of_ceiling": 13,
-      "headroom_tokens": 18859,
+      "headroom_tokens": 18865,
       "dangling_cross_references": [],
       "temptation_weight": 5
     },
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 48,
-      "tokens": 6588,
-      "listing_tokens": 3435,
+      "tokens": 6581,
+      "listing_tokens": 3429,
       "step_schema_tokens": 2560,
       "percent_of_ceiling": 20,
-      "headroom_tokens": 16622,
+      "headroom_tokens": 16629,
       "dangling_cross_references": [
         "at_risk_relationships → read_relationships",
         "log_activity → draft_outbound",
