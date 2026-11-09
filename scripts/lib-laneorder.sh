@@ -81,11 +81,14 @@ order_by_hint() {
 # `dir|package|*|seconds` line gives the weight of every test of that package it
 # does not name. A test with neither weighs 1 s, so a stale file costs balance
 # and never a test. With no timing at all every weight is equal.
+#
+# No weight is under 0.01 s, go test's own resolution. A zero never adds to a
+# bin's load, so every zero-weight test would be dealt to the same first bin.
 LANEORDER_WEIGHT='
   function load_weights(timing,    l, f, n) {
     while (timing != "" && (getline l < timing) > 0) {
       n = split(l, f, "|")
-      if (n == 4 && f[4] ~ /^[0-9]+(\.[0-9]+)?$/) secs[f[1] "|" f[2] "|" f[3]] = f[4] + 0
+      if (n == 4 && f[4] ~ /^[0-9]+(\.[0-9]+)?$/) secs[f[1] "|" f[2] "|" f[3]] = (f[4] + 0 < 0.01) ? 0.01 : f[4] + 0
     }
   }
   function weight(dir, pkg, test,    rest) {
@@ -234,20 +237,27 @@ critical_part() {
 # compiler under `-tags=integration`. A test it misses is in no slice, and the
 # ran==assigned teeth compare two sets derived from it, so where it cannot
 # decide it fails rather than guesses:
-#   - A file's constraints are its `//go:build` and `// +build` lines above the
-#     `package` clause. A tag named below it is prose.
-#   - A package is in the lane when one of its test files names `integration`
-#     alone. Only those packages are held to the allowlist below; a package the
-#     lane never runs may use any tag.
+#   - Files go reads as it reads them: none under testdata, vendor or a
+#     directory starting with `_` or `.`, and no file starting with either.
+#   - A file's constraints are its `//go:build` lines above the `package`
+#     clause, or its `// +build` lines when it has no `//go:build` line.
+#   - A package is in the lane when a test file's constraint names
+#     `integration`. Only those packages are held to the allowlist below; a
+#     package the lane never runs may use any tag.
 #   - `integration` tags a file. `!integration`, the opt-in lanes (e2e_llm,
 #     livesmoke, voicelive) and the `integration && bench|rolesweep` lanes are
 #     never in this build, so their files are left out as the compiler leaves
-#     them out. Any other constraint fails: a built-in tag such as linux
-#     compiles under `go test` yet would land in no slice.
+#     them out. Any other constraint fails, `(integration)` included: a
+#     built-in tag such as linux compiles under `go test` yet would land in no
+#     slice. A tagged file named for a GOOS or GOARCH fails for the same reason.
 #   - A tagged file with a Fuzz or Example function fails, because the anchored
-#     -run union would filter it out where no check sees it.
-#   - TestMain is a fixture, and Test followed by a lowercase letter is a plain
-#     function, as `go test` reads them.
+#     -run union would filter it out where no check sees it, and so does a Test
+#     name outside ASCII, which this scan cannot class as go does.
+#   - TestMain(*testing.M) is a fixture, and Test followed by a lowercase letter
+#     is a plain function, as `go test` reads them.
+#
+# A declaration-shaped line inside a raw string or a block comment reads as a
+# test. That fails loudly in the ran==assigned check, never quietly.
 #
 # One awk process reads every test file. A shell loop that forked a sed and a
 # grep per file cost each build and each shard about 40 s.
@@ -256,32 +266,58 @@ lane_discover() { # untagged module-dir...
   shift
   for dir in "$@"; do
     [[ -d "$dir" ]] || continue
-    # Not a dot file: the `*_test.go` glob go test reads never names one.
-    find "$dir" -type f -name '*_test.go' ! -name '.*' | awk -v dir="$dir" '{ print dir "\t" $0 }'
+    find "$dir" -mindepth 1 \( -name testdata -o -name vendor -o -name '_*' -o -name '.*' \) -prune \
+      -o -type f -name '*_test.go' -print | awk -v dir="$dir" '{ print dir "\t" $0 }'
   done | LC_ALL=C sort | awk -F'\t' -v untagged="$untagged" '
     function fail(msg) { print "FAIL: " msg > "/dev/stderr"; exit 1 }
+    # go/build: the part after the first `_`, less `_test`, ends in _GOOS,
+    # _GOARCH or _GOOS_GOARCH.
+    function named_for_platform(file,    base, at, parts, count) {
+      base = file
+      sub(/^.*\//, "", base)
+      sub(/\.go$/, "", base)
+      at = index(base, "_")
+      if (!at) return 0
+      base = substr(base, at)
+      sub(/_test$/, "", base)
+      count = split(base, parts, "_")
+      if (count >= 3 && (parts[count - 1] in goos) && (parts[count] in goarch)) return 1
+      return (parts[count] in goos) || (parts[count] in goarch)
+    }
+    BEGIN {
+      split("aix android darwin dragonfly freebsd hurd illumos ios js linux nacl netbsd openbsd plan9 solaris wasip1 windows zos", list, " ")
+      for (i in list) goos[list[i]] = 1
+      split("386 amd64 amd64p32 arm armbe arm64 arm64be loong64 mips mipsle mips64 mips64le mips64p32 mips64p32le ppc ppc64 ppc64le riscv riscv64 s390 s390x sparc sparc64 wasm", list, " ")
+      for (i in list) goarch[list[i]] = 1
+    }
     {
       n++
       path[n] = $2
       pkgdir = $2
       sub(/\/[^\/]*$/, "", pkgdir)
       key[n] = $1 "|" ((pkgdir == $1) ? "." : "./" substr(pkgdir, length($1) + 2))
-      region = 1; exprs = 0; funcs = 0; names = ""; fuzz[n] = 0
+      region = 1; modern = 0; legacy = 0; funcs = 0; names = ""; fuzz[n] = 0; odd[n] = ""
       while ((getline line < $2) > 0) {
         if (region && line ~ /^package /) region = 0
-        else if (region && line ~ /^\/\/go:build /) expr[n, ++exprs] = substr(line, 12)
-        else if (region && line ~ /^\/\/ \+build /) expr[n, ++exprs] = substr(line, 11)
-        if (line ~ /^func Test[A-Za-z0-9_]*\(/) {
-          funcs++
+        else if (region && line ~ /^\/\/go:build /) expr[n, ++modern] = substr(line, 12)
+        else if (region && line ~ /^\/\/ \+build /) old[++legacy] = substr(line, 11)
+        if (line ~ /^func Test[A-Za-z0-9_]*\(/) funcs++
+        if (line ~ /^func Test/) {
           name = substr(line, 6)
           sub(/\(.*/, "", name)
-          if (name != "TestMain" && substr(name, 5, 1) !~ /[a-z]/) names = names "|" name
+          if (name ~ /[^A-Za-z0-9_]/) odd[n] = name
+          else if (name == "TestMain" && line !~ /^func TestMain\([^)]*\*testing\.T\)/) continue
+          else if (substr(name, 5, 1) !~ /[a-z]/) names = names "|" name
         }
         if (line ~ /^func (Fuzz|Example)[A-Za-z0-9_]*\(/) fuzz[n] = 1
       }
       close($2)
-      nexpr[n] = exprs; nfuncs[n] = funcs; tests[n] = names
-      for (i = 1; i <= exprs; i++) if (expr[n, i] == "integration") lane[key[n]] = 1
+      # go ignores `// +build` once a file has a `//go:build` line.
+      if (!modern) for (i = 1; i <= legacy; i++) expr[n, ++modern] = old[i]
+      nexpr[n] = modern; nfuncs[n] = funcs; tests[n] = names
+      for (i = 1; i <= modern; i++) {
+        if (expr[n, i] ~ /(^|[^A-Za-z0-9_.])integration([^A-Za-z0-9_.]|$)/) lane[key[n]] = 1
+      }
     }
     END {
       for (i = 1; i <= n; i++) {
@@ -298,9 +334,13 @@ lane_discover() { # untagged module-dir...
         }
         if (skip) continue
         if (!tagged) { print key[i] "|" nfuncs[i] > untagged; continue }
+        if (named_for_platform(path[i])) fail(path[i] " is named for a GOOS or GOARCH, which the static shard discovery cannot decide\n" \
+          "  rename it, or move what it holds into a file every platform builds")
         if (fuzz[i]) fail(path[i] " declares a Fuzz or Example function in the integration lane\n" \
           "  the anchored -run union would filter it out and the ran==assigned teeth cannot see it;\n" \
           "  teach discovery to enumerate it, or move it to the unit lane")
+        if (odd[i] != "") fail(path[i] " declares " odd[i] ", a test name outside ASCII letters, digits and _\n" \
+          "  the static shard discovery cannot tell whether go test runs it; rename it")
         count = split(tests[i], found, "|")
         for (j = 2; j <= count; j++) print key[i] "|" found[j]
       }

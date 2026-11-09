@@ -586,7 +586,8 @@ Wiring details:
     nothing is not a measure of zero.
   - On a pull request the rule does not apply. New code there is the diff, and a diff that skipped a
     part of the tree has no lines of that part to cover.
-- It waits for its coverage jobs and nothing else, so it starts as the `integration` fan-in ends.
+- It waits for its coverage jobs and nothing else, so it starts as the last of them ends. On a full run
+  that is the `integration` fan-in.
   SonarCloud reads coverage only from the report files there when the scanner runs. It takes no coverage
   after an analysis, and a second analysis of a pull request replaces the first. So no part of the scan
   can start earlier, and the `ci` aggregate, which makes no coverage, is not in its `needs`.

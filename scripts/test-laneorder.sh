@@ -237,6 +237,15 @@ printf 'backend|./mid|TestP|10.0\nbackend|./mid|*|6.0\n' > "$work/midtime"
 count=$(assign_shard "$work/middisc" "$work/midtime" 1 2 | wc -l | tr -d ' ')
 [[ "$count" -eq 2 ]] || fail "shard 1 of 2 got $count of ./mid's tests; the * row weighs the unnamed ones at 6 s, so it must hold 2"
 
+# A package whose tests all measured 0.00 s, or a file poisoned with zeros,
+# must still spread: a weight of zero never adds to a shard's load.
+printf 'backend|./zero|*|0.000\n' > "$work/zerotime"
+printf 'backend|./zero|TestZ%s\n' 1 2 3 4 5 6 > "$work/zerodisc"
+for k in 1 2 3; do
+  count=$(assign_shard "$work/zerodisc" "$work/zerotime" "$k" 3 | wc -l | tr -d ' ')
+  [[ "$count" -eq 2 ]] || fail "with every weight zero, shard $k got $count of 6 tests; it must get 2"
+done
+
 : > "$work/notiming"
 for k in 1 2 3; do
   count=$(assign_shard "$work/discovery" "$work/notiming" "$k" 3 | grep -c '|./big|' || true)
@@ -331,15 +340,32 @@ expect_order "discovery lists the tagged tests of the lane's packages, as go tes
   "$(lane_discover "$work/untagged" "$mod")"
 expect_order "an untagged file counts every Test function it holds, and a constraint below package is prose" \
   "$(printf '%s\n' "$mod|./a|1" "$mod|./a|2")" "$(LC_ALL=C sort "$work/untagged")"
-printf '//go:build linux\n\npackage c\n\nfunc TestLinux(t *testing.T) {}\n' > "$mod/c/linux_test.go"
-if lane_discover "$work/untagged" "$mod" > /dev/null 2> "$work/err" || ! grep -q "linux" "$work/err"; then
-  fail "a constraint discovery cannot decide, in a package the lane runs, must fail by name"
-fi
-rm "$mod/c/linux_test.go"
-printf 'func FuzzC(f *testing.F) {}\n' >> "$mod/c/c_test.go"
-if lane_discover "$work/untagged" "$mod" > /dev/null 2> "$work/err" || ! grep -q "Fuzz or Example" "$work/err"; then
-  fail "a Fuzz function in a tagged file must fail discovery"
-fi
+# go reads no testdata directory, and with a //go:build line it ignores the
+# // +build lines beside it.
+mkdir -p "$mod/c/testdata/fixture"
+printf '//go:build integration\n\npackage fixture\n\nfunc TestFixture(t *testing.T) {}\n' > "$mod/c/testdata/fixture/f_test.go"
+printf '//go:build integration && bench\n// +build integration,bench\n\npackage c\n\nfunc TestPaired(t *testing.T) {}\n' > "$mod/c/paired_test.go"
+printf '//go:build integration\n\npackage c\n\nfunc TestMain(t *testing.T) {}\n' > "$mod/c/main_test.go"
+expect_order "testdata is not read, a paired legacy line follows //go:build, and TestMain(*testing.T) is a test" \
+  "$(printf '%s\n' "$mod|./a|Test" "$mod|./a|TestA" "$mod|./c|TestC" "$mod|./c|TestMain")" \
+  "$(lane_discover "$work/untagged" "$mod")"
+expect_fail() { # label stderr-pattern file content
+  printf '%b' "$4" > "$3"
+  if lane_discover "$work/untagged" "$mod" > /dev/null 2> "$work/err" || ! grep -q "$2" "$work/err"; then
+    fail "$1"
+  fi
+  rm "$3"
+}
+expect_fail "a constraint discovery cannot decide, in a package the lane runs, must fail by name" \
+  linux "$mod/c/linux_test.go" '//go:build linux\n\npackage c\n\nfunc TestLinux(t *testing.T) {}\n'
+expect_fail "a constraint that names integration in another form must fail, not skip its package" \
+  "(integration)" "$mod/d_test.go" '//go:build (integration)\n\npackage d\n\nfunc TestD(t *testing.T) {}\n'
+expect_fail "a tagged file named for a GOOS must fail" \
+  "GOOS or GOARCH" "$mod/c/c_windows_test.go" '//go:build integration\n\npackage c\n\nfunc TestWin(t *testing.T) {}\n'
+expect_fail "a test name outside ASCII must fail" \
+  "outside ASCII" "$mod/c/u_test.go" '//go:build integration\n\npackage c\n\nfunc Test\xc3\x89crit(t *testing.T) {}\n'
+expect_fail "a Fuzz function in a tagged file must fail discovery" \
+  "Fuzz or Example" "$mod/c/fuzz_test.go" '//go:build integration\n\npackage c\n\nfunc FuzzC(f *testing.F) {}\n'
 
 # The committed shard timing has to be readable by assign_shard: four fields,
 # a number last. A line it cannot read silently weighs its test at the mean.

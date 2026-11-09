@@ -1001,7 +1001,7 @@ jobs:
     # wasn't already blocked is blocked.
     #
     # It waits for its coverage producers and nothing else, so it starts as the
-    # integration fan-in ends. SonarCloud reads coverage only from the report
+    # last of them ends: on a full run, the integration fan-in. SonarCloud reads coverage only from the report
     # files present when the scanner runs, and a second analysis of a pull request
     # replaces the first, so no part of the scan can start before the last
     # producer ends. The `ci` aggregate is not a producer.

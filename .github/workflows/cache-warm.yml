@@ -324,8 +324,12 @@ jobs:
           set -euo pipefail
           dir="$RUNNER_TEMP/timing"
           mkdir -p "$dir"
-          urls="$(gh api "repos/$REPO/actions/artifacts?name=test-timing-integration&per_page=20" \
-            --jq '[.artifacts[] | select(.expired == false)][:5][].archive_download_url')"
+          # Runs from branches of this repository only. A fork's pull request
+          # writes what its own code measured, so it could skew the split; a
+          # floor on every weight (scripts/lib-laneorder.sh) keeps even skewed
+          # times from piling a package onto one shard.
+          urls="$(gh api "repos/$REPO/actions/artifacts?name=test-timing-integration&per_page=50" \
+            --jq '[.artifacts[] | select(.expired == false and .workflow_run.head_repository_id == .workflow_run.repository_id)][:5][].archive_download_url')"
           n=0
           while IFS= read -r url; do
             [[ -n "$url" ]] || continue
