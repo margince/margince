@@ -42,8 +42,8 @@ const (
 )
 
 // A ceiling and no floor: the held-out mail brings questions but none of the
-// facts that answer them, and a word floor over a factless reply is filled
-// with invented reasons; naming what has to be checked is the honest answer.
+// facts that answer them. A word floor over a factless reply is filled with
+// invented reasons, so the reply names what has to be checked.
 //
 // Carries no draftrules.Shared; exemptFromSharedRules says why and when that ends.
 const voiceEvalDraftSystem = voiceDraftOpening + "\n" +

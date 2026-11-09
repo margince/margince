@@ -279,8 +279,8 @@ func TestAMoveWrittenAsAPromiseIsRefusedWithoutSpendingTheAdviceBudget(t *testin
 	}
 }
 
-// A move is read off its own message, so a newer message the reader may not
-// read can have answered it: the model is never told an older one waits.
+// A move is read off its own message. A newer message the reader may not read
+// can have answered it, so the model is never told an older one waits.
 func TestNoMoveIsShownBehindAMessageTheReaderMayNotRead(t *testing.T) {
 	t.Parallel()
 	open := inputFixture()

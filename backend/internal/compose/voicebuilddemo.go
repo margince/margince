@@ -23,9 +23,9 @@ import (
 )
 
 // voiceDemoDraftSystemFor is the evaluation's instruction for a call that
-// carries no sample to reply to — only the profile is inside the boundary, so
-// only the profile is named by it. A ceiling and no floor: three facts fill
-// about thirty words, and a word floor is met with invented ones.
+// carries no sample to reply to. Only the profile is inside the boundary, so it
+// names only the profile. A ceiling and no floor: three facts fill about thirty
+// words, and a word floor is met with invented ones.
 func voiceDemoDraftSystemFor(fence promptfence.Fence) string {
 	return voiceDraftOpening + "\n" +
 		"Length: one or two short paragraphs, at most 80 words — as long as the facts need, never padded to a length.\n" +

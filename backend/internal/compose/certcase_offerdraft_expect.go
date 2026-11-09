@@ -146,10 +146,9 @@ func groundablePrice(priceMinor int64, snippet string, catalog []crmcontracts.Pr
 	return false
 }
 
-// disagreements names every expected line the staged draft does not carry, and
-// every staged line citing an item expected to ground none. All of them, not the
-// first: a draft that priced one line right and two wrong is not the near miss
-// one line would read as.
+// disagreements names every expected line the staged draft does not carry. It
+// also names every staged line citing an item expected to ground none. It names
+// all of them: a draft with one line right and two wrong is no near miss.
 //
 // A line is identified by the context item it cites, and ANY staged line citing
 // that item can satisfy the scenario — every staged line reaches the offer, so

@@ -132,8 +132,8 @@ func encodeInput(in Input) string {
 }
 
 // withNoTurnBehindAWithheldRow drops the move from every message older than a
-// withheld one: each move is read off its own message, and the newer message
-// this reader cannot read may have answered it. Recent is newest first.
+// withheld one. Each move is read off its own message. The newer message this
+// reader cannot read may have answered it. Recent is newest first.
 func withNoTurnBehindAWithheldRow(in Input) Input {
 	recent := slices.Clone(in.Recent)
 	behindWithheld := false

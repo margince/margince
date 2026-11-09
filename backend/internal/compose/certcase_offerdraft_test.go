@@ -377,8 +377,8 @@ func TestOfferDraftCaseReportsARefusedLineBesideAnAcceptedAnswer(t *testing.T) {
 	}
 }
 
-// An item declared no_line fails any draft that stages a line from it, however
-// right the rest of the draft is, and passes one that leaves it out.
+// An item declared no_line fails a draft that stages a line from it, however
+// right the rest is. A draft that leaves it out passes.
 func TestOfferDraftCaseFailsALineFromAnItemExpectedToGroundNone(t *testing.T) {
 	expected := offerDraftExpectation(t, map[string]offerDraftExpectedLine{
 		offerDraftKickoffSource: {UnitPriceMinor: 20000, PriceGrounded: true},
