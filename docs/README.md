@@ -141,7 +141,6 @@ ready before we need it, because the first date comes 24 hours after we learn of
   measure, and how to watch it.
 - [build-a-custom-margince.md](how-to/build-a-custom-margince.md): which extension code a build
   holds, and how to compose one.
-  what migrates before what.
 - [certify-an-ai-model.md](how-to/certify-an-ai-model.md): test a model against a task before you use it
   (`make e2e-ai`).
 - [certify-a-decision-site.md](how-to/certify-a-decision-site.md): test a model for one place in the code
