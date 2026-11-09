@@ -16,10 +16,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// redactUnsentMessages reaches both kinds of message that exist before any
-// activity does: one scheduled for later, and one still in a rep's composer.
-func redactUnsentMessages(ctx context.Context, tx pgx.Tx, reason string, subject ids.ContactID, leads []ids.UUID, emails []string) error {
+// redactUnsentMessages reaches the messages nobody has sent yet. One is
+// scheduled for later, one is still in a rep's composer, and one waits to go to
+// a lead twin.
+func redactUnsentMessages(
+	ctx context.Context, tx pgx.Tx, reason string, subject ids.ContactID, leads []ids.UUID, emails []string,
+	payloads PayloadPurger,
+) error {
 	if err := redactScheduledSends(ctx, tx, reason, emails); err != nil {
+		return err
+	}
+	if err := redactLeadDeliveries(ctx, tx, leads, payloads); err != nil {
 		return err
 	}
 	return purgeMailDrafts(ctx, tx, subject, leads, emails)

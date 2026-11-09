@@ -77,8 +77,6 @@ func missedReceiptText(missed consent.MissedReceipt) string {
 		return "This refusal requires a receipt, and the subject has no email address on record, so none was sent." + stands
 	case consent.MissedReceiptNoMailLane:
 		return "This refusal requires a receipt, and this installation has no mail lane to send it on, so none was sent." + stands
-	case consent.MissedReceiptNoLeadReceipt:
-		return "This refusal by a lead requires a receipt, and receipts are not yet sent to leads, so none was sent." + stands
 	case consent.MissedReceiptOverdue:
 		return fmt.Sprintf("This refusal's receipt was due by %s and has not been delivered. Delivery status: %s.",
 			missed.DueAt.UTC().Format(time.RFC3339), missed.DeliveryStatus) + stands
