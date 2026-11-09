@@ -27,7 +27,7 @@ func TestADraftIsHeldToTheContractsSubjectAndAddressCaps(t *testing.T) {
 		"more than 100 addresses":        {MailDraftContent{To: make([]string, 101)}, "to"},
 		"an empty composer":              {MailDraftContent{}, ""},
 	} {
-		err := validateDraft(anchor, tc.content)
+		err := validateDraft(anchor, tc.content, draftSavedAt)
 		var refused *InvalidMailDraftError
 		switch {
 		case tc.field == "" && err != nil:

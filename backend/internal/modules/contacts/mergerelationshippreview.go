@@ -70,7 +70,7 @@ func (s *Store) authorizeMergePrimaryWitnesses(ctx context.Context, tx pgx.Tx, k
 	witness := mergeContactPrimaryWitness
 	affected := "a.kind <> 'works_with'"
 	if kind == companyEntity {
-		witness, affected = mergeCompanyPrimaryWitness, "a.company_id = @source"
+		witness, affected = mergePrimarySlotWitness, "a.company_id = @source"
 	}
 	rows, err := tx.Query(ctx, "SELECT DISTINCT b.id FROM relationship a JOIN relationship b ON "+witness+" WHERE ("+sourceSQL+") AND "+affected+" AND a.is_current_primary AND NOT COALESCE(("+retiredSQL+"), false) ORDER BY b.id LIMIT 501", pgx.NamedArgs{mergeSourceKey: source, mergeTargetKey: target})
 	if err != nil {

@@ -35,6 +35,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestEverySARSectionStatementResolvesAgainstTheSchema(t *testing.T) {
@@ -61,7 +62,10 @@ func TestEverySARSectionStatementResolvesAgainstTheSchema(t *testing.T) {
 	// added to any chapter is covered the day it is added, and one that stops
 	// being reachable stops being checked, which is correct in both directions.
 	var pkg SARPackage
-	sections := sarSections(&pkg, ids.New[ids.ContactKind](), []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()})
+	sections, err := sarSections(principal.SystemActing(context.Background(), "sar_test"), &pkg, ids.New[ids.ContactKind](), []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// A floor, because a gather list that came back empty would report the same
 	// clean pass as one that resolved every statement. The number is the shape

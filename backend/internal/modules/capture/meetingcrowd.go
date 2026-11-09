@@ -128,15 +128,44 @@ func settleAnswers(
 		addresses = append(addresses, address)
 		responses = append(responses, p.Response)
 	}
+
+	ownerAddress, ownerResponse := "", ""
+	if roster.Current && actorUserID(ctx) == roster.Seat && roster.OwnerAnswer != nil {
+		ownerResponse = roster.OwnerAnswer.Response
+		ownerAddress = strings.ToLower(strings.TrimSpace(roster.OwnerAnswer.Address))
+	}
+	if ownerResponse != "" && ownerAddress != "" {
+		alone, err := ownAddressHeldAloneTx(ctx, tx, roster.Seat, ownerAddress)
+		if err != nil {
+			return 0, err
+		}
+		if !alone {
+			ownerAddress = ""
+		}
+	}
+
+	if ownerResponse != "" {
+		addresses = append(addresses, "")
+		responses = append(responses, ownerResponse)
+	}
 	if len(addresses) == 0 {
 		return 0, nil
 	}
+	// A current roster takes a listed row whose calendar seat disconnected; it
+	// never binds a seat, so a row taken over grants nothing new.
+	ownAnswer := `(@current AND @owner_response<>'' AND (ap.user_id=@seat OR (ap.user_id IS NULL AND ap.address=@owner_address AND @owner_address<>'')))`
 	tag, err := tx.Exec(ctx, `
-		UPDATE activity_participant ap SET response = inp.response
-		  FROM unnest($3::text[], $4::text[]) AS inp(address, response)
-		 WHERE ap.activity_id = $1 AND ap.roster_seat = $2 AND ap.address = inp.address
-		   AND ap.response IS DISTINCT FROM inp.response AND ($5 OR ap.response IS NULL)`,
-		activityID, roster.Seat, addresses, responses, roster.Current)
+ UPDATE activity_participant ap SET response=CASE WHEN `+ownAnswer+` THEN @owner_response ELSE inp.response END,
+ roster_seat=@seat
+ FROM unnest(@addresses::text[],@responses::text[]) AS inp(address,response)
+ WHERE ap.activity_id=@activity
+ AND ((inp.address<>'' AND ap.address=inp.address AND (ap.roster_seat=@seat OR (@current AND `+rosterOwnerGoneSQL("ap")+`))) OR `+ownAnswer+`)
+ AND (ap.response IS DISTINCT FROM CASE WHEN `+ownAnswer+` THEN @owner_response ELSE inp.response END
+  OR (`+ownAnswer+` AND ap.roster_seat IS DISTINCT FROM @seat))
+ AND (@current OR ap.response IS NULL)`, pgx.StrictNamedArgs{
+		capturedActivityObject: activityID, rosterSeatArg: roster.Seat, rosterAddressesArg: addresses, "responses": responses, "current": roster.Current,
+		"owner_address": ownerAddress, "owner_response": ownerResponse, calendarProvidersArg: calendarProviderNames(),
+	})
 	if err != nil {
 		return 0, fmt.Errorf("capture: recording the answers a calendar lists: %w", err)
 	}

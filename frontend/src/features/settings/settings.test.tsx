@@ -160,7 +160,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     // underneath it. `setThemeChoice` publishes to `useSyncExternalStore`
     // subscribers, and this is one of them.
     await user.click(screen.getByRole("button", { name: "Account" }));
-    await user.click(screen.getByRole("menuitem", { name: "Theme" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Theme" }));
     expect(screen.getByRole("radio", { name: "Dark" })).toBeChecked();
   });
 
@@ -196,8 +196,12 @@ describe("SettingsScreen RBAC surfaces", () => {
     expect(
       within(signIn).getByRole("button", { name: "Sign out" }),
     ).toBeTruthy();
+    const language = card("Language and time zone");
     expect(
-      within(card("Language")).getByRole("combobox", { name: "Language" }),
+      within(language).getByRole("combobox", { name: "Language" }),
+    ).toBeTruthy();
+    expect(
+      await within(language).findByRole("combobox", { name: "Time zone" }),
     ).toBeTruthy();
     expect(
       within(card("This browser")).getByRole("group", { name: "Appearance" }),
@@ -512,14 +516,21 @@ describe("SettingsScreen RBAC surfaces", () => {
   // asks `ai_diagnostics:read`, so it keeps its place and says why.
   it("withholds the AI spend from a principal without the diagnostics read", async () => {
     vi.stubGlobal("fetch", allowanceReaderBackend());
-    render(<SettingsScreen route={settingsHref("usage")} />);
+    const { unmount } = render(
+      <SettingsScreen route={settingsHref("usage")} />,
+    );
 
     // The allowance this grant reads is on screen...
     expect(await screen.findByText("Monthly AI allowance")).toBeTruthy();
-    // ...and the card whose endpoint requires `ai_diagnostics:read` KEEPS its
-    // place and says it is withheld. Absent, it would claim the installation had
-    // spent nothing. No request is made for it (GET /ai/usage).
-    expect(screen.getByRole("heading", { name: "AI spend" })).toBeTruthy();
+    unmount();
+    // ...and the card on the Spend tab, whose endpoint requires
+    // `ai_diagnostics:read`, KEEPS its place and says it is withheld. Absent, it
+    // would claim the installation had spent nothing. No request is made for it
+    // (GET /ai/usage).
+    render(<SettingsScreen route={settingsHref("usage", "spend")} />);
+    expect(
+      await screen.findByRole("heading", { name: "AI spend" }),
+    ).toBeTruthy();
     expect(
       await screen.findByText(
         /only an administrator or operations user can see AI spend/i,
@@ -657,7 +668,7 @@ function mergedEntryBackend(opts: {
 // its own grant, and the personal one has to open for a seat no grant would have
 // admitted.
 describe("SettingsScreen restructured pages", () => {
-  it("opens AI access for a read-only seat, passports and all", async () => {
+  it("opens AI assistants for a read-only seat, passports and all", async () => {
     vi.stubGlobal(
       "fetch",
       mergedEntryBackend({ roles: ["rep"], seat: "read" }),
@@ -666,7 +677,7 @@ describe("SettingsScreen restructured pages", () => {
     await waitFor(() =>
       expect(
         screen
-          .getByRole("link", { name: "AI access" })
+          .getByRole("link", { name: "AI assistants" })
           .getAttribute("aria-current"),
       ).toBe("page"),
     );
@@ -701,13 +712,12 @@ describe("SettingsScreen restructured pages", () => {
     expect(developers.textContent).toContain("Passports");
     await userEvent.setup().click(screen.getByText("For developers"));
     expect(developers.open).toBe(true);
-    // API keys open first: the passports, not the coding agents.
+    // API keys open first: the passports, not the agent rules.
     expect(
       screen
         .getByRole("button", { name: "API keys" })
         .getAttribute("aria-pressed"),
     ).toBe("true");
-    expect(screen.queryByRole("heading", { name: "Coding agents" })).toBeNull();
   });
 
   it("renders the consent registry on Privacy, and the trail on its own page", async () => {
@@ -946,7 +956,10 @@ describe("installation-wide cards live off the personal pages", () => {
       }
       return walk(node.props.children);
     };
-    return walk(tabContent(id));
+    // Every tab, since a card lives on one part of its page.
+    const page = SETTINGS_PAGES.find((each) => each.id === id);
+    const tabs = page && "tabs" in page ? page.tabs.map((tab) => tab.id) : [""];
+    return tabs.some((tab) => walk(tabContent(id, tab)));
   }
 
   it("puts the vendor OAuth apps on an installation page, not beside a contact's own connections", () => {

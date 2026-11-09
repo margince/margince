@@ -1,63 +1,58 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { Suspense } from "react";
 import type { components } from "../../api/schema";
 import { AppLink } from "../../design-system/applink";
-import { Button } from "../../design-system/atoms";
+import { Button, PendingBody } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
-import { ErrorLine } from "../../design-system/errorline";
 import { QueryGate } from "../../design-system/querystates";
 import { useLocale, useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCanWrite } from "../../lib/capability";
-import { usePipelines } from "../../lib/pipelines.queries";
+import { useCompanyZone } from "../../lib/companyzone";
+import { defaultPipelineOf, usePipelines } from "../../lib/pipelines.queries";
 import { problemCodeOf } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { replaceDial, type UrlParams, useUrlParams } from "../../lib/urlstate";
+import { AnalyticsBoard, AnalyticsSheet } from "./analytics.board";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
-import { DecisionsPanel } from "./analytics.decisions";
-import {
-  SalesHero,
-  StockCharts,
-  useSalesCharts,
-} from "./analytics.overview.board";
+import { ReportingEvidenceDrawer } from "./analytics.drawers";
+import { useSalesCharts } from "./analytics.overview.board";
 import {
   type OverviewDials,
   outboundDials,
   scopeDials,
 } from "./analytics.overview.context";
-import { DecisionSummary } from "./analytics.overview.decision";
-import { HeroAside } from "./analytics.overview.hero";
 import { InitiativePanel } from "./analytics.overview.initiative";
 import {
   InterventionPanel,
   useInterventions,
 } from "./analytics.overview.interventions";
-import { metricOf, OverviewLinks } from "./analytics.overview.readings";
-import { SalesHeader } from "./analytics.overview.salesheader";
+import { useOverviewNavigation } from "./analytics.overview.navigation";
 import {
-  OpenPipelineLine,
-  SalesReadings,
-} from "./analytics.overview.salesreadings";
+  OVERVIEW_DEFAULT_PERIOD,
+  salesQuestion,
+} from "./analytics.overview.questions";
+import { metricOf } from "./analytics.overview.readings";
+import { SalesFigures } from "./analytics.overview.salesfigures";
+import { SalesHeader } from "./analytics.overview.salesheader";
 import { SinceLastReview } from "./analytics.overview.since";
+import { AssessmentPanel, DecisionsPanel } from "./analytics.overview.work";
 import { periodCaption } from "./analytics.period";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import { applyDimensions } from "./reporting.dimensions";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
 import type {
   ReportingEvaluation,
   ReportingEvidenceRef,
   ReportingSelection,
 } from "./reporting.model";
+import { useReportingEvaluation } from "./reporting.queries";
 import {
-  applyDimensions,
-  customInterval,
+  pipelineIsGone,
   useOverviewFilters,
   validDateRange,
-} from "./reporting.overview";
-import { useReportingEvaluation } from "./reporting.queries";
-import { viewRequest } from "./reporting.views";
+} from "./reporting.selection";
 
 type Catalog = components["schemas"]["ReportingCatalog"];
 type Pipeline = components["schemas"]["Pipeline"];
@@ -104,21 +99,11 @@ function SalesReviewBody({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const [params] = useUrlParams();
-  const filters = useOverviewFilters(pipelines, "this_quarter");
-  const { metrics, blocks } = viewRequest("sales", catalog, filters.period);
-  const selection: ReportingSelection = {
-    scope: { kind: scope.kind, id: scope.id ?? undefined, label: scope.label },
-    pipeline_id: filters.pipelineId || undefined,
-    period: filters.period,
-    interval: customInterval(filters.period, filters.start, filters.end, zone),
-    target_basis: filters.targetBasis,
-    close_window: filters.closeWindow,
-    ...filters.dimensions,
-    metrics,
-    blocks: [],
-  };
+  const filters = useOverviewFilters(pipelines, OVERVIEW_DEFAULT_PERIOD.sales);
+  const { selection, blocks } = salesQuestion(catalog, scope, filters, zone);
+  const { metrics } = selection;
   const validDates = validDateRange(filters.period, filters.start, filters.end);
   // A pipeline the address names and this reader cannot open is said, never
   // swapped for the default one.
@@ -126,6 +111,10 @@ function SalesReviewBody({
   const asks = validDates && metrics.length > 0 && !pipelineGone;
   // The figures and the charts are two reads of one question, so a slow or
   // failed chart never holds back the figures or the actions.
+  useOverviewNavigation("sales", selection, {
+    start: filters.start,
+    end: filters.end,
+  });
   const query = useReportingEvaluation(selection, asks);
   const charts = useSalesCharts(selection, blocks, catalog, asks);
   const { evidence, evidenceFrom, openEvidence, closeEvidence } =
@@ -142,7 +131,7 @@ function SalesReviewBody({
     if (scopeKey(next.scope) !== scopeKey(scope))
       replaceDial("scope", scopeKey(next.scope));
   };
-  const checks = useInterventions(scope);
+  const checks = useInterventions(scope, filters.dimensions);
   const invalid = problemCodeOf(query.error) === "reporting_interval_invalid";
   // The evaluation the page draws below its readings; a cached answer to a
   // question the page no longer asks is never drawn.
@@ -179,155 +168,80 @@ function SalesReviewBody({
         scope={scopeKey(scope)}
         onChange={(next) => changeFilters(filters, selection, next)}
       />
-      {pipelineGone ? (
-        <PipelineGone
-          defaultPipeline={
-            pipelines.find((pipeline) => pipeline.is_default) ?? pipelines[0]
-          }
-        />
-      ) : invalid ? (
-        <ErrorLine error={query.error} />
-      ) : (
-        <QueryGate query={query} pendingLabel={t("analytics.overview.sales")}>
-          {(evaluation) => (
+      <AnalyticsBoard
+        railLabel={t("analytics.board.rail")}
+        main={
+          pipelineGone ? (
+            <PipelineGone defaultPipeline={defaultPipelineOf(pipelines)} />
+          ) : (
             <>
-              {emptyNotice(evaluation.context.scope_holds_deals)}
-              {selection.initiative_id && (
-                <InitiativePanel
+              {answered && (
+                <SalesNotes
+                  notice={emptyNotice(answered.context.scope_holds_deals)}
+                  evaluation={answered}
                   selection={selection}
+                  period={filters.period}
+                  catalog={catalog}
+                  onApply={apply}
                   onEvidence={openEvidence}
                 />
               )}
-              <DecisionsPanel />
-              <QuarterNotes
-                evaluation={evaluation}
-                period={filters.period}
-                offersLanding={catalog.metrics.some(
-                  (metric) => metric.id === "forecast_landing",
-                )}
-                onApply={apply}
-              />
-              {/* The lead and its three readings share one row, so the
-                  decision and the first action still fit the first screen. */}
-              <div className="analytics-lead">
-                <SalesHero
-                  evaluation={evaluation}
+              <AnalyticsSheet>
+                <SalesFigures
+                  query={query}
+                  invalid={invalid}
+                  forecastHref={forecastHref}
                   charts={charts}
+                  onApply={apply}
                   onEvidence={openEvidence}
-                  aside={
-                    <HeroAside
-                      evaluation={evaluation}
-                      charts={charts?.data}
-                      onApply={apply}
-                      targetSetup={targetSetup}
-                    />
+                  targetSetup={targetSetup}
+                />
+                {/* Its own read, so it stands whatever the sales read does. */}
+                <SinceLastReview
+                  catalog={catalog}
+                  scope={selection.scope}
+                  pipelineId={selection.pipeline_id}
+                  after={
+                    checks.state === "not_permitted" ? "ready" : checks.state
                   }
                 />
-                <SalesReadings
-                  evaluation={evaluation}
-                  onEvidence={openEvidence}
-                  forecastHref={forecastHref}
-                />
-              </div>
+              </AnalyticsSheet>
             </>
-          )}
-        </QueryGate>
-      )}
-      {/* One place for the action list, so it never moves while the figures
-          load; its sources are its own, so a failed evaluation leaves it. */}
-      <div className="analytics-pair">
-        {answered && (
-          <DecisionSummary
-            evaluation={answered}
-            checks={{
-              state: checks.state,
-              findings: checks.list?.totals?.findings,
-              deals: checks.list?.totals?.deals,
-            }}
-            forecastHref={forecastHref}
-            onEvidence={openEvidence}
-          />
-        )}
-        <InterventionPanel
-          interventions={checks}
-          dials={findingDials(doors)}
-          emptyLabel={t("analytics.overview.salesNothing")}
-        />
-      </div>
-      {/* Below the decision and the actions: today's stock by stage, and the
-          permitted chart of sales by owner, in name order. */}
-      {answered && (
-        <SalesStock
-          answered={answered}
-          charts={charts}
-          evidence={evidence}
-          evidenceFrom={evidenceFrom}
-          onEvidence={openEvidence}
-          onCloseEvidence={closeEvidence}
-        />
-      )}
-      <SinceLastReview
-        catalog={catalog}
-        scope={selection.scope}
-        pipelineId={selection.pipeline_id}
-        after={checks.state === "not_permitted" ? "ready" : checks.state}
+          )
+        }
+        rail={
+          <>
+            {answered && (
+              <Suspense fallback={<PendingBody label={t("common.loading")} />}>
+                <AssessmentPanel
+                  selection={selection}
+                  evaluation={answered}
+                  onEvidence={openEvidence}
+                />
+              </Suspense>
+            )}
+            <InterventionPanel
+              interventions={checks}
+              dials={findingDials(doors)}
+              emptyLabel=""
+            />
+            <Suspense fallback={<PendingBody label={t("common.loading")} />}>
+              <DecisionsPanel review={selection} />
+            </Suspense>
+          </>
+        }
       />
-      <OverviewLinks
-        dials={doors}
-        sections={[
-          { section: "forecast", label: t("analytics.sectionForecast") },
-          { section: "pipeline", label: t("analytics.sectionPipeline") },
-          { section: "performance", label: t("analytics.sectionPerformance") },
-        ]}
-      />
-    </>
-  );
-}
-
-// Under the decision and the actions: all open pipeline, today's stock by
-// stage and the permitted sales by owner. The evidence drawer for every figure
-// and chart on the page is here too, under the read each came from.
-function SalesStock({
-  answered,
-  charts,
-  evidence,
-  evidenceFrom,
-  onEvidence,
-  onCloseEvidence,
-}: Readonly<{
-  answered: ReportingEvaluation;
-  charts: UseQueryResult<ReportingEvaluation> | undefined;
-  evidence: ReportingEvidenceRef | null;
-  evidenceFrom: ReportingEvaluation | undefined;
-  onEvidence: (
-    reference: ReportingEvidenceRef,
-    from?: ReportingEvaluation,
-  ) => void;
-  onCloseEvidence: () => void;
-}>) {
-  return (
-    <>
-      <OpenPipelineLine evaluation={answered} onEvidence={onEvidence} />
-      {charts && <StockCharts charts={charts} onEvidence={onEvidence} />}
-      {evidence && (
+      {/* The records behind every figure and chart on the page, under the
+          read each came from. */}
+      {answered && evidence && (
         <ReportingEvidenceDrawer
           key={JSON.stringify(evidence)}
           evaluation={evidenceFrom ?? answered}
           reference={evidence}
-          onClose={onCloseEvidence}
+          onClose={closeEvidence}
         />
       )}
     </>
-  );
-}
-
-// A pipeline the address names that is not among the reader's pipelines.
-function pipelineIsGone(
-  named: string | undefined,
-  pipelines: readonly Pipeline[],
-): boolean {
-  return (
-    !!named && named !== "all" && !pipelines.some(({ id }) => id === named)
   );
 }
 
@@ -374,6 +288,46 @@ function findingDials(doors: UrlParams): UrlParams {
   ]);
 }
 
+// What stands above the sheet once the figures answered: why the scope is
+// empty, the initiative the cut follows and the note on the period.
+function SalesNotes({
+  notice,
+  evaluation,
+  selection,
+  period,
+  catalog,
+  onApply,
+  onEvidence,
+}: Readonly<{
+  notice: ReactNode;
+  evaluation: ReportingEvaluation;
+  selection: ReportingSelection;
+  period: ReportingSelection["period"];
+  catalog: Catalog;
+  onApply: (selection: ReportingSelection) => void;
+  onEvidence: (
+    reference: ReportingEvidenceRef,
+    from?: ReportingEvaluation,
+  ) => void;
+}>) {
+  return (
+    <>
+      {notice}
+      {selection.initiative_id && (
+        <InitiativePanel selection={selection} onEvidence={onEvidence} />
+      )}
+      <QuarterNotes
+        evaluation={evaluation}
+        period={period}
+        offersLanding={catalog.metrics.some(
+          (metric) => metric.id === "forecast_landing",
+        )}
+        onApply={onApply}
+      />
+    </>
+  );
+}
+
 // A period other than this quarter has no expected finish to compare, and
 // the one step that gives it one. The comparison's own states are explained
 // in the hero, beside the attainment they affect.
@@ -392,22 +346,16 @@ function QuarterNotes({
   if (metricOf(evaluation, "forecast_landing")?.target_comparison) return null;
   if (!offersLanding || period === "this_quarter") return null;
   return (
-    <Callout
-      tone="info"
-      kind="standing"
-      title={t("analytics.overview.quarterOnlyTitle")}
-      actions={
-        <Button
-          onClick={() =>
-            onApply({ ...evaluation.selection, period: "this_quarter" })
-          }
-        >
-          {t("reporting.compare.apply.period")}
-        </Button>
-      }
-    >
-      <p>{t("analytics.overview.quarterOnlyBody")}</p>
-    </Callout>
+    <p className="t-caption">
+      <Button
+        variant="link"
+        onClick={() =>
+          onApply({ ...evaluation.selection, period: "this_quarter" })
+        }
+      >
+        {t("reporting.compare.apply.period")}
+      </Button>
+    </p>
   );
 }
 

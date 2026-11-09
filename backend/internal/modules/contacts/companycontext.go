@@ -285,6 +285,8 @@ func normalizeCompanySource(source string) string {
 	switch source {
 	case "manual", CompanySourceHuman:
 		return CompanySourceHuman
+	case CompanySourceAgent:
+		return CompanySourceAgent
 	case "coldstart", "deepread", companySourceSiteRead:
 		return companySourceSiteRead
 	case "enrich", "connector":

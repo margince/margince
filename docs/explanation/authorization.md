@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/platform/auth backend/internal/shared/kernel/principal backend/internal/compose/agentgate.go backend/internal/modules/identity/passport.go backend/internal/platform/database/database.go backend/internal/compose/dbrole.go scripts/check-rls-store-path.sh backend/api/crm.yaml backend/internal/modules/contacts/contactcasedecide.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/duplicatepairmerge.go -->
+<!-- describes: backend/internal/platform/auth backend/internal/shared/kernel/principal backend/internal/compose/agentgate.go backend/internal/modules/identity/passport.go backend/internal/modules/identity/meresponse.go backend/internal/modules/identity/roster.go frontend/src/lib/settingscatalog.ts frontend/src/features/settings/settingsnav.tsx backend/internal/platform/database/database.go backend/internal/compose/dbrole.go scripts/check-rls-store-path.sh backend/api/crm.yaml backend/internal/modules/contacts/contactcasedecide.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/duplicatepairmerge.go -->
 # Authorization & access control
 
 How Margince decides who may do what, and where that decision is made. You may look for the auth check in
@@ -72,8 +72,45 @@ Two things make it safe:
   So revoking the passport (or giving the human a lower role) takes effect at once. That includes an MCP
   session that is already connected.
 
+A passport also holds its `work_areas`: every group of work, or the groups its human chose. Scopes say
+what kind of act an agent may do, and `work_areas` say where. `Gate.Admit` reads them with the seat and
+RBAC at every call, and refuses a call outside them with `scope_exceeds_grantor`. Which group each
+operation is in: [mcp-parity.md](../reference/mcp-parity.md#each-agent-operations-passport-area).
+
 Making and using one: [how-to/mint-a-passport.md](../how-to/mint-a-passport.md) →
 [how-to/connect-an-mcp-client.md](../how-to/connect-an-mcp-client.md).
+
+## The public permission contract
+
+The [OpenAPI contract](../../backend/api/crm.yaml) owns the public names in
+`RbacObject` and `RbacAction`. The web client gets its types from that contract.
+`backend/gates/rbacvocabulary_test.go` checks those names against the server's
+policy and grant fields. The [role matrix](../reference/rbac-matrix.md) lists
+the built-in grants.
+
+`GET /v1/me` gives a human session an `authorization` snapshot with `seat_type`,
+`objects` and `row_scope`. The seat limit and object grants must both allow an
+action. The row scope says how far those grants reach; the server still checks
+each row. Clients use the snapshot to explain access and show controls, and
+fetch it again on window focus and after a 403. Human-only checks and any route that
+asks for the admin role still apply.
+
+The `passport` field on this response is marked `deprecated` and always null. A passport
+cannot reach this human-session endpoint. The field stays for published clients;
+an agent asks MCP `tools/list` which tools its passport may call. The server
+checks its scopes and its human's live seat and grants on every call.
+
+### Settings menus and API reads
+
+The Settings catalog gives each page its own access check. Group headings
+name subjects and add no admin-or-ops check over their pages.
+Hiding a menu entry changes the menu and grants no right to call its API.
+Every API read still runs its own checks, even when the menu shows no link.
+
+Some reads serve members outside Settings. The member roster supports owner
+and sharing pickers without `user_admin:read`. Its admin view, including
+role keys and team membership, needs that grant. Reading a roster grants no
+right to invite a member, change their role or turn off their account.
 
 ## The two layers, in detail
 
@@ -150,8 +187,8 @@ checks and no other:
   grant check.
 - `AdmitChangers`, the batch check for several principals, lets it pass for the acting principal
   only. A colleague in the same batch still needs their own write authority.
-- `EnsureAssignee` accepts one of the named owners as the new owner, if that owner is a live
-  human with a full seat. Anyone else is still refused.
+- `EnsureRunAsOwner` accepts one of the named owners without the caller's write scope, if that
+  owner is a live human with a full seat. `EnsureAssignee` asks no write scope of anyone.
 
 It opens up no other table, no other contact and no read. Object RBAC, the visibility check and the
 seat limit still run, so a `read` seat still cannot write.
@@ -204,8 +241,8 @@ below the transport, so REST and MCP act the same:
   - An installation can also set a verb back to confirm first, per record type, by declaring
     `tier: confirmation_required` on the operation. Every verb still has the staging code that sends
     such a call to a human's inbox, so it does not just end as a refusal.
-- **`human-only`** routes (consent, DSR, passport issue, pipeline config) refuse an agent principal at
-  once. Each one would let a credential add to what a credential may do.
+- **`human-only`** routes (consent purposes, passport issue, retention policy, trusting a stage move to run by itself) refuse
+  an agent principal at once. Each one would let a credential add to what a credential may do.
 - An operation that changes data and has no tier is **denied by default** for agents. The generator for
   agent policy refuses to ship a change with no tier in the first place; see
   [contract-first.md](contract-first.md).

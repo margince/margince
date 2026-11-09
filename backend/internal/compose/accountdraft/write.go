@@ -36,6 +36,7 @@ type Completer interface {
 const draftSystem = `You draft the first email of a new conversation, for a salesperson to send under their own name, from a JSON summary of one account in their CRM.
 Return ONLY a JSON object: {"subject":"...","body":"...","reasoning":[{"kind":"intent|recipient|relationship|deal|commitment|conversation|dossier","label":"...","entity_type":"deal|activity|contact|company|fact","entity_id":"..."}]}.
 ` + draftrules.FirstTouch + `
+If subject is supplied, write the body for that subject and the stated intent.
 Say one thing and ask for one thing. Three short paragraphs at most.
 A commitment is something WE said we would do by its "due" date. One due before now is overdue, and it is the reason this message is being written: lead with it and say plainly that it is late, without apologising at length and without promising a new date the summary did not give you. "due" is a machine timestamp for you to read, never text to copy.
 Where the shared rules let you either write around a missing detail or ask for it, prefer writing around it here: this message opens with an ask of its own, and a second question dilutes it.

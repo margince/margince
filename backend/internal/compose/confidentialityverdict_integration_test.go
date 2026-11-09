@@ -530,6 +530,12 @@ func TestAnOrdinaryVerdictOpensTheSiblingsTheClassifierDidNotRead(t *testing.T) 
 	if pointer != fromLawyer {
 		t.Fatalf("the re-opened question points at %s, want the lawyer's message %s", pointer, fromLawyer)
 	}
+	// The answer was about the customer's message. Left on the re-opened row it
+	// would read as a classification of the lawyer's, which nobody has judged.
+	if n := e.WsCount(t, `SELECT count(*) FROM capture_thread_verdict WHERE id = $1
+	 AND (kind IS NOT NULL OR confidence IS NOT NULL OR disposition_reason IS NOT NULL)`, threadID); n != 0 {
+		t.Fatal("the re-opened question still carries the answer about the message it no longer points at")
+	}
 	// The senders this verdict cleared are remembered, so the next message from
 	// one of them inherits instead of buying another model call.
 	var seen []string

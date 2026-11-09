@@ -186,36 +186,36 @@ test.describe("the Brief — page shape", () => {
     expect(rail.x).toBeGreaterThanOrEqual(main.x + main.width);
   });
 
-  test("keeps the greeting and date above the work, with an optional factual agenda", async ({
+  test("keeps the date over the greeting and both above the work, with an optional factual agenda", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     const day = await openBrief(page);
     await expectShellRendered(page);
 
-    const heading = await topOf(page.locator("main h1"));
     const date = await topOf(page.locator(`${GLANCE} time`));
+    const heading = await topOf(page.locator("main h1"));
     const work = await topOf(page.locator(FOCUS));
-    expect(heading).toBeLessThan(date);
-    expect(date).toBeLessThan(work);
-    // Above 640px the facts are one line: the date opens it, the dial ends it.
-    const firstLine = (el: Element) => {
-      const box = el.getClientRects().item(0);
-      if (!box) throw new Error("the fact draws no line box");
-      return { x: box.x, top: box.top, bottom: box.bottom };
+    expect(date).toBeLessThan(heading);
+    expect(heading).toBeLessThan(work);
+    const box = async (selector: string) => {
+      const found = await page.locator(selector).first().boundingBox();
+      if (!found) throw new Error(`${selector} draws no box`);
+      return found;
     };
-    const at = await page.locator(`${GLANCE} time`).evaluate(firstLine);
+    // The view's dial stands at the end of the head, past the greeting.
+    const title = await box("main h1");
     const dial = await page
       .getByRole("group", { name: copy("brief.view.label") })
-      .evaluate(firstLine);
-    expect(dial.top).toBeLessThan(at.bottom);
-    expect(dial.bottom).toBeGreaterThan(at.top);
+      .boundingBox();
+    if (!dial) throw new Error("the view dial draws no box");
+    expect(dial.x).toBeGreaterThanOrEqual(title.x + title.width);
+    // The agenda is its own row under the greeting.
     const agenda = page.getByTestId("glance-sentence");
     await expect(agenda).toHaveCount(completeFocus(day) ? 1 : 0);
     if (completeFocus(day)) {
-      const words = await agenda.evaluate(firstLine);
-      expect(Math.abs(at.top - words.top)).toBeLessThan(2);
-      expect(at.x).toBeLessThan(words.x);
+      const words = await box('[data-testid="glance-sentence"]');
+      expect(words.y).toBeGreaterThanOrEqual(title.y + title.height - 1);
     }
   });
 
@@ -232,15 +232,11 @@ test.describe("the Brief — page shape", () => {
     await expect(page.locator(`${GLANCE} p.glance-sentence`)).toHaveCount(
       complete ? 1 : 0,
     );
-    // The clamp holds the whole facts line, or the sentence alone on a phone.
+    // The sentence is never clamped short of its last word.
     if (complete) {
       const clipped = await page
-        .locator(`${GLANCE} .glance-facts`)
-        .evaluate((facts) =>
-          [facts, ...facts.querySelectorAll(".glance-sentence")].some(
-            (el) => el.scrollHeight > el.clientHeight,
-          ),
-        );
+        .locator(`${GLANCE} .glance-sentence`)
+        .evaluate((sentence) => sentence.scrollHeight > sentence.clientHeight);
       expect(clipped).toBe(false);
     }
   });

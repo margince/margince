@@ -12,6 +12,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -56,9 +60,10 @@ func TestAnOlderPullCannotReplaceANewerSyncOutcome(t *testing.T) {
 			ctx, reg, _, _ := newCaptureRegistryFixture(t)
 			at := time.Date(2026, 8, 24, 12, 0, 0, 0, time.UTC)
 			newerAt := at.Add(time.Minute)
-			reg.WithClock(func() time.Time { return at })
+			reg.SetClock(func() time.Time { return at })
 			reg.Register(&overlappingPull{olderError: tc.err, newerCursor: tc.next, finishNewer: func() error {
 				at = newerAt
+				endCaptureSyncSession(ctx, t, connectionOf(ctx, t))
 				err := reg.SyncOnce(ctx, connectionOf(ctx, t))
 				at = newerAt.Add(time.Minute)
 				return err
@@ -93,9 +98,10 @@ func TestAnOlderPullCannotReplaceANewerSyncOutcome(t *testing.T) {
 func TestACompletedPullCanRecoverAFailureFromItsStartingSnapshot(t *testing.T) {
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	at := time.Date(2026, 8, 24, 12, 0, 0, 0, time.UTC)
-	reg.WithClock(func() time.Time { return at })
+	reg.SetClock(func() time.Time { return at })
 	reg.Register(&overlappingPull{newerError: connector.ErrUnreachable, finishNewer: func() error {
 		at = at.Add(time.Minute)
+		endCaptureSyncSession(ctx, t, connectionOf(ctx, t))
 		if err := reg.SyncOnce(ctx, connectionOf(ctx, t)); !errors.Is(err, connector.ErrUnreachable) {
 			t.Fatalf("overlapping failure = %v", err)
 		}
@@ -119,5 +125,35 @@ func TestACompletedPullCanRecoverAFailureFromItsStartingSnapshot(t *testing.T) {
 	}
 	if cursor["watermark"] != "older" {
 		t.Fatalf("completed pull lost its cursor: %v", cursor)
+	}
+}
+
+func endCaptureSyncSession(ctx context.Context, t *testing.T, connection ids.UUID) {
+	t.Helper()
+	owner, _ := setupCaptureDB(t)
+	ws, ok := principal.WorkspaceID(ctx)
+	if !ok {
+		t.Fatal("workspace missing")
+	}
+	key := "capture:sync:" + ws.String() + ":" + connection.String()
+	var killed int
+	err := owner.QueryRow(ctx, `
+  SELECT count(*) FILTER (WHERE pg_terminate_backend(pid, 5000)) FROM pg_locks
+  WHERE locktype = 'advisory' AND granted AND objsubid = 1
+  AND ((classid::bigint << 32) | (objid::bigint & 4294967295)) = hashtextextended(@key, 0)`, pgx.StrictNamedArgs{"key": key}).Scan(&killed)
+	if err != nil || killed != 1 {
+		t.Fatalf("ending sync session: killed=%d err=%v", killed, err)
+	}
+}
+
+func TestALiveSyncOwnerSuppressesASecondPull(t *testing.T) {
+	ctx, reg, _, _ := newCaptureRegistryFixture(t)
+	pull := &overlappingPull{finishNewer: func() error { return reg.SyncOnce(ctx, connectionOf(ctx, t)) }}
+	reg.Register(pull)
+	if err := syncOnceOf(ctx, t, reg, haltingProvider); err != nil {
+		t.Fatal(err)
+	}
+	if pull.started != 1 {
+		t.Fatalf("provider calls=%d, want one", pull.started)
 	}
 }

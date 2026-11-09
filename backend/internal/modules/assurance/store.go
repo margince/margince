@@ -28,7 +28,6 @@ import (
 type Store struct {
 	db             *database.DB
 	signalDecision SignalDecisionFunc
-	reviewCheck    ReviewCheckFunc
 }
 
 // NewStore wires the store to its pool.
@@ -80,17 +79,9 @@ const ExceptionSubjectDeparted = "subject_departed"
 const reopenableStatuses = `'` + ExceptionConditionCleared + `', '` + ExceptionSubjectDeparted + `'`
 
 // reopensSQL is the upsert's test that a re-detected finding starts a new
-// episode. A closing nobody answered reopens, as above. A REVIEW finding also
-// reopens after somebody resolved it, once no suppression is still running.
-// The deal was revived and then went silent again, which is a new question.
-// Every other type keeps its resolution, which re-detection must not un-ask.
-const reopensSQL = `(assurance_exception.status IN (` + reopenableStatuses + `)
-	OR (assurance_exception.type = '` + TypeDealViability + `'
-	    AND assurance_exception.status = 'resolved'
-	    AND NOT EXISTS (SELECT 1 FROM assurance_resolution r
-	                     WHERE r.exception_id = assurance_exception.id
-	                       AND r.outcome IN ('` + OutcomeValueCorrect + `', '` + OutcomeNotRelevant + `')
-	                       AND r.expires_at > now())))`
+// episode: a closing nobody answered reopens, as above. A resolution stays, and
+// re-detection must not un-ask it.
+const reopensSQL = `assurance_exception.status IN (` + reopenableStatuses + `)`
 
 // Source coverage states.
 const (
@@ -233,16 +224,12 @@ func (s *Store) UpsertException(ctx context.Context, tx pgx.Tx, f Finding, owner
 		ON CONFLICT (logical_key) DO UPDATE
 		SET last_seen_at = now(),
 		    updated_at = now(),
-		    -- A reopened row is a new episode, and its task link belongs to the
-		    -- old one: the new episode's review is delivered afresh. Every SET
-		    -- reads the row as it was, so all four test the same old status.
+		    -- Every SET reads the row as it was, so each tests the same old status.
 		    episode = CASE WHEN ` + reopensSQL + ` THEN assurance_exception.episode + 1
 		                   ELSE assurance_exception.episode END,
-		    task_activity_id = CASE WHEN ` + reopensSQL + ` THEN NULL
-		                            ELSE assurance_exception.task_activity_id END,
 		    status = CASE WHEN ` + reopensSQL + ` THEN 'open' ELSE assurance_exception.status END,
 		    -- The deal's owner tonight, not the one it had when first raised: a
-		    -- review of a deal that changed hands belongs to the new owner.
+		    -- finding on a deal that changed hands belongs to the new owner.
 		    owner_id = CASE WHEN assurance_exception.status = 'open' OR ` + reopensSQL + `
 		                    THEN EXCLUDED.owner_id ELSE assurance_exception.owner_id END,
 		    -- Only while it is still somebody's problem. A resolved row keeps
@@ -293,7 +280,7 @@ func (s *Store) FinishRun(
 	// about what it found.
 	auditID, err := storekit.AuditEvent(ctx, tx, "create", "assurance_run", runID,
 		map[string]any{
-			"status":           status,
+			auditStatusKey:     status,
 			"readiness":        readiness,
 			"eligible_deals":   eligibleDeals,
 			"eligible_signals": eligibleSignals,

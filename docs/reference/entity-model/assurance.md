@@ -29,7 +29,7 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 ## assurance_deal_receipt
 
-12 columns · primary key `(deal_id)` · referenced by 0 foreign keys
+18 columns · primary key `(deal_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -39,9 +39,15 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 | `outcome` | `text` | yes | One of `eligible`, `review_required`, `unsupported`, `waiting`, `unknown`. |
 | `policy_version` | `text` | yes |  |
 | `reasons` | `text[]`, default `'{}'::text[]` | yes |  |
-| `run_id` | `uuid` | yes | Points at `assurance_run.id`. |
+| `run_id` | `uuid` |  | Points at `assurance_run.id`. |
 | `silent_days` | `integer` | yes |  |
 | `valid_until` | `timestamp with time zone` | yes |  |
+| `verdict_actions` | `jsonb` |  |  |
+| `verdict_assessed_at` | `timestamp with time zone` |  |  |
+| `verdict_basis_digest` | `text` |  |  |
+| `verdict_input_checksum` | `text` |  |  |
+| `verdict_next_due_at` | `timestamp with time zone` |  |  |
+| `verdict_prompt_version` | `text` |  |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
@@ -64,7 +70,7 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 ## assurance_exception
 
-21 columns · primary key `(id)` · referenced by 3 foreign keys
+24 columns · primary key `(id)` · referenced by 3 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -72,6 +78,9 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 | `affected_minor` | `bigint` |  |  |
 | `claim` | `jsonb`, default `'{}'::jsonb` | yes |  |
 | `currency` | `currency_code` |  |  |
+| `delivered_assignee_id` | `uuid` |  |  |
+| `delivery_attempts` | `integer`, default `0` | yes |  |
+| `delivery_state` | `text` |  | One of `pending`, `failed`, `delivered`. |
 | `episode` | `integer`, default `1` | yes |  |
 | `evidence_refs` | `jsonb`, default `'[]'::jsonb` | yes |  |
 | `first_seen_at` | `timestamp with time zone`, default `now()` | yes |  |
@@ -100,6 +109,7 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 - `assurance_exception_affected_minor_js_safe`: `CHECK (((affected_minor >= '-9007199254740991'::bigint) AND (affected_minor <= '9007199254740991'::bigint)))`
 - `assurance_exception_amount_currency_pair`: `CHECK (((affected_minor IS NULL) = (currency IS NULL)))`
+- `assurance_exception_delivery_state_check`: `CHECK ((delivery_state = ANY (ARRAY['pending', 'failed', 'delivered'])))`
 - `assurance_exception_seen_ordered`: `CHECK ((last_seen_at >= first_seen_at))`
 - `assurance_exception_severity_check`: `CHECK ((severity = ANY (ARRAY['low', 'medium', 'high'])))`
 - `assurance_exception_status_check`: `CHECK ((status = ANY (ARRAY['open', 'resolved', 'expired', 'condition_cleared', 'subject_departed'])))`
@@ -178,7 +188,7 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 ## assurance_run
 
-15 columns · primary key `(id)` · referenced by 3 foreign keys
+16 columns · primary key `(id)` · referenced by 3 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -187,6 +197,7 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 | `digest` | `text` |  |  |
 | `eligible_deals` | `integer`, default `0` | yes |  |
 | `eligible_signals` | `integer`, default `0` | yes |  |
+| `outbox_inputs_tracked` | `boolean`, default `false` | yes |  |
 | `read_through_generation` | `bigint` |  |  |
 | `readiness` | `text` |  | One of `ready`, `ready_with_exceptions`, `needs_review`, `checks_incomplete`. |
 | `requested_by` | `text` |  |  |

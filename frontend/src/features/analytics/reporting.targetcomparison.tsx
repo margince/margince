@@ -3,7 +3,7 @@ import { Button } from "../../design-system/button";
 import { Callout } from "../../design-system/callout";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { StatStrip } from "../../design-system/statstrip";
-import { formatDecimal } from "../../format/format";
+import { formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import {
   type ReportingEvaluation,
@@ -14,7 +14,6 @@ import {
 type Comparison = NonNullable<
   ReportingEvaluation["metrics"][number]["target_comparison"]
 >;
-type Qualified = NonNullable<Comparison["qualified"]>;
 
 /**
  * Where this fiscal quarter's expected landing stands against its sales
@@ -96,47 +95,7 @@ function ComparedFigures({
           remaining: amount(comparison.remaining),
         })}
       />
-      <QualifiedCard
-        qualified={comparison.qualified}
-        amount={amount}
-        locale={locale}
-      />
     </StatStrip>
-  );
-}
-
-function QualifiedCard({
-  qualified,
-  amount,
-  locale,
-}: Readonly<{
-  qualified?: Qualified;
-  amount: (value: number | undefined) => string;
-  locale: Locale;
-}>) {
-  const t = useT();
-  if (!qualified || qualified.status === "not_enforced") {
-    return (
-      <StatCard
-        label={t("reporting.compare.coverageQualified")}
-        value={t("reporting.compare.qualifiedOff")}
-        detail={t("reporting.compare.qualifiedOffBasis")}
-      />
-    );
-  }
-  return (
-    <StatCard
-      label={t("reporting.compare.coverageQualified")}
-      value={coverageValue(
-        qualified.coverage,
-        qualified.status === "target_reached",
-        t,
-        locale,
-      )}
-      detail={t("reporting.compare.qualifiedBasis", {
-        open: amount(qualified.open_pipeline),
-      })}
-    />
   );
 }
 
@@ -153,7 +112,7 @@ function coverageValue(
 ): string {
   if (reached || coverage == null) return t("reporting.compare.reached");
   return t("reporting.compare.ratio", {
-    ratio: formatDecimal(coverage, locale, 1),
+    ratio: formatNumber(Math.round(coverage * 10) / 10, locale),
   });
 }
 

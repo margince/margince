@@ -1,8 +1,8 @@
 import { AuthCardTitle, AuthExperience } from "../../components/auth-core";
+import { usePageTitle, Wordmark } from "../../components/auth-identity";
 import { useT } from "../../i18n";
-import { usePageTitle, Wordmark } from "./auth";
 import { ChangePasswordCard } from "./passwordcard";
-import "./auth.css";
+import "../../components/auth-core.css";
 
 // The account whose password an operator chose.
 //

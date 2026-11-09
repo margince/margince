@@ -12,6 +12,8 @@
 #   INTEGRATION_TIMEOUT  go-test timeout, as <seconds>s — the same budget and the
 #                        same rule as the parallel lane, since this runs a whole
 #                        package too
+#   IT_TAGS              build tags, `integration` by default; make test-roles
+#                        adds the weekly lane's own tag
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -67,7 +69,7 @@ echo "test-integration-one: backend $rel ${RUN:+(-run $RUN) }(db=$db)"
        MARGINCE_TEST_BLOBSTORE_BUCKET="$(bucket_for one)" \
        MARGINCE_TEST_REDIS="$MARGINCE_TEST_REDIS" \
        MARGINCE_TEST_REDIS_DB="$MARGINCE_TEST_REDIS_DB" \
-    go test -p 1 -tags=integration -v -count=1 -timeout="$IT_TIMEOUT" "${run_flag[@]+"${run_flag[@]}"}" "$rel" ${IT_ARGS:+$IT_ARGS} )
+    go test -p 1 -tags="${IT_TAGS:-integration}" -v -count=1 -timeout="$IT_TIMEOUT" "${run_flag[@]+"${run_flag[@]}"}" "$rel" ${IT_ARGS:+$IT_ARGS} )
 # A package that opened no pool wrote no census, and has no statement to check.
 if compgen -G "$census/census-*.jsonl" > /dev/null; then
   check_repeated_gates "$census" "$census/repeated-gates.txt"

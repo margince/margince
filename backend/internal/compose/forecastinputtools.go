@@ -86,7 +86,14 @@ func freshnessToolResult(in crmcontracts.AssuranceFreshness) agents.ForecastAssu
 func inputChecksToolReader(pool *pgxpool.Pool) agents.InputChecksReader {
 	store := assurance.NewStore(InstallationDB(pool))
 	return func(ctx context.Context, args agents.InputChecksArgs) (json.RawMessage, error) {
-		population := assurance.Population{Kind: args.ScopeKind}
+		population := assurance.Population{Kind: args.ScopeKind, Country: args.Country, Industry: args.Industry}
+		if args.ProductID != "" {
+			id, err := ids.Parse(args.ProductID)
+			if err != nil {
+				return nil, fmt.Errorf("product_id is not a valid id: %w", apperrors.ErrInvalidArgument)
+			}
+			population.ProductID = &id
+		}
 		if args.ScopeID != "" {
 			id, err := ids.Parse(args.ScopeID)
 			if err != nil {

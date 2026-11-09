@@ -36,7 +36,6 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -119,7 +118,7 @@ func laneNameFor(task string) (string, bool) {
 // so a fifth binary is enrolled by existing.
 func lanesWiredByProcessRoles(t *testing.T) map[string]bool {
 	t.Helper()
-	entries, err := os.ReadDir("cmd")
+	entries, err := gatekit.ReadDir("cmd")
 	if err != nil {
 		t.Fatalf("reading the process roles under cmd/: %v", err)
 	}
@@ -144,7 +143,7 @@ func lanesWiredByProcessRoles(t *testing.T) map[string]bool {
 // nil-checked would be as unshipped as one nobody mentions at all.
 func lanesWiredIn(t *testing.T, dir string) map[string]bool {
 	t.Helper()
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", dir, err)
 	}

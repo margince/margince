@@ -34,6 +34,16 @@ func newSchedulingCalendar(pool *pgxpool.Pool, registry *capture.Registry) sched
 }
 
 func (c schedulingCalendar) Check(ctx context.Context, host ids.UserID, provider string) error {
+	if err := c.hostMayBook(ctx, host); err != nil {
+		return err
+	}
+	_, _, err := c.calendarFor(ctx, host, provider, true)
+	return err
+}
+
+// hostMayBook asks the host's own live authority whether a booking may write
+// their meeting.
+func (c schedulingCalendar) hostMayBook(ctx context.Context, host ids.UserID) error {
 	if c.registry == nil {
 		return apperrors.ErrPermissionDenied
 	}
@@ -49,11 +59,7 @@ func (c schedulingCalendar) Check(ctx context.Context, host ids.UserID, provider
 		Type: principal.PrincipalHuman, ID: "human:" + host.String(), UserID: host.UUID,
 		SeatType: seat, Permissions: rbac.Permissions, TeamIDs: rbac.TeamIDs,
 	})
-	if err := auth.Require(hostCtx, "activity", principal.ActionCreate); err != nil {
-		return err
-	}
-	_, _, err = c.calendarFor(ctx, host, provider, true)
-	return err
+	return auth.Require(hostCtx, "activity", principal.ActionCreate)
 }
 
 // calendarFor is the only door to the registry's calendar. A host with no
@@ -93,12 +99,11 @@ func (c schedulingCalendar) Save(ctx context.Context, host ids.UserID, provider 
 			return connector.CalendarReceipt{}, apperrors.ErrPermissionDenied
 		}
 	}
-	for _, address := range in.Attendees {
-		if err := c.checkAppointmentRecipient(ctx, host, in, address); err != nil {
-			return connector.CalendarReceipt{}, err
-		}
+	gated, err := c.consentAddresses(ctx, host, in)
+	if err != nil {
+		return connector.CalendarReceipt{}, err
 	}
-	if err := consentGateFor(c.pool).RequireGrantedForEmails(ctx, in.Attendees, "transactional"); err != nil {
+	if err := consentGateFor(c.pool).RequireGrantedForEmails(ctx, gated, "transactional"); err != nil {
 		return connector.CalendarReceipt{}, err
 	}
 

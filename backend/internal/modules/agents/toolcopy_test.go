@@ -121,8 +121,8 @@ func TestDescribeForClientStatesEachTierDistinctly(t *testing.T) {
 	}
 }
 
-// A tool that cannot be undone and runs with no human approval tells the client
-// to get the user's yes first. A call a human approves already has that yes.
+// A tool marked ask-first that runs with no human approval tells the client to get
+// the user's yes first. A call a human approves already has that yes.
 func TestDescribeForClientAsksTheUserFirstOnlyWhereNoHumanApproves(t *testing.T) {
 	describe := func(tier mcp.RiskTier, askFirst bool) string {
 		return DescribeForClient(mcp.ToolSpec{
@@ -130,8 +130,8 @@ func TestDescribeForClientAsksTheUserFirstOnlyWhereNoHumanApproves(t *testing.T)
 			Tier: tier, AskUserFirst: askFirst,
 		})
 	}
-	const ask = "get their yes before calling"
-	if got := describe(mcp.TierAutoExecute, true); !strings.Contains(got, "it cannot be undone") || !strings.Contains(got, ask) {
+	const ask = "get it before calling"
+	if got := describe(mcp.TierAutoExecute, true); !strings.Contains(got, "the user's yes is needed for it") || !strings.Contains(got, ask) {
 		t.Errorf("auto-execute archive reads %q, want the client told to ask the user first", got)
 	}
 	if got := describe(mcp.TierConfirmationRequired, true); strings.Contains(got, ask) {

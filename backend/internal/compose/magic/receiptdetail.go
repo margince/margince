@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"slices"
 	"sort"
 
 	"github.com/jackc/pgx/v5"
@@ -77,7 +78,11 @@ func (s *Service) ReceiptChanges(ctx context.Context, records []ReceiptRecord) (
 			if err != nil {
 				return err
 			}
-			changes, err := changesByReceipt(ctx, entityType, wanted, entries)
+			held, err := heldCurrencies(ctx, tx, entries)
+			if err != nil {
+				return err
+			}
+			changes, err := changesByReceipt(ctx, entityType, wanted, entries, held)
 			if err != nil {
 				return err
 			}
@@ -85,6 +90,9 @@ func (s *Service) ReceiptChanges(ctx context.Context, records []ReceiptRecord) (
 		}
 		return nil
 	})
+	if err == nil {
+		err = s.labelReferences(ctx, slices.Collect(maps.Values(out)))
+	}
 	if err != nil {
 		return nil, fmt.Errorf("read what a receipt changed: %w", err)
 	}
@@ -141,7 +149,7 @@ func receiptEntries(ctx context.Context, tx pgx.Tx, entityType string, wanted []
 // changesByReceipt folds each receipt's rows into one change per field: the
 // value before the act's first write and after its last.
 func changesByReceipt(
-	ctx context.Context, entityType string, wanted []ReceiptRecord, entries []entry,
+	ctx context.Context, entityType string, wanted []ReceiptRecord, entries []entry, held map[ids.UUID]heldCurrency,
 ) (map[ids.UUID][]crmcontracts.MagicFieldChange, error) {
 	recordOf := make(map[ids.UUID]ids.UUID, len(wanted))
 	for _, record := range wanted {
@@ -156,7 +164,7 @@ func changesByReceipt(
 		if fields[receipt] == nil {
 			fields[receipt] = map[string]crmcontracts.MagicFieldChange{}
 		}
-		for _, change := range changesOf(e) {
+		for _, change := range typedChangesOf(e, held) {
 			if earlier, seen := fields[receipt][change.Field]; seen {
 				change.Before = earlier.Before
 			}

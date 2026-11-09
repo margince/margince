@@ -17,7 +17,6 @@ package gates
 
 import (
 	"fmt"
-	"os"
 	"slices"
 	"sort"
 	"strings"
@@ -31,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The two carrier kinds that are not scheduled specs: a human asking for an
@@ -212,7 +212,7 @@ func crmYAMLMaxLengths(t *testing.T, schema string) map[string]int {
 			} `yaml:"schemas"`
 		} `yaml:"components"`
 	}
-	raw, err := os.ReadFile("api/crm.yaml")
+	raw, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}

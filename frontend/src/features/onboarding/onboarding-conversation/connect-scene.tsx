@@ -13,7 +13,7 @@ import {
 import { useT } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
 import { isConnectedAtAll } from "../../../lib/connector-status";
-import { useConnectors } from "../../../lib/connectors";
+import { captureRefusalOf, useConnectors } from "../../../lib/connectors";
 import { type AdminWait, waitsOnAdmin } from "../../../lib/setup-checklist";
 import { AlsoWorthDoing, type AlsoWorthDoingProps } from "./connect-also";
 import { AppWaitingPanel } from "./connect-app-missing";
@@ -54,6 +54,9 @@ type ConnectedMailRoster = Readonly<{
    *  absent for the whole map on a build whose server does not report it yet,
    *  which reads the same as it always did: every account offered. */
   blockers: ReadonlyMap<string, ConnectBlocker>;
+  /** Set when the reader's role or seat cannot capture: no account is
+   *  offered, because the server refuses every connect. */
+  captureRefusal: MessageKey | null;
   /** An answer is in hand, though a refetch may be replacing it. */
   read: boolean;
   verified: boolean;
@@ -101,6 +104,7 @@ function useConnectedMailProviders(): ConnectedMailRoster {
     providers: new Set((connected ?? []).map((c) => c.provider)),
     accounts: accountsOf(shown ?? []),
     blockers,
+    captureRefusal: captureRefusalOf(roster.data),
     read: roster.isSuccess && !unreadable,
     verified: roster.isSuccess && !roster.isFetching && !unreadable,
     failed: unreadable,
@@ -155,6 +159,9 @@ export function ConnectScene({
   const waitingOn = vendor === null ? undefined : waiting.get(vendor);
   // An ask is open for a picked account this installation can connect while
   // no mailbox is live. A live one answers the ask on its own.
+  // Held while the roster has not answered: an ask opened against it could
+  // connect a second mailbox the read has not reported.
+  const held = !mailRoster.verified || connected !== null || askBusy;
   const asking =
     vendor !== null &&
     mailRoster.read &&
@@ -182,21 +189,15 @@ export function ConnectScene({
         />
       ) : (
         <>
-          <Panel title={t("ob.conv.connect.whereTitle")}>
-            <PanelBody>
-              <PanelIntro>{t("ob.conv.connect.whereHint")}</PanelIntro>
-              <VendorChoice
-                value={vendor}
-                onChange={onVendorChange}
-                // Held while the roster has not answered: an ask opened against
-                // it could connect a second mailbox the read has not reported.
-                disabled={!mailRoster.verified || connected !== null || askBusy}
-                notes={notes}
-                refused={refused}
-                waiting={new Set<MailProvider>(waiting.keys())}
-              />
-            </PanelBody>
-          </Panel>
+          <AccountPick
+            refusal={mailRoster.captureRefusal}
+            vendor={vendor}
+            onVendorChange={onVendorChange}
+            held={held}
+            notes={notes}
+            refused={refused}
+            waiting={new Set<MailProvider>(waiting.keys())}
+          />
 
           {waitingOn && (
             <AppWaitingPanel
@@ -230,7 +231,7 @@ export function ConnectScene({
             }
             // Recording "no mailbox" before the roster answers, or while a
             // connect is in flight, could persist a fact that is not so.
-            held={!mailRoster.verified || askBusy || connected !== null}
+            held={held}
             finishing={finishing}
             onSkip={() => onFinish(true)}
           />
@@ -293,6 +294,46 @@ function nameOf(key: MailProvider): MessageKey {
   return key === "microsoft"
     ? "ob.s4.provMicrosoft"
     : "ob.conv.connect.tileImap";
+}
+
+/** Where the work account lives; for a role the server refuses every connect,
+ *  the one sentence that says why none is offered. */
+function AccountPick({
+  refusal,
+  vendor,
+  onVendorChange,
+  held,
+  notes,
+  refused,
+  waiting,
+}: Readonly<{
+  refusal: MessageKey | null;
+  vendor: MailProvider | null;
+  onVendorChange: (next: MailProvider | null) => void;
+  held: boolean;
+  notes: ReadonlyMap<MailProvider, string>;
+  refused: ReadonlySet<MailProvider>;
+  waiting: ReadonlySet<MailProvider>;
+}>) {
+  const t = useT();
+  if (refusal) {
+    return <Callout tone="info" kind="standing" title={t(refusal)} />;
+  }
+  return (
+    <Panel title={t("ob.conv.connect.whereTitle")}>
+      <PanelBody>
+        <PanelIntro>{t("ob.conv.connect.whereHint")}</PanelIntro>
+        <VendorChoice
+          value={vendor}
+          onChange={onVendorChange}
+          disabled={held}
+          notes={notes}
+          refused={refused}
+          waiting={waiting}
+        />
+      </PanelBody>
+    </Panel>
+  );
 }
 
 /** The way on before a mailbox: the page's one primary is the ask's own

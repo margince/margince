@@ -36,6 +36,12 @@ describe("which reads a timeline write has to invalidate", () => {
     expect(entityTimelineKeys("deal", "d1")).toEqual([
       ["activities", "deal", "d1"],
       ["deal-status", "d1"],
+      ["deal", "d1"],
+      ["deals"],
+      ["deal-coverage"],
+      ["company-coverage"],
+      ["activities", "company"],
+      ["company360"],
     ]);
   });
 

@@ -79,6 +79,10 @@ THREE="$(write_list discovered.txt "src/a.test.tsx" "src/b.test.tsx" "src/c.test
 expect_accepted "a report covering every discovered file once" \
   "$(write_report complete.json "src/a.test.tsx" "src/b.test.tsx" "src/c.test.tsx")" "$THREE"
 
+expect_accepted "a discovery list that names each file's project" \
+  "$(write_report projects.json "src/a.test.tsx" "src/b.test.tsx" "src/c.test.tsx")" \
+  "$(write_list projects.txt "[unit] src/a.test.tsx" "[source-scan] src/b.test.tsx" "[unit] src/c.test.tsx")"
+
 # THE defect this gate exists for: one matrix leg never reported, so a third of
 # the suite is missing from a report that says every test in it passed.
 expect_refusal "a report missing a shard's files" \

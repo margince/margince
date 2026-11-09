@@ -121,19 +121,23 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 	// match. A broad press sends NULL for $7, where `= $7` is never true, so
 	// the two arms together leave a broad press matching broad rows only —
 	// exactly the behaviour this dedup had before the column existed.
+	// A stop kept from an anonymized or earlier press may hold only the hash of
+	// the address, so the bare-address arm matches either.
+	lowered, hashes := storekit.StopAddressArgs(ref.Address)
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO communication_suppression
-		    (lead_id, address, kind, source, captured_by, decided_by_level, purpose_id)
-		SELECT $1, $2, $3, $6, $4, $5, $7
+		    (lead_id, address, kind, source, captured_by, decided_by_level, purpose_id, recorded_through)
+		SELECT $1, $2, $3, $6, $4, $5, $7, $8
 		 WHERE NOT EXISTS (
 		       SELECT 1 FROM communication_suppression live
 		        WHERE live.revoked_at IS NULL
 		          AND live.kind = $3
 		          AND (live.purpose_id IS NULL OR live.purpose_id = $7)
 		          AND (($1::uuid IS NOT NULL AND live.lead_id = $1)
-		            OR ($1::uuid IS NULL AND lower(live.address) = $2)))`,
+		            OR ($1::uuid IS NULL AND `+storekit.StopOnAddressesSQL("live", "$9", "$10")+`)))`,
 		zeroAsNull(ref.LeadID.UUID), ref.Address, commsauthz.ReasonObjection,
-		by, string(commsauthz.LevelMachine), sourcePublicLink, purposeID)
+		by, string(commsauthz.LevelMachine), sourcePublicLink, purposeID, string(commsauthz.RecordedBySubject),
+		lowered, hashes)
 	if err != nil {
 		return false, fmt.Errorf("consent: recording the stop this link pressed: %w", err)
 	}

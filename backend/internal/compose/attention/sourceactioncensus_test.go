@@ -91,6 +91,7 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	// on another screen, and a verb here would promise a repair this queue
 	// cannot make.
 	"capture_health": {"open"},
+	"booking_health": {"open"},
 	"ai_work_health": {"open"},
 	// `retry` reaches AutomationRetry; a failed firing carries it and a blocked
 	// one does not, because blocked is a refusal on purpose.
@@ -355,6 +356,7 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 			Domain: "hosting.example", Reason: "The site reads as a mail or hosting vendor.",
 			ReasonCode: contacts.PendingVendorVerdict, AskedAt: readInstant,
 		}}}).
+		WithBookingHealth(&stubBookingHealth{rows: []BookingConcern{{PageID: ids.NewV7(), Blocker: "no_calendar"}}}).
 		WithDealSuggestions(&stubSuggestions{rows: []crmcontracts.DealSuggestion{suggestionRow("proposal_sent")}}).
 		WithTagSuggestions(&stubTagSuggestions{rows: []crmcontracts.TagSuggestion{
 			tagSuggestionRow(crmcontracts.TagSuggestionEntityTypeContact),

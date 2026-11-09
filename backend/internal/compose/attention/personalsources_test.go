@@ -96,6 +96,7 @@ func TestThePerUserSourcesAreTheOnesTheirPortsDeclare(t *testing.T) {
 		"notice":               "Notices: the acting contact's own unread notices",
 		"capture_health":       "CaptureHealth: capture is per-user, the seam refuses a principal with no human behind it",
 		"ai_work_health":       "AIWork: per-user like CaptureHealth",
+		"booking_health":       "BookingHealth: the reader's own booking page, refused for a principal with no human",
 		"bounce":               "Bounces: the reader's own sends, per-user like the health lanes",
 		"undelivered":          "Undelivered: per-user like the health lanes beside it",
 		"domain_question":      "DomainQuestions: the reader's OWN undecided domains, the seam takes no owner argument",

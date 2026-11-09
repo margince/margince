@@ -29,6 +29,8 @@ import (
 
 // piiHandling declares how erasure and SAR must reach a PII table.
 type piiHandling struct {
+	// proofExpiry names the owner that deletes accountability evidence after its retention date.
+	proofExpiry string
 	// erasureWrite: erasure.go must UPDATE/DELETE this table (redact or purge).
 	erasureWrite bool
 	// retentionErase: the nightly retention sweep is this table's ONLY
@@ -114,6 +116,15 @@ type piiHandling struct {
 // PII-bearing, and the test then proves erasure and SAR reach it. Keep it
 // in step with the subject data in data-model §3.
 var piiTables = map[string]piiHandling{
+	"audit_log":                   {erasureWrite: true, sarRead: true},
+	"event_outbox":                {erasureWrite: true, sarRead: true},
+	"deal_room_participant":       {erasureWrite: true, sarRead: true},
+	"deal_room_comment":           {erasureWrite: true, sarRead: true},
+	"intro_request":               {erasureWrite: true, sarRead: true},
+	"dedupe_candidate":            {erasureWrite: true, sarRead: true},
+	"weekly_plan_commitment":      {erasureWrite: true, sarRead: true},
+	"capture_test_mailbox_sent":   {erasureWrite: true, sarRead: true},
+	"capture_thread_verdict":      {erasureWrite: true, sarRead: true},
 	"report_edition":              {erasureWrite: true, sarRead: true},
 	"report_edition_contribution": {erasureWrite: true, sarRead: true},
 	// A report card's kept question holds its filters, and a filter value can
@@ -211,7 +222,13 @@ var piiTables = map[string]piiHandling{
 	// Held by: TestTheRetentionSweepDestroysTheProviderOriginalToo and
 	// TestAPassMissingItsPurgerRefusesBeforeDestroyingAnything
 	// (backend/internal/compose/integration/retentionrawcapture_integration_test.go)
-	"raw_capture":          {erasureWrite: true, sarRead: true},
+	"raw_capture": {erasureWrite: true, sarRead: true},
+	// A voice sample read from the owner's sent mail is a copy of that mail's
+	// words, and names whoever the owner wrote to. Both erasers that destroy a
+	// mail's content empty the sample through privacy.RawCapturePurger. Not
+	// exported: the subject's copy of the correspondence is the activity,
+	// which AssembleSAR already hands back.
+	"voice_corpus_source":  {erasureWrite: true, sarRead: false},
 	"capture_party_source": {erasureWrite: true, sarRead: true},
 	"embedding":            {erasureWrite: true, sarRead: false}, // opaque vector: purged, never exported
 	// The 24-hour capture trace names its counterparty — by address for mail,
@@ -427,7 +444,8 @@ var piiTables = map[string]piiHandling{
 	// with them and disclosed to them — a subject who asked to be erased and
 	// was refused could not otherwise see that the refusal exists, which is the
 	// one thing they need to appeal it.
-	"data_subject_request": {erasureWrite: true, sarRead: true},
+	"data_subject_request":  {erasureWrite: true, sarRead: true},
+	"privacy_request_proof": {sarRead: true, proofExpiry: "internal/modules/consent/requestproofexpiry.go"},
 	// The unsubscribe links minted for a subject: a capability over their own
 	// record, carrying the address it was written to, living twenty-four
 	// months. Erased with them for that reason, and disclosed because "does the
@@ -505,11 +523,13 @@ var piiTables = map[string]piiHandling{
 // privacy's own TestEveryPromisedTableIsActuallyAssembled asks that half, from
 // the only package that can call sarSections.
 var sarAssemblyFiles = []string{
+	"internal/modules/privacy/sarretainedcopies.go",
 	"internal/modules/privacy/sarreporting.go",
 	"internal/modules/privacy/reportingquestions.go",
 	"internal/modules/privacy/reportingbindings.go",
 	"internal/modules/privacy/sar.go",
 	"internal/modules/privacy/sarsections.go",
+	"internal/modules/privacy/sarrequestproofs.go",
 	// What this installation CONCLUDED about the subject's correspondence —
 	// what their replies meant, and what ours did about what they asked. Its
 	// own file for the reason the others have theirs, and named here because a
@@ -538,11 +558,11 @@ var sarAssemblyFiles = []string{
 // erasure's writes as disclosures, which is the confusion the list was made to
 // avoid in the first place.
 var sarReachedButNotAssembly = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/sarsubjectread.go":    "subjectStrings executes SQL supplied by the already censused assembly callers; this file declares no export query or section of its own",
 	"internal/modules/privacy/erasuretally.go":      "reached because the walk follows any call named Query or QueryRow to the methods tallyTx declares. The SAR never runs on a tallyTx; the file passes an erasure arm's statements through and counts them",
 	"internal/modules/privacy/scheduledsends.go":    "reached because sarmessages.go calls loweredAddresses, a string helper living here. Its own SQL is the queued-send scrub's, on the erasure path",
 	"internal/modules/privacy/erasure_approvals.go": "reached because sarmessages.go calls addressPatterns, likewise. Its SQL erases staged proposals and discloses nothing",
 	"internal/modules/privacy/erasure_channels.go":  "reached because sarjudgements.go calls channelIdentityPairs, a pairing helper living here. Its SQL reads and erases the subject's channel identities on the erasure path",
-	"internal/modules/privacy/erasure_consent.go":   "reached because sarcommunication.go calls lowerAll, likewise. Its SQL revokes consent capabilities, which are other contacts' secrets rather than this subject's data",
 })
 
 // Every file the Art. 15 export reads SQL from is one the PII census reads.
@@ -624,9 +644,10 @@ func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 	// the readable half names. Collected from the syntax tree rather than the
 	// text, for the reason assembledSweepTargets gives.
 	assembled := map[string]string{}
+	consts := sqlConstants(t, "internal/modules/privacy", "internal/platform/database/storekit")
 	for _, path := range retentionSweepFiles {
-		maps.Copy(assembled, assembledSweepTargets(t, path))
-		for _, lit := range sqlLiterals(t, path) {
+		maps.Copy(assembled, assembledSweepTargets(t, path, consts))
+		for _, lit := range sqlLiterals(t, path, consts) {
 			if form := unclosedWriteSpan(lit); form != "" {
 				t.Fatalf("%s carries an unclosed SQL span %q; complete the literal before the statement scan", path, form)
 			}
@@ -663,9 +684,21 @@ func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 
 	var missing []string
 	for table, h := range piiTables {
-		if !h.erasureWrite && !h.retentionErase {
+		if !h.erasureWrite && !h.retentionErase && h.proofExpiry == "" {
 			missing = append(missing, "PII table "+table+
 				" is registered with no eraser at all — declare erasureWrite (the Art. 17 cascade) or retentionErase (the time-based sweep)")
+		}
+		if h.proofExpiry != "" {
+			if writes[table] {
+				missing = append(missing, "erasure reaches retained accountability proof "+table)
+			}
+			deleted := false
+			for _, statement := range sqlLiterals(t, h.proofExpiry) {
+				deleted = deleted || strings.Contains(strings.ToLower(statement), "delete from "+table)
+			}
+			if !deleted {
+				missing = append(missing, "accountability proof has no expiry delete: "+table)
+			}
 		}
 		if h.erasureWrite && !writes[table] {
 			missing = append(missing, "erasure never writes PII table "+table+

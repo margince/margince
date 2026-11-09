@@ -73,7 +73,9 @@ type chatReply struct {
 	// does what it did before the question existed.
 	Available bool
 	Accepted  bool
-	Content   map[string]json.RawMessage
+	// Action is the user's own word: accept, decline or cancel.
+	Action  string
+	Content map[string]json.RawMessage
 }
 
 type chatAnswersKey struct{}
@@ -109,9 +111,9 @@ func replyInChat(ctx context.Context, q chatQuestion) (chatReply, error) {
 	}
 	switch reply.Action {
 	case "accept":
-		return chatReply{Available: true, Accepted: true, Content: reply.Content}, nil
+		return chatReply{Available: true, Accepted: true, Action: reply.Action, Content: reply.Content}, nil
 	case "decline", "cancel":
-		return chatReply{Available: true}, nil
+		return chatReply{Available: true, Action: reply.Action}, nil
 	default:
 		return chatReply{Available: true}, &askInChatError{question: q}
 	}

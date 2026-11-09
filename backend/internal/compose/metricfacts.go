@@ -29,6 +29,7 @@ type metricFactQuery struct {
 	revision                                                                   int64
 	from, where, owner, at, value, key, stage, stageLabel, outcome, provenance string
 	money                                                                      bool
+	state                                                                      bool
 	// allocatable says the reader values a won deal, so a product or value
 	// basis replaces the deal's amount with its allocations.
 	allocatable bool
@@ -48,19 +49,9 @@ func readDealMetricFacts(ctx context.Context, tx pgx.Tx, frame crmcontracts.Repo
 		spec.value = strings.ReplaceAll(spec.value, "@"+name, placeholder)
 		spec.where = strings.ReplaceAll(spec.where, "@"+name, placeholder)
 	}
-	_, population, err := analyticsPopulationExpression(ctx, tx, reportingRequested(frame.Scope), spec.owner, b.arg, unownedIsExcluded)
+	population, withheld, err := reportingDealPopulationSQL(ctx, tx, frame, spec.owner, reportingDealFields(metric), &b)
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
-	}
-	if population == "" {
-		population = sqlUnnarrowed
-	}
-	rowScope, err := auth.ScopeClauseFor(ctx, string(recordTypeDeal), "t", b.arg)
-	if err != nil {
-		return nil, crmcontracts.ReportingCoverage{}, err
-	}
-	if rowScope == "" {
-		rowScope = sqlUnnarrowed
 	}
 	value, err := reportingFactValue(ctx, frame, spec, &b)
 	if err != nil {
@@ -70,16 +61,7 @@ func readDealMetricFacts(ctx context.Context, tx pgx.Tx, frame crmcontracts.Repo
 	if strings.Contains(from, "@revision") {
 		from = strings.ReplaceAll(from, "@revision", b.add(spec.revision))
 	}
-	fieldScope, withheld, err := reportingFieldScope(ctx, string(recordTypeDeal), "t", reportingDealFields(metric), &b)
-	if err != nil {
-		return nil, crmcontracts.ReportingCoverage{}, err
-	}
-	dimensions, err := dealDimensionSQL(ctx, frame, &b, "t")
-	if err != nil {
-		return nil, crmcontracts.ReportingCoverage{}, err
-	}
-	where := spec.where + " AND " + population + " AND " + rowScope + " AND " + fieldScope
-	where += reportingFactFilters(frame, metric, spec, &b) + dimensions + initiativeMemberSQL(ctx, &b, "t", string(recordTypeDeal))
+	where := spec.where + " AND " + population + reportingFactFilters(frame, metric, spec, &b)
 	position := spec.stagePosition
 	if position == "" {
 		position = "0"
@@ -107,6 +89,14 @@ func readDealMetricFacts(ctx context.Context, tx pgx.Tx, frame crmcontracts.Repo
 		return nil, crmcontracts.ReportingCoverage{}, fmt.Errorf("narrow the reporting population before evaluating: %w", apperrors.ErrInvalidArgument)
 	}
 	coverage := crmcontracts.ReportingCoverage{Status: "ok", Withheld: withheld}
+	if spec.state {
+		for i := range facts {
+			facts[i].ContextID = reportingState
+			facts[i].SetEvidenceDate(facts[i].Row.OccurredAt)
+			facts[i].Row.OccurredPrecision = new(crmcontracts.OccurredPrecisionOccurredPrecisionDay)
+		}
+		return facts, coverage, nil
+	}
 	return reportingCohorts(frame, facts), coverage, nil
 }
 
@@ -181,7 +171,7 @@ func readReportingAge(ctx context.Context, tx pgx.Tx, frame crmcontracts.Reporti
 }
 
 func openMetricQuery(age bool) metricFactQuery {
-	query := metricFactQuery{stagePosition: "COALESCE(s.position,0)", from: "LEFT JOIN stage s ON s.id=t.stage_id", where: "t.archived_at IS NULL AND t.status='open'", owner: colOwnerID, at: "NULL::timestamptz", key: "t.id::text", stage: "t.stage_id::text", stageLabel: "s.name", outcome: "'open'", provenance: "'current_state'", money: !age}
+	query := metricFactQuery{state: true, stagePosition: "COALESCE(s.position,0)", from: "LEFT JOIN stage s ON s.id=t.stage_id", where: "t.archived_at IS NULL AND t.status='open'", owner: colOwnerID, at: "t.expected_close_date", key: "t.id::text", stage: "t.stage_id::text", stageLabel: "s.name", outcome: "'open'", provenance: "'current_state'", money: !age}
 	if age {
 		query.from += " " + currentStageEntryJoin
 		query.value = "current_stage_age"
@@ -221,7 +211,7 @@ func reportingFactFilters(frame crmcontracts.ReportingContext, metric crmcontrac
 	}
 	// The filter starts early enough for every chart subcontext; projection
 	// assigns interval, target, and previous cohorts from the same fact read.
-	if spec.at != "NULL::timestamptz" {
+	if !spec.state && spec.at != "NULL::timestamptz" {
 		where += " AND " + spec.at + " >= " + b.add(reportingEarliest(frame)) + " AND " + spec.at + " < " + b.add(frame.EvaluatedAt)
 	}
 	if metric == reportingOpenPipeline || metric == reportingStageAge {
@@ -255,11 +245,13 @@ func readReportingBookingsMix(ctx context.Context, tx pgx.Tx, frame crmcontracts
 	query.key = "COALESCE(closing.id,t.id)::text||':'||part.part"
 	query.value = allocationConvertedSQL("part.amount", "part.currency IS DISTINCT FROM t.currency", "t", "@currency")
 	query.group = func(_ context.Context, b *reportingBindings) (string, string, error) {
-		label := "CASE part.kind"
+		var label strings.Builder
+		label.WriteString("CASE part.kind")
 		for kind, phrase := range reportingComponentKindLabels {
-			label += " WHEN '" + kind + "' THEN " + b.add(said.Say(phrase))
+			label.WriteString(" WHEN '" + kind + "' THEN " + b.add(said.Say(phrase)))
 		}
-		return "'kind:'||part.kind", label + " END", nil
+		label.WriteString(" END")
+		return "'kind:'||part.kind", label.String(), nil
 	}
 	return readDealMetricFacts(ctx, tx, frame, reportingBookingsMix, query)
 }

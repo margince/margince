@@ -5,8 +5,12 @@ package deals
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -15,24 +19,28 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-const dealProductTable = "deal_product"
-
 // syncDealProductsFromOffer rewrites the deal's `offer` allocations from the
 // accepted offer's lines that name a product, one row per product with the
-// lines' net value. A `manual` set stays, because it is the human's answer.
+// lines' net value. A `manual` set stays, because it is the human's answer,
+// and so does every row of a deal priced from its lines.
 // It runs under the deal row lock the amount sync took, so a manual set
 // cannot land between the check and the writes. It answers the rows it
 // wrote, and nil when the manual set stood.
 func syncDealProductsFromOffer(ctx context.Context, tx pgx.Tx, dealID ids.DealID, offer crmcontracts.Offer) ([]crmcontracts.DealProduct, error) {
+	head, err := readDealCommercialHead(ctx, tx, dealID)
+	if err != nil {
+		return nil, err
+	}
 	var manual bool
 	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM deal_product WHERE deal_id = $1 AND source = 'manual')`, dealID).Scan(&manual); err != nil {
 		return nil, fmt.Errorf("read manual deal products: %w", err)
 	}
-	if manual {
+	if manual || head.Mode == modeLines {
 		return nil, nil
 	}
 	lines, err := readOfferLines(ctx, tx, ids.From[ids.OfferKind](ids.UUID(offer.Id)))
@@ -70,37 +78,24 @@ func syncDealProductsFromOffer(ctx context.Context, tx pgx.Tx, dealID ids.DealID
 // every allocation the deal had, offer-derived ones included, and the next
 // accepted offer leaves them alone. An empty set removes the hand-set rows
 // and derives the products from the accepted offer again, if there is one.
-func (s *Store) ReplaceDealProducts(ctx context.Context, dealID ids.DealID, in []crmcontracts.DealProductInput) ([]crmcontracts.DealProduct, error) {
+// expectedTag is the ProductSetTag of the set the caller read; a set written
+// since answers a version skew. The deal row's version does not move.
+func (s *Store) ReplaceDealProducts(ctx context.Context, dealID ids.DealID, expectedTag string, in []crmcontracts.DealProductInput) ([]crmcontracts.DealProduct, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return nil, err
 	}
 	if err := auth.Require(ctx, "product", principal.ActionRead); err != nil {
 		return nil, err
 	}
-	if len(in) > 50 {
-		return nil, httperr.Validation("products", "out_of_range", "name at most fifty products on one deal")
-	}
-	seen := map[openapi_types.UUID]bool{}
-	for _, row := range in {
-		if seen[row.ProductId] {
-			return nil, httperr.Validation("products", "duplicate", "name each product once")
-		}
-		seen[row.ProductId] = true
-		if row.AmountMinor != nil && *row.AmountMinor < 0 {
-			return nil, httperr.Validation("products", "invalid", "an allocated amount is zero or more")
-		}
+	if err := validateProductSet(expectedTag, in); err != nil {
+		return nil, err
 	}
 	var out []crmcontracts.DealProduct
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		if err := auth.EnsureWritableLive(ctx, tx, dealTable, dealID.UUID); err != nil {
 			return err
 		}
-		// The lock orders this set against an offer accept on the same deal, so
-		// the two never leave a mixed manual and offer set behind.
-		if _, err := storekit.LockRow(ctx, tx, dealTable, dealID.UUID, storekit.LiveOnly); err != nil {
-			return fmt.Errorf("lock deal for product set: %w", err)
-		}
-		before, err := readDealProducts(ctx, tx, dealID)
+		before, err := lockProductSetForReplace(ctx, tx, dealID, expectedTag)
 		if err != nil {
 			return err
 		}
@@ -119,33 +114,86 @@ func (s *Store) ReplaceDealProducts(ctx context.Context, dealID ids.DealID, in [
 				return err
 			}
 		}
-		for _, row := range in {
-			amount, amountCurrency := row.AmountMinor, currency
-			if amount == nil || amountCurrency == nil {
-				amount, amountCurrency = nil, nil
-			}
-			tag, err := tx.Exec(ctx, `INSERT INTO deal_product (deal_id, product_id, source, amount_minor, currency, component_kind)
-				 SELECT $1, $2, 'manual', $3, $4, p.component_kind FROM product p WHERE p.id = $2 AND p.archived_at IS NULL`,
-				dealID, row.ProductId, amount, amountCurrency)
-			if err != nil {
-				return fmt.Errorf("write manual deal product: %w", err)
-			}
-			if tag.RowsAffected() == 0 {
-				return httperr.Validation("products", "unknown", "choose a live product")
-			}
+		if err := writeManualDealProducts(ctx, tx, dealID, currency, in); err != nil {
+			return err
 		}
 		out, err = readDealProducts(ctx, tx, dealID)
 		if err != nil {
 			return err
 		}
 		auditID, err := storekit.Audit(ctx, tx, "update", "deal", dealID.UUID,
-			map[string]any{"products": allocationImage(before)}, map[string]any{"products": allocationImage(out)})
+			map[string]any{productsField: allocationImage(before)}, map[string]any{productsField: allocationImage(out)})
 		if err != nil {
 			return fmt.Errorf("audit deal products: %w", err)
 		}
-		return storekit.EmitEvent(ctx, tx, auditID, dealID.UUID, crmcontracts.PublicEventDealUpdated{ChangedFields: map[string]any{"products": allocationImage(out)}})
+		return storekit.EmitEvent(ctx, tx, auditID, dealID.UUID, crmcontracts.PublicEventDealUpdated{ChangedFields: map[string]any{productsField: allocationImage(out)}})
 	})
 	return out, err
+}
+
+// lockProductSetForReplace locks the deal and returns the set a hand-set save
+// replaces, refusing a deal its lines price and a save from a stale read.
+func lockProductSetForReplace(ctx context.Context, tx pgx.Tx, dealID ids.DealID, expectedTag string) ([]crmcontracts.DealProduct, error) {
+	// The lock orders this set against an offer accept on the same deal, so
+	// the two never leave a mixed manual and offer set behind.
+	if _, err := storekit.LockRow(ctx, tx, dealTable, dealID.UUID, storekit.LiveOnly); err != nil {
+		return nil, fmt.Errorf("lock deal for product set: %w", err)
+	}
+	head, err := readDealCommercialHead(ctx, tx, dealID)
+	if err != nil {
+		return nil, err
+	}
+	if head.Mode == modeLines {
+		return nil, &LineOwnedValueError{Field: productsField}
+	}
+	before, err := readDealProducts(ctx, tx, dealID)
+	if err != nil {
+		return nil, err
+	}
+	if ProductSetTag(before) != expectedTag {
+		return nil, &apperrors.VersionSkewError{Message: "The deal's products changed since you read them. Reload them and apply your change again."}
+	}
+	return before, nil
+}
+
+func writeManualDealProducts(ctx context.Context, tx pgx.Tx, dealID ids.DealID, currency *string, in []crmcontracts.DealProductInput) error {
+	for _, row := range in {
+		amount, amountCurrency := row.AmountMinor, currency
+		if amount == nil || amountCurrency == nil {
+			amount, amountCurrency = nil, nil
+		}
+		tag, err := tx.Exec(ctx, `INSERT INTO deal_product (deal_id, product_id, source, amount_minor, currency, component_kind)
+			 SELECT $1, $2, 'manual', $3, $4, p.component_kind FROM product p WHERE p.id = $2 AND p.archived_at IS NULL`,
+			dealID, row.ProductId, amount, amountCurrency)
+		if err != nil {
+			return fmt.Errorf("write manual deal product: %w", err)
+		}
+		if tag.RowsAffected() == 0 {
+			return httperr.Validation(productsField, "unknown", "choose a live product")
+		}
+	}
+	return nil
+}
+
+// validateProductSet refuses what no deal state could accept, before the lock.
+func validateProductSet(expectedTag string, in []crmcontracts.DealProductInput) error {
+	if expectedTag == "" {
+		return httperr.Validation("expected_tag", "required", "read the deal's products first and send the tag they came with")
+	}
+	if len(in) > 50 {
+		return httperr.Validation(productsField, "out_of_range", "name at most fifty products on one deal")
+	}
+	seen := map[openapi_types.UUID]bool{}
+	for _, row := range in {
+		if seen[row.ProductId] {
+			return httperr.Validation(productsField, "duplicate", "name each product once")
+		}
+		seen[row.ProductId] = true
+		if row.AmountMinor != nil && *row.AmountMinor < 0 {
+			return httperr.Validation(productsField, "invalid", "an allocated amount is zero or more")
+		}
+	}
+	return nil
 }
 
 // dealAllocationBound reads the deal's currency and the amount that bounds a
@@ -185,7 +233,7 @@ func refuseOverAllocation(in []crmcontracts.DealProductInput, dealAmount *int64)
 		}
 	}
 	if total > *dealAmount {
-		return httperr.Validation("products", "exceeds_deal", "the allocated amounts add up to more than the deal's amount")
+		return httperr.Validation(productsField, "exceeds_deal", "the allocated amounts add up to more than the deal's amount")
 	}
 	return nil
 }
@@ -222,14 +270,24 @@ func (s *Store) ListDealProducts(ctx context.Context, dealID ids.DealID) ([]crmc
 			return err
 		}
 		var err error
-		out, err = readDealProducts(ctx, tx, dealID)
-		return err
+		if out, err = readDealProducts(ctx, tx, dealID); err != nil {
+			return err
+		}
+		readable, err := dealAmountReadable(ctx, tx, dealID)
+		if err != nil || readable {
+			return err
+		}
+		// The allocations add up to the deal's amount, so its mask withholds them.
+		for i := range out {
+			out[i].AmountMinor, out[i].KnownAmountMinor, out[i].Currency = nil, nil, nil
+		}
+		return nil
 	})
 	return out, err
 }
 
 func readDealProducts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) ([]crmcontracts.DealProduct, error) {
-	rows, err := tx.Query(ctx, `SELECT dp.product_id, p.name, dp.source, dp.amount_minor, dp.currency, dp.component_kind, dp.updated_at
+	rows, err := tx.Query(ctx, `SELECT dp.product_id, p.name, dp.source, dp.amount_minor, dp.known_amount_minor, dp.currency, dp.component_kind, dp.updated_at
 		 FROM deal_product dp JOIN product p ON p.id = dp.product_id WHERE dp.deal_id = $1 ORDER BY p.name, dp.product_id`, dealID)
 	if err != nil {
 		return nil, fmt.Errorf("read deal products: %w", err)
@@ -237,7 +295,7 @@ func readDealProducts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) ([]crmc
 	out, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (crmcontracts.DealProduct, error) {
 		var product crmcontracts.DealProduct
 		var source, kind *string
-		err := row.Scan(&product.ProductId, &product.ProductName, &source, &product.AmountMinor, &product.Currency, &kind, &product.UpdatedAt)
+		err := row.Scan(&product.ProductId, &product.ProductName, &source, &product.AmountMinor, &product.KnownAmountMinor, &product.Currency, &kind, &product.UpdatedAt)
 		if source != nil {
 			product.Source = crmcontracts.DealProductSource(*source)
 		}
@@ -256,13 +314,27 @@ func readDealProducts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) ([]crmc
 	return out, nil
 }
 
+// ProductSetTag names one state of a deal's allocations. Every writer deletes
+// and inserts its rows, so a write gives each row a new updated_at and the set
+// a new tag. It hashes no amount, so a reader the amount is masked from learns
+// nothing from it. It sorts by product, so a renamed product keeps the tag.
+func ProductSetTag(products []crmcontracts.DealProduct) string {
+	keys := make([]string, 0, len(products))
+	for _, product := range products {
+		keys = append(keys, fmt.Sprintf("%s|%s|%d", product.ProductId, product.Source, product.UpdatedAt.UnixMicro()))
+	}
+	slices.Sort(keys)
+	sum := sha256.Sum256([]byte(strings.Join(keys, "\n")))
+	return hex.EncodeToString(sum[:16])
+}
+
 // allocationImage is what an audit row and a deal.updated event say about the
 // allocations: each product with its amount, currency and kind. So a changed
 // amount under the same product is a change the trail shows.
 func allocationImage(products []crmcontracts.DealProduct) []map[string]any {
 	out := make([]map[string]any, 0, len(products))
 	for _, product := range products {
-		out = append(out, map[string]any{"product_id": product.ProductId.String(), "source": product.Source, "amount_minor": product.AmountMinor, "currency": product.Currency, "component_kind": product.ComponentKind})
+		out = append(out, map[string]any{productIDColumn: product.ProductId.String(), sourceColumn: product.Source, amountField: product.AmountMinor, currencyField: product.Currency, componentKindColumn: product.ComponentKind})
 	}
 	return out
 }
@@ -276,6 +348,6 @@ func noteAllocations(dealChanged map[string]any, allocated []crmcontracts.DealPr
 	if dealChanged == nil {
 		dealChanged = map[string]any{}
 	}
-	dealChanged["products"] = allocationImage(allocated)
+	dealChanged[productsField] = allocationImage(allocated)
 	return dealChanged
 }

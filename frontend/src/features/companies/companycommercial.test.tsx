@@ -90,9 +90,12 @@ describe("offerAmount — the last offer's own figure", () => {
     ).toBe("—");
   });
 
-  it("says nothing rather than a zero when the offer carries no gross amount", () => {
+  it("says nothing rather than a zero when the offer withholds its money", () => {
     expect(
-      offerAmount({ gross_minor: undefined, currency: "EUR" } as never, "en"),
+      offerAmount(
+        { gross_minor: 0, money_withheld: true, currency: "EUR" } as never,
+        "en",
+      ),
     ).toBe("—");
   });
 

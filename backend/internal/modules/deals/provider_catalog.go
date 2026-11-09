@@ -29,6 +29,7 @@ const (
 
 var productListFilters = storekit.FilterSet[ListProductsInput]{
 	filterActive:          storekit.FilterFlag(func(in *ListProductsInput, v *bool) { in.Active = v }),
+	taxCategoryField:      storekit.FilterWord(func(in *ListProductsInput, v *string) { in.TaxCategory = v }),
 	filterIncludeArchived: storekit.FilterFlag(func(in *ListProductsInput, v *bool) { in.IncludeArchived = *v }),
 	filterSort:            storekit.FilterWord(func(in *ListProductsInput, v *string) { in.Sort = v }),
 }

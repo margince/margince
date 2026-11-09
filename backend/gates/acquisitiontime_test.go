@@ -22,7 +22,6 @@ package gates
 
 import (
 	"go/ast"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -105,7 +104,7 @@ func TestBothCaptureDoorsDateTheAcquisitionFromTheMessage(t *testing.T) {
 	t.Parallel()
 	dir := filepath.Join(repoRoot, "backend", "internal", "modules", "contacts")
 	for _, name := range []string{"ensure.go", "ensurechannel.go"} {
-		src, err := os.ReadFile(filepath.Join(dir, name))
+		src, err := gatekit.ReadFile(filepath.Join(dir, name))
 		if err != nil {
 			t.Fatalf("%s no longer exists — this gate names a door that is gone, point it "+
 				"at what replaced the file: %v", name, err)
@@ -129,7 +128,7 @@ func TestBothCaptureDoorsDateTheAcquisitionFromTheMessage(t *testing.T) {
 func createContactCallers(t *testing.T) []string {
 	t.Helper()
 	dir := filepath.Join(repoRoot, "backend", "internal", "modules", "contacts")
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading the contacts package: %v", err)
 	}

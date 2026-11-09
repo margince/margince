@@ -25,7 +25,6 @@ package gates_test
 
 import (
 	"go/ast"
-	"os"
 	"sort"
 	"strings"
 	"testing"
@@ -185,7 +184,7 @@ func jsonTagName(tag string) string {
 // schemas, and fails loudly on a document this gate cannot read at all.
 func readOpenAPIDoc(t *testing.T, path string) openapiDoc {
 	t.Helper()
-	raw, err := os.ReadFile(path)
+	raw, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

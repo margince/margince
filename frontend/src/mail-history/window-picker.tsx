@@ -4,7 +4,7 @@ import { Select } from "../design-system/select";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { useRecordZone } from "../lib/recordzone";
+import { useCompanyZone } from "../lib/companyzone";
 
 type ImportWindow = components["schemas"]["StartBackfillRequest"]["window"];
 type Preview = components["schemas"]["BackfillPreview"];
@@ -56,7 +56,7 @@ export function ImportWindowPicker({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   // The server supplies the queried calendar date; browser clocks and month-end
   // arithmetic cannot silently change the period the estimate describes.
   // The shared formatter preserves this calendar day in the record zone.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
-import { UTC_ZONE, viewerZone } from "../../format/timezone";
+import { browserZone, UTC_ZONE } from "../../format/timezone";
 import { type Translator, translate } from "../../i18n";
 import { withShippedLabels } from "../../lib/shippedlabels";
 import type { LeadDisqualifyReason } from "./leadhandling";
@@ -17,7 +17,7 @@ const t: Translator = (key: string, params?: Record<string, string>) =>
 
 // The zone only satisfies the signature: no case here asserts a rendered date,
 // so the reader's own zone is the honest one to hand over.
-const zone = viewerZone();
+const zone = browserZone();
 
 function lead(extra: Partial<Lead>): Lead {
   return {

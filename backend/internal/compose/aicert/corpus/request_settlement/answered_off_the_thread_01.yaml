@@ -40,17 +40,8 @@ expect:
   answer:
     - verdict: settled
     - verdict: settled
-  rubric: >
-    Both are settled. In the first, they asked to talk and the meeting took
-    place: a held meeting is the answer to a request to meet, whatever was
-    decided in it. In the second, our own mail with the same subject delivers
-    the signed NDA they asked for; that it is a new mail and not a reply does
-    not change what it did.
-    Score high only if both are settled. A model that answers still_owed or
-    unsure because no reply was written on the thread is reading the thread's
-    shape rather than what we did, which is the defect this evidence exists to
-    fix, and should score at the floor for that conversation.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The answer is one closed verdict per conversation, and the check fails any
+    other verdict. The rubric only said both are settled and that still_owed
+    or unsure, the shape this case exists to catch, scores at the floor.

@@ -18,7 +18,6 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -68,7 +67,7 @@ func TestEveryAssuranceRuleAdmitsAndRefuses(t *testing.T) {
 // under-recognition is the single direction a census must never fail in.
 func assuranceSources(t *testing.T) (declared []string, tests []string) {
 	t.Helper()
-	entries, err := os.ReadDir(assuranceDir)
+	entries, err := gatekit.ReadDir(assuranceDir)
 	if err != nil {
 		t.Fatalf("reading the assurance package: %v", err)
 	}
@@ -79,7 +78,7 @@ func assuranceSources(t *testing.T) (declared []string, tests []string) {
 		}
 		path := filepath.Join(assuranceDir, name)
 		if strings.HasSuffix(name, "_test.go") {
-			body, err := os.ReadFile(path)
+			body, err := gatekit.ReadFile(path)
 			if err != nil {
 				t.Fatalf("reading %s: %v", name, err)
 			}

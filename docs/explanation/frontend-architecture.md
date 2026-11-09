@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/App.tsx frontend/src/app/nav.ts frontend/src/app/shell.tsx frontend/src/app/pagemeta.ts frontend/src/lib/router.tsx frontend/src/design-system/tokens.css frontend/src/i18n frontend/scripts/feature-boundaries.ts -->
+<!-- describes: frontend/src/App.tsx frontend/src/bootstrap.ts frontend/src/main.tsx frontend/src/app/startup-session.ts frontend/src/app/nav.ts frontend/src/app/shell.tsx frontend/src/app/pagemeta.ts frontend/src/lib/router.tsx frontend/src/design-system/tokens.css frontend/src/i18n frontend/scripts/feature-boundaries.ts -->
 # The frontend: how the web app is put together
 
 Read this before you change anything under `frontend/`. Most of the rules of
@@ -116,8 +116,31 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   So a new string lands in all three catalogs in one change. A string in one
   catalog alone is a red build, never missing text on the screen of a reader.
   A count takes its text from the `Intl.PluralRules` kind of the language the
-  reader uses (`format/plural.ts`). `one-plural-rule.test.ts` refuses a
+  reader uses (`format/plural.ts`). The census rule `one-plural-rule` refuses a
   `count === 1` that chooses a message key in any file outside this folder.
+
+  `catalogs.ts` loads the language in use. `bootstrap.ts` starts that read while the app loads.
+  `LocaleProvider` waits for the catalog before drawing its content.
+  The error fallback uses a small copy generated from `en`, so a failed load can still offer Retry.
+  Retry clears the failed catalog request before reading it again.
+
+  The `Analytics` route starts with the messages reached by its static imports and deferred
+  components that request the copy their first screen needs through `frontend/src/i18n/lazy.tsx`.
+  `frontend/scripts/gen-essential-copy.mjs` follows those imports from the same entry paths as
+  the bundle groups. `fe-drift` checks the generated copy. Other routes and dialogs wait for the
+  complete catalog through `CompleteLocale` and `frontend/src/i18n/lazy.tsx`.
+  A language change also loads the complete catalog.
+
+  `frontend/src/bootstrap.ts` starts the session read through `frontend/src/lib/session.read.ts`
+  while the app loads. `frontend/src/main.tsx` waits for `frontend/src/app/startup-session.ts` to
+  register the prepared query before it renders the app.
+
+  `frontend/src/app/analytics-prefetch.ts` keeps the response time when
+  filling the shared query cache. Expired responses are read again.
+  Once the session grants are known, it starts `Analytics` reads in that cache.
+  The opening page and the rendered views use the same functions in
+  `frontend/src/features/analytics/analytics.overview.questions.ts`.
+  Sign-in forms, closed drawers and other `Analytics` sections load when opened.
 
   The order of choice is: the user's own choice, then the languages the browser
   asks for, then the default. English with no setting is `en-GB`, never
@@ -129,6 +152,17 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   fixed value such as `+02:00` is rejected at the edge with an error. No turning
   one kind of money into another, no counting on calendar dates, and no locale
   going back into what is stored.
+
+  Every time a signed-in screen shows is read in the reader's own zone,
+  `useViewerZone()` from `lib/viewerzone.tsx`. That is the zone the user chose
+  under Settings → Account, or their browser's until they have one.
+  `useCompanyZone()` (`lib/companyzone.tsx`) is for reports
+  and for days the server counts on the company's clock. `browserZone()` is for
+  public screens, sign-in and a browser's own date-time input.
+  `src/format/timezone.ts` states the rule, and the census in
+  `src/format/zone-by-purpose.test.ts` lists every file that uses an exception,
+  each with its reason. A file that is not on that list reads the reader's
+  zone.
 
 ### Each feature stands alone
 

@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -219,19 +220,15 @@ func (h Handlers) GetPublicAvailability(w http.ResponseWriter, r *http.Request, 
 		httperr.Write(w, r, err)
 		return
 	}
-	profile, err := h.store.hostSchedulingProfile(r.Context(), page.HostUserID)
-	if err != nil {
-		writeStoreErr(w, r, err)
+	profile, ok := h.openBookingPage(w, r, page)
+	if !ok {
 		return
 	}
-	if !profile.Enabled || profile.Provider == "" {
-		httperr.Write(w, r, apperrors.ErrNotFound)
-		return
-	}
-	if params.DurationMinutes != nil && *params.DurationMinutes != profile.DurationMinutes {
+	if params.L == nil && params.DurationMinutes != nil && *params.DurationMinutes != profile.DurationMinutes {
 		httperr.Write(w, r, httperr.Validation("duration_minutes", "duration", "Choose the duration offered by this booking page"))
 		return
 	}
+	profile = bookingLength(profile, params.L)
 	duration := time.Duration(profile.DurationMinutes) * time.Minute
 	slots, truncated, err := h.store.ReliableAvailability(r.Context(), page.HostUserID, params.From, params.To, duration)
 	if err != nil {
@@ -278,7 +275,7 @@ func (h Handlers) bookingRequestIsWritable(
 // BookPublicMeeting implements (POST /public/booking/{host_slug}):
 // consent-shape check → contact (idempotent on email) → consent grant →
 // booking. The 201 discloses nothing beyond the slot itself.
-func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, hostSlug string, _ crmcontracts.BookPublicMeetingParams) {
+func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, hostSlug string, params crmcontracts.BookPublicMeetingParams) {
 	if h.publicContacts == nil || h.publicConsent == nil {
 		// Fail closed: a process role composed without the capture seams
 		// must refuse, not book without consent.
@@ -290,17 +287,21 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 		httperr.Write(w, r, err)
 		return
 	}
+	profile, open := h.store.openForBooking(r.Context(), page)
+	if open.err != nil {
+		writeStoreErr(w, r, open.err)
+		return
+	}
+	if open.paused {
+		h.answerPausedBooking(w, r, page, hostSlug)
+		return
+	}
 
 	var req crmcontracts.BookPublicMeetingJSONRequestBody
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
 	if !h.bookingRequestIsWritable(w, r, req) {
-		return
-	}
-	profile, err := h.store.hostSchedulingProfile(r.Context(), page.HostUserID)
-	if err != nil {
-		writeStoreErr(w, r, err)
 		return
 	}
 	intent, err := publicBookingRequestIntent(r, hostSlug, req)
@@ -315,14 +316,11 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 		writePublicInvitation(w, *recovered, intent.Marketing)
 		return
 	}
-	if !profile.Enabled || profile.Provider == "" {
-		httperr.Write(w, r, apperrors.ErrNotFound)
-		return
-	}
 	if _, err := h.store.validateInvitationTime(r.Context(), page.HostUserID, req.Start, req.End); err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
+	profile = bookingLength(profile, params.L)
 	if req.End.Sub(req.Start) != time.Duration(profile.DurationMinutes)*time.Minute {
 		httperr.Write(w, r, httperr.Validation("end", "duration", "Choose a time offered by this booking page"))
 		return
@@ -340,16 +338,20 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 		return
 	}
 
-	contactID, leadID, ok := h.ensureBooker(w, r, req)
-	if !ok {
-		return
-	}
 	bookingConsent := BookingConsent{
 		PurposeID: purposeID, PolicyVersion: req.Consent.PolicyVersion,
 		Wording: *req.Consent.Wording, Marketing: marketing,
 	}
+	h.bookPublicMeetingForBooker(w, r, page, req, bookingConsent, intent, params.L)
+}
+
+func (h Handlers) bookPublicMeetingForBooker(w http.ResponseWriter, r *http.Request, page BookingPage, req crmcontracts.BookPublicMeetingJSONRequestBody, bookingConsent BookingConsent, intent *publicBookingIntent, length *int) {
+	contactID, leadID, ok := h.ensureBooker(w, r, req)
+	if !ok {
+		return
+	}
 	if !leadID.IsZero() {
-		h.bookPublicMeetingForLead(w, r, page, req, leadID, bookingConsent, intent)
+		h.bookPublicMeetingForLead(w, r, page, req, leadID, bookingConsent, intent, length)
 		return
 	}
 	if err := h.store.calendar.CheckRecipient(r.Context(), page.HostUserID, contactID, string(req.Booker.Email)); err != nil {
@@ -362,7 +364,7 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 		return
 	}
 
-	h.bookPublicInvitation(w, r, page, req, contactID, marketingOutcome, intent)
+	h.bookPublicInvitation(w, r, page, req, contactID, marketingOutcome, intent, length)
 }
 
 // ensureBooker is the contact or the live lead the booking lands on, or the
@@ -383,13 +385,13 @@ func (h Handlers) ensureBooker(w http.ResponseWriter, r *http.Request, req crmco
 
 // bookPublicMeetingForLead files the meeting on the live lead. The lead's
 // owner decides when to qualify them.
-func (h Handlers) bookPublicMeetingForLead(w http.ResponseWriter, r *http.Request, page BookingPage, req crmcontracts.BookPublicMeetingJSONRequestBody, lead ids.LeadID, consent BookingConsent, intent *publicBookingIntent) {
+func (h Handlers) bookPublicMeetingForLead(w http.ResponseWriter, r *http.Request, page BookingPage, req crmcontracts.BookPublicMeetingJSONRequestBody, lead ids.LeadID, consent BookingConsent, intent *publicBookingIntent, length *int) {
 	marketing, err := h.publicConsent.CaptureLeadBookingConsent(r.Context(), lead, consent)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
-	out, ok := h.reservePublicInvitation(w, r, page, req, ids.Nil, invitationIntent{Public: intent, DescriptionFromBooker: true, Lead: lead}, marketing)
+	out, ok := h.reservePublicInvitation(w, r, page, req, ids.Nil, invitationIntent{Public: intent, DescriptionFromBooker: true, Lead: lead}, marketing, length)
 	if !ok {
 		return
 	}
@@ -444,4 +446,11 @@ func (h Handlers) captureBookingConsent(w http.ResponseWriter, r *http.Request, 
 		return false
 	}
 	return true
+}
+
+func bookingLength(profile crmcontracts.SchedulingProfile, requested *int) crmcontracts.SchedulingProfile {
+	if requested != nil && (profile.DurationMinutes == *requested || (profile.OfferedLengths != nil && slices.Contains(*profile.OfferedLengths, *requested))) {
+		profile.DurationMinutes = *requested
+	}
+	return profile
 }

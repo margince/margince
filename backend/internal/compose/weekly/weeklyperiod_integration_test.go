@@ -41,7 +41,8 @@ func TestASundayDayMeetingCountsInItsOwnWeek(t *testing.T) {
 				want  int
 			}{"its own week": {monday, 2}, "the next week": {nextMonday, 1}} {
 				err := database.WithWorkspaceTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
-					held, _, err := countWeekMeetings(e.repCtx, tx, e.Rep1, week.start, week.start.AddDate(0, 0, 7))
+					held, _, err := countWeekMeetings(e.repCtx, tx, e.Rep1,
+						week.start, week.start.AddDate(0, 0, 7))
 					if err == nil && held != week.want {
 						t.Errorf("%s: %d meetings held, want %d", name, held, week.want)
 					}

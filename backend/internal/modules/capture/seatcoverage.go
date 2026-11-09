@@ -63,7 +63,7 @@ func SeatsWithoutMailbox(
 		  FROM activity_participant pc
 		  JOIN activity a ON a.id = pc.activity_id AND a.archived_at IS NULL
 		   AND `+relstrength.WorkspaceAudienceSQL("a")+`
-		   AND `+relstrength.InteractionCountsSQL("a")+`
+		   AND `+relstrength.InteractionCountsSQL("a", "now()")+`
 		  JOIN activity_participant ps ON ps.activity_id = a.id AND ps.id <> pc.id
 		  JOIN app_user u ON u.is_agent = false AND `+workforce.ActivatableMemberSQL("u")+`
 		   AND (ps.user_id = u.id

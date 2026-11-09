@@ -40,6 +40,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -118,12 +119,10 @@ func (s *Store) RecordContext(
 	if err := httperr.RequireBodyID(fieldSubjectID, in.SubjectID.UUID); err != nil {
 		return Review{}, err
 	}
-	// A HUMAN, not merely a principal auth.RequireHuman admits. That check
-	// lets connectors through, and a connector runs with the granting human's
-	// own grants — so it would hold whatever this is gated on and could assert,
-	// in a named employee's name, that a phone call happened. This is a
-	// statement about what somebody remembers.
-	if err := requireAHumanAtTheKeyboard(ctx); err != nil {
+	// A user or their agent, never a connector. It runs with the granting user's
+	// grants and could assert, in an employee's name, that a phone call happened.
+	// The evidence row names an agent as its author.
+	if err := requireAUserOrTheirAgent(ctx); err != nil {
 		return Review{}, err
 	}
 	review, err := s.ReviewForReader(ctx, reviewID)
@@ -181,21 +180,102 @@ func (s *Store) RecordContext(
 	// jurisdiction pack that shortens the window shortens this too. Two copies
 	// of the bound would drift, and the drift would be silent in exactly the
 	// same way.
-	if err := s.refuseAnExchangeTooOldToCount(ctx, in.OccurredAt); err != nil {
+	//
+	// A request answering an explicit claim that requestOnRecord reads has no
+	// age limit there, so it has none here either (requestAnswersClaim). A send
+	// that named no claim is judged on the windowed legacy reading.
+	if !requestAnswersClaim(in.Kind, commsauthz.Category(refusal.Requested)) {
+		if err := s.refuseAnExchangeTooOldToCount(ctx, in.SubjectID, in.OccurredAt); err != nil {
+			return Review{}, err
+		}
+	}
+	if err := s.recordStatement(ctx, in, refusal); err != nil {
 		return Review{}, err
 	}
-	if _, err := s.RecordQualifyingEvent(ctx, in.SubjectID, RecordQualifyingEventInput{
+	// Read again instead of patching the copy in hand: the caller needs to know
+	// whether the message can go now. A suppression recorded while the rep was
+	// typing is the case a patched copy would miss.
+	return s.ReviewForReader(ctx, reviewID)
+}
+
+// recordStatement writes the rep's statement. A meeting in person goes through
+// recordFaceToFaceTx, the writer the source review shares. A statement against
+// a message about a deal is about that deal, so the next message reuses it.
+func (s *Store) recordStatement(ctx context.Context, in RecordContextInput, refusal RefusedRecipient) error {
+	if in.Kind == kindInPerson {
+		if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+			return s.recordFaceToFaceTx(ctx, tx, in.SubjectID, faceToFaceMeeting{
+				note: in.Note, met: in.OccurredAt, aboutDeal: refusal.dealID(),
+			})
+		}); err != nil {
+			return err
+		}
+		return s.settleSourceReviewsByMeeting(ctx, in)
+	}
+	// A request stated against a refused quote is a request for that quote.
+	_, err := s.RecordQualifyingEvent(ctx, in.SubjectID, RecordQualifyingEventInput{
 		Kind:       in.Kind,
 		Note:       in.Note,
 		OccurredAt: in.OccurredAt,
-	}); err != nil {
-		return Review{}, err
+		AsksForQuote: in.Kind == KindRequestedBySubject &&
+			refusal.claim() == commsauthz.CategoryPrecontractQuote,
+		AboutDeal: refusal.dealID(),
+	})
+	return err
+}
+
+// mayChangeNoticeCases reports whether the caller passes the notice-case gate.
+func mayChangeNoticeCases(ctx context.Context) bool {
+	return requireNoticeCaseUpdate(ctx) == nil
+}
+
+// settleSourceReviewsByMeeting settles the contact's open source reviews with
+// the meeting, through AssessNoticeSource and its gate. A caller without the
+// notice-case grant leaves them for the privacy officer.
+func (s *Store) settleSourceReviewsByMeeting(ctx context.Context, in RecordContextInput) error {
+	if !mayChangeNoticeCases(ctx) {
+		return nil
 	}
-	// RE-READ, rather than patching the copy in hand. What the caller needs to
-	// know is whether the message can go NOW, and the only honest source for
-	// that is the row as it stands after the write — a suppression recorded
-	// while the rep was typing is exactly the case a patched copy would miss.
-	return s.ReviewForReader(ctx, reviewID)
+	var reviews []ids.UUID
+	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		reviews, err = collectIDs(ctx, tx, `
+			SELECT id FROM privacy_notice_case WHERE contact_id = $1 AND state = $2 ORDER BY created_at`,
+			in.SubjectID, string(NoticeSourceReview))
+		return err
+	}); err != nil {
+		return fmt.Errorf("consent: reading the source reviews a meeting answers: %w", err)
+	}
+	now := s.now().UTC()
+	met := in.OccurredAt
+	if met.After(now) {
+		met = now
+	}
+	for _, review := range reviews {
+		if _, err := s.AssessNoticeSource(ctx, review, SourceAssessment{
+			Kind: faceToFaceSource, MetInPerson: true, ObtainedAt: &met, Note: in.Note, Now: now,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// requestAnswersClaim reports whether the claim's validator reads this
+// statement as a request with no age limit (requestOnRecord). That holds for a
+// request the subject made, answering a reply, a follow-up, a quote or a deal
+// follow-up.
+func requestAnswersClaim(kind string, claim commsauthz.Category) bool {
+	if kind != KindRequestedBySubject {
+		return false
+	}
+	switch claim {
+	case commsauthz.CategoryReplyToInbound, commsauthz.CategoryRequestedFollowup,
+		commsauthz.CategoryPrecontractQuote, commsauthz.CategoryActiveDealFollowup:
+		return true
+	default:
+		return false
+	}
 }
 
 // refusalNaming finds the refusal this statement is about.
@@ -212,45 +292,6 @@ func refusalNaming(review Review, subject ids.ContactID) (RefusedRecipient, bool
 		}
 	}
 	return RefusedRecipient{}, false
-}
-
-// whyAStatementCannotAnswer says what is really in the way, in the words the
-// rep needs rather than the engine's code.
-//
-// NAMED ONE BY ONE rather than answered with "this cannot be fixed here",
-// because each of these has a different next move and the rep is about to go
-// looking for it. A default that said nothing would send them back to the same
-// box to try different words.
-func whyAStatementCannotAnswer(reason string) string {
-	switch reason {
-	case commsauthz.ReasonObjection, commsauthz.ReasonSubjectRequest:
-		return "this contact asked us to stop, so what you remember does not change it; " +
-			"a send that has to go anyway needs a recorded exception"
-	case commsauthz.ReasonRestricted:
-		return "this record is under a processing restriction, which only lifting the " +
-			"restriction changes"
-	case commsauthz.ReasonHardBounce:
-		return "this address does not accept mail, so the message would not arrive whatever " +
-			"the evidence says; correct the address"
-	case commsauthz.ReasonConsentWithdrawn:
-		return "they took their consent back, and only they can give it again"
-	case commsauthz.ReasonNoMarketingConsent, commsauthz.ReasonUnconfirmedDOI:
-		return "marketing needs their express consent, which no recollection of a conversation " +
-			"can supply"
-	case commsauthz.ReasonFrequencyCapReached:
-		return "this jurisdiction's limit on how often we may write has been reached; it passes " +
-			"with time rather than with evidence"
-	case commsauthz.ReasonNoSubject:
-		return "this address does not resolve to one contact, so there is nobody to record the " +
-			"evidence against"
-	case commsauthz.ReasonUnknownPurpose:
-		return "this message names a purpose this installation does not define, which is a " +
-			"problem with the message rather than with what you know about the contact"
-	case commsauthz.ReasonLegacyTransactionalUnevidenced:
-		return "this message was sent under the old transactional key with nothing behind it; " +
-			"give it a communication context and the engine can judge it properly"
-	}
-	return fmt.Sprintf("this refusal (%s) is not one a statement about what happened can answer", reason)
 }
 
 // HeldSubjectsForReview lists the contacts a review was refused for, so a caller
@@ -279,29 +320,23 @@ func HeldSubjectsForReview(review Review) []ids.ContactID {
 // rep whose evidence has aged out is not making a mistake — the fact is true
 // and no longer supports an unprompted message — and the next move is a
 // recorded exception, not a differently worded sentence.
-func (s *Store) refuseAnExchangeTooOldToCount(ctx context.Context, occurredAt time.Time) error {
+func (s *Store) refuseAnExchangeTooOldToCount(ctx context.Context, subject ids.ContactID, occurredAt time.Time) error {
+	var counts bool
 	var window time.Duration
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rules, err := s.packRulesFor(ctx, tx)
-		if err != nil {
-			return err
-		}
-		window = rules.reply
-		return nil
+		var err error
+		counts, window, err = exchangeStillCountsTx(ctx, tx, subject, occurredAt, s.now())
+		return err
 	}); err != nil {
 		return err
 	}
-	// NOT-BEFORE rather than after, matching recordedQualifyingEvent's own
-	// `occurred_at >= since`. An exclusive bound here would refuse a statement
-	// exactly at the edge that the verdict would have read — a refusal the rep
-	// cannot act on, about a fact that would have worked.
-	if !occurredAt.Before(time.Now().Add(-window)) {
+	if counts {
 		return nil
 	}
 	return &ContextNotAnswerableError{
 		Why: fmt.Sprintf("this happened more than %d days ago, which is longer than a recorded "+
-			"exchange keeps supporting a message the contact did not prompt; a send that has to "+
-			"go anyway needs a recorded exception", int(window.Hours()/24)),
+			"exchange keeps supporting a message the contact did not prompt; %s",
+			int(window.Hours()/24), refusalNextMove(commsauthz.ReasonNoEvidence)),
 	}
 }
 
@@ -352,14 +387,15 @@ func aStopThatBindsTheMessage(
 	ctx context.Context, db *database.DB, subject ids.ContactID, refusal RefusedRecipient,
 ) (string, error) {
 	var stops []liveStop
+	lowered, hashes := storekit.StopAddressArgs(refusal.Address)
 	err := db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT DISTINCT kind, purpose_id FROM communication_suppression
+			SELECT DISTINCT kind, purpose_id FROM communication_suppression s
 			 WHERE revoked_at IS NULL
 			   AND (contact_id = $1
 			        OR lead_id = $1
-			        OR (address IS NOT NULL AND $2 <> '' AND lower(address) = lower($2)))`,
-			subject.UUID, refusal.Address)
+			        OR `+storekit.StopOnAddressesSQL("s", "$2", "$3")+`)`,
+			subject.UUID, lowered, hashes)
 		if err != nil {
 			return err
 		}

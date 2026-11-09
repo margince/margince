@@ -8,7 +8,7 @@ import { formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   type OpenReceipt,
   SentenceList,
@@ -61,7 +61,7 @@ export function DossierPanel({
   const t = useT();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const dossier = useQuery({
     queryKey: ["company-dossier", companyId],
     queryFn: async () => {
@@ -115,7 +115,7 @@ export function DossierPanel({
         )}
         <span className="t-caption">
           {t("co.brief.generatedAt", {
-            when: formatDateTime(readable.generated_at, locale, recordZone),
+            when: formatDateTime(readable.generated_at, locale, readerZone),
           })}
         </span>
       </span>

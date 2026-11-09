@@ -101,7 +101,13 @@ function lastReply(view: Contact360, words: StandingWords): ContactFigure {
   }
   const inbound = lastInbound(view);
   if (!inbound) {
-    return { ...base, value: t("contact.strip.never"), tone: "neutral" };
+    // The date counts the messages this reader can open (last_touch_basis),
+    // so an absence is about those messages, not proof nobody replied.
+    return {
+      ...base,
+      value: t("contact.standing.noneAccessible"),
+      tone: "neutral",
+    };
   }
   return {
     ...base,

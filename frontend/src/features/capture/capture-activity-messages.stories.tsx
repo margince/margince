@@ -91,7 +91,7 @@ function story(payloads: boolean) {
 }
 
 const meta: Meta<typeof CaptureMessages> = {
-  title: "Settings/You/Capture activity/Messages",
+  title: "Settings/You/Connections/Messages",
   component: CaptureMessages,
 };
 export default meta;

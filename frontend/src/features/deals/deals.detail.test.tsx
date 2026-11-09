@@ -6,6 +6,7 @@ import { pickOption } from "../../design-system/select-testing";
 import { formatDayMonth, formatMoney } from "../../format/format";
 import { UTC_ZONE } from "../../format/timezone";
 import { translate } from "../../i18n";
+import { openChoiceDialog } from "../../testing/choicedialog.testkit";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
@@ -38,6 +39,11 @@ function stubDealBackend(
     const request = input instanceof Request ? input : null;
     const url = String(request ? request.url : input);
     const method = request ? request.method : (init?.method ?? "GET");
+    // The deal's products, in the list-and-tag shape the card reads. Without
+    // this the deal's own route answers it with the deal record.
+    if (/\/deals\/[^/]+\/products$/.test(new URL(url, "http://x").pathname)) {
+      return jsonResponse({ data: [], tag: "empty" });
+    }
     if (url.includes("/me")) {
       return jsonResponse(meFixture({ allow: REP_GRANTS }));
     }
@@ -112,8 +118,9 @@ async function openEditForm(user: UserEvent | typeof userEvent = userEvent) {
   // The drawer's own field; the page's head renames the deal too.
   const drawer = await screen.findByRole("dialog");
   await user.click(
-    await within(drawer).findByRole("button", { name: "Change Deal name" }),
+    await within(drawer).findByRole("button", { name: /^Change Deal name/ }),
   );
+  await screen.findByRole("dialog", { name: "Deal name" });
 }
 
 describe("DealScreen — edit, archive (A3)", () => {
@@ -282,10 +289,8 @@ describe("DealScreen — edit, archive (A3)", () => {
         name: translate("en", "deal.editDetails"),
       }),
     );
-    await user.click(
-      await screen.findByRole("button", { name: "Change Referring partner" }),
-    );
-    await user.click(screen.getByLabelText("Referring partner"));
+    const { chooser } = await openChoiceDialog(user, "Referring partner");
+    await user.click(chooser);
     expect(
       await screen.findByRole("option", { name: "Northgate Partners" }),
     ).toBeTruthy();
@@ -403,6 +408,30 @@ describe("DealScreen — the stage stepper advances the deal", () => {
     await user.click(await screen.findByRole("button", { name: "Proposal" }));
 
     expect(await screen.findByText("Moved to Proposal")).toBeTruthy();
+  });
+
+  it("says the probability the new stage set, in place of the bare move", async () => {
+    const d = deal({ id: "x", version: 7, stage_id: "s1" });
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([d], {
+        single: d,
+        probabilitySet: {
+          win_probability: 60,
+          stage_name: "Proposal",
+          note: "Probability set to 60% by the stage Proposal.",
+        },
+      }),
+    );
+    const user = userEvent.setup();
+    render(<DealScreen id="x" />);
+
+    await user.click(await screen.findByRole("button", { name: "Proposal" }));
+
+    expect(
+      await screen.findByText("Probability set to 60% by the stage Proposal"),
+    ).toBeTruthy();
+    expect(screen.queryByText("Moved to Proposal")).toBeNull();
   });
 
   // The deal's tags ride in the context rail, beside the seats, the deal room
@@ -672,7 +701,7 @@ describe("DealScreen — a live deal that is not the viewer's to change", () => 
     expect(await screen.findByText(/You cannot change this deal/)).toBeTruthy();
     await openHeaderMenu();
     expect(
-      screen.queryByRole("button", { name: "Change Deal name" }),
+      screen.queryByRole("button", { name: /^Change Deal name/ }),
     ).toBeNull();
   });
 });
