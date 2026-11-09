@@ -121,9 +121,9 @@ record of one call only. The code that reads the reply turns each ref back into
 the record's ID, and it refuses a ref the call did not show. So the per-call ID
 list above still holds.
 
-A ref hides what the ID's record showed. When the model needs a fact about a
-record, such as whether a participant is a colleague or a contact, the input
-states it next to the ref.
+A ref hides what the ID's record showed. The model may need a fact about the
+record, such as whether a participant is a colleague or a contact. Then the
+input states it next to the ref.
 
 ### Wording a small model reads wrong
 
@@ -152,17 +152,17 @@ other way.
    wins"                                       twice in two senses
 ```
 
-- **Say what still holds.** A rule that forbids something and says only
-  "never" is read as "report nothing".
+- **Say what still holds.** A rule that says only "never" is read as "report
+  nothing".
 - **Put a field's definition in the reply format.** The model follows the
   line that names the field more closely than a rule in the system text.
 - **Say which value wins.** Name each closed value by what decides it, and
   when two kinds both fit, add a line that says which wins.
-- **Measure the whole task.** A new line can break a case that passed. A
-  rewording that fixes one case is measured on the whole task before it ships,
-  because a model applies a general line to every input it fits.
-- **Never write a case's fixture into a prompt.** Names, subjects and amounts
-  from a case make the case measure copying. Use a generic example.
+- **Measure the whole task.** A new line can break a case that passed. A model
+  applies a general line to every input it fits. So a new line that fixes one
+  case is measured on the whole task before it ships.
+- **Never write a case's fixture into a prompt.** Names, subjects and figures
+  from a case make the case measure copying. Use an example on another subject.
 
 ---
 
