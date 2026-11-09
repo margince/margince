@@ -78,12 +78,8 @@ const documentFrom = `deal_room_document d
 // The deal's own Files read applies the same message link and listed-file
 // rule from storekit. A logo a rep never sees in the area is not shareable by id.
 //
-// `NOT a.bytes_withheld` also excludes a row that never had bytes, which is a
-// captured document link. That is the one clause this predicate does not share
-// with a Documents list, which admits a link row by its category.
-//
-// So the two are not one rule in two spellings, and sharing them would hand a
-// buyer a link to a file nobody uploaded.
+// `NOT a.bytes_withheld` also keeps out a captured link, which a Documents list
+// admits by its category. Shared, the rule would hand a buyer a link to nothing.
 //
 // Held by: TestRoomDocumentMembershipIsSpelledOnce (backend/internal/modules/dealrooms/documentmembership_test.go)
 var inTheDealsFilesArea = `a.archived_at IS NULL AND NOT a.bytes_withheld
