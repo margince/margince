@@ -123,9 +123,7 @@ Emit exactly one kind for the thread you are given:
     "personal", not this kind.
   "explicitly_confidential" — the message itself ASKS for confidence: it is marked
     "vertraulich" or "confidential", or it says in words not to forward it or to keep it to a
-    small circle. The ASK is what decides, never the subject matter. It is the kind for an ask
-    on otherwise routine business: when the thread is ALSO one of the subject kinds above,
-    that subject kind wins.
+    small circle. The ASK is what decides, never the subject matter.
     Mentioning an NDA is not asking. "I have the NDA", "the NDA is signed", "we need an NDA
     before we share the numbers" are ordinary commercial status: an NDA is a routine agreement
     between two COMPANIES, it is signed by the company rather than by one individual, and that one
@@ -133,7 +131,9 @@ Emit exactly one kind for the thread you are given:
     covers, sent together with a request to keep it close, is this kind.
 Only "ordinary" makes a thread readable by colleagues, so answer "ordinary" only when you are
 confident the conversation is routine company business. When a thread is about ordinary trade
-AND something sensitive, the sensitive kind wins. Between two sensitive kinds only, choose by
+AND something sensitive, the sensitive kind wins. A thread that asks for confidence AND is one
+of the subject kinds above takes that subject kind, not "explicitly_confidential"; an ask for
+confidence is never a reason for "ordinary". Between two sensitive kinds only, choose by
 subject: a contract on this company's shares, funding or valuation (a term sheet, a
 shareholder or investment agreement) is "financial_corporate" even while it is negotiated;
 "legal" is a dispute, a claim, counsel, or a commercial contract.
