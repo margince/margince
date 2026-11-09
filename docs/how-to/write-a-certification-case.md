@@ -241,8 +241,12 @@ These rules decide whether a scenario is worth having:
   kept out of a draft, or a section withheld from the reader. Such a scenario certifies only
   when every run passes. With a judge, a run also fails when its score is at or under the floor, or no
   judge scored it. Leave it off a scenario whose wrong answer only costs quality, because there half the runs
-  may fail and the pool still decides. The flag is part of the scenario's stamp, so setting it sends the
-  scenario's record to `re-check pending`.
+  may fail and the pool still decides.
+
+  Such a scenario runs at least 15 times (`privacyMinRuns`), or `RUNS=` times if that is more, and gets no
+  extra rounds. A case that leaks one run in five still passes 6 runs by chance about one time in four, and
+  15 runs about one time in 25. The flag and that minimum are part of the scenario's stamp, so setting the
+  flag sends the scenario's record to `re-check pending`.
 - **A rubric asks only for declared fields**: what the reply of the site can carry. A rubric that scores a
   field the schema does not declare measures nothing. The model cannot make that field, even when the rest of
   its answer is right. So that part of the rubric can only mark a right reply down. Read the request builder

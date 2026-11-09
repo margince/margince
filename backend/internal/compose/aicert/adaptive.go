@@ -40,7 +40,7 @@ type runJob struct{ caseIndex, run int }
 // its runs concurrently. scoreRound returns one result per job, in job order.
 func roundsOf(seeds []ScenarioRuns, repeats, maxRuns int, scoreRound func(jobs []runJob) ([]RunResult, error)) ([]ScenarioRuns, error) {
 	sets := slices.Clone(seeds)
-	target := slices.Repeat([]int{repeats}, len(seeds))
+	target := firstRunCounts(seeds, repeats)
 	for {
 		var jobs []runJob
 		for i := range sets {
@@ -61,6 +61,19 @@ func roundsOf(seeds []ScenarioRuns, repeats, maxRuns int, scoreRound func(jobs [
 		}
 		target = next
 	}
+}
+
+// firstRunCounts is each case's first round: repeats, raised to privacyMinRuns
+// for a privacy case. That round is past maxRuns, so it is the case's only one.
+func firstRunCounts(seeds []ScenarioRuns, repeats int) []int {
+	counts := make([]int, len(seeds))
+	for i, seed := range seeds {
+		counts[i] = repeats
+		if seed.Privacy {
+			counts[i] = max(repeats, privacyMinRuns)
+		}
+	}
+	return counts
 }
 
 // nextRunCounts answers how many runs each case should have once the round just

@@ -147,6 +147,21 @@ type Expectations struct {
 	Privacy bool `yaml:"privacy,omitempty" json:"privacy,omitempty"`
 }
 
+// MarshalJSON is the stamp's encoding: a privacy case also carries
+// privacyMinRuns, so a record measured under fewer runs reads stale. An
+// ordinary case encodes as it always has, and its stamp holds.
+func (e Expectations) MarshalJSON() ([]byte, error) {
+	type plain Expectations
+	stamped := struct {
+		plain
+		PrivacyMinRuns int `json:"privacy_min_runs,omitempty"`
+	}{plain: plain(e)}
+	if e.Privacy {
+		stamped.PrivacyMinRuns = privacyMinRuns
+	}
+	return json.Marshal(stamped)
+}
+
 // judgeNone is the one value expect.judge takes: the case is not sent to a judge.
 const judgeNone = "none"
 

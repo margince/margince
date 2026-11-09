@@ -38,7 +38,7 @@ var gradingRuleOwners = []struct {
 		"judgeBand", "marginsOver", "lowerVerdict", "verdictRank", "majorityOf", "judgeMedianAndMin", "medianOf",
 	}},
 	{"stats.go", []string{"wilsonBounds", "meanBounds", "meanAndSD", "tQuantile"}},
-	{"adaptive.go", []string{"runRounds", "roundsOf", "nextRunCounts", "caseBorderline", "poolUndecided"}},
+	{"adaptive.go", []string{"runRounds", "roundsOf", "firstRunCounts", "nextRunCounts", "caseBorderline", "poolUndecided"}},
 	{"run.go", []string{"runEntry"}},
 	{"taskdriver.go", []string{"caseSeeds"}},
 	{"judge.go", []string{"judgeScore", "wantsAnotherOpinion", "nearABand", "absDiff", "foldOpinions", "judgeVerdict"}},
@@ -46,7 +46,7 @@ var gradingRuleOwners = []struct {
 	{"thresholds.go", []string{
 		"certifiedPassPercent", "certifiedPassBoundPercent", "casePassPercent", "vetoPassPercent",
 		"majorityNumerator", "majorityDenominator", "confidenceZ", "tQuantile90", "adaptiveRound", "adaptiveMaxRuns",
-		"reaskBandMargin", "reaskDisagreement", "maxJudgeOpinions", "judgeScoreSDFloor",
+		"reaskBandMargin", "reaskDisagreement", "maxJudgeOpinions", "judgeScoreSDFloor", "privacyMinRuns",
 	}},
 }
 
@@ -169,6 +169,12 @@ var gradingRuleExtensions = []ruleExtension{{
 	to:   "003b33363e9f7ff49dffd05019c3b075bc0fecefdaf02ade420501349af2fba5",
 	reason: "leaked fails a privacy case on any failed run and reads only the row's privacy flag; " +
 		"no committed row carries one, and setting it moves the case stamp, so the old row reads stale",
+}, {
+	rule: "grading-rule-10",
+	from: "003b33363e9f7ff49dffd05019c3b075bc0fecefdaf02ade420501349af2fba5",
+	to:   "5908d46ee2b29fa1a3e8a853a0aaacde3fc8cb527a23e2a88ff419fd9d34e645",
+	reason: "firstRunCounts gives a privacy case privacyMinRuns runs and every other case the runs it had; " +
+		"a privacy case's stamp now carries privacyMinRuns, so its records measured under fewer runs read stale",
 }}
 
 // extendedDigest is the digest the golden's version accepts once every

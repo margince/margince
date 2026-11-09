@@ -43,9 +43,11 @@ type pendingRun struct {
 // measure a round's runs concurrently and fold them in run order, so the
 // record is the one a single lane would build.
 func (d taskDriver) runScenarios(ctx context.Context, scenarios []Scenario, stamps map[string]string, repeats int) ([]ScenarioRuns, error) {
+	seeds := caseSeeds(scenarios)
+	first := firstRunCounts(seeds, repeats)
 	measure := func(ctx context.Context, worker int, job runJob) (pendingRun, error) {
 		sc := scenarios[job.caseIndex]
-		if job.run > repeats && (job.run-repeats-1)%adaptiveRound == 0 {
+		if firstRun := first[job.caseIndex]; job.run > firstRun && (job.run-firstRun-1)%adaptiveRound == 0 {
 			d.log.InfoContext(ctx, "aicert: extending a borderline case by another round",
 				"task", string(d.task), "scenario", sc.Name, "runs_so_far", job.run-1)
 		}
@@ -58,7 +60,7 @@ func (d taskDriver) runScenarios(ctx context.Context, scenarios []Scenario, stam
 	var sets []ScenarioRuns
 	var err error
 	if len(d.lanes) == 1 {
-		sets, err = runRounds(caseSeeds(scenarios), repeats, d.maxRuns, func(i, run int) (RunResult, error) {
+		sets, err = runRounds(seeds, repeats, d.maxRuns, func(i, run int) (RunResult, error) {
 			job := runJob{caseIndex: i, run: run}
 			pending, err := measure(ctx, 0, job)
 			if err != nil {
@@ -67,7 +69,7 @@ func (d taskDriver) runScenarios(ctx context.Context, scenarios []Scenario, stam
 			return fold(job, pending)
 		})
 	} else {
-		sets, err = roundsOf(caseSeeds(scenarios), repeats, d.maxRuns, func(jobs []runJob) ([]RunResult, error) {
+		sets, err = roundsOf(seeds, repeats, d.maxRuns, func(jobs []runJob) ([]RunResult, error) {
 			return scoreConcurrently(ctx, jobs, len(d.lanes), measure, fold)
 		})
 	}

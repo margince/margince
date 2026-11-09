@@ -8,6 +8,10 @@ package aicert
 
 import (
 	"encoding/json"
+	"fmt"
+	"reflect"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
@@ -188,5 +192,90 @@ func TestAPrivacyDecisionRecordCertifiesOnlyWhenEveryRunIsServedRight(t *testing
 				t.Errorf("the row's privacy flag is %v, want %v", rec.Scenarios[0].Privacy, tc.sc.Expect.Privacy)
 			}
 		})
+	}
+}
+
+// runsAsked is how many runs runRounds asks of each case at repeats, every run
+// passing.
+func runsAsked(t *testing.T, seeds []ScenarioRuns, repeats int) []int {
+	t.Helper()
+	asked := make([]int, len(seeds))
+	if _, err := runRounds(seeds, repeats, adaptiveMaxRuns, func(i, _ int) (RunResult, error) {
+		asked[i]++
+		return RunResult{HardPass: true}, nil
+	}); err != nil {
+		t.Fatalf("runRounds: %v", err)
+	}
+	return asked
+}
+
+// A privacy case gets privacyMinRuns runs on its first round, since a leak of
+// one run in five passes a short run by chance. RUNS= above it still wins.
+func TestAPrivacyCaseGetsItsMinimumRunsAndAnOrdinaryCaseKeepsRUNS(t *testing.T) {
+	seeds := []ScenarioRuns{{Mechanical: true, Privacy: true}, {Mechanical: true}}
+	if got := runsAsked(t, seeds, 3); !slices.Equal(got, []int{privacyMinRuns, 3}) {
+		t.Errorf("at RUNS=3 the privacy and ordinary cases ran %v, want [%d 3]", got, privacyMinRuns)
+	}
+	if got := runsAsked(t, seeds, 20); !slices.Equal(got, []int{20, 20}) {
+		t.Errorf("at RUNS=20 the cases ran %v, want [20 20]", got)
+	}
+}
+
+// certifyWithPrivacy certifies mixedCorpus with its first scenario flagged.
+func certifyWithPrivacy(t *testing.T, parallel int) Record {
+	t.Helper()
+	withFixedNow(t, fixedResumeNow)
+	corpus := mixedCorpus()
+	corpus[0].Expect.Privacy = true
+	candidate, judge := mixedClients()
+	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, corpus, testCensus(t),
+		ai.ProviderConfig{Provider: providerClaudeCLI, Model: "candidate"},
+		ai.ProviderConfig{Provider: providerClaudeCLI, Model: "judge"}, ai.ProfileCloudFrontier, testRepeats, quietLogger(),
+		&certifyHooks{
+			candidateOpts: []ai.LocalOption{ai.WithHarnessClient(providerClaudeCLI, candidate)},
+			judgeOpts:     []ai.LocalOption{ai.WithHarnessClient(providerClaudeCLI, judge)},
+			parallel:      parallel,
+		})
+	if err != nil {
+		t.Fatalf("certifying with %d run(s) in flight: %v", parallel, err)
+	}
+	rec.LatencyP50, rec.LatencyP95 = 0, 0
+	return rec
+}
+
+func TestAPrivacyCaseRecordIsTheSameWhateverRunsAreInFlight(t *testing.T) {
+	sequential := certifyWithPrivacy(t, 1)
+	if got := sequential.Scenarios[0].Runs; got != privacyMinRuns {
+		t.Fatalf("the privacy row holds %d runs, want %d", got, privacyMinRuns)
+	}
+	if got := certifyWithPrivacy(t, 4); !reflect.DeepEqual(got, sequential) {
+		t.Fatalf("with 4 runs in flight the record is\n %+v\nwant the sequential record\n %+v", got, sequential)
+	}
+}
+
+// An ordinary case's stamp encoding is the plain struct's, so its records hold.
+// A privacy case's names its run floor, so a record of fewer runs reads stale.
+func TestOnlyAPrivacyCaseStampCarriesItsRunFloor(t *testing.T) {
+	type plain Expectations
+	ordinary := Expectations{Outcome: aitasks.OutcomeAccepted, Answer: JSONValue(`"ordinary"`), Bands: privacyBands}
+	got, err := json.Marshal(ordinary)
+	if err != nil {
+		t.Fatalf("encoding: %v", err)
+	}
+	want, err := json.Marshal(plain(ordinary))
+	if err != nil {
+		t.Fatalf("encoding: %v", err)
+	}
+	if string(got) != string(want) {
+		t.Errorf("an ordinary case encodes as\n %s\nwant the plain encoding\n %s", got, want)
+	}
+	flagged := ordinary
+	flagged.Privacy = true
+	encoded, err := json.Marshal(flagged)
+	if err != nil {
+		t.Fatalf("encoding: %v", err)
+	}
+	if !strings.Contains(string(encoded), fmt.Sprintf(`"privacy_min_runs":%d`, privacyMinRuns)) {
+		t.Errorf("a privacy case encodes as %s, which does not name its run floor", encoded)
 	}
 }
