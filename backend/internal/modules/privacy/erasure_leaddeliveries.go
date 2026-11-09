@@ -13,10 +13,10 @@ import (
 )
 
 // redactLeadDeliveries scrubs the deliveries still waiting to go out to a lead
-// twin this erasure anonymized. Such a delivery is filed under the lead alone,
-// as a lead's opt-out receipt is, and may name an address the contact never
-// held. So neither the contact's timeline nor its addresses reach it, and
-// unscrubbed it would be sent to the person this erasure was asked to forget.
+// that an erasure or a retention action anonymized. Such a delivery is filed
+// under the lead alone, as a lead's opt-out receipt is, and may name an address
+// no contact held. Nothing keyed by a contact reaches it, and unscrubbed it
+// would be sent to the subject the act was asked to forget.
 //
 // A sent delivery is left to the timeline scrubs: what it said is a record of
 // what happened. A waiting one is only an intent, and it is parked here.
