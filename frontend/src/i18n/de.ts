@@ -9968,6 +9968,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ein verlorener Deal braucht den Grund, warum er verloren ging.",
   "import.reason.deal_pipeline_fixed":
     "Dieser Deal liegt in einer anderen Pipeline als in der Datei angegeben. Ein Import verschiebt keinen Deal zwischen Pipelines, daher wird die Zeile übersprungen.",
+  "import.reason.deal_company_has_contracts":
+    "Für diesen Deal sind Verträge mit seinem bisherigen Unternehmen hinterlegt, daher wird die Zeile übersprungen. Löse die Verträge vom Deal oder ordne sie einem Deal des neuen Unternehmens zu und importiere erneut.",
   "import.reason.deal_already_closed":
     "Dieser Deal ist bereits abgeschlossen, daher wird die Zeile übersprungen. Ein Import öffnet keinen abgeschlossenen Deal wieder.",
   "import.reason.fx_rate_missing":

@@ -9965,6 +9965,8 @@ export const en = {
     "A lost deal needs the reason it was lost.",
   "import.reason.deal_pipeline_fixed":
     "This deal is in another pipeline than the file names. An import does not move a deal between pipelines, so the row is skipped.",
+  "import.reason.deal_company_has_contracts":
+    "This deal has contracts filed against its current company, so the row is skipped. Detach the contracts from the deal, or move them to a deal of the new company, then import again.",
   "import.reason.deal_already_closed":
     "This deal is already closed, so the row is skipped. An import does not reopen a closed deal.",
   "import.reason.fx_rate_missing":
