@@ -151,6 +151,9 @@ func TestTheirReplyEndsTheWaitOnlyWhenTheReaderMayReadIt(t *testing.T) {
 		})
 	}
 
+	// The colleague was copied on our mail, so their mailbox holds it and their
+	// copy of the reply may join our thread.
+	seatHoldsSeeded(t, o.e, o.e.Rep2, ours)
 	private := theirReply(o.e.Rep2, seatAddress(t, o.e, o.e.Rep2), o.now.Add(-2*time.Hour))
 	if o.threadKey(t, private) != o.threadKey(t, ours) {
 		t.Fatal("the reply did not join our thread, so the test cannot tell a reply from a new mail")

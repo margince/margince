@@ -54,7 +54,7 @@ func (f *fakeDocuments) MaxBytes(context.Context) int64 { return f.maxBytes }
 
 func documentsRegistry(docs Documents) *Registry {
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
-	RegisterDocumentTools(r, docs)
+	registerDocumentsWithDownload(r, docs)
 	return r
 }
 
@@ -188,8 +188,8 @@ func TestTheCapIsTheSmallerOfTheOperatorLimitAndWhatOneRequestCarries(t *testing
 	for _, tc := range []struct {
 		operator, want int64
 	}{
-		{operator: 0, want: maxInlineFileBytes},
-		{operator: 50_000_000, want: maxInlineFileBytes},
+		{operator: 0, want: MaxInlineFileBytes},
+		{operator: 50_000_000, want: MaxInlineFileBytes},
 		{operator: 2_000_000, want: 2_000_000},
 	} {
 		if got := (attachDocument{docs: &fakeDocuments{maxBytes: tc.operator}}).maxBytes(context.Background()); got != tc.want {
@@ -197,7 +197,7 @@ func TestTheCapIsTheSmallerOfTheOperatorLimitAndWhatOneRequestCarries(t *testing
 		}
 	}
 	// The largest file the cap admits must fit the transport once encoded.
-	if base64.StdEncoding.EncodedLen(maxInlineFileBytes) >= MaxMCPRequestBytes {
+	if base64.StdEncoding.EncodedLen(MaxInlineFileBytes) >= MaxMCPRequestBytes {
 		t.Error("a file at the cap does not fit one MCP request")
 	}
 }
@@ -306,7 +306,7 @@ func TestAttachDocumentCanNeverBeStaged(t *testing.T) {
 func TestAnAttachThatNeedsApprovalSaysTheFileCannotWait(t *testing.T) {
 	approvals := &recordingApprovals{}
 	registry := NewRegistry(approvals, nil)
-	RegisterDocumentTools(registry, &fakeDocuments{})
+	registerDocumentsWithDownload(registry, &fakeDocuments{})
 
 	err := registry.stageRefusedCall(context.Background(), registry.tools["attach_document"], "attach_document",
 		attachCall(t, nil), "hash", apperrors.ErrRequiresApproval)
@@ -333,7 +333,7 @@ func TestARetriedAttachReplaysTheFirstReceipt(t *testing.T) {
 	reader := &answeringReader{}
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}),
 		WithIdempotency(claims), WithReplayReader(reader), WithVolumeCharger(newCountingCharger()))
-	RegisterDocumentTools(r, docs)
+	registerDocumentsWithDownload(r, docs)
 	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), ids.NewV7()), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:docs", OnBehalfOf: ids.NewV7(), PassportID: ids.NewV7(),
 		Scopes: principal.NewScopeSet(principal.ScopeWrite),
@@ -397,5 +397,72 @@ func TestAttachDocumentPassesAnotherFieldFaultThrough(t *testing.T) {
 	_, err := documentsRegistry(docs).Invoke(docsCtx(), "attach_document", attachCall(t, nil))
 	if err == nil || errors.Is(err, errFileKindRefused) {
 		t.Fatalf("err = %v, want the store's own refusal, not the refused-kind sentinel", err)
+	}
+}
+
+// registerDocumentsWithDownload registers the document tools as compose does,
+// after the contract's download verb their router fronts.
+func registerDocumentsWithDownload(r *Registry, docs Documents) {
+	RegisterRouteVerbs(r, []RouteVerb{downloadVerbForTest}, func(context.Context, RouteCall) (json.RawMessage, error) {
+		return json.RawMessage(`{"content_base64":""}`), nil
+	})
+	RegisterDocumentTools(r, docs)
+}
+
+var downloadVerbForTest = RouteVerb{
+	Verb: downloadAttachmentName, Router: "list_documents", Action: "download", Op: "downloadAttachment",
+	Summary: "Download an attachment's file bytes.", Method: "GET", Pattern: "/v1/attachments/{id}",
+	Scope: principal.ScopeRead, PathParams: []string{routeIDArg},
+	AnswerSchema: json.RawMessage(`{"type":"object"}`),
+}
+
+func TestNamingADocumentsIDDownloadsItAndNamingItsRecordListsThem(t *testing.T) {
+	var called RouteCall
+	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
+	RegisterRouteVerbs(r, []RouteVerb{downloadVerbForTest}, func(_ context.Context, call RouteCall) (json.RawMessage, error) {
+		called = call
+		return json.RawMessage(`{"content_base64":"aGk="}`), nil
+	})
+	docs := &fakeDocuments{}
+	RegisterDocumentTools(r, docs)
+	id := ids.NewV7().String()
+
+	out, err := r.Invoke(docsCtx(), "list_documents", json.RawMessage(`{"id":"`+id+`"}`))
+	if err != nil {
+		t.Fatalf("download: %v", err)
+	}
+	if called.Path[routeIDArg] != id || !strings.Contains(string(out), "aGk=") {
+		t.Fatalf("download reached path %v and answered %s", called.Path, out)
+	}
+
+	called = RouteCall{}
+	if _, err := r.Invoke(docsCtx(), "list_documents", json.RawMessage(
+		`{"entity_type":"deal","entity_id":"`+ids.NewV7().String()+`"}`)); err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if called.Verb.Verb != "" {
+		t.Fatalf("a list call ran the download verb %s", called.Verb.Verb)
+	}
+}
+
+// The surface takes no conditional schema, so the words carry what a call needs:
+// an empty call would otherwise read as valid.
+func TestListDocumentsSaysWhatEachCallNeeds(t *testing.T) {
+	spec, ok := documentsRegistry(&fakeDocuments{}).Spec("list_documents")
+	if !ok {
+		t.Fatal("list_documents is not registered")
+	}
+	var shape struct {
+		Properties map[string]struct {
+			Description string `json:"description"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(spec.InputSchema, &shape); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"entity_type", "entity_id"} {
+		if !strings.Contains(shape.Properties[name].Description, "Needed to list") {
+			t.Errorf("%s reads %q, which does not say a list needs it", name, shape.Properties[name].Description)
+		}
 	}
 }

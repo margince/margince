@@ -29,7 +29,6 @@ package gates
 // anything that fails when the next unbounded column arrives.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -117,7 +116,7 @@ func TestABigintReachingAJSONClientIsBoundedToWhatItCanHold(t *testing.T) {
 // and the ones it sends as strings.
 func publishedIntegerFields(t *testing.T, root string) map[string]bool {
 	t.Helper()
-	body, err := os.ReadFile(filepath.Join(root, "api", "crm.yaml"))
+	body, err := gatekit.ReadFile(filepath.Join(root, "api", "crm.yaml"))
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}
@@ -170,7 +169,7 @@ func enclosingProperty(lines []string, at int) (string, bool) {
 // a CHECK already bounds to the safe range.
 func bigintColumnsAndTheirBounds(t *testing.T, root string) (columns map[string][]string, bounded map[string]bool) {
 	t.Helper()
-	body, err := os.ReadFile(filepath.Join(root, "migrations", "testdata", "head_catalog.txt"))
+	body, err := gatekit.ReadFile(filepath.Join(root, "migrations", "testdata", "head_catalog.txt"))
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
 	}

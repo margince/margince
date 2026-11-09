@@ -12,17 +12,17 @@ package gates
 // to find another reason bound elsewhere in the contract.
 
 import (
-	"os"
 	"testing"
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/statedreason"
 )
 
 func TestTheStatedReasonBoundIsTheContractsMaxLength(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile("api/crm.yaml")
+	raw, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}

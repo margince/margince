@@ -66,7 +66,7 @@ function purposes(
 }
 
 const meta: Meta<typeof ConsentPurposesCard> = {
-  title: "Settings/Governance/Privacy and retention/Consent purposes",
+  title: "Settings/Compliance/Privacy and retention/Consent purposes",
   component: ConsentPurposesCard,
 };
 export default meta;

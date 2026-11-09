@@ -137,6 +137,6 @@ describe("the route kept across a provider sign-in", () => {
     const main = readFileSync(resolve(__dirname, "../main.tsx"), "utf8");
     const restore = main.indexOf("restoreReturnRoute();");
     expect(restore).toBeGreaterThan(-1);
-    expect(restore).toBeLessThan(main.indexOf("createRoot(root)"));
+    expect(restore).toBeLessThan(main.indexOf("createRoot(root"));
   });
 });

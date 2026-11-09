@@ -37,7 +37,8 @@ func (s *Service) recordOwners(ctx context.Context) (*storekit.OwnerSet, error) 
 	return &storekit.OwnerSet{IDs: append(slices.Clone(s.noticeOwners), former...), Unassigned: true}, nil
 }
 
-// These producers name no decider. Their rows belong to Unassigned and team views.
+// Duplicate pairs and tag suggestions name no decider. Their rows belong to
+// Unassigned and team views.
 func (s *Service) unassignedDecisions() bool {
 	return s.taskScope != TasksMine && s.taskScope != TasksOwnedBy
 }

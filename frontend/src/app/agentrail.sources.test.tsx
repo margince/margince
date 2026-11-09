@@ -13,7 +13,6 @@ import {
   jsonResponse,
   openPanel,
   panel,
-  ROUTE,
   render,
   settlesOnLine,
   stubAgentRailApi,
@@ -84,7 +83,7 @@ describe("the agent panel's offline sources", () => {
           ],
         }),
     });
-    const { container } = render(ROUTE);
+    const { container } = render();
     await waitFor(() =>
       expect(block(container).getAttribute("data-core-state")).toBe("error"),
     );
@@ -104,7 +103,7 @@ describe("the agent panel's offline sources", () => {
       connectors: () =>
         jsonResponse({ data: [GMAIL, { ...GCAL, status: "reauth_required" }] }),
     });
-    const { container } = render(ROUTE);
+    const { container } = render();
     await openPanel(user, container);
     await waitFor(() =>
       expect(sourceRows()).toEqual([
@@ -126,7 +125,7 @@ describe("the agent panel's offline sources", () => {
           ],
         }),
     });
-    const { container } = render(ROUTE);
+    const { container } = render();
     await openPanel(user, container);
     await waitFor(() =>
       expect(sourceRows()).toEqual([
@@ -140,7 +139,7 @@ describe("the agent panel's offline sources", () => {
     stubAgentRailApi({
       connectors: () => jsonResponse({ data: [GMAIL, GCAL] }),
     });
-    const { container } = render(ROUTE);
+    const { container } = render();
     await settlesOnLine(container, en["agent.line.allClear"]);
   });
 });

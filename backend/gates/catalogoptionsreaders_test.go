@@ -76,7 +76,7 @@ var catalogOptionsReaders = map[string]string{
 func TestOnlyTheDeclaredPackagesReadACustomFieldsOptions(t *testing.T) {
 	t.Parallel()
 	found := map[string]bool{}
-	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

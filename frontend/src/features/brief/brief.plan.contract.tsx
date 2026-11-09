@@ -7,8 +7,10 @@ import { Callout } from "../../design-system/callout";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { useCanWrite } from "../../lib/capability";
 import {
   useSetPlanContract,
+  useWeeklyPlan,
   type WeeklyPlan,
 } from "../worklist/weeklyplan.queries";
 
@@ -39,6 +41,36 @@ type Capacity = NonNullable<WeeklyPlan["capacity"]>;
 // right, and a plan that argued with them would be a worse plan.
 const crowdedWeek = 8;
 
+/**
+ * Whether the week's plan takes edits. A closed week is history: the weekly
+ * job freezes its outcome into the review, so an edit would make the two
+ * disagree.
+ */
+export function planEditable(
+  canEdit: boolean,
+  plan: Readonly<{ status: string }> | null | undefined,
+): boolean {
+  return canEdit && plan?.status === "open";
+}
+
+/** Whether `PlanConstraints` draws anything, or `undefined` while it reads. */
+export function usePlanConstraintsShown(): boolean | undefined {
+  const plan = useWeeklyPlan();
+  return plan.isLoading ? undefined : Boolean(plan.data);
+}
+
+/** What the week is up against, on its own, for the report's side column. */
+export function PlanConstraints() {
+  const plan = useWeeklyPlan();
+  const canEdit = useCanWrite("weekly_plan", "update");
+  return (
+    <PlanContract
+      plan={plan.data}
+      editable={planEditable(canEdit, plan.data)}
+    />
+  );
+}
+
 export function PlanContract({
   plan,
   editable,
@@ -51,7 +83,7 @@ export function PlanContract({
   const crowded = capacity !== undefined && isCrowded(capacity, commitments);
   const n = (value: number) => formatNumber(value, locale);
   return (
-    <Panel title={t("plan.contract.title")}>
+    <Panel flatHead title={t("plan.contract.title")}>
       {/* A warning Callout only when the week is actually crowded. Drawn always,
           the tone would stop meaning anything and a reader would learn to skip
           it. */}

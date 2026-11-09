@@ -81,7 +81,7 @@ screen against it. The sources are listed at the end of the section.
    button and the focus ring, and nothing else.
 
    The primary action in Raycast is plain white. The accent colour in Vercel is a status colour and a focus
-   ring. Rule: the teal accent is the brand mark, the one primary verb in view and a link. It
+   ring. Rule: the accent is the brand mark, the one primary verb in view and a link. It
    also marks the current row of the sidebar and draws the focus ring. The
    cards on the board, the readings and the rows have no colour.
 7. **Type: tight letter space, tabular figures everywhere**. In Linear, the weights run 600 → 400,
@@ -147,9 +147,9 @@ Sources for this section:
    Everything else, figures included, is one quiet sans with tabular figures.
 4. **Buttons are flat, and one is filled**. No gradient, no light line on the edge, no glow.
 
-   A filled teal verb is for the move the page names, and white outlines are for the rest.
+   A filled accent verb is for the move the page names, and white outlines are for the rest.
    Every button carries the resting layer, `--shadow-rest`.
-5. **Colour means something**. The teal accent is the one filled verb, a link and the current row of
+5. **Colour means something**. The accent is the one filled verb, a link and the current row of
    the sidebar.
 
    The indigo tint is a row that says an agent wrote it.
@@ -229,7 +229,7 @@ The ground is `--bgPage #0c1311`, the darkest rung. Every other ground lifts abo
 A pane in a pane lifts one step toward the light per level, up to `--ladder4` at level 4. That is
 as light as a state chip's ground can go and still clear AA.
 
-The accent goes up to `#3aae94` with dark ink (`#07221d`) on it, its text to `#66d5ba`, and the
+The accent goes up to `#16a34a` with dark ink (`#06130b`) on it, its text to `#4ade80`, and the
 indigo text to `#9ba0f0`. The chip turns around instead of copying the light theme: `--bgChip` becomes
 `rgba(239,247,244,.09)`, because a chip on a dark ground can step only one way. The theme switch in three states moves between
 them: `:root`, then `prefers-color-scheme` inside `:not([data-theme="light"])`,
@@ -239,7 +239,7 @@ then `[data-theme="dark"]`.
 
 - **The ground is the chrome**. The sidebar and the top bar are panes over the flat ground. The
   sidebar is never a green column, and there is no coloured bar on any screen.
-- **At most one filled control in view**, in the teal accent: the move the page names. Every other button is
+- **At most one filled control in view**, in the accent: the move the page names. Every other button is
   a pane with an outline.
 - **The indigo tint marks the agent's work**. The agent's read is a row on `--aiBg`. A staged change is a row
   with a dashed `--aiLine` edge until a human accepts it. Nothing else is indigo.
@@ -275,7 +275,7 @@ for most text inside a component. Weight 700 is for a heading, or for emphasis t
 Everything is rem on the 1rem = 16px of the browser, so when a reader makes that larger, the product
 grows with them. The three weights are named tokens (`--fontWeightRegular` / `Medium` / `Bold`) that
 the size tokens read. All of the type (size, line height, weight, letter space) is declared in
-`tokens.css` and in no other file. `design-system/type-source.test.ts` fails a sheet or a `style`
+`tokens.css` and in no other file. `frontend/census/rules/type-source.census.ts` fails a sheet or a `style`
 value in code that spells any of the four by value.
 
 **Almost none of it is in use yet**. `body` in `app.css` reads `--fontBody`, and that is all of it.
@@ -398,8 +398,8 @@ and `min-width: 0`. A page never scrolls to the side; the thing that is too wide
   At the top is the workspace head: the company's mark in a 40px square and its name. While open,
   it is one card with an edge. Then come the rows, 32px each with an 18px icon. Their order is the
   one `frontend/src/app/nav.ts` holds, under the group labels Records, Work and Insights.
-- **Its states**: the group labels are quiet sentence case. The current row is filled with the
-  accent, in medium weight. The agent's orb is pinned to the foot.
+- **Its states**: the group labels are quiet sentence case. The current row is an accent tint with
+  accent text, in medium weight. The agent's orb is pinned to the foot.
 - The sidebar has no badges. The approval and task lists are lanes of the Worklist, which reports
   its counts on the page. Settings is not a row; it opens from the account menu.
 - While a settings route is open, the sidebar shows the settings second level: Overview, then the
@@ -887,7 +887,7 @@ The primitives in the catalog keep their names and `props`; this is how each one
 
 | Component | Look |
 |---|---|
-| `Button` primary | `--accent` fill, `--textOnAccentControl` text (off-white `#f4faf7` in light, dark ink `#07221d` in dark), `--r-control` (12px) radius, `--controlHeight` (32px), `--fontWeightMedium`. One per view. |
+| `Button` primary | `--accent` fill, `--textOnAccentControl` text (off-white `#f4faf7` in light, dark ink `#06130b` in dark), `--r-control` (12px) radius, `--controlHeight` (32px), `--fontWeightMedium`. One per view. |
 | `Button` secondary | `--pane` fill, `--line2` outline, `--ink` text, flat. With only an icon, it is the same `--controlHeight` square for the more menu: there is one control size. |
 | `Button` ghost | No outline, `--ink2` text; hover `--bg3`. |
 | `Button` danger | An outline in `--bad`; fills only inside a `ConfirmModal`. |

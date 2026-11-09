@@ -131,10 +131,10 @@ func eraseChannelIdentities(ctx context.Context, tx pgx.Tx, identities []channel
 			return 0, err
 		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO erasure_suppression (kind, value_hash)
-			VALUES ('channel_identity', $1)
+			INSERT INTO erasure_suppression (kind, value_hash, key_id)
+			VALUES ('channel_identity', $1, $2)
 			ON CONFLICT DO NOTHING`,
-			storekit.ChannelIdentityHash(identity.Provider, identity.ChannelUserID)); err != nil {
+			storekit.ChannelIdentityHash(identity.Provider, identity.ChannelUserID), storekit.SuppressionKeyID()); err != nil {
 			return 0, err
 		}
 	}
@@ -254,16 +254,13 @@ func purgeChannelCaptureTrace(ctx context.Context, tx pgx.Tx, fullName string, i
 func purgeChannelRawCapture(ctx context.Context, tx pgx.Tx, identities []channelIdentity) (int64, error) {
 	var purged int64
 	for _, identity := range identities {
-		tag, err := tx.Exec(ctx, `
-			DELETE FROM raw_capture
-			 WHERE source_system = $1
-			   AND (payload->'message'->'from'->>'id' = $2
-			        OR payload->'my_chat_member'->'chat'->>'id' = $2)`,
-			identity.Provider, identity.ChannelUserID)
+		erased, err := deleteRawOriginalsTx(ctx, tx,
+			rawChannelMatchSQL("r.payload", "r.source_system", "@provider::text", "@account::text"),
+			pgx.NamedArgs{"provider": identity.Provider, "account": identity.ChannelUserID})
 		if err != nil {
 			return 0, err
 		}
-		purged += tag.RowsAffected()
+		purged += erased
 	}
 	return purged, nil
 }

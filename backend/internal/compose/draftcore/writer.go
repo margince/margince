@@ -25,6 +25,7 @@ package draftcore
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -97,13 +98,7 @@ type Input interface {
 	CoRecipientNames() []string
 	// Addresses is where the draft is sent, empty when the record holds none.
 	Addresses() []string
-	// Threaded says whether this draft answers a message THEY sent, which is
-	// what lets a subject carry "Re:" past the phrasing checks.
-	Threaded() bool
-	// ThreadSubject is the subject of the email thread this draft continues,
-	// whoever wrote last, and false when there is none. The served subject is
-	// set from it in code (see ContinueThread).
-	ThreadSubject() (string, bool)
+	RequestedSubject() string
 	// Booked says whether the record carries a meeting with this recipient.
 	//
 	// False is the common answer and the one that binds: with nothing booked, a
@@ -218,7 +213,7 @@ func writeChecked(
 		func(ctx context.Context, correction string) (Draft, error) {
 			return writeWithModel(ctx, lane, surface, in, voice, correction)
 		},
-		DraftText, DraftSubject(in),
+		DraftText, DraftSubject,
 		// No observer: these packages hold no logger, and a retry that does not
 		// help still returns a real draft. The reply surface, which has one,
 		// reports it.
@@ -232,7 +227,12 @@ func writeChecked(
 		return Draft{}, err
 	}
 	served.Body = draftcheck.EnsureGreeting(served.Body, envelope, groundsOf(in))
-	served.Subject = ContinueThread(served.Subject, in)
+	if draftcheck.ClaimsAttachment(served.Body) {
+		return Draft{}, errors.New("draft claims an outgoing attachment that was not supplied")
+	}
+	if subject := in.RequestedSubject(); subject != "" {
+		served.Subject = subject
+	}
 	return served, nil
 }
 
@@ -407,12 +407,8 @@ func groundsOf(in Input) draftcheck.Grounds {
 // labels beside it.
 func DraftText(d Draft) (string, []string) { return d.Body, ReasonLabels(d.Reasoning) }
 
-// DraftSubject is the subject a phrasing check judges, and whether it continues
-// an existing thread — a threaded subject is not held to the same rules as one
-// opening a conversation.
-func DraftSubject(in Input) func(Draft) (string, bool) {
-	return func(d Draft) (string, bool) { return d.Subject, in.Threaded() }
-}
+// DraftSubject checks subjects on the new-message surfaces.
+func DraftSubject(d Draft) (string, bool) { return d.Subject, false }
 
 // ReasonLabels is the reasoning as plain strings, for the phrasing checks.
 func ReasonLabels(reasons []Reason) []string {

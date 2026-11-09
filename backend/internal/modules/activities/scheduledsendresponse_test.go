@@ -87,7 +87,7 @@ func TestTheWireCarriesWhatAnEditRebuildsTheMessageFrom(t *testing.T) {
 	file := OutboundFile{AttachmentID: ids.NewV7(), Filename: "quote.pdf", ContentType: "application/pdf", ByteSize: 2048, Checksum: "sha256:ab"}
 
 	out := scheduledSendResponse(row)
-	withScheduledFiles(&out, scheduledFiles{attachable: []OutboundFile{file}, unavailable: 2})
+	withScheduledFiles(&out, resolvedFiles{attachable: []OutboundFile{file}, unavailable: 2})
 
 	if out.HtmlBody == nil || *out.HtmlBody != "<p>Your <b>quote</b></p>" {
 		t.Errorf("markup on the wire = %v, want the frozen markup", out.HtmlBody)

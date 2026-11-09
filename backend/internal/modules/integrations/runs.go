@@ -267,7 +267,7 @@ func (s *Store) refuseOnStanding(ctx context.Context, tx pgx.Tx, conn admittedCo
 			return provider.SkipRateLimited, nil
 		}
 	}
-	if conn.refreshAge != nil && in.Trigger.Automatic() {
+	if conn.refreshAge != nil && (in.Trigger.Automatic() || runIsAnAgents(ctx)) {
 		fresh, err := s.hasFreshRun(ctx, tx, in.ContactID, in.Provider, *conn.refreshAge)
 		if err != nil {
 			return "", err
@@ -303,9 +303,9 @@ func (s *Store) refuseOnWhatTheRecordCarries(ctx context.Context, tx pgx.Tx, des
 	}
 	fingerprint := fingerprintOf(idents, cats)
 
-	// The duplicate fence, automatic runs only. A human asking explicitly
-	// knows something the duplicate signal does not.
-	if in.Trigger.Automatic() && s.cluster != nil {
+	// The duplicate fence, for automatic runs and an agent's. A human asking
+	// explicitly knows something the duplicate signal does not.
+	if (in.Trigger.Automatic() || runIsAnAgents(ctx)) && s.cluster != nil {
 		dup, err := s.duplicateAlreadyBought(ctx, tx, in, fingerprint)
 		if err != nil {
 			return none, "", err
@@ -322,7 +322,11 @@ func (s *Store) refuseOnWhatTheRecordCarries(ctx context.Context, tx pgx.Tx, des
 // contact not enriched" deserves a row that answers, and a silent no-op cannot.
 func (s *Store) queueOne(ctx context.Context, tx pgx.Tx, desc provider.Descriptor, conn admittedConnection, in provider.QueueInput) (provider.Run, error) {
 	snapshot := freezeSnapshot(conn)
-	cats, err := runCategories(desc, conn, in)
+	pick := runCategories
+	if runIsAnAgents(ctx) {
+		pick = agentRunCategories
+	}
+	cats, err := pick(desc, conn, in)
 	if err != nil {
 		return provider.Run{}, err
 	}

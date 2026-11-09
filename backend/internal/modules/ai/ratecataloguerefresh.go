@@ -54,6 +54,9 @@ type ProviderRefresh struct {
 	Unlisted []string `json:"unlisted"`
 	// Models is the ids written this run, in id order.
 	Models []string `json:"models"`
+	// Review is the banded models whose catalogue price changed while the
+	// catalogue publishes no band. They were kept for an admin to re-price.
+	Review []string `json:"review"`
 }
 
 // RateRefreshReport lists every provider this build knows, chat adapters
@@ -236,7 +239,7 @@ func reportLine(name string, planned *ProviderRefresh, brokerDown bool) Provider
 		line = ProviderRefresh{Provider: name, Outcome: RefreshUnreachable}
 	case line.Updated+line.Added > 0:
 		line.Outcome = RefreshUpdated
-	case line.Unchanged+line.Kept > 0:
+	case line.Unchanged+line.Kept+len(line.Review) > 0:
 		line.Outcome = RefreshUnchanged
 	case len(line.Unlisted) > 0:
 		line.Outcome = RefreshNotListed
@@ -252,6 +255,9 @@ func reportLine(name string, planned *ProviderRefresh, brokerDown bool) Provider
 	}
 	if line.Unlisted == nil {
 		line.Unlisted = []string{}
+	}
+	if line.Review == nil {
+		line.Review = []string{}
 	}
 	return line
 }

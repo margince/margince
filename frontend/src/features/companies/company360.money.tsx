@@ -10,6 +10,7 @@ import { FactList } from "../../design-system/factlist";
 import { formatMoneyCompact } from "../../format/format";
 import type { Locale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { problemCodeOf } from "../../lib/problem";
 import type { Company360 } from "./company360";
 import { WITHHELD_READING } from "./company360health";
@@ -76,7 +77,7 @@ function financeAbsence({
     // read rather than assumed, since a former customer comes down here too.
     return {
       value: "co.strip.fin.neverInvoiced",
-      detail: LIFECYCLE_LABELS[lifecycle],
+      detail: labelFor(LIFECYCLE_LABELS, lifecycle),
     };
   }
   return { value: "co.strip.fin.noFigure", detail: noFigureReason(state) };
@@ -161,7 +162,7 @@ export function MoneyStat({
         {
           key: "payment",
           term: t(HEALTH_DIMENSION_LABEL.payment),
-          value: t(HEALTH_RATING_LABEL[dimension.rating]),
+          value: t(labelFor(HEALTH_RATING_LABEL, dimension.rating)),
           note: dimension.reason,
         },
       ]}
@@ -180,7 +181,7 @@ export function MoneyStat({
         // Which stage, rather than "not a customer yet". Every stage that
         // reaches here answers why there is nothing to invoice. The record
         // page reads them all out of the one catalog.
-        detail={t(LIFECYCLE_LABELS[lifecycle])}
+        detail={t(labelFor(LIFECYCLE_LABELS, lifecycle))}
       />
     );
   }

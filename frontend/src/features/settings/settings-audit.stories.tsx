@@ -167,7 +167,7 @@ const openFirst = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
 };
 
 const meta: Meta<typeof AuditLogCard> = {
-  title: "Settings/Governance/Audit log/Recorded actions",
+  title: "Settings/Compliance/Audit log/Recorded actions",
   component: AuditLogCard,
 };
 export default meta;

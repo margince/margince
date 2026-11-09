@@ -16,8 +16,8 @@ import { formatDateTime } from "../../format/format";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { type ActorFields, actorAttribution } from "../../lib/auditactor";
-import { useRecordZone } from "../../lib/recordzone";
 import { SEARCH_HIT_KIND_KEY } from "../../lib/searchkinds";
+import { useViewerZone } from "../../lib/viewerzone";
 import "./audit.css";
 
 // Reusable audit attribution — turns a raw AuditLogEntry into a line a contact
@@ -174,7 +174,7 @@ export function AuditEntryLine({
 }: Readonly<{ entry: AuditLogEntry; meUserId?: string }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const name = entryName(entry);
   return (
     <div className="audit-line t-sub">
@@ -190,7 +190,7 @@ export function AuditEntryLine({
           record clock exists to prevent. `dateTime` carries the unambiguous
           instant for anyone who has to convert. */}
       <time className="audit-when" dateTime={entry.occurred_at}>
-        {formatDateTime(entry.occurred_at, locale, recordZone)}
+        {formatDateTime(entry.occurred_at, locale, readerZone)}
       </time>
     </div>
   );

@@ -1,3 +1,4 @@
+import { SenderCorrections } from "./capture-sendercorrections";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -24,11 +25,11 @@ import {
 } from "../import/linkedin-reach";
 import {
   AwaitingContacts,
-  SenderDecisions,
   useAwaitingDecision,
   useSenders,
 } from "./capture-senders";
 import { HeldThreads, useHeldThreads } from "./held-threads";
+import { heldTotal } from "./held-threads.counts";
 
 // One row per list the mailboxes and LinkedIn import produced. Each list is
 // long and read rarely, so the row says how much there is and opens a drawer.
@@ -58,9 +59,9 @@ export function ConnectionOutcomesCard() {
   const waitingCount = waiting.data?.data.length ?? 0;
   const reachCount = reach.data?.accounts_total;
   const counts: Record<Outcome, number | undefined> = {
-    senders: senders.data?.data.length,
+    senders: senders.data?.total ?? senders.data?.data.length,
     waiting: waitingCount,
-    held: held.data?.data.length,
+    held: held.data?.pages[0] && heldTotal(held.data.pages[0]),
     reach: reachCount,
   };
   // A list emptied in the drawer, or about to re-read, may take its row's View
@@ -136,7 +137,7 @@ export function ConnectionOutcomesCard() {
           {senders.data.data.length === 0 ? (
             <EmptyState>{t("senders.emptyBody")}</EmptyState>
           ) : (
-            <SenderDecisions rows={senders.data.data} />
+            <SenderCorrections />
           )}
         </OutcomeDrawer>
       )}
@@ -159,11 +160,7 @@ export function ConnectionOutcomesCard() {
           onClose={close}
           returnFocusTo={backTo("held")}
         >
-          {held.data.data.length === 0 ? (
-            <EmptyState>{t("heldThreads.empty")}</EmptyState>
-          ) : (
-            <HeldThreads list={held.data} />
-          )}
+          <HeldThreads />
         </OutcomeDrawer>
       )}
       {open === "reach" && reach.data && (

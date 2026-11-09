@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -133,10 +134,10 @@ func TestABrokenLinkSkipsTheRowUnlessTheRunSaysImportAnyway(t *testing.T) {
 }
 
 // stageRefRun stages contacts.csv of a ZIP under a broken-link policy.
-func stageRefRun(t *testing.T, e *apptest.AppEnv, files map[string]string, policy string) importRunDTO {
+func stageRefRun(t *testing.T, e *apptest.AppEnv, files map[string]string, policy string) importjobtest.Run {
 	t.Helper()
-	var run importRunDTO
-	if status := testCall(t, e, "/v1/imports", AnyMap{
+	var run importjobtest.Run
+	if status := importjobtest.CallTestRun(t, e, "/v1/imports", AnyMap{
 		"connector": "csv", "source_ref": uploadZip(t, e, "b.zip", zipBytes(t, files)).SourceRef,
 		"source_name": "b", "on_broken_link": policy, "parts": contactRefParts(),
 	}, &run); status != http.StatusAccepted {
@@ -222,8 +223,8 @@ func TestACompanyNameThatFindsNothingFollowsTheZipsPolicy(t *testing.T) {
 		t.Run(policy, func(t *testing.T) {
 			e := setupImportApp(t)
 			files := map[string]string{"contacts.csv": "ref,email,name,company\nP-1,lu@" + policy + ".example,Lu,Nowhere Ltd\n"}
-			var run importRunDTO
-			if status := testCall(t, e, "/v1/imports", AnyMap{
+			var run importjobtest.Run
+			if status := importjobtest.CallTestRun(t, e, "/v1/imports", AnyMap{
 				"connector": "csv", "source_ref": uploadZip(t, e, "c.zip", zipBytes(t, files)).SourceRef,
 				"source_name": "c", "on_broken_link": policy, "parts": nameParts,
 			}, &run); status != http.StatusAccepted {
@@ -242,11 +243,11 @@ func TestACompanyNameThatFindsNothingFollowsTheZipsPolicy(t *testing.T) {
 	}
 	t.Run("single csv", func(t *testing.T) {
 		e := setupImportApp(t)
-		profile, status := uploadCSV(t, e, "contact", "Email,Name,Company\nlu@single.example,Lu,Nowhere Ltd\n")
+		profile, status := importjobtest.UploadCSV(t, e, "contact", "Email,Name,Company\nlu@single.example,Lu,Nowhere Ltd\n")
 		if status != http.StatusOK {
 			t.Fatalf("upload → %d, want 200", status)
 		}
-		run, status := createRunWithMapping(t, e, "contact", profile.SourceRef,
+		run, status := importjobtest.CreateRunWithMapping(t, e, "contact", profile.SourceRef,
 			map[string]string{"Email": "email", "Name": "full_name", "Company": "company_name"})
 		if status != http.StatusAccepted {
 			t.Fatalf("stage → %d, want 202", status)
@@ -307,7 +308,7 @@ func TestALeadsCompanyNameNeverSkipsTheLead(t *testing.T) {
 
 // namedCompanyZip stages a ZIP whose company row names an existing company by
 // id under ref CO-7, and whose contact links to CO-7.
-func namedCompanyZip(t *testing.T, e *apptest.AppEnv, companyCSV string) importRunDTO {
+func namedCompanyZip(t *testing.T, e *apptest.AppEnv, companyCSV string) importjobtest.Run {
 	t.Helper()
 	files := map[string]string{
 		"companies.csv": companyCSV,

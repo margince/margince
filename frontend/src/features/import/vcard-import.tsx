@@ -17,6 +17,7 @@ import { RecordBack } from "../../design-system/recordview";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { ACCEPTED_ATTACHMENT_EXTENSIONS } from "../../lib/attachmentupload";
+import { valueFor } from "../../lib/labelfor";
 import { ACTION_PARAM, QUALIFY_ACTION } from "../../lib/leads.address";
 import { postMultipart } from "../../lib/multipart";
 import { problemMessageOf } from "../../lib/problem";
@@ -318,7 +319,7 @@ function HeldLeadVerbs({ leadId }: Readonly<{ leadId: string }>) {
 function CardFields({ fields }: Readonly<{ fields: readonly VCardField[] }>) {
   const t = useT();
   const label = (field: VCardField["field"]) => {
-    const key = FIELD_LABELS[field];
+    const key = valueFor(FIELD_LABELS, field, undefined);
     return key ? t(key) : field;
   };
   const stated = fields.filter((f) => f.action !== "not_in_card");
@@ -329,7 +330,9 @@ function CardFields({ fields }: Readonly<{ fields: readonly VCardField[] }>) {
         <ul>
           {stated.map((f) => {
             const action =
-              f.action === "not_in_card" ? undefined : ACTION_LABELS[f.action];
+              f.action === "not_in_card"
+                ? undefined
+                : valueFor(ACTION_LABELS, f.action, undefined);
             return (
               <li key={`${f.field}:${f.value ?? ""}`} data-action={f.action}>
                 <span className="vcard-import-field-label">

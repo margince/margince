@@ -134,10 +134,21 @@ func (s *Store) CurrentEmployers(ctx context.Context, contactIDs []ids.UUID) (ma
 	var out map[ids.UUID]crmcontracts.ContactEmployer
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = readContactEmployers(ctx, tx, contactIDs)
+		out, err = CurrentEmployersTx(ctx, tx, contactIDs)
 		return err
 	})
 	return out, err
+}
+
+// CurrentEmployersTx reads the same employer facts inside an existing transaction.
+func CurrentEmployersTx(ctx context.Context, tx pgx.Tx, contactIDs []ids.UUID) (map[ids.UUID]crmcontracts.ContactEmployer, error) {
+	if err := auth.Require(ctx, contactEntity, principal.ActionRead); err != nil {
+		return nil, err
+	}
+	if err := auth.Require(ctx, companyEntity, principal.ActionRead); err != nil {
+		return nil, err
+	}
+	return readContactEmployers(ctx, tx, contactIDs)
 }
 
 // readContactEmployers is the one read behind every employer a contact

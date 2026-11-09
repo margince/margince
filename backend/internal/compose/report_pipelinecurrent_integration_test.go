@@ -37,7 +37,7 @@ import (
 // (report_dealsbystage_integration_test.go).
 func TestPipelineCurrentCountsAnUnownedDealForATeamManager(t *testing.T) {
 	e := setupForecast(t)
-	e.seedOpenDeal(t, "Unowned", 60, nil, new(int64(10000)), new("commit"))
+	e.seedOpenDeal(t, "Unowned", 60, nil, new(int64(10000)))
 
 	manager := e.dealReadCtx(ids.NewV7(), []ids.UUID{e.Team1}, principal.RowScopeTeam)
 	result := e.runReport(manager, t, "pipeline-current", pipelineCurrentPlan)
@@ -169,8 +169,8 @@ func TestPipelineCurrentCountsAnUnpricedDealAndExcludesItFromTheMoney(t *testing
 	if got := wireInt(t, row, "deals"); got != 2 {
 		t.Errorf("counted %v deals, want both — an unconvertible deal is still pipeline", got)
 	}
-	if got := wireInt(t, row, "base"); got != 10_000 {
-		t.Errorf("money total was %v, want only the deal that could be priced", got)
+	if row["base"] != nil {
+		t.Errorf("incomplete pipeline total was served: %v", row["base"])
 	}
 	// The two numbers disagreeing is the whole point: a reader comparing them
 	// can see the total covers one deal of the two. Equal counts would say the

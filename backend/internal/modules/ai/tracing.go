@@ -18,6 +18,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -431,13 +432,10 @@ func tierOnLadder(ladder []Tier, t Tier) bool {
 	return slices.Contains(ladder, t)
 }
 
-// flushDetached wraps flush in a context that outlives the request: a
-// timed-out or canceled call is exactly the terminal worth recording, and
-// the workspace GUC values ride context values, which WithoutCancel
-// preserves. The bound keeps a dead trace store from pinning the caller's
-// goroutine.
+// A canceled or replaced execution still owes a trace of its spent model calls.
+// The trace write is bounded and keeps the caller's identity.
 func (r *Router) flushDetached(ctx context.Context, b *binding, lc *logicalCall) {
-	traceCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), traceWriteTimeout)
+	traceCtx, cancel := context.WithTimeout(context.WithoutCancel(database.WithoutTransactionGuard(ctx)), traceWriteTimeout)
 	defer cancel()
 	r.flush(traceCtx, b, lc)
 }

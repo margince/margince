@@ -27,7 +27,7 @@ export function count(value: unknown): string {
  * document inlined into a third-party host.
  *
  * The locale is the host browser's. No LocaleProvider stands above this
- * document and no reader's choice reaches it; `format/one-locale.test.ts`
+ * document and no reader's choice reaches it; `census/rules/one-locale.census.ts`
  * names this file as an exemption for that reason.
  *
  * An unknown currency or an amount past the safe integer range renders as the

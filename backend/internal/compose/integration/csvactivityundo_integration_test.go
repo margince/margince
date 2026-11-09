@@ -54,9 +54,20 @@ func TestAnImportedActivityStartsNoAutomation(t *testing.T) {
 	if !events.IsImported(captured) {
 		t.Errorf("activity.captured of the imported meeting does not name run %s: %s", run.ID, captured.Payload)
 	}
-	for _, group := range []string{"cg:workflows", "cg:flow-bridge", "cg:capture-enrich", "cg:intro-advance", "cg:notice-case-open", "cg:commitment-settle", "cg:vcard-ingest"} {
+	for _, group := range []string{"cg:workflows", "cg:flow-bridge", "cg:intro-advance", "cg:commitment-settle"} {
 		if !events.SkipsImported(group) {
 			t.Errorf("%s does not skip imported events", group)
+		}
+	}
+	// These read imported events because mailbox history needs them, and each
+	// leaves a data import alone in its handler. Signature enrichment queues
+	// nothing for an import that is not a mailbox's
+	// (TestOtherImportedMailDoesNotRequestSignatureWork). A notice duty settles
+	// only on mail a connector captured (correspondence.SubjectMailSQL). A
+	// vCard comes from an attachment, which an imported row has none of.
+	for _, group := range []string{"cg:capture-enrich", "cg:notice-case-open", "cg:vcard-ingest"} {
+		if events.SkipsImported(group) {
+			t.Errorf("%s skips imported events, so a mailbox import's history would never reach it", group)
 		}
 	}
 

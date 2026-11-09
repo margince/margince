@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/compose/draftcore backend/internal/compose/replydraft.go backend/internal/compose/replyconversation.go frontend/src/lib/messagevoice.ts backend/internal/modules/activities/signaturetemplate.go -->
+<!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/scheduledstop.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/compose/draftcore backend/internal/compose/replydraft.go backend/internal/compose/replyconversation.go frontend/src/lib/activityfiling.ts frontend/src/lib/messagevoice.ts backend/internal/modules/activities/signaturetemplate.go -->
 # Writing and sending mail
 
 ### How do I send an email to a contact?
@@ -44,7 +44,7 @@ Rest the mouse on **Preview** to see a message's text, and press **Read full ema
 To file an email you send under a project in Margince, choose the project in the composer's head, beside its title. Margince puts its key, such as `[NER-1]`, at the start of the **Subject**, so the client's answer is filed under the project too.
 The switch **Add project key to subject (helps filing)** under the subject is on. Turn it off to send this email without the key; the next email starts with it on. Choosing **No project** also takes the key out; deleting it from the text does not.
 
-The list starts on the thread's own project, then on the deal's, then on the company's only live project. Writing from a project page files under that project; with no live project to offer, the list shows **No project** and cannot be changed. A new email from a company has one **Related to** list there instead: the company's live projects, its open deals ("Deal: {name}"), and **Nothing specific**. A deal has no key, so choosing one takes the key out of the subject and files the email under the deal. Also called: tag an email with a project, project key in the subject, file an email under a deal.
+The list starts on the thread's own project, then on the deal's, then on the company's only live project. Writing from a project page files under that project; with no live project to offer, the project list is hidden. A new email from a company has one **Related to** list there instead: the company's live projects, its open deals ("Deal: {name}"), and **Nothing specific**. A deal has no key, so choosing one takes the key out of the subject and files the email under the deal. Also called: tag an email with a project, project key in the subject, file an email under a deal.
 
 ### What do the composer's error messages mean?
 The composer in Margince does not send until four things are filled in, and names each one under its field.
@@ -113,7 +113,7 @@ To have AI draft an email in Margince, open the composer. Say what the email is 
 4. Then press **Draft email** (**Draft reply** for a reply). It shows **Drafting…** while it writes, and an empty message field shows moving dots where the text will appear.
 5. Read and edit the draft, then send it as you always do.
 
-With no AI model set up, AI drafting is not available, and you write the email yourself.
+**Email** starts a new message and waits for you to press **Draft email**. Its subject does not come from an earlier thread. A suggested **Draft a follow-up** continues the message named by the suggestion. If that message can no longer be read, the action says so. With no AI model set up, AI drafting is not available, and you write the email yourself.
 Also called: AI writer, generate an email, write it for me.
 
 ### Drafting with AI
@@ -122,7 +122,7 @@ Also called: AI writer, generate an email, write it for me.
 **Why this draft**, closed until you open it, shows what it read
 ("Based on: {inputs}"), with a link to each record it read.
 
-Every AI draft is marked **AI-assisted draft**, with a note that AI wrote it and
+A restored draft keeps its purpose and AI note. The **Saved draft restored** notice makes clear that you are opening saved work. Every AI draft is marked **AI-assisted draft**, with a note that AI wrote it and
 that you should check and edit it before sending.
 
 Your voice profile has a number that goes up with each build, shown after
@@ -145,6 +145,8 @@ keeps the text it wrote.
 Margince keeps a message you have not finished as a draft while you type. The
 foot says **Draft saved**, and closing the window keeps it too. It does not send
 anything. **Delete draft** deletes the message.
+
+A saved draft also keeps the deal and project you chose. Margince checks that you can still use them when you open the draft again.
 
 ### The four rewrites
 
@@ -173,14 +175,21 @@ The answers are:
 - Their customer relationship
 - Marketing
 
-Margince does not ask for a reason when you reply to their own message.
+Margince does not ask for a reason when you reply to their own message. On a contact's page,
+**Active deal** adds **Deal this follow-up is about**: pick their open deal before **Send**.
 
 The consent check reads the reason, and it runs *before* you send. Beside
-**Send** the composer shows **Ready to send** once the check allows it. When it
-does not, the warning bar above **Send** shows the answer: **No recorded reason
-to contact this recipient**, or **Message cannot be sent**. A check with no answer never counts
-as permission: "The send check did not complete. Sending runs the check
-again."
+**Send** the composer shows **Recipients checked** once the check allows it and
+nothing on the form is missing. The mailbox is still checked when you send.
+
+When the check does not allow it, the warning bar above **Send** shows one
+answer for the message, with its fix: see the list below. With several recipients, the bar names the address
+the answer applies to. A check with no answer never counts as permission: "The
+send check did not complete. Sending runs the check again."
+
+When **Send** is refused, the refusal takes the place of the earlier answer in
+the same bar. It goes away when you change anything in the message, or when
+a new check allows the message.
 
 Some purposes that Margince knows, such as a security notice, are not offered
 here. A sender who could pick one could send marketing that looks like a
@@ -188,31 +197,29 @@ security notice.
 
 ### Why can't I send an email to this contact?
 When Margince will not send an email to a contact, the warning bar above **Send** names the reason. Where there is a fix, it names that too.
-- **Send blocked: no consent**: there is no consent for this purpose. Use **Review consent**, or press **Overrule with a reason** where it is offered.
-- **No recorded reason to contact this recipient**: pick why you may write from the list beside the refusal. When **Reason for contact** already names it, press **Record this reason**. It is recorded at once under your name for this kind of message, and it is not consent. If Margince still refuses when you press **Send**, press **Overrule with a reason**.
-- **Overrule with a reason**: write why the message may go and press **Record the overrule**, then press **Send** again. Your reason is recorded on each contact, under your name, and covers that kind of message to them until someone revokes it. It is offered only where Margince itself refused. It is not offered when the contact objected or the address does not accept mail.
-- **Message cannot be sent**: a reason nobody can lift, such as "The recipient objected to marketing."
+- **This message needs one more detail**: for "Choose the deal for this follow-up.", pick it in **Deal this follow-up is about**. You can also write from the deal's page. When the record already shows another reason, the bar offers **Use "…" instead**. It switches the reason and checks again; it does not send.
+- **Permission needed for this message**: the required permission is not on record. Record the recipient's consent or the facts that support an allowed customer route. A staff exception cannot replace them.
+- **No recorded reason to contact this recipient**: pick why you may write from the list beside the refusal. When **Reason for contact** already names it, press **Keep as a standing reason**. It covers this kind of message to them from your company until someone revokes it. It is your word, not their consent. If Margince still refuses when you press **Send**, press **Overrule with a reason**.
+- **Overrule with a reason**: write why the message may go and press **Record the overrule**, then press **Send** again. Your reason is recorded on each contact, under your name, and covers that kind of message to them until someone revokes it. It is offered only where Margince itself refused. It is not offered when the contact objected or the address does not accept mail. Where you hold the exception right, **Send with a recorded exception** sends this one message instead. It grants nothing for later messages, and the composer closes once it has sent.
+- **Message cannot be sent**: a reason nobody can lift, such as "The recipient objected to marketing", or an address that does not take mail.
 - A mailbox connected only to read mail: press **Reconnect your mailbox** and allow sending.
 Also called: email blocked, cannot email customer, send refused.
 
 ## What a send refuses, and what it only warns about
 
-A send without consent is refused:
+A marketing send without consent is refused:
 
-> **Send blocked: no consent**
-> A recipient has not given consent for this purpose, so the send was blocked.
-> With no consent, the answer is always no.
+> **Permission needed for this message**
+> Marketing needs the recipient's consent, and none is on record.
 
-The reason is always clear. Some say that nobody can lift them: "The recipient
-objected to marketing", and no one here can change that, an administrator
-too. Others name the fix. An address that does not take mail must be
-corrected, and no one can let it through. When several records share one
-address, Margince cannot tell who the recipient is, and you merge the records to
-fix it.
+An administrator cannot send marketing after the recipient objected.
+Correct an address that does not take mail. If several records share one address,
+merge them so Margince can tell who the recipient is.
 
-**A bouncing address is a warning.** You can still send. The composer says the
-last mail to that address came back, and none has gone through after it. Send it
-all the same, or use another address.
+**Mail that comes back** needs a check of the address. The composer says the last
+mail came back, and none has gone through since. If the address does not take mail,
+sending is blocked.
+Correct that address before trying again.
 
 **A colleague's mailbox** gets a note on a reply, and you can still send. Your
 reply goes to the recipients in **To**, from your own mailbox and under your name.
@@ -287,23 +294,22 @@ later means writing it again.
 
 ### Held
 
-A scheduled message is **Held** when its time came and a check refused it. The
-reason says which check, and what to do:
+A scheduled message is **Held** when a check refused it, or when a recipient answered first. The
+reason says which, and what to do:
 
 - **A recipient withdrew their consent** after you set the send.
+- **A recipient stopped marketing** after you scheduled a marketing message. It is held at once.
+- **New mail came in from a recipient** after you scheduled a deal follow-up or a quote. Read it first.
 - **Your seat or mailbox changed**, so it cannot be sent as you.
-- **Its send time passed** while the system was not running, and it is now too
-  late to send. Reschedule or withdraw it.
+- **Its send time passed** while the system was not running, and it is now too late to send. Reschedule or withdraw it.
 - **The send job ran out of attempts.** Reschedule it to try again.
 - **A check blocked it when it was due.** Nothing was sent.
 
-A held message also adds an approval card that never runs out. See
-[Approvals](approvals.md).
+A held message also adds an approval card that never runs out. See [Approvals](approvals.md). After reading a recipient's reply, accept the card or reschedule the message to send it again. Another reply received after that review pauses it again. Only mail you can read counts.
 
 ## What the recipient controls
 
-Every marketing message carries a footer with two links: unsubscribe, and
-manage preferences. Both are the recipient's own private links.
+Every marketing message carries a footer with two links: unsubscribe, and manage preferences. Both are the recipient's own private links.
 
 **The preference centre** says that each purpose is separate. The recipient
 cannot switch off messages they need for something they did, such as an order note. All other purposes are theirs to control.
@@ -313,8 +319,7 @@ because they did not say no, or off because they asked you to stop. Only a clear
 "no" from them counts as off.
 
 **Security and service messages are always on**, and the page says why. They
-are needed for something the recipient asked for, such as a password reset or a
-confirmation.
+are needed for something the recipient asked for, such as a password reset or a confirmation.
 
 **Stop all marketing** switches off every marketing purpose at once and leaves
 the rest alone. Replies to their own questions, and anything they asked for, go
@@ -350,9 +355,11 @@ Also called: GDPR Art. 14 notice, disclosure duty, information obligation.
 
 ### Why does a contact say “Review source”?
 The record does not say where the contact's details come from, so no notice deadline is set.
-In **Settings → Privacy**, a user with privacy access can check the source and its proof.
+A user with privacy access answers how the details came in, under **Source** on the contact or in **Settings → Privacy**.
 If the details come from the contact, the review ends. Data from someone else may still need a notice.
 **Due no later than** is the last possible date. The duty may already be due.
+
+**Met face to face** asks for the day of the meeting. It allows personal follow-up mail, never marketing or a newsletter. No privacy notice is owed, because they learned at the meeting who you are. A meeting you record when a send is refused also allows follow-up mail.
 
 ### Why does Margince say "this installation cannot send mail"?
 "Not sent: this installation cannot send mail" means your installation has no server set up to send its own mail. So the privacy notice or confirmation link was not sent, and the duty stays open.

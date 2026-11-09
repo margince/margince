@@ -12,7 +12,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
-import { stillHeld } from "./employmentcurrency";
+import { stillHeld } from "../../lib/employmentcurrency";
 import { datePatch, patchEmployment, validDateEntry } from "./employmentpatch";
 import "../../design-system/querystates.css";
 

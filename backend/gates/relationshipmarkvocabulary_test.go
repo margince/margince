@@ -10,11 +10,11 @@ package gates
 // time. A value in the CHECK and not in Go is one no reader was written for.
 
 import (
-	"os"
 	"regexp"
 	"sort"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
 )
 
@@ -23,7 +23,7 @@ var relationshipMarkCheckRE = regexp.MustCompile(
 
 func TestTheRelationshipMarkVocabularyIsTheCatalogsCheck(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile(replyVerdictCatalog)
+	raw, err := gatekit.ReadFile(replyVerdictCatalog)
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
 	}

@@ -10,13 +10,16 @@ import { DataTable } from "../../design-system/datatable";
 import { ErrorLine } from "../../design-system/errorline";
 import { SurfaceState } from "../../design-system/surfacestate";
 import {
-  formatMoneyOrAbsent,
-  formatNumber,
+  formatAnalyticsMoneyOrAbsent,
+  formatAnalyticsNumber,
+  formatDateTime,
   MONEY_ABSENT,
 } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
+import { labelFor } from "../../lib/labelfor";
 import { ProblemError, throwProblem } from "../../lib/problem";
-import { derivationColumns } from "./analytics.explain";
+import { derivationColumns, ExcludedNote } from "./analytics.explain";
 import { ExplainDrawer } from "./analytics.explain.drawer";
 import {
   type Namer,
@@ -31,6 +34,8 @@ import {
   type CustomLabels,
   columnLabel,
   explainGroup,
+  isMoneyField,
+  isNativeMoneyField,
   isWithheldRow,
   measureOfColumn,
   measureReading,
@@ -72,8 +77,8 @@ function measureCell(
   return (
     <span className="t-num">
       {reading.kind === "money"
-        ? formatMoneyOrAbsent(value, reading.currency, locale)
-        : formatNumber(value, locale)}
+        ? formatAnalyticsMoneyOrAbsent(value, reading.currency, locale)
+        : formatAnalyticsNumber(value, locale)}
     </span>
   );
 }
@@ -128,7 +133,7 @@ function AnswerCell({
   if (isWithheldRow(row)) {
     return first
       ? plural("analytics.q.withheldGroups", withheldGroups, {
-          count: formatNumber(withheldGroups, locale),
+          count: formatAnalyticsNumber(withheldGroups, locale),
         })
       : null;
   }
@@ -170,6 +175,8 @@ export function AnswerTable({
   const t = useT();
   const { locale } = useLocale();
   const plural = usePlural();
+  const zone = useCompanyZone();
+  const answerCurrency = answer.base_currency ?? baseCurrency;
   const namer = useValueNamer(
     query.entity,
     query.group_by ?? [],
@@ -183,7 +190,7 @@ export function AnswerTable({
     query,
     namer,
     source,
-    baseCurrency,
+    baseCurrency: answerCurrency,
     withheldGroups,
     fieldLabels,
   };
@@ -191,6 +198,22 @@ export function AnswerTable({
   const limit = query.limit ?? QUESTION_LIMIT;
   return (
     <>
+      {query.measures.some(
+        (measure) =>
+          measure.field &&
+          isMoneyField(measure.field) &&
+          !isNativeMoneyField(measure.field),
+      ) &&
+        answer.base_currency &&
+        answer.rate_date && (
+          <p className="t-caption">
+            {t("analytics.q.conversionFrame", {
+              currency: answer.base_currency,
+              date: formatDateTime(answer.rate_date, locale, zone),
+            })}
+          </p>
+        )}
+      <ExcludedNote count={answer.excluded_by_permission} />
       {answer.withheld && (
         <Callout
           tone="info"
@@ -200,7 +223,7 @@ export function AnswerTable({
           {t("analytics.q.withheldBody")}
         </Callout>
       )}
-      {anyReading("mixed", query, answer, baseCurrency) && (
+      {anyReading("mixed", query, answer, answerCurrency) && (
         <Callout
           tone="info"
           kind="standing"
@@ -209,7 +232,7 @@ export function AnswerTable({
           {t("analytics.q.mixedBody")}
         </Callout>
       )}
-      {anyReading("noBase", query, answer, baseCurrency) && (
+      {anyReading("noBase", query, answer, answerCurrency) && (
         <Callout
           tone="info"
           kind="standing"
@@ -240,7 +263,7 @@ export function AnswerTable({
       {answer.rows.length >= limit && (
         <p className="t-caption">
           {plural("analytics.q.limited", limit, {
-            count: formatNumber(limit, locale),
+            count: formatAnalyticsNumber(limit, locale),
           })}
         </p>
       )}
@@ -354,7 +377,7 @@ function ExplainRecords({
       {data?.truncated && (
         <p className="t-caption">
           {plural("analytics.q.explainTruncated", data.rows.length, {
-            count: formatNumber(data.rows.length, locale),
+            count: formatAnalyticsNumber(data.rows.length, locale),
           })}
         </p>
       )}
@@ -428,7 +451,7 @@ function recordCell(
   }
   const currency = moneyCurrency(column, row, frame.query, frame.baseCurrency);
   if (currency !== undefined && typeof value === "number") {
-    return formatMoneyOrAbsent(value, currency, frame.locale);
+    return formatAnalyticsMoneyOrAbsent(value, currency, frame.locale);
   }
   return frame.namer(column, value);
 }
@@ -459,7 +482,11 @@ export function QuestionFailure({
     );
   }
   return (
-    <Callout tone="info" kind="outcome" title={t(REFUSAL_KEY[refusal.kind])}>
+    <Callout
+      tone="info"
+      kind="outcome"
+      title={t(labelFor(REFUSAL_KEY, refusal.kind))}
+    >
       {refusal.suggest !== "" && <p>{refusal.suggest}</p>}
       {refusal.message !== "" && <p>{refusal.message}</p>}
     </Callout>

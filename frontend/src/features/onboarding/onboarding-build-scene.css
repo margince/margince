@@ -183,7 +183,7 @@
 }
 
 /* The product's real wordmark (the shared <Wordmark>: two PNGs, theme-swapped
-   by auth.css, one accessible name on the container). It is in the DOM from the
+   by auth-core.css, one accessible name on the container). It is in the DOM from the
    first frame — only its paint waits — so its name is available to assistive
    tech immediately. */
 .ob-build-wordmark {

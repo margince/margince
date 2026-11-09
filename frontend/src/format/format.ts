@@ -6,7 +6,7 @@ import { calendarDaysBetween } from "./format.dates";
 // locale never flows back into storage. format.test.ts pins each rule.
 import { INTL_LOCALE } from "./intllocale";
 import { minorUnitDigits, toMajorUnits } from "./minorunits";
-import { formatMoneyOrWord } from "./moneyword";
+import { formatMoneyOrWord, MONEY_ABSENT } from "./moneyword";
 
 export {
   assertIanaZone,
@@ -14,11 +14,14 @@ export {
   displayDay,
   formatDate,
   formatDateAbbrev,
+  formatDateAbbrevRange,
   formatDateTime,
   formatDayLong,
   formatDayMonth,
   formatDayMonthNearYear,
   formatDayRange,
+  formatDue,
+  formatDueCompact,
   formatTimeOfDay,
   fullDayName,
   hourInZone,
@@ -78,7 +81,7 @@ export function formatMoneyWhole(
 // What the product shows for a money figure it does not have. Not a zero and
 // not a guessed currency: "€0 open" and "we do not know" are different claims,
 // and a euro sign on a figure that might be dong is worse than no figure.
-export const MONEY_ABSENT = "—";
+export { MONEY_ABSENT } from "./moneyword";
 
 /**
  * A money reading, or nothing. BOTH halves are required.
@@ -131,6 +134,7 @@ export function formatMoneyCompact(
   amountMinor: number,
   currency: string,
   locale: Locale,
+  significantDigits = 3,
 ): string {
   // Our scale, Intl's formatting: see formatMoney for why.
   const major = toMajorUnits(amountMinor, currency);
@@ -156,7 +160,7 @@ export function formatMoneyCompact(
     maximumFractionDigits: abbreviated ? 1 : 0,
     // One decimal alone cuts €1,062,548 and €1,094,000 both to "€1m". Three
     // significant digits keep them apart, and the more precise rule wins.
-    maximumSignificantDigits: 3,
+    maximumSignificantDigits: significantDigits,
     roundingPriority: "morePrecision",
     // Half-up turns CHF 999,999.99 into "CHF 1M", a figure the record does
     // not reach; truncating drops digits but never adds any.
@@ -329,9 +333,9 @@ export function formatSignedMoney(
  * the two are opposite defects and no single answer covers both.
  *
  * It is a FUNCTION and not a bare interpolation because the name is where the
- * decision is recorded. `format/jsx-magnitude.test.ts` refuses a raw number in
- * anything a reader is shown, so every site has had to pick between this,
- * `ordinalNumber` and a formatter — which is what makes the gate absolute
+ * decision is recorded. `census/rules/jsx-magnitude.census.ts` refuses a raw
+ * number in anything a reader is shown. So every site has had to pick between
+ * this, `ordinalNumber` and a formatter. That choice makes the gate absolute
  * instead of a list of blessed exceptions. `format/collate.ts` reached the same
  * shape first, for the same reason: `forReader` and `stable` both order, and
  * only the name says which order was meant.
@@ -485,3 +489,11 @@ export function formatAge(
     unitDisplay: "narrow",
   }).format(days > 0 ? days : hours);
 }
+
+export {
+  formatAnalyticsHours,
+  formatAnalyticsMoney,
+  formatAnalyticsMoneyOrAbsent,
+  formatAnalyticsNumber,
+  formatAnalyticsPercent,
+} from "./format.analytics";

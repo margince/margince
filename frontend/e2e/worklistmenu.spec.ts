@@ -165,7 +165,10 @@ test("a row menu with little room below opens upward at full height", async ({
   for (const line of shape.lines) {
     expect(line).toBeGreaterThanOrEqual(30);
   }
-  expect(shape).toMatchObject({ scrolls: false, inside: true });
+  await expect.poll(() => openPanelShape(page)).toMatchObject({
+    scrolls: false,
+    inside: true,
+  });
 });
 
 // No room for the whole menu on either side: the lines keep their height and

@@ -1,6 +1,7 @@
 import type { components } from "../../../api/schema";
 import type { useT } from "../../../i18n";
 import { useCanWrite } from "../../../lib/capability";
+import { labelFor } from "../../../lib/labelfor";
 import { WON_REASON_LABELS, type WonReason } from "../../../lib/winreason";
 import {
   type ReviewTemplate,
@@ -155,7 +156,7 @@ export function closeReason(
   if (said.won === "") {
     return "";
   }
-  const label = said.t(WON_REASON_LABELS[said.won]);
+  const label = said.t(labelFor(WON_REASON_LABELS, said.won));
   const detail = said.detail.trim();
   return detail === "" ? label : `${label} — ${detail}`;
 }

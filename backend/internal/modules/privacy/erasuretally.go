@@ -11,6 +11,7 @@ import (
 	"context"
 	"maps"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -25,9 +26,38 @@ import (
 type tallyTx struct {
 	pgx.Tx
 	rows map[string]int64
+	// outside names the arms that destroyed at least one thing outside the
+	// database during this erasure. An arm only wired, with nothing to
+	// destroy, is not here.
+	outside map[string]bool
 }
 
-func newTallyTx(tx pgx.Tx) *tallyTx { return &tallyTx{Tx: tx, rows: map[string]int64{}} }
+func newTallyTx(tx pgx.Tx) *tallyTx {
+	return &tallyTx{Tx: tx, rows: map[string]int64{}, outside: map[string]bool{}}
+}
+
+// noteOutside records that arm destroyed something outside the database.
+func (t *tallyTx) noteOutside(arm string) { t.outside[arm] = true }
+
+// uncounted answers the arms that destroyed something outside the database, in
+// a stable order.
+func (t *tallyTx) uncounted() []string {
+	arms := make([]string, 0, len(t.outside))
+	for arm := range t.outside {
+		arms = append(arms, arm)
+	}
+	sort.Strings(arms)
+	return arms
+}
+
+// destroyedOutside records, on an erasure's counting transaction, that arm
+// destroyed something outside the database. Any other transaction counts
+// nothing, so a caller outside an erasure is unaffected.
+func destroyedOutside(tx pgx.Tx, arm string) {
+	if counting, ok := tx.(interface{ noteOutside(string) }); ok {
+		counting.noteOutside(arm)
+	}
+}
 
 // mutationTarget finds the first write a statement makes. A row lock (FOR
 // UPDATE) and an upsert's DO UPDATE are not a target of their own.
@@ -37,9 +67,11 @@ var (
 	verbOf         = map[string]string{"UPDATE": "updated", "DELETE": "deleted", "INSERT": "inserted"}
 )
 
-// bookkeeping are the tables a write lands in to record the erasure rather
-// than to erase anything.
-var bookkeeping = map[string]bool{storekit.TableAudit: true, "event_outbox": true}
+// bookkeeping excludes infrastructure from the domain-record account. Audit
+// payload removal keeps the ledger records, and the projection fence only expires caches.
+var bookkeeping = map[string]bool{
+	storekit.TableAudit: true, "event_outbox": true, "report_projection_fence": true,
+}
 
 // categoryOf answers the category a statement's rows count under, or false
 // for a statement that writes nothing the account reports.

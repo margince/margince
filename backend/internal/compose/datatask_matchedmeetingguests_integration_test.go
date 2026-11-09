@@ -200,7 +200,7 @@ func settleRoster(t *testing.T, e *integration.Env, meeting, seat ids.UUID, comp
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		settled, err = capture.SettleMeetingRosterTx(ctx, ctx, tx, ids.From[ids.ActivityKind](meeting),
-			capture.MeetingRoster{Seat: seat, Parties: connector.Parties{Participants: parties}, Complete: complete}, nil)
+			capture.MeetingRoster{Seat: seat, Parties: connector.Parties{Participants: parties}, Complete: complete, Current: true}, nil)
 		return err
 	}); err != nil {
 		t.Errorf("settling the roster: %v", err)
@@ -216,6 +216,9 @@ func guest(address string) connector.MessageParticipant {
 func TestTwoCalendarsDoNotRetireEachOthersGuests(t *testing.T) {
 	e := integration.Setup(t)
 	meeting := captureMeeting(t, e, e.AdminUser)
+	for seat, address := range map[ids.UUID]string{e.Rep1: rep1Address, e.Rep2: rep2Address} {
+		e.WsExec(t, `INSERT INTO capture_connection (provider, user_id, status, account_label) VALUES ('gcal', $1, 'connected', $2)`, seat, address)
+	}
 	settleRoster(t, e, meeting, e.Rep1, true, guest(rep1Address), guest("ana@client.test"))
 	settleRoster(t, e, meeting, e.Rep2, true, guest(rep2Address), guest("ben@client.test"))
 
@@ -286,5 +289,34 @@ func TestARosterAddsGuestsOnlyUpToThePartyCap(t *testing.T) {
 	}
 	if got := e.WsCount(t, guestRowsSQL, meeting); got != connector.MaxParticipants {
 		t.Errorf("%d guests on the meeting, want the cap of %d", got, connector.MaxParticipants)
+	}
+}
+
+func TestAStoredOriginalCannotRetireOrReverseACurrentGuest(t *testing.T) {
+	e := integration.Setup(t)
+	meeting := captureMeeting(t, e, e.AdminUser)
+	accepted := guest("buyer@client.test")
+	accepted.Response = connector.ResponseAccepted
+	settleRoster(t, e, meeting, e.Rep1, true, guest(rep1Address), accepted)
+	ctx := calendarOwnerCtx(e, e.Rep1)
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		old := guest("buyer@client.test")
+		old.Response = connector.ResponseDeclined
+		settled, err := capture.SettleMeetingRosterTx(ctx, ctx, tx, ids.From[ids.ActivityKind](meeting), capture.MeetingRoster{Seat: e.Rep1, Complete: true, Parties: connector.Parties{Participants: []connector.MessageParticipant{old}}}, nil)
+		if err != nil {
+			return err
+		}
+		if settled.Retired != 0 || settled.Answered != 0 {
+			return fmt.Errorf("stored original changed current replies: %+v", settled)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM activity_participant WHERE activity_id=$1 AND address=$2 AND response=$3`, meeting, accepted.Email, accepted.Response); n != 1 {
+		t.Fatalf("current accepted guest rows=%d", n)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM activity_participant WHERE activity_id=$1 AND address=$2`, meeting, rep1Address); n != 1 {
+		t.Fatalf("stored original retired the current calendar owner: %d rows", n)
 	}
 }

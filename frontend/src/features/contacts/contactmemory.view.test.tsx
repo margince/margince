@@ -3,7 +3,13 @@
 // View on the What was said card opens a call, note or meeting whole in the
 // shell's activity drawer. Closing the drawer returns to the card.
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
@@ -96,6 +102,46 @@ function renderCard(view: Contact360) {
 }
 
 describe("View on the What was said card", () => {
+  it("shows a newer note with its author beside an older conversation without making a task", () => {
+    const writes: string[] = [];
+    installFetchStub({
+      "GET /me": meRoute({ activity: ["read"] }),
+      "POST /activities": () => {
+        writes.push("activity");
+        return jsonResponse({}, 201);
+      },
+    });
+    const note = entry({
+      voice: {
+        author: {
+          kind: "colleague",
+          display_name: "Ada Colleague",
+          is_reader: false,
+        },
+      },
+    });
+    renderCard(
+      viewWith([note], {
+        conversation_memory: [
+          {
+            key: "older-thread",
+            channel: "email",
+            direction: "inbound",
+            title: "Older correspondence",
+            summary: "The earlier correspondence.",
+            occurred_at: "2026-08-27T11:00:00Z",
+            occurred_precision: "instant",
+            activity_count: 1,
+            first_activity_id: "older-email",
+          },
+        ],
+      }),
+    );
+    expect(screen.getByText(WORDS)).toBeTruthy();
+    expect(screen.getByText(/Ada Colleague/)).toBeTruthy();
+    expect(writes).toEqual([]);
+    expect(screen.queryByRole("button", { name: /Create task/ })).toBeNull();
+  });
   it.each([
     ["note", "Call prep"],
     ["call", "Pricing call"],
@@ -108,13 +154,15 @@ describe("View on the What was said card", () => {
       renderCard(viewWith([entry({ kind, subject })]));
 
       await user.click(screen.getByRole("button", { name: `View ${subject}` }));
-      expect(await screen.findByText(WORDS)).toBeTruthy();
+      expect(
+        await within(await screen.findByRole("dialog")).findByText(WORDS),
+      ).toBeTruthy();
       expect(screen.getByRole("dialog")).toBeTruthy();
 
       await user.keyboard("{Escape}");
-      await waitFor(() => {
-        expect(screen.queryByText(WORDS)).toBeNull();
-      });
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+      if (kind === "note") expect(screen.getByText(WORDS)).toBeTruthy();
+      else expect(screen.queryByText(WORDS)).toBeNull();
       expect(
         screen.getByRole("button", { name: `View ${subject}` }),
       ).toBeTruthy();
@@ -129,7 +177,8 @@ describe("View on the What was said card", () => {
       ]),
     );
 
-    expect(screen.getByText("Not shared with you")).toBeTruthy();
+    expect(screen.queryByText("Not shared with you")).toBeNull();
+    expect(screen.queryByText(WORDS)).toBeNull();
     expect(screen.queryByRole("button", { name: /^View/ })).toBeNull();
   });
 
@@ -147,11 +196,10 @@ describe("View on the What was said card", () => {
     renderCard(viewWith([entry()]));
 
     await user.click(screen.getByRole("button", { name: "View Call prep" }));
-    await screen.findByText(WORDS);
+    await within(await screen.findByRole("dialog")).findByText(WORDS);
     await user.keyboard("{Escape}");
-    await waitFor(() => {
-      expect(screen.queryByText(WORDS)).toBeNull();
-    });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByText(WORDS)).toBeTruthy();
 
     refused = true;
     const before = reads();
@@ -160,7 +208,7 @@ describe("View on the What was said card", () => {
       expect(reads()).toBeGreaterThan(before);
     });
     expect(await screen.findByRole("dialog")).toBeTruthy();
-    expect(screen.queryByText(WORDS)).toBeNull();
+    await waitFor(() => expect(screen.queryByText(WORDS)).toBeNull());
   });
 
   it("opens a thread entry only when the page read its activity as readable", () => {
@@ -181,7 +229,7 @@ describe("View on the What was said card", () => {
 
     cleanup();
     renderCard(viewWith([], { conversation_memory: [projected] }));
-    expect(screen.getByText("Call prep")).toBeTruthy();
+    expect(screen.queryByText("Call prep")).toBeNull();
     expect(screen.queryByRole("button", { name: "View Call prep" })).toBeNull();
   });
 });

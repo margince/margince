@@ -34,7 +34,7 @@ const PHRASES: readonly (readonly [string, SettingsPageId])[] = [
   ["passport", "agents"],
   ["digest", "notifications"],
   ["mailbox", "connections"],
-  ["capture log", "capture-activity"],
+  ["capture log", "connections"],
   ["fx", "company"],
   ["fiscal year", "company"],
   ["oauth app", "authentication"],
@@ -42,11 +42,11 @@ const PHRASES: readonly (readonly [string, SettingsPageId])[] = [
   ["sso", "authentication"],
   ["invite", "members"],
   ["license", "seats"],
-  ["deal stages", "pipelines"],
+  ["deal stages", "deals"],
   ["lead sources", "leads"],
-  ["custom-fields", "fields"],
-  ["data model", "fields"],
-  ["labels", "tags"],
+  ["custom-fields", "records"],
+  ["data model", "records"],
+  ["labels", "records"],
   ["price list", "products"],
   ["rate card", "products"],
   ["offer-templates", "products"],
@@ -91,6 +91,12 @@ function everyCatalogGrant(): GrantSpec {
   for (const page of SETTINGS_PAGES) {
     walk(page.requires);
     walk(page.changes);
+    // A tab can ask for a grant its page does not, as System health's
+    // configuration tab does.
+    for (const tab of "tabs" in page ? page.tabs : []) {
+      if ("requires" in tab) walk(tab.requires);
+      if ("changes" in tab) walk(tab.changes);
+    }
   }
   return allow;
 }

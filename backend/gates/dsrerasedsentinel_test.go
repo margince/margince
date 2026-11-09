@@ -16,10 +16,11 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -30,7 +31,7 @@ const (
 func TestBothErasureWritersLeaveTheSameWordInPlaceOfTheAnswer(t *testing.T) {
 	t.Parallel()
 	consentWord := erasedResolutionConst(t)
-	source, err := os.ReadFile(privacySentinelFile)
+	source, err := gatekit.ReadFile(privacySentinelFile)
 	if err != nil {
 		t.Fatalf("reading the privacy erasure writer: %v", err)
 	}
