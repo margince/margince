@@ -20,6 +20,7 @@ import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { type ContractDraft, draftProblem, pricedIn } from "./contractform";
@@ -339,7 +340,7 @@ export function ContractStatusModal({
               onChange={(value) => setStatus(value as ContractStatus)}
               options={ASSERTABLE_STATUSES.map((value) => ({
                 value,
-                label: t(CONTRACT_STATUS_LABEL[value]),
+                label: t(labelFor(CONTRACT_STATUS_LABEL, value)),
               }))}
             />
           )}

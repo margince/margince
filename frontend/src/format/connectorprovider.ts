@@ -165,7 +165,7 @@ export const ACCOUNT_NAME: Readonly<
  *  read "Google". */
 export function accountNameOf(provider: Provider): MessageKey {
   if (isLoneProvider(provider)) {
-    return ACCOUNT_NAME[provider];
+    return labelFor(ACCOUNT_NAME, provider);
   }
   const { mail, calendar } = VENDOR_SERVICES.google;
   const isGoogle = provider === mail || provider === calendar;

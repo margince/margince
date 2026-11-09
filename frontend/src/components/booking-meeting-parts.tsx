@@ -10,7 +10,7 @@ import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody } from "../design-system/panel";
 import { type Translator, useT } from "../i18n";
 import { PROVIDER_VIDEO_APP, VIDEO_APP_NAME } from "../lib/booking-video";
-import { valueFor } from "../lib/labelfor";
+import { labelFor, valueFor } from "../lib/labelfor";
 import { INVITATION_IN_FLIGHT } from "../lib/meeting-invitation-query";
 
 type Invitation = components["schemas"]["MeetingInvitation"];
@@ -31,7 +31,9 @@ const OPEN_CALENDAR: Readonly<
 };
 
 export function openCalendarLabel(t: Translator, provider?: Provider) {
-  return t(provider ? OPEN_CALENDAR[provider] : "scheduling.openCalendar");
+  return t(
+    provider ? labelFor(OPEN_CALENDAR, provider) : "scheduling.openCalendar",
+  );
 }
 
 const STATUS_TONE: Readonly<

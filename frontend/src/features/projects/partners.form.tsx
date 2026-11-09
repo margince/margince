@@ -231,7 +231,7 @@ function PartnerForm({
               { value: "", label: t("field.unset") },
               ...MARGIN_TIERS.map((tier) => ({
                 value: tier,
-                label: t(MARGIN_TIER_LABELS[tier]),
+                label: t(labelFor(MARGIN_TIER_LABELS, tier)),
               })),
             ]}
           />
