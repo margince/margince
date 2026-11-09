@@ -122,7 +122,7 @@ export function CommandPalette({
   // and Shift+Tab left for the page behind on the first press. Keyed on `open`
   // and not on `mounted`, so the reader gets their place back the moment they
   // dismiss rather than at the end of an animation.
-  useDialogFocus({ open, onClose, container: panel });
+  useDialogFocus({ open, onClose, container: panel, overlay });
 
   // AC-shell-3: opening CLEARS the input. Focus is the hook's — the input is
   // this dialog's first tab stop, so it lands there either way, and two owners
@@ -239,20 +239,12 @@ export function CommandPalette({
   }
 
   return (
-    // The two a11y suppressions this element carried are gone rather than kept:
-    // `aria-hidden` below takes the overlay out of the accessibility tree while
-    // it leaves, and the rules that wanted a keyboard handler beside the
-    // backdrop click no longer fire on it. Escape is still the keyboard path,
-    // and it is `useDialogFocus`'s.
     <div // NOSONAR: backdrop dismiss only; keyboard path (Esc) is handled on the input inside
       className="overlay palette-overlay"
       data-state={state}
-      // Painted and nothing else while it leaves: `inert` takes it out of the
-      // tab order and out of hit testing, `aria-hidden` out of the
-      // accessibility tree — an inert node keeps its role, so without the
-      // second one a palette on its way out is still a dialog to a reader.
+      // Painted and nothing else while it leaves: `inert` stops Tab and hit
+      // testing now; `useDialogFocus` hides it from readers once focus is out.
       inert={leaving}
-      aria-hidden={leaving || undefined}
       ref={overlay}
       {...backdrop}
     >

@@ -281,7 +281,8 @@ function ownsKeyboard(container: HTMLElement | null): boolean {
  * `container` is the element the trap holds and the element focus lands inside
  * — the dialog's own box, not its overlay. `returnFocusTo` names where focus
  * should go instead of the opener, for a dialog whose OWN mutation removes the
- * control that opened it.
+ * control that opened it. `overlay` is the layer a surface keeps painted while
+ * it leaves; this hides it from assistive technology once focus is out of it.
  */
 export function useDialogFocus({
   open,
@@ -289,12 +290,14 @@ export function useDialogFocus({
   container,
   returnFocusTo,
   initialFocusTo,
+  overlay,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
   container: React.RefObject<HTMLElement | null>;
   returnFocusTo?: () => HTMLElement | null;
   initialFocusTo?: () => HTMLElement | null;
+  overlay?: React.RefObject<HTMLElement | null>;
 }>) {
   // Held in a ref so the restore below calls the CURRENT resolver. The focus
   // effect is keyed on `open` alone — re-running it whenever an inline callback
@@ -303,10 +306,38 @@ export function useDialogFocus({
   // one from the render that opened the dialog.
   const returnFocus = useRef(returnFocusTo);
   const initialFocus = useRef(initialFocusTo);
+  const opener = useRef<Element | null>(null);
   useEffect(() => {
     returnFocus.current = returnFocusTo;
     initialFocus.current = initialFocusTo;
   }, [returnFocusTo, initialFocusTo]);
+
+  // Before paint, focus first: the browser refuses `aria-hidden` on a subtree
+  // that holds focus, and the reader is left focused inside a dialog that left.
+  useLayoutEffect(() => {
+    const layer = overlay?.current;
+    if (!layer) {
+      return;
+    }
+    if (open) {
+      layer.removeAttribute("aria-hidden");
+      return;
+    }
+    const back = opener.current;
+    if (
+      layer.contains(document.activeElement) &&
+      back instanceof HTMLElement &&
+      back.isConnected &&
+      back.closest('[inert], [aria-hidden="true"]') === null
+    ) {
+      back.focus();
+    }
+    const stuck = document.activeElement;
+    if (layer.contains(stuck) && stuck instanceof HTMLElement) {
+      stuck.blur();
+    }
+    layer.setAttribute("aria-hidden", "true");
+  }, [open, overlay]);
 
   // A LAYOUT effect, because a passive one is scheduled after the browser
   // paints: between the commit that puts this dialog on screen and a passive
@@ -353,7 +384,8 @@ export function useDialogFocus({
     if (!open) {
       return;
     }
-    const opener = document.activeElement;
+    const openedFrom = document.activeElement;
+    opener.current = openedFrom;
     (
       initialFocus.current?.() ??
       firstControlIn(container.current) ??
@@ -375,8 +407,8 @@ export function useDialogFocus({
       // leaves focus on <body>, from where the next Tab restarts at the top of
       // the document. Asking first is what keeps that case from looking like a
       // restore that worked.
-      if (opener instanceof HTMLElement && opener.isConnected) {
-        opener.focus();
+      if (openedFrom instanceof HTMLElement && openedFrom.isConnected) {
+        openedFrom.focus();
       }
     };
   }, [open, container]);

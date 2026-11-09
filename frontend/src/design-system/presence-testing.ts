@@ -19,3 +19,24 @@ export function holdExits() {
     } as unknown as Animation,
   ]);
 }
+
+/**
+ * Record every `aria-hidden="true"` written for the rest of a case, and whether
+ * the element held focus as it was written: the order a browser refuses.
+ */
+export function watchHiding() {
+  const write = Element.prototype.setAttribute;
+  const hidings: { element: Element; heldFocus: boolean }[] = [];
+  const spy = vi
+    .spyOn(Element.prototype, "setAttribute")
+    .mockImplementation(function (this: Element, name, value) {
+      if (name === "aria-hidden" && String(value) === "true") {
+        hidings.push({
+          element: this,
+          heldFocus: this.contains(document.activeElement),
+        });
+      }
+      write.call(this, name, value);
+    });
+  return { hidings, restore: () => spy.mockRestore() };
+}
