@@ -156,6 +156,9 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		if err := redactStagedApprovals(ctx, tx, subject, leadsWiped, emails); err != nil {
 			return err
 		}
+		if err := eraseReceiptNotices(ctx, tx, subject, leadsWiped, reason); err != nil {
+			return err
+		}
 		// The proposals READ OUT OF the timeline rows just redacted, after the
 		// scrub above and never before it. A proposal can answer to both — cited
 		// from an erased meeting AND naming the subject in its summary — and

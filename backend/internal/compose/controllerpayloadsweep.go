@@ -34,6 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/noticekeys"
 )
 
 // ControllerPayloadSweepArgs carries nothing: the pass reads what has expired
@@ -64,6 +65,7 @@ type controllerPayloadSweepWorker struct {
 	// material does, and a second spelling of that resolution is a second answer
 	// to "whose vault is this".
 	vault controllerPayloads
+	alarm receiptAlarm
 	clock func() time.Time
 	log   *slog.Logger
 }
@@ -72,11 +74,35 @@ func newControllerPayloadSweepWorker(
 	idsvc *identity.Service,
 	store *comms.Store,
 	vault controllerPayloads,
+	alarm receiptAlarm,
 	log *slog.Logger,
 ) *controllerPayloadSweepWorker {
 	return &controllerPayloadSweepWorker{
-		identity: idsvc, store: store, vault: vault, clock: time.Now, log: log,
+		identity: idsvc, store: store, vault: vault, alarm: alarm, clock: time.Now, log: log,
 	}
+}
+
+// alarmMissedReceipts tells the privacy operators about each receipt past its
+// deadline, and takes back the notices whose receipt has since been sent.
+func (w *controllerPayloadSweepWorker) alarmMissedReceipts(ctx context.Context) error {
+	backlog, err := w.store.OverdueReceiptBacklog(ctx, w.clock())
+	if err != nil {
+		return fmt.Errorf("reading controller receipt deadlines: %w", err)
+	}
+	if backlog > 0 {
+		w.log.ErrorContext(ctx, "controller receipts remain undelivered after their deadline", "count", backlog)
+	}
+	overdue, err := w.store.UnraisedOverdueReceipts(ctx, w.clock(), noticekeys.OptOutReceiptPrefix)
+	if err != nil {
+		return fmt.Errorf("reading controller receipt deadlines: %w", err)
+	}
+	if failed := w.alarm.raiseOverdue(ctx, overdue); failed > 0 {
+		w.log.ErrorContext(ctx, "overdue controller receipts could not be raised to the privacy operators", "count", failed)
+	}
+	if err := w.alarm.settleSent(ctx, w.store); err != nil {
+		return fmt.Errorf("settling missed-receipt notices: %w", err)
+	}
+	return nil
 }
 
 func (w *controllerPayloadSweepWorker) Work(ctx context.Context, _ *river.Job[ControllerPayloadSweepArgs]) error {
@@ -86,12 +112,8 @@ func (w *controllerPayloadSweepWorker) Work(ctx context.Context, _ *river.Job[Co
 	}
 	ctx = sendWorkerScope(ctx)
 
-	overdue, err := w.store.OverdueControllerReceipts(ctx, w.clock())
-	if err != nil {
-		return jobs.FaultContext(ctx, fmt.Errorf("reading controller receipt deadlines: %w", err))
-	}
-	if overdue > 0 {
-		w.log.ErrorContext(ctx, "controller receipts remain undelivered after their deadline", "count", overdue)
+	if err := w.alarmMissedReceipts(ctx); err != nil {
+		return jobs.FaultContext(ctx, err)
 	}
 
 	// Paged past what this run already attempted, so a batch that will never
@@ -195,6 +217,7 @@ func addControllerPayloadSweepJob(reg *jobRegistry, pool *pgxpool.Pool, cfg JobR
 		identity.NewService(pool),
 		comms.NewStore(db, time.Now, activities.NewStore(db)),
 		controllerPayloads{v: cfg.ControllerVault},
+		receiptAlarm{db: db},
 		log)
 	addDeclaredWorker[ControllerPayloadSweepArgs](reg, worker)
 	return periodicFor(cfg, ControllerPayloadSweepArgs{})

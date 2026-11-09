@@ -38,6 +38,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/noticekeys"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
@@ -301,9 +302,12 @@ func TestAOnePurposeUnsubscribeIsAcknowledgedThroughTheRealEngine(t *testing.T) 
 		t.Fatal("receipt deadline and link expiry were conflated")
 	}
 	now := clocktest.Now(t)
-	count, err := comms.NewStore(InstallationDB(l.e.Pool), func() time.Time { return now }, nil).OverdueControllerReceipts(sendWorkerScope(l.ctx), dueAt.Add(time.Second))
-	if err != nil || count != 1 {
-		t.Fatalf("overdue receipt was invisible: %d %v", count, err)
+	overdue, err := comms.NewStore(InstallationDB(l.e.Pool), func() time.Time { return now }, nil).UnraisedOverdueReceipts(sendWorkerScope(l.ctx), dueAt.Add(time.Second), noticekeys.OptOutReceiptPrefix)
+	if err != nil || len(overdue) != 1 {
+		t.Fatalf("overdue receipt was invisible: %d %v", len(overdue), err)
+	}
+	if overdue[0].SubjectType != "contact" || overdue[0].SubjectID != l.contact {
+		t.Errorf("the overdue receipt names subject %s %s, want the contact who refused", overdue[0].SubjectType, overdue[0].SubjectID)
 	}
 }
 
