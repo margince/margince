@@ -143,7 +143,7 @@ func (s *Sink) revokePartySourceTx(ctx context.Context, tx pgx.Tx, rec connector
 	_, err := tx.Exec(ctx, `UPDATE capture_party_source ps SET admission_blocked=true
  FROM activity a WHERE a.id=ps.activity_id AND ps.user_id=@user AND ps.provider=@provider
  AND ((a.source_system=@system AND a.source_id=ANY(@keys::text[])) OR a.id=@resolved)
- AND NOT ps.admission_blocked`, pgx.NamedArgs{partyUserArg: actorUserID(ctx), partyProviderArg: deliveringConnector(ctx), "system": rec.NaturalKey.SourceSystem, "keys": keys, "resolved": resolved})
+ AND NOT ps.admission_blocked`, pgx.NamedArgs{partyUserArg: actorUserID(ctx), partyProviderArg: deliveringConnector(ctx), sqlArgSystem: rec.NaturalKey.SourceSystem, sqlArgKeys: keys, "resolved": resolved})
 	return err
 }
 

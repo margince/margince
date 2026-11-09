@@ -18,8 +18,7 @@ import (
 //
 // A project with no deals shows zero on its own row, so an average or a minimum
 // over the phase counts it as zero. A project with a deal no rate can price
-// leaves the phase's average, minimum and maximum without an answer. The sum
-// still says what it could price.
+// leaves the phase's sum, average, minimum and maximum without an answer.
 func TestAPhasesMoneyFoldsItsProjectsAsTheirRowsRead(t *testing.T) {
 	e := setupForecast(t)
 	company := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by)
@@ -70,10 +69,7 @@ func TestAPhasesMoneyFoldsItsProjectsAsTheirRowsRead(t *testing.T) {
 			t.Errorf("delivering %s = %v (answered %v), want %v: the dealless project counts as zero", key, got, ok, want)
 		}
 	}
-	if got, ok := moneyCell(t, phases["pursuing"], "total"); !ok || got != 400 {
-		t.Errorf("pursuing total = %v (answered %v), want the 400 it could price", got, ok)
-	}
-	for _, key := range []string{"mean", "least", "most"} {
+	for _, key := range []string{"total", "mean", "least", "most"} {
 		if got, ok := moneyCell(t, phases["pursuing"], key); ok {
 			t.Errorf("pursuing %s answered %v, want no answer: one project's deal has no rate", key, got)
 		}

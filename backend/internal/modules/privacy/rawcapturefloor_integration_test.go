@@ -9,10 +9,13 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
@@ -252,5 +255,68 @@ func TestARawCaptureRestrictedThroughOneOfItsActivitiesSurvives(t *testing.T) {
 	}
 	if left != 1 {
 		t.Fatalf("the original is gone though %s is restricted", restricted)
+	}
+}
+
+func TestArchivedOriginalRetentionFollowsItsObjectAndEveryHold(t *testing.T) {
+	e := setupSARIdentifiers(t)
+	blob := blobstore.NewMemory()
+	ctx := originalstore.Bind(e.ctx, e.db, blob)
+	payload := []byte(`{"text":"` + strings.Repeat("x", originalstore.InlineLimit) + `"}`)
+	var original ids.UUID
+	if err := e.db.Tx(ctx, func(tx pgx.Tx) error {
+		inline, ref, err := originalstore.Prepare(ctx, payload)
+		if err != nil {
+			return err
+		}
+		if err := tx.QueryRow(ctx, `INSERT INTO raw_capture(source_system,source_id,payload,payload_object)
+ VALUES('fixture','archived',@payload::jsonb,@object::jsonb) RETURNING id`, pgx.NamedArgs{"payload": inline, "object": ref}).Scan(&original); err != nil {
+			return err
+		}
+		return originalstore.Adopt(ctx, tx, ref)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var ref originalstore.Reference
+	if err := e.db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT payload_object FROM raw_capture WHERE id=@id`, pgx.NamedArgs{"id": original}).Scan(&ref)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, held := range []bool{false, true} {
+		var activity ids.UUID
+		if err := e.owner.QueryRow(ctx, `INSERT INTO activity(kind,subject,occurred_at,source,captured_by,raw_capture_id,archived_at)
+ VALUES('email','Archived original',now()-interval '800 days','capture_email','connector:fixture',@id,now()) RETURNING id`, pgx.NamedArgs{"id": original}).Scan(&activity); err != nil {
+			t.Fatal(err)
+		}
+		if held {
+			if _, err := e.owner.Exec(ctx, `INSERT INTO activity_link(activity_id,entity_type,contact_id) VALUES(@activity,'contact',@contact)`, pgx.NamedArgs{"activity": activity, "contact": e.contact}); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	if _, err := e.owner.Exec(ctx, `UPDATE contact SET legal_hold=true WHERE id=@id`, pgx.NamedArgs{"id": e.contact}); err != nil {
+		t.Fatal(err)
+	}
+
+	svc := &RetentionService{db: e.db, eraser: NewEraser(e.db).WithBlobstore(blob)}
+	if err := e.db.Tx(ctx, func(tx pgx.Tx) error { return svc.eraseRawCapture(ctx, tx, original) }); !errors.Is(err, errKeptByFloor) {
+		t.Fatalf("linked hold did not protect archived original: %v", err)
+	}
+	body, _, err := blob.Get(ctx, ref.Key)
+	if err != nil {
+		t.Fatal("held original lost its object", err)
+	}
+	if err := body.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(ctx, `UPDATE contact SET legal_hold=false WHERE id=@id`, pgx.NamedArgs{"id": e.contact}); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.db.Tx(ctx, func(tx pgx.Tx) error { return svc.eraseRawCapture(ctx, tx, original) }); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := blob.Get(ctx, ref.Key); !errors.Is(err, blobstore.ErrNotFound) {
+		t.Fatal("archived original retained its object", err)
 	}
 }
