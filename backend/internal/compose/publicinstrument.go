@@ -19,14 +19,12 @@ import (
 // without a session. The browser half of a unit's instrumentation reaches its
 // backend here, before anyone has signed in and past a CSP that admits only
 // this origin. The segment after the prefix is the unit's name, not a
-// credential.
+// credential. A literal, because the credential gate reads route prefixes as
+// literals; a test holds it equal to extension.InstrumentEdgePrefix.
 const publicInstrumentPrefix = "/v1/public/instrument/"
 
-// instrumentEdgeBodyLimit caps one request to a unit's edge.
-const instrumentEdgeBodyLimit = 1 << 20
-
 func newPublicInstrumentLimiter() *ratelimit.Limiter {
-	return ratelimit.New("public-instrument/per-ip", ratelimit.FailClosed, 600, time.Minute)
+	return ratelimit.New("public-instrument/per-ip", ratelimit.FailClosed, extension.InstrumentEdgePerIPPerMinute, time.Minute)
 }
 
 // publicInstrument serves each unit's Instrumentation.Edge under
@@ -63,7 +61,7 @@ func publicInstrument(exts []extension.Extension, perIP *ratelimit.Limiter) func
 				httperr.Write(w, r, apperrors.ErrBudgetExceeded)
 				return
 			}
-			r.Body = http.MaxBytesReader(w, r.Body, instrumentEdgeBodyLimit)
+			r.Body = http.MaxBytesReader(w, r.Body, extension.InstrumentEdgeMaxBody)
 			edge.ServeHTTP(w, r)
 		})
 	}

@@ -15,9 +15,9 @@ import (
 // handler, the HTTP chain, each job and subscription delivery, and recovered
 // panics. In the browser it sees errors and navigation. It names no vendor.
 //
-// The core guards every call. A Start that fails or panics is logged, and the
-// process boots without that unit's hooks. A hook that panics is logged, and
-// the work it wrapped goes on.
+// The core contains a Start that fails or panics: it is logged, and the
+// process boots without that unit's hooks. It cannot contain a Start that
+// hangs, and an HTTP wrapper that panics fails the request it was serving.
 type Instrumentation struct {
 	// Start runs once per process (api, worker), before it serves or runs
 	// work. Nil means the unit has no backend part.
@@ -25,12 +25,19 @@ type Instrumentation struct {
 	// Browser is a named export of the unit's frontend main module: a function
 	// the SPA calls before its first render. Empty means no browser part.
 	Browser string
-	// Edge is served without a session at /v1/public/instrument/<unit>/, with
-	// that prefix stripped. It takes GET and POST only, a body of at most
-	// 1 MiB, and is held to a per-IP limit. The unit sets its own caching
-	// headers. Nil means none.
+	// Edge is served without a session at InstrumentEdgePrefix + <unit> + "/",
+	// with that prefix stripped. It takes GET and POST only, within the bounds
+	// below. The unit sets its own caching headers. Nil means none.
 	Edge http.Handler
 }
+
+// The bounds the core holds every Instrumentation.Edge to. The composition
+// manifest publishes them beside the edge, for the operator who enables it.
+const (
+	InstrumentEdgePrefix         = "/v1/public/instrument/"
+	InstrumentEdgeMaxBody        = 1 << 20 // bytes in one request
+	InstrumentEdgePerIPPerMinute = 600     // requests from one client address
+)
 
 // Process is what the core tells Start about the process it runs in.
 type Process struct {
@@ -66,11 +73,9 @@ type Instruments struct {
 	// RecoverPanics reports an api request and the worker's event listener.
 	// jobs.Govern reports any River job that panics out of its work. The
 	// extension job tick and an extension subscription delivery report too.
-	// A panic that other code recovers by itself reaches a unit only through
-	// its LogHandler, at Error level. Every site also logs its panic at Error
-	// with a "panic" attribute. River's own job-panic line carries "panic_val"
-	// instead. A record with either attribute describes a panic already handed
-	// to Panic, so a unit must not report it twice.
+	// Other code logs the panics it recovers by itself with a "panic"
+	// attribute and never calls Panic. So that attribute alone does not mean
+	// Panic was told: match the value before skipping a record as a duplicate.
 	Panic func(ctx context.Context, value any, stack []byte)
 	// Shutdown runs when the process exits, so a unit can send what it still
 	// holds. It gets a window of 2 seconds.

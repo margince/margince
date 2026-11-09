@@ -3,8 +3,10 @@
 
 // Package instrument holds the hooks extension units returned from their
 // Instrumentation.Start, for the life of the process. It is the one place the
-// core's choke points call them through. Every call is guarded: a hook that
-// panics is logged and skipped, so it cannot take the product down.
+// core's choke points call them through. Each hook call is guarded: a hook
+// that panics is logged and skipped. A log handler is guarded on every record
+// too. An HTTP wrapper that panics while serving fails that request, and
+// RecoverPanics answers it.
 //
 // It is set once at boot (Install) and read everywhere after, the same
 // lifetime as the process logger.
@@ -88,11 +90,53 @@ func LogHandler(h slog.Handler) slog.Handler {
 		}
 		safely(log, u.Unit, "LogHandler", func() {
 			if wrapped := u.Hooks.LogHandler(h); wrapped != nil {
-				h = wrapped
+				h = guardedHandler{unit: u.Unit, log: log, outer: wrapped, inner: h}
 			}
 		})
 	}
 	return h
+}
+
+// guardedHandler runs a unit's log handler on every record. If it panics, the
+// record goes to the handler it wrapped, so a log call never panics.
+type guardedHandler struct {
+	unit  string
+	log   *slog.Logger
+	outer slog.Handler // the unit's handler
+	inner slog.Handler // the handler it wrapped
+}
+
+func (g guardedHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	var enabled bool
+	if guard(g.log, g.unit, "LogHandler", nil, func() { enabled = g.outer.Enabled(ctx, level) }) {
+		return g.inner.Enabled(ctx, level)
+	}
+	return enabled
+}
+
+func (g guardedHandler) Handle(ctx context.Context, record slog.Record) error {
+	var err error
+	if guard(g.log, g.unit, "LogHandler", nil, func() { err = g.outer.Handle(ctx, record) }) {
+		return g.inner.Handle(ctx, record)
+	}
+	return err
+}
+
+func (g guardedHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return g.derive(func(h slog.Handler) slog.Handler { return h.WithAttrs(attrs) })
+}
+
+func (g guardedHandler) WithGroup(name string) slog.Handler {
+	return g.derive(func(h slog.Handler) slog.Handler { return h.WithGroup(name) })
+}
+
+func (g guardedHandler) derive(with func(slog.Handler) slog.Handler) slog.Handler {
+	inner := with(g.inner)
+	var outer slog.Handler
+	if guard(g.log, g.unit, "LogHandler", nil, func() { outer = with(g.outer) }) || outer == nil {
+		return inner
+	}
+	return guardedHandler{unit: g.unit, log: g.log, outer: outer, inner: inner}
 }
 
 // HTTP wraps h in every unit's HTTP hook, the first unit outermost. It sits
@@ -196,10 +240,8 @@ func wrapWork(log *slog.Logger, u Started, w extension.Work, inner func(context.
 // Panic tells every unit about a recovered panic. It never re-panics.
 //
 // Every site that calls it also logs the panic at Error with a "panic"
-// attribute. River's own job-panic line carries "panic_val" instead. The
-// stable rule: a log record that carries "panic" or "panic_val" describes a
-// panic already handed to Panic. A panic that other code recovers by itself
-// reaches a unit only through its LogHandler.
+// attribute. Other code logs the panics it recovers by itself the same way,
+// and never calls Panic. So the attribute alone does not mark a reported panic.
 //
 //craft:ignore naked-any value mirrors recover(), whose result is any; extension.Instruments.Panic is published API
 func Panic(ctx context.Context, value any, stack []byte) {

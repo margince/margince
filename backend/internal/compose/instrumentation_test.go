@@ -9,7 +9,9 @@ import (
 	"errors"
 	"log/slog"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/platform/instrument"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -22,7 +24,8 @@ func TestStartInstrumentationSkipsAFailingOrPanickingUnitAndKeepsTheRest(t *test
 	shutdowns := 0
 	exts := []extension.Extension{
 		{Name: "fails", Instrumentation: &extension.Instrumentation{Start: func(context.Context, extension.Process) (extension.Instruments, error) {
-			return extension.Instruments{}, errors.New("no dsn parse")
+			// Hooks returned beside an error are not installed.
+			return extension.Instruments{Shutdown: func(context.Context) error { shutdowns++; return nil }}, errors.New("no dsn parse")
 		}}},
 		{Name: "panics", Instrumentation: &extension.Instrumentation{Start: func(context.Context, extension.Process) (extension.Instruments, error) {
 			panic("start")
@@ -57,7 +60,21 @@ func TestStartInstrumentationRedactsCapabilityPaths(t *testing.T) {
 			return extension.Instruments{}, nil
 		},
 	}}}, "worker", slog.New(slog.DiscardHandler))
-	if got := redact("/v1/public/confirm/secret-token"); strings.Contains(got, "secret-token") {
+	if got := redact("/v1/public/confirm/secret-token"); got != "/v1/public/confirm/[redacted]" {
 		t.Fatalf("RedactPath kept the credential: %q", got)
+	}
+}
+
+func TestFlushStopsWaitingForAShutdownHookThatIgnoresItsContext(t *testing.T) {
+	t.Cleanup(instrument.Reset)
+	release := make(chan struct{})
+	t.Cleanup(func() { close(release) })
+	var hookReturned atomic.Bool
+	instrument.Install([]instrument.Started{{Unit: "stuck", Hooks: extension.Instruments{
+		Shutdown: func(context.Context) error { <-release; hookReturned.Store(true); return nil },
+	}}}, slog.New(slog.DiscardHandler))
+	flushWithin(context.Background(), time.Millisecond)
+	if hookReturned.Load() {
+		t.Fatal("the flush returned only after the stuck hook did")
 	}
 }

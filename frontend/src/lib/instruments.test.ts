@@ -11,7 +11,10 @@ import {
   startInstruments,
 } from "./instruments";
 
-afterEach(() => resetInstruments());
+afterEach(() => {
+  resetInstruments();
+  vi.restoreAllMocks();
+});
 
 describe("startInstruments", () => {
   it("hands each unit its version and its own edge path", () => {
@@ -65,6 +68,22 @@ describe("reportError", () => {
       "",
     );
     expect(() => reportError(new Error("x"), { caught: true })).not.toThrow();
+  });
+
+  it("logs an async hook that rejects instead of leaving it unhandled", async () => {
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const failure = new Error("async hook");
+    startInstruments(
+      { a: () => ({ onError: async () => Promise.reject(failure) }) },
+      "",
+    );
+    reportError(new Error("x"), { caught: true });
+    await vi.waitFor(() =>
+      expect(err).toHaveBeenCalledWith(
+        "extension a: instrument onError threw",
+        failure,
+      ),
+    );
   });
 });
 

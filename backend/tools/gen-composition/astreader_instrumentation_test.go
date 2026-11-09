@@ -12,7 +12,11 @@ import (
 func instrumentationUnitSource(field string) string {
 	return `package x
 
-import "github.com/margince/margince/backend/pkg/extension"
+import (
+	"net/http"
+
+	"github.com/margince/margince/backend/pkg/extension"
+)
 
 func New() extension.Extension {
 	return extension.Extension{
@@ -35,7 +39,10 @@ func TestInstrumentationDerivesIntoTheManifest(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := string(derived)
-	for _, want := range []string{`"instrumentation"`, `"start": true`, `"browser": "instrument"`, `"edge": true`} {
+	for _, want := range []string{
+		`"instrumentation"`, `"start": true`, `"browser": "instrument"`,
+		`"path": "/v1/public/instrument/x/"`, `"max_body": 1048576`, `"per_ip_per_minute": 600`,
+	} {
 		if !strings.Contains(s, want) {
 			t.Errorf("the manifest misses %s:\n%s", want, s)
 		}
@@ -72,6 +79,9 @@ func TestInstrumentationDerivationRefusals(t *testing.T) {
 		"unknown field":         `Instrumentation: &extension.Instrumentation{Sink: x},`,
 		"declares nothing":      `Instrumentation: &extension.Instrumentation{},`,
 		"only nil parts":        `Instrumentation: &extension.Instrumentation{Start: nil, Edge: nil},`,
+		"nil in parentheses":    `Instrumentation: &extension.Instrumentation{Start: (nil), Edge: ((nil))},`,
+		"nil converted":         `Instrumentation: &extension.Instrumentation{Edge: (http.Handler(nil))},`,
+		"nil handler func":      `Instrumentation: &extension.Instrumentation{Edge: http.HandlerFunc((nil))},`,
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := deriveSynthetic(t, "x", instrumentationUnitSource(field)); err == nil {

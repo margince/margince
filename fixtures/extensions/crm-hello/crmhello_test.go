@@ -142,7 +142,7 @@ func TestTheInstrumentsWorkHookRunsTheWorkOnceAndReturnsItsError(t *testing.T) {
 	if calls != 1 {
 		t.Fatalf("run called %d times, want exactly once", calls)
 	}
-	if !errors.Is(got, want) {
+	if got != want {
 		t.Fatalf("Work returned %v, want the run's error unchanged", got)
 	}
 	if runs := workRuns.Load() - before; runs != 1 {

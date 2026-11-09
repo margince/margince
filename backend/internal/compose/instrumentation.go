@@ -31,9 +31,23 @@ func StartInstrumentation(ctx context.Context, role string, boot *slog.Logger) {
 // flush. A role defers it so it runs after the signal context is cancelled,
 // which is why the window is detached from ctx's cancellation.
 func FlushInstrumentation(ctx context.Context) {
-	flushCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), instrumentFlushWindow)
+	flushWithin(ctx, instrumentFlushWindow)
+}
+
+// flushWithin stops waiting when the window closes, even for a hook that
+// ignores its context. The process is exiting, so the hook is left behind.
+func flushWithin(ctx context.Context, window time.Duration) {
+	flushCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), window)
 	defer cancel()
-	instrument.Shutdown(flushCtx)
+	flushed := make(chan struct{})
+	go func() {
+		defer close(flushed)
+		instrument.Shutdown(flushCtx)
+	}()
+	select {
+	case <-flushed:
+	case <-flushCtx.Done():
+	}
 }
 
 func startUnits(ctx context.Context, exts []extension.Extension, role string, boot *slog.Logger) {

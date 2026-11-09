@@ -74,16 +74,22 @@ func TestRecoverPanicsReportsThePanicToTheInstruments(t *testing.T) {
 	t.Cleanup(instrument.Reset)
 	var got []any
 	var stack []byte
+	rec := httptest.NewRecorder()
+	answeredFirst := false
 	instrument.Install([]instrument.Started{{Unit: "u", Hooks: extension.Instruments{
-		Panic: func(_ context.Context, v any, s []byte) { got, stack = append(got, v), s },
+		Panic: func(_ context.Context, v any, s []byte) {
+			got, stack, answeredFirst = append(got, v), s, rec.Body.Len() > 0
+		},
 	}}}, slog.New(slog.DiscardHandler))
 	h := RecoverPanics(slog.New(slog.DiscardHandler), http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		panic("kaboom")
 	}))
-	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, httptest.NewRequest("GET", "/v1/x", nil))
 	if rec.Code != http.StatusInternalServerError || len(got) != 1 || got[0] != "kaboom" || len(stack) == 0 {
 		t.Fatalf("code=%d got=%v stack=%d", rec.Code, got, len(stack))
+	}
+	if !answeredFirst {
+		t.Fatal("the instruments heard the panic before the client had its 500")
 	}
 }
 

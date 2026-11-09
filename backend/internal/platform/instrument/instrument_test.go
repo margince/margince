@@ -272,3 +272,26 @@ func TestInstallCopiesTheCallersSlice(t *testing.T) {
 		t.Fatalf("trail = %v, caller mutation leaked in", trail)
 	}
 }
+
+// panickingHandler stands for a unit's handler that fails on every record.
+type panickingHandler struct{ slog.Handler }
+
+func (panickingHandler) Handle(context.Context, slog.Record) error { panic("unit handler") }
+
+func (p panickingHandler) WithAttrs([]slog.Attr) slog.Handler { return p }
+
+func TestALogHandlerThatPanicsOnARecordHandsItToTheHandlerItWrapped(t *testing.T) {
+	t.Cleanup(instrument.Reset)
+	var boot, sink bytes.Buffer
+	instrument.Install([]instrument.Started{{Unit: "flaky", Hooks: extension.Instruments{
+		LogHandler: func(h slog.Handler) slog.Handler { return panickingHandler{h} },
+	}}}, slog.New(slog.NewTextHandler(&boot, nil)))
+	logger := slog.New(instrument.LogHandler(slog.NewTextHandler(&sink, nil))).With("request", "r1")
+	logger.Info("still written")
+	if !strings.Contains(sink.String(), "still written") || !strings.Contains(sink.String(), "request=r1") {
+		t.Fatalf("the record did not reach the wrapped handler: %q", sink.String())
+	}
+	if !strings.Contains(boot.String(), "unit=flaky") {
+		t.Fatalf("the unit's panic was not logged: %q", boot.String())
+	}
+}

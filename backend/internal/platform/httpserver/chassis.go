@@ -203,10 +203,11 @@ func RecoverPanics(log *slog.Logger, next http.Handler) http.Handler {
 				log.ErrorContext(r.Context(), "handler panic",
 					"panic", rec, "method", r.Method, "path", capabilitypath.Redact(r.URL.Path),
 					"stack", string(stack))
-				instrument.Panic(r.Context(), rec, stack)
 				httperr.Write(w, r, &httperr.DetailedError{
 					Status: http.StatusInternalServerError, Code: "internal",
 				})
+				// After the answer, so a slow unit hook does not hold the client.
+				instrument.Panic(r.Context(), rec, stack)
 			}
 		}()
 		next.ServeHTTP(w, r)

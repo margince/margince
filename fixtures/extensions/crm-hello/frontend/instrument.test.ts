@@ -9,5 +9,5 @@ test("the smoke fixture's browser instrument starts and returns hooks without th
     version: "",
     edge: "/v1/public/instrument/crm-hello/",
   });
-  expect(hooks).toBeTypeOf("object");
+  expect(hooks).toEqual({});
 });

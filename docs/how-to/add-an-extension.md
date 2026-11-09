@@ -771,19 +771,22 @@ full request path in a log call. It cannot see what you send to other places.
 | `Panic` | When the core catches a panic, at four places: a request or the worker's event handler, any job that panics out of its work, an extension job tick and an extension delivery |
 | `Shutdown` | When the process exits, so the unit can send what it still holds |
 
-A log record that carries a `panic` field describes a panic already handed to `Panic`, so do not report it
-twice. River's own job-panic line carries `panic_val` instead. It follows a panic already handed to `Panic`,
-so do not report it either. A panic that other code recovers by itself does not reach `Panic`. It reaches
-your `LogHandler` at `Error` level, and in no other way.
+Each of the four places also logs its panic at `Error` with a `panic` field. Other code logs the panics it
+recovers by itself the same way, and those never reach `Panic`. So a `panic` field alone does not mean
+`Panic` was told. So that you do not report one panic twice, skip a record only when its value matches a
+`Panic` call.
 
 A `Work` hook must call `run` in the call itself, not from another thread, and return what it returns. The work runs once even if the hook never calls
 `run`, or panics before it does. If the work panics, the panic reaches its caller as it was, so a job fails
 as it would without the unit.
 
-**The core guards every call.** A `Start` that fails or panics is logged, and the process boots without
-that unit's hooks. A hook that panics is logged and skipped, and the work it wrapped goes on. So
-it never stops the product and never fails a request. With several units, the first in the
-composed registry comes first.
+**What the core guards.** A `Start` that fails or panics is logged, and the process boots without that
+unit's hooks. A hook that panics is logged and skipped, and the work it wrapped goes on. A `LogHandler`
+that panics on a record hands that record to the handler it wrapped.
+
+The core cannot guard two things: a `Start` that never returns holds up boot, and an `HTTP` wrapper that
+panics fails the request it serves. `Shutdown` gets 2 seconds, and then the process exits without waiting.
+With several units, the first in the composed registry comes first.
 
 ### Serve an edge
 
@@ -794,13 +797,14 @@ directly. A unit that needs to carry something out of the browser serves an `Edg
 - No session is needed. Any caller can reach it, so do not trust the sender.
 - It takes `GET` and `POST`. Any other method gets 405.
 - A body is at most 1 MiB.
-- Each client address has a limit. Past it, the request is refused.
+- Each client address may send 600 requests a minute. Past that, the request is refused.
 - A unit with no `Edge` gets a 404 at its path.
 
 ### Hook into the browser
 
 Set `Browser` to a named export of your frontend package's `main` module, as a panel's `Export` is. It may
-not be `default`. A unit with a `Browser` must ship `frontend/package.json`, and a unit without it is refused.
+not be `default`. A unit that sets `Browser` must ship `frontend/package.json`, or it is refused. A unit
+with only `Start` or `Edge` needs no frontend package.
 
 ```ts
 import type { BrowserInstrument } from "@margince/frontend/app";

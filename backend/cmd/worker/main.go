@@ -69,10 +69,7 @@ func start(ctx context.Context, args []string, stdout io.Writer) error {
 // runner, then the relay it blocks on — in the order the process depends on;
 // boot.go and jobrunner.go hold the phases.
 func run(ctx context.Context, args []string, stdout io.Writer) error {
-	if handled, err := runDebugSubcommand(ctx, args, stdout); handled {
-		return err
-	}
-	if checked, err := checkWorkerConfig(workerFlags(args), config.Environ(), stdout); checked || err != nil {
+	if handled, err := runPreBootSubcommand(ctx, args, stdout); handled {
 		return err
 	}
 
@@ -80,9 +77,8 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	// Registered before the pool, the bus, the observer, the lanes and the job
-	// runner, so it runs after every one of them has stopped. The last events a
-	// draining job or lane logs are still flushed.
+	// Deferred before every closer below, so it runs last: what a draining job
+	// or lane logs is still flushed.
 	defer compose.FlushInstrumentation(ctx)
 	cfg, bootstrap, logger := boot.cfg, boot.deploy, boot.log
 
@@ -267,18 +263,12 @@ type workerBoot struct {
 	log        *slog.Logger
 }
 
-// configureWorker runs the phases that can fail on configuration alone. They
-// run in the order they depend on each other: flags, then extensions, then the
-// deployment file, then the unit instrumentation, then the logger. A failing
-// extension registration aborts the boot before anything is opened. The
-// instrumentation starts here, which is why this takes ctx, and the logger
-// wraps what it returns. The capture posture comes last, because it carries
-// the logger into the Sink's post-commit steps, where a fault is reported
-// rather than returned.
+// configureWorker runs the phases that can fail on configuration alone. In
+// order: flags, extensions, the deployment file, the units' instrumentation,
+// the logger that wraps it, and the capture posture that carries the logger.
 //
-// Grouped because they share one property the phases after them do not: none
-// of them opens a connection, so a deployment misconfigured in any of these
-// ways fails before a pool, a bus client or a listener exists to clean up.
+// None opens a core connection, so a misconfigured deployment fails before a
+// pool, bus client or listener exists. A unit's Start may do its own I/O.
 func configureWorker(ctx context.Context, args []string, stdout io.Writer) (workerBoot, error) {
 	cfg, loaded, err := loadWorkerConfig(args, config.Environ())
 	if err != nil {

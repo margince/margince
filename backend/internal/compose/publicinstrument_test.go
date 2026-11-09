@@ -96,8 +96,15 @@ func TestPublicInstrumentRefusesAClientPastItsBudget(t *testing.T) {
 }
 
 func TestPublicInstrumentCapsTheBodyAtOneMebibyte(t *testing.T) {
-	rec := serveEdge(t, "POST", "/v1/public/instrument/alpha/tunnel", strings.Repeat("x", instrumentEdgeBodyLimit+1))
+	rec := serveEdge(t, "POST", "/v1/public/instrument/alpha/tunnel", strings.Repeat("x", extension.InstrumentEdgeMaxBody+1))
 	if rec.Code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("code = %d", rec.Code)
+	}
+}
+
+// The manifest publishes extension.InstrumentEdgePrefix as the edge's path.
+func TestTheServedEdgePrefixIsTheOneTheManifestPublishes(t *testing.T) {
+	if publicInstrumentPrefix != extension.InstrumentEdgePrefix {
+		t.Fatalf("served at %q, published as %q", publicInstrumentPrefix, extension.InstrumentEdgePrefix)
 	}
 }

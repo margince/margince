@@ -37,6 +37,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// runPreBootSubcommand answers the commands that end before the boot: the
+// debug subcommands and the config check. handled is true when one ran.
+func runPreBootSubcommand(ctx context.Context, args []string, stdout io.Writer) (handled bool, err error) {
+	if handled, err := runDebugSubcommand(ctx, args, stdout); handled {
+		return true, err
+	}
+	checked, err := checkWorkerConfig(workerFlags(args), config.Environ(), stdout)
+	return checked || err != nil, err
+}
+
 // runDebugSubcommand dispatches the DB-less debug loops — `worker siteread …`
 // (siteread.go) and `worker aitask …` (aitask.go) — and reports whether it
 // handled the arguments. It runs before the worker flags, which would otherwise

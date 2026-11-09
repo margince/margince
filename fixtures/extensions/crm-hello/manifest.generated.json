@@ -46,7 +46,11 @@
   "instrumentation": {
     "start": true,
     "browser": "instrument",
-    "edge": true
+    "edge": {
+      "path": "/v1/public/instrument/crm-hello/",
+      "max_body": 1048576,
+      "per_ip_per_minute": 600
+    }
   },
   "system_reads": [
     "deals"

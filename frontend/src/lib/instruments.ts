@@ -38,11 +38,16 @@ type Started = { unit: string; hooks: BrowserInstruments };
 let started: Started[] = [];
 let lastRoute: string | undefined;
 
-function guarded(unit: string, what: string, call: () => void): void {
-  try {
-    call();
-  } catch (error) {
+// An async hook still type-checks as returning void, so a rejection is caught
+// here too rather than surfacing as an unhandled one.
+function guarded(unit: string, what: string, call: () => unknown): void {
+  const report = (error: unknown) =>
     console.error(`extension ${unit}: instrument ${what} threw`, error);
+  try {
+    const result = call();
+    if (result instanceof Promise) result.catch(report);
+  } catch (error) {
+    report(error);
   }
 }
 
