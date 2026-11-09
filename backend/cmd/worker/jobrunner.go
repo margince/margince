@@ -60,6 +60,7 @@ func graphWatchConfig(cfg workerConfig) compose.GraphWatchConfig {
 // is unchanged; only the scheduler is River now. The returned stop function
 // drains in-flight jobs on shutdown.
 func startJobRunner(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, logger *slog.Logger, cfg workerConfig, modelPath compose.ModelPath, lanes workerLanes, weeklyMail compose.WeeklyMailConfig, stdout io.Writer) (func(), error) {
+	_, _ = fmt.Fprintln(stdout, weeklyMailBanner(weeklyMail))
 	// The sweep registry is always live — the standing IMAP connector needs
 	// no deployment config; gmail joins it when the OAuth app is configured.
 	// The vault holds every connection's sealed credential (the standing
