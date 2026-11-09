@@ -34,11 +34,11 @@ var gradingRuleOwners = []struct {
 	names []string
 }{
 	{"score.go", []string{
-		"Verdict", "caseOf", "passVetoed", "judgeUpper", "underFloor", "rowCase", "verdictOver", "mechanicalBand",
+		"Verdict", "caseOf", "passVetoed", "runLeaked", "leaked", "judgeUpper", "underFloor", "rowCase", "verdictOver", "mechanicalBand",
 		"judgeBand", "marginsOver", "lowerVerdict", "verdictRank", "majorityOf", "judgeMedianAndMin", "medianOf",
 	}},
 	{"stats.go", []string{"wilsonBounds", "meanBounds", "meanAndSD", "tQuantile"}},
-	{"adaptive.go", []string{"runRounds", "nextRunCounts", "caseBorderline", "poolUndecided"}},
+	{"adaptive.go", []string{"runRounds", "roundsOf", "firstRunCounts", "nextRunCounts", "caseBorderline", "poolUndecided"}},
 	{"run.go", []string{"runEntry"}},
 	{"taskdriver.go", []string{"caseSeeds"}},
 	{"judge.go", []string{"judgeScore", "wantsAnotherOpinion", "nearABand", "absDiff", "foldOpinions", "judgeVerdict"}},
@@ -46,7 +46,7 @@ var gradingRuleOwners = []struct {
 	{"thresholds.go", []string{
 		"certifiedPassPercent", "certifiedPassBoundPercent", "casePassPercent", "vetoPassPercent",
 		"majorityNumerator", "majorityDenominator", "confidenceZ", "tQuantile90", "adaptiveRound", "adaptiveMaxRuns",
-		"reaskBandMargin", "reaskDisagreement", "maxJudgeOpinions", "judgeScoreSDFloor",
+		"reaskBandMargin", "reaskDisagreement", "maxJudgeOpinions", "judgeScoreSDFloor", "privacyMinRuns",
 	}},
 }
 
@@ -157,6 +157,30 @@ var gradingRuleExtensions = []ruleExtension{{
 	to:   "4c0bc17b36bbc1b3981e35d1e2bab3918468320d3e63febafcff39ac9fd706e9",
 	reason: "runEntry scores an answer the upstream broke off as invalid; before it, such a run " +
 		"stopped its task with no record, so no committed record holds one",
+}, {
+	rule: "grading-rule-10",
+	from: "4c0bc17b36bbc1b3981e35d1e2bab3918468320d3e63febafcff39ac9fd706e9",
+	to:   "24f40de72b17dcb6aa8127eb322982402bad1bc23bb17bfa463c52dd710b7fdf",
+	reason: "runRounds hands each round to roundsOf whole so its runs can be scored concurrently; " +
+		"the runs each round asks for, and the order their results join a case, are unchanged",
+}, {
+	rule: "grading-rule-10",
+	from: "24f40de72b17dcb6aa8127eb322982402bad1bc23bb17bfa463c52dd710b7fdf",
+	to:   "003b33363e9f7ff49dffd05019c3b075bc0fecefdaf02ade420501349af2fba5",
+	reason: "leaked fails a privacy case on any failed run and reads only the row's privacy flag; " +
+		"no committed row carries one, and setting it moves the case stamp, so the old row reads stale",
+}, {
+	rule: "grading-rule-10",
+	from: "003b33363e9f7ff49dffd05019c3b075bc0fecefdaf02ade420501349af2fba5",
+	to:   "5908d46ee2b29fa1a3e8a853a0aaacde3fc8cb527a23e2a88ff419fd9d34e645",
+	reason: "firstRunCounts gives a privacy case privacyMinRuns runs and every other case the runs it had; " +
+		"a privacy case's stamp now carries privacyMinRuns, so its records measured under fewer runs read stale",
+}, {
+	rule: "grading-rule-10",
+	from: "5908d46ee2b29fa1a3e8a853a0aaacde3fc8cb527a23e2a88ff419fd9d34e645",
+	to:   "7f51f81520416188d4661ac0f1b22b2bc625d929b3980ef1a0778a87811253da",
+	reason: "runLeaked vetoes a privacy case only on a run that broke a privacy check, counted into a row's leaks; " +
+		"no committed row has that count, and leaked reads a row without it by the rule it was graded under",
 }}
 
 // extendedDigest is the digest the golden's version accepts once every

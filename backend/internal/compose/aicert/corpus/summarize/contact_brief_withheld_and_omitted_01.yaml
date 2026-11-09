@@ -36,6 +36,7 @@ fixture:
       from_label: rollout_question
 expect:
   outcome: accepted
+  privacy: true
   # The rollout question is what this reader may be told about, and a right
   # brief says what the blocker actually requires — sign-on against THEIR OWN
   # directory, which the extracted priority row does not say and the floor

@@ -70,7 +70,7 @@ func timeZoneLane(t *testing.T, passage knowledge.Passage) *fixedLane {
 	t.Helper()
 	return &fixedLane{text: corpusReply(askedClaim{
 		Text:  "Pick your time zone in your own settings.",
-		ID:    passage.ChunkID.String(),
+		ID:    firstPassageRef,
 		Quote: firstLineUnderHeading(t, passage.Text),
 	})}
 }

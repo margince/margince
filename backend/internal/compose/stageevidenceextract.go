@@ -41,6 +41,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/schema"
 )
@@ -98,6 +99,39 @@ evidence either way; omit it. Reporting nothing is the correct answer for many c
 // the buyer's own words that must survive intact.
 func stageEvidenceSystemFor(fence promptfence.Fence, lang string) string {
 	return stageEvidenceSystem + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("span")
+}
+
+// stageEvidenceSpanRefs names the spans s1, s2, … in the order the prompt
+// shows them; a claim's source_id is one of these refs.
+func stageEvidenceSpanRefs(spans []stageEvidenceSpan) *promptref.Refs {
+	refs := promptref.New("s")
+	for _, span := range spans {
+		refs.For(span.SourceID)
+	}
+	return refs
+}
+
+// stageEvidenceSpansByRef is the spans a claim may cite, by the ref the prompt
+// showed. A ref the call never minted, a raw span id included, cites nothing.
+func stageEvidenceSpansByRef(spans []stageEvidenceSpan) map[string]stageEvidenceSpan {
+	refs := stageEvidenceSpanRefs(spans)
+	byRef := make(map[string]stageEvidenceSpan, len(spans))
+	for _, span := range spans {
+		byRef[refs.For(span.SourceID)] = span
+	}
+	return byRef
+}
+
+// readStageEvidenceRefs rewrites each validated claim's span ref to the span
+// id it names.
+func readStageEvidenceRefs(claims []stageEvidenceClaim, spans []stageEvidenceSpan) []stageEvidenceClaim {
+	refs := stageEvidenceSpanRefs(spans)
+	out := make([]stageEvidenceClaim, len(claims))
+	for i, claim := range claims {
+		claim.SourceID = shownID(refs, claim.SourceID)
+		out[i] = claim
+	}
+	return out
 }
 
 // stageEvidenceSpan is one piece of text this call offers the model, with the
@@ -177,10 +211,11 @@ func stageEvidenceRequest(
 
 	prompt.WriteString("\nThe conversation (untrusted). Each span is one record, " +
 		"and its lines are numbered from 1:\n")
+	refs := stageEvidenceSpanRefs(spans)
 	for _, span := range spans {
 		for i, line := range span.Lines {
 			prompt.WriteString(fence.WrapAttr("span",
-				span.SourceID+":"+strconv.Itoa(i+1), line) + "\n")
+				refs.For(span.SourceID)+":"+strconv.Itoa(i+1), line) + "\n")
 		}
 	}
 
@@ -189,7 +224,7 @@ func stageEvidenceRequest(
 		`"quote", "met", "commitment", "confidence" } ] } — at most %d, and an empty `+
 		`list when the conversation settles none. `+
 		`"criterion_key" is one of the keys listed above and nothing else. `+
-		`"source_id" is the span id the passage is in, before the colon. `+
+		`"source_id" is the span reference the passage is in, such as s1, before the colon. `+
 		`"source_lines" are the numbers after the colon, at most %d of them, `+
 		`ascending and with no line skipped between the first and the last — `+
 		`quote the interruption rather than reading around it. `+
@@ -213,10 +248,10 @@ func stageEvidenceRequest(
 // stage and no author side, so the shape itself refuses the reply this site
 // must never accept.
 //
-// The two ids a claim cites are closed to THIS call's own: the criterion keys
-// it listed and the span ids it supplied. stageEvidenceValid refuses anything
-// else afterwards, but a decoder that can only write an offered id cannot
-// spend a whole reply on a record this call never read. The lines are
+// The two ids a claim cites are closed to this call's own: the criterion keys
+// it listed and the span refs it supplied. stageEvidenceValid refuses anything
+// else afterwards. A decoder that can only write an offered id cannot spend a
+// whole reply on a record this call never read. The lines are
 // integers because a claim cites line 3, never line 2.5, and the reader
 // decodes them into ints.
 func stageEvidenceSchema(criteria []stageEvidenceCriterion, spans []stageEvidenceSpan) json.RawMessage {
@@ -224,10 +259,7 @@ func stageEvidenceSchema(criteria []stageEvidenceCriterion, spans []stageEvidenc
 	for _, c := range criteria {
 		keys = append(keys, c.Key)
 	}
-	sourceIDs := make([]string, 0, len(spans))
-	for _, span := range spans {
-		sourceIDs = append(sourceIDs, span.SourceID)
-	}
+	sourceIDs := stageEvidenceSpanRefs(spans).All()
 	return schema.Must(schema.Object(
 		map[string]schema.Node{
 			"claims": schema.Array(schema.Object(
@@ -269,10 +301,7 @@ func stageEvidenceValid(criteria []stageEvidenceCriterion, spans []stageEvidence
 	for _, c := range criteria {
 		keys[c.Key] = true
 	}
-	byID := make(map[string]stageEvidenceSpan, len(spans))
-	for _, s := range spans {
-		byID[s.SourceID] = s
-	}
+	byID := stageEvidenceSpansByRef(spans)
 	return func(text string) error {
 		var payload stageEvidencePayload
 		if err := json.Unmarshal([]byte(ai.Unfence(text)), &payload); err != nil {

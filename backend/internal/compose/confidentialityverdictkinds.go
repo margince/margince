@@ -12,6 +12,7 @@ package compose
 // read.
 
 import (
+	"slices"
 	"sort"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -62,6 +63,17 @@ const (
 // needs no floor at all: an unsure hold is the safe direction, and requiring
 // confidence to hold would publish exactly the threads the model found hardest.
 const confidentialityFloor = 0.8
+
+// confidentialityOpens says whether answer opens thread: an opening kind at or
+// above the floor. A thread never opens with a document the verdict did not
+// read, left out or unreadable, because what it holds is unknown.
+func confidentialityOpens(answer confidentialityResult, thread capture.PendingThread) bool {
+	status, _ := statusForConfidentiality(answer.Verdict)
+	if status != capture.VerdictCleared || float64(answer.Confidence) < confidentialityFloor || thread.DocumentsOmitted > 0 {
+		return false
+	}
+	return !slices.ContainsFunc(thread.Documents, func(doc capture.ThreadDocument) bool { return doc.Unreadable })
+}
 
 // statusForConfidentiality maps a kind to the ledger status it resolves to.
 func statusForConfidentiality(kind string) (string, bool) {

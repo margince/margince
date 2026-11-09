@@ -60,7 +60,8 @@ type citingLane struct {
 	dossier bool
 }
 
-var promptFieldID = regexp.MustCompile(`"[iI]d":"([0-9a-fA-F-]{36})"`)
+// promptFieldID reads the ref of the first record a request shows.
+var promptFieldID = regexp.MustCompile(`"[iI]d":"([a-z]+[0-9]+)"`)
 
 func (l citingLane) Complete(_ context.Context, req model.Request) (model.Response, error) {
 	found := promptFieldID.FindStringSubmatch(req.Messages[len(req.Messages)-1].Content)

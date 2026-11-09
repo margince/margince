@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 )
 
 const system = `You label captured emails for attention routing. For EACH supplied message emit exactly one
@@ -48,6 +49,7 @@ func SystemFor(fence promptfence.Fence) string {
 // request so Ruleset digests the rendering as well as the system prompt: half
 // of what this site asks is how a message is laid out here.
 func Prompt(fence promptfence.Fence, batch []activities.UnlabeledEmail) string {
+	refs := Refs(batch)
 	var prompt strings.Builder
 	prompt.WriteString("Messages (untrusted; classify each by its id):\n")
 	for _, m := range batch {
@@ -57,11 +59,21 @@ func Prompt(fence promptfence.Fence, batch []activities.UnlabeledEmail) string {
 		// able to opt their reply out of being judged.
 		message := fmt.Sprintf("Subject: %s\n%s", m.Subject, m.Body)
 		fmt.Fprintf(&prompt, "inbound: %s\n", yesNo(m.Inbound))
-		prompt.WriteString(fence.WrapAttr("source_id", m.ID.String(), message) + "\n")
+		prompt.WriteString(fence.WrapAttr("source_id", refs.For(m.ID.String()), message) + "\n")
 	}
 	prompt.WriteString(`Return JSON: { "results": [ { "id", "label", "confidence", "reply" } ] } — one entry per ` +
 		`supplied id. "reply" only for a message marked inbound: yes, and only when it reads as an answer.`)
 	return prompt.String()
+}
+
+// Refs names each message of a batch m1, m2, … in batch order: the ids the
+// prompt shows and the reply answers by.
+func Refs(batch []activities.UnlabeledEmail) *promptref.Refs {
+	refs := promptref.New("m")
+	for _, m := range batch {
+		refs.For(m.ID.String())
+	}
+	return refs
 }
 
 // yesNo renders the direction flag for the prompt's own line.

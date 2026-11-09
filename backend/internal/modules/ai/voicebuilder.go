@@ -29,7 +29,7 @@ Three lists are the easiest place to break that rule, because each reads like co
 observed_obsessions: what the author's reasoning keeps returning to (what they check, weigh or refuse), never a subject they write about.
 vocabulary: words the author reaches for whatever the topic, never a term of their trade, a product or a figure.
 closings: how a message ends, described as a move, never a sign-off or its wording.
-Every signature move must quote a short verbatim fragment from a supplied sample and cite that sample's id.
+Every signature move must quote a short verbatim fragment from a supplied sample and cite that sample's id. Draw at least one move from each register. Copy each quote exactly as it stands in the sample, with its own words and capitals, even when it starts mid-sentence.
 The universal anti-AI baseline always forbids parenthetical em dashes, abstract not-X-but-Y reframes, canned engagement openers, balanced consultant tricolons, generic calls to action and corporate filler.
 Return only the requested JSON object.`
 

@@ -281,14 +281,16 @@ func (c *roomBriefCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	if !strings.Contains(folded, strings.ToLower(c.mustName)) {
 		wrong = append(wrong, fmt.Sprintf("the brief never names %q, so it would read the same about any room", c.mustName))
 	}
+	leaks := false
 	for _, avoided := range c.mustAvoid {
 		if strings.Contains(folded, strings.ToLower(avoided)) {
 			wrong = append(wrong, fmt.Sprintf("the brief says %q", avoided))
+			leaks = true
 		}
 	}
 	wrong = append(wrong, c.openingFaults(strings.ToLower(sentences[0].Text))...)
 	if len(wrong) > 0 {
-		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: strings.Join(wrong, "; ")}
+		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: strings.Join(wrong, "; "), Leak: leaks}
 	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}
 }

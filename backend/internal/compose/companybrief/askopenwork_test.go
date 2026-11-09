@@ -56,6 +56,9 @@ func taskAndCommitment() Input {
 
 func answerOpen(t *testing.T, lane Completer, in Input) ([]Sentence, crmcontracts.WrittenBy) {
 	t.Helper()
+	if canned, ok := lane.(cannedLane); ok {
+		lane = citingLane{in: in, reply: canned.reply}
+	}
 	answered, by, err := Answer(t.Context(), lane, crmcontracts.CompanyQuestionWhatsOpen, askCompanyID, in, string(textlang.English))
 	if err != nil {
 		t.Fatalf("answer: %v", err)
@@ -372,5 +375,23 @@ func TestTheAskPromptCarriesTheOpenWorkRule(t *testing.T) {
 	system := AskRequest(crmcontracts.CompanyQuestionWhatsOpen, Input{}, "en").System
 	if !strings.Contains(system, openWorkRule) {
 		t.Error("the ask prompt lacks the open-work rule")
+	}
+}
+
+func TestACommitmentIsCitedByItsMessageNotItsClaimID(t *testing.T) {
+	for name, system := range map[string]string{
+		"ask":   AskRequest(crmcontracts.CompanyQuestionWhatsOpen, Input{}, "en").System,
+		"brief": BriefRequest(Input{}, "en").System,
+	} {
+		if !strings.Contains(system, "by its activity_id, never by its id") {
+			t.Errorf("the %s prompt does not say which id cites a commitment", name)
+		}
+	}
+	in := taskAndCommitment()
+	byClaimID := replyOf(
+		citing("Send the quote is open.", "activity", taskActivity),
+		citing("We promised the security audit.", "activity", in.OpenCommitments[0].ID))
+	if _, by := answerOpen(t, byClaimID, in); by != crmcontracts.WrittenByDeterministic {
+		t.Errorf("generated_by = %q, want the floor: the claim id is not a citable record", by)
 	}
 }

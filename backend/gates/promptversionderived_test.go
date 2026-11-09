@@ -196,13 +196,17 @@ func namesAVersion(name string) bool {
 }
 
 // declaredPrompts returns the prompt constants a package declares.
+//
+// A total fold, because a prompt may splice in another package's constant
+// (`... ` + claims.NeverNameTheGap). A strict fold drops the whole prompt for
+// that one unreadable half. The readable text is a floor on its length.
 func declaredPrompts(pkg promptPackage) []string {
 	var prompts []string
 	eachDeclaredString(pkg, isConst, func(name string, value ast.Expr) {
 		if !promptConstantName.MatchString(name) {
 			return
 		}
-		if text, ok := gatekit.StringExpr(value, pkg.consts, gatekit.FoldStrict); ok && len(text) >= promptFloor {
+		if text, ok := gatekit.StringExpr(value, pkg.consts, gatekit.FoldTotal); ok && len(text) >= promptFloor {
 			prompts = append(prompts, name)
 		}
 	}, func(string) {})
@@ -508,7 +512,9 @@ func TestThePromptCensusSeesWhatItClaimsTo(t *testing.T) {
 			}
 		}, func(string) {})
 	}
-	for _, want := range []string{"briefSystem", "dossierSystem", "growthFitSystem"} {
+	// askSystem splices in another package's constant, which a strict fold
+	// cannot read.
+	for _, want := range []string{"briefSystem", "askSystem", "dossierSystem", "growthFitSystem"} {
 		if !found[want] {
 			t.Errorf("the census no longer finds %s — the naming rule has drifted from the tree", want)
 		}

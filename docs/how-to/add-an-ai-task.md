@@ -141,6 +141,47 @@ one certification run can cover:
    `TestNoModelClientOutsideTheGate` fails a model client built in any other place.
    Keep the builder and the checker in reach: the certification case must call the same two functions.
 
+   Show the model short labels, never a record UUID. Name each record the prompt shows with a
+   `promptref.Refs` table (`backend/internal/shared/kernel/promptref`). Build the table from the
+   records in the order the prompt shows them, in one function that the builder and the parser both
+   call. The parser reads each label of the reply back to its ID, after the shape check has refused
+   any label the call did not show.
+
+   ```go
+   func messageRefs(batch []Message) *promptref.Refs {
+   	refs := promptref.New("m")              // m1, m2, … in batch order
+   	for _, m := range batch {
+   		refs.For(m.ID.String())
+   	}
+   	return refs
+   }
+
+   // builder: the span, the prompt text and the answer enum carry refs
+   fence.WrapAttr("source_id", messageRefs(batch).For(m.ID.String()), body)
+   // parser: after the shape check, read each ref back
+   id, ok := messageRefs(batch).ID(result.ID) // ok is false for a ref never shown
+   ```
+
+   A batch that answers one result per label can use `resolveBatchRefs` in
+   `internal/compose/batchfidelity.go`. A JSON payload built with record IDs goes out through
+   `promptref.Rewrite`, which puts each ID's label in its place. `promptref.Mint` makes those tables
+   from every UUID in the payload, one table for each kind. A site that sends a whole record then
+   misses none. `Refs.NamedIn` finds a label that a reply wrote in reader text. The parser refuses
+   that text as it refuses an ID there.
+
+   Evidence of the shape `{entity_type, entity_id}` reads back through `claims.Refs`, one table for
+   each entity type. `claims.MintRefs` makes it from the payload. `Show` writes the payload with
+   labels, and `Read` turns the labels in the reply back into IDs.
+   `TestNoSiteShowsTheModelARecordUUID` builds every request of every corpus scenario. It fails a
+   site whose prompt, answer schema or tool list carries a UUID.
+
+   A test lane reads the label of a record off a JSON request with `aitest.RefWhere`, by a field
+   the test knows. `aitest.RefBeside` does the same by the record's name. An integration fake for a
+   fenced prompt wraps in `inRefs`, in `internal/compose/refscript_integration_test.go`. It finds
+   each record in the request by text the record shows, and writes the label the request gave it.
+   Why a UUID is a bad name for a model:
+   [prompt-shape.md](../explanation/prompt-shape.md#short-refs-not-record-ids).
+
 5. **Register the site and bind its case** with one line in the **census**.
    The census is `compose.NewTaskCensus` in `internal/compose/aitaskregistry.go`.
    It lists every invocation site this build ships, and every start and test run checks it against the
@@ -174,6 +215,7 @@ one certification run can cover:
    | a fixture that is not the shape its site takes | `TestEveryCorpusScenarioPreparesAgainstItsSite` |
    | a closed answer enum with a kind that no accepted corpus scenario names | `TestEveryClosedAnswerKindCarriesAScenario`. Each kind of the enum needs its own accepted scenario; one per site is not enough |
    | a task with no lane, or a lane no role wires | `TestEveryCensusedSiteRidesALaneAProcessRoleWires` |
+   | a prompt, answer schema or tool list that shows a record UUID | `site X shows the model a record UUID` |
    | a new `.go` file with no SPDX header | `TestEveryHandWrittenGoFileCarriesTheLicenseHeader` |
 
 8. **Certify it** once the gates are green. This is the one step that costs money.
@@ -185,7 +227,7 @@ one certification run can cover:
    Read that first, or the run fails on a missing key.
 
    ```
-   # real calls on your key; MODEL is required. JUDGE defaults to claude_cli:claude-sonnet-4-6
+   # real calls on your key; MODEL is required. JUDGE defaults to claude_cli:claude-sonnet-5-5
    make e2e-ai TASK=<your task> MODEL=gemini:gemini-3.1-flash-lite
    make e2e-ai-report                # free: band, scope, binding, counts, scenario coverage
    cd backend && go test ./internal/compose/aicert/ -run TestAICertificationPage -update-ai-cert

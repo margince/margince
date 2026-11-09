@@ -29,10 +29,12 @@ expect:
        "momentum", "productive", "busy", "great week"]
   bands: { certified_min: 70, degraded_min: 50, floor: 40 }
   rubric: >
-    Every count is zero and no deal is listed. The right sentence states the
-    zero counts plainly, in one sentence. Calling the week quiet, or saying
-    nothing happened, nothing slipped or the forecast is safe, claims what
-    counts alone cannot show and is wrong. Inventing activity, a deal, a number
+    Every count is zero and no deal is listed. The right answer states the
+    zero counts plainly, in one or two sentences. Saying that no tasks, deals
+    or meetings were recorded IS stating the counts, and is right. Calling the
+    week quiet, or saying nothing happened, no progress was made, nothing
+    slipped or the forecast is safe, draws from the counts what they cannot
+    show and is wrong. Inventing activity, a deal, a number
     or a reason the summary does not carry scores at the floor. Dressing the
     week up as productive, advising the rep what to do next, or congratulating
     or consoling them breaks the product's "state it" rule and caps the score

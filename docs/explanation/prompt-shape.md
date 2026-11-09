@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/shared/kernel/promptfence/promptfence.go backend/internal/compose/companycontextprompt.go backend/internal/compose/confidentialityverdictask.go backend/internal/compose/batchfidelity.go backend/internal/compose/captureclassify.go backend/internal/compose/captureverdict.go -->
+<!-- describes: backend/internal/shared/kernel/promptfence/promptfence.go backend/internal/compose/companycontextprompt.go backend/internal/compose/confidentialityverdictask.go backend/internal/compose/batchfidelity.go backend/internal/shared/kernel/promptref/promptref.go backend/internal/compose/captureclassify.go backend/internal/compose/captureverdict.go -->
 # How we write prompts: the password, the cost, and one item at a time
 
 Most prompts this product sends have the same three parts. One carries no
@@ -101,6 +101,25 @@ harm; see *One item per call, or several?*
   one boundary only    a prompt never gets two passwords. Two "this is the
                        only boundary" sentences would let the model pick.
 ```
+
+### Short refs, not record IDs
+
+A prompt never shows the model a record's UUID. It names each record by a short
+ref such as `m1` or `p2`, and the reply cites that ref.
+
+```
+  a UUID in the prompt                       a short ref in the prompt
+  01a1bb71-4030-72d8-800d-415f66656529       m1
+
+  copied with one digit wrong                copied whole
+  put in the field next to it                hard to put in the wrong place
+  written into a sentence for a reader       nothing worth writing out
+```
+
+A small model makes all three of these errors most often. A ref names one
+record of one call only. The code that reads the reply turns each ref back into
+the record's ID, and it refuses a ref the call did not show. So the per-call ID
+list above still holds.
 
 ---
 
@@ -461,6 +480,8 @@ each item alone.
 | One boundary per prompt | `backend/internal/compose/companycontextprompt.go`, `contextFence` |
 | Closed answer list | such as `confidentialitySchema` in `backend/internal/compose/confidentialityverdictask.go` |
 | Matching answers to items | `backend/internal/compose/batchfidelity.go`, `checkBatchFidelity` |
+| Short refs for records | `backend/internal/shared/kernel/promptref`: `New`, `For`, `ID`, `NamedIn`, `Mint`, `Rewrite` |
+| No site shows a UUID | `backend/internal/compose/aishortrefs_test.go`, `TestNoSiteShowsTheModelARecordUUID` |
 | A task that batches | `backend/internal/compose/captureclassify.go`, `classifyBatchSize` |
 | A task that refuses, and why | `backend/internal/compose/captureverdict.go`, `judgeClaimed` doc comment |
 | The other task that refuses | `backend/internal/compose/confidentialityverdictask.go`, `confidentialityRequest` doc comment |

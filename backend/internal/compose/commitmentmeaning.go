@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -86,11 +87,22 @@ func validateCommitmentMeaning(meaning *commitmentMeaning, dueDate, source strin
 		if utf8.RuneCountInString(quote) > maxExtractQuote {
 			return "a commitment condition or deadline quote is too long"
 		}
-		if _, found := evidenceSpan(source, quote); !found {
+		if !quotedFrom(source, quote) {
 			return "a commitment condition or deadline quotes words outside its evidence"
 		}
 	}
 	return ""
+}
+
+// quotedFrom reports whether quote is the source's own words. A quote lifted
+// from mid-sentence may open on a capital, which is still those words.
+func quotedFrom(source, quote string) bool {
+	if _, found := evidenceSpan(source, quote); found {
+		return true
+	}
+	first, size := utf8.DecodeRuneInString(quote)
+	_, found := evidenceSpan(source, string(unicode.ToLower(first))+quote[size:])
+	return found
 }
 
 func (meaning *commitmentMeaning) withheldOutcome() CommitmentOutcome {

@@ -172,7 +172,7 @@ func TestTheCounterpartyAskTakesAConfidentDecision(t *testing.T) {
 	row := capture.PendingCounterparty{ID: ids.NewV7(), Email: "k.bauer@kanzlei.example", Direction: connector.DirectionInbound}
 	lane := &scriptedDecidingLane{
 		answer:   decision.Answer{Choice: capture.KindAdvisor, Confidence: verdictCreateFloor},
-		llmReply: verdictReply(row.ID.String(), capture.KindSpam),
+		llmReply: verdictReply("s1", capture.KindSpam),
 	}
 
 	results, _, err := (&CounterpartyVerdictEngine{brain: lane}).ask(context.Background(), row)
@@ -198,7 +198,7 @@ func TestTheCounterpartyAskFallsBackBelowTheFloor(t *testing.T) {
 	row := capture.PendingCounterparty{ID: ids.NewV7(), Email: "k.bauer@kanzlei.example"}
 	lane := &scriptedDecidingLane{
 		answer:   decision.Answer{Choice: capture.KindContact, Confidence: verdictCreateFloor - 0.01},
-		llmReply: verdictReply(row.ID.String(), capture.KindSpam),
+		llmReply: verdictReply("s1", capture.KindSpam),
 	}
 
 	results, _, err := (&CounterpartyVerdictEngine{brain: lane}).ask(context.Background(), row)
@@ -209,6 +209,9 @@ func TestTheCounterpartyAskFallsBackBelowTheFloor(t *testing.T) {
 		t.Error("an unsure decision was kept instead of falling back to the LLM")
 	}
 	if len(results) != 1 || results[0].Verdict != capture.KindSpam {
-		t.Errorf("results %+v, want the LLM's own spam answer", results)
+		t.Fatalf("results %+v, want the LLM's own spam answer", results)
+	}
+	if results[0].ID != row.ID.String() {
+		t.Errorf("the answer about s1 reads back as %q, want the row id %s", results[0].ID, row.ID)
 	}
 }

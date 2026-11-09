@@ -24,7 +24,8 @@ inferring rather than reading. Cite the id of the message the event is stated in
 For contract_ended, quote the exact current message words and report lifecycle_scope:
 "company" only when those words explicitly end the whole account relationship;
 "workstream" when they end a particular project, pilot, contract or service; otherwise "unknown".
-Put the named engagement in workstream, or "" when none is named. When scope is unknown,
+Put the named engagement in workstream, with the words that say what kind of work it is
+("Atlas support service", never "Atlas" alone), or "" when none is named. When scope is unknown,
 workstream must be empty. Ending one contract never implies ending all business with a company.
 For other event kinds set lifecycle_scope and workstream to "".
 For commitments, later evidence of fulfillment or explicit withdrawal means no new commitment.
@@ -62,7 +63,10 @@ message’s words that establish the need. An explicit report of a named partici
 can identify that participant as the buyer; their presence in Cc alone cannot.
 Use supplier, partner or provider only when the source establishes that specific relationship.
 Merely relaying an unidentified company’s need does not establish a partnership: use unknown.
-A meeting invitation alone establishes no buying intent.
+A relationship the source does state still holds when the client it relays is unnamed: a
+transcript provider passing on an unidentified client’s need is provider, not unknown.
+A meeting invitation alone establishes no buying intent. Neither does a pitch: a supplier offering
+us its product or price, when no one states a need for it, is no event at all.
 Every field is always present. A text field that does not apply to the kind is "", recipient_refs is [],
 commercial_role is unknown, and commitment is always the object.
 A conversation can state several events in different messages. Report each one. An event in a later
@@ -94,6 +98,7 @@ func extractRequest(thread settledThread, lang string) model.Request {
 	if thread.Count > len(thread.Messages) {
 		fmt.Fprintf(&prompt, "This excerpt omits %d messages. The shown messages are not necessarily consecutive. Do not infer that an obligation remains open merely because no answer appears here.\n", thread.Count-len(thread.Messages))
 	}
+	parties := thread.partyRefs()
 	for _, message := range thread.Messages {
 		// The sender's own words only, because that is what validateEventEvidence
 		// holds a quote to. Shown the history, the model cites a reply for a
@@ -101,7 +106,7 @@ func extractRequest(thread settledThread, lang string) model.Request {
 		body := fmt.Sprintf("Direction: %s\nSent: %s\nSubject: %s\n%s",
 			directionWord(message.Direction), message.At.Format(time.DateOnly), message.Subject,
 			textlang.CurrentMessage(message.Body))
-		body += "\nVerified participants (reference, role, name, address):\n" + commitmentPartyPrompt(message.Parties, textlang.CurrentMessage(message.Body))
+		body += "\n" + commitmentPartyHeader + commitmentPartyPrompt(message.Parties, textlang.CurrentMessage(message.Body), parties)
 		label := thread.messageLabel(message.ID.String())
 		fmt.Fprintf(&prompt, "Message %s:\n", label)
 		prompt.WriteString(fence.WrapAttr("source_id", label, body) + "\n")

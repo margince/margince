@@ -89,27 +89,27 @@ var sleepFunc = func(ctx context.Context, d time.Duration) error {
 // the model was reached and could not finish, so the run is scored invalid and
 // the task keeps its record. It is re-driven first because one such break can
 // be a transient crash; only every attempt breaking off is evidence.
-func driveRun(ctx context.Context, candidate *ai.Router, candidateRec *traceRecorder, judge *ai.Router, judgeRec *traceRecorder,
+func driveRun(ctx context.Context, lane runLane,
 	sc Scenario, task ai.Task, census *aitasks.Registry, log *slog.Logger, trace *payloadTrace, journal taskJournal, run int,
-) (runOutcome, error) {
+) (measuredRun, error) {
 	var lastErr, lastOutage error
-	var brokenOff runOutcome
+	var brokenOff measuredRun
 	for attempt := 1; attempt <= runAttempts; attempt++ {
 		if attempt > 1 {
 			log.WarnContext(ctx, "aicert: re-driving a run after the router exhausted every bound tier — the calls the failed attempt made are paid for and discarded",
 				"task", string(task), "scenario", sc.Name, "run", run, "attempt", attempt, "err", lastErr)
 			if err := sleepFunc(ctx, backoffFor(lastErr)[attempt-2]); err != nil {
-				return runOutcome{}, errors.Join(err, lastErr)
+				return measuredRun{}, errors.Join(err, lastErr)
 			}
 		}
-		outcome, err := runOnce(ctx, candidate, candidateRec, judge, judgeRec, sc, task, census, log, trace, run, attempt)
+		measured, err := runOnce(ctx, lane, sc, task, census, log, trace, run, attempt)
 		switch {
-		case err == nil && !outcome.Abandoned:
-			return outcome, nil
+		case err == nil && !measured.outcome.Abandoned:
+			return measured, nil
 		case err == nil:
-			brokenOff, lastErr = outcome, errAnswerBrokenOff
+			brokenOff, lastErr = measured, errAnswerBrokenOff
 		case !worthRedriving(err):
-			return runOutcome{}, err
+			return measuredRun{}, err
 		default:
 			lastErr, lastOutage = err, err
 		}
@@ -119,7 +119,7 @@ func driveRun(ctx context.Context, candidate *ai.Router, candidateRec *traceReco
 			"task", string(task), "scenario", sc.Name, "run", run)
 		return brokenOff, nil
 	}
-	return runOutcome{}, fmt.Errorf(
+	return measuredRun{}, fmt.Errorf(
 		"every bound tier failed on all %d attempts — re-run the same command once the provider is reachable%s: %w",
 		runAttempts, journal.restartHint(), lastOutage,
 	)
