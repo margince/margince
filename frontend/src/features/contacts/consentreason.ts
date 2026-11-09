@@ -5,6 +5,7 @@ import type { components } from "../../api/schema";
 import { formatDateAbbrev } from "../../format/format";
 import type { Locale, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { valueFor } from "../../lib/labelfor";
 
 type GuardEntry = components["schemas"]["ContactConsentGuardEntry"];
 type QualifyingKind = components["schemas"]["ConsentQualifyingEvent"]["kind"];
@@ -67,7 +68,7 @@ export function consentReason(
   const date = (iso: string) => formatDateAbbrev(iso, locale, zone);
   const event = entry.qualifying_event;
   if (entry.reason_code === "qualifying_event" && event) {
-    const key = QUALIFYING[event.kind];
+    const key = valueFor(QUALIFYING, event.kind, undefined);
     return key
       ? t(key, { date: date(event.occurred_at), note: event.note ?? "" })
       : entry.reason;
@@ -75,6 +76,6 @@ export function consentReason(
   if (entry.reason_code === "objection" && entry.reason_at) {
     return t("consent.reason.objectionOn", { date: date(entry.reason_at) });
   }
-  const key = REASON[entry.reason_code];
+  const key = valueFor(REASON, entry.reason_code, undefined);
   return key ? t(key) : entry.reason;
 }

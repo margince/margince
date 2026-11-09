@@ -9,6 +9,7 @@ import {
   NEW_FILTER_LABEL,
   opensAFocusedFiltersPage,
 } from "../lib/filtersaddress";
+import { labelFor } from "../lib/labelfor";
 import { useList } from "../lib/lists.queries";
 import { type Route, routeHash } from "../lib/router";
 import { openableTree, useSavedView } from "../lib/savedviews.queries";
@@ -60,7 +61,7 @@ export function useFiltersCrumbs(route: Route): readonly Crumb[] | null {
     case "library":
       return null;
     case "new":
-      return [library, { label: t(NEW_FILTER_LABEL[address.tab]) }];
+      return [library, { label: t(labelFor(NEW_FILTER_LABEL, address.tab)) }];
     case "view": {
       // A view the page cannot open reads as gone there, so it is unnamed here.
       const opened = view.data;

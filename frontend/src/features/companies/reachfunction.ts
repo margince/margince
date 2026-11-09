@@ -5,6 +5,7 @@ import type { components } from "../../api/schema";
 import { formatNumber } from "../../format/format";
 import type { Locale, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 
 type ReachFunction = components["schemas"]["LinkedInReachFunction"];
 type ReachFunctionCount = components["schemas"]["LinkedInReachFunctionCount"];
@@ -28,7 +29,7 @@ export function reachFunctionCount(
   held: ReachFunctionCount,
 ): string {
   return t("companyReach.functionCount", {
-    function: t(FUNCTION_LABEL[held.function]),
+    function: t(labelFor(FUNCTION_LABEL, held.function)),
     connections: formatNumber(held.connections, locale),
   });
 }

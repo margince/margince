@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   render as rtlRender,
   screen,
@@ -734,3 +735,75 @@ describe("what a channel reply says it will be filed under", () => {
     ).toBeNull();
   });
 });
+
+it.each(["proj-2", ""])(
+  "restores the selected project, including an explicit no-project choice: %s",
+  async (projectId) => {
+    let answerProjects: (response: Response) => void = () => {};
+    const sent = stubRoutes({
+      "GET /companies/company-1/360": () =>
+        new Promise<Response>((resolve) => {
+          answerProjects = resolve;
+        }),
+      "GET /mail-drafts": () =>
+        jsonResponse({
+          id: "draft-one",
+          anchor_type: "company",
+          anchor_id: "company-1",
+          version: 2,
+          to: ["dieter@acme.test"],
+          cc: [],
+          bcc: [],
+          subject: "Next steps",
+          body: "The current draft.",
+          communication_context: "requested_followup",
+          agent_drafted: false,
+          grounding: [{ anchor_type: "project", anchor_id: "proj-1" }],
+          editor_state: {
+            filing: projectId
+              ? [{ anchor_type: "project", anchor_id: projectId }]
+              : [],
+          },
+        }),
+      "GET /projects/proj-2": () =>
+        jsonResponse({
+          id: "proj-2",
+          name: "Datacentre migration",
+          key: "DC-4",
+        }),
+    });
+    render(
+      <ComposeModal
+        entityType="company"
+        entityId="company-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+    await screen.findByText("Saved draft restored");
+    act(() =>
+      answerProjects(
+        jsonResponse({
+          ...COMPANY_VIEW,
+          projects: projectId
+            ? COMPANY_VIEW.projects
+            : COMPANY_VIEW.projects.slice(0, 1),
+        }),
+      ),
+    );
+    await waitFor(() => {
+      const previews = sent.filter(
+        (call) => call.key === "POST /emails:preview",
+      );
+      expect(previews.at(-1)?.body).toMatchObject({
+        links: [
+          { entity_type: "company", entity_id: "company-1" },
+          { entity_type: "contact", entity_id: "per-1" },
+          ...(projectId
+            ? [{ entity_type: "project", entity_id: projectId }]
+            : []),
+        ],
+      });
+    });
+  },
+);

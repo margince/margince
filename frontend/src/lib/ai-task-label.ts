@@ -1,6 +1,7 @@
 import type { components } from "../api/schema";
 import type { Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { labelFor } from "./labelfor";
 
 type AiTask = components["schemas"]["AiTask"];
 
@@ -54,7 +55,7 @@ export function aiTaskLabel(
   fallback?: string | null,
 ): string {
   if (task === "embeddings") return t("aiRouting.lane.embeddings");
-  if (task && isAiTask(task)) return t(TASK_NAME_KEYS[task]);
+  if (task && isAiTask(task)) return t(labelFor(TASK_NAME_KEYS, task));
   const name = fallback?.trim();
   return name && name !== task ? name : t("aiTask.name.unknown");
 }

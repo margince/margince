@@ -79,6 +79,7 @@ func TestTransmitJudgesTheEntityStagingStoredForAHumanAndAnAgent(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			e := setupResolve(t)
+			e.livesIn(t, reviewableMarketingCountry())
 			e.seedPurpose(t, "newsletter", "marketing")
 			branch := e.secondEntity(t)
 			branchRep := e.colleague(t, branch)
@@ -94,6 +95,7 @@ func TestTransmitJudgesTheEntityStagingStoredForAHumanAndAnAgent(t *testing.T) {
 
 func TestTheWorkerNeverSendsOnTheDefaultEntitysVouchForABranchMessage(t *testing.T) {
 	e := setupResolve(t)
+	e.livesIn(t, reviewableMarketingCountry())
 	e.seedPurpose(t, "newsletter", "marketing")
 	branchRep := e.colleague(t, e.secondEntity(t))
 	e.vouchAs(t, e.colleague(t, ids.Nil))
@@ -106,6 +108,7 @@ func TestTheWorkerNeverSendsOnTheDefaultEntitysVouchForABranchMessage(t *testing
 
 func TestTransmitRefusesADeliveryWhosePurposeDiffersFromTheStagedOne(t *testing.T) {
 	e := setupResolve(t)
+	e.livesIn(t, reviewableMarketingCountry())
 	e.seedPurpose(t, "newsletter", "marketing")
 	e.seedPurpose(t, "events", "marketing")
 	branchRep := e.colleague(t, ids.Nil)

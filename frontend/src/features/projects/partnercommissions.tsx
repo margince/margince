@@ -13,6 +13,7 @@ import { formatMoney, formatNumber, INTL_LOCALE } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
+import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { CommissionDecision, decisionsFor } from "./commissiondecide";
 import "./partnercommissions.css";
@@ -268,7 +269,7 @@ function CommissionLedger({
             header: t("commission.column.status"),
             render: (entry) => (
               <Badge tone={STATUS_TONES[entry.status]}>
-                {t(STATUS_LABELS[entry.status])}
+                {t(labelFor(STATUS_LABELS, entry.status))}
               </Badge>
             ),
           },

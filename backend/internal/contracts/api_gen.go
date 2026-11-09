@@ -53030,11 +53030,14 @@ type MailDraftEditorState struct {
 	AiGenerated  *bool   `json:"ai_generated,omitempty"`
 
 	// ContentFingerprint Server binding to the saved words, used only to retire stale editor state.
-	ContentFingerprint  *string `json:"content_fingerprint,omitempty"`
-	Intent              *string `json:"intent,omitempty"`
-	ServedBody          *string `json:"served_body,omitempty"`
-	VoiceDegraded       *bool   `json:"voice_degraded,omitempty"`
-	VoiceProfileVersion *int    `json:"voice_profile_version,omitempty" minimum:"1"`
+	ContentFingerprint *string `json:"content_fingerprint,omitempty"`
+
+	// Filing The deal and project selected in the composer. An empty list clears the selection. Omission keeps the older draft's grounding as the restore default. These are filing choices, not evidence of a request or permission to send. The send checks each link.
+	Filing              *[]MailDraftGround `json:"filing,omitempty"`
+	Intent              *string            `json:"intent,omitempty"`
+	ServedBody          *string            `json:"served_body,omitempty"`
+	VoiceDegraded       *bool              `json:"voice_degraded,omitempty"`
+	VoiceProfileVersion *int               `json:"voice_profile_version,omitempty" minimum:"1"`
 }
 
 // MailDraftGround One record the draft was written from. A saved agent draft keeps these so the composer files the sent mail where the draft was grounded, rather than rebuilding links from whichever page it was opened on.

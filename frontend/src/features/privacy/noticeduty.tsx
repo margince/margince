@@ -20,6 +20,7 @@ import { QueryStates } from "../../design-system/querystates";
 import { formatDate } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
+import { labelFor } from "../../lib/labelfor";
 import {
   acquisitionKindLabel,
   acquisitionRecorder,
@@ -266,7 +267,7 @@ function dutyFacts(
     facts.push({
       key: "state",
       term: t("history.field.status"),
-      value: t(NOTICE_STATE_LABEL[duty.state]),
+      value: t(labelFor(NOTICE_STATE_LABEL, duty.state)),
     });
     facts.push({
       key: "owner",

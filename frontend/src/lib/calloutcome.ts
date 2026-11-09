@@ -9,6 +9,7 @@ import type { components } from "../api/schema";
 import type { Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { CallOutcome } from "./activitybody";
+import { labelFor } from "./labelfor";
 
 type Activity = components["schemas"]["Activity"];
 
@@ -32,5 +33,5 @@ export function callOutcomeLabel(
   if (!t || activity.kind !== "call" || !activity.call_outcome) {
     return undefined;
   }
-  return t(CALL_OUTCOME_LABEL[activity.call_outcome]);
+  return t(labelFor(CALL_OUTCOME_LABEL, activity.call_outcome));
 }

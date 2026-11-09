@@ -391,6 +391,7 @@ func TestAColleagueWhoTakesOverRepliesWithoutAConsentQuestion(t *testing.T) {
 // answers the delivery and a way to ask the transmit phase about it.
 func (e *resolveEnv) stagedMarketingDelivery(t *testing.T) (ids.UUID, func(attempt int) commsauthz.TransmitTicket) {
 	t.Helper()
+	e.livesIn(t, reviewableMarketingCountry())
 	e.seedPurpose(t, "newsletter", "marketing")
 	delivery := e.plantDelivery(t)
 	recipients := []connector.Recipient{{Email: e.address}}
@@ -470,13 +471,8 @@ func TestAStopRecordedAfterQueueingIsNotOneAnExceptionAnswers(t *testing.T) {
 	}
 }
 
-// A refusal only an admin may answer, recorded after the exception was given,
-// is answered by an admin's exception and not by a rep's. The authority is the
-// one stored on the exception, never the one of whoever sends now.
-//
-// Mutation: pass true to ExceptionMayAnswer in AuthorizeTransmit, or drop
-// given_by_admin from exceptionGivenByAdminTx's answer, and one case fails.
-func TestAnAdminOnlyRefusalIsAnsweredOnlyByAnAdminsException(t *testing.T) {
+// A provider's hard bounce is not lifted by a staff exception.
+func TestAHardBounceStopsEvenAnAdminsQueuedException(t *testing.T) {
 	for _, tc := range []struct {
 		name         string
 		givenByAdmin bool
@@ -491,9 +487,8 @@ func TestAnAdminOnlyRefusalIsAnsweredOnlyByAnAdminsException(t *testing.T) {
 			if ticket.Allowed {
 				t.Fatal("a bounced address was allowed")
 			}
-			if ticket.ConsentRefused != tc.givenByAdmin {
-				t.Errorf("consentRefused = %v, want %v: only an admin's exception answers a bounce",
-					ticket.ConsentRefused, tc.givenByAdmin)
+			if ticket.ConsentRefused {
+				t.Error("a bounced address was offered to a staff exception")
 			}
 		})
 	}
