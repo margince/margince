@@ -131,11 +131,47 @@ var costFilenameWords = wordSet(`inv invoice invoices rechnung rechnungen cost c
 
 var sensitiveFilenameWords = wordSet(`passport passports reisepass reisepässe personalausweis visa befund befunde covid`)
 
-var sensitiveFilenameStems = wordList{"passport", "reisepass", "personalausweis", "befund", "covid"}
+// sensitiveStem names an identity or medical document inside a longer word,
+// as in "employeeidcard". Where an ordinary word also contains the stem, the
+// letters around it are limited: "passporting" and "idcardinality" end in no
+// file-name tail, and "contestresults" starts with no kind of test.
+type sensitiveStem struct {
+	stem            string
+	tails, prefixes []string
+}
 
-// sensitiveFilenamePrefixes name the same only at the start of a word:
-// "contestresults" and "latestresults" contain "testresult".
-var sensitiveFilenamePrefixes = wordList{"idcard", "testresult"}
+var filenameTails = []string{"", "s", "scan", "scans", "copy", "copies", "kopie", "front", "back", "page", "photo", "foto"}
+
+var testKinds = []string{"", "blood", "covid", "corona", "pcr", "antigen", "lab", "labor", "drug", "urine", "medical", "my"}
+
+var sensitiveFilenameStems = []sensitiveStem{
+	{stem: "passport", tails: filenameTails},
+	{stem: "reisepass"},
+	{stem: "personalausweis"},
+	{stem: "befund"},
+	{stem: "covid"},
+	{stem: "idcard", tails: filenameTails},
+	{stem: "visa", tails: filenameTails},
+	{stem: "medicalresult"},
+	{stem: "testresult", prefixes: testKinds},
+}
+
+// in says whether word holds the stem with letters around it the stem admits.
+func (s sensitiveStem) in(word string) bool {
+	for at := strings.Index(word, s.stem); at >= 0; {
+		before, after := word[:at], word[at+len(s.stem):]
+		if (s.prefixes == nil || slices.Contains(s.prefixes, before)) &&
+			(s.tails == nil || slices.Contains(s.tails, after)) {
+			return true
+		}
+		next := strings.Index(word[at+1:], s.stem)
+		if next < 0 {
+			return false
+		}
+		at += 1 + next
+	}
+	return false
+}
 
 var sensitiveFilenamePhrases = []string{"id card", "test result", "test results", "medical result", "medical results"}
 
@@ -169,8 +205,8 @@ func NamedAsPrivate(filename string) bool {
 	words := filenameWords(filename)
 	name := " " + strings.Join(words, " ") + " "
 	return NamedAsPersonnel(filename) || slices.ContainsFunc(words, func(word string) bool {
-		return sensitiveFilenameWords[word] || sensitiveFilenameStems.inside(word) ||
-			slices.ContainsFunc(sensitiveFilenamePrefixes, func(prefix string) bool { return strings.HasPrefix(word, prefix) })
+		return sensitiveFilenameWords[word] ||
+			slices.ContainsFunc(sensitiveFilenameStems, func(s sensitiveStem) bool { return s.in(word) })
 	}) || slices.ContainsFunc(sensitiveFilenamePhrases, func(phrase string) bool {
 		return strings.Contains(name, " "+phrase+" ")
 	})
