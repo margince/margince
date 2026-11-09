@@ -17,9 +17,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/margince/margince/backend/internal/compose/dealtopicprompt"
-
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/dealtopicprompt"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
