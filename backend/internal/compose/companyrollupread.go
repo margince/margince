@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/moneytotal"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -417,7 +418,7 @@ func closedWonMinorIn(ctx context.Context, tx pgx.Tx, included []ids.UUID, perio
 	if err != nil {
 		return nil, err
 	}
-	value := deals.IncompleteBaseTotalSQL("sum("+amount+")", deals.UnpricedValueCountSQL(amount, nativeAmount, "TRUE"))
+	value := moneytotal.IncompleteBaseTotalSQL("sum("+amount+")", deals.UnpricedValueCountSQL(amount, nativeAmount, "TRUE"))
 	anchor := wonSalesAnchor("d")
 	var total *int64
 	err = tx.QueryRow(ctx, fmt.Sprintf(`

@@ -11,6 +11,7 @@ import {
   translatePlural,
 } from "../../i18n";
 import { bucketLabel } from "../../lib/bucketlabel";
+import { valueFor } from "../../lib/labelfor";
 import { omitted } from "./contact360";
 import { directionSentence } from "./contactrail";
 import { changeSentence } from "./relationshipchange";
@@ -63,7 +64,7 @@ export function contactVerdict(
   if (moment && moment.rule !== "nothing_needed") {
     // The Next bar above already says why now, so the sentence here is the
     // relationship's own reading and the two never print one line twice.
-    const tone = MOMENT_TONE[moment.rule];
+    const tone = valueFor(MOMENT_TONE, moment.rule, "neutral");
     const change = changeUnder(view, tone);
     return {
       word: t(`contact.moment.rule.${moment.rule}`),

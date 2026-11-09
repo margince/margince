@@ -16388,6 +16388,10 @@ export interface paths {
          *     read it, was shown the compliance warning, acknowledged it, and decided in writing that the
          *     message goes — and then sends the exact message the review was holding.
          *
+         *     Current permission is checked again before an exception is recorded. If new evidence or a
+         *     consent grant now permits the held message, it is queued under that permission with no
+         *     exception instruction. The caller's authority and request validation still apply.
+         *
          *     NOTHING ABOUT THE REFUSAL CHANGES. No consent is written and no stop is lifted. The decision
          *     rows still read `deny`; what changes is one column saying the message left under a human's
          *     instruction rather than under the engine's permission. A subject asking later why they
@@ -41451,6 +41455,8 @@ export interface components {
         };
         /** @description The author's drafting purpose and presentation state, restored with the words. These client-supplied values grant no send permission and do not attest model execution. */
         MailDraftEditorState: {
+            /** @description The deal and project selected in the composer. An empty list clears the selection. Omission keeps the older draft's grounding as the restore default. These are filing choices, not evidence of a request or permission to send. The send checks each link. */
+            filing?: components["schemas"]["MailDraftGround"][];
             /** @description Server binding to the saved words, used only to retire stale editor state. */
             readonly content_fingerprint?: string;
             intent?: string;

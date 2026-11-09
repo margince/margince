@@ -5,16 +5,16 @@
 // imports a tree walker parses the tree again in its own module graph.
 //
 // The import is matched in the syntax tree by the exported name, so an alias
-// counts. A walk the file writes itself counts too. census/stray-census-waivers.txt lists the files not moved yet. It
-// only shrinks: an entry that no longer imports a walker is a finding.
+// counts. A walk the file writes itself counts too, and so does a walk a
+// helper module does for it. The rule has no waiver list.
 
-import { readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import ts from "typescript";
-import { resolveRelative } from "../../scripts/lib/source-tree";
+import { isModuleOnDisk, resolveRelative } from "../../scripts/lib/source-tree";
 import {
   type CensusFile,
   type CensusRule,
+  type CensusTree,
   frontendRoot,
   scriptsDir,
   srcDir,
@@ -48,8 +48,6 @@ export const WALKERS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
   walker(lib("dialoglayout.ts"), "markupFiles", "sheetTexts"),
   walker(lib("import-reach.ts"), "productionModulesUnder"),
   walker(lib("bundle-reach.ts"), "reachedModules", "documentEntries"),
-  walker(lib("locale-catalogs.ts"), "localeCatalogs"),
-  walker(lib("rendered-inside.ts"), "renderedInside", "drawnElements"),
   walker(lib("story-files.ts"), "storyCensus"),
   walker(lib("essential-copy.ts"), "essentialKeys"),
   walker(
@@ -62,12 +60,13 @@ export const WALKERS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
     "readGraph",
     "shippedInTree",
   ),
-  walker(join(srcDir, "format", "zone-by-purpose.testkit.ts"), "sourceFiles"),
 ]);
 
 // Tests of a walker itself: each walks a temporary directory it plants, not
-// the tree, so it costs no parse of the tree.
+// the tree, so it costs no parse of the tree. `findsTheTree` holds that.
 const WALKER_TESTS: ReadonlySet<string> = new Set([
+  "scripts/ext-imports.test.ts",
+  "scripts/feature-boundaries.test.ts",
   "scripts/lib/essential-copy.test.ts",
   "scripts/lib/import-reach.test.ts",
   "scripts/lib/source-tree.test.ts",
@@ -75,17 +74,6 @@ const WALKER_TESTS: ReadonlySet<string> = new Set([
 ]);
 
 const TEST_FILE = /\.test\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)$/;
-
-const waiverFile = join(frontendRoot, "census", "stray-census-waivers.txt");
-
-export function readWaivers(text: string): Set<string> {
-  return new Set(
-    text
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line !== "" && !line.startsWith("#")),
-  );
-}
 
 const shown = (module: string) =>
   relative(frontendRoot, module).split(sep).join("/");
@@ -212,16 +200,22 @@ const globsDeep = (argument: ts.Expression): boolean =>
  * and itself, a `readdirSync` asked to recurse, or an `import.meta.glob` over
  * `**`.
  */
-export function ownWalks(source: ts.SourceFile): string[] {
-  const readdir = readdirNames(source);
+export function ownWalks(
+  root: ts.Node,
+  { outsideFunctions = false } = {},
+): string[] {
+  const readdir = readdirNames(root.getSourceFile());
   const found: string[] = [];
   const visit = (node: ts.Node) => {
-    const name = declaredFunction(node);
+    const name = outsideFunctions ? undefined : declaredFunction(node);
     const calls = name ? callsIn(node) : [];
     if (name && calls.includes(name) && calls.some((c) => readdir.has(c))) {
       found.push(`walks the tree itself in ${name}()`);
     }
-    if (ts.isCallExpression(node)) {
+    if (
+      ts.isCallExpression(node) &&
+      !(outsideFunctions && ts.findAncestor(node.parent, ts.isFunctionLike))
+    ) {
       if (
         readdir.has(calleeName(node) ?? "") &&
         node.arguments.some(recurses)
@@ -234,41 +228,367 @@ export function ownWalks(source: ts.SourceFile): string[] {
     }
     ts.forEachChild(node, visit);
   };
+  visit(root);
+  return found;
+}
+
+/** Each `import()` in a module whose name is not a literal. Such a name can
+ * be a walker's, and only running the module says which. */
+export function computedImports(source: ts.SourceFile): string[] {
+  const found: string[] = [];
+  const visit = (node: ts.Node) => {
+    if (
+      ts.isCallExpression(node) &&
+      node.expression.kind === ts.SyntaxKind.ImportKeyword &&
+      node.arguments[0] &&
+      !ts.isStringLiteralLike(node.arguments[0])
+    ) {
+      found.push(
+        `imports a module whose name is computed: import(${node.arguments[0].getText(source)})`,
+      );
+    }
+    ts.forEachChild(node, visit);
+  };
   visit(source);
   return found;
 }
 
-// The waiver list's length. It may only fall: a move deletes a line and lowers
-// this number in the same change.
-export const WAIVED_FILES = 97;
+const walks = (file: CensusFile) =>
+  file.source
+    ? [
+        ...strayImports(file.path, file.source),
+        ...computedImports(file.source),
+        ...ownWalks(file.source),
+      ]
+    : [];
 
-export function waiverCount(
-  waived: ReadonlySet<string>,
-  pinned = WAIVED_FILES,
-): string[] {
-  if (waived.size > pinned) {
-    return [
-      `census/stray-census-waivers.txt lists ${waived.size} files and the pin is ${pinned}; the list only shrinks, so move the census instead`,
-    ];
-  }
-  if (waived.size < pinned) {
-    return [
-      `census/stray-census-waivers.txt lists ${waived.size} files; lower WAIVED_FILES in no-stray-census.census.ts to ${waived.size}`,
-    ];
-  }
-  return [];
+type Imported = Readonly<{
+  path: string;
+  /** The imported file as the tree holds it, if it does. */
+  module: CensusFile | undefined;
+  /** Each imported name and the local name it binds; `*` for a namespace. */
+  names: Map<string, string>;
+}>;
+
+// Each module's imports, read once a run: helpers are shared by many tests.
+const importsRead = new WeakMap<CensusFile, Imported[]>();
+
+/** The non-type imports of one module by a relative specifier. */
+function localImports(file: CensusFile, tree: CensusTree): Imported[] {
+  const known = importsRead.get(file);
+  if (known) return known;
+  const found = readImports(file, tree);
+  importsRead.set(file, found);
+  return found;
 }
 
-const strays = (file: CensusFile) =>
-  file.source
-    ? [...strayImports(file.path, file.source), ...ownWalks(file.source)]
-    : [];
+function readImports(file: CensusFile, tree: CensusTree): Imported[] {
+  if (!file.source) return [];
+  const out: Imported[] = [];
+  for (const statement of file.source.statements) {
+    if (
+      !ts.isImportDeclaration(statement) ||
+      !ts.isStringLiteral(statement.moduleSpecifier) ||
+      statement.importClause?.phaseModifier === ts.SyntaxKind.TypeKeyword
+    ) {
+      continue;
+    }
+    const path = resolveRelative(
+      file.path,
+      statement.moduleSpecifier.text,
+      (candidate) =>
+        tree.at(candidate) !== undefined || isModuleOnDisk(candidate),
+    );
+    if (path === null) continue;
+    const names = new Map<string, string>();
+    const bindings = statement.importClause?.namedBindings;
+    if (bindings && ts.isNamedImports(bindings)) {
+      for (const element of bindings.elements) {
+        if (element.isTypeOnly) continue;
+        names.set(
+          (element.propertyName ?? element.name).text,
+          element.name.text,
+        );
+      }
+    }
+    if (bindings && ts.isNamespaceImport(bindings)) {
+      names.set("*", bindings.name.text);
+    }
+    out.push({ path, module: tree.at(path), names });
+  }
+  // A literal `import()` reaches the whole module, as a namespace import does.
+  const visit = (node: ts.Node) => {
+    if (
+      ts.isCallExpression(node) &&
+      node.expression.kind === ts.SyntaxKind.ImportKeyword &&
+      node.arguments[0] &&
+      ts.isStringLiteralLike(node.arguments[0])
+    ) {
+      const path = resolveRelative(
+        file.path,
+        node.arguments[0].text,
+        (candidate) =>
+          tree.at(candidate) !== undefined || isModuleOnDisk(candidate),
+      );
+      if (path !== null) {
+        out.push({ path, module: tree.at(path), names: new Map([["*", ""]]) });
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file.source);
+  return out;
+}
+
+const enclosingFunction = (node: ts.Node): ts.Node | undefined =>
+  ts.findAncestor(node.parent, ts.isFunctionLike);
+
+const exported = (node: ts.Node) =>
+  (ts.getCombinedModifierFlags(node as ts.Declaration) &
+    ts.ModifierFlags.Export) !==
+  0;
+
+/** The function a declaration holds, with its name and whether the module
+ * exports it. */
+function functionOf(
+  node: ts.Node,
+): { name: string; body: ts.Node; exported: boolean } | undefined {
+  if (ts.isFunctionDeclaration(node) && node.name && node.body) {
+    return { name: node.name.text, body: node, exported: exported(node) };
+  }
+  if (
+    ts.isVariableDeclaration(node) &&
+    ts.isIdentifier(node.name) &&
+    node.initializer &&
+    (ts.isArrowFunction(node.initializer) ||
+      ts.isFunctionExpression(node.initializer))
+  ) {
+    return { name: node.name.text, body: node, exported: exported(node) };
+  }
+  return undefined;
+}
+
+const calleeRoot = (call: ts.CallExpression): string | undefined => {
+  const callee = ts.isPropertyAccessExpression(call.expression)
+    ? call.expression.expression
+    : call.expression;
+  return ts.isIdentifier(callee) ? callee.text : undefined;
+};
+
+/** How a module walks the tree: as it loads, and through which exports. */
+type Walking = Readonly<{
+  onLoad: string | null;
+  exports: ReadonlyMap<string, string>;
+}>;
+
+type Classified = Map<CensusFile, Walking>;
+
+const NONE: Walking = { onLoad: null, exports: new Map() };
+
+/** The names a module binds that walk the tree when called, with why. */
+function walkingImports(
+  module: CensusFile,
+  tree: CensusTree,
+  known: Classified,
+): { names: Map<string, string>; onLoad: string | null } {
+  const names = new Map<string, string>();
+  let onLoad: string | null = null;
+  for (const { path, module: imported, names: bound } of localImports(
+    module,
+    tree,
+  )) {
+    const walking = WALKERS.get(path);
+    if (walking) {
+      for (const [name, local] of bound) {
+        if (name === "*" || walking.has(name)) {
+          names.set(local, `${name} from ${shown(path)}`);
+        }
+      }
+      continue;
+    }
+    if (!imported || TEST_FILE.test(path)) continue;
+    const helper = classify(imported, tree, known);
+    onLoad ??= helper.onLoad && `imports ${helper.onLoad}`;
+    for (const [name, local] of bound) {
+      const why =
+        name === "*"
+          ? [...helper.exports.values()][0]
+          : helper.exports.get(name);
+      if (why && local !== "") names.set(local, why);
+    }
+  }
+  return { names, onLoad };
+}
+
+/**
+ * How one non-test module walks. A function walks when it writes its own walk
+ * or calls a name that walks. That name is a walker, a walking export of
+ * another module, or another function here that walks. The module walks as it
+ * loads when such a call runs outside any function. It also does when it
+ * imports a module that walks as it loads, or a module by a computed name.
+ */
+function classify(
+  module: CensusFile,
+  tree: CensusTree,
+  known: Classified,
+): Walking {
+  const cached = known.get(module);
+  if (cached) return cached;
+  known.set(module, NONE);
+  const source = module.source;
+  if (!source) return NONE;
+  const imported = walkingImports(module, tree, known);
+  const walking = new Map(imported.names);
+  const functions = [...descendantsOf(source)].flatMap(
+    (node) => functionOf(node) ?? [],
+  );
+  for (const fn of functions) {
+    const own = ownWalks(fn.body)[0];
+    if (own) walking.set(fn.name, `${module.rel} ${own}`);
+  }
+  for (let grew = true; grew; ) {
+    grew = false;
+    for (const fn of functions) {
+      if (walking.has(fn.name)) continue;
+      const called = rootsCalledIn(fn.body).find((name) => walking.has(name));
+      if (called) {
+        walking.set(
+          fn.name,
+          `${fn.name}() in ${module.rel}, which calls ${walking.get(called)}`,
+        );
+        grew = true;
+      }
+    }
+  }
+  const loading = [...descendantsOf(source)].find(
+    (node) =>
+      ts.isCallExpression(node) &&
+      enclosingFunction(node) === undefined &&
+      !onlyAsAScript(node) &&
+      walking.has(calleeRoot(node) ?? ""),
+  );
+  const topWalk = ownWalks(source, { outsideFunctions: true })[0];
+  const computed = computedImports(source)[0];
+  const onLoad =
+    (loading &&
+      `${module.rel}, which calls ${walking.get(calleeRoot(loading as ts.CallExpression) ?? "")} when it loads`) ||
+    (topWalk && `${module.rel}, which ${topWalk} when it loads`) ||
+    (computed && `${module.rel}, which ${computed}`) ||
+    (imported.onLoad && `${module.rel}, which ${imported.onLoad}`) ||
+    null;
+  const exports = new Map(
+    functions
+      .filter((fn) => fn.exported && walking.has(fn.name))
+      .map((fn) => [fn.name, walking.get(fn.name) ?? ""]),
+  );
+  const found: Walking = { onLoad, exports };
+  known.set(module, found);
+  return found;
+}
+
+/** Whether a call runs only when the module is run as a script, under
+ * `if (process.argv[1] === …)`, and so never when a test imports it. */
+const onlyAsAScript = (node: ts.Node): boolean =>
+  ts.findAncestor(
+    node.parent,
+    (at) =>
+      ts.isIfStatement(at) && at.expression.getText().includes("process.argv"),
+  ) !== undefined;
+
+/** The root name of every call inside a node: `walk` for `walk()`, `ns` for
+ * `ns.walk()`. */
+const rootsCalledIn = (node: ts.Node): string[] =>
+  [...descendantsOf(node)].flatMap((child) =>
+    ts.isCallExpression(child) ? (calleeRoot(child) ?? []) : [],
+  );
+
+function* descendantsOf(node: ts.Node): Generator<ts.Node> {
+  const stack: ts.Node[] = [node];
+  for (let at = stack.pop(); at; at = stack.pop()) {
+    yield at;
+    ts.forEachChild(at, (child) => {
+      stack.push(child);
+    });
+  }
+}
+
+/**
+ * The walks a test reaches through the non-test modules it imports: one that
+ * walks as it loads, or a function of one that walks. A walker module itself
+ * counts only for the walking names a test imports, which `walks` reads.
+ */
+function helperWalks(
+  file: CensusFile,
+  tree: CensusTree,
+  known: Classified,
+): string[] {
+  return localImports(file, tree).flatMap(({ path, module, names }) => {
+    if (!module || WALKERS.has(path) || TEST_FILE.test(path)) return [];
+    const helper = classify(module, tree, known);
+    if (helper.onLoad) return [`walks the tree through ${helper.onLoad}`];
+    return [...names.keys()].flatMap((name) => {
+      const why =
+        name === "*"
+          ? [...helper.exports.values()][0]
+          : helper.exports.get(name);
+      return why ? [`walks the tree through ${why}`] : [];
+    });
+  });
+}
+
+/**
+ * The ways a module finds the real tree: its own location, the working
+ * directory, or a root the census names. A walker's own test that walks only
+ * what it plants has none of them.
+ */
+export function findsTheTree(source: ts.SourceFile): string[] {
+  const found = new Set<string>();
+  const visit = (node: ts.Node) => {
+    if (
+      ts.isPropertyAccessExpression(node) &&
+      ts.isMetaProperty(node.expression) &&
+      node.name.text === "url"
+    ) {
+      found.add("import.meta.url");
+    }
+    if (
+      ts.isIdentifier(node) &&
+      ["__dirname", "__filename"].includes(node.text)
+    ) {
+      found.add(node.text);
+    }
+    if (
+      ts.isCallExpression(node) &&
+      node.expression.getText(source) === "process.cwd"
+    ) {
+      found.add("process.cwd()");
+    }
+    if (
+      ts.isImportDeclaration(node) &&
+      ts.isStringLiteral(node.moduleSpecifier) &&
+      /(^|\/)census\/tree(\.ts)?$/.test(node.moduleSpecifier.text)
+    ) {
+      found.add("census/tree.ts");
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return [...found];
+}
+
+const strays = (file: CensusFile, tree: CensusTree, known: Classified) => [
+  ...walks(file),
+  ...helperWalks(file, tree, known),
+];
 
 export const rule: CensusRule = {
   name: "no-stray-census",
   corpus: (tree) =>
     tree.files.filter(
-      (file) => TEST_FILE.test(file.path) && !WALKER_TESTS.has(file.rel),
+      (file) =>
+        TEST_FILE.test(file.path) &&
+        !WALKER_TESTS.has(file.rel) &&
+        !file.rel.startsWith("census/"),
     ),
   floors: (corpus, tree) => [
     ...(corpus.length > 500 ? [] : ["fewer than 500 test files were read"]),
@@ -276,22 +596,22 @@ export const rule: CensusRule = {
       .filter((rel) => !tree.at(join(frontendRoot, rel)))
       .map((rel) => `${rel} is listed as a walker's own test and is gone`),
   ],
-  across: (corpus) => {
-    const waived = readWaivers(readFileSync(waiverFile, "utf8"));
-    const byRel = new Map(corpus.map((file) => [file.rel, file]));
-    const stale = [...waived]
-      .filter((rel) => {
-        const file = byRel.get(rel);
-        return file === undefined || strays(file).length === 0;
-      })
-      .map(
-        (rel) =>
-          `${rel} is waived in census/stray-census-waivers.txt and walks no tree; delete its line`,
+  across: (corpus, tree) => {
+    const known: Classified = new Map();
+    const realTree = tree.files
+      .filter((file) => WALKER_TESTS.has(file.rel) && file.source)
+      .flatMap((file) =>
+        findsTheTree(file.source as ts.SourceFile).map(
+          (how) =>
+            `${file.rel} is listed as a walker's own test but finds the real tree through ${how}`,
+        ),
       );
-    const found = corpus
-      .filter((file) => !waived.has(file.rel))
-      .flatMap((file) => strays(file).map((what) => `${file.rel}: ${what}`));
-    return [...waiverCount(waived), ...found, ...stale];
+    return [
+      ...realTree,
+      ...corpus.flatMap((file) =>
+        strays(file, tree, known).map((what) => `${file.rel}: ${what}`),
+      ),
+    ];
   },
   advice:
     "A test file outside census/ walks the tree. Move the census into a rule in " +

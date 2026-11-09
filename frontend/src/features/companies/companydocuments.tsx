@@ -18,6 +18,7 @@ import { formatNumber } from "../../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
+import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { AddDocumentDialog } from "../voice-knowledge/adddocument";
 import { DocumentExtractionPanel } from "../voice-knowledge/documentextraction";
@@ -246,7 +247,7 @@ export function CompanyDocumentsCard({
               { value: "", label: t("docs.category.all"), count: live.length },
               ...FILTER_CATEGORIES.map((key) => ({
                 value: key,
-                label: t(CATEGORY_LABELS[key]),
+                label: t(labelFor(CATEGORY_LABELS, key)),
                 count: live.filter((doc) => doc.category === key).length,
               })),
             ]}

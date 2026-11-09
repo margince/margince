@@ -6,6 +6,7 @@ import { Badge } from "../../design-system/atoms";
 import { PanelBody, PanelRow } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import type { WeeklyReview } from "./brief.queries";
 
 import "./brief.weekly.css";
@@ -61,7 +62,7 @@ function LearningItem({ learning }: Readonly<{ learning: Learning }>) {
   return (
     <PanelRow>
       <div className="brief-weekly-learning">
-        <Badge>{t(KIND_LABEL[learning.kind])}</Badge>
+        <Badge>{t(labelFor(KIND_LABEL, learning.kind))}</Badge>
         <p>{learning.text}</p>
         <ul className="weekly-learnings-citations">
           {learning.citations.map((c) => (

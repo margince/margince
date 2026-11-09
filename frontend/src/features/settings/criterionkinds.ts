@@ -4,6 +4,7 @@
 import type { components } from "../../api/schema";
 import type { Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { humanizeToken } from "./audit";
 
 export type CriterionKind = components["schemas"]["StageCriterionKind"];
@@ -23,7 +24,7 @@ export const CRITERION_KIND_LABEL: Readonly<Record<CriterionKind, MessageKey>> =
 // The report types a kind as a plain string, so a kind this build does not know still reads as words.
 export function criterionKindLabel(kind: string, t: Translator): string {
   return isCriterionKind(kind)
-    ? t(CRITERION_KIND_LABEL[kind])
+    ? t(labelFor(CRITERION_KIND_LABEL, kind))
     : humanizeToken(kind);
 }
 

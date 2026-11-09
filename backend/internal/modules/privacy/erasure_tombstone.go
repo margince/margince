@@ -67,8 +67,9 @@ func certifyErasure(ctx context.Context, tx *tallyTx, subject ids.ContactID, rea
 // only when it destroyed at least one thing (tallyTx.uncounted). A store that
 // is wired but held nothing for the subject destroyed nothing.
 const (
-	armAttachmentObject = "attachment_object"
-	armDeliveryPayload  = "controller_delivery_payload"
+	armRawOriginalObject = "raw_original_object"
+	armAttachmentObject  = "attachment_object"
+	armDeliveryPayload   = "controller_delivery_payload"
 )
 
 // tombstoneContactErasure closes the cascade with action=erase and counts only —

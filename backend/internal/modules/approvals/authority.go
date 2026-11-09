@@ -407,28 +407,33 @@ func pendingDecidableInScopeAt(ctx context.Context, tx pgx.Tx, id ids.ApprovalID
 }
 
 func requireDecisionGrants(p principal.Principal, a row) error {
-	grants, err := decisionGrantsFor(a.Kind, a.TargetType)
+	checks, err := decisionChecksFor(a)
 	if err != nil {
 		return err
 	}
-	for _, g := range grants {
-		if !p.Permissions.Allows(g.Object, g.Action) && !mayArchiveOwnRecord(p, a, g) {
-			return fmt.Errorf("approving %s needs %s.%s: %w", a.Kind, g.Object, g.Action, apperrors.ErrPermissionDenied)
+	for _, check := range checks {
+		if !check.HeldBy(p) {
+			return fmt.Errorf("approving %s needs %s: %w", a.Kind, check, apperrors.ErrPermissionDenied)
 		}
 	}
 	return nil
 }
 
-// mayArchiveOwnRecord is the object half of the archive rule the store asks.
-// Archiving a record type whose owner may archive it without delete takes
-// update at the object level. Whether this row is the decider's own to archive
-// is the row half, which decidableRows asks with auth.EnsureArchivable.
-func mayArchiveOwnRecord(p principal.Principal, a row, g DecisionGrant) bool {
-	if a.Kind != kindArchiveRecord || g.Action != principal.ActionDelete {
-		return false
+// An owner's archive may use update; the row check still proves ownership.
+func decisionChecksFor(a row) ([]auth.Check, error) {
+	grants, err := decisionGrantsFor(a.Kind, a.TargetType)
+	if err != nil {
+		return nil, err
 	}
-	_, ruled := auth.ArchiveRuleFor(g.Object)
-	return ruled && p.Permissions.Allows(g.Object, principal.ActionUpdate)
+	checks := make([]auth.Check, 0, len(grants))
+	for _, grant := range grants {
+		check := auth.Check{Object: grant.Object, Actions: []principal.Action{grant.Action}}
+		if _, ruled := auth.ArchiveRuleFor(grant.Object); ruled && a.Kind == kindArchiveRecord && grant.Action == principal.ActionDelete {
+			check.Actions = append(check.Actions, principal.ActionUpdate)
+		}
+		checks = append(checks, check)
+	}
+	return checks, nil
 }
 
 // decisionGrantsFor derives every grant approving this staging requires: the
