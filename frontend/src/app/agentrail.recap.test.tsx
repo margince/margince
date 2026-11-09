@@ -88,7 +88,7 @@ function mount() {
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider>
-        <AgentRail route={{ screen: "companies" }} />
+        <AgentRail />
       </LocaleProvider>
     </QueryClientProvider>,
   );

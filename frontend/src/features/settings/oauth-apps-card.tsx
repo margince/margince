@@ -23,6 +23,7 @@ import {
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { useCompanyPhrase } from "../../lib/company-phrase";
+import { labelFor } from "../../lib/labelfor";
 import {
   useOAuthApp,
   type Vendor,
@@ -187,7 +188,9 @@ function AppRow({
               account={
                 origin === "none"
                   ? t(copy.for)
-                  : t(CLIENT_LINE[origin], { clientId: status.client_id })
+                  : t(labelFor(CLIENT_LINE, origin), {
+                      clientId: status.client_id,
+                    })
               }
               facts={<AppFacts provider={provider} tenant={status.tenant} />}
               // The installation's own app refuses every edit, so the row

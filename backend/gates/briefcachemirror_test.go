@@ -6,10 +6,11 @@
 package gates
 
 import (
-	"os"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The brief cache's upsert is spelled in two places and they must stay one
@@ -46,7 +47,7 @@ var sqlWhitespace = regexp.MustCompile(`\s+`)
 // its whitespace flattened so indentation is not a difference.
 func statementAfter(t *testing.T, path, needle string) string {
 	t.Helper()
-	raw, err := os.ReadFile(path)
+	raw, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

@@ -6,9 +6,12 @@ package identity
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -18,7 +21,10 @@ const memberNameArgument = "name"
 const (
 	memberParameter  = "member"
 	memberEmailField = "email"
-	mergedFromField  = "merged_from"
+	// memberDomainField carries the login's folded domain, because Postgres
+	// cannot fold IDNA and the stored column is folded on write.
+	memberDomainField = "domain_folded"
+	mergedFromField   = "merged_from"
 )
 
 func unusedMemberSQL(alias string) string {
@@ -42,11 +48,30 @@ var errRemovedEmail = fmt.Errorf("%w: this address belongs to a permanently remo
 
 func refuseRemovedEmail(ctx context.Context, tx pgx.Tx, email string) error {
 	var removed bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM app_user WHERE lower(email)=lower(@email) AND removed_at IS NOT NULL)`, pgx.StrictNamedArgs{memberEmailField: email}).Scan(&removed); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM app_user u
+		 WHERE `+storekit.SeatLoginIsSQL("u", "@"+memberEmailField, "@"+memberDomainField)+`
+		   AND u.removed_at IS NOT NULL)`, memberLoginArgs(email)).Scan(&removed); err != nil {
 		return err
 	}
 	if removed {
 		return errRemovedEmail
 	}
 	return nil
+}
+
+// typedLoginAddress lowercases and trims the address, and leaves its domain
+// un-IDNA-folded.
+//
+// The raw arm is the only one that answers for a seat whose
+// email_domain_folded is unwritten, and FoldLoginDomainsTx writes those a page
+// at a time.
+func typedLoginAddress(email string) string { return strings.ToLower(strings.TrimSpace(email)) }
+
+// memberLoginArgs binds one typed address for a seat-login comparison: the
+// address as typed, and its domain folded the way the column stores it.
+func memberLoginArgs(email string) pgx.StrictNamedArgs {
+	return pgx.StrictNamedArgs{
+		memberEmailField:  typedLoginAddress(email),
+		memberDomainField: owndomain.OfAddress(email),
+	}
 }

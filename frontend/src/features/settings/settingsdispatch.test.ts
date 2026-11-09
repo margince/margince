@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { readGraph } from "../../../scripts/feature-boundaries";
 import { SETTINGS_PAGES } from "../../lib/settingscatalog";
 
 // Every catalog page renders something, and nothing renders that is not a page.
@@ -35,98 +34,15 @@ function dispatchedIds(): Set<string> {
   );
 }
 
-// Every card the old sixteen-entry register reached, written out from
-// `git show origin/main` at the time of the split.
-//
-// A card silently dropped during a page split is the one defect none of the
-// other gates can see: the dispatch still covers every page, every page still
-// renders SOMETHING, and a surface a reader used yesterday is simply gone. The
-// split moved eight cards out of a Data model wrapper and seven out of an AI
-// tab strip, which is exactly the shape that loses one.
-const CARDS_THE_REGISTER_REACHED = [
-  "AccountSettings",
-  "AutonomySettingsCard",
-  "VoiceDnaCard",
-  "AiAccessTab",
-  "InstallationSettingsCard",
-  "FxRatesCard",
-  "CompanyContextCard",
-  "SignInMethodsCard",
-  "OAuthAppsCard",
-  "ExtensionAccessCard",
-  "UsersAdminCard",
-  "TeamsCard",
-  "ConnectionsTab",
-  "CaptureActivityTab",
-  "IntegrationsTab",
-  "OwnDomainsCard",
-  "CaptureSettingsCard",
-  "ConsumerMailDomainsCard",
-  "BlockedDomainsCard",
-  "CustomFieldsAdmin",
-  "TagVocabularyCard",
-  "PipelinesCard",
-  "LeadOriginsCard",
-  "LeadDisqualifyReasonsCard",
-  "LeadHandlingCard",
-  "ProductsAdmin",
-  "OfferTemplatesAdmin",
-  "KnowledgeCard",
-  "AiRoutingCard",
-  "AiProviderKeysCard",
-  "AutomationsAdmin",
-  "AiUsageCard",
-  "AiCallsCard",
-  "ConsentPurposesCard",
-  "RetentionCard",
-  "RestrictedRecordsCard",
-  "PrivacyInboxCard",
-  "AuditLogCard",
-  "LicenseCard",
-  "ImportCard",
-  "EmbedReindexCard",
-  "JobHealthCard",
-  "ResetDataCard",
-];
-
-describe("the split lost no card", () => {
-  function renderedComponents(): Set<string> {
-    const graph = readGraph(here);
-    const pending = ["settings.tsx"];
-    const visited = new Set<string>();
-    while (pending.length) {
-      const path = pending.pop();
-      if (!path || path.startsWith("../") || visited.has(path)) continue;
-      visited.add(path);
-      pending.push(...(graph.get(path) ?? []));
-    }
-    const source = [...visited]
-      .map((path) => readFileSync(join(here, path), "utf8"))
-      .join("\n");
-    return new Set(
-      [...source.matchAll(/<([A-Z][A-Za-z]+)\b/g)].map((match) => match[1]),
-    );
-  }
-
-  it("still reaches every card the register reached", () => {
-    const rendered = renderedComponents();
-    const lost = CARDS_THE_REGISTER_REACHED.filter(
-      (card) => !rendered.has(card),
-    );
-    expect(lost).toEqual([]);
-  });
-
-  // The scan above proves no card was LOST. It cannot prove where one sits, and
-  // deliberately so — it reads the whole file. So the two cards this change
-  // moved are asserted by page, against the dispatch, because a widened scan
-  // that no longer notices a card sliding back to its old page is exactly the
-  // regression the widening could introduce.
+describe("the moved cards", () => {
+  // The settingsdispatch census rule proves every card is still reached, but
+  // not where one sits. So the moved cards are asserted by page, against the dispatch.
   it("dispatches the moved cards to the pages they moved to", () => {
     const source = readFileSync(join(here, "settings.tsx"), "utf8");
     /** One tab function's body, for a page whose case dispatches to one. */
     function bodyOf(fn: string, file = "settings.tsx"): string {
       const text = readFileSync(join(here, file), "utf8");
-      const start = text.indexOf(`function ${fn}()`);
+      const start = text.indexOf(`function ${fn}(`);
       if (start < 0) {
         throw new Error(`${file} has no ${fn}`);
       }
@@ -142,8 +58,9 @@ describe("the split lost no card", () => {
     }
     // The mail-sharing switch writes the WORKSPACE's posture. It belongs with
     // the rest of the capture rules, not among the reader's own mailboxes.
-    expect(cardsOn("capture")).toContain("<MailSharingCard />");
-    expect(cardsOn("connections")).not.toContain("<MailSharingCard />");
+    expect(cardsOn("capture")).toContain("captureTab(tab)");
+    expect(bodyOf("captureTab")).toContain("<MailSharingCard />");
+    expect(bodyOf("connectionsTab")).not.toContain("<MailSharingCard />");
     // And the personal autonomy choice belongs on the page about agents
     // deciding without you, under the tier reference it is written in terms of.
     // `agents` dispatches to a tab FUNCTION, so the case body names the
@@ -158,17 +75,8 @@ describe("the split lost no card", () => {
     expect(aiAccess).toContain("<AutonomySettingsCard />");
     expect(aiAccess).toContain("<ConnectAiToolCard />");
     expect(aiAccess).toContain("<PassportCard />");
-    // The same for the card that left Connections, which is also a tab
-    // function: gone from the tab, not merely gone from the case line.
-    expect(bodyOf("ConnectionsTab")).not.toContain("<MailSharingCard />");
-    // What it says stays here, as the plate under the mail card.
-    expect(bodyOf("ConnectionsTab")).toContain("<ConnectorsCard />");
-  });
-
-  it("names enough cards to make that meaningful", () => {
-    // Two empty sets compare equal, and a scan that stopped matching would
-    // report every card present by finding none of them.
-    expect(renderedComponents().size).toBeGreaterThan(30);
+    // The mailbox list stays the first thing Connections draws.
+    expect(bodyOf("connectionsTab")).toContain("<ConnectorsCard />");
   });
 });
 

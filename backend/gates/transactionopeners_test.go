@@ -16,7 +16,6 @@ package gates_test
 import (
 	"go/ast"
 	"go/parser"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -50,7 +49,7 @@ const transactionOpener = "runTxWith"
 // it commits, it reads correctly in review — and it is a second place where the
 // rollback discipline can drift, invisibly, from the one above it.
 func TestTheDatabasePackageOpensATransactionInOneFunction(t *testing.T) {
-	entries, err := os.ReadDir(databasePackage)
+	entries, err := gatekit.ReadDir(databasePackage)
 	if err != nil {
 		t.Fatalf("reading %s: %v", databasePackage, err)
 	}

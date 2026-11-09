@@ -29,7 +29,14 @@ class ResolveTest(unittest.TestCase):
             candidates.resolve("mistral", "cli")
 
     def test_unknown_candidate_names_the_known_ones(self):
-        with self.assertRaisesRegex(candidates.RouteError, "claude, gpt, mistral"):
+        with self.assertRaisesRegex(candidates.RouteError, "claude, gemini, gpt, mistral"):
+            candidates.resolve("llama", "api")
+
+    def test_gemini_runs_only_through_agy(self):
+        route = candidates.resolve("gemini", "cli")
+        self.assertEqual((route.model, route.folder, route.wire),
+                         ("gemini-3.8-flash-medium", "gemini-3.8-flash-medium@agy-cli", "agy-cli"))
+        with self.assertRaisesRegex(candidates.RouteError, "gemini has no api route"):
             candidates.resolve("gemini", "api")
 
     def test_model_override_needs_a_folder_unless_it_is_the_default(self):

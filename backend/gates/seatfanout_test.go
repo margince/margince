@@ -176,7 +176,7 @@ func triggerRefCalls(t *testing.T) []triggerRefCall {
 	var out []triggerRefCall
 	fset := gatekit.SourceFileSet()
 	const root = "internal"
-	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -267,7 +267,7 @@ func readMigrations(t *testing.T) string {
 	t.Helper()
 	var b strings.Builder
 	dir := filepath.Join("migrations", "core")
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading the core migrations: %v", err)
 	}
@@ -275,7 +275,7 @@ func readMigrations(t *testing.T) string {
 		if !strings.HasSuffix(e.Name(), ".up.sql") {
 			continue
 		}
-		raw, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		raw, err := gatekit.ReadFile(filepath.Join(dir, e.Name()))
 		if err != nil {
 			t.Fatalf("reading %s: %v", e.Name(), err)
 		}

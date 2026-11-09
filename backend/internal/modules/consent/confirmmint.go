@@ -109,8 +109,12 @@ func (s *Store) issueLinkTx(
 		// way round: they ask different questions and arrive in different
 		// mails, so superseding across them would silently kill an answer the
 		// subject was still coming back to.
+		//
+		// The earlier link's issued_at may come from another replica's clock,
+		// running ahead of this one. Its expiry is then held just after that
+		// stamp: never before its own issue, which the lifetime check refuses.
 		if _, err := tx.Exec(ctx, `
-			UPDATE confirm_token SET expires_at = $2
+			UPDATE confirm_token SET expires_at = greatest($2, issued_at + interval '1 microsecond')
 			WHERE contact_id = $1 AND consumed_at IS NULL AND expires_at > $2
 			  AND kind = $3 AND purpose_id IS NOT DISTINCT FROM $4`,
 			contactID, issued, kind, nullablePurpose(purposeID)); err != nil {

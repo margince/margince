@@ -19,10 +19,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
-	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
@@ -34,13 +31,14 @@ func owingAcknowledgement(t *testing.T, e *channelConsentEnv, owes bool) *record
 	messagingrules.Register(messagingrules.Rules{
 		Jurisdiction: code, Version: 1, OptOutAcknowledgement: owes,
 	})
+	// The receipt follows the stopping subject's country, not the
+	// installation's.
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE contact SET address_country = upper($2) WHERE id = $1`, e.contact, string(code)); err != nil {
+		t.Fatal(err)
+	}
 	stager := &recordingStager{}
-	e.store = e.store.
-		WithConfirmationLane(stager, &recordingVault{}, "https://crm.example.test/").
-		WithInstallationCountry(
-			InstallationCountryFunc(func(context.Context, pgx.Tx) (jurisdiction.Code, error) {
-				return code, nil
-			}))
+	e.store = e.store.WithConfirmationLane(stager, &recordingVault{}, "https://crm.example.test/")
 	return stager
 }
 

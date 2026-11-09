@@ -29,12 +29,13 @@ package gates
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"testing"
 	"unicode"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const frontendCollapseSpace = "../frontend/src/design-system/markdown-highlight.ts"
@@ -52,7 +53,7 @@ var namedEscape = map[string]rune{"t": '\t', "n": '\n', "v": '\v', "f": '\f', "r
 
 func TestTheViewerFoldsTheSameWhitespaceTheServerDoes(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile(frontendCollapseSpace)
+	source, err := gatekit.ReadFile(frontendCollapseSpace)
 	if err != nil {
 		t.Fatalf("reading the frontend whitespace class: %v", err)
 	}

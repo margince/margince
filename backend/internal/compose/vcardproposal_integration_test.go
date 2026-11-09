@@ -78,7 +78,7 @@ func TestAVCardNearMatchBecomesOneDurableProposal(t *testing.T) {
 		t.Fatalf("re-staging the review: %v", err)
 	}
 
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	status := "pending"
 	kind := vcardCreateKind
 	rows, _, err := svc.ListWire(ctx, approvals.ListInput{Status: &status, Kind: &kind, Limit: 10})
@@ -152,7 +152,7 @@ func TestACardNamingNoCompanyCanStillBeStaged(t *testing.T) {
 	// A staging error nil does not, by itself, prove a decidable row exists —
 	// StageUnlessDeclined can also settle onto a prior decline with no new
 	// row. The reader this bug affected needs the review IN THEIR QUEUE.
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	status, kind := "pending", vcardCreateKind
 	rows, _, err := svc.ListWire(ctx, approvals.ListInput{Status: &status, Kind: &kind, Limit: 10})
 	if err != nil {
@@ -232,7 +232,7 @@ func TestAVacuousCardDoesNotSupersedeAnotherSubjectsPendingReview(t *testing.T) 
 		t.Fatalf("rep staging the same vacuous card: %v", err)
 	}
 
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	status, kind := "pending", vcardCreateKind
 	adminRows, _, err := svc.ListWire(adminCtx, approvals.ListInput{Status: &status, Kind: &kind, Limit: 10})
 	if err != nil {
@@ -270,7 +270,7 @@ func TestATwoMembersCardsWithNoCandidateDoNotJoinIntoOneReview(t *testing.T) {
 		t.Fatalf("rep staging the identical card: %v", err)
 	}
 
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	status, kind := "pending", vcardCreateKind
 	adminRows, _, err := svc.ListWire(adminCtx, approvals.ListInput{Status: &status, Kind: &kind, Limit: 10})
 	if err != nil {
@@ -322,7 +322,7 @@ func TestATwoFieldCardDoesNotSupersedeAnotherSubjectsPendingReview(t *testing.T)
 		t.Fatalf("rep staging the same name-and-company card: %v", err)
 	}
 
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	status, kind := "pending", vcardCreateKind
 	adminRows, _, err := svc.ListWire(adminCtx, approvals.ListInput{Status: &status, Kind: &kind, Limit: 10})
 	if err != nil {
@@ -349,7 +349,7 @@ func TestADeclinedVCardReviewIsNotReAsked(t *testing.T) {
 	if err := stage(ctx, reviewedCard(), candidate); err != nil {
 		t.Fatalf("staging the review: %v", err)
 	}
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	status, kind := "pending", vcardCreateKind
 	rows, _, err := svc.ListWire(ctx, approvals.ListInput{Status: &status, Kind: &kind, Limit: 10})
 	if err != nil || len(rows) != 1 {
@@ -386,7 +386,7 @@ func TestAnEditThatDropsTheCardIsRefusedWhileStillPending(t *testing.T) {
 	if err := stage(ctx, reviewedCard(), candidate); err != nil {
 		t.Fatalf("staging the review: %v", err)
 	}
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	status, kind := "pending", vcardCreateKind
 	rows, _, err := svc.ListWire(ctx, approvals.ListInput{Status: &status, Kind: &kind, Limit: 10})
 	if err != nil || len(rows) != 1 {
@@ -427,7 +427,7 @@ func TestAcceptingAVCardReviewForSomebodyWhoBecameALeadCreatesNothing(t *testing
 	if err != nil {
 		t.Fatalf("creating the lead: %v", err)
 	}
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	status, kind := "pending", vcardCreateKind
 	rows, _, err := svc.ListWire(ctx, approvals.ListInput{Status: &status, Kind: &kind, Limit: 10})
 	if err != nil || len(rows) != 1 {

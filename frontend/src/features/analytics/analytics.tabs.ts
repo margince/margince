@@ -14,7 +14,7 @@ import { useRoute } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { useUrlParams } from "../../lib/urlstate";
 import { useDataCoverage } from "./analytics.coverage";
-import { overviewViews } from "./analytics.overview.choice";
+import { overviewViews, readsOverview } from "./analytics.overview.choice";
 import { useReportingCatalog } from "./reporting.queries";
 import { readableViews, VIEW_SHAPE, viewOfSection } from "./reporting.views";
 
@@ -40,7 +40,7 @@ export function useAnalyticsSections(defaultScope: ScopeKind | undefined) {
     deal: useCan("deal", "read"),
     company: useCan("company", "read"),
   };
-  const readsViews = can.reports && can.framework;
+  const readsViews = readsOverview(can);
   // Until the seat's grants are known, every grant reads as refused, and the
   // bare address would land on Forecast and ask its figures first.
   const grantsKnown = useMe().data !== undefined;

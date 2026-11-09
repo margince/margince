@@ -31,14 +31,14 @@ func (e *forecastEnv) teamManagerCtx() context.Context {
 // seedDealClosing plants an open deal with a chosen forecast category and a
 // close date a number of days from today. A nil offset leaves the date empty.
 func (e *forecastEnv) seedDealClosing(
-	t *testing.T, owner ids.UUID, category string, closeInDays *int,
+	t *testing.T, owner ids.UUID, probability int, closeInDays *int,
 ) {
 	t.Helper()
 	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, owner_id, amount_minor, currency,
-			forecast_category, expected_close_date, source, captured_by)
-		VALUES ($1, 'Deal', $2, $3, $4, 100000, 'EUR', $5,
+			win_probability_override, win_probability_set_by, expected_close_date, source, captured_by)
+		VALUES ($1, 'Deal', $2, $3, $4, 100000, 'EUR', $5, 'human',
 		        CASE WHEN $6::int IS NULL THEN NULL ELSE current_date + $6::int END, 'manual', 'human:x')`,
-		e.pipeline, e.stages[pipelineTestStage], owner, category, closeInDays)
+		e.pipeline, e.stages[pipelineTestStage], owner, probability, closeInDays)
 }
 
 // currentQuarter and currentMonth are today's period labels as the report
@@ -89,28 +89,27 @@ func answerRows(ctx context.Context, t *testing.T, e *forecastEnv, query string)
 	return rows
 }
 
-// M01: how much of my team's pipeline is commit, best case and pipeline. A
-// commit deal past its close date reads as slipped, never as commit.
+// M01: how much of my team's pipeline sits in each probability band. A
+// colleague outside the team is never counted.
 func proveM01ForecastByCategory(t *testing.T) {
 	e := setupForecast(t)
 	mate := reportingTeammate(t, e)
 	future, past := new(30), new(-10)
 	for _, c := range []struct {
-		owner    ids.UUID
-		category string
-		close    *int
-	}{{e.Rep1, "commit", future}, {mate, "best_case", future}, {mate, "pipeline", future}, {e.Rep1, "commit", past}} {
-		seedMany(5, func() { e.seedDealClosing(t, c.owner, c.category, c.close) })
+		owner       ids.UUID
+		probability int
+		close       *int
+	}{{e.Rep1, 95, future}, {mate, 60, future}, {mate, 20, future}, {e.Rep1, 95, past}} {
+		seedMany(5, func() { e.seedDealClosing(t, c.owner, c.probability, c.close) })
 	}
-	seedMany(5, func() { e.seedDealClosing(t, e.Rep3, "commit", future) })
+	seedMany(5, func() { e.seedDealClosing(t, e.Rep3, 95, future) })
 
 	rows := rowsBy(t, answerRows(e.teamManagerCtx(), t, e, `{"entity":"forecast",
-		"group_by":["forecast_category"],"measures":[{"fn":"count","as":"deals"},
-		{"fn":"sum","field":"amount_base_minor","as":"value"}]}`), "forecast_category")
-	for _, category := range []string{"commit", "best_case", "pipeline", "slipped"} {
-		if row := rows[category]; row["deals"] != float64(5) || row["value"] != float64(500_000) {
-			t.Errorf("%s = %v, want 5 deals worth 500000. A lens leak makes commit 10, "+
-				"and so does a past-dated commit counted as commit", category, row)
+		"group_by":["win_probability_band"],"measures":[{"fn":"count","as":"deals"},
+		{"fn":"sum","field":"amount_base_minor","as":"value"}]}`), "win_probability_band")
+	for band, want := range map[string]float64{"90_plus": 10, "60_89": 5, "1_29": 5} {
+		if row := rows[band]; row["deals"] != want || row["value"] != want*100_000 {
+			t.Errorf("%s = %v, want %v deals. A lens leak adds the other team's five", band, row, want)
 		}
 	}
 }
@@ -120,10 +119,10 @@ func proveM01ForecastByCategory(t *testing.T) {
 func proveM02PipelineByCloseMonth(t *testing.T) {
 	e := setupForecast(t)
 	mate := reportingTeammate(t, e)
-	seedMany(5, func() { e.seedDealClosing(t, e.Rep1, "pipeline", new(30)) })
-	seedMany(5, func() { e.seedDealClosing(t, mate, "pipeline", new(65)) })
-	seedMany(5, func() { e.seedDealClosing(t, e.Rep1, "pipeline", nil) })
-	seedMany(5, func() { e.seedDealClosing(t, e.Rep3, "pipeline", new(30)) })
+	seedMany(5, func() { e.seedDealClosing(t, e.Rep1, 20, new(30)) })
+	seedMany(5, func() { e.seedDealClosing(t, mate, 20, new(65)) })
+	seedMany(5, func() { e.seedDealClosing(t, e.Rep1, 20, nil) })
+	seedMany(5, func() { e.seedDealClosing(t, e.Rep3, 20, new(30)) })
 	seedMany(5, func() { seedClosedOwnedDeal(t, e, "Won", 100_000, "won", "manual", "", e.Rep1) })
 
 	rows := answerRows(e.teamManagerCtx(), t, e, `{"entity":"pipeline-current",
@@ -141,23 +140,23 @@ func proveM02PipelineByCloseMonth(t *testing.T) {
 	}
 }
 
-// M03: which of my team's committed deals have slipped. A commit or best-case
-// deal with a past or missing date counts. A pipeline-category deal does not.
+// M03: which of my team's deals are at 90% or more. A colleague outside the
+// team is never counted.
 func proveM03SlippedCommittedDeals(t *testing.T) {
 	e := setupForecast(t)
 	mate := reportingTeammate(t, e)
 	past := new(-10)
-	seedMany(5, func() { e.seedDealClosing(t, e.Rep1, "commit", past) })
-	seedMany(5, func() { e.seedDealClosing(t, mate, "best_case", nil) })
-	seedMany(5, func() { e.seedDealClosing(t, e.Rep1, "pipeline", past) })
-	seedMany(5, func() { e.seedDealClosing(t, e.Rep1, "commit", new(30)) })
-	seedMany(5, func() { e.seedDealClosing(t, e.Rep3, "commit", past) })
+	seedMany(5, func() { e.seedDealClosing(t, e.Rep1, 95, past) })
+	seedMany(5, func() { e.seedDealClosing(t, mate, 60, nil) })
+	seedMany(5, func() { e.seedDealClosing(t, e.Rep1, 20, past) })
+	seedMany(5, func() { e.seedDealClosing(t, e.Rep1, 95, new(30)) })
+	seedMany(5, func() { e.seedDealClosing(t, e.Rep3, 95, past) })
 
 	rows := answerRows(e.teamManagerCtx(), t, e, `{"entity":"forecast",
 		"measures":[{"fn":"count","as":"deals"}],
-		"filters":[{"field":"forecast_category","op":"eq","value":"slipped"}]}`)
+		"filters":[{"field":"win_probability_band","op":"eq","value":"90_plus"}]}`)
 	if len(rows) != 1 || rows[0]["deals"] != float64(10) {
-		t.Errorf("slipped = %v, want 10: five past-dated commit and five undated best case", rows)
+		t.Errorf("90_plus = %v, want 10: the team's deals at 95%%", rows)
 	}
 }
 
@@ -166,9 +165,9 @@ func proveM03SlippedCommittedDeals(t *testing.T) {
 func proveM09OwnerWithMostPipeline(t *testing.T) {
 	e := setupForecast(t)
 	mate := reportingTeammate(t, e)
-	seedMany(5, func() { e.seedDealClosing(t, e.Rep1, "pipeline", new(30)) })
-	seedMany(7, func() { e.seedDealClosing(t, mate, "pipeline", new(30)) })
-	seedMany(9, func() { e.seedDealClosing(t, e.Rep3, "pipeline", new(30)) })
+	seedMany(5, func() { e.seedDealClosing(t, e.Rep1, 20, new(30)) })
+	seedMany(7, func() { e.seedDealClosing(t, mate, 20, new(30)) })
+	seedMany(9, func() { e.seedDealClosing(t, e.Rep3, 20, new(30)) })
 
 	rows := rowsBy(t, answerRows(e.teamManagerCtx(), t, e, `{"entity":"pipeline-current",
 		"group_by":["owner_id"],"measures":[{"fn":"sum","field":"amount_base_minor","as":"value"}]}`), "owner_id")

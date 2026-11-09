@@ -138,6 +138,8 @@ export function qualificationConfirmState(
   deal: ReturnType<typeof qualificationDealState>,
   preview: { isPending: boolean; isFetching: boolean },
   amount: { amountInvalid: boolean; amountWaitsForCurrency: boolean },
+  // nameSettling: the deal would be named after a company name still being read.
+  name: { nameSettling: boolean },
 ) {
   return {
     label: qualificationConfirmLabel(Boolean(deal.selectedDeal), deal.withDeal),
@@ -146,7 +148,9 @@ export function qualificationConfirmState(
       preview.isFetching ||
       deal.invalidSelection ||
       (deal.withDeal &&
-        (amount.amountInvalid || amount.amountWaitsForCurrency)) ||
+        (amount.amountInvalid ||
+          amount.amountWaitsForCurrency ||
+          name.nameSettling)) ||
       (Boolean(deal.selectedDeal) && preview.isFetching),
   };
 }

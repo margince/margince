@@ -18,7 +18,7 @@ import { OAuthAppsCard } from "./oauth-apps-card";
 // reader who may see the apps but not change them.
 
 const meta: Meta<typeof OAuthAppsCard> = {
-  title: "Settings/Company/Sign-in and apps/Company apps",
+  title: "Settings/Company/Sign-in and security/Company apps",
   component: OAuthAppsCard,
   parameters: { layout: "padded" },
 };

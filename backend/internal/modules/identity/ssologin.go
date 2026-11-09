@@ -96,6 +96,9 @@ type OIDCClaims struct {
 	// Google sends it under the `profile` scope; Microsoft only when the app
 	// registration asks for it. It fills an empty greeting name and nothing else.
 	GivenName string
+	// Picture is the `picture` claim, empty when the provider sends none.
+	// Only Google's is read; it fills the seat's picture (providerpicture.go).
+	Picture string
 }
 
 // OIDCExchanger is what ssologin needs from the code exchange.

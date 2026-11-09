@@ -75,6 +75,12 @@ export function useRovingSeats(count: number) {
     }
   };
 
+  /** Whether the row at `index` holds focus right now. */
+  const holds = useCallback((index: number) => {
+    const row = rows.current[index];
+    return row !== null && row !== undefined && row === document.activeElement;
+  }, []);
+
   const seat = (index: number): RowSeat => ({
     ref: (element) => {
       rows.current[index] = element;
@@ -83,5 +89,5 @@ export function useRovingSeats(count: number) {
     onFocus: () => setActive(index),
   });
 
-  return { seat, walk, move };
+  return { seat, walk, move, holds };
 }

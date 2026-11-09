@@ -125,6 +125,8 @@ func keepFiltered(rows []ranked, want crmcontracts.WorklistFilter) []ranked {
 
 func keepsRow(row ranked, want crmcontracts.WorklistFilter) bool {
 	switch want {
+	case crmcontracts.WorklistFilterProspecting:
+		return buildsPipeline(row.item) || row.item.Source == crmcontracts.WorklistItemSourceMeeting || row.item.Source == crmcontracts.WorklistItemSourceMeetingOutcome || row.item.Source == sourceMeetingFollowUp
 	case crmcontracts.WorklistFilterLeads:
 		return prospectingWork(row.item)
 	case filterUrgent:

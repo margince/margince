@@ -65,19 +65,19 @@ type VoiceBuildInput struct {
 	Samples     []VoiceSample
 }
 
-// ClaimBuild moves a queued or due-deferred build to running and loads its
-// input. A running row older than reclaimAfter is reclaimed (its worker
-// died); claimed=false reports a terminal or actively-worked row — the
-// caller stops without error, the row already owns its state. When the
-// corpus changed between queue and claim, the build fails honestly instead
-// of building from a snapshot nobody asked for.
+// ClaimBuild loads one corpus snapshot and advances the claim generation.
+// A session owner can reclaim immediately; callers without one keep the timed grace.
 func (s *VoiceStore) ClaimBuild(ctx context.Context, profileID, buildID ids.UUID, reclaimAfter time.Duration) (VoiceBuildInput, bool, error) {
 	if err := auth.Require(ctx, "voice_profile", principal.ActionUpdate); err != nil {
 		return VoiceBuildInput{}, false, err
 	}
+	owned, err := s.db.WorkLeaseOwned(ctx, "voice_build", buildID)
+	if err != nil {
+		return VoiceBuildInput{}, false, err
+	}
 	var input VoiceBuildInput
 	claimed := false
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		now := s.now().UTC()
 		// Lock order is profile THEN build — the same order CompleteBuild
 		// and every corpus mutation take, so a concurrent claim and
@@ -90,17 +90,19 @@ func (s *VoiceStore) ClaimBuild(ctx context.Context, profileID, buildID ids.UUID
 		build, err := scanVoiceBuild(tx.QueryRow(ctx, storekit.SQLf(`
 			UPDATE voice_build
 			SET status = 'running', stage = 'snapshot', status_code = NULL, status_detail = NULL,
-			    next_attempt_at = NULL, started_at = $3, version = version + 1, updated_at = $3,
-			    -- Taking a QUEUED build is the attempt that was already
-			    -- queued; taking a deferred one back, or reclaiming one whose
-			    -- worker died, starts a new attempt at the same build.
-			    attempt    = attempt + CASE WHEN status = 'queued' THEN 0 ELSE 1 END,
-			    attempt_at = CASE WHEN status = 'queued' THEN attempt_at ELSE $3 END
-			WHERE id = $1 AND voice_profile_id = $2 AND archived_at IS NULL
+			    next_attempt_at = NULL,
+			    started_at = GREATEST(@now::timestamptz, started_at + interval '1 microsecond'),
+			    version = version + 1, updated_at = @now,
+			    attempt = attempt + CASE WHEN status = 'queued' THEN 0 ELSE 1 END,
+			    attempt_at = CASE WHEN status = 'queued' THEN attempt_at ELSE @now END
+			WHERE id = @id AND voice_profile_id = @profile AND archived_at IS NULL
 			  AND (status = 'queued'
-			       OR (status = 'deferred' AND next_attempt_at <= $3)
-			       OR (status = 'running' AND started_at < $4))
-			RETURNING %s`, voiceBuildColumns), buildID, profileID, now, now.Add(-reclaimAfter)))
+			       OR (status = 'deferred' AND next_attempt_at <= @now)
+			       OR (status = 'running' AND (@owned OR started_at < @cutoff)))
+			RETURNING %s`, voiceBuildColumns), pgx.StrictNamedArgs{
+			"id": buildID, "profile": profileID, "now": now,
+			"owned": owned, "cutoff": now.Add(-reclaimAfter),
+		}))
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Not claimable right now. Report the row's state so the caller
 			// can distinguish "terminal, stop" from "still owned or waiting,
@@ -193,14 +195,15 @@ var ErrVoiceBuildNotRunning = errors.New("ai: the voice build is no longer runni
 
 // SetBuildStage records forward progress. The stage is display state, but a
 // refused one means the build stopped running, which its worker must hear.
-func (s *VoiceStore) SetBuildStage(ctx context.Context, buildID ids.UUID, stage string) error {
+func (s *VoiceStore) SetBuildStage(ctx context.Context, buildID ids.UUID, claimedAt time.Time, stage string) error {
 	if err := auth.Require(ctx, "voice_profile", principal.ActionUpdate); err != nil {
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `
-			UPDATE voice_build SET stage = $2, version = version + 1, updated_at = $3
-			WHERE id = $1 AND status = 'running' AND archived_at IS NULL`, buildID, stage, s.now().UTC())
+			UPDATE voice_build SET stage = @stage, version = version + 1, updated_at = @now
+			WHERE id = @id AND status = 'running' AND started_at = @claimed AND archived_at IS NULL`,
+			pgx.StrictNamedArgs{"stage": stage, "now": s.now().UTC(), "id": buildID, "claimed": claimedAt})
 		if err != nil {
 			return err
 		}

@@ -82,10 +82,13 @@ type FieldHistoryPage struct {
 // the dispatch both read from the same word.
 const entityTypeActivity = "activity"
 
+// entityTypeProject is the project record's entity type.
+const entityTypeProject = "project"
+
 // The record kinds whose field history is readable — the audit spine's
 // entity_type is free text, so the surface pins the vocabulary.
 var fieldHistoryEntityTypes = map[string]bool{
-	contactObject: true, "company": true, "deal": true, "lead": true, "project": true, entityTypeActivity: true,
+	contactObject: true, "company": true, "deal": true, "lead": true, entityTypeProject: true, entityTypeActivity: true,
 }
 
 // fieldHistoryEntityTypeList is fieldHistoryEntityTypes spelled for a
@@ -129,14 +132,8 @@ var fieldHistoryProjectedActionList = func() []string {
 	return list
 }()
 
-// fieldHistoryScrubActions are the verbs certifying the record's PII was
-// scrubbed in place: an Art. 17 erase (erasure.go, retention's
-// activity/erase), a retention anonymize, or a restriction — which redacts
-// the identifiers that are the subject and hides the rest, so the images
-// captured before it are exactly as gone to a reader. The audit spine is
-// append-only, so a scrub cannot rewrite the historical field images it
-// certifies gone — the projection enforces the scrub instead, by never
-// reading the tombstone row or anything older.
+// fieldHistoryScrubActions bound reads of legacy images and restricted records.
+// Erasure removes payloads physically; restrictions retain them behind this boundary.
 var fieldHistoryScrubActions = []string{actionErase, "anonymize", actionRestrict}
 
 const (
@@ -146,10 +143,9 @@ const (
 
 // ListFieldHistory reads one record's per-field change timeline,
 // projected inside a single workspace tx from the audit spine. The gate
-// is threefold: a human session (the agent gate only fronts mutating
-// routes, so the human-only rule binds here), object-level read on the
-// entity type, and the row-scope visibility check — out of scope reads
-// as not-found, indistinguishable from not-there.
+// has three parts: a user or the agent on their passport, object-level read
+// on the entity type, and the row-scope visibility check. Out of scope
+// reads as not-found, indistinguishable from not-there.
 //
 // The page limit counts ENTRIES, but one audit row can yield several;
 // a row's entries never split across pages, so a page may overflow the
@@ -158,7 +154,7 @@ const (
 // filled the page may have been the true last one.
 func ListFieldHistory(ctx context.Context, db *database.DB, f FieldHistoryFilter) (FieldHistoryPage, error) {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
+	if !ok || !actor.HumanOrItsAgent() {
 		return FieldHistoryPage{}, apperrors.ErrPermissionDenied
 	}
 	if !fieldHistoryEntityTypes[f.EntityType] {

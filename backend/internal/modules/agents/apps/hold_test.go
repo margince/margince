@@ -74,7 +74,15 @@ func withSecondView(t *testing.T) {
 
 func newWebTier(t *testing.T) (*webTier, *Provider) {
 	t.Helper()
+	return newWebTierLinkedWith(t, func() {})
+}
+
+// newWebTierLinkedWith is newWebTier with link sets ViewDigests, as the
+// linker would, before the provider is built.
+func newWebTierLinkedWith(t *testing.T, link func()) (*webTier, *Provider) {
+	t.Helper()
 	withSecondView(t)
+	link()
 	tier := &webTier{answers: map[string]func(http.ResponseWriter){}}
 	for _, v := range catalog {
 		tier.answer(v.uri, ok(documentFor(v.uri)))
@@ -392,7 +400,7 @@ func TestTheFailureLineIsRateLimitedButTheCounterIsNot(t *testing.T) {
 	// A view missing for a week must still be findable in the log, and must not
 	// be the only thing in it. The counter is what a dashboard reads; the line
 	// is what a human reads.
-	tier, p := newWebTier(t)
+	tier, p := newPinnedWebTier(t)
 	var lines atomic.Int64
 	p.log = slog.New(slog.NewTextHandler(countingWriter{&lines}, &slog.HandlerOptions{Level: slog.LevelWarn}))
 	frozen := time.Now()
@@ -750,7 +758,7 @@ func summaryLine(t *testing.T, logged string) string {
 // A boot that held everything says nothing: a warning on a healthy start is how
 // the one that matters stops being read.
 func TestACompleteBootLogsNoWarning(t *testing.T) {
-	_, p := newWebTier(t)
+	_, p := newPinnedWebTier(t)
 	var logged strings.Builder
 	p.log = slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelWarn}))
 

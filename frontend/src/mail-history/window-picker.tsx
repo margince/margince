@@ -4,7 +4,8 @@ import { Select } from "../design-system/select";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { useRecordZone } from "../lib/recordzone";
+import { useCompanyZone } from "../lib/companyzone";
+import { labelFor } from "../lib/labelfor";
 
 type ImportWindow = components["schemas"]["StartBackfillRequest"]["window"];
 type Preview = components["schemas"]["BackfillPreview"];
@@ -56,7 +57,7 @@ export function ImportWindowPicker({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   // The server supplies the queried calendar date; browser clocks and month-end
   // arithmetic cannot silently change the period the estimate describes.
   // The shared formatter preserves this calendar day in the record zone.
@@ -77,7 +78,7 @@ export function ImportWindowPicker({
           value={value}
           options={offeredOrAll(offered).map((window) => ({
             value: window,
-            label: t(IMPORT_WINDOW_LABELS[window]),
+            label: t(labelFor(IMPORT_WINDOW_LABELS, window)),
           }))}
           onChange={(next) => {
             // Select emits strings; narrow to the contract-backed option set.

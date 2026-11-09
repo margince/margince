@@ -20,12 +20,25 @@ import {
 import { dealProjectFields } from "./dealproject";
 import type { Deal } from "./deals";
 
-const FORECAST_OPTIONS: { value: string; label: MessageKey }[] = [
-  { value: "commit", label: "deal.fcCommit" },
-  { value: "best_case", label: "deal.fcBestCase" },
-  { value: "pipeline", label: "deal.fcPipeline" },
-  { value: "omitted", label: "deal.fcOmitted" },
-];
+const WHOLE_PERCENT = /^(100|[1-9]?\d)$/;
+
+// The deal's own probability. Empty follows the stage, which is also how a
+// probability set on the deal is cleared. A won or lost deal has none to set:
+// its stage fixes it, and the server refuses one.
+function winProbabilityField(t: (k: MessageKey) => string): CreateField {
+  return {
+    key: "win_probability",
+    label: "deal.winProbability",
+    type: "number",
+    step: "1",
+    min: "0",
+    hint: t("deal.winProbability.hint"),
+    validate: (value) =>
+      value.trim() === "" || WHOLE_PERCENT.test(value.trim())
+        ? undefined
+        : t("deal.winProbability.invalid"),
+  };
+}
 
 // What a partner did for the deal. Only "sourced" earns commission: a partner
 // who helped a deal we already had is recorded, not paid.
@@ -294,6 +307,8 @@ export function dealEditFields(
     // named them. A withheld reference is offered as withheld rather than as
     // an empty picker.
     masked: readonly string[];
+    // Won or lost: the stage fixes the probability.
+    closed: boolean;
     me: string;
     currentOwner: string | null;
     currency: string;
@@ -343,15 +358,7 @@ export function dealEditFields(
       opts.attributedPartner,
       opts.masked.includes("partner_company_id"),
     ),
-    {
-      key: "forecast_category",
-      label: "deal.forecastCategory",
-      type: "select",
-      options: FORECAST_OPTIONS.map((o) => ({
-        value: o.value,
-        label: t(o.label),
-      })),
-    },
+    ...(opts.closed ? [] : [winProbabilityField(t)]),
     { key: "expected_close_date", label: "create.expectedClose", type: "date" },
     { key: "wait_until", label: "deal.waitUntil", type: "date" },
     {

@@ -113,16 +113,12 @@ func TestAnInstallationWithNothingRefusedReportsNoUnitsRatherThanNoAnswer(t *tes
 	}
 }
 
-func TestExtensionIngestHealthIsShutToAnAgent(t *testing.T) {
+func TestAnAdminsAgentReadsExtensionIngestHealth(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	seedRefusal(t, e, "openchannel", "key", 0, 1)
 
-	// An admin-minted read-scoped passport satisfies every object grant, so
-	// the RBAC check alone would admit it. Which units are breaking is
-	// operational knowledge about the installation rather than a record the
-	// agent's human lent it, and the endpoint is declared human-only — so the
-	// refusal has to come from the layer that does not depend on the grants.
+	// An admin's agent reads what the admin reads, on the admin's own grant.
 	var minted struct {
 		Token string `json:"token"`
 	}
@@ -134,7 +130,7 @@ func TestExtensionIngestHealthIsShutToAnAgent(t *testing.T) {
 
 	status := e.Call(t, "GET", "/v1/admin/extension-ingest-health", nil,
 		map[string]string{"Authorization": "Bearer " + minted.Token}, nil)
-	if status != http.StatusForbidden {
-		t.Fatalf("GET /admin/extension-ingest-health as an agent = %d, want 403", status)
+	if status != http.StatusOK {
+		t.Fatalf("GET /admin/extension-ingest-health as an admin's agent = %d, want 200", status)
 	}
 }

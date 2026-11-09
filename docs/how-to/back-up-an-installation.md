@@ -11,7 +11,7 @@ The cadence below meets the two recovery targets that [run-a-restore-drill.md](r
 |---|---|---|
 | Postgres database | Every record, the audit log, settings, the event outbox and the restore-drill ledger | Yes, with point-in-time recovery or a dump at least every hour |
 | Object store (`MARGINCE_BLOBSTORE_*`, or the folder in `MARGINCE_BLOBSTORE_PATH`) | Attachments, documents, exports, and the erasure journal under `erasure-suppression/` | Yes, at the same cadence as the database |
-| `MARGINCE_KEYVAULT_ROOT_KEY` | The key that seals mailbox credentials, provider keys, the mail relay password and the licence copy in the `vault_secret` table | Yes, in your secret store, apart from the data backups |
+| `MARGINCE_KEYVAULT_ROOT_KEY` | The key that seals mailbox credentials, provider keys, the mail relay password and the licence copy in the `vault_secret` table. The keys for the erasure list and the preference links are derived from it | Yes, in your secret store, apart from the data backups |
 | Deployment settings | `margince.yaml`, the DSNs, object store keys and `MARGINCE_LICENSE` | Yes, in your secret store or configuration repository |
 | Redis (`MARGINCE_REDIS`) | The event stream, event dedupe markers, provider health and rate-limit counters | Not for the records: every event is written to the database first, in the same transaction as the change. Events that reached Redis and no reader has taken yet are lost with it |
 

@@ -40,7 +40,7 @@ func TestEveryStagingNamesItsDealTargetThroughOneConstant(t *testing.T) {
 	// any identifier is resolved, or a staging in a file walked before the one
 	// declaring its constant resolves to nothing and passes.
 	var files []*ast.File
-	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}

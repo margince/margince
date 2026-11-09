@@ -22,7 +22,8 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
+import { labelFor } from "../../lib/labelfor";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   type IntroDecision,
   type IntroRequest,
@@ -52,7 +53,7 @@ export function IntroDecisionDrawer({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const titleId = useId();
   const [answer, setAnswer] = useState<IntroDecision>("accepted");
   const [reason, setReason] = useState("");
@@ -98,7 +99,7 @@ export function IntroDecisionDrawer({
             name={request.requester_display_name}
           />
           {", "}
-          {formatDate(request.requested_at, locale, recordZone)}
+          {formatDate(request.requested_at, locale, readerZone)}
         </p>
         {request.through_contact_id ? (
           <p>
@@ -138,8 +139,8 @@ export function IntroDecisionDrawer({
           onChange={setAnswer}
           choices={answers.map((a) => ({
             value: a,
-            label: t(DECISION_LABEL[a]),
-            description: t(DECISION_HELP[a]),
+            label: t(labelFor(DECISION_LABEL, a)),
+            description: t(labelFor(DECISION_HELP, a)),
           }))}
         />
         <Field

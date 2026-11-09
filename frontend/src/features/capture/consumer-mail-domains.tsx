@@ -28,6 +28,7 @@ import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanUpsert, useCanWrite } from "../../lib/capability";
+import { labelFor } from "../../lib/labelfor";
 import { isOption } from "../../lib/options";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { captureValueMessage } from "./capturevalue";
@@ -266,7 +267,7 @@ export function ConsumerMailDomainsCard() {
                   <SettingRow
                     key={entry.id}
                     label={entry.domain}
-                    description={t(kindLabel[entry.kind])}
+                    description={t(labelFor(kindLabel, entry.kind))}
                     control={
                       <IconAction
                         variant="ghost"
@@ -377,7 +378,7 @@ function AddConsumerMailDialog({
               }}
               options={KINDS.map((value) => ({
                 value,
-                label: t(kindLabel[value]),
+                label: t(labelFor(kindLabel, value)),
               }))}
             />
           )}

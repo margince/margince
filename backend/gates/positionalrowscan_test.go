@@ -42,7 +42,7 @@ func TestAPositionalRowScanTargetsItsOwnPackagesStruct(t *testing.T) {
 	t.Parallel()
 	calls := 0
 	for _, root := range positionalScanTrees {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}

@@ -8,9 +8,9 @@ import { ApprovalBundleReview } from "../worklist/worklist.bundle";
 import { useApproval, worklistKey } from "../worklist/worklist.queries";
 import { ApprovalRow } from "./approvalrow";
 
-export { APPROVAL_PARAM, approvalHref } from "./approvalhref";
+export { APPROVAL_PARAM, approvalHref } from "../../lib/approvalhref";
 
-import { APPROVAL_PARAM } from "./approvalhref";
+import { APPROVAL_PARAM } from "../../lib/approvalhref";
 
 /**
  * One decision, fetched whole and answered in a drawer: the same ApprovalRow

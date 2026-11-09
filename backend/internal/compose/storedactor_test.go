@@ -60,7 +60,7 @@ func TestAnImportRunActsOnlyWithItsActorAndItsCorrelation(t *testing.T) {
 
 func TestAnAgentWithNoPassportIsBoundOnlyByItsHuman(t *testing.T) {
 	t.Parallel()
-	live, ok, err := storedActor{}.passportStillLive(context.Background(), ids.UUID{}, ids.NewV7())
+	live, ok, err := storedActor{}.passportStillLive(context.Background(), migration.StoredActor{}, ids.NewV7())
 	if err != nil || !ok {
 		t.Fatalf("an agent with no passport answered live %v, %v; want live", ok, err)
 	}

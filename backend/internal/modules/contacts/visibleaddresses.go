@@ -20,7 +20,7 @@ import (
 )
 
 // VisibleAddresses returns the subset of addresses that belong to a live
-// contact this caller can read, keyed lowercase.
+// contact or lead this caller can read, keyed lowercase.
 //
 // Row scope is applied to the CONTACT, not to the address: an address is
 // visible exactly when the contact carrying it is. An out-of-scope contact's
@@ -83,5 +83,39 @@ func VisibleAddresses(ctx context.Context, tx pgx.Tx, addresses []string) (map[s
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("contacts: resolving recipient addresses: %w", err)
 	}
-	return found, nil
+	return found, visibleLeadAddresses(ctx, tx, normalized, found)
+}
+
+// visibleLeadAddresses adds the addresses of live leads this caller can read.
+// A rep may write to a lead without a contact being made for it. A seat that
+// may not read leads gets the contact answer alone.
+func visibleLeadAddresses(ctx context.Context, tx pgx.Tx, normalized []string, found map[string]bool) error {
+	allowed, err := mayReadLead(ctx)
+	if err != nil || !allowed {
+		return err
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	addressPos := arg(normalized)
+	visible, err := auth.ScopeClauseFor(ctx, leadEntity, "l", arg)
+	if err != nil {
+		return err
+	}
+	if visible == "" {
+		visible = sqlAlwaysVisible
+	}
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
+		SELECT DISTINCT l.email FROM lead l
+		 WHERE l.email = ANY($%d::text[]) AND l.archived_at IS NULL AND (%s)`, addressPos, visible), args...)
+	if err != nil {
+		return fmt.Errorf("contacts: resolving recipient addresses on leads: %w", err)
+	}
+	emails, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return fmt.Errorf("contacts: resolving recipient addresses on leads: %w", err)
+	}
+	for _, email := range emails {
+		found[email] = true
+	}
+	return nil
 }

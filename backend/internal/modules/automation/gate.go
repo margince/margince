@@ -172,6 +172,6 @@ func (e *WorkflowEngine) recordBlocked(ctx context.Context, h workflow.Handler, 
 	if err != nil {
 		return fmt.Errorf("automation: encoding the match-time gate's blocked reason: %w", err)
 	}
-	_, err = e.claimRun(ctx, h, ev, planned, "blocked", detail)
+	_, err = e.claimRun(ctx, h, ev, planned, runBlocked, detail)
 	return err
 }

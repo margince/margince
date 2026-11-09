@@ -23,11 +23,12 @@ package gates
 // check that cannot fall short as the sink grows.
 
 import (
-	"os"
 	"regexp"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // sinkSeamBuilder matches a `func (s *Sink) WithX(...)` declaration — the
@@ -79,7 +80,7 @@ func captureSinkSeams(t *testing.T) []string {
 
 func readGateFile(t *testing.T, path string) string {
 	t.Helper()
-	raw, err := os.ReadFile(path)
+	raw, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

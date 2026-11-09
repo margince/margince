@@ -43,7 +43,7 @@ func TestLiveMeetingsUseTheirOwnDealEvidenceAndNeverRaiseTheMailQuestion(t *test
 	actor.OnBehalfOf = e.AdminUser
 	actor.SeatType = principal.SeatFull
 	ctx := principal.WithActor(e.Admin(), actor)
-	sink := newCaptureSink(e.Pool, CaptureConfig{Now: func() time.Time { return f.o.now }})
+	sink := newCaptureSink(e.Pool, CaptureConfig{Now: func() time.Time { return f.o.now }, DealTopicBrain: aboutEveryDeal})
 	captureMeeting := func() ids.UUID {
 		t.Helper()
 		event := ids.NewV7().String()

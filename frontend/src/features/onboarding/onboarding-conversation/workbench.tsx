@@ -11,8 +11,9 @@ import {
 } from "../../../design-system/onboarding-stage";
 import { type Translator, useLocale, useT } from "../../../i18n";
 import { useCan } from "../../../lib/capability";
+import { labelFor } from "../../../lib/labelfor";
 import { throwProblem, unwrap } from "../../../lib/problem";
-import { loadWizardState } from "../onboarding";
+import { loadWizardState } from "../onboarding-progress";
 import type { ConversationState } from "./conversation-types";
 import { isDetour, railStops, stopState } from "./rail";
 
@@ -43,7 +44,7 @@ export function configuredModelLabel(
   const configured = profile?.configured_models
     ?.map(
       (binding) =>
-        `${binding.provider}/${binding.model} · ${t(tierKeys[binding.tier])}`,
+        `${binding.provider}/${binding.model} · ${t(labelFor(tierKeys, binding.tier))}`,
     )
     .filter((binding, index, all) => binding && all.indexOf(binding) === index);
   if (configured?.length) return configured.join(" + ");

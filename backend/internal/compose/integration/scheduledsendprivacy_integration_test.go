@@ -40,7 +40,7 @@ import (
 
 func TestErasingARecipientEmptiesAndStopsTheirScheduledMail(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	// A message written the night before, addressed to the contact who is about
 	// to exercise Art. 17.
@@ -85,7 +85,7 @@ func TestErasingARecipientEmptiesAndStopsTheirScheduledMail(t *testing.T) {
 // activity and no delivery row, so all three of that query's clauses miss it.
 func TestASubjectAccessExportCarriesTheMailNobodyHasSentYet(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	// Scheduled through the real endpoint, so the row under test is the one the
 	// product writes — payload shape included, which is what the export reads.
@@ -126,7 +126,7 @@ func TestASubjectAccessExportCarriesTheMailNobodyHasSentYet(t *testing.T) {
 // against a single-recipient fixture.
 func TestABlindCopiedSubjectSeesTheirOwnMailAndNobodyElsesAddress(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	// The subject is BLIND-copied; somebody else is the visible addressee, and
 	// a third party shares the blind list with them.
