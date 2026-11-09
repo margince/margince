@@ -120,6 +120,10 @@ function code(path: string, source: string): string {
 // output moved with the machine it ran on would assert nothing.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "app/agentrail.month.test.tsx",
+    why: "Proves the rail asks for the reader's month, not UTC's: only a reader zone already past midnight while UTC is not tells the two apart, and UTC is named to show the boundary is real.",
+  },
+  {
     file: "features/booking/meeting-availability.refusal.test.tsx",
     why: "Feeds the working-hours card the zone a host stores with their hours: the API sends that zone as data, so the fixture carries a real stored value.",
   },
