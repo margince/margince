@@ -54,6 +54,9 @@ func recordEngagement(
 	roomID ids.DealRoomID, participantID ids.DealRoomParticipantID,
 	documentID *ids.DealRoomDocumentID, kind string,
 ) error {
+	if err := holdLiveSeat(ctx, tx, roomID, participantID); err != nil {
+		return err
+	}
 	var doc *ids.UUID
 	if documentID != nil {
 		id := documentID.UUID
