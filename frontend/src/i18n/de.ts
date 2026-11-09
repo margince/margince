@@ -7729,8 +7729,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.unprovenRefuses":
     "Der Versand wird abgelehnt, bis ein Grund erfasst ist.",
   "sendPermission.missingContext": "Für diese Nachricht fehlt eine Angabe",
-  "sendPermission.missingPermission":
-    "Für diese Nachricht fehlt die Erlaubnis",
+  "sendPermission.missingPermission": "Für diese Nachricht fehlt die Erlaubnis",
   "sendPermission.reason.chooseDeal": "Wähle den Deal für dieses Follow-up.",
   "sendPermission.appliesTo": "Das betrifft {address}.",
   "sendPermission.appliesToAndMore_one":

@@ -210,15 +210,13 @@ A marketing send without consent is refused:
 > **Permission needed for this message**
 > Marketing needs the recipient's consent, and none is on record.
 
-The reason is always clear. Some say that nobody can lift them: "The recipient
-objected to marketing", and no one here can change that, an administrator
-too. Others name the fix. An address that does not take mail must be
-corrected, and no one can let it through. When several records share one
-address, Margince cannot tell who the recipient is, and you merge the records to
-fix it.
+An administrator cannot send marketing after the recipient objected.
+Correct an address that does not take mail. If several records share one address,
+merge them so Margince can tell who the recipient is.
 
-**A bounce warning asks you to check the address.** The composer says the last
-mail came back, and none has gone through since. A hard bounce blocks the send.
+**Mail that comes back** needs a check of the address. The composer says the last
+mail came back, and none has gone through since. If the address does not take mail,
+sending is blocked.
 Correct that address before trying again.
 
 **A colleague's mailbox** gets a note on a reply, and you can still send. Your

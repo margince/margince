@@ -2,11 +2,6 @@
 <!-- describes: backend/internal/modules/consent backend/internal/modules/privacy backend/internal/shared/ports/commsauthz backend/internal/shared/ports/jurisdiction backend/internal/compose/jobs_privacyretention.go backend/internal/compose/siteleadnotice.go extensions/de -->
 # Privacy, consent & the GDPR engines
 
-How Margince meets its duties to a data subject. The **authorization engine** decides whether each
-outbound message may go, and keeps a record of why. The **privacy engines** (erasure, subject
-access, retention) do the work a granted request asks for. The product refuses to fill records by
-scraping in the first place.
-
 ## The authorization engine (`consent`)
 
 `consent` owns two things a reader can take for one. **Consent** is a subject's answer to a question
@@ -83,12 +78,11 @@ the **proof** that category needs, and records a **decision** per recipient sayi
   record. A standing "write to them all the same" must not live longer than its contact. Article 15 subject
   access exports it (the `communication_overrides` part of `privacy.AssembleSAR`). A subject who asks what is
   held about them has a right to the record that a human decided to write to them, and why.
-  An address that bounced for good, an opt-in not yet confirmed and a recipient the check cannot
-  identify must be corrected before a new send. Staff cannot skip those checks.
 
-  Where marketing needs consent or a route backed by facts, staff cannot replace either with an
-  exception. An unknown country uses the limited baseline: requested mail may go, while marketing
-  needs recorded consent.
+  An address that bounced for good, an opt-in not yet confirmed and a recipient the check cannot
+  name must be fixed before a new send. A rep cannot skip these checks or replace a required
+  marketing basis with an exception. The limited baseline lets requested mail go and needs
+  recorded consent for marketing.
 
 - **A restricted subject still gets three message kinds.** Three categories still reach a
   restricted subject through a registered template: `security_notice`, `privacy_notice` and
@@ -208,8 +202,7 @@ resolve it in `commsauthz.RemediesFor`.
 
 - A reason that lists the plain exception can be sent past by any holder of the grant. Missing
   evidence is one such reason. It does not replace a required marketing basis.
-- A hard bounce, an opt-in not yet confirmed and a recipient that matches no single subject need
-  correction. No staff exception answers them.
+- A hard bounce, an opt-in not yet confirmed or an unknown recipient needs a fix. A rep exception cannot answer them.
 - An unknown purpose or a claim that conflicts with the record needs a corrected request.
 - A contact's own stop lists nothing, so nobody sends past it, an admin included. That covers an
   objection, a withdrawal, a limit on processing and a request to stop. It also covers a quote that
@@ -220,11 +213,10 @@ resolve it in `commsauthz.RemediesFor`.
   override answers it. Nobody sends past a pack's limit on advertising mail
   (`frequency_cap_reached`); it clears with time.
 
-`Review.DirectableBy` is the one check. `DirectSend` and the actions a refusal offers both ask it.
-The direction stores whether an admin gave it. Staging and the transmit check both ask
-`DecisionSet.ExceptionMayAnswer` again before the message goes. A new stop leaves the direction
-unused. When a new grant now permits the held message, the resume uses that permission and
-records no exception instruction.
+`Review.DirectableBy` is the check both `DirectSend` and a refusal's actions ask.
+Staging and the transmit check ask `DecisionSet.ExceptionMayAnswer` again.
+A new stop leaves the direction not used. A new grant lets the held message go
+on that basis and records no exception instruction.
 
 A contact can be written to about a thread when three things hold:
 
