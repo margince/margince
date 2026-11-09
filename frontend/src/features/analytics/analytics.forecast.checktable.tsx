@@ -114,6 +114,7 @@ export function CheckTable({
         ) : (
           <div ref={table}>
             <DataTable<InputCheck>
+              fold
               label={title}
               rows={rows}
               rowKey={(check) => check.id}
@@ -138,6 +139,14 @@ export function CheckTable({
         onClose={close}
       />
     </>
+  );
+}
+
+function stakeOf(check: InputCheck, locale: Locale): string {
+  return formatAnalyticsMoneyOrAbsent(
+    check.affected_minor ?? null,
+    check.currency ?? "",
+    locale,
   );
 }
 
@@ -166,20 +175,18 @@ function checkColumns(
     {
       key: "deal",
       header: t("review.colDeal"),
+      fold: "title",
       render: (check) => <SubjectCell check={check} />,
     },
     {
       key: "stake",
       header: t("review.colAtStake"),
+      fold: "end",
       render: (check) => (
-        <span className="t-num">
-          {formatAnalyticsMoneyOrAbsent(
-            check.affected_minor ?? null,
-            check.currency ?? "",
-            locale,
-          )}
-        </span>
+        <span className="t-num">{stakeOf(check, locale)}</span>
       ),
+      folded: (check) =>
+        t("review.foldedAtStake", { amount: stakeOf(check, locale) }),
     },
     {
       key: "since",
@@ -187,11 +194,16 @@ function checkColumns(
       // each other, and two of them must read the same day.
       header: t("review.colSeenSince"),
       render: (check) => formatDate(check.first_seen_at, locale, zone),
+      folded: (check) =>
+        t("review.foldedSeenSince", {
+          date: formatDate(check.first_seen_at, locale, zone),
+        }),
     },
     {
       key: "answer",
       header: t("table.actions"),
       headerHidden: true,
+      fold: "trail",
       render: (check) =>
         // A reader who may not answer is shown the finding to read, never a
         // button the server would refuse.
