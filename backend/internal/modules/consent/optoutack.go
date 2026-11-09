@@ -28,11 +28,9 @@ import (
 // and stay silent on the common one, which is the shape of an obligation that
 // looks discharged and is not.
 //
-// ONE MESSAGE FOR THE PRESS, not one per purpose. The subject performed one
-// act, and a stop that withdrew four subscriptions is not four refusals — the
-// message id is derived from the contact and the day for exactly that reason,
-// so a second press the same day is refused by the ledger's own uniqueness
-// index rather than by a count somebody maintains.
+// One message for the press, not one per purpose: a stop that withdrew four
+// subscriptions is one refusal. withdrawalMessageID names the press by contact
+// and the transaction that recorded it, so every later press gets its own receipt.
 //
 // NOTHING WITHDRAWN, NOTHING TO ACKNOWLEDGE. A replayed press changes no state,
 // and telling somebody again that we stopped is a second message they did not
@@ -43,13 +41,13 @@ func (s *Store) acknowledgeWithdrawalTx(
 	if len(withdrawn) == 0 {
 		return nil
 	}
-	day, err := databaseDayTx(ctx, tx)
+	act, err := withdrawalActTx(ctx, tx)
 	if err != nil {
 		return err
 	}
 	return s.stageAcknowledgementTx(ctx, tx,
 		subject{id: contactID.UUID, entityType: entityContact},
-		withdrawalMessageID(contactID, day))
+		withdrawalMessageID(contactID, act))
 }
 
 // acknowledgeOptOutTx stages the acknowledgement this stop owes, if any.
@@ -75,43 +73,78 @@ func (s *Store) acknowledgeOptOutTx(
 // this would be a second answer to what the decree requires. What differs is
 // the message id, which each caller derives from the act it is acknowledging.
 func (s *Store) stageAcknowledgementTx(ctx context.Context, tx pgx.Tx, sub subject, messageID string) error {
-	if s.confirmSender == nil {
-		return nil
-	}
 	nested, err := tx.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("consent: opening receipt preparation: %w", err)
 	}
-	if err := s.prepareAcknowledgementTx(ctx, nested, sub, messageID); err != nil {
+	owed, missing, err := s.stageOwedReceiptTx(ctx, nested, sub, messageID)
+	missed := MissedReceipt{SubjectType: sub.entityType, SubjectID: sub.id, MessageID: messageID, Reason: missing}
+	if err != nil {
 		if rollbackErr := nested.Rollback(ctx); rollbackErr != nil {
 			return fmt.Errorf("consent: rolling back receipt preparation: %w", rollbackErr)
 		}
-		slog.ErrorContext(ctx, "opt-out receipt could not be staged; the refusal remains recorded", "subject_type", sub.entityType, "subject_id", sub.id, "cause", err)
+		slog.ErrorContext(ctx, "opt-out receipt could not be staged; the refusal remains recorded",
+			"subject_type", sub.entityType, "subject_id", sub.id, "cause", err)
+		// A failure before the rules answered cannot say a receipt was owed.
+		if owed {
+			missed.Reason = MissedReceiptNotPrepared
+			s.raiseMissedReceiptTx(ctx, tx, missed)
+		}
 		return nil
 	}
 	if err := nested.Commit(ctx); err != nil {
 		return fmt.Errorf("consent: committing receipt preparation: %w", err)
 	}
+	if owed && missing != "" {
+		s.raiseMissedReceiptTx(ctx, tx, missed)
+	}
 	return nil
 }
 
-func (s *Store) prepareAcknowledgementTx(ctx context.Context, tx pgx.Tx, sub subject, messageID string) error {
-	// The receipt is owed under the stopping subject's own country's rules.
-	country, err := recipientCountryTx(ctx, tx, ruleSubject{Kind: sub.entityType, ID: sub.id.String()})
-	if err != nil {
-		return err
+// stageOwedReceiptTx stages the receipt when the rules owe one. It answers
+// whether one is owed, and why it could not be staged when it was not.
+func (s *Store) stageOwedReceiptTx(ctx context.Context, tx pgx.Tx, sub subject, messageID string) (bool, string, error) {
+	owed, dueAt, err := s.receiptOwedTx(ctx, tx, sub)
+	if err != nil || !owed {
+		return false, "", err
 	}
-	rules, _, applicable := applicableRules(country.Code)
-	if !applicable {
-		return nil
-	}
-	if !rules.OptOutAcknowledgement {
-		return nil
+	switch {
+	case s.confirmSender == nil:
+		return true, MissedReceiptNoMailLane, nil
+	case sub.entityType != entityContact:
+		return true, MissedReceiptNoLeadReceipt, nil
 	}
 	address, err := acknowledgementAddressTx(ctx, tx, sub)
-	if err != nil || address == "" {
-		return err
+	if err != nil {
+		return true, "", err
 	}
+	if address == "" {
+		return true, MissedReceiptNoAddress, nil
+	}
+	return true, "", s.prepareAcknowledgementTx(ctx, tx, sub, dueAt, address, messageID)
+}
+
+// receiptOwedTx asks the stopping subject's own country's rules whether this
+// refusal owes a receipt, and by when. A nil deadline is a rule that sets none.
+func (s *Store) receiptOwedTx(ctx context.Context, tx pgx.Tx, sub subject) (bool, *time.Time, error) {
+	country, err := recipientCountryTx(ctx, tx, ruleSubject{Kind: sub.entityType, ID: sub.id.String()})
+	if err != nil {
+		return false, nil, err
+	}
+	rules, _, applicable := applicableRules(country.Code)
+	if !applicable || !rules.OptOutAcknowledgement {
+		return false, nil, nil
+	}
+	if rules.OptOutAcknowledgementWithin <= 0 {
+		return true, nil, nil
+	}
+	due := s.now().Add(rules.OptOutAcknowledgementWithin)
+	return true, &due, nil
+}
+
+func (s *Store) prepareAcknowledgementTx(
+	ctx context.Context, tx pgx.Tx, sub subject, dueAt *time.Time, address, messageID string,
+) error {
 	rendered, category, err := RenderControllerTemplate(TemplateOptOutAcknowledgement, time.Time{}, s.mailLanguage(ctx, tx))
 	if err != nil {
 		return err
@@ -119,11 +152,6 @@ func (s *Store) prepareAcknowledgementTx(ctx context.Context, tx pgx.Tx, sub sub
 	rendered, err = s.controllerView(ctx, tx, rendered, category, address)
 	if err != nil {
 		return err
-	}
-	var dueAt *time.Time
-	if rules.OptOutAcknowledgementWithin > 0 {
-		due := s.now().Add(rules.OptOutAcknowledgementWithin)
-		dueAt = &due
 	}
 	_, err = s.confirmSender.QueueConfirmationTx(ctx, tx, ConfirmationSend{ContactID: ids.From[ids.ContactKind](sub.id), Recipient: address, Category: category, MessageID: messageID, DueAt: dueAt, Rendered: rendered})
 	return err
@@ -194,34 +222,23 @@ func acknowledgementMessageID(stopID ids.UUID) string {
 	return "optout-ack-" + strings.ReplaceAll(stopID.String(), "-", "") + "@margince.invalid"
 }
 
-// withdrawalMessageID derives the RFC822 identity from the contact and the day.
+// withdrawalMessageID names one press by its contact and its act.
 //
-// THE DAY, not the moment, because one press is one refusal however many
-// subscriptions it withdrew — and because a subject who presses twice in an
-// afternoon has refused once. A second press the same day collides on the
-// ledger's uniqueness index and is contained, which is the behaviour wanted:
-// the decree owes an acknowledgement of the refusal, not of each click.
-//
-// The date comes from the DATABASE rather than a Go clock. Two application
-// processes with skewed wall clocks would otherwise be able to place one press
-// on either side of midnight and send two messages for one act; one clock
-// narrows that to the midnight boundary itself, which is as far as a derived id
-// can take it.
-func withdrawalMessageID(contactID ids.ContactID, day string) string {
-	return "optout-ack-" + strings.ReplaceAll(contactID.String(), "-", "") +
-		"-" + day + "@margince.invalid"
+// A second press of the same purposes on one day, after a re-grant, is a
+// second refusal. It owes its own receipt.
+func withdrawalMessageID(contactID ids.ContactID, act string) string {
+	return "optout-ack-" + strings.ReplaceAll(contactID.String(), "-", "") + "-" + act + "@margince.invalid"
 }
 
-// databaseDayTx reads today's date from the database.
+// withdrawalActTx names the transaction recording this press: the database day
+// and its transaction id.
 //
-// ONE CLOCK for every process, rather than each reading its own: the day is
-// part of a message id, so two application hosts with skewed wall clocks could
-// otherwise place one press on either side of midnight and stage two
-// acknowledgements for one refusal.
-func databaseDayTx(ctx context.Context, tx pgx.Tx) (string, error) {
-	var day string
-	if err := tx.QueryRow(ctx, `SELECT to_char(now(), 'YYYYMMDD')`).Scan(&day); err != nil {
-		return "", fmt.Errorf("consent: reading the day this refusal belongs to: %w", err)
+// The id is unique per act, and stable while the act runs. The day keeps an id
+// from repeating after a restore into a new cluster, which counts transactions afresh.
+func withdrawalActTx(ctx context.Context, tx pgx.Tx) (string, error) {
+	var act string
+	if err := tx.QueryRow(ctx, `SELECT to_char(now(), 'YYYYMMDD') || '-' || pg_current_xact_id()::text`).Scan(&act); err != nil {
+		return "", fmt.Errorf("consent: naming the refusal this receipt acknowledges: %w", err)
 	}
-	return day, nil
+	return act, nil
 }
