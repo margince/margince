@@ -321,8 +321,8 @@ whole credential bundle, app password too, into the vault. The row holds only th
 It moves a **UID watermark** forward (`uidvalidity` + `last_uid`, bound to the mailbox it was taken in),
 so each pull resumes where the last one stopped. A pull reads at most its page of new mail. It asks for UID
 ranges from the watermark up, and doubles a range while it comes back short. A server with `ESEARCH` first
-names the lowest new UID, so a gap costs nothing. Without it, a range below `UIDNEXT` that holds no mail can
-never fill, so the watermark moves past it.
+names the lowest new UID, so a gap costs nothing. Without it, a range below the newest message that holds no
+mail can never fill, so the watermark moves past it.
 
 **Disconnect deletes the sealed credential**. So an app
 password you handed over can be revoked from inside the product. That is the promise about who holds it
