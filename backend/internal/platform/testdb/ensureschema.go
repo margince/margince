@@ -8,7 +8,6 @@ package testdb
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/jackc/pgx/v5"
 
@@ -39,11 +38,8 @@ func EnsureSchema(ctx context.Context, owner *pgx.Conn) error {
 		}
 		if !reusable {
 			if reason != "" {
-				// Only a caller that DECLARED a clone and was refused gets a
-				// line. Silence here means the caller never asked for the
-				// skip, which is the ordinary case for the serial lane and for
-				// a suite that migrates a database it made itself.
-				fmt.Fprintf(os.Stderr, "testdb: rebuilding the schema rather than reusing the clone — %s\n", reason)
+				migrateErr = fmt.Errorf("testdb: refusing to rebuild a declared clone: %s", reason)
+				return
 			}
 			if err := rebuildSchema(ctx, owner); err != nil {
 				migrateErr = err
@@ -76,9 +72,8 @@ func EnsureSchema(ctx context.Context, owner *pgx.Conn) error {
 	return migrateErr
 }
 
-// rebuildSchema drops public and re-applies every embedded core and custom
-// migration — the unconditional path, and the one every caller that cannot
-// prove its database is a fresh clone still takes.
+// rebuildSchema prepares databases the lane did not declare as clones.
+// Declared clones must pass the reuse checks before any schema write.
 func rebuildSchema(ctx context.Context, owner *pgx.Conn) error {
 	if err := dropPublicSchema(ctx, owner); err != nil {
 		return err

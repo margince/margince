@@ -13,6 +13,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -104,10 +105,14 @@ func (s *Service) recordDecision(ctx context.Context, id ids.ApprovalID, approve
 	if err := s.runPrecheck(ctx, id, approve, edited); err != nil {
 		return row{}, err
 	}
+	footprint, err := s.footprintToStore(ctx, id, edited)
+	if err != nil {
+		return row{}, err
+	}
 	var a row
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		a, err = s.decideInTx(ctx, tx, p, id, approve, reason, edited, by)
+		a, err = s.decideInTx(ctx, tx, p, id, approve, reason, edited, footprint, by)
 		if err != nil {
 			return err
 		}
@@ -141,11 +146,14 @@ func (s *Service) recordDecision(ctx context.Context, id ids.ApprovalID, approve
 
 // Preflight refuses unsafe context before a verdict can strand an unapplied effect.
 func (s *Service) runPrecheck(ctx context.Context, id ids.ApprovalID, approve bool, edited json.RawMessage) error {
-	if !approve || (len(s.prechecks) == 0 && s.preview == nil) {
+	if !approve {
 		return nil
 	}
 	a, err := s.Get(ctx, id)
 	if err != nil {
+		if _, automatic := policyActorFor(ctx, id); automatic && errors.Is(err, apperrors.ErrNotFound) {
+			return ErrPolicyWithdrawn
+		}
 		return err
 	}
 	// An approved but unapplied effect retries through its execution guards.
@@ -205,29 +213,37 @@ func landEditedPayload(
 	return applyEditedPayload(ctx, tx, id, edited, a, auditEvidence, decidedPayload)
 }
 
-func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Principal, id ids.ApprovalID, approve bool, reason *string, edited json.RawMessage, by decider) (row, error) {
-	// The row lock makes the pending pre-read and the status write below
-	// one race-free unit: two concurrent decisions cannot both pass the
-	// pending guard. Taken raw — the approval table has no archived_at,
-	// so storekit.LockRow's live filter does not apply here.
-	var locked ids.ApprovalID
-	if err := tx.QueryRow(ctx, `SELECT id FROM approval WHERE id = $1 FOR UPDATE`, id).Scan(&locked); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return row{}, apperrors.ErrNotFound
-		}
-		return row{}, err
-	}
+// readToDecide hides rows the decider cannot open.
+func readToDecide(ctx context.Context, tx pgx.Tx, p principal.Principal, id ids.ApprovalID, by decider) (row, error) {
 	a, err := get(ctx, tx, id)
 	if err != nil {
 		return row{}, err
 	}
 	visible, err := decidable(ctx, tx, p, a)
+	switch {
+	case err != nil:
+		return row{}, err
+	case !visible && by == decidedBySystem:
+		return row{}, ErrPolicyWithdrawn
+	case !visible:
+		return row{}, auth.HideRow(ctx, "approval")
+	}
+	return a, nil
+}
+
+// pendingToDecide reads the locked approval as one the caller may decide now.
+// A refusal for a decided row carries that row; recordDecision reads it.
+func (s *Service) pendingToDecide(ctx context.Context, tx pgx.Tx, p principal.Principal, id ids.ApprovalID, approve bool, edited json.RawMessage, by decider) (row, error) {
+	a, err := readToDecide(ctx, tx, p, id, by)
 	if err != nil {
 		return row{}, err
 	}
-	if !visible {
-		return row{}, apperrors.ErrNotFound
+	if approve && agentCallNeedsRecheck(a) {
+		if _, err := s.agentCallAuthority(ctx, tx, a); err != nil {
+			return row{}, err
+		}
 	}
+
 	// After visibility, so a caller who cannot see this row is told it is absent
 	// rather than that their credential is short a cap — the existence-hiding
 	// this module keeps everywhere. Before the status check, because what a
@@ -257,6 +273,33 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 	if approve && retiredKinds[a.Kind] {
 		return row{}, fmt.Errorf("crmapprovals: %s is retired and can no longer be applied: %w",
 			a.Kind, apperrors.ErrConflict)
+	}
+	return a, nil
+}
+
+func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Principal, id ids.ApprovalID, approve bool, reason *string, edited, footprint json.RawMessage, by decider) (row, error) {
+	// An automatic apply binds the owner, reads the mode and holds the target
+	// before the row lock (bindUnderPolicy has the lock order).
+	if by == decidedBySystem {
+		var err error
+		if ctx, p, err = bindUnderPolicy(ctx, tx, id); err != nil {
+			return row{}, err
+		}
+	}
+	// The row lock makes the pending pre-read and the status write below
+	// one race-free unit: two concurrent decisions cannot both pass the
+	// pending guard. Taken raw: the approval table has no archived_at,
+	// so storekit.LockRow's live filter does not apply here.
+	var locked ids.ApprovalID
+	if err := tx.QueryRow(ctx, `SELECT id FROM approval WHERE id = $1 FOR UPDATE`, id).Scan(&locked); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return row{}, apperrors.ErrNotFound
+		}
+		return row{}, err
+	}
+	a, err := s.pendingToDecide(ctx, tx, p, id, approve, edited, by)
+	if err != nil {
+		return a, err
 	}
 
 	status, action, verdict := approvalStatusRejected, "reject", approvalStatusRejected
@@ -291,9 +334,9 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 	}
 	if _, err := tx.Exec(ctx,
 		`UPDATE approval SET status = $2, decided_by = $3, decided_at = now(), decision_reason = $4,
-		        decided_by_system = $5
+		        decided_by_system = $5, plan_footprint = $6
 		 WHERE id = $1`,
-		id, status, p.UserID, reason, bool(by)); err != nil {
+		id, status, p.UserID, reason, bool(by), footprint); err != nil {
 		return row{}, err
 	}
 	// The track record the autonomy ladder is earned on, counted in the same
@@ -341,25 +384,15 @@ func (s *Service) emitKindDecided(ctx context.Context, tx pgx.Tx, p principal.Pr
 // ApplyUnderPolicy approves a proposal because the rep it belongs to has put
 // this kind on automatic, rather than because anybody was asked.
 //
-// It is the SAME decision path a contact takes — one entry point, so the
-// registered effect, the audit row, the outbox event and the track record are
-// all written exactly as they are for a human. A second execution route would
-// be a second answer to "what does approving this do", and the two would drift.
-//
-// What differs is only what the receipt claims: decided_by_system marks the row
-// so the day's "Done for you" lane can say nobody was asked. The authority is
-// NOT the system principal — the caller binds an agent principal carrying the
-// owner's own grants, seat and row scope, so an automatic apply is bounded by
-// exactly what that rep could have done by hand. compose/autoapply.go builds
-// it, and refuses to apply at all when the owner cannot be resolved or is no
-// longer live.
-//
-// The caller checks the mode. This does not read the policy itself because the
-// decision to apply is made where the owner is resolved: reading it again here
-// would be a second answer to whether this may run, from the place with less
-// context about whose policy was consulted.
-func (s *Service) ApplyUnderPolicy(ctx context.Context, id ids.ApprovalID) (row, error) {
-	return s.recordDecision(ctx, id, true, nil, nil, decidedBySystem)
+// It takes the decision path a contact takes, so the effect, audit row, event
+// and track record are written as they are for a human. decided_by_system tells
+// the receipt nobody was asked. actAs binds an agent with the owner's own
+// grants, so the apply is bounded by what that rep could do by hand. The
+// decision and the effect's redemption each bind it again in their own
+// transaction and ask the owner's mode there. A withdrawn policy answers
+// ErrPolicyWithdrawn, and that stage writes nothing.
+func (s *Service) ApplyUnderPolicy(ctx context.Context, id ids.ApprovalID, actAs PolicyActor) (row, error) {
+	return s.recordDecision(withPolicyActor(ctx, id, actAs), id, true, nil, nil, decidedBySystem)
 }
 
 // statusAfter is the state a decision leaves the approval in, which is what the

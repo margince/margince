@@ -100,7 +100,7 @@ export const FromCall: Story = {
 
 export const TypedByHand: Story = {
   render: () => <Steps task={{ ...TASK, source_activity_id: null }} />,
-  play: offers(en["task.next.openContact"]),
+  play: offers(en["record.verb.call"]),
 };
 
 export const NoAddress: Story = {

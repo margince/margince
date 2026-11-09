@@ -25,12 +25,13 @@ package gates
 // others move.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -54,7 +55,7 @@ var settingsOutcomeKey = regexp.MustCompile(`(?m)^\s*([a-z_]+):\s*(?:\{\s*key:\s
 
 func serverOutcomes(t *testing.T) []string {
 	t.Helper()
-	source, err := os.ReadFile(outcomeOwner)
+	source, err := gatekit.ReadFile(outcomeOwner)
 	if err != nil {
 		t.Fatalf("reading the outcome owner: %v", err)
 	}
@@ -90,7 +91,7 @@ func renderedOutcomes(t *testing.T) (outcomes []string, read string) {
 	}
 	var owners []string
 	for _, path := range paths {
-		source, readErr := os.ReadFile(path)
+		source, readErr := gatekit.ReadFile(path)
 		if readErr != nil {
 			t.Fatalf("reading %s: %v", path, readErr)
 		}
@@ -140,7 +141,7 @@ func TestTheOnboardingPanelsNameOnlyRealOutcomes(t *testing.T) {
 	t.Parallel()
 	server := serverOutcomes(t)
 
-	source, err := os.ReadFile(outcomePanelsMap)
+	source, err := gatekit.ReadFile(outcomePanelsMap)
 	if err != nil {
 		t.Fatalf("reading the connect panels: %v", err)
 	}

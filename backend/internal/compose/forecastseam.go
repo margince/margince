@@ -20,14 +20,11 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/weekly"
-	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
 // ForecastDeals reads the deals in scope for one period.
@@ -86,22 +83,18 @@ func forecastDealsForPipeline(ctx context.Context, tx pgx.Tx, period forecasting
 	if err != nil {
 		return nil, forecasting.Scope{}, false, err
 	}
-	qualification, basis, err := forecastQualificationSQL(ctx, tx, arg)
-	if err != nil {
-		return nil, forecasting.Scope{}, false, err
-	}
 	sql := fmt.Sprintf(`
 		SELECT d.id, d.owner_id, %[5]s, d.currency, %[1]s,
 		       d.expected_close_date, d.close_date_provisional, d.closed_at,
-		       d.status = 'won', d.status = 'lost', d.forecast_category,
-		       COALESCE(s.win_probability, 0), d.stage_id, %[6]s, d.name, %[7]s
+		       d.status = 'won', d.status = 'lost', `+deals.WinProbabilitySourceSQL("d")+`,
+		       COALESCE(`+deals.WinProbabilitySQL("d")+`, 0), d.stage_id, d.name
 		FROM deal d
 		LEFT JOIN stage s ON s.id = d.stage_id
 		WHERE %[2]s
 		  AND %[3]s
 		  %[4]s`,
 		baseValue, forecastWindowSQL(period, arg),
-		scopeClause, "AND "+populationClause, amountSQL, qualification, basis)
+		scopeClause, "AND "+populationClause, amountSQL)
 
 	rows, err := tx.Query(ctx, sql, args...)
 	if err != nil {
@@ -116,6 +109,9 @@ func forecastDealsForPipeline(ctx context.Context, tx pgx.Tx, period forecasting
 		return nil, forecasting.Scope{}, false, fmt.Errorf("compose: collecting the forecast's deals: %w", err)
 	}
 	if err := requireNoLoneColleague(ctx, tx, forecastDealGroups(out)); err != nil {
+		return nil, forecasting.Scope{}, false, err
+	}
+	if err := requirePopulationFloor(ctx, tx, resolved); err != nil {
 		return nil, forecasting.Scope{}, false, err
 	}
 	return out, forecastScopeFromResolved(resolved), limited, nil
@@ -204,22 +200,12 @@ func forecastPopulationClauses(ctx context.Context, tx pgx.Tx, scope forecasting
 func scanForecastDeal(row pgx.CollectableRow) (forecasting.Deal, error) {
 	var d forecasting.Deal
 	var owner *ids.UUID
-	var currency, category *string
+	var currency *string
+	var source string
 	var stage *ids.UUID
-	var qualification string
-	var policy, disposition *string
-	var assessed *time.Time
-	var complete *bool
 	err := row.Scan(&d.ID, &owner, &d.AmountMinor, &currency, &d.BaseMinor,
 		&d.ExpectedCloseDate, &d.CloseProvisional, &d.ClosedAt,
-		&d.Won, &d.Lost, &category, &d.StageProbability, &stage, &qualification, &d.Name,
-		&policy, &assessed, &disposition, &complete)
-	d.Qualification = viability.Qualification(qualification)
-	if policy != nil && disposition != nil && complete != nil {
-		d.Basis = &forecasting.ViabilityBasis{
-			PolicyVersion: *policy, AssessedAt: assessed, Disposition: *disposition, Complete: *complete,
-		}
-	}
+		&d.Won, &d.Lost, &source, &d.StageProbability, &stage, &d.Name)
 	if stage != nil {
 		d.StageID = stage.String()
 	}
@@ -229,36 +215,9 @@ func scanForecastDeal(row pgx.CollectableRow) (forecasting.Deal, error) {
 	if currency != nil {
 		d.Currency = *currency
 	}
-	if category != nil {
-		d.Category = *category
-	}
+	d.Source = forecasting.ProbabilitySource(source)
+	d.WinProbability = d.StageProbability
 	return d, err
-}
-
-// forecastQualificationSQL is the qualification column of the forecast read,
-// and the basis columns frozen beside it. While enforcement is on they are each
-// deal's viability treatment. While it is off they are empty, so no reading can
-// claim a qualification nobody switched on.
-func forecastQualificationSQL(ctx context.Context, tx pgx.Tx, arg func(any) int) (string, string, error) {
-	policy, err := forecastQualifiedPolicy(ctx, tx)
-	if err != nil || policy == "" {
-		return "''", noViabilityBasisSQL, err
-	}
-	return viabilityQualificationSQL("d", arg), viabilityBasisSQL("d", arg), nil
-}
-
-// forecastQualifiedPolicy is the viability policy the forecast read applies
-// now, empty while enforcement is off. A snapshot stores it beside the
-// qualification the same read put on its deals.
-func forecastQualifiedPolicy(ctx context.Context, tx pgx.Tx) (string, error) {
-	enforced, err := config.StoredApplyTx(ctx, tx, config.Bound(), assurance.QualifiedForecastEnforced)
-	if err != nil {
-		return "", fmt.Errorf("compose: reading whether the qualified forecast is enforced: %w", err)
-	}
-	if !enforced {
-		return "", nil
-	}
-	return viability.PolicyVersion, nil
 }
 
 // requestedFromForecastScope carries the forecast module's scope vocabulary

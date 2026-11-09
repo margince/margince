@@ -30,7 +30,6 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"slices"
 	"strings"
 	"testing"
@@ -153,7 +152,7 @@ type contractSchemaFields struct {
 
 func contractSchema(t *testing.T, name string) contractSchemaFields {
 	t.Helper()
-	raw, err := os.ReadFile(contractFile)
+	raw, err := gatekit.ReadFile(contractFile)
 	if err != nil {
 		t.Fatalf("reading %s: %v", contractFile, err)
 	}

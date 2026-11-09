@@ -12,7 +12,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
-	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
 // Deal is what a reading needs to know about one opportunity, already resolved
@@ -41,10 +40,14 @@ type Deal struct {
 	ClosedAt *time.Time
 	Won      bool
 	// Lost deals cannot land, so no reading counts them as open.
-	Lost     bool
-	Category string
-	// StageProbability is the chance in use, an integer percent: the typed
-	// stage chance, moved by the stage's recorded outcomes when there are any.
+	Lost bool
+	// WinProbability is the deal's own probability where one is set, else its
+	// stage's typed one, in percent. It decides Likely; Source says which.
+	WinProbability int
+	Source         ProbabilitySource
+	// StageProbability is the chance in use, an integer percent. It is the
+	// deal's own probability where set, else the typed stage chance moved by
+	// the stage's recorded outcomes when there are any.
 	StageProbability int
 	// The typed chance, the count of outcomes that moved it, the risk signals
 	// and the strongest one's odds ratio. Nil where the reader set none.
@@ -57,12 +60,6 @@ type Deal struct {
 	// ask what happened to deals that REACHED a stage — a question the deal's
 	// current stage cannot answer, because it has moved since.
 	StageID string
-	// Qualification is how the qualified readings treat this deal, decided by
-	// the caller from its viability receipt and any open review. NotApplied on
-	// every deal means enforcement is off and no qualified reading exists.
-	Qualification viability.Qualification
-	// Basis is what the qualification rested on, nil while enforcement is off.
-	Basis *ViabilityBasis
 }
 
 // Readings are the four money answers plus the counts that say what they do not
@@ -73,11 +70,17 @@ type Deal struct {
 // rounding of the same deals, which is what makes reconciliation to the cent a
 // property a test can hold rather than an approximation.
 type Readings struct {
-	WonMinor      int64
+	WonMinor int64
+	// EvidenceMinor is the Likely reading: open deals at or above
+	// LikelyThreshold with a confirmed close date, counted in full.
 	EvidenceMinor int64
-	BestCaseMinor int64
 	OpenMinor     int64
 	WeightedMinor int64
+	// LikelyThreshold is the probability this read counted Likely from.
+	LikelyThreshold int
+	// BySource splits the open and weighted readings by probability source;
+	// each adds up to its reading.
+	BySource map[ProbabilitySource]SourceTotal
 
 	// What the money does not cover, in TWO gaps rather than one. An unpriced
 	// deal has no amount to contribute; a priced deal no rate could reach has
@@ -93,13 +96,6 @@ type Readings struct {
 	// Per-deal rows behind the sums, in the order they were given. What gets
 	// frozen as contributions, and what a drill-through reads.
 	Contributions []Contribution
-
-	// Qualified is nil unless the caller qualified the deals, or set a policy.
-	Qualified *QualifiedReadings
-	// QualifiedPolicy is the viability policy enforced for this read, empty
-	// while enforcement is off. Carried apart from Qualified so an enforced
-	// read over no deals still answers with a zero block.
-	QualifiedPolicy string
 
 	// Range is the central 80% of finishes, set by the assembler; nil if not drawn.
 	Range *Range
@@ -117,7 +113,9 @@ type Contribution struct {
 	BaseMinor        *int64
 	EffectiveClose   *time.Time
 	CloseProvisional bool
-	Category         string
+	// Source is where the deal's probability came from; empty on a row frozen
+	// before it was recorded.
+	Source           ProbabilitySource
 	StageProbability int
 	// What the chance and the risk effect were made of; see Deal. Nil on a
 	// contribution frozen before they were recorded.
@@ -134,9 +132,9 @@ type Contribution struct {
 	// whose parts are not persisted cannot be reconciled against anything.
 	WeightedMinor int64
 
-	InWon      bool
+	InWon bool
+	// InEvidence is membership of the Likely reading.
 	InEvidence bool
-	InBestCase bool
 	InOpen     bool
 	// InLost marks a deal that closed lost: in no reading, kept so a movement
 	// can name the loss instead of calling it pushed out.
@@ -145,12 +143,6 @@ type Contribution struct {
 	// inferred from a nil amount, because "we have no price" and "we could not
 	// convert it" are different facts and a reader is owed which one.
 	ExclusionReason string
-	// Qualification is the deal's treatment in the qualified readings. A
-	// different question from ExclusionReason, which is about money.
-	Qualification viability.Qualification
-	// Basis is what the qualification rested on, frozen with it. Nil on a row
-	// frozen while enforcement was off or before the basis was recorded.
-	Basis *ViabilityBasis
 
 	// What changed this deal since the previous snapshot, recorded at write
 	// time. audit_log has no correlation column to join on later, so
@@ -170,17 +162,36 @@ const (
 	ExcludedFxMissing = "fx_missing"
 )
 
-// The categories a rep sets on a deal, plus the one the product derives.
+// ProbabilitySource is where a deal's win probability comes from, spelled as
+// the deal module's deal_win_probability_set_by column and forecast
+// contribution's probability_source spell it.
+type ProbabilitySource string
+
+// The three sources a probability comes from.
 const (
-	CategoryCommit   = "commit"
-	CategoryBestCase = "best_case"
-	// CategorySlipped is DERIVED, never stored: a commit or best-case deal
-	// whose close date has passed, is missing, or was never confirmed. The
-	// report engine spells the same rule in SQL (forecastCategoryExpr in
-	// compose/report.go), because an aggregate has to categorise in the
-	// database. Both answer from the same three conditions.
-	CategorySlipped = "slipped"
+	SourceStage    ProbabilitySource = "stage"
+	SourceHuman    ProbabilitySource = "human"
+	SourceMargince ProbabilitySource = "margince"
 )
+
+// ProbabilitySources lists the sources in the order a reader is shown them.
+func ProbabilitySources() []ProbabilitySource {
+	return []ProbabilitySource{SourceStage, SourceHuman, SourceMargince}
+}
+
+// SourceTotal is the open and weighted money of the deals one source gave a
+// probability to.
+type SourceTotal struct {
+	OpenMinor     int64
+	WeightedMinor int64
+}
+
+// Rules are the installation's settings a read applies.
+type Rules struct {
+	// LikelyThreshold is the probability, in percent, from which an open deal
+	// with a confirmed close date counts in the Likely reading.
+	LikelyThreshold int
+}
 
 // Compute answers the readings for one period over one set of deals.
 //
@@ -188,13 +199,19 @@ const (
 // and the deals arrive converted, so what this function decides is membership
 // and arithmetic — the two things worth testing exhaustively and the two that
 // are impossible to test exhaustively through a store.
-func Compute(period Period, asOfDay time.Time, in []Deal) (Readings, error) {
+func Compute(period Period, in []Deal, rules Rules) (Readings, error) {
 	// The rows come in no stated order. Evidence pages are cut by position, so
 	// the contributions follow the deal id and a next page repeats no row.
 	byID := slices.SortedFunc(slices.Values(in), func(a, b Deal) int { return strings.Compare(a.ID, b.ID) })
-	out := Readings{Contributions: make([]Contribution, 0, len(in))}
+	out := Readings{
+		Contributions: make([]Contribution, 0, len(in)), LikelyThreshold: rules.LikelyThreshold,
+		BySource: map[ProbabilitySource]SourceTotal{},
+	}
+	for _, source := range ProbabilitySources() {
+		out.BySource[source] = SourceTotal{}
+	}
 	for _, deal := range byID {
-		contribution, err := contribute(period, asOfDay, deal)
+		contribution, err := contribute(period, deal, rules)
 		if err != nil {
 			return Readings{}, err
 		}
@@ -228,7 +245,6 @@ func Compute(period Period, asOfDay time.Time, in []Deal) (Readings, error) {
 		}{
 			{&out.WonMinor, base, contribution.InWon},
 			{&out.EvidenceMinor, base, contribution.InEvidence},
-			{&out.BestCaseMinor, base, contribution.InBestCase},
 			{&out.OpenMinor, base, contribution.InOpen},
 			{&out.WeightedMinor, contribution.WeightedMinor, contribution.InOpen},
 		} {
@@ -241,8 +257,8 @@ func Compute(period Period, asOfDay time.Time, in []Deal) (Readings, error) {
 			}
 			*add.into = sum
 		}
-		if err := qualify(&out, contribution, base); err != nil {
-			return Readings{}, fmt.Errorf("forecasting: qualifying deal %s: %w", deal.ID, err)
+		if err := addBySource(&out, contribution, base); err != nil {
+			return Readings{}, fmt.Errorf("forecasting: totalling deal %s: %w", deal.ID, err)
 		}
 		out.Contributions = append(out.Contributions, contribution)
 	}
@@ -266,8 +282,30 @@ func addMinor(running, add int64) (int64, error) {
 	return sum, nil
 }
 
+// addBySource adds an open deal's money to its source's totals, with the same
+// overflow refusal as every other total.
+func addBySource(out *Readings, c Contribution, base int64) error {
+	if !c.InOpen {
+		return nil
+	}
+	source := c.Source
+	if source == "" {
+		source = SourceStage
+	}
+	total := out.BySource[source]
+	var err error
+	if total.OpenMinor, err = addMinor(total.OpenMinor, base); err != nil {
+		return err
+	}
+	if total.WeightedMinor, err = addMinor(total.WeightedMinor, c.WeightedMinor); err != nil {
+		return err
+	}
+	out.BySource[source] = total
+	return nil
+}
+
 // contribute decides one deal's membership and its rounded weighted value.
-func contribute(period Period, asOfDay time.Time, deal Deal) (Contribution, error) {
+func contribute(period Period, deal Deal, rules Rules) (Contribution, error) {
 	out := Contribution{
 		DealID:           deal.ID,
 		Name:             deal.Name,
@@ -277,15 +315,13 @@ func contribute(period Period, asOfDay time.Time, deal Deal) (Contribution, erro
 		BaseMinor:        deal.BaseMinor,
 		EffectiveClose:   deal.ExpectedCloseDate,
 		CloseProvisional: deal.CloseProvisional,
-		Category:         EffectiveCategory(asOfDay, deal),
+		Source:           deal.Source,
 		StageProbability: deal.StageProbability,
 		TypedProbability: deal.TypedProbability,
 		EvidenceN:        deal.EvidenceN,
 		Signals:          deal.Signals,
 		Effect:           deal.Effect,
 		StageID:          deal.StageID,
-		Qualification:    deal.Qualification,
-		Basis:            deal.Basis,
 	}
 	switch {
 	case deal.AmountMinor == nil:
@@ -307,12 +343,9 @@ func contribute(period Period, asOfDay time.Time, deal Deal) (Contribution, erro
 
 	if !deal.Won && !deal.Lost && deal.ExpectedCloseDate != nil && period.ContainsDay(*deal.ExpectedCloseDate) {
 		out.InOpen = true
-		// Evidence is the reading that claims support. A provisional date is a
-		// guess, so it is in the open pipeline and out of the evidence — which
-		// is what the word is for.
-		out.InEvidence = !deal.CloseProvisional && out.Category == CategoryCommit
-		out.InBestCase = !deal.CloseProvisional &&
-			(out.Category == CategoryCommit || out.Category == CategoryBestCase)
+		// Likely is the reading that claims support. A provisional date is a
+		// guess, so it is in the open pipeline and out of Likely.
+		out.InEvidence = !deal.CloseProvisional && deal.WinProbability >= rules.LikelyThreshold
 	}
 
 	if out.InOpen && deal.BaseMinor != nil {
@@ -323,47 +356,6 @@ func contribute(period Period, asOfDay time.Time, deal Deal) (Contribution, erro
 		out.WeightedMinor = weighted
 	}
 	return out, nil
-}
-
-// calendarDay drops the clock, keeping the zone the value already carries. A
-// date and an instant compare as the same day or they do not compare at all.
-func calendarDay(at time.Time) time.Time {
-	return time.Date(at.Year(), at.Month(), at.Day(), 0, 0, 0, 0, at.Location())
-}
-
-// EffectiveCategory answers what a deal's forecast category READS as, which is
-// not always what is stored on it.
-//
-// A commit or best-case deal whose close date has passed, is missing, or was
-// never confirmed reads as slipped. The report engine applies the same three
-// conditions in SQL (forecastCategoryExpr, compose/report.go); both exist
-// because an aggregate categorises in the database and this path has no
-// aggregate to fold into.
-//
-// asOfDay is the local day the reading is taken on — the same value the SQL
-// gets from timezone(<installation zone>, now())::date. Passed in rather than
-// read from a clock here, so the categorisation of a set of deals is a
-// function of its inputs and a test can state the day it means.
-func EffectiveCategory(asOfDay time.Time, deal Deal) string {
-	if deal.Category != CategoryCommit && deal.Category != CategoryBestCase {
-		return deal.Category
-	}
-	// Against TODAY, not against the period's opening day. A deal expected
-	// next week has not slipped merely because the quarter started last month,
-	// and comparing to the period start would report most of a quarter's
-	// healthy pipeline as slipped for the whole quarter.
-	// Both sides reduced to a calendar day before comparing. asOfDay arrives
-	// as an instant and a deal expected TODAY must not read as slipped from
-	// noon onward — the SQL compares dates in the installation zone, and a Go
-	// side comparing instants disagrees with it for exactly one day per deal,
-	// on the day the deal is due.
-	slipped := deal.ExpectedCloseDate == nil ||
-		calendarDay(*deal.ExpectedCloseDate).Before(calendarDay(asOfDay)) ||
-		deal.CloseProvisional
-	if slipped {
-		return CategorySlipped
-	}
-	return deal.Category
 }
 
 // CoverageNote states, in one line, what the money readings do not cover —

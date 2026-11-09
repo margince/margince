@@ -12,7 +12,7 @@ import {
 import { AutomaticWorkHealthCard } from "./automaticworkhealth";
 
 const meta = {
-  title: "Settings/Governance/System health/Automatic work",
+  title: "Settings/System/System health/Automatic work",
   component: AutomaticWorkHealthCard,
 } satisfies Meta<typeof AutomaticWorkHealthCard>;
 export default meta;

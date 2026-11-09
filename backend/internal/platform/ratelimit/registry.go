@@ -36,6 +36,7 @@ type store interface {
 type Registry struct {
 	mu     sync.RWMutex
 	shared store // nil until bound; each Limiter then uses its own local store
+	pacing paceClock
 }
 
 // NewRegistry builds a registry whose limiters each count in this process.

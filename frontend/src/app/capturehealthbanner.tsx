@@ -6,16 +6,17 @@ import { Callout } from "../design-system/callout";
 import { ErrorLine } from "../design-system/errorline";
 import { providerName } from "../format/connectorprovider";
 import { formatDateTime, formatNumber } from "../format/format";
-import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
-import { CAPTURE_CONCERNS } from "../lib/captureconcern";
+import { CAPTURE_CONCERNS, concernKey } from "../lib/captureconcern";
 import { useConnectors } from "../lib/connectors";
 import { problemMessageOf, unwrap } from "../lib/problem";
+import { useViewerZone } from "../lib/viewerzone";
 import { briefKey, magicKey, worklistKey } from "../lib/workkeys";
 
 type Connection = components["schemas"]["CaptureConnection"];
 
 export function CaptureHealthBanner() {
+  const readerZone = useViewerZone();
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -56,7 +57,7 @@ export function CaptureHealthBanner() {
   if (query.isError || !row?.concern) return null;
   const label = row.account_label || providerName(row.provider, t);
   const since = row.concern_since
-    ? formatDateTime(row.concern_since, locale, viewerZone())
+    ? formatDateTime(row.concern_since, locale, readerZone)
     : "";
   return (
     <div className="appbanner">
@@ -65,7 +66,7 @@ export function CaptureHealthBanner() {
         kind="standing"
         title={t("captureConcern.title", {
           mailbox: label,
-          concern: t(CAPTURE_CONCERNS[row.concern]),
+          concern: t(concernKey(row.concern, row.last_sync_error_class)),
         })}
         actions={
           <AppLink href="#/settings/connections">

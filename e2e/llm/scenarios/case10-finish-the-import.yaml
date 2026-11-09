@@ -136,7 +136,18 @@ must_mention:
   # each order is held to one clause and may not cross a negation on its way to
   # the verb, nor between the verb and the field: "I mapped size to description,
   # not size_band" names the field only to say it got nothing.
-  - "(?:^|[.;!?\n|])(?:(?!\b(?:not|nothing|no|never|none)\b|n['’]t\b)[^.;!?\n|])*?(?:map\w*|→|->|=>|placed|put|assigned|matched|treated|filed|went|\b(?:landed|stored|saved|became|set|into|as)\b)(?:(?!\b(?:not|nothing|no|never|none)\b|n['’]t\b)[^.;!?\n|]){0,60}(?:size[_ ]band|address\.(?:city|country)|display[_ ]name)|(?:size[_ ]band|address\.(?:city|country)|display[_ ]name)(?:(?!\b(?:not|never|no)\b|n['’]t\b)[^.;!?\n|]){0,60}(?:map\w*|→|->|=>|from (?:your |the )?(?:size|country|city|name)\b)|\|\s*`?(?:name|city|size|country)`?\s*\|\s*`?(?:size[_ ]band|address\.(?:city|country)|display[_ ]name)`?\s*\|"
+  #
+  # THE TARGET MAY BE NAMED BY ITS LABEL. read_import's format calls size_band
+  # "Employees", and "size → employee band" says where size landed in the words
+  # the app shows. City and Country are not taken by label: they are the file's
+  # own column names, so "city → city" says nothing the file did not.
+  #
+  # THE CLAUSE BEFORE THE VERB STARTS AT A "SO", because a negation there
+  # belongs to another clause: "Your CSV headers didn't match the company
+  # fields, so I mapped size to size band" is the mapping, reported by a real
+  # run. A bare comma does not start one: "I couldn't place size, as the
+  # employee band needs a number" is the failure, and "as" reads as a verb.
+  - "(?:^|[.;!?\n|]|\bso\b)(?:(?!\b(?:not|nothing|no|never|none)\b|n['’]t\b)[^.;!?\n|])*?(?:map\w*|→|->|=>|placed|put|assigned|matched|treated|filed|went|\b(?:landed|stored|saved|became|set|into|as)\b)(?:(?!\b(?:not|nothing|no|never|none)\b|n['’]t\b)[^.;!?\n|]){0,60}(?:size[_ ]band|employees?(?:[ _](?:size[ _])?bands?)?\b|address\.(?:city|country)|display[_ ]name)|(?:size[_ ]band|employees?(?:[ _](?:size[ _])?bands?)?\b|address\.(?:city|country)|display[_ ]name)(?:(?!\b(?:not|never|no)\b|n['’]t\b)[^.;!?\n|]){0,60}(?:map\w*|→|->|=>|from (?:your |the )?(?:size|country|city|name)\b)|\|\s*`?(?:name|city|size|country)`?\s*\|\s*`?(?:size[_ ]band|employees?(?:[ _](?:size[ _])?bands?)?\b|address\.(?:city|country)|display[_ ]name)`?\s*\|"
 
 must_not_mention:
   # THE FAILURE THIS CASE EXISTS FOR. The asker pre-authorized the write in the

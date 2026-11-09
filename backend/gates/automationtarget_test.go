@@ -33,7 +33,6 @@ package gates
 import (
 	"go/ast"
 	"io/fs"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -53,7 +52,7 @@ func TestNoHandlerTargetsAnActivityAwayFromItsTrigger(t *testing.T) {
 	seen := 0
 	for _, root := range actionProducerRoots {
 		fset := gatekit.SourceFileSet()
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 				strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") {
 				return err

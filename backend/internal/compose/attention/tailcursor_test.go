@@ -97,12 +97,12 @@ func TestTheTailReadsTheWindowItsWalkBeganIn(t *testing.T) {
 	after := before.Add(10 * time.Minute)
 	bounded := map[crmcontracts.WorklistItemSource]bool{sourceTask: true}
 
-	first := svc.readingBacklog(t.Context(), crmcontracts.Attention{AsOf: before}, before.Truncate(24*time.Hour).Add(24*time.Hour), time.UTC, true)
+	first := svc.readingBacklog(t.Context(), crmcontracts.Attention{AsOf: before}, besideDay{until: before.Truncate(24 * time.Hour).Add(24 * time.Hour), zone: time.UTC}, true)
 	rest := first.startTail(tailPage{scope: scopeMine, day: crmcontracts.Attention{AsOf: before}, bounded: bounded, first: true})
 	if rest == nil {
 		t.Fatal("a cut task lane started no tail")
 	}
-	later := svc.readingBacklog(t.Context(), crmcontracts.Attention{AsOf: after}, after.Truncate(24*time.Hour).Add(24*time.Hour), time.UTC, false)
+	later := svc.readingBacklog(t.Context(), crmcontracts.Attention{AsOf: after}, besideDay{until: after.Truncate(24 * time.Hour).Add(24 * time.Hour), zone: time.UTC}, false)
 	later.backlogTail(t.Context(), tailPage{scope: scopeMine, day: crmcontracts.Attention{AsOf: after}}, 5, rest, nil)
 
 	if len(recorder.asked) != 1 {

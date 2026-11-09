@@ -21,7 +21,6 @@ import {
   useCreateLegalEntity,
   useLegalEntities,
 } from "../../lib/legalentities.queries";
-import { problemMessageOf } from "../../lib/problem";
 import {
   ArchiveEntityDialog,
   CountryField,
@@ -211,9 +210,7 @@ function NewEntityDialog({ onClose }: Readonly<{ onClose: () => void }>) {
             value={form.country}
             onChange={set("country")}
           />
-          <ErrorLine
-            error={create.isError && problemMessageOf(create.error, t)}
-          />
+          <ErrorLine error={create.error} />
         </form>
       }
       actions={

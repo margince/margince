@@ -18,8 +18,9 @@ var readListsCopy = toolCopy{
 		"in retired_fields; its steward should replace that clause. A list with health retired_tag " +
 		"filters on an archived or merged-away tag, named in retired_tags, and that tag no longer matches any " +
 		"record, so its steward should name the live tag.",
-	Instead: "search_records finds records by name; tags are applied with change_tags, not lists.",
-	Retain:  "Keep list_id, the version for a later change, and next_cursor to read the next page.",
+	Instead: "search_records finds records by name; tags are applied with change_tags, not lists; " +
+		"change_attention marks a list as seen when the user asks.",
+	Retain: "Keep list_id, the version for a later change, and next_cursor to read the next page.",
 }
 
 var changeListsCopy = toolCopy{

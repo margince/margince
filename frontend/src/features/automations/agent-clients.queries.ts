@@ -23,7 +23,9 @@ export type RegisteredAgentClient =
 
 type MethodChange = Pick<
   components["schemas"]["UpdateInstallationSettingsRequest"],
-  "dynamic_client_registration" | "metadata_document_clients"
+  | "dynamic_client_registration"
+  | "metadata_document_clients"
+  | "mcp_client_check"
 >;
 
 // One key for the list and the method switches: both come from the same read.

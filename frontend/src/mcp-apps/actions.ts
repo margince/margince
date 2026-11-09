@@ -8,7 +8,13 @@
 // call arrives at the server as the connected assistant, through the same
 // passport, scope and approval checks as a call the model made.
 
-import { allowOutbound, nextRequestID, onResponse, sendToHost } from "./bridge";
+import {
+  allowOutbound,
+  MAX_MESSAGE_CHARS,
+  nextRequestID,
+  onResponse,
+  sendToHost,
+} from "./bridge";
 import { asRecord, asText, asWarnings, type Warning } from "./types";
 
 /** How long a click waits for the host before the card says it did not land. */
@@ -98,8 +104,23 @@ export function askAssistant(text: string): void {
   sendToHost({
     id: nextRequestID(),
     method: "ui/message",
-    params: { role: "user", content: { type: "text", text } },
+    params: {
+      role: "user",
+      content: { type: "text", text: fitMessage(text) },
+    },
   });
+}
+
+/** The closing part of a question kept when it is shortened: the record it
+ *  names and what it asks come last. */
+const KEPT_ENDING_CHARS = 600;
+
+/** fitMessage shortens a question to the bridge's cap. A long name sits in the
+ *  middle, so the start and the ending are kept and the middle becomes "…". */
+export function fitMessage(text: string): string {
+  if (text.length <= MAX_MESSAGE_CHARS) return text;
+  const head = MAX_MESSAGE_CHARS - KEPT_ENDING_CHARS - 1;
+  return `${text.slice(0, head)}…${text.slice(-KEPT_ENDING_CHARS)}`;
 }
 
 function outcomeOf(message: Record<string, unknown>): ActionOutcome {

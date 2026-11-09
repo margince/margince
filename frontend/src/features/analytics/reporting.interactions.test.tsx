@@ -11,7 +11,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
-import { RecordZoneProvider } from "../../lib/recordzone";
+import { CompanyZoneProvider } from "../../lib/companyzone";
 import {
   installFetchStub,
   jsonResponse,
@@ -19,7 +19,7 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { AnalyticsScreen } from "./analytics";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import { layoutOf } from "./reporting.layout";
 import { ReportingOverview } from "./reporting.overview";
 import { ReportingReportDetail } from "./reporting.report";
@@ -263,9 +263,9 @@ it("uses local inclusive custom dates without querying an incomplete range", asy
   const fetch = vi.spyOn(globalThis, "fetch");
   render(
     <StoryProviders>
-      <RecordZoneProvider zone={REPORTING_FIXTURE_ZONE}>
+      <CompanyZoneProvider zone={REPORTING_FIXTURE_ZONE}>
         <ReportingOverview view="sales" scope={reportingStoryScope} />
-      </RecordZoneProvider>
+      </CompanyZoneProvider>
     </StoryProviders>,
   );
   await pickOption(

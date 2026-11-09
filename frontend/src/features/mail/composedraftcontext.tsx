@@ -1,4 +1,3 @@
-import { Sparkles } from "lucide-react";
 import type { components } from "../../api/schema";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { Disclosure } from "../../design-system/disclosure";
@@ -189,17 +188,17 @@ export function DraftOffer({
       >
         {(control) => (
           <div className="compose-draftbar">
-            <Sparkles aria-hidden="true" />
             <TextInput
               {...control}
               placeholder={t(ask)}
               value={intent}
+              maxLength={400}
               onChange={(event) => onIntentChange(event.target.value)}
             />
-            {/* The agent's own verb, in the agent's own colour and mark:
-                indigo means "Margince does this" everywhere on the record. */}
+            {/* Outlined with its sparkle: Send is the composer's one filled
+                verb, and the mark alone says "Margince does this". */}
             <Button
-              variant="ai"
+              variant="aiQuiet"
               onClick={draft.run}
               disabled={draft.disabled}
               pending={draft.pending}

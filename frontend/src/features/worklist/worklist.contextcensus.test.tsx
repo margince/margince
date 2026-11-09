@@ -90,13 +90,13 @@ const CONTEXT = {
   customer_waiting: record("customer_waiting", "contact"),
   lead_response: record("lead_response", "lead"),
   deal_at_risk: record("deal_at_risk", "deal"),
-  deal_review: record("deal_review", "deal"),
   meeting: activity("meeting"),
   relationship_decay: record("relationship_decay", "contact"),
   failed_approval: record("failed_approval", "contact"),
   dsr: queue("dsr"),
   notice_case: record("notice_case", "contact"),
   capture_health: queue("capture_health"),
+  booking_health: queue("booking_health"),
   domain_question: {
     item: row({
       source: "domain_question",

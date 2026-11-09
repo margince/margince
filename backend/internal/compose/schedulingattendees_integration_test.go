@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -63,6 +64,23 @@ func (w attendeeWorld) queued(t *testing.T, invitee ids.UUID, attendees ...strin
 	return connector.CalendarAppointment{ContactID: invitee, Attendees: attendees, Roster: roster}
 }
 
+// A visible lead resolves as a lead and carries no name: its participant row is
+// an address row, read without the lead's scope.
+func TestALeadAttendeeCarriesNoName(t *testing.T) {
+	w := newAttendeeWorld(t)
+	address := "lead@buyer.test"
+	if _, _, err := w.e.Contacts.CreateLead(w.e.Admin(), contacts.CreateLeadInput{Email: &address, FullName: new("Lena Lead"), Source: "manual"}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := w.calendar.ResolveAttendees(w.e.Admin(), w.host, []string{address})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0].Basis != connector.AttendeeLead || got[0].Name != "" {
+		t.Errorf("the lead resolved as %+v, want a lead with no name", got)
+	}
+}
+
 func TestABookingAttendeeResolvesContactFirstUnderTheHostsScope(t *testing.T) {
 	w := newAttendeeWorld(t)
 	visible := w.contact(t, w.e.Rep1, "visible@buyer.test", "")
@@ -72,15 +90,18 @@ func TestABookingAttendeeResolvesContactFirstUnderTheHostsScope(t *testing.T) {
 	alsoContact := w.e.WsScalar(t, `SELECT email FROM app_user WHERE id = $1`, w.e.Rep3)
 	shared := w.contact(t, w.e.Rep1, alsoContact, "")
 
-	got, err := w.calendar.ResolveAttendees(w.e.Admin(), w.host, []string{"visible@buyer.test", "hidden@buyer.test", colleague, alsoContact, "stranger@elsewhere.test"})
+	got, err := w.calendar.ResolveAttendees(w.e.Admin(), w.host, []string{" Visible@Buyer.TEST ", "hidden@buyer.test", colleague, alsoContact, "stranger@elsewhere.test"})
 	if err != nil {
 		t.Fatal(err)
 	}
+	colleagueName := w.e.WsScalar(t, `SELECT display_name FROM app_user WHERE id = $1`, w.e.Rep2)
+	// Each resolved attendee carries its record's name; the hidden contact's
+	// name never leaves with it.
 	want := []connector.CalendarAttendee{
-		{Address: "visible@buyer.test", Basis: connector.AttendeeContact, ID: visible, AskConsent: true},
+		{Address: "visible@buyer.test", Basis: connector.AttendeeContact, ID: visible, Name: "visible@buyer.test", AskConsent: true},
 		{Address: "hidden@buyer.test", Basis: connector.AttendeeHostNamed, AskConsent: true},
-		{Address: colleague, Basis: connector.AttendeeColleague, ID: w.e.Rep2},
-		{Address: alsoContact, Basis: connector.AttendeeContact, ID: shared, AskConsent: true},
+		{Address: colleague, Basis: connector.AttendeeColleague, ID: w.e.Rep2, Name: colleagueName},
+		{Address: alsoContact, Basis: connector.AttendeeContact, ID: shared, Name: alsoContact, AskConsent: true},
 		{Address: "stranger@elsewhere.test", Basis: connector.AttendeeHostNamed},
 	}
 	if !slices.Equal(got, want) {

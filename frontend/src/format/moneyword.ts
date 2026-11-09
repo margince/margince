@@ -3,6 +3,8 @@
 
 import type { Locale } from "../i18n";
 
+export const MONEY_ABSENT = "—";
+
 /**
  * A money reading, or the WORD the caller gives for its absence.
  *

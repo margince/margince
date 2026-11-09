@@ -71,7 +71,7 @@ describe("BasisAct", () => {
     const user = userEvent.setup();
 
     expect(await screen.findByLabelText("Base currency")).toHaveValue("EUR");
-    expect(screen.getByLabelText("Reporting timezone")).toHaveValue(
+    expect(screen.getByLabelText("Company time zone")).toHaveValue(
       "Europe/Berlin",
     );
     // Third of five: the stop sits between the confirmation and the voice.

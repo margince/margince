@@ -30,6 +30,15 @@ export function webUrl(value: string): URL | null {
     : null;
 }
 
+// Prepending https to a bare host ("example.com/x") is a guess, made only for a
+// value with no scheme. A typed `http://` stays: upgrading it claims an unseen certificate.
+const BARE_HOST = /^[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?([/?#]|$)/i;
+
+export function withWebScheme(value: string): string {
+  const trimmed = value.trim();
+  return BARE_HOST.test(trimmed) ? `https://${trimmed}` : trimmed;
+}
+
 // The hosts a LinkedIn profile can honestly live on.
 const LINKEDIN_HOSTS = ["linkedin.com", "lnkd.in"];
 

@@ -28,8 +28,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -54,28 +56,43 @@ func AssuranceExceptionsIn(
 		if population.ID != nil {
 			return nil, fmt.Errorf("scope_id names a team or owner and needs scope_kind: %w", apperrors.ErrInvalidArgument)
 		}
-		return AssuranceExceptions(ctx, tx)
 	}
-	requested := RequestedScope{Kind: population.Kind, ID: population.ID}
-	return assuranceExceptionsOwnedBy(ctx, tx, nil, &requested, 0)
+	var requested *RequestedScope
+	if population.Kind != "" {
+		requested = &RequestedScope{Kind: population.Kind, ID: population.ID}
+	}
+	frame := crmcontracts.ReportingContext{}
+	selection := crmcontracts.ReportingSelection{ProductId: (*crmcontracts.ReportingProductId)(population.ProductID), Country: population.Country, Industry: population.Industry}
+	if err := reportingDimensionContext(ctx, tx, selection, &frame); err != nil {
+		return nil, err
+	}
+	return assuranceExceptionsWith(ctx, tx, nil, requested, 0, nil, frame)
 }
 
 // TeamAssuranceExceptions reads the open findings on deals the members own
-// now. Ownership is the deal's live owner, never the finding's own owner_id,
-// which is set when the finding is first raised and not kept in step.
+// now, with the findings on the team's own calls. Ownership is the deal's live
+// owner, never the finding's own owner_id, which is set when the finding is
+// first raised and not kept in step.
 func TeamAssuranceExceptions(
-	ctx context.Context, tx pgx.Tx, members []ids.UUID, limit int,
+	ctx context.Context, tx pgx.Tx, teamID ids.UUID, members []ids.UUID, limit int,
 ) ([]assurance.Exception, error) {
-	if len(members) == 0 {
-		return nil, nil
+	// A read for named owners skips call findings, so the team's are read by
+	// the team's scope and merged into the one ranking.
+	calls, err := assuranceCallExceptions(ctx, tx, nil, &RequestedScope{Kind: forecasting.ScopeTeam, ID: &teamID})
+	if err != nil {
+		return nil, err
 	}
-	return assuranceExceptionsOwnedBy(ctx, tx, members, nil, limit)
+	// Nil owners read every deal, so a team with nobody left keeps only its calls.
+	if len(members) == 0 {
+		return rankedWithin(ctx, tx, calls, limit)
+	}
+	return assuranceExceptionsWith(ctx, tx, members, nil, limit, calls)
 }
 
 // assuranceDealExceptionsOwnedBy is both deal readers' body. Nil owners reads every
 // finding the caller may see; a zero limit reads them all.
 func assuranceDealExceptionsOwnedBy(
-	ctx context.Context, tx pgx.Tx, owners []ids.UUID, requested *RequestedScope, limit int,
+	ctx context.Context, tx pgx.Tx, owners []ids.UUID, requested *RequestedScope, limit int, dimensions ...crmcontracts.ReportingContext,
 ) ([]assurance.Exception, error) {
 	// Both halves, and the object half first. Every finding here is ABOUT a
 	// deal and carries its name, so the row scope below answers which deals
@@ -112,6 +129,15 @@ func assuranceDealExceptionsOwnedBy(
 			scopeClause = "(" + scopeClause + ") AND " + population
 		}
 	}
+	if len(dimensions) > 0 {
+		bindings := reportingBindings{values: args}
+		dimensionWhere, err := dealDimensionSQL(ctx, dimensions[0], &bindings, "d")
+		if err != nil {
+			return nil, err
+		}
+		args = bindings.values
+		scopeClause = "(" + scopeClause + ")" + dimensionWhere
+	}
 	// The finding's amount is the deal figure this statement selects and ranks
 	// by, so its mask is rendered here, beside the statement.
 	affected, err := auth.MaskedExpressionSQL(ctx, tableDeal, "amount_minor", "d", rawFindingMoney.affected, arg)
@@ -136,7 +162,7 @@ func assuranceDealExceptionsOwnedBy(
 		FROM assurance_exception e
 		JOIN deal d ON d.id = e.subject_id
 		%s
-		WHERE `+openFindingOnLiveDealSQL("e", "d")+`
+		WHERE e.status = 'open' AND e.subject_kind = 'deal' AND d.archived_at IS NULL
 		  AND %s
 		ORDER BY `+findingRank+`, e.id`+bound,
 		exceptionSelect(money), findingPricedJoin(money.affected), scopeClause)

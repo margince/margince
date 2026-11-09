@@ -17,7 +17,7 @@ import {
 // Microsoft has a directory to pin.
 
 const meta: Meta<typeof OAuthAppDrawer> = {
-  title: "Settings/Company/Sign-in and apps/Connector app setup",
+  title: "Settings/Company/Sign-in and security/Connector app setup",
   component: OAuthAppDrawer,
   parameters: { layout: "padded" },
 };

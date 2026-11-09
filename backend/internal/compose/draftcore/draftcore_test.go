@@ -250,8 +250,8 @@ func TestAFalseClaimIsWorseThanAnyNumberOfPhrasingTics(t *testing.T) {
 	// one finding, one rule. Every count says the retry is better.
 	lane := &scripted{bodies: []string{
 		"I hope this finds you well. I hope you are well. Hope you're doing well. " +
-			"The quote is attached and the depot slots are open on Tuesday.",
-		"It was great speaking with you earlier. The quote is attached and the " +
+			"The quote is ready and the depot slots are open on Tuesday.",
+		"It was great speaking with you earlier. The quote is ready and the " +
 			"depot slots are open on Tuesday.",
 	}}
 	got, err := draftcore.CorrectOnce(context.Background(),

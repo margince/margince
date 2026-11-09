@@ -92,7 +92,7 @@ func stageSiteLeadFrom(
 	t *testing.T, e *integration.Env, company, bundleID, readID ids.UUID, contact siteContact,
 ) ids.ApprovalID {
 	t.Helper()
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	var id ids.ApprovalID
 	ctx := withClaimedRequester(principal.WithWorkspaceID(context.Background(), e.WS), "human:"+e.Rep1.String(), readID)
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
@@ -133,7 +133,7 @@ func TestASiteLeadStagedBeforeTheLaneShutStaysPendingWhenAccepted(t *testing.T) 
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	id := stageSiteLeadAsBefore(t, e, company, ids.NewV7())
 
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	_, err := svc.Decide(e.As(e.Rep2, nil, integration.AdminPerms), id, true, nil)
 	if !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("accepting a site lead while the lane is shut = %v, want a conflict", err)
@@ -165,7 +165,7 @@ func TestABundleApprovalLeavesASiteLeadPendingWhileTheLaneIsShut(t *testing.T) {
 	bundleID := ids.NewV7()
 	id := stageSiteLeadAsBefore(t, e, company, bundleID)
 
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	members, err := svc.DecideBundle(e.As(e.Rep2, nil, integration.AdminPerms), bundleID, true, nil)
 	if err != nil {
 		t.Fatalf("deciding the bundle: %v", err)

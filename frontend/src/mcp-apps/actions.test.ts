@@ -220,6 +220,30 @@ describe("a view asks its host to run a declared tool", () => {
     });
   });
 
+  // A promise's subject has no length limit, and the bridge drops a chat
+  // message over its cap. The question must be shortened to reach the chat.
+  it("shortens a question built from a very long subject so it still reaches the chat", async () => {
+    const parent = stubParent();
+    const actions = await load(parent.win);
+    handshake(parent, {});
+    const subject = `Send the signed contract ${"and the annex ".repeat(400)}`;
+    const ending =
+      " (task_id 7): where does it stand, and what should happen next?";
+
+    actions.askAssistant(`Catch me up on the promise "${subject}"${ending}`);
+    const sent = parent.sent.filter((s) => s.msg.method === "ui/message");
+    expect(sent).toHaveLength(1);
+    const text = (sent[0].msg.params as { content: { text: string } }).content
+      .text;
+    expect(subject.length).toBeGreaterThan(5000);
+    expect(text.length).toBeLessThanOrEqual(4000);
+    expect(text).toContain(
+      'Catch me up on the promise "Send the signed contract',
+    );
+    expect(text).toContain("…");
+    expect(text.endsWith(ending)).toBe(true);
+  });
+
   it("never lets the transport carry a tool call the view did not declare", async () => {
     const parent = stubParent();
     const actions = await load(parent.win);

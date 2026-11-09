@@ -6,33 +6,41 @@ Margince settings open from the **account menu** at the top right. They are not 
 
 ### How do I open Settings?
 To open Settings in Margince, open the account menu at the top right of the screen and choose **Settings**.
-Settings opens on **Overview**, which lists every page you can open. The page list down the side is in groups: **You**, **Company**, **People**, **Sales**, **Data**, **AI** and **Governance**.
+Settings opens on **Overview**, which lists every page you can open. The page list down the side is in groups: **You**, **Company**, **People**, **Sales**, **Data**, **AI**, **Compliance** and **System**.
+
+A long page splits into tabs at its top, such as **Booking links**, **Availability** and **Guest page** on **Meetings**. Each tab has its own address, so a link can open one tab.
 To go right to one page, press ⌘K (Ctrl+K) and type its name, or the name of a setting on it. Or type into **Search settings** at the top of the settings list. When the page was found by one of its settings, **Search settings** shows that setting under the page name.
 
 Also called: preferences, admin settings, configuration, options.
 
 ### What settings pages are there?
 Margince Settings puts its pages in these groups:
-- **You**: Account, Meetings, Writing voice, AI access, Notifications, Connections, Capture activity.
-- **Company**: Company profile, Sign-in and apps.
+- **You**: Account, Notifications, Meetings, Writing voice, AI assistants, Connections.
+- **Company**: Company profile, Sign-in and security.
 - **People**: Members, Teams, Roles and permissions, Seats and license.
-- **Sales**: Pipelines, Stage automation, Lead handling, Acquisition sources, Outcome reviews, Responsibility roles, Fields, Tags, Products and offers.
-- **Data**: Capture rules, Integrations, Website forms, Knowledge, Data import.
-- **AI**: AI usage, AI models, MCP, AI call log, Automations.
-- **Governance**: Privacy and retention, Audit log, System health, [Configuration](configuration.md), Extensions, Reset data.
+- **Sales**: Deals, Leads, Partners, Records and fields, Products and offers.
+- **Data**: Mail capture, Integrations, Website forms, Knowledge, Data import.
+- **AI**: AI models, AI tool access, AI usage, AI call log, Automations.
+- **Compliance**: Privacy and retention, Jurisdiction, Audit log.
+- **System**: System health, [Configuration](configuration.md), Extensions, Reset data.
+
+Some pages joined others as tabs. Search still finds them by their old names:
+- **Pipelines**, **Acquisition sources**, **Loss reasons** and **Outcome reviews** are tabs of **Deals**.
+- **Fields**, **Tags** and **Responsibility roles** are tabs of **Records and fields**.
+- **Capture activity** is the **Activity** tab of **Connections**.
 
 You see only the pages your permissions open. The Reset data page appears only where the installation turns it on.
 
 ### Which settings page do I need for my own account?
 Your own things in Margince are under **You** in Settings.
-- Change your password, display name, email signature, language or theme (appearance): **Account**.
+- Change your password, display name, profile picture, email signature, language or theme (appearance): **Account**.
 - Turn on two-step sign-in, with a code from your phone: **Account**.
 - Set when customers can book you, and share your booking link: **Meetings**, in **When people can book** and **Booking links**.
 - Set up how your drafts sound: **Writing voice**.
 - Choose how each kind of notification reaches you, and whether the morning brief and weekly review come by email: **Notifications**.
-- Connect your AI tool, such as Claude or ChatGPT, or create an API key for a script: **AI access**.
+- Connect your AI tool, such as Claude or ChatGPT, or create an API key for a script: **AI assistants**.
 - Connect your mailbox or calendar, or import from LinkedIn: **Connections**.
-- Keep a sender out of capture, release a held thread, or see why an email did not come in: **Capture activity**.
+- Keep a sender out of capture, release a held thread, or see why an email did not come in: **Connections**, on the **Activity** tab.
 See [Your own settings](your-own-settings.md) for each one step by step.
 
 ### Which settings page do I need for colleagues and the company?
@@ -42,27 +50,27 @@ Things for the whole company in Margince each have one settings page.
 - Create, rename, narrow or archive a role: **Roles and permissions**.
 - See how many seats are in use: **Seats and license**.
 - Change the company name, time zone, base currency, date format, time format or exchange rates: **Company profile**.
-- Set up single sign-on, the Google and Microsoft apps or the app an extension signs in to, or require two-step sign-in: **Sign-in and apps**.
-- Mark your own email domains, or refuse a domain: **Capture rules**.
+- Set up single sign-on, the Google and Microsoft apps or the app an extension signs in to, or require two-step sign-in: **Sign-in and security**.
+- Mark your own email domains, or refuse a domain: **Mail capture**.
 - Set up webhooks, a provider of contact data, the accounting source, or the company's Telegram bot: **Integrations**.
 
 ### Which settings page do I need for sales and data?
 Sales and data settings in Margince each have one page.
-- Change deal stages: **Pipelines**.
-- Lead origins, reasons to drop a lead, and the first-reply target: **Lead handling**.
-- Where a deal came from: **Acquisition sources**.
+- Change deal stages: **Deals**, on the **Pipelines** tab.
+- Lead origins, reasons to drop a lead, and the first-reply target: **Leads**.
+- Where a deal came from: **Deals**, on the **Acquisition sources** tab.
 - The stages a partner program moves through: **Partners**.
-- Won and lost questions: **Outcome reviews**.
-- Add a custom field: **Fields**. Rename a tag on every record: **Tags**.
+- Won and lost questions: **Deals**, on the **Outcome reviews** tab.
+- Add a custom field: **Records and fields**. Rename a tag on every record: its **Tags** tab.
 - The price list, rate card and offer templates: **Products and offers**.
 - Turn each question sent from a form on your website into a lead: **Website forms**.
 - Upload a document set to ask questions of: **Knowledge**.
 - Import companies, contacts or prospects from a ZIP of CSV files or one CSV: **Data import**.
 
-### Which settings page do I need for AI and governance?
-AI and governance settings in Margince each have one page.
+### Which settings page do I need for AI, compliance and the system?
+AI, compliance and system settings in Margince each have one page.
 - Which model does which work, and provider keys: **AI models**.
-- Which AI tools may connect over MCP, and their clients: **MCP**.
+- Which AI tools may connect over MCP, and their clients: **AI tool access**.
 - Rules that do an action when something happens: **Automations**.
 - The monthly AI allowance and what was used: **AI usage**. Each call that ran: **AI call log**.
 - Consent purposes, how long records are kept, and privacy requests: **Privacy and retention**.
@@ -81,7 +89,7 @@ Also called: settings missing, no access to settings, greyed out.
 The settings list down the side shows what you can change. A page where every control is closed to you is not in it, but you can still open it. Overview lists everything you can open, in the same groups as the side list, with **You** first. A page you can read and not change has a lock there, which says **Read-only** when you point at it. The page says so once at its top: "Your role cannot change these settings."
 
 ### Why can't I change a setting?
-A setting is locked when whoever runs the installation set it outside the app. The control is turned off, and a line under it says where the value comes from. For the daily limit on **Capture rules**, it can read:
+A setting is locked when whoever runs the installation set it outside the app. The control is turned off, and a line under it says where the value comes from. For the daily limit on **Mail capture**, it can read:
 - "Set by MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP (environment). Change it there."
 - "Set by MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP in .env.local. Change it there."
 - "Set by capture.auto_enrich_daily_cap in margince.yaml. Change it there."
@@ -99,24 +107,24 @@ Every Margince settings page carries a badge beside its heading. It says who a c
 | **Installation** | The whole installation, such as sign-in, seats and which model does which work. |
 | **Mixed** | The page holds settings of more than one kind. Read the card. |
 
-Two pages are **Mixed**, each for a clear reason. *Capture activity* sits with your own settings, but carries one card that holds for everybody. *Integrations* holds a provider setting for the whole installation beside settings for the company.
+Two pages are **Mixed**, each for a clear reason. *Connections* sits with your own settings, but its **Activity** tab carries one card that holds for everybody. *Integrations* holds a provider setting for the whole installation beside settings for the company.
 
-*Connections* is **Only you**. Its row showing the company's email sharing rule is marked **Whole company** and offers no control: change it on **Capture rules**.
-
----
+On *Connections*, the row showing the company's email sharing rule is marked **Whole company** and offers no control: change it on **Mail capture**.
 
 The pages under **You** are on [Your own settings](your-own-settings.md).
 
 # The rest of settings
 
-The rest of Margince settings is six groups after **You**. Which pages you see, and whether you can change them, follows your role. The table at the end sums it up.
+The rest of Margince settings is in the groups after **You**. Which pages you see, and whether you can change them, follows your role. The table at the end sums it up.
 ## Company profile
 
-The Company profile page in Settings (group **Company**) holds your own company's name, currency and business facts. It is an administrator's page: Admin and Ops reach it, and a sales seat does not. Sign-in and the Google and Microsoft apps have their own **Sign-in and apps** page in the same group.
+The Company profile page in Settings (group **Company**) holds your own company's name, currency and business facts. Its tabs are **Profile**, **Legal entities**, **Regional and calendar**, **Money** and **Email defaults**. It is an administrator's page: Admin and Ops reach it, and a sales seat does not. **Profile** shows only to the Admin role, so for anyone else the page opens on **Legal entities**. Sign-in and the Google and Microsoft apps have their own **Sign-in and security** page in the same group.
 
-The company's name is the **Company name** row under **Business context**. Saving it there also renames the installation, so sign-in, offers and the data reset show the new name. **Installation** and **Currency** hold the time zone and base currency, which Admin and Ops change. On the **Installation** card, three **Calling** switches (**WhatsApp chat**, **Telegram chat** and **Zalo chat**) show or hide the chat links beside phone numbers. All three are on by default, and only Admin and Ops can change them. See [How do I call a contact?](records.md#how-do-i-call-a-contact).
+The company's name is the **Company name** row under **Business context**. Saving it there also renames the installation, so sign-in, offers and the data reset show the new name. **Installation** and **Currency** hold the company time zone and base currency, which Admin and Ops change. On the **Installation** card, three **Calling** switches (**WhatsApp chat**, **Telegram chat** and **Zalo chat**) show or hide the chat links beside phone numbers. All three are on by default, and only Admin and Ops can change them. See [How do I call a contact?](records.md#how-do-i-call-a-contact).
 
-The **Show individual performance** switch there decides whether anyone sees a colleague's figures. See [Can we stop Margince from showing each colleague's performance?](compliance.md#can-we-stop-margince-from-showing-each-colleagues-performance). The **Forecast** card there holds one switch, **Let the forecast correct itself**. Off, each open deal counts at the probability typed on its stage. On, the forecast learns from deals that closed. See [How the forecast learns](forecast-learning.md).
+The company's logo heads the mail Margince sends as your installation: daily and weekly emails, notifications, invitations and password resets. Under it is a small "Powered by Margince" line. Without a logo, and on privacy notices, the company name stands in its place. Mail you send from your own mailbox carries your signature instead. The logo is set on the **Brand** card, where **Edit** under the **Wide logo** or the **Square icon** uploads or removes it.
+
+The **Show individual performance** switch, on the **Forecast** tab of **Deals**, decides whether anyone sees a colleague's figures. See [Can we stop Margince from showing each colleague's performance?](compliance.md#can-we-stop-margince-from-showing-each-colleagues-performance). The **Forecast** card on that tab holds one switch, **Let the forecast correct itself**. Off, each open deal counts at the probability typed on its stage. On, the forecast learns from deals that closed. See [How the forecast learns](forecast-learning.md).
 
 **Date format** and **Time format** sit on the **Installation** card too, and set the notation for formatted dates and times across the interface. For dates the choices are **Use interface language**, **DD.MM.YYYY · 23.09.2026**, **MM/DD/YYYY · 09/23/2026** and **YYYY-MM-DD · 2026-09-23**. For times they are **Use interface language**, **24-hour · 17:30** and **12-hour · 05:30 pm**. Native date fields use the browser's own date picker and date format. Stored dates and time zones stay the same.
 
@@ -133,23 +141,23 @@ Seeing the rates needs the permission to read exchange rates. The Admin and Ops 
 
 To add another, an Admin chooses **New legal entity**, types its name and legal name, and picks where it is based. Of the roles Margince ships, only Admin may change them, and a custom role can be given that permission too. Every other role sees the list and cannot change it. The ones you add can also say what they sell and to whom. On a company you can then choose which of them its fit rating is measured against. A new offer is issued by the company its writer works for; see [Offers and the rate card](offers-and-products.md).
 
-To change one, open the menu on its row and choose **Edit**. The form holds its address, VAT ID, register entry, **Bank details**, document language, imprint, mail signature template, what it sells and its logo. **Save** stores only what you changed, and a logo is stored as soon as you choose it. For the default the form holds only where it is based, its **Bank details**, document language and imprint.
+To change one, open the menu on its row and choose **Edit**. The form holds its address, VAT ID, register entry, **Bank details**, document language, imprint, mail signature template, what it sells and its logo. **Save** stores only what you changed. A logo is stored as soon as you choose it with **Edit** and **Upload logo** under the logo. For the default the form holds only where it is based, its **Bank details**, document language and imprint.
 
 **Archive** in the same menu takes one off the list, and the default cannot be archived. Margince also refuses while colleagues still work for it or companies are rated against it. It then says what to change first. Once there are two, the **Members** page shows a **Legal entity** column, where an Admin chooses which one each colleague works for.
-## Sign-in and apps
+## Sign-in and security
 
-The Sign-in and apps page in Settings (group **Company**) holds how members sign in to the installation, and the Google and Microsoft apps. Admin and Ops change it; Management can read it.
+The Sign-in and security page in Settings (group **Company**) holds how members sign in to the installation, and the Google and Microsoft apps. Admin and Ops change it; Management can read it.
 
 ### How do I require two-step sign-in for every member?
 <!-- opens: settings/authentication -->
-To require two-step sign-in for every member of Margince, open Settings → **Sign-in and apps** and turn on **Require second factor**. Margince asks you to confirm first.
+To require two-step sign-in for every member of Margince, open Settings → **Sign-in and security** and turn on **Require second factor**. Margince asks you to confirm first.
 A member without two-step sign-in is asked to set it up the next time they sign in or open Margince, before anything else opens.
 Members who already use it go on as before, with their own phone app.
 The switch keeps its setting when someone resets data.
 Also called: require MFA, two-step sign-in for everyone, sign-in codes for all.
 
 ### How do I offer sign-in with Google or Microsoft?
-To offer sign-in with Google or Microsoft in Margince, store that company's app on Settings → **Sign-in and apps** and keep its switch on.
+To offer sign-in with Google or Microsoft in Margince, store that company's app on Settings → **Sign-in and security** and keep its switch on.
 1. Under **Google app** or **Microsoft app**, open **Authorized redirect URIs**. Add each address to the app at Google or Microsoft.
 2. Enter the **Client ID** and **Client secret**, then choose **Store app**.
 3. Under **Sign-in methods**, check that **Continue with Google** or **Continue with Microsoft** is on.
@@ -176,19 +184,19 @@ The Integrations page in Settings (group **Data**) shows what the installation i
 
 ## Extensions
 
-The Extensions page in Settings (group **Governance**) lists the add-ons your installation was built with, and what each may reach. You cannot add one from inside the app. Each add-on names what it is for, its release, and the kinds of record it adds.
+The Extensions page in Settings (group **System**) lists the add-ons your installation was built with, and what each may reach. You cannot add one from inside the app. Each add-on names what it is for, its release, and the kinds of record it adds.
 
 If an add-on's screen shows nothing, give a role access to it here with its switches. The built-in roles start with no access to an add-on's records. An add-on that adds no records, such as a set of rules for one place, is listed with nothing to give. Admin and Ops both reach the page.
 
-## Capture rules
+## Mail capture
 
-The Capture rules page in Settings (group **Data**) decides what comes into the CRM, in the order the page shows:
+The Mail capture page in Settings (group **Data**) decides what comes into the CRM. Its tabs follow the order mail meets the rules: **Sharing and sync**, **Domains**, **Enrichment** and **Internal mail**.
 
-**Mail sharing and sync**, at the top: whether captured mail is shared with colleagues, and how often each mailbox syncs. It holds for everybody, so it lives here. Your own **Connections** page shows the current sharing setting on a row marked **Whole company**.
+**Mail sharing and sync**, on the first tab: whether captured mail is shared with colleagues, and how often each mailbox syncs. It holds for everybody, so it lives here. Your own **Connections** page shows the current sharing setting on a row marked **Whole company**.
 
 The same card holds **Held threads reviewed per run**. A mailbox set to *Held until checked* holds its mail until Margince has checked the thread ([Who can see an email](who-can-see-an-email.md)). This setting says how many held threads one review run looks at, from 1 to 200. The default is 40, and the rest wait for the next run. Raise it when new mail stays hidden from colleagues for longer than the run schedule, which System health sets.
 
-**Own email domains** are the domains that belong to this company. Mail between colleagues is not stored for anyone, including you. Take note: no mailbox offers again the mail skipped while a domain is on this list.
+**Own email domains** are the domains that belong to this company. Mail between colleagues is skipped by default. An Admin can add a mailbox and its folders under **Internal operational mail**. That mail stays with its participants. See [Capture](capture.md) for the source and history choices. Take note: no mailbox offers again the mail skipped while a domain is on this list.
 
 **Enrichment.** Whether Margince fills in facts on captured companies by itself.
 
@@ -200,31 +208,27 @@ The same card holds **Held threads reviewed per run**. A mailbox set to *Held un
 
 The Sales group in Settings has one page per subject. There are the fields a record carries, the stages it moves through, and the lists of choices it picks from. And there are the priced things that go on an offer.
 
-- **Pipelines**: the stages a deal moves through, for the whole company. See [The pipeline](the-pipeline.md#pipelines-and-stages).
-- **Stage automation**: the record of how each stage move has gone, before Margince moves deals by itself. See [The pipeline](the-pipeline.md#stage-automation-the-evidence-before-trusting-a-move).
-- **Lead handling**: lead origins, reasons to drop a lead, and the first-reply target, which is off by default. Origins add or take away score points.
-- **Acquisition sources**: the business channels a deal can come from. Lead origins, which record where a lead came from, are separate.
+- **Deals**, on its tabs:
+  - **Pipelines**: the stages a deal moves through, for the whole company. See [The pipeline](the-pipeline.md#pipelines-and-stages).
+  - **Acquisition sources**: the business channels a deal can come from. Lead origins, which record where a lead came from, are separate.
+  - **Loss reasons**: the reasons a seller picks when a deal is lost.
+  - **Outcome reviews**: questions a seller answers when a deal is won or lost. There is one set for won and one for lost.
+  - **Legal review**: whether a stage waits for legal. See [Legal review](legal-review.md).
+  - **Forecast**: how the forecast counts open deals, and whether anyone sees a colleague's figures.
+- **Leads**: lead origins, reasons to drop a lead, and the first-reply target, which is off by default. Origins add or take away score points.
 - **Partners**: the partner stages and what each one means. See [Partners and commission](partners.md#how-do-i-change-the-partner-stages).
-- **Outcome reviews**: questions a seller answers when a deal is won or lost. There is one set for won and one for lost.
-- **Responsibility roles**: what a colleague or team looks after on a
-  company, deal or project. A role gives no access to the record; the owner
-  keeps the responsibility for it. Each role is marked **Built-in** when it comes with
-  Margince, or **Custom** when someone added it. When you
-  create one, you choose what it applies to and who can hold it. You turn a role
-  off with its switch instead of deleting it, so a record that carried it still
-  reads well.
-- **Fields**: the custom columns this company keeps on top of the ones every
-  installation has. See
-  [Contacts, companies, leads, deals and projects](records.md#custom-fields).
-- **Tags**: tags everyone shares. Renaming a tag here renames it on every record.
-- **Products and offers**: what this company sells, and the templates an offer
-  starts from.
+- **Records and fields**, on its tabs:
+  - **Fields**: the custom columns this company keeps on top of the ones every installation has. See [Contacts, companies, leads, deals and projects](records.md#custom-fields).
+  - **Tags**: tags everyone shares. Renaming a tag here renames it on every record.
+  - **Responsibility roles**: what a colleague or team looks after on a company, deal or project. A role gives no access to the record; the owner keeps the responsibility for it.
+    Each role is marked **Built-in** when it comes with Margince, or **Custom** when someone added it. When you create one, you choose what it applies to and who can hold it. You turn a role off with its switch instead of deleting it, so a record that carried it still reads well.
+- **Products and offers**: what this company sells, and the templates an offer starts from.
 
-Every seat can read all of them. All but two are for Admin and Ops to change, so for most seats they appear on **Overview** marked with a lock. Two stay in a sales seat's side list. A sales seat writes **Products and offers**, and a seller opens **Outcome reviews** to read the questions.
+Every seat can read all of them. All but one are for Admin and Ops to change, so for most seats they appear on **Overview** marked with a lock. A sales seat writes **Products and offers**, which stays in its side list. A tab a seat can only read says so at its top.
 
 ## AI usage, AI models, AI call log, and Automations
 
-The AI group in Settings has the pages **AI usage**, **AI models**, **AI call log** and **Automations**.
+The AI group in Settings has the pages **AI models**, **AI tool access**, **AI usage**, **AI call log** and **Automations**. **AI models** has the tabs **Providers**, **Model tiers**, **AI tasks** and **Prices**. **AI usage** has **Allowance**, **Agent limits** and **Spend**. **Automations** has **Your automations** and **Starter library**.
 
 **Model routing**, on **AI models**, shows which model does each kind of work, listed by activity. What you see is the current setting; **AI call log** shows what ran. Settings that several kinds of work share sit under **Advanced**, and changing one can move several kinds of work at once. Prices show the cost of the text sent in and the text that comes back, per million tokens. To know where data goes and what it costs, check the model and provider shown on each row, not the tier name.
 
@@ -244,14 +248,14 @@ When someone sets a higher allowance, three kinds of waiting work run on the nex
 
 Look at a preview of an allowance or model change before you save it. Margince refuses a save if the stored setting has changed after your preview, so you never save against an answer you did not see.
 
-**AI usage** and **AI call log** show "AI spend this month against the allowance", and "each model request and its response". **AI usage** also holds the agent passport allowances, and how much each user's agents used. [Agents and passports](agents-and-passports.md#allowances-per-window) says how they work. Anything that failed for good stays in view in **Background jobs**, on **System health**, instead.
+**AI usage** and **AI call log** show "AI spend this month against the allowance", and "each model request and its response". **AI usage** also holds the agent passport allowances, and how much each user's agents used. [How much an agent may do](agent-allowances.md) says how they work. Anything that failed for good stays in view in **Background jobs**, on **System health**, instead.
 
-## MCP
+## AI tool access
 
-The MCP page in Settings (group **AI**) holds which AI tools may connect to Margince over MCP, and how. It has the switches, the list of MCP clients, and how long a connection's token lasts. Admin changes it; Management and Ops can read it, and Ops can also set how long a token lasts. Each user connects their own tool under **AI access**.
+The AI tool access page in Settings (group **AI**) holds which AI tools may connect to Margince over MCP, and how. It has the switches, the list of MCP clients, and how long a connection's token lasts. Admin changes it; Management and Ops can read it, and Ops can also set how long a token lasts. Each user connects their own tool under **AI assistants**.
 
 ### How do I let Gemini through work or school connect?
-To let Gemini through work or school connect to Margince, register it as a client on Settings → **MCP**.
+To let Gemini through work or school connect to Margince, register it as a client on Settings → **AI tool access**.
 1. Under **MCP clients**, choose **Register a client**.
 2. Name it, pick **Gemini Enterprise** from the list under **Redirect URIs**, and choose **Register client**.
 3. Copy each value Margince shows into the Gemini form, since it shows the client secret only once.
@@ -261,14 +265,14 @@ To let Gemini through work or school connect to Margince, register it as a clien
 Also called: Gemini Enterprise, client ID and secret, OAuth client.
 
 ### How do I choose how AI tools may connect?
-To choose how AI tools may connect to Margince, use the switches under **How MCP clients may connect** on Settings → **MCP**.
+To choose how AI tools may connect to Margince, use the switches under **How MCP clients may connect** on Settings → **AI tool access**.
 **Accept a tool's published identity** is how Claude, Codex and ChatGPT connect first, and **Let tools register themselves** is the older way.
 Turning one off stops new sign-ins through it, and tools that are already connected go on working.
 A switch that is off and locked was turned off by whoever runs your installation.
 Also called: DCR, CIMD.
 
 ### How do I turn off one AI tool for everyone?
-To turn off one AI tool for everyone in Margince, open **MCP clients** on Settings → **MCP** and choose **Disable** in its menu.
+To turn off one AI tool for everyone in Margince, open **MCP clients** on Settings → **AI tool access** and choose **Disable** in its menu.
 It stops at once, for everyone who connected it, and **Enable** lets it in again.
 **Delete** ends every connection through it, but the tool can come back, so use **Disable** to keep it out. For a tool that signed up on its own, also turn off **Let tools register themselves**, which stops new sign-ins for every tool that did.
 If a tool your admin turned off asks you to sign in, Margince says it cannot connect and to ask your admin.
@@ -284,32 +288,31 @@ To ask a document set a question, open the command palette with ⌘K (Ctrl+K) an
 
 ## Privacy and retention
 
-The Privacy and retention page in Settings (group **Governance**) holds consent, how long records are kept, and privacy requests. The **Audit log** is its own page beside it, because the two need different permissions.
+The Privacy and retention page in Settings (group **Compliance**) holds consent, how long records are kept, and privacy requests, each on its own tab. The **Audit log** is its own page beside it, because the two need different permissions.
 
 Between them they hold:
 
-- **Consent purposes**: you can only add. Once you create a purpose, you cannot
-  rename or remove it.
-- **Retention**: how long each kind of record is kept, and what happens when its
-  time runs out.
+- **Consent purposes**: you can only add. Once you create a purpose, you cannot rename or remove it.
+- **Retention**: how long each kind of record is kept, and what happens when its time runs out.
 - **Requests**: one panel with three lists. **Privacy** holds requests from a
   contact about their own data, with their due dates. **Corrections** holds the
   changes contacts sent through the link they were emailed. **Held** holds what the law makes
   Margince keep after an erasure.
-- **Disclosure duties**: contacts whose details came from someone else, and
-  whether they have been told yet.
+- **Disclosure duties**: contacts whose details came from someone else, and whether they have been told yet.
 - **Audit log**: every action, and who did it.
 
 Admin and Ops can see Retention and the **Held** list. The audit log and privacy requests each need their own permission. Only the Admin role holds them by default, because they name everyone who acted and everyone who asked. All the detail is in [What is kept, what is destroyed](retention-exports-and-deletion.md).
 
 ## System health, Data import, and Reset
 
-System health and Reset data sit in the **Governance** group, and Data import in **Data**.
+System health and Reset data sit in the **System** group, and Data import in **Data**.
 
-**System health** opens on **Overview**: what needs work, who can act and the next step.
-Only work that needs a person appears here, with its effect and an action button. The status label says what to fix or review. **Check results** compares the current counts. **All checks** holds service status; **Diagnostics** shows the technical details.
+**System health** opens on **Overview**: what needs work, who can act and the next step. A row of counts at the top says how many checks need you, are not set up yet, and pass.
+Work that needs a person comes first, with its effect and an action button. The status label says what to fix or review.
 
-**Review mailbox decisions** lists who has choices waiting. **Review my choices** opens your **Worklist → Decisions** for proposed contacts, or your held conversations in **Capture activity** for sharing choices. For another owner, copy a request with their personal review link. The request sends no message and gives you no access to their mail.
+**Not set up yet** lists each part nobody has set up, such as AI providers, search or restore tests. Each says what happened, why it matters and what to do, with a button that goes there. **Passing** lists the checks with nothing to do. **All checks** holds service status; **Diagnostics** shows the technical details.
+
+**Review mailbox decisions** lists who has choices waiting. **Review my choices** opens your **Worklist → Decisions** for proposed contacts, or your held conversations on the **Activity** tab of **Connections** for sharing choices. For another owner, copy a request with their personal review link. The request sends no message and gives you no access to their mail.
 
 **Diagnostics** shows each source and keeps the selected check in its address. Data updates shows open work first; completed updates and optional work open separately. Mail capture shows counts only; held meetings are counted across the whole installation. Filter background runs or open the next page; totals include all runs still kept in that window.
 
@@ -371,19 +374,15 @@ A **read-only seat** keeps every page it could read, and loses every control tha
 
 | You are | You can change | You can also look up |
 |---|---|---|
-| A sales seat | Your own pages, Products and offers, Outcome reviews, Capture rules (adding only) | The rest of the Sales group, and Knowledge |
+| A sales seat | Your own pages, Products and offers, Mail capture (adding only) | The rest of the Sales group, and Knowledge |
 | A team lead | The same | The same |
 | Management | The same | The above, and also AI usage, model calls, seat counts and the sign-in status, all read-only |
 | Ops | Most pages that run the business, the model rates too | The rest, the list of add-ons too, whose access switches Ops cannot change |
 | Admin | Everything the installation has turned on | Nothing more |
 
-A sales seat reaches **Capture rules**, because one card there asks for a permission every sales role holds. To keep sales seats out, change that permission on their role.
+A sales seat reaches **Mail capture**, because one card there asks for a permission every sales role holds. To keep sales seats out, change that permission on their role.
 
 On that page a sales seat may only add entries, such as a consumer mail domain missing from the list Margince came with. It may not change a setting or an entry that is already there; that is for Admin and Ops.
-
-The **company context** is what the Margince AI knows about your own company. Only an Admin reads or changes it.
-
-Most pages follow permissions, such as the members list, the audit log and the privacy requests. A custom role with the right permission reaches the page, and an Admin whose role lost it does not.
 
 A few things ask for the Admin role itself. Two are for most readers to know. Only an Admin may act on another Admin's account or give out the Admin role. And only an Admin reads or changes the company context.
 

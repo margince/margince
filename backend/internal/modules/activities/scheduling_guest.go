@@ -45,7 +45,7 @@ func (s *Store) ResolveMeetingToken(ctx context.Context, token string) (ids.UUID
 
 // GetPublicSchedulingProfile returns the host-approved public identity and
 // meeting policy. A paused page answers only whose page it is.
-func (h Handlers) GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request, slug string) {
+func (h Handlers) GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request, slug string, params crmcontracts.GetPublicSchedulingProfileParams) {
 	page, err := h.store.ResolveBookingPage(r.Context(), slug)
 	if err != nil {
 		writeStoreErr(w, r, err)
@@ -61,7 +61,7 @@ func (h Handlers) GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	profile = h.store.brandSchedulingProfile(r.Context(), page.HostUserID, profile)
-	httperr.WriteJSON(w, http.StatusOK, publicProfile(profile, nil))
+	httperr.WriteJSON(w, http.StatusOK, publicProfile(bookingLength(profile, params.L), nil))
 }
 
 // GetPublicMeetingInvitation withholds provider URLs from the guest projection.
@@ -102,8 +102,8 @@ func (h Handlers) ChangePublicMeetingInvitation(w http.ResponseWriter, r *http.R
 	httperr.WriteJSON(w, http.StatusAccepted, guestInvitationView(out))
 }
 
-func (h Handlers) bookPublicInvitation(w http.ResponseWriter, r *http.Request, page BookingPage, req crmcontracts.BookPublicMeetingJSONRequestBody, contact ids.UUID, marketing MarketingOutcome, intent *publicBookingIntent) {
-	out, ok := h.reservePublicInvitation(w, r, page, req, contact, invitationIntent{Public: intent, DescriptionFromBooker: true}, marketing)
+func (h Handlers) bookPublicInvitation(w http.ResponseWriter, r *http.Request, page BookingPage, req crmcontracts.BookPublicMeetingJSONRequestBody, contact ids.UUID, marketing MarketingOutcome, intent *publicBookingIntent, length *int) {
+	out, ok := h.reservePublicInvitation(w, r, page, req, contact, invitationIntent{Public: intent, DescriptionFromBooker: true}, marketing, length)
 	if !ok {
 		return
 	}
@@ -115,11 +115,12 @@ func (h Handlers) bookPublicInvitation(w http.ResponseWriter, r *http.Request, p
 
 // reservePublicInvitation reserves the booked slot for the contact, or for the
 // lead the intent names, and writes the refusal when it cannot.
-func (h Handlers) reservePublicInvitation(w http.ResponseWriter, r *http.Request, page BookingPage, req crmcontracts.BookPublicMeetingJSONRequestBody, contact ids.UUID, booking invitationIntent, marketing MarketingOutcome) (crmcontracts.MeetingInvitation, bool) {
+func (h Handlers) reservePublicInvitation(w http.ResponseWriter, r *http.Request, page BookingPage, req crmcontracts.BookPublicMeetingJSONRequestBody, contact ids.UUID, booking invitationIntent, marketing MarketingOutcome, length *int) (crmcontracts.MeetingInvitation, bool) {
 	profile, ok := h.openBookingPage(w, r, page)
 	if !ok {
 		return crmcontracts.MeetingInvitation{}, false
 	}
+	profile = bookingLength(profile, length)
 	if req.End.Sub(req.Start) != time.Duration(profile.DurationMinutes)*time.Minute {
 		httperr.Write(w, r, apperrors.ErrPermissionDenied)
 		return crmcontracts.MeetingInvitation{}, false

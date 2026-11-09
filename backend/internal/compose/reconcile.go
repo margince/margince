@@ -402,12 +402,9 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store) appr
 		// the redemption back with it, so redeemed and created stay the same
 		// fact.
 		//
-		// It does NOT make a failed effect re-drivable. The decision commits
-		// before any effect runs, so a failure here leaves an approved row with
-		// its redemption intact and nothing to re-trigger it — deciding again
-		// returns AlreadyDecided. Closing that needs the effect inside the
-		// decision transaction, or a durable retry, and it is the approvals
-		// module's to close for every kind rather than this one's.
+		// The rollback also keeps a failed effect re-drivable: the approval is
+		// still unconsumed, so deciding it again runs this effect again
+		// (approvals.effectIsStillOwed).
 		return svc.RedeemAndApply(ctx, approvalID, deals.FollowUpReconcileKind, diffHash,
 			func(tx pgx.Tx) error {
 				_, _, err := store.LogActivityTx(execCtx, tx, activities.LogActivityInput{

@@ -10,5 +10,5 @@ import (
 )
 
 func newContactsStore(db *database.DB) *contacts.Store {
-	return contacts.NewStore(db).WithConsumerMail(capture.MatcherTx)
+	return contacts.NewStore(db).WithConsumerMail(capture.MatcherTx).WithFloorCarry(EntityFloorCarry(db.Pool()))
 }

@@ -59,7 +59,7 @@ WORKDIR /src
 # modules live IN the layer (no cache mount here) for exactly that reason.
 # The composed workspace folds in extensions/* on top; anything those need
 # beyond this set is fetched in the build steps below.
-COPY go.work go.work.sum ./
+COPY go.work go.work.sum go.mod ./
 COPY backend/go.mod backend/go.sum ./backend/
 COPY backend/tools/go.mod backend/tools/go.sum ./backend/tools/
 COPY composition/go.mod composition/go.sum ./composition/
@@ -78,40 +78,8 @@ COPY . .
 # mount across runs (see .github/workflows/release.yml).
 WORKDIR /src/backend
 RUN --mount=type=cache,id=margince-gobuild,target=/root/.cache/go-build \
-    GOWORK=/src/go.work go run ./tools/gen-composition
-
-# ── api: build ────────────────────────────────────────────────────────────────
-# The api + migrate binaries under the COMPOSED workspace. migrate ships in the
-# api image so its entrypoint can apply the embedded migrations as the owner
-# role before serving. CGO is off — no role has cgo deps.
-FROM gobase AS api-build
-
-# The one immutable revision, passed identically to the api and web targets so
-# the api can report when the view documents it fetched came from a different
-# build. Diagnostic metadata, never an integrity signature — see
-# internal/shared/buildinfo. Absent (a plain `docker build`) leaves it empty,
-# which DISABLES the comparison rather than alarming on it.
-ARG MARGINCE_BUILD_REVISION=""
-
-# The release this set is built from, stamped into the binary at link time. The
-# api is the role that owns the schema, so at boot it RECORDS this as the
-# installation's release and every other role refuses to start against a
-# different one — the run-time answer to a torn tag pull the registry cannot
-# refuse. Absent (a plain `docker build`) it stays "dev", which disables the
-# comparison; see internal/shared/buildinfo.
-ARG MARGINCE_RELEASE_VERSION=dev
-ARG TARGETARCH
-# cmd/migrate joins no comparison: it applies the schema rather than joining the
-# set the guard compares. It is stamped all the same, because the server bundle
-# ships it as a bare binary and `--version` is how that install names its release.
-RUN --mount=type=cache,id=margince-gobuild,target=/root/.cache/go-build \
-    stamp="-s -w \
-        -X github.com/margince/margince/backend/internal/shared/buildinfo.Revision=$MARGINCE_BUILD_REVISION \
-        -X github.com/margince/margince/backend/internal/shared/buildinfo.ReleaseVersion=$MARGINCE_RELEASE_VERSION" \
-    && GOWORK=/src/build/composition/go.work CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH \
-        go build -ldflags="$stamp" -o /bin/margince-api ./cmd/api \
-    && GOWORK=/src/build/composition/go.work CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH \
-        go build -ldflags="$stamp" -o /bin/margince-migrate ./cmd/migrate
+    GOWORK=/src/go.work go run ./tools/gen-composition \
+    && mkdir -p /src/build/extensions
 
 # ── worker: build ─────────────────────────────────────────────────────────────
 # cmd/worker — the background process role: the outbox relay (mail does not
@@ -213,7 +181,7 @@ RUN --mount=type=cache,id=margince-pnpm-store,target=/pnpm-store \
 WORKDIR /app
 COPY --from=gobase /src/build/composition/api/ ./build/composition/api/
 COPY --from=gobase /src/build/composition/frontend/ ./build/composition/frontend/
-COPY package.json pnpm-workspace.yaml ./
+COPY package.json pnpm-workspace.yaml third-party-files.txt ./
 COPY frontend/ ./frontend/
 # The unit trees, because a unit's frontend layer is a workspace member and the
 # generated registry imports it by package name. Copied AFTER the fetch above so
@@ -253,6 +221,11 @@ RUN --mount=type=cache,id=margince-pnpm-store,target=/pnpm-store \
 # point, and CI=true above would otherwise flip the default to frozen against a
 # lockfile no image carries.
 COPY --from=gobase /src/build/composition-frontend/workspace/ ./build/composition-frontend/workspace/
+# The SPA resolves each unit's screen through the link gen-composition writes in
+# units/. A link to a downloaded unit lands in build/extensions/, made above even
+# when nothing was downloaded, so the COPY has a source.
+COPY --from=gobase /src/build/composition-frontend/units/ ./build/composition-frontend/units/
+COPY --from=gobase /src/build/extensions/ ./build/extensions/
 RUN --mount=type=cache,id=margince-pnpm-store,target=/pnpm-store \
     cd build/composition-frontend/workspace \
     && pnpm install --no-frozen-lockfile --prefer-offline --ignore-scripts --store-dir /pnpm-store
@@ -301,6 +274,45 @@ ARG MARGINCE_CORE_VERSION=""
 ENV MARGINCE_CORE_VERSION=$MARGINCE_CORE_VERSION
 RUN --mount=type=cache,id=margince-tsbuildinfo,target=/app/frontend/node_modules/.tmp \
     pnpm gen:composed-types && pnpm gen:events:composed && pnpm build:composed
+
+# ── api: build ────────────────────────────────────────────────────────────────
+# The api + migrate binaries under the COMPOSED workspace. migrate ships in the
+# api image so its entrypoint can apply the embedded migrations as the owner
+# role before serving. CGO is off — no role has cgo deps.
+FROM gobase AS api-build
+
+# The one immutable revision, passed identically to the api and web targets so
+# the api can report when the view documents it fetched came from a different
+# build. Diagnostic metadata, never an integrity signature — see
+# internal/shared/buildinfo. Absent (a plain `docker build`) leaves it empty,
+# which DISABLES the comparison rather than alarming on it.
+ARG MARGINCE_BUILD_REVISION=""
+
+# The release this set is built from, stamped into the binary at link time. The
+# api is the role that owns the schema, so at boot it RECORDS this as the
+# installation's release and every other role refuses to start against a
+# different one — the run-time answer to a torn tag pull the registry cannot
+# refuse. Absent (a plain `docker build`) it stays "dev", which disables the
+# comparison; see internal/shared/buildinfo.
+ARG MARGINCE_RELEASE_VERSION=dev
+ARG TARGETARCH
+# The view digests the web build above wrote, linked into the api so it serves
+# only the documents this build produced. The api build therefore follows the
+# web build. A missing manifest fails the copy rather than shipping unpinned.
+COPY --from=web-build /app/frontend/dist/mcp-apps/digests.json /tmp/mcp-app-digests.json
+# cmd/migrate joins no comparison: it applies the schema rather than joining the
+# set the guard compares. It is stamped all the same, because the server bundle
+# ships it as a bare binary and `--version` is how that install names its release.
+RUN --mount=type=cache,id=margince-gobuild,target=/root/.cache/go-build \
+    digests="$(cat /tmp/mcp-app-digests.json)" \
+    && stamp="-s -w \
+        -X github.com/margince/margince/backend/internal/shared/buildinfo.Revision=$MARGINCE_BUILD_REVISION \
+        -X github.com/margince/margince/backend/internal/shared/buildinfo.ReleaseVersion=$MARGINCE_RELEASE_VERSION \
+        -X 'github.com/margince/margince/backend/internal/modules/agents/apps.ViewDigests=$digests'" \
+    && GOWORK=/src/build/composition/go.work CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH \
+        go build -ldflags="$stamp" -o /bin/margince-api ./cmd/api \
+    && GOWORK=/src/build/composition/go.work CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH \
+        go build -ldflags="$stamp" -o /bin/margince-migrate ./cmd/migrate
 
 # ── api: runtime ──────────────────────────────────────────────────────────────
 # cmd/api — the HTTP process role (serves /v1 + /healthz + /readyz + /metrics).

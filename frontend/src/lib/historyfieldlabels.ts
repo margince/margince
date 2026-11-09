@@ -40,7 +40,6 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["ended_at", "history.field.ended_at"],
   ["expected_close_date", "history.field.expected_close_date"],
   ["first_name", "history.field.first_name"],
-  ["forecast_category", "history.field.forecast_category"],
   ["full_name", "history.field.full_name"],
   ["fx_rate_date", "history.field.fx_rate_date"],
   ["fx_rate_to_base", "history.field.fx_rate_to_base"],
@@ -53,6 +52,7 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["linkedin_url", "history.field.linkedin_url"],
   ["lost_reason", "history.field.lost_reason"],
   ["meeting_status", "history.field.meeting_status"],
+  ["call_outcome", "history.field.call_outcome"],
   ["name", "history.field.name"],
   ["occurred_at", "history.field.occurred_at"],
   ["occurred_precision", "history.field.occurred_precision"],
@@ -64,7 +64,9 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["partner_company_id", "history.field.partner_company_id"],
   ["phones", "history.field.phones"],
   ["project_id", "history.field.project_id"],
+  ["product_id", "history.field.product_id"],
   ["relationship_types", "history.field.relationship_types"],
+  ["due_has_time", "history.field.due_has_time"],
   ["remind_at", "history.field.remind_at"],
   ["score", "history.field.score"],
   ["score_override_reason", "history.field.score_override_reason"],
@@ -84,6 +86,17 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["commercial_motion", "history.field.commercial_motion"],
   ["priority", "history.field.priority"],
   ["acquisition_source", "history.field.acquisition_source"],
+  ["win_probability", "history.field.win_probability"],
+]);
+
+// The columns an update stores under names of their own: the deal's
+// `win_probability` is recorded as the figure set on the deal and who set it.
+// Apart from both maps above, because no `Update<Type>Request` names these and
+// no hand-built image writes them, so each census would call them orphans.
+const STORED_COLUMN_LABELS = new Map<string, MessageKey>([
+  ["stage_id", "history.field.stage_id"],
+  ["win_probability_override", "history.field.win_probability_override"],
+  ["win_probability_set_by", "history.field.win_probability_set_by"],
 ]);
 
 // Fields a HAND-BUILT audit image names — a write described by its own
@@ -137,7 +150,9 @@ const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
   ["filled", "history.field.filled"],
   ["guests_added", "history.field.guests_added"],
   ["guest_links_added", "history.field.guest_links_added"],
+  ["meeting_documents_added", "history.field.meeting_documents_added"],
   ["guests_retired", "history.field.guests_retired"],
+  ["meeting_guests_removed", "history.field.meeting_guests_removed"],
   ["guest_answers_changed", "history.field.guest_answers_changed"],
   ["guests_left_out", "history.field.guests_left_out"],
   ["relinked_emails", "history.field.relinked_emails"],
@@ -152,7 +167,13 @@ const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
   ["override_category", "history.field.override_category"],
   ["overrides_carried", "history.field.overrides_carried"],
   ["provider_claims_received", "history.field.provider_claims_received"],
+  ["about_deal", "history.field.about_deal"],
   ["qualifying_event", "history.field.qualifying_event"],
+  ["qualifying_event_retracted", "history.field.qualifying_event_retracted"],
+  [
+    "acquisition_request_retracted",
+    "history.field.acquisition_request_retracted",
+  ],
   ["reachability", "history.field.reachability"],
   ["readiness", "history.field.readiness"],
   ["reason", "history.field.reason"],
@@ -192,7 +213,9 @@ export function historyFieldLabel(
   t: (key: MessageKey) => string,
 ): string {
   const key =
-    HISTORY_FIELD_LABELS.get(field) ?? SYNTHETIC_AUDIT_FIELD_LABELS.get(field);
+    HISTORY_FIELD_LABELS.get(field) ??
+    STORED_COLUMN_LABELS.get(field) ??
+    SYNTHETIC_AUDIT_FIELD_LABELS.get(field);
   return key ? t(key) : field.replaceAll("_", " ");
 }
 

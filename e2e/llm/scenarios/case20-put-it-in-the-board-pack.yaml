@@ -58,29 +58,17 @@ writes: true
 prompt: |
   I need a short written pipeline section for Thursday's board pack — the
   headline open pipeline and what we have won so far, in a couple of sentences
-  with the figures in it. No per-rep breakdown, they do not want that. Put it
-  together as one document I can paste.
+  with the figures in it. No per-rep breakdown, they do not want that. Keep
+  the figures in Margince so finance can open them and check them before
+  Thursday, and give me the section to paste.
 
-# Both are required and neither substitutes for the other. run_analytics_query
-# alone answers a number and composes nothing; compose_analytics_report alone
-# has nothing to cite and is refused.
-must_call:
-  - run_analytics_query
-  - compose_analytics_report
+# The model chooses its path; the outcome is checked. The pasted figures must be
+# the ones the run's tools returned, and the figures finance opens must be kept:
+# only a saved question leaves them where finance can re-ask them.
+figures_from_results: true
 
-# `save` is the pin, and it is the honest one available here.
-#
-# Pinning `entity` would be over-recognition dressed as rigour: more than one
-# population answers "open pipeline and what we have won" — pipeline-current,
-# deals-by-stage and win-loss are all defensible, and failing two of the three
-# would measure which report the model happened to like.
-#
-# `save` is different. A document cites a saved run or it does not exist, so a
-# run without it is a query that could not have fed the report — which is
-# exactly the shape of the failure where the model queries, reads the numbers,
-# and composes from its own memory of them.
-must_call_with:
-  - run_analytics_query.save=true
+must_end_with:
+  - me "admin@demo.test" saved_questions=1+
 
 may_call:
   # The block grammar, for a caller that wants the kinds before composing. NOT
@@ -90,6 +78,11 @@ may_call:
   # score the better route as a failure.
   - read_workspace
   - run_report
+  - run_analytics_query
+  - compose_analytics_report
+  - read_reports
+  - read_forecast
+  - forecast_readings
   - query_workspace
   - search_records
 

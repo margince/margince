@@ -5,7 +5,9 @@ source: hand_authored
 sanitized_by: hand_authored/claude-opus-5
 # The reason this site exists. The buyer wants what the tag describes and shares
 # no word with the description: Excel for spreadsheets, month-end close for
-# bookkeeping. A phrase match finds nothing here; a reader of meaning does.
+# bookkeeping. A phrase match finds nothing here; a reader of meaning does. The
+# second item asks the same in German, so the tag must also follow the
+# interest across a language the English description does not use.
 fixture:
   tags:
     - key: ledger_migration
@@ -22,9 +24,20 @@ fixture:
         our hands? Happy to talk next week.
 
         Petra
+    - kind: email
+      subject: 'Monatsabschluss'
+      body: |
+        Hallo Herr Weber,
+
+        wir machen unseren Monatsabschluss immer noch komplett in Excel, und
+        das kostet uns jeden Monat zwei Tage. Könnten Sie uns ein Angebot
+        machen, wie wir das in ein richtiges System überführen?
+
+        Viele Grüße
+        Petra Lindner
 expect:
   outcome: accepted
-  answer: [[ledger_migration]]
+  answer: [[ledger_migration], [ledger_migration]]
   judge: none
   judge_none_reason: >
     The answer is a closed set of tag keys per item, and the check requires
