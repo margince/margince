@@ -47,7 +47,7 @@ func (h attentionMeetingHorizon) NextCustomerMeeting(
 	if !applyMeetingScope(ctx, &in, attention.TasksMine, ids.UUID{}) {
 		return crmcontracts.Contact360NextMeeting{}, false, nil
 	}
-	rows, _, err := h.store.ListActivities(ctx, in)
+	rows, err := listReusingPlans(ctx, h.store, in)
 	if err != nil || len(rows) == 0 {
 		return crmcontracts.Contact360NextMeeting{}, false, err
 	}
