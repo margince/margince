@@ -57,6 +57,10 @@ func verifiedCommitmentParties(parties activities.MessageParties) []commitmentPa
 	return out
 }
 
+// commitmentPartyHeader names the columns commitmentPartyPrompt writes, in
+// its order.
+const commitmentPartyHeader = "Verified participants (reference, kind, role, name, address):\n"
+
 // commitmentPartyPrompt lists the participants under the short refs a reply
 // cites them by; their record keys never reach the model.
 func commitmentPartyPrompt(parties []commitmentParty, source string, refs *promptref.Refs) string {
@@ -75,8 +79,8 @@ func commitmentPartyPrompt(parties []commitmentParty, source string, refs *promp
 	return out.String()
 }
 
-// partyKind tells the model which participants are contacts, since only a
-// contact may receive a promise and a short ref no longer shows it.
+// partyKind says which participants are contacts: only a contact may receive
+// a promise, and a short ref does not show it.
 func partyKind(party commitmentParty) string {
 	switch {
 	case party.Seat != nil:

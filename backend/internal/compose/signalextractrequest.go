@@ -103,7 +103,7 @@ func extractRequest(thread settledThread, lang string) model.Request {
 		body := fmt.Sprintf("Direction: %s\nSent: %s\nSubject: %s\n%s",
 			directionWord(message.Direction), message.At.Format(time.DateOnly), message.Subject,
 			textlang.CurrentMessage(message.Body))
-		body += "\nVerified participants (reference, kind, role, name, address):\n" + commitmentPartyPrompt(message.Parties, textlang.CurrentMessage(message.Body), parties)
+		body += "\n" + commitmentPartyHeader + commitmentPartyPrompt(message.Parties, textlang.CurrentMessage(message.Body), parties)
 		label := thread.messageLabel(message.ID.String())
 		fmt.Fprintf(&prompt, "Message %s:\n", label)
 		prompt.WriteString(fence.WrapAttr("source_id", label, body) + "\n")

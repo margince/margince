@@ -81,10 +81,12 @@ func TestAParticipantIsListedAndReadBackByItsShortRef(t *testing.T) {
 	if strings.Contains(prompt, "seat:") || strings.Contains(prompt, "contact:") {
 		t.Fatalf("a record key reached the participant list:\n%s", prompt)
 	}
+	if !strings.Contains(prompt, `"p1" "colleague" "from"`) || !strings.Contains(prompt, `"p2" "contact" "to" "Pat Buyer"`) {
+		t.Fatalf("participants are not listed as p1 and p2:\n%s", prompt)
+	}
 	// The kind is the only sign of who may receive a promise.
-	if !strings.Contains(prompt, `"p1" "colleague" "from"`) || !strings.Contains(prompt, `"p2" "contact" "to" "Pat Buyer"`) ||
-		!strings.Contains(prompt, `"" "" "to" "Unverified Sender"`) {
-		t.Fatalf("participants are not listed as p1 and p2 with their kind:\n%s", prompt)
+	if !strings.Contains(prompt, `"" "" "to" "Unverified Sender"`) {
+		t.Errorf("an unverified sender was listed with a ref or a kind:\n%s", prompt)
 	}
 	if got := partyKey(refs, "p2"); got != parties[2].Ref {
 		t.Errorf("p2 reads back to %q, want %q", got, parties[2].Ref)
