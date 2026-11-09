@@ -26,8 +26,13 @@ database by the time it answers, without a separate migration step to schedule.
 
 The second ordering follows from it. The worker does not migrate. On a database
 behind its binary it starts, stays unready, and holds its lanes and jobs until
-the API has migrated. So the worker can be started at any time, and a cluster
-that brings both up together is correct.
+the API has migrated.
+
+An empty database is different. Before it waits, the worker records which
+extensions it holds, and an empty database has no table to record them in. So
+on a first install the worker stops with an error until the API has migrated.
+Start the worker once the API answers `/readyz`, or let the platform start it
+again when it stops. Then a cluster that brings both up together is correct.
 
 ## Two DSNs, because two roles
 
@@ -71,5 +76,6 @@ which is `secrets/admin-password` as the API reads it.
 
 ## What this does not cover
 
-The full list of settings each program reads is in
-[configuration.md](../reference/configuration.md).
+The steps to run the images on your own servers are in
+[deploy-margince.md](deploy-margince.md). The full list of settings each program
+reads is in [configuration.md](../reference/configuration.md).
