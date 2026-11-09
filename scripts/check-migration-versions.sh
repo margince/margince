@@ -94,6 +94,25 @@ migrations_at() {
     sed 's/^\([^_]*\)_\(.*\)$/\1 \2/' | sort
 }
 
+# renumbers_declared NAMESPACE — the "<old> <new> <name>" pairs
+# backend/migrations/renumbered.txt declares for it. `migrate up` moves a
+# database's ledger row along exactly these pairs, so a renumber missing here
+# runs its DDL a second time on every database that applied the old version.
+renumbers_declared() {
+  awk -v ns="$1" '$1==ns && NF==4 {print $2, $3, $4}' "$MIGRATIONS_DIR/renumbered.txt" 2>/dev/null || true
+}
+
+# renamed_between REF_ROWS TREE_ROWS — "<old> <new> <name>" for each migration
+# REF_ROWS carries under a version the tree no longer gives that name. Matched
+# by name, so identical SQL under a new version still counts.
+renamed_between() {
+  local ref_rows="$1" tree_rows="$2"
+  [[ -n "$ref_rows" && -n "$tree_rows" ]] || return 0
+  awk 'NR==FNR {held[$2]=held[$2] " " $1 " "; now[$2]=$1; next}
+       ($2 in held) && index(held[$2], " " $1 " ")==0 {print $1, now[$2], $2}' \
+    <(echo "$tree_rows") <(echo "$ref_rows")
+}
+
 # A shallow clone has no base to compare against. CI sets REQUIRE_BASE so a
 # broken checkout fails loudly there instead of quietly disarming the gate,
 # which is the contract-breaking gate's convention and the same hazard.
@@ -333,11 +352,33 @@ for ns in $all_namespaces; do
   # Intersected with the FORK point's versions first: a version on the tip
   # that this branch's history never contained landed after the fork, so its
   # absence from the tree is staleness, not a rename — see FORK_REF above.
+  # A RENUMBER: a name the base (as this branch forked from it) or the synced
+  # base carries under a version the tree has moved it off. Judged even when
+  # the SQL is identical, because the ledger records versions.
+  declared_renumbers="$(renumbers_declared "$ns")"
+  renumbered="$( { renamed_between "$(comm -12 <(echo "$base_rows") <(echo "$fork_rows"))" "$tree_rows"
+                   renamed_between "$sync_rows" "$tree_rows"; } | sort -u)"
+  while read -r old new name; do
+    [[ -n "$old" ]] || continue
+    # The base claims the old version twice, so it could not load and no
+    # database applied either claimant: this is the repair the row loop admits.
+    if [[ "$(echo "$base_rows" | awk -v v="$old" '$1==v' | wc -l)" -gt 1 ]]; then
+      continue
+    fi
+    if ! grep -qxF "$old $new $name" <<<"$declared_renumbers"; then
+      fail "$ns migration '$name' moved from $old to $new, but backend/migrations/renumbered.txt does not declare it. A database that applied $old would run it again. Keep the old version, or add the line '$ns $old $new $name' there once the SQL is byte-identical"
+    fi
+  done <<<"$renumbered"
+
   vanished="$(comm -23 <(echo "$base_rows" | cut -d' ' -f1 | sort -u) <(echo "$tree_rows" | cut -d' ' -f1 | sort -u) |
     comm -12 - <(echo "$fork_rows" | cut -d' ' -f1 | sort -u))"
   if [[ -n "$vanished" ]]; then
     for v in $vanished; do
       vname="$(echo "$base_rows" | awk -v v="$v" '$1==v {print $2}' | head -n1)"
+      # A declared renumber is moved forward by `migrate up`, so it has not vanished.
+      if grep -qxF "$v $(echo "$tree_rows" | awk -v n="$vname" '$2==n {print $1}' | tail -n1) $vname" <<<"$declared_renumbers"; then
+        continue
+      fi
       fail "$ns/$v ('$vname') is on $BASE_REF but this branch no longer has it — a migration a deployed database may already have applied cannot be renamed or removed; add a new one instead of renumbering it. MIGRATION_VERSIONS_BASELINE_RESET=1 will not admit this on its own: the namespace must also end with FEWER migrations than $BASE_REF has, which a rename alone never does — see reset_admitted"
     done
   fi
