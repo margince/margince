@@ -220,7 +220,7 @@ func requestConversation(ctx context.Context, tx pgx.Tx, requestID ids.UUID,
 // conversationRows is requestConversation's read: the request and then the
 // NEWEST limit-1 messages after it, or only the one message only names when it
 // is set. Rows come back request first and newest next; callers put them in
-// time order. After it means occurredday.AnswersSQL, the bound of every settlement answer arm.
+// time order. After it means activities.SettlementThreadSQL, the rows the completeness check covers.
 func conversationRows(ctx context.Context, tx pgx.Tx, requestID ids.UUID,
 	counterparty string, asOf time.Time, only *ids.UUID, limit int,
 ) ([]threadMessage, error) {
@@ -251,7 +251,7 @@ func conversationRows(ctx context.Context, tx pgx.Tx, requestID ids.UUID,
 		   -- this statement is the first to see.
 		   AND activity.audience = 'workspace' AND activity.restricted_at IS NULL
 		   AND `+occurredday.BegunSQL("activity", "$3")+`
-		   AND (activity.id = $2 OR `+occurredday.AnswersSQL("activity", "request")+`)
+		   AND (activity.id = $2 OR `+activities.SettlementThreadSQL("activity", "request")+`)
 		   AND ($6::uuid IS NULL OR activity.id = $6)
 		 ORDER BY activity.id = $2 DESC, activity.occurred_at DESC, activity.id DESC
 		 LIMIT $4`, extractBodyLimit, requestID, asOf, limit, counterparty, only)

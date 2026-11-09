@@ -114,3 +114,10 @@ func reopenSettledReminder(ctx context.Context, tx pgx.Tx, in RequestSettlementI
 	}
 	return err
 }
+
+// SettlementThreadSQL keeps a thread row under row that the settlement pass reads after the request under request.
+// That is an answer (occurredday.AnswersSQL), or their own mail at the request's stored instant, read as context only.
+func SettlementThreadSQL(row, request string) string {
+	return `(` + occurredday.AnswersSQL(row, request) + ` OR (` + row + `.occurred_at = ` + request + `.occurred_at AND ` +
+		CapturedInboundSQL(row) + `))`
+}

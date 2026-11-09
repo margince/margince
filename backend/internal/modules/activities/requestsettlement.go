@@ -143,7 +143,7 @@ var settlementEvidenceCompleteSQL = provenance.MailBodyCompleteSQL("a") + `
  AND NOT EXISTS (SELECT 1 FROM activity later
    WHERE later.thread_key = a.thread_key AND later.kind = a.kind
      AND later.counterparty_email = a.counterparty_email AND later.archived_at IS NULL
-     AND ` + occurredday.BegunSQL("later", "$1") + ` AND ` + occurredday.AnswersSQL("later", "a") + ` AND later.id <> a.id
+     AND ` + occurredday.BegunSQL("later", "$1") + ` AND ` + SettlementThreadSQL("later", "a") + ` AND later.id <> a.id
      AND NOT ` + provenance.MailBodyCompleteSQL("later") + `)
  AND NOT EXISTS (SELECT 1 FROM (` + offThreadAnswersSQL("a", "$1") + `) off
    JOIN activity answer ON answer.id = off.id

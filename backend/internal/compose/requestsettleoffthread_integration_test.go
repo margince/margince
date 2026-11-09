@@ -284,3 +284,39 @@ func TestADayTieReplyFiledFirstReachesTheModel(t *testing.T) {
 		t.Fatal("the reply that answers the request never reaches the model")
 	}
 }
+
+// Their second mail in the request's own second is no answer, but the model still reads it: it may correct the ask.
+func TestTheirMailAtTheRequestsInstantReachesTheModel(t *testing.T) {
+	o := setupOwed(t)
+	o.contact(t, "Pat Buyer", "pat@customer.example")
+	asked := clocktest.Now(t).Add(-3 * time.Hour).Truncate(time.Second)
+	request := o.capture(t, owedMail{
+		from: "pat@customer.example", to: o.seat, subject: "Signed NDA", messageID: "same-second@customer.example", at: asked,
+	})
+	correction := o.capture(t, owedMail{
+		from: "pat@customer.example", to: o.seat, subject: "Re: Signed NDA", inReplyTo: "same-second@customer.example",
+		messageID: "correction@customer.example", at: asked, authenticated: true,
+	})
+	if o.threadKey(t, correction) != o.threadKey(t, request) {
+		t.Fatal("capture left the correction off the request's thread; the fixture proves nothing")
+	}
+	if applied, err := o.e.Activities.SetOwedVerdict(o.judge(), request, activities.OwedVerdictAsksUs,
+		"prompts-test", clocktest.Now(t)); err != nil || !applied {
+		t.Fatalf("judging the request: applied=%v err=%v", applied, err)
+	}
+	o.weWrite(t, owedMail{
+		to: "pat@customer.example", subject: "Re: Signed NDA", inReplyTo: "same-second@customer.example",
+		at: asked.Add(time.Hour),
+	})
+
+	candidate, ok := o.offered(t, request)
+	if !ok {
+		t.Fatal("a request with a reply on its thread was never offered")
+	}
+	if candidate.NewestAnswerID == correction {
+		t.Fatal("their mail at the request's instant was taken for an answer")
+	}
+	if !slices.ContainsFunc(o.evidence(t, candidate), func(message threadMessage) bool { return message.ID == correction }) {
+		t.Fatal("their mail at the request's instant never reaches the model")
+	}
+}
