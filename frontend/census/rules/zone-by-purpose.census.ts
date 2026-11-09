@@ -16,7 +16,7 @@
 
 import ts from "typescript";
 import { parseSource } from "../../scripts/lib/source-tree";
-import { byCodeUnit } from "../../src/lib/codeunitorder";
+import { stable } from "../../src/format/collate";
 import type { CensusFile, CensusRule } from "../tree";
 
 // The IANA areas every zone name starts with. Anchoring on them keeps module
@@ -640,7 +640,7 @@ export const rule: CensusRule = {
       ...all
         .filter(({ file }) => !pinned.has(file))
         .map(({ file, line, text }) => `${file}:${line}: ${text}`)
-        .sort(byCodeUnit),
+        .sort(stable),
       ...corpus
         .filter(
           (file) =>

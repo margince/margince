@@ -11,7 +11,7 @@
 // its own shadow does not follow, and nobody sees it in a diff or a screenshot.
 // The register below lists box-shadows that are not depth, each with its why.
 
-import { byCodeUnit } from "../../src/lib/codeunitorder";
+import { stable } from "../../src/format/collate";
 import type { CensusRule } from "../tree";
 
 // `none` and `0` are the suppression half: a control with no fill takes the
@@ -162,7 +162,7 @@ export const rule: CensusRule = {
       corpus
         .filter((file) => !file.rel.endsWith("tokens.css"))
         .flatMap((file) => spelledShadows(file.rel, file.text))
-        .sort(byCodeUnit),
+        .sort(stable),
       NOT_DEPTH,
     ),
   advice:

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { afterEach, expect, it, vi } from "vitest";
+import { stable } from "../format/collate";
 import { jsonResponse } from "../testing/story-utils";
 import { searchByEntity } from "./relationshipcandidates";
 
@@ -37,7 +38,9 @@ it("lists every current employer's open deals without asking for unrelated deals
   const candidates = await searchByEntity("deal", "", ["o1", "o2", "o1"]);
   expect(requests).toHaveLength(2);
   expect(
-    requests.map((url) => url.searchParams.get("company_id")).sort(),
+    requests
+      .map((url) => url.searchParams.get("company_id"))
+      .sort((a, b) => stable(String(a), String(b))),
   ).toEqual(["o1", "o2"]);
   expect(
     requests.every((url) => url.searchParams.get("status") === "open"),

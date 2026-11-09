@@ -12,7 +12,7 @@
 
 import { join } from "node:path";
 import ts from "typescript";
-import { byCodeUnit } from "../../src/lib/codeunitorder";
+import { stable } from "../../src/format/collate";
 import {
   type CensusFile,
   type CensusRule,
@@ -230,7 +230,7 @@ export function writeFindings(
   const conditional = conditionalIn(tree);
   const found = corpus
     .flatMap((file) => unpinnedIn(file, conditional))
-    .sort(byCodeUnit);
+    .sort(stable);
   const unlisted = found.filter((write) => !listed.includes(write));
   const fixed = listed
     .filter((write) => !found.includes(write))

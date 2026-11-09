@@ -5,6 +5,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { stable } from "../src/format/collate";
 
 const frontendDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const LEDGER = join(frontendDir, "scripts", "compiler-lint-waivers.txt");
@@ -71,7 +72,7 @@ export function judge(counts: Counts, ledger: Counts): string[] {
       );
     }
   }
-  return failures.sort();
+  return failures.sort(stable);
 }
 
 async function main() {

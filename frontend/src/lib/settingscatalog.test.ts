@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { stable } from "../format/collate";
 import { translate } from "../i18n";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import type { RbacAction, RbacObject } from "./capability";
@@ -135,8 +136,8 @@ describe("the scope each page declares", () => {
   // The other direction. Without this, deleting a page leaves a stale entry
   // that nothing reads, and the census quietly describes a catalog that moved.
   it("names every page in the catalog and nothing else", () => {
-    expect(Object.keys(DECLARED_SCOPE).sort()).toEqual(
-      SETTINGS_PAGES.map((page) => page.id).sort(),
+    expect(Object.keys(DECLARED_SCOPE).sort(stable)).toEqual(
+      SETTINGS_PAGES.map((page) => page.id).sort(stable),
     );
   });
 });
@@ -283,8 +284,8 @@ describe("what each page lets a reader change", () => {
   // The other direction: a page added with no entry fails, and an entry for a
   // page that no longer exists fails too.
   it("names every page in the catalog and nothing else", () => {
-    expect(Object.keys(DECLARED_CHANGES).sort()).toEqual(
-      SETTINGS_PAGES.map((page) => page.id).sort(),
+    expect(Object.keys(DECLARED_CHANGES).sort(stable)).toEqual(
+      SETTINGS_PAGES.map((page) => page.id).sort(stable),
     );
   });
 

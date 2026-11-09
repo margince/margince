@@ -57,6 +57,7 @@
     ".storybook/*.ts",
     ".storybook/*.tsx",
     "scripts/**/*.ts",
+    "scripts/**/*.mts",
     "census/**/*.ts",
     "src",
     "e2e/**/*.ts"

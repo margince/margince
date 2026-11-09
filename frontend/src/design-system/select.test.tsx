@@ -6,6 +6,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { stable } from "../format/collate";
 import { Field } from "./atoms";
 import type { SelectOption, SelectProps } from "./select";
 import { Select } from "./select";
@@ -177,7 +178,7 @@ describe("the trigger", () => {
       className: "stage-picker",
       "aria-invalid": true,
     });
-    expect([...trigger.classList].sort()).toEqual([
+    expect([...trigger.classList].sort(stable)).toEqual([
       "input",
       "select-control",
       "stage-picker",

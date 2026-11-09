@@ -39,7 +39,7 @@ import { inWorker } from "../../scripts/lib/in-worker";
 import type * as Sweep from "../../scripts/lib/jsx-magnitude.sweep";
 import { census } from "../../scripts/lib/jsx-magnitude.sweep";
 import { sourceFileAt } from "../../scripts/lib/source-tree";
-import { byCodeUnit } from "../../src/lib/codeunitorder";
+import { stable } from "../../src/format/collate";
 import {
   type CensusFile,
   type CensusRule,
@@ -178,7 +178,7 @@ const srcFolder = (file: CensusFile) =>
   file.area === "src" ? file.rel.split("/")[1] : undefined;
 
 function derivationFloors(): string[] {
-  const stringifiers = [...blind].sort(byCodeUnit).join(", ");
+  const stringifiers = [...blind].sort(stable).join(", ");
   return [
     ...(stringifiers === "toExponential, toFixed, toPrecision, toString"
       ? []

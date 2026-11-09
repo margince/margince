@@ -104,6 +104,7 @@ func (s *server) consent(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "redirect_uri must point at this machine or at -callback-origin")
 		return
 	}
+	//nolint:gosec // G710: target is rebuilt from parts isLoopback or callbackOrigin checked; TestTheConsentRedirectIsRebuiltFromTheCheckedParts holds it
 	http.Redirect(w, r, target, http.StatusFound)
 }
 
