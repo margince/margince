@@ -8,6 +8,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { meFixture } from "../../testing/mefixture";
 import { ChannelReplyAction } from "./compose";
 import {
   type Activity,
@@ -166,6 +167,25 @@ describe("what a row offers to write", () => {
       within(dialog).getByRole("button", { name: "Draft reply" }),
     ).toBeTruthy();
   });
+
+  it.each([
+    ["Reply", EMAIL],
+    ["Write email", ADDRESSED_CALL],
+  ] as const)(
+    "offers no %s to a seat that may not write activities",
+    async (verb, activity) => {
+      draw([activity], CONTACT_PAGE, {
+        "GET /me": () =>
+          jsonResponse(meFixture({ allow: { activity: ["read"] } })),
+      });
+
+      // Drawn while the grants are unknown, gone once /me refuses the write.
+      await screen.findByRole("button", { name: verb });
+      await waitFor(() =>
+        expect(screen.queryByRole("button", { name: verb })).toBeNull(),
+      );
+    },
+  );
 
   // Whose thread it is matters only to a reply. A new email written about a
   // call joins no thread, so the same answer draws no notice there.

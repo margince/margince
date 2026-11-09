@@ -1,9 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
-import { expect, within } from "storybook/test";
+import { expect, screen, waitFor, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { ChannelReplyAction } from "./compose.reply";
@@ -92,6 +93,36 @@ export const MailReply: Story = {
           />
         </Row>
       </StoryProviders>
+    );
+  },
+};
+
+/** A seat that may not write activities is offered no reply. */
+export const MailReplyRefused: Story = {
+  render: () => {
+    installFetchStub({ "GET /me": meRoute({ activity: ["read"] }) });
+    return (
+      <StoryProviders>
+        <Row
+          when="24 August, 10:00"
+          said="Can we align the payment schedule with our fiscal quarters?"
+        >
+          <ChannelReplyAction
+            activityId="a-1"
+            kind="email"
+            entityType="contact"
+            entityId="p-1"
+            contactId="p-1"
+          />
+        </Row>
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    // Drawn while the grants are unknown, gone once /me refuses the write.
+    await screen.findByRole("button", { name: "Reply" });
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Reply" })).toBeNull(),
     );
   },
 };

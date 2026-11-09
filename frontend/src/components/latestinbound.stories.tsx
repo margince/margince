@@ -3,11 +3,16 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ReactNode, useState } from "react";
-import { expect, within } from "storybook/test";
+import { expect, screen, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { OpenSourceProvider } from "../lib/opensource";
-import { StoryProviders, storyQueryClient } from "../testing/story-utils";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+  storyQueryClient,
+} from "../testing/story-utils";
 import {
   type JustIn,
   JustInScope,
@@ -120,6 +125,25 @@ export const Email: Story = {
       <RecordNextBar />
     </OnRecord>
   ),
+};
+
+/** A seat that may not write activities is offered no task. */
+export const EmailTaskRefused: Story = {
+  render: () => {
+    installFetchStub({ "GET /me": meRoute({ activity: ["read"] }) });
+    return (
+      <OnRecord latest={MAIL}>
+        <RecordNextBar />
+      </OnRecord>
+    );
+  },
+  play: async () => {
+    // Drawn while the grants are unknown, gone once /me refuses the write.
+    await screen.findByRole("button", { name: "Create task" });
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Create task" })).toBeNull(),
+    );
+  },
 };
 
 export const UrgentNext: Story = {

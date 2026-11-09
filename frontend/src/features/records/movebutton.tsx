@@ -13,6 +13,7 @@ import { ListChecks } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { useActivityWritable } from "../../components/activitygate";
 import { useTaskUpdate } from "../../components/taskactions";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
@@ -193,24 +194,13 @@ export function MoveButton({
         </>
       );
     case "create_task":
-      // No body, no button: a click that sent {} would only be refused.
-      if (!taskBody) {
-        return null;
-      }
       return (
-        <>
-          {/* A rule wrote the task and pressing this accepts it. No model
-              runs on the press, so it is the plain primary, not indigo. */}
-          <Button
-            variant="primary"
-            pending={createTask.isPending}
-            onClick={() => createTask.mutate(taskBody)}
-          >
-            <ListChecks aria-hidden />
-            {t("deal360.createTask")}
-          </Button>
-          <ErrorLine error={createTask.error} />
-        </>
+        <CreateTaskVerb
+          body={taskBody}
+          pending={createTask.isPending}
+          error={createTask.error}
+          onCreate={createTask.mutate}
+        />
       );
     case "draft_email":
       // Only the follow-up after a meeting draws a button: it names who the
@@ -324,6 +314,41 @@ function FollowUpDraft({
           }}
         />
       )}
+    </>
+  );
+}
+
+// A rule wrote the task and pressing this accepts it. No model runs on the
+// press, so it is the plain primary, not indigo.
+function CreateTaskVerb({
+  body,
+  pending,
+  error,
+  onCreate,
+}: Readonly<{
+  body: Record<string, unknown> | undefined;
+  pending: boolean;
+  error: unknown;
+  onCreate: (body: Record<string, unknown>) => void;
+}>) {
+  const t = useT();
+  const writable = useActivityWritable();
+  // No body, no button: a click that sent {} would only be refused, and so
+  // would any press from a seat that may not write activities.
+  if (!body || !writable) {
+    return null;
+  }
+  return (
+    <>
+      <Button
+        variant="primary"
+        pending={pending}
+        onClick={() => onCreate(body)}
+      >
+        <ListChecks aria-hidden />
+        {t("deal360.createTask")}
+      </Button>
+      <ErrorLine error={error} />
     </>
   );
 }

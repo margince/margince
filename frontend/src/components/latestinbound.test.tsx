@@ -12,6 +12,7 @@ import { LocaleProvider } from "../i18n";
 import type { EntityKind } from "../lib/entity";
 import { OpenSourceProvider } from "../lib/opensource";
 import { forgetSeat } from "../lib/storage";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import {
   type JustIn,
   JustInScope,
@@ -237,12 +238,18 @@ describe("a record's Next bar with what just came in", () => {
   });
 });
 
-function serveTasks() {
+function serveTasks(allow: GrantSpec = { activity: ["read", "create"] }) {
   const posted: Record<string, unknown>[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const request = input instanceof Request ? input : undefined;
+      const url = request ? request.url : String(input);
+      if (url.endsWith("/me")) {
+        return new Response(JSON.stringify(meFixture({ allow })), {
+          headers: { "Content-Type": "application/json" },
+        });
+      }
       const body = request ? await request.text() : String(init?.body ?? "");
       posted.push(JSON.parse(body));
       return new Response(JSON.stringify(activity("task", { kind: "task" })), {
@@ -289,6 +296,18 @@ describe("making the item a task", () => {
       source: "manual",
       source_activity_id: "form",
     });
+  });
+
+  it("offers no task to a seat that may not write activities", async () => {
+    const posted = serveTasks({ activity: ["read"] });
+    withProviders(scoped(MAIL_IN, <RecordNextBar />));
+
+    // Drawn while the grants are unknown, gone once /me refuses the write.
+    await screen.findByRole("button", { name: "Create task" });
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Create task" })).toBeNull(),
+    );
+    expect(posted).toHaveLength(0);
   });
 });
 

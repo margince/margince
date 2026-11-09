@@ -43,3 +43,8 @@ export function useActivityGate(
     sentenceId,
   };
 }
+
+/** Whether a lone verb that writes an activity is offered; one refused is not drawn. */
+export function useActivityWritable(): boolean {
+  return useActivityGate().refusalKey === undefined;
+}

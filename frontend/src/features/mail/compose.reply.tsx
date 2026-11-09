@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { components } from "../../api/schema";
+import { useActivityWritable } from "../../components/activitygate";
 import { Button } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import { ComposeModal } from "./compose";
@@ -79,10 +80,16 @@ export function ChannelReplyAction({
     contactId,
     channelProvider,
   );
+  // Every send writes an activity, which a seat without the grant is refused.
+  const writable = useActivityWritable();
   const answer = rowAnswer(kind);
   // A written-about row is withheld through `email_target`, which the server
   // leaves out for it, so only mail reaches the withheld branch below.
-  if (!reachable || (answer === "about" && !offered(emailTarget))) {
+  if (
+    !writable ||
+    !reachable ||
+    (answer === "about" && !offered(emailTarget))
+  ) {
     return null;
   }
   const company = answer === "about" ? companyOf(emailTarget) : undefined;

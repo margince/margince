@@ -34,6 +34,7 @@ import { useSourceOpener } from "../lib/opensource";
 import { unwrap } from "../lib/problem";
 import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
 import { useViewerZone } from "../lib/viewerzone";
+import { useActivityWritable } from "./activitygate";
 import "./latestinbound.css";
 
 type Activity = components["schemas"]["Activity"];
@@ -406,6 +407,7 @@ function TaskFromItem({
   const t = useT();
   const queryClient = useQueryClient();
   const { activity, kind, accepts_request } = latest;
+  const writable = useActivityWritable();
   const create = useMutation({
     mutationFn: async () => {
       const about = itemWords(activity).subject ?? kindLabel(kind, t);
@@ -435,7 +437,7 @@ function TaskFromItem({
     },
   });
   // The task reads the item's content, which a withheld row refuses.
-  if (activity.content_state === "withheld") {
+  if (!writable || activity.content_state === "withheld") {
     return null;
   }
   return (
