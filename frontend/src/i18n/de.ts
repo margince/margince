@@ -2774,6 +2774,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.partner_company_id": "Partner",
   "history.field.project_id": "Projekt",
   "history.field.product_id": "Produkt",
+  "history.field.legal_entity_id": "Absendendes Unternehmen",
   "history.field.about_deal": "Betreffender Deal",
   "history.field.qualifying_event": "Qualifizierendes Ereignis",
   "history.field.qualifying_event_retracted":
@@ -7524,9 +7525,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.fact.scope":
     "Hält den Austausch mit {address} für das sendende Unternehmen fest. Sendet keine E-Mail, erfasst keine Werbeeinwilligung und erstellt keine Ausnahme.",
   "compose.fact.kind": "Was ist passiert?",
-  "compose.fact.request": "Die Person hat mich gebeten zu schreiben",
-  "compose.fact.quoteRequest": "Die Person hat um dieses Angebot gebeten",
-  "compose.fact.met": "Wir haben uns persönlich getroffen",
+  "compose.fact.request": "Der Kontakt hat um eine Nachricht gebeten",
+  "compose.fact.quoteRequest": "Der Kontakt hat um dieses Angebot gebeten",
+  "compose.fact.met": "Persönlich getroffen",
   "compose.fact.note": "Was wurde vereinbart?",
   "compose.fact.save": "Gespräch festhalten",
   "compose.replyIntent": "Zweck der Antwort",

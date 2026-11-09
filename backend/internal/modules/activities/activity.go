@@ -328,17 +328,7 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	if origin == "" {
 		origin = OriginHuman
 	}
-	counterparty, err := counterpartyFor(ctx, tx, in)
-	if err != nil {
-		return crmcontracts.Activity{}, false, err
-	}
-	if err := lockCorrespondenceForAttestedSend(ctx, tx, in, counterparty); err != nil {
-		return crmcontracts.Activity{}, false, err
-	}
-	if err := storekit.RefuseUnknownSeat(ctx, tx, in.Author); err != nil {
-		return crmcontracts.Activity{}, false, err
-	}
-	entity, err := loggedCorrespondenceEntity(ctx, tx, in, host)
+	counterparty, entity, err := prepareLoggedCorrespondence(ctx, tx, in, host)
 	if err != nil {
 		return crmcontracts.Activity{}, false, err
 	}

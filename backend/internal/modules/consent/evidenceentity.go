@@ -105,9 +105,9 @@ func qualifyingRecordsSQL(alias, visible string, args *[]any) string {
 	}
 	sort.Strings(manualKinds)
 	kinds := bind(manualKinds)
-	people := bind([]string{sourceKindHuman, sourceKindAgent})
+	actors := bind([]string{sourceKindHuman, sourceKindAgent})
 	captured, inquiry := bind(sourceKindCaptured), bind(KindInquiry)
-	return `((` + alias + `.kind=ANY(` + kinds + `) AND ` + alias + `.source=ANY(` + people + `))
+	return `((` + alias + `.kind=ANY(` + kinds + `) AND ` + alias + `.source=ANY(` + actors + `))
  OR (` + alias + `.source=` + captured + ` AND ` + alias + `.kind=` + inquiry + `
  AND ` + alias + `.source_entity_type='activity' AND EXISTS (
  SELECT 1 FROM activity a WHERE a.id=` + alias + `.source_entity_id

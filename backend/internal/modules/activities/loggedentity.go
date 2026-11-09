@@ -29,3 +29,18 @@ func loggedCorrespondenceEntity(ctx context.Context, tx pgx.Tx, in LogActivityIn
 	}
 	return &entity, nil
 }
+
+func prepareLoggedCorrespondence(ctx context.Context, tx pgx.Tx, in LogActivityInput, host *ids.UserID) (string, *ids.UUID, error) {
+	counterparty, err := counterpartyFor(ctx, tx, in)
+	if err != nil {
+		return "", nil, err
+	}
+	if err := lockCorrespondenceForAttestedSend(ctx, tx, in, counterparty); err != nil {
+		return "", nil, err
+	}
+	if err := storekit.RefuseUnknownSeat(ctx, tx, in.Author); err != nil {
+		return "", nil, err
+	}
+	entity, err := loggedCorrespondenceEntity(ctx, tx, in, host)
+	return counterparty, entity, err
+}

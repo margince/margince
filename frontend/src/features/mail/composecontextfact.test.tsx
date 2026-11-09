@@ -86,7 +86,8 @@ it("keeps the recorded request, recipient and deal after a failed save, then ret
   expect((await dialog.findByRole("alert")).textContent).toMatch(/./);
   const note = dialog.getByLabelText("What was agreed?");
   expect(note).toBeInstanceOf(HTMLTextAreaElement);
-  if (!(note instanceof HTMLTextAreaElement)) throw new Error("Missing note field");
+  if (!(note instanceof HTMLTextAreaElement))
+    throw new Error("Missing note field");
   expect(note.value).toBe("Asked for a revised quote by phone.");
   await user.click(dialog.getByRole("button", { name: "Record the exchange" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());

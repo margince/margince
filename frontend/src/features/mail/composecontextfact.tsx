@@ -11,7 +11,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { RecordFormDialog } from "../../design-system/recordformdialog";
 import { Select } from "../../design-system/select";
-import { TimeInput, type ClockTime } from "../../design-system/timeinput";
+import { type ClockTime, TimeInput } from "../../design-system/timeinput";
 import { dueInstant } from "../../format/calendarday";
 import { useT } from "../../i18n";
 import { useCan, useCanMutate } from "../../lib/capability";

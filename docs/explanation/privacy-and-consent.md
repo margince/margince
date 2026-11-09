@@ -4,13 +4,10 @@
 
 ## The authorization engine (`consent`)
 
-`consent` owns two things a reader can take for one. **Consent** is a subject's answer to a question
-about a purpose: the catalog, each contact's current state, and an **add-only proof log**.
-**Authorization** is whether one message may go. That is a different question, and it mostly has a different answer. Most mail goes out on a contract, on a reply to a thread the subject
-started, or on a legal duty, not on consent.
-
-The engine answers the second question. It works out a **category** from what the send is, checks
-the **proof** that category needs, and records a **decision** per recipient saying why:
+`consent` records each contact's answer about a purpose and keeps an **add-only proof log**.
+It also checks whether one message may go. Most mail rests on a contract, a reply to a thread
+the subject started, or a legal duty. The engine works out the message's **category**, checks
+its **proof**, and records a **decision** per recipient:
 
 - **The server works out the category.** The caller does not name it. A closed set of names
   (`reply_to_inbound`, `invoice_or_payment`, `marketing`, `security_notice`, … in
@@ -31,8 +28,7 @@ the **proof** that category needs, and records a **decision** per recipient sayi
   recipient. The row holds the category, the verdict, the reason, the basis and a fingerprint of the
   words. So "why could this message go" is one query, not a search through old mail.
 
-  (The proof
-  itself goes into `communication_basis`, not on the decision row.) A message that reaches a provider
+  The proof itself goes into `communication_basis`, not on the decision row. A message that reaches a provider
   always has both rows. The second sees a withdrawal, a bounce or an edit to the words that comes
   in between the two.
 
@@ -44,7 +40,7 @@ the **proof** that category needs, and records a **decision** per recipient sayi
 - Supporting proof stays with the company that received the request or logged the exchange.
   Moving a user to another company does not move that proof. A source must still be live and
   visible to the sender. An open deal alone does not prove that the subject asked for a follow-up.
-  A fact with no company on record can count for the sole default company. With more than one
+  A fact with no company on record can count for the only company, which must be the default. With more than one
   company on file, its scope needs a human check before it can allow a send.
 - The composer uses proof already on file before asking for a fact. A user can record what was
   agreed and when, for the recipient, sending company and linked deal. This records an exchange;
@@ -125,8 +121,6 @@ proof row (Article 7(1): the duty to show consent). A fitness test (`consentproo
 state write that skips its proof.
 
 ## What a refusal leaves behind
-
-A refusal leaves two records behind, and they answer different questions.
 
 **A review is the refused message.** It can still go on. `communication_review` holds one send
 attempt that stopped. Where the attempt carried a mail payload and the hold worked, the review points

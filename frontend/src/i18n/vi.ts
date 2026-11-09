@@ -2687,6 +2687,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.partner_company_id": "Đối tác",
   "history.field.project_id": "Dự án",
   "history.field.product_id": "Sản phẩm",
+  "history.field.legal_entity_id": "Công ty gửi",
   "history.field.about_deal": "Giao dịch liên quan",
   "history.field.qualifying_event": "Sự kiện đủ điều kiện",
   "history.field.qualifying_event_retracted": "Trao đổi đã ghi nhận bị rút lại",
@@ -7349,8 +7350,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.fact.scope":
     "Ghi lại trao đổi với {address} cho công ty gửi email. Không gửi email này, không ghi nhận đồng ý nhận quảng cáo hay tạo ngoại lệ.",
   "compose.fact.kind": "Đã xảy ra việc gì?",
-  "compose.fact.request": "Người này đã yêu cầu liên hệ",
-  "compose.fact.quoteRequest": "Người này đã yêu cầu báo giá này",
+  "compose.fact.request": "Đã yêu cầu tôi liên hệ",
+  "compose.fact.quoteRequest": "Đã yêu cầu báo giá này",
   "compose.fact.met": "Đã gặp trực tiếp",
   "compose.fact.note": "Đã thống nhất điều gì?",
   "compose.fact.save": "Ghi lại trao đổi",

@@ -11,16 +11,16 @@
       "covered": 29,
       "sign_in": 1,
       "no_signed_in_user": 0,
-      "web_app_calls": 859,
-      "web_app_calls_open": 731,
-      "web_app_calls_ask_first": 99,
+      "web_app_calls": 860,
+      "web_app_calls_open": 732,
+      "web_app_calls_ask_first": 100,
       "web_app_calls_pending": 0,
       "web_app_calls_security": 112,
       "web_app_calls_covered": 15,
       "parity_signed_in_percent": 84,
-      "parity_web_app_percent": 85
+      "parity_web_app_percent": 85.1
     },
-    "open_with_no_web_app_call_found": 112,
+    "open_with_no_web_app_call_found": 111,
     "parity_web_app_counting_covered_percent": 86.8,
     "parity_web_app_once_pending_is_open_percent": 86.8
   },
@@ -625,14 +625,14 @@
       "covered": 0,
       "sign_in": 0,
       "no_signed_in_user": 0,
-      "web_app_calls": 47,
-      "web_app_calls_open": 35,
-      "web_app_calls_ask_first": 14,
+      "web_app_calls": 48,
+      "web_app_calls_open": 36,
+      "web_app_calls_ask_first": 15,
       "web_app_calls_pending": 0,
       "web_app_calls_security": 12,
       "web_app_calls_covered": 0,
       "parity_signed_in_percent": 74.1,
-      "parity_web_app_percent": 74.4,
+      "parity_web_app_percent": 75,
       "areas": [
         {
           "key": "consent",
@@ -645,14 +645,14 @@
           "covered": 0,
           "sign_in": 0,
           "no_signed_in_user": 0,
-          "web_app_calls": 22,
-          "web_app_calls_open": 18,
-          "web_app_calls_ask_first": 10,
+          "web_app_calls": 23,
+          "web_app_calls_open": 19,
+          "web_app_calls_ask_first": 11,
           "web_app_calls_pending": 0,
           "web_app_calls_security": 4,
           "web_app_calls_covered": 0,
           "parity_signed_in_percent": 85.1,
-          "parity_web_app_percent": 81.8
+          "parity_web_app_percent": 82.6
         },
         {
           "key": "privacy_requests",
@@ -8088,7 +8088,8 @@
       "scope": "write",
       "verb": "record_qualifying_event",
       "router": "change_compliance",
-      "action": "record_qualifying_event"
+      "action": "record_qualifying_event",
+      "web_app": "direct"
     },
     {
       "method": "POST",

@@ -301,17 +301,9 @@ func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert) (ids.
 	// previous mailbox's date is not this one's. A same-account reconnect
 	// keeps the original stamp.
 	rebound := rebindsAccount(priorLabel, in.accountLabel)
-	args := pgx.StrictNamedArgs{
-		"provider": in.provider, "user": in.userID, "scopes": in.scopes,
-		"ref": string(in.ref), "label": in.accountLabel, "provider_scopes": in.providerScopes,
-		"rebound": rebound, "bound": nil,
-	}
-	if rebound {
-		boundary, err := nextBackfillAccountTimeTx(ctx, tx, priorID)
-		if err != nil {
-			return ids.Nil, nil, err
-		}
-		args["bound"] = boundary
+	args, err := connectionGrantArgs(ctx, tx, in, priorID, rebound)
+	if err != nil {
+		return ids.Nil, nil, err
 	}
 	var id ids.UUID
 	if err := tx.QueryRow(ctx, `
@@ -375,6 +367,22 @@ func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert) (ids.
 		return ids.Nil, nil, err
 	}
 	return id, priorRef, nil
+}
+
+func connectionGrantArgs(ctx context.Context, tx pgx.Tx, in connectionUpsert, priorID ids.UUID, rebound bool) (pgx.StrictNamedArgs, error) {
+	args := pgx.StrictNamedArgs{
+		"provider": in.provider, "user": in.userID, "scopes": in.scopes,
+		"ref": string(in.ref), "label": in.accountLabel, "provider_scopes": in.providerScopes,
+		"rebound": rebound, "bound": nil,
+	}
+	if rebound {
+		boundary, err := nextBackfillAccountTimeTx(ctx, tx, priorID)
+		if err != nil {
+			return nil, err
+		}
+		args["bound"] = boundary
+	}
+	return args, nil
 }
 
 func auditConnectedAccountTx(ctx context.Context, tx pgx.Tx, id ids.UUID, in connectionUpsert, priorStatus, priorLabel *string) error {
