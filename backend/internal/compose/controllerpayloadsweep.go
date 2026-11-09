@@ -92,11 +92,12 @@ func (w *controllerPayloadSweepWorker) alarmMissedReceipts(ctx context.Context) 
 	if backlog > 0 {
 		w.log.ErrorContext(ctx, "controller receipts remain undelivered after their deadline", "count", backlog)
 	}
-	overdue, err := w.store.UnraisedOverdueReceipts(ctx, w.clock(), noticekeys.OptOutReceiptPrefix)
+	now := w.clock()
+	overdue, err := w.store.UnraisedOverdueReceipts(ctx, now, noticekeys.OptOutReceiptPrefix)
 	if err != nil {
 		return fmt.Errorf("reading controller receipt deadlines: %w", err)
 	}
-	if failed := w.alarm.raiseOverdue(ctx, overdue); failed > 0 {
+	if failed := w.alarm.raiseOverdue(ctx, w.store, now, overdue); failed > 0 {
 		w.log.ErrorContext(ctx, "overdue controller receipts could not be raised to the privacy operators", "count", failed)
 	}
 	if err := w.alarm.settleSent(ctx, w.store); err != nil {
