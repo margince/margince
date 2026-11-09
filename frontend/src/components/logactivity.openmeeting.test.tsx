@@ -96,6 +96,11 @@ function stubApi(
   patch: () => Response = () =>
     jsonResponse(booked({ meeting_status: "held" })),
   post: (body: { kind: string }) => Response | undefined = () => undefined,
+  filing: {
+    choice_required: boolean;
+    company_id?: string;
+    suggested_deal_id?: string;
+  } = { choice_required: false },
 ) {
   vi.stubGlobal(
     "fetch",
@@ -121,6 +126,9 @@ function stubApi(
         idempotencyKey: headers?.get("Idempotency-Key") ?? null,
         form,
       });
+      if (key === "GET /activities/deal-filing") return jsonResponse(filing);
+      if (key === "GET /deals/d1")
+        return jsonResponse({ id: "d1", name: "Renewal" });
       if (key === "GET /me") {
         return jsonResponse(
           meFixture({
@@ -216,6 +224,27 @@ const sent = (captured: Captured[], key: string) =>
   captured.filter((entry) => entry.key === key);
 
 describe("logging a meeting where one owes its outcome", () => {
+  it("files the existing meeting using the deal shown in the logging form", async () => {
+    const captured: Captured[] = [];
+    stubApi([booked()], captured, undefined, undefined, {
+      choice_required: false,
+      company_id: "o1",
+      suggested_deal_id: "d1",
+    });
+    render();
+    const user = await logMeeting();
+    await screen.findByText("Renewal");
+    await user.click(screen.getByRole("button", { name: "Log" }));
+    await waitFor(() =>
+      expect(sent(captured, "PATCH /activities/m-1")).toHaveLength(1),
+    );
+    expect(sent(captured, "PATCH /activities/m-1")[0]?.body).toMatchObject({
+      meeting_status: "held",
+      deal_filing: { record_type: "contact", record_id: "p1", deal_id: "d1" },
+    });
+    expect(sent(captured, "POST /activities")).toHaveLength(0);
+  });
+
   it("Yes records the notes on the open meeting", async () => {
     const captured: Captured[] = [];
     stubApi([booked()], captured);
@@ -230,6 +259,7 @@ describe("logging a meeting where one owes its outcome", () => {
     const [patch] = sent(captured, "PATCH /activities/m-1");
     expect(patch?.ifMatch).toBe("4");
     expect(patch?.body).toEqual({
+      deal_filing: { record_type: "contact", record_id: "p1", skip: false },
       meeting_status: "held",
       body: "Agenda: pricing\n\nThey agreed to the renewal.",
     });
@@ -330,6 +360,7 @@ describe("logging a meeting where one owes its outcome", () => {
       "POST /activities",
     ]);
     expect(sent(captured, "PATCH /activities/m-1")[0]?.body).toEqual({
+      deal_filing: { record_type: "contact", record_id: "p1", skip: false },
       meeting_status: "held",
     });
     const [note] = sent(captured, "POST /activities");

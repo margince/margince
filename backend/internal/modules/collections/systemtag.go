@@ -6,6 +6,7 @@ package collections
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -15,9 +16,7 @@ import (
 )
 
 // ApplySystemTagTx files each record under the tag with this name, as
-// tagNamedTx finds or makes it. A word a user already made is reused. A record
-// already filed there counts as done, so a second run changes nothing. It
-// answers how many records it tagged. System principal only.
+// tagNamedTx finds or makes it. Human removals and archived words are kept.
 func ApplySystemTagTx(ctx context.Context, tx pgx.Tx, name, entityType string, entityIDs []ids.UUID, evidence map[string]any) (int, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return 0, err
@@ -31,6 +30,23 @@ func ApplySystemTagTx(ctx context.Context, tx pgx.Tx, name, entityType string, e
 	tagID, err := tagNamedTx(ctx, tx, name)
 	if err != nil {
 		return 0, err
+	}
+	if tagID.UUID == ids.Nil {
+		return 0, nil
+	}
+	// Maintenance must not reverse a user's explicit removal.
+	rows, err := tx.Query(ctx, `SELECT candidate FROM unnest(@entity_ids::uuid[]) candidate
+ WHERE NOT EXISTS (SELECT 1 FROM audit_log a WHERE a.entity_type = 'tag'
+ AND a.entity_id = @tag AND a.actor_type NOT IN ('system', 'connector')
+ AND a.after -> 'removed' ->> 'entity_type' = @entity_type
+ AND a.after -> 'removed' ->> 'entity_id' = candidate::text)`,
+		pgx.NamedArgs{"entity_ids": entityIDs, "tag": tagID, "entity_type": entityType})
+	if err != nil {
+		return 0, fmt.Errorf("collections: reading prior tag decisions: %w", err)
+	}
+	entityIDs, err = pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return 0, fmt.Errorf("collections: reading prior tag decisions: %w", err)
 	}
 	applied := 0
 	for _, id := range entityIDs {
@@ -46,8 +62,7 @@ func ApplySystemTagTx(ctx context.Context, tx pgx.Tx, name, entityType string, e
 	return applied, nil
 }
 
-// tagNamedTx is the tag holding this name, live first. An archived one is
-// restored rather than coined again, so its records stay under one word.
+// tagNamedTx reuses a live word and leaves an archived word retired.
 // A name no tag ever held is coined.
 func tagNamedTx(ctx context.Context, tx pgx.Tx, name string) (ids.TagID, error) {
 	name, err := ValidateTagName(name)
@@ -66,8 +81,7 @@ func tagNamedTx(ctx context.Context, tx pgx.Tx, name string) (ids.TagID, error) 
 	case err != nil:
 		return ids.TagID{}, err
 	case archived:
-		restored, err := restoreTagTx(ctx, tx, id)
-		return restored.ID, err
+		return ids.TagID{}, nil
 	}
 	return id, nil
 }

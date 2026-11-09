@@ -267,11 +267,10 @@ the same deals, tasks and subjects. So the two surfaces cannot disagree about wh
   know exists, but may not read, is not in the input. So the model cannot quote it.
 - A reader with no activity grant is refused, and is not shown a quiet account.
 
-**What it may say.** The *read* kinds sit beside the rule kinds:
-
-- `commitment_unmet`: we said we would do something, and nothing says it happened;
-- `question_unanswered`: they asked, and no later message of ours answers;
-- `risk_raised` and `need_raised`.
+**What it may say.** The [scan's finding kinds](../../backend/internal/compose/companyscan/write.go)
+sit beside the rules' findings. Promise decisions come from `activities.WithCommitmentAdmissions`.
+The scan creates no task, including for a message about a colleague's promise.
+A stored model finding also offers no task action. Existing commitment and task cards keep their actions.
 
 How a finding is held to the input:
 

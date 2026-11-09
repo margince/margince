@@ -20,6 +20,7 @@ const PASSPORTS = [
     id: "pp-1",
     label: "Claude Code on my laptop",
     scopes: ["read", "draft"],
+    areas: { mode: "custom", areas: ["business", "own_account"] },
     created_at: "2026-07-01T08:00:00Z",
     last_used_at: "2026-09-28T14:10:00Z",
     expires_at: "2026-10-31T08:00:00Z",
@@ -30,6 +31,7 @@ const PASSPORTS = [
     id: "pp-2",
     label: "Nightly enrichment script with a name long enough to truncate",
     scopes: ["read", "draft", "write", "send", "enrich"],
+    areas: { mode: "all", areas: [] },
     created_at: "2026-08-01T08:00:00Z",
     last_used_at: null,
     expires_at: null,
@@ -39,6 +41,7 @@ const PASSPORTS = [
     id: "pp-3",
     label: "Old runner",
     scopes: ["read"],
+    areas: { mode: "all", areas: [] },
     created_at: "2026-06-01T08:00:00Z",
     last_used_at: "2026-06-20T09:00:00Z",
     expires_at: "2026-07-01T08:00:00Z",
@@ -46,7 +49,20 @@ const PASSPORTS = [
   },
 ];
 
-function story(passports: readonly Record<string, unknown>[]) {
+// What an admin's role reaches; a sales rep reaches Sales work alone.
+const ADMIN_AREAS = [
+  "business",
+  "compliance",
+  "capture",
+  "workspace_settings",
+  "admin_settings",
+  "own_account",
+];
+
+function story(
+  passports: readonly Record<string, unknown>[],
+  reachable: readonly string[] = ADMIN_AREAS,
+) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({}),
@@ -54,6 +70,7 @@ function story(passports: readonly Record<string, unknown>[]) {
         jsonResponse({
           data: passports,
           api_base_url: "https://crm.example.com/v1",
+          reachable_areas: reachable,
           page: { next_cursor: null, has_more: false },
         }),
     });
@@ -66,7 +83,7 @@ function story(passports: readonly Record<string, unknown>[]) {
 }
 
 const meta: Meta<typeof PassportCard> = {
-  title: "Settings/You/AI access/Passports",
+  title: "Settings/You/AI assistants/Passports",
   component: PassportCard,
 };
 export default meta;
@@ -130,5 +147,49 @@ export const UsageOpen: Story = {
       }),
     );
     await canvas.findByRole("meter", { name: "Sends" });
+  },
+};
+
+// A role that reaches one area has no Areas column and no Change areas verb.
+export const OneAreaRole: Story = { render: story(PASSPORTS, ["business"]) };
+
+// The drawer with Admin settings ticked off a passport that had all areas. It
+// says what the passport loses and what an agent is told there.
+export const ChangeAreas: Story = {
+  render: story(PASSPORTS),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", {
+        name: "Actions for Nightly enrichment script with a name long enough to truncate",
+      }),
+    );
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await body.findByRole("button", {
+        name: "Change areas for Nightly enrichment script with a name long enough to truncate",
+      }),
+    );
+    await userEvent.click(
+      await body.findByRole("radio", { name: /Choose areas/ }),
+    );
+    await userEvent.click(
+      await body.findByRole("checkbox", { name: /Admin settings/ }),
+    );
+    await body.findByText(/It will no longer work in: Admin settings/);
+  },
+};
+
+export const NewPassportWithAreas: Story = {
+  render: story(PASSPORTS),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "New passport" }),
+    );
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await body.findByRole("radio", { name: /Choose areas/ }),
+    );
   },
 };

@@ -3,21 +3,10 @@
 
 package compose
 
-// The `unsure` disposition's review queue (ADR-0072/A118 §4): when the verdict
-// engine cannot answer above the confidence floor, it asks a human instead of
-// guessing — and the offer it stages is deliberately lopsided.
-//
-// ACCEPT creates the records capture withheld. REJECT does nothing at all: no
-// records, no hiding, no redaction — the mail stays exactly where it is and the
-// disposition simply records that a human declined to make it a counterparty.
-// That asymmetry is what keeps the approvals engine approve-only-effects: a
-// proposal may only ever ADD, so a stale or mistakenly-rejected offer can never
-// destroy anything.
+// The redemption contract remains; automatic uncertainty offers are withdrawn.
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -45,51 +34,6 @@ const (
 	// contract's declared grammar for captured_by.
 	counterpartyExecutorActor = contacts.CaptureAcceptActor
 )
-
-// stageCounterpartyReview offers one unresolvable sender to a human. Returns the
-// staged proposal's id so the ledger row can point at it — a re-run then finds
-// the existing offer instead of stacking another copy in the inbox.
-func stageCounterpartyReview(ctx context.Context, svc *approvals.Service, said approvalSummaryCopy, row capture.PendingCounterparty) (ids.UUID, error) {
-	proposal := approvalsubject.Counterparty{
-		DispositionID: row.ID,
-		Email:         row.Email,
-		DisplayName:   row.DisplayName,
-		Domain:        row.Domain,
-		OwnerID:       row.OwnerID,
-		ActivityID:    row.ActivityID,
-	}
-	body, err := json.Marshal(proposal)
-	if err != nil {
-		return ids.Nil, fmt.Errorf("compose: encoding the counterparty proposal: %w", err)
-	}
-	digest := sha256.Sum256(body)
-	id, err := svc.Stage(ctx, approvals.StageInput{
-		Kind:           counterpartyProposalKind,
-		ProposedChange: body,
-		DiffHash:       hex.EncodeToString(digest[:]),
-		TargetType:     counterpartyTargetType,
-		TargetID:       row.ActivityID,
-		TargetLabel:    counterpartyLabel(row),
-		Summary:        fmt.Sprintf(said.counterpartyWorthKeeping, row.Email),
-		// The verdict pass is an at-least-once worker: a retried batch must
-		// return the existing offer rather than multiply inbox rows.
-		JoinPending: true,
-	})
-	if err != nil {
-		return ids.Nil, err
-	}
-	return id.UUID, nil
-}
-
-// counterpartyLabel names the sender a counterparty proposal is about, so the
-// receipt and the inbox say who wrote rather than which message.
-func counterpartyLabel(row capture.PendingCounterparty) *string {
-	label := row.Email
-	if name := strings.TrimSpace(row.DisplayName); name != "" {
-		label = name + " <" + row.Email + ">"
-	}
-	return &label
-}
 
 // counterpartyAcceptEffect builds the approvals.ApprovedEffect for kind
 // "capture_counterparty": the human said yes, so the records capture withheld

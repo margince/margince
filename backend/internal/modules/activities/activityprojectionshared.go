@@ -7,6 +7,8 @@ package activities
 // No reader then keeps a copy of the column list that fails to grow.
 
 import (
+	"context"
+
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -20,7 +22,9 @@ import (
 // whether a row's content reaches the caller or only its markers — so a reader
 // that composed a different test there would be answering a different question
 // about the same rows.
-func ActivityProjection(contentArm string) string { return activityColumns(contentArm) }
+func ActivityProjection(ctx context.Context, contentArm string, arg func(any) int) (string, error) {
+	return activityColumns(ctx, contentArm, arg)
+}
 
 // ScanActivityRow reads one row of the projection and answers the finished record.
 func ScanActivityRow(rows pgx.Rows) (crmcontracts.Activity, error) { return scanActivity(rows) }

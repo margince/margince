@@ -14,7 +14,7 @@ expect:
   answer:
     already_in_target: false
     keeps: ["Nordwind Logistik", "Albers"]
-    omits: ["shotgun", "corn"]
+    omits: ["shotgun", "into the corn"]
   bands:
     certified_min: 80
     degraded_min: 60

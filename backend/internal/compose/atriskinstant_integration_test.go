@@ -30,7 +30,9 @@ import (
 func TestTheSweepAndTheTailJudgeQuietAtOneInstant(t *testing.T) {
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
-	asOf := clocktest.Now(t).Add(-2 * time.Hour).Truncate(time.Microsecond)
+	// In UTC, so the days back are whole days on a machine whose zone
+	// crosses a daylight-saving change in that span.
+	asOf := clocktest.Now(t).UTC().Add(-2 * time.Hour).Truncate(time.Microsecond)
 	threshold := asOf.AddDate(0, 0, -deals.QuietThresholdDays)
 	idle := map[string]time.Time{
 		"quiet":    threshold.Add(-time.Minute),

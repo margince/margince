@@ -134,3 +134,27 @@ export const RestoredDark: Story = {
   render: savedDraftStory({}),
   play: restoredOnScreen,
 };
+
+export const AIDraftRestored: Story = {
+  render: savedDraftStory({
+    "GET /mail-drafts": () =>
+      jsonResponse({
+        ...SAVED,
+        editor_state: {
+          intent: "Ask about the seat count",
+          ai_generated: true,
+          ai_disclosure: "Drafted with AI assistance. Review before sending.",
+          served_body: SAVED.body,
+        },
+      }),
+  }),
+  play: async () => {
+    await restoredOnScreen();
+    await screen.findByRole("heading", { name: "AI-assisted draft" });
+  },
+};
+
+export const AIDraftRestoredDark: Story = {
+  ...AIDraftRestored,
+  globals: { theme: "dark" },
+};

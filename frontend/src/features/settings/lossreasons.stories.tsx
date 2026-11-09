@@ -92,7 +92,7 @@ function story(allow: Parameters<typeof meRoute>[0]) {
 }
 
 const meta = {
-  title: "Settings/Sales/Loss reasons/Reasons",
+  title: "Settings/Sales/Deals/Loss reasons",
   component: LossReasonsCard,
 } satisfies Meta<typeof LossReasonsCard>;
 export default meta;

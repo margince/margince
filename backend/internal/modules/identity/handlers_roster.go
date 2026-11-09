@@ -95,6 +95,7 @@ func wireUser(u userRow) crmcontracts.User {
 		Id:            openapi_types.UUID(u.ID),
 		Email:         openapi_types.Email(u.Email),
 		DisplayName:   u.DisplayName,
+		AvatarUrl:     AvatarURL(u.ID, u.AvatarKey),
 		Status:        crmcontracts.UserStatus(u.Status),
 		IsAgent:       u.IsAgent,
 		Assignable:    u.Assignable,

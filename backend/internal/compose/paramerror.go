@@ -21,10 +21,12 @@ import (
 // resolves to before the router serves it.
 func contractRouter(srv crmcontracts.ServerInterface, outer ...crmcontracts.MiddlewareFunc) *chi.Mux {
 	router := chi.NewRouter()
+	router.Use(compressAPIJSON)
+	middlewares := append([]crmcontracts.MiddlewareFunc{refuseUnknownQueryEnum, refuseQueryBelowMinimum}, outer...)
 	crmcontracts.HandlerWithOptions(srv, crmcontracts.ChiServerOptions{
 		BaseURL:     httpserver.BaseURL,
 		BaseRouter:  router,
-		Middlewares: append([]crmcontracts.MiddlewareFunc{refuseUnknownQueryEnum, refuseQueryBelowMinimum}, outer...),
+		Middlewares: append(middlewares, announceDeprecatedOperation),
 		// The generated default writes err.Error() as text/plain, an
 		// off-contract shape that also leaks the parser's internal text.
 		ErrorHandlerFunc: paramParseError,
@@ -39,6 +41,7 @@ func contractRouter(srv crmcontracts.ServerInterface, outer ...crmcontracts.Midd
 // detail — so a bad cursor/limit/sort/UUID answers problem+json, not a
 // text/plain leak.
 func paramParseError(w http.ResponseWriter, r *http.Request, err error) {
+	setDeprecationHeaders(w, r)
 	param := "request"
 	switch e := err.(type) {
 	case *crmcontracts.RequiredParamError:

@@ -118,12 +118,14 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_backfill
 
-25 columns · primary key `(id)` · referenced by 2 foreign keys
+31 columns · primary key `(id)` · referenced by 5 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `admission_slot` | `integer` |  |  |
 | `after_date` | `date` | yes |  |
+| `backoff_is_mailbox_scoped` | `boolean`, default `false` | yes |  |
 | `captured` | `integer`, default `0` | yes |  |
 | `companies_created` | `integer`, default `0` | yes |  |
 | `completed_at` | `timestamp with time zone` |  |  |
@@ -132,10 +134,14 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `contacts_created` | `integer`, default `0` | yes |  |
 | `cursor` | `jsonb` |  |  |
 | `dedupe_candidates` | `integer`, default `0` | yes |  |
+| `execution_due_at` | `timestamp with time zone` |  |  |
+| `execution_generation` | `bigint`, default `0` | yes |  |
+| `execution_owner_pid` | `integer` |  |  |
 | `failed` | `integer`, default `0` | yes |  |
 | `inflight_captured` | `integer`, default `0` | yes |  |
 | `inflight_scanned` | `integer`, default `0` | yes |  |
 | `inflight_skipped` | `integer`, default `0` | yes |  |
+| `internal_mail_authorization` | `jsonb` |  |  |
 | `last_error_class` | `text` |  |  |
 | `scanned` | `integer`, default `0` | yes |  |
 | `skipped` | `integer`, default `0` | yes |  |
@@ -156,6 +162,8 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 **Rules**
 
+- `capture_backfill_admission_slot_check`: `CHECK ((admission_slot > 0))`
+- `capture_backfill_internal_mail_authorization`: `CHECK (((internal_mail_authorization IS NULL) OR ((jsonb_typeof(internal_mail_authorization) = 'object') AND (internal_mail_authorization ?& ARRAY['admission', 'after', 'before', 'authorized_by']))))`
 - `capture_backfill_status_check`: `CHECK ((status = ANY (ARRAY['queued', 'running', 'done', 'error', 'cancelled'])))`
 - `capture_backfill_window_months_check`: `CHECK ((window_months = ANY (ARRAY[3, 6, 12, 24, 36, 60, 84, 120])))`
 
@@ -163,6 +171,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 - `capture_backfill_pkey`: `unique, btree (id)`
 - `idx_capture_backfill_conn`: `btree (connection_id, created_at DESC)`
+- `uq_capture_backfill_admission_slot`: `unique, btree (admission_slot) WHERE ((status = 'running') AND (admission_slot IS NOT NULL))`
 - `uq_capture_backfill_live`: `unique, btree (connection_id) WHERE (status = ANY (ARRAY['queued', 'running']))`
 
 **Triggers**
@@ -376,7 +385,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_import
 
-12 columns · primary key `(id)` · referenced by 0 foreign keys
+13 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -386,6 +395,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `delivered_by` | `text[]`, default `'{}'::text[]` | yes |  |
 | `imported_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `posture_at_import` | `text` |  | One of `shared`, `classified`, `held`. |
+| `provider_message_ids` | `text[]`, default `'{}'::text[]` | yes |  |
 | `provider_received_at` | `timestamp with time zone` |  |  |
 | `source_occurred_at` | `timestamp with time zone` |  |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
@@ -411,6 +421,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `capture_import_activity_user_key`: `unique, btree (activity_id, user_id)`
 - `capture_import_pkey`: `unique, btree (id)`
 - `capture_import_user_idx`: `btree (user_id, activity_id)`
+- `idx_capture_import_provider_messages`: `gin (provider_message_ids)`
 
 **Triggers**
 

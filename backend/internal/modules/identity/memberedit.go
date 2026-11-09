@@ -25,10 +25,12 @@ import (
 
 // MemberEdit binds editable account settings to the revision the administrator saw.
 type MemberEdit struct {
-	Name              string
-	Email             string
-	Role              *string
-	Teams             *[]ids.UUID
+	Name  string
+	Email string
+	Role  *string
+	Teams *[]ids.UUID
+	// LegalEntity moves the member to that entity; nil keeps their entity.
+	LegalEntity       *ids.LegalEntityID
 	ExpectedUpdatedAt time.Time
 }
 
@@ -79,9 +81,11 @@ func (s *Service) UpdateMember(ctx context.Context, actor Identity, member ids.U
 			}
 		}
 		if in.Teams != nil {
-			return s.replaceMemberTeamsTx(ctx, tx, actor, member.UUID, uniqueTeams(*in.Teams))
+			if err := s.replaceMemberTeamsTx(ctx, tx, actor, member.UUID, uniqueTeams(*in.Teams)); err != nil {
+				return err
+			}
 		}
-		return nil
+		return s.placeMember(ctx, tx, in.LegalEntity, member)
 	})
 }
 

@@ -172,6 +172,7 @@ describe("the copy that names the accepted formats", () => {
     (_locale, catalog) => {
       for (const key of formatLines) {
         const line = catalog[key];
+        if (!line) throw new Error("The locale catalog was not loaded");
         for (const extension of accepted) {
           expect(line, `${key} lacks ${extension}`).toContain(extension);
         }

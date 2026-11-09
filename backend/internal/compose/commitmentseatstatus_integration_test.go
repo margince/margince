@@ -120,7 +120,7 @@ func TestAnUnsurePromiseIsProposedToItsColleagueAlone(t *testing.T) {
 			if time.Duration(hours)*time.Hour != window {
 				t.Errorf("the %s colleague's card waits %dh, want %s", status, hours, window)
 			}
-			queue := approvalsServiceWithEffects(e.Pool)
+			queue := NewApprovalsServiceWithEffects(e.Pool)
 			for name, reader := range map[string]context.Context{
 				"the admin":         e.Admin(),
 				"a third colleague": e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms),

@@ -16,6 +16,9 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "entity_type", Values: []string{"contact", "company", "deal", "lead", "project"}, Array: false, Explode: true},
 		{Name: "kind", Values: []string{"email", "call", "meeting", "note", "task", "message"}, Array: false, Explode: true},
 	},
+	"GET /v1/activities/deal-filing": {
+		{Name: "record_type", Values: []string{"contact", "company"}, Array: false, Explode: true},
+	},
 	"GET /v1/activities/latest-inbound": {
 		{Name: "entity_type", Values: []string{"contact", "company", "deal", "lead", "project"}, Array: false, Explode: true},
 	},
@@ -37,6 +40,7 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "view", Values: []string{"single_threaded", "untouched", "silent"}, Array: false, Explode: true},
 	},
 	"GET /v1/analytics/decisions": {
+		{Name: "scope_kind", Values: []string{"owner", "team", "workspace", "managed_teams"}, Array: false, Explode: true},
 		{Name: "status", Values: []string{"open", "done"}, Array: false, Explode: true},
 	},
 	"GET /v1/analytics/editions/{id}/evidence": {
@@ -58,6 +62,7 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "period", Values: []string{"this_week", "this_month", "last_month", "last_week", "this_quarter", "custom"}, Array: false, Explode: true},
 		{Name: "scope_kind", Values: []string{"owner", "team", "workspace"}, Array: false, Explode: true},
 		{Name: "target_basis", Values: []string{"month", "fiscal_quarter"}, Array: false, Explode: true},
+		{Name: "value_basis", Values: []string{"all", "software", "implementation"}, Array: false, Explode: true},
 	},
 	"GET /v1/analytics/evidence": {
 		{Name: "blocks", Values: []string{"bookings_trend", "stage_distribution", "owner_attainment", "stage_age", "sdr_outcomes", "target_progress", "forecast_support", "pipeline_movement", "metric_reading", "breakdown", "stage_cohort", "lead_cohort"}, Array: true, Explode: true},
@@ -95,8 +100,14 @@ var queryEnumTable = map[string][]queryEnum{
 	"GET /v1/attachments": {
 		{Name: "entity_type", Values: []string{"contact", "company", "deal", "activity", "lead", "project"}, Array: false, Explode: true},
 	},
+	"GET /v1/attachments/{id}/extraction": {
+		{Name: "question", Values: []string{"deal_facts", "chat_capture"}, Array: false, Explode: true},
+	},
 	"GET /v1/automations/{id}/runs": {
 		{Name: "outcome", Values: []string{"fired", "failed", "blocked", "skipped", "queued_for_approval"}, Array: false, Explode: true},
+	},
+	"GET /v1/capture/held-threads": {
+		{Name: "status", Values: []string{"pending", "unsure", "held", "held_by_owner"}, Array: false, Explode: true},
 	},
 	"GET /v1/catch-up": {
 		{Name: "record_type", Values: []string{"contact", "company", "deal", "lead", "project", "activity"}, Array: false, Explode: true},
@@ -225,8 +236,11 @@ var queryEnumTable = map[string][]queryEnum{
 	"GET /v1/mail-drafts": {
 		{Name: "anchor_type", Values: []string{"activity", "contact", "company", "deal", "lead", "project"}, Array: false, Explode: true},
 	},
+	"GET /v1/me": {
+		{Name: "prepare", Values: []string{"analytics"}, Array: false, Explode: true},
+	},
 	"GET /v1/me/ai-activity": {
-		{Name: "kinds", Values: []string{"morning_brief", "overnight_at_risk_sweep", "document_extract", "site_read", "brief_ranking", "capture_classify", "capture_confidentiality_verdict", "capture_counterparty_verdict", "cert_judge", "cold_start", "deal_health", "draft_reply", "enrich", "growth_fit", "nl_search", "offer_draft", "rate_extract", "signal_extract", "site_extract", "site_fact_extract", "site_triage", "stage_evidence_extract", "summarize", "transcript", "transcript_propose", "voice_build", "corpus_ask", "weekly_review", "weekly_learnings", "propose_roles", "owed_verdict", "request_settlement", "account_scan", "tag_suggest", "report_setup", "report_interpret", "reader_rendering"}, Array: true, Explode: true},
+		{Name: "kinds", Values: []string{"morning_brief", "overnight_at_risk_sweep", "document_extract", "site_read", "brief_ranking", "capture_classify", "capture_confidentiality_verdict", "capture_counterparty_verdict", "cert_judge", "cold_start", "deal_health", "draft_reply", "enrich", "growth_fit", "nl_search", "offer_draft", "rate_extract", "signal_extract", "site_extract", "site_fact_extract", "site_triage", "stage_evidence_extract", "summarize", "transcript", "transcript_propose", "voice_build", "corpus_ask", "weekly_review", "weekly_learnings", "propose_roles", "owed_verdict", "request_settlement", "account_scan", "tag_suggest", "report_setup", "report_interpret", "reader_rendering", "deal_verdict"}, Array: true, Explode: true},
 	},
 	"GET /v1/meeting-prep": {
 		{Name: "record_type", Values: []string{"contact", "company", "deal", "lead", "project", "activity"}, Array: false, Explode: true},
@@ -294,6 +308,9 @@ var queryEnumTable = map[string][]queryEnum{
 // queryMinimumTable maps "METHOD /v1/path" to the integer query parameters
 // the contract gives a minimum, with that minimum.
 var queryMinimumTable = map[string][]queryMinimum{
+	"DELETE /v1/deals/{id}/lines/{lineId}": {
+		{Name: "expected_revision", Minimum: 0},
+	},
 	"GET /v1/activities": {
 		{Name: "limit", Minimum: 1},
 	},
@@ -368,6 +385,12 @@ var queryMinimumTable = map[string][]queryMinimum{
 		{Name: "limit", Minimum: 1},
 	},
 	"GET /v1/capture/domain-questions": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/capture/held-threads": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/capture/senders": {
 		{Name: "limit", Minimum: 1},
 	},
 	"GET /v1/catch-up": {
@@ -532,9 +555,6 @@ var queryMinimumTable = map[string][]queryMinimum{
 	"GET /v1/signals": {
 		{Name: "limit", Minimum: 1},
 	},
-	"GET /v1/stage-automation/report": {
-		{Name: "window_days", Minimum: 1},
-	},
 	"GET /v1/teams": {
 		{Name: "limit", Minimum: 1},
 	},
@@ -559,4 +579,24 @@ var queryMinimumTable = map[string][]queryMinimum{
 	"POST /v1/analytics/reports/{id}/questions/{card_id}/explain": {
 		{Name: "revision", Minimum: 1},
 	},
+}
+
+var deprecationTable = map[string]map[string]string{
+	"DELETE /v1/lead-sources/{id}":                               {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
+	"GET /v1/companies/{id}/brief":                               {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
+	"GET /v1/deals/{id}/viability":                               {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
+	"GET /v1/forecast/assurance/enforcement":                     {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
+	"GET /v1/lead-sources":                                       {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
+	"GET /v1/stage-automation/policies/{id}":                     {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
+	"GET /v1/stage-automation/report":                            {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
+	"PATCH /v1/lead-sources/{id}":                                {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
+	"POST /v1/ai-model-rates/propose-refresh":                    {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
+	"POST /v1/companies/{id}/brief":                              {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
+	"POST /v1/deals/{id}/stage-progressions/{approvalId}/revert": {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
+	"POST /v1/forecast/assurance/exceptions/{id}/close-lost":     {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
+	"POST /v1/forecast/assurance/exceptions/{id}/wait":           {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
+	"POST /v1/lead-sources":                                      {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
+	"POST /v1/stage-automation/policies/{id}/resume":             {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
+	"PUT /v1/forecast/assurance/enforcement":                     {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
+	"PUT /v1/stage-automation/policies/{id}":                     {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 }

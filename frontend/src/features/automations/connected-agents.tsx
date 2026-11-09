@@ -17,7 +17,13 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import "./connected-agents.css";
 import "../settings/settings-agents.css";
+import { PassportAreasDrawer } from "../../components/passport-areas";
 import { usePassportRevoke } from "../../components/passport-revoke";
+import {
+  offersWorkAreas,
+  type WorkArea,
+  WorkAreasCell,
+} from "../../components/workareas";
 import {
   type ConnectionState,
   connectionStateOf,
@@ -52,14 +58,18 @@ function stateBadge(state: ConnectionState, t: Translate): ReactNode {
 
 // A lapsed connection has lost its credential but not its grant, so it ends the
 // grant. Each verb names its client: the dialog's confirm names only the act.
+// A renewing connection still holds its grant, where a change of areas lands.
+// So it is offered there too. An ended one has nothing to change.
 function EndVerb({
   connection,
   state,
   onEnd,
+  onChangeAreas,
 }: Readonly<{
   connection: Connection;
   state: ConnectionState;
   onEnd: () => void;
+  onChangeAreas?: () => void;
 }>) {
   const t = useT();
   const client = connection.connection.client_name;
@@ -69,6 +79,15 @@ function EndVerb({
   return (
     <span className="cell-actions">
       <OverflowMenu label={t("table.rowActions", { name: client })}>
+        {onChangeAreas && !state.ended && (
+          <Button
+            aria-label={t("passportAreas.openNamed", { name: client })}
+            aria-haspopup="dialog"
+            onClick={onChangeAreas}
+          >
+            {t("passportAreas.open")}
+          </Button>
+        )}
         <Button
           variant={state.ended ? undefined : "danger"}
           aria-label={t(
@@ -166,12 +185,17 @@ function useConnectionDates() {
 function ConnectionTable({
   connections,
   now,
+  reachable,
   onEnd,
+  onChangeAreas,
 }: Readonly<{
   connections: readonly Connection[];
   now: number;
+  reachable: readonly WorkArea[];
   onEnd: (id: string) => void;
+  onChangeAreas: (connection: Connection) => void;
 }>) {
+  const areas = offersWorkAreas(reachable);
   const t = useT();
   const dates = useConnectionDates();
   const stateOf = (connection: Connection) =>
@@ -207,6 +231,19 @@ function ConnectionTable({
         </span>
       ),
     },
+    ...(areas
+      ? [
+          {
+            key: "areas",
+            header: t("settings.passportColAreas"),
+            render: (connection: Connection) => (
+              <span className="agents-scopes">
+                <WorkAreasCell areas={connection.areas} />
+              </span>
+            ),
+          },
+        ]
+      : []),
     {
       key: "connected",
       header: t("agents.colConnected"),
@@ -230,6 +267,7 @@ function ConnectionTable({
           connection={connection}
           state={stateOf(connection)}
           onEnd={() => onEnd(connection.id)}
+          onChangeAreas={areas ? () => onChangeAreas(connection) : undefined}
         />
       ),
     },
@@ -306,6 +344,8 @@ export function ConnectedAgentsCard() {
     (passport): passport is Connection => Boolean(passport.connection),
   );
   const now = useExpiryClock(connections);
+  const reachable = list.data?.reachable_areas ?? [];
+  const [changingAreas, setChangingAreas] = useState<Connection | null>(null);
 
   return (
     <Panel title={t("agents.connected")}>
@@ -325,7 +365,21 @@ export function ConnectedAgentsCard() {
         <ConnectionTable
           connections={connections}
           now={now}
+          reachable={reachable}
           onEnd={disconnect.ask}
+          onChangeAreas={setChangingAreas}
+        />
+      )}
+      {changingAreas && (
+        <PassportAreasDrawer
+          key={changingAreas.id}
+          subject={{
+            id: changingAreas.id,
+            name: changingAreas.connection.client_name,
+            areas: changingAreas.areas,
+          }}
+          reachable={reachable}
+          onClose={() => setChangingAreas(null)}
         />
       )}
       {disconnect.confirm}

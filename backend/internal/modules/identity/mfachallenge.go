@@ -234,6 +234,9 @@ func liveMemberIdentity(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, us
 	if err != nil {
 		return Identity{}, err
 	}
+	if err := readSeatProfile(ctx, tx, &id); err != nil {
+		return Identity{}, err
+	}
 	if id.Roles, id.Teams, id.Permissions, err = loadGrants(ctx, tx, userID); err != nil {
 		return Identity{}, err
 	}

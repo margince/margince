@@ -54,6 +54,10 @@ var returningRow = regexp.MustCompile(`(?i)\bRETURNING\b`)
 // right not to look, each saying why. A reason describes the act, not the
 // missing check.
 var declinedWriteIsSilent = gatekit.Waive(map[string]string{
+	"backend/internal/modules/capture/syncstate.go:recordSyncSuccessTx":                          "restoring an errored connection after a successful sync: a connection already connected, archived or awaiting reauthorization keeps its newer state; the success itself is recorded independently in capture_sync_state",
+	"backend/internal/modules/comms/partysettle.go:SettlePartyAdmission":                         "acknowledging a sent delivery's party admission: a delivery no longer sent has no sent admission to settle, and clearing a flag already clear is idempotent",
+	"backend/internal/modules/privacy/retentionstops.go:pinStop":                                 "the anonymize holds the subject's stop lock, which a lift also takes, and read the stop live in the same transaction. The revoked_at predicate cannot decline; it keeps a lifted stop from ever being pinned if that changes",
+	"backend/internal/platform/jobs/orphans.go:FinishOwnRun":                                     "completing a run only while it is still running, from the worker that holds its lock: a row no longer running was already settled by River or cancelled by an operator, and the worker has nothing to finish or to report either way",
 	"backend/internal/modules/identity/passport.go:touchPassport":                                "stamping last use at most once a minute (last_used_at older than a minute or unset): a call inside the minute finds the stamp fresh and touches nothing, which is the debounce working, and no caller has anything to report either way",
 	"backend/internal/modules/privacy/erasure_untoldlead.go:dropFromSiteRead":                    "removes an untold website lead from the site read that found them. Touching no row is a right answer: the proposal may name a read that has since been deleted with its company, or a contact the dossier no longer lists, and either way nothing of theirs is left there to remove",
 	"backend/internal/modules/activities/audienceretraction.go:RetractDerivedForActivityTx":      "clearing a capture label that may already be absent, under the activity's lock: the retraction is idempotent by design because it runs again whenever a narrowing arrives late",
@@ -65,7 +69,6 @@ var declinedWriteIsSilent = gatekit.Waive(map[string]string{
 	"backend/internal/modules/consent/lift.go:liftAdmittedTx":                                    "lifting a suppression the function has already read FOR UPDATE under the subject's lock: the locked read established revoked_at IS NULL, so the write cannot find the row otherwise",
 	"backend/internal/modules/contacts/fillretraction.go:clearFilledValue":                       "retracting a filled value only while the column still holds what the fill wrote: a value the user has since edited is theirs, and clearing it would delete a human's correction to undo a machine's guess",
 	"backend/internal/modules/contacts/leadresponseclock.go:startLeadResponseClockTx":            "starting a lead's response clock once (routed_at IS NULL) under the lead's lock: a lead routed twice keeps the first instant, which is the clock the service level is measured against",
-	"backend/internal/modules/capture/backfillpager.go:commitBackfillPage":                       "cancelling a run that is no longer queued or running, in the arm the page commit falls to when its own guarded write matched nothing: the function reads THAT tag and discards this one, because a run somebody else finished or cancelled needs no second cancellation",
 	"backend/internal/modules/capture/backfillpager.go:failBackfill":                             "failing a backfill that is no longer queued or running: the run somebody else finished or cancelled is the newer fact, and recording an error over it would report a completed import as broken",
 	"backend/internal/modules/capture/backfillprogress.go:flushBackfillProgress":                 "page counters for a run that has finished, or for a connection reconnected since (the generation predicate): stale progress landing on a live row would overwrite a newer import's tallies with a dead one's",
 	"backend/internal/modules/capture/channelpoll.go:AdvanceChannelPollOffsetTx":                 "a monotonic advance (poll_offset < $3): a poller holding an older offset declining to move the cursor backwards is the predicate working, and the furthest reader has already set it",
@@ -178,7 +181,7 @@ func TestAConditionalByIDWriteReportsThatItDeclined(t *testing.T) {
 	var unchecked []string
 	var corpus int
 	// The module root, one up from this package.
-	if err := filepath.WalkDir("..", func(path string, d fs.DirEntry, err error) error {
+	if err := gatekit.WalkDir("..", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 			strings.HasSuffix(path, "_test.go") || isIntegrationTagged(path) {
 			return err

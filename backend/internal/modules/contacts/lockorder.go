@@ -22,7 +22,8 @@ package contacts
 // address. So a create of the same address never holds a lane while it waits
 // on the other writer's uncommitted row. Capture locks the lanes only on its
 // create path, because its exact path locks the incumbent. A promotion takes
-// the lanes between its contact and its lead.
+// the lanes between its contact and its lead. A restore of several contacts
+// takes every lane after the last contact row (FileRestoredEmployerTwinsTx).
 
 import (
 	"context"

@@ -572,9 +572,9 @@ func TestCompanyLogoWriteBackCoalescesConcurrentReadersOfTheSameUntrimmedKey(t *
 }
 
 // writeBackTrimmedLogo re-checks the slot's current key AFTER blob.Put, not
-// only before: a replace landing WHILE the write is in flight can otherwise
-// let a write-back resurrect the exact orphan deleteUnreferencedLogo exists to
-// prevent (handlers_companylogo.go). This proves the after-check: a
+// only before. A replace landing WHILE the write is in flight could otherwise
+// let a write-back resurrect the orphan deleteUnreferencedObject removes
+// (handlers_companylogo.go). This proves the after-check: a
 // replace that lands mid-Put gets its own resurrected object collected, not
 // left for nothing to ever reference again.
 func TestCompanyLogoWriteBackCollectsItsOwnObjectWhenAReplaceRacesTheWrite(t *testing.T) {

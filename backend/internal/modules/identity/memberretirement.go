@@ -181,7 +181,7 @@ func applyMergeEligibility(out *crmcontracts.MemberRetirementPreview, member ret
 }
 
 func memberHasWork(c crmcontracts.HandoverCounts) bool {
-	return c.Contact+c.Company+c.Deal+c.Lead+c.Project+c.Task > 0
+	return c.Contact+c.Company+c.Deal+c.Lead+c.Project+c.Task+c.List > 0
 }
 
 // RetireMember moves work and retires the source as one atomic change.

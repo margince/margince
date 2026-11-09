@@ -38,7 +38,7 @@ func TestEveryInboundEndpointChecksItsSignature(t *testing.T) {
 	t.Parallel()
 	declared := 0
 	for _, root := range []string{"../extensions", "../fixtures/extensions"} {
-		units, err := os.ReadDir(root)
+		units, err := gatekit.ReadDir(root)
 		if os.IsNotExist(err) {
 			continue
 		}

@@ -25,7 +25,6 @@ package gates
 
 import (
 	"maps"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -33,6 +32,8 @@ import (
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // workflowDir holds every workflow this repository runs. The list of FILES is
@@ -92,7 +93,7 @@ func workflowFiles(t *testing.T) []string {
 // fields it reads and no further; the shared name is the reader, not the shape.
 func readWorkflowJobs(t *testing.T, path string) workflowJobs {
 	t.Helper()
-	raw, err := os.ReadFile(path) // #nosec G304 -- a repo-relative workflow path from the glob above
+	raw, err := gatekit.ReadFile(path) // #nosec G304 -- a repo-relative workflow path from the glob above
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}
@@ -354,7 +355,7 @@ func compositeActionFiles(t *testing.T) []string {
 
 func readCompositeSteps(t *testing.T, path string) []workflowStep {
 	t.Helper()
-	raw, err := os.ReadFile(path)
+	raw, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

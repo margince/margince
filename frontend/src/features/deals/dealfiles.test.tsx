@@ -254,8 +254,8 @@ it("dates a file from a mail logged by its day on that day, in any record zone",
     </CompanyZoneProvider>,
   );
 
-  expect((await screen.findAllByText("21 Aug 2026")).length).toBeGreaterThan(0);
-  expect(screen.queryByText("22 Aug 2026")).toBeNull();
+  expect((await screen.findAllByText(/21 Aug 2026/)).length).toBeGreaterThan(0);
+  expect(screen.queryByText(/22 Aug 2026/)).toBeNull();
 });
 
 it("names the rep, not the buyer, as the sender of a sent mail's file", async () => {

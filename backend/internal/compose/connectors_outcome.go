@@ -90,15 +90,8 @@ const (
 )
 
 // writeConnectorUnavailable answers a connect request this deployment cannot
-// serve, saying WHICH of the two reasons it is.
-//
-// Both are 501 and they are not the same fact. Without a capture registry this
-// deployment wired no mail capture at all, and no screen an operator can open
-// changes that — the generic sentence is the honest one there. With a registry
-// and no stored app the route WORKS and is waiting, which a Settings-supplied
-// installation passes through on its way in; the generic stub text describes an
-// unbuilt feature and sends that operator looking for a newer build instead of
-// for the screen that fixes it in a minute.
+// serve. Without a capture registry no screen can fix it. With one, only the
+// OAuth app is missing, so the answer names the page that stores it.
 func writeConnectorUnavailable(w http.ResponseWriter, r *http.Request, provider string, hasRegistry bool) {
 	if !hasRegistry {
 		httperr.NotImplemented(w, r, "ConnectConnector")
@@ -106,7 +99,7 @@ func writeConnectorUnavailable(w http.ResponseWriter, r *http.Request, provider 
 	}
 	httperr.NotImplementedBecause(w, r,
 		"no "+provider+" OAuth app is configured for this installation — "+
-			"add one under Settings → General, or supply it in the environment")
+			"add one under Settings → Sign-in and security, or supply it in the environment")
 }
 
 // disabledProviderAPI reports whether the failure is a provider API that was

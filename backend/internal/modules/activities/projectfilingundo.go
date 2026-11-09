@@ -54,44 +54,10 @@ func (s *Store) UndoProjectFiling(ctx context.Context, id ids.ActivityID, reason
 	}
 	var out crmcontracts.ProjectFiling
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		// The linked records are locked before the activity, the order a deal's
-		// win takes (its own row, then the activity it stamps), so the two cannot
-		// wait on each other. The links are read once more under the activity
-		// lock: a record linked in between was not locked, and the undo says so
-		// rather than judge it unprotected.
-		linksBefore, err := shareLockQualifyingRecords(ctx, tx, id)
-		if err != nil {
+		if err := lockForFilingChange(ctx, tx, id); err != nil {
 			return err
 		}
-		held, err := lockActivityForWrite(ctx, tx, id.UUID)
-		if err != nil {
-			return err
-		}
-		if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
-			return err
-		}
-		linksAfter, err := linkSignature(ctx, tx, id)
-		if err != nil {
-			return err
-		}
-		if linksBefore != linksAfter {
-			return fmt.Errorf("the activity's links changed while the undo was being judged; retry: %w", apperrors.ErrConflict)
-		}
-		facts, err := readProjectFilingFacts(ctx, tx, id)
-		if err != nil {
-			return err
-		}
-		if refusal := facts.refusal(); refusal != nil {
-			return refusal
-		}
-		name, err := deciderName(ctx, tx, actor)
-		if err != nil {
-			return err
-		}
-		if err := withdrawProjectFiling(ctx, tx, id, facts.filings); err != nil {
-			return err
-		}
-		if err := recordProjectFilingUndone(ctx, tx, id, facts, name, stated); err != nil {
+		if err := undoProjectFilingLocked(ctx, tx, id, actor, stated); err != nil {
 			return err
 		}
 		out, err = projectFilingState(ctx, tx, id)
@@ -101,6 +67,54 @@ func (s *Store) UndoProjectFiling(ctx context.Context, id ids.ActivityID, reason
 		return crmcontracts.ProjectFiling{}, apperrors.ErrNotFound
 	}
 	return out, err
+}
+
+// lockForFilingChange takes the locks a change to the activity's filing
+// needs, and checks the caller may write the activity.
+//
+// The linked records are locked before the activity, the order a deal's win
+// takes, so the two cannot wait on each other. The links are read again under
+// the activity lock. A record linked in between was not locked, so it fails.
+func lockForFilingChange(ctx context.Context, tx pgx.Tx, id ids.ActivityID) error {
+	linksBefore, err := shareLockQualifyingRecords(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+	held, err := lockActivityForWrite(ctx, tx, id.UUID)
+	if err != nil {
+		return err
+	}
+	if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
+		return err
+	}
+	linksAfter, err := linkSignature(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+	if linksBefore != linksAfter {
+		return fmt.Errorf("the activity's links changed while the undo was being judged; retry: %w", apperrors.ErrConflict)
+	}
+	return nil
+}
+
+// undoProjectFilingLocked judges and takes the project filing back, under the
+// locks lockForFilingChange took. A refusal is a *ProjectFilingRefusedError.
+func undoProjectFilingLocked(ctx context.Context, tx pgx.Tx, id ids.ActivityID, actor principal.Principal, reason string) error {
+	facts, err := readProjectFilingFacts(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+	if refusal := facts.refusal(); refusal != nil {
+		return refusal
+	}
+	name, err := deciderName(ctx, tx, actor)
+	if err != nil {
+		return err
+	}
+	if err := withdrawProjectFiling(ctx, tx, id, facts.filings); err != nil {
+		return err
+	}
+	return recordProjectFilingUndone(ctx, tx, id, facts, name, reason)
 }
 
 // parseUndoReason refuses an unstated reason before any transaction opens:

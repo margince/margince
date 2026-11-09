@@ -69,6 +69,9 @@ type InstallationSettings struct {
 	// AgentAllowances is what one agent passport may do per window
 	// (installationagentallowances.go).
 	AgentAllowances agentvolume.Policy
+	// AgentRoleAllowances lists the live roles and what each holds apart from the
+	// installation value (agentroleallowances.go).
+	AgentRoleAllowances []RoleAllowance
 }
 
 // InstallationPatch is a sparse installation-settings write: a nil field is
@@ -228,7 +231,7 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	if err != nil {
 		return InstallationSettings{}, err
 	}
-	allowances, err := s.readAgentPolicy(ctx)
+	allowances, byRole, err := s.readAgentPolicy(ctx)
 	if err != nil {
 		return InstallationSettings{}, err
 	}
@@ -242,6 +245,7 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 		EnabledOidcProviders: providers,
 		Operations:           operations,
 		AgentAllowances:      allowances,
+		AgentRoleAllowances:  byRole,
 	}
 	for _, read := range []func(context.Context, *InstallationSettings) error{
 		s.readCallMessengers, s.readIndividualPerformance, s.readForecastSelfCorrecting, s.readForecastLikelyThreshold,
@@ -385,6 +389,11 @@ func (s *InstallationSettingsStore) UpdateInstallation(ctx context.Context, in I
 	if err := auth.Require(ctx, installationSettingsObject, principal.ActionUpdate); err != nil {
 		return InstallationSettings{}, err
 	}
+	// The agent allowances are among these settings, so no agent changes them,
+	// whatever its human may: an agent would be raising its own allowance.
+	if err := auth.RequireHuman(ctx); err != nil {
+		return InstallationSettings{}, err
+	}
 	// Each field is encoded where its own type is still known, so the loop
 	// below carries bytes rather than an `any` that would accept anything.
 	// Every field of the patch appears exactly once: one left out is a value
@@ -409,6 +418,12 @@ func (s *InstallationSettingsStore) UpdateInstallation(ctx context.Context, in I
 			return err
 		}
 		if err := s.scheduleAgentWindowTx(ctx, tx, in.AgentAllowances.WindowHours); err != nil {
+			return err
+		}
+		if err := s.resetAgentAllowancesTx(ctx, tx, in.AgentAllowances.ToDefaults); err != nil {
+			return err
+		}
+		if err := s.saveRoleAllowancesTx(ctx, tx, in.AgentAllowances.Roles); err != nil {
 			return err
 		}
 		for _, w := range patch {

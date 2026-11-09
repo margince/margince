@@ -18,10 +18,15 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func (s *RetentionService) anonymizeLead(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	// The stop lock first, the order a stop writer takes it in.
+	if err := storekit.LockStopKey(ctx, tx, id.String()); err != nil {
+		return err
+	}
 	// BEFORE the UPDATE below nulls it: a suppression is detached onto the
 	// address it applies to, and the lead row is the only place that address
 	// still lives. Read after the scrub and the objection is orphaned.

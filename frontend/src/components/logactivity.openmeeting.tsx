@@ -35,6 +35,7 @@ export type OpenMeeting = Pick<
   Activity,
   | "id"
   | "version"
+  | "links"
   | "body"
   | "calendar_managed"
   | "subject"
@@ -198,6 +199,7 @@ export type MeetingRecord = {
   meeting: OpenMeeting;
   // The outcome is written (with the notes, for a meeting the form may edit).
   outcome: boolean;
+  linkedDealIds?: string[];
   // The linked note is posted (a calendar-managed meeting only).
   note: boolean;
   // The follow-up task is posted.
@@ -224,6 +226,7 @@ export function useRecordOfMeeting(
   zone: string,
   attendeeIds: readonly string[],
 ): Readonly<{
+  recordingFiledMeeting: boolean;
   start: () => MeetingRecord | undefined;
   keep: (record: MeetingRecord | undefined) => void;
   clear: () => void;
@@ -248,15 +251,34 @@ export function useRecordOfMeeting(
   const clear = () => setResume(undefined);
   if (resume && meetingKind) {
     return {
+      recordingFiledMeeting: Boolean(
+        resume.meeting.links?.some((link) =>
+          ["deal", "project", "lead"].includes(link.entity_type),
+        ),
+      ),
       start: () => ({ ...resume, sent: { ...resume.sent } }),
       keep,
       clear,
       question: <RecordedMeetingLine meeting={resume.meeting} />,
     };
   }
-  if (!open) return { start: () => undefined, keep, clear, question: null };
+  if (!open)
+    return {
+      recordingFiledMeeting: false,
+      start: () => undefined,
+      keep,
+      clear,
+      question: null,
+    };
   const recordsIt = notRecordOf !== open.id;
   return {
+    recordingFiledMeeting:
+      recordsIt &&
+      Boolean(
+        open.links?.some((link) =>
+          ["deal", "project", "lead"].includes(link.entity_type),
+        ),
+      ),
     start: () =>
       recordsIt
         ? {
@@ -384,7 +406,7 @@ export async function recordOnMeeting(
     );
   };
   if (!record.outcome) {
-    await writeMeetingOutcome(
+    const updated = await writeMeetingOutcome(
       {
         id: meeting.id,
         version: meeting.version,
@@ -392,9 +414,13 @@ export async function recordOnMeeting(
         ...(managed ? {} : { body: appendedNotes(meeting.body, draft.body) }),
         // The fields typed on the form describe the meeting they record.
         custom: draft.custom,
+        dealFiling: draft.dealFiling?.context,
       },
       t,
     );
+    record.linkedDealIds = (updated?.links ?? [])
+      .filter((link) => link.entity_type === "deal")
+      .map((link) => link.entity_id);
     record.outcome = true;
   }
   if (managed && !record.note) {

@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig, type UserConfig } from "vite";
 import { inlineViews } from "./scripts/vite-inline-views.ts";
+import { thirdPartyNotices } from "./scripts/vite-licenses.ts";
 
 // The MCP App views' own build. vite.config.ts is UNTOUCHED, and deliberately:
 // it has no `build` section at all today, so every pin below — the browser
@@ -70,7 +71,7 @@ export function mcpAppView(name: string, outDir: string): UserConfig {
         output: { codeSplitting: false },
       },
     },
-    plugins: [inlineViews()],
+    plugins: [thirdPartyNotices({ inline: true }), inlineViews()],
   };
 }
 

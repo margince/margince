@@ -7,7 +7,7 @@ a boot error, and so is a value its setting does not take.
 
 A limit an admin changes while the product runs is a setting, not configuration. The daily cap on
 automatic web page reads, the limits per read and how often Margince reads a mailbox are on
-Settings → Capture rules. How long a connector access token lasts is on Settings → MCP. How often
+Settings → Mail capture. How long a connector access token lasts is on Settings → MCP. How often
 each scheduled run starts, how early Margince renews a mail subscription and how fast one mailbox
 sends are on Settings → System health. Each applies on its next use with no restart; a running
 worker checks the schedules again every minute.
@@ -186,7 +186,7 @@ the same transaction. `PATCH /installation/settings` refuses a different `name`.
 
 **Legal review.** Legal review on deals is on by default, as the setting `deals.legal_review_enabled`.
 `seeds.legal_review: false` starts a new installation with it off. An admin changes it later under
-Settings → Pipelines, or through `PUT /v1/legal-reviews/settings`. Off hides the request, the reviewer
+Settings → Deals, or through `PUT /v1/legal-reviews/settings`. Off hides the request, the reviewer
 queue and the `legal_reviewed` criterion kind, and a stage stops waiting for legal. Reviews already
 recorded are kept.
 
@@ -242,7 +242,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | `graph_tenant` | `MARGINCE_GRAPH_TENANT` | `--graph-tenant` | `string` | — | api, worker | Microsoft identity tenant of the capture consent endpoint and token refresh; unset means common. |
 | `inline_relay` | `MARGINCE_INLINE_RELAY` | `--inline-relay` | `bool` | `true` | api | Run the outbox relay in this process; false when cmd/worker runs it. |
 | `job_drain_window` | `MARGINCE_JOB_DRAIN_WINDOW` | `--job-drain-window` | `duration` | `20s` | worker | How long a running job gets to finish at shutdown; the grace period must cover it, five more seconds and the shutdown steps. |
-| `keyvault_root_key` | `MARGINCE_KEYVAULT_ROOT_KEY` | — | `string`, secret | — | api, worker | Standard Base64 of the 32-byte root key that seals connector credentials; unset disables the vault. |
+| `keyvault_root_key` | `MARGINCE_KEYVAULT_ROOT_KEY` | — | `string`, secret | — | api, migrate, worker | Standard Base64 of the 32-byte root key that seals connector credentials and keys the erasure list and preference links; unset disables the vault. |
 | `log_format` | `MARGINCE_LOG_FORMAT` | `--log-format` | `enum(text\|json)` | `text` | api, worker | Log format. |
 | `log_level` | `MARGINCE_LOG_LEVEL` | `--log-level` | `enum(debug\|info\|warn\|error)` | `info` | api, worker | Log level. |
 | `mcp_apps_base_url` | `MARGINCE_MCP_APPS_BASE_URL` | `--mcp-apps-base-url` | `string` | — | api | Origin the api reads the MCP App view documents from; defaults to `--public-base-url`. |
@@ -291,12 +291,6 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 |---|---|---|---|---|---|---|
 | `analytics.performance_enabled` | `MARGINCE_ANALYTICS_PERFORMANCE_ENABLED` | — | `bool` | `false` | api, worker | Ignored; kept so existing files load. |
 
-### `assurance`
-
-| Key | Env | Flag | Type | Default | Programs | Doc |
-|---|---|---|---|---|---|---|
-| `assurance.qualified_forecast_enforced` | `MARGINCE_ASSURANCE_QUALIFIED_FORECAST_ENFORCED` | — | `bool`, stored | `false` | api, worker | Leave a deal whose customer stopped answering out of the forecast line of deals the customer supports, and stop the close-date sweep lowering forecast categories. |
-
 ### `auth`
 
 | Key | Env | Flag | Type | Default | Programs | Doc |
@@ -312,6 +306,10 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | `capture.confidentiality_pass_cap` | `MARGINCE_CAPTURE_CONFIDENTIALITY_PASS_CAP` | — | `int`, 1 to 200, stored | `40` | api, worker | Held mail threads one review pass may judge; the rest wait for the next pass. |
 | `capture.freemail_extra` | `MARGINCE_CAPTURE_FREEMAIL_EXTRA` | — | `list<string>` | — | api, worker | Ignored, with a warning at boot; the consumer-mail list is edited under Settings. |
 | `capture.freemail_never` | `MARGINCE_CAPTURE_FREEMAIL_NEVER` | — | `list<string>` | — | api, worker | Ignored, with a warning at boot; the consumer-mail list is edited under Settings. |
+| `capture.gmail_mailbox_quota` | `MARGINCE_CAPTURE_GMAIL_MAILBOX_QUOTA` | — | `int` | `6000` | api, worker | Effective Gmail quota units per minute per mailbox. Shared across live and history requests and OAuth apps; 100 units are kept free. Match the limit shown by Google. |
+| `capture.gmail_project_quota` | `MARGINCE_CAPTURE_GMAIL_PROJECT_QUOTA` | — | `int` | `1200000` | api, worker | Effective Gmail quota units per minute across this installation's OAuth projects. Use the smallest project limit; 100 units are kept free. Use identical values in every process. |
+| `capture.history_concurrency` | `MARGINCE_CAPTURE_HISTORY_CONCURRENCY` | — | `int` | `1` | api, worker | Limit on history imports running at once across the installation. Use the same value in every process. |
+| `capture.history_hold` | `MARGINCE_CAPTURE_HISTORY_HOLD` | — | `bool` | `false` | api, worker | Accept queued history requests without starting another page. Stop older history workers before starting workers with a new admission protocol. |
 | `capture.mail_sharing` | `MARGINCE_CAPTURE_MAIL_SHARING` | — | `bool`, stored | `true` | api, worker | Let every colleague who can see a contact read the email captured with them; off keeps new mail to those on it. |
 | `capture.mail_sync_interval_seconds` | `MARGINCE_CAPTURE_MAIL_SYNC_INTERVAL_SECONDS` | — | `int`, 30 to 3600, stored | `120` | api, worker | Seconds a working mailbox connection waits between polls. |
 | `capture.max_backfill_months` | `MARGINCE_CAPTURE_MAX_BACKFILL_MONTHS` | — | `int` | `0` | api, worker | How far back a mailbox import may reach, for the whole installation; 0 is no cap. |
@@ -354,6 +352,13 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 |---|---|---|---|---|---|---|
 | `data_tasks.pace` | `MARGINCE_DATA_TASKS_PACE` | `--data-tasks-pace` | `duration` | `1s` | worker | Delay between saved batches of data tasks. |
 
+### `database`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `database.worker_max_connections` | `MARGINCE_WORKER_MAX_CONNECTIONS` | `--worker-max-connections` | `int` | `12` | worker | Worker connection limit, with the River listener counted. Also bounded by the DSN and queue worker count. Count every process when sizing the installation. |
+| `database.worker_statement_cache_capacity` | `MARGINCE_WORKER_STATEMENT_CACHE_CAPACITY` | `--worker-statement-cache-capacity` | `int` | `256` | worker | Limit on cached statements and result types per worker connection. The DSN may lower it. Zero needs a compatible DSN `default_query_exec_mode`. |
+
 ### `deals`
 
 | Key | Env | Flag | Type | Default | Programs | Doc |
@@ -361,7 +366,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | `deals.legal_review_enabled` | `MARGINCE_DEALS_LEGAL_REVIEW_ENABLED` | — | `bool`, stored | `true` | api, worker | Let a deal be sent to legal for review, and let a `legal_reviewed` criterion hold a deal at its stage. |
 | `deals.maintenance_writes_enabled` | `MARGINCE_DEALS_MAINTENANCE_WRITES_ENABLED` | — | `bool`, stored | `true` | api, worker | Let the nightly close-date sweep write to a deal. Off stops every automatic write the sweep makes. |
 | `deals.silent_close_days` | `MARGINCE_DEALS_SILENT_CLOSE_DAYS` | — | `int`, 60 to 730, stored | `120` | api, worker | Days without word from the customer after which Margince closes an open deal as lost. |
-| `deals.stage_autopilot_enabled` | `MARGINCE_DEALS_STAGE_AUTOPILOT_ENABLED` | — | `bool`, stored | `false` | api, worker | Let a deal move to the next stage by itself where the rule of its stage allows it; off stops every automatic move. |
+| `deals.stage_autopilot_enabled` | `MARGINCE_DEALS_STAGE_AUTOPILOT_ENABLED` | — | `bool`, stored | `true` | api, worker | Let Margince move a deal to a later stage when the evidence on the deal shows it reached that stage; off stops every automatic move. |
 
 ### `email`
 
@@ -393,6 +398,9 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 |---|---|---|---|---|---|---|
 | `installation.agent_calls_per_window` | `MARGINCE_INSTALLATION_AGENT_CALLS_PER_WINDOW` | — | `int`, 50 to 20000, stored | `1000` | api, worker | Calls of any kind, tool or API, one agent passport may make per window. |
 | `installation.agent_egress_per_window` | `MARGINCE_INSTALLATION_AGENT_EGRESS_PER_WINDOW` | — | `int`, 1 to 200, stored | `20` | api, worker | Calls that send something out of the workspace one agent passport may make per window. |
+| `installation.agent_role_calls_per_window` | `MARGINCE_INSTALLATION_AGENT_ROLE_CALLS_PER_WINDOW` | — | `map<string,int>`, stored | — | api, worker | Calls of any kind, tool or API, one agent passport may make per window, by the role key of the user who connected it, as role:count pairs; 0 uses the installation value. An agent gets the highest value of its user's roles; a role with no value counts as the installation value. Admin gets 20000 while neither Admin nor the installation count has a value set. |
+| `installation.agent_role_egress_per_window` | `MARGINCE_INSTALLATION_AGENT_ROLE_EGRESS_PER_WINDOW` | — | `map<string,int>`, stored | — | api, worker | Calls that send something out of the workspace one agent passport may make per window, by the role key of the user who connected it, as role:count pairs; 0 uses the installation value. An agent gets the highest value of its user's roles; a role with no value counts as the installation value. |
+| `installation.agent_role_writes_per_window` | `MARGINCE_INSTALLATION_AGENT_ROLE_WRITES_PER_WINDOW` | — | `map<string,int>`, stored | — | api, worker | Changing calls one agent passport may make per window, by the role key of the user who connected it, as role:count pairs; 0 uses the installation value. An agent gets the highest value of its user's roles; a role with no value counts as the installation value. Admin gets 2000 while neither Admin nor the installation count has a value set. |
 | `installation.agent_runner_interval_seconds` | `MARGINCE_INSTALLATION_AGENT_RUNNER_INTERVAL_SECONDS` | — | `int`, 10 to 3600, stored | `30` | api, worker | Seconds between the passes of the agent scheduler. |
 | `installation.agent_window_hours` | `MARGINCE_INSTALLATION_AGENT_WINDOW_HOURS` | — | `int`, 1 to 168, stored | `24` | api, worker | Hours in the window the agent limits count over; set at boot, it also keeps a length an admin saved for the next reset from taking over. |
 | `installation.agent_writes_per_window` | `MARGINCE_INSTALLATION_AGENT_WRITES_PER_WINDOW` | — | `int`, 10 to 5000, stored | `200` | api, worker | Changing calls one agent passport may make per window. |
@@ -449,8 +457,8 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
-| `mcp.client_registration.dynamic` | `MARGINCE_MCP_CLIENT_REGISTRATION_DYNAMIC` | — | `bool` | `true` | api | Let AI tools register their own OAuth client at `/oauth/register` (DCR); false keeps it off whatever the admin's switch in Settings > MCP says. |
-| `mcp.client_registration.metadata_document` | `MARGINCE_MCP_CLIENT_REGISTRATION_METADATA_DOCUMENT` | — | `bool` | `true` | api | Accept a client ID that is the URL of the tool's published metadata document (CIMD); false keeps it off whatever the admin's switch in Settings > MCP says. |
+| `mcp.client_registration.dynamic` | `MARGINCE_MCP_CLIENT_REGISTRATION_DYNAMIC` | — | `bool` | `true` | api | Let AI tools register their own OAuth client at `/oauth/register` (DCR); false keeps it off whatever the admin's switch in Settings > AI tool access says. |
+| `mcp.client_registration.metadata_document` | `MARGINCE_MCP_CLIENT_REGISTRATION_METADATA_DOCUMENT` | — | `bool` | `true` | api | Accept a client ID that is the URL of the tool's published metadata document (CIMD); false keeps it off whatever the admin's switch in Settings > AI tool access says. |
 | `mcp.connector_enabled` | `MARGINCE_MCP_CONNECTOR_ENABLED` | — | `bool` | `false` | api | Serve `/mcp` and the OAuth authorization server to outside agent clients; needs `--public-base-url`. |
 
 ### `operations`
@@ -524,7 +532,7 @@ reset from taking over.
 Some bounds are checked in code and not shown in the Type column.
 `installation.dead_work_banner_hours` takes 1 to 168. `installation.geocode_backfill_interval_seconds`
 and `installation.technical_backfill_interval_seconds` take 300 to 604800, or `0` for off.
-`installation.forecast_forward_measure` takes `likely`, `qualified_likely`, `weighted`, `qualified_weighted` or `manager_call`. `installation.forecast_likely_threshold` takes 1 to 100.
+`installation.forecast_forward_measure` takes `likely`, `weighted` or `manager_call`. `installation.forecast_likely_threshold` takes 1 to 100.
 
 `consent.authorization_modes` names every category or none; a value that leaves one out fails the
 boot. `consent.controller_particulars` takes the fields `LegalName`, `PostalAddress`,

@@ -102,7 +102,9 @@ describe("the Leads view", () => {
     const asked = showView("leads", reportingLeadsEvaluation);
 
     const created = await panel(titled(reportingMetricNames.leads_created));
-    expect(created.getByRole("button", { name: "Website: 12" })).toBeVisible();
+    expect(
+      await created.findByRole("button", { name: "Website: 12" }),
+    ).toBeVisible();
     const evaluate = asked.find((url) =>
       url.pathname.endsWith("/analytics/evaluate"),
     );

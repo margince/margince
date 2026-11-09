@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/capture/health.go frontend/src/app/capturehealthbanner.tsx frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/features/capture/connection-service.tsx backend/internal/compose/connectors_sharedconsent.go -->
+<!-- describes: backend/internal/modules/capture/health.go frontend/src/app/capturehealthbanner.tsx frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/features/capture/connection-service.tsx backend/internal/compose/connectors_sharedconsent.go backend/internal/compose/connectors_picture.go -->
 # Connecting your mailbox and calendar
 
 Capture reads mail and meetings only from an account you connect. This page
@@ -17,6 +17,8 @@ To connect your Gmail or Outlook mailbox to Margince, open **Settings → Connec
 You land back on Connections with a note such as "Google connected" and "Mail and Calendar are syncing." An agent cannot connect a mailbox for you.
 If the account says "{provider} is not configured on this installation.", an administrator has to set it up first.
 Also called: hook up Google Mail, link my inbox, email sync, Outlook sync, Office 365.
+
+Google also shares your account's picture. If that Google account is the address you sign in with, colleagues see its picture next to your name. A picture you uploaded or removed stays as it is. A shared mailbox, such as sales@, sets no one's picture.
 
 ### How do I connect an IMAP mailbox?
 To connect any other mail host to Margince, open **Settings → Connections**, choose **Add account** and pick **Another mail host**. Then fill in the **Connect IMAP mailbox** form.
@@ -58,11 +60,17 @@ Also called: calendar sync, sync meetings, link my agenda.
 
 A meeting from your calendar names every guest on the invitation under **Attendees**, whether they accepted, declined or did not answer yet. A guest who is a contact links to their record. A guest who is not a contact yet shows by the name or address on the invitation. Colleagues show under **Colleagues**. A booked room is not a guest.
 
+If you say no to an invitation, the meeting stays on for colleagues who are still going. It is called off for everyone only when the colleague who set it up calls it off.
+
 Each guest's answer shows next to their name: **Declined**, **Maybe** or **No answer**. A guest who accepted shows no label. The next calendar sync updates an answer that changed.
+
+A colleague's own calendar decides their answer while it is connected. Once they disconnect their calendar, the next sync of a colleague's calendar that lists them updates their answer instead. When they connect again, their own calendar decides it again.
 
 A colleague on the invitation can read the meeting. A colleague who declined is shown under **Attendees** and cannot read it.
 
-A guest added to the invitation later joins the meeting at the next calendar sync. A guest taken off the invitation leaves it, and a colleague taken off can no longer read it. If someone set who can see the meeting by hand, a colleague added later is shown but cannot read it unless they are picked. A meeting you imported from another CRM gets its guests from your calendar the same way.
+A guest added to the invitation later joins the meeting at the next calendar sync. A guest taken off the invitation leaves it, and a colleague taken off can no longer read it. A colleague taken off by whoever set the meeting up leaves it at the next calendar sync of whoever set it up. Their own calendar does not need to sync first. If a colleague deletes the meeting from their own calendar, only they leave it.
+
+If someone set who can see the meeting by hand, a colleague added later is shown but cannot read it unless they are picked. A meeting you imported from another CRM gets its guests from your calendar the same way.
 
 An invitation with more than 50 guests is a mailing list to Margince. It keeps your colleagues on it and names up to 200 outside guests by the name or address on the invitation. Those guests are not linked to a contact, no contact is made for them, and the meeting does not count as contact with anyone. Past 200, the meeting says how many more guests it does not list.
 
@@ -233,6 +241,11 @@ Before it runs, it counts the messages in the window, without reading what they
 say, and shows what the AI work will likely cost. It counts up to 20,000
 messages. A larger mailbox is shown as "{count} emails or more. Counting stopped
 there." and not as a made-up guess.
+
+Internal mail is left out unless an Admin has authorized its source and history
+range. You must also choose to include that scope in a new run. Read the scope before
+starting. [Who can see an email](who-can-see-an-email.md) explains the separate
+admin and mailbox-owner choices.
 
 You can stop it with **Stop**: "Everything imported so far is kept."
 

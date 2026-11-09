@@ -54,11 +54,13 @@ func messageCode(err error) string {
 }
 
 func TestAcceptingAPartnersFirstLeadActivatesIt(t *testing.T) {
+	pinLeadAuditClock(t)
 	e := setupDedupe(t)
 	ctx := asStageAdmin(e, stageAdminGrants())
 	partnerID, _ := newPartnerCompany(ctx, t, e, "Referrer GmbH", UpsertPartnerInput{PartnerRole: "consulting", RelationshipStage: new("ready")})
 
 	first := acceptReferredLead(ctx, t, e, partnerID, "First Referral")
+	requireStoredLeadClockAudit(ctx, t, e.store, ids.From[ids.LeadKind](ids.UUID(first.Id)))
 	if first.PartnerAcceptedAt == nil || first.PartnerAcceptedBy == nil {
 		t.Fatalf("the accepted lead carries no stamp: %+v", first)
 	}

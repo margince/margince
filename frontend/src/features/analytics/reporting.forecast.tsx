@@ -9,9 +9,9 @@ import { useLocale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import type { AnalyticsScope } from "./analytics.context";
+import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import { ForecastShareActions } from "./analytics.share";
 import { ReportingCharts } from "./reporting.charts";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
 import {
   type ReportingEvaluation,

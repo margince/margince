@@ -184,25 +184,83 @@ func (s *Store) refreshWaitingHorizonTx(ctx context.Context, tx pgx.Tx, asOf tim
 // measureWaitingHorizon takes the response spread and derives the horizon
 // from it: the year-long percentile only the worker pass pays for.
 func (s *Store) measureWaitingHorizon(ctx context.Context, tx pgx.Tx, asOf time.Time) (int, error) {
+	spread, err := s.horizonSpreadTx(ctx, tx, asOf, waitingHorizonSample)
+	if err != nil {
+		return 0, err
+	}
+	return derivedWaitingHorizonDays(spread), nil
+}
+
+// horizonSpreadTx measures over the sample, and over the whole window when
+// the sample holds too few answers to speak. Without the second pass a mailbox
+// that answers rarely would store the compiled horizon over a learned one.
+func (s *Store) horizonSpreadTx(ctx context.Context, tx pgx.Tx, asOf time.Time, sample int) (waitingHorizonSpread, error) {
+	spread, err := s.waitingHorizonSpreadTx(ctx, tx, asOf, sample)
+	if err != nil || spread.Answered >= waitingHorizonMinSample {
+		return spread, err
+	}
+	return s.waitingHorizonSpreadTx(ctx, tx, asOf, wholeWindow)
+}
+
+// wholeWindow is the sample size that judges every message in the window.
+const wholeWindow = 0
+
+// waitingHorizonSample is how many of the window's sales messages the
+// measurement judges. Each one costs a read of the mail that could have
+// answered it, so a year of a busy mailbox outgrew the pass's budget. A sample
+// this size fixes the high percentile well inside the days the horizon keeps.
+const waitingHorizonSample = 3000
+
+// waitingHorizonSpreadTx measures the spread over at most sample inbound
+// messages of the window. The sample orders by a hash of the id, so it is the
+// same set on every pass over unchanged mail.
+func (s *Store) waitingHorizonSpreadTx(ctx context.Context, tx pgx.Tx, asOf time.Time, sample int) (waitingHorizonSpread, error) {
+	query, args, err := s.waitingHorizonStatement(ctx, tx, asOf, sample)
+	if err != nil {
+		return waitingHorizonSpread{}, err
+	}
+	var spread waitingHorizonSpread
+	var slowMinutes int64
+	if err := tx.QueryRow(ctx, query, args...).Scan(&spread.Answered, &slowMinutes); err != nil {
+		return waitingHorizonSpread{}, fmt.Errorf("activities: measuring the response spread the horizon follows: %w", err)
+	}
+	spread.Slow = time.Duration(slowMinutes) * time.Minute
+	return spread, nil
+}
+
+// waitingHorizonStatement is the measurement's statement and its arguments.
+//
+//craft:ignore naked-any pgx takes a statement's arguments as []any
+func (s *Store) waitingHorizonStatement(ctx context.Context, tx pgx.Tx, asOf time.Time, sample int) (string, []any, error) {
 	args := []any{asOf.AddDate(0, 0, -waitingHorizonWindowDays), asOf}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	ownDomains, err := s.ownDomainList(ctx, tx)
 	if err != nil {
-		return 0, err
+		return "", nil, err
 	}
-	var spread waitingHorizonSpread
-	var slowMinutes int64
 	query := fmt.Sprintf(firstResponseSQL,
 		scopeUnbounded,
 		liveRecord(openDealPredicate, "d"),
 		liveRecord(workingLeadPredicate, "ld"),
 		ownDomainSenderSQL("inbound", arg(ownDomains)),
-		slowPercentile)
-	if err := tx.QueryRow(ctx, query, args...).Scan(&spread.Answered, &slowMinutes); err != nil {
-		return 0, fmt.Errorf("activities: measuring the response spread the horizon follows: %w", err)
+		slowPercentile,
+		sampleClause(sample, arg))
+	return query, args, nil
+}
+
+// sampleClause is the sample firstResponseSQL judges: every message for
+// wholeWindow, else sampledMessages.
+func sampleClause(sample int, arg func(any) int) string {
+	if sample == wholeWindow {
+		return everyMessage
 	}
-	spread.Slow = time.Duration(slowMinutes) * time.Minute
-	return derivedWaitingHorizonDays(spread), nil
+	return sampledMessages(arg(sample))
+}
+
+// sampledMessages keeps the first messages firstResponseSQL judges by a hash of
+// their id, after every filter. limit is the placeholder of the sample size.
+func sampledMessages(limit int) string {
+	return fmt.Sprintf(`ORDER BY md5(inbound.id::text) LIMIT $%d`, limit)
 }
 
 // horizonOrDefault reads an unmeasured horizon as the compiled one.

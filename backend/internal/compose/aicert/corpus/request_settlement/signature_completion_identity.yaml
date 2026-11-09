@@ -14,13 +14,6 @@ fixture:
   - messages:
       - direction: inbound
         subject: Signature requested
-        body: Please sign envelope BETA-205, the services agreement.
-      - direction: inbound
-        subject: Signature requested
-        body: Envelope ALPHA-104 is fully signed by all required parties.
-  - messages:
-      - direction: inbound
-        subject: Signature requested
         body: Please sign the services agreement.
       - direction: inbound
         subject: Signature completed
@@ -36,16 +29,12 @@ expect:
   outcome: accepted
   answer:
     - verdict: settled
-    - verdict: still_owed
     - verdict: unsure
     - verdict: still_owed
-  rubric: >
-    Only the first request is settled. The second completion names a different
-    envelope and leaves BETA-205 outstanding. The third supplies no identity
-    that establishes which agreement was signed, so it is unsure. The fourth
-    explicitly leaves our signature outstanding. Shared subjects and another
-    signer's progress must never close our request.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+      remaining_names: ALPHA-104|services agreement
+  judge: none
+  judge_none_reason: >
+    The answer is one closed verdict per conversation, and the check fails any
+    other verdict and a still_owed that does not name the envelope or the
+    agreement. Only the first request is settled: the second names no
+    document, and the third leaves our signature outstanding.

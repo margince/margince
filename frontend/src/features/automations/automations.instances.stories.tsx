@@ -8,6 +8,7 @@ import { Panel } from "../../design-system/panel";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import {
@@ -51,6 +52,10 @@ const entryFor = (key: string) =>
 
 function Table({ canEdit = true }: Readonly<{ canEdit?: boolean }>) {
   installFetchStub({
+    "GET /me": meRoute(
+      { automation: canEdit ? ["read", "update", "delete"] : ["read"] },
+      canEdit ? {} : { roles: ["rep"], seat: "read" },
+    ),
     "GET /automations/au-1/runs": () =>
       jsonResponse({ data: [], page: { next_cursor: null } }),
     "GET /automations/au-2/runs": () =>
@@ -126,7 +131,9 @@ export const RunHistoryOpen: Story = {
     const body = within(canvasElement.ownerDocument.body);
     await user.click(await body.findByRole("button", { name: "Runs" }));
     await canvas.findByText("This automation has not fired yet.");
-    await expect(canvas.queryByRole("combobox")).toBeNull();
+    await expect(
+      canvas.queryByRole("combobox", { name: "Outcome" }),
+    ).toBeNull();
   },
   render: () => <Table />,
 };

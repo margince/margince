@@ -94,7 +94,7 @@ func (e signingEnv) as(user ids.UUID) context.Context {
 
 func (e signingEnv) signatureOf(t *testing.T, user ids.UUID) SenderSignature {
 	t.Helper()
-	signature, err := e.store.SignatureFor(e.as(user), user)
+	signature, err := e.store.SignatureFor(e.as(user), user, ids.Nil)
 	if err != nil {
 		t.Fatalf("read the signature of %s: %v", user, err)
 	}

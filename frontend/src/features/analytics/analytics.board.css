@@ -57,6 +57,13 @@
 .analytics-sheet > .stat-strip[data-density="plate"]:first-child {
   border-top: 0;
 }
+/* A section's foot is its last line, not a band: the seam between sections
+   already closes it. */
+.analytics-sheet .panel > .panel-foot {
+  border-top: 0;
+  padding-top: 0;
+  padding-bottom: var(--padPanel);
+}
 /* A plate of figures inside the sheet stands on the sheet's own ground. */
 .analytics-sheet .stat-strip[data-density="plate"] {
   background: none;
@@ -88,4 +95,33 @@
 }
 .analytics-board-rail .stat-strip[data-density="plate"] > * + * {
   border-block-start: 1px solid var(--groundEdge);
+}
+
+/* Before the first decision its card is one line and its step, side by side. */
+.analytics-decision-start .panel-actions {
+  align-items: center;
+  justify-content: space-between;
+}
+/* In the rail a bar has no room beside a name: each member's name and amount
+   share a line, with the bar under them. */
+.analytics-board-rail .report-chart-rows:has(> li > .report-chart-row) {
+  grid-template-columns: minmax(0, 1fr) max-content;
+}
+.analytics-board-rail .report-chart .btn.report-chart-row {
+  row-gap: var(--space-1);
+  padding-block: var(--space-1);
+}
+.analytics-board-rail .report-chart-row > .report-chart-row-name {
+  grid-area: 1 / 1;
+}
+.analytics-board-rail .report-chart-row > .report-chart-row-amount {
+  grid-area: 1 / 2;
+}
+.analytics-board-rail .report-chart-row > .report-chart-bullet {
+  grid-area: 2 / 1 / 3 / -1;
+  height: 0.5rem;
+}
+.analytics-board-rail .report-chart-row .report-chart-bullet-fill {
+  inset-block: 0;
+  height: 100%;
 }

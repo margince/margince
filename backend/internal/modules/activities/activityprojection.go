@@ -19,11 +19,13 @@ package activities
 // forget.
 
 import (
+	"context"
 	"strings"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -156,6 +158,7 @@ var activityProjection = []activityColumn{
 	{"a.audience", func(s *activityScan) any { return &s.audience }},
 	{"a.audience_reason", func(s *activityScan) any { return &s.audienceReason }},
 	{"a.raw", func(s *activityScan) any { return &s.raw }},
+	{"", func(s *activityScan) any { return &s.a.CanShareInternal }},
 	{"", func(s *activityScan) any { return &s.contentAvailable }},
 }
 
@@ -220,13 +223,18 @@ const activityLive = "a.archived_at IS NULL"
 // activityColumns renders the select list. contentArm is the predicate
 // auth.ActivityAudienceArm rendered for this query's arguments, which is why
 // the final column's SQL cannot be a constant.
-func activityColumns(contentArm string) string {
+func activityColumns(ctx context.Context, contentArm string, arg func(any) int) (string, error) {
+	share, err := auth.ActivityInternalMailShareClause(ctx, "a", arg)
+	if err != nil {
+		return "", err
+	}
 	out := make([]string, len(activityProjection))
 	for i, c := range activityProjection {
 		out[i] = c.sql
 	}
 	out[len(out)-1] = "(" + contentArm + ") AS content_available"
-	return strings.Join(out, ", ")
+	out[len(out)-2] = "CASE WHEN a.internal_mail_authorization IS NOT NULL THEN (" + share + ") ELSE NULL END AS can_share_internal"
+	return strings.Join(out, ", "), nil
 }
 
 // activityScanTargets answers the destinations, in the projection's order.
@@ -252,6 +260,7 @@ func (s *activityScan) record() crmcontracts.Activity {
 		// at the provider — goes; the markers stay.
 		state = crmcontracts.ActivityContentStateWithheld
 		a.Subject, a.Body, a.SourceId = nil, nil, nil
+		a.CanShareInternal = nil
 		// The language too: it was read off the body, so answering it would
 		// tell a caller one fact about text they may not read.
 		a.Language = nil

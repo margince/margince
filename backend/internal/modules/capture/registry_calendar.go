@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
@@ -63,6 +64,12 @@ var calendarWriteScopes = map[string][]string{
 		"https://www.googleapis.com/auth/calendar",
 	},
 	"graphcal": {"Calendars.ReadWrite"},
+}
+
+// calendarProviderNames are the providers that connect a calendar: each one
+// names its write scopes above.
+func calendarProviderNames() []string {
+	return slices.Sorted(maps.Keys(calendarWriteScopes))
 }
 
 // CalendarWriteGranted says whether a connection's granted scopes let it write
