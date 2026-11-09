@@ -337,6 +337,7 @@ func (s *Store) loadTarget(ctx context.Context, deliveryID ids.UUID) (attemptTar
 // outcome is the result of one HTTP attempt, translated to the next row
 // state by recordOutcome.
 type outcome struct {
+	suppressed bool
 	statusCode int    // 0 when the request never got a response (dial/timeout)
 	failure    string // empty on success
 }

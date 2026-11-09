@@ -19,6 +19,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -31,12 +32,12 @@ var capturedOriginKeys = []string{"leadsource"}
 
 // capturedOriginSQL reads the first of those names out of a retained capture
 // that is a JSON object. The names are literals here and nothing a caller sent.
-const capturedOriginSQL = `(SELECT btrim(e.value) FROM jsonb_each_text(r.payload) e
-	WHERE lower(replace(e.key, '_', '')) = ANY($3) AND btrim(e.value) <> '' LIMIT 1)`
+const capturedOriginSQL = `SELECT btrim(e.value) FROM jsonb_each_text(@payload::jsonb) e
+ WHERE lower(replace(e.key, '_', '')) = ANY(@keys) AND btrim(e.value) <> '' LIMIT 1`
 
 type lacksOrigin struct {
-	id   ids.UUID
-	text *string
+	id      ids.UUID
+	payload []byte
 }
 
 // BackfillLeadOriginTx fills the origin of one page of leads from the wording
@@ -50,18 +51,18 @@ func BackfillLeadOriginTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit 
 		return nil, 0, err
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT l.id, `+capturedOriginSQL+`
+		SELECT l.id, `+originalstore.SQL("r")+`
 		  FROM lead l
 		  JOIN raw_capture r ON r.source_system = l.source_system AND r.source_id = l.source_id
 		 WHERE l.id > $1 AND l.archived_at IS NULL AND l.origin IS NULL AND jsonb_typeof(r.payload) = 'object'
-		 ORDER BY l.id LIMIT $2 FOR UPDATE OF l`, after, limit, capturedOriginKeys)
+		 ORDER BY l.id LIMIT $2 FOR UPDATE OF l`, after, limit)
 	if err != nil {
 		return nil, 0, fmt.Errorf("contacts: reading leads to give an origin: %w", err)
 	}
 	var page []lacksOrigin
 	for rows.Next() {
 		var row lacksOrigin
-		if err := rows.Scan(&row.id, &row.text); err != nil {
+		if err := rows.Scan(&row.id, &row.payload); err != nil {
 			rows.Close()
 			return nil, 0, err
 		}
@@ -73,10 +74,19 @@ func BackfillLeadOriginTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit 
 	}
 	for _, row := range page {
 		scanned = append(scanned, row.id)
-		if row.text == nil {
+		payload, err := originalstore.RepairPayload(ctx, row.payload)
+		if err != nil {
+			return nil, 0, err
+		}
+		var wording string
+		err = tx.QueryRow(ctx, capturedOriginSQL, pgx.NamedArgs{"payload": payload, "keys": capturedOriginKeys}).Scan(&wording)
+		if errors.Is(err, pgx.ErrNoRows) {
 			continue
 		}
-		key, ok, err := ResolveOrigin(ctx, tx, *row.text)
+		if err != nil {
+			return nil, 0, err
+		}
+		key, ok, err := ResolveOrigin(ctx, tx, wording)
 		if err != nil {
 			return nil, 0, err
 		}

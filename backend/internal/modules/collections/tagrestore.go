@@ -73,6 +73,9 @@ func restoreTagRemovalTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, remova
 	if err := holdTagTarget(ctx, tx, record.EntityType, record.EntityID); err != nil {
 		return out, err
 	}
+	if err := lockTagAssignmentTx(ctx, tx, tagID, record.EntityType, record.EntityID); err != nil {
+		return out, err
+	}
 	if err := refuseRetiredTag(ctx, tx, tagID); err != nil {
 		return out, err
 	}

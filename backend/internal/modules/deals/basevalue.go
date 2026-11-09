@@ -66,26 +66,6 @@ func UnpricedCountSQL(asOfSQL, baseSQL, alias, filterSQL string) string {
 	return UnpricedValueCountSQL(BaseValueSQL(asOfSQL, baseSQL, alias), alias+".amount_minor", filterSQL)
 }
 
-// FinalizeBaseTotalSQL distinguishes no money from money that cannot be priced.
-func FinalizeBaseTotalSQL(sumSQL, unpricedSQL string) string {
-	return "CASE WHEN (" + sumSQL + ") IS NULL AND coalesce((" + unpricedSQL + "), 0) > 0 THEN NULL ELSE coalesce((" + sumSQL + "), 0) END"
-}
-
-// StrictBaseTotalSQL answers null for a group holding an amount that cannot be
-// priced, rather than an aggregate over the rest of it.
-//
-// It is the form for an average, a minimum, a maximum or a percentile. They
-// have no answer for a part of the group standing in for all of it.
-func StrictBaseTotalSQL(aggregateSQL, unpricedSQL string) string {
-	return "CASE WHEN coalesce((" + unpricedSQL + "), 0) > 0 THEN NULL ELSE (" + aggregateSQL + ") END"
-}
-
-// IncompleteBaseTotalSQL is StrictBaseTotalSQL for a sum, which reads an empty
-// group as zero.
-func IncompleteBaseTotalSQL(sumSQL, unpricedSQL string) string {
-	return StrictBaseTotalSQL("coalesce(("+sumSQL+"), 0)", unpricedSQL)
-}
-
 // UnpricedValueCountSQL keeps coverage under the same visibility as its amount.
 func UnpricedValueCountSQL(valueSQL, amountSQL, filterSQL string) string {
 	return "count(*) FILTER (WHERE " + filterSQL + " AND (" + amountSQL + ") IS NOT NULL AND (" + valueSQL + ") IS NULL)::integer"
