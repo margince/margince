@@ -97,13 +97,5 @@ func stampAwaitingOutcome(ctx context.Context, tx pgx.Tx, page []crmcontracts.Ac
 // mayUpdateActivities is the object half of every activity write offered to a
 // reader. The row authority is asked after it.
 func mayUpdateActivities(ctx context.Context) bool {
-	return mayMutate(ctx) && auth.Allows(ctx, "activity", principal.ActionUpdate)
-}
-
-// mayMutate is the seat ceiling the mutation admission applies before any
-// grant: a read seat changes nothing, whatever its role says. The system
-// principal holds no seat and is trusted by construction, as in auth.Require.
-func mayMutate(ctx context.Context) bool {
-	p, ok := principal.Actor(ctx)
-	return ok && (p.Type == principal.PrincipalSystem || p.SeatType.CanMutate())
+	return auth.AllowsWrite(ctx, "activity", principal.ActionUpdate)
 }

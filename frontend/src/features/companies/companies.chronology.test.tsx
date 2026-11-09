@@ -3,10 +3,12 @@
 
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { ACTIVITY_KINDS } from "../../design-system/recordtimeline";
+import { isConversationKind } from "../../design-system/timelineentry";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { company, company360 } from "../../testing/company.fixtures";
@@ -91,5 +93,20 @@ describe("a company history the reader's role withholds", () => {
     expect(await screen.findByText("Hidden for your role")).toBeTruthy();
     expect(screen.queryByText("No threads yet.")).toBeNull();
     expect(reads).toEqual([]);
+  });
+});
+
+describe("the Threads cut of a company history", () => {
+  it("asks the server for the conversation kinds", async () => {
+    const user = userEvent.setup();
+    draw(company360);
+
+    await user.click(await screen.findByRole("button", { name: "Threads" }));
+
+    await waitFor(() =>
+      expect(reads.at(-1)?.searchParams.getAll("kind")).toEqual(
+        ACTIVITY_KINDS.filter((kind) => isConversationKind(kind)),
+      ),
+    );
   });
 });

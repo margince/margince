@@ -42,6 +42,7 @@ const page = { has_more: false, next_cursor: null };
 
 const contact: components["schemas"]["Company360Contact"] = {
   contact_id: "p-1",
+  attachable: true,
   full_name: "Greta Schilling",
   title: "Head of Procurement",
   strength: {

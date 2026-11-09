@@ -7333,6 +7333,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.earlierThreads_other": "{count} chuỗi thư trước",
   "compose.earlierThreadsAtLeast_one": "{count}+ chuỗi thư trước",
   "compose.earlierThreadsAtLeast_other": "{count}+ chuỗi thư trước",
+  "compose.earlierThreadsMayExist": "Có thể còn chuỗi thư trước đó",
   "compose.threadChange": "Đổi",
   "compose.threadContinue": "Tiếp tục chuỗi thư",
   "compose.threadsRecent": "Chuỗi thư gần đây",

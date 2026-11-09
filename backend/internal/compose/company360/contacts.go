@@ -74,6 +74,10 @@ func contactsSection(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, no
 	for i, id := range contactIDs {
 		rawIDs[i] = id.UUID
 	}
+	attachable, err := auth.AttachableSubset(ctx, tx, "contact", rawIDs)
+	if err != nil {
+		return nil, crmcontracts.PageInfo{}, err
+	}
 	allowed, err := mayReadRoutes(ctx)
 	if err != nil {
 		return nil, crmcontracts.PageInfo{}, err
@@ -90,10 +94,11 @@ func contactsSection(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, no
 	for _, s := range strengths {
 		id := s.ContactID
 		card := crmcontracts.Company360Contact{
-			ContactId: openapi_types.UUID(id.UUID),
-			Strength:  contacts.StrengthToWire(s.Strength, now),
-			DealRoles: roles[id],
-			Consent:   consent[id],
+			ContactId:  openapi_types.UUID(id.UUID),
+			Strength:   contacts.StrengthToWire(s.Strength, now),
+			DealRoles:  roles[id],
+			Consent:    consent[id],
+			Attachable: attachable[id.UUID],
 		}
 		if card.DealRoles == nil {
 			card.DealRoles = []crmcontracts.Company360DealRole{}

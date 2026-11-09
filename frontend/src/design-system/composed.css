@@ -761,10 +761,11 @@
   gap: var(--space-2);
 }
 /* The head's words are separate facts, so a dot stands between two of them;
-   the states after them are badges, which carry their own edge. */
-.tl-head-part + .tl-head-part::before {
+   the states after them are badges, which carry their own edge. The dot ends
+   the fact before it, so a head that wraps never opens a line on a dot. */
+.tl-head-part:has(+ .tl-head-part)::after {
   content: "·";
-  margin-inline-end: var(--space-2);
+  margin-inline-start: var(--space-2);
   color: var(--textSecondary);
 }
 /* The verbs share the head line only. Beside the whole body they held a

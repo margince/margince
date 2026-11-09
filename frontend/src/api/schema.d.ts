@@ -33255,6 +33255,8 @@ export interface components {
             /** Format: uuid */
             contact_id: string;
             full_name: string;
+            /** @description Whether this caller may file an activity under this contact. Computed with the same row-scope and write-share predicate the attach gate uses, so a mail started from the company links only the recipients this is true for. A read-only share grants no attach right. The server rechecks every write. */
+            attachable: boolean;
             title?: string | null;
             /** @description A provider-sourced job title, populated ONLY where the canonical title is empty (PO-EXT-9): a bought title fills a blank, never overwrites or seconds one a human typed. */
             provider_title?: string | null;

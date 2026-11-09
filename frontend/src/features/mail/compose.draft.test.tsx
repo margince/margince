@@ -709,9 +709,10 @@ describe("ComposeModal draft provenance", () => {
 // The 422 the send answers for a mailbox that cannot send: a message fault
 // with its code at the top level and no field named.
 const MAILBOX_NOT_SEND_CAPABLE = {
+  type: "https://errors.gradion.com/mailbox_not_send_capable",
+  title: "Unprocessable Entity",
   status: 422,
   code: "mailbox_not_send_capable",
-  title: "Unprocessable Entity",
   detail: "reconnect your mailbox to enable sending",
 };
 

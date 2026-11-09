@@ -47298,10 +47298,17 @@ components:
     Company360Contact:
       type: object
       description: One current employee of the account, as the company view shows them.
-      required: [contact_id, full_name, strength, deal_roles, consent]
+      required: [contact_id, full_name, strength, deal_roles, consent, attachable]
       properties:
         contact_id: { type: string, format: uuid }
         full_name: { type: string }
+        attachable:
+          type: boolean
+          description: >-
+            Whether this caller may file an activity under this contact. Computed with the
+            same row-scope and write-share predicate the attach gate uses, so a mail started
+            from the company links only the recipients this is true for. A read-only share
+            grants no attach right. The server rechecks every write.
         title: { type: [string, 'null'] }
         provider_title:
           type: [string, 'null']

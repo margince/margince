@@ -138,6 +138,7 @@ describe("the Next bar's own fallback verb", () => {
           data: [
             {
               contact_id: "p-1",
+              attachable: true,
               full_name: "Dana Buyer",
               strength: {
                 score: 71,
@@ -186,6 +187,7 @@ describe("the Next bar's verbs for a seat that may not write activities", () => 
           data: [
             {
               contact_id: "p-1",
+              attachable: true,
               full_name: "Dana Buyer",
               strength: {
                 score: 71,

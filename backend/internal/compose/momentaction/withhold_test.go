@@ -12,12 +12,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// reader is a rep holding exactly the activity grants named, and row scope over
-// everything — so the only thing the assertions below can be answering is the
-// object grant.
+// reader is a full-seat rep with the activity grants named and row scope over
+// everything. So the assertions below can answer only the object grant.
 func reader(grant principal.ObjectGrant) context.Context {
+	return seated(principal.SeatFull, grant)
+}
+
+func seated(seat principal.SeatType, grant principal.ObjectGrant) context.Context {
 	return principal.WithActor(context.Background(), principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:test", UserID: ids.NewV7(),
+		Type: principal.PrincipalHuman, ID: "human:test", UserID: ids.NewV7(), SeatType: seat,
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"rep"},
 			Objects:  map[string]principal.ObjectGrant{"activity": grant},
@@ -174,5 +177,23 @@ func TestWithholdBlocksDraftReplyForAReaderWhoCannotSend(t *testing.T) {
 	Withhold(reader(principal.ObjectGrant{Read: true, Create: true}), "en", &writer)
 	if writer.RecommendedAction.State != crmcontracts.ContactMomentActionStateAvailable {
 		t.Errorf("draft_reply for a reader who may send = %q, want available", writer.RecommendedAction.State)
+	}
+}
+
+// A read seat writes nothing whatever its role grants, so the create grant on
+// its role still leaves every writing verb blocked.
+func TestWithholdBlocksTheWritingVerbsForAReadSeatWhoseRoleMayLog(t *testing.T) {
+	moment := card()
+
+	Withhold(seated(principal.SeatRead, principal.ObjectGrant{Read: true, Create: true}), "en", &moment)
+
+	if got := moment.RecommendedAction.State; got != crmcontracts.ContactMomentActionStateBlocked {
+		t.Errorf("log_activity state for a read seat = %q, want blocked", got)
+	}
+	if got := (*moment.SecondaryActions)[0].State; got != crmcontracts.ContactMomentActionStateBlocked {
+		t.Errorf("complete_task state for a read seat = %q, want blocked", got)
+	}
+	if got := (*moment.SecondaryActions)[1].State; got != crmcontracts.ContactMomentActionStateAvailable {
+		t.Errorf("open_record state for a read seat = %q, want available — it writes nothing", got)
 	}
 }

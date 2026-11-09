@@ -6,6 +6,7 @@
 package integration
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -38,6 +39,8 @@ func TestContactAttachableFlagMatchesTheAttachGate(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			e := Setup(t)
 			contact := e.SeedContact(t, "Shared buyer", &e.Rep3)
+			company := e.SeedCompany(t, "Shared account", nil)
+			employContact(t, e, contact, company, nil)
 			if tc.private {
 				e.MakeCapturePrivate(t, "contact", contact, e.Rep3)
 			}
@@ -56,10 +59,13 @@ func TestContactAttachableFlagMatchesTheAttachGate(t *testing.T) {
 			if tc.owner {
 				user = e.Rep3
 			}
-			reader := e.As(user, nil, principal.Permissions{
+			reader := onFullSeat(e.As(user, nil, principal.Permissions{
 				RoleKeys: []string{"rep"}, RowScope: principal.RowScopeOwn,
-				Objects: map[string]principal.ObjectGrant{"contact": {Read: true}, "activity": {Create: true, Read: true}},
-			})
+				Objects: map[string]principal.ObjectGrant{
+					"contact": {Read: true}, "activity": {Create: true, Read: true},
+					"company": {Read: true}, "relationship": {Read: true},
+				},
+			}))
 			row, err := e.Contacts.GetContact(reader, ids.From[ids.ContactKind](contact), storekit.LiveOnly)
 			if err != nil {
 				t.Fatal(err)
@@ -88,6 +94,10 @@ func TestContactAttachableFlagMatchesTheAttachGate(t *testing.T) {
 				t.Fatal("the readable contact is absent from the list")
 			}
 
+			if got := accountRowAttachable(t, e, reader, company, contact); got != tc.want {
+				t.Fatalf("the company page's contact row says attachable = %v, the contact read says %v", got, tc.want)
+			}
+
 			page, err := contactRoomService(e).Assemble(reader, ids.From[ids.ContactKind](contact))
 			if err != nil {
 				t.Fatal(err)
@@ -114,4 +124,24 @@ func TestContactAttachableFlagMatchesTheAttachGate(t *testing.T) {
 			}
 		})
 	}
+}
+
+// accountRowAttachable is the company page's answer for one contact, the list
+// a mail started from the account files its recipients by.
+func accountRowAttachable(t *testing.T, e *Env, reader context.Context, company, contact ids.UUID) bool {
+	t.Helper()
+	page, err := companySurfaceService(e).Assemble(reader, ids.From[ids.CompanyKind](company))
+	if err != nil {
+		t.Fatalf("assembling the company page: %v", err)
+	}
+	if page.Contacts == nil {
+		t.Fatalf("the company page withheld its contacts: %v", page.SectionsOmitted)
+	}
+	for _, row := range page.Contacts.Data {
+		if ids.UUID(row.ContactId) == contact {
+			return row.Attachable
+		}
+	}
+	t.Fatalf("the employed contact is absent from the company page's contacts")
+	return false
 }

@@ -53,12 +53,7 @@ func logEmailActivity(author context.Context, t *testing.T, e *Env, contact ids.
 // onFullSeat puts ctx's actor on a full seat, the one a signed-in member holds:
 // a read seat is offered no write whatever its role grants.
 func onFullSeat(ctx context.Context) context.Context {
-	p, ok := principal.Actor(ctx)
-	if !ok {
-		panic("onFullSeat: the context carries no actor")
-	}
-	p.SeatType = principal.SeatFull
-	return principal.WithActor(ctx, p)
+	return OnSeat(ctx, principal.SeatFull)
 }
 
 // TestEmailPresentationAccessMatrix walks every audience against every reader.
@@ -162,37 +157,47 @@ func TestEmailPresentationAccessMatrix(t *testing.T) {
 }
 
 // TestEmailPresentationOffersReplyOnlyToASeatThatMaySend holds every offered
-// control to the grant its write asks. A seat that may only read the message is
-// offered no reply, forward, relink or audience change.
+// control to the grant its write asks, under the seat ceiling. A role that may
+// only read, or a read seat whatever its role grants, is offered no reply,
+// forward, relink or audience change.
 func TestEmailPresentationOffersReplyOnlyToASeatThatMaySend(t *testing.T) {
 	e := Setup(t)
 	author := onFullSeat(e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms))
-	readOnly := onFullSeat(e.As(e.Rep2, []ids.UUID{e.Team1}, principal.Permissions{
+	readRole := principal.Permissions{
 		RoleKeys: []string{"read_only"},
 		Objects: map[string]principal.ObjectGrant{
 			"contact":  {Read: true},
 			"activity": {Read: true},
 		},
 		RowScope: principal.RowScopeTeam,
-	}))
+	}
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	id := logEmailActivity(author, t, e, contact, "Pricing question", "what does it cost")
 	if _, err := e.Activities.SetAudience(author, id, activities.SetAudienceInput{Audience: "workspace"}); err != nil {
 		t.Fatalf("sharing with the workspace: %v", err)
 	}
 
-	got, err := e.Activities.GetEmailPresentation(readOnly, id, nil)
-	if err != nil {
-		t.Fatalf("read-only seat reading a workspace message: %v", err)
-	}
-	if got.Access.ContentState != crmcontracts.EmailAccessContentStateAvailable {
-		t.Fatalf("content_state=%v, want available: the seat reads the message whole", got.Access.ContentState)
-	}
-	if got.CanReply || got.CanForward {
-		t.Errorf("read-only seat: can_reply=%v can_forward=%v, want both false — its send is refused", got.CanReply, got.CanForward)
-	}
-	if got.CanRelink || got.Access.CanChange {
-		t.Errorf("read-only seat: can_relink=%v access.can_change=%v, want both false — both writes ask activity.update", got.CanRelink, got.Access.CanChange)
+	for _, reader := range []struct {
+		name string
+		ctx  context.Context
+	}{
+		{"full seat, read-only role", OnSeat(e.As(e.Rep2, []ids.UUID{e.Team1}, readRole), principal.SeatFull)},
+		{"read seat, read-only role", OnSeat(e.As(e.Rep2, []ids.UUID{e.Team1}, readRole), principal.SeatRead)},
+		{"read seat, role that may create and update", OnSeat(e.As(e.Rep2, []ids.UUID{e.Team1}, activityLifecyclePerms), principal.SeatRead)},
+	} {
+		got, err := e.Activities.GetEmailPresentation(reader.ctx, id, nil)
+		if err != nil {
+			t.Fatalf("%s reading a workspace message: %v", reader.name, err)
+		}
+		if got.Access.ContentState != crmcontracts.EmailAccessContentStateAvailable {
+			t.Fatalf("%s: content_state=%v, want available: the seat reads the message whole", reader.name, got.Access.ContentState)
+		}
+		if got.CanReply || got.CanForward {
+			t.Errorf("%s: can_reply=%v can_forward=%v, want both false — its send is refused", reader.name, got.CanReply, got.CanForward)
+		}
+		if got.CanRelink || got.Access.CanChange {
+			t.Errorf("%s: can_relink=%v access.can_change=%v, want both false — both writes ask activity.update", reader.name, got.CanRelink, got.Access.CanChange)
+		}
 	}
 
 	asAuthor, err := e.Activities.GetEmailPresentation(author, id, nil)

@@ -38412,6 +38412,9 @@ type Company360CommitmentKind string
 
 // Company360Contact One current employee of the account, as the company view shows them.
 type Company360Contact struct {
+	// Attachable Whether this caller may file an activity under this contact. Computed with the same row-scope and write-share predicate the attach gate uses, so a mail started from the company links only the recipients this is true for. A read-only share grants no attach right. The server rechecks every write.
+	Attachable bool `json:"attachable"`
+
 	// Consent Consent state keyed by purpose key — per purpose, never one boolean. A purpose
 	// the contact has no row for reads `unknown`, which is default-deny for outbound,
 	// not "not applicable".

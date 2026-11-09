@@ -74,6 +74,17 @@ func Allows(ctx context.Context, object string, action principal.Action) bool {
 	return probe(ctx, object, action) == nil
 }
 
+// AllowsWrite is Allows under the seat ceiling, for a control a read offers: a
+// read seat writes nothing, whatever its role grants. It records nothing.
+func AllowsWrite(ctx context.Context, object string, action principal.Action) bool {
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return false
+	}
+	mutable := p.Type == principal.PrincipalSystem || p.SeatType.CanMutate()
+	return mutable && Allows(ctx, object, action)
+}
+
 // RequireAny admits when the actor holds ANY of the listed actions on the
 // object. It exists for a write whose exact action is not yet knowable —
 // an upsert learns insert-vs-overwrite only from the table — so the caller

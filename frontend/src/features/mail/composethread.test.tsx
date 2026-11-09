@@ -254,6 +254,18 @@ it("counts the threads read so far as a floor while older mail is unread", () =>
   expect(screen.queryByText("2 earlier threads")).toBeNull();
 });
 
+it("reads the floor as plural when one thread is read so far", () => {
+  render(bar({ conversations: [pricing], more: true }));
+
+  expect(screen.getByText("1+ earlier threads")).toBeTruthy();
+});
+
+it("says earlier threads may exist when the mail read so far holds none", () => {
+  render(bar({ conversations: [], more: true }));
+
+  expect(screen.getByText("Earlier threads may exist")).toBeTruthy();
+});
+
 it("counts the threads exactly once every page is read", () => {
   render(
     bar({

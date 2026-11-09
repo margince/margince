@@ -278,16 +278,14 @@ export function contactsByAddress(
 }
 
 /**
- * Who an account-started message is to. The draft is written for the first
- * account contact in To; the send is linked to every account contact in To,
- * Cc and Bcc. A second picker could only disagree with the address fields.
+ * The account contact the draft is for (first in To), and those the send links.
+ * Bcc is left out: its link would show every reader whom the mail hid.
  */
 export function useAccountRecipient(
   companyId: string | undefined,
   addressed: Readonly<{
     to: readonly string[];
     cc: readonly string[];
-    bcc: readonly string[];
   }>,
   // The contact a verb on the account started from, offered into an empty To
   // unless the caller holds the record's own address.
@@ -298,11 +296,20 @@ export function useAccountRecipient(
   const ownerOf = contactsByAddress(undefined, company.data);
   const recipientId =
     addressed.to.map(ownerOf).find((owner) => owner !== undefined) ?? "";
+  const attachable = new Set(
+    contacts
+      .filter((contact) => contact.attachable)
+      .map((contact) => contact.contact_id),
+  );
   const contactIds = [
     ...new Set(
-      [...addressed.to, ...addressed.cc, ...addressed.bcc]
+      [...addressed.to, ...addressed.cc]
         .map(ownerOf)
-        .filter((owner) => owner !== undefined),
+        // One the sender may not attach to would refuse the whole send.
+        .filter(
+          (owner): owner is string =>
+            owner !== undefined && attachable.has(owner),
+        ),
     ),
   ];
   const startedFrom = contacts.find(

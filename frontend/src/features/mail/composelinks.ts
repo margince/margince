@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { MAX_ACTIVITY_LINKS } from "../../lib/activitybody";
 import type { RelinkKind } from "./composerelink";
 
 export type Link = { entity_type: RelinkKind; entity_id: string };
@@ -52,7 +53,16 @@ export function composedLinks(
   }
   add("deal", chosen.dealId);
   add("project", chosen.projectId);
-  return links;
+  // Past the server's cap the whole send is refused; the last contacts give way.
+  const room =
+    MAX_ACTIVITY_LINKS -
+    links.filter((link) => link.entity_type !== "contact").length;
+  const kept = new Set(
+    links.filter((link) => link.entity_type === "contact").slice(0, room),
+  );
+  return links.filter(
+    (link) => link.entity_type !== "contact" || kept.has(link),
+  );
 }
 
 /**

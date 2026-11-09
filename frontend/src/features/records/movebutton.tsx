@@ -18,7 +18,7 @@ import { useTaskUpdate } from "../../components/taskactions";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
-import { useCan } from "../../lib/capability";
+import { useCanWrite } from "../../lib/capability";
 import { refreshSuggestedMoves, useCurrentMove } from "../../lib/currentmove";
 import { useOpenEmail } from "../../lib/openemail";
 import { unwrap } from "../../lib/problem";
@@ -106,7 +106,7 @@ export function MoveButton({
   const [taskId, setTaskId] = useState<string | null>(null);
   const openTask = useCurrentMove<string>(setTaskId);
   const openBrief = useCurrentMove<string>(setBriefId);
-  const canUpdateTask = useCan("activity", "update");
+  const canUpdateTask = useCanWrite("activity", "update");
   const taskUpdate = useTaskUpdate([
     ...taskRefreshKeys,
     ...(dealId ? [["deal-status", dealId]] : []),

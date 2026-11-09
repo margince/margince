@@ -118,6 +118,9 @@ export const NO_ATTENDEES: MeetingAttendees = {
   colleagueIds: [],
 };
 
+// The server's cap on a send's `links`; activitybody.linkcap.test.ts holds it.
+export const MAX_ACTIVITY_LINKS = 25;
+
 // A meeting and a call are WITH A CONTACT, and the server refuses either one
 // filed against a company — per link, so naming the company alongside the
 // contact is refused too, and the company is reached through the attendee's

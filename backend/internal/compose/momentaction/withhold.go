@@ -58,7 +58,7 @@ func Withhold(ctx context.Context, language string, moment *crmcontracts.Contact
 	if moment.MayBeDone != nil {
 		withholdDone(ctx, said, moment)
 	}
-	if auth.Allows(ctx, "activity", principal.ActionCreate) {
+	if auth.AllowsWrite(ctx, "activity", principal.ActionCreate) {
 		return
 	}
 	block := func(action *crmcontracts.ContactMomentAction) {
@@ -98,7 +98,7 @@ func withholdDone(ctx context.Context, said langcopy.Spoken, moment *crmcontract
 	if moment.MayBeDone.PromiseType == crmcontracts.ContactMomentMayBeDonePromiseTypeClaim {
 		object, reason = "contact", said.Say(blockedWords.Settle)
 	}
-	if auth.Allows(ctx, object, principal.ActionUpdate) {
+	if auth.AllowsWrite(ctx, object, principal.ActionUpdate) {
 		return
 	}
 	done := &moment.RecommendedAction

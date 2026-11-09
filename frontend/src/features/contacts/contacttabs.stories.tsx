@@ -282,6 +282,59 @@ export const FiveVerbsBesideTheHead: Story = {
 };
 
 /**
+ * A thread head in a phone-wide column wraps its facts onto further lines. Each
+ * dot closes the fact before it, so no line opens on a dot.
+ */
+export const ThreadHeadWraps: Story = {
+  tags: ["uat-phone"],
+  render: tab(
+    {
+      ...view,
+      activities: {
+        data: [
+          activity({
+            id: "t-2",
+            kind: "email",
+            subject: "Re: Fleet renewal",
+            body: "Numbers attached.",
+            direction: "outbound",
+            thread_key: "fleet-renewal",
+            occurred_at: "2026-08-12T10:00:00Z",
+          }),
+          activity({
+            id: "t-1",
+            kind: "email",
+            subject: "Fleet renewal",
+            body: "Could you send the retrofit numbers?",
+            direction: "inbound",
+            thread_key: "fleet-renewal",
+            occurred_at: "2026-08-11T12:00:00Z",
+          }),
+        ],
+        page: { has_more: false },
+      },
+    },
+    { width: 260 },
+  ),
+  play: async ({ canvasElement }) => {
+    const page = within(canvasElement);
+    await page.findAllByRole("listitem");
+    const parts = [
+      ...canvasElement.querySelectorAll<HTMLElement>(
+        ".tl-head > .tl-head-part",
+      ),
+    ];
+    const firstLine = parts[0]?.getBoundingClientRect().bottom ?? 0;
+    await expect(
+      parts.some((part) => part.getBoundingClientRect().top >= firstLine),
+    ).toBe(true);
+    for (const part of parts) {
+      await expect(getComputedStyle(part, "::before").content).toBe("none");
+    }
+  },
+};
+
+/**
  * The Conversations cut: the same chronicle, narrowed to the exchanges
  * somebody can answer, with the kind dial under it offering only the kinds
  * this cut can draw. Reached by pressing the pill, because the cut is the

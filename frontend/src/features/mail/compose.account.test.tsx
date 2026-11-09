@@ -136,6 +136,7 @@ describe("ComposeModal started from an account", () => {
             data: [
               {
                 contact_id: "p-1",
+                attachable: true,
                 full_name: "Sarah Cole",
                 primary_email: "sarah@acme.test",
                 strength: {
@@ -153,6 +154,7 @@ describe("ComposeModal started from an account", () => {
               },
               {
                 contact_id: "p-2",
+                attachable: true,
                 full_name: "Mark Hughes",
                 primary_email: "mark@acme.test",
                 strength: {
@@ -220,6 +222,7 @@ describe("ComposeModal started from an account", () => {
             data: [
               {
                 contact_id: "p-2",
+                attachable: true,
                 full_name: "Mark Hughes",
                 primary_email: "mark@acme.test",
               },

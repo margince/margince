@@ -35,15 +35,7 @@ import { useChronologyFilter } from "./recordchronology";
 export const CONVERSATION_FILTER_KINDS: readonly ActivityKind[] =
   ACTIVITY_KINDS.filter((kind) => isConversationKind(kind));
 
-/**
- * conversationFilters drops a narrowing this cut cannot honour.
- *
- * The kind dial is a SERVER parameter and the cut is a client-side narrowing
- * of what comes back, so the two can contradict each other: a reader who
- * picked Meetings on the whole chronology and then opened Conversations had
- * the server answering about meetings and this cut throwing every row away —
- * an empty list on a record whose mail stands under the next pill.
- */
+/** Drops a picked kind this cut cannot draw, which would leave it empty. */
 export function conversationFilters(filters: TimelineFilters): TimelineFilters {
   if (!filters.kind || isConversationKind(filters.kind)) {
     return filters;
@@ -52,9 +44,8 @@ export function conversationFilters(filters: TimelineFilters): TimelineFilters {
 }
 
 /**
- * conversationRead is what the cut asks the server for: the conversation kinds,
- * unless the reader picked one. Not a cut of the newest page on the client: a
- * thread behind twenty notes would read as none.
+ * conversationRead asks the server for the conversation kinds unless the reader
+ * picked one, so a thread behind a page of other work still shows.
  */
 export function conversationRead(filters: TimelineFilters): TimelineFilters {
   return filters.kind

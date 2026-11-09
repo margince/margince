@@ -114,3 +114,53 @@ export const LongRecord: StoryObj = {
     await expect(list && list.scrollHeight > list.clientHeight).toBe(true);
   },
 };
+
+// The first page with `readable` of its threads open to the reader, more behind.
+function withReadable(readable: number) {
+  return () => {
+    installFetchStub({
+      "GET /me": meRoute({}),
+      "GET /activities": () =>
+        jsonResponse({
+          data: LONG.map((row, index) =>
+            index < readable ? row : { ...row, content_state: "withheld" },
+          ),
+          page: { has_more: true, next_cursor: "older" },
+        }),
+    });
+    return (
+      <StoryProviders>
+        <ComposeModal
+          entityType="contact"
+          entityId="ada"
+          open
+          onClose={() => undefined}
+        />
+      </StoryProviders>
+    );
+  };
+}
+
+async function threadBar() {
+  const dialog = within(await screen.findByRole("dialog"));
+  return dialog.findByRole("button", { name: /Continue a thread$/ });
+}
+
+/** One thread read so far and older mail unread: the floor reads plural. */
+export const OneThreadReadSoFar: StoryObj = {
+  render: withReadable(1),
+  play: async () => {
+    await expect(await threadBar()).toHaveTextContent("1+ earlier threads");
+  },
+};
+
+/** The mail read so far is all withheld, and older mail is unread: the bar
+ *  says earlier threads may exist rather than falling silent. */
+export const OnlyWithheldReadSoFar: StoryObj = {
+  render: withReadable(0),
+  play: async () => {
+    await expect(await threadBar()).toHaveTextContent(
+      "Earlier threads may exist",
+    );
+  },
+};

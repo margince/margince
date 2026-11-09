@@ -353,9 +353,10 @@ export const MailboxNotSendCapable: Story = {
     "POST /activities/act-1/send-email": () =>
       jsonResponse(
         {
+          type: "https://errors.gradion.com/mailbox_not_send_capable",
+          title: "Unprocessable Entity",
           status: 422,
           code: "mailbox_not_send_capable",
-          title: "Unprocessable Entity",
           detail: "reconnect your mailbox to enable sending",
         },
         422,
