@@ -12,6 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // manualSignalNoEvidenceDataTask replaces the sentence the lead form used to
@@ -20,7 +21,7 @@ import (
 func manualSignalNoEvidenceDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792809942_manual_signal_no_evidence", Version: 1,
-		Title: "Marking lead signals saved without evidence", Requires: []string{"core/1792799323"},
+		Title: systemtext.Literal("datatask.title.core.1792809942_manual_signal_no_evidence"), Requires: []string{"core/1792799323"},
 		Steps: []datatask.Step{{
 			Name: "mark_unevidenced_signals", Limit: 200, MinLimit: 10,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

@@ -637,6 +637,24 @@ func (e ActivityLinkInputEntityType) Valid() bool {
 	}
 }
 
+// Defines values for ActivityReaderRenderingPart.
+const (
+	ActivityReaderRenderingPartBody    ActivityReaderRenderingPart = "body"
+	ActivityReaderRenderingPartSubject ActivityReaderRenderingPart = "subject"
+)
+
+// Valid indicates whether the value is a known member of the ActivityReaderRenderingPart enum.
+func (e ActivityReaderRenderingPart) Valid() bool {
+	switch e {
+	case ActivityReaderRenderingPartBody:
+		return true
+	case ActivityReaderRenderingPartSubject:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityReaderRenderingSourceLanguage.
 const (
 	ActivityReaderRenderingSourceLanguageDe ActivityReaderRenderingSourceLanguage = "de"
@@ -694,6 +712,24 @@ func (e ActivityReaderRenderingRequestLocale) Valid() bool {
 	case ActivityReaderRenderingRequestLocaleEn:
 		return true
 	case ActivityReaderRenderingRequestLocaleVi:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityReaderRenderingRequestPart.
+const (
+	ActivityReaderRenderingRequestPartBody    ActivityReaderRenderingRequestPart = "body"
+	ActivityReaderRenderingRequestPartSubject ActivityReaderRenderingRequestPart = "subject"
+)
+
+// Valid indicates whether the value is a known member of the ActivityReaderRenderingRequestPart enum.
+func (e ActivityReaderRenderingRequestPart) Valid() bool {
+	switch e {
+	case ActivityReaderRenderingRequestPartBody:
+		return true
+	case ActivityReaderRenderingRequestPartSubject:
 		return true
 	default:
 		return false
@@ -22885,6 +22921,45 @@ func (e SubscriptionConfirmationPageState) Valid() bool {
 	}
 }
 
+// Defines values for SystemDisplayGeneratedParts.
+const (
+	SystemDisplayGeneratedPartsBody    SystemDisplayGeneratedParts = "body"
+	SystemDisplayGeneratedPartsSubject SystemDisplayGeneratedParts = "subject"
+)
+
+// Valid indicates whether the value is a known member of the SystemDisplayGeneratedParts enum.
+func (e SystemDisplayGeneratedParts) Valid() bool {
+	switch e {
+	case SystemDisplayGeneratedPartsBody:
+		return true
+	case SystemDisplayGeneratedPartsSubject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SystemDisplayLocale.
+const (
+	SystemDisplayLocaleDe SystemDisplayLocale = "de"
+	SystemDisplayLocaleEn SystemDisplayLocale = "en"
+	SystemDisplayLocaleVi SystemDisplayLocale = "vi"
+)
+
+// Valid indicates whether the value is a known member of the SystemDisplayLocale enum.
+func (e SystemDisplayLocale) Valid() bool {
+	switch e {
+	case SystemDisplayLocaleDe:
+		return true
+	case SystemDisplayLocaleEn:
+		return true
+	case SystemDisplayLocaleVi:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SystemHealthAssessment.
 const (
 	SystemHealthAssessmentAttention  SystemHealthAssessment = "attention"
@@ -30874,8 +30949,9 @@ type Activity struct {
 	SourceId *string `json:"source_id,omitempty"`
 
 	// SourceSystem Which system this record came from: `email` for any captured or sent mail (one identity across gmail/outlook/imap), else gcal/outlook/transcript or a caller's own. Idempotency key part.
-	SourceSystem *string `json:"source_system,omitempty"`
-	Subject      *string `json:"subject,omitempty"`
+	SourceSystem  *string        `json:"source_system,omitempty"`
+	Subject       *string        `json:"subject,omitempty"`
+	SystemDisplay *SystemDisplay `json:"system_display,omitempty"`
 
 	// ThreadKey The provider's own conversation id (Gmail threadId, Graph conversationId, the RFC822 References root), stamped by capture. It is what makes a thread a thread: grouping by subject would merge two unrelated "Re: Update" exchanges and split one that was renamed mid-conversation. Null on anything capture did not thread — a note, a task, a message whose provider offered none.
 	ThreadKey *string   `json:"thread_key,omitempty"`
@@ -31070,10 +31146,12 @@ type ActivityReaderRendering struct {
 	GeneratedAt time.Time `json:"generated_at"`
 
 	// ModelUsed The model that wrote the rendering, or judged the text unchanged. Absent when no model was asked.
-	ModelUsed *string `json:"model_used,omitempty"`
+	ModelUsed *string                      `json:"model_used,omitempty"`
+	Part      *ActivityReaderRenderingPart `json:"part,omitempty"`
 
 	// SourceLanguage The language the original is written in, null when it could not be told.
 	SourceLanguage *ActivityReaderRenderingSourceLanguage `json:"source_language,omitempty"`
+	SourceVersion  *int64                                 `json:"source_version,omitempty"`
 
 	// Subject The subject in the target language, null when the activity has none.
 	Subject        *string                               `json:"subject,omitempty"`
@@ -31084,6 +31162,9 @@ type ActivityReaderRendering struct {
 	Unchanged bool `json:"unchanged"`
 }
 
+// ActivityReaderRenderingPart defines model for ActivityReaderRendering.Part.
+type ActivityReaderRenderingPart string
+
 // ActivityReaderRenderingSourceLanguage The language the original is written in, null when it could not be told.
 type ActivityReaderRenderingSourceLanguage string
 
@@ -31092,16 +31173,22 @@ type ActivityReaderRenderingTargetLanguage string
 
 // ActivityReaderRenderingRequest defines model for ActivityReaderRenderingRequest.
 type ActivityReaderRenderingRequest struct {
+	ExpectedSourceVersion *int64 `json:"expected_source_version,omitempty" minimum:"1"`
+
 	// Locale The language to show the text in, normally the reader's interface language.
 	// Absent means the language the reader chose for their seat, else the
 	// installation's base language.
 	Locale *ActivityReaderRenderingRequestLocale `json:"locale,omitempty"`
+	Part   *ActivityReaderRenderingRequestPart   `json:"part,omitempty"`
 }
 
 // ActivityReaderRenderingRequestLocale The language to show the text in, normally the reader's interface language.
 // Absent means the language the reader chose for their seat, else the
 // installation's base language.
 type ActivityReaderRenderingRequestLocale string
+
+// ActivityReaderRenderingRequestPart defines model for ActivityReaderRenderingRequest.Part.
+type ActivityReaderRenderingRequestPart string
 
 // ActivityReference One activity a derived number was computed from, named well enough to be
 // recognised and opened.
@@ -33710,6 +33797,7 @@ type Approval struct {
 
 	// SummaryParts The summary's sentence and the field values it lists, apart, so a client can show the values as a list instead of the joined key=value text. Absent on a proposal whose summary is a sentence alone, and on one staged before the parts were kept. Withheld with the summary.
 	SummaryParts   *ApprovalSummaryParts `json:"summary_parts,omitempty"`
+	SystemDisplay  *SystemDisplay        `json:"system_display,omitempty"`
 	TargetEntityId *openapi_types.UUID   `json:"target_entity_id,omitempty"`
 
 	// TargetEntityType Entity the effect mutates (for precondition re-validation).
@@ -35144,7 +35232,8 @@ type AttentionItem struct {
 	SubjectMovedAt *time.Time `json:"subject_moved_at,omitempty"`
 
 	// SummaryParts On an approval, its title taken apart, so the row can show the proposed values as a list. Absent when the title is a sentence alone.
-	SummaryParts *ApprovalSummaryParts `json:"summary_parts,omitempty"`
+	SummaryParts  *ApprovalSummaryParts `json:"summary_parts,omitempty"`
+	SystemDisplay *SystemDisplay        `json:"system_display,omitempty"`
 
 	// Title The server's own sentence for this item, when it has one — an approval
 	// summary is composed at staging time out of the proposal's own facts.
@@ -53197,6 +53286,9 @@ type MeResponse struct {
 		Scopes     *[]MeResponsePassportScopes `json:"scopes,omitempty"`
 	} `json:"passport,omitempty"`
 
+	// ReaderRenderingAvailable Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request.
+	ReaderRenderingAvailable *bool `json:"reader_rendering_available,omitempty"`
+
 	// Roles Effective role keys for this principal, and the one authority for them — `user.roles` is deliberately left unset here rather than repeating the same fact.
 	Roles []string `json:"roles"`
 
@@ -54263,7 +54355,8 @@ type Notice struct {
 	Kind NoticeKind `json:"kind"`
 
 	// Subject The headline the recipient reads, derived from the kind rather than supplied.
-	Subject string `json:"subject"`
+	Subject       string         `json:"subject"`
+	SystemDisplay *SystemDisplay `json:"system_display,omitempty"`
 }
 
 // NoticeAcquisition The original acquisition evidence. A confirmed duty runs from `occurred_at` or an officer's
@@ -54579,7 +54672,8 @@ type NotificationItem struct {
 	Subject string `json:"subject"`
 
 	// SummaryParts On an approval notice, its subject taken apart into the sentence and the field values, so a client can show the values as a list. Absent on any other notice, and on one written before the parts were kept.
-	SummaryParts *ApprovalSummaryParts `json:"summary_parts,omitempty"`
+	SummaryParts  *ApprovalSummaryParts `json:"summary_parts,omitempty"`
+	SystemDisplay *SystemDisplay        `json:"system_display,omitempty"`
 
 	// Target What the notice is about, when it is about one thing a reader can open. Both halves or
 	// neither — a type with no id names a KIND of thing and cannot be opened. Absent where
@@ -57234,7 +57328,8 @@ type Receipt struct {
 	Summary string `json:"summary"`
 
 	// SummaryParts The summary taken apart, as on the approval it reports. Absent when the summary is a sentence alone.
-	SummaryParts *ApprovalSummaryParts `json:"summary_parts,omitempty"`
+	SummaryParts  *ApprovalSummaryParts `json:"summary_parts,omitempty"`
+	SystemDisplay *SystemDisplay        `json:"system_display,omitempty"`
 
 	// Undo The way back, on a receipt for work that was APPLIED rather than approved.
 	// A receipt for an approval the system decided carries none: that decision is revisitable through the record it named. A change made without asking — the close-date sweep's corrections — has this receipt as its only telling, so the way back travels with it.
@@ -60429,6 +60524,9 @@ type SchedulingProfile struct {
 	Slug        *string `json:"slug,omitempty"`
 	Title       string  `json:"title"`
 
+	// UseDefaultTitle Use the built-in meeting title. Explicitly false preserves the supplied title as custom wording.
+	UseDefaultTitle *bool `json:"use_default_title,omitempty"`
+
 	// VideoCall Add a video call link from the connected calendar (Google Meet or Microsoft Teams) to new meetings. Absent means on.
 	VideoCall *bool `json:"video_call,omitempty"`
 }
@@ -62559,6 +62657,21 @@ type SubscriptionConfirmationPageKind string
 
 // SubscriptionConfirmationPageState Their answer today, so somebody who already said yes is not asked as though they had not.
 type SubscriptionConfirmationPageState string
+
+// SystemDisplay defines model for SystemDisplay.
+type SystemDisplay struct {
+	Body           *string                        `json:"body,omitempty"`
+	GeneratedParts *[]SystemDisplayGeneratedParts `json:"generated_parts,omitempty"`
+	Locale         SystemDisplayLocale            `json:"locale"`
+	SourceVersion  *int64                         `json:"source_version,omitempty"`
+	Subject        *string                        `json:"subject,omitempty"`
+}
+
+// SystemDisplayGeneratedParts defines model for SystemDisplay.GeneratedParts.
+type SystemDisplayGeneratedParts string
+
+// SystemDisplayLocale defines model for SystemDisplay.Locale.
+type SystemDisplayLocale string
 
 // SystemHealth defines model for SystemHealth.
 type SystemHealth struct {
@@ -67717,7 +67830,8 @@ type WorklistItem struct {
 	Subject *AttentionSubject `json:"subject,omitempty"`
 
 	// SummaryParts On an approval, its title taken apart, so the row shows the sentence as its title and the proposed values as its supporting line. Absent when the title is a sentence alone.
-	SummaryParts *ApprovalSummaryParts `json:"summary_parts,omitempty"`
+	SummaryParts  *ApprovalSummaryParts `json:"summary_parts,omitempty"`
+	SystemDisplay *SystemDisplay        `json:"system_display,omitempty"`
 
 	// Title The server's own sentence for this item, where it has one.
 	Title *string `json:"title,omitempty"`
@@ -78336,6 +78450,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "subject")
 	}
 
+	if raw, found := object["system_display"]; found {
+		err = json.Unmarshal(raw, &a.SystemDisplay)
+		if err != nil {
+			return fmt.Errorf("error reading 'system_display': %w", err)
+		}
+		delete(object, "system_display")
+	}
+
 	if raw, found := object["thread_key"]; found {
 		err = json.Unmarshal(raw, &a.ThreadKey)
 		if err != nil {
@@ -78755,6 +78877,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["subject"], err = json.Marshal(a.Subject)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'subject': %w", err)
+		}
+	}
+
+	if a.SystemDisplay != nil {
+		object["system_display"], err = json.Marshal(a.SystemDisplay)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'system_display': %w", err)
 		}
 	}
 

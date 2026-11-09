@@ -2868,6 +2868,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "action.newDeal": "Deal mới",
   "action.booking": "Trang đặt lịch",
 
+  "common.fieldInvalid": "Kiểm tra giá trị này và thử lại.",
   "common.undo": "Hoàn tác",
   "common.close": "Đóng",
   "common.unknownValue": "Khác",

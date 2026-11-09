@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -327,6 +328,7 @@ func (r listRule) Plan(ctx context.Context, ev workflow.Event) (workflow.Effect,
 		}
 		// The task is read by whoever may read the record, so it names no
 		// list: a list's name and membership stay with the list's own sharing.
+		ctx = systemtext.WithMessage(ctx, &systemtext.Message{Subject: systemtext.Sentence(firing.taskCode())})
 		return ownedTaskEffectNoKey(ctx, r.ex, ev, firing.taskSubject(),
 			ev.OccurredAt.AddDate(0, 0, days))
 	case ActionTypeNotify:
@@ -350,29 +352,30 @@ func (r listRule) planNotice(ev workflow.Event, firing listFiring) (workflow.Eff
 		Recipient: ev.OwnerID,
 		DedupeKey: r.IdempotencyKey(ev),
 		Subject:   firing.ListName,
-		Body:      fmt.Sprintf("A record %s the list.", firing.did()),
+		Body:      systemtext.Literal(firing.noticeCode()),
 		Origin:    noticeOrigin(ev),
 	})
 	if err != nil {
 		return workflow.Effect{}, fmt.Errorf("automation: encoding the notify action: %w", err)
 	}
-	return workflow.Effect{Actions: []workflow.Action{{Kind: workflow.ActionNotify, Target: ev.Entity, Args: args}}}, nil
+	return workflow.Effect{Actions: []workflow.Action{{Kind: workflow.ActionNotify, Target: ev.Entity, Args: args, SystemText: &systemtext.Message{Body: systemtext.Sentence(firing.noticeCode())}}}}, nil
 }
 
 // taskSubject is a follow-up task's subject, which names no list.
-func (f listFiring) taskSubject() string {
+func (f listFiring) taskSubject() string { return systemtext.Literal(f.taskCode()) }
+
+func (f listFiring) taskCode() string {
 	if f.Action == directionLeft {
-		return "Left a Live List"
+		return "automation.list_left_task"
 	}
-	return "Joined a Live List"
+	return "automation.list_joined_task"
 }
 
-// did says what the record did, in the past tense a sentence needs.
-func (f listFiring) did() string {
+func (f listFiring) noticeCode() string {
 	if f.Action == directionLeft {
-		return "left"
+		return "automation.list_left_notice"
 	}
-	return "joined"
+	return "automation.list_joined_notice"
 }
 
 func (r listRule) Apply(ctx context.Context, _ workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {

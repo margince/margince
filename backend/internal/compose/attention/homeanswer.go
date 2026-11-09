@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // WithHomeCache serves a reader's first worklist page from c while it holds.
@@ -72,8 +73,8 @@ func (s *Service) homeKey(ctx context.Context, q worklistQuestion) (string, bool
 		return "", false, err
 	}
 	day := storekit.StartOfDay(s.now(), loc)
-	return fmt.Sprintf("zone=%s&day=%s&own_owner=%t&limit=%d",
-		loc.String(), day.Format(time.DateOnly), !q.owner.IsZero(), pageLimit(q.limit)), true, nil
+	return fmt.Sprintf("zone=%s&day=%s&own_owner=%t&limit=%d&locale=%s",
+		loc.String(), day.Format(time.DateOnly), !q.owner.IsZero(), pageLimit(q.limit), systemtext.Locale(ctx)), true, nil
 }
 
 // walkStartedBy is the walk a first page's cursor resumes, so a cached page is

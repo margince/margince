@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -127,11 +128,12 @@ func (d extensionNoticeDoor) deliver(ctx context.Context, in extension.NoticeReq
 			dedupe = "extension:" + d.core.unit + ":" + in.Key
 		}
 		_, written, err := store.CreateTxNew(ctx, d.core.tx, notices.NewNotice{
-			Recipient: ids.From[ids.UserKind](user),
-			Kind:      notices.KindExtension,
-			Subject:   in.Subject,
-			DedupeKey: dedupe,
-			Target:    notices.Target{Type: in.Record.Type, ID: record},
+			SystemText: &systemtext.Message{Subject: systemtext.Prose(systemtext.Quote, "")},
+			Recipient:  ids.From[ids.UserKind](user),
+			Kind:       notices.KindExtension,
+			Subject:    in.Subject,
+			DedupeKey:  dedupe,
+			Target:     notices.Target{Type: in.Record.Type, ID: record},
 		})
 		if err != nil {
 			return 0, err

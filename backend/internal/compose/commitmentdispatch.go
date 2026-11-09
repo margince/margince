@@ -38,8 +38,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // CommitmentTaskKind is the staging kind for a promise read too unsurely to
@@ -62,6 +62,7 @@ const commitmentIdentityLocator = "locator"
 
 // Commitment is one promise as an extractor hands it to the rule.
 type Commitment struct {
+	SystemText *systemtext.Message
 	// absentColleague says the reply named the sender for a colleague's work
 	// and the promiser was cleared (senderOwesAnAbsentColleaguesWork).
 	absentColleague bool
@@ -300,7 +301,7 @@ func (d *CommitmentDispatcher) createOurCommitment(ctx context.Context, tx pgx.T
 	}
 	if !c.NeedsConfirmation && c.Confidence >= CommitmentTaskConfidence {
 		task, err := writeCommitmentTask(ctx, tx, d.tasks, d.claims, commitmentTask{
-			Extractor: c.Extractor, Locator: c.Locator, Summary: c.Summary, Body: c.Body,
+			Extractor: c.Extractor, Locator: c.Locator, Summary: c.Summary, Body: c.Body, SystemText: c.SystemText,
 			SourceActivityID: c.SourceActivityID, Links: c.Links, DueDate: c.DueDate, DueZone: c.DueZone,
 			Assignee: asked, ClaimID: claimID, ClaimIDs: claimIDs, PrivateTo: c.PrivateTo,
 			Origin: activities.OriginAgent,
@@ -308,7 +309,7 @@ func (d *CommitmentDispatcher) createOurCommitment(ctx context.Context, tx pgx.T
 		return CommitmentTaskWritten, task, err
 	}
 	proposal := CommitmentTaskProposal{
-		SourceActivityID: c.SourceActivityID, Summary: c.Summary, Party: c.Party,
+		SourceActivityID: c.SourceActivityID, Summary: c.Summary, Party: c.Party, SystemText: c.SystemText,
 		SeatID: &asked, PromiserSeatID: &asked, DueDate: c.DueDate, DueZone: c.DueZone, Links: c.Links, Quote: c.Quote,
 		Locator: c.Locator, ClaimID: claimID, ClaimIDs: claimIDs, Body: c.Body, PrivateTo: c.PrivateTo,
 	}
@@ -439,6 +440,8 @@ func (d *CommitmentDispatcher) stageCommitmentProposal(
 		return CommitmentPromiserUnassignable, ids.UUID{}, nil
 	}
 	ctx = onBehalfOf(ctx, asked)
+	proposal.SystemText = systemtext.ForWrite(ctx, proposal.SystemText, proposal.Summary, proposal.Body)
+
 	raw, err := json.Marshal(proposal)
 	if err != nil {
 		return CommitmentRemembered, ids.UUID{}, fmt.Errorf("compose: marshal commitment proposal: %w", err)
@@ -456,17 +459,19 @@ func (d *CommitmentDispatcher) stageCommitmentProposal(
 		evidence = append(evidence, *c.RenewalEvidence)
 	}
 	approvalID, staged, err := d.approval.StageUnlessDeclinedTx(ctx, tx, approvals.StageInput{
-		Kind:           CommitmentTaskKind,
-		ProposedChange: canonical,
-		DiffHash:       hash,
-		Identity:       identity,
-		TargetType:     string(recordTypeActivity),
-		TargetID:       c.SourceActivityID,
-		Summary:        proposal.Summary,
-		Evidence:       evidence,
-		BundleID:       bundleID,
-		JoinPending:    true,
-		TTL:            window,
+		Kind:             CommitmentTaskKind,
+		EffectSystemText: proposal.SystemText,
+		SystemText:       proposal.SystemText,
+		ProposedChange:   canonical,
+		DiffHash:         hash,
+		Identity:         identity,
+		TargetType:       string(recordTypeActivity),
+		TargetID:         c.SourceActivityID,
+		Summary:          proposal.Summary,
+		Evidence:         evidence,
+		BundleID:         bundleID,
+		JoinPending:      true,
+		TTL:              window,
 	})
 	if errors.Is(err, approvals.ErrNoDecider) {
 		return CommitmentRemembered, ids.UUID{}, nil
@@ -475,26 +480,4 @@ func (d *CommitmentDispatcher) stageCommitmentProposal(
 		return CommitmentRemembered, ids.UUID{}, err
 	}
 	return CommitmentProposed, approvalID.UUID, nil
-}
-
-// derefSeat is the seat or the zero id, which no private conversation names.
-func derefSeat(seat *ids.UUID) ids.UUID {
-	if seat == nil {
-		return ids.UUID{}
-	}
-	return *seat
-}
-
-// extractorContext files under the extractor's own name, so the claim and the
-// task say a reader wrote them. It renames the product's own pass and nothing
-// else: a human stays who they are, and a context with no principal stays
-// without one, so every gate below answers for the caller that is really
-// there rather than for a principal this function made up.
-func extractorContext(ctx context.Context, extractor string) context.Context {
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalSystem {
-		return ctx
-	}
-	actor.ID = extractor
-	return principal.WithActor(ctx, actor)
 }

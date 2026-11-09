@@ -371,9 +371,9 @@ func (s *Service) insertProposalInTx(ctx context.Context, tx pgx.Tx, in StageInp
 	// The summary is prose, and several stagers build it out of record text
 	// the agent or an inbound sender could have written. Sanitizing at the
 	// one place every staging passes through means no stager can bypass it.
-	in.Summary = SanitizeSummary(in.Summary)
-	in.SummaryParts = SanitizeSummaryParts(in.SummaryParts)
-	summaryParts, err := marshalSummaryParts(in.SummaryParts)
+	in = prepareSystemSummary(ctx, in)
+
+	summaryParts, err := marshalSystemSummary(ctx, in.Summary, in.SummaryParts, in.SystemText, in.EffectSystemText)
 	if err != nil {
 		return ids.ApprovalID{}, err
 	}

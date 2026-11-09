@@ -152,7 +152,7 @@ export const ProviderAppPending: Story = {
 export const GroupDraft: Story = {
   render: () => (
     <Served providers={[{ key: "google", label: "Google", enabled: true }]}>
-      <SignInMethodsCard />
+      <SignInMethodsCard part="grants" />
     </Served>
   ),
   play: async ({ canvasElement }) => {

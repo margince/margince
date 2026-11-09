@@ -78,8 +78,12 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 		return ids.UserID{}, "", err
 	}
 	var newUserID ids.UserID
-	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+	invite := func(tx pgx.Tx) error {
 		if err := lockAuthorization(ctx, tx); err != nil {
+			return err
+		}
+		// An invited login is a seat address, so a capture classifying it waits.
+		if err := storekit.LockSeatAddressClaims(ctx, tx, in.Email); err != nil {
 			return err
 		}
 		// An invited member is a full seat — the insert below takes the column's
@@ -134,7 +138,10 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 			return err
 		}
 		return s.recordInvite(ctx, tx, newUserID, actor.UserID, in)
-	})
+	}
+	// Another writer may take the seat-address and authorization locks in the
+	// other order, so a lock cycle is retried.
+	err = storekit.RetryLockCycles(ctx, func() error { return s.db.Tx(ctx, invite) })
 	if err != nil {
 		return ids.UserID{}, "", err
 	}

@@ -7,14 +7,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"regexp"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -56,7 +60,7 @@ func TestEveryThreadVerdictSaysWhetherItHoldsItsMessages(t *testing.T) {
 	// written here, so the claim was false and the gap it described was open.
 	for _, declared := range declaredVerdicts(t) {
 		if _, classified := holds[declared]; !classified {
-			t.Errorf("%s is declared in verdictinherit.go and classified nowhere here, so a message "+
+			t.Errorf("%s is declared in the shared thread vocabulary and classified nowhere here, so a message "+
 				"that joins a thread carrying it reads as shareable by default", declared)
 		}
 	}
@@ -66,18 +70,37 @@ func TestEveryThreadVerdictSaysWhetherItHoldsItsMessages(t *testing.T) {
 // them, so the set this test checks against is the product's rather than a copy.
 func declaredVerdicts(t *testing.T) []string {
 	t.Helper()
-	body, err := os.ReadFile("verdictinherit.go")
+	path := filepath.Join(gatekit.ModuleRoot(t), "internal/shared/kernel/threadverdict/status.go")
+	file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
 	if err != nil {
-		t.Fatalf("reading the verdict declarations: %v", err)
-	}
-	found := regexp.MustCompile(`(?m)^\s*Verdict[A-Za-z]*\s*=\s*"([a-z_]+)"`).FindAllStringSubmatch(string(body), -1)
-	if len(found) < 6 {
-		t.Fatalf("read %d verdict declarations, want at least the 6 that exist — this test is "+
-			"reading less than the file and would pass over an unclassified verdict", len(found))
+		t.Fatal(err)
 	}
 	var out []string
-	for _, m := range found {
-		out = append(out, m[1])
+	for _, declaration := range file.Decls {
+		group, ok := declaration.(*ast.GenDecl)
+		if !ok || group.Tok != token.CONST {
+			continue
+		}
+		for _, spec := range group.Specs {
+			constant, ok := spec.(*ast.ValueSpec)
+			if !ok || len(constant.Values) != len(constant.Names) {
+				t.Fatal("unreadable thread verdict declaration")
+			}
+			for _, value := range constant.Values {
+				literal, ok := value.(*ast.BasicLit)
+				if !ok || literal.Kind != token.STRING {
+					t.Fatal("thread verdict is not a string literal")
+				}
+				status, err := strconv.Unquote(literal.Value)
+				if err != nil {
+					t.Fatal(err)
+				}
+				out = append(out, status)
+			}
+		}
+	}
+	if len(out) < 6 {
+		t.Fatalf("read %d thread verdicts; the canonical vocabulary has at least six", len(out))
 	}
 	return out
 }

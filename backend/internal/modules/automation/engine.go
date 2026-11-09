@@ -22,12 +22,10 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
-	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -410,87 +408,4 @@ func applyUpdate(ctx context.Context, provider datasource.SystemOfRecordProvider
 		Source: systemSource,
 	})
 	return err
-}
-
-// stageForApproval builds the human-facing staging request for one 🟡
-// action and hands it to the approvals seam. ProposedChange/DiffHash are
-// derived the same way every other stager in this codebase derives them
-// (e.g. compose/closedate.go): canonicalize the action's own args and
-// hash that, never a fabricated placeholder — so a redelivered firing of
-// the identical action reaches the identical diff_hash a human already
-// saw, instead of minting a fresh unrecognizable staging each retry.
-func stageForApproval(ctx context.Context, approvals Approvals, language baselanguage.Resolver, action workflow.Action) (ids.ApprovalID, error) {
-	raw := action.Args
-	if len(raw) == 0 {
-		raw = json.RawMessage(`{}`)
-	}
-	summary := fmt.Sprintf(summaryIn(ctx, language).stagedAction, action.Kind, action.Target.Type, action.Target.ID)
-	if action.Kind == workflow.ActionEmitFlowEvent {
-		request, err := ReadConfirmationRequest(raw)
-		if err != nil {
-			return ids.ApprovalID{}, err
-		}
-		summary = fmt.Sprintf(summaryIn(ctx, language).confirmation, request.Question)
-	}
-	canonical, diffHash, err := diffhash.Canonical(raw)
-	if err != nil {
-		return ids.ApprovalID{}, fmt.Errorf("automation: canonicalizing %s for staging: %w", action.Kind, err)
-	}
-	return approvals.Stage(ctx, StageRequest{
-		Kind:           string(action.Kind),
-		ProposedChange: canonical,
-		DiffHash:       diffHash,
-		TargetType:     string(action.Target.Type),
-		TargetID:       action.Target.ID,
-		Summary:        summary,
-	})
-}
-
-// HeldDraftKind is the staging kind an automation-composed email waits under.
-//
-// It differs from send_email, the kind an agent's send stages under when a
-// tier floor makes it confirm first. Two reasons, and either alone would be enough.
-// The pin: this kind waives the target version pin (approvals' contextTargetKinds).
-// A draft waits in an inbox while ordinary work bumps the message it answers.
-// send_email must keep its pin, so a shared name would waive it for agent sends too.
-// The effect: the release executor is registered per kind. An agent's staged
-// send is redeemed by token, so it must not gain an executor that fires it on approval.
-const HeldDraftKind = "held_draft"
-
-// stageHeldDraft puts one composed draft in front of a human.
-//
-// JoinPending, unlike the generic stager above: a firing reaches this seam more
-// than once (the bus is at-least-once, and a scan re-evaluates candidates), and
-// an identical re-stage must return the row already waiting rather than add a
-// second copy of the same message to somebody's inbox. The generic stager has
-// no such caller today and is left alone.
-//
-// The summary names the addressee, because the inbox row is read before the
-// draft is opened and "send an email" is not a decision anyone can take.
-func stageHeldDraft(ctx context.Context, approvals Approvals, language baselanguage.Resolver, target datasource.EntityRef, proposal HeldDraftProposal) (ids.ApprovalID, error) {
-	if approvals == nil {
-		// A composition with no staging seam cannot hold this draft for
-		// anybody, and the alternative to saying so is a nil dereference. It
-		// refuses the way a notify firing with no transport does (§3.3): the
-		// run records a visible outcome an operator can act on, rather than the
-		// process falling over — or, worse, the draft quietly evaporating.
-		return ids.ApprovalID{}, ErrNoApprovalStaging
-	}
-	raw, err := json.Marshal(proposal)
-	if err != nil {
-		return ids.ApprovalID{}, fmt.Errorf("automation: encoding a held draft for staging: %w", err)
-	}
-	canonical, diffHash, err := diffhash.Canonical(raw)
-	if err != nil {
-		return ids.ApprovalID{}, fmt.Errorf("automation: canonicalizing a held draft for staging: %w", err)
-	}
-	return approvals.Stage(ctx, StageRequest{
-		Kind:           HeldDraftKind,
-		ProposedChange: canonical,
-		DiffHash:       diffHash,
-		TargetType:     string(target.Type),
-		TargetID:       target.ID,
-		Summary:        fmt.Sprintf(summaryIn(ctx, language).heldDraft, proposal.To),
-		JoinPending:    true,
-	})
 }

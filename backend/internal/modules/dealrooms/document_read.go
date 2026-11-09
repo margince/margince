@@ -86,7 +86,7 @@ var inTheDealsFilesArea = `a.archived_at IS NULL AND NOT a.bytes_withheld
 	      AND EXISTS (
 	        SELECT 1 FROM activity m
 	         WHERE m.id = a.entity_id AND m.archived_at IS NULL
-	           AND m.restricted_at IS NULL AND m.audience = 'workspace')))
+	           AND m.restricted_at IS NULL AND ` + auth.WorkspaceAudienceSQL("m") + `)))
 	AND NOT EXISTS (SELECT 1 FROM deal_document_hide h WHERE h.deal_id = r.deal_id AND h.attachment_id = a.id)`
 
 // sellerReadsTheCarrier is the caller-bound half of every seller read of a

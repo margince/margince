@@ -470,6 +470,7 @@ func (r *Registry) stageRefusedCall(ctx context.Context, t mcp.Tool, tool string
 		CoTargetType:   info.CoTargetType,
 		CoTargetID:     info.CoTargetID,
 		Summary:        info.Summary,
+		SystemText:     info.SystemText,
 	}
 	id, alreadyApproved, err := r.approvals.StageCall(ctx, req)
 	if err != nil {

@@ -293,15 +293,16 @@ func (a attentionNotices) Unread(ctx context.Context, limit int) ([]attention.Un
 			}
 		}
 		out = append(out, attention.UnreadNotice{
-			ApprovalID: notice.ApprovalID,
-			ID:         notice.ID,
-			Origin:     notice.Origin,
-			Kind:       notice.Kind,
-			Subject:    notice.Subject,
-			Body:       notice.Body,
-			TargetType: notice.Target.Type,
-			TargetID:   notice.Target.ID,
-			CreatedAt:  notice.CreatedAt,
+			ApprovalID:    notice.ApprovalID,
+			ID:            notice.ID,
+			Origin:        notice.Origin,
+			Kind:          notice.Kind,
+			Subject:       notice.Subject,
+			SystemDisplay: notice.SystemDisplay,
+			Body:          notice.Body,
+			TargetType:    notice.Target.Type,
+			TargetID:      notice.Target.ID,
+			CreatedAt:     notice.CreatedAt,
 		})
 	}
 	return out, nil

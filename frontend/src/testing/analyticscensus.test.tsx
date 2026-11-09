@@ -23,6 +23,7 @@ import {
   startingMovement,
   teamEvaluation,
 } from "../features/analytics/analytics.overview.testkit";
+import { stable } from "../format/collate";
 import { forgetSeat } from "../lib/storage";
 import { jsonResponse } from "./story-utils";
 
@@ -119,7 +120,7 @@ function census(asked: readonly AskedRequest[], view: View) {
       !SHELL.includes(path(url)) && !view.critical(url) && !view.optional(url),
   );
   return {
-    critical: critical.map(({ url }) => path(url)).sort(),
+    critical: critical.map(({ url }) => path(url)).sort(stable),
     unplaced: unplaced.map(({ url }) => `${path(url)}${url.search}`),
   };
 }

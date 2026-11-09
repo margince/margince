@@ -29656,6 +29656,8 @@ components:
       description: One durable line addressed to one contact, as the raising call returns it.
       required: [id, kind, subject, created_at]
       properties:
+        system_display:
+          $ref: '#/components/schemas/SystemDisplay'
         id: {type: string, format: uuid}
         kind: {$ref: '#/components/schemas/NoticeKind'}
         subject:
@@ -29706,6 +29708,8 @@ components:
         whether they have already answered it.
       required: [id, kind, subject, created_at]
       properties:
+        system_display:
+          $ref: '#/components/schemas/SystemDisplay'
         id: {type: string, format: uuid}
         kind:
           type: string
@@ -38183,6 +38187,7 @@ components:
         horizon_days: {type: integer, minimum: 1, maximum: 90}
         buffer_minutes: {type: integer, minimum: 0, maximum: 120}
         title: {type: string, maxLength: 200}
+        use_default_title: {type: boolean, description: Use the built-in meeting title. Explicitly false preserves the supplied title as custom wording.}
         location: {type: string, maxLength: 1000}
         host_name: {type: string, maxLength: 200, description: Derived from the host account display name; request values are ignored. Names longer than 200 characters are abbreviated for this profile.}
         company_name: {type: string, maxLength: 200, description: The name of the legal entity an admin assigns the host to; request values are ignored. Names longer than 200 characters are abbreviated for this profile.}
@@ -38401,6 +38406,8 @@ components:
         `withheld`.
       required: [id, kind, occurred_at, occurred_precision, source, captured_by, created_at, updated_at, offers_email]
       properties:
+        system_display:
+          $ref: '#/components/schemas/SystemDisplay'
         can_share_internal:
           type: boolean
           readOnly: true
@@ -42015,6 +42022,18 @@ components:
         next_cursor:
           type: [string, 'null']
           description: Opaque cursor for the next page, or null if none.
+    SystemDisplay:
+      type: object
+      additionalProperties: false
+      required: [locale]
+      properties:
+        locale: {type: string, enum: [en, de, vi]}
+        subject: {type: string}
+        body: {type: string}
+        generated_parts:
+          type: array
+          items: {type: string, enum: [subject, body]}
+        source_version: {type: integer, format: int64}
     FilterProposalRequest:
       type: object
       description: A list described in plain words, to be turned into filter clauses.
@@ -48806,6 +48825,8 @@ components:
       description: A staged confirm-first action awaiting human decision.
       required: [id, kind, status, proposed_by, created_at]
       properties:
+        system_display:
+          $ref: '#/components/schemas/SystemDisplay'
         preview:
           $ref: '#/components/schemas/ApprovalPreview'
         assignee_inactive:
@@ -52862,6 +52883,8 @@ components:
         One completed act, and the record it was about.
       required: [id, kind, summary, occurred_at]
       properties:
+        system_display:
+          $ref: '#/components/schemas/SystemDisplay'
         close_date_change: {$ref: '#/components/schemas/CloseDateChange'}
         id: {type: string, format: uuid, description: 'The completed act, as its own surface spells it.'}
         source:
@@ -53405,6 +53428,8 @@ components:
         One thing to do, with the reason it sits where it sits.
       required: [id, source, category, level, actions, because, consequence, occurred_precision]
       properties:
+        system_display:
+          $ref: '#/components/schemas/SystemDisplay'
         summary_parts:
           allOf: [{$ref: '#/components/schemas/ApprovalSummaryParts'}]
           description: >-

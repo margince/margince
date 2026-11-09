@@ -15,6 +15,7 @@ package activities
 import (
 	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -67,7 +68,7 @@ type outboundMessage struct {
 // markup. A fixed sentence rather than the markup itself: the row is served to
 // every seat holding activity:read and rendering a sender's HTML there would
 // put caller-supplied markup into our own document.
-const htmlAlternativeNote = "This message was also sent as HTML."
+var htmlAlternativeNote = systemtext.Literal("activity.html_alternative")
 
 // activity is the timeline row the send commits.
 func (m outboundMessage) activity(chain threading) LogActivityInput {
@@ -90,6 +91,7 @@ func (m outboundMessage) activity(chain threading) LogActivityInput {
 	}
 	return SentRecord(LogActivityInput{
 		correspondenceEntity: m.in.SendingEntity,
+		SystemText:           outboundMessageText(m.recordedBody, m.htmlBody != ""),
 		Kind:                 "email",
 		Subject:              &m.in.Subject,
 		Body:                 &recorded,

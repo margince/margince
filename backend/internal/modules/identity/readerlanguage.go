@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -39,8 +40,8 @@ func ReaderLanguageForPrompt(ctx context.Context, pool *pgxpool.Pool) string {
 // chosenLanguage is the display language the caller chose, carried on their
 // principal from sign-in. A system caller and a member who never chose have none.
 func chosenLanguage(ctx context.Context) (textlang.Lang, bool) {
-	if actor, ok := principal.Actor(ctx); ok && textlang.Known(actor.Locale) {
-		return textlang.Lang(actor.Locale), true
+	if actor, ok := principal.Actor(ctx); ok && actor.Type == principal.PrincipalHuman && (systemtext.HasLocale(ctx) || textlang.Known(actor.Locale)) {
+		return systemtext.Locale(ctx), true
 	}
 	return textlang.Unknown, false
 }

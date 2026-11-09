@@ -5,6 +5,7 @@
 // holds. A new narrowing sends the reader back to page one.
 
 import { type RefObject, useEffect, useRef, useState } from "react";
+import { stable } from "../format/collate";
 
 /**
  * Page sizes the footer offers, as rendered pages. The caller fetches several
@@ -50,7 +51,7 @@ export function narrowingSignature(
     Object.keys(dials.chosen)
       // Byte order, not the reader's: this identity is compared with itself a
       // render ago, so it must be the same string in every locale.
-      .sort((one, other) => (one === other ? 0 : one < other ? -1 : 1))
+      .sort(stable)
       .map((name) => `${name}=${dials.chosen[name]}`)
       .join("&");
   return JSON.stringify([

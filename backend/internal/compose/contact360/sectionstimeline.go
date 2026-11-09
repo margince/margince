@@ -281,7 +281,7 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	defer rows.Close()
 	out := make([]crmcontracts.Activity, 0, sectionCap)
 	for rows.Next() {
-		a, err := activities.ScanActivityRow(rows)
+		a, err := activities.ScanActivityRow(ctx, rows)
 		if err != nil {
 			return nil, false, err
 		}

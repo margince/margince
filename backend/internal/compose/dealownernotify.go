@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // ownerChangeMail stages the email about a moved request. Deal stores are
@@ -70,8 +71,9 @@ func tellNewDecider(ctx context.Context, tx pgx.Tx, store *notices.Store, decide
 		key := approvalNoticeDedupeKey(request.ID.UUID)
 		decidable := false
 		var parts *crmcontracts.ApprovalSummaryParts
+		var metadata *systemtext.Message
 		if live {
-			if decidable, parts, err = approvals.PendingAskOfAtTx(seatCtx, tx, request.ID, now); err != nil {
+			if decidable, parts, metadata, err = approvals.PendingAskOfAtTx(seatCtx, tx, request.ID, now); err != nil {
 				return err
 			}
 		}
@@ -85,7 +87,7 @@ func tellNewDecider(ctx context.Context, tx pgx.Tx, store *notices.Store, decide
 		if request.TargetID != nil {
 			target = notices.Target{Type: request.TargetType, ID: *request.TargetID}
 		}
-		line := approvalNoticeFor(decider, request.ID, request.Summary, parts, target)
+		line := approvalNoticeFor(decider, request.ID, request.Summary, parts, target, metadata)
 		if err := recordApprovalNotice(ctx, tx, store.HandOverTx, mail, wsID, line); err != nil {
 			return err
 		}

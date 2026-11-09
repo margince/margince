@@ -82,7 +82,7 @@ func collectDealActivityLists(ctx context.Context, tx pgx.Tx, rows pgx.Rows, col
 	var unique []crmcontracts.Activity
 	for rows.Next() {
 		var dealID ids.UUID
-		activity, err := scanActivity(storekit.TrailingColumns{Row: rows, Dest: []any{&dealID}})
+		activity, err := scanActivity(ctx, storekit.TrailingColumns{Row: rows, Dest: []any{&dealID}})
 		if err != nil {
 			return nil, err
 		}

@@ -302,6 +302,7 @@ func (s *Service) RedeemPasswordReset(ctx context.Context, rawToken, newPassword
 		if statusErr != nil {
 			return statusErr
 		}
+		// No seat-address lock: an invited login is already in the set as internal.
 		tag, err := tx.Exec(ctx,
 			`UPDATE app_user SET password_hash = $2, status = 'active',
 			        failed_login_count = 0, locked_until = NULL,

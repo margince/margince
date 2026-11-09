@@ -2956,6 +2956,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "action.newDeal": "Neuer Deal",
   "action.booking": "Buchungsseite",
 
+  "common.fieldInvalid": "Prüfe diesen Wert und versuche es erneut.",
   "common.undo": "Rückgängig",
   "common.close": "Schließen",
   "common.unknownValue": "Sonstiges",

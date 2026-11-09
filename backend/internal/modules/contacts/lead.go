@@ -95,10 +95,10 @@ func (s *Store) CreateLead(ctx context.Context, in CreateLeadInput) (crmcontract
 // task: an agent, or the source the request declared.
 func arrivalOrigin(ctx context.Context, source string) string {
 	if actor, ok := principal.Actor(ctx); ok && actor.Type == principal.PrincipalAgent {
-		return "an agent"
+		return CompanySourceAgent
 	}
 	if source == "" {
-		return "the API"
+		return "API"
 	}
 	return source
 }

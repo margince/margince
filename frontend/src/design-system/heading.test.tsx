@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { marginDeclarations } from "../../census/rules/heading.census";
+import { stable } from "../format/collate";
 import { rulesIn, withoutComments } from "../testing/css";
 import { Heading, type HeadingSize } from "./heading";
 
@@ -54,7 +55,9 @@ describe("Heading", () => {
   it("covers every heading token in tokens.css and nothing else", () => {
     const sizes = headingTokens().map((name) => name.toLowerCase());
     expect(sizes.length).toBeGreaterThan(0);
-    expect(sizes.sort()).toEqual(Object.keys(DEFAULT_ELEMENT).sort());
+    expect(sizes.sort(stable)).toEqual(
+      Object.keys(DEFAULT_ELEMENT).sort(stable),
+    );
   });
 
   it("puts each size on the element its place in the outline implies", () => {

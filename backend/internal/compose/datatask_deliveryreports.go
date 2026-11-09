@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // deliveryReportsAfter is the core migration this task waits for.
@@ -28,7 +29,7 @@ const deliveryReportsAfter = "core/1792799323"
 func deliveryReportsDataTask(pool *pgxpool.Pool, now func() time.Time) datatask.Task {
 	return datatask.Task{
 		ID: "core/1792823163_imported_delivery_reports", Version: 1,
-		Title: "Archiving delivery reports filed as received mail", Requires: []string{deliveryReportsAfter},
+		Title: systemtext.Literal("datatask.title.core.1792823163_imported_delivery_reports"), Requires: []string{deliveryReportsAfter},
 		Steps: []datatask.Step{{
 			Name: "imported_received_mail", Limit: 200, MinLimit: 10,
 			Audit:    datatask.AuditPolicy{PerRecord: true},
