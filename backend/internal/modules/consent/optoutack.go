@@ -108,11 +108,8 @@ func (s *Store) stageOwedReceiptTx(ctx context.Context, tx pgx.Tx, sub subject, 
 	if err != nil || !owed {
 		return false, "", err
 	}
-	switch {
-	case s.confirmSender == nil:
+	if s.confirmSender == nil {
 		return true, MissedReceiptNoMailLane, nil
-	case sub.entityType != entityContact:
-		return true, MissedReceiptNoLeadReceipt, nil
 	}
 	address, err := acknowledgementAddressTx(ctx, tx, sub)
 	if err != nil {
@@ -153,7 +150,15 @@ func (s *Store) prepareAcknowledgementTx(
 	if err != nil {
 		return err
 	}
-	_, err = s.confirmSender.QueueConfirmationTx(ctx, tx, ConfirmationSend{ContactID: ids.From[ids.ContactKind](sub.id), Recipient: address, Category: category, MessageID: messageID, DueAt: dueAt, Rendered: rendered})
+	send := ConfirmationSend{Recipient: address, Category: category, MessageID: messageID, DueAt: dueAt, Rendered: rendered}
+	// Filed under the subject who refused, so the receipt's timeline row, the
+	// overdue sweep and an erasure all find it on that record.
+	if sub.entityType == entityLead {
+		send.LeadID = ids.From[ids.LeadKind](sub.id)
+	} else {
+		send.ContactID = ids.From[ids.ContactKind](sub.id)
+	}
+	_, err = s.confirmSender.QueueConfirmationTx(ctx, tx, send)
 	return err
 }
 
@@ -183,28 +188,31 @@ func acknowledgeableKinds() []string {
 	return []string{commsauthz.ReasonObjection, suppressibleKind}
 }
 
-// acknowledgementAddressTx reads where to send it: the contact's primary
-// address, by the ordering the preference centre and the confirm card share.
+// acknowledgementAddressTx reads where to send it. A contact's is its primary
+// address, by the ordering the preference centre and the confirm card share. A
+// lead holds one address on its own row, read while the lead is live.
 //
 // Answers EMPTY rather than an error when there is none. A stop can be recorded
-// against a contact whose address the product does not hold, or has since
-// erased, and that is a fact about the contact rather than a failure.
+// against a subject whose address the product does not hold, or has erased.
+// That is a fact about the subject rather than a failure.
 func acknowledgementAddressTx(ctx context.Context, tx pgx.Tx, sub subject) (string, error) {
-	if sub.entityType != entityContact {
-		// A LEAD holds no contact_email row, and the acknowledgement is
-		// addressed by the same reader every other controller message uses.
-		// Reaching for the lead's own address here would be a second spelling
-		// of "where does this contact receive mail", which is the thing
-		// primaryEmailSQL exists to keep singular.
-		return "", nil
+	reader := primaryEmailSQL("$1")
+	if sub.entityType == entityLead {
+		reader = liveLeadEmailSQL("$1")
 	}
 	var address string
-	err := tx.QueryRow(ctx,
-		`SELECT `+primaryEmailSQL("$1"), sub.id).Scan(&address)
+	err := tx.QueryRow(ctx, `SELECT `+reader, sub.id).Scan(&address)
 	if err != nil {
 		return "", fmt.Errorf("consent: reading where to acknowledge this stop: %w", err)
 	}
 	return address, nil
+}
+
+// liveLeadEmailSQL is a lead's own address, or empty when the lead has none or
+// is archived. An archived lead was promoted, merged or erased. Mail to it would
+// answer for a record that no longer speaks for its subject.
+func liveLeadEmailSQL(ref string) string {
+	return `coalesce((SELECT l.email FROM lead l WHERE l.id = ` + ref + ` AND l.archived_at IS NULL), '')`
 }
 
 // acknowledgementMessageID derives the RFC822 identity from the stop it
