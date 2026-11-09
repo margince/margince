@@ -35,9 +35,9 @@ function TakeButton({ item }: Readonly<{ item: WorklistItem }>) {
   return (
     <Button
       pending={take.isPending}
-      // mutateAsync, not per-call callbacks: the refetch after the write takes
-      // the row off the Unassigned list, and React Query drops the callbacks
-      // of an unmounted button. The promise still settles, so the line shows.
+      // mutateAsync, not per-call callbacks. The refetch after the write takes
+      // the row off the Unassigned list. React Query drops the callbacks of an
+      // unmounted button, but the promise still settles, so the line shows.
       onClick={() =>
         take
           .mutateAsync({
