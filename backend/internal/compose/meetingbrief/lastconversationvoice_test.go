@@ -6,6 +6,11 @@ package meetingbrief
 import (
 	"fmt"
 	"testing"
+
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The last conversation line names who wrote it, which the row's voice answers
@@ -34,5 +39,39 @@ func TestTheLastConversationLineNamesTheVoiceNotTheTransport(t *testing.T) {
 				t.Errorf("line = %q, want %q", got, want)
 			}
 		})
+	}
+}
+
+// Through the production fold: a colleague's inbound mail on the contact's page
+// reaches the line as ours.
+func TestAColleaguesInboundMailFoldsIntoAnOurSideLastLine(t *testing.T) {
+	available := crmcontracts.ActivityContentStateAvailable
+	inbound := crmcontracts.ActivityDirectionInbound
+	view := crmcontracts.Contact360{
+		Activities: &struct {
+			Data []crmcontracts.Activity `json:"data"`
+			Page crmcontracts.PageInfo   `json:"page"`
+		}{
+			Data: []crmcontracts.Activity{{
+				Id:           openapi_types.UUID(ids.NewV7()),
+				Kind:         crmcontracts.ActivityKindEmail,
+				Subject:      new("Prices"),
+				Direction:    &inbound,
+				ContentState: &available,
+				Voice: &crmcontracts.ActivityVoice{Author: &crmcontracts.ActivityAuthor{
+					Kind: crmcontracts.ActivityAuthorKindColleague,
+				}},
+			}},
+		},
+	}
+	in := &Input{}
+	WithCounterpart(in, view)
+	if len(in.Recent) != 1 {
+		t.Fatalf("recent = %d, want 1", len(in.Recent))
+	}
+	said := briefCopyFor("en")
+	got := said.lastConversationLine(in.Recent[0])
+	if want := fmt.Sprintf(said.Say(sectionWords.WeWrote), "Prices"); got != want {
+		t.Errorf("line = %q, want %q", got, want)
 	}
 }
