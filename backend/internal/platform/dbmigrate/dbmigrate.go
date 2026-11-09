@@ -171,20 +171,49 @@ func Load(fsys fs.FS, dir string) ([]Migration, error) {
 // Held by: TestNoMigrationValidatesAConstraintItAddedInTheSameFile
 // (backend/migrations/notvalidsplit_test.go)
 func Up(ctx context.Context, conn *pgx.Conn, namespaces ...Namespace) (applied int, err error) {
+	report, err := UpWithReport(ctx, conn, namespaces...)
+	return report.Applied, err
+}
+
+// UpReport counts what one Up run changed: migrations applied, and ledger rows
+// moved from a declared renumber's old version to its new one.
+type UpReport struct {
+	Applied    int
+	Reconciled int
+}
+
+// UpWithReport is Up for the caller that also reports the reconciled rows,
+// which is cmd/migrate: an operator reads that line to see the ledger changed.
+//
+// Every namespace's renumbers are planned before any is written, so a refusal
+// in the last namespace leaves the first one untouched as well.
+func UpWithReport(ctx context.Context, conn *pgx.Conn, namespaces ...Namespace) (report UpReport, err error) {
 	if err := lock(ctx, conn); err != nil {
-		return 0, err
+		return report, err
 	}
 	defer unlock(ctx, conn)
 
-	for _, ns := range namespaces {
-		table, err := trackingTable(ctx, conn, ns.Name)
-		if err != nil {
-			return applied, err
+	tables := make([]string, len(namespaces))
+	plans := make([]renumberPlan, len(namespaces))
+	for i, ns := range namespaces {
+		if tables[i], err = trackingTable(ctx, conn, ns.Name); err != nil {
+			return report, err
 		}
-		done, err := appliedVersions(ctx, conn, table)
+		done, err := appliedVersions(ctx, conn, tables[i])
 		if err != nil {
-			return applied, err
+			return report, err
 		}
+		if plans[i], err = planRenumbers(ns, done); err != nil {
+			return report, err
+		}
+	}
+
+	for i, ns := range namespaces {
+		if err := reconcileRenumbered(ctx, conn, tables[i], plans[i]); err != nil {
+			return report, fmt.Errorf("pgmigrate: %s: reconciling renumbered migrations: %w", ns.Name, err)
+		}
+		report.Reconciled += len(plans[i].steps)
+		done := plans[i].ledger
 
 		// EVERY migration is judged before ANY is applied. Judged inside the
 		// apply loop, a namespace whose third migration disagrees with the
@@ -194,10 +223,10 @@ func Up(ctx context.Context, conn *pgx.Conn, namespaces ...Namespace) (applied i
 		// nothing and the answer cannot change under the advisory lock.
 		for _, m := range ns.Migrations {
 			if err := assertLedgerMatches(ns.Name, done, m); err != nil {
-				return applied, err
+				return report, err
 			}
 			if err := assertContentMatches(ns.Name, done, m); err != nil {
-				return applied, err
+				return report, err
 			}
 		}
 
@@ -206,14 +235,14 @@ func Up(ctx context.Context, conn *pgx.Conn, namespaces ...Namespace) (applied i
 				continue
 			}
 			if err := apply(ctx, conn, m, m.UpSQL,
-				fmt.Sprintf(`INSERT INTO %s (version, name, content_digest) VALUES ($1, $2, $3)`, table),
+				fmt.Sprintf(`INSERT INTO %s (version, name, content_digest) VALUES ($1, $2, $3)`, tables[i]),
 				[]any{m.Version, m.Name, Digest(m)}); err != nil {
-				return applied, fmt.Errorf("pgmigrate: %s %s_%s: %w", ns.Name, m.Version, m.Name, err)
+				return report, fmt.Errorf("pgmigrate: %s %s_%s: %w", ns.Name, m.Version, m.Name, err)
 			}
-			applied++
+			report.Applied++
 		}
 	}
-	return applied, nil
+	return report, nil
 }
 
 // Down reverts up to n applied migrations of ONE namespace, newest first.
@@ -286,18 +315,18 @@ func NamespaceFor(unit string) (string, error) {
 // database that applied some other migration in that slot — and matching on
 // the version alone makes the two indistinguishable, so the migration actually
 // sitting there is skipped silently and forever.
-func appliedVersions(ctx context.Context, conn *pgx.Conn, table string) (map[string]appliedRow, error) {
+func appliedVersions(ctx context.Context, conn *pgx.Conn, table string) (map[string]LedgerRow, error) {
 	rows, err := conn.Query(ctx, fmt.Sprintf(`SELECT version, name, content_digest FROM %s`, table))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	done := map[string]appliedRow{}
+	done := map[string]LedgerRow{}
 	for rows.Next() {
 		var version string
-		var applied appliedRow
-		if err := rows.Scan(&version, &applied.name, &applied.digest); err != nil {
+		var applied LedgerRow
+		if err := rows.Scan(&version, &applied.Name, &applied.Digest); err != nil {
 			return nil, err
 		}
 		done[version] = applied
@@ -305,7 +334,7 @@ func appliedVersions(ctx context.Context, conn *pgx.Conn, table string) (map[str
 	return done, rows.Err()
 }
 
-// appliedRow is what the ledger recorded for one version: the name it was
+// LedgerRow is what the ledger recorded for one version: the name it was
 // applied under, and the digest of the content that was applied.
 //
 // The digest is a POINTER because NULL is a real and permanent answer — a row
@@ -313,9 +342,9 @@ func appliedVersions(ctx context.Context, conn *pgx.Conn, table string) (map[str
 // one would stamp a fingerprint over content nobody can recover, which is the
 // divergence the column exists to expose. Unverifiable is not the same as
 // matching, and the two must never collapse into one another.
-type appliedRow struct {
-	name   string
-	digest *string
+type LedgerRow struct {
+	Name   string
+	Digest *string
 }
 
 // assertLedgerMatches refuses when a version was applied under a different
@@ -323,21 +352,20 @@ type appliedRow struct {
 //
 // It is a stop, not a warning, because every continuation from here is wrong
 // in a way nothing later reports. The migration recorded in that slot is not
-// the one on disk, so this run would skip the on-disk one as done; the obvious
-// manual repair — inserting the new version's row — leaves the database
-// permanently missing whatever the skipped migration created, with no failure
-// to point at it. A renumbered migration cannot be reconciled forward: the
-// database has to be rebuilt (make dev-fresh).
-func assertLedgerMatches(namespace string, done map[string]appliedRow, m Migration) error {
+// the one on disk, so this run would skip the on-disk one as done. Inserting
+// the new version's row by hand leaves the database missing whatever the
+// skipped migration created, and nothing reports it. Up moves only a renumber
+// the Namespace declares (renumbered.go); any other needs a rebuilt database.
+func assertLedgerMatches(namespace string, done map[string]LedgerRow, m Migration) error {
 	recorded, ok := done[m.Version]
-	if !ok || recorded.name == m.Name {
+	if !ok || recorded.Name == m.Name {
 		return nil
 	}
 	return fmt.Errorf(
 		"pgmigrate: %s %s: applied as %q, but the source at that version is %q — this database "+
 			"applied a migration that has since been renumbered, so %q would be skipped as done. "+
 			"It cannot be repaired forward; rebuild the database (make dev-fresh)",
-		namespace, m.Version, recorded.name, m.Name, m.Name,
+		namespace, m.Version, recorded.Name, m.Name, m.Name,
 	)
 }
 
@@ -370,9 +398,9 @@ func assertLedgerMatches(namespace string, done map[string]appliedRow, m Migrati
 // every installation that migrated before the column existed with no way
 // forward, and back-filling one would invent the evidence. Unverifiable is its
 // own answer.
-func assertContentMatches(namespace string, done map[string]appliedRow, m Migration) error {
+func assertContentMatches(namespace string, done map[string]LedgerRow, m Migration) error {
 	recorded, ok := done[m.Version]
-	if !ok || recorded.digest == nil || ContentAdmitted(namespace, m, *recorded.digest) {
+	if !ok || recorded.Digest == nil || ContentAdmitted(namespace, m, *recorded.Digest) {
 		return nil
 	}
 	return fmt.Errorf(

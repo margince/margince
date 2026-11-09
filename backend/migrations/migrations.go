@@ -31,7 +31,10 @@
 package migrations
 
 import (
+	"bufio"
 	"embed"
+	"fmt"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/dbmigrate"
 )
@@ -39,22 +42,55 @@ import (
 //go:embed core custom
 var files embed.FS
 
+// renumbered declares the migrations that moved to a new version with
+// identical bytes. Up moves a database's ledger row along such a pair instead
+// of running the migration again.
+//
+//go:embed renumbered.txt
+var renumbered string
+
+const renumberedFile = "renumbered.txt"
+
 // Core returns the upstream-owned namespace.
 func Core() (dbmigrate.Namespace, error) {
-	ms, err := dbmigrate.Load(files, "core")
-	if err != nil {
-		return dbmigrate.Namespace{}, err
-	}
-	return dbmigrate.Namespace{Name: "core", Migrations: ms}, nil
+	return namespace("core")
 }
 
 // Custom returns the fork-owned namespace. Empty upstream by design: a
 // fork's agent-authored migrations land here with x_-prefixed columns and
 // never collide with a core upgrade (ADR-0017 Amendment 1).
 func Custom() (dbmigrate.Namespace, error) {
-	ms, err := dbmigrate.Load(files, "custom")
+	return namespace("custom")
+}
+
+func namespace(name string) (dbmigrate.Namespace, error) {
+	ms, err := dbmigrate.Load(files, name)
 	if err != nil {
 		return dbmigrate.Namespace{}, err
 	}
-	return dbmigrate.Namespace{Name: "custom", Migrations: ms}, nil
+	pairs, err := Renumbered()
+	if err != nil {
+		return dbmigrate.Namespace{}, err
+	}
+	return dbmigrate.Namespace{Name: name, Migrations: ms, Renumbered: pairs[name]}, nil
+}
+
+// Renumbered reads renumbered.txt into its pairs, keyed by namespace. Each
+// line is `namespace old_version new_version name`; a line starting with #
+// is a comment.
+func Renumbered() (map[string][]dbmigrate.Renumber, error) {
+	pairs := map[string][]dbmigrate.Renumber{}
+	lines := bufio.NewScanner(strings.NewReader(renumbered))
+	for n := 1; lines.Scan(); n++ {
+		line := strings.TrimSpace(lines.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) != 4 {
+			return nil, fmt.Errorf("migrations: %s:%d: want `namespace old_version new_version name`, got %q", renumberedFile, n, line)
+		}
+		pairs[fields[0]] = append(pairs[fields[0]], dbmigrate.Renumber{Old: fields[1], New: fields[2], Name: fields[3]})
+	}
+	return pairs, lines.Err()
 }
