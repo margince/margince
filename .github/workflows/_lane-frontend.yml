@@ -111,6 +111,9 @@ jobs:
           # a tier measured at zero, silently.
           if-no-files-found: error
           retention-days: 1
+      # The whole-tree censuses, on one runner: one parse of the tree serves
+      # every rule, so a fe-unit shard would pay that parse again.
+      - run: make fe-census
 
   # FOUR shards, and the number comes from a measurement rather than from the
   # runner budget.

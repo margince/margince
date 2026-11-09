@@ -334,6 +334,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /activities/{id}/meeting-brief` | getMeetingBrief | The pre-meeting brief for one booked meeting — goal, commitments, where the deal stands. | Read records | at once |
 | `GET /activities/{id}/pipeline` | readActivityPipelineTrace | Every ingress stage this message passed through, and why each did or did not run. | Read records | at once |
 | `POST /activities/{id}/relink` | relinkActivity | Re-associate a captured activity to a chosen deal/entity (idempotent, source-preserving). | Change records | may wait for approval |
+| `POST /activities/{id}/deal-decline` | declineActivityDeal | Say a captured message is not about a deal, or about none of the deals its question offered. | Change records | at once |
 | `GET /activities/{id}/project-filing` | getActivityProjectFiling | What filing this activity under a project did to its retention, and whether it can be undone. | Read records | at once |
 | `POST /activities/relink-thread` | relinkThread | Re-associate every activity of one conversation thread to a chosen record, in one transaction. | Change records | may wait for approval |
 | `POST /activities/relink-bulk` | relinkActivities | Re-associate a named set of activities to a chosen record, in one transaction. | Change records | may wait for approval |
@@ -591,7 +592,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /ai/routing/schema` | getAiRoutingSchema | The JSON Schema of the routing document, with a description and documentation link per OpenRouter field (ai_routing read). | Read records | at once |
 | `POST /ai/routing/preview` | previewAiRouting | Preview affected features without calling a model (ai_routing read/update and ai_budget read). | Read records | at once |
 | `GET /ai/usage` | getAiUsage | AI usage + budget — the spend is never invisible. | Read records | at once |
-| `GET /ai/usage/summary` | getAiUsageSummary | What AI cost this month so far, as one figure. | Read records | at once |
+| `GET /ai/usage/summary` | getAiUsageSummary | What AI cost over a window, this month by default, as one figure. | Read records | at once |
 | `GET /ai/profile` | getAiProfile | Authenticated AI configuration posture for transparent human-facing workspaces. | Read records | at once |
 | `GET /ai/routing` | getAiRouting | The tier-to-model binding this installation runs on (admin/ops). | Read records | at once |
 | `GET /ai/available-models/{provider}` | listAvailableModels | What one vendor says it serves today (admin/ops). | Read records | at once |

@@ -117,13 +117,35 @@ func (s *Service) runDecisionEffect(ctx context.Context, id ids.ApprovalID, a ro
 	}
 	if effect, ok := s.effects[a.Kind]; ok && approve && serverProposed(a) {
 		if err := effect(storekit.WithReleasingApproval(releasing(ctx, id), id.UUID), id, a.ProposedChange, a.DiffHash); err != nil {
-			return s.recordEffectFailure(ctx, a,
-				"this was approved, but the work it released did not run",
+			return s.recordEffectFailure(ctx, a, effectFailureSentence(err),
 				fmt.Errorf("approved, but executing the %s effect failed: %w", a.Kind, err))
 		}
 		s.recordEffectRan(ctx, id)
 	}
 	return nil
+}
+
+// ErrEffectUnconfirmed is an effect whose write went to another system and was
+// not confirmed, so it may have landed. An effect returns it only after
+// redeeming, so the approval is spent and is never re-driven.
+var ErrEffectUnconfirmed = errors.New("approvals: the released write was not confirmed")
+
+// ErrEffectFollowUpFailed is an effect whose change landed and whose later
+// bookkeeping did not. It too is returned only after redeeming.
+var ErrEffectFollowUpFailed = errors.New("approvals: the released change landed and a later step failed")
+
+// effectFailureSentence is what the decider reads about a failed effect.
+func effectFailureSentence(err error) string {
+	switch {
+	case errors.Is(err, ErrEffectFollowUpFailed):
+		return "this was approved and the change was made, but the automation that asked for it " +
+			"could not be marked finished"
+	case errors.Is(err, ErrEffectUnconfirmed):
+		return "this was approved and sent on, but the system it went to never confirmed it, " +
+			"so it may have happened. Check the record before you ask for it again"
+	default:
+		return "this was approved, but the work it released did not run"
+	}
 }
 
 // recordEffectFailure marks an approved row whose effect did not run, and
@@ -205,8 +227,8 @@ func (s *Service) recordEffectRan(ctx context.Context, id ids.ApprovalID) {
 	}
 }
 
-// serverProposed reports whether this staging was minted by a SERVER-SIDE
-// proposal flow rather than by an agent asserting a passport.
+// serverProposed reports whether a server flow owns the proposal's effect.
+// A human agreement keeps that flow when an agent files the request.
 //
 // The effect table is keyed by the kind string alone, and a kind is not a
 // namespace: the REST admission gate stages under the operation's TOOL name,
@@ -219,12 +241,9 @@ func (s *Service) recordEffectRan(ctx context.Context, id ids.ApprovalID) {
 // the approval could never be redeemed again, and the audit row asserted a
 // redemption for an effect that never ran.
 //
-// Provenance is the discriminator, because it is the thing that actually
-// differs: a server-side proposal is staged by the system or by a human, and
-// carries no passport. An agent-minted staging is redeemed the way ADR-0055
-// says — by repeating the identical call with the approval token — and needs
-// no server-side executor at all.
-func serverProposed(a row) bool { return a.PassportID == nil }
+// Ordinary agent calls are retried under their passport. A human agreement's
+// passport records who asked; its human decider authorizes the effect.
+func serverProposed(a row) bool { return a.PassportID == nil || humanAcceptedKinds[a.Kind] }
 
 // decideInTx runs the decision inside the caller's transaction: the
 // decide-authority + row-scope gate, the pending guard, the optional

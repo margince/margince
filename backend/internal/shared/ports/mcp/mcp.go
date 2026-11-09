@@ -80,20 +80,8 @@ type ToolSpec struct {
 	// refused the identity they tell it to consult, so an instruction meant
 	// to remove a guess costs a failed call and then the guess anyway.
 	SelfDescribing bool
-	// ReplayGrant is the object grant a REPLAY re-checks, for a tool whose
-	// answer names no record.
-	//
-	// The replay path re-reads every record a recorded answer names, because
-	// object RBAC and row scope live inside the handler and a replay never
-	// enters it — so a named record is normally the only authority it can
-	// re-check, and an answer naming none is refused.
-	//
-	// A write to VOCABULARY names no record: a tag is a word, not a row with a
-	// scope. For those the object grant IS what the handler checked, so it is
-	// what the replay checks. Nil leaves the refusal in place, which stays
-	// correct for an answer whose authority cannot be re-established at all —
-	// record-less is not the same as authority-less, and this field is what
-	// tells the two apart.
+	// ReplayGrant rechecks record-less retries. Staging kinds use the same
+	// grant before an approval is created or decided.
 	ReplayGrant *ReplayGrant
 	Tier        RiskTier
 	// TierResolver is non-nil iff Tier == TierDynamic; the admission gate

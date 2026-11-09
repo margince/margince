@@ -15,6 +15,7 @@ import type { MessageKey } from "./en";
 //     string in this catalog and must stay that way.
 export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.import_identity_links": "Liên kết email đã nhập",
+  "systemJob.optout_receipt": "Báo biên nhận hủy đăng ký bị lỡ",
   "systemJob.task_completion": "Hoàn tất công việc sau email",
   "homeRepair.reason.taskChanged":
     "Công việc đã thay đổi trong khi tạo bản xem trước. Hãy xem trước lần nữa.",
@@ -2868,6 +2869,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "common.undo": "Hoàn tác",
   "common.close": "Đóng",
+  "common.unknownValue": "Khác",
   "common.opensNewTab": "(Mở trong tab mới)",
   "common.expand": "Mở rộng",
   "common.collapse": "Thu gọn",
@@ -7727,7 +7729,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Việc này được tạo từ một cam kết đọc được trong một cuộc trao đổi.",
   "tasks.origin.email_request": "Việc này được tạo từ một yêu cầu trong email.",
   "tasks.origin.which_deal":
-    "Việc này được tạo vì một email đã thu thập khớp với nhiều deal đang mở. Chọn deal mà email này thuộc về.",
+    "Việc này được tạo vì một email đã thu thập khớp với nhiều deal đang mở. Chọn deal mà email này thuộc về, hoặc chọn “Không thuộc deal nào”.",
+  "tasks.whichDeal.none": "Không thuộc deal nào",
+  "tasks.whichDeal.noneDone": "Đã để email ngoài các deal này",
   "tasks.origin.system":
     "Một quy trình tự động đã tạo việc này, không phải đồng nghiệp nhập vào.",
 
@@ -8944,6 +8948,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agents.disconnectOpen": "Ngắt kết nối",
   "agents.disconnectNamed": "Ngắt kết nối {client}",
   "agents.disconnected": "Đã ngắt kết nối",
+  "agents.showDisconnected_one": "Hiện {count} công cụ đã ngắt kết nối",
+  "agents.showDisconnected_other": "Hiện {count} công cụ đã ngắt kết nối",
+  "agents.hideDisconnected": "Ẩn công cụ đã ngắt kết nối",
   "agents.lapsed": "Thông tin xác thực đã hết hạn",
   "agents.renewing": "Đang gia hạn",
   "agents.expiredOn": "Đã hết hạn {date}",
@@ -15680,7 +15687,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentAllowances.window.help":
     "Một hạn mức kéo dài bao lâu. Độ dài mới bắt đầu ở lần đặt lại kế tiếp, nên không passport nào được hạn mức mới sớm.",
   "agentAllowances.burst":
-    "Giới hạn cố định trên kết nối MCP: {calls} lệnh gọi và {streams} lần mở luồng mỗi phút cho mỗi passport.",
+    "Giới hạn cố định trên kết nối MCP: {calls} lệnh gọi và {streams} lần mở luồng mỗi phút cho mỗi passport, như nhau cho mọi vai trò.",
   "agentAllowances.pending.title": "Đang chờ đổi khung thời gian",
   "agentAllowances.pending.body":
     "Từ {date} UTC, mỗi khung kéo dài {interval}. Đến lúc đó, khung hiện tại vẫn tiếp tục đếm.",
@@ -15702,6 +15709,35 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Con số có hiệu lực trong vòng một phút, ngay trong khung đang chạy. Agent đã vượt con số được hạ xuống sẽ bị từ chối ở lệnh gọi kế tiếp.",
   "agentAllowances.diff.window":
     "Khung thời gian {from} → {to}, bắt đầu từ lần đặt lại kế tiếp.",
+  "agentAllowances.installation.title": "Giá trị của hệ thống",
+  "agentAllowances.installation.sub":
+    "Dùng cho mọi vai trò không có giá trị riêng, trừ khi mức sẵn của Quản trị áp dụng.",
+  "agentAllowances.roles.title": "Theo vai trò",
+  "agentAllowances.roles.rule":
+    "Với mỗi loại, agent nhận giá trị cao nhất trong các vai trò của thành viên. Vai trò không có giá trị riêng dùng giá trị của hệ thống, còn Quản trị có thể nhận mức sẵn của Quản trị.",
+  "agentAllowances.roles.col.role": "Vai trò",
+  "agentAllowances.roles.builtIn": "Có sẵn",
+  "agentAllowances.roles.source.role": "Đặt cho vai trò này",
+  "agentAllowances.roles.source.admin_preset": "Mức sẵn của Quản trị",
+  "agentAllowances.roles.source.installation": "Hệ thống",
+  "agentAllowances.roles.source.installation_kept": "Giữ theo hệ thống",
+  "agentAllowances.roles.editHelp":
+    "Để trống một ô để bỏ giá trị của vai trò; chữ gợi ý trong ô cho biết giá trị sẽ áp dụng khi đó. Nhập 0 để Quản trị giữ giá trị của hệ thống. Lệnh gọi từ 50 đến 20.000, thay đổi từ 10 đến 5.000, lượt gửi từ 1 đến 200.",
+  "agentAllowances.roles.preset":
+    "Quản trị nhận {calls} lệnh gọi và {changes} thay đổi khi cả Quản trị lẫn hệ thống đều chưa đặt giá trị cho loại đó. Mức sẵn không đổi lượt gửi.",
+  "agentAllowances.roles.inherits": "Theo {value}",
+  "agentAllowances.roles.presetValue": "Mức sẵn của Quản trị {value}",
+  "agentAllowances.roles.inputLabel": "{kind} cho {role}",
+  "agentAllowances.roles.useInstallation": "Dùng giá trị của hệ thống",
+  "agentAllowances.roles.refusal":
+    "Nhập một số nguyên trong khoảng cho phép, hoặc để trống ô.",
+  "agentAllowances.diff.role": "Vai trò {role}, {label} {from} → {to}",
+  "agentAllowances.diff.inherited": "giá trị của hệ thống",
+  "agentAllowances.diff.toDefaults":
+    "Mọi hạn mức trở về giá trị Margince có sẵn, kể cả mức sẵn của Quản trị. Giá trị đặt trong cấu hình máy chủ được giữ nguyên.",
+  "agentAllowances.diff.preset": "mức sẵn của Quản trị",
+  "agentAllowances.diff.roles":
+    "Những gì agent đã dùng trong khung này vẫn được tính. Không có gì bị đặt lại.",
   "agentUsage.title": "Mức dùng agent theo thành viên",
   "agentUsage.sub":
     "Khung thời gian này, cộng dồn theo các passport và kết nối của từng thành viên. Chỉ cho biết dùng bao nhiêu, không bao giờ cho biết passport nào hay đã đọc gì.",
@@ -15719,6 +15755,19 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentUsage.state.ok": "Đang hoạt động",
   "agentUsage.state.near": "Gần chạm giới hạn",
   "agentUsage.state.stopped": "Đã dừng",
+  "agentUsage.noRole": "Chưa có vai trò",
+  "agentUsage.check.title": "Agent của một thành viên được dùng bao nhiêu",
+  "agentUsage.check.label": "Thành viên",
+  "agentUsage.check.fromRole": "Từ {role}",
+  "agentUsage.check.fromInstallation": "Giá trị của hệ thống",
+  "agentUsage.check.note":
+    "Mỗi passport hoặc kết nối được tính riêng theo các giá trị này, gồm cả lệnh gọi công cụ và yêu cầu API.",
+  "agentUsage.stopped.calls":
+    "Đã dừng vì giới hạn tổng số lệnh gọi: {used} / {limit}. Có thể gọi lại khi khung thời gian đặt lại lúc {date} UTC.",
+  "agentUsage.stopped.egress":
+    "Đã dừng vì giới hạn lượt gửi: {used} / {limit}. Email và các lệnh gọi khác ra khỏi Margince, kể cả việc đọc trang web, bị từ chối cho đến khi khung thời gian đặt lại lúc {date} UTC.",
+  "agentUsage.stopped.writes":
+    "Đã dừng vì giới hạn thay đổi: {used} / {limit}. Chủ sở hữu có thể được đề nghị cho phép thêm. Nếu không, agent thay đổi lại được khi khung thời gian đặt lại lúc {date} UTC.",
   "settings.passportColWindow": "Khung này",
   "settings.passportUsageToggle": "Xem mức dùng khung này của {name}",
   "settings.passportsShowRevoked_one": "Hiện {count} passport đã thu hồi",
@@ -20178,6 +20227,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiServing.notObject": "phải là một đối tượng: phần văn bản giữa { và }.",
   "aiServing.previewFailed":
     "Máy chủ không thể kiểm tra giá trị này: {reason} Nút Lưu sẽ tắt cho đến khi kiểm tra được.",
+  "dealDecline.action": "Không thuộc deal này",
+  "dealDecline.title": "Gỡ email khỏi deal này?",
+  "dealDecline.body":
+    "Email rời khỏi deal này và Margince sẽ không gắn lại vào đây. Liên kết dự án có từ deal này cũng bị gỡ.",
+  "dealDecline.confirm": "Gỡ khỏi deal",
+  "dealDecline.done": "Đã gỡ email khỏi deal",
+  "dealDecline.doneProjectKept":
+    "Đã gỡ email khỏi deal. Liên kết dự án vẫn giữ nguyên.",
   "projectFiling.action": "Hoàn tác xếp vào dự án",
   "projectFiling.title": "Hoàn tác xếp vào dự án?",
   "projectFiling.loading": "Đang kiểm tra căn cứ lưu trữ hoạt động này…",

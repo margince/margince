@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/capture backend/internal/compose/capturejobs.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkdealdecide.go backend/internal/modules/capture/dealrefile.go backend/internal/compose/dealrefiletrigger.go backend/internal/compose/jobs_dealrefile.go backend/internal/modules/capture/threadboundary.go frontend/src/features/worklist/worklist.domainquestion.tsx frontend/src/features/worklist/worklist.domainreview.tsx backend/internal/modules/contacts/domainquestioncontext.go -->
+<!-- describes: frontend/src/features/capture backend/internal/compose/capturejobs.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/activities/dealdecline.go frontend/src/features/records/dealdecline.tsx frontend/src/components/whichdealdecline.tsx backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkdealdecide.go backend/internal/modules/capture/dealrefile.go backend/internal/modules/capture/dealtopic.go backend/internal/modules/capture/dealrecheck.go backend/internal/compose/capturedealtopic.go backend/internal/compose/dealrefiletrigger.go backend/internal/compose/jobs_dealrefile.go backend/internal/modules/capture/threadboundary.go frontend/src/features/worklist/worklist.domainquestion.tsx frontend/src/features/worklist/worklist.domainreview.tsx backend/internal/modules/contacts/domainquestioncontext.go -->
 # Capture: how conversations get into Margince
 
 Nobody should have to copy an email into a CRM by hand. **Capture** is the part of Margince that connects to your mailbox, your calendar and your chat. It files what arrives against the right contacts, their companies and projects. Connecting a mailbox or calendar, and importing your older mail, is its own page: [Connecting your mailbox and calendar](connecting-mail-and-calendars.md).
@@ -152,21 +152,23 @@ Margince puts a captured email on a deal by itself only when one deal, and no ot
 
 1. **The project.** An email filed under a project goes on that project's one open deal. If the project has no open deal, or several, the email goes on no deal. The company's deals are not asked.
 2. **Your thread.** Your own sent email in the thread is on a deal. The reply goes on that deal if it is the reply's company's deal.
-3. **The company.** If neither fits, the email goes on the one open deal of the one company its contacts work at. With several open deals, a contact who is a stakeholder on only one of them picks it.
+3. **The company.** If neither fits, the company's one open deal is suggested. With several open deals, a stakeholder on only one of them suggests it. An AI check reads the email and files it only when it is fully sure it is about that deal. Without an AI answer, the email waits for a later pass.
 
-An email stays on no deal when:
+An email stays on no deal when nothing picks one of several open deals, or the AI check is not sure. It also stays off when its contacts work at two companies, or when a colleague said it is not about the deal that fits. An email already on a deal keeps it, and a deal you chose by hand is never changed.
 
-- the company has several open deals and nothing picks one;
-- its contacts work at two companies;
-- it is already on a deal. A deal you chose by hand is never changed.
+When several deals fit, the AI check reads the email first. A sure pick files it, and a sure "none" files nothing. Only when it is not sure does one colleague get one task per thread: "Which deal is this about?".
 
-When several deals fit, one colleague gets one task per thread: "Which deal is this about?". That is the colleague who sent the email, or the one colleague it was addressed to. Nobody else is asked. If no colleague is named that way, nobody is asked. An email older than the waiting horizon asks nobody, even when it is captured today.
+That is the colleague who sent the email, or the one colleague it was addressed to. Nobody else is asked. If no colleague is named that way, nobody is asked. An email older than the waiting horizon asks nobody, even when it is captured today.
 
-To answer, use **Relink** on any email of that conversation and pick the deal. The other emails of the conversation with the same contact go on that deal too, with the promises read from them. An email already on a deal keeps it. The task is then done.
+To answer, use **Relink** on any email of that conversation and pick the deal. The other emails of the conversation with the same contact go on that deal too, with the promises read from them. An email already on a deal keeps it. The task is then done. If it is about none of them, choose **None of these deals** on the task. Margince then never files that conversation on those deals.
+
+To take an email off a deal it is not about, choose **Not about this deal** in its **More actions** menu on the deal's timeline. Margince never files it on that deal again by itself; other deals can still fit it, and **Relink** still files it on any record. A project link that came with that deal comes off too, unless its retention rules keep it. This holds when an agent declines the deal for you as well.
 
 Meetings use the same contact and company rules. They never follow an email thread or ask you to choose a deal. If several deals fit, the meeting stays off them.
 
-Margince checks recent mail and meetings again when a deal opens or changes company, a lead becomes a contact, or a contact's employer changes. A guest found later is checked too. These checks run in the background and ask nobody. Existing deal links stay where you put them. An hourly pass picks up work left behind; it uses the same waiting horizon as other automatic work.
+Margince checks recent mail and meetings again when a deal opens or changes company, a lead becomes a contact, or a contact's employer changes. A guest found later is checked too. These checks run in the background and ask nobody. Existing deal links stay where you put them.
+
+An hourly pass picks up work left behind; it uses the same waiting horizon as other automatic work. It also checks, once, the deal links Margince suggested on mail of the last 90 days before the AI check existed. A link the AI says is not about its deal comes off.
 
 An email only its participants can read still appears on the deal's timeline. It does not change the deal's last activity date.
 
@@ -254,7 +256,7 @@ Also called: open an email, read a conversation, forward an email.
 ### How do I move an email to the right contact or deal?
 To move a captured email that was filed on the wrong record, choose **Relink** on it in the timeline. Search for the right contact, company, deal, lead or project.
 Tick **Replace existing link** to replace it instead of adding a second link, and choose **Relink**. Tick **Move rest of thread** to move the whole conversation.
-Also called: email on the wrong deal, refile an email, change which deal an email belongs to.
+Also called: email on the wrong deal, refile an email, change which deal an email belongs to, remove an email from a deal.
 
 ## What capture refuses to do
 

@@ -4,7 +4,7 @@ import { browserZone, UTC_ZONE } from "../../format/timezone";
 import { type Translator, translate } from "../../i18n";
 import { withShippedLabels } from "../../lib/shippedlabels";
 import type { LeadDisqualifyReason } from "./leadhandling";
-import { leadStanding, standingReasons } from "./leadstanding";
+import { leadStanding, standingReasons, terminalBadge } from "./leadstanding";
 
 type Lead = components["schemas"]["Lead"];
 
@@ -267,3 +267,14 @@ function reason(
     updated_at: "2026-01-01T00:00:00Z",
   };
 }
+
+describe("terminalBadge", () => {
+  // A status a newer server added is not one this build knows to be terminal.
+  it("gives a lead with an unknown status no badge, rather than an undefined one", () => {
+    expect(
+      terminalBadge(
+        lead({ status: "a_status_from_a_later_release" as Lead["status"] }),
+      ),
+    ).toBeNull();
+  });
+});

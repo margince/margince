@@ -985,6 +985,69 @@ func (e AgentContextItemOccurredPrecision) Valid() bool {
 	}
 }
 
+// Defines values for AgentRoleAllowanceFallbackSource.
+const (
+	AgentRoleAllowanceFallbackSourceAdminPreset  AgentRoleAllowanceFallbackSource = "admin_preset"
+	AgentRoleAllowanceFallbackSourceInstallation AgentRoleAllowanceFallbackSource = "installation"
+)
+
+// Valid indicates whether the value is a known member of the AgentRoleAllowanceFallbackSource enum.
+func (e AgentRoleAllowanceFallbackSource) Valid() bool {
+	switch e {
+	case AgentRoleAllowanceFallbackSourceAdminPreset:
+		return true
+	case AgentRoleAllowanceFallbackSourceInstallation:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AgentRoleAllowanceSetUnset.
+const (
+	AgentRoleAllowanceSetUnsetAgentCallsPerWindow  AgentRoleAllowanceSetUnset = "agent_calls_per_window"
+	AgentRoleAllowanceSetUnsetAgentEgressPerWindow AgentRoleAllowanceSetUnset = "agent_egress_per_window"
+	AgentRoleAllowanceSetUnsetAgentWritesPerWindow AgentRoleAllowanceSetUnset = "agent_writes_per_window"
+)
+
+// Valid indicates whether the value is a known member of the AgentRoleAllowanceSetUnset enum.
+func (e AgentRoleAllowanceSetUnset) Valid() bool {
+	switch e {
+	case AgentRoleAllowanceSetUnsetAgentCallsPerWindow:
+		return true
+	case AgentRoleAllowanceSetUnsetAgentEgressPerWindow:
+		return true
+	case AgentRoleAllowanceSetUnsetAgentWritesPerWindow:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AgentRoleAllowanceValueSource.
+const (
+	AgentRoleAllowanceValueSourceAdminPreset      AgentRoleAllowanceValueSource = "admin_preset"
+	AgentRoleAllowanceValueSourceInstallation     AgentRoleAllowanceValueSource = "installation"
+	AgentRoleAllowanceValueSourceInstallationKept AgentRoleAllowanceValueSource = "installation_kept"
+	AgentRoleAllowanceValueSourceRole             AgentRoleAllowanceValueSource = "role"
+)
+
+// Valid indicates whether the value is a known member of the AgentRoleAllowanceValueSource enum.
+func (e AgentRoleAllowanceValueSource) Valid() bool {
+	switch e {
+	case AgentRoleAllowanceValueSourceAdminPreset:
+		return true
+	case AgentRoleAllowanceValueSourceInstallation:
+		return true
+	case AgentRoleAllowanceValueSourceInstallationKept:
+		return true
+	case AgentRoleAllowanceValueSourceRole:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AgentToolTier.
 const (
 	AgentToolTierAutoExecute          AgentToolTier = "auto_execute"
@@ -30888,6 +30951,24 @@ type ActivityAuthor struct {
 // ActivityAuthorKind `colleague` is a seat in this workspace, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
 type ActivityAuthorKind string
 
+// ActivityDealDecline defines model for ActivityDealDecline.
+type ActivityDealDecline struct {
+	// DeclinedDealIds The deals this call declined on the message. A deal declined before is not listed again.
+	DeclinedDealIds []openapi_types.UUID `json:"declined_deal_ids"`
+
+	// ProjectKept A project link came from a declined deal and stays, because a retention rule keeps it or the caller cannot read the project.
+	ProjectKept bool `json:"project_kept"`
+
+	// ProjectUnfiled The project link that came from a declined deal came off the message.
+	ProjectUnfiled bool `json:"project_unfiled"`
+
+	// QuestionsClosed The open deal questions of the conversation this call marked done.
+	QuestionsClosed int `json:"questions_closed" minimum:"0"`
+
+	// Unlinked A deal link came off the message.
+	Unlinked bool `json:"unlinked"`
+}
+
 // ActivityDealFiling defines model for ActivityDealFiling.
 type ActivityDealFiling struct {
 	// DealId Explicitly selected deal; omitted for automatic filing.
@@ -31238,10 +31319,24 @@ type AdvanceProjectPhaseRequestToPhase string
 
 // AgentAllowanceDefaults What each agent allowance is before an admin changes it, so a screen never restates them.
 type AgentAllowanceDefaults struct {
+	// AdminCallsPerWindow The Admin preset for calls of any kind. The preset leaves sends at the installation value.
+	AdminCallsPerWindow int `json:"admin_calls_per_window"`
+
+	// AdminWritesPerWindow The Admin preset for changing calls.
+	AdminWritesPerWindow int `json:"admin_writes_per_window"`
 	AgentCallsPerWindow  int `json:"agent_calls_per_window"`
 	AgentEgressPerWindow int `json:"agent_egress_per_window"`
 	AgentWindowHours     int `json:"agent_window_hours"`
 	AgentWritesPerWindow int `json:"agent_writes_per_window"`
+}
+
+// AgentAllowanceFrom defines model for AgentAllowanceFrom.
+type AgentAllowanceFrom struct {
+	Limit int `json:"limit" minimum:"1"`
+
+	// RoleKey The role whose own value, or the Admin preset, gives this count: the highest among the
+	// user's roles. Null when it is the installation value.
+	RoleKey *string `json:"role_key"`
 }
 
 // AgentAllowanceSettings How much one agent may do in one window. A passport a user minted has its own allowance;
@@ -31252,6 +31347,12 @@ type AgentAllowanceDefaults struct {
 // a count applies within a minute, in the window that is running: a raised count gives
 // headroom within that minute, and a lowered one refuses an agent already past it on its
 // next call. The per-minute limits are fixed by the build and shown here read-only.
+//
+// The three counts here are the installation value. `roles` lists what each live role gives.
+// An agent gets, for each count, the highest allowance among the live roles of the user who
+// connected it, where a role with no value of its own gives the installation value. Roles
+// choose the limit only: the count is still one per passport or connection, for tool calls
+// and API requests together, and a change of role or value resets nothing.
 type AgentAllowanceSettings struct {
 	// AgentCallsPerWindow How many calls of any kind one passport or connection may make per window, a tool call or an API request, reads included. Default 1000.
 	AgentCallsPerWindow int `json:"agent_calls_per_window" maximum:"20000" minimum:"50"`
@@ -31286,6 +31387,9 @@ type AgentAllowanceSettings struct {
 
 	// McpStreamOpensPerMinute How many streams one passport may open per minute. Fixed by the build.
 	McpStreamOpensPerMinute int `json:"mcp_stream_opens_per_minute"`
+
+	// Roles Every live role, the seeded ones first in their order, then the others by name.
+	Roles []AgentRoleAllowance `json:"roles"`
 }
 
 // AgentAssembledContext What `catch_me_up_on` answers: the record asked about and the sections assembled around it.
@@ -31416,8 +31520,8 @@ type AgentContextSection struct {
 
 // AgentCounterUsage One allowance in the running window.
 type AgentCounterUsage struct {
-	// Limit The allowance in force: the installation's value, plus one more allowance for each
-	// release a user granted in this window.
+	// Limit The allowance in force: what the roles of the user who connected the agent give, plus
+	// one more allowance for each release a user granted in this window.
 	Limit int `json:"limit" minimum:"0"`
 
 	// Released How many times a user released more in this window.
@@ -31550,6 +31654,88 @@ type AgentRecordRef struct {
 	RecordType string             `json:"record_type"`
 }
 
+// AgentRoleAllowance One live role and the allowance its users' agents get for each count.
+type AgentRoleAllowance struct {
+	AgentCallsPerWindow  AgentRoleAllowanceValue `json:"agent_calls_per_window"`
+	AgentEgressPerWindow AgentRoleAllowanceValue `json:"agent_egress_per_window"`
+	AgentWritesPerWindow AgentRoleAllowanceValue `json:"agent_writes_per_window"`
+
+	// HoldsPreset True for the built-in Admin role, which the Admin preset is for, whether or not the
+	// preset binds a count now. Left out of a save, this role returns to the preset.
+	HoldsPreset bool `json:"holds_preset"`
+
+	// RoleKey The role's key: its identity, which a rename leaves alone.
+	RoleKey  string `json:"role_key"`
+	RoleName string `json:"role_name"`
+
+	// System True for a role Margince ships.
+	System bool `json:"system"`
+}
+
+// AgentRoleAllowanceFallback What the count would give once the role's own value is given up (`unset`).
+type AgentRoleAllowanceFallback struct {
+	Source AgentRoleAllowanceFallbackSource `json:"source"`
+	Value  int                              `json:"value" minimum:"1"`
+}
+
+// AgentRoleAllowanceFallbackSource defines model for AgentRoleAllowanceFallback.Source.
+type AgentRoleAllowanceFallbackSource string
+
+// AgentRoleAllowanceSet One role's changes in a save. A count sent is saved for the role; `0` saves the
+// installation value, which for the built-in Admin role turns the preset off for that count.
+// A count named in `unset` loses the role's value: the role uses the installation value
+// again, and Admin returns to the preset. A count neither sent nor unset is left as it is.
+type AgentRoleAllowanceSet struct {
+	// AgentCallsPerWindow 0, or 50 to 20000, the installation bounds.
+	AgentCallsPerWindow *int `json:"agent_calls_per_window,omitempty" minimum:"0"`
+
+	// AgentEgressPerWindow 0, or 1 to 200, the installation bounds.
+	AgentEgressPerWindow *int `json:"agent_egress_per_window,omitempty" minimum:"0"`
+
+	// AgentWritesPerWindow 0, or 10 to 5000, the installation bounds.
+	AgentWritesPerWindow *int `json:"agent_writes_per_window,omitempty" minimum:"0"`
+
+	// RoleKey The key of a live role.
+	RoleKey string `json:"role_key"`
+
+	// Unset The counts whose saved value this role gives up. A count may not be both sent and unset.
+	Unset *[]AgentRoleAllowanceSetUnset `json:"unset,omitempty"`
+}
+
+// AgentRoleAllowanceSetUnset defines model for AgentRoleAllowanceSet.Unset.
+type AgentRoleAllowanceSetUnset string
+
+// AgentRoleAllowanceValue defines model for AgentRoleAllowanceValue.
+type AgentRoleAllowanceValue struct {
+	// IfUnset What the count would give once the role's own value is given up (`unset`).
+	IfUnset AgentRoleAllowanceFallback `json:"if_unset"`
+
+	// Source Where the value comes from. `role` is a value saved for this role. `admin_preset` is the
+	// Admin preset, which binds the built-in Admin role for a count while nobody saved an
+	// Admin value for it and nobody chose the installation value. `installation` is the
+	// installation value, which the role inherits. `installation_kept` is the installation
+	// value saved for the role as `0`, which keeps Admin off the preset for that count.
+	Source AgentRoleAllowanceValueSource `json:"source"`
+
+	// Value The allowance this role gives for the count.
+	Value int `json:"value" minimum:"1"`
+}
+
+// AgentRoleAllowanceValueSource Where the value comes from. `role` is a value saved for this role. `admin_preset` is the
+// Admin preset, which binds the built-in Admin role for a count while nobody saved an
+// Admin value for it and nobody chose the installation value. `installation` is the
+// installation value, which the role inherits. `installation_kept` is the installation
+// value saved for the role as `0`, which keeps Admin off the preset for that count.
+type AgentRoleAllowanceValueSource string
+
+// AgentRoleResolvedAllowance What each one of this user's passports or connections may do per window, before any release,
+// and the role each count comes from.
+type AgentRoleResolvedAllowance struct {
+	Calls  AgentAllowanceFrom `json:"calls"`
+	Egress AgentAllowanceFrom `json:"egress"`
+	Writes AgentAllowanceFrom `json:"writes"`
+}
+
 // AgentTool defines model for AgentTool.
 type AgentTool struct {
 	// Actions A router's choices. Each runs one verb and is admitted at that verb's tier, so a router whose actions differ lists its own tier as dynamic. Absent on a tool that is not a router.
@@ -31626,10 +31812,21 @@ type AgentUsageByUser struct {
 // that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
 type AgentUsageState string
 
-// AgentUserUsage One user's agents in the running window. Each count and allowance is the sum over
-// their live passports and connections, so a user with two passports has twice the
-// allowance. `state` is the worst state of any one of them.
+// AgentUserRole defines model for AgentUserRole.
+type AgentUserRole struct {
+	RoleKey  string `json:"role_key"`
+	RoleName string `json:"role_name"`
+}
+
+// AgentUserUsage One user's agents in the running window. Each count is the sum over their live
+// passports and connections, so a user with two passports has twice the limit there.
+// `allowance` is what one of those passports may do, and is not summed. `state` is the
+// worst state of any one of them.
 type AgentUserUsage struct {
+	// Allowance What each one of this user's passports or connections may do per window, before any release,
+	// and the role each count comes from.
+	Allowance AgentRoleResolvedAllowance `json:"allowance"`
+
 	// Calls One allowance in the running window.
 	Calls       AgentCounterUsage `json:"calls"`
 	DisplayName string            `json:"display_name"`
@@ -31639,6 +31836,9 @@ type AgentUserUsage struct {
 
 	// PassportCount Live passports and connections. A connection counts once.
 	PassportCount int `json:"passport_count" minimum:"1"`
+
+	// Roles The user's live roles, which choose their agents' allowance, by name.
+	Roles []AgentUserRole `json:"roles"`
 
 	// State The worst of the three allowances. `stopped` when one is used up, so the next call of
 	// that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
@@ -33052,12 +33252,12 @@ type AiUsage struct {
 // AiUsageBudgetBand < 80% / 80–100% soft-degrade / ≥ 100% non-interactive queued (AIRT-PARAM-9..11).
 type AiUsageBudgetBand string
 
-// AiUsageSummary The month's AI spend so far, summed from the lines GET /ai/usage prices.
+// AiUsageSummary The AI spend over the requested window, summed from the lines GET /ai/usage prices.
 type AiUsageSummary struct {
 	// ComputedAt The instant the window ends at and the figure was computed.
 	ComputedAt time.Time `json:"computed_at"`
 
-	// CostEstMinor Sum of the month's `cost_est_minor` lines from GET /ai/usage, in minor units of `currency`. Omitted, not 0, when no line carries a price: then nobody knows what the month cost, which is not the same as a month that cost nothing.
+	// CostEstMinor Sum of the window's `cost_est_minor` lines from GET /ai/usage, in minor units of `currency`. Omitted, not 0, when no line carries a price: then nobody knows what the window cost, which is not the same as a window that cost nothing.
 	CostEstMinor *int `json:"cost_est_minor,omitempty"`
 
 	// Currency ISO-4217 of cost_est_minor — always USD in phase 1 (ADR-0067).
@@ -35662,7 +35862,7 @@ type AutomationRun struct {
 	// OccurredAt Maps to automation_run.ran_at.
 	OccurredAt time.Time `json:"occurred_at"`
 
-	// Outcome Maps 1:1 to automation_run.status (data-model §12.5); `blocked` added by ADR-0035 Am.1.
+	// Outcome Maps 1:1 to automation_run.status; `blocked` added by ADR-0035 Am.1.
 	Outcome AutomationRunOutcome `json:"outcome"`
 
 	// Reason For failed/blocked/skipped: why (e.g. "provider error", "approval expired", "Passport no longer permits send") — from automation_run.detail.
@@ -35683,7 +35883,7 @@ type AutomationRun struct {
 	TriggerEvidence *string `json:"trigger_evidence,omitempty"`
 }
 
-// AutomationRunOutcome Maps 1:1 to automation_run.status (data-model §12.5); `blocked` added by ADR-0035 Am.1.
+// AutomationRunOutcome Maps 1:1 to automation_run.status; `blocked` added by ADR-0035 Am.1.
 type AutomationRunOutcome string
 
 // AutomationRunTier The tier that fired for this run.
@@ -37604,7 +37804,7 @@ type ColdStartField struct {
 	EvidenceSnippet string              `json:"evidence_snippet"`
 	Field           ColdStartFieldField `json:"field"`
 
-	// SourceKind Where evidence_snippet came from. For self_description the "evidence" is the user's own statement — a self-declared ICP is grounded in that statement (B-E01.13), not fabricated.
+	// SourceKind Where evidence_snippet came from. For self_description the "evidence" is the user's own statement — a self-declared ICP is grounded in that statement, not fabricated.
 	SourceKind ColdStartFieldSourceKind `json:"source_kind"`
 
 	// SourceUrl Present only when source_kind=url; null for text/self_description.
@@ -37615,7 +37815,7 @@ type ColdStartField struct {
 // ColdStartFieldField defines model for ColdStartField.Field.
 type ColdStartFieldField string
 
-// ColdStartFieldSourceKind Where evidence_snippet came from. For self_description the "evidence" is the user's own statement — a self-declared ICP is grounded in that statement (B-E01.13), not fabricated.
+// ColdStartFieldSourceKind Where evidence_snippet came from. For self_description the "evidence" is the user's own statement — a self-declared ICP is grounded in that statement, not fabricated.
 type ColdStartFieldSourceKind string
 
 // ColdStartProposal A staged proposal. NOTHING is written to real records until accepted via /approvals.
@@ -46049,6 +46249,12 @@ type DeclaredExtensionSetting struct {
 // DeclaredExtensionSettingKind The control the core draws.
 type DeclaredExtensionSettingKind string
 
+// DeclineActivityDealRequest defines model for DeclineActivityDealRequest.
+type DeclineActivityDealRequest struct {
+	// DealId The deal the message is not about. Leave it out to answer "none of them".
+	DealId *openapi_types.UUID `json:"deal_id,omitempty"`
+}
+
 // DedupeCandidate One DH-DDL-1 review-queue row: the canonical unordered pair, its confidence, and the detection-time evidence snapshot (DH-N-8).
 type DedupeCandidate struct {
 	// CanDecide Whether THIS caller could dismiss the pair or undo a decision on it.
@@ -49828,6 +50034,12 @@ type InstallationSettings struct {
 	// a count applies within a minute, in the window that is running: a raised count gives
 	// headroom within that minute, and a lowered one refuses an agent already past it on its
 	// next call. The per-minute limits are fixed by the build and shown here read-only.
+	//
+	// The three counts here are the installation value. `roles` lists what each live role gives.
+	// An agent gets, for each count, the highest allowance among the live roles of the user who
+	// connected it, where a role with no value of its own gives the installation value. Roles
+	// choose the limit only: the count is still one per passport or connection, for tool calls
+	// and API requests together, and a change of role or value resets nothing.
 	AgentAllowances AgentAllowanceSettings `json:"agent_allowances"`
 
 	// BaseCurrency ISO-4217 code every money roll-up converts to.
@@ -55720,6 +55932,11 @@ type Problem struct {
 
 	// Details Structured machine context — e.g. `existing_id` on 409 duplicate, or an
 	// `errors` array of `{ field, code, message }` on 422 validation.
+	//
+	// A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
+	// `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
+	// `ceiling` is the limit in force, and a window allowance adds `used` and `resets_at`.
+	// The `Retry-After` header says how many seconds until the call can succeed.
 	Details *map[string]interface{} `json:"details,omitempty"`
 
 	// Instance URI of the specific occurrence.
@@ -64058,11 +64275,23 @@ type UpdateImportRunRequest struct {
 
 // UpdateInstallationSettingsRequest A sparse installation-settings patch (admin/ops, human-only).
 type UpdateInstallationSettingsRequest struct {
+	// AgentAllowancesToDefaults Put the agent counts and every role's values back to what Margince ships: their stored
+	// values are removed, so they read as the defaults and the built-in Admin role takes its
+	// preset again. A value a boot source sets stays. Applied before the other fields of the
+	// same patch, so a count sent beside it is saved as a choice again.
+	AgentAllowancesToDefaults *bool `json:"agent_allowances_to_defaults,omitempty"`
+
 	// AgentCallsPerWindow Set the value `AgentAllowanceSettings.agent_calls_per_window` describes. Applies within a minute, in the running window.
 	AgentCallsPerWindow *int `json:"agent_calls_per_window,omitempty" maximum:"20000" minimum:"50"`
 
 	// AgentEgressPerWindow Set the value `AgentAllowanceSettings.agent_egress_per_window` describes. Applies within a minute, in the running window.
 	AgentEgressPerWindow *int `json:"agent_egress_per_window,omitempty" maximum:"200" minimum:"1"`
+
+	// AgentRoleAllowances Change some roles' own allowances. Each item names a live role by its `role_key` and
+	// says which counts it sets and which it gives up; everything else is left as it is,
+	// the values of a role that is archived now included. Applies within a minute, in the
+	// running window, and resets no count.
+	AgentRoleAllowances *[]AgentRoleAllowanceSet `json:"agent_role_allowances,omitempty"`
 
 	// AgentRunnerIntervalSeconds Set the value `OperationSettings.agent_runner_interval_seconds` describes.
 	AgentRunnerIntervalSeconds *int `json:"agent_runner_interval_seconds,omitempty" maximum:"3600" minimum:"10"`
@@ -68908,6 +69137,15 @@ type GetAiUsageParams struct {
 	From *openapi_types.Date `form:"from,omitempty" json:"from,omitempty"`
 
 	// To Default: today.
+	To *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
+}
+
+// GetAiUsageSummaryParams defines parameters for GetAiUsageSummary.
+type GetAiUsageSummaryParams struct {
+	// From Default: the first day of the current UTC month. Must not be after `to`.
+	From *openapi_types.Date `form:"from,omitempty" json:"from,omitempty"`
+
+	// To Default: today. At most 366 days after `from`.
 	To *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
 }
 
@@ -76407,6 +76645,9 @@ type UpdateActivityJSONRequestBody = UpdateActivityRequest
 
 // SetActivityAudienceJSONRequestBody defines body for SetActivityAudience for application/json ContentType.
 type SetActivityAudienceJSONRequestBody = SetActivityAudienceRequest
+
+// DeclineActivityDealJSONRequestBody defines body for DeclineActivityDeal for application/json ContentType.
+type DeclineActivityDealJSONRequestBody = DeclineActivityDealRequest
 
 // SetActivityDispositionJSONRequestBody defines body for SetActivityDisposition for application/json ContentType.
 type SetActivityDispositionJSONRequestBody = SetActivityDispositionRequest
@@ -90417,6 +90658,9 @@ type ServerInterface interface {
 	// Limit (or re-open) who may see this activity's content.
 	// (PATCH /activities/{id}/audience)
 	SetActivityAudience(w http.ResponseWriter, r *http.Request, id Id, params SetActivityAudienceParams)
+	// Say a captured message is not about a deal, or about none of the deals its question offered.
+	// (POST /activities/{id}/deal-decline)
+	DeclineActivityDeal(w http.ResponseWriter, r *http.Request, id Id)
 	// Pick the message back up — the undo behind every set-aside verb.
 	// (DELETE /activities/{id}/disposition)
 	ClearActivityDisposition(w http.ResponseWriter, r *http.Request, id Id, params ClearActivityDispositionParams)
@@ -90630,9 +90874,9 @@ type ServerInterface interface {
 	// AI usage + budget — the spend is never invisible.
 	// (GET /ai/usage)
 	GetAiUsage(w http.ResponseWriter, r *http.Request, params GetAiUsageParams)
-	// What AI cost this month so far, as one figure.
+	// What AI cost over a window, this month by default, as one figure.
 	// (GET /ai/usage/summary)
-	GetAiUsageSummary(w http.ResponseWriter, r *http.Request)
+	GetAiUsageSummary(w http.ResponseWriter, r *http.Request, params GetAiUsageSummaryParams)
 	// The accounts at risk in one population: single-threaded deals, accounts in pipeline nobody has exchanged a word with, and won accounts gone silent. Each row carries the facts behind its verdict. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework's, and the answer prints them.
 	// (GET /analytics/account-coverage)
 	GetAccountCoverage(w http.ResponseWriter, r *http.Request, params GetAccountCoverageParams)
@@ -93597,6 +93841,12 @@ func (_ Unimplemented) SetActivityAudience(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Say a captured message is not about a deal, or about none of the deals its question offered.
+// (POST /activities/{id}/deal-decline)
+func (_ Unimplemented) DeclineActivityDeal(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Pick the message back up — the undo behind every set-aside verb.
 // (DELETE /activities/{id}/disposition)
 func (_ Unimplemented) ClearActivityDisposition(w http.ResponseWriter, r *http.Request, id Id, params ClearActivityDispositionParams) {
@@ -94023,9 +94273,9 @@ func (_ Unimplemented) GetAiUsage(w http.ResponseWriter, r *http.Request, params
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// What AI cost this month so far, as one figure.
+// What AI cost over a window, this month by default, as one figure.
 // (GET /ai/usage/summary)
-func (_ Unimplemented) GetAiUsageSummary(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) GetAiUsageSummary(w http.ResponseWriter, r *http.Request, params GetAiUsageSummaryParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -100732,6 +100982,40 @@ func (siw *ServerInterfaceWrapper) SetActivityAudience(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// DeclineActivityDeal operation middleware
+func (siw *ServerInterfaceWrapper) DeclineActivityDeal(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeclineActivityDeal(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ClearActivityDisposition operation middleware
 func (siw *ServerInterfaceWrapper) ClearActivityDisposition(w http.ResponseWriter, r *http.Request) {
 
@@ -103278,6 +103562,9 @@ func (siw *ServerInterfaceWrapper) GetAiUsage(w http.ResponseWriter, r *http.Req
 // GetAiUsageSummary operation middleware
 func (siw *ServerInterfaceWrapper) GetAiUsageSummary(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -103286,8 +103573,37 @@ func (siw *ServerInterfaceWrapper) GetAiUsageSummary(w http.ResponseWriter, r *h
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAiUsageSummaryParams
+
+	// ------------- Optional query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetAiUsageSummary(w, r)
+		siw.Handler.GetAiUsageSummary(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -145696,6 +146012,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/activities/{id}/audience", wrapper.SetActivityAudience)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/activities/{id}/deal-decline", wrapper.DeclineActivityDeal)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/activities/{id}/disposition", wrapper.ClearActivityDisposition)

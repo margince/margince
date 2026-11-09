@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 228.0 KB |
+| Tool catalog | 228.1 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 59763 |
+| Approx. wire tokens | 59786 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 50.6 KB | 22% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 53.8 KB | 23% | Yes, every step |
-| Input schemas | 111.7 KB | 48% | Yes, every step |
+| Input schemas | 111.8 KB | 49% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **165.5 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **165.6 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -68,7 +68,7 @@ descriptions and input schemas are what each step pays for.
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 798 |
 | [`change_access`](#change_access) | Share records and set up members and teams |  |  | 706 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1957 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1968 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 899 |
 | [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1080 |
 | [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 834 |
@@ -105,7 +105,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2692 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
 | [`read_view`](#read_view) | Read a view | yes |  | 638 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2756 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2765 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 776 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 420 |
@@ -1319,8 +1319,8 @@ a meeting still to come, change_state with move_deal when the same event moves a
 note are one change, and change_reports record_decision for a sales review's decision, which a note
 cannot track. Keep the activity id; a relink needs it. A staged answer's approval id is what the
 retry carries. (Governance: runs immediately for accept_document_fields, archive_document, attach,
-bring_back, cancel_send, check_new_send, check_send, discard_draft, hide_document, log,
-preview_sign_off, read_document_fields, read_transcript, ready, request_document_access,
+bring_back, cancel_send, check_new_send, check_send, decline_deal, discard_draft, hide_document,
+log, preview_sign_off, read_document_fields, read_transcript, ready, request_document_access,
 reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience,
 show_document, task, unready; decided per call from its arguments for relink, relink_many; the
 user's yes is needed for the action archive_document, so tell them what the call will change and get
@@ -1342,6 +1342,7 @@ it before calling, unless they asked for this call themselves; requires passport
         "cancel_send",
         "check_new_send",
         "check_send",
+        "decline_deal",
         "discard_draft",
         "hide_document",
         "log",
@@ -1489,7 +1490,7 @@ it before calling, unless they asked for this call themselves; requires passport
       "type": "object"
     },
     "id": {
-      "description": "accept_document_fields, archive_document, bring_back, cancel_send, check_send, discard_draft, hide_document, read_document_fields, read_transcript, request_document_access, reschedule_send, set_aside, set_audience, set_document_details, show_document only",
+      "description": "accept_document_fields, archive_document, bring_back, cancel_send, check_send, decline_deal, discard_draft, hide_document, read_document_fields, read_transcript, request_document_access, reschedule_send, set_aside, set_audience, set_document_details, show_document only",
       "type": "string"
     },
     "idempotency_key": {
@@ -1575,7 +1576,7 @@ it before calling, unless they asked for this call themselves; requires passport
       "type": "boolean"
     },
     "request_body": {
-      "description": "accept_document_fields, check_new_send, check_send, preview_sign_off, read_document_fields, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "accept_document_fields, check_new_send, check_send, decline_deal, preview_sign_off, read_document_fields, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
     },
     "scope": {
@@ -11557,7 +11558,7 @@ deal. Take every name verbatim; a custom field is spelled cf_<slug>.
       "type": "string"
     },
     "from": {
-      "description": "ai_calls, ai_usage, audit_log, fx_rates, held_threads only",
+      "description": "ai_calls, ai_usage, ai_usage_summary, audit_log, fx_rates, held_threads only",
       "type": "string"
     },
     "group": {
@@ -11793,7 +11794,7 @@ deal. Take every name verbatim; a custom field is spelled cf_<slug>.
       "type": "string"
     },
     "to": {
-      "description": "ai_calls, ai_usage, audit_log, held_threads only",
+      "description": "ai_calls, ai_usage, ai_usage_summary, audit_log, held_threads only",
       "type": "string"
     },
     "to_user_id": {

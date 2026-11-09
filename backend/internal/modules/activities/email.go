@@ -232,7 +232,7 @@ func MintMessageID(domain string) string {
 // It RETURNS the provider it resolved, so the send that follows uses the very
 // mailbox this guard cleared. Asking twice would be two round-trips and two
 // answers, and the second could differ from the one that was judged.
-func (s *Store) refuseUnsendable(ctx context.Context, in SendEmailInput, gate ConsentGate, stager DeliveryStager) (string, error) {
+func (s *Store) refuseUnsendable(ctx context.Context, in SendEmailInput, gate ConsentGate, checkDelivery func() error) (string, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return "", err
 	}
@@ -265,10 +265,10 @@ func (s *Store) refuseUnsendable(ctx context.Context, in SendEmailInput, gate Co
 	if gate == nil {
 		return "", fmt.Errorf("send path has no consent authority wired: %w", apperrors.ErrConsentNotGranted)
 	}
-	if stager == nil {
-		// A send nothing will ever transmit must refuse, not leave a timeline
-		// entry claiming a message went out.
-		return "", errNoDeliveryStager
+	if checkDelivery != nil {
+		if err := checkDelivery(); err != nil {
+			return "", err
+		}
 	}
 	// The mailbox pre-flight is the SENDER's own authority and precedes the
 	// consent gate for the same reason authorization does: a user who holds no

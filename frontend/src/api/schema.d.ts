@@ -6344,6 +6344,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/activities/{id}/deal-decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Say a captured message is not about a deal, or about none of the deals its question offered.
+         * @description With `deal_id`, the message is not about that deal. Its link to the deal comes off, and no
+         *     automatic pass (capture, the refile pass, the repair) files it on that deal again. Other
+         *     deals stay open to it, and a colleague's own relink still files it anywhere.
+         *
+         *     A project link that came from the deal comes off with it, through the same rules as the
+         *     project-filing undo. It stays when the project was filed some other way, when a retention
+         *     rule keeps it, or when the caller cannot read the project. An agent's decline takes it off
+         *     as a member's does. `project_kept` says so.
+         *
+         *     Without `deal_id`, the answer is "none of them" to the open "Which deal is this about?"
+         *     question of the message's conversation. Each deal the question offered is declined on the
+         *     message and on each unfiled message of the conversation, and the question is done. A
+         *     message with no open question answers 422.
+         *
+         *     Declining a deal already declined is the same success and writes nothing.
+         */
+        post: operations["declineActivityDeal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/activities/{id}/project-filing": {
         parameters: {
             query?: never;
@@ -14895,11 +14932,14 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * What AI cost this month so far, as one figure.
-         * @description The sum of every `cost_est_minor` line `GET /ai/usage` reports for its default window
-         *     (the first day of the current UTC month through now), computed the same way and admitted
-         *     by the same grant. For a page that shows only the month's total and needs none of the
-         *     report's lines, budget or decisions.
+         * What AI cost over a window, this month by default, as one figure.
+         * @description The sum of every `cost_est_minor` line `GET /ai/usage` reports for the same window,
+         *     computed the same way and admitted by the same grant. For a page that shows only a
+         *     total and needs none of the report's lines, budget or decisions.
+         *
+         *     The window defaults to the installation's UTC month. A reader whose own month differs
+         *     sends it, so one figure answers for both: a surface that names a month and a surface
+         *     beside it that totals one cannot disagree about which month that is.
          */
         get: operations["getAiUsageSummary"];
         put?: never;
@@ -25952,6 +25992,20 @@ export interface components {
             /** @description Set the value `AgentAllowanceSettings.agent_calls_per_window` describes. Applies within a minute, in the running window. */
             agent_calls_per_window?: number;
             /**
+             * @description Put the agent counts and every role's values back to what Margince ships: their stored
+             *     values are removed, so they read as the defaults and the built-in Admin role takes its
+             *     preset again. A value a boot source sets stays. Applied before the other fields of the
+             *     same patch, so a count sent beside it is saved as a choice again.
+             */
+            agent_allowances_to_defaults?: boolean;
+            /**
+             * @description Change some roles' own allowances. Each item names a live role by its `role_key` and
+             *     says which counts it sets and which it gives up; everything else is left as it is,
+             *     the values of a role that is archived now included. Applies within a minute, in the
+             *     running window, and resets no count.
+             */
+            agent_role_allowances?: components["schemas"]["AgentRoleAllowanceSet"][];
+            /**
              * @description Set how long one agent allowance window lasts, in hours. The window in force is never
              *     cut short: the new length takes effect at its next reset, and the response names that
              *     moment in `agent_allowances.agent_window_next_starts_at`. Sending the length already
@@ -27048,6 +27102,64 @@ export interface components {
             agent_egress_per_window: number;
             agent_calls_per_window: number;
             agent_window_hours: number;
+            /** @description The Admin preset for changing calls. */
+            admin_writes_per_window: number;
+            /** @description The Admin preset for calls of any kind. The preset leaves sends at the installation value. */
+            admin_calls_per_window: number;
+        };
+        /** @description One live role and the allowance its users' agents get for each count. */
+        AgentRoleAllowance: {
+            /** @description The role's key: its identity, which a rename leaves alone. */
+            role_key: string;
+            role_name: string;
+            /** @description True for a role Margince ships. */
+            system: boolean;
+            /**
+             * @description True for the built-in Admin role, which the Admin preset is for, whether or not the
+             *     preset binds a count now. Left out of a save, this role returns to the preset.
+             */
+            holds_preset: boolean;
+            agent_writes_per_window: components["schemas"]["AgentRoleAllowanceValue"];
+            agent_egress_per_window: components["schemas"]["AgentRoleAllowanceValue"];
+            agent_calls_per_window: components["schemas"]["AgentRoleAllowanceValue"];
+        };
+        AgentRoleAllowanceValue: {
+            /** @description The allowance this role gives for the count. */
+            value: number;
+            /**
+             * @description Where the value comes from. `role` is a value saved for this role. `admin_preset` is the
+             *     Admin preset, which binds the built-in Admin role for a count while nobody saved an
+             *     Admin value for it and nobody chose the installation value. `installation` is the
+             *     installation value, which the role inherits. `installation_kept` is the installation
+             *     value saved for the role as `0`, which keeps Admin off the preset for that count.
+             * @enum {string}
+             */
+            source: "role" | "admin_preset" | "installation" | "installation_kept";
+            if_unset: components["schemas"]["AgentRoleAllowanceFallback"];
+        };
+        /** @description What the count would give once the role's own value is given up (`unset`). */
+        AgentRoleAllowanceFallback: {
+            value: number;
+            /** @enum {string} */
+            source: "admin_preset" | "installation";
+        };
+        /**
+         * @description One role's changes in a save. A count sent is saved for the role; `0` saves the
+         *     installation value, which for the built-in Admin role turns the preset off for that count.
+         *     A count named in `unset` loses the role's value: the role uses the installation value
+         *     again, and Admin returns to the preset. A count neither sent nor unset is left as it is.
+         */
+        AgentRoleAllowanceSet: {
+            /** @description The key of a live role. */
+            role_key: string;
+            /** @description 0, or 10 to 5000, the installation bounds. */
+            agent_writes_per_window?: number;
+            /** @description 0, or 1 to 200, the installation bounds. */
+            agent_egress_per_window?: number;
+            /** @description 0, or 50 to 20000, the installation bounds. */
+            agent_calls_per_window?: number;
+            /** @description The counts whose saved value this role gives up. A count may not be both sent and unset. */
+            unset?: ("agent_writes_per_window" | "agent_egress_per_window" | "agent_calls_per_window")[];
         };
         /**
          * @description How much one agent may do in one window. A passport a user minted has its own allowance;
@@ -27058,6 +27170,12 @@ export interface components {
          *     a count applies within a minute, in the window that is running: a raised count gives
          *     headroom within that minute, and a lowered one refuses an agent already past it on its
          *     next call. The per-minute limits are fixed by the build and shown here read-only.
+         *
+         *     The three counts here are the installation value. `roles` lists what each live role gives.
+         *     An agent gets, for each count, the highest allowance among the live roles of the user who
+         *     connected it, where a role with no value of its own gives the installation value. Roles
+         *     choose the limit only: the count is still one per passport or connection, for tool calls
+         *     and API requests together, and a change of role or value resets nothing.
          */
         AgentAllowanceSettings: {
             /** @description How many changing calls one passport or connection may make per window. Default 200. */
@@ -27089,6 +27207,8 @@ export interface components {
              */
             agent_window_next_starts_at?: string | null;
             defaults: components["schemas"]["AgentAllowanceDefaults"];
+            /** @description Every live role, the seeded ones first in their order, then the others by name. */
+            roles: components["schemas"]["AgentRoleAllowance"][];
             /** @description How many tool calls one passport may make per minute. Fixed by the build. */
             mcp_calls_per_minute: number;
             /** @description How many streams one passport may open per minute. Fixed by the build. */
@@ -29748,9 +29868,9 @@ export interface components {
             /** @description Per task, how often the decision model was consulted over the same window and how often its answer stood. Read from the ai_call trace, one logical call counted once, because the metered calls above count attempts and cannot give a rate. Empty when no call in the window consulted a decision model. */
             decisions?: components["schemas"]["AiDecisionSummary"][];
         };
-        /** @description The month's AI spend so far, summed from the lines GET /ai/usage prices. */
+        /** @description The AI spend over the requested window, summed from the lines GET /ai/usage prices. */
         AiUsageSummary: {
-            /** @description Sum of the month's `cost_est_minor` lines from GET /ai/usage, in minor units of `currency`. Omitted, not 0, when no line carries a price: then nobody knows what the month cost, which is not the same as a month that cost nothing. */
+            /** @description Sum of the window's `cost_est_minor` lines from GET /ai/usage, in minor units of `currency`. Omitted, not 0, when no line carries a price: then nobody knows what the window cost, which is not the same as a window that cost nothing. */
             cost_est_minor?: number;
             /** @description ISO-4217 of cost_est_minor — always USD in phase 1 (ADR-0067). */
             currency: string;
@@ -30832,6 +30952,11 @@ export interface components {
             /**
              * @description Structured machine context — e.g. `existing_id` on 409 duplicate, or an
              *     `errors` array of `{ field, code, message }` on 422 validation.
+             *
+             *     A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
+             *     `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
+             *     `ceiling` is the limit in force, and a window allowance adds `used` and `resets_at`.
+             *     The `Retry-After` header says how many seconds until the call can succeed.
              */
             details?: {
                 [key: string]: unknown;
@@ -40369,6 +40494,25 @@ export interface components {
              */
             permanent?: boolean;
         };
+        DeclineActivityDealRequest: {
+            /**
+             * Format: uuid
+             * @description The deal the message is not about. Leave it out to answer "none of them".
+             */
+            deal_id?: string;
+        };
+        ActivityDealDecline: {
+            /** @description The deals this call declined on the message. A deal declined before is not listed again. */
+            declined_deal_ids: string[];
+            /** @description A deal link came off the message. */
+            unlinked: boolean;
+            /** @description The project link that came from a declined deal came off the message. */
+            project_unfiled: boolean;
+            /** @description A project link came from a declined deal and stays, because a retention rule keeps it or the caller cannot read the project. */
+            project_kept: boolean;
+            /** @description The open deal questions of the conversation this call marked done. */
+            questions_closed: number;
+        };
         SetActivityDispositionRequest: {
             /**
              * @description What the reader decided. `not_sales` binds the thread for everybody; `handled`,
@@ -48527,7 +48671,7 @@ export interface components {
             /** @description Verbatim source text (from the page, the pasted text, or the user's own words) — non-empty or the field is absent. */
             evidence_snippet: string;
             /**
-             * @description Where evidence_snippet came from. For self_description the "evidence" is the user's own statement — a self-declared ICP is grounded in that statement (B-E01.13), not fabricated.
+             * @description Where evidence_snippet came from. For self_description the "evidence" is the user's own statement — a self-declared ICP is grounded in that statement, not fabricated.
              * @enum {string}
              */
             source_kind: "url" | "text" | "self_description";
@@ -51954,7 +52098,7 @@ export interface components {
              */
             occurred_at: string;
             /**
-             * @description Maps 1:1 to automation_run.status (data-model §12.5); `blocked` added by ADR-0035 Am.1.
+             * @description Maps 1:1 to automation_run.status; `blocked` added by ADR-0035 Am.1.
              * @enum {string}
              */
             outcome: "fired" | "failed" | "blocked" | "skipped" | "queued_for_approval";
@@ -53632,9 +53776,10 @@ export interface components {
             resets_at: string;
         };
         /**
-         * @description One user's agents in the running window. Each count and allowance is the sum over
-         *     their live passports and connections, so a user with two passports has twice the
-         *     allowance. `state` is the worst state of any one of them.
+         * @description One user's agents in the running window. Each count is the sum over their live
+         *     passports and connections, so a user with two passports has twice the limit there.
+         *     `allowance` is what one of those passports may do, and is not summed. `state` is the
+         *     worst state of any one of them.
          */
         AgentUserUsage: {
             /** Format: uuid */
@@ -53646,14 +53791,38 @@ export interface components {
             egress: components["schemas"]["AgentCounterUsage"];
             calls: components["schemas"]["AgentCounterUsage"];
             state: components["schemas"]["AgentUsageState"];
+            /** @description The user's live roles, which choose their agents' allowance, by name. */
+            roles: components["schemas"]["AgentUserRole"][];
+            allowance: components["schemas"]["AgentRoleResolvedAllowance"];
+        };
+        AgentUserRole: {
+            role_key: string;
+            role_name: string;
+        };
+        /**
+         * @description What each one of this user's passports or connections may do per window, before any release,
+         *     and the role each count comes from.
+         */
+        AgentRoleResolvedAllowance: {
+            writes: components["schemas"]["AgentAllowanceFrom"];
+            egress: components["schemas"]["AgentAllowanceFrom"];
+            calls: components["schemas"]["AgentAllowanceFrom"];
+        };
+        AgentAllowanceFrom: {
+            limit: number;
+            /**
+             * @description The role whose own value, or the Admin preset, gives this count: the highest among the
+             *     user's roles. Null when it is the installation value.
+             */
+            role_key: string | null;
         };
         /** @description One allowance in the running window. */
         AgentCounterUsage: {
             /** @description What has been used in this window. */
             used: number;
             /**
-             * @description The allowance in force: the installation's value, plus one more allowance for each
-             *     release a user granted in this window.
+             * @description The allowance in force: what the roles of the user who connected the agent give, plus
+             *     one more allowance for each release a user granted in this window.
              */
             limit: number;
             /** @description How many times a user released more in this window. */
@@ -68696,6 +68865,38 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    declineActivityDeal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeclineActivityDealRequest"];
+            };
+        };
+        responses: {
+            /** @description What the decline did. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityDealDecline"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            423: components["responses"]["RetentionHeld"];
+        };
+    };
     getActivityProjectFiling: {
         parameters: {
             query?: never;
@@ -82113,14 +82314,19 @@ export interface operations {
     };
     getAiUsageSummary: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Default: the first day of the current UTC month. Must not be after `to`. */
+                from?: string;
+                /** @description Default: today. At most 366 days after `from`. */
+                to?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description The month's spend. */
+            /** @description The window's spend. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -82131,6 +82337,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listAgentUsageByUser: {

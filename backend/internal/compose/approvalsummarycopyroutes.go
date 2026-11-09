@@ -76,6 +76,7 @@ var routeVerbsGerman = map[string]string{
 	"delete_lead_origin":                 "Lead-Herkunft entfernen",
 	"delete_lead_source":                 "Lead-Quelle entfernen",
 	"delete_legal_entity_logo":           "Logo einer Rechtseinheit entfernen",
+	"decline_activity_deal":              "Sagen, dass eine Nachricht nicht zu einem Deal gehört",
 	"discard_mail_draft":                 "Nachrichtenentwurf verwerfen",
 	"dismiss_company_suggestion":         "Vorschlag zu einer Firma zurückstellen",
 	"dismiss_contact_moment":             "Hinweis zu einem Kontakt ausblenden",

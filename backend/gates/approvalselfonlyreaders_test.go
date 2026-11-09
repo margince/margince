@@ -5,87 +5,108 @@
 
 package gates
 
-// Every approvals reader that filters rows by the decision grants also applies
-// the self-only narrowing.
-//
-// decidable() is the module's ONE visibility predicate and it has two authority
-// halves: the grants approving a row would take (requireDecisionGrants), and the
-// narrowing to the single seat a row was staged FOR (withheldFromOtherSeats) —
-// a linkedin_match, a vcard_create, a held_draft. The two target-filtered reads
-// settle target visibility once for the record instead of per row, so they
-// cannot call decidable and must spell the per-row halves themselves. One of
-// them spelled only the first half, and the omission is invisible in the code:
-// a reader that never applied the narrowing looks exactly like one that never
-// needed to, and its rows are a colleague's imported address book.
-//
-// So the obligation is derived rather than listed: whoever asks the grant
-// question about a row is a reader deciding what a caller may SEE, and owes the
-// narrowing in the same breath. A fourth reader added tomorrow inherits it
-// without anybody remembering to add it here.
-//
-// The rule is deliberately about DIRECT calls. requireDecisionGrants is the
-// half a reader reaches for when it is filtering per row, and a function that
-// reaches it only through decidable already has both halves — widening to
-// transitive reach would put every caller of decidable in the corpus and each
-// would need a waiver saying "discharged by decidable", which is a list of
-// sentences nobody reads standing in for the rule itself.
-
 import (
+	"fmt"
 	"sort"
 	"testing"
 )
 
 const (
-	// approvalsPackage is the module whose readers this census governs.
 	approvalsPackage = "internal/modules/approvals"
-
-	// grantHalf is the authority half every per-row reader already spells, and
-	// so the marker that SELECTS the corpus: asking it is what makes a function
-	// a per-row visibility filter.
-	grantHalf = "requireDecisionGrants"
-
-	// seatHalf is the half the target-filtered readers dropped. Naming both
-	// symbols here is what makes the census fail loudly on a rename instead of
-	// walking an empty corpus and reporting PASS.
-	seatHalf = "withheldFromOtherSeats"
+	grantHalf        = "requireDecisionGrants"
+	seatHalf         = "withheldFromOtherSeats"
+	actionHalf       = "authorityRows"
+	readableHalf     = "proposalsReadable"
 )
 
 func TestEveryApprovalsGrantFilterAlsoAppliesTheSelfOnlyNarrowing(t *testing.T) {
 	t.Parallel()
-	graph := packageCallGraph(t, approvalsPackage)
+	for _, violation := range approvalScopeViolations(packageCallGraph(t, approvalsPackage)) {
+		t.Error(violation)
+	}
+}
 
-	// Under-recognition is the one way this census must not break: a renamed or
-	// deleted predicate would leave nothing to select on, and an empty corpus
-	// reads exactly like a clean one. Both halves are asserted present as
-	// declarations before the walk trusts anything the walk found.
-	for _, half := range []string{grantHalf, seatHalf} {
-		if _, declared := graph[half]; !declared {
-			t.Fatalf("%s is not declared in %s — this census selects and certifies on those two names, "+
-				"so a rename leaves it sweeping nothing while still reporting PASS",
-				half, approvalsPackage)
+// Staging needs action authority before a proposal exists. Row readers must
+// combine that shared check with the seat and evidence checks.
+func approvalScopeViolations(graph map[string]*graphFunc) []string {
+	var violations []string
+	for _, name := range []string{grantHalf, seatHalf, actionHalf, readableHalf, "decidableRows", "requireCallAuthority"} {
+		if graph[name] == nil {
+			violations = append(violations, "missing approval predicate "+name)
 		}
 	}
-
-	var corpus, missing []string
+	if len(violations) > 0 {
+		return violations
+	}
+	if !graph[actionHalf].calls[grantHalf] {
+		violations = append(violations, "action authority omits decision grants")
+	}
+	if !graph[readableHalf].calls[seatHalf] {
+		violations = append(violations, "proposal readability omits self-only narrowing")
+	}
+	if !graph["decidableRows"].calls[actionHalf] || !graph["decidableRows"].calls[readableHalf] {
+		violations = append(violations, "decidableRows must combine action authority and proposal readability")
+	}
+	if !graph["requireCallAuthority"].calls[actionHalf] {
+		violations = append(violations, "call admission omits action authority")
+	}
 	for name, fn := range graph {
-		if name == grantHalf || !fn.calls[grantHalf] {
+		// These two return permission only. Every other consumer of either half
+		// must apply the other half before it can serve an approval.
+		if name == actionHalf || name == "requireCallAuthority" {
 			continue
 		}
-		corpus = append(corpus, name)
-		if !fn.calls[seatHalf] {
-			missing = append(missing, name)
+		if fn.calls[grantHalf] && !fn.calls[seatHalf] {
+			violations = append(violations, fmt.Sprintf("%s checks grants without self-only narrowing", name))
+		}
+		if fn.calls[actionHalf] && !fn.calls[readableHalf] {
+			violations = append(violations, fmt.Sprintf("%s checks action authority without proposal readability", name))
+		}
+		if fn.calls[readableHalf] && !fn.calls[actionHalf] {
+			violations = append(violations, fmt.Sprintf("%s checks readability without action authority", name))
 		}
 	}
-	if len(corpus) == 0 {
-		t.Fatalf("no function in %s filters rows with %s — the corpus is empty, "+
-			"which is this census reporting PASS over a tree it cannot see",
-			approvalsPackage, grantHalf)
-	}
-	sort.Strings(missing)
-	for _, name := range missing {
-		t.Errorf("%s filters approval rows with %s but never calls %s: it serves a caller "+
-			"the stagings staged for OTHER seats — a colleague's linkedin_match, vcard_create "+
-			"or held_draft, whose summary and proposed_change ARE that private row's content",
-			name, grantHalf, seatHalf)
+	sort.Strings(violations)
+	return violations
+}
+
+func TestTheApprovalScopeCensusRejectsEitherMissingHalfAndNewReaders(t *testing.T) {
+	t.Parallel()
+	for _, defect := range []string{"none", "missing predicate", "missing grants", "missing seat", "missing action", "missing readability", "grant reader", "action reader", "readability reader"} {
+		t.Run(defect, func(t *testing.T) {
+			node := func(names ...string) *graphFunc {
+				calls := map[string]bool{}
+				for _, name := range names {
+					calls[name] = true
+				}
+				return &graphFunc{calls: calls}
+			}
+			graph := map[string]*graphFunc{
+				grantHalf: node(), seatHalf: node(), actionHalf: node(grantHalf), readableHalf: node(seatHalf),
+				"decidableRows": node(actionHalf, readableHalf), "requireCallAuthority": node(grantHalf, actionHalf),
+			}
+			switch defect {
+			case "missing predicate":
+				delete(graph, grantHalf)
+			case "missing grants":
+				delete(graph[actionHalf].calls, grantHalf)
+			case "missing seat":
+				delete(graph[readableHalf].calls, seatHalf)
+			case "missing action":
+				delete(graph["decidableRows"].calls, actionHalf)
+			case "missing readability":
+				delete(graph["decidableRows"].calls, readableHalf)
+			case "grant reader":
+				graph["newReader"] = node(grantHalf)
+			case "action reader":
+				graph["newReader"] = node(actionHalf)
+			case "readability reader":
+				graph["newReader"] = node(readableHalf)
+			}
+			violations := approvalScopeViolations(graph)
+			if (len(violations) == 0) != (defect == "none") {
+				t.Fatalf("defect %s: %v", defect, violations)
+			}
+		})
 	}
 }
