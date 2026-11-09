@@ -30,15 +30,6 @@ func (s *Store) MeetingsAwaitingFollowUp(ctx context.Context, asOf time.Time) ([
 	return s.readMeetingFollowUps(ctx, asOf, func(func(any) int) (string, error) { return scopeUnbounded, nil })
 }
 
-// MeetingsAwaitingFollowUpOnDeal is MeetingsAwaitingFollowUp narrowed to the
-// meetings filed under one deal, so the deal page and Home name the same ones.
-func (s *Store) MeetingsAwaitingFollowUpOnDeal(ctx context.Context, asOf time.Time, dealID ids.UUID) ([]AwaitingReply, error) {
-	return s.readMeetingFollowUps(ctx, asOf, func(arg func(any) int) (string, error) {
-		return fmt.Sprintf(`EXISTS (SELECT 1 FROM activity_link on_deal
-		    WHERE on_deal.activity_id = a.id AND on_deal.deal_id = $%d)`, arg(dealID)), nil
-	})
-}
-
 // MeetingsStillAwaitingFollowUp answers which of these meetings the reader
 // still owes a follow-up, so a stored suggestion can be checked again.
 func (s *Store) MeetingsStillAwaitingFollowUp(ctx context.Context, asOf time.Time, meetingIDs []ids.UUID) (map[ids.UUID]bool, error) {
@@ -210,7 +201,22 @@ func meetingHeldSQL(alias, now string) string {
 	return "(" + meetingoutcome.HeldSQL(alias) + " AND " + occurredday.BegunSQL(alias, now) + ")"
 }
 
+// meetingFollowUpsStatement is the follow-up read, newest first, holding at
+// most limit meetings; a limit of 0 holds none.
 func meetingFollowUpsStatement(ctx context.Context, asOf time.Time, windowDays int, narrow func(func(any) int) (string, error), limit int) (string, []any, error) {
+	if limit < 0 {
+		return "", nil, fmt.Errorf("activities: a meeting follow-up page of %d meetings", limit)
+	}
+	return meetingFollowUpsPage(ctx, asOf, windowDays, narrow, fmt.Sprintf("LIMIT %d", limit))
+}
+
+// unpagedMeetingFollowUpsStatement is the same read without a page, for a
+// caller whose own narrowing bounds it.
+func unpagedMeetingFollowUpsStatement(ctx context.Context, asOf time.Time, windowDays int, narrow func(func(any) int) (string, error)) (string, []any, error) {
+	return meetingFollowUpsPage(ctx, asOf, windowDays, narrow, "")
+}
+
+func meetingFollowUpsPage(ctx context.Context, asOf time.Time, windowDays int, narrow func(func(any) int) (string, error), page string) (string, []any, error) {
 	args := []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	instant, reader, window := arg(asOf), arg(readerOrNobody(ctx)), arg(windowDays)
@@ -229,10 +235,6 @@ func meetingFollowUpsStatement(ctx context.Context, asOf time.Time, windowDays i
 	at := fmt.Sprintf("$%d", instant)
 	held := meetingHeldSQL("a", at)
 	candidates := meetingCandidatesSQL(at, fmt.Sprintf("$%d", window), fmt.Sprintf("$%d", reader), held)
-	page := ""
-	if limit > 0 {
-		page = fmt.Sprintf("LIMIT %d", limit)
-	}
 	return followUpStatement(candidates, g, fmt.Sprintf(meetingFollowUpsSQL,
 		instant, g.content, g.links, window, AwaitingReplyLookbackDays,
 		g.later, relstrength.InteractionCountsSQL("later", at), reader,

@@ -17,6 +17,11 @@ import (
 // NextMeetingFollowUpsByDealTx selects the newest actionable follow-up for each deal.
 // The feed's global page bound cannot hide another deal's first matching meeting.
 func (s *Store) NextMeetingFollowUpsByDealTx(ctx context.Context, tx pgx.Tx, asOf time.Time, dealIDs []ids.UUID) (map[ids.UUID][]AwaitingReply, error) {
+	// Before any SQL, so a refused caller costs no read; the builder checks
+	// again because it is where the deal table is read.
+	if err := requireDealFollowUpRead(ctx); err != nil {
+		return nil, err
+	}
 	days, err := followUpAfterDays(ctx, tx)
 	if err != nil {
 		return nil, err
@@ -42,19 +47,16 @@ func (s *Store) NextMeetingFollowUpsByDealTx(ctx context.Context, tx pgx.Tx, asO
 
 // meetingFollowUpsByDealStatement selects each readable deal's newest meeting follow-up.
 func meetingFollowUpsByDealStatement(ctx context.Context, asOf time.Time, days int, dealIDs []ids.UUID) (string, []any, error) {
-	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
-		return "", nil, err
-	}
-	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+	if err := requireDealFollowUpRead(ctx); err != nil {
 		return "", nil, err
 	}
 	var dealScope string
-	query, args, err := meetingFollowUpsStatement(ctx, asOf, days, func(arg func(any) int) (string, error) {
+	query, args, err := unpagedMeetingFollowUpsStatement(ctx, asOf, days, func(arg func(any) int) (string, error) {
 		var err error
 		dealScope, err = readableDealBatchSQL(ctx, dealIDs, arg)
 		return `cardinality(attendees.recipients) > 0 AND EXISTS (SELECT 1 FROM activity_link on_deal
    JOIN deal d ON d.id = on_deal.deal_id WHERE on_deal.activity_id = a.id AND ` + dealScope + `)`, err
-	}, 0)
+	})
 	if err != nil {
 		return "", nil, err
 	}
@@ -64,6 +66,13 @@ func meetingFollowUpsByDealStatement(ctx context.Context, asOf time.Time, days i
   JOIN activity_link on_deal ON on_deal.activity_id = owed.id
   JOIN deal d ON d.id = on_deal.deal_id
   WHERE ` + dealScope + ` ORDER BY d.id, owed.occurred_at DESC, owed.id DESC`, args, nil
+}
+
+func requireDealFollowUpRead(ctx context.Context) error {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return err
+	}
+	return auth.Require(ctx, "deal", principal.ActionRead)
 }
 
 // NextMeetingFollowUpOnDeal shares the batch selector so page bounds cannot change the answer.

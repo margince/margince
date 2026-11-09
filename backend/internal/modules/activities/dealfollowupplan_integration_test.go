@@ -12,6 +12,7 @@ package activities
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -20,11 +21,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// The other mail is far more than the meetings. A slice of it names a contact:
-// walking those links once per meeting reads more than all of the mail.
+// The other mail outnumbers what the reader's own meetings may cost, twice
+// over meetings squared, so one pass over it stands out. A slice of it names
+// a contact, so a walk of the links reads it too.
 const (
 	planMeetings   = 201
-	planOtherMail  = 50000
+	planDeals      = 20
+	planOtherMail  = 100000
 	planLinkedMail = 5000
 )
 
@@ -41,12 +44,11 @@ func TestTheDealFollowUpBatchReadsEachMeetingOnceWhateverTheStatisticsSay(t *tes
 		}
 	}()
 	asOf := clocktest.Now(t)
-	busy, quiet := ids.NewV7(), ids.NewV7()
-	seedDealMeetingsAmongOtherMail(ctx, t, tx, e.rep, busy, quiet)
+	deals := seedDealMeetingsAmongOtherMail(ctx, t, tx, e.rep)
 	if _, err := tx.Exec(ctx, "SET LOCAL jit = off"); err != nil {
 		t.Fatal(err)
 	}
-	statement, args, err := meetingFollowUpsByDealStatement(e.as(), asOf, 3, []ids.UUID{busy, quiet})
+	statement, args, err := meetingFollowUpsByDealStatement(e.as(), asOf, 3, deals)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,56 +64,81 @@ func TestTheDealFollowUpBatchReadsEachMeetingOnceWhateverTheStatisticsSay(t *tes
 		if err := tx.QueryRow(ctx, "EXPLAIN (ANALYZE, FORMAT JSON) "+statement, args...).Scan(&raw); err != nil {
 			t.Fatalf("running the deal follow-up batch: %v", err)
 		}
-		// Walking even the linked slice of the other mail once per meeting
-		// reads this much; the reader's own meetings read far less.
-		const walkedPerMeeting = planMeetings * planLinkedMail
-		var attendeeReads float64
-		decodePlan(t, raw).walk(func(n planNode) {
-			if n.Alias == "attendees" {
-				attendeeReads += n.ActualLoops
-			}
-			if read := (n.ActualRows + n.RemovedByFilter) * n.ActualLoops; read >= walkedPerMeeting {
-				t.Errorf("%s statistics: a step reads %.0f rows, the other mail once per meeting: %s %s %s",
-					stats, read, n.NodeType, n.RelationName, n.Alias)
-			}
-		})
-		if attendeeReads == 0 {
-			t.Fatalf("%s statistics: the plan never read a meeting's attendees, so this test checks nothing", stats)
-		}
-		if attendeeReads > planMeetings {
-			t.Errorf("%s statistics: attendees read %.0f times for %d meetings, once per deal instead of once",
-				stats, attendeeReads, planMeetings)
-		}
+		assertBoundedDealFollowUpPlan(t, stats, decodePlan(t, raw))
 	}
-	var deals int
-	if err := tx.QueryRow(ctx, "SELECT count(*) FROM ("+statement+") batch", args...).Scan(&deals); err != nil {
+	var answered int
+	if err := tx.QueryRow(ctx, "SELECT count(*) FROM ("+statement+") batch", args...).Scan(&answered); err != nil {
 		t.Fatal(err)
 	}
-	if deals != 2 {
-		t.Fatalf("the batch answered for %d deals, want both", deals)
+	if answered != planDeals {
+		t.Fatalf("the batch answered for %d deals, want all %d", answered, planDeals)
 	}
 }
 
-// seedDealMeetingsAmongOtherMail files every held meeting but one under busy,
-// the last under quiet, and logs a larger volume of unrelated mail after them.
-// Every row goes through the tables' own triggers, so the linked slice stays
-// small and lands before the bulk the link triggers would otherwise read.
-func seedDealMeetingsAmongOtherMail(ctx context.Context, t *testing.T, tx pgx.Tx, rep, busy, quiet ids.UUID) {
+// assertBoundedDealFollowUpPlan holds the plan to reading each meeting once and
+// each later activity by its key, never the unrelated mail.
+func assertBoundedDealFollowUpPlan(t *testing.T, stats string, plan planNode) {
+	t.Helper()
+	var attendeeReads, keyedReads float64
+	plan.walk(func(n planNode) {
+		read := (n.ActualRows + n.RemovedByFilter) * n.ActualLoops
+		switch n.Alias {
+		case "attendees":
+			attendeeReads += n.ActualLoops
+		case "keyed":
+			keyedReads += n.ActualLoops
+			// Any unique index that leads on id is the key; the planner may
+			// pick one that carries a version beside it.
+			if !strings.HasPrefix(n.IndexCond, "(id = ") || n.ActualRows+n.RemovedByFilter > 1 {
+				t.Errorf("%s statistics: a later activity is read by %s %s on %q, %.0f rows a loop, not by its key",
+					stats, n.NodeType, n.IndexName, n.IndexCond, n.ActualRows+n.RemovedByFilter)
+			}
+		}
+		// A per-meeting step may scan a small table, such as the reader's own
+		// meetings. A walk of even the linked slice reads twice this a loop.
+		const perMeetingRead = planLinkedMail / 2
+		if n.ActualLoops >= planMeetings && read > n.ActualLoops*perMeetingRead {
+			t.Errorf("%s statistics: a per-meeting step reads %.0f rows a loop: %s %s %s",
+				stats, read/n.ActualLoops, n.NodeType, n.RelationName, n.Alias)
+		}
+		if read >= planOtherMail {
+			t.Errorf("%s statistics: a step reads %.0f rows, the unrelated mail: %s %s %s",
+				stats, read, n.NodeType, n.RelationName, n.Alias)
+		}
+	})
+	if attendeeReads == 0 || keyedReads == 0 {
+		t.Fatalf("%s statistics: the plan read no attendees (%.0f) or no later activity (%.0f), so this test checks nothing",
+			stats, attendeeReads, keyedReads)
+	}
+	if attendeeReads > planMeetings {
+		t.Errorf("%s statistics: attendees read %.0f times for %d meetings, once per deal instead of once",
+			stats, attendeeReads, planMeetings)
+	}
+}
+
+// seedDealMeetingsAmongOtherMail files most held meetings under one deal and
+// one under each other deal, and logs a larger volume of unrelated mail after
+// them. Every row goes through the tables' own triggers, so the linked slice
+// stays small and lands before the bulk the link triggers would otherwise read.
+func seedDealMeetingsAmongOtherMail(ctx context.Context, t *testing.T, tx pgx.Tx, rep ids.UUID) []ids.UUID {
 	t.Helper()
 	if _, err := tx.Exec(ctx, `CREATE TEMP TABLE plan_seed AS
-	  SELECT $1::uuid rep, $2::timestamptz at, $3::uuid busy, $4::uuid quiet, $5::int meetings, $6::int other_mail, $7::int linked_mail`,
-		rep, clocktest.Now(t), busy, quiet, planMeetings, planOtherMail, planLinkedMail); err != nil {
+	  SELECT $1::uuid rep, $2::timestamptz at, gen_random_uuid() pipeline, $3::int meetings, $4::int deals,
+	         $5::int other_mail, $6::int linked_mail`,
+		rep, clocktest.Now(t), planMeetings, planDeals, planOtherMail, planLinkedMail); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := tx.Exec(ctx, `
-	INSERT INTO pipeline (id, name) SELECT busy, 'Plan pipeline' FROM plan_seed;
-	INSERT INTO stage (id, pipeline_id, name, "position") SELECT busy, busy, 'Qualified', 1 FROM plan_seed;
+	INSERT INTO pipeline (id, name) SELECT pipeline, 'Plan pipeline' FROM plan_seed;
+	INSERT INTO stage (id, pipeline_id, name, "position") SELECT pipeline, pipeline, 'Qualified', 1 FROM plan_seed;
+	CREATE TEMP TABLE plan_deal AS SELECT n, gen_random_uuid() id FROM plan_seed s, generate_series(1, s.deals) n;
 	INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, source, captured_by)
-	  SELECT d, 'Deal', 'open', rep, busy, busy, 'seed', 'system' FROM plan_seed, unnest(ARRAY[busy, quiet]) d;
+	  SELECT d.id, 'Deal '||d.n, 'open', s.rep, s.pipeline, s.pipeline, 'seed', 'system' FROM plan_deal d, plan_seed s;
 	CREATE TEMP TABLE plan_meeting AS
-	  SELECT gen_random_uuid() id, gen_random_uuid() contact, g, CASE WHEN g = s.meetings THEN s.quiet ELSE s.busy END deal,
+	  SELECT gen_random_uuid() id, gen_random_uuid() contact, g, d.id deal,
 	         s.at - interval '4 days' - random() * interval '12 days' at_time
-	    FROM plan_seed s, generate_series(1, s.meetings) g;
+	    FROM plan_seed s CROSS JOIN LATERAL generate_series(1, s.meetings) g
+	    JOIN plan_deal d ON d.n = greatest(1, g - (s.meetings - s.deals));
 	INSERT INTO contact (id, full_name, source, captured_by) SELECT contact, 'Attendee '||g, 'manual', 'human:seed' FROM plan_meeting;
 	INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by, meeting_status)
 	  SELECT id, 'meeting', 'Meeting '||g, at_time, 'outbound', 'manual', 'human:seed', 'held' FROM plan_meeting;
@@ -133,4 +160,13 @@ func seedDealMeetingsAmongOtherMail(ctx context.Context, t *testing.T, tx pgx.Tx
 	    FROM plan_other, plan_seed s WHERE g > s.linked_mail`); err != nil {
 		t.Fatalf("seeding the meetings: %v", err)
 	}
+	rows, err := tx.Query(ctx, `SELECT id FROM plan_deal ORDER BY n`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deals, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		t.Fatal(err)
+	}
+	return deals
 }
