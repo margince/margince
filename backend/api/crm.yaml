@@ -447,11 +447,20 @@ paths:
         administrator of any tenant can set any of their own users' mail attribute to
         any string — so a multi-tenant authority is refused at boot rather than
         served here.
+
+        `return=consent` comes from the OAuth consent screen's own buttons. The
+        signed state cookie keeps it, and a completed sign-in then lands back on that
+        fixed consent path instead of the post-login page. It carries no address.
       parameters:
         - name: provider
           in: path
           required: true
           schema: { type: string, enum: [google, microsoft] }
+        - name: return
+          in: query
+          required: false
+          description: Land a completed sign-in on the OAuth consent screen.
+          schema: { type: string, enum: [consent] }
       responses:
         '302':
           description: Redirect to the provider's consent screen.

@@ -4,6 +4,9 @@
 package compose
 
 import (
+	"encoding/base64"
+	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 )
@@ -11,15 +14,43 @@ import (
 func TestLoginStateSignerRoundTrip(t *testing.T) {
 	signer := newLoginStateSigner([]byte("0123456789012345678901234567890123"))
 	now := time.Unix(1_700_000_000, 0)
-	st := loginState{Provider: "google", Nonce: "abc123", CodeVerifier: "verifier-xyz"}
-	token := signer.sign(st, now.Add(10*time.Minute))
-
-	got, err := signer.verify(token, now)
-	if err != nil {
-		t.Fatalf("verify: %v", err)
+	for _, st := range []loginState{
+		{Provider: "google", ClientID: "cid", Nonce: "abc123", CodeVerifier: "verifier-xyz"},
+		{Provider: "google", ClientID: "cid", Nonce: "abc123", CodeVerifier: "verifier-xyz", ReturnToConsent: true},
+	} {
+		got, err := signer.verify(signer.sign(st, now.Add(10*time.Minute)), now)
+		if err != nil {
+			t.Fatalf("verify: %v", err)
+		}
+		if got != st {
+			t.Fatalf("got %+v, want %+v", got, st)
+		}
 	}
-	if got.Provider != st.Provider || got.Nonce != st.Nonce || got.CodeVerifier != st.CodeVerifier {
-		t.Fatalf("got %+v, want %+v", got, st)
+}
+
+// The consent marker decides where a session lands. A browser that sets it in
+// its own cookie is refused like any other edit to the state.
+func TestLoginStateSignerRefusesAnAddedConsentMarker(t *testing.T) {
+	signer := newLoginStateSigner([]byte("0123456789012345678901234567890123"))
+	now := time.Unix(1_700_000_000, 0)
+	token := signer.sign(loginState{Provider: "google", Nonce: "n"}, now.Add(time.Minute))
+	enc, mac, _ := strings.Cut(token, ".")
+	payload, err := base64.RawURLEncoding.DecodeString(enc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fields map[string]any
+	if err := json.Unmarshal(payload, &fields); err != nil {
+		t.Fatal(err)
+	}
+	fields["rc"] = true
+	edited, err := json.Marshal(fields)
+	if err != nil {
+		t.Fatal(err)
+	}
+	forged := base64.RawURLEncoding.EncodeToString(edited) + "." + mac
+	if _, err := signer.verify(forged, now); err == nil {
+		t.Fatal("a state with an added consent marker verified")
 	}
 }
 

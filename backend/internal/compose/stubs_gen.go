@@ -767,7 +767,7 @@ func (stubs) OidcSignInCallback(w nethttp.ResponseWriter, r *nethttp.Request, pr
 	httperr.NotImplemented(w, r, "OidcSignInCallback")
 }
 
-func (stubs) StartOidcSignIn(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.StartOidcSignInParamsProvider) {
+func (stubs) StartOidcSignIn(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.StartOidcSignInParamsProvider, params crmcontracts.StartOidcSignInParams) {
 	httperr.NotImplemented(w, r, "StartOidcSignIn")
 }
 

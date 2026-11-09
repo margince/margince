@@ -28072,6 +28072,21 @@ func (e OidcSignInCallbackParamsProvider) Valid() bool {
 	}
 }
 
+// Defines values for StartOidcSignInParamsReturn.
+const (
+	StartOidcSignInParamsReturnConsent StartOidcSignInParamsReturn = "consent"
+)
+
+// Valid indicates whether the value is a known member of the StartOidcSignInParamsReturn enum.
+func (e StartOidcSignInParamsReturn) Valid() bool {
+	switch e {
+	case StartOidcSignInParamsReturnConsent:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for StartOidcSignInParamsProvider.
 const (
 	StartOidcSignInParamsProviderGoogle    StartOidcSignInParamsProvider = "google"
@@ -70005,6 +70020,15 @@ type OidcSignInCallbackParams struct {
 // OidcSignInCallbackParamsProvider defines parameters for OidcSignInCallback.
 type OidcSignInCallbackParamsProvider string
 
+// StartOidcSignInParams defines parameters for StartOidcSignIn.
+type StartOidcSignInParams struct {
+	// Return Land a completed sign-in on the OAuth consent screen.
+	Return *StartOidcSignInParamsReturn `form:"return,omitempty" json:"return,omitempty"`
+}
+
+// StartOidcSignInParamsReturn defines parameters for StartOidcSignIn.
+type StartOidcSignInParamsReturn string
+
 // StartOidcSignInParamsProvider defines parameters for StartOidcSignIn.
 type StartOidcSignInParamsProvider string
 
@@ -91489,7 +91513,7 @@ type ServerInterface interface {
 	OidcSignInCallback(w http.ResponseWriter, r *http.Request, provider OidcSignInCallbackParamsProvider, params OidcSignInCallbackParams)
 	// Begin federated sign-in with a configured OIDC provider.
 	// (GET /auth/oidc/{provider}/start)
-	StartOidcSignIn(w http.ResponseWriter, r *http.Request, provider StartOidcSignInParamsProvider)
+	StartOidcSignIn(w http.ResponseWriter, r *http.Request, provider StartOidcSignInParamsProvider, params StartOidcSignInParams)
 	// Redeem a reset token and set a new password.
 	// (POST /auth/reset-password)
 	ResetPassword(w http.ResponseWriter, r *http.Request)
@@ -95191,7 +95215,7 @@ func (_ Unimplemented) OidcSignInCallback(w http.ResponseWriter, r *http.Request
 
 // Begin federated sign-in with a configured OIDC provider.
 // (GET /auth/oidc/{provider}/start)
-func (_ Unimplemented) StartOidcSignIn(w http.ResponseWriter, r *http.Request, provider StartOidcSignInParamsProvider) {
+func (_ Unimplemented) StartOidcSignIn(w http.ResponseWriter, r *http.Request, provider StartOidcSignInParamsProvider, params StartOidcSignInParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -109049,8 +109073,24 @@ func (siw *ServerInterfaceWrapper) StartOidcSignIn(w http.ResponseWriter, r *htt
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params StartOidcSignInParams
+
+	// ------------- Optional query parameter "return" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "return", r.URL.Query(), &params.Return, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "return"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "return", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.StartOidcSignIn(w, r, provider)
+		siw.Handler.StartOidcSignIn(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

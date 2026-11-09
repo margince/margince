@@ -6,6 +6,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  CONSENT_LANDING,
   keepReturnRoute,
   OIDC_FAILURE_HASH,
   restoreReturnRoute,
@@ -37,6 +38,26 @@ function minutesLater(minutes: number): void {
 }
 
 describe("the route kept across a provider sign-in", () => {
+  it("puts the consent request back on the consent landing", () => {
+    const request = "#/oauth-consent?client_id=cl-1&state=s";
+    globalThis.history.replaceState(null, "", `/consent${request}`);
+    keepReturnRoute();
+
+    globalThis.history.replaceState(null, "", CONSENT_LANDING);
+    restoreReturnRoute();
+    expect(globalThis.location.pathname).toBe("/consent");
+    expect(globalThis.location.hash).toBe(request);
+  });
+
+  it("puts no other kept route on the consent landing", () => {
+    landOn(APPROVAL_LINK);
+    keepReturnRoute();
+
+    globalThis.history.replaceState(null, "", CONSENT_LANDING);
+    restoreReturnRoute();
+    expect(globalThis.location.hash).toBe("#/oauth-consent");
+  });
+
   it("restores the followed link on the bare landing, then forgets it", () => {
     landOn(APPROVAL_LINK);
     keepReturnRoute();
