@@ -21,7 +21,6 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -69,7 +68,7 @@ func storeClearableFields(t *testing.T) map[string][]string {
 		filepath.Join("internal", "modules", "activities"),
 	}
 	for _, root := range roots {
-		entries, err := os.ReadDir(root)
+		entries, err := gatekit.ReadDir(root)
 		if err != nil {
 			t.Fatalf("read %s: %v", root, err)
 		}

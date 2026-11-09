@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/company360"
 	"github.com/margince/margince/backend/internal/compose/contact360"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -349,5 +350,66 @@ func TestOnlyAProvenIdentityBindsASeatToACalendarEvent(t *testing.T) {
 		if got != tc.want {
 			t.Errorf("SeatProvedAddressTx(%s) = %v, but calendar attendance treats it as %v", tc.address, got, tc.want)
 		}
+	}
+}
+
+// A colleague can attend by their own address and also be on file as a contact
+// with that email. The room names them once, as the colleague.
+func TestAColleagueOnFileAsAContactIsNamedOnceInTheRoom(t *testing.T) {
+	e := integration.Setup(t)
+	clock := func() time.Time { return laneDay }
+	guest := e.SeedContact(t, "Greta Guest", nil)
+	twin := e.SeedContact(t, "Rita Twin", nil)
+	subject := "Rollout planning"
+	at := laneDay.Add(48 * time.Hour)
+	row, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "meeting", Subject: &subject, OccurredAt: &at, Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: guest}},
+	})
+	if err != nil {
+		t.Fatalf("booking: %v", err)
+	}
+	owner := integration.OwnerConn(t)
+	const address = "rita.twin@own-company.test"
+	for _, statement := range []struct {
+		sql  string
+		args []any
+	}{
+		{`INSERT INTO contact_email (contact_id, email, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`, []any{twin, address}},
+		{`INSERT INTO activity_participant (activity_id, contact_id, role) VALUES ($1, $2, 'attendee')`, []any{row.Id, guest}},
+		{`INSERT INTO activity_participant (activity_id, contact_id, role) VALUES ($1, $2, 'attendee')`, []any{row.Id, twin}},
+		{`INSERT INTO activity_participant (activity_id, user_id, address, role) VALUES ($1, $2, $3, 'attendee')`, []any{row.Id, e.Rep1, address}},
+	} {
+		if _, err := owner.Exec(context.Background(), statement.sql, statement.args...); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	page, err := contact360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects,
+		consent.NewStore(InstallationDB(e.Pool)),
+		comms.NewStore(InstallationDB(e.Pool), clock, activities.NewStore(InstallationDB(e.Pool))),
+		ai.NewFeedbackStore(InstallationDB(e.Pool)), clock).Assemble(e.Admin(), ids.From[ids.ContactKind](guest))
+	if err != nil {
+		t.Fatalf("assembling the contact: %v", err)
+	}
+	next := page.NextMeeting
+	if next == nil || next.Participants == nil {
+		t.Fatalf("next meeting = %+v", next)
+	}
+	for _, p := range *next.Participants {
+		if ids.UUID(p.ContactId) == twin {
+			t.Errorf("the colleague is also listed as the contact %q", p.FullName)
+		}
+	}
+	colleagues := 0
+	if next.OtherParticipants != nil {
+		for _, other := range *next.OtherParticipants {
+			if other.Kind == crmcontracts.MeetingOtherParticipantKindColleague {
+				colleagues++
+			}
+		}
+	}
+	if colleagues != 1 {
+		t.Errorf("colleagues in the room = %d, want the one colleague once", colleagues)
 	}
 }

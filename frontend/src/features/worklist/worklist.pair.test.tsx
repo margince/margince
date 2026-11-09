@@ -2,13 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { ANA, BEN, contactCase } from "../../testing/contactcase.fixtures";
 import { PairDecision } from "./worklist.pair";
 
 // Deciding a duplicate where it is shown.
@@ -129,7 +131,9 @@ describe("deciding a duplicate pair on the row", () => {
   // them would be the product deciding which of a customer's records is real.
   it("merges into the record the reader chose", async () => {
     const fetched = stubOk();
-    draw(pairRow());
+    draw(
+      pairRow({ subject: { type: "company", id: LEFT, label: "Acme GmbH" } }),
+    );
 
     // BY NAME, not by position: this is the assertion that the button the
     // reader believes they pressed is the record that survives.
@@ -402,5 +406,46 @@ describe("deciding a duplicate pair on the row", () => {
     const body = await bodyOf(fetched);
     expect(body.disposition).toBe("not_a_duplicate");
     expect(Object.hasOwn(body, "winner_id")).toBe(false);
+  });
+
+  // Two contacts merge only through the case review, where the reader ticks
+  // both and sees the preview. Keep opens it on the record they chose; the
+  // company path above still posts the merge straight from the row.
+  it("opens the review on the kept contact and posts nothing", async () => {
+    const requests: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const request = input instanceof Request ? input : new Request(input);
+        requests.push(`${request.method} ${new URL(request.url).pathname}`);
+        return new Response(JSON.stringify(contactCase({ anchor_id: BEN })), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }),
+    );
+    const user = userEvent.setup();
+    draw(
+      pairRow({
+        subject: { type: "contact", id: ANA, label: "Mira Kovac" },
+        pair: {
+          left: { id: ANA, label: "Mira Kovac" },
+          right: { id: BEN, label: "Mira Kovač" },
+          evidence: [],
+        },
+      }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Keep Mira Kovač" }));
+
+    const review = await screen.findByRole("dialog", {
+      name: "Possible duplicates",
+    });
+    expect(
+      await within(review).findByRole("checkbox", { name: /Mira Kovač/ }),
+    ).toBeChecked();
+    expect(requests).toEqual([
+      expect.stringMatching(new RegExp(`^GET .*/dedupe/contact-cases/${BEN}$`)),
+    ]);
   });
 });

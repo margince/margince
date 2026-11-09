@@ -14,8 +14,8 @@ import { useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
+import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import { ReportingComparison } from "./reporting.comparison";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { ReportingExecutions } from "./reporting.executions";
 import { ReportingExportButton } from "./reporting.export";
 import {

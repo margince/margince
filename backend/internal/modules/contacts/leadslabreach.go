@@ -165,7 +165,7 @@ func dayAnswerCandidates(ctx context.Context, tx pgx.Tx, now time.Time, after id
 		                WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.occurred_precision = 'day'
 		                  AND `+mayAnswerSQL("lead.id", "a")+` AND `+proven+` <= $1
 		                  AND `+leadTakesFirstResponseSQL("lead", proven)+`
-		                  AND `+auth.ActivityAvailableClause("a")+`)
+		                  AND `+auth.ActivityExternalEvidenceClause("a")+`)
 		 ORDER BY lead.id LIMIT $3`, now, after, dayAnswerPage)
 	if err != nil {
 		return nil, fmt.Errorf("select leads a day touch may have answered: %w", err)

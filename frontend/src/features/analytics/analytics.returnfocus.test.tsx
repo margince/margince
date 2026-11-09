@@ -63,6 +63,19 @@ describe("the control a reader left a page through", () => {
     await waitFor(() => expect(finishDoor()).toHaveFocus());
   });
 
+  it("has focus again when Back returns to a surface that stayed mounted", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<Surface ready />);
+    await user.click(finishDoor());
+    const entry = history.state;
+    finishDoor().blur();
+    history.pushState({ elsewhere: true }, "");
+    history.replaceState(entry, "");
+    globalThis.dispatchEvent(new PopStateEvent("popstate", { state: entry }));
+
+    await waitFor(() => expect(finishDoor()).toHaveFocus());
+  });
+
   it("is not focused on another entry, such as a new visit", async () => {
     await leaveThroughFinish();
     history.replaceState(null, "");

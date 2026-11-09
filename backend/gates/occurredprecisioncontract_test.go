@@ -20,7 +20,6 @@ package gates
 
 import (
 	"maps"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -55,9 +54,7 @@ const storedClock = "stored clock without a precision column, issue #8910"
 // place, each with the reason. Keyed "<spec> <schema path>.<property>" as the
 // census prints it.
 var precisionlessTimes = gatekit.Waive(map[string]string{
-	"api/crm.yaml ExistingCustomerNotice.evidence_dated_at":               "the date an admin reads off the proof of a collection notice, not an activity time",
-	"api/crm.yaml DeclareExistingCustomerNoticeRequest.evidence_dated_at": "the same proof date, as the admin enters it",
-	"api/crm.yaml ExistingCustomerNotice.withdrawn_at":                    "when an admin withdrew a collection-notice declaration, the row's own instant",
+	"api/crm.yaml MarginceChangeBundle.latest_at":                         "when Margince last changed the deal, the correction row's own write instant, not an activity time",
 	"api/crm.yaml ReportingForecastBasis.call_at":                         "when a manager submitted a forecast call, the call row's exact write instant",
 	"api/crm.yaml AssessNoticeSource.obtained_at":                         "The privacy user enters a source date; this does not copy a captured activity timestamp.",
 	"api/crm.yaml NoticeCase.source_obtained_at":                          "The saved human source date is used for a calendar deadline, without an activity timestamp or its precision.",
@@ -106,6 +103,10 @@ var precisionlessTimes = gatekit.Waive(map[string]string{
 	"api/crm.yaml User.last_active_at":                                    "when a member last made a request, a request's own instant",
 	"api/crm.yaml UserSession.last_active_at":                             "when a sign-in session last made a request, a request's own instant",
 	"api/crm.yaml VoiceProfile.last_built_at":                             "when a voice profile was last built, the build's own instant",
+	"api/crm.yaml ExistingCustomerNotice.evidence_dated_at":               "the date an admin reads off the proof of a collection notice, not an activity time",
+	"api/crm.yaml DeclareExistingCustomerNoticeRequest.evidence_dated_at": "the same proof date, as the admin enters it",
+	"api/crm.yaml ExistingCustomerNotice.withdrawn_at":                    "when an admin withdrew a collection-notice declaration, the row's own instant",
+	"api/crm.yaml DealMarginceCheck.next_check_at":                        "the day after the deal's close date, when the nightly check is due again, not an activity time",
 	"api/crm.yaml ConsentQualifyingEvent.occurred_at": "the proof a consent guard holds in consent_qualifying_event; no client draws it, " +
 		"and the guard measures it against windows of 90 days and more, which a date's hours do not move",
 	"api/crm.yaml QualifyingEventRecord.occurred_at":             "a qualifying exchange a rep stated, stored in consent_qualifying_event, not an activity",
@@ -178,15 +179,17 @@ const (
 // schema declares them, each with the reason.
 var instantTimeNames = gatekit.Waive(map[string]string{
 	"expected_updated_at": rowStamp,
-	"created_at":          rowStamp, "updated_at": rowStamp, "archived_at": rowStamp, "restricted_at": rowStamp,
-	"content_erased_at": rowStamp, "superseded_at": rowStamp, "revoked_at": rowStamp, "suspended_at": rowStamp,
-	"activated_at": rowStamp, "partner_accepted_at": rowStamp, "enabled_at": rowStamp, "added_at": rowStamp, "entered_at": rowStamp,
+	"enrolled_at":         "server timestamp of source enrollment, never an activity occurrence",
+	"opened_at":           actStamp, "enabled_at": actStamp, "suspended_at": actStamp,
+	"created_at": rowStamp, "updated_at": rowStamp, "archived_at": rowStamp, "restricted_at": rowStamp,
+	"content_erased_at": rowStamp, "superseded_at": rowStamp, "revoked_at": rowStamp,
+	"activated_at": rowStamp, "partner_accepted_at": rowStamp, "added_at": rowStamp, "entered_at": rowStamp,
 	"captured_at": rowStamp, "recorded_at": rowStamp, "set_at": rowStamp, "changed_at": rowStamp,
 	"corrected_at": rowStamp, "effective_at": rowStamp, "latest_captured_at": rowStamp, "value_captured_at": rowStamp,
 
 	"generated_at": runStamp, "computed_at": runStamp, "evaluated_at": runStamp, "checked_at": runStamp,
 	"retrieved_at": runStamp, "estimated_at": runStamp, "assessed_at": runStamp, "narrated_at": runStamp,
-	"annotated_at": runStamp, "finished_at": runStamp, "completed_at": runStamp, "failed_at": runStamp, "opened_at": rowStamp,
+	"annotated_at": runStamp, "finished_at": runStamp, "completed_at": runStamp, "failed_at": runStamp,
 	"first_failed_at": runStamp, "dead_lettered_at": runStamp, "effect_failed_at": runStamp, "ran_at": runStamp,
 	"detected_at": runStamp, "first_seen_at": runStamp, "observed_at": runStamp, "refresh_at": runStamp,
 	"verified_at": runStamp, "connected_at": runStamp, "month_start_at": runStamp, "pipeline_state_at": runStamp,
@@ -198,7 +201,7 @@ var instantTimeNames = gatekit.Waive(map[string]string{
 	"scheduled_at": aheadStamp, "remind_at": aheadStamp, "due_at": aheadStamp, "next_step_due_at": aheadStamp,
 	"next_task_due_at": aheadStamp, "sla_deadline_at": aheadStamp, "next_expiry_at": aheadStamp,
 
-	"accepted_at": actStamp, "approved_at": actStamp, "applied_at": actStamp, "decided_at": actStamp,
+	"answered_at": actStamp, "accepted_at": actStamp, "approved_at": actStamp, "applied_at": actStamp, "decided_at": actStamp,
 	"resolved_at": actStamp, "closed_at": actStamp, "submitted_at": actStamp, "requested_at": actStamp,
 	"delivered_at": actStamp, "read_at": actStamp, "assigned_at": actStamp, "routed_at": actStamp,
 	"promoted_at": actStamp, "qualified_at": actStamp, "taken_at": actStamp, "issued_at": actStamp,
@@ -222,7 +225,7 @@ func TestEveryActivityTimeOnTheWireCarriesItsPrecision(t *testing.T) {
 	root := gatekit.ModuleRoot(t)
 	seen, precise := 0, 0
 	for _, spec := range precisionContracts {
-		raw, err := os.ReadFile(filepath.Join(root, spec)) // #nosec G304 -- a contract of this module
+		raw, err := gatekit.ReadFile(filepath.Join(root, spec)) // #nosec G304 -- a contract of this module
 		if err != nil {
 			t.Fatal(err)
 		}

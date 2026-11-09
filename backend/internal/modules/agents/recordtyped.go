@@ -132,3 +132,9 @@ func (relinkActivity) ServesRecordType(recordType string) bool { return recordTy
 func (relinkThread) ServesRecordType(recordType string) bool { return recordType == typeActivity }
 
 func (relinkActivities) ServesRecordType(recordType string) bool { return recordType == typeActivity }
+
+// --- reads: the record type names only the area a call lands in ---
+
+func (readRecord) RecordTypeOf(args json.RawMessage) string { return recordTypeArg(args) }
+
+func (listRecords) RecordTypeOf(args json.RawMessage) string { return recordTypeArg(args) }

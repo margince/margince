@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
 type oauthEnv struct {
@@ -319,7 +320,7 @@ func TestOAuthConsentGateBlocksSilentAuthorization(t *testing.T) {
 	}
 	apptest.CloseBody(t, resp)
 	location := resp.Header.Get("Location")
-	if resp.StatusCode != http.StatusFound || !strings.HasPrefix(location, "/#/oauth-consent?") {
+	if resp.StatusCode != http.StatusFound || !strings.HasPrefix(location, identity.ConsentScreenPath+"?") {
 		t.Fatalf("GET authorize → %d %q, want the consent screen, never a code", resp.StatusCode, location)
 	}
 	// The redirect goes to the screen, not toward the client — and there is

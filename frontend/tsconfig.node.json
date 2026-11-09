@@ -52,11 +52,13 @@
     "vite-proxy.test.ts",
     "vitest.budget.ts",
     "vitest.ext.config.ts",
+    "vitest.census.config.ts",
     "vitest.setup.ts",
     "playwright.config.ts",
     ".storybook/*.ts",
     ".storybook/*.tsx",
     "scripts/**/*.ts",
+    "census/**/*.ts",
     "src",
     "e2e/**/*.ts"
   ]

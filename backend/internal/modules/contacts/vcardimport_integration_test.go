@@ -26,6 +26,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -448,17 +449,18 @@ func TestUndoingAReplacedNumberBringsBackTheRowAReaderDials(t *testing.T) {
 	contactID, _ := e.seedEmployedContact(ctx, t,
 		"Nora Numbers", "nora@numbers.example", "Numbers AS", "numbers.example")
 
+	statedAt := clocktest.Now(t).Add(-30 * 24 * time.Hour)
 	// The number on the record, stated a month ago.
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO contact_phone (contact_id, phone, phone_type, is_primary, position, source, captured_by, observed_at)
-			VALUES ($1, '+49301111111', 'work', true, 0, 'manual', 'human:test', now() - interval '30 days')`,
-			contactID)
+			VALUES (@contact, '+49301111111', 'work', true, 0, 'manual', 'human:test', @observed)`,
+			pgx.StrictNamedArgs{"contact": contactID, "observed": statedAt.Add(-time.Hour)})
 		return err
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if !fillFromSignatureObserved(ctx, t, e, contactID, time.Now().Add(-30*24*time.Hour), SignatureField{
+	if !fillFromSignatureObserved(ctx, t, e, contactID, statedAt, SignatureField{
 		Name: fieldPhone, Value: "+49301111111", Evidence: "+49 30 1111111", Confidence: 0.9,
 	}) {
 		t.Fatal("seeding the evidence line for the old number wrote nothing")

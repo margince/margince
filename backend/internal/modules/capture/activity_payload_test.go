@@ -12,6 +12,7 @@ package capture
 // drives a Store method against a real Postgres.
 
 import (
+	"context"
 	"encoding/json"
 	"reflect"
 	"strings"
@@ -21,6 +22,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
@@ -28,8 +30,22 @@ import (
 // TestActivityCaptureEventPayload proves the capture auto-create path names
 // its originating source system — the field the direct-log path
 // (activities/activity.go) never sets.
+// A mailbox history run marks what it captures, so consumers that act only on
+// news can leave it alone; live capture carries no mark.
+func TestAHistoryRunMarksTheMailItCaptures(t *testing.T) {
+	run := ids.NewV7()
+	history := activityCaptureEventPayload(storekit.WithImportRun(context.Background(), run), "email", "", "gmail")
+	if history.Imported == nil || !*history.Imported || history.ImportRunId == nil || ids.UUID(*history.ImportRunId) != run {
+		t.Fatalf("history capture: imported=%v run=%v, want true and %s", history.Imported, history.ImportRunId, run)
+	}
+	live := activityCaptureEventPayload(context.Background(), "email", "", "gmail")
+	if live.Imported != nil || live.ImportRunId != nil {
+		t.Fatalf("live capture carries an import mark: imported=%v run=%v", live.Imported, live.ImportRunId)
+	}
+}
+
 func TestActivityCaptureEventPayload(t *testing.T) {
-	payload := activityCaptureEventPayload("email", "", "gmail")
+	payload := activityCaptureEventPayload(context.Background(), "email", "", "gmail")
 
 	if !reflect.DeepEqual(payload.EventType(), "activity.captured") {
 		t.Errorf("got %v, want %v", payload.EventType(), "activity.captured")

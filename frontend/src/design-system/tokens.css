@@ -653,6 +653,15 @@
   --fontDisplayFigure:
     var(--fontWeightBold) clamp(2rem, 2.8vw, 2.75rem) / 1.05
     var(--fontFamilyHeading);
+  /* The figures of an Analytics plate: medium weight, so a row of them reads
+     as one calm band under the view's name. */
+  --fontPlateFigure:
+    var(--fontWeightMedium) 1.375rem / 1.75rem var(--fontFamilyHeading);
+  /* The plate's lead figure. It scales with its cell (cqi), so it fits whole
+     instead of ending cut, and never falls under the figures beside it. */
+  --fontPlateLeadFigure:
+    var(--fontWeightMedium) clamp(1.375rem, 13cqi, 2.25rem) / 1.05
+    var(--fontFamilyHeading);
   /* The line under the full-window greeting. The line is tall enough for a
      record chip to sit in it without pushing the next line down. */
   --fontLead: var(--fontWeightRegular) 1.3125rem / 2.5rem var(--fontFamilyBody);

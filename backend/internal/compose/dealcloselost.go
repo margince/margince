@@ -10,7 +10,6 @@ package compose
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -27,7 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/viability"
@@ -95,17 +93,11 @@ func (c silentDealCloser) CloseWorkspace(ctx context.Context) (int, error) {
 	return closed, nil
 }
 
-// closeOne closes one deal as its owner's agent. Under the deal row lock the
+// closeOne closes one deal as its owner's agent. The close reads the owner's
+// grants in its own transaction, before the deal row lock. Under that lock the
 // owner's switch must be on and the deal still due.
 func (c silentDealCloser) closeOne(ctx context.Context, decision closeDecision, now time.Time) (bool, error) {
-	ownerCtx, err := ownersAgent(ctx, c.users, decision.owner, marginceActorID)
-	if errors.Is(err, apperrors.ErrNotFound) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return c.deals.CloseAsLost(ownerCtx, deals.CloseLostInput{
+	return c.deals.CloseAsLost(ctx, deals.CloseLostInput{
 		DealID: decision.deal, Owner: decision.owner, ReasonCode: decision.code, Reason: decision.reason,
 		StillDue: func(ctx context.Context, tx pgx.Tx) (bool, error) {
 			mode, err := approvals.AutoApplyModeTx(ctx, tx, decision.owner, deals.DealCloseLostKind)
@@ -118,6 +110,7 @@ func (c silentDealCloser) closeOne(ctx context.Context, decision closeDecision, 
 		Record: func(ctx context.Context, tx pgx.Tx, _ ids.UUID) error {
 			return c.recordOnTimeline(ctx, tx, decision)
 		},
+		AsOwner: ownersAgentTx(c.users, decision.owner, marginceActorID),
 	})
 }
 

@@ -20,11 +20,11 @@ import (
 // one answer — there is no paging on this endpoint — so there is no cursor to
 // carry.
 type labelsPage struct {
-	Labels []struct {
+	Labels boundedJSONList[struct {
 		ID   string `json:"id"`
 		Name string `json:"name"`
 		Type string `json:"type"`
-	} `json:"labels"`
+	}] `json:"labels"`
 }
 
 // ListLabels returns the mailbox's labels, system and user alike.

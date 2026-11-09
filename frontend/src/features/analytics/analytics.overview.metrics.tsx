@@ -12,6 +12,7 @@ import {
 } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { landingBasisLines } from "./analytics.forecast.landing";
+import { formatMoneyCompactRange } from "./analytics.moneyrange";
 import {
   ForecastCoverage,
   useForecastCoverage,
@@ -105,11 +106,6 @@ function QuarterOverviewMetrics({
       evaluation.context.currency,
       locale,
     );
-  // A range reads as two short amounts; the exact ends are on Forecast.
-  const short = (value: number | null | undefined) =>
-    value == null
-      ? "—"
-      : formatMoneyCompact(value, evaluation.context.currency, locale);
   const periodPipeline =
     basis?.open_pipeline_minor ?? comparison?.open_pipeline;
   const hasRange =
@@ -136,7 +132,13 @@ function QuarterOverviewMetrics({
         label={t("forecast.model.quarter")}
         value={
           hasRange
-            ? `${short(visibleForecast.range_low_minor)} – ${short(visibleForecast.range_high_minor)}`
+            ? // Two short amounts; the exact ends are on Forecast.
+              formatMoneyCompactRange(
+                visibleForecast.range_low_minor ?? 0,
+                visibleForecast.range_high_minor ?? 0,
+                evaluation.context.currency,
+                locale,
+              )
             : "—"
         }
         detail={

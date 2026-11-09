@@ -29,6 +29,7 @@ export type SavedDraftFields = Readonly<{
   subject: string;
   body: string;
   html: string;
+  editorState?: components["schemas"]["MailDraftEditorState"];
   files: readonly ChosenFile[];
   context: CommunicationContext | "";
   /** The send-later moment as the composer holds it: wall-clock text. */
@@ -141,6 +142,7 @@ export async function writeDraft(ask: SaveAsk): Promise<MailDraft> {
     attachment_ids: ask.fields.files.map((file) => file.id),
     communication_context: ask.fields.context || undefined,
     ...scheduleFields(ask.fields.sendAt),
+    editor_state: ask.fields.editorState,
   };
   const keepalive =
     ask.keepalive === true &&

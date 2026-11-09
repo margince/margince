@@ -19,7 +19,7 @@ import { AgentClientMethodsCard } from "./agent-client-methods";
 // always open. The deployment file can hold either way off.
 
 const meta: Meta<typeof AgentClientMethodsCard> = {
-  title: "Settings/AI/MCP/How MCP clients may connect",
+  title: "Settings/AI/AI tool access/How MCP clients may connect",
   component: AgentClientMethodsCard,
   parameters: { layout: "padded" },
 };

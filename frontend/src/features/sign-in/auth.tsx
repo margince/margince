@@ -5,13 +5,12 @@ import {
   previewedUnavailableProviders,
   uiPreviewOidcEnabled,
 } from "../../app/ui-preview";
-import wordmarkDark from "../../assets/wordmark-dark.png";
-import wordmarkWhite from "../../assets/wordmark-white.png";
 import {
   AuthCardTitle,
   AuthExperience,
   type AuthPhase,
 } from "../../components/auth-core";
+import { usePageTitle, Wordmark } from "../../components/auth-identity";
 import { Button } from "../../design-system/atoms";
 import { providerBrandName } from "../../design-system/provider-mark";
 import { LOCALES, localeNameKey, useLocale, useT } from "../../i18n";
@@ -24,9 +23,10 @@ import {
   watchAddress,
 } from "../../lib/router";
 import { sessionAnswers } from "../../lib/session";
+import { RESET_ROUTE } from "./auth.route";
 import { FederatedOnlyCard } from "./auth-providers";
 import { MfaForm } from "./auth-signin";
-import "./auth.css";
+import "../../components/auth-core.css";
 
 // The default unauthenticated screen is LOGIN, not setup or signup
 // (ADR-0061): one installation serves one company, provisioned at
@@ -37,6 +37,8 @@ import "./auth.css";
 // the server can complete it.
 import { ForgotForm, LoginForm, Notice } from "./auth-login";
 import { ResetForm } from "./auth-reset";
+
+export { usePageTitle, Wordmark } from "../../components/auth-identity";
 
 // AuthNotice is the boundary's transient context for the login screen: a
 // deliberate sign-out, an expired session, or a federated sign-in that did
@@ -112,7 +114,7 @@ type View =
  * What is left is the history entry, and lib/router.tsx takes the token out of
  * that before anything renders.
  */
-export const RESET_ROUTE = "reset-password";
+export { RESET_ROUTE } from "./auth.route";
 
 // clearResetHash drops a lingering `#/reset-password` from the address bar
 // once the reset entry is done with. The token itself left with the router
@@ -370,38 +372,6 @@ export function AvailabilityScreen({
       </section>
     </AuthExperience>
   );
-}
-
-// Wordmark renders the current Margince logo. Two source images (dark ink for
-// the light theme, white for dark) swap via CSS on the data-theme toggle — no
-// JS theme read needed. Shared with onboarding, which sizes it for its top bar
-// through className: the product has ONE wordmark, and a screen that draws its
-// own drifts the moment the real one changes.
-export function Wordmark({
-  alt,
-  className = "auth-wordmark",
-}: Readonly<{ alt: string; className?: string }>) {
-  // The container carries the ONE accessible name: the theme swap hides
-  // one <img> with display:none, so a name on either image alone would
-  // vanish in the other theme.
-  return (
-    <span className={className} role="img" aria-label={alt}>
-      <img className="auth-wordmark-light" src={wordmarkDark} alt="" />
-      <img className="auth-wordmark-dark" src={wordmarkWhite} alt="" />
-    </span>
-  );
-}
-
-// usePageTitle stamps the document title for the unauthenticated surface
-// (§7.1) and restores the product name on unmount.
-export function usePageTitle(title: string) {
-  useEffect(() => {
-    const previous = document.title;
-    document.title = title;
-    return () => {
-      document.title = previous;
-    };
-  }, [title]);
 }
 
 // LocaleFooter is the one footer utility that actually works today (§3.3

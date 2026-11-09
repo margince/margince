@@ -184,6 +184,56 @@ func TestTheOwnersSwitchStopsTheClose(t *testing.T) {
 	}
 }
 
+// The check decides to close a deal, and closes it in a later transaction. An
+// owner who leaves, loses the deal grant or turns the switch off in between
+// keeps the deal open.
+func TestAnOwnerWhoLeavesBeforeTheSilentCloseWritesKeepsTheDeal(t *testing.T) {
+	for name, change := range map[string]func(c *closeLostEnv, t *testing.T){
+		"nothing changes": func(*closeLostEnv, *testing.T) {},
+		"suspended": func(c *closeLostEnv, t *testing.T) {
+			c.WsExec(t, `UPDATE app_user SET status = 'suspended' WHERE id = $1`, c.Rep1)
+		},
+		"role removed": func(c *closeLostEnv, t *testing.T) {
+			c.WsExec(t, `DELETE FROM role_assignment WHERE user_id = $1`, c.Rep1)
+		},
+		"switch turned off": func(c *closeLostEnv, t *testing.T) {
+			if _, err := approvals.NewService(InstallationDB(c.Pool)).SetAutoApply(c.owner(t), deals.DealCloseLostKind, false); err != nil {
+				t.Fatal(err)
+			}
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			c := setupCloseLost(t)
+			ctx := principal.SystemActing(c.Admin(), closeDateSweepActor)
+			var due []closeDecision
+			if err := database.WithWorkspaceTx(ctx, c.Pool, func(tx pgx.Tx) error {
+				var err error
+				due, err = closeDecisions(ctx, tx, c.now, nil)
+				return err
+			}); err != nil {
+				t.Fatal(err)
+			}
+			if len(due) != 1 || due[0].deal.UUID != c.silent {
+				t.Fatalf("due = %+v, want only the silent deal", due)
+			}
+			change(c, t)
+
+			closed, err := c.closer.closeOne(ctx, due[0], c.now)
+			if err != nil {
+				t.Fatal(err)
+			}
+			want, wantStatus := false, deals.DealOpen
+			if name == "nothing changes" {
+				want, wantStatus = true, deals.DealLost
+			}
+			if closed != want || c.status(t, c.silent) != string(wantStatus) {
+				t.Fatalf("closed = %v, deal is %s: want closed = %v, deal %s",
+					closed, c.status(t, c.silent), want, wantStatus)
+			}
+		})
+	}
+}
+
 func TestADealOnLegalHoldIsNotClosed(t *testing.T) {
 	c := setupCloseLost(t)
 	c.WsExec(t, `UPDATE deal SET legal_hold = true WHERE id = $1`, c.silent)
@@ -369,3 +419,9 @@ func TestHomeShowsAnOlderCloseAsAChangeWithItsWayBack(t *testing.T) {
 		t.Fatalf("Home lines for the close two days on = %d, want 1", found)
 	}
 }
+
+// fixedBrief is a last brief at one instant: the reader's own state, which
+// is what the window depends on.
+type fixedBrief struct{ at time.Time }
+
+func (b fixedBrief) CutoffFor(context.Context) (time.Time, bool, error) { return b.at, true, nil }

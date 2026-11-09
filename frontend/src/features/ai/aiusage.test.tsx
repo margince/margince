@@ -396,7 +396,7 @@ it("points to the model prices only for a reader who may read them", async () =>
   mount(body, 200, { ...OPERATOR, ai_model_rate: ["read"] });
   expect(
     await screen.findByRole("link", { name: "Prices are set on AI models" }),
-  ).toHaveProperty("hash", "#/settings/models");
+  ).toHaveProperty("hash", "#/settings/models/prices");
   cleanup();
   mount(body);
   expect(await screen.findByText("No AI calls this month.")).toBeTruthy();

@@ -11,6 +11,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 var transactionalBaseline = map[string]struct{}{
@@ -138,7 +139,27 @@ func machineShape(address string) bool {
 	}
 	local, host := address[:at], strings.ToLower(address[at+1:])
 	return IsMachineLocalpart(local) || HasMachineMarker(local) ||
-		isTokenReplyLocalpart(local) || notificationHosts[host] || technicalDestinationHost(host)
+		isTokenReplyLocalpart(local) || isRecruitingRelay(local, host) ||
+		notificationHosts[host] || technicalDestinationHost(host)
+}
+
+// IsRecruitingRelayAddress identifies a routing address that must stay available
+// for review when correcting old contacts, rather than being auto-archived.
+func IsRecruitingRelayAddress(address string) bool {
+	local, host, found := strings.Cut(strings.ToLower(address), "@")
+	return found && isRecruitingRelay(local, host)
+}
+
+func isRecruitingRelay(local, host string) bool {
+	if host != "hire.lever.co" {
+		return false
+	}
+	token, found := strings.CutPrefix(strings.ToLower(local), "group-")
+	if !found || len(token) != 36 {
+		return false
+	}
+	parsed, err := ids.Parse(token)
+	return err == nil && parsed.String() == token
 }
 
 // technicalDestinationHosts are the registrable domains whose `bcc` host logs

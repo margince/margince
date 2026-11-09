@@ -90,7 +90,7 @@ var listRecordTypes = []string{
 // is a wiring defect, not a configuration.
 func RegisterListTool(r *Registry, p datasource.SystemOfRecordProvider, vocabulary FilterVocabulary) {
 	filters := bindableFilters(vocabulary)
-	r.Register(listRecords{p: p, filters: filters, name: r.seats})
+	r.Register(listRecords{p: p, filters: filters, name: r.seats, calendar: r.listCalendar})
 	r.Register(describeListFilters{filters: filters})
 }
 
@@ -115,8 +115,9 @@ func bindableFilters(vocabulary FilterVocabulary) map[string][]listFilter {
 type listRecords struct {
 	p datasource.SystemOfRecordProvider
 	// filters is the published vocabulary per record type, already intersected.
-	filters map[string][]listFilter
-	name    SeatNamer
+	filters  map[string][]listFilter
+	name     SeatNamer
+	calendar ActivityListCalendar
 }
 
 func (t listRecords) Spec() mcp.ToolSpec {
@@ -129,8 +130,8 @@ func (t listRecords) Spec() mcp.ToolSpec {
 		OpenAPIOp: "listContacts/listCompanies/listDeals/listLeads/listProjects/listProducts/listOfferTemplates/listActivities/listDealOffers/listCommissionEntries/listDealRooms/listDealRoomThreads/listDealRoomDocuments/listDealRoomParticipants/listPartners",
 		InputSchema: schema(`{"type":"object","required":["record_type"],"properties":{
 			"record_type":{"type":"string","enum":["contact","company","deal","lead","project","product","offer_template","activity","offer","commission","deal_room","deal_room_thread","deal_room_document","deal_room_participant","partner"]},` +
-			t.filtersProperty() + `
-			"q":{"type":"string","description":"Text to match, as the record type's list route takes it, alongside any filters. Types with no text of their own refuse it."},
+			t.filtersProperty() + compactRecordsProperty + `
+			"q":{"type":"string","description":"List-route text match alongside filters. Types without text search refuse it."},
 			"limit":{"type":"integer","minimum":1,"maximum":50},
 			"cursor":{"type":"string","description":"Keyset cursor from a previous page's next_cursor"}},
 			"additionalProperties":false}`),
@@ -222,6 +223,7 @@ func (t listRecords) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 		Q          string            `json:"q"`
 		Limit      json.RawMessage   `json:"limit"`
 		Cursor     string            `json:"cursor"`
+		Compact    bool              `json:"compact"`
 	}
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
@@ -247,7 +249,22 @@ func (t listRecords) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(listResult(ctx, t.name, res))
+	result := listResult(ctx, t.name, res)
+	if args.Compact {
+		for i := range result.Records {
+			if err := compactActivityRecord(&result.Records[i].wireRecord); err != nil {
+				return nil, err
+			}
+		}
+	}
+	calendar, owed, err := t.activityListCalendar(ctx, args.RecordType, args.Filters)
+	if err != nil {
+		return nil, err
+	}
+	if owed {
+		result.Calendar = &calendar
+	}
+	return json.Marshal(result)
 }
 
 // pageLimit reads the page size, telling an ABSENT argument from an explicit

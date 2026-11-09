@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { heldThreadList } from "../../testing/heldthreads.fixtures";
 import "@testing-library/jest-dom/vitest";
 
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
@@ -46,7 +47,8 @@ function stubRoutes(waiting: unknown[], senders: unknown[] = []) {
       if (path === "/capture/contacts-awaiting-decision")
         return jsonResponse({ data: waiting });
       if (path === "/me") return jsonResponse(meFixture({ roles: ["rep"] }));
-      if (path === "/capture/held-threads") return jsonResponse({ data: [] });
+      if (path === "/capture/held-threads")
+        return jsonResponse(heldThreadList());
       if (path === "/me/linkedin-reach")
         return jsonResponse(linkedInReachFixture());
       return jsonResponse({});
@@ -84,7 +86,12 @@ async function openList(
       name: translate("en", "connectionOutcomes.viewNamed", { name: list }),
     }),
   );
-  return within(await screen.findByRole("dialog", { name: list }));
+  const dialog = await screen.findByRole("dialog", { name: list });
+  if (list === "Sender decisions")
+    await user.click(
+      within(dialog).getByRole("button", { name: "Browse recent senders" }),
+    );
+  return within(dialog);
 }
 
 function settingRowOf(label: HTMLElement): HTMLElement {

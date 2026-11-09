@@ -37,6 +37,7 @@ import {
   useRowPutDown,
 } from "./worklist.dispositions";
 import { ReassignForm } from "./worklist.manager";
+import { isPinned } from "./worklist.pinmark";
 import { usePinRow, type WorklistItem } from "./worklist.queries";
 import { replyIsTheMove } from "./worklist.reply";
 import { TakeVerb } from "./worklist.take";
@@ -447,15 +448,15 @@ function PinLine({ item }: Readonly<{ item: WorklistItem }>) {
   const t = useT();
   const toast = useToast();
   const pin = usePinRow();
-  const pinned = (item.because ?? []).some((why) => why.kind === "pinned");
+  const pinned = isPinned(item);
   // What the word cannot say: whose order it changes and for how long. Per
   // state, so Unpin never describes itself as keeping the row on top.
   const { ref, trigger, tip } = useTooltip<HTMLButtonElement>(
     t(pinned ? "worklist.verb.unpinHint" : "worklist.verb.pinHint"),
   );
   return (
-    // A verb rather than a switch, so the menu closes on it. The row says
-    // "pinned by you" in its own captions.
+    // A verb rather than a switch, so the menu closes on it. The row shows
+    // the pin beside its name (`PinnedMark`).
     <Button
       variant="ghost"
       ref={ref}

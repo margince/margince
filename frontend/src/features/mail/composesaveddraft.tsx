@@ -90,11 +90,13 @@ export function useDraftRestore(input: {
 // reason or a send time is the reader's choice, and is kept like a word.
 function wroteSomething(
   fields: SavedDraftFields,
-  defaults: Readonly<{ recipient?: string; subject: string }>,
+  defaults: Readonly<{ recipient?: string; subject: string; intent?: string }>,
 ): boolean {
   const subject = stripEveryKeyTag(fields.subject).trim();
   return (
     fields.body.trim() !== "" ||
+    (fields.editorState?.intent ?? "").trim() !==
+      (defaults.intent ?? "").trim() ||
     fields.cc.length > 0 ||
     fields.bcc.length > 0 ||
     fields.to.some((address) => address !== defaults.recipient) ||
@@ -197,6 +199,24 @@ function savedDraftSettled(
   return !state.held || state.restored || state.typed;
 }
 
+// What the composer opens with: a draft is measured against it, and deleting
+// one puts it back.
+function composerDefaults(input: {
+  initialIntent?: string;
+  offeredRecipient: string | undefined;
+  replyTo: Activity | undefined;
+}) {
+  return {
+    intent: input.initialIntent ?? "",
+    recipient: input.offeredRecipient,
+    subject:
+      input.replyTo?.kind === "email" &&
+      input.replyTo.content_state !== "withheld"
+        ? replySubject(input.replyTo.subject ?? "")
+        : "",
+  };
+}
+
 export function useSavedDraft(input: {
   where: Parameters<typeof savedDraftAnchor>[0];
   open: boolean;
@@ -205,6 +225,7 @@ export function useSavedDraft(input: {
   replyTo: Activity | undefined;
   /** The address the composer offered into To on its own. */
   offeredRecipient: string | undefined;
+  initialIntent?: string;
   /** Puts words in the composer: a saved draft's, or its opening defaults. */
   onRestore: (fields: SavedDraftFields) => void;
   onClose: () => void;
@@ -214,16 +235,7 @@ export function useSavedDraft(input: {
   const queryClient = useQueryClient();
   const { open, fields } = input;
   const anchor = savedDraftAnchor(input.where);
-  // What the composer opens with: a draft is measured against it, and deleting
-  // one puts it back.
-  const defaults = {
-    recipient: input.offeredRecipient,
-    subject:
-      input.replyTo?.kind === "email" &&
-      input.replyTo.content_state !== "withheld"
-        ? replySubject(input.replyTo.subject ?? "")
-        : "",
-  };
+  const defaults = composerDefaults(input);
   const key = draftKey(anchor);
   // Only this composer's own writes move the held version. A refetch on focus
   // could adopt another window's save, and the next write here would replace

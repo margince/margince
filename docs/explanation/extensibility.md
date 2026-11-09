@@ -19,7 +19,7 @@ Read this page for the whole tier first and then each part. To *build* a unit, g
 ## The whole tier in one map
 
 ```text
-extensions/<name>/                 one Go module per unit — its PRESENCE is the enablement
+extensions/<name>/                 one Go module per unit, on when instance/go.mod requires it
    │  New() extension.Extension     an inert declaration: plain data, no handle into the core
    ▼
 make composition ─▶ build/composition/     generated wiring (ignored); an empty extensions/
@@ -67,9 +67,9 @@ fails.
 
 Four rules hold the tier together:
 
-1. **Being there is what turns it on.** A unit is enabled because its folder exists under `extensions/`.
-   There is no flag, no config list and no registry file to add a line to. The set that is turned on is a
-   fact about the tree, so it cannot fall out of date.
+1. **A `require` is what turns it on.** A unit is enabled because the instance's `go.mod` requires it:
+   `instance/go.mod` here, or a client's own. The same file marks example units.
+   [Build a custom Margince](../how-to/build-a-custom-margince.md) states when they join a build.
 2. **A declaration is plain data that does nothing.** `New()` returns a plain value with no handle into
    the running server, and it registers nothing itself. Only the check and apply step at boot does
    anything, after the whole set has passed its checks. Nothing is wired through the declaration, so a
@@ -559,7 +559,7 @@ The fitness tests and `scripts/` checks guard the tier, so the promises cannot d
 | Only the route of a unit sends a call to its served tool, so one unit cannot take the handler of another by naming its verb | `backend/internal/compose/extparity_test.go` |
 | A unit screen reaches the core only through the public surface (the `exports` in `frontend/package.json`), and npm only through what its own package declares | `frontend/scripts/ext-imports.test.ts`, a vitest fitness function over the TypeScript AST, with its own set of fixture tests |
 | A unit screen keeps to the same design system as core: tokens, the font, each icon, spacing | These gates scan `extensions/*/frontend` and also `frontend/src`: `check-ds-purity.sh`, `check-font-lock.sh`, `check-icon-glyph.sh`, `check-space-tokens.sh`, `check-ds-spacing-roles.sh` and `check-ds-spacing.sh` (the last one scoped to the change, through git paths instead of a walk). `check-ext-frontend-walk.test.sh` holds that they all still reach the tier. It puts a known fault in a fixture unit at two levels and requires each gate to name it. It reads its list of subjects out of the `fe-ds-gates` target, so no gate is added to the lane without being read. It names the two gates it cannot measure, with the reason: its fixture files are `*.tsx`, and the spacing gates read CSS files. `check-ds-spacing-roles.test.sh` puts unit CSS files at both levels instead |
-| …and uses no plain `<select>` and no date input of the browser's own | `frontend/src/design-system/native-controls.test.ts`, a vitest fitness function over the TypeScript AST, that reaches every extension frontend layer at any level |
+| …and uses no plain `<select>` and no date input of the browser's own | `frontend/census/rules/native-controls.census.ts`, a census rule over the TypeScript AST in `make fe-census`, that reaches every extension frontend layer at any level |
 | A unit cannot ship a second copy of state the host owns (the hook dispatcher of React, the `QueryClient` of `react-query`) | `gen-composition` refuses them as direct dependencies; `resolve.dedupe` catches one that comes in through another package |
 | The copy of a unit sits in the namespace of that unit and cannot change a core string | `gen-composition` (`mergeUnitLocales`), and core keys win the lookup |
 | The tests of a unit screen run, not only the type check | `frontend/vitest.ext.config.ts` through `make fe-test-ext`, which `make check-fe` calls |

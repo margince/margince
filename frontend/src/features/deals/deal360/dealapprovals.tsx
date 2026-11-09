@@ -10,12 +10,14 @@ import { AutonomyDot, ProvenanceTag } from "../../../design-system/trust";
 import { useT } from "../../../i18n";
 import { approvalLabel } from "../../../lib/approvalkindlabel";
 import { approvalDotTier, useAgentTierMap } from "../../../lib/autonomy";
+import { useOpenApproval } from "../../../lib/openapproval";
 import { useViewerId } from "../../../lib/session";
 
 type Approval = components["schemas"]["Approval"];
 
 // The live confirm-first staging queue for this deal. Renders nothing while
-// the deal has no pending approval.
+// the deal has no pending approval. Open shows the whole decision, a drafted
+// email's subject and body included, in the drawer Home and the bell open.
 export function DealApprovals({
   approvals,
   decide,
@@ -29,6 +31,7 @@ export function DealApprovals({
   const t = useT();
   const tierMap = useAgentTierMap();
   const viewerId = useViewerId();
+  const openApproval = useOpenApproval();
   if (approvals.length === 0) {
     return null;
   }
@@ -62,6 +65,15 @@ export function DealApprovals({
                 </Button>
               }
             >
+              {openApproval && (
+                <Button
+                  variant="ghost"
+                  aria-haspopup="dialog"
+                  onClick={() => openApproval(approval.id)}
+                >
+                  {t("deal.approval.open")}
+                </Button>
+              )}
               {/* Dismiss sends the `reject` verdict, the same answer the
                 decision card's trash can gives, so it wears the same glyph. */}
               <IconAction

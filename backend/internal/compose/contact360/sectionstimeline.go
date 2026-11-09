@@ -262,13 +262,17 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	}
 	// The SELECT list and its scan are the activities module's, so there is no
 	// list here to fall behind that one.
+	columns, err := activities.ActivityProjection(ctx, contentArm, arg)
+	if err != nil {
+		return nil, false, err
+	}
 	query := fmt.Sprintf(`
 		SELECT %s
 		FROM activity a
 		WHERE a.archived_at IS NULL AND %s AND (%s)%s %s
 		ORDER BY %s
 		LIMIT %d`,
-		activities.ActivityProjection(contentArm), fmt.Sprintf(contactReachesActivity, bind(contactPos)),
+		columns, fmt.Sprintf(contactReachesActivity, bind(contactPos)),
 		scope, projectScope(opts, arg), extra, order, sectionCap+1)
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {

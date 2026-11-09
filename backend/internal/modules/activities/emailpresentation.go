@@ -132,7 +132,7 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 		out.Links = *activity.Links
 	}
 
-	access, err := readEmailAccess(ctx, tx, id, activity)
+	access, writable, err := readEmailAccess(ctx, tx, id, activity)
 	if err != nil {
 		return crmcontracts.EmailPresentation{}, err
 	}
@@ -158,6 +158,9 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 	// than being promised to every reader and refused on click.
 	out.CanReply = true
 	out.CanRelink = access.CanChange && access.ChangeMode == crmcontracts.EmailAccessChangeModeMessageAudience
+	if activity.CanShareInternal != nil {
+		out.CanRelink = writable
+	}
 	return out, nil
 }
 

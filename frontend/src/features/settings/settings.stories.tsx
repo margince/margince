@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { pickOption } from "../../design-system/select-testing";
+import type { Route } from "../../lib/router";
 import type { SettingsPageId } from "../../lib/settingscatalog";
 import { readingsDay } from "../../testing/brief.fixtures";
 import {
@@ -144,14 +145,15 @@ const WORKING_HOURS: RouteMap = {
     }),
 };
 
+// A `route` arg opens another address of the page, such as one of its tabs.
 function tab(tabId: string, routes: RouteMap) {
-  return () => {
+  return ({ route }: Partial<{ route: Route }>) => {
     // The story's own routes last, so a story about this card can still say
     // something different from the default.
     installFetchStub({ ...SHELL, ...WORKING_HOURS, ...routes });
     return (
       <StoryProviders>
-        <SettingsScreen route={settingsAddress(tabId)} />
+        <SettingsScreen route={route ?? settingsAddress(tabId)} />
       </StoryProviders>
     );
   };
@@ -643,23 +645,16 @@ export const VoicePage: Story = catalogPage("voice");
 export const AgentsPage: Story = catalogPage("agents");
 export const NotificationsPage: Story = catalogPage("notifications");
 export const ConnectionsPage: Story = catalogPage("connections");
-export const CaptureActivityPage: Story = catalogPage("capture-activity");
 export const CompanyPage: Story = catalogPage("company");
 export const AuthenticationPage: Story = catalogPage("authentication");
 export const MembersPage: Story = catalogPage("members");
 export const TeamsPage: Story = catalogPage("teams");
 export const RolesPage: Story = catalogPage("roles");
 export const SeatsPage: Story = catalogPage("seats");
-export const PipelinesPage: Story = catalogPage("pipelines");
-export const StageautomationPage: Story = catalogPage("stageautomation");
+export const DealsPage: Story = catalogPage("deals");
 export const LeadsPage: Story = catalogPage("leads");
-export const AcquisitionPage: Story = catalogPage("acquisition");
-export const LossreasonsPage: Story = catalogPage("lossreasons");
 export const PartnersPage: Story = catalogPage("partners");
-export const ReviewtemplatesPage: Story = catalogPage("reviewtemplates");
-export const RecordrolesPage: Story = catalogPage("recordroles");
-export const FieldsPage: Story = catalogPage("fields");
-export const TagsPage: Story = catalogPage("tags");
+export const RecordsPage: Story = catalogPage("records");
 export const ProductsPage: Story = catalogPage("products");
 export const CapturePage: Story = catalogPage("capture");
 export const IntegrationsPage: Story = catalogPage("integrations");

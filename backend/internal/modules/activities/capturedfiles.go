@@ -78,6 +78,12 @@ type StagedFile struct {
 // read what is inside.
 func (StagedFile) StagedFile() {}
 
+// Location is where the staged bytes live and what they hash to, read by the
+// one adapter that hands capture its stored-original references.
+func (f StagedFile) Location() (partID, key, checksum string, size int) {
+	return f.file.PartID, f.key, f.checksum, len(f.file.Body)
+}
+
 // StageCapturedFiles writes each file's bytes to object storage.
 //
 // A deployment with no blob seam keeps the MESSAGE and no files rather than

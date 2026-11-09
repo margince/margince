@@ -189,7 +189,7 @@ func upsertAgentMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, ancho
 		       attachment_ids = EXCLUDED.attachment_ids,
 		       communication_context = EXCLUDED.communication_context,
 		       scheduled_at = EXCLUDED.scheduled_at, scheduled_tz = EXCLUDED.scheduled_tz,
-		       version = mail_draft.version + 1, updated_at = now()
+		       editor_state = '{}'::jsonb, version = mail_draft.version + 1, updated_at = now()
 		 WHERE mail_draft.agent_drafted AND ($%d::bigint IS NULL OR mail_draft.version = $%d)
 		RETURNING `+mailDraftColumns,
 		arg(ids.NewV7()), arg(author), arg(string(anchor.Type)), arg(anchor.ID),

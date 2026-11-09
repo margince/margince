@@ -1,0 +1,3 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__query_workspace", "mcp__margince__read_record"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__query_workspace", "input": {"plan": {"version": "v1", "target": "company", "where": [{"field": "address.city", "op": "in", "values": ["Köln", "Cologne"]}]}}}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "There are three companies in K\u00f6ln in the CRM. All three are owned by Sofia Meier, so contacting or visiting them is her decision: Dom Digital GmbH, Rheinufer AG and Vorort Systeme KG."}

@@ -14,7 +14,6 @@ package gates
 import (
 	"fmt"
 	"maps"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -22,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 var frontendJobKinds = filepath.Join(repoRoot, "frontend", "src", "features", "settings", "jobkinds.ts")
@@ -44,7 +44,7 @@ func TestEveryDeclaredJobKindHasAFrontendName(t *testing.T) {
 			declared[kind] = true
 		}
 	}
-	source, err := os.ReadFile(frontendJobKinds)
+	source, err := gatekit.ReadFile(frontendJobKinds)
 	if err != nil {
 		t.Fatalf("reading the frontend job kind names: %v", err)
 	}

@@ -20,72 +20,9 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-type UpdateActivityInput struct {
-	recordedAt         *time.Time
-	calendarSettlement bool
-	// recordZone dates a stored instant made a day; the store sets it (WithRecordZone).
-	recordZone RecordZone
-	// Trail names what the audit trail calls this write; zero is an update.
-	Trail      storekit.AuditTrail
-	Subject    *string
-	Body       *string
-	OccurredAt *time.Time
-	// OccurredPrecision nil with OccurredAt set means an instant: a new time is
-	// a known time. A day sent alone keeps the stored date, moved to its anchor.
-	OccurredPrecision *string
-	DurationSeconds   *int
-	DueAt             *time.Time
-	// DueHasTime says whether DueAt names a time of day. Sent only with DueAt;
-	// a DueAt without it is a day (admitPatchTime).
-	DueHasTime *bool
-	RemindAt   *time.Time
-	AssigneeID *ids.UserID
-	IsDone     *bool
-	// Clear names the fields sent as an explicit JSON null, which a nil pointer
-	// cannot tell from a field not mentioned.
-	Clear []string
-	// MeetingStatus is how the meeting went, and it is meaningful only on a
-	// meeting. The pairing is refused in the mapping against the kind the ROW
-	// carries — a patch cannot change a kind, so the stored one is the only
-	// honest thing to hold it against.
-	MeetingStatus *string
-	// CallOutcome is how a call ended; refused on another kind, like
-	// MeetingStatus, against the kind the row carries.
-	CallOutcome *string
-	IfVersion   *int64
-	// CustomFields are the patch's cf_ values; a null clears one. customColumns
-	// are the active fields they are checked and written against.
-	CustomFields  map[string]any
-	customColumns []fieldcatalog.Column
-}
-
-const archiveReasonKey = "reason"
-
-// UpdateActivity keeps an authorized edit and its audit in one transaction.
-func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in UpdateActivityInput) (crmcontracts.Activity, error) {
-	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	at := s.now()
-	in.recordedAt, in.recordZone = &at, s.recordZone
-	if err := s.readPatchColumns(ctx, &in); err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	var out crmcontracts.Activity
-	err := s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		out, err = updateActivityInTx(ctx, tx, id, in)
-		return err
-	})
-	if err != nil {
-		return out, err
-	}
-	return out, s.attachCustomValues(ctx, &out)
-}
+const evidenceReasonKey = "reason"
 
 // updateActivityInTx is UpdateActivity's transactional body, shared with the
 // capture replay in activity.go.
@@ -426,7 +363,7 @@ func archiveActivityInTx(
 	}
 	var evidence map[string]any
 	if o.reason != "" {
-		evidence = map[string]any{archiveReasonKey: o.reason, ruleVersionEvidenceKey: o.ruleVersion}
+		evidence = map[string]any{evidenceReasonKey: o.reason, ruleVersionEvidenceKey: o.ruleVersion}
 	}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "archive", "activity", id.UUID, p.Before(), p.After(), evidence)
 	if err != nil {

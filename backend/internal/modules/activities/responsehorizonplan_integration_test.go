@@ -133,11 +133,12 @@ func checkHorizonPlan(t *testing.T, shape mailboxShape) {
 		liveRecord(openDealPredicate, "d"),
 		liveRecord(workingLeadPredicate, "ld"),
 		ownDomainSenderSQL("inbound", 3),
-		slowPercentile)
+		slowPercentile,
+		sampledMessages(4))
 	now := time.Now()
 	var raw string
 	if err := tx.QueryRow(ctx, "EXPLAIN (FORMAT JSON) "+statement,
-		now.AddDate(0, 0, -waitingHorizonWindowDays), now, []string{"mine.example"}).Scan(&raw); err != nil {
+		now.AddDate(0, 0, -waitingHorizonWindowDays), now, []string{"mine.example"}, waitingHorizonSample).Scan(&raw); err != nil {
 		t.Fatalf("planning the horizon measurement: %v", err)
 	}
 	var plans []struct {
@@ -159,6 +160,12 @@ func checkHorizonPlan(t *testing.T, shape mailboxShape) {
 		if alias == "answer_mail" && n.IndexName == "idx_activity_answer_mail_subject" &&
 			strings.Contains(n.IndexCond, "counterparty_email") && strings.Contains(n.IndexCond, "kind") &&
 			strings.Contains(n.IndexCond, "regexp_replace") {
+			addressIndexBoundsKind++
+		}
+		// With little attested mail the planner may key on the sender alone.
+		// That reads only the attested mail to them, never a range of the index.
+		if shape == sparseMailbox && alias == "answer_mail" && n.IndexName == "idx_activity_attested_counterparty" &&
+			strings.HasPrefix(n.IndexCond, "(counterparty_email = ") {
 			addressIndexBoundsKind++
 		}
 		// A heap scan of activity under the touch alias, or an index read keyed

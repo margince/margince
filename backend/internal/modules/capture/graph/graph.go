@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/capture/graphconn"
@@ -30,7 +29,8 @@ import (
 )
 
 const (
-	connectorName = "graph"
+	connectorName       = "graph"
+	immutableMessageIDs = `IdType="ImmutableId"`
 
 	// anchorWindow bounds the first sync (before any deltaLink exists) and the
 	// delta-gone re-anchor: the initial delta is filtered to messages received
@@ -249,18 +249,18 @@ func (c *Connector) SyncFrom(
 	// pass reaches it first is the one whose attestation sticks and the second is
 	// a no-op. Inbox-first left exactly those messages permanently unattested,
 	// which is the T1 evidence this change exists to collect.
-	nextSent, err := c.pullFolder(ctx, access, folderSent, start.SentDeltaLink, from, sink, owner, true)
-	if err != nil {
-		return nil, err
-	}
-	nextInbox, err := c.pullFolder(ctx, access, folderInbox, start.DeltaLink, from, sink, owner, false)
-	if err != nil {
-		return nil, err
+	links := map[string]*string{folderSent: &start.SentDeltaLink, folderInbox: &start.DeltaLink}
+	for _, folder := range syncedFolders {
+		next, err := c.pullFolder(ctx, access, folder, *links[folder], from, sink, owner, folder == folderSent)
+		if err != nil {
+			return nil, err
+		}
+		*links[folder] = next
 	}
 	// Neither watermark is stored until BOTH folders are through: one cursor is
 	// returned at the end, so a round that lost either half advances nothing and
 	// the next cycle re-reads the same window.
-	return marshalCursor(nextInbox, nextSent, owner), nil
+	return marshalCursor(start.DeltaLink, start.SentDeltaLink, owner), nil
 }
 
 // pullFolder walks one folder's delta and captures what it names, returning the
@@ -283,9 +283,11 @@ func (c *Connector) pullFolder(
 	// and re-delivered in one round — and reporting first is the safe half: the
 	// re-delivery re-captures it, where the other order would destroy the copy
 	// that just arrived.
-	reportRemovals(ctx, sink, removed)
+	if err := reportRemovals(ctx, sink, removed); err != nil {
+		return "", err
+	}
 	for _, message := range ids {
-		raw, err := c.api.GetMIME(ctx, access, message.ID)
+		raw, err := c.api.GetMIME(ctx, access, "", message.ID)
 		if errors.Is(err, connector.ErrSkip) {
 			// A message the provider refuses to hand over: deleted since the
 			// delta named it, or oversized (truncated MIME is not honest
@@ -298,7 +300,7 @@ func (c *Connector) pullFolder(
 			// cursor so the next cycle retries from the same watermark.
 			return "", err
 		}
-		if _, err := captureOne(ctx, raw, sink, c.bounces, owner, folder, sentByOwner, message.ReceivedAt); err != nil {
+		if _, err := captureOne(ctx, raw, sink, c.bounces, owner, folder, message.ID, sentByOwner, message.ReceivedAt); err != nil {
 			return "", err
 		}
 	}
@@ -343,7 +345,7 @@ func (c *Connector) selectMessages(
 // when it did not (the delta rounds name ids only).
 func captureOne(
 	ctx context.Context, raw []byte, sink connector.Sink, bounces connector.BounceSink,
-	owner, folderID string, sentByOwner bool, receivedAt time.Time,
+	owner, folderID, providerMessageID string, sentByOwner bool, receivedAt time.Time,
 ) (captured bool, err error) {
 	msg, err := mailmap.Parse(raw, owner)
 	if err != nil {
@@ -355,6 +357,7 @@ func captureOne(
 	msg = msg.AttestSentByOwner(sentByOwner)
 	rec := msg.ToRecord(connectorName, raw)
 	rec.ProviderReceivedAt = receivedAt
+	rec.ProviderMessageID = providerMessageID
 	// Which folder Graph filed it in, so an owner who keeps one out of the CRM
 	// is answered before the message is stored. Set here rather than in
 	// mailmap.ToRecord because the folder is provider metadata off the message
@@ -430,31 +433,8 @@ func marshalCursor(deltaLink, sentDeltaLink, email string) connector.Cursor {
 	return b
 }
 
-// reportRemovals tells the sink which messages the provider tombstoned.
-//
-// A Sink that cannot take removals is not a fault, for cancelCaptured's reason:
-// connector.MessageRemover is optional by design, so a fixture implementing
-// only Upsert behaves exactly as this connector did before — the tombstones are
-// dropped. Silently, because there is nothing for an operator to fix.
-//
-// A failure on one removal does not stop the pull. The alternative is losing a
-// round of new mail over a message that was already deleted, which trades a
-// real capture for a cleanup that the next round's delta will report again
-// anyway: Graph replays tombstones until the cursor moves past them.
-func reportRemovals(ctx context.Context, sink connector.Sink, removed []string) {
-	if len(removed) == 0 {
-		return
-	}
-	remover, ok := sink.(connector.MessageRemover)
-	if !ok {
-		return
-	}
-	for _, id := range removed {
-		if err := remover.RemoveMessage(ctx, connector.NaturalKey{SourceSystem: connectorName, SourceID: id}); err != nil {
-			slog.WarnContext(ctx, "graph: a provider-side deletion was not acted on",
-				"source_system", connectorName, "error", err)
-		}
-	}
+func reportRemovals(ctx context.Context, sink connector.Sink, removed []string) error {
+	return connector.ReportMessageRemovals(ctx, sink, connectorName, removed)
 }
 
 // ListContainers returns the mailbox's folders, satisfying

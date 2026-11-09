@@ -3,7 +3,6 @@
 
 import { Badge } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
-import { Panel } from "../../design-system/panel";
 import { isoWeekBefore, isoWeekOf } from "../../format/calendarday";
 import {
   formatDayRange,
@@ -151,6 +150,11 @@ function difference(
   figure: WeekFigure,
   review: WeeklyReview,
 ): number | undefined {
+  if (
+    figure.figure === "leads" &&
+    (review.leads_withheld || review.prior?.leads_withheld)
+  )
+    return undefined;
   const now = figure.count(review.counts);
   const prior = review.prior?.counts;
   const before = prior ? figure.count(prior) : undefined;
@@ -182,20 +186,18 @@ export function HeadlineFigures({
   const priorStart = review.prior?.local_week_start;
   return (
     <>
-      <Panel>
-        <div className="brief-report-tiles" data-testid="weekly-strip">
-          {carried(review, t, locale)
-            .filter((figure) => HEADLINE.includes(figure.key))
-            .map((figure) => (
-              <HeadlineTile
-                key={figure.key}
-                figure={figure}
-                review={review}
-                state={figures[figure.figure]}
-              />
-            ))}
-        </div>
-      </Panel>
+      <div className="brief-report-tiles" data-testid="weekly-strip">
+        {carried(review, t, locale)
+          .filter((figure) => HEADLINE.includes(figure.key))
+          .map((figure) => (
+            <HeadlineTile
+              key={figure.key}
+              figure={figure}
+              review={review}
+              state={figures[figure.figure]}
+            />
+          ))}
+      </div>
       {priorStart && (
         <p className="t-caption">
           {t("brief.report.priorWeek", {
@@ -360,7 +362,11 @@ export function FiguresTable({
     label: figure.label,
     week: figureValue(figures[figure.figure], figure.shown(review.counts), t),
     prior:
-      prior && figure.count(prior) !== undefined ? figure.shown(prior) : "—",
+      figure.figure === "leads" && review.prior?.leads_withheld
+        ? t("reporting.unavailable")
+        : prior && figure.count(prior) !== undefined
+          ? figure.shown(prior)
+          : "—",
     change:
       figures[figure.figure].kind === "measured"
         ? (change(figure, review, locale) ?? "—")

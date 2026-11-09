@@ -300,3 +300,40 @@ describe("the subject-request drawer", () => {
     });
   });
 });
+
+it("shows the retained proof on a closed request", async () => {
+  stub();
+  renderDrawer({
+    ...NAMED,
+    status: "fulfilled",
+    proof: {
+      request_number: "DSR-2026-0042",
+      request_kind: "erasure",
+      result: "fulfilled",
+      identity_check: "id_document",
+      requester_email: "subject@demo.test",
+      received_at: "2026-07-01T00:00:00Z",
+      answered_at: "2026-07-12T10:00:00Z",
+      keep_until: "2030-01-01T00:00:00Z",
+      erased_counts: { contact: 1, activity: 2 },
+      erased_counts_known: true,
+      erased_uncounted: [],
+    },
+  });
+  expect(await screen.findByText("DSR-2026-0042")).toBeVisible();
+  expect(screen.getByText("subject@demo.test")).toBeVisible();
+  expect(screen.getByText(en["privacy.proofErasureChanges"])).toBeVisible();
+});
+
+it("prefills the identity check for a request opened through its confirm link", async () => {
+  stub();
+  renderDrawer({ ...NAMED, kind: "access", identity_verified: true });
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: en["privacy.fulfil"] }),
+  );
+  expect(
+    screen.getByRole("combobox", { name: en["privacy.identityCheck"] })
+      .textContent,
+  ).toContain(en["privacy.identityCheck.confirm_link"]);
+});

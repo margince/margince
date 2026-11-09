@@ -13,6 +13,17 @@ const RECORD_PATH = new RegExp(
   `^/r/(deals|companies|contacts)/(${IDENTIFIER})$`,
 );
 
+/**
+ * Whether a pathname is one this module publishes or restores: a record, a
+ * booking page or the consent screen.
+ *
+ * Exported so the served-path check reads this notion rather than keeping a
+ * second copy. Two copies disagree the first time one gains an address.
+ */
+export function namesAnAppAddress(pathname: string): boolean {
+  return isMirroredPath(pathname) || pathname === CONSENT_PATH;
+}
+
 export function appHref(href: string): string;
 export function appHref(href: string | undefined): string | undefined;
 export function appHref(href: string | undefined): string | undefined {
@@ -96,9 +107,19 @@ export function restoreRecordAddress(): void {
     );
 }
 
+/** The consent screen's own path, which nginx serves without COOP same-origin. */
+export const CONSENT_PATH = "/consent";
+const CONSENT_ROUTE = /^#\/oauth-consent(?:[/?]|$)/;
+
 // Keep the hash router while making the record identity visible to preview fetchers.
 export function publishRecordAddress(): void {
   const { pathname, search, hash } = globalThis.location;
+  // Any other screen here would leave a window handle open to whoever opened it.
+  // So it reloads at the root, under the app's own policy.
+  if (pathname === CONSENT_PATH && !CONSENT_ROUTE.test(hash)) {
+    globalThis.location.replace(`/${search}${hash}`);
+    return;
+  }
   if (
     pathname !== "/" &&
     !pathname.startsWith("/r/") &&

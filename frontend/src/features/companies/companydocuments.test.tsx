@@ -151,7 +151,7 @@ describe("the account's document library", () => {
     });
     expect(named.getAttribute("download")).toBe("Rahmenvertrag.pdf");
     expect(
-      screen.getByText("Rahmenvertrag.pdf").closest(".rec-meta"),
+      screen.getByText(/Rahmenvertrag\.pdf ·/).closest(".board-doc-meta"),
     ).toBeTruthy();
   });
 

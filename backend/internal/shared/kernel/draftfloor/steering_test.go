@@ -9,17 +9,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 )
 
-func TestSteeringTrimsBothFieldsAndTreatsEmptyAsAbsent(t *testing.T) {
+func TestSteeringTrimsFieldsAndTreatsEmptyAsAbsent(t *testing.T) {
 	t.Parallel()
 	padded, blank := "  shorter \n", " \t"
-	got := draftfloor.NewSteering(&padded, &padded)
-	if got.Intent != "shorter" || got.RewriteOf != "shorter" {
-		t.Errorf("trimmed steering = %+v, want both fields %q", got, "shorter")
+	got := draftfloor.NewSteering(&padded, &padded, &padded)
+	if got.Intent != "shorter" || got.RewriteOf != "shorter" || got.Subject != "shorter" {
+		t.Errorf("trimmed steering = %+v, want each field %q", got, "shorter")
 	}
-	if got := draftfloor.NewSteering(&blank, &blank); got != (draftfloor.Steering{}) {
+	if got := draftfloor.NewSteering(&blank, &blank, nil); got != (draftfloor.Steering{}) {
 		t.Errorf("blank fields = %+v, want a first draft with no ask", got)
 	}
-	if got := draftfloor.NewSteering(nil, nil); got != (draftfloor.Steering{}) {
+	if got := draftfloor.NewSteering(nil, nil, nil); got != (draftfloor.Steering{}) {
 		t.Errorf("absent fields = %+v, want zero", got)
 	}
 }

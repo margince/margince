@@ -21,7 +21,6 @@ package gates
 // until it carries the default or a waiver.
 
 import (
-	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -54,7 +53,7 @@ var mintsItsOwnKey = gatekit.Waive(map[string]string{})
 // uuidKeyDefaults derives the corpus, mapping a table to its id default.
 func uuidKeyDefaults(t *testing.T) map[string]string {
 	t.Helper()
-	raw, err := os.ReadFile("migrations/testdata/head_catalog.txt")
+	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
 	}

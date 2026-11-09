@@ -82,7 +82,9 @@ function refusalsOf(
       {readOnlyReason && <span id={readOnlyReasonId}>{readOnlyReason}</span>}
       {readOnlyReason && activityRefused && " "}
       {activityRefused && (
-        <span id={activity.sentenceId}>{t("record.logActivityRefused")}</span>
+        <span id={activity.sentenceId}>
+          {t(activity.refusalKey ?? "record.logActivityRefused")}
+        </span>
       )}
     </>
   );
@@ -108,7 +110,7 @@ export function ContactPageV2({
   const view = useContact360(id, !record.data?.archived_at);
 
   const guard = useConsentGuard(id, live);
-  const activity = useActivityGate();
+  const activity = useActivityGate(record.data ?? null);
   const latest = useLatestInbound("contact", id);
   const writeRefusalId = useId();
 
@@ -139,9 +141,13 @@ export function ContactPageV2({
   // left behind, or it inherits a subject nobody asked for; and a composer
   // already on screen keeps what it holds, because a reader mid-sentence is not
   // asking to have their words replaced.
-  const openComposer = (intent: string, drafts = false) => {
+  const openComposer = (
+    intent: string,
+    drafts = false,
+    activityId?: string,
+  ) => {
     if (drawer !== "composer") {
-      setComposerAsk({ intent, drafts });
+      setComposerAsk({ intent, drafts, activityId });
     }
     setDrawer("composer");
   };

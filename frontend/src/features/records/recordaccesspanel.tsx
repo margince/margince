@@ -17,7 +17,8 @@ import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect } from "react";
 import { api, FIRST_PAGE } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Avatar, Badge, Disclosure } from "../../design-system/atoms";
+import { SeatAvatar } from "../../components/seatavatar";
+import { Badge, Disclosure } from "../../design-system/atoms";
 import {
   Panel,
   PanelBody,
@@ -119,7 +120,7 @@ function MemberRow({
   const { t } = words;
   return (
     <PanelRow className="who-can-see-row">
-      <Avatar name={member.display_name} identity={member.user_id} />
+      <SeatAvatar id={member.user_id} name={member.display_name} />
       <div className="who-can-see-who">
         <span>{member.display_name}</span>
         <span className="t-caption">

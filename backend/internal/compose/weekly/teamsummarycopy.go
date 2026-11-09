@@ -54,7 +54,7 @@ var focusWords = map[string]langcopy.Phrase{
 	FocusNoNextStepCoverage:      {En: "no next step coverage", De: "Fehlende nächste Schritte", Vi: "thiếu bước tiếp theo"},
 	FocusStrongWeek:              {En: "strong week", De: "Starke Woche", Vi: "tuần làm việc tốt"},
 	FocusMeetingsWithoutNextStep: {En: "meetings without next step", De: "Besprechungen ohne nächsten Schritt", Vi: "cuộc họp chưa có bước tiếp theo"},
-	FocusQuietWeek:               {En: "quiet week", De: "Ruhige Woche", Vi: "tuần ít hoạt động"},
+	FocusQuietWeek:               patternWords.Quiet,
 }
 
 func (said teamCopy) focusWord(kind string) string {

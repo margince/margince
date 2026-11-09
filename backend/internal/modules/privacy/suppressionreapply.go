@@ -35,8 +35,8 @@ const ReapplySuppressionsReason = "resurrected after erasure; suppression list r
 // pass is cheap to run and its result is evidence either way. A non-zero
 // answer is not a failure of this pass — it is this pass catching one.
 //
-// The hashing happens in Go, through the same SuppressionHash and
-// ChannelIdentityHash the eraser writes with. In SQL, lower() and btrim()
+// The hashing happens in Go, through the same SuppressionForms and
+// ChannelIdentityForms the eraser's hashes are matched with. In SQL, lower() and btrim()
 // would stand in for Go's normalization, and the two agree only on ASCII. A
 // second spelling of the hash silently forks the list, which is the mistake
 // suppression.go names in its own header.
@@ -123,7 +123,7 @@ func (e *Eraser) contactsMatchingSuppression(ctx context.Context, suppressed map
 	liveIdentifierQueries := []struct {
 		kind  string
 		query string
-		hash  func(rows pgx.Rows) (ids.UUID, string, error)
+		forms func(rows pgx.Rows) (ids.UUID, []string, error)
 	}{
 		{
 			kind: "email",
@@ -132,11 +132,11 @@ func (e *Eraser) contactsMatchingSuppression(ctx context.Context, suppressed map
 				  FROM contact_email ce
 				  JOIN contact c ON c.id = ce.contact_id AND c.archived_at IS NULL
 				 ORDER BY ce.contact_id`,
-			hash: func(rows pgx.Rows) (ids.UUID, string, error) {
+			forms: func(rows pgx.Rows) (ids.UUID, []string, error) {
 				var contactID ids.UUID
 				var email string
 				err := rows.Scan(&contactID, &email)
-				return contactID, storekit.SuppressionHash(email), err
+				return contactID, storekit.SuppressionForms(email), err
 			},
 		},
 		{
@@ -146,11 +146,11 @@ func (e *Eraser) contactsMatchingSuppression(ctx context.Context, suppressed map
 				  FROM contact_channel_identity ci
 				  JOIN contact c ON c.id = ci.contact_id AND c.archived_at IS NULL
 				 ORDER BY ci.contact_id`,
-			hash: func(rows pgx.Rows) (ids.UUID, string, error) {
+			forms: func(rows pgx.Rows) (ids.UUID, []string, error) {
 				var contactID ids.UUID
 				var provider, account string
 				err := rows.Scan(&contactID, &provider, &account)
-				return contactID, storekit.ChannelIdentityHash(provider, account), err
+				return contactID, storekit.ChannelIdentityForms(provider, account), err
 			},
 		},
 	}
@@ -167,7 +167,7 @@ func (e *Eraser) contactsMatchingSuppression(ctx context.Context, suppressed map
 				return err
 			}
 			for rows.Next() {
-				contactID, hash, err := source.hash(rows)
+				contactID, forms, err := source.forms(rows)
 				if err != nil {
 					rows.Close()
 					return err
@@ -175,13 +175,12 @@ func (e *Eraser) contactsMatchingSuppression(ctx context.Context, suppressed map
 				if _, already := seen[contactID]; already {
 					continue
 				}
-				entry := suppressionEntry{kind: source.kind, hash: hash}
-				if _, ok := suppressed[entry]; ok {
+				if suppressedInAnyForm(suppressed, source.kind, forms) {
 					seen[contactID] = struct{}{}
 					matched = append(matched, contactID)
 					continue
 				}
-				ask = append(ask, suppressionCandidate{contact: contactID, suppressionEntry: entry})
+				ask = append(ask, suppressionCandidate{contact: contactID, kind: source.kind, forms: forms})
 			}
 			rows.Close()
 			if err := rows.Err(); err != nil {
@@ -206,7 +205,7 @@ func (e *Eraser) matchJournaled(
 		if _, already := seen[c.contact]; already {
 			continue
 		}
-		journaled, err := e.journalSuppressed(ctx, c.kind, c.hash)
+		journaled, err := e.journalSuppressedInAnyForm(ctx, c.kind, c.forms)
 		if err != nil {
 			return nil, err
 		}
@@ -220,8 +219,21 @@ func (e *Eraser) matchJournaled(
 }
 
 // suppressionCandidate is a live contact's identifier that the database's own
-// list does not name, still to be asked of the journal.
+// list does not name, still to be asked of the journal. forms are the ways
+// it can be stored.
 type suppressionCandidate struct {
 	contact ids.UUID
-	suppressionEntry
+	kind    string
+	forms   []string
+}
+
+// suppressedInAnyForm reports whether the list holds the identifier in any of
+// its forms: keyed, or unkeyed from before the key.
+func suppressedInAnyForm(suppressed map[suppressionEntry]struct{}, kind string, forms []string) bool {
+	for _, form := range forms {
+		if _, ok := suppressed[suppressionEntry{kind: kind, hash: form}]; ok {
+			return true
+		}
+	}
+	return false
 }

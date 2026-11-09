@@ -58,10 +58,10 @@ var importedDecisions = map[string]ImportedDecision{
 	"cg:audience-rescope":   {KeepImported, "narrows derived signals when a message is limited, which is as true of an old message"},
 	"cg:voice-copy-recheck": {KeepImported, "empties a voice sample when its mail stops being learnable, which is as true of an old mail"},
 	"cg:intro-advance":      {SkipImported, "an old reply must not close an introduction asked for today"},
-	"cg:notice-case-open":   {SkipImported, "settles a duty on mail that arrives now, not on history"},
+	"cg:notice-case-open":   {KeepImported, "a mailbox import reads a contact's own mail after the reply that minted them, and that mail settles the notice duty"},
 	"cg:commitment-settle":  {SkipImported, "an old task update must not settle a commitment kept today"},
-	"cg:capture-enrich":     {SkipImported, "queues a model-backed pass that spends credits on mail nobody just received"},
-	"cg:vcard-ingest":       {SkipImported, "parses a card attached to mail that arrives now"},
+	"cg:capture-enrich":     {KeepImported, "defers imported mailbox history to the end of its run; the handler itself leaves out other imports"},
+	"cg:vcard-ingest":       {KeepImported, "a card attached to an old mail still states the sender's details"},
 	"cg:assurance-freshness": {
 		KeepImported, "an imported deal or activity is a record the last input check has not read",
 	},
@@ -112,10 +112,6 @@ func carriesImportMarker(eventType string) bool {
 
 // ImportedStreams is the set of streams an import writes events on. A group
 // that reads one of them owes a decision.
-//
-// The activity stream is listed ahead of its marker: no activity writer stamps
-// storekit.ImportMark yet. A group sees its entries as live news only once the
-// activity importer writes them.
 func ImportedStreams() map[string]bool {
 	return map[string]bool{
 		StreamPrefix + dealStreamEntity:     true,

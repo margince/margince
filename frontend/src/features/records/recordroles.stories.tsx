@@ -102,7 +102,7 @@ function story(
 }
 
 const meta = {
-  title: "Settings/Sales/Responsibility roles/Roles",
+  title: "Settings/Sales/Records and fields/Responsibility roles",
   component: RecordRolesCard,
 } satisfies Meta<typeof RecordRolesCard>;
 export default meta;

@@ -88,6 +88,7 @@ type IssuePassportInput struct {
 	Label  *string
 	Scopes []string
 	TTL    *time.Duration
+	Areas  principal.WorkAreas
 }
 
 // IssuedPassport carries the raw token exactly once.
@@ -189,6 +190,9 @@ func mintPassport(ctx context.Context, tx pgx.Tx, id Identity, in IssuePassportI
 	if err := admitScopes(in.Scopes); err != nil {
 		return IssuedPassport{}, err
 	}
+	if err := admitAreas(in.Areas); err != nil {
+		return IssuedPassport{}, err
+	}
 	if grantID == nil {
 		if err := admitCallerChosenFields(in); err != nil {
 			return IssuedPassport{}, err
@@ -218,10 +222,10 @@ func mintPassport(ctx context.Context, tx pgx.Tx, id Identity, in IssuePassportI
 	out := IssuedPassport{Token: token, Scopes: in.Scopes}
 
 	if err := tx.QueryRow(ctx,
-		`INSERT INTO passport (on_behalf_of, granted_by, label, scopes, token_hash, expires_at, oauth_grant_id)
-		 VALUES ($1, $1, $2, $3, $4, now() + $5::interval, $6)
+		`INSERT INTO passport (on_behalf_of, granted_by, label, scopes, token_hash, expires_at, oauth_grant_id, work_areas)
+		 VALUES ($1, $1, $2, $3, $4, now() + $5::interval, $6, $7)
 		 RETURNING id, expires_at`,
-		id.UserID, in.Label, in.Scopes, hashToken(token), ttl.String(), grantID).
+		id.UserID, in.Label, in.Scopes, hashToken(token), ttl.String(), grantID, areasColumn(in.Areas)).
 		Scan(&out.ID, &out.ExpiresAt); err != nil {
 		return IssuedPassport{}, err
 	}
@@ -229,7 +233,7 @@ func mintPassport(ctx context.Context, tx pgx.Tx, id Identity, in IssuePassportI
 	// scopes and label are the row's own fields, so they are its after image
 	// rather than evidence about the write.
 	if _, err := storekit.Audit(actorCtx(ctx, id), tx, "create", "passport", out.ID.UUID,
-		nil, map[string]any{auditFieldScopes: in.Scopes, "label": in.Label}); err != nil {
+		nil, map[string]any{auditFieldScopes: in.Scopes, "label": in.Label, auditFieldAreas: areasColumn(in.Areas)}); err != nil {
 		return IssuedPassport{}, err
 	}
 	return out, nil
@@ -365,6 +369,7 @@ type AgentIdentity struct {
 	OnBehalfOf   ids.UserID
 	SeatType     string
 	Scopes       principal.ScopeSet
+	Areas        principal.WorkAreas
 	Roles        []string
 	Teams        []ids.TeamID
 	Permissions  principal.Permissions
@@ -384,6 +389,7 @@ func (a AgentIdentity) Principal() principal.Principal {
 		TeamIDs:      rawTeamIDs(a.Teams),
 		SeatType:     principal.SeatType(a.SeatType),
 		Scopes:       a.Scopes,
+		Areas:        a.Areas,
 		Permissions:  a.Permissions,
 	}
 }
@@ -402,12 +408,12 @@ func (s *Service) authenticateAgentWhere(ctx context.Context, tx pgx.Tx, predica
 		return AgentIdentity{}, err
 	}
 	a := AgentIdentity{WorkspaceID: wsID}
-	var scopes []string
+	var scopes, areas []string
 	// oauth_grant_id is NULL for a locally minted passport, which the principal
 	// spells as a zero connection rather than a pointer nobody else carries.
 	var connection *ids.UUID
 	err = tx.QueryRow(ctx, agentAuthQuery(predicate), args...).
-		Scan(&a.PassportID, &a.OnBehalfOf, &scopes, &a.SeatType, &connection)
+		Scan(&a.PassportID, &a.OnBehalfOf, &scopes, &a.SeatType, &connection, &areas)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return AgentIdentity{}, apperrors.ErrNotFound
 	}
@@ -421,6 +427,7 @@ func (s *Service) authenticateAgentWhere(ctx context.Context, tx pgx.Tx, predica
 	for _, sc := range scopes {
 		a.Scopes[principal.Scope(sc)] = struct{}{}
 	}
+	a.Areas = areasFromColumn(areas)
 	var loadErr error
 	a.Roles, a.Teams, a.Permissions, loadErr = loadGrants(ctx, tx, a.OnBehalfOf)
 	if loadErr != nil {

@@ -104,3 +104,30 @@ func TestHubSpotBCCHostIsMachine(t *testing.T) {
 		}
 	}
 }
+
+func TestRecruitingRelaysRequireTheExactHostAndUUIDShape(t *testing.T) {
+	t.Parallel()
+	for address, want := range map[string]bool{
+		"group-11111111-2222-4333-8444-555555555555@hire.lever.co": true,
+		"GROUP-AAAAAAAA-BBBB-4CCC-8DDD-EEEEEEEEEEEE@HIRE.LEVER.CO": true,
+		"alice@lever.co":            false,
+		"alice@hire.lever.co":       false,
+		"group-sales@example.com":   false,
+		"group-sales@hire.lever.co": false,
+		"group-11111111-2222-4333-8444-555555555555@example.com":               false,
+		"group-11111111-2222-4333-8444-555555555555@hire.lever.co.example.com": false,
+		"group-11111111222243338444555555555555@hire.lever.co":                 false,
+		"group-11111111-2222-4333-8444-55555555555z@hire.lever.co":             false,
+		"11111111-2222-4333-8444-555555555555@hire.lever.co":                   false,
+	} {
+		if got := IsMachineAddress(address); got != want {
+			t.Errorf("IsMachineAddress(%q) = %v, want %v", address, got, want)
+		}
+		if got := HasMachineLocalpart(address); got != want {
+			t.Errorf("HasMachineLocalpart(%q) = %v, want %v", address, got, want)
+		}
+		if IsDeliverySystemSender(address) {
+			t.Errorf("%s must keep its mail", address)
+		}
+	}
+}
