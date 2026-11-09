@@ -241,7 +241,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `analyticsscope_test.go` | H2 | Every path that renders a report spec's population applies that spec's row narrowings. |
 | `answerwalk_test.go` | H2 | Only the answer predicate walks a thread for our reply. |
 | `approvalconstruction_test.go` | H3 | _(no doc comment)_ |
-| `approvalselfonlyreaders_test.go` | H2 | Every approvals reader that filters rows by the decision grants also applies the self-only narrowing. |
+| `approvalselfonlyreaders_test.go` | H2 | Staging needs action authority before a proposal exists. |
 | `approvalsummarycopy_test.go` | H1 | An approval's summary is written through a per-language copy table, never as an English sentence in product code. |
 | `assigneeeligibility_test.go` | H2 | A seat's fitness to receive work has one spelling, wherever it is asked. |
 | `assurancerules_test.go` | H3 | Every assurance rule proves both halves of its judgement. |
@@ -520,6 +520,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `enrichmentpool_test.go` | H2 | A provider handler set that can queue a run must carry the pool its visibility check reads through. |
 | `extensionsqlscope_test.go` | H1 | A unit's SQL addresses the unit's own tables. |
 | `fieldnames_test.go` | H2 | A field name published to a caller has to BE a field name. |
+| `generatedenumdecode_test.go` | H2 | No generated Go client refuses an enum value it does not know while decoding. |
 | `geocodestaleness_test.go` | H1 | The staleness rule lives in the schema, and this holds it there. |
 | `gitcontent_test.go` | H3 | What belongs to the repository, as against what happens to be in a working tree. |
 | `gitfixtureisolation_test.go` | H1 | Every test that builds a git repository keeps the caller's git config out of it. |
@@ -530,6 +531,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `manifestdigest_test.go` | H2 | Every hash a generated unit manifest publishes says which algorithm produced it. |
 | `narrowingreasonvocabulary_test.go` | H1 | The narrowing reason is spelled twice: contacts.NarrowingReasons() and the column's CHECK. |
 | `noopifmatch_test.go` | H2 | An update that skips its write because nothing changes still answers the If-Match. |
+| `openresponseenums_test.go` | H2 | Every enum a response can carry is open, and every enum only a request carries stays closed. |
 | `positionalrowscan_test.go` | H2 | A positional row mapping may only target a struct its own package declares. |
 | `promptversionderived_test.go` | H2 | A cached answer is keyed by a fingerprint, and the fingerprint has to move when the prompt that produced the answer moves. |
 | `relationshipmarkvocabulary_test.go` | H1 | The relationship mark is spelled twice: relationshipmark.Values() and the column's CHECK. |

@@ -39067,7 +39067,7 @@ components:
           description: The project link that came from a declined deal came off the message.
         project_kept:
           type: boolean
-          description: A project link came from a declined deal and stays, because an agent declined or a retention rule keeps it.
+          description: A project link came from a declined deal and stays, because a retention rule keeps it or the caller cannot read the project.
         questions_closed:
           type: integer
           minimum: 0

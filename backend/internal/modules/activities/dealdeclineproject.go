@@ -11,21 +11,23 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // unfileDealProject takes back the project link capture copied from a deal
-// the message was just declined on. It goes through the project-filing undo,
-// so an agent, a retention rule or an unnamed account keeps the link, and the
-// answer says so.
+// the message was just declined on. It goes through the project-filing undo.
+// A retention rule, a project the caller cannot see or an unnamed account
+// keeps the link, and the answer says so.
 func unfileDealProject(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deal ids.UUID, out *crmcontracts.ActivityDealDecline) error {
 	derived, err := projectCameFromDeal(ctx, tx, mail, deal)
 	if err != nil || !derived {
 		return err
 	}
-	actor, err := admitUndoDecider(ctx)
+	actor, err := admitDeclineUndoDecider(ctx)
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
 		out.ProjectKept = true
 		return nil
@@ -45,6 +47,22 @@ func unfileDealProject(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deal
 	}
 	out.ProjectUnfiled = true
 	return nil
+}
+
+// admitDeclineUndoDecider is admitUndoDecider widened for a deal decline: it
+// also admits an agent working on a colleague's passport. The product owner
+// lets an agent's decline carry the deal's own project link with it. The
+// standalone undo stays a member's decision, so admitUndoDecider still refuses
+// every agent there.
+func admitDeclineUndoDecider(ctx context.Context) (principal.Principal, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok || !actor.ActsAsItsUser() || actor.UserID == ids.Nil {
+		return admitUndoDecider(ctx)
+	}
+	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+		return principal.Principal{}, err
+	}
+	return actor, nil
 }
 
 // projectCameFromDeal answers whether the message's project link is the

@@ -146,11 +146,14 @@ func (s *Service) recordDecision(ctx context.Context, id ids.ApprovalID, approve
 
 // Preflight refuses unsafe context before a verdict can strand an unapplied effect.
 func (s *Service) runPrecheck(ctx context.Context, id ids.ApprovalID, approve bool, edited json.RawMessage) error {
-	if !approve || (len(s.prechecks) == 0 && s.preview == nil) {
+	if !approve {
 		return nil
 	}
 	a, err := s.Get(ctx, id)
 	if err != nil {
+		if _, automatic := policyActorFor(ctx, id); automatic && errors.Is(err, apperrors.ErrNotFound) {
+			return ErrPolicyWithdrawn
+		}
 		return err
 	}
 	// An approved but unapplied effect retries through its execution guards.
@@ -210,9 +213,7 @@ func landEditedPayload(
 	return applyEditedPayload(ctx, tx, id, edited, a, auditEvidence, decidedPayload)
 }
 
-// readToDecide reads the locked approval as the decider sees it. An
-// undecidable approval reads as absent; one whose automatic apply the owner
-// withdrew says so.
+// readToDecide hides rows the decider cannot open.
 func readToDecide(ctx context.Context, tx pgx.Tx, p principal.Principal, id ids.ApprovalID, by decider) (row, error) {
 	a, err := get(ctx, tx, id)
 	if err != nil {
@@ -237,6 +238,12 @@ func (s *Service) pendingToDecide(ctx context.Context, tx pgx.Tx, p principal.Pr
 	if err != nil {
 		return row{}, err
 	}
+	if approve && agentCallNeedsRecheck(a) {
+		if _, err := s.agentCallAuthority(ctx, tx, a); err != nil {
+			return row{}, err
+		}
+	}
+
 	// After visibility, so a caller who cannot see this row is told it is absent
 	// rather than that their credential is short a cap — the existence-hiding
 	// this module keeps everywhere. Before the status check, because what a

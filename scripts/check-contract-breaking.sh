@@ -61,6 +61,12 @@ if [[ ! -f "$CRM_YAML" ]]; then
   echo "check-contract-breaking: contract not found at $CRM_YAML" >&2
   exit 2
 fi
+# The contract's enum rule (see crm.yaml's header): every enum a response can
+# carry is open, and every enum only a request carries stays closed. Checked on
+# the candidate alone and in every stance, because a closed response enum is the
+# hazard whatever the base was.
+GOWORK="$ROOT/go.work" go run ./backend/tools/check-openenums -contract "$CRM_YAML"
+
 if ! git rev-parse --verify -q "$BASE_REF" >/dev/null; then
   # A shallow clone has no base to diff against. CI sets REQUIRE_BASE so a
   # dropped fetch-depth surfaces as a red gate instead of a silent skip.
@@ -108,6 +114,10 @@ if [[ "$CONTRACT_STABILITY" = stable ]] && [[ -f "$ALLOWLIST" ]]; then
   done < "$ALLOWLIST"
 fi
 
+# Adding a value to an open response enum is the routine change the rule above
+# allows, so oasdiff reports it as information rather than a warning.
+SEVERITY_LEVELS="$ROOT/scripts/contract-breaking-severity.txt"
+
 notice_base="$(mktemp)"
 trap 'rm -f "$notice_base"' EXIT
 git show "$BASE_REF:$CRM_YAML" > "$notice_base"
@@ -118,13 +128,13 @@ if [[ "$CONTRACT_STABILITY" = pre-live ]] || [[ "$ALLOWLISTED_RESYNC" = 1 ]]; th
   # Advisory stance: print every change (oasdiff without --fail-on never
   # exits non-zero on findings) so the deliberate breaks stay visible in
   # the log, but do not block.
-  "${OASDIFF_CMD[@]}" breaking "$BASE_REF:$CRM_YAML" "$CRM_YAML" -f text
+  "${OASDIFF_CMD[@]}" breaking "$BASE_REF:$CRM_YAML" "$CRM_YAML" --severity-levels "$SEVERITY_LEVELS" -f text
   if [[ "$ALLOWLISTED_RESYNC" = 1 ]]; then
     echo "contract-breaking-check: advisory — this exact pre-live contract resync is ratified; any later contract edit restores the stable gate"
   else
     echo "contract-breaking-check: advisory (CONTRACT_STABILITY=pre-live) — breaking change(s) printed above, if any, are deliberately permitted for this run"
   fi
-elif "${OASDIFF_CMD[@]}" breaking "$BASE_REF:$CRM_YAML" "$CRM_YAML" --fail-on ERR -f text; then
+elif "${OASDIFF_CMD[@]}" breaking "$BASE_REF:$CRM_YAML" "$CRM_YAML" --severity-levels "$SEVERITY_LEVELS" --fail-on ERR -f text; then
   echo "contract-breaking-check: no breaking API changes since $BASE_REF"
 else
   echo "contract-breaking-check: breaking API change(s) since $BASE_REF — deprecate instead of removing, or run a deliberate re-sync with CONTRACT_STABILITY=pre-live" >&2

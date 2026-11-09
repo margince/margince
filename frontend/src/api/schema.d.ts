@@ -6364,8 +6364,8 @@ export interface paths {
          *
          *     A project link that came from the deal comes off with it, through the same rules as the
          *     project-filing undo. It stays when the project was filed some other way, when a retention
-         *     rule keeps it, or when an agent declines: only a member takes a project filing back.
-         *     `project_kept` says so.
+         *     rule keeps it, or when the caller cannot read the project. An agent's decline takes it off
+         *     as a member's does. `project_kept` says so.
          *
          *     Without `deal_id`, the answer is "none of them" to the open "Which deal is this about?"
          *     question of the message's conversation. Each deal the question offered is declined on the
@@ -40508,7 +40508,7 @@ export interface components {
             unlinked: boolean;
             /** @description The project link that came from a declined deal came off the message. */
             project_unfiled: boolean;
-            /** @description A project link came from a declined deal and stays, because an agent declined or a retention rule keeps it. */
+            /** @description A project link came from a declined deal and stays, because a retention rule keeps it or the caller cannot read the project. */
             project_kept: boolean;
             /** @description The open deal questions of the conversation this call marked done. */
             questions_closed: number;
@@ -48671,7 +48671,7 @@ export interface components {
             /** @description Verbatim source text (from the page, the pasted text, or the user's own words) — non-empty or the field is absent. */
             evidence_snippet: string;
             /**
-             * @description Where evidence_snippet came from. For self_description the "evidence" is the user's own statement — a self-declared ICP is grounded in that statement (B-E01.13), not fabricated.
+             * @description Where evidence_snippet came from. For self_description the "evidence" is the user's own statement — a self-declared ICP is grounded in that statement, not fabricated.
              * @enum {string}
              */
             source_kind: "url" | "text" | "self_description";
@@ -52098,7 +52098,7 @@ export interface components {
              */
             occurred_at: string;
             /**
-             * @description Maps 1:1 to automation_run.status (data-model §12.5); `blocked` added by ADR-0035 Am.1.
+             * @description Maps 1:1 to automation_run.status; `blocked` added by ADR-0035 Am.1.
              * @enum {string}
              */
             outcome: "fired" | "failed" | "blocked" | "skipped" | "queued_for_approval";

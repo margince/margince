@@ -72,6 +72,10 @@ Two things make it safe:
   So revoking the passport (or giving the human a lower role) takes effect at once. That includes an MCP
   session that is already connected.
 
+Before a call enters Approvals, `approvals.Service.StageAgentCall` checks the grants and access of the agent to each record it would change.
+Send checks use the same code as sending mail. Before a human approves, the service checks the agent again, including its scope, seat and `work_areas`.
+A refusal leaves the approval pending. Spending an approval still runs the call's normal checks.
+
 A passport also holds its `work_areas`: every group of work, or the groups its human chose. Scopes say
 what kind of act an agent may do, and `work_areas` say where. `Gate.Admit` reads them with the seat and
 RBAC at every call, and refuses a call outside them with `scope_exceeds_grantor`. Which group each

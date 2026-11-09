@@ -162,7 +162,7 @@ That is the colleague who sent the email, or the one colleague it was addressed 
 
 To answer, use **Relink** on any email of that conversation and pick the deal. The other emails of the conversation with the same contact go on that deal too, with the promises read from them. An email already on a deal keeps it. The task is then done. If it is about none of them, choose **None of these deals** on the task. Margince then never files that conversation on those deals.
 
-To take an email off a deal it is not about, choose **Not about this deal** in its **More actions** menu on the deal's timeline. Margince never files it on that deal again by itself; other deals can still fit it, and **Relink** still files it on any record. A project link that came with that deal comes off too, unless its retention rules keep it. Only a member, not an agent, takes back a project link.
+To take an email off a deal it is not about, choose **Not about this deal** in its **More actions** menu on the deal's timeline. Margince never files it on that deal again by itself; other deals can still fit it, and **Relink** still files it on any record. A project link that came with that deal comes off too, unless its retention rules keep it. This holds when an agent declines the deal for you as well.
 
 Meetings use the same contact and company rules. They never follow an email thread or ask you to choose a deal. If several deals fit, the meeting stays off them.
 

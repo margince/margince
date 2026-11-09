@@ -24,6 +24,7 @@ import { identity } from "./brief.focuslink";
 import { HomeListReturnScope } from "./brief.queue";
 import { laneUnread } from "./brief.readings.honesty";
 import { waitingRows } from "./brief.sentence";
+import { HOME_DAY_TIMING } from "./elementtiming";
 
 import "../worklist/worklist.css";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -64,7 +65,12 @@ export function BriefFeed({
     !day?.focus || day.readings?.more_available || laneUnread(day),
   );
   return (
-    <section id="brief-today" className="brief-first" aria-labelledby={titleId}>
+    <section
+      id="brief-today"
+      className="brief-first"
+      aria-labelledby={titleId}
+      elementtiming={HOME_DAY_TIMING}
+    >
       <div className="brief-first-head">
         <Eyebrow as="h2" id={titleId}>
           {t("brief.first.title")}

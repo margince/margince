@@ -30956,7 +30956,7 @@ type ActivityDealDecline struct {
 	// DeclinedDealIds The deals this call declined on the message. A deal declined before is not listed again.
 	DeclinedDealIds []openapi_types.UUID `json:"declined_deal_ids"`
 
-	// ProjectKept A project link came from a declined deal and stays, because an agent declined or a retention rule keeps it.
+	// ProjectKept A project link came from a declined deal and stays, because a retention rule keeps it or the caller cannot read the project.
 	ProjectKept bool `json:"project_kept"`
 
 	// ProjectUnfiled The project link that came from a declined deal came off the message.
@@ -35862,7 +35862,7 @@ type AutomationRun struct {
 	// OccurredAt Maps to automation_run.ran_at.
 	OccurredAt time.Time `json:"occurred_at"`
 
-	// Outcome Maps 1:1 to automation_run.status (data-model §12.5); `blocked` added by ADR-0035 Am.1.
+	// Outcome Maps 1:1 to automation_run.status; `blocked` added by ADR-0035 Am.1.
 	Outcome AutomationRunOutcome `json:"outcome"`
 
 	// Reason For failed/blocked/skipped: why (e.g. "provider error", "approval expired", "Passport no longer permits send") — from automation_run.detail.
@@ -35883,7 +35883,7 @@ type AutomationRun struct {
 	TriggerEvidence *string `json:"trigger_evidence,omitempty"`
 }
 
-// AutomationRunOutcome Maps 1:1 to automation_run.status (data-model §12.5); `blocked` added by ADR-0035 Am.1.
+// AutomationRunOutcome Maps 1:1 to automation_run.status; `blocked` added by ADR-0035 Am.1.
 type AutomationRunOutcome string
 
 // AutomationRunTier The tier that fired for this run.
@@ -37804,7 +37804,7 @@ type ColdStartField struct {
 	EvidenceSnippet string              `json:"evidence_snippet"`
 	Field           ColdStartFieldField `json:"field"`
 
-	// SourceKind Where evidence_snippet came from. For self_description the "evidence" is the user's own statement — a self-declared ICP is grounded in that statement (B-E01.13), not fabricated.
+	// SourceKind Where evidence_snippet came from. For self_description the "evidence" is the user's own statement — a self-declared ICP is grounded in that statement, not fabricated.
 	SourceKind ColdStartFieldSourceKind `json:"source_kind"`
 
 	// SourceUrl Present only when source_kind=url; null for text/self_description.
@@ -37815,7 +37815,7 @@ type ColdStartField struct {
 // ColdStartFieldField defines model for ColdStartField.Field.
 type ColdStartFieldField string
 
-// ColdStartFieldSourceKind Where evidence_snippet came from. For self_description the "evidence" is the user's own statement — a self-declared ICP is grounded in that statement (B-E01.13), not fabricated.
+// ColdStartFieldSourceKind Where evidence_snippet came from. For self_description the "evidence" is the user's own statement — a self-declared ICP is grounded in that statement, not fabricated.
 type ColdStartFieldSourceKind string
 
 // ColdStartProposal A staged proposal. NOTHING is written to real records until accepted via /approvals.

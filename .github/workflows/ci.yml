@@ -1194,8 +1194,8 @@ jobs:
         run: cat "$RUNNER_TEMP/api.log" || true
 
   # Home's per-PR budget (scripts/home-budget.sh): the API p95 of Home's reads,
-  # cold and warm, on a small corpus of its own, then main-content LCP and CLS of
-  # a production bundle against an api booted the way live-boot boots it.
+  # cold and warm, on a small corpus of its own, then the day paint and CLS of a
+  # production bundle against an api booted the way live-boot boots it.
   # ADVISORY: it is not in the `ci` fan-in, and a red run stops no merge. The
   # scope step skips the rest when the diff cannot reach Home
   # (scripts/home-budget-scope.sh); a push or a merge group always runs.
