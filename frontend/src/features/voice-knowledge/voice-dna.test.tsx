@@ -12,11 +12,18 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
-import { parseHash } from "../../lib/router";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
-import { ReviewActionsProvider } from "../../testing/reviewactions";
 import { candidateVersion } from "../../testing/voice-candidate";
-import { SettingsScreen } from "../settings/settings";
+import {
+  emptyPage,
+  fileInput,
+  jsonResponse,
+  PROFILE,
+  SOURCE,
+  STATS,
+  SUMMARY,
+  VOICE_EDITOR,
+} from "../../testing/voice-dna.testkit";
 import { VoiceDnaCard } from "./voice-dna";
 
 // The Settings Voice DNA card is the ONLY surface outside onboarding where a
@@ -26,85 +33,6 @@ import { VoiceDnaCard } from "./voice-dna";
 // onboarding flow's.
 
 type VoiceProfile = components["schemas"]["VoiceProfile"];
-type VoiceCorpusSummary = components["schemas"]["VoiceCorpusSummary"];
-
-const PROFILE: VoiceProfile = {
-  id: "vp-1",
-  owner_id: "u1",
-  status: "collecting",
-  maturity: "collecting",
-  quality_band: "thin",
-  voice_profile_md: "",
-  profile_version: 0,
-  personality_md: "",
-  auto_learning_enabled: false,
-  active_source_hash: null,
-  candidate_version: null,
-  first_build_words_remaining: 380,
-  last_built_at: null,
-  source: "manual",
-  captured_by: "human:u1",
-  version: 1,
-  created_at: "2026-07-01T00:00:00Z",
-  updated_at: "2026-07-01T00:00:00Z",
-  archived_at: null,
-};
-
-const SUMMARY: VoiceCorpusSummary = {
-  total_words: 420,
-  target_words: 30000,
-  maturity: "collecting",
-  quality_band: "thin",
-  source_count: 1,
-  register_words: { general: 420 },
-};
-
-const SOURCE: components["schemas"]["VoiceCorpusSource"] = {
-  id: "vs-1",
-  origin: "manual",
-  kind: "other",
-  register: "general",
-  weight: 1,
-  source_label: "Pasted writing",
-  source_ref: "settings:paste:1",
-  word_count: 420,
-  included: true,
-  exclusion_reason: null,
-  extractor_version: "1",
-  occurred_at: "2026-07-01T00:00:00Z",
-  retention_until: null,
-  content_erased_at: null,
-  source: "manual",
-  captured_by: "human:u1",
-  version: 1,
-  created_at: "2026-07-01T00:00:00Z",
-  updated_at: "2026-07-01T00:00:00Z",
-  archived_at: null,
-};
-
-const STATS: components["schemas"]["VoiceIngestStats"] = {
-  input_words: 420,
-  kept_words: 420,
-  kept_turns: 0,
-  discarded_turns: 0,
-  speakers_seen: [],
-};
-
-const emptyPage = { data: [], page: { next_cursor: null, has_more: false } };
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-// Every write on this surface is one grant server-side (`voice_profile:update`,
-// plus `create` for minting the first profile), so the seat the stub answers
-// with decides whether the card offers any control at all.
-const VOICE_EDITOR = {
-  voice_profile: ["read", "create", "update"],
-} as const;
 
 // A stub that behaves like the server does across the whole mint: the profile
 // list answers empty until POST /voice-profiles creates one, so a card that
@@ -169,38 +97,11 @@ function render(ui: ReactNode) {
   );
 }
 
-// The settings screen itself at one Voice tab, so a tab change remounts what
-// production remounts and keeps what production keeps.
-function settingsVoicePage() {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return (tab: string) => (
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">
-        <ReviewActionsProvider>
-          <SettingsScreen route={parseHash(`#/settings/voice/${tab}`)} />
-        </ReviewActionsProvider>
-      </LocaleProvider>
-    </QueryClientProvider>
-  );
-}
-
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   globalThis.location.hash = "";
 });
-
-// The zone's input is the one control the intake has; a file is handed to it
-// the way the browser hands one over.
-function fileInput(): HTMLInputElement {
-  const input = document.querySelector('input[type="file"]');
-  if (!(input instanceof HTMLInputElement)) {
-    throw new Error("the card rendered no file input");
-  }
-  return input;
-}
 
 describe("the Settings Voice DNA card with no profile yet", () => {
   it("offers the first-sample zone and says what it is for", async () => {
@@ -354,137 +255,6 @@ describe("the Settings Voice DNA card with a profile", () => {
 
   // Settings remounts a tab on every switch; the host above the tabs is what
   // keeps a speaker question that is still waiting for its answer.
-  it("keeps a waiting speaker question when the tab changes", async () => {
-    const user = userEvent.setup();
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (request: Request) => {
-        const path = new URL(request.url).pathname.replace(/^\/v1/, "");
-        if (path === "/me") {
-          return jsonResponse(meFixture({ allow: VOICE_EDITOR }));
-        }
-        if (path === "/voice-profiles") {
-          return jsonResponse({ data: [PROFILE], page: emptyPage.page });
-        }
-        if (path === "/voice-profiles/vp-1/sources/preview") {
-          return jsonResponse({
-            total_words: 1000,
-            detected_format: "vtt",
-            ingestible_as_transcript: true,
-            unattributed_words: 0,
-            speakers: [
-              { label: "Lars", words: 640, turns: 12 },
-              { label: "Sam", words: 360, turns: 9 },
-            ],
-          });
-        }
-        if (path === "/voice-profiles/vp-1/sources") {
-          return jsonResponse({ data: [SOURCE], summary: SUMMARY });
-        }
-        return jsonResponse(emptyPage);
-      }),
-    );
-    const page = settingsVoicePage();
-    const view = rtlRender(page("samples"));
-    await screen.findByRole("heading", { name: "Make it sharper" });
-    await user.upload(
-      fileInput(),
-      new File(["Lars: we ship Friday. Sam: agreed."], "standup.vtt", {
-        type: "text/plain",
-      }),
-    );
-    expect(await screen.findByText(/Which speaker are you/)).toBeTruthy();
-    view.rerender(page("rules"));
-    await screen.findByRole("heading", { name: "Your rules" });
-    expect(screen.getByText(/Which speaker are you/)).toBeTruthy();
-  });
-
-  it("holds the rebuild on another tab until an upload lands", async () => {
-    const user = userEvent.setup();
-    let releasePreview: () => void = () => {};
-    const previewHeld = new Promise<void>((resolve) => {
-      releasePreview = resolve;
-    });
-    let releasePost: () => void = () => {};
-    const postHeld = new Promise<void>((resolve) => {
-      releasePost = resolve;
-    });
-    let postStarted = false;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (request: Request) => {
-        const path = new URL(request.url).pathname.replace(/^\/v1/, "");
-        if (path === "/me") {
-          return jsonResponse(meFixture({ allow: VOICE_EDITOR }));
-        }
-        if (path === "/voice-profiles") {
-          const built = {
-            ...PROFILE,
-            maturity: "provisional",
-            profile_version: 2,
-          };
-          return jsonResponse({ data: [built], page: emptyPage.page });
-        }
-        if (path === "/voice-profiles/vp-1/sources/preview") {
-          await previewHeld;
-          return jsonResponse({
-            total_words: 1000,
-            detected_format: "txt",
-            ingestible_as_transcript: false,
-            unattributed_words: 1000,
-            speakers: [],
-          });
-        }
-        if (path === "/voice-profiles/vp-1/sources") {
-          if (request.method === "POST") {
-            postStarted = true;
-            await postHeld;
-          }
-          return request.method === "POST"
-            ? jsonResponse(
-                {
-                  source: {},
-                  summary: SUMMARY,
-                  ingest_stats: {
-                    input_words: 4,
-                    kept_words: 4,
-                    kept_turns: 0,
-                    discarded_turns: 0,
-                    speakers_seen: [],
-                  },
-                },
-                201,
-              )
-            : jsonResponse({ data: [SOURCE], summary: SUMMARY });
-        }
-        return jsonResponse(emptyPage);
-      }),
-    );
-    const page = settingsVoicePage();
-    const view = rtlRender(page("samples"));
-    await screen.findByRole("heading", { name: "Make it sharper" });
-    await user.upload(
-      fileInput(),
-      new File(["We ship on Friday."], "notes.txt", { type: "text/plain" }),
-    );
-    view.rerender(page("builds"));
-    const rebuild = await screen.findByRole("button", {
-      name: /Rebuild Voice DNA/,
-    });
-    expect(rebuild).toHaveProperty("disabled", true);
-    releasePreview();
-    await waitFor(() => expect(postStarted).toBe(true));
-    expect(
-      screen.getByRole("button", { name: /Rebuild Voice DNA/ }),
-    ).toHaveProperty("disabled", true);
-    releasePost();
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: /Rebuild Voice DNA/ }),
-      ).toHaveProperty("disabled", false),
-    );
-  });
-
   it("sends an owner with no build yet from the builds tab to the first build", async () => {
     const user = userEvent.setup();
     stubProfile();
