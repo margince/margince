@@ -3151,6 +3151,14 @@ func (stubs) ExcuseNoticeCase(w nethttp.ResponseWriter, r *nethttp.Request, id o
 	httperr.NotImplemented(w, r, "ExcuseNoticeCase")
 }
 
+func (stubs) GetRetainedEmailSignature(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "GetRetainedEmailSignature")
+}
+
+func (stubs) SaveRetainedEmailSignature(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "SaveRetainedEmailSignature")
+}
+
 func (stubs) ListProducts(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListProductsParams) {
 	httperr.NotImplemented(w, r, "ListProducts")
 }

@@ -895,7 +895,7 @@
   "common.providerUnauthorized": "The AI provider refused the configured credential. Contact your system administrator.",
   "common.providerUnavailable": "The AI provider is not answering right now. Try again later or contact your system administrator.",
   "common.gatewayUnavailable": "The server did not finish the request in time and may still be processing it. Wait before retrying, or the work can run twice.",
-  "common.individualPerformanceOff": "An administrator switched off individual performance. You can see your own figures. A figure is withheld when fewer than two other members make it up, or when taking another team’s total from it would leave fewer than two.",
+  "common.individualPerformanceOff": "An administrator switched off individual performance. You can see your own figures. A figure is withheld when fewer than two other members make it up, or when taking another team’s total from it would leave fewer than two. A forecast is withheld in full if any of its groups would show one colleague’s figures.",
   "common.permissionDenied": "You do not have permission for this action. Ask an administrator, or the user who shared this record, to extend your access.",
   "common.seatReadOnly": "This seat is read-only, so the request was refused. Ask an administrator to upgrade the seat.",
   "common.versionSkew": "This record changed after you opened it. Reload it to see the change, then make yours again.",

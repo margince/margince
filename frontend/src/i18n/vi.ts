@@ -3256,7 +3256,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "common.gatewayUnavailable":
     "Máy chủ không kịp xử lý xong yêu cầu và có thể vẫn đang xử lý. Chờ một lúc rồi hãy thử lại, nếu không thao tác có thể chạy hai lần.",
   "common.individualPerformanceOff":
-    "Quản trị viên đã tắt hiệu suất của từng thành viên. Bạn vẫn xem được số liệu của bạn. Một số liệu bị ẩn khi có ít hơn hai thành viên khác đóng góp, hoặc khi trừ đi tổng của một nhóm khác sẽ còn ít hơn hai thành viên.",
+    "Quản trị viên đã tắt hiệu suất của từng thành viên. Bạn vẫn xem được số liệu của bạn. Một số liệu bị ẩn khi có ít hơn hai thành viên khác đóng góp, hoặc khi trừ đi tổng của một nhóm khác sẽ còn ít hơn hai thành viên. Toàn bộ dự báo bị ẩn nếu một nhóm trong đó có thể cho thấy số liệu của riêng một đồng nghiệp.",
   "common.permissionDenied":
     "Bạn không có quyền thực hiện thao tác này. Liên hệ quản trị viên hoặc người đã chia sẻ hồ sơ này để được cấp thêm quyền.",
   "common.seatReadOnly":
@@ -8576,6 +8576,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.signatureHtmlHintPlain":
     "Để trống để dùng lại chữ ký văn bản thuần. Hình ảnh từ xa và mã script sẽ bị xóa.",
   "settings.signatureOwnHtml": "Chữ ký HTML của bạn",
+  "settings.signatureReviewTitle": "Kiểm tra chữ ký được giữ lại của {name}",
+  "settings.signatureReviewIntro":
+    "Chủ chữ ký không thể tự kiểm tra. Bản gốc được giữ nguyên cho đến khi bạn lưu thay đổi. Hãy kiểm tra từng trường trước khi chọn phần cần xóa.",
+  "settings.signatureReviewPreview": "Xem trước chữ ký đã lưu",
+  "settings.signatureReviewReload": "Tải lại chữ ký này trước khi chỉnh sửa.",
+  "settings.signatureReviewChangedTitle": "Chữ ký đã thay đổi",
+  "settings.signatureReviewChanged":
+    "Một người kiểm tra khác đã lưu thay đổi. Hãy xem phiên bản mới nhất bên dưới. Chỉ giữ bản nháp của bạn nếu bạn muốn dùng nó để thay các trường đó.",
+  "settings.signatureReviewLatest": "Phiên bản đã lưu mới nhất",
+  "settings.signatureReviewUseLatest": "Dùng phiên bản mới nhất",
+  "settings.signatureReviewKeepDraft": "Giữ bản nháp của tôi",
+  "settings.signatureReviewLoading": "Đang tải chữ ký được giữ lại…",
+  "settings.signatureReviewSaved": "Đã lưu kiểm tra chữ ký",
+  "settings.signatureReviewMember": "thành viên",
   "settings.signature": "Chữ ký email",
   "settings.signatureSub":
     "Chèn vào dưới mỗi email bạn gửi, phía trên chân trang hủy đăng ký.",

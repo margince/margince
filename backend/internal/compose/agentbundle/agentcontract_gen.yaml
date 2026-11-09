@@ -41011,7 +41011,7 @@ components:
     AssignmentSubjectKind:
       type: string
       enum: [user, team]
-      description: Whether the responsible party is one colleague or a whole team.
+      description: Whether the responsible party is one member or a whole team.
     RecordRoleListResponse:
       type: object
       required: [data]
@@ -41093,6 +41093,8 @@ components:
         data: {type: array, items: {$ref: '#/components/schemas/RecordAssignment'}}
     CreateRecordAssignmentRequest:
       type: object
+      description: >-
+        A responsibility may name an agent seat as well as a human member. It grants no record access. The web picker lists active human colleagues.
       required: [subject_kind, subject_id, role_id]
       properties:
         subject_kind: {$ref: '#/components/schemas/AssignmentSubjectKind'}

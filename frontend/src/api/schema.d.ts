@@ -22676,6 +22676,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/privacy/retained-signatures/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Review a retained signature whose owner cannot review it.
+         * @description Active human privacy controllers with unrestricted contact read and deletion rights may review a signature whose owner is not an active human member. Opening the review leaves the original unchanged.
+         */
+        get: operations["getRetainedEmailSignature"];
+        /**
+         * Save a human review of a retained member signature.
+         * @description The controller policy and owner eligibility are checked again at save. The stored version must match the review. Archived signatures stay archived. Text is changed only by the human's explicit save.
+         */
+        put: operations["saveRetainedEmailSignature"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/email-signature": {
         parameters: {
             query?: never;
@@ -30899,7 +30925,8 @@ export interface components {
                  *     corrections list rather than that run: a manual re-run replaces the `run_id`, so the
                  *     one a notice names may no longer be listed. Manual privacy reviews use
                  *     `knowledge_document` (download the retained file), `email_signature` (the
-                 *     recipient's own account settings), `activity` (open the retained note in its
+                 *     recipient's own account settings), `retained_email_signature` (the departed member's
+                 *     signature in the controller review), `activity` (open the retained note in its
                  *     drawer), `legal_entity` (Company settings), or `signature_template` (Company
                  *     settings; `id` identifies the erasure whose review flagged the workspace template).
                  */
@@ -36315,6 +36342,21 @@ export interface components {
              *     on the deal record; only this card's copy of the finding is withheld.
              */
             sections_omitted: ("stakeholders" | "our_side" | "risks")[];
+        };
+        RetainedEmailSignature: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            owner_id: string;
+            owner_name: string;
+            version: components["schemas"]["RowVersion"];
+            signature: components["schemas"]["EmailSignature"];
+            /** @description The saved markup through the send path's signature sanitizer. */
+            readonly preview_html: string;
+        };
+        SaveRetainedEmailSignatureRequest: components["schemas"]["SaveEmailSignatureRequest"] & {
+            /** Format: int64 */
+            expected_version: number;
         };
         EmailSignature: {
             /**
@@ -42767,7 +42809,7 @@ export interface components {
          */
         AssignmentRecordType: "company" | "deal" | "project";
         /**
-         * @description Whether the responsible party is one colleague or a whole team.
+         * @description Whether the responsible party is one member or a whole team.
          * @enum {string}
          */
         AssignmentSubjectKind: "user" | "team";
@@ -42826,6 +42868,7 @@ export interface components {
         RecordAssignmentListResponse: {
             data: components["schemas"]["RecordAssignment"][];
         };
+        /** @description A responsibility may name an agent seat as well as a human member. It grants no record access. The web picker lists active human colleagues. */
         CreateRecordAssignmentRequest: {
             subject_kind: components["schemas"]["AssignmentSubjectKind"];
             /** Format: uuid */
@@ -93638,6 +93681,63 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getRetainedEmailSignature: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The retained signature and its owner. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetainedEmailSignature"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    saveRetainedEmailSignature: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveRetainedEmailSignatureRequest"];
+            };
+        };
+        responses: {
+            /** @description The retained signature and its owner. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetainedEmailSignature"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

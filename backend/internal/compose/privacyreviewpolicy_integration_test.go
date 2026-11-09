@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -70,14 +71,23 @@ func TestErasureFlagsCompanyTemplatesWithoutChangingThem(t *testing.T) {
 
 func TestErasureFlagsAnInactiveMembersSignatureWithoutOpeningTheControllersOwn(t *testing.T) {
 	e := integration.Setup(t)
-	e.WsExec(t, `INSERT INTO role_assignment(user_id,role_id) SELECT $1,id FROM role WHERE key='admin'`, e.AdminUser)
-	subject, signature := e.SeedContact(t, "Anna Berg", nil), ids.NewV7()
-	e.WsExec(t, `INSERT INTO email_signature(id,owner_id,body) VALUES($1,$2,'Anna Berg')`, signature, e.Rep1)
-	e.WsExec(t, `UPDATE app_user SET status='deactivated' WHERE id=$1`, e.Rep1)
+	memberManagerFor(t, e)
+	subject := e.SeedContact(t, "Anna Berg", nil)
+	store := contacts.NewStore(InstallationDB(e.Pool))
+	if _, err := store.SaveMyEmailSignature(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms), contacts.SaveSignatureInput{Body: "Anna Berg"}); err != nil {
+		t.Fatal(err)
+	}
+	var signature ids.UUID
+	if err := e.DB().Tx(e.Admin(), func(tx pgx.Tx) error {
+		return tx.QueryRow(e.Admin(), `SELECT id FROM email_signature WHERE owner_id=$1`, e.Rep1).Scan(&signature)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	deactivateSignatureOwner(t, e)
 	if err := privacy.NewEraser(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), subject, "Subject requested erasure"); err != nil {
 		t.Fatal(err)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM notice WHERE kind='privacy_review_required' AND recipient_user_id=$1 AND target_type IS NULL AND body LIKE '%'||$2::uuid::text||'%' AND body LIKE '%'||$3::uuid::text||'%'`, e.AdminUser, signature, e.Rep1); n != 1 {
+	if n := e.WsCount(t, `SELECT count(*) FROM notice WHERE kind='privacy_review_required' AND recipient_user_id=$1 AND target_type='retained_email_signature' AND target_id=$2`, e.AdminUser, signature); n != 1 {
 		t.Fatalf("inactive signature review count=%d", n)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM notice WHERE kind='privacy_review_required' AND recipient_user_id=$1`, e.Rep1); n != 0 {
@@ -156,5 +166,30 @@ func TestMarkerCorrectionDefersAReadLockOnARightsRequest(t *testing.T) {
 	runMachineAddressTask(ctx, t, e, markedAuditRedactionDataTask())
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='data_subject_request' AND entity_id=$1 AND after->>'email'='private@example.test'`, request); n != 0 {
 		t.Fatalf("retry kept %d images", n)
+	}
+}
+
+func TestAReadSeatCannotBeTheControllerForErasureOrMissedReceipts(t *testing.T) {
+	e := integration.Setup(t)
+	memberManagerFor(t, e)
+	e.WsExec(t, `UPDATE app_user SET seat_type='read' WHERE id=$1`, e.AdminUser)
+	subject := e.SeedContact(t, "Anna Berg", nil)
+	company := e.SeedCompany(t, "Review company", nil)
+	e.WsExec(t, `UPDATE company SET description='Anna Berg is mentioned here' WHERE id=$1`, company)
+	err := privacy.NewEraser(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), subject, "Subject requested erasure")
+	if !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("read-only controller accepted erasure: %v", err)
+	}
+	if name := e.WsScalar(t, `SELECT full_name FROM contact WHERE id=$1`, subject); name != "Anna Berg" {
+		t.Fatalf("partial erasure: %s", name)
+	}
+	err = e.DB().Tx(e.Admin(), func(tx pgx.Tx) error {
+		return (receiptAlarm{db: e.DB()}).RaiseMissedReceiptTx(e.Admin(), tx, consent.MissedReceipt{SubjectType: "contact", SubjectID: subject, MessageID: ids.NewV7().String(), Reason: consent.MissedReceiptNoAddress})
+	})
+	if !errors.Is(err, errNoReceiptOperator) {
+		t.Fatalf("read-only receipt controller accepted: %v", err)
+	}
+	if count := e.WsCount(t, `SELECT count(*) FROM notice WHERE kind IN ('privacy_review_required','optout_receipt_missed')`); count != 0 {
+		t.Fatalf("ineligible operator received %d notices", count)
 	}
 }

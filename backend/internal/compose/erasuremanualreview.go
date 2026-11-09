@@ -16,7 +16,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
-	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 const (
@@ -39,9 +38,9 @@ func (p capturedTextPurger) FlagSubjectReviewTx(ctx context.Context, tx pgx.Tx, 
 		}
 		body := manualPrivacyReviewText(source.Kind)
 		metadata := &systemtext.Message{Subject: systemtext.Sentence("privacy.review.subject"), Body: systemtext.Sentence(manualPrivacyReviewCode(source.Kind))}
-		if source.Kind == reviewEmailSignature && target.Type == "" && source.Owner != nil {
-			metadata.Body = systemtext.Sentence("privacy.review.inactive", systemtext.Text(source.ID.String()), systemtext.Text(source.Owner.String()))
-			body = fmt.Sprintf(systemtext.Copy("privacy.review.inactive", textlang.English), source.ID, *source.Owner)
+		if source.Kind == reviewEmailSignature && target.Type == notices.TargetRetainedEmailSignature && source.Owner != nil {
+			metadata.Body = systemtext.Sentence("privacy.review.retained_signature")
+			body = systemtext.Literal("privacy.review.retained_signature")
 		}
 		for _, recipient := range recipients {
 			_, err := store.CreateTx(system, tx, notices.NewNotice{
@@ -68,7 +67,7 @@ func privacyReviewRecipients(ctx context.Context, tx pgx.Tx, source privacy.Eras
 		if live {
 			return target, []ids.UserID{ids.From[ids.UserKind](*source.Owner)}, nil
 		}
-		target = notices.Target{}
+		target = notices.Target{Type: notices.TargetRetainedEmailSignature, ID: source.ID}
 	}
 	object := source.Kind
 	switch object {

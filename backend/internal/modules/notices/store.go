@@ -252,7 +252,7 @@ func (s *Store) insertNoticeTx(ctx context.Context, tx pgx.Tx, in NewNotice, evi
 	}
 	return Notice{
 		ID: id, Kind: in.Kind, Subject: subject, Body: body, SystemText: metadata, SystemDisplay: noticeSystemDisplay(ctx, metadata, subject, body),
-		Target: in.Target, CreatedAt: createdAt, Origin: in.Origin,
+		Target: resolvedNoticeTarget(in.Target, in.Kind, metadata), CreatedAt: createdAt, Origin: in.Origin,
 	}, true, nil
 }
 
@@ -343,6 +343,7 @@ func (s *Store) unreadPage(ctx context.Context, limit int, workOnly bool) ([]Not
 				typed := ids.From[ids.ApprovalKind](approval)
 				n.ApprovalID = &typed
 			}
+			n.Target = resolvedNoticeTarget(n.Target, n.Kind, n.SystemText)
 			n.SystemDisplay = noticeSystemDisplay(ctx, n.SystemText, n.Subject, n.Body)
 			unread = append(unread, n)
 		}
