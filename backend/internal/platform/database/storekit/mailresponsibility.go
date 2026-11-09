@@ -87,8 +87,15 @@ func UnambiguousMailSeatIdentities(ctx context.Context, tx pgx.Tx) (map[string][
 		switch record.source {
 		case loginSource, provedMailboxSource:
 			claim(record.seat, record.label, 2)
+		case invitedLoginSource:
+			// An invited login reserves its address at login strength, so no
+			// other seat's alias takes it, and owes no answer until redeemed.
+			claim("", record.label, 2)
 		case "user":
 			claim(record.seat, record.label, 1)
+		default:
+			// A provider or discovered alias, or a mailbox not proven, names
+			// no seat that owes an answer.
 		}
 	}
 	out := map[string][]string{}
@@ -112,6 +119,10 @@ func MailSeatIdentities(ctx context.Context, tx pgx.Tx) (map[string][]string, er
 	}
 	out := map[string][]string{}
 	for _, record := range records {
+		if record.source == invitedLoginSource {
+			// An invited seat reads no stored mail until it redeems the invite.
+			continue
+		}
 		if address := mailidentity.ReaderAddress(record.label, record.source); address != "" {
 			out[record.seat] = append(out[record.seat], mailidentity.AddressSpellings(address)...)
 		}
@@ -121,6 +132,7 @@ func MailSeatIdentities(ctx context.Context, tx pgx.Tx) (map[string][]string, er
 
 const (
 	loginSource            = "login"
+	invitedLoginSource     = "invited_login"
 	provedMailboxSource    = "proved_mailbox"
 	withdrawnMailboxSource = "withdrawn_mailbox"
 )
@@ -134,7 +146,9 @@ type mailSeatIdentity struct{ seat, label, source string }
 func (r mailSeatIdentity) decidesNew() bool { return r.source != withdrawnMailboxSource }
 
 func readMailSeatIdentities(ctx context.Context, tx pgx.Tx) ([]mailSeatIdentity, error) {
-	rows, err := tx.Query(ctx, `SELECT u.id::text, u.email, 'login' FROM app_user u WHERE `+workforce.LiveMemberSQL("u")+`
+	rows, err := tx.Query(ctx, `SELECT u.id::text, u.email,
+ CASE WHEN u.status = 'invited' THEN '`+invitedLoginSource+`' ELSE '`+loginSource+`' END
+ FROM app_user u WHERE `+workforce.ActivatableMemberSQL("u")+`
  UNION SELECT i.user_id::text, i.value, i.source FROM capture_owner_identity i
  JOIN app_user u ON u.id = i.user_id WHERE i.kind = 'address' AND `+workforce.LiveMemberSQL("u")+`
  UNION SELECT c.user_id::text, c.account_label, CASE WHEN `+provedMailboxClause("c")+` THEN '`+provedMailboxSource+`'
