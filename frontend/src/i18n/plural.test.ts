@@ -89,11 +89,11 @@ describe("pluralKey", () => {
 });
 
 describe("a locale with more than two categories", () => {
-  // The reason this layer exists is a locale whose rule has a `few` or a `many`
-  // — Polish, Russian, Arabic — where no comparison with 1 can produce the right
-  // form. That is deliberately NOT asserted by constructing
-  // `new Intl.PluralRules("pl-PL")` here: a locale tag written into a source
-  // file is exactly what `format/one-locale.test.ts` refuses, and it is right to,
+  // This layer exists for a locale whose rule has a `few` or a `many`, such as
+  // Polish, Russian or Arabic. No comparison with 1 can produce the right form
+  // there. This test does not assert that by constructing
+  // `new Intl.PluralRules("pl-PL")` here. A locale tag written into a source
+  // file is what `census/rules/one-locale.census.ts` refuses. It is right to,
   // because a pinned tag is a rendering in somebody else's language. The claim
   // about CLDR's categories is a fact about CLDR rather than about this code.
   //

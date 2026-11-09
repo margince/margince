@@ -875,6 +875,7 @@
   "ext.notFound": "No extension named “{name}” is enabled on this installation.",
   "search.kind.deal": "Deal",
   "common.close": "Close",
+  "common.unknownValue": "Other",
   "common.expand": "Expand",
   "common.collapse": "Collapse",
   "format.notForecast": "Not forecast",

@@ -1,5 +1,6 @@
 import type { components } from "../../api/schema";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { problemCodeOf } from "../../lib/problem";
 
 // The retention-authoring screen's pure half: the authorable vocabulary, the
@@ -65,7 +66,7 @@ export const SCOPE_LABEL_KEYS: Record<RetentionScope, MessageKey> = {
 };
 
 export function scopeLabelKey(scope: RetentionScope): MessageKey {
-  return SCOPE_LABEL_KEYS[scope];
+  return labelFor(SCOPE_LABEL_KEYS, scope);
 }
 
 export const ACTION_LABEL_KEYS: Record<RetentionAction, MessageKey> = {
@@ -75,7 +76,7 @@ export const ACTION_LABEL_KEYS: Record<RetentionAction, MessageKey> = {
 };
 
 export function actionLabelKey(action: RetentionAction): MessageKey {
-  return ACTION_LABEL_KEYS[action];
+  return labelFor(ACTION_LABEL_KEYS, action);
 }
 
 /**

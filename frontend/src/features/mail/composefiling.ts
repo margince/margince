@@ -156,6 +156,7 @@ function useTagSwitch({
 
 function useProjectFiling(input: {
   activityId?: string;
+  initialProjectId?: string;
   /** The deal the message is written from, when it is one. */
   anchorDealId?: string;
   anchorProjectId?: string | null;
@@ -169,7 +170,11 @@ function useProjectFiling(input: {
   const thread = useThreadProject(input.activityId, input.open);
   // An empty string is a real answer ("None"), so unanswered is undefined.
   const filingKey = input.activityId ?? "";
-  const [picks, setPicks] = useState<Record<string, string>>({});
+  const [picks, setPicks] = useState<Record<string, string>>(() =>
+    input.initialProjectId === undefined
+      ? {}
+      : { [filingKey]: input.initialProjectId },
+  );
   const picked = picks[filingKey];
   const setPicked = useCallback(
     (next: string) => {
@@ -194,7 +199,13 @@ function useProjectFiling(input: {
   const chosen = picked ?? suggested;
   // The account path has nothing to suggest from, so a company with one live
   // project defaults to it. The two rules never fire together.
-  useSoleProjectDefault(input.projects, chosen, setPicked, filingKey);
+  const defaultProject = useCallback(
+    (next: string) => {
+      if (picked === undefined) setPicked(next);
+    },
+    [picked, setPicked],
+  );
+  useSoleProjectDefault(input.projects, chosen, defaultProject, filingKey);
   // A value the option list lacks shows as no choice. Writing that back would
   // race the adoption above, so it is only read.
   const offered =
@@ -243,6 +254,7 @@ function useProjectFiling(input: {
     }
   }, [open, awaiting, carried, filingKey, tag, ownTag, subject, setSubject]);
   return {
+    draftProjectId: chosen,
     projectId,
     setProjectId: chooseProject,
     /** Empty when the chosen project has no tag to offer. */
@@ -337,6 +349,7 @@ export function useComposeRecords({
   subject,
   setSubject,
   addressed,
+  initialProjectId,
 }: Readonly<{
   open: boolean;
   isChannelReply: boolean;
@@ -349,6 +362,7 @@ export function useComposeRecords({
   setSubject: (next: string) => void;
   /** Everybody on the message: To, Cc and Bcc. */
   addressed: readonly string[];
+  initialProjectId?: string;
 }>) {
   // A channel reply's recipient is resolved on the server, so it asks nothing.
   const recipientContact = isChannelReply
@@ -381,6 +395,7 @@ export function useComposeRecords({
     anchorCompany,
   });
   const projectFiling = useProjectFiling({
+    initialProjectId,
     activityId: answering,
     anchorDealId: entityType === "deal" ? entityId : undefined,
     anchorProjectId: anchorProject.projectId,

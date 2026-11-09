@@ -11,6 +11,7 @@ import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { isOption } from "../../lib/options";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 
@@ -157,7 +158,7 @@ export function DecisionDialog({
                 }}
                 options={ADMISSIONS.map((value) => ({
                   value,
-                  label: t(ADMISSION_LABEL[value]),
+                  label: t(labelFor(ADMISSION_LABEL, value)),
                 }))}
               />
             )}

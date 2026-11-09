@@ -27,7 +27,7 @@ func (r Review) DirectableBy(ctx context.Context) bool {
 }
 
 func directableBy(ctx context.Context, refusals []RefusedRecipient) bool {
-	if !auth.Allows(ctx, entityCommunicationException, principal.ActionCreate) {
+	if len(refusals) == 0 || !auth.Allows(ctx, entityCommunicationException, principal.ActionCreate) {
 		return false
 	}
 	for _, refusal := range refusals {

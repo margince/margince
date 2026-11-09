@@ -9,6 +9,7 @@ import { formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { entityTimelineKeys } from "../../lib/activitykeys";
+import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 
@@ -231,7 +232,7 @@ function FilingBody({
         <Callout
           tone="warning"
           kind="standing"
-          title={t(REFUSAL_COPY[state.refusal.code])}
+          title={t(labelFor(REFUSAL_COPY, state.refusal.code))}
         />
       )}
       {!done && state.undoable && (

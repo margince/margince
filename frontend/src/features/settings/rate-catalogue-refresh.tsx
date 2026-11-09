@@ -9,6 +9,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { PanelBody } from "../../design-system/panel";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { valueFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import "./rates.css";
 
@@ -122,7 +123,7 @@ export function ProviderRefreshLine({
   }
   return (
     <span className="rates-refresh-detail" role="status">
-      <Badge tone={OUTCOME_TONE[line.outcome]}>
+      <Badge tone={valueFor(OUTCOME_TONE, line.outcome, "default")}>
         {t(`aiRates.refresh.outcome.${line.outcome}` as const)}
       </Badge>
       <ProviderCounts provider={line} />
