@@ -14,6 +14,7 @@ import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { type Translator, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import {
   CONFIGURATION_FILTER_PARAM,
@@ -81,7 +82,7 @@ function scopePills(
 function SourceCell({ entry }: Readonly<{ entry: Entry }>) {
   const t = useT();
   const { source, name, file } = entry.origin;
-  const label = t(SOURCE_LABEL[source]);
+  const label = t(labelFor(SOURCE_LABEL, source));
   if (!name) {
     return label;
   }

@@ -16388,6 +16388,10 @@ export interface paths {
          *     read it, was shown the compliance warning, acknowledged it, and decided in writing that the
          *     message goes — and then sends the exact message the review was holding.
          *
+         *     Current permission is checked again before an exception is recorded. If new evidence or a
+         *     consent grant now permits the held message, it is queued under that permission with no
+         *     exception instruction. The caller's authority and request validation still apply.
+         *
          *     NOTHING ABOUT THE REFUSAL CHANGES. No consent is written and no stop is lifted. The decision
          *     rows still read `deny`; what changes is one column saying the message left under a human's
          *     instruction rather than under the engine's permission. A subject asking later why they
@@ -28285,7 +28289,19 @@ export interface components {
             links: components["schemas"]["ActivityLink"][];
             thread?: components["schemas"]["EmailThreadPage"];
             access: components["schemas"]["EmailAccess"];
+            /**
+             * @description True when this reader may answer the message: they read it inside its audience and
+             *     hold `activity.create`, because a reply is a new message they write. False otherwise:
+             *     a read seat's send is refused with `403 seat_tier_insufficient`, and a full seat's
+             *     without the grant with `403 permission_denied`.
+             */
             can_reply: boolean;
+            /**
+             * @description True when this reader holds `activity.create`. A forward is a new message the reader
+             *     writes to whoever they choose, so it asks nothing of the message's audience beyond
+             *     this read.
+             */
+            can_forward: boolean;
             can_relink: boolean;
             /** @description The activity's version, for the If-Match its own actions send. */
             version: components["schemas"]["RowVersion"];
@@ -33244,6 +33260,8 @@ export interface components {
             /** Format: uuid */
             contact_id: string;
             full_name: string;
+            /** @description Whether this caller may file an activity under this contact. Computed with the same row-scope and write-share predicate the attach gate uses, so a mail started from the company links only the recipients this is true for. A read-only share grants no attach right. The server rechecks every write. */
+            attachable: boolean;
             title?: string | null;
             /** @description A provider-sourced job title, populated ONLY where the canonical title is empty (PO-EXT-9): a bought title fills a blank, never overwrites or seconds one a human typed. */
             provider_title?: string | null;
@@ -41451,6 +41469,8 @@ export interface components {
         };
         /** @description The author's drafting purpose and presentation state, restored with the words. These client-supplied values grant no send permission and do not attest model execution. */
         MailDraftEditorState: {
+            /** @description The deal and project selected in the composer. An empty list clears the selection. Omission keeps the older draft's grounding as the restore default. These are filing choices, not evidence of a request or permission to send. The send checks each link. */
+            filing?: components["schemas"]["MailDraftGround"][];
             /** @description Server binding to the saved words, used only to retire stale editor state. */
             readonly content_fingerprint?: string;
             intent?: string;
@@ -58652,6 +58672,20 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
+        /**
+         * @description The send failed validation, or no mailbox can carry it. The second answers with the top-level
+         *     `code: mailbox_not_send_capable` and no `details.errors`, because no field of the request can
+         *     fix it: the sender must connect a mailbox that can send, or an administrator must set up
+         *     sending for the installation. A scheduled send is checked the same way when it is created.
+         */
+        SendValidationError: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
     };
     parameters: {
         /** @description The type of the record to build around. */
@@ -68243,7 +68277,8 @@ export interface operations {
                 sort?: components["parameters"]["Sort"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
                 include_archived?: components["parameters"]["IncludeArchived"];
-                kind?: "email" | "call" | "meeting" | "note" | "task" | "message";
+                /** @description Activities of these kinds. Repeat the parameter for several (`kind=email&kind=message`), so a page of one kind of work is never filled by another kind it does not show. */
+                kind?: ("email" | "call" | "meeting" | "note" | "task" | "message")[];
                 /** @description Calls that ended this way. Matches calls only. */
                 call_outcome?: "reached" | "not_reached" | "voicemail" | "call_back_later" | "put_through";
                 /**
@@ -69349,6 +69384,18 @@ export interface operations {
             };
         };
         responses: {
+            /**
+             * @description Scheduled, not sent (ADR-0104). No activity and no delivery row exist yet;
+             *     the timeline stays silent until it fires.
+             */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledSend"];
+                };
+            };
             /** @description Accepted for send (queued); the resulting activity is logged. */
             202: {
                 headers: {
@@ -69382,7 +69429,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            422: components["responses"]["ValidationError"];
+            422: components["responses"]["SendValidationError"];
         };
     };
     sendCompanyEmail: {
@@ -69484,7 +69531,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            422: components["responses"]["ValidationError"];
+            422: components["responses"]["SendValidationError"];
         };
     };
     listScheduledSends: {

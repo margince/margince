@@ -12,6 +12,7 @@ import {
   useBackfillRun,
 } from "../../lib/backfill-run";
 import { useDrawsImportRun } from "../../lib/import-onscreen";
+import { labelFor } from "../../lib/labelfor";
 import { ProblemError, problemCode, problemMessageOf } from "../../lib/problem";
 import {
   IMPORT_WINDOW_LABELS,
@@ -326,7 +327,9 @@ export function EstimateCard({
           agreed to. It also degrades better: the scope sentence is true while
           the count is still arriving, or when it never does. */}
       <p>
-        {t("backfill.scopeIs", { window: t(IMPORT_WINDOW_LABELS[window]) })}
+        {t("backfill.scopeIs", {
+          window: t(labelFor(IMPORT_WINDOW_LABELS, window)),
+        })}
       </p>
       {/* The count is its own line and its own condition. `estimated_messages`
           is required on the wire, so an answer without it is a server too old

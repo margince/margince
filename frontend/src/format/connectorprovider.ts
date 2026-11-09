@@ -3,6 +3,7 @@
 
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
+import { labelFor } from "../lib/labelfor";
 
 type Provider = components["schemas"]["CaptureConnection"]["provider"];
 
@@ -40,13 +41,13 @@ export function isCaptureProvider(id: string): id is Provider {
 
 /** The catalog key that names a capture provider. */
 export function providerNameKey(provider: Provider): MessageKey {
-  return PROVIDER_NAME[provider];
+  return labelFor(PROVIDER_NAME, provider);
 }
 
 // An id this build cannot name comes back as sent: a newer server's provider is
 // still one the reader can quote.
 export function providerName(id: string, t: (key: MessageKey) => string) {
-  return isCaptureProvider(id) ? t(PROVIDER_NAME[id]) : id;
+  return isCaptureProvider(id) ? t(labelFor(PROVIDER_NAME, id)) : id;
 }
 
 /** The two vendors whose mail and calendar are separate connections of one account. */
@@ -164,7 +165,7 @@ export const ACCOUNT_NAME: Readonly<
  *  read "Google". */
 export function accountNameOf(provider: Provider): MessageKey {
   if (isLoneProvider(provider)) {
-    return ACCOUNT_NAME[provider];
+    return labelFor(ACCOUNT_NAME, provider);
   }
   const { mail, calendar } = VENDOR_SERVICES.google;
   const isGoogle = provider === mail || provider === calendar;

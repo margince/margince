@@ -12,6 +12,7 @@ import { LEAD_STATUS_LABEL } from "../../format/leadstatus";
 import { isProjectPhase, PHASE_LABEL } from "../../format/projectphase";
 import { isMessageKey, type useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { writtenByLabel } from "../../lib/leadorigins";
 import { bandOfKey } from "../../lib/winprobabilitybands";
 
@@ -53,7 +54,7 @@ function valueKey(
     case "meeting_status":
       return keyed(MEETING_STATUSES, value);
     case "phase":
-      return isProjectPhase(value) ? PHASE_LABEL[value] : undefined;
+      return isProjectPhase(value) ? labelFor(PHASE_LABEL, value) : undefined;
     case "kind": {
       const key = `timeline.kind.${value}`;
       return isMessageKey(key) ? key : undefined;

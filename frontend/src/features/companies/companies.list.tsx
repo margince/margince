@@ -38,6 +38,7 @@ import type { ListChip } from "../../design-system/listsurface";
 import { CellStrip } from "../../design-system/listtable";
 import { useLocale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
+import { labelFor } from "../../lib/labelfor";
 import {
   KIND_LABELS,
   MEANING_LABELS,
@@ -125,7 +126,7 @@ export function CompaniesScreen() {
           allLabel: t("partner.kindsAll"),
           options: PARTNER_KINDS.map((kind) => ({
             value: kind,
-            label: t(KIND_LABELS[kind]),
+            label: t(labelFor(KIND_LABELS, kind)),
           })),
         },
         {
@@ -143,7 +144,7 @@ export function CompaniesScreen() {
           allLabel: t("partner.stageMeaningAll"),
           options: PARTNER_STAGE_MEANINGS.map((meaning) => ({
             value: meaning,
-            label: t(MEANING_LABELS[meaning]),
+            label: t(labelFor(MEANING_LABELS, meaning)),
           })),
         },
       ]
@@ -274,7 +275,9 @@ export function CompaniesScreen() {
             // on classification would show stale values forever.
             cell: (company: Company) =>
               company.lifecycle && company.lifecycle !== "unknown" ? (
-                <Badge>{t(LIFECYCLE_LABELS[company.lifecycle])}</Badge>
+                <Badge>
+                  {t(labelFor(LIFECYCLE_LABELS, company.lifecycle))}
+                </Badge>
               ) : null,
           },
           {
@@ -294,7 +297,7 @@ export function CompaniesScreen() {
                     <Badge key={type}>
                       {type === "partner"
                         ? partnerMarkText(company, t)
-                        : t(RELATIONSHIP_TYPE_LABELS[type])}
+                        : t(labelFor(RELATIONSHIP_TYPE_LABELS, type))}
                     </Badge>
                   ))}
                 </CellStrip>
@@ -317,7 +320,10 @@ export function CompaniesScreen() {
             allLabel: "company.filterLifecycleAll",
             options: LIFECYCLE_OPTIONS.filter(
               (value) => value !== "unknown",
-            ).map((value) => ({ value, label: LIFECYCLE_LABELS[value] })),
+            ).map((value) => ({
+              value,
+              label: labelFor(LIFECYCLE_LABELS, value),
+            })),
           },
           {
             key: "relationship_type",
@@ -325,7 +331,7 @@ export function CompaniesScreen() {
             allLabel: "company.filterRelTypeAll",
             options: RELATIONSHIP_TYPE_OPTIONS.map((value) => ({
               value,
-              label: RELATIONSHIP_TYPE_LABELS[value],
+              label: labelFor(RELATIONSHIP_TYPE_LABELS, value),
             })),
           },
         ]}

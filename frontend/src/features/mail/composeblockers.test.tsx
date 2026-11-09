@@ -403,7 +403,7 @@ describe("a message with no reason for contact yet", () => {
     const checks = await newMessageTo("anna@example.test");
 
     expect(
-      await checks.findByText("Consent needed for this message"),
+      await checks.findByText("Permission needed for this message"),
     ).toBeTruthy();
     expect(checks.getByText("No contact reason.")).toBeTruthy();
   });

@@ -26,6 +26,7 @@ import { useT } from "../../i18n";
 import { entityTimelineKeys, taskWriteKeys } from "../../lib/activitykeys";
 import { useMessageAudience } from "../../lib/audienceservice";
 import { useCanWriteRecord } from "../../lib/capability";
+import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import {
@@ -58,6 +59,8 @@ type RowVerbProps = Readonly<{
   entityType: RelinkKind;
   entityId: string;
   contactId?: string;
+  /** The contact whose page draws the row, whose attach right gates a reply. */
+  contact?: { readonly attachable?: boolean };
   extra?: (activity: Activity) => ReactNode;
 }>;
 
@@ -73,6 +76,7 @@ export function RowAnswerActions({
   entityType,
   entityId,
   contactId,
+  contact,
   extra,
 }: RowVerbProps) {
   const t = useT();
@@ -95,6 +99,7 @@ export function RowAnswerActions({
         entityType={entityType}
         entityId={entityId}
         contactId={contactId}
+        contact={contact}
         contentWithheld={activity.content_state === "withheld"}
       />
       {activity.invitation_status && activity.content_state !== "withheld" && (
@@ -376,8 +381,8 @@ export function AudienceAction({
             onChange={setChoice}
             choices={messageAudienceChoices(internal).map((value) => ({
               value,
-              label: t(AUDIENCE_LABEL[value]),
-              description: t(AUDIENCE_HINT[value]),
+              label: t(labelFor(AUDIENCE_LABEL, value)),
+              description: t(labelFor(AUDIENCE_HINT, value)),
             }))}
           />
           {/* The picker only where the choice needs one. A limited-to-nobody

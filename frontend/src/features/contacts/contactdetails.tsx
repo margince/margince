@@ -34,6 +34,7 @@ import { linkedinUrl } from "../../format/weburl";
 import { useLocale, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
 import { currentEmployer } from "../../lib/employmentcurrency";
+import { labelFor } from "../../lib/labelfor";
 import { useMemberName } from "../../lib/membernames";
 import { routeHash } from "../../lib/router";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -292,7 +293,7 @@ export function ContactDetails({
                     readOnly={Boolean(contact.archived_at)}
                   />
                   <span className="t-caption">
-                    {t(EMAIL_TYPE_LABEL[email.email_type ?? "work"])}
+                    {t(labelFor(EMAIL_TYPE_LABEL, email.email_type ?? "work"))}
                   </span>
                   <BoughtMark
                     bought={bought.get(`email:${email.id}`)}
@@ -310,7 +311,7 @@ export function ContactDetails({
                     record={{ entityType: "contact", entityId: contact.id }}
                   />
                   <span className="t-caption">
-                    {t(PHONE_TYPE_LABEL[phone.phone_type ?? "work"])}
+                    {t(labelFor(PHONE_TYPE_LABEL, phone.phone_type ?? "work"))}
                   </span>
                   <BoughtMark
                     bought={bought.get(`phone:${phone.id}`)}

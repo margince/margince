@@ -7331,6 +7331,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.draftSaving": "Đang lưu…",
   "compose.earlierThreads_one": "{count} chuỗi thư trước",
   "compose.earlierThreads_other": "{count} chuỗi thư trước",
+  "compose.earlierThreadsAtLeast_one": "{count}+ chuỗi thư trước",
+  "compose.earlierThreadsAtLeast_other": "{count}+ chuỗi thư trước",
+  "compose.earlierThreadsMayExist": "Có thể còn chuỗi thư trước đó",
   "compose.threadChange": "Đổi",
   "compose.threadContinue": "Tiếp tục chuỗi thư",
   "compose.threadsRecent": "Chuỗi thư gần đây",
@@ -7545,7 +7548,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Nếu có lý do, ví dụ một yêu cầu, một cuộc họp hoặc quan hệ khách hàng, ghi lại lý do đó dưới tên bạn.",
   "sendPermission.unprovenRefuses": "Không thể gửi cho đến khi ghi nhận lý do.",
   "sendPermission.missingContext": "Tin nhắn này còn thiếu một thông tin",
-  "sendPermission.missingPermission": "Tin nhắn này cần có sự đồng ý",
+  "sendPermission.missingPermission": "Cần được phép gửi thư này",
   "sendPermission.reason.chooseDeal": "Chọn giao dịch cho lần liên hệ lại này.",
   "sendPermission.appliesTo": "Điều này áp dụng cho {address}.",
   "sendPermission.appliesToAndMore_one":
@@ -7573,6 +7576,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Địa chỉ này không nhận thư. Sửa lại địa chỉ; trường hợp này không thể bỏ qua.",
   "sendPermission.reason.optedOutAfterRequest":
     "Người nhận đã từ chối tin tiếp thị sau khi yêu cầu báo giá này. Hãy xác nhận lại với họ rằng họ vẫn muốn nhận, rồi ghi nhận yêu cầu mới của họ.",
+  "sendPermission.reason.permissionRequired":
+    "Chưa có căn cứ cho phép gửi tin tiếp thị này theo quy tắc áp dụng. Ngoại lệ của nhân viên không thay thế sự đồng ý hoặc bằng chứng bắt buộc.",
   "sendPermission.reason.consentRequired":
     "Tin tiếp thị gửi người nhận ở quốc gia này cần sự đồng ý trước của họ. Không có ngoại lệ nào thay thế được.",
   "sendPermission.reason.dealNotRequested":
@@ -20422,6 +20427,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "standing.mark.group_one": "{count} mục, {range}",
   "standing.mark.group_other": "{count} mục, {range}",
   "standing.mark.range": "{from} đến {to}",
+  "standing.mark.label": "{what}, {when}",
   "standing.mark.more_one": "{count} mục nữa trong Lịch sử",
   "standing.mark.more_other": "{count} mục nữa trong Lịch sử",
   "standing.peek.partial_one": "Hiển thị {shown}/{count}.",

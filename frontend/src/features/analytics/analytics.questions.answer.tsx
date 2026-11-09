@@ -17,6 +17,7 @@ import {
 } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
+import { labelFor } from "../../lib/labelfor";
 import { ProblemError, throwProblem } from "../../lib/problem";
 import { derivationColumns, ExcludedNote } from "./analytics.explain";
 import { ExplainDrawer } from "./analytics.explain.drawer";
@@ -481,7 +482,11 @@ export function QuestionFailure({
     );
   }
   return (
-    <Callout tone="info" kind="outcome" title={t(REFUSAL_KEY[refusal.kind])}>
+    <Callout
+      tone="info"
+      kind="outcome"
+      title={t(labelFor(REFUSAL_KEY, refusal.kind))}
+    >
       {refusal.suggest !== "" && <p>{refusal.suggest}</p>}
       {refusal.message !== "" && <p>{refusal.message}</p>}
     </Callout>

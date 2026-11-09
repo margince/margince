@@ -4,7 +4,7 @@
 /**
  * The one order every record's tab strip follows, set by the contact page.
  * A record shows only the tabs it has, in this order, and
- * `recordtaborder.test.ts` fails a list that breaks it.
+ * `census/rules/recordtaborder.census.ts` fails a list that breaks it.
  *
  * Linked addresses keep two tabs on two ids each: History is `timeline` or
  * `history`, and Documents is `documents` or `files`.

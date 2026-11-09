@@ -7517,6 +7517,9 @@ export const en = {
   "compose.draftSaving": "Saving…",
   "compose.earlierThreads_one": "{count} earlier thread",
   "compose.earlierThreads_other": "{count} earlier threads",
+  "compose.earlierThreadsAtLeast_one": "{count}+ earlier threads",
+  "compose.earlierThreadsAtLeast_other": "{count}+ earlier threads",
+  "compose.earlierThreadsMayExist": "Earlier threads may exist",
   "compose.threadChange": "Change",
   "compose.threadContinue": "Continue a thread",
   "compose.threadsRecent": "Recent threads",
@@ -7734,7 +7737,7 @@ export const en = {
   "sendPermission.unprovenRefuses":
     "Sending is refused until a reason is recorded.",
   "sendPermission.missingContext": "This message needs one more detail",
-  "sendPermission.missingPermission": "Consent needed for this message",
+  "sendPermission.missingPermission": "Permission needed for this message",
   "sendPermission.reason.chooseDeal": "Choose the deal for this follow-up.",
   "sendPermission.appliesTo": "This applies to {address}.",
   "sendPermission.appliesToAndMore_one":
@@ -7762,6 +7765,8 @@ export const en = {
     "This address does not accept mail. Correct the address; an override does not apply.",
   "sendPermission.reason.optedOutAfterRequest":
     "The recipient opted out of marketing after asking for this quote. Confirm with them that they still want it, then record their new request.",
+  "sendPermission.reason.permissionRequired":
+    "This marketing message has no recorded permission under the applicable rules. A staff exception cannot replace consent or the required evidence.",
   "sendPermission.reason.consentRequired":
     "Marketing to a recipient in this country needs their prior consent. No exception can replace it.",
   "sendPermission.reason.dealNotRequested":
@@ -20738,6 +20743,7 @@ export const en = {
   "standing.mark.group_one": "{count} entry, {range}",
   "standing.mark.group_other": "{count} entries, {range}",
   "standing.mark.range": "{from} to {to}",
+  "standing.mark.label": "{what}, {when}",
   "standing.mark.more_one": "{count} more in History",
   "standing.mark.more_other": "{count} more in History",
   "standing.peek.partial_one": "Showing {shown} of {count}.",

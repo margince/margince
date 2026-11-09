@@ -221,7 +221,7 @@
  * sheet; it is the panel's to make once. `:where` on the summary keeps a rail
  * that shapes its own (a heading, a badge pushed to the far end) ahead of this
  * by specificity rather than by sheet order; the body's rule is spelt plainly
- * because `disclosure-inset.test.ts` reads the combinator, and every rail's
+ * because `census/rules/disclosure-inset.census.ts` reads the combinator, and every rail's
  * own body rule agrees with it. */
 .panel > .disclosure {
   padding-top: 0;

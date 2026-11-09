@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import ts from "typescript";
 import {
   alternativesOf,
@@ -13,7 +11,6 @@ import {
   subjectClasses,
   subjectOf,
 } from "./css-rules";
-import { parseSource } from "./source-tree";
 
 // WHO RENDERS INSIDE WHOM, read off the components rather than off the
 // selectors.
@@ -40,10 +37,11 @@ import { parseSource } from "./source-tree";
 // A JSX attribute whose value this cannot read statically — a computed
 // className — contributes nothing rather than guessing, which is why the
 // emptiness check at the call site is not optional.
-export function renderedInside(root: string): Map<string, Set<string>[]> {
+export function renderedInside(
+  components: readonly ts.SourceFile[],
+): Map<string, Set<string>[]> {
   const inside = new Map<string, Set<string>[]>();
-  for (const file of componentFiles(root)) {
-    const source = parseSource(file, readFileSync(file, "utf8"));
+  for (const source of components) {
     const walk = (node: ts.Node, hosts: readonly string[]) => {
       // The classes hang off the ELEMENT, not off the attribute: an
       // attribute's own children are its value, and the children rendered
@@ -89,10 +87,11 @@ export type DrawnElement = {
   textless: boolean;
 };
 
-export function drawnElements(root: string): DrawnElement[] {
+export function drawnElements(
+  components: readonly ts.SourceFile[],
+): DrawnElement[] {
   const drawn: DrawnElement[] = [];
-  for (const file of componentFiles(root)) {
-    const source = parseSource(file, readFileSync(file, "utf8"));
+  for (const source of components) {
     const walk = (node: ts.Node) => {
       const classes = classNamesOfElement(node);
       if (classes.length > 0) {
@@ -169,18 +168,6 @@ function intrinsicName(tag: ts.JsxTagNameExpression): string | undefined {
   return ts.isIdentifier(tag) && !/^[A-Z]/.test(tag.text)
     ? tag.text
     : undefined;
-}
-
-function componentFiles(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      return entry.name === "node_modules" || entry.name === "dist"
-        ? []
-        : componentFiles(path);
-    }
-    return entry.name.endsWith(".tsx") ? [path] : [];
-  });
 }
 
 // The classes a JSX element carries, read off its opening tag.

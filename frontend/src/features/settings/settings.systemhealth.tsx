@@ -13,6 +13,7 @@ import { formatDateTime, formatNumber } from "../../format/format";
 import { formatAge } from "../../format/interval";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useHealthScope } from "../../lib/healthscope";
+import { valueFor } from "../../lib/labelfor";
 import { useUrlParams } from "../../lib/urlstate";
 import { useViewerZone } from "../../lib/viewerzone";
 import { PublicOriginCard } from "./public-origin";
@@ -320,7 +321,7 @@ function SourceStatus({ source }: Readonly<{ source: Source }>) {
     <Badge tone={tone}>
       {t(
         healthCodes[source.code] ??
-          healthAvailability[source.availability] ??
+          valueFor(healthAvailability, source.availability, undefined) ??
           "health.failed",
       )}
     </Badge>

@@ -78,13 +78,16 @@ func recordNames(in Input) map[recordKey]string {
 	for _, task := range in.OpenTasks {
 		names[recordKey{citeActivity, task.ID}] = task.Name
 	}
-	// A commitment's message is named by the promise, not the subject line, and
-	// the first of two promises from one message keeps the name.
-	claimed := make(map[recordKey]bool, len(in.OpenCommitments))
+	// A commitment's message is named by its promise. A citation cannot pick
+	// between two, and a cut page may hide a second. Then the subject stands.
+	promises := make(map[recordKey]int, len(in.OpenCommitments))
+	for _, commitment := range in.OpenCommitments {
+		promises[recordKey{citeActivity, commitment.ActivityID}]++
+	}
 	for _, commitment := range in.OpenCommitments {
 		key := recordKey{citeActivity, commitment.ActivityID}
-		if !claimed[key] {
-			names[key], claimed[key] = commitment.Claim, true
+		if promises[key] == 1 && !in.OpenCommitmentsCut {
+			names[key] = commitment.Claim
 		}
 	}
 	return names

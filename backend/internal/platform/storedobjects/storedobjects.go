@@ -12,7 +12,7 @@
 // the owning row, so a key is provisional exactly while the pair is incomplete. A key
 // still recorded after the grace period is an object whose row never arrived.
 //
-// In platform rather than in one module because six modules put bytes, and a module
+// In platform rather than in one module because modules put bytes, and a module
 // never imports a sibling to borrow a ledger.
 package storedobjects
 
@@ -43,18 +43,19 @@ type Kind string
 // Every kind a writer may declare. A new one is added here and in the sweep's
 // reference map together; nothing else may name one.
 const (
-	KindAttachment Kind = "attachment"
-	KindKnowledge  Kind = "knowledge"
-	KindLogo       Kind = "logo"
-	KindOffer      Kind = "offer"
-	KindImport     Kind = "import"
-	KindAvatar     Kind = "avatar"
+	KindRawOriginal Kind = "raw_original"
+	KindAttachment  Kind = "attachment"
+	KindKnowledge   Kind = "knowledge"
+	KindLogo        Kind = "logo"
+	KindOffer       Kind = "offer"
+	KindImport      Kind = "import"
+	KindAvatar      Kind = "avatar"
 )
 
 // AllKinds is the vocabulary itself, so a reader of the ledger can be held to
 // covering all of it rather than to a list somebody keeps in step by hand.
 func AllKinds() []Kind {
-	return []Kind{KindAttachment, KindKnowledge, KindLogo, KindOffer, KindImport, KindAvatar}
+	return []Kind{KindRawOriginal, KindAttachment, KindKnowledge, KindLogo, KindOffer, KindImport, KindAvatar}
 }
 
 // declared reports whether a writer may record this kind.
@@ -102,21 +103,7 @@ func (l *Ledger) Record(ctx context.Context, kind Kind, key string) error {
 	// ledger-bound resolve has no single workspace to find.
 	ws := ids.From[ids.WorkspaceKind](storekit.MustWorkspace(ctx))
 	return l.db.ForWorkspace(ws).Tx(ctx, func(tx pgx.Tx) error {
-		// ON CONFLICT because a retried upload of the same id is not an error worth
-		// failing a caller's file over. Both columns are refreshed, and recorded_at
-		// is the one that matters: a retry of a key whose earlier intent has already
-		// aged past the grace period would otherwise inherit that timestamp and be
-		// eligible for the reaper the moment it is recorded — so a sweep running
-		// between this retry's put and its row could delete the bytes just written.
-		// The clock restarts because the WINDOW restarts.
-		_, err := tx.Exec(ctx, `
-			INSERT INTO stored_object_intent (storage_key, kind) VALUES ($1, $2)
-			ON CONFLICT (storage_key) DO UPDATE
-			   SET kind = excluded.kind, recorded_at = now()`, key, string(kind))
-		if err != nil {
-			return fmt.Errorf("record a provisional object: %w", err)
-		}
-		return nil
+		return RecordTx(ctx, tx, kind, key)
 	})
 }
 
@@ -128,10 +115,8 @@ func RecordTx(ctx context.Context, tx pgx.Tx, kind Kind, key string) error {
 	if !declared(kind) {
 		return fmt.Errorf("record a provisional object: %q is not a declared kind", kind)
 	}
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO stored_object_intent (storage_key, kind) VALUES ($1, $2)
-		ON CONFLICT (storage_key) DO UPDATE SET kind = excluded.kind, recorded_at = now()`,
-		key, string(kind)); err != nil {
+	if _, err := tx.Exec(ctx, `SELECT record_stored_object_intent(@kind, @key)`,
+		pgx.NamedArgs{"kind": string(kind), "key": key}); err != nil {
 		return fmt.Errorf("record a provisional object: %w", err)
 	}
 	return nil

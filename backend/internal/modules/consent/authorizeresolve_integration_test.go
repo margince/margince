@@ -826,21 +826,26 @@ func TestARecipientWithNoStagedClaimInheritsNothing(t *testing.T) {
 // plantDelivery makes a delivery row for decisions to hang off.
 func (e *resolveEnv) plantDelivery(t *testing.T) ids.UUID {
 	t.Helper()
+	return plantConsentDelivery(t, e.owner, e.user)
+}
+
+func plantConsentDelivery(t *testing.T, owner *pgx.Conn, user ids.UUID) ids.UUID {
+	t.Helper()
 	ctx := context.Background()
 	activityID := ids.NewV7()
-	if _, err := e.owner.Exec(ctx, `
+	if _, err := owner.Exec(ctx, `
 		INSERT INTO activity (id, kind, direction, source, occurred_at, captured_by)
 		VALUES ($1, 'email', 'outbound', 'manual', now(), 'human:x')`, activityID); err != nil {
 		t.Fatal(err)
 	}
 	id := ids.NewV7()
-	if _, err := e.owner.Exec(ctx, `
+	if _, err := owner.Exec(ctx, `
 		INSERT INTO comms_outbound
 		  (id, activity_id, user_id, provider, message_id, recipients, cc, subject, body,
 		   consent_purpose, references_chain, status)
 		VALUES ($1, $2, $3, 'gmail', $4, '[]'::jsonb, '[]'::jsonb, 'S', 'b',
 		        'newsletter', '[]'::jsonb, 'pending')`,
-		id, activityID, e.user, "msg-"+id.String()); err != nil {
+		id, activityID, user, "msg-"+id.String()); err != nil {
 		t.Fatal(err)
 	}
 	return id

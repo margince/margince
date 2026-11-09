@@ -278,7 +278,7 @@ export function formatDateTime(
  *
  * Held by two tests. format.calendar-days.test.ts pins the boundary cases:
  * 23:00 to 01:00 is one day, not zero, and the zone moves the answer.
- * calendar-days-zone.test.ts fails a caller that names no zone.
+ * census/rules/calendar-days-zone.census.ts fails a caller that names no zone.
  */
 export function calendarDaysBetween(
   from: Date,
@@ -294,7 +294,7 @@ export function calendarDaysBetween(
  * The clock hour, 0-23, that an instant reads as in one zone.
  *
  * Here because this file constructs formatters. Outside it, a locale reaches
- * `Intl` only through `INTL_LOCALE` (`one-locale.test.ts` holds that).
+ * `Intl` only through `INTL_LOCALE` (`census/rules/one-locale.census.ts` holds that).
  * The hour carries no locale (08 is 08 in every language). So the tag is `en-GB`
  * for an unambiguous `hourCycle: "h23"`, and the zone is what the caller asks.
  *

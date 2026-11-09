@@ -11,11 +11,12 @@ package compose
 
 import (
 	"fmt"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/moneytotal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -63,7 +64,7 @@ var (
 )
 
 func projectDealMoneySQL(status string, unpriced bool) string {
-	expression := deals.BaseValueSumSQL(reportAsOfToken, reportBaseCurrencyToken, "d", reportDealMaskToken)
+	expression := "coalesce(" + deals.BaseValueSumSQL(reportAsOfToken, reportBaseCurrencyToken, "d", reportDealMaskToken) + ", 0)"
 	if unpriced {
 		expression = deals.UnpricedCountSQL(reportAsOfToken, reportBaseCurrencyToken, "d", reportDealMaskToken)
 	}
@@ -238,21 +239,17 @@ func projectsGoneQuietSpec() reportSpec {
 // reportMoneyAggregateSQL renders one aggregate over a measure. Over a
 // converted amount it answers only what it can price.
 //
-// A sum keeps the total of what was priced. Every other function folds the rows
-// beneath it as each row reads, so a project with no deals counts as zero. A
-// group holding an unpriced amount then has no answer, and so does a function
-// added to the vocabulary later.
+// A group holding an unpriced amount has no answer, whatever the function, so a
+// function added to the vocabulary later is held to it too. A sum over an empty
+// group reads zero. Every other function folds the rows as each row reads, and
+// a project with no deals reads zero because its measure does.
 func reportMoneyAggregateSQL(spec reportSpec, aggregate reportAggregate, expression string) string {
+	rendered := aggregateOver(aggregate.Fn, expression)
 	coverage, ok := spec.sumCoverage[aggregate.Field]
 	if !ok {
-		return aggregateOver(aggregate.Fn, expression)
+		return rendered
 	}
-	unpriced := "sum(" + coverage + ")"
-	if aggregate.Fn == aggFnSum {
-		return deals.FinalizeBaseTotalSQL(aggregateOver(aggFnSum, expression), unpriced)
-	}
-	row := deals.FinalizeBaseTotalSQL(expression, coverage)
-	return deals.StrictBaseTotalSQL(aggregateOver(aggregate.Fn, row), unpriced)
+	return moneytotal.CompleteAggregateSQL(rendered, "sum("+coverage+")", aggregate.Fn == aggFnSum)
 }
 
 // aggregateOver is one function over an expression. A percentile is rendered by

@@ -56,7 +56,7 @@ function useDealMail(dealId: string) {
             query: {
               entity_type: "deal",
               entity_id: dealId,
-              kind: "email",
+              kind: ["email"],
               limit: MAIL_ASIDE_ROWS,
             },
           },

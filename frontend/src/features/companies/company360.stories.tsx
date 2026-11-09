@@ -72,6 +72,7 @@ const populated: View = {
     data: [
       {
         contact_id: "p-1",
+        attachable: true,
         full_name: "Dana Buyer",
         title: "Head of Fleet",
         primary_email: "dana@brandt.example",
@@ -90,6 +91,7 @@ const populated: View = {
       },
       {
         contact_id: "p-2",
+        attachable: true,
         full_name: "Kim Ops",
         title: "Operations",
         deal_roles: [],

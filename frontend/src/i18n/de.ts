@@ -7506,6 +7506,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.draftSaving": "Wird gespeichert…",
   "compose.earlierThreads_one": "{count} früherer Thread",
   "compose.earlierThreads_other": "{count} frühere Threads",
+  "compose.earlierThreadsAtLeast_one": "{count}+ frühere Threads",
+  "compose.earlierThreadsAtLeast_other": "{count}+ frühere Threads",
+  "compose.earlierThreadsMayExist": "Möglicherweise gibt es frühere Threads",
   "compose.threadChange": "Ändern",
   "compose.threadContinue": "Thread fortsetzen",
   "compose.threadsRecent": "Letzte Threads",
@@ -7729,8 +7732,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.unprovenRefuses":
     "Der Versand wird abgelehnt, bis ein Grund erfasst ist.",
   "sendPermission.missingContext": "Für diese Nachricht fehlt eine Angabe",
-  "sendPermission.missingPermission":
-    "Für diese Nachricht fehlt die Einwilligung",
+  "sendPermission.missingPermission": "Für diese Nachricht fehlt die Erlaubnis",
   "sendPermission.reason.chooseDeal": "Wähle den Deal für dieses Follow-up.",
   "sendPermission.appliesTo": "Das betrifft {address}.",
   "sendPermission.appliesToAndMore_one":
@@ -7759,6 +7761,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese Adresse nimmt keine E-Mails an. Korrigiere die Adresse. Eine Ausnahme ist hier nicht möglich.",
   "sendPermission.reason.optedOutAfterRequest":
     "Die empfangende Person hat sich nach ihrer Anfrage vom Marketing abgemeldet. Kläre mit ihr, ob sie das Angebot noch möchte, und erfasse dann ihre neue Anfrage.",
+  "sendPermission.reason.permissionRequired":
+    "Für diese Marketingnachricht ist nach den geltenden Regeln keine Erlaubnis belegt. Eine Ausnahme durch Mitarbeitende ersetzt weder die Einwilligung noch die erforderlichen Nachweise.",
   "sendPermission.reason.consentRequired":
     "Marketing an eine empfangende Person in diesem Land braucht ihre vorherige Einwilligung. Keine Ausnahme kann sie ersetzen.",
   "sendPermission.reason.dealNotRequested":
@@ -20963,6 +20967,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "standing.mark.group_one": "{count} Eintrag, {range}",
   "standing.mark.group_other": "{count} Einträge, {range}",
   "standing.mark.range": "{from} bis {to}",
+  "standing.mark.label": "{what}, {when}",
   "standing.mark.more_one": "{count} weiterer im Verlauf",
   "standing.mark.more_other": "{count} weitere im Verlauf",
   "standing.peek.partial_one": "{shown} von {count} werden gezeigt.",

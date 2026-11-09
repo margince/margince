@@ -57,10 +57,12 @@ func (s *Service) aboutActivity(ctx context.Context, id ids.ActivityID, envelope
 // under so the follow-up knows which deal it continues.
 func foldAbout(activity crmcontracts.Activity, now time.Time, zone *time.Location) *ActIn {
 	folded := ActIn{
-		ID:      activity.Id.String(),
-		Kind:    string(activity.Kind),
-		At:      activitywhen.Text(activity),
-		Inbound: activity.Direction != nil && *activity.Direction == crmcontracts.ActivityDirectionInbound,
+		ID:   activity.Id.String(),
+		Kind: string(activity.Kind),
+		At:   activitywhen.Text(activity),
+		// By the voice: a colleague's mail can arrive inbound, and the transport
+		// alone hands the drafter our own message as the contact's words.
+		Inbound: draftcore.FromThem(activity),
 	}
 	if activity.Subject != nil {
 		folded.Subject = *activity.Subject

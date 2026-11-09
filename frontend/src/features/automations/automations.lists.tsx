@@ -12,6 +12,7 @@ import { Popover } from "../../design-system/popover";
 import { Select, type SelectOption } from "../../design-system/select";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { useLists } from "../../lib/lists.queries";
 import { useMe } from "../../lib/session";
 import "./automations.datefield.css";
@@ -142,9 +143,9 @@ export function RulePausedReason({
     <Popover
       onHover
       className="t-caption"
-      label={t(PAUSED_SHORT[automation.paused_reason])}
+      label={t(labelFor(PAUSED_SHORT, automation.paused_reason))}
     >
-      <p>{t(PAUSED_REASON[automation.paused_reason])}</p>
+      <p>{t(labelFor(PAUSED_REASON, automation.paused_reason))}</p>
     </Popover>
   );
 }
