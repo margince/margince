@@ -5,6 +5,7 @@ import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import { contextOptions } from "../../lib/compose-context";
+import "./compose.css";
 
 type CommunicationContext = components["schemas"]["CommunicationContext"];
 
