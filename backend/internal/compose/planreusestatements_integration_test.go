@@ -17,12 +17,16 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/attention"
+	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/contact360"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/modules/collections"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -109,8 +113,13 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	store := activities.NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.WS)))
+	db := database.BindTo(pool, ids.From[ids.WorkspaceKind](e.WS))
+	store := activities.NewStore(db)
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	engine := briefs.NewBriefEngine(pool, contacts.NewStore(db))
+	if _, err := engine.SnapshotRun(reader, at); err != nil {
+		t.Fatalf("taking the rep's brief run: %v", err)
+	}
 	if err := database.WithWorkspaceSnapshot(reader, pool, func(ctx context.Context) error {
 		if _, err := emailSummariesReusingPlans(ctx, store, []ids.UUID{ids.UUID(mail.Id)}); err != nil {
 			return err
@@ -125,7 +134,10 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 		if _, err := advice.CurrentMoves(ctx, []ids.UUID{deal}); err != nil {
 			return err
 		}
-		if err := readSuggestionLanes(ctx, database.BindTo(pool, ids.From[ids.WorkspaceKind](e.WS))); err != nil {
+		if err := readSuggestionLanes(ctx, db); err != nil {
+			return err
+		}
+		if err := readPlannedOnceLanes(ctx, plannedOnceLanes{db: db, pool: pool, engine: engine}, deal, ids.UUID(mail.Id), at); err != nil {
 			return err
 		}
 		return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
@@ -147,7 +159,11 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 	if len(sent.sql) == 0 {
 		t.Fatal("no statement was sent, so there is nothing to hold")
 	}
-	for _, held := range []string{"FROM activity_commitment_admission d", "FROM deal_suggestion s", "FROM tag_suggestion s"} {
+	for _, held := range []string{
+		"FROM activity_commitment_admission d", "FROM deal_suggestion s", "FROM tag_suggestion s",
+		"FROM brief_item bi", "'deal_stakeholder'", "wd.source = 'domain_question'", "task_claims AS MATERIALIZED",
+		"a.meeting_status = 'booked'",
+	} {
 		if !slices.ContainsFunc(sent.sql, func(sql string) bool { return strings.Contains(sql, held) }) {
 			t.Fatalf("no statement %s was sent, so the check does not hold that read", held)
 		}
@@ -157,6 +173,43 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 			t.Errorf("a statement under generic plans binds %q; spell it as a literal or leave the read out of plan reuse:\n%s", found, sql)
 		}
 	}
+}
+
+// plannedOnceLanes is what the Worklist's other plan-reusing reads are built on.
+type plannedOnceLanes struct {
+	db     *database.DB
+	pool   *pgxpool.Pool
+	engine *briefs.BriefEngine
+}
+
+// readPlannedOnceLanes runs the Worklist's other plan-reusing reads through
+// their seams. They are the meeting lanes, the task flags and their claims, the
+// domain questions, the champion cover and the brief run items.
+func readPlannedOnceLanes(ctx context.Context, lanes plannedOnceLanes, deal, task ids.UUID, at time.Time) error {
+	store := activities.NewStore(lanes.db)
+	window := attention.MeetingWindow{From: at.Add(-24 * time.Hour), Until: at.Add(24 * time.Hour), DaysFrom: at, DaysUntil: at}
+	if _, _, err := (attentionMeetings{store: store}).Today(ctx, window, 10, attention.TasksMine, ids.UUID{}); err != nil {
+		return err
+	}
+	if _, err := (attentionMeetingsAwaitingOutcome{store: store}).Since(ctx, window, 10, attention.TasksMine, ids.UUID{}); err != nil {
+		return err
+	}
+	if _, _, err := (attentionMeetingHorizon{store: store}).NextCustomerMeeting(ctx, window); err != nil {
+		return err
+	}
+	claims := contacts.NewStore(lanes.db)
+	if _, err := (attentionTasks{store: store, claims: claims}).markReadOnly(ctx, []attention.Task{{ID: task}}, at); err != nil {
+		return err
+	}
+	if _, err := (attentionDomainQuestions{store: claims}).OpenDomainQuestions(ctx); err != nil {
+		return err
+	}
+	if _, err := (attentionAtRisk{pool: lanes.pool}).championCover(ctx, []agents.SlippingDeal{{DealID: deal}}, at); err != nil {
+		return err
+	}
+	briefing := attentionBriefing{engine: lanes.engine, figures: attentionDealFacts{store: deals.NewStore(lanes.db, DealsInstallation())}, now: func() time.Time { return at }}
+	_, _, _, err := briefing.Queue(ctx)
+	return err
 }
 
 // readSuggestionLanes runs the needs_you lane's four suggestion reads through
