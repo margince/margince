@@ -25,13 +25,11 @@ const (
 )
 
 // EnsureDealContractsShareCompany refuses to point a deal at a company that
-// the contracts filed against it do not name. It is ensureLinksShareCompany
-// seen from the deal's side: that check refuses to file company A's contract
-// against company B's deal, and this one refuses to move the deal there later.
+// the contracts filed against it do not name. ensureLinksShareCompany refuses
+// the same pairing when a contract is filed; this refuses it on a deal move.
 //
-// Archived contracts count, because a contract read by id is filtered by its
-// anchor's archived_at, not its own, so an archived one still reads through the
-// deal.
+// Archived contracts count. A read by id filters on the anchor's archived_at,
+// not the contract's, so an archived contract still reads through the deal.
 func EnsureDealContractsShareCompany(ctx context.Context, tx pgx.Tx, dealID ids.DealID, companyID ids.CompanyID) error {
 	rows, err := tx.Query(ctx,
 		`SELECT COALESCE(contract_number, title)
@@ -50,8 +48,8 @@ func EnsureDealContractsShareCompany(ctx context.Context, tx pgx.Tx, dealID ids.
 		return nil
 	}
 	refusal := &DealContractsCrossCompanyError{Count: len(blocking)}
-	// The caller may write this deal and so see every contract on it, but a
-	// role without contract read is told how many, not what they are called.
+	// The caller may write this deal, so every contract on it is in their
+	// row scope. A role without contract read still gets only the count.
 	if auth.ReadGranted(ctx, contractObject) {
 		for _, name := range blocking[:min(len(blocking), namedInRefusal)] {
 			refusal.Named = append(refusal.Named, textcut.RunesMarked(name, nameRunes, "…"))

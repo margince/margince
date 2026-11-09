@@ -18,23 +18,16 @@ import (
 )
 
 // EnsureContractsShareCompany refuses to move a deal to a company that the
-// contracts filed against it do not name.
+// contracts filed against it do not name. A contract on a deal is visible
+// through that deal alone, so the move would show them to the new company.
 //
-// A contract with a deal is visible through that deal alone
-// (contracts.VisibleClause). If a deal moved from company A to company B kept
-// A's contracts, everyone who can see the deal would read A's contracts. So a
-// company move is refused while such contracts are attached; the user detaches
-// them or files them against a deal of the right company first.
-//
-// It runs in the caller's transaction, after updateDealInTx has locked the deal
-// row. A contract filed against the deal at the same time reads the deal's
-// company under a share lock (auth.EnsureLinkTarget), so one of the two waits
-// and sees what the other committed.
+// It runs after updateDealInTx locked the deal row. A concurrent contract
+// filing reads the deal under a share lock, so one of the two waits.
 type EnsureContractsShareCompany func(ctx context.Context, tx pgx.Tx, dealID ids.DealID, companyID ids.CompanyID) error
 
-// refusingEnsureContractsShareCompany is what an un-injected check becomes: it
-// refuses every company move rather than admitting every one, because a check
-// that failed open would let one company's contracts reach another company's readers.
+// refusingEnsureContractsShareCompany is what an un-injected check becomes. It
+// refuses every company move, because a check that failed open would let one
+// company's contracts reach another company's readers.
 func refusingEnsureContractsShareCompany() EnsureContractsShareCompany {
 	return func(context.Context, pgx.Tx, ids.DealID, ids.CompanyID) error {
 		return errors.New("deals: the EnsureContractsShareCompany seam was not injected; " +

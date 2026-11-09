@@ -83,7 +83,7 @@ func (f companyMoveFixture) dealStillNames(t *testing.T, deal ids.DealID, want *
 }
 
 // The state the refusal exists against, seeded past every writer. A contract
-// with a deal is visible through that deal alone, so a deal naming Contoso
+// with a deal is visible through that deal alone. So a deal naming Contoso
 // shows Acme's contract to a rep who cannot see Acme at all.
 func TestADealAnchorShowsAContractOfAnotherCompanyToTheDealsReaders(t *testing.T) {
 	f := newCompanyMoveFixture(t)
@@ -113,9 +113,9 @@ func TestADealAnchorShowsAContractOfAnotherCompanyToTheDealsReaders(t *testing.T
 	}
 }
 
-// Both known routes into the mismatch reach the deal update, and it refuses
-// each before writing: a deal filed for Acme and corrected to Contoso, and a
-// deal that named no company when Acme's contract was filed.
+// Both known routes into the mismatch reach the deal update, which refuses
+// each before writing. One deal was filed for Acme and corrected to Contoso.
+// The other named no company when Acme's contract was filed.
 func TestMovingADealsCompanyIsRefusedWhileItsContractsNameAnother(t *testing.T) {
 	f := newCompanyMoveFixture(t)
 	for name, born := range map[string]*ids.CompanyID{
@@ -248,8 +248,8 @@ func TestACompanyMergeCarriesTheDealAndItsContractsTogether(t *testing.T) {
 }
 
 // The refusal runs after the existing gates, so RBAC and row scope answer as
-// before, and a role without contract read learns how many contracts block,
-// not what they are called.
+// before. A role without contract read learns how many contracts block, not
+// what they are called.
 func TestTheRefusalKeepsTheDealGatesAndTheContractReadGrant(t *testing.T) {
 	f := newCompanyMoveFixture(t)
 	e := f.e

@@ -55,11 +55,11 @@ func applyDealLinkPatches(ctx context.Context, tx pgx.Tx,
 	return applyPartnerAttributionPatch(ctx, tx, current, in, p, clearPartner, ensurePartner)
 }
 
-// applyCompanyLinkPatch points a deal at a company the caller may see and that
-// the contracts filed against the deal name (contractseam.go). Every caller of
+// applyCompanyLinkPatch points a deal at a company the caller may see and
+// that the deal's contracts name (contractseam.go). Every caller of
 // updateDealInTx reaches it: REST, the agent tools, the CSV import, restores.
 //
-// Clearing the company stays allowed: the filing check admits a contract on a
+// Clearing the company stays allowed. The filing check admits a contract on a
 // deal with no company, and a deal's row scope does not read its company.
 func applyCompanyLinkPatch(ctx context.Context, tx pgx.Tx, current crmcontracts.Deal,
 	companyID ids.CompanyID, p *storekit.Patch, ensureContractsShareCompany EnsureContractsShareCompany,
