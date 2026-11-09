@@ -72890,7 +72890,7 @@ components:
     StandingOverride:
       type: object
       description: A recorded exception for one contact, message category and sending company.
-      required: [override_id, category, reason, authority, recorded_at, may_revoke]
+      required: [override_id, category, reason, authority, saved_at, may_revoke]
       properties:
         override_id: { type: string, format: uuid }
         category:
@@ -72898,7 +72898,11 @@ components:
           description: The message category recorded by the exception; an older category is not a new permission.
         reason: { type: string }
         authority: { type: string }
-        recorded_at: { type: string, format: date-time }
+        saved_at: { type: string, format: date-time }
+        recorded_at:
+          type: [string, 'null']
+          format: date-time
+          description: Original recording time, when retained provenance establishes it. Unknown for an erased origin or an older unmarked record.
         recorded_by_name: { type: [string, 'null'] }
         sending_entity_id: { type: [string, 'null'], format: uuid }
         sending_entity_name: { type: [string, 'null'] }

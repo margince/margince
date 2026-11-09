@@ -24,6 +24,7 @@ import { Checkbox, Field, Textarea } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
 import { Select } from "../../design-system/select";
+import { sendingCompanyScope } from "../../format/sendingcompany";
 import { sendPermissionReasonKey } from "../../format/sendpermissionreason";
 import { useT } from "../../i18n";
 import { communicationContextLabel } from "../../lib/compose-context";
@@ -180,11 +181,11 @@ export function DirectSendModal({
             ) ?? t("consent.exceptionOtherPurpose")}
           </p>
           <p className="t-caption">
-            {refusal.sending_entity_name
-              ? t("consent.exceptionCompany", {
-                  name: refusal.sending_entity_name,
-                })
-              : t("consent.exceptionUnknownCompany")}
+            {sendingCompanyScope(
+              refusal.sending_entity_id,
+              refusal.sending_entity_name,
+              t,
+            )}
           </p>
         </div>
       ))}

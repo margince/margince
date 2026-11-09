@@ -3500,11 +3500,13 @@ export const en = {
     "Sends stop resting on it, including a message already queued on it. The request stays on the record as withdrawn and cannot be restored.",
   "consent.acquisitionRequest":
     "When this contact was added, they asked for a quote or a meeting, or said face to face that they may be written to.",
+  "consent.exceptionUnknownOrigin": "Original author and date unavailable.",
   "consent.exceptionsTitle": "Standing exceptions",
   "consent.exceptionsScope":
     "Each exception covers one purpose and one sending company. It grants no marketing consent. Every message is checked again.",
   "consent.exceptionOtherPurpose": "Other recorded purpose",
   "consent.exceptionCompany": "Sending company: {name}",
+  "consent.exceptionUnnamedCompany": "Sending company name not set.",
   "consent.exceptionUnknownCompany": "Sending company not recorded.",
   "consent.exceptionRevoke": "Revoke exception",
   "consent.exceptionRevokeBody":

@@ -62610,12 +62610,15 @@ type StandingOverride struct {
 	Authority string `json:"authority"`
 
 	// Category The message category recorded by the exception; an older category is not a new permission.
-	Category          string              `json:"category"`
-	MayRevoke         bool                `json:"may_revoke"`
-	OverrideId        openapi_types.UUID  `json:"override_id"`
-	Reason            string              `json:"reason"`
-	RecordedAt        time.Time           `json:"recorded_at"`
+	Category   string             `json:"category"`
+	MayRevoke  bool               `json:"may_revoke"`
+	OverrideId openapi_types.UUID `json:"override_id"`
+	Reason     string             `json:"reason"`
+
+	// RecordedAt Original recording time, when retained provenance establishes it. Unknown for an erased origin or an older unmarked record.
+	RecordedAt        *time.Time          `json:"recorded_at,omitempty"`
 	RecordedByName    *string             `json:"recorded_by_name,omitempty"`
+	SavedAt           time.Time           `json:"saved_at"`
 	SendingEntityId   *openapi_types.UUID `json:"sending_entity_id,omitempty"`
 	SendingEntityName *string             `json:"sending_entity_name,omitempty"`
 }

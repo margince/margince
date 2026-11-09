@@ -52,11 +52,14 @@ func (s *Store) ListContactOverrides(ctx context.Context, contactID ids.ContactI
 			return items, make([]*string, len(items)), err
 		}
 		entries, page, err = storekit.RunListPageTx(ctx, tx, pre, table,
-			"id, category, reason, decided_by_level, created_at, source_recorded_at, legal_entity_id, sending_entity_name, recorded_by_name",
+			"id, category, reason, decided_by_level, created_at, source_recorded_at, legal_entity_id, recorded_by_name",
 			nil, pre.Where(), scan, func(row listedOverride) (time.Time, ids.UUID) {
 				return row.savedAt, ids.UUID(row.value.OverrideId)
 			})
-		return err
+		if err != nil {
+			return err
+		}
+		return s.nameListedEntities(ctx, tx, entries)
 	})
 	out := make([]crmcontracts.StandingOverride, 0, len(entries))
 	for _, entry := range entries {
@@ -96,13 +99,13 @@ func overrideListTable(pre *storekit.ListPrelude, subjectID ids.UUID) string {
 	human := pre.Arg(principal.HumanIDPrefix)
 	agent := pre.Arg(passportAgentPrefix)
 	return storekit.SQLf(`(SELECT o.id, o.category, o.reason, o.decided_by_level,
-	        o.recorded_at AS created_at, origin.recorded_at AS source_recorded_at,
-	        o.legal_entity_id, le.display_name AS sending_entity_name, u.display_name AS recorded_by_name
+	        o.recorded_at AS created_at, CASE WHEN origin.recorded_directly IS TRUE THEN origin.recorded_at END AS source_recorded_at,
+	        o.legal_entity_id, u.display_name AS recorded_by_name
 	    FROM communication_override o
-	    LEFT JOIN LATERAL `+carriedRootSQL("communication_override", "o", "captured_by", "recorded_at")+` origin ON true
-	    LEFT JOIN legal_entity le ON le.id = o.legal_entity_id
+	    LEFT JOIN LATERAL `+carriedRootSQL("communication_override", "o", "captured_by", "recorded_at", "recorded_directly")+` origin ON true
 	    LEFT JOIN passport p ON origin.captured_by = $%d || p.id::text
-	    LEFT JOIN app_user u ON origin.captured_by = $%d || u.id::text OR u.id = p.on_behalf_of
+	    LEFT JOIN app_user u ON origin.recorded_directly IS TRUE
+        AND (origin.captured_by = $%d || u.id::text OR u.id = p.on_behalf_of)
 	   WHERE o.contact_id = $%d AND o.revoked_at IS NULL) standing`, agent, human, contact)
 }
 
@@ -111,9 +114,10 @@ func scanListedOverride(row pgx.CollectableRow, ctx context.Context, admitted bo
 	var id ids.UUID
 	var entity *ids.UUID
 	if err := row.Scan(&id, &out.value.Category, &out.value.Reason, &out.value.Authority,
-		&out.savedAt, &out.value.RecordedAt, &entity, &out.value.SendingEntityName, &out.value.RecordedByName); err != nil {
+		&out.savedAt, &out.value.RecordedAt, &entity, &out.value.RecordedByName); err != nil {
 		return out, fmt.Errorf("consent: reading a standing exception: %w", err)
 	}
+	out.value.SavedAt = out.savedAt
 	out.value.OverrideId = openapi_types.UUID(id)
 	if entity != nil {
 		value := openapi_types.UUID(*entity)

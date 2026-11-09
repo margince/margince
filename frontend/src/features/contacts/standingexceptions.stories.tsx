@@ -36,6 +36,7 @@ export const Scoped: Story = {
               category: "requested_followup",
               reason: "Asked for the next steps during the meeting.",
               authority: "user",
+              saved_at: "2026-06-12T10:00:00Z",
               recorded_at: "2026-06-12T10:00:00Z",
               recorded_by_name: "Alex",
               sending_entity_name: "Example Company",
@@ -69,7 +70,8 @@ export const Historical: Story = {
               category: "requested_followup",
               reason: "Requested a follow-up.",
               authority: "user",
-              recorded_at: "2026-06-12T10:00:00Z",
+              saved_at: "2026-06-12T10:00:00Z",
+              recorded_at: null,
               may_revoke: false,
             },
           ],
@@ -79,3 +81,5 @@ export const Historical: Story = {
     return <StandingExceptions {...args} />;
   },
 };
+
+export const ScopedPhone: Story = { ...Scoped, tags: ["uat-phone"] };

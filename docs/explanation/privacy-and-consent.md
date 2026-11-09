@@ -66,7 +66,9 @@ its **proof**, and records a **decision** per recipient:
   and an override per category has nothing to answer. The fix there is to send again with a purpose the engine knows.
 
   The user must write a reason. The contact's consent panel lists live standing exceptions, their
-  category, sending company, first author and date. An admin with access to change that contact can
+  category and sending company. It shows the first author and date only while marked source rows
+  still prove them. Old unmarked rows and copies whose source was erased state that the source is
+  unknown. An admin with access to change that contact can
   revoke one with a reason (`consent.RevokeOverride`). The list uses the writer's own authority check
   for each action. The list is paged, so older exceptions stay in reach.
 

@@ -185,8 +185,8 @@ func (s *Store) allowAdmittedTx(
 	var overrideID ids.UUID
 	if err = tx.QueryRow(ctx, `
 		INSERT INTO communication_override
-		    (`+sub.column+`, category, reason, decided_by_level, captured_by, legal_entity_id)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		    (`+sub.column+`, category, reason, decided_by_level, captured_by, legal_entity_id, recorded_directly)
+		VALUES ($1, $2, $3, $4, $5, $6, true)
 		RETURNING id`,
 		sub.id, in.Category, in.Reason, string(level), by, entity).Scan(&overrideID); err != nil {
 		return ids.UUID{}, fmt.Errorf("consent: recording the override: %w", err)

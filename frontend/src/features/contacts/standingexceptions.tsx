@@ -14,6 +14,7 @@ import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Field, Textarea } from "../../design-system/field";
 import { Heading } from "../../design-system/heading";
 import { formatDateAbbrev } from "../../format/format";
+import { sendingCompanyScope } from "../../format/sendingcompany";
 import { useLocale, useT } from "../../i18n";
 import { communicationContextLabel } from "../../lib/compose-context";
 import { problemMessageOf, unwrap } from "../../lib/problem";
@@ -85,19 +86,21 @@ function ExceptionRow({
   const category =
     communicationContextLabel(row.category, t) ??
     t("consent.exceptionOtherPurpose");
-  const date = formatDateAbbrev(row.recorded_at, locale, zone);
+  const date = row.recorded_at
+    ? formatDateAbbrev(row.recorded_at, locale, zone)
+    : undefined;
   return (
     <div>
       <p>{category}</p>
       <p className="t-caption">
-        {row.sending_entity_name
-          ? t("consent.exceptionCompany", { name: row.sending_entity_name })
-          : t("consent.exceptionUnknownCompany")}
+        {sendingCompanyScope(row.sending_entity_id, row.sending_entity_name, t)}
       </p>
       <p className="t-caption">
-        {row.recorded_by_name
-          ? t("consent.stopRecordedBy", { name: row.recorded_by_name, date })
-          : t("consent.stopRecordedByColleague", { date })}
+        {date
+          ? row.recorded_by_name
+            ? t("consent.stopRecordedBy", { name: row.recorded_by_name, date })
+            : t("consent.stopRecordedByColleague", { date })
+          : t("consent.exceptionUnknownOrigin")}
       </p>
       <p className="t-caption">{row.reason}</p>
       {row.may_revoke && <RevokeException contactId={contactId} row={row} />}

@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 360 |
-| Columns | 4368 |
+| Columns | 4369 |
 | Foreign keys | 602 |
 | Owning areas | 38 |
 
@@ -232,7 +232,7 @@ erDiagram
 | [`communication_basis`](consent.md#communication_basis) | consent | 12 | 0 |
 | [`communication_decision`](consent.md#communication_decision) | consent | 30 | 0 |
 | [`communication_instruction`](consent.md#communication_instruction) | consent | 19 | 2 |
-| [`communication_override`](consent.md#communication_override) | consent | 11 | 1 |
+| [`communication_override`](consent.md#communication_override) | consent | 12 | 1 |
 | [`communication_review`](consent.md#communication_review) | consent | 10 | 2 |
 | [`communication_suppression`](consent.md#communication_suppression) | consent | 16 | 1 |
 | [`company`](contacts.md#company) | contacts | 47 | 51 |

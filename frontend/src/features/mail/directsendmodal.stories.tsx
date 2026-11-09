@@ -63,3 +63,5 @@ export const WithNoServedWarning: Story = {
     review: { ...review, warning: undefined },
   },
 };
+
+export const AsItOpensPhone: Story = { ...AsItOpens, tags: ["uat-phone"] };

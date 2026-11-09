@@ -18,6 +18,7 @@ const row = {
   category: "requested_followup",
   reason: "Asked for next steps.",
   authority: "user",
+  saved_at: "2026-06-12T10:00:00Z",
   recorded_at: "2026-06-12T10:00:00Z",
   recorded_by_name: "Alex",
   sending_entity_name: "Example Company",
@@ -139,4 +140,34 @@ it("reads the next page instead of hiding older exceptions", async () => {
   await user.click(await screen.findByRole("button", { name: "Load more" }));
   expect(await screen.findByText("Older request.")).toBeTruthy();
   expect(screen.getByText("Asked for next steps.")).toBeTruthy();
+});
+
+it("does not attribute an erased origin to the person who saved a merged copy", async () => {
+  installFetchStub({
+    "GET /contacts/p-1/consent/allow": () =>
+      jsonResponse({
+        data: [{ ...row, recorded_at: null, recorded_by_name: null }],
+        page: { has_more: false },
+      }),
+  });
+  mount();
+  expect(
+    await screen.findByText("Original author and date unavailable."),
+  ).toBeTruthy();
+  expect(screen.queryByText(/Recorded by Alex/)).toBeNull();
+});
+
+it("distinguishes a known company with no name from a missing company scope", async () => {
+  installFetchStub({
+    "GET /contacts/p-1/consent/allow": () =>
+      jsonResponse({
+        data: [
+          { ...row, sending_entity_id: "company-1", sending_entity_name: null },
+        ],
+        page: { has_more: false },
+      }),
+  });
+  mount();
+  expect(await screen.findByText("Sending company name not set.")).toBeTruthy();
+  expect(screen.queryByText("Sending company not recorded.")).toBeNull();
 });

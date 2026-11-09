@@ -3557,11 +3557,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Keine Nachricht stützt sich mehr darauf, auch keine, die schon in der Warteschlange steht. Die Anfrage bleibt als zurückgenommen im Datensatz und lässt sich nicht wiederherstellen.",
   "consent.acquisitionRequest":
     "Bei der Aufnahme hat der Kontakt ein Angebot oder einen Termin angefragt oder persönlich erlaubt, dass Mails an ihn gehen dürfen.",
+  "consent.exceptionUnknownOrigin":
+    "Wer den Eintrag zuerst erfasst hat und wann, ist unbekannt.",
   "consent.exceptionsTitle": "Dauerhafte Ausnahmen",
   "consent.exceptionsScope":
     "Jede Ausnahme gilt für einen Zweck und ein absendendes Unternehmen. Sie erteilt keine Werbeeinwilligung. Jede Nachricht wird erneut geprüft.",
   "consent.exceptionOtherPurpose": "Anderer erfasster Zweck",
   "consent.exceptionCompany": "Absendendes Unternehmen: {name}",
+  "consent.exceptionUnnamedCompany":
+    "Name des absendenden Unternehmens nicht festgelegt.",
   "consent.exceptionUnknownCompany": "Absendendes Unternehmen nicht erfasst.",
   "consent.exceptionRevoke": "Ausnahme widerrufen",
   "consent.exceptionRevokeBody":

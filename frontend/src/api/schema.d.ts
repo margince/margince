@@ -53733,7 +53733,12 @@ export interface components {
             reason: string;
             authority: string;
             /** Format: date-time */
-            recorded_at: string;
+            saved_at: string;
+            /**
+             * Format: date-time
+             * @description Original recording time, when retained provenance establishes it. Unknown for an erased origin or an older unmarked record.
+             */
+            recorded_at?: string | null;
             recorded_by_name?: string | null;
             /** Format: uuid */
             sending_entity_id?: string | null;

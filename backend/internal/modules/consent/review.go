@@ -262,7 +262,7 @@ func (s *Store) ReviewForReader(ctx context.Context, id ids.UUID) (Review, error
 			return err
 		}
 		out.State = openStateFor(out.State, out.Refusals)
-		return nameReviewEntities(ctx, tx, out.Refusals)
+		return s.nameReviewEntities(ctx, tx, out.Refusals)
 	})
 	return out, err
 }
@@ -458,7 +458,7 @@ func (s *Store) ReviewForInitiator(ctx context.Context, id ids.UUID) (Review, er
 			return err
 		}
 		out.State = openStateFor(out.State, out.Refusals)
-		return nameReviewEntities(ctx, tx, out.Refusals)
+		return s.nameReviewEntities(ctx, tx, out.Refusals)
 	})
 	return out, err
 }

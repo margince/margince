@@ -10,6 +10,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -135,8 +137,18 @@ func TestCarriedStandingExceptionKeepsItsOriginalAuthorAndCompany(t *testing.T) 
 	if row.SendingEntityId == nil || ids.UUID(*row.SendingEntityId) != company ||
 		row.SendingEntityName == nil || *row.SendingEntityName != "Original Company" ||
 		row.RecordedByName == nil || *row.RecordedByName != "Original Rep" ||
-		!row.RecordedAt.Equal(before[0].RecordedAt) {
+		row.RecordedAt == nil || before[0].RecordedAt == nil || !row.RecordedAt.Equal(*before[0].RecordedAt) {
 		t.Fatalf("the carry changed provenance or company: %+v", row)
+	}
+	if _, err := e.owner.Exec(context.Background(), `DELETE FROM communication_override WHERE contact_id = $1`, source); err != nil {
+		t.Fatal(err)
+	}
+	orphan, _, err := e.store.ListContactOverrides(e.ctx, survivor, 50, "")
+	if err != nil || len(orphan) != 1 {
+		t.Fatalf("orphaned copy = %v, %v", orphan, err)
+	}
+	if orphan[0].RecordedByName != nil || orphan[0].RecordedAt != nil || orphan[0].SavedAt.IsZero() || orphan[0].SendingEntityId == nil || ids.UUID(*orphan[0].SendingEntityId) != company {
+		t.Fatalf("an erased origin was attributed to the merger: %+v", orphan[0])
 	}
 }
 
@@ -162,6 +174,16 @@ func TestAStandingExceptionDoesNotAcquireTheReadersNewCompany(t *testing.T) {
 func overrideTestCompany(t *testing.T, e *channelConsentEnv, user ids.UUID, name string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
+	previous := e.store.entityNames
+	e.store.WithEntityNames(func(ctx context.Context, tx pgx.Tx, target ids.UUID) (string, error) {
+		if target == id {
+			return name, nil
+		}
+		if previous != nil {
+			return previous(ctx, tx, target)
+		}
+		return "", nil
+	})
 	if _, err := e.owner.Exec(context.Background(), `INSERT INTO legal_entity
 		(id, display_name, legal_name, country, imprint, captured_by)
 		VALUES ($1, $2, $2, 'de', 'Company details', 'human:x')`, id, name); err != nil {
@@ -173,4 +195,22 @@ func overrideTestCompany(t *testing.T, e *channelConsentEnv, user ids.UUID, name
 		t.Fatal(err)
 	}
 	return id
+}
+
+func TestAnUnmarkedStandingExceptionDoesNotInventItsOrigin(t *testing.T) {
+	e := setupChannelConsent(t)
+	id, err := e.store.Allow(e.ctx, AllowInput{ContactID: e.contact, Category: "requested_followup", Reason: "Asked for next steps."})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(context.Background(), `UPDATE communication_override SET recorded_directly = NULL WHERE id = $1`, id); err != nil {
+		t.Fatal(err)
+	}
+	rows, _, err := e.store.ListContactOverrides(e.ctx, e.contact, 50, "")
+	if err != nil || len(rows) != 1 {
+		t.Fatalf("unmarked exception = %v, %v", rows, err)
+	}
+	if rows[0].RecordedAt != nil || rows[0].RecordedByName != nil || rows[0].SavedAt.IsZero() {
+		t.Fatalf("an unmarked origin was inferred: %+v", rows[0])
+	}
 }

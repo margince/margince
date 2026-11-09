@@ -11,36 +11,74 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func nameReviewEntities(ctx context.Context, tx pgx.Tx, refusals []RefusedRecipient) error {
+// EntityNameReader keeps the default company's name with the owner of its profile.
+type EntityNameReader func(context.Context, pgx.Tx, ids.UUID) (string, error)
+
+func (s *Store) WithEntityNames(reader EntityNameReader) *Store {
+	s.entityNames = reader
+	return s
+}
+
+func (h Handlers) WithEntityNames(reader EntityNameReader) Handlers {
+	h.store = h.store.WithEntityNames(reader)
+	return h
+}
+
+func (s *Store) nameReviewEntities(ctx context.Context, tx pgx.Tx, refusals []RefusedRecipient) error {
 	entities := make([]ids.UUID, 0, len(refusals))
 	for _, refusal := range refusals {
 		if refusal.SendingEntity != nil {
 			entities = append(entities, *refusal.SendingEntity)
 		}
 	}
-	if len(entities) == 0 {
-		return nil
-	}
-	rows, err := tx.Query(ctx, `SELECT id, display_name FROM legal_entity WHERE id = ANY($1)`, entities)
+	names, err := s.readEntityNames(ctx, tx, entities)
 	if err != nil {
-		return fmt.Errorf("consent: reading review companies: %w", err)
-	}
-	names := make(map[ids.UUID]string)
-	defer rows.Close()
-	for rows.Next() {
-		var id ids.UUID
-		var name string
-		if err := rows.Scan(&id, &name); err != nil {
-			return fmt.Errorf("consent: reading a review company: %w", err)
-		}
-		names[id] = name
-	}
-	if err := rows.Err(); err != nil {
-		return fmt.Errorf("consent: reading review companies: %w", err)
+		return err
 	}
 	for i := range refusals {
 		if refusals[i].SendingEntity != nil {
 			refusals[i].SendingEntityName = names[*refusals[i].SendingEntity]
+		}
+	}
+	return nil
+}
+
+func (s *Store) readEntityNames(ctx context.Context, tx pgx.Tx, entities []ids.UUID) (map[ids.UUID]string, error) {
+	names := make(map[ids.UUID]string, len(entities))
+	if s.entityNames == nil {
+		return names, nil
+	}
+	for _, entity := range entities {
+		if _, known := names[entity]; known {
+			continue
+		}
+		name, err := s.entityNames(ctx, tx, entity)
+		if err != nil {
+			return nil, fmt.Errorf("consent: reading a sending company's name: %w", err)
+		}
+		names[entity] = name
+	}
+	return names, nil
+}
+
+func (s *Store) nameListedEntities(ctx context.Context, tx pgx.Tx, entries []listedOverride) error {
+	entities := make([]ids.UUID, 0, len(entries))
+	for _, entry := range entries {
+		if entry.value.SendingEntityId != nil {
+			entities = append(entities, ids.UUID(*entry.value.SendingEntityId))
+		}
+	}
+	names, err := s.readEntityNames(ctx, tx, entities)
+	if err != nil {
+		return err
+	}
+	for i := range entries {
+		id := entries[i].value.SendingEntityId
+		if id == nil {
+			continue
+		}
+		if name := names[ids.UUID(*id)]; name != "" {
+			entries[i].value.SendingEntityName = &name
 		}
 	}
 	return nil
