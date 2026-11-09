@@ -463,12 +463,12 @@ describe("ConnectedAgentsCard: disconnected tools", () => {
     expect(screen.queryByText("Old Gemini")).toBeNull();
   });
 
-  it("offers only the toggle when every tool is disconnected", async () => {
+  it("says no tool is connected when every tool is disconnected, and still offers them", async () => {
     vi.stubGlobal("fetch", backend({ passports: [DISCONNECTED] }));
     render(<ConnectedAgentsCard />);
 
     await screen.findByRole("button", { name: "Show 1 disconnected tool" });
-    expect(screen.queryByText("No AI tool connected yet.")).toBeNull();
+    expect(screen.getByText("No AI tool connected yet.")).toBeTruthy();
     expect(screen.queryByText("Old Gemini")).toBeNull();
   });
 });

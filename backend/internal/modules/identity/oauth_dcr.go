@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"strings"
 )
 
 // oauthGrantTypesSupported is what discovery advertises and what a
@@ -35,6 +36,17 @@ type dcrRequest struct {
 // so the endpoint cannot answer anything but an RFC 7591 document.
 type dcrRefusal struct {
 	code, description string
+}
+
+// dcrLoggedReasonBytes bounds the logged reason: a description can quote a
+// redirect URI the caller sent, and the body may be 1 MiB.
+const dcrLoggedReasonBytes = 200
+
+func (r *dcrRefusal) logged() string {
+	if len(r.description) <= dcrLoggedReasonBytes {
+		return r.description
+	}
+	return strings.ToValidUTF8(r.description[:dcrLoggedReasonBytes], "") + "…"
 }
 
 // parseDCR ignores every member it does not read: a client registering with

@@ -3,7 +3,6 @@
 
 import { useState } from "react";
 import type { components } from "../../api/schema";
-import { useEndedRows } from "../../components/endedrows";
 import { PassportAreasDrawer } from "../../components/passport-areas";
 import { usePassportRevoke } from "../../components/passport-revoke";
 import {
@@ -28,6 +27,7 @@ import { ScopeChips, scopeChipLabel } from "../../design-system/passportselect";
 import { QueryStates } from "../../design-system/querystates";
 import { formatDate, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { useEndedRows } from "../../lib/ended-rows";
 import { usePassports } from "../../lib/passports.queries";
 import {
   PassportUsageLine,

@@ -96,7 +96,9 @@ Also called: work areas, limit an agent to sales, keep an agent out of admin set
 
 ### How do I revoke an agent's access?
 To stop an agent, open **Settings → AI assistants**. For a passport, open **For developers**, then the **…** menu on its row, and choose **Revoke**: "The passport’s credential is invalidated immediately. The agent loses access on its next call."
-For a connected AI tool, open the **…** menu on its row under **Your connections** and choose **Disconnect**, which ends the whole connection. A disconnected tool is then kept out of the list; choose **Show disconnected tools** below it to see it again. Turning off a user revokes all their passports at once.
+For a connected AI tool, open the **…** menu on its row under **Your connections** and choose **Disconnect**, which ends the whole connection. Turning off a user revokes all their passports at once.
+
+A disconnected tool then leaves the list. The link below it that counts the disconnected tools shows them again.
 Also called: kill switch, remove an agent, disconnect, delete an API key.
 
 ### How do I let Margince work overnight for me?

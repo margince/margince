@@ -12,7 +12,8 @@ export function useEndedRows<Row extends { id: string }>(
   const [showing, setShowing] = useState(false);
   const [endedHere, setEndedHere] = useState<ReadonlySet<string>>(new Set());
   const hidden = rows.filter((row) => isEnded(row) && !endedHere.has(row.id));
-  const shown = showing ? rows : rows.filter((row) => !hidden.includes(row));
+  const hiddenIds = new Set(hidden.map((row) => row.id));
+  const shown = showing ? rows : rows.filter((row) => !hiddenIds.has(row.id));
   return {
     shown,
     hidden,

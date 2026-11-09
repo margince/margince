@@ -17,7 +17,6 @@ import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import "./connected-agents.css";
 import "../settings/settings-agents.css";
-import { useEndedRows } from "../../components/endedrows";
 import { PassportAreasDrawer } from "../../components/passport-areas";
 import { usePassportRevoke } from "../../components/passport-revoke";
 import {
@@ -25,6 +24,7 @@ import {
   type WorkArea,
   WorkAreasCell,
 } from "../../components/workareas";
+import { useEndedRows } from "../../lib/ended-rows";
 import {
   type ConnectionState,
   connectionStateOf,
@@ -350,7 +350,7 @@ export function ConnectedAgentsCard() {
   // A lapsed connection stays out in the open: its grant still needs ending.
   const { shown, hidden, showing, toggle, keep } = useEndedRows(
     connections,
-    (connection) => connectionStateOf(connection, now).revoked,
+    (connection) => connection.revoked_at != null,
   );
   const askDisconnect = (id: string) => {
     keep(id);
@@ -363,7 +363,7 @@ export function ConnectedAgentsCard() {
     <Panel title={t("agents.connected")}>
       <PanelBody>
         <PanelIntro>{t("agents.connectedSub")}</PanelIntro>
-        {!(list.isSuccess && connections.length > 0) && (
+        {!(list.isSuccess && shown.length > 0) && (
           <div ref={emptyRegion} tabIndex={-1} className="agents-empty">
             <QueryStates query={list} pendingLabel={t("agents.connected")}>
               {/* Not the generic empty state: beside a connect guide, "nothing
@@ -382,7 +382,7 @@ export function ConnectedAgentsCard() {
           onChangeAreas={setChangingAreas}
         />
       )}
-      {hidden.length > 0 && (
+      {list.isSuccess && hidden.length > 0 && (
         <PanelBody>
           <Button variant="link" onClick={toggle}>
             {showing
