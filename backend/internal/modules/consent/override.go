@@ -73,10 +73,7 @@ const auditFieldOverrideCategory = "override_category"
 // creates no lawful basis — decideOne (authorizetransmit.go) reads it, and
 // reads it only when the decision it is weighing is already CanBeOverruled.
 //
-// IT RETURNS THE ID, unlike Suppress, and the asymmetry is deliberate:
-// RevokeOverride takes that id in its path and nothing lists a contact's
-// standing vouches, so a door that returned nothing would leave the caller
-// unable to ever take back what they just recorded.
+// The returned ID identifies the exception for a later revocation.
 func (s *Store) Allow(ctx context.Context, in AllowInput) (ids.UUID, error) {
 	sub, level, err := admitAllow(ctx, in)
 	if err != nil {
@@ -188,8 +185,8 @@ func (s *Store) allowAdmittedTx(
 	var overrideID ids.UUID
 	if err = tx.QueryRow(ctx, `
 		INSERT INTO communication_override
-		    (`+sub.column+`, category, reason, decided_by_level, captured_by, legal_entity_id)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		    (`+sub.column+`, category, reason, decided_by_level, captured_by, legal_entity_id, recorded_directly)
+		VALUES ($1, $2, $3, $4, $5, $6, true)
 		RETURNING id`,
 		sub.id, in.Category, in.Reason, string(level), by, entity).Scan(&overrideID); err != nil {
 		return ids.UUID{}, fmt.Errorf("consent: recording the override: %w", err)
@@ -375,7 +372,7 @@ func (s *Store) revokeOverrideAdmittedTx(
 	// decision stays beyond every seat — CanRevoke keeps that square closed.
 	// An override holds a user's or an admin's level, and a user's revokes
 	// neither. So the admin gate asks the same question, and records it.
-	if err := auth.RequireAdmin(ctx); err != nil || !level.CanRevoke(commsauthz.AuthorityLevel(decided)) {
+	if !mayRevokeOverride(ctx, level, commsauthz.AuthorityLevel(decided)) {
 		return fmt.Errorf("this override was recorded at a level you may not revoke: %w", apperrors.ErrPermissionDenied)
 	}
 
@@ -412,4 +409,8 @@ func overrideLiftedPayload(
 		RecordedAtLevel: string(recordedAtLevel),
 		RevokedByLevel:  string(by),
 	}
+}
+
+func mayRevokeOverride(ctx context.Context, caller, recorded commsauthz.AuthorityLevel) bool {
+	return auth.RequireAdmin(ctx) == nil && caller.CanRevoke(recorded)
 }

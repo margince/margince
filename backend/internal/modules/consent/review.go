@@ -69,12 +69,13 @@ const reviewKindSingle = "single"
 // with the subject. A reason code without an address says a message was refused
 // and not who for, which is exactly the question the rep is asking.
 type RefusedRecipient struct {
-	SendingEntity *ids.UUID `json:"sending_entity,omitempty"`
-	Address       string    `json:"address"`
-	SubjectKind   string    `json:"subject_kind,omitempty"`
-	SubjectID     string    `json:"subject_id,omitempty"`
-	ReasonCode    string    `json:"reason_code"`
-	Category      string    `json:"category,omitempty"`
+	SendingEntity     *ids.UUID `json:"sending_entity,omitempty"`
+	SendingEntityName string    `json:"-"`
+	Address           string    `json:"address"`
+	SubjectKind       string    `json:"subject_kind,omitempty"`
+	SubjectID         string    `json:"subject_id,omitempty"`
+	ReasonCode        string    `json:"reason_code"`
+	Category          string    `json:"category,omitempty"`
 	// Requested is what the sender claimed the message is, which an unproven
 	// claim never writes into Category. Empty on a snapshot from before it.
 	Requested string `json:"requested,omitempty"`
@@ -261,7 +262,7 @@ func (s *Store) ReviewForReader(ctx context.Context, id ids.UUID) (Review, error
 			return err
 		}
 		out.State = openStateFor(out.State, out.Refusals)
-		return nil
+		return s.nameReviewEntities(ctx, tx, out.Refusals)
 	})
 	return out, err
 }
@@ -457,7 +458,7 @@ func (s *Store) ReviewForInitiator(ctx context.Context, id ids.UUID) (Review, er
 			return err
 		}
 		out.State = openStateFor(out.State, out.Refusals)
-		return nil
+		return s.nameReviewEntities(ctx, tx, out.Refusals)
 	})
 	return out, err
 }

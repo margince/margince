@@ -5982,6 +5982,24 @@
     },
     {
       "tool": "read_details",
+      "action": "contact_overrides",
+      "verb": "list_contact_overrides",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": [],
+      "colleague_record": {
+        "manager": "ran",
+        "rep": "ran"
+      }
+    },
+    {
+      "tool": "read_details",
       "action": "contact_profile_fields",
       "verb": "get_contact_profile_fields",
       "allowed_for": [

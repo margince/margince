@@ -47,6 +47,18 @@ func wireReview(review Review) crmcontracts.CommunicationReview {
 			Address:    refusal.Address,
 			ReasonCode: refusal.ReasonCode,
 		}
+		if refusal.SendingEntity != nil {
+			id := openapi_types.UUID(*refusal.SendingEntity)
+			wire.SendingEntityId = &id
+		}
+		if refusal.SendingEntityName != "" {
+			name := refusal.SendingEntityName
+			wire.SendingEntityName = &name
+		}
+		if refusal.Requested != "" {
+			requested := refusal.Requested
+			wire.RequestedCategory = &requested
+		}
 		if refusal.Category != "" {
 			category := refusal.Category
 			wire.Category = &category

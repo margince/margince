@@ -423,6 +423,9 @@ var queryMinimumTable = map[string][]queryMinimum{
 	"GET /v1/contacts/{id}/access": {
 		{Name: "limit", Minimum: 1},
 	},
+	"GET /v1/contacts/{id}/consent/allow": {
+		{Name: "limit", Minimum: 1},
+	},
 	"GET /v1/context-search": {
 		{Name: "limit", Minimum: 1},
 	},

@@ -1527,6 +1527,10 @@ func (stubs) RecordConsent(w nethttp.ResponseWriter, r *nethttp.Request, id crmc
 	httperr.NotImplemented(w, r, "RecordConsent")
 }
 
+func (stubs) ListContactOverrides(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListContactOverridesParams) {
+	httperr.NotImplemented(w, r, "ListContactOverrides")
+}
+
 func (stubs) AllowContact(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "AllowContact")
 }
