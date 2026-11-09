@@ -112,11 +112,12 @@ func newestMessage(
 	if err != nil {
 		return lastMessage{}, false, err
 	}
-	query := fmt.Sprintf(`SELECT * FROM (
-		SELECT a.id, a.direction, a.occurred_at, a.occurred_precision = 'day', a.kind,
-		       CASE WHEN %[3]s THEN a.subject END,
-		       CASE WHEN %[3]s THEN left(a.body, %[4]d) END,
-		       %[6]s
+	query := fmt.Sprintf(`SELECT newest.id, newest.direction, newest.occurred_at, newest.date_only, newest.kind,
+		       newest.subject, newest.excerpt, newest.move FROM (
+		SELECT a.id, a.direction, a.occurred_at, a.occurred_precision = 'day' AS date_only, a.kind,
+		       CASE WHEN %[3]s THEN a.subject END AS subject,
+		       CASE WHEN %[3]s THEN left(a.body, %[4]d) END AS excerpt,
+		       %[6]s AS move
 		FROM activity a
 		WHERE %[5]s AND a.archived_at IS NULL AND %[1]s
 		  AND %[2]s`+opts.projectScope(arg)+`

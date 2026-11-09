@@ -16,7 +16,6 @@ import {
   type ActivityMoment,
   activityAnswers,
   activityDay,
-  type OccurredPrecision,
 } from "../../../format/activitywhen";
 import { useLocale, useT } from "../../../i18n";
 import { bucketLabel } from "../../../lib/bucketlabel";
@@ -285,23 +284,20 @@ function LastTouch({ contact }: { readonly contact: CompanyContact }) {
 function lastWritten(
   contact: CompanyContact,
 ): (ActivityMoment & { theyWrote: boolean }) | undefined {
-  const inbound = momentOf(
-    contact.last_inbound_at,
-    contact.last_inbound_precision,
-  );
-  const outbound = momentOf(
-    contact.last_outbound_at,
-    contact.last_outbound_precision,
-  );
+  const inbound: ActivityMoment | undefined = contact.last_inbound_at
+    ? {
+        at: contact.last_inbound_at,
+        precision: contact.last_inbound_precision ?? "instant",
+      }
+    : undefined;
+  const outbound: ActivityMoment | undefined = contact.last_outbound_at
+    ? {
+        at: contact.last_outbound_at,
+        precision: contact.last_outbound_precision ?? "instant",
+      }
+    : undefined;
   if (inbound && (!outbound || !activityAnswers(outbound, inbound))) {
     return { theyWrote: true, ...inbound };
   }
   return outbound && { theyWrote: false, ...outbound };
-}
-
-function momentOf(
-  at: string | null | undefined,
-  precision: OccurredPrecision | undefined,
-): ActivityMoment | undefined {
-  return at ? { at, precision: precision ?? "instant" } : undefined;
 }

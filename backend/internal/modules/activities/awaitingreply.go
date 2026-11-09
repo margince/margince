@@ -328,8 +328,8 @@ func awaitingNeedSQL() string {
 
 // awaitingHeardSinceSQL lists the candidates whose recipients were in contact
 // since, on any channel: a call or a meeting with them is a follow-up already
-// made. Contact our mail answers (occurredday.Answers) came before it. It is
-// one set over every candidate. Asked per candidate, it walked each
+// made. Their message our mail answers (occurredday.Answers) came before it.
+// It is one set over every candidate. Asked per candidate, it walked each
 // recipient's whole history once per mail. It reads awaitingRepliesSQL's slots.
 var awaitingHeardSinceSQL = followUpHeardSince + ` AS MATERIALIZED (
 	SELECT DISTINCT c.id FROM ` + followUpCandidates + ` c
@@ -340,7 +340,9 @@ var awaitingHeardSinceSQL = followUpHeardSince + ` AS MATERIALIZED (
 	   AND later.archived_at IS NULL
 	   AND %[7]s
 	   AND %[8]s
-	   AND NOT ` + occurredday.AnswersSQL("c", "later") + `
+	   AND (later.direction = 'inbound' AND NOT ` + occurredday.AnswersSQL("c", "later") + `
+	     OR later.direction IS DISTINCT FROM 'inbound'
+	       AND later.occurred_at > c.occurred_at) -- occurred_at raw: a touch of ours counts only once our mail was out, an ordering of rows
 	   AND ` + occurredday.BegunSQL("later", "$%[1]d") + `)`
 
 // awaitingRepliesSQL: every rule sits before the cap.

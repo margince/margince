@@ -33,7 +33,7 @@ func (o *owedEnv) handLogged(t *testing.T, contact ids.UUID, direction crmcontra
 	t.Helper()
 	subject := "Samples for the trial"
 	links := []struct {
-		EntityId   openapi_types.UUID                                `json:"entity_id"`
+		EntityId   openapi_types.UUID                                `json:"entity_id"` //nolint:staticcheck // mirrors the generated inline struct, whose field is spelled EntityId
 		EntityType crmcontracts.CreateActivityRequestLinksEntityType `json:"entity_type"`
 	}{{EntityId: openapi_types.UUID(contact), EntityType: crmcontracts.CreateActivityRequestLinksEntityTypeContact}}
 	status, row := postActivity(o.reader(), t, o.e, crmcontracts.CreateActivityRequest{

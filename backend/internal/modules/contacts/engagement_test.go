@@ -43,14 +43,18 @@ func TestEngagementOfReadsTheStatesOffWhoWroteLast(t *testing.T) {
 		},
 		{
 			"their mail and ours are dated one day",
-			RelationshipStrength{Inbound90d: 1, Outbound90d: 1, LastInbound: at(0), LastOutbound: at(0),
-				LastInboundPrecision: "day", LastOutboundPrecision: "day"},
+			RelationshipStrength{
+				Inbound90d: 1, Outbound90d: 1, LastInbound: at(0), LastOutbound: at(0),
+				LastInboundPrecision: "day", LastOutboundPrecision: "day",
+			},
 			EngagementAnswered,
 		},
 		{
 			"their mail and ours carry one second",
-			RelationshipStrength{Inbound90d: 1, Outbound90d: 1, LastInbound: at(0), LastOutbound: at(0),
-				LastInboundPrecision: "instant", LastOutboundPrecision: "instant"},
+			RelationshipStrength{
+				Inbound90d: 1, Outbound90d: 1, LastInbound: at(0), LastOutbound: at(0),
+				LastInboundPrecision: "instant", LastOutboundPrecision: "instant",
+			},
 			EngagementWaiting,
 		},
 		{
