@@ -56617,6 +56617,7 @@ components:
     LinkedRecordType:
       type: string
       enum: [deal, company, contact]
+      x-extensible-enum: true
 
     LinkType:
       type: object
