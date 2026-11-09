@@ -13,6 +13,8 @@ import { rawRecord } from "../../components/recordfieldtypes";
 import { useRecordOwners } from "../../components/recordowners";
 import { useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
+import { useViewerId } from "../../lib/session";
+import { mayLeaveReach, useLeaveIfOutOfReach } from "../records/outofreach";
 
 type Contact = components["schemas"]["Contact"];
 
@@ -24,6 +26,8 @@ export function useContactEdit(contact: Contact): RailEdit {
   const t = useT();
   const canEdit = useCanWriteRecord("contact", contact) && !contact.archived_at;
   const owners = useRecordOwners(contact.owner_id);
+  const viewerId = useViewerId();
+  const leaveIfOutOfReach = useLeaveIfOutOfReach("contact");
   const linkedin =
     typeof contact.social?.linkedin === "string" ? contact.social.linkedin : "";
   return {
@@ -51,10 +55,27 @@ export function useContactEdit(contact: Contact): RailEdit {
       "social.linkedin": linkedin,
     },
     resolveExisting: (_code, id) => ({ screen: "contacts", id }),
-    save: async (values, rows, opened, extra) =>
-      saveRecordEdit("contact", rawRecord(opened), {
-        ...mapContactUpdate(values, rows, opened),
-        ...extra,
-      }),
+    save: async (values, rows, opened, extra) => {
+      const patch = { ...mapContactUpdate(values, rows, opened), ...extra };
+      const saved = await saveRecordEdit("contact", rawRecord(opened), patch);
+      // Handing a private contact to a colleague can take it out of the
+      // giver's reach; the page would then fail on its own refetch.
+      const owner = patch.owner_id;
+      if (
+        typeof owner === "string" &&
+        owner !== contact.owner_id &&
+        mayLeaveReach(contact.visibility, owner, viewerId)
+      ) {
+        await leaveIfOutOfReach(
+          contact.id,
+          t("recordAccess.contact.handedOver", {
+            owner:
+              owners.options.find((option) => option.value === owner)?.label ??
+              "",
+          }),
+        );
+      }
+      return saved;
+    },
   };
 }

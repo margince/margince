@@ -7235,6 +7235,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Liên hệ này giờ là riêng của người chịu trách nhiệm. Thành viên và nhóm đã được chia sẻ vẫn giữ quyền truy cập.",
   "recordAccess.contact.leftYourAccess":
     "Liên hệ này giờ là riêng của người chịu trách nhiệm. Bạn không còn quyền truy cập.",
+  "recordAccess.contact.handedOver":
+    "{owner} giờ chịu trách nhiệm liên hệ này. Liên hệ ở chế độ riêng tư, nên bạn không còn quyền truy cập.",
   "recordAccess.company.title": "Ai có thể xem công ty này",
   "recordAccess.company.shared":
     "Mọi thành viên trong công ty đều có thể xem hồ sơ này.",
@@ -7250,6 +7252,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Công ty này giờ là riêng của người chịu trách nhiệm. Deal, liên hệ và email đã xếp vào công ty vẫn giữ phạm vi hiển thị riêng.",
   "recordAccess.company.leftYourAccess":
     "Công ty này giờ là riêng của người chịu trách nhiệm. Bạn không còn quyền truy cập.",
+  "recordAccess.company.handedOver":
+    "{owner} giờ chịu trách nhiệm công ty này. Công ty ở chế độ riêng tư, nên bạn không còn quyền truy cập.",
   "recordAccess.option.owner": "Chỉ người chịu trách nhiệm",
   "recordAccess.option.ownerHint":
     "Thành viên và nhóm được chia sẻ vẫn giữ quyền truy cập.",

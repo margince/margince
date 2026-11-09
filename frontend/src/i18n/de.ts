@@ -7408,6 +7408,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieser Kontakt ist jetzt privat für das verantwortliche Teammitglied. Nutzende und Teams, mit denen der Kontakt geteilt wurde, behalten den Zugriff.",
   "recordAccess.contact.leftYourAccess":
     "Dieser Kontakt ist jetzt privat für das verantwortliche Teammitglied. Du hast keinen Zugriff mehr auf diesen Kontakt.",
+  "recordAccess.contact.handedOver":
+    "{owner} ist jetzt für diesen Kontakt verantwortlich. Er ist privat, deshalb hast du keinen Zugriff mehr darauf.",
   "recordAccess.company.title": "Wer dieses Unternehmen sehen kann",
   "recordAccess.company.shared":
     "Alle Nutzenden im Unternehmen können diesen Datensatz sehen.",
@@ -7423,6 +7425,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieses Unternehmen ist jetzt privat für das verantwortliche Teammitglied. Deals, Kontakte und E-Mails, die diesem Unternehmen zugeordnet sind, behalten ihre eigene Sichtbarkeit.",
   "recordAccess.company.leftYourAccess":
     "Dieses Unternehmen ist jetzt privat für das verantwortliche Teammitglied. Du hast keinen Zugriff mehr auf dieses Unternehmen.",
+  "recordAccess.company.handedOver":
+    "{owner} ist jetzt für dieses Unternehmen verantwortlich. Es ist privat, deshalb hast du keinen Zugriff mehr darauf.",
   "recordAccess.option.owner": "Nur das verantwortliche Teammitglied",
   "recordAccess.option.ownerHint":
     "Nutzende und Teams, mit denen der Datensatz geteilt ist, behalten den Zugriff.",

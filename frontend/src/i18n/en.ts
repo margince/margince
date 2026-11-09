@@ -7427,6 +7427,8 @@ export const en = {
     "This contact is now private to its owner. Users and teams it was shared with keep access.",
   "recordAccess.contact.leftYourAccess":
     "This contact is now private to its owner. You no longer have access to it.",
+  "recordAccess.contact.handedOver":
+    "{owner} now owns this contact. It is private to them, so you no longer have access to it.",
   "recordAccess.company.title": "Who can see this company",
   "recordAccess.company.shared":
     "All users in the company can see this record.",
@@ -7441,6 +7443,8 @@ export const en = {
     "This company is now private to its owner. Deals, contacts and mail filed against it keep their own visibility.",
   "recordAccess.company.leftYourAccess":
     "This company is now private to its owner. You no longer have access to it.",
+  "recordAccess.company.handedOver":
+    "{owner} now owns this company. It is private to them, so you no longer have access to it.",
   // The switch behind the header's access chip. The owner's answer carries
   // what it does not take away, because a share outlives it; to anyone but the
   // owner it says what it takes from them, and without an owner it is refused.
