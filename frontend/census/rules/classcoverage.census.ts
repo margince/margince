@@ -15,6 +15,7 @@
 // a class name.
 
 import ts from "typescript";
+import { byCodeUnit } from "../../src/lib/codeunitorder";
 import { classNamesOn } from "../../src/testing/classnames";
 import { withoutComments } from "../../src/testing/css";
 import type { CensusFile, CensusRule, CensusTree } from "../tree";
@@ -233,7 +234,7 @@ export const rule: CensusRule = {
             )
         : [],
     );
-    return [...new Set([...orphans, ...pinned])].sort();
+    return [...new Set([...orphans, ...pinned])].sort(byCodeUnit);
   },
   advice:
     "A class put on an element and matched by no selector is a rule that " +

@@ -15,6 +15,7 @@ import { join } from "node:path";
 import ts from "typescript";
 import { resolveRelative } from "../../scripts/lib/source-tree";
 import { NAV } from "../../src/app/nav";
+import { byCodeUnit } from "../../src/lib/codeunitorder";
 import { SCREENS } from "../../src/lib/router";
 import { bindingOf } from "../../src/testing/classnames";
 import { type CensusFile, type CensusRule, srcDir } from "../tree";
@@ -266,10 +267,10 @@ export function unreachedScreens(
   router: ts.SourceFile,
 ): string[] {
   const waivers = waiversIn(router);
-  const declared = [...waivers.keys()].sort();
+  const declared = [...waivers.keys()].sort(byCodeUnit);
   // The waivers are read from source and the subject is imported. Two lists
   // would apply each reason to a screen it was not written for.
-  if (declared.join("\n") !== [...SCREENS].sort().join("\n")) {
+  if (declared.join("\n") !== [...SCREENS].sort(byCodeUnit).join("\n")) {
     return [
       "router.tsx's SCREENS list, read from source, differs from the imported one",
     ];

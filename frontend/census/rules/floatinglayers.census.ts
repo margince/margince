@@ -15,6 +15,7 @@ import {
   splitTopLevel,
 } from "../../scripts/lib/css-rules";
 import { themes } from "../../src/design-system/tokens-testing";
+import { byCodeUnit } from "../../src/lib/codeunitorder";
 import { type CensusRule, isAppSheet, sheetRules } from "../tree";
 
 const OPAQUE = /^#[0-9a-f]{6}$/i;
@@ -51,7 +52,7 @@ export function floatingLayers(rules: readonly Rule[]): string[] {
       if (hangs(rule.body)) hanging.add(alternative);
     }
   }
-  return [...casting].filter((layer) => hanging.has(layer)).sort();
+  return [...casting].filter((layer) => hanging.has(layer)).sort(byCodeUnit);
 }
 
 // The ground that wins, from the layer's own rules and those of a class it

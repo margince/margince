@@ -15,6 +15,7 @@
 
 import ts from "typescript";
 import { classNameLiterals } from "../../scripts/lib/source-tree";
+import { byCodeUnit } from "../../src/lib/codeunitorder";
 import type { CensusFile, CensusRule } from "../tree";
 
 // The floor and the ceiling as every surface that takes them spells them. Each
@@ -170,7 +171,7 @@ export function classesUnderAnOptionRole(source: ts.SourceFile): string[] {
   visit(source);
   return [...found]
     .filter((one) => !STATES.test(one) && !PLACEMENTS.has(one))
-    .sort();
+    .sort(byCodeUnit);
 }
 
 /** The last class of every roster selector: what an element wears. */
@@ -199,7 +200,7 @@ export const rule: CensusRule = {
       ),
     ]
       .filter((className) => !KNOWN.has(className))
-      .sort()
+      .sort(byCodeUnit)
       .map(
         (className) =>
           `.${className} sits on a menu or listbox role and is in no roster entry`,

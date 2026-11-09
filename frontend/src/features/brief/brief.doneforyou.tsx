@@ -26,6 +26,7 @@ import { PanelBody, PanelGroupHead } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { byCodeUnit } from "../../lib/codeunitorder";
 import { ENTITY } from "../../lib/entity";
 import { type Receipt, useHandledForYou } from "../../lib/handled";
 import { useMagic } from "../../lib/magic.queries";
@@ -423,7 +424,7 @@ function changedSince(
   const ids = (groups: readonly DealChanges[]) =>
     groups
       .flatMap((group) => group.receipts.map((receipt) => receipt.id))
-      .sort()
+      .sort(byCodeUnit)
       .join(",");
   return ids(shown) !== ids(live);
 }

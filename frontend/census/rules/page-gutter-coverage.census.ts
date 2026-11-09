@@ -27,6 +27,7 @@
 import { join } from "node:path";
 import ts from "typescript";
 import { resolveRelative } from "../../scripts/lib/source-tree";
+import { byCodeUnit } from "../../src/lib/codeunitorder";
 import {
   type CensusFile,
   type CensusRule,
@@ -835,11 +836,11 @@ export const rule: CensusRule = {
     const known = new Set(screens);
     // The dispatch is total over `Screen` by its own type, so a disagreement
     // means this reader missed entries.
-    const dispatched = [...entries.keys()].sort().join(" ");
+    const dispatched = [...entries.keys()].sort(byCodeUnit).join(" ");
     return [
       ...(screens.length > 0 ? [] : ["SCREENS named no screen"]),
       ...(railLess.size > 0 ? [] : ["RAIL_LESS_SCREENS named no screen"]),
-      ...(dispatched === [...screens].sort().join(" ")
+      ...(dispatched === [...screens].sort(byCodeUnit).join(" ")
         ? []
         : ["SCREEN_VIEWS and SCREENS name different screens"]),
       ...[...railLess, ...NOT_OURS_TO_INSET.keys()]

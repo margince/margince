@@ -26,6 +26,7 @@ import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
 import { parseSource, sourceFileAt } from "../../scripts/lib/source-tree";
+import { byCodeUnit } from "../../src/lib/codeunitorder";
 import { type CensusFile, type CensusRule, frontendRoot } from "../tree";
 
 /**
@@ -43,7 +44,7 @@ export function intlFormatters(): string[] {
           .supportedLocalesOf === "function"
       );
     })
-    .sort();
+    .sort(byCodeUnit);
 }
 
 /**
@@ -441,7 +442,7 @@ export const rule: CensusRule = {
       ...all
         .filter(({ file }) => !pinned.has(file))
         .map(({ file, line, text }) => `${file}:${line}: ${text}`)
-        .sort(),
+        .sort(byCodeUnit),
       // An entry whose last pinned site is gone is a standing permission.
       ...pinnedLocales
         .filter(({ file }) => !covered.has(file))

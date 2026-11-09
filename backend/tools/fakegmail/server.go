@@ -95,17 +95,64 @@ func (s *server) consent(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "redirect_uri is not a URL")
 		return
 	}
-	if !isLoopback(back) && (s.callbackOrigin == "" || origin(back) != s.callbackOrigin) {
-		writeError(w, http.StatusBadRequest, "redirect_uri must point at this machine or at -callback-origin")
-		return
-	}
 	v := back.Query()
 	v.Set("code", "code-"+owner)
 	v.Set("state", q.Get("state"))
 	v.Set("scope", q.Get("scope"))
-	back.RawQuery = v.Encode()
-	//nolint:gosec // G710: the check above admits only loopback or the origin the operator named
-	http.Redirect(w, r, back.String(), http.StatusFound)
+	target, ok := s.callbackTarget(back, v)
+	if !ok {
+		writeError(w, http.StatusBadRequest, "redirect_uri must point at this machine or at -callback-origin")
+		return
+	}
+	http.Redirect(w, r, target, http.StatusFound)
+}
+
+// callbackTarget rebuilds the redirect from checked parts only. The scheme and
+// host come from the loopback check or from the operator's -callback-origin.
+// The path is the caller's, and the query is the one this server wrote. A
+// target that passes neither check is refused.
+func (s *server) callbackTarget(back *url.URL, query url.Values) (string, bool) {
+	target := url.URL{Path: back.Path, RawQuery: query.Encode()}
+	switch {
+	case isLoopback(back):
+		host, ok := loopbackHost(back)
+		if !ok {
+			return "", false
+		}
+		target.Scheme, target.Host = "http", host
+		if back.Scheme == "https" {
+			target.Scheme = "https"
+		}
+	case s.callbackOrigin != "" && origin(back) == s.callbackOrigin:
+		named, err := url.Parse(s.callbackOrigin)
+		if err != nil {
+			return "", false
+		}
+		target.Scheme, target.Host = named.Scheme, named.Host
+	default:
+		return "", false
+	}
+	return target.String(), true
+}
+
+// loopbackHost spells a loopback host again from its parsed parts: the
+// address or lower-case name, and the port as a number.
+func loopbackHost(u *url.URL) (string, bool) {
+	name := strings.ToLower(strings.TrimSuffix(u.Hostname(), "."))
+	if ip := net.ParseIP(name); ip != nil {
+		name = ip.String()
+	}
+	if u.Port() == "" {
+		if strings.Contains(name, ":") {
+			return "[" + name + "]", true
+		}
+		return name, true
+	}
+	port, err := strconv.Atoi(u.Port())
+	if err != nil || port < 1 || port > 65535 {
+		return "", false
+	}
+	return net.JoinHostPort(name, strconv.Itoa(port)), true
 }
 
 // isLoopback admits only a dev stack on this machine, so the consent page
