@@ -5,6 +5,7 @@ package connector
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -21,6 +22,17 @@ type CalendarScheduler interface {
 	CalendarSave(context.Context, Auth, CalendarAppointment) (CalendarReceipt, error)
 	CalendarCancel(context.Context, Auth, string, string) error
 }
+
+// CalendarResponder answers an event the connection's owner was invited to,
+// on their own calendar, which tells the organizer. A connector that can
+// schedule may still not answer, so this is a capability of its own.
+type CalendarResponder interface {
+	CalendarRespond(ctx context.Context, auth Auth, uid, response string) error
+}
+
+// ErrCalendarEventMissing is a calendar that holds no event with the UID an
+// invitation names, or holds one that does not list its owner as a guest.
+var ErrCalendarEventMissing = errors.New("calendar: the invited event is not on this calendar")
 
 // CalendarInterval exposes occupancy without event titles or attendee identities.
 type CalendarInterval struct {

@@ -125,6 +125,34 @@ func (c schedulingCalendar) Cancel(ctx context.Context, host ids.UserID, provide
 	return scheduler.CalendarCancel(ctx, credential, calendar, event)
 }
 
+// Respond answers an invitation on whichever of the host's calendars Margince
+// may write to and holds the event. A host with neither reads as unconnected.
+func (c schedulingCalendar) Respond(ctx context.Context, host ids.UserID, uid, response string) error {
+	if c.registry == nil {
+		return apperrors.ErrPermissionDenied
+	}
+	outcome := connector.ErrAuthRejected
+	for _, provider := range capture.CalendarProviders() {
+		scheduler, credential, err := c.calendarFor(ctx, host, provider, true)
+		if errors.Is(err, connector.ErrAuthRejected) {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		responder, ok := scheduler.(connector.CalendarResponder)
+		if !ok {
+			continue
+		}
+		err = responder.CalendarRespond(ctx, credential, uid, response)
+		if !errors.Is(err, connector.ErrCalendarEventMissing) {
+			return err
+		}
+		outcome = err
+	}
+	return outcome
+}
+
 func (c schedulingCalendar) Lookup(ctx context.Context, host ids.UserID, provider string, in connector.CalendarAppointment) (*connector.CalendarReceipt, error) {
 	if err := c.checkCalendar(ctx, host, provider, in.CalendarID); err != nil {
 		return nil, err
