@@ -12,6 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/attention"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -61,7 +62,19 @@ func (m attentionMeetings) openIn(
 	if !applyMeetingScope(ctx, &in, scope, owner) {
 		return nil, nil
 	}
-	rows, _, err := m.store.ListActivities(ctx, in)
+	return listReusingPlans(ctx, m.store, in)
+}
+
+// listReusingPlans reads a meeting window with each statement's generic plan
+// reused (database.ReuseGenericPlans). The window spells its kind and its cap
+// as literals, so one plan serves every reader.
+func listReusingPlans(ctx context.Context, store *activities.Store, in activities.ListActivitiesInput) ([]crmcontracts.Activity, error) {
+	var rows []crmcontracts.Activity
+	err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+		var err error
+		rows, _, err = store.ListActivities(ctx, in)
+		return err
+	})
 	return rows, err
 }
 
@@ -215,7 +228,7 @@ func (m attentionMeetingsAwaitingOutcome) Since(
 	if !applyMeetingScope(ctx, &in, scope, owner) {
 		return nil, nil
 	}
-	rows, _, err := m.store.ListActivities(ctx, in)
+	rows, err := listReusingPlans(ctx, m.store, in)
 	if err != nil {
 		return nil, err
 	}

@@ -286,20 +286,24 @@ func reminderReaderFor(ctx context.Context, scope attention.TaskScope) ids.UUID 
 }
 
 // markReadOnly flags the tasks the reader may see and not change, asked of the
-// whole page in one read.
+// whole page in one read. Both reads key on the page's ids, so their generic
+// plans are reused (database.ReuseGenericPlans).
 func (t attentionTasks) markReadOnly(ctx context.Context, tasks []attention.Task, asOf time.Time) ([]attention.Task, error) {
 	named := make([]ids.UUID, len(tasks))
 	for i, task := range tasks {
 		named[i] = task.ID
 	}
-	writable, err := t.store.WritableTasks(ctx, named)
-	if err != nil {
-		return nil, err
-	}
-	for i := range tasks {
-		tasks[i].ReadOnly = !writable[tasks[i].ID]
-	}
-	tasks, err = t.withRecipients(ctx, tasks, named)
+	err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+		writable, err := t.store.WritableTasks(ctx, named)
+		if err != nil {
+			return err
+		}
+		for i := range tasks {
+			tasks[i].ReadOnly = !writable[tasks[i].ID]
+		}
+		tasks, err = t.withRecipients(ctx, tasks, named)
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}
