@@ -268,6 +268,24 @@ func TestTheHoldEndsBeforeTheResponseIsAwaited(t *testing.T) {
 	}
 }
 
+// An informational answer before the final one is not the receiver's verdict.
+func TestAnEarlyHintBeforeTheFinal2xxCountsAsDelivered(t *testing.T) {
+	receiver := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, err := io.Copy(io.Discard, r.Body); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusEarlyHints)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer receiver.Close()
+	d, sealed := testDeliverer(t, loopbackClient(transportTLS(t, receiver)))
+	target := attemptTarget{deliveryID: ids.NewV7(), subID: ids.NewV7(), targetURL: receiver.URL, sealedSecret: sealed, payload: []byte(`{}`)}
+	if got := d.attempt(context.Background(), target, allowSend); got != (outcome{statusCode: http.StatusOK}) {
+		t.Fatalf("attempt = %+v, want the final 200", got)
+	}
+}
+
 // wroteAfterRelease records a request write that reached the wire after the
 // hold ended. Writes once a read started after the release are the TLS close,
 // not the request; a read under the hold excuses no later write.

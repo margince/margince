@@ -55,13 +55,35 @@ func (c checkedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		stop()
 		return nil, errors.Join(err, conn.Close())
 	}
-	resp, err := http.ReadResponse(bufio.NewReader(conn), req)
+	resp, err := readFinalResponse(bufio.NewReader(conn), req)
 	if err != nil {
 		stop()
 		return nil, errors.Join(err, conn.Close())
 	}
 	resp.Body = &connBody{ReadCloser: resp.Body, conn: conn, stop: stop}
 	return resp, nil
+}
+
+// maxInformational is how many 1xx answers may precede the final one, the cap
+// net/http's own Transport applies.
+const maxInformational = 5
+
+// readFinalResponse skips the informational answers (100, 103) a receiver may
+// send before its final one, which is the answer the delivery is judged by.
+func readFinalResponse(br *bufio.Reader, req *http.Request) (*http.Response, error) {
+	for range maxInformational + 1 {
+		resp, err := http.ReadResponse(br, req)
+		if err != nil {
+			return nil, err
+		}
+		if resp.StatusCode >= 200 || resp.StatusCode == http.StatusSwitchingProtocols {
+			return resp, nil
+		}
+		if err := resp.Body.Close(); err != nil {
+			return nil, err
+		}
+	}
+	return nil, fmt.Errorf("webhooks: the receiver sent more than %d informational answers", maxInformational)
 }
 
 // requestBytes is the whole request as it goes on the wire, with the
