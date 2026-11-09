@@ -20,10 +20,12 @@ import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { type ContractDraft, draftProblem, pricedIn } from "./contractform";
-import { contractTermsBody, renewDraftOf } from "./contracttermsbody";
+import { renewContract } from "./contractrenewal";
+import { renewDraftOf } from "./contracttermsbody";
 import { ContractTermsFields } from "./contracttermsfields";
 
 // The three transitions a signed agreement goes through after it is recorded:
@@ -60,50 +62,6 @@ export function isTerminalContractStatus(status: Contract["status"]): boolean {
   return (
     status === "expired" || status === "cancelled" || status === "superseded"
   );
-}
-
-function renewalBody(
-  draft: ContractDraft,
-  dealId: string,
-): components["schemas"]["RenewContractRequest"] {
-  return {
-    title: draft.title.trim(),
-    value_basis: draft.valueBasis,
-    // Stated rather than defaulted, for the same reason contractBody
-    // (contractform.tsx) states it on a create: whether the successor renews
-    // itself is a fact about the paper, and a field this form quietly omitted
-    // would be a guess the record could not distinguish from an answer.
-    auto_renew: false,
-    // Omitted rather than sent empty, same rule as every field in
-    // contractTermsBody: no deal picked is "not recorded", not a value the
-    // server has to reject. Never the PREDECESSOR's own deal_id — the server
-    // does not inherit it either (contract_write.go), because a renewal is
-    // usually won by its own opportunity and attributing it to the one that
-    // won the old term would name the wrong sale.
-    ...(dealId !== "" ? { deal_id: dealId } : {}),
-    ...contractTermsBody(draft),
-  };
-}
-
-// The successor's terms, created in the transaction that supersedes the
-// predecessor — the id and version this call takes are the predecessor's, never
-// from a closure: a click landing after the modal re-rendered for a different
-// row would otherwise renew whichever contract the previous render held.
-async function renewContract(
-  predecessor: Contract,
-  draft: ContractDraft,
-  dealId: string,
-): Promise<string> {
-  const data = unwrap(
-    await api.POST("/contracts/{id}/renewal", {
-      params: {
-        path: { id: predecessor.id },
-        ...ifMatch(requireVersion(predecessor.version)),
-      },
-      body: renewalBody(draft, dealId),
-    }),
-  );
-  return data?.id ?? "";
 }
 
 // The company's own deals, for the picker below — every status, not only
@@ -339,7 +297,7 @@ export function ContractStatusModal({
               onChange={(value) => setStatus(value as ContractStatus)}
               options={ASSERTABLE_STATUSES.map((value) => ({
                 value,
-                label: t(CONTRACT_STATUS_LABEL[value]),
+                label: t(labelFor(CONTRACT_STATUS_LABEL, value)),
               }))}
             />
           )}

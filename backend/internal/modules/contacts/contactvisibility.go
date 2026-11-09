@@ -157,7 +157,7 @@ func (s *Store) carryHistoryIfPublished(
 	if !ok || current.OwnerId == nil || ids.UUID(*current.OwnerId) != actor.UserID {
 		return nil
 	}
-	_, err := s.PromoteContactCohortTx(ctx, tx, id)
+	_, err := s.PromoteHeldContactCohortTx(ctx, tx, id)
 	return err
 }
 

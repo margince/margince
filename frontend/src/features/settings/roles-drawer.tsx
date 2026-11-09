@@ -9,7 +9,12 @@ import { Heading } from "../../design-system/heading";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import type { ExtensionUnit } from "../../lib/extensions.queries";
-import { type Role, roleLabel, roleRefusalOf } from "../../lib/roles.queries";
+import {
+  type Role,
+  roleLabel,
+  roleRefusalOf,
+  useAssignableRoles,
+} from "../../lib/roles.queries";
 import { RoleDetail, type RoleWrites, useRoleWrites } from "./roles-detail";
 
 /** A role's kind, and whether it is archived: the row and the drawer say both. */
@@ -58,6 +63,12 @@ export function RoleDrawer({
   const current = newest(role, writes);
   const name = roleLabel(t)(current.key, current.name);
   const moveVerb = moveOf(current, canMove, canRestore);
+  // Only the assignable roles say whether a role captures; a role absent there,
+  // such as an archived one, says nothing rather than guess.
+  const assignable = useAssignableRoles(open);
+  const capturesMail = assignable.data?.find(
+    (entry) => entry.key === current.key,
+  )?.captures_mail;
   return (
     <Modal
       open={open}
@@ -108,6 +119,13 @@ export function RoleDrawer({
               </Button>
             )}
           </div>
+          {capturesMail === false && (
+            <Callout
+              tone="info"
+              kind="standing"
+              title={t("roles.cannotCapture")}
+            />
+          )}
           {/* In the head, so a refusal stays in view however far the grid scrolled. */}
           {writes.failure && (
             <Callout tone="danger" kind="outcome" title={t("roles.notSaved")}>

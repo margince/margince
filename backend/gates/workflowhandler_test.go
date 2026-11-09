@@ -75,7 +75,7 @@ func TestWorkflowHandlerMatchAndPlanAreReadOnly(t *testing.T) {
 	methodsByType := map[string]map[string]bool{}      // "dir.Type" -> method-name set
 	matchPlanDecls := map[string][]handlerMethodDecl{} // "dir.Type" -> its Match/Plan decls
 
-	err := filepath.WalkDir("internal/modules", func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir("internal/modules", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 			strings.HasSuffix(path, "_test.go") || isIntegrationTagged(path) {
 			return err

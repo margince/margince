@@ -3,10 +3,8 @@ import { fn } from "storybook/test";
 import { bookingConnection, bookingProfile } from "../../testing/book.testkit";
 import { jsonResponse } from "../../testing/story-utils";
 import { bookingFrame } from "./book.storykit";
-import {
-  MeetingLinkDrawer,
-  ReplaceAddressConfirm,
-} from "./meeting-link-drawer";
+import { ReplaceAddressConfirm } from "./meeting-link-actions";
+import { MeetingLinkDrawer } from "./meeting-link-drawer";
 
 const meta: Meta<typeof MeetingLinkDrawer> = {
   title: "Settings/You/Meetings/Booking link drawer",

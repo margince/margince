@@ -84,6 +84,12 @@ func (s *Store) ReconcileMessageIdentityTx(ctx context.Context, tx pgx.Tx, activ
 		// writing anything would bump a version over a change nobody made.
 		return nil
 	}
+	if _, err := storekit.LockActivityThreadTx(ctx, tx, activityID.UUID); err != nil {
+		return err
+	}
+	if err := storekit.LockThreadKeysTx(ctx, tx, previous, stamped); err != nil {
+		return err
+	}
 	moved, err := reKeyAbsorbingTheEcho(ctx, tx, activityID, previous, stamped)
 	if err != nil {
 		return err

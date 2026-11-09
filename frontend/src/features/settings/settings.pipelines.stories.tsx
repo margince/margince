@@ -13,7 +13,7 @@ import { PipelinesCard } from "./settings.pipelines";
 // The several-pipeline catalog lives in settings.stories.tsx; this file holds
 // one pipeline standing alone, its second arriving, and a refused restore.
 const meta: Meta = {
-  title: "Settings/Sales/Pipelines/Pipeline page",
+  title: "Settings/Sales/Deals/Pipeline page",
   parameters: { layout: "padded" },
 };
 export default meta;

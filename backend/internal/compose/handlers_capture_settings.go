@@ -50,6 +50,7 @@ func (h captureSettingsHandlers) UpdateCaptureSettings(w http.ResponseWriter, r 
 		return
 	}
 	settings, err := h.store.Update(r.Context(), capture.SettingsPatch{
+		InternalMail:            internalMailPatch(req.InternalMail),
 		AutoEnrich:              req.AutoEnrich,
 		MailSharing:             req.MailSharing,
 		SharedPostureAllowed:    req.SharedPostureAllowed,
@@ -71,6 +72,7 @@ func (h captureSettingsHandlers) UpdateCaptureSettings(w http.ResponseWriter, r 
 // toContractCaptureSettings maps the posture in force onto the wire shape.
 func toContractCaptureSettings(s capture.Settings) crmcontracts.CaptureSettings {
 	return crmcontracts.CaptureSettings{
+		InternalMail:         contractInternalMailSettings(s.InternalMail),
 		AutoEnrich:           s.AutoEnrich,
 		MailSharing:          s.MailSharing,
 		SharedPostureAllowed: s.SharedPostureAllowed,

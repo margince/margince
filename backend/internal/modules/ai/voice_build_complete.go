@@ -295,16 +295,11 @@ type VoiceBuildRef struct {
 	RequestedBy *ids.UUID
 }
 
-// staleQueuedAge is how long a queued build may sit before the sweep
-// re-offers it: the in-transaction enqueue makes a lost job rare (a crash
-// between commit and job pickup, or a row predating the runner), and the
-// per-build job uniqueness makes a duplicate offer harmless.
-const staleQueuedAge = 10 * time.Minute
+// staleQueuedAge bounds recovery of a queued build whose job was lost.
+// The session lease makes repeated offers safe.
+const staleQueuedAge = time.Minute
 
-// DueDeferredBuilds walks the fleet for builds the sweep should re-offer:
-// deferred rows whose next attempt is due, and queued rows old enough that
-// their job evidently never ran — the capture registry's
-// workspace-by-workspace RLS walk.
+// DueDeferredBuilds finds due deferrals, lost queued jobs and running builds with no session owner.
 func (s *VoiceStore) DueDeferredBuilds(ctx context.Context) ([]VoiceBuildRef, error) {
 	// rls-exempt: fleet enumeration — the workspace table is not workspace-scoped; this reads every tenant before entering each workspace's own GUC.
 	rows, err := s.db.Pool().Query(ctx, `SELECT id FROM workspace WHERE archived_at IS NULL ORDER BY created_at`)
@@ -325,19 +320,29 @@ func (s *VoiceStore) DueDeferredBuilds(ctx context.Context) ([]VoiceBuildRef, er
 				SELECT id, voice_profile_id, requested_by FROM voice_build
 				WHERE archived_at IS NULL
 				  AND ((status = 'deferred' AND next_attempt_at <= $1)
-				       OR (status = 'queued' AND created_at <= $2))`, now, now.Add(-staleQueuedAge))
+				       OR (status = 'queued' AND created_at <= $2)
+			       OR status = 'running')`, now, now.Add(-staleQueuedAge))
 			if err != nil {
 				return err
 			}
-			defer wsRows.Close()
-			for wsRows.Next() {
+			refs, err := pgx.CollectRows(wsRows, func(row pgx.CollectableRow) (VoiceBuildRef, error) {
 				ref := VoiceBuildRef{Workspace: wsID}
-				if err := wsRows.Scan(&ref.BuildID, &ref.ProfileID, &ref.RequestedBy); err != nil {
+				err := row.Scan(&ref.BuildID, &ref.ProfileID, &ref.RequestedBy)
+				return ref, err
+			})
+			if err != nil {
+				return err
+			}
+			for _, ref := range refs {
+				free, err := s.db.WorkLeaseAvailable(wsCtx, tx, "voice_build", ref.BuildID)
+				if err != nil {
 					return err
 				}
-				due = append(due, ref)
+				if free {
+					due = append(due, ref)
+				}
 			}
-			return wsRows.Err()
+			return nil
 		})
 		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("voice: deferred-build walk in workspace %s: %w", wsID, err))

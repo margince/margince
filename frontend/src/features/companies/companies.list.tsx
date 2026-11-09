@@ -38,6 +38,7 @@ import type { ListChip } from "../../design-system/listsurface";
 import { CellStrip } from "../../design-system/listtable";
 import { useLocale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
+import { labelFor } from "../../lib/labelfor";
 import {
   KIND_LABELS,
   MEANING_LABELS,
@@ -46,11 +47,15 @@ import {
   usePartnerStages,
 } from "../../lib/partnerstages.queries";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { listQueryParams } from "../../lib/tagfilter";
-import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
+import { useViewerZone } from "../../lib/viewerzone";
+import {
+  SavedViewsFailure,
+  SaveViewAction,
+  useSavedViewTabs,
+} from "../lists/savedviews";
 import type { Company } from "./companies";
 import { offerDomainContacts } from "./companycontacts/domaincontacts";
 import { displayHost } from "./companyheader";
@@ -89,7 +94,7 @@ export function CompaniesScreen() {
   const queryClient = useQueryClient();
   const pageName = usePageName("companies");
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const cf = useObjectCustomFields("company", "create");
   const state = useListQuery<Company>({
     key: "companies",
@@ -121,7 +126,7 @@ export function CompaniesScreen() {
           allLabel: t("partner.kindsAll"),
           options: PARTNER_KINDS.map((kind) => ({
             value: kind,
-            label: t(KIND_LABELS[kind]),
+            label: t(labelFor(KIND_LABELS, kind)),
           })),
         },
         {
@@ -139,7 +144,7 @@ export function CompaniesScreen() {
           allLabel: t("partner.stageMeaningAll"),
           options: PARTNER_STAGE_MEANINGS.map((meaning) => ({
             value: meaning,
-            label: t(MEANING_LABELS[meaning]),
+            label: t(labelFor(MEANING_LABELS, meaning)),
           })),
         },
       ]
@@ -270,7 +275,9 @@ export function CompaniesScreen() {
             // on classification would show stale values forever.
             cell: (company: Company) =>
               company.lifecycle && company.lifecycle !== "unknown" ? (
-                <Badge>{t(LIFECYCLE_LABELS[company.lifecycle])}</Badge>
+                <Badge>
+                  {t(labelFor(LIFECYCLE_LABELS, company.lifecycle))}
+                </Badge>
               ) : null,
           },
           {
@@ -290,17 +297,18 @@ export function CompaniesScreen() {
                     <Badge key={type}>
                       {type === "partner"
                         ? partnerMarkText(company, t)
-                        : t(RELATIONSHIP_TYPE_LABELS[type])}
+                        : t(labelFor(RELATIONSHIP_TYPE_LABELS, type))}
                     </Badge>
                   ))}
                 </CellStrip>
               ) : null,
           },
           ownerColumn<Company>(t),
-          lastActivityColumn<Company>(t, locale, recordZone),
-          createdColumn<Company>(t, locale, recordZone),
+          lastActivityColumn<Company>(t, locale, readerZone),
+          createdColumn<Company>(t, locale, readerZone),
         ]}
-        saveView={<SaveViewAction resource="companies" query={state.query} />}
+        saveView={<SaveViewAction resource="companies" state={state} />}
+        notice={<SavedViewsFailure resource="companies" />}
         rowKey={(company) => company.id}
         rowRoute={(company) => ({ screen: "companies", id: company.id })}
         selection={selection}
@@ -312,7 +320,10 @@ export function CompaniesScreen() {
             allLabel: "company.filterLifecycleAll",
             options: LIFECYCLE_OPTIONS.filter(
               (value) => value !== "unknown",
-            ).map((value) => ({ value, label: LIFECYCLE_LABELS[value] })),
+            ).map((value) => ({
+              value,
+              label: labelFor(LIFECYCLE_LABELS, value),
+            })),
           },
           {
             key: "relationship_type",
@@ -320,7 +331,7 @@ export function CompaniesScreen() {
             allLabel: "company.filterRelTypeAll",
             options: RELATIONSHIP_TYPE_OPTIONS.map((value) => ({
               value,
-              label: RELATIONSHIP_TYPE_LABELS[value],
+              label: labelFor(RELATIONSHIP_TYPE_LABELS, value),
             })),
           },
         ]}

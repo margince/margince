@@ -58,7 +58,7 @@ func TestGovernForwardsWork(t *testing.T) {
 		return nil
 	}), Spec{})
 
-	if err := governed.Work(context.Background(), nil); err != nil {
+	if err := governed.Work(context.Background(), &river.Job[fixtureArgs]{}); err != nil {
 		t.Fatalf("Work: %v", err)
 	}
 	if !called {

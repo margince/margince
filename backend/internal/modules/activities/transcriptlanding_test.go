@@ -25,6 +25,9 @@ func TestOnlyATranscriptWithABodyStartsAReading(t *testing.T) {
 		created  bool
 		want     bool
 	}{
+		"a call transcript with a body is read": {
+			crmcontracts.Activity{Kind: crmcontracts.ActivityKindCall, SourceSystem: &transcript, Body: &body}, true, true,
+		},
 		"a transcript with a body is read": {
 			crmcontracts.Activity{SourceSystem: &transcript, Body: &body}, true, true,
 		},

@@ -48,7 +48,7 @@ const jobArgsFloor = 20
 // with a blind spot that widens every time the tree does.
 func goFilesUnder(root string) ([]string, error) {
 	var paths []string
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

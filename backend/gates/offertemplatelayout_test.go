@@ -16,13 +16,13 @@ package gates
 // renderer prints that no form can write.
 
 import (
-	"os"
 	"regexp"
 	"slices"
 	"strconv"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const offerTemplateForm = "../frontend/src/features/deals/offertemplates.tsx"
@@ -41,7 +41,7 @@ var tsLayoutRead = regexp.MustCompile(`\.layout\.([A-Za-z_][A-Za-z0-9_]*)`)
 
 func TestTheOfferTemplateFormWritesTheKeysTheRendererPrints(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile(offerTemplateForm)
+	source, err := gatekit.ReadFile(offerTemplateForm)
 	if err != nil {
 		t.Fatalf("reading the offer-template form: %v", err)
 	}

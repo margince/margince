@@ -49,7 +49,8 @@ const (
 	// Colleagues writing to each other are not the workspace's to read, so no
 	// verdict clears it. The mailbox owner sharing the thread does: that is a
 	// human decision, not an automatic promotion.
-	ReasonMembersOnly = "members_only"
+	ReasonMembersOnly         = "members_only"
+	ReasonInternalOperational = "internal_operational"
 	// ReasonNoRecord: the message is filed under no record because something
 	// JUDGED its sender — a suppression rule, a settled verdict, a thread the
 	// owner's own. Written by the capture ladder rather than derived here, and
@@ -92,6 +93,7 @@ func EveryReason() []string {
 		ReasonCounterparty,
 		ReasonConfidentialMarker,
 		ReasonMembersOnly,
+		ReasonInternalOperational,
 		ReasonNoRecord,
 		ReasonNoCounterparty,
 	}

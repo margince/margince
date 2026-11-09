@@ -73,9 +73,6 @@ func lockedSurfaces() []lockedSurface {
 		{"/legal-reviews/settings", "/v1/legal-reviews/settings", []lockedWrite{
 			{method: http.MethodPut, path: "/v1/legal-reviews/settings", body: map[string]any{"enabled": false}},
 		}},
-		{"/forecast/assurance/enforcement", "/v1/forecast/assurance/enforcement", []lockedWrite{
-			{method: http.MethodPut, path: "/v1/forecast/assurance/enforcement", body: map[string]any{"enabled": true}},
-		}},
 		{"/dedupe/settings", "/v1/dedupe/settings", []lockedWrite{
 			{method: http.MethodPut, path: "/v1/dedupe/settings", body: map[string]any{"enabled": true}},
 		}},
@@ -101,21 +98,29 @@ func (r rawJSON) MarshalJSON() ([]byte, error) { return []byte(r), nil }
 // unsurfaced are the stored settings no HTTP surface writes, so no response
 // reports their lock. A scan of the save calls cannot name them: identity and
 // capture save through a loop variable. The census fails when one gains a surface.
-var unsurfaced = []string{"consent.authorization_modes", "deals.stage_autopilot_enabled", "deals.maintenance_writes_enabled"}
+var unsurfaced = []string{
+	"consent.authorization_modes",
+	"deals.stage_autopilot_enabled",
+	"deals.maintenance_writes_enabled",
+	"deals.silent_close_days",
+}
 
 // censusValues are boot values for the stored settings that declare no
 // usable default. Every other stored setting is set to its own default.
 //
 // gatekit:fixture boot values a test environment sets, not reasons
 var censusValues = map[string]string{
-	"ai.routing":                             "{}",
-	"installation.name":                      "Census GmbH",
-	"installation.country":                   "zk",
-	"identity.enabled_oidc_providers":        "google",
-	"identity.oidc_group_role_map":           "sales:rep",
-	"consent.controller_particulars":         `{"LegalName":"Census GmbH"}`,
-	"contacts.unassigned_escalation_user_id": ids.NewV7().String(),
-	"contacts.signature_template":            "<p>{name}</p>",
+	"ai.routing":                                "{}",
+	"installation.name":                         "Census GmbH",
+	"installation.country":                      "zk",
+	"identity.enabled_oidc_providers":           "google",
+	"identity.oidc_group_role_map":              "sales:rep",
+	"installation.agent_role_writes_per_window": "admin:2000",
+	"installation.agent_role_egress_per_window": "admin:20",
+	"installation.agent_role_calls_per_window":  "admin:20000",
+	"consent.controller_particulars":            `{"LegalName":"Census GmbH"}`,
+	"contacts.unassigned_escalation_user_id":    ids.NewV7().String(),
+	"contacts.signature_template":               "<p>{name}</p>",
 }
 
 // everyStoredSettingSet is an environment in which a boot source sets every

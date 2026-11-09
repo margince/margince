@@ -30,10 +30,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// dressedDeal seeds one open deal carrying a value in every Subject field: a
-// commit-category deal with a provisional close date, an inbound email, a
-// same-currency sent offer and active contract, two close-date pushes plus one
-// pull-in that must not count, an open task, and an economic buyer.
+// dressedDeal seeds one open deal carrying a value in every Subject field. It
+// is at 95% with a provisional close date and has an inbound email, a
+// same-currency sent offer and active contract. It has two close-date pushes
+// plus one pull-in that must not count, an open task, and an economic buyer.
 func dressedDeal(t *testing.T, e *integration.Env) ids.UUID {
 	t.Helper()
 	pipeline, open, _ := integration.DealFixture(t, e)
@@ -43,9 +43,9 @@ func dressedDeal(t *testing.T, e *integration.Env) ids.UUID {
 	deal := integration.SeedIDRow(t, owner, `
 		INSERT INTO deal (id, pipeline_id, stage_id, name, owner_id, status, source, captured_by,
 		                  amount_minor, currency, expected_close_date, close_date_provisional,
-		                  forecast_category)
+		                  win_probability_override, win_probability_set_by)
 		VALUES ($1, $2, $3, 'Dressed Subject', $4, 'open', 'manual', 'test',
-		        4200000, 'EUR', now()::date + 30, true, 'commit')`,
+		        4200000, 'EUR', now()::date + 30, true, 95, 'human')`,
 		pipeline, open, e.Rep1)
 
 	// A required criterion the stage declares and nothing has shown met, which

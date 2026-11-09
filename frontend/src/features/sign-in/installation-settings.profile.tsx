@@ -49,7 +49,7 @@ type ForwardMeasure = NonNullable<
 >;
 
 const FORWARD_MEASURES = [
-  "commit_evidence",
+  "likely",
   "weighted",
   "manager_call",
 ] as const satisfies readonly ForwardMeasure[];
@@ -119,6 +119,7 @@ export function InstallationProfileDialog({
   const baseLanguage = lockOf("base_language");
   const fiscalYearStart = lockOf("fiscal_year_start_month");
   const forwardMeasure = lockOf("forecast_forward_measure");
+  const likelyThreshold = lockOf("forecast_likely_threshold");
   const { locale } = useLocale();
   const titleId = useId();
   const formId = useId();
@@ -327,6 +328,46 @@ export function InstallationProfileDialog({
                     if (picked) {
                       onChange({ ...draft, forecast_forward_measure: picked });
                     }
+                  }}
+                />
+              )}
+            </Field>
+          </div>
+
+          <div data-fact="forecast_likely_threshold">
+            <Field
+              label={t("installationSettings.likelyThreshold")}
+              hint={
+                likelyThreshold.disabled
+                  ? likelyThreshold.reason
+                  : t("installationSettings.likelyThreshold.help")
+              }
+              error={refused.get("forecast_likely_threshold")}
+            >
+              {(control) => (
+                <TextInput
+                  {...control}
+                  aria-describedby={describe(control)}
+                  ref={
+                    focus === "forecast_likely_threshold" ? asked : undefined
+                  }
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={100}
+                  step={1}
+                  value={String(draft.forecast_likely_threshold || "")}
+                  disabled={!canManage || likelyThreshold.disabled}
+                  // A cleared or broken entry is held as 0, which the server
+                  // refuses on this field, rather than being dropped unseen.
+                  onChange={(event) => {
+                    const percent = Number(event.target.value);
+                    onChange({
+                      ...draft,
+                      forecast_likely_threshold: Number.isFinite(percent)
+                        ? percent
+                        : 0,
+                    });
                   }}
                 />
               )}

@@ -40,7 +40,7 @@ func (s *Service) stagedContextDigest(ctx context.Context, tx pgx.Tx, in StageIn
 	if !ok {
 		return "", errors.New("crmapprovals: no actor bound to context")
 	}
-	pinCtx, err := s.effectContext(ctx, tx, stagedByActor(stager))
+	pinCtx, err := s.effectContext(ctx, tx, in.Kind, stagedByActor(stager))
 	if err != nil {
 		return "", err
 	}
@@ -57,7 +57,7 @@ func (s *Service) checkContextPin(ctx context.Context, tx pgx.Tx, a row) error {
 	if a.ContextDigest == nil || a.TargetID == nil {
 		return auth.ReleasedContextMoved()
 	}
-	pinCtx, err := s.effectContext(ctx, tx, stagedByRow(a))
+	pinCtx, err := s.effectContext(ctx, tx, a.Kind, stagedByRow(a))
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ func (s *Service) storeContextDigest(ctx context.Context, tx pgx.Tx, a row) erro
 	if a.TargetID == nil {
 		return auth.ReleasedContextMoved()
 	}
-	pinCtx, err := s.effectContext(ctx, tx, stagedByRow(a))
+	pinCtx, err := s.effectContext(ctx, tx, a.Kind, stagedByRow(a))
 	if err != nil {
 		return err
 	}

@@ -52,7 +52,7 @@ const censusCorpus = "gates/testdata/sourcecensus.json"
 
 func readCensusCorpus(t *testing.T) []censusCase {
 	t.Helper()
-	raw, err := os.ReadFile(censusCorpus)
+	raw, err := gatekit.ReadFile(censusCorpus)
 	if err != nil {
 		t.Fatalf("reading the planted cases: %v", err)
 	}
@@ -78,7 +78,7 @@ func TestTheMoneyScaleCensusAnswersEveryPlantedGoCase(t *testing.T) {
 		ran++
 		t.Run(planted.Name, func(t *testing.T) {
 			path := plantGo(t, planted.Body)
-			src, err := os.ReadFile(path)
+			src, err := gatekit.ReadFile(path)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -102,7 +102,7 @@ func TestTheOneSpellingCensusAnswersEveryPlantedCase(t *testing.T) {
 		ran++
 		t.Run(planted.Name, func(t *testing.T) {
 			path := plantGo(t, planted.Body)
-			src, err := os.ReadFile(path)
+			src, err := gatekit.ReadFile(path)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -185,7 +185,7 @@ func assertNames(t *testing.T, planted censusCase, found []gatekit.Finding) {
 // un-gated by the gate that exists to stop exactly that.
 func sqlstateCodes(t *testing.T) []string {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join(repoRoot, sqlstateOwner))
+	raw, err := gatekit.ReadFile(filepath.Join(repoRoot, sqlstateOwner))
 	if err != nil {
 		t.Fatalf("reading the SQLSTATE owner: %v", err)
 	}
@@ -232,7 +232,7 @@ func censusSourceFiles(t *testing.T) []string {
 		if info, err := os.Stat(at); err != nil || !info.IsDir() {
 			t.Fatalf("scan root %s does not exist — this census would inspect nothing and say OK", root)
 		}
-		if err := filepath.WalkDir(at, func(path string, entry os.DirEntry, err error) error {
+		if err := gatekit.WalkDir(at, func(path string, entry os.DirEntry, err error) error {
 			switch {
 			case err != nil:
 				return err
@@ -274,7 +274,7 @@ func TestNoMinorUnitAmountIsScaledByAHardCodedPowerOfTen(t *testing.T) {
 		if strings.Contains(path, "shared/kernel/values/") {
 			continue
 		}
-		src, err := os.ReadFile(path)
+		src, err := gatekit.ReadFile(path)
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}
@@ -311,7 +311,7 @@ func TestSQLSTATEsRefusalsAndCurrencyShapesHaveOneSpelling(t *testing.T) {
 		if isOneSpellingOwner(path) {
 			continue
 		}
-		src, err := os.ReadFile(path)
+		src, err := gatekit.ReadFile(path)
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}

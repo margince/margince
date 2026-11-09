@@ -13,7 +13,7 @@ import { AuditEntryLine } from "./audit";
 // is a change to what an auditor reads before anything else, so every
 // attribution state gets a row rather than only the happy one.
 const meta: Meta = {
-  title: "Settings/Governance/Audit log/Audit attribution",
+  title: "Settings/Compliance/Audit log/Audit attribution",
   parameters: { layout: "padded" },
 };
 export default meta;

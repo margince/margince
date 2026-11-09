@@ -12,6 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -41,9 +42,9 @@ const redecodableMailTextScope = `FROM activity a ` + mailOriginalJoin + `
 // parser wrote before it read the message's charset.
 func redecodeMailTextBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
 	return pageStoredMail(ctx, tx, in,
-		"a.id, a.version, a.subject, a.body, a.body_completeness, rc.payload",
+		"a.id, a.version, a.subject, a.body, a.body_completeness, "+originalstore.SQL("rc"),
 		redecodableMailTextScope,
-		func(c redecodableMailText) ids.UUID { return c.ID },
+		func(c *redecodableMailText) (ids.UUID, *[]byte) { return c.ID, &c.Payload },
 		redecodeMailText)
 }
 

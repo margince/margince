@@ -7,42 +7,33 @@ import type { ProjectScope } from "../../design-system/projectpicker";
 import { paragraphsFrom } from "../../design-system/richtext";
 import type { CommunicationContext } from "../../lib/compose-context";
 import type { DraftProvenance, DraftUnavailable } from "./composedraftcall";
+import {
+  type DraftMarks,
+  holdsServedWords,
+  MarksMemory,
+  oneKeystroke,
+  plainText,
+} from "./composedraftmarks";
+import type { AddressLine } from "./composehead";
 import type { SavedDraftFields } from "./composesaveddraftcalls";
 import type { EditSeed } from "./schedulededit";
 
 type DraftReason = components["schemas"]["AccountDraftReason"];
 
-// The account-started path's grounding: the deal and the project a draft is
-// written for, with what the server said it wrote from. The recipient is not
-// held here: it is whoever from the account stands first in To.
-function useAccountGrounding(
-  edit: EditSeed | undefined,
-  onGroundingChanged: () => void,
-) {
+// The chosen deal and the server's report of what its draft read.
+function useAccountGrounding(edit: EditSeed | undefined) {
   const [dealId, setDealId] = useState(edit?.dealId ?? "");
-  // The project scopes the draft's grounding and files the sent message.
-  const [projectId, setProjectId] = useState(edit?.projectId ?? "");
   const [reasoning, setReasoning] = useState<DraftReason[]>([]);
   // The server's scope report for the draft on screen, retired with the
   // reasons because it describes the same read.
   const [scope, setScope] = useState<ProjectScope | undefined>(undefined);
-  // A new project retires the draft written for the previous one.
-  // A re-draft could not repair it, because the fill leaves a full field alone.
-  const reground = (apply: (next: string) => void) => (next: string) => {
-    apply(next);
-    setReasoning([]);
-    setScope(undefined);
-    onGroundingChanged();
-  };
   return {
     // A deal is chosen beside the project, among what the message is about.
     // The words stay: they are the rep's to read again, and a draft still in
     // flight for the old deal is dropped when it lands.
     dealId,
     setDealId,
-    projectId,
-    setProjectId: reground(setProjectId),
-    grounding: { dealId, projectId },
+    grounding: { dealId },
     reasoning,
     setReasoning,
     scope,
@@ -65,6 +56,7 @@ export type FieldsSnapshot = Readonly<{
   provenance: DraftProvenance | null;
   draftRef: string | null;
   servedBody: string;
+  dealId: string;
   reasoning: DraftReason[];
   scope: ProjectScope | undefined;
 }>;
@@ -84,10 +76,35 @@ export function emptyFields(): FieldsSnapshot {
     provenance: null,
     draftRef: null,
     servedBody: "",
+    dealId: "",
     reasoning: [],
     scope: undefined,
   };
 }
+
+// What an edit does to the marks on screen: none when they stand. A body held
+// before takes the marks it had; an emptied one sets them aside.
+function marksAfterEdit(
+  edit: Readonly<{
+    text: string;
+    marks: DraftMarks | null;
+    remembered: DraftMarks | null | undefined;
+    aside: DraftMarks | null;
+    served: string;
+  }>,
+): Readonly<{ apply: DraftMarks | null }> | null {
+  if (edit.remembered !== undefined) return { apply: edit.remembered };
+  if (plainText(edit.text) === "") return edit.marks ? { apply: null } : null;
+  const back =
+    !edit.marks && edit.aside && holdsServedWords(edit.text, edit.served);
+  return back ? { apply: edit.aside } : null;
+}
+
+const NO_REFUSALS: Readonly<Record<AddressLine, readonly string[]>> = {
+  to: [],
+  cc: [],
+  bcc: [],
+};
 
 // Whether a seed arrives holding a copy, which opens the copy rows.
 function holdsCopies(edit: EditSeed | undefined): boolean {
@@ -98,10 +115,12 @@ function holdsCopies(edit: EditSeed | undefined): boolean {
 // the epoch that retires a draft request once the words move on.
 export function useComposeFields({
   initialMessage,
+  initialReason,
   askedIntent,
   edit,
 }: Readonly<{
   initialMessage?: Readonly<{ subject: string; body: string }>;
+  initialReason?: CommunicationContext;
   askedIntent?: string;
   /** A scheduled message being written again; read once, when the composer mounts. */
   edit?: EditSeed;
@@ -133,7 +152,7 @@ export function useComposeFields({
   // What this message is, when the record does not say. Empty until the
   // reader answers, and never asked on a reply (see contextFor).
   const [context, setContext] = useState<CommunicationContext | "">(
-    edit?.context ?? "",
+    edit?.context ?? initialReason ?? "",
   );
   // The send-later moment as datetime-local text in the rep's zone. It
   // becomes an instant at submit (see scheduleFields).
@@ -151,28 +170,48 @@ export function useComposeFields({
   const [draftUnavailable, setDraftUnavailable] =
     useState<DraftUnavailable | null>(null);
   const [sendUnavailable, setSendUnavailable] = useState(false);
+  // Text a recipient line could not read as an address. It is no recipient,
+  // so the send waits until the reader corrects or removes it.
+  const [refusedAddresses, setRefusedAddresses] = useState(NO_REFUSALS);
+  const addressRefused = Object.values(refusedAddresses).some(
+    (parts) => parts.length > 0,
+  );
+  // Bumped when a reset clears refusals, so every address box drops what it
+  // holds; with nothing refused, typed text stays.
+  const [addressEpoch, setAddressEpoch] = useState(0);
+  const forgetRefusals = () => {
+    if (!addressRefused) return;
+    setRefusedAddresses(NO_REFUSALS);
+    setAddressEpoch((epoch) => epoch + 1);
+  };
+  // A new number marks a body the reader may undo: only the model's words.
+  const [undoableRevision, setUndoableRevision] = useState(0);
+  const refuseAddresses = useCallback(
+    (line: AddressLine, parts: readonly string[]) =>
+      setRefusedAddresses((prev) => ({ ...prev, [line]: parts })),
+    [],
+  );
   const [draftKept, setDraftKept] = useState(false);
-  // A new grounding clears drafted text alone. `draftRef` and `provenance`
-  // are set by the fill, so a rep's own typed message stays.
-  const account = useAccountGrounding(edit, () => {
-    if (!provenance && !draftRef) {
-      return;
-    }
-    setBody("");
-    setHtml("");
-    setSubject("");
-    setTo([]);
-    setDraftRef(null);
-    setProvenance(null);
-  });
+  const grounding = useAccountGrounding(edit);
   // A ref invalidates in-flight drafts at once, including React Query's
   // window before it adopts the latest render's callbacks.
   const draftEpoch = useRef(0);
+  // The model's words can come back by undo, and never without their marks;
+  // the reader's own words never come back with the model's.
+  const memory = useRef(new MarksMemory());
+  const parked = useRef<DraftMarks | null>(null);
+  const forgetMarks = () => {
+    memory.current.forget();
+    parked.current = null;
+  };
+  const account = grounding;
 
   // A new transport changes what is being written. A subject or address left
   // standing would be one the channel send never uses.
   const clearForTransport = () => {
     draftEpoch.current += 1;
+    forgetMarks();
+    forgetRefusals();
     setSubject("");
     setBody("");
     setHtml("");
@@ -183,36 +222,68 @@ export function useComposeFields({
     setProvenance(null);
   };
 
-  // An emptied body no longer holds the served draft, so the reference, the
-  // disclosure and the reasons go with it.
+  const marksNow = (): DraftMarks | null =>
+    provenance || draftRef
+      ? {
+          draftRef,
+          provenance,
+          reasoning: account.reasoning,
+          scope: account.scope,
+        }
+      : null;
+  const applyMarks = (marks: DraftMarks | null) => {
+    setDraftRef(marks?.draftRef ?? null);
+    setProvenance(marks?.provenance ?? null);
+    account.setReasoning(marks?.reasoning ?? []);
+    account.setScope(marks?.scope);
+  };
+
   const editBody = (next: Readonly<{ html: string; text: string }>) => {
     if (next.text !== body || next.html !== html) draftEpoch.current += 1;
     setBody(next.text);
     setHtml(next.html);
-    if (next.text.trim()) {
-      return;
-    }
-    setDraftRef(null);
-    setProvenance(null);
-    account.setReasoning([]);
-    account.setScope(undefined);
+    const marks = marksNow();
+    memory.current.remember(body, marks);
+    const change = marksAfterEdit({
+      text: next.text,
+      marks,
+      remembered: oneKeystroke(body, next.text)
+        ? undefined
+        : memory.current.marksOf(next.text),
+      aside: parked.current,
+      served: servedBody,
+    });
+    if (!change) return;
+    if (marks) parked.current = marks;
+    applyMarks(change.apply);
   };
 
   // The model answers in plain text, so the markup starts as its paragraphs.
   const adoptDraftedBody = (drafted: string) => {
+    memory.current.remember(body, marksNow());
+    parked.current = null;
+    setUndoableRevision((revision) => revision + 1);
     setBody(drafted);
     setHtml(paragraphsFrom(drafted));
   };
 
-  // A rejected draft's words and disclosure leave with the judgment.
+  // A rejected draft's words and disclosure leave with the judgment. An undo
+  // may still bring the words back, so the disclosure waits for them.
   const clearRejected = () => {
+    const rejected: DraftMarks | null = provenance
+      ? { draftRef: null, provenance, reasoning: [], scope: undefined }
+      : null;
+    memory.current.remember(body, rejected);
+    parked.current = rejected;
     setBody("");
     setHtml("");
     setProvenance(null);
   };
 
-  const restoreSaved = useCallback((saved: SavedDraftFields) => {
+  const restoreSaved = (saved: SavedDraftFields) => {
     draftEpoch.current += 1;
+    forgetMarks();
+    forgetRefusals();
     setTo([...saved.to]);
     setCc([...saved.cc]);
     setBcc([...saved.bcc]);
@@ -220,9 +291,23 @@ export function useComposeFields({
     setSubject(saved.subject);
     setBody(saved.body);
     setHtml(saved.html);
+    setContext(saved.context);
+    setSendAt(saved.sendAt);
+    const state = saved.editorState;
+    setIntent(state?.intent ?? "");
+    setServedBody(state?.served_body ?? "");
     setDraftRef(null);
-    setProvenance(null);
-  }, []);
+    setProvenance(
+      state?.ai_generated
+        ? {
+            ai_generated: true,
+            ai_disclosure: state.ai_disclosure,
+            voice_profile_version: state.voice_profile_version,
+            voice_degraded: state.voice_degraded ?? false,
+          }
+        : null,
+    );
+  };
 
   const snapshot = (): FieldsSnapshot => ({
     to,
@@ -238,12 +323,16 @@ export function useComposeFields({
     provenance,
     draftRef,
     servedBody,
+    dealId: account.dealId,
     reasoning: account.reasoning,
     scope: account.scope,
   });
 
   const load = (next: FieldsSnapshot) => {
+    grounding.setDealId(next.dealId);
     draftEpoch.current += 1;
+    forgetMarks();
+    forgetRefusals();
     setTo(next.to);
     setCc(next.cc);
     setBcc(next.bcc);
@@ -263,6 +352,7 @@ export function useComposeFields({
   };
 
   return {
+    editorState: editorStateOf({ intent, provenance, servedBody }),
     to,
     setTo,
     cc,
@@ -291,6 +381,11 @@ export function useComposeFields({
     setDraftUnavailable,
     sendUnavailable,
     setSendUnavailable,
+    refuseAddresses,
+    refusedAddresses,
+    addressEpoch,
+    undoableRevision,
+    addressRefused,
     draftKept,
     setDraftKept,
     account,
@@ -306,3 +401,17 @@ export function useComposeFields({
 }
 
 export type ComposeFields = ReturnType<typeof useComposeFields>;
+
+function editorStateOf(
+  fields: Pick<FieldsSnapshot, "intent" | "provenance" | "servedBody">,
+): components["schemas"]["MailDraftEditorState"] {
+  return {
+    intent: fields.intent,
+    ai_generated: fields.provenance?.ai_generated ?? false,
+    ai_disclosure: fields.provenance?.ai_disclosure ?? undefined,
+    voice_profile_version:
+      fields.provenance?.voice_profile_version ?? undefined,
+    voice_degraded: fields.provenance?.voice_degraded ?? false,
+    served_body: fields.servedBody,
+  };
+}

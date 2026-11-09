@@ -12,6 +12,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/jackc/pgx/v5"
@@ -21,10 +22,12 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // transcriptReadEnqueuer is the slice of *jobs.Runner the start handler needs;
@@ -37,6 +40,8 @@ type transcriptReadEnqueuer interface {
 type transcriptReadEngine struct {
 	activities *activities.Store
 	enqueue    transcriptReadEnqueuer
+	seats      *identity.Service
+	pool       *pgxpool.Pool
 }
 
 // start queues the reading and says how the request landed.
@@ -75,7 +80,7 @@ func (e *transcriptReadEngine) report(w http.ResponseWriter, r *http.Request, id
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, transcriptReadReport(read))
+	e.writeReport(w, r, read)
 }
 
 // latestReport answers with the newest reading of this transcript, for a page
@@ -86,7 +91,68 @@ func (e *transcriptReadEngine) latestReport(w http.ResponseWriter, r *http.Reque
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, transcriptReadReport(read))
+	e.writeReport(w, r, read)
+}
+
+// writeReport answers the reading phrased for the caller: in their display
+// language, "you" for their own work, and the roster's name for a colleague's.
+func (e *transcriptReadEngine) writeReport(w http.ResponseWriter, r *http.Request, read activities.TranscriptRead) {
+	report := transcriptReadReport(read)
+	if read.Outcome != nil {
+		who, err := e.audience(r.Context(), *read.Outcome)
+		if err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+		said := transcriptCopyFor(identity.ReaderLanguageForPrompt(r.Context(), e.pool))
+		phraseTranscriptReport(&report, *read.Outcome, said, who)
+	}
+	httperr.WriteJSON(w, http.StatusOK, report)
+}
+
+// audience is the caller and the names of every colleague the outcome names.
+func (e *transcriptReadEngine) audience(ctx context.Context, facts activities.TranscriptReadFacts) (transcriptAudience, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return transcriptAudience{}, errors.New("compose: no actor bound to context")
+	}
+	seats := []ids.UserID{}
+	for _, task := range facts.Tasks {
+		seats = append(seats, ids.From[ids.UserKind](task.SeatID))
+	}
+	for _, proposal := range facts.Proposals {
+		seats = append(seats, ids.From[ids.UserKind](proposal.SeatID))
+	}
+	for _, known := range facts.Known {
+		if !known.SeatID.IsZero() {
+			seats = append(seats, ids.From[ids.UserKind](known.SeatID))
+		}
+	}
+	names, err := e.seats.SeatNames(ctx, seats)
+	if err != nil {
+		return transcriptAudience{}, err
+	}
+	return transcriptAudience{reader: actor.UserID, names: names}, nil
+}
+
+// phraseTranscriptReport fills the parts of a report that depend on who reads
+// it. A seat with no name to show is named by the copy's fallback.
+func phraseTranscriptReport(
+	report *crmcontracts.TranscriptReadReport, facts activities.TranscriptReadFacts, said transcriptCopy, who transcriptAudience,
+) {
+	report.Detail = new(said.outcomeSentence(facts, who))
+	for _, proposal := range facts.Proposals {
+		asked := crmcontracts.TranscriptReadAskedOf{
+			SeatId: openapi_types.UUID(proposal.SeatID),
+			IsYou:  proposal.SeatID == who.reader,
+		}
+		if name := who.names[proposal.SeatID]; name != "" {
+			asked.Name = &name
+		}
+		report.Proposals = append(report.Proposals, crmcontracts.TranscriptReadProposal{
+			Id: openapi_types.UUID(proposal.ApprovalID), AskedOf: asked,
+		})
+	}
 }
 
 // transcriptReadReport maps the run record onto the contract report. The
@@ -99,6 +165,7 @@ func transcriptReadReport(read activities.TranscriptRead) crmcontracts.Transcrip
 		Status:       crmcontracts.TranscriptReadReportStatus(read.Status),
 		LineCount:    read.LineCount,
 		ProposalIds:  make([]openapi_types.UUID, 0, len(read.ProposalIDs)),
+		Proposals:    []crmcontracts.TranscriptReadProposal{},
 		StatusDetail: read.StatusDetail,
 		StartedAt:    read.StartedAt,
 		FinishedAt:   read.FinishedAt,
@@ -119,6 +186,8 @@ func WithTranscriptRead(inserter *jobs.Runner) Option {
 		engine := &transcriptReadEngine{
 			activities: activities.NewStore(InstallationDB(pool)),
 			enqueue:    inserter,
+			seats:      identity.NewService(pool),
+			pool:       pool,
 		}
 		s.transcriptReadHandlers = transcriptReadHandlers{
 			start: engine.start, report: engine.report, latest: engine.latestReport,

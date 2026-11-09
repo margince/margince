@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -44,7 +45,7 @@ func restoreMailRecipientsBatch(ctx context.Context, tx pgx.Tx, in datatask.Batc
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
-	rows, err := tx.Query(ctx, `SELECT a.id, rc.payload `+mailRecipientOriginalScope+` AND a.id > @after ORDER BY a.id LIMIT @batch_limit FOR UPDATE OF a`, pgx.NamedArgs{dataTaskAfterArg: after, "batch_limit": in.Limit})
+	rows, err := tx.Query(ctx, `SELECT a.id, `+originalstore.SQL("rc")+` `+mailRecipientOriginalScope+` AND a.id > @after ORDER BY a.id LIMIT @batch_limit FOR UPDATE OF a`, pgx.NamedArgs{dataTaskAfterArg: after, "batch_limit": in.Limit})
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
@@ -56,6 +57,10 @@ func restoreMailRecipientsBatch(ctx context.Context, tx pgx.Tx, in datatask.Batc
 	evidence := make([]capture.MailRecipientEvidence, 0, len(originals))
 	for _, original := range originals {
 		scanned = append(scanned, original.ID)
+		original.Payload, err = originalstore.RepairPayload(ctx, original.Payload)
+		if err != nil {
+			return datatask.BatchOut{}, err
+		}
 		// Unreadable evidence must keep the correction pending rather than report success.
 		raw, err := capture.DecodeStoredOriginal(original.Payload)
 		if err != nil {

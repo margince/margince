@@ -3,17 +3,9 @@
 
 package storekit
 
-import (
-	"strconv"
-	"strings"
-)
+import "github.com/margince/margince/backend/internal/platform/database"
 
-// Placeholders binds a complete value list, including for INSERT … SELECT.
-// Its length follows the arguments, so extending a writer cannot reuse a slot.
+// Placeholders shares argument numbering with database-level callers.
 func Placeholders[T any](arguments []T) string {
-	holders := make([]string, len(arguments))
-	for index := range arguments {
-		holders[index] = "$" + strconv.Itoa(index+1)
-	}
-	return strings.Join(holders, ",")
+	return database.Placeholders(arguments)
 }

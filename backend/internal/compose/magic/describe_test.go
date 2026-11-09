@@ -5,6 +5,7 @@ package magic
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -45,6 +46,13 @@ func auditRow(actor, before, after, evidence string, at time.Time) entry {
 	return e
 }
 
+// companyRow is one update of a company by the site-reading agent.
+func companyRow(before, after, evidence string, at time.Time) entry {
+	e := auditRow("agent:deepread", before, after, evidence, at)
+	e.EntityType = typeCompany
+	return e
+}
+
 // Mail filed under a contact reads as that, says why, and names the job.
 func TestAMailFilingSaysWhatItDidAndWhy(t *testing.T) {
 	line, _, ok := lineOf(unmasked(t), auditRow("link-reconcile", "", `{"cohort_linked": 0, "cohort_promoted": 1}`, "", time.Now()))
@@ -65,12 +73,12 @@ func TestAMailFilingSaysWhatItDidAndWhy(t *testing.T) {
 // An enrichment names the fields it changed and the page it read them on.
 func TestAFieldChangeNamesTheFieldsAndTheSource(t *testing.T) {
 	line, _, ok := lineOf(unmasked(t), auditRow("agent:deepread",
-		`{"role": null, "title": null}`, `{"role": "Counsel", "title": "Counsel"}`,
+		`{"first_name": null, "title": null}`, `{"first_name": "Lea", "title": "Counsel"}`,
 		`{"source": "site_read", "source_ref": "site_read:https://www.studiolegal.de/de/team"}`, time.Now()))
 	if !ok {
 		t.Fatal("a field change was not shown")
 	}
-	if line.Summary.Key != "magic.action.fields_changed" || (*line.Summary.Values)["fields"] != "role, title" {
+	if line.Summary.Key != "magic.action.fields_changed" || (*line.Summary.Values)["fields"] != "first name, title" {
 		t.Fatalf("summary %q values %v, want the changed fields", line.Summary.Key, line.Summary.Values)
 	}
 	if line.Reason == nil || line.Reason.Key != "magic.why.site_read" || (*line.Reason.Values)["site"] != "studiolegal.de" {
@@ -81,7 +89,7 @@ func TestAFieldChangeNamesTheFieldsAndTheSource(t *testing.T) {
 // The website reader records the page it read as source_url, which is the
 // shape every live row carries.
 func TestASiteReadNamesTheSiteItRecordedAsSourceURL(t *testing.T) {
-	line, _, ok := lineOf(unmasked(t), auditRow("agent:deepread",
+	line, _, ok := lineOf(unmasked(t), companyRow(
 		`{"industry": null}`, `{"industry": "Legal services"}`,
 		`{"source": "site_read", "source_url": "https://www.studiolegal.de/de/about"}`, time.Now()))
 	if !ok {
@@ -96,8 +104,8 @@ func TestASiteReadNamesTheSiteItRecordedAsSourceURL(t *testing.T) {
 // the site would be wrong, so the reason says the company's website instead.
 func TestALogoReadDoesNotNameTheImageHostAsTheSite(t *testing.T) {
 	logo := "https://cdn.prod.website-files.com/66ded54b/webclip.png"
-	line, _, ok := lineOf(unmasked(t), auditRow("agent:deepread",
-		`{"logo": null}`, `{"logo": "`+logo+`"}`,
+	line, _, ok := lineOf(unmasked(t), companyRow(
+		`{"industry": null, "logo": null}`, `{"industry": "Legal services", "logo": "`+logo+`"}`,
 		`{"source": "site_read", "source_url": "`+logo+`"}`, time.Now()))
 	if !ok {
 		t.Fatal("a logo read was not shown")
@@ -117,7 +125,7 @@ func TestASiteReadOverManyRecordsIsOneLineWithoutOneSite(t *testing.T) {
 		if i == 2 {
 			after = `{"industry": "Software", "logo": "` + site + `"}`
 		}
-		entries = append(entries, auditRow("agent:deepread", `{"industry": null}`, after,
+		entries = append(entries, companyRow(`{"industry": null}`, after,
 			`{"source": "site_read", "source_url": "`+site+`"}`, now.Add(-time.Duration(i)*time.Second)))
 	}
 	lines, _ := linesOf(unmasked(t), entries, nil, 100)
@@ -128,18 +136,18 @@ func TestASiteReadOverManyRecordsIsOneLineWithoutOneSite(t *testing.T) {
 		}
 	}
 	if len(industry) != 1 {
-		t.Fatalf("got %d industry lines, want the two page reads folded into one", len(industry))
+		t.Fatalf("got %d industry lines, want the three page reads folded into one", len(industry))
 	}
 	l := lines[industry[0]]
-	if l.Count == nil || *l.Count != 2 || l.Reason == nil || l.Reason.Key != "magic.why.site_read_each" {
-		t.Fatalf("count %v reason %v, want 2 records read on each company's own website", l.Count, l.Reason)
+	if l.Count == nil || *l.Count != 3 || l.Reason == nil || l.Reason.Key != "magic.why.site_read_each" {
+		t.Fatalf("count %v reason %v, want 3 records read on each company's own website", l.Count, l.Reason)
 	}
 }
 
 // One record read from two sites names neither, rather than the newer alone.
 func TestOneRecordReadFromTwoSitesNamesNeither(t *testing.T) {
 	now := time.Now()
-	first := auditRow("agent:deepread", `{"industry": null}`, `{"industry": "Software"}`,
+	first := companyRow(`{"industry": null}`, `{"industry": "Software"}`,
 		`{"source": "site_read", "source_url": "https://a.example/about"}`, now)
 	second := first
 	second.ID = ids.NewV7()
@@ -155,7 +163,8 @@ func TestOneRecordReadFromTwoSitesNamesNeither(t *testing.T) {
 // the logo's address is an image rather than a page.
 func TestAWebsiteReadThatWritesTheWebsiteNamesTheSite(t *testing.T) {
 	site := "https://www.studiolegal.de"
-	line, _, ok := lineOf(unmasked(t), auditRow("agent:deepread", `{"website": null}`, `{"website": "`+site+`"}`,
+	line, _, ok := lineOf(unmasked(t), companyRow(
+		`{"website": null, "industry": null}`, `{"website": "`+site+`", "industry": "Legal services"}`,
 		`{"source": "site_read", "source_url": "`+site+`"}`, time.Now()))
 	if !ok || line.Reason == nil || line.Reason.Key != "magic.why.site_read" || (*line.Reason.Values)["site"] != "studiolegal.de" {
 		t.Fatalf("reason %v, want the site it was read on", line.Reason)
@@ -256,7 +265,7 @@ func TestALineFromACompleteReadStatesItsCountFlat(t *testing.T) {
 }
 
 func TestForecastCorrectionExplainsReviewWithoutRepeatingPrivateBasis(t *testing.T) {
-	row := auditRow("system:close-date", `{"forecast_category":"commit"}`, `{"forecast_category":"best_case"}`,
+	row := auditRow("system:close-date", `{"win_probability_override":90}`, `{"win_probability_override":45}`,
 		`{"close_date_correction":"downgrade_and_review","basis":"Restricted correspondence"}`, whenStaged)
 	row.EntityType = typeDeal
 	line, _, ok := lineOf(unmasked(t), row)
@@ -264,7 +273,7 @@ func TestForecastCorrectionExplainsReviewWithoutRepeatingPrivateBasis(t *testing
 		t.Fatalf("forecast reason = %+v, admitted = %v", line.Reason, ok)
 	}
 	changes := changesOf(row)
-	if len(changes) != 1 || changes[0].Field != "forecast_category" || changes[0].Before != "commit" || changes[0].After != "best_case" {
+	if len(changes) != 1 || changes[0].Field != "win_probability_override" || fmt.Sprint(changes[0].Before) != "90" || fmt.Sprint(changes[0].After) != "45" {
 		t.Fatalf("forecast changes = %+v", changes)
 	}
 }
@@ -274,7 +283,7 @@ func TestUnknownForecastEvidenceKeepsTheActualFieldChange(t *testing.T) {
 		`{"close_date_correction":true}`,
 		`{"close_date_correction":"unknown_action"}`,
 	} {
-		row := auditRow("system:close-date", `{"forecast_category":"commit"}`, `{"forecast_category":"best_case"}`, evidence, whenStaged)
+		row := auditRow("system:close-date", `{"win_probability_override":90}`, `{"win_probability_override":45}`, evidence, whenStaged)
 		row.EntityType = typeDeal
 		line, _, ok := lineOf(unmasked(t), row)
 		if !ok || line.Summary.Key != "magic.action.fields_changed" || line.Reason != nil {

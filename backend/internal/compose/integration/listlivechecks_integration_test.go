@@ -310,14 +310,14 @@ func (f *liveListFixture) pulseOf(ctx context.Context, t *testing.T) crmcontract
 	return view
 }
 
-func TestAnAgentReadingThroughAPassportIsNotAVisit(t *testing.T) {
+func TestAutomaticWorkIsNotAVisit(t *testing.T) {
 	f := newLiveListFixture(t)
 	agent := principal.WithActor(principal.WithWorkspaceID(context.Background(), f.e.WS), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test", UserID: f.e.Rep1, TeamIDs: []ids.UUID{f.e.Team1},
 		Permissions: liveListReaderPerms(),
 	})
 	if _, err := f.store.VisitList(agent, f.list); err == nil {
-		t.Fatal("an agent recorded a visit for the human behind it")
+		t.Fatal("automatic work recorded a visit for the user behind it")
 	}
 }
 

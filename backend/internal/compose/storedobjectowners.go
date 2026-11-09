@@ -8,8 +8,10 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/knowledge"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -27,11 +29,14 @@ import (
 // owner takes both a new kind and a missing entry.
 func unreferencedKeysBy(db *database.DB) map[storedobjects.Kind]func(context.Context, []string) ([]string, error) {
 	return map[storedobjects.Kind]func(context.Context, []string) ([]string, error){
-		storedobjects.KindAttachment: activities.NewStore(db).UnreferencedAttachmentKeys,
-		storedobjects.KindKnowledge:  knowledge.NewStore(db).UnreferencedDocumentKeys,
-		storedobjects.KindLogo:       contacts.NewStore(db).UnreferencedLogoKeys,
-		storedobjects.KindOffer:      deals.NewStore(db, DealsInstallation()).UnreferencedOfferKeys,
-		storedobjects.KindImport:     migration.NewRunStore(db).UnreferencedImportKeys,
+		storedobjects.KindRawOriginal: capture.NewSink(db).UnreferencedOriginalKeys,
+		storedobjects.KindAttachment:  activities.NewStore(db).UnreferencedAttachmentKeys,
+		storedobjects.KindKnowledge:   knowledge.NewStore(db).UnreferencedDocumentKeys,
+		storedobjects.KindLogo: unreferencedByAll(contacts.NewStore(db).UnreferencedLogoKeys,
+			deals.NewStore(db, DealsInstallation()).UnreferencedIssuerLogoKeys),
+		storedobjects.KindOffer:  deals.NewStore(db, DealsInstallation()).UnreferencedOfferKeys,
+		storedobjects.KindImport: migration.NewRunStore(db).UnreferencedImportKeys,
+		storedobjects.KindAvatar: identity.NewServiceFor(db).UnreferencedAvatarKeys,
 	}
 }
 
@@ -94,4 +99,23 @@ func keysExcept(keys, unreferenced []string) []string {
 		}
 	}
 	return kept
+}
+
+// unreferencedByAll is a key every owner calls unreferenced. A logo is owned
+// by the company or entity wearing it and by every sent offer that printed it.
+// Its bytes stay while any of them names it.
+func unreferencedByAll(owners ...func(context.Context, []string) ([]string, error)) func(context.Context, []string) ([]string, error) {
+	return func(ctx context.Context, keys []string) ([]string, error) {
+		left := keys
+		for _, owner := range owners {
+			var err error
+			if left, err = owner(ctx, left); err != nil {
+				return nil, err
+			}
+			if len(left) == 0 {
+				return nil, nil
+			}
+		}
+		return left, nil
+	}
 }

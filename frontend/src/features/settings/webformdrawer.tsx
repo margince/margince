@@ -38,6 +38,7 @@ import {
 import "./webforms.css";
 import { OwnerField } from "./webformowner";
 import { PrivacyNoticeFields } from "./webformprivacy";
+import { ProductField } from "./webformproduct";
 import { SenderField } from "./webformsender";
 
 export type WebFormDraft = Readonly<{
@@ -46,6 +47,7 @@ export type WebFormDraft = Readonly<{
   origins: string;
   senderSecret: string;
   ownerId: string;
+  productId: string;
   consentRequired: boolean;
   consentWording: string;
   consentPolicyVersion: string;
@@ -62,6 +64,7 @@ export function draftFor(form?: WebForm): WebFormDraft {
     origins: (form?.allowed_origins ?? []).join("\n"),
     senderSecret: "",
     ownerId: form?.owner_id ?? "",
+    productId: form?.product_id ?? "",
     consentRequired: form?.consent_required ?? false,
     consentWording: form?.consent_wording ?? "",
     consentPolicyVersion: form?.consent_policy_version ?? "",
@@ -145,6 +148,9 @@ export function webFormBodyOf(draft: WebFormDraft, form?: WebForm) {
     ...(draft.ownerId !== (form?.owner_id ?? "")
       ? { owner_id: optional(draft.ownerId) }
       : {}),
+    ...(draft.productId !== (form?.product_id ?? "")
+      ? { product_id: optional(draft.productId) }
+      : {}),
     consent_required: draft.consentRequired,
     consent_wording: optional(draft.consentWording),
     consent_policy_version: optional(draft.consentPolicyVersion),
@@ -182,6 +188,7 @@ const FIELDS_WITH_A_SLOT = new Set([
   "allowed_origins",
   "sender_secret",
   "owner_id",
+  "product_id",
   "consent_wording",
   "consent_policy_version",
   "privacy_notice",
@@ -349,6 +356,11 @@ export function WebFormDrawer({
           ownerId={draft.ownerId}
           error={fieldErrors.get("owner_id")}
           onChange={(ownerId) => set({ ownerId })}
+        />
+        <ProductField
+          productId={draft.productId}
+          error={fieldErrors.get("product_id")}
+          onChange={(productId) => set({ productId })}
         />
         <div className="form-stack webform-part">
           <Checkbox

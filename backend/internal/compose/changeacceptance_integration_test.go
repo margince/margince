@@ -57,13 +57,26 @@ func TestAcceptanceRecordsOneDecisionForTheDisplayedCorrection(t *testing.T) {
 		t.Fatalf("acceptance must record one audit and linked event: %d, %d", audits, events)
 	}
 	if _, err := e.Deals.RevertCorrection(e.Admin(), e.correctionFor(t, deal), nil, nil); err != nil {
+		t.Fatalf("a change marked reviewed must still undo: %v", err)
+	}
+	if after, err := e.Deals.AppliedChangeReview(e.Admin(), dealID, change); err != nil || !after.Accepted || !after.Reversed {
+		t.Fatalf("after undoing a reviewed change = %+v, %v; want the review kept beside the reversal", after, err)
+	}
+
+	undone := e.seedSweepDeal(t, "Undo before accepting", e.early, nil, new(-12), 3)
+	if err := e.sweep(); err != nil {
 		t.Fatal(err)
 	}
-	reversed, err := e.Deals.AppliedChangeReview(e.Admin(), dealID, change)
+	undoneChange := e.correctionAuditIDFor(t, undone)
+	undoneID := ids.From[ids.DealKind](undone)
+	if _, err := e.Deals.RevertCorrection(e.Admin(), e.correctionFor(t, undone), nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	reversed, err := e.Deals.AppliedChangeReview(e.Admin(), undoneID, undoneChange)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := e.Deals.AcceptAppliedChange(e.Admin(), dealID, change, reversed.Version); !errors.Is(err, apperrors.ErrConflict) {
+	if err := e.Deals.AcceptAppliedChange(e.Admin(), undoneID, undoneChange, reversed.Version); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("accepted a reversed change: %v", err)
 	}
 }

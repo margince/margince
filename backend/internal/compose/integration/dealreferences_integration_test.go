@@ -244,7 +244,8 @@ func TestEveryDealMutationResponseWithholdsTheSameReferences(t *testing.T) {
 			return e.Deals.UpdateDeal(rep, fx.hiddenRefs, deals.UpdateDealInput{Name: &renamed})
 		}},
 		{"advancing the deal", func() (crmcontracts.Deal, error) {
-			return e.Deals.AdvanceDeal(rep, fx.hiddenRefs, deals.AdvanceDealInput{ToStageID: fx.wonStage, WonWithoutContractReason: &wonWithout})
+			advanced, err := e.Deals.AdvanceDeal(rep, fx.hiddenRefs, deals.AdvanceDealInput{ToStageID: fx.wonStage, WonWithoutContractReason: &wonWithout})
+			return advanced.Deal, err
 		}},
 		{"archiving the deal", func() (crmcontracts.Deal, error) {
 			return e.Deals.ArchiveDeal(rep, fx.hiddenRefs, nil)

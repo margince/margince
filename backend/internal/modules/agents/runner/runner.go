@@ -96,6 +96,18 @@ type Result struct {
 	OutputTokens int
 }
 
+// NothingToJudge is the result of a run closed before its first model call,
+// because its goal had nothing to work on. summary is what the rail shows.
+func NothingToJudge(summary string) (Result, error) {
+	final, err := json.Marshal(struct {
+		Summary string `json:"summary"`
+	}{summary})
+	if err != nil {
+		return Result{}, fmt.Errorf("runner: marshal the nothing-to-judge summary: %w", err)
+	}
+	return Result{Outcome: OutcomeCompleted, Final: final, Steps: []Step{}}, nil
+}
+
 // Step is one trace entry: proposal → admission outcome → observation,
 // plus the model identity and per-step spend the run was served with. The
 // ordered list is the §6 replayable record — RUNNER-AC-4 requires it to

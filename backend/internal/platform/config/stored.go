@@ -100,6 +100,22 @@ func StoredValTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Setting[T]
 	return openSealed(ctx, c, s, ref)
 }
 
+// StoredChosenTx is StoredValTx that also reports whether somebody chose the
+// value: a boot value or a stored row. False means the default answered.
+func StoredChosenTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Setting[T]) (T, bool, error) {
+	var zero T
+	if err := requirePlain(s); err != nil {
+		return zero, false, err
+	}
+	if err := settings.RequireRead(ctx, s.row); err != nil {
+		return zero, false, err
+	}
+	if v, _, ok := bootValue(c, s); ok {
+		return v, true, nil
+	}
+	return settings.GetStoredTx(ctx, tx, s.row)
+}
+
 // StoredRequireTx is StoredValTx for a value the installation is measured in:
 // with no boot value, an absent row is an error rather than the default.
 func StoredRequireTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Setting[T]) (T, error) {
@@ -160,6 +176,19 @@ func StoredApplyTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Setting[
 		return v, nil
 	}
 	return settings.ApplyTx(ctx, tx, s.row)
+}
+
+// StoredApplyChosenTx is StoredApplyTx that also reports whether somebody chose
+// the value: a boot source or a stored row, never the default.
+func StoredApplyChosenTx[T any](ctx context.Context, tx pgx.Tx, c *Config, s *Setting[T]) (T, bool, error) {
+	var zero T
+	if err := requireMachinery(s); err != nil {
+		return zero, false, err
+	}
+	if v, _, ok := bootValue(c, s); ok {
+		return v, true, nil
+	}
+	return settings.ApplyChosenTx(ctx, tx, s.row)
 }
 
 // StoredApplyPairTx is StoredApplyTx for two settings a decision pairs. One

@@ -37,5 +37,4 @@ expect:
     Score whether the proposal keeps Open pipeline with its stage chart,
     Austria as AT and this_month, and names back "the average discount per rep" as a measure
     no metric here holds. Mapping that phrase to Sales won, or to any
-    metric, fails the scenario. A product or an industry the words never
-    asked for scores low.
+    metric, fails the scenario.

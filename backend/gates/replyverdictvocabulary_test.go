@@ -19,11 +19,12 @@ package gates
 // that stops the next author from looking.
 
 import (
-	"os"
 	"regexp"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The committed head catalog is the authority: it is the schema the migrations
@@ -64,7 +65,7 @@ func TestTheReplyVerdictVocabularyIsSpelledOnceEverywhere(t *testing.T) {
 			"a correction the row accepts would be refused by the record of it", history, fromDB)
 	}
 
-	engine, err := os.ReadFile("internal/compose/captureclassify.go")
+	engine, err := gatekit.ReadFile("internal/compose/captureclassify.go")
 	if err != nil {
 		t.Fatalf("reading the classify engine: %v", err)
 	}
@@ -101,7 +102,7 @@ func TestTheReplyVerdictVocabularyIsSpelledOnceEverywhere(t *testing.T) {
 	// And the PROMPT has to offer every word too. Read from the system prompt
 	// alone, for the same reason the map is: a word appearing anywhere in the
 	// file would satisfy a whole-file search after the prompt stopped naming it.
-	promptSurface, err := os.ReadFile("internal/compose/capturelabel/prompt.go")
+	promptSurface, err := gatekit.ReadFile("internal/compose/capturelabel/prompt.go")
 	if err != nil {
 		t.Fatalf("reading the classify prompt: %v", err)
 	}
@@ -125,7 +126,7 @@ func TestTheReplyVerdictVocabularyIsSpelledOnceEverywhere(t *testing.T) {
 // constraint, so the two copies are compared rather than assumed equal.
 func replyVerdictsFromHistoryCheck(t *testing.T) []string {
 	t.Helper()
-	raw, err := os.ReadFile(replyVerdictCatalog)
+	raw, err := gatekit.ReadFile(replyVerdictCatalog)
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
 	}
@@ -141,7 +142,7 @@ func replyVerdictsFromHistoryCheck(t *testing.T) []string {
 // enforces it.
 func replyVerdictsFromMigration(t *testing.T) []string {
 	t.Helper()
-	raw, err := os.ReadFile(replyVerdictCatalog)
+	raw, err := gatekit.ReadFile(replyVerdictCatalog)
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
 	}
@@ -171,7 +172,7 @@ func splitCatalogTokens(body string) []string {
 // replyVerdictConstants reads the module's exported spellings.
 func replyVerdictConstants(t *testing.T) []string {
 	t.Helper()
-	raw, err := os.ReadFile("internal/modules/activities/replyverdict.go")
+	raw, err := gatekit.ReadFile("internal/modules/activities/replyverdict.go")
 	if err != nil {
 		t.Fatalf("reading the reply-verdict store: %v", err)
 	}

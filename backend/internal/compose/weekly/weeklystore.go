@@ -34,6 +34,7 @@ import (
 
 // Review is one rep's week, as it was measured.
 type Review struct {
+	LeadsWithheld  bool
 	NumericSummary *crmcontracts.WeeklyNumericSummary
 	ID             ids.UUID
 	UserID         ids.UUID
@@ -41,7 +42,9 @@ type Review struct {
 	GeneratedAt    time.Time
 	AsOf           time.Time
 	Counts         Counts
-	Deals          []DealLine
+	// DailyActivity is the rep's own work per local day, nil on an older review.
+	DailyActivity []crmcontracts.WeeklyDayActivity
+	Deals         []DealLine
 	// MeetingsWithheld marks a week read by a seat that may not read meetings.
 	// Its meeting figures are zero, and the wire says they are withheld.
 	MeetingsWithheld bool
@@ -99,6 +102,7 @@ type Review struct {
 
 // PriorWeek is the earlier review a week is compared against.
 type PriorWeek struct {
+	LeadsWithheld    bool
 	LocalWeekStart   time.Time
 	Counts           Counts
 	Money            Money

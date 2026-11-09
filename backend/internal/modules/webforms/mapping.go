@@ -32,6 +32,7 @@ func wireForm(f Form) crmcontracts.WebForm {
 		SecretConfigured:     f.SecretConfigured(),
 		LeadOrigin:           f.LeadOrigin,
 		OwnerId:              wireUUID(f.OwnerID),
+		ProductId:            wireUUID(f.ProductID),
 		FieldMap:             fieldMap,
 		ConsentRequired:      f.ConsentRequired,
 		ConsentPolicyVersion: f.ConsentPolicyVersion,
@@ -55,7 +56,7 @@ func wireCreated(f Form, secret string) crmcontracts.WebFormCreated {
 	w := wireForm(f)
 	out := crmcontracts.WebFormCreated{
 		Id: w.Id, Name: w.Name, FormKey: w.FormKey, Sender: w.Sender, AllowedOrigins: w.AllowedOrigins,
-		SecretConfigured: w.SecretConfigured, LeadOrigin: w.LeadOrigin, OwnerId: w.OwnerId, FieldMap: w.FieldMap,
+		SecretConfigured: w.SecretConfigured, LeadOrigin: w.LeadOrigin, OwnerId: w.OwnerId, ProductId: w.ProductId, FieldMap: w.FieldMap,
 		ConsentRequired: w.ConsentRequired, ConsentPolicyVersion: w.ConsentPolicyVersion,
 		ConsentWording: w.ConsentWording, PrivacyNotice: w.PrivacyNotice, PrivacyNoticeUrl: w.PrivacyNoticeUrl,
 		RedirectUrl: w.RedirectUrl, SuccessMessage: w.SuccessMessage,

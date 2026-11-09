@@ -95,37 +95,3 @@
   min-width: 0;
   max-width: 100%;
 }
-
-/* An UNLINKED source is plain text and wraps on its own once it is allowed to
-   shrink. Its linked twin is a `Button`, which pins `white-space: nowrap`
-   because every other label in the product is one of our verbs at a length we
-   chose — a record's name is not, and the design system's answer to a label
-   that carries DATA is `.btn-valuelabel` (base.css), on the control. That class
-   is the control's to wear, so this sheet does not restate its two
-   declarations here: two spellings of one behaviour is what makes them drift. */
-.today-evidence .pe-source {
-  min-inline-size: 0;
-  max-width: 100%;
-}
-/* A source that takes a second line reads from the left, like the caption above
-   it and the reason above that. `.btn` centres its contents because a verb's
-   label is one short line in the middle of a control; a record's name is a run
-   of prose, and prose centred over two lines reads as a heading for the row
-   rather than as the thing the move was read FROM. Where the words sit in this
-   row is the row's to say; what the control looks like is still the design
-   system's. */
-.today-evidence .btn {
-  justify-content: flex-start;
-  text-align: start;
-}
-
-/* A source names its kind with a glyph before its words, on the same
-   baseline; the link variant of Button already lays its children out this
-   way, so the rule covers the plain-text sources. Shared by both record
-   pages the moment's evidence draws on: the company page does not load the
-   contact page's stylesheet, so the class lives in the kit both reach. */
-.pe-source {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-}

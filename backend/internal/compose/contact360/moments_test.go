@@ -920,8 +920,9 @@ func TestImportedInboundDoesNotRaiseTheReEngagedSuggestion(t *testing.T) {
 
 func momentPages() map[string]*crmcontracts.Contact360 {
 	return map[string]*crmcontracts.Contact360{
-		"meeting prep": {NextMeeting: &crmcontracts.Contact360NextMeeting{StartsAt: ahead(24)}},
-		"gone quiet":   {LastOutboundAt: new(at(9)), LastInboundAt: new(at(16)), LastLiveInboundAt: new(at(16))},
+		"meeting prep":   {NextMeeting: &crmcontracts.Contact360NextMeeting{StartsAt: ahead(24)}},
+		"gone quiet":     {LastOutboundAt: new(at(9)), LastInboundAt: new(at(16)), LastLiveInboundAt: new(at(16))},
+		"awaiting reply": {LastOutboundAt: new(at(2)), LastInboundAt: new(at(5)), LastLiveInboundAt: new(at(5))},
 		"thin relationship": {
 			Activities: timelineOf(),
 			Network: &struct {

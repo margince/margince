@@ -9,9 +9,24 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+// AgentForStoredWork is AgentForStagedCallTx in a transaction of its own, for work
+// an agent queued: a refresh between queueing and running leaves the same agent. It
+// reads past any ambient snapshot, because liveness is a fact about now. A preview's
+// snapshot can predate a refresh or a revocation.
+func (s *Service) AgentForStoredWork(ctx context.Context, human ids.UUID, passport ids.PassportID, connection ids.UUID) (AgentIdentity, error) {
+	var a AgentIdentity
+	err := s.db.Tx(database.Detached(ctx), func(tx pgx.Tx) error {
+		var err error
+		a, err = s.AgentForStagedCallTx(ctx, tx, human, passport, connection)
+		return err
+	})
+	return a, err
+}
 
 // AgentForStagedCallTx re-authenticates, on the caller's transaction, the
 // agent that will spend a call it staged. That is the passport it staged

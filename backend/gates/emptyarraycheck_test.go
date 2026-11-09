@@ -24,11 +24,12 @@ package gates
 // the right answer for some of them, an unfilled multi-select among them.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // bareArrayBound finds a length-ish array function that is not already wrapped
@@ -46,7 +47,7 @@ var catalogEntryStart = regexp.MustCompile(`^(?:public\.|defacl |schema )`)
 func TestNoCheckBoundsAnArrayLengthThatCanBeNull(t *testing.T) {
 	t.Parallel()
 	path := filepath.Join(repoRoot, "backend", "migrations", "testdata", "head_catalog.txt")
-	raw, err := os.ReadFile(path)
+	raw, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}
