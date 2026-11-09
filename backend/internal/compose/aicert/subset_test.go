@@ -153,3 +153,52 @@ func TestTheSubsetKeepsTheScenariosItsFiltersName(t *testing.T) {
 		t.Error("a filter matching no scenario was accepted, and the run would measure nothing")
 	}
 }
+
+func TestAFilteredRunIsRefusedWhileAScenarioHasNoRow(t *testing.T) {
+	dir := t.TempDir()
+	corpus := mixedCorpus()
+	// The committed record predates gamma, so a merge of alpha alone would
+	// leave gamma unmeasured inside a record that reads as the whole task.
+	if err := WriteRecord(dir, certifyCorpusWith(t, corpus[:2], "")); err != nil {
+		t.Fatalf("writing the committed record: %v", err)
+	}
+	_, err := mergeIntoCommitted(dir, certifyCorpusWith(t, corpus[:1], ""), corpus)
+	if err == nil || !strings.Contains(err.Error(), "gamma") || !strings.Contains(err.Error(), "SCENARIO=") {
+		t.Fatalf("err = %v; want the merge refused, naming gamma and how to measure it", err)
+	}
+}
+
+func TestAMergedRecordKeepsTheWorstOfItsTwoRuns(t *testing.T) {
+	dir := t.TempDir()
+	corpus := mixedCorpus()
+	committed := certifyCorpusWith(t, corpus, "")
+	committed.SelfJudged, committed.RanAt = true, "2026-09-01T08:00:00Z"
+	if err := WriteRecord(dir, committed); err != nil {
+		t.Fatalf("writing the committed record: %v", err)
+	}
+	measured := certifyCorpusWith(t, corpus[:1], "")
+	measured.SelfJudged, measured.RanAt = false, "2026-09-02T08:00:00Z"
+	merged, err := mergeIntoCommitted(dir, measured, corpus)
+	if err != nil {
+		t.Fatalf("merging: %v", err)
+	}
+	if !merged.SelfJudged {
+		t.Error("the merged record dropped self_judged, though rows it pools were graded by the candidate's own family")
+	}
+	if merged.RanAt != committed.RanAt {
+		t.Errorf("merged ran_at %s, want the older measurement %s: most rows were not measured today", merged.RanAt, committed.RanAt)
+	}
+}
+
+func TestAFilteredRunIsRefusedARecordWhoseModelWasIdentifiedAnotherWay(t *testing.T) {
+	dir := t.TempDir()
+	corpus := mixedCorpus()
+	committed := certifyCorpusWith(t, corpus, "")
+	committed.ServedIdentitySource = "a-different-source"
+	if err := WriteRecord(dir, committed); err != nil {
+		t.Fatalf("writing the committed record: %v", err)
+	}
+	if _, err := mergeIntoCommitted(dir, certifyCorpusWith(t, corpus[:1], ""), corpus); err == nil {
+		t.Fatal("rows whose served model was identified two ways were pooled under one served_identity_source")
+	}
+}

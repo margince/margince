@@ -20,6 +20,8 @@ import (
 	"reflect"
 	"regexp"
 	"slices"
+	"strings"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -102,13 +104,17 @@ func mergeIntoCommitted(dir string, measured Record, corpus []Scenario) (Record,
 	}
 	rows, err := mergedRows(prior.Scenarios, measured.Scenarios, corpus)
 	if err != nil {
-		return Record{}, fmt.Errorf("%s cannot take a filtered run's rows: %w; certify the task without a filter", path, err)
+		return Record{}, fmt.Errorf("%s cannot take a filtered run's rows: %w", path, err)
 	}
 	merged := measured
 	merged.Scenarios = rows
 	regradeFromRows(&merged)
 	merged.CertifiedScope = aitasks.NarrowerScope(prior.CertifiedScope, measured.CertifiedScope)
 	merged.ContextApplied = prior.ContextApplied && measured.ContextApplied
+	// Every row the record pools vouches for these, so each reads the worse run:
+	// a judge of the candidate's family, and the oldest measurement.
+	merged.SelfJudged = prior.SelfJudged || measured.SelfJudged
+	merged.RanAt = olderRanAt(prior.RanAt, measured.RanAt)
 	merged.LatencyP50, merged.LatencyP95 = prior.LatencyP50, prior.LatencyP95
 	merged.MeanTokens, merged.MeanTokensIn, merged.MeanTokensOut = prior.MeanTokens, prior.MeanTokensIn, prior.MeanTokensOut
 	merged.MeanCachedTokens, merged.MeanCacheWriteTokens = prior.MeanCachedTokens, prior.MeanCacheWriteTokens
@@ -129,13 +135,27 @@ func mergeable(prior, measured Record) error {
 		return errors.New("its runs were served under other upstream preferences")
 	case prior.JudgeProvider != measured.JudgeProvider || prior.JudgeServedModel != measured.JudgeServedModel:
 		return errors.New("another judge graded it")
+	case prior.ServedIdentitySource != measured.ServedIdentitySource:
+		return errors.New("its served model was identified another way")
 	}
 	return nil
 }
 
+// olderRanAt is the earlier of two record timestamps, the committed one when
+// either cannot be read.
+func olderRanAt(prior, measured string) string {
+	priorAt, perr := time.Parse(time.RFC3339, prior)
+	measuredAt, merr := time.Parse(time.RFC3339, measured)
+	if perr != nil || merr != nil || priorAt.Before(measuredAt) {
+		return prior
+	}
+	return measured
+}
+
 // mergedRows is the measured rows plus every committed row they do not
 // replace, in corpus order. A row whose scenario left the corpus is dropped,
-// as a full run would drop it.
+// as a full run would drop it. A corpus scenario with no row is refused, since
+// a full run would have measured it.
 func mergedRows(prior, measured []ScenarioRecord, corpus []Scenario) ([]ScenarioRecord, error) {
 	order := map[string]int{}
 	for i, sc := range corpus {
@@ -149,9 +169,19 @@ func mergedRows(prior, measured []ScenarioRecord, corpus []Scenario) ([]Scenario
 			continue
 		}
 		if row.legacy() || row.Stamp == "" {
-			return nil, fmt.Errorf("row %q predates rows that keep their stamp, scores and bands", row.Scenario)
+			return nil, fmt.Errorf("row %q predates rows that keep their stamp, scores and bands; certify the task without a filter", row.Scenario)
 		}
 		rows = append(rows, row)
+	}
+	var missing []string
+	for _, sc := range corpus {
+		if !slices.ContainsFunc(rows, func(r ScenarioRecord) bool { return r.Scenario == sc.Name }) {
+			missing = append(missing, sc.Name)
+		}
+	}
+	if len(missing) > 0 {
+		return nil, fmt.Errorf("scenario(s) %s have no row; measure them too, by naming them in SCENARIO=",
+			strings.Join(missing, ", "))
 	}
 	slices.SortStableFunc(rows, func(a, b ScenarioRecord) int { return order[a.Scenario] - order[b.Scenario] })
 	return rows, nil

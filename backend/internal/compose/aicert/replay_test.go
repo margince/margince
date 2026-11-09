@@ -184,3 +184,68 @@ func TestAReplayRenamesTheIDsThisPreparationMinted(t *testing.T) {
 		t.Fatalf("a replay that asked nothing reported %v, want it to name the call it skipped", err)
 	}
 }
+
+func TestARunServedUnderAnotherRoutingIsPaidForAgain(t *testing.T) {
+	dir := t.TempDir()
+	sc := testScenario("basic", wideBands)
+	candidate, judge := answeringFakes()
+	if _, err := certifyOnce(t, dir, sc, candidate, judge); err != nil {
+		t.Fatalf("first certification: %v", err)
+	}
+	rewriteEveryJournaledRun(t, dir, func(line *journaledRun) { line.Evidence.Routing = "replay-routing-0" })
+
+	refusingCandidate, refusingJudge := refusingFakes(t)
+	if _, err := certifyOnce(t, dir, sc, refusingCandidate, refusingJudge); err == nil {
+		t.Fatal("a run the router served under another version was replayed")
+	}
+	if len(refusingCandidate.Calls()) == 0 {
+		t.Fatal("the candidate was never asked — an answer routed by older code stood in for a fresh one")
+	}
+}
+
+// A withheld run carries no answer, but its refusal is still the routing's. It
+// replays only from a line that says which routing refused it.
+func TestAWithheldRunReplaysOnlyUnderItsOwnRouting(t *testing.T) {
+	sc := testScenario("basic", wideBands)
+	withheld := runOutcome{}
+	withheld.Outcome, withheld.Withheld, withheld.Ungraded = aitasks.OutcomeInvalid, "SAFETY", true
+	for name, tc := range map[string]struct {
+		evidence *replayEvidence
+		replays  bool
+	}{
+		"no evidence":        {nil, false},
+		"another routing":    {&replayEvidence{Routing: "replay-routing-0"}, false},
+		"this build's route": {&replayEvidence{Routing: replayRouting}, true},
+	} {
+		got, err := reevaluate(wsContext(t), testCensus(t), ai.TaskSummarize, sc, journaledRun{Outcome: withheld, Evidence: tc.evidence}, quietLogger())
+		if replayed := err == nil; replayed != tc.replays {
+			t.Errorf("%s: replayed = %v (err %v), want %v", name, replayed, err, tc.replays)
+		}
+		if tc.replays && got.Withheld != "SAFETY" {
+			t.Errorf("%s: replayed as %+v, want the withheld run kept whole", name, got)
+		}
+	}
+}
+
+func TestAReplayRenamesAnIDTheModelWroteInCapitals(t *testing.T) {
+	ctx := context.Background()
+	oldID, newID := ids.NewV7().String(), ids.NewV7().String()
+	ask := func(id string) model.Request {
+		return model.Request{System: "Name the row.", Messages: []model.Message{{Role: "user", Content: "row " + id}}}
+	}
+	recorder := &recordingCompleter{next: fixedAnswer("the row is " + strings.ToUpper(oldID))}
+	if _, err := recorder.Complete(ctx, ask(oldID)); err != nil {
+		t.Fatalf("recording: %v", err)
+	}
+	evidence, err := recorder.evidence(runCalls{})
+	if err != nil {
+		t.Fatalf("building the evidence: %v", err)
+	}
+	resp, err := (&replayCompleter{evidence: evidence}).Complete(ctx, ask(newID))
+	if err != nil {
+		t.Fatalf("replaying: %v", err)
+	}
+	if resp.Text != "the row is "+newID {
+		t.Fatalf("replayed answer %q, want the capitalised id renamed to %s", resp.Text, newID)
+	}
+}

@@ -14,19 +14,16 @@ package aicert
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
-	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -50,7 +47,9 @@ type measuredRun struct {
 // replayEvidence is what the models said in one run, and what the caps read of
 // its calls, which the journal does not otherwise hold.
 type replayEvidence struct {
-	Calls []replayedCall `json:"calls"`
+	// Routing is the replayRouting the run was served under.
+	Routing string         `json:"routing"`
+	Calls   []replayedCall `json:"calls"`
 	// IDs are the per-call row ids the run's requests carried, by first appearance.
 	IDs             []string `json:"ids,omitempty"`
 	ReasoningTokens int      `json:"reasoning_tokens,omitempty"`
@@ -64,39 +63,6 @@ type replayEvidence struct {
 type replayedCall struct {
 	Shape    string         `json:"shape"`
 	Response model.Response `json:"response"`
-}
-
-// idTable numbers per-call row ids in the order a run's requests first carry them.
-type idTable struct {
-	ids   []string
-	index map[string]int
-}
-
-func (t *idTable) ordinal(id string) int {
-	if at, seen := t.index[id]; seen {
-		return at
-	}
-	if t.index == nil {
-		t.index = map[string]int{}
-	}
-	t.index[id] = len(t.ids)
-	t.ids = append(t.ids, id)
-	return t.index[id]
-}
-
-// requestShape digests a request with each row id replaced by its ordinal in
-// table. Two requests share a shape only when they differ in nothing but which
-// ids were minted, and mint them in the same places.
-func requestShape(req model.Request, table *idTable) (string, error) {
-	material, err := canonicalRequestMaterial(req)
-	if err != nil {
-		return "", err
-	}
-	renamed := perCallID.ReplaceAllFunc(material, func(id []byte) []byte {
-		return []byte("id-" + strconv.Itoa(table.ordinal(string(id))))
-	})
-	sum := sha256.Sum256([]byte(promptfence.ReplaceNonces(string(renamed), canonicalID)))
-	return hex.EncodeToString(sum[:]), nil
 }
 
 // recordingCompleter passes a live run's calls through and keeps each answer.
@@ -138,7 +104,7 @@ func (c *recordingCompleter) evidence(pooled runCalls) (*replayEvidence, error) 
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	var table idTable
-	ev := &replayEvidence{ReasoningTokens: pooled.ReasoningTokens, Truncated: pooled.Truncated}
+	ev := &replayEvidence{Routing: replayRouting, ReasoningTokens: pooled.ReasoningTokens, Truncated: pooled.Truncated}
 	for _, x := range c.exchanges {
 		shape, err := requestShape(x.request, &table)
 		if err != nil {
@@ -186,7 +152,7 @@ func (c *replayCompleter) Complete(_ context.Context, req model.Request) (model.
 // rename maps an id the journaled run minted to the one this preparation
 // minted in the same place. An id no request carried is the model's own and stays.
 func (c *replayCompleter) rename(id string) string {
-	at := slices.Index(c.evidence.IDs, id)
+	at := slices.IndexFunc(c.evidence.IDs, func(minted string) bool { return strings.EqualFold(minted, id) })
 	if at < 0 || at >= len(c.table.ids) {
 		return id
 	}
@@ -214,16 +180,17 @@ var errNoEvidence = errors.New("the journaled run carries no replay evidence")
 // reevaluate is a journaled run as the code that runs now grades it. The
 // judge's opinion is kept only when the judge would be shown the same request.
 //
-// A run with no answer, withheld or broken off, is kept whole: no code grades
-// it, so nothing that changed can move it.
+// A run with no answer, withheld or broken off, is kept whole. No code grades
+// it, so only a change to the routing can move it.
 func reevaluate(ctx context.Context, census *aitasks.Registry, task ai.Task, sc Scenario, line journaledRun, log *slog.Logger) (runOutcome, error) {
-	kept := line.Outcome
-	if !kept.delivered() {
-		return kept, nil
-	}
-	ev := line.Evidence
-	if ev == nil {
+	kept, ev := line.Outcome, line.Evidence
+	switch {
+	case ev == nil:
 		return runOutcome{}, errNoEvidence
+	case ev.Routing != replayRouting:
+		return runOutcome{}, fmt.Errorf("the run was served under %q, and this build routes as %q", ev.Routing, replayRouting)
+	case !kept.delivered():
+		return kept, nil
 	}
 	factory, prepared, err := prepareCase(census, task, sc)
 	if err != nil {

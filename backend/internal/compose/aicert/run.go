@@ -161,7 +161,11 @@ func runOnce(ctx context.Context, lane runLane, sc Scenario, task ai.Task, censu
 		return measuredRun{}, err
 	}
 	measured := measuredRun{outcome: scored.outcome}
-	if recorder.replayable() {
+	switch {
+	case !scored.outcome.delivered():
+		// No answer to keep, only the routing it was refused under.
+		measured.evidence = &replayEvidence{Routing: replayRouting}
+	case recorder.replayable():
 		// Losing the evidence costs a later restart this run, never this run itself.
 		if measured.evidence, err = recorder.evidence(pooled); err != nil {
 			log.WarnContext(ctx, "aicert: this run cannot be journaled for replay — a restart will pay for it again",

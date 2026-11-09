@@ -216,7 +216,7 @@ how long that takes:
   back.
 - **`SITE=<variant>` and `SCENARIO=<regexp>`** measure part of a task, such as the one site a prompt fix
   changed. The rows measured replace theirs in the committed record, and the verdict is worked out
-  again from every row. The task needs a committed record for this.
+  again from every row. The task needs a committed record with a row for every other scenario.
 - **`RUNS=3`** while you look for a fix. Leave it out for the run that writes the record you commit.
 - **A restart replays.** The journal under `RESUME=` keeps what the models said, and the code you
   build now grades it again. Only a scenario whose case, prompt or judge request changed costs money

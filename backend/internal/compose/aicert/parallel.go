@@ -38,27 +38,73 @@ func parallelOrDefault(n int) (int, error) {
 // safe to share. A fold happens as soon as every job before it has folded, so a
 // slow early run delays the journal but never reorders it.
 //
-// The first error cancels the jobs still running and is the one returned.
+// A failure stops new jobs from starting and lets running ones finish. Every
+// job before the earliest failure is folded, and that failure is returned, as
+// one worker scoring the jobs in order would leave it.
 func scoreConcurrently[R any](ctx context.Context, jobs []runJob, workers int,
 	measure func(ctx context.Context, worker int, job runJob) (R, error),
 	fold func(job runJob, measured R) (RunResult, error),
 ) ([]RunResult, error) {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	type finished struct {
-		at       int
-		measured R
-		err      error
+	done, stop := dispatch(ctx, jobs, workers, measure)
+	results := make([]RunResult, len(jobs))
+	waiting := map[int]R{}
+	failures := map[int]error{}
+	failedAt, folded := len(jobs), 0
+	for f := range done {
+		if f.err != nil {
+			failures[f.at] = f.err
+			failedAt = min(failedAt, f.at)
+			stop()
+			continue
+		}
+		waiting[f.at] = f.measured
+		for folded < failedAt {
+			measured, ready := waiting[folded]
+			if !ready {
+				break
+			}
+			delete(waiting, folded)
+			result, err := fold(jobs[folded], measured)
+			if err != nil {
+				failures[folded], failedAt = err, folded
+				stop()
+				break
+			}
+			results[folded] = result
+			folded++
+		}
 	}
+	if failedAt < len(jobs) {
+		return nil, failures[failedAt]
+	}
+	if folded < len(jobs) {
+		// The caller's context ended before every job was handed out.
+		return nil, fmt.Errorf("aicert: %d of %d runs not scored: %w", len(jobs)-folded, len(jobs), context.Cause(ctx))
+	}
+	return results, nil
+}
+
+// measuredJob is one job's measurement, or the error it failed with.
+type measuredJob[R any] struct {
+	at       int
+	measured R
+	err      error
+}
+
+// dispatch hands jobs to workers in job order and streams what each measured.
+// The channel closes once every started job is done; stop hands out no more.
+func dispatch[R any](ctx context.Context, jobs []runJob, workers int,
+	measure func(ctx context.Context, worker int, job runJob) (R, error),
+) (<-chan measuredJob[R], func()) {
 	next := make(chan int)
-	done := make(chan finished)
+	done := make(chan measuredJob[R])
+	halt := make(chan struct{})
 	var wg sync.WaitGroup
 	for worker := range min(workers, len(jobs)) {
 		wg.Go(func() {
 			for at := range next {
 				measured, err := measure(ctx, worker, jobs[at])
-				done <- finished{at: at, measured: measured, err: err}
+				done <- measuredJob[R]{at: at, measured: measured, err: err}
 			}
 		})
 	}
@@ -66,7 +112,14 @@ func scoreConcurrently[R any](ctx context.Context, jobs []runJob, workers int,
 		defer close(next)
 		for at := range jobs {
 			select {
+			case <-halt:
+				return // checked first, since a ready send would otherwise race it
+			default:
+			}
+			select {
 			case next <- at:
+			case <-halt:
+				return
 			case <-ctx.Done():
 				return
 			}
@@ -76,43 +129,5 @@ func scoreConcurrently[R any](ctx context.Context, jobs []runJob, workers int,
 		wg.Wait()
 		close(done)
 	}()
-
-	results := make([]RunResult, len(jobs))
-	waiting := make(map[int]R, workers)
-	folded := 0
-	var firstErr error
-	for f := range done {
-		if firstErr != nil {
-			continue // draining, so no worker blocks on a send nobody reads
-		}
-		if f.err != nil {
-			firstErr = f.err
-			cancel()
-			continue
-		}
-		waiting[f.at] = f.measured
-		for firstErr == nil {
-			measured, ready := waiting[folded]
-			if !ready {
-				break
-			}
-			delete(waiting, folded)
-			result, err := fold(jobs[folded], measured)
-			if err != nil {
-				firstErr = err
-				cancel()
-				break
-			}
-			results[folded] = result
-			folded++
-		}
-	}
-	if firstErr != nil {
-		return nil, firstErr
-	}
-	if folded < len(jobs) {
-		// The caller's context ended before every job was handed out.
-		return nil, fmt.Errorf("aicert: %d of %d runs not scored: %w", len(jobs)-folded, len(jobs), context.Cause(ctx))
-	}
-	return results, nil
+	return done, sync.OnceFunc(func() { close(halt) })
 }

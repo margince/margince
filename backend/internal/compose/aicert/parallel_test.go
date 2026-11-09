@@ -151,29 +151,71 @@ func TestScoreConcurrentlyFoldsInJobOrderWhateverOrderRunsFinish(t *testing.T) {
 	}
 }
 
-func TestScoreConcurrentlyStopsAtTheFirstFailedRun(t *testing.T) {
-	jobs := make([]runJob, 6)
+// numberedJobs is n jobs whose case index is their position.
+func numberedJobs(n int) []runJob {
+	jobs := make([]runJob, n)
 	for i := range jobs {
 		jobs[i] = runJob{caseIndex: i, run: 1}
 	}
+	return jobs
+}
+
+// A failure leaves every run before it folded and journaled, as a single
+// worker scoring in order would. Those runs were paid for, and a restart replays them.
+func TestScoreConcurrentlyKeepsEveryRunBeforeTheFailure(t *testing.T) {
 	errRunFailed := errors.New("run 3 failed")
-	var folded []int
-	_, err := scoreConcurrently(context.Background(), jobs, 2,
+	jobThreeFailed := make(chan struct{})
+	var journaled []int
+	_, err := scoreConcurrently(context.Background(), numberedJobs(6), 4,
 		func(_ context.Context, _ int, job runJob) (int, error) {
-			if job.caseIndex == 3 {
+			switch job.caseIndex {
+			case 0:
+				<-jobThreeFailed // the slow run finishes after the failure
+			case 3:
+				close(jobThreeFailed)
 				return 0, errRunFailed
 			}
 			return job.caseIndex, nil
 		},
 		func(job runJob, _ int) (RunResult, error) {
-			folded = append(folded, job.caseIndex)
+			journaled = append(journaled, job.caseIndex)
 			return RunResult{}, nil
 		})
 	if !errors.Is(err, errRunFailed) {
 		t.Fatalf("err = %v, want the failed run's own error", err)
 	}
-	if slices.ContainsFunc(folded, func(i int) bool { return i >= 3 }) {
-		t.Fatalf("folded %v: a run at or after the failure joined the task", folded)
+	if want := []int{0, 1, 2}; !slices.Equal(journaled, want) {
+		t.Fatalf("journaled %v, want every run before the failure (%v) and none after it", journaled, want)
+	}
+}
+
+// Two failures report the earlier run's, whichever arrives first, so the
+// error is the one a single worker would have stopped at.
+func TestScoreConcurrentlyReportsTheEarliestFailedRun(t *testing.T) {
+	errEarly, errLate := errors.New("run 1 failed"), errors.New("run 3 failed")
+	lateFailed := make(chan struct{})
+	var journaled []int
+	_, err := scoreConcurrently(context.Background(), numberedJobs(4), 4,
+		func(_ context.Context, _ int, job runJob) (int, error) {
+			switch job.caseIndex {
+			case 1:
+				<-lateFailed
+				return 0, errEarly
+			case 3:
+				close(lateFailed)
+				return 0, errLate
+			}
+			return job.caseIndex, nil
+		},
+		func(job runJob, _ int) (RunResult, error) {
+			journaled = append(journaled, job.caseIndex)
+			return RunResult{}, nil
+		})
+	if !errors.Is(err, errEarly) {
+		t.Fatalf("err = %v, want run 1's, the earliest by job order", err)
+	}
+	if !slices.Equal(journaled, []int{0}) {
+		t.Fatalf("journaled %v, want only the run before the earliest failure", journaled)
 	}
 }
 
