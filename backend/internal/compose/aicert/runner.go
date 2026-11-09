@@ -96,8 +96,15 @@ type RunnerConfig struct {
 	Profile    ai.Profile        // MARGINCE_AICERT_PROFILE
 	TaskFilter string            // MARGINCE_AICERT_TASK ("" = all tasks with a corpus)
 	Repeats    int               // MARGINCE_AICERT_RUNS: each case's first round, default defaultRepeats
-	RecordDir  string
-	CorpusDir  string
+	// Parallel is how many runs of one task are in flight at once, default
+	// defaultParallel. One drives them one after another.
+	Parallel int // MARGINCE_AICERT_PARALLEL
+	// SiteFilter and ScenarioFilter (a regular expression on the scenario name)
+	// narrow each task to some of its scenarios; see subset.go.
+	SiteFilter     string // MARGINCE_AICERT_SITE
+	ScenarioFilter string // MARGINCE_AICERT_SCENARIO
+	RecordDir      string
+	CorpusDir      string
 	// TraceDir, when non-empty, turns on the opt-in payload trace
 	// (MARGINCE_AICERT_TRACE): every candidate and judge call's
 	// post-stripper request+response is dumped to a JSONL file under this
@@ -175,15 +182,12 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 	if err != nil {
 		return nil, err
 	}
-
-	scenarios, err := LoadCorpus(cfg.CorpusDir, cfg.Census)
+	if cfg.Parallel, err = parallelOrDefault(cfg.Parallel); err != nil {
+		return nil, err
+	}
+	corpus, byTask, subset, err := scenariosToCertify(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("aicert: runner: %w", err)
-	}
-
-	byTask := groupByTask(scenarios, cfg.TaskFilter)
-	if cfg.TaskFilter != "" && len(byTask) == 0 {
-		return nil, fmt.Errorf("aicert: runner: task %q has no scenarios under %s", cfg.TaskFilter, cfg.CorpusDir)
 	}
 
 	// Refused here rather than per task, over the tasks this run certifies: with no
@@ -237,7 +241,7 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 	var records []Record
 	var runErrs []error
 	for _, task := range sortedTasks(byTask) {
-		written, err := certifyAndWrite(ctx, cfg, task, byTask[task], repeats, trace, journal, log)
+		written, err := certifyAndWrite(ctx, cfg, task, taskScenarios{measured: byTask[task], corpus: corpus[task], subset: subset.narrows()}, repeats, trace, journal, log)
 		records = append(records, written...)
 		if err != nil {
 			runErrs = append(runErrs, err)
@@ -247,6 +251,24 @@ func Run(ctx context.Context, cfg RunnerConfig, log *slog.Logger) ([]Record, err
 		log.WarnContext(ctx, "aicert: fallbacks not measured", "skipped", strings.Join(skipped, "; "))
 	}
 	return records, errors.Join(runErrs...)
+}
+
+// scenariosToCertify loads each task's corpus and the part of it this run
+// measures, which is all of it unless SITE= or SCENARIO= narrows it.
+func scenariosToCertify(cfg RunnerConfig) (corpus, measured map[ai.Task][]Scenario, subset scenarioSubset, err error) {
+	if subset, err = subsetOf(cfg); err != nil {
+		return nil, nil, scenarioSubset{}, err
+	}
+	scenarios, err := LoadCorpus(cfg.CorpusDir, cfg.Census)
+	if err != nil {
+		return nil, nil, scenarioSubset{}, err
+	}
+	corpus = groupByTask(scenarios, cfg.TaskFilter)
+	if cfg.TaskFilter != "" && len(corpus) == 0 {
+		return nil, nil, scenarioSubset{}, fmt.Errorf("task %q has no scenarios under %s", cfg.TaskFilter, cfg.CorpusDir)
+	}
+	measured, err = subset.apply(corpus)
+	return corpus, measured, subset, err
 }
 
 // runPreflights asks every binding the run will use one question before the
@@ -293,25 +315,19 @@ func certifyTask(ctx context.Context, task ai.Task, scenarios []Scenario, census
 	var candidateExtra, judgeExtra []ai.LocalOption
 	var trace *payloadTrace
 	var journal taskJournal
-	maxRuns := adaptiveMaxRuns
+	maxRuns, parallel := adaptiveMaxRuns, 1
 	if hooks != nil {
 		candidateExtra, judgeExtra, trace, journal = hooks.candidateOpts, hooks.judgeOpts, hooks.trace, hooks.journal
 		if hooks.maxRuns > 0 {
 			maxRuns = hooks.maxRuns
 		}
+		parallel = max(hooks.parallel, 1)
 	}
 	// Capture the post-stripper bodies only when a trace will consume them —
 	// otherwise the router pays the marshal+strip cost for content nothing reads.
 	if trace != nil {
 		candidateExtra = append(candidateExtra, ai.WithPayloadCapture())
 		judgeExtra = append(judgeExtra, ai.WithPayloadCapture())
-	}
-
-	candidateRec := newTraceRecorder()
-	candidateOpts := append([]ai.LocalOption{ai.WithoutResultCache(), ai.WithCallStore(candidateRec)}, candidateExtra...)
-	candidateRouter, err := compose.NewLocalRouterForCert(candidateCfg, candidateOpts...)
-	if err != nil {
-		return Record{}, fmt.Errorf("aicert: task %s: candidate router: %w", task, err)
 	}
 
 	// The judge NEVER rides the candidate's binding — a model grading itself is
@@ -321,18 +337,17 @@ func certifyTask(ctx context.Context, task ai.Task, scenarios []Scenario, census
 	if err != nil {
 		return Record{}, err
 	}
-	judgeRec := newTraceRecorder()
-	judgeOpts := append([]ai.LocalOption{ai.WithoutResultCache(), ai.WithCallStore(judgeRec)}, judgeTransport(judgeBinding)...)
-	judgeOpts = append(judgeOpts, judgeExtra...)
-	judgeRouter, err := compose.NewLocalRouterForCert(judgeCfg, judgeOpts...)
-	if err != nil {
-		return Record{}, fmt.Errorf("aicert: task %s: judge router: %w", task, err)
+	judgeExtra = append(judgeTransport(judgeBinding), judgeExtra...)
+	lanes := make([]runLane, parallel)
+	for i := range lanes {
+		if lanes[i], err = newRunLane(candidateCfg, judgeCfg, candidateExtra, judgeExtra); err != nil {
+			return Record{}, fmt.Errorf("aicert: task %s: %w", task, err)
+		}
 	}
 
 	acc := &taskAccumulation{selfJudgedEveryRun: true}
 	driver := taskDriver{
-		task: task, census: census, candidateRouter: candidateRouter, candidateRec: candidateRec,
-		judgeRouter: judgeRouter, judgeRec: judgeRec, log: log, acc: acc, trace: trace, journal: journal, maxRuns: maxRuns,
+		task: task, census: census, lanes: lanes, log: log, acc: acc, trace: trace, journal: journal, maxRuns: maxRuns,
 	}
 	sets, err := driver.runScenarios(ctx, scenarios, scenarioStamps, repeats)
 	if err != nil {
@@ -345,6 +360,22 @@ func certifyTask(ctx context.Context, task ai.Task, scenarios []Scenario, census
 	rec.ThinkingLevel, rec.SiteThinking = binding.ThinkingLevel, ai.SiteThinkingLevels(binding, task)
 	rec.JudgeProvider = judgeBinding.Provider
 	return rec, nil
+}
+
+// newRunLane builds one worker's candidate and judge routers, each over a
+// recorder of its own.
+func newRunLane(candidateCfg, judgeCfg ai.RoutingConfig, candidateExtra, judgeExtra []ai.LocalOption) (runLane, error) {
+	lane := runLane{candidateRec: newTraceRecorder(), judgeRec: newTraceRecorder()}
+	candidateOpts := append([]ai.LocalOption{ai.WithoutResultCache(), ai.WithCallStore(lane.candidateRec)}, candidateExtra...)
+	var err error
+	if lane.candidate, err = compose.NewLocalRouterForCert(candidateCfg, candidateOpts...); err != nil {
+		return runLane{}, fmt.Errorf("candidate router: %w", err)
+	}
+	judgeOpts := append([]ai.LocalOption{ai.WithoutResultCache(), ai.WithCallStore(lane.judgeRec)}, judgeExtra...)
+	if lane.judge, err = compose.NewLocalRouterForCert(judgeCfg, judgeOpts...); err != nil {
+		return runLane{}, fmt.Errorf("judge router: %w", err)
+	}
+	return lane, nil
 }
 
 // taskAccumulation collects the pooled stats certifyTask folds across

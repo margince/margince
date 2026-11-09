@@ -12,37 +12,65 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
-// taskDriver is what every run of one task shares: the two routers and their
-// recorders, the accumulation the record is built from, and the trace and
-// journal each run is filed in.
+// taskDriver is what every run of one task shares: its lanes, the record's
+// accumulation, and the trace and journal.
 type taskDriver struct {
-	task            ai.Task
-	census          *aitasks.Registry
-	candidateRouter *ai.Router
-	candidateRec    *traceRecorder
-	judgeRouter     *ai.Router
-	judgeRec        *traceRecorder
-	log             *slog.Logger
-	acc             *taskAccumulation
-	trace           *payloadTrace
-	journal         taskJournal
+	task   ai.Task
+	census *aitasks.Registry
+	// lanes holds one router pair per worker; the task's runs are in flight on
+	// at most len(lanes) of them at once.
+	lanes   []runLane
+	log     *slog.Logger
+	acc     *taskAccumulation
+	trace   *payloadTrace
+	journal taskJournal
 	// maxRuns is the most runs any case reaches: adaptiveMaxRuns in production.
 	maxRuns int
 }
 
+// pendingRun is a run measured or replayed but not yet folded into the task.
+type pendingRun struct {
+	measured measuredRun
+	replayed bool
+}
+
 // runScenarios drives every scenario of the task in adaptive rounds (runRounds)
 // and returns their run sets for certifyTask to judge together. The per-run
-// degrade gates sit in scoreRun rather than inside certifyTask because they void
-// the WHOLE task: a demoted answer or a demoted grader anywhere in the set means
-// no record, not a lower band.
+// degrade gates sit in measureRun because they void the whole task. A demoted
+// answer or grader anywhere in the set means no record, not a lower band.
+//
+// One lane scores each run and folds it before the next begins. More lanes
+// measure a round's runs concurrently and fold them in run order, so the
+// record is the one a single lane would build.
 func (d taskDriver) runScenarios(ctx context.Context, scenarios []Scenario, stamps map[string]string, repeats int) ([]ScenarioRuns, error) {
-	sets, err := runRounds(caseSeeds(scenarios), repeats, d.maxRuns, func(i, run int) (RunResult, error) {
-		if run > repeats && (run-repeats-1)%adaptiveRound == 0 {
+	measure := func(ctx context.Context, worker int, job runJob) (pendingRun, error) {
+		sc := scenarios[job.caseIndex]
+		if job.run > repeats && (job.run-repeats-1)%adaptiveRound == 0 {
 			d.log.InfoContext(ctx, "aicert: extending a borderline case by another round",
-				"task", string(d.task), "scenario", scenarios[i].Name, "runs_so_far", run-1)
+				"task", string(d.task), "scenario", sc.Name, "runs_so_far", job.run-1)
 		}
-		return d.scoreRun(ctx, scenarios[i], stamps[scenarios[i].Name], run)
-	})
+		return d.measureRun(ctx, d.lanes[worker], sc, stamps[sc.Name], job.run)
+	}
+	fold := func(job runJob, pending pendingRun) (RunResult, error) {
+		sc := scenarios[job.caseIndex]
+		return d.foldRun(ctx, sc, stamps[sc.Name], job.run, pending)
+	}
+	var sets []ScenarioRuns
+	var err error
+	if len(d.lanes) == 1 {
+		sets, err = runRounds(caseSeeds(scenarios), repeats, d.maxRuns, func(i, run int) (RunResult, error) {
+			job := runJob{caseIndex: i, run: run}
+			pending, err := measure(ctx, 0, job)
+			if err != nil {
+				return RunResult{}, err
+			}
+			return fold(job, pending)
+		})
+	} else {
+		sets, err = roundsOf(caseSeeds(scenarios), repeats, d.maxRuns, func(jobs []runJob) ([]RunResult, error) {
+			return scoreConcurrently(ctx, jobs, len(d.lanes), measure, fold)
+		})
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -52,26 +80,32 @@ func (d taskDriver) runScenarios(ctx context.Context, scenarios []Scenario, stam
 	return sets, nil
 }
 
-// scoreRun yields one run of one scenario, from the journal when it holds it
-// and paid for when it does not, folded into the task's accumulation.
-func (d taskDriver) scoreRun(ctx context.Context, sc Scenario, stamp string, run int) (RunResult, error) {
-	outcome, replayed := d.journal.lookup(sc, stamp, run)
-	if replayed {
+// measureRun yields one run of one scenario, replayed from the journal when it
+// can be and paid for on lane when it cannot.
+func (d taskDriver) measureRun(ctx context.Context, lane runLane, sc Scenario, stamp string, run int) (pendingRun, error) {
+	pending := pendingRun{}
+	pending.measured.outcome, pending.replayed = d.journal.replay(ctx, d.census, sc, stamp, run, d.log)
+	if pending.replayed {
 		d.log.InfoContext(ctx, "aicert: replaying a journaled run — not paying for it again",
 			"task", string(d.task), "scenario", sc.Name, "run", run)
 	} else {
-		var runErr error
-		outcome, runErr = driveRun(ctx, d.candidateRouter, d.candidateRec, d.judgeRouter, d.judgeRec, sc, d.task, d.census, d.log, d.trace, d.journal, run)
+		measured, runErr := driveRun(ctx, lane, sc, d.task, d.census, d.log, d.trace, d.journal, run)
 		if runErr != nil {
-			return RunResult{}, fmt.Errorf("aicert: task %s scenario %s run %d: %w", d.task, sc.Name, run, runErr)
+			return pendingRun{}, fmt.Errorf("aicert: task %s scenario %s run %d: %w", d.task, sc.Name, run, runErr)
 		}
+		pending.measured = measured
 	}
 	// Applied to a replayed run too, though only a run that already passed
 	// it is ever journaled: one gate over both paths is one answer to
 	// "may this run be certified", rather than two that can drift apart.
-	if err := degradeGate(d.task, sc, run, outcome); err != nil {
-		return RunResult{}, err
+	if err := degradeGate(d.task, sc, run, pending.measured.outcome); err != nil {
+		return pendingRun{}, err
 	}
+	return pending, nil
+}
+
+// foldRun adds one measured run to the task's accumulation, then journals it.
+func (d taskDriver) foldRun(ctx context.Context, sc Scenario, stamp string, run int, pending pendingRun) (RunResult, error) {
 	// Journaled only once the accumulation ACCEPTS it, never before. addRun
 	// enforces served-identity uniformity across the whole set, which is a
 	// property of the set and not of this run: journaling first would store a
@@ -79,13 +113,13 @@ func (d taskDriver) scoreRun(ctx context.Context, sc Scenario, stamp string, run
 	// replay it and fail the task again — a transient provider drift made
 	// sticky for six hours, escapable only by throwing away the whole
 	// journal with RESUME=.
-	if err := d.acc.addRun(d.task, sc, run-1, outcome); err != nil {
+	if err := d.acc.addRun(d.task, sc, run-1, pending.measured.outcome); err != nil {
 		return RunResult{}, err
 	}
-	if !replayed {
-		d.journal.append(ctx, sc, stamp, run, outcome, nowFunc(), d.log)
+	if !pending.replayed {
+		d.journal.append(ctx, sc, stamp, run, pending.measured, nowFunc(), d.log)
 	}
-	return outcome.RunResult, nil
+	return pending.measured.outcome.RunResult, nil
 }
 
 // certifyHooks is the injection seam for certifyTask's two router
@@ -110,6 +144,8 @@ type certifyHooks struct {
 	// maxRuns, when set, caps each case's adaptive runs below adaptiveMaxRuns:
 	// a test pinning an exact run count sets it to the repeats it asks for.
 	maxRuns int
+	// parallel is how many runs are in flight at once; zero is one.
+	parallel int
 }
 
 // caseSeeds is each scenario's run set before its first run: what the verdict

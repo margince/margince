@@ -38,7 +38,7 @@ var gradingRuleOwners = []struct {
 		"judgeBand", "marginsOver", "lowerVerdict", "verdictRank", "majorityOf", "judgeMedianAndMin", "medianOf",
 	}},
 	{"stats.go", []string{"wilsonBounds", "meanBounds", "meanAndSD", "tQuantile"}},
-	{"adaptive.go", []string{"runRounds", "nextRunCounts", "caseBorderline", "poolUndecided"}},
+	{"adaptive.go", []string{"runRounds", "roundsOf", "nextRunCounts", "caseBorderline", "poolUndecided"}},
 	{"run.go", []string{"runEntry"}},
 	{"taskdriver.go", []string{"caseSeeds"}},
 	{"judge.go", []string{"judgeScore", "wantsAnotherOpinion", "nearABand", "absDiff", "foldOpinions", "judgeVerdict"}},
@@ -157,6 +157,12 @@ var gradingRuleExtensions = []ruleExtension{{
 	to:   "4c0bc17b36bbc1b3981e35d1e2bab3918468320d3e63febafcff39ac9fd706e9",
 	reason: "runEntry scores an answer the upstream broke off as invalid; before it, such a run " +
 		"stopped its task with no record, so no committed record holds one",
+}, {
+	rule: "grading-rule-10",
+	from: "4c0bc17b36bbc1b3981e35d1e2bab3918468320d3e63febafcff39ac9fd706e9",
+	to:   "24f40de72b17dcb6aa8127eb322982402bad1bc23bb17bfa463c52dd710b7fdf",
+	reason: "runRounds hands each round to roundsOf whole so its runs can be scored concurrently; " +
+		"the runs each round asks for, and the order their results join a case, are unchanged",
 }}
 
 // extendedDigest is the digest the golden's version accepts once every

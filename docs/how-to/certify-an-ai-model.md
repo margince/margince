@@ -38,11 +38,11 @@ See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-p
 
    `JUDGE=provider:model` is the second model, which grades the answers. **One judge grades every task of
    a run**, because a new judge changes verdicts on its own. The default is
-   `claude_cli:claude-sonnet-4-6`, graded through `claude -p` on a Claude Code plan. It needs `claude`
+   `claude_cli:claude-sonnet-5-5`, graded through `claude -p` on a Claude Code plan. It needs `claude`
    on your `PATH`, and `CLAUDE_CODE_OAUTH_TOKEN`.
 
    An exported `MARGINCE_AICERT_JUDGE_MODEL` replaces the default, and `JUDGE=` replaces both. For
-   example, use `openai_compatible:anthropic/claude-sonnet-4.6` with `JUDGE_UPSTREAM='{}'` (the same
+   example, use `openai_compatible:anthropic/claude-sonnet-4.6` with `JUDGE_UPSTREAM='{}'` (a Claude
    model, paid for each call), or `gemini:gemini-3.5-flash`.
 
    The run **never takes the judge from the routing**, and a model never grades itself. The run refuses,
@@ -150,7 +150,7 @@ Other settings:
 ## Choose how the judge runs
 
 `JUDGE=provider:model` grades through the client for that provider, and you pay for each token.
-`JUDGE=claude_cli:<model>` (`sonnet`, or an ID such as `claude-sonnet-4-6`) grades through `claude -p`
+`JUDGE=claude_cli:<model>` (`sonnet`, or an ID such as `claude-sonnet-5-5`) grades through `claude -p`
 on a Claude Code plan. It needs the CLI on your `PATH`, and `CLAUDE_CODE_OAUTH_TOKEN`. Get that token
 from `claude setup-token`; the run reads it from `.env.local`. `ANTHROPIC_API_KEY` works too.
 
@@ -160,6 +160,38 @@ stands in for the one of the CLI. The record names the model that the CLI report
 Use it when a plan costs less than to pay for each token. Each call costs 2–5 seconds to start, and counts
 against the limits of the plan. It has no setting for `temperature` or for the most tokens. It refuses
 Claude candidates.
+
+**The judge sets the pace of a run.** Its time grows with the tokens it writes, and most of those are
+thinking that never reaches the score. `claude-sonnet-4-6` writes about 1,000 tokens a call and takes
+about 20 seconds. `claude-sonnet-5-5` writes about 100 and takes about 7. `MAX_THINKING_TOKENS=<n>` in
+the environment caps the thinking of a `claude_cli` judge. A judge that thinks less may grade
+differently, so compare its scores on traced runs before a sweep uses it.
+
+A new judge changes scores even where nothing else changed. `claude-sonnet-5-5` scores about nine
+points under `claude-sonnet-4-6` on the same answers. A record names the model that graded it, so read
+two records side by side only when they name the same judge.
+
+## Make a run fast
+
+A run calls the candidate and then the judge, for every run of every scenario. These settings decide
+how long that takes:
+
+- **`PARALLEL=<n>`** (default `4`) measures that many runs of a task at once. The record is the same one
+  `PARALLEL=1` writes. Raise it until the plan of the judge or the rate limit of the candidate pushes
+  back.
+- **`SITE=<variant>` and `SCENARIO=<regexp>`** measure part of a task, such as the one site a prompt fix
+  changed. The rows measured replace theirs in the committed record, and the verdict is worked out
+  again from every row. The task needs a committed record for this.
+- **`RUNS=3`** while you look for a fix. Leave it out for the run that writes the record you commit.
+- **A restart replays.** The journal under `RESUME=` keeps what the models said, and the code you
+  build now grades it again. Only a scenario whose case, prompt or judge request changed costs money
+  again (section 5).
+- **Separate tasks can run side by side.** Give each `TASK=` its own `RESUME=<dir>` (section 5), and
+  watch the memory of the machine.
+
+Fix in batches. Wait for a run to end, read every failed scenario in the trace (section 4), fix the
+prompt, case or validator each one points to, and run again once. A fix made while a run is still
+going leaves that run measuring a prompt you have already changed.
 
 ## 3. Read the report
 
@@ -293,17 +325,17 @@ with no grade only when every try breaks off, and its scenario row counts it as 
 the run reached the model, and the model could not end its answer.
 
 **The run writes every scored run** to `.tmp/aicert/resume/` as soon as it is scored. So a new start replays
-what it can (`… run(s) replayable`), and does not pay again. A stored run stands in for a new one
-only when nothing it measured can have changed:
+what it can (`… run(s) replayable`), and does not pay again. A stored run keeps what the candidate and
+the judge said, and stands in for a new one only when neither could say something else:
 
-- the **same candidate binding, judge, profile, corpus version, scenario stamp, binary and run
-  number**;
+- the **same candidate binding, judge, profile, corpus version, scenario stamp and run number**;
 - and **within 6 hours**.
 
-Edit a prompt, and the stamp of that scenario changes. Build again after you make a validator stricter,
-and the binary changes, which the stamp does *not* cover. Either way the run measures those runs again.
-A replayed run passes the same gates as a live one, for the model that served it and for a degraded
-answer. So a record built from stored runs is the same measure.
+Edit a prompt, and the stamp of that scenario changes, so those runs are measured again. A Go edit
+does not throw the journal away: the code you build now grades every stored answer again. Make a
+validator stricter, and a replayed answer it now refuses fails as a live one would. A replayed run
+passes the same gates as a live one, for the model that served it and for a degraded answer. So a
+record built from stored runs is the same measure.
 
 It is on by default, and out of git, like the trace. `RESUME=<dir>` sets its folder; `RESUME=` measures
 everything again. A stored file cut off in the middle of a write still replays every whole run before the

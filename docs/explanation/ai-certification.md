@@ -67,7 +67,7 @@ answer a judge would catch, and that answer must fail. The certification page ma
 `checked mechanically`.
 
 The judge is never the exact model under test. A judge from the same vendor or family may still grade,
-and the record marks that run as self judged. The default judge is `claude_cli:claude-sonnet-4-6`.
+and the record marks that run as self judged. The default judge is `claude_cli:claude-sonnet-5-5`.
 
 ## Many tries per scenario
 

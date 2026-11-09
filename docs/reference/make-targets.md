@@ -94,14 +94,14 @@ These target names are a stable interface: external tooling and its UAT guides c
 ### `e2e-ai` options
 
 - **What it certifies.** `MODEL=<provider:model>` binds one candidate to every task. `ROUTING=<config>` certifies a deployment. Each task is measured against every distinct model that `seeds.ai_routing` in the config binds on its ladder (the rung that answers, then each fallback). So one run writes records across several models. The two are mutually exclusive and the run refuses both.
-- **The judge.** `JUDGE=<provider:model>` defaults to an exported `MARGINCE_AICERT_JUDGE_MODEL`, else `claude_cli:claude-sonnet-4-6` graded through `claude -p` on `CLAUDE_CODE_OAUTH_TOKEN`. One grader serves every task of the run, because a judge swap flips verdicts on its own. The judge is never resolved from the routing.
+- **The judge.** `JUDGE=<provider:model>` defaults to an exported `MARGINCE_AICERT_JUDGE_MODEL`, else `claude_cli:claude-sonnet-5-5` graded through `claude -p` on `CLAUDE_CODE_OAUTH_TOKEN`. One grader serves every task of the run, because a judge swap flips verdicts on its own. The judge is never resolved from the routing.
 - `JUDGE=openai_compatible:anthropic/claude-sonnet-4.6` or `gemini:gemini-3.5-flash` picks another. An `openai_compatible` judge uses the candidate's `BASE_URL=` (or `MARGINCE_AICERT_BASE_URL`), falling back to the OpenRouter host only when neither is set (`JUDGE_BASE_URL=` for another broker).
 - A model never grades itself. A run in which any certified task has the judge as its candidate is refused before the first paid call, naming the tasks.
 - `BASE_URL=` carries a broker host (`openai_compatible` fails closed without one). `PROFILE=` is the environment class a record is filed under; it is ignored under `ROUTING=`, which takes the profile from the config.
-- Narrow with `TASK=<task>`, repeat with `RUNS=<n>`.
+- Narrow with `TASK=<task>`, repeat with `RUNS=<n>`, and run `PARALLEL=<n>` runs of a task at once (`4`; the record is the one `PARALLEL=1` writes). `SITE=<variant>` and `SCENARIO=<regexp>` measure part of a task: their rows replace their own in the committed record, the verdict is computed again from every row, and a task with no committed record is refused.
 - **Trace.** Every candidate+judge request/response (the `ai_call_payload` shape, post-stripper) is written to a gitignored `.tmp/aicert/*.jsonl`, and the path is printed. On by default (`TRACE=<dir>` to relocate, `TRACE=` to disable).
 - **Retries.** A run the router failed on every bound tier is re-driven (3 attempts, `2s` then `8s`), never for an exhausted account or a failed validator. A candidate that breaks off its answer on every attempt is scored an invalid run instead of stopping the task.
-- **Resume.** Every scored run is journaled to `.tmp/aicert/resume/`, so a restart replays it instead of paying again. A replay needs the same bindings, profile, corpus, scenario stamp and binary, within six hours, one run per directory. On by default (`RESUME=<dir>` to relocate, `RESUME=` to measure everything fresh).
+- **Resume.** Every scored run is journaled to `.tmp/aicert/resume/`, so a restart replays it instead of paying again. A replay needs the same bindings, profile, corpus and scenario stamp, within six hours, one run per directory. The code that runs now grades the journaled answers again, so a rebuild still replays. On by default (`RESUME=<dir>` to relocate, `RESUME=` to measure everything fresh).
 - A model whose record is already current is skipped unless `STALE_ONLY=0`.
 
 ### `e2e-ai-report`

@@ -227,7 +227,7 @@ one certification run can cover:
    Read that first, or the run fails on a missing key.
 
    ```
-   # real calls on your key; MODEL is required. JUDGE defaults to claude_cli:claude-sonnet-4-6
+   # real calls on your key; MODEL is required. JUDGE defaults to claude_cli:claude-sonnet-5-5
    make e2e-ai TASK=<your task> MODEL=gemini:gemini-3.1-flash-lite
    make e2e-ai-report                # free: band, scope, binding, counts, scenario coverage
    cd backend && go test ./internal/compose/aicert/ -run TestAICertificationPage -update-ai-cert

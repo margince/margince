@@ -90,9 +90,9 @@ The commands above also follow these rules:
 - **Use separate folders for each pass.** Give each pass its own `TRACE=` and `RESUME=`. Then they can run
   at the same time. The records they write are separate: one file for each
   task, provider, model and environment. And no pass replays the journal of the other.
-- **`RESUME=` is a cache that lasts 6 hours.** It holds only for the same program. Any Go edit makes
-  the whole journal stale. So finish the work in section 3 and the fix before you start a run that stopped early
-  again, or the whole run costs money again.
+- **`RESUME=` is a cache that lasts 6 hours.** A replay keeps what the models said, and the code
+  that runs now grades it again, so a Go edit does not throw the journal away. A change to a scenario,
+  or to a request a site or the judge is sent, does: those runs cost money again.
 
 Expect these outcomes:
 
