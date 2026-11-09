@@ -131,9 +131,10 @@ Emit exactly one kind for the thread you are given:
     covers, sent together with a request to keep it close, is this kind.
 Only "ordinary" makes a thread readable by colleagues, so answer "ordinary" only when you are
 confident the conversation is routine company business. When a thread is about ordinary trade
-AND something sensitive, the sensitive kind wins. A thread that asks for confidence AND is one
-of the subject kinds above takes that subject kind, not "explicitly_confidential"; an ask for
-confidence is never a reason for "ordinary". Between two sensitive kinds only, choose by
+AND something sensitive, the sensitive kind wins. A thread that asks for confidence AND is
+"legal", "financial_corporate", "personnel", "personal" or "security_incident" takes that kind; a
+thread that asks for confidence about otherwise ordinary business is "explicitly_confidential",
+never "ordinary". Between two sensitive kinds only, choose by
 subject: a contract on this company's shares, funding or valuation (a term sheet, a
 shareholder or investment agreement) is "financial_corporate" even while it is negotiated;
 "legal" is a dispute, a claim, counsel, or a commercial contract.

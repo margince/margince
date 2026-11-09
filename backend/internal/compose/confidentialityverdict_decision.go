@@ -36,7 +36,7 @@ var confidentialityDecisionCriteria = map[string]string{
 	confidentialityPersonnel:     "Employees or candidates, one or many: salary or payroll data (a salary list, payroll sheet or compensation table included), employment contract, termination, grievance, performance, application. An attached document's text counts as the thread's.",
 	confidentialityPersonal:      "The mailbox owner's private life: family, health, their home, rent, phone or utility bill, personal bank or card alert, private subscription, even if forwarded for reimbursement.",
 	confidentialitySecurity:      "A breach, intrusion, leaked credentials, or an unpatched vulnerability in this company's own systems or data; never a routine alert on the owner's own consumer account.",
-	confidentialityExplicitlyMar: "The message itself asks for confidence: marked confidential or vertraulich, or asks to keep it to a small circle or not forward it. Any subject kind that also fits wins over this one.",
+	confidentialityExplicitlyMar: "The message itself asks for confidence: marked confidential or vertraulich, or asks to keep it to a small circle or not forward it. Any sensitive kind that also fits wins over this one; it always wins over ordinary.",
 }
 
 type confidentialityDecisionThread struct {

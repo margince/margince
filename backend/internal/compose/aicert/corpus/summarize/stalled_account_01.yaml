@@ -44,6 +44,8 @@ expect:
     degraded_min: 50
     floor: 40
   rubric: >
+    Restating the subject's own words (he wrote about the proposal after the
+    board meeting) reads the subject, not the content, and is no fault.
     Score whether the brief states only what the summary states — no inferred
     cause for the stall, no read on the counterparty's intent beyond the quoted
     subject line, the email attributed to Jonas Brandt at the account because its speaker

@@ -11,11 +11,10 @@ fixture:
   subject: Coffee with Rainer
   company: Asia Flight Services
   attendee: Rainer Vogt
-  # The wish list is what this meeting is about; the newsletter is what a
-  # recency-ordered reader would have shown instead, so citing the right one is
-  # a choice rather than the only option. The open question was asked on a
-  # call, so the claim row points at the call and never names the wish list:
-  # finding it takes reading the conversations, not copying the claim.
+  # Two moments and a wall of noise. The wish list is what this meeting is
+  # about; the newsletter is what a recency-ordered reader would have shown
+  # instead, and it is here so that citing the right one is a choice rather
+  # than the only option.
   messages:
     - label: wish_list
       days_ago: 62
@@ -24,13 +23,8 @@ fixture:
       body: >
         We keep losing track of issues and quotes. What we need is issue
         tracking, quote tracking and multi-channel capture in one place, so
-        nobody has to ask three colleagues where a request went.
-    - label: intro_call
-      kind: call
-      days_ago: 55
-      subject: Intro call
-      body: >
-        Rainer asked how we would get started on the CRM work.
+        nobody has to ask three colleagues where a request went. How do we get
+        started on this?
     - label: ownership_change
       days_ago: 30
       direction: inbound
@@ -48,7 +42,7 @@ fixture:
   claims:
     - kind: open_question
       body: How do we get started on the CRM work?
-      from_label: intro_call
+      from_label: wish_list
 expect:
   outcome: accepted
   # The sections prompt is sent the room's timeline as subjects and dates, never
@@ -69,11 +63,10 @@ expect:
     floor: 40
   rubric: >
     The sections are sent the meeting, the attendee, the open question Rainer
-    asked on the intro call (named as its source), and the room's recent correspondence as subjects and dates — not the
+    asked, and the room's recent correspondence as subjects and dates — not the
     messages' text. Score whether the brief's sections are about the
-    conversation this meeting is about — the CRM requirements thread, and the
-    open question about starting that work — rather than about the most recent
-    message.
+    conversation this meeting is about — the CRM requirements thread and the
+    open question raised in it — rather than about the most recent message.
     Sections that read well and cite only the newsletter have read the newest
     thing rather than the relevant one. The prompt asks a sentence resting on
     one message to name it by its subject, so a reader can find the thread; a
@@ -81,4 +74,4 @@ expect:
     reader to guess which message it means. Sections that would read identically
     about another company have not prepared anybody, however well grounded
     each sentence is. Anything a section claims the requirements said beyond
-    its subject is invented, and scores low.
+    its subject and the open question is invented, and scores low.

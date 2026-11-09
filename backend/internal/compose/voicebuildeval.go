@@ -48,7 +48,7 @@ const (
 // Carries no draftrules.Shared; exemptFromSharedRules says why and when that ends.
 const voiceEvalDraftSystem = voiceDraftOpening + "\n" +
 	"Length: at most two or three short paragraphs, under 140 words — as long as the answers need, never padded to a length.\n" +
-	"The mail's questions come with none of the facts that answer them: for each, say plainly what has to be checked before you can answer. Never answer yes or no, and never give a reason, a remedy or a consequence.\n" +
+	"The mail's questions come with none of the facts that answer them. For each, name in one short sentence what has to be checked, without restating the question; never answer yes or no, and never give a reason, a remedy or a consequence.\n" +
 	voiceDraftFactsAndShape
 
 // voiceDraftOpening and voiceDraftFactsAndShape are the drafting lines every
