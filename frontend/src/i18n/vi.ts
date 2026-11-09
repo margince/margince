@@ -2868,6 +2868,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "common.undo": "Hoàn tác",
   "common.close": "Đóng",
+  "common.unknownValue": "Khác",
   "common.opensNewTab": "(Mở trong tab mới)",
   "common.expand": "Mở rộng",
   "common.collapse": "Thu gọn",

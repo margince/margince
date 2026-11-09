@@ -11,6 +11,7 @@ import { CompanyZoneProvider } from "../../lib/companyzone";
 import { project, project360 } from "../../testing/projects.fixtures";
 import { pretendReaderZone } from "../../testing/readerzone.testkit";
 import { ProjectDetails, ProjectSubtitle } from "./projectdetails";
+import type { Project } from "./projects.form";
 
 // The screen reads the browser's zone here, so the suite names it.
 beforeEach(() => pretendReaderZone(UTC_ZONE));
@@ -166,5 +167,21 @@ describe("the head's lines", () => {
   it("draws no day line without dates", () => {
     show(<ProjectSubtitle view={project360()} />);
     expect(screen.queryByText(/^Day /)).toBeNull();
+  });
+});
+
+// A phase a newer server added still reads as something, not as a blank.
+describe("a phase this build does not know", () => {
+  it("names it with the neutral label", () => {
+    show(
+      <ProjectDetails
+        view={project360({
+          project: project({
+            phase: "a_phase_from_a_later_release" as Project["phase"],
+          }),
+        })}
+      />,
+    );
+    expect(screen.getByText(en["common.unknownValue"])).toBeTruthy();
   });
 });

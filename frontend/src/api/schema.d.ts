@@ -48668,7 +48668,7 @@ export interface components {
             /** @description Verbatim source text (from the page, the pasted text, or the user's own words) — non-empty or the field is absent. */
             evidence_snippet: string;
             /**
-             * @description Where evidence_snippet came from. For self_description the "evidence" is the user's own statement — a self-declared ICP is grounded in that statement (B-E01.13), not fabricated.
+             * @description Where evidence_snippet came from. For self_description the "evidence" is the user's own statement — a self-declared ICP is grounded in that statement, not fabricated.
              * @enum {string}
              */
             source_kind: "url" | "text" | "self_description";
@@ -52095,7 +52095,7 @@ export interface components {
              */
             occurred_at: string;
             /**
-             * @description Maps 1:1 to automation_run.status (data-model §12.5); `blocked` added by ADR-0035 Am.1.
+             * @description Maps 1:1 to automation_run.status; `blocked` added by ADR-0035 Am.1.
              * @enum {string}
              */
             outcome: "fired" | "failed" | "blocked" | "skipped" | "queued_for_approval";
