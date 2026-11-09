@@ -133,6 +133,19 @@ export const DraftRefusedOnReadShareContact: Story = {
       name: "Draft a follow-up",
     });
     await waitFor(() => expect(verb).toHaveProperty("disabled", true));
-    expect(canvas.getByText(en["contact.attachRefused"])).toBeTruthy();
+    const reason = canvas
+      .getByText(en["contact.attachRefused"])
+      .getBoundingClientRect();
+    const snooze = canvas
+      .getByRole("button", { name: "Snooze" })
+      .getBoundingClientRect();
+    // The sentence wraps at a readable width and keeps clear of Snooze.
+    await expect(reason.width).toBeGreaterThan(120);
+    const overlaps =
+      reason.left < snooze.right &&
+      snooze.left < reason.right &&
+      reason.top < snooze.bottom &&
+      snooze.top < reason.bottom;
+    await expect(overlaps).toBe(false);
   },
 };
