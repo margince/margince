@@ -360,12 +360,11 @@ function ActionVerb({
   onAction: (action: ContactMomentAction) => void;
 }>) {
   const t = useT();
-  const gate = useActivityGate(
-    contact,
+  const permissionRefusal =
     action.kind === "schedule_meeting"
       ? "scheduling.bookRefused"
-      : "record.logActivityRefused",
-  );
+      : "record.logActivityRefused";
+  const gate = useActivityGate(contact, permissionRefusal);
   const attaches =
     action.destination?.surface === "booking" ||
     action.destination?.surface === "activity_log";
@@ -373,6 +372,10 @@ function ActionVerb({
   // A rule ladder picks the verb, not a model. Only the bar's lead verb is
   // filled; a press that has the model write the mail carries the ✦.
   const drafts = momentDrafts(action);
+  // Not drawn: the press files an activity the server refuses this seat.
+  if ((attaches || drafts) && gate.refusalKey === permissionRefusal) {
+    return null;
+  }
   const variant = verbVariant(drafts, primary === true);
   return (
     <span className="today-verb">

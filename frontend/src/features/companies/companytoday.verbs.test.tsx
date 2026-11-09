@@ -5,12 +5,14 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { installFetchStub, meRoute } from "../../testing/story-utils";
 import { CompanyNextBar } from "./companynextbar";
 
 // The Next bar's own promise: whenever it names something the reader owes, it
@@ -162,6 +164,57 @@ describe("the Next bar's own fallback verb", () => {
     );
     fireEvent.click(verb);
     expect(drafted).toHaveBeenCalledWith("p-1");
+  });
+});
+
+describe("the Next bar's verbs for a seat that may not write activities", () => {
+  it("draws neither the reply nor Log, and keeps the moment's words", async () => {
+    installFetchStub({ "GET /me": meRoute({ activity: ["read"] }) });
+    show(
+      {
+        ...BASE,
+        moment: MOMENT_NO_DESTINATION,
+        state_strip: {
+          account: { lifecycle: "customer", relationship_types: [] },
+          engagement: {
+            state: "waiting_on_us",
+            last_inbound_at: "2026-08-05T09:00:00Z",
+            last_outbound_at: "2026-07-20T09:00:00Z",
+          },
+        },
+        contacts: {
+          data: [
+            {
+              contact_id: "p-1",
+              full_name: "Dana Buyer",
+              strength: {
+                score: 71,
+                bucket: "strong",
+                factors: {
+                  recency: 0.9,
+                  frequency: 0.6,
+                  reciprocity: 0.8,
+                  direction: 0.8,
+                },
+              },
+              deal_roles: [],
+              consent: {},
+            },
+          ],
+          page: { has_more: false, next_cursor: null },
+        },
+      },
+      { onDraftTo: vi.fn(), onLogActivity: vi.fn() },
+    );
+    expect(screen.getByText(MOMENT_NO_DESTINATION.headline)).toBeTruthy();
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("button", { name: en["today.draft.act"] }),
+      ).toBeNull();
+      expect(
+        screen.queryByRole("button", { name: en["log.title"] }),
+      ).toBeNull();
+    });
   });
 });
 

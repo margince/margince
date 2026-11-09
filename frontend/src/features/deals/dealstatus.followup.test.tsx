@@ -108,3 +108,42 @@ it("offers no follow-up to a seat that may not write activities", async () => {
     ).not.toBeInTheDocument(),
   );
 });
+
+it("offers no follow-up draft to a seat that may not write activities", async () => {
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /deals/demo-deal/status": () =>
+      jsonResponse({
+        deal_id: "demo-deal",
+        story: { sentences: [] },
+        next: {
+          action: "draft_email",
+          reason: "Follow up on the meeting",
+          arguments: {
+            activity_id: "m-1",
+            links: [{ entity_type: "contact", entity_id: "p-1" }],
+          },
+          evidence: [],
+        },
+        generated_at: "2026-08-24T12:00:00Z",
+        generated_by: "deterministic",
+      }),
+    "GET /deals/demo-deal/coverage": () =>
+      jsonResponse({ stakeholders: [], risks: [] }),
+  });
+  render(
+    <StoryProviders>
+      <DealStatusCardPanel
+        deal={{ id: "demo-deal", name: "Demo deal" }}
+        onOpenEmail={vi.fn()}
+      />
+    </StoryProviders>,
+  );
+
+  expect(await screen.findByText("Follow up on the meeting")).toBeVisible();
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("button", { name: "Draft follow-up" }),
+    ).not.toBeInTheDocument(),
+  );
+});

@@ -269,6 +269,7 @@ function FollowUpDraft({
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
+  const writable = useActivityWritable();
   const [target, setTarget] = useState<{
     dealId?: string;
     meetingId: string;
@@ -277,7 +278,7 @@ function FollowUpDraft({
   const check = useCurrentMove<NonNullable<typeof target>>(setTarget);
   const selected = target ?? { dealId, meetingId, recipients };
   const [contact, ...alsoTo] = selected.recipients;
-  if (contact === undefined) return null;
+  if (contact === undefined || !writable) return null;
   return (
     <>
       <Button
