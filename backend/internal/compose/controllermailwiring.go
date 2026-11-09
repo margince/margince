@@ -188,7 +188,9 @@ func (s *Server) rewireConfirmationLane(pool *pgxpool.Pool) {
 		return
 	}
 	queue := NewControllerMailQueue(pool, s.confirmRunner, s.controllerRelay.SenderAddress())
-	s.consentHandlers = s.WithConfirmationLane(queue, confirmLinkVault{s.vault}, s.confirmLinkBase)
+	alarm := receiptAlarm{db: InstallationDB(pool)}
+	s.consentHandlers = s.WithConfirmationLane(queue, confirmLinkVault{s.vault}, s.confirmLinkBase).
+		WithMissedReceipts(alarm)
 	// The session probe answers whether a caller may ask for a confirmation,
 	// and it is this branch that decides whether the lane exists at all. The
 	// early return above leaves the capability false, which is the answer an
@@ -196,7 +198,8 @@ func (s *Server) rewireConfirmationLane(pool *pgxpool.Pool) {
 	s.authHandlers = s.WithContactMailLane(true)
 	s.siteLeadNotices.store.Store(consent.NewStore(InstallationDB(pool)).
 		WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf)).
-		WithConfirmationLane(queue, confirmLinkVault{s.vault}, s.confirmLinkBase))
+		WithConfirmationLane(queue, confirmLinkVault{s.vault}, s.confirmLinkBase).
+		WithMissedReceipts(alarm))
 }
 
 // errNoWorkspaceForConfirmLink marks a seal attempted with no workspace in

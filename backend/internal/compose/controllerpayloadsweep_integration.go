@@ -38,6 +38,7 @@ func DriveControllerPayloadSweepForTest(
 		identity.NewService(pool),
 		comms.NewStore(db, time.Now, activities.NewStore(db)),
 		controllerPayloads{v: vault},
+		receiptAlarm{db: db},
 		slog.New(slog.DiscardHandler))
 	worker.clock = func() time.Time { return now }
 	return worker.Work(ctx, &river.Job[ControllerPayloadSweepArgs]{

@@ -82,36 +82,66 @@ func (s *Store) stageAcknowledgementTx(ctx context.Context, tx pgx.Tx, sub subje
 	if err != nil {
 		return fmt.Errorf("consent: opening receipt preparation: %w", err)
 	}
-	if err := s.prepareAcknowledgementTx(ctx, nested, sub, messageID); err != nil {
+	owed, address, err := s.stageOwedReceiptTx(ctx, nested, sub, messageID)
+	missed := MissedReceipt{SubjectType: sub.entityType, SubjectID: sub.id, MessageID: messageID}
+	if err != nil {
 		if rollbackErr := nested.Rollback(ctx); rollbackErr != nil {
 			return fmt.Errorf("consent: rolling back receipt preparation: %w", rollbackErr)
 		}
-		slog.ErrorContext(ctx, "opt-out receipt could not be staged; the refusal remains recorded", "subject_type", sub.entityType, "subject_id", sub.id, "cause", err)
+		slog.ErrorContext(ctx, "opt-out receipt could not be staged; the refusal remains recorded",
+			"subject_type", sub.entityType, "subject_id", sub.id, "cause", err)
+		// A failure before the rules answered cannot say a receipt was owed.
+		if owed {
+			missed.Reason = MissedReceiptNotPrepared
+			s.raiseMissedReceiptTx(ctx, tx, missed)
+		}
 		return nil
 	}
 	if err := nested.Commit(ctx); err != nil {
 		return fmt.Errorf("consent: committing receipt preparation: %w", err)
 	}
+	if owed && address == "" {
+		missed.Reason = MissedReceiptNoAddress
+		s.raiseMissedReceiptTx(ctx, tx, missed)
+	}
 	return nil
 }
 
-func (s *Store) prepareAcknowledgementTx(ctx context.Context, tx pgx.Tx, sub subject, messageID string) error {
-	// The receipt is owed under the stopping subject's own country's rules.
-	country, err := recipientCountryTx(ctx, tx, ruleSubject{Kind: sub.entityType, ID: sub.id.String()})
-	if err != nil {
-		return err
-	}
-	rules, _, applicable := applicableRules(country.Code)
-	if !applicable {
-		return nil
-	}
-	if !rules.OptOutAcknowledgement {
-		return nil
+// stageOwedReceiptTx stages the receipt when the rules owe one and the subject
+// has an address. It answers whether one is owed and where it went.
+func (s *Store) stageOwedReceiptTx(ctx context.Context, tx pgx.Tx, sub subject, messageID string) (bool, string, error) {
+	owed, dueAt, err := s.receiptOwedTx(ctx, tx, sub)
+	if err != nil || !owed {
+		return false, "", err
 	}
 	address, err := acknowledgementAddressTx(ctx, tx, sub)
 	if err != nil || address == "" {
-		return err
+		return true, "", err
 	}
+	return true, address, s.prepareAcknowledgementTx(ctx, tx, sub, dueAt, address, messageID)
+}
+
+// receiptOwedTx asks the stopping subject's own country's rules whether this
+// refusal owes a receipt, and by when. A nil deadline is a rule that sets none.
+func (s *Store) receiptOwedTx(ctx context.Context, tx pgx.Tx, sub subject) (bool, *time.Time, error) {
+	country, err := recipientCountryTx(ctx, tx, ruleSubject{Kind: sub.entityType, ID: sub.id.String()})
+	if err != nil {
+		return false, nil, err
+	}
+	rules, _, applicable := applicableRules(country.Code)
+	if !applicable || !rules.OptOutAcknowledgement {
+		return false, nil, nil
+	}
+	if rules.OptOutAcknowledgementWithin <= 0 {
+		return true, nil, nil
+	}
+	due := s.now().Add(rules.OptOutAcknowledgementWithin)
+	return true, &due, nil
+}
+
+func (s *Store) prepareAcknowledgementTx(
+	ctx context.Context, tx pgx.Tx, sub subject, dueAt *time.Time, address, messageID string,
+) error {
 	rendered, category, err := RenderControllerTemplate(TemplateOptOutAcknowledgement, time.Time{}, s.mailLanguage(ctx, tx))
 	if err != nil {
 		return err
@@ -119,11 +149,6 @@ func (s *Store) prepareAcknowledgementTx(ctx context.Context, tx pgx.Tx, sub sub
 	rendered, err = s.controllerView(ctx, tx, rendered, category, address)
 	if err != nil {
 		return err
-	}
-	var dueAt *time.Time
-	if rules.OptOutAcknowledgementWithin > 0 {
-		due := s.now().Add(rules.OptOutAcknowledgementWithin)
-		dueAt = &due
 	}
 	_, err = s.confirmSender.QueueConfirmationTx(ctx, tx, ConfirmationSend{ContactID: ids.From[ids.ContactKind](sub.id), Recipient: address, Category: category, MessageID: messageID, DueAt: dueAt, Rendered: rendered})
 	return err
