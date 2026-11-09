@@ -216,12 +216,10 @@ func TestARefusedAnswerTellsTheReaderWhyAndRecordsNothing(t *testing.T) {
 }
 
 func refusalCode(err error) string {
-	var parse *values.ParseError
-	if errors.As(err, &parse) {
+	if parse, ok := errors.AsType[*values.ParseError](err); ok {
 		return parse.Code
 	}
-	var scheduling *SchedulingArgumentError
-	if errors.As(err, &scheduling) {
+	if scheduling, ok := errors.AsType[*SchedulingArgumentError](err); ok {
 		return scheduling.Code
 	}
 	return ""
