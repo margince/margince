@@ -57,12 +57,13 @@ func TestCommitmentMeaningPreservesDeadlinePrecision(t *testing.T) {
 	}
 }
 
-func TestACommitmentConditionMayOpenOnACapital(t *testing.T) {
+func TestACommitmentConditionMayDifferInTheCaseOfItsFirstLetter(t *testing.T) {
 	source := "Mira: Nếu ngân sách được duyệt, tôi sẽ gửi bản nháp vào tuần tới."
 	for condition, valid := range map[string]bool{
 		"Nếu ngân sách được duyệt": true,
 		"Ngân sách được duyệt":     true,
 		"ngân sách được duyệt":     true,
+		"nếu ngân sách được duyệt": true,
 		"NGÂN SÁCH được duyệt":     false,
 		"Ngân sách đã được duyệt":  false,
 	} {

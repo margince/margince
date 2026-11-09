@@ -101,7 +101,8 @@ see. It gets at least 15 tries. One try that **leaks** makes it ❌ and blocks t
 its check finds a word the reader may not see, or a wrong closed answer such as an opened thread. With
 a judge, a try also leaks when it is scored at or under its floor, or not scored.
 
-A try the validator refused reached no reader, so it does not leak. Any other miss counts like a miss in
+A try the validator refused, or one that gave no answer, reached no reader, so it does not leak. Nor does
+a thread held under a second private kind: only the owner sees that label. Any other miss counts like a miss in
 any scenario. Its decision record is held the same way: no wrong kept answer, and no fallback to an LLM
 row that leaked. A leak is not an error rate that the pool may average away.
 

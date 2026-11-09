@@ -7,5 +7,5 @@ fixture: [{"direction": "outbound", "subject": "A migration project", "sent": "2
 expect:
   outcome: accepted
   answer: [{"kind": "new_opportunity", "message": 1, "commercial_role": "supplier"}]
-  rubric: "The project is stated, but this counterparty is not a verified buyer. Preserve the commercial role so automatic proposals cannot treat the intermediary as the customer."
+  rubric: "The project is stated, but this counterparty is not a verified buyer. Preserve the commercial role so automatic proposals cannot treat the intermediary as the customer. buyer_ref is ignored unless commercial_role is buyer."
   bands: {certified_min: 70, degraded_min: 50, floor: 40}

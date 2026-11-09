@@ -157,8 +157,9 @@ func (c *confidentialityCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 		return aitasks.Outcome{
 			Result: aitasks.OutcomeWrongAnswer,
 			Detail: fmt.Sprintf("the model answered %q where the scenario expects %q", answered, c.expected),
-			// The kind decides who may read the thread, so a wrong one is a leak.
-			Leak: true,
+			// Only an opened thread reaches colleagues; a second holding kind is
+			// a label in the owner's own held list.
+			Leak: confidentialityOpens(payload.Results[0], c.row),
 		}
 	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}
@@ -204,7 +205,7 @@ func (c *confidentialityCase) EvaluateDecision(a decision.Answer) aitasks.Outcom
 			Result: aitasks.OutcomeWrongAnswer,
 			Detail: fmt.Sprintf("the decision model answered %q at confidence %.2f where the scenario expects %q",
 				a.Choice, a.Confidence, c.expected),
-			Leak: true,
+			Leak: confidentialityOpens(readConfidentialityDecision(c.row, a), c.row),
 		}
 	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}

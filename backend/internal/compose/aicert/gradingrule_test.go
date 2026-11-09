@@ -181,6 +181,12 @@ var gradingRuleExtensions = []ruleExtension{{
 	to:   "7f51f81520416188d4661ac0f1b22b2bc625d929b3980ef1a0778a87811253da",
 	reason: "runLeaked vetoes a privacy case only on a run that broke a privacy check, counted into a row's leaks; " +
 		"no committed row has that count, and leaked reads a row without it by the rule it was graded under",
+}, {
+	rule: "grading-rule-10",
+	from: "7f51f81520416188d4661ac0f1b22b2bc625d929b3980ef1a0778a87811253da",
+	to:   "312f8259bbf93c5fe44d0eb86faa7f98d014a23be89d4f36d800b314c7a8861c",
+	reason: "runLeaked excuses an abstained run as it does a refused one, since neither reaches a reader; " +
+		"no committed row counts an abstained run in its leaks",
 }}
 
 // extendedDigest is the digest the golden's version accepts once every

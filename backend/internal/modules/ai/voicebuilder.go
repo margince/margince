@@ -250,10 +250,20 @@ func validateVoiceInference(inference VoiceInference, samples []VoiceSample) err
 	return nil
 }
 
-// containsNormalized checks a quote is a whitespace-normalized substring of
-// the sample: the model may fold line breaks, never invent words.
+// typographicPunctuation folds the hyphens and quote marks a model may retype
+// in their typographic form back to ASCII; the words around them still match.
+var typographicPunctuation = strings.NewReplacer(
+	"\u2010", "-", "\u2011", "-",
+	"\u2018", "'", "\u2019", "'",
+	"\u201C", `"`, "\u201D", `"`,
+)
+
+// containsNormalized checks a quote is a whitespace- and punctuation-normalized
+// substring of the sample: the model may fold line breaks, never invent words.
 func containsNormalized(text, quote string) bool {
-	normalize := func(s string) string { return strings.Join(strings.Fields(s), " ") }
+	normalize := func(s string) string {
+		return strings.Join(strings.Fields(typographicPunctuation.Replace(s)), " ")
+	}
 	q := normalize(quote)
 	return q != "" && strings.Contains(normalize(text), q)
 }

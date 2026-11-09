@@ -180,7 +180,9 @@ one certification run can cover:
    fenced prompt wraps in `inRefs`, in `internal/compose/refscript_integration_test.go`. It finds
    each record in the request by text the record shows, and writes the label the request gave it.
    Why a UUID is a bad name for a model:
-   [prompt-shape.md](../explanation/prompt-shape.md#short-refs-not-record-ids).
+   [prompt-shape.md](../explanation/prompt-shape.md#short-refs-not-record-ids). Before you write
+   the prompt's rules, read
+   [Wording a small model reads wrong](../explanation/prompt-shape.md#wording-a-small-model-reads-wrong).
 
 5. **Register the site and bind its case** with one line in the **census**.
    The census is `compose.NewTaskCensus` in `internal/compose/aitaskregistry.go`.

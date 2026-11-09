@@ -407,7 +407,12 @@ func (c *signalExtractCase) disagreements(payload extractPayload) []string {
 		if event.Kind == extractKindCommitment && event.Meaning.withheldOutcome() != "" {
 			continue
 		}
-		reported[fmt.Sprintf("%s@%d:%s", event.Kind, position[event.MessageID], c.promiserKeys[event.PromiserRef])] = true
+		promiser := ""
+		// Only a commitment has a promiser the product reads.
+		if event.Kind == extractKindCommitment {
+			promiser = c.promiserKeys[event.PromiserRef]
+		}
+		reported[fmt.Sprintf("%s@%d:%s", event.Kind, position[event.MessageID], promiser)] = true
 	}
 	wanted := map[string]bool{}
 	for _, event := range c.expected {
