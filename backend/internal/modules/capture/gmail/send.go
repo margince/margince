@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -117,10 +118,8 @@ func (c *Connector) SendEmail(ctx context.Context, auth connector.Auth, msg conn
 	if err != nil {
 		return connector.SendReceipt{}, err
 	}
-	return connector.SendReceipt{
-		ProviderMessageID: id,
-		RFC822MessageID:   c.stampedIdentity(ctx, access, st.Owner, id),
-	}, nil
+	stamped, unread := c.stampedIdentity(ctx, access, st.Owner, id)
+	return connector.SendReceipt{ProviderMessageID: id, RFC822MessageID: stamped, IdentityUnread: unread}, nil
 }
 
 // Carriage declares what this connector transmits
@@ -169,27 +168,27 @@ func (c *Connector) Carriage() connector.Carriage {
 // bounded length. Anything else is reported as no identity at all rather than
 // adopted, which is the already-ratified no-op.
 //
-// EVERY failure returns "". The message has already been transmitted when this
-// runs, and returning an error would hand the delivery back to a retry whose
-// prior-send lookup cannot find a rewritten identity — mailing the recipient a
-// second time to fix a bookkeeping problem. An unread identity costs one
-// duplicate timeline row; a re-mail costs the recipient's trust. This is the
-// one place in this package where an error is deliberately not propagated, and
-// TestSendSucceedsWithNoIdentityWhenTheReadBackFails is what keeps it that way.
+// Every failure returns "", with the failure classified (identityUnreadOf) so
+// comms can recover the identity from the captured echo or record a denial.
+// The message has already been transmitted when this runs. An error would hand
+// the delivery to a retry whose prior-send lookup cannot find a rewritten
+// identity, and the recipient would be mailed twice. This is the one place in
+// this package where an error is not propagated, and
+// TestSendSucceedsWithNoIdentityWhenTheReadBackFails keeps it that way.
 //
 // A connection granted send-but-not-read makes this structurally dead:
 // SendEmail verifies only SendScope, so the read-back 403s and degrades as above.
-func (c *Connector) stampedIdentity(ctx context.Context, access, owner, providerMessageID string) string {
+func (c *Connector) stampedIdentity(ctx context.Context, access, owner, providerMessageID string) (string, connector.IdentityUnread) {
 	sent, err := c.api.GetRaw(ctx, access, providerMessageID)
 	if err != nil {
 		slog.WarnContext(ctx, "gmail: reading back the sent message identity",
 			"err", err, "provider_message_id", providerMessageID)
-		return ""
+		return "", identityUnreadOf(err)
 	}
 	parsed, err := mailmap.Parse(sent.RFC822, owner)
 	if err != nil {
 		slog.WarnContext(ctx, "gmail: parsing the sent message identity", "err", err)
-		return ""
+		return "", ""
 	}
 	id := parsed.ID()
 	if !connector.ValidMessageID(id) {
@@ -199,9 +198,22 @@ func (c *Connector) stampedIdentity(ctx context.Context, access, owner, provider
 		// carry no risk of writing megabytes or control bytes into a log line.
 		slog.WarnContext(ctx, "gmail: the sent copy carries no usable message identity",
 			"provider_message_id", providerMessageID, "identity_bytes", len(id))
-		return ""
+		return "", ""
 	}
-	return id
+	return id, ""
+}
+
+// identityUnreadOf classifies a failed read-back. A rate limit is transient
+// even when Google answers it with a 403, so it is asked first. Any other
+// refused credential is a denial; a server fault or lost connection is transient.
+func identityUnreadOf(err error) connector.IdentityUnread {
+	if _, throttled := errors.AsType[*connector.RateLimitedError](err); throttled {
+		return connector.IdentityUnreadTransient
+	}
+	if errors.Is(err, ErrAuthRejected) {
+		return connector.IdentityUnreadDenied
+	}
+	return connector.IdentityUnreadTransient
 }
 
 // Send transmits one already-encoded RFC822 message via messages.send. No

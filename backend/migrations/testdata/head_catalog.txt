@@ -2633,6 +2633,7 @@ public.comms_outbound_message_unique CREATE UNIQUE INDEX comms_outbound_message_
 public.comms_outbound_one_delivery_per_instruction CREATE UNIQUE INDEX comms_outbound_one_delivery_per_instruction ON public.comms_outbound USING btree (instruction_id) WHERE (instruction_id IS NOT NULL)
 public.comms_outbound_party_admission CREATE INDEX comms_outbound_party_admission ON public.comms_outbound USING btree (activity_id, user_id) WHERE (party_admission_pending AND (status = 'sent'::text) AND (sender_kind = 'user'::text) AND (channel_user_id IS NULL))
 public.comms_outbound_pkey CREATE UNIQUE INDEX comms_outbound_pkey ON public.comms_outbound USING btree (id)
+public.comms_outbound_provider_message CREATE INDEX comms_outbound_provider_message ON public.comms_outbound USING btree (user_id, provider, provider_message_id) WHERE (provider_message_id IS NOT NULL)
 public.comms_outbound_workspace_activity_ix CREATE INDEX comms_outbound_workspace_activity_ix ON public.comms_outbound USING btree (activity_id, id)
 public.communication_basis acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.communication_basis.captured_at timestamp with time zone NOT NULL gen=- def=now()
