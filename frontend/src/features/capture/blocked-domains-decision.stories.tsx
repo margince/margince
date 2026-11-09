@@ -52,7 +52,7 @@ function dialog(initial: Decision) {
 }
 
 const meta: Meta<typeof DecisionDialog> = {
-  title: "Settings/Data/Capture rules/Refused domain decision",
+  title: "Settings/Data/Mail capture/Refused domain decision",
   component: DecisionDialog,
 };
 export default meta;

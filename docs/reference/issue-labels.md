@@ -22,8 +22,8 @@ next reader something false about your finding.
 
 **Priority** says how serious the problem is; the milestone holds the schedule. Do not lower a real
 bug because it is not work for this week. Use the milestone of the month the work is planned
-for ([cut-a-release.md](../how-to/cut-a-release.md#plan-the-work-by-month)). Work that is not for
-this month goes in the next month's milestone, and keeps its real priority:
+for ([cut-a-release.md](../how-to/cut-a-release.md#plan-the-work-by-month)). Work without a planned
+month carries `status: backlog` and keeps its real priority:
 
 | Label | It fits when |
 |---|---|
@@ -46,9 +46,11 @@ to the code it is wrong about. There is no documentation area.
 
 ## Status
 
-**Status**, when it applies, marks an issue nobody *else* should pick up. Nobody can work on
-it, or someone already has it. To leave it off puts the
-issue in the queue of someone:
+**Status** marks work without a planned month, work waiting for a decision, or work someone already owns:
+
+- `status: backlog`: valid work with no planned month. Leave its milestone empty.
+  Set a monthly milestone and remove this label when the work is planned.
+  Keep `status: needs-decision` too if a named decision blocks the work.
 
 - `status: in progress`: someone is working on it right now. It goes on together with the
   assignee when the work starts. It comes off when the last assignee leaves or the issue closes.

@@ -160,11 +160,11 @@ func TestCounterpartyReviewRemainsWithItsImportingSeat(t *testing.T) {
 	engine := NewCounterpartyVerdictEngine(
 		e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default(),
 	)
-	if err := engine.StageReviewsWorkspace(e.Admin(), 0); err != nil {
+	if err := seedLegacySenderReviews(t, e, engine); err != nil {
 		t.Fatal(err)
 	}
 	approval := ids.From[ids.ApprovalKind](stagedProposalID(t, e, disposition))
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	assertCaptureReviewDelivery(t, e, approval.UUID)
 	status := "pending"
 	owner := e.As(e.Rep1, nil, integration.AdminPerms)

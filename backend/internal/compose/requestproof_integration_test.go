@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -141,7 +142,7 @@ func TestFulfillingAnErasureWritesOneProofWithTheErasuresOwnAccount(t *testing.T
 	subject, body := "Loeschantrag Henrike", "Bitte alles loeschen, Ihre Henrike"
 	e.seedNoteFor(t, contact, subject, body)
 	request := e.openRequest(t, "erasure", contact.String())
-	closing := `{"status":"fulfilled","resolution":"erased","identity_check":"id_document","requester_email":"Henrike@Proof.test"}`
+	closing := `{"status":"fulfilled","identity_check":"id_document","requester_email":"Henrike@Proof.test"}`
 
 	e.patch(t, request, closing)
 	first := e.tombstone(t, request)
@@ -205,7 +206,7 @@ func TestARetriedCloseStoresTheFirstErasuresAccount(t *testing.T) {
 	contact := e.SeedContact(t, "Retried Subject", nil)
 	e.seedNoteFor(t, contact, "Bitte loeschen", "Bitte loeschen Sie alles")
 	request := e.openRequest(t, "erasure", contact.String())
-	closing := `{"status":"fulfilled","resolution":"erased","identity_check":"id_document"}`
+	closing := `{"status":"fulfilled","identity_check":"id_document"}`
 
 	dying := consent.NewHandlers(e.DB()).WithEraser(failingAfterErase{inner: privacy.NewEraser(e.DB())})
 	if w := patchWith(e.Admin(), dying, request, closing); w.Code == http.StatusOK {
@@ -230,8 +231,12 @@ func TestARequestWhoseIdentityWasNotCheckedCannotBeFulfilled(t *testing.T) {
 	contact := e.SeedContact(t, "Unverified Subject", nil)
 	for kind, subjectRef := range map[string]string{"access": "unverified@proof.test", "erasure": contact.String()} {
 		request := e.openRequest(t, kind, subjectRef)
-		w := patchWith(e.Admin(), e.handlers, request,
-			`{"status":"fulfilled","resolution":"done","identity_check":"not_verified"}`)
+		// An erasure is answered by the erasure itself, so it sends no text.
+		body := `{"status":"fulfilled","resolution":"done","identity_check":"not_verified"}`
+		if kind == "erasure" {
+			body = `{"status":"fulfilled","identity_check":"not_verified"}`
+		}
+		w := patchWith(e.Admin(), e.handlers, request, body)
 		if w.Code != http.StatusUnprocessableEntity || !strings.Contains(w.Body.String(), "identity_check") {
 			t.Fatalf("%s fulfilled with not_verified → %d %s, want 422 naming identity_check", kind, w.Code, w.Body)
 		}
@@ -264,7 +269,7 @@ func TestClosingARequestFiledByHandNeedsTheIdentityCheck(t *testing.T) {
 	e := setupProofs(t)
 	contact := e.SeedContact(t, "Unchecked Subject", nil)
 	request := e.openRequest(t, "erasure", contact.String())
-	w := patchWith(e.Admin(), e.handlers, request, `{"status":"fulfilled","resolution":"erased"}`)
+	w := patchWith(e.Admin(), e.handlers, request, `{"status":"fulfilled"}`)
 	if w.Code != http.StatusUnprocessableEntity || !strings.Contains(w.Body.String(), "identity_check") {
 		t.Fatalf("a close without an identity check → %d %s, want 422 naming identity_check", w.Code, w.Body)
 	}
@@ -273,5 +278,39 @@ func TestClosingARequestFiledByHandNeedsTheIdentityCheck(t *testing.T) {
 	}
 	if n := e.proofCount(t, request); n != 0 {
 		t.Fatalf("%d proofs after a refused close", n)
+	}
+}
+
+func TestAClosedRequestReadsAndExportsOnlyItsSubjectsProof(t *testing.T) {
+	e := setupProofs(t)
+	subjectContact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Exported subject", Source: "manual", Emails: []contacts.ContactEmailInput{{Email: "subject@demo.test", EmailType: "work", IsPrimary: true}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	contact := ids.UUID(subjectContact.Id)
+	other := e.SeedContact(t, "Other subject", nil)
+	request := e.openRequest(t, "access", contact.String())
+	otherRequest := e.openRequest(t, "access", other.String())
+	e.patch(t, request, `{"status":"fulfilled","identity_check":"id_document","requester_email":"subject@demo.test","resolution":"Export supplied"}`)
+	e.patch(t, otherRequest, `{"status":"rejected","identity_check":"not_verified","resolution":"Identity not verified","requester_email":"subject@demo.test"}`)
+	row, err := e.store.GetDSR(e.Admin(), request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if row.Proof == nil || row.Proof.Result != "fulfilled" || row.Proof.IdentityCheck != "id_document" {
+		t.Fatalf("closed proof = %+v", row.Proof)
+	}
+	exported, err := privacy.AssembleSAR(e.Admin(), e.DB(), ids.From[ids.ContactKind](contact))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(exported.RequestProofs) != 1 {
+		t.Fatalf("exported proofs = %d", len(exported.RequestProofs))
+	}
+	if exported.RequestProofs[0]["request_number"] != row.Proof.RequestNumber {
+		t.Fatalf("wrong proof exported: %+v", exported.RequestProofs)
+	}
+	if _, found := exported.RequestProofs[0]["completed_by_id"]; found {
+		t.Fatal("subject export includes a workspace actor identifier")
 	}
 }

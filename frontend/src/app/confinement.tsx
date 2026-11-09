@@ -1,17 +1,21 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { lazy, Suspense, useState } from "react";
-import { ForcedPasswordChangeScreen } from "../features/sign-in/forcedpassword";
+import { Suspense, useState } from "react";
+
+import { lazy } from "../i18n/lazy";
 import { AuthProbeError, type AuthProbeKind } from "../lib/session";
 import { AuthSplash } from "./bootsplash";
 
 // Split off: the setup carries the QR encoder, which the sign-in surface must not download.
-const ForcedMfaScreen = lazy(() =>
-  import("../features/sign-in/forcedmfa").then((m) => ({
-    default: m.ForcedMfaScreen,
-  })),
-);
+const ForcedMfaScreen = lazy(async () => ({
+  default: (await import("../features/sign-in/forcedmfa")).ForcedMfaScreen,
+}));
+
+const ForcedPasswordChangeScreen = lazy(async () => ({
+  default: (await import("../features/sign-in/forcedpassword"))
+    .ForcedPasswordChangeScreen,
+}));
 
 type ConfinedKind = Extract<
   AuthProbeKind,
@@ -90,7 +94,11 @@ export function ConfinedAccountScreen({
   onResolved: () => void;
 }>) {
   if (kind === "must-change-password") {
-    return <ForcedPasswordChangeScreen onChanged={onResolved} />;
+    return (
+      <Suspense fallback={<AuthSplash />}>
+        <ForcedPasswordChangeScreen onChanged={onResolved} />
+      </Suspense>
+    );
   }
   return (
     <Suspense fallback={<AuthSplash />}>

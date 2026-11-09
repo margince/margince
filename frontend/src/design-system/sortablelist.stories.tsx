@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { SortableList } from "./sortablelist";
 
 // Rows a reader puts in order by hand. The stories hold their own order in
@@ -75,6 +75,24 @@ export const Reorderable: Story = {
     await expect(
       canvas.getByText("Proposal is now step 2 of 4"),
     ).toBeInTheDocument();
+  },
+};
+
+/** The grip shows an open hand, and a closed one while it carries a row. */
+export const GripHand: Story = {
+  render: () => <Ordered />,
+  play: async ({ canvasElement }) => {
+    const grip = await within(canvasElement).findByRole("button", {
+      name: "Move Qualified, step 1 of 4",
+    });
+    await waitFor(() => expect(grip).toBeVisible());
+    await expect(getComputedStyle(grip).cursor).toBe("grab");
+    // One pointer, so the release lands on the press it ends.
+    const user = userEvent.setup();
+    await user.pointer({ keys: "[MouseLeft>]", target: grip });
+    await waitFor(() => expect(getComputedStyle(grip).cursor).toBe("grabbing"));
+    await user.pointer({ keys: "[/MouseLeft]", target: grip });
+    await waitFor(() => expect(getComputedStyle(grip).cursor).toBe("grab"));
   },
 };
 

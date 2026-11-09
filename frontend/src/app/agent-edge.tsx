@@ -2,10 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useEffect, useRef, useState } from "react";
-import { readHue } from "../design-system/margince-core-gl";
+import { readHue } from "../design-system/margince-core-color";
 import { usePrefersReducedMotion } from "../design-system/motion";
 import type { EdgeHues } from "./agent-edge-gl";
-import { type EdgeLoop, runEdgeLoop } from "./agent-edge-loop";
+import type { EdgeLoop } from "./agent-edge-loop";
 import { useEdgeLightShown } from "./agent-edge-preference";
 import { type AgentEdgeRegister, useAgentEdge } from "./agent-edge-signal";
 import "./agent-edge.css";
@@ -164,33 +164,38 @@ function LitEdge({
       readHue("--orbBright"),
       readHue("--orbAmber"),
     ];
-    const started = runEdgeLoop(element, hues, {
-      reduced,
-      // A context lost to a GPU reset is not recoverable in place: the program
-      // and the buffer went with it, so the honest picture of what this machine
-      // can draw is the static rim.
-      onLost: () => {
-        // The handle goes too. A stopped loop still referenced here would be
-        // asked to setLit(false) later, would do nothing, and would never report
-        // going dark, which leaves the canvas mounted for the life of the page.
-        loop.current = null;
-        setLive(false);
-      },
-      onDark: () => onDarkRef.current(),
-    });
-    loop.current = started;
-    // The register before the light: a fresh loop takes its register at once
-    // while dark, so the first lit frame is already in the right one.
-    started?.setRegister(registerRef.current);
-    // A fresh loop opens with its light asked for. When this rebuild happened
-    // while the edge was already on its way out (a motion-preference change
-    // mid-fade), the replacement relit and stayed lit, because the effect below
-    // only runs when `lit` CHANGES and it had not.
-    started?.setLit(litRef.current);
-    setLive(started !== null);
+    let cancelled = false;
+    let release: (() => void) | undefined;
+    void import("./agent-edge-loop")
+      .then(({ runEdgeLoop }) => {
+        if (cancelled) return;
+        const started = runEdgeLoop(element, hues, {
+          reduced,
+          // Context loss keeps the static rim until the signal ends.
+          onLost: () => {
+            // A stopped loop cannot later report that its fade completed.
+            loop.current = null;
+            setLive(false);
+          },
+          onDark: () => onDarkRef.current(),
+        });
+        loop.current = started;
+        // The first lit frame must use the current register.
+        started?.setRegister(registerRef.current);
+        // A preference change during a fade must not relight the replacement.
+        started?.setLit(litRef.current);
+        setLive(started !== null);
+        release = () => {
+          started?.stop();
+          loop.current = null;
+        };
+      })
+      .catch((error: unknown) =>
+        console.error("Agent edge animation could not be loaded", error),
+      );
     return () => {
-      started?.stop();
-      loop.current = null;
+      cancelled = true;
+      release?.();
     };
   }, [reduced]);
 

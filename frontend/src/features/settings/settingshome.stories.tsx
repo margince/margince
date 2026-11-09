@@ -17,10 +17,10 @@ import { SettingsBoundary, SettingsHome } from "./settingshome";
 // The settings address with NO page segment, and the two things it answers when
 // the segment it does carry names no page this reader can open.
 //
-// Neither surface is a catalog page — `SETTINGS_HOME_ID` is deliberately not a
-// member of `SETTINGS_PAGES` — so both live under one node here rather than
-// under a `<Group>/<Page>` that would be a claim about a page that does not
-// exist. `settingsstories.test.ts` names this title for that reason.
+// Neither surface is a catalog page (`SETTINGS_HOME_ID` is not a member of
+// `SETTINGS_PAGES`). So both live under one node here rather than under a
+// `<Group>/<Page>`. Such a node would claim a page that does not exist.
+// `census/rules/settingsstories.census.ts` names this title for that reason.
 //
 // The partition the home draws is REAL: `settingsReach` is the same evaluator
 // the screen and the sidebar read, run over the same snapshot the story serves
@@ -164,7 +164,7 @@ export const ReadOnlyLockTip: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const row = await canvas.findByRole("link", {
-      name: new RegExp(en["settings.tab.fields"]),
+      name: new RegExp(en["settings.tab.records"]),
     });
     row.focus();
     const tip = await within(canvasElement.ownerDocument.body).findByRole(
@@ -192,7 +192,7 @@ export const Phone: Story = {
   render: home(LEAD),
 };
 
-// Every setup step done: the card folds to one success note, steps a press away.
+// Every setup step done: no setup card, the directory leads the page.
 export const SetupComplete: Story = { render: home(LEAD, "answered", true) };
 
 export const SetupCompleteDark: Story = {

@@ -1,0 +1,39 @@
+# CASE 112 — The weekly plan and a company's dossier are both read_details panels.
+# Reading them starts no plan and refreshes no dossier: a refresh would spend the
+# enrich scope, and the user asked only to be told.
+name: case112_my_plan_and_the_dossier
+criteria: [1]
+writes: false
+
+prompt: |
+  What is on my weekly plan right now, and what does the dossier say about
+  Nordholz Anlagenbau GmbH? Only tell me. Change nothing and do not create
+  anything new.
+
+must_call:
+  - read_details
+
+must_call_with:
+  - read_details.action=dossier
+  - read_details.action=weekly_plan
+
+may_call:
+  - find_records
+  - search_records
+  - list_records
+  - read_record
+  - read_context
+  - read_attention
+  - read_workspace
+  - whoami
+
+must_not_call_with:
+  - run_research~.
+  - change_attention~.
+
+must_mention:
+  - "Nordholz"
+  - "(?i)\bplan\b"
+
+runs: 3
+pass_at: 2

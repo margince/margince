@@ -31,5 +31,5 @@ func (h Handlers) SaveMyLocale(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, seatUser(seat))
+	httperr.WriteJSON(w, http.StatusOK, SeatUser(seat))
 }

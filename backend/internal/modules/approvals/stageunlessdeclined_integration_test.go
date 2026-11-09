@@ -90,6 +90,13 @@ func setupStaging(t *testing.T) *stagingEnv {
 	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
 	e.pool, e.svc = pool, NewService(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)))
+	e.svc.WithEffectActor(func(_ context.Context, _ pgx.Tx, by StagedBy) (principal.Principal, error) {
+		actor, ok := principal.Actor(e.asPassport(by.PassportID))
+		if !ok {
+			return principal.Principal{}, errors.New("fixture proposer is absent")
+		}
+		return actor, nil
+	})
 	return e
 }
 

@@ -70,6 +70,9 @@ expect:
   answer:
     cites_label: cap
     names_token: liability
+    # The opening carries the condition and the buyer who set it.
+    leads_with: liability
+    names_author: Tomas
   bands:
     # The floor quotes the two newest waiting threads and is useful alone, so
     # the bar is reading the blocker reliably, not flawlessly.
@@ -79,7 +82,8 @@ expect:
   rubric: >
     Score whether the brief leads with what blocks this deal — the buyer's
     unanswered objection to the liability cap on the MSA redline — rather than
-    with the newest message, a request to resend a file. Score whether it says
+    with the newest message, a request to resend a file, and names Tomas
+    Petrauskas as the buyer who raised it. Score whether it says
     what the objection is in the buyer's terms, and whether it notices that a
     buyer asked for a new link. Penalise any date the summary did not supply,
     and any words from your side reported as a buyer's.

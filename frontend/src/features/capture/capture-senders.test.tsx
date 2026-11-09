@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { heldThreadList } from "../../testing/heldthreads.fixtures";
 import "@testing-library/jest-dom/vitest";
 
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { translate, translatePlural } from "../../i18n";
 import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
@@ -46,7 +47,8 @@ function stubRoutes(waiting: unknown[], senders: unknown[] = []) {
       if (path === "/capture/contacts-awaiting-decision")
         return jsonResponse({ data: waiting });
       if (path === "/me") return jsonResponse(meFixture({ roles: ["rep"] }));
-      if (path === "/capture/held-threads") return jsonResponse({ data: [] });
+      if (path === "/capture/held-threads")
+        return jsonResponse(heldThreadList());
       if (path === "/me/linkedin-reach")
         return jsonResponse(linkedInReachFixture());
       return jsonResponse({});
@@ -84,7 +86,12 @@ async function openList(
       name: translate("en", "connectionOutcomes.viewNamed", { name: list }),
     }),
   );
-  return within(await screen.findByRole("dialog", { name: list }));
+  const dialog = await screen.findByRole("dialog", { name: list });
+  if (list === "Sender decisions")
+    await user.click(
+      within(dialog).getByRole("button", { name: "Browse recent senders" }),
+    );
+  return within(dialog);
 }
 
 function settingRowOf(label: HTMLElement): HTMLElement {
@@ -278,7 +285,7 @@ it("links a sender to its contact beside its mail count and newest message", asy
   const row = within(rowOf(link));
   expect(row.getByText("1,204")).toBeVisible();
   expect(
-    row.getByText(formatDateTime(LAST_SEEN, "en", viewerZone())),
+    row.getByText(formatDateTime(LAST_SEEN, "en", browserZone())),
   ).toBeVisible();
   expect(read.filter((path) => path.startsWith("/contacts/"))).toEqual([]);
 });

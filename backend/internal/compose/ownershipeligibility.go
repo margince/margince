@@ -41,7 +41,7 @@ var (
 // recordType. Each is a live human seat that can write, as
 // EnsureHandOverRecipient rules, and their role may read and change the type.
 func handOverRecipientsTx(ctx context.Context, tx pgx.Tx, recordType string, candidates []ids.UUID) (map[ids.UUID]bool, error) {
-	seated, err := auth.EligibleHandOverRecipients(ctx, tx, candidates)
+	seated, err := auth.EligibleAssignees(ctx, tx, candidates)
 	if err != nil {
 		return nil, err
 	}

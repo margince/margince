@@ -30,8 +30,19 @@ export function needsStory(file) {
 
 export const ALL_STORIES_FLAG = "--all-stories";
 
-export function scopeFor(argv) {
-  return argv.includes(ALL_STORIES_FLAG) ? "all" : "diff";
+export function baseRefFor(env) {
+  const ref = env.FE_UAT_BASE_REF ?? "origin/main";
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._/-]*$/.test(ref)) {
+    throw new Error("FE_UAT_BASE_REF must name a git ref");
+  }
+  return ref;
+}
+
+export function scopeFor(argv, changed = []) {
+  return argv.includes(ALL_STORIES_FLAG) ||
+    changed.some((file) => file.startsWith("frontend/.storybook/"))
+    ? "all"
+    : "diff";
 }
 
 export function storiesInScope(entries, scope, importPaths) {
@@ -63,10 +74,11 @@ export function uatVerdict({
   return { pass, emptyCensus };
 }
 
-export function changesSince(git, base) {
+export function changesSince(git, base, { includeDeleted = false } = {}) {
+  const filter = includeDeleted ? " --no-renames" : " --diff-filter=d";
   return [
     ...new Set([
-      ...git(`diff --name-only --diff-filter=d ${base}`).split("\n"),
+      ...git(`diff --name-only${filter} ${base}`).split("\n"),
       ...git("ls-files --others --exclude-standard").split("\n"),
     ]),
   ].filter(Boolean);

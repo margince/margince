@@ -1,0 +1,43 @@
+name: sales_assessment_names_the_deal_no_decision_covers
+task: report_interpret
+site: sales_assessment
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+# Two open deals, and an earlier review already left an open decision on one.
+# The assessment reads the figures and names the deal no decision covers.
+fixture:
+  frame:
+    scope: Whole company
+    period: this_quarter
+    window: "2026-10-01 to 2026-12-31"
+    currency: EUR
+    today: "2026-11-03"
+  cells:
+    - {label: bookings_won, value: "216000 EUR", unit: EUR, window: "2026-10-01 to 2026-11-03", coverage: ok}
+    - {label: forecast_landing, value: "410000 EUR", unit: EUR, window: "2026-10-01 to 2026-12-31", coverage: ok}
+    - {label: open_pipeline, value: "370000 EUR", unit: EUR, window: "2026-10-01 to 2026-11-03", coverage: ok}
+    - {label: closed_win_rate, value: "0.33 ratio", unit: ratio, window: "2026-10-01 to 2026-11-03", coverage: ok}
+  candidate_deals:
+    - {label: linden, name: "Linden press line", amount: "250000 EUR"}
+    - {label: tern, name: "Tern customer portal", amount: "120000 EUR"}
+  decisions:
+    - deal: tern
+      text: "Agree the portal scope with the buyer's IT lead"
+      review_on: "2026-11-10"
+      status: open
+expect:
+  outcome: accepted
+  answer:
+    cites: [bookings_won, open_pipeline]
+    next_decision: linden
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the assessment reads the figures as given and names the deal
+    that matters. It must cite sales won and the open pipeline, and acknowledge
+    the decision still open on the Tern customer portal. The next decision must
+    name the Linden press line, the one open deal no decision covers yet, with
+    one concrete thing to decide. Recommending again on Tern, which the open
+    decision already covers, scores low; no decision at all fails.

@@ -21,10 +21,11 @@ import { leadIdentityName } from "../../format/leadname";
 import { toMinorUnits } from "../../format/minorunits";
 import { useLocale, useT } from "../../i18n";
 import { leadPromotePreviewKey, leadWriteKeys } from "../../lib/leadkeys";
-import { usePipelines } from "../../lib/pipelines.queries";
+import { defaultPipelineOf, usePipelines } from "../../lib/pipelines.queries";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { useInstallationSettings } from "../../lib/uploadlimit";
+import { useViewerZone } from "../../lib/viewerzone";
+import { useLeadCompanyNameReading } from "./leadcompany";
 import {
   ExistingQualificationDeal,
   type QualificationDealChoice,
@@ -198,7 +199,7 @@ function QualificationForm({
   const t = useT();
   const { locale } = useLocale();
   // The signal is an activity, so its day is the record's.
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const queryClient = useQueryClient();
   const pipelines = usePipelines(open);
   // The money pair holds from birth: an amount travels with the
@@ -234,15 +235,19 @@ function QualificationForm({
   const [note, setNote] = useState("");
   const typedCompany = preview.data?.typed_company;
 
-  const defaultPipeline =
-    pipelines.data?.find((p) => p.is_default) ?? pipelines.data?.[0];
+  const defaultPipeline = defaultPipelineOf(pipelines.data ?? []);
   const chosenPipeline =
     pipelines.data?.find((p) => p.id === pipelineId) ?? defaultPipeline;
   const stages = openStagesOf(chosenPipeline);
   const chosenStage = stages.find((s) => s.id === stageId) ?? stages[0];
+  // The linked company's own name, which a rename there may have moved away
+  // from what the lead typed. The deal this dialog offers to open carries the
+  // name into a record of its own, so the stale one would outlive the lead.
+  const company = useLeadCompanyNameReading(lead);
+  const companyName = company.name ?? leadIdentityName(lead);
   const suggestedName = chosenStage
-    ? `${lead.company_name ?? leadIdentityName(lead)} — ${chosenStage.name}`
-    : (lead.company_name ?? leadIdentityName(lead));
+    ? `${companyName} — ${chosenStage.name}`
+    : companyName;
 
   const qualify = useMutation({
     mutationFn: async (body: PromoteLeadRequest) => {
@@ -306,6 +311,7 @@ function QualificationForm({
     { selectedDeal, withDeal, invalidSelection },
     preview,
     { amountInvalid, amountWaitsForCurrency },
+    { nameSettling: company.settling && !dealName.trim() },
   );
   const name = leadIdentityName(lead);
 

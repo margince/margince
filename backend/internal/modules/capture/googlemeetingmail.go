@@ -51,7 +51,7 @@ func googleMeetingMailTx(ctx context.Context, tx pgx.Tx, activityID ids.UUID, em
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS(SELECT 1 FROM activity a WHERE a.id=$1
  AND a.inbound_sender_authenticated AND a.counterparty_email IS NOT DISTINCT FROM $2
- AND `+auth.ActivityAvailableClause("a")+`)`,
+ AND `+auth.ActivityExternalEvidenceClause("a")+`)`,
 		activityID, correspondence.Fold(email)).Scan(&authenticated); err != nil {
 		return false, fmt.Errorf("capture: reading whether the message's sender was authenticated: %w", err)
 	}

@@ -142,9 +142,26 @@ if reported; then
   fail "a file carrying //go:build integration was reported — the tag is what the whole rule is stated in terms of"
 fi
 
+# --- a stripper failure still prints the other files' reports ---------------
+
+plant opens 'package x
+
+func TestOpensAConnection(t *testing.T) {
+	conn, _ := pgx.Connect(ctx, dsn)
+	_ = conn
+}'
+printf 'package x\n' > "$TMP/repo/backend/unreadable_test.go"
+{ echo 'FILENAME ~ /unreadable_test\.go$/ { exit 2 }'; cat "$SCRIPT_DIR/lib-strip-go-comments.awk"; } \
+  > "$TMP/repo/scripts/lib-strip-go-comments.awk"
+if out="$(cd "$TMP/repo" && ./scripts/check-test-lanes.sh 2>&1)"; then
+  fail "a file the stripper could not read passed the gate"
+elif ! grep -q 'VIOLATION.*opens_test.go' <<<"$out"; then
+  fail "a stripper failure on one file hid the violation report of another"
+fi
+
 if [[ "$FAILURES" -ne 0 ]]; then
   echo "" >&2
   echo "$FAILURES case(s) failed." >&2
   exit 1
 fi
-echo "==> test-lanes census: comments are prose, strings and calls are code (8 cases)"
+echo "==> test-lanes census: comments are prose, strings and calls are code (9 cases)"

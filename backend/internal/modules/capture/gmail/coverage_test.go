@@ -50,7 +50,7 @@ func realConn(t *testing.T, mux *http.ServeMux) *Connector {
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 	oauth := NewOAuth(OAuthConfig{ClientID: "cid", ClientSecret: "sec", TokenURL: srv.URL + "/token"})
-	return New(oauth, NewAPI(srv.Client(), srv.URL))
+	return New(oauth, newTestAPI(t, srv.Client(), srv.URL))
 }
 
 // fullStub answers every endpoint the connect+backfill path touches; any
@@ -181,7 +181,7 @@ func TestSyncSkipsDeliverySystemMail(t *testing.T) {
 func TestClientUnreachableWhenServerDown(t *testing.T) {
 	srv := httptest.NewServer(http.NewServeMux())
 	srv.Close() // nothing will answer
-	api := NewAPI(srv.Client(), srv.URL)
+	api := newTestAPI(t, srv.Client(), srv.URL)
 	if _, _, err := api.Profile(context.Background(), "at"); !errors.Is(err, ErrUnreachable) {
 		t.Fatalf("Profile against a closed server = %v, want ErrUnreachable", err)
 	}
@@ -194,7 +194,7 @@ func TestGetRawRejectsBadBase64(t *testing.T) {
 	})
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
-	if _, err := NewAPI(srv.Client(), srv.URL).GetRaw(context.Background(), "at", "m1"); err == nil {
+	if _, err := newTestAPI(t, srv.Client(), srv.URL).GetRaw(context.Background(), "at", "m1"); err == nil {
 		t.Fatal("GetRaw should reject undecodable base64")
 	}
 }
@@ -217,7 +217,7 @@ func TestHistoryFollowsPagination(t *testing.T) {
 	})
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
-	ids, _, hist, err := NewAPI(srv.Client(), srv.URL).History(context.Background(), "at", "1")
+	ids, _, hist, err := newTestAPI(t, srv.Client(), srv.URL).History(context.Background(), "at", "1")
 	if err != nil {
 		t.Fatalf("History: %v", err)
 	}

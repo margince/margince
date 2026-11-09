@@ -98,23 +98,11 @@ func TestPendingThreadsComeFirst(t *testing.T) {
 	}
 }
 
-// The ledger outlives the message it was raised about — first_activity_id is
-// ON DELETE SET NULL, because losing the verdict would re-open a thread a
-// classifier already held. An inner join would drop exactly those rows.
-func TestAThreadWhoseMessageWasErasedIsStillListed(t *testing.T) {
+func TestAThreadWithoutAnyReadableMessageIsAbsent(t *testing.T) {
 	e := integration.Setup(t)
 	seedVerdictOrphan(t, e, e.Rep1, "thread-orphan", "held", "personal", 1)
-
-	got := heldThreads(t, e, e.Rep1)
-	if len(got) != 1 {
-		t.Fatalf("%d threads, want 1 — a verdict with no activity still holds", len(got))
-	}
-	if got[0].HasActivity {
-		t.Error("an orphaned verdict reports an activity it does not have — " +
-			"which the card draws as a message with a blank subject line")
-	}
-	if got[0].Kind != "personal" {
-		t.Errorf("kind = %q, want personal — the verdict survives its evidence", got[0].Kind)
+	if got := heldThreads(t, e, e.Rep1); len(got) != 0 {
+		t.Fatalf("orphaned threads=%+v", got)
 	}
 }
 
@@ -124,8 +112,7 @@ func TestAThreadWhoseMessageWasErasedIsStillListed(t *testing.T) {
 // This is the caller's OWN mailbox, so the clause admits them and the subject
 // arrives — which is exactly why the rule is easy to leave out and why nothing
 // on the happy path notices. What it buys is the row the clause refuses: a
-// verdict whose activity the caller may not read the content of is still listed
-// (they are holding it, and must be able to release it) and carries no subject.
+// verdict whose activity the caller may not read is omitted.
 func TestAHeldThreadCarriesItsSubjectOnlyWhenTheReaderMayReadIt(t *testing.T) {
 	e := integration.Setup(t)
 	seedVerdict(t, e, e.Rep1, "thread-mine", "held", "legal", 1)
@@ -170,32 +157,8 @@ func TestAHeldThreadWithholdsAMessageTheReaderIsNotOn(t *testing.T) {
 		t.Fatalf("seeding the verdict: %v", err)
 	}
 
-	got := heldThreads(t, e, e.Rep1)
-	if len(got) != 1 {
-		t.Fatalf("%d threads, want 1 — the row is the caller's to see", len(got))
-	}
-	if got[0].Subject == "Entwurf Aufhebungsvertrag" {
-		t.Error("a message the caller is not on handed them its subject — " +
-			"the content clause is not composed")
-	}
-	// And no id either. The id is what a client OPENS, so handing one out for
-	// a message whose subject is withheld would route the reader straight to
-	// the words the line above just refused them. It is read from the joined
-	// activity row for exactly this reason — the ledger's own
-	// first_activity_id carries no content gate.
-	if got[0].ActivityID != nil {
-		t.Errorf("a message the caller is not on handed them its id (%v) — "+
-			"the id is read from the ledger rather than the gated join",
-			*got[0].ActivityID)
-	}
-	// Refusing the content is right; reporting the message GONE is not. The
-	// screen draws a row with no activity as "no message at all", which tells a
-	// holder their evidence was destroyed while it sits in the thread. That is
-	// the confusion HasActivity exists to prevent, arriving from the other
-	// side: not evidence destroyed read as unnamed, but evidence withheld read
-	// as destroyed.
-	if !got[0].HasActivity {
-		t.Error("a message that exists and is merely withheld reports itself erased")
+	if got := heldThreads(t, e, e.Rep1); len(got) != 0 {
+		t.Fatalf("unreadable threads=%+v", got)
 	}
 }
 
@@ -240,11 +203,11 @@ func TestAHeldThreadCarriesTheMessageItsReaderMayOpen(t *testing.T) {
 
 func heldThreads(t *testing.T, e *integration.Env, user ids.UUID) []capture.HeldThread {
 	t.Helper()
-	got, err := capture.HeldThreadsFor(purgeCtx(e, user), InstallationDB(e.Pool))
+	got, err := capture.HeldThreadsFor(purgeCtx(e, user), InstallationDB(e.Pool), capture.HeldThreadQuery{})
 	if err != nil {
 		t.Fatalf("listing held threads: %v", err)
 	}
-	return got
+	return got.Threads
 }
 
 // seedVerdict writes one ledger row and the message it was raised about. The
@@ -353,7 +316,7 @@ func listHeldThreads(t *testing.T, e *integration.Env, user ids.UUID,
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/v1/capture/held-threads", nil).
 		WithContext(purgeCtx(e, user))
-	handlers.ListHeldThreads(w, r)
+	handlers.ListHeldThreads(w, r, crmcontracts.ListHeldThreadsParams{})
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200: %s", w.Code, w.Body.String())
 	}

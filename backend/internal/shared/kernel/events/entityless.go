@@ -26,6 +26,9 @@ package events
 // link (audit_log OR system_log) so the outcome stays attributable — Validate
 // enforces the trace, only the entity is relaxed.
 var pipelineEventTypes = map[string]struct{}{
+	// Source policy and owner consent are private configuration, not webhook subjects.
+	"capture_settings.updated":      {},
+	"internal_mail_history.created": {},
 	// Reporting changes carry private configuration; they are not webhook subscriptions.
 	"reporting.changed": {},
 	// Host settings and invitation delivery state feed private UI recovery;
@@ -39,11 +42,15 @@ var pipelineEventTypes = map[string]struct{}{
 	"legal_entity.updated":      {},
 	"legal_entity.archived":     {},
 	"legal_entity.member_added": {},
-	"capture.received":          {},
-	"capture.normalized":        {},
-	"capture.failed":            {},
-	"capture.skipped":           {},
-	"ai_task.state_changed":     {},
+	// A collection-notice declaration is read through the consent_config
+	// grant; a consumer re-reads it there.
+	"existing_customer_notice.created":   {},
+	"existing_customer_notice.withdrawn": {},
+	"capture.received":                   {},
+	"capture.normalized":                 {},
+	"capture.failed":                     {},
+	"capture.skipped":                    {},
+	"ai_task.state_changed":              {},
 	// A Brief open names no record it could hand a consumer: the subject is the
 	// READING, not the run, and the run is the reader's own queue. Entity-less
 	// is also what keeps it off the subscribable set — see its schema in

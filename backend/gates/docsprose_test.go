@@ -15,11 +15,12 @@ package gates
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 var (
@@ -364,7 +365,7 @@ func TestDocsProseMeetsTheHouseBar(t *testing.T) {
 			continue
 		}
 		path := filepath.Join(docsTreeRoot, f.path)
-		raw, err := os.ReadFile(path)
+		raw, err := gatekit.ReadFile(path)
 		if err != nil {
 			t.Fatalf("read %s: %v", f.path, err)
 		}

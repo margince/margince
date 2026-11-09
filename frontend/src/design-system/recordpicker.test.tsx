@@ -16,7 +16,7 @@ import { RecordPicker, type RecordPickerCandidate } from "./recordpicker";
 
 // RecordPicker is the debounced search→candidate-list→pick pattern that
 // MergeAction (components/merge.tsx) and AddRelationshipAction
-// (features/records/relationships.tsx) share. These specs pin what those two
+// (components/relationships.tsx) share. These specs pin what those two
 // call sites rely on. The search waits 250ms, and an empty term clears the list
 // instead of searching. A search error shows inline rather than being thrown,
 // and a picked candidate reaches onPick.
@@ -29,6 +29,65 @@ const candidates: RecordPickerCandidate[] = [
 ];
 
 describe("RecordPicker", () => {
+  it("lists default candidates on focus only when requested and collapses them after a pick", async () => {
+    const searchTargets = vi.fn().mockResolvedValue(candidates);
+    const onPick = vi.fn();
+    rtlRender(
+      <RecordPicker
+        label="Search…"
+        searchOnFocus
+        searchTargets={searchTargets}
+        onPick={onPick}
+      />,
+    );
+    expect(searchTargets).not.toHaveBeenCalled();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("searchbox"));
+    await user.click(await screen.findByRole("button", { name: "Anna Weber" }));
+    expect(searchTargets).toHaveBeenCalledWith("");
+    expect(onPick).toHaveBeenCalledWith(candidates[0]);
+    expect(screen.queryByRole("button", { name: "Anna Weber" })).toBeNull();
+    searchTargets.mockResolvedValue([{ id: "c3", name: "New company" }]);
+    await user.click(screen.getByRole("searchbox"));
+    expect(
+      await screen.findByRole("button", { name: "New company" }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Anna Weber" })).toBeNull();
+  });
+
+  it("ignores a late default answer after the reader types a search", async () => {
+    let resolveDefault: ((rows: RecordPickerCandidate[]) => void) | undefined;
+    const defaults = new Promise<RecordPickerCandidate[]>((resolve) => {
+      resolveDefault = resolve;
+    });
+    const searchTargets = vi.fn((query: string) =>
+      query ? Promise.resolve([{ id: "new", name: "Typed result" }]) : defaults,
+    );
+    rtlRender(
+      <RecordPicker
+        label="Search…"
+        searchOnFocus
+        searchTargets={searchTargets}
+        onPick={vi.fn()}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("searchbox"));
+    await waitFor(() => expect(searchTargets).toHaveBeenCalledWith(""));
+    await user.type(screen.getByRole("searchbox"), "typed");
+    expect(
+      await screen.findByRole("button", { name: "Typed result" }),
+    ).toBeTruthy();
+    const resolve = resolveDefault;
+    if (!resolve) throw new Error("The default search has no resolver");
+    await act(async () => {
+      resolve([{ id: "old", name: "Old default" }]);
+      await defaults;
+    });
+    expect(screen.queryByRole("button", { name: "Old default" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Typed result" })).toBeTruthy();
+  });
+
   it("debounces the typed term and renders the resolved candidates", async () => {
     const searchTargets = vi.fn().mockResolvedValue(candidates);
     rtlRender(

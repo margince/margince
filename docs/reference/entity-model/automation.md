@@ -6,7 +6,7 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 
 ## automation
 
-15 columns · primary key `(id)` · referenced by 0 foreign keys
+16 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -18,7 +18,8 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 | `origin` | `text`, default `'catalog'::text` | yes | One of `catalog`, `agent_authored`. |
 | `owner_id` | `uuid` |  | The member the rule runs as. |
 | `params` | `jsonb`, default `'{}'::jsonb` | yes |  |
-| `paused_reason` | `text` |  | Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, or one check moved more than 100 records. |
+| `paused_reason` | `text` |  | Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, one check moved more than 100 records, or the agent that set the rule up no longer has a live passport or connection, whether revoked or expired. |
+| `setter_passport_id` | `uuid` |  | The passport of the agent that turned this rule on, which the rule stops with. |
 | `tier` | `text`, default `'confirmation_required'::text` | yes | One of `auto_execute`, `confirmation_required`. |
 | `trigger` | `jsonb` | yes |  |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
@@ -31,11 +32,12 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `owner_id` | `app_user` | deleting the parent keeps this row and clears the link |
+| `setter_passport_id` | `passport` | deleting the parent keeps this row and clears the link |
 
 **Rules**
 
 - `automation_origin_check`: `CHECK ((origin = ANY (ARRAY['catalog', 'agent_authored'])))`
-- `automation_paused_reason_check`: `CHECK ((paused_reason = ANY (ARRAY['list_archived', 'list_invalid', 'list_unavailable', 'burst'])))`
+- `automation_paused_reason_check`: `CHECK ((paused_reason = ANY (ARRAY['list_archived', 'list_invalid', 'list_unavailable', 'burst', 'passport_revoked'])))`
 - `automation_tier_check`: `CHECK ((tier = ANY (ARRAY['auto_execute', 'confirmation_required'])))`
 - `automation_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
@@ -95,6 +97,7 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 
 **Indexes**
 
+- `idx_workflow_run_failed_trigger`: `btree (trigger_event) WHERE (status = 'failed')`
 - `workflow_run_by_automation`: `btree (handler, "right"(idempotency_key, 36), created_at DESC, id DESC) WHERE (status <> 'skipped')`
 - `workflow_run_pkey`: `unique, btree (id)`
 - `workflow_run_troubled`: `btree (created_at DESC, id DESC) WHERE (status = ANY (ARRAY['failed', 'blocked']))`

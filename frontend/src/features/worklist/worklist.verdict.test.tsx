@@ -40,7 +40,7 @@ function dealRow(verdict: unknown) {
 }
 
 describe("the standing beside the step", () => {
-  it("draws the standing, the sentence and who is speaking", async () => {
+  it("keeps the standing and the sentence behind a dated earlier assessment", async () => {
     stub(
       day({
         queue: [
@@ -63,7 +63,11 @@ describe("the standing beside the step", () => {
         ?.classList.contains("badge-danger"),
     ).toBe(false);
     expect(screen.getByText("Legal has not returned the DPA.")).toBeTruthy();
-    expect(screen.getByText("Earlier assessment")).toBeTruthy();
+    // The assessment is history: it stays shut behind its dated summary.
+    const opener = screen
+      .getByText(/^Earlier assessment · /)
+      .closest("summary");
+    expect(opener?.getAttribute("aria-expanded")).toBe("false");
   });
 
   // The night's finding is prose about the deal and carries no standing word.
@@ -99,12 +103,12 @@ describe("the standing beside the step", () => {
     renderWorklist();
 
     expect(await screen.findByText("Fleet retrofit")).toBeTruthy();
-    expect(screen.queryByText("Earlier assessment")).toBeNull();
+    expect(screen.queryByText(/^Earlier assessment/)).toBeNull();
     // The deterministic explanation is still there.
     expect(screen.getByText(/41/)).toBeTruthy();
   });
 
-  it("says when the reading was taken, so a stale one can be told", async () => {
+  it("dates the earlier assessment, so a stale one can be told", async () => {
     stub(
       day({
         queue: [
@@ -119,10 +123,10 @@ describe("the standing beside the step", () => {
     );
     renderWorklist();
 
-    expect(await screen.findByText(/^As of /)).toBeTruthy();
+    expect(await screen.findByText(/^Earlier assessment · \d/)).toBeTruthy();
   });
 
-  it("says nothing about when a reading with no instant was taken", async () => {
+  it("names no date for an assessment with no instant", async () => {
     stub(
       day({
         queue: [
@@ -133,6 +137,6 @@ describe("the standing beside the step", () => {
     renderWorklist();
 
     expect(await screen.findByText("Quiet since June.")).toBeTruthy();
-    expect(screen.queryByText(/^As of /)).toBeNull();
+    expect(screen.getByText("Earlier assessment")).toBeTruthy();
   });
 });

@@ -21,6 +21,7 @@ type InputCheck = components["schemas"]["InputCheck"];
 
 const RUN: Assurance = {
   run_id: "r-1",
+  review_deliveries: { pending: 0, failed: 0, delivered: 0 },
   as_of: "2026-09-07T03:00:00Z",
   status: "complete",
   readiness: "ready",
@@ -32,7 +33,6 @@ const RUN: Assurance = {
     changed_signals: 0,
     workspace_changed: false,
   },
-  review_deliveries: { pending: 0, failed: 0, delivered: 0 },
 };
 
 function check(id: string, label: string, changed: boolean | null): InputCheck {
@@ -57,9 +57,6 @@ function show(run: Assurance, checks: InputCheck[]) {
       const url = String(input instanceof Request ? input.url : input);
       if (url.includes("/forecast/assurance/exceptions")) {
         return jsonResponse({ data: checks });
-      }
-      if (url.includes("/forecast/assurance/enforcement")) {
-        return jsonResponse({}, 404);
       }
       if (url.includes("/forecast/assurance")) {
         return jsonResponse(run);
@@ -183,7 +180,7 @@ describe("an input check the records moved past", () => {
 
     expect(
       await screen.findByText(
-        "It is not known whether the records changed since this check: no check that read every source has run since Margince started tracking changes. Choose Check again to run one.",
+        "Margince has not yet confirmed whether the records changed since this check. Wait for an update, or choose Check again to read them now.",
       ),
     ).toBeTruthy();
     expect(
@@ -198,30 +195,5 @@ describe("an input check the records moved past", () => {
     await screen.findByRole("link", { name: "Fleet retrofit" });
     expect(screen.queryByText("Out of date")).toBeNull();
     expect(badgeOf("Ready")).toContain("badge-success");
-  });
-});
-
-describe("a customer review whose task could not be delivered", () => {
-  it("says how many and that the next check tries again", async () => {
-    show(
-      { ...RUN, review_deliveries: { pending: 1, failed: 2, delivered: 4 } },
-      [],
-    );
-
-    expect(
-      await screen.findByText(
-        "2 customer reviews could not be handed to their owners as tasks. The next check tries again.",
-      ),
-    ).toBeTruthy();
-  });
-
-  it("says nothing while every delivery is on its way or done", async () => {
-    show(
-      { ...RUN, review_deliveries: { pending: 1, failed: 0, delivered: 4 } },
-      [],
-    );
-
-    expect(await screen.findByText("Ready")).toBeTruthy();
-    expect(screen.queryByText(/could not be handed/)).toBeNull();
   });
 });

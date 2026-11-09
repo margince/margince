@@ -23,7 +23,6 @@ package gates
 
 import (
 	"go/ast"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -66,7 +65,7 @@ func TestEveryEventConsumerIsSubscribed(t *testing.T) {
 func subscribedConsumers(t *testing.T) map[string]bool {
 	t.Helper()
 	dir := filepath.Join(gatekit.ModuleRoot(t), "cmd", "worker")
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading cmd/worker: %v", err)
 	}
@@ -131,7 +130,7 @@ func calledFunctions(body *ast.BlockStmt) []string {
 func composeEventConsumers(t *testing.T) []string {
 	t.Helper()
 	dir := filepath.Join(gatekit.ModuleRoot(t), "internal", "compose")
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading internal/compose: %v", err)
 	}

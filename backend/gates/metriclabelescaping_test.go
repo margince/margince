@@ -52,6 +52,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // labelWithQuoteVerb matches a Prometheus label pair written with Go's %q:
@@ -201,7 +203,7 @@ func waived(lines []string, i int) bool {
 // which prose does not produce, and this file's own essay is proof of it.
 func expositionFiles(t *testing.T, visit func(path, code string)) {
 	t.Helper()
-	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

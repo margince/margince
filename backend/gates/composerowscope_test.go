@@ -65,11 +65,10 @@ const (
 	// row-scope primitives interpolate, and so the references this gate is about.
 	rowScopeVocabularyPkg = "internal/platform/auth"
 
-	// wantMinimumScopedSites guards against the way this gate fails silently: an
-	// extractor that stops recognising SQL finds no sites and reports nothing,
-	// which is indistinguishable from a clean tier. Fifteen stand today; the
-	// floor sits below that rather than on it, so removing a read stays an
-	// ordinary change and only a collapse is a finding.
+	// wantMinimumScopedSites guards against the way this gate fails silently. An
+	// extractor that stops recognising SQL finds no sites, which reads as a clean
+	// tier. The floor sits below today's count, so removing a read stays an
+	// ordinary change and a collapse fails.
 	wantMinimumScopedSites = 10
 )
 
@@ -85,6 +84,7 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	"internal/compose:tagScoutSQL":                  "the tag scout's one read of captured activities that mention a suggestible tag's phrases, under the tag-scout sweep's system principal: every contact and company it names is one a suggestion is filed against, handed to collections.RecordTagSuggestionTx and never to a reader",
 	"internal/compose:raiseFromAnswers":             "the tag scout's model path replays the stored model answers into the contacts and companies the answered activities are filed under, under the tag-scout sweep's system principal, on tagScoutSQL's terms: each record goes to collections.RecordTagSuggestionTx and never to a reader",
 	"internal/compose:forecastStageEvidence":        "the recorded stage entries behind a stage's chance, read installation-wide as the system; the deal ids are grouped by stage inside the read and only per-stage counts and won shares are returned",
+	"internal/compose:viabilityFingerprintSQL":      "a digest of what a viability assessment read about one deal: the participant and address rows are folded into one md5 inside the statement and only that hash is stored on the receipt and compared, so no contact or seat id leaves the read",
 	"internal/compose:forecastRiskEffects":          "the settled frozen forecast rows behind each risk signal's effect, read installation-wide as the system; only one odds ratio per signal is returned",
 	"internal/compose/weekly:StageEntriesSQL":       "a fragment whose narrowing argument carries the row scope: both callers, measureTeamFunnel and readReportingStageConversion, render auth.ScopeClauseFor for deal on its alias d into it",
 	"internal/modules/projects:LinkPhaseHistoryTx":  "the data task that links phase-history rows to their audit rows runs as the system principal and returns only the ids of the history rows it inspected, to page the next batch; it reads no project and serves nothing to a caller",
@@ -885,7 +885,7 @@ func projectedBytes(sql string) []bool {
 // something other than the referenced record itself.
 func boundToCallerArgument(sql, column string) bool {
 	return compiledPattern(
-		`\b(?:[A-Za-z_][\w]*\.)?` + column + `\s*(?:=|IN)\s*(?:ANY\s*\(\s*)?\$\d+`).MatchString(sql)
+		`\b(?:[A-Za-z_][\w]*\.)?` + column + `\s*(?:=|IN)\s*(?:ANY\s*\(\s*)?(?:\$\d+|@[A-Za-z_][\w]*)`).MatchString(sql)
 }
 
 // selectSpan locates one SELECT: [from, to) is its projection, and [to, stop)
@@ -978,7 +978,7 @@ func tierFiles(t *testing.T, root string) []tierFile {
 	t.Helper()
 	fset := gatekit.SourceFileSet()
 	var files []tierFile
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 			strings.HasSuffix(path, "_test.go") || isIntegrationTagged(path) {
 			return err

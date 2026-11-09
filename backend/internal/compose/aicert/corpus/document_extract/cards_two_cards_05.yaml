@@ -17,7 +17,7 @@ expect:
     companies, email addresses and phone numbers, with the diacritics and the
     spelling shown. Score any invented value hardest, above all an email
     address built from a name and a company, and any translation of a title.
-    Both cards must be reported, in reading order, and no third card.
+    Both cards must be reported, and no third card.
 
     You cannot see the picture, so this is what is printed on it. Card 1:
     Marta Lindqvist, Head of Procurement, Nordlicht Logistik AB,

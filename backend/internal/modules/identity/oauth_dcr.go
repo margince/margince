@@ -15,6 +15,11 @@ import (
 // stores the token it gets, and never renews with it.
 var oauthGrantTypesSupported = []string{oauthGrantAuthorizationCode, oauthRefreshToken}
 
+// dcrSubstitutableAuthMethods are the token_endpoint_auth_method values a
+// registration may ask for; each is registered as none. A key- or TLS-bound
+// method is refused, since a client that asks for one cannot work without it.
+var dcrSubstitutableAuthMethods = []string{"", oauthAuthMethodNone, oauthAuthMethodSecretBasic, oauthAuthMethodSecretPost}
+
 // dcrRequest is the part of an RFC 7591 registration document this server
 // acts on.
 type dcrRequest struct {
@@ -28,8 +33,11 @@ type dcrRequest struct {
 // dcrRefusal is a refusal RFC 7591 §3.2.2 names: the code is the error
 // member, the message its description. A concrete type rather than an error,
 // so the endpoint cannot answer anything but an RFC 7591 document.
+//
+// member names what was refused and is all the log keeps: a description can
+// quote a redirect URI the caller sent, credentials and all.
 type dcrRefusal struct {
-	code, description string
+	code, description, member string
 }
 
 // parseDCR ignores every member it does not read: a client registering with
@@ -56,24 +64,29 @@ func parseDCR(members map[string]json.RawMessage) (dcrRequest, *dcrRefusal) {
 }
 
 func (req dcrRequest) validate() *dcrRefusal {
-	// Public clients only: PKCE is the proof of possession. A client
-	// asking for a secret-based method is asking to be privileged —
-	// refused, and there is no column to store a secret in anyway. An
-	// omitted method is taken as none, and the echo says so (§3.2.1).
-	if req.TokenEndpointAuthMethod != "" && req.TokenEndpointAuthMethod != oauthAuthMethodNone {
+	// Public clients only: PKCE is the proof of possession, and only an admin
+	// mints a secret. A server may replace requested metadata, so a client
+	// asking for a secret method is registered as public. The echo of none
+	// tells it so. The Gemini app asks for client_secret_basic.
+	if !slices.Contains(dcrSubstitutableAuthMethods, req.TokenEndpointAuthMethod) {
 		return &dcrRefusal{
 			oauthErrInvalidClientMetadata,
-			"only public clients register here (token_endpoint_auth_method must be none)",
+			fmt.Sprintf("token_endpoint_auth_method: %q is not served here; register with %q",
+				req.TokenEndpointAuthMethod, oauthAuthMethodNone),
+			"token_endpoint_auth_method",
 		}
 	}
 	if req.ClientName == "" || len(req.RedirectURIs) == 0 {
-		return &dcrRefusal{oauthErrInvalidClientMetadata, "client_name and redirect_uris are required"}
+		return &dcrRefusal{
+			oauthErrInvalidClientMetadata, "client_name and redirect_uris are required", "client_name, redirect_uris",
+		}
 	}
 	for _, raw := range req.RedirectURIs {
 		if !validRedirectURI(raw) {
 			return &dcrRefusal{
 				oauthErrInvalidRedirectURI,
 				fmt.Sprintf("%q: redirect uris must be https, or http on localhost", raw),
+				"redirect_uris",
 			}
 		}
 	}
@@ -83,6 +96,7 @@ func (req dcrRequest) validate() *dcrRefusal {
 		return &dcrRefusal{
 			oauthErrInvalidClientMetadata,
 			"grant_types: every connection begins with authorization_code, so the list must include it",
+			"grant_types",
 		}
 	}
 	for _, grant := range req.GrantTypes {
@@ -90,6 +104,7 @@ func (req dcrRequest) validate() *dcrRefusal {
 			return &dcrRefusal{
 				oauthErrInvalidClientMetadata,
 				fmt.Sprintf("grant_types: %q is not issued here; supported: %v", grant, oauthGrantTypesSupported),
+				"grant_types",
 			}
 		}
 	}
@@ -98,6 +113,7 @@ func (req dcrRequest) validate() *dcrRefusal {
 			return &dcrRefusal{
 				oauthErrInvalidClientMetadata,
 				fmt.Sprintf("response_types: %q is not served here; only %q is", responseType, oauthResponseTypeCode),
+				"response_types",
 			}
 		}
 	}
@@ -139,6 +155,7 @@ func dcrMember[T any](members map[string]json.RawMessage, name string) (T, *dcrR
 		return value, &dcrRefusal{
 			oauthErrInvalidClientMetadata,
 			fmt.Sprintf("%s: the value has the wrong type for this member", name),
+			name,
 		}
 	}
 	return value, nil

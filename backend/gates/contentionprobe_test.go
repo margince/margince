@@ -152,7 +152,7 @@ func scanTrees(t *testing.T, check func(path string, file *ast.File) []string) [
 // scanTree parses every Go file under root and returns what check finds in each.
 func scanTree(root string, check func(path string, file *ast.File) []string) ([]string, error) {
 	var findings []string
-	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

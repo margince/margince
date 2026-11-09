@@ -16,10 +16,15 @@
 import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
+import { changeFieldKey } from "../lib/changecopy";
 import type { Receipt } from "../lib/handled";
 import { useReceiptUndo } from "../lib/receiptundo";
+import { BundleUndo } from "./marginchanges";
 
-export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
+export function ReceiptUndo({
+  receipt,
+  onDone,
+}: Readonly<{ receipt: Receipt; onDone?: () => void }>) {
   const t = useT();
   const writable = useCanWrite("deal", "update");
   const receiptUndo = useReceiptUndo();
@@ -29,6 +34,17 @@ export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
   // system decided is revisitable through the record it named.
   if (!undo) {
     return null;
+  }
+  if (receiptUndo.undone && receipt.kind === "deal_close_lost") {
+    return <span role="status">{t("worklist.handled.closeLostUndone")}</span>;
+  }
+  const field = changeFieldKey(receipt.kind);
+  if (receiptUndo.undone && field) {
+    return (
+      <span role="status">
+        {t("worklist.handled.verdictUndone", { field: t(field) })}
+      </span>
+    );
   }
   if (undo.reversed || receiptUndo.undone) {
     return <span>{t("worklist.handled.putBackDone")}</span>;
@@ -40,6 +56,26 @@ export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
   if (subject?.type !== "deal") {
     return null;
   }
+  // An opened or reopened deal undoes through the bundle path, which asks
+  // before it archives or closes work the team added since.
+  if (receipt.kind === "deal_open" || receipt.kind === "deal_revive") {
+    return (
+      <BundleUndo
+        bundles={[
+          {
+            deal_id: subject.id,
+            deal_name: subject.label ?? "",
+            version: undo.version,
+            audit_log_ids: [undo.audit_log_id],
+            kinds: [receipt.kind],
+            latest_at: receipt.occurred_at,
+          },
+        ]}
+        label={t("common.undo")}
+        onDone={onDone}
+      />
+    );
+  }
   const kind = subject.type;
   return (
     <>
@@ -48,12 +84,15 @@ export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
         pending={receiptUndo.pending}
         busyLabel={t("history.undo.busy")}
         onClick={() =>
-          receiptUndo.press({
-            kind,
-            id: subject.id,
-            auditId: undo.audit_log_id,
-            version: undo.version,
-          })
+          receiptUndo.press(
+            {
+              kind,
+              id: subject.id,
+              auditId: undo.audit_log_id,
+              version: undo.version,
+            },
+            onDone,
+          )
         }
       >
         {t("common.undo")}

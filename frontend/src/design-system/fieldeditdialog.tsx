@@ -11,20 +11,14 @@ import {
   useState,
 } from "react";
 import { useT } from "../i18n";
+import { isParagraphCommit } from "../lib/fieldcommit";
 import { isImeCommit } from "../lib/imecommit";
 import { problemMessageOf } from "../lib/problem";
 import { Button, Field, type FieldControl } from "./atoms";
 import { refuseUnreadableField } from "./formvalidity";
 import { RecordFormDialog } from "./recordformdialog";
 
-export const FIELD_COMMIT_KEY = "Enter";
-
-/** A paragraph commits on ⌘/Ctrl+Enter, because Enter there is a newline. */
-export function isParagraphCommit(
-  event: Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey">,
-): boolean {
-  return event.key === FIELD_COMMIT_KEY && (event.metaKey || event.ctrlKey);
-}
+export { FIELD_COMMIT_KEY, isParagraphCommit } from "../lib/fieldcommit";
 
 /** What the dialog hands the one control it holds. */
 export type FieldEditControl = Readonly<{
@@ -41,7 +35,8 @@ export type FieldEditDialogProps = Readonly<{
   label: string;
   /** The stored value. Each opening starts the draft from it. */
   value: string;
-  hint?: ReactNode;
+  /** A function hint speaks for the draft, so it can follow the pick. */
+  hint?: ReactNode | ((draft: string) => ReactNode);
   onClose: () => void;
   /** Resolves once stored; a throw is the refusal, shown on the field. */
   onSave: (next: string) => Promise<void>;
@@ -164,7 +159,8 @@ export function FieldEditDialog({
           <Field
             label={label}
             labelHidden
-            hint={hint}
+            hint={typeof hint === "function" ? hint(draft) : hint}
+            hintLive={typeof hint === "function"}
             error={failure ?? undefined}
           >
             {(control) => children({ control, draft, setDraft, saving })}

@@ -7,21 +7,14 @@
 // backing MCP tool verb + declared tier (`x-mcp-tool`) or the
 // `x-agent-access` class (`human-only` | `auth-bootstrap`).
 //
-// It is also the contract drift-lint (interfaces.md §2 fail-closed rule):
-// a MUTATING operation carrying NEITHER annotation fails generation, so an
-// un-tiered endpoint cannot ship — the gate would default-deny it at
-// runtime anyway, but the lint keeps the contract honest at build time.
-//
-// Reads are emitted too, and the asymmetry is deliberate on both sides. A
-// read carrying no annotation is ordinary agent-readable data, so it is not
-// a defect and gets no row: the contract annotates the EXCEPTIONS to agent
-// readability, not the rule. But an annotated read is exactly as binding as
-// an annotated write, and emitting only mutating rows is what previously
-// made `x-agent-access: human-only` on a `get:` a comment — dropped at
-// build time, with the runtime gate structurally unable to see it.
+// It is also the contract's fail-closed drift-lint.
+// An operation a principal reaches fails generation, read or write, when it
+// carries neither annotation. The gate refuses a route it has no row for.
+// The refusal suggests the placement (placement.go) but never writes it.
 package main
 
 import (
+	"cmp"
 	"flag"
 	"fmt"
 	"go/format"
@@ -47,14 +40,25 @@ type policy struct {
 	Tier       string // x-mcp-tool tier: auto_execute | confirmation_required | dynamic
 	Scope      string // x-mcp-tool scope: the passport cap the operation consumes
 	ServedBy   string // x-mcp-tool served_by: "registry" when the handler runs the tool
+	Router     string // x-mcp-tool router: the listed tool that fronts this verb (served_by: route)
+	Action     string // x-mcp-tool action: the router's name for this verb
+	AskFirst   bool   // x-mcp-tool ask_user_first: the app confirms this act before it runs
+	// HumanOnlyReason is x-human-only-reason: why an agent may not reach an
+	// operation its user reaches in the app (security | covered | pending).
+	HumanOnlyReason string
 }
 
 func main() {
 	in := flag.String("in", "", "authoritative crm.yaml")
 	out := flag.String("out", "", "generated Go table")
+	agentsDir := flag.String("agents", "", "the agents package, whose routers a route-backed action names")
 	flag.Parse()
-	if *in == "" || *out == "" {
-		log.Fatal("gen-agentpolicy: -in and -out are required")
+	if *in == "" || *out == "" || *agentsDir == "" {
+		log.Fatal("gen-agentpolicy: -in, -out and -agents are required")
+	}
+	routers, rErr := registeredRouters(*agentsDir)
+	if rErr != nil {
+		log.Fatalf("gen-agentpolicy: %v", rErr)
 	}
 
 	src, err := os.ReadFile(*in)
@@ -82,6 +86,7 @@ func main() {
 	policies, defects := derivePolicies(doc.Paths)
 	defects = append(defects, vocab.violations(policies)...)
 	defects = append(defects, scopeCoherence(policies)...)
+	defects = append(defects, routeBackedDefects(policies, routers)...)
 	if len(defects) > 0 {
 		sort.Strings(defects)
 		log.Fatalf("gen-agentpolicy: the contract violates the ADR-0055 fail-closed invariant:\n  %s", strings.Join(defects, "\n  "))
@@ -94,7 +99,23 @@ func main() {
 	if vErr != nil {
 		log.Fatalf("gen-agentpolicy: %v", vErr)
 	}
-	formatted, err := format.Source([]byte(renderTable(policies, vocab) + renderViews(views)))
+	var raw struct {
+		Components struct {
+			Schemas map[string]any `yaml:"schemas"`
+		} `yaml:"components"`
+	}
+	if err := yaml.Unmarshal(src, &raw); err != nil {
+		log.Fatalf("gen-agentpolicy: parsing %s: %v", *in, err)
+	}
+	shapes, sErr := routeShapes(doc.Paths, doc.Components.Parameters, doc.Components.Schemas, raw.Components.Schemas, policies,
+		func(p policy) bool { return p.ServedBy == routeServed })
+	if sErr != nil {
+		log.Fatalf("gen-agentpolicy: %v", sErr)
+	}
+	if defects := nonJSONBodies(shapes); len(defects) > 0 {
+		log.Fatalf("gen-agentpolicy: the contract violates the ADR-0055 fail-closed invariant:\n  %s", strings.Join(defects, "\n  "))
+	}
+	formatted, err := format.Source([]byte(renderTable(policies, vocab) + renderViews(views) + renderRouteShapes(shapes)))
 	if err != nil {
 		log.Fatalf("gen-agentpolicy: formatting the generated table: %v", err)
 	}
@@ -107,8 +128,9 @@ func main() {
 // derivePolicies classifies every mutating operation and collects the
 // contract defects the fail-closed rule refuses to ship.
 func derivePolicies(paths map[string]map[string]yaml.Node) ([]policy, []string) {
-	var policies []policy
+	var policies, unannotated []policy
 	var defects []string
+	tags := map[string][]string{}
 	for path, item := range paths {
 		for method, node := range item {
 			httpMethod, isOperation := oasnode.HTTPMethods[method]
@@ -116,24 +138,39 @@ func derivePolicies(paths map[string]map[string]yaml.Node) ([]policy, []string) 
 				continue // parameters, summary, and the other path-item keys
 			}
 			var op struct {
-				OperationID string `yaml:"operationId"`
+				OperationID string   `yaml:"operationId"`
+				Tags        []string `yaml:"tags"`
 				MCPTool     *struct {
 					Verb       string `yaml:"verb"`
 					RecordType string `yaml:"record_type"`
 					Tier       string `yaml:"tier"`
 					Scope      string `yaml:"scope"`
 					ServedBy   string `yaml:"served_by"`
+					Router     string `yaml:"router"`
+					Action     string `yaml:"action"`
+					AskFirst   bool   `yaml:"ask_user_first"`
 				} `yaml:"x-mcp-tool"`
-				AgentAccess string                 `yaml:"x-agent-access"`
-				Security    *[]map[string][]string `yaml:"security"`
+				AgentAccess     string                 `yaml:"x-agent-access"`
+				HumanOnlyReason string                 `yaml:"x-human-only-reason"`
+				Audience        string                 `yaml:"x-settings-audience"`
+				Security        *[]map[string][]string `yaml:"security"`
 			}
 			if err := node.Decode(&op); err != nil {
 				log.Fatalf("gen-agentpolicy: %s %s: %v", httpMethod, path, err)
 			}
 			p := policy{Route: httpMethod + " /v1" + path, Op: op.OperationID}
+			tags[p.Route] = op.Tags
+			if defect := cmp.Or(reasonDefect(op.AgentAccess, op.HumanOnlyReason, op.Security), audienceDefect(op.Audience)); defect != "" {
+				defects = append(defects, fmt.Sprintf("%s %s (%s): %s", httpMethod, path, op.OperationID, defect))
+				continue
+			}
 			switch {
+			case op.AgentAccess != "" && op.MCPTool != nil:
+				defects = append(defects, fmt.Sprintf("%s %s (%s): x-mcp-tool and x-agent-access give opposite answers; keep one", httpMethod, path, op.OperationID))
+				continue
 			case op.AgentAccess == "human-only" || op.AgentAccess == "auth-bootstrap":
 				p.Access = op.AgentAccess
+				p.HumanOnlyReason = op.HumanOnlyReason
 			case op.AgentAccess != "":
 				defects = append(defects, fmt.Sprintf("%s %s (%s): unknown x-agent-access %q", httpMethod, path, op.OperationID, op.AgentAccess))
 				continue
@@ -144,6 +181,9 @@ func derivePolicies(paths map[string]map[string]yaml.Node) ([]policy, []string) 
 				p.Tier = op.MCPTool.Tier
 				p.Scope = op.MCPTool.Scope
 				p.ServedBy = op.MCPTool.ServedBy
+				p.Router = op.MCPTool.Router
+				p.Action = op.MCPTool.Action
+				p.AskFirst = op.MCPTool.AskFirst
 				if p.Tool == "" || (p.Tier != "auto_execute" && p.Tier != "confirmation_required" && p.Tier != "dynamic") {
 					defects = append(defects, fmt.Sprintf("%s %s (%s): x-mcp-tool needs a verb and an auto_execute|confirmation_required|dynamic tier", httpMethod, path, op.OperationID))
 					continue
@@ -156,19 +196,19 @@ func derivePolicies(paths map[string]map[string]yaml.Node) ([]policy, []string) 
 					defects = append(defects, fmt.Sprintf("%s %s (%s): x-mcp-tool declares no scope — name the passport cap this operation consumes", httpMethod, path, op.OperationID))
 					continue
 				}
-			case mutating[httpMethod]:
-				defects = append(defects, fmt.Sprintf("%s %s (%s): mutating operation carries neither x-mcp-tool nor x-agent-access", httpMethod, path, op.OperationID))
-				continue
-			case op.Security != nil && len(*op.Security) == 0:
+			case !mutating[httpMethod] && op.Security != nil && len(*op.Security) == 0:
 				continue // anonymous: no principal, so no agent, ever reaches it
 			default:
 				// The gate refuses a route it has no row for, read or write. So
 				// an unannotated read is a defect, as a mutation is.
-				defects = append(defects, fmt.Sprintf("%s %s (%s): operation carries neither x-mcp-tool nor x-agent-access — name the verb that serves it on MCP, or mark it human-only", httpMethod, path, op.OperationID))
+				unannotated = append(unannotated, p)
 				continue
 			}
 			policies = append(policies, p)
 		}
+	}
+	for _, p := range unannotated {
+		defects = append(defects, unannotatedDefect(p, policies, tags))
 	}
 	return policies, defects
 }
@@ -228,6 +268,14 @@ type agentPolicy struct {
 	Tier       agentTier       // contract-declared autonomy tier; zero when it declares none
 	Scope      agentScope      // the passport cap the operation consumes (Access == accessTool)
 	ServedBy   agentServedBy   // registry: the handler's tool call admits it
+	Router     string          // the listed router fronting Tool (ServedBy == servedByRoute)
+	Action     string          // the router's name for Tool
+	// AskUserFirst: the app asks its user to confirm this act, so the tool
+	// tells an agent to ask first too.
+	AskUserFirst bool
+	// HumanOnlyReason says why a human-only operation stays out of an agent's
+	// reach; empty for one no signed-in user reaches either.
+	HumanOnlyReason agentHumanOnlyReason
 }
 
 // agentPolicies is keyed by "METHOD <chi route pattern>" as the generated
@@ -240,6 +288,15 @@ var agentPolicies = map[string]agentPolicy{
 		// Written only where declared, so the marker stands out in the table.
 		if p.ServedBy != "" {
 			fmt.Fprintf(&b, ", ServedBy: %q", p.ServedBy)
+		}
+		if p.Router != "" {
+			fmt.Fprintf(&b, ", Router: %q, Action: %q", p.Router, p.Action)
+		}
+		if p.AskFirst {
+			b.WriteString(", AskUserFirst: true")
+		}
+		if p.HumanOnlyReason != "" {
+			fmt.Fprintf(&b, ", HumanOnlyReason: %q", p.HumanOnlyReason)
 		}
 		b.WriteString("},\n")
 	}

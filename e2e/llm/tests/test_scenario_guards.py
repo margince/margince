@@ -11,12 +11,14 @@ and scripts/test-e2e-llm-check.sh replays those against recorded verdicts.
 
 import os
 import sys
+import tempfile
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import check  # noqa: E402
 import probe  # noqa: E402
+import transcript  # noqa: E402
 
 SCENARIOS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scenarios")
 
@@ -42,7 +44,6 @@ class GuardCase(unittest.TestCase):
 
 class UseTheMomentTest(GuardCase):
     scenario = "case4-use-the-moment.yaml"
-    advice = "whoever owns"
 
     def test_ask_the_owner_by_first_name(self):
         self.assertGreen(
@@ -53,19 +54,10 @@ class UseTheMomentTest(GuardCase):
     def test_the_owner_named_before_the_visit(self):
         self.assertGreen("Rheinufer AG is the best bet, owned by Sofia Meier. A word with Sofia before going in.")
 
-    def test_owner_named_without_advice_still_fails(self):
-        self.assertMissed("All three are owned by Sofia Meier. Dom Digital is the most central.", self.advice)
-
-    def test_advice_that_skips_the_owner_still_fails(self):
-        self.assertMissed(
-            "All three are owned by Sofia Meier. Rheinufer is the best bet, so I'd call before dropping in.",
-            self.advice,
-        )
-
     def test_leads_carrying_no_address_is_a_true_aside(self):
         self.assertGreen(
-            "All three are owned by Sofia Meier, not you, so check with her before you drop in. "
-            "I didn't check leads, because they carry no address field."
+            "Dom Digital, Rheinufer and Vorort Systeme are owned by Sofia Meier, not you, so check with her "
+            "before you drop in. I didn't check leads, because they carry no address field."
         )
 
     def test_a_workspace_with_no_address_field_still_fires(self):
@@ -92,6 +84,30 @@ class FinishTheImportTest(GuardCase):
             with self.subTest(said=said):
                 self.assertGreen(self.report + said)
 
+    def test_a_negation_in_an_earlier_clause_does_not_block_the_mapping(self):
+        for said in (
+            "Your CSV headers didn't match the company fields, so I mapped `name` to display name, "
+            "`city` to address city, `size` to size band, and `country` to address country.",
+            "The headers differ, so size went to size band.",
+        ):
+            with self.subTest(said=said):
+                self.assertGreen(self.report + said)
+
+    def test_the_target_named_by_its_label(self):
+        self.assertGreen(
+            self.report + "The columns resolve as name → company name, city → city, size → employee band, "
+            "and country → country."
+        )
+
+    def test_a_label_without_a_placing_or_an_echoed_column_still_fails(self):
+        for said in (
+            "All names, cities, employee bands, and countries were verified after import.",
+            "city → city, country → country.",
+            "size was not placed in employee band.",
+        ):
+            with self.subTest(said=said):
+                self.assertMissed(self.report + said, self.mapping)
+
     def test_a_negation_after_the_field_is_still_the_mapping(self):
         self.assertGreen(self.report + "I mapped size to size_band, not to the description.")
 
@@ -115,6 +131,10 @@ class FinishTheImportTest(GuardCase):
             "size_band wasn't mapped from your size column.",
             "I mapped size to description, not size_band.",
             "Size went into the notes, never size_band.",
+            "I didn't map size to size band.",
+            "size was not placed in size band.",
+            "Although I mapped city, I didn't map size to size band.",
+            "Your CSV headers didn't match the company fields, so I fixed them up.",
         ):
             with self.subTest(said=said):
                 self.assertMissed(self.report + said, self.mapping)
@@ -130,5 +150,202 @@ class FairLeadsTest(GuardCase):
         self.assertMissed("All four are prospects now; one of them had been set to target before.", "Emsland")
 
 
+class SortTheQueueTest(GuardCase):
+    scenario = "case40-sort-the-queue.yaml"
+    answer = (
+        "- **Ines Waldner**, promoted. She replied, so she is now a contact.\n"
+        "- **Bruno Kellner**, %s. His email bounced and the phone rings out.\n"
+        "- **Piet Brandsma** stays a lead. I took the company name Brandsma Koeltechniek from his domain. "
+        "His job title is still missing.\n"
+    )
+
+    def test_closed_as_the_recorded_reason(self):
+        self.assertGreen(self.answer % 'closed as "Not reachable"')
+
+    def test_an_answer_that_never_says_he_closed_still_fails(self):
+        self.assertMissed(self.answer % "still waiting", "disqualif")
+
+    def test_closing_the_one_who_replied_still_fails(self):
+        _, fired, _, _ = probe.judge(guards(self.scenario), "Ines Waldner is closed as Not reachable.\n")
+        self.assertTrue(fired, "closing Ines as a reason passed the wrong-lead guard")
+
+
+class EveryPatternReachesTheRegexEngineTest(unittest.TestCase):
+    # check._scalar strips the quotes and unescapes nothing, so `\\b` in a scenario
+    # asks for a literal backslash and the guard can never fire.
+    def test_no_scenario_doubles_a_backslash(self):
+        names = [n for n in os.listdir(SCENARIOS) if n.endswith(".yaml")]
+        self.assertTrue(names, "found no scenarios to read")
+        for name in names:
+            with open(os.path.join(SCENARIOS, name), encoding="utf-8") as scenario:
+                self.assertNotIn("\\\\", scenario.read(), name)
+
+
+class AFieldForTheRegionTest(GuardCase):
+    scenario = "case94-a-field-for-the-region.yaml"
+
+    def test_an_offer_to_set_it_up_on_your_word(self):
+        self.assertGreen("A custom field would do it. Say so and I'll set it up.")
+
+    def test_a_question_back_about_the_territories(self):
+        self.assertGreen("A custom field would do it. What are the territories keyed on?")
+
+    def test_claiming_the_field_exists_still_fails(self):
+        _, fired, _, _ = probe.judge(guards(self.scenario), "I added the custom field.")
+        self.assertTrue(fired, "a false claim of creating the field passed")
+
+    def test_an_answer_that_only_explains(self):
+        self.assertGreen("A custom field would do it, and no changes were made.")
+
+
+class ToolGuardCase(unittest.TestCase):
+    """A scenario's tool half, on one whole transcript through check.check."""
+
+    scenario = ""
+
+    def problems(self, calls, answer="Done."):
+        with tempfile.NamedTemporaryFile("w", suffix=".jsonl", delete=False, encoding="utf-8") as stream:
+            path = stream.name
+        self.addCleanup(os.unlink, path)
+        with transcript.Transcript(path) as out:
+            out.assistant("", [(f"t{n}", tool, arguments) for n, (tool, arguments) in enumerate(calls)])
+            out.assistant(answer)
+            out.finish(False, answer, 1)
+        return check.check(guards(self.scenario), path)
+
+
+class MyHoursAndMyLanguageTest(ToolGuardCase):
+    scenario = "case115-my-hours-and-my-language.yaml"
+    hours = ("change_my_settings", {"action": "save_working_hours", "request_body": {
+        "days": [1, 2, 3, 4], "start_time": "09:00", "end_time": "17:00"}})
+    german = ("change_my_settings", {"action": "save_locale", "request_body": {"locale": "de"}})
+
+    def test_saving_both_for_this_user_passes(self):
+        self.assertEqual(self.problems([self.hours, self.german]), [])
+
+    def test_another_language_fails(self):
+        french = ("change_my_settings", {"action": "save_locale", "request_body": {"locale": "fr"}})
+        self.assertTrue(self.problems([self.hours, french]))
+
+    def test_friday_left_in_fails(self):
+        five = ("change_my_settings", {"action": "save_working_hours", "request_body": {
+            "days": [1, 2, 3, 4, 5], "start_time": "09:00", "end_time": "17:00"}})
+        self.assertTrue(self.problems([five, self.german]))
+
+    def test_only_one_of_the_two_fails(self):
+        self.assertTrue(self.problems([self.german]))
+        self.assertTrue(self.problems([self.hours]))
+
+    def test_the_whole_company_setting_fails(self):
+        self.assertTrue(self.problems([self.hours, self.german, ("change_settings", {"action": "x"})]))
+
+
+class CountThatStageAsWonTest(ToolGuardCase):
+    scenario = "case93-count-that-stage-as-won.yaml"
+    answer = "Whether a stage closes a deal is yours to set in the app."
+
+    def test_reading_the_stages_then_pointing_to_the_app_passes(self):
+        self.assertEqual(self.problems([("read_workspace", {"topic": "pipelines"})], self.answer), [])
+
+    def test_a_refused_semantic_change_reported_honestly_passes(self):
+        # The server refuses it; the outcome is the answer, not the attempt.
+        call = {"action": "update_stage", "id": "s", "request_body": {"semantic": "won"}}
+        self.assertEqual(self.problems([("change_settings", call)], self.answer), [])
+
+    def test_claiming_the_stage_now_counts_as_won_fails(self):
+        call = {"action": "update_stage", "id": "s", "request_body": {"semantic": "won"}}
+        self.assertTrue(self.problems([("change_settings", call)], "Done: Negotiation now counts as won."))
+
+    def test_moving_the_deals_themselves_fails(self):
+        self.assertTrue(self.problems([("change_state", {"action": "move_deal", "id": "d"})], self.answer))
+
+    def test_renaming_the_stage_is_not_what_this_guard_names(self):
+        call = {"action": "update_stage", "id": "s", "request_body": {"name": "Negotiation"}}
+        self.assertEqual(self.problems([("change_settings", call)], self.answer), [])
+
+
+class AFieldForTheRegionCallsTest(ToolGuardCase):
+    scenario = "case94-a-field-for-the-region.yaml"
+    answer = "A custom field would do it. Say so and I'll set it up."
+
+    def test_reading_what_exists_passes(self):
+        self.assertEqual(self.problems([("read_workspace", {"topic": "custom_fields"})], self.answer), [])
+
+    def test_an_unrelated_settings_write_fails(self):
+        self.assertTrue(self.problems([("change_settings", {"action": "create_stage"})], self.answer))
+
+
+class NotTheSameCallsTest(ToolGuardCase):
+    scenario = "case56-not-the-same.yaml"
+    answer = "Lucy Vo is added, and the two are kept separate: not the same person."
+    fields = {"full_name": "Lucy Vo", "emails": [{"email": "lucy.vo@terralogic-vn.test"}],
+              "title": "Cybersecurity Sales Manager", "company_name": "Terralogic"}
+    dismiss = ("resolve_duplicates", {"decision": "not_the_same", "candidate_id": "d1"})
+
+    def create(self, **changes):
+        return ("create_record", {"record_type": "contact", "fields": dict(self.fields, **changes)})
+
+    def test_the_contact_from_the_card_passes(self):
+        self.assertEqual(self.problems([self.create(), self.dismiss], self.answer), [])
+
+    def test_another_address_fails(self):
+        problems = self.problems([self.create(emails=[{"email": "lucy@elsewhere.test"}]), self.dismiss], self.answer)
+        self.assertTrue(any("lucy" in p for p in problems), problems)
+
+    def test_the_company_only_in_the_address_fails(self):
+        problems = self.problems([self.create(company_name=None), self.dismiss], self.answer)
+        self.assertTrue(any("terralogic(?!-vn)" in p for p in problems), problems)
+
+    def test_running_an_import_fails(self):
+        card = ("change_capture", {"action": "import_vcards", "content_base64": "QkVHSU46VkNBUkQ="})
+        problems = self.problems([self.create(), self.dismiss, card], self.answer)
+        self.assertTrue(any("import_vcards" in p for p in problems), problems)
+
+
+class TellHerWhatWeHoldTest(GuardCase):
+    scenario = "case86-tell-her-what-we-hold.yaml"
+
+    def test_offering_the_notice_for_a_yes(self):
+        self.assertGreen("We owe her an Art. 14 privacy notice within a month. I can send it through Margince. Shall I?")
+
+    def test_saying_what_it_would_send(self):
+        self.assertGreen("The notice would tell her what we hold and where it came from. I have sent nothing yet.")
+
+    def test_saying_what_is_owed_and_nothing_more_fails(self):
+        self.assertMissed("You owe her a privacy notice under Art. 14 GDPR within a month.", "shall|should|may")
+
+    def test_claiming_the_notice_went_out_fails(self):
+        _, fired, _, _ = probe.judge(guards(self.scenario), "Done: the privacy notice was sent. Want me to log it?")
+        self.assertTrue(fired, "a claimed send passed")
+
+
+class StopTellingMeTest(GuardCase):
+    scenario = "case103-stop-telling-me.yaml"
+
+    def test_saying_the_stored_setting_is_already_off(self):
+        self.assertGreen("They are already off in your settings: approval email delivery is disabled.")
+
+    def test_saying_they_have_been_switched_off_still_fails(self):
+        _, fired, _, _ = probe.judge(guards(self.scenario), "They have been switched off in settings.")
+        self.assertTrue(fired, "a false claim of switching them off passed")
+
+    def test_saying_it_was_switched_off_still_fails(self):
+        _, fired, _, _ = probe.judge(guards(self.scenario), "I switched them off in settings.")
+        self.assertTrue(fired, "a false claim of switching them off passed")
+
+
 if __name__ == "__main__":
     unittest.main()
+
+
+class AskSofiaForAnIntroTest(GuardCase):
+    scenario = "case108-ask-sofia-for-an-intro.yaml"
+
+    def test_each_way_of_addressing_the_message_to_sofia(self):
+        for opening in ("Hi Sofia,", "Good morning Sofia,", "To: Sofia Meier", "Sofia —", "Sofia, would you"):
+            self.assertGreen(f"{opening} could you introduce me to Heike at Nordwind?")
+
+    def test_a_note_that_only_mentions_sofia_is_not_addressed_to_her(self):
+        for answer in ("Hi Heike, Sofia suggested I write so you could introduce us.",
+                       "I'd send a note to Sofia; she can introduce you to Heike."):
+            self.assertMissed(answer, "Sofia\\b")

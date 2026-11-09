@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { act, cleanup, renderHook } from "@testing-library/react";
-import { afterEach, expect, it } from "vitest";
-import { appHref } from "./recordaddress";
+import { afterEach, expect, it, vi } from "vitest";
+import { appHref, CONSENT_PATH, publishRecordAddress } from "./recordaddress";
 import { useRoute } from "./router";
 
 const DEAL = "01a00000-0000-7000-8000-000000000001";
@@ -132,4 +132,44 @@ it("moves to the root path when a booking leads to the guest's private managemen
     id: "manage-private-token",
   });
   expect(location.pathname).toBe("/");
+});
+
+// The consent path is served with the opener left in place, for a client's
+// popup. Any other screen there reloads at the root under the app's policy.
+it.each([
+  ["#/home", "/#/home"],
+  ["", "/"],
+  ["#/oauth-consentx", "/#/oauth-consentx"],
+])("reloads %s at the root when it opens on the consent path", (hash, to) => {
+  const replace = vi.fn();
+  vi.stubGlobal("location", {
+    pathname: CONSENT_PATH,
+    search: "",
+    hash,
+    replace,
+  });
+  try {
+    publishRecordAddress();
+  } finally {
+    vi.unstubAllGlobals();
+  }
+  expect(replace).toHaveBeenCalledWith(to);
+});
+
+it("keeps the consent screen on its own path", () => {
+  const replace = vi.fn();
+  for (const hash of ["#/oauth-consent", "#/oauth-consent?client_id=c1"]) {
+    vi.stubGlobal("location", {
+      pathname: CONSENT_PATH,
+      search: "",
+      hash,
+      replace,
+    });
+    try {
+      publishRecordAddress();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  }
+  expect(replace).not.toHaveBeenCalled();
 });
