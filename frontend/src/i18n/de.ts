@@ -7522,7 +7522,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.fact.open": "Gespräch festhalten",
   "compose.fact.title": "Gespräch mit {address} festhalten",
   "compose.fact.scope":
-    "Hält den Sachverhalt für {address} fest. Sendet keine E-Mail und erfasst keine Werbeeinwilligung.",
+    "Hält den Austausch mit {address} für das sendende Unternehmen fest. Sendet keine E-Mail, erfasst keine Werbeeinwilligung und erstellt keine Ausnahme.",
   "compose.fact.kind": "Was ist passiert?",
   "compose.fact.request": "Die Person hat mich gebeten zu schreiben",
   "compose.fact.quoteRequest": "Die Person hat um dieses Angebot gebeten",

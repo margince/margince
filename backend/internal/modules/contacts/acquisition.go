@@ -94,9 +94,13 @@ type Acquisition struct {
 // question unasked.
 func recordAcquisition(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, in Acquisition, capturedBy string) error {
 	in = normalizedAcquisition(in)
-	entity, err := storekit.LegalEntityOf(ctx, tx, storekit.SenderOf(ctx))
-	if err != nil {
-		return err
+	var entity *ids.UUID
+	if user := storekit.SenderOf(ctx); !user.IsZero() {
+		resolved, err := storekit.LegalEntityOf(ctx, tx, user)
+		if err != nil {
+			return err
+		}
+		entity = &resolved
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO contact_acquisition_evidence (contact_id, kind, occurred_at, captured_by, legal_entity_id)

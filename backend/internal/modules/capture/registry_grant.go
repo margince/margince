@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -300,25 +301,30 @@ func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert) (ids.
 	// previous mailbox's date is not this one's. A same-account reconnect
 	// keeps the original stamp.
 	rebound := rebindsAccount(priorLabel, in.accountLabel)
-	args := []any{in.provider, in.userID, in.scopes, string(in.ref), in.accountLabel, in.providerScopes, rebound, nil}
+	args := pgx.StrictNamedArgs{
+		"provider": in.provider, "user": in.userID, "scopes": in.scopes,
+		"ref": string(in.ref), "label": in.accountLabel, "provider_scopes": in.providerScopes,
+		"rebound": rebound, "bound": nil,
+	}
 	if rebound {
 		boundary, err := nextBackfillAccountTimeTx(ctx, tx, priorID)
 		if err != nil {
 			return ids.Nil, nil, err
 		}
-		args[len(args)-1] = boundary
+		args["bound"] = boundary
 	}
 	var id ids.UUID
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO capture_connection (provider, user_id, scopes, credential_ref, status, account_label, provider_scopes, share_acknowledged_at)
-		VALUES ($1, $2, $3, $4, 'connected', $5, $6, now())
+		INSERT INTO capture_connection (provider, user_id, scopes, credential_ref, status, account_label, provider_scopes, share_acknowledged_at, legal_entity_id)
+		VALUES (@provider, @user, @scopes, @ref, 'connected', @label, @provider_scopes, now(), `+storekit.LegalEntityOfSQL("@user")+`)
 		ON CONFLICT (user_id, provider)
 		DO UPDATE SET credential_ref = EXCLUDED.credential_ref, auth = NULL, status = 'connected', archived_at = NULL,
 		              connected_at = now(),
-		              silence_dismissed_since = CASE WHEN $7 THEN NULL ELSE capture_connection.silence_dismissed_since END,
-		              share_acknowledged_at = CASE WHEN $7 THEN now()
+		              silence_dismissed_since = CASE WHEN @rebound THEN NULL ELSE capture_connection.silence_dismissed_since END,
+		              share_acknowledged_at = CASE WHEN @rebound THEN now()
 		                                           ELSE COALESCE(capture_connection.share_acknowledged_at, now()) END,
-		              account_label = EXCLUDED.account_label, provider_scopes = EXCLUDED.provider_scopes,
+		              legal_entity_id = CASE WHEN @rebound THEN EXCLUDED.legal_entity_id ELSE capture_connection.legal_entity_id END,
+                  account_label = EXCLUDED.account_label, provider_scopes = EXCLUDED.provider_scopes,
 		              -- A rebind points this row at a DIFFERENT account, so the
               -- previous mailbox's answer about who may read its mail is not
               -- this one's to inherit. Reset to HELD rather than to the
@@ -327,9 +333,9 @@ func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert) (ids.
               -- otherwise. The opening direction is the one that must never
               -- happen by inheritance — rebinding a shared role mailbox to a
               -- personal account would publish that account's mail on arrival.
-              mail_posture = CASE WHEN $7 THEN 'held' ELSE capture_connection.mail_posture END,
-              generation = capture_connection.generation + CASE WHEN $7 THEN 1 ELSE 0 END,
-		              sync_cursor = CASE WHEN $7 THEN NULL ELSE capture_connection.sync_cursor END,
+              mail_posture = CASE WHEN @rebound THEN 'held' ELSE capture_connection.mail_posture END,
+              generation = capture_connection.generation + CASE WHEN @rebound THEN 1 ELSE 0 END,
+		              sync_cursor = CASE WHEN @rebound THEN NULL ELSE capture_connection.sync_cursor END,
 		              -- A rebind points this row at a DIFFERENT account, so the
 		              -- previous mailbox's answer about reading its signatures
 		              -- is not this one's to inherit. Cleared to NULL rather
@@ -339,13 +345,13 @@ func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert) (ids.
 		              -- alternative — carrying the old answer — would silently
 		              -- apply one contact's opt-out to another's mail, in either
 		              -- direction.
-		              signature_enrich_enabled = CASE WHEN $7 THEN NULL
+		              signature_enrich_enabled = CASE WHEN @rebound THEN NULL
 		                                              ELSE capture_connection.signature_enrich_enabled END,
 		              -- The history baseline is a date chosen for the previous account's mail.
-		              history_baseline_date = CASE WHEN $7 THEN NULL ELSE capture_connection.history_baseline_date END,
-		              history_baseline_tz = CASE WHEN $7 THEN NULL ELSE capture_connection.history_baseline_tz END,
-		              history_baseline_set_by = CASE WHEN $7 THEN NULL ELSE capture_connection.history_baseline_set_by END,
-		              history_baseline_set_at = CASE WHEN $7 THEN NULL ELSE capture_connection.history_baseline_set_at END,
+		              history_baseline_date = CASE WHEN @rebound THEN NULL ELSE capture_connection.history_baseline_date END,
+		              history_baseline_tz = CASE WHEN @rebound THEN NULL ELSE capture_connection.history_baseline_tz END,
+		              history_baseline_set_by = CASE WHEN @rebound THEN NULL ELSE capture_connection.history_baseline_set_by END,
+		              history_baseline_set_at = CASE WHEN @rebound THEN NULL ELSE capture_connection.history_baseline_set_at END,
 		              -- A rebind points this row at a DIFFERENT mailbox, and a
 		              -- watch handle names a subscription in the mailbox it was
 		              -- made against. Kept, it would send the next renewal to
@@ -355,10 +361,10 @@ func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert) (ids.
 		              -- say so. The deadline goes with it: a stored deadline for
 		              -- a subscription this row no longer owns keeps the renewal
 		              -- scan away until it lapses.
-		              watch_ref = CASE WHEN $7 THEN NULL ELSE capture_connection.watch_ref END,
-		              watch_expires_at = CASE WHEN $7 THEN NULL ELSE capture_connection.watch_expires_at END,
-		              account_bound_at = CASE WHEN $7 THEN `+fmt.Sprintf("$%d", len(args))+` ELSE capture_connection.account_bound_at END
-		RETURNING id`, args...).Scan(&id); err != nil {
+		              watch_ref = CASE WHEN @rebound THEN NULL ELSE capture_connection.watch_ref END,
+		              watch_expires_at = CASE WHEN @rebound THEN NULL ELSE capture_connection.watch_expires_at END,
+		              account_bound_at = CASE WHEN @rebound THEN @bound ELSE capture_connection.account_bound_at END
+		RETURNING id`, args).Scan(&id); err != nil {
 		return ids.Nil, nil, err
 	}
 	database.Forget(tx, ownerIdentitiesMemo)

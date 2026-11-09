@@ -7347,7 +7347,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.fact.open": "Ghi lại sự việc",
   "compose.fact.title": "Ghi lại trao đổi với {address}",
   "compose.fact.scope":
-    "Ghi lại sự việc cho {address}. Không gửi email này và không ghi nhận đồng ý nhận quảng cáo.",
+    "Ghi lại trao đổi với {address} cho công ty gửi email. Không gửi email này, không ghi nhận đồng ý nhận quảng cáo hay tạo ngoại lệ.",
   "compose.fact.kind": "Đã xảy ra việc gì?",
   "compose.fact.request": "Người này đã yêu cầu liên hệ",
   "compose.fact.quoteRequest": "Người này đã yêu cầu báo giá này",

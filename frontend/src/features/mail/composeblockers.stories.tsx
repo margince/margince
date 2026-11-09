@@ -107,7 +107,10 @@ function NewMessage({ preview }: Readonly<{ preview: object }>) {
 
 function Composer() {
   installFetchStub({
-    "GET /me": meRoute({ contact: ["read", "update"], activity: ["read", "update"] }),
+    "GET /me": meRoute({
+      contact: ["read", "update"],
+      activity: ["read", "update"],
+    }),
     "GET /activities/act-1": () =>
       jsonResponse({
         id: "act-1",

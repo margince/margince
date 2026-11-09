@@ -7533,7 +7533,7 @@ export const en = {
   "compose.fact.open": "Record what happened",
   "compose.fact.title": "Record the exchange with {address}",
   "compose.fact.scope":
-    "Keeps this fact for {address}. It does not send this email or record marketing consent.",
+    "Records the exchange with {address} for the sending company. It does not send this email, record marketing consent or create an exception.",
   "compose.fact.kind": "What happened?",
   "compose.fact.request": "They asked me to write",
   "compose.fact.quoteRequest": "They asked for this quote",

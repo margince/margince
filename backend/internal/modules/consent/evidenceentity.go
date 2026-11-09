@@ -6,9 +6,11 @@ package consent
 import (
 	"context"
 	"errors"
+	"sort"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -55,18 +57,52 @@ func activityEntitySQL(alias, entity string) string {
  AND ` + recordedEntitySQL(`entity_import.legal_entity_id`, entity) + `))`
 }
 
-func qualifyingSourceEntities(ctx context.Context, tx pgx.Tx, event QualifyingEvent) ([]ids.UUID, error) {
+const availableQualifyingActivitySQL = `a.archived_at IS NULL AND a.restricted_at IS NULL`
+
+func recordedQualificationSQL(alias string, args *[]any) string {
+	bind := func(value any) string {
+		*args = append(*args, value)
+		return storekit.SQLf("$%d", len(*args))
+	}
+	var manualKinds []string
+	for kind, manual := range handRecordedKinds {
+		if manual {
+			manualKinds = append(manualKinds, kind)
+		}
+	}
+	sort.Strings(manualKinds)
+	kinds := bind(manualKinds)
+	people := bind([]string{sourceKindHuman, sourceKindAgent})
+	captured, inquiry := bind(sourceKindCaptured), bind(KindInquiry)
+	return `((` + alias + `.kind=ANY(` + kinds + `) AND ` + alias + `.source=ANY(` + people + `))
+ OR (` + alias + `.source=` + captured + ` AND ` + alias + `.kind=` + inquiry + `
+ AND ` + alias + `.source_entity_type='activity' AND EXISTS (
+ SELECT 1 FROM activity a WHERE a.id=` + alias + `.source_entity_id
+ AND ` + availableQualifyingActivitySQL + `)))`
+}
+
+func qualifyingSourceEntities(ctx context.Context, tx pgx.Tx, event QualifyingEvent) ([]ids.UUID, bool, error) {
 	if event.SourceEntityType != "activity" {
-		return nil, errors.New("consent: the exchange does not name a recorded activity")
+		return nil, false, errors.New("consent: the exchange does not name a recorded activity")
 	}
 	rows, err := tx.Query(ctx, `SELECT DISTINCT scope.entity FROM activity a CROSS JOIN LATERAL (
  SELECT a.legal_entity_id AS entity
  UNION SELECT ci.legal_entity_id FROM capture_import ci WHERE ci.activity_id = a.id
  UNION SELECT le.id FROM legal_entity le WHERE le.is_default AND (SELECT count(*) FROM legal_entity) = 1
- ) scope WHERE a.id = @activity AND a.archived_at IS NULL AND a.restricted_at IS NULL AND scope.entity IS NOT NULL`,
+ ) scope WHERE a.id = @activity AND `+availableQualifyingActivitySQL+` ORDER BY scope.entity`,
 		pgx.StrictNamedArgs{"activity": event.SourceEntityID})
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	scopes, err := pgx.CollectRows(rows, pgx.RowTo[*ids.UUID])
+	if err != nil || len(scopes) == 0 {
+		return nil, false, err
+	}
+	entities := make([]ids.UUID, 0, len(scopes))
+	for _, entity := range scopes {
+		if entity != nil {
+			entities = append(entities, *entity)
+		}
+	}
+	return entities, true, nil
 }

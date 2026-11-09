@@ -182,12 +182,12 @@ const (
 func stampQualifyingEvent(
 	ctx context.Context, tx pgx.Tx, contactID string, event QualifyingEvent, source, capturedBy string,
 ) error {
-	entities, err := qualifyingSourceEntities(ctx, tx, event)
+	entities, found, err := qualifyingSourceEntities(ctx, tx, event)
 	if err != nil {
 		return err
 	}
-	if len(entities) == 0 {
-		return errors.New("consent: the exchange has no recorded sending entity")
+	if !found {
+		return nil
 	}
 	_, err = tx.Exec(ctx, `
  INSERT INTO consent_qualifying_event
@@ -203,10 +203,8 @@ func stampQualifyingEvent(
 	return err
 }
 
-// recordedQualifyingEvent reads a recorded qualifying-event row, whichever writer
-// left it: a human, their passport agent, an integration, the transmit path or a booking.
-// A row dated after asOf does not count yet: older derived stamps carry a booked
-// meeting's future start.
+// Human statements and booking inquiries are recorded facts. Inferred events
+// are re-read from their source so a cached decision cannot outlive a correction.
 func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since, asOf time.Time, address *string, entity ids.UUID) (QualifyingEvent, bool, error) {
 	var event QualifyingEvent
 	var id string
@@ -215,12 +213,14 @@ func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, s
 	arg := func(value any) string { args = append(args, value); return storekit.SQLf("$%d", len(args)) }
 	contact, from, until, addr := arg(contactID), arg(since), arg(asOf), arg(address)
 	entityArg := arg(entity)
+	qualification := recordedQualificationSQL("q", &args)
 	err := tx.QueryRow(ctx, `
 		SELECT id, kind, occurred_at, source_entity_type, source_entity_id, note
-		FROM consent_qualifying_event
+		FROM consent_qualifying_event q
 		WHERE contact_id = `+contact+` AND occurred_at >= `+from+` AND occurred_at <= `+until+` AND retracted_at IS NULL
 		  AND (`+addr+`::text IS NULL OR `+requestCoversSQL("recorded_for_addresses", addr)+`)
 		  AND `+recordedEntitiesSQL("recorded_for_entities", entityArg)+`
+          AND `+qualification+`
 		ORDER BY occurred_at DESC
 		LIMIT 1`, args...).Scan(&id, &event.Kind, &event.OccurredAt, &sourceType, &sourceID, &note)
 	if errors.Is(err, pgx.ErrNoRows) {

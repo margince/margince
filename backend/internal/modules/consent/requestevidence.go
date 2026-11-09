@@ -44,6 +44,7 @@ func requestedNegotiation(ctx context.Context, tx pgx.Tx, deals []ids.UUID, subj
 		deals, handRecordedRequestKinds, followupRequests.acquisitionKinds,
 		time.Now().Add(clockSkewAllowance), time.Now(), entity}
 	entityArg := storekit.SQLf("$%d", len(args))
+	qualification := recordedQualificationSQL("q", &args)
 	var found bool
 	err = tx.QueryRow(ctx, `
 		SELECT EXISTS (
@@ -71,7 +72,7 @@ func requestedNegotiation(ctx context.Context, tx pgx.Tx, deals []ids.UUID, subj
 			          AND q.occurred_at <= $9
 			          AND q.retracted_at IS NULL
 			          AND `+requestCoversSQL("q.recorded_for_addresses", "$3")+`
-			          AND `+recordedEntitiesSQL("q.recorded_for_entities", entityArg)+`)
+			          AND `+recordedEntitiesSQL("q.recorded_for_entities", entityArg)+` AND `+qualification+`)
 			  OR EXISTS (
 			       SELECT 1 FROM contact_acquisition_evidence e
 			        WHERE e.contact_id = $2::uuid
@@ -152,6 +153,7 @@ func latestRequest(ctx context.Context, tx pgx.Tx, subject subjectRef, scope req
 		scope.eventKinds, scope.acquisitionKinds, scope.quoteOnly, scope.perDeal, zeroUUIDAsNull(deal),
 		subject.Address, entity}
 	entityArg := storekit.SQLf("$%d", len(args))
+	qualification := recordedQualificationSQL("q", &args)
 	var newest *time.Time
 	err = tx.QueryRow(ctx, `
 		SELECT max(asked_at) FROM (
@@ -175,7 +177,7 @@ func latestRequest(ctx context.Context, tx pgx.Tx, subject subjectRef, scope req
 			   AND (q.asks_for_quote OR NOT $5)
 			   AND (NOT $6 OR q.about_deal_id IS NULL OR q.about_deal_id = $7::uuid)
 			   AND `+requestCoversSQL("q.recorded_for_addresses", "$8")+`
-			   AND `+recordedEntitiesSQL("q.recorded_for_entities", entityArg)+`
+			   AND `+recordedEntitiesSQL("q.recorded_for_entities", entityArg)+` AND `+qualification+`
 		) requests`, args...).Scan(&newest)
 	if err != nil {
 		return time.Time{}, false, fmt.Errorf("consent: read what this contact asked for: %w", err)
