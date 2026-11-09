@@ -304,6 +304,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The rule under test is which SIDE of the reader's own day a moment falls on — today's meeting shows a bare time, another day's shows the date too. Deciding that needs a zone whose offset is not zero: in UTC the fixture's instants land on the same calendar day under either rule, so every case would pass whichever branch ran. The zone is injected by mocking browserZone, which is the module this gate points callers at; naming it is what makes the expectation ('14:30', not '12:30') checkable at all.",
   },
   {
+    file: "features/brief/brief.queue.test.tsx",
+    why: "A snooze keeps the wall time the reader picked, and that time maps to a different instant on each side of a daylight-saving change. Only a named zone with daylight saving makes the expected instant the same on every runner.",
+  },
+  {
     file: "features/brief/brief.readings.test.tsx",
     why: "The case is that a date-only period reads as the SAME days for every colleague, and proving it needs three named zones at once: the installation's, which the tile must follow, and a viewer's on either side of UTC. A zone taken off the runner would decide whether the bug can appear at all — east of UTC a viewer-zone read prints the right days by luck, so the assertion would pass over code that is wrong for half the world. The installation's zone is supplied through CompanyZoneProvider, the seam the product itself reads.",
   },
