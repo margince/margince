@@ -71,6 +71,9 @@ func TestABuyerThreadOpenedAcrossAnErasureIsRefused(t *testing.T) {
 	if n := commentsBy(t, e, buyer.seat); n != 0 {
 		t.Fatalf("%d comment(s) by the erased seat were written after the erasure certified them destroyed", n)
 	}
+	if n := threadsBy(t, e, buyer.seat); n != 0 {
+		t.Fatalf("%d thread(s) opened by the erased seat were written after the erasure", n)
+	}
 }
 
 // A buyer reply already holding the seat is waited for, and the erasure then
@@ -119,12 +122,36 @@ func TestAnErasureWaitsForABuyerReplyAndTakesItWithTheRest(t *testing.T) {
 	if n := commentsBy(t, e, buyer.seat); n != 0 {
 		t.Fatalf("%d comment(s) by the erased seat outlived the erasure", n)
 	}
+	if n := threadsBy(t, e, buyer.seat); n != 0 {
+		t.Fatalf("%d thread(s) opened by the erased seat outlived the erasure", n)
+	}
 }
 
 // A download recorded with a session from before the erasure records nothing.
 func TestADownloadRecordedAfterAnErasureIsRefused(t *testing.T) {
 	e := Setup(t)
 	buyer := seedBuyerInARoom(t, e, "download.race@acme.test")
+	doc := roomDocument(t, e, buyer)
+	sess := signedInBuyer(t, e, buyer)
+	if err := compose.ComposedEraser(e.Pool, nil, nil).EraseContact(
+		e.As(e.AdminUser, nil, roomErasureAdmin), buyer.contact.UUID, "subject request"); err != nil {
+		t.Fatalf("erasing the subject: %v", err)
+	}
+
+	err := dealrooms.NewStore(e.DB()).NoteDocumentDelivered(
+		e.As(e.AdminUser, nil, roomErasureAdmin), sess, ids.From[ids.DealRoomDocumentKind](doc))
+	if !errors.Is(err, dealrooms.ErrSessionRefused) {
+		t.Errorf("recording a download for the erased seat answered %v, want the session refused", err)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM deal_room_engagement WHERE participant_id = $1`, buyer.seat); n != 0 {
+		t.Fatalf("%d engagement row(s) for the erased seat", n)
+	}
+}
+
+// roomDocument puts a real deal attachment in the buyer's room and returns the
+// room document's id.
+func roomDocument(t *testing.T, e *Env, buyer buyerSeat) ids.UUID {
+	t.Helper()
 	files := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	file := uploadDealAttachment(e.Admin(), t, files, roomDeal(t, buyer), "proposal.pdf", []byte("proposal bytes"))
 	doc, err := dealrooms.NewStore(e.DB()).AddDocument(e.As(e.AdminUser, nil, roomErasureAdmin), buyer.room,
@@ -132,20 +159,13 @@ func TestADownloadRecordedAfterAnErasureIsRefused(t *testing.T) {
 	if err != nil {
 		t.Fatalf("putting the proposal in the room: %v", err)
 	}
-	sess := signedInBuyer(t, e, buyer)
-	if err := compose.ComposedEraser(e.Pool, nil, nil).EraseContact(
-		e.As(e.AdminUser, nil, roomErasureAdmin), buyer.contact.UUID, "subject request"); err != nil {
-		t.Fatalf("erasing the subject: %v", err)
-	}
+	return ids.UUID(doc.Id)
+}
 
-	err = dealrooms.NewStore(e.DB()).NoteDocumentDelivered(
-		e.As(e.AdminUser, nil, roomErasureAdmin), sess, ids.From[ids.DealRoomDocumentKind](ids.UUID(doc.Id)))
-	if !errors.Is(err, dealrooms.ErrSessionRefused) {
-		t.Errorf("recording a download for the erased seat answered %v, want the session refused", err)
-	}
-	if n := e.WsCount(t, `SELECT count(*) FROM deal_room_engagement WHERE participant_id = $1`, buyer.seat); n != 0 {
-		t.Fatalf("%d engagement row(s) for the erased seat", n)
-	}
+// threadsBy counts the threads one seat opened, read past every API gate.
+func threadsBy(t *testing.T, e *Env, seat ids.DealRoomParticipantID) int {
+	t.Helper()
+	return e.WsCount(t, `SELECT count(*) FROM deal_room_thread WHERE author_participant_id = $1`, seat)
 }
 
 func roomDeal(t *testing.T, buyer buyerSeat) ids.UUID {
