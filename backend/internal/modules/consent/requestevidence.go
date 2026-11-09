@@ -44,9 +44,20 @@ func requestedNegotiation(ctx context.Context, tx pgx.Tx, deals []ids.UUID, subj
 		deals, handRecordedRequestKinds, followupRequests.acquisitionKinds,
 		time.Now().Add(clockSkewAllowance), time.Now(), entity}
 	entityArg := storekit.SQLf("$%d", len(args))
-	qualification := recordedQualificationSQL("q", &args)
+	args = append(args, deals)
+	dealFilter := storekit.SQLf("$%d", len(args))
+	args = append(args, subject.ID)
+	contactFilter := storekit.SQLf("$%d", len(args))
+	readable, err := readableEvidenceSQL(ctx, `SELECT activity_id FROM activity_link WHERE deal_id=ANY(`+dealFilter+`)
+ UNION SELECT source_entity_id FROM consent_qualifying_event
+ WHERE contact_id=`+contactFilter+`::uuid AND source_entity_type='activity'`, &args)
+	if err != nil {
+		return false, err
+	}
+	visible := activityEntitySQL("a", entityArg) + " AND a.id IN (SELECT id FROM readable_evidence)"
+	qualification := qualifyingRecordsSQL("q", "a.id IN (SELECT id FROM readable_evidence)", &args)
 	var found bool
-	err = tx.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, readable+`
 		SELECT EXISTS (
 			SELECT 1
 			  FROM deal d
@@ -61,7 +72,7 @@ func requestedNegotiation(ctx context.Context, tx pgx.Tx, deals []ids.UUID, subj
 			         JOIN activity_participant p ON p.activity_id = a.id
 			        WHERE l.entity_type = 'deal' AND l.deal_id = d.id
 			          AND a.archived_at IS NULL
-			          AND `+activityEntitySQL("a", entityArg)+`
+			          AND `+visible+`
 			          AND ((`+correspondence.AuthenticatedInboundSQL("a")+` AND `+authorIsTheSubject+`)
 			               OR (`+capturedMeetingSQL("$10")+` AND `+participantIsTheSubject+`)))
 			  OR EXISTS (
@@ -153,7 +164,10 @@ func latestRequest(ctx context.Context, tx pgx.Tx, subject subjectRef, scope req
 		scope.eventKinds, scope.acquisitionKinds, scope.quoteOnly, scope.perDeal, zeroUUIDAsNull(deal),
 		subject.Address, entity}
 	entityArg := storekit.SQLf("$%d", len(args))
-	qualification := recordedQualificationSQL("q", &args)
+	qualification, err := recordedQualificationSQL(ctx, "q", &args)
+	if err != nil {
+		return time.Time{}, false, err
+	}
 	var newest *time.Time
 	err = tx.QueryRow(ctx, `
 		SELECT max(asked_at) FROM (

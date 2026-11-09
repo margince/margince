@@ -384,9 +384,13 @@ func TestAMergeCarriesQualifyingEventsWithoutDoublingOne(t *testing.T) {
 	pipeline, stage, _ := integration.DealFixture(t, c.e)
 	deal := c.e.SeedDeal(t, "Consent evidence", pipeline, stage, &c.e.Rep1)
 	if err := c.e.DB().Tx(c.admin, func(tx pgx.Tx) error {
-		return consent.RecordDerivedQualifyingEvent(c.admin, tx, retired.String(), consent.QualifyingEvent{
-			Kind: "active_deal", SourceEntityType: "deal", SourceEntityID: deal.String(), OccurredAt: time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC),
-		}, "human:"+c.e.AdminUser.String())
+		// The retired deal kind remains in historical rows but has no current writer.
+		_, err := tx.Exec(c.admin, `INSERT INTO consent_qualifying_event
+ (contact_id,kind,source_entity_type,source_entity_id,occurred_at,source,captured_by)
+ VALUES (@contact,'active_deal','deal',@deal,@when,'derived',@actor)`,
+			pgx.StrictNamedArgs{"contact": retired, "deal": deal,
+				"when": time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC), "actor": "human:" + c.e.AdminUser.String()})
+		return err
 	}); err != nil {
 		t.Fatal(err)
 	}

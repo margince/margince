@@ -4,12 +4,12 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
+import { meFixture } from "../../testing/mefixture";
 import {
   allowedPreview,
   isPreviewDoor,
   refusedPreview,
 } from "../../testing/sendpermission.testkit";
-import { meFixture } from "../../testing/mefixture";
 import { ComposeModal } from "./compose";
 import { MailSendNotices } from "./compose.parts";
 import {
@@ -126,11 +126,38 @@ describe("who a reason to write is recorded on", () => {
 
 function requestBackend(
   refused: Parameters<typeof refusedPreview>[1] = NOTHING_ON_RECORD,
+  dealId?: string,
 ) {
   let recorded = false;
   const sent = stubRoutes({
+    "GET /deals/deal-one": () =>
+      jsonResponse({
+        id: "deal-one",
+        company_id: "company-one",
+        name: "The quote deal",
+      }),
+    "GET /companies/company-one/360": () =>
+      jsonResponse({
+        company: { id: "company-one", display_name: "Acme" },
+        contacts: {
+          data: [
+            {
+              contact_id: "c-1",
+              primary_email: "anna@example.test",
+              full_name: "Anna Brandt",
+            },
+          ],
+          page: { has_more: false },
+        },
+        projects: [],
+      }),
+
     "GET /activities/act-1": () =>
-      jsonResponse({ ...activity202, direction: "inbound" }),
+      jsonResponse({
+        ...activity202,
+        direction: "inbound",
+        links: dealId ? [{ entity_type: "deal", entity_id: dealId }] : [],
+      }),
     "GET /contacts/c-1/360": () =>
       jsonResponse({
         as_of: "2026-08-01T09:00:00Z",
@@ -235,6 +262,82 @@ describe("recording a fact where the refusal is read", () => {
       ),
     ).toBe(false);
   });
+
+  it.each(["deal page", "anchored reply"])(
+    "keeps the %s deal on a recorded quote request",
+    async (source) => {
+      const user = userEvent.setup();
+      const sent = requestBackend(
+        {
+          ...NOTHING_ON_RECORD,
+          requested_category: "precontract_quote",
+          resolved_category: "precontract_quote",
+        },
+        "deal-one",
+      );
+      render(
+        <ComposeModal
+          entityType={source === "deal page" ? "deal" : "contact"}
+          entityId={source === "deal page" ? "deal-one" : "c-1"}
+          contactId="c-1"
+          activityId={source === "anchored reply" ? "act-1" : undefined}
+          open
+          onClose={vi.fn()}
+        />,
+      );
+      await user.type(await screen.findByLabelText("To"), "anna@example.test");
+      await user.tab();
+      if (source === "deal page") {
+        await pickOption(
+          user,
+          screen.getByRole("combobox", { name: "Reason for contact" }),
+          "Quote or proposal they requested",
+        );
+      }
+      await user.click(
+        await screen.findByRole("button", { name: "Record what happened" }),
+      );
+      const dialog = within(
+        await screen.findByRole("dialog", {
+          name: "Record the exchange with anna@example.test",
+        }),
+      );
+      await pickOption(
+        user,
+        dialog.getByRole("combobox", { name: "What happened?" }),
+        "They asked for this quote",
+      );
+      await user.type(
+        dialog.getByLabelText("What was agreed?"),
+        "They asked for a quote for this deal.",
+      );
+      await user.type(dialog.getByLabelText("Date"), "2020-03-02");
+      await user.tab();
+      await user.type(dialog.getByLabelText("Time"), "09:00");
+      await user.tab();
+      await user.click(
+        dialog.getByRole("button", { name: "Record the exchange" }),
+      );
+      await waitFor(() =>
+        expect(
+          sent.find(
+            (call) =>
+              call.key === "POST /contacts/c-1/consent/qualifying-events",
+          )?.body,
+        ).toMatchObject({
+          kind: "requested_by_subject",
+          asks_for_quote: true,
+          about_deal: "deal-one",
+        }),
+      );
+      expect(
+        sent.some(
+          (call) =>
+            call.key === "POST /emails" || call.key.endsWith("/send-email"),
+        ),
+      ).toBe(false);
+    },
+  );
 
   it("asks for the message's reason first and makes no standing override from that choice", async () => {
     const user = userEvent.setup();

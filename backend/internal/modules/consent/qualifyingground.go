@@ -213,8 +213,11 @@ func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, s
 	arg := func(value any) string { args = append(args, value); return storekit.SQLf("$%d", len(args)) }
 	contact, from, until, addr := arg(contactID), arg(since), arg(asOf), arg(address)
 	entityArg := arg(entity)
-	qualification := recordedQualificationSQL("q", &args)
-	err := tx.QueryRow(ctx, `
+	qualification, err := recordedQualificationSQL(ctx, "q", &args)
+	if err != nil {
+		return QualifyingEvent{}, false, err
+	}
+	err = tx.QueryRow(ctx, `
 		SELECT id, kind, occurred_at, source_entity_type, source_entity_id, note
 		FROM consent_qualifying_event q
 		WHERE contact_id = `+contact+` AND occurred_at >= `+from+` AND occurred_at <= `+until+` AND retracted_at IS NULL
@@ -267,7 +270,11 @@ func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 	var activityID string
 	args := []any{contactID, since, entity}
 	entityArg := storekit.SQLf("$%d", len(args))
-	err := tx.QueryRow(ctx, `
+	visible, err := activityEvidenceSQL(ctx, "a", entityArg, &args)
+	if err != nil {
+		return QualifyingEvent{}, false, err
+	}
+	err = tx.QueryRow(ctx, `
 		SELECT a.id, a.occurred_at
 		FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $1
@@ -275,7 +282,7 @@ func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 		     AND p.role = 'from' AND p.contact_id = $1::uuid
 		WHERE a.direction = 'inbound' AND a.archived_at IS NULL
 		  AND `+occurredday.FromSQL("a", "$2")+`
-		  AND `+activityEntitySQL("a", entityArg)+`
+		  AND `+visible+`
 		ORDER BY a.occurred_at DESC
 		LIMIT 1`, args...).Scan(&activityID, &event.OccurredAt)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -354,13 +361,17 @@ func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 	var activityID string
 	args := []any{contactID, since, asOf, entity}
 	entityArg := storekit.SQLf("$%d", len(args))
-	err := tx.QueryRow(ctx, `
+	visible, err := activityEvidenceSQL(ctx, "a", entityArg, &args)
+	if err != nil {
+		return QualifyingEvent{}, false, err
+	}
+	err = tx.QueryRow(ctx, `
 		SELECT a.id, a.occurred_at
 		FROM activity a
 		JOIN activity_participant p ON p.activity_id = a.id AND p.contact_id = $1::uuid
 		WHERE `+capturedMeetingSQL("$3")+`
 		  AND `+occurredday.FromSQL("a", "$2")+`
-		  AND `+activityEntitySQL("a", entityArg)+`
+		  AND `+visible+`
 		ORDER BY a.occurred_at DESC
 		LIMIT 1`, args...).Scan(&activityID, &event.OccurredAt)
 	if errors.Is(err, pgx.ErrNoRows) {

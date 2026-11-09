@@ -9,8 +9,8 @@ import { asksWhy } from "../../lib/compose-context";
 import { remedyCategoryOf } from "../../lib/sendstatus";
 import type { Activity } from "./compose";
 import { ComposeOutcome, ComposeWhy, MailSendNotices } from "./compose.parts";
-import { ComposeDeal, type DealChoiceState } from "./composedeal";
 import { RecordConversationFact } from "./composecontextfact";
+import { ComposeDeal, type DealChoiceState } from "./composedeal";
 import type { ComposeFields } from "./composefields";
 import {
   alternativeReasonOf,
@@ -149,10 +149,10 @@ export function ComposeBlockers({
           ) : (
             target && (
               <RecordConversationFact
-                key={`${target.contactId}:${target.category}:${dealChoice.dealId}`}
+                key={`${target.contactId}:${target.category}:${send.contextDealId}`}
                 target={target}
                 chosen={send.claimedContext}
-                dealId={dealChoice.dealId}
+                dealId={send.contextDealId}
               />
             )
           ),

@@ -214,7 +214,9 @@ func (s *Store) recordStatement(ctx context.Context, in RecordContextInput, refu
 		}); err != nil {
 			return err
 		}
-		return s.settleSourceReviewsByMeeting(ctx, in)
+		return s.settleSourceReviewsByMeeting(ctx, in, faceToFaceMeeting{
+			note: in.Note, met: in.OccurredAt, aboutDeal: refusal.dealID(), entity: entity,
+		})
 	}
 	// A request stated against a refused quote is a request for that quote.
 	_, err := s.RecordQualifyingEvent(ctx, in.SubjectID, RecordQualifyingEventInput{
@@ -237,7 +239,7 @@ func mayChangeNoticeCases(ctx context.Context) bool {
 // settleSourceReviewsByMeeting settles the contact's open source reviews with
 // the meeting, through AssessNoticeSource and its gate. A caller without the
 // notice-case grant leaves them for the privacy officer.
-func (s *Store) settleSourceReviewsByMeeting(ctx context.Context, in RecordContextInput) error {
+func (s *Store) settleSourceReviewsByMeeting(ctx context.Context, in RecordContextInput, meeting faceToFaceMeeting) error {
 	if !mayChangeNoticeCases(ctx) {
 		return nil
 	}
@@ -258,7 +260,7 @@ func (s *Store) settleSourceReviewsByMeeting(ctx context.Context, in RecordConte
 	}
 	for _, review := range reviews {
 		if _, err := s.AssessNoticeSource(ctx, review, SourceAssessment{
-			Kind: faceToFaceSource, MetInPerson: true, ObtainedAt: &met, Note: in.Note, Now: now,
+			Kind: faceToFaceSource, MetInPerson: true, ObtainedAt: &met, Note: in.Note, Now: now, meeting: &meeting,
 		}); err != nil {
 			return err
 		}

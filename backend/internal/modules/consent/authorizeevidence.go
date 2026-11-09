@@ -89,6 +89,10 @@ func repliesToTheSubject(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subjec
 	}
 	args := []any{subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID, anchor, entity}
 	entityArg := storekit.SQLf("$%d", len(args))
+	visible, err := activityEvidenceSQL(ctx, "a", entityArg, &args)
+	if err != nil {
+		return false, err
+	}
 	var found bool
 	err = tx.QueryRow(ctx, `
 		WITH anchor AS (
@@ -105,7 +109,7 @@ func repliesToTheSubject(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subjec
 			   -- Authorship, from the shared spelling: the subject WROTE into
 			   -- this thread, and a recipient who was merely copied has
 			   -- initiated nothing.
-			   AND `+activityEntitySQL("a", entityArg)+`
+			   AND `+visible+`
 			   AND `+authorIsTheSubject+`
 		)`, args...).Scan(&found)
 	if err != nil {
@@ -147,6 +151,10 @@ func wroteIntoThread(ctx context.Context, tx pgx.Tx, threadKey string, subject s
 	}
 	args := []any{subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID, threadKey, entity}
 	entityArg := storekit.SQLf("$%d", len(args))
+	visible, err := activityEvidenceSQL(ctx, "a", entityArg, &args)
+	if err != nil {
+		return false, err
+	}
 	var found bool
 	err = tx.QueryRow(ctx, `
 		SELECT EXISTS (
@@ -156,7 +164,7 @@ func wroteIntoThread(ctx context.Context, tx pgx.Tx, threadKey string, subject s
 			 WHERE a.direction = 'inbound'
 			   AND a.archived_at IS NULL
 			   AND a.thread_key = $6
-			   AND `+activityEntitySQL("a", entityArg)+`
+			   AND `+visible+`
 			   AND `+authorIsTheSubject+`
 		)`, args...).Scan(&found)
 	if err != nil {
@@ -213,15 +221,23 @@ func copiedOnThisMatter(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 	}
 	args := []any{subject.Address, threadKey, entity}
 	entityArg := storekit.SQLf("$%d", len(args))
+	args = append(args, threadKey)
+	threadFilter := storekit.SQLf("$%d", len(args))
+	readable, err := readableEvidenceSQL(ctx, "SELECT id FROM activity WHERE thread_key="+threadFilter, &args)
+	if err != nil {
+		return false, err
+	}
+	visible := activityEntitySQL("a", entityArg) + " AND a.id IN (SELECT id FROM readable_evidence)"
+	ours := activityEntitySQL("ours", entityArg) + " AND ours.id IN (SELECT id FROM readable_evidence)"
 	var found bool
-	err = tx.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, readable+`
 		SELECT EXISTS (
 			SELECT 1
 			  FROM activity a
 			  JOIN activity_participant p ON p.activity_id = a.id
 			 WHERE a.thread_key = $2
 			   AND a.archived_at IS NULL
-			   AND `+activityEntitySQL("a", entityArg)+`
+			   AND `+visible+`
 			   AND `+correspondence.AuthenticatedInboundSQL("a")+`
 			   AND p.role IN ('to', 'cc')
 			   AND $1 <> '' AND lower(p.address) = lower($1)
@@ -236,7 +252,7 @@ func copiedOnThisMatter(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 			         JOIN activity_participant op ON op.activity_id = ours.id
 			        WHERE `+correspondence.ConversationSQL("ours", "a")+`
 			          AND `+correspondence.OurOutboundSQL("ours")+`
-			          AND `+activityEntitySQL("ours", entityArg)+`
+			          AND `+ours+`
 			          AND ours.captured_by LIKE 'connector:%'
 			          AND op.role = 'from'
 			          AND op.user_id IS NOT NULL)
@@ -269,6 +285,10 @@ func wroteToUsWithin(ctx context.Context, tx pgx.Tx, subject subjectRef, since t
 	}
 	args := []any{subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID, since, entity}
 	entityArg := storekit.SQLf("$%d", len(args))
+	visible, err := activityEvidenceSQL(ctx, "a", entityArg, &args)
+	if err != nil {
+		return false, err
+	}
 	var found bool
 	err = tx.QueryRow(ctx, `
 		SELECT EXISTS (
@@ -278,7 +298,7 @@ func wroteToUsWithin(ctx context.Context, tx pgx.Tx, subject subjectRef, since t
 			 WHERE a.direction = 'inbound'
 			   AND a.archived_at IS NULL
 			   AND `+occurredday.FromSQL("a", "$6")+`
-			   AND `+activityEntitySQL("a", entityArg)+`
+			   AND `+visible+`
 			   AND `+authorIsTheSubject+`
 		)`, args...).Scan(&found)
 	if err != nil {
