@@ -19,7 +19,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -466,22 +465,12 @@ func aggregateSelect(spec reportSpec, agg reportAggregate) (name, sel string, er
 			return "", "", &FieldNotAllowedError{Field: agg.Field, Slot: slotAggregates, Allowed: allowedReportNames(spec.measures)}
 		}
 		return name, fmt.Sprintf("count(%s) AS %s", expr, quoteIdent(name)), nil
-	case aggFnSum, aggFnAvg, aggFnMin, aggFnMax:
+	case aggFnSum, aggFnAvg, aggFnMin, aggFnMax, aggFnMedian, aggFnP75:
 		expr, ok := spec.measures[agg.Field]
 		if !ok {
 			return "", "", &FieldNotAllowedError{Field: agg.Field, Slot: slotAggregates, Allowed: allowedReportNames(spec.measures)}
 		}
 		return name, reportMoneyAggregateSQL(spec, agg, expr) + " AS " + quoteIdent(name), nil
-	case aggFnMedian, aggFnP75:
-		expr, ok := spec.measures[agg.Field]
-		if !ok {
-			return "", "", &FieldNotAllowedError{Field: agg.Field, Slot: slotAggregates, Allowed: allowedReportNames(spec.measures)}
-		}
-		// One renderer for both engines: the fraction, the CASE shape and the
-		// sample floor live in analyticsquery.PercentileExpr, so the screen
-		// and the typed query cannot drift apart about what a median is.
-		return name, analyticsquery.PercentileExpr(expr, analyticsquery.AggFn(agg.Fn)) +
-			" AS " + quoteIdent(name), nil
 	default:
 		return "", "", &FieldNotAllowedError{Field: "fn=" + agg.Fn}
 	}
