@@ -179,9 +179,9 @@ describe("a receipt line is one row", () => {
       // The record's name opens what changed on it; the undo stands beside.
       "Fleet retrofit",
       "Undo",
-      // The job's undos are inside, one per record, behind its record count.
-      "Fleet retrofit and 2 more",
-      "Fleet retrofit, and possibly others",
+      // The job's undos are inside, one per record, behind its change count.
+      "View 3 changes",
+      "View at least 1 change",
     ]);
   });
 
@@ -216,7 +216,7 @@ describe("a receipt line is one row", () => {
       within(done)
         .getAllByRole("button", { hidden: true })
         .map((b) => b.textContent),
-    ).toEqual(["Anna Weber and 2,145 more"]);
+    ).toEqual(["View 2,146 changes"]);
   });
 
   it("marks a source to restore in its lane's colour, since the clock does not place it", async () => {

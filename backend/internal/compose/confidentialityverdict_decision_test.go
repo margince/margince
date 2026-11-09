@@ -50,6 +50,8 @@ func TestConfidentialityDecisionStateCarriesTheLLMInputs(t *testing.T) {
 		firstCanary   = "qzvAufhebungsvertrag.pdf"
 		secondCanary  = "qzvGehalt.xlsx"
 		bodyCanary    = "qzvBODYcanary"
+		excerptCanary = "qzvSALARYcanary"
+		scanCanary    = "qzvScan.pdf"
 		// The thread key rides the ledger row and never the LLM prompt, so the
 		// state must not carry it either.
 		threadKeyCanary = "qzvTHREADKEYcanary"
@@ -57,11 +59,16 @@ func TestConfidentialityDecisionStateCarriesTheLLMInputs(t *testing.T) {
 	row := capture.PendingThread{
 		ID: ids.NewV7(), ThreadKey: threadKeyCanary, Subject: subjectCanary,
 		Attachments: []string{firstCanary, secondCanary}, Body: bodyCanary,
+		Documents: []capture.ThreadDocument{
+			{Filename: secondCanary, Excerpt: excerptCanary},
+			{Filename: scanCanary, Unreadable: true},
+		},
+		DocumentsOmitted: 2,
 	}
 
 	prompt := confidentialityRequest(row).Messages[0].Content
 	dreq := confidentialityDecision(row)
-	for _, canary := range []string{subjectCanary, firstCanary, secondCanary, bodyCanary} {
+	for _, canary := range []string{subjectCanary, firstCanary, secondCanary, bodyCanary, excerptCanary, scanCanary} {
 		if !strings.Contains(prompt, canary) {
 			t.Fatalf("the LLM request lost %q, so this test no longer measures its inputs", canary)
 		}
@@ -75,8 +82,17 @@ func TestConfidentialityDecisionStateCarriesTheLLMInputs(t *testing.T) {
 	if strings.Contains(string(dreq.State), threadKeyCanary) {
 		t.Error("the decision state carries the thread key, which the LLM is never sent")
 	}
-	if got := slices.Sorted(slices.Values(jsonLeafPaths(t, "", dreq.State))); !slices.Equal(got, []string{"thread.attachments", "thread.body", "thread.subject"}) {
-		t.Errorf("decision state leaves %v, want exactly thread.subject, thread.attachments and thread.body", got)
+	want := []string{"thread.attachments", "thread.body", "thread.documents", "thread.documents_omitted", "thread.subject"}
+	if got := slices.Sorted(slices.Values(jsonLeafPaths(t, "", dreq.State))); !slices.Equal(got, want) {
+		t.Errorf("decision state leaves %v, want exactly %v", got, want)
+	}
+	if !strings.Contains(prompt, "could not be read") || !strings.Contains(prompt, "2 more attached documents") {
+		t.Error("the LLM request does not say which document went unread and how many were left out")
+	}
+	thread := confidentialityDecisionThreadOf(t, dreq)
+	if len(thread.Documents) != 2 || !thread.Documents[1].Unreadable || thread.DocumentsOmitted != 2 {
+		t.Errorf("decision documents %+v omitted %d, want the excerpt, the unreadable mark and 2 omitted",
+			thread.Documents, thread.DocumentsOmitted)
 	}
 	if got := confidentialityDecisionThreadOf(t, dreq).Attachments; !slices.Equal(got, row.Attachments) {
 		t.Errorf("attachments %v, want each name the LLM is sent, in order: %v", got, row.Attachments)
@@ -85,8 +101,8 @@ func TestConfidentialityDecisionStateCarriesTheLLMInputs(t *testing.T) {
 
 func TestTheConfidentialityStateListsNoAttachmentsAsAnEmptyList(t *testing.T) {
 	dreq := confidentialityDecision(capture.PendingThread{ID: ids.NewV7(), Subject: "Lunch", Body: "Tuesday?"})
-	if !strings.Contains(string(dreq.State), `"attachments":[]`) {
-		t.Errorf("state %s, want an empty attachments list rather than null or absent", dreq.State)
+	if !strings.Contains(string(dreq.State), `"attachments":[]`) || !strings.Contains(string(dreq.State), `"documents":[]`) {
+		t.Errorf("state %s, want empty attachments and documents lists rather than null or absent", dreq.State)
 	}
 }
 

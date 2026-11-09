@@ -106,7 +106,7 @@ func marketingContextTx(ctx context.Context, tx pgx.Tx, w packRules) (MarketingC
 	if out.Exception == nil {
 		return out, nil
 	}
-	entity, err := sendingEntityTx(ctx, tx, senderOf(ctx))
+	entity, err := sendingEntityOf(ctx, tx)
 	if err != nil {
 		return MarketingContext{}, err
 	}

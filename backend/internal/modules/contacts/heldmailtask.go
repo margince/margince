@@ -69,3 +69,7 @@ func EstimateHeldMailAcquisitions(ctx context.Context, q datatask.Querier, maxim
 }
 
 const acquisitionKindField = "kind"
+
+// The folded comparison seeks the index; the exact one preserves stored spelling.
+const historyRecipientsSQL = `SELECT p.activity_id FROM activity_participant p
+ WHERE lower(p.address)=lower(ce.email) AND p.address=ce.email AND p.role IN ('to','cc')`

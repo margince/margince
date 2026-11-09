@@ -193,7 +193,7 @@ func markSeen(n ast.Node, seen map[ast.Node]bool) {
 func handWrittenGoSources(t *testing.T) []string {
 	t.Helper()
 	var paths []string
-	err := filepath.WalkDir(".", func(path string, entry fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(".", func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

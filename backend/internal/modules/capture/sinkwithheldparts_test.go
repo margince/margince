@@ -29,6 +29,10 @@ func (k *withheldOnlyKeeper) Record(context.Context, pgx.Tx, ids.ActivityID, Fil
 	return errors.New("not reached")
 }
 
+func (k *withheldOnlyKeeper) Stored([]StagedFile) ([]StoredFile, error) {
+	return nil, errors.New("withheldOnlyKeeper stores no bytes")
+}
+
 func (k *withheldOnlyKeeper) RecordLinks(context.Context, pgx.Tx, ids.ActivityID, FileSource, []MailLink) (int, error) {
 	return 0, nil
 }

@@ -11,7 +11,8 @@ import {
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
-import { AnalyticsScreen, ForecastTile } from "./analytics";
+import { AnalyticsScreen } from "./analytics";
+import { ForecastTile } from "./analytics.pipeline";
 import { forecastEvaluation } from "./reporting.scenarios";
 import {
   reportingStoryEvaluation,

@@ -81,7 +81,7 @@ func (g *Gate) RequireGrantedForRecipients(ctx context.Context, recipients []con
 			// No sending entity: this gate is asked about a purpose key, not a
 			// staged message, so the existing-customer route never applies here.
 			marketing := MarketingContext{Exception: w.marketingException}
-			granted, err := grantedForRecipient(ctx, tx, r, purpose, time.Now().Add(-w.reply), marketing)
+			granted, err := grantedForRecipient(ctx, tx, r, purpose, time.Now(), w.reply, marketing)
 			if err != nil {
 				return err
 			}
@@ -112,7 +112,7 @@ func (g *Gate) RequireGrantedForRecipients(ctx context.Context, recipients []con
 // A recipient that resolves only to an unpromoted LEAD is answered by its
 // recorded grant. Any stop that binds the purpose refuses it. resolveLead
 // finds the lead, as it does for the send engine.
-func grantedForRecipient(ctx context.Context, tx pgx.Tx, r connector.Recipient, purpose PurposeRow, since time.Time, marketing MarketingContext) (bool, error) {
+func grantedForRecipient(ctx context.Context, tx pgx.Tx, r connector.Recipient, purpose PurposeRow, asOf time.Time, window time.Duration, marketing MarketingContext) (bool, error) {
 	contactID, found, err := resolveContact(ctx, tx, r)
 	if err != nil {
 		return false, err
@@ -133,7 +133,7 @@ func grantedForRecipient(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 		_, stopped, err := stopBindingPurpose(stops, purpose)
 		return !stopped, err
 	}
-	verdict, err := VerdictForRecipient(ctx, tx, contactID, r.Email, purpose, since, marketing)
+	verdict, err := VerdictForRecipient(ctx, tx, contactID, r.Email, purpose, asOf.Add(-window), asOf, marketing)
 	if err != nil {
 		return false, err
 	}

@@ -35,7 +35,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -66,7 +65,7 @@ func TestEveryRelationshipCarryingAContactIsWrittenUnderItsLock(t *testing.T) {
 	t.Parallel()
 
 	dir := filepath.Join(repoRoot, "backend", "internal", "modules", "contacts")
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading the contacts module: %v", err)
 	}

@@ -191,3 +191,27 @@ func setDispositionOutcome(t *testing.T, e *integration.Env, id ids.UUID, kind, 
 		t.Fatalf("setting the disposition outcome: %v", err)
 	}
 }
+
+func TestSenderSearchPagesTheOwnersDecisionsAndFiltersOverrides(t *testing.T) {
+	e := integration.Setup(t)
+	for _, address := range []string{"ada@paging.example", "bea@paging.example", "cam@paging.example"} {
+		seedPendingDisposition(t, e, address, "paging.example", seedCapturedMail(t, e, address, "Hello"))
+	}
+	setDecision(t, e, e.Rep1, "bea@paging.example", capture.OverrideBusiness)
+	first, err := capture.SendersFor(purgeCtx(e, e.Rep1), InstallationDB(e.Pool), capture.DefaultPersonalPurgeWindows(), capture.SenderQuery{Q: "paging.example", Limit: new(1)})
+	if err != nil || len(first) != 2 || first[0].Address != "ada@paging.example" || first[0].Total != 3 {
+		t.Fatalf("first page=%+v, %v", first, err)
+	}
+	next, err := capture.SendersFor(purgeCtx(e, e.Rep1), InstallationDB(e.Pool), capture.DefaultPersonalPurgeWindows(), capture.SenderQuery{Q: "paging.example", After: first[0].Address, Limit: new(1)})
+	if err != nil || len(next) != 2 || next[0].Address != "bea@paging.example" {
+		t.Fatalf("next page=%+v, %v", next, err)
+	}
+	overrides, err := capture.SendersFor(purgeCtx(e, e.Rep1), InstallationDB(e.Pool), capture.DefaultPersonalPurgeWindows(), capture.SenderQuery{Q: "paging.example", Decision: "business", Overrides: true})
+	if err != nil || len(overrides) != 1 || overrides[0].Address != "bea@paging.example" {
+		t.Fatalf("overrides=%+v, %v", overrides, err)
+	}
+	other, err := capture.SendersFor(purgeCtx(e, e.Rep2), InstallationDB(e.Pool), capture.DefaultPersonalPurgeWindows(), capture.SenderQuery{Q: "paging.example"})
+	if err != nil || len(other) != 0 {
+		t.Fatalf("another owner's search=%+v, %v", other, err)
+	}
+}

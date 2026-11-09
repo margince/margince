@@ -289,6 +289,13 @@ func (s *Store) UndoDedupeDisposition(ctx context.Context, id ids.UUID) (DedupeC
 	// a grant revoked mid-flight must not strand a candidate at 'merged' with
 	// no merge behind it.
 	if err := s.writePairDecision(ctx, row, func(ctx context.Context, tx pgx.Tx) error {
+		live, err := lockLiveDedupeSubjects(ctx, tx, row.EntityType, row.LeftID, row.RightID)
+		if err != nil {
+			return err
+		}
+		if !live {
+			return apperrors.ErrNotFound
+		}
 		return reopenDedupeCandidateTx(ctx, tx, row.ID)
 	}); err != nil {
 		return DedupeCandidateRow{}, err

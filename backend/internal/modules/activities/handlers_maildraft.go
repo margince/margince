@@ -71,6 +71,7 @@ func mailDraftContentFrom(req crmcontracts.MailDraftInput) (MailDraftContent, er
 		AttachmentIDs: attachmentIDsFrom(req.AttachmentIds),
 		Context:       commsauthz.Category(valueOr(req.CommunicationContext)),
 		Schedule:      schedule,
+		EditorState:   valueOr(req.EditorState),
 	}, nil
 }
 
@@ -95,6 +96,7 @@ func ownDraftAsConflict(err error) error {
 func mailDraftResponse(d MailDraft) crmcontracts.MailDraft {
 	out := crmcontracts.MailDraft{
 		Id:           openapi_types.UUID(d.ID),
+		EditorState:  &d.Content.EditorState,
 		AnchorType:   d.Anchor.Type,
 		AnchorId:     openapi_types.UUID(d.Anchor.ID),
 		To:           addressLine(d.Content.To),

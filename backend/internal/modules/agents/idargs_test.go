@@ -330,8 +330,8 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterIntentTools(r, inertRetriever{}, nil, nil, nil, seamProbeLifecycle{})
 	RegisterChannelProviderTools(r, inertChannelProviderDirectory{})
 	RegisterSlippingTools(r,
-		func(context.Context, int) ([]SlippingDeal, error) { return nil, errSeamReached },
-		func(context.Context, SlippingDeal) (ids.UUID, string, error) { return ids.UUID{}, "", errSeamReached }, testStalledDays)
+		func(context.Context, int, *ids.UUID) ([]SlippingDeal, error) { return nil, errSeamReached },
+		func(context.Context, SlippingDeal) (ids.UUID, string, error) { return ids.UUID{}, "", errSeamReached }, testStalledDays, testStalledDays)
 	RegisterCommitmentTool(r, func(context.Context, CommitmentQuery) (CommitmentSweep, error) {
 		return CommitmentSweep{}, errSeamReached
 	})
@@ -347,7 +347,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 			return DealCoverageAnswer{}, errSeamReached
 		},
 		func(context.Context, ids.UUID) ([]IntroRoute, bool, error) { return nil, false, errSeamReached },
-		func(context.Context) (AtRiskReport, error) { return AtRiskReport{}, errSeamReached })
+		func(context.Context, *ids.UUID) (AtRiskReport, error) { return AtRiskReport{}, errSeamReached })
 	RegisterCommsTools(r, &recordingComms{}, seamProbeProvider{})
 	RegisterLifecycleTools(r, seamProbeProvider{},
 		seamProbeLifecycle{}, seamProbeLifecycle{}, seamProbeLifecycle{}, seamProbeLifecycle{}, seamProbeLifecycle{})
@@ -358,6 +358,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	})
 	RegisterVocabularyTool(r, seamProbeVocabulary{})
 	RegisterReportVocabularyTool(r, seamProbeReportVocabulary{})
+	RegisterReadViewsTool(r, NewReadViewsResource(nil))
 	RegisterRecordFieldsTool(r, RecordFieldsResource{})
 	RegisterAnalyticsVocabularyTool(r, seamProbeAnalyticsVocabulary{})
 	RegisterContextSearchTool(r, seamProbeProvider{}, seamProbeRetriever{})

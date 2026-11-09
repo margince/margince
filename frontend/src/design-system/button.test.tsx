@@ -727,7 +727,7 @@ describe("a glyph inside a control takes no size of its own", () => {
     );
     // The one way a census fails: it reads a smaller tree, finds nothing, and
     // reports the same word a clean tree does. A floor makes an empty walk say
-    // so instead — the same guard `native-controls.test.ts` keeps.
+    // so instead. `native-controls.census.ts` keeps the same guard.
     expect(files.length).toBeGreaterThan(100);
     // And the extension tier specifically: the floor above is one the core
     // satisfies alone, so it cannot notice a walk that stops at src/.

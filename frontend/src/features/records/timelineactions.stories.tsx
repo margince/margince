@@ -125,6 +125,28 @@ export const AudienceOpen: Story = {
   },
 };
 
+/** Captured mail on a deal's timeline: "Not about this deal", open. */
+export const NotAboutThisDeal: Story = {
+  args: { activity: { ...CAPTURED, subject: "Rechnungslauf Oktober" } },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "More actions for Rechnungslauf Oktober",
+      }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Not about this deal" }),
+    );
+    await screen.findByRole("dialog", {
+      name: "Take this email off the deal?",
+    });
+  },
+};
+export const NotAboutThisDealDark: Story = {
+  ...NotAboutThisDeal,
+  globals: { theme: "dark" },
+};
+
 export const InvitationPending: Story = {
   args: {
     activity: {

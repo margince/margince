@@ -42,7 +42,7 @@ const agentPrefixText = "agent:"
 
 func TestEveryAgentPrincipalHasAFrontendLabel(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile(frontendCatalogue)
+	source, err := gatekit.ReadFile(frontendCatalogue)
 	if err != nil {
 		t.Fatalf("reading the frontend catalogue: %v", err)
 	}
@@ -130,8 +130,14 @@ func namesAnAgentPrincipal(_ string, file *ast.File) bool {
 // package's own constants and every module constant it names by qualifier
 // (`"agent:" + approvalsubject.KindCounterparty`) in the table.
 func foldConstant(consts packageConsts, parsed gatekit.ParsedFile, expr ast.Expr) (string, bool) {
-	table := maps.Clone(consts.of(packageDir(parsed)))
-	return gatekit.StringExpr(qualifiedAsIdents(consts, parsed, expr, table), table, gatekit.FoldStrict)
+	table := consts.of(packageDir(parsed))
+	qualified := map[string]string{}
+	folded := qualifiedAsIdents(consts, parsed, expr, qualified)
+	if len(qualified) > 0 {
+		table = maps.Clone(table)
+		maps.Copy(table, qualified)
+	}
+	return gatekit.StringExpr(folded, table, gatekit.FoldStrict)
 }
 
 // qualifiedAsIdents copies a concatenation with each readable `pkg.Name`
@@ -207,7 +213,7 @@ func TestEveryExtensionAgentIsNamedFromItsKind(t *testing.T) {
 			t.Errorf("%s declares dispatcher %q outside the %q namespace, so the provenance tag cannot tell it is an extension's", kinds[kind], kind, extension.NamespacePrefix)
 		}
 	}
-	source, err := os.ReadFile(provenanceSource)
+	source, err := gatekit.ReadFile(provenanceSource)
 	if err != nil {
 		t.Fatalf("reading %s: %v", provenanceSource, err)
 	}
@@ -256,7 +262,7 @@ func extensionDispatcherKinds(t *testing.T, root string) map[string]string {
 	}
 	kinds := map[string]string{}
 	for _, file := range files {
-		source, err := os.ReadFile(file)
+		source, err := gatekit.ReadFile(file)
 		if err != nil {
 			t.Fatalf("reading %s: %v", file, err)
 		}

@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -106,7 +105,7 @@ func (s *Store) Resolve(ctx context.Context, exceptionID ids.UUID, in Resolution
 		return err
 	}
 	return database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
-		return s.resolveIn(ctx, tx, exceptionID, in, actor.UserID, settled, now)
+		return s.resolveIn(ctx, tx, exceptionID, in, actor.UserID, settled)
 	})
 }
 
@@ -117,7 +116,7 @@ func (s *Store) ResolveTx(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID, 
 	if err != nil {
 		return err
 	}
-	return s.resolveIn(ctx, tx, exceptionID, in, actor.UserID, settled, now)
+	return s.resolveIn(ctx, tx, exceptionID, in, actor.UserID, settled)
 }
 
 // admitResolution checks who answers and what, before any transaction, and
@@ -148,12 +147,8 @@ func answeringActor(ctx context.Context) (principal.Principal, error) {
 
 func (s *Store) resolveIn(
 	ctx context.Context, tx pgx.Tx, exceptionID ids.UUID, in Resolution, actorID ids.UUID, settled *time.Time,
-	now time.Time,
 ) error {
 	if err := ensureAnswerable(ctx, tx, exceptionID); err != nil {
-		return err
-	}
-	if err := ensureOutcomeFitsReview(ctx, tx, exceptionID, in.Outcome); err != nil {
 		return err
 	}
 	if err := s.applySignalDecision(ctx, tx, exceptionID, in); err != nil {
@@ -180,12 +175,6 @@ func (s *Store) resolveIn(
 		// be able to open.
 		return apperrors.ErrNotFound
 	}
-	// After the status moved, so the check reads the deal as it stands
-	// without this review open.
-	if err := s.applyReviewCheck(ctx, tx, exceptionID, in.Outcome, now); err != nil {
-		return err
-	}
-
 	capturedBy, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return err
@@ -287,28 +276,6 @@ func ensureCallAnswerable(ctx context.Context, tx pgx.Tx, callID ids.UUID) error
 		return apperrors.ErrNotFound
 	}
 	return nil
-}
-
-// ReviewOutcomes are the four answers a viability review takes. Revived is
-// confirmed by the review check against the deal's evidence. Closed lost is
-// recorded as not relevant once the deal is lost. An override needs a reason
-// and an end date. A wait keeps the review open.
-func ReviewOutcomes() []string {
-	return []string{OutcomeFixedRecord, OutcomeNotRelevant, OutcomeValueCorrect, OutcomeRemindLater}
-}
-
-func ensureOutcomeFitsReview(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID, outcome string) error {
-	var kind string
-	if err := tx.QueryRow(ctx, `SELECT type FROM assurance_exception WHERE id = $1`, exceptionID).Scan(&kind); err != nil {
-		return fmt.Errorf("assurance: reading the finding's type: %w", err)
-	}
-	if !slices.Contains(ReviewTypes(), kind) || slices.Contains(ReviewOutcomes(), outcome) {
-		return nil
-	}
-	return &values.ParseError{
-		Field: slotOutcome, Code: "not_allowed",
-		Message: "a customer review is answered by reviving the deal, closing it as lost, an override with a reason and an end date, or a wait",
-	}
 }
 
 // checkResolution refuses an answer the surface cannot honour, and returns the

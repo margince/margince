@@ -1,92 +1,27 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { useProspectingWeeks } from "./analytics.overview.prospectingweeks.queries";
+
+export {
+  outcomeWeeks,
+  type ProspectingOutcome,
+  useProspectingWeeks,
+} from "./analytics.overview.prospectingweeks.queries";
+
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { GroupedBars } from "../../design-system/report-charts";
 import { formatDateAbbrev, formatDayMonth } from "../../format/format";
-import { dayInZone, startOfDayInZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
 import {
   type ReportingChart,
   type ReportingEvaluation,
   type ReportingEvidenceRef,
-  type ReportingMetricID,
-  type ReportingSelection,
   reportingAmount,
 } from "./reporting.model";
-import { useMetricNames, useReportingEvaluation } from "./reporting.queries";
+import { useMetricNames } from "./reporting.queries";
 import { SdrOutcomes } from "./reporting.sdroutcomes";
-
-// How many weeks the trend shows, the one under way included.
-const WEEKS = 6;
-
-export type ProspectingOutcome = Extract<
-  ReportingMetricID,
-  "accepted_opportunities" | "leads_qualified" | "leads_promoted"
->;
-
-/**
- * The weeks that end with the period on screen, read as the server's own
- * weekly buckets. The interval is cut from the answered period in its zone.
- * So when the period is a week, the last bucket is the headline's week.
- */
-export function useProspectingWeeks(
-  week: ReportingEvaluation | undefined,
-  outcome: ProspectingOutcome | undefined,
-) {
-  const selection: ReportingSelection | undefined =
-    week && outcome
-      ? {
-          scope: week.selection.scope,
-          period: "custom",
-          interval: weeksBefore(week),
-          target_basis: "month",
-          close_window: "all_open",
-          metrics: [outcome, "meetings_held"],
-          blocks: ["sdr_outcomes"],
-        }
-      : undefined;
-  // A disabled query still needs a key, so it asks for nothing it would send.
-  return useReportingEvaluation(
-    selection ?? NO_SELECTION,
-    selection !== undefined,
-  );
-}
-
-const NO_SELECTION: ReportingSelection = {
-  scope: { kind: "owner" },
-  period: "this_week",
-  target_basis: "month",
-  close_window: "all_open",
-  metrics: [],
-  blocks: [],
-};
-
-function weeksBefore(
-  week: ReportingEvaluation,
-): ReportingSelection["interval"] {
-  const { interval, timezone } = week.context;
-  const last = dayInZone(Date.parse(interval.end_at) - 1, timezone);
-  const weekday = new Date(`${last}T00:00:00Z`).getUTCDay();
-  const fromMonday = (weekday + 6) % 7;
-  // Whole weeks: the server stops the week under way at its own reading.
-  return {
-    start_at: startOfDayInZone(last, timezone, -fromMonday - 7 * (WEEKS - 1)),
-    end_at: startOfDayInZone(last, timezone, 7 - fromMonday),
-  };
-}
-
-/** The outcome's weekly buckets, or undefined while there are none to draw. */
-export function outcomeWeeks(
-  weeks: ReportingEvaluation | undefined,
-  outcome: ProspectingOutcome,
-): ReportingChart | undefined {
-  const chart = weeks?.charts.find(
-    (each) => each.kind === "sdr_outcomes" && each.metric === outcome,
-  );
-  return chart && chart.points.length > 0 ? chart : undefined;
-}
 
 // A week is named by its Monday. A bucket with no value stays empty: it is
 // never drawn as a measured zero.

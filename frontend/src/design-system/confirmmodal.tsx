@@ -1,10 +1,10 @@
 import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
 import { Children, useId } from "react";
 import { useT } from "../i18n";
+import { isParagraphCommit } from "../lib/fieldcommit";
 import { isImeCommit } from "../lib/imecommit";
 import { Button, Modal } from "./atoms";
 import { ErrorLine } from "./errorline";
-import { isParagraphCommit } from "./fieldeditdialog";
 import { refuseUnreadableField } from "./formvalidity";
 import { Heading } from "./heading";
 import type { ModalIntent } from "./modal";

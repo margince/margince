@@ -34,7 +34,7 @@ function criterion(over: Partial<Criterion>): Criterion {
 }
 
 const meta: Meta<typeof StageExitCriteria> = {
-  title: "Settings/Sales/Pipelines/Stage exit criteria",
+  title: "Settings/Sales/Deals/Stage exit criteria",
   component: StageExitCriteria,
   parameters: { layout: "padded" },
 };

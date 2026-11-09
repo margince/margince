@@ -72,6 +72,12 @@ func parseConsentedScopes(raw string) ([]string, error) {
 	return out, nil
 }
 
+// consentChoice is what the human posted: the scopes ticked and the areas chosen.
+type consentChoice struct {
+	scopes string
+	areas  principal.WorkAreas
+}
+
 // mintConsentedAuthorizationCode writes the single-use code the client will
 // redeem, and the audit row naming the code — all in ONE transaction, so a
 // code the audit trail cannot explain is a state this flow cannot reach.
@@ -81,15 +87,16 @@ func parseConsentedScopes(raw string) ([]string, error) {
 // (oauth_token.go), so writing them here would be duplicate. This function
 // answers with the plaintext courier; only the courier's hash is stored.
 func (s *Service) mintConsentedAuthorizationCode(
-	ctx context.Context, id Identity, rawScopes string, req authorizeRequest,
+	ctx context.Context, id Identity, choice consentChoice, req authorizeRequest,
 ) (code string, err error) {
 	if err := auth.RequireHuman(ctx); err != nil {
 		return "", err
 	}
-	scopes, err := parseConsentedScopes(rawScopes)
+	scopes, err := parseConsentedScopes(choice.scopes)
 	if err != nil {
 		return "", err
 	}
+	areas := choice.areas
 	code, err = randomToken()
 	if err != nil {
 		return "", err
@@ -110,11 +117,11 @@ func (s *Service) mintConsentedAuthorizationCode(
 		var codeID ids.UUID
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO oauth_authorization_code
-			  (code_hash, client_id, user_id, scopes, code_challenge, redirect_uri, resource, expires_at)
-			VALUES ($1, $2, $3, $4, $5, $6, NULLIF($7, ''), now() + $8::interval)
+			  (code_hash, client_id, user_id, scopes, code_challenge, redirect_uri, resource, expires_at, work_areas)
+			VALUES ($1, $2, $3, $4, $5, $6, NULLIF($7, ''), now() + $8::interval, $9)
 			RETURNING id`,
 			codeHash, req.ClientID, id.UserID, storedScopes, req.CodeChallenge,
-			req.RedirectURI, req.Resource, authCodeTTL.String()).Scan(&codeID); err != nil {
+			req.RedirectURI, req.Resource, authCodeTTL.String(), areasColumn(areas)).Scan(&codeID); err != nil {
 			return err
 		}
 		// Audit the consent: what scopes the human ticked, for what client, with
@@ -126,6 +133,7 @@ func (s *Service) mintConsentedAuthorizationCode(
 				auditFieldClientID:       req.ClientID,
 				auditFieldScopes:         scopes,
 				auditFieldRefreshAllowed: req.Offline,
+				auditFieldAreas:          areasColumn(areas),
 			})
 		return err
 	})

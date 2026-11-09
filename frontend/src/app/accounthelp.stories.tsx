@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import {
   AccountMenuFrame,
   openHelpFlyout,
@@ -9,20 +10,21 @@ import {
 } from "../testing/accountmenu-story";
 import { HelpSubmenu } from "./accounthelp";
 
-/**
- * Help and feedback, open from the account menu and opening LEFT like the theme
- * flyout. Four places off the app, each marked as a new tab, the keyboard
- * shortcuts, and the build under its own rule.
- *
- * Only the unstamped build is drawn: the releases are compiled into the bundle
- * from the build's environment, so a story cannot set them. The unit tests
- * cover the stamped and instance builds (accounthelp.test.tsx).
- */
+// Help documents, licence notices and keyboard shortcuts stay available to every seat.
 const meta: Meta<typeof HelpSubmenu> = {
   title: "Shell/Account help and feedback",
   component: HelpSubmenu,
   parameters: { layout: "fullscreen" },
-  play: openHelpFlyout,
+  play: async (context) => {
+    await openHelpFlyout(context);
+    const link = within(document.body).getByRole("menuitem", {
+      name: /^Web app licenses/,
+    });
+    await expect(link).toHaveAttribute(
+      "href",
+      "/licenses/THIRD-PARTY-NOTICES.txt",
+    );
+  },
   render: () => {
     stubSession();
     return <AccountMenuFrame />;

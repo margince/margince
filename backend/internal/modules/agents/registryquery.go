@@ -95,6 +95,7 @@ func (r *Registry) Spec(name string) (mcp.ToolSpec, bool) {
 func copySchemas(spec mcp.ToolSpec) mcp.ToolSpec {
 	spec.InputSchema = bytes.Clone(spec.InputSchema)
 	spec.OutputSchema = bytes.Clone(spec.OutputSchema)
+	spec.Areas = slices.Clone(spec.Areas)
 	// The view declaration, for the SAME reason and one field over: it is a
 	// pointer to a struct holding a slice, so a tool that kept a reference to
 	// what it registered could rewrite the URI a host is told to fetch — and the

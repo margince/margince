@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture/capturemetrics"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
@@ -25,6 +26,7 @@ import (
 // Sink is the one connector.Sink implementation — the chokepoint every
 // captured record passes on its way into the domain.
 type Sink struct {
+	internalMailRecorder   InternalMailRecorder
 	partyReceiptSettlement PartyReceiptSettlement
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db     *database.DB
@@ -70,9 +72,8 @@ type Sink struct {
 	nameParticipants ParticipantNamer
 	// scoreLead scores a lead the sink created. Nil keeps the column default.
 	scoreLead LeadScorer
-	// cancelMeeting closes a captured meeting the calendar says is off — called
-	// off by its organizer, or declined by the seat whose calendar it is. Nil
-	// captures meetings and cancels none.
+	// cancelMeeting closes a meeting cancelled by its organizer.
+	// Nil captures meetings and cancels none.
 	cancelMeeting MeetingCloser
 	// cancelMeetingByID closes the meeting a cancelled event's cross-door
 	// identity resolved to, when nothing was captured under its natural key.
@@ -83,7 +84,10 @@ type Sink struct {
 	moveMeeting MeetingMover
 	// foldMeeting retires one of two live rows holding one meeting. Nil keeps
 	// both.
-	foldMeeting       MeetingFolder
+	foldMeeting MeetingFolder
+	// keepMeetingHost hands a replayed meeting to its organizer. Nil leaves the
+	// first calendar that synced it as its host.
+	keepMeetingHost   MeetingHostKeeper
 	resolveInvitation CalendarInvitationResolver
 	// takeOverAsserted writes this connector's reading of a message over a row
 	// an importer asserted. Nil leaves an asserted incumbent alone, which is
@@ -233,6 +237,10 @@ var (
 // key. Replays return the existing row and write nothing new, so an
 // at-least-once sync loop costs no duplicate audit entries.
 func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (datasource.EntityRef, error) {
+	return s.captureRecord(ctx, rec, rec.CalendarAnswer != nil && rec.CalendarAnswer.Response == connector.ResponseDeclined)
+}
+
+func (s *Sink) captureRecord(ctx context.Context, rec connector.NormalizedRecord, existingOnly bool) (datasource.EntityRef, error) {
 	noteDelivered(ctx, rec)
 	rec = maskCapturedCredentials(rec)
 	actor, err := admitRecord(ctx, rec)
@@ -240,98 +248,81 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 		return datasource.EntityRef{}, err
 	}
 
-	var ref datasource.EntityRef
-	var dedupeHit *ids.LeadID
-	var dedupeFields json.RawMessage
-	var activityCreated bool
-	var decision counterpartyDecision
-	// internalOnly is set INSIDE the transaction and read after it commits.
-	// The skip has to commit — its breadcrumb is the proof that a message
-	// produced no rows, and returning ErrSkip from inside the callback would
-	// roll that proof back along with everything else (ADR-0082 §1).
-	var internalOnly bool
-	// dropped says why, when a gate above the raw store kept the message out;
-	// it is the skip's sentence to the connector, so it names the rule, never
-	// an address.
-	var dropped string
+	s = s.withRetryFileStage()
+	var attempt captureAttempt
 	txStart := time.Now()
-	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// A channel record's account id IS personal data, and THIS transaction is
-		// the one that makes it durable — so the erasure is excluded here, under
-		// the account's own lock, and not only at the ingress edge that admitted
-		// the update. sinkchannel.go states what landing inside an erasure costs.
-		if err := s.refuseErasedChannelAccount(ctx, tx, rec.Counterparty); err != nil {
-			return err
-		}
+	original := rec
+	err = storekit.RetryLockCycles(ctx, func() error {
+		return s.db.Tx(ctx, func(tx pgx.Tx) error {
+			rec = original
+			attempt = captureAttempt{}
+			ctx, err := s.admitWriteTx(withAdmissionNote(ctx, &attempt.admission), tx, rec)
+			if err != nil {
+				return err
+			}
 
-		// The pre-store gates run BEFORE the raw store, which is the whole
-		// point: raw capture is append-once evidence, so a message that gets
-		// that far has been kept whatever happens next.
-		drop, err := s.dropBeforeStoreTx(ctx, tx, rec)
-		if err != nil {
-			return err
-		}
-		if drop != "" {
-			internalOnly = true
-			dropped = drop
-			return nil
-		}
+			if err := s.prepareActivityCapture(ctx, tx, rec, existingOnly); err != nil {
+				return err
+			}
 
-		switch fields := rec.Fields.(type) {
-		case ActivityFields:
-			// First of everything that touches an activity row in this transaction,
-			// alias adoption included. Adoption recomputes the audience of every message
-			// it adopts, which locks those rows. A transaction holding one before it asks
-			// for the merge lock is the cycle takeMergeLockFirst exists to break.
-			if err := s.takeMergeLockFirst(ctx, tx, rec); err != nil {
+			// A skip commits its breadcrumb before the connector advances its cursor.
+			ctx, drop, err := s.dropBeforeStoreTx(ctx, tx, rec)
+			if err != nil {
 				return err
 			}
-			var err error
-			if rec, fields, err = s.readMailForTheSeatTx(ctx, tx, actor.UserID, rec, fields); err != nil {
-				return err
+			if drop != "" {
+				attempt.dropped = drop
+				return nil
 			}
-			// Stored only now, so the original's privacy question sees the record
-			// staging sees, after it was read against the seat's own addresses.
-			if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {
+
+			switch fields := rec.Fields.(type) {
+			case ActivityFields:
+				attempt.activityLanding, err = s.landActivityTx(ctx, tx, rec, fields, actor.UserID)
 				return err
-			}
-			ref, activityCreated, decision, err = s.captureActivity(ctx, tx, rec, fields)
-			return err
-		case LeadFields:
-			if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {
+			case LeadFields:
+				if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {
+					return err
+				}
+				attempt.ref, attempt.duplicate, attempt.duplicateFields, err = s.captureLead(ctx, tx, rec, fields)
 				return err
+			default:
+				return fmt.Errorf("capture: unmapped Fields type %T for %s", rec.Fields, rec.EntityType)
 			}
-			ref, dedupeHit, dedupeFields, err = s.captureLead(ctx, tx, rec, fields)
-			return err
-		default:
-			return fmt.Errorf("capture: unmapped Fields type %T for %s", rec.Fields, rec.EntityType)
-		}
+		})
 	})
 	capturemetrics.ObserveStage(ctx, capturemetrics.StageSink, time.Since(txStart))
 	if err != nil {
 		s.traceInvisibleIncumbent(ctx, rec, err)
 		return datasource.EntityRef{}, err
 	}
-	if internalOnly {
+	return s.finishCapture(ctx, rec, attempt)
+}
+
+func (s *Sink) finishCapture(ctx context.Context, rec connector.NormalizedRecord, attempt captureAttempt) (datasource.EntityRef, error) {
+	ref := attempt.ref
+	if attempt.dropped != "" {
 		// The breadcrumb is committed; only now does the connector learn the
 		// message was dropped. ErrSkip is counted by every sync loop and fails
 		// none of them, so the watermark advances past the message exactly as it
 		// does for any other skip — which is what makes the classification
 		// irreversible, and why the own-domain set is admin-visible (ADR-0082 §4).
-		return datasource.EntityRef{}, fmt.Errorf("%w: %s", connector.ErrSkip, dropped)
+		return datasource.EntityRef{}, fmt.Errorf("%w: %s", connector.ErrSkip, attempt.dropped)
+	}
+	if attempt.internal {
+		return ref, nil
 	}
 	// Everything after the commit, merge staging included, is the ensure stage.
 	ensureStart := time.Now()
 	defer func() { capturemetrics.ObserveStage(ctx, capturemetrics.StageEnsure, time.Since(ensureStart)) }()
-	if activityCreated {
+	if attempt.created {
 		// The tier ladder already decided, and recorded its decision, inside
 		// the transaction above. Creation runs AFTER that commit, in its own
 		// transaction: the timeline row is never lost to a resolver fault, and
 		// a fault here is logged for the link_reconcile sweep rather than
 		// surfaced as a capture failure (the 60s p95 already delivered).
-		s.ensureCounterparty(ctx, rec, ref, decision)
+		s.ensureCounterparty(ctx, rec, ref, attempt.decision)
 	}
-	s.admitCapturedParties(ctx, rec, ref)
+	s.admitCapturedParties(ctx, rec, ref, attempt.created && !attempt.admission.pending)
 	// The project ladder runs on the same terms as the counterparty step —
 	// after the commit, in its own transaction, never failing the capture —
 	// and on EVERY capture of the activity rather than only the first.
@@ -355,7 +346,7 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 			s.contactArrivals.TellContactOwner(ctx, ids.From[ids.ContactKind](ref.ID), rec, fields)
 		}
 	}
-	if err := s.stageDuplicateLead(ctx, rec, dedupeHit, dedupeFields); err != nil {
+	if err := s.stageDuplicateLead(ctx, rec, attempt.duplicate, attempt.duplicateFields); err != nil {
 		return datasource.EntityRef{}, err
 	}
 	return ref, nil
@@ -373,6 +364,20 @@ func (s *Sink) stageDuplicateLead(ctx context.Context, rec connector.NormalizedR
 		return fmt.Errorf("capture: staging the dedupe merge: %w", err)
 	}
 	return nil
+}
+
+// admitWriteTx is what the capture transaction asks before it locks a row.
+func (s *Sink) admitWriteTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (context.Context, error) {
+	// A mailbox run started under a role that was taken away since writes
+	// nothing more under it.
+	ctx, err := s.mailboxRunAllowedTx(ctx, tx)
+	if err != nil {
+		return ctx, err
+	}
+	// A channel record's account id is personal data, and this transaction
+	// makes it durable. So the erasure is excluded here, under the account's own
+	// lock, and not only at the ingress edge (sinkchannel.go).
+	return ctx, s.refuseErasedChannelAccount(ctx, tx, rec.Counterparty)
 }
 
 // admitRecord is what a record must be before ANY of it is written, and it

@@ -3,6 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { calendarDay } from "../../format/calendarday";
+import { UTC_ZONE } from "../../format/timezone";
 import { en } from "../../i18n/en";
 import {
   type Approval,
@@ -14,6 +16,7 @@ import {
   lapsed,
   NOT_FOUND,
   narratedWeek,
+  noMarginceChanges,
   pipelineRows,
   quietRun,
   ranked,
@@ -133,7 +136,7 @@ function brief({
           page: { next_cursor: null, has_more: false },
         }),
       ...approvalRoutes,
-      "GET /weekly-reviews": () => jsonResponse({ weeks: [WEEK_START] }),
+      "GET /weekly-reviews": () => jsonResponse(ARCHIVE),
       "GET /weekly-reviews/latest": () =>
         weekly ? jsonResponse(weekly) : jsonResponse(NOT_FOUND, 404),
       "GET /digest": () =>
@@ -171,6 +174,10 @@ function brief({
         }),
       "POST /reports/deals-by-stage": () => pipeline(),
       "GET /magic": () => jsonResponse(quietNight),
+      // No stored run yet. `items` is required on a run, so the fallback list
+      // page would crash the deal-suggestions opener, which counts them.
+      "GET /brief": () => jsonResponse(NOT_FOUND, 404),
+      "GET /deal-corrections/pending": () => jsonResponse(noMarginceChanges),
       // The plan's week is required by the contract, which the fallback list
       // page lacks.
       "GET /weekly-plans/current": () =>
@@ -240,8 +247,8 @@ export const DecisionApproved: Story = {
     // in hand on the card, and the one after it listed under it.
     await waitFor(() =>
       expect(
-        canvasElement.querySelectorAll("#brief-today .brief-focus-list > li"),
-      ).toHaveLength(1),
+        canvasElement.querySelectorAll("#brief-today .brief-triage > li"),
+      ).toHaveLength(2),
     );
   },
 };
@@ -352,10 +359,43 @@ const SixPrioritiesDay = readingsDay({}, [
 export const SixPriorities: Story = {
   render: brief({ approvals: [], day: SixPrioritiesDay }),
 };
+const sonyaMessage = {
+  id: "mail-sonya",
+  lifecycle: "delivered",
+  version: 1,
+  occurred_at: "2026-09-03T16:46:00Z",
+  summary: waitingEmailRow().email_summary,
+  body: "Hey Josh — let's meet next Tues instead of Monday. You're going to be talking to the team about the rollout?",
+  from: [],
+  to: [],
+  cc: [],
+  bcc: [],
+  bcc_withheld: false,
+  attachments: [],
+  links: [],
+  thread: { members: [], next_cursor: null },
+  can_reply: false,
+  can_relink: false,
+  access: {
+    content_state: "available",
+    display_status: "team",
+    audience: "workspace",
+    can_change: false,
+    change_mode: "none",
+  },
+};
 // A row that is not an activity opens its details in the drawer beside the
 // queue; its close is the way back to Focus.
 export const RowDetailsOpen: Story = {
-  render: brief({ approvals: [], day: SixPrioritiesDay }),
+  render: brief({
+    approvals: [],
+    day: SixPrioritiesDay,
+    // The first row is Sonya's waiting message, so its details read it.
+    extra: {
+      "GET /activities/mail-sonya/email-presentation": () =>
+        jsonResponse(sonyaMessage),
+    },
+  }),
   play: async ({ canvasElement }) => {
     const [context] = await within(canvasElement).findAllByRole("button", {
       name: en["brief.focus.context"],
@@ -502,6 +542,7 @@ export const WorkingMorning: Story = {
           jsonResponse({ ...ranked, generated_at: "2026-09-13T05:30:00Z" }),
         "GET /digest": () => jsonResponse({ title: "Not found" }, 404),
         "GET /magic": () => jsonResponse(quietNight),
+        "GET /deal-corrections/pending": () => jsonResponse(noMarginceChanges),
         "GET /worklist/handled": () =>
           jsonResponse({
             as_of: day.as_of,
@@ -553,7 +594,22 @@ function onWeekly() {
   };
 }
 
-// One pane as wide as the morning's two, so the dial stays put across views.
+// Eight weeks of reports, newest first, each with what it won.
+const ARCHIVE = (() => {
+  const won = [3, 1, 2, 0, 1, 4, 1, 2];
+  const weeks = won.map((_, back) =>
+    // Read in UTC from a UTC noon, so no reader's zone moves the date.
+    calendarDay(
+      new Date(Date.parse(`${WEEK_START}T12:00:00Z`) - back * 7 * 864e5),
+      UTC_ZONE,
+    ),
+  );
+  return {
+    weeks,
+    entries: weeks.map((week, at) => ({ week, deals_won: won[at] ?? 0 })),
+  };
+})();
+
 export const Week: Story = {
   beforeEach: onWeekly,
   render: brief({ approvals: [] }),

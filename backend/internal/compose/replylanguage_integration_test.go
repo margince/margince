@@ -128,8 +128,12 @@ func longReplyThread(t *testing.T, o *owedEnv, oldestOwner ids.UUID, oldestSeat 
 	e := o.e
 	replyLangContact(t, e, "Dietmar Kunde", "dietmar@kunde.test")
 	replyLangContact(t, e, "Anne Kollegin", "anne@kunde.test")
+	// Both mailboxes hold the colleague's first mail, so the conversation is one
+	// the owner of the oldest mail shares. Capture order does not change dates.
+	shared := replyLangMail(t, o, "inbound", "anne@kunde.test", replyLangEnglish, time.Minute)
+	seatHoldsSeeded(t, e, oldestOwner, shared)
 	oldest = replyLangMailFor(t, o, oldestOwner, oldestSeat, "inbound", "dietmar@kunde.test", replyLangGerman, 0)
-	for i := range replyEvidenceRows + 1 {
+	for i := 1; i <= replyEvidenceRows; i++ {
 		replyLangMail(t, o, "inbound", "anne@kunde.test", replyLangEnglish, time.Duration(i+1)*time.Minute)
 	}
 	anchor = replyLangMail(t, o, "inbound", "dietmar@kunde.test", "ok", 2*time.Hour)
@@ -150,7 +154,10 @@ func TestTheAddresseesMailTheDrafterMayNotReadDoesNotDecideTheLanguage(t *testin
 	e := o.e
 	o.e.WsExec(t, `INSERT INTO capture_connection (user_id, provider, status, credential_ref, account_label)
 		VALUES ($1, 'gmail', 'connected', 'vault:test', 'rep2@ws.example')`, o.e.Rep2)
-	_, anchor := longReplyThread(t, o, o.e.Rep2, "rep2@ws.example")
+	oldest, anchor := longReplyThread(t, o, o.e.Rep2, "rep2@ws.example")
+	if o.threadKey(t, oldest) != o.threadKey(t, anchor) {
+		t.Fatal("the German mail is not in the drafter's conversation, so the case tests nothing")
+	}
 	if got := replyLangDraft(t, e, anchor); got != "en" {
 		t.Fatalf("output language = %q, want English: the German mail is limited to participants the drafter is not among", got)
 	}

@@ -221,3 +221,14 @@ func TestTheThreadNamesTheLanguageWhenTheAnsweredMessageDoesNot(t *testing.T) {
 		t.Errorf("a du thread gave language %q register %q, same as a bare message (%q)", du.Language, du.Register, sie.Register)
 	}
 }
+
+func TestCorrespondenceOutranksTheSubjectOfANewDraft(t *testing.T) {
+	resolver := draftfloor.NewResolver()
+	got := resolver.Resolve(context.Background(), draftfloor.Written{
+		Thread:       []string{"Hallo Anna, wir haben das Angebot geprüft und melden uns bei Ihnen."},
+		DraftSubject: "Your proposal and our next steps", Purpose: "Please ask for a meeting",
+	}, convstate.State{Band: convstate.BandFresh})
+	if got.Language != "de" {
+		t.Fatalf("language = %q, want the correspondence's German", got.Language)
+	}
+}

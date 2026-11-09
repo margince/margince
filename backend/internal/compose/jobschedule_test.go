@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/riverqueue/river"
+	"github.com/riverqueue/river/rivertype"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -382,5 +383,21 @@ func TestTheSuppressionJournalNeedsAnObjectStoreForBothHalves(t *testing.T) {
 	}
 	if got := suppressionJournalExporterFor(nil, blob, log); got == nil {
 		t.Error("with an object store: got no worker, want one")
+	}
+}
+
+func TestARunningAdmissionTickDoesNotSuppressItsReplacement(t *testing.T) {
+	opts := periodicInsertOpts(CaptureBackfillReconcileArgs{})
+	cadence := specFor(t, CaptureBackfillReconcileArgs{}.Kind()).Cadence.Fixed
+	if opts.UniqueOpts.ByPeriod <= 0 || opts.UniqueOpts.ByPeriod >= cadence {
+		t.Fatal("a lost running reconcile would suppress replacement ticks")
+	}
+	for _, state := range activeSweepStates {
+		if !slices.Contains(opts.UniqueOpts.ByState, state) {
+			t.Fatalf("pending ticks no longer coalesce in state %s", state)
+		}
+	}
+	if !slices.Contains(periodicInsertOpts(CaptureDigestArgs{}).UniqueOpts.ByState, rivertype.JobStateRunning) {
+		t.Fatal("admission changed another pass's uniqueness policy")
 	}
 }

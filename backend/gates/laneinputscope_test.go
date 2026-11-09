@@ -35,7 +35,6 @@ package gates
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -44,6 +43,8 @@ import (
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -105,7 +106,7 @@ type workflowFile struct {
 
 func readWorkflow(t *testing.T, path string) workflowFile {
 	t.Helper()
-	body, err := os.ReadFile(path)
+	body, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}
@@ -178,7 +179,7 @@ type recipeTarget struct {
 
 func parseRecipes(t *testing.T, path string) (map[string]*recipeTarget, map[string]string) {
 	t.Helper()
-	body, err := os.ReadFile(path)
+	body, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

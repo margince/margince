@@ -24,23 +24,52 @@ import (
 )
 
 // GetAttachmentExtraction answers the poll with the newest reading of this
-// attachment: its status, the fields it grounded, and what it honestly omitted
-// (RD-WIRE-N-2). A pure read — zero writes, no model call, no extractor here at
-// all. The reading itself is compose orchestration behind a 202, because a
-// model call takes seconds and can fail and so cannot happen inside the request
-// that asks for it.
+// attachment for one question, deal facts when none is named. It carries the
+// status, the fields the reading grounded, and what it omitted (RD-WIRE-N-2).
+// A pure read: zero writes, no model call, no extractor here at all. The reading
+// itself is compose orchestration behind a 202. A model call takes seconds and
+// can fail, so it cannot happen inside the request that asks for it.
 //
-// 404 when this attachment has never been read, which is the honest difference
-// between nobody asking and a reading that got nothing. Valid for ANY
-// entity_type: a non-deal attachment reads fine, since accepting fields onto a
-// deal (not this op) is what is deal-only.
-func (h Handlers) GetAttachmentExtraction(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	read, err := h.store.LatestExtractionRead(r.Context(), ids.UUID(id))
+// 404 when this attachment was never read for that question, which separates
+// nobody asking from a reading that got nothing. An attachment read only as a
+// chat capture therefore answers 404 to a deal-facts poll. Valid for any
+// entity_type: a non-deal attachment reads fine, since only accepting fields
+// onto a deal (not this op) is deal-only.
+func (h Handlers) GetAttachmentExtraction(
+	w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.GetAttachmentExtractionParams,
+) {
+	question := ExtractionQuestionDealFacts
+	if params.Question != nil {
+		question = string(*params.Question)
+	}
+	read, err := h.store.LatestExtractionRead(r.Context(), ids.UUID(id), question)
+	h.writeExtraction(w, r, read, err)
+}
+
+// GetAttachmentExtractionReading reports one named reading, so a screen that
+// started a reading polls that reading and not whichever is newest.
+func (h Handlers) GetAttachmentExtractionReading(
+	w http.ResponseWriter, r *http.Request, id crmcontracts.Id, extractionID openapi_types.UUID,
+) {
+	read, err := h.store.GetExtractionRead(r.Context(), ids.UUID(id), ids.UUID(extractionID))
+	h.writeExtraction(w, r, read, err)
+}
+
+func (h Handlers) writeExtraction(w http.ResponseWriter, r *http.Request, read ExtractionRead, err error) {
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, extractionReport(read, time.Now()))
+	other, err := h.store.OtherChatCounterparty(r.Context(), read)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	report := extractionReport(read, time.Now())
+	if other != "" {
+		report.OtherCounterparty = &other
+	}
+	httperr.WriteJSON(w, http.StatusOK, report)
 }
 
 // extractionReport maps the run record onto the contract's wire shape,
@@ -52,6 +81,7 @@ func (h Handlers) GetAttachmentExtraction(w http.ResponseWriter, r *http.Request
 func extractionReport(read ExtractionRead, now time.Time) crmcontracts.AttachmentExtraction {
 	out := crmcontracts.AttachmentExtraction{
 		Id:           openapi_types.UUID(read.ID),
+		Question:     crmcontracts.AttachmentExtractionQuestion(read.Question),
 		Status:       crmcontracts.AttachmentExtractionStatus(read.Status),
 		Stalled:      read.Abandoned(now),
 		StatusDetail: read.StatusDetail,

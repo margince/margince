@@ -11,8 +11,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+// seededRevision is the commercial revision noted on a seeded record.
+func seededRevision(p *recordPool, id string) int {
+	revision, _ := strconv.Atoi(p.fact(id, "revision"))
+	return revision
+}
 
 // toolRoleFixtures are what a verb needs and its schema does not say. That is
 // a field one record type requires, a record in a given state, or a value a
@@ -167,15 +174,18 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 		return map[string]any{"request_body": map[string]any{"anchor_type": "company", "anchor_id": p.take("company")}}
 	},
 	"set_activity_disposition": byID("inbound_email"),
-	"set_thread_audience":      func(p *recordPool) map[string]any { return map[string]any{"thread_key": p.take("captured_thread")} },
-	"hide_deal_document":       dealDocument,
-	"unhide_deal_document":     dealDocument,
-	"accept_deal_suggestion":   byID("deal_suggestion"),
-	"dismiss_deal_suggestion":  byID("deal_suggestion"),
-	"get_deal_suggestion":      byID("deal_suggestion"),
-	"accept_tag_suggestion":    byID("tag_suggestion"),
-	"dismiss_tag_suggestion":   byID("tag_suggestion"),
-	"get_tag_suggestion":       byID("tag_suggestion"),
+	"decline_activity_deal": func(p *recordPool) map[string]any {
+		return map[string]any{"id": p.take("inbound_email"), "request_body": map[string]any{"deal_id": p.take("deal")}}
+	},
+	"set_thread_audience":     func(p *recordPool) map[string]any { return map[string]any{"thread_key": p.take("captured_thread")} },
+	"hide_deal_document":      dealDocument,
+	"unhide_deal_document":    dealDocument,
+	"accept_deal_suggestion":  byID("deal_suggestion"),
+	"dismiss_deal_suggestion": byID("deal_suggestion"),
+	"get_deal_suggestion":     byID("deal_suggestion"),
+	"accept_tag_suggestion":   byID("tag_suggestion"),
+	"dismiss_tag_suggestion":  byID("tag_suggestion"),
+	"get_tag_suggestion":      byID("tag_suggestion"),
 	"acknowledge_approval_failure": func(p *recordPool) map[string]any {
 		approval := p.take("failed_approval")
 		return map[string]any{"id": approval, "request_body": map[string]any{"failed_at": p.fact(approval, "failed_at")}}
@@ -290,9 +300,28 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 	"complete_intro_request": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("accepted_intro_ask"), "request_body": map[string]any{"version": 2}}
 	},
-	"revert_stage_progression": func(p *recordPool) map[string]any {
-		deal := p.take("auto_moved_deal")
-		return map[string]any{"id": deal, "approvalId": p.fact(deal, "move")}
+	"add_deal_line": func(p *recordPool) map[string]any {
+		return map[string]any{"id": p.take("deal"), "request_body": map[string]any{
+			"expected_revision": 0, "replace_estimate": true, "description": "Role Sweep", "quantity": 1, "unit_price_minor": 1000,
+		}}
+	},
+	"update_deal_line": func(p *recordPool) map[string]any {
+		deal := p.take("priced_deal")
+		return map[string]any{"id": deal, "lineId": p.fact(deal, "line"), "request_body": map[string]any{
+			"expected_revision": seededRevision(p, deal), "description": "Role Sweep Renamed",
+		}}
+	},
+	"remove_deal_line": func(p *recordPool) map[string]any {
+		deal := p.take("priced_deal")
+		return map[string]any{"id": deal, "lineId": p.fact(deal, "line"), "expected_revision": seededRevision(p, deal)}
+	},
+	"use_deal_estimate": func(p *recordPool) map[string]any {
+		return map[string]any{"id": p.take("deal"), "request_body": map[string]any{"expected_revision": 0}}
+	},
+	"refresh_offer_from_deal": func(p *recordPool) map[string]any {
+		offer := p.take("offer_from_lines")
+		version, _ := strconv.Atoi(p.fact(offer, "version"))
+		return map[string]any{"id": offer, "if_version": version, "request_body": map[string]any{"expected_revision": seededRevision(p, offer)}}
 	},
 	"accept_applied_deal_change": func(p *recordPool) map[string]any {
 		deal := p.take("auto_moved_deal")
@@ -379,6 +408,9 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 	},
 	"request_ownership_transfer": func(p *recordPool) map[string]any {
 		return map[string]any{"record_type": "contact", "id": p.take("stranger_contact")}
+	},
+	"replace_deal_products": func(p *recordPool) map[string]any {
+		return map[string]any{"id": p.take("deal"), "request_body": map[string]any{"expected_tag": deals.ProductSetTag(nil), "products": []any{}}}
 	},
 	"list_connector_containers": func(*recordPool) map[string]any { return map[string]any{"provider": "gmail"} },
 	"mark_worklist_rows_done": func(p *recordPool) map[string]any {

@@ -194,6 +194,7 @@ var tableOwners = map[string]string{
 	"offer":                     "internal/modules/deals",
 	"offer_line_item":           "internal/modules/deals",
 	"deal_product":              "internal/modules/deals",
+	"deal_line_item":            "internal/modules/deals",
 	"sales_initiative":          "internal/modules/initiatives",
 	"sales_initiative_revision": "internal/modules/initiatives",
 	"sales_initiative_member":   "internal/modules/initiatives",

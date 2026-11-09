@@ -1292,7 +1292,6 @@ shader
 shape
 shard
 sharded
-sharding
 shards
 share
 sharper

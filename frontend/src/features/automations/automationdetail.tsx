@@ -19,6 +19,7 @@ import { unwrap } from "../../lib/problem";
 // the row that folds these open lives in another sheet, and a story or a test
 // that mounts one panel alone would otherwise render it unstyled.
 import "./automationdetail.css";
+import { RUN_OUTCOME_WORD, runReasonWords } from "../../lib/automationrun";
 import { useViewerZone } from "../../lib/viewerzone";
 
 // The human surface for the two human-only automation ops
@@ -40,14 +41,14 @@ export const OUTCOME_LOOK: Readonly<
     }>
   >
 > = {
-  fired: { tone: "success", icon: Check, word: "auto.runs.outcomeFired" },
-  failed: { tone: "danger", icon: X, word: "auto.runs.outcomeFailed" },
-  blocked: { tone: "warning", icon: Ban, word: "auto.runs.outcomeBlocked" },
-  skipped: { tone: "warning", icon: Minus, word: "auto.runs.outcomeSkipped" },
+  fired: { tone: "success", icon: Check, word: RUN_OUTCOME_WORD.fired },
+  failed: { tone: "danger", icon: X, word: RUN_OUTCOME_WORD.failed },
+  blocked: { tone: "warning", icon: Ban, word: RUN_OUTCOME_WORD.blocked },
+  skipped: { tone: "warning", icon: Minus, word: RUN_OUTCOME_WORD.skipped },
   queued_for_approval: {
     tone: "warning",
     icon: Clock,
-    word: "auto.runs.outcomeQueued",
+    word: RUN_OUTCOME_WORD.queued_for_approval,
   },
 };
 
@@ -114,10 +115,14 @@ function RunRow({ run }: Readonly<{ run: AutomationRun }>) {
       {run.action_result && (
         <DetailLine label={t("auto.runs.result")} value={run.action_result} />
       )}
-      {run.reason && (
+      {(run.reason_code || run.reason) && (
         <DetailLine
           label={t("auto.runs.reason")}
-          value={run.reason}
+          value={
+            run.reason_code
+              ? runReasonWords(run.reason_code, t)
+              : (run.reason ?? "")
+          }
           color={reasonColor(run.outcome)}
         />
       )}

@@ -96,7 +96,7 @@ To change the partner stages in Margince, open **Settings** → **Partners**. An
 Also called: custom partner stage, rename a partner stage, partner pipeline.
 
 ### Can I add a partner kind or change the other partner lists?
-No. The partner kinds, certification statuses and margin tiers in Margince are fixed lists. Changing one is a change to the product. To record something the fixed fields do not hold, an admin adds a company custom field under **Settings** → **Fields**.
+No. The partner kinds, certification statuses and margin tiers in Margince are fixed lists. Changing one is a change to the product. To record something the fixed fields do not hold, an admin adds a company custom field under **Settings** → **Records and fields**.
 Also called: new partner tier, new partner kind.
 
 ## Partners on a deal

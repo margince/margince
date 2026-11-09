@@ -2,27 +2,28 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
-import { StoryProviders } from "../testing/story-utils";
+import { expect, userEvent, waitFor, within } from "storybook/test";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+  visibleDialog,
+} from "../testing/story-utils";
 import { ArchiveAction } from "./archive";
 
-// ArchiveAction owns its own confirm-modal open state (there is no
-// startOpen prop, unlike CreateAction) — a play() interaction drives the
-// trigger click so the capture gate screenshots the confirm dialog itself,
-// not just the closed danger button. fe-uat.mjs waits 250ms after render for
-// any play() interaction to settle before it screenshots. useArchiveRecord
-// is a react-query mutation, so this needs the shared QueryClient provider
-// (not just LocaleProvider) even though no fetch ever actually fires here.
 const meta: Meta<typeof ArchiveAction> = {
   title: "Patterns/Archive record",
   component: ArchiveAction,
   parameters: { layout: "padded" },
   decorators: [
-    (Story) => (
-      <StoryProviders>
-        <Story />
-      </StoryProviders>
-    ),
+    (Story) => {
+      installFetchStub({ "GET /me": meRoute({ contact: ["delete"] }) });
+      return (
+        <StoryProviders>
+          <Story />
+        </StoryProviders>
+      );
+    },
   ],
 };
 export default meta;
@@ -32,6 +33,7 @@ type Story = StoryObj<typeof ArchiveAction>;
 export const ConfirmOpen: Story = {
   args: {
     label: "Archive",
+    archivedMessage: "Contact archived",
     confirmText: "Archive this record? There is no undo.",
     archive: () => Promise.resolve({ id: "p-1" }),
     invalidate: "contacts",
@@ -41,6 +43,9 @@ export const ConfirmOpen: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByTestId("archive-record"));
+    const trigger = await canvas.findByTestId("archive-record");
+    await waitFor(() => expect(trigger).toBeEnabled());
+    await userEvent.click(trigger);
+    await visibleDialog();
   },
 };

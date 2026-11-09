@@ -37,7 +37,7 @@ import (
 )
 
 // kindInPerson is an exchange that happened in a room: a card handed over at a
-// trade fair, a conversation at a stand.
+// trade fair, a conversation at a stand. What it allows is in facetoface.go.
 //
 // Held by: TestRecordingAnExchangeRefusesWhatItCannotStandBehind
 // (backend/internal/modules/consent/qualifyingevent_integration_test.go), whose
@@ -234,6 +234,19 @@ func (s *Store) RecordQualifyingEvent(
 	contactID ids.ContactID,
 	in RecordQualifyingEventInput,
 ) (QualifyingEvent, error) {
+	var out QualifyingEvent
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = s.recordQualifyingEventTx(ctx, tx, contactID, in)
+		return err
+	})
+	return out, err
+}
+
+// recordQualifyingEventTx is RecordQualifyingEvent on the caller's transaction.
+func (s *Store) recordQualifyingEventTx(
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, in RecordQualifyingEventInput,
+) (QualifyingEvent, error) {
 	note, err := in.validated(s.now())
 	if err != nil {
 		return QualifyingEvent{}, err
@@ -252,66 +265,68 @@ func (s *Store) RecordQualifyingEvent(
 	}
 
 	out := QualifyingEvent{Kind: in.Kind, Note: note, OccurredAt: in.OccurredAt, AsksForQuote: in.AsksForQuote}
-	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// The row-scope probe first: this changes what may be SENT to a contact,
-		// which is a change to their record however little of the row it
-		// touches. Held to commit, so a merge of this contact carries the row
-		// rather than committing before it lands on the retired record.
-		if err := auth.HoldWritableLive(ctx, tx, "contact", contactID.UUID); err != nil {
-			return err
-		}
-		if !in.AboutDeal.IsZero() {
-			if err := auth.EnsureLinkTarget(ctx, tx, "deal", in.AboutDeal); err != nil {
-				return err
-			}
-		}
-		// The same exchange, re-sent, is one exchange. A retry — a double click,
-		// a client that resends on a timeout — must not stack a second row
-		// claiming a second meeting happened, because the rows ARE the legal
-		// evidence and a duplicated one is a claim nobody made.
-		//
-		// Matched on the contact, the moment and the words: two genuinely
-		// different exchanges with the same contact do not share all three.
-		// A retracted row matches too, so replaying the request that recorded
-		// it answers the row as it stands and does not bring it back.
-		if err := tx.QueryRow(ctx, `
-			INSERT INTO consent_qualifying_event
-				(contact_id, kind, note, occurred_at, source, captured_by, asks_for_quote, about_deal_id)
-			SELECT $1, $2, $3, $4, $7, $5, $6, $8
-			 WHERE NOT EXISTS (
-				SELECT 1 FROM consent_qualifying_event
-				 WHERE contact_id = $1 AND kind = $2 AND note = $3 AND occurred_at = $4
-				   AND about_deal_id IS NOT DISTINCT FROM $8)
-			RETURNING id::text`,
-			contactID, in.Kind, note, in.OccurredAt, by, in.AsksForQuote, handRecordedSource(ctx), zeroUUIDAsNull(in.AboutDeal)).Scan(&out.ID); err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				// Already on file. Nothing was written twice, so there is
-				// nothing to audit, and the answer is the standing row.
-				return standingExchange(ctx, tx, contactID, in.AboutDeal, &out)
-			}
-			return fmt.Errorf("consent: recording the exchange: %w", err)
-		}
-		// Audit-only, like every other consent-basis write beside it: the closed
-		// public-event catalog carries no type for a lawful basis, and what an
-		// auditor asks — who said this happened, and what did they say — is a
-		// row question rather than a subscriber's.
-		//
-		// The entity is `contact`, which is the row the caller was authorized
-		// against and the row this changes the sendability of. Naming
-		// `contact_consent` would have put a rule in the trail
-		// (`contact_consent.create`) that authorized nothing here.
-		_, err := storekit.AuditEvent(ctx, tx, "update", "contact", contactID.UUID, map[string]any{
-			"qualifying_event": in.Kind,
-			fieldNote:          note,
-			fieldOccurredAt:    in.OccurredAt.UTC().Format(time.RFC3339),
-			"about_deal":       zeroUUIDAsNull(in.AboutDeal),
-		})
-		return err
-	})
-	if err != nil {
+	if err := writeExchangeTx(ctx, tx, contactID, in, note, by, &out); err != nil {
 		return QualifyingEvent{}, err
 	}
 	return out, nil
+}
+
+// writeExchangeTx writes one validated exchange and its audit row, or fills out
+// with the row a retry matched.
+func writeExchangeTx(
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, in RecordQualifyingEventInput,
+	note, by string, out *QualifyingEvent,
+) error {
+	// The row-scope probe first: this changes what may be sent to a contact,
+	// which changes their record. Held to commit, so a merge of this contact
+	// carries the row instead of committing before it lands on the retired one.
+	if err := auth.HoldWritableLive(ctx, tx, "contact", contactID.UUID); err != nil {
+		return err
+	}
+	if !in.AboutDeal.IsZero() {
+		if err := auth.EnsureLinkTarget(ctx, tx, "deal", in.AboutDeal); err != nil {
+			return err
+		}
+	}
+	// The same exchange, sent again, is one exchange. A retry (a double click,
+	// a client that resends on a timeout) must not stack a second row. The rows
+	// are the legal evidence, and a duplicate is a claim nobody made.
+	//
+	// Matched on the contact, the moment and the words, which two different
+	// exchanges with one contact never all share. A retracted row matches too,
+	// so a replay answers the row as it stands and does not bring it back.
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO consent_qualifying_event
+			(contact_id, kind, note, occurred_at, source, captured_by, asks_for_quote, about_deal_id)
+		SELECT $1, $2, $3, $4, $7, $5, $6, $8
+		 WHERE NOT EXISTS (
+			SELECT 1 FROM consent_qualifying_event
+			 WHERE contact_id = $1 AND kind = $2 AND note = $3 AND occurred_at = $4
+			   AND about_deal_id IS NOT DISTINCT FROM $8)
+		RETURNING id::text`,
+		contactID, in.Kind, note, in.OccurredAt, by, in.AsksForQuote, handRecordedSource(ctx), zeroUUIDAsNull(in.AboutDeal)).Scan(&out.ID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// Already on file. Nothing was written twice, so there is
+			// nothing to audit, and the answer is the standing row.
+			return standingExchange(ctx, tx, contactID, in.AboutDeal, out)
+		}
+		return fmt.Errorf("consent: recording the exchange: %w", err)
+	}
+	// Audit-only, like every other consent-basis write beside it. The closed
+	// public-event catalog carries no type for a lawful basis. An auditor asks
+	// who said this happened and what they said, which the row answers.
+	//
+	// The entity is `contact`, which is the row the caller was authorized
+	// against and the row this changes the sendability of. Naming
+	// `contact_consent` would have put a rule in the trail
+	// (`contact_consent.create`) that authorized nothing here.
+	_, err := storekit.AuditEvent(ctx, tx, "update", "contact", contactID.UUID, map[string]any{
+		"qualifying_event": in.Kind,
+		fieldNote:          note,
+		fieldOccurredAt:    in.OccurredAt.UTC().Format(time.RFC3339),
+		"about_deal":       zeroUUIDAsNull(in.AboutDeal),
+	})
+	return err
 }
 
 // standingExchange fills out with the row a retried record matched, retracted

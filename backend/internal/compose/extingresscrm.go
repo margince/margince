@@ -65,6 +65,8 @@ func (r *callRuntime) ingestOtherKind(ctx context.Context, on extension.UserID, 
 	if rec.Kind() == extension.KindSignal {
 		return r.landSignal(runCtx, rec, declared)
 	}
+	// The record mirrors another CRM, so a stage move it lands was made there.
+	runCtx = storekit.WithSync(runCtx)
 	db := InstallationDB(r.deps.pool)
 	overwrite, err := r.overwritesEditedFields(ctx)
 	if err != nil {

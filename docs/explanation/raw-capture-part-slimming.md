@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/capture/partslim backend/internal/modules/capture/partslimstore.go backend/internal/compose/jobs_partslim.go backend/internal/compose/jobs_storedobject.go backend/internal/modules/capture/sinkraw.go backend/internal/compose/sarrestore.go backend/internal/modules/privacy/erasure_attachments.go -->
+<!-- describes: backend/internal/modules/capture/partslim backend/internal/modules/capture/partslimstore.go backend/internal/modules/capture/sinkoriginal.go backend/internal/compose/jobs_partslim.go backend/internal/compose/jobs_storedobject.go backend/internal/modules/capture/sinkraw.go backend/internal/compose/sarrestore.go backend/internal/modules/privacy/erasure_attachments.go -->
 # raw_capture part slimming: what the stored original promises
 
 `raw_capture` holds the provider's original for every captured message. Without slimming it would
@@ -34,9 +34,9 @@ message gets a line of text that says where the bytes are now, rather than noise
 
 ## Why the copy exists
 
-Two writers, and each one does not know about the other. `storeRawCapture` in `capture/sinkraw.go`
-writes `rec.Raw` (the whole `RFC822` message) inside the capture transaction. `capture/sinkparts.go`
-then gets the same attachment bytes ready for the object store. `activities/capturedfiles.go` puts
+Two writers, and each one does not know about the other. Where an original is stored whole,
+`storeRawCapture` in `capture/sinkraw.go` writes `rec.Raw` (the whole `RFC822` message) inside the
+capture transaction. `capture/sinkparts.go` gets the same attachment bytes ready for the object store. `activities/capturedfiles.go` puts
 them there before the row that records them (*"ORDER IS THE DESIGN"*).
 
 Without slimming, every attachment sits in `raw_capture` a second time as `base64`, which takes 4
@@ -44,20 +44,24 @@ bytes for every 3 of the file. The `base64` of a file that is already compressed
 not compress again. So the copy costs full price in the database files, in every full database copy,
 in every `pg_dump` and in every `VACUUM`.
 
-## Why a sweep, and not a cut at parse time
+## A new message is stored slim; the sweep handles the rest
 
-The first place you would cut the bytes is `mailmap.ToRecord`, so `rec.Raw` never carries them. That
-does not work.
+A new message stages its files in the object store, inside the capture transaction, before the
+rows that point at them exist. `capture/sinkoriginal.go` holds back the original of such a message
+until then. Then it writes the original once, with each stored file replaced by the block above, and
+stamps the row `slimmed`. The file's bytes never reach `raw_capture`. The cut comes after the object
+store took the bytes, and after the attachment row names that object. So the block never names
+bytes that are not there.
 
-At the point where `storeRawCapture` writes the original, `stageParts` has not yet put the
-attachment bytes in the object store. Cutting there leaves two ways to do it, both wrong. One is to
-change the order of steps in the capture `sink`, so the stored original needs an outbound call to
-work. That is on the path whose job is to get the mail stored. The other is to write a reference to
-bytes that may never reach the store.
+The cut is not made at parse time (`mailmap.ToRecord`), because the bytes are not stored yet
+there. The original is stored whole, and the sweep below meets it as before, when:
 
-A later sweep can *prove* the bytes are safe before it removes anything. The same code also works
-through rows captured before the sweep existed. One path, no change of order, and no window in which
-the only copy is removed.
+- the message is a replay, or the row turns out to be one capture took over;
+- its file was kept back, as for a private thread;
+- the attachment row already existed and names an older object, which only the sweep can prove;
+- nothing can come out of it.
+
+The sweep is also what works through rows captured before this existed.
 
 ## How fast it drains
 
