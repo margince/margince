@@ -225,8 +225,11 @@ func (s *Service) DeactivateUser(ctx context.Context, actor Identity, in Deactiv
 	if err != nil {
 		return err
 	}
-	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	deactivate := func(tx pgx.Tx) error {
 		if err := lockAuthorization(ctx, tx); err != nil {
+			return err
+		}
+		if err := lockMemberAddressClaims(ctx, tx, in.UserID); err != nil {
 			return err
 		}
 		// A delegated holder must not lock out an administrator. The last-admin
@@ -271,7 +274,8 @@ func (s *Service) DeactivateUser(ctx context.Context, actor Identity, in Deactiv
 		}
 		return storekit.EmitEvent(ctx, tx, auditID, in.UserID.UUID,
 			userDeactivatedPayload(in.UserID, actor.UserID, in.Reason))
-	}); err != nil {
+	}
+	if err := storekit.RetryLockCycles(ctx, func() error { return s.db.Tx(ctx, deactivate) }); err != nil {
 		return err
 	}
 	// The withdrawal above committed, so the mailbox has already stopped being

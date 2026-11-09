@@ -15,14 +15,17 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -53,6 +56,209 @@ func seatAddressesNow(t *testing.T, e *integration.Env) (storekit.SeatAddresses,
 		t.Fatalf("reading the seat addresses: %v", err)
 	}
 	return seats, history
+}
+
+// invitedColleague invites address through the real invite writer, after the
+// installation describes its company as an invite requires.
+func invitedColleague(t *testing.T, e *integration.Env, address string) (*identity.Service, ids.UserID, string) {
+	t.Helper()
+	users := identity.NewServiceFor(e.DB())
+	company := contacts.NewStore(e.DB()).WithInstallationRenamer(installationRenamer(e.Pool))
+	if _, err := company.SaveCompany(e.Admin(), contacts.SaveCompanyInput{DisplayName: "Example company"}); err != nil {
+		t.Fatal(err)
+	}
+	identity.NewHandlers(users).WithInstallationDescribed(installationDescribed(company))
+	seat, token, err := users.InviteUser(e.Admin(), recoveryAdminIdentity(e), identity.InviteUserInput{
+		Email: address, DisplayName: "Invited colleague", Role: "rep",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return users, seat, token
+}
+
+// isInternal answers whether capture and the counterparty ensure both treat
+// address as a seat's, and fails when the two disagree.
+func isInternal(t *testing.T, e *integration.Env, address string) bool {
+	t.Helper()
+	seats, _ := seatAddressesNow(t, e)
+	err := ensureFromMailbox(t, e, e.Rep1, address, strings.SplitN(address, "@", 2)[1])
+	refused := errors.Is(err, contacts.ErrCounterpartyIsSeat)
+	if err != nil && !refused {
+		t.Fatalf("ensuring %s as a counterparty: %v", address, err)
+	}
+	if refused != seats.Covers(address, ids.Nil) {
+		t.Fatalf("the seat set says internal=%v for %s and the counterparty ensure says %v", seats.Covers(address, ids.Nil), address, refused)
+	}
+	return refused
+}
+
+// An invited colleague's login is internal from the invitation on. The
+// invitation grants no stored mailbox history; redeeming it does.
+func TestAnInvitedColleaguesLoginIsInternalBeforeAndAfterActivation(t *testing.T) {
+	e := integration.Setup(t)
+	const address = "invited@colleague.example"
+	users, seat, token := invitedColleague(t, e, address)
+	seats, history := seatAddressesNow(t, e)
+	if !isInternal(t, e, address) || !seats.IsLogin(address) {
+		t.Fatal("an invited colleague's login was classified as external")
+	}
+	if len(history[seat.String()]) != 0 {
+		t.Fatal("the invitation granted access to stored mailbox history")
+	}
+	if len(answeringSeats(t, e)[seat.String()]) != 0 {
+		t.Fatal("the invitation made the colleague responsible for answering mail")
+	}
+	if err := users.RedeemPasswordReset(e.Admin(), token, "Invited-colleague-strong-password-42!"); err != nil {
+		t.Fatal(err)
+	}
+	_, history = seatAddressesNow(t, e)
+	if !isInternal(t, e, address) || len(history[seat.String()]) == 0 {
+		t.Fatal("activation changed the internal identity or lost its live mailbox identity")
+	}
+}
+
+// A revoked invitation makes the address an outside party again.
+func TestARevokedInvitationMakesTheAddressOutsideAgain(t *testing.T) {
+	e := integration.Setup(t)
+	const address = "revoked@colleague.example"
+	users, seat, _ := invitedColleague(t, e, address)
+	if !isInternal(t, e, address) {
+		t.Fatal("the invitation did not make the address internal; this case proves nothing")
+	}
+	if err := users.DeactivateUser(e.Admin(), recoveryAdminIdentity(e), identity.DeactivateUserInput{UserID: seat}); err != nil {
+		t.Fatal(err)
+	}
+	if isInternal(t, e, address) {
+		t.Fatal("a revoked invitation still counts its address as internal")
+	}
+}
+
+// An invitation whose email is corrected before redemption moves the internal
+// address with it.
+func TestAnInvitationsChangedEmailMovesTheInternalAddress(t *testing.T) {
+	e := integration.Setup(t)
+	const before, after = "typo@colleague.example", "fixed@colleague.example"
+	users, seat, _ := invitedColleague(t, e, before)
+	if err := users.UpdateMember(e.Admin(), recoveryAdminIdentity(e), seat, identity.MemberEdit{
+		Name: "Invited colleague", Email: after, ExpectedUpdatedAt: memberUpdatedAt(t, e, seat),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if isInternal(t, e, before) || !isInternal(t, e, after) {
+		t.Fatal("the internal address did not move with the invitation's email")
+	}
+	// The email change ends the first invitation's token, so a new one is sent.
+	token, err := users.ResendInvite(e.Admin(), recoveryAdminIdentity(e), seat)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := users.RedeemPasswordReset(e.Admin(), token, "Invited-colleague-strong-password-42!"); err != nil {
+		t.Fatal(err)
+	}
+	if !isInternal(t, e, after) {
+		t.Fatal("redeeming the corrected invitation lost its internal address")
+	}
+}
+
+// answeringSeats is the set that decides who owes an answer to a mail.
+func answeringSeats(t *testing.T, e *integration.Env) map[string][]string {
+	t.Helper()
+	var seats map[string][]string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		var err error
+		seats, err = storekit.UnambiguousMailSeatIdentities(context.Background(), tx)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return seats
+}
+
+func memberUpdatedAt(t *testing.T, e *integration.Env, member ids.UserID) time.Time {
+	t.Helper()
+	var at time.Time
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `SELECT updated_at FROM app_user WHERE id = $1`, member).Scan(&at)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return at
+}
+
+// Each writer that adds, moves or withdraws an invited login waits for a seat
+// check of that address already in flight. The check never sees half of it.
+func TestInvitationWritersWaitForASeatCheckInFlight(t *testing.T) {
+	e := integration.Setup(t)
+	users, seat, _ := invitedColleague(t, e, "held@colleague.example")
+	admin := recoveryAdminIdentity(e)
+	for _, write := range []struct {
+		name, address string
+		run           func() error
+	}{
+		{"invite", "second@colleague.example", func() error {
+			_, _, err := users.InviteUser(e.Admin(), admin, identity.InviteUserInput{Email: "second@colleague.example", DisplayName: "Second", Role: "rep"})
+			return err
+		}},
+		{"email change", "moved@colleague.example", func() error {
+			return users.UpdateMember(e.Admin(), admin, seat, identity.MemberEdit{
+				Name: "Invited colleague", Email: "moved@colleague.example", ExpectedUpdatedAt: memberUpdatedAt(t, e, seat)})
+		}},
+		// After the email change, so the login it withdraws is the moved one.
+		{"revoke", "moved@colleague.example", func() error {
+			return users.DeactivateUser(e.Admin(), admin, identity.DeactivateUserInput{UserID: seat})
+		}},
+	} {
+		t.Run(write.name, func(t *testing.T) { writerWaitsForCheck(t, e, write.address, write.run) })
+	}
+}
+
+// writerWaitsForCheck holds a seat check of address open, runs write, and
+// insists it queues behind the check and completes once the check ends.
+func writerWaitsForCheck(t *testing.T, e *integration.Env, address string, write func() error) {
+	t.Helper()
+	ctx := context.Background()
+	conn, err := e.Pool.Acquire(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(conn.Release)
+	check, err := conn.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := check.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("ending the seat check: %v", err)
+		}
+	})
+	if err := storekit.LockSeatAddressChecks(ctx, check, address); err != nil {
+		t.Fatal(err)
+	}
+	holder := conn.Conn().PgConn().PID()
+	probe, err := e.Pool.Acquire(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(probe.Release)
+	done, returned := make(chan error, 1), make(chan struct{})
+	go func() { defer close(returned); done <- write() }()
+	testdb.WaitForContention(t, returned, "the writer finished while the seat check held its address",
+		"the writer never queued behind the seat check", func(ctx context.Context) (bool, error) {
+			// pg_stat_activity is cached per transaction until cleared.
+			if _, err := probe.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
+				return false, err
+			}
+			var queued bool
+			err := probe.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM pg_stat_activity a WHERE $1 = ANY (pg_blocking_pids(a.pid)))`, holder).Scan(&queued)
+			return queued, err
+		})
+	if err := check.Rollback(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-done; err != nil {
+		t.Fatalf("the writer failed once the check ended: %v", err)
+	}
 }
 
 // A disconnected mailbox's label proves nothing for a decision made now, for
