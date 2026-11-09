@@ -861,7 +861,7 @@ bench-home:
 		pnpm exec playwright test
 
 ## home-budget — Home's per-PR budget: the API check on its own corpus (needs
-## db-up), then main-content LCP and CLS of a production bundle against the
+## db-up), then the day paint and CLS of a production bundle against the
 ## running api on BENCH_API_PORT, which holds the seed-dev data. The advisory
 ## CI job home-budget runs it; scripts/home-budget.sh has the details.
 home-budget:

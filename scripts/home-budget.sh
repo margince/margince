@@ -8,8 +8,9 @@
 #    heaviest owner of its own small corpus, cold and warm. It needs the test
 #    Postgres (make db-up), not the running api.
 # 2. The browser check: a production bundle of the SPA, loaded against the api
-#    on BENCH_API_PORT with BENCH_HOME_PROFILE=ci, judged on main-content LCP
-#    and CLS. That api must hold the seed-dev demo data, as live-boot leaves it.
+#    on BENCH_API_PORT with BENCH_HOME_PROFILE=ci, judged on when Home's day
+#    content paints (frontend/e2e/bench-home.spec.ts) and CLS. That api must
+#    hold the seed-dev demo data, as live-boot leaves it.
 #
 # Both halves run even when the first fails, so one run reports every number.
 # The wall time of each half, its rows and the vitals line go to stdout and,
@@ -75,7 +76,7 @@ summary() {
   echo "Browser vitals on the ci profile:"
   echo
   echo '```'
-  grep -ho 'bench-home: vitals lcp_p95_ms=.*' "$logs/browser.log" || echo "no vitals were measured"
+  grep -ho 'bench-home: vitals day_paint_p95_ms=.*' "$logs/browser.log" || echo "no vitals were measured"
   echo '```'
 }
 

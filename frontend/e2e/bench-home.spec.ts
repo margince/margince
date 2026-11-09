@@ -1,6 +1,7 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { HOME_DAY_TIMING } from "../src/features/brief/elementtiming";
 import { de } from "../src/i18n/de";
-import type { JourneyMark } from "../src/lib/journeymarks";
+import { type JourneyMark, journeyMarkName } from "../src/lib/journeymarks";
 import {
   type Answer,
   budgetSamples,
@@ -27,8 +28,8 @@ import {
   holdWorklist,
   journeyMarks,
   probeClick,
-  readVitals,
   recordVitals,
+  settledVitals,
   startJourney,
   watchScreen,
   worklistFetches,
@@ -57,7 +58,7 @@ import {
  * journey is counted as such, never as a latency.
  *
  * A fourth case, vitals, repeats the load on a fixed CPU and network profile
- * and judges main-content LCP and CLS. `BENCH_HOME_PROFILE=ci` runs only that
+ * and judges when Home's day content paints (Element Timing) and CLS. `BENCH_HOME_PROFILE=ci` runs only that
  * case, on fewer samples, for the per-PR check (`make home-budget`).
  */
 
@@ -447,7 +448,7 @@ test("refresh: the day stays for its reader and the queue answers within 200 ms"
   ).toBeLessThanOrEqual(INTERACTION_BUDGET_MS);
 });
 
-test("vitals: main-content LCP and CLS stay in budget on a fixed profile", async ({
+test("vitals: the day paint and CLS stay in budget on a fixed profile", async ({
   page,
 }) => {
   await recordVitals(page);
@@ -457,103 +458,158 @@ test("vitals: main-content LCP and CLS stay in budget on a fixed profile", async
   const vitals: Vitals[] = [];
   for (let i = 1; i <= SAMPLES; i++) {
     loads.push(await loadHome(page, log, reader, i));
-    vitals.push(await readVitals(page));
+    vitals.push(await settledVitals(page, JOURNEY_TIMEOUT_MS));
   }
   report("vitals", loads);
   const p95 = vitalsP95(vitals);
   // One line the home-budget script copies into the job summary.
   console.log(
-    `bench-home: vitals lcp_p95_ms=${Math.round(p95.lcpMs)} cls_p95=${p95.cls.toFixed(3)} samples=${vitals.length}`,
+    `bench-home: vitals day_paint_p95_ms=${Math.round(p95.dayPaintMs)} cls_p95=${p95.cls.toFixed(3)} samples=${vitals.length}`,
   );
   expectAllComplete("vitals", loads);
   expect(vitalsReasons(vitals), "the vitals budget").toEqual([]);
 });
 
 /**
- * The vitals check against pages built to break it, so a recorder or a judge
- * that sees nothing cannot pass. They need no api: each page is served here.
+ * The vitals check against pages built to break it or keep it. A recorder or
+ * a judge that sees too little or too much fails one of them. They need no
+ * api: each page is served here.
  */
-test.describe("vitals: a load that breaks the budget fails", () => {
+test.describe("vitals: pages built to break or keep the budget", () => {
   const PAGE = "http://vitals.test/";
   const TEXT = "Pipeline review for the week ahead. ".repeat(40);
   const BLOCK = `<p style="font-size:40px;margin:0">${TEXT}</p>`;
+  const SECTION = `<section id="brief-today" elementtiming="${HOME_DAY_TIMING}">`;
+  const DAY = `${SECTION}<p>Today</p></section>`;
+  // `complete()` sets Home's final mark, where the bench starts to settle.
+  const COMPLETE = `<script>
+    const complete = () => performance.mark(${JSON.stringify(journeyMarkName("home:complete"))});
+  </script>`;
 
-  async function vitalsOf(
-    page: Page,
-    body: string,
-    settled: (vitals: Vitals) => boolean,
-  ): Promise<string[]> {
+  async function vitalsOf(page: Page, body: string): Promise<string[]> {
     await recordVitals(page);
     await page.route(PAGE, (route) =>
-      route.fulfill({ contentType: "text/html", body }),
+      route.fulfill({ contentType: "text/html", body: COMPLETE + body }),
     );
     await page.goto(PAGE);
-    await expect
-      .poll(async () => settled(await readVitals(page)), { timeout: 10_000 })
-      .toBe(true);
-    return vitalsReasons([await readVitals(page)]);
+    return vitalsReasons([await settledVitals(page, 10_000)]);
   }
 
-  test("a block painted inside main after 1.5 s fails LCP", async ({
+  test("a larger block drawn in the day content after 1.5 s fails", async ({
     page,
   }) => {
     const reasons = await vitalsOf(
       page,
-      `<main><p>Today</p></main><script>
-        setTimeout(() => document.querySelector("main").insertAdjacentHTML("beforeend", ${JSON.stringify(BLOCK)}), 1500);
+      `<main>${DAY}</main><script>
+        setTimeout(() => {
+          document.querySelector("section").insertAdjacentHTML("beforeend", ${JSON.stringify(BLOCK)});
+          complete();
+        }, 1500);
       </script>`,
-      (v) => v.paints.some((paint) => paint.inMain && paint.at >= 1_400),
     );
     expect(reasons).toEqual([
-      expect.stringMatching(/^main-content LCP p95 \d+ ms is over 1000 ms$/),
+      expect.stringMatching(/^day paint p95 \d+ ms is over 1000 ms$/),
     ]);
+  });
+
+  test("a larger block drawn in the day content after Home's final mark still counts", async ({
+    page,
+  }) => {
+    const reasons = await vitalsOf(
+      page,
+      `<main>${DAY}</main><script>
+        setTimeout(complete, 300);
+        setTimeout(() => document.querySelector("section").insertAdjacentHTML("beforeend", ${JSON.stringify(BLOCK)}), 1200);
+      </script>`,
+    );
+    expect(reasons).toEqual([
+      expect.stringMatching(/^day paint p95 \d+ ms is over 1000 ms$/),
+    ]);
+  });
+
+  test("day content mounted inside a larger tree is timed", async ({
+    page,
+  }) => {
+    const reasons = await vitalsOf(
+      page,
+      `<main></main><script>
+        document.querySelector("main").innerHTML = ${JSON.stringify(`<div>${DAY}</div>`)};
+        complete();
+      </script>`,
+    );
+    expect(reasons).toEqual([]);
+  });
+
+  // Chrome times a faded block when its fade ends, not when it is drawn.
+  test("day content inside a block that fades in is timed when drawn", async ({
+    page,
+  }) => {
+    const reasons = await vitalsOf(
+      page,
+      `<style>
+        @keyframes arrive { from { opacity: 0; } }
+        main > * { animation: arrive 1500ms ease-out 100ms backwards; }
+      </style><main><div>${DAY}</div></main><script>complete();</script>`,
+    );
+    expect(reasons).toEqual([]);
   });
 
   test("a layout shift of 0.2 or more fails CLS", async ({ page }) => {
     const reasons = await vitalsOf(
       page,
-      `<main><div id="top"></div>${BLOCK}</main><script>
-        setTimeout(() => { document.getElementById("top").style.height = "400px"; }, 300);
+      `<main><div id="top"></div>${DAY}${BLOCK}</main><script>
+        setTimeout(() => { document.getElementById("top").style.height = "400px"; complete(); }, 300);
       </script>`,
-      (v) => v.shifts.length > 0,
     );
     expect(reasons).toEqual([
       expect.stringMatching(/^CLS p95 0\.\d+ is over 0\.1$/),
     ]);
   });
 
-  test("a load with no paint inside main fails rather than passes", async ({
+  test("a load whose day content never paints fails rather than passes", async ({
     page,
   }) => {
     const reasons = await vitalsOf(
       page,
-      `<header>${BLOCK}</header><main></main>`,
-      (v) => v.paints.length > 0,
+      `<main>${SECTION}</section>${BLOCK}</main><script>complete();</script>`,
     );
-    expect(reasons).toEqual([
-      expect.stringMatching(
-        /^load 1: the largest contentful paint is outside main \(p\)$/,
-      ),
-    ]);
+    expect(reasons).toEqual(["load 1: Home's day content never painted"]);
   });
 
-  // The browser reports no paint of main after a larger one outside it. So the
-  // late block in main below never shows in the LCP stream.
-  test("a larger paint outside main fails rather than hiding main's late content", async ({
+  test("a marked block outside the day root does not count", async ({
     page,
   }) => {
     const reasons = await vitalsOf(
       page,
-      `<main><p>Today</p></main><header id="shell"></header><script>
-        setTimeout(() => { document.getElementById("shell").innerHTML = ${JSON.stringify(BLOCK)}; }, 200);
-        setTimeout(() => document.querySelector("main").insertAdjacentHTML("beforeend", "<p>The rest of the day</p>"), 1500);
-      </script>`,
-      (v) => v.paints.some((paint) => !paint.inMain),
+      `<main>${SECTION}</section></main>
+      <aside><p elementtiming="${HOME_DAY_TIMING}">Not the day</p></aside>
+      <script>complete();</script>`,
     );
-    expect(reasons).toEqual([
-      expect.stringMatching(
-        /^load 1: the largest contentful paint is outside main \(p\)$/,
-      ),
-    ]);
+    expect(reasons).toEqual(["load 1: Home's day content never painted"]);
+  });
+
+  test("a page with two day roots fails", async ({ page }) => {
+    const reasons = await vitalsOf(
+      page,
+      `<main>${DAY}${DAY}</main><script>complete();</script>`,
+    );
+    expect(reasons).toEqual(["load 1: Home has 2 day roots, not one"]);
+  });
+
+  // The shell's block lands late, larger than all of the day. The day's last
+  // small paint comes after it, so the load settles only once both are drawn.
+  test("a larger, later paint outside the day content does not count", async ({
+    page,
+  }) => {
+    const reasons = await vitalsOf(
+      page,
+      `<header id="shell"></header><main>${DAY}</main><script>
+        const day = (html) => document.querySelector("section").insertAdjacentHTML("beforeend", html);
+        setTimeout(() => day("<p>The rest of the day, and more of it</p>"), 300);
+        setTimeout(() => { document.getElementById("shell").innerHTML = ${JSON.stringify(BLOCK)}; }, 1100);
+        setTimeout(() => { day("<p>.</p>"); complete(); }, 1300);
+      </script>`,
+    );
+    expect(reasons).toEqual([]);
   });
 });
