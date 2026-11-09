@@ -120,6 +120,90 @@ describe("the response-enum-lookups rule", () => {
     ).toEqual([]);
   });
 
+  // The words match a response enum, but the app wrote the union: its record
+  // kinds, say. Only a value that comes from the contract is open.
+  it("passes an unnamed union the frontend wrote whose words a response enum shares", () => {
+    expect(
+      planted(
+        `${HEAD}export const f = (s: "new" | "contacted") => LABEL[s];\n`,
+      ),
+    ).toEqual([]);
+  });
+
+  it("finds a read by a computed key in a destructuring", () => {
+    expect(
+      planted(
+        `${HEAD}export function f(lead: Lead) {\n  const { [lead.status]: word } = LABEL;\n  return word;\n}\n`,
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("finds a read by a template key built from a response value", () => {
+    expect(
+      planted(
+        `${HEAD}const WORDS = { new: 1, contacted: 2 } as const;\nexport const f = (lead: Lead) => WORDS[\`\${lead.status}\`];\n`,
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("finds a read inside a helper in the same file that a caller hands a response value", () => {
+    expect(
+      planted(
+        `${HEAD}function look<K extends string>(map: Record<K, number>, key: K) {\n  return map[key];\n}\nconst COUNT: Record<Lead["status"], number> = { new: 1, contacted: 1, engaged: 1, promoted: 1, disqualified: 1 };\nexport const f = (lead: Lead) => look(COUNT, lead.status);\n`,
+      ),
+    ).toEqual([
+      "src/features/planted.tsx:13 `map[key]` reads nothing for a value this build does not know",
+    ]);
+    expect(
+      planted(
+        `${HEAD}function word(s: "new" | "contacted" | "engaged" | "promoted" | "disqualified") {\n  return LABEL[s];\n}\nexport const g = (lead: Lead) => word(lead.status);\n`,
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("finds a read by a destructured field and by a callback over a list", () => {
+    expect(
+      planted(`${HEAD}export const f = ({ status }: Lead) => LABEL[status];\n`),
+    ).toHaveLength(1);
+    expect(
+      planted(
+        `${HEAD}export const f = (leads: Lead[]) => leads.map((lead) => lead.status).map((s) => LABEL[s]);\n`,
+      ),
+    ).toHaveLength(1);
+  });
+
+  // A value a map holds is the map's, even when the map is keyed by the contract.
+  it("reads a map's value as the map's own, not as the contract's", () => {
+    expect(
+      planted(
+        `${HEAD}const NEXT: Record<Lead["status"], "new" | "contacted"> = { new: "contacted", contacted: "contacted", engaged: "contacted", promoted: "new", disqualified: "new" };\nexport const f = (lead: Lead) => LABEL[NEXT[lead.status]];\n`,
+      ),
+    ).toEqual([
+      "src/features/planted.tsx:13 `NEXT[lead.status]` reads nothing for a value this build does not know",
+    ]);
+  });
+
+  // An `any` result says nothing about a missing key.
+  it("finds a read whose result is any", () => {
+    expect(
+      planted(
+        `${HEAD}const LOOSE: any = {};\nexport const f = (lead: Lead) => LOOSE[lead.status];\n`,
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("passes a read behind a guard that the map holds the value", () => {
+    expect(
+      planted(`${HEAD}export const f = (lead: Lead) =>
+  Object.hasOwn(LABEL, lead.status) ? LABEL[lead.status] : "common.unknownValue";
+export function g(s: Lead["status"]) {
+  if (s in LABEL) return LABEL[s];
+  return "common.unknownValue";
+}
+`),
+    ).toEqual([]);
+  });
+
   it("finds a switch with a case per value and no default", () => {
     expect(
       planted(
@@ -219,7 +303,7 @@ describe("the waiver list", () => {
     "src/lib/labelfor.ts:9 `M[y]` …",
   ];
   const read = new Set(["src/lib/labelfor.ts", "src/b.tsx"]);
-  const waivers = readWaivers("# a comment\nsrc/lib/labelfor.ts 2\n");
+  const waivers = readWaivers("# a comment\nsrc/lib/labelfor.ts 2\n").counts;
 
   it("waives a file holding exactly its count", () => {
     expect(unwaived(two, waivers, read, 2)).toEqual([]);
@@ -249,8 +333,33 @@ describe("the waiver list", () => {
   });
 
   it("finds a waiver line for a file that is gone", () => {
-    expect(unwaived([], readWaivers("src/gone.tsx 1\n"), new Set(), 1)).toEqual(
-      ["src/gone.tsx: delete its waiver line, the file is gone"],
-    );
+    expect(
+      unwaived([], readWaivers("src/gone.tsx 1\n").counts, new Set(), 1),
+    ).toEqual(["src/gone.tsx: delete its waiver line, the file is gone"]);
+  });
+});
+
+describe("a waiver line", () => {
+  it.each([
+    ["no count", "src/lib/labelfor.ts"],
+    ["a word for a count", "src/lib/labelfor.ts two"],
+    ["a fraction", "src/lib/labelfor.ts 1.5"],
+    ["zero", "src/lib/labelfor.ts 0"],
+    ["a negative count", "src/lib/labelfor.ts -1"],
+    ["a token past the count", "src/lib/labelfor.ts 1 more"],
+  ])("refuses %s", (_, line) => {
+    const read = readWaivers(`# head\n${line}\n`);
+    expect(read.counts.size).toBe(0);
+    expect(read.problems).toEqual([
+      `census/response-enum-lookups-waivers.txt:2 is not \`<path> <count above zero>\`: ${line}`,
+    ]);
+  });
+
+  it("refuses a path listed twice", () => {
+    const read = readWaivers("src/lib/labelfor.ts 1\nsrc/lib/labelfor.ts 2\n");
+    expect(read.counts).toEqual(new Map([["src/lib/labelfor.ts", 1]]));
+    expect(read.problems).toEqual([
+      "census/response-enum-lookups-waivers.txt:2 lists src/lib/labelfor.ts a second time",
+    ]);
   });
 });

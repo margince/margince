@@ -128,7 +128,8 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   The census rule `response-enum-lookups` refuses a plain index by such a
   value. It also refuses a `switch` with a case for every value and no
   `default`. It reads which enum a response carries from the
-  `x-extensible-enum` markers in `crm.yaml`.
+  `x-extensible-enum` markers in `crm.yaml`. A value counts only when its type
+  comes from `src/api/schema.d.ts`, so a union the app writes itself does not.
 
   `catalogs.ts` loads the language in use. `bootstrap.ts` starts that read while the app loads.
   `LocaleProvider` waits for the catalog before drawing its content.
