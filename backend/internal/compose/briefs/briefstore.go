@@ -417,20 +417,25 @@ func readRunItems(ctx context.Context, tx pgx.Tx, runID ids.UUID) ([]BriefRunIte
 	}
 	q += " ORDER BY bi.rank"
 
-	rows, err := tx.Query(ctx, q, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+	// It keys on the run and spells the state as a literal, so one generic plan
+	// serves every reader. Planned per call, it costs more to plan than to run.
 	var items []BriefRunItem
-	for rows.Next() {
-		item, err := scanBriefItem(rows)
+	err = database.ReuseGenericPlansTx(ctx, tx, func() error {
+		rows, err := tx.Query(ctx, q, args...)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		items = append(items, item)
-	}
-	return items, rows.Err()
+		defer rows.Close()
+		for rows.Next() {
+			item, err := scanBriefItem(rows)
+			if err != nil {
+				return err
+			}
+			items = append(items, item)
+		}
+		return rows.Err()
+	})
+	return items, err
 }
 
 // resurfaceExpiredSnoozes flips a run's finished snoozes back to actionable —
