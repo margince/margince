@@ -121,6 +121,49 @@ record of one call only. The code that reads the reply turns each ref back into
 the record's ID, and it refuses a ref the call did not show. So the per-call ID
 list above still holds.
 
+A ref hides what the ID's record showed. When the model needs a fact about a
+record, such as whether a participant is a colleague or a contact, the input
+states it next to the ref.
+
+### Wording a small model reads wrong
+
+Each rule below comes from a failed certification run, read in its trace. A
+rule the prompt already stated was not enough when the wording pulled the
+other way.
+
+```
+  write this                                   not this
+
+  "2026-03-04 (Wednesday)"                     a bare date: "by Friday" then
+                                               lands on the wrong day
+  "the one or two sentences that carry it,     "between 30 and 200 characters":
+   never the whole message"                    a model cannot count characters
+  "Highest probability a raise may set: 70%"   "Raise limit: 70%", which reads as
+                                               a step of 70 points
+  "copied character for character, in the      "copied exactly": the model
+   source's language, never translated"        translates a quote into the
+                                               output language
+  "still report the event, but the sender      "never make the sender the buyer":
+   is never its buyer"                         the model drops the event
+  an example on another subject                an example that is a case's own
+                                               question, or that shows the wrong
+                                               answer as the right one
+  one meaning per word: "the subject kind      "about", "ordinary business" used
+   wins"                                       twice in two senses
+```
+
+- **Say what still holds.** A rule that forbids something and says only
+  "never" is read as "report nothing".
+- **Put a field's definition in the reply format.** The model follows the
+  line that names the field more closely than a rule in the system text.
+- **Say which value wins.** Name each closed value by what decides it, and
+  when two kinds both fit, add a line that says which wins.
+- **Measure the whole task.** A new line can break a case that passed. A
+  rewording that fixes one case is measured on the whole task before it ships,
+  because a model applies a general line to every input it fits.
+- **Never write a case's fixture into a prompt.** Names, subjects and amounts
+  from a case make the case measure copying. Use a generic example.
+
 ---
 
 ## 2. Prompt caching: what really stops it
