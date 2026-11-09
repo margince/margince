@@ -113,8 +113,8 @@ function VoiceDnaPage({
   const canCreate = useCanWrite("voice_profile", "create");
   const profile = useVoiceProfile();
   // Before the first sample there is no section to land on; the dial is still
-  // answered, so pressing the step again works.
-  useSetupFocus(profile.data === null);
+  // answered, so pressing the step again works. An error screen draws neither.
+  useSetupFocus(profile.data === null && !profile.isError);
   return (
     <QueryGate query={profile} pendingLabel={t("settings.voice.title")}>
       {(data) =>
