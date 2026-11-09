@@ -73,16 +73,15 @@ func FinalizeBaseTotalSQL(sumSQL, unpricedSQL string) string {
 
 // StrictBaseTotalSQL answers null for a group holding an amount that cannot be
 // priced, rather than an aggregate over the rest of it.
+//
+// It is the form for an average, a minimum, a maximum or a percentile. They
+// have no answer for a part of the group standing in for all of it.
 func StrictBaseTotalSQL(aggregateSQL, unpricedSQL string) string {
 	return "CASE WHEN coalesce((" + unpricedSQL + "), 0) > 0 THEN NULL ELSE (" + aggregateSQL + ") END"
 }
 
 // IncompleteBaseTotalSQL is StrictBaseTotalSQL for a sum, which reads an empty
 // group as zero.
-//
-// An average, a minimum and a maximum have no zero, so they take the strict
-// form directly. A group with one unpriced amount then has no answer, rather
-// than a partial one.
 func IncompleteBaseTotalSQL(sumSQL, unpricedSQL string) string {
 	return StrictBaseTotalSQL("coalesce(("+sumSQL+"), 0)", unpricedSQL)
 }

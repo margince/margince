@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -234,24 +235,31 @@ func projectsGoneQuietSpec() reportSpec {
 	}
 }
 
+// reportMoneyAggregateSQL renders one aggregate over a measure. Over a
+// converted amount it answers only what it can price.
+//
+// A sum keeps the total of what was priced. Every other function folds the rows
+// beneath it as each row reads, so a project with no deals counts as zero. A
+// group holding an unpriced amount then has no answer, and so does a function
+// added to the vocabulary later.
 func reportMoneyAggregateSQL(spec reportSpec, aggregate reportAggregate, expression string) string {
-	rendered := fmt.Sprintf("%s(%s)", aggregate.Fn, expression)
 	coverage, ok := spec.sumCoverage[aggregate.Field]
 	if !ok {
-		return rendered
+		return aggregateOver(aggregate.Fn, expression)
 	}
+	unpriced := "sum(" + coverage + ")"
 	if aggregate.Fn == aggFnSum {
-		return deals.FinalizeBaseTotalSQL(rendered, "sum("+coverage+")")
+		return deals.FinalizeBaseTotalSQL(aggregateOver(aggFnSum, expression), unpriced)
 	}
-	// An average, a minimum or a maximum over a converted amount skips the
-	// rows that could not be priced, and reads as the whole group. They have
-	// no zero to fall back on, so an unpriced row leaves no answer.
-	if foldsMoney[aggregate.Fn] {
-		return deals.StrictBaseTotalSQL(rendered, "sum("+coverage+")")
-	}
-	return rendered
+	row := deals.FinalizeBaseTotalSQL(expression, coverage)
+	return deals.StrictBaseTotalSQL(aggregateOver(aggregate.Fn, row), unpriced)
 }
 
-// foldsMoney are the aggregates that combine amounts into one, apart from the
-// sum, which has its own answer for an empty group.
-var foldsMoney = map[string]bool{aggFnAvg: true, aggFnMin: true, aggFnMax: true}
+// aggregateOver is one function over an expression. A percentile is rendered by
+// analyticsquery.PercentileExpr, which the typed query also renders it with.
+func aggregateOver(fn, expression string) string {
+	if fn == aggFnMedian || fn == aggFnP75 {
+		return analyticsquery.PercentileExpr(expression, analyticsquery.AggFn(fn))
+	}
+	return fmt.Sprintf("%s(%s)", fn, expression)
+}

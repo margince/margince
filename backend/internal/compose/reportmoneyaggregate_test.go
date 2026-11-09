@@ -4,33 +4,55 @@
 package compose
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/deals"
 )
 
-// Each aggregate over a converted amount says what it can price, and no more.
-// A sum reads an empty group as zero. An average, a minimum and a maximum have
-// no zero, so one unpriced amount leaves them without an answer. A count is not
-// money, and an amount with no coverage column converts nothing.
-func TestEachMoneyAggregateSaysOnlyWhatItCanPrice(t *testing.T) {
+// Every aggregate the report engine offers says only what it can price over a
+// converted amount. The functions come from the engine's own vocabulary, so one
+// added later is held to the rule without anyone remembering to list it.
+//
+// A sum keeps what it priced. A count is not money. Every other function has no
+// answer for a group holding an amount that could not be priced, and folds each
+// row as that row reads.
+func TestEveryAggregateOverAConvertedAmountSaysOnlyWhatItCanPrice(t *testing.T) {
 	const amount, coverage = "v.base", "v.unpriced"
-	spec := reportSpec{sumCoverage: map[string]string{"value": coverage}}
-	unpriced := "sum(" + coverage + ")"
+	spec := reportSpec{
+		measures:    map[string]string{"value": amount},
+		sumCoverage: map[string]string{"value": coverage},
+	}
+	strict := deals.StrictBaseTotalSQL("", "sum("+coverage+")")
+	strictHead := strict[:strings.Index(strict, "ELSE")]
+	row := deals.FinalizeBaseTotalSQL(amount, coverage)
 
-	for fn, want := range map[string]string{
-		aggFnSum:   deals.FinalizeBaseTotalSQL("sum(v.base)", unpriced),
-		aggFnAvg:   deals.StrictBaseTotalSQL("avg(v.base)", unpriced),
-		aggFnMin:   deals.StrictBaseTotalSQL("min(v.base)", unpriced),
-		aggFnMax:   deals.StrictBaseTotalSQL("max(v.base)", unpriced),
-		aggFnCount: "count(v.base)",
-	} {
-		if got := reportMoneyAggregateSQL(spec, reportAggregate{Fn: fn, Field: "value"}, amount); got != want {
-			t.Errorf("%s over a converted amount renders %q, want %q", fn, got, want)
+	for _, fn := range reportPlanVocabulary().Functions {
+		_, sel, err := aggregateSelect(spec, reportAggregate{Fn: fn, Field: "value", As: "out"})
+		if err != nil {
+			t.Fatalf("%s over a converted amount: %v", fn, err)
+		}
+		switch fn {
+		case aggFnCount:
+			if strings.Contains(sel, coverage) {
+				t.Errorf("count renders %q, want a count that reads no coverage", sel)
+			}
+		case aggFnSum:
+			if want := deals.FinalizeBaseTotalSQL("sum("+amount+")", "sum("+coverage+")"); !strings.HasPrefix(sel, want) {
+				t.Errorf("sum renders %q, want the finalized total %q", sel, want)
+			}
+		default:
+			if !strings.HasPrefix(sel, strictHead) || !strings.Contains(sel, row) {
+				t.Errorf("%s renders %q, want the strict form over each row as it reads", fn, sel)
+			}
 		}
 	}
+}
 
-	if got := reportMoneyAggregateSQL(spec, reportAggregate{Fn: aggFnAvg, Field: "probability"}, "v.p"); got != "avg(v.p)" {
-		t.Errorf("an average over a field with no coverage renders %q, want the plain average", got)
+// A measure with no coverage is not a converted amount, and is aggregated as is.
+func TestAnAggregateOverAnUncoveredMeasureIsLeftAsIs(t *testing.T) {
+	spec := reportSpec{measures: map[string]string{"age": "v.age"}}
+	if got := reportMoneyAggregateSQL(spec, reportAggregate{Fn: aggFnAvg, Field: "age"}, "v.age"); got != "avg(v.age)" {
+		t.Errorf("an average over an uncovered measure renders %q, want avg(v.age)", got)
 	}
 }
