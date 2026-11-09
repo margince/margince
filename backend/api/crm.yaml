@@ -33398,6 +33398,54 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /privacy/retained-signatures/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [Compliance]
+      operationId: getRetainedEmailSignature
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Review a retained signature whose owner cannot review it.
+      description: >-
+        Active human privacy controllers with unrestricted contact read and deletion rights may review a signature whose owner is not an active human member. Opening the review leaves the original unchanged.
+      responses:
+        '200':
+          description: The retained signature and its owner.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RetainedEmailSignature' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    put:
+      tags: [Compliance]
+      operationId: saveRetainedEmailSignature
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Save a human review of a retained member signature.
+      description: >-
+        The controller policy and owner eligibility are checked again at save. The stored version must match the review. Archived signatures stay archived. Text is changed only by the human's explicit save.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SaveRetainedEmailSignatureRequest' }
+      responses:
+        '200':
+          description: The retained signature and its owner.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RetainedEmailSignature' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /me/email-signature:
     get:
       tags: [Contacts]
@@ -44081,7 +44129,8 @@ components:
                 corrections list rather than that run: a manual re-run replaces the `run_id`, so the
                 one a notice names may no longer be listed. Manual privacy reviews use
                 `knowledge_document` (download the retained file), `email_signature` (the
-                recipient's own account settings), `activity` (open the retained note in its
+                recipient's own account settings), `retained_email_signature` (the departed member's
+                signature in the controller review), `activity` (open the retained note in its
                 drawer), `legal_entity` (Company settings), or `signature_template` (Company
                 settings; `id` identifies the erasure whose review flagged the workspace template).
             id: { type: string, format: uuid }
@@ -51364,6 +51413,24 @@ components:
             type: string
             enum: [stakeholders, our_side, risks]
             x-extensible-enum: true
+
+    RetainedEmailSignature:
+      type: object
+      required: [id, owner_id, owner_name, version, signature, preview_html]
+      properties:
+        id: { type: string, format: uuid }
+        owner_id: { type: string, format: uuid }
+        owner_name: { type: string }
+        version: { $ref: '#/components/schemas/RowVersion' }
+        signature: { $ref: '#/components/schemas/EmailSignature' }
+        preview_html: { type: string, readOnly: true, description: The saved markup through the send path's signature sanitizer. }
+    SaveRetainedEmailSignatureRequest:
+      allOf:
+        - { $ref: '#/components/schemas/SaveEmailSignatureRequest' }
+        - type: object
+          required: [expected_version]
+          properties:
+            expected_version: { type: integer, format: int64, minimum: 1, maximum: 9007199254740991 }
 
     EmailSignature:
       type: object
@@ -58719,7 +58786,7 @@ components:
       type: string
       enum: [user, team]
       x-extensible-enum: true
-      description: Whether the responsible party is one colleague or a whole team.
+      description: Whether the responsible party is one member or a whole team.
 
     RecordRoleListResponse:
       type: object
@@ -58815,6 +58882,9 @@ components:
 
     CreateRecordAssignmentRequest:
       type: object
+      description: >-
+        A responsibility may name an agent seat as well as a human member. It grants
+        no record access. The web picker lists active human colleagues.
       required: [subject_kind, subject_id, role_id]
       properties:
         subject_kind: { $ref: '#/components/schemas/AssignmentSubjectKind' }

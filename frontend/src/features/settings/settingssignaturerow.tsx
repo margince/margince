@@ -1,16 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
-import { SignatureHtml } from "../../components/signaturehtml";
 import { useUnsavedGuard } from "../../components/unsaved";
-import {
-  Button,
-  Field,
-  Modal,
-  SegmentedControl,
-  Textarea,
-  TextInput,
-} from "../../design-system/atoms";
+import { Button, Modal, SegmentedControl } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { WriteRefused } from "../../design-system/querystates";
 import { SettingRow } from "../../design-system/settingrow";
@@ -20,15 +12,13 @@ import { unwrap } from "../../lib/problem";
 import { useSignOff } from "../mail/composesignoff";
 import { useSaveSignature } from "./settingssignature";
 
-type Format = "text" | "html";
+import {
+  type SignatureDraft as Draft,
+  type SignatureFormat as Format,
+  SignatureFields,
+} from "./settingssignatureeditor";
+
 const FORMATS: readonly Format[] = ["text", "html"];
-type Draft = {
-  body: string;
-  title: string;
-  phone: string;
-  html: string;
-  format: Format;
-};
 
 // Personal HTML takes precedence over the company template and plain text.
 export function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
@@ -85,11 +75,7 @@ export function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
   const change = (field: Exclude<keyof Draft, "format">, value: string) =>
     setDraft({ ...shown, [field]: value });
 
-  const answer = signature.isPending
-    ? undefined
-    : stored.html
-      ? t("settings.signatureOwnHtml")
-      : rowAnswer(t, templated, stored.body);
+  const answer = rowAnswer(t, signature.isPending, templated, stored);
 
   const close = () => {
     if (!save.isPending) setOpen(false);
@@ -152,8 +138,15 @@ export function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
           />
           <SignatureFields
             shown={shown}
-            templated={templated}
-            rendered={rendered}
+            mode={editorMode(shown.format, templated)}
+            previewHtml={
+              shown.format === "html" || templated ? rendered?.html : undefined
+            }
+            htmlHint={t(
+              templated
+                ? "settings.signatureHtmlHintTemplate"
+                : "settings.signatureHtmlHintPlain",
+            )}
             disabled={save.isPending}
             change={change}
           />
@@ -178,110 +171,24 @@ export function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
   );
 }
 
-function SignatureFields({
-  shown,
-  templated,
-  rendered,
-  change,
-  disabled,
-}: Readonly<{
-  shown: Draft;
-  templated: boolean;
-  disabled: boolean;
-  rendered: ReturnType<typeof useSignOff>["signOff"];
-  change: (field: Exclude<keyof Draft, "format">, value: string) => void;
-}>) {
-  const t = useT();
-  return (
-    <>
-      {shown.format === "html" ? (
-        <>
-          <Field label={t("settings.signatureHtmlLabel")}>
-            {(control) => (
-              <Textarea
-                {...control}
-                disabled={disabled}
-                rows={8}
-                value={shown.html}
-                onChange={(event) => change("html", event.target.value)}
-              />
-            )}
-          </Field>
-          <p className="t-caption">
-            {t(
-              templated
-                ? "settings.signatureHtmlHintTemplate"
-                : "settings.signatureHtmlHintPlain",
-            )}
-          </p>
-          {rendered?.html ? (
-            <SignatureHtml
-              html={rendered.html}
-              title={t("settings.signaturePreview")}
-            />
-          ) : null}
-        </>
-      ) : templated ? (
-        <>
-          <p className="t-caption">{t("settings.signatureTemplateHint")}</p>
-          <Field label={t("settings.signatureTitle")}>
-            {(control) => (
-              <TextInput
-                {...control}
-                disabled={disabled}
-                value={shown.title}
-                onChange={(event) => change("title", event.target.value)}
-              />
-            )}
-          </Field>
-          <Field label={t("settings.signaturePhone")}>
-            {(control) => (
-              <TextInput
-                {...control}
-                disabled={disabled}
-                value={shown.phone}
-                onChange={(event) => change("phone", event.target.value)}
-              />
-            )}
-          </Field>
-          {rendered?.html ? (
-            <SignatureHtml
-              html={rendered.html}
-              title={t("settings.signaturePreview")}
-            />
-          ) : null}
-        </>
-      ) : (
-        <>
-          <Field label={t("settings.signatureLabel")}>
-            {(control) => (
-              <Textarea
-                {...control}
-                disabled={disabled}
-                rows={5}
-                value={shown.body}
-                placeholder={t("settings.signaturePlaceholder")}
-                onChange={(event) => change("body", event.target.value)}
-              />
-            )}
-          </Field>
-          <p className="t-caption">{t("settings.signatureHint")}</p>
-        </>
-      )}
-    </>
-  );
-}
-
 // The row's value: the first line identifies a sign-off. The caller claims
 // nothing before the read has answered.
 function rowAnswer(
   t: ReturnType<typeof useT>,
+  pending: boolean,
   templated: boolean,
-  body: string,
-): string {
+  stored: Draft,
+): string | undefined {
+  if (pending) return undefined;
+  if (stored.html) return t("settings.signatureOwnHtml");
   if (templated) {
     return t("settings.signatureFromTemplate");
   }
-  const firstLine = (body.split("\n")[0] ?? "").trim();
+  const firstLine = (stored.body.split("\n")[0] ?? "").trim();
   return firstLine === "" ? t("settings.signatureNone") : firstLine;
+}
+
+function editorMode(format: Format, templated: boolean) {
+  if (format === "html") return "html";
+  return templated ? "template" : "plain";
 }

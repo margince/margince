@@ -34156,7 +34156,7 @@ type AssignableRoleDirectory struct {
 // AssignmentRecordType The kind of record an assignment hangs on.
 type AssignmentRecordType string
 
-// AssignmentSubjectKind Whether the responsible party is one colleague or a whole team.
+// AssignmentSubjectKind Whether the responsible party is one member or a whole team.
 type AssignmentSubjectKind string
 
 // AssistantConfiguredModel defines model for AssistantConfiguredModel.
@@ -44248,12 +44248,12 @@ type CreateProjectRequest struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
-// CreateRecordAssignmentRequest defines model for CreateRecordAssignmentRequest.
+// CreateRecordAssignmentRequest A responsibility may name an agent seat as well as a human member. It grants no record access. The web picker lists active human colleagues.
 type CreateRecordAssignmentRequest struct {
 	RoleId    openapi_types.UUID `json:"role_id"`
 	SubjectId openapi_types.UUID `json:"subject_id"`
 
-	// SubjectKind Whether the responsible party is one colleague or a whole team.
+	// SubjectKind Whether the responsible party is one member or a whole team.
 	SubjectKind AssignmentSubjectKind `json:"subject_kind"`
 }
 
@@ -54687,7 +54687,8 @@ type NotificationItem struct {
 		// corrections list rather than that run: a manual re-run replaces the `run_id`, so the
 		// one a notice names may no longer be listed. Manual privacy reviews use
 		// `knowledge_document` (download the retained file), `email_signature` (the
-		// recipient's own account settings), `activity` (open the retained note in its
+		// recipient's own account settings), `retained_email_signature` (the departed member's
+		// signature in the controller review), `activity` (open the retained note in its
 		// drawer), `legal_entity` (Company settings), or `signature_template` (Company
 		// settings; `id` identifies the erasure whose review flagged the workspace template).
 		Type string `json:"type"`
@@ -57504,7 +57505,7 @@ type RecordAssignment struct {
 	// SubjectInactive True when the assigned user is deactivated. The assignment stays and keeps its label, so history stays readable; it simply reads as needing a successor.
 	SubjectInactive *bool `json:"subject_inactive,omitempty"`
 
-	// SubjectKind Whether the responsible party is one colleague or a whole team.
+	// SubjectKind Whether the responsible party is one member or a whole team.
 	SubjectKind AssignmentSubjectKind `json:"subject_kind"`
 
 	// SubjectName Resolved server-side so the row renders without a second lookup.
@@ -59703,6 +59704,23 @@ type RestrictedRecord struct {
 	RestrictedUntil time.Time `json:"restricted_until"`
 }
 
+// RetainedEmailSignature defines model for RetainedEmailSignature.
+type RetainedEmailSignature struct {
+	Id        openapi_types.UUID `json:"id"`
+	OwnerId   openapi_types.UUID `json:"owner_id"`
+	OwnerName string             `json:"owner_name"`
+
+	// PreviewHtml The saved markup through the send path's signature sanitizer.
+	PreviewHtml *string        `json:"preview_html,omitempty"`
+	Signature   EmailSignature `json:"signature"`
+
+	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
+}
+
 // RetentionAction What happens to a record past its window. One action per policy row — a ladder is separate
 // rows at increasing `retain_days`, never a multi-action row. `archive` retains the record;
 // `anonymize` and `erase` destroy data and are the two the retain-only posture suppresses.
@@ -60283,6 +60301,26 @@ type SaveMyTimezoneRequest struct {
 // against a browser's guess as a chosen zone is. Only an agent sends it,
 // and an agent never sends `chosen`.
 type SaveMyTimezoneRequestSource string
+
+// SaveRetainedEmailSignatureRequest defines model for SaveRetainedEmailSignatureRequest.
+type SaveRetainedEmailSignatureRequest struct {
+	// Body Plain text. Empty clears the signature. The cap is what a signature is
+	// FOR — a name, a role, a way to reach the sender — and past it a block
+	// is a document riding on every message.
+	Body            string `json:"body"`
+	ExpectedVersion int64  `json:"expected_version" maximum:"9007199254740991" minimum:"1"`
+
+	// Html Personal HTML as typed. Empty clears it; omitted on a write or preview
+	// leaves it unchanged. Rendering uses the signature sanitizer without
+	// expanding placeholders. Empty sanitized content uses the usual fallback.
+	Html *string `json:"html,omitempty"`
+
+	// Phone The member's phone number, for the workspace template. Omitted leaves it as it is.
+	Phone *string `json:"phone,omitempty"`
+
+	// Title The member's title, for the workspace template. Omitted leaves it as it is.
+	Title *string `json:"title,omitempty"`
+}
 
 // SaveWorkingHoursRequest The hours and days to store. The zone they are read on is the caller's
 // own time zone, set through `saveMyTimezone`.
@@ -64950,7 +64988,7 @@ type UpdateRecordAssignmentRequest struct {
 	RoleId    *openapi_types.UUID `json:"role_id,omitempty"`
 	SubjectId *openapi_types.UUID `json:"subject_id,omitempty"`
 
-	// SubjectKind Whether the responsible party is one colleague or a whole team.
+	// SubjectKind Whether the responsible party is one member or a whole team.
 	SubjectKind *AssignmentSubjectKind `json:"subject_kind,omitempty"`
 }
 
@@ -77681,6 +77719,9 @@ type AssignNoticeCaseJSONRequestBody = AssignNoticeCase
 
 // ExcuseNoticeCaseJSONRequestBody defines body for ExcuseNoticeCase for application/json ContentType.
 type ExcuseNoticeCaseJSONRequestBody = ExcuseNoticeCase
+
+// SaveRetainedEmailSignatureJSONRequestBody defines body for SaveRetainedEmailSignature for application/json ContentType.
+type SaveRetainedEmailSignatureJSONRequestBody = SaveRetainedEmailSignatureRequest
 
 // CreateProductJSONRequestBody defines body for CreateProduct for application/json ContentType.
 type CreateProductJSONRequestBody = CreateProductRequest
@@ -93092,6 +93133,12 @@ type ServerInterface interface {
 	// End a disclosure duty on a stated ground, or record that it was met elsewhere.
 	// (POST /privacy/notice-cases/{id}/excuse)
 	ExcuseNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Review a retained signature whose owner cannot review it.
+	// (GET /privacy/retained-signatures/{id})
+	GetRetainedEmailSignature(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Save a human review of a retained member signature.
+	// (PUT /privacy/retained-signatures/{id})
+	SaveRetainedEmailSignature(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// List rate-card products (live by default; cursor-paginated).
 	// (GET /products)
 	ListProducts(w http.ResponseWriter, r *http.Request, params ListProductsParams)
@@ -98567,6 +98614,18 @@ func (_ Unimplemented) AssignNoticeCase(w http.ResponseWriter, r *http.Request, 
 // End a disclosure duty on a stated ground, or record that it was met elsewhere.
 // (POST /privacy/notice-cases/{id}/excuse)
 func (_ Unimplemented) ExcuseNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Review a retained signature whose owner cannot review it.
+// (GET /privacy/retained-signatures/{id})
+func (_ Unimplemented) GetRetainedEmailSignature(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Save a human review of a retained member signature.
+// (PUT /privacy/retained-signatures/{id})
+func (_ Unimplemented) SaveRetainedEmailSignature(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -134276,6 +134335,70 @@ func (siw *ServerInterfaceWrapper) ExcuseNoticeCase(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// GetRetainedEmailSignature operation middleware
+func (siw *ServerInterfaceWrapper) GetRetainedEmailSignature(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetRetainedEmailSignature(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SaveRetainedEmailSignature operation middleware
+func (siw *ServerInterfaceWrapper) SaveRetainedEmailSignature(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveRetainedEmailSignature(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListProducts operation middleware
 func (siw *ServerInterfaceWrapper) ListProducts(w http.ResponseWriter, r *http.Request) {
 
@@ -148446,6 +148569,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/privacy/notice-cases/{id}/excuse", wrapper.ExcuseNoticeCase)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/privacy/retained-signatures/{id}", wrapper.GetRetainedEmailSignature)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/privacy/retained-signatures/{id}", wrapper.SaveRetainedEmailSignature)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/products", wrapper.ListProducts)

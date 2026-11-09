@@ -3267,7 +3267,7 @@ export const en = {
   // comes back 404, so by the time this is read the record is one they may know
   // about. Two sentences, no dash (VOICE-RULE-5).
   "common.individualPerformanceOff":
-    "An administrator switched off individual performance. You can see your own figures. A figure is withheld when fewer than two other members make it up, or when taking another team’s total from it would leave fewer than two.",
+    "An administrator switched off individual performance. You can see your own figures. A figure is withheld when fewer than two other members make it up, or when taking another team’s total from it would leave fewer than two. A forecast is withheld in full if any of its groups would show one colleague’s figures.",
   "common.permissionDenied":
     "You do not have permission for this action. Ask an administrator, or the user who shared this record, to extend your access.",
   // The licensing ceiling, decided before any role is consulted: a read seat is
@@ -8756,6 +8756,20 @@ export const en = {
   "settings.signatureHtmlHintPlain":
     "Leave this empty to use your plain text again. Remote images and scripts are removed.",
   "settings.signatureOwnHtml": "Your HTML signature",
+  "settings.signatureReviewTitle": "Review {name}’s retained signature",
+  "settings.signatureReviewIntro":
+    "The owner cannot review this signature themselves. The original stays until you save your changes. Check every field before choosing what to remove.",
+  "settings.signatureReviewPreview": "Saved signature preview",
+  "settings.signatureReviewReload": "Reload this signature before editing it.",
+  "settings.signatureReviewChangedTitle": "The signature changed",
+  "settings.signatureReviewChanged":
+    "Another controller saved changes. Review the latest version below. Keep your draft only if you want it to replace those fields.",
+  "settings.signatureReviewLatest": "Latest saved version",
+  "settings.signatureReviewUseLatest": "Use latest version",
+  "settings.signatureReviewKeepDraft": "Keep my draft",
+  "settings.signatureReviewLoading": "Loading the retained signature…",
+  "settings.signatureReviewSaved": "Signature review saved",
+  "settings.signatureReviewMember": "the member",
   "settings.signature": "Email signature",
   "settings.signatureSub":
     "Added below every message you send, above the unsubscribe footer.",

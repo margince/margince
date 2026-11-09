@@ -414,6 +414,7 @@ func unreadInWindow(ctx context.Context, tx pgx.Tx, user ids.UserID, w Window) (
 			typed := ids.From[ids.ApprovalKind](approval)
 			n.ApprovalID = &typed
 		}
+		n.Target = resolvedNoticeTarget(n.Target, n.Kind, n.SystemText)
 		held = append(held, n)
 	}
 	return held, rows.Err()

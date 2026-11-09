@@ -263,6 +263,7 @@ func scanCentreItems(ctx context.Context, rows pgx.Rows) ([]CentreItem, error) {
 		if approval, ok := approvalOfNoticeKey(item.Kind, dedupeKey); ok {
 			item.Target = Target{Type: TargetApproval, ID: approval}
 		}
+		item.Target = resolvedNoticeTarget(item.Target, item.Kind, item.SystemText)
 		item.SystemDisplay = noticeSystemDisplay(ctx, item.SystemText, item.Subject, item.Body)
 		items = append(items, item)
 	}

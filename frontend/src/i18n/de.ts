@@ -3350,7 +3350,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.gatewayUnavailable":
     "Der Server hat die Anfrage nicht rechtzeitig abgeschlossen und verarbeitet sie möglicherweise noch. Warte, bevor du es erneut versuchst, sonst kann die Arbeit zweimal laufen.",
   "common.individualPerformanceOff":
-    "Ein Admin hat die Einzelleistung ausgeschaltet. Du siehst deine eigenen Zahlen. Eine Zahl wird zurückgehalten, wenn weniger als zwei andere Mitglieder zu ihr beitragen oder wenn nach Abzug der Summe eines anderen Teams weniger als zwei übrig blieben.",
+    "Ein Admin hat die Einzelleistung ausgeschaltet. Du siehst deine eigenen Zahlen. Eine Zahl wird zurückgehalten, wenn weniger als zwei andere Mitglieder zu ihr beitragen oder wenn nach Abzug der Summe eines anderen Teams weniger als zwei übrig blieben. Eine Prognose wird ganz zurückgehalten, wenn eine ihrer Teilgruppen die Zahlen eines einzelnen Mitglieds zeigen würde.",
   "common.permissionDenied":
     "Du hast keine Berechtigung für diese Aktion. Lass deinen Zugriff von einem Admin oder der Person erweitern, die diesen Datensatz mit dir geteilt hat.",
   "common.seatReadOnly":
@@ -8791,6 +8791,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.signatureHtmlHintPlain":
     "Leere das Feld, um wieder deinen Text zu verwenden. Externe Bilder und Skripte werden entfernt.",
   "settings.signatureOwnHtml": "Deine HTML-Signatur",
+  "settings.signatureReviewTitle": "Gespeicherte Signatur von {name} prüfen",
+  "settings.signatureReviewIntro":
+    "Die Person kann diese Signatur nicht selbst prüfen. Das Original bleibt, bis du deine Änderungen speicherst. Prüfe jedes Feld, bevor du etwas entfernst.",
+  "settings.signatureReviewPreview": "Vorschau der gespeicherten Signatur",
+  "settings.signatureReviewReload":
+    "Lade diese Signatur neu, bevor du sie bearbeitest.",
+  "settings.signatureReviewChangedTitle": "Signatur geändert",
+  "settings.signatureReviewChanged":
+    "Jemand hat die Signatur geändert. Prüfe unten die gespeicherte Version. Wenn du deinen Entwurf behältst, ersetzt er diese Felder.",
+  "settings.signatureReviewLatest": "Zuletzt gespeicherte Version",
+  "settings.signatureReviewUseLatest": "Gespeicherte Version verwenden",
+  "settings.signatureReviewKeepDraft": "Meinen Entwurf behalten",
+  "settings.signatureReviewLoading": "Gespeicherte Signatur wird geladen…",
+  "settings.signatureReviewSaved": "Signaturprüfung gespeichert",
+  "settings.signatureReviewMember": "dem Mitglied",
   "settings.signature": "E-Mail-Signatur",
   "settings.signatureSub":
     "Steht unter jeder Nachricht, die du sendest, oberhalb der Fußzeile zum Abbestellen.",

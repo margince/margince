@@ -29,6 +29,7 @@ func storedNotice(ctx context.Context, tx pgx.Tx, recipient ids.UserID, dedupeKe
 	if storedType != nil && storedID != nil {
 		stored.Target = Target{Type: *storedType, ID: *storedID}
 	}
+	stored.Target = resolvedNoticeTarget(stored.Target, stored.Kind, stored.SystemText)
 	stored.SystemDisplay = noticeSystemDisplay(ctx, stored.SystemText, stored.Subject, stored.Body)
 	return stored, nil
 }

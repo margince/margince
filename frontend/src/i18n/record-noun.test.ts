@@ -168,6 +168,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contact.card.committee_other",
   ],
   de: [
+    // The signature belongs to a human member, not a contact record.
+    "settings.signatureReviewIntro",
     "analytics.team.eventCredit",
     "analytics.team.qualificationBasis",
     "analytics.team.targetBasis",
@@ -312,6 +314,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "analytics.team.qualificationUnattributed_one",
     "analytics.team.qualificationUnattributed_other",
     // Operators and mailbox owners are human roles, not contact record types.
+    "settings.signatureReviewChanged",
     "health.stoppedNext",
     "health.readFailedNext",
     "health.effect.jobs",

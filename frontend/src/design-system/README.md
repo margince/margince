@@ -583,6 +583,10 @@ role, light beside dark), `elevation.stories.tsx`, `spacing.stories.tsx`, `motio
 
 ### Text and data display
 
+The shared [`SignatureHtml`](../components/signaturehtml.tsx) shows email text cleaned by the
+server in a sandboxed frame. Set `resolveEmbeddedLogo={false}` when viewing another member's
+saved text. This keeps the signed-in user's logo out of that preview.
+
 | Primitive | For | File | Story |
 |---|---|---|---|
 | `EmailEntry` | One kept email as a row, and the one reading of a message in the product. It takes the server's `EmailSummary` and a formatted time; there are no density or variant props. `onOpen` opens the reader; `onSelect` and `selected` let a composer pick a message to reply to. It owns its padding, type, cutting short and focus ring. A withheld row keeps its shape and loses its words | `emailentry.tsx` | ✅ |

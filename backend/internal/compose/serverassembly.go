@@ -55,6 +55,11 @@ import (
 // ADR-0054 reason as the stager.
 func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 	return withContactMergeCarriers(InstallationDB(pool), contacts.NewHandlers(InstallationDB(pool))).
+		WithPrivacyReviewer(identity.NewServiceFor(InstallationDB(pool))).
+		WithRetainedSignaturePreview(func(source string) (string, error) {
+			markup, _, err := activities.SignatureMarkup(source)
+			return markup, err
+		}).
 		WithFloorCarry(EntityFloorCarry(pool)).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
 		WithMatchStager(linkedInMatchStager(pool)).
