@@ -233,7 +233,11 @@ func confidentialityProofs() map[string]judgelessProof {
 		"a_consumer_bank_alert_is_the_owners_own_money_not_the_companys":           {"personal", "security_incident"},
 		"a_termination_agreement_stays_private_whatever_the_attachment_note_says":  {"personnel", "ordinary"},
 		"a_salary_sheet_behind_an_invoice_note_stays_private":                      {"personnel", "ordinary"},
-		"an_unpatched_vulnerability_is_held_until_it_is_closed":                    {"security_incident", "ordinary"},
+		"a_readable_supplier_invoice_opens_the_thread":                             {"ordinary", "personnel"},
+		// A "held" case passes any kind that holds and refuses a confident "ordinary".
+		"an_unreadable_scan_under_an_invoice_note_stays_held":   {"personnel", "ordinary"},
+		"a_cut_off_cost_sheet_by_team_member_stays_held":        {"personnel", "ordinary"},
+		"an_unpatched_vulnerability_is_held_until_it_is_closed": {"security_incident", "ordinary"},
 	} {
 		proofs[name] = judgelessProof{
 			correct: owedVerdicts(kinds[0]), wrong: owedVerdicts(kinds[1]), wantWrong: aitasks.OutcomeWrongAnswer,

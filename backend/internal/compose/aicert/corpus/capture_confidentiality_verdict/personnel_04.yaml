@@ -1,0 +1,36 @@
+name: a_cut_off_cost_sheet_by_team_member_stays_held
+task: capture_confidentiality_verdict
+site: thread
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# The excerpt stops before the first row of figures. What it shows is a cost
+# overview whose columns are per person, role and monthly gross, and the
+# prompt says the file continues. No line carries an amount next to a name,
+# so the staff-cost rule does not hold it first.
+fixture:
+  subject: "Q2 delivery cost overview"
+  attachments:
+    - Q2 delivery cost overview.xlsx
+  body: |
+    Hi Tom,
+
+    here is the cost overview for the Q2 delivery team, as discussed. The
+    totals match the March figures.
+
+    Thanks
+  documents:
+    - name: Q2 delivery cost overview.xlsx
+      truncated: true
+      excerpt: |
+        Sheet: Overview
+        Q2 delivery, cost by team member
+        Prepared for finance review
+        Team member | Role | Monthly gross | Employer cost | Months
+expect:
+  outcome: accepted
+  answer: held
+  judge: none
+  judge_none_reason: >
+    Any answer the engine would not open passes. The visible part is a cost
+    sheet laid out by team member and gross pay, and the rest of the file was
+    not read, so the thread must not open with confidence.

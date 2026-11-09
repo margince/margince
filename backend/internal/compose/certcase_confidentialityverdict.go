@@ -83,7 +83,7 @@ func (confidentialityCases) Prepare(fixture, expected json.RawMessage) (aitasks.
 	// An expectation outside the closed vocabulary is unreachable: the validator
 	// refuses every reply that could satisfy it, so the scenario would measure
 	// nothing for as long as it stayed in the corpus.
-	if _, known := statusForConfidentiality(want); !known {
+	if _, known := statusForConfidentiality(want); !known && want != confidentialityExpectsHeld {
 		return nil, fmt.Errorf(
 			"capture_confidentiality_verdict/thread: the scenario expects %q, which is not a thread kind", want)
 	}
@@ -104,6 +104,12 @@ func (confidentialityCases) Prepare(fixture, expected json.RawMessage) (aitasks.
 		expected: want,
 	}, nil
 }
+
+// confidentialityExpectsHeld is the expectation that the engine keeps the
+// thread private, whatever kind holds it. A scenario uses it where the model
+// cannot know the kind, as with a file it could not read. An unsure "ordinary"
+// below the floor holds the thread as well as a sensitive kind does.
+const confidentialityExpectsHeld = "held"
 
 // confidentialityCase is one fixture thread ready to be judged, closed over the
 // minted row id and the kind the scenario expects.
@@ -144,6 +150,9 @@ func (c *confidentialityCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	// must carry the one requested id, none may repeat it, and it must be
 	// present.
 	answered := payload.Results[0].Verdict
+	if c.expected == confidentialityExpectsHeld {
+		return c.heldOutcome(payload.Results[0], "the model")
+	}
 	if answered != c.expected {
 		return aitasks.Outcome{
 			Result: aitasks.OutcomeWrongAnswer,
@@ -185,11 +194,27 @@ func (*confidentialityCase) Floors() map[string]float64 {
 // EvaluateDecision grades an answer the gate kept. The answer is a closed
 // label, so exact match against the scenario is the whole judgment.
 func (c *confidentialityCase) EvaluateDecision(a decision.Answer) aitasks.Outcome {
+	if c.expected == confidentialityExpectsHeld {
+		return c.heldOutcome(readConfidentialityDecision(c.row, a), "the decision model")
+	}
 	if a.Choice != c.expected {
 		return aitasks.Outcome{
 			Result: aitasks.OutcomeWrongAnswer,
 			Detail: fmt.Sprintf("the decision model answered %q at confidence %.2f where the scenario expects %q",
 				a.Choice, a.Confidence, c.expected),
+		}
+	}
+	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}
+}
+
+// heldOutcome grades a "held" scenario by the engine's own opening rule, so an
+// answer passes when production would keep the thread private, and only then.
+func (c *confidentialityCase) heldOutcome(answer confidentialityResult, who string) aitasks.Outcome {
+	if confidentialityOpens(answer, c.row.DocumentsOmitted) {
+		return aitasks.Outcome{
+			Result: aitasks.OutcomeWrongAnswer,
+			Detail: fmt.Sprintf("%s opened the thread as %q at confidence %.2f where the scenario expects it held",
+				who, answer.Verdict, float64(answer.Confidence)),
 		}
 	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}

@@ -63,6 +63,14 @@ const (
 // confidence to hold would publish exactly the threads the model found hardest.
 const confidentialityFloor = 0.8
 
+// confidentialityOpens says whether answer opens the thread: an opening kind at
+// or above the floor. A thread with documents the verdict never read cannot
+// open: the sender names the files, so the unread ones are theirs to choose.
+func confidentialityOpens(answer confidentialityResult, documentsOmitted int) bool {
+	status, _ := statusForConfidentiality(answer.Verdict)
+	return status == capture.VerdictCleared && float64(answer.Confidence) >= confidentialityFloor && documentsOmitted == 0
+}
+
 // statusForConfidentiality maps a kind to the ledger status it resolves to.
 func statusForConfidentiality(kind string) (string, bool) {
 	status, ok := confidentialityKinds[kind]

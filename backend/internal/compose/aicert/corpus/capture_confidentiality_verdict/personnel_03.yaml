@@ -1,0 +1,30 @@
+name: an_unreadable_scan_under_an_invoice_note_stays_held
+task: capture_confidentiality_verdict
+site: thread
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# The covering note reads as an invoice, and the one document could not be
+# read. Its name says nothing, so no rule holds it first: only the model
+# decides. A file the verdict could not read is never evidence for "ordinary".
+fixture:
+  subject: "[Northwind] April statement"
+  attachments:
+    - scan_0042.pdf
+  body: |
+    Dear Anna,
+
+    please find attached the statement for April. Let me know if anything
+    needs correcting before month end.
+
+    Best regards
+  documents:
+    - name: scan_0042.pdf
+      unreadable: true
+expect:
+  outcome: accepted
+  answer: held
+  judge: none
+  judge_none_reason: >
+    Any answer the engine would not open passes: a sensitive kind, or
+    "ordinary" below the confidence floor. The check is the engine's own
+    opening rule, because what the attachment holds cannot be known.
