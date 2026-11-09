@@ -94,7 +94,7 @@ func TestContactAttachableFlagMatchesTheAttachGate(t *testing.T) {
 				t.Fatal("the readable contact is absent from the list")
 			}
 
-			if got := accountRowAttachable(t, e, reader, company, contact); got != tc.want {
+			if got := accountRowAttachable(reader, t, e, company, contact); got != tc.want {
 				t.Fatalf("the company page's contact row says attachable = %v, the contact read says %v", got, tc.want)
 			}
 
@@ -128,7 +128,7 @@ func TestContactAttachableFlagMatchesTheAttachGate(t *testing.T) {
 
 // accountRowAttachable is the company page's answer for one contact, the list
 // a mail started from the account files its recipients by.
-func accountRowAttachable(t *testing.T, e *Env, reader context.Context, company, contact ids.UUID) bool {
+func accountRowAttachable(reader context.Context, t *testing.T, e *Env, company, contact ids.UUID) bool {
 	t.Helper()
 	page, err := companySurfaceService(e).Assemble(reader, ids.From[ids.CompanyKind](company))
 	if err != nil {
