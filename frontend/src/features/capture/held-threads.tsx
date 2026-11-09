@@ -220,7 +220,7 @@ export function HeldThreads() {
 }
 
 // A failed next page keeps the rows already read, beside the error and the
-// retry; only a read with no rows at all leaves the error alone.
+// retry. Only a read with no rows at all leaves the error alone.
 function HeldListBody({
   rows,
   active,
