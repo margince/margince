@@ -28,13 +28,13 @@ import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useRecordWriteRefusal } from "../../lib/capability";
 import { useMemberName } from "../../lib/membernames";
+import { mayLeaveReach, useLeaveIfOutOfReach } from "../../lib/outofreach";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { invalidateRecord } from "../../lib/recordwritekeys";
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { HandoverOffer } from "./handoveroffer";
 import { HandoverRequest } from "./handoverrequest";
-import { mayLeaveReach, useLeaveIfOutOfReach } from "./outofreach";
 import "./recordaccess.css";
 
 // The shape both records share, which is all this component reads. Spelled

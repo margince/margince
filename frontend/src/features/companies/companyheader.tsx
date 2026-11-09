@@ -28,10 +28,10 @@ import {
 } from "../../lib/capability";
 import { useClaimRecord } from "../../lib/claimrecord";
 import { useMemberName } from "../../lib/membernames";
+import { mayLeaveReach, useLeaveIfOutOfReach } from "../../lib/outofreach";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { useMe, useViewerId } from "../../lib/session";
-import { mayLeaveReach, useLeaveIfOutOfReach } from "../records/outofreach";
 import { ShareAction } from "../records/share";
 import { CompanyRejectAction } from "./companyreject";
 

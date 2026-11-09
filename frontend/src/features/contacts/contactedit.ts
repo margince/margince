@@ -13,8 +13,8 @@ import { rawRecord } from "../../components/recordfieldtypes";
 import { useRecordOwners } from "../../components/recordowners";
 import { useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
+import { mayLeaveReach, useLeaveIfOutOfReach } from "../../lib/outofreach";
 import { useViewerId } from "../../lib/session";
-import { mayLeaveReach, useLeaveIfOutOfReach } from "../records/outofreach";
 
 type Contact = components["schemas"]["Contact"];
 

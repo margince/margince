@@ -3,10 +3,10 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
-import { api } from "../../api/client";
-import { useToast } from "../../design-system/toast";
-import { recordWriteKeys } from "../../lib/recordwritekeys";
-import { navigateReplacing } from "../../lib/router";
+import { api } from "../api/client";
+import { useToast } from "../design-system/toast";
+import { recordWriteKeys } from "./recordwritekeys";
+import { navigateReplacing } from "./router";
 
 export type ReachableKind = "contact" | "company";
 
