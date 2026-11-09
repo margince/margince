@@ -31,6 +31,7 @@ package privacy
 // own side of the conversation and loses the buyer's. Nothing automatic can separate
 // the clause from the contact inside one sentence, and of the two ways to be wrong,
 // keeping an erased subject's words is the one the subject did not consent to.
+// In a thread the buyer opened, the seller's replies go with the thread.
 
 import (
 	"context"
@@ -139,42 +140,49 @@ func anonymizeDealRoomSeats(ctx context.Context, tx pgx.Tx, emails []string) ([]
 	return wiped, nil
 }
 
-// purgeDealRoomSeatTraces removes what the wiped seats would still betray about
-// the subject even with their name gone.
-//
-// Three things do. A live session is a credential that still admits somebody, and
-// an erased subject's access ending only when the token expires is access they
-// did not consent to keep. A comment is the subject's own words. An engagement row
-// says WHEN this contact signed in
-// and WHICH documents they took — a behavioural record of the subject, useful
-// to the seller only as a claim about a contact who has asked to be forgotten.
-//
-// The invitations stay: they are the seller's record that access was granted
-// and when, and they name no addressee beyond the now-wiped seat.
-//
-// The seat's AUDIT spine is tombstoned by eraseDealRoomSeats above, not here.
+// purgeDealRoomSeatTraces deletes what the wiped seats still say about the
+// subject: live sessions, engagement rows, comments and the threads they opened.
+// Each deleted session, comment and thread gets an erase tombstone, which redacts
+// its audit history. The invitations stay as the seller's record that access was
+// granted. The seat's own audit history is tombstoned by eraseDealRoomSeats.
 func purgeDealRoomSeatTraces(ctx context.Context, tx pgx.Tx, seats []ids.UUID) error {
 	if len(seats) == 0 {
 		return nil
 	}
-	if _, err := tx.Exec(ctx,
-		`DELETE FROM deal_room_session WHERE participant_id = ANY($1)`, seats); err != nil {
+	sessions, err := scrubbedIDs(ctx, tx,
+		`DELETE FROM deal_room_session WHERE participant_id = ANY($1) RETURNING id`, seats)
+	if err != nil {
 		return fmt.Errorf("purge deal room sessions of an erased subject: %w", err)
+	}
+	if err := tombstoneCollateralScrubs(ctx, tx, "deal_room_session", sessions, subjectRedactionReason, subjectRedactionCause); err != nil {
+		return err
 	}
 	if _, err := tx.Exec(ctx,
 		`DELETE FROM deal_room_engagement WHERE participant_id = ANY($1)`, seats); err != nil {
 		return fmt.Errorf("purge deal room engagement of an erased subject: %w", err)
 	}
-	// The subject's own comments, which the anonymized seat keeps: the seat is wiped
-	// rather than deleted, and the comment references it ON DELETE RESTRICT, so the
-	// buyer's text outlives the erasure that was meant to reach it. Blanking is not
-	// available -- body carries a non-empty CHECK -- and nothing references a comment,
-	// so the row goes. The seller's own comments stay in the thread, the same split
-	// the invitations above are kept under.
+	return purgeDealRoomSeatConversation(ctx, tx, seats)
+}
+
+// purgeDealRoomSeatConversation deletes the seats' comments and the threads they
+// opened. A comment's body must not be empty, so it cannot be blanked. A thread
+// must name one author, so its seat link cannot be cut. The seller's replies in
+// such a thread go with it; the seller's own threads stay.
+func purgeDealRoomSeatConversation(ctx context.Context, tx pgx.Tx, seats []ids.UUID) error {
 	comments, err := scrubbedIDs(ctx, tx,
-		`DELETE FROM deal_room_comment WHERE author_participant_id = ANY($1) RETURNING id`, seats)
+		`DELETE FROM deal_room_comment WHERE author_participant_id = ANY($1)
+		    OR thread_id IN (SELECT id FROM deal_room_thread WHERE author_participant_id = ANY($1))
+		 RETURNING id`, seats)
 	if err != nil {
 		return fmt.Errorf("purge deal room comments of an erased subject: %w", err)
 	}
-	return tombstoneCollateralScrubs(ctx, tx, "deal_room_comment", comments, subjectRedactionReason, subjectRedactionCause)
+	if err := tombstoneCollateralScrubs(ctx, tx, "deal_room_comment", comments, subjectRedactionReason, subjectRedactionCause); err != nil {
+		return err
+	}
+	threads, err := scrubbedIDs(ctx, tx,
+		`DELETE FROM deal_room_thread WHERE author_participant_id = ANY($1) RETURNING id`, seats)
+	if err != nil {
+		return fmt.Errorf("purge deal room threads of an erased subject: %w", err)
+	}
+	return tombstoneCollateralScrubs(ctx, tx, "deal_room_thread", threads, subjectRedactionReason, subjectRedactionCause)
 }

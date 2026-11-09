@@ -30,22 +30,30 @@ func legacyAuditSubjectQuery(entry legacyAuditEntry) (string, pgx.StrictNamedArg
 	case rightsRequestEntity:
 		return legacyRequestAuditQuery(entry)
 	case "deal_room_comment":
-		if entry.actorType != "buyer" {
-			return "", nil
-		}
-		buyer, ok := strings.CutPrefix(entry.actorID, "buyer:")
-		if !ok {
-			return "", nil
-		}
-		args["buyer"] = buyer
-		return `SELECT 'deal'::text,room.deal_id,erasure.id FROM deal_room_participant participant
+		return legacyBuyerAuditQuery(entry, args, `NOT EXISTS(SELECT 1 FROM deal_room_comment WHERE id=@entity)`)
+	case "deal_room_session":
+		return legacyBuyerAuditQuery(entry, args, `NOT EXISTS(SELECT 1 FROM deal_room_session WHERE id=@entity)`)
+	}
+	return "", nil
+}
+
+// legacyBuyerAuditQuery finds the erasure of the seat that wrote a deleted
+// record. The audit actor names the seat; the record itself is gone.
+func legacyBuyerAuditQuery(entry legacyAuditEntry, args pgx.StrictNamedArgs, recordGone string) (string, pgx.StrictNamedArgs) {
+	if entry.actorType != "buyer" {
+		return "", nil
+	}
+	buyer, ok := strings.CutPrefix(entry.actorID, "buyer:")
+	if !ok {
+		return "", nil
+	}
+	args["buyer"] = buyer
+	return `SELECT 'deal'::text,room.deal_id,erasure.id FROM deal_room_participant participant
    JOIN deal_room room ON room.id=participant.room_id
    JOIN audit_log erasure ON erasure.entity_type='deal_room_participant' AND erasure.entity_id=participant.id
    WHERE participant.id::text=@buyer
-   AND NOT EXISTS(SELECT 1 FROM deal_room_comment WHERE id=@entity) AND ` + legacyPrivacyBoundary + `
+   AND ` + recordGone + ` AND ` + legacyPrivacyBoundary + `
    ORDER BY erasure.occurred_at,erasure.id LIMIT 1 FOR UPDATE OF participant,room`, args
-	}
-	return "", nil
 }
 
 func legacyApprovalAuditQuery(entry legacyAuditEntry) (string, pgx.StrictNamedArgs) {
