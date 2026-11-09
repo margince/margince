@@ -72,9 +72,9 @@ func parseDCR(members map[string]json.RawMessage) (dcrRequest, *dcrRefusal) {
 
 func (req dcrRequest) validate() *dcrRefusal {
 	// Public clients only: PKCE is the proof of possession, and only an admin
-	// mints a secret. A client asking for a secret method is registered as
-	// public instead, since a server may replace requested metadata, and the
-	// echo of none tells it so. The Gemini app asks for client_secret_basic.
+	// mints a secret. A server may replace requested metadata, so a client
+	// asking for a secret method is registered as public. The echo of none
+	// tells it so. The Gemini app asks for client_secret_basic.
 	if !slices.Contains(dcrSubstitutableAuthMethods, req.TokenEndpointAuthMethod) {
 		return &dcrRefusal{
 			oauthErrInvalidClientMetadata,
