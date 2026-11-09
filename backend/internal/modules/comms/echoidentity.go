@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -24,7 +25,9 @@ import (
 // EchoIdentity answers the identity of the captured echo of one sent message,
 // found by the provider's message id in the sending seat's own mailbox. capture
 // owns the import rows, so compose injects it.
-type EchoIdentity func(ctx context.Context, tx pgx.Tx, seat ids.UUID, provider, providerMessageID string) (string, bool, error)
+// sentAt bounds the match to the account the connection held when the message
+// was sent.
+type EchoIdentity func(ctx context.Context, tx pgx.Tx, seat ids.UUID, provider, providerMessageID string, sentAt time.Time) (string, bool, error)
 
 // WithEchoIdentity hands the store the read that recovers an identity the
 // read-back could not.
@@ -48,6 +51,7 @@ type sentReceipt struct {
 	seat           ids.UUID
 	provider       string
 	providerSentID string
+	sentAt         time.Time
 }
 
 // identityAfterReceipt is the stamped identity to reconcile onto. A denied
@@ -82,7 +86,7 @@ func (s *Store) capturedEchoIdentity(callerCtx context.Context, sent sentReceipt
 			return err
 		}
 		var err error
-		stamped, _, err = s.echoIdentity(ctx, tx, sent.seat, sent.provider, sent.providerSentID)
+		stamped, _, err = s.echoIdentity(ctx, tx, sent.seat, sent.provider, sent.providerSentID, sent.sentAt)
 		return err
 	})
 	if err != nil {
@@ -97,7 +101,9 @@ func (s *Store) capturedEchoIdentity(callerCtx context.Context, sent sentReceipt
 //
 // The caller holds storekit.LockSentEchoKey. The lookup is scoped to the seat
 // and provider, so another mailbox's message with the same id is untouched.
-func (s *Store) AdoptEchoIdentityTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, provider, providerMessageID, stamped string) (bool, error) {
+// A provider id names a message only within one account. A delivery sent
+// before the connection's current account was bound (accountSince) never matches.
+func (s *Store) AdoptEchoIdentityTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, provider, providerMessageID, stamped string, accountSince *time.Time) (bool, error) {
 	if providerMessageID == "" || !connector.ValidMessageID(stamped) {
 		return false, nil
 	}
@@ -108,7 +114,8 @@ func (s *Store) AdoptEchoIdentityTx(ctx context.Context, tx pgx.Tx, seat ids.UUI
 		SELECT id, activity_id, message_id FROM comms_outbound
 		 WHERE user_id = $1 AND provider = $2 AND provider_message_id = $3
 		   AND status = 'sent' AND channel_user_id IS NULL AND message_id <> $4
-		 ORDER BY sent_at DESC, id LIMIT 1`, seat, provider, providerMessageID, stamped).Scan(&delivery, &activity, &staged)
+		   AND ($5::timestamptz IS NULL OR sent_at >= $5)
+		 ORDER BY sent_at DESC, id LIMIT 1`, seat, provider, providerMessageID, stamped, accountSince).Scan(&delivery, &activity, &staged)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}

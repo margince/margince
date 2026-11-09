@@ -336,7 +336,7 @@ func (s *Store) commitReceipt(ctx context.Context, id ids.UUID, receipt connecto
 	ctx, cancel := detachedWrite(ctx)
 	defer cancel()
 
-	sent := sentReceipt{providerSentID: receipt.ProviderMessageID}
+	sent := sentReceipt{providerSentID: receipt.ProviderMessageID, sentAt: s.now().UTC()}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// inflight_at is cleared with the receipt: the outcome is now KNOWN, and
 		// a sent row still carrying the marker would read as a transmission
@@ -347,7 +347,7 @@ func (s *Store) commitReceipt(ctx context.Context, id ids.UUID, receipt connecto
 		arg := func(v any) string { args = append(args, v); return "$" + strconv.Itoa(len(args)) }
 		query := `
 			UPDATE comms_outbound
-			   SET status = 'sent', party_admission_pending = true, provider_message_id = ` + arg(receipt.ProviderMessageID) + `, sent_at = ` + arg(s.now().UTC()) + `,
+			   SET status = 'sent', party_admission_pending = true, provider_message_id = ` + arg(receipt.ProviderMessageID) + `, sent_at = ` + arg(sent.sentAt) + `,
 			       reason = NULL, inflight_at = NULL, from_address = coalesce(nullif(` + arg(receipt.FromAddress) + `, ''), from_address)
 			 WHERE id = ` + arg(id) + ` AND status = 'pending'
 			RETURNING activity_id, coalesce(message_id, ''), coalesce(user_id, '00000000-0000-0000-0000-000000000000'), provider`

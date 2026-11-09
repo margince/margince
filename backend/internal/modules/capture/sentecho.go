@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -24,7 +25,9 @@ import (
 // SentEchoAdoption re-keys the seat's sent message onto the identity its echo
 // carries, in the capture transaction, and answers whether it did.
 // comms.Store.AdoptEchoIdentityTx is the implementation.
-type SentEchoAdoption func(ctx context.Context, tx pgx.Tx, seat ids.UUID, provider, providerMessageID, stamped string) (bool, error)
+// accountSince is when the connection was bound to the account it holds now,
+// nil when it never changed account.
+type SentEchoAdoption func(ctx context.Context, tx pgx.Tx, seat ids.UUID, provider, providerMessageID, stamped string, accountSince *time.Time) (bool, error)
 
 // WithSentEchoAdoption returns a copy that folds a seat's own sent echo onto
 // the send it copies. Without one, an echo of a send whose identity is unknown
@@ -43,10 +46,20 @@ func (s *Sink) WithSentEchoAdoption(adopt SentEchoAdoption) *Sink {
 func (s *Sink) adoptSentEchoTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) error {
 	fields, ok := rec.Fields.(ActivityFields)
 	seat, provider := actorUserID(ctx), deliveringConnector(ctx)
-	if s.adoptSentEcho == nil || !ok || fields.Direction != connector.DirectionOutbound ||
-		rec.NaturalKey.SourceSystem != connector.EmailSourceSystem || rec.ProviderMessageID == "" ||
-		seat.IsZero() || provider == "" {
+	if s.adoptSentEcho == nil || !ok || rec.NaturalKey.SourceSystem != connector.EmailSourceSystem ||
+		rec.ProviderMessageID == "" || seat.IsZero() || provider == "" {
 		return nil
+	}
+	// Mail sent from another of the seat's addresses arrives inbound until this
+	// re-reading. It runs before the alias sighting the landing makes, so a
+	// message that itself first proves an alias is not adopted: one extra row.
+	_, fields, err := s.asSentFromOwnAddressTx(ctx, tx, rec, fields)
+	if err != nil || fields.Direction != connector.DirectionOutbound {
+		return err
+	}
+	since, live, err := connectionAccountSinceTx(ctx, tx, seat, provider)
+	if err != nil || !live {
+		return err
 	}
 	if err := storekit.LockSentEchoKey(ctx, tx, seat, provider, rec.ProviderMessageID); err != nil {
 		return err
@@ -55,7 +68,7 @@ func (s *Sink) adoptSentEchoTx(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	if err != nil {
 		return fmt.Errorf("capture: opening the sent-echo adoption savepoint: %w", err)
 	}
-	if _, err := s.adoptSentEcho(ctx, sp, seat, provider, rec.ProviderMessageID, rec.NaturalKey.SourceID); err != nil {
+	if _, err := s.adoptSentEcho(ctx, sp, seat, provider, rec.ProviderMessageID, rec.NaturalKey.SourceID, since); err != nil {
 		if storekit.IsLockCycle(err) {
 			return err
 		}
@@ -69,17 +82,37 @@ func (s *Sink) adoptSentEchoTx(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	return sp.Commit(ctx)
 }
 
+// connectionAccountSinceTx answers when the seat's live connection was bound
+// to the account it holds now (nil: never rebound), and whether one is live.
+func connectionAccountSinceTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, provider string) (*time.Time, bool, error) {
+	var since *time.Time
+	err := tx.QueryRow(ctx, `
+		SELECT account_bound_at FROM capture_connection
+		 WHERE user_id = $1 AND provider = $2 AND archived_at IS NULL AND status IN ('connected','error')`,
+		seat, provider).Scan(&since)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, fmt.Errorf("capture: reading the account the connection holds: %w", err)
+	}
+	return since, true, nil
+}
+
 // EchoIdentityTx answers the identity of the seat's captured echo of one sent
 // message, found by the provider's message id under the connection that
-// delivered it. comms reads it through compose when a read-back failed.
-func EchoIdentityTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, provider, providerMessageID string) (string, bool, error) {
+// delivered it. comms reads it through compose when a read-back failed. The
+// connection must have held its current account when the message was sent.
+func EchoIdentityTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, provider, providerMessageID string, sentAt time.Time) (string, bool, error) {
 	var stamped string
 	err := tx.QueryRow(ctx, `
 		SELECT a.source_id FROM capture_import ci JOIN activity a ON a.id = ci.activity_id
 		 WHERE ci.user_id = $1 AND ci.provider_message_ids && `+providerMessageKeysSQL("$1", "$2", "$3")+`
 		   AND a.source_system = $4 AND a.direction = 'outbound' AND a.archived_at IS NULL
+		   AND EXISTS (SELECT 1 FROM capture_connection c WHERE c.user_id = $1 AND c.provider = $2
+		               AND c.archived_at IS NULL AND (c.account_bound_at IS NULL OR c.account_bound_at <= $5))
 		 ORDER BY a.created_at, a.id LIMIT 1`,
-		seat, provider, providerMessageID, connector.EmailSourceSystem).Scan(&stamped)
+		seat, provider, providerMessageID, connector.EmailSourceSystem, sentAt).Scan(&stamped)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", false, nil
 	}

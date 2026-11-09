@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -120,11 +121,18 @@ func (r recoveryEnv) sendRefusingReadBack(t *testing.T, status int, reason strin
 	return gmail
 }
 
-// captureOwnEcho drives the composed sink with the provider's copy of the
-// message, filed in the rep's own mailbox under the provider's message id.
+// captureOwnEcho drives the composed sink with a message the rep's mailbox
+// filed as sent, under the provider's message id.
 func (r recoveryEnv) captureOwnEcho(ctx context.Context, t *testing.T, stored []byte) {
 	t.Helper()
-	msg, err := mailmap.Parse(stored, sendingMailbox)
+	r.captureSent(ctx, t, sendingMailbox, stored)
+}
+
+// captureSent captures a message the mailbox filed as sent, parsed against
+// that mailbox's own address, under the provider's message id.
+func (r recoveryEnv) captureSent(ctx context.Context, t *testing.T, mailbox string, stored []byte) {
+	t.Helper()
+	msg, err := mailmap.Parse(stored, mailbox)
 	if err != nil {
 		t.Fatalf("the provider's stored copy does not parse:\n%s\n%v", stored, err)
 	}
@@ -260,21 +268,20 @@ func TestADeniedReadBackIsRecordedAndTheSendStaysOneRow(t *testing.T) {
 	}
 }
 
-// Another seat's mailbox can hold a message with the same Gmail id. Its echo
-// is that seat's own mail and never re-keys this rep's send.
-func TestAnEchoInAnotherMailboxLeavesTheSendAlone(t *testing.T) {
-	r := setupRecovery(t)
-	r.sendRefusingReadBack(t, http.StatusTooManyRequests, "rateLimitExceeded")
-	r.DescribeCompany(t)
-	colleague := uuidOf(t, createdID(t, r.AppEnv, "/v1/users", AnyMap{
-		"email": "second-mailbox@recovery.test", "display_name": "Second Mailbox", "role": "rep",
-	}))
-	r.inWorkspace(t, `INSERT INTO capture_connection (provider, user_id, scopes, status, auth, provider_scopes)
-		VALUES ('gmail', $1, '{}', 'connected', '{"refresh_token":"r","granted":[]}', $2)`,
-		colleague, []string{apptest.GmailReadonlyScope})
+// sentFrom is a message a mailbox sent: from its own address, with its own
+// identity.
+func sentFrom(from, messageID string) []byte {
+	return []byte("From: " + from + "\r\n" +
+		"To: buyer@preflight.test\r\n" +
+		"Subject: Another message\r\n" +
+		"Message-ID: <" + messageID + ">\r\n" +
+		"\r\n" +
+		"Unrelated.\r\n")
+}
 
-	r.captureOwnEcho(seatMailboxCtx(t, r.workspaceID(t), colleague), t, echoAlreadyCaptured("Re: Inbound question", gmailStamped))
-
+// sendIsUntouched insists the rep's delivery and row kept the staged identity.
+func (r recoveryEnv) sendIsUntouched(t *testing.T) {
+	t.Helper()
 	if got := r.scalar(t, `SELECT message_id FROM comms_outbound WHERE id = $1`, r.delivery); got != r.minted {
 		t.Errorf("the rep's delivery reads %q, want its staged %q", got, r.minted)
 	}
@@ -282,6 +289,61 @@ func TestAnEchoInAnotherMailboxLeavesTheSendAlone(t *testing.T) {
 		t.Errorf("%d rows on the rep's staged identity, want the send untouched", rows)
 	}
 }
+
+// Another seat's mailbox can hold its own sent message with the same Gmail id.
+// It never re-keys this rep's send.
+func TestAnotherMailboxsSentMessageWithTheSameIDLeavesTheSendAlone(t *testing.T) {
+	r := setupRecovery(t)
+	r.sendRefusingReadBack(t, http.StatusTooManyRequests, "rateLimitExceeded")
+	r.DescribeCompany(t)
+	const colleagueMailbox = "second-mailbox@recovery.test"
+	colleague := uuidOf(t, createdID(t, r.AppEnv, "/v1/users", AnyMap{
+		"email": colleagueMailbox, "display_name": "Second Mailbox", "role": "rep",
+	}))
+	r.inWorkspace(t, `INSERT INTO capture_connection (provider, user_id, scopes, status, auth, provider_scopes, account_label)
+		VALUES ('gmail', $1, '{}', 'connected', '{"refresh_token":"r","granted":[]}', $2, $3)`,
+		colleague, []string{apptest.GmailReadonlyScope}, colleagueMailbox)
+
+	r.captureSent(seatMailboxCtx(t, r.workspaceID(t), colleague), t, colleagueMailbox,
+		sentFrom(colleagueMailbox, "colleague-own@mail.gmail.com"))
+
+	r.sendIsUntouched(t)
+}
+
+// A provider id names a message within one account. After the seat rebinds the
+// connection to another account, a message there with the same id is not the
+// earlier send's echo.
+func TestAMessageInAReboundAccountLeavesTheEarlierSendAlone(t *testing.T) {
+	r := setupRecovery(t)
+	r.sendRefusingReadBack(t, http.StatusTooManyRequests, "rateLimitExceeded")
+	const rebound = "rebound@fable.test"
+	// The columns the grant writer sets when a connection changes account.
+	r.inWorkspace(t, `UPDATE capture_connection SET account_label = $2, account_bound_at = clock_timestamp(),
+		generation = generation + 1 WHERE user_id = $1`, r.user, rebound)
+
+	r.captureSent(r.ownMailbox(t), t, rebound, sentFrom(rebound, "new-account@mail.gmail.com"))
+
+	r.sendIsUntouched(t)
+}
+
+// Mail the rep sent from a second verified address arrives inbound until
+// capture re-reads it as theirs. The echo is still recognised as the send's.
+func TestAnEchoSentFromTheSeatsSecondAddressStillFindsTheSend(t *testing.T) {
+	r := setupRecovery(t)
+	const alias = "alias@fable.test"
+	if status := r.Call(t, "POST", "/v1/capture/owner-identities", AnyMap{"kind": "address", "value": alias}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("declaring the second address → %d, want 201", status)
+	}
+	gmail := r.sendRefusingReadBack(t, http.StatusTooManyRequests, "rateLimitExceeded")
+	fromAlias := fromAliasHeader.ReplaceAllString(string(gmail.transmitted(t)), "From: "+alias+"\r\n")
+
+	r.captureOwnEcho(r.ownMailbox(t), t, []byte(fromAlias))
+
+	r.convergedOnTheSend(t)
+}
+
+// fromAliasHeader is the From line a send-as alias rewrites.
+var fromAliasHeader = regexp.MustCompile(`(?im)^From: [^\r\n]*\r\n`)
 
 // ownMailbox is the rep's own Gmail connector.
 func (r recoveryEnv) ownMailbox(t *testing.T) context.Context {
