@@ -192,25 +192,56 @@ func TestInvitationWritersWaitForASeatCheckInFlight(t *testing.T) {
 	e := integration.Setup(t)
 	users, seat, _ := invitedColleague(t, e, "held@colleague.example")
 	admin := recoveryAdminIdentity(e)
+	manager := memberManagerFor(t, e)
+	var second ids.UserID
+	// In order: each case leaves the seat in the state the next one needs.
 	for _, write := range []struct {
 		name, address string
-		run           func() error
+		prepare, run  func() error
 	}{
-		{"invite", "second@colleague.example", func() error {
-			_, _, err := users.InviteUser(e.Admin(), admin, identity.InviteUserInput{Email: "second@colleague.example", DisplayName: "Second", Role: "rep"})
+		{"invite", "second@colleague.example", nil, func() error {
+			var err error
+			second, _, err = users.InviteUser(e.Admin(), admin, identity.InviteUserInput{Email: "second@colleague.example", DisplayName: "Second", Role: "rep"})
 			return err
 		}},
-		{"email change", "moved@colleague.example", func() error {
+		{"email change", "moved@colleague.example", nil, func() error {
 			return users.UpdateMember(e.Admin(), admin, seat, identity.MemberEdit{
-				Name: "Invited colleague", Email: "moved@colleague.example", ExpectedUpdatedAt: memberUpdatedAt(t, e, seat)})
+				Name: "Invited colleague", Email: "moved@colleague.example", ExpectedUpdatedAt: memberUpdatedAt(t, e, seat),
+			})
 		}},
-		// After the email change, so the login it withdraws is the moved one.
-		{"revoke", "moved@colleague.example", func() error {
+		{"revoke", "moved@colleague.example", nil, func() error {
 			return users.DeactivateUser(e.Admin(), admin, identity.DeactivateUserInput{UserID: seat})
 		}},
+		{"reactivate", "second@colleague.example", func() error {
+			return users.DeactivateUser(e.Admin(), admin, identity.DeactivateUserInput{UserID: second})
+		}, func() error {
+			return users.ReactivateUser(e.Admin(), admin, second)
+		}},
+		{"retire", "moved@colleague.example", nil, func() error {
+			return retireMember(e, manager, seat)
+		}},
 	} {
-		t.Run(write.name, func(t *testing.T) { writerWaitsForCheck(t, e, write.address, write.run) })
+		t.Run(write.name, func(t *testing.T) {
+			if write.prepare != nil {
+				if err := write.prepare(); err != nil {
+					t.Fatal(err)
+				}
+			}
+			writerWaitsForCheck(t, e, write.address, write.run)
+		})
 	}
+}
+
+// retireMember removes the member through the composed retirement, after the
+// preview its confirmation is staged from.
+func retireMember(e *integration.Env, manager memberManager, member ids.UserID) error {
+	ctx := e.As(e.AdminUser, nil, integration.AdminWithSignals)
+	preview, err := manager.Preview(ctx, member.UUID, nil, false)
+	if err != nil {
+		return err
+	}
+	actor := identity.Identity{UserID: ids.From[ids.UserKind](e.AdminUser), Roles: []string{"admin"}, SeatType: "full", Permissions: integration.AdminWithSignals}
+	return manager.service.RetireMember(ctx, actor, member, nil, preview.Token, false)
 }
 
 // writerWaitsForCheck holds a seat check of address open, runs write, and

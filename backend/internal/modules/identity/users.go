@@ -88,8 +88,11 @@ func (s *Service) ReactivateUser(ctx context.Context, actor Identity, userID ids
 	if err != nil {
 		return err
 	}
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+	reactivate := func(tx pgx.Tx) error {
 		if err := lockAuthorization(ctx, tx); err != nil {
+			return err
+		}
+		if err := lockMemberAddressClaims(ctx, tx, userID); err != nil {
 			return err
 		}
 		// Restoring an admin somebody removed is the mirror of removing one, so
@@ -160,7 +163,8 @@ func (s *Service) ReactivateUser(ctx context.Context, actor Identity, userID ids
 		}
 		return storekit.EmitEvent(ctx, tx, auditID, userID.UUID,
 			userReactivatedPayload(userID, actor.UserID, restored))
-	})
+	}
+	return storekit.RetryLockCycles(ctx, func() error { return s.db.Tx(ctx, reactivate) })
 }
 
 // userReactivatedPayload builds user.reactivated's typed payload.
