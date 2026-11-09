@@ -70,7 +70,7 @@ func (s *Store) PromoteOwnCapturedContact(ctx context.Context, id ids.ContactID)
 		// The mail and meetings that were only ever linked to this contact
 		// follow it. Without this the record is visible and its history is not,
 		// which reads to a colleague as a contact nobody has ever spoken to.
-		_, err = s.PromoteContactCohortTx(ctx, tx, id)
+		_, err = s.PromoteHeldContactCohortTx(ctx, tx, id)
 		return err
 	})
 }
