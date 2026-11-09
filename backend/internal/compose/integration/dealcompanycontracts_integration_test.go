@@ -275,3 +275,23 @@ func TestTheRefusalKeepsTheDealGatesAndTheContractReadGrant(t *testing.T) {
 		t.Errorf("a rep without contract read was told %d %v, want the count and no names", blocked.Count, blocked.Named)
 	}
 }
+
+// The filing check holds from the contract's side too: a contract cannot be
+// re-pointed at a deal of another company.
+func TestAContractCannotBeRepointedAtADealOfAnotherCompany(t *testing.T) {
+	f := newCompanyMoveFixture(t)
+	acmeDeal := f.dealFor(t, &f.acme, nil)
+	contract := f.acmeContractOn(t, acmeDeal, "MSA-8")
+	contosoDeal := openapi_types.UUID(f.dealFor(t, &f.contoso, nil).UUID)
+
+	_, err := f.e.Contracts.UpdateContract(f.e.Admin(), contract,
+		crmcontracts.UpdateContractRequest{DealId: &contosoDeal}, nil, nil)
+
+	var crossed *contracts.CrossCompanyLinkError
+	if !errors.As(err, &crossed) || crossed.Field != "deal_id" {
+		t.Fatalf("re-pointing Acme's contract at Contoso's deal answered %v, want the refusal on deal_id", err)
+	}
+	if f.e.WsCount(t, `SELECT count(*) FROM contract WHERE id = $1 AND deal_id = $2`, contract, acmeDeal) != 1 {
+		t.Error("the contract left its Acme deal although the patch was refused")
+	}
+}
