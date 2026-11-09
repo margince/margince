@@ -68,7 +68,8 @@ commercial direction is unclear use unknown and leave buyer_ref empty. Quote the
 message’s words that establish the need. An explicit report of a named participant’s request
 can identify that participant as the buyer; their presence in Cc alone cannot.
 Words the sender attributes to someone else ("the client said", "our client needs", "a company
-needs") are a relayed need: still report the new_opportunity, but the sender is never its buyer_ref.
+needs") are a relayed need: report it as you would the same need stated first-hand, but the sender
+is never its buyer_ref. A question about price or terms states no new need.
 Use supplier, partner or provider only when the source establishes that specific relationship.
 Merely relaying an unidentified company’s need does not establish a partnership: use unknown.
 A relationship the source does state still holds when the client it relays is unnamed: a
@@ -145,7 +146,8 @@ func extractRequest(thread settledThread, lang string) model.Request {
 			`"message_id" and any "restated_message_id" are the label of the cited message, such as "m2", from the "Message" line above it. `+
 			`Never use a participant reference as a message id. `+
 			`"buyer_ref" is the contact whose own words ask for OUR company's work; words they attribute to someone else `+
-			`("the client said …") are not their request. commercial_role is "buyer" only when buyer_ref is set. `+
+			`("the client said …") are not their request. commercial_role is "buyer" only when buyer_ref is set; `+
+			`it is "partner", "supplier" or "provider" whenever the source states that relationship, with buyer_ref empty. `+
 			`"promiser_ref" is the verified participant reference for who made the quoted promise, `+
 			`not necessarily its sender. For "you agreed", resolve the addressed party; for a named `+
 			`third party, use a reference only when the clause identifies them unambiguously. `+
