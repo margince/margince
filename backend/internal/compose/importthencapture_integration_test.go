@@ -485,7 +485,7 @@ func importThrough(
 	if err != nil {
 		t.Fatalf("mapping the import: %v", err)
 	}
-	if _, _, err := activities.NewStore(e.DB()).LogActivity(seatCtx(t, e, seat), in); err != nil {
+	if _, _, err := activities.NewStore(e.DB()).WithIdentityProver(capture.ProvedUnambiguouslyTx).LogActivity(seatCtx(t, e, seat), in); err != nil {
 		t.Fatalf("importing the message: %v", err)
 	}
 }

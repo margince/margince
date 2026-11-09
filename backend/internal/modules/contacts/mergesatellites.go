@@ -58,28 +58,28 @@ func relinkReaderJudgements(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	if _, err := tx.Exec(ctx, `
 		WITH carried AS (
 		  INSERT INTO contact_moment_dismissal (user_id, contact_id, claim_key, evidence_fingerprint, dismissed_at)
-		  SELECT user_id, $2, claim_key, evidence_fingerprint, dismissed_at
-		    FROM contact_moment_dismissal WHERE contact_id = $1
+		  SELECT user_id, @target, claim_key, evidence_fingerprint, dismissed_at
+		    FROM contact_moment_dismissal WHERE contact_id = @source
 		  ON CONFLICT (user_id, contact_id, claim_key) DO NOTHING
 		)
-		DELETE FROM contact_moment_dismissal WHERE contact_id = $1`,
-		sourceID, targetID); err != nil {
+		DELETE FROM contact_moment_dismissal WHERE contact_id = @source`,
+		pgx.NamedArgs{auditKeySource: sourceID, mergeTargetKey: targetID}); err != nil {
 		return fmt.Errorf("carry the moments a reader had already dismissed: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `
 		WITH carried AS (
 		  INSERT INTO relationship_nudge_dismissal (contact_id, reader_id, dismissed_until, set_by, set_at)
-		  SELECT $2, reader_id, dismissed_until, set_by, set_at
-		    FROM relationship_nudge_dismissal WHERE contact_id = $1
+		  SELECT @target, reader_id, dismissed_until, set_by, set_at
+		    FROM relationship_nudge_dismissal WHERE contact_id = @source
 		  ON CONFLICT (contact_id, reader_id) DO NOTHING
 		)
-		DELETE FROM relationship_nudge_dismissal WHERE contact_id = $1`,
-		sourceID, targetID); err != nil {
+		DELETE FROM relationship_nudge_dismissal WHERE contact_id = @source`,
+		pgx.NamedArgs{auditKeySource: sourceID, mergeTargetKey: targetID}); err != nil {
 		return fmt.Errorf("carry the nudges a reader had already put down: %w", err)
 	}
 	if _, err := tx.Exec(ctx,
-		`DELETE FROM contact_brief WHERE contact_id IN ($1, $2)`,
-		sourceID, targetID); err != nil {
+		`DELETE FROM contact_brief WHERE contact_id IN (@source, @target)`,
+		pgx.NamedArgs{auditKeySource: sourceID, mergeTargetKey: targetID}); err != nil {
 		return fmt.Errorf("drop the briefs the merge made stale: %w", err)
 	}
 	return nil
@@ -93,29 +93,30 @@ func relinkReaderJudgements(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 // can see is a prospect dropped, and a claim nobody can see is a commitment the
 // workspace made and can no longer answer.
 //
-// The enrich state keeps the SURVIVOR'S row rather than the source's. It is one
-// row per contact saying what the last attempt was, and the attempt that
-// describes the record still standing is the survivor's.
+// The merged evidence needs a fresh read, with a generation beyond both prior ranges.
 func relinkWorkInFlight(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
 	if _, err := tx.Exec(ctx,
-		`UPDATE conversation_claim SET contact_id = $2 WHERE contact_id = $1`,
-		sourceID, targetID); err != nil {
+		`UPDATE conversation_claim SET contact_id = @target WHERE contact_id = @source`,
+		pgx.NamedArgs{auditKeySource: sourceID, mergeTargetKey: targetID}); err != nil {
 		return fmt.Errorf("relink the claims still open against this contact: %w", err)
 	}
 	if _, err := tx.Exec(ctx,
-		`UPDATE sdr_handoff SET contact_id = $2 WHERE contact_id = $1`,
-		sourceID, targetID); err != nil {
+		`UPDATE sdr_handoff SET contact_id = @target WHERE contact_id = @source`,
+		pgx.NamedArgs{auditKeySource: sourceID, mergeTargetKey: targetID}); err != nil {
 		return fmt.Errorf("relink the hand-offs naming this contact: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `
 		WITH carried AS (
-		  INSERT INTO contact_signature_enrich_state (contact_id, activity_id, last_activity_at, attempted_at, history_depth)
-		  SELECT $2, activity_id, last_activity_at, attempted_at, history_depth
-		    FROM contact_signature_enrich_state WHERE contact_id = $1
-		  ON CONFLICT (contact_id) DO NOTHING
+		  INSERT INTO contact_signature_enrich_state AS st (contact_id, requested_generation,live_generation,attempted_at)
+		  SELECT @target, next.g,next.g,NULL FROM (SELECT GREATEST(COALESCE(max(requested_generation),0),COALESCE(max(processed_generation),0))+1 AS g
+		    FROM contact_signature_enrich_state WHERE contact_id = @source) next WHERE true
+		  ON CONFLICT (contact_id) DO UPDATE SET
+		    activity_id=NULL, last_activity_at=NULL, history_depth=NULL, deferred_run_id=NULL, due_at=now(),
+		    requested_generation=GREATEST(st.requested_generation,st.processed_generation,EXCLUDED.requested_generation)+1,
+ live_generation=GREATEST(st.requested_generation,st.processed_generation,EXCLUDED.requested_generation)+1
 		)
-		DELETE FROM contact_signature_enrich_state WHERE contact_id = $1`,
-		sourceID, targetID); err != nil {
+		DELETE FROM contact_signature_enrich_state WHERE contact_id = @source`,
+		pgx.NamedArgs{auditKeySource: sourceID, mergeTargetKey: targetID}); err != nil {
 		return fmt.Errorf("carry the signature-enrichment attempt: %w", err)
 	}
 	return nil

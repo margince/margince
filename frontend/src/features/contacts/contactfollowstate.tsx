@@ -7,9 +7,9 @@ import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ErrorLine } from "../../design-system/errorline";
 import { formatDate } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { nudgeDismissalKey, worklistKey } from "../../lib/workkeys";
 
 const followStateKey = (contactId: string) =>
@@ -27,6 +27,7 @@ const followStateKey = (contactId: string) =>
 export function ContactFollowState({
   contactId,
 }: Readonly<{ contactId: string }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
@@ -62,7 +63,7 @@ export function ContactFollowState({
     title = t("contact.follow.stopped");
   } else if (current?.state === "set_aside" && current.dismissed_until) {
     title = t("contact.follow.setAside", {
-      date: formatDate(current.dismissed_until, locale, viewerZone()),
+      date: formatDate(current.dismissed_until, locale, readerZone),
     });
   } else {
     return null;

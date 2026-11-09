@@ -10,7 +10,7 @@ import {
 } from "../../design-system/provider-mark";
 import { useT } from "../../i18n";
 import { keepReturnRoute } from "../../lib/returnroute";
-import "./auth.css";
+import "../../components/auth-core.css";
 import { foldForSearch } from "../../format/collate";
 
 // The federated half of the sign-in surface: the provider block, the divider

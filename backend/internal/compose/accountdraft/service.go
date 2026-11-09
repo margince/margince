@@ -40,6 +40,7 @@ type Assembler interface {
 
 // Request is the transport's body, narrowed to what the writer needs.
 type Request struct {
+	Subject   string
 	ContactID string
 	DealID    string
 	// ProjectID names the body of work the message is about. When set, the
@@ -148,7 +149,7 @@ func (s *Service) envelopeFor(ctx context.Context, view crmcontracts.Company360,
 	// of whichever one sorted first is not the language of the exchange.
 	zone := s.envelope.Zone(ctx)
 	return s.envelope.Resolve(ctx,
-		draftfloor.Written{Thread: languageEvidence(view, s.envelope.Now(), zone), Rewrite: req.RewriteOf, Purpose: req.Intent},
+		draftfloor.Written{Thread: languageEvidence(view, s.envelope.Now(), zone), Rewrite: req.RewriteOf, Purpose: req.Intent, DraftSubject: req.Subject},
 		ConversationState(view, s.envelope.Now(), zone)).InZone(zone)
 }
 

@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/stagemove"
 )
 
 // forecastChanceActor names the system reads behind a deal's chance.
@@ -67,7 +68,8 @@ func readForecastChanceModel(ctx context.Context, tx pgx.Tx, cutoff time.Time) (
 
 // applyForecastChances sets each deal's typed chance, chance in use, evidence
 // count, risk signals and effect. Off, the typed chance stays the chance in use
-// and nothing else is set.
+// and nothing else is set. A probability set on the deal is used as it is:
+// self-correction moves only a probability that comes from the stage.
 func applyForecastChances(ctx context.Context, tx pgx.Tx, model forecastChanceModel, at time.Time, in []forecasting.Deal) error {
 	for i := range in {
 		in[i].TypedProbability = new(in[i].StageProbability)
@@ -80,6 +82,9 @@ func applyForecastChances(ctx context.Context, tx pgx.Tx, model forecastChanceMo
 		return err
 	}
 	for i := range in {
+		if in[i].Source != forecasting.SourceStage {
+			continue
+		}
 		evidence := model.Stages[in[i].StageID]
 		in[i].StageProbability = forecasting.ChanceInUse(*in[i].TypedProbability, evidence)
 		in[i].EvidenceN = new(evidence.Resolved)
@@ -102,15 +107,15 @@ func forecastStandingSQL(deal, cutoff string) string {
 
 // forecastStageEntriesSQL is each deal's first recorded entry into an open
 // stage in the two years before the cutoff, with how it stood at the cutoff.
-// Only moves made in this installation start an entry; imported moves and
-// moves saved before their origin was kept do not. A later move into another
+// Only moves made in this installation start an entry; imported or synced
+// moves and moves saved before their origin was kept do not. A later move into another
 // pipeline ends the entry open. Archived deals count by how they closed.
 var forecastStageEntriesSQL = `
 	WITH entry AS (
 		SELECT DISTINCT ON (h.deal_id, h.to_stage_id)
 		       h.deal_id, h.to_stage_id AS stage_id, h.pipeline_id_at_change AS pipeline_id, h.changed_at
 		  FROM deal_stage_history h
-		 WHERE h.provenance = 'recorded' AND h.semantic_at_change = 'open'
+		 WHERE h.provenance = '` + stagemove.Recorded + `' AND h.semantic_at_change = 'open'
 		   AND h.pipeline_id_at_change IS NOT NULL
 		   AND h.changed_at >= $1 AND h.changed_at < $2
 		 ORDER BY h.deal_id, h.to_stage_id, h.changed_at, COALESCE(h.write_seq, 0), h.id

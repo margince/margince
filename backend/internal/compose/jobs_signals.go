@@ -176,7 +176,7 @@ func addSignalJobs(
 		extractor: newSignalExtractorIfConfigured(pool, cfg.SignalExtractBrain, log),
 		// The SAME approvals service the HTTP surface decides on, so a released
 		// effect can redeem the offer this reconciler staged.
-		proposer: NewSignalProposer(pool, approvalsServiceWithEffects(pool), log),
+		proposer: NewSignalProposer(pool, NewApprovalsServiceWithEffects(pool), log),
 		now:      time.Now,
 		log:      log,
 	})

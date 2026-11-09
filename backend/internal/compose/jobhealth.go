@@ -136,13 +136,9 @@ type jobHealthHandlers struct {
 
 // GetJobHealth reports this workspace's background-job health.
 //
-// Gate order, fail-closed: human-only first, then admin. The payload
-// carries operational failure text and a fleet-wide view of the
-// dispatchers, and an admin-minted read-scoped passport satisfies every
-// object grant — so human-only is asserted here rather than inferred from
-// RBAC. The generated agent policy refuses a passport at the middleware
-// too; this check is the layer that does not depend on the wiring being
-// right.
+// Gate order, fail-closed: a user or their agent first, then the grant. The
+// payload carries operational failure text and a fleet-wide view of the
+// dispatchers, which an admin's agent may read as the admin does.
 func (h jobHealthHandlers) GetJobHealth(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	// Queue depth and retry ladders: what an operator on call needs, and the

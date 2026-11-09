@@ -1,0 +1,12 @@
+-- SPDX-License-Identifier: BUSL-1.1
+-- SPDX-FileCopyrightText: 2026 Gradion
+
+SET LOCAL lock_timeout = '5s';
+
+ALTER TABLE contact_signature_enrich_state VALIDATE CONSTRAINT signature_work_generations;
+ALTER TABLE contact_signature_enrich_state VALIDATE CONSTRAINT contact_signature_enrich_state_activity_id_fkey;
+ALTER TABLE contact_signature_enrich_state VALIDATE CONSTRAINT contact_signature_enrich_state_deferred_run_id_fkey;
+ALTER TABLE graph_contact_edge VALIDATE CONSTRAINT graph_contact_edge_work_generations;
+ALTER TABLE graph_contact_edge VALIDATE CONSTRAINT graph_contact_edge_deferred_run_id_fkey;
+ALTER TABLE graph_interaction_edge VALIDATE CONSTRAINT graph_interaction_edge_work_generations;
+ALTER TABLE graph_interaction_edge VALIDATE CONSTRAINT graph_interaction_edge_deferred_run_id_fkey;

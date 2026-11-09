@@ -16,7 +16,8 @@ import { useToast } from "../../design-system/toast";
 import { ProvenanceTag, StagingCard } from "../../design-system/trust";
 import { activityDay } from "../../format/activitywhen";
 import { useLocale, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
+import { valueFor } from "../../lib/labelfor";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   type TagSuggestion,
   useContactEmployer,
@@ -60,7 +61,7 @@ function TagSuggestionCard({
   const decide = useDecideTagSuggestion();
   // A cited activity's date is the record's, and a `day` one has no instant
   // to move into the reader's zone.
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   return (
     <StagingCard>
       <Stack gap="2">
@@ -133,9 +134,11 @@ const EVIDENCE_KINDS = {
 
 // A kind from a newer server reads as a note rather than as its identifier.
 function evidenceKindKey(kind: string) {
-  return kind in EVIDENCE_KINDS
-    ? EVIDENCE_KINDS[kind as keyof typeof EVIDENCE_KINDS]
-    : EVIDENCE_KINDS.note;
+  return valueFor(
+    EVIDENCE_KINDS,
+    kind as keyof typeof EVIDENCE_KINDS,
+    EVIDENCE_KINDS.note,
+  );
 }
 
 /**

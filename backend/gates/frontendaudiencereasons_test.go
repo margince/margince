@@ -26,13 +26,13 @@ package gates
 // words that once meant something.
 
 import (
-	"os"
 	"regexp"
 	"sort"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const frontendAudienceReasons = "../frontend/src/features/lists/audiencemembers.tsx"
@@ -53,7 +53,7 @@ var tsReasonComment = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
 
 func TestTheBrowserNamesEveryAudienceReason(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile(frontendAudienceReasons)
+	source, err := gatekit.ReadFile(frontendAudienceReasons)
 	if err != nil {
 		t.Fatalf("reading the frontend reason map: %v", err)
 	}
@@ -114,7 +114,7 @@ func TestTheBrowserNamesEveryAudienceReason(t *testing.T) {
 func TestEveryReasonIsListed(t *testing.T) {
 	t.Parallel()
 	const vocabulary = "../backend/internal/modules/activities/audiencereasons.go"
-	source, err := os.ReadFile(vocabulary)
+	source, err := gatekit.ReadFile(vocabulary)
 	if err != nil {
 		t.Fatalf("reading the reason vocabulary: %v", err)
 	}

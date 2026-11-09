@@ -26,10 +26,11 @@ package gates
 
 import (
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // typeLine matches an emitted `# TYPE <family> <type>` however the writer
@@ -60,11 +61,11 @@ const minFamilies = 20
 func TestOnlyACounterCarriesTheTotalSuffix(t *testing.T) {
 	t.Parallel()
 	families := map[string]string{}
-	err := filepath.WalkDir(".", func(path string, d os.DirEntry, err error) error {
+	err := gatekit.WalkDir(".", func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}
-		body, err := os.ReadFile(path)
+		body, err := gatekit.ReadFile(path)
 		if err != nil {
 			return err
 		}

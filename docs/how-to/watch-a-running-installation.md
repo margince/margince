@@ -1,0 +1,99 @@
+# Watch a running installation
+
+Margince measures itself over one Prometheus exposition per program. This page
+is how to scrape it and what its shape means for an alert. The settings that
+decide who may scrape, and the address the worker answers on, are in
+[configuration.md](../reference/configuration.md).
+
+## Scrape the API and the worker separately
+
+Each program answers for itself, and a scrape of one says nothing about the
+other, so both are targets.
+
+The API serves `/metrics` on the port it serves the app on. The worker serves
+its own only when `observe_addr` is set, and serves nothing at all when it is
+unset.
+
+The two are guarded differently, which decides what you have to do:
+
+- The API's `/metrics` is closed by default and wants a bearer credential.
+  Give the scraper that credential rather than opening the endpoint, because
+  the exposition names queue depths and connection counts.
+- The worker's listener carries no credential of its own. The address is what
+  guards it, which is why the setting's own example is a loopback one. Bind it
+  where only the scraper can reach it, and read `observe_pprof` before you turn
+  that on: it serves the Go profiles on the same listener with no sign-in.
+
+## An exposition is sections, and a missing one is a signal
+
+The handler writes one section per subsystem and concatenates them: the process
+answering the scrape, the outbox backlog, what the relay has published, the
+database pool, and whatever the program adds.
+
+A section that cannot measure writes **nothing** and the rest still serves.
+That keeps one broken probe from costing the whole exposition, and it has a
+consequence for alerting:
+
+> A series that is absent says the target could not measure that part of
+> itself.
+
+So alert on absence as well as on value. A series being absent is a different
+fault from it being high, and a rule that only thresholds the value stays
+quiet through the first one.
+
+Write the rule per target, and only over the targets that serve the series.
+The worker serves no `margince_outbox_unpublished`, so `absent()` over every
+target fires for every worker for ever.
+
+The exposition carries no labels of its own, so the selector has to come from
+whatever your scrape configuration attaches to its targets. Narrow to the
+api's targets with that, and keep the rule per instance, so one silent target
+is not hidden by a noisy neighbour.
+
+## Two sections have two seconds
+
+The handler gives a two-second deadline to the sections that query the
+database: the outbox backlog and the job statistics. The rest, the runtime
+counters and the pool gauges, are read from memory and are not bounded by it.
+
+A query that passes the deadline writes nothing, which shows up as that
+section's series going absent rather than as a failed scrape. So the whole
+response is not bounded at two seconds, and a scrape interval has to leave
+room for everything the exposition does, not only those two.
+
+## The format is pinned, not negotiated
+
+The response is always the Prometheus text format. A scraper that asks for
+OpenMetrics first still receives text. The sections are rendered by different
+writers, so negotiating would let one exposition carry two formats and parse as
+neither.
+
+## What to watch first
+
+- `margince_outbox_unpublished`: domain writes that have not reached the bus.
+  A number that climbs and stays means the relay is behind, and events are the
+  trail that audit and search read. It does not cover every mutation: a write
+  that only audits emits no event, so an absent backlog is not proof that
+  every write landed.
+- `margince_relay_published_total`: the other half of that pair. A flat
+  counter beside a climbing backlog says the relay stopped rather than slowed.
+- `margince_pgxpool_acquire_empty_total`: acquisitions that found no free
+  connection, waited, and then got one. It rises before latency does, which is
+  what makes it an early reading rather than a fault count.
+  `margince_pgxpool_acquire_canceled_total` is the one whose callers gave up.
+- `go_goroutines`: growth that does not come back down is a leak, and it grows
+  for a while before anything else notices. Boot and a rise in load both raise
+  the count on their own, so watch for a level that never returns rather than
+  for any climb. The runtime section writes it under the standard name rather
+  than a `margince_` one.
+
+The full set is whatever the writers register, so read those rather than a list
+here: `backend/internal/platform/httpserver/metrics.go` names the sections in
+the order they are written, and each section's writer names its own series.
+
+## Logs carry the request's identity
+
+Every request makes one `correlation_id`, and the write path links it to the
+audit row it produced. A log line, the audit entry and the event of one request
+can be followed as one trace, which is what makes a report of "this did not
+happen" answerable.

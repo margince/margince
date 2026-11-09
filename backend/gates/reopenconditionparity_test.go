@@ -19,7 +19,6 @@ package gates
 // would make this file a fifth copy rather than a check on the other four.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -28,6 +27,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -89,7 +89,7 @@ func reopenCheckValues(t *testing.T, table string) []string {
 	slices.Sort(files)
 	var found []string
 	for _, file := range files {
-		body, err := os.ReadFile(file)
+		body, err := gatekit.ReadFile(file)
 		if err != nil {
 			t.Fatalf("reading %s: %v", file, err)
 		}
@@ -120,7 +120,7 @@ func quotedValues(list string) []string {
 // reopenContractEnum reads the shared schema's enum out of the contract.
 func reopenContractEnum(t *testing.T) []string {
 	t.Helper()
-	body, err := os.ReadFile(filepath.Join("api", "crm.yaml"))
+	body, err := gatekit.ReadFile(filepath.Join("api", "crm.yaml"))
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}

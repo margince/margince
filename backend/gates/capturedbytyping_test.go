@@ -25,11 +25,12 @@ package gates
 // ends up with, which is the last statement to touch the column.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // capturedByColumn matches a `captured_by` column definition and captures the
@@ -70,7 +71,7 @@ func TestCapturedByIsAlwaysTextAndNeverAUserForeignKey(t *testing.T) {
 
 	var declared int
 	for _, path := range migrations {
-		body, err := os.ReadFile(path)
+		body, err := gatekit.ReadFile(path)
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}

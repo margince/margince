@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useMemo, useRef, useState } from "react";
-import { ComposeWindow } from "./compose";
+import { type ReactNode, Suspense, useMemo, useRef, useState } from "react";
+import { lazy } from "../../i18n/lazy";
+
+const ComposeWindow = lazy(async () => ({
+  default: (await import("./compose")).ComposeWindow,
+}));
+
 import {
   type ComposeDock,
   ComposeDockContext,
@@ -42,15 +47,17 @@ export function ComposeDockProvider({
     <ComposeDockContext.Provider value={dock}>
       {children}
       {docked && (
-        <ComposeWindow
-          key={docked.id}
-          {...docked.props}
-          open
-          onClose={() => {
-            dock.hide(docked.id);
-            docked.props.onClose();
-          }}
-        />
+        <Suspense fallback={null}>
+          <ComposeWindow
+            key={docked.id}
+            {...docked.props}
+            open
+            onClose={() => {
+              dock.hide(docked.id);
+              docked.props.onClose();
+            }}
+          />
+        </Suspense>
       )}
     </ComposeDockContext.Provider>
   );

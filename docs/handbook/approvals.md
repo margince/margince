@@ -22,6 +22,10 @@ touches or names a record you cannot open, the card shows none of the plan. It s
 see them must decide it," and you cannot approve it. Fields your role hides stay hidden on the card. A proposal
 that Margince itself or a colleague made shows what it will do when you approve it, read with your access.
 
+The approval email and an agent's approval read use the card's detail labels and value words.
+They also carry its conflicts, files and import rows.
+A preview whose plan is hidden carries none of these sections.
+
 ## Reading an import proposal
 
 An import proposal shows each source row, its planned result, and the values to create or change.
@@ -129,7 +133,7 @@ Also called: request ownership, take over an account, ask for a contact, ownersh
 To give a contact or company you own to a colleague, open the record and press the access chip under its name. Press **Hand over to…**, choose the colleague, add a note if you like, and press **Send offer**.
 The offer waits as an approval on the colleague's **Worklist** for 7 days. Only that colleague can answer it, and their agent can decline it but not accept it.
 
-You can offer it to any active colleague on a seat that can edit records, even one outside your own team. The colleague's agreement takes the place of the limit an owner change has. If they accept, the record moves to them, with the same open deals and tasks a request moves.
+You can offer it to any active colleague on a seat that can edit records, even one outside your own team. If they accept, the record moves to them, with the same open deals and tasks a request moves. To move it without asking, change the owner on the record instead, which needs edit rights on it.
 
 A notice tells you when the colleague accepts or declines and when the offer runs out. Until then the panel says who it is offered to; press **Withdraw offer** to take it back. A record has one handover open at a time. While a colleague's request or your offer is open, a second one is refused with a line naming the open one.
 
@@ -137,11 +141,11 @@ Only the owner can offer a record. A manager who does not own it changes the own
 Also called: give away a record, hand over an account, offer a contact, reassign to a colleague.
 
 ### How do I stop Margince making automatic changes?
-To make Margince ask before changing close dates, company names or lifecycle stages, open **Settings → AI access**, then **For developers**, then **Agent rules**. Turn off the matching switch under **Automatic changes**. The switches apply to your work only. A kind you switch off comes back to your Worklist as an approval.
+To make Margince ask before changing close dates, company names or lifecycle stages, open **Settings → AI assistants**, then **For developers**, then **Agent rules**. Turn off the matching switch under **Automatic changes**. The switches apply to your work only. A kind you switch off comes back to your Worklist as an approval.
 Also called: autopilot, auto-apply, stop the AI editing my records.
 
 ### How do I hide a kind of proposal from my own queue?
-Open **Settings → AI access**, then **For developers**, then **Agent rules**, then
+Open **Settings → AI assistants**, then **For developers**, then **Agent rules**, then
 **Personal approval mutes**.
 Turn on a kind to hide it from your own queue. Other readers keep their proposals, and nobody has accepted or rejected anything.
 
@@ -156,6 +160,13 @@ Yes. To undo a change the AI or an agent made in Margince, press **Undo** on its
 2. For a company name, a lifecycle stage or anything older, choose **Undo** in the record's history.
    That is **History** → **Changes** on a contact, lead or deal, and **More actions** → **Full history** on a company.
 Only a human can undo; an agent cannot.
+
+Margince may open, reopen, move or close a deal, or change its close date, amount or probability. Those changes also show on the deal's **Overview** under **Changes by Margince**. They are listed newest first, with the reason, **Mark reviewed** and **Undo**. The card stays after the change leaves Home, and a change you marked reviewed keeps its **Undo** there. Only the deal's owner reads the reason; a colleague sees what changed. **Undo** answers in words:
+- After a close: "Undone. Add a note on why this deal is still alive, or Margince will close it again at the next check."
+- After a reopen: "Closed as lost again, with its earlier reason. Margince reopens it only if newer buying evidence arrives."
+- After any other change: "Undone. Margince will not change the amount again until something new happens on this deal."
+- When a colleague changed a field since: "Undone, except the amount, which was changed since Margince set it."
+
 Also called: revert the AI, roll back an agent edit, reverse an automatic change.
 
 ## What an approval card holds
@@ -217,12 +228,14 @@ raises it.
 Automatic changes are the exception to everything below: some proposals do not
 wait.
 
-Three kinds of change can apply on their own, without an approval being
-decided: **Close dates**, **Company names** and **Lifecycle stages**. They land
+Nine kinds of change can apply on their own, with no approval. They are
+**Close dates**, **Close silent deals as lost**, **Deal amounts**, **Win
+probabilities**, **Stage moves**, **New deals**, **Reopened deals**,
+**Company names** and **Lifecycle stages**. They land
 under **Handled for you** on the Worklist rather than as an approval.
 
 This is set per seat, and it is **on by default**. The switches
-are at **Settings → AI access**, on the **Agent rules** tab under **For developers**. The **Automatic
+are at **Settings → AI assistants**, on the **Agent rules** tab under **For developers**. The **Automatic
 changes** card says: "Each switch
 lets one kind of change run without your review. It applies to your work, not
 the whole team."
@@ -357,8 +370,11 @@ yourself.
 5. Open **History** and find the meeting. Margince queues a reading when you
    log a transcript. If no reading is running or done, click **Read
    transcript** to ask for one.
-6. Wait for **Done**. It reports what it found: "{count} next steps awaiting
-   review", or "Transcript read in full. No next steps found."
+6. Wait for **Done**. It reports what it found, in your language:
+   - A task it wrote names who has it, you or a colleague.
+   - You decide the "{count} next steps awaiting review" yourself.
+   - "Sent to {name} to confirm" waits in that colleague's Worklist, not yours.
+   - A reading that found nothing says "Transcript read in full. No next steps found."
 7. Go to **Home → Worklist** and set **Work type** to **Approvals**.
    A full queue can hide a new proposal, so look for the subject you chose in step 3.
 8. Choose **Decide** and open the evidence. It shows the transcript lines the

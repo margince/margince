@@ -14,8 +14,9 @@ import { formatDayMonth } from "../../format/format.dates";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { CompanyTab } from "../../lib/companytab";
+import { labelFor } from "../../lib/labelfor";
 import { useMemberName } from "../../lib/membernames";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { recordNamesIn } from "./company360";
 import { latestExchanges } from "./companyoverviewrows";
 import { activityHeadline } from "./companyrecent";
@@ -44,7 +45,7 @@ export function LatestCard({
   onOpenEmail: (activityId: string) => void;
 }>) {
   const t = useT();
-  const rows = latestExchanges(view, useRecordZone());
+  const rows = latestExchanges(view, useViewerZone());
   const hidden = view.sections_omitted.includes("activities");
   return (
     <OverviewCard
@@ -83,13 +84,13 @@ function LatestRow({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const who = useWhoOf(activity, view);
   const title = activityHeadline(activity, t);
   const email = activity.email_summary;
   const sub = [
     who,
-    t(KIND_WORD[activity.kind]),
+    t(labelFor(KIND_WORD, activity.kind)),
     activityDay(
       activity.occurred_at,
       activity.occurred_precision,

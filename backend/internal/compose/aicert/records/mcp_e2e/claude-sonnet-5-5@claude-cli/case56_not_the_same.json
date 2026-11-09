@@ -1,10 +1,11 @@
 {
   "scenario": "case56_not_the_same",
   "criteria": [
-    1
+    1,
+    2
   ],
-  "passed": 3,
-  "runs": 3,
+  "passed": 2,
+  "runs": 2,
   "pass_at": 2,
   "driver": "claude:cli",
   "effort": "thinking off",
@@ -12,12 +13,12 @@
   "search": "semantic",
   "self_judged": true,
   "usage": {
-    "input_tokens": 40,
-    "output_tokens": 5241,
-    "cache_creation_input_tokens": 58932,
-    "cache_read_input_tokens": 1257585,
-    "runs_measured": 3,
-    "runs_costed": 3,
-    "cost_usd": 0.414
+    "input_tokens": 24,
+    "output_tokens": 2661,
+    "cache_creation_input_tokens": 23238,
+    "cache_read_input_tokens": 764996,
+    "runs_measured": 2,
+    "runs_costed": 2,
+    "cost_usd": 0.1961
   }
 }

@@ -7,18 +7,21 @@ import {
   searchWords,
 } from "../../format/collate";
 import type { MessageKey } from "../../i18n/en";
+import type { Route } from "../../lib/router";
 import {
   groupHeadingKey,
   type SettingsPage,
   type SettingsPageId,
 } from "../../lib/settingscatalog";
+import { settingsHref } from "../../lib/settingsrouting";
 import {
   matchesConfigurationFilter,
   type SettingName,
 } from "./configurationentries";
+import { matchedTab, tabAliases } from "./settingssearchtabs";
 import {
   COMPANY_CONTEXT_SECTIONS,
-  SETTINGS_SECTIONS,
+  settingsSectionKeys,
 } from "./settingssections";
 
 /**
@@ -74,6 +77,7 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
     "mcp",
     "credentials",
     "automation",
+    "ai access",
   ],
   notifications: [
     "notifications",
@@ -92,15 +96,7 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
     "linkedin",
     "oauth",
     "calendar",
-  ],
-  "capture-activity": [
     "mail",
-    "email",
-    "held",
-    "judgement",
-    "why",
-    "capture log",
-    "trace",
   ],
   company: [
     "general",
@@ -121,6 +117,9 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
     "google",
     "microsoft",
     "token",
+    "sign-in and apps",
+    "security",
+    "mfa",
   ],
   members: [
     "users",
@@ -134,17 +133,24 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
   teams: ["team", "group", "manager"],
   roles: ["role", "permission", "access", "rights", "scope", "grant"],
   seats: ["license", "licence", "entitlement", "capacity", "headcount"],
-  pipelines: ["stages", "deal stages", "funnel", "won", "lost"],
-  leads: ["lead sources", "vocabulary", "qualification", "disqualify"],
-  fields: [
+  deals: ["stages", "deal stages", "funnel", "won", "lost"],
+  leads: [
+    "lead sources",
+    "vocabulary",
+    "qualification",
+    "disqualify",
+    "lead handling",
+  ],
+  records: [
     "custom fields",
     "custom-fields",
     "data model",
     "schema",
     "column",
     "attribute",
+    "labels",
+    "vocabulary",
   ],
-  tags: ["labels", "vocabulary"],
   products: [
     "product",
     "offer templates",
@@ -164,6 +170,7 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
     "website",
     "enrichment",
     "limit",
+    "capture rules",
   ],
   integrations: ["webhook", "api"],
   "web-forms": ["website", "form", "contact form", "enquiry", "lead form"],
@@ -223,8 +230,14 @@ const PROFILE_ALIASES: readonly string[] = [
   "context",
 ];
 
-/** What the search needs to know about the reader asking. */
-type SettingsSearchReader = { readonly seesCompanyContext: boolean };
+/**
+ * What the search needs to know about the reader asking: whether they see the
+ * company context, and which tabs of a page they may open.
+ */
+type SettingsSearchReader = {
+  readonly seesCompanyContext: boolean;
+  readonly opensTab?: (page: SettingsPageId, tab: string) => boolean;
+};
 
 /** The reader a caller gets when it names none: no company-context words. */
 const NO_COMPANY_CONTEXT: SettingsSearchReader = { seesCompanyContext: false };
@@ -240,18 +253,26 @@ export function settingsPageAliases(
   ];
 }
 
+// The keys of the panels and settings `page` draws for this reader.
+function pageSectionKeys(
+  page: SettingsPageId,
+  reader: SettingsSearchReader,
+): readonly MessageKey[] {
+  return [
+    ...settingsSectionKeys(page, (tab) => reader.opensTab?.(page, tab) ?? true),
+    ...(page === "company" && reader.seesCompanyContext
+      ? COMPANY_CONTEXT_SECTIONS
+      : []),
+  ];
+}
+
 /** The names of the panels and settings `page` draws, in the reader's words. */
 export function settingsPageSections(
   page: SettingsPageId,
   t: (key: MessageKey) => string,
   reader: SettingsSearchReader = NO_COMPANY_CONTEXT,
 ): readonly string[] {
-  return [
-    ...SETTINGS_SECTIONS[page],
-    ...(page === "company" && reader.seesCompanyContext
-      ? COMPANY_CONTEXT_SECTIONS
-      : []),
-  ].map((key) => t(key));
+  return pageSectionKeys(page, reader).map((key) => t(key));
 }
 
 /** Everything `page` answers to besides its own name, for the ⌘K palette. */
@@ -262,6 +283,7 @@ export function settingsPageKeywords(
 ): readonly string[] {
   return [
     ...settingsPageAliases(page, reader),
+    ...tabAliases(page, reader.opensTab).map(([, word]) => word),
     ...settingsPageSections(page, t, reader),
   ];
 }
@@ -274,9 +296,20 @@ export type SettingsHit = {
   group: string;
   /** The setting on the page that matched, when nothing above it did. */
   section: string | undefined;
+  /** The tab that holds the match, when it is not the page's first. */
+  tab?: string;
   /** What the page's filter opens on, when only a setting's name matched. */
   filter?: string;
 };
+
+/**
+ * Where a hit opens: its page, on the tab that holds the match. The first tab
+ * is the bare address, so a hit there mints no second spelling of it.
+ */
+export function settingsSearchRoute(hit: SettingsHit): Route {
+  const first = "tabs" in hit.page ? hit.page.tabs[0]?.id : undefined;
+  return settingsHref(hit.page.id, hit.tab === first ? undefined : hit.tab);
+}
 
 /** The page a setting's key or variable finds. */
 export const CONFIGURATION_PAGE: SettingsPageId = "configuration";
@@ -336,13 +369,17 @@ export function settingsSearch(
     const label = t(`settings.tab.${page.id}`);
     const group = t(groupHeadingKey(page.group));
     const sub = t(`settings.page.${page.id}.sub`);
-    const sections = settingsPageSections(page.id, t, reader);
-    // Order is the ranking: the page's own name, its group, the words it
-    // answers to, the settings it draws, and last its description.
+    const sectionKeys = pageSectionKeys(page.id, reader);
+    const sections = sectionKeys.map((key) => t(key));
+    const aliases = settingsPageAliases(page.id, reader);
+    const tabWords = tabAliases(page.id, reader.opensTab);
+    // Order is the ranking: name, group, the page's words, its tabs' words,
+    // the settings it draws, and last its description.
     const named = [
       fold(label),
       fold(group),
-      ...settingsPageAliases(page.id, reader).map(fold),
+      ...aliases.map(fold),
+      ...tabWords.map(([, word]) => fold(word)),
     ];
     const fields = [...named, ...sections.map(fold), fold(sub)];
     // Every word, or the page does not answer. Ranked by the BEST field any
@@ -351,12 +388,15 @@ export function settingsSearch(
     // rather than ranked low, because a reader who typed two words meant both.
     if (holdsEveryWord(words, fields)) {
       const rank = Math.min(...words.map((word) => rankOf(word, fields)));
-      const section = namedSection(
-        words,
-        sections,
-        Math.floor(rank / 2) - named.length,
+      const best = Math.floor(rank / 2);
+      const section = namedSection(words, sections, best - named.length);
+      const tabIndex = best - (named.length - tabWords.length);
+      const tab = matchedTab(
+        page.id,
+        tabIndex >= 0 ? tabWords[tabIndex] : undefined,
+        sectionKeys[sections.indexOf(section ?? "")],
       );
-      scored.push({ hit: { page, label, group, section }, rank });
+      scored.push({ hit: { page, label, group, section, tab }, rank });
     } else if (page.id === CONFIGURATION_PAGE) {
       const setting = configurationFilterFor(query, settings);
       if (setting !== undefined) {

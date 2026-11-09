@@ -4,38 +4,18 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import {
-  appStylesheets,
-  declaredValues,
-  rulesOf,
-  selectorList,
-} from "../../scripts/lib/css-rules";
+import { scopeOf } from "../../census/rules/inkfield.census";
+import { rulesOf } from "../../scripts/lib/css-rules";
 import { contrastOf, themes } from "./tokens-testing";
 
 // The ink field is one dark plate in both themes, and the page's inks are
-// tuned for a light page. inkfield.css lists every component that paints the
-// plate and hands it the plate's inks. These gates read the painters from the
-// app's sheets, so a new one cannot land unlisted.
+// tuned for a light page. inkfield.css hands every plate the plate's inks;
+// census/rules/inkfield.census.ts holds that it lists every painter.
 
 const here = dirname(fileURLToPath(import.meta.url));
-const frontendRoot = join(here, "..", "..");
-
-const squash = (selector: string) => selector.replace(/\s+/g, " ").trim();
-const scopeOf = (selector: string) =>
-  selectorList(/^:(?:where|is)\(([\s\S]*)\)/.exec(selector)?.[1] ?? "").map(
-    squash,
-  );
 
 const [tokenRule, linkRule] = rulesOf([join(here, "inkfield.css")]);
 const scope = scopeOf(tokenRule.selector);
-
-const painters = rulesOf(appStylesheets(frontendRoot)).filter((rule) =>
-  ["background", "background-color"].some((property) =>
-    declaredValues(rule.body, property).some((value) =>
-      value.includes("--bgInkField"),
-    ),
-  ),
-);
 
 // Each page token the scope re-points, and the plate ink it now reads.
 const repointed = [
@@ -43,20 +23,6 @@ const repointed = [
 ].map(([, token, ink]) => ({ token, ink }));
 
 describe("the ink field's scope", () => {
-  it("finds the components that paint the plate", () => {
-    expect(painters.length).toBeGreaterThanOrEqual(6);
-  });
-
-  it("lists every rule that paints the plate", () => {
-    const unlisted = painters.flatMap((rule) =>
-      selectorList(rule.selector)
-        .map(squash)
-        .filter((selector) => !scope.includes(selector))
-        .map((selector) => `${rule.file}: ${selector}`),
-    );
-    expect(unlisted, "add the selector to inkfield.css").toEqual([]);
-  });
-
   it("underlines links on the same plates it re-inks", () => {
     expect(scopeOf(`${linkRule.selector.split(/\)\s*:is/)[0]})`)).toEqual(
       scope,

@@ -21,6 +21,7 @@ import {
   tabOfViewResource,
   UNIT_LABEL,
 } from "../../lib/filtersaddress";
+import { labelFor } from "../../lib/labelfor";
 import { useListsAvailable } from "../../lib/lists.queries";
 import { problemCodeOf, problemMessageOf } from "../../lib/problem";
 import { navigateReplacing } from "../../lib/router";
@@ -39,12 +40,7 @@ import {
   useRowsFocus,
   type VocabularyRead,
 } from "./filtereditor";
-import {
-  canExportFilter,
-  ExportFilterItems,
-  ExportProgress,
-  useFilterExport,
-} from "./filterexport";
+import { canExportFilter } from "./filterexport";
 import { FilterFoot } from "./filterfoot";
 import {
   BackToLibrary,
@@ -212,7 +208,6 @@ function OpenedView({
   const focus = useFoldFocus();
   const onScreen = useOnScreen(draft.tree);
   const resource = RESOURCE_OF[tab];
-  const exportRun = useFilterExport();
   const plainWords = usePlainWords({
     resource,
     dispatch,
@@ -276,7 +271,9 @@ function OpenedView({
     <div className="wrap filters-screen">
       <FocusedHead
         title={pin.view.name}
-        facts={t("filters.view.facts", { records: t(TAB_LABEL[tab]) })}
+        facts={t("filters.view.facts", {
+          records: t(labelFor(TAB_LABEL, tab)),
+        })}
         actions={
           // Held with the rows while a save is out: a rename or delete here
           // would race it on the version it is about to advance.
@@ -304,13 +301,6 @@ function OpenedView({
                   {t("filters.view.saveAsList")}
                 </Button>
               )}
-              {complete && (
-                <ExportFilterItems
-                  run={exportRun}
-                  resource={resource}
-                  tree={draft.tree}
-                />
-              )}
               <DeleteViewAction
                 view={pin.view}
                 // The library's views anchor takes focus once it has drawn, so
@@ -321,9 +311,6 @@ function OpenedView({
           </div>
         }
       />
-      <div className="filters-head-status">
-        <ExportProgress run={exportRun} tree={draft.tree} />
-      </div>
       <Panel
         title={t("filters.builderTitle")}
         titleAction={
@@ -343,7 +330,6 @@ function OpenedView({
         footer={
           editing ? (
             <FilterFoot
-              resource={resource}
               tree={draft.tree}
               mode={{
                 kind: "view",
@@ -354,7 +340,6 @@ function OpenedView({
                 saving: saveQuery.isPending,
               }}
               onSave={() => setSaving({ keep: "view", tree: draft.tree })}
-              exportRun={exportRun}
               problem={
                 <SaveProblem failure={saveQuery.error} reload={reload} />
               }
@@ -370,7 +355,7 @@ function OpenedView({
                 dispatch={dispatch}
                 vocabulary={vocabulary}
                 words={plainWords}
-                records={t(UNIT_LABEL[tab])}
+                records={t(labelFor(UNIT_LABEL, tab))}
               />
             </div>
           ) : (

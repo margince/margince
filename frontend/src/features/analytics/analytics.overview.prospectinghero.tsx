@@ -2,20 +2,21 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
+import { Suspense } from "react";
 import type { components } from "../../api/schema";
-import { Button, StatCard } from "../../design-system/atoms";
+import { Button, PendingBody, StatCard } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { StatStrip } from "../../design-system/statstrip";
-import { formatNumber } from "../../format/format";
+import { formatAnalyticsNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import { upcomingThrough } from "./analytics.outcomes.sdr";
 import {
-  OutcomeWeeks,
   outcomeWeeks,
   type ProspectingOutcome,
   type useProspectingWeeks,
-} from "./analytics.overview.prospectingweeks";
+} from "./analytics.overview.prospectingweeks.queries";
 import { metricOf, readingValue } from "./analytics.overview.readings";
+import { OutcomeWeeks } from "./analytics.overview.work";
 import {
   type ReportingEvaluation,
   type ReportingEvidenceRef,
@@ -57,8 +58,7 @@ function figureText(
   const state = readingState(metric);
   if (state === "withheld") return t("analytics.prospect.withheld");
   if (state === "failed") return t("analytics.prospect.failed");
-  if (metric?.coverage.status === "insufficient_sample")
-    return t("analytics.prospect.tooFew");
+  if (metric?.coverage.status === "insufficient_sample") return "—";
   return readingValue(metric, evaluation, t, locale);
 }
 
@@ -126,11 +126,13 @@ export function ProspectingResults({
           </div>
           {chart && (
             <div className="analytics-hero-chart">
-              <OutcomeWeeks
-                chart={chart}
-                evaluation={weeks.data ?? evaluation}
-                onEvidence={onEvidence}
-              />
+              <Suspense fallback={<PendingBody label={t("common.loading")} />}>
+                <OutcomeWeeks
+                  chart={chart}
+                  evaluation={weeks.data ?? evaluation}
+                  onEvidence={onEvidence}
+                />
+              </Suspense>
             </div>
           )}
           {outcome && !chart && weeks.isError && (
@@ -157,21 +159,20 @@ function OutcomeFigure({
   const { locale } = useLocale();
   const metricName = useMetricNames();
   const metric = metricOf(evaluation, outcome);
-  const noCohort = outcome === "leads_promoted" && metric?.denominator === 0;
-  let basis = t("analytics.prospect.basisAccepted", { period });
-  if (noCohort) basis = t("analytics.prospect.noArrivals", { period });
-  else if (outcome === "leads_promoted" && metric?.denominator != null)
-    basis = t("analytics.prospect.basisQualified", {
-      arrived: formatNumber(metric.denominator, locale),
-      period,
-    });
   return (
     <>
-      <p className="t-label">{metricName(outcome)}</p>
-      <p className="analytics-hero-value t-num">
-        {noCohort ? "—" : figureText(metric, evaluation, t, locale)}
+      <p className="t-label">
+        {outcome === "leads_promoted"
+          ? t("analytics.team.arrivalQualified")
+          : metricName(outcome)}
       </p>
-      <p className="t-caption">{basis}</p>
+      <p className="analytics-hero-value t-num">
+        {figureText(metric, evaluation, t, locale)}
+      </p>
+      <p className="t-caption">{period}</p>
+      {metric?.coverage.status === "partial" && metric.coverage.reason && (
+        <p className="t-caption">{metric.coverage.reason}</p>
+      )}
       {metric?.coverage.withheld && metric.value != null && (
         <p className="t-caption">{t("analytics.overview.partlyHidden")}</p>
       )}
@@ -220,7 +221,7 @@ export function ProspectingReadings({
   const heldState = readingState(held);
   const week = evaluation.context.period_kind === "this_week";
   return (
-    <StatStrip label={t("analytics.overview.readings")}>
+    <StatStrip label={t("analytics.overview.readings")} density="plate">
       <StatCard
         narrow="row"
         label={metricName("meetings_held")}
@@ -256,6 +257,23 @@ export function ProspectingReadings({
         opens="records"
         onOpen={response ? () => onEvidence(response.evidence) : undefined}
       />
+      {metricOf(evaluation, "leads_awaiting_response_now") && (
+        <StatCard
+          narrow="row"
+          label={metricName("leads_awaiting_response_now")}
+          value={figureText(
+            metricOf(evaluation, "leads_awaiting_response_now"),
+            evaluation,
+            t,
+            locale,
+          )}
+          opens="records"
+          onOpen={() => {
+            const metric = metricOf(evaluation, "leads_awaiting_response_now");
+            if (metric) onEvidence(metric.evidence);
+          }}
+        />
+      )}
       <UpcomingReading summary={summary} />
     </StatStrip>
   );
@@ -267,7 +285,7 @@ function unansweredText(
   evaluation: ReportingEvaluation,
   t: Translator,
   plural: ReturnType<typeof usePlural>,
-  locale: Parameters<typeof formatNumber>[1],
+  locale: Parameters<typeof formatAnalyticsNumber>[1],
 ): string {
   const waiting = metricOf(evaluation, "leads_awaiting_response");
   const state = readingState(waiting);
@@ -276,7 +294,7 @@ function unansweredText(
     return t("analytics.prospect.unansweredFailed");
   const count = waiting.value ?? 0;
   return plural("analytics.overview.stillWaiting", count, {
-    count: formatNumber(count, locale),
+    count: formatAnalyticsNumber(count, locale),
   });
 }
 
@@ -319,7 +337,7 @@ function UpcomingReading({
     <StatCard
       narrow="row"
       label={label}
-      value={formatNumber(data.upcoming_meetings, locale)}
+      value={formatAnalyticsNumber(data.upcoming_meetings, locale)}
       detail={upcomingThrough(window, t, locale)}
       onOpen={() => document.getElementById(UPCOMING_LIST_ID)?.focus()}
     />

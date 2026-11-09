@@ -1,4 +1,3 @@
-import { Sparkles } from "lucide-react";
 import { useState } from "react";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
@@ -106,7 +105,6 @@ export function ChannelReplyAction({
           }));
         }}
       >
-        {proposed && <Sparkles aria-hidden="true" />}
         {proposed?.label ??
           t(
             withheld || answer === "about"

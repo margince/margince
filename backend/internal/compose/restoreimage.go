@@ -70,7 +70,8 @@ var provenanceStamps = map[string]map[string]bool{
 //
 //nolint:goconst // as namedByTheShapeButNotWrittenByThePatch below: the rows are wire names read as data
 var followsAnotherField = map[string]map[string]bool{
-	"contact": {"narrowing_reason": true},
+	"contact":  {"narrowing_reason": true},
+	"activity": {"done_at": true},
 }
 
 // addressColumns maps the address_* columns an audit image carries onto the

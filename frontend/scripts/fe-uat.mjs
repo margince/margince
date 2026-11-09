@@ -1,10 +1,3 @@
-// Change-scoped Storybook render + capture UAT lane. For frontend-only diffs:
-// renders the CHANGED component's stories in isolation and screenshots them —
-// no live stack, no DB. It is a GATE: it fails on a render error, on a changed
-// component that has no story, and on a changed story the build does not
-// register — and writes a machine-readable manifest a UAT runner can consume.
-// Built for this repo's plain frontend/.
-//
 // Usage: node frontend/scripts/fe-uat.mjs [--allow-missing | --all-stories]
 //   --allow-missing  do not fail when a changed component has no story yet
 //   --all-stories    render every story the build registers, whatever the diff
@@ -29,6 +22,7 @@ import {
   readStoryIndex,
   serveStaticStorybook,
 } from "./lib/storybook-harness.mjs";
+import { startupModules } from "./lib/uat-entry.mjs";
 import {
   EXPECTED_ERROR_TAG,
   PAINTED,
@@ -38,6 +32,7 @@ import {
   viewportFor,
 } from "./lib/uat-page.mjs";
 import {
+  baseRefFor,
   changesSince,
   needsStory,
   scopeFor,
@@ -54,9 +49,16 @@ import {
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const staticDir = join(repoRoot, "frontend/storybook-static");
-const outDir = join(repoRoot, ".tmp/fe-uat");
+const outDir = resolve(
+  process.env.FE_UAT_OUTPUT_DIR || join(repoRoot, ".tmp/fe-uat"),
+);
+const theme = process.env.FE_UAT_THEME ?? "light";
+if (theme !== "light" && theme !== "dark") {
+  console.error("fe-uat: FE_UAT_THEME must be light or dark");
+  process.exit(2);
+}
 const allowMissing = process.argv.includes("--allow-missing");
-const scope = scopeFor(process.argv);
+let scope = scopeFor(process.argv);
 
 let requested;
 try {
@@ -120,13 +122,14 @@ function git(args) {
 }
 
 // Include the working tree because this gate also runs before a commit.
+const baseRef = baseRefFor(process.env);
 let base = null;
 if (scope === "diff") {
   try {
-    base = git("merge-base origin/main HEAD");
+    base = git(`merge-base ${baseRef} HEAD`);
   } catch {
     console.error(
-      "fe-uat: cannot compute merge-base with origin/main (shallow/detached?) — fall back to full-stack UAT",
+      `fe-uat: cannot compute merge-base with ${baseRef} (shallow/detached?) — fall back to full-stack UAT`,
     );
     process.exit(2);
   }
@@ -138,6 +141,10 @@ const head = git("rev-parse HEAD");
 // gate reporting its own bookkeeping as a defect. The sibling spacing gate
 // filters the same way.
 const changed = base === null ? [] : changesSince(git, base);
+scope = scopeFor(
+  process.argv,
+  base === null ? [] : changesSince(git, base, { includeDeleted: true }),
+);
 
 // 2. Story-coverage map: for every source file, the story files that import it.
 //    A component is covered by ANY story that renders it — coverage is not tied
@@ -176,6 +183,12 @@ function resolveSpecifier(fromFile, specifier) {
   return null;
 }
 
+const startup = startupModules(
+  documentEntry,
+  (file) => readFileSync(join(repoRoot, file), "utf8"),
+  resolveSpecifier,
+);
+
 const coveringStories = new Map();
 for (const abs of census.files.filter(isStoryFile)) {
   const story = relative(repoRoot, abs);
@@ -199,7 +212,7 @@ for (const f of changed) {
   // API types (src/api/schema.d.ts) regenerate on any contract change, so
   // requiring a story for them is a false gate. Skip them.
   if (f.endsWith(".d.ts")) continue;
-  if (f === documentEntry) continue;
+  if (startup.has(f)) continue;
   if (isStoryFile(f)) {
     storyFiles.add(f);
     fanOut.set(f, [f]);
@@ -254,7 +267,7 @@ async function captureStory(page, port, story) {
   });
 
   await page.goto(
-    `http://localhost:${port}/iframe.html?id=${story.id}&viewMode=story`,
+    `http://localhost:${port}/iframe.html?id=${story.id}&viewMode=story&globals=theme:${theme}`,
     {
       waitUntil: "networkidle",
     },
@@ -294,9 +307,26 @@ async function captureStory(page, port, story) {
   await page.waitForTimeout(250);
   const png = join(outDir, `${story.id}.png`);
   await page.screenshot({ path: png });
+  const expectedTheme = await page.evaluate(
+    (requested) =>
+      globalThis.__STORYBOOK_PREVIEW__?.currentRender?.story?.storyGlobals
+        ?.theme ?? requested,
+    theme,
+  );
+  const drawnTheme = await page.getAttribute("html", "data-theme");
+  if (drawnTheme !== expectedTheme) {
+    errors.push(`theme is ${drawnTheme}, expected ${expectedTheme}`);
+  }
   const pass = rendered && errors.length === 0;
   console.log(pass ? `✓ ${story.id}` : `✗ ${story.id} — ${errors.join("; ")}`);
-  return { id: story.id, pass, png: relative(repoRoot, png), errors };
+  return {
+    id: story.id,
+    pass,
+    png: relative(repoRoot, png),
+    theme: drawnTheme,
+    expectedTheme,
+    errors,
+  };
 }
 
 async function openPage(browser, lane) {
@@ -333,7 +363,14 @@ function captureThrew(story, error) {
 function writeManifest(fields) {
   mkdirSync(outDir, { recursive: true });
   const fanOutMap = Object.fromEntries(fanOutByReach);
-  const manifest = { scope, base, head, fanOut: fanOutMap, ...fields };
+  const manifest = {
+    scope,
+    base,
+    head,
+    requestedTheme: theme,
+    fanOut: fanOutMap,
+    ...fields,
+  };
   writeFileSync(
     join(outDir, "manifest.json"),
     `${JSON.stringify(manifest, null, 2)}\n`,

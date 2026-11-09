@@ -72,6 +72,10 @@ var taskSourceWriters = map[string][]string{
 	"modules/contacts/handlers_company.go:ListCompanies":                  {writesNoTask},
 	"modules/deals/handlers_deal.go:ListDeals":                            {writesNoTask},
 	"compose/dealroomtimeline.go:write":                                   {writesNoTask},
+	"compose/dealcloselost.go:recordOnTimeline":                           {writesNoTask},
+	"compose/dealscoutopen.go:recordOnTimeline":                           {writesNoTask},
+	"compose/dealscoutrevive.go:recordRevivalOnTimeline":                  {writesNoTask},
+	"compose/dealverdictjudge.go:recordOnTimeline":                        {writesNoTask},
 	"compose/webformleads.go:Land":                                        {writesNoTask},
 	"compose/assurancebundletask.go:writeBundleTask":                      {provenance.AssuranceTaskSource},
 	"compose/leadworktasks.go:repliedTaskInput":                           {provenance.LeadRepliedSource},
@@ -91,10 +95,11 @@ var taskSourceWriters = map[string][]string{
 	"modules/activities/provider.go:Create":                               {writesCallerSource},
 	"modules/activities/activity.go:logActivityAndReadTranscript":         {writesForItsCaller},
 	"modules/activities/channelsend.go:SendMessage":                       {writesNoTask},
+	"modules/activities/dealfiling.go:fileUpdatedActivity":                {writesCallerSource},
 	"modules/activities/sendcore.go:SendPreparedTx":                       {writesNoTask},
 	"compose/controllermail.go:QueueConfirmationTx":                       {writesNoTask},
 	"compose/extractionaccept.go:auditAcceptedFieldsTx":                   {writesNoTask},
-	"modules/activities/booking.go:BookMeeting":                           {writesNoTask},
+	"modules/activities/chatcapture.go:writeChatActivity":                 {writesNoTask},
 	"modules/activities/channelsend.go:activity":                          {writesNoTask},
 	"modules/activities/extraction.go:RequestAttachmentAccess":            {writesNoTask},
 	"modules/activities/reviewresponse.go:WriteOutcomeReviewTx":           {writesNoTask},
@@ -107,6 +112,8 @@ var taskSourceWriters = map[string][]string{
 // storekit.CurrentTaskClause itself, with why.
 // gatekit:fixture the declared readers of another population, checked both ways below
 var openTaskReadersElsewhere = map[string]string{
+	"modules/activities/taskanswered.go:CompleteContactTasksAnsweredByTx": "Completes every existing open task for the sender and addressed contact, including dormant automatic tasks. It creates and surfaces no open work.",
+	"modules/activities/taskanswered.go:RecentTaskCompletions":            "Reads only completed tasks from audit evidence for Done for you, never open work.",
 	"modules/activities/memberhandover.go:ConsolidateMemberTasksTx":       "moves every open task during an admitted identity merge, including tasks no longer current, so none can be left on a hidden account",
 	"compose/automaticworksql.go:automaticItemsSQL":                       "lists what Margince did, done or not, for Done for you; it reports work, it assigns none",
 	"modules/activities/bulkcomplete.go:LockTaskForBulkTx":                "locks one task a human chose to complete",
@@ -122,7 +129,7 @@ var openTaskReadersElsewhere = map[string]string{
 	"modules/activities/lasttouch.go:openReminderHoldsEntity":             "an open reminder of the engine's own family holds its re-raise; it creates no work",
 	"modules/activities/requestreminderreach.go:openReminderClause":       "names the reminder a reach recompute may move, where the waiting horizon would skip a stale one instead of correcting it",
 	"modules/activities/requestrecovery.go:requestAvailableForAcceptance": "checks a request has no accepted task before a human accepts it",
-	"modules/activities/whichdealanswer.go:answerWhichDealTx":             "closes the deal questions a colleague's filing has just answered; it creates no work",
+	"modules/activities/whichdealanswer.go:openWhichDealQuestions":        "closes the deal questions a colleague's filing or decline has just answered; it creates no work",
 	"modules/activities/taskwindow.go:openTaskWindowClauses":              "narrows a list the caller already gates with the worklist clauses",
 	"modules/activities/taskreminder.go:dueReminderClause":                "narrows a list the caller already gates with the worklist clauses",
 	"modules/contacts/claimrecord.go:SetClaimTaskTx":                      "links a promise to its own task row",
@@ -161,7 +168,7 @@ func scanTaskCensus(t *testing.T, root string, planted map[string]string) taskCe
 		byDir[dir] = append(byDir[dir], file)
 		names[file] = filepath.ToSlash(rel)
 	}
-	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 			strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") || isIntegrationTagged(path) {
 			return err
@@ -170,7 +177,7 @@ func scanTaskCensus(t *testing.T, root string, planted map[string]string) taskCe
 		if err != nil || strings.HasPrefix(rel, "contracts") {
 			return err
 		}
-		body, err := os.ReadFile(path) // #nosec G304 -- a *.go file from walking the trusted backend tree
+		body, err := gatekit.ReadFile(path) // #nosec G304 -- a *.go file from walking the trusted backend tree
 		if err != nil {
 			return err
 		}
@@ -222,9 +229,14 @@ func censusPackage(root string, consts packageConsts, files []*ast.File, names m
 			}
 			facts := fnFacts{key: names[file] + ":" + fn.Name.Name}
 			values := taskValues(consts, gatekit.ParsedFile{Path: filepath.Join(root, names[file]), File: file}, fn)
-			visibleConsts := maps.Clone(sqlConsts)
+			visibleConsts, copied := sqlConsts, false
 			for name := range declaredNames(fn) {
-				delete(visibleConsts, name)
+				if _, shadowed := sqlConsts[name]; shadowed && !copied {
+					visibleConsts, copied = maps.Clone(sqlConsts), true
+				}
+				if copied {
+					delete(visibleConsts, name)
+				}
 			}
 			statements := gatekit.SQLStatementsWithConstants(fn.Body, visibleConsts)
 			text := strings.Join(statements, "\n")

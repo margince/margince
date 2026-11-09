@@ -98,7 +98,6 @@ func (commitImport) RecordTypeOf(json.RawMessage) string         { return typeIm
 func (sendEmailTool) RecordTypeOf(json.RawMessage) string        { return typeActivity }
 func (sendMessageTool) RecordTypeOf(json.RawMessage) string      { return typeActivity }
 func (sendCompanyEmailTool) RecordTypeOf(json.RawMessage) string { return typeActivity }
-func (bookMeetingTool) RecordTypeOf(json.RawMessage) string      { return typeActivity }
 
 func (promoteLead) ServesRecordType(recordType string) bool    { return recordType == typeLead }
 func (disqualifyLead) ServesRecordType(recordType string) bool { return recordType == typeLead }
@@ -109,8 +108,6 @@ func (commitImport) ServesRecordType(recordType string) bool   { return recordTy
 func (sendEmailTool) ServesRecordType(recordType string) bool { return recordType == typeActivity }
 
 func (sendMessageTool) ServesRecordType(recordType string) bool { return recordType == typeActivity }
-
-func (bookMeetingTool) ServesRecordType(recordType string) bool { return recordType == typeActivity }
 
 func (advanceProjectPhase) ServesRecordType(recordType string) bool {
 	return recordType == typeProject
@@ -135,3 +132,9 @@ func (relinkActivity) ServesRecordType(recordType string) bool { return recordTy
 func (relinkThread) ServesRecordType(recordType string) bool { return recordType == typeActivity }
 
 func (relinkActivities) ServesRecordType(recordType string) bool { return recordType == typeActivity }
+
+// --- reads: the record type names only the area a call lands in ---
+
+func (readRecord) RecordTypeOf(args json.RawMessage) string { return recordTypeArg(args) }
+
+func (listRecords) RecordTypeOf(args json.RawMessage) string { return recordTypeArg(args) }

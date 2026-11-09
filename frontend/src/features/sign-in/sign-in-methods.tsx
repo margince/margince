@@ -66,7 +66,9 @@ type SignInProvider = components["schemas"]["SignInProvider"];
  * deployment configured and cannot add a provider. Password is always on, so its
  * row is a switch that refuses rather than a missing row.
  */
-export function SignInMethodsCard() {
+export function SignInMethodsCard({
+  part = "methods",
+}: Readonly<{ part?: "methods" | "grants" }>) {
   const t = useT();
   const canManage = useCanWrite("installation_settings", "update");
   // The group→role map GRANTS roles, so writing it is admin-only
@@ -97,6 +99,19 @@ export function SignInMethodsCard() {
   const ownMfa = useMyMfa(confirmingMfa);
   // An answer that failed is no proof the admin holds a factor, so it warns.
   const selfLockedOut = !ownMfa.isPending && ownMfa.data?.confirmed !== true;
+
+  // The group map reads the same policy and locks. It is drawn from here, on
+  // its own tab, so they are not fetched twice.
+  if (part === "grants")
+    return settings.data ? (
+      <GroupRoleGrants
+        // Defaulted: the field is contract-required, and a body that lost it
+        // hands over `undefined`.
+        initial={settings.data.oidc_group_role_map ?? {}}
+        canManage={canManageGrants}
+        lock={lockFor(locks, "identity.oidc_group_role_map", t)}
+      />
+    ) : null;
 
   return (
     <>
@@ -249,15 +264,6 @@ export function SignInMethodsCard() {
         <p>{t("signInMethods.requireMfaConfirmBody")}</p>
         {selfLockedOut && <p>{t("signInMethods.requireMfaConfirmSelf")}</p>}
       </ConfirmModal>
-      {settings.data && (
-        <GroupRoleGrants
-          // Defaulted for the same reason `sign_in_providers` is: the field is
-          // contract-required, and a body that lost it hands over `undefined`.
-          initial={settings.data.oidc_group_role_map ?? {}}
-          canManage={canManageGrants}
-          lock={lockFor(locks, "identity.oidc_group_role_map", t)}
-        />
-      )}
     </>
   );
 }

@@ -196,29 +196,32 @@ func scalarKind(t reflect.Type) (FieldKind, bool) {
 const relationSuffix = "_id"
 
 // contractRelations answers the depth-1 hops declared BY this record type:
-// every scalar id member whose stripped name is itself a searchable record
-// type. `deal.company_id` gives deal the relation `company`;
-// `deal.owner_id` gives nothing, because a user is not a record type this
-// module searches.
+// every top-level scalar id member whose target (referenceTarget) is a
+// searchable record type. The hop is named for the member, so
+// `deal.company_id` gives `company` and `deal.partner_company_id` gives
+// `partner_company`. `deal.owner_id` gives nothing, because a user is not a
+// record type this module searches. A merge pointer gives nothing either: the
+// record carrying it is archived, and a hop reads live records only.
 func contractRelations(entity string, fields []Field) []Relation {
 	var relations []Relation
 	for _, f := range fields {
-		if f.Kind != KindID || !strings.HasSuffix(f.Name, relationSuffix) {
+		if f.Kind != KindID || !strings.HasSuffix(f.Name, relationSuffix) ||
+			strings.Contains(f.Name, memberPathSeparator) || selfReferences[f.Name] {
 			continue
 		}
-		target := strings.TrimSuffix(f.Name, relationSuffix)
-		if target == entity || contractRecords[target] == nil {
+		target := referenceTarget(entity, f.Name)
+		name := strings.TrimSuffix(f.Name, relationSuffix)
+		if name == entity || contractRecords[target] == nil {
 			continue
 		}
-		relations = append(relations, Relation{Name: target, Target: target, Via: f.Name})
+		relations = append(relations, Relation{Name: name, Target: target, Via: f.Name})
 	}
 	return relations
 }
 
 // inverseRelations answers the hops that land ON this record type: for every
-// OTHER searchable record declaring a reference to it, the reverse edge,
-// named for the referring type. `deal.company_id` gives company the
-// relation `deals`.
+// searchable record declaring a reference to it, the reverse edge.
+// `deal.company_id` gives company the relation `deals`.
 //
 // The inverse direction is derived rather than declared for the same reason
 // the forward one is — and it is the direction that carries most of the
@@ -227,14 +230,26 @@ func contractRelations(entity string, fields []Field) []Relation {
 func inverseRelations(entity string) []Relation {
 	var relations []Relation
 	for other, t := range contractRecords {
-		if other == entity {
-			continue
-		}
 		for _, r := range contractRelations(other, contractFields(t)) {
 			if r.Target == entity {
-				relations = append(relations, Relation{Name: pluralRelationName(other), Target: other, Via: other + "." + r.Via})
+				relations = append(relations, Relation{Name: inverseRelationName(other, r), Target: other, Via: other + "." + r.Via})
 			}
 		}
 	}
 	return relations
 }
+
+// inverseRelationName names the hop back along r. A reference named for its
+// target keeps the plain plural (`deals`). One named for its role carries the
+// role (`deals_by_partner_company`). So two references from one record type to
+// the same target never share a name, and no list of nicer names is kept.
+func inverseRelationName(referring string, r Relation) string {
+	if r.Name == r.Target {
+		return pluralRelationName(referring)
+	}
+	return pluralRelationName(referring) + inverseRoleSeparator + r.Name
+}
+
+// inverseRoleSeparator joins an inverse hop's plural to the role it runs back
+// along. hopTargets reads names apart on it.
+const inverseRoleSeparator = "_by_"

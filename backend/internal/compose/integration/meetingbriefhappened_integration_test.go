@@ -89,6 +89,9 @@ func TestABriefTakesNoDayMeetingDatedTodayAsWhenWeLastSpoke(t *testing.T) {
 		t.Fatal(err)
 	}
 	day := room.log(t, "meeting", occurredday.AnchorIn(now, los), activities.PrecisionDay)
+	// Reported held, so only its date keeps it out of the arc. A writer refuses
+	// held on a day entry dated today, so this is a raw row.
+	room.e.WsExec(t, `UPDATE activity SET meeting_status = 'held' WHERE id = $1`, day)
 	if !occurredday.AnchorIn(now, los).Before(now) {
 		t.Fatal("today's anchor is not behind the clock, so this test proves nothing")
 	}
@@ -167,5 +170,43 @@ func TestABriefTakesNoTouchStillAheadAsAnAttendeesLastTouch(t *testing.T) {
 	room.log(t, "call", now.Add(-time.Hour), activities.PrecisionInstant)
 	if line := room.attendeeLine(t); !strings.Contains(line, "last spoke today") {
 		t.Errorf("attendee = %q, want the call an hour ago", line)
+	}
+}
+
+// A call that reached nobody is no conversation: a voicemail is not the
+// attendee's last touch, and a reached call is.
+func TestABriefTakesNoUnreachedCallAsAnAttendeesLastTouch(t *testing.T) {
+	now := time.Date(2026, 8, 4, 13, 0, 0, 0, time.UTC)
+	room := newBriefRoom(t, "UTC", now, now.Add(7*24*time.Hour))
+	voicemail := room.log(t, "call", now.Add(-time.Hour), activities.PrecisionInstant)
+	if _, err := OwnerConn(t).Exec(t.Context(), `UPDATE activity SET call_outcome = 'voicemail' WHERE id = $1`, voicemail); err != nil {
+		t.Fatal(err)
+	}
+	if line := room.attendeeLine(t); !strings.Contains(line, "first time you are meeting them") {
+		t.Errorf("attendee = %q, but the only call left a voicemail", line)
+	}
+	reached := room.log(t, "call", now.Add(-2*time.Hour), activities.PrecisionInstant)
+	if _, err := OwnerConn(t).Exec(t.Context(), `UPDATE activity SET call_outcome = 'reached' WHERE id = $1`, reached); err != nil {
+		t.Fatal(err)
+	}
+	if line := room.attendeeLine(t); !strings.Contains(line, "last spoke today") {
+		t.Errorf("attendee = %q, want the reached call", line)
+	}
+}
+
+// A past meeting nobody reported held is still a meeting we had, so the reader
+// is not meeting the attendee for the first time. A canceled one is no touch.
+func TestABriefTakesAnUnreportedPastMeetingAsAnAttendeesLastTouch(t *testing.T) {
+	now := time.Date(2026, 8, 4, 13, 0, 0, 0, time.UTC)
+	room := newBriefRoom(t, "UTC", now, now.Add(7*24*time.Hour))
+	met := room.log(t, "meeting", now.Add(-3*time.Hour), activities.PrecisionInstant)
+	if line := room.attendeeLine(t); strings.Contains(line, "first time you are meeting them") {
+		t.Errorf("attendee = %q, want the unreported past meeting as their last touch", line)
+	}
+	if _, err := OwnerConn(t).Exec(t.Context(), `UPDATE activity SET meeting_status = 'canceled' WHERE id = $1`, met); err != nil {
+		t.Fatal(err)
+	}
+	if line := room.attendeeLine(t); !strings.Contains(line, "first time you are meeting them") {
+		t.Errorf("attendee = %q, but the only earlier meeting was canceled", line)
 	}
 }

@@ -115,14 +115,21 @@ const WRITTEN_BY: Readonly<
 
 /**
  * How the row got into Margince, in words. An import reads "Imported from
- * <upload>", a connector reads as its name, and a typed lead reads "Created
- * manually". The raw `connector:apollo:a-1` token and an import's stamp never
- * show.
+ * <upload>" and a website form reads as the form's name. A connector reads as
+ * its name, and a typed lead reads "Created manually". The raw
+ * `connector:apollo:a-1` token and an import's stamp never show.
  */
 export function addedViaFor(
-  lead: Readonly<{ source?: string | null; imported_from?: string | null }>,
+  lead: Readonly<{
+    source?: string | null;
+    imported_from?: string | null;
+    web_form_name?: string | null;
+  }>,
   t: ReturnType<typeof useT>,
 ): string {
+  if (lead.web_form_name) {
+    return t("lead.source.webformNamed", { name: lead.web_form_name });
+  }
   if (lead.imported_from !== null && lead.imported_from !== undefined) {
     return importLabel(
       { kind: "import", uploadName: lead.imported_from || undefined },
