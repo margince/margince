@@ -14,7 +14,7 @@ func renumberedNamespace() (Namespace, Migration) {
 	return Namespace{
 		Name:       "core",
 		Migrations: []Migration{current},
-		Renumbered: []Renumber{{Old: "0010", New: "0020", Name: "add_thing"}},
+		Renumbered: []Renumber{{Old: "0010", New: "0020", Name: "add_thing", OldDigest: *digestAs(current, "0010")}},
 	}, current
 }
 
@@ -135,6 +135,12 @@ func TestARenumberTheSourceContradictsIsRefused(t *testing.T) {
 		t.Errorf("a pair whose new version ships another name: err = %v", err)
 	}
 
+	edited := ns
+	edited.Migrations = []Migration{{Version: "0020", Name: "add_thing", UpSQL: "CREATE TABLE thing (id int)", DownSQL: "DROP TABLE thing"}}
+	if _, err := planRenumbers(edited, ledger); err == nil || !strings.Contains(err.Error(), "no longer has the declared old content") {
+		t.Errorf("a pair whose source changed since the declaration: err = %v", err)
+	}
+
 	stillShipped := ns
 	stillShipped.Migrations = append([]Migration{{Version: "0010", Name: "add_thing", UpSQL: "SELECT 1", DownSQL: "SELECT 1"}}, ns.Migrations...)
 	if _, err := planRenumbers(stillShipped, ledger); err == nil || !strings.Contains(err.Error(), "still ships") {
@@ -159,7 +165,7 @@ func TestALedgerWithoutTheOldVersionIsLeftAlone(t *testing.T) {
 func TestTwoOldVersionsOfOneMigrationEndAsOneRow(t *testing.T) {
 	t.Parallel()
 	ns, current := renumberedNamespace()
-	ns.Renumbered = append(ns.Renumbered, Renumber{Old: "0005", New: "0020", Name: "add_thing"})
+	ns.Renumbered = append(ns.Renumbered, Renumber{Old: "0005", New: "0020", Name: "add_thing", OldDigest: *digestAs(current, "0005")})
 	plan, err := planRenumbers(ns, map[string]LedgerRow{
 		"0005": {Name: "add_thing", Digest: digestAs(current, "0005")},
 		"0010": {Name: "add_thing", Digest: digestAs(current, "0010")},

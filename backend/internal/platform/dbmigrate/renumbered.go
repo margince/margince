@@ -16,10 +16,12 @@ import (
 // Renumber declares that the migration Name shipped as version Old before it
 // moved to New with the same bytes. A database that applied Old has already
 // run its DDL. Up moves that ledger row to New instead of running it again.
+// OldDigest is Digest of the files that shipped as Old, taken from history.
 type Renumber struct {
-	Old  string
-	New  string
-	Name string
+	Old       string
+	New       string
+	Name      string
+	OldDigest string
 }
 
 // renumberStep is one ledger row Up moves. dropOld is set when the ledger
@@ -46,9 +48,10 @@ func Reconciled(ns Namespace, recorded map[string]LedgerRow) (map[string]LedgerR
 }
 
 // planRenumbers decides every move before any is written. A row moves only
-// when its recorded digest equals Digest of today's source under the old
-// version. Digest covers the version, name and both halves. So that equality
-// proves the database ran the bytes that now ship as New.
+// when its recorded digest equals the pair's OldDigest, and Digest of today's
+// source under the old version equals it too. Digest covers the version, name
+// and both halves. So the two equalities prove the database ran the bytes that
+// now ship as New.
 //
 // Pairs are taken in old-version order. When two old rows name one new
 // version, the first moves and the second is dropped once it proves the same
@@ -110,7 +113,10 @@ func provenRenumber(namespace string, pair Renumber, old LedgerRow, source map[s
 	}
 	asOld := current
 	asOld.Version = pair.Old
-	if *old.Digest != Digest(asOld) {
+	if Digest(asOld) != pair.OldDigest {
+		return Migration{}, renumberRefusal(namespace, pair, "the migration that ships no longer has the declared old content")
+	}
+	if *old.Digest != pair.OldDigest {
 		return Migration{}, renumberRefusal(namespace, pair, "the ledger row records different content from the migration that ships")
 	}
 	return current, nil
@@ -126,19 +132,21 @@ func renumberRefusal(namespace string, pair Renumber, why string) error {
 }
 
 // reconcileRenumbered writes one namespace's plan in one transaction, so a
-// crash leaves either every row moved or none. Each statement must touch one
-// row; any other count means the ledger changed under the advisory lock.
+// crash leaves either every row moved or none. Each statement matches the old
+// row by version, name and digest, and must touch one row. Any other count
+// means the ledger changed under the advisory lock.
 func reconcileRenumbered(ctx context.Context, conn *pgx.Conn, table string, plan renumberPlan) error {
 	if len(plan.steps) == 0 {
 		return nil
 	}
 	return inTx(ctx, conn, func(tx pgx.Tx) error {
 		for _, step := range plan.steps {
-			statement := fmt.Sprintf(`UPDATE %s SET version = $2, content_digest = $3 WHERE version = $1 AND name = $4`, table)
-			args := []any{step.pair.Old, step.pair.New, step.digest, step.pair.Name}
+			statement := fmt.Sprintf(`UPDATE %s SET version = $2, content_digest = $3
+				WHERE version = $1 AND name = $4 AND content_digest = $5`, table)
+			args := []any{step.pair.Old, step.pair.New, step.digest, step.pair.Name, step.pair.OldDigest}
 			if step.dropOld {
-				statement = fmt.Sprintf(`DELETE FROM %s WHERE version = $1 AND name = $2`, table)
-				args = []any{step.pair.Old, step.pair.Name}
+				statement = fmt.Sprintf(`DELETE FROM %s WHERE version = $1 AND name = $2 AND content_digest = $3`, table)
+				args = []any{step.pair.Old, step.pair.Name, step.pair.OldDigest}
 			}
 			tag, err := tx.Exec(ctx, statement, args...)
 			if err != nil {

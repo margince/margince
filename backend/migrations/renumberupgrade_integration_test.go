@@ -23,11 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/dbmigrate"
 )
 
-// oldHeadManifest lists what commit e549efee shipped. It is the last head
-// before the renumbers in renumbered.txt, so a database migrated there holds
-// the old versions this upgrade has to reconcile.
-const oldHeadManifest = "testdata/oldhead-e549efee.txt"
-
 // oldHead returns the namespaces the old head shipped, built from today's
 // files. A migration the manifest names at a declared old version gets today's
 // content under that version, which is the content renumbered.txt claims it

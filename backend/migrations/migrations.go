@@ -76,8 +76,8 @@ func namespace(name string) (dbmigrate.Namespace, error) {
 }
 
 // Renumbered reads renumbered.txt into its pairs, keyed by namespace. Each
-// line is `namespace old_version new_version name`; a line starting with #
-// is a comment.
+// line is `namespace old_version new_version name old_digest`; a line
+// starting with # is a comment.
 func Renumbered() (map[string][]dbmigrate.Renumber, error) {
 	pairs := map[string][]dbmigrate.Renumber{}
 	lines := bufio.NewScanner(strings.NewReader(renumbered))
@@ -87,10 +87,12 @@ func Renumbered() (map[string][]dbmigrate.Renumber, error) {
 			continue
 		}
 		fields := strings.Fields(line)
-		if len(fields) != 4 {
-			return nil, fmt.Errorf("migrations: %s:%d: want `namespace old_version new_version name`, got %q", renumberedFile, n, line)
+		if len(fields) != 5 {
+			return nil, fmt.Errorf("migrations: %s:%d: want `namespace old_version new_version name old_digest`, got %q", renumberedFile, n, line)
 		}
-		pairs[fields[0]] = append(pairs[fields[0]], dbmigrate.Renumber{Old: fields[1], New: fields[2], Name: fields[3]})
+		pairs[fields[0]] = append(pairs[fields[0]], dbmigrate.Renumber{
+			Old: fields[1], New: fields[2], Name: fields[3], OldDigest: fields[4],
+		})
 	}
 	return pairs, lines.Err()
 }
