@@ -66,6 +66,7 @@
         "floor": 40
       },
       "privacy": true,
+      "leaks": 0,
       "reported_accepted": 15,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -200,6 +201,7 @@
         "floor": 40
       },
       "privacy": true,
+      "leaks": 0,
       "reported_accepted": 15,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
@@ -455,6 +457,7 @@
         "floor": 40
       },
       "privacy": true,
+      "leaks": 0,
       "reported_accepted": 15,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
