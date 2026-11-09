@@ -131,7 +131,11 @@ var costFilenameWords = wordSet(`inv invoice invoices rechnung rechnungen cost c
 
 var sensitiveFilenameWords = wordSet(`passport passports reisepass reisepässe personalausweis visa befund befunde covid`)
 
-var sensitiveFilenameStems = wordList{"passport", "reisepass", "personalausweis", "befund", "idcard", "testresult"}
+var sensitiveFilenameStems = wordList{"passport", "reisepass", "personalausweis", "befund", "covid"}
+
+// sensitiveFilenamePrefixes name the same only at the start of a word:
+// "contestresults" and "latestresults" contain "testresult".
+var sensitiveFilenamePrefixes = wordList{"idcard", "testresult"}
 
 var sensitiveFilenamePhrases = []string{"id card", "test result", "test results", "medical result", "medical results"}
 
@@ -165,7 +169,8 @@ func NamedAsPrivate(filename string) bool {
 	words := filenameWords(filename)
 	name := " " + strings.Join(words, " ") + " "
 	return NamedAsPersonnel(filename) || slices.ContainsFunc(words, func(word string) bool {
-		return sensitiveFilenameWords[word] || sensitiveFilenameStems.inside(word)
+		return sensitiveFilenameWords[word] || sensitiveFilenameStems.inside(word) ||
+			slices.ContainsFunc(sensitiveFilenamePrefixes, func(prefix string) bool { return strings.HasPrefix(word, prefix) })
 	}) || slices.ContainsFunc(sensitiveFilenamePhrases, func(phrase string) bool {
 		return strings.Contains(name, " "+phrase+" ")
 	})

@@ -51,12 +51,15 @@ func TestAFileNamedAsAnInvoiceCostSheetOrCVIsNamedPrivate(t *testing.T) {
 		"PhamHoangThucCV.pdf", "Résumé - Jane Doe.pdf", "invo\u200bice.PDF", "re\u0301sume\u0301.pdf",
 		"salaryinvoice.pdf", "passport_scan.png", "Reisepass.pdf", "ID_card.jpg", "visa.pdf",
 		"Befund.pdf", "COVID19.pdf", "test_result.pdf", "medical_test_results.pdf", "personalausweis.pdf",
+		"testresults2024.pdf", "idcardscan.jpg", "covidtestresult.pdf",
 	} {
 		if !NamedAsPrivate(name) {
 			t.Errorf("%q: not named private", name)
 		}
 	}
-	for _, name := range []string{"venue map.pdf", "Invitation.pdf", "Termsheet.pdf", "scan0001.pdf", "Recovery plan.pdf", "project_ID.pdf", "card_layout.pdf", "contest_results.pdf", "advisable.pdf"} {
+	for _, name := range []string{"venue map.pdf", "Invitation.pdf", "Termsheet.pdf", "scan0001.pdf", "Recovery plan.pdf", "project_ID.pdf", "card_layout.pdf", "contest_results.pdf", "advisable.pdf",
+		"contestresults.png", "latestresults.pdf", "squidcard.png",
+	} {
 		if NamedAsPrivate(name) {
 			t.Errorf("%q: named private", name)
 		}
