@@ -21,14 +21,8 @@ func insertLoggedActivityRow(ctx context.Context, tx pgx.Tx, in LogActivityInput
 	if origin == "" {
 		origin = OriginHuman
 	}
-	counterparty, err := counterpartyFor(ctx, tx, in)
+	counterparty, entity, err := prepareLoggedCorrespondence(ctx, tx, in, host)
 	if err != nil {
-		return ids.ActivityID{}, time.Time{}, err
-	}
-	if err := lockCorrespondenceForAttestedSend(ctx, tx, in, counterparty); err != nil {
-		return ids.ActivityID{}, time.Time{}, err
-	}
-	if err := storekit.RefuseUnknownSeat(ctx, tx, in.Author); err != nil {
 		return ids.ActivityID{}, time.Time{}, err
 	}
 	authorCols, authorHolders, args := storekit.AuthorInsertFragments(in.Author, []any{
@@ -39,6 +33,8 @@ func insertLoggedActivityRow(ctx context.Context, tx pgx.Tx, in LogActivityInput
 		in.ThreadKey, counterparty, in.CounterpartyOutboundAttested, origin,
 		in.SourceActivityID, in.Raw, in.DurationSeconds, loggedSenderIsMachine(in), in.DueHasTime, in.CallOutcome,
 	})
+	args = append(args, entity)
+	entityHolder := storekit.SQLf("$%d", len(args))
 	systemCol, systemHolder, args := systemTextInsert(ctx, in, args)
 	precisionCol, precisionHolder, args := precisionInsertFragment(in.OccurredPrecision, args)
 	languageCol, languageHolder, args := languageInsertFragment(in, args)
@@ -53,9 +49,9 @@ func insertLoggedActivityRow(ctx context.Context, tx pgx.Tx, in LogActivityInput
 		`INSERT INTO activity (id, kind, channel_provider, subject, body, occurred_at, direction, meeting_status,
 		                       due_at, remind_at, assignee_id, host_user_id, claims_host_slot, booking_interval_exact, source_system, source_id, source, captured_by,
 		                       thread_key, counterparty_email, counterparty_outbound_attested, origin,
-		                       source_activity_id, raw, duration_seconds, sender_is_machine, due_has_time, call_outcome`+authorCols+precisionCol+languageCol+systemCol+cfCols+`)
+		                       source_activity_id, raw, duration_seconds, sender_is_machine, due_has_time, call_outcome`+authorCols+`, legal_entity_id`+precisionCol+languageCol+systemCol+cfCols+`)
 		 VALUES ($1, $2, NULLIF($3, ''), $4, $5, coalesce($6, now()), $7, $8, $9, $10, $11, $12, $13, $13, $14, $15, $16, $17, NULLIF($18, ''),
-		         NULLIF($19, ''), $20, $21, $22, $23, $24, $25, $26, $27`+authorHolders+precisionHolder+languageHolder+systemHolder+cfHolders+`) RETURNING occurred_at`,
+		         NULLIF($19, ''), $20, $21, $22, $23, $24, $25, $26, $27`+authorHolders+`, `+entityHolder+precisionHolder+languageHolder+systemHolder+cfHolders+`) RETURNING occurred_at`,
 		args...).Scan(&occurredAt)
 	if err != nil {
 		if storekit.IsUniqueViolation(err) {

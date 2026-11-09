@@ -69,11 +69,12 @@ const reviewKindSingle = "single"
 // with the subject. A reason code without an address says a message was refused
 // and not who for, which is exactly the question the rep is asking.
 type RefusedRecipient struct {
-	Address     string `json:"address"`
-	SubjectKind string `json:"subject_kind,omitempty"`
-	SubjectID   string `json:"subject_id,omitempty"`
-	ReasonCode  string `json:"reason_code"`
-	Category    string `json:"category,omitempty"`
+	SendingEntity *ids.UUID `json:"sending_entity,omitempty"`
+	Address       string    `json:"address"`
+	SubjectKind   string    `json:"subject_kind,omitempty"`
+	SubjectID     string    `json:"subject_id,omitempty"`
+	ReasonCode    string    `json:"reason_code"`
+	Category      string    `json:"category,omitempty"`
 	// Requested is what the sender claimed the message is, which an unproven
 	// claim never writes into Category. Empty on a snapshot from before it.
 	Requested string `json:"requested,omitempty"`
@@ -285,13 +286,14 @@ func refusedRecipientOf(d commsauthz.Decision) RefusedRecipient {
 		// Normalized on the way in, because the erasure sweeps match on it.
 		// A lowercased, trimmed comparison walks past an address stored as
 		// typed. What it walks past is an erased subject's mailbox.
-		Address:     strings.ToLower(strings.TrimSpace(d.Recipient.Email)),
-		SubjectKind: d.SubjectKind,
-		ReasonCode:  d.ReasonCode,
-		Category:    string(d.Resolved),
-		Requested:   string(d.Requested),
-		PurposeID:   d.PurposeID,
-		DealID:      zeroUUIDAsNull(d.Evidence.DealID),
+		Address:       strings.ToLower(strings.TrimSpace(d.Recipient.Email)),
+		SubjectKind:   d.SubjectKind,
+		ReasonCode:    d.ReasonCode,
+		Category:      string(d.Resolved),
+		Requested:     string(d.Requested),
+		PurposeID:     d.PurposeID,
+		DealID:        zeroUUIDAsNull(d.Evidence.DealID),
+		SendingEntity: zeroUUIDAsNull(d.SendingEntity),
 		// The same answer the preview sends, so the composer picks the same
 		// deciding recipient before and after Send.
 		CanBeOverruled:    d.CanBeOverruledByCategory(),

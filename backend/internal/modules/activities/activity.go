@@ -45,13 +45,15 @@ func activityCapturedPayload(ctx context.Context, kind, channelProvider string) 
 }
 
 type LogActivityInput struct {
-	SystemText         *systemtext.Message
-	identityProver     AddressProver
-	DealFiling         *crmcontracts.ActivityDealFiling
-	dealFilingResolver DealFilingResolver
-	Recommendation     *crmcontracts.RecommendationReceipt
-	FollowUpTask       *LogActivityInput
-	recordedAt         *time.Time
+	// Queued mail keeps its original entity when the sender changes company.
+	correspondenceEntity ids.UUID
+	SystemText           *systemtext.Message
+	identityProver       AddressProver
+	DealFiling           *crmcontracts.ActivityDealFiling
+	dealFilingResolver   DealFilingResolver
+	Recommendation       *crmcontracts.RecommendationReceipt
+	FollowUpTask         *LogActivityInput
+	recordedAt           *time.Time
 	// Internal creation policy; public activity input cannot set an audience.
 	audienceMembers []AudienceMember
 	// invitedAssignee admits an invited colleague as the task's assignee. The
@@ -289,10 +291,6 @@ func meetingHost(ctx context.Context, in LogActivityInput) *ids.UserID {
 	host := ids.From[ids.UserKind](actor.UserID)
 	return &host
 }
-
-// logActivityInTx is LogActivity's transactional body, shared by the
-// store-opened (LogActivity) and caller-opened (LogActivityTx) entry
-// points.
 
 // replayedActivity resolves the (source_system, source_id) idempotency
 // key: replaying a capture returns the existing activity. The replay

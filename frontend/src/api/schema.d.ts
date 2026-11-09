@@ -17737,8 +17737,8 @@ export interface paths {
          * Record the exchange that makes business correspondence lawful.
          * @description A qualifying event is what a `business_correspondence` verdict reads to answer whether
          *     we may write to somebody at all (`getContactConsentGuard`). Most arrive on their own —
-         *     an inbound message, an inquiry, an open deal are all derived from records the product
-         *     already holds. Two cannot: **a card handed over in person**, and **a request the contact
+         *     an inbound message, an inquiry or a meeting can come from records the product already
+         *     holds. An open deal alone does not prove a request. Two kinds need a colleague's statement: **a card handed over in person**, and **a request the contact
          *     made themselves** by phone or across a counter. Both happened away from every system and
          *     are facts only the colleague who was there can state.
          *
@@ -43302,6 +43302,11 @@ export interface components {
         };
         /** @description One exchange that makes ordinary business correspondence lawful. */
         RecordQualifyingEventRequest: {
+            /**
+             * Format: uuid
+             * @description The visible deal this exchange concerned. Omit for a request with no deal.
+             */
+            about_deal?: string;
             /**
              * @description The two kinds a human may state. `in_person` is an exchange that happened in a room —
              *     a card handed over at a stand. `requested_by_subject` is the contact asking us to write

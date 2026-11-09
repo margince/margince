@@ -9,11 +9,11 @@ import { asksWhy } from "../../lib/compose-context";
 import { remedyCategoryOf } from "../../lib/sendstatus";
 import type { Activity } from "./compose";
 import { ComposeOutcome, ComposeWhy, MailSendNotices } from "./compose.parts";
+import { RecordConversationFact } from "./composecontextfact";
 import { ComposeDeal, type DealChoiceState } from "./composedeal";
 import type { ComposeFields } from "./composefields";
 import {
   alternativeReasonOf,
-  ContactReasonPick,
   ReasonSwitch,
   type ReasonTarget,
 } from "./composereason";
@@ -21,21 +21,8 @@ import type { ComposeSend } from "./composesend";
 
 type Preview = components["schemas"]["SendAuthorizationPreview"];
 
-/**
- * Who a vouch for the deciding recipient would be recorded on. That is known
- * when the engine says one may be and the composer knows the contact.
- *
- * Absent otherwise, and the refusal then renders without the control. A form
- * that could only answer 404 is a dead button, which `SendPermission` refuses.
- * An answer still out, or one that failed, names no one either. A vouch
- * resting on the answer before it would be recorded for the wrong message.
- *
- * The vouch is for the category the refusal is explained in, so the offered
- * action and the text agree. A claim the engine did not resolve to, such as an
- * active-deal follow-up with no deal behind it, offers no vouch at all: its
- * remedy is the missing fact, and a vouch in the resolved category would let
- * the next check pass on a reason the rep never gave.
- */
+// The subject and category whose missing request can be recorded without
+// changing the purpose or copying the statement to another recipient.
 export function reasonTargetOf(
   permission: ComposeSend["permission"],
   contactOf: (address: string) => string | undefined,
@@ -45,17 +32,25 @@ export function reasonTargetOf(
   }
   const preview: Preview | undefined = permission.preview;
   const { state, recipient } = decidingRecipient(preview);
-  const category = recipient?.resolved_category;
-  if (state !== "unproven" || !recipient || !category) {
+  if (state !== "unproven" || !recipient) {
     return undefined;
   }
-  const remedy = remedyCategoryOf({
-    category,
+  const category = remedyCategoryOf({
+    category: recipient.resolved_category,
     requestedCategory: recipient.requested_category,
   });
-  if (remedy !== category) {
+  if (
+    category !== "reply_to_inbound" &&
+    category !== "requested_followup" &&
+    category !== "precontract_quote" &&
+    category !== "active_deal_followup"
+  )
     return undefined;
-  }
+  if (
+    recipient.reason_code !== "no_compatible_evidence" &&
+    recipient.reason_code !== "deal_not_requested"
+  )
+    return undefined;
   const contactId = contactOf(recipient.address);
   if (!contactId) {
     return undefined;
@@ -153,10 +148,11 @@ export function ComposeBlockers({
             <ReasonSwitch reason={alternative} onSwitch={fields.setContext} />
           ) : (
             target && (
-              <ContactReasonPick
-                key={`${target.contactId}:${target.category}`}
+              <RecordConversationFact
+                key={`${target.contactId}:${target.category}:${send.contextDealId}`}
                 target={target}
                 chosen={send.claimedContext}
+                dealId={send.contextDealId}
               />
             )
           ),

@@ -2774,6 +2774,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.partner_company_id": "Partner",
   "history.field.project_id": "Projekt",
   "history.field.product_id": "Produkt",
+  "history.field.legal_entity_id": "Absendendes Unternehmen",
   "history.field.about_deal": "Betreffender Deal",
   "history.field.qualifying_event": "Qualifizierendes Ereignis",
   "history.field.qualifying_event_retracted":
@@ -7520,12 +7521,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.newThread": "Neuer Thread",
   "compose.copies": "Cc und Bcc",
   "compose.signsOffAs": "Die Nachricht endet mit „{closing}“.",
-  "compose.reasonRecord": "Als dauerhaften Grund festhalten",
-  "compose.reasonStanding":
-    "Ein dauerhafter Grund gilt für diese Art von Nachricht an {address} aus deinem Unternehmen, bis ihn jemand widerruft. Er ist deine Angabe, keine Einwilligung.",
-  "compose.reasonRecordFor":
-    "Als dauerhaften Grund festhalten: {reason}, für {address}",
-  "compose.reasonLabel": "Warum du an {address} schreiben darfst",
+  "compose.fact.open": "Gespräch festhalten",
+  "compose.fact.title": "Gespräch mit {address} festhalten",
+  "compose.fact.scope":
+    "Hält den Austausch mit {address} für das sendende Unternehmen fest. Sendet keine E-Mail, erfasst keine Werbeeinwilligung und erstellt keine Ausnahme.",
+  "compose.fact.kind": "Was ist passiert?",
+  "compose.fact.request": "Der Kontakt hat um eine Nachricht gebeten",
+  "compose.fact.quoteRequest": "Der Kontakt hat um dieses Angebot gebeten",
+  "compose.fact.met": "Persönlich getroffen",
+  "compose.fact.note": "Was wurde vereinbart?",
+  "compose.fact.save": "Gespräch festhalten",
   "compose.replyIntent": "Zweck der Antwort",
   "compose.newIntent": "Zweck der E-Mail",
   "compose.draftReply": "Antwort entwerfen",

@@ -6,7 +6,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-76 columns · primary key `(id)` · referenced by 45 foreign keys
+77 columns · primary key `(id)` · referenced by 45 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -47,6 +47,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 | `is_done` | `boolean`, default `false` | yes | Task only. |
 | `kind` | `text` | yes | Points at `activity_kind.kind`. |
 | `language` | `text` |  | What language this message is written in, read from its own text when it was captured, or when a note, meeting or call was logged or its text edited. |
+| `legal_entity_id` | `uuid` |  | Points at `legal_entity.id`. |
 | `meeting_status` | `text` |  | Set only when kind=meeting. |
 | `occurred_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `occurred_precision` | `text`, default `'instant'::text` | yes | How to read `occurred_at`. |
@@ -96,6 +97,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 | `host_user_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `invitation_sender` | `app_user` | deleting the parent keeps this row and clears the link |
 | `kind` | `activity_kind` | the parent cannot be deleted while this row points at it |
+| `legal_entity_id` | `legal_entity` | the parent cannot be deleted while this row points at it |
 | `raw_capture_id` | `raw_capture` | deleting the parent keeps this row and clears the link |
 | `sent_by_colleague` | `app_user` | deleting the parent keeps this row and clears the link |
 | `source_activity_id` | `activity` | deleting the parent keeps this row and clears the link |

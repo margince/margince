@@ -195,7 +195,11 @@ func carryQualifyingEvents(ctx context.Context, tx pgx.Tx, from, to ids.ContactI
 	if _, err := tx.Exec(ctx, `
  UPDATE consent_qualifying_event b SET recorded_for_addresses = CASE
    WHEN b.recorded_for_addresses IS NULL OR a.recorded_for_addresses IS NULL THEN NULL
-   ELSE ARRAY(SELECT DISTINCT x FROM unnest(b.recorded_for_addresses || a.recorded_for_addresses) AS x ORDER BY x) END
+   ELSE ARRAY(SELECT DISTINCT x FROM unnest(b.recorded_for_addresses || a.recorded_for_addresses) AS x ORDER BY x) END,
+ recorded_for_entities = CASE
+   WHEN b.recorded_for_entities IS NULL AND a.recorded_for_entities IS NULL THEN NULL
+   ELSE ARRAY(SELECT DISTINCT x FROM unnest(coalesce(b.recorded_for_entities,'{}'::uuid[]) ||
+     coalesce(a.recorded_for_entities,'{}'::uuid[])) AS x ORDER BY x) END
    FROM consent_qualifying_event a
   WHERE b.contact_id = @target AND a.contact_id = @source AND a.source_entity_id IS NOT NULL
     AND b.source_entity_type = a.source_entity_type AND b.source_entity_id = a.source_entity_id`,

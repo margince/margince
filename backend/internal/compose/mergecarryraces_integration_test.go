@@ -28,7 +28,9 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -264,7 +266,15 @@ func TestQualifyingEventsWrittenDuringTheMergeAreNotLeftBehind(t *testing.T) {
 	c := setupCarry(t)
 	retired := c.contactAt(t, "Race Event Retired", "race-event@carry.test")
 	survivor := c.contactAt(t, "Race Event Survivor", "race-event-survivor@carry.test")
-	booking := ids.NewV7()
+	when := clocktest.Now(t).Add(time.Hour)
+	booked, _, err := c.e.Activities.LogActivity(c.e.Admin(), activities.LogActivityInput{
+		Kind: "meeting", Subject: new("A booked call"), Source: "public_booking", OccurredAt: &when,
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: retired.UUID}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	booking := ids.UUID(booked.Id)
 
 	merge := c.parkContactMerge(t, retired, survivor)
 	handWritten, inquired := make(chan error, 1), make(chan error, 1)
