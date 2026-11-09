@@ -30,12 +30,12 @@ import (
 func applyDealLinkPatches(ctx context.Context, tx pgx.Tx,
 	current crmcontracts.Deal, in UpdateDealInput, p *storekit.Patch, clearPartner bool,
 	ensurePartner EnsurePartner, ensureProjectAttachable EnsureProjectAttachable,
+	ensureContractsShareCompany EnsureContractsShareCompany,
 ) error {
 	if in.CompanyID != nil {
-		if err := auth.EnsureReferenceTarget(ctx, tx, "company_id", "company", in.CompanyID.UUID); err != nil {
+		if err := applyCompanyLinkPatch(ctx, tx, current, *in.CompanyID, p, ensureContractsShareCompany); err != nil {
 			return err
 		}
-		p.Set("company_id", current.CompanyId, *in.CompanyID)
 	}
 	if in.OwnerID != nil {
 		// Handing the deal on is an assignment, and the destination is checked
@@ -53,4 +53,23 @@ func applyDealLinkPatches(ctx context.Context, tx pgx.Tx,
 		p.Set("project_id", current.ProjectId, *in.ProjectID)
 	}
 	return applyPartnerAttributionPatch(ctx, tx, current, in, p, clearPartner, ensurePartner)
+}
+
+// applyCompanyLinkPatch points a deal at a company the caller may see and that
+// the contracts filed against the deal name (contractseam.go). Every caller of
+// updateDealInTx reaches it: REST, the agent tools, the CSV import, restores.
+//
+// Clearing the company stays allowed: the filing check admits a contract on a
+// deal with no company, and a deal's row scope does not read its company.
+func applyCompanyLinkPatch(ctx context.Context, tx pgx.Tx, current crmcontracts.Deal,
+	companyID ids.CompanyID, p *storekit.Patch, ensureContractsShareCompany EnsureContractsShareCompany,
+) error {
+	if err := auth.EnsureReferenceTarget(ctx, tx, "company_id", "company", companyID.UUID); err != nil {
+		return err
+	}
+	if err := ensureContractsShareCompany(ctx, tx, ids.From[ids.DealKind](ids.UUID(current.Id)), companyID); err != nil {
+		return err
+	}
+	p.Set("company_id", current.CompanyId, companyID)
+	return nil
 }
