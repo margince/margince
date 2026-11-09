@@ -69,7 +69,7 @@ func (s *ThreadVerdictStore) RecordOutcomeOnThreadTx(
 		// private" is true of the whole conversation whoever wrote which part.
 		// An opening one takes only what the verdict actually read, and it never
 		// read the documents on a message other than the one it judged.
-		if holdingVerdict(status) || (addressWasSeen(sib.from, seen) && !sib.carriesDocument) {
+		if ClosesOpenMessages(status) || (addressWasSeen(sib.from, seen) && !sib.carriesDocument) {
 			out.Stamped = append(out.Stamped, sib.id)
 			continue
 		}
@@ -88,6 +88,31 @@ func (s *ThreadVerdictStore) RecordOutcomeOnThreadTx(
 		}
 	}
 	return out, nil
+}
+
+// RecordOutcomeOnWholeThreadTx repeats RecordOutcomeOnThreadTx in this
+// transaction until a pass stamps less than a full batch. The live verdict
+// path calls it, so a thread over one batch long ends with every message
+// decided. Each full pass stamps a full batch that leaves the selection, so
+// the loop ends.
+func (s *ThreadVerdictStore) RecordOutcomeOnWholeThreadTx(
+	ctx context.Context, tx pgx.Tx, threadKey string, user ids.UUID,
+	status, kind string, seen []string,
+) (ThreadOutcome, error) {
+	var whole ThreadOutcome
+	for {
+		pass, err := s.RecordOutcomeOnThreadTx(ctx, tx, threadKey, user, status, kind, seen)
+		if err != nil {
+			return ThreadOutcome{}, err
+		}
+		whole.Stamped = append(whole.Stamped, pass.Stamped...)
+		if whole.Reopened == ids.Nil {
+			whole.Reopened = pass.Reopened
+		}
+		if len(pass.Stamped) < threadSiblingBatch {
+			return whole, nil
+		}
+	}
 }
 
 // closingVerdicts are the thread verdicts that close the messages of the thread

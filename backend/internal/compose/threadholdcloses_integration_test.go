@@ -198,3 +198,31 @@ func TestAnOwnerCanShareAThreadAgainAfterItWasHeld(t *testing.T) {
 		}
 	}
 }
+
+// One RecordOutcomeOnThreadTx pass takes 500 messages. A held verdict on a
+// longer thread still closes every message in the same transaction.
+func TestAHeldVerdictClosesEveryOpenedMessageOfALongThread(t *testing.T) {
+	e := integration.Setup(t)
+	messages := seedOpenedUnderVerdict(t, e, "long-live", capture.VerdictCleared, capture.VerdictCleared, 620)
+	var question ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		// Back to an open question, as a new party's reply leaves it.
+		return tx.QueryRow(context.Background(), `
+			UPDATE capture_thread_verdict
+			   SET status = 'pending', first_activity_id = $2, resolved_at = NULL,
+			       next_attempt_at = now() - interval '1 minute'
+			 WHERE thread_key = 'long-live' AND user_id = $1
+			RETURNING id`, e.Rep1, messages[0]).Scan(&question)
+	}); err != nil {
+		t.Fatalf("reopening the long thread: %v", err)
+	}
+
+	runConfidentiality(t, e, question, confidentialityPersonnel, 0.95)
+
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE id = ANY($1) AND audience <> 'participants'`, messages); n != 0 {
+		t.Fatalf("%d of %d messages of the held thread are still open", n, len(messages))
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM capture_import WHERE activity_id = ANY($1) AND verdict_status <> 'held'`, messages); n != 0 {
+		t.Fatalf("%d import rows of the held thread do not say held", n)
+	}
+}
