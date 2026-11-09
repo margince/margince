@@ -183,7 +183,8 @@ tries a client it was given first, then a metadata document, then dynamic regist
     24 hours). A deleted CIMD client is fetched again on its next sign-in; a disabled one is never fetched.
 - **Dynamic client registration** (`POST /oauth/register`). The profile marks it as old, and Margince **keeps it for
   the window it still supports**. So a client registered earlier is not cut off by a version it never asked for. It
-  registers public clients only: a request for `client_secret_basic` or `client_secret_post` is refused.
+  registers public clients only. A request for `client_secret_basic` or `client_secret_post` is registered as `none`,
+  as RFC 7591 §3.2.1 allows, and the answer says `none`. The Gemini app asks for a secret method. Any other method is refused, and the API logs the reason of each refused registration.
 
 **Client authentication.** `token_endpoint_auth_methods_supported` and `revocation_endpoint_auth_methods_supported`
 list `none`, `client_secret_basic` and `client_secret_post`, with `none` first: Claude and Codex pick a metadata

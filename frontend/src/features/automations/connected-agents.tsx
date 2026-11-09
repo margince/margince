@@ -12,11 +12,12 @@ import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { ScopeChips, scopeChipLabel } from "../../design-system/passportselect";
 import { QueryStates } from "../../design-system/querystates";
-import { formatDate } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { formatDate, formatNumber } from "../../format/format";
+import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import "./connected-agents.css";
 import "../settings/settings-agents.css";
+import { useEndedRows } from "../../components/endedrows";
 import { PassportAreasDrawer } from "../../components/passport-areas";
 import { usePassportRevoke } from "../../components/passport-revoke";
 import {
@@ -326,6 +327,8 @@ function useExpiryClock(connections: readonly Connection[]): number {
 // would be undone by the client's next refresh.
 export function ConnectedAgentsCard() {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
   // Focus returns to the ended connection's row while it is still listed, and
   // otherwise to what the list still holds.
   const emptyRegion = useRef<HTMLDivElement | null>(null);
@@ -344,6 +347,15 @@ export function ConnectedAgentsCard() {
     (passport): passport is Connection => Boolean(passport.connection),
   );
   const now = useExpiryClock(connections);
+  // A lapsed connection stays out in the open: its grant still needs ending.
+  const { shown, hidden, showing, toggle, keep } = useEndedRows(
+    connections,
+    (connection) => connectionStateOf(connection, now).revoked,
+  );
+  const askDisconnect = (id: string) => {
+    keep(id);
+    disconnect.ask(id);
+  };
   const reachable = list.data?.reachable_areas ?? [];
   const [changingAreas, setChangingAreas] = useState<Connection | null>(null);
 
@@ -361,14 +373,25 @@ export function ConnectedAgentsCard() {
           </div>
         )}
       </PanelBody>
-      {list.isSuccess && connections.length > 0 && (
+      {list.isSuccess && shown.length > 0 && (
         <ConnectionTable
-          connections={connections}
+          connections={shown}
           now={now}
           reachable={reachable}
-          onEnd={disconnect.ask}
+          onEnd={askDisconnect}
           onChangeAreas={setChangingAreas}
         />
+      )}
+      {hidden.length > 0 && (
+        <PanelBody>
+          <Button variant="link" onClick={toggle}>
+            {showing
+              ? t("agents.hideDisconnected")
+              : plural("agents.showDisconnected", hidden.length, {
+                  count: formatNumber(hidden.length, locale),
+                })}
+          </Button>
+        </PanelBody>
       )}
       {changingAreas && (
         <PassportAreasDrawer

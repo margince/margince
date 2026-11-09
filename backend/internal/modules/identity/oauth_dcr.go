@@ -15,6 +15,11 @@ import (
 // stores the token it gets, and never renews with it.
 var oauthGrantTypesSupported = []string{oauthGrantAuthorizationCode, oauthRefreshToken}
 
+// dcrSubstitutableAuthMethods are the token_endpoint_auth_method values a
+// registration may ask for; each is registered as none. A key- or TLS-bound
+// method is refused, since a client that asks for one cannot work without it.
+var dcrSubstitutableAuthMethods = []string{"", oauthAuthMethodNone, oauthAuthMethodSecretBasic, oauthAuthMethodSecretPost}
+
 // dcrRequest is the part of an RFC 7591 registration document this server
 // acts on.
 type dcrRequest struct {
@@ -56,14 +61,15 @@ func parseDCR(members map[string]json.RawMessage) (dcrRequest, *dcrRefusal) {
 }
 
 func (req dcrRequest) validate() *dcrRefusal {
-	// Public clients only: PKCE is the proof of possession. A client
-	// asking for a secret-based method is asking to be privileged —
-	// refused, and there is no column to store a secret in anyway. An
-	// omitted method is taken as none, and the echo says so (§3.2.1).
-	if req.TokenEndpointAuthMethod != "" && req.TokenEndpointAuthMethod != oauthAuthMethodNone {
+	// Public clients only: PKCE is the proof of possession, and only an admin
+	// mints a secret. A client asking for a secret method is registered as
+	// public instead, which §3.2.1 allows, and the echo of none tells it so.
+	// The Gemini app is one client that asks for client_secret_basic.
+	if !slices.Contains(dcrSubstitutableAuthMethods, req.TokenEndpointAuthMethod) {
 		return &dcrRefusal{
 			oauthErrInvalidClientMetadata,
-			"only public clients register here (token_endpoint_auth_method must be none)",
+			fmt.Sprintf("token_endpoint_auth_method: %q is not served here; register with %q",
+				req.TokenEndpointAuthMethod, oauthAuthMethodNone),
 		}
 	}
 	if req.ClientName == "" || len(req.RedirectURIs) == 0 {

@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"slices"
@@ -92,6 +93,10 @@ func (h Handlers) oauthRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	req, refusal := parseDCR(members)
 	if refusal != nil {
+		// The client's author reads the reason in the answer; the operator has
+		// only this line, since the request log carries a bare 400.
+		slog.InfoContext(r.Context(), "a client registration was refused",
+			"error", refusal.code, "reason", refusal.description)
 		oauthError(w, http.StatusBadRequest, refusal.code, refusal.description)
 		return
 	}

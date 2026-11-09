@@ -434,6 +434,45 @@ describe("ConnectedAgentsCard", () => {
   });
 });
 
+describe("ConnectedAgentsCard: disconnected tools", () => {
+  const DISCONNECTED = {
+    ...CONNECTED,
+    id: "pp-disconnected",
+    revoked_at: "2026-08-01T08:00:00Z",
+    connection: { ...CONNECTED.connection, client_name: "Old Gemini" },
+  };
+
+  it("keeps a disconnected tool out of sight until asked for, and a lapsed one in view", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backend({ passports: [CONNECTED, LAPSED, DISCONNECTED] }),
+    );
+    render(<ConnectedAgentsCard />);
+
+    const toggle = await screen.findByRole("button", {
+      name: "Show 1 disconnected tool",
+    });
+    expect(screen.queryByText("Old Gemini")).toBeNull();
+    expect(screen.getByTestId("connection-pp-lapsed")).toBeTruthy();
+
+    await userEvent.click(toggle);
+    expect(await screen.findByText("Old Gemini")).toBeTruthy();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Hide disconnected" }),
+    );
+    expect(screen.queryByText("Old Gemini")).toBeNull();
+  });
+
+  it("offers only the toggle when every tool is disconnected", async () => {
+    vi.stubGlobal("fetch", backend({ passports: [DISCONNECTED] }));
+    render(<ConnectedAgentsCard />);
+
+    await screen.findByRole("button", { name: "Show 1 disconnected tool" });
+    expect(screen.queryByText("No AI tool connected yet.")).toBeNull();
+    expect(screen.queryByText("Old Gemini")).toBeNull();
+  });
+});
+
 describe("the two passport cards on AI access", () => {
   it("keeps a connection out of the passports a human may lend", async () => {
     vi.stubGlobal("fetch", backend({}));

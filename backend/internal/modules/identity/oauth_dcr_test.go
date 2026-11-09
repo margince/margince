@@ -64,6 +64,43 @@ func TestRegistrationEchoesTheGrantsTheServerIssues(t *testing.T) {
 	}
 }
 
+// geminiRegistration has the shape of the Gemini app's document: a secret
+// method it never receives, and one callback per Google redirector host and path.
+const geminiRegistration = `{
+	"client_name": "Gemini",
+	"redirect_uris": [
+		"https://oauth-redirect.googleusercontent.com/r/user_bound_custom-mcp-1-margince",
+		"https://oauth-redirect.googleusercontent.com/a/user_bound_custom-mcp-1-margince",
+		"https://oauth-redirect-sandbox.googleusercontent.com/r/user_bound_custom-mcp-1-margince",
+		"https://oauth-redirect-sandbox.googleusercontent.com/a/user_bound_custom-mcp-1-margince",
+		"https://oauth-redirect-test.googleusercontent.com/r/user_bound_custom-mcp-1-margince",
+		"https://oauth-redirect-test.googleusercontent.com/a/user_bound_custom-mcp-1-margince"
+	],
+	"token_endpoint_auth_method": "client_secret_basic",
+	"grant_types": ["authorization_code", "refresh_token"],
+	"response_types": ["code"],
+	"scope": "read draft offline_access"
+}`
+
+func TestRegistrationMakesASecretMethodPublic(t *testing.T) {
+	for _, method := range []string{oauthAuthMethodSecretBasic, oauthAuthMethodSecretPost} {
+		t.Run(method, func(t *testing.T) {
+			document := strings.Replace(geminiRegistration, oauthAuthMethodSecretBasic, method, 1)
+			req, refusal := parseDocument(t, document)
+			if refusal != nil {
+				t.Fatalf("parseDCR refused the document: %s", refusal.description)
+			}
+			echo := req.registered("client-1")
+			if echo.TokenEndpointAuthMethod != oauthAuthMethodNone {
+				t.Errorf("token_endpoint_auth_method = %q, want %q", echo.TokenEndpointAuthMethod, oauthAuthMethodNone)
+			}
+			if len(echo.RedirectURIs) != 6 {
+				t.Errorf("redirect_uris = %v, want all six kept", echo.RedirectURIs)
+			}
+		})
+	}
+}
+
 func TestRegistrationReadsAnEmptyListAsOmitted(t *testing.T) {
 	req, refusal := parseDocument(t,
 		`{"client_name":"x","redirect_uris":["https://c.example/cb"],"grant_types":[],"response_types":[]}`)
@@ -91,8 +128,8 @@ func TestRegistrationRefusesWhatItCannotHonour(t *testing.T) {
 			`{"client_name":"x","redirect_uris":["https://c.example/cb"],"response_types":["token"]}`,
 			"invalid_client_metadata",
 		},
-		"confidential client": {
-			`{"client_name":"x","redirect_uris":["https://c.example/cb"],"token_endpoint_auth_method":"client_secret_basic"}`,
+		"key-bound client": {
+			`{"client_name":"x","redirect_uris":["https://c.example/cb"],"token_endpoint_auth_method":"private_key_jwt"}`,
 			"invalid_client_metadata",
 		},
 		"plain-http redirect": {

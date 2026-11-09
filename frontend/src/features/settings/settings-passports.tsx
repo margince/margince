@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import type { components } from "../../api/schema";
+import { useEndedRows } from "../../components/endedrows";
 import { PassportAreasDrawer } from "../../components/passport-areas";
 import { usePassportRevoke } from "../../components/passport-revoke";
 import {
@@ -72,20 +73,12 @@ export function PassportCard() {
   const [changingAreas, setChangingAreas] = useState<PassportSummary | null>(
     null,
   );
-  // A revoked passport can do nothing more, so it waits behind a toggle. One
-  // revoked from this view stays, struck, so focus has its row to land on.
-  const [showRevoked, setShowRevoked] = useState(false);
-  const [revokedHere, setRevokedHere] = useState<ReadonlySet<string>>(
-    new Set(),
+  const { shown, hidden, showing, toggle, keep } = useEndedRows(
+    minted,
+    (passport) => passport.revoked_at != null,
   );
-  const hidden = minted.filter(
-    (passport) => passport.revoked_at != null && !revokedHere.has(passport.id),
-  );
-  const shown = showRevoked
-    ? minted
-    : minted.filter((passport) => !hidden.includes(passport));
   const askRevoke = (id: string) => {
-    setRevokedHere((ids) => new Set(ids).add(id));
+    keep(id);
     revoke.ask(id);
   };
 
@@ -126,8 +119,8 @@ export function PassportCard() {
       <PanelBody className="form-stack">
         {hidden.length > 0 && (
           <span>
-            <Button variant="link" onClick={() => setShowRevoked((on) => !on)}>
-              {showRevoked
+            <Button variant="link" onClick={toggle}>
+              {showing
                 ? t("settings.passportsHideRevoked")
                 : plural("settings.passportsShowRevoked", hidden.length, {
                     count: formatNumber(hidden.length, locale),
