@@ -1,7 +1,7 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { HOME_DAY_TIMING } from "../src/features/brief/elementtiming";
 import { de } from "../src/i18n/de";
-import { HOME_DAY_TIMING } from "../src/lib/elementtiming";
-import type { JourneyMark } from "../src/lib/journeymarks";
+import { type JourneyMark, journeyMarkName } from "../src/lib/journeymarks";
 import {
   type Answer,
   budgetSamples,
@@ -28,7 +28,6 @@ import {
   holdWorklist,
   journeyMarks,
   probeClick,
-  readVitals,
   recordVitals,
   settledVitals,
   startJourney,
@@ -480,33 +479,48 @@ test.describe("vitals: pages built to break or keep the budget", () => {
   const PAGE = "http://vitals.test/";
   const TEXT = "Pipeline review for the week ahead. ".repeat(40);
   const BLOCK = `<p style="font-size:40px;margin:0">${TEXT}</p>`;
-  const DAY = `<section elementtiming="${HOME_DAY_TIMING}"><p>Today</p></section>`;
+  const SECTION = `<section id="brief-today" elementtiming="${HOME_DAY_TIMING}">`;
+  const DAY = `${SECTION}<p>Today</p></section>`;
+  // `complete()` sets Home's final mark, where the bench starts to settle.
+  const COMPLETE = `<script>
+    const complete = () => performance.mark(${JSON.stringify(journeyMarkName("home:complete"))});
+  </script>`;
 
-  async function vitalsOf(
-    page: Page,
-    body: string,
-    settled: (vitals: Vitals) => boolean,
-  ): Promise<string[]> {
+  async function vitalsOf(page: Page, body: string): Promise<string[]> {
     await recordVitals(page);
     await page.route(PAGE, (route) =>
-      route.fulfill({ contentType: "text/html", body }),
+      route.fulfill({ contentType: "text/html", body: COMPLETE + body }),
     );
     await page.goto(PAGE);
-    await expect
-      .poll(async () => settled(await readVitals(page)), { timeout: 10_000 })
-      .toBe(true);
-    return vitalsReasons([await readVitals(page)]);
+    return vitalsReasons([await settledVitals(page, 10_000)]);
   }
 
-  test("a block painted inside the day content after 1.5 s fails", async ({
+  test("a larger block drawn in the day content after 1.5 s fails", async ({
     page,
   }) => {
     const reasons = await vitalsOf(
       page,
       `<main>${DAY}</main><script>
-        setTimeout(() => document.querySelector("section").insertAdjacentHTML("beforeend", ${JSON.stringify(BLOCK)}), 1500);
+        setTimeout(() => {
+          document.querySelector("section").insertAdjacentHTML("beforeend", ${JSON.stringify(BLOCK)});
+          complete();
+        }, 1500);
       </script>`,
-      (v) => v.dayPaints.some((paint) => paint.at >= 1_400),
+    );
+    expect(reasons).toEqual([
+      expect.stringMatching(/^day paint p95 \d+ ms is over 1000 ms$/),
+    ]);
+  });
+
+  test("a larger block drawn in the day content after Home's final mark still counts", async ({
+    page,
+  }) => {
+    const reasons = await vitalsOf(
+      page,
+      `<main>${DAY}</main><script>
+        setTimeout(complete, 300);
+        setTimeout(() => document.querySelector("section").insertAdjacentHTML("beforeend", ${JSON.stringify(BLOCK)}), 1200);
+      </script>`,
     );
     expect(reasons).toEqual([
       expect.stringMatching(/^day paint p95 \d+ ms is over 1000 ms$/),
@@ -520,8 +534,8 @@ test.describe("vitals: pages built to break or keep the budget", () => {
       page,
       `<main></main><script>
         document.querySelector("main").innerHTML = ${JSON.stringify(`<div>${DAY}</div>`)};
+        complete();
       </script>`,
-      (v) => v.dayPaints.length > 0,
     );
     expect(reasons).toEqual([]);
   });
@@ -534,11 +548,8 @@ test.describe("vitals: pages built to break or keep the budget", () => {
       page,
       `<style>
         @keyframes arrive { from { opacity: 0; } }
-        @media (prefers-reduced-motion: no-preference) {
-          main > * { animation: arrive 1500ms ease-out 100ms backwards; }
-        }
-      </style><main><div>${DAY}</div></main>`,
-      (v) => v.dayPaints.length > 0,
+        main > * { animation: arrive 1500ms ease-out 100ms backwards; }
+      </style><main><div>${DAY}</div></main><script>complete();</script>`,
     );
     expect(reasons).toEqual([]);
   });
@@ -547,34 +558,42 @@ test.describe("vitals: pages built to break or keep the budget", () => {
     const reasons = await vitalsOf(
       page,
       `<main><div id="top"></div>${DAY}${BLOCK}</main><script>
-        setTimeout(() => { document.getElementById("top").style.height = "400px"; }, 300);
+        setTimeout(() => { document.getElementById("top").style.height = "400px"; complete(); }, 300);
       </script>`,
-      (v) => v.shifts.length > 0,
     );
     expect(reasons).toEqual([
       expect.stringMatching(/^CLS p95 0\.\d+ is over 0\.1$/),
     ]);
   });
 
-  // An absence never arrives, so this load settles on the page's next frame.
   test("a load whose day content never paints fails rather than passes", async ({
     page,
   }) => {
-    await recordVitals(page);
-    await page.route(PAGE, (route) =>
-      route.fulfill({
-        contentType: "text/html",
-        body: `<main><section elementtiming="${HOME_DAY_TIMING}"></section>${BLOCK}</main>`,
-      }),
+    const reasons = await vitalsOf(
+      page,
+      `<main>${SECTION}</section>${BLOCK}</main><script>complete();</script>`,
     );
-    await page.goto(PAGE);
-    await page.evaluate(
-      () =>
-        new Promise((done) => requestAnimationFrame(() => setTimeout(done))),
+    expect(reasons).toEqual(["load 1: Home's day content never painted"]);
+  });
+
+  test("a marked block outside the day root does not count", async ({
+    page,
+  }) => {
+    const reasons = await vitalsOf(
+      page,
+      `<main>${SECTION}</section></main>
+      <aside><p elementtiming="${HOME_DAY_TIMING}">Not the day</p></aside>
+      <script>complete();</script>`,
     );
-    expect(vitalsReasons([await readVitals(page)])).toEqual([
-      "load 1: Home's day content never painted",
-    ]);
+    expect(reasons).toEqual(["load 1: Home's day content never painted"]);
+  });
+
+  test("a page with two day roots fails", async ({ page }) => {
+    const reasons = await vitalsOf(
+      page,
+      `<main>${DAY}${DAY}</main><script>complete();</script>`,
+    );
+    expect(reasons).toEqual(["load 1: Home has 2 day roots, not one"]);
   });
 
   // The shell's block lands late, larger than all of the day. The day's last
@@ -588,9 +607,8 @@ test.describe("vitals: pages built to break or keep the budget", () => {
         const day = (html) => document.querySelector("section").insertAdjacentHTML("beforeend", html);
         setTimeout(() => day("<p>The rest of the day, and more of it</p>"), 300);
         setTimeout(() => { document.getElementById("shell").innerHTML = ${JSON.stringify(BLOCK)}; }, 1100);
-        setTimeout(() => day("<p>.</p>"), 1300);
+        setTimeout(() => { day("<p>.</p>"); complete(); }, 1300);
       </script>`,
-      (v) => v.dayPaints.some((paint) => paint.at >= 1_250),
     );
     expect(reasons).toEqual([]);
   });

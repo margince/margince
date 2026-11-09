@@ -12,7 +12,6 @@ import {
 } from "../../design-system/surfacestate";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { HOME_DAY_TIMING } from "../../lib/elementtiming";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import {
   type Worklist,
@@ -25,6 +24,7 @@ import { identity } from "./brief.focuslink";
 import { HomeListReturnScope } from "./brief.queue";
 import { laneUnread } from "./brief.readings.honesty";
 import { waitingRows } from "./brief.sentence";
+import { HOME_DAY_TIMING } from "./elementtiming";
 
 import "../worklist/worklist.css";
 import { useViewerZone } from "../../lib/viewerzone";

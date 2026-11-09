@@ -361,8 +361,11 @@ export class RequestLedger {
 export type DayPaint = { at: number; area: number };
 /** One layout shift; `input` marks a shift right after user input. */
 export type Shift = { at: number; value: number; input: boolean };
-/** What one document load painted of the day and shifted, as recorded. */
-export type Vitals = { dayPaints: DayPaint[]; shifts: Shift[] };
+/**
+ * What one document load painted of the day and shifted, as recorded. `roots`
+ * counts its day roots when read; any count but one fails the load.
+ */
+export type Vitals = { dayPaints: DayPaint[]; shifts: Shift[]; roots: number };
 
 /** Home's fixed-profile browser budgets: both are "at most". */
 export const VITALS_BUDGET = { dayPaintMs: 1_000, cls: 0.1 };
@@ -427,6 +430,8 @@ export function vitalsReasons(loads: readonly Vitals[]): string[] {
   if (loads.length === 0) return ["no load was measured"];
   const reasons: string[] = [];
   for (const [i, load] of loads.entries()) {
+    if (load.roots !== 1)
+      reasons.push(`load ${i + 1}: Home has ${load.roots} day roots, not one`);
     if (dayPaint(load.dayPaints) === null)
       reasons.push(`load ${i + 1}: Home's day content never painted`);
   }

@@ -320,10 +320,11 @@ describe("Home's browser vitals", () => {
     value,
     input,
   });
-  const load = (dayPaints: DayPaint[], shifts: Shift[] = []): Vitals => ({
-    dayPaints,
-    shifts,
-  });
+  const load = (
+    dayPaints: DayPaint[],
+    shifts: Shift[] = [],
+    roots = 1,
+  ): Vitals => ({ dayPaints, shifts, roots });
 
   it("takes the day content's largest paint, however early or late", () => {
     expect(dayPaint([paint(100, 50), paint(1_500, 5_000)])?.at).toBe(1_500);
@@ -339,6 +340,15 @@ describe("Home's browser vitals", () => {
       "load 1: Home's day content never painted",
     ]);
     expect(vitalsReasons([])).toEqual(["no load was measured"]);
+  });
+
+  it("fails a load with no day root or with two", () => {
+    expect(vitalsReasons([load([paint(300)], [], 0)])).toEqual([
+      "load 1: Home has 0 day roots, not one",
+    ]);
+    expect(vitalsReasons([load([paint(300)], [], 2)])).toEqual([
+      "load 1: Home has 2 day roots, not one",
+    ]);
   });
 
   it("passes a day paint p95 of exactly the budget and fails one past it", () => {
