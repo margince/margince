@@ -86,7 +86,7 @@ func scanGhostedThreads(ctx context.Context, tx pgx.Tx, now time.Time) ([]ghoste
 			  FROM activity a
 			  JOIN (`+activities.CompanyReachSet()+`) ro ON ro.activity_id = a.id
 			 WHERE a.archived_at IS NULL
-			   AND `+relstrength.InteractionCountsSQL("a")+`
+			   AND `+relstrength.InteractionCountsSQL("a", "$1")+`
 			   -- An interaction with no recorded direction cannot say who spoke
 			   -- last, so it is skipped rather than guessed at — the same rule
 			   -- PO-F-4 applies to the engagement state.

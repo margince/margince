@@ -150,15 +150,18 @@ func TestLatestInboundKeepsAFormUntilARowThatAnswersIt(t *testing.T) {
 		kind    string
 		dir     *string
 		meeting *string
+		after   time.Duration
 		answers bool
 	}{
-		{"a sent mail", "email", &out, nil, true},
-		{"a call", "call", nil, nil, true},
-		{"a held meeting", "meeting", nil, status(crmcontracts.ActivityMeetingStatusHeld), true},
-		{"their reply", "email", &in, nil, false},
-		{"our own note", "note", nil, nil, false},
-		{"a canceled meeting", "meeting", nil, status(crmcontracts.ActivityMeetingStatusCanceled), false},
-		{"a no-show", "meeting", nil, status(crmcontracts.ActivityMeetingStatusNoShow), false},
+		{"a sent mail", "email", &out, nil, 30 * time.Minute, true},
+		{"a call", "call", nil, nil, 30 * time.Minute, true},
+		{"a held meeting", "meeting", nil, status(crmcontracts.ActivityMeetingStatusHeld), 30 * time.Minute, true},
+		{"a past meeting nobody reported", "meeting", nil, nil, 30 * time.Minute, true},
+		{"a booked meeting still to come", "meeting", nil, status(crmcontracts.ActivityMeetingStatusBooked), 2 * time.Hour, false},
+		{"their reply", "email", &in, nil, 30 * time.Minute, false},
+		{"our own note", "note", nil, nil, 30 * time.Minute, false},
+		{"a canceled meeting", "meeting", nil, status(crmcontracts.ActivityMeetingStatusCanceled), 30 * time.Minute, false},
+		{"a no-show", "meeting", nil, status(crmcontracts.ActivityMeetingStatusNoShow), 30 * time.Minute, false},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -173,7 +176,9 @@ func TestLatestInboundKeepsAFormUntilARowThatAnswersIt(t *testing.T) {
 			}); err != nil {
 				t.Fatal(err)
 			}
-			later, what := requestInstant.Add(30*time.Minute), "After the form"
+			// The store's clock is justInLater, so a meeting two hours after the
+			// form is still to come for it. The database clock is long past it.
+			later, what := requestInstant.Add(c.after), "After the form"
 			if _, _, err := store.LogActivity(e.asSeat(e.rep), LogActivityInput{
 				Kind: c.kind, Source: "manual", Subject: &what, OccurredAt: &later,
 				Direction: c.dir, MeetingStatus: c.meeting, Links: links,

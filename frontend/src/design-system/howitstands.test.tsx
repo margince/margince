@@ -4,11 +4,19 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { HowItStands } from "./howitstands";
 
-afterEach(cleanup);
+const here = dirname(fileURLToPath(import.meta.url));
+
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 describe("How it stands", () => {
   it("credits the CRM's records by default, never an agent", () => {
@@ -87,5 +95,63 @@ describe("How it stands", () => {
     expect(
       screen.getByText("hero").closest(".standing-sheet-readings"),
     ).not.toBeNull();
+  });
+
+  it("holds a note to two lines and opens it in place when clipped", () => {
+    // happy-dom lays nothing out: the note reads as taller than its box.
+    vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockImplementation(
+      function (this: HTMLElement) {
+        return this.classList.contains("standing-sheet-note") ? 80 : 0;
+      },
+    );
+    render(
+      <HowItStands
+        date="13 Aug"
+        verdict={{
+          word: "Lost",
+          sentence: "Closed 12 Aug · Price",
+          note: "The board chose to stay with their supplier.",
+          tone: "neutral",
+        }}
+      />,
+    );
+    const note = screen.getByText(/stay with their supplier/);
+    expect(note).toHaveAttribute("data-clamped");
+    const more = screen.getByRole("button", { name: "Show more" });
+    expect(more).toHaveAttribute("aria-controls", note.id);
+    fireEvent.click(more);
+    expect(note).not.toHaveAttribute("data-clamped");
+    const less = screen.getByRole("button", { name: "Show less" });
+    expect(less).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(less);
+    expect(note).toHaveAttribute("data-clamped");
+    expect(screen.getByRole("button", { name: "Show more" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+  });
+
+  // happy-dom loads no stylesheet, so the two-line cut is read off the sheet.
+  it("cuts a clamped note at two lines", () => {
+    const css = readFileSync(join(here, "howitstands.css"), "utf8");
+    const rule = /\.standing-sheet-note\[data-clamped\]\s*\{([^}]*)\}/.exec(
+      css,
+    );
+    expect(rule?.[1]).toMatch(/(?:^|[\s;])line-clamp:\s*2;/);
+    expect(rule?.[1]).toMatch(/-webkit-line-clamp:\s*2;/);
+    expect(rule?.[1]).toMatch(/display:\s*-webkit-box;/);
+    expect(rule?.[1]).toMatch(/-webkit-box-orient:\s*vertical;/);
+    expect(rule?.[1]).toMatch(/overflow:\s*hidden;/);
+  });
+
+  it("offers no control for a note that fits", () => {
+    render(
+      <HowItStands
+        date="13 Aug"
+        verdict={{ word: "Lost", note: "Budget frozen", tone: "neutral" }}
+      />,
+    );
+    expect(screen.getByText("Budget frozen")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).toBeNull();
   });
 });

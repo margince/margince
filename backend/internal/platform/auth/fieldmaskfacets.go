@@ -27,6 +27,14 @@ var auditImageFacets = map[string][]string{
 	"company": {"partner"},
 }
 
+// auditImageRestatements names, per audit entity type and masked field, the
+// image and evidence keys that restate that field in another shape. A deal's
+// `products` lists each product's share of the amount, and a line write's
+// `line_before`/`line_after` carry the prices the amount is summed from.
+var auditImageRestatements = map[string]map[string][]string{
+	"deal": {"amount_minor": {"products", "line_before", "line_after"}},
+}
+
 // MaskedHistoryFields answers the fields of one record's trail the principal
 // reads as withheld: what MaskedFields withholds on the record's own object,
 // and what it withholds on every facet that record's images carry.
@@ -40,6 +48,13 @@ func MaskedHistoryFields(p principal.Principal, entityType string, writable bool
 		for _, field := range MaskedFields(p, facet, false) {
 			if !slices.Contains(withheld, field) {
 				withheld = append(withheld, field)
+			}
+		}
+	}
+	for _, field := range slices.Clone(withheld) {
+		for _, key := range auditImageRestatements[entityType][field] {
+			if !slices.Contains(withheld, key) {
+				withheld = append(withheld, key)
 			}
 		}
 	}

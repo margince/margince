@@ -72,7 +72,7 @@ func TestAMisspelledVariableReachesTheBootReport(t *testing.T) {
 		misspelled + "=localhost:6379",
 		"MARGINCE_DSN=postgres://user@localhost:5432/db",
 		// Read by a package this role wires, and by the worker only.
-		"MARGINCE_KEYVAULT_ROOT_KEY=stands-in-for-a-key",
+		"MARGINCE_KEYVAULT_ROOT_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
 		"MARGINCE_OBSERVE_ADDR=127.0.0.1:9101",
 	})
 	if err != nil {

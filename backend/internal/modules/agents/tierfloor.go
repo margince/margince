@@ -54,8 +54,13 @@ func WithTierFloor(floor TierFloor) RegistryOption {
 // be tightened for it, because tightening converts an immediate refusal into a
 // staged approval a human releases onto a call that was never going to run.
 type recordTypedTool interface {
-	RecordTypeOf(args json.RawMessage) string
+	recordTypeNamer
 	ServesRecordType(recordType string) bool
+}
+
+// recordTypeNamer is a tool whose arguments name the record type a call acts on.
+type recordTypeNamer interface {
+	RecordTypeOf(args json.RawMessage) string
 }
 
 // Every implementation lives in recordtyped.go, gathered rather than sitting

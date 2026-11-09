@@ -4,10 +4,11 @@ import { INTL_LOCALE } from "./format";
 // Which plural form a count takes, in the reader's language.
 //
 // This lives beside the other locale-sensitive readings for the reason
-// `one-locale.test.ts` states about all of them: the question is never WHETHER a
-// rendering is locale-sensitive, only whose locale it uses, and the answer here
-// is the reader's own through `INTL_LOCALE`. A count comparison written at the
-// call site answers it differently — it answers "English and German", which is
+// `census/rules/one-locale.census.ts` states about all of them. The question is
+// never whether a rendering is locale-sensitive, only whose locale it uses.
+// The answer here is the reader's own, through `INTL_LOCALE`. A count
+// comparison written at the call site answers it differently. It answers
+// "English and German", which is
 // two of the three languages this product ships.
 //
 // The three shipped locales need at most two forms, so nothing is visibly wrong

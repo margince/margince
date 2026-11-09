@@ -22,7 +22,7 @@ const EstimateAction = "estimate"
 
 // Control requires the version the operator read, so a stale click cannot replace progress.
 func (e *Engine) Control(ctx context.Context, taskID, stepName, action string, version int64) error {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	if err := auth.Require(ctx, "data_task", principal.ActionUpdate); err != nil {

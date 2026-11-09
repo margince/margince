@@ -93,6 +93,8 @@ describe("the request the dials send", () => {
       close_to: undefined,
       value_min: undefined,
       value_max: undefined,
+      win_probability_min: undefined,
+      win_probability_max: undefined,
       currency: undefined,
       country: undefined,
     });

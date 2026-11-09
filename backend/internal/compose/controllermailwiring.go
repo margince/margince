@@ -105,6 +105,13 @@ func (r mailerRelay) SenderAddress() string { return r.from }
 // SendControllerMail hands one rendered message to the operator relay, under
 // the delivery row's own Message-ID so a bounce of it can find that row.
 func (r mailerRelay) SendControllerMail(ctx context.Context, msg comms.ControllerMessage) error {
+	if len(msg.Inline) > 0 {
+		related, ok := r.m.(mailer.RelatedSender)
+		if !ok {
+			return errors.New("compose: controller relay does not support the staged inline logo")
+		}
+		return related.SendRelated(ctx, msg.To, msg.Subject, msg.TextBody, msg.HTMLBody, msg.MessageID, msg.Inline)
+	}
 	if msg.HTMLBody != "" {
 		alternative, ok := r.m.(mailer.AlternativeSender)
 		if !ok {
@@ -189,7 +196,8 @@ func (s *Server) rewireConfirmationLane(pool *pgxpool.Pool) {
 	s.authHandlers = s.WithContactMailLane(true)
 	s.siteLeadNotices.store.Store(consent.NewStore(InstallationDB(pool)).
 		WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf)).
-		WithConfirmationLane(queue, confirmLinkVault{s.vault}, s.confirmLinkBase))
+		WithConfirmationLane(queue, confirmLinkVault{s.vault}, s.confirmLinkBase).
+		WithMissedReceipts(receiptAlarm{db: InstallationDB(pool)}))
 }
 
 // errNoWorkspaceForConfirmLink marks a seal attempted with no workspace in

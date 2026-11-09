@@ -27,8 +27,8 @@ import type {
   ListRecordType,
 } from "../../lib/lists.queries";
 import { useMemberNames } from "../../lib/membernames";
-import { useRecordZone } from "../../lib/recordzone";
 import type { FilterOp } from "../../lib/segmentpredicate";
+import { useViewerZone } from "../../lib/viewerzone";
 import { clauseWords, moneyText, useSentenceWords } from "./filtersentence";
 
 /** Whether a Live List selects the record, and each clause's verdict. */
@@ -184,7 +184,7 @@ export function useFieldValueText(
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const vocabulary = useFilterVocabulary(entityType, enabled);
   const users = useMemberNames(enabled ? userIds : []);
   return (name: string, raw: string): string => {

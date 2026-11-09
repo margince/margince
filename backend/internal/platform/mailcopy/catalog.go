@@ -129,6 +129,46 @@ func morningLines(line writeLine) {
 		"View today’s work",
 		"Tagesübersicht öffnen",
 		"Xem công việc hôm nay")
+	line(func(c *Copy) *string { return &c.MorningChanges },
+		"Margince changed %d of your deals last night",
+		"Margince hat letzte Nacht %d deiner Deals geändert",
+		"Margince đã thay đổi %d giao dịch của bạn đêm qua")
+	line(func(c *Copy) *string { return &c.MorningChangeClosed },
+		"closed as lost",
+		"als verloren geschlossen",
+		"đóng là thất bại")
+	line(func(c *Copy) *string { return &c.MorningChangeMoved },
+		"moved forward",
+		"in eine spätere Phase verschoben",
+		"chuyển sang giai đoạn sau")
+	line(func(c *Copy) *string { return &c.MorningChangeOpened },
+		"opened",
+		"eröffnet",
+		"đã mở")
+	line(func(c *Copy) *string { return &c.MorningChangeReopened },
+		"reopened",
+		"wieder eröffnet",
+		"đã mở lại")
+	line(func(c *Copy) *string { return &c.MorningChangeRedated },
+		"new close date",
+		"neues Abschlussdatum",
+		"ngày chốt mới")
+	line(func(c *Copy) *string { return &c.MorningChangeRevalued },
+		"new amount",
+		"neuer Betrag",
+		"giá trị mới")
+	line(func(c *Copy) *string { return &c.MorningChangeProbability },
+		"new probability",
+		"neue Wahrscheinlichkeit",
+		"xác suất mới")
+	line(func(c *Copy) *string { return &c.MorningChangeMore },
+		"and %d more deals",
+		"und %d weitere Deals",
+		"và %d giao dịch khác")
+	line(func(c *Copy) *string { return &c.MorningChangesUndo },
+		"Undo or view all",
+		"Rückgängig machen oder alle ansehen",
+		"Hoàn tác hoặc xem tất cả")
 }
 
 // notificationLines is the one notice mailed the moment it is raised: an

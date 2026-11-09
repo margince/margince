@@ -91,33 +91,51 @@ export type DsrClosing = Readonly<{
 // A close to `next` needs its answer and the identity check, and an identity
 // nobody could check closes only as rejected. The server takes a confirm-link
 // case without the check; the form asks every time, so one rule covers both.
+// Fulfilling an erasure needs no typed answer: the erasure answers for itself.
 export function closingReady(
   next: DsrStatus,
   closing: DsrClosing,
   storedResolution: string | null | undefined,
+  kind?: DsrKind,
 ): boolean {
   return (
-    Boolean(closing.resolution.trim() || storedResolution) &&
+    (erasureAnswersItself(next, kind) ||
+      Boolean(closing.resolution.trim() || storedResolution)) &&
     closing.identityCheck !== "" &&
     !(next === "fulfilled" && closing.identityCheck === "not_verified")
   );
 }
 
 // The patch body that moves a request to `status`. Blank text is omitted: an
-// empty string is a value the server would write.
+// empty string is a value the server would write. An erasure's fulfilment
+// carries no text at all: the server refuses it and records the erasure's own
+// answer.
 export function closingBody(
   status: DsrStatus,
   closing: DsrClosing,
+  kind?: DsrKind,
 ): components["schemas"]["UpdateDataSubjectRequest"] {
   const body: components["schemas"]["UpdateDataSubjectRequest"] = { status };
   const answer = closing.resolution.trim();
-  if (answer) body.resolution = answer;
+  if (answer && !erasureAnswersItself(status, kind)) body.resolution = answer;
   if (!isTerminal(status)) return body;
   if (closing.identityCheck) body.identity_check = closing.identityCheck;
   const address = closing.requesterEmail.trim();
   if (address) body.requester_email = address;
   return body;
 }
+
+// Whether this close records the erasure's own answer rather than the typed one.
+export function erasureAnswersItself(next: DsrStatus, kind?: DsrKind): boolean {
+  return kind === "erasure" && next === "fulfilled";
+}
+
+// The fixed answers an erasure records, in the reader's words. Anything else
+// stored on a request is the officer's own text and shows as written.
+export const ERASURE_ANSWER_LABEL: Readonly<Record<string, MessageKey>> = {
+  erased: "privacy.erasureAnswer.erased",
+  nothing_held: "privacy.erasureAnswer.nothing_held",
+};
 
 // Rejected is an outcome the officer chose, not a breakage, so it stays grey.
 export const DSR_STATUS_KIND: Record<DsrStatus, StatusKind> = {

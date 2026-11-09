@@ -96,9 +96,9 @@ func quietAtSQL(alias string, days int, instant string) string {
 		columnPrefix(alias), days, idlebase.SQL(alias), MeetingAheadSQL(alias), instant)
 }
 
-// MeetingAheadSQL is true when the deal has a booked meeting its stored clock
-// has not reached. That is a meeting still to come, or one that started before
-// the refold job moved the clock to it. It reads the clock's own filters. The
+// MeetingAheadSQL is true when the deal has a meeting nobody called off that
+// its stored clock has not reached. That is a meeting still to come, or one
+// that started before the refold job moved the clock to it. The
 // audience is spelled as in last_activity_of_deal, so a meeting only some
 // colleagues may see changes no number everyone reads.
 func MeetingAheadSQL(alias string) string {
@@ -109,7 +109,7 @@ func MeetingAheadSQL(alias string) string {
 	return `EXISTS (SELECT 1 FROM activity_link ahead_link
 		JOIN activity ahead ON ahead.id = ahead_link.activity_id
 		WHERE ahead_link.deal_id = ` + deal + `.id AND ahead.archived_at IS NULL
-		  AND ahead.kind = 'meeting' AND ` + relstrength.NotCalledOffSQL("ahead") +
+		  AND ahead.kind = 'meeting' AND ` + relstrength.MeetingNotCalledOffSQL("ahead") +
 		auth.OriginIsEngagement("ahead") + ` AND ahead.audience = 'workspace'
 		  AND coalesce(` + deal + `.last_activity_at, '-infinity') < ahead.occurred_at -- occurred_at raw: the stored clock holds an occurred_at
 		)`

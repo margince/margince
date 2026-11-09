@@ -81,7 +81,7 @@ func TestReviewedLifecycleRepairWithdrawsContradictedChangesAndPreservesUncertai
 
 func proposeAutomaticRepairLifecycle(t *testing.T, e *integration.Env) int {
 	t.Helper()
-	proposer := NewSignalProposer(e.Pool, approvalsServiceWithEffects(e.Pool), slog.New(slog.DiscardHandler))
+	proposer := NewSignalProposer(e.Pool, NewApprovalsServiceWithEffects(e.Pool), slog.New(slog.DiscardHandler))
 	ctx := principal.SystemActing(e.As(e.AdminUser, nil, integration.AdminWithSignals), "system:signal-propose")
 	count, err := proposer.RunWorkspace(ctx)
 	if err != nil {

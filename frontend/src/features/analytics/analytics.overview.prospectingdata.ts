@@ -28,7 +28,7 @@ export function isWeeks(url: URL): boolean {
  */
 export function prospectingWeeks(
   frame: ReportingFixtureFrame,
-  outcome: "accepted_opportunities" | "leads_promoted",
+  outcome: "accepted_opportunities" | "leads_qualified",
   values: readonly (number | null)[],
   held: readonly (number | null)[] = values.map(() => 1),
 ): ReportingEvaluation {
@@ -37,7 +37,7 @@ export function prospectingWeeks(
     new Date(last - (values.length - 1 - index) * 7 * 86_400_000).toISOString(),
   );
   const chart = (
-    metricID: "accepted_opportunities" | "leads_promoted" | "meetings_held",
+    metricID: "accepted_opportunities" | "leads_qualified" | "meetings_held",
     series: readonly (number | null)[],
   ): Chart => ({
     kind: "sdr_outcomes",

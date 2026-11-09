@@ -15,8 +15,9 @@ import { Badge } from "../../../design-system/atoms";
 import { type ActivityMoment, activityDay } from "../../../format/activitywhen";
 import { useLocale, useT } from "../../../i18n";
 import { bucketLabel } from "../../../lib/bucketlabel";
+import { labelFor } from "../../../lib/labelfor";
 import { throwProblem } from "../../../lib/problem";
-import { useRecordZone } from "../../../lib/recordzone";
+import { useViewerZone } from "../../../lib/viewerzone";
 import { CoverageExplorer } from "../../contacts/coverageexplorer";
 import { companyContactsListKey } from "./contacts.keys";
 import { DomainContactsCallout } from "./domaincontacts";
@@ -167,6 +168,8 @@ export function CompanyContactsList({
       <ListTable
         state={state}
         unit="unit.contacts"
+        // The contacts screen keeps its own layout under the same unit.
+        layoutKey="company-contacts"
         searchable
         showArchivedToggle={false}
         action={
@@ -217,7 +220,7 @@ export function CompanyContactsList({
             header: t("co.contacts.engagement"),
             cell: (contact: CompanyContact) => (
               <Badge tone={ENGAGEMENT_TONES[contact.engagement]}>
-                {t(ENGAGEMENT_LABELS[contact.engagement])}
+                {t(labelFor(ENGAGEMENT_LABELS, contact.engagement))}
               </Badge>
             ),
           },
@@ -258,7 +261,7 @@ export function CompanyContactsList({
 function LastTouch({ contact }: { readonly contact: CompanyContact }) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const last = lastWritten(contact);
   if (!last) {
     return <span>{t("co.contacts.neverInTouch")}</span>;
@@ -266,7 +269,7 @@ function LastTouch({ contact }: { readonly contact: CompanyContact }) {
   return (
     <span>
       {last.theyWrote ? t("co.contacts.theyWrote") : t("co.contacts.weWrote")}
-      {` · ${activityDay(last.at, last.precision, locale, recordZone)}`}
+      {` · ${activityDay(last.at, last.precision, locale, readerZone)}`}
     </span>
   );
 }

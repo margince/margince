@@ -53,7 +53,7 @@ func (e *LegalReviewRequiredError) Error() string {
 
 // FieldFault names the target the caller asked for.
 func (e *LegalReviewRequiredError) FieldFault() (field, code, message string) {
-	return progressionToKey, "legal_review_required", e.Error()
+	return "to_stage_id", "legal_review_required", e.Error()
 }
 
 // ensureLegalReviewed refuses a move onto a stage past a required

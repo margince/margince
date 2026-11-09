@@ -28,7 +28,7 @@ const (
 func TestAnErasedAddressBooksAndIsAnsweredAsACleanOne(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
-	enableBookingPage(t, e)
+	apptest.EnableGoogleBookingPage(t, e)
 	base := "/v1/public/booking/" + bookingSlug(t, e)
 	transactional := seededTransactionalPurposeID(t, e)
 	monday := nextMonday()
@@ -82,7 +82,7 @@ func eraseBooker(t *testing.T, e *apptest.AppEnv, contactID string) {
 		t.Fatalf("filing the erasure request → %d", status)
 	}
 	if status := e.Call(t, "PATCH", "/v1/data-subject-requests/"+dsr.ID, AnyMap{
-		"status": "fulfilled", "resolution": "erased per Art. 17", "identity_check": "id_document",
+		"status": "fulfilled", "identity_check": "id_document",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("fulfilling the erasure request → %d", status)
 	}

@@ -46,9 +46,10 @@ type tailWindow struct {
 // tailSources are the sources a tail can continue, by the categories their
 // rows carry.
 var tailSources = map[string][]crmcontracts.WorklistItemCategory{
-	string(sourceTask):    taskCategories,
-	string(sourceWaiting): {categoryOfSource(sourceWaiting)},
-	string(sourceAtRisk):  {categoryOfSource(sourceAtRisk)},
+	string(sourceTask):                              taskCategories,
+	string(sourceWaiting):                           {categoryOfSource(sourceWaiting)},
+	string(sourceAtRisk):                            {categoryOfSource(sourceAtRisk)},
+	string(crmcontracts.WorklistItemSourceApproval): {categoryOfSource(crmcontracts.WorklistItemSourceApproval)},
 }
 
 // valid says whether a client-held tail is one this binary could have minted.
@@ -84,7 +85,7 @@ func (s *Service) startTail(page tailPage) *backlogCursor {
 	for source, categories := range tailSources {
 		bound := s.tailReader(crmcontracts.WorklistItemSource(source)) != nil
 		if page.bounded[crmcontracts.WorklistItemSource(source)] && bound && sourceAnswers(categories, s.view, page.filter) {
-			at[source] = ""
+			at[source] = s.tailStart(crmcontracts.WorklistItemSource(source))
 		}
 	}
 	if len(at) == 0 {
@@ -100,11 +101,24 @@ func (s *Service) startTail(page tailPage) *backlogCursor {
 	}
 }
 
+// tailStart is where a source's tail begins. Approvals resume after the last
+// one the ranked rows hold; every other source starts at its beginning.
+func (s *Service) tailStart(source crmcontracts.WorklistItemSource) string {
+	if source == crmcontracts.WorklistItemSourceApproval {
+		return s.backlog.approvalsFrom
+	}
+	return ""
+}
+
 // withTail fills what the ranked rows left of a page from the backlog, once
 // they have run out.
 func (s *Service) withTail(
 	ctx context.Context, page tailPage, shown []ranked, more bool, limit int, from *backlogCursor, ranking []ranked,
 ) ([]ranked, *backlogCursor, []crmcontracts.WorklistSourceUnavailable) {
+	// The changed badge counts the ranked snapshot, so its door ends with that snapshot.
+	if page.filter == string(filterChangedSinceBrief) {
+		return shown, nil, nil
+	}
 	if page.first {
 		from = s.startTail(page)
 	}
@@ -190,12 +204,16 @@ func (s *Service) readTail(
 	if err != nil {
 		return tailBatch{}, err
 	}
-	kept := map[worklistsnap.Row]bool{}
+	kept := map[worklistsnap.Row]ranked{}
 	for _, row := range admitted {
-		kept[rowIdentity(row)] = true
+		kept[rowIdentity(row)] = row
 	}
 	for i := range batch.rows {
-		batch.rows[i].kept = kept[rowIdentity(batch.rows[i].row)]
+		row, admitted := kept[rowIdentity(batch.rows[i].row)]
+		batch.rows[i].kept = admitted
+		if admitted {
+			batch.rows[i].row = row
+		}
 	}
 	return batch, nil
 }
@@ -211,6 +229,8 @@ func (s *Service) tailReader(source crmcontracts.WorklistItemSource) func(
 		return s.moreWaiting
 	case source == sourceAtRisk && s.backlog.risk != nil:
 		return s.moreRisk
+	case source == crmcontracts.WorklistItemSourceApproval && s.backlog.approvals != nil:
+		return s.moreApprovals
 	}
 	return nil
 }
@@ -247,7 +267,9 @@ func (s *Service) moreTasks(ctx context.Context, page tailPage, walk tailWindow,
 	rows := appendLane(nil, sourceTask, &items, walk.AsOf, classifyTask)
 	batch := tailBatch{more: more, rows: make([]tailRow, len(read))}
 	for i, task := range read {
-		batch.rows[i] = tailRow{row: rows[i], at: task.Row.DueAt, after: task.After}
+		batch.rows[i] = tailRow{
+			row: rows[i], at: task.Row.DueAt, after: task.After,
+		}
 	}
 	return batch, nil
 }

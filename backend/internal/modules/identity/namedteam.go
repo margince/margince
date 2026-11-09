@@ -19,7 +19,7 @@ import (
 // Who may ask is the weekly review's live-team rule; who is listed is wider, so a
 // lead sees a seat that has not signed in yet rather than a team missing a member.
 func (s *Service) MembersOfTeam(ctx context.Context, team ids.UUID) ([]TeamMember, bool, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return nil, false, err
 	}
 	actor, ok := principal.Actor(ctx)

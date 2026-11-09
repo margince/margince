@@ -7,11 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -56,8 +58,7 @@ var FieldTypes = []string{TypeText, TypeNumber, TypeDate, TypeCurrency, TypePick
 //     employment edge would change that premise while Art. 17 erasure and
 //     Art. 15 SAR both stay blind to it.
 //
-// An activity field applies to every kind. The catalog has no per-kind
-// narrowing, so a field meant for meetings is offered on a logged call too.
+// An activity field applies to every kind unless its ActivityKinds narrow it.
 //
 // The catalog CHECK stays WIDER than this list (migrations/core/0171), which is
 // safe because this engine is the only writer of that table, and is the same
@@ -112,6 +113,8 @@ type FieldSpec struct {
 	// ShowInCreate nil means the catalog default (true), so a spec written
 	// before the setting existed keeps creating fields the create dialogs offer.
 	ShowInCreate *bool
+	// ActivityKinds narrows an activity field to some kinds; empty means every kind.
+	ActivityKinds []string
 }
 
 // FieldError is one field-level validation failure, matching the contract's
@@ -138,6 +141,7 @@ const (
 	fieldReport   = "reportable"
 	fieldSlug     = "slug"
 	fieldColumn   = "column_name"
+	fieldKinds    = "activity_kinds"
 	codeRequired  = "required"
 
 	// codeInvalidCharacters flags a picklist option carrying a NUL byte or
@@ -153,6 +157,11 @@ const (
 	codeUnsupportedObject = "unsupported_object"
 	codeUnsupportedType   = "unsupported_type"
 	codeUnsupportedStatus = "unsupported_status"
+
+	// The activity-kinds refusals: kinds on a field of another object, and a
+	// kind outside the activity kind list.
+	codeKindsNotActivity        = "only_on_activity_fields"
+	codeUnsupportedActivityKind = "unsupported_activity_kind"
 )
 
 // validOptionText reports whether a picklist option is safe to carry into
@@ -200,7 +209,33 @@ func Validate(spec FieldSpec) []FieldError {
 	if strings.TrimSpace(spec.Source) == "" {
 		errs = append(errs, FieldError{Field: fieldSource, Code: codeRequired})
 	}
-	return errs
+	return append(errs, checkActivityKinds(spec.Object, spec.ActivityKinds)...)
+}
+
+// checkActivityKinds refuses kinds on a field of another object and a kind the
+// activity kind list does not hold. Create and the settings update both ask it.
+func checkActivityKinds(object string, kinds []string) []FieldError {
+	if len(kinds) == 0 {
+		return nil
+	}
+	if object != string(fieldcatalog.TargetActivity) {
+		return []FieldError{{Field: fieldKinds, Code: codeKindsNotActivity}}
+	}
+	for _, kind := range kinds {
+		if !crmcontracts.ActivityKind(kind).Valid() {
+			return []FieldError{{Field: fieldKinds, Code: codeUnsupportedActivityKind}}
+		}
+	}
+	return nil
+}
+
+// storedKinds is the stored form of a kind list: sorted and without repeats,
+// and nil, which binds as SQL NULL, for every kind.
+func storedKinds(kinds []string) []string {
+	if len(kinds) == 0 {
+		return nil
+	}
+	return slices.Compact(slices.Sorted(slices.Values(kinds)))
 }
 
 var nonAlnum = regexp.MustCompile(`[^a-z0-9]+`)

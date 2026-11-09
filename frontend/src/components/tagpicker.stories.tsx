@@ -43,10 +43,11 @@ type Story = StoryObj<typeof AddTagPicker>;
 
 function Served({
   truncated,
+  mayCreate = false,
   children,
-}: Readonly<{ truncated: boolean; children: ReactNode }>) {
+}: Readonly<{ truncated: boolean; mayCreate?: boolean; children: ReactNode }>) {
   installFetchStub({
-    "GET /me": meRoute({ tag: ["read"] }),
+    "GET /me": meRoute({ tag: mayCreate ? ["read", "create"] : ["read"] }),
     "GET /tags": () =>
       jsonResponse({
         data: VOCABULARY,
@@ -83,6 +84,18 @@ export const PhoneSheet: Story = {
   tags: ["uat-phone"],
   render: () => (
     <Served truncated={false}>
+      <AddTagPicker entityType="company" entityID={COMPANY} current={[]} />
+    </Served>
+  ),
+};
+
+/**
+ * A seat that may coin a word: the foot links to Settings → Tags, and a typed
+ * word that matches nothing offers "Create tag {name}".
+ */
+export const SeatThatMayCreate: Story = {
+  render: () => (
+    <Served truncated={false} mayCreate>
       <AddTagPicker entityType="company" entityID={COMPANY} current={[]} />
     </Served>
   ),

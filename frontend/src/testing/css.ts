@@ -38,6 +38,8 @@ export type CssRule = {
   body: string;
   raw: string;
   line: number;
+  /** The preludes of the at-rules around it, outermost first: when it applies. */
+  conditions: string[];
 };
 
 /**
@@ -75,6 +77,9 @@ export function rulesIn(source: string): CssRule[] {
           parents: opens
             .map((enclosing) => enclosing.selector)
             .filter((selector) => !selector.startsWith("@")),
+          conditions: opens
+            .map((enclosing) => enclosing.selector)
+            .filter((selector) => selector.startsWith("@")),
           body: css.slice(open.at, i).replaceAll(/\{[^{}]*\}/g, ""),
           raw: source.slice(open.at, i),
           line: open.line,

@@ -46,6 +46,9 @@ type DecidedReceipt struct {
 	// Approval says the receipt is an approval, whose own page is where the
 	// decision is revisited.
 	Approval bool
+	// Undo is a correction's way back as its review judges it; nil for an
+	// approval.
+	Undo *crmcontracts.MagicUndo
 }
 
 // WithDecidedReceipts binds the second source. Unbound, the lane holds the
@@ -105,9 +108,9 @@ func decidedLines(drawn []crmcontracts.MagicLine, decided []DecidedReceipt) []cr
 	return out
 }
 
-// decidedLine dresses one decision. It offers no Undo. The record an
-// approval named can revisit it, and a correction with a way back is always
-// an audit line already.
+// decidedLine dresses one decision. An approval is revisited through the
+// record it named. A correction carries the Undo its review allows: one older
+// than the audit window has no audit line to carry it.
 func decidedLine(receipt DecidedReceipt) crmcontracts.MagicLine {
 	values := map[string]string{"kind": receipt.Kind}
 	sentence := "magic.action.decided_kind"
@@ -135,5 +138,6 @@ func decidedLine(receipt DecidedReceipt) crmcontracts.MagicLine {
 	if receipt.Approval {
 		line.ApprovalKind = &receipt.Kind
 	}
+	line.Undo = receipt.Undo
 	return line
 }

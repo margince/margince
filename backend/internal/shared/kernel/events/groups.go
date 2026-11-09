@@ -53,6 +53,10 @@ func Groups() []Group {
 		// signals must not be able to stall the edge projection, and vice
 		// versa.
 		{Name: "cg:audience-rescope", Streams: forEntities(activityStreamEntity)},
+		// Empties a voice sample read from sent mail once that mail is
+		// archived, restricted, narrowed or marked confidential. The contact
+		// stream carries retention.restricted.
+		{Name: "cg:voice-copy-recheck", Streams: forEntities(activityStreamEntity, contactStreamEntity)},
 		// The LinkedIn ghost matcher (ADR-0078 §8b). Its own group rather than
 		// a second handler on cg:graph-edge: that consumer lives in the search
 		// module and this call belongs to contacts, and a module never reaches
@@ -99,8 +103,12 @@ func Groups() []Group {
 		// consumer WRITES the evidence a proposal rests on and this one counts
 		// what happened to the proposal, so a wedged extraction must not stop
 		// the measurement that says whether the feature may stay on.
-		{Name: "cg:stage-progression-outcome", Streams: forEntities(approvalStreamEntity)},
 		{Name: "cg:approval-notice-retract", Streams: forEntities(approvalStreamEntity)},
+		// Holding a contact's queued marketing the moment they stop it. The
+		// CONTACT stream, where consent.suppressed and consent.changed ride.
+		// Its own group: a backlog behind any other contact consumer must not
+		// let a stopped message wait for its due time.
+		{Name: "cg:scheduled-send-stop", Streams: forEntities(contactStreamEntity)},
 		// Telling the seats that could decide a staged proposal that it is
 		// waiting on them. The APPROVAL stream, where approval.requested
 		// rides.

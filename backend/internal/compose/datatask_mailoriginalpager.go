@@ -10,6 +10,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -24,7 +25,7 @@ import (
 // its step is decided per row, against the re-parse.
 func pageStoredMail[T any](
 	ctx context.Context, tx pgx.Tx, in datatask.BatchIn, columns, scope string,
-	idOf func(T) ids.UUID,
+	originalOf func(*T) (ids.UUID, *[]byte),
 	fix func(context.Context, pgx.Tx, T) (bool, error),
 ) (datatask.BatchOut, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
@@ -47,7 +48,12 @@ func pageStoredMail[T any](
 	scanned := make([]ids.UUID, 0, len(candidates))
 	changed := 0
 	for _, candidate := range candidates {
-		scanned = append(scanned, idOf(candidate))
+		id, payload := originalOf(&candidate)
+		scanned = append(scanned, id)
+		*payload, err = originalstore.RepairPayload(ctx, *payload)
+		if err != nil {
+			return datatask.BatchOut{}, err
+		}
 		corrected, err := fix(ctx, tx, candidate)
 		if err != nil {
 			return datatask.BatchOut{}, err

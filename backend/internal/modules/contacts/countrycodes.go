@@ -47,6 +47,13 @@ var assignedCountry = func() map[string]struct{} {
 	return set
 }()
 
+// IsAssignedCountry reports whether code, in either case, is an assigned
+// ISO 3166-1 alpha-2 code.
+func IsAssignedCountry(code string) bool {
+	_, ok := assignedCountry[strings.ToUpper(code)]
+	return ok
+}
+
 // AssignedCountryCodes is the assigned set in code order. The frontend's
 // country filter mirrors it (gates/frontendcountries_test.go).
 func AssignedCountryCodes() []string {

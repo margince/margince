@@ -90,7 +90,7 @@ func EstimateUnaskedCommitments(ctx context.Context, q datatask.Querier, maximum
 	}
 	var count int64
 	err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT id `+unaskedCommitmentScope+` LIMIT @cap) candidates`,
-		pgx.NamedArgs{"commitment": kindCommitmentTask, "cap": maximum + 1}).Scan(&count)
+		pgx.NamedArgs{"commitment": kindCommitmentTask, capArg: maximum + 1}).Scan(&count)
 	return min(count, maximum), count > maximum, err
 }
 
@@ -106,7 +106,7 @@ func WithdrawUnaskedCommitmentsTx(ctx context.Context, tx pgx.Tx, in datatask.Ba
 		return datatask.BatchOut{}, err
 	}
 	rows, err := tx.Query(ctx, `SELECT `+columns+` `+unaskedCommitmentScope+` AND id > @after ORDER BY id LIMIT @batch_limit`,
-		pgx.NamedArgs{"commitment": kindCommitmentTask, "after": after, "batch_limit": in.Limit})
+		pgx.NamedArgs{"commitment": kindCommitmentTask, cursorArg: after, batchLimitArg: in.Limit})
 	if err != nil {
 		return datatask.BatchOut{}, fmt.Errorf("approvals: reading pending commitments: %w", err)
 	}

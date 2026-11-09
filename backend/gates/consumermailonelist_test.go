@@ -36,7 +36,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/parser"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -287,7 +286,7 @@ func consumerMailListsIn(t *testing.T, root string) []string {
 		if strings.Contains(filepath.ToSlash(path), consumerMailOwner) {
 			continue
 		}
-		raw, err := os.ReadFile(path)
+		raw, err := gatekit.ReadFile(path)
 		if err != nil {
 			t.Fatalf("read %s: %v", path, err)
 		}

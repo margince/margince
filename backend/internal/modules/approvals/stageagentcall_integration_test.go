@@ -48,7 +48,10 @@ func (e *stagingEnv) asPassport(passport ids.UUID) context.Context {
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:" + passport.String(),
-		OnBehalfOf: e.rep, PassportID: passport,
+		OnBehalfOf: e.rep, UserID: e.rep, PassportID: passport, SeatType: principal.SeatFull,
+		Permissions: grantsFor(map[string]principal.ObjectGrant{
+			"company": {Read: true, Update: true}, "tag": {Read: true, Update: true},
+		}),
 	})
 }
 

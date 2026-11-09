@@ -260,7 +260,7 @@ func TestOnlyAnAdministratorRenamesTheAnchor(t *testing.T) {
 	e := oneNameApp(t)
 	anchor := saveAnchor(t, e, "Profile Name AG")
 	if status := e.Call(t, http.MethodPatch, "/v1/companies/"+anchor,
-		AnyMap{"owner_id": sessionUserID(t, e)}, nil, nil); status != http.StatusOK {
+		AnyMap{"owner_id": apptest.SessionUserID(t, e)}, nil, nil); status != http.StatusOK {
 		t.Fatalf("hand the anchor to the seat about to be a rep = %d, want 200", status)
 	}
 	demoteToRep(t, e)

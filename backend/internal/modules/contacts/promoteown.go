@@ -39,7 +39,7 @@ import (
 // contact must not be distinguishable from one that does not exist.
 func (s *Store) PromoteOwnCapturedContact(ctx context.Context, id ids.ContactID) error {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID == ids.Nil {
+	if !ok || !actor.HumanOrItsAgent() || actor.UserID == ids.Nil {
 		// The mailbox owner is a contact. A connector or the verdict engine
 		// reaches the workspace through their own path, which is judged rather
 		// than asserted.
@@ -70,7 +70,7 @@ func (s *Store) PromoteOwnCapturedContact(ctx context.Context, id ids.ContactID)
 		// The mail and meetings that were only ever linked to this contact
 		// follow it. Without this the record is visible and its history is not,
 		// which reads to a colleague as a contact nobody has ever spoken to.
-		_, err = s.PromoteContactCohortTx(ctx, tx, id)
+		_, err = s.PromoteHeldContactCohortTx(ctx, tx, id)
 		return err
 	})
 }

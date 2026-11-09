@@ -31,7 +31,7 @@ const TASK = {
   is_done: false,
 };
 
-it("opens the task the address names, read-only while no row offers to finish it", async () => {
+it("opens the task the address names, read-only for a reader who may not change tasks", async () => {
   window.location.hash = "#/home?task=reminded-task";
   stubApi({
     "GET /worklist": () => jsonResponse(readingsDay({}, [])),
@@ -63,6 +63,42 @@ it("lets the reader finish the named task when their own row offers it", async (
       name: en["tasks.complete"],
     }),
   ).toBeTruthy();
+});
+
+it("lets the reader finish a task beyond the loaded queue when its own read says they may", async () => {
+  window.location.hash = "#/home?task=reminded-task";
+  stubApi({
+    "GET /me": () =>
+      jsonResponse(meFixture({ allow: { activity: ["read", "update"] } })),
+    "GET /worklist": () => jsonResponse(readingsDay({}, [])),
+    "GET /activities/reminded-task": () => jsonResponse(TASK),
+  });
+  render(<BriefScreen />);
+
+  expect(
+    await within(await screen.findByRole("dialog")).findByRole("button", {
+      name: en["tasks.complete"],
+    }),
+  ).toBeTruthy();
+});
+
+it("keeps a task read-only when its own read says the reader may not change it", async () => {
+  window.location.hash = "#/home?task=reminded-task";
+  stubApi({
+    "GET /me": () =>
+      jsonResponse(meFixture({ allow: { activity: ["read", "update"] } })),
+    "GET /worklist": () => jsonResponse(readingsDay({}, [])),
+    "GET /activities/reminded-task": () =>
+      jsonResponse({ ...TASK, writable: false }),
+  });
+  render(<BriefScreen />);
+
+  expect(await screen.findByText(TASK.body)).toBeTruthy();
+  expect(
+    within(screen.getByRole("dialog")).queryByRole("button", {
+      name: en["tasks.complete"],
+    }),
+  ).toBeNull();
 });
 
 it("says so when the named task cannot be read, and closing clears the address", async () => {

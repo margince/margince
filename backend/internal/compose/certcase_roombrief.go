@@ -77,6 +77,12 @@ type roomBriefExpectation struct {
 	CitesLabel string   `json:"cites_label"`
 	NamesToken string   `json:"names_token"`
 	Avoids     []string `json:"avoids"`
+	// LeadsWith and NamesAuthor are asked of the first sentence alone.
+	//
+	// A token anywhere in the brief does not say the brief opened with the
+	// condition. A room with two buyers is answered wrongly by naming either.
+	LeadsWith   string `json:"leads_with"`
+	NamesAuthor string `json:"names_author"`
 }
 
 //nolint:ireturn // PreparedCase IS the seam: one implementation per site behind the one interface the cert lane runs.
@@ -99,6 +105,7 @@ func (roomBriefCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepar
 	return &roomBriefCase{
 		in: in, mustCite: byLabel[want.CitesLabel], citeLabel: want.CitesLabel,
 		mustName: want.NamesToken, mustAvoid: want.Avoids,
+		mustLead: want.LeadsWith, mustAttribute: want.NamesAuthor,
 	}, nil
 }
 
@@ -224,6 +231,9 @@ func refuseUnmeasurableRoomBrief(in roombrief.Input, byLabel map[string]string, 
 	if strings.Contains(strings.ToLower(claims.Prose(roombrief.Deterministic(in, "en"))), token) {
 		return fmt.Errorf("summarize/deal_room_brief: the token %q is already in the floor's own prose, so a reply saying nothing would pass", want.NamesToken)
 	}
+	if err := refuseUnmeasurableOpening(string(summary), in, want); err != nil {
+		return err
+	}
 	for _, avoided := range want.Avoids {
 		if strings.TrimSpace(avoided) == "" {
 			return errors.New("summarize/deal_room_brief: the expectation forbids a blank phrase, which every reply contains")
@@ -233,11 +243,13 @@ func refuseUnmeasurableRoomBrief(in roombrief.Input, byLabel map[string]string, 
 }
 
 type roomBriefCase struct {
-	in        roombrief.Input
-	mustCite  string
-	citeLabel string
-	mustName  string
-	mustAvoid []string
+	in            roombrief.Input
+	mustCite      string
+	citeLabel     string
+	mustName      string
+	mustAvoid     []string
+	mustLead      string
+	mustAttribute string
 }
 
 // Run issues the production request, in English pinned so a record's score
@@ -274,8 +286,57 @@ func (c *roomBriefCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 			wrong = append(wrong, fmt.Sprintf("the brief says %q", avoided))
 		}
 	}
+	wrong = append(wrong, c.openingFaults(strings.ToLower(sentences[0].Text))...)
 	if len(wrong) > 0 {
 		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: strings.Join(wrong, "; ")}
 	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}
+}
+
+// openingFaults reads the brief's first sentence against what the room turns
+// on. A reader sees that sentence first and acts on it.
+//
+// Asked of the whole brief, these two pass on a brief that opens with the
+// newest message and mentions the condition later. They also pass on one that
+// opens with the condition and credits the other buyer in the thread.
+func (c *roomBriefCase) openingFaults(opening string) []string {
+	var wrong []string
+	if c.mustLead != "" && !strings.Contains(opening, strings.ToLower(c.mustLead)) {
+		wrong = append(wrong, fmt.Sprintf(
+			"the brief opens on something other than %q, which is what this room turns on", c.mustLead))
+	}
+	if c.mustAttribute != "" && !strings.Contains(opening, strings.ToLower(c.mustAttribute)) {
+		wrong = append(wrong, fmt.Sprintf(
+			"the brief's opening does not say %q set the condition", c.mustAttribute))
+	}
+	return wrong
+}
+
+// refuseUnmeasurableOpening refuses an opening expectation the fixture cannot
+// answer, so a case that can never pass is rejected rather than scored.
+//
+// The floor's own opening is the second test. A token the floor already leads
+// with is passed by a reply that reads the floor back, which measures nothing.
+func refuseUnmeasurableOpening(summary string, in roombrief.Input, want roomBriefExpectation) error {
+	folded := strings.ToLower(summary)
+	floor := roombrief.Deterministic(in, "en")
+	for field, value := range map[string]string{
+		"leads_with": want.LeadsWith, "names_author": want.NamesAuthor,
+	} {
+		token := strings.ToLower(strings.TrimSpace(value))
+		if token == "" {
+			continue
+		}
+		if !strings.Contains(folded, token) {
+			return fmt.Errorf(
+				"summarize/deal_room_brief: %s is %q, which the summary does not carry, so no reply can lead with it",
+				field, value)
+		}
+		if len(floor) > 0 && strings.Contains(strings.ToLower(floor[0].Text), token) {
+			return fmt.Errorf(
+				"summarize/deal_room_brief: %s is %q, which the floor's own opening already says",
+				field, value)
+		}
+	}
+	return nil
 }

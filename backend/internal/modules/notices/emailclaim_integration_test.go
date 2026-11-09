@@ -85,3 +85,52 @@ func TestACauseForANoticeThatIsGoneReportsItAbsent(t *testing.T) {
 		t.Fatalf("recording a cause on a notice that is gone → %v, want %v", err, apperrors.ErrNotFound)
 	}
 }
+
+// A release frees every claim of the send or none. Three claims, one of them
+// taken again since: nothing is released and the caller is told.
+func TestAReleaseWithOneChangedClaimReleasesNone(t *testing.T) {
+	e := setupNotices(t)
+	var attempts []EmailAttempt
+	for _, subject := range []string{"First", "Second", "Third"} {
+		id, err := e.store.Create(e.engineCtx(), NewNotice{Recipient: e.recipient, Kind: "automation", Subject: subject})
+		if err != nil {
+			t.Fatalf("recording the notice: %v", err)
+		}
+		attempt, claimed, err := e.store.ClaimEmailAttempt(e.engineCtx(), id)
+		if err != nil || !claimed {
+			t.Fatalf("claiming %s → claimed=%v, err=%v", subject, claimed, err)
+		}
+		attempts = append(attempts, attempt)
+	}
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE notice SET email_attempted_at = email_attempted_at + interval '1 second' WHERE id = $1`,
+		attempts[1].Notice.ID); err != nil {
+		t.Fatalf("moving one claim: %v", err)
+	}
+
+	if err := e.store.ReleaseEmailAttempts(e.engineCtx(), attempts); !errors.Is(err, ErrReleaseChanged) {
+		t.Fatalf("releasing with one changed claim → %v, want %v", err, ErrReleaseChanged)
+	}
+	var held int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM notice WHERE id = ANY($1::uuid[]) AND email_attempted_at IS NOT NULL`,
+		[]ids.UUID{attempts[0].Notice.ID, attempts[1].Notice.ID, attempts[2].Notice.ID}).Scan(&held); err != nil {
+		t.Fatalf("reading the claims back: %v", err)
+	}
+	if held != 3 {
+		t.Fatalf("%d of 3 claims are still held after a refused release, want all 3", held)
+	}
+
+	// The unchanged two, one named twice, are freed together.
+	if err := e.store.ReleaseEmailAttempts(e.engineCtx(), []EmailAttempt{attempts[0], attempts[2], attempts[0]}); err != nil {
+		t.Fatalf("releasing two unchanged claims: %v", err)
+	}
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM notice WHERE id = ANY($1::uuid[]) AND email_attempted_at IS NOT NULL`,
+		[]ids.UUID{attempts[0].Notice.ID, attempts[2].Notice.ID}).Scan(&held); err != nil {
+		t.Fatalf("reading the claims back: %v", err)
+	}
+	if held != 0 {
+		t.Fatalf("%d claims are still held after a release of unchanged claims", held)
+	}
+}

@@ -19,7 +19,9 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -247,5 +249,35 @@ func TestDisposedCountsOnlyInboundMessages(t *testing.T) {
 	}
 	if after.Disposed != before.Disposed {
 		t.Errorf("a judgement on a meeting moved Disposed %d → %d", before.Disposed, after.Disposed)
+	}
+}
+
+// An agent marks a message done for its user, and the message leaves that user's
+// list. Passportless work has no list and is refused.
+func TestAnAgentMarksAMessageDoneOnItsUsersList(t *testing.T) {
+	e := setupLoad(t)
+	_, message := handledFixture(t, e, "Answered by the agent")
+	rep := e.asSeat(e.rep)
+	p, ok := principal.Actor(rep)
+	if !ok {
+		t.Fatal("no actor")
+	}
+	passportless := p
+	passportless.Type, passportless.ID = principal.PrincipalAgent, "agent:deal-scout"
+	if err := handledStore(e).MarkMessageHandled(principal.WithActor(rep, passportless), ids.From[ids.ActivityKind](message)); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("passportless work marking done answered %v, want permission denied", err)
+	}
+	p.Type, p.ID, p.PassportID, p.OnBehalfOf = principal.PrincipalAgent, "agent:"+ids.NewV7().String(), ids.NewV7(), p.UserID
+	agent := principal.WithActor(rep, p)
+	if !onListNow(agent, t, e, message) {
+		t.Fatal("the message is not on the agent's list before it marks it, so this proves nothing")
+	}
+	if err := handledStore(e).MarkMessageHandled(agent, ids.From[ids.ActivityKind](message)); err != nil {
+		t.Fatalf("the agent marking done: %v", err)
+	}
+	for name, ctx := range map[string]context.Context{"its user": rep, "the agent": agent} {
+		if onListNow(ctx, t, e, message) {
+			t.Errorf("the message is still on the list of %s", name)
+		}
 	}
 }

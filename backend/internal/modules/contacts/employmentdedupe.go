@@ -22,3 +22,15 @@ const employerTwinSource = "employment_edge_recheck"
 func fileEmployerTwins(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, by string) error {
 	return recheckContactForDuplicates(ctx, tx, contactID, employerTwinSource, by)
 }
+
+// promoteThenFileEmployerTwins promotes the contact's surviving employment and
+// files the twins that promotion can create.
+//
+// Promoting is what makes an employer current primary, and only a current
+// primary employer scores a twin. So the two belong together.
+func promoteThenFileEmployerTwins(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, by string) error {
+	if err := promoteLoneSurvivingEmployment(ctx, tx, contactID); err != nil {
+		return err
+	}
+	return fileEmployerTwins(ctx, tx, contactID, by)
+}

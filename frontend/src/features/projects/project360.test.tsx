@@ -20,6 +20,7 @@ import { meFixture } from "../../testing/mefixture";
 import { project, project360 } from "../../testing/projects.fixtures";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import { ProjectScreen } from "./project360";
+import type { Project } from "./projects.form";
 import { projectsBackend } from "./projects.testing";
 
 // The project page: every section drawn from one Project360, a withheld
@@ -642,5 +643,21 @@ describe("a commitment's task detail", () => {
         name: en["tasks.complete"],
       }),
     ).toBeTruthy();
+  });
+});
+
+// A phase a newer server added still reads in the head's badge, not as a blank.
+describe("a phase this build does not know", () => {
+  it("names it with the neutral label in the head and the details", async () => {
+    projectsBackend({
+      view: project360({
+        project: project({
+          phase: "a_phase_from_a_later_release" as Project["phase"],
+        }),
+      }),
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+    expect(screen.getAllByText(en["common.unknownValue"]).length).toBe(2);
   });
 });

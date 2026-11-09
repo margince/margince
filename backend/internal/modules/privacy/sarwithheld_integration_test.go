@@ -34,6 +34,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // withheldFromTheExport names, per table, the columns an Art. 15 package must
@@ -122,7 +123,10 @@ func TestNoWithheldColumnReachesTheAssembledExport(t *testing.T) {
 	}
 
 	var pkg SARPackage
-	sections := sarSections(&pkg, ids.New[ids.ContactKind](), []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()})
+	sections, err := sarSections(principal.SystemActing(context.Background(), "sar_test"), &pkg, ids.New[ids.ContactKind](), []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	var probed int
 	for _, section := range sections {

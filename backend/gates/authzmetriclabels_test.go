@@ -40,12 +40,13 @@ package gates
 
 import (
 	"go/ast"
-	"os"
 	"regexp"
 	"slices"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -113,7 +114,7 @@ func TestTheDecisionCounterLabelsOnlyClosedVocabularies(t *testing.T) {
 func TestTheRenderedLabelsAreOnlyTheDeclaredOnes(t *testing.T) {
 	t.Parallel()
 
-	source, err := os.ReadFile(metricsRendererFile)
+	source, err := gatekit.ReadFile(metricsRendererFile)
 	if err != nil {
 		t.Fatalf("reading %s: %v — the renderer this gate reads has moved, and a gate that "+
 			"found nothing to judge reports the labels safe", metricsRendererFile, err)

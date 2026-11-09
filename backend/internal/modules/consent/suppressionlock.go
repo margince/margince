@@ -37,6 +37,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
@@ -56,14 +57,7 @@ func lockSubjectSuppressions(ctx context.Context, tx pgx.Tx, subject ids.UUID) e
 // address is a key like any other — what this adds is a caller that has no
 // uuid to offer and must not invent one.
 func lockStopKey(ctx context.Context, tx pgx.Tx, key string) error {
-	if key == "" {
-		return nil
-	}
-	if _, err := tx.Exec(ctx,
-		`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, key); err != nil {
-		return fmt.Errorf("consent: serialising stop writes for this subject: %w", err)
-	}
-	return nil
+	return storekit.LockStopKey(ctx, tx, key)
 }
 
 // lockBothSidesOfACarry takes the lock on the retiring subject AND the

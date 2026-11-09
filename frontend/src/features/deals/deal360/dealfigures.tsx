@@ -17,6 +17,7 @@ import {
 import {
   calendarDaysBetween,
   formatDayMonth,
+  formatDueCompact,
   formatMoneyCompact,
   formatNumber,
   formatPercent,
@@ -32,8 +33,11 @@ import {
 } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
 import { closeDayOf } from "../../../lib/closeday";
-import { useRecordZone } from "../../../lib/recordzone";
+import { labelFor } from "../../../lib/labelfor";
+import { useViewerId } from "../../../lib/session";
 import { activityMarks } from "../../../lib/standingmarks";
+import { useViewerZone } from "../../../lib/viewerzone";
+import { probabilityWords } from "../dealprobability";
 import { useStageTimes } from "./dealstagehistory";
 import type { DealStandingInputs } from "./dealstanding";
 import { lastInbound, nextStepOf, standingOffer } from "./dealstanding";
@@ -50,7 +54,7 @@ type Words = Readonly<{
 
 function useWords(): Words {
   const { locale } = useLocale();
-  return { t: useT(), plural: usePlural(), locale, zone: useRecordZone() };
+  return { t: useT(), plural: usePlural(), locale, zone: useViewerZone() };
 }
 
 // The calls and meetings that already happened, newest kept: the axis has room
@@ -111,31 +115,32 @@ function ValueFigure({ inputs, words }: FigureProps) {
   );
 }
 
-// The stage's own default, which is what the pipeline says a deal there is
-// worth; nothing on the deal states a probability of its own. A closed deal's
-// outcome is settled, so it is certain either way.
+// The deal's own probability where somebody set one, else its stage's. A closed
+// deal's outcome is settled, so it is certain either way.
 function ProbabilityFigure({ inputs, words }: FigureProps) {
   const { t, locale } = words;
+  const viewerId = useViewerId();
   const { status } = inputs.deal;
+  const label = t("deal.standing.figure.probability");
   if (status !== "open") {
     return (
       <StatCard
-        label={t("deal.standing.figure.probability")}
+        label={label}
         value={formatPercent(status === "won" ? 1 : 0, locale)}
         detail={t("deal.standing.figure.final")}
       />
     );
   }
-  const stage = inputs.stages.find((each) => each.id === inputs.deal.stage_id);
+  const probability = probabilityWords(inputs.deal, t, locale, viewerId);
+  if (!probability) {
+    return <StatCard label={label} value={t("field.unset")} />;
+  }
+  const detail = [probability.source, probability.stage].filter(Boolean);
   return (
     <StatCard
-      label={t("deal.standing.figure.probability")}
-      value={
-        stage
-          ? formatPercent(stage.win_probability / 100, locale)
-          : t("field.unset")
-      }
-      detail={stage ? t("deal.standing.figure.stageDefault") : undefined}
+      label={label}
+      value={probability.value}
+      detail={detail.join(" · ") || undefined}
     />
   );
 }
@@ -210,7 +215,7 @@ function NextStepFigure({ inputs, words }: FigureProps) {
     <StatCard
       label={label}
       value={activityDay(step.at, step.precision, locale, zone, formatDayMonth)}
-      detail={step.subject ?? t(KIND_LABEL[step.kind])}
+      detail={step.subject ?? t(labelFor(KIND_LABEL, step.kind))}
       tone={tone}
     />
   );
@@ -234,6 +239,7 @@ export function DealTimeline({
       record={words.zone}
       gap={timelineGap(inputs, words)}
       events={timelineEvents(inputs, words)}
+      history={inputs.history}
       marks={activityMarks(inputs.activities, {
         ...words,
         record: words.zone,
@@ -282,7 +288,8 @@ export function timelineEvents(
       zone,
       formatDayMonth,
     );
-  const titleOf = (row: Activity) => row.subject || t(KIND_LABEL[row.kind]);
+  const titleOf = (row: Activity) =>
+    row.subject || t(labelFor(KIND_LABEL, row.kind));
   const held = activities
     .filter((row) => isConversation(row) && activityHasHappened(row, now, zone))
     .sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at))
@@ -292,7 +299,7 @@ export function timelineEvents(
         key: row.id,
         at: row.occurred_at,
         title: titleOf(row),
-        sub: `${dayOf(row)} · ${t(KIND_LABEL[row.kind])}`,
+        sub: `${dayOf(row)} · ${t(labelFor(KIND_LABEL, row.kind))}`,
         kind: "done",
         activityIds: [row.id],
       }),
@@ -320,7 +327,7 @@ export function timelineEvents(
             key: row.id,
             at: row.due_at,
             title: titleOf(row),
-            sub: day(row.due_at),
+            sub: formatDueCompact(row.due_at, row.due_has_time, locale, zone),
             kind: Date.parse(row.due_at) < now ? "late" : "ahead",
           },
         ]
@@ -389,7 +396,7 @@ function closeEvent(
     {
       key: "close",
       at: closeDay,
-      title: t(CLOSE_TITLE[deal.status]),
+      title: t(labelFor(CLOSE_TITLE, deal.status)),
       sub: day(closeDay),
       kind: "end",
     },

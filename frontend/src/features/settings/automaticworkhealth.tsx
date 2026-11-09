@@ -28,8 +28,9 @@ import {
 import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
 import { useHealthScope, useHealthVisible } from "../../lib/healthscope";
+import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { HealthCard } from "./healthcard";
 
 // GET /admin/automatic-work-health: per colleague and kind, the items Margince
@@ -103,7 +104,7 @@ function ShareCell({ tally }: Readonly<{ tally: Tally }>) {
 
 function DayTable({ row }: Readonly<{ row: Row }>) {
   const t = useT();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const { locale } = useLocale();
   const columns: DataTableColumn<Day>[] = [
     {
@@ -117,7 +118,7 @@ function DayTable({ row }: Readonly<{ row: Row }>) {
     <DataTable
       label={t("automaticWork.days", {
         name: row.colleague.display_name,
-        kind: t(KIND_LABEL[row.tally.kind]),
+        kind: t(labelFor(KIND_LABEL, row.tally.kind)),
       })}
       columns={columns}
       rows={[...row.tally.by_day]}
@@ -136,7 +137,7 @@ function workColumns(t: Translator, locale: Locale): DataTableColumn<Row>[] {
     {
       key: "kind",
       header: t("automaticWork.col.kind"),
-      render: (row) => t(KIND_LABEL[row.tally.kind]),
+      render: (row) => t(labelFor(KIND_LABEL, row.tally.kind)),
     },
     ...countColumns<Row>((row) => row.tally.counts, t, locale),
     {
@@ -183,7 +184,7 @@ function AutomaticWorkBody({ health }: Readonly<{ health: Health }>) {
             toggleLabel: (row) =>
               t("automaticWork.days", {
                 name: row.colleague.display_name,
-                kind: t(KIND_LABEL[row.tally.kind]),
+                kind: t(labelFor(KIND_LABEL, row.tally.kind)),
               }),
             render: (row) => <DayTable row={row} />,
           }}
@@ -310,7 +311,7 @@ export function useAutomaticWorkHealth(days: Window) {
 
 export function AutomaticWorkHealthCard() {
   const t = useT();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const { locale } = useLocale();
   const [days, setDays] = useState<Window>("7");
   const { canSee, query } = useAutomaticWorkHealth(days);
