@@ -3,7 +3,7 @@
 
 package capture
 
-// Two more documents the verdict holds without a model.
+// File names and career headings can require a hold without a model.
 //
 // A CV describes one candidate's career, and a model can read the mail that
 // carries it as an ordinary application or offer. A scanned invoice or cost
@@ -129,6 +129,12 @@ var cvFilenameWords = wordSet(`cv lebenslauf resume résumé`)
 var costFilenameWords = wordSet(`inv invoice invoices rechnung rechnungen cost costs costing payroll salary
 	salaries gehalt gehälter lohn`)
 
+var sensitiveFilenameWords = wordSet(`passport passports reisepass reisepässe personalausweis visa befund befunde covid`)
+
+var sensitiveFilenameStems = wordList{"passport", "reisepass", "personalausweis", "befund", "idcard", "testresult"}
+
+var sensitiveFilenamePhrases = []string{"id card", "test result", "test results", "medical result", "medical results"}
+
 // cvFilenameStems and costFilenameStems name the same inside a longer word,
 // as in "salaryinvoice". Only stems no ordinary word contains are listed.
 var (
@@ -144,14 +150,24 @@ func NamedAsCV(filename string) bool {
 	})
 }
 
+// NamedAsPersonnel identifies files whose unread contents require a personnel hold.
+func NamedAsPersonnel(filename string) bool {
+	return slices.ContainsFunc(filenameWords(filename), func(word string) bool {
+		return cvFilenameWords[word] || costFilenameWords[word] || cvFilenameStems.inside(word) || costFilenameStems.inside(word)
+	})
+}
+
 // NamedAsPrivate says whether a file's name calls it an invoice, a cost sheet
-// or a CV. The verdict asks it only of a file it could not read: then the name
+// or a CV, identity document or medical result. For an unread file, its name
 // is all there is to judge. An invoice it can read is judged by its text,
 // because most invoices bill no one's pay.
 func NamedAsPrivate(filename string) bool {
-	return slices.ContainsFunc(filenameWords(filename), func(word string) bool {
-		return cvFilenameWords[word] || costFilenameWords[word] ||
-			cvFilenameStems.inside(word) || costFilenameStems.inside(word)
+	words := filenameWords(filename)
+	name := " " + strings.Join(words, " ") + " "
+	return NamedAsPersonnel(filename) || slices.ContainsFunc(words, func(word string) bool {
+		return sensitiveFilenameWords[word] || sensitiveFilenameStems.inside(word)
+	}) || slices.ContainsFunc(sensitiveFilenamePhrases, func(phrase string) bool {
+		return strings.Contains(name, " "+phrase+" ")
 	})
 }
 

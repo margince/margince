@@ -262,7 +262,6 @@ internal/compose/network/intronote_test.go 1
 internal/compose/openpromisesection_integration_test.go 5
 internal/compose/owedanswer_integration_test.go 10
 internal/compose/privacyqueuenames_integration_test.go 5
-internal/compose/proposalsfollowdeal_integration_test.go 1
 internal/compose/providerreceived_integration_test.go 2
 internal/compose/providerselect_test.go 5
 internal/compose/publicoriginprobe_test.go 7
