@@ -210,20 +210,34 @@ function DealCreateAction({
 }
 
 // Each surface reads only while it shows, so neither pays for the other.
+//
+// The pipeline the surfaces are scoped to arrives with the pipelines read.
+// Asking before it lands asks for every deal and throws the answer away. An
+// installation with no pipelines answers `[]`, which is knowing.
+//
+// Until that read answers, the table's state is that read's. The list waits on
+// it, so a pipelines failure is the table's failure to show.
 function useSurfaceReads(
   f: DealFilters,
   stages: readonly Stage[],
   view: "board" | "table",
   refused: boolean,
+  pipelinesQuery: ReturnType<typeof usePipelines>,
 ) {
-  const dealsQuery = useDeals(f, view === "table" && !refused);
+  const scopeKnown = pipelinesQuery.data !== undefined;
+  const dealsQuery = useDeals(f, view === "table" && !refused && scopeKnown);
   const stageColumns = useStageColumns(
     f,
     stages.map((stage) => stage.id),
     view === "board" && !refused,
   );
+  // The board's column totals: a per-stage server aggregate over every
+  // matching deal, not only the pages the columns have read. Built from the
+  // same filter dials, so cards and totals agree on which deals are in view.
+  const stageTotalsQuery = useStageTotals(f, !refused && scopeKnown);
   const readError = view === "board" ? stageColumns.error : dealsQuery.error;
-  return { dealsQuery, stageColumns, readError };
+  const listRead = scopeKnown ? dealsQuery : pipelinesQuery;
+  return { dealsQuery, stageColumns, stageTotalsQuery, readError, listRead };
 }
 
 export function DealsScreen({
@@ -280,30 +294,19 @@ export function DealsScreen({
   });
   // A refused dial the list can name is named, and no wider list is asked for.
   const roleRefusal = nameRefusal(refusedDials);
-  // The pipeline this list is scoped to arrives with the pipelines read. Asking
-  // before it lands asks for every deal and throws the answer away.
-  //
-  // An installation with no pipelines answers `[]`, which is knowing. The list
-  // is then scoped to nothing and reads once.
-  const scopeKnown = pipelinesQuery.data !== undefined;
-  const { dealsQuery, stageColumns, readError } = useSurfaceReads(
-    dealFilters,
-    stages,
-    view,
-    Boolean(roleRefusal) || !scopeKnown,
-  );
+  const { dealsQuery, stageColumns, stageTotalsQuery, readError, listRead } =
+    useSurfaceReads(
+      dealFilters,
+      stages,
+      view,
+      Boolean(roleRefusal),
+      pipelinesQuery,
+    );
   // A dial the role's mask refused, which a current snapshot would have
   // withheld. Reading /me again withholds it and the list reloads without it.
   const maskRefused = maskRefusedDialOf(readError);
   useReReadMeWhen(Boolean(maskRefused));
   const refusal = nameRefusal([...refusedDials, maskRefused]);
-  // The board's column totals: a per-stage server aggregate over every
-  // matching deal, not only the pages the columns have read. Built from the
-  // same filter dials, so cards and totals agree on which deals are in view.
-  const stageTotalsQuery = useStageTotals(
-    dealFilters,
-    !roleRefusal && scopeKnown,
-  );
   // The same answer the query keys its `enabled` on, so the column explains the
   // absence by the rule that caused it.
   const totalsWithheld =
@@ -333,10 +336,10 @@ export function DealsScreen({
     rows: loadedDeals,
     query,
     setQuery,
-    isPending: dealsQuery.isPending,
-    isError: dealsQuery.isError,
-    error: dealsQuery.error,
-    refetch: () => dealsQuery.refetch(),
+    isPending: listRead.isPending,
+    isError: listRead.isError,
+    error: listRead.error,
+    refetch: () => listRead.refetch(),
     hasMore: dealsQuery.hasNextPage,
     loadMore: () => {
       dealsQuery.fetchNextPage();
