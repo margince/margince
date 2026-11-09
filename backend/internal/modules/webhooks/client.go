@@ -44,21 +44,12 @@ func NewGuardedClient() *http.Client {
 type DialFunc func(ctx context.Context, network, addr string) (net.Conn, error)
 
 // NewDeliveryClient builds a delivery client over dial. Production calls it
-// through NewGuardedClient; a test dials its loopback receiver instead.
-//
-// The row is re-checked on each new connection, before any request byte
-// (checkedDialer). Keep-alives are off, so no attempt rides another's check.
-// HTTP/2 is off, because its flow control could hold a checked body back.
+// through NewGuardedClient; a test dials its loopback receiver instead. Every
+// request goes through checkedTransport, which holds the row while it writes.
 func NewDeliveryClient(dial DialFunc, tlsConfig *tls.Config) *http.Client {
-	d := checkedDialer{dial: dial, tlsConfig: tlsConfig}
 	return &http.Client{
-		Timeout: deliveryTimeout,
-		Transport: &http.Transport{
-			DialContext:       d.dialPlain,
-			DialTLSContext:    d.dialTLS,
-			DisableKeepAlives: true,
-			TLSNextProto:      map[string]func(string, *tls.Conn) http.RoundTripper{},
-		},
+		Timeout:   deliveryTimeout,
+		Transport: checkedTransport{dial: dial, tlsConfig: tlsConfig, writeLimit: writeHoldLimit},
 		// A redirect is never followed. Go would turn the POST into a GET with
 		// no body, and carry custom headers to a host nobody named. The 3xx is
 		// recorded as the failed attempt it is.

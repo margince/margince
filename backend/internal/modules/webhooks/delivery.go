@@ -399,18 +399,17 @@ func (d *Deliverer) deliverOnce(ctx context.Context, t attemptTarget) {
 	}
 }
 
-// attempt sends t's body over a connection on which guard re-checked the
-// row, and decides the outcome from that check first (checkedOutcome).
-func (d *Deliverer) attempt(ctx context.Context, t attemptTarget, guard func() error) outcome {
-	check := &sendCheck{verify: guard}
-	body := &countedBody{body: bytes.NewReader(t.payload)}
-	return checkedOutcome(check, body, len(t.payload), d.post(withSendCheck(ctx, check), t, body))
+// attempt sends t's body over a connection on which guard holds the row, and
+// decides the outcome from that check first (checkedOutcome).
+func (d *Deliverer) attempt(ctx context.Context, t attemptTarget, guard sendHold) outcome {
+	check := &sendCheck{hold: guard}
+	return checkedOutcome(check, d.post(withSendCheck(ctx, check), t))
 }
 
 // post signs and POSTs the stored body, returning the outcome. A
 // non-2xx or a transport error is a failure; the receiver's response body
 // is read (capped) only to keep the connection reusable and is discarded.
-func (d *Deliverer) post(ctx context.Context, t attemptTarget, body *countedBody) outcome {
+func (d *Deliverer) post(ctx context.Context, t attemptTarget) outcome {
 	if d.store.cipher == nil {
 		return outcome{failure: "signing key not configured"}
 	}
@@ -420,13 +419,9 @@ func (d *Deliverer) post(ctx context.Context, t attemptTarget, body *countedBody
 		return outcome{failure: "signing secret could not be unsealed"}
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, t.targetURL, body)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, t.targetURL, bytes.NewReader(t.payload))
 	if err != nil {
 		return outcome{failure: "building request: " + err.Error()}
-	}
-	req.ContentLength = int64(len(t.payload))
-	if len(t.payload) == 0 {
-		req.Body = http.NoBody
 	}
 	// ts is minted fresh for THIS attempt (not the delivery's original enqueue
 	// time): Standard Webhooks' replay defense depends on the timestamp

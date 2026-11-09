@@ -339,10 +339,10 @@ a parked delivery can be replayed after the bus stream has cut the source event.
   on the delivery row, and never fails the pass of the tenant. A sweep claims each row before it
   sends it (`claimed_until`, a lease of twice the attempt time limit). A second sweep skips a
   claimed row, so one retry is sent once; storing the result clears the claim.
-- **The send check** (`deliverysendguard.go`): each attempt opens its own connection, never shared,
-  over HTTP/1.1. Once TCP and TLS are up, the row must still be `pending` or `retrying`, with the
-  same body and claim. Else the connection closes before any request byte. No lock is held during
-  the POST. Left open is the time from the check's commit to the request's write to the connection.
+- **The send check** (`deliverysendguard.go`, `deliverytransport.go`): each attempt opens its own
+  HTTP/1.1 connection. Once TCP and TLS are up, the row must still be `pending` or `retrying`, with
+  the same body and claim. If not, no request byte is sent. An erasure that commits
+  first stops the send. One that starts later waits until the request is written, at most 5 seconds.
 - **`deliverOnce` never returns an error**: the result is the record. A failed *store* of it is
   logged. A first attempt whose result write fails stays `pending`, which the sweep never scans, so
   it needs a **replay** by hand. A row that reached `retrying` is scanned again.

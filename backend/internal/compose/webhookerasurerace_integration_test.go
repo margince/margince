@@ -55,7 +55,7 @@ type rawReceiver struct {
 	mu        sync.Mutex
 	early     bool
 	status    int
-	conns     []*atomic.Int64
+	conns     []*receivedConn
 	bodies    []string
 	done      sync.WaitGroup
 }
@@ -91,12 +91,15 @@ func (r *rawReceiver) serve() {
 			return
 		}
 		r.mu.Lock()
-		read := &atomic.Int64{}
-		r.conns = append(r.conns, read)
+		rc := &receivedConn{done: make(chan struct{})}
+		r.conns = append(r.conns, rc)
 		early, status := r.early, r.status
 		r.done.Add(1)
 		r.mu.Unlock()
-		go r.handle(countingConn{Conn: conn, read: read}, early, status)
+		go func() {
+			defer close(rc.done)
+			r.handle(countingConn{Conn: conn, read: &rc.read}, early, status)
+		}()
 	}
 }
 
@@ -134,13 +137,30 @@ func (r *rawReceiver) set(early bool, status int) {
 	r.early, r.status = early, status
 }
 
-// bytesSince is the request bytes read on connections after the first n.
-func (r *rawReceiver) bytesSince(n int) int64 {
+// receivedConn is one accepted connection: the bytes read on it, and done
+// once its handler has read to the end.
+type receivedConn struct {
+	read atomic.Int64
+	done chan struct{}
+}
+
+// bytesSince is the request bytes read on connections after the first n,
+// counted only once each of them has been read to its end.
+func (r *rawReceiver) bytesSince(t *testing.T, n int) int64 {
+	t.Helper()
 	r.mu.Lock()
-	defer r.mu.Unlock()
+	conns := append([]*receivedConn(nil), r.conns[n:]...)
+	r.mu.Unlock()
+	bound, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	var total int64
-	for _, c := range r.conns[n:] {
-		total += c.Load()
+	for _, c := range conns {
+		select {
+		case <-c.done:
+		case <-bound.Done():
+			t.Fatal("a receiver connection was never closed, so its byte count is not final")
+		}
+		total += c.read.Load()
 	}
 	return total
 }
@@ -276,7 +296,7 @@ func (r *erasureRace) assertNothingSentSince(t *testing.T, n int) {
 	if r.receiver.connCount() <= n {
 		t.Fatal("the attempt opened no connection, so it proves nothing about what a connection carries")
 	}
-	if got := r.receiver.bytesSince(n); got != 0 {
+	if got := r.receiver.bytesSince(t, n); got != 0 {
 		t.Fatalf("the receiver read %d request bytes after the erasure, want 0", got)
 	}
 	if state := r.deliveryState(t); state != "visibility_revoked:true" {
