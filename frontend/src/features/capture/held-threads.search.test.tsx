@@ -175,6 +175,44 @@ it("never shows one contact's threads under the next contact's name", async () =
   expect(await within(drawer).findByText("Sam's renewal")).toBeVisible();
 });
 
+it("waits for the contact's answer before saying nothing matches", async () => {
+  serveHeld(
+    (query) =>
+      query.get(CAPTURE_CONTACT_PARAM)
+        ? new Promise<Response>(() => undefined)
+        : jsonResponse(heldThreadList()),
+  );
+  steppedClock();
+  openFromContact("contact-one");
+
+  const drawer = await screen.findByRole("dialog", {
+    name: "Mail not shared with the team",
+  });
+  expect(await within(drawer).findByRole("status")).toHaveTextContent(
+    "Loading…",
+  );
+  expect(within(drawer).queryByText("No held thread matches.")).toBeNull();
+});
+
+it("keeps the rows already read when the next page fails", async () => {
+  serveHeld((query) =>
+    query.get("cursor")
+      ? jsonResponse({ status: 503, title: "Unavailable" }, 503)
+      : jsonResponse(
+          heldThreadList([thread("t-lena", "Lena's contract", "mail-one")], {
+            page: { next_cursor: "page-two", has_more: true },
+          }),
+        ),
+  );
+  const user = await openDrawer();
+  expect(await screen.findByText("Lena's contract")).toBeVisible();
+
+  await user.click(screen.getByRole("button", { name: "Load more" }));
+  expect(await screen.findByRole("alert")).toBeVisible();
+  expect(screen.getByText("Lena's contract")).toBeVisible();
+  expect(screen.getByRole("button", { name: "Load more" })).toBeVisible();
+});
+
 it("says a refused contact is refused, and offers the whole list", async () => {
   const asked = serveHeld((query) =>
     query.get(CAPTURE_CONTACT_PARAM)

@@ -198,10 +198,14 @@ export function HeldThreads() {
         />
       )}
       {held.isError && !contactRefused && <ErrorLine error={held.error} />}
-      {held.isError ? null : !active ? (
+      {/* A failed next page keeps the rows already read; a refused contact shows none. */}
+      {contactRefused ||
+      (held.isError && rows.length === 0) ? null : !active ? (
         <Button onClick={() => setBrowse(true)}>
           {t("heldThreads.browse")}
         </Button>
+      ) : held.isPending ? (
+        <p role="status">{t("common.loading")}</p>
       ) : rows.length === 0 ? (
         <EmptyState>{t("heldThreads.noMatch")}</EmptyState>
       ) : (
