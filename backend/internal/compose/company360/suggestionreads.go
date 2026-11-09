@@ -86,12 +86,16 @@ const excerptRunes = 200
 func newestMessage(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions,
 ) (lastMessage, bool, error) {
-	tied, err := newestTiedIDs(ctx, tx, companyID, now, opts)
-	if err != nil || len(tied) == 0 {
-		return lastMessage{}, false, err
-	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
+	companyPos, nowPos := arg(companyID), arg(now)
+	activityScope, err := auth.ActivityDiscoverClause(ctx, "a", arg)
+	if err != nil {
+		return lastMessage{}, false, err
+	}
+	if activityScope == "" {
+		activityScope = scopeAll
+	}
 	// The WORDS ride the audience test and the ROW does not: which message is
 	// newest is a fact about the account, what it said is content a limited
 	// audience withholds. Filtering the row on the audience would make the
@@ -107,14 +111,23 @@ func newestMessage(
 	if err != nil {
 		return lastMessage{}, false, err
 	}
+	reached := fmt.Sprintf(`%[3]s AND a.archived_at IS NULL AND %[1]s AND %[2]s`, activityScope,
+		activities.CompanyLinkedActivityExists(companyPos),
+		relstrength.InteractionCountsAtSQL("a", fmt.Sprintf("$%d::timestamptz", nowPos))) + opts.projectScope(arg)
+	// LastWord wants every row at the newest stored instant, in the timeline's order (storekit's created_at, id).
+	// Not a rank() window: without a small LIMIT the planner sorts every reached row instead of stopping on the index.
 	query := fmt.Sprintf(`
 		SELECT a.id, a.direction, a.occurred_at, a.occurred_precision = 'day', a.kind,
 		       CASE WHEN %[1]s THEN a.subject END,
 		       CASE WHEN %[1]s THEN left(a.body, %[2]d) END,
 		       %[3]s
-		FROM activity a
-		WHERE a.id = ANY($%[4]d)
-		ORDER BY a.created_at DESC, a.id DESC`, audience, excerptRunes, move, arg(tied))
+		FROM (SELECT a.id, a.created_at FROM activity a
+		      WHERE %[4]s AND a.occurred_at = (
+		        SELECT a.occurred_at FROM activity a WHERE %[4]s ORDER BY a.occurred_at DESC LIMIT 1)
+		      ORDER BY a.created_at DESC, a.id DESC
+		      LIMIT %[5]d) newest
+		JOIN activity a ON a.id = newest.id
+		ORDER BY newest.created_at DESC, newest.id DESC`, audience, excerptRunes, move, reached, activities.NewestTiedCap)
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return lastMessage{}, false, fmt.Errorf("read the account's newest message: %w", err)
@@ -126,52 +139,6 @@ func newestMessage(
 	return activities.LastWord(found, func(m lastMessage) (occurredday.Moment, bool) {
 		return occurredday.Moment{At: m.At, DateOnly: m.DateOnly}, m.Direction == string(crmcontracts.ActivityDirectionInbound)
 	}), true, nil
-}
-
-// newestTiedIDs is the account's rows at their newest stored instant, in the timeline's order (storekit's
-// created_at, id tie-breaker), as LastWord wants. Not `FETCH FIRST ... WITH TIES`: it sorts every matching row.
-func newestTiedIDs(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions) ([]ids.UUID, error) {
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	companyPos, nowPos := arg(companyID), arg(now)
-	activityScope, err := auth.ActivityDiscoverClause(ctx, "a", arg)
-	if err != nil {
-		return nil, err
-	}
-	if activityScope == "" {
-		activityScope = scopeAll
-	}
-	where := fmt.Sprintf(`%[3]s AND a.archived_at IS NULL AND %[1]s AND %[2]s`, activityScope,
-		activities.CompanyLinkedActivityExists(companyPos),
-		relstrength.InteractionCountsAtSQL("a", fmt.Sprintf("$%d::timestamptz", nowPos))) + opts.projectScope(arg)
-	read := func(filter string, limit int) ([]newestRow, error) {
-		rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT a.id, a.occurred_at FROM activity a WHERE %s
-			ORDER BY a.occurred_at DESC, a.created_at DESC, a.id DESC LIMIT %d`, where+filter, limit), args...)
-		if err != nil {
-			return nil, fmt.Errorf("read the account's newest message: %w", err)
-		}
-		return pgx.CollectRows(rows, pgx.RowToStructByPos[newestRow])
-	}
-	// A small LIMIT keeps the plan that stops early on the occurred_at index.
-	newest, err := read("", activities.NewestTiedFirstPage)
-	if err == nil && len(newest) == activities.NewestTiedFirstPage && newest[len(newest)-1].At.Equal(newest[0].At) {
-		newest, err = read(fmt.Sprintf(" AND a.occurred_at = $%d", arg(newest[0].At)), activities.NewestTiedCap)
-	}
-	if err != nil {
-		return nil, err
-	}
-	var tied []ids.UUID
-	for _, row := range newest {
-		if row.At.Equal(newest[0].At) {
-			tied = append(tied, row.ID)
-		}
-	}
-	return tied, nil
-}
-
-type newestRow struct {
-	ID ids.UUID
-	At time.Time
 }
 
 func scanLastMessage(row pgx.CollectableRow) (lastMessage, error) {

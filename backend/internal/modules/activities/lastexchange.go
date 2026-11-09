@@ -64,7 +64,7 @@ func (s *Store) lastExchange(
 
 // newestTied reads the rows at the newest stored instant in the timeline's order, at most NewestTiedCap.
 func (s *Store) newestTied(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([]crmcontracts.Activity, error) {
-	size := NewestTiedFirstPage
+	size := newestTiedFirstPage
 	var tied []crmcontracts.Activity
 	for {
 		in.Limit = &size
@@ -88,8 +88,8 @@ func (s *Store) newestTied(ctx context.Context, tx pgx.Tx, in ListActivitiesInpu
 // NewestTiedCap bounds one stored instant's read: a day-only import can file hundreds of rows on one date.
 const NewestTiedCap = 200
 
-// NewestTiedFirstPage covers the usual tie, an inbound and its reply, in one read.
-const NewestTiedFirstPage = 4
+// newestTiedFirstPage covers the usual tie, an inbound and its reply, in one read.
+const newestTiedFirstPage = 4
 
 func exchangeMoment(row crmcontracts.Activity) (occurredday.Moment, bool) {
 	inbound := row.Direction != nil && *row.Direction == crmcontracts.ActivityDirectionInbound
