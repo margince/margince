@@ -212,6 +212,27 @@ it("keeps the rows already read when the next page fails", async () => {
   expect(screen.getByRole("button", { name: "Load more" })).toBeVisible();
 });
 
+it("retries a contact's list whose first read failed", async () => {
+  let fail = true;
+  serveHeld((query) =>
+    query.get(CAPTURE_CONTACT_PARAM) && fail
+      ? jsonResponse({ status: 503, title: "Unavailable" }, 503)
+      : jsonResponse(
+          heldThreadList([thread("t-lena", "Lena's contract", "mail-one")]),
+        ),
+  );
+  const user = steppedClock();
+  openFromContact("contact-one");
+  const drawer = await screen.findByRole("dialog", {
+    name: "Mail not shared with the team",
+  });
+  const retry = await within(drawer).findByRole("button", { name: "Retry" });
+
+  fail = false;
+  await user.click(retry);
+  expect(await within(drawer).findByText("Lena's contract")).toBeVisible();
+});
+
 it("says a refused contact is refused, and offers the whole list", async () => {
   const asked = serveHeld((query) =>
     query.get(CAPTURE_CONTACT_PARAM)

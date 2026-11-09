@@ -197,7 +197,22 @@ export function HeldThreads() {
           onClear={() => setParams(withoutCaptureContact(params))}
         />
       )}
-      {held.isError && !contactRefused && <ErrorLine error={held.error} />}
+      {held.isError && !contactRefused && (
+        <ErrorLine
+          error={held.error}
+          actions={
+            rows.length === 0 && (
+              <Button
+                variant="link"
+                pending={held.isRefetching}
+                onClick={() => void held.refetch()}
+              >
+                {t("common.retry")}
+              </Button>
+            )
+          }
+        />
+      )}
       {!contactRefused && (
         <HeldListBody
           rows={rows}
