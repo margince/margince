@@ -48,7 +48,7 @@ func TestARefusedSendGuardKeepsTheBodyOffTheWire(t *testing.T) {
 		func() time.Time { return time.Unix(1_700_000_000, 0).UTC() }, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	target := attemptTarget{
 		deliveryID: ids.NewV7(), subID: ids.NewV7(), targetURL: receiver.URL, sealedSecret: sealed,
-		eventType: "contact.updated", eventID: ids.NewV7(), payload: []byte(`{"full_name":"Erased Person"}`),
+		eventType: "contact.updated", eventID: ids.NewV7(), payload: []byte(`{"full_name":"Erased Contact"}`),
 	}
 
 	for name, tc := range map[string]struct {
