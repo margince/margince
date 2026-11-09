@@ -15,20 +15,25 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/calendarmethod"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
+
+// answerableInvitationSQL is a message that asks for an RSVP: the answer is
+// given on the calendar, so no reminder task is filed for it.
+var answerableInvitationSQL = "(a.calendar_uid IS NOT NULL AND " + calendarMethodInSQL(calendarmethod.Answerable()) + ")"
 
 // openInvitation is one invitation the reader may still answer.
 type openInvitation struct {
@@ -36,10 +41,25 @@ type openInvitation struct {
 	meeting  *ids.UUID
 	response crmcontracts.EmailCalendarInvitationResponse
 	startsAt *time.Time
+	// precision says how to read startsAt: an all-day event knows only its date.
+	precision *string
 }
 
 func (o openInvitation) wire() crmcontracts.EmailCalendarInvitation {
-	return crmcontracts.EmailCalendarInvitation{Response: o.response, StartsAt: o.startsAt}
+	out := crmcontracts.EmailCalendarInvitation{Response: o.response, StartsAt: o.startsAt}
+	if o.precision != nil {
+		precision := crmcontracts.OccurredPrecision(*o.precision)
+		out.StartsPrecision = &precision
+	}
+	return out
+}
+
+// mark says on a row that it asks the reader for an RSVP. That is its move, so
+// it owes no written reply.
+func (o openInvitation) mark(summary *crmcontracts.EmailSummary) {
+	invitation := o.wire()
+	summary.CalendarInvitation = &invitation
+	summary.Move = crmcontracts.EmailSummaryMoveNone
 }
 
 // openInvitationsTx reads which of these messages are invitations this reader
@@ -56,27 +76,26 @@ func openInvitationsTx(
 	if len(messages) == 0 || reader.IsZero() {
 		return out, nil
 	}
+	ahead := occurredday.AheadSQL("mt", "$3")
 	rows, err := tx.Query(ctx, `
-		SELECT a.id, a.calendar_uid, m.id, m.occurred_at,
-		       (SELECT p.response FROM activity_participant p
-		         WHERE p.activity_id = m.id AND p.user_id = $2 AND p.response IS NOT NULL
-		         ORDER BY p.created_at LIMIT 1)
+		SELECT a.id, a.calendar_uid, m.id, m.occurred_at, m.occurred_precision, m.response
 		  FROM activity a
 		  LEFT JOIN LATERAL (
-		       SELECT mt.id, mt.occurred_at, mt.meeting_status
+		       SELECT mt.id, mt.occurred_at, mt.occurred_precision, mt.meeting_status, `+ahead+` AS ahead,
+		              (SELECT p.response FROM activity_participant p
+		                WHERE p.activity_id = mt.id AND p.user_id = $2 AND p.response IS NOT NULL
+		                  AND `+auth.ParticipantStandsSQL("p", "mt")+`
+		                ORDER BY p.created_at LIMIT 1) AS response
 		         FROM activity_identity ai JOIN activity mt ON mt.id = ai.activity_id
 		        WHERE ai.identity_kind = '`+IdentityKindMeeting+`'
 		          AND `+meetingUIDOfKeySQL("ai.identity_key")+` = a.calendar_uid
 		          AND mt.kind = 'meeting' AND mt.archived_at IS NULL AND mt.restricted_at IS NULL
-		        ORDER BY mt.occurred_at < $3,
-		                 CASE WHEN mt.occurred_at >= $3 THEN mt.occurred_at END,
-		                 mt.occurred_at DESC
+		        ORDER BY `+ahead+` DESC, CASE WHEN `+ahead+` THEN mt.occurred_at END, mt.occurred_at DESC
 		        LIMIT 1) m ON true
 		 WHERE a.id = ANY($1) AND a.kind = 'email' AND a.direction = 'inbound'
-		   AND a.calendar_uid IS NOT NULL AND a.restricted_at IS NULL
-		   AND a.calendar_method IN ('`+strings.Join(calendarmethod.Answerable(), "', '")+`')
+		   AND a.restricted_at IS NULL AND `+answerableInvitationSQL+`
 		   AND EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id AND ci.user_id = $2)
-		   AND (m.id IS NULL OR (m.occurred_at >= $3 AND m.meeting_status IS DISTINCT FROM 'canceled'))`,
+		   AND (m.id IS NULL OR (m.ahead AND m.meeting_status IS DISTINCT FROM 'canceled'))`,
 		messages, reader, asOf)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading which messages are open invitations: %w", err)
@@ -86,7 +105,7 @@ func openInvitationsTx(
 		var id ids.UUID
 		var found openInvitation
 		var response *string
-		if err := rows.Scan(&id, &found.uid, &found.meeting, &found.startsAt, &response); err != nil {
+		if err := rows.Scan(&id, &found.uid, &found.meeting, &found.startsAt, &found.precision, &response); err != nil {
 			return nil, fmt.Errorf("activities: reading which messages are open invitations: %w", err)
 		}
 		found.response = crmcontracts.EmailCalendarInvitationResponseNeedsAction
@@ -108,8 +127,7 @@ func withCalendarInvitations(ctx context.Context, tx pgx.Tx, page []crmcontracts
 	for i := range page {
 		found, ok := open[ids.UUID(page[i].Id)]
 		if ok && page[i].EmailSummary != nil {
-			invitation := found.wire()
-			page[i].EmailSummary.CalendarInvitation = &invitation
+			found.mark(page[i].EmailSummary)
 		}
 	}
 	return nil
@@ -204,7 +222,8 @@ func recordInvitationAnswerTx(
 			return fmt.Errorf("activities: recording the reader's answer on the meeting: %w", err)
 		}
 	}
-	auditID, err := storekit.AuditEvent(ctx, tx, "update", "activity", id.UUID,
+	auditID, err := storekit.Audit(ctx, tx, "update", "activity", id.UUID,
+		map[string]any{"invitation_response": string(invitation.response)},
 		map[string]any{"invitation_response": string(response)})
 	if err != nil {
 		return err

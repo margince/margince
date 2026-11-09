@@ -2595,6 +2595,9 @@ type EmailCalendarInvitation struct {
 
 	// StartsAt When the event starts. Absent while the reader's calendar has not synced it.
 	StartsAt *time.Time `json:"starts_at,omitempty"`
+
+	// StartsPrecision How to read `starts_at`, present beside it. `day` is an all-day event, so a client draws no time.
+	StartsPrecision *OccurredPrecision `json:"starts_precision,omitempty"`
 }
 
 // EmailCalendarInvitationResponse What the reader's calendar holds. `needs_action` until they answer, and while their
@@ -2712,7 +2715,8 @@ type EmailSummary struct {
 	// Move Whose move it is, derived from what this reader can see of the thread.
 	// `needs_reply` on a message still owed our answer, `waiting_for_them` on one we sent
 	// that is still the last word with them. A calendar invitation, update, cancellation
-	// or answer is `none` unless someone confirmed it asks us something. `none` also when
+	// or answer is `none` unless someone confirmed it asks us something, and an invitation
+	// the reader may still answer is `none` too: `calendar_invitation` carries what it asks. `none` also when
 	// the question cannot be answered honestly — an unanswerable move is not a claim.
 	// A message older than the waiting horizon that nobody kept is `none` too: it is
 	// no longer current work, the same bound the waiting queue and `waiting_reply` apply.
@@ -2744,7 +2748,8 @@ type EmailSummaryDirection string
 // EmailSummaryMove Whose move it is, derived from what this reader can see of the thread.
 // `needs_reply` on a message still owed our answer, `waiting_for_them` on one we sent
 // that is still the last word with them. A calendar invitation, update, cancellation
-// or answer is `none` unless someone confirmed it asks us something. `none` also when
+// or answer is `none` unless someone confirmed it asks us something, and an invitation
+// the reader may still answer is `none` too: `calendar_invitation` carries what it asks. `none` also when
 // the question cannot be answered honestly — an unanswerable move is not a claim.
 // A message older than the waiting horizon that nobody kept is `none` too: it is
 // no longer current work, the same bound the waiting queue and `waiting_reply` apply.

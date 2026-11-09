@@ -182,6 +182,22 @@ describe("answering the message the drawer is showing", () => {
     expect(onRelink).toHaveBeenCalledTimes(1);
   });
 
+  it("leads an invitation with its answers and keeps Reply quiet beside them", () => {
+    const base = presentation({});
+    draw(
+      actions({
+        summary: {
+          ...base.summary,
+          calendar_invitation: { response: "needs_action" },
+        },
+      }),
+    );
+
+    expect(reply()?.className).not.toContain("btn-primary");
+    expect(screen.getByRole("button", { name: "Accept" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Forward" })).toBeTruthy();
+  });
+
   it("hides More when the message may not be moved", () => {
     draw(actions({ can_relink: false }));
 

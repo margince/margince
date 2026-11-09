@@ -96,6 +96,7 @@ export function RowAnswerActions({
         entityId={entityId}
         contactId={contactId}
         contentWithheld={activity.content_state === "withheld"}
+        invitation={activity.email_summary?.calendar_invitation}
       />
       {activity.invitation_status && activity.content_state !== "withheld" && (
         <Button

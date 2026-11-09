@@ -171,6 +171,9 @@ var erasureColumnBaseline = map[string][]string{
 		// One of the eight iCalendar method words RFC 5546 defines, enforced by
 		// a CHECK. Nothing the subject wrote beyond which scheduling act it was.
 		"calendar_method",
+		// The event's iCalendar UID, a key the organizer's calendar made, kept
+		// as the redaction keeps a mail's message-id: it names no subject.
+		"calendar_uid",
 		// One of four words, enforced by a CHECK: how much of
 		// the mail's text the parser decoded. Nothing the subject wrote.
 		"body_completeness",

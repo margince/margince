@@ -94,6 +94,7 @@ export function WaitingReply({
       kind="email"
       entityType={to.type}
       entityId={to.id}
+      invitation={item.email_summary?.calendar_invitation}
       prepared={
         replyIsTheMove(item)
           ? {

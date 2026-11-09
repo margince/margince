@@ -138,12 +138,18 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 	}
 	out.Access = access
 	out.Summary = availableSummary(activity, parties, len(attachments), access.DisplayStatus)
-
 	// What HAPPENED to it. Read after the access gate for the reason the
 	// attachment count is: whether a message left is something about the
 	// message, so the caller's own gate is what decides.
 	if out.ControllerSend, err = withEmailStateOn(ctx, tx, activity.Id, &out.Summary, asOf); err != nil {
 		return crmcontracts.EmailPresentation{}, err
+	}
+	open, err := openInvitationsTx(ctx, tx, []ids.UUID{id.UUID}, readerOrNobody(ctx), asOf)
+	if err != nil {
+		return crmcontracts.EmailPresentation{}, err
+	}
+	if found, ok := open[id.UUID]; ok {
+		found.mark(&out.Summary)
 	}
 
 	thread, err := readThreadPage(ctx, tx, activity, threadCursor)
