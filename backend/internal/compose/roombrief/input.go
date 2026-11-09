@@ -81,6 +81,9 @@ type ThreadIn struct {
 type CommentIn struct {
 	Speaker string `json:"speaker"`
 	Author  string `json:"author"`
+	// AuthorID is the buyer seat that wrote it, so the brief cites who set a
+	// condition instead of guessing from the buyer list.
+	AuthorID string `json:"author_id,omitempty"`
 	On      string `json:"on"`
 	Body    string `json:"body"`
 }
@@ -106,8 +109,25 @@ func FromRoom(
 			})
 		}
 	}
-	in.Threads = threadsFrom(threads, titles)
+	in.Threads = threadsFrom(threads, titles, seatsByName(in.Buyers))
 	return in
+}
+
+// seatsByName links a buyer comment to its seat. A comment's author carries
+// only a name, so a name two seats share links to neither.
+func seatsByName(buyers []BuyerIn) map[string]string {
+	seats := make(map[string]string, len(buyers))
+	shared := map[string]bool{}
+	for _, buyer := range buyers {
+		if _, seen := seats[buyer.Name]; seen {
+			shared[buyer.Name] = true
+		}
+		seats[buyer.Name] = buyer.ID
+	}
+	for name := range shared {
+		delete(seats, name)
+	}
+	return seats
 }
 
 func buyersFrom(participants []crmcontracts.DealRoomParticipant) []BuyerIn {
@@ -145,7 +165,7 @@ func linkStillOwed(p crmcontracts.DealRoomParticipant) bool {
 // first, a waiting change request ahead of the others, then the most recently
 // active. The cap then never drops a waiting change request for
 // newer small asks, and the floor quotes it first.
-func threadsFrom(threads []crmcontracts.DealRoomThread, titles map[string]string) []ThreadIn {
+func threadsFrom(threads []crmcontracts.DealRoomThread, titles, seats map[string]string) []ThreadIn {
 	out := make([]ThreadIn, 0, len(threads))
 	for _, thread := range threads {
 		folded := ThreadIn{
@@ -165,7 +185,7 @@ func threadsFrom(threads []crmcontracts.DealRoomThread, titles map[string]string
 			folded.WaitingOnYou = !folded.Resolved && last.Author.Side == sideBuyer
 		}
 		for _, comment := range comments[max(0, len(comments)-maxThreadComments):] {
-			folded.Comments = append(folded.Comments, commentFrom(comment))
+			folded.Comments = append(folded.Comments, commentFrom(comment, seats))
 		}
 		out = append(out, folded)
 	}
@@ -181,17 +201,18 @@ func threadsFrom(threads []crmcontracts.DealRoomThread, titles map[string]string
 	return out[:min(len(out), maxThreads)]
 }
 
-func commentFrom(comment crmcontracts.DealRoomComment) CommentIn {
-	speaker := speakerYourSide
-	if comment.Author.Side == sideBuyer {
-		speaker = speakerBuyer
-	}
-	return CommentIn{
-		Speaker: speaker,
+func commentFrom(comment crmcontracts.DealRoomComment, seats map[string]string) CommentIn {
+	folded := CommentIn{
+		Speaker: speakerYourSide,
 		Author:  comment.Author.Name,
 		On:      day(comment.CreatedAt),
 		Body:    textcut.Runes(comment.Body, maxCommentRunes),
 	}
+	if comment.Author.Side == sideBuyer {
+		folded.Speaker = speakerBuyer
+		folded.AuthorID = seats[comment.Author.Name]
+	}
+	return folded
 }
 
 func day(at time.Time) string {

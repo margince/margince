@@ -192,6 +192,32 @@ func TestFromRoomFoldsTheReadsTheTabMakes(t *testing.T) {
 	}
 }
 
+// A buyer comment shows the ref of the seat that wrote it, so the brief can
+// cite who set a condition. A seller comment, and a name two seats share,
+// link to no seat.
+func TestABuyerCommentShowsItsAuthorsSeat(t *testing.T) {
+	at := time.Date(2026, 10, 22, 12, 0, 0, 0, time.UTC)
+	says := func(name, side string) crmcontracts.DealRoomComment {
+		return crmcontracts.DealRoomComment{Author: crmcontracts.DealRoomAuthor{Name: name, Side: side}, Body: "Noted.", CreatedAt: at}
+	}
+	seat := func(name string) crmcontracts.DealRoomParticipant {
+		return crmcontracts.DealRoomParticipant{Id: openapi_types.UUID(ids.NewV7()), FullName: name}
+	}
+	in := FromRoom(crmcontracts.DealRoom{Title: "Room", State: "live"},
+		[]crmcontracts.DealRoomParticipant{seat("Lena Vogt"), seat("Rasmus Berg"), seat("Alex Kim"), seat("Alex Kim")}, nil,
+		[]crmcontracts.DealRoomThread{{Id: openapi_types.UUID(ids.NewV7()), CreatedAt: at, Comments: []crmcontracts.DealRoomComment{
+			says("Rasmus Berg", "buyer"), says("Lena Vogt", "seller"), says("Alex Kim", "buyer"),
+		}}})
+	comments := in.Threads[0].Comments
+	if comments[0].AuthorID != in.Buyers[1].ID || comments[1].AuthorID != "" || comments[2].AuthorID != "" {
+		t.Fatalf("author seats = %q, %q, %q; want Rasmus's seat, then none for a seller and a shared name",
+			comments[0].AuthorID, comments[1].AuthorID, comments[2].AuthorID)
+	}
+	if shown := BriefRequest(in, "en").Messages[0].Content; !strings.Contains(shown, `"author":"Rasmus Berg","author_id":"p2"`) {
+		t.Errorf("the request does not show the author's seat by its ref:\n%s", shown)
+	}
+}
+
 func TestALinkRequestCountsOnlyUntilTheBuyerIsBackIn(t *testing.T) {
 	asked := time.Date(2026, 10, 20, 9, 0, 0, 0, time.UTC)
 	back := asked.Add(time.Hour)
