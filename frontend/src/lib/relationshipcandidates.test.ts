@@ -26,8 +26,36 @@ function stubDeals() {
     );
     requests.push(url);
     const company = url.searchParams.get("company_id");
+    const status = url.searchParams.get("status");
     const data =
-      company === "o1" ? rows.o1 : company === "o2" ? rows.o2 : rows.workspace;
+      status === "won"
+        ? company === "o2"
+          ? []
+          : [
+              {
+                id: "won",
+                name: "Won renewal",
+                company_id: "o1",
+                status: "won",
+              },
+            ]
+        : status === "lost"
+          ? company
+            ? []
+            : [
+                {
+                  id: "lost",
+                  name: "Lost renewal",
+                  company_id: "o3",
+                  status: "lost",
+                },
+              ]
+          : (company === "o1"
+              ? rows.o1
+              : company === "o2"
+                ? rows.o2
+                : rows.workspace
+            ).map((row) => ({ ...row, status: "open" }));
     return jsonResponse({ data, page: { has_more: false } });
   });
   return requests;
@@ -51,25 +79,35 @@ it("lists every current employer's open deals without asking for unrelated deals
 it("searches on the server and places employer deals before other open deals without duplicates", async () => {
   const requests = stubDeals();
   const candidates = await searchByEntity("deal", "renewal", ["o1", "o2"]);
-  expect(requests).toHaveLength(3);
+  expect(requests).toHaveLength(9);
   for (const request of requests) {
     expect(request.searchParams.get("q")).toBe("renewal");
-    expect(request.searchParams.get("status")).toBe("open");
+    expect(["open", "won", "lost"]).toContain(
+      request.searchParams.get("status"),
+    );
     expect(request.searchParams.get("limit")).not.toBe("50");
   }
   expect(candidates.map((candidate) => candidate.id)).toEqual([
     "d1",
     "d2",
     "d3",
+    "won",
+    "lost",
   ]);
   expect(candidates[2]).toMatchObject({ companyId: "o3" });
 });
 
-it("uses the open-deal server search when no employer is known", async () => {
+it("searches open and closed deals when no employer is known", async () => {
   const requests = stubDeals();
   await searchByEntity("deal", "older deal");
-  expect(requests).toHaveLength(1);
-  expect(requests[0]?.searchParams.get("q")).toBe("older deal");
-  expect(requests[0]?.searchParams.get("status")).toBe("open");
-  expect(requests[0]?.searchParams.has("company_id")).toBe(false);
+  expect(requests).toHaveLength(3);
+  expect(
+    new Set(requests.map((url) => url.searchParams.get("status"))),
+  ).toEqual(new Set(["open", "won", "lost"]));
+  expect(
+    requests.every((url) => url.searchParams.get("q") === "older deal"),
+  ).toBe(true);
+  expect(requests.every((url) => !url.searchParams.has("company_id"))).toBe(
+    true,
+  );
 });

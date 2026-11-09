@@ -7748,11 +7748,16 @@ public.record_role.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.record_role.version bigint NOT NULL gen=- def=1
 public.record_role_key_key CREATE UNIQUE INDEX record_role_key_key ON public.record_role USING btree (key)
 public.record_role_pkey CREATE UNIQUE INDEX record_role_pkey ON public.record_role USING btree (id)
-public.record_stored_object_intent(requested_kind text, requested_key text) secdef=false cfg=- acl==X/margince_owner,margince_owner=X/margince_owner,margince_app=X/margince_owner INSERT INTO stored_object_intent (storage_key, kind)
+public.record_stored_object_intent(requested_kind text, requested_key text) secdef=false cfg=- acl==X/margince_owner,margince_owner=X/margince_owner,margince_app=X/margince_owner BEGIN
+    INSERT INTO stored_object_intent (storage_key, kind)
     VALUES (requested_key, requested_kind)
     ON CONFLICT (storage_key) DO UPDATE
-       SET kind = excluded.kind, recorded_at = now();
-
+       SET kind = excluded.kind, recorded_at = now()
+       WHERE stored_object_intent.reaping_since IS NULL;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'The stored file has expired; upload it again' USING ERRCODE = '55000';
+    END IF;
+END;
 public.refresh_last_activity_for_link(cid uuid, did uuid, oid uuid) secdef=false cfg=- acl=- 
 DECLARE
   reached record;
@@ -8415,6 +8420,7 @@ public.session.id uuid NOT NULL gen=- def=uuidv7()
 public.session.idle_expires_at timestamp with time zone NOT NULL gen=- def=-
 public.session.ip inet gen=- def=-
 public.session.last_seen_at timestamp with time zone NOT NULL gen=- def=now()
+public.session.provider_authenticated boolean NOT NULL gen=- def=false
 public.session.revoked_at timestamp with time zone gen=- def=-
 public.session.session_expires_after_creation CHECK ((expires_at > created_at))
 public.session.session_pkey PRIMARY KEY (id)
@@ -8821,9 +8827,12 @@ END;
 
 public.stored_object_intent acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.stored_object_intent.kind text NOT NULL gen=- def=-
+public.stored_object_intent.reaped_at timestamp with time zone gen=- def=-
+public.stored_object_intent.reaping_since timestamp with time zone gen=- def=-
 public.stored_object_intent.recorded_at timestamp with time zone NOT NULL gen=- def=now()
 public.stored_object_intent.storage_key text NOT NULL gen=- def=-
 public.stored_object_intent.stored_object_intent_pkey PRIMARY KEY (storage_key)
+public.stored_object_intent_pending_idx CREATE INDEX stored_object_intent_pending_idx ON public.stored_object_intent USING btree (COALESCE(reaping_since, recorded_at), storage_key) WHERE (reaped_at IS NULL)
 public.stored_object_intent_pkey CREATE UNIQUE INDEX stored_object_intent_pkey ON public.stored_object_intent USING btree (storage_key)
 public.stored_object_intent_recorded_idx CREATE INDEX stored_object_intent_recorded_idx ON public.stored_object_intent USING btree (recorded_at)
 public.suggestion_dismissal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false

@@ -24,12 +24,14 @@ For why the schema is shaped this way rather than what it holds, read
 [explanation/write-backbone.md](../../explanation/write-backbone.md). For which
 module to put a change in, read [modules.md](../modules.md).
 
+[Foreign keys between owning areas](coupling.md) measures the dependencies an extraction must replace.
+
 ## The shape
 
 | | |
 |---|--:|
 | Tables | 360 |
-| Columns | 4365 |
+| Columns | 4368 |
 | Foreign keys | 602 |
 | Owning areas | 38 |
 
@@ -434,7 +436,7 @@ erDiagram
 | [`sdr_handoff`](contacts.md#sdr_handoff) | contacts | 17 | 1 |
 | [`sdr_handoff_event`](contacts.md#sdr_handoff_event) | contacts | 10 | 0 |
 | [`sdr_handoff_reason`](contacts.md#sdr_handoff_reason) | contacts | 9 | 2 |
-| [`session`](identity.md#session) | identity | 10 | 0 |
+| [`session`](identity.md#session) | identity | 11 | 0 |
 | [`setting`](platform.md#setting) | platform | 3 | 0 |
 | [`setup_token`](identity.md#setup_token) | identity | 4 | 0 |
 | [`signal`](signals.md#signal) | signals | 30 | 3 |
@@ -445,7 +447,7 @@ erDiagram
 | [`stage_exit_criterion`](deals.md#stage_exit_criterion) | deals | 12 | 1 |
 | [`stage_progression_outcome`](deals.md#stage_progression_outcome) | deals | 19 | 0 |
 | [`stage_progression_policy`](deals.md#stage_progression_policy) | deals | 18 | 0 |
-| [`stored_object_intent`](platform.md#stored_object_intent) | platform | 3 | 0 |
+| [`stored_object_intent`](platform.md#stored_object_intent) | platform | 5 | 0 |
 | [`suggestion_dismissal`](compose.md#suggestion_dismissal) | compose | 4 | 0 |
 | [`system_log`](platform.md#system_log) | platform | 8 | 0 |
 | [`tag`](collections.md#tag) | collections | 10 | 3 |

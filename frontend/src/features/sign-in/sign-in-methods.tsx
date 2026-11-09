@@ -250,7 +250,7 @@ export function SignInMethodsCard({
           save.reset();
         }}
         title={t("signInMethods.requireMfaConfirmTitle")}
-        confirmLabel={t("signInMethods.requireMfa")}
+        confirmLabel={t("signInMethods.requireMfaAction")}
         pending={save.isPending}
         confirmDisabled={ownMfa.isPending}
         error={save.error ? problemMessageOf(save.error, t) : null}

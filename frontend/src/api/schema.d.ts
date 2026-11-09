@@ -25914,9 +25914,9 @@ export interface components {
              */
             require_sso?: boolean;
             /**
-             * @description Make a second factor mandatory: a member without a confirmed authenticator is
-             *     confined to the MFA enrolment routes until they set one up. Omit to leave the policy
-             *     unchanged.
+             * @description Require a second factor for password sign-in. Password sessions without a confirmed
+             *     authenticator are confined to MFA enrolment routes. Provider sessions rely on the
+             *     provider’s MFA policy. Omit to leave unchanged.
              */
             require_mfa?: boolean;
             /**
@@ -26573,10 +26573,9 @@ export interface components {
              */
             require_sso: boolean;
             /**
-             * @description When true, a second factor is mandatory: a member with no confirmed authenticator
-             *     is admitted only to the MFA enrolment routes until they set one up, the same
-             *     confinement a forced password change uses. A member who already holds a factor is
-             *     unaffected — they are challenged for it at sign-in either way.
+             * @description When true, password sessions without a confirmed authenticator are confined to
+             *     MFA enrolment routes. Provider sessions rely on the provider’s MFA policy.
+             *     Password sign-in with a confirmed factor always requires a challenge.
              */
             require_mfa: boolean;
             /**

@@ -1185,7 +1185,7 @@
           }
         },
         "require_mfa": {
-          "description": "Every member must use two-step sign-in.",
+          "description": "Password sign-in needs two-step sign-in; Google and Microsoft check their own sign-ins.",
           "type": [
             "boolean",
             "null"

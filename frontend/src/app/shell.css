@@ -1081,6 +1081,7 @@
   background: transparent;
 }
 .palette-list {
+  position: relative;
   max-height: 320px;
   overflow-y: auto;
   padding: var(--space-2);
@@ -1795,6 +1796,7 @@
 /* A question's answer sits between the box and the rows, on the list's own
    inset, so the record rows below it still read as the palette's list. */
 .palette-answer {
+  position: relative;
   display: grid;
   gap: var(--space-2);
   max-height: 320px;
