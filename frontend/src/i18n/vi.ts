@@ -6479,11 +6479,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.briefedAt": "Margince tóm tắt lúc {time}",
   "brief.task.done": "Đánh dấu xong: {title}",
   "brief.task.reply": "Trả lời {name}: {subject}",
-  "brief.pager.label": "Công việc",
-  "brief.pager.previous": "Công việc trước",
-  "brief.pager.next": "Công việc tiếp theo",
-  "brief.pager.hint":
-    "Vuốt sang trái hoặc phải để xem công việc. Bạn cũng có thể dùng phím mũi tên trên các nút điều hướng.",
   "brief.first.title": "Cần bạn xử lý",
   "brief.intro.waiting": "Đang chờ bạn",
   "brief.intro.meetings": "Cuộc họp hôm nay",

@@ -133,9 +133,8 @@ it("keeps the next card in hand when the completed selection leaves the queue", 
     taskRow("task-2", "Call Lumen"),
   ];
   const view = render(<BriefFeed day={readingsDay({}, rows)} state="ready" />);
-  await user.click(
-    screen.getByRole("button", { name: en["brief.pager.next"] }),
-  );
+  const [nextCard] = waitingCards(view.container);
+  await user.click(within(nextCard).getByText("Send the sheet"));
   expect(
     view.container.querySelector(".brief-triage-lead .worklist-row-title")
       ?.textContent,
