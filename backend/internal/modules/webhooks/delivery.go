@@ -399,11 +399,18 @@ func (d *Deliverer) deliverOnce(ctx context.Context, t attemptTarget) {
 	}
 }
 
-// attempt signs and POSTs the stored body, returning the outcome. A
+// attempt sends t's body over a connection on which guard re-checked the
+// row, and decides the outcome from that check first (checkedOutcome).
+func (d *Deliverer) attempt(ctx context.Context, t attemptTarget, guard func() error) outcome {
+	check := &sendCheck{verify: guard}
+	body := &countedBody{body: bytes.NewReader(t.payload)}
+	return checkedOutcome(check, body, len(t.payload), d.post(withSendCheck(ctx, check), t, body))
+}
+
+// post signs and POSTs the stored body, returning the outcome. A
 // non-2xx or a transport error is a failure; the receiver's response body
 // is read (capped) only to keep the connection reusable and is discarded.
-// guard runs before the transport reads the first byte of the body (guardedBody).
-func (d *Deliverer) attempt(ctx context.Context, t attemptTarget, guard func() error) outcome {
+func (d *Deliverer) post(ctx context.Context, t attemptTarget, body *countedBody) outcome {
 	if d.store.cipher == nil {
 		return outcome{failure: "signing key not configured"}
 	}
@@ -413,12 +420,14 @@ func (d *Deliverer) attempt(ctx context.Context, t attemptTarget, guard func() e
 		return outcome{failure: "signing secret could not be unsealed"}
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, t.targetURL,
-		&guardedBody{check: guard, body: bytes.NewReader(t.payload)})
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, t.targetURL, body)
 	if err != nil {
 		return outcome{failure: "building request: " + err.Error()}
 	}
 	req.ContentLength = int64(len(t.payload))
+	if len(t.payload) == 0 {
+		req.Body = http.NoBody
+	}
 	// ts is minted fresh for THIS attempt (not the delivery's original enqueue
 	// time): Standard Webhooks' replay defense depends on the timestamp
 	// reflecting when the signature was actually produced, so a retry signs
@@ -450,12 +459,6 @@ func (d *Deliverer) attempt(ctx context.Context, t attemptTarget, guard func() e
 	req.Header.Set(HeaderWebhookSignature, sig)
 
 	resp, err := d.client.Do(req)
-	if res, refused := withdrawnOutcome(err); refused {
-		if !res.withdrawn {
-			d.log.Error("webhooks: re-checking a delivery before its body was sent", "delivery", t.deliveryID, "err", err)
-		}
-		return res
-	}
 	if err != nil {
 		return outcome{failure: "request failed: " + err.Error()}
 	}

@@ -186,7 +186,7 @@ func TestFrozenReplayResendsTheStoredBodyVerbatim(t *testing.T) {
 	}))
 	defer receiver.Close()
 
-	d := NewDeliverer(NewStore(nil, cipher), receiver.Client(), clock, nil, log)
+	d := NewDeliverer(NewStore(nil, cipher), loopbackClient(nil), clock, nil, log)
 	target := attemptTarget{
 		deliveryID:   ids.NewV7(),
 		subID:        ids.NewV7(),

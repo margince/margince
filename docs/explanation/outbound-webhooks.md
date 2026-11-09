@@ -325,9 +325,8 @@ a parked delivery can be replayed after the bus stream has cut the source event.
 ```
 
 - **Budget and wait** (`delivery.go`): 6 attempts in all. The wait after `n` failed attempts doubles
-  each time, `1s, 2s, 4s, 8s, 16s`, with a cap of `32s`. The cap never binds within the budget; it
-  guards a budget that grows later. Times come from an **injected clock**, so the schedule is the
-  same on every test run (no sleeps).
+  each time, `1s, 2s, 4s, 8s, 16s`, with a cap of `32s` for a budget that grows later. Times come
+  from an **injected clock**, so the schedule is the same on every test run (no sleeps).
 - **The sweep** (`SweepOnce`): one pass over one workspace. It binds that workspace into the
   context itself, from its own database handle, because the job worker calls it with the bare queue
   context. It claims at most 128 `retrying` rows at a time, whose `next_retry_at` has passed
@@ -340,9 +339,10 @@ a parked delivery can be replayed after the bus stream has cut the source event.
   on the delivery row, and never fails the pass of the tenant. A sweep claims each row before it
   sends it (`claimed_until`, a lease of twice the attempt time limit). A second sweep skips a
   claimed row, so one retry is sent once; storing the result clears the claim.
-- **The send check** (`deliverysendguard.go`): as the body starts to go out, the row must still be
-  `pending` or `retrying`, with the same body and claim. A committed erasure fails it, and the body
-  is not sent. No lock is held during the POST; the headers may leave, with no record data.
+- **The send check** (`deliverysendguard.go`): each attempt opens its own connection, never shared,
+  over HTTP/1.1. Once TCP and TLS are up, the row must still be `pending` or `retrying`, with the
+  same body and claim. Else the connection closes before any request byte. No lock is held during
+  the POST. Left open is the time from the check's commit to the request's write to the connection.
 - **`deliverOnce` never returns an error**: the result is the record. A failed *store* of it is
   logged. A first attempt whose result write fails stays `pending`, which the sweep never scans, so
   it needs a **replay** by hand. A row that reached `retrying` is scanned again.
