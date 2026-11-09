@@ -12,9 +12,12 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { parseHash } from "../../lib/router";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { ReviewActionsProvider } from "../../testing/reviewactions";
 import { candidateVersion } from "../../testing/voice-candidate";
-import { VoiceDnaCard, VoiceIntakeHost } from "./voice-dna";
+import { SettingsScreen } from "../settings/settings";
+import { VoiceDnaCard } from "./voice-dna";
 
 // The Settings Voice DNA card is the ONLY surface outside onboarding where a
 // voice can be started. Its empty state promises samples can be added "below",
@@ -163,6 +166,23 @@ function render(ui: ReactNode) {
     >
       <LocaleProvider initial="en">{ui}</LocaleProvider>
     </QueryClientProvider>,
+  );
+}
+
+// The settings screen itself at one Voice tab, so a tab change remounts what
+// production remounts and keeps what production keeps.
+function settingsVoicePage() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return (tab: string) => (
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <ReviewActionsProvider>
+          <SettingsScreen route={parseHash(`#/settings/voice/${tab}`)} />
+        </ReviewActionsProvider>
+      </LocaleProvider>
+    </QueryClientProvider>
   );
 }
 
@@ -364,18 +384,7 @@ describe("the Settings Voice DNA card with a profile", () => {
         return jsonResponse(emptyPage);
       }),
     );
-    const client = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-    const page = (tab: string) => (
-      <QueryClientProvider client={client}>
-        <LocaleProvider initial="en">
-          <VoiceIntakeHost>
-            <VoiceDnaCard key={tab} tab={tab} />
-          </VoiceIntakeHost>
-        </LocaleProvider>
-      </QueryClientProvider>
-    );
+    const page = settingsVoicePage();
     const view = rtlRender(page("samples"));
     await screen.findByRole("heading", { name: "Make it sharper" });
     await user.upload(
@@ -396,6 +405,11 @@ describe("the Settings Voice DNA card with a profile", () => {
     const previewHeld = new Promise<void>((resolve) => {
       releasePreview = resolve;
     });
+    let releasePost: () => void = () => {};
+    const postHeld = new Promise<void>((resolve) => {
+      releasePost = resolve;
+    });
+    let postStarted = false;
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {
@@ -422,6 +436,10 @@ describe("the Settings Voice DNA card with a profile", () => {
           });
         }
         if (path === "/voice-profiles/vp-1/sources") {
+          if (request.method === "POST") {
+            postStarted = true;
+            await postHeld;
+          }
           return request.method === "POST"
             ? jsonResponse(
                 {
@@ -442,18 +460,7 @@ describe("the Settings Voice DNA card with a profile", () => {
         return jsonResponse(emptyPage);
       }),
     );
-    const client = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-    const page = (tab: string) => (
-      <QueryClientProvider client={client}>
-        <LocaleProvider initial="en">
-          <VoiceIntakeHost>
-            <VoiceDnaCard key={tab} tab={tab} />
-          </VoiceIntakeHost>
-        </LocaleProvider>
-      </QueryClientProvider>
-    );
+    const page = settingsVoicePage();
     const view = rtlRender(page("samples"));
     await screen.findByRole("heading", { name: "Make it sharper" });
     await user.upload(
@@ -466,6 +473,11 @@ describe("the Settings Voice DNA card with a profile", () => {
     });
     expect(rebuild).toHaveProperty("disabled", true);
     releasePreview();
+    await waitFor(() => expect(postStarted).toBe(true));
+    expect(
+      screen.getByRole("button", { name: /Rebuild Voice DNA/ }),
+    ).toHaveProperty("disabled", true);
+    releasePost();
     await waitFor(() =>
       expect(
         screen.getByRole("button", { name: /Rebuild Voice DNA/ }),

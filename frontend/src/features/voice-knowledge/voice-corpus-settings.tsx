@@ -6,6 +6,7 @@ import { SettingRow } from "../../design-system/settingrow";
 import { formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { problemMessageOf } from "../../lib/problem";
+import { useUnsavedGuard } from "../../lib/unsavedclaims";
 import { useFileDrop } from "../../lib/use-file-drop";
 import { ACCEPTED_CORPUS_ATTR } from "../../lib/voice-corpus-file";
 import { VOICE_MIN_WORDS } from "../../lib/voice-intake-core";
@@ -118,6 +119,8 @@ function PasteSample({
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const blank = text.trim() === "";
+  // A tab change unmounts the box, so an unsent paste asks before it goes.
+  useUnsavedGuard(!blank);
   return (
     <div className="vdna-paste">
       <Field label={t("settings.voice.pasteLabel")}>

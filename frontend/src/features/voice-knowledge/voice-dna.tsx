@@ -135,7 +135,7 @@ function VoiceDnaPage({
           <div className="vdna-page">
             {open === "overview" && <VoiceStart />}
             <VoiceSection id={VOICE_SECTIONS.sharpen}>
-              <Panel tone="ai" title={t("settings.voice.start.addTitle")}>
+              <Panel title={t("settings.voice.start.addTitle")}>
                 <PanelBody>
                   <PanelIntro>{t("settings.voice.emptyBody")}</PanelIntro>
                   <VoiceKinds />
@@ -217,7 +217,8 @@ function VoiceDnaBody({
   const qc = useQueryClient();
   // The intake outlives every tab, so a sample still arriving holds the build
   // wherever its button is drawn.
-  const intakeBusy = intake.busy;
+  // Reading sent mail adds to the corpus too, so it holds a build the same way.
+  const intakeBusy = intake.busy || sentMail.reading;
   const invalidate = () => invalidateVoiceCorpus(qc);
   const versionsRead = useVoiceVersions(profile.id);
   const versions = loadedVersions(versionsRead.data?.pages);
@@ -316,7 +317,7 @@ function VoiceSamplesPanel({
   const t = useT();
   return (
     <VoiceSection id={VOICE_SECTIONS.sharpen}>
-      <Panel tone="ai" title={t("settings.voice.sharpenTitle")}>
+      <Panel title={t("settings.voice.sharpenTitle")}>
         <PanelBody>
           <PanelIntro>{t("settings.voice.sharpenIntro")}</PanelIntro>
         </PanelBody>

@@ -87,7 +87,7 @@ export function VoiceBuilds({
   const built = (profile.profile_version ?? 0) > 0;
   return (
     <VoiceSection id={VOICE_SECTIONS.builds}>
-      <Panel tone="ai" title={t("settings.voice.buildsTitle")}>
+      <Panel title={t("settings.voice.buildsTitle")}>
         {!built && canEdit && (
           <PanelBody>
             <PanelIntro>{t("settings.voice.firstBuildHint")}</PanelIntro>
