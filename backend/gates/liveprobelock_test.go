@@ -23,10 +23,12 @@ package gates
 // on "this body names the probe" missed the second shape entirely, and there was
 // a live instance of it.
 //
-// Two things it cannot see, said here rather than left for the next reader to
+// Three things it cannot see, said here rather than left for the next reader to
 // discover. The reach is EXISTENTIAL and unqualified — it answers that a lock is
 // taken somewhere downward, not that it is taken on THIS subject or on an arm
 // the write actually follows; guardedBy names the same hole for its own walk.
+// Nor does it check order: a lock taken after the insert passes the same as
+// one taken before it.
 // And the corpus is what the privacy module DELETEs, so a table the erasure
 // clears by UPDATE-to-NULL is outside it, and so is a restoring UPDATE on the
 // write side. Both are presence checks around a per-site argument the comments
