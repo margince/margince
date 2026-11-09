@@ -11,7 +11,6 @@ package gates
 // head catalog, so a later table is read without being listed here.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -36,7 +35,7 @@ var notRecordKinds = gatekit.Waive(map[string]string{
 func TestEveryColumnNamingAKindOfRecordAcceptsAnExtensionKind(t *testing.T) {
 	t.Parallel()
 	defer notRecordKinds.AssertAllMatched(t)
-	body, err := os.ReadFile(filepath.Join(gatekit.ModuleRoot(t), "migrations", "testdata", "head_catalog.txt"))
+	body, err := gatekit.ReadFile(filepath.Join(gatekit.ModuleRoot(t), "migrations", "testdata", "head_catalog.txt"))
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
 	}
