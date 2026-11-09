@@ -105,9 +105,9 @@ var dealReasons = map[ReasonCode]reasonEntry{
 		textlang.Vietnamese: "Deal này đã đóng nên hàng bị bỏ qua. Nhập không mở lại deal đã đóng.",
 	}},
 	ReasonDealCompanyContracts: {params: nil, text: map[textlang.Lang]string{
-		textlang.English:    "This deal has contracts filed against its current company, so the row is skipped. Detach the contracts from the deal, or move them to a deal of the new company, then import again.",
-		textlang.German:     "Für diesen Deal sind Verträge mit seinem bisherigen Unternehmen hinterlegt, daher wird die Zeile übersprungen. Löse die Verträge vom Deal oder ordne sie einem Deal des neuen Unternehmens zu und importiere erneut.",
-		textlang.Vietnamese: "Deal này có hợp đồng thuộc công ty hiện tại của nó nên hàng bị bỏ qua. Hãy tách các hợp đồng khỏi deal hoặc chuyển chúng sang một deal của công ty mới rồi nhập lại.",
+		textlang.English:    "This deal has contracts that name another company, so the row is skipped. Detach the contracts from the deal, or file each against a deal of its own company, then import again.",
+		textlang.German:     "Für diesen Deal sind Verträge hinterlegt, die ein anderes Unternehmen nennen, daher wird die Zeile übersprungen. Löse die Verträge vom Deal oder ordne jeden einem Deal seines eigenen Unternehmens zu und importiere erneut.",
+		textlang.Vietnamese: "Deal này có hợp đồng thuộc một công ty khác nên hàng bị bỏ qua. Hãy tách các hợp đồng khỏi deal hoặc chuyển từng hợp đồng sang một deal của chính công ty đó rồi nhập lại.",
 	}},
 	ReasonFxRateMissing: {params: []string{"currency"}, text: map[textlang.Lang]string{
 		textlang.English:    "No exchange rate for {currency} is on file for the day this deal closed, so the row is skipped. Add the rate, then import again.",

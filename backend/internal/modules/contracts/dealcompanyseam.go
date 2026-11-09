@@ -70,9 +70,9 @@ type DealContractsCrossCompanyError struct {
 }
 
 func (e *DealContractsCrossCompanyError) Error() string {
-	subject, verb, them := "1 contract on this deal", "belongs", "it"
+	subject, verb, them, each := "1 contract on this deal", "belongs", "it", "it"
 	if e.Count != 1 {
-		subject, verb, them = strconv.Itoa(e.Count)+" contracts on this deal", "belong", "them"
+		subject, verb, them, each = strconv.Itoa(e.Count)+" contracts on this deal", "belong", "them", "each"
 	}
 	if len(e.Named) > 0 {
 		names := strings.Join(e.Named, ", ")
@@ -81,8 +81,10 @@ func (e *DealContractsCrossCompanyError) Error() string {
 		}
 		subject += " (" + names + ")"
 	}
-	return subject + " " + verb + " to another company. Detach " + them + ", or move " + them +
-		" to a deal of the new company, before changing the company."
+	// A contract's company never changes, so only a deal of that company
+	// can take it.
+	return subject + " " + verb + " to another company. Detach " + them + ", or file " + each +
+		" against a deal of its own company, before changing the company."
 }
 
 // FieldFault names company_id, the field the caller sent, so the transport

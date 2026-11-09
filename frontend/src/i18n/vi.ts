@@ -9694,7 +9694,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.reason.deal_pipeline_fixed":
     "Deal này nằm trong quy trình khác với quy trình trong tệp. Nhập không chuyển deal giữa các quy trình nên hàng bị bỏ qua.",
   "import.reason.deal_company_has_contracts":
-    "Deal này có hợp đồng thuộc công ty hiện tại của nó nên hàng bị bỏ qua. Hãy tách các hợp đồng khỏi deal hoặc chuyển chúng sang một deal của công ty mới rồi nhập lại.",
+    "Deal này có hợp đồng thuộc một công ty khác nên hàng bị bỏ qua. Hãy tách các hợp đồng khỏi deal hoặc chuyển từng hợp đồng sang một deal của chính công ty đó rồi nhập lại.",
   "import.reason.deal_already_closed":
     "Deal này đã đóng nên hàng bị bỏ qua. Nhập không mở lại deal đã đóng.",
   "import.reason.fx_rate_missing":
