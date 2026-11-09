@@ -82,7 +82,7 @@ func (e *DealContractsCrossCompanyError) Error() string {
 		subject += " (" + names + ")"
 	}
 	// No edit changes a contract's company, so only a deal of that company
-	// can take it.
+	// or a deal with no company can take it.
 	return subject + " " + verb + " to another company. Detach " + them + ", or file " + each +
 		" against a deal of its own company, before changing the company."
 }
