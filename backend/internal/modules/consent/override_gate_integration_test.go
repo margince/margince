@@ -74,6 +74,7 @@ func (e *resolveEnv) seedMarketingOverrideAt(t *testing.T, level string, recorde
 // stronger admin row must not displace it.
 func TestTheStrongestOverrideWinsEvenWhenAWeakerOneIsNewer(t *testing.T) {
 	e := setupResolve(t)
+	e.livesIn(t, reviewableMarketingCountry())
 	e.seedPurpose(t, "newsletter", "marketing")
 	req := commsauthz.Request{LegacyPurposeKey: "newsletter"}
 
@@ -97,6 +98,7 @@ func TestTheStrongestOverrideWinsEvenWhenAWeakerOneIsNewer(t *testing.T) {
 // artefact of which case happens to align with recorded_at.
 func TestAStrongerSurvivorIsNotDisplacedByAWeakerCarry(t *testing.T) {
 	e := setupResolve(t)
+	e.livesIn(t, reviewableMarketingCountry())
 	e.seedPurpose(t, "newsletter", "marketing")
 	req := commsauthz.Request{LegacyPurposeKey: "newsletter"}
 
@@ -113,6 +115,7 @@ func TestAStrongerSurvivorIsNotDisplacedByAWeakerCarry(t *testing.T) {
 // A live user-level override flips a no-evidence refusal for its category.
 func TestAnOverrideFlipsANoEvidenceRefusal(t *testing.T) {
 	e := setupResolve(t)
+	e.livesIn(t, reviewableMarketingCountry())
 	e.seedPurpose(t, "newsletter", "marketing")
 	req := commsauthz.Request{LegacyPurposeKey: "newsletter"}
 
@@ -146,6 +149,7 @@ func TestAnOverrideFlipsANoEvidenceRefusal(t *testing.T) {
 // An override for one category does not flip a refusal in another.
 func TestAnOverrideIsScopedToItsCategory(t *testing.T) {
 	e := setupResolve(t)
+	e.livesIn(t, reviewableMarketingCountry())
 	e.seedPurpose(t, "newsletter", "marketing")
 	req := commsauthz.Request{LegacyPurposeKey: "newsletter"}
 
@@ -169,6 +173,7 @@ func TestAnOverrideIsScopedToItsCategory(t *testing.T) {
 // override for the same contact and category must not lift it.
 func TestAnOverrideCannotFlipASubjectStop(t *testing.T) {
 	e := setupResolve(t)
+	e.livesIn(t, reviewableMarketingCountry())
 	e.seedPurpose(t, "newsletter", "marketing")
 	e.suppress(t, "subject_request")
 	e.seedOverride(t, "marketing", false)
@@ -193,6 +198,7 @@ func TestAnOverrideCannotFlipASubjectStop(t *testing.T) {
 // it.
 func TestAnOverrideCannotFlipAHardBounce(t *testing.T) {
 	e := setupResolve(t)
+	e.livesIn(t, reviewableMarketingCountry())
 	e.seedPurpose(t, "newsletter", "marketing")
 	e.suppress(t, "hard_bounce")
 	e.seedOverride(t, "marketing", false)
@@ -213,6 +219,7 @@ func TestAnOverrideCannotFlipAHardBounce(t *testing.T) {
 // excludes it before liveOverride is ever consulted.
 func TestAnOverrideCannotFlipAnUnknownPurpose(t *testing.T) {
 	e := setupResolve(t)
+	e.livesIn(t, reviewableMarketingCountry())
 	// No seedPurpose: the key is undefined, so the engine cannot resolve what
 	// this send is and refuses with unknown_purpose.
 	e.seedOverride(t, "marketing", false)
@@ -235,6 +242,7 @@ func TestAnOverrideCannotFlipAnUnknownPurpose(t *testing.T) {
 // it, so the refusal it would have lifted stands.
 func TestARevokedOverrideDoesNotApply(t *testing.T) {
 	e := setupResolve(t)
+	e.livesIn(t, reviewableMarketingCountry())
 	e.seedPurpose(t, "newsletter", "marketing")
 	e.seedOverride(t, "marketing", true)
 

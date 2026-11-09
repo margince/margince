@@ -196,7 +196,7 @@ security notice.
 ### Why can't I send an email to this contact?
 When Margince will not send an email to a contact, the warning bar above **Send** names the reason. Where there is a fix, it names that too.
 - **This message needs one more detail**: for "Choose the deal for this follow-up.", pick it in **Deal this follow-up is about**. You can also write from the deal's page. When the record already shows another reason, the bar offers **Use "…" instead**. It switches the reason and checks again; it does not send.
-- **Consent needed for this message**: there is no consent for this kind of message. Press **Overrule with a reason** where it is offered.
+- **Permission needed for this message**: the required permission is not on record. Record the recipient's consent or the facts that support an allowed customer route. A staff exception cannot replace them.
 - **No recorded reason to contact this recipient**: pick why you may write from the list beside the refusal. When **Reason for contact** already names it, press **Keep as a standing reason**. It covers this kind of message to them from your company until someone revokes it. It is your word, not their consent. If Margince still refuses when you press **Send**, press **Overrule with a reason**.
 - **Overrule with a reason**: write why the message may go and press **Record the overrule**, then press **Send** again. Your reason is recorded on each contact, under your name, and covers that kind of message to them until someone revokes it. It is offered only where Margince itself refused. It is not offered when the contact objected or the address does not accept mail. Where you hold the exception right, **Send with a recorded exception** sends this one message instead. It grants nothing for later messages, and the composer closes once it has sent.
 - **Message cannot be sent**: a reason nobody can lift, such as "The recipient objected to marketing", or an address that does not take mail.
@@ -207,19 +207,17 @@ Also called: email blocked, cannot email customer, send refused.
 
 A marketing send without consent is refused:
 
-> **Consent needed for this message**
+> **Permission needed for this message**
 > Marketing needs the recipient's consent, and none is on record.
 
-The reason is always clear. Some say that nobody can lift them: "The recipient
-objected to marketing", and no one here can change that, an administrator
-too. Others name the fix. An address that does not take mail must be
-corrected, and no one can let it through. When several records share one
-address, Margince cannot tell who the recipient is, and you merge the records to
-fix it.
+An administrator cannot send marketing after the recipient objected.
+Correct an address that does not take mail. If several records share one address,
+merge them so Margince can tell who the recipient is.
 
-**A bouncing address is a warning.** You can still send. The composer says the
-last mail to that address came back, and none has gone through after it. Send it
-all the same, or use another address.
+**Mail that comes back** needs a check of the address. The composer says the last
+mail came back, and none has gone through since. If the address does not take mail,
+sending is blocked.
+Correct that address before trying again.
 
 **A colleague's mailbox** gets a note on a reply, and you can still send. Your
 reply goes to the recipients in **To**, from your own mailbox and under your name.
