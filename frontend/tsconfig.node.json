@@ -49,7 +49,6 @@
   "include": [
     "vite.config.ts",
     "vite.mcp-apps.config.ts",
-    "vite-proxy.test.ts",
     "vitest.budget.ts",
     "vitest.ext.config.ts",
     "vitest.census.config.ts",

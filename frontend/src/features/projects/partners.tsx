@@ -15,6 +15,7 @@ import { Badge } from "../../design-system/atoms";
 import type { ListChip } from "../../design-system/listsurface";
 import { CellStrip } from "../../design-system/listtable";
 import { useT } from "../../i18n";
+import { labelFor } from "../../lib/labelfor";
 import { isOption } from "../../lib/options";
 import {
   KIND_LABELS,
@@ -126,7 +127,7 @@ export function PartnersScreen() {
                   {PARTNER_KINDS.filter((kind) =>
                     partner.partner_kinds?.includes(kind),
                   ).map((kind) => (
-                    <Badge key={kind}>{t(KIND_LABELS[kind])}</Badge>
+                    <Badge key={kind}>{t(labelFor(KIND_LABELS, kind))}</Badge>
                   ))}
                 </CellStrip>
               ) : null,
@@ -134,7 +135,8 @@ export function PartnersScreen() {
           {
             key: "cert",
             header: t("partner.certStatus"),
-            cell: (partner: Partner) => t(CERT_LABELS[partner.cert_status]),
+            cell: (partner: Partner) =>
+              t(labelFor(CERT_LABELS, partner.cert_status)),
           },
           {
             key: "stage",
@@ -155,7 +157,7 @@ export function PartnersScreen() {
             allLabel: "partner.kindsAll",
             options: PARTNER_KINDS.map((kind) => ({
               value: kind,
-              label: KIND_LABELS[kind],
+              label: labelFor(KIND_LABELS, kind),
             })),
           },
           {
@@ -164,7 +166,7 @@ export function PartnersScreen() {
             allLabel: "partner.stageMeaningAll",
             options: PARTNER_STAGE_MEANINGS.map((meaning) => ({
               value: meaning,
-              label: MEANING_LABELS[meaning],
+              label: labelFor(MEANING_LABELS, meaning),
             })),
           },
           {
@@ -173,7 +175,7 @@ export function PartnersScreen() {
             allLabel: "partner.certStatusAll",
             options: CERT_STATUSES.map((status) => ({
               value: status,
-              label: CERT_LABELS[status],
+              label: labelFor(CERT_LABELS, status),
             })),
           },
         ]}

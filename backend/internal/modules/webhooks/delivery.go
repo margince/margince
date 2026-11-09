@@ -65,6 +65,10 @@ type Deliverer struct {
 	log      *slog.Logger
 	// publicBaseURL is the app's origin for record links; empty sends none.
 	publicBaseURL string
+	// beforeSend runs in each attempt's send check, after the connection is up
+	// and before the row is re-read. Nil outside tests, which use it to change
+	// the row at that point; an error counts as a check that could not run.
+	beforeSend func(context.Context) error
 }
 
 // WithPublicBaseURL sets the origin that record links in a delivery start

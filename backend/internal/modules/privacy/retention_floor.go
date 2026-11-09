@@ -101,13 +101,15 @@ func floorWindowEnd(currentArg, carriedArg int) string {
 		ownerWindowEnd(currentArg), carriedArg, windowEndOf(fmt.Sprintf("$%d::jsonb", carriedArg)))
 }
 
-// rawCaptureUnshielded keeps the provider original, aliased `r`, of an activity
-// the floor shields. A held message keeps its original as evidence, the same
-// as it keeps its row.
+// Every linked activity must release an original, including archived ones.
+// A restriction keeps its evidence and would also refuse the unlinking write.
 func rawCaptureUnshielded(currentArg, carriedArg int) string {
-	return `NOT EXISTS (SELECT 1 FROM activity a
-		  WHERE ` + storekit.StoredOriginalSQL("a", "r") + `
-		    AND ` + handelsbriefShielded(currentArg, carriedArg) + `)`
+	return `EXISTS (SELECT 1 FROM activity a WHERE ` + storekit.StoredOriginalSQL("a", "r") + `)
+ AND NOT EXISTS (SELECT 1 FROM activity a
+   WHERE ` + storekit.StoredOriginalSQL("a", "r") + `
+     AND (` + handelsbriefShielded(currentArg, carriedArg) + `
+          OR a.restricted_at IS NOT NULL
+          OR ` + retentionscope.HeldThroughAnyLink("a.id") + `) IS NOT FALSE)`
 }
 
 // windowEndOf is one floor's window end over the activity aliased `a`. floor

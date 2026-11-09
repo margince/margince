@@ -9,12 +9,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -30,9 +32,12 @@ func TestAgentStagingRequiresTheEffectsObjectGrant(t *testing.T) {
 		t.Fatal("no proposer")
 	}
 	actor.Permissions = grantsFor(map[string]principal.ObjectGrant{"tag": {Read: true}})
-	ctx = principal.WithActor(ctx, actor)
+	ctx, recorded := auth.RecordChecksForTest(principal.WithActor(ctx, actor))
 	if _, _, err := e.svc.StageAgentCall(ctx, in); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("read-only proposer staged a merge: %v", err)
+	}
+	if got := recorded(); !slices.Contains(got.Refused, "tag.update") {
+		t.Fatalf("the staging refusal was not recorded: %+v", got)
 	}
 	var count int
 	if err := e.owner.QueryRow(ctx, `SELECT count(*) FROM approval`).Scan(&count); err != nil {

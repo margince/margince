@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
@@ -58,7 +59,7 @@ func fillGuestAnswersBatch(ctx context.Context, tx pgx.Tx, authority authz.Resol
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
-	rows, err := tx.Query(ctx, `SELECT rc.id, rc.source_id, rc.payload FROM raw_capture rc
+	rows, err := tx.Query(ctx, `SELECT rc.id, rc.source_id, `+originalstore.SQL("rc")+` FROM raw_capture rc
 		 WHERE rc.source_system = $1 AND rc.id > $2 ORDER BY rc.id LIMIT $3`, sourceGCal, after, in.Limit)
 	if err != nil {
 		return datatask.BatchOut{}, fmt.Errorf("compose: listing stored calendar originals: %w", err)
@@ -79,6 +80,10 @@ func fillGuestAnswersBatch(ctx context.Context, tx pgx.Tx, authority authz.Resol
 	changed := 0
 	for _, o := range originals {
 		scanned = append(scanned, o.id)
+		o.payload, err = originalstore.RepairPayload(ctx, o.payload)
+		if err != nil {
+			return datatask.BatchOut{}, err
+		}
 		settled, err := fillAnswersFromOriginal(ctx, tx, authority, o.sourceID, o.payload, in.RunID)
 		if err != nil {
 			return datatask.BatchOut{}, err

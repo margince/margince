@@ -76,8 +76,8 @@ func TestAnExceptionAnswersNoSetThatHoldsASubjectsStop(t *testing.T) {
 	missing := Decision{Verdict: VerdictDeny, ReasonCode: ReasonNoMarketingConsent}
 	bounced := Decision{Verdict: VerdictDeny, ReasonCode: ReasonHardBounce}
 	allowed := Decision{Verdict: VerdictAllow, ReasonCode: ReasonAllowed}
-	if !(DecisionSet{Decisions: []Decision{missing, bounced, allowed}}).ExceptionMayAnswer(true) {
-		t.Error("an admin's exception may answer missing consent and a bounce, yet the set refuses it")
+	if (DecisionSet{Decisions: []Decision{missing, bounced, allowed}}).ExceptionMayAnswer(true) {
+		t.Error("an admin's exception answers a bounced address")
 	}
 	for _, stop := range []string{ReasonObjection, ReasonConsentWithdrawn, ReasonRestricted, ReasonSubjectRequest} {
 		set := DecisionSet{Decisions: []Decision{missing, {Verdict: VerdictDeny, ReasonCode: stop}}}
@@ -87,9 +87,8 @@ func TestAnExceptionAnswersNoSetThatHoldsASubjectsStop(t *testing.T) {
 	}
 }
 
-// A rep's exception answers what any sender may answer and nothing an admin
-// alone may: a bounce recorded after it was given stops the message.
-func TestARepsExceptionDoesNotCoverAnAdminOnlyRefusal(t *testing.T) {
+// A bounced address stops the message, whoever recorded the exception.
+func TestNoStaffExceptionAnswersAHardBounce(t *testing.T) {
 	t.Parallel()
 	missing := Decision{Verdict: VerdictDeny, ReasonCode: ReasonNoMarketingConsent}
 	bounced := Decision{Verdict: VerdictDeny, ReasonCode: ReasonHardBounce}
@@ -97,10 +96,10 @@ func TestARepsExceptionDoesNotCoverAnAdminOnlyRefusal(t *testing.T) {
 		t.Error("a rep's exception does not answer missing marketing consent")
 	}
 	if (DecisionSet{Decisions: []Decision{missing, bounced}}).ExceptionMayAnswer(false) {
-		t.Error("a rep's exception answers a hard bounce, which only an admin may")
+		t.Error("a rep's exception answers a hard bounce")
 	}
-	if !(DecisionSet{Decisions: []Decision{missing, bounced}}).ExceptionMayAnswer(true) {
-		t.Error("an admin's exception does not answer a hard bounce")
+	if (DecisionSet{Decisions: []Decision{missing, bounced}}).ExceptionMayAnswer(true) {
+		t.Error("an admin's exception answers a hard bounce")
 	}
 }
 
@@ -120,5 +119,18 @@ func TestNoExceptionStandsInForConsentWhereTheCountryRequiresIt(t *testing.T) {
 	}
 	if !HasRemedy(ReasonNoMarketingConsent, RemedyException) {
 		t.Error("outside such a country missing marketing consent keeps the exception")
+	}
+}
+
+func TestAnExceptionCannotWaiveAnAbsoluteRefusal(t *testing.T) {
+	t.Parallel()
+	for reason := range absoluteDenials {
+		set := DecisionSet{Decisions: []Decision{{Verdict: VerdictDeny, ReasonCode: reason}}}
+		if set.ExceptionMayAnswer(false) || set.ExceptionMayAnswer(true) {
+			t.Errorf("an exception waives the absolute refusal %s", reason)
+		}
+	}
+	if (DecisionSet{}).ExceptionMayAnswer(true) {
+		t.Error("an exception answers an empty check")
 	}
 }

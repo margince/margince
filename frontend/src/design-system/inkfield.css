@@ -3,8 +3,9 @@
  * The page tokens are tuned for a light page: --textSecondary measures 2.62:1
  * and --accentText 1.89:1 on --bgInkField. Every component that paints the
  * plate is listed here, so a label, a link or a focus ring dropped into it
- * reads the plate's inks without knowing where it is. inkfield.test.ts fails a
- * rule that paints the plate and is missing from this list. */
+ * reads the plate's inks without knowing where it is.
+ * census/rules/inkfield.census.ts fails a rule that paints the plate and is
+ * missing from this list. */
 :where(
   .docked-head,
   .docked-bar,

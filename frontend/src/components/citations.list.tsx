@@ -5,6 +5,7 @@ import { formatActivityWhen } from "../format/activitywhen";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { labelFor } from "../lib/labelfor";
 import { useViewerZone } from "../lib/viewerzone";
 import type {
   BriefSentence,
@@ -307,7 +308,9 @@ function NatureBadge({ sentence }: Readonly<{ sentence: BriefSentence }>) {
     sentence.nature === "recommendation"
       ? "co-brief-nature co-brief-nature-suggested"
       : "co-brief-nature";
-  return <span className={cls}>{t(NATURE_LABELS[sentence.nature])}: </span>;
+  return (
+    <span className={cls}>{t(labelFor(NATURE_LABELS, sentence.nature))}: </span>
+  );
 }
 
 /**

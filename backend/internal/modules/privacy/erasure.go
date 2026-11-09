@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/erasureaccount"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -93,8 +94,9 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
 		return erasureaccount.Account{}, err
 	}
+	ctx = originalstore.Bind(ctx, e.db, e.blob)
 	subject := ids.From[ids.ContactKind](contactID)
-	err = e.db.Tx(ctx, func(raw pgx.Tx) error {
+	err = e.withPreparedOriginalErasure(ctx, subject, func(raw pgx.Tx, prepared originalMatches) error {
 		tx := newTallyTx(raw)
 		floor, err := e.erasableUnderFloor(ctx, tx, subject)
 		if err != nil {
@@ -120,7 +122,7 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		// holding the same identifier would be left named, reachable, and
 		// stripped of the evidence that was never this request's to destroy
 		// (erasure_rivals.go).
-		if err := refuseRivalIdentifierHolders(ctx, tx, subject, emails, identities); err != nil {
+		if err := freezeSubjectOriginalsTx(ctx, tx, subject, keys, prepared); err != nil {
 			return err
 		}
 
@@ -148,7 +150,7 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		// hold the subject's address and the body before any activity exists, so
 		// nothing above this line can reach them — and a scheduled one would
 		// otherwise fire the morning after this erasure certified the data destroyed.
-		if err := redactUnsentMessages(ctx, tx, reason, subject, leadsWiped, emails); err != nil {
+		if err := redactUnsentMessages(ctx, tx, reason, subject, leadsWiped, emails, e.payloads); err != nil {
 			return err
 		}
 		// And the ones nobody has DECIDED yet, one step earlier in the same life

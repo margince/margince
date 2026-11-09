@@ -7734,7 +7734,7 @@ export const en = {
   "sendPermission.unprovenRefuses":
     "Sending is refused until a reason is recorded.",
   "sendPermission.missingContext": "This message needs one more detail",
-  "sendPermission.missingPermission": "Consent needed for this message",
+  "sendPermission.missingPermission": "Permission needed for this message",
   "sendPermission.reason.chooseDeal": "Choose the deal for this follow-up.",
   "sendPermission.appliesTo": "This applies to {address}.",
   "sendPermission.appliesToAndMore_one":
@@ -7762,6 +7762,8 @@ export const en = {
     "This address does not accept mail. Correct the address; an override does not apply.",
   "sendPermission.reason.optedOutAfterRequest":
     "The recipient opted out of marketing after asking for this quote. Confirm with them that they still want it, then record their new request.",
+  "sendPermission.reason.permissionRequired":
+    "This marketing message has no recorded permission under the applicable rules. A staff exception cannot replace consent or the required evidence.",
   "sendPermission.reason.consentRequired":
     "Marketing to a recipient in this country needs their prior consent. No exception can replace it.",
   "sendPermission.reason.dealNotRequested":
@@ -9220,6 +9222,9 @@ export const en = {
   "agents.disconnectOpen": "Disconnect",
   "agents.disconnectNamed": "Disconnect {client}",
   "agents.disconnected": "Disconnected",
+  "agents.showDisconnected_one": "Show {count} disconnected tool",
+  "agents.showDisconnected_other": "Show {count} disconnected tools",
+  "agents.hideDisconnected": "Hide disconnected",
   "agents.lapsed": "Credential expired",
   "agents.renewing": "Renewing",
   "agents.expiredOn": "Expired {date}",
@@ -9960,6 +9965,8 @@ export const en = {
     "A lost deal needs the reason it was lost.",
   "import.reason.deal_pipeline_fixed":
     "This deal is in another pipeline than the file names. An import does not move a deal between pipelines, so the row is skipped.",
+  "import.reason.deal_company_has_contracts":
+    "This deal has contracts filed against its current company, so the row is skipped. Detach the contracts from the deal, or move them to a deal of the new company, then import again.",
   "import.reason.deal_already_closed":
     "This deal is already closed, so the row is skipped. An import does not reopen a closed deal.",
   "import.reason.fx_rate_missing":

@@ -9,6 +9,7 @@ import { StatusBadge, type StatusKind } from "../../design-system/statusbadge";
 import { formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useProviderLabel } from "../../lib/channelproviders";
+import { valueFor } from "../../lib/labelfor";
 import { useViewerZone } from "../../lib/viewerzone";
 
 // Settings › Capture activity: one row per message in the window, each opening
@@ -195,7 +196,10 @@ function EntryOutcome({ entry }: Readonly<{ entry: TraceEntry }>) {
       {entry.outcome_now === "captured" ? (
         <span>{words}</span>
       ) : (
-        <StatusBadge kind={OUTCOME_KIND[entry.outcome]} label={words} />
+        <StatusBadge
+          kind={valueFor(OUTCOME_KIND, entry.outcome, "neutral")}
+          label={words}
+        />
       )}
       {caption && <span className="t-caption">{caption}</span>}
     </CellStack>

@@ -88,7 +88,7 @@ type sendHold func() (release func(), err error)
 func (d *Deliverer) sendGuard(ctx context.Context, t attemptTarget) sendHold {
 	return func() (func(), error) {
 		ctx, cancel := context.WithTimeout(ctx, deliveryTimeout)
-		release, err := d.store.holdToSend(ctx, t)
+		release, err := d.holdToSend(ctx, t)
 		if err != nil {
 			cancel()
 			if errors.Is(err, errSendWithdrawn) {
@@ -104,6 +104,16 @@ func (d *Deliverer) sendGuard(ctx context.Context, t attemptTarget) sendHold {
 			}
 		}, nil
 	}
+}
+
+// holdToSend runs the test seam, if any, then takes the row.
+func (d *Deliverer) holdToSend(ctx context.Context, t attemptTarget) (func() error, error) {
+	if d.beforeSend != nil {
+		if err := d.beforeSend(ctx); err != nil {
+			return nil, err
+		}
+	}
+	return d.store.holdToSend(ctx, t)
 }
 
 const (

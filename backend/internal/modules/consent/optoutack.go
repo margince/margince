@@ -9,10 +9,8 @@ package consent
 import (
 	"context"
 	"fmt"
-	"hash/fnv"
 	"log/slog"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -31,9 +29,8 @@ import (
 // looks discharged and is not.
 //
 // One message for the press, not one per purpose: a stop that withdrew four
-// subscriptions is one refusal. withdrawalMessageID names the press by contact,
-// day and withdrawn set. A later press that withdraws something else gets its
-// own receipt.
+// subscriptions is one refusal. withdrawalMessageID names the press by contact
+// and the transaction that recorded it, so every later press gets its own receipt.
 //
 // NOTHING WITHDRAWN, NOTHING TO ACKNOWLEDGE. A replayed press changes no state,
 // and telling somebody again that we stopped is a second message they did not
@@ -44,13 +41,13 @@ func (s *Store) acknowledgeWithdrawalTx(
 	if len(withdrawn) == 0 {
 		return nil
 	}
-	day, err := databaseDayTx(ctx, tx)
+	act, err := withdrawalActTx(ctx, tx)
 	if err != nil {
 		return err
 	}
 	return s.stageAcknowledgementTx(ctx, tx,
 		subject{id: contactID.UUID, entityType: entityContact},
-		withdrawalMessageID(contactID, day, withdrawn))
+		withdrawalMessageID(contactID, act), ids.UUID{})
 }
 
 // acknowledgeOptOutTx stages the acknowledgement this stop owes, if any.
@@ -66,7 +63,7 @@ func (s *Store) acknowledgeOptOutTx(
 	if !acknowledgeableStop(kind) {
 		return nil
 	}
-	return s.stageAcknowledgementTx(ctx, tx, sub, acknowledgementMessageID(stopID))
+	return s.stageAcknowledgementTx(ctx, tx, sub, acknowledgementMessageID(stopID), stopID)
 }
 
 // stageAcknowledgementTx is the one place an acknowledgement is composed and
@@ -75,12 +72,15 @@ func (s *Store) acknowledgeOptOutTx(
 // ONE PLACE, because the two refusals owe the same message and a second copy of
 // this would be a second answer to what the decree requires. What differs is
 // the message id, which each caller derives from the act it is acknowledging.
-func (s *Store) stageAcknowledgementTx(ctx context.Context, tx pgx.Tx, sub subject, messageID string) error {
+//
+// stopID names the suppression this receipt acknowledges, zero for a
+// withdrawal, which records none.
+func (s *Store) stageAcknowledgementTx(ctx context.Context, tx pgx.Tx, sub subject, messageID string, stopID ids.UUID) error {
 	nested, err := tx.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("consent: opening receipt preparation: %w", err)
 	}
-	owed, missing, err := s.stageOwedReceiptTx(ctx, nested, sub, messageID)
+	owed, missing, err := s.stageOwedReceiptTx(ctx, nested, sub, messageID, stopID)
 	missed := MissedReceipt{SubjectType: sub.entityType, SubjectID: sub.id, MessageID: messageID, Reason: missing}
 	if err != nil {
 		if rollbackErr := nested.Rollback(ctx); rollbackErr != nil {
@@ -106,18 +106,17 @@ func (s *Store) stageAcknowledgementTx(ctx context.Context, tx pgx.Tx, sub subje
 
 // stageOwedReceiptTx stages the receipt when the rules owe one. It answers
 // whether one is owed, and why it could not be staged when it was not.
-func (s *Store) stageOwedReceiptTx(ctx context.Context, tx pgx.Tx, sub subject, messageID string) (bool, string, error) {
+func (s *Store) stageOwedReceiptTx(
+	ctx context.Context, tx pgx.Tx, sub subject, messageID string, stopID ids.UUID,
+) (bool, string, error) {
 	owed, dueAt, err := s.receiptOwedTx(ctx, tx, sub)
 	if err != nil || !owed {
 		return false, "", err
 	}
-	switch {
-	case s.confirmSender == nil:
+	if s.confirmSender == nil {
 		return true, MissedReceiptNoMailLane, nil
-	case sub.entityType != entityContact:
-		return true, MissedReceiptNoLeadReceipt, nil
 	}
-	address, err := acknowledgementAddressTx(ctx, tx, sub)
+	address, err := acknowledgementAddressTx(ctx, tx, sub, stopID)
 	if err != nil {
 		return true, "", err
 	}
@@ -156,7 +155,15 @@ func (s *Store) prepareAcknowledgementTx(
 	if err != nil {
 		return err
 	}
-	_, err = s.confirmSender.QueueConfirmationTx(ctx, tx, ConfirmationSend{ContactID: ids.From[ids.ContactKind](sub.id), Recipient: address, Category: category, MessageID: messageID, DueAt: dueAt, Rendered: rendered})
+	send := ConfirmationSend{Recipient: address, Category: category, MessageID: messageID, DueAt: dueAt, Rendered: rendered}
+	// Filed under the subject who refused, so the receipt's timeline row, the
+	// overdue sweep and an erasure all find it on that record.
+	if sub.entityType == entityLead {
+		send.LeadID = ids.From[ids.LeadKind](sub.id)
+	} else {
+		send.ContactID = ids.From[ids.ContactKind](sub.id)
+	}
+	_, err = s.confirmSender.QueueConfirmationTx(ctx, tx, send)
 	return err
 }
 
@@ -186,28 +193,43 @@ func acknowledgeableKinds() []string {
 	return []string{commsauthz.ReasonObjection, suppressibleKind}
 }
 
-// acknowledgementAddressTx reads where to send it: the contact's primary
-// address, by the ordering the preference centre and the confirm card share.
+// acknowledgementAddressTx reads where to send it. A refusal made from an
+// address, as a link press is, is answered at that address. The stop records
+// it, and the subject may have changed the one on file since. Otherwise a
+// contact's is its primary address, by the ordering the preference centre and
+// the confirm card share. A lead's is the one on its own row while it is live.
 //
 // Answers EMPTY rather than an error when there is none. A stop can be recorded
-// against a contact whose address the product does not hold, or has since
-// erased, and that is a fact about the contact rather than a failure.
-func acknowledgementAddressTx(ctx context.Context, tx pgx.Tx, sub subject) (string, error) {
-	if sub.entityType != entityContact {
-		// A LEAD holds no contact_email row, and the acknowledgement is
-		// addressed by the same reader every other controller message uses.
-		// Reaching for the lead's own address here would be a second spelling
-		// of "where does this contact receive mail", which is the thing
-		// primaryEmailSQL exists to keep singular.
-		return "", nil
+// against a subject whose address the product does not hold, or has erased.
+// That is a fact about the subject rather than a failure.
+func acknowledgementAddressTx(ctx context.Context, tx pgx.Tx, sub subject, stopID ids.UUID) (string, error) {
+	if !stopID.IsZero() {
+		var refusedFrom string
+		if err := tx.QueryRow(ctx,
+			`SELECT coalesce(address, '') FROM communication_suppression WHERE id = $1`, stopID).Scan(&refusedFrom); err != nil {
+			return "", fmt.Errorf("consent: reading the address this stop was made from: %w", err)
+		}
+		if refusedFrom != "" {
+			return refusedFrom, nil
+		}
+	}
+	reader := primaryEmailSQL("$1")
+	if sub.entityType == entityLead {
+		reader = liveLeadEmailSQL("$1")
 	}
 	var address string
-	err := tx.QueryRow(ctx,
-		`SELECT `+primaryEmailSQL("$1"), sub.id).Scan(&address)
+	err := tx.QueryRow(ctx, `SELECT `+reader, sub.id).Scan(&address)
 	if err != nil {
 		return "", fmt.Errorf("consent: reading where to acknowledge this stop: %w", err)
 	}
 	return address, nil
+}
+
+// liveLeadEmailSQL is a lead's own address, or empty when the lead has none or
+// is archived. An archived lead was promoted, merged or erased. Mail to it would
+// answer for a record that no longer speaks for its subject.
+func liveLeadEmailSQL(ref string) string {
+	return `coalesce((SELECT l.email FROM lead l WHERE l.id = ` + ref + ` AND l.archived_at IS NULL), '')`
 }
 
 // acknowledgementMessageID derives the RFC822 identity from the stop it
@@ -225,35 +247,23 @@ func acknowledgementMessageID(stopID ids.UUID) string {
 	return "optout-ack-" + strings.ReplaceAll(stopID.String(), "-", "") + "@margince.invalid"
 }
 
-// withdrawalMessageID derives the RFC822 identity from the contact, the day and
-// the purposes this press withdrew.
+// withdrawalMessageID names one press by its contact and its act.
 //
-// Two presses that withdraw different purposes are two refusals, and each owes
-// its own receipt, so the withdrawn set is part of the id. A replay withdraws
-// nothing and stages nothing.
-//
-// The date comes from the database, so two hosts with skewed clocks cannot
-// place one press on both sides of midnight.
-func withdrawalMessageID(contactID ids.ContactID, day string, withdrawn []string) string {
-	purposes := slices.Clone(withdrawn)
-	slices.Sort(purposes)
-	act := fnv.New64a()
-	//craft:ignore swallowed-errors hash.Hash.Write never returns an error
-	_, _ = act.Write([]byte(strings.Join(purposes, "\x00")))
-	return "optout-ack-" + strings.ReplaceAll(contactID.String(), "-", "") +
-		"-" + day + "-" + strconv.FormatUint(act.Sum64(), 16) + "@margince.invalid"
+// A second press of the same purposes on one day, after a re-grant, is a
+// second refusal. It owes its own receipt.
+func withdrawalMessageID(contactID ids.ContactID, act string) string {
+	return "optout-ack-" + strings.ReplaceAll(contactID.String(), "-", "") + "-" + act + "@margince.invalid"
 }
 
-// databaseDayTx reads today's date from the database.
+// withdrawalActTx names the transaction recording this press: the database day
+// and its transaction id.
 //
-// ONE CLOCK for every process, rather than each reading its own: the day is
-// part of a message id, so two application hosts with skewed wall clocks could
-// otherwise place one press on either side of midnight and stage two
-// acknowledgements for one refusal.
-func databaseDayTx(ctx context.Context, tx pgx.Tx) (string, error) {
-	var day string
-	if err := tx.QueryRow(ctx, `SELECT to_char(now(), 'YYYYMMDD')`).Scan(&day); err != nil {
-		return "", fmt.Errorf("consent: reading the day this refusal belongs to: %w", err)
+// The id is unique per act, and stable while the act runs. The day keeps an id
+// from repeating after a restore into a new cluster, which counts transactions afresh.
+func withdrawalActTx(ctx context.Context, tx pgx.Tx) (string, error) {
+	var act string
+	if err := tx.QueryRow(ctx, `SELECT to_char(now(), 'YYYYMMDD') || '-' || pg_current_xact_id()::text`).Scan(&act); err != nil {
+		return "", fmt.Errorf("consent: naming the refusal this receipt acknowledges: %w", err)
 	}
-	return day, nil
+	return act, nil
 }

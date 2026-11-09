@@ -139,3 +139,20 @@ export const RefusedSendUnreadable: Story = {
     <SendPermission preview={undefined} refusal={{ refusals: [] }} />
   ),
 };
+
+export const MarketingPermissionMissing: Story = {
+  render: () => (
+    <SendPermission
+      namesRecipients
+      preview={refused({
+        reason_code: "marketing_permission_required",
+        resolved_category: "marketing",
+      })}
+    />
+  ),
+};
+
+export const MarketingPermissionMissingPhone: Story = {
+  ...MarketingPermissionMissing,
+  tags: ["uat-phone"],
+};

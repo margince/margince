@@ -87,6 +87,7 @@ func (e *resolveEnv) decideAs(t *testing.T, user ids.UUID) commsauthz.Decision {
 
 func TestAVouchServesEveryRepOfItsEntityAndNoOther(t *testing.T) {
 	e := setupResolve(t)
+	e.livesIn(t, reviewableMarketingCountry())
 	e.seedPurpose(t, "newsletter", "marketing")
 	branch := e.secondEntity(t)
 	recorder := e.colleague(t, ids.Nil)
@@ -111,6 +112,7 @@ func TestAVouchServesEveryRepOfItsEntityAndNoOther(t *testing.T) {
 
 func TestAVouchRecordedForAnotherEntityStaysWithIt(t *testing.T) {
 	e := setupResolve(t)
+	e.livesIn(t, reviewableMarketingCountry())
 	e.seedPurpose(t, "newsletter", "marketing")
 	branch := e.secondEntity(t)
 	vouch := e.vouchAs(t, e.colleague(t, branch))
@@ -125,6 +127,7 @@ func TestAVouchRecordedForAnotherEntityStaysWithIt(t *testing.T) {
 
 func TestAVouchDoesNotLapseForAgeOrAnOwnerChange(t *testing.T) {
 	e := setupResolve(t)
+	e.livesIn(t, reviewableMarketingCountry())
 	e.seedPurpose(t, "newsletter", "marketing")
 	recorder := e.colleague(t, ids.Nil)
 	vouch := e.vouchAs(t, recorder)

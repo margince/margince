@@ -528,7 +528,7 @@ time, with an error that does not point at the cause:
 **Import the core only through `@margince/frontend/<subpath>`** (`design-system`, `api`, `app`), as
 `frontend/package.json` publishes them in its `exports` map. That map is this side's
 `//margince:extension-surface`. The Go tier gets its edge from the compiler, and a bundler gives none. So
-`frontend/scripts/ext-imports.test.ts` is the edge. It refuses a relative path that leaves your unit, and a path that `exports` does not publish. It also
+`frontend/census/rules/ext-imports.census.ts` is the edge. It refuses a relative path that leaves your unit, and a path that `exports` does not publish. It also
 refuses any bare package name your own `package.json` does not declare.
 
 `devDependencies` count for test files only, so a screen cannot pull a test runner into the bundle.
@@ -563,11 +563,11 @@ on the object it declares. Settings → Integrations is also gated on the grants
 The design-system gates scan your unit as they scan the core. The script gates run in the `fe-ds-gates` lane
 (`ds-purity`, `font-lock`, `icon-lint`, `ds-spacing`, `ds-spacing-roles`, `space-tokens`). The gates that read
 the AST run inside `fe-unit`: `native-controls`, `ext-imports`, and the action-row gate
-(`design-system/actionrow.test.ts`). That last gate holds a unit's rows of two or more buttons to
+(`frontend/census/rules/actionrow.census.ts`). That last gate holds a unit's rows of two or more buttons to
 `gap: var(--gapActions)`, like any other.
 
 **Copy text with `useClipboardCopy`** from `@margince/frontend/design-system`. A gate
-(`frontend/src/design-system/clipboard-spelling.test.ts`) refuses `navigator.clipboard` in a unit as in the core.
+(`frontend/census/rules/clipboard-spelling.census.ts`) refuses `navigator.clipboard` in a unit as in the core.
 
 **Test your screen next to it.** `make fe-test-ext` runs a `*.test.tsx` under your `frontend/`, and
 `make check-fe` calls it. It is a second `vitest` lane (`frontend/vitest.ext.config.ts`), separate from the core
