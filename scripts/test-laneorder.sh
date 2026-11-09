@@ -18,7 +18,10 @@
 #   4. the shard split holds every test once and spreads slow tests apart;
 #   5. a package too heavy for one process splits into parts that hold every
 #      test once, none empty, balanced by weight;
-#   6. the wall-clock report reads the critical part's own seconds.
+#   6. the wall-clock report reads the critical part's own seconds;
+#   7. a shard starts its heaviest part first, by the weights it split by;
+#   8. discovery finds the tests `go test -tags=integration` runs, and fails on
+#      a file it cannot decide.
 set -euo pipefail
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -292,6 +295,51 @@ expect_order "the critical part is joined to its own seconds, not its sibling's"
 printf './big|20.0|5|8\n' > "$work/othertiming"
 expect_order "a critical part whose log recorded no seconds reports none" \
   './big|5|400|' "$(critical_part "$work/wallclock" "$work/othertiming")"
+
+# 7. Part order, by the weights of the timing above: a part weighs the sum of
+# its tests, a test the file does not name weighs its package's `*` row, the
+# packages mix, and the two 60 s parts keep the order they arrived in.
+cat > "$work/unordered" <<'PARTS'
+backend|./small|^(TestG|TestH)$
+backend|./big|^(TestB|TestC)$
+backend|./big|^(TestA)$
+backend|./small|^(TestNew)$
+backend|./big|^(TestD|TestE)$
+PARTS
+expect_order "parts start heaviest first, whatever package they belong to" \
+  'backend|./big|^(TestA)$
+backend|./big|^(TestD|TestE)$
+backend|./small|^(TestG|TestH)$
+backend|./small|^(TestNew)$
+backend|./big|^(TestB|TestC)$' \
+  "$(order_by_weight "$work/unordered" "$work/timing")"
+
+# 8. Discovery, against a module laid out as the lane meets one.
+mod="$work/mod"
+mkdir -p "$mod/a" "$mod/b" "$mod/c"
+printf '//go:build integration\n\npackage a\n\nfunc TestA(t *testing.T) {}\nfunc TestMain(m *testing.M) {}\nfunc Testhelper() {}\nfunc Test(t *testing.T) {}\n' > "$mod/a/a_test.go"
+printf 'package a\n\nfunc TestUnitOne(t *testing.T) {}\nfunc TestUnitTwo(t *testing.T) {}\n' > "$mod/a/unit_test.go"
+printf 'package a\n\n//go:build integration\nfunc TestProse(t *testing.T) {}\n' > "$mod/a/prose_test.go"
+printf '//go:build linux\n\npackage b\n\nfunc TestB(t *testing.T) {}\n' > "$mod/b/b_test.go"
+printf '//go:build integration\n\npackage c\n\nfunc TestC(t *testing.T) {}\n' > "$mod/c/c_test.go"
+printf '//go:build !integration\n\npackage c\n\nfunc TestNotHere(t *testing.T) {}\n' > "$mod/c/unit_test.go"
+printf '//go:build integration && bench\n\npackage c\n\nfunc TestBench(t *testing.T) {}\n' > "$mod/c/bench_test.go"
+printf '// +build e2e_llm\n\npackage c\n\nfunc TestLLM(t *testing.T) {}\n' > "$mod/c/llm_test.go"
+: > "$work/untagged"
+expect_order "discovery lists the tagged tests of the lane's packages, as go test runs them" \
+  "$(printf '%s\n' "$mod|./a|Test" "$mod|./a|TestA" "$mod|./c|TestC")" \
+  "$(lane_discover "$work/untagged" "$mod")"
+expect_order "an untagged file counts every Test function it holds, and a constraint below package is prose" \
+  "$(printf '%s\n' "$mod|./a|1" "$mod|./a|2")" "$(LC_ALL=C sort "$work/untagged")"
+printf '//go:build linux\n\npackage c\n\nfunc TestLinux(t *testing.T) {}\n' > "$mod/c/linux_test.go"
+if lane_discover "$work/untagged" "$mod" > /dev/null 2> "$work/err" || ! grep -q "linux" "$work/err"; then
+  fail "a constraint discovery cannot decide, in a package the lane runs, must fail by name"
+fi
+rm "$mod/c/linux_test.go"
+printf 'func FuzzC(f *testing.F) {}\n' >> "$mod/c/c_test.go"
+if lane_discover "$work/untagged" "$mod" > /dev/null 2> "$work/err" || ! grep -q "Fuzz or Example" "$work/err"; then
+  fail "a Fuzz function in a tagged file must fail discovery"
+fi
 
 # The committed shard timing has to be readable by assign_shard: four fields,
 # a number last. A line it cannot read silently weighs its test at the mean.
