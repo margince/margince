@@ -256,7 +256,7 @@ export const MenuUnderATip: Story = {
   render: () => <SortMenuBesideAVerb />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const menu = canvas.getByRole("group", { name: "Sort by" });
+    const menu = await canvas.findByRole("group", { name: "Sort by" });
     const call = canvas.getByRole("button", { name: "Call" });
     await userEvent.hover(call);
     const body = within(document.body);
@@ -279,7 +279,6 @@ export const LongAppliedFilterPhone: Story = {
   tags: ["uat-phone"],
   render: () => <LongFilters />,
   play: async ({ canvasElement }) => {
-    const card = canvasElement.querySelector(".lt");
     const line = await waitFor(() => {
       const found = canvasElement.querySelector(".lt-applied-rows");
       if (!(found instanceof HTMLElement)) {
@@ -287,6 +286,7 @@ export const LongAppliedFilterPhone: Story = {
       }
       return found;
     });
+    const card = canvasElement.querySelector(".lt");
     if (!(card instanceof HTMLElement)) {
       throw new Error("the list surface did not render");
     }

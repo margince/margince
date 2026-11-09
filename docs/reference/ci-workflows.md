@@ -36,15 +36,15 @@ the one in `CLA.md`.
 
 ## `cache-warm.yml`
 
-The only writer of the Go build cache and of the golangci analysis cache, and one of the writers of
-the gate binaries. A red or cancelled run makes the next lane slower, and costs nothing else. It is a
+The only writer of the Go build cache and of the frontend cache. It is also one of the writers of
+the golangci analysis cache and of the gate binaries. A red or cancelled run makes the next lane slower, and costs nothing else. It is a
 separate workflow because a merge queue build cannot fill the cache. `actions/cache` scopes a write
 to the branch that writes plus the default branch, and a queue ref does not last. See [The shared Go build cache](../explanation/ci-pipeline.md#the-shared-go-build-cache)
 for why it does not run on each push.
 
 GitHub drops some of the cron runs. So `pace.yml` starts it from a push to `main` once the newest run is
 three hours old, as it does for `main-health.yml`. Why `ci.yml` saves neither lint cache: [The lint
-caches are saved on `main` only](../explanation/ci-pipeline.md#the-lint-caches-are-saved-on-main-only).
+caches are saved on `main` only](../explanation/ci-pipeline.md#the-lint-caches-are-saved-on-main-and-the-golangci-one-on-develop-too).
 
 ## `merge-attest.yml`
 
@@ -95,6 +95,10 @@ and runs a script from it. So the job only runs for branches of this repository 
 `pull_request` event did not start it. A fork still gets the report on every push, but not the new
 report on a sent review. `backend/gates/forkheadcheckout_test.go` holds that across the workflow
 tree.
+
+A review the author of the pull request sends does not start it, and does not count as a record. A
+reply to a review thread is saved as a review by whoever replied, so a batch of replies would
+otherwise start one run each.
 
 It says nothing about a pull request nobody has reviewed yet. That is every pull request for most
 of the time it is open, and `merge-attest.yml` says nothing about a missing result for the same reason.
@@ -219,7 +223,6 @@ asks "is this diff good?", and runs because a diff exists.
 |---|---|---|---|
 | `govulncheck` | daily | Go packages against the vulnerability database | The database changes daily, so a scan per PR proves only the day it merged. |
 | SonarCloud quality gate | daily | The stored gate of `main`, read through the API (no new scan) | It is not a required PR check, so nothing else reads it. `main-health.yml` publishes the analysis. |
-| backend lane | daily | The backend gate, always | A docs-only commit after a breaking one matches no classifier scope. Every gate skips, and the run reports green over a broken tree. |
 | frontend clock drift | daily | The Vitest tests run as if it were 200 days from now, with the same result | A fixture whose fixed date a page part compares to `now` breaks on a calendar date, with no diff. |
 | every story renders | daily | `make fe-uat ARGS=--all-stories`: every story the Storybook build registers renders clean | `make fe-uat` on a branch renders only the stories the diff reaches, so a story that fails on `main` stays hidden until a change reaches it. |
 | backend clock drift | daily | The Go tests, unit and real-Postgres, run on a runner whose clock is 200 days later, with the same result | The same calendar break on the backend, where a test can read the clock of Go or the `now()` of Postgres. |
@@ -232,8 +235,8 @@ asks "is this diff good?", and runs because a diff exists.
 
 Notes on the jobs:
 
-- The backend lane covers the same checks as the merge gate, by design. It is the one check that
-  does not trust the classifier of the gate.
+- The backend gate on `main` runs in `main-health.yml`, not as a daily job here. It runs the same
+  `make check-backend` on every health check, so a daily copy would only repeat it.
 - No rule a scan can apply finds the next test that needs the clock. "A fixed date in a file that never
   pins the clock" matches 129 files, and nearly all of them do no harm. So the gate is a second run.
 - Many backend test files read the wall clock, and

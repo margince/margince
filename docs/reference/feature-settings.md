@@ -29,8 +29,8 @@ a **default an admin can edit**, and each installation decides its own. Three th
 ## Capture, company context and lists
 
 `capture.trace_payloads` (default `true`) keeps the sender of each traced message and a limited
-subject (320 and 300 characters, never a body). It keeps them in the 24-hour Capture activity trace
-every member sees under Settings. It covers messages dropped because every party was inside your
+subject (320 and 300 characters, never a body). It keeps them in the 24-hour activity trace
+every member sees under **Settings → Connections → Activity**. It covers messages dropped because every party was inside your
 own domains. The CRM stores nothing else about those, and they are what an operator looks for when
 a message is missing.
 

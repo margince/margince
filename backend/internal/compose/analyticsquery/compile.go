@@ -25,8 +25,10 @@ import (
 // Plan is a compiled query: the statement, its arguments, and what the columns
 // mean.
 type Plan struct {
-	SQL  string
-	Args []any
+	SQL             string
+	Args            []any
+	PopulationWhere []string
+	PopulationArgs  []any
 	// Columns names each selected column IN ORDER — the group keys, then the
 	// measures. Results map by position, which is what lets a caller's alias
 	// stay out of the SQL entirely.
@@ -154,10 +156,12 @@ func Compile(q Query, schema Schema, scope ScopeClauses) (Plan, error) {
 	if groupCount > 0 {
 		sql += " ORDER BY " + groupPositions(groupCount)
 	}
+	populationArgs := slices.Clone(args)
 	sql += fmt.Sprintf(" LIMIT %s", bind(AppliedLimit(q.Limit)))
 
 	plan := Plan{
 		SQL: sql, Args: args, Columns: columns,
+		PopulationWhere: slices.Clone(where), PopulationArgs: populationArgs,
 		GroupCount: groupCount, CountColumn: countColumn,
 		ContributorsSQL: contributorsSQL, ContributorsArgs: contributorsArgs,
 	}

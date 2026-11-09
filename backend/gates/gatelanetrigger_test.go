@@ -29,6 +29,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // candidatePath finds string literals that could name a file: no whitespace,
@@ -66,7 +68,7 @@ func TestEveryGateRunsInALaneItsSubjectTriggers(t *testing.T) {
 	// workflow above is reached as ../.github — the gates are a directory down
 	// from here, not the one the process is in.
 	const dir = "gates"
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", dir, err)
 	}
@@ -75,7 +77,7 @@ func TestEveryGateRunsInALaneItsSubjectTriggers(t *testing.T) {
 		if !strings.HasSuffix(entry.Name(), "_test.go") {
 			continue
 		}
-		body, err := os.ReadFile(filepath.Join(dir, entry.Name()))
+		body, err := gatekit.ReadFile(filepath.Join(dir, entry.Name()))
 		if err != nil {
 			t.Fatalf("reading %s: %v", entry.Name(), err)
 		}
@@ -154,7 +156,7 @@ func covered(scope []string, path string) bool {
 func backendFilterPatterns(t *testing.T) []string {
 	t.Helper()
 	const workflow = "../.github/workflows/ci.yml"
-	body, err := os.ReadFile(filepath.Clean(workflow))
+	body, err := gatekit.ReadFile(filepath.Clean(workflow))
 	if err != nil {
 		t.Fatalf("reading %s: %v", workflow, err)
 	}

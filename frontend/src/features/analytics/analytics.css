@@ -91,7 +91,11 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  column-gap: var(--space-3);
+  gap: var(--space-1) var(--space-3);
+}
+/* The row's gap spaces its lines; a paragraph's own gap would double it. */
+.analytics-attention-text > * + * {
+  margin-block-start: 0;
 }
 .analytics-attention-text {
   display: contents;
@@ -254,9 +258,6 @@
   font-weight: var(--fontWeightMedium);
   color: var(--textPrimary);
   text-wrap: pretty;
-}
-.analytics-outlook .panel-body > .actions {
-  margin-block-start: var(--space-3);
 }
 .analytics-outlook .panel-foot {
   justify-content: space-between;

@@ -109,15 +109,19 @@ func clearProfileFields(fields map[string]*string, cleared []string) error {
 }
 
 func (h companyHandlers) GetAnchorCompanyContextCapabilities(w http.ResponseWriter, r *http.Request) {
+	httperr.WriteJSON(w, http.StatusOK, h.contextCapabilities())
+}
+
+func (h companyHandlers) contextCapabilities() crmcontracts.CompanyContextCapabilities {
 	rollout := h.rollout
 	if rollout == "" {
 		rollout = companyContextRolloutOnboarding
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.CompanyContextCapabilities{
+	return crmcontracts.CompanyContextCapabilities{
 		Rollout:     crmcontracts.CompanyContextCapabilitiesRollout(rollout),
 		ReadEnabled: companyContextReadEnabled(rollout), TasksEnabled: companyContextTasksEnabled(rollout),
 		OnboardingEnabled: companyContextOnboardingEnabled(rollout),
-	})
+	}
 }
 
 func (h companyHandlers) GetAnchorCompany(w http.ResponseWriter, r *http.Request) {

@@ -8,8 +8,11 @@ import { providerName } from "../../format/connectorprovider";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
+import { approvalHref } from "../../lib/approvalhref";
 import { approvalKindLabel } from "../../lib/approvalkindlabel";
+import { runOutcomeWord, runReasonWords } from "../../lib/automationrun";
 import { ENTITY, isEntityKind } from "../../lib/entity";
+import { historyFieldLabel } from "../../lib/historyfieldlabels";
 import type { MagicLane, MagicLine } from "../../lib/magic.queries";
 import {
   magicByKey,
@@ -18,7 +21,6 @@ import {
   magicWhyKey,
 } from "../../lib/magickeys";
 import { routeHash } from "../../lib/router";
-import { approvalHref } from "../automations/approvaldrawer";
 import { MagicApproval } from "./magic.approval";
 import { axisLabel, markKind } from "./magic.marks";
 import { LineRecordsOpener } from "./magic.records";
@@ -350,6 +352,23 @@ function LineSubject({
     line.approval_kind === undefined &&
     since;
   const href = many ? undefined : recordHref(line);
+  // A group's opener counts the changes it holds, not the records it names.
+  if (opens && many) {
+    return (
+      <>
+        <span className="magic-line-subject">{shown}</span>{" "}
+        <LineRecordsOpener
+          line={line}
+          since={since}
+          summary={plural(
+            floor ? "magic.viewChangesAtLeast" : "magic.viewChanges",
+            count,
+            { count: formatNumber(count, locale) },
+          )}
+        />
+      </>
+    );
+  }
   return (
     <span className="magic-line-subject">
       {opens ? (
@@ -407,6 +426,20 @@ function readableValues(
   return {
     ...values,
     ...(values.kind && { kind: approvalKindLabel(values.kind, t) }),
+    ...(values.fields && { fields: fieldWords(values.fields, t) }),
     ...(values.provider && { provider: providerName(values.provider, t) }),
+    ...(values.outcome && { outcome: runOutcomeWord(values.outcome, t) }),
+    ...(values.reason_code && {
+      reason: runReasonWords(values.reason_code, t),
+    }),
   };
+}
+
+// The server names the changed fields by column, with spaces for underscores;
+// each is read as the record page names it.
+function fieldWords(fields: string, t: Translator): string {
+  return fields
+    .split(", ")
+    .map((field) => historyFieldLabel(field.replaceAll(" ", "_"), t))
+    .join(", ");
 }

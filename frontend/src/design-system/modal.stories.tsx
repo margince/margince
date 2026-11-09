@@ -175,6 +175,48 @@ export const Drawer: Story = {
   play: opens("Log a call with Anna"),
 };
 
+function FitDemo() {
+  const [open, setOpen] = useState(true);
+  const titleId = useId();
+  return (
+    <>
+      <Behind onOpen={() => setOpen(true)} />
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        labelledBy={titleId}
+        intent="drawer"
+        fit
+      >
+        <DrawerHead>
+          <Heading size="large" id={titleId} className="t-h2">
+            Why Anna Brandt needs attention
+          </Heading>
+        </DrawerHead>
+        <DrawerBody>
+          <p className="t-body">You wrote last, three days ago.</p>
+          <p className="t-body">Send the pricing she asked for.</p>
+        </DrawerBody>
+      </Modal>
+    </>
+  );
+}
+
+/** A drawer with little to say ends below its content, not at the screen's
+ * foot; a longer one is capped and scrolls like any drawer. */
+export const DrawerFit: Story = {
+  render: () => <FitDemo />,
+  play: async () => {
+    const dialog = await screen.findByRole("dialog", {
+      name: "Why Anna Brandt needs attention",
+    });
+    await expect(dialog).toHaveClass("modal-drawer-fit");
+    await expect(dialog.getBoundingClientRect().height).toBeLessThan(
+      window.innerHeight / 2,
+    );
+  },
+};
+
 function ReadingDemo({ expanded }: Readonly<{ expanded?: boolean }>) {
   const [open, setOpen] = useState(true);
   const [span, setSpan] = useState<DrawerSpan>("window");

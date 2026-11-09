@@ -39,6 +39,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const entityModelDir = "../docs/reference/entity-model"
@@ -168,7 +170,7 @@ func writeEntityModel(t *testing.T, pages map[string]string) {
 // an empty set rather than a failure, so the first run can create it.
 func entityModelOnDisk(t *testing.T) map[string]string {
 	t.Helper()
-	entries, err := os.ReadDir(entityModelDir)
+	entries, err := gatekit.ReadDir(entityModelDir)
 	if os.IsNotExist(err) {
 		return map[string]string{}
 	}
@@ -180,7 +182,7 @@ func entityModelOnDisk(t *testing.T) map[string]string {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".md") {
 			continue
 		}
-		body, err := os.ReadFile(filepath.Join(entityModelDir, entry.Name()))
+		body, err := gatekit.ReadFile(filepath.Join(entityModelDir, entry.Name()))
 		if err != nil {
 			t.Fatalf("reading %s: %v", entry.Name(), err)
 		}

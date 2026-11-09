@@ -107,7 +107,7 @@ func tagScoutDrafts(found []tagScoutRow) []collections.TagSuggestionDraft {
 
 func tagScoutCitable(a string) string {
 	return a + `.kind IN ('email', 'meeting', 'note', 'call')
-	     AND ` + a + `.archived_at IS NULL AND ` + auth.ActivityAvailableClause(a) + `
+	     AND ` + a + `.archived_at IS NULL AND ` + auth.ActivityExternalEvidenceClause(a) + `
 	     AND ` + a + `.capture_label IS DISTINCT FROM 'noise'`
 }
 

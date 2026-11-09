@@ -6,7 +6,8 @@ package attention
 // How the backlog tail merges its sources into one order. Every store can sort
 // by it in SQL. Rows go by a timestamp, earliest first and undated last. A tie
 // goes to the source's name, then to the store's own order. A task's timestamp
-// is its due date, and a waiting card's is when its message came in.
+// is its due date, and a waiting card's is when its message came in. An
+// approval is undated, because its store orders it newest first.
 
 import (
 	"context"

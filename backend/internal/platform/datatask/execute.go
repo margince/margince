@@ -42,13 +42,19 @@ func (e *Engine) Execute(ctx context.Context) (Outcome, error) {
 	defer cancel()
 	var picked *selection
 	var outcome Outcome
-	err := database.WithWorkspaceTx(batchCtx, e.pool, func(tx pgx.Tx) error {
-		var err error
-		outcome, picked, err = e.executeTx(batchCtx, tx)
-		return err
+	err := storekit.RetryLockCycles(batchCtx, func() error {
+		picked, outcome = nil, Outcome{}
+		return database.WithWorkspaceTx(batchCtx, e.pool, func(tx pgx.Tx) error {
+			var err error
+			outcome, picked, err = e.executeTx(batchCtx, tx)
+			return err
+		})
 	})
 	if err == nil || ctx.Err() != nil {
 		return outcome, nil
+	}
+	if storekit.IsLockCycle(err) {
+		return Outcome{Busy: true}, nil
 	}
 	if picked == nil {
 		return Outcome{}, err

@@ -52,13 +52,11 @@ expect:
   outcome: accepted
   # A right plan aims the objective and the opening at the open deal: it
   # cites the hangar question or the deal itself, and says "hangar booking".
-  # A plan whose objective restates telematics has written the meeting about
-  # a deal the account already declined.
+  # The prompt lets it name telematics as lost, so the word is not refused.
   answer:
     cites_label: hangar_question
     names_token: hangar booking
     objective_cites_any: [hangar_question, this]
-    objective_avoids: telematics
   bands:
     # The same bar as the thread scenario: the floor stands on its own, so a
     # model must reliably pick the meeting's deal to be worth the call.

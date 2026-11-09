@@ -49,7 +49,8 @@ screen comes after it. The request waits through the sign-in.
 
 The consent screen shows the human who signed in the fixed list of scopes, `read draft write send enrich`.
 All of them are checked by default. Before they approve, the human can clear each one they do not mean to
-grant. **Deny** sends the client `access_denied`, so it stops waiting.
+grant. **Deny** sends the client `access_denied`, so it stops waiting. When the human's role reaches two
+or more groups of work, the screen also asks where the agent may work. They keep all of them, or tick some.
 
 A human with no passport yet can still connect a client from nothing. Nothing needs to exist before
 the consent screen: to approve it creates the connection's own credential.

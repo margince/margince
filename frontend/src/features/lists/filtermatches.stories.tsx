@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { useFilterPreview, type VocabularyField } from "../../lib/filterdata";
 import { newGroup, newLeaf } from "../../lib/segmentpredicate";
 import {
@@ -166,7 +166,11 @@ export const Exporting: Story = {
   play: async ({ canvasElement }) => {
     const user = userEvent.setup();
     const canvas = within(canvasElement);
-    await user.click(await canvas.findByRole("button", { name: "Export CSV" }));
+    const exportButton = await canvas.findByRole("button", {
+      name: "Export CSV",
+    });
+    await waitFor(() => expect(exportButton).toBeEnabled());
+    await user.click(exportButton);
     await canvas.findByText("Exporting…");
   },
 };

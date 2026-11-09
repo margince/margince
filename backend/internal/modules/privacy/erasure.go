@@ -17,7 +17,6 @@ package privacy
 import (
 	"context"
 	"fmt"
-	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -138,27 +137,11 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		if err := eraseDealRoomSeats(ctx, tx, emails, reason); err != nil {
 			return err
 		}
-		// Before the timeline is JUDGED, not merely before it is written: the
-		// erase-or-hold decision reads a column another transaction stamps, so
-		// the lock has to precede the read that decides.
-		if err := lockSubjectTimeline(ctx, tx, subject, emails, channelActivityKeys(identities)); err != nil {
-			return err
-		}
-		activitiesRedacted, err := e.redactSubjectTimeline(ctx, tx, subject, emails, channelActivityKeys(identities), floor, reason)
-		if err != nil {
-			return err
-		}
-		// What the floor shielded from the statement above is held instead
-		// (erasure_restrict.go): the same three id sets, selected BY the
-		// floor rather than against it, so every row is one of the two.
-		activitiesHeld, err := holdShieldedTimeline(ctx, tx, subject, emails, channelActivityKeys(identities), floor, e.payloads)
-		if err != nil {
-			return err
-		}
 		if err := tombstoneLeadsAndSignals(ctx, tx, subject, leadsWiped, reason); err != nil {
 			return err
 		}
-		if err := e.purgeRedactedActivityTraces(ctx, tx, activitiesRedacted, activitiesHeld, reason); err != nil {
+		activitiesRedacted, activitiesHeld, err := e.redactSubjectActivities(ctx, tx, subject, keys, floor, reason)
+		if err != nil {
 			return err
 		}
 		// The messages nobody has sent yet — scheduled, or still a draft. They
@@ -183,10 +166,13 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		if err := redactQuotationsOf(ctx, tx, append(activitiesRedacted, activitiesHeld...), reason); err != nil {
 			return err
 		}
-		// What the subject's name is left standing in inside somebody else's
-		// working record — an automation's run, and a colleague's plan for
-		// their week (erasure_commitments.go).
-		if err := redactWorkingRecords(ctx, tx, subject, emails); err != nil {
+		// Where the subject's name stands inside somebody else's working record:
+		// an automation's run, a colleague's voice sample or weekly plan
+		// (erasure_commitments.go).
+		if err := e.redactWorkingRecords(ctx, tx, subject, keys); err != nil {
+			return err
+		}
+		if err := e.flagManualSubjectMentions(ctx, tx, subject, keys); err != nil {
 			return err
 		}
 		// Purge the subject's attachment bytes and rows together, inside the
@@ -204,7 +190,10 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		if err != nil {
 			return err
 		}
-		erased, err = certifyErasure(ctx, tx, subject, reason, identities, e.uncountedArms(), contactErasureCounts{
+		if err := e.scrubDeliveryCopies(ctx, tx, subject, leadsWiped); err != nil {
+			return err
+		}
+		erased, err = certifyErasure(ctx, tx, subject, reason, identities, tx.uncounted(), contactErasureCounts{
 			emailsSuppressed: len(emails), rawRowsPurged: rawPurged, aiPayloadsPurged: aiPayloadsPurged,
 			activitiesRedacted: len(activitiesRedacted), activitiesRestricted: len(activitiesHeld),
 		})
@@ -266,44 +255,6 @@ func subjectIdentifiers(ctx context.Context, tx pgx.Tx, contactID ids.ContactID)
 	return subjectKeys{emails: emails, identities: identities, displayName: displayName}, nil
 }
 
-// purgeRedactedActivityTraces finishes off the activities the timeline redaction
-// just emptied. It removes their vectors, their own audit spines, the external
-// identities they answered to and the proposals read out of them. It also
-// clears the transmitted copy in the send log and the copies other modules
-// took of their text. Those copies go for the held activities too: the floor
-// keeps the original record, never a voice sample read from it.
-func (e *Eraser) purgeRedactedActivityTraces(ctx context.Context, tx pgx.Tx, activities, held []ids.UUID, reason string) error {
-	if err := purgeActivityTraces(ctx, tx, activities, e.payloads); err != nil {
-		return err
-	}
-	if err := e.purgeTextCopies(ctx, tx, append(slices.Clone(activities), held...)); err != nil {
-		return err
-	}
-	return tombstoneCollateralScrubs(ctx, tx, "activity", activities, reason, causeContactErasure)
-}
-
-func purgeActivityTraces(ctx context.Context, tx pgx.Tx, activities []ids.UUID, payloads PayloadPurger) error {
-	if err := purgeActivityIndexes(ctx, tx, activities); err != nil {
-		return err
-	}
-	// The external identities of the messages just emptied. The activity-content
-	// arm has always retired these and this arm never did, so a subject's
-	// Message-IDs outlived the erasure that emptied their correspondence.
-	if err := retireActivityIdentities(ctx, tx, activities); err != nil {
-		return err
-	}
-	// The readings of those rows, which describe a body that is now gone. The
-	// proposals a reading produced are scrubbed later in the cascade, after the
-	// subject's own stagings (EraseContact states why the order matters).
-	if err := purgeTranscriptReadings(ctx, tx, activities); err != nil {
-		return err
-	}
-	// The transmitted copy of every activity just redacted. Without this
-	// the timeline row is a tombstone while the send log still holds the
-	// address, the subject line and the body of the same message.
-	return redactDeliveries(ctx, tx, activities, erasedName, payloads)
-}
-
 // anonymizeSubjectRows wipes the subject's PII in place: the contact row
 // keeps its skeleton (business records other subjects appear in still
 // reference it), the email/phone child rows and the preference-center
@@ -338,15 +289,50 @@ func anonymizeSubjectRows(
 	if err != nil {
 		return nil, err
 	}
-	if _, err := tx.Exec(ctx, fmt.Sprintf(`
+	// The hashes an earlier anonymize kept go onto the erasure list before the
+	// redaction clears them, with the key that made them. They are the same hash
+	// (storekit.SuppressionHash), so the anonymized subject's addresses stay
+	// refused once the row forgets them. The stops kept on them are deleted with
+	// the subject's other stops.
+	var keptHashes []string
+	var keptKey *string
+	if err := tx.QueryRow(ctx,
+		`SELECT anonymized_address_hashes, anonymized_address_key_id FROM contact WHERE id = $1`,
+		contactID).Scan(&keptHashes, &keptKey); err != nil {
+		return nil, fmt.Errorf("privacy: reading the anonymized address hashes: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO erasure_suppression (kind, value_hash, key_id)
+		SELECT 'email', kept, $2 FROM unnest($1::text[]) AS kept
+		ON CONFLICT DO NOTHING`, keptHashes, keptKey); err != nil {
+		return nil, fmt.Errorf("privacy: keeping the anonymized addresses on the erasure list: %w", err)
+	}
+	// Only a row that still holds something is written. An already-anonymised
+	// contact is left as it is, so an erasure that finds nothing counts no
+	// update and its request can answer nothing_held. Asked first rather than
+	// in the update's `WHERE`, so the write itself stays the absolute one.
+	var holds bool
+	if err := tx.QueryRow(ctx, fmt.Sprintf(`
+		SELECT full_name IS DISTINCT FROM $2 OR first_name IS NOT NULL OR last_name IS NOT NULL
+		       OR title IS NOT NULL OR photo_object_key IS NOT NULL OR photo_origin IS NOT NULL
+		       OR address_line1 IS NOT NULL OR address_line2 IS NOT NULL OR address_city IS NOT NULL
+		       OR address_region IS NOT NULL OR address_postal_code IS NOT NULL
+		       OR address_country IS NOT NULL OR source_author_name IS NOT NULL
+		       OR anonymized_address_hashes IS NOT NULL OR archived_at IS NULL%s
+		  FROM contact WHERE id = $1`, anyColumnHeld(contactCustom)), contactID, erasedName).Scan(&holds); err != nil {
+		return nil, err
+	}
+	if holds {
+		if _, err := tx.Exec(ctx, fmt.Sprintf(`
 		UPDATE contact SET first_name = NULL, last_name = NULL, full_name = $2,
 		  title = NULL, photo_object_key = NULL, photo_origin = NULL,
 		  address_line1 = NULL, address_line2 = NULL, address_city = NULL,
 		  address_region = NULL, address_postal_code = NULL, address_country = NULL,
-		  source_author_name = NULL,
+		  source_author_name = NULL, anonymized_address_hashes = NULL, anonymized_address_key_id = NULL,
 		  archived_at = coalesce(archived_at, now())%s
 		WHERE id = $1`, nullColumnAssignments(contactCustom)), contactID, erasedName); err != nil {
-		return nil, err
+			return nil, err
+		}
 	}
 	// BEFORE the identifier rows go, and for the same reason the provider
 	// purge is: a Deal Room seat holds no contact id and is resolved by
@@ -358,7 +344,7 @@ func anonymizeSubjectRows(
 	if err := scrubSubjectFromGraph(ctx, tx, contactID, emails, identities, subjectName, linkedInHandles); err != nil {
 		return nil, err
 	}
-	if err := deleteConsentCapabilities(ctx, tx, contactID, emails, reason); err != nil {
+	if err := deleteConsentCapabilities(ctx, tx, contactID, emails, keptHashes, reason); err != nil {
 		return nil, err
 	}
 	// Why this contact existed. It names one contact, records what they did or
@@ -471,31 +457,4 @@ func deleteSubjectIdentifierRows(ctx context.Context, tx pgx.Tx, contactID ids.C
 		return nil, err
 	}
 	return linkedInHandles, nil
-}
-
-// tombstoneCollateralScrubs stamps a per-record erase tombstone for each
-// record the erasure scrubbed alongside the subject. The field-history
-// projection cuts a record's timeline at ITS OWN newest erase row — the
-// contact's tombstone cannot bound a lead twin's or an activity's spine,
-// so without these the scrubbed records' historical audit images (a lead
-// create's email, an activity create's subject line) would project the
-// erased PII straight back out. The scrub context rides evidence, like
-// the contact tombstone's counts — before/after stay empty, because a
-// tombstone must never re-store what it certifies gone and its images
-// are served verbatim by the record-history read. No
-// paired outbox event on purpose: the erasure's single retention.applied
-// on the contact is the bus-visible fact, and the collateral scrubs have
-// never announced themselves per record.
-// cause is the caller's, because this path is no longer the Art. 17 erasure's
-// alone: retention reaches it too, and a tombstone stamped contact_erasure for a
-// record a retention sweep cleared says the wrong thing about why the data went.
-func tombstoneCollateralScrubs(ctx context.Context, tx pgx.Tx, entityType string, records []ids.UUID, reason, cause string) error {
-	for _, id := range records {
-		if _, err := storekit.AuditWithEvidence(ctx, tx, actionErase, entityType, id, nil, nil, map[string]any{
-			evidenceKeyReason: reason, evidenceKeyCause: cause,
-		}); err != nil {
-			return fmt.Errorf("tombstoning scrubbed %s: %w", entityType, err)
-		}
-	}
-	return nil
 }

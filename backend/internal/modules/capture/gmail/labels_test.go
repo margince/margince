@@ -30,7 +30,7 @@ func TestListLabelsReturnsSystemAndUserLabelsAlike(t *testing.T) {
 		{"id": "Label_7", "name": "Privat", "type": "user"},
 	}})
 
-	got, err := NewAPI(srv.Client(), srv.URL).ListLabels(context.Background(), "access-1")
+	got, err := newTestAPI(t, srv.Client(), srv.URL).ListLabels(context.Background(), "access-1")
 	if err != nil {
 		t.Fatalf("ListLabels: %v", err)
 	}
@@ -52,7 +52,7 @@ func TestAnUnnamedLabelFallsBackToItsID(t *testing.T) {
 		{"id": "Label_9", "name": ""},
 	}})
 
-	got, err := NewAPI(srv.Client(), srv.URL).ListLabels(context.Background(), "access-1")
+	got, err := newTestAPI(t, srv.Client(), srv.URL).ListLabels(context.Background(), "access-1")
 	if err != nil {
 		t.Fatalf("ListLabels: %v", err)
 	}
@@ -69,7 +69,7 @@ func TestALabelWithNoIDIsDropped(t *testing.T) {
 		{"id": "Label_1", "name": "Real"},
 	}})
 
-	got, err := NewAPI(srv.Client(), srv.URL).ListLabels(context.Background(), "access-1")
+	got, err := newTestAPI(t, srv.Client(), srv.URL).ListLabels(context.Background(), "access-1")
 	if err != nil {
 		t.Fatalf("ListLabels: %v", err)
 	}

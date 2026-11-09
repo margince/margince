@@ -24,6 +24,7 @@ import { formatNumber } from "../../format/format";
 import { formatDateAbbrev } from "../../format/format.dates";
 import { industryWords } from "../../format/industry";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useProjectEdit } from "./projectedit";
@@ -200,7 +201,7 @@ export function ProjectDetails({ view }: Readonly<{ view: Project360 }>) {
     {
       key: "phase",
       term: t("project.phaseLabel"),
-      value: t(PHASE_LABEL[project.phase]),
+      value: t(labelFor(PHASE_LABEL, project.phase)),
     },
     {
       key: "started",

@@ -285,6 +285,7 @@ func readPriorWeek(
 		Counts:           prior.Counts,
 		Money:            prior.Money,
 		MeetingsWithheld: prior.MeetingsWithheld,
+		LeadsWithheld:    prior.LeadsWithheld,
 	}, nil
 }
 

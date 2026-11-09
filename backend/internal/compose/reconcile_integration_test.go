@@ -324,7 +324,7 @@ func TestFollowUpReconcileSuppressesWhenNoDiscrepancy(t *testing.T) {
 	// A recent call but an OPEN task already queued: the rep has a next
 	// step — do not nag.
 	planned := e.SeedDeal(t, "Has next step", e.pipeline, e.open, &e.Rep1)
-	e.seedInteraction(t, planned, "meeting", "Kickoff", 2)
+	e.seedInteraction(t, planned, "call", "Kickoff", 2)
 	e.seedTask(t, planned, false)
 
 	// A deal with only a note (not a call/mail/meeting): no real touch.
@@ -691,7 +691,7 @@ func TestADealEditDoesNotCancelAWaitingFollowUp(t *testing.T) {
 func TestFollowUpRejectWritesNothing(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Reject me", e.pipeline, e.open, &e.Rep1)
-	e.seedInteraction(t, deal, "meeting", "Sync", 1)
+	e.seedInteraction(t, deal, "call", "Sync", 1)
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
@@ -725,7 +725,7 @@ func TestFollowUpRejectWritesNothing(t *testing.T) {
 func TestARejectedFollowUpIsNotAskedAgainTomorrow(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Asked once", e.pipeline, e.open, &e.Rep1)
-	e.seedInteraction(t, deal, "meeting", "Sync", 1)
+	e.seedInteraction(t, deal, "call", "Sync", 1)
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
@@ -753,7 +753,7 @@ func TestARejectionOnOneDealDoesNotSilenceAnother(t *testing.T) {
 	e := setupReconcile(t)
 	declined := e.SeedDeal(t, "Said no here", e.pipeline, e.open, &e.Rep1)
 	other := e.SeedDeal(t, "Never asked", e.pipeline, e.open, &e.Rep1)
-	e.seedInteraction(t, declined, "meeting", "Sync", 1)
+	e.seedInteraction(t, declined, "call", "Sync", 1)
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
@@ -788,7 +788,7 @@ func TestARejectionOnOneDealDoesNotSilenceAnother(t *testing.T) {
 func TestAnEditTheEffectCannotUseRefusesTheDecision(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Edited badly", e.pipeline, e.open, &e.Rep1)
-	e.seedInteraction(t, deal, "meeting", "Sync", 1)
+	e.seedInteraction(t, deal, "call", "Sync", 1)
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
@@ -835,7 +835,7 @@ func TestAnEditTheEffectCannotUseRefusesTheDecision(t *testing.T) {
 func TestAValidEditIsApprovedAndTheEffectUsesIt(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Edited well", e.pipeline, e.open, &e.Rep1)
-	e.seedInteraction(t, deal, "meeting", "Sync", 1)
+	e.seedInteraction(t, deal, "call", "Sync", 1)
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
@@ -869,7 +869,7 @@ func TestAValidEditIsApprovedAndTheEffectUsesIt(t *testing.T) {
 func TestARejectionSurvivesTheProposalChangingUnderIt(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Payload moves", e.pipeline, e.open, &e.Rep1)
-	e.seedInteraction(t, deal, "meeting", "Sync", 1)
+	e.seedInteraction(t, deal, "call", "Sync", 1)
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
@@ -907,7 +907,7 @@ func TestANewConversationIsProposedAgainAfterAnEarlierRejection(t *testing.T) {
 	deal := e.SeedDeal(t, "Moved on", e.pipeline, e.open, &e.Rep1)
 	// Both interactions sit inside the pass's 48h lookback; the declined one is
 	// simply the older, so the later call becomes the evidence on the reruns.
-	e.seedInteraction(t, deal, "meeting", "Discovery", 40)
+	e.seedInteraction(t, deal, "call", "Discovery", 40)
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}

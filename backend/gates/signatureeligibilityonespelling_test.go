@@ -30,11 +30,12 @@ package gates
 // exists over was a literal audience comparison, as is every plausible next one.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // audienceWorkspaceTest matches a SQL comparison of an audience column against
@@ -86,7 +87,7 @@ func withoutFragmentDeclaration(text string) string {
 func TestSignatureEligibilityHasOneSpelling(t *testing.T) {
 	t.Parallel()
 	dir := filepath.Join("internal", "modules", "contacts")
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading the contacts module: %v", err)
 	}
@@ -101,7 +102,7 @@ func TestSignatureEligibilityHasOneSpelling(t *testing.T) {
 		// the fragment's OWN declaration is exempt, so the rest of that file is
 		// held to the same rule as every other reader.
 		if name == signatureEligibilityOwner {
-			body, err := os.ReadFile(filepath.Join(dir, name))
+			body, err := gatekit.ReadFile(filepath.Join(dir, name))
 			if err != nil {
 				t.Fatalf("reading %s: %v", name, err)
 			}
@@ -115,7 +116,7 @@ func TestSignatureEligibilityHasOneSpelling(t *testing.T) {
 			}
 			continue
 		}
-		body, err := os.ReadFile(filepath.Join(dir, name))
+		body, err := gatekit.ReadFile(filepath.Join(dir, name))
 		if err != nil {
 			t.Fatalf("reading %s: %v", name, err)
 		}

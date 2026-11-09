@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
@@ -104,12 +105,14 @@ func TestTheFooterIsSeparatedFromTheMessage(t *testing.T) {
 
 // stubDisclosures answers a fixed set, for the wiring tests below.
 type stubDisclosures struct {
-	lines []DisclosureLine
-	asked []string
+	lines    []DisclosureLine
+	asked    []string
+	entities []ids.UUID
 }
 
-func (s *stubDisclosures) DisclosuresFor(_ context.Context, category string, _ []string) ([]DisclosureLine, error) {
+func (s *stubDisclosures) DisclosuresFor(_ context.Context, category string, _ []string, entity ids.UUID) ([]DisclosureLine, error) {
 	s.asked = append(s.asked, category)
+	s.entities = append(s.entities, entity)
 	return s.lines, nil
 }
 
@@ -131,7 +134,7 @@ func TestADisclosureRidesAMessageCarryingNoUnsubscribeSurface(t *testing.T) {
 
 	got, err := store.deliverability(context.Background(), "As discussed.", "Re: your question",
 		[]string{"anna@example.test"},
-		unsubscribeSurface{category: commsauthz.CategoryReplyToInbound})
+		unsubscribeSurface{category: commsauthz.CategoryReplyToInbound}, ids.Nil)
 	if err != nil {
 		t.Fatalf("deriving the message: %v", err)
 	}
@@ -164,7 +167,7 @@ func TestADisclosureSurvivesEveryEarlyReturn(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			got, err := store.deliverability(context.Background(), "As discussed.", "Subject",
-				tc.recipients, unsubscribeSurface{category: commsauthz.CategoryMarketing})
+				tc.recipients, unsubscribeSurface{category: commsauthz.CategoryMarketing}, ids.Nil)
 			if err != nil {
 				t.Fatalf("deriving the message: %v", err)
 			}
@@ -184,7 +187,7 @@ func TestTheCategoryCrossesTheSeam(t *testing.T) {
 
 	if _, err := store.deliverability(context.Background(), "body", "subject",
 		[]string{"anna@example.test"},
-		unsubscribeSurface{category: commsauthz.CategoryMarketing}); err != nil {
+		unsubscribeSurface{category: commsauthz.CategoryMarketing}, ids.Nil); err != nil {
 		t.Fatalf("deriving the message: %v", err)
 	}
 	if len(stub.asked) != 1 || stub.asked[0] != string(commsauthz.CategoryMarketing) {
@@ -198,7 +201,7 @@ func TestTheCategoryCrossesTheSeam(t *testing.T) {
 func TestNoResolverWiredSendsWhatItAlwaysSent(t *testing.T) {
 	got, err := (&Store{}).deliverability(context.Background(), "As discussed.", "Subject",
 		[]string{"anna@example.test"},
-		unsubscribeSurface{category: commsauthz.CategoryMarketing})
+		unsubscribeSurface{category: commsauthz.CategoryMarketing}, ids.Nil)
 	if err != nil {
 		t.Fatalf("deriving the message: %v", err)
 	}
@@ -225,7 +228,7 @@ func TestTheMarkupAlternativeCarriesTheSameDisclosures(t *testing.T) {
 	// alternative ship without disclosures in the first place.
 	derived, err := store.deliverability(context.Background(), "As discussed.", "Subject",
 		[]string{"anna@example.test"},
-		unsubscribeSurface{category: commsauthz.CategoryReplyToInbound})
+		unsubscribeSurface{category: commsauthz.CategoryReplyToInbound}, ids.Nil)
 	if err != nil {
 		t.Fatalf("deriving the message: %v", err)
 	}
@@ -309,7 +312,7 @@ func TestASendOwingAnUnstatedParticularIsRefusedNotShippedShort(t *testing.T) {
 
 	_, err := store.deliverability(context.Background(), "As discussed.", "Re: your question",
 		[]string{"anna@example.test"},
-		unsubscribeSurface{category: commsauthz.CategoryReplyToInbound})
+		unsubscribeSurface{category: commsauthz.CategoryReplyToInbound}, ids.Nil)
 
 	var refusal *UndisclosableError
 	if !errors.As(err, &refusal) {
@@ -337,7 +340,7 @@ func TestAMetObligationStillSends(t *testing.T) {
 
 	got, err := store.deliverability(context.Background(), "As discussed.", "Re: your question",
 		[]string{"anna@example.test"},
-		unsubscribeSurface{category: commsauthz.CategoryReplyToInbound})
+		unsubscribeSurface{category: commsauthz.CategoryReplyToInbound}, ids.Nil)
 	if err != nil {
 		t.Fatalf("a fully stated installation was refused: %v", err)
 	}

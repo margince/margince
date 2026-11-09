@@ -39,7 +39,8 @@ func (h Handlers) UpdateMember(w http.ResponseWriter, r *http.Request, id crmcon
 	}
 
 	err := h.svc.UpdateMember(r.Context(), actor, ids.From[ids.UserKind](ids.UUID(id)), MemberEdit{
-		Name: req.DisplayName, Email: string(req.Email), Role: req.Role, Teams: teams, ExpectedUpdatedAt: req.ExpectedUpdatedAt,
+		Name: req.DisplayName, Email: string(req.Email), Role: req.Role, Teams: teams,
+		LegalEntity: legalEntityOf(req.LegalEntityId), ExpectedUpdatedAt: req.ExpectedUpdatedAt,
 	})
 	if err != nil {
 		httperr.Write(w, r, err)

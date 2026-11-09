@@ -253,6 +253,12 @@ describe("a saved draft", () => {
       subject: "Pricing for 40 seats",
       body: "Finished after lunch",
       html_body: "<p>Finished after lunch</p>",
+      editor_state: {
+        intent: "",
+        ai_generated: false,
+        voice_degraded: false,
+        served_body: "",
+      },
       attachment_ids: [],
     });
     expect(

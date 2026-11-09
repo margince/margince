@@ -64,6 +64,9 @@ func TestTheAnalyticsToolAndTheHTTPEngineServeOneAnswer(t *testing.T) {
 	if got.SchemaVersion == "" {
 		t.Error("the answer names no schema version, so two answers cannot be compared")
 	}
+	if got.BaseCurrency == nil || *got.BaseCurrency != "EUR" || got.RateDate == nil || got.RateDate.IsZero() {
+		t.Fatalf("answer lacks its conversion frame: %s", raw)
+	}
 
 	// The HTTP engine's answer to the same question, through the same seam.
 	var twin AnalyticsAnswer

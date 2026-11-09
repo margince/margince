@@ -13,10 +13,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -137,6 +139,9 @@ func (s *Store) correctTechnicalContact(
 func (s *Store) writeTechnicalOutcome(
 	ctx context.Context, tx pgx.Tx, contact technicalCandidate,
 ) (technicalOutcome, error) {
+	if slices.ContainsFunc(contact.emails, mailidentity.IsRecruitingRelayAddress) {
+		return technicalHeld, nil
+	}
 	technical := technicalAddresses(contact.emails)
 	switch {
 	case len(technical) == 0:
@@ -157,6 +162,12 @@ func (s *Store) writeTechnicalOutcome(
 		return technicalArchived, nil
 	}
 }
+
+// otherLiveIdentitySQL is whether contact c has a live phone or channel
+// identity, which may still name a human. Both machine repairs keep such a
+// contact for review.
+const otherLiveIdentitySQL = `(EXISTS (SELECT 1 FROM contact_phone p WHERE p.contact_id = c.id AND p.archived_at IS NULL)
+		       OR EXISTS (SELECT 1 FROM contact_channel_identity i WHERE i.contact_id = c.id AND i.archived_at IS NULL))`
 
 // technicalAddresses are the addresses refuseMachineAddress refuses, the rule
 // every create path asks.
@@ -214,9 +225,7 @@ func technicalCandidatePage(
 	ctx context.Context, tx pgx.Tx, after ids.UUID, limit int, only *ids.ContactID,
 ) ([]technicalCandidate, []ids.UUID, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT c.id, c.version, array_agg(e.email ORDER BY e.email), c.legal_hold,
-		       EXISTS (SELECT 1 FROM contact_phone p WHERE p.contact_id = c.id AND p.archived_at IS NULL)
-		       OR EXISTS (SELECT 1 FROM contact_channel_identity i WHERE i.contact_id = c.id AND i.archived_at IS NULL)
+		SELECT c.id, c.version, array_agg(e.email ORDER BY e.email), c.legal_hold, `+otherLiveIdentitySQL+`
 		  FROM contact c
 		  JOIN contact_email e ON e.contact_id = c.id AND e.archived_at IS NULL
 		 WHERE c.archived_at IS NULL AND c.merged_into_id IS NULL AND c.id > $1

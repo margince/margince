@@ -9,8 +9,11 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
@@ -40,6 +43,10 @@ var complianceFixtures = map[string]func(p *recordPool) map[string]any{
 		stop := p.take("suppression")
 		return map[string]any{"id": p.fact(stop, "contact"), "suppressionId": stop, "request_body": map[string]any{"reason": "They asked us to carry on."}}
 	},
+	"lift_lead_suppression": func(p *recordPool) map[string]any {
+		stop := p.take("lead_suppression")
+		return map[string]any{"id": p.fact(stop, "lead"), "suppressionId": stop, "request_body": map[string]any{"reason": "They asked us to carry on."}}
+	},
 	"revoke_contact_override": func(p *recordPool) map[string]any {
 		vouch := p.take("consent_override")
 		return map[string]any{"id": p.fact(vouch, "contact"), "overrideId": vouch, "request_body": map[string]any{"reason": "Another contact."}}
@@ -53,8 +60,14 @@ var complianceFixtures = map[string]func(p *recordPool) map[string]any{
 	"update_data_subject_request": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("subject_request"), "request_body": map[string]any{"status": "in_progress"}}
 	},
-	"get_notice_case":        byID("notice_case"),
-	"get_notice_case_review": byID("notice_case_review"),
+	"get_notice_case":            byID("notice_case"),
+	"get_notice_case_review":     byID("notice_case_review"),
+	"get_notice_source_evidence": byID("notice_case_review"),
+	"preview_notice_source": func(p *recordPool) map[string]any {
+		return map[string]any{"id": p.take("notice_case_review"), "request_body": map[string]any{
+			"kind": "subject_initiated", "note": "Their own message confirms direct collection.",
+		}}
+	},
 	"assign_notice_case": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("notice_case"), "request_body": map[string]any{"owner_user_id": p.take("me")}}
 	},
@@ -79,7 +92,7 @@ var complianceFixtures = map[string]func(p *recordPool) map[string]any{
 	"direct_communication_send": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("communication_review"), "request_body": map[string]any{
 			"reason_code": "contractual_necessity", "explanation": "The service agreement obliges us to send this notice.",
-			"warning_version": "override-v1", "acknowledged": true,
+			"warning_version": consent.OverrideWarningVersion, "acknowledged": true,
 		}}
 	},
 	"preview_controller_mail": func(p *recordPool) map[string]any {
@@ -156,6 +169,13 @@ func complianceSeeders(s sweepSeed) map[string]func() string {
 			s.pool.note(stop, "contact", contact)
 			return stop
 		},
+		"lead_suppression": func() string {
+			lead := s.create["lead"]()
+			stop := s.ownerScalar(`INSERT INTO communication_suppression (lead_id, kind, source, captured_by, decided_by_level)
+				VALUES ($1, 'marketing_objection', 'role sweep', 'system', 'machine') RETURNING id::text`, lead)
+			s.pool.note(stop, "lead", lead)
+			return stop
+		},
 		"consent_override": func() string {
 			contact := s.create["contact"]()
 			var vouch struct {
@@ -211,7 +231,8 @@ func refusedSendReview(s sweepSeed, purpose string) string {
 	}, nil, nil); status != http.StatusConflict {
 		s.t.Fatalf("a %s send with no grant → %d, want the refusal that opens a review", purpose, status)
 	}
-	review := s.ownerScalar(`SELECT id::text FROM communication_review WHERE resolved_at IS NULL ORDER BY id DESC LIMIT 1`)
+	review := s.ownerScalar(`SELECT id::text FROM communication_review
+ WHERE resolved_at IS NULL AND initiated_by = @initiator ORDER BY id DESC LIMIT 1`, pgx.NamedArgs{"initiator": apptest.SessionUserID(s.t, s.e)})
 	s.pool.note(review, "contact", contact)
 	return review
 }

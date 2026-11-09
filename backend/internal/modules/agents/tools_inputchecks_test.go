@@ -17,10 +17,10 @@ func TestListInputChecksPassesItsScopeToTheRead(t *testing.T) {
 		return json.RawMessage(`{"data":[]}`), nil
 	}}
 
-	if _, err := tool.Handle(context.Background(), json.RawMessage(`{"scope_kind":"team","scope_id":"0190a1b2-0000-7000-8000-000000000001"}`)); err != nil {
+	if _, err := tool.Handle(context.Background(), json.RawMessage(`{"scope_kind":"team","scope_id":"0190a1b2-0000-7000-8000-000000000001","product_id":"0190a1b2-0000-7000-8000-000000000002","country":"DE","industry":"manufacturing"}`)); err != nil {
 		t.Fatal(err)
 	}
-	if asked.ScopeKind != "team" || asked.ScopeID != "0190a1b2-0000-7000-8000-000000000001" {
+	if asked.ScopeKind != "team" || asked.ScopeID != "0190a1b2-0000-7000-8000-000000000001" || asked.ProductID == "" || asked.Country == nil || *asked.Country != "DE" || asked.Industry == nil || *asked.Industry != "manufacturing" {
 		t.Errorf("read got %+v, want the team scope", asked)
 	}
 

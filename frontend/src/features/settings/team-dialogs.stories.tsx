@@ -99,6 +99,25 @@ export const Members: Story = { render: story(TEAM, USERS) };
 // dialog while the title and Done stay put.
 export const ManyMembers: Story = { render: story(LONG_TEAM, MANY) };
 
+// A team of 120, searched. The box narrows the list to the names that hold
+// the typed words, and says how many of the team that is.
+const LARGE = Array.from({ length: 120 }, (_, i) =>
+  member(i + 1, `Roster Member ${String(i).padStart(3, "0")}`, true),
+);
+export const SearchedLargeTeam: Story = {
+  render: story({ ...TEAM, member_count: 120 }, LARGE),
+  play: async () => {
+    const dialog = within(await within(document.body).findByRole("dialog"));
+    await userEvent.type(
+      dialog.getByRole("searchbox", { name: "Search team members" }),
+      "Member 07",
+    );
+    // Names and emails both match, so the story asks only that the count of
+    // the whole team is stated. The unit test pins the exact rows.
+    await expect(await dialog.findByText(/ of 120 members$/)).toBeTruthy();
+  },
+};
+
 // A seat that reads membership and may not change it keeps the list and loses
 // the verbs, with the reason said once.
 export const ReadOnly: Story = {

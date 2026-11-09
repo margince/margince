@@ -37,7 +37,7 @@ func CommitmentEvidenceClause(ctx context.Context, source, locator string, arg f
 }
 
 func commitmentEvidenceArm(actor principal.Principal, source, locator string, arg func(any) int) string {
-	content := activityDiscoverClause(actor, "renewal_source", arg)
+	content := discoverGateFor(actor, "renewal_source", arg)
 	if actor.Type != principal.PrincipalSystem {
 		content += " AND " + activityAudienceArm(actor, "renewal_source", arg)
 	}

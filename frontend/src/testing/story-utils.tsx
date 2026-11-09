@@ -7,7 +7,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { type ReactNode, useEffect } from "react";
-import { expect, within } from "storybook/test";
+import { expect, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { type Locale, LocaleProvider } from "../i18n";
 import { useMe } from "../lib/session";
@@ -345,4 +345,10 @@ export async function expectFoldedRowsUnderSummary(canvasElement: HTMLElement) {
       ),
     ).toBeLessThan(1);
   }
+}
+
+export async function visibleDialog(): Promise<HTMLElement> {
+  const dialog = await within(document.body).findByRole("dialog");
+  await waitFor(() => expect(dialog).toBeVisible());
+  return dialog;
 }

@@ -171,13 +171,19 @@ func specScopeClauses(ctx context.Context, spec reportSpec, arg func(any) int) (
 //
 // breakdown says the question splits its answer per owner (typedOwnerBreakdown);
 // the string returned is the narrowing the answer must announce, or "".
+type reportNarrowings struct {
+	clauses []string
+	masks   []string
+	reason  string
+}
+
 func specNarrowings(
 	ctx context.Context, tx pgx.Tx, spec reportSpec, requested RequestedScope,
 	named referencedColumns, breakdown bool, arg func(any) int,
-) ([]string, string, error) {
+) (reportNarrowings, error) {
 	out, err := specScopeClauses(ctx, spec, arg)
 	if err != nil {
-		return nil, "", err
+		return reportNarrowings{}, err
 	}
 	// The POPULATION the caller asked to measure, resolved against their own
 	// lens. Record authorization is not it: deals are workspace-readable by
@@ -200,7 +206,7 @@ func specNarrowings(
 	if spec.population == measureCallersOwn || namedScope {
 		_, population, err := AnalyticsPopulationClause(ctx, tx, requested, "t", arg, unownedIsPartOfDefault)
 		if err != nil {
-			return nil, "", err
+			return reportNarrowings{}, err
 		}
 		if population != "" {
 			out = append(out, population)
@@ -211,7 +217,7 @@ func specNarrowings(
 	owners, narrowed, err := ownerBreakdownClause(ctx, tx, spec, requested,
 		narrowsOwnerBreakdown(requested, ownerBreakdown{byOwner: breakdown}), arg)
 	if err != nil {
-		return nil, "", err
+		return reportNarrowings{}, err
 	}
 	if owners != "" {
 		out = append(out, owners)
@@ -220,15 +226,15 @@ func specNarrowings(
 	// so the row leaves the population entirely.
 	masks, _, err := maskExclusionClauses(ctx, spec, arg)
 	if err != nil {
-		return nil, "", err
+		return reportNarrowings{}, err
 	}
 	// And the records the population POINTS AT: grouping by a reference column
 	// would otherwise name ids the caller's ordinary read of the same row masks.
 	refs, err := referenceScopeClauses(ctx, spec, named, arg)
 	if err != nil {
-		return nil, "", err
+		return reportNarrowings{}, err
 	}
-	return append(append(out, masks...), refs...), narrowed, nil
+	return reportNarrowings{clauses: append(append(out, masks...), refs...), masks: masks, reason: narrowed}, nil
 }
 
 // referencedColumns is the set of SQL expressions one query SELECTS BY — the

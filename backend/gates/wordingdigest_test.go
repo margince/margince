@@ -17,7 +17,6 @@ package gates
 
 import (
 	"go/ast"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -29,7 +28,7 @@ func TestOneWordingDigest(t *testing.T) {
 	t.Parallel()
 
 	dir := filepath.Join(gatekit.ModuleRoot(t), "internal", "modules", "consent")
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading the consent module: %v", err)
 	}

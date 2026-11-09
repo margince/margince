@@ -79,22 +79,28 @@ func TestObservedCloseDateCarriesItsActualSampleAndPace(t *testing.T) {
 	}
 }
 
-// An imported win lands its moves in one instant. Its zero-day stints would
-// pull the median to nothing, so the pace and its sample leave them out.
-func TestImportedWinsDoNotSetTheSweepPace(t *testing.T) {
+// An imported win lands its moves in one instant, and a synced win shows
+// another CRM's pace. Their stints would pull the median to nothing, so the
+// pace and its sample leave them out.
+func TestImportedOrSyncedWinsDoNotSetTheSweepPace(t *testing.T) {
 	e := setupCloseDate(t)
 	run := integration.SeedIDRow(t, e.owner, importRunSeedSQL)
-	for range deals.CloseDateMinHistory + 1 {
-		id := ids.NewV7()
-		if _, err := e.owner.Exec(context.Background(), `INSERT INTO deal (id,name,pipeline_id,stage_id,status,closed_at,source,captured_by) VALUES ($1,'Imported won deal',$2,$3,'won',now(),'manual','human:x')`, id, e.pipeline, e.late); err != nil {
-			t.Fatal(err)
-		}
-		if _, err := e.owner.Exec(context.Background(), `INSERT INTO deal_stage_history(deal_id,to_stage_id,changed_by,changed_at,provenance,import_run_id)
-			VALUES ($1,$2,'human:x',now()-interval '1 day','imported',$4),($1,$3,'human:x',now()-interval '1 day','imported',$4)`, id, e.early, e.late, run); err != nil {
-			t.Fatal(err)
+	for _, origin := range []struct {
+		provenance string
+		run        *ids.UUID
+	}{{"imported", &run}, {"synced", nil}} {
+		for range deals.CloseDateMinHistory + 1 {
+			id := ids.NewV7()
+			if _, err := e.owner.Exec(context.Background(), `INSERT INTO deal (id,name,pipeline_id,stage_id,status,closed_at,source,captured_by) VALUES ($1,'Brought-in won deal',$2,$3,'won',now(),'manual','human:x')`, id, e.pipeline, e.late); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := e.owner.Exec(context.Background(), `INSERT INTO deal_stage_history(deal_id,to_stage_id,changed_by,changed_at,provenance,import_run_id)
+				VALUES ($1,$2,'human:x',now()-interval '1 day',$4,$5),($1,$3,'human:x',now()-interval '1 day',$4,$5)`, id, e.early, e.late, origin.provenance, origin.run); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
-	id := e.seedSweepDeal(t, "Paced without imports", e.early, nil, new(-12), 3)
+	id := e.seedSweepDeal(t, "Paced without imports or syncs", e.early, nil, new(-12), 3)
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
 	}

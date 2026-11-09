@@ -8,7 +8,6 @@ package contactdraft
 
 import (
 	"context"
-	"strings"
 	"testing"
 	"time"
 
@@ -52,12 +51,9 @@ func renewalThread() Input {
 	return FromView(view, Request{Envelope: envelopeAt(textlang.German, convstate.BandWeeks)})
 }
 
-// A model answering their newest email with "Re:" is right, and a task logged
-// since does not make it wrong. Refusing it spent a correction call on every
-// such click, and the retry it bought was told to rewrite a body nothing was
-// wrong with.
-func TestAReplyToTheirNewestEmailIsServedOnTheFirstCall(t *testing.T) {
-	const answer = `{"subject":"Re: Renewal terms for Demo GmbH",` +
+// Historical email grounds a new message without forcing a reply subject.
+func TestANewMessageIsServedOnTheFirstCallWithInboundHistory(t *testing.T) {
+	const answer = `{"subject":"Renewal options",` +
 		`"body":"Guten Tag Alice Müller,\n\nvielen Dank für Ihre Rückmeldung zu den Verlängerungskonditionen für die Demo GmbH.\n\n` +
 		`Haben Sie Zeit für ein kurzes Telefonat, um die Details zu besprechen?","reasoning":[]}`
 	lane := &sequencedLane{answers: []string{answer, answer}}
@@ -69,54 +65,7 @@ func TestAReplyToTheirNewestEmailIsServedOnTheFirstCall(t *testing.T) {
 	if lane.calls != 1 {
 		t.Errorf("one click made %d model calls, want 1", lane.calls)
 	}
-	if by != crmcontracts.WrittenByModel || !strings.HasPrefix(draft.Subject, "Re:") {
-		t.Errorf("served %q by %s, want the model's reply subject", draft.Subject, by)
-	}
-}
-
-func TestOnlyTheNewestEmailDecidesTheThread(t *testing.T) {
-	at := func(hours int) time.Time { return draftedAt.Add(-time.Duration(hours) * time.Hour) }
-	cases := map[string]struct {
-		acts []crmcontracts.Activity
-		want bool
-	}{
-		"their email is newest": {
-			[]crmcontracts.Activity{mail(crmcontracts.ActivityDirectionInbound, at(2), "Pricing")}, true,
-		},
-		"a task after their email": {
-			[]crmcontracts.Activity{task(at(1), "Call back"), mail(crmcontracts.ActivityDirectionInbound, at(2), "Pricing")}, true,
-		},
-		"our email after theirs": {
-			[]crmcontracts.Activity{
-				mail(crmcontracts.ActivityDirectionOutbound, at(1), "Pricing"),
-				mail(crmcontracts.ActivityDirectionInbound, at(2), "Pricing"),
-			}, false,
-		},
-		"a task after our email": {
-			[]crmcontracts.Activity{task(at(1), "Call back"), mail(crmcontracts.ActivityDirectionOutbound, at(2), "Pricing")}, false,
-		},
-		"no email at all": {
-			[]crmcontracts.Activity{task(at(1), "Call back")}, false,
-		},
-	}
-	for name, c := range cases {
-		t.Run(name, func(t *testing.T) {
-			in := FromView(viewWith(c.acts...), Request{Envelope: envelopeAt(textlang.English, convstate.BandFresh)})
-			if got := in.Threaded(); got != c.want {
-				t.Errorf("Threaded() = %v, want %v", got, c.want)
-			}
-		})
-	}
-}
-
-func TestAMeetingFollowUpContinuesNoEmailThread(t *testing.T) {
-	in := Input{
-		Recent: FoldRecent([]crmcontracts.Activity{
-			mail(crmcontracts.ActivityDirectionInbound, draftedAt.Add(-time.Hour), "Unrelated invoice"),
-		}, draftedAt, time.UTC),
-		About: &ActIn{Kind: string(crmcontracts.ActivityKindMeeting), Subject: "Kickoff"},
-	}
-	if subject, ok := in.ThreadSubject(); ok || in.ContinuesThread() {
-		t.Errorf("a follow-up to a named meeting took thread subject %q", subject)
+	if by != crmcontracts.WrittenByModel || draft.Subject != "Renewal options" {
+		t.Errorf("served %q by %s, want the new subject", draft.Subject, by)
 	}
 }

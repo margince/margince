@@ -81,6 +81,9 @@ func (e *Eraser) ReleaseRestriction(ctx context.Context, activityID ids.UUID, re
 		if err != nil {
 			return err
 		}
+		if err := storekit.RedactAuditHistory(ctx, tx, auditID); err != nil {
+			return err
+		}
 		return storekit.EmitEvent(ctx, tx, auditID, activityID, crmcontracts.PublicEventRetentionRestricted{
 			Action:     crmcontracts.Release,
 			ActivityId: openapi_types.UUID(activityID),
@@ -144,7 +147,7 @@ func (e *Eraser) PinToFloor(ctx context.Context, activityID ids.UUID, reason Sta
 			return err
 		}
 		floorCurrent, floorCarried := floor.sqlArgs()
-		if err := auth.EnsureActivityVisible(ctx, tx, activityID); err != nil {
+		if err := auth.EnsureActivityRetentionTargetTx(ctx, tx, activityID); err != nil {
 			// A held record reads as gone to every reader (A165 §2), so a
 			// not-found here is ambiguous on its own. pinRefusalFor says which
 			// it was: a record that is not there, or one already held.

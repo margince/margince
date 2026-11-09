@@ -29,19 +29,7 @@ func (s *Store) answerWhichDealTx(ctx context.Context, tx pgx.Tx, mail ids.Activ
 	if !ok || actor.Type != principal.PrincipalHuman || !auth.ReadGranted(ctx, linkEntityDeal) {
 		return nil
 	}
-	// The conversation is the thread with one correspondent in one medium. Only
-	// rows whose place in it cannot be forged count: our own attested mail, or
-	// mail whose sender the receiving server authenticated. The key is the
-	// sender's References root, so anything else may be a spoof.
-	proven := `(` + correspondence.ConversationSQL("mail", "anchor") + ` AND ` + correspondence.ProvenSQL("mail") + `)`
-	conversation := `FROM activity anchor JOIN activity mail ON ` + proven + `
-		 WHERE anchor.id = $1 AND mail.restricted_at IS NULL`
-	questions, err := threadIDs(ctx, tx, `SELECT q.id FROM activity anchor
-		  JOIN activity mail ON (mail.id = anchor.id OR `+proven+`)
-		  JOIN activity q ON q.source_activity_id = mail.id AND q.kind = 'task' AND q.source_system = $2
-		   AND q.archived_at IS NULL AND NOT q.is_done
-		 WHERE anchor.id = $1 AND mail.restricted_at IS NULL
-		 ORDER BY q.id`, mail, provenance.WhichDealSource)
+	questions, err := openWhichDealQuestions(ctx, tx, mail)
 	if err != nil || len(questions) == 0 {
 		return err
 	}
@@ -50,9 +38,7 @@ func (s *Store) answerWhichDealTx(ctx context.Context, tx pgx.Tx, mail ids.Activ
 		 WHERE d.id = $1 AND d.status = 'open' AND d.archived_at IS NULL)`, deal).Scan(&open); err != nil || !open {
 		return err
 	}
-	siblings, err := threadIDs(ctx, tx, `SELECT mail.id `+conversation+` AND mail.id <> anchor.id
-		   AND NOT EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = mail.id AND l.entity_type = 'deal')
-		 ORDER BY mail.id`, mail)
+	siblings, err := unfiledConversationSiblings(ctx, tx, mail)
 	if err != nil {
 		return err
 	}
@@ -64,12 +50,49 @@ func (s *Store) answerWhichDealTx(ctx context.Context, tx pgx.Tx, mail ids.Activ
 			return err
 		}
 	}
+	_, err = s.completeWhichDealQuestions(ctx, tx, questions)
+	return err
+}
+
+// provenConversationSQL joins mail to the conversation of anchor. Only rows
+// whose place in it cannot be forged count: our own attested mail, or mail
+// whose sender the receiving server authenticated. The key is the sender's
+// References root, so anything else may be a spoof.
+var provenConversationSQL = `(` + correspondence.ConversationSQL("mail", "anchor") + ` AND ` + correspondence.ProvenSQL("mail") + `)`
+
+// openWhichDealQuestions is the open deal questions of mail's conversation.
+func openWhichDealQuestions(ctx context.Context, tx pgx.Tx, mail ids.ActivityID) ([]ids.UUID, error) {
+	return threadIDs(ctx, tx, `SELECT q.id FROM activity anchor
+		  JOIN activity mail ON (mail.id = anchor.id OR `+provenConversationSQL+`)
+		  JOIN activity q ON q.source_activity_id = mail.id AND q.kind = 'task' AND q.source_system = $2
+		   AND q.archived_at IS NULL AND NOT q.is_done
+		 WHERE anchor.id = $1 AND mail.restricted_at IS NULL
+		 ORDER BY q.id`, mail, provenance.WhichDealSource)
+}
+
+// unfiledConversationSiblings is the other proven mail of mail's conversation
+// that is on no deal, in id order.
+func unfiledConversationSiblings(ctx context.Context, tx pgx.Tx, mail ids.ActivityID) ([]ids.UUID, error) {
+	return threadIDs(ctx, tx, `SELECT mail.id FROM activity anchor JOIN activity mail ON `+provenConversationSQL+`
+		 WHERE anchor.id = $1 AND mail.restricted_at IS NULL AND mail.id <> anchor.id
+		   AND NOT EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = mail.id AND l.entity_type = 'deal')
+		 ORDER BY mail.id`, mail)
+}
+
+// completeWhichDealQuestions marks the questions done, skipping one the
+// colleague may not change, and answers how many it closed.
+func (s *Store) completeWhichDealQuestions(ctx context.Context, tx pgx.Tx, questions []ids.UUID) (int, error) {
+	closed := 0
 	for _, question := range questions {
-		if _, err := s.CompleteTaskTx(ctx, tx, ids.From[ids.ActivityKind](question), s.now()); err != nil && !notTheirsToFile(err) {
-			return err
+		done, err := s.CompleteTaskTx(ctx, tx, ids.From[ids.ActivityKind](question), s.now())
+		switch {
+		case err != nil && !notTheirsToFile(err):
+			return closed, err
+		case err == nil && done:
+			closed++
 		}
 	}
-	return nil
+	return closed, nil
 }
 
 // notTheirsToFile is a refusal that leaves one row as it is: the colleague

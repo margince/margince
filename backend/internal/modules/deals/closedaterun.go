@@ -211,7 +211,7 @@ func (c *CloseDateCorrector) nextMembers(
 		SELECT m.deal_id, m.deal_created_at,
 		       d.id, d.name, d.created_at, d.last_activity_at, d.wait_until, `+MeetingAheadSQL("d")+`,
 		       d.expected_close_date, d.close_date_provisional, d.win_probability_override, d.win_probability_set_by,
-		       d.pipeline_id, d.owner_id, s.win_probability,
+		       d.pipeline_id, d.owner_id, s.win_probability, d.stage_id,
 		       (SELECT count(*) FROM stage s2
 		         WHERE s2.pipeline_id = d.pipeline_id AND s2.archived_at IS NULL
 		           AND s2.semantic = 'open' AND s2.position >= s.position)
@@ -238,10 +238,11 @@ func (c *CloseDateCorrector) nextMembers(
 		var provisional *bool
 		var pipelineID *ids.PipelineID
 		var winProbability, remainingOpen *int
+		var stageID *ids.UUID
 		if err := rows.Scan(&m.dealID, &m.createdAt,
 			&dealID, &name, &createdAt, &cand.lastActivityAt, &cand.waitUntil, &cand.meetingAhead,
 			&cand.expectedClose, &provisional, &cand.override, &cand.overrideBy,
-			&pipelineID, &cand.ownerID, &winProbability, &remainingOpen); err != nil {
+			&pipelineID, &cand.ownerID, &winProbability, &stageID, &remainingOpen); err != nil {
 			return nil, nil, err
 		}
 		if dealID == nil {
@@ -253,7 +254,7 @@ func (c *CloseDateCorrector) nextMembers(
 		}
 		cand.id, cand.name, cand.createdAt = *dealID, *name, *createdAt
 		cand.provisional, cand.pipelineID = *provisional, *pipelineID
-		cand.stageProbability, cand.remainingOpen = *winProbability, *remainingOpen
+		cand.stageProbability, cand.remainingOpen, cand.stageID = *winProbability, *remainingOpen, *stageID
 		live = append(live, cand)
 		members = append(members, m)
 	}

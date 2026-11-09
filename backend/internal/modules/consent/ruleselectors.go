@@ -29,7 +29,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
@@ -221,43 +220,34 @@ func codeOf(column *string) jurisdiction.Code {
 }
 
 // dataProtectionCountryTx is the data-protection selector: the country of the
-// legal entity the sender belongs to. A sender assigned to no entity, or to
-// the default one, sends for the installation's default entity, so an
+// legal entity the message goes out for. The default entity, a further entity
+// with no country, and the zero entity take the installation's country, so an
 // installation with one entity configures nothing.
 //
-// The fallback reads installation.country, which is MachineryApplied: this runs
+// That fallback reads installation.country, which is MachineryApplied: this runs
 // under whatever principal is sending, and a rep or a worker holds no
 // settings-read grant (backend/gates/machineryapplied_test.go).
-func (s *Store) dataProtectionCountryTx(ctx context.Context, tx pgx.Tx, sender ids.UUID) (jurisdiction.Code, error) {
-	if !sender.IsZero() {
-		var isDefault bool
-		var country *string
-		err := tx.QueryRow(ctx, `
-			SELECT le.is_default, le.country
-			  FROM legal_entity_member m
-			  JOIN legal_entity le ON le.id = m.legal_entity_id AND le.archived_at IS NULL
-			 WHERE m.user_id = $1`, sender).Scan(&isDefault, &country)
-		switch {
-		case errors.Is(err, pgx.ErrNoRows):
-		case err != nil:
-			return "", fmt.Errorf("consent: reading the sending legal entity: %w", err)
-		case !isDefault && country != nil:
-			return jurisdiction.Code(*country), nil
-		}
+func (s *Store) dataProtectionCountryTx(ctx context.Context, tx pgx.Tx, entity ids.UUID) (jurisdiction.Code, error) {
+	facts, err := sendingEntityFactsTx(ctx, tx, entity)
+	if err != nil {
+		return "", err
+	}
+	return s.dataProtectionCountryOf(ctx, tx, facts)
+}
+
+func (s *Store) dataProtectionCountryOf(ctx context.Context, tx pgx.Tx, entity sendingEntityFacts) (jurisdiction.Code, error) {
+	if entity.further() && entity.country != "" {
+		return jurisdiction.Code(entity.country), nil
 	}
 	return s.defaultEntityCountry(ctx, tx)
 }
 
-// senderOf is the user a message goes out for: the human, or the human an
-// agent works for. Automatic work names nobody and sends for the default
-// entity.
-func senderOf(ctx context.Context) ids.UUID {
-	actor, ok := principal.Actor(ctx)
-	if !ok || !actor.HumanOrItsAgent() {
-		return ids.Nil
+// dataProtectionStamp is the country a decision records beside its marketing
+// ruleset. A decision that names no entity records none rather than a guess.
+func (s *Store) dataProtectionStamp(ctx context.Context, tx pgx.Tx, entity ids.UUID) (*string, error) {
+	if entity.IsZero() {
+		return nil, nil //nolint:nilnil // a NULL stamp is the answer for a decision with no entity
 	}
-	if actor.Type == principal.PrincipalHuman {
-		return actor.UserID
-	}
-	return actor.OnBehalfOf
+	code, err := s.dataProtectionCountryTx(ctx, tx, entity)
+	return nullableText(string(code)), err
 }

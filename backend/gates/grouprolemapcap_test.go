@@ -19,7 +19,6 @@
 package gates
 
 import (
-	"os"
 	"regexp"
 	"strconv"
 	"testing"
@@ -27,6 +26,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const frontendGroupGrants = "../frontend/src/features/sign-in/group-role-grants.tsx"
@@ -47,7 +47,7 @@ func TestTheGroupRoleMapCapIsOneNumber(t *testing.T) {
 		)
 	}
 
-	source, err := os.ReadFile(frontendGroupGrants)
+	source, err := gatekit.ReadFile(frontendGroupGrants)
 	if err != nil {
 		t.Fatalf("reading the group grants screen: %v", err)
 	}
@@ -86,7 +86,7 @@ func contractMaxProperties(t *testing.T, schema, property string) int {
 			} `yaml:"schemas"`
 		} `yaml:"components"`
 	}
-	raw, err := os.ReadFile("api/crm.yaml")
+	raw, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}

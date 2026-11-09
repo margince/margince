@@ -5,6 +5,8 @@ import { afterEach, expect, vi } from "vitest";
 import type { components } from "../api/schema";
 import type { Deal, MorningBrief } from "../features/brief/brief.queries";
 import { LocaleProvider } from "../i18n";
+import type { Receipt } from "../lib/handled";
+import { receiptAuditId } from "../lib/receiptreview";
 import { readingsDay } from "./brief.fixtures";
 import { meFixture } from "./mefixture";
 
@@ -93,6 +95,21 @@ const DEFAULTS: Routes = {
       receipts: [],
       truncated: false,
     }),
+  // Home asks for the changes Margince made beside the receipts; a quiet
+  // night has none.
+  "GET /deal-corrections/pending": () =>
+    jsonResponse({
+      as_of: "2026-09-13T08:00:00Z",
+      deals: 0,
+      closed: 0,
+      redated: 0,
+      revalued: 0,
+      probabilities: 0,
+      moved: 0,
+      base_currency: "EUR",
+      bundles: [],
+      truncated: false,
+    }),
   // The receipt at the foot of the page. Every lane, `totals` and both caveat
   // lists are required by the contract, so the generic empty page would fail
   // the panel in a way no server could produce — the same reason /worklist is
@@ -167,6 +184,52 @@ function activityRoute(route: string): string {
  * this screen must not do is as load-bearing as what it must: a staged verdict
  * is only staged if nothing was sent, and no rendering can prove that.
  */
+/**
+ * The pending summary a server sends beside these receipts. It holds one bundle
+ * per changed deal naming its corrections, so a fixture's list and count agree
+ * as the server's do.
+ */
+export function pendingSummaryFor(receipts: readonly Receipt[]) {
+  const bundles = new Map<
+    string,
+    { name: string; audits: string[]; at: string }
+  >();
+  for (const receipt of receipts) {
+    const audit = receiptAuditId(receipt);
+    if (receipt.subject?.type !== "deal" || audit === undefined) continue;
+    const bundle = bundles.get(receipt.subject.id) ?? {
+      name: receipt.subject.label ?? "",
+      audits: [],
+      at: receipt.occurred_at,
+    };
+    bundle.audits.push(audit);
+    bundles.set(receipt.subject.id, bundle);
+  }
+  return {
+    as_of: "2026-09-13T08:00:00Z",
+    deals: bundles.size,
+    undoable_deals: bundles.size,
+    closed: 0,
+    redated: 0,
+    revalued: 0,
+    probabilities: 0,
+    moved: 0,
+    opened: 0,
+    revived: 0,
+    base_currency: "EUR",
+    bundles: [...bundles].map(([dealId, bundle]) => ({
+      deal_id: dealId,
+      deal_name: bundle.name,
+      version: 1,
+      audit_log_ids: bundle.audits,
+      undoable_audit_log_ids: bundle.audits,
+      kinds: [],
+      latest_at: bundle.at,
+    })),
+    truncated: false,
+  };
+}
+
 export function stubApi(routes: Routes): Call[] {
   const calls: Call[] = [];
   const mock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
