@@ -34,15 +34,17 @@ const maxUsageWindowDays = 366
 // rule: in order, and no wider than maxUsageWindowDays.
 func usageWindowRefusal(from, to time.Time) *httperr.DetailedError {
 	if to.Before(from) {
+		const detail = "`from` must not be after `to`."
 		return &httperr.DetailedError{
-			Status: http.StatusUnprocessableEntity, Code: "window_inverted",
-			Detail: "`from` must not be after `to`.",
+			Status: http.StatusUnprocessableEntity, Code: "window_inverted", Detail: detail,
+			Fields: []httperr.FieldError{{Field: "from", Code: "window_inverted", Message: detail}},
 		}
 	}
 	if to.Sub(from) > maxUsageWindowDays*24*time.Hour {
+		const detail = "The usage window is capped at 366 days — narrow `from`/`to`."
 		return &httperr.DetailedError{
-			Status: http.StatusUnprocessableEntity, Code: "window_too_wide",
-			Detail: "The usage window is capped at 366 days — narrow `from`/`to`.",
+			Status: http.StatusUnprocessableEntity, Code: "window_too_wide", Detail: detail,
+			Fields: []httperr.FieldError{{Field: "to", Code: "window_too_wide", Message: detail}},
 		}
 	}
 	return nil

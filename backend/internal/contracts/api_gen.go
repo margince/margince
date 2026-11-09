@@ -33252,12 +33252,12 @@ type AiUsage struct {
 // AiUsageBudgetBand < 80% / 80–100% soft-degrade / ≥ 100% non-interactive queued (AIRT-PARAM-9..11).
 type AiUsageBudgetBand string
 
-// AiUsageSummary The month's AI spend so far, summed from the lines GET /ai/usage prices.
+// AiUsageSummary The AI spend over the requested window, summed from the lines GET /ai/usage prices.
 type AiUsageSummary struct {
 	// ComputedAt The instant the window ends at and the figure was computed.
 	ComputedAt time.Time `json:"computed_at"`
 
-	// CostEstMinor Sum of the month's `cost_est_minor` lines from GET /ai/usage, in minor units of `currency`. Omitted, not 0, when no line carries a price: then nobody knows what the month cost, which is not the same as a month that cost nothing.
+	// CostEstMinor Sum of the window's `cost_est_minor` lines from GET /ai/usage, in minor units of `currency`. Omitted, not 0, when no line carries a price: then nobody knows what the window cost, which is not the same as a window that cost nothing.
 	CostEstMinor *int `json:"cost_est_minor,omitempty"`
 
 	// Currency ISO-4217 of cost_est_minor — always USD in phase 1 (ADR-0067).
@@ -90874,7 +90874,7 @@ type ServerInterface interface {
 	// AI usage + budget — the spend is never invisible.
 	// (GET /ai/usage)
 	GetAiUsage(w http.ResponseWriter, r *http.Request, params GetAiUsageParams)
-	// What AI cost this month so far, as one figure.
+	// What AI cost over a window, this month by default, as one figure.
 	// (GET /ai/usage/summary)
 	GetAiUsageSummary(w http.ResponseWriter, r *http.Request, params GetAiUsageSummaryParams)
 	// The accounts at risk in one population: single-threaded deals, accounts in pipeline nobody has exchanged a word with, and won accounts gone silent. Each row carries the facts behind its verdict. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework's, and the answer prints them.
@@ -94273,7 +94273,7 @@ func (_ Unimplemented) GetAiUsage(w http.ResponseWriter, r *http.Request, params
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// What AI cost this month so far, as one figure.
+// What AI cost over a window, this month by default, as one figure.
 // (GET /ai/usage/summary)
 func (_ Unimplemented) GetAiUsageSummary(w http.ResponseWriter, r *http.Request, params GetAiUsageSummaryParams) {
 	w.WriteHeader(http.StatusNotImplemented)
