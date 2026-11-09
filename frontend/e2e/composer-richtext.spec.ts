@@ -130,6 +130,7 @@ test("a switch of thread is out of Undo's reach", async ({ page }) => {
 test("Cmd/Ctrl+K in the body asks for a link, not the palette", async ({
   page,
 }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
   const body = await openBody(page);
   await body.click();
   await page.keyboard.type("Zur Preisliste");
@@ -151,7 +152,13 @@ test("Cmd/Ctrl+K in the body asks for a link, not the palette", async ({
   expect(
     axe.violations
       .filter((found) => ["serious", "critical"].includes(found.impact ?? ""))
-      .map((found) => found.id),
+      .map((found) => ({
+        id: found.id,
+        nodes: found.nodes.map(({ target, failureSummary }) => ({
+          target,
+          failureSummary,
+        })),
+      })),
   ).toEqual([]);
 
   await address.fill("javascript:alert(1)");

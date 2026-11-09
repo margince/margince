@@ -272,6 +272,37 @@ func TestRetentionErasingATranscriptEmptiesTheProposalQuotingIt(t *testing.T) {
 	}
 }
 
+// An approved proposal nobody has redeemed loses its token when the record it
+// quotes is erased. Redemption reads the untouched diff_hash, not the blanked
+// payload, so a live token could still run the call. The verdict stays.
+func TestErasingAQuotedRecordSpendsTheTokenOfAnApprovedButUnredeemedProposal(t *testing.T) {
+	e := integration.Setup(t)
+	integration.SeedRetentionPolicies(t, e)
+
+	overAge := seedTranscript(t, e, quotedTranscriptLine)
+	e.WsExec(t, `UPDATE activity SET occurred_at = now() - interval '400 days' WHERE id = $1`, overAge)
+	approvalID := stageProposalQuoting(t, e, overAge, quotedTranscriptLine)
+	passport := e.SeedPassport(t, integration.OwnerConn(t), "quotation redemption probe")
+	e.WsExec(t, `UPDATE approval SET status = 'approved', decided_at = now(), passport_id = $2, consumed_at = NULL
+		WHERE id = $1`, approvalID, passport)
+
+	svc := NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	integration.SettleIntoInstall(t, e)
+	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(e.WS)); err != nil {
+		t.Fatalf("EvaluateInstallation → %v", err)
+	}
+
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE id = $1 AND body IS NULL`, overAge); n != 1 {
+		t.Fatal("the sweep did not erase the over-age transcript body, so the rest of this test proves nothing")
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE id = $1 AND status = 'approved'`, approvalID); n != 1 {
+		t.Error("erasure rewrote a verdict a human had already given")
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE id = $1 AND consumed_at IS NOT NULL`, approvalID); n != 1 {
+		t.Error("the approval is still spendable after the record it quotes was erased")
+	}
+}
+
 // TestAControllerReleasingARestrictionSaysSoOnTheCardsItWithdrew is the other
 // half of the sentence the test above asserts.
 //

@@ -183,12 +183,16 @@ func carryConsent(ctx context.Context, tx pgx.Tx, kind consentCarryKind, fromID,
 // record overrides the survivor's grant, and the flip lands with its proof row
 // in the same statement — a state change without proof would break the
 // Art. 7(1) demonstrability invariant.
+//
+// The flipped row takes the addresses the withdrawal was bound to, because the
+// retiring record's subject withdrew, not the survivor's.
 func flipCarriedWithdrawals(ctx context.Context, tx pgx.Tx, spec consentCarrySpec,
 	fromID, toID ids.UUID, by string, now time.Time,
 ) error {
 	_, err := tx.Exec(ctx, storekit.SQLf(`
 		WITH flipped AS (
-		  UPDATE contact_consent b SET state = 'withdrawn', captured_at = @now, source = @origin
+		  UPDATE contact_consent b SET state = 'withdrawn', captured_at = @now, source = @origin,
+		         recorded_for_addresses = a.recorded_for_addresses
 		  FROM contact_consent a
 		  WHERE a.%[1]s = @source AND b.%[2]s = @target
 		    AND a.purpose_id = b.purpose_id
@@ -208,8 +212,19 @@ func flipCarriedWithdrawals(ctx context.Context, tx pgx.Tx, spec consentCarrySpe
 
 // dropCollidingConsent answers question 2: where the survivor already holds a
 // state for a purpose, its own stands and the retiring record's row goes.
+//
+// Where both withdrew, the kept row joins the addresses of the dropped one:
+// each record's subject withdrew. NULL on either side covers every address.
 func dropCollidingConsent(ctx context.Context, tx pgx.Tx, spec consentCarrySpec, fromID, toID ids.UUID) error {
 	_, err := tx.Exec(ctx, storekit.SQLf(`
+		WITH joined AS (
+		  UPDATE contact_consent b SET recorded_for_addresses = CASE
+		      WHEN b.recorded_for_addresses IS NULL OR a.recorded_for_addresses IS NULL THEN NULL
+		      ELSE ARRAY(SELECT DISTINCT x FROM unnest(b.recorded_for_addresses || a.recorded_for_addresses) AS x ORDER BY x) END
+		  FROM contact_consent a
+		  WHERE a.%[1]s = $1 AND b.%[2]s = $2 AND a.purpose_id = b.purpose_id
+		    AND a.state = 'withdrawn' AND b.state = 'withdrawn'
+		)
 		DELETE FROM contact_consent a
 		WHERE a.%[1]s = $1 AND EXISTS (
 		  SELECT 1 FROM contact_consent b

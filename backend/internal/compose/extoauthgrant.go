@@ -33,7 +33,7 @@ const codeInvalidGrant = "invalid_grant"
 
 // errExtOAuthAppMissing is a unit app whose client id and secret no admin has
 // stored, so no flow can run and no token can be refreshed.
-var errExtOAuthAppMissing = errors.New("no client id and secret are stored for this OAuth app — an admin adds them under Settings → Sign-in and apps")
+var errExtOAuthAppMissing = errors.New("no client id and secret are stored for this OAuth app — an admin adds them under Settings → Sign-in and security")
 
 // storedOAuthGrant is the sealed grant. ExpiresAt is zero when the vendor did
 // not state the access token's lifetime; the token is then refreshed on use.

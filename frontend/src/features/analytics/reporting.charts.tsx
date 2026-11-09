@@ -1,13 +1,14 @@
-import type { ReactNode } from "react";
-import { Button, EmptyState } from "../../design-system/atoms";
+import { type ReactNode, Suspense } from "react";
+import { PendingBody } from "../../design-system/atoms";
+import { CardBoundary } from "../../design-system/cardboundary";
 import { Heading } from "../../design-system/heading";
-import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { useT } from "../../i18n";
+import { lazy } from "../../i18n/lazy";
 import { AnalyticsBoard, AnalyticsSheet } from "./analytics.board";
 import { AssessmentCard } from "./reporting.assessmentcard";
-import { ChartBody, chartTitle } from "./reporting.chartbody";
-import { ChartContext, ChartDetails } from "./reporting.chartcontext";
+import { ChartPanel } from "./reporting.chartpanel";
+
 import {
   type LaidOutItem,
   type LaidOutSection,
@@ -20,16 +21,20 @@ import type {
   ReportingEvidenceRef,
   ReportingSelection,
 } from "./reporting.model";
-import { useMetricNames, useReportingCatalog } from "./reporting.queries";
-import {
-  type KeptQuestions,
-  QuestionCard,
-  type ReportRevision,
-} from "./reporting.questioncard";
+import { useReportingCatalog } from "./reporting.queries";
+import type { KeptQuestions, ReportRevision } from "./reporting.questioncard";
 import { ResultsSummary } from "./reporting.summary";
 import { TargetComparison } from "./reporting.targetcomparison";
 import { WrittenSummary } from "./reporting.written";
 import "./reporting.css";
+
+const QuestionCard = lazy(
+  async () => ({
+    default: (await import("./reporting.questioncard")).QuestionCard,
+  }),
+  "complete",
+  CardBoundary,
+);
 
 type EvidenceAction = (reference: ReportingEvidenceRef) => void;
 
@@ -268,6 +273,7 @@ function ChartSection({
   questions: "live" | "frozen" | "preview";
   kept?: KeptQuestions;
 }>) {
+  const t = useT();
   const wide = pairWidths(
     section.items.map(
       (item) =>
@@ -299,15 +305,19 @@ function ChartSection({
               wide={wide[index] === true}
             />
           ) : (
-            <QuestionCard
+            <Suspense
               key={itemKey(item)}
-              card={item.question}
-              wide={wide[index] === true}
-              evaluation={evaluation}
-              report={report}
-              mode={questions}
-              kept={kept}
-            />
+              fallback={<PendingBody label={t("common.loading")} />}
+            >
+              <QuestionCard
+                card={item.question}
+                wide={wide[index] === true}
+                evaluation={evaluation}
+                report={report}
+                mode={questions}
+                kept={kept}
+              />
+            </Suspense>
           ),
         )}
       </div>
@@ -332,76 +342,6 @@ function itemKey(item: LaidOutItem): string {
 // One chart in its panel. The head holds the title and one quiet door to what
 // the figure was read from. What it covers and the door to its records share
 // one foot line, so a row of cards reads as titles over charts.
-export function ChartPanel({
-  chart,
-  wide,
-  evaluation,
-  editionId,
-  section = false,
-  onEvidence,
-}: Readonly<{
-  chart: ReportingChart;
-  wide: boolean;
-  evaluation: ReportingEvaluation;
-  editionId?: string;
-  // A section of a larger sheet: its title sits flat over the chart.
-  section?: boolean;
-  onEvidence: EvidenceAction;
-}>) {
-  const t = useT();
-  const metricName = useMetricNames();
-  const drawn = chart.points.length > 0 && chart.coverage.status !== "no_data";
-  return (
-    <Panel
-      flatHead={section}
-      className={
-        wide ? "reporting-panel reporting-panel-wide" : "reporting-panel"
-      }
-      title={chartTitle(chart, evaluation, t, metricName)}
-      titleAction={<ChartDetails chart={chart} evaluation={evaluation} />}
-      footer={
-        <>
-          <ChartContext
-            chart={chart}
-            evaluation={evaluation}
-            editionId={editionId}
-          />
-          {drawn && (
-            <Button
-              variant="link"
-              onClick={() =>
-                onEvidence({
-                  metric: chart.metric,
-                  context_id: chart.context_id,
-                })
-              }
-            >
-              {t("reporting.viewRecords")}
-            </Button>
-          )}
-        </>
-      }
-    >
-      <PanelBody>
-        {/* A chart drawn from the reader's own figures alone says so above its
-            bars: one bar on a team chart otherwise reads as a team of one. */}
-        {drawn && chart.coverage.withheld && chart.coverage.reason && (
-          <p className="t-caption">{chart.coverage.reason}</p>
-        )}
-        {drawn ? (
-          <ChartBody
-            chart={chart}
-            evaluation={evaluation}
-            onEvidence={onEvidence}
-          />
-        ) : (
-          <EmptyState>{chart.coverage.reason ?? t("common.empty")}</EmptyState>
-        )}
-      </PanelBody>
-    </Panel>
-  );
-}
-
 // Kinds that need the page's whole width. The waterfall's steps and the
 // outcomes table each need more room than half a row.
 const WIDE_KINDS: ReadonlySet<ReportingChart["kind"]> = new Set([

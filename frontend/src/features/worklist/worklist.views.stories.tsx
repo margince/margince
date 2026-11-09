@@ -102,7 +102,7 @@ export const DecisionsAFloor: Story = {
       within(canvasElement).getByRole("group", { name: "Work view" }),
     );
     await expect(
-      picker.getByRole("button", { name: named("Decisions") }),
+      picker.getByRole("button", { name: named("Decisions, 200+") }),
     ).toBeVisible();
     await expect(
       picker.getByRole("button", { name: named("Today, 12") }),

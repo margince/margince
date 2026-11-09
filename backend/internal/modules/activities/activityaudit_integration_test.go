@@ -307,20 +307,23 @@ func imageMembers(t *testing.T, image map[string]any) []string {
 
 // loggedMeeting is a meeting with nothing recorded about how it went, which is
 // every meeting until somebody says otherwise.
-func loggedMeeting(ctx context.Context, t *testing.T, e *sendEnv) crmcontracts.Activity {
+func loggedMeeting(ctx context.Context, t *testing.T, e *sendEnv) (*Store, crmcontracts.Activity) {
 	t.Helper()
 	subject := "Quarterly review"
+	occurred := time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC)
+	precision := crmcontracts.OccurredPrecisionOccurredPrecisionInstant
+	store := e.store(nil).WithClock(func() time.Time { return occurred.Add(time.Hour) })
 	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-		Kind: "meeting", Subject: &subject, Source: "manual",
+		Kind: "meeting", Subject: &subject, Source: "manual", OccurredAt: &occurred, OccurredPrecision: &precision,
 	})
 	if err != nil {
 		t.Fatalf("LogActivityInputFrom: %v", err)
 	}
-	activity, _, err := e.store(nil).LogActivity(ctx, in)
+	activity, _, err := store.LogActivity(ctx, in)
 	if err != nil {
 		t.Fatalf("LogActivity: %v", err)
 	}
-	return activity
+	return store, activity
 }
 
 // How a meeting went, recorded after it happened.
@@ -332,13 +335,13 @@ func loggedMeeting(ctx context.Context, t *testing.T, e *sendEnv) crmcontracts.A
 func TestHowAMeetingWentCanBeRecordedAfterIt(t *testing.T) {
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
-	meeting := loggedMeeting(ctx, t, e)
+	store, meeting := loggedMeeting(ctx, t, e)
 	if meeting.MeetingStatus != nil {
 		t.Fatalf("a freshly logged meeting already reports %v", *meeting.MeetingStatus)
 	}
 
 	held := string(crmcontracts.ActivityMeetingStatusHeld)
-	out, err := e.store(nil).UpdateActivity(ctx, ids.From[ids.ActivityKind](ids.UUID(meeting.Id)),
+	out, err := store.UpdateActivity(ctx, ids.From[ids.ActivityKind](ids.UUID(meeting.Id)),
 		UpdateActivityInput{MeetingStatus: &held})
 	if err != nil {
 		t.Fatalf("UpdateActivity: %v", err)
@@ -355,10 +358,10 @@ func TestHowAMeetingWentCanBeRecordedAfterIt(t *testing.T) {
 func TestRecordingAMeetingsOutcomeReachesTheAuditImages(t *testing.T) {
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
-	meeting := loggedMeeting(ctx, t, e)
+	store, meeting := loggedMeeting(ctx, t, e)
 
 	noShow := string(crmcontracts.ActivityMeetingStatusNoShow)
-	if _, err := e.store(nil).UpdateActivity(ctx, ids.From[ids.ActivityKind](ids.UUID(meeting.Id)),
+	if _, err := store.UpdateActivity(ctx, ids.From[ids.ActivityKind](ids.UUID(meeting.Id)),
 		UpdateActivityInput{MeetingStatus: &noShow}); err != nil {
 		t.Fatalf("UpdateActivity: %v", err)
 	}

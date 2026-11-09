@@ -1,4 +1,6 @@
 import type { Decorator, Preview } from "@storybook/react-vite";
+import { loadLocale } from "../src/i18n/catalogs";
+import { LOCALES } from "../src/i18n/locale";
 // app.css loads Tailwind + the Ledger-Green tokens + base element styles, so
 // every story renders on the real design-system surface with each var
 // resolved. No `backgrounds` palette is configured: the addon needs literal
@@ -64,6 +66,12 @@ const withSurface: Decorator = (Story, context) => {
 };
 
 const preview: Preview = {
+  loaders: [
+    async () => {
+      await Promise.all(LOCALES.map(loadLocale));
+      return {};
+    },
+  ],
   globalTypes: {
     theme: {
       description: "Ledger-Green theme",

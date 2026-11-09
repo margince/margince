@@ -203,6 +203,25 @@ describe("a record's Next bar with what just came in", () => {
     expect(screen.getByRole("button", { name: "Read form" })).toBeTruthy();
   });
 
+  it("reads a website form's note as text, without its markdown", () => {
+    const form = activity("form", {
+      kind: "note",
+      source: "web_form",
+      body: "> Hello,\n> we need a quote for 40 seats.\n>\n> **not bold** & more\n>\n> Name: Pat",
+    });
+    withProviders(
+      scoped(
+        { activity: form, kind: "web_form", accepts_request: false },
+        <RecordNextBar />,
+      ),
+    );
+    expect(
+      screen.getByText(
+        "Hello, · we need a quote for 40 seats. · not bold & more · Name: Pat",
+      ),
+    ).toBeTruthy();
+  });
+
   it("keeps a chat message's own characters, which are not markdown", () => {
     const chat = activity("chat", {
       kind: "message",

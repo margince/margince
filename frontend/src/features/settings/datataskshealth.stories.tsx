@@ -42,7 +42,7 @@ function report(
   };
 }
 const meta = {
-  title: "Settings/Governance/System health/Data updates",
+  title: "Settings/System/System health/Data updates",
   component: DataTasksHealthCard,
 } satisfies Meta<typeof DataTasksHealthCard>;
 export default meta;

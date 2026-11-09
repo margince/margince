@@ -203,8 +203,8 @@ type MeetingMover interface {
 // answers. A connector that decided it would be deciding for mailboxes it
 // cannot see.
 type MessageRemover interface {
-	// RemoveMessage reports that the message captured under this natural key
-	// was deleted at the provider, by the owner of the mailbox it arrived in.
+	// RemoveMessage names the provider and its mailbox-specific message id,
+	// not the stored email Message-ID. The owning mailbox comes from ctx.
 	//
 	// Whose mailbox comes from the principal on ctx, the way every other write
 	// a sync makes resolves its seat — a connector that passed an owner would
@@ -289,7 +289,8 @@ type NormalizedRecord struct {
 	// and a connector may not import it.
 	CrossDoorIdentity CrossDoorIdentity
 	OwnerDomainOnly   string // the calendar owner's domain when every party is on it; the sink judges it
-	PartiesIncomplete bool   // the provider may have left parties out of Addresses, so they cannot prove it internal
+	CalendarAnswer    *CalendarAnswer
+	PartiesIncomplete bool // the provider may have left parties out of Addresses, so they cannot prove it internal
 
 	// The address the RECEIVING infrastructure recorded delivery to, empty when
 	// no such claim could be trusted. It is how a forwarding alias is
@@ -309,6 +310,9 @@ type NormalizedRecord struct {
 	// sender cannot set it the way they set a Date header. Zero when the
 	// transport states none, and a zero time proves nothing about arrival.
 	ProviderReceivedAt time.Time
+
+	// ProviderMessageID comes from the mailbox API, never the message headers.
+	ProviderMessageID string
 
 	// The provider's own filing places, each qualified by its namespace:
 	// "gmail:<labelId>", "graph:<folderId>", "imap:<mailbox>". Qualified rather
@@ -345,14 +349,8 @@ type NormalizedRecord struct {
 	// is not mail.
 	ReplyTo []string
 
-	// The FURTHER parties beyond the mailbox owner and Counterparty — CCs, a
-	// meeting's attendees and organizer. Additive rather than a replacement,
-	// because direction is defined against the two ENDS of the exchange and
-	// everyone else is present without being either.
-	//
-	// Addresses, not records: resolving one is capture's job at stamping time,
-	// and one that resolves to nobody is still kept — an attendee without a
-	// record is a fact about the meeting.
+	// Participants holds the parties beyond the mailbox owner and counterparty.
+	// Capture resolves them; an unresolved invitee stays recorded by address.
 	Participants []MessageParticipant
 
 	// The parties the MaxParticipants cap withheld from Participants. Capture

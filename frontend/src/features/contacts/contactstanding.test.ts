@@ -79,6 +79,7 @@ describe("contactVerdict", () => {
   it.each<[ContactMomentRule, string]>([
     ["overdue_promise", "danger"],
     ["gone_quiet", "danger"],
+    ["awaiting_reply", "neutral"],
     ["open_promise", "warning"],
     ["missing_next_step", "warning"],
     ["meeting_prep", "warning"],

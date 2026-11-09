@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -51,7 +52,8 @@ import (
 // project link per activity: a concurrent pass that got there first is the
 // system working, not a collision to report. Nothing is audited or bumped when
 // nothing landed — a no-op writes no audit noise and moves no version.
-func linkActivityToProject(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, projectID ids.UUID, stamp StampProjectCorrespondence) error {
+func linkActivityToProject(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, filing projectFiling, stamp StampProjectCorrespondence) error {
+	projectID := filing.project
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return nil
@@ -97,7 +99,14 @@ func linkActivityToProject(ctx context.Context, tx pgx.Tx, activityID ids.Activi
 	if err := stamp(ctx, tx, activityID, projectID); err != nil {
 		return fmt.Errorf("capture: classifying the filed activity's correspondence: %w", err)
 	}
-	return auditProjectAttribution(ctx, tx, activityID, projectID)
+	return auditProjectAttribution(ctx, tx, activityID, filing)
+}
+
+// projectFiling is the project the ladder chose and the rung that chose it.
+// A zero project proposes nothing.
+type projectFiling struct {
+	project ids.UUID
+	rung    string
 }
 
 // auditProjectAttribution records the link the ladder just wrote, under the
@@ -119,9 +128,10 @@ func linkActivityToProject(ctx context.Context, tx pgx.Tx, activityID ids.Activi
 // to one arrival. activity.updated is the activities module's type to mean
 // what it means, and capture does not get to redefine it as "a message
 // arrived, again".
-func auditProjectAttribution(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, projectID ids.UUID) error {
-	_, err := storekit.Audit(ctx, tx, "activity_relink", "activity", activityID.UUID, nil,
-		map[string]any{"entity_type": string(datasource.EntityProject), "entity_id": projectID})
+func auditProjectAttribution(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, filing projectFiling) error {
+	_, err := storekit.AuditWithEvidence(ctx, tx, "activity_relink", "activity", activityID.UUID, nil,
+		map[string]any{"entity_type": string(datasource.EntityProject), "entity_id": filing.project},
+		map[string]any{provenance.ProjectRungKey: filing.rung})
 	return err
 }
 

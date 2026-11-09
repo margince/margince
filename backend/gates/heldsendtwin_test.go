@@ -27,10 +27,11 @@ package gates
 // here instead.
 
 import (
-	"os"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // heldTwinColumns is the identity both copies must name. Adding a column to the
@@ -168,7 +169,7 @@ func heldTwinWrappingName(wrapping string) string {
 // a column named elsewhere in the file cannot satisfy the check above.
 func readHeldTwinSource(t *testing.T, path, from string) string {
 	t.Helper()
-	raw, err := os.ReadFile(path)
+	raw, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

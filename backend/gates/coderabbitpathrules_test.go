@@ -20,10 +20,11 @@ package gates
 // names, and checks each against the rule that actually makes it off-limits.
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const coderabbitConfig = ".coderabbit.yaml"
@@ -31,7 +32,7 @@ const coderabbitConfig = ".coderabbit.yaml"
 func TestTheReviewerIsToldWhichPathsAreReallyOffLimits(t *testing.T) {
 	t.Parallel()
 
-	raw, err := os.ReadFile(filepath.Join(repoRoot, coderabbitConfig))
+	raw, err := gatekit.ReadFile(filepath.Join(repoRoot, coderabbitConfig))
 	if err != nil {
 		t.Fatalf("reading %s: %v", coderabbitConfig, err)
 	}
@@ -78,7 +79,7 @@ func TestTheReviewerIsToldWhichPathsAreReallyOffLimits(t *testing.T) {
 // the rules.
 func rulebook(t *testing.T) string {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join(repoRoot, "AGENTS.md"))
+	raw, err := gatekit.ReadFile(filepath.Join(repoRoot, "AGENTS.md"))
 	if err != nil {
 		t.Fatalf("reading the rulebook: %v", err)
 	}

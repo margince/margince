@@ -28,7 +28,7 @@ func (s *Service) NamedTeamBoard(ctx context.Context, team ids.UUID) (crmcontrac
 	if team.IsZero() {
 		return s.TeamBoard(ctx)
 	}
-	if err := requireLeadTier(ctx); err != nil {
+	if err := RequireLeadTier(ctx); err != nil {
 		return crmcontracts.TeamBoard{}, err
 	}
 	if s.namedTeams == nil {

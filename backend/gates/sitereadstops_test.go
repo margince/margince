@@ -21,12 +21,12 @@ package gates
 // counted on one side and not the other fails, whichever side added it.
 
 import (
-	"os"
 	"regexp"
 	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const frontendSiteReadStops = "../frontend/src/lib/sitereadkind.ts"
@@ -41,7 +41,7 @@ var tsStopComment = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
 
 func TestTheFrontendCeilingStopsMatchTheGoOnes(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile(frontendSiteReadStops)
+	source, err := gatekit.ReadFile(frontendSiteReadStops)
 	if err != nil {
 		t.Fatalf("reading the frontend stop list: %v", err)
 	}

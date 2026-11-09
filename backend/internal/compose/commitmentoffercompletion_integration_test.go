@@ -109,11 +109,11 @@ func TestCompletingOnePromiseKeepsAnotherAskFromTheSameMeetingPending(t *testing
 		if err != nil {
 			t.Fatal(err)
 		}
-		if proposal.Summary == nil {
-			t.Fatal("proposal lost its summary")
-		}
-		if string(proposal.Status) != want[*proposal.Summary] {
-			t.Fatalf("%s is %s, want %s", *proposal.Summary, proposal.Status, want[*proposal.Summary])
+		// A withdrawn ask stores no plan footprint, so its reader gets metadata
+		// only. The stored summary names which ask the row is.
+		ask := e.wsString(t, `SELECT summary FROM approval WHERE id = $1`, id)
+		if string(proposal.Status) != want[ask] {
+			t.Fatalf("%s is %s, want %s", ask, proposal.Status, want[ask])
 		}
 	}
 }

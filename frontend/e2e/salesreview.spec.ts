@@ -3,7 +3,7 @@ import { quarterSales } from "../src/features/analytics/analytics.overview.scena
 import { de } from "../src/i18n/de";
 import { meFixture } from "../src/testing/mefixture";
 import { reportingStoryCatalog } from "../src/testing/reporting.fixtures";
-import { mockApi } from "./seed";
+import { mockApi, servePrincipal } from "./seed";
 
 // Compact readings precede a substantial outlook on desktop and phone.
 const VIEWPORT = { width: 1366, height: 768 };
@@ -59,19 +59,18 @@ async function openSalesReview(page: Page, evaluation: unknown = QUARTER) {
   await page.setViewportSize(VIEWPORT);
   await mockApi(page);
   // The mock's admin holds no forecast grant, so the checks would be withheld.
-  await page.route("**/v1/me", (route) =>
-    route.fulfill({
-      json: meFixture({
-        rowScope: "all",
-        allow: {
-          deal: ["read"],
-          forecast: ["read"],
-          pipeline: ["read"],
-          report_definition: ["read", "create"],
-          reporting_framework: ["read"],
-          installation_settings: ["read"],
-        },
-      }),
+  await servePrincipal(
+    page,
+    meFixture({
+      rowScope: "all",
+      allow: {
+        deal: ["read"],
+        forecast: ["read"],
+        pipeline: ["read"],
+        report_definition: ["read", "create"],
+        reporting_framework: ["read"],
+        installation_settings: ["read"],
+      },
     }),
   );
   await page.route("**/v1/analytics/metrics", (route) =>

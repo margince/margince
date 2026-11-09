@@ -91,7 +91,7 @@ func MarkedContactsWithMailTx(ctx context.Context, tx pgx.Tx, setBy string, afte
 		                WHERE sent.counterparty_email = lower(pe.email)
 		                  AND sent.counterparty_outbound_attested
 		                  AND sent.occurred_at > p.created_at -- occurred_at raw: attested mail is captured at its instant, never a day
-		                  AND `+auth.ActivityAvailableClause("sent")+`)
+		                  AND `+auth.ActivityExternalEvidenceClause("sent")+`)
 		 ORDER BY p.id, pe.email
 		 LIMIT $3`, setBy, after, limit)
 	if err != nil {

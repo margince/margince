@@ -38,27 +38,8 @@ fixture:
 expect:
   outcome: accepted
   answer: {}
-  rubric: >
-    This document states none of the four fields, and reporting all four as
-    not stated is the whole correct answer. Score any invention hardest.
-
-    The traps are real and each one reads plausibly. "Packaging line 3 —
-    revision C" is a heading, not what a piece of business is called;
-    "revision C" is a document version. "Two consecutive passing runs",
-    "three points", "a full shift" and "sampled hourly" are quantities on a
-    page that has no money on it at all — a reading that turns any of them
-    into an amount has grounded a number in text that is not about money, and
-    the currency it would have to pair with appears nowhere. "the agreed
-    window" and "the same validation window" are schedule language with no
-    date in them; a reading that produces an expected close date from this
-    document produced it from nothing.
-
-    A reading that omits everything and says so scores full marks. A reading
-    that offers one field with a genuine quote but a low confidence is better
-    than one that offers it confidently, but the omission is still the right
-    answer — the floor exists precisely so an unsure reading of a document
-    like this reaches nobody.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The right answer is every field not stated, and the check fails any field
+    the reading offers above the floor, whatever its quote. A reading too
+    unsure to clear the floor offers nothing, which is the right answer too.

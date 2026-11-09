@@ -4,6 +4,7 @@
 package dealrooms
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 
@@ -92,43 +93,17 @@ func (h Handlers) UpdateDealRoomParticipant(w http.ResponseWriter, r *http.Reque
 	httperr.WriteJSON(w, http.StatusOK, participant)
 }
 
-// issuedBody renders a freshly minted credential and mails it if the
-// installation can send.
+// issuedBody renders a freshly minted credential and hands it to the sender.
 //
-// Sending is best-effort and never fails the write: the participant and the
-// credential are recorded either way, so a relay outage leaves a seller with a
-// link they can pass on by hand rather than a half-admitted contact and an error.
-// `queued` says which happened, so the caller knows whether to send it.
-//
-// Queued, not delivered. All this knows is that the relay took the message; a
-// mailbox receiving it is a later and separate fact, and an address that
-// hard-bounces a second afterwards was queued all the same. recordSendOutcome
-// stamps that one attempt onto the invitation as sent_at or failed_at, which the
-// roster reads. Nothing revises it afterwards — the invitation carries a
-// delivered_at column that no writer in this tree sets.
+// Sending never fails the write. A relay outage leaves the seller a link to
+// pass on by hand. `queued` says whether the relay took the mail within
+// inviteRelayWait; its answer also lands on the roster, as sent or failed.
 func (h Handlers) issuedBody(r *http.Request, issued IssuedInvitation) crmcontracts.DealRoomInvitationIssued {
-	queued := false
-	if h.canSendInvite() {
-		sendErr := h.sendInvite(r, issued)
-		if sendErr != nil {
-			// Logged rather than returned: the caller's request succeeded, and
-			// telling them it failed would invite a retry that mints a second
-			// credential and silently retires the one already on its way.
-			slog.ErrorContext(r.Context(), "deal room invitation email failed",
-				"participant_id", issued.Participant.Id, "err", sendErr)
-		} else {
-			queued = true
-		}
-		// Recorded as well as reported, so the roster can answer "did it
-		// arrive?" tomorrow. Without this the delivery state a seller reads
-		// would be `pending` forever, whatever actually happened to the mail.
-		h.recordSendOutcome(r, issued, sendErr)
-	}
 	return crmcontracts.DealRoomInvitationIssued{
 		Participant:         issued.Participant,
 		Credential:          credentialFor(r, issued.Credential),
 		CredentialExpiresAt: issued.ExpiresAt,
-		Queued:              queued,
+		Queued:              h.sendInviteAndWait(r, issued),
 	}
 }
 
@@ -142,18 +117,14 @@ func credentialFor(r *http.Request, credential string) string {
 	return credential
 }
 
-// recordSendOutcome stamps what the relay did onto the invitation.
-//
-// It runs after the issuing transaction has committed, because the send happens
-// there: rolling the invitation back because a mail server was slow would leave
-// the seller with no participant at all, which is worse than a participant whose
-// delivery state is unknown. A failure to record is therefore logged and
-// swallowed — the credential is valid either way, and the only casualty is the
-// chip on the roster.
-func (h Handlers) recordSendOutcome(r *http.Request, issued IssuedInvitation, sendErr error) {
-	if err := h.store.RecordInvitationSend(r.Context(),
-		participantPathID(issued.Participant.Id), sendErr); err != nil {
-		slog.ErrorContext(r.Context(), "recording deal room invitation delivery failed",
+// recordSendOutcome stamps what the relay did onto the invitation it carried.
+// It runs after the issuing transaction committed, so a slow relay never rolls
+// back a participant. A failure to record is logged and swallowed: the
+// credential is valid either way, and only the roster chip is lost.
+func (h Handlers) recordSendOutcome(ctx context.Context, issued IssuedInvitation, sendErr error) {
+	if err := h.inviteRecords.RecordInvitationSend(ctx,
+		participantPathID(issued.Participant.Id), issued.Credential, sendErr); err != nil {
+		slog.ErrorContext(ctx, "recording deal room invitation delivery failed",
 			"participant_id", issued.Participant.Id, "err", err)
 	}
 }

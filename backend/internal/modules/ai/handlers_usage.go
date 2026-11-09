@@ -29,6 +29,27 @@ import (
 // whole metering history. A year covers every UI view.
 const maxUsageWindowDays = 366
 
+// usageWindowRefusal is the refusal a usage window earns, or nil. The report
+// and the summary both aggregate every metered call in it, so both take one
+// rule: in order, and no wider than maxUsageWindowDays.
+func usageWindowRefusal(from, to time.Time) *httperr.DetailedError {
+	if to.Before(from) {
+		const detail = "`from` must not be after `to`."
+		return &httperr.DetailedError{
+			Status: http.StatusUnprocessableEntity, Code: "window_inverted", Detail: detail,
+			Fields: []httperr.FieldError{{Field: "from", Code: "window_inverted", Message: detail}},
+		}
+	}
+	if to.Sub(from) > maxUsageWindowDays*24*time.Hour {
+		const detail = "The usage window is capped at 366 days — narrow `from`/`to`."
+		return &httperr.DetailedError{
+			Status: http.StatusUnprocessableEntity, Code: "window_too_wide", Detail: detail,
+			Fields: []httperr.FieldError{{Field: "to", Code: "window_too_wide", Message: detail}},
+		}
+	}
+	return nil
+}
+
 // GetAiUsage implements (GET /ai/usage).
 func (h Handlers) GetAiUsage(w http.ResponseWriter, r *http.Request, params crmcontracts.GetAiUsageParams) {
 	from, to := h.meter.UsageWindow()
@@ -38,18 +59,8 @@ func (h Handlers) GetAiUsage(w http.ResponseWriter, r *http.Request, params crmc
 	if params.To != nil {
 		to = params.To.Time
 	}
-	if to.Before(from) {
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusUnprocessableEntity, Code: "window_inverted",
-			Detail: "`from` must not be after `to`.",
-		})
-		return
-	}
-	if to.Sub(from) > maxUsageWindowDays*24*time.Hour {
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusUnprocessableEntity, Code: "window_too_wide",
-			Detail: "The usage window is capped at 366 days — narrow `from`/`to`.",
-		})
+	if refusal := usageWindowRefusal(from, to); refusal != nil {
+		httperr.Write(w, r, refusal)
 		return
 	}
 	days, budget, err := h.meter.UsageReport(r.Context(), h.budget, h.rates, from, to)
@@ -103,7 +114,7 @@ type aiUsageTask = struct {
 	Tier          string `json:"tier"`
 	TokensIn      int    `json:"tokens_in"`
 	TokensOut     int    `json:"tokens_out"`
-	UnpricedCalls *int   `json:"unpriced_calls,omitempty"`
+	UnpricedCalls *int   `json:"unpriced_calls,omitempty" minimum:"0"`
 }
 
 // microUSDPerMinor converts ADR-0067's micro-USD price grain to wire
@@ -173,8 +184,25 @@ func lineCostMinor(line TaskUsage) (int, bool) {
 }
 
 // GetAiUsageSummary implements (GET /ai/usage/summary).
-func (h Handlers) GetAiUsageSummary(w http.ResponseWriter, r *http.Request) {
-	spend, err := h.meter.MonthSpend(r.Context(), h.rates)
+//
+// The window is the report's, defaulted and refused the same way.
+//
+// So the figure a surface shows beside a named month totals that month.
+func (h Handlers) GetAiUsageSummary(
+	w http.ResponseWriter, r *http.Request, params crmcontracts.GetAiUsageSummaryParams,
+) {
+	from, to := h.meter.UsageWindow()
+	if params.From != nil {
+		from = params.From.Time
+	}
+	if params.To != nil {
+		to = params.To.Time
+	}
+	if refusal := usageWindowRefusal(from, to); refusal != nil {
+		httperr.Write(w, r, refusal)
+		return
+	}
+	spend, err := h.meter.SpendOver(r.Context(), h.rates, from, to)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

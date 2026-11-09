@@ -57,6 +57,8 @@ type Registry struct {
 	// typedArgs[tool] is the JSON type its schema declares for each top-level
 	// argument, read off the schema once at registration.
 	typedArgs map[string][]typedArg
+	// uniqueArgs[tool] names its list arguments whose schema declares uniqueItems.
+	uniqueArgs map[string][]string
 	// unitOwned[tool] is true when an extension unit shipped that tool's
 	// handler, read off the registered tool once (mcp.UnitScopedTool). It is
 	// remembered rather than re-asserted because two decisions depend on it and
@@ -100,9 +102,16 @@ type Registry struct {
 	// language writes every staged summary in the installation's base
 	// language (summarycopy.go). Nil writes English.
 	language baselanguage.Resolver
+	// closeTasks answers and settles the open tasks a closing deal leaves.
+	// A registry composed without one closes deals without asking, which is
+	// the behaviour this field exists to end.
+	closeTasks DealTaskSettler
 	// seats names the owner every served record row carries (queryowner.go).
 	// Nil leaves owners unnamed but still disclosed.
 	seats SeatNamer
+	// listCalendar says whether a meeting list is the reader's diary
+	// (listcalendar.go). Nil says nothing.
+	listCalendar ActivityListCalendar
 	// changeWords describes what a write changed (changewords.go). Nil
 	// answers no changes.
 	changeWords ChangeWords
@@ -131,6 +140,7 @@ func NewRegistry(approvals Approvals, gate *auth.Gate, opts ...RegistryOption) *
 		enumArgs:     map[string][]enumArg{},
 		requiredArgs: map[string][]string{},
 		typedArgs:    map[string][]typedArg{},
+		uniqueArgs:   map[string][]string{},
 		unitOwned:    map[string]bool{},
 		routeServed:  map[string]bool{},
 		routeActions: map[string]map[string]string{},
@@ -237,6 +247,7 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 	// names, and only the call can say which type that is (tierfloor.go).
 	// Applied before Admit, because the tier is what Admit decides on.
 	spec = r.tightened(t, spec, args)
+	spec = placedCall(t, spec, args)
 
 	admitted, err := r.gate.Admit(ctx, spec, r.tierResolverFor(ctx, t, name, args))
 	// Static-tier tools, whose resolver Admit never runs. After authority and

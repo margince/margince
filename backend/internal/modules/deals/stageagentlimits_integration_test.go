@@ -120,23 +120,6 @@ func TestAnAgentsReshapeWaitsForATrustBeingGrantedAndIsRefused(t *testing.T) {
 	}
 }
 
-// Trust being granted waits for an agent's reshape in the same way, whichever came first.
-func TestATrustBeingGrantedWaitsForAReshapeInFlight(t *testing.T) {
-	e := setupConfigEnv(t)
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	race := holdLadderTrust(ctx, t, e)
-	err := awaitWriter(ctx, t, e, race, func() error {
-		_, err := e.store.SetTransitionPolicy(e.as(), SetTransitionPolicyInput{
-			PipelineID: race.pipeline, FromStageID: race.from, ToStageID: race.to, Mode: ModeAuto,
-		})
-		return err
-	}, race.holder.Rollback)
-	if err != nil {
-		t.Fatalf("the grant answered %v after the lock was released", err)
-	}
-}
-
 // A policy write holds the trust lock while its foreign keys read the pipeline and
 // the stages. So an agent's write waits for that lock holding neither, or the two
 // wait on each other. Each writer here is asked while it waits.

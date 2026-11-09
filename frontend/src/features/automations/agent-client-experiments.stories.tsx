@@ -12,7 +12,7 @@ import {
 import { AgentClientExperimentsCard } from "./agent-client-experiments";
 
 const meta: Meta<typeof AgentClientExperimentsCard> = {
-  title: "Settings/AI/MCP/Experiments",
+  title: "Settings/AI/AI tool access/Experiments",
   component: AgentClientExperimentsCard,
   parameters: { layout: "padded" },
 };

@@ -105,7 +105,7 @@ func (f *fakeAPI) GetRaw(_ context.Context, _, id string) (Message, error) {
 	if f.getErr != nil {
 		return Message{}, f.getErr
 	}
-	msg := Message{RFC822: f.raws[id], FiledAsSent: f.sent[id]}
+	msg := Message{ID: id, RFC822: f.raws[id], FiledAsSent: f.sent[id]}
 	if f.drafts[id] {
 		// The real client carries Gmail's own label ids off the same
 		// messages.get response; a draft is one the owner has not sent.
@@ -230,6 +230,9 @@ func TestSyncInitialBackfillAnchorsCursorAndCaptures(t *testing.T) {
 	}
 	if sink.recs[0].Source != "gmail:m1@mail.gmail.com" {
 		t.Errorf("Source = %q, want gmail:m1@mail.gmail.com", sink.recs[0].Source)
+	}
+	if got := sink.recs[0].ProviderMessageID; got != "m1@mail.gmail.com" {
+		t.Errorf("provider message id = %q", got)
 	}
 	if sink.recs[0].CapturedBy != "connector:gmail" {
 		t.Errorf("CapturedBy = %q, want connector:gmail", sink.recs[0].CapturedBy)
@@ -630,14 +633,13 @@ func (s *failingRemover) RemoveMessage(_ context.Context, key connector.NaturalK
 	return errors.New("the copy is held by a legal duty")
 }
 
-// A failure on one removal does not stop the pull, nor the removals behind it.
-// Losing a round of new mail because one deletion could not be acted on trades
-// a small wrong for a larger one — and the message that failed is still here,
-// which the next round's history will mention again.
+// Every removal is attempted, and any failure prevents the cursor advancing.
 func TestAFailedRemovalDoesNotStopTheOnesBehindIt(t *testing.T) {
 	sink := &failingRemover{}
 
-	reportRemovals(context.Background(), sink, []string{"first@mail", "second@mail", "third@mail"})
+	if err := reportRemovals(context.Background(), sink, []string{"first@mail", "second@mail", "third@mail"}); err == nil {
+		t.Fatal("removal failures were lost")
+	}
 
 	if len(sink.seen) != 3 {
 		t.Fatalf("reached %d removals (%v), want all 3 — one failure stopped the rest", len(sink.seen), sink.seen)
@@ -650,7 +652,9 @@ func TestAFailedRemovalDoesNotStopTheOnesBehindIt(t *testing.T) {
 func TestASinkThatTakesNoRemovalsIsNotAFailure(t *testing.T) {
 	plain := &recordingSink{}
 
-	reportRemovals(context.Background(), plain, []string{"gone@mail"})
+	if err := reportRemovals(context.Background(), plain, []string{"gone@mail"}); err != nil {
+		t.Fatal(err)
+	}
 
 	if len(plain.recs) != 0 {
 		t.Errorf("a removal reached Upsert: %+v", plain.recs)
@@ -662,7 +666,9 @@ func TestASinkThatTakesNoRemovalsIsNotAFailure(t *testing.T) {
 func TestAnEmptyRemovalListAsksTheSinkNothing(t *testing.T) {
 	sink := &removalSink{}
 
-	reportRemovals(context.Background(), sink, nil)
+	if err := reportRemovals(context.Background(), sink, nil); err != nil {
+		t.Fatal(err)
+	}
 
 	if len(sink.removed) != 0 {
 		t.Errorf("an empty deletion list still reached the sink: %+v", sink.removed)
@@ -674,12 +680,22 @@ func TestAnEmptyRemovalListAsksTheSinkNothing(t *testing.T) {
 func TestEachRemovalNamesTheKeyTheMessageWasCapturedUnder(t *testing.T) {
 	sink := &removalSink{}
 
-	reportRemovals(context.Background(), sink, []string{"gone@mail.gmail.com"})
+	if err := reportRemovals(context.Background(), sink, []string{"gone@mail.gmail.com"}); err != nil {
+		t.Fatal(err)
+	}
 
 	if len(sink.removed) != 1 {
 		t.Fatalf("want one removal, got %+v", sink.removed)
 	}
 	if got := sink.removed[0]; got.SourceSystem != connectorName || got.SourceID != "gone@mail.gmail.com" {
 		t.Errorf("removal named %+v, want this connector's system and Gmail's id", got)
+	}
+}
+
+func TestSyncKeepsItsWatermarkWhenDeletionFails(t *testing.T) {
+	api := &fakeAPI{deletedIDs: []string{"gone"}, addedHistoryID: "999"}
+	cursor, err := New(fakeOAuth{access: "token"}, api).Sync(context.Background(), authBytes(t), []byte(`{"history_id":"12345"}`), &failingRemover{})
+	if err == nil || len(cursor) != 0 {
+		t.Fatalf("failed removal advanced cursor: %s err=%v", cursor, err)
 	}
 }

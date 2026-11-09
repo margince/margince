@@ -57,6 +57,8 @@ export const company: Company = {
   // contract fails closed), so a fixture without it models a record nobody may
   // edit — a different record from the ordinary one these suites describe.
   writable: true,
+  // The server's per-row archive answer, stated for the same reason.
+  archivable: true,
   created_at: "2026-06-01T08:00:00Z",
   updated_at: "2026-06-01T08:00:00Z",
 };

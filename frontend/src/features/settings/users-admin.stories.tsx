@@ -141,8 +141,8 @@ const ENTITY_ROUTES = {
   "GET /legal-entities": () =>
     jsonResponse({
       data: [
-        { id: "le-default", is_default: true, display_name: "Brandt" },
-        { id: "le-vienna", is_default: false, display_name: "Brandt Wien" },
+        { id: "le-default", is_default: true, display_name: "Example Germany" },
+        { id: "le-vienna", is_default: false, display_name: "Example Vietnam" },
       ].map((entity) => ({
         ...entity,
         address: {},
@@ -211,6 +211,21 @@ export const RosterPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: story(roster(ROSTER), ADMIN, true),
+};
+
+// A roster of 450: the first 100 rows are drawn, the next batches as the
+// reader scrolls, and the caption counts all 450.
+const LARGE_ROSTER = Array.from({ length: 450 }, (_, at) => {
+  const n = String(at).padStart(3, "0");
+  return {
+    ...DANA,
+    id: `u-roster-${n}`,
+    display_name: `Roster Member ${n}`,
+    email: `roster-${n}@example.test`,
+  };
+});
+export const LargeRoster: Story = {
+  render: story(roster(LARGE_ROSTER), ADMIN, true),
 };
 
 export const LongContent: Story = {
@@ -343,6 +358,25 @@ export const RowMenuOpen: Story = {
 export const TwoLegalEntities: Story = {
   render: story(
     roster(ROSTER),
+    {
+      roles: ["admin"],
+      allow: {
+        user_admin: ["read", "create", "update", "delete"],
+        legal_entity: ["read", "update"],
+      },
+    },
+    false,
+    ENTITY_ROUTES,
+  ),
+};
+
+export const LongLabelsAndDeactivatedMember: Story = {
+  render: story(
+    roster([
+      LARS,
+      { ...LONG, roles: ["ops"] },
+      { ...RETIRED, team_ids: TEAMS.map((team) => team.id) },
+    ]),
     {
       roles: ["admin"],
       allow: {

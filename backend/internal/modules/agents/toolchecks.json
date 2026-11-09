@@ -74,6 +74,11 @@
     "add_counterparty_hold": {
       "checks": []
     },
+    "add_deal_line": {
+      "checks": [
+        "deal.update"
+      ]
+    },
     "add_deal_room_document": {
       "checks": [
         "deal_room.create"
@@ -202,16 +207,16 @@
     },
     "archive_record": {
       "checks": [
-        "activity.delete|update,company.delete,company.read,product.delete",
-        "activity.delete|update,company.delete,contact.delete,deal.delete|update,offer.delete,product.delete,project.delete",
-        "activity.delete|update,company.delete,contact.delete,offer.delete,product.delete,project.delete,project.read",
-        "activity.delete|update,company.delete,deal.delete|update,offer.delete,product.delete,relationship.read",
-        "activity.delete|update,company.delete,offer.delete,product.delete,project.read,relationship.read",
-        "activity.read,company.delete,company.read,product.delete",
-        "activity.read,company.delete,contact.delete,deal.delete|update,offer.delete,product.delete,project.delete",
-        "activity.read,company.delete,contact.delete,offer.delete,product.delete,project.delete,project.read",
-        "activity.read,company.delete,deal.delete|update,offer.delete,product.delete,relationship.read",
-        "activity.read,company.delete,offer.delete,product.delete,project.read,relationship.read"
+        "activity.delete|update,company.delete|update,company.read,product.delete",
+        "activity.delete|update,company.delete|update,contact.delete|update,deal.delete|update,offer.delete,product.delete,project.delete",
+        "activity.delete|update,company.delete|update,contact.delete|update,offer.delete,product.delete,project.delete,project.read",
+        "activity.delete|update,company.delete|update,deal.delete|update,offer.delete,product.delete,relationship.read",
+        "activity.delete|update,company.delete|update,offer.delete,product.delete,project.read,relationship.read",
+        "activity.read,company.delete|update,company.read,product.delete",
+        "activity.read,company.delete|update,contact.delete|update,deal.delete|update,offer.delete,product.delete,project.delete",
+        "activity.read,company.delete|update,contact.delete|update,offer.delete,product.delete,project.delete,project.read",
+        "activity.read,company.delete|update,deal.delete|update,offer.delete,product.delete,relationship.read",
+        "activity.read,company.delete|update,offer.delete,product.delete,project.read,relationship.read"
       ]
     },
     "archive_record_assignment": {
@@ -331,12 +336,12 @@
     },
     "bulk_update_records": {
       "checks": [
-        "company.delete,contact.delete,deal.delete|update",
-        "company.delete,contact.delete,deal.read",
-        "company.delete,contact.read,deal.delete|update",
-        "company.delete,contact.read,deal.read",
-        "company.read,contact.delete,deal.delete|update",
-        "company.read,contact.delete,deal.read",
+        "company.delete|update,contact.delete|update,deal.delete|update",
+        "company.delete|update,contact.delete|update,deal.read",
+        "company.delete|update,contact.read,deal.delete|update",
+        "company.delete|update,contact.read,deal.read",
+        "company.read,contact.delete|update,deal.delete|update",
+        "company.read,contact.delete|update,deal.read",
         "company.read,contact.read,deal.delete|update",
         "company.read,contact.read,deal.read"
       ]
@@ -432,16 +437,6 @@
     "close_deal_room": {
       "checks": [
         "deal_room.update"
-      ]
-    },
-    "close_lost_input_check": {
-      "checks": [
-        "company.read",
-        "deal.update",
-        "forecast.update",
-        "installation_settings.read",
-        "project.read",
-        "signal.update"
       ]
     },
     "commit_import": {
@@ -759,6 +754,12 @@
         "legal_review.update"
       ]
     },
+    "decline_activity_deal": {
+      "checks": [
+        "activity.update",
+        "deal.read"
+      ]
+    },
     "delete_anchor_company_logo": {
       "checks": [
         "admin",
@@ -836,6 +837,9 @@
       "checks": []
     },
     "describe_router_actions": {
+      "checks": []
+    },
+    "describe_views": {
       "checks": []
     },
     "direct_communication_send": {
@@ -1115,6 +1119,14 @@
       "checks": [
         "activity.read",
         "deal.read"
+      ]
+    },
+    "get_activity_deal_filing": {
+      "checks": [
+        "activity.create",
+        "company.read",
+        "contact.read,deal.read",
+        "deal.read,relationship.read"
       ]
     },
     "get_activity_project_filing": {
@@ -1401,13 +1413,6 @@
         "integrations.read"
       ]
     },
-    "get_forecast_assurance_enforcement": {
-      "checks": [
-        "deal.read",
-        "forecast.read",
-        "installation_settings.read"
-      ]
-    },
     "get_forecast_stage_chances": {
       "checks": [
         "forecast.read",
@@ -1416,7 +1421,9 @@
     },
     "get_handled_for_you": {
       "checks": [
-        "deal.read"
+        "activity.read",
+        "deal.read",
+        "pipeline.read"
       ]
     },
     "get_hidden_backlog": {
@@ -1528,11 +1535,23 @@
         "privacy_request.read"
       ]
     },
+    "get_notice_source_evidence": {
+      "checks": [
+        "activity.read",
+        "contact.read",
+        "privacy_request.read"
+      ]
+    },
     "get_ownership_offer": {
       "checks": []
     },
     "get_ownership_request": {
       "checks": []
+    },
+    "get_pending_margince_changes": {
+      "checks": [
+        "deal.read"
+      ]
     },
     "get_record_history": {
       "checks": [
@@ -1640,6 +1659,12 @@
         "tag.read"
       ]
     },
+    "get_team_margince_changes": {
+      "checks": [
+        "deal.read",
+        "scope:team"
+      ]
+    },
     "get_team_weekly_review": {
       "checks": [
         "company.read",
@@ -1711,8 +1736,8 @@
         "lead.read",
         "project.read",
         "project.update",
-        "scope:team",
-        "user_admin.update"
+        "user_admin.update",
+        "webhook_subscription.update"
       ]
     },
     "hide_deal_document": {
@@ -1791,7 +1816,6 @@
     "launch_sales_initiative": {
       "checks": [
         "deal.read",
-        "lead.read",
         "sales_initiative.update"
       ]
     },
@@ -1805,6 +1829,11 @@
     },
     "lift_counterparty_hold": {
       "checks": []
+    },
+    "lift_lead_suppression": {
+      "checks": [
+        "lead.update"
+      ]
     },
     "link_company_contacts": {
       "checks": [
@@ -1967,6 +1996,11 @@
         "deal.read"
       ]
     },
+    "list_deal_margince_changes": {
+      "checks": [
+        "deal.read"
+      ]
+    },
     "list_deal_products": {
       "checks": [
         "deal.read",
@@ -2033,6 +2067,11 @@
       ]
     },
     "list_lead_manual_signals": {
+      "checks": [
+        "lead.read"
+      ]
+    },
+    "list_lead_stops": {
       "checks": [
         "lead.read"
       ]
@@ -2261,6 +2300,11 @@
     "mark_all_notices_read": {
       "checks": []
     },
+    "mark_booking_page_shared": {
+      "checks": [
+        "activity.create"
+      ]
+    },
     "mark_brief_item_acted": {
       "checks": [
         "activity.read",
@@ -2484,6 +2528,11 @@
         "user_admin.update"
       ]
     },
+    "preview_notice_source": {
+      "checks": [
+        "privacy_request.read"
+      ]
+    },
     "preview_send_authorization": {
       "checks": [
         "activity.create",
@@ -2668,6 +2717,11 @@
         "data_task.read"
       ]
     },
+    "read_deal_lines": {
+      "checks": [
+        "deal.read"
+      ]
+    },
     "read_extension_ingest_health": {
       "checks": [
         "job_health.read"
@@ -2850,6 +2904,12 @@
         "relationship.read"
       ]
     },
+    "refresh_offer_from_deal": {
+      "checks": [
+        "company.read",
+        "offer.update"
+      ]
+    },
     "regenerate_company_brief": {
       "checks": [
         "activity.read",
@@ -2904,6 +2964,11 @@
     "remove_consumer_mail_domain": {
       "checks": [
         "capture_settings.update"
+      ]
+    },
+    "remove_deal_line": {
+      "checks": [
+        "deal.update"
       ]
     },
     "remove_deal_room_document": {
@@ -3173,14 +3238,6 @@
         "report_edition.update"
       ]
     },
-    "revert_stage_progression": {
-      "checks": [
-        "company.read",
-        "deal.update",
-        "installation_settings.read",
-        "project.read"
-      ]
-    },
     "review_commitments": {
       "checks": [
         "activity.read",
@@ -3432,6 +3489,14 @@
         "contact.update"
       ]
     },
+    "share_company_contacts": {
+      "checks": [
+        "company.read",
+        "contact.read",
+        "contact.update",
+        "relationship.read"
+      ]
+    },
     "share_counterparty_hold_history": {
       "checks": []
     },
@@ -3488,8 +3553,7 @@
     "transfer_project_ownership": {
       "checks": [
         "project.read",
-        "project.update",
-        "scope:team"
+        "project.update"
       ]
     },
     "undo_import_run": {
@@ -3577,6 +3641,11 @@
     "update_data_subject_request": {
       "checks": [
         "privacy_request.update"
+      ]
+    },
+    "update_deal_line": {
+      "checks": [
+        "deal.update"
       ]
     },
     "update_deal_room": {
@@ -3798,6 +3867,11 @@
         "company.update"
       ]
     },
+    "use_deal_estimate": {
+      "checks": [
+        "deal.update"
+      ]
+    },
     "validate_import_run": {
       "checks": [
         "custom_field.read",
@@ -3808,15 +3882,6 @@
     "visit_list": {
       "checks": [
         "list.read"
-      ]
-    },
-    "wait_input_check": {
-      "checks": [
-        "company.read",
-        "deal.update",
-        "forecast.update",
-        "project.read",
-        "signal.update"
       ]
     },
     "whats_slipping_this_week": {

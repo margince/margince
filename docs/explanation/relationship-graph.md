@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/capture/participant.go backend/internal/modules/activities/participantlog.go backend/internal/modules/contacts/participant.go backend/internal/modules/search/graphedge.go backend/internal/modules/search/graphedgegen.go backend/internal/shared/kernel/relstrength backend/internal/compose/network backend/internal/modules/privacy/erasure_graph.go -->
+<!-- describes: backend/internal/compose/strength_handlers.go backend/internal/modules/contacts/strength.go backend/internal/modules/contacts/strengthaccount.go backend/api/crm.yaml backend/internal/modules/capture/participant.go backend/internal/modules/activities/participantlog.go backend/internal/modules/contacts/participant.go backend/internal/modules/search/graphedge.go backend/internal/modules/search/graphedgegen.go backend/internal/shared/kernel/relstrength backend/internal/compose/network backend/internal/modules/privacy/erasure_graph.go backend/internal/modules/search/graphnewpairs.go backend/internal/modules/search/graphworklocks.go backend/internal/modules/search/graphworkqueue.go backend/internal/modules/search/graphedgetargets.go -->
 # The relationship graph: participants, the interaction edge & deal coverage
 
 Margince answers the question *is this account cold* from the real parties to each conversation. It
@@ -146,7 +146,7 @@ the wrong user, and nobody sees it.
 
 `graph_interaction_edge` is one row per `(workspace, user, contact)` holding counted facts and exact
 times: `last_at`, `last_inbound_at`, `last_outbound_at`, the 90-day counts, and the all-time count.
-It is a **projection**. It holds no fact of its own and carries no id, no version, no `audit_log` row
+It is a **projection**. It holds no fact of its own and carries no id, no record version, no `audit_log` row
 and no `event_outbox` row. It can be deleted and built again at any time. That rebuild *is* the
 fix for wrong data, which is why the table can carry no audit history.
 
@@ -170,11 +170,21 @@ Two paths keep it true. They meet on the same statement.
 
   `user.deactivated` does nothing at all. Reads filter through the live-member join, so a user who
   leaves drops out, and no row is written again.
-- **Daily reconcile**: the `graph_edge_reconcile` dispatcher (`24h`) runs `graph_edge_workspace` per
-  workspace. It empties and fills the whole projection in **one transaction**, so a reader never sees
+- **Daily reconcile**: `graph_edge_reconcile` walks the workspaces and rebuilds each one. It empties and fills the whole projection in **one transaction**, so a reader never sees
   an empty graph. It runs daily for a reason no event can give: the 90-day window counts go out of
   date by time alone. The migration states that limit. A count may hold up to `24h` too much, while
   recency, which counts most in the score, is exact.
+
+History imports group repeated requests for the same pair on its existing row. A new pair is
+read at once; later history mail raises its request number. After the imports finish, a worker
+reads waiting pairs in small groups through the same statement. It marks only the request number
+that its read covered, so mail that comes in during that read stays due. New mail and changes that
+remove access still take effect at once. See the [worker reference](../reference/worker-diagnostics.md)
+for the jobs and the rules when a new version starts.
+
+The lock query also records pairs that do not have a row yet. A first insert can wait while
+another worker writes a newer result. It folds only the missing pairs its first write returned
+once more through the same code, while it still holds their rows. Existing rows and drains need no extra read.
 
 A fixture keeps the two paths in line: a rebuild and a stream of step-by-step updates over the same
 history must agree.
@@ -212,6 +222,10 @@ meeting is not a message sent. A contact's Reach row reads its two-way verdict a
 from this count, so a team member who was only copied is neither. A reader without activity access
 gets the edge without the count. A row folded before the column existed holds NULL, and readers keep
 the outbound count's reading until the row is folded again.
+
+The graph's ways in read the same two-way verdict from the same count. The edge and the route
+evidence carry it as `sent_90d`. The ranking and the proof line then follow it. One function decides
+the verdict for all of them: `twoWayExchange` in `compose/network/memberwrote.go`.
 
 **What does not make an edge**, and why:
 
@@ -287,6 +301,19 @@ Two gates guard every edge read, and both are needed:
 - **The live-member join.** `app_user.status = 'active' AND archived_at IS NULL`. Both parts count.
   Deactivation sets `status` and leaves `archived_at` NULL. So a filter on `archived_at` alone keeps
   offering a team member who left as a way in. The surface exists to name someone who can *act*.
+
+## Strength reads for integrations
+
+The public API keeps `GET /contacts/{id}/strength` and `GET /companies/{id}/strength`
+for integrations. The shared readers are `contacts.Store.ContactStrength` and
+`contacts.Store.CompanyStrength`.
+
+The contact read gives the score's `factors` and `contributing_activity_ids`.
+`receiptHandlers` adds names only for activities the caller can read.
+
+The company read gives the top score of its current contacts that the caller can read,
+with that contact's `factors` and counts. Its activity receipt lists are empty.
+It also asks for `relationship:read`; without `contact:read` it gives `none`.
 
 ## Deal coverage and its risk rules
 

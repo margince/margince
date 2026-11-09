@@ -64,8 +64,9 @@ type ExtensionKind struct {
 	// and therefore the grant deciding it requires. Deciding takes the grant
 	// PERFORMING it takes — anything less puts the confirm-first control point
 	// with someone who could not do the thing they are releasing.
-	RbacObject string
-	RbacAction principal.Action
+	RbacObject    string
+	RbacAction    principal.Action
+	RequiredScope principal.Scope
 }
 
 // extensionTableGrammar is the identifier shape a registered table must have.
@@ -148,8 +149,8 @@ func (k ExtensionKind) validate() error {
 		return fmt.Errorf("crmapprovals: extension verb %q stages against %q, which is not a namespaced table "+
 			"identifier — this name is read into the probe that proves the staged row exists", k.Verb, k.TargetTable)
 	}
-	if k.RbacObject == "" || k.RbacAction == "" {
-		return fmt.Errorf("crmapprovals: extension verb %q registers no RBAC object and action — deciding a "+
+	if k.RbacObject == "" || k.RbacAction == "" || k.RequiredScope == "" {
+		return fmt.Errorf("crmapprovals: extension verb %q must declare its RBAC object, action and passport scope — deciding a "+
 			"staged call requires the grant performing it requires, and there would be nothing to require",
 			k.Verb)
 	}

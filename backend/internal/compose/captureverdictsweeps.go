@@ -3,15 +3,7 @@
 
 package compose
 
-// The verdict engine's SWEEP stages — the passes that run whether or not a model
-// is configured, because none of them asks one anything.
-//
-// Judging is the only stage that needs AI. These are the obligations that
-// outlive it: a row nobody can process still has to reach a human, a decline
-// still has to close the question, mail a judged-noise sender keeps sending
-// still has to be hidden, and content already hidden still has to be redacted on
-// schedule. Turning AI off is not consent to retain the content of messages the
-// workspace already decided were noise.
+// Sweep stages maintain classification and retention without asking a model.
 
 import (
 	"context"
@@ -24,21 +16,12 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// ReconcileLedgerWorkspace runs the two housekeeping transitions that keep the ledger
-// from silently filling up: a row that spent its attempts without ever getting
-// an answer retires to `unsure` so a human can take it, and a row whose offer a
-// human declined closes as `rejected` so it stops holding a slot.
-//
-// Both are claim-free and idempotent, and both run BEFORE staging in the pass —
-// retiring is what puts a stranded row in front of the review queue in the first
-// place, and reconciling declines is what keeps staging from re-asking a
-// question that has already been answered.
+// ReconcileLedgerWorkspace retires exhausted processing and records legacy declines.
 func (e *CounterpartyVerdictEngine) ReconcileLedgerWorkspace(ctx context.Context) error {
 	return e.inWorkspace(ctx, func(wsCtx context.Context, _ ids.UUID) error {
 		retired, err := e.pending.RetireExhausted(wsCtx, capture.ExhaustedReason)
@@ -53,10 +36,7 @@ func (e *CounterpartyVerdictEngine) ReconcileLedgerWorkspace(ctx context.Context
 	})
 }
 
-// StageReviewsWorkspace offers every `unsure` disposition without an offer yet to a
-// human. Run after a verdict pass — and independently of it, so a staging that
-// failed while the model was answering is picked up on the next cycle rather
-// than leaving a row nobody can act on.
+// StageReviewsWorkspace withdraws automatic uncertainty offers; sender correction is optional.
 func (e *CounterpartyVerdictEngine) StageReviewsWorkspace(ctx context.Context, maxRows int) error {
 	if maxRows <= 0 {
 		maxRows = verdictCatchUpCap
@@ -66,76 +46,35 @@ func (e *CounterpartyVerdictEngine) StageReviewsWorkspace(ctx context.Context, m
 		if err != nil {
 			return err
 		}
-		if len(rows) == 0 {
-			return nil
-		}
-		said := approvalSummaryCopyOver(wsCtx, e.pool)
 		for _, row := range rows {
 			if e.skipReservedDomains && values.IsReservedAddress(row.Email) {
 				if err := e.closeReservedDomainReview(wsCtx, row); err != nil {
-					e.log.WarnContext(wsCtx, "counterparty verdict: closing a reserved-domain review failed",
-						"disposition", row.ID.String(), "err", err)
+					return err
 				}
 				continue
 			}
-			if held, err := e.closeLeadHeldReview(wsCtx, row); err != nil || held {
-				if err != nil {
-					e.log.WarnContext(wsCtx, "counterparty verdict: closing a lead's review failed",
-						"disposition", row.ID.String(), "err", err)
-				}
-				continue
-			}
-			proposalID, err := stageCounterpartyReview(wsCtx, e.approvals, said, row)
-			if err != nil {
-				e.log.WarnContext(wsCtx, "counterparty verdict: staging a review offer failed",
-					"disposition", row.ID.String(), "err", err)
-				continue
-			}
-			if proposalID.IsZero() {
-				continue
-			}
-			// A row a human decided while this sweep staged its offer is
-			// nothing to link, not a reason to abandon the other rows.
-			//
-			// The offer describes a question that is already answered.
-			switch err := e.pending.LinkProposal(wsCtx, row.ID, proposalID); {
-			case errors.Is(err, apperrors.ErrConflict), errors.Is(err, apperrors.ErrNotFound):
-				continue
-			case err != nil:
+			if _, err := e.closeLeadHeldReview(wsCtx, row); err != nil {
 				return err
 			}
 		}
-		return nil
-	})
-}
-
-// reservedDomainReason is the ledger's record of why a reserved-name sender
-// was never put to a human.
-const reservedDomainReason = "reserved domain (RFC 2606): no contact proposed"
-
-// closeReservedDomainReview closes the question instead of asking it. Left
-// `unsure`, the row would come back on every pass and hold a slot in the
-// staging backlog ahead of real senders. `rejected` creates nothing and
-// touches no mail, as an aged-out review does.
-func (e *CounterpartyVerdictEngine) closeReservedDomainReview(ctx context.Context, row capture.PendingCounterparty) error {
-	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-		return e.pending.ResolveReviewed(ctx, tx, row.ID, capture.PendingStatusRejected, reservedDomainReason)
-	})
-}
-
-// leadHeldReason is the ledger's record of a sender who is already a lead.
-const leadHeldReason = "the sender is a lead: the mail is filed on the lead, and no contact is proposed"
-
-// closeLeadHeldReview closes the question for a sender a live lead holds,
-// instead of asking a human to make them a contact as well. The sender is a
-// real counterparty, and the lead is their record.
-func (e *CounterpartyVerdictEngine) closeLeadHeldReview(ctx context.Context, row capture.PendingCounterparty) (bool, error) {
-	lead, err := e.contacts.CounterpartyLead(ctx, row.Email)
-	if err != nil || lead.IsZero() {
-		return false, err
-	}
-	return true, database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-		return e.pending.ResolveReviewedAs(ctx, tx, row.ID, capture.PendingStatusReal, capture.KindContact, leadHeldReason)
+		return database.WithWorkspaceTx(wsCtx, e.pool, func(tx pgx.Tx) error {
+			args := []any{counterpartyProposalKind, maxRows}
+			rows, err := tx.Query(wsCtx, fmt.Sprintf(`SELECT a.id FROM approval a JOIN capture_pending_counterparty p ON p.proposal_id=a.id
+     WHERE a.kind=$%d AND a.status='pending' AND p.status='unsure' ORDER BY a.id LIMIT $%d`, len(args)-1, len(args)), args...)
+			if err != nil {
+				return err
+			}
+			proposals, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+			if err != nil {
+				return err
+			}
+			for _, id := range proposals {
+				if _, err := e.approvals.WithdrawInTx(wsCtx, tx, ids.From[ids.ApprovalKind](id), "Sender uncertainty is an optional correction, not a required review."); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
 	})
 }
 
@@ -143,22 +82,7 @@ func (e *CounterpartyVerdictEngine) closeLeadHeldReview(ctx context.Context, row
 // pass leaves behind the next tick takes.
 const staleReviewBatch = 200
 
-// AgeOutStaleReviewsWorkspace closes the questions nobody answered. An `unsure` row waits
-// UnsureReviewWindow for a human; past that the ledger stops asking, and the
-// offer standing in the review queue is withdrawn with it.
-//
-// Without this the queue only ever grows. A staged offer expires after a day and
-// StageReviewsWorkspace honestly re-offers the row, so an unanswered question cycles
-// forever — holding a slot against the deferral ceiling and against its sender's
-// address the whole time. That is the tail an outsider can lean on: mail from
-// enough fresh addresses and the workspace never defers anyone new again.
-//
-// Closing as `rejected` creates nothing and touches no mail, and the sender is
-// not shut out: the live-unique index covers only `pending` and `unsure`, so
-// their next message opens a fresh row and gets a fresh verdict.
-//
-// The withdrawal and the ledger write share one transaction, so the inbox can
-// never hold an offer whose accept would resolve nothing.
+// AgeOutStaleReviewsWorkspace releases old uncertain ledger slots without changing mail.
 func (e *CounterpartyVerdictEngine) AgeOutStaleReviewsWorkspace(ctx context.Context, window time.Duration) error {
 	return e.inWorkspace(ctx, func(wsCtx context.Context, ws ids.UUID) error {
 		stale, err := e.pending.StaleReviews(wsCtx, window, staleReviewBatch)
@@ -411,3 +335,33 @@ func (e *CounterpartyVerdictEngine) NoticeBacklogStalledWorkspace(ctx context.Co
 // BacklogNotifier raises the stall notice for one seat. notices owns the table,
 // so compose injects the edge.
 type BacklogNotifier func(ctx context.Context, seat ids.UUID, waiting int) error
+
+// reservedDomainReason is the ledger's record of why a reserved-name sender
+// was never put to a human.
+const reservedDomainReason = "reserved domain (RFC 2606): no contact proposed"
+
+// closeReservedDomainReview closes the question instead of asking it. Left
+// `unsure`, the row would come back on every pass and hold a slot in the
+// staging backlog ahead of real senders. `rejected` creates nothing and
+// touches no mail, as an aged-out review does.
+func (e *CounterpartyVerdictEngine) closeReservedDomainReview(ctx context.Context, row capture.PendingCounterparty) error {
+	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		return e.pending.ResolveReviewed(ctx, tx, row.ID, capture.PendingStatusRejected, reservedDomainReason)
+	})
+}
+
+// leadHeldReason is the ledger's record of a sender who is already a lead.
+const leadHeldReason = "the sender is a lead: the mail is filed on the lead, and no contact is proposed"
+
+// closeLeadHeldReview closes the question for a sender a live lead holds,
+// instead of asking a human to make them a contact as well. The sender is a
+// real counterparty, and the lead is their record.
+func (e *CounterpartyVerdictEngine) closeLeadHeldReview(ctx context.Context, row capture.PendingCounterparty) (bool, error) {
+	lead, err := e.contacts.CounterpartyLead(ctx, row.Email)
+	if err != nil || lead.IsZero() {
+		return false, err
+	}
+	return true, database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		return e.pending.ResolveReviewedAs(ctx, tx, row.ID, capture.PendingStatusReal, capture.KindContact, leadHeldReason)
+	})
+}

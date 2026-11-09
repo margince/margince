@@ -26,19 +26,23 @@ import {
 
 /** The governance page's panels in working order: defaults, the requests
  * that override them, then the duties nobody asked for. */
-export function PrivacyLanes() {
+export function PrivacyLanes({ tab = "consent" }: Readonly<{ tab?: string }>) {
   const [params] = useUrlParams();
   const caseId = params.get(NOTICE_CASE_PARAM);
+  // A notice case opens over whichever tab the link named.
   if (caseId) return <NoticeCasesCard key={caseId} caseId={caseId} />;
-  return (
-    <>
-      <ConsentPurposesCard />
-      <CustomerNoticesCard />
-      <RetentionCard />
-      <RequestsPanel />
-      <NoticeCasesCard />
-    </>
-  );
+  switch (tab) {
+    case "customers":
+      return <CustomerNoticesCard />;
+    case "retention":
+      return <RetentionCard />;
+    case "requests":
+      return <RequestsPanel />;
+    case "duties":
+      return <NoticeCasesCard />;
+    default:
+      return <ConsentPurposesCard />;
+  }
 }
 
 const LANES = ["requests", "corrections", "restricted"] as const;

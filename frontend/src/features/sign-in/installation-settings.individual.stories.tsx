@@ -7,6 +7,7 @@ import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
+import { en } from "../../i18n/en";
 import { defaultAgentAllowances } from "../../testing/agentallowances.fixtures";
 import { FIXTURE_TIMEZONE } from "../../testing/mefixture";
 import { defaultOperations } from "../../testing/operationsettings.fixtures";
@@ -59,7 +60,13 @@ function Individual({
   });
   const update = {
     mutate: (patch: Patch) => {
-      if (!refused) setSettings((was) => ({ ...was, ...patch }));
+      if (!refused) {
+        setSettings((was) => ({
+          ...was,
+          individual_performance:
+            patch.individual_performance ?? was.individual_performance,
+        }));
+      }
     },
     isPending: false,
     isError: refused,
@@ -106,7 +113,7 @@ export const SwitchOff: Story = {
     await userEvent.click(control);
     await expect(control).toHaveAttribute("aria-checked", "false");
     await expect(
-      canvas.getByText(/Nobody sees a colleague/),
+      canvas.getByText(en["installationSettings.individualOff"]),
     ).toBeInTheDocument();
   },
 };

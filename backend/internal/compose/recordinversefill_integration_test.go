@@ -186,7 +186,7 @@ func TestTheReceiptFoldsCreatesAndArchivesAndOffersAnUndoPerRecord(t *testing.T)
 			t.Fatal(err)
 		}
 	}
-	svc := newMagicService(e.Pool, approvalsServiceWithEffects(e.Pool), time.Now)
+	svc := newMagicService(e.Pool, NewApprovalsServiceWithEffects(e.Pool), time.Now)
 	svc.WithUndoJudge(magicUndoJudge{seam: restoreSeamFor(e)})
 
 	receipt, err := svc.Read(e.Admin(), &since, 20)

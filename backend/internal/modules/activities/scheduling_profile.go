@@ -198,12 +198,29 @@ func (s *Store) checkCalendarConnected(ctx context.Context, host ids.UserID, pro
 	return unconnectedAsRefusal(s.calendar.Check(ctx, host, provider))
 }
 
+const (
+	faultTooMany           = "too_many"
+	fieldBlockingCalendars = "blocking_calendars"
+)
+
 func validateSchedulingProfile(p crmcontracts.SchedulingProfile) error {
 	if err := validateSchedulingLimits(p); err != nil {
 		return err
 	}
+	if p.OfferedLengths != nil {
+		if len(*p.OfferedLengths) > 16 {
+			return &SchedulingArgumentError{Field: "offered_lengths", Code: faultTooMany, Message: "Choose at most sixteen meeting lengths"}
+		}
+		seen := map[int]bool{}
+		for _, length := range *p.OfferedLengths {
+			if length < 15 || length > 480 || seen[length] {
+				return &SchedulingArgumentError{Field: "offered_lengths", Code: faultInvalid, Message: "Choose distinct meeting lengths between 15 and 480 minutes"}
+			}
+			seen[length] = true
+		}
+	}
 	if !p.Provider.Valid() {
-		return &SchedulingArgumentError{Field: "provider", Code: "invalid", Message: "Choose a supported calendar provider"}
+		return &SchedulingArgumentError{Field: "provider", Code: faultInvalid, Message: "Choose a supported calendar provider"}
 	}
 	if p.Enabled && (p.HostName == nil || strings.TrimSpace(*p.HostName) == "") {
 		return &SchedulingArgumentError{Field: "host_name", Code: "required", Message: "Set your name in Settings → Account before enabling bookings"}
@@ -212,14 +229,14 @@ func validateSchedulingProfile(p crmcontracts.SchedulingProfile) error {
 		return errCalendarNotConnected()
 	}
 	if p.BlockingCalendars != nil && len(*p.BlockingCalendars) > 10 {
-		return &SchedulingArgumentError{Field: "blocking_calendars", Code: "too_many", Message: "Choose at most ten calendars"}
+		return &SchedulingArgumentError{Field: fieldBlockingCalendars, Code: faultTooMany, Message: "Choose at most ten calendars"}
 	}
 	if p.BlockingCalendars != nil && slices.ContainsFunc(*p.BlockingCalendars, func(id string) bool { return !values.HasVisibleText(id) }) {
-		return &SchedulingArgumentError{Field: "blocking_calendars", Code: "invalid", Message: "Remove the empty calendar entry"}
+		return &SchedulingArgumentError{Field: fieldBlockingCalendars, Code: faultInvalid, Message: "Remove the empty calendar entry"}
 	}
 	if p.BlockingCalendars != nil && slices.ContainsFunc(*p.BlockingCalendars, func(id string) bool { return utf8.RuneCountInString(id) > maxSchedulingCalendar }) {
 		return &SchedulingArgumentError{
-			Field: "blocking_calendars", Code: codeTooLong,
+			Field: fieldBlockingCalendars, Code: codeTooLong,
 			Message: fmt.Sprintf("A calendar id may be at most %d characters", maxSchedulingCalendar),
 		}
 	}
@@ -311,7 +328,7 @@ func (s *Store) validateBookingCalendars(ctx context.Context, host ids.UserID, p
 	if profile.BlockingCalendars != nil {
 		for _, id := range *profile.BlockingCalendars {
 			if !available[id] {
-				return &SchedulingArgumentError{Field: "blocking_calendars", Code: "unavailable", Message: "Choose calendars that are available on this connection"}
+				return &SchedulingArgumentError{Field: fieldBlockingCalendars, Code: "unavailable", Message: "Choose calendars that are available on this connection"}
 			}
 		}
 	}
@@ -402,7 +419,7 @@ func (s *Store) persistSchedulingProfile(ctx context.Context, host ids.UserID, p
 			return err
 		}
 		if errors.Is(err, pgx.ErrNoRows) || (profile.ReplaceLink != nil && *profile.ReplaceLink) {
-			id, err = s.replaceBookingPage(ctx, tx, host)
+			id, err = s.replaceBookingPage(ctx, tx, host, profile.Enabled)
 			if err != nil {
 				return err
 			}
@@ -426,7 +443,7 @@ func (s *Store) persistSchedulingProfile(ctx context.Context, host ids.UserID, p
 	})
 }
 
-func (s *Store) replaceBookingPage(ctx context.Context, tx pgx.Tx, host ids.UserID) (ids.UUID, error) {
+func (s *Store) replaceBookingPage(ctx context.Context, tx pgx.Tx, host ids.UserID, enabled bool) (ids.UUID, error) {
 	args := schedulingArgs{}
 	if _, err := tx.Exec(ctx, `UPDATE booking_page SET revoked_at=now() WHERE host_user_id=`+args.add(host)+` AND revoked_at IS NULL`, args...); err != nil {
 		return ids.Nil, err
@@ -442,6 +459,8 @@ func (s *Store) replaceBookingPage(ctx context.Context, tx pgx.Tx, host ids.User
 	}
 	args = schedulingArgs{}
 	var id ids.UUID
-	err = tx.QueryRow(ctx, `SELECT id FROM booking_page WHERE slug=`+args.add(slug), args...).Scan(&id)
-	return id, err
+	if err := tx.QueryRow(ctx, `SELECT id FROM booking_page WHERE slug=`+args.add(slug), args...).Scan(&id); err != nil {
+		return ids.Nil, err
+	}
+	return id, carryBookingPageUseTx(ctx, tx, host, id, enabled)
 }

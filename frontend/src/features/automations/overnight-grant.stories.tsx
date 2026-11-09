@@ -6,6 +6,7 @@ import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { OvernightGrantChoice } from "../../components/overnight-grant-choice";
 import { SettingList } from "../../design-system/settingrow";
+import { OVERNIGHT_AGENTS } from "../../lib/overnight-grant";
 import {
   installFetchStub,
   jsonResponse,
@@ -35,15 +36,13 @@ function grantsResponse(
   credentialFundsAgent = true,
 ) {
   return jsonResponse({
-    data: [
-      {
-        spec: "morning_brief",
-        state,
-        credential_usable: credentialUsable,
-        credential_funds_agent: credentialFundsAgent,
-        decided_at: "2026-08-20T06:00:00Z",
-      },
-    ],
+    data: OVERNIGHT_AGENTS.map((spec) => ({
+      spec,
+      state,
+      credential_usable: credentialUsable,
+      credential_funds_agent: credentialFundsAgent,
+      decided_at: "2026-08-20T06:00:00Z",
+    })),
   });
 }
 
@@ -115,10 +114,15 @@ export const SettingsSwitchedOff: Story = {
     let state: "granted" | "declined" = "granted";
     installFetchStub({
       "GET /me/agent-grants": () => grantsResponse(state),
-      "PUT /me/agent-grants/morning_brief": () => {
-        state = "declined";
-        return jsonResponse({ spec: "morning_brief", state });
-      },
+      ...Object.fromEntries(
+        OVERNIGHT_AGENTS.map((spec) => [
+          `PUT /me/agent-grants/${spec}`,
+          () => {
+            state = "declined";
+            return jsonResponse({ spec, state });
+          },
+        ]),
+      ),
     });
     return (
       <StoryProviders>
@@ -128,7 +132,9 @@ export const SettingsSwitchedOff: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByTestId("overnight-grant-toggle"));
+    const toggle = await canvas.findByTestId("overnight-grant-toggle");
+    await waitFor(() => expect(toggle).toBeChecked());
+    await userEvent.click(toggle);
     await waitFor(() =>
       expect(canvas.getByText("Overnight agent will not run")).toBeVisible(),
     );
@@ -200,7 +206,9 @@ export const SettingsWriteRefused: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByTestId("overnight-grant-toggle"));
+    const toggle = await canvas.findByTestId("overnight-grant-toggle");
+    await waitFor(() => expect(toggle).toBeChecked());
+    await userEvent.click(toggle);
     await canvas.findByText("Change was not saved");
   },
 };

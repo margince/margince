@@ -9,6 +9,7 @@ import { Callout } from "./callout";
 import "./composed.css";
 
 import { type BoardDealMail, DealCard, type DealCardHooks } from "./dealcard";
+import type { DealOwnerSeat } from "./dealowner";
 import {
   matchesTitle,
   matchingColumns,
@@ -92,11 +93,12 @@ export type BoardDeal = BoardRecord & {
   closeDate?: string | null;
   closeDateProvisional?: boolean;
   /**
-   * Who carries the deal: the seat's name, and its user id to key the chip.
+   * Who carries the deal: the seat's name, its user id to key the chip, and
+   * its picture if it has one.
    * Null for a deal nobody owns and for one whose owner the caller could not
    * name. The card draws nothing for either; the owner column tells them apart.
    */
-  owner?: Readonly<{ id: string; name: string }> | null;
+  owner?: DealOwnerSeat | null;
   /**
    * The newest email on the deal that the whole workspace may see, as how long
    * ago it was and which way it went. The caller owns the clock. A card that read
