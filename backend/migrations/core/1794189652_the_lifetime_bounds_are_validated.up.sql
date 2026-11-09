@@ -17,6 +17,13 @@ ALTER TABLE session VALIDATE CONSTRAINT session_expires_after_creation;
 ALTER TABLE consent_doi_token VALIDATE CONSTRAINT consent_doi_token_expires_after_issue;
 ALTER TABLE confirm_token VALIDATE CONSTRAINT confirm_token_expires_after_creation;
 ALTER TABLE data_task_review VALIDATE CONSTRAINT data_task_review_expires_after_creation;
+-- The proposal writer used to read its clock after deriving the expiry, and an
+-- option with zero notice could then expire at or before the creation. Such a
+-- link was never openable. It is ended just after it was created, so it stays
+-- expired and the check holds. Credentials get no such repair: one that expired
+-- before it existed is for an operator to look at, so its validation fails.
+UPDATE meeting_proposal SET expires_at = created_at + interval '1 millisecond'
+ WHERE expires_at <= created_at;
 ALTER TABLE meeting_proposal VALIDATE CONSTRAINT meeting_proposal_expires_after_creation;
 ALTER TABLE technical_lookup_cache VALIDATE CONSTRAINT technical_lookup_cache_expires_after_creation;
 ALTER TABLE withdrawal_credential VALIDATE CONSTRAINT withdrawal_credential_expires_after_creation;

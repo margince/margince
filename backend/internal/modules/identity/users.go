@@ -356,8 +356,12 @@ func endCredentialAuthority(ctx context.Context, tx pgx.Tx, userID ids.UserID, r
 	if err := revokeGrantsOfUserTx(ctx, tx, userID, reason); err != nil {
 		return err
 	}
+	// The window closes at the statement's own clock, not the transaction's. A
+	// code committed after this transaction began was created later than now().
+	// Ending it at now() would date its expiry before its creation, and the
+	// lifetime check would refuse the whole revocation.
 	if _, err := tx.Exec(ctx,
-		`UPDATE oauth_authorization_code SET expires_at = now()
+		`UPDATE oauth_authorization_code SET expires_at = clock_timestamp()
 		  WHERE user_id = $1 AND consumed_at IS NULL AND expires_at > now()`,
 		userID); err != nil {
 		return err

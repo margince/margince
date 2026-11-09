@@ -40,6 +40,19 @@ type proposalLink struct {
 	Expires time.Time `json:"expires_at"`
 }
 
+// proposalLifetimeRefusal refuses a link with no usable lifetime: one that
+// would be expired before a guest could open it. It is refused by name rather
+// than by the column's own CHECK, so the host is told what to change.
+func proposalLifetimeRefusal(created, expires time.Time) error {
+	if expires.After(created) {
+		return nil
+	}
+	return &SchedulingArgumentError{
+		Field: optionsField, Code: "no_usable_lifetime",
+		Message: "Offer a time far enough ahead that the link is still open when it arrives",
+	}
+}
+
 // CreateProposal binds an expiring one-use link to a contact and optional times.
 func (s *Store) CreateProposal(ctx context.Context, in crmcontracts.MeetingProposalRequest) (proposalLink, error) {
 	host, err := schedulingHost(ctx)
@@ -55,14 +68,8 @@ func (s *Store) CreateProposal(ctx context.Context, in crmcontracts.MeetingPropo
 	if err != nil {
 		return proposalLink{}, err
 	}
-	if !expires.After(created) {
-		// No usable lifetime: the link would be expired before a guest could
-		// open it. Refused by name rather than by the column's own CHECK, so
-		// the host is told what to change.
-		return proposalLink{}, &SchedulingArgumentError{
-			Field: optionsField, Code: "no_usable_lifetime",
-			Message: "Offer a time far enough ahead that the link is still open when it arrives",
-		}
+	if err := proposalLifetimeRefusal(created, expires); err != nil {
+		return proposalLink{}, err
 	}
 	token, hash, err := invitationToken()
 	if err != nil {
