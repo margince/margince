@@ -238,10 +238,16 @@ These rules decide whether a scenario is worth having:
   If the reader sees something that the check never reads, such as a free text summary, the judge stays.
 - **`privacy: true`** marks a scenario whose wrong answer shows private content to a reader who must not
   see it. Examples are a thread that must stay held, or a sender that must stay owner-only. Others are a
-  team note kept out of a draft, or a section withheld from the reader. Such a scenario certifies only
-  when every run passes. With a judge, a run also fails when its score is at or under the floor, or no
-  judge scored it. Leave it off a scenario whose wrong answer only makes a bad reply: there half the
-  runs may fail and the pool still decides.
+  team note kept out of a draft, or a section withheld from the reader. Leave the flag off a scenario
+  whose wrong answer only makes a bad reply.
+
+  One run that shows the reader too much makes such a scenario `not_supported`. The check of the site
+  marks such a run (`aitasks.Outcome.Leak`). A brief that writes an `avoids` word is one. A wrong kind on
+  the two capture verdict sites is another. With a judge, a run also counts when its score is at or under
+  the floor, or no judge scored it.
+
+  A run the validator refused reached no reader, so it does not count. Any other miss, such as a missed
+  `names_token`, counts under the rule for every scenario.
 
   Such a scenario runs at least 15 times (`privacyMinRuns`), or `RUNS=` times if that is more, and gets no
   extra rounds. A case that shows the reader too much in one run of five still passes 6 runs one time

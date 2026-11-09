@@ -66,6 +66,9 @@ func scenarioRow(sc Scenario, stamp string, set ScenarioRuns) ScenarioRecord {
 		ReportedInvalid:     tally.invalid,
 		ReportedAbstained:   tally.abstained,
 	}
+	if set.Privacy {
+		row.Leaks = &stats.leaks
+	}
 	if !set.Mechanical {
 		row.Bands = &RowBands{CertifiedMin: set.Bands.CertifiedMin, DegradedMin: set.Bands.DegradedMin, Floor: set.Bands.Floor}
 	}
@@ -254,6 +257,7 @@ func scoreAnswer(ctx context.Context, prepared aitasks.PreparedCase, scope strin
 	outcome := candidateSideRun(candidateSide{
 		output: validated.output, outcome: entry.outcome, passed: entry.passed, scope: scope, pooled: pooled,
 	})
+	outcome.Leak = entry.leak
 	outcome.AnswerConfidence = keptConfidence(prepared, caseTrace, entry.passed)
 	outcome.ContextApplied = len(caseTrace.Requests) > 0 && caseTrace.Requests[0].ContextFingerprint != ""
 	if !entry.graded {
@@ -273,6 +277,8 @@ type validation struct {
 	output, outcome string
 	// asExpected is the outcome the scenario named, inside its caps.
 	asExpected bool
+	// leak is the site's own word that the reply failed a privacy check.
+	leak bool
 }
 
 // validateRun runs the site's own validator over the site's own trace: Evaluate
@@ -305,6 +311,7 @@ func validateRun(ctx context.Context, prepared aitasks.PreparedCase, caseTrace a
 	// presentation, not a defect).
 	return validation{
 		output: ai.Unfence(caseTrace.Output), outcome: evaluated.Result, asExpected: outcomeAsExpected && capsOK,
+		leak: evaluated.Leak,
 	}, nil
 }
 
@@ -326,8 +333,8 @@ func keptConfidence(prepared aitasks.PreparedCase, trace aitasks.Trace, kept boo
 // tallyEntry is how one run enters its scenario's tally: the outcome counted,
 // whether it passed, and whether a judge is asked about it.
 type tallyEntry struct {
-	outcome        string
-	passed, graded bool
+	outcome              string
+	passed, graded, leak bool
 }
 
 // runEntry decides how a run enters the tally, which is part of the grading
@@ -349,7 +356,7 @@ func runEntry(pooled runCalls, validated validation) tallyEntry {
 	case pooled.Truncated:
 		return tallyEntry{outcome: validated.outcome}
 	default:
-		return tallyEntry{outcome: validated.outcome, passed: validated.asExpected, graded: true}
+		return tallyEntry{outcome: validated.outcome, passed: validated.asExpected, graded: true, leak: validated.leak}
 	}
 }
 

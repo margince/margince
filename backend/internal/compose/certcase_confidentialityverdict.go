@@ -157,6 +157,8 @@ func (c *confidentialityCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 		return aitasks.Outcome{
 			Result: aitasks.OutcomeWrongAnswer,
 			Detail: fmt.Sprintf("the model answered %q where the scenario expects %q", answered, c.expected),
+			// The kind decides who may read the thread, so a wrong one is a leak.
+			Leak: true,
 		}
 	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}
@@ -202,6 +204,7 @@ func (c *confidentialityCase) EvaluateDecision(a decision.Answer) aitasks.Outcom
 			Result: aitasks.OutcomeWrongAnswer,
 			Detail: fmt.Sprintf("the decision model answered %q at confidence %.2f where the scenario expects %q",
 				a.Choice, a.Confidence, c.expected),
+			Leak: true,
 		}
 	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}
@@ -215,6 +218,7 @@ func (c *confidentialityCase) heldOutcome(answer confidentialityResult, who stri
 			Result: aitasks.OutcomeWrongAnswer,
 			Detail: fmt.Sprintf("%s opened the thread as %q at confidence %.2f where the scenario expects it held",
 				who, answer.Verdict, float64(answer.Confidence)),
+			Leak: true,
 		}
 	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}

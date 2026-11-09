@@ -169,6 +169,10 @@ func TestVerdictCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 			if !strings.Contains(outcome.Detail, tc.wantDetail) {
 				t.Errorf("Detail = %q, want it to name %q", outcome.Detail, tc.wantDetail)
 			}
+			// Only a well-formed wrong kind reaches a reader, so only it leaks.
+			if outcome.Leak != (tc.wantResult == aitasks.OutcomeWrongAnswer) {
+				t.Errorf("Leak = %v for a %s reply", outcome.Leak, outcome.Result)
+			}
 		})
 	}
 }

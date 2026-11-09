@@ -34,7 +34,7 @@ var gradingRuleOwners = []struct {
 	names []string
 }{
 	{"score.go", []string{
-		"Verdict", "caseOf", "passVetoed", "leaked", "judgeUpper", "underFloor", "rowCase", "verdictOver", "mechanicalBand",
+		"Verdict", "caseOf", "passVetoed", "runLeaked", "leaked", "judgeUpper", "underFloor", "rowCase", "verdictOver", "mechanicalBand",
 		"judgeBand", "marginsOver", "lowerVerdict", "verdictRank", "majorityOf", "judgeMedianAndMin", "medianOf",
 	}},
 	{"stats.go", []string{"wilsonBounds", "meanBounds", "meanAndSD", "tQuantile"}},
@@ -175,6 +175,12 @@ var gradingRuleExtensions = []ruleExtension{{
 	to:   "5908d46ee2b29fa1a3e8a853a0aaacde3fc8cb527a23e2a88ff419fd9d34e645",
 	reason: "firstRunCounts gives a privacy case privacyMinRuns runs and every other case the runs it had; " +
 		"a privacy case's stamp now carries privacyMinRuns, so its records measured under fewer runs read stale",
+}, {
+	rule: "grading-rule-10",
+	from: "5908d46ee2b29fa1a3e8a853a0aaacde3fc8cb527a23e2a88ff419fd9d34e645",
+	to:   "7f51f81520416188d4661ac0f1b22b2bc625d929b3980ef1a0778a87811253da",
+	reason: "runLeaked vetoes a privacy case only on a run that broke a privacy check, counted into a row's leaks; " +
+		"no committed row has that count, and leaked reads a row without it by the rule it was graded under",
 }}
 
 // extendedDigest is the digest the golden's version accepts once every

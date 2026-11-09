@@ -43,8 +43,9 @@ func decisionVerdict(stats DecisionStats) string {
 }
 
 // decisionLeaked says a privacy scenario was not served right on every run. A
-// wrong kept answer leaks. A fallback leaks unless the LLM row it hands the
-// question to passed every one of its own runs.
+// wrong kept answer leaks, since these sites' answers are closed kinds that
+// decide who may read. A fallback leaks unless the LLM row it hands the
+// question to never leaked.
 func decisionLeaked(sc Scenario, stats DecisionStats, llm Record) bool {
 	switch {
 	case !sc.Expect.Privacy:
@@ -55,7 +56,12 @@ func decisionLeaked(sc Scenario, stats DecisionStats, llm Record) bool {
 		return false
 	}
 	row, ok := llmRow(llm, sc.Name)
-	return !ok || row.Runs == 0 || row.Passed < row.Runs
+	if !ok || row.Runs == 0 {
+		return true
+	}
+	served := rowCase(row)
+	served.privacy = true
+	return leaked(served)
 }
 
 // foldDecisionRuns tallies one scenario's runs against what it expects.
