@@ -143,6 +143,31 @@ func TestAnAgentRecordsAndTakesBackAStopAndAVouch(t *testing.T) {
 	if !isAgentStamp(vouchBy) {
 		t.Errorf("the vouch's captured_by = %q, want the agent", vouchBy)
 	}
+	var listed struct {
+		Data []struct {
+			ID          string `json:"override_id"`
+			Company     string `json:"sending_entity_id"`
+			CompanyName string `json:"sending_entity_name"`
+			Author      string `json:"recorded_by_name"`
+			MayRevoke   bool   `json:"may_revoke"`
+		} `json:"data"`
+	}
+	shown := c.tool(t, "read_details", map[string]any{"action": "contact_overrides", "id": c.contact})
+	if err := json.Unmarshal(shown, &listed); err != nil || len(listed.Data) != 1 {
+		t.Fatalf("standing exceptions = %s, %v", shown, err)
+	}
+	row := listed.Data[0]
+	if row.ID != vouch.ID || row.Company == "" || row.Author == "" || !row.MayRevoke {
+		t.Fatalf("standing exception scope or authority missing: %+v", row)
+	}
+	c.e.DescribeCompany(t)
+	shown = c.tool(t, "read_details", map[string]any{"action": "contact_overrides", "id": c.contact})
+	if err := json.Unmarshal(shown, &listed); err != nil || len(listed.Data) != 1 {
+		t.Fatalf("named default company = %s, %v", shown, err)
+	}
+	if listed.Data[0].Company != row.Company || listed.Data[0].CompanyName != "Acme GmbH" {
+		t.Fatalf("the default company did not use its existing profile: %+v", listed.Data[0])
+	}
 	c.act(t, "revoke_override", map[string]any{"id": c.contact, "overrideId": vouch.ID, "request_body": AnyMap{
 		"reason": "The fair was another contact.",
 	}})
@@ -231,6 +256,7 @@ func TestAnAgentReadsAContactsConsentAsTheUserDoes(t *testing.T) {
 		"contact_consent":       "/v1/contacts/" + c.contact + "/consent",
 		"contact_consent_guard": "/v1/contacts/" + c.contact + "/consent/guard",
 		"contact_stops":         "/v1/contacts/" + c.contact + "/consent/stops",
+		"contact_overrides":     "/v1/contacts/" + c.contact + "/consent/allow",
 	} {
 		var asUser json.RawMessage
 		if status := c.e.Call(t, "GET", route, nil, nil, &asUser); status != http.StatusOK {

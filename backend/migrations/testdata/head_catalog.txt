@@ -23,6 +23,7 @@ public.activity.activity_invitation_sender_fkey FOREIGN KEY (invitation_sender) 
 public.activity.activity_kind_fkey FOREIGN KEY (kind) REFERENCES activity_kind(kind)
 public.activity.activity_language_check CHECK (((language IS NULL) OR (language = ANY (ARRAY['de'::text, 'en'::text, 'vi'::text]))))
 public.activity.activity_last_activity CREATE TRIGGER activity_last_activity AFTER UPDATE OF occurred_at, archived_at, audience, origin, kind, meeting_status, occurred_precision, call_outcome ON public.activity FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin) OR (old.kind IS DISTINCT FROM new.kind) OR (old.meeting_status IS DISTINCT FROM new.meeting_status) OR (old.occurred_precision IS DISTINCT FROM new.occurred_precision) OR (old.call_outcome IS DISTINCT FROM new.call_outcome))) EXECUTE FUNCTION trg_activity_last_activity()
+public.activity.activity_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES legal_entity(id) ON DELETE RESTRICT
 public.activity.activity_meeting_host CHECK (((host_user_id IS NULL) OR (kind = 'meeting'::text)))
 public.activity.activity_meeting_no_overlap EXCLUDE USING gist (host_user_id WITH =, tsrange(timezone('UTC'::text, occurred_at), (timezone('UTC'::text, occurred_at) + ((
 CASE
@@ -55,6 +56,8 @@ public.activity.activity_sent_by_colleague_fkey FOREIGN KEY (sent_by_colleague) 
 public.activity.activity_source_activity_id_fkey FOREIGN KEY (source_activity_id) REFERENCES activity(id) ON DELETE SET NULL
 public.activity.activity_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.activity.activity_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
+public.activity.activity_system_text_retire CREATE TRIGGER activity_system_text_retire BEFORE UPDATE ON public.activity FOR EACH ROW EXECUTE FUNCTION retire_changed_system_text()
+public.activity.activity_system_text_shape CHECK (((system_text IS NULL) OR ((jsonb_typeof(system_text) = 'object'::text) AND (((system_text ->> 'schema_version'::text) = '1'::text) IS TRUE) AND (octet_length((system_text)::text) <= 8192))))
 public.activity.activity_task_fields CHECK (((kind = 'task'::text) OR ((due_at IS NULL) AND (assignee_id IS NULL) AND (is_done = false) AND (remind_at IS NULL))))
 public.activity.activity_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.activity.advance_activity_domain_evidence_version CREATE TRIGGER advance_activity_domain_evidence_version BEFORE UPDATE OF occurred_at, occurred_precision, archived_at, restricted_at ON public.activity FOR EACH ROW EXECUTE FUNCTION advance_activity_domain_evidence_version()
@@ -99,6 +102,7 @@ public.activity.invitation_sender uuid gen=- def=-
 public.activity.is_done boolean NOT NULL gen=- def=false
 public.activity.kind text NOT NULL gen=- def=-
 public.activity.language text gen=- def=-
+public.activity.legal_entity_id uuid gen=- def=-
 public.activity.meeting_status text gen=- def=-
 public.activity.occurred_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity.occurred_precision text NOT NULL gen=- def='instant'::text
@@ -133,6 +137,7 @@ public.activity.source_author_name text gen=- def=-
 public.activity.source_id text gen=- def=-
 public.activity.source_system text gen=- def=-
 public.activity.subject text gen=- def=-
+public.activity.system_text jsonb gen=- def=-
 public.activity.thread_key text gen=- def=-
 public.activity.trg_activity_updated CREATE TRIGGER trg_activity_updated BEFORE UPDATE ON public.activity FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.activity.updated_at timestamp with time zone NOT NULL gen=- def=now()
@@ -2096,6 +2101,7 @@ public.capture_connection.archived_at timestamp with time zone gen=- def=-
 public.capture_connection.auth bytea gen=- def=-
 public.capture_connection.capture_connection_context_tag_id_fkey FOREIGN KEY (context_tag_id) REFERENCES tag(id) ON DELETE SET NULL
 public.capture_connection.capture_connection_history_baseline_check CHECK ((((history_baseline_date IS NULL) = (history_baseline_tz IS NULL)) AND ((history_baseline_date IS NULL) = (history_baseline_set_by IS NULL)) AND ((history_baseline_date IS NULL) = (history_baseline_set_at IS NULL))))
+public.capture_connection.capture_connection_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES legal_entity(id) ON DELETE RESTRICT
 public.capture_connection.capture_connection_mail_posture_check CHECK ((mail_posture = ANY (ARRAY['shared'::text, 'classified'::text, 'held'::text])))
 public.capture_connection.capture_connection_provider_check CHECK ((provider = ANY (ARRAY['gmail'::text, 'gcal'::text, 'imap'::text, 'graph'::text, 'graphcal'::text, 'whatsapp'::text, 'telegram'::text, 'offline_demo'::text, 'test_mailbox'::text])))
 public.capture_connection.capture_connection_status_check CHECK ((status = ANY (ARRAY['connected'::text, 'disconnected'::text, 'error'::text, 'reauth_required'::text])))
@@ -2113,6 +2119,7 @@ public.capture_connection.history_baseline_set_at timestamp with time zone gen=-
 public.capture_connection.history_baseline_set_by text gen=- def=-
 public.capture_connection.history_baseline_tz text gen=- def=-
 public.capture_connection.id uuid NOT NULL gen=- def=uuidv7()
+public.capture_connection.legal_entity_id uuid gen=- def=-
 public.capture_connection.mail_posture text NOT NULL gen=- def='classified'::text
 public.capture_connection.provider text NOT NULL gen=- def=-
 public.capture_connection.provider_scopes text[] gen=- def=-
@@ -2187,6 +2194,7 @@ public.capture_import.activity_id uuid NOT NULL gen=- def=-
 public.capture_import.bcc_only boolean gen=- def=-
 public.capture_import.capture_import_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.capture_import.capture_import_activity_user_key UNIQUE (activity_id, user_id)
+public.capture_import.capture_import_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES legal_entity(id) ON DELETE RESTRICT
 public.capture_import.capture_import_pkey PRIMARY KEY (id)
 public.capture_import.capture_import_posture_check CHECK (((posture_at_import IS NULL) OR (posture_at_import = ANY (ARRAY['shared'::text, 'classified'::text, 'held'::text]))))
 public.capture_import.capture_import_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE RESTRICT
@@ -2196,6 +2204,7 @@ public.capture_import.home_read_fence_capture_import CREATE TRIGGER home_read_fe
 public.capture_import.home_read_fence_capture_import_removed CREATE TRIGGER home_read_fence_capture_import_removed AFTER DELETE ON public.capture_import FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()
 public.capture_import.id uuid NOT NULL gen=- def=uuidv7()
 public.capture_import.imported_at timestamp with time zone NOT NULL gen=- def=now()
+public.capture_import.legal_entity_id uuid gen=- def=-
 public.capture_import.posture_at_import text gen=- def=-
 public.capture_import.provider_message_ids text[] NOT NULL gen=- def='{}'::text[]
 public.capture_import.provider_received_at timestamp with time zone gen=- def=-
@@ -2633,6 +2642,7 @@ public.comms_outbound_message_unique CREATE UNIQUE INDEX comms_outbound_message_
 public.comms_outbound_one_delivery_per_instruction CREATE UNIQUE INDEX comms_outbound_one_delivery_per_instruction ON public.comms_outbound USING btree (instruction_id) WHERE (instruction_id IS NOT NULL)
 public.comms_outbound_party_admission CREATE INDEX comms_outbound_party_admission ON public.comms_outbound USING btree (activity_id, user_id) WHERE (party_admission_pending AND (status = 'sent'::text) AND (sender_kind = 'user'::text) AND (channel_user_id IS NULL))
 public.comms_outbound_pkey CREATE UNIQUE INDEX comms_outbound_pkey ON public.comms_outbound USING btree (id)
+public.comms_outbound_provider_message CREATE INDEX comms_outbound_provider_message ON public.comms_outbound USING btree (user_id, provider, provider_message_id) WHERE (provider_message_id IS NOT NULL)
 public.comms_outbound_workspace_activity_ix CREATE INDEX comms_outbound_workspace_activity_ix ON public.comms_outbound USING btree (activity_id, id)
 public.communication_basis acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.communication_basis.captured_at timestamp with time zone NOT NULL gen=- def=now()
@@ -2805,6 +2815,7 @@ public.communication_override.lead_id uuid gen=- def=-
 public.communication_override.legal_entity_id uuid NOT NULL gen=- def=-
 public.communication_override.reason text NOT NULL gen=- def=-
 public.communication_override.recorded_at timestamp with time zone NOT NULL gen=- def=now()
+public.communication_override.recorded_directly boolean gen=- def=-
 public.communication_override.revoked_at timestamp with time zone gen=- def=-
 public.communication_override_carried_from CREATE INDEX communication_override_carried_from ON public.communication_override USING btree (carried_from) WHERE (carried_from IS NOT NULL)
 public.communication_override_contact_cascade CREATE INDEX communication_override_contact_cascade ON public.communication_override USING btree (contact_id) WHERE (contact_id IS NOT NULL)
@@ -3496,6 +3507,7 @@ public.consent_qualifying_event.kind text NOT NULL gen=- def=-
 public.consent_qualifying_event.note text gen=- def=-
 public.consent_qualifying_event.occurred_at timestamp with time zone NOT NULL gen=- def=-
 public.consent_qualifying_event.recorded_for_addresses text[] gen=- def=-
+public.consent_qualifying_event.recorded_for_entities uuid[] gen=- def=-
 public.consent_qualifying_event.retracted_at timestamp with time zone gen=- def=-
 public.consent_qualifying_event.retracted_by text gen=- def=-
 public.consent_qualifying_event.source text NOT NULL gen=- def=-
@@ -3620,11 +3632,13 @@ public.contact_acquisition_evidence.captured_at timestamp with time zone NOT NUL
 public.contact_acquisition_evidence.captured_by text NOT NULL gen=- def=-
 public.contact_acquisition_evidence.contact_acquisition_evidence_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.contact_acquisition_evidence.contact_acquisition_evidence_kind CHECK ((kind = ANY (ARRAY['subject_initiated'::text, 'customer_contract'::text, 'requested_quote_or_meeting'::text, 'in_person_permission'::text, 'referral'::text, 'event_or_form'::text, 'public_or_business_source'::text, 'purchased_or_imported'::text, 'unknown_legacy'::text, 'crm_migration'::text, 'mailbox_history'::text])))
+public.contact_acquisition_evidence.contact_acquisition_evidence_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES legal_entity(id) ON DELETE RESTRICT
 public.contact_acquisition_evidence.contact_acquisition_evidence_pkey PRIMARY KEY (id)
 public.contact_acquisition_evidence.contact_acquisition_evidence_source_shape CHECK (((source_entity_type IS NULL) = (source_entity_id IS NULL)))
 public.contact_acquisition_evidence.contact_id uuid NOT NULL gen=- def=-
 public.contact_acquisition_evidence.id uuid NOT NULL gen=- def=uuidv7()
 public.contact_acquisition_evidence.kind text NOT NULL gen=- def=-
+public.contact_acquisition_evidence.legal_entity_id uuid gen=- def=-
 public.contact_acquisition_evidence.note text gen=- def=-
 public.contact_acquisition_evidence.occurred_at timestamp with time zone gen=- def=-
 public.contact_acquisition_evidence.purpose_claimed text gen=- def=-
@@ -6845,6 +6859,8 @@ public.notice.notice_email_error_bounded CHECK ((length(email_error) <= 500))
 public.notice.notice_pkey PRIMARY KEY (id)
 public.notice.notice_recipient_user_id_fkey FOREIGN KEY (recipient_user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.notice.notice_subject_present CHECK ((subject <> ''::text))
+public.notice.notice_system_text_retire CREATE TRIGGER notice_system_text_retire BEFORE UPDATE ON public.notice FOR EACH ROW EXECUTE FUNCTION retire_changed_system_text()
+public.notice.notice_system_text_shape CHECK (((system_text IS NULL) OR ((jsonb_typeof(system_text) = 'object'::text) AND (((system_text ->> 'schema_version'::text) = '1'::text) IS TRUE) AND (octet_length((system_text)::text) <= 8192))))
 public.notice.notice_target_paired CHECK (((target_type IS NULL) = (target_id IS NULL)))
 public.notice.origin jsonb gen=- def=-
 public.notice.read_at timestamp with time zone gen=- def=-
@@ -6852,6 +6868,7 @@ public.notice.recipient_user_id uuid NOT NULL gen=- def=-
 public.notice.retracted_at timestamp with time zone gen=- def=-
 public.notice.subject text NOT NULL gen=- def=-
 public.notice.subject_parts jsonb gen=- def=-
+public.notice.system_text jsonb gen=- def=-
 public.notice.target_id uuid gen=- def=-
 public.notice.target_type text gen=- def=-
 public.notice_dedupe_key CREATE INDEX notice_dedupe_key ON public.notice USING btree (dedupe_key) WHERE (dedupe_key IS NOT NULL)
@@ -7732,11 +7749,16 @@ public.record_role.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.record_role.version bigint NOT NULL gen=- def=1
 public.record_role_key_key CREATE UNIQUE INDEX record_role_key_key ON public.record_role USING btree (key)
 public.record_role_pkey CREATE UNIQUE INDEX record_role_pkey ON public.record_role USING btree (id)
-public.record_stored_object_intent(requested_kind text, requested_key text) secdef=false cfg=- acl==X/margince_owner,margince_owner=X/margince_owner,margince_app=X/margince_owner INSERT INTO stored_object_intent (storage_key, kind)
+public.record_stored_object_intent(requested_kind text, requested_key text) secdef=false cfg=- acl==X/margince_owner,margince_owner=X/margince_owner,margince_app=X/margince_owner BEGIN
+    INSERT INTO stored_object_intent (storage_key, kind)
     VALUES (requested_key, requested_kind)
     ON CONFLICT (storage_key) DO UPDATE
-       SET kind = excluded.kind, recorded_at = now();
-
+       SET kind = excluded.kind, recorded_at = now()
+       WHERE stored_object_intent.reaping_since IS NULL;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'The stored file has expired; upload it again' USING ERRCODE = '55000';
+    END IF;
+END;
 public.refresh_last_activity_for_link(cid uuid, did uuid, oid uuid) secdef=false cfg=- acl=- 
 DECLARE
   reached record;
@@ -8077,6 +8099,20 @@ public.retention_policy.retention_policy_retain_days_check CHECK (((retain_days 
 public.retention_policy.retention_policy_unique UNIQUE NULLS NOT DISTINCT (object_type, category)
 public.retention_policy_pkey CREATE UNIQUE INDEX retention_policy_pkey ON public.retention_policy USING btree (id)
 public.retention_policy_unique CREATE UNIQUE INDEX retention_policy_unique ON public.retention_policy USING btree (object_type, category) NULLS NOT DISTINCT
+public.retire_changed_system_text() secdef=false cfg=- acl=- 
+BEGIN
+ IF NEW.subject IS DISTINCT FROM OLD.subject AND
+    NEW.system_text->'subject'->>'digest' IS DISTINCT FROM encode(sha256(convert_to(coalesce(NEW.subject, ''), 'UTF8')), 'hex') THEN
+  NEW.system_text := NEW.system_text - 'subject';
+ END IF;
+ IF NEW.body IS DISTINCT FROM OLD.body AND
+    NEW.system_text->'body'->>'digest' IS DISTINCT FROM encode(sha256(convert_to(coalesce(NEW.body, ''), 'UTF8')), 'hex') THEN
+  NEW.system_text := NEW.system_text - 'body';
+ END IF;
+ IF NOT (NEW.system_text ? 'subject' OR NEW.system_text ? 'body') THEN NEW.system_text := NULL; END IF;
+ RETURN NEW;
+END;
+
 public.retire_raw_original_object() secdef=false cfg=- acl=- BEGIN
     IF TG_OP = 'UPDATE' THEN
         IF OLD.payload_object IS NOT NULL
@@ -8385,6 +8421,7 @@ public.session.id uuid NOT NULL gen=- def=uuidv7()
 public.session.idle_expires_at timestamp with time zone NOT NULL gen=- def=-
 public.session.ip inet gen=- def=-
 public.session.last_seen_at timestamp with time zone NOT NULL gen=- def=now()
+public.session.provider_authenticated boolean NOT NULL gen=- def=false
 public.session.revoked_at timestamp with time zone gen=- def=-
 public.session.session_expires_after_creation CHECK ((expires_at > created_at))
 public.session.session_pkey PRIMARY KEY (id)
@@ -8791,9 +8828,12 @@ END;
 
 public.stored_object_intent acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.stored_object_intent.kind text NOT NULL gen=- def=-
+public.stored_object_intent.reaped_at timestamp with time zone gen=- def=-
+public.stored_object_intent.reaping_since timestamp with time zone gen=- def=-
 public.stored_object_intent.recorded_at timestamp with time zone NOT NULL gen=- def=now()
 public.stored_object_intent.storage_key text NOT NULL gen=- def=-
 public.stored_object_intent.stored_object_intent_pkey PRIMARY KEY (storage_key)
+public.stored_object_intent_pending_idx CREATE INDEX stored_object_intent_pending_idx ON public.stored_object_intent USING btree (COALESCE(reaping_since, recorded_at), storage_key) WHERE (reaped_at IS NULL)
 public.stored_object_intent_pkey CREATE UNIQUE INDEX stored_object_intent_pkey ON public.stored_object_intent USING btree (storage_key)
 public.stored_object_intent_recorded_idx CREATE INDEX stored_object_intent_recorded_idx ON public.stored_object_intent USING btree (recorded_at)
 public.suggestion_dismissal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false

@@ -12,6 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // companyIndustryRequiredMigration is the migration the industry column mapping reads from.
@@ -24,7 +25,7 @@ const companyIndustryRequiredMigration = "core/1792799323"
 func companyIndustryDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792811260_company_industry_codes", Version: 1,
-		Title: "Mapping company industries onto the fixed list", Requires: []string{companyIndustryRequiredMigration},
+		Title: systemtext.Literal("datatask.title.core.1792811260_company_industry_codes"), Requires: []string{companyIndustryRequiredMigration},
 		Steps: []datatask.Step{{
 			Name: "company_industry", Limit: 200, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

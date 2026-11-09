@@ -43,6 +43,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -244,6 +245,7 @@ func (p *SignalProposer) offerStageChange(ctx context.Context, said approvalSumm
 		TargetType:     string(recordTypeCompany),
 		TargetID:       account.CompanyID.UUID,
 		Summary:        fmt.Sprintf(said.contractEndedMove, account.Stage, lifecycleEnded),
+		SystemText:     &systemtext.Message{Version: 1, Subject: systemtext.Sentence("approval.contractEndedMove", systemtext.Text(account.Stage), systemtext.Text(lifecycleEnded))},
 		JoinPending:    true,
 		Evidence:       []approvals.Evidence{{Snippet: approvals.SanitizeSummary(account.Summary), SourceType: tableSignal, SourceID: account.SignalID}},
 	})

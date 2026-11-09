@@ -25,6 +25,7 @@ import { SIGN_OFF_QUERY } from "../mail/composesignoff";
 import { SettingsScreen, tabContent } from "./settings";
 import { AuditLogCard } from "./settings-audit";
 import { healthReport } from "./systemhealth.fixtures";
+import "./systemhealthdiagnostics";
 
 // What a principal is SERVED once an entry opens: the identity and locale
 // surfaces on Account, the rows that read as WITHHELD rather than absent, and

@@ -18,6 +18,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // statementTx keeps the statement a read sends and fails it, so the read is
@@ -62,10 +65,61 @@ func TestTheMeetingFollowUpMaterializesRecipientsBeforeCheckingLaterActivities(t
 		t.Fatal(err)
 	}
 	normalized := strings.Join(strings.Fields(query), " ")
-	// The fence prevents recipient links from being scanned once per later activity.
-	for _, part := range []string{"NOT EXISTS (WITH touched AS MATERIALIZED (", "SELECT 1 FROM touched JOIN activity later"} {
+	// The fence prevents recipient links from being scanned once per later
+	// activity, and each later activity is read by its key alone.
+	for _, part := range []string{
+		"NOT EXISTS (WITH touched AS MATERIALIZED (",
+		"SELECT 1 FROM touched CROSS JOIN LATERAL (SELECT keyed.id,",
+		"FROM activity keyed WHERE keyed.id = touched.activity_id LIMIT 1) later",
+	} {
 		if !strings.Contains(normalized, part) {
 			t.Fatalf("meeting recipients are not materialized before checking later activities: missing %q", part)
+		}
+	}
+}
+
+func TestAMeetingFollowUpPageOfZeroHoldsNone(t *testing.T) {
+	everyMeeting := func(func(any) int) (string, error) { return scopeUnbounded, nil }
+	const newestFirst = "ORDER BY a.occurred_at DESC, a.id DESC"
+	paged, _, err := meetingFollowUpsStatement(teamScopedCtx(), clocktest.Now(t), 3, everyMeeting, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasSuffix(strings.Join(strings.Fields(paged), " "), newestFirst+" LIMIT 0") {
+		t.Error("a page of zero meetings is not LIMIT 0")
+	}
+	if _, _, err := meetingFollowUpsStatement(teamScopedCtx(), clocktest.Now(t), 3, everyMeeting, -1); err == nil {
+		t.Error("a negative page was rendered instead of refused")
+	}
+	unpaged, _, err := unpagedMeetingFollowUpsStatement(teamScopedCtx(), clocktest.Now(t), 3, everyMeeting)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasSuffix(strings.Join(strings.Fields(unpaged), " "), newestFirst) {
+		t.Error("the unpaged read carries a page")
+	}
+}
+
+// A caller refused either object learns nothing and costs no SQL.
+func TestTheDealFollowUpBatchRefusesBeforeReadingAnything(t *testing.T) {
+	grants := func(objects ...string) context.Context {
+		held := map[string]principal.ObjectGrant{}
+		for _, object := range objects {
+			held[object] = principal.ObjectGrant{Read: true}
+		}
+		return principal.WithActor(context.Background(), principal.Principal{
+			Type: principal.PrincipalHuman, ID: "human:rep", UserID: ids.NewV7(),
+			Permissions: principal.Permissions{RoleKeys: []string{"rep"}, Objects: held, RowScope: principal.RowScopeAll},
+		})
+	}
+	for name, ctx := range map[string]context.Context{"no deal read": grants("activity"), "no activity read": grants("deal")} {
+		tx := &statementTx{}
+		_, err := (&Store{}).NextMeetingFollowUpsByDealTx(ctx, tx, clocktest.Now(t), []ids.UUID{ids.NewV7()})
+		if !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("%s: answered %v, want permission denied", name, err)
+		}
+		if tx.sql != "" {
+			t.Errorf("%s: sent SQL before refusing: %.80s", name, tx.sql)
 		}
 	}
 }

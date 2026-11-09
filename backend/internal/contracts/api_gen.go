@@ -637,6 +637,24 @@ func (e ActivityLinkInputEntityType) Valid() bool {
 	}
 }
 
+// Defines values for ActivityReaderRenderingPart.
+const (
+	ActivityReaderRenderingPartBody    ActivityReaderRenderingPart = "body"
+	ActivityReaderRenderingPartSubject ActivityReaderRenderingPart = "subject"
+)
+
+// Valid indicates whether the value is a known member of the ActivityReaderRenderingPart enum.
+func (e ActivityReaderRenderingPart) Valid() bool {
+	switch e {
+	case ActivityReaderRenderingPartBody:
+		return true
+	case ActivityReaderRenderingPartSubject:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityReaderRenderingSourceLanguage.
 const (
 	ActivityReaderRenderingSourceLanguageDe ActivityReaderRenderingSourceLanguage = "de"
@@ -694,6 +712,24 @@ func (e ActivityReaderRenderingRequestLocale) Valid() bool {
 	case ActivityReaderRenderingRequestLocaleEn:
 		return true
 	case ActivityReaderRenderingRequestLocaleVi:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityReaderRenderingRequestPart.
+const (
+	ActivityReaderRenderingRequestPartBody    ActivityReaderRenderingRequestPart = "body"
+	ActivityReaderRenderingRequestPartSubject ActivityReaderRenderingRequestPart = "subject"
+)
+
+// Valid indicates whether the value is a known member of the ActivityReaderRenderingRequestPart enum.
+func (e ActivityReaderRenderingRequestPart) Valid() bool {
+	switch e {
+	case ActivityReaderRenderingRequestPartBody:
+		return true
+	case ActivityReaderRenderingRequestPartSubject:
 		return true
 	default:
 		return false
@@ -22885,6 +22921,45 @@ func (e SubscriptionConfirmationPageState) Valid() bool {
 	}
 }
 
+// Defines values for SystemDisplayGeneratedParts.
+const (
+	SystemDisplayGeneratedPartsBody    SystemDisplayGeneratedParts = "body"
+	SystemDisplayGeneratedPartsSubject SystemDisplayGeneratedParts = "subject"
+)
+
+// Valid indicates whether the value is a known member of the SystemDisplayGeneratedParts enum.
+func (e SystemDisplayGeneratedParts) Valid() bool {
+	switch e {
+	case SystemDisplayGeneratedPartsBody:
+		return true
+	case SystemDisplayGeneratedPartsSubject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SystemDisplayLocale.
+const (
+	SystemDisplayLocaleDe SystemDisplayLocale = "de"
+	SystemDisplayLocaleEn SystemDisplayLocale = "en"
+	SystemDisplayLocaleVi SystemDisplayLocale = "vi"
+)
+
+// Valid indicates whether the value is a known member of the SystemDisplayLocale enum.
+func (e SystemDisplayLocale) Valid() bool {
+	switch e {
+	case SystemDisplayLocaleDe:
+		return true
+	case SystemDisplayLocaleEn:
+		return true
+	case SystemDisplayLocaleVi:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SystemHealthAssessment.
 const (
 	SystemHealthAssessmentAttention  SystemHealthAssessment = "attention"
@@ -30874,8 +30949,9 @@ type Activity struct {
 	SourceId *string `json:"source_id,omitempty"`
 
 	// SourceSystem Which system this record came from: `email` for any captured or sent mail (one identity across gmail/outlook/imap), else gcal/outlook/transcript or a caller's own. Idempotency key part.
-	SourceSystem *string `json:"source_system,omitempty"`
-	Subject      *string `json:"subject,omitempty"`
+	SourceSystem  *string        `json:"source_system,omitempty"`
+	Subject       *string        `json:"subject,omitempty"`
+	SystemDisplay *SystemDisplay `json:"system_display,omitempty"`
 
 	// ThreadKey The provider's own conversation id (Gmail threadId, Graph conversationId, the RFC822 References root), stamped by capture. It is what makes a thread a thread: grouping by subject would merge two unrelated "Re: Update" exchanges and split one that was renamed mid-conversation. Null on anything capture did not thread — a note, a task, a message whose provider offered none.
 	ThreadKey *string   `json:"thread_key,omitempty"`
@@ -31070,10 +31146,12 @@ type ActivityReaderRendering struct {
 	GeneratedAt time.Time `json:"generated_at"`
 
 	// ModelUsed The model that wrote the rendering, or judged the text unchanged. Absent when no model was asked.
-	ModelUsed *string `json:"model_used,omitempty"`
+	ModelUsed *string                      `json:"model_used,omitempty"`
+	Part      *ActivityReaderRenderingPart `json:"part,omitempty"`
 
 	// SourceLanguage The language the original is written in, null when it could not be told.
 	SourceLanguage *ActivityReaderRenderingSourceLanguage `json:"source_language,omitempty"`
+	SourceVersion  *int64                                 `json:"source_version,omitempty"`
 
 	// Subject The subject in the target language, null when the activity has none.
 	Subject        *string                               `json:"subject,omitempty"`
@@ -31084,6 +31162,9 @@ type ActivityReaderRendering struct {
 	Unchanged bool `json:"unchanged"`
 }
 
+// ActivityReaderRenderingPart defines model for ActivityReaderRendering.Part.
+type ActivityReaderRenderingPart string
+
 // ActivityReaderRenderingSourceLanguage The language the original is written in, null when it could not be told.
 type ActivityReaderRenderingSourceLanguage string
 
@@ -31092,16 +31173,22 @@ type ActivityReaderRenderingTargetLanguage string
 
 // ActivityReaderRenderingRequest defines model for ActivityReaderRenderingRequest.
 type ActivityReaderRenderingRequest struct {
+	ExpectedSourceVersion *int64 `json:"expected_source_version,omitempty" minimum:"1"`
+
 	// Locale The language to show the text in, normally the reader's interface language.
 	// Absent means the language the reader chose for their seat, else the
 	// installation's base language.
 	Locale *ActivityReaderRenderingRequestLocale `json:"locale,omitempty"`
+	Part   *ActivityReaderRenderingRequestPart   `json:"part,omitempty"`
 }
 
 // ActivityReaderRenderingRequestLocale The language to show the text in, normally the reader's interface language.
 // Absent means the language the reader chose for their seat, else the
 // installation's base language.
 type ActivityReaderRenderingRequestLocale string
+
+// ActivityReaderRenderingRequestPart defines model for ActivityReaderRenderingRequest.Part.
+type ActivityReaderRenderingRequestPart string
 
 // ActivityReference One activity a derived number was computed from, named well enough to be
 // recognised and opened.
@@ -33710,6 +33797,7 @@ type Approval struct {
 
 	// SummaryParts The summary's sentence and the field values it lists, apart, so a client can show the values as a list instead of the joined key=value text. Absent on a proposal whose summary is a sentence alone, and on one staged before the parts were kept. Withheld with the summary.
 	SummaryParts   *ApprovalSummaryParts `json:"summary_parts,omitempty"`
+	SystemDisplay  *SystemDisplay        `json:"system_display,omitempty"`
 	TargetEntityId *openapi_types.UUID   `json:"target_entity_id,omitempty"`
 
 	// TargetEntityType Entity the effect mutates (for precondition re-validation).
@@ -34068,7 +34156,7 @@ type AssignableRoleDirectory struct {
 // AssignmentRecordType The kind of record an assignment hangs on.
 type AssignmentRecordType string
 
-// AssignmentSubjectKind Whether the responsible party is one colleague or a whole team.
+// AssignmentSubjectKind Whether the responsible party is one member or a whole team.
 type AssignmentSubjectKind string
 
 // AssistantConfiguredModel defines model for AssistantConfiguredModel.
@@ -35144,7 +35232,8 @@ type AttentionItem struct {
 	SubjectMovedAt *time.Time `json:"subject_moved_at,omitempty"`
 
 	// SummaryParts On an approval, its title taken apart, so the row can show the proposed values as a list. Absent when the title is a sentence alone.
-	SummaryParts *ApprovalSummaryParts `json:"summary_parts,omitempty"`
+	SummaryParts  *ApprovalSummaryParts `json:"summary_parts,omitempty"`
+	SystemDisplay *SystemDisplay        `json:"system_display,omitempty"`
 
 	// Title The server's own sentence for this item, when it has one — an approval
 	// summary is composed at staging time out of the proposal's own facts.
@@ -35552,10 +35641,9 @@ type AuthenticationPolicy struct {
 	// already invited.
 	OidcGroupRoleMap map[string]string `json:"oidc_group_role_map"`
 
-	// RequireMfa When true, a second factor is mandatory: a member with no confirmed authenticator
-	// is admitted only to the MFA enrolment routes until they set one up, the same
-	// confinement a forced password change uses. A member who already holds a factor is
-	// unaffected — they are challenged for it at sign-in either way.
+	// RequireMfa When true, password sessions without a confirmed authenticator are confined to
+	// MFA enrolment routes. Provider sessions rely on the provider’s MFA policy.
+	// Password sign-in with a confirmed factor always requires a challenge.
 	RequireMfa bool `json:"require_mfa"`
 
 	// RequireSso When true, this installation has closed the password path: an ordinary member
@@ -44163,12 +44251,12 @@ type CreateProjectRequest struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
-// CreateRecordAssignmentRequest defines model for CreateRecordAssignmentRequest.
+// CreateRecordAssignmentRequest A responsibility may name an agent seat as well as a human member. It grants no record access. The web picker lists active human colleagues.
 type CreateRecordAssignmentRequest struct {
 	RoleId    openapi_types.UUID `json:"role_id"`
 	SubjectId openapi_types.UUID `json:"subject_id"`
 
-	// SubjectKind Whether the responsible party is one colleague or a whole team.
+	// SubjectKind Whether the responsible party is one member or a whole team.
 	SubjectKind AssignmentSubjectKind `json:"subject_kind"`
 }
 
@@ -53210,6 +53298,9 @@ type MeResponse struct {
 		Scopes     *[]MeResponsePassportScopes `json:"scopes,omitempty"`
 	} `json:"passport,omitempty"`
 
+	// ReaderRenderingAvailable Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request.
+	ReaderRenderingAvailable *bool `json:"reader_rendering_available,omitempty"`
+
 	// Roles Effective role keys for this principal, and the one authority for them — `user.roles` is deliberately left unset here rather than repeating the same fact.
 	Roles []string `json:"roles"`
 
@@ -54276,7 +54367,8 @@ type Notice struct {
 	Kind NoticeKind `json:"kind"`
 
 	// Subject The headline the recipient reads, derived from the kind rather than supplied.
-	Subject string `json:"subject"`
+	Subject       string         `json:"subject"`
+	SystemDisplay *SystemDisplay `json:"system_display,omitempty"`
 }
 
 // NoticeAcquisition The original acquisition evidence. A confirmed duty runs from `occurred_at` or an officer's
@@ -54592,7 +54684,8 @@ type NotificationItem struct {
 	Subject string `json:"subject"`
 
 	// SummaryParts On an approval notice, its subject taken apart into the sentence and the field values, so a client can show the values as a list. Absent on any other notice, and on one written before the parts were kept.
-	SummaryParts *ApprovalSummaryParts `json:"summary_parts,omitempty"`
+	SummaryParts  *ApprovalSummaryParts `json:"summary_parts,omitempty"`
+	SystemDisplay *SystemDisplay        `json:"system_display,omitempty"`
 
 	// Target What the notice is about, when it is about one thing a reader can open. Both halves or
 	// neither — a type with no id names a KIND of thing and cannot be opened. Absent where
@@ -54607,7 +54700,8 @@ type NotificationItem struct {
 		// corrections list rather than that run: a manual re-run replaces the `run_id`, so the
 		// one a notice names may no longer be listed. Manual privacy reviews use
 		// `knowledge_document` (download the retained file), `email_signature` (the
-		// recipient's own account settings), `activity` (open the retained note in its
+		// recipient's own account settings), `retained_email_signature` (the departed member's
+		// signature in the controller review), `activity` (open the retained note in its
 		// drawer), `legal_entity` (Company settings), or `signature_template` (Company
 		// settings; `id` identifies the erasure whose review flagged the workspace template).
 		Type string `json:"type"`
@@ -57247,7 +57341,8 @@ type Receipt struct {
 	Summary string `json:"summary"`
 
 	// SummaryParts The summary taken apart, as on the approval it reports. Absent when the summary is a sentence alone.
-	SummaryParts *ApprovalSummaryParts `json:"summary_parts,omitempty"`
+	SummaryParts  *ApprovalSummaryParts `json:"summary_parts,omitempty"`
+	SystemDisplay *SystemDisplay        `json:"system_display,omitempty"`
 
 	// Undo The way back, on a receipt for work that was APPLIED rather than approved.
 	// A receipt for an approval the system decided carries none: that decision is revisitable through the record it named. A change made without asking — the close-date sweep's corrections — has this receipt as its only telling, so the way back travels with it.
@@ -57423,7 +57518,7 @@ type RecordAssignment struct {
 	// SubjectInactive True when the assigned user is deactivated. The assignment stays and keeps its label, so history stays readable; it simply reads as needing a successor.
 	SubjectInactive *bool `json:"subject_inactive,omitempty"`
 
-	// SubjectKind Whether the responsible party is one colleague or a whole team.
+	// SubjectKind Whether the responsible party is one member or a whole team.
 	SubjectKind AssignmentSubjectKind `json:"subject_kind"`
 
 	// SubjectName Resolved server-side so the row renders without a second lookup.
@@ -57620,6 +57715,9 @@ type RecordListsResponse struct {
 
 // RecordQualifyingEventRequest One exchange that makes ordinary business correspondence lawful.
 type RecordQualifyingEventRequest struct {
+	// AboutDeal The visible deal this exchange concerned. Omit for a request with no deal.
+	AboutDeal *openapi_types.UUID `json:"about_deal,omitempty"`
+
 	// AsksForQuote The contact asked for a quote or an offer. Only a `requested_by_subject` exchange may say so,
 	// and only such a request bears out a quote sent before any deal exists. A request to be
 	// called back supports a follow-up and not a quote.
@@ -57781,11 +57879,14 @@ type RefreshAcceptedStatus string
 // reason code without one says a message was refused and not who for, which is the question
 // the rep is actually asking — and it is why an erasure clears this list.
 type RefusedRecipient struct {
-	Address     string                       `json:"address"`
-	Category    *string                      `json:"category,omitempty"`
-	ReasonCode  string                       `json:"reason_code"`
-	SubjectId   *openapi_types.UUID          `json:"subject_id,omitempty"`
-	SubjectKind *RefusedRecipientSubjectKind `json:"subject_kind,omitempty"`
+	Address           string                       `json:"address"`
+	Category          *string                      `json:"category,omitempty"`
+	ReasonCode        string                       `json:"reason_code"`
+	RequestedCategory *string                      `json:"requested_category,omitempty"`
+	SendingEntityId   *openapi_types.UUID          `json:"sending_entity_id,omitempty"`
+	SendingEntityName *string                      `json:"sending_entity_name,omitempty"`
+	SubjectId         *openapi_types.UUID          `json:"subject_id,omitempty"`
+	SubjectKind       *RefusedRecipientSubjectKind `json:"subject_kind,omitempty"`
 }
 
 // RefusedRecipientSubjectKind defines model for RefusedRecipient.SubjectKind.
@@ -59619,6 +59720,23 @@ type RestrictedRecord struct {
 	RestrictedUntil time.Time `json:"restricted_until"`
 }
 
+// RetainedEmailSignature defines model for RetainedEmailSignature.
+type RetainedEmailSignature struct {
+	Id        openapi_types.UUID `json:"id"`
+	OwnerId   openapi_types.UUID `json:"owner_id"`
+	OwnerName string             `json:"owner_name"`
+
+	// PreviewHtml The saved markup through the send path's signature sanitizer.
+	PreviewHtml *string        `json:"preview_html,omitempty"`
+	Signature   EmailSignature `json:"signature"`
+
+	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
+}
+
 // RetentionAction What happens to a record past its window. One action per policy row — a ladder is separate
 // rows at increasing `retain_days`, never a multi-action row. `archive` retains the record;
 // `anonymize` and `erase` destroy data and are the two the retain-only posture suppresses.
@@ -60200,6 +60318,26 @@ type SaveMyTimezoneRequest struct {
 // and an agent never sends `chosen`.
 type SaveMyTimezoneRequestSource string
 
+// SaveRetainedEmailSignatureRequest defines model for SaveRetainedEmailSignatureRequest.
+type SaveRetainedEmailSignatureRequest struct {
+	// Body Plain text. Empty clears the signature. The cap is what a signature is
+	// FOR — a name, a role, a way to reach the sender — and past it a block
+	// is a document riding on every message.
+	Body            string `json:"body"`
+	ExpectedVersion int64  `json:"expected_version" maximum:"9007199254740991" minimum:"1"`
+
+	// Html Personal HTML as typed. Empty clears it; omitted on a write or preview
+	// leaves it unchanged. Rendering uses the signature sanitizer without
+	// expanding placeholders. Empty sanitized content uses the usual fallback.
+	Html *string `json:"html,omitempty"`
+
+	// Phone The member's phone number, for the workspace template. Omitted leaves it as it is.
+	Phone *string `json:"phone,omitempty"`
+
+	// Title The member's title, for the workspace template. Omitted leaves it as it is.
+	Title *string `json:"title,omitempty"`
+}
+
 // SaveWorkingHoursRequest The hours and days to store. The zone they are read on is the caller's
 // own time zone, set through `saveMyTimezone`.
 type SaveWorkingHoursRequest struct {
@@ -60438,6 +60576,9 @@ type SchedulingProfile struct {
 	ReplaceLink *bool   `json:"replace_link,omitempty"`
 	Slug        *string `json:"slug,omitempty"`
 	Title       string  `json:"title"`
+
+	// UseDefaultTitle Use the built-in meeting title. Explicitly false preserves the supplied title as custom wording.
+	UseDefaultTitle *bool `json:"use_default_title,omitempty"`
 
 	// VideoCall Add a video call link from the connected calendar (Google Meet or Microsoft Teams) to new meetings. Absent means on.
 	VideoCall *bool `json:"video_call,omitempty"`
@@ -62515,6 +62656,30 @@ type StageTransitionRecord struct {
 	UnsafeRate float64 `json:"unsafe_rate" maximum:"1" minimum:"0"`
 }
 
+// StandingOverride A recorded exception for one contact, message category and sending company.
+type StandingOverride struct {
+	Authority string `json:"authority"`
+
+	// Category The message category recorded by the exception; an older category is not a new permission.
+	Category   string             `json:"category"`
+	MayRevoke  bool               `json:"may_revoke"`
+	OverrideId openapi_types.UUID `json:"override_id"`
+	Reason     string             `json:"reason"`
+
+	// RecordedAt Original recording time, when retained provenance establishes it. Unknown for an erased origin or an older unmarked record.
+	RecordedAt        *time.Time          `json:"recorded_at,omitempty"`
+	RecordedByName    *string             `json:"recorded_by_name,omitempty"`
+	SavedAt           time.Time           `json:"saved_at"`
+	SendingEntityId   *openapi_types.UUID `json:"sending_entity_id,omitempty"`
+	SendingEntityName *string             `json:"sending_entity_name,omitempty"`
+}
+
+// StandingOverridesPage defines model for StandingOverridesPage.
+type StandingOverridesPage struct {
+	Data []StandingOverride `json:"data"`
+	Page PageInfo           `json:"page"`
+}
+
 // StartBackfillRequest defines model for StartBackfillRequest.
 type StartBackfillRequest struct {
 	// InternalMailPreviewToken Explicitly include internal operational history within the administrator's authorized source and date range. Must match this window's current preview. Omit to exclude internal history.
@@ -62569,6 +62734,21 @@ type SubscriptionConfirmationPageKind string
 
 // SubscriptionConfirmationPageState Their answer today, so somebody who already said yes is not asked as though they had not.
 type SubscriptionConfirmationPageState string
+
+// SystemDisplay defines model for SystemDisplay.
+type SystemDisplay struct {
+	Body           *string                        `json:"body,omitempty"`
+	GeneratedParts *[]SystemDisplayGeneratedParts `json:"generated_parts,omitempty"`
+	Locale         SystemDisplayLocale            `json:"locale"`
+	SourceVersion  *int64                         `json:"source_version,omitempty"`
+	Subject        *string                        `json:"subject,omitempty"`
+}
+
+// SystemDisplayGeneratedParts defines model for SystemDisplay.GeneratedParts.
+type SystemDisplayGeneratedParts string
+
+// SystemDisplayLocale defines model for SystemDisplay.Locale.
+type SystemDisplayLocale string
 
 // SystemHealth defines model for SystemHealth.
 type SystemHealth struct {
@@ -64457,9 +64637,9 @@ type UpdateInstallationSettingsRequest struct {
 	// empty object to clear it; sending a map replaces the whole stored map.
 	OidcGroupRoleMap *map[string]string `json:"oidc_group_role_map,omitempty"`
 
-	// RequireMfa Make a second factor mandatory: a member without a confirmed authenticator is
-	// confined to the MFA enrolment routes until they set one up. Omit to leave the policy
-	// unchanged.
+	// RequireMfa Require a second factor for password sign-in. Password sessions without a confirmed
+	// authenticator are confined to MFA enrolment routes. Provider sessions rely on the
+	// provider’s MFA policy. Omit to leave unchanged.
 	RequireMfa *bool `json:"require_mfa,omitempty"`
 
 	// RequireSso Close the password path: when true, an ordinary member may sign in only through a
@@ -64848,7 +65028,7 @@ type UpdateRecordAssignmentRequest struct {
 	RoleId    *openapi_types.UUID `json:"role_id,omitempty"`
 	SubjectId *openapi_types.UUID `json:"subject_id,omitempty"`
 
-	// SubjectKind Whether the responsible party is one colleague or a whole team.
+	// SubjectKind Whether the responsible party is one member or a whole team.
 	SubjectKind *AssignmentSubjectKind `json:"subject_kind,omitempty"`
 }
 
@@ -67727,7 +67907,8 @@ type WorklistItem struct {
 	Subject *AttentionSubject `json:"subject,omitempty"`
 
 	// SummaryParts On an approval, its title taken apart, so the row shows the sentence as its title and the proposed values as its supporting line. Absent when the title is a sentence alone.
-	SummaryParts *ApprovalSummaryParts `json:"summary_parts,omitempty"`
+	SummaryParts  *ApprovalSummaryParts `json:"summary_parts,omitempty"`
+	SystemDisplay *SystemDisplay        `json:"system_display,omitempty"`
 
 	// Title The server's own sentence for this item, where it has one.
 	Title *string `json:"title,omitempty"`
@@ -71412,6 +71593,22 @@ type RecordConsentParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// ListContactOverridesParams defines parameters for ListContactOverrides.
+type ListContactOverridesParams struct {
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
+
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // AllowContactJSONBody defines parameters for AllowContact.
@@ -77584,6 +77781,9 @@ type AssignNoticeCaseJSONRequestBody = AssignNoticeCase
 // ExcuseNoticeCaseJSONRequestBody defines body for ExcuseNoticeCase for application/json ContentType.
 type ExcuseNoticeCaseJSONRequestBody = ExcuseNoticeCase
 
+// SaveRetainedEmailSignatureJSONRequestBody defines body for SaveRetainedEmailSignature for application/json ContentType.
+type SaveRetainedEmailSignatureJSONRequestBody = SaveRetainedEmailSignatureRequest
+
 // CreateProductJSONRequestBody defines body for CreateProduct for application/json ContentType.
 type CreateProductJSONRequestBody = CreateProductRequest
 
@@ -78351,6 +78551,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "subject")
 	}
 
+	if raw, found := object["system_display"]; found {
+		err = json.Unmarshal(raw, &a.SystemDisplay)
+		if err != nil {
+			return fmt.Errorf("error reading 'system_display': %w", err)
+		}
+		delete(object, "system_display")
+	}
+
 	if raw, found := object["thread_key"]; found {
 		err = json.Unmarshal(raw, &a.ThreadKey)
 		if err != nil {
@@ -78770,6 +78978,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["subject"], err = json.Marshal(a.Subject)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'subject': %w", err)
+		}
+	}
+
+	if a.SystemDisplay != nil {
+		object["system_display"], err = json.Marshal(a.SystemDisplay)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'system_display': %w", err)
 		}
 	}
 
@@ -91764,6 +91979,9 @@ type ServerInterface interface {
 	// Grant or withdraw consent for one purpose — writes an append-only proof row.
 	// (POST /contacts/{id}/consent)
 	RecordConsent(w http.ResponseWriter, r *http.Request, id Id, params RecordConsentParams)
+	// List the contact's standing exceptions and their exact scope.
+	// (GET /contacts/{id}/consent/allow)
+	ListContactOverrides(w http.ResponseWriter, r *http.Request, id Id, params ListContactOverridesParams)
 	// Record a standing vouch that a machine-level refusal for one category may be overruled.
 	// (POST /contacts/{id}/consent/allow)
 	AllowContact(w http.ResponseWriter, r *http.Request, id Id)
@@ -92979,6 +93197,12 @@ type ServerInterface interface {
 	// End a disclosure duty on a stated ground, or record that it was met elsewhere.
 	// (POST /privacy/notice-cases/{id}/excuse)
 	ExcuseNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Review a retained signature whose owner cannot review it.
+	// (GET /privacy/retained-signatures/{id})
+	GetRetainedEmailSignature(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Save a human review of a retained member signature.
+	// (PUT /privacy/retained-signatures/{id})
+	SaveRetainedEmailSignature(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// List rate-card products (live by default; cursor-paginated).
 	// (GET /products)
 	ListProducts(w http.ResponseWriter, r *http.Request, params ListProductsParams)
@@ -96027,6 +96251,12 @@ func (_ Unimplemented) RecordConsent(w http.ResponseWriter, r *http.Request, id 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// List the contact's standing exceptions and their exact scope.
+// (GET /contacts/{id}/consent/allow)
+func (_ Unimplemented) ListContactOverrides(w http.ResponseWriter, r *http.Request, id Id, params ListContactOverridesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Record a standing vouch that a machine-level refusal for one category may be overruled.
 // (POST /contacts/{id}/consent/allow)
 func (_ Unimplemented) AllowContact(w http.ResponseWriter, r *http.Request, id Id) {
@@ -98454,6 +98684,18 @@ func (_ Unimplemented) AssignNoticeCase(w http.ResponseWriter, r *http.Request, 
 // End a disclosure duty on a stated ground, or record that it was met elsewhere.
 // (POST /privacy/notice-cases/{id}/excuse)
 func (_ Unimplemented) ExcuseNoticeCase(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Review a retained signature whose owner cannot review it.
+// (GET /privacy/retained-signatures/{id})
+func (_ Unimplemented) GetRetainedEmailSignature(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Save a human review of a retained member signature.
+// (PUT /privacy/retained-signatures/{id})
+func (_ Unimplemented) SaveRetainedEmailSignature(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -117134,6 +117376,69 @@ func (siw *ServerInterfaceWrapper) RecordConsent(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// ListContactOverrides operation middleware
+func (siw *ServerInterfaceWrapper) ListContactOverrides(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListContactOverridesParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListContactOverrides(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // AllowContact operation middleware
 func (siw *ServerInterfaceWrapper) AllowContact(w http.ResponseWriter, r *http.Request) {
 
@@ -134163,6 +134468,70 @@ func (siw *ServerInterfaceWrapper) ExcuseNoticeCase(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// GetRetainedEmailSignature operation middleware
+func (siw *ServerInterfaceWrapper) GetRetainedEmailSignature(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetRetainedEmailSignature(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SaveRetainedEmailSignature operation middleware
+func (siw *ServerInterfaceWrapper) SaveRetainedEmailSignature(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveRetainedEmailSignature(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListProducts operation middleware
 func (siw *ServerInterfaceWrapper) ListProducts(w http.ResponseWriter, r *http.Request) {
 
@@ -147120,6 +147489,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/contacts/{id}/consent", wrapper.RecordConsent)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/contacts/{id}/consent/allow", wrapper.ListContactOverrides)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/consent/allow", wrapper.AllowContact)
 	})
 	r.Group(func(r chi.Router) {
@@ -148333,6 +148705,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/privacy/notice-cases/{id}/excuse", wrapper.ExcuseNoticeCase)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/privacy/retained-signatures/{id}", wrapper.GetRetainedEmailSignature)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/privacy/retained-signatures/{id}", wrapper.SaveRetainedEmailSignature)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/products", wrapper.ListProducts)

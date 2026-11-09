@@ -17459,7 +17459,16 @@ export interface paths {
             };
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List the contact's standing exceptions and their exact scope.
+         * @description Live standing exceptions, newest saved or carried record first. Each names its message category and sending
+         *     company. These records grant no marketing consent. Every message is checked separately.
+         *     An older record with no sending company is shown without inferring one.
+         *
+         *     `may_revoke` uses the same authority and record-access checks as `revokeOverride`.
+         *     Revocation takes back that recorded exception and its carried copies, with a reason.
+         */
+        get: operations["listContactOverrides"];
         put?: never;
         /**
          * Record a standing vouch that a machine-level refusal for one category may be overruled.
@@ -17737,8 +17746,8 @@ export interface paths {
          * Record the exchange that makes business correspondence lawful.
          * @description A qualifying event is what a `business_correspondence` verdict reads to answer whether
          *     we may write to somebody at all (`getContactConsentGuard`). Most arrive on their own —
-         *     an inbound message, an inquiry, an open deal are all derived from records the product
-         *     already holds. Two cannot: **a card handed over in person**, and **a request the contact
+         *     an inbound message, an inquiry or a meeting can come from records the product already
+         *     holds. An open deal alone does not prove a request. Two kinds need a colleague's statement: **a card handed over in person**, and **a request the contact
          *     made themselves** by phone or across a counter. Both happened away from every system and
          *     are facts only the colleague who was there can state.
          *
@@ -22667,6 +22676,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/privacy/retained-signatures/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Review a retained signature whose owner cannot review it.
+         * @description Active human privacy controllers with unrestricted contact read and deletion rights may review a signature whose owner is not an active human member. Opening the review leaves the original unchanged.
+         */
+        get: operations["getRetainedEmailSignature"];
+        /**
+         * Save a human review of a retained member signature.
+         * @description The controller policy and owner eligibility are checked again at save. The stored version must match the review. Archived signatures stay archived. Text is changed only by the human's explicit save.
+         */
+        put: operations["saveRetainedEmailSignature"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/email-signature": {
         parameters: {
             query?: never;
@@ -25914,9 +25949,9 @@ export interface components {
              */
             require_sso?: boolean;
             /**
-             * @description Make a second factor mandatory: a member without a confirmed authenticator is
-             *     confined to the MFA enrolment routes until they set one up. Omit to leave the policy
-             *     unchanged.
+             * @description Require a second factor for password sign-in. Password sessions without a confirmed
+             *     authenticator are confined to MFA enrolment routes. Provider sessions rely on the
+             *     provider’s MFA policy. Omit to leave unchanged.
              */
             require_mfa?: boolean;
             /**
@@ -26573,10 +26608,9 @@ export interface components {
              */
             require_sso: boolean;
             /**
-             * @description When true, a second factor is mandatory: a member with no confirmed authenticator
-             *     is admitted only to the MFA enrolment routes until they set one up, the same
-             *     confinement a forced password change uses. A member who already holds a factor is
-             *     unaffected — they are challenged for it at sign-in either way.
+             * @description When true, password sessions without a confirmed authenticator are confined to
+             *     MFA enrolment routes. Provider sessions rely on the provider’s MFA policy.
+             *     Password sign-in with a confirmed factor always requires a challenge.
              */
             require_mfa: boolean;
             /**
@@ -30805,6 +30839,7 @@ export interface components {
         };
         /** @description One durable line addressed to one contact, as the raising call returns it. */
         Notice: {
+            system_display?: components["schemas"]["SystemDisplay"];
             /** Format: uuid */
             id: string;
             kind: components["schemas"]["NoticeKind"];
@@ -30864,6 +30899,7 @@ export interface components {
          *     whether they have already answered it.
          */
         NotificationItem: {
+            system_display?: components["schemas"]["SystemDisplay"];
             /** Format: uuid */
             id: string;
             /**
@@ -30901,7 +30937,8 @@ export interface components {
                  *     corrections list rather than that run: a manual re-run replaces the `run_id`, so the
                  *     one a notice names may no longer be listed. Manual privacy reviews use
                  *     `knowledge_document` (download the retained file), `email_signature` (the
-                 *     recipient's own account settings), `activity` (open the retained note in its
+                 *     recipient's own account settings), `retained_email_signature` (the departed member's
+                 *     signature in the controller review), `activity` (open the retained note in its
                  *     drawer), `legal_entity` (Company settings), or `signature_template` (Company
                  *     settings; `id` identifies the erasure whose review flagged the workspace template).
                  */
@@ -36320,6 +36357,21 @@ export interface components {
              */
             sections_omitted: ("stakeholders" | "our_side" | "risks")[];
         };
+        RetainedEmailSignature: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            owner_id: string;
+            owner_name: string;
+            version: components["schemas"]["RowVersion"];
+            signature: components["schemas"]["EmailSignature"];
+            /** @description The saved markup through the send path's signature sanitizer. */
+            readonly preview_html: string;
+        };
+        SaveRetainedEmailSignatureRequest: components["schemas"]["SaveEmailSignatureRequest"] & {
+            /** Format: int64 */
+            expected_version: number;
+        };
         EmailSignature: {
             /**
              * @description Plain-text fallback after personal HTML and the company template.
@@ -39677,6 +39729,8 @@ export interface components {
             horizon_days: number;
             buffer_minutes: number;
             title: string;
+            /** @description Use the built-in meeting title. Explicitly false preserves the supplied title as custom wording. */
+            use_default_title?: boolean;
             location: string;
             /** @description Derived from the host account display name; request values are ignored. Names longer than 200 characters are abbreviated for this profile. */
             host_name?: string;
@@ -39934,6 +39988,7 @@ export interface components {
          *     `withheld`.
          */
         Activity: {
+            system_display?: components["schemas"]["SystemDisplay"];
             /** @description Whether this caller may replace selected individual readers of this internal operational message. Absent for ordinary or withheld activities. */
             readonly can_share_internal?: boolean;
             /** @description Whether THIS caller may change THIS activity: the same question the server's write gate answers on a mutation — an `activity:update` grant, plus authorship, assignment or a linked record the caller may change, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
@@ -42768,7 +42823,7 @@ export interface components {
          */
         AssignmentRecordType: "company" | "deal" | "project";
         /**
-         * @description Whether the responsible party is one colleague or a whole team.
+         * @description Whether the responsible party is one member or a whole team.
          * @enum {string}
          */
         AssignmentSubjectKind: "user" | "team";
@@ -42827,6 +42882,7 @@ export interface components {
         RecordAssignmentListResponse: {
             data: components["schemas"]["RecordAssignment"][];
         };
+        /** @description A responsibility may name an agent seat as well as a human member. It grants no record access. The web picker lists active human colleagues. */
         CreateRecordAssignmentRequest: {
             subject_kind: components["schemas"]["AssignmentSubjectKind"];
             /** Format: uuid */
@@ -43311,6 +43367,11 @@ export interface components {
         };
         /** @description One exchange that makes ordinary business correspondence lawful. */
         RecordQualifyingEventRequest: {
+            /**
+             * Format: uuid
+             * @description The visible deal this exchange concerned. Omit for a request with no deal.
+             */
+            about_deal?: string;
             /**
              * @description The two kinds a human may state. `in_person` is an exchange that happened in a room —
              *     a card handed over at a stand. `requested_by_subject` is the contact asking us to write
@@ -43862,7 +43923,20 @@ export interface components {
             /** @description Opaque cursor for the next page, or null if none. */
             next_cursor?: string | null;
         };
+        SystemDisplay: {
+            /** @enum {string} */
+            locale: "en" | "de" | "vi";
+            subject?: string;
+            body?: string;
+            generated_parts?: ("subject" | "body")[];
+            /** Format: int64 */
+            source_version?: number;
+        };
         ActivityReaderRenderingRequest: {
+            /** @enum {string} */
+            part?: "subject" | "body";
+            /** Format: int64 */
+            expected_source_version?: number;
             /**
              * @description The language to show the text in, normally the reader's interface language.
              *     Absent means the language the reader chose for their seat, else the
@@ -43876,6 +43950,10 @@ export interface components {
          *     nowhere.
          */
         ActivityReaderRendering: {
+            /** Format: int64 */
+            source_version?: number;
+            /** @enum {string} */
+            part?: "subject" | "body";
             /** Format: uuid */
             activity_id: string;
             /**
@@ -45755,6 +45833,8 @@ export interface components {
             pipelines?: components["schemas"]["Pipeline"][];
         };
         MeResponse: {
+            /** @description Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request. */
+            reader_rendering_available?: boolean;
             analytics_startup?: components["schemas"]["AnalyticsStartup"];
             user: components["schemas"]["User"];
             /** @description The installation's company name (the installation.name setting). Shown as the typed-confirmation target of the "Reset data" action — the exact string that endpoint validates. */
@@ -49968,6 +50048,7 @@ export interface components {
         };
         /** @description A staged 🟡 confirm-first action awaiting human decision. */
         Approval: {
+            system_display?: components["schemas"]["SystemDisplay"];
             preview?: components["schemas"]["ApprovalPreview"];
             /** @description For a pending commitment, whether its named task assignee cannot receive the task. True for deactivated, archived, missing, or agent seats. An invited colleague can. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee. */
             readonly assignee_inactive?: boolean;
@@ -51015,6 +51096,10 @@ export interface components {
             subject_id?: string;
             reason_code: string;
             category?: string;
+            /** Format: uuid */
+            sending_entity_id?: string;
+            sending_entity_name?: string;
+            requested_category?: string;
         };
         /**
          * @description What a refused send left behind. A SNAPSHOT of the engine's answer at the moment it was
@@ -53696,6 +53781,31 @@ export interface components {
              */
             lift_blocked_by?: "address" | "restriction" | "subject_decision" | "level" | "permission" | null;
         };
+        /** @description A recorded exception for one contact, message category and sending company. */
+        StandingOverride: {
+            /** Format: uuid */
+            override_id: string;
+            /** @description The message category recorded by the exception; an older category is not a new permission. */
+            category: string;
+            reason: string;
+            authority: string;
+            /** Format: date-time */
+            saved_at: string;
+            /**
+             * Format: date-time
+             * @description Original recording time, when retained provenance establishes it. Unknown for an erased origin or an older unmarked record.
+             */
+            recorded_at?: string | null;
+            recorded_by_name?: string | null;
+            /** Format: uuid */
+            sending_entity_id?: string | null;
+            sending_entity_name?: string | null;
+            may_revoke: boolean;
+        };
+        StandingOverridesPage: {
+            data: components["schemas"]["StandingOverride"][];
+            page: components["schemas"]["PageInfo"];
+        };
         /** @description The standing override just recorded, by id. The category and reason are what the caller sent and the authority is their own session's, so the id is the one fact the caller could not have known — and the handle a later revoke takes. */
         RecordedOverride: {
             /**
@@ -55471,6 +55581,7 @@ export interface components {
          *     adds none.
          */
         AttentionItem: {
+            system_display?: components["schemas"]["SystemDisplay"];
             /** @description Sent as true on a task whose reminder is due for the reader, who is its assignee and reads their own work. Absent otherwise. */
             reminder_due?: boolean;
             /** @description Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open. Absent when there is no such mail or the reader answered Not yet to this mail. */
@@ -56337,6 +56448,7 @@ export interface components {
          *     client draws the summary alone rather than inventing something to open.
          */
         Receipt: {
+            system_display?: components["schemas"]["SystemDisplay"];
             close_date_change?: components["schemas"]["CloseDateChange"];
             /**
              * Format: uuid
@@ -57114,6 +57226,7 @@ export interface components {
          *     browser does not.
          */
         WorklistItem: {
+            system_display?: components["schemas"]["SystemDisplay"];
             /** @description On an approval, its title taken apart, so the row shows the sentence as its title and the proposed values as its supporting line. Absent when the title is a sentence alone. */
             summary_parts?: components["schemas"]["ApprovalSummaryParts"];
             /** @description Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open. Absent when there is no such mail or the reader answered Not yet to this mail. */
@@ -85704,6 +85817,47 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listContactOverrides: {
+        parameters: {
+            query?: {
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
+                limit?: components["parameters"]["Limit"];
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The live standing exceptions and their scope. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StandingOverridesPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     allowContact: {
         parameters: {
             query?: never;
@@ -93568,6 +93722,63 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getRetainedEmailSignature: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The retained signature and its owner. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetainedEmailSignature"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    saveRetainedEmailSignature: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveRetainedEmailSignatureRequest"];
+            };
+        };
+        responses: {
+            /** @description The retained signature and its owner. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetainedEmailSignature"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

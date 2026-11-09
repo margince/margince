@@ -24,13 +24,15 @@ For why the schema is shaped this way rather than what it holds, read
 [explanation/write-backbone.md](../../explanation/write-backbone.md). For which
 module to put a change in, read [modules.md](../modules.md).
 
+[Foreign keys between owning areas](coupling.md) measures the dependencies an extraction must replace.
+
 ## The shape
 
 | | |
 |---|--:|
 | Tables | 360 |
-| Columns | 4358 |
-| Foreign keys | 598 |
+| Columns | 4369 |
+| Foreign keys | 602 |
 | Owning areas | 38 |
 
 ## The 12 records everything else hangs off
@@ -42,19 +44,20 @@ Ranked by how many foreign keys point at them.
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 153 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 47 | 51 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 38 | 49 |
-| [`activity`](activities.md#activity) | [activities](activities.md) | 75 | 45 |
+| [`activity`](activities.md#activity) | [activities](activities.md) | 77 | 45 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 49 | 30 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 48 | 18 |
 | [`project`](projects.md#project) | [projects](projects.md) | 24 | 12 |
+| [`legal_entity`](contacts.md#legal_entity) | [contacts](contacts.md) | 29 | 9 |
 | [`passport`](identity.md#passport) | [identity](identity.md) | 12 | 9 |
 | [`stage`](deals.md#stage) | [deals](deals.md) | 10 | 9 |
 | [`team`](identity.md#team) | [identity](identity.md) | 6 | 9 |
 | [`consent_purpose`](consent.md#consent_purpose) | [consent](consent.md) | 7 | 8 |
-| [`pipeline`](deals.md#pipeline) | [deals](deals.md) | 8 | 7 |
 
 ```mermaid
 erDiagram
     team ||--o{ app_user : routine_mail_team_id
+    legal_entity ||--o{ company : assess_against_entity_id
     app_user ||--o{ company : owner_id
     app_user ||--o{ company : source_author_id
     lead ||--o{ contact : converted_from_lead_id
@@ -64,12 +67,12 @@ erDiagram
     app_user ||--o{ activity : assignee_id
     app_user ||--o{ activity : host_user_id
     app_user ||--o{ activity : invitation_sender
+    legal_entity ||--o{ activity : legal_entity_id
     app_user ||--o{ activity : sent_by_colleague
     app_user ||--o{ activity : source_author_id
     company ||--o{ deal : company_id
     app_user ||--o{ deal : owner_id
     company ||--o{ deal : partner_company_id
-    pipeline ||--o{ deal : pipeline_id
     project ||--o{ deal : project_id
     app_user ||--o{ deal : source_author_id
     company ||--o{ lead : company_id
@@ -85,7 +88,6 @@ erDiagram
     app_user ||--o{ project : source_author_id
     app_user ||--o{ passport : granted_by
     app_user ||--o{ passport : on_behalf_of
-    pipeline ||--o{ stage : pipeline_id
 ```
 
 ## The pages
@@ -135,7 +137,7 @@ erDiagram
 
 | Table | Area | Columns | Referenced by |
 |---|---|--:|--:|
-| [`activity`](activities.md#activity) | activities | 75 | 45 |
+| [`activity`](activities.md#activity) | activities | 77 | 45 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
 | [`activity_calendar_method_backfill`](activities.md#activity_calendar_method_backfill) | activities | 5 | 0 |
 | [`activity_clock_refold_mark`](activities.md#activity_clock_refold_mark) | activities | 3 | 0 |
@@ -203,12 +205,12 @@ erDiagram
 | [`capture_auto_enrich_state`](capture.md#capture_auto_enrich_state) | capture | 7 | 0 |
 | [`capture_backfill`](capture.md#capture_backfill) | capture | 31 | 5 |
 | [`capture_backfill_creation`](capture.md#capture_backfill_creation) | capture | 4 | 0 |
-| [`capture_connection`](capture.md#capture_connection) | capture | 30 | 2 |
+| [`capture_connection`](capture.md#capture_connection) | capture | 31 | 2 |
 | [`capture_counterparty_hold`](capture.md#capture_counterparty_hold) | capture | 6 | 0 |
 | [`capture_digest`](capture.md#capture_digest) | capture | 5 | 0 |
 | [`capture_exclusion`](capture.md#capture_exclusion) | capture | 7 | 0 |
 | [`capture_freemail_domain`](capture.md#capture_freemail_domain) | capture | 5 | 0 |
-| [`capture_import`](capture.md#capture_import) | capture | 13 | 0 |
+| [`capture_import`](capture.md#capture_import) | capture | 14 | 0 |
 | [`capture_owner_identity`](capture.md#capture_owner_identity) | capture | 7 | 0 |
 | [`capture_owner_identity_withdrawn`](capture.md#capture_owner_identity_withdrawn) | capture | 10 | 0 |
 | [`capture_party_admission_cursor`](capture.md#capture_party_admission_cursor) | capture | 4 | 0 |
@@ -230,7 +232,7 @@ erDiagram
 | [`communication_basis`](consent.md#communication_basis) | consent | 12 | 0 |
 | [`communication_decision`](consent.md#communication_decision) | consent | 30 | 0 |
 | [`communication_instruction`](consent.md#communication_instruction) | consent | 19 | 2 |
-| [`communication_override`](consent.md#communication_override) | consent | 11 | 1 |
+| [`communication_override`](consent.md#communication_override) | consent | 12 | 1 |
 | [`communication_review`](consent.md#communication_review) | consent | 10 | 2 |
 | [`communication_suppression`](consent.md#communication_suppression) | consent | 16 | 1 |
 | [`company`](contacts.md#company) | contacts | 47 | 51 |
@@ -254,10 +256,10 @@ erDiagram
 | [`consent_doi_token`](consent.md#consent_doi_token) | consent | 7 | 0 |
 | [`consent_event`](consent.md#consent_event) | consent | 16 | 0 |
 | [`consent_purpose`](consent.md#consent_purpose) | consent | 7 | 8 |
-| [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 15 | 0 |
+| [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 16 | 0 |
 | [`consent_text_version`](consent.md#consent_text_version) | consent | 14 | 1 |
 | [`contact`](contacts.md#contact) | contacts | 38 | 49 |
-| [`contact_acquisition_evidence`](contacts.md#contact_acquisition_evidence) | contacts | 13 | 1 |
+| [`contact_acquisition_evidence`](contacts.md#contact_acquisition_evidence) | contacts | 14 | 1 |
 | [`contact_address_country`](contacts.md#contact_address_country) | contacts | 3 | 0 |
 | [`contact_brief`](compose.md#contact_brief) | compose | 6 | 0 |
 | [`contact_channel_identity`](contacts.md#contact_channel_identity) | contacts | 14 | 0 |
@@ -350,7 +352,7 @@ erDiagram
 | [`lead_privacy_notice`](consent.md#lead_privacy_notice) | consent | 12 | 0 |
 | [`lead_score_history`](contacts.md#lead_score_history) | contacts | 9 | 0 |
 | [`lead_source`](contacts.md#lead_source) | contacts | 10 | 0 |
-| [`legal_entity`](contacts.md#legal_entity) | contacts | 29 | 5 |
+| [`legal_entity`](contacts.md#legal_entity) | contacts | 29 | 9 |
 | [`legal_entity_member`](contacts.md#legal_entity_member) | contacts | 4 | 0 |
 | [`legal_review`](deals.md#legal_review) | deals | 17 | 1 |
 | [`linkedin_account`](contacts.md#linkedin_account) | contacts | 6 | 0 |
@@ -370,7 +372,7 @@ erDiagram
 | [`meeting_readiness`](activities.md#meeting_readiness) | activities | 9 | 0 |
 | [`mfa_challenge_spent`](identity.md#mfa_challenge_spent) | identity | 2 | 0 |
 | [`mfa_recovery_code`](identity.md#mfa_recovery_code) | identity | 5 | 0 |
-| [`notice`](notices.md#notice) | notices | 16 | 0 |
+| [`notice`](notices.md#notice) | notices | 17 | 0 |
 | [`notification_digest_run`](notices.md#notification_digest_run) | notices | 4 | 0 |
 | [`notification_preference`](notices.md#notification_preference) | notices | 5 | 0 |
 | [`oauth_authorization_code`](identity.md#oauth_authorization_code) | identity | 13 | 0 |
@@ -434,7 +436,7 @@ erDiagram
 | [`sdr_handoff`](contacts.md#sdr_handoff) | contacts | 17 | 1 |
 | [`sdr_handoff_event`](contacts.md#sdr_handoff_event) | contacts | 10 | 0 |
 | [`sdr_handoff_reason`](contacts.md#sdr_handoff_reason) | contacts | 9 | 2 |
-| [`session`](identity.md#session) | identity | 10 | 0 |
+| [`session`](identity.md#session) | identity | 11 | 0 |
 | [`setting`](platform.md#setting) | platform | 3 | 0 |
 | [`setup_token`](identity.md#setup_token) | identity | 4 | 0 |
 | [`signal`](signals.md#signal) | signals | 30 | 3 |
@@ -445,7 +447,7 @@ erDiagram
 | [`stage_exit_criterion`](deals.md#stage_exit_criterion) | deals | 12 | 1 |
 | [`stage_progression_outcome`](deals.md#stage_progression_outcome) | deals | 19 | 0 |
 | [`stage_progression_policy`](deals.md#stage_progression_policy) | deals | 18 | 0 |
-| [`stored_object_intent`](platform.md#stored_object_intent) | platform | 3 | 0 |
+| [`stored_object_intent`](platform.md#stored_object_intent) | platform | 5 | 0 |
 | [`suggestion_dismissal`](compose.md#suggestion_dismissal) | compose | 4 | 0 |
 | [`system_log`](platform.md#system_log) | platform | 8 | 0 |
 | [`tag`](collections.md#tag) | collections | 10 | 3 |

@@ -25937,6 +25937,32 @@ paths:
   /contacts/{id}/consent/allow:
     parameters:
       - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Compliance]
+      operationId: listContactOverrides
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: list_contact_overrides, router: read_details, action: contact_overrides, tier: auto_execute, scope: read, served_by: route }
+      summary: List the contact's standing exceptions and their exact scope.
+      description: |
+        Live standing exceptions, newest saved or carried record first. Each names its message category and sending
+        company. These records grant no marketing consent. Every message is checked separately.
+        An older record with no sending company is shown without inferring one.
+
+        `may_revoke` uses the same authority and record-access checks as `revokeOverride`.
+        Revocation takes back that recorded exception and its carried copies, with a reason.
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: The live standing exceptions and their scope.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StandingOverridesPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Compliance]
       operationId: allowContact
@@ -26327,8 +26353,8 @@ paths:
       description: |
         A qualifying event is what a `business_correspondence` verdict reads to answer whether
         we may write to somebody at all (`getContactConsentGuard`). Most arrive on their own —
-        an inbound message, an inquiry, an open deal are all derived from records the product
-        already holds. Two cannot: **a card handed over in person**, and **a request the contact
+        an inbound message, an inquiry or a meeting can come from records the product already
+        holds. An open deal alone does not prove a request. Two kinds need a colleague's statement: **a card handed over in person**, and **a request the contact
         made themselves** by phone or across a counter. Both happened away from every system and
         are facts only the colleague who was there can state.
 
@@ -33412,6 +33438,54 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /privacy/retained-signatures/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [Compliance]
+      operationId: getRetainedEmailSignature
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Review a retained signature whose owner cannot review it.
+      description: >-
+        Active human privacy controllers with unrestricted contact read and deletion rights may review a signature whose owner is not an active human member. Opening the review leaves the original unchanged.
+      responses:
+        '200':
+          description: The retained signature and its owner.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RetainedEmailSignature' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    put:
+      tags: [Compliance]
+      operationId: saveRetainedEmailSignature
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Save a human review of a retained member signature.
+      description: >-
+        The controller policy and owner eligibility are checked again at save. The stored version must match the review. Archived signatures stay archived. Text is changed only by the human's explicit save.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SaveRetainedEmailSignatureRequest' }
+      responses:
+        '200':
+          description: The retained signature and its owner.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RetainedEmailSignature' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /me/email-signature:
     get:
       tags: [Contacts]
@@ -38339,9 +38413,9 @@ components:
         require_mfa:
           type: boolean
           description: |
-            Make a second factor mandatory: a member without a confirmed authenticator is
-            confined to the MFA enrolment routes until they set one up. Omit to leave the policy
-            unchanged.
+            Require a second factor for password sign-in. Password sessions without a confirmed
+            authenticator are confined to MFA enrolment routes. Provider sessions rely on the
+            provider’s MFA policy. Omit to leave unchanged.
         dynamic_client_registration:
           type: boolean
           description: |
@@ -39284,10 +39358,9 @@ components:
         require_mfa:
           type: boolean
           description: |
-            When true, a second factor is mandatory: a member with no confirmed authenticator
-            is admitted only to the MFA enrolment routes until they set one up, the same
-            confinement a forced password change uses. A member who already holds a factor is
-            unaffected — they are challenged for it at sign-in either way.
+            When true, password sessions without a confirmed authenticator are confined to
+            MFA enrolment routes. Provider sessions rely on the provider’s MFA policy.
+            Password sign-in with a confirmed factor always requires a challenge.
         oidc_group_role_map:
           type: object
           additionalProperties:
@@ -44022,6 +44095,8 @@ components:
       description: One durable line addressed to one contact, as the raising call returns it.
       required: [id, kind, subject, created_at]
       properties:
+        system_display:
+          $ref: '#/components/schemas/SystemDisplay'
         id: { type: string, format: uuid }
         kind: { $ref: '#/components/schemas/NoticeKind' }
         subject:
@@ -44087,6 +44162,8 @@ components:
         whether they have already answered it.
       required: [id, kind, subject, created_at]
       properties:
+        system_display:
+          $ref: '#/components/schemas/SystemDisplay'
         id: { type: string, format: uuid }
         kind:
           type: string
@@ -44126,7 +44203,8 @@ components:
                 corrections list rather than that run: a manual re-run replaces the `run_id`, so the
                 one a notice names may no longer be listed. Manual privacy reviews use
                 `knowledge_document` (download the retained file), `email_signature` (the
-                recipient's own account settings), `activity` (open the retained note in its
+                recipient's own account settings), `retained_email_signature` (the departed member's
+                signature in the controller review), `activity` (open the retained note in its
                 drawer), `legal_entity` (Company settings), or `signature_template` (Company
                 settings; `id` identifies the erasure whose review flagged the workspace template).
             id: { type: string, format: uuid }
@@ -51417,6 +51495,24 @@ components:
             enum: [stakeholders, our_side, risks]
             x-extensible-enum: true
 
+    RetainedEmailSignature:
+      type: object
+      required: [id, owner_id, owner_name, version, signature, preview_html]
+      properties:
+        id: { type: string, format: uuid }
+        owner_id: { type: string, format: uuid }
+        owner_name: { type: string }
+        version: { $ref: '#/components/schemas/RowVersion' }
+        signature: { $ref: '#/components/schemas/EmailSignature' }
+        preview_html: { type: string, readOnly: true, description: The saved markup through the send path's signature sanitizer. }
+    SaveRetainedEmailSignatureRequest:
+      allOf:
+        - { $ref: '#/components/schemas/SaveEmailSignatureRequest' }
+        - type: object
+          required: [expected_version]
+          properties:
+            expected_version: { type: integer, format: int64, minimum: 1, maximum: 9007199254740991 }
+
     EmailSignature:
       type: object
       required: [body, html, title, phone, template_active]
@@ -55039,6 +55135,7 @@ components:
         horizon_days: { type: integer, minimum: 1, maximum: 90 }
         buffer_minutes: { type: integer, minimum: 0, maximum: 120 }
         title: { type: string, maxLength: 200 }
+        use_default_title: { type: boolean, description: Use the built-in meeting title. Explicitly false preserves the supplied title as custom wording. }
         location: { type: string, maxLength: 1000 }
         host_name: { type: string, maxLength: 200, description: Derived from the host account display name; request values are ignored. Names longer than 200 characters are abbreviated for this profile. }
         company_name: { type: string, maxLength: 200, description: The name of the legal entity an admin assigns the host to; request values are ignored. Names longer than 200 characters are abbreviated for this profile. }
@@ -55287,6 +55384,8 @@ components:
         `withheld`.
       required: [id, kind, occurred_at, occurred_precision, source, captured_by, created_at, updated_at, offers_email]
       properties:
+        system_display:
+          $ref: '#/components/schemas/SystemDisplay'
         can_share_internal:
           type: boolean
           readOnly: true
@@ -58768,7 +58867,7 @@ components:
       type: string
       enum: [user, team]
       x-extensible-enum: true
-      description: Whether the responsible party is one colleague or a whole team.
+      description: Whether the responsible party is one member or a whole team.
 
     RecordRoleListResponse:
       type: object
@@ -58864,6 +58963,9 @@ components:
 
     CreateRecordAssignmentRequest:
       type: object
+      description: >-
+        A responsibility may name an agent seat as well as a human member. It grants
+        no record access. The web picker lists active human colleagues.
       required: [subject_kind, subject_id, role_id]
       properties:
         subject_kind: { $ref: '#/components/schemas/AssignmentSubjectKind' }
@@ -59393,6 +59495,10 @@ components:
       required: [kind, note, occurred_at]
       description: One exchange that makes ordinary business correspondence lawful.
       properties:
+        about_deal:
+          type: string
+          format: uuid
+          description: The visible deal this exchange concerned. Omit for a request with no deal.
         kind:
           type: string
           enum: [in_person, requested_by_subject]
@@ -59957,10 +60063,25 @@ components:
           type: [string, 'null']
           description: Opaque cursor for the next page, or null if none.
 
+    SystemDisplay:
+      type: object
+      additionalProperties: false
+      required: [locale]
+      properties:
+        locale: { type: string, enum: [en, de, vi], x-extensible-enum: true }
+        subject: { type: string }
+        body: { type: string }
+        generated_parts:
+          type: array
+          items: { type: string, enum: [subject, body], x-extensible-enum: true }
+        source_version: { type: integer, format: int64 }
+
     ActivityReaderRenderingRequest:
       type: object
       additionalProperties: false
       properties:
+        part: { type: string, enum: [subject, body] }
+        expected_source_version: { type: integer, format: int64, minimum: 1 }
         locale:
           type: string
           enum: [en, de, vi]
@@ -59975,6 +60096,8 @@ components:
         nowhere.
       required: [activity_id, target_language, unchanged, generated_at]
       properties:
+        source_version: { type: integer, format: int64 }
+        part: { type: string, enum: [subject, body], x-extensible-enum: true }
         activity_id: { type: string, format: uuid }
         source_language:
           type: [string, 'null']
@@ -62875,6 +62998,9 @@ components:
       type: object
       required: [user, roles, teams, workspace_name, non_production, admin_password_link]
       properties:
+        reader_rendering_available:
+          type: boolean
+          description: Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request.
         analytics_startup: { $ref: '#/components/schemas/AnalyticsStartup' }
         user: { $ref: '#/components/schemas/User' }
         workspace_name:
@@ -68945,6 +69071,8 @@ components:
       description: A staged 🟡 confirm-first action awaiting human decision.
       required: [id, kind, status, proposed_by, created_at]
       properties:
+        system_display:
+          $ref: '#/components/schemas/SystemDisplay'
         preview:
           $ref: '#/components/schemas/ApprovalPreview'
         assignee_inactive:
@@ -70142,6 +70270,9 @@ components:
         subject_id: { type: string, format: uuid }
         reason_code: { type: string }
         category: { type: string }
+        sending_entity_id: { type: string, format: uuid }
+        sending_entity_name: { type: string }
+        requested_category: { type: string }
 
     CommunicationReview:
       type: object
@@ -72881,6 +73012,34 @@ components:
             send yet. `subject_decision`: the contact set it and only they change it. `level`: it
             was recorded at your level or above. Null when `may_lift` is true.
 
+    StandingOverride:
+      type: object
+      description: A recorded exception for one contact, message category and sending company.
+      required: [override_id, category, reason, authority, saved_at, may_revoke]
+      properties:
+        override_id: { type: string, format: uuid }
+        category:
+          type: string
+          description: The message category recorded by the exception; an older category is not a new permission.
+        reason: { type: string }
+        authority: { type: string }
+        saved_at: { type: string, format: date-time }
+        recorded_at:
+          type: [string, 'null']
+          format: date-time
+          description: Original recording time, when retained provenance establishes it. Unknown for an erased origin or an older unmarked record.
+        recorded_by_name: { type: [string, 'null'] }
+        sending_entity_id: { type: [string, 'null'], format: uuid }
+        sending_entity_name: { type: [string, 'null'] }
+        may_revoke: { type: boolean }
+
+    StandingOverridesPage:
+      type: object
+      required: [data, page]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/StandingOverride' } }
+        page: { $ref: '#/components/schemas/PageInfo' }
+
     RecordedOverride:
       type: object
       description: >-
@@ -74962,6 +75121,8 @@ components:
         adds none.
       required: [id, source, actions]
       properties:
+        system_display:
+          $ref: '#/components/schemas/SystemDisplay'
         reminder_due:
           type: boolean
           description: >-
@@ -75902,6 +76063,8 @@ components:
         client draws the summary alone rather than inventing something to open.
       required: [id, kind, summary, occurred_at]
       properties:
+        system_display:
+          $ref: '#/components/schemas/SystemDisplay'
         close_date_change: { $ref: '#/components/schemas/CloseDateChange' }
         id: { type: string, format: uuid, description: 'The completed act, as its own surface spells it.' }
         source:
@@ -76753,6 +76916,8 @@ components:
         browser does not.
       required: [id, source, category, level, actions, because, consequence, occurred_precision]
       properties:
+        system_display:
+          $ref: '#/components/schemas/SystemDisplay'
         summary_parts:
           allOf: [{ $ref: '#/components/schemas/ApprovalSummaryParts' }]
           description: >-

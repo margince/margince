@@ -9,6 +9,9 @@ import {
   useReviewActions,
 } from "../../lib/reviewactions";
 import type { Route } from "../../lib/router";
+import { settingsRouteTarget } from "../../lib/settingsrouting";
+import { SIGNATURE_REVIEW_PARAM } from "../../lib/signaturereviewlink";
+import { useUrlParams } from "../../lib/urlstate";
 import { AiBudgetCard } from "../ai/ai-admin";
 import { ModelPricesCard } from "../ai/ai-price-sync";
 import { AiProviderKeysCard } from "../ai/ai-provider-keys";
@@ -66,6 +69,7 @@ import { NotificationSettingsCard } from "./notification-settings";
 import { OAuthAppsCard } from "./oauth-apps-card";
 import { PartnerStagesCard } from "./partnerstages";
 import { FxRatesCard } from "./rates";
+import { RetainedSignaturePanel } from "./retainedsignature";
 import { RolesSettings } from "./roles-settings";
 import { AiAccessTab } from "./settings.aiaccess";
 import { JurisdictionCard } from "./settings.jurisdiction";
@@ -413,9 +417,27 @@ export function SettingsScreen({
   reviewActions,
 }: Readonly<{ route: Route; reviewActions?: ReviewActions }>) {
   const inheritedReviewActions = useReviewActions();
+  const [params] = useUrlParams();
   const t = useT();
   const address = useSettingsDestination(route);
   const reach = useSettingsReach();
+  const signatureReview = params.get(SIGNATURE_REVIEW_PARAM);
+  // A linked controller review has its own authority, separate from privacy settings.
+  const target = settingsRouteTarget(route);
+  if (
+    signatureReview &&
+    target.kind === "page" &&
+    target.page === "privacy" &&
+    (target.tab === undefined || target.tab === "requests")
+  ) {
+    return (
+      <div className="wrap">
+        <SettingsSavePage>
+          <RetainedSignaturePanel id={signatureReview} />
+        </SettingsSavePage>
+      </div>
+    );
+  }
   // No nav column and no heading of its own: the entries are the sidebar's second
   // level now, and the shell's page head names the entry, so the page is that
   // entry's own content across the whole reading column.

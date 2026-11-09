@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // organizerHostCandidatesSQL selects the synced meetings whose organizer is
@@ -32,7 +33,7 @@ func meetingOrganizerHostDataTask(pool *pgxpool.Pool) datatask.Task {
 	meetings := activities.NewStore(InstallationDB(pool))
 	return datatask.Task{
 		ID: "core/1793690361_meeting_organizer_host", Version: 1,
-		Title: "Naming each calendar meeting's organizer as its host",
+		Title: systemtext.Literal("datatask.title.core.1793690361_meeting_organizer_host"),
 		Steps: []datatask.Step{{
 			Name: "claim_organizer_hosts", Limit: 100, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

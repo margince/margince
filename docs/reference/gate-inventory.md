@@ -458,6 +458,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `statutoryfloorsingle_test.go` | H2 | The statutory retention floor is spelled once, and every destructive activity path applies that one spelling. |
 | `storedobjectdeclaration_test.go` | H2 | A writer that puts bytes into the object store declares them first, or says why its key needs no declaration. |
 | `suppressionauthority_test.go` | H2 | Every kind of suppression says who decided it. |
+| `systemtextproducer_test.go` | H2 | _(no doc comment)_ |
 | `tablelistpointer_test.go` | H1 | Every module names its entity-model page as its table list, and no Go comment copies that list. |
 | `tableownershipdiscovery_test.go` | H2 | Which packages the ownership gate walks, derived rather than remembered. |
 | `taskdeadlinereaders_test.go` | H2 | _(no doc comment)_ |
@@ -686,6 +687,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | Gate | Hardness | What it holds |
 |---|---|---|
 | `docspagelength_test.go` | H3 | A docs page an agent cannot navigate is a page it does not read, and the failure is silent: it greps, lands in the middle of six hundred lines, and answers from the part it happened to see. |
+| `entitymodelcoupling_test.go` | H3 | _(no doc comment)_ |
 | `laneconnbudget_test.go` | H3 | The integration lane's connection demand is concurrent packages times what one package may hold, and that product has to fit inside the compose Postgres's max\_connections. |
 | `mcptoolcount_test.go` | H2 | How much of a user's tool budget this server spends. |
 | `rulebooklength_test.go` | H3 | A rulebook is read in full by every session and, for its Craftsmanship section, by every gate prompt, so its length is a running cost rather than a matter of taste. |
@@ -696,6 +698,7 @@ The eight shapes, what each is for, and how each one silently passes:
 
 | Gate | Hardness | What it holds |
 |---|---|---|
+| `audiencebinding_test.go` | H2 | _(no doc comment)_ |
 | `bookingdisplay_test.go` | H2 | A projection may append display values, but cannot pass addresses to another call or retain them in another assignment for a later send. |
 | `extensionsqlscopecases_test.go` | H2 | The SQL-scope gate's own test, driven with synthetic unit sources rather than the tree, because the real units are supposed to pass. |
 | `historyfieldlabelsfalsify_test.go` | H3 | The label census, falsified. |

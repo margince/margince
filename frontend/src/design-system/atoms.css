@@ -444,6 +444,7 @@
   flex-direction: column;
 }
 .modal-drawer:has(> .drawer-head) > .drawer-body {
+  position: relative;
   flex: 1;
   min-block-size: 0;
   overflow-y: auto;
@@ -523,6 +524,7 @@
       :has(> .form-stack:not(.drawer-body) + .actions)
     )
     > .form-stack:where(:not(.drawer-body)) {
+    position: relative;
     flex: 0 1 auto;
     min-block-size: 0;
     overflow-y: auto;

@@ -231,7 +231,7 @@ func (s *Service) LoginViaFederatedIdentity(ctx context.Context, provider string
 		if grantErr := s.grantMappedRoles(ctx, tx, userID, mappedRoles); grantErr != nil {
 			return grantErr
 		}
-		if insErr := insertSession(ctx, tx, userID, tokenHash); insErr != nil {
+		if insErr := insertSession(ctx, tx, userID, tokenHash, true); insErr != nil {
 			return fmt.Errorf("identity: insert session: %w", insErr)
 		}
 		detail := fmt.Sprintf("oidc login: %s", provider)

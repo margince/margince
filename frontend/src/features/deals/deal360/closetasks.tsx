@@ -29,6 +29,7 @@ import { useTruncationTooltip } from "../../../design-system/tooltip";
 import { formatDate, formatNumber } from "../../../format/format";
 import { useLocale, usePlural, useT } from "../../../i18n";
 import { unwrap } from "../../../lib/problem";
+import { displayedSubject } from "../../../lib/systemdisplay";
 import { useViewerZone } from "../../../lib/viewerzone";
 import "./closetasks.css";
 
@@ -93,7 +94,7 @@ function completionRequests(tasks: readonly Activity[]): BulkChangeRequest[] {
       rows: tasks.slice(at, at + BULK_MAX_ITEMS).map((task) => ({
         id: task.id,
         version: task.version,
-        label: task.subject ?? task.id,
+        label: displayedSubject(task) ?? task.id,
       })),
       openId: crypto.randomUUID(),
     });
@@ -283,7 +284,7 @@ function CloseTaskRow({
 }: Readonly<{ task: Activity; zone: string }>) {
   const t = useT();
   const { locale } = useLocale();
-  const subject = task.subject ?? t("deals.closeTasks.untitled");
+  const subject = displayedSubject(task) ?? t("deals.closeTasks.untitled");
   const { ref, trigger, tip } = useTruncationTooltip<HTMLSpanElement>(subject);
   return (
     <li>

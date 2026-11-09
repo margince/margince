@@ -49,10 +49,10 @@ export function problemResponse(body: unknown, status: number) {
 
 export function render(
   ui: ReactNode,
-): RenderResult & { queryClient: QueryClient } {
-  const client = new QueryClient({
+  client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
-  });
+  }),
+): RenderResult & { queryClient: QueryClient } {
   // The client is returned so a test can re-render against the same cache. A
   // fresh one would empty it, which is the opposite of the stale-entry case.
   return {

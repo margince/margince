@@ -41,6 +41,7 @@ const faceToFaceSettled = "The information was already given at the meeting."
 // faceToFaceMeeting is one meeting as a door states it. AboutDeal names the
 // deal a refused send was about, or is zero.
 type faceToFaceMeeting struct {
+	entity    *ids.UUID
 	note      string
 	met       time.Time
 	aboutDeal ids.UUID
@@ -58,6 +59,7 @@ func (s *Store) recordFaceToFaceTx(ctx context.Context, tx pgx.Tx, contactID ids
 	}
 	_, err = s.recordQualifyingEventTx(ctx, tx, contactID, RecordQualifyingEventInput{
 		Kind: kindInPerson, Note: meeting.note, OccurredAt: meeting.met, AboutDeal: meeting.aboutDeal,
+		sendingEntity: meeting.entity,
 	})
 	return err
 }

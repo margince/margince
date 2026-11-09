@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -93,6 +94,9 @@ type Sink struct {
 	// claimOwnSentMail corrects a colleague's earlier reading of this seat's
 	// sent mail; nil leaves the first reading standing.
 	claimOwnSentMail OwnSentMailClaim
+	// adoptSentEcho re-keys the seat's send onto its echo's identity
+	// (sentecho.go). Nil lands such an echo as a second row.
+	adoptSentEcho SentEchoAdoption
 	// mailIdentityKind is activities.IdentityKindMail, and the two identity
 	// seams below are that module's own resolve and claim. All three are set
 	// together by WithMessageIdentity or none is: an empty kind is what
@@ -135,6 +139,7 @@ type MergeStager interface {
 // MergeProposal names the collision: the surviving record and the
 // captured fields that would fold into it.
 type MergeProposal struct {
+	SystemText *systemtext.Message
 	// note: TargetType + TargetID are the polymorphic pair the approvals
 	// merge target carries — this is a discriminated ref, not a single
 	// entity's id, so it stays untyped (kernel Ref semantics).
@@ -342,7 +347,8 @@ func (s *Sink) stageDuplicateLead(ctx context.Context, rec connector.NormalizedR
 	}
 	_, err := s.stager.StageMerge(ctx, MergeProposal{
 		TargetType: "lead", TargetID: hit.UUID, ProposedChange: fields,
-		Summary: s.duplicateLeadSummary(ctx, rec.NaturalKey),
+		Summary:    s.duplicateLeadSummary(ctx, rec.NaturalKey),
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("capture.duplicateLead", systemtext.Text(rec.NaturalKey.SourceSystem), systemtext.Text(rec.NaturalKey.SourceID))},
 	})
 	if err != nil {
 		return fmt.Errorf("capture: staging the dedupe merge: %w", err)

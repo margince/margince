@@ -407,7 +407,7 @@ func TestAStagedCallKeepsItsSummaryPartsCleaned(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the staged row: %v", err)
 	}
-	got := wire(stored, e.svc.now()).SummaryParts
+	got := wire(context.Background(), stored, e.svc.now()).SummaryParts
 	want := []crmcontracts.ApprovalSummaryField{{Field: "depth", Value: "2, note=x"}}
 	if got == nil || got.Sentence != "Read stainzer.at" || !slices.Equal(got.Fields, want) {
 		t.Errorf("read back parts %+v, want the sentence and %+v", got, want)
@@ -418,7 +418,7 @@ func TestAStagedCallKeepsItsSummaryPartsCleaned(t *testing.T) {
 	if err != nil {
 		t.Fatalf("staging without parts: %v", err)
 	}
-	if row, err := e.svc.Get(e.asDecider(), plain); err != nil || wire(row, e.svc.now()).SummaryParts != nil {
+	if row, err := e.svc.Get(e.asDecider(), plain); err != nil || wire(context.Background(), row, e.svc.now()).SummaryParts != nil {
 		t.Errorf("a staging without parts read back %v (err %v), want none", row.SummaryParts, err)
 	}
 }

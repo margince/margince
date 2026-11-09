@@ -18,6 +18,6 @@ const ErasedActivitySubject = "Erased"
 // rows every pass and audits each erase again. A batch limit then fills with
 // them before it reaches mail that still holds content.
 func ActivityErasedSQL(activity string) string {
-	return fmt.Sprintf(`(%[1]s.subject = '%[2]s' AND %[1]s.body IS NULL AND %[1]s.raw IS NULL)`,
+	return fmt.Sprintf(`coalesce((%[1]s.subject = '%[2]s' AND %[1]s.body IS NULL AND %[1]s.raw IS NULL), false)`,
 		activity, ErasedActivitySubject)
 }

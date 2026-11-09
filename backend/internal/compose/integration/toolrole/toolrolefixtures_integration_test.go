@@ -424,7 +424,7 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 		return map[string]any{"id": p.fact(run, "contact"), "run_id": run}
 	},
 	"send_message": func(p *recordPool) map[string]any {
-		return map[string]any{"activity_id": p.take("channel_conversation"), "consent_purpose": "transactional"}
+		return map[string]any{"activity_id": p.take("channel_conversation"), "consent_purpose": "transactional", "communication_context": "requested_followup"}
 	},
 	"request_company_vat_check": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.fact(p.take("profile_field"), "company")}

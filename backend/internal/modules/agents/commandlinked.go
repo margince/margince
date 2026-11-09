@@ -21,13 +21,13 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -129,6 +129,7 @@ func (r *accountSendResolver) Subject(ctx context.Context, cmd SendCompanyEmailC
 	return StageInfo{
 		TargetType: string(datasource.EntityActivity),
 		Summary:    describeAccountSend(summaryIn(ctx, r.language), cmd, links),
+		SystemText: &systemtext.Message{Subject: accountSendComponent(cmd, links)},
 	}, nil
 }
 
@@ -186,11 +187,7 @@ func requireAccountSendLinks(links []RecordLink) error {
 // decidable on the activity floor rather than on those records, so naming them
 // would disclose more than the decision rests on.
 func describeAccountSend(said summaryCopy, cmd SendCompanyEmailCommand, links []RecordLink) string {
-	summary := fmt.Sprintf(said.accountSend, strings.Join(cmd.To, ", "))
-	if len(cmd.Cc) > 0 {
-		summary += fmt.Sprintf(said.cc, strings.Join(cmd.Cc, ", "))
-	}
-	return summary + fmt.Sprintf(said.accountSendFiled, cmd.Subject, len(links))
+	return systemtext.Canonical(accountSendComponent(cmd, links), said.lang)
 }
 
 // BookMeetingCommand is one booking, whichever door asked for it. It carries
@@ -240,6 +237,7 @@ func (r *bookMeetingResolver) Subject(ctx context.Context, cmd BookMeetingComman
 		TargetID:      links[0].EntityID,
 		TargetVersion: &rows[0].Version,
 		Summary:       describeBooking(summaryIn(ctx, r.language), cmd, links),
+		SystemText:    &systemtext.Message{Subject: bookingComponent(cmd, links)},
 	}, nil
 }
 
@@ -340,17 +338,5 @@ func requireBookingLinks(links []RecordLink) error {
 // the sentence; the approvals engine sanitizes every summary at the single
 // staging path regardless.
 func describeBooking(said summaryCopy, cmd BookMeetingCommand, links []RecordLink) string {
-	subject := cmd.Subject
-	if strings.TrimSpace(subject) == "" {
-		subject = said.noSubject
-	}
-	summary := fmt.Sprintf(said.booking,
-		subject, cmd.Start.Format(time.RFC3339), cmd.End.Format(time.RFC3339))
-	if cmd.HostUserID != nil {
-		summary += fmt.Sprintf(said.bookingHost, cmd.HostUserID)
-	}
-	if len(links) > 0 {
-		summary += fmt.Sprintf(said.bookingLinks, len(links))
-	}
-	return summary
+	return systemtext.Canonical(bookingComponent(cmd, links), said.lang)
 }

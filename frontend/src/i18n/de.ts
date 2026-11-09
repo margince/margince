@@ -2353,6 +2353,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.ai_price_sync": "Aktualisierung der Modellpreise",
   "systemJob.alias_discovery": "Erkennung von E-Mail-Adressen",
   "systemJob.approval_expiry": "Ablauf von Freigaben",
+  "systemJob.approval_owner_notice": "Hinweis zur Freigabeübergabe",
   "systemJob.approval_notice_reconcile": "Bereinigung offener Freigabehinweise",
   "systemJob.approval_notice_retract": "Rücknahme von Freigabehinweisen",
   "systemJob.approval_notify": "Freigabebenachrichtigung",
@@ -2774,6 +2775,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.partner_company_id": "Partner",
   "history.field.project_id": "Projekt",
   "history.field.product_id": "Produkt",
+  "history.field.legal_entity_id": "Absendendes Unternehmen",
   "history.field.about_deal": "Betreffender Deal",
   "history.field.qualifying_event": "Qualifizierendes Ereignis",
   "history.field.qualifying_event_retracted":
@@ -2955,6 +2957,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "action.newDeal": "Neuer Deal",
   "action.booking": "Buchungsseite",
 
+  "common.fieldInvalid": "Prüfe diesen Wert und versuche es erneut.",
   "common.undo": "Rückgängig",
   "common.close": "Schließen",
   "common.unknownValue": "Sonstiges",
@@ -3348,7 +3351,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.gatewayUnavailable":
     "Der Server hat die Anfrage nicht rechtzeitig abgeschlossen und verarbeitet sie möglicherweise noch. Warte, bevor du es erneut versuchst, sonst kann die Arbeit zweimal laufen.",
   "common.individualPerformanceOff":
-    "Ein Admin hat die Einzelleistung ausgeschaltet. Du siehst deine eigenen Zahlen. Eine Zahl wird zurückgehalten, wenn weniger als zwei andere Mitglieder zu ihr beitragen oder wenn nach Abzug der Summe eines anderen Teams weniger als zwei übrig blieben.",
+    "Ein Admin hat die Einzelleistung ausgeschaltet. Du siehst deine eigenen Zahlen. Eine Zahl wird zurückgehalten, wenn weniger als zwei andere Mitglieder zu ihr beitragen oder wenn nach Abzug der Summe eines anderen Teams weniger als zwei übrig blieben. Eine Prognose wird ganz zurückgehalten, wenn eine ihrer Teilgruppen die Zahlen eines einzelnen Mitglieds zeigen würde.",
   "common.permissionDenied":
     "Du hast keine Berechtigung für diese Aktion. Lass deinen Zugriff von einem Admin oder der Person erweitern, die diesen Datensatz mit dir geteilt hat.",
   "common.seatReadOnly":
@@ -3435,6 +3438,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   "list.headActions": "Weitere Aktionen",
   "list.search": "Suchen",
+  "list.searchFor": "Nach „{query}“ suchen",
+  "list.filterSuggestionsFailed":
+    "Die Filtervorschläge konnten nicht geladen werden.",
   "list.showArchived": "Archivierte anzeigen",
   "list.viewToggleOn": "An",
   "list.viewToggleOff": "Aus",
@@ -3552,6 +3558,19 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Keine Nachricht stützt sich mehr darauf, auch keine, die schon in der Warteschlange steht. Die Anfrage bleibt als zurückgenommen im Datensatz und lässt sich nicht wiederherstellen.",
   "consent.acquisitionRequest":
     "Bei der Aufnahme hat der Kontakt ein Angebot oder einen Termin angefragt oder persönlich erlaubt, dass Mails an ihn gehen dürfen.",
+  "consent.exceptionUnknownOrigin":
+    "Wer den Eintrag zuerst erfasst hat und wann, ist unbekannt.",
+  "consent.exceptionsTitle": "Dauerhafte Ausnahmen",
+  "consent.exceptionsScope":
+    "Jede Ausnahme gilt für einen Zweck und ein absendendes Unternehmen. Eine Ausnahme ist keine Einwilligung in Werbung. Jede Nachricht wird erneut geprüft.",
+  "consent.exceptionOtherPurpose": "Anderer erfasster Zweck",
+  "consent.exceptionCompany": "Absendendes Unternehmen: {name}",
+  "consent.exceptionUnnamedCompany":
+    "Name des absendenden Unternehmens nicht festgelegt.",
+  "consent.exceptionUnknownCompany": "Absendendes Unternehmen nicht erfasst.",
+  "consent.exceptionRevoke": "Ausnahme widerrufen",
+  "consent.exceptionRevokeBody":
+    "Künftige Nachrichten können diese Ausnahme nicht mehr nutzen. Einwilligungen und Anfragen des Kontakts bleiben bestehen.",
   "consent.stopsTitle": "Sperren",
   "consent.stopKind.subject_request":
     "Hat gebeten, keinen Kontakt mehr aufzunehmen",
@@ -7522,12 +7541,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.newThread": "Neuer Thread",
   "compose.copies": "Cc und Bcc",
   "compose.signsOffAs": "Die Nachricht endet mit „{closing}“.",
-  "compose.reasonRecord": "Als dauerhaften Grund festhalten",
-  "compose.reasonStanding":
-    "Ein dauerhafter Grund gilt für diese Art von Nachricht an {address} aus deinem Unternehmen, bis ihn jemand widerruft. Er ist deine Angabe, keine Einwilligung.",
-  "compose.reasonRecordFor":
-    "Als dauerhaften Grund festhalten: {reason}, für {address}",
-  "compose.reasonLabel": "Warum du an {address} schreiben darfst",
+  "compose.fact.open": "Gespräch festhalten",
+  "compose.fact.title": "Gespräch mit {address} festhalten",
+  "compose.fact.scope":
+    "Hält den Austausch mit {address} für das sendende Unternehmen fest. Sendet keine E-Mail, erfasst keine Werbeeinwilligung und erstellt keine Ausnahme.",
+  "compose.fact.kind": "Was ist passiert?",
+  "compose.fact.request": "Der Kontakt hat um eine Nachricht gebeten",
+  "compose.fact.quoteRequest": "Der Kontakt hat um dieses Angebot gebeten",
+  "compose.fact.met": "Persönlich getroffen",
+  "compose.fact.note": "Was wurde vereinbart?",
+  "compose.fact.save": "Gespräch festhalten",
   "compose.replyIntent": "Zweck der Antwort",
   "compose.newIntent": "Zweck der E-Mail",
   "compose.draftReply": "Antwort entwerfen",
@@ -8785,6 +8808,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.signatureHtmlHintPlain":
     "Leere das Feld, um wieder deinen Text zu verwenden. Externe Bilder und Skripte werden entfernt.",
   "settings.signatureOwnHtml": "Deine HTML-Signatur",
+  "settings.signatureReviewTitle": "Gespeicherte Signatur von {name} prüfen",
+  "settings.signatureReviewIntro":
+    "Die Person kann diese Signatur nicht selbst prüfen. Das Original bleibt, bis du deine Änderungen speicherst. Prüfe jedes Feld, bevor du etwas entfernst.",
+  "settings.signatureReviewPreview": "Vorschau der gespeicherten Signatur",
+  "settings.signatureReviewReload":
+    "Lade diese Signatur neu, bevor du sie bearbeitest.",
+  "settings.signatureReviewChangedTitle": "Signatur geändert",
+  "settings.signatureReviewChanged":
+    "Jemand hat die Signatur geändert. Prüfe unten die gespeicherte Version. Wenn du deinen Entwurf behältst, ersetzt er diese Felder.",
+  "settings.signatureReviewLatest": "Zuletzt gespeicherte Version",
+  "settings.signatureReviewUseLatest": "Gespeicherte Version verwenden",
+  "settings.signatureReviewKeepDraft": "Meinen Entwurf behalten",
+  "settings.signatureReviewLoading": "Gespeicherte Signatur wird geladen…",
+  "settings.signatureReviewSaved": "Signaturprüfung gespeichert",
+  "settings.signatureReviewMember": "dem Mitglied",
   "settings.signature": "E-Mail-Signatur",
   "settings.signatureSub":
     "Steht unter jeder Nachricht, die du sendest, oberhalb der Fußzeile zum Abbestellen.",
@@ -12547,7 +12585,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forcedMfa.pageTitle": "Zweistufige Anmeldung einrichten",
   "forcedMfa.title": "Zweistufige Anmeldung einrichten",
   "forcedMfa.body":
-    "Diese Installation verlangt die zweistufige Anmeldung. Richte eine Authenticator-App ein, um fortzufahren.",
+    "Die Anmeldung mit Passwort verlangt die zweistufige Anmeldung. Richte eine Authenticator-App ein, um fortzufahren.",
   "forcedMfa.alreadyOn": "Die zweistufige Anmeldung ist schon an.",
   "forcedMfa.continue": "Weiter",
   "forcedPassword.pageTitle": "Passwort festlegen",
@@ -15195,14 +15233,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Immer verfügbar. Alle Nutzenden können sich so anmelden, daher lassen sich die anderen Methoden gefahrlos deaktivieren.",
   "signInMethods.noneConfigured":
     "Für diese Installation ist kein externer Anbieter konfiguriert. Das Passwort ist die einzige Anmeldemethode.",
-  "signInMethods.requireMfa": "Zweiten Faktor verlangen",
+  "signInMethods.requireMfa": "Zweiten Faktor für Passwörter verlangen",
+  "signInMethods.requireMfaAction": "Verlangen",
   "signInMethods.requireMfaHint":
-    "Jedes Mitglied braucht die zweistufige Anmeldung, um Margince zu nutzen.",
-  "signInMethods.requireMfaConfirmTitle": "Zweiten Faktor verlangen?",
+    "Die Anmeldung mit Passwort erfordert die zweistufige Anmeldung in Margince. Google und Microsoft verwalten ihre eigene MFA.",
+  "signInMethods.requireMfaConfirmTitle":
+    "Zweiten Faktor für Passwörter verlangen?",
   "signInMethods.requireMfaConfirmBody":
-    "Mitglieder ohne zweistufige Anmeldung werden gebeten, sie einzurichten, bevor sie weitermachen können.",
+    "Mitglieder, die sich mit Passwort anmelden, müssen die zweistufige Anmeldung einrichten, bevor sie weitermachen können.",
   "signInMethods.requireMfaConfirmSelf":
-    "Du hast die zweistufige Anmeldung noch nicht eingerichtet, deshalb wirst auch du gebeten, sie einzurichten.",
+    "Auch für dieses Konto muss bei der Anmeldung mit Passwort die zweistufige Anmeldung eingerichtet werden.",
   "groupRoles.title": "Rollen aus IdP-Gruppen",
   "groupRoles.sub":
     "Vergibt bei der Anmeldung über SSO eine Rolle an jedes eingeladene Mitglied einer IdP-Gruppe. Die Gruppe muss genau so geschrieben sein wie im groups-Anspruch des ID-Tokens. Ein Nutzerkonto entsteht dabei nicht: Eine nicht eingeladene E-Mail-Adresse wird abgewiesen, mit oder ohne Gruppen.",

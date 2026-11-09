@@ -218,7 +218,7 @@ func verdictFor(ctx context.Context, tx pgx.Tx, contactID string, address *strin
 		return said(Verdict{State: VerdictAllowed, ReasonCode: ReasonContractNotice}), nil
 
 	case ClassBusinessCorrespondence:
-		return correspondenceVerdict(ctx, tx, contactID, address, purpose, since, asOf)
+		return correspondenceVerdict(ctx, tx, contactID, address, purpose, since, asOf, marketing.SendingEntity)
 
 	case ClassPhoneOutreach:
 		// Dormant by decision: the purpose exists so the model is complete. A
@@ -247,7 +247,7 @@ func verdictFor(ctx context.Context, tx pgx.Tx, contactID string, address *strin
 // The implied arm below is unchanged and stays second: it is the Art 6(1)(f)
 // reading of a relationship the subject started, and it is what answers for the
 // overwhelming majority of contacts, who never record an answer either way.
-func correspondenceVerdict(ctx context.Context, tx pgx.Tx, contactID string, address *string, purpose PurposeRow, since, asOf time.Time) (Verdict, error) {
+func correspondenceVerdict(ctx context.Context, tx pgx.Tx, contactID string, address *string, purpose PurposeRow, since, asOf time.Time, entity ids.UUID) (Verdict, error) {
 	// requiresDOI is passed as the purpose declares it rather than as a
 	// constant false. Correspondence does not demand the round trip today, and
 	// hard-coding that here would silently ignore an installation that turned
@@ -265,7 +265,7 @@ func correspondenceVerdict(ctx context.Context, tx pgx.Tx, contactID string, add
 		// would let the timeline supply what the confirmation did not.
 		return said(Verdict{State: VerdictBlocked, ReasonCode: ReasonUnconfirmedDOI, Code: BlockUnconfirmedDOI}), nil
 	}
-	event, source, err := latestQualifyingEvent(ctx, tx, contactID, since, asOf, address)
+	event, source, err := latestQualifyingEvent(ctx, tx, contactID, since, asOf, address, entity)
 	if err != nil {
 		return Verdict{}, err
 	}

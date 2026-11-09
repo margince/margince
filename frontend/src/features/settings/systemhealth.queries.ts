@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { stable } from "../../format/collate";
 import { useHealthScope, useHealthVisible } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
@@ -91,7 +92,7 @@ export function useSystemHealth(enabled: boolean) {
             ?.read,
       )
       .map((source) => source.permission)
-      .sort();
+      .sort(stable);
     const denialKey = JSON.stringify([scope, mismatches]);
     if (reconciledDenial.current !== denialKey) {
       reconciledDenial.current = denialKey;

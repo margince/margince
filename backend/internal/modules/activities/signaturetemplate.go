@@ -125,3 +125,8 @@ func writeText(out *strings.Builder, node *xhtml.Node) {
 		}
 	}
 }
+
+// SignatureMarkup renders retained markup through the send path's sanitizer.
+func SignatureMarkup(source string) (markup, text string, err error) {
+	return signatureMarkup(source)
+}

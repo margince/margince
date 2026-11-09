@@ -607,7 +607,9 @@ export const LongerListKeepsPager: Story = {
     await expect(
       canvas.getByRole("combobox", { name: "Rows per page" }),
     ).toBeVisible();
-    await expect(canvas.getByRole("searchbox")).toBeVisible();
+    await expect(
+      canvas.getByRole("combobox", { name: "Search" }),
+    ).toBeVisible();
   },
 };
 

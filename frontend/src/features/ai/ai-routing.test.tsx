@@ -4,6 +4,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption, pickSuggestion } from "../../design-system/select-testing";
+import { stable } from "../../format/collate";
 import type { GrantSpec } from "../../testing/mefixture";
 import { reachableProviders } from "./ai-provider-reach";
 import { AiRoutingCard } from "./ai-routing";
@@ -54,7 +55,7 @@ describe("AiRoutingCard", () => {
     // and the reader would be exactly where they started.
     await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
     const sent = backend.getCapturedPut() as CapturedRouting;
-    expect(Object.keys(sent.tiers).sort()).toEqual([
+    expect(Object.keys(sent.tiers).sort(stable)).toEqual([
       "cheap_cloud",
       "frontier",
       "local_large",

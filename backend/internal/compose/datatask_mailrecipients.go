@@ -18,12 +18,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 func mailRecipientsDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792592656_mail_recipient_evidence", Version: 1,
-		Title: "Restore captured mail recipients", Requires: []string{"core/1792501453"},
+		Title: systemtext.Literal("datatask.title.core.1792592656_mail_recipient_evidence"), Requires: []string{"core/1792501453"},
 		Steps: []datatask.Step{{
 			Name: "restore_recipient_headers", Limit: 50, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{Reason: "capture stamps the same parsed participant evidence without a separate audit"},

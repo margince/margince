@@ -35,6 +35,9 @@ func (s *Sink) prepareActivityCapture(ctx context.Context, tx pgx.Tx, rec connec
 		}
 		return nil
 	}
+	if err := s.adoptSentEchoTx(ctx, tx, rec); err != nil {
+		return err
+	}
 	if err := s.takeMergeLockFirst(ctx, tx, rec); err != nil {
 		return err
 	}

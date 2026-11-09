@@ -111,7 +111,7 @@ internal/compose/integration/capture/perfcapture_bench_test.go 1
 internal/compose/integration/channels/telegram_roundtrip_integration_test.go 1
 internal/compose/integration/channels/telegram_sinkerasure_integration_test.go 1
 internal/compose/integration/collections/listlive_integration_test.go 1
-internal/compose/integration/comms_send_integration_test.go 2
+internal/compose/integration/comms_send_integration_test.go 1
 internal/compose/integration/company360/company360_integration_test.go 1
 internal/compose/integration/company_computed_integration_test.go 1
 internal/compose/integration/companylogo_integration_test.go 4

@@ -66,7 +66,7 @@ var taskSourceWriters = map[string][]string{
 	"compose/csvactivityfields.go:activityCreateFrom":                     {writesCallerSource},
 	"modules/activities/mapping.go:logActivityInput":                      {writesCallerSource},
 	"modules/capture/sinkactivity.go:capturedActivityInsert":              {writesCallerSource},
-	"modules/activities/activity.go:logActivityInTx":                      {writesForItsCaller},
+	"modules/activities/activityinsert.go:insertLoggedActivityRow":        {writesForItsCaller},
 	"modules/activities/activityinitialaudience.go:recordInitialActivity": {writesForItsCaller},
 	"compose/csvcontactfields.go:contactCreateFrom":                       {writesNoTask},
 	"modules/contacts/handlers_company.go:ListCompanies":                  {writesNoTask},

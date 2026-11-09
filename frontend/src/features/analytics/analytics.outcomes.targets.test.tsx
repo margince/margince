@@ -2,6 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { stable } from "../../format/collate";
 import { formatAnalyticsMoney } from "../../format/format";
 import { translate } from "../../i18n";
 import { en } from "../../i18n/en";
@@ -178,7 +179,9 @@ describe("the seat's figures against its own targets", () => {
       expect.arrayContaining(["leads_promoted", "partner_pipeline"]),
     );
     expect(
-      asked.map((url) => url.searchParams.get("target_basis")).sort(),
+      asked
+        .map((url) => url.searchParams.get("target_basis"))
+        .sort((a, b) => stable(String(a), String(b))),
     ).toEqual(["fiscal_quarter", "month"]);
     for (const url of asked) {
       expect(url.searchParams.get("scope_kind")).toBe("owner");

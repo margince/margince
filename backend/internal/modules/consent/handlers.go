@@ -353,12 +353,16 @@ func (h Handlers) RecordQualifyingEvent(w http.ResponseWriter, r *http.Request, 
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	recorded, err := h.store.RecordQualifyingEvent(r.Context(), pathID[ids.ContactKind](id), RecordQualifyingEventInput{
+	in := RecordQualifyingEventInput{
 		Kind:         string(req.Kind),
 		Note:         req.Note,
 		OccurredAt:   req.OccurredAt,
 		AsksForQuote: req.AsksForQuote != nil && *req.AsksForQuote,
-	})
+	}
+	if deal := idArg[ids.DealKind](req.AboutDeal); deal != nil {
+		in.AboutDeal = deal.UUID
+	}
+	recorded, err := h.store.RecordQualifyingEvent(r.Context(), pathID[ids.ContactKind](id), in)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return

@@ -131,7 +131,7 @@ func (s *Service) CompleteMFAChallenge(ctx context.Context, userID ids.UserID, j
 		if err := resetLockoutStreak(ctx, tx, userID, lock); err != nil {
 			return err
 		}
-		if err := insertSession(ctx, tx, userID, tokenHash); err != nil {
+		if err := insertSession(ctx, tx, userID, tokenHash, false); err != nil {
 			return err
 		}
 		if err := auditLogin(ctx, tx, userID, "password + second factor login"); err != nil {

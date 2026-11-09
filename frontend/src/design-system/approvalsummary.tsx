@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
+import { effectiveDisplayLocale } from "../i18n/locale";
 import { type Fact, FactList } from "./factlist";
 
 export type SummaryParts = components["schemas"]["ApprovalSummaryParts"];
@@ -15,6 +16,7 @@ export type SummaryWords = Readonly<{
 
 type Summarized = Readonly<{
   summary?: string | null;
+  system_display?: components["schemas"]["SystemDisplay"];
   summary_parts?: SummaryParts;
 }>;
 
@@ -24,7 +26,14 @@ type Summarized = Readonly<{
  * whole.
  */
 export function summarySentence(summarized: Summarized): string | null {
-  return summarized.summary_parts?.sentence || summarized.summary || null;
+  return (
+    (summarized.system_display?.locale === effectiveDisplayLocale()
+      ? summarized.system_display.subject
+      : undefined) ||
+    summarized.summary_parts?.sentence ||
+    summarized.summary ||
+    null
+  );
 }
 
 /**

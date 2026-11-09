@@ -433,6 +433,9 @@ export function useComposeSend({
     sendReview,
     sendError,
     claimedContext,
+    contextDealId: (answering ? anchorActivity?.links : links)?.find(
+      (link) => link.entity_type === "deal",
+    )?.entity_id,
     permission,
     flagged,
     fieldsRef,

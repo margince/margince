@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { stable } from "../../format/collate";
 import { forgetSeat } from "../../lib/storage";
 import { reportingFixtureFrames } from "../../testing/reporting.fixtures";
 import { backlogFindings } from "./analytics.overview.scenariodata";
@@ -98,8 +99,8 @@ const censusPairs = Object.entries(CENSUS).flatMap(([name, views]) =>
 
 describe("the Overview scenario map", () => {
   it("holds exactly the census scenarios, each on the views it names", () => {
-    expect(Object.keys(OVERVIEW_SCENARIOS).sort()).toEqual(
-      Object.keys(CENSUS).sort(),
+    expect(Object.keys(OVERVIEW_SCENARIOS).sort(stable)).toEqual(
+      Object.keys(CENSUS).sort(stable),
     );
     for (const [name, views] of Object.entries(CENSUS)) {
       const scenario = OVERVIEW_SCENARIOS[name as ScenarioName];
@@ -125,7 +126,9 @@ describe("the Overview scenario map", () => {
       scenarioStoryName(name, view),
     );
     const exported = Object.keys(stories).filter((key) => key !== "default");
-    expect(exported.sort()).toEqual([...expected, ...ALIASES].sort());
+    expect(exported.sort(stable)).toEqual(
+      [...expected, ...ALIASES].sort(stable),
+    );
   });
 
   it("puts at least 20 findings on at most 8 deals in the backlog", () => {

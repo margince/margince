@@ -170,7 +170,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## communication_override
 
-11 columns · primary key `(id)` · referenced by 1 foreign key
+12 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -183,6 +183,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `legal_entity_id` | `uuid` | yes | Points at `legal_entity.id`. |
 | `reason` | `text` | yes |  |
 | `recorded_at` | `timestamp with time zone`, default `now()` | yes |  |
+| `recorded_directly` | `boolean` |  |  |
 | `revoked_at` | `timestamp with time zone` |  |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 
@@ -450,7 +451,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## consent_qualifying_event
 
-15 columns · primary key `(id)` · referenced by 0 foreign keys
+16 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -462,6 +463,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `note` | `text` |  | The typed evidence for a hand-recorded exchange (`in_person` or `requested_by_subject`), where a named human's note is the record. |
 | `occurred_at` | `timestamp with time zone` | yes |  |
 | `recorded_for_addresses` | `text[]` |  |  |
+| `recorded_for_entities` | `uuid[]` |  |  |
 | `retracted_at` | `timestamp with time zone` |  |  |
 | `retracted_by` | `text` |  |  |
 | `source_entity_id` | `uuid` |  |  |

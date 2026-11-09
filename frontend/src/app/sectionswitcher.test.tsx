@@ -52,11 +52,11 @@ const trigger = () =>
       name: translate("en", "settings.tab.records"),
     }),
   });
-const searchBox = () => screen.getByRole("combobox");
 
 async function openSheet(user: ReturnType<typeof userEvent.setup>) {
   await user.click(trigger());
   await screen.findByRole("dialog");
+  await screen.findByRole("combobox");
 }
 
 async function expectClosedOnTrigger() {
@@ -85,7 +85,8 @@ describe("the phone section switcher", () => {
     const user = userEvent.setup();
     mount();
     await openSheet(user);
-    searchBox().focus();
+    const search = await screen.findByRole("combobox");
+    search.focus();
 
     await user.keyboard("{Escape}");
 
@@ -96,12 +97,13 @@ describe("the phone section switcher", () => {
     const user = userEvent.setup();
     mount();
     await openSheet(user);
-    await user.type(searchBox(), "tag");
+    const search = await screen.findByRole("combobox");
+    await user.type(search, "tag");
 
     await user.keyboard("{Escape}");
 
-    expect(searchBox()).toHaveValue("");
-    expect(searchBox()).toHaveFocus();
+    expect(search).toHaveValue("");
+    expect(search).toHaveFocus();
     expect(screen.getByRole("dialog")).toBeInTheDocument();
 
     await user.keyboard("{Escape}");

@@ -30,15 +30,6 @@ func (s *Store) MeetingsAwaitingFollowUp(ctx context.Context, asOf time.Time) ([
 	return s.readMeetingFollowUps(ctx, asOf, func(func(any) int) (string, error) { return scopeUnbounded, nil })
 }
 
-// MeetingsAwaitingFollowUpOnDeal is MeetingsAwaitingFollowUp narrowed to the
-// meetings filed under one deal, so the deal page and Home name the same ones.
-func (s *Store) MeetingsAwaitingFollowUpOnDeal(ctx context.Context, asOf time.Time, dealID ids.UUID) ([]AwaitingReply, error) {
-	return s.readMeetingFollowUps(ctx, asOf, func(arg func(any) int) (string, error) {
-		return fmt.Sprintf(`EXISTS (SELECT 1 FROM activity_link on_deal
-		    WHERE on_deal.activity_id = a.id AND on_deal.deal_id = $%d)`, arg(dealID)), nil
-	})
-}
-
 // MeetingsStillAwaitingFollowUp answers which of these meetings the reader
 // still owes a follow-up, so a stored suggestion can be checked again.
 func (s *Store) MeetingsStillAwaitingFollowUp(ctx context.Context, asOf time.Time, meetingIDs []ids.UUID) (map[ids.UUID]bool, error) {
@@ -117,10 +108,10 @@ var followUpFromSQL = `(CASE WHEN a.occurred_precision = 'day' THEN ` + occurred
 //  1. as of, 2. content gate on a, 3. link visibility on wl, 4. the follow-up
 //     window in days, 5. the lookback in days past it, 6. content gate on later,
 //  7. what counts as contact for later, 8. the reader, 9. a snooze lifted,
-//  10. the customer arms the reader may read, 11. the cap, 12. the meeting
-//     took place, 13. the contacts the reader may write to, 14. the recipient
-//     cap, 15. which meetings the caller narrowed the read to, 16. later comes
-//     after the meeting.
+//  10. the customer arms the reader may read, 11. the page limit, if any,
+//  12. the meeting took place, 13. the contacts the reader may write to,
+//  14. the recipient cap, 15. which meetings the caller narrowed the read to,
+//  16. later comes after the meeting.
 //
 // The attendees are read once, in the LATERAL, and both the recipient list and
 // the "nothing sent since" test use that one set.
@@ -171,13 +162,17 @@ var meetingFollowUpsSQL = `
 	   -- follow-up already made. Only the recipients count, uncapped: a
 	   -- contact the reader cannot see must not make a row vanish. Their own
 	   -- mail after it is the waiting queue's business, not this reminder's.
-	   -- The recipient set must not be scanned once per later activity.
+	   -- The recipient set must not be scanned once per later activity, and a
+	   -- later activity is read by its key alone. The LIMIT keeps the tests
+	   -- below out of that read, so no planner can walk everything logged
+	   -- since the meeting instead, whatever its statistics say. The columns
+	   -- are the ones those tests read; a test that needs another fails loudly.
 	   AND NOT EXISTS (WITH touched AS MATERIALIZED (SELECT heard.activity_id FROM activity_link heard
 	                                   WHERE heard.contact_id = ANY(attendees.recipients)
 	                                  UNION ALL
 	                                  SELECT reached.activity_id FROM activity_participant reached
 	                                   WHERE reached.contact_id = ANY(attendees.recipients))
-	                   SELECT 1 FROM touched JOIN activity later ON later.id = touched.activity_id
+	                   SELECT 1 FROM touched CROSS JOIN LATERAL ` + laterActivityFromLinkSQL + ` later
 	                    WHERE later.id <> a.id
 	                      AND later.archived_at IS NULL
 	                      AND later.direction IS DISTINCT FROM 'inbound'
@@ -189,7 +184,18 @@ var meetingFollowUpsSQL = `
 	   AND NOT ` + readerSetAsideSQL("$%[8]d", "%[9]s") + `
 	 GROUP BY a.id, a.subject, a.occurred_at, a.occurred_precision, attendees.recipients
 	 ORDER BY a.occurred_at DESC, a.id DESC
-	 LIMIT %[11]d`
+	 %[11]s`
+
+// laterActivityColumns are the columns the "nothing sent since" tests read from
+// a later activity.
+const laterActivityColumns = `keyed.id, keyed.kind, keyed.direction, keyed.origin, keyed.occurred_at,
+	keyed.occurred_precision, keyed.archived_at, keyed.restricted_at, keyed.meeting_status, keyed.call_outcome,
+	keyed.calendar_method, keyed.sender_is_machine, keyed.bulk_mail_attested, keyed.internal_mail_authorization`
+
+// The limit keeps the keyed lookup ahead of predicates on the later activity,
+// even when stale statistics favor scanning the whole activity table.
+const laterActivityFromLinkSQL = `(SELECT ` + laterActivityColumns + ` FROM activity keyed
+ WHERE keyed.id = touched.activity_id LIMIT 1)`
 
 // meetingHeldSQL is a meeting somebody said took place: its outcome was saved
 // as held, and it has started (occurredday.BegunSQL). A booked or unmarked
@@ -199,7 +205,22 @@ func meetingHeldSQL(alias, now string) string {
 	return "(" + meetingoutcome.HeldSQL(alias) + " AND " + occurredday.BegunSQL(alias, now) + ")"
 }
 
+// meetingFollowUpsStatement is the follow-up read, newest first, holding at
+// most limit meetings; a limit of 0 holds none.
 func meetingFollowUpsStatement(ctx context.Context, asOf time.Time, windowDays int, narrow func(func(any) int) (string, error), limit int) (string, []any, error) {
+	if limit < 0 {
+		return "", nil, fmt.Errorf("activities: a meeting follow-up page of %d meetings", limit)
+	}
+	return meetingFollowUpsPage(ctx, asOf, windowDays, narrow, fmt.Sprintf("LIMIT %d", limit))
+}
+
+// unpagedMeetingFollowUpsStatement is the same read without a page, for a
+// caller whose own narrowing bounds it.
+func unpagedMeetingFollowUpsStatement(ctx context.Context, asOf time.Time, windowDays int, narrow func(func(any) int) (string, error)) (string, []any, error) {
+	return meetingFollowUpsPage(ctx, asOf, windowDays, narrow, "")
+}
+
+func meetingFollowUpsPage(ctx context.Context, asOf time.Time, windowDays int, narrow func(func(any) int) (string, error), page string) (string, []any, error) {
 	args := []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	instant, reader, window := arg(asOf), arg(readerOrNobody(ctx)), arg(windowDays)
@@ -221,7 +242,7 @@ func meetingFollowUpsStatement(ctx context.Context, asOf time.Time, windowDays i
 	return followUpStatement(candidates, g, fmt.Sprintf(meetingFollowUpsSQL,
 		instant, g.content, g.links, window, AwaitingReplyLookbackDays,
 		g.later, relstrength.InteractionCountsSQL("later", at), reader,
-		messageSnoozeLiftedSQL(at, g.back), g.customer, limit,
+		messageSnoozeLiftedSQL(at, g.back), g.customer, page,
 		held, addressable, maxActivityLinks, narrowed, occurredday.FromSQL("later", followUpFromSQL),
 	)), args, nil
 }
@@ -260,7 +281,8 @@ func meetingNeedSQL() string {
 	   JOIN (SELECT heard.activity_id, heard.contact_id FROM activity_link heard WHERE heard.contact_id IS NOT NULL
 	         UNION ALL SELECT reached.activity_id, reached.contact_id FROM activity_participant reached
 	          WHERE reached.contact_id IS NOT NULL) touched ON touched.contact_id = recipient.contact_id
-	   JOIN activity later ON later.id = touched.activity_id AND later.restricted_at IS NULL
+	   CROSS JOIN LATERAL ` + laterActivityFromLinkSQL + ` later
+	  WHERE later.restricted_at IS NULL
 	    AND later.occurred_at >= recipient.since -- occurred_at raw: FromSQL implies it, so the set is never narrower
 `
 }

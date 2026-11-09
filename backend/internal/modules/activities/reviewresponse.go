@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // WriteReviewInput is one submission, as the caller that already holds the deal
@@ -95,6 +96,7 @@ func (s *Store) WriteOutcomeReviewTx(ctx context.Context, tx pgx.Tx, in WriteRev
 	// it. Written through the ordinary activity writer so it carries the
 	// author, the audience and the retention treatment every other note has.
 	note, _, err := s.LogActivityTx(ctx, tx, LogActivityInput{
+		SystemText: &systemtext.Message{Subject: systemtext.Prose(systemtext.Quote, ""), Body: systemtext.Prose(systemtext.Quote, "")},
 		// A note, not a kind of its own. The review IS a note somebody wrote;
 		// a new activity kind would need a place in every timeline filter and
 		// every count, to say something the frozen row beside it already says.

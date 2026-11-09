@@ -9,12 +9,13 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // retiredThreadSplitDataTask keeps a released ID whose repair was withdrawn. Version 2
 // supersedes any version 1 progress a database recorded, and its one step has no work.
 func retiredThreadSplitDataTask() datatask.Task {
-	return datatask.Task{ID: "core/1793602001_subject_thread_boundaries", Version: 2, Title: "Separate correspondence at subject boundaries (withdrawn)", Requires: []string{"core/1793602000"}, Steps: []datatask.Step{{
+	return datatask.Task{ID: "core/1793602001_subject_thread_boundaries", Version: 2, Title: systemtext.Literal("datatask.title.core.1793602001_subject_thread_boundaries"), Requires: []string{"core/1793602000"}, Steps: []datatask.Step{{
 		Name: "withdrawn", Limit: 1, MinLimit: 1,
 		Audit: datatask.AuditPolicy{Reason: "the step changes no row"},
 		Estimate: func(context.Context, datatask.Querier, int64) (int64, bool, error) {

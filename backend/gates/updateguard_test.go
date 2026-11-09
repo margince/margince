@@ -133,7 +133,6 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 		"under the assurance pass lock, so no other writer can hold that row",
 	"internal/modules/contacts:DisqualifyLead":             "readDisqualifiableLead locks this live lead with storekit.LockRow and checks its optional version pin before the update, in the same leadWrite transaction; the preview shares that reader",
 	"internal/modules/privacy:EraseUntoldLeadTx":           "terminal absolute write: empties the accepted proposal of a website lead whose notice failed, regardless of concurrent state, as the Art. 17 eraser empties a decided approval",
-	"internal/modules/activities:updateActivityInTx":       "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above",
 	"internal/modules/collections:archiveSavedViewTx":      "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",
 	"internal/modules/collections:ArchiveTag":              "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",
 	"internal/modules/contacts:absorbCompanyReferences":    "runs under the merge pair lock (storekit.LockPair on both company rows) taken by MergeCompany",

@@ -15,6 +15,7 @@ import { useLocale, usePlural, useT } from "../../i18n";
 import { latePromise } from "../../lib/latepromise";
 import { useSourceOpener } from "../../lib/opensource";
 import { tasksPeek } from "../../lib/standingpeeks";
+import { displayedSubject } from "../../lib/systemdisplay";
 import { taskDetail } from "../../lib/taskdetail";
 import { MoveButton } from "../records/movebutton";
 import { basisAddsARecord } from "../records/record360";
@@ -255,7 +256,7 @@ function TaskBar({
     latePromise(task.due_at, view.as_of, zone, "task", { t, plural, locale });
   return (
     <RecordNextBar
-      title={task.subject ?? t("task.untitled")}
+      title={displayedSubject(task) ?? t("task.untitled")}
       late={late ? { label: late.badge, tone: "danger" } : undefined}
       detail={taskDetail(task)}
       sub={taskLine([

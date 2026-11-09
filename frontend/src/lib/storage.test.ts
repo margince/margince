@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { stable } from "../format/collate";
 import {
   forgetSeat,
   readStored,
@@ -44,7 +45,7 @@ function storedNames(storage: Storage): string[] {
     storage.key(index),
   )
     .filter((name) => name !== null)
-    .sort();
+    .sort(stable);
 }
 
 describe("a stored value", () => {
@@ -197,10 +198,10 @@ describe("forgetting a seat", () => {
     forgetSeat();
 
     expect(storedNames(localStorage)).toEqual(
-      [...survivingNames("local"), "another.app.key"].sort(),
+      [...survivingNames("local"), "another.app.key"].sort(stable),
     );
     expect(storedNames(sessionStorage)).toEqual(
-      survivingNames("session").sort(),
+      survivingNames("session").sort(stable),
     );
     expect(readStored(STORAGE_KEYS.theme)).toBe("kept");
     expect(readStored(STORAGE_KEYS.faultsSeen)).toBeNull();
@@ -220,7 +221,7 @@ describe("forgetting a seat", () => {
     forgetSeat();
 
     expect(storedNames(sessionStorage)).toEqual(
-      survivingNames("session").sort(),
+      survivingNames("session").sort(stable),
     );
   });
 });

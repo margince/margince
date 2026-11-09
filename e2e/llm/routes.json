@@ -464,6 +464,7 @@
         "contact_brief": "get_contact_brief",
         "contact_consent": "get_contact_consent",
         "contact_consent_guard": "get_contact_consent_guard",
+        "contact_overrides": "list_contact_overrides",
         "contact_profile_fields": "get_contact_profile_fields",
         "contact_stops": "list_contact_stops",
         "contract": "get_contract",

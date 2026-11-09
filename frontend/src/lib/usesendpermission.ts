@@ -17,6 +17,8 @@ import { throwProblem } from "./problem";
 // thread it is not showing, a jurisdiction's ceiling — so a surface that
 // guessed would be a second implementation of the authorization engine.
 
+export const SEND_PERMISSION_KEY = ["send-permission"] as const;
+
 type Preview = components["schemas"]["SendAuthorizationPreview"];
 
 /**
@@ -76,7 +78,7 @@ export function useSendPermission(args: {
   // question, so they are the whole key. Changing any of them must re-ask
   // rather than serve the answer to a different message.
   const queryKey = [
-    "send-permission",
+    ...SEND_PERMISSION_KEY,
     args.anchorActivityId ?? "",
     recipients,
     links,
@@ -92,7 +94,7 @@ export function useSendPermission(args: {
     // and the send — so this is a reading taken close to the write, never a
     // cached verdict that outlives what it described.
     staleTime: 0,
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const body = {
         to: [...recipients],
         communication_context: args.context,
@@ -102,10 +104,12 @@ export function useSendPermission(args: {
       };
       const answered = args.anchorActivityId
         ? await api.POST("/activities/{id}/send-email:preview", {
+            signal,
             params: { path: { id: args.anchorActivityId } },
             body,
           })
         : await api.POST("/emails:preview", {
+            signal,
             body: { ...body, links: [...links] },
           });
       // Only a real 2xx is an answer. openapi-fetch reports a falsy `error` for
@@ -142,7 +146,7 @@ export function useSendPermission(args: {
   // the exact failure this hook exists to end.
   return {
     preview: query.data,
-    asking: query.isPending && enabled,
+    asking: (query.isPending || query.isFetching) && enabled,
     unanswered: enabled && query.isError,
   };
 }

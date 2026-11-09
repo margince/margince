@@ -389,7 +389,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | `identity.oauth_dynamic_registration` | `MARGINCE_IDENTITY_OAUTH_DYNAMIC_REGISTRATION` | — | `bool`, stored, kept by a reset | `true` | api, worker | AI tools may register their own OAuth client (DCR) for new sign-ins. |
 | `identity.oauth_metadata_documents` | `MARGINCE_IDENTITY_OAUTH_METADATA_DOCUMENTS` | — | `bool`, stored, kept by a reset | `true` | api, worker | AI tools may sign in with a client ID that is the URL of their metadata document (CIMD). |
 | `identity.oidc_group_role_map` | `MARGINCE_IDENTITY_OIDC_GROUP_ROLE_MAP` | — | `map<string,string>`, stored, kept by a reset | — | api, worker | The role each directory group grants at sign-in, as group:role pairs; it only grants, and never removes a role. |
-| `identity.require_mfa` | `MARGINCE_IDENTITY_REQUIRE_MFA` | — | `bool`, stored, kept by a reset | `false` | api, worker | Every member must use two-step sign-in. |
+| `identity.require_mfa` | `MARGINCE_IDENTITY_REQUIRE_MFA` | — | `bool`, stored, kept by a reset | `false` | api, worker | Password sign-in needs two-step sign-in; Google and Microsoft check their own sign-ins. |
 | `identity.require_sso` | `MARGINCE_IDENTITY_REQUIRE_SSO` | — | `bool`, stored, kept by a reset | `false` | api, worker | Members other than admins sign in only through a sign-in provider. |
 
 ### `installation`

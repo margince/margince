@@ -188,6 +188,7 @@ func TestEveryOtherForeignKeyIsIndexedOrMeasured(t *testing.T) {
 // measurement found. Not a waiver: its keys are parents, where a finding names one
 // child key. The test above checks the directions, not subject matching.
 var foreignKeyNoIndexNeeded = map[string]string{
+	"legal_entity":               "a sending company is archived in place, so retained mail and permission records keep naming it; TestEveryEntityWriteCommitsItsAuditAndItsEvent checks that retirement keeps the row",
 	"deal_room_participant":      "a seat is revoked and anonymized in place by the erasure, never deleted: a comment names its participant row, and deleting the seat would orphan the conversation",
 	"report_definition_revision": "append-only: a revision is what a report meant when it ran",
 	"sdr_handoff_reason":         "a reason is a vocabulary row the handoffs that cite it keep resolving",

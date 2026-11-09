@@ -2290,6 +2290,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.ai_price_sync": "Cập nhật giá mô hình",
   "systemJob.alias_discovery": "Tìm địa chỉ email",
   "systemJob.approval_expiry": "Hết hạn phê duyệt",
+  "systemJob.approval_owner_notice": "Thông báo bàn giao phê duyệt",
   "systemJob.approval_notice_reconcile": "Dọn thông báo phê duyệt đang chờ",
   "systemJob.approval_notice_retract": "Thu hồi thông báo phê duyệt",
   "systemJob.approval_notify": "Thông báo phê duyệt",
@@ -2687,6 +2688,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.partner_company_id": "Đối tác",
   "history.field.project_id": "Dự án",
   "history.field.product_id": "Sản phẩm",
+  "history.field.legal_entity_id": "Công ty gửi",
   "history.field.about_deal": "Giao dịch liên quan",
   "history.field.qualifying_event": "Sự kiện đủ điều kiện",
   "history.field.qualifying_event_retracted": "Trao đổi đã ghi nhận bị rút lại",
@@ -2867,6 +2869,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "action.newDeal": "Deal mới",
   "action.booking": "Trang đặt lịch",
 
+  "common.fieldInvalid": "Kiểm tra giá trị này và thử lại.",
   "common.undo": "Hoàn tác",
   "common.close": "Đóng",
   "common.unknownValue": "Khác",
@@ -3254,7 +3257,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "common.gatewayUnavailable":
     "Máy chủ không kịp xử lý xong yêu cầu và có thể vẫn đang xử lý. Chờ một lúc rồi hãy thử lại, nếu không thao tác có thể chạy hai lần.",
   "common.individualPerformanceOff":
-    "Quản trị viên đã tắt hiệu suất của từng thành viên. Bạn vẫn xem được số liệu của bạn. Một số liệu bị ẩn khi có ít hơn hai thành viên khác đóng góp, hoặc khi trừ đi tổng của một nhóm khác sẽ còn ít hơn hai thành viên.",
+    "Quản trị viên đã tắt hiệu suất của từng thành viên. Bạn vẫn xem được số liệu của bạn. Một số liệu bị ẩn khi có ít hơn hai thành viên khác đóng góp, hoặc khi trừ đi tổng của một nhóm khác sẽ còn ít hơn hai thành viên. Toàn bộ dự báo bị ẩn nếu một nhóm trong đó có thể cho thấy số liệu của riêng một đồng nghiệp.",
   "common.permissionDenied":
     "Bạn không có quyền thực hiện thao tác này. Liên hệ quản trị viên hoặc người đã chia sẻ hồ sơ này để được cấp thêm quyền.",
   "common.seatReadOnly":
@@ -3331,6 +3334,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "list.headActions": "Thao tác khác",
   "list.search": "Tìm kiếm",
+  "list.searchFor": "Tìm “{query}”",
+  "list.filterSuggestionsFailed": "Không tải được gợi ý bộ lọc.",
   "list.showArchived": "Hiển thị mục trong kho lưu trữ",
   "list.viewToggleOn": "Bật",
   "list.viewToggleOff": "Tắt",
@@ -3446,6 +3451,18 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Các thư sẽ không còn dựa vào yêu cầu này, kể cả thư đã xếp hàng chờ gửi. Yêu cầu vẫn nằm trong hồ sơ ở trạng thái đã rút lại và không thể khôi phục.",
   "consent.acquisitionRequest":
     "Khi được thêm vào, liên hệ này đã yêu cầu báo giá hoặc cuộc hẹn, hoặc đã đồng ý trực tiếp để nhận thư.",
+  "consent.exceptionUnknownOrigin":
+    "Không rõ ai đã ghi nhận ban đầu và vào ngày nào.",
+  "consent.exceptionsTitle": "Ngoại lệ thường trực",
+  "consent.exceptionsScope":
+    "Mỗi ngoại lệ áp dụng cho một mục đích và một công ty gửi. Ngoại lệ không cấp sự đồng ý nhận quảng cáo. Mỗi thư đều được kiểm tra lại.",
+  "consent.exceptionOtherPurpose": "Mục đích khác đã ghi nhận",
+  "consent.exceptionCompany": "Công ty gửi: {name}",
+  "consent.exceptionUnnamedCompany": "Chưa đặt tên công ty gửi.",
+  "consent.exceptionUnknownCompany": "Chưa ghi nhận công ty gửi.",
+  "consent.exceptionRevoke": "Thu hồi ngoại lệ",
+  "consent.exceptionRevokeBody":
+    "Các thư sau không thể dùng ngoại lệ này. Hồ sơ đồng ý và yêu cầu của liên hệ vẫn được giữ nguyên.",
   "consent.stopsTitle": "Lệnh dừng",
   "consent.stopKind.subject_request": "Đã yêu cầu ngừng liên hệ",
   "consent.stopKind.marketing_objection": "Đã phản đối tiếp thị",
@@ -7347,11 +7364,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.newThread": "Chuỗi thư mới",
   "compose.copies": "Cc và Bcc",
   "compose.signsOffAs": "Kết thư bằng “{closing}”.",
-  "compose.reasonRecord": "Giữ làm lý do lâu dài",
-  "compose.reasonStanding":
-    "Lý do lâu dài áp dụng cho loại thư này gửi {address} từ công ty của bạn cho đến khi có ai thu hồi. Đây là lời xác nhận của bạn, không phải sự đồng ý của họ.",
-  "compose.reasonRecordFor": "Giữ làm lý do lâu dài: {reason}, cho {address}",
-  "compose.reasonLabel": "Vì sao bạn có thể viết cho {address}",
+  "compose.fact.open": "Ghi lại sự việc",
+  "compose.fact.title": "Ghi lại trao đổi với {address}",
+  "compose.fact.scope":
+    "Ghi lại trao đổi với {address} cho công ty gửi email. Không gửi email này, không ghi nhận đồng ý nhận quảng cáo hay tạo ngoại lệ.",
+  "compose.fact.kind": "Đã xảy ra việc gì?",
+  "compose.fact.request": "Đã yêu cầu tôi liên hệ",
+  "compose.fact.quoteRequest": "Đã yêu cầu báo giá này",
+  "compose.fact.met": "Đã gặp trực tiếp",
+  "compose.fact.note": "Đã thống nhất điều gì?",
+  "compose.fact.save": "Ghi lại trao đổi",
   "compose.replyIntent": "Mục đích trả lời",
   "compose.newIntent": "Mục đích email",
   "compose.draftReply": "Soạn trả lời",
@@ -8558,6 +8580,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.signatureHtmlHintPlain":
     "Để trống để dùng lại chữ ký văn bản thuần. Hình ảnh từ xa và mã script sẽ bị xóa.",
   "settings.signatureOwnHtml": "Chữ ký HTML của bạn",
+  "settings.signatureReviewTitle": "Kiểm tra chữ ký được giữ lại của {name}",
+  "settings.signatureReviewIntro":
+    "Chủ chữ ký không thể tự kiểm tra. Bản gốc được giữ nguyên cho đến khi bạn lưu thay đổi. Hãy kiểm tra từng trường trước khi chọn phần cần xóa.",
+  "settings.signatureReviewPreview": "Xem trước chữ ký đã lưu",
+  "settings.signatureReviewReload": "Tải lại chữ ký này trước khi chỉnh sửa.",
+  "settings.signatureReviewChangedTitle": "Chữ ký đã thay đổi",
+  "settings.signatureReviewChanged":
+    "Một người kiểm tra khác đã lưu thay đổi. Hãy xem phiên bản mới nhất bên dưới. Chỉ giữ bản nháp của bạn nếu bạn muốn dùng nó để thay các trường đó.",
+  "settings.signatureReviewLatest": "Phiên bản đã lưu mới nhất",
+  "settings.signatureReviewUseLatest": "Dùng phiên bản mới nhất",
+  "settings.signatureReviewKeepDraft": "Giữ bản nháp của tôi",
+  "settings.signatureReviewLoading": "Đang tải chữ ký được giữ lại…",
+  "settings.signatureReviewSaved": "Đã lưu kiểm tra chữ ký",
+  "settings.signatureReviewMember": "thành viên",
   "settings.signature": "Chữ ký email",
   "settings.signatureSub":
     "Chèn vào dưới mỗi email bạn gửi, phía trên chân trang hủy đăng ký.",
@@ -12231,7 +12267,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forcedMfa.pageTitle": "Thiết lập đăng nhập hai bước",
   "forcedMfa.title": "Thiết lập đăng nhập hai bước",
   "forcedMfa.body":
-    "Bản cài đặt này yêu cầu đăng nhập hai bước. Thiết lập ứng dụng xác thực để tiếp tục.",
+    "Đăng nhập bằng mật khẩu yêu cầu đăng nhập hai bước. Thiết lập ứng dụng xác thực để tiếp tục.",
   "forcedMfa.alreadyOn": "Đăng nhập hai bước đã bật.",
   "forcedMfa.continue": "Tiếp tục",
   "forcedPassword.pageTitle": "Đặt mật khẩu",
@@ -14800,14 +14836,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Luôn khả dụng, nên không ai bị khóa ngoài khi một phương thức khác bị tắt.",
   "signInMethods.noneConfigured":
     "Bản cài đặt này chưa cấu hình nhà cung cấp bên ngoài nào. Chỉ có thể đăng nhập bằng mật khẩu.",
-  "signInMethods.requireMfa": "Yêu cầu yếu tố thứ hai",
+  "signInMethods.requireMfa": "Yêu cầu yếu tố thứ hai khi dùng mật khẩu",
+  "signInMethods.requireMfaAction": "Yêu cầu",
   "signInMethods.requireMfaHint":
-    "Mọi thành viên cần bật đăng nhập hai bước để dùng Margince.",
-  "signInMethods.requireMfaConfirmTitle": "Yêu cầu yếu tố thứ hai?",
+    "Đăng nhập bằng mật khẩu yêu cầu đăng nhập hai bước của Margince. Google và Microsoft quản lý MFA riêng.",
+  "signInMethods.requireMfaConfirmTitle":
+    "Yêu cầu yếu tố thứ hai khi dùng mật khẩu?",
   "signInMethods.requireMfaConfirmBody":
-    "Thành viên chưa bật đăng nhập hai bước sẽ được yêu cầu thiết lập trước khi tiếp tục.",
+    "Thành viên đăng nhập bằng mật khẩu phải thiết lập đăng nhập hai bước trước khi tiếp tục.",
   "signInMethods.requireMfaConfirmSelf":
-    "Bạn chưa thiết lập đăng nhập hai bước, nên bạn cũng sẽ được yêu cầu thiết lập.",
+    "Tài khoản này cũng cần thiết lập đăng nhập hai bước khi đăng nhập bằng mật khẩu.",
   "groupRoles.title": "Cấp vai trò theo nhóm",
   "groupRoles.sub":
     "Khi ai đó bạn đã mời đăng nhập bằng Google hoặc Microsoft, họ nhận vai trò được ánh xạ với một nhóm họ thuộc về trong thư mục công ty bạn. Không ai vào được nếu chưa được mời.",
