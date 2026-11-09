@@ -135,6 +135,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
   which part.
 - [run-a-restore-drill.md](how-to/run-a-restore-drill.md): test that a copy of your data can be
   used, and record the time it takes.
+- [run-from-container-images.md](how-to/run-from-container-images.md): what each image holds, and
+  which part starts first.
 - [watch-a-running-installation.md](how-to/watch-a-running-installation.md): what each program can
   measure, and how to watch it.
 - [build-a-custom-margince.md](how-to/build-a-custom-margince.md): which extension code a build
