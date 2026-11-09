@@ -61,16 +61,17 @@ expect:
   rubric: >
     The candidate profile says this author answers in the opening sentence, keeps
     paragraphs short, and does not hedge. Score whether the draft actually reads
-    that way against the held-out mail: both open questions answered plainly, in
-    the author's own rhythm, with no preamble and no corporate vocabulary the
-    corpus never uses. The data carries no facts to answer with, so a plain
-    answer gives the author's answer with no reason behind it, or says what has
-    to be checked, and a short reply is the right length for that; one that
-    invents a figure, a date, a reason or a policy to sound decisive breaks the
+    that way against the held-out mail: both open questions addressed plainly,
+    in the author's own rhythm, with no preamble and no corporate vocabulary the
+    corpus never uses. The data carries no facts to answer with, so the product
+    asks for the author's answer with no reason behind it, or a plain statement
+    of what has to be checked, for either question. A short, verdict-first reply
+    that names what has to be checked for one or both questions scores full
+    marks. One that invents a figure, a date, a reason or a policy breaks the
     product's rule against inventing commitments and scores low. A draft that
     opens with pleasantries, that reaches for
-    "transformative"/"delve"/"leverage", or that answers one question and defers
-    the other scores low — the whole point of a voice build is that the reader
+    "transformative"/"delve"/"leverage", or that leaves one question unaddressed
+    scores low — the whole point of a voice build is that the reader
     cannot tell a model wrote it. The deterministic half of this site's score is
     how close the draft's own sentence rhythm and punctuation rates sit to the
     corpus fingerprint; the rubric is the other half and grades whether it also

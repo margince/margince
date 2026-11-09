@@ -311,6 +311,19 @@ const canonicalID = "per-call-id"
 // nonce of any marker quoted from another request, such as a judge shown the
 // prompt it grades.
 func canonicalRequestDigest(req model.Request) (string, error) {
+	material, err := canonicalRequestMaterial(req)
+	if err != nil {
+		return "", err
+	}
+	withoutIDs := perCallID.ReplaceAll(material, []byte(canonicalID))
+	canonical := promptfence.ReplaceNonces(string(withoutIDs), canonicalID)
+	sum := sha256.Sum256([]byte(canonical))
+	return hex.EncodeToString(sum[:]), nil
+}
+
+// canonicalRequestMaterial is what canonicalRequestDigest hashes before the
+// per-call ids and quoted nonces are swept out of it.
+func canonicalRequestMaterial(req model.Request) ([]byte, error) {
 	declaring := req.System
 	messages := make([]model.Message, len(req.Messages))
 	for i, m := range req.Messages {
@@ -331,10 +344,7 @@ func canonicalRequestDigest(req model.Request) (string, error) {
 		ResponseSchema: req.ResponseSchema,
 	})
 	if err != nil {
-		return "", fmt.Errorf("aicert: stamp: the built request cannot be digested: %w", err)
+		return nil, fmt.Errorf("aicert: stamp: the built request cannot be digested: %w", err)
 	}
-	withoutIDs := perCallID.ReplaceAll(material, []byte(canonicalID))
-	canonical := promptfence.ReplaceNonces(string(withoutIDs), canonicalID)
-	sum := sha256.Sum256([]byte(canonical))
-	return hex.EncodeToString(sum[:]), nil
+	return material, nil
 }

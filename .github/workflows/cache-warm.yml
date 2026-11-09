@@ -291,6 +291,66 @@ jobs:
           path: ~/.cache/go-build
           key: ${{ steps.go-cache.outputs.key }}
 
+  # The test durations the integration shards split by. The committed
+  # scripts/integration-test-timing.txt goes stale between refreshes by hand:
+  # measured, its weights summed to 57% of the lane's real time, and shards it
+  # balanced to the second ran from 7.7 to 12.5 minutes. So each test weighs its
+  # mean over the newest green fan-ins, pull requests included, because one run
+  # times each test on one runner and runners differ by a third. Saved on main,
+  # because a pull request reads only its own entries and main's.
+  integration-timing:
+    name: integration test durations
+    timeout-minutes: 10
+    # Default branch only, for the reason spelled out on `plain` above.
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Reads the test-timing-integration artifacts of ci.yml runs.
+      actions: read
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Fetch the newest measured test durations
+        id: fetch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/timing"
+          mkdir -p "$dir"
+          # Runs from branches of this repository only. A fork's pull request
+          # writes what its own code measured, so it could skew the split; a
+          # floor on every weight (scripts/lib-laneorder.sh) keeps even skewed
+          # times from piling a package onto one shard.
+          urls="$(gh api "repos/$REPO/actions/artifacts?name=test-timing-integration&per_page=50" \
+            --jq '[.artifacts[] | select(.expired == false and .workflow_run.head_repository_id == .workflow_run.repository_id)][:5][].archive_download_url')"
+          n=0
+          while IFS= read -r url; do
+            [[ -n "$url" ]] || continue
+            n=$((n + 1))
+            gh api "$url" > "$dir/$n.zip"
+            unzip -o -q "$dir/$n.zip" -d "$dir/$n"
+          done <<< "$urls"
+          if (( n == 0 )); then
+            echo "No test-timing-integration artifact yet: the shards keep splitting by the last entry, or the committed file."
+          fi
+          echo "runs=$n" >> "$GITHUB_OUTPUT"
+      - name: Weigh each test by its mean
+        if: steps.fetch.outputs.runs != '0'
+        run: scripts/refresh-integration-test-timing.sh -o "$RUNNER_TEMP/integration-test-timing.txt" "$RUNNER_TEMP"/timing/*/test-timing.txt
+      - name: Save the test durations for the shards
+        if: steps.fetch.outputs.runs != '0'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/integration-test-timing.txt
+          key: integration-test-timing-${{ github.run_id }}
+
   # What fe-quality and fe-bundle read: tsc's build info for all four projects
   # and the compiler lint's cache. It restores the last entry first, unlike the
   # Go jobs: tsc rewrites its build info whole, and ESLint drops the entry of

@@ -3,7 +3,7 @@
   "provider": "gemini",
   "served_model": "gemini-3.6-flash",
   "env_class": "cloud_frontier",
-  "prompt_version": "pc1d985571b72efe167a8fcbb508a6e42",
+  "prompt_version": "pd817211a00bdc6bbc3e42f09d5b5a572",
   "corpus_version": "v1",
   "verdict": "certified",
   "runs": 15,
@@ -18,33 +18,33 @@
   "context_scopes": null,
   "judge_score_p50": 97,
   "judge_score_min": 88,
-  "latency_p50": 2844,
-  "latency_p95": 5701,
-  "mean_tokens": 2608,
-  "mean_tokens_in": 2154,
-  "mean_tokens_out": 453,
+  "latency_p50": 2046,
+  "latency_p95": 4698,
+  "mean_tokens": 2311,
+  "mean_tokens_in": 1963,
+  "mean_tokens_out": 347,
   "mean_cached_tokens": 0,
   "mean_cache_write_tokens": 0,
-  "est_cost_microusd": 7308,
+  "est_cost_microusd": 2773,
   "judge_served_model": "claude-sonnet-4-6",
   "judge_provider": "claude_cli",
   "self_judged": false,
   "served_identity_source": "response",
   "thinking_level": "low",
-  "ran_at": "2026-10-13T03:42:54Z",
+  "ran_at": "2026-11-08T17:25:29Z",
   "scenarios": [
     {
       "scenario": "corpus_ask_returns_nothing_when_the_passages_do_not_answer",
       "site": "corpus_ask",
-      "stamp": "f1538f0d5e22f8d4da07a4c20779523b9c807db928a3c581c84706f11692c0faf04e67f09dc955fb960aed23243060990fac58ef7722f2a1d19d91b082c2bc5a402cea7fa3d5bba37973275523a8358b72f19dc8ab09b0b6ec05ff20e9eceed9",
+      "stamp": "f1538f0d5e22f8d4da07a4c20779523b9c807db928a3c581c84706f11692c0faae83cf07c400b1ecdee12406922fc73bb7383b5508fb734be428dbbabac9c58ae4c69b35239f4defff1630f2b2b787c3977605b0ef69d5682541e51068823202",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        97,
         100,
-        100
+        100,
+        93
       ],
       "bands": {
         "certified_min": 70,
@@ -59,7 +59,30 @@
     {
       "scenario": "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
       "site": "corpus_ask",
-      "stamp": "8c684307257130b724772a8308291b6c1ddfdd0a98d8afb326d9c5f560353681a879bafdd1acfa29e2fa3167fb113a9c4d398a5448d241e009cc692859eedf0e0155a7ce197a314c5f2f6541b72f63d82185510134f14698870e4257aef7b5ca",
+      "stamp": "8c684307257130b724772a8308291b6c1ddfdd0a98d8afb326d9c5f56035368174268878f52615bcd41b858d33949c3945c3e0a9af44b5365aa23201d95f8b8cb472dcb6511839e5199fd9e054d2bdea495360f2c5ca1aa3f837b493fe8773ec",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        97,
+        90,
+        100
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question",
+      "site": "corpus_ask",
+      "stamp": "6efe61da162809fd4a370dd3e817162dbcc8e10e96cbed89c9ff7053f0dd87feff4506e40d0c6b9df46a8c80885b93e7adf1ad310fba12090b3acecd123cd81f6590e682ea8c49635401c77a2d501eb23440419f5ce959f47fe80d040e9d48d9",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -80,32 +103,9 @@
       "reported_abstained": 0
     },
     {
-      "scenario": "corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question",
-      "site": "corpus_ask",
-      "stamp": "6efe61da162809fd4a370dd3e817162dbcc8e10e96cbed89c9ff7053f0dd87febb8f0dac38188cc3e4e6530b4ef07f46065204fd05282dcbf46064be2a3c5c86d013734d82d1f4095cbf7aa4307e507c7d24fcbc253d5cf378120f7ee0340f2c",
-      "verdict": "certified",
-      "judge_band": "certified",
-      "runs": 3,
-      "passed": 3,
-      "judge_scores": [
-        88,
-        97,
-        97
-      ],
-      "bands": {
-        "certified_min": 70,
-        "degraded_min": 50,
-        "floor": 40
-      },
-      "reported_accepted": 3,
-      "reported_wrong_answer": 0,
-      "reported_invalid": 0,
-      "reported_abstained": 0
-    },
-    {
       "scenario": "corpus_ask_answers_only_from_the_passage_that_says_it",
       "site": "corpus_ask",
-      "stamp": "910380329237ab7b1bf158e2c50dd91e466dfa2d6573643851d436594cc976edb34c900b24288d5e7e223b47f536a9df468bd0217e77fe4e43523c3ddc51f4aa08da063c8b78d6213626f7d5f92d8755535850efe367b2385f17cbccc73dfea1",
+      "stamp": "910380329237ab7b1bf158e2c50dd91e466dfa2d6573643851d436594cc976edab096399b8302e9190dde9dea99217c62fb7201661acdf5631d93506b6a5d70e186406821e2846ffc29c0fde05df974d293c47d4384c954a5e5c50a86672ba5d",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -113,7 +113,7 @@
       "judge_scores": [
         95,
         97,
-        97
+        100
       ],
       "bands": {
         "certified_min": 70,
@@ -128,15 +128,15 @@
     {
       "scenario": "corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present",
       "site": "corpus_ask",
-      "stamp": "633f23b4ded101f13829df8619dd8fd13a7ae7dd3db68f49808a4f8586e4ec76a12080584e89dc847e3f0bccf7ef85240834b5efaef8e6fb1969d6fd0bc59e806dbbce4734d5b669d55b0e0689203af78fcd15af4297bc314a9281c35dc98dc0",
+      "stamp": "633f23b4ded101f13829df8619dd8fd13a7ae7dd3db68f49808a4f8586e4ec767ebf98f058aa207fe460e391efe29cee09c39d6a6c1a80721e3333b999d9c14025c202238ba60ef5c9edf025e625eeb2723e9cc034f4403f403b7847e6e27984",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
         97,
-        95,
-        97
+        97,
+        95
       ],
       "bands": {
         "certified_min": 70,

@@ -50,6 +50,7 @@ func (e *tagScoutEnv) tag(t *testing.T, name, description string, suggestible bo
 	if _, err := e.tags.UpdateTag(e.Admin(), row.ID, collections.TagUpdate{Suggestible: &suggestible}, 0); err != nil {
 		t.Fatalf("marking %s suggestible=%v: %v", name, suggestible, err)
 	}
+	shownTagNames.Store(row.ID, name)
 	return row.ID
 }
 
