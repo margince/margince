@@ -28,7 +28,9 @@ expect:
     them, so it does not say the sender has or can provide them and promises no delivery.
     The request is twelve days old, so the reply ends on one question Alex can answer
     without the history: whether the materials are still needed, or how or in what format
-    they should be supplied. Either question is right. It invents no filenames, versions
+    they should be supplied. Either question is right. An offer phrased as that question
+    ("shall I send them, and in what format?") is right; claiming the materials
+    are ready, prepared or finalized is the fault. It invents no filenames, versions
     or prices.
     It keeps the reply focused on the two supplied requests.
     The text is an English reply to Alex, without a signature or invented facts.
