@@ -41,6 +41,14 @@ the **proof** that category needs, and records a **decision** per recipient sayi
 - A request stays with the record it was made on. A merge binds each request on either record to
   that record's addresses (`recorded_for_addresses`). After a wrong merge, one human's request does
   not cover the other's addresses.
+- Supporting proof stays with the company that received the request or logged the exchange.
+  Moving a user to another company does not move that proof. A source must still be live and
+  visible to the sender. An open deal alone does not prove that the subject asked for a follow-up.
+  A fact with no company on record can count for the sole default company. With more than one
+  company on file, its scope needs a human check before it can allow a send.
+- The composer uses proof already on file before asking for a fact. A user can record what was
+  agreed and when, for the recipient, sending company and linked deal. This records an exchange;
+  it grants no marketing consent and sends no message. The engine then checks the message again.
 - **Withdrawals and stops are separate, and both bind.** An unsubscribe is a consent withdrawal. The
   engine reads it **by class** ("has the subject stopped this kind of message"). That is because a category worked out from
   proof may carry no purpose key to match. `communication_suppression` records the other stops: an
@@ -166,12 +174,9 @@ That is `deny`, or `review` where the refusal is a reading by the machine. The r
 `execution_authority='instruction'` beside it. So a query can tell a message that is never refused
 from one that is refused and sent all the same.
 
-**Open problem: the cap misses directed recipients.** `advertisingMessagesReceived` counts transmit
-decisions with `verdict='allow'`, and the row for a recipient a user directed through does not have
-that verdict. An allowed recipient on the same envelope still counts. So a send to both kinds is
-counted for some of its recipients and not for others. So an installation under a legal cap can
-go over it through such sends without the count moving. The column the query would need is
-already on the row; nothing reads it yet.
+The legal cap counts mail sent and mail about to go out. It joins each delivery to its transmit
+check, including a send made under an instruction. A parked message does not use the allowance.
+The count is per address, so one recipient's delivery cannot consume another's allowance.
 
 Using an instruction checks four things. Each is a different way the record could end up telling of
 something that never happened:
