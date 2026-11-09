@@ -178,6 +178,9 @@ var erasureCascadeFiles = []string{
 	// destructive engine and both reach it.
 	"internal/modules/privacy/erasure_approvals.go",
 	"internal/modules/privacy/erasure_approvalnotices.go",
+	// The missed-receipt notices that name the subject. Same Art. 17
+	// transaction; retracted and detached from the erased record.
+	"internal/modules/privacy/erasure_receiptnotices.go",
 	// The readings of the transcripts the timeline scrub just emptied — same
 	// transaction, its own file for the same both-engines reason.
 	"internal/modules/privacy/transcriptreadings.go",

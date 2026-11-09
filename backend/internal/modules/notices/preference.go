@@ -67,6 +67,9 @@ const (
 	// KindProjectHealthAI tells a project's owner the health job judged it.
 	KindProjectHealthAI       = "project_health_ai"
 	KindPrivacyReviewRequired = "privacy_review_required"
+	// KindOptOutReceiptMissed tells the privacy operators a receipt a refusal
+	// requires did not go out.
+	KindOptOutReceiptMissed = noticekeys.OptOutReceiptMissedKind
 
 	KindApprovalPending  = "approval_pending"
 	ClassApprovalPending = KindApprovalPending
@@ -97,6 +100,7 @@ const KindMeetingInvitationAttention = "meeting_invitation_attention"
 var classByKind = map[string]string{
 	"data_task_failed":             classSystem,
 	KindPrivacyReviewRequired:      classSystem,
+	KindOptOutReceiptMissed:        classSystem,
 	"automation":                   classAutomation,
 	"lead_sla":                     classLeadSLA,
 	"capture_backlog_stalled":      classCapture,
