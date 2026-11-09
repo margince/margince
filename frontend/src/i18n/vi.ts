@@ -13894,6 +13894,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đang dựng giọng văn. Mất khoảng một phút và vẫn tiếp tục nếu bạn rời trang này.",
   "settings.voice.rebuild": "Dựng lại Voice DNA",
   "settings.voice.buildFirst": "Dựng Voice DNA",
+  "settings.voice.firstBuildHint":
+    "Bản dựng đầu tiên bắt đầu ở thẻ Giọng văn của bạn.",
+  "settings.voice.firstBuildGo": "Mở Giọng văn của bạn",
   "settings.voice.buildNeedsWords":
     "Lần dựng đầu tiên cần thêm khoảng {n} từ. Dưới mức đó, chưa đủ văn bản để học.",
   "settings.voice.buildProvisional":

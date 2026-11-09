@@ -1,6 +1,5 @@
 import { type QueryClient, useQueryClient } from "@tanstack/react-query";
 import { Lock } from "lucide-react";
-import { useState } from "react";
 import type { components } from "../../api/schema";
 import { VoiceKinds } from "../../components/voicekinds";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
@@ -10,7 +9,7 @@ import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { useVoiceProfile } from "../../lib/voice-profile";
 import { useVoiceIntake, type VoiceIntake } from "./use-voice-intake";
-import { VoiceCorpusIntake } from "./voice-corpus-settings";
+import { VoiceCorpusIntake, VoicePendingAsk } from "./voice-corpus-settings";
 import { VoiceStanding } from "./voice-dna.standing";
 import { SharpenStrip, VoiceHero, VoiceStart } from "./voice-hero";
 import {
@@ -181,9 +180,9 @@ function VoiceDnaBody({
   // grant would otherwise be offered a write the server clamps.
   const canEdit = useCanWrite("voice_profile", "update");
   const qc = useQueryClient();
-  // Intake and the build button sit on different tabs, so the fact that a
-  // sample is still arriving is held by the parent they share.
-  const [intakeBusy, setIntakeBusy] = useState(false);
+  // The intake outlives every tab, so a sample still arriving holds the build
+  // wherever its button is drawn.
+  const intakeBusy = intake.busy;
   const invalidate = () => invalidateVoiceCorpus(qc);
   const versionsRead = useVoiceVersions(profile.id);
   const versions = loadedVersions(versionsRead.data?.pages);
@@ -195,6 +194,8 @@ function VoiceDnaBody({
   // it in full while the hero asks whether to use it.
   const shown = active ?? candidate;
   const insights = shown ? parseVoiceInsights(shown) : null;
+  const drawsIntake =
+    canEdit && (tab === "samples" || (tab === "overview" && insights === null));
   return (
     <div className="vdna-page">
       <div className="vdna-meta">
@@ -208,6 +209,9 @@ function VoiceDnaBody({
       {!canEdit && (
         <p className="vdna-readonly">{t("settings.voice.readOnly")}</p>
       )}
+      {/* The first add can mint the profile on any tab; its speaker question
+          stays in view where no intake card is drawn. */}
+      {!drawsIntake && <VoicePendingAsk intake={intake} />}
       {tab === "overview" && (
         <VoiceOverview
           profile={profile}
@@ -228,7 +232,6 @@ function VoiceDnaBody({
           intake={intake}
           sentMail={sentMail}
           canEdit={canEdit}
-          onBusyChange={setIntakeBusy}
           onChanged={invalidate}
         />
       )}
@@ -238,7 +241,6 @@ function VoiceDnaBody({
           intake={intake}
           sentMail={sentMail}
           canEdit={canEdit}
-          onBusyChange={setIntakeBusy}
           onChanged={invalidate}
         />
       )}
@@ -268,14 +270,12 @@ function VoiceSamplesPanel({
   intake,
   sentMail,
   canEdit,
-  onBusyChange,
   onChanged,
 }: Readonly<{
   profile: VoiceProfile;
   intake: VoiceIntake;
   sentMail: SentMailLearning;
   canEdit: boolean;
-  onBusyChange: (busy: boolean) => void;
   onChanged: () => void;
 }>) {
   const t = useT();
@@ -295,7 +295,7 @@ function VoiceSamplesPanel({
         {canEdit && (
           <SettingList bleed="settings">
             <LearnFromSentMail learning={sentMail} />
-            <VoiceCorpusIntake intake={intake} onBusyChange={onBusyChange} />
+            <VoiceCorpusIntake intake={intake} />
           </SettingList>
         )}
       </Panel>

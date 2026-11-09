@@ -332,6 +332,17 @@ describe("the Settings Voice DNA card with a profile", () => {
     expect(screen.getByText("Only you can see your Voice DNA.")).toBeTruthy();
   });
 
+  it("sends an owner with no build yet from the builds tab to the first build", async () => {
+    const user = userEvent.setup();
+    stubProfile();
+    globalThis.location.hash = "#/settings/voice/builds";
+    render(<VoiceDnaCard tab="builds" />);
+    await user.click(
+      await screen.findByRole("button", { name: "Go to Your voice" }),
+    );
+    expect(globalThis.location.hash).toMatch(/^#\/settings\/voice(?![/\w])/);
+  });
+
   it("keeps the rules the writer sets as rows of the rules card", async () => {
     stubProfile();
     render(<VoiceDnaCard tab="rules" />);
@@ -789,11 +800,12 @@ describe("a version awaiting review", () => {
   });
 
   it("opens the rules tab from the hero once a voice is learned", async () => {
+    const user = userEvent.setup();
     stubWith([{ ...candidateVersion([]), id: "v-1", status: "active" }]);
     globalThis.location.hash = "#/settings/voice";
     render(<VoiceDnaCard />);
     const hero = await screen.findByRole("region", { name: "Your Voice DNA" });
-    await userEvent.click(
+    await user.click(
       await within(hero).findByRole("button", { name: "Edit your rules" }),
     );
     expect(globalThis.location.hash).toMatch(/^#\/settings\/voice\/rules\b/);

@@ -14275,6 +14275,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das Stilprofil wird aufgebaut. Das dauert etwa eine Minute und läuft weiter, wenn du die Seite verlässt.",
   "settings.voice.rebuild": "Voice DNA neu aufbauen",
   "settings.voice.buildFirst": "Voice DNA aufbauen",
+  "settings.voice.firstBuildHint":
+    "Den ersten Aufbau startest du im Tab „Dein Schreibstil“.",
+  "settings.voice.firstBuildGo": "Zu „Dein Schreibstil“",
   "settings.voice.buildNeedsWords":
     "Ein erster Aufbau braucht noch etwa {n} Wörter. Darunter gibt es nicht genug Text, um daraus zu lernen.",
   "settings.voice.buildProvisional":

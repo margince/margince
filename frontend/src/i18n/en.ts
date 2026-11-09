@@ -14215,6 +14215,9 @@ export const en = {
     "Building voice. This takes about a minute and continues if you leave this page.",
   "settings.voice.rebuild": "Rebuild Voice DNA",
   "settings.voice.buildFirst": "Build Voice DNA",
+  "settings.voice.firstBuildHint":
+    "Your first build starts on the Your voice tab.",
+  "settings.voice.firstBuildGo": "Go to Your voice",
   "settings.voice.buildNeedsWords":
     "A first build needs about {n} more words. Below that there is not enough writing to learn from.",
   "settings.voice.buildProvisional":

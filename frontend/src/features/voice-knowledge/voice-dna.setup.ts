@@ -59,6 +59,13 @@ function useOpenVoiceTab(): VoiceTab {
   return parseVoiceTab(useRoute().id2);
 }
 
+// Without a profile only the first-add card is drawn, so it is the head.
+function pageHead(): string {
+  return document.getElementById(VOICE_SECTIONS.voice) === null
+    ? VOICE_SECTIONS.sharpen
+    : VOICE_SECTIONS.voice;
+}
+
 // Answers the focus dial once the page has drawn what it points at. A focus
 // this tab does not draw opens the tab that does. The dial is then cleared, so the same step
 // pressed again moves focus again.
@@ -77,7 +84,7 @@ export function useSetupFocus(ready: boolean) {
       navigateReplacing(voiceTabHref(target.tab), currentParams());
       return;
     }
-    jump(drawn ? target.section : VOICE_SECTIONS.voice);
+    jump(drawn ? target.section : pageHead());
     replaceDial(VOICE_FOCUS_PARAM, undefined);
   }, [asked, ready, tab, jump]);
 }

@@ -18,7 +18,7 @@ import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import type { VoiceProfile } from "./voice-dna";
 import { BuildControls, reportFailure } from "./voice-dna.build";
-import { VOICE_SECTIONS } from "./voice-dna.setup";
+import { useVoiceGo, VOICE_SECTIONS } from "./voice-dna.setup";
 import { DerivedVoice } from "./voice-dna.standing";
 import { VoiceChangeLog, VoiceHistory } from "./voice-versions";
 
@@ -39,7 +39,7 @@ export function VoiceRules({
   const t = useT();
   return (
     <VoiceSection id={VOICE_SECTIONS.rules}>
-      <Panel tone="ai" title={t("settings.voice.rulesTitle")}>
+      <Panel title={t("settings.voice.rulesTitle")}>
         <PanelBody>
           <PanelIntro>{t("settings.voice.rulesIntro")}</PanelIntro>
         </PanelBody>
@@ -82,15 +82,27 @@ export function VoiceBuilds({
   onChanged: () => void;
 }>) {
   const t = useT();
+  const go = useVoiceGo();
   const [deltasAsked, setDeltasAsked] = useState(false);
+  const built = (profile.profile_version ?? 0) > 0;
   return (
     <VoiceSection id={VOICE_SECTIONS.builds}>
       <Panel tone="ai" title={t("settings.voice.buildsTitle")}>
+        {!built && canEdit && (
+          <PanelBody>
+            <PanelIntro>{t("settings.voice.firstBuildHint")}</PanelIntro>
+            <div>
+              <Button onClick={() => go("voice")}>
+                {t("settings.voice.firstBuildGo")}
+              </Button>
+            </div>
+          </PanelBody>
+        )}
         <SettingList bleed="settings">
           {/* The first build starts in the hero, where the writer is guided to
               it; from then on rebuilds live with the history. intakeBusy holds
               a build back while a sample is arriving. */}
-          {(profile.profile_version ?? 0) > 0 && (
+          {built && (
             <BuildControls
               profile={profile}
               canEdit={canEdit}
