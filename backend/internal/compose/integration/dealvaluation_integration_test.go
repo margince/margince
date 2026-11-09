@@ -35,7 +35,7 @@ type valuationFixture struct {
 func setupValuation(t *testing.T) valuationFixture {
 	t.Helper()
 	e := Setup(t)
-	e.Deals.WithClock(func() time.Time { return valuationDate })
+	e.Deals.SetClock(func() time.Time { return valuationDate })
 	pipeline, open, won := DealFixture(t, e)
 	if _, err := e.Deals.UpdateStage(e.Admin(), open, deals.UpdateStageInput{WinProbability: new(60)}); err != nil {
 		t.Fatal(err)
@@ -47,7 +47,7 @@ func setupValuation(t *testing.T) valuationFixture {
 
 func (f valuationFixture) rate(t *testing.T, currency, rate string, date time.Time) {
 	t.Helper()
-	f.e.Deals.WithClock(func() time.Time { return date })
+	f.e.Deals.SetClock(func() time.Time { return date })
 	if _, err := f.e.Deals.SetFxRate(f.e.Admin(), deals.SetFxRateInput{FromCurrency: currency, Rate: rate, EffectiveDate: date}); err != nil {
 		t.Fatal(err)
 	}
@@ -96,41 +96,60 @@ func valuationPlan(project ids.ProjectID) string {
 	return fmt.Sprintf(`{"group_by":["stage_id"],"filters":{"project_id":%q},"aggregates":[{"fn":"count","as":"deals"},{"fn":"count","field":"amount_base_minor","as":"priced_deals"},{"fn":"sum","field":"amount_base_minor","as":"base_minor"},{"fn":"sum","field":"weighted_base_minor","as":"weighted_base_minor"}]}`, project.String())
 }
 
-func TestProjectAndBoardValueTheSameMixedCurrencyDealsAsAnalytics(t *testing.T) {
+func TestProjectAndBoardValuesAndReportsExposeMissingPrices(t *testing.T) {
 	f := setupValuation(t)
 	f.rate(t, "USD", "0.5", valuationDate)
 	f.rate(t, "JPY", "0.006", valuationDate)
 	f.deal(t, "EUR", new(int64(10001)), f.e.Rep1)
 	usd := f.deal(t, "USD", new(int64(20001)), f.e.Rep1)
 	f.deal(t, "JPY", new(int64(50000)), f.e.Rep1)
-	f.deal(t, "GBP", new(int64(70000)), f.e.Rep1)
 	const want = int64(50002)
 	totals := f.totals(f.e.Admin(), t)
-	if totals.OpenMinor == nil || *totals.OpenMinor != want || totals.OpenUnpriced != 1 {
-		t.Fatalf("project totals = %+v, want priced %d and one unpriced", totals, want)
+	if totals.OpenMinor == nil || *totals.OpenMinor != want || totals.OpenUnpriced != 0 {
+		t.Fatalf("project totals = %+v, want priced %d and none unpriced", totals, want)
 	}
 	header := f.header(f.e.Admin(), t)
-	if header.OpenDealValue.AmountMinor == nil || *header.OpenDealValue.AmountMinor != want || header.OpenDealsUnpriced == nil || *header.OpenDealsUnpriced != 1 {
-		t.Fatalf("header = %+v, want %d and one unpriced", header, want)
+	if header.OpenDealValue.AmountMinor == nil || *header.OpenDealValue.AmountMinor != want || header.OpenDealsUnpriced == nil || *header.OpenDealsUnpriced != 0 {
+		t.Fatalf("header = %+v, want %d and none unpriced", header, want)
 	}
 	for _, key := range []string{"deals-by-stage", "pipeline-current"} {
 		rows := runPrebuiltReport(f.e.Admin(), t, f.e, key, valuationPlan(f.project))
-		if len(rows) != 1 || cell(rows[0], "base_minor") != fmt.Sprint(want) || cell(rows[0], "deals") != "4" || cell(rows[0], "priced_deals") != "3" || cell(rows[0], "weighted_base_minor") != "30002" {
-			t.Fatalf("%s = %v, want one shared-currency row with three priced of four deals", key, rows)
+		if len(rows) != 1 || cell(rows[0], "base_minor") != fmt.Sprint(want) || cell(rows[0], "deals") != "3" || cell(rows[0], "priced_deals") != "3" || cell(rows[0], "weighted_base_minor") != "30002" {
+			t.Fatalf("%s = %v, want one shared-currency row with three priced deals", key, rows)
 		}
 	}
 	rows := runPrebuiltReport(f.e.Admin(), t, f.e, "projects-by-phase", "")
-	if len(rows) != 1 || cell(rows[0], "open_deal_value_minor") != fmt.Sprint(want) || cell(rows[0], "open_deal_unpriced") != "1" {
-		t.Fatalf("delivery report = %v, want %d and one unpriced", rows, want)
+	if len(rows) != 1 || cell(rows[0], "open_deal_value_minor") != fmt.Sprint(want) || cell(rows[0], "open_deal_unpriced") != "0" {
+		t.Fatalf("delivery report = %v, want %d and none unpriced", rows, want)
 	}
-	if _, err := f.e.Deals.UpdateDeal(f.e.Admin(), usd, deals.UpdateDealInput{ForecastCategory: new("commit")}); err != nil {
+	f.deal(t, "GBP", new(int64(70000)), f.e.Rep1)
+	totals = f.totals(f.e.Admin(), t)
+	if totals.OpenMinor == nil || *totals.OpenMinor != want || totals.OpenUnpriced != 1 {
+		t.Fatalf("project subtotal = %+v, want %d beside one missing price", totals, want)
+	}
+	header = f.header(f.e.Admin(), t)
+	if header.OpenDealValue.AmountMinor == nil || *header.OpenDealValue.AmountMinor != want || header.OpenDealsUnpriced == nil || *header.OpenDealsUnpriced != 1 {
+		t.Fatalf("header subtotal = %+v, want %d beside one missing price", header, want)
+	}
+	for _, key := range []string{"deals-by-stage", "pipeline-current"} {
+		rows = runPrebuiltReport(f.e.Admin(), t, f.e, key, valuationPlan(f.project))
+		if len(rows) != 1 || rows[0]["base_minor"] != nil || rows[0]["weighted_base_minor"] != nil || cell(rows[0], "deals") != "4" || cell(rows[0], "priced_deals") != "3" {
+			t.Fatalf("%s = %v, want null converted totals with three priced of four deals", key, rows)
+		}
+	}
+	rows = runPrebuiltReport(f.e.Admin(), t, f.e, "projects-by-phase", "")
+	if len(rows) != 1 || rows[0]["open_deal_value_minor"] != nil || cell(rows[0], "open_deal_unpriced") != "1" {
+		t.Fatalf("delivery report = %v, want a withheld aggregate and one missing price", rows)
+	}
+	if _, err := f.e.Deals.UpdateDeal(f.e.Admin(), usd, deals.UpdateDealInput{WinProbability: new(95)}); err != nil {
 		t.Fatal(err)
 	}
-	cards, _, err := f.e.Deals.ListDeals(f.e.Admin(), deals.ListDealsInput{ProjectID: &f.project, ForecastCategory: new("commit")})
+	likely := deals.ListDealsInput{ProjectID: &f.project, WinProbabilityMin: new(90)}
+	cards, _, err := f.e.Deals.ListDeals(f.e.Admin(), likely)
 	if err != nil || len(cards) != 1 {
-		t.Fatalf("forecast-filtered cards = %d, %v", len(cards), err)
+		t.Fatalf("probability-filtered cards = %d, %v", len(cards), err)
 	}
-	filtered := strings.Replace(valuationPlan(f.project), `"project_id":`, `"forecast_category":"commit","project_id":`, 1)
+	filtered := strings.Replace(valuationPlan(f.project), `"project_id":`, `"win_probability_band":"90_plus","project_id":`, 1)
 	rows = runPrebuiltReport(f.e.Admin(), t, f.e, "deals-by-stage", filtered)
 	if len(rows) != 1 || cell(rows[0], "deals") != "1" || cell(rows[0], "base_minor") != "10001" {
 		t.Fatalf("forecast-filtered totals disagree with their cards: %v", rows)

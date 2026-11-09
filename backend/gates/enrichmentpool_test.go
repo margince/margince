@@ -8,7 +8,6 @@ package gates
 import (
 	"fmt"
 	"go/ast"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -37,7 +36,7 @@ func TestAProviderHandlerSetCarriesItsPool(t *testing.T) {
 
 	const composeDir = "internal/compose"
 	fset := gatekit.SourceFileSet()
-	entries, err := os.ReadDir(composeDir)
+	entries, err := gatekit.ReadDir(composeDir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", composeDir, err)
 	}

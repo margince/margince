@@ -18,7 +18,8 @@ import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { Heading } from "../../design-system/heading";
 import { WriteRefused } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
-import { AI_RATE_DAY_ZONE, todayIn } from "../../format/calendarday";
+import { todayIn } from "../../format/calendarday";
+import { AI_RATE_DAY_ZONE } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { ModelLane } from "../../lib/ai-models";
@@ -27,6 +28,7 @@ import {
   useAiModelCatalogue,
   useAvailableModels,
 } from "../../lib/ai-models";
+import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { DECISION_PROVIDERS, PROVIDERS } from "../ai/ai-routing-fields";
 import { PER_MTOK_PRICE } from "./priceinput";
@@ -198,7 +200,7 @@ export function PriceForm({
         <p className="t-sub">
           {t("aiRates.manual.editing", {
             model: initial.model_id,
-            lane: t(LANE_LABEL[initial.lane]),
+            lane: t(labelFor(LANE_LABEL, initial.lane)),
           })}
         </p>
       ) : null}
@@ -386,7 +388,7 @@ function LaneField({
           value={lane}
           options={LANES.map((value) => ({
             value,
-            label: t(LANE_LABEL[value]),
+            label: t(labelFor(LANE_LABEL, value)),
           }))}
           onChange={(next) => {
             const picked = LANES.find((candidate) => candidate === next);

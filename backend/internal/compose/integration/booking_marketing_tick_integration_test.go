@@ -50,7 +50,7 @@ func seededMarketingPurposeID(t *testing.T, e *apptest.AppEnv) string {
 func TestAPublicBookingMarketingTickMailsALinkAndGrantsNothing(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
-	enableBookingPage(t, e)
+	apptest.EnableGoogleBookingPage(t, e)
 	base := "/v1/public/booking/" + bookingSlug(t, e)
 	transactional := seededTransactionalPurposeID(t, e)
 	marketing := seededMarketingPurposeID(t, e)
@@ -102,7 +102,7 @@ func TestAPublicBookingMarketingTickMailsALinkAndGrantsNothing(t *testing.T) {
 func TestAPublicBookingRefusesAnInadmissibleMarketingTickBeforeAnyWrite(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
-	enableBookingPage(t, e)
+	apptest.EnableGoogleBookingPage(t, e)
 	base := "/v1/public/booking/" + bookingSlug(t, e)
 	transactional := seededTransactionalPurposeID(t, e)
 	monday := nextMonday()
@@ -229,7 +229,7 @@ func bookingCounts(t *testing.T, e *apptest.AppEnv) counts {
 func TestAPublicBookingWithoutAMarketingTickMailsNothing(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
-	enableBookingPage(t, e)
+	apptest.EnableGoogleBookingPage(t, e)
 	base := "/v1/public/booking/" + bookingSlug(t, e)
 	transactional := seededTransactionalPurposeID(t, e)
 	marketing := seededMarketingPurposeID(t, e)
@@ -328,7 +328,7 @@ func assertNoMarketingGrant(t *testing.T, e *apptest.AppEnv, contactID, purposeI
 func TestAMarketingTickFromANonPrimaryAddressIsNotAsked(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
-	enableBookingPage(t, e)
+	apptest.EnableGoogleBookingPage(t, e)
 	base := "/v1/public/booking/" + bookingSlug(t, e)
 	transactional := seededTransactionalPurposeID(t, e)
 	marketing := seededMarketingPurposeID(t, e)
@@ -435,7 +435,7 @@ func TestAMarketingTickFromANonPrimaryAddressIsNotAsked(t *testing.T) {
 func TestAMarketingTickDoesNotReSolicitAWithdrawnSubject(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
-	enableBookingPage(t, e)
+	apptest.EnableGoogleBookingPage(t, e)
 	base := "/v1/public/booking/" + bookingSlug(t, e)
 	transactional := seededTransactionalPurposeID(t, e)
 	marketing := seededMarketingPurposeID(t, e)

@@ -67,7 +67,7 @@ export function ReportingExportButton({
           actions={
             <Button
               onClick={() => {
-                reloadReportingFigures(client);
+                void reloadReportingFigures(client);
                 download.reset();
               }}
             >

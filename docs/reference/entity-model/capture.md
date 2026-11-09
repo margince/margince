@@ -118,12 +118,14 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_backfill
 
-25 columns · primary key `(id)` · referenced by 2 foreign keys
+31 columns · primary key `(id)` · referenced by 5 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `admission_slot` | `integer` |  |  |
 | `after_date` | `date` | yes |  |
+| `backoff_is_mailbox_scoped` | `boolean`, default `false` | yes |  |
 | `captured` | `integer`, default `0` | yes |  |
 | `companies_created` | `integer`, default `0` | yes |  |
 | `completed_at` | `timestamp with time zone` |  |  |
@@ -132,10 +134,14 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `contacts_created` | `integer`, default `0` | yes |  |
 | `cursor` | `jsonb` |  |  |
 | `dedupe_candidates` | `integer`, default `0` | yes |  |
+| `execution_due_at` | `timestamp with time zone` |  |  |
+| `execution_generation` | `bigint`, default `0` | yes |  |
+| `execution_owner_pid` | `integer` |  |  |
 | `failed` | `integer`, default `0` | yes |  |
 | `inflight_captured` | `integer`, default `0` | yes |  |
 | `inflight_scanned` | `integer`, default `0` | yes |  |
 | `inflight_skipped` | `integer`, default `0` | yes |  |
+| `internal_mail_authorization` | `jsonb` |  |  |
 | `last_error_class` | `text` |  |  |
 | `scanned` | `integer`, default `0` | yes |  |
 | `skipped` | `integer`, default `0` | yes |  |
@@ -156,6 +162,8 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 **Rules**
 
+- `capture_backfill_admission_slot_check`: `CHECK ((admission_slot > 0))`
+- `capture_backfill_internal_mail_authorization`: `CHECK (((internal_mail_authorization IS NULL) OR ((jsonb_typeof(internal_mail_authorization) = 'object') AND (internal_mail_authorization ?& ARRAY['admission', 'after', 'before', 'authorized_by']))))`
 - `capture_backfill_status_check`: `CHECK ((status = ANY (ARRAY['queued', 'running', 'done', 'error', 'cancelled'])))`
 - `capture_backfill_window_months_check`: `CHECK ((window_months = ANY (ARRAY[3, 6, 12, 24, 36, 60, 84, 120])))`
 
@@ -163,6 +171,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 - `capture_backfill_pkey`: `unique, btree (id)`
 - `idx_capture_backfill_conn`: `btree (connection_id, created_at DESC)`
+- `uq_capture_backfill_admission_slot`: `unique, btree (admission_slot) WHERE ((status = 'running') AND (admission_slot IS NOT NULL))`
 - `uq_capture_backfill_live`: `unique, btree (connection_id) WHERE (status = ANY (ARRAY['queued', 'running']))`
 
 **Triggers**
@@ -376,7 +385,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_import
 
-12 columns · primary key `(id)` · referenced by 0 foreign keys
+13 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -386,6 +395,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `delivered_by` | `text[]`, default `'{}'::text[]` | yes |  |
 | `imported_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `posture_at_import` | `text` |  | One of `shared`, `classified`, `held`. |
+| `provider_message_ids` | `text[]`, default `'{}'::text[]` | yes |  |
 | `provider_received_at` | `timestamp with time zone` |  |  |
 | `source_occurred_at` | `timestamp with time zone` |  |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
@@ -411,6 +421,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `capture_import_activity_user_key`: `unique, btree (activity_id, user_id)`
 - `capture_import_pkey`: `unique, btree (id)`
 - `capture_import_user_idx`: `btree (user_id, activity_id)`
+- `idx_capture_import_provider_messages`: `gin (provider_message_ids)`
 
 **Triggers**
 
@@ -604,6 +615,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Indexes**
 
 - `capture_pending_counterparty_backfill_idx`: `btree (backfill_id) WHERE (backfill_id IS NOT NULL)`
+- `capture_pending_counterparty_email_ix`: `btree (email)`
 - `capture_pending_counterparty_pkey`: `unique, btree (id)`
 - `idx_capture_pending_counterparty_activity`: `btree (activity_id)`
 - `idx_capture_pending_counterparty_due`: `btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)`
@@ -614,7 +626,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_sender_override
 
-7 columns · primary key `(id)` · referenced by 0 foreign keys
+8 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -623,6 +635,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `decision` | `text` | yes | One of `business`, `keep_out`. |
 | `overruled_kind` | `text` |  |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
+| `captured_by` | `text` |  | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
@@ -685,7 +698,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `consecutive_failures` | `integer`, default `0` | yes |  |
 | `failing_since` | `timestamp with time zone` |  |  |
 | `last_delivery_at` | `timestamp with time zone` |  |  |
-| `last_error_class` | `text` |  | One of `rate_limited`, `unreachable`, `auth`, `history_gone`, `internal`. |
+| `last_error_class` | `text` |  | One of `rate_limited`, `unreachable`, `auth`, `history_gone`, `forbidden`, `internal`. |
 | `last_success_at` | `timestamp with time zone` |  |  |
 | `last_synced_at` | `timestamp with time zone` |  |  |
 | `next_sync_at` | `timestamp with time zone`, default `now()` | yes |  |
@@ -700,7 +713,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 **Rules**
 
-- `capture_sync_state_last_error_class_check`: `CHECK (((last_error_class IS NULL) OR (last_error_class = ANY (ARRAY['rate_limited', 'unreachable', 'auth', 'history_gone', 'internal']))))`
+- `capture_sync_state_last_error_class_check`: `CHECK (((last_error_class IS NULL) OR (last_error_class = ANY (ARRAY['rate_limited', 'unreachable', 'auth', 'history_gone', 'forbidden', 'internal']))))`
 
 **Indexes**
 
@@ -859,7 +872,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## raw_capture
 
-7 columns · primary key `(id)` · referenced by 2 foreign keys
+9 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -867,6 +880,8 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `parts_slim_outcome` | `text` |  | One of `slimmed`, `no_proved_parts`, `unreadable_spelling`, `unrewritable_original`, `nothing_came_out`, `unencodable_result` and 1 more. |
 | `parts_slimmed_at` | `timestamp with time zone` |  |  |
 | `payload` | `jsonb` | yes |  |
+| `payload_object` | `jsonb` |  |  |
+| `payload_offload_checked_at` | `timestamp with time zone` |  |  |
 | `received_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `source_id` | `text` | yes |  |
 | `source_system` | `text` | yes | The outside system the record came from, when it came from one. |
@@ -874,13 +889,22 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Rules**
 
 - `raw_capture_parts_slim_outcome_known`: `CHECK (((parts_slim_outcome IS NULL) OR (parts_slim_outcome = ANY (ARRAY['slimmed', 'no_proved_parts', 'unreadable_spelling', 'unrewritable_original', 'nothing_came_out', 'unencodable_result', 'no_bytes_saved']))))`
+- `raw_capture_payload_object_shape`: `CHECK (((payload_object IS NULL) OR (((jsonb_typeof(payload_object) = 'object') AND (jsonb_typeof((payload_object -> 'key')) = 'string') AND (jsonb_typeof((payload_object -> 'sha256')) = 'string') AND ((payload_object ->> 'sha256') ~ '^[0-9a-f]{64}$') AND (jsonb_typeof((payload_object -> 'bytes')) = 'number') AND (((payload_object ->> 'bytes'))::numeric > (0)::numeric)) IS TRUE)))`
 - `raw_capture_source_unique`: `UNIQUE (source_system, source_id)`
 
 **Indexes**
 
+- `raw_capture_original_legacy_hints`: `btree (id) WHERE ((payload_object IS NOT NULL) AND ((((payload_object -> 'subjects') ->> 'version') IS DISTINCT FROM '1') OR (jsonb_typeof(((payload_object -> 'subjects') -> 'email_bits')) IS DISTINCT FROM 'array') OR (COALESCE(((payload_object -> 'subjects') ->> 'email_saturated'), 'false') <> 'false')))`
+- `raw_capture_original_subject_hints`: `gin (payload_object jsonb_path_ops) WHERE (payload_object IS NOT NULL)`
+- `raw_capture_payload_object_key`: `btree (((payload_object ->> 'key'))) WHERE (payload_object IS NOT NULL)`
+- `raw_capture_payload_offload_unchecked`: `btree (id) WHERE ((payload_offload_checked_at IS NULL) AND (payload_object IS NULL))`
 - `raw_capture_pkey`: `unique, btree (id)`
 - `raw_capture_source_unique`: `unique, btree (source_system, source_id)`
 - `raw_capture_unslimmed_idx`: `btree (received_at) WHERE (parts_slimmed_at IS NULL)`
+
+**Triggers**
+
+- `raw_original_object_retired`: `BEFORE DELETE OR UPDATE OF payload, payload_object FOR EACH ROW EXECUTE FUNCTION retire_raw_original_object()`
 
 ## workspace_email_domain
 

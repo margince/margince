@@ -98,6 +98,7 @@ export const CORE_OBJECTS: Readonly<Record<CoreRbacObject, CoreObjectName>> = {
   import_run: { area: "data", label: "roles.object.import_run" },
   finance: { area: "data", label: "roles.object.finance" },
   fx_rate: { area: "data", label: "roles.object.fx_rate" },
+  tax_rate: { area: "data", label: "roles.object.tax_rate" },
   data_coverage: { area: "data", label: "roles.object.data_coverage" },
   knowledge_corpus: { area: "data", label: "roles.object.knowledge_corpus" },
   knowledge_document: {

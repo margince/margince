@@ -5,9 +5,9 @@
 
 package compose
 
-// What an import brings in is the source system's history. The readings of
-// how this team sells leave it out: stage conversion and close-date pushes. A
-// move saved before provenance was kept still counts.
+// What an import brings in or a sync mirrors in is another system's history.
+// The readings of how this team sells leave it out: stage conversion and
+// close-date pushes. A move saved before provenance was kept still counts.
 
 import (
 	"context"
@@ -78,6 +78,15 @@ func (f *stageCohortFixture) importMove(importer context.Context, t *testing.T, 
 	f.at = f.at.Add(time.Hour)
 }
 
+// syncMove moves a deal the way an extension mirroring another CRM does.
+func (f *stageCohortFixture) syncMove(t *testing.T, deal ids.DealID, to ids.UUID) {
+	t.Helper()
+	if _, err := f.store.AdvanceDeal(storekit.WithSync(f.writer), deal, deals.AdvanceDealInput{ToStageID: ids.From[ids.StageKind](to)}); err != nil {
+		t.Fatalf("moving a deal by sync: %v", err)
+	}
+	f.at = f.at.Add(time.Hour)
+}
+
 // forgetProvenance makes a deal's moves into one stage look like rows written
 // before a move kept where it came from.
 func (f *stageCohortFixture) forgetProvenance(t *testing.T, deal ids.DealID, stage *ids.UUID) {
@@ -123,6 +132,33 @@ func TestStageConversionLeavesOutImportedMoves(t *testing.T) {
 	}
 	if metric := result.Metrics[0]; metric.Numerator == nil || *metric.Numerator != 6 || *metric.Denominator != 6 || metric.Coverage.Status != reportingPartial {
 		t.Fatalf("stage conversion: %+v, want 6 of 6, partial for the imported exit and the legacy move", metric)
+	}
+}
+
+// A synced move starts no entry, as an imported one does. An entry whose next
+// move was synced is history_partial and stays out of the rate.
+func TestStageConversionLeavesOutSyncedMoves(t *testing.T) {
+	f := newStageCohortFixture(t)
+	s0, s1 := f.stage(0), f.stage(1)
+	start := f.at
+	for range 5 {
+		f.deal(t, f.env.Rep1, s0, s1)
+	}
+	movedOnBySync := f.deal(t, f.env.Rep1, s0)
+	f.syncMove(t, movedOnBySync, s1)
+
+	interval := crmcontracts.ReportingWindow{StartAt: start, EndAt: f.at.Add(time.Hour)}
+	at := f.at.Add(2 * time.Hour)
+	result := f.evaluate(t, newReportingService(f.env.Pool, func() time.Time { return at }), crmcontracts.ReportingScope{Kind: "workspace"}, interval)
+	rows := cohortRows(t, result)
+	if first := rows[s0.String()]; first.observations != 6 || first.outcomes[cohortAdvanced] != 5 || first.outcomes[cohortHistoryPartial] != 1 {
+		t.Fatalf("first stage: %+v, want five advanced and one exit by sync", first)
+	}
+	if second := rows[s1.String()]; second.observations != 5 {
+		t.Fatalf("second stage: %+v, want the five hand entries and not the synced one", second)
+	}
+	if metric := result.Metrics[0]; metric.Numerator == nil || *metric.Numerator != 5 || *metric.Denominator != 5 {
+		t.Fatalf("stage conversion: %+v, want 5 of 5 with the synced exit left out", metric)
 	}
 }
 

@@ -29,15 +29,6 @@ func promiseFollowUps(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, n
 			bases = append(bases, activities.PromiseBasis{PromiseID: ids.UUID(promise), SourceActivityID: ids.UUID(*source), RecipientContactID: contactID.UUID})
 		}
 	}
-	if page.NextSteps != nil {
-		// Only a task written for a promise read out of a message. A reply
-		// reminder has its own judge, and a hand task names no promise.
-		for _, task := range page.NextSteps.Data {
-			if task.SourceSystem != nil && *task.SourceSystem == activities.CommitmentTaskSource {
-				add(task.Id, task.SourceActivityId)
-			}
-		}
-	}
 	if page.Claims != nil {
 		for _, claim := range *page.Claims {
 			if claim.Kind == crmcontracts.ConversationClaimKindCommitmentOurs && claim.Status == crmcontracts.ConversationClaimStatusOpen {
@@ -60,17 +51,6 @@ type owedPromise struct {
 // promiseBehind finds the task or claim a promise card was built from. A card
 // from any other rung has none.
 func promiseBehind(ctx context.Context, moment crmcontracts.ContactMoment, page *crmcontracts.Contact360) (owedPromise, bool) {
-	if moment.ClaimKey == overdueTaskKey || moment.ClaimKey == openTaskKey {
-		if page.NextSteps == nil || len(moment.Evidence) == 0 || moment.Evidence[0].Id == nil {
-			return owedPromise{}, false
-		}
-		for _, task := range page.NextSteps.Data {
-			if task.Id == *moment.Evidence[0].Id {
-				return owedPromise{kind: crmcontracts.ContactMomentMayBeDonePromiseTypeTask, id: task.Id, holder: heldMarker(ctx, task)}, true
-			}
-		}
-		return owedPromise{}, false
-	}
 	if page.Claims == nil {
 		return owedPromise{}, false
 	}

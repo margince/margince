@@ -171,6 +171,8 @@ func messagingRules() messaging.Rules {
 		DealFollowUpWindow: 182 * 24 * time.Hour,
 		// Empty on purpose: prior consent is the only route. See above.
 		MarketingExceptions: nil,
+		// And no exception a sender or an admin records replaces it.
+		ConsentOnly: true,
 		Disclosures: []messaging.Disclosure{
 			{Kind: messaging.ControllerIdentity},
 			{Kind: messaging.PrivacyContact},

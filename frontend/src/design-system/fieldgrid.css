@@ -77,7 +77,6 @@
 .fieldgrid-value .link-button {
   text-align: left;
   font-weight: var(--fontWeightRegular);
-  padding-inline: 0;
 }
 /* A value and the link that opens it stack, or the two run into one string;
    a handle stacks over the row's next part the same way. */

@@ -111,7 +111,7 @@ func withGhostOwnerAsSubject(ctx context.Context) (context.Context, ids.UUID, er
 // ONCE: the registration list is a dozen effects over a dozen stores, and
 // rebuilding it per upload produces the same service every time.
 func linkedInMatchStager(pool *pgxpool.Pool) func(context.Context) error {
-	svc, store := approvalsServiceWithEffects(pool), contacts.NewStore(InstallationDB(pool))
+	svc, store := NewApprovalsServiceWithEffects(pool), contacts.NewStore(InstallationDB(pool))
 	return func(ctx context.Context) error {
 		_, err := StageLinkedInMatches(ctx, pool, svc, store)
 		return err

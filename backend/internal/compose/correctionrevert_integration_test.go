@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/magic"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -314,6 +315,43 @@ func TestTheReceiptOffersUndoOnARealCorrection(t *testing.T) {
 	if reversed.Undo == nil || reversed.Undo.Undoable {
 		t.Error("a correction already taken back still offers an Undo")
 	}
+}
+
+// A later human edit of the corrected field takes the Undo away on the
+// receipt, as it does on the deal's own list. The writer would refuse it.
+func TestTheReceiptRefusesUndoOnACorrectionEditedSince(t *testing.T) {
+	e := setupCloseDate(t)
+	deal := e.seedSweepDeal(t, "Corrected, then edited by hand", e.early, nil, new(-12), 3)
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+	since := clocktest.Now(t).Add(-time.Hour)
+	date := today().AddDate(0, 0, 90)
+	if _, err := e.Deals.UpdateDeal(e.Admin(), ids.From[ids.DealKind](deal), deals.UpdateDealInput{ExpectedClose: &date}); err != nil {
+		t.Fatal(err)
+	}
+	receipt, err := e.magicReceipt(t, since)
+	if err != nil {
+		t.Fatal(err)
+	}
+	correction := e.correctionAuditIDFor(t, deal)
+	line, ok := magicLineByID(receipt, correction)
+	if !ok {
+		t.Fatal("the correction is not on the receipt's done lane")
+	}
+	if line.Undo == nil || line.Undo.Undoable || line.Undo.Reason == nil || *line.Undo.Reason != string(ReasonSuperseded) {
+		t.Fatalf("an edited correction must refuse Undo as superseded, got %+v", line.Undo)
+	}
+}
+
+// magicLineByID finds the done-lane line for one audit row.
+func magicLineByID(receipt crmcontracts.MagicReceipt, auditID ids.UUID) (crmcontracts.MagicLine, bool) {
+	for _, line := range receipt.Done {
+		if ids.UUID(line.Id) == auditID {
+			return line, true
+		}
+	}
+	return crmcontracts.MagicLine{}, false
 }
 
 // The write-side half of TestTheReceiptOffersUndoOnARealCorrection: the

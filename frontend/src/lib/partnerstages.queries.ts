@@ -3,6 +3,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { type Translator, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { labelFor } from "./labelfor";
 import { throwProblem } from "./problem";
 import { shippedLabel, withShippedLabels } from "./shippedlabels";
 
@@ -91,7 +92,7 @@ export function partnerKindsLabel(
   t: Translator,
 ): string {
   return PARTNER_KINDS.filter((kind) => kinds?.includes(kind))
-    .map((kind) => t(KIND_LABELS[kind]))
+    .map((kind) => t(labelFor(KIND_LABELS, kind)))
     .join(", ");
 }
 

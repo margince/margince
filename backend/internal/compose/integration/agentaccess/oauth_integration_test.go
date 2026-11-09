@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
 type oauthEnv struct {
@@ -319,7 +320,7 @@ func TestOAuthConsentGateBlocksSilentAuthorization(t *testing.T) {
 	}
 	apptest.CloseBody(t, resp)
 	location := resp.Header.Get("Location")
-	if resp.StatusCode != http.StatusFound || !strings.HasPrefix(location, "/#/oauth-consent?") {
+	if resp.StatusCode != http.StatusFound || !strings.HasPrefix(location, identity.ConsentScreenPath+"?") {
 		t.Fatalf("GET authorize → %d %q, want the consent screen, never a code", resp.StatusCode, location)
 	}
 	// The redirect goes to the screen, not toward the client — and there is
@@ -369,13 +370,22 @@ func TestOAuthConsentGateBlocksSilentAuthorization(t *testing.T) {
 func TestOAuthRefusesDowngradesAndPrivilegedClients(t *testing.T) {
 	o := setupOAuth(t)
 
-	// No confidential clients, ever.
-	var problem map[string]any
+	// No confidential clients, ever: a request for a secret is registered
+	// public, with no secret issued, and a key-bound method is refused.
+	var registered map[string]any
 	if status := o.Call(t, "POST", "/oauth/register", integration.AnyMap{
 		"client_name": "privileged", "redirect_uris": []string{oauthRedirect},
 		"token_endpoint_auth_method": "client_secret_basic",
+	}, nil, &registered); status != http.StatusCreated ||
+		registered["token_endpoint_auth_method"] != "none" || registered["client_secret"] != nil {
+		t.Fatalf("secret-method DCR → %d %v, want 201 registered as none with no secret", status, registered)
+	}
+	var problem map[string]any
+	if status := o.Call(t, "POST", "/oauth/register", integration.AnyMap{
+		"client_name": "key-bound", "redirect_uris": []string{oauthRedirect},
+		"token_endpoint_auth_method": "private_key_jwt",
 	}, nil, &problem); status != http.StatusBadRequest {
-		t.Fatalf("confidential DCR → %d %v, want refusal", status, problem)
+		t.Fatalf("key-bound DCR → %d %v, want refusal", status, problem)
 	}
 
 	// The plain method and a missing challenge are refused pre-code.

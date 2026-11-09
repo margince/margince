@@ -3,6 +3,7 @@
 
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
+import { labelFor } from "../lib/labelfor";
 
 type Provider = components["schemas"]["CaptureConnection"]["provider"];
 
@@ -40,28 +41,34 @@ export function isCaptureProvider(id: string): id is Provider {
 
 /** The catalog key that names a capture provider. */
 export function providerNameKey(provider: Provider): MessageKey {
-  return PROVIDER_NAME[provider];
+  return labelFor(PROVIDER_NAME, provider);
 }
 
 // An id this build cannot name comes back as sent: a newer server's provider is
 // still one the reader can quote.
 export function providerName(id: string, t: (key: MessageKey) => string) {
-  return isCaptureProvider(id) ? t(PROVIDER_NAME[id]) : id;
+  return isCaptureProvider(id) ? t(labelFor(PROVIDER_NAME, id)) : id;
 }
 
-/** The two vendors whose mail and calendar are separate grants of one account. */
+/** The two vendors whose mail and calendar are separate connections of one account. */
 export type AccountVendor = "google" | "microsoft";
 
 /** Each vendor's mailbox and calendar, the same pairs the server chains with
- *  `also_connect` (gmail then gcal, graph then graphcal). */
+ *  `also_connect` (gmail then gcal, graph then graphcal). `oneConsent` mirrors
+ *  the server's `sharedConsentCalendars`: Google asks for both on one screen,
+ *  Microsoft asks once for mail and once more for the calendar. */
 export const VENDOR_SERVICES: Readonly<
   Record<
     AccountVendor,
-    Readonly<{ mail: "gmail" | "graph"; calendar: "gcal" | "graphcal" }>
+    Readonly<{
+      mail: "gmail" | "graph";
+      calendar: "gcal" | "graphcal";
+      oneConsent: boolean;
+    }>
   >
 > = {
-  google: { mail: "gmail", calendar: "gcal" },
-  microsoft: { mail: "graph", calendar: "graphcal" },
+  google: { mail: "gmail", calendar: "gcal", oneConsent: true },
+  microsoft: { mail: "graph", calendar: "graphcal", oneConsent: false },
 };
 
 /** The vendor a provider belongs to, or null for IMAP, the test mailbox and
@@ -158,7 +165,7 @@ export const ACCOUNT_NAME: Readonly<
  *  read "Google". */
 export function accountNameOf(provider: Provider): MessageKey {
   if (isLoneProvider(provider)) {
-    return ACCOUNT_NAME[provider];
+    return labelFor(ACCOUNT_NAME, provider);
   }
   const { mail, calendar } = VENDOR_SERVICES.google;
   const isGoogle = provider === mail || provider === calendar;

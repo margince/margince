@@ -7,7 +7,6 @@ package gates
 
 import (
 	"os"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -80,7 +79,9 @@ var runLedgerWindow = gatekit.Waive(map[string]string{
 	"activity_calendar_method_backfill": "one row per calendar-method re-read settled. The check " +
 		"stamp is the only column, so a window is the whole question",
 	"webhook_delivery": "one row per delivery attempt, holding the dead-letter stamp and the retry " +
-		"schedule. The retry path reads it, so a window must clear the longest backoff",
+		"schedule. The retry path reads it, so a window must clear the longest backoff. The rendered " +
+		"body is cleared once the delivery ended (privacy/retentioncopies.go); the row stays for the " +
+		"log and the (subscription, event) dedupe",
 })
 
 // ledgerName is the shape of a table that records executions rather than
@@ -127,7 +128,7 @@ func TestEveryLedgerOfExecutionsStatesItsWindow(t *testing.T) {
 // ledgerTables derives the corpus from the catalog.
 func ledgerTables(t *testing.T) []string {
 	t.Helper()
-	raw, err := os.ReadFile("migrations/testdata/head_catalog.txt")
+	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
 	}
@@ -152,12 +153,12 @@ func windowedLedgers(t *testing.T) map[string]bool {
 	t.Helper()
 	bounded := map[string]bool{}
 	for _, root := range []string{"internal", "../extensions"} {
-		err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 				strings.HasSuffix(path, "_test.go") {
 				return nil //nolint:nilerr // a tree that cannot be walked is the caller's problem, not a finding
 			}
-			raw, readErr := os.ReadFile(path)
+			raw, readErr := gatekit.ReadFile(path)
 			if readErr != nil {
 				return readErr
 			}

@@ -16,9 +16,11 @@ package weekly
 // figures are what the panel draws forever.
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -26,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // Outlook is one horizon's landing, frozen.
@@ -48,9 +51,9 @@ type Outlook struct {
 	ForwardMeasure string
 	BaseCurrency   string
 	// The readings behind the landing, copied for the same reason.
-	WonMinor      int64
-	CommitMinor   int64
-	BestCaseMinor int64
+	WonMinor int64
+	// LikelyMinor is the Likely reading, frozen in the commit_minor column.
+	LikelyMinor   int64
 	WeightedMinor int64
 	// Movement is how this window got from its opening landing to its closing
 	// one. Empty where there was no opening snapshot to move from.
@@ -185,8 +188,7 @@ func insertOutlookInto(
 	add("period_end", out.PeriodEnd)
 	add("base_currency", out.BaseCurrency)
 	add("won_minor", out.WonMinor)
-	add("commit_minor", out.CommitMinor)
-	add("best_case_minor", out.BestCaseMinor)
+	add("commit_minor", out.LikelyMinor)
 	add("weighted_minor", out.WeightedMinor)
 	// The opening side travels whole or not at all, which is what the table's
 	// own CHECK holds. An absent Monday writes nulls, and the panel says "no
@@ -266,7 +268,7 @@ func readOutlookFrom(
 	// Identifiers from this package's own constants, never from a request.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT period_kind, period_start, period_end, base_currency,
-		       won_minor, commit_minor, best_case_minor, weighted_minor,
+		       won_minor, commit_minor, weighted_minor,
 		       opening_snapshot_id, opening_landing_minor,
 		       closing_snapshot_id, closing_landing_minor, forward_measure
 		  FROM %s
@@ -283,7 +285,7 @@ func readOutlookFrom(
 		var openLanding, closeLanding *int64
 		var measure *string
 		err := row.Scan(&o.PeriodKind, &o.PeriodStart, &o.PeriodEnd, &o.BaseCurrency,
-			&o.WonMinor, &o.CommitMinor, &o.BestCaseMinor, &o.WeightedMinor,
+			&o.WonMinor, &o.LikelyMinor, &o.WeightedMinor,
 			&openID, &openLanding, &closeID, &closeLanding, &measure)
 		if openID != nil && openLanding != nil {
 			o.Opening = OutlookSide{Known: true, SnapshotID: *openID, LandingMinor: *openLanding}
@@ -291,8 +293,16 @@ func readOutlookFrom(
 		if closeID != nil && closeLanding != nil {
 			o.Closing = OutlookSide{Known: true, SnapshotID: *closeID, LandingMinor: *closeLanding}
 		}
-		if measure != nil {
-			o.ForwardMeasure = *measure
+		// A week frozen under the retired qualified forecast keeps its word: it
+		// was not read under Likely or weighted, and saying so would re-mean it.
+		if retired, ok := values.RetiredForwardMeasure(derefMeasure(measure)); ok {
+			o.ForwardMeasure = retired
+		} else if measure != nil {
+			parsed, parseErr := values.ParseForwardMeasure(measure, "forward_measure")
+			if parseErr != nil {
+				return o, parseErr
+			}
+			o.ForwardMeasure = string(parsed)
 		}
 		return o, err
 	})
@@ -342,7 +352,7 @@ func readMovement(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, horizons []
 		// Ordered by the bridge's own drawing order rather than by whatever the
 		// scan returned: a waterfall read left to right is a story, and two
 		// readers of one week must get the same one.
-		horizons[i].Movement = inBarOrder(bars[horizons[i].PeriodKind])
+		horizons[i].Movement = inBarOrder(foldRetiredBars(bars[horizons[i].PeriodKind]))
 	}
 	return nil
 }
@@ -368,6 +378,60 @@ func readDrivers(ctx context.Context, tx pgx.Tx, reviewID ids.UUID) (map[string]
 		out[d.PeriodKind+"/"+d.Bar] = append(out[d.PeriodKind+"/"+d.Bar], d)
 	}
 	return out, rows.Err()
+}
+
+// retiredBars are the bars of the retired qualified forecast. A week frozen
+// with them still owes its money to the bridge, or the bars stop adding up to
+// the frozen landings.
+var retiredBars = []string{"excluded", "reinstated", "not_checked"}
+
+// foldRetiredBars moves the retired bars into "other", the bar that already
+// holds a definition change. It sums their deltas and keeps the largest of
+// their drivers, up to the number any bar remembers.
+func foldRetiredBars(bars []Movement) []Movement {
+	out := make([]Movement, 0, len(bars))
+	var retired []Movement
+	other := -1
+	for _, bar := range bars {
+		if slices.Contains(retiredBars, bar.Bar) {
+			retired = append(retired, bar)
+			continue
+		}
+		if bar.Bar == BarOther {
+			other = len(out)
+		}
+		out = append(out, bar)
+	}
+	if len(retired) == 0 {
+		return out
+	}
+	if other < 0 {
+		out = append(out, Movement{PeriodKind: retired[0].PeriodKind, Bar: BarOther})
+		other = len(out) - 1
+	}
+	for _, bar := range retired {
+		out[other].DeltaMinor += bar.DeltaMinor
+		out[other].Drivers = append(out[other].Drivers, bar.Drivers...)
+	}
+	slices.SortStableFunc(out[other].Drivers, func(a, b Driver) int {
+		return cmp.Compare(abs(b.DeltaMinor), abs(a.DeltaMinor))
+	})
+	out[other].Drivers = out[other].Drivers[:min(driversPerBar, len(out[other].Drivers))]
+	return out
+}
+
+func derefMeasure(measure *string) string {
+	if measure == nil {
+		return ""
+	}
+	return *measure
+}
+
+func abs(v int64) int64 {
+	if v < 0 {
+		return -v
+	}
+	return v
 }
 
 // inBarOrder puts a horizon's bars in the bridge's drawing order.

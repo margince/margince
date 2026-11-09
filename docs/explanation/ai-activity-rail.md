@@ -141,7 +141,7 @@ reads the file, not the PR.
 
 The text uses a literal key, never `t(\`agent.activity.${kind}.${state}\`)`. The guard for keys no code uses, in
 
-`i18n/orphan-keys.test.ts` counts a key as in use when it starts with the fixed part of a template. A
+`frontend/census/rules/orphan-keys.census.ts` counts a key as in use when it starts with the fixed part of a template. A
 key built from parts would count for the whole namespace forever. The text of a removed kind would then
 sit in three catalogs with nothing to flag it.
 
@@ -154,7 +154,7 @@ sit in three catalogs with nothing to flag it.
 | `document_extract` | carrier (`attachment_extraction`) | reading a document you attached |
 | `account_scan` | carrier (`account_scan`, the `company_scan` row) | `I'm reading Brandt Automotive's exchanges and deals.` Named for the account, so a reader who opened three accounts and moved on knows which is ready |
 | `site_read` | carrier (`site_read`) | reading a company's website, named for the company |
-| `transcript_propose` | carrier (`transcript_read`) | reading a meeting transcript for its next steps |
+| `transcript_propose` | carrier (`transcript_read`) | reading a call or meeting transcript for its next steps |
 | `voice_build` | carrier (`voice_build`) | learning the reader's own writing voice |
 | `weekly_review` | router | the review of the week, under the rep's own principal |
 | `weekly_learnings` | router | the rep's own week, under their own principal |

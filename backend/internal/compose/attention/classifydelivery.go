@@ -18,12 +18,14 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
-// The two system sources that are ONE contact's: a mailbox belongs to whoever
-// connected it, and a notice is addressed to whoever it names. Spelled as
-// constants because both the consequence switch and the ownership switch read
-// them, and a typo in either would silently move a row to the wrong answer.
+// The system sources that belong to one colleague. A mailbox is whoever connected
+// it, a booking page is its host's, and a notice is whoever it names. The
+// ownership switch reads all three, so a typo would move a row to the wrong
+// answer. classifySystem's consequence reads the mailbox and the notice, and a
+// booking page takes its default.
 const (
 	sourceCaptureHealth = crmcontracts.AttentionItemSource("capture_health")
+	sourceBookingHealth = crmcontracts.AttentionItemSource("booking_health")
 	sourceNotice        = crmcontracts.AttentionItemSource("notice")
 )
 
@@ -86,18 +88,17 @@ func classifySystem(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 // systemRowOwner separates the personal system rows from the workspace ones.
 //
 // classifySystem draws five sources and they do not agree about ownership. A
-// notice is addressed to one contact and a mailbox belongs to one contact: both
-// lanes read per-user, so the row is the reader's by construction. A failing
-// sync, a broken AI task and a stopped automation are the WORKSPACE's — those
-// services read no user at all, several admins see the same row, and naming
-// whoever opened the page would make one shared failure look like five contacts's
-// separate problems.
+// notice, a mailbox and a booking page each belong to one colleague. Their lanes
+// read per-user, so the row is the reader's by construction. A broken AI task
+// and a stopped automation are the workspace's. Those services
+// read no user, several admins see the same row, and naming the reader would
+// make one shared failure look like several colleagues' problems.
 //
 // Stated here rather than in the classifier's literal so the difference is
 // visible: a source added to that switch has to answer this question too.
 func systemRowOwner(source crmcontracts.AttentionItemSource) ownerRef {
 	switch source {
-	case sourceNotice, sourceCaptureHealth:
+	case sourceNotice, sourceCaptureHealth, sourceBookingHealth:
 		return ownedByWhoeverIsReading()
 	default:
 		return unassigned()

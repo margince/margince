@@ -200,7 +200,7 @@ func TestTheSweptCorpusIsEveryModuleThatCouldCarryAClaim(t *testing.T) {
 // could have written a claim in, stopping at a nested module so a parent does
 // not answer for its child.
 func holdsAuthoredGo(dir string) (bool, error) {
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		return false, err
 	}
@@ -326,7 +326,7 @@ func TestTheTwoDoorsAreJudgedRatherThanTrusted(t *testing.T) {
 // A regression removing the skip would leave the sweep refusing on the first
 // symlink in somebody's package store, which is the flake this exists to stop.
 func walkSweptTree(root string, ignored map[string]bool, visit func(path string) error) error {
-	return filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+	return gatekit.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}

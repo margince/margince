@@ -111,7 +111,7 @@ func TestTheAtRiskSweepReportsItsOwnReach(t *testing.T) {
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	seedOpenDeal(t, e)
 
-	report, err := atRiskLister(e.Pool, contacts.NewStore(InstallationDB(e.Pool)))(ctx)
+	report, err := atRiskLister(e.Pool, contacts.NewStore(InstallationDB(e.Pool)))(ctx, nil)
 	if err != nil {
 		t.Fatalf("at-risk sweep: %v", err)
 	}
@@ -256,7 +256,7 @@ func TestTheAtRiskSweepSaysADealCouldNotBeAssessedRatherThanCallingItClean(t *te
 	e := integration.Setup(t)
 	seedOpenDeal(t, e)
 
-	granted, err := atRiskLister(e.Pool, contacts.NewStore(InstallationDB(e.Pool)))(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms))
+	granted, err := atRiskLister(e.Pool, contacts.NewStore(InstallationDB(e.Pool)))(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms), nil)
 	if err != nil {
 		t.Fatalf("the granted sweep: %v", err)
 	}
@@ -265,7 +265,7 @@ func TestTheAtRiskSweepSaysADealCouldNotBeAssessedRatherThanCallingItClean(t *te
 			"nothing about the denied caller", len(granted.Deals), granted.CoverageWithheld)
 	}
 
-	denied, err := atRiskLister(e.Pool, contacts.NewStore(InstallationDB(e.Pool)))(e.As(e.Rep1, []ids.UUID{e.Team1}, coverageDeniedPerms()))
+	denied, err := atRiskLister(e.Pool, contacts.NewStore(InstallationDB(e.Pool)))(e.As(e.Rep1, []ids.UUID{e.Team1}, coverageDeniedPerms()), nil)
 	if err != nil {
 		t.Fatalf("the denied sweep failed instead of reporting what it could not assess: %v", err)
 	}

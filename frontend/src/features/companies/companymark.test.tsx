@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -7,7 +8,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -62,26 +63,42 @@ function slot(name: "Wide logo" | "Square icon") {
   return within(screen.getByRole("region", { name }));
 }
 
-// A company with no mark in a slot is not a broken image and not an empty slot:
-// it is its own initials, and the slot says why and offers the way out.
-it("stands the monogram in and offers to add each mark", () => {
-  mark(WITHOUT_MARK);
-  for (const name of ["Wide logo", "Square icon"] as const) {
-    const field = slot(name);
+// A slot's verbs sit in its Edit menu, opened from the pill on its picture.
+async function openEdit(
+  user: UserEvent,
+  slotName: "Wide logo" | "Square icon",
+) {
+  const label =
+    slotName === "Wide logo" ? "Edit wide logo" : "Edit square icon";
+  await user.click(screen.getByRole("button", { name: label }));
+}
+
+// An empty slot shows the company's initials, never a broken image.
+// Its menu offers the way out.
+it.each(["Wide logo", "Square icon"] as const)(
+  "stands the monogram in for an empty %s and offers only its upload",
+  async (slotName) => {
+    const user = userEvent.setup();
+    mark(WITHOUT_MARK);
+    const field = slot(slotName);
     expect(field.queryByRole("img", { name: "Acme GmbH" })).toBeNull();
     expect(field.getByText("AG")).toBeTruthy();
+
+    await openEdit(user, slotName);
+    const upload =
+      slotName === "Wide logo" ? "Upload wide logo" : "Upload square icon";
+    expect(screen.getByRole("button", { name: upload })).toBeVisible();
     // Nothing to remove, so the verb that removes it is not drawn. A control
     // whose only outcome is a refusal is worse than no control.
-    expect(field.queryByRole("button", { name: /^Remove/ })).toBeNull();
-  }
-  expect(screen.getByRole("button", { name: "Add wide logo" })).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Add square icon" })).toBeTruthy();
-});
+    expect(screen.queryByRole("button", { name: /^Remove/ })).toBeNull();
+  },
+);
 
 // Each slot answers for its own mark. A company that uploaded a wordmark and no
 // badge is the ordinary case, and the icon slot must still be an invitation
 // rather than look as though it already holds the wordmark.
-it("draws each mark in its own slot and offers the verbs that fit it", () => {
+it("draws each mark in its own slot and offers the verbs that fit it", async () => {
+  const user = userEvent.setup();
   mark(WITH_MARK);
   expect(
     slot("Wide logo")
@@ -89,21 +106,29 @@ it("draws each mark in its own slot and offers the verbs that fit it", () => {
       .querySelector("img")
       ?.getAttribute("src"),
   ).toBe(LOGO);
+  await openEdit(user, "Wide logo");
   expect(
-    screen.getByRole("button", { name: "Replace wide logo" }),
-  ).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Remove wide logo" })).toBeTruthy();
+    screen.getByRole("button", { name: "Upload wide logo" }),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "Remove wide logo" }),
+  ).toBeVisible();
+  await user.keyboard("{Escape}");
 
   const icon = slot("Square icon");
   expect(icon.queryByRole("img", { name: "Acme GmbH" })).toBeNull();
   expect(icon.getByText("AG")).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Add square icon" })).toBeTruthy();
+  await openEdit(user, "Square icon");
+  expect(
+    screen.getByRole("button", { name: "Upload square icon" }),
+  ).toBeVisible();
   expect(
     screen.queryByRole("button", { name: "Remove square icon" }),
   ).toBeNull();
 });
 
-it("draws both marks when the company wears both", () => {
+it("draws both marks when the company wears both", async () => {
+  const user = userEvent.setup();
   mark(WITH_BOTH);
   expect(
     slot("Square icon")
@@ -111,20 +136,32 @@ it("draws both marks when the company wears both", () => {
       .querySelector("img")
       ?.getAttribute("src"),
   ).toBe(ICON);
-  expect(
-    screen.getByRole("button", { name: "Replace square icon" }),
-  ).toBeTruthy();
+  await openEdit(user, "Square icon");
   expect(
     screen.getByRole("button", { name: "Remove square icon" }),
-  ).toBeTruthy();
+  ).toBeVisible();
 });
 
-// The verb under a tile opens that tile's own picker, never the other slot's.
+// A reader who may not change the marks still sees them, with no pill.
+it("draws the marks alone for a reader who may not change them", () => {
+  render(
+    <Providers>
+      <CompanyMark profile={WITH_BOTH} canEdit={false} />
+    </Providers>,
+  );
+  expect(
+    slot("Wide logo").getByRole("img", { name: "Acme GmbH" }),
+  ).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /^Edit/ })).toBeNull();
+  expect(document.querySelector("input[type=file]")).toBeNull();
+});
+
+// A slot's Upload opens that slot's own picker, never the other slot's.
 it.each([
-  { verb: "Replace wide logo", slotName: "Wide logo" },
-  { verb: "Replace square icon", slotName: "Square icon" },
+  { verb: "Upload wide logo", slotName: "Wide logo" },
+  { verb: "Upload square icon", slotName: "Square icon" },
 ] as const)(
-  "$verb opens the picker of its own tile",
+  "$verb opens the picker of its own slot",
   async ({ verb, slotName }) => {
     const user = userEvent.setup();
     mark(WITH_BOTH);
@@ -135,12 +172,37 @@ it.each([
         opened.push(this);
       });
 
+    await openEdit(user, slotName);
     await user.click(screen.getByRole("button", { name: verb }));
 
     expect(opened).toEqual([slot(slotName).getByLabelText(slotName)]);
     click.mockRestore();
   },
 );
+
+// Down opens the menu on its first item and walks to the next.
+// Escape closes it and puts focus back on the pill.
+it("opens the Edit menu from the keyboard and closes back onto its pill", async () => {
+  const user = userEvent.setup();
+  mark(WITH_MARK);
+  const pill = screen.getByRole("button", { name: "Edit wide logo" });
+  pill.focus();
+
+  await user.keyboard("{ArrowDown}");
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Upload wide logo" }),
+    ).toHaveFocus(),
+  );
+  await user.keyboard("{ArrowDown}");
+  expect(
+    screen.getByRole("button", { name: "Remove wide logo" }),
+  ).toHaveFocus();
+  await user.keyboard("{Escape}");
+
+  expect(pill).toHaveFocus();
+  expect(pill).toHaveAttribute("aria-expanded", "false");
+});
 
 // One caption describes both files, tied to both tiles, so a keyboard reader
 // on either hears the format it takes.
@@ -207,6 +269,10 @@ it.each([
   const fetchStub = stubFetch(WITHOUT_MARK);
   mark(WITH_BOTH);
 
+  await openEdit(
+    user,
+    verb === "Remove wide logo" ? "Wide logo" : "Square icon",
+  );
   await user.click(screen.getByRole("button", { name: verb }));
 
   await waitFor(() => expect(fetchStub).toHaveBeenCalled());
@@ -311,7 +377,7 @@ it("draws the refusals below the tiles, wide first, never inside a slot", async 
     alerts.map((alert) => alert.querySelector(".callout-title")?.textContent),
   ).toEqual(["Wide logo not uploaded", "Square icon not uploaded"]);
   for (const alert of alerts) {
-    expect(alert.closest(".brand-slot")).toBeNull();
+    expect(alert.closest(".image-slot")).toBeNull();
   }
   const slots = alerts[0].closest(".brand-refusals")?.previousElementSibling;
   expect(slots?.className).toBe("brand-slots");
@@ -342,6 +408,7 @@ it("shows the server's refusal of a removal beside the control", async () => {
   );
   mark(WITH_MARK);
 
+  await openEdit(user, "Wide logo");
   await user.click(screen.getByRole("button", { name: "Remove wide logo" }));
 
   expect(await screen.findByText("Wide logo not removed")).toBeTruthy();

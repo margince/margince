@@ -6,6 +6,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { useT } from "../../i18n";
+import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { LANE_LABEL } from "./rate-manual";
 
@@ -50,7 +51,10 @@ export function RemovePriceDialog({
       onClose();
     },
   });
-  const named = { model: row.model_id, lane: t(LANE_LABEL[row.lane]) };
+  const named = {
+    model: row.model_id,
+    lane: t(labelFor(LANE_LABEL, row.lane)),
+  };
   return (
     <ConfirmModal
       open

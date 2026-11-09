@@ -13,10 +13,11 @@ import (
 // wellFormedKind is the registration every case below mutates one field of.
 func wellFormedKind() ExtensionKind {
 	return ExtensionKind{
-		Verb:        "notes_forget",
-		TargetTable: "ext_notes_note",
-		RbacObject:  "ext_notes_note",
-		RbacAction:  principal.ActionDelete,
+		Verb:          "notes_forget",
+		TargetTable:   "ext_notes_note",
+		RbacObject:    "ext_notes_note",
+		RbacAction:    principal.ActionDelete,
+		RequiredScope: principal.ScopeWrite,
 	}
 }
 
@@ -85,7 +86,7 @@ func TestRegisterExtensionKindsRefusesWhatCannotBeGoverned(t *testing.T) {
 		// A unit re-governing a verb this module decides.
 		"a core kind's name": {{
 			Verb: "promote_lead", TargetTable: "ext_notes_note",
-			RbacObject: "ext_notes_note", RbacAction: principal.ActionDelete,
+			RbacObject: "ext_notes_note", RbacAction: principal.ActionDelete, RequiredScope: principal.ScopeWrite,
 		}},
 		// The dangerous half of the same collision: decisionGrantsFor consults
 		// targetResolvedGrants BEFORE the registry, so a unit taking one of
@@ -93,33 +94,33 @@ func TestRegisterExtensionKindsRefusesWhatCannotBeGoverned(t *testing.T) {
 		// object and action silently ignored.
 		"a core kind whose grant resolves from its target": {{
 			Verb: "assign_owner", TargetTable: "ext_notes_note",
-			RbacObject: "ext_notes_note", RbacAction: principal.ActionDelete,
+			RbacObject: "ext_notes_note", RbacAction: principal.ActionDelete, RequiredScope: principal.ScopeWrite,
 		}},
 		// Its existence probe would read another store's table.
 		"a core target type": {{
 			Verb: "notes_forget", TargetTable: tableContact,
-			RbacObject: "ext_notes_note", RbacAction: principal.ActionDelete,
+			RbacObject: "ext_notes_note", RbacAction: principal.ActionDelete, RequiredScope: principal.ScopeWrite,
 		}},
 		// The name is read into a statement, so it is checked as an identifier
 		// here as well as at declaration.
 		"a table that is not a namespaced identifier": {{
 			Verb: "notes_forget", TargetTable: "note",
-			RbacObject: "ext_notes_note", RbacAction: principal.ActionDelete,
+			RbacObject: "ext_notes_note", RbacAction: principal.ActionDelete, RequiredScope: principal.ScopeWrite,
 		}},
 		"a table carrying a statement": {{
 			Verb: "notes_forget", TargetTable: `ext_notes_note" WHERE true--`,
-			RbacObject: "ext_notes_note", RbacAction: principal.ActionDelete,
+			RbacObject: "ext_notes_note", RbacAction: principal.ActionDelete, RequiredScope: principal.ScopeWrite,
 		}},
 		// Nothing to require of the decider is decidable by any seat that can
 		// see the inbox.
 		"no RBAC object": {{
-			Verb: "notes_forget", TargetTable: "ext_notes_note", RbacAction: principal.ActionDelete,
+			Verb: "notes_forget", TargetTable: "ext_notes_note", RbacAction: principal.ActionDelete, RequiredScope: principal.ScopeWrite,
 		}},
 		"no RBAC action": {{
 			Verb: "notes_forget", TargetTable: "ext_notes_note", RbacObject: "ext_notes_note",
 		}},
 		"no verb": {{
-			TargetTable: "ext_notes_note", RbacObject: "ext_notes_note", RbacAction: principal.ActionDelete,
+			TargetTable: "ext_notes_note", RbacObject: "ext_notes_note", RbacAction: principal.ActionDelete, RequiredScope: principal.ScopeWrite,
 		}},
 		"one verb registered twice": {wellFormedKind(), wellFormedKind()},
 		// Who may decide a staged row must not depend on which verb parked it.
@@ -127,7 +128,7 @@ func TestRegisterExtensionKindsRefusesWhatCannotBeGoverned(t *testing.T) {
 			wellFormedKind(),
 			{
 				Verb: "notes_rename", TargetTable: "ext_notes_note",
-				RbacObject: "ext_notes_note", RbacAction: principal.ActionUpdate,
+				RbacObject: "ext_notes_note", RbacAction: principal.ActionUpdate, RequiredScope: principal.ScopeWrite,
 			},
 		},
 	} {
@@ -145,7 +146,7 @@ func TestRegisterExtensionKindsRefusesWhatCannotBeGoverned(t *testing.T) {
 func TestTwoVerbsMayStageAgainstOneTableWhenTheyAgreeOnTheDecider(t *testing.T) {
 	registerOnly(t, wellFormedKind(), ExtensionKind{
 		Verb: "notes_rename", TargetTable: "ext_notes_note",
-		RbacObject: "ext_notes_note", RbacAction: principal.ActionDelete,
+		RbacObject: "ext_notes_note", RbacAction: principal.ActionDelete, RequiredScope: principal.ScopeWrite,
 	})
 	for _, verb := range []string{"notes_forget", "notes_rename"} {
 		if _, err := decisionGrantsFor(verb, nil); err != nil {
@@ -164,7 +165,7 @@ func TestRegisteringAgainReplacesTheSet(t *testing.T) {
 	registerOnly(t, wellFormedKind())
 	if err := RegisterExtensionKinds([]ExtensionKind{{
 		Verb: "notes_rename", TargetTable: "ext_notes_other",
-		RbacObject: "ext_notes_other", RbacAction: principal.ActionUpdate,
+		RbacObject: "ext_notes_other", RbacAction: principal.ActionUpdate, RequiredScope: principal.ScopeWrite,
 	}}); err != nil {
 		t.Fatalf("re-registering: %v", err)
 	}
@@ -196,7 +197,7 @@ func count(values []string, want string) int {
 func TestTheReadFloorAsksAboutTheObjectAUnitDeclared(t *testing.T) {
 	registerOnly(t, ExtensionKind{
 		Verb: "notes_forget", TargetTable: "ext_notes_note",
-		RbacObject: "ext_notes_notepad", RbacAction: principal.ActionDelete,
+		RbacObject: "ext_notes_notepad", RbacAction: principal.ActionDelete, RequiredScope: principal.ScopeWrite,
 	})
 	if got := readObjectFor("ext_notes_note"); got != "ext_notes_notepad" {
 		t.Errorf("the read floor asks about %q, want the unit's declared object", got)

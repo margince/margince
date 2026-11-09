@@ -60,7 +60,7 @@ func offlineRequested(raw string) bool {
 // each tool and the granting human's RBAC is re-derived per call — so offering
 // fewer here would narrow the screen without narrowing the authority, and the
 // human would be choosing from a list that does not mean what it shows.
-func consentRequestPayload(clientName string, offline bool) crmcontracts.ConsentRequest {
+func consentRequestPayload(clientName string, offline bool, areas []crmcontracts.WorkArea) crmcontracts.ConsentRequest {
 	scopes := make([]crmcontracts.ConsentRequestScopes, 0, len(passportScopeVocabulary))
 	for _, scope := range passportScopeVocabulary {
 		scopes = append(scopes, crmcontracts.ConsentRequestScopes(scope))
@@ -69,6 +69,7 @@ func consentRequestPayload(clientName string, offline bool) crmcontracts.Consent
 		ClientName: clientName,
 		Offline:    offline,
 		Scopes:     scopes,
+		Areas:      areas,
 	}
 }
 
@@ -93,5 +94,5 @@ func (h Handlers) GetConsentRequest(w http.ResponseWriter, r *http.Request, para
 	// still proves possession of the cookie. An endpoint that read it would 404
 	// every real browser while a test setting the header by hand passed.
 	httperr.WriteJSON(w, http.StatusOK,
-		consentRequestPayload(clientName, offlineRequested(params.Scope)))
+		consentRequestPayload(clientName, offlineRequested(params.Scope), h.reachable(r.Context())))
 }

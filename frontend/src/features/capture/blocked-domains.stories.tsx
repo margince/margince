@@ -106,7 +106,7 @@ const OPS = { company: ["read", "update"] } as const;
 const READER = { company: ["read"] } as const;
 
 const meta: Meta<typeof BlockedDomainsCard> = {
-  title: "Settings/Data/Capture rules/Refused domains",
+  title: "Settings/Data/Mail capture/Refused domains",
   component: BlockedDomainsCard,
 };
 export default meta;

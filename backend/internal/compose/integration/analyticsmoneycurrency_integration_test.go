@@ -137,26 +137,24 @@ func TestEachCurrencyIsSummedInItsOwnMinorUnits(t *testing.T) {
 	}
 }
 
-// The converted measure on each of the three populations the decision names.
-// CHF has no rate, so it is left out of the total and out of the priced count.
-func TestTheBaseMeasureConvertsEachDealAndLeavesTheUnratedOut(t *testing.T) {
+func TestTheBaseMeasureWithholdsAnIncompleteTotalAndConvertsThePricedSubset(t *testing.T) {
 	d := newTwoDoors(t, "money-currency-base", "read")
 	seedMixedCurrencyPipeline(t, d)
 	// 5×100000 EUR + 5×(10000 USD cents × 0.5) + 5×(1000 yen × 0.006 × 100 cents).
 	const want = 500_000 + 25_000 + 3_000
 	for _, entity := range []string{"deals-by-stage", "open-deals-per-company"} {
-		answer := askMoney(t, d, map[string]any{"entity": entity, "scope_kind": "workspace", "measures": []any{
+		query := map[string]any{"entity": entity, "scope_kind": "workspace", "measures": []any{
 			map[string]any{"fn": "count", "as": "deals"},
 			map[string]any{"fn": "sum", "field": "amount_base_minor", "as": "base"},
 			map[string]any{"fn": "count_distinct", "field": "amount_base_minor", "as": "distinct_prices"},
-		}})
+		}}
+		answer := askMoney(t, d, query)
 		if len(answer.Rows) != 1 {
 			t.Fatalf("%s: ungrouped answer has %d rows: %+v", entity, len(answer.Rows), answer.Rows)
 		}
 		row := answer.Rows[0]
-		if fmt.Sprint(row["base"]) != itoa(want) {
-			t.Errorf("%s: converted total %s, want %d — 3010 short of it means the yen were read as cents",
-				entity, row["base"], want)
+		if value, present := row["base"]; !present || value != nil {
+			t.Errorf("%s: incomplete converted total = %v, want an explicit null", entity, row)
 		}
 		if fmt.Sprint(row["deals"]) != itoa(int64(len(mixedCurrencyDeals)*dealsPerCurrency)) {
 			t.Errorf("%s: counted %s deals, want every one including the unrated CHF", entity, row["deals"])
@@ -164,6 +162,11 @@ func TestTheBaseMeasureConvertsEachDealAndLeavesTheUnratedOut(t *testing.T) {
 		// One converted price per rated currency: CHF has none to count.
 		if fmt.Sprint(row["distinct_prices"]) != "3" {
 			t.Errorf("%s: %s distinct converted prices, want 3 — CHF has no rate and must not price at zero", entity, row["distinct_prices"])
+		}
+		query["filters"] = []any{map[string]any{"field": "currency", "op": "ne", "value": "CHF"}}
+		priced := askMoney(t, d, query)
+		if len(priced.Rows) != 1 || fmt.Sprint(priced.Rows[0]["base"]) != itoa(want) {
+			t.Errorf("%s: priced subset = %v, want %d with yen converted from whole units", entity, priced.Rows, want)
 		}
 	}
 }

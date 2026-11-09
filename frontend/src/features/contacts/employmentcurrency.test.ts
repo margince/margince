@@ -6,7 +6,7 @@ import {
   formerEmployers,
   stillHeld,
   today,
-} from "./employmentcurrency";
+} from "../../lib/employmentcurrency";
 
 type Employment = components["schemas"]["Contact360Employment"];
 

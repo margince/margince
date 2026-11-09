@@ -67,7 +67,7 @@ func TestAnUncommittedEngagementChangePreventsEndingTheAccount(t *testing.T) {
 			decided, done := make(chan error, 1), make(chan struct{})
 			go func() {
 				defer close(done)
-				_, err := approvalsServiceWithEffects(e.Pool).Decide(e.As(e.Rep1, nil, integration.AdminWithSignals), proposal, true, nil)
+				_, err := NewApprovalsServiceWithEffects(e.Pool).Decide(e.As(e.Rep1, nil, integration.AdminWithSignals), proposal, true, nil)
 				decided <- err
 			}()
 			observer, err := e.Pool.Acquire(e.Admin())

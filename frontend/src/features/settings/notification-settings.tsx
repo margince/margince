@@ -16,6 +16,7 @@ import { Select } from "../../design-system/select";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import {
   type BrowserNotificationPermission,
   requestNotificationPermission,
@@ -47,7 +48,7 @@ const CHOICES = ["off", "in_app", "email", "digest"] as const;
  * and no other producer stages one at all. Offering the word elsewhere would
  * promise mail that was never going to arrive, which is worse than not offering
  * it — the reader stops watching the screen. `digest` reaches every class, so
- * mail is still on the table for all six.
+ * mail is still on the table for every class.
  */
 function choicesFor(
   notificationClass: NotificationClass,
@@ -70,6 +71,10 @@ const CLASS_COPY: Readonly<
   approval_pending: {
     label: "notifications.class.approval_pending.label",
     help: "notifications.class.approval_pending.help",
+  },
+  project_health: {
+    label: "notifications.class.project_health.label",
+    help: "notifications.class.project_health.help",
   },
   coach: {
     label: "notifications.class.coach.label",
@@ -300,7 +305,7 @@ function DeliveryRow({
           }}
           options={offered.map((choice) => ({
             value: choice,
-            label: t(DELIVERY_COPY[choice]),
+            label: t(labelFor(DELIVERY_COPY, choice)),
           }))}
         />
       )}

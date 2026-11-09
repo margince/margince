@@ -15,6 +15,8 @@ package compose
 import (
 	"fmt"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/platform/doctext"
 )
 
 // proposalWords are the file-name words that name a proposal, a quote or a
@@ -37,25 +39,6 @@ var (
 	marketingWords = []string{"newsletter", "brochure", "broschure", "flyer", "catalog", "katalog"}
 )
 
-// documentTypes are the content types a proposal arrives as. Images are left
-// out on purpose: an image on an outbound mail is almost always a logo or a
-// signature part.
-var documentTypes = []string{
-	"application/pdf", "application/msword", "application/rtf",
-	"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-	"application/vnd.openxmlformats-officedocument.presentationml.presentation",
-	"application/vnd.ms-excel", "application/vnd.ms-powerpoint",
-	"application/vnd.oasis.opendocument.text",
-	"application/vnd.oasis.opendocument.spreadsheet",
-	"application/vnd.oasis.opendocument.presentation",
-}
-
-// documentExtensions stand in for a content type the provider did not send.
-var documentExtensions = []string{
-	".pdf", ".doc", ".docx", ".rtf", ".odt", ".xls", ".xlsx", ".ods", ".ppt", ".pptx", ".odp",
-}
-
 // filenameWordsSQL folds a file name's stem to lower-case ASCII words framed by
 // spaces: accents are dropped after NFD decomposition (the Vietnamese đ is a
 // letter of its own and is mapped by hand), and every separator and every
@@ -77,7 +60,7 @@ func proposalDocumentSQL(filename, contentType string, arg func(any) int) string
 	outranking := append(append([]string{}, billingWords...), marketingWords...)
 	return fmt.Sprintf(`((%[1]s = ANY($%[3]d) OR (%[1]s = '' AND %[2]s = ANY($%[4]d)))
 	   AND %[5]s LIKE ANY($%[6]d) AND NOT %[5]s LIKE ANY($%[7]d))`,
-		bareType, ext, arg(documentTypes), arg(documentExtensions),
+		bareType, ext, arg(doctext.OfficeTypes), arg(doctext.OfficeExtensions),
 		words, arg(likeWords(proposalWords)), arg(likeWords(outranking)))
 }
 

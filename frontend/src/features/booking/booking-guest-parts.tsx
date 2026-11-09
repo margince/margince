@@ -261,6 +261,7 @@ export function GuestUnavailable({
   zone,
 }: Readonly<{
   host: Readonly<{
+    host_name: string;
     proposal: components["schemas"]["PublicMeetingProposal"] | null;
   }>;
   zone: string;
@@ -289,7 +290,11 @@ export function GuestUnavailable({
             </Button>
           </>
         ) : (
-          <p>{t("scheduling.unavailable")}</p>
+          <p>
+            {host.host_name
+              ? t("scheduling.pausedUnavailable", { host: host.host_name })
+              : t("scheduling.unavailable")}
+          </p>
         )}
       </PanelBody>
     </Panel>

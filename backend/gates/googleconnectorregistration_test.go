@@ -82,7 +82,7 @@ func TestOnlyOneFunctionRegistersTheGoogleConnectors(t *testing.T) {
 	// registrations, and a census that certified on the total would pass a tree
 	// that had lost Calendar entirely.
 	inRegistrar := map[string]bool{}
-	err := filepath.WalkDir("internal/compose", func(walked string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir("internal/compose", func(walked string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(walked, ".go") ||
 			strings.HasSuffix(walked, "_test.go") || isIntegrationTagged(walked) {
 			return err

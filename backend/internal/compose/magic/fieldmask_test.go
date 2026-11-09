@@ -43,8 +43,8 @@ func dealUpdate(before, after string) entry {
 
 func TestAReceiptLineWithholdsWhatTheReaderMayNotSee(t *testing.T) {
 	line, _, ok := lineOf(maskedReader(t), dealUpdate(
-		`{"amount_minor": 1200000, "currency": "EUR", "expected_arr_minor": 400000, "stage": "qualify", "company_id": "c0ffee00-0000-4000-8000-000000000001"}`,
-		`{"amount_minor": 1500000, "currency": "EUR", "expected_arr_minor": 500000, "stage": "propose", "company_id": "c0ffee00-0000-4000-8000-000000000001"}`))
+		`{"amount_minor": 1200000, "currency": "EUR", "expected_arr_minor": 400000, "stage_id": "5ea9e000-0000-4000-8000-000000000001", "company_id": "c0ffee00-0000-4000-8000-000000000001"}`,
+		`{"amount_minor": 1500000, "currency": "EUR", "expected_arr_minor": 500000, "stage_id": "5ea9e000-0000-4000-8000-000000000002", "company_id": "c0ffee00-0000-4000-8000-000000000001"}`))
 	if !ok {
 		t.Fatal("a deal update was not shown")
 	}
@@ -62,8 +62,8 @@ func TestAReceiptLineWithholdsWhatTheReaderMayNotSee(t *testing.T) {
 				t.Errorf("the %s image carries %q, which this reader may not see on the deal itself", image.side, withheld)
 			}
 		}
-		if _, present := image.fields["stage"]; !present {
-			t.Errorf("the %s image dropped stage, which nothing withholds from this reader", image.side)
+		if _, present := image.fields["stage_id"]; !present {
+			t.Errorf("the %s image dropped stage_id, which nothing withholds from this reader", image.side)
 		}
 	}
 }

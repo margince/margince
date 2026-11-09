@@ -297,41 +297,28 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 	}
 	switch in.Ref.Type {
 	case datasource.EntityContact:
-		var req crmcontracts.UpdateContactRequest
-		if err := datasource.StrictDecode(raw, &req); err != nil {
+		update, err := contactUpdateFrom(raw, in)
+		if err != nil {
 			return datasource.EntityRef{}, err
 		}
-		update := contactUpdateInput(req, in.IfVersion)
-		update.Trail = in.Trail
-		update.Clear = in.Clear
 		v, err := p.store.UpdateContact(ctx, ids.From[ids.ContactKind](in.Ref.ID), update)
 		return ref(datasource.EntityContact, v.Id), err
 	case datasource.EntityCompany:
-		var req crmcontracts.UpdateCompanyRequest
-		if err := datasource.StrictDecode(raw, &req); err != nil {
+		update, err := companyUpdateFrom(raw, in)
+		if err != nil {
 			return datasource.EntityRef{}, err
 		}
-		update := companyUpdateInput(req, in.IfVersion)
-		update.Trail = in.Trail
-		update.Clear = in.Clear
 		v, err := p.store.UpdateCompany(ctx, ids.From[ids.CompanyKind](in.Ref.ID), update)
 		return ref(datasource.EntityCompany, v.Id), err
 	case datasource.EntityLead:
-		var req LeadUpdateRequest
-		if err := datasource.StrictDecode(raw, &req); err != nil {
+		update, err := leadUpdateFrom(raw, in)
+		if err != nil {
 			return datasource.EntityRef{}, err
 		}
-		update := leadUpdateInput(req, in.IfVersion)
-		update.Trail = in.Trail
-		update.Clear = in.Clear
 		v, err := p.store.UpdateLead(ctx, ids.From[ids.LeadKind](in.Ref.ID), update)
 		return ref(datasource.EntityLead, v.Id), err
 	case datasource.EntityRelationship:
-		var req crmcontracts.UpdateRelationshipRequest
-		if err := datasource.StrictDecode(raw, &req); err != nil {
-			return datasource.EntityRef{}, err
-		}
-		update, err := relationshipUpdateInput(req, in.IfVersion, in.Clear)
+		update, err := relationshipUpdateFrom(raw, in)
 		if err != nil {
 			return datasource.EntityRef{}, err
 		}
