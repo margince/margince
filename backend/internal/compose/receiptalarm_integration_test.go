@@ -21,9 +21,11 @@ import (
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/noticekeys"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
@@ -358,5 +360,69 @@ func TestTwoDifferentSameDayWithdrawalsEachGetAReceipt(t *testing.T) {
 	}
 	if bodies := l.missedReceiptNotices(t); len(bodies) != 0 {
 		t.Fatalf("the second refusal's receipt was reported missed: %q", bodies)
+	}
+}
+
+// A press that withdraws the same purpose again after a re-grant is a second
+// refusal and owes a second receipt.
+func TestARepeatedSameDayWithdrawalOfOnePurposeGetsItsOwnReceipt(t *testing.T) {
+	l := receiptLane(t, receiptOwed)
+	l.e.WsExec(t, `INSERT INTO consent_purpose (key, label, class) VALUES ('receipt_again', 'receipt_again', 'marketing')`)
+	var purpose ids.PurposeID
+	if err := l.e.Pool.QueryRow(context.Background(), `SELECT id FROM consent_purpose WHERE key = 'receipt_again'`).Scan(&purpose); err != nil {
+		t.Fatal(err)
+	}
+	contact := ids.From[ids.ContactKind](l.contact)
+	for press := range 2 {
+		if press > 0 {
+			if _, err := l.store.Record(l.ctx, consent.RecordInput{
+				ContactID: contact, PurposeID: purpose, NewState: "granted", PolicyText: new("Monthly offers."),
+			}); err != nil {
+				t.Fatalf("granting again: %v", err)
+			}
+		}
+		withdrawn, err := l.store.PublicWithdrawAll(l.ctx, contact, []string{"receipt_again"})
+		if err != nil || len(withdrawn) != 1 {
+			t.Fatalf("press %d: %v %v", press+1, withdrawn, err)
+		}
+	}
+	if n := l.e.WsCount(t, `SELECT count(*) FROM comms_outbound WHERE template_key = 'optout_acknowledgement'`); n != 2 {
+		t.Fatalf("%d receipts for two refusals of one purpose, want 2", n)
+	}
+	if bodies := l.missedReceiptNotices(t); len(bodies) != 0 {
+		t.Fatalf("the second refusal's receipt was reported missed: %q", bodies)
+	}
+}
+
+// A receipt the sweep read as overdue and an erasure scrubbed before the raise
+// raises nothing about the erased subject.
+func TestAReceiptErasedBetweenTheReadAndTheRaiseIsNotRaised(t *testing.T) {
+	l := receiptLane(t, receiptOwed)
+	l.object(t)
+	var dueAt time.Time
+	if err := l.e.Pool.QueryRow(context.Background(),
+		`SELECT delivery_due_at FROM comms_outbound WHERE template_key = 'optout_acknowledgement'`).Scan(&dueAt); err != nil {
+		t.Fatal(err)
+	}
+	ctx, err := installationJobCtx(context.Background(), identity.NewService(l.e.Pool))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx = sendWorkerScope(ctx)
+	db := InstallationDB(l.e.Pool)
+	store := comms.NewStore(db, func() time.Time { return clocktest.Now(t) }, activities.NewStore(db))
+	now := dueAt.Add(time.Minute)
+	overdue, err := store.UnraisedOverdueReceipts(ctx, now, noticekeys.OptOutReceiptPrefix)
+	if err != nil || len(overdue) != 1 {
+		t.Fatalf("read %d overdue receipts (%v), want the one", len(overdue), err)
+	}
+	if err := ComposedEraser(l.e.Pool, nil, nil).EraseContact(l.e.Admin(), l.contact, "Art. 17 request"); err != nil {
+		t.Fatalf("erasing the subject: %v", err)
+	}
+	if failed := (receiptAlarm{db: db}).raiseOverdue(ctx, store, now, overdue); failed != 0 {
+		t.Fatalf("%d raises failed", failed)
+	}
+	if n := l.e.WsCount(t, `SELECT count(*) FROM notice WHERE kind = 'optout_receipt_missed'`); n != 0 {
+		t.Fatalf("%d notices raised about a subject erased after the read", n)
 	}
 }

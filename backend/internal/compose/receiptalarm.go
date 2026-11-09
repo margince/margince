@@ -88,10 +88,15 @@ func missedReceiptText(missed consent.MissedReceipt) string {
 }
 
 // raiseOverdue raises a notice for each receipt past its deadline, each in a
-// transaction of its own, and answers how many it could not raise.
-func (a receiptAlarm) raiseOverdue(ctx context.Context, overdue []comms.OverdueReceipt) (failed int) {
+// transaction of its own, and answers how many it could not raise. A receipt an
+// erasure scrubbed since the read is skipped.
+func (a receiptAlarm) raiseOverdue(ctx context.Context, store *comms.Store, now time.Time, overdue []comms.OverdueReceipt) (failed int) {
 	for _, receipt := range overdue {
 		err := a.db.Tx(ctx, func(tx pgx.Tx) error {
+			still, err := store.LockOverdueReceiptTx(ctx, tx, receipt.DeliveryID, now)
+			if err != nil || !still {
+				return err
+			}
 			return a.RaiseMissedReceiptTx(ctx, tx, consent.MissedReceipt{
 				SubjectType: receipt.SubjectType, SubjectID: receipt.SubjectID, MessageID: receipt.MessageID,
 				Reason: consent.MissedReceiptOverdue, DueAt: receipt.DueAt, DeliveryStatus: receipt.Status,

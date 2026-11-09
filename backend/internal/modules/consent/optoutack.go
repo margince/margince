@@ -9,10 +9,8 @@ package consent
 import (
 	"context"
 	"fmt"
-	"hash/fnv"
 	"log/slog"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -31,9 +29,8 @@ import (
 // looks discharged and is not.
 //
 // One message for the press, not one per purpose: a stop that withdrew four
-// subscriptions is one refusal. withdrawalMessageID names the press by contact,
-// day and withdrawn set. A later press that withdraws something else gets its
-// own receipt.
+// subscriptions is one refusal. withdrawalMessageID names the press by contact
+// and the transaction that recorded it, so every later press gets its own receipt.
 //
 // NOTHING WITHDRAWN, NOTHING TO ACKNOWLEDGE. A replayed press changes no state,
 // and telling somebody again that we stopped is a second message they did not
@@ -44,13 +41,13 @@ func (s *Store) acknowledgeWithdrawalTx(
 	if len(withdrawn) == 0 {
 		return nil
 	}
-	day, err := databaseDayTx(ctx, tx)
+	act, err := withdrawalActTx(ctx, tx)
 	if err != nil {
 		return err
 	}
 	return s.stageAcknowledgementTx(ctx, tx,
 		subject{id: contactID.UUID, entityType: entityContact},
-		withdrawalMessageID(contactID, day, withdrawn))
+		withdrawalMessageID(contactID, act))
 }
 
 // acknowledgeOptOutTx stages the acknowledgement this stop owes, if any.
@@ -225,35 +222,23 @@ func acknowledgementMessageID(stopID ids.UUID) string {
 	return "optout-ack-" + strings.ReplaceAll(stopID.String(), "-", "") + "@margince.invalid"
 }
 
-// withdrawalMessageID derives the RFC822 identity from the contact, the day and
-// the purposes this press withdrew.
+// withdrawalMessageID names one press by its contact and its act.
 //
-// Two presses that withdraw different purposes are two refusals, and each owes
-// its own receipt, so the withdrawn set is part of the id. A replay withdraws
-// nothing and stages nothing.
-//
-// The date comes from the database, so two hosts with skewed clocks cannot
-// place one press on both sides of midnight.
-func withdrawalMessageID(contactID ids.ContactID, day string, withdrawn []string) string {
-	purposes := slices.Clone(withdrawn)
-	slices.Sort(purposes)
-	act := fnv.New64a()
-	//craft:ignore swallowed-errors hash.Hash.Write never returns an error
-	_, _ = act.Write([]byte(strings.Join(purposes, "\x00")))
-	return "optout-ack-" + strings.ReplaceAll(contactID.String(), "-", "") +
-		"-" + day + "-" + strconv.FormatUint(act.Sum64(), 16) + "@margince.invalid"
+// A second press of the same purposes on one day, after a re-grant, is a
+// second refusal. It owes its own receipt.
+func withdrawalMessageID(contactID ids.ContactID, act string) string {
+	return "optout-ack-" + strings.ReplaceAll(contactID.String(), "-", "") + "-" + act + "@margince.invalid"
 }
 
-// databaseDayTx reads today's date from the database.
+// withdrawalActTx names the transaction recording this press: the database day
+// and its transaction id.
 //
-// ONE CLOCK for every process, rather than each reading its own: the day is
-// part of a message id, so two application hosts with skewed wall clocks could
-// otherwise place one press on either side of midnight and stage two
-// acknowledgements for one refusal.
-func databaseDayTx(ctx context.Context, tx pgx.Tx) (string, error) {
-	var day string
-	if err := tx.QueryRow(ctx, `SELECT to_char(now(), 'YYYYMMDD')`).Scan(&day); err != nil {
-		return "", fmt.Errorf("consent: reading the day this refusal belongs to: %w", err)
+// The id is unique per act, and stable while the act runs. The day keeps an id
+// from repeating after a restore into a new cluster, which counts transactions afresh.
+func withdrawalActTx(ctx context.Context, tx pgx.Tx) (string, error) {
+	var act string
+	if err := tx.QueryRow(ctx, `SELECT to_char(now(), 'YYYYMMDD') || '-' || pg_current_xact_id()::text`).Scan(&act); err != nil {
+		return "", fmt.Errorf("consent: naming the refusal this receipt acknowledges: %w", err)
 	}
-	return day, nil
+	return act, nil
 }
