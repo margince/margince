@@ -22,10 +22,9 @@ package consent
 // CANNOT grant; it names a scope it may never exceed, and that is what makes it
 // safe to keep for years.
 //
-// HASHED, unlike preference_token, which stores its value in plaintext. This
-// one outlives every rotation and sits in mail archives and proxy logs, so a
-// database read must not hand somebody a working withdrawal link for every
-// recipient we have ever mailed.
+// HASHED, like a preference link on an installation with a root key. This one
+// outlives every rotation and sits in mail archives and proxy logs. A database
+// read must not hand somebody a working withdrawal link for every recipient.
 
 import (
 	"context"
@@ -340,13 +339,20 @@ func legacyPreferenceTokenAsWithdrawal(ctx context.Context, tx pgx.Tx, token str
 		contactID ids.UUID
 		address   *string
 	)
+	row, ok := signedPreferenceRow(token)
+	if !ok {
+		return WithdrawalRef{}, apperrors.ErrNotFound
+	}
 	err := tx.QueryRow(ctx, `
 		SELECT pt.contact_id, pe.email
 		  FROM preference_token pt
 		  LEFT JOIN contact_email pe ON pe.id = pt.contact_email_id
-		 WHERE pt.token = $1
-		   AND (pt.revoked_reason IS NULL OR pt.revoked_reason IN ('rotated', 'expired', $2))`,
-		token, PreferenceRevokedMergedIntoSurvivor).Scan(&contactID, &address)
+		 WHERE `+preferenceLinkRowSQL+`
+		   AND (pt.revoked_reason IS NULL OR pt.revoked_reason IN ('rotated', 'expired', @merged))`,
+		pgx.NamedArgs{
+			"link_row": row, "link_hash": hashPublicToken(token), "link_token": token,
+			"merged": PreferenceRevokedMergedIntoSurvivor,
+		}).Scan(&contactID, &address)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return WithdrawalRef{}, apperrors.ErrNotFound
 	}

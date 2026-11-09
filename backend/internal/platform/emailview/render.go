@@ -13,7 +13,7 @@ import (
 )
 
 // PresentationVersion pins queued markup independently of published wording.
-const PresentationVersion = 5
+const PresentationVersion = 6
 
 // Message holds approved words. Text remains the readable fallback verbatim.
 type Message struct {
@@ -77,16 +77,41 @@ func renderText(message Message) string {
 
 // document is the page around the card. The dark sheet repaints role classes
 // for clients that honour prefers-color-scheme; the rest keep the light card.
+// Each sheet is its own style block. Gmail drops a whole block over one rule
+// it rejects, so the layout must not ride with the dark sheet.
 func document(language, preheader, card string) string {
 	return `<!doctype html><html lang="` + html.EscapeString(language) + `"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark">` +
-		`<style>@media(max-width:480px){.pad{padding-left:20px!important;padding-right:20px!important}.facts th,.facts td{display:block!important;width:auto!important}.facts th{padding:10px 0 0!important;border-top:0!important}.facts td{border-top:0!important;padding:2px 0 10px!important}.stats td{display:block!important;width:auto!important;border-left:0!important}}` +
-		`@media(prefers-color-scheme:dark){` + darkSheet(":root") + `}</style></head>` +
+		`<style>` + layoutSheet() + `</style><style>@media (prefers-color-scheme:dark){` + darkSheet(":root") + `}</style><!--[if mso]><style>` + wideFigures() + `</style><![endif]--></head>` +
 		`<body data-email-version="` + strconv.Itoa(PresentationVersion) + `"` + look{ink: textPrimary, fill: bgPage}.attrs("margin:0;font:"+body.font()+";overflow-wrap:anywhere;word-wrap:break-word") + `>` +
 		`<div style="display:none;max-height:0;overflow:hidden" aria-hidden="true">` + html.EscapeString(preheader) + `</div>` +
-		`<table role="presentation" width="100%" cellspacing="0" cellpadding="0"` + look{fill: bgPage}.attrs("") + `><tr><td align="center" style="padding:32px 12px">` +
+		`<table role="presentation" width="100%" cellspacing="0" cellpadding="0"` + look{fill: bgPage}.attrs("") + `><tr><td align="center" class="frame" style="padding:32px 12px">` +
 		`<!--[if mso]><table role="presentation" width="600" cellspacing="0" cellpadding="0"><tr><td><![endif]-->` +
 		`<table role="presentation" width="100%" cellspacing="0" cellpadding="0"` + look{fill: pane, edge: paneEdge, shadow: shadowRest}.attrs("table-layout:fixed;max-width:600px;border:1px solid;border-radius:"+rLg.light()) + `>` +
 		card + `</table><!--[if mso]></td></tr></table><![endif]--></td></tr></table></body></html>`
+}
+
+// layoutSheet fits the card to the screen. On a phone, fact labels sit over
+// their values and a record's link drops under its text. Inline figures stay
+// small for a phone that drops the sheet; a wide screen enlarges them.
+func layoutSheet() string {
+	return `@media screen and (max-width:480px){` +
+		`.frame{padding:16px 8px!important}` +
+		`.pad{padding-left:20px!important;padding-right:20px!important}` +
+		`.title{font:` + headingLarge.font() + `!important}` +
+		`.facts th,.facts td{display:block!important;width:auto!important}` +
+		`.facts th{padding:10px 16px 0!important}` +
+		`.facts td{border-top:0!important;padding:2px 16px 10px!important}` +
+		`.itemtext,.itemlink{display:block!important;width:auto!important}` +
+		`.itemlink{text-align:left!important;padding:6px 0 0!important}` +
+		`.itemlink a{white-space:normal!important}}` +
+		`@media screen and (min-width:481px){` + wideFigures() + `}`
+}
+
+// wideFigures is the desktop StatStrip. Outlook on Windows reads no media
+// query, so the document repeats these rules for it alone.
+func wideFigures() string {
+	return `.stats td{padding:14px 16px!important}` +
+		`.figure{font:` + headingXLarge.font() + `!important}`
 }
 
 // header names who the mail comes from, over a hairline. A company logo
@@ -121,7 +146,7 @@ func letterheadName(head Letterhead) string {
 func LetterheadName(name string) string {
 	tile := `<td width="24" height="24" align="center" valign="middle"` + look{ink: textOnAccentControl, fill: accent}.attrs("width:24px;height:24px;border-radius:6px;font:"+headingXXSmall.font()) + `>` + html.EscapeString(initials(name)) + `</td>`
 	return `<table role="presentation" cellspacing="0" cellpadding="0"><tr>` + tile +
-		`<td valign="middle"` + look{ink: textPrimary}.attrs("padding-left:10px;font:"+wordmark.font()) + `>` + html.EscapeString(name) + `</td></tr></table>`
+		`<td valign="middle"` + look{ink: textPrimary}.attrs("padding-left:10px;font:"+headingMedium.font()) + `>` + html.EscapeString(name) + `</td></tr></table>`
 }
 
 // letterheadMark is the Margince mark beside the wordmark. The mark is its
@@ -130,19 +155,40 @@ func LetterheadName(name string) string {
 func letterheadMark(name, contentID string) string {
 	mark := `<td width="28" valign="middle"><img src="cid:` + html.EscapeString(contentID) + `" alt="" width="28" height="28" style="display:block;width:28px;height:28px;border:0"></td>`
 	return `<table role="presentation" cellspacing="0" cellpadding="0"><tr>` + mark +
-		`<td valign="middle"` + look{ink: textPrimary}.attrs("padding-left:10px;font:"+wordmark.font()) + `>` + html.EscapeString(name) + `</td></tr></table>`
+		`<td valign="middle"` + look{ink: textPrimary}.attrs("padding-left:10px;font:"+headingMedium.font()) + `>` + html.EscapeString(name) + `</td></tr></table>`
 }
 
 // letterheadLogo is the company logo on a white plate. The plate carries no
 // role class, so the dark sheet leaves it white and a dark logo stays legible.
 // The name is the image's alt text, for a client that blocks images.
 func letterheadLogo(name, contentID string) string {
+	return logoPlateOpen(contentID) + html.EscapeString(name) + logoPlateClose
+}
+
+const logoPlateClose = `" width="150" style="display:block;max-width:150px;height:auto;border:0"></div>`
+
+func logoPlateOpen(contentID string) string {
 	return `<div style="display:inline-block;background:#ffffff;border-radius:6px;padding:8px">` +
-		`<img src="cid:` + html.EscapeString(contentID) + `" alt="` + html.EscapeString(name) + `" width="150" style="display:block;max-width:150px;height:auto;border:0"></div>`
+		`<img src="cid:` + html.EscapeString(contentID) + `" alt="`
+}
+
+// WithoutLetterheadLogo turns the logo letterhead in markup back into the name
+// tile, for a mail staged with a logo that can no longer be read. The name is
+// the logo's alt text; markup with no logo letterhead comes back unchanged.
+func WithoutLetterheadLogo(markup, contentID string) string {
+	before, rest, found := strings.Cut(markup, logoPlateOpen(contentID))
+	if !found {
+		return markup
+	}
+	name, after, found := strings.Cut(rest, logoPlateClose)
+	if !found {
+		return markup
+	}
+	return before + LetterheadName(html.UnescapeString(name)) + after
 }
 
 func titleRow(title, main string) string {
-	heading := `<h1` + look{ink: textPrimary}.attrs("margin:0 0 16px;font:"+headingXLarge.font()+";overflow-wrap:anywhere") + `>` + html.EscapeString(title) + `</h1>`
+	heading := `<h1` + look{ink: textPrimary}.attrs("margin:0 0 16px;font:"+headingXLarge.font()+";overflow-wrap:anywhere", "title") + `>` + html.EscapeString(title) + `</h1>`
 	return `<tr><td class="pad" style="padding:32px 32px 16px">` + heading + main + `</td></tr>`
 }
 

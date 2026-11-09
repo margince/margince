@@ -242,3 +242,10 @@ export function useTheme(): Theme {
 export function useThemeChoice(): ThemeChoice {
   return useSyncExternalStore(subscribeToTheme, readChoice, readChoice);
 }
+
+/** The appearance choices, in the order the submenu shows them, named. */
+export const THEME_LABEL_KEYS = {
+  light: "theme.light",
+  dark: "theme.dark",
+  system: "theme.system",
+} as const satisfies Record<ThemeChoice, string>;

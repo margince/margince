@@ -133,17 +133,22 @@ describe("the schedule panel", () => {
       calendar: "connected" as const,
       next_meeting: NEXT,
     };
-    draw(<SchedulePanel day={day} state="ready" />);
+    const opened: string[] = [];
+    draw(
+      <SchedulePanel
+        day={day}
+        state="ready"
+        onOpenMeeting={(id) => opened.push(id)}
+      />,
+    );
 
     const panel = screen.getByRole("region");
     expect(panel.querySelector(".rail-schedule-when")?.textContent).toBe(
       formatDateAbbrev(NEXT.starts_at, "en", zone),
     );
-    expect(
-      within(panel)
-        .getByRole("link", { name: "Weber kickoff" })
-        .getAttribute("href"),
-    ).toContain("deal-1");
+    // The title opens the meeting itself, never the deal it is filed on.
+    within(panel).getByRole("button", { name: "Weber kickoff" }).click();
+    expect(opened).toEqual([NEXT.activity_id]);
     expect(
       within(panel)
         .getByRole("link", { name: "Anna Weber" })
@@ -200,9 +205,7 @@ describe("the schedule panel", () => {
     expect(
       within(panel).getByRole("link", { name: en["brief.schedule.connect"] }),
     ).toBeTruthy();
-    expect(
-      within(panel).getByRole("link", { name: "Weber kickoff" }),
-    ).toBeTruthy();
+    expect(within(panel).getByText("Weber kickoff")).toBeTruthy();
   });
 
   // A read that has not landed is not a clear day. Collapsing here would send a
@@ -226,4 +229,37 @@ describe("the schedule panel", () => {
     ).toBeTruthy();
     expect(screen.getByText(en["state.failed"])).toBeTruthy();
   });
+});
+
+it("separates the next meeting's attendees with one comma each", () => {
+  const day = {
+    ...readingsDay({}, []),
+    calendar: "connected" as const,
+    next_meeting: {
+      ...NEXT,
+      participants: [
+        { contact_id: "c-1", full_name: "Anna Weber" },
+        { contact_id: "c-2", full_name: "Ben Ortiz" },
+      ],
+      other_participants: [{ kind: "colleague" as const, name: "Rita Rep" }],
+    },
+  };
+  draw(<SchedulePanel day={day} state="ready" />);
+  const row = screen.getByRole("region").querySelector(".rail-schedule-what");
+  expect(row?.textContent).toContain("Anna Weber, Ben Ortiz, Rita Rep");
+  expect(row?.textContent).not.toMatch(/,\s*,|,\s*$/);
+});
+
+it("opens today's meeting from its title, not the record it is about", () => {
+  const opened: string[] = [];
+  const day = readingsDay({}, [meetingRow("m-today", true)]);
+  draw(
+    <SchedulePanel
+      day={day}
+      state="ready"
+      onOpenMeeting={(id) => opened.push(id)}
+    />,
+  );
+  screen.getByRole("button", { name: /Weber GmbH · quarterly review/ }).click();
+  expect(opened).toEqual(["m-today"]);
 });

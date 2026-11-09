@@ -14,6 +14,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -111,6 +112,16 @@ func WithCommitmentAdmissions(ctx context.Context, tx pgx.Tx, list []crmcontract
 	query := fmt.Sprintf(`SELECT d.source_activity_id, d.locator, d.summary, d.source_quote, d.outcome, d.current_work, d.rule_version, d.evidence_ids, d.evaluated_at, d.renewed_by, d.renewed_at, d.meaning
  FROM activity_commitment_admission d JOIN activity a ON a.id = d.source_activity_id
  WHERE a.id = ANY($%d::uuid[]) AND (d.summary <> '' OR d.source_quote <> '') AND `+content+` AND `+renewal+` ORDER BY d.source_activity_id, d.locator`, arg(sources))
+	// The statement binds only the gate's values and the source ids, never a
+	// partial-index predicate, so one generic plan serves every list it reads.
+	return database.ReuseGenericPlansTx(ctx, tx, func() error {
+		return attachCommitmentAdmissions(ctx, tx, query, args, list, positions)
+	})
+}
+
+// attachCommitmentAdmissions runs the admission read and files each row under
+// its source's position in list.
+func attachCommitmentAdmissions(ctx context.Context, tx pgx.Tx, query string, args []any, list []crmcontracts.Activity, positions map[ids.UUID]int) error {
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("activities: reading commitment admissions: %w", err)

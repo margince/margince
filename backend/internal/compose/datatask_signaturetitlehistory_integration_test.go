@@ -30,7 +30,7 @@ func (h *historyEnv) oneMailWatermark(t *testing.T, contact, mail ids.UUID) {
 
 func (h *historyEnv) hasWatermark(t *testing.T, contact ids.UUID) bool {
 	t.Helper()
-	return h.count(t, `SELECT count(*) FROM contact_signature_enrich_state WHERE contact_id = $1`, contact) == 1
+	return h.count(t, `SELECT count(*) FROM contact_signature_enrich_state WHERE contact_id = $1 AND activity_id IS NOT NULL`, contact) == 1
 }
 
 func runSignatureHistoryBatch(ctx context.Context, h *historyEnv, in datatask.BatchIn) (datatask.BatchOut, error) {

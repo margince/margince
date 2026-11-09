@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/platform/workarea"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -142,6 +143,7 @@ func (r *Registry) Register(t mcp.Tool) {
 	r.unitOwned[spec.Name] = owned
 	_, served := t.(routeVerbTool)
 	r.routeServed[spec.Name] = served
+	spec.Areas = workarea.OfVerb(spec.Name)
 	r.specs[spec.Name] = copySchemas(withRetryKey(envelopedSpec(spec), owned || served))
 	// Derived from the tool's OWN schema, never the spliced one: the reserved
 	// members are popped before any of these checks runs, so a check that knew
@@ -151,6 +153,7 @@ func (r *Registry) Register(t mcp.Tool) {
 	r.enumArgs[spec.Name] = declaredEnumArgs(spec.InputSchema)
 	r.requiredArgs[spec.Name] = declaredRequired(spec.InputSchema)
 	r.typedArgs[spec.Name] = declaredTypes(spec.InputSchema)
+	r.uniqueArgs[spec.Name] = declaredUniqueArgs(spec.InputSchema)
 }
 
 // envelopedSpec is the spec every surface is served: the tool's own, with its

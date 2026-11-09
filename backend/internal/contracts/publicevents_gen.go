@@ -690,6 +690,7 @@ const (
 	OfferRejected                         SubscribableEventType = "offer.rejected"
 	OfferSent                             SubscribableEventType = "offer.sent"
 	OfferSuperseded                       SubscribableEventType = "offer.superseded"
+	OfferUpdated                          SubscribableEventType = "offer.updated"
 	OnboardingStateChanged                SubscribableEventType = "onboarding.state_changed"
 	PassportRevoked                       SubscribableEventType = "passport.revoked"
 	PipelineArchived                      SubscribableEventType = "pipeline.archived"
@@ -944,6 +945,8 @@ func (e SubscribableEventType) Valid() bool {
 		return true
 	case OfferSuperseded:
 		return true
+	case OfferUpdated:
+		return true
 	case OnboardingStateChanged:
 		return true
 	case PassportRevoked:
@@ -1118,11 +1121,17 @@ type PublicEventActivityChangedFields struct {
 	// DueHasTime Whether the new due_at names a time of day (true) or only a day (false). Carried whenever this update names due_at.
 	DueHasTime *bool `json:"due_has_time,omitempty"`
 
+	// HostUserId The meeting's new host seat, when a calendar meeting was handed to the colleague who organized it (absent otherwise).
+	HostUserId *openapi_types.UUID `json:"host_user_id,omitempty"`
+
 	// IsDone The activity's new completion state (absent when this update did not touch it).
 	IsDone *bool `json:"is_done,omitempty"`
 
 	// MeetingStatus How the meeting went, once somebody recorded it (absent when this update did not touch it). Meeting rows only; the update refuses the field on any other kind.
 	MeetingStatus *PublicEventActivityChangedFieldsMeetingStatus `json:"meeting_status,omitempty"`
+
+	// MeetingStatusCleared True when this update removed the meeting's status, so the meeting is unanswered again, as a calendar first captured it.
+	MeetingStatusCleared *bool `json:"meeting_status_cleared,omitempty"`
 
 	// OccurredAt The activity's new occurred_at (absent when this update did not touch it).
 	OccurredAt *time.Time `json:"occurred_at,omitempty"`
@@ -1524,7 +1533,7 @@ type PublicEventConsentSuppressionLifted struct {
 	RecordedAtLevel string `json:"recorded_at_level"`
 
 	// RemainingSuppressions How many stops are still live for this contact after the lift, counted inside the same transaction that did the lifting.
-	RemainingSuppressions *int `json:"remaining_suppressions,omitempty"`
+	RemainingSuppressions *int `json:"remaining_suppressions,omitempty" minimum:"0"`
 
 	// StillSuppressed Whether this contact is still not writable. Equivalent to remaining_suppressions > 0, stated as its own field so a consumer cannot get the comparison wrong in the direction that resumes mail.
 	StillSuppressed *bool `json:"still_suppressed,omitempty"`
@@ -1925,6 +1934,9 @@ type PublicEventEntityRef struct {
 
 	// Name The record's name when the event was delivered, for a deal, company or project. Absent for a contact or lead; open the link to see who it is.
 	Name *string `json:"name,omitempty"`
+
+	// OwnerName The display name of the record's owner when the event was delivered, for a deal, company or project. Absent when the record has no owner.
+	OwnerName *string `json:"owner_name,omitempty"`
 
 	// Type Entity kind (e.g. deal, contact, company).
 	Type string `json:"type"`
@@ -2376,6 +2388,18 @@ type PublicEventOfferSuperseded struct {
 	ToRevision int `json:"to_revision"`
 }
 
+// PublicEventOfferUpdated Payload for offer.updated: a draft offer was edited, its header or its line items. Names what changed and carries no values, so a subscriber reads the offer for them.
+type PublicEventOfferUpdated struct {
+	// ChangedFields The offer fields the edit moved, by their column names. A line edit names line_items, beside any total it moved.
+	ChangedFields []string `json:"changed_fields"`
+
+	// DealId The deal this offer belongs to.
+	DealId openapi_types.UUID `json:"deal_id"`
+
+	// OfferId The edited draft offer.
+	OfferId openapi_types.UUID `json:"offer_id"`
+}
+
 // PublicEventOnboardingStateChanged Payload for onboarding.state_changed — the admitted human's wizard checkpoint was created or advanced (identity/onboarding.go's auditOnboardingState).
 type PublicEventOnboardingStateChanged struct {
 	// Completed Whether the wizard was completed as of this checkpoint.
@@ -2736,7 +2760,7 @@ type PublicEventUserMfaRemoved struct {
 	By openapi_types.UUID `json:"by"`
 
 	// SessionsEnded How many live sessions of the member the removal ended.
-	SessionsEnded int `json:"sessions_ended"`
+	SessionsEnded int `json:"sessions_ended" minimum:"0"`
 
 	// UserId The member whose second factor was removed.
 	UserId openapi_types.UUID `json:"user_id"`
@@ -3374,6 +3398,10 @@ func (PublicEventOfferSuperseded) EventType() string { return "offer.superseded"
 
 func (PublicEventOfferSuperseded) EntityType() string { return "offer" }
 
+func (PublicEventOfferUpdated) EventType() string { return "offer.updated" }
+
+func (PublicEventOfferUpdated) EntityType() string { return "offer" }
+
 func (PublicEventOnboardingStateChanged) EventType() string { return "onboarding.state_changed" }
 
 func (PublicEventOnboardingStateChanged) EntityType() string { return "onboarding_wizard_state" }
@@ -3655,6 +3683,7 @@ var PublicEventVersions = map[string]int{
 	"offer.rejected":                            1,
 	"offer.sent":                                1,
 	"offer.superseded":                          1,
+	"offer.updated":                             1,
 	"onboarding.state_changed":                  1,
 	"passport.revoked":                          1,
 	"pipeline.archived":                         1,
@@ -3708,7 +3737,7 @@ var PublicEventSamples = map[string]string{
 	"activity.disposition_recorded":             "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"disposition\":\"not_sales\"}",
 	"activity.marked_handled":                   "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"activity.readiness_recorded":               "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"preparation_revision\":\"Sample preparation revision\",\"state\":\"ready\"}",
-	"activity.updated":                          "{\"changed_fields\":{\"agenda_changed\":true,\"assignee_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"audience\":\"workspace\",\"automatic_task_repaired\":true,\"body\":true,\"calendar_method\":\"PUBLISH\",\"call_outcome\":\"reached\",\"call_outcome_cleared\":true,\"commitment_admissions_changed\":true,\"direction\":\"outbound\",\"due_at\":\"2026-10-14T09:12:00Z\",\"due_has_time\":true,\"is_done\":true,\"meeting_status\":\"booked\",\"occurred_at\":\"2026-10-14T09:12:00Z\",\"occurred_precision\":\"instant\",\"outbound_attested\":true,\"project_filing_undone\":true,\"relinked\":{\"entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"entity_type\":\"Sample entity type\"},\"remind_at\":\"2026-10-14T09:12:00Z\",\"remind_at_cleared\":true,\"request_settlement_changed\":true,\"restored\":true,\"subject\":\"Sample subject\",\"thread_key\":\"Sample thread key\"},\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
+	"activity.updated":                          "{\"changed_fields\":{\"agenda_changed\":true,\"assignee_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"audience\":\"workspace\",\"automatic_task_repaired\":true,\"body\":true,\"calendar_method\":\"PUBLISH\",\"call_outcome\":\"reached\",\"call_outcome_cleared\":true,\"commitment_admissions_changed\":true,\"direction\":\"outbound\",\"due_at\":\"2026-10-14T09:12:00Z\",\"due_has_time\":true,\"host_user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"is_done\":true,\"meeting_status\":\"booked\",\"meeting_status_cleared\":true,\"occurred_at\":\"2026-10-14T09:12:00Z\",\"occurred_precision\":\"instant\",\"outbound_attested\":true,\"project_filing_undone\":true,\"relinked\":{\"entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"entity_type\":\"Sample entity type\"},\"remind_at\":\"2026-10-14T09:12:00Z\",\"remind_at_cleared\":true,\"request_settlement_changed\":true,\"restored\":true,\"subject\":\"Sample subject\",\"thread_key\":\"Sample thread key\"},\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
 	"approval.decided":                          "{\"decided_by\":\"0190a7f2-0000-7000-8000-000000000010\",\"decided_by_system\":true,\"diff_hash\":\"Sample diff hash\",\"edited\":true,\"edited_change\":{},\"kind\":\"Sample kind\",\"verdict\":\"approved\"}",
 	"approval.failure_acknowledged":             "{\"failed_at\":\"2026-10-14T09:12:00Z\",\"kind\":\"Sample kind\"}",
 	"approval.preference_changed":               "{\"kind\":\"Sample kind\"}",
@@ -3720,7 +3749,7 @@ var PublicEventSamples = map[string]string{
 	"coldstart.accepted":                        "{\"approval_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"decided_by\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"coldstart.read_back_proposed":              "{\"field_count\":1,\"source_kind\":\"Sample source kind\",\"source_url\":\"Sample source url\"}",
 	"coldstart.rejected":                        "{\"approval_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"decided_by\":\"0190a7f2-0000-7000-8000-000000000010\"}",
-	"commission.accrued":                        "{\"amount_minor\":1,\"currency\":\"Sample currency\",\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"partner_company_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"rate_bps\":1}",
+	"commission.accrued":                        "{\"amount_minor\":1,\"currency\":\"EUR\",\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"partner_company_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"rate_bps\":1}",
 	"commission.decided":                        "{\"decision\":\"Sample decision\",\"from_status\":\"Sample from status\",\"reason\":\"Sample reason\",\"to_status\":\"Sample to status\"}",
 	"comms.delivery_bounced":                    "{\"kind\":\"hard\",\"message_id\":\"Sample message id\",\"reason\":\"Sample reason\"}",
 	"company.archived":                          "{}",
@@ -3751,7 +3780,7 @@ var PublicEventSamples = map[string]string{
 	"deal.merged":                               "{\"merged_from_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"merged_into_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"deal.owner_changed":                        "{\"from_owner_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true,\"to_owner_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"deal.restored":                             "{\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
-	"deal.stage_changed":                        "{\"amount_minor_at_change\":1,\"currency_at_change\":\"Sample currency at change\",\"deal_name\":\"Sample deal name\",\"from_stage_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"from_stage_name\":\"Sample from stage name\",\"from_status\":\"Sample from status\",\"fx_rate_to_base\":\"Sample fx rate to base\",\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true,\"lost_reason_code\":\"Sample lost reason code\",\"partner_attribution\":\"Sample partner attribution\",\"partner_company_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"to_stage_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"to_stage_name\":\"Sample to stage name\",\"to_status\":\"Sample to status\",\"win_probability\":1}",
+	"deal.stage_changed":                        "{\"amount_minor_at_change\":1,\"currency_at_change\":\"EUR\",\"deal_name\":\"Sample deal name\",\"from_stage_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"from_stage_name\":\"Sample from stage name\",\"from_status\":\"Sample from status\",\"fx_rate_to_base\":\"Sample fx rate to base\",\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true,\"lost_reason_code\":\"Sample lost reason code\",\"partner_attribution\":\"Sample partner attribution\",\"partner_company_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"to_stage_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"to_stage_name\":\"Sample to stage name\",\"to_status\":\"Sample to status\",\"win_probability\":1}",
 	"deal.updated":                              "{\"changed_fields\":{},\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
 	"deal_room.archived":                        "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"deal_room.closed":                          "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
@@ -3768,7 +3797,7 @@ var PublicEventSamples = map[string]string{
 	"email_signature.changed":                   "{\"has_signature\":true}",
 	"engagement.reply":                          "{\"channel\":\"Sample channel\",\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"idempotency_key\":\"Sample idempotency key\",\"matched_outbound_activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"occurred_at\":\"2026-10-14T09:12:00Z\",\"occurred_precision\":\"instant\"}",
 	"forecast.assurance_created":                "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"eligible_deals\":1,\"eligible_signals\":1,\"readiness\":\"ready\",\"run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"status\":\"complete\"}",
-	"forecast.created":                          "{\"amount_minor\":1,\"author_user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"call_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"currency\":\"Sample currency\",\"period_end\":\"2026-10-14\",\"period_start\":\"2026-10-14\",\"supersedes_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
+	"forecast.created":                          "{\"amount_minor\":1,\"author_user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"call_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"currency\":\"EUR\",\"period_end\":\"2026-10-14\",\"period_start\":\"2026-10-14\",\"supersedes_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"forecast.exception_resolved":               "{\"actor_user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"exception_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"expires_at\":\"2026-10-14T09:12:00Z\",\"outcome\":\"fixed_record\"}",
 	"forecast.share_issued":                     "{\"expires_at\":\"2026-10-14T09:12:00Z\",\"kind\":\"live\",\"share_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"target\":\"Sample target\"}",
 	"forecast.share_revoked":                    "{\"revoked_at\":\"2026-10-14T09:12:00Z\",\"share_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
@@ -3801,11 +3830,12 @@ var PublicEventSamples = map[string]string{
 	"notice.created":                            "{\"kind\":\"Sample kind\",\"notice_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"recipient_user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"notice.read":                               "{\"notice_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"notification.preference_changed":           "{\"class\":\"Sample class\"}",
-	"offer.accepted":                            "{\"currency\":\"Sample currency\",\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"gross_minor\":1,\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"revision\":1}",
-	"offer.created":                             "{\"captured_by\":\"Sample captured by\",\"currency\":\"Sample currency\",\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"revision\":1,\"source\":\"Sample source\"}",
+	"offer.accepted":                            "{\"currency\":\"EUR\",\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"gross_minor\":1,\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"revision\":1}",
+	"offer.created":                             "{\"captured_by\":\"Sample captured by\",\"currency\":\"EUR\",\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"revision\":1,\"source\":\"Sample source\"}",
 	"offer.rejected":                            "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"reason\":\"Sample reason\",\"revision\":1}",
-	"offer.sent":                                "{\"currency\":\"Sample currency\",\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"fx_rate_to_base\":\"Sample fx rate to base\",\"gross_minor\":1,\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"revision\":1,\"valid_until\":\"2026-10-14\"}",
+	"offer.sent":                                "{\"currency\":\"EUR\",\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"fx_rate_to_base\":\"Sample fx rate to base\",\"gross_minor\":1,\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"revision\":1,\"valid_until\":\"2026-10-14\"}",
 	"offer.superseded":                          "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"from_revision\":1,\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"to_revision\":1}",
+	"offer.updated":                             "{\"changed_fields\":[\"Sample changed fields\"],\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"onboarding.state_changed":                  "{\"completed\":true,\"connect_skipped\":true,\"path\":\"Sample path\",\"step\":\"Sample step\",\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"version\":1,\"voice_skipped\":true}",
 	"passport.revoked":                          "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"passport_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"pipeline.archived":                         "{}",

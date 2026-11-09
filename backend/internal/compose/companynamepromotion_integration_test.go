@@ -241,7 +241,7 @@ func TestCompanyNamePromotionDoesNotReofferADeclinedRename(t *testing.T) {
 	company := seedProvisionalCompany(t, e, "Gitex", "domain")
 	seedSigningEmployee(t, e, company, "Alice Signer", "Gitex Global")
 
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	promoter := NewCompanyNamePromoter(e.Pool, slog.New(slog.DiscardHandler))
 	if err := promoter.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), e.WS); err != nil {
 		t.Fatalf("RunWorkspace: %v", err)
@@ -292,7 +292,7 @@ func declineTheStagedRename(t *testing.T, e *integration.Env, promoter *CompanyN
 	}); err != nil {
 		t.Fatalf("reading the staged offer: %v", err)
 	}
-	if _, err := approvalsServiceWithEffects(e.Pool).Decide(e.As(e.Rep1, nil, integration.AdminPerms),
+	if _, err := NewApprovalsServiceWithEffects(e.Pool).Decide(e.As(e.Rep1, nil, integration.AdminPerms),
 		ids.From[ids.ApprovalKind](approvalID), false, nil); err != nil {
 		t.Fatalf("declining the rename: %v", err)
 	}

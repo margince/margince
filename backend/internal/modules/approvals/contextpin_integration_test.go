@@ -84,3 +84,48 @@ func tagDeciderPerms() principal.Permissions {
 		},
 	}
 }
+
+func TestADeniedContextPinWithholdsOnePreviewWithoutBreakingTheInbox(t *testing.T) {
+	e := setupStaging(t)
+	passport := e.seedPassport(t)
+	denied := ids.Nil
+	e.svc.WithContextPin("merge_tags", func(_ context.Context, _ pgx.Tx, target ids.UUID, _ json.RawMessage) (string, error) {
+		if target == denied {
+			return "", apperrors.ErrPermissionDenied
+		}
+		return "reviewed-context", nil
+	}).WithPreview(func(context.Context, crmcontracts.Approval) (*crmcontracts.ApprovalPreview, error) {
+		return &crmcontracts.ApprovalPreview{Version: 2, State: "ready", Changes: []crmcontracts.ApprovalPreviewChange{}}, nil
+	})
+	blocked := e.mergeCall(e.seedTag(t, "Blocked source"), e.seedTag(t, "Blocked target"))
+	blockedID, err := e.svc.Stage(e.asPassport(passport), blocked)
+	if err != nil {
+		t.Fatal(err)
+	}
+	allowed := e.mergeCall(e.seedTag(t, "Allowed source"), e.seedTag(t, "Allowed target"))
+	allowedID, err := e.svc.Stage(e.asPassport(passport), allowed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	denied = blocked.TargetID
+	human := e.asHumanWith(tagDeciderPerms())
+	rows, _, err := e.svc.ListWire(human, ListInput{})
+	if err != nil || len(rows) != 2 {
+		t.Fatalf("inbox: rows=%d, error=%v", len(rows), err)
+	}
+	for _, row := range rows {
+		want := "ready"
+		if ids.UUID(row.Id) == blockedID.UUID {
+			want = "stale"
+		}
+		if row.Preview == nil || row.Preview.State != want {
+			t.Fatalf("approval %s preview=%+v, want %s", row.Id, row.Preview, want)
+		}
+	}
+	if _, err := e.svc.Decide(human, blockedID, true, nil); !errors.Is(err, apperrors.ErrVersionSkew) {
+		t.Fatalf("deciding the denied context: %v, want stale-context refusal", err)
+	}
+	if _, err := e.svc.Decide(human, allowedID, true, nil); err != nil {
+		t.Fatalf("deciding the unaffected row: %v", err)
+	}
+}

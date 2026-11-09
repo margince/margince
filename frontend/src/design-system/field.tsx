@@ -95,19 +95,33 @@ export function Textarea({
  */
 type ToggleProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & {
   label: ReactNode;
+  /**
+   * Some, not all, of what the box stands for is on. HTML has no attribute for
+   * it, only the element's property, so it is set on the node.
+   */
+  indeterminate?: boolean;
 };
 
 function Toggle({
   kind,
   label,
   className,
+  indeterminate = false,
   ...rest
 }: ToggleProps & { kind: "checkbox" | "radio" }) {
   return (
     <label
       className={["checkfield", className ?? ""].filter(Boolean).join(" ")}
     >
-      <input type={kind} {...rest} />
+      <input
+        type={kind}
+        ref={(node) => {
+          if (node) {
+            node.indeterminate = indeterminate;
+          }
+        }}
+        {...rest}
+      />
       <span>{label}</span>
     </label>
   );

@@ -94,6 +94,10 @@ func fileCaptureReview(ctx context.Context, tx pgx.Tx, review ReviewMatch, pair 
 // DH-DDL-1); the unique pair index makes a re-detection a no-op — reported
 // as recorded=false so counters stay honest.
 func recordDedupeCandidate(ctx context.Context, tx pgx.Tx, entityType string, a, b ids.UUID, confidence float64, evidence []map[string]any, source, by string) (bool, error) {
+	live, err := lockLiveDedupeSubjects(ctx, tx, entityType, a, b)
+	if err != nil || !live {
+		return false, err
+	}
 	left, right := a, b
 	if right.String() < left.String() {
 		left, right = right, left
@@ -203,10 +207,14 @@ func acquiredFromCaptureTx(ctx context.Context, tx pgx.Tx, replied bool, email s
 	var wrote bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
-		  SELECT 1 FROM activity_participant p
-		    JOIN activity a ON a.id = p.activity_id
-		   WHERE p.role = 'from' AND p.address = lower($1)
-		     AND `+correspondence.SubjectMailSQL("a")+`)`, email).Scan(&wrote); err != nil {
+          WITH senders AS MATERIALIZED (
+            SELECT activity_id FROM activity_participant
+            WHERE role='from' AND lower(address)=lower(@address) AND address=lower(@address))
+          SELECT 1 FROM senders p CROSS JOIN LATERAL (
+            SELECT internal_mail_authorization,kind,direction,archived_at,captured_by,
+                   bulk_mail_attested,inbound_sender_authenticated
+            FROM activity WHERE id=p.activity_id OFFSET 0) a
+          WHERE `+correspondence.SubjectMailSQL("a")+`)`, pgx.NamedArgs{"address": email}).Scan(&wrote); err != nil {
 		return "", fmt.Errorf("contacts: did this address write to us: %w", err)
 	}
 	if wrote {

@@ -9,7 +9,7 @@ expects these papers before a company reads the mailboxes of its own team, and
 holding them is your company's duty.
 
 What Margince gives you is a way to check what the papers describe. The AI
-egress reference says what leaves your installation. The Senders card says what
+egress reference says what leaves your installation. The Sender decisions card says what
 was decided, and the audit log says who read what.
 
 ### How do I make Margince GDPR compliant before connecting mailboxes?
@@ -18,7 +18,7 @@ To get Margince ready for mail capture within the law, do four things before any
 2. Settle private use of work mail: consent per colleague, or a written ban (Einwilligung, §26(2) BDSG).
 3. Agree it with the works council (Betriebsvereinbarung, §87(1) Nr. 6 BetrVG).
 4. Record it for the regulator (Verarbeitungsverzeichnis und DSFA, Art. 30 and Art. 35).
-With Germany chosen as the law, **Settings → Governance → Jurisdiction** lists the templates.
+With Germany chosen as the law, **Settings → Compliance → Jurisdiction** lists the templates.
 Also called: DSGVO, data protection, works council, Betriebsrat, DPIA.
 
 ### Does Margince check that we signed a works agreement?
@@ -78,7 +78,7 @@ Also called: works council, Betriebsrat, figures per rep, team figures.
 4. **Write it down for the regulator**: the *Verarbeitungsverzeichnis und DSFA*
    (Art. 30, Art. 35). One entry per processing operation.
 
-With Germany chosen as the law, the templates are on **Settings → Governance →
+With Germany chosen as the law, the templates are on **Settings → Compliance →
 Jurisdiction**, to read and download. The English set is for reading and for
 passing around inside the company; the German versions are the ones to sign.
 
@@ -88,7 +88,7 @@ passing around inside the company; the German versions are the ones to sign.
 | --- | --- |
 | Does mail leave the company's systems? | The AI egress reference, which lists every AI task and whether its text can leave your installation |
 | Who decided this message was private, and when? | The message's audience reason, and the audit log |
-| What was decided about the senders who write to me? | Settings → Capture activity → Senders, per seat |
+| What was decided about the senders who write to me? | Settings → Connections → Activity → Sender decisions, per seat |
 | Can an administrator read a held message? | No. An administrator cannot open a held message |
 | What happens when the sorting model is down? | Everything stays held |
 | Can a manager see each colleague's sales figures? | Not in reports and forecasts while **Show individual performance** is off. Each member sees their own figures. The compliance answer above lists what the switch does not cover |
@@ -99,7 +99,7 @@ templates have blanks to fill in. For erasure, access requests, retention and co
 
 ## Which law applies
 
-Margince follows one law for the whole installation. An admin chooses it at first setup, or later on **Settings → Governance → Jurisdiction**. The page shows what the choice changes:
+Margince follows one law for the whole installation. An admin chooses it at first setup, or later on **Settings → Compliance → Jurisdiction**. The page shows what the choice changes:
 
 - how long business mail is kept before anyone may delete it;
 - the due date of a privacy request;
@@ -109,5 +109,9 @@ Margince follows one law for the whole installation. An admin chooses it at firs
 The sales-mail rules follow the law where each recipient is, not where you are. Margince reads it from the contact's address, then from the address of the company they work for. For a lead, it reads the address of the lead's company. If it is wrong, fix the address. With no address on record, sales mail they did not ask for needs their consent. Every such mail offers a way to unsubscribe.
 
 With no law chosen, a privacy request is due in one calendar month. Mail is then kept for the longest time any built-in law asks for.
+
+How long business mail is kept follows the legal entity of the colleague it belongs to. That is the colleague who sent it, or whose mailbox it arrived in. Mail that names no colleague follows the owner of the contact or deal it is filed under. A legal entity that follows another law keeps its colleagues' mail under that law, but never for a shorter time than the law chosen here. Mail that belongs to nobody uses the law chosen here. When the colleagues of one mail work under two different laws, the mail is kept for the longer time.
+
+When a colleague moves to another legal entity, or a legal entity changes its law, mail already kept keeps its time.
 
 A change to a law that keeps mail for a shorter time does not cut that time for mail you already hold. That mail keeps the old time, and the page says until when.

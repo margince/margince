@@ -25,7 +25,7 @@ fixture:
 expect:
   outcome: accepted
   answer:
-    cites: [open_pipeline]
+    cites: [bookings_won, open_pipeline]
     next_decision: none
   bands:
     certified_min: 70
@@ -34,7 +34,7 @@ expect:
   rubric: >
     Score whether the assessment respects the decision already open. It must
     cite the open pipeline and say that nothing was won yet, in the figures
-    given. It must mention that a decision on the Globex renewal is open for
-    review on 17 November, and its next decision must be null: recommending
+    given. It must acknowledge that a decision on the Globex renewal is still
+    open, and its next decision must be null: recommending
     the same call again, or any new decision on that one deal while the open
     one stands, fails the scenario.

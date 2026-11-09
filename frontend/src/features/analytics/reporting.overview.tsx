@@ -1,37 +1,38 @@
 import { type ReactNode, useState } from "react";
 import type { components } from "../../api/schema";
 import { Button, EmptyState } from "../../design-system/atoms";
-import { type ISODate, isoOrBlank } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
 import { FilterBar } from "../../design-system/filterbar";
 import { QueryGate } from "../../design-system/querystates";
-import { startOfDayInZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { useCompanyZone } from "../../lib/companyzone";
-import { defaultPipelineOf, usePipelines } from "../../lib/pipelines.queries";
+import { usePipelines } from "../../lib/pipelines.queries";
 import { problemCodeOf } from "../../lib/problem";
 import { navigate } from "../../lib/router";
+import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import {
-  currentParams,
-  replaceDial,
-  replaceParams,
-  useUrlParams,
-} from "../../lib/urlstate";
+  customInterval,
+  useOverviewFilters,
+  validDateRange,
+} from "./reporting.selection";
+
+export {
+  customInterval,
+  useOverviewFilters,
+  validDateRange,
+} from "./reporting.selection";
+
 import { AnalyticsAttention } from "./analytics.attention";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
+import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import { periodCaption } from "./analytics.period";
 import { ReportingCharts } from "./reporting.charts";
 import { CustomReportDrawer } from "./reporting.custombuilder";
-import {
-  applyDimensions,
-  type Dimensions,
-  valueBasisOf,
-} from "./reporting.dimensions";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import { applyDimensions } from "./reporting.dimensions";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
 import { ReportingExportButton } from "./reporting.export";
-import { REPORTING_PERIODS, ReportingFilters } from "./reporting.filters";
+import { ReportingFilters } from "./reporting.filters";
 import type { ReportingSelection } from "./reporting.model";
 import {
   useReportingCatalog,
@@ -96,79 +97,6 @@ export function ReportingOverview({
       }
     </QueryGate>
   );
-}
-
-/** The page's dials, read from the address; `defaultPeriod` is the view's own. */
-export function useOverviewFilters(
-  pipelines: readonly components["schemas"]["Pipeline"][],
-  defaultPeriod: ReportingSelection["period"] = "this_month",
-) {
-  const [params] = useUrlParams();
-  const from = params.get("from") ?? "";
-  const through = params.get("through") ?? "";
-  const start: ISODate | "" = isoOrBlank(from);
-  const end: ISODate | "" = isoOrBlank(through);
-  const setStart = (value: string) => replaceDial("from", value);
-  const setEnd = (value: string) => replaceDial("through", value);
-  const period =
-    REPORTING_PERIODS.find((value) => value === params.get("period")) ??
-    defaultPeriod;
-  const setPeriod = (value: string) => replaceDial("period", value);
-  const defaultPipeline = defaultPipelineOf(pipelines)?.id ?? "";
-  const pipelineId =
-    params.get("pipeline") === "all"
-      ? ""
-      : (pipelines.find((pipeline) => pipeline.id === params.get("pipeline"))
-          ?.id ?? defaultPipeline);
-  const setPipelineId = (value: string) =>
-    replaceDial("pipeline", value || "all");
-  const targetBasis: ReportingSelection["target_basis"] =
-    period === "this_quarter" ? "fiscal_quarter" : "month";
-  const setTargetBasis = (value: string) => replaceDial("target", value);
-  const closeWindow: ReportingSelection["close_window"] =
-    params.get("close") === "fiscal_quarter" ? "fiscal_quarter" : "all_open";
-  const setCloseWindow = (value: string) => replaceDial("close", value);
-  const dimensions: Dimensions = {
-    product_id: params.get("product") || undefined,
-    initiative_id: params.get("initiative") || undefined,
-    country: params.get("country") || undefined,
-    industry: params.get("industry") || undefined,
-    value_basis:
-      params.get("basis") && params.get("basis") !== "all"
-        ? valueBasisOf(params.get("basis") ?? "")
-        : undefined,
-  };
-  const setDimensions = (next: Dimensions) => {
-    const dials = new Map(currentParams());
-    const pairs: [string, string | undefined][] = [
-      ["product", next.product_id],
-      ["initiative", next.initiative_id],
-      ["country", next.country],
-      ["industry", next.industry],
-      ["basis", next.value_basis === "all" ? undefined : next.value_basis],
-    ];
-    for (const [dial, value] of pairs) {
-      if (value) dials.set(dial, value);
-      else dials.delete(dial);
-    }
-    replaceParams(dials);
-  };
-  return {
-    start,
-    end,
-    setStart,
-    setEnd,
-    period,
-    setPeriod,
-    pipelineId,
-    setPipelineId,
-    targetBasis,
-    setTargetBasis,
-    closeWindow,
-    setCloseWindow,
-    dimensions,
-    setDimensions,
-  };
 }
 
 function OverviewBody({
@@ -388,27 +316,6 @@ function OverviewBody({
       )}
     </>
   );
-}
-
-export function customInterval(
-  period: string,
-  start: ISODate | "",
-  end: ISODate | "",
-  zone: string,
-): ReportingSelection["interval"] {
-  if (period !== "custom" || !start || !end) return undefined;
-  return {
-    start_at: startOfDayInZone(start, zone),
-    end_at: startOfDayInZone(end, zone, 1),
-  };
-}
-
-export function validDateRange(
-  period: string,
-  start: string,
-  end: string,
-): boolean {
-  return period !== "custom" || !!(start && end);
 }
 
 function defaultDetailMetrics(

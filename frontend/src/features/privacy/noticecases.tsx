@@ -10,6 +10,10 @@ import {
   useRoster,
 } from "../../components/entityref";
 import {
+  SourceReviewDialog,
+  useCanChangeNoticeCase,
+} from "../../components/sourcereviewdialog";
+import {
   Badge,
   Button,
   EmptyState,
@@ -33,15 +37,15 @@ import { useNow } from "../../format/now";
 import { type Translator, useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { useMemberName } from "../../lib/membernames";
-import { problemMessageOf } from "../../lib/problem";
-import { useMe } from "../../lib/session";
-import { useViewerZone } from "../../lib/viewerzone";
-import { ControllerMailDialog } from "./controllermail";
 import {
   acquisitionCaption,
   noticeRuleHint,
   noticeRuleLabel,
-} from "./noticeacquisition";
+} from "../../lib/noticeacquisition";
+import { problemMessageOf } from "../../lib/problem";
+import { useMe } from "../../lib/session";
+import { useViewerZone } from "../../lib/viewerzone";
+import { ControllerMailDialog } from "./controllermail";
 import {
   isDefaultNoticeState,
   isNoticeOverdue,
@@ -61,7 +65,6 @@ import {
 } from "./noticecases.queries";
 import { NoticeDuty } from "./noticeduty";
 import { ExcuseModal } from "./noticeexcuse";
-import { SourceReviewDialog } from "./noticesource";
 
 // NoticeCasesCard is the disclosure-duty queue: who we obtained without asking,
 // whether anybody has told them, and by when we must.
@@ -87,7 +90,7 @@ function NoticeQueueCard() {
 
   // `privacy_request:read`, which is what consent/noticeownership.go asks for.
   const canSee = useCan("privacy_request", "read");
-  const canWork = useCanWrite("privacy_request", "update");
+  const canWork = useCanChangeNoticeCase();
   // Sending writes the contact's consent record, a grant of its own.
   const canSend = useCanWrite("contact", "update");
   // The probe itself: capability predicates read false while /me is in flight.
@@ -155,7 +158,7 @@ function NoticeQueueCard() {
       {reviewing && (
         <SourceReviewDialog
           key={reviewing.id}
-          duty={reviewing}
+          caseId={reviewing.id}
           open
           onClose={() => setReviewing(null)}
         />

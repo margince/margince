@@ -102,11 +102,8 @@ func newGmailOAuth(c GmailConfig) gmail.OAuth {
 	})
 }
 
-// newGcalOAuth builds the calendar connector's OAuth client. It shares the same
-// Google app credentials as Gmail (one app per deployment) but authorizes
-// SEPARATELY, requesting the calendar scope alone — the gcal package owns that
-// scope and its own error sentinels, so calendar diagnostics never surface as
-// "gmail:" and the credential never accretes Gmail's mail-read grant.
+// newGcalOAuth builds the calendar connector's OAuth client on Gmail's app, as its own
+// grant. No mail scope accretes into it, and its errors never read as "gmail:".
 //
 //nolint:ireturn // returns the gcal.OAuth seam by design (a fakeable interface)
 func newGcalOAuth(c GmailConfig) gcal.OAuth {
@@ -135,7 +132,7 @@ func newCaptureRegistryWithGoogle(
 ) *capture.Registry {
 	reg := NewCaptureRegistry(pool, vault, cfg)
 	if appReachable(resolve, c.canSync()) {
-		reg.Register(gmail.New(newGmailAuthorizer(resolve, c), gmail.NewAPI(nil, "")).
+		reg.Register(gmail.New(newGmailAuthorizer(resolve, c), gmail.NewAPIWithQuota(nil, "", cfg.GmailMailboxQuota, cfg.GmailProjectQuota)).
 			WithBounceSink(newBounceSink(pool)))
 		reg.Register(gcal.New(newGcalAuthorizer(resolve, c), gcal.NewAPI(nil, "")))
 	}
@@ -269,7 +266,7 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 			registry:      newCaptureRegistryWithGoogle(pool, s.vault, s.googleAppResolver, c, cfg),
 			authority:     identity.NewService(pool),
 			oauth:         gmailOAuth,
-			gmailAPI:      gmail.NewAPI(nil, ""),
+			gmailAPI:      gmail.NewAPIWithQuota(nil, "", cfg.GmailMailboxQuota, cfg.GmailProjectQuota),
 			gcalOAuth:     gcalOAuth,
 			gcalAPI:       gcal.NewAPI(nil, ""),
 			signer:        newStateSigner([]byte(c.StateKey)),

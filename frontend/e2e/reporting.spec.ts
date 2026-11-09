@@ -8,7 +8,7 @@ import {
   reportingStoryFramework,
   reportingStoryScope,
 } from "../src/testing/reporting.fixtures";
-import { mockApi } from "./seed";
+import { mockApi, servePrincipal } from "./seed";
 
 test.use({ locale: "en-GB" });
 for (const colorScheme of ["light", "dark"] satisfies ("light" | "dark")[]) {
@@ -21,19 +21,18 @@ for (const colorScheme of ["light", "dark"] satisfies ("light" | "dark")[]) {
       // when the evidence drawer has closed, and axe would read the blend.
       await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
       await mockApi(page);
-      await page.route("**/v1/me", (route) =>
-        route.fulfill({
-          json: meFixture({
-            rowScope: "all",
-            allow: {
-              deal: ["read"],
-              forecast: ["read"],
-              pipeline: ["read"],
-              report_definition: ["read", "create"],
-              reporting_framework: ["read"],
-              installation_settings: ["read"],
-            },
-          }),
+      await servePrincipal(
+        page,
+        meFixture({
+          rowScope: "all",
+          allow: {
+            deal: ["read"],
+            forecast: ["read"],
+            pipeline: ["read"],
+            report_definition: ["read", "create"],
+            reporting_framework: ["read"],
+            installation_settings: ["read"],
+          },
         }),
       );
       await page.route("**/v1/analytics/context", (route) =>

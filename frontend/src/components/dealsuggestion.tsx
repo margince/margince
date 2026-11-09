@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { suggestedName } from "./dealsuggestions.queries";
 // A Deal Scout suggestion, wherever it is shown — the pipeline board, the
 // Worklist and the company page — and the two answers a rep gives it.
 //
@@ -215,15 +216,6 @@ type Draft = {
  * evidence that leads, worded here. The server stores only the kind, so no
  * text read out of a message reaches a suggestion.
  */
-export function suggestedName(
-  suggestion: DealSuggestion,
-  t: ReturnType<typeof useT>,
-): string {
-  return t("dealSuggestion.name", {
-    company: suggestion.company_name,
-    hint: t(`dealSuggestion.hint.${suggestion.name_hint}` as const),
-  });
-}
 
 function draftOf(
   suggestion: DealSuggestion,

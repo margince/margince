@@ -28,10 +28,11 @@ package gates
 // twin means the reverse.
 
 import (
-	"os"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -100,7 +101,7 @@ func TestBothEmailSplittersAreHeldToTheSameBodies(t *testing.T) {
 // and this gate would report parity that the tables do not have.
 func bodiesIn(t *testing.T, path string, pattern *regexp.Regexp) map[string]bool {
 	t.Helper()
-	source, err := os.ReadFile(path)
+	source, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

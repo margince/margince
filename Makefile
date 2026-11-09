@@ -1,3 +1,5 @@
+include scripts/composition-profile.mk
+
 # Thin delegator: the real Makefile lives in backend/ (the Go module root).
 # `make check` is the merge gate; `make dev` boots everything.
 # The frontend lane is separate (`make frontend-check`) — it needs node+pnpm,
@@ -19,10 +21,10 @@ ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-en
   test-dev-cleanup test-disk-headroom \
   test-golangci-guard test-scheduled-report test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict \
   test-review-coverage \
-  test-laneorder check-image-pins check-host-ports ci-doc-parity \
+  test-laneorder test-lane-binaries check-image-pins check-host-ports ci-doc-parity \
   make-target-parity test-make-target-parity contract-breaking-check \
   test-contract-frontend-drift migration-versions test-migration-versions \
-  test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-test-budget rls-store-path \
+  test-lanes env-reads gofmt go-file-length fe-file-length test-fe-file-length test-test-budget rls-store-path \
   comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes test-phase-timer test-check-lane-end \
   check-extension-modules go-work-sum \
   no-jurisdiction test-no-jurisdiction \
@@ -31,7 +33,8 @@ ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-en
   test-release-version-stamped test-closing-declaration test-release-patch-base \
   test-docs-describing \
   test-craft-review test-release-tag-version test-release-license-stamped \
-  test-release-notes test-release-bundle embedded-binary-licenses
+  test-release-notes test-release-bundle embedded-binary-licenses third-party-files test-third-party-files \
+  test-strict-lint-packages
 
 # How wide the gate fan-out runs: the machine's online core count, so a 4-core
 # CI runner and an 18-core laptop each get the width they have without anybody
@@ -68,7 +71,7 @@ MINIO_PORT ?= 29000
 # called inside another command's argument would fail unnoticed.
 
 .PHONY: gate-timings
-.PHONY: help help-all install dev-fresh check check-config check-all check-backend check-root-gates check-lane-craft check-lane-gates check-lane-backend check-lane-fe check-q check-go check-gates check-fe dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev seed-analytics verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check bench-home e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign release-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules go-work-sum contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-test-budget comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes test-check-lane-end test-phase-timer comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-release-tag-version test-release-license-stamped test-release-notes test-release-bundle test-release-version-stamped test-closing-declaration test-release-patch-base docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign release-sign sbom-check sbom-gate
+.PHONY: help help-all install dev-fresh check check-config check-all check-backend check-root-gates check-lane-craft check-lane-gates check-lane-backend check-lane-fe check-q check-go check-gates check-fe dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev seed-analytics verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check bench-home home-budget e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-census fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict test-review-coverage test-laneorder test-lane-binaries secret-scan test-secret-scan test-sbom-sign release-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules go-work-sum contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-input-census-judge test-strict-lint-packages test-test-budget comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes test-check-lane-end test-phase-timer comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-release-tag-version test-release-license-stamped test-release-notes test-release-bundle test-release-version-stamped test-closing-declaration test-release-patch-base docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign release-sign sbom-check sbom-gate
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
 
@@ -131,12 +134,20 @@ install: fe-install tools hooks
 ## twice. PHASE_TIMER_OWNED tells it this target owns the ledger, so it adds its
 ## rows to this table instead of resetting and printing one of its own — which
 ## is what it does when somebody runs it directly (`make check-go`).
+##
+## CHECK_TREE_GATES=off leaves out every gate that reads the tree the same way
+## whatever CHECK_LEGS holds: the contract types, the root script gates, drift
+## and composition reproducibility. CI splits CHECK_LEGS over two runners, and
+## one of them running these is enough.
+CHECK_TREE_GATES ?= on
 check-backend:
 	@bash scripts/phase-timer.sh reset
+ifneq ($(CHECK_TREE_GATES),off)
 	@bash scripts/phase-timer.sh start "frontend contract types (gen:api)"
 	$(MAKE) contract-frontend-drift
 	@bash scripts/phase-timer.sh stop
 	PHASE_TIMER_OWNED=1 $(MAKE) check-root-gates
+endif
 	PHASE_TIMER_OWNED=1 $(MAKE) -C backend check
 	@bash scripts/phase-timer.sh report
 
@@ -359,6 +370,7 @@ FORCE:
 
 # The match-anything rule above would otherwise try to remake this file.
 Makefile: ;
+scripts/composition-profile.mk: ;
 
 ## check-fe — the frontend half of the gate (part of `make check`). Its first
 ## leg, fe-typecheck-composed, installs the frontend deps, and the check below
@@ -431,8 +443,7 @@ fe-test-ext: composition
 	@# persistent runner, or a laptop with CI set. The root install above keeps
 	@# --frozen-lockfile, which is the property this whole change buys.
 	cd build/composition-frontend/workspace && pnpm install --no-frozen-lockfile
-	cd frontend && pnpm build && \
-		MARGINCE_COMPOSITION_FRONTEND=../build/composition/frontend pnpm test:ext \
+	cd frontend && MARGINCE_COMPOSITION_FRONTEND=../build/composition/frontend pnpm test:ext \
 		$(if $(FE_COVERAGE),--coverage.enabled)
 	@# The same acceptance test the core report gets, on the report that is
 	@# about to be uploaded beside it. An lcov whose records name paths the
@@ -491,13 +502,12 @@ space-tokens:
 ## native-controls — no browser-drawn control: `<select>`, `<option>`,
 ## `<optgroup>` or a native date input (`type="date"` on `input` or
 ## `TextInput`) anywhere under frontend/src or extensions/*/frontend. It is a
-## vitest fitness function over the TypeScript AST now — see
-## frontend/src/design-system/native-controls.test.ts — so it runs in `fe-unit`
-## with the rest of the suite. This target keeps its name for anyone who runs
-## the gate on its own.
+## census rule over the TypeScript AST — see
+## frontend/census/rules/native-controls.census.ts — so it runs in `fe-census`
+## with the other rules. This target runs that rule alone.
 native-controls:
 	cd frontend && pnpm install --frozen-lockfile && pnpm exec vitest run \
-		src/design-system/native-controls.test.ts
+		-c vitest.census.config.ts -t native-controls
 ## action-rows — two buttons side by side sit in a row that says so: a container
 ## whose element children are two or more buttons takes `gap: var(--gapActions)`,
 ## from a class it names or from its own inline style. The only gate that reads
@@ -571,6 +581,7 @@ frontend-check:
 	$(MAKE) fe-lint
 	$(MAKE) fe-compiler-lint
 	$(MAKE) fe-unit
+	$(MAKE) fe-census
 	$(MAKE) fe-build
 
 ## fe-ds-gates — the frontend's cheap grep gates on their own, so the CI job that
@@ -616,7 +627,9 @@ ifdef CHECK_WRITERS_RAN
 else
 	cd frontend && pnpm install --frozen-lockfile
 	@./scripts/check-contract-frontend-drift.sh
+	cd frontend && pnpm gen:approval-reading --check
 endif
+	cd frontend && pnpm gen:essential-copy --check
 
 ## fe-unit — the vitest suite. FE_COVERAGE=1 instruments the run so it also
 ## writes frontend/coverage/lcov.info for the `sonarcloud` job — ONE execution
@@ -656,12 +669,21 @@ FE_SHARD ?=
 ## between majors (.vitest-reports → .vitest/blob); the upload step reads it too.
 FE_BLOB_DIR := .vitest-reports
 fe-unit:
+	node --test scripts/ensure-pnpm.test.mjs
 	bash frontend/scripts/check-lcov-paths.test.sh
 	bash frontend/scripts/check-shard-union.test.sh
 	cd frontend && pnpm install --frozen-lockfile && pnpm exec vitest run \
 		$(if $(FE_SHARD),--shard=$(FE_SHARD) --reporter=blob --outputFile=$(FE_BLOB_DIR)/blob-$(subst /,-,$(FE_SHARD)).json --reporter=default) \
 		$(if $(FE_COVERAGE),--coverage.enabled)
 	$(if $(FE_SHARD),,$(if $(FE_COVERAGE),frontend/scripts/check-lcov-paths.sh frontend/coverage/lcov.info))
+
+## fe-census — the whole-tree censuses: frontend/census/census.test.ts walks
+## and parses frontend/src, frontend/scripts and every extension frontend layer
+## once, then runs each rule in frontend/census/rules/ as its own named case.
+## fe-unit excludes census/, so each census runs once, on one parse.
+fe-census:
+	cd frontend && pnpm install --frozen-lockfile && pnpm exec vitest run \
+		-c vitest.census.config.ts
 
 ## fe-unit-merge — one measurement out of the shards' blob reports. CI only:
 ## nothing produces a blob unless FE_SHARD asked for one.
@@ -737,6 +759,7 @@ fe-storybook:
 ## fe-install — install the frontend deps (pnpm, frozen lockfile). The FE half
 ## of `make install`; also what `fe-uat` / `dev` assume has run.
 fe-install:
+	node scripts/ensure-pnpm.mjs
 	cd frontend && pnpm install --frozen-lockfile
 
 ## fe-typecheck — TypeScript typecheck of the frontend (tsc project build, no
@@ -837,6 +860,14 @@ bench-home:
 		env -u BASE_URL -u MARGINCE_BENCH_MOBILE MARGINCE_BENCH_HOME=1 BACKEND_PORT=$(BENCH_API_PORT) \
 		pnpm exec playwright test
 
+## home-budget — Home's per-PR budget: the API check on its own corpus (needs
+## db-up), then the day paint and CLS of a production bundle against the
+## running api on BENCH_API_PORT, which holds the seed-dev data. The advisory
+## CI job home-budget runs it; scripts/home-budget.sh has the details.
+home-budget:
+	@test -n "$(BENCH_API_PORT)" || { echo "home-budget: set BENCH_API_PORT to the api port of a running stack"; exit 2; }
+	BENCH_API_PORT=$(BENCH_API_PORT) bash scripts/home-budget.sh
+
 ## bench-mobile-check — the same measurement, writing NOTHING: a check run by
 ## hand without touching the published page, as bench-perf-check is beside
 ## bench-perf.
@@ -874,13 +905,13 @@ E2E_SHOT_DIR ?= /tmp/e2e-company
 ## bad run is the weather and two is a defect. Never touches :8080; it boots,
 ## seeds and tears down its own DEV_SLUG stack.
 ## A scenario stops once its verdict is settled; E2E_LLM_ALL_RUNS=1 makes every run.
-## SCENARIO=<name> runs one. E2E_LLM_KEEP=1 leaves the stack up.
+## SCENARIO=<name> runs one, or several names in quotes. E2E_LLM_KEEP=1 leaves the stack up.
 ##
-## THE CANDIDATE IS CHOSEN: E2E_LLM_CANDIDATE=claude|gpt|mistral, each pinned
+## THE CANDIDATE IS CHOSEN: E2E_LLM_CANDIDATE=claude|gpt|gemini|mistral, each pinned
 ## to the model its consumer app defaults to (e2e/llm/candidates.json), and
 ## E2E_LLM_VIA=api|openrouter|cli. api and openrouter run e2e/llm/drive.py, the
 ## neutral bridge that offers every vendor the same tools under the server's own
-## instructions — the comparable route. cli runs `claude -p` or `codex exec`,
+## instructions — the comparable route. cli runs `claude -p`, `codex exec` or `agy -p`,
 ## each with its own system prompt, filed apart under <model>@<cli>. The judge
 ## is reached by E2E_LLM_JUDGE_VIA=cli|api|openrouter. Codex reports no list of
 ## the tools it offered, so its run is held against the lane's own tools/list;
@@ -972,6 +1003,7 @@ storybook:
 ## changed story the build didn't register, or on a changed component with no
 ## story. Artifact: .tmp/fe-uat/manifest.json. Deliberately NOT in `make check`
 ## — it is the fe-only UAT lane a coordinator runs instead of the full stack.
+## FE_UAT_BASE_REF chooses the PR base (origin/main by default).
 ## Optional: ARGS="--allow-missing"; ARGS="--all-stories" renders every story
 ## the build registers instead of the diff's (scheduled.yml runs it daily).
 fe-uat:
@@ -1268,6 +1300,13 @@ test-review-coverage:
 test-laneorder:
 	@./scripts/test-laneorder.sh
 
+## test-lane-binaries — prove the integration build empties only a directory it
+## made, and that a shard refuses binaries compiled from other source than its
+## checkout. Neither fails on its own: one deletes files, the other tests old
+## code and reports green.
+test-lane-binaries:
+	@./scripts/test-lane-binaries.sh
+
 ## check-image-pins — every `uses:` in .github/workflows/, every container
 ## `image:` (workflow service containers + docker-compose.dev.yml) AND every
 ## Dockerfile base `FROM` is pinned to an immutable ref (supply-chain: a
@@ -1308,6 +1347,7 @@ make-target-parity:
 ## test-make-target-parity — the gate's own test: the shipped Makefiles pass and
 ## each planted forwarding mistake fails.
 test-make-target-parity:
+	@bash scripts/test-composition-profile.sh
 	@./scripts/check-make-target-parity.test.sh
 
 ## contract-breaking-check — strict compatibility against CHECK_BASE_REF
@@ -1315,6 +1355,7 @@ test-make-target-parity:
 ## A deliberate spec resync uses CONTRACT_STABILITY=pre-live.
 CHECK_BASE_REF ?= origin/main
 contract-breaking-check:
+	@bash scripts/check-contract-breaking.test.sh
 	@CONTRACT_BREAKING_REQUIRE_BASE="$(if $(filter file,$(origin CHECK_BASE_REF)),$(CONTRACT_BREAKING_REQUIRE_BASE),1)" ./scripts/check-contract-breaking.sh "$(CHECK_BASE_REF)"
 
 ## contract-frontend-drift — the THIRD regeneration a crm.yaml change owes.
@@ -1387,8 +1428,14 @@ gofmt:
 ## reach: backend/tools, composition and the units under extensions/
 ## are each their own module, so the backend lint lane never saw them. Same
 ## config as the product module; the list derives from tracked go.mod files.
-lint-modules: composition
-	@./scripts/check-lint-modules.sh
+## A static leg of the backend gate, so it runs where the golangci cache is.
+lint-modules:
+	$(MAKE) -C backend lint-modules
+
+## test-strict-lint-packages — prove the strict lint pass loads every package
+## a change touched, and only what `./...` from backend/ reaches.
+test-strict-lint-packages:
+	@./scripts/test-strict-lint-packages.sh
 
 ## test-golangci-guard — prove scripts/run-golangci.sh still tells a finding in
 ## this checkout from one golangci's machine-wide cache remembers from another
@@ -1419,13 +1466,21 @@ test-budget:
 ## test-input-census — every cached unit-test package that reads a file outside
 ## its module also reads that file's tree digest, or a replayed pass outlives an
 ## edit to it. Judged on a real run, since such paths are mostly built at run
-## time; a failing test does not decide it. CI's backend-lint job and
-## cache-warm both run it.
+## time; a failing test does not decide it. cache-warm runs it.
 test-input-census:
 	@set -e; logs="$$(mktemp -d)"; trap 'rm -rf "$$logs"' EXIT; \
 	if ! TESTLOG_DIR="$$logs" $(MAKE) -C backend -k test-cached test-extensions TEST_EXEC="$(CURDIR)/scripts/testlog-exec.sh"; then \
 	  echo "test-input-census: a test failed under the census; its inputs are judged all the same" >&2; \
 	fi; \
+	TESTLOG_DIR="$$logs" $(MAKE) --no-print-directory test-input-census-judge
+
+## test-input-census-judge — the judging half of test-input-census, over logs a
+## pass run with TEST_EXEC=scripts/testlog-exec.sh left in TESTLOG_DIR. CI's
+## deterministic-gates (unit) leg logs its own test pass and judges it here, so
+## the census costs no second run of the tests.
+test-input-census-judge:
+	@set -e; logs="$(TESTLOG_DIR)"; \
+	[ -d "$$logs" ] || { echo "test-input-census-judge: TESTLOG_DIR must name the logs a testlog-exec.sh pass wrote" >&2; exit 2; }; \
 	./scripts/ci-stable-mtimes.sh --names > "$$logs/names.tsv"; \
 	cd backend && GOWORK="$(CURDIR)/go.work" go run ./tools/check-test-inputs -logs "$$logs" -names "$$logs/names.tsv"
 
@@ -1726,8 +1781,7 @@ sbom:
 ## lives in sbom-schemas/license-supplement.json (key = purl without version,
 ## so every pinned action version matches — and that directory is in the
 ## license gate's classifier scope, so editing the map re-runs the gate); it
-## sets the license on the CycloneDX doc the gate reads and on the SPDX 2.2 doc,
-## and leaves the SPDX 3.0 doc as syft wrote it. SonarSource's action is left
+## sets the license in all three documents. SonarSource's action is left
 ## unset on purpose — it is LGPL-3.0-only and ignored in .grant.yaml, not shipped.
 ## Idempotent; keep the map in step with the workflows and the SPDX-tools deps.
 sbom-supplement:
@@ -1737,6 +1791,7 @@ sbom-supplement:
 	  jq --slurpfile m sbom-schemas/license-supplement.json '$$m[0] as $$map | .components |= map(((.purl // "") | sub("@[^@]*$$"; "")) as $$k | if $$map[$$k] != null then .licenses = [{"license": {"id": $$map[$$k]}}] else . end)' "$$cdx" > "$$cdx.tmp" && mv "$$cdx.tmp" "$$cdx"; \
 	  jq --slurpfile m sbom-schemas/license-supplement.json '$$m[0] as $$map | .packages |= map((([.externalRefs[]? | select(.referenceType == "purl") | .referenceLocator] | (.[0] // "")) | sub("@[^@]*$$"; "")) as $$k | if $$map[$$k] != null then (.licenseConcluded = $$map[$$k] | .licenseDeclared = $$map[$$k]) else . end)' "$$s22" > "$$s22.tmp" && mv "$$s22.tmp" "$$s22" ; \
 	  jq --slurpfile m sbom-schemas/license-supplement.json -f sbom-schemas/spdx30-licenses.jq "$$s30" > "$$s30.tmp" && mv "$$s30.tmp" "$$s30"
+	@python3 scripts/third_party_files.py supplement $(SBOM_DIR) third-party-files.txt
 
 ## sbom-normalize — reconcile syft's three writers so all three SBOMs describe one
 ## tree, the invariant the constellation dist gate enforces. syft scans the export
@@ -1918,3 +1973,13 @@ SBOM_GATE_ATTEMPTS ?= 3
 ## into the answer the network would have given.
 sbom-gate:
 	@set -e; 	  for attempt in $$(seq 1 $(SBOM_GATE_ATTEMPTS)); do 	    echo "license gate: attempt $$attempt of $(SBOM_GATE_ATTEMPTS)"; 	    $(MAKE) sbom >/dev/null; 	    if $(MAKE) sbom-check; then exit 0; fi; 	    if [ "$$attempt" -eq "$(SBOM_GATE_ATTEMPTS)" ]; then 	      echo "license gate: denied on every one of $(SBOM_GATE_ATTEMPTS) attempts — this is a licence, not a lookup"; 	      exit 1; 	    fi; 	    echo "license gate: retrying — a denial that moves between runs is a failed registry lookup, not a missing licence"; 	  done
+
+.PHONY: third-party-files test-third-party-files
+
+## third-party-files — require provenance and licence text for copied third-party files.
+third-party-files:
+	@bash scripts/third-party-files.sh
+
+## test-third-party-files — prove missing provenance and copied-file SBOM drift fail.
+test-third-party-files:
+	@bash scripts/test-third-party-files.sh

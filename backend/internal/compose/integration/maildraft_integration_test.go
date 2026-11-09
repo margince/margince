@@ -179,6 +179,7 @@ func TestASubjectAccessExportCarriesTheDraftsWrittenToThem(t *testing.T) {
 		"subject": "Re: pricing", "body": "Written and never sent.",
 		"attachment_ids": []string{file}, "communication_context": "precontract_quote",
 		"scheduled_at": "2026-01-07T08:00:00Z", "scheduled_tz": "Europe/Berlin",
+		"editor_state": AnyMap{"intent": "Ask about the subject", "served_body": "Generated for the subject"},
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("saving a draft → %d, want 200", status)
 	}
@@ -212,6 +213,9 @@ func TestASubjectAccessExportCarriesTheDraftsWrittenToThem(t *testing.T) {
 			len(pkg.DraftMessages), pkg.DraftMessages)
 	}
 	rendered := fmt.Sprintf("%#v", pkg.DraftMessages)
+	if !strings.Contains(rendered, "Ask about the subject") || !strings.Contains(rendered, "Generated for the subject") {
+		t.Errorf("the export lost the subject drafting state: %s", rendered)
+	}
 	if !strings.Contains(rendered, "About the subject.") {
 		t.Errorf("the draft opened on the subject's record is missing from their export: %s", rendered)
 	}

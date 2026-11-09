@@ -126,10 +126,12 @@ function holdsCopies(edit: EditSeed | undefined): boolean {
 // the epoch that retires a draft request once the words move on.
 export function useComposeFields({
   initialMessage,
+  initialReason,
   askedIntent,
   edit,
 }: Readonly<{
   initialMessage?: Readonly<{ subject: string; body: string }>;
+  initialReason?: CommunicationContext;
   askedIntent?: string;
   /** A scheduled message being written again; read once, when the composer mounts. */
   edit?: EditSeed;
@@ -161,7 +163,7 @@ export function useComposeFields({
   // What this message is, when the record does not say. Empty until the
   // reader answers, and never asked on a reply (see contextFor).
   const [context, setContext] = useState<CommunicationContext | "">(
-    edit?.context ?? "",
+    edit?.context ?? initialReason ?? "",
   );
   // The send-later moment as datetime-local text in the rep's zone. It
   // becomes an instant at submit (see scheduleFields).
@@ -317,8 +319,20 @@ export function useComposeFields({
     setHtml(saved.html);
     setContext(saved.context);
     setSendAt(saved.sendAt);
+    const state = saved.editorState;
+    setIntent(state?.intent ?? "");
+    setServedBody(state?.served_body ?? "");
     setDraftRef(null);
-    setProvenance(null);
+    setProvenance(
+      state?.ai_generated
+        ? {
+            ai_generated: true,
+            ai_disclosure: state.ai_disclosure,
+            voice_profile_version: state.voice_profile_version,
+            voice_degraded: state.voice_degraded ?? false,
+          }
+        : null,
+    );
   };
 
   const snapshot = (): FieldsSnapshot => ({
@@ -362,6 +376,7 @@ export function useComposeFields({
   };
 
   return {
+    editorState: editorStateOf({ intent, provenance, servedBody }),
     to,
     setTo,
     cc,
@@ -410,3 +425,17 @@ export function useComposeFields({
 }
 
 export type ComposeFields = ReturnType<typeof useComposeFields>;
+
+function editorStateOf(
+  fields: Pick<FieldsSnapshot, "intent" | "provenance" | "servedBody">,
+): components["schemas"]["MailDraftEditorState"] {
+  return {
+    intent: fields.intent,
+    ai_generated: fields.provenance?.ai_generated ?? false,
+    ai_disclosure: fields.provenance?.ai_disclosure ?? undefined,
+    voice_profile_version:
+      fields.provenance?.voice_profile_version ?? undefined,
+    voice_degraded: fields.provenance?.voice_degraded ?? false,
+    served_body: fields.servedBody,
+  };
+}

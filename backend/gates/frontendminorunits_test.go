@@ -24,11 +24,11 @@ package gates
 // added to one side and not the other fails, and so does a changed digit count.
 
 import (
-	"os"
 	"regexp"
 	"strconv"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -51,7 +51,7 @@ var tsComment = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
 
 func TestTheFrontendMinorUnitTableMatchesTheGoOne(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile(frontendMinorUnits)
+	source, err := gatekit.ReadFile(frontendMinorUnits)
 	if err != nil {
 		t.Fatalf("reading the frontend minor-unit table: %v", err)
 	}

@@ -53,10 +53,6 @@ type Baseline struct {
 	BaseCurrency          string
 	// ForwardMeasure is the measure the landing was built from when read.
 	ForwardMeasure ForwardMeasure
-	// QualifiedPolicy is the viability rule the qualified readings applied,
-	// empty while enforcement is off. Read from the setting, so a period with
-	// no deal still records it.
-	QualifiedPolicy string
 	// Assembly is the whole result the readings came from, kept so a snapshot
 	// of the baseline freezes the basis of its chances too.
 	Assembly Assembly
@@ -409,7 +405,7 @@ func (h Handlers) recordWithBaseline(ctx context.Context, tx pgx.Tx, in NewCall)
 		Period: in.Period, Scope: baseline.Scope, Trigger: TriggerCall,
 		BaseCurrency: baseline.BaseCurrency, Readings: baseline.Readings, TakenAt: submitted,
 		CallID: &out.ID, PopulationFingerprint: baseline.PopulationFingerprint,
-		ForwardMeasure: baseline.ForwardMeasure, QualifiedPolicyVersion: baseline.QualifiedPolicy,
+		ForwardMeasure: baseline.ForwardMeasure,
 	}
 	snapshot.StampChances(baseline.Assembly)
 	if _, err := h.store.TakeSnapshot(ctx, tx, snapshot); err != nil {

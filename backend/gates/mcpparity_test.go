@@ -27,10 +27,12 @@ import (
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 var updateMCPParity = flag.Bool("update-mcp-parity", false,
-	"rewrite docs/reference/mcp-parity.{json,md} from the contract, the web app and the seeded grants")
+	"rewrite docs/reference/mcp-parity.{json,md} and the work-area table from the contract, the web app and the seeded grants")
 
 const (
 	mcpParityCommand = "go test ./gates -run TestTheMCPParityCatalogIsPublished -update-mcp-parity"
@@ -170,6 +172,8 @@ type parityGroupRow struct {
 	Key   string `json:"key"`
 	Title string `json:"title"`
 	What  string `json:"what"`
+	// PassportArea says which switch on a passport admits the group's calls.
+	PassportArea string `json:"passport_area"`
 	parityCounts
 	Areas []parityAreaRow `json:"areas"`
 }
@@ -202,12 +206,13 @@ type parityContractOp struct {
 	OperationID string   `yaml:"operationId"` //nolint:tagliatelle // OpenAPI's key, read as written.
 	Tags        []string `yaml:"tags"`
 	MCPTool     *struct {
-		Verb     string `yaml:"verb"`
-		Tier     string `yaml:"tier"`
-		Scope    string `yaml:"scope"`
-		Router   string `yaml:"router"`
-		Action   string `yaml:"action"`
-		AskFirst bool   `yaml:"ask_user_first"`
+		Verb       string `yaml:"verb"`
+		Tier       string `yaml:"tier"`
+		Scope      string `yaml:"scope"`
+		Router     string `yaml:"router"`
+		Action     string `yaml:"action"`
+		AskFirst   bool   `yaml:"ask_user_first"`
+		RecordType string `yaml:"record_type"`
 	} `yaml:"x-mcp-tool"` //nolint:tagliatelle // the contract's own extension key.
 	AgentAccess string                 `yaml:"x-agent-access"`      //nolint:tagliatelle // the contract's own extension key.
 	Reason      string                 `yaml:"x-human-only-reason"` //nolint:tagliatelle // the contract's own extension key.
@@ -229,7 +234,7 @@ var parityContractOperationID = regexp.MustCompile(`(?m)^\s+operationId:`)
 // readParityContract decodes each operation by its method node, as gen-agentpolicy does.
 func readParityContract(t *testing.T) parityContract {
 	t.Helper()
-	raw, err := os.ReadFile(contractDocument)
+	raw, err := gatekit.ReadFile(contractDocument)
 	if err != nil {
 		t.Fatalf("reading %s: %v", contractDocument, err)
 	}
@@ -328,7 +333,7 @@ func parityStateOf(op parityContractOp) string {
 // runs the real handler, so a refusal on any action of a verb stands.
 func measuredRep(t *testing.T) map[string]bool {
 	t.Helper()
-	raw, err := os.ReadFile(toolRolesJSON)
+	raw, err := gatekit.ReadFile(toolRolesJSON)
 	if err != nil {
 		t.Fatalf("reading %s: %v", toolRolesJSON, err)
 	}
@@ -475,7 +480,7 @@ func summarizeParity(scan webScan, ops []parityOperation) parityReport {
 		titles[area.Key] = area.Title
 	}
 	for _, info := range parityGroupInfos {
-		groups[info.Key] = &parityGroupRow{Key: info.Key, Title: info.Title, What: info.What}
+		groups[info.Key] = &parityGroupRow{Key: info.Key, Title: info.Title, What: info.What, PassportArea: passportAreaOf(info)}
 		areasByKey[info.Key] = map[string]*parityAreaRow{}
 	}
 	for _, op := range ops {
@@ -536,6 +541,7 @@ func TestTheMCPParityCatalogIsPublished(t *testing.T) {
 	}
 	syncMCPParity(t, mcpParityJSON, append(payload, '\n'))
 	syncMCPParity(t, mcpParityPage, renderMCPParityPage(report))
+	syncMCPParity(t, workAreaTable, workAreaFile(t, contract, report))
 	syncToolRolesPage(t, report)
 }
 
@@ -679,7 +685,7 @@ func syncMCPParity(t *testing.T, path string, want []byte) {
 		}
 		return
 	}
-	got, err := os.ReadFile(path)
+	got, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v\nRegenerate with: %s", path, err, mcpParityCommand)
 	}

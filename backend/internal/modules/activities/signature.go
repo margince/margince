@@ -27,10 +27,12 @@ import (
 )
 
 // SignatureReader answers what the SENDER signs their mail with. It is asked
-// only about the authenticated caller: a send signs with its own sender's
-// sign-off, and there is no call shape here that names anybody else.
+// only about the authenticated caller, and no call shape here names anybody
+// else. The
+// sign-off wears the template, imprint and logo of entity. Zero is the entity
+// the sender works for now.
 type SignatureReader interface {
-	SignatureFor(ctx context.Context, userID ids.UUID) (SenderSignature, error)
+	SignatureFor(ctx context.Context, userID, entity ids.UUID) (SenderSignature, error)
 }
 
 // WithSignature wires the sign-off the send path appends. Compose calls this;
@@ -101,19 +103,22 @@ func (o SignOff) under(body string) string {
 //
 // One lookup for both renderings. Two would be two chances for the plain part
 // and the markup part of one message to disagree about who signed it.
-func (s *Store) PreviewMailSignOff(ctx context.Context, body, subject string) (SignOff, error) {
+//
+// entity is the legal entity the message goes out for, as a frozen message
+// keeps it. Zero is the one the sender works for now.
+func (s *Store) PreviewMailSignOff(ctx context.Context, body, subject string, entity ids.UUID) (SignOff, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return SignOff{}, err
 	}
-	return s.signOff(ctx, body, subject)
+	return s.signOff(ctx, body, subject, entity)
 }
 
-func (s *Store) signOff(ctx context.Context, body, subject string) (SignOff, error) {
+func (s *Store) signOff(ctx context.Context, body, subject string, entity ids.UUID) (SignOff, error) {
 	name, err := s.senderDisplayName(ctx)
 	if err != nil {
 		return SignOff{}, err
 	}
-	return s.signOffAs(ctx, body, subject, name)
+	return s.signOffAs(ctx, body, subject, name, entity)
 }
 
 // signatureDraft is what a settings form has typed and not saved. Each set
@@ -150,16 +155,16 @@ func (s *Store) previewSignOff(ctx context.Context, body, subject string, draft 
 	if err != nil {
 		return SignOff{}, err
 	}
-	return s.signOffDrafted(ctx, body, subject, name, draft)
+	return s.signOffDrafted(ctx, body, subject, name, ids.Nil, draft)
 }
 
 // signOffAs is signOff with the sender's display name already read, so a send
 // writes one name in its From header and its closing.
-func (s *Store) signOffAs(ctx context.Context, body, subject, name string) (SignOff, error) {
-	return s.signOffDrafted(ctx, body, subject, name, signatureDraft{})
+func (s *Store) signOffAs(ctx context.Context, body, subject, name string, entity ids.UUID) (SignOff, error) {
+	return s.signOffDrafted(ctx, body, subject, name, entity, signatureDraft{})
 }
 
-func (s *Store) signOffDrafted(ctx context.Context, body, subject, name string, draft signatureDraft) (SignOff, error) {
+func (s *Store) signOffDrafted(ctx context.Context, body, subject, name string, entity ids.UUID, draft signatureDraft) (SignOff, error) {
 	if s.signature == nil {
 		return SignOff{Kind: SignOffNone}, nil
 	}
@@ -167,7 +172,7 @@ func (s *Store) signOffDrafted(ctx context.Context, body, subject, name string, 
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID == ids.Nil {
 		return SignOff{Kind: SignOffNone}, nil
 	}
-	stored, err := s.signature.SignatureFor(ctx, actor.UserID)
+	stored, err := s.signature.SignatureFor(ctx, actor.UserID, entity)
 	if err != nil {
 		return SignOff{}, err
 	}

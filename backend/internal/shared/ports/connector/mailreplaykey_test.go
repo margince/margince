@@ -44,7 +44,7 @@ func TestAScopedKeyIsNeverAValidMessageID(t *testing.T) {
 // Message-ID, so no incoming header can arrive already looking scoped and claim
 // another seat's shared key.
 func TestASenderCannotTypeAKeyThatLooksScoped(t *testing.T) {
-	forged := "a" + mailSeatMarker + "b@example.com"
+	forged := "a" + MailSeatMarker + "b@example.com"
 	if ValidMessageID(forged) {
 		t.Errorf("%q is accepted as a Message-ID, so a sender could type a scoped-looking key", forged)
 	}

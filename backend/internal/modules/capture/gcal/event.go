@@ -48,8 +48,11 @@ type rawEvent struct {
 	Description string        `json:"description"`
 	End         eventDateTime `json:"end"`
 	Start       eventDateTime `json:"start"`
-	Organizer   eventActor    `json:"organizer"`
-	Attendees   []eventActor  `json:"attendees"`
+	// OriginalStart is an occurrence's slot in its series, which a move does
+	// not change. Google states it only on an instance of a recurring event.
+	OriginalStart eventDateTime `json:"originalStartTime"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
+	Organizer     eventActor    `json:"organizer"`
+	Attendees     []eventActor  `json:"attendees"`
 	// Google sets attendeesOmitted when it cut the list short. A guest list
 	// hidden from guests (guestsCanSeeOtherGuests false, default true) is
 	// withheld from every copy but the organizer's.
@@ -155,17 +158,23 @@ func decode(ev rawEvent, owner string) meetingmap.Event {
 			Email: a.Email, Name: a.DisplayName, Room: a.isRoom(), Response: guestResponse(a.ResponseStatus),
 		})
 	}
+	answer := ownerCalendarAnswer(ev.Attendees, owner)
+	cancelled := strings.EqualFold(strings.TrimSpace(ev.Status), calendarCanceled)
+	organizer := ev.Organizer.Self || (strings.TrimSpace(owner) != "" && strings.EqualFold(strings.TrimSpace(ev.Organizer.Email), strings.TrimSpace(owner)))
 	return meetingmap.Event{
 		ID:            ev.ID,
 		Private:       ev.Visibility != "" && ev.Visibility != "default" && ev.Visibility != "public",
 		ICalUID:       strings.TrimSpace(ev.ICalUID),
-		Cancelled:     strings.EqualFold(strings.TrimSpace(ev.Status), calendarCanceled),
-		OwnerDeclined: ownerDeclined(ev.Attendees, owner),
+		Cancelled:     cancelled && organizer,
+		Removed:       cancelled && !organizer,
+		OwnerResponse: answer.Response,
+		OwnerAddress:  answer.Address,
 		Subject:       ev.Summary,
 		Description:   ev.Description,
 		StartsAt:      parseStart(ev.Start),
 		EndsAt:        parseStart(ev.End),
 		AllDay:        isAllDay(ev.Start),
+		SeriesSlot:    parseStart(ev.OriginalStart),
 		Organizer:     meetingmap.Actor{Email: ev.Organizer.Email, Name: ev.Organizer.DisplayName},
 		Attendees:     attendees,
 		PartiesHidden: ev.partiesHidden(),
@@ -187,29 +196,12 @@ func guestResponse(status string) string {
 	return guestResponses[strings.ToLower(strings.TrimSpace(status))]
 }
 
-// ownerDeclined reports that the connected account answered NO to this
-// invitation.
-//
-// Google's `self` flag is the authority and the address is the FALLBACK, in
-// that order and never as a pair of equals. The flag is the account's own answer
-// to which attendee it is, so it holds when the invitation went to an alias or
-// reached the account through a group — cases where matching the owner's address
-// finds nobody at all. The address answers only for a payload carrying no flag.
-//
-// Asking them as one condition would let either say yes, which is a different
-// rule and a wrong one: an event where the `self` attendee ACCEPTED and some
-// other attendee on the owner's address declined would read as declined, and a
-// meeting the account is going to would leave the schedule. Whichever entry is
-// the owner's, exactly one answer is theirs.
-//
-// Only "declined" counts. A tentative answer is an attendance somebody may yet
-// make, and "needsAction" is an invitation nobody has read; taking either off
-// the schedule would hide a meeting that is still going to happen.
-func ownerDeclined(attendees []eventActor, owner string) bool {
+// ownerCalendarAnswer uses Google's self entry before an address match.
+func ownerCalendarAnswer(attendees []eventActor, owner string) connector.CalendarAnswer {
 	if self, ok := ownerAttendee(attendees, owner); ok {
-		return strings.EqualFold(strings.TrimSpace(self.ResponseStatus), "declined")
+		return connector.CalendarAnswer{Address: self.Email, Response: guestResponse(self.ResponseStatus)}
 	}
-	return false
+	return connector.CalendarAnswer{}
 }
 
 // ownerAttendee picks the attendee entry belonging to the connected account:
@@ -237,6 +229,12 @@ func ownerAttendee(attendees []eventActor, owner string) (eventActor, bool) {
 // participants were recorded.
 func ParticipantsOf(raw []byte, owner string) (connector.Parties, error) {
 	return meetingmap.ParticipantsOf(raw, owner, decodeEvent)
+}
+
+// SeriesIdentityOf reads the identity of one stored occurrence of a series
+// (meetingmap.SeriesIdentityOf).
+func SeriesIdentityOf(raw []byte) (connector.CrossDoorIdentity, bool, error) {
+	return meetingmap.SeriesIdentityOf(raw, decodeEvent)
 }
 
 // RecordOf maps one stored event resource to the record live capture writes

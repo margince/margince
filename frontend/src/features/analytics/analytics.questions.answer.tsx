@@ -12,11 +12,13 @@ import { SurfaceState } from "../../design-system/surfacestate";
 import {
   formatAnalyticsMoneyOrAbsent,
   formatAnalyticsNumber,
+  formatDateTime,
   MONEY_ABSENT,
 } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
 import { ProblemError, throwProblem } from "../../lib/problem";
-import { derivationColumns } from "./analytics.explain";
+import { derivationColumns, ExcludedNote } from "./analytics.explain";
 import { ExplainDrawer } from "./analytics.explain.drawer";
 import {
   type Namer,
@@ -31,6 +33,8 @@ import {
   type CustomLabels,
   columnLabel,
   explainGroup,
+  isMoneyField,
+  isNativeMoneyField,
   isWithheldRow,
   measureOfColumn,
   measureReading,
@@ -170,6 +174,8 @@ export function AnswerTable({
   const t = useT();
   const { locale } = useLocale();
   const plural = usePlural();
+  const zone = useCompanyZone();
+  const answerCurrency = answer.base_currency ?? baseCurrency;
   const namer = useValueNamer(
     query.entity,
     query.group_by ?? [],
@@ -183,7 +189,7 @@ export function AnswerTable({
     query,
     namer,
     source,
-    baseCurrency,
+    baseCurrency: answerCurrency,
     withheldGroups,
     fieldLabels,
   };
@@ -191,6 +197,22 @@ export function AnswerTable({
   const limit = query.limit ?? QUESTION_LIMIT;
   return (
     <>
+      {query.measures.some(
+        (measure) =>
+          measure.field &&
+          isMoneyField(measure.field) &&
+          !isNativeMoneyField(measure.field),
+      ) &&
+        answer.base_currency &&
+        answer.rate_date && (
+          <p className="t-caption">
+            {t("analytics.q.conversionFrame", {
+              currency: answer.base_currency,
+              date: formatDateTime(answer.rate_date, locale, zone),
+            })}
+          </p>
+        )}
+      <ExcludedNote count={answer.excluded_by_permission} />
       {answer.withheld && (
         <Callout
           tone="info"
@@ -200,7 +222,7 @@ export function AnswerTable({
           {t("analytics.q.withheldBody")}
         </Callout>
       )}
-      {anyReading("mixed", query, answer, baseCurrency) && (
+      {anyReading("mixed", query, answer, answerCurrency) && (
         <Callout
           tone="info"
           kind="standing"
@@ -209,7 +231,7 @@ export function AnswerTable({
           {t("analytics.q.mixedBody")}
         </Callout>
       )}
-      {anyReading("noBase", query, answer, baseCurrency) && (
+      {anyReading("noBase", query, answer, answerCurrency) && (
         <Callout
           tone="info"
           kind="standing"

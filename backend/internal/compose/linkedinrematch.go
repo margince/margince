@@ -69,7 +69,7 @@ type linkedInRematchWorker struct {
 func newLinkedInRematchWorker(pool *pgxpool.Pool, store *contacts.Store, authority authz.Resolver, log *slog.Logger) *linkedInRematchWorker {
 	return &linkedInRematchWorker{
 		pool: pool, store: store, authority: authority,
-		approvals: approvalsServiceWithEffects(pool), log: log,
+		approvals: NewApprovalsServiceWithEffects(pool), log: log,
 	}
 }
 

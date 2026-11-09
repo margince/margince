@@ -19,6 +19,7 @@ package approvals
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -91,10 +92,14 @@ func (s *Service) DecideBundle(ctx context.Context, bundleID ids.UUID, approve b
 	if err != nil {
 		return nil, err
 	}
+	footprints, err := s.bundleFootprints(ctx, bundleID)
+	if err != nil {
+		return nil, err
+	}
 	var members []BundleMember
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		members, err = s.decideBundleInTx(ctx, tx, p, bundleID, approve, reason, ready)
+		members, err = s.decideBundleInTx(ctx, tx, p, bundleID, approve, reason, ready, footprints)
 		return err
 	})
 	if err != nil {
@@ -116,7 +121,7 @@ func (s *Service) DecideBundle(ctx context.Context, bundleID ids.UUID, approve b
 // closes everywhere else. And a bundle past the cap must be refused whole rather
 // than applied to a prefix, which is only possible while nothing has been
 // decided yet.
-func (s *Service) decideBundleInTx(ctx context.Context, tx pgx.Tx, p principal.Principal, bundleID ids.UUID, approve bool, reason *string, ready map[ids.ApprovalID]bool) ([]BundleMember, error) {
+func (s *Service) decideBundleInTx(ctx context.Context, tx pgx.Tx, p principal.Principal, bundleID ids.UUID, approve bool, reason *string, ready map[ids.ApprovalID]bool, footprints map[ids.ApprovalID]json.RawMessage) ([]BundleMember, error) {
 	rows, oversized, err := bundleMembers(ctx, tx, bundleID, true)
 	if err != nil {
 		return nil, err
@@ -144,7 +149,7 @@ func (s *Service) decideBundleInTx(ctx context.Context, tx pgx.Tx, p principal.P
 			out = append(out, BundleMember{Approval: a, Outcome: BundleRefused})
 			continue
 		}
-		member, err := s.decideMemberInTx(ctx, tx, p, a, approve, reason)
+		member, err := s.decideMemberInTx(ctx, tx, p, a, approve, reason, footprints[a.ID])
 		if err != nil {
 			return nil, err
 		}
@@ -215,8 +220,8 @@ func (s *Service) decidableMembers(ctx context.Context, tx pgx.Tx, p principal.P
 // status the REFUSAL named rather than from re-judging that fresh row against
 // the older clock, which would see it as still pending and answer
 // "already_decided" — telling a human somebody decided a question nobody did.
-func (s *Service) decideMemberInTx(ctx context.Context, tx pgx.Tx, p principal.Principal, a row, approve bool, reason *string) (BundleMember, error) {
-	decided, err := s.decideInTx(ctx, tx, p, a.ID, approve, reason, nil, decidedByContact)
+func (s *Service) decideMemberInTx(ctx context.Context, tx pgx.Tx, p principal.Principal, a row, approve bool, reason *string, footprint json.RawMessage) (BundleMember, error) {
+	decided, err := s.decideInTx(ctx, tx, p, a.ID, approve, reason, nil, footprint, decidedByContact)
 	if err == nil {
 		return BundleMember{Approval: decided, Outcome: BundleDecided}, nil
 	}

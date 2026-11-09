@@ -414,3 +414,44 @@ func heldMailCases(ctx context.Context, t *testing.T, conn *pgx.Conn, seat strin
 		},
 	}
 }
+
+func TestHeldMailCorrectionKeepsCopiedAndColleagueSentAcquisitionsUnknown(t *testing.T) {
+	e := integration.Setup(t)
+	conn := integration.OwnerConn(t)
+	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+	connected := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	var seat, other string
+	if err := conn.QueryRow(ctx, `INSERT INTO app_user(email,display_name) VALUES('narrow-owner@held.test','Owner') RETURNING id`).Scan(&seat); err != nil {
+		t.Fatal(err)
+	}
+	if err := conn.QueryRow(ctx, `INSERT INTO app_user(email,display_name) VALUES('narrow-colleague@held.test','Colleague') RETURNING id`).Scan(&other); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.Exec(ctx, `INSERT INTO capture_connection(provider,user_id,status,created_at) VALUES('gmail',@seat,'connected',@connected)`, pgx.NamedArgs{"seat": seat, "connected": connected}); err != nil {
+		t.Fatal(err)
+	}
+	copied := heldHistoryCase(ctx, t, conn, seat, "copied-only@held.test", "connector:gmail", "open", connected.Add(-24*time.Hour))
+	colleague := heldHistoryCase(ctx, t, conn, seat, "colleague-sent@held.test", "connector:gmail", "open", connected.Add(-24*time.Hour))
+	if _, err := conn.Exec(ctx, `UPDATE activity SET counterparty_email='somebody-else@held.test' WHERE source_id='copied-only@held.test'`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.Exec(ctx, `UPDATE activity_participant p SET role='cc' FROM activity a WHERE a.id=p.activity_id AND a.source_id='copied-only@held.test' AND p.role='to'`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.Exec(ctx, `UPDATE activity_participant p SET user_id=@other FROM activity a WHERE a.id=p.activity_id AND a.source_id='colleague-sent@held.test' AND p.role='from'`, pgx.NamedArgs{"other": other}); err != nil {
+		t.Fatal(err)
+	}
+	task := heldMailDataTask(func() time.Time { return connected.Add(time.Hour) })
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		_, err := task.Steps[1].Batch(ctx, tx, datatask.BatchIn{Limit: 100})
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{copied, colleague} {
+		state, kind := heldCaseAndKind(ctx, t, conn, id)
+		if state != "open" || kind != "unknown_legacy" {
+			t.Fatalf("narrow correction changed case: state=%s kind=%s", state, kind)
+		}
+	}
+}

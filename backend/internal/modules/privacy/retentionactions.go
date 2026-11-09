@@ -77,7 +77,12 @@ func (*RetentionService) archiveDeal(ctx context.Context, tx pgx.Tx, id ids.UUID
 	return err
 }
 
+// anonymizeContact takes the stop lock first, so a stop recorded meanwhile is
+// either pinned by this anonymize or written after it onto the kept hashes.
 func (s *RetentionService) anonymizeContact(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	if err := storekit.LockStopKey(ctx, tx, id.String()); err != nil {
+		return err
+	}
 	return anonymizeContactRecord(ctx, tx, id, s.eraser)
 }
 
@@ -119,6 +124,11 @@ func (s *RetentionService) apply(ctx context.Context, pol retentionPolicy, id id
 		})
 		if err != nil {
 			return err
+		}
+		if pol.Action != actionArchive {
+			if err := storekit.RedactAuditHistory(ctx, tx, auditID); err != nil {
+				return err
+			}
 		}
 		policyID := pol.ID
 		action, err := publishedRetentionAction(pol.Action, pol.ID)
@@ -163,9 +173,10 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, eraser 
 		  title = NULL, photo_object_key = NULL, photo_origin = NULL,
 		  address_line1 = NULL, address_line2 = NULL, address_city = NULL,
 		  address_region = NULL, address_postal_code = NULL, address_country = NULL,
-		  source_author_name = NULL,
+		  source_author_name = NULL, anonymized_address_hashes = $3, anonymized_address_key_id = $4,
 		  archived_at = coalesce(archived_at, now())%s
-		WHERE id = $1`, nullColumnAssignments(contactCustom)), id, erasedName)
+		WHERE id = $1`, nullColumnAssignments(contactCustom)), id, erasedName, addressHashes(subjectEmails),
+		storekit.SuppressionKeyID())
 	if err == nil {
 		err = deleteConsentCredentials(ctx, tx, id)
 	}

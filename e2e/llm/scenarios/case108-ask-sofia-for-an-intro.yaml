@@ -1,0 +1,53 @@
+# CASE 108 — The user asks for the message to Sofia that asks her for an
+# introduction. Margince's drafter (run_research draft_intro_request, on a
+# passport that holds enrich) is one way to write it; the relationship records
+# and the model's own words are another. The answer is scored, not the path.
+#
+# The seed gives Sofia Meier three mails with Heike Brandt at Nordwind Armaturen
+# (case 49). The ask is to the COLLEAGUE: the forwardable note to Heike is a
+# different message, and a first mail to Heike is a third.
+#
+# Nothing is written: the draft comes back for the user to send themself.
+
+name: case108_ask_sofia_for_an_intro
+criteria: [1]
+passport: research
+
+writes: true
+
+# THE PROMPT ASKS FOR THE PRODUCT'S DRAFT. draft_intro_request grounds on the
+# same route read_relationships returns, and changes and sends nothing, so a
+# model that reads the route and writes the ask itself has done the job well.
+# Asking it to prefer the drafter for an ask that does not name it would grade a
+# preference with no reason behind it. The user who wants Margince's drafted
+# ask says so, and that is the request this case keeps covered.
+prompt: |
+  We want into Nordwind Armaturen, and Sofia knows somebody there. Have
+  Margince draft the message I should send Sofia to ask her for the
+  introduction.
+
+# The model chooses how the message is drafted: Margince's own drafter, or the
+# relationship records and its own words. The answer is what is checked.
+may_call:
+  - draft_intro_request
+  - read_relationships
+  - search_records
+  - list_records
+  - read_record
+  - resolve_entities
+  - read_workspace
+  - draft_intro_note
+
+must_mention:
+  - "Sofia"
+  - "Heike"
+  - "(?i)introduc"
+  # The message is to Sofia: a greeting or a To line names her. A note that
+  # greets Heike is the forwardable note, a different message.
+  - "(?im)\b(?:hi|hello|hey|dear|hallo|liebe|morning|afternoon|evening)\W+Sofia\b|\b(?-i:To)\b\W{0,3}Sofia\b|^\W*Sofia\s*[,—–-]"
+
+must_not_mention:
+  - "(?i)\b(?:i|we)(?:\s+have|['’]ve)?\s+(?:sent|emailed|messaged|forwarded)\b"
+
+runs: 3
+pass_at: 2

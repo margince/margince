@@ -177,10 +177,11 @@ func TestAnOwnerHoldOnAMessageBornOpenStillShowsItsEvidence(t *testing.T) {
 		t.Fatalf("holding the thread as its owner: %v", err)
 	}
 
-	held, err := capturemod.HeldThreadsFor(seatContext(e, e.Rep1), e.DB())
+	heldPage, err := capturemod.HeldThreadsFor(seatContext(e, e.Rep1), e.DB(), capturemod.HeldThreadQuery{})
 	if err != nil {
 		t.Fatalf("listing held threads: %v", err)
 	}
+	held := heldPage.Threads
 	if len(held) != 1 {
 		t.Fatalf("want exactly one held thread, got %d", len(held))
 	}
@@ -957,10 +958,11 @@ func TestAnAgentHoldsAThreadOfItsUsersMailbox(t *testing.T) {
 	if _, err := compose.NewThreadAudienceSetter(e.Pool).Decide(principal.WithActor(seat, agent), threadKey, false); err != nil {
 		t.Fatalf("the agent holding the thread: %v", err)
 	}
-	held, err := capturemod.HeldThreadsFor(seatContext(e, e.Rep1), e.DB())
+	heldPage, err := capturemod.HeldThreadsFor(seatContext(e, e.Rep1), e.DB(), capturemod.HeldThreadQuery{})
 	if err != nil {
 		t.Fatalf("listing held threads: %v", err)
 	}
+	held := heldPage.Threads
 	if len(held) != 1 || !held[0].HasActivity {
 		t.Fatalf("held threads = %+v, want the one its agent held", held)
 	}

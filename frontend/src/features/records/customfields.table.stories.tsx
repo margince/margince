@@ -20,7 +20,7 @@ import {
 // The field table stands straight in its Panel, as the card mounts it, so the
 // row hairlines and the hover run to the pane's edge.
 const meta: Meta = {
-  title: "Settings/Sales/Fields/Custom field table",
+  title: "Settings/Sales/Records and fields/Custom field table",
   parameters: { layout: "padded" },
 };
 export default meta;

@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LocaleProvider } from "../i18n";
 import { Card } from "./atoms";
-import { CardBoundary } from "./cardboundary";
+import { CardBoundary, SilentCardBoundary } from "./cardboundary";
 
 // One card's throw, contained. The point of the story is what does NOT happen:
 // the cards beside the failed one keep rendering, and so would the navigation
@@ -17,6 +17,7 @@ const client = new QueryClient({
 const meta: Meta<typeof CardBoundary> = {
   title: "Components/Messaging/Card boundary",
   component: CardBoundary,
+  subcomponents: { SilentCardBoundary },
   parameters: { layout: "padded" },
   decorators: [
     (Story) => (
@@ -77,4 +78,22 @@ export const OneCardFails: Story = {
   // declared opt-out (frontend/scripts/fe-uat.mjs), scoped to this one story.
   tags: ["uat-expected-console-error"],
   render: () => <ContainedFailure />,
+};
+
+export const OptionalChromeFails: Story = {
+  tags: ["uat-expected-console-error"],
+  render: () => (
+    <>
+      <SilentCardBoundary>
+        <Boom />
+      </SilentCardBoundary>
+      <HealthyCard name="The page stays available" />
+    </>
+  ),
+};
+
+export const OptionalChromeFailsDark: Story = {
+  ...OptionalChromeFails,
+  tags: ["uat-expected-console-error"],
+  globals: { theme: "dark" },
 };

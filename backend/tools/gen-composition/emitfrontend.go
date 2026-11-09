@@ -359,7 +359,7 @@ func linkHost(dir string) error {
 // The file set is REPLACED on every call, so a unit removed from extensions/
 // stops being a member. An accumulating list would leave the next install
 // resolving a member that is not there.
-func emitComposedFrontendWorkspace(dir string, units []string) error {
+func emitComposedFrontendWorkspace(dir string, unitDirs []string) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil { // #nosec G301 -- build output stays readable to another UID
 		return err
 	}
@@ -383,8 +383,8 @@ func emitComposedFrontendWorkspace(dir string, units []string) error {
 
 	// Sorted, for the same reason go.work's members are: the emitted bytes must
 	// not depend on the order the tree was walked in.
-	members := make([]string, len(units))
-	copy(members, units)
+	members := make([]string, len(unitDirs))
+	copy(members, unitDirs)
 	sort.Strings(members)
 
 	var b strings.Builder
@@ -398,8 +398,8 @@ func emitComposedFrontendWorkspace(dir string, units []string) error {
 	b.WriteString("# override below names its target through that link rather than climbing out\n")
 	b.WriteString("# of this directory with `../` — which pnpm 12 miscounts.\n")
 	b.WriteString("packages:\n")
-	for _, unit := range members {
-		fmt.Fprintf(&b, "  - %sextensions/%s/frontend\n", root, unit)
+	for _, unitDir := range members {
+		fmt.Fprintf(&b, "  - %s%s/frontend\n", root, unitDir)
 	}
 	// esbuild ships a platform binary and needs its install script to run — the
 	// same carve-out the root workspace states, for the same reason.
@@ -430,4 +430,33 @@ func emitComposedFrontendWorkspace(dir string, units []string) error {
 		fmt.Fprintf(&b, "  %q: %q\n", override[0], override[1])
 	}
 	return os.WriteFile(filepath.Join(dir, "pnpm-workspace.yaml"), []byte(b.String()), 0o644) // #nosec G306 -- generated build artifact
+}
+
+// unitScreensDir holds one link per unit that ships a screen, named by the
+// unit, so the SPA resolves `@margince-ext/<unit>` in one place wherever the
+// unit lives.
+const unitScreensDir = "build/composition-frontend/units"
+
+// linkUnitScreens replaces the whole link set, so a unit no longer enabled
+// leaves no link the bundler would still resolve.
+func linkUnitScreens(root string, units []extensionUnit) error {
+	dir := filepath.Join(root, filepath.FromSlash(unitScreensDir))
+	if err := os.RemoveAll(dir); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil { // #nosec G301 -- build output stays readable to another UID
+		return err
+	}
+	for _, u := range units {
+		// Relative, as linkHost's is, so the tree still resolves when it is
+		// mounted at another path.
+		target, err := filepath.Rel(dir, filepath.Join(u.Dir, frontendLayer))
+		if err != nil {
+			return err
+		}
+		if err := os.Symlink(target, filepath.Join(dir, u.Name)); err != nil {
+			return fmt.Errorf("linking %s's screen: %w", u.Name, err)
+		}
+	}
+	return nil
 }

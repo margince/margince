@@ -19,10 +19,11 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // withClockCallFloor is the fewest WithClock calls the walk may see and still
@@ -41,11 +42,11 @@ func TestWithClockReturnsACopyWhoseResultIsUsed(t *testing.T) {
 
 	calls := 0
 	for _, root := range []string{"internal", "cmd", "pkg", "gates"} {
-		err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
 				return err
 			}
-			src, err := os.ReadFile(path) // #nosec G304 -- a *.go file from walking the trusted backend tree
+			src, err := gatekit.ReadFile(path) // #nosec G304 -- a *.go file from walking the trusted backend tree
 			if err != nil {
 				return err
 			}

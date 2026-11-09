@@ -13,7 +13,7 @@ import "./tagpicker.css";
 // What the record tag picker and the bulk tag picker offer past the words the
 // workspace has. Both pickers draw these, so a seat sees one way forward.
 
-const TAGS_SETTINGS_HREF = routeHash(settingsHref("tags"));
+const TAGS_SETTINGS_HREF = routeHash(settingsHref("records", "tags"));
 
 /**
  * The footer under a tag list, the same whatever the box holds: a reader who

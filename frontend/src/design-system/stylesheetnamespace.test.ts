@@ -29,7 +29,7 @@ const sheets = appStylesheets(frontendRoot).map((file) => ({
 
 const namespaces = [
   { prefix: "askai-", home: "features/ai/ai.css" },
-  { prefix: "auth-", home: "features/sign-in/auth.css" },
+  { prefix: "auth-", home: "components/auth-core.css" },
   { prefix: "book-", home: "features/booking/book.css" },
   { prefix: "clientsurface-", home: "features/settings/client.css" },
   {
@@ -58,7 +58,6 @@ const namespaces = [
     prefix: "relationshiprows-",
     home: "components/relationshiprows.css",
   },
-  { prefix: "relationships-", home: "components/relationships.css" },
   {
     prefix: "repeatablerowsfield-",
     home: "components/repeatablerowsfield.css",

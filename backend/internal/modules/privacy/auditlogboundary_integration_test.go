@@ -7,10 +7,8 @@ package privacy
 
 // The compliance log stops at a scrub the way the two history projections do.
 //
-// audit_log is append-only — trg_audit_no_mutate refuses an UPDATE and a DELETE
-// — so an Art. 17 erase cannot rewrite the images it certifies gone. Every read
-// of the spine enforces that boundary itself, or the erase is only as complete
-// as the reads that happen to respect it.
+// Reads also guard legacy rows and restrictions whose payloads must remain stored.
+// Physical erasure preserves the metadata these projections answer.
 //
 // ListFieldHistory and ListRecordHistory each take one boundary because each
 // reads one record. This read does not: entity_type and entity_id are optional

@@ -30,13 +30,8 @@ const unitScreens = resolve(
 //     is the COMPOSED lane, exactly as `make fe-typecheck-composed` is, and a
 //     lane with a precondition should not be smuggled into the one that has
 //     none.
-//   - `test.projects` in vite.config.ts would work, but a project entry does
-//     not inherit the root config's `plugins`/`resolve` — so expressing it that
-//     way means restating react(), tailwindcss() and the whole alias array for
-//     the core project too, and the 2230-test lane silently changes shape if
-//     one of those restatements drifts. mergeConfig keeps ONE definition of the
-//     aliases (`@composition/*` and `@margince-ext/*`) and the setup file, and
-//     changes only what this lane needs: which files it collects.
+//   - A third entry in vite.config.ts's `test.projects` would run in every
+//     vanilla `vitest run`, the lane that has no composed tree.
 //
 // Every alias the base config defines is an ABSOLUTE path built from
 // vite.config.ts's own URL, so moving the root below changes nothing about how
@@ -72,6 +67,8 @@ export default defineConfig({
     // lane's job. A glob rather than a list, so a unit joins this gate by
     // existing — the same presence-is-enablement every other layer has.
     include: ["../extensions/*/frontend/**/*.test.{ts,tsx}"],
+    // The base's projects split the core suite, and would collect it here too.
+    projects: undefined,
     // ITS OWN REPORT DIRECTORY, and that is the whole of what this lane needed
     // to be measured. Everything else about coverage is the base's and stays
     // the base's — the v8 provider, the exclusions, and the lcov reporter's

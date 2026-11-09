@@ -7,7 +7,6 @@ package gates
 
 import (
 	"maps"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -16,6 +15,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -29,7 +29,7 @@ func camelIndustryKey(code string) string {
 
 func readFrontendFile(t *testing.T, elems ...string) string {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join(append([]string{repoRoot, "frontend", "src"}, elems...)...))
+	raw, err := gatekit.ReadFile(filepath.Join(append([]string{repoRoot, "frontend", "src"}, elems...)...))
 	if err != nil {
 		t.Fatalf("reading the frontend file: %v", err)
 	}
