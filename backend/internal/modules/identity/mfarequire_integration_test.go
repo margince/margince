@@ -110,10 +110,9 @@ func TestAVaultlessServiceNeverChallengesConfinesOrEnrols(t *testing.T) {
 // opened the session. That includes a provider sign-in, which will never ask
 // for the factor they are told to enrol.
 //
-// Which reading is right is open on #7655. Either the provider counts as the
-// second factor, or a provider sign-in challenges as the password path does.
-// This test is here so settling it means editing a test that states the reading
-// it replaced.
+// Which reading is right is an open product decision. Either the provider
+// counts as the second factor, or it challenges as the password path does.
+// Settling it means editing this test, which states the reading it replaces.
 func TestRequireMFAAsksOnlyThePasswordPathWhileConfiningBoth(t *testing.T) {
 	e := setupRevocationEnv(t, "require-mfa-paths")
 	e.withVault()
@@ -131,8 +130,8 @@ func TestRequireMFAAsksOnlyThePasswordPathWhileConfiningBoth(t *testing.T) {
 		t.Fatalf("authenticate a provider session: %v", err)
 	}
 	if !id.MustEnrolMFA {
-		t.Error("a provider session for a member with no factor is not confined. If #7655 chose to " +
-			"exempt provider sessions, this test states the reading it replaced")
+		t.Error("a provider session for a member with no factor is not confined. If provider " +
+			"sessions are now exempt, this test states the reading that replaced")
 	}
 
 	// Now the same member holds a confirmed factor. The password path turns
@@ -153,13 +152,17 @@ func TestRequireMFAAsksOnlyThePasswordPathWhileConfiningBoth(t *testing.T) {
 	if _, _, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice); !errors.Is(err, errMFARequired) {
 		t.Errorf("password sign-in with a confirmed factor: err = %v, want %v", err, errMFARequired)
 	}
-	// The provider path opens a session for the same confirmed factor rather
-	// than challenging it. A refusal here is the other reading, not a failure
-	// of this environment, so it names where that was decided.
-	if _, err := e.svc.LoginViaFederatedIdentity(e.wsOnlyCtx(), "google",
-		OIDCClaims{Subject: "sub-mfa-paths", Email: e.member.Email}); err != nil {
-		t.Errorf("provider sign-in with a confirmed factor: %v. If #7655 chose to challenge the "+
-			"provider path, this test states the reading it replaced", err)
+	// The provider path opens an unconfined session for the same confirmed
+	// factor rather than challenging it. A refusal is the other reading.
+	signedIn, err := e.svc.LoginViaFederatedIdentity(e.wsOnlyCtx(), "google",
+		OIDCClaims{Subject: "sub-mfa-paths", Email: e.member.Email})
+	if err != nil {
+		t.Fatalf("provider sign-in with a confirmed factor: %v. If the provider path now "+
+			"challenges, this test states the reading that replaced", err)
+	}
+	if id, err := e.svc.Authenticate(e.wsOnlyCtx(), signedIn); err != nil || id.MustEnrolMFA {
+		t.Errorf("provider session with a confirmed factor: confined=%v err=%v, want an unconfined session",
+			id.MustEnrolMFA, err)
 	}
 }
 
