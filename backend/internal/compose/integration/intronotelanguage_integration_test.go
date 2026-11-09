@@ -19,13 +19,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
-	"github.com/margince/margince/backend/internal/modules/search"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // bootstrapSeat is the seat BootstrapWorkspace created, which is the colleague
@@ -38,44 +33,6 @@ func bootstrapSeat(t *testing.T, e *apptest.AppEnv) ids.UUID {
 		t.Fatalf("reading the bootstrap seat: %v", err)
 	}
 	return seat
-}
-
-// seedRoute gives the colleague a recorded edge to the contact, which is what
-// makes a route exist for the note to be written for. Folded through the real
-// edge recompute rather than written straight into the edge table, because a
-// route the graph would not return is a fixture that proves nothing about the
-// endpoint.
-func seedRoute(t *testing.T, e *apptest.AppEnv, seat, contact ids.UUID) {
-	t.Helper()
-	ctx := context.Background()
-	id := ids.NewV7()
-	if _, err := e.Owner.Exec(ctx, `
-		INSERT INTO activity (id, kind, subject, occurred_at, direction, audience, source, captured_by)
-		VALUES ($1, 'email', 'Re: Angebot', now() - interval '3 days', 'outbound',
-		        'workspace', 'manual', 'human:x')`, id); err != nil {
-		t.Fatalf("seeding the exchange: %v", err)
-	}
-	if _, err := e.Owner.Exec(ctx,
-		`INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`, id, contact); err != nil {
-		t.Fatalf("linking the exchange: %v", err)
-	}
-	if _, err := e.Owner.Exec(ctx,
-		`INSERT INTO activity_participant (activity_id, user_id, role) VALUES ($1, $2, 'from')`,
-		id, seat); err != nil {
-		t.Fatalf("seeding our side: %v", err)
-	}
-	if _, err := e.Owner.Exec(ctx,
-		`INSERT INTO activity_participant (activity_id, contact_id, role) VALUES ($1, $2, 'to')`,
-		id, contact); err != nil {
-		t.Fatalf("seeding their side: %v", err)
-	}
-	ws := apptest.InstallationWorkspaceUUID(ctx, t, e.Pool)
-	wsCtx := principal.WithWorkspaceID(ctx, ws)
-	if err := database.WithWorkspaceTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
-		return search.RecomputeEdgesForActivities(wsCtx, tx, []ids.UUID{id})
-	}); err != nil {
-		t.Fatalf("folding the edge: %v", err)
-	}
 }
 
 // seedInboundGerman plants mail the contact wrote, which is the signal the
@@ -115,7 +72,7 @@ func TestTheIntroNoteIsWrittenInTheLanguageTheContactWroteIn(t *testing.T) {
 	id := ids.MustParse(contactID)
 
 	// The route the note is written for, and the German the note must answer in.
-	seedRoute(t, e, seat, id)
+	apptest.SeedRoute(t, e, seat, id)
 	seedInboundGerman(t, e, id,
 		"Guten Tag, vielen Dank für Ihre Nachricht. Wir prüfen das Angebot und melden "+
 			"uns bis Ende der Woche bei Ihnen zurück. Mit freundlichen Grüßen")
@@ -154,7 +111,7 @@ func TestAnIntroNoteWithNoCorrespondenceSaysTheLanguageIsUndetermined(t *testing
 
 	// A route, and no inbound mail. The name alone is not prose, which is the
 	// defect: "Brandt GmbH" detects as nothing.
-	seedRoute(t, e, seat, ids.MustParse(contactID))
+	apptest.SeedRoute(t, e, seat, ids.MustParse(contactID))
 
 	var draft AnyMap
 	if status := e.Call(t, "POST", "/v1/contacts/"+contactID+"/intro-note-draft",

@@ -171,9 +171,10 @@ func purgeDealRoomSeatTraces(ctx context.Context, tx pgx.Tx, seats []ids.UUID) e
 	// available -- body carries a non-empty CHECK -- and nothing references a comment,
 	// so the row goes. The seller's own comments stay in the thread, the same split
 	// the invitations above are kept under.
-	if _, err := tx.Exec(ctx,
-		`DELETE FROM deal_room_comment WHERE author_participant_id = ANY($1)`, seats); err != nil {
+	comments, err := scrubbedIDs(ctx, tx,
+		`DELETE FROM deal_room_comment WHERE author_participant_id = ANY($1) RETURNING id`, seats)
+	if err != nil {
 		return fmt.Errorf("purge deal room comments of an erased subject: %w", err)
 	}
-	return nil
+	return tombstoneCollateralScrubs(ctx, tx, "deal_room_comment", comments, subjectRedactionReason, subjectRedactionCause)
 }

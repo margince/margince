@@ -5,9 +5,13 @@ package jobs
 
 import (
 	"context"
+	"runtime/debug"
 	"time"
 
 	"github.com/riverqueue/river"
+
+	"github.com/margince/margince/backend/internal/platform/instrument"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // DefaultMaxAttempts is the ladder River gives a job whose insert names none:
@@ -41,7 +45,18 @@ type governedWorker[T river.JobArgs] struct {
 func (w governedWorker[T]) Timeout(*river.Job[T]) time.Duration { return w.timeout }
 
 func (w governedWorker[T]) Work(ctx context.Context, job *river.Job[T]) error {
-	return w.work.Work(ctx, job)
+	return instrument.Work(ctx, extension.Work{Kind: extension.WorkJob, Name: job.Args.Kind()},
+		func(ctx context.Context) error {
+			defer func() {
+				if rec := recover(); rec != nil {
+					// Reported here, then handed back unchanged: River's own
+					// recovery still decides the attempt's fate and logs it.
+					instrument.Panic(ctx, rec, debug.Stack())
+					panic(rec)
+				}
+			}()
+			return w.work.Work(ctx, job)
+		})
 }
 
 // Govern binds a worker to its declaration.

@@ -17,9 +17,9 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"slices"
 	"strings"
 	"syscall"
-	"time"
 	// Embedded tzdata: workspace timezones must resolve on scratch
 	// containers that ship no zoneinfo.
 	_ "time/tzdata"
@@ -35,9 +35,11 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
+	"github.com/margince/margince/backend/internal/shared/buildinfo"
 )
 
 func main() {
@@ -50,8 +52,13 @@ func main() {
 	}
 }
 
-// start is --check-config when args ask for it, and the boot otherwise.
+// start is --version or --check-config when args ask for it, and the boot
+// otherwise.
 func start(ctx context.Context, args []string, stdout io.Writer) error {
+	if buildinfo.AsksForVersion(args) {
+		_, err := fmt.Fprintln(stdout, buildinfo.VersionLine("margince-api"))
+		return err
+	}
 	if checked, err := checkAPIConfig(args, config.Environ(), stdout); checked || err != nil {
 		return err
 	}
@@ -77,6 +84,13 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	if err := compose.RegisterExtensions(extensions, composition.Verbs(), composition.Jobs()); err != nil {
 		return err
 	}
+
+	// The flush is deferred before the pool and the other closers, so it runs
+	// last. Events logged while shutting down still leave.
+	if err := startInstrumentation(ctx, cfg, stdout); err != nil {
+		return err
+	}
+	defer compose.FlushInstrumentation(ctx)
 
 	// INSTALLED as the process default, not merely built. Everything below is
 	// handed this logger explicitly, but the tree also logs through the
@@ -108,11 +122,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	// AllowTestMailbox is an operations.* kill switch, not a capture.* tuning
-	// knob, so it is set here rather than folded into CaptureConfigFromDeploy.
-	captureCfg := compose.CaptureConfigFromDeploy(cfg.settings, logger)
-	compose.WarnStaleRates(cfg.settings, logger)
-	captureCfg.AllowTestMailbox = config.Val(cfg.settings, programsettings.AllowTestMailbox)
+	captureCfg := captureConfig(cfg, logger)
 	opts, schemaPool, closeSchemaPool, err := baseComposeOptions(ctx, cfg, captureCfg, pool, vault, logger, stdout, license)
 	if err != nil {
 		return err
@@ -159,10 +169,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	opts = append(opts, modelOpts...)
-	opts = append(opts, compose.WithCompanyContextRollout(config.Val(cfg.settings, compose.CompanyContextRollout)))
-	opts = append(opts, compose.WithListsEnabled(config.Val(cfg.settings, programsettings.ListsEnabled)))
-	opts = append(opts, compose.SecurityTxtOption(cfg.settings, time.Now(), logger))
+	opts = append(opts, slices.Concat(modelOpts, settingOptions(cfg, logger))...)
 
 	viewOpts, stopViewRefresh, err := mcpAppViewsLane(ctx, cfg, logger)
 	if err != nil {
@@ -205,6 +212,9 @@ func openInstallation(ctx context.Context, cfg apiConfig) (*pgxpool.Pool, keyvau
 		return nil, nil, err
 	}
 	vault, err := keyvault.ForRole(ctx, "api", pool, cfg.settings)
+	if err == nil {
+		err = storekit.RefuseForeignSuppressionKey(ctx, pool)
+	}
 	if err != nil {
 		pool.Close()
 		return nil, nil, err
@@ -397,7 +407,7 @@ func passwordResetOptions(ctx context.Context, settings *config.Config, pool *pg
 	}
 	// The relay password is sealed into the vault on the boot that first sees
 	// it, and read back from there once the deployment stops declaring it.
-	m, err := compose.OperatorMailer(ctx, pool, vault, settings, logger)
+	m, err := compose.OperatorMailer(ctx, pool, vault, letterheadBlobstore(ctx, settings, logger), settings, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -415,6 +425,24 @@ func passwordResetOptions(ctx context.Context, settings *config.Config, pool *pg
 		compose.WithOperatorMail(m),
 		compose.WithDealRoomInviteMail(m),
 	}, nil
+}
+
+// letterheadBlobstore is the object store operator mail reads the company logo
+// from. The mail still goes out without one, headed by the company name, so a
+// store that will not open is logged rather than refusing the boot: the
+// attachment wiring reports the same fault as a boot error of its own.
+//
+//nolint:ireturn // the store has three providers behind one interface.
+func letterheadBlobstore(ctx context.Context, settings *config.Config, logger *slog.Logger) blobstore.Store {
+	blob, configured, err := blobstore.FromConfig(ctx, settings)
+	if err != nil {
+		logger.WarnContext(ctx, "operator mail is headed by the company name alone: the object store could not be opened", "cause", err)
+		return nil
+	}
+	if !configured {
+		return nil
+	}
+	return blob
 }
 
 // blobstoreOptions wires the attachment endpoints (and their /readyz probe +

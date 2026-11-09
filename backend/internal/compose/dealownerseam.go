@@ -6,12 +6,11 @@ package compose
 // Reading a deal's world as the contact the deal belongs to.
 //
 // A nightly sweep runs as a system principal, which auth.Require passes
-// unconditionally and which no row scope bounds. That is right for the sweep's
-// own WRITES — nobody asked for them, and the audit trail should say the system
-// did it. It is wrong for anything the sweep reads and then STORES into an
-// approval payload, because that payload is read back later by whoever holds the
-// card's decide grant, and the grant set is narrower than the principal that
-// filled it. A string resolved under the system principal and frozen into a row
+// unconditionally and which no row scope bounds. Its writes to an owned deal
+// run as the owner's agent instead (ownersAgentTx). The system principal is
+// also wrong for anything the sweep reads and then STORES into an approval
+// payload. Whoever holds the card's decide grant reads that payload later, and
+// that grant set is narrower than the principal that filled it. A string resolved under the system principal and frozen into a row
 // is a disclosure no read-side gate can undo.
 //
 // So a producer that puts human-identifying data or message content on a card
@@ -31,10 +30,12 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
 // dealOwnerAuthority answers "read this deal's world as its owner would".
@@ -117,4 +118,48 @@ func (a dealOwnerAuthority) asOwner(ctx context.Context, owner ids.UUID) (contex
 		TeamIDs:     rbac.TeamIDs,
 		Permissions: rbac.Permissions,
 	}), nil
+}
+
+// ownersAgent binds the product acting FOR the owner: an agent principal named
+// actorID, carrying OnBehalfOf and the owner's grants as they are now. An owner
+// who left answers apperrors.ErrNotFound, and the caller does not act.
+func ownersAgent(ctx context.Context, users *identity.Service, owner ids.UUID, actorID string) (context.Context, error) {
+	wsID, ok := principal.WorkspaceID(ctx)
+	if !ok {
+		return nil, errors.New("compose: acting for a deal owner outside a bound workspace")
+	}
+	rbac, seat, err := users.EffectiveAuthority(ctx, wsID, owner)
+	if err != nil {
+		return nil, fmt.Errorf("compose: authority of the owner to act for: %w", err)
+	}
+	return withOwnersAgent(ctx, owner, actorID, rbac, seat), nil
+}
+
+// ownersAgentTx is ownersAgent read in the write's own transaction. The write
+// acts on the grants a role change or suspension committed before it left.
+func ownersAgentTx(users *identity.Service, owner ids.UUID, actorID string) deals.OwnerAuthorityTx {
+	return func(ctx context.Context, tx pgx.Tx) (context.Context, error) {
+		rbac, seat, err := users.EffectiveAuthorityTx(ctx, tx, owner)
+		if err != nil {
+			return nil, fmt.Errorf("compose: authority of the owner to act for: %w", err)
+		}
+		return withOwnersAgent(ctx, owner, actorID, rbac, seat), nil
+	}
+}
+
+func withOwnersAgent(
+	ctx context.Context, owner ids.UUID, actorID string, rbac authz.RBAC, seat principal.SeatType,
+) context.Context {
+	return principal.WithActor(ctx, principal.Principal{
+		Type:       principal.PrincipalAgent,
+		ID:         actorID,
+		UserID:     owner,
+		OnBehalfOf: owner,
+		SeatType:   seat,
+		TeamIDs:    rbac.TeamIDs,
+		// Write, and only write: a pass acting unattended changes records and
+		// never puts a message on the wire.
+		Scopes:      principal.ScopeSet{principal.ScopeWrite: struct{}{}},
+		Permissions: rbac.Permissions,
+	})
 }

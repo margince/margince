@@ -21,7 +21,7 @@ func listContainers(ctx context.Context, t *testing.T, h connectorHandlers, prov
 	t.Helper()
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/connectors/"+provider+"/containers", nil)
-	h.ListConnectorContainers(rec, req.WithContext(ctx), crmcontracts.CaptureProvider(provider))
+	h.ListConnectorContainers(rec, req.WithContext(ctx), crmcontracts.CaptureProvider(provider), crmcontracts.ListConnectorContainersParams{})
 	return rec
 }
 
@@ -43,7 +43,7 @@ func TestListContainersRefusesACalendarProvider(t *testing.T) {
 	}
 }
 
-// Reading your own mailbox's folders is a signed-in human action: an
+// Reading your own mailbox's folders needs a user or their agent: an
 // unauthenticated caller is refused before any provider is asked.
 func TestListContainersRefusesAnAnonymousCaller(t *testing.T) {
 	rec := listContainers(context.Background(), t, wiredHandlers(), "gmail")

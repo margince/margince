@@ -74,24 +74,15 @@ func acquisitionTimeFor(ctx context.Context, tx pgx.Tx, email string, activityID
 	if email == "" {
 		return nil
 	}
-	// The triggering activity is included as a floor rather than trusted as the
-	// answer: a message being captured right now may not have its participant
-	// rows visible to this statement yet, and a counterparty whose only message
-	// is this one must still be dated from it.
-	// A LEFT JOIN, not an inner one, and the difference is the fallback. The
-	// triggering activity is included as a floor rather than trusted as the
-	// answer: a counterparty whose only message is the one being processed must
-	// still be dated from it, and an inner join drops that row before the id
-	// arm can match — it has no participant row yet, or none recording this
-	// address. The first version of this query joined inner and silently left
-	// exactly those acquisitions undated.
+	// The trigger id supplies a floor before its participant rows are visible.
 	var occurred *time.Time
 	err := tx.QueryRow(ctx, `
-		SELECT min(a.occurred_at)
-		  FROM activity a
-		  LEFT JOIN activity_participant ap ON ap.activity_id = a.id
-		 WHERE lower(ap.address) = $1
-		    OR a.id = $2`, email, activityID).Scan(&occurred)
+		WITH candidates AS MATERIALIZED (
+          SELECT activity_id AS id FROM activity_participant WHERE lower(address)=@email
+          UNION SELECT @activity::uuid)
+        SELECT min(a.occurred_at) FROM candidates c CROSS JOIN LATERAL (
+          SELECT occurred_at FROM activity WHERE id=c.id OFFSET 0) a`,
+		pgx.NamedArgs{historyEmailParam: email, acquisitionActivityEntity: activityID}).Scan(&occurred)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}

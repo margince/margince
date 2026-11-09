@@ -29,6 +29,9 @@ type DealRefileScope struct {
 	Companies  []ids.UUID `json:"companies,omitempty"`
 	Projects   []ids.UUID `json:"projects,omitempty"`
 	All        bool       `json:"all,omitempty"`
+	// Recheck also asks the topic check about the rule's older suggested
+	// links; only the recovery sweep sets it, beside All.
+	Recheck bool `json:"recheck,omitempty"`
 }
 
 // Empty prevents an unscoped trigger from becoming a full sweep.
@@ -49,8 +52,9 @@ func DealRefileCeilingTx(ctx context.Context, tx pgx.Tx) (ids.UUID, error) {
 	return ceiling, err
 }
 
-// RefileCandidatesTx advances by inspected identity, including ambiguous activities.
-func (r DealRepair) RefileCandidatesTx(ctx context.Context, tx pgx.Tx, scope DealRefileScope, asOf time.Time, after, ceiling ids.UUID) ([]ids.UUID, error) {
+// RefileCandidatesTx advances by inspected identity, including ambiguous
+// activities, and returns at most limit of them.
+func (r DealRepair) RefileCandidatesTx(ctx context.Context, tx pgx.Tx, scope DealRefileScope, asOf time.Time, after, ceiling ids.UUID, limit int) ([]ids.UUID, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, err
 	}
@@ -72,7 +76,7 @@ func (r DealRepair) RefileCandidatesTx(ctx context.Context, tx pgx.Tx, scope Dea
  SELECT 1 FROM relationship employer WHERE employer.contact_id=participant.contact_id
  AND `+employment.CurrentMembershipSQL("employer")+`
  AND employer.company_id=ANY($%d::uuid[])))))
- ORDER BY a.id LIMIT $%d`, capturedConnectorActivitySQL, horizon, arg(after), arg(ceiling), arg(scope.All), arg(scope.Activities), arg(scope.Contacts), arg(scope.Companies), arg(scope.Projects), arg(scope.Contacts), arg(scope.Companies), arg(DealRefileLimit))
+ ORDER BY a.id LIMIT $%d`, capturedConnectorActivitySQL, horizon, arg(after), arg(ceiling), arg(scope.All), arg(scope.Activities), arg(scope.Contacts), arg(scope.Companies), arg(scope.Projects), arg(scope.Contacts), arg(scope.Companies), arg(limit))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -80,13 +84,23 @@ func (r DealRepair) RefileCandidatesTx(ctx context.Context, tx pgx.Tx, scope Dea
 	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 }
 
-// RefileTx never moves an existing link, including a link an operator repair wrote.
-func (r DealRepair) RefileTx(ctx context.Context, tx pgx.Tx, activity ids.ActivityID, asOf time.Time) (DealOutcome, error) {
+// Refile files one unfiled captured activity in its own transactions, with a
+// suggested deal confirmed by the repair's Check between them. It never moves
+// an existing link, including one an operator repair wrote, and reports
+// whether it asked the model.
+func (r DealRepair) Refile(ctx context.Context, db TxRunner, activity ids.ActivityID, asOf time.Time) (bool, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
-		return "", err
+		return false, err
 	}
+	return checkedFiling(ctx, db, r.Check, func(tx pgx.Tx, topic *dealTopicState) (*topicQuestion, error) {
+		return r.refileTx(ctx, tx, activity, asOf, topic)
+	})
+}
+
+// refileTx is one transaction of Refile.
+func (r DealRepair) refileTx(ctx context.Context, tx pgx.Tx, activity ids.ActivityID, asOf time.Time, topic *dealTopicState) (*topicQuestion, error) {
 	if live, err := lockForDeal(ctx, tx, activity); err != nil || !live {
-		return DealNone, err
+		return nil, err
 	}
 	args := []any{activity}
 	arg := func(value any) int { args = append(args, value); return len(args) }
@@ -94,22 +108,20 @@ func (r DealRepair) RefileTx(ctx context.Context, tx pgx.Tx, activity ids.Activi
 	var eligible bool
 	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity a WHERE a.id=$1
  AND a.kind IN ('email','meeting') AND `+capturedConnectorActivitySQL+` AND `+horizon+`)`, args...).Scan(&eligible); err != nil || !eligible {
-		return DealNone, err
+		return nil, err
 	}
 	links, _, human, _, err := readDealProvenance(ctx, tx, activity)
-	if err != nil {
-		return "", err
+	if err != nil || human || links > 0 {
+		return nil, err
 	}
-	if human {
-		return DealHumanKept, nil
-	}
-	if links > 0 {
-		return DealAlreadyFiled, nil
-	}
-	return r.asMailbox(ctx, tx, activity, dealRefileReason, func(f dealFiling) (DealOutcome, error) {
-		verdict, err := fileOnDeal(f, tx, activity, r.Candidates, nil)
+	var question *topicQuestion
+	_, err = r.asMailbox(ctx, tx, activity, dealRefileReason, func(f dealFiling) (DealOutcome, error) {
+		f.topic = topic
+		verdict, asked, err := fileOnDeal(f, tx, activity, r.Candidates, nil)
+		question = asked
 		return verdict.Outcome, err
 	})
+	return question, err
 }
 
 func refileHorizonSQL(asOf time.Time, arg func(any) int) string {

@@ -7,6 +7,7 @@ import {
   worklistGaps,
 } from "../features/brief/brief.completeness";
 import { greetingNameOf } from "../format/greetingname";
+import { nearestRank } from "./quantile";
 
 // The Home benchmark's verdicts (e2e/bench-home.spec.ts), kept apart from the
 // browser so each one is a plain function a unit test can ask. The marks say
@@ -354,4 +355,95 @@ export class RequestLedger {
       if (due.journey === journey) this.retries.delete(read);
     }
   }
+}
+
+/** One Element Timing entry of Home's day content: when, and how much area. */
+export type DayPaint = { at: number; area: number };
+/** One layout shift; `input` marks a shift right after user input. */
+export type Shift = { at: number; value: number; input: boolean };
+/**
+ * What one document load painted of the day and shifted, as recorded. `roots`
+ * counts its day roots when read; any count but one fails the load.
+ */
+export type Vitals = { dayPaints: DayPaint[]; shifts: Shift[]; roots: number };
+
+/** Home's fixed-profile browser budgets: both are "at most". */
+export const VITALS_BUDGET = { dayPaintMs: 1_000, cls: 0.1 };
+
+/**
+ * When the day content's largest block painted; the earliest of equal ones.
+ * Null when nothing of it painted. Paints outside the day content never count,
+ * however large, so the shell and the agent rail cannot move this number.
+ */
+export function dayPaint(paints: readonly DayPaint[]): DayPaint | null {
+  let largest: DayPaint | null = null;
+  for (const paint of paints) {
+    if (largest === null || paint.area > largest.area) largest = paint;
+  }
+  return largest;
+}
+
+// A session window closes after a 1 s gap or at 5 s long, as Chrome's CLS does.
+const SHIFT_GAP_MS = 1_000;
+const SHIFT_WINDOW_MS = 5_000;
+
+/** CLS as the largest session window of shifts no input caused. */
+export function sessionWindowCls(shifts: readonly Shift[]): number {
+  let worst = 0;
+  let current = 0;
+  let first = Number.NEGATIVE_INFINITY;
+  let last = Number.NEGATIVE_INFINITY;
+  for (const shift of shifts) {
+    if (shift.input) continue;
+    if (shift.at - last < SHIFT_GAP_MS && shift.at - first < SHIFT_WINDOW_MS) {
+      current += shift.value;
+    } else {
+      current = shift.value;
+      first = shift.at;
+    }
+    last = shift.at;
+    worst = Math.max(worst, current);
+  }
+  return worst;
+}
+
+/** The p95 of the day paint and of CLS over a run of loads. */
+export function vitalsP95(loads: readonly Vitals[]): {
+  dayPaintMs: number;
+  cls: number;
+} {
+  const paints = loads.map(
+    (load) => dayPaint(load.dayPaints)?.at ?? Number.POSITIVE_INFINITY,
+  );
+  const shifts = loads.map((load) => sessionWindowCls(load.shifts));
+  return {
+    dayPaintMs: nearestRank(paints, 0.95),
+    cls: nearestRank(shifts, 0.95),
+  };
+}
+
+/**
+ * Why a run of loads breaks the vitals budget; empty when it keeps it. A load
+ * whose day content never painted fails by itself, whatever the p95.
+ */
+export function vitalsReasons(loads: readonly Vitals[]): string[] {
+  if (loads.length === 0) return ["no load was measured"];
+  const reasons: string[] = [];
+  for (const [i, load] of loads.entries()) {
+    if (load.roots !== 1)
+      reasons.push(`load ${i + 1}: Home has ${load.roots} day roots, not one`);
+    if (dayPaint(load.dayPaints) === null)
+      reasons.push(`load ${i + 1}: Home's day content never painted`);
+  }
+  const p95 = vitalsP95(loads);
+  if (
+    Number.isFinite(p95.dayPaintMs) &&
+    p95.dayPaintMs > VITALS_BUDGET.dayPaintMs
+  )
+    reasons.push(
+      `day paint p95 ${Math.round(p95.dayPaintMs)} ms is over ${VITALS_BUDGET.dayPaintMs} ms`,
+    );
+  if (p95.cls > VITALS_BUDGET.cls)
+    reasons.push(`CLS p95 ${p95.cls.toFixed(3)} is over ${VITALS_BUDGET.cls}`);
+  return reasons;
 }

@@ -30,7 +30,6 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -63,7 +62,7 @@ var oneOfItsKindForever = gatekit.Waive(map[string]string{
 func TestNoPrincipalNamesAConnectorInAStringLiteral(t *testing.T) {
 	t.Parallel()
 	read := 0
-	err := filepath.WalkDir("internal", func(dir string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir("internal", func(dir string, d fs.DirEntry, err error) error {
 		if err != nil || !d.IsDir() {
 			return err
 		}
@@ -134,7 +133,7 @@ type writtenActorID struct {
 // other direction is silent.
 func packageSource(t *testing.T, dir string) (map[string]*ast.File, map[string]string) {
 	t.Helper()
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", dir, err)
 	}
@@ -348,7 +347,7 @@ var connectorKinds = map[string]string{connectorActorPrefix: "PrincipalConnector
 func TestAConnectorIDIsCarriedOnlyByAConnectorPrincipal(t *testing.T) {
 	t.Parallel()
 	read := 0
-	err := filepath.WalkDir("internal", func(dir string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir("internal", func(dir string, d fs.DirEntry, err error) error {
 		if err != nil || !d.IsDir() {
 			return err
 		}

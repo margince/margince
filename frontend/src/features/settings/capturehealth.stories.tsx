@@ -20,7 +20,7 @@ import { CaptureHealthCard } from "./capturehealth";
 type Health = components["schemas"]["CaptureHealth"];
 
 const meta = {
-  title: "Settings/Governance/System health/Mail capture checks",
+  title: "Settings/System/System health/Mail capture checks",
   component: CaptureHealthCard,
 } satisfies Meta<typeof CaptureHealthCard>;
 export default meta;

@@ -1,0 +1,7 @@
+-- SPDX-License-Identifier: BUSL-1.1
+-- SPDX-FileCopyrightText: 2026 Gradion
+
+SET LOCAL lock_timeout = '3s';
+
+ALTER TABLE automation VALIDATE CONSTRAINT automation_setter_passport_id_fkey;
+ALTER TABLE automation VALIDATE CONSTRAINT automation_paused_reason_check;

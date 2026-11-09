@@ -19,14 +19,16 @@ import (
 )
 
 // proofExpiryCause is the evidence both expiry audit rows carry.
+const privacyEvidenceCause = "cause"
+
 const proofExpiryCause = "privacy_request_proof_expired"
 
 // ExpireRequestProofs deletes up to limit proofs due by now, and answers how
 // many. It acts only in January, so one year's proofs go in one run. A proof
 // whose request has an open dispute waits for the next January.
 //
-// The request loses subject_ref, its prose and its contact link. audit_log is
-// append-only, so the anonymize row hides the creation image on every read.
+// The request loses its reference and prose when its proof expires. Audit
+// payloads are cleared in the same transaction while their metadata stays.
 func (s *Store) ExpireRequestProofs(ctx context.Context, now time.Time, limit int) (int, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return 0, err
@@ -90,8 +92,12 @@ func expireRequestProof(ctx context.Context, tx pgx.Tx, proof expiredProof, reti
 	if _, err := tx.Exec(ctx, `DELETE FROM privacy_request_proof WHERE id = $1`, proof.id); err != nil {
 		return err
 	}
-	if _, err := storekit.AuditWithEvidence(ctx, tx, "expire", proofEntity, proof.id, nil, nil,
-		map[string]any{"cause": proofExpiryCause, "request_id": proof.requestID}); err != nil {
+	certificate, err := storekit.AuditWithEvidence(ctx, tx, "expire", proofEntity, proof.id, nil, nil,
+		map[string]any{privacyEvidenceCause: proofExpiryCause, "request_id": proof.requestID})
+	if err != nil {
+		return err
+	}
+	if err := storekit.RedactAuditHistory(ctx, tx, certificate); err != nil {
 		return err
 	}
 	retired, err := retire(ctx, tx, proof.requestID)
@@ -101,7 +107,10 @@ func expireRequestProof(ctx context.Context, tx pgx.Tx, proof expiredProof, reti
 	if !retired {
 		return fmt.Errorf("consent: the request %s behind an expired proof changed while it was locked", proof.requestID)
 	}
-	_, err = storekit.AuditWithEvidence(ctx, tx, "anonymize", "data_subject_request", proof.requestID, nil, nil,
-		map[string]any{"cause": proofExpiryCause})
-	return err
+	certificate, err = storekit.AuditWithEvidence(ctx, tx, "anonymize", "data_subject_request", proof.requestID, nil, nil,
+		map[string]any{privacyEvidenceCause: proofExpiryCause})
+	if err != nil {
+		return err
+	}
+	return storekit.RedactAuditHistory(ctx, tx, certificate)
 }

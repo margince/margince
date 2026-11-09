@@ -176,7 +176,7 @@ func httpStatusNames() map[string]int {
 func readGoUnits(t *testing.T, root string) []*goUnit {
 	t.Helper()
 	var units []*goUnit
-	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+	err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}

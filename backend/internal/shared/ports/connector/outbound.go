@@ -248,6 +248,11 @@ type InlineImage struct {
 // embeds. The markup refers to it as cid:<this>, and the send attaches it.
 const SignatureLogoContentID = "signature-logo@margince"
 
+// LetterheadLogoContentID names the installation's company logo that heads
+// mail the system relay sends. It differs from the signature's, so a mail
+// carrying both attaches two parts that never collide.
+const LetterheadLogoContentID = "letterhead-logo@margince"
+
 // SignatureLogoTag is the one form the logo takes in sanitized markup. The
 // sanitizer writes it and the send removes it when the image is gone.
 const SignatureLogoTag = `<img src="cid:` + SignatureLogoContentID + `" alt="" width="150">`

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import { Field } from "./atoms";
 import { RecordPicker, type RecordPickerCandidate } from "./recordpicker";
 
@@ -32,13 +33,14 @@ function searchFixture(q: string): Promise<RecordPickerCandidate[]> {
   );
 }
 
-function PickerDemo() {
+function PickerDemo({ searchOnFocus = false }: { searchOnFocus?: boolean }) {
   const [selected, setSelected] = useState<RecordPickerCandidate | null>(null);
   return (
     <div style={{ maxWidth: 320 }}>
       <RecordPicker
         label="Search companies…"
         searchTargets={searchFixture}
+        searchOnFocus={searchOnFocus}
         onPick={setSelected}
         selected={selected}
       />
@@ -86,4 +88,19 @@ export const UnavailableRow: Story = {
       />
     </div>
   ),
+};
+
+export const DefaultsOnFocus: Story = {
+  render: () => <PickerDemo searchOnFocus />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("searchbox"));
+    await expect(
+      await canvas.findByRole("button", { name: "Brandt Automotive" }),
+    ).toBeVisible();
+  },
+};
+export const DefaultsOnFocusDark: Story = {
+  ...DefaultsOnFocus,
+  globals: { theme: "dark" },
 };

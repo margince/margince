@@ -21,7 +21,6 @@ package gatekit
 // census in platform/auth — and two spellings of one derivation drift.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -69,7 +68,7 @@ func buildRenames(dir string) map[string]string {
 
 	renames := map[string]string{}
 	for _, file := range files {
-		body, err := os.ReadFile(file) // #nosec G304 -- a *.up.sql name from the migrations tree, test-support only
+		body, err := ReadFile(file) // #nosec G304 -- a *.up.sql name from the migrations tree, test-support only
 		if err != nil {
 			continue
 		}

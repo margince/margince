@@ -19,26 +19,17 @@ import {
   type UrlParams,
   useUrlParams,
 } from "../../lib/urlstate";
-import { type AnalyticsScope, scopeKey } from "./analytics.context";
-import {
-  OVERVIEW_DIAL,
-  type OverviewView,
-  openingView,
-  overviewViews,
-  recommendedView,
-} from "./analytics.overview.choice";
+import type { AnalyticsScope } from "./analytics.context";
+import type { OverviewView } from "./analytics.overview.choice";
 import {
   chooseContext,
   dialsOf,
-  namesContext,
   noteContext,
   type OverviewDials,
-  permittedDials,
-  rememberedContext,
-  rememberedView,
   rememberView,
   withContext,
 } from "./analytics.overview.context";
+import { overviewOpening } from "./analytics.overview.opening";
 import { MyProspecting } from "./analytics.overview.prospecting";
 import { SalesReview } from "./analytics.overview.sales";
 import { TeamProspecting } from "./analytics.overview.team";
@@ -115,28 +106,13 @@ function OverviewBoard({
   }>) {
   const t = useT();
   const [params] = useUrlParams();
-  const offered = overviewViews(
+  const { offered, view, restore, waitsForWork } = overviewOpening({
     catalog,
-    context.default_scope.kind !== "owner",
-  );
-  const chosen = openingView(
-    offered,
-    params.get(OVERVIEW_DIAL),
-    account ? rememberedView(account) : null,
-    undefined,
-  );
-  const waitsForWork = !chosen && offered.length > 1 && framework.isLoading;
-  const view = waitsForWork
-    ? undefined
-    : (chosen ??
-      recommendedView(offered, {
-        sdrFramework: framework.data?.definition.template === "sdr",
-        defaultScope: context.default_scope.kind,
-        submitsForecast: context.capabilities.submit_manager_forecast,
-      }));
-  const restore = view
-    ? restoredDials(params, view, account, context.allowed_scopes)
-    : undefined;
+    context,
+    params,
+    framework,
+    account,
+  });
   useOverviewMemory(account, view, params, restore);
   // Only a recommendation waits on the framework, and a remembered question
   // is put in the address first, so the wrong figures are never asked for.
@@ -186,26 +162,6 @@ function OverviewBoard({
       switcher={switcher}
     />
   );
-}
-
-/**
- * The question `view` opens with when the address names none. It is what
- * this tab or this account kept, minus what the reader may no longer ask.
- * Undefined when the address already states one or nothing is kept.
- */
-function restoredDials(
-  params: UrlParams,
-  view: OverviewView,
-  account: string | null,
-  allowed: readonly AnalyticsScope[],
-): OverviewDials | undefined {
-  if (!account || namesContext(params, view)) return undefined;
-  const kept = permittedDials(
-    rememberedContext(account, view) ?? {},
-    view,
-    allowed.map(scopeKey),
-  );
-  return Object.keys(kept).length > 0 ? kept : undefined;
 }
 
 /**

@@ -8,6 +8,7 @@
     "lib": ["ES2022", "ES2023.Intl", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "resolveJsonModule": true,
     "jsx": "react-jsx",
     "strict": true,
     "noUnusedLocals": true,
@@ -46,6 +47,7 @@
       "@composition/extensions": ["./src/composition/extensions.gen"],
       "@composition/schema": ["./src/api/schema"],
       "@composition/screens": ["./src/composition/extscreens.gen"],
+      "@composition/instruments": ["./src/composition/extinstruments.gen"],
       "@composition/copy": ["./src/composition/extlocales.gen"]
     }
   },

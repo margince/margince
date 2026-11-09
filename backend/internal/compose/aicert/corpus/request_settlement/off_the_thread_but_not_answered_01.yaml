@@ -7,9 +7,8 @@ sanitized_by: hand_authored/claude-opus-5
 # customer is not an answer to every ask they made: the notes decide, and a call
 # whose notes promise a next step leaves it owed.
 #
-# A meeting whose notes are about other matters is deliberately not a case here.
-# Certified models split on it between still_owed and unsure whatever the prompt
-# says, and both leave the request owed, so it measured a coin flip.
+# A meeting whose notes are about other matters leaves the ask owed too: the
+# prompt rules it still_owed, naming the ask, because nothing we did touched it.
 fixture:
   - messages:
       - direction: inbound

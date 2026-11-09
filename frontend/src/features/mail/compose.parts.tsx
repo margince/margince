@@ -3,6 +3,7 @@ import { type ReactNode, useState } from "react";
 import { EntityRef } from "../../components/entityref";
 import { SendMark } from "../../components/sendpermission";
 import { Button, Field } from "../../design-system/atoms";
+import { Callout } from "../../design-system/callout";
 import { DockedWindow, type DockState } from "../../design-system/dockedwindow";
 import { EmailText } from "../../design-system/emailtext";
 import { ErrorLine } from "../../design-system/errorline";
@@ -10,7 +11,6 @@ import { IconAction } from "../../design-system/iconaction";
 import { RichText } from "../../design-system/richtext";
 import { Select } from "../../design-system/select";
 import { formatActivityWhen } from "../../format/activitywhen";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
@@ -25,6 +25,7 @@ import {
 } from "../../lib/messagevoice";
 import type { RelinkKind } from "../../lib/recordtargets";
 import { useRichTextLabels } from "../../lib/richtextlabels";
+import { useViewerZone } from "../../lib/viewerzone";
 import type { CarriageViolation } from "./carriage";
 import type { Activity, VoiceProfile } from "./compose";
 import { AiDraftBand } from "./composeaiband";
@@ -32,6 +33,7 @@ import { CarriageNotice } from "./composeattachments";
 import type { ComposeFields } from "./composefields";
 import { FieldNeed } from "./composehead";
 import type { useSavedDraft } from "./composesaveddraft";
+import { SavedDraftFailure } from "./composesaveddraftnotices";
 import { momentLabel, momentOf, ScheduleMenu } from "./composeschedule";
 import type { ComposeSend, MissingField } from "./composesend";
 import { SignOffPreview } from "./composesignoff";
@@ -64,10 +66,13 @@ export function MailSendNotices({
   to,
   cc,
   context,
+  newContacts = [],
 }: Readonly<{
   to: string[];
   cc: string[];
   context: CommunicationContext | undefined;
+  /** Addresses on no record, which the send adds as the sender's contacts. */
+  newContacts?: readonly string[];
 }>) {
   const t = useT();
   return (
@@ -75,6 +80,13 @@ export function MailSendNotices({
       {sharedUnsubscribeAhead(to, cc, context) && (
         <ErrorLine standing>{t("compose.multiRecipientWarning")}</ErrorLine>
       )}
+      {newContacts.map((address) => (
+        <Callout
+          key={address}
+          kind="standing"
+          title={t("compose.newContact", { address })}
+        />
+      ))}
     </>
   );
 }
@@ -170,6 +182,7 @@ export function ComposeFoot({
   sendAt,
   savedDraft,
   busy,
+  addressRefused,
   marksRef,
 }: Readonly<{
   confirmLabel: string;
@@ -183,16 +196,19 @@ export function ComposeFoot({
   savedDraft: ReturnType<typeof useSavedDraft>;
   /** A send or a rejection is in flight. */
   busy: boolean;
+  /** A recipient line holds text that is not an address. */
+  addressRefused: boolean;
   /** The place the body's formatting marks draw, beside Send. */
   marksRef: (node: HTMLDivElement | null) => void;
 }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const scheduled = momentOf(sendAt);
-  const error = send.sendError ?? savedDraft.error;
   return (
     <div className="compose-foot">
-      {error && <ErrorLine>{error}</ErrorLine>}
+      {send.sendError && <ErrorLine>{send.sendError}</ErrorLine>}
+      <SavedDraftFailure draft={savedDraft} />
       <div className="compose-foot-row">
         <span className="actions-split">
           <Button
@@ -200,17 +216,22 @@ export function ComposeFoot({
             onClick={send.confirm}
             pending={send.send.isPending}
             disabled={held}
+            reason={
+              addressRefused ? t("compose.sendWaitsForAddress") : undefined
+            }
           >
             {confirmLabel}
           </Button>
           {!isChannelReply && <ScheduleMenu onOpen={onPickMoment} />}
         </span>
-        {!isChannelReply && <SendMark {...send.permission} />}
+        {!isChannelReply && (
+          <SendMark {...send.permission} blocked={send.blocked} />
+        )}
         <div className="compose-foot-marks" ref={marksRef} />
         <span className="t-caption compose-foot-status" role="status">
           {scheduled
             ? t("compose.willGoOut", {
-                when: momentLabel(scheduled, locale, viewerZone()),
+                when: momentLabel(scheduled, locale, readerZone),
               })
             : savedDraftStatus(savedDraft, t)}
         </span>
@@ -246,24 +267,18 @@ export function ComposeOutcome({
   bodyKey,
   sendUnavailable,
   send,
-  contactId,
 }: Readonly<{
   isChannelReply: boolean;
   bodyKey: MessageKey;
   sendUnavailable: boolean;
   send: ComposeSend;
-  contactId: string | undefined;
 }>) {
   const t = useT();
   return (
     <>
       {isChannelReply && <p>{t(bodyKey)}</p>}
       {sendUnavailable && <p>{t("compose.sendUnavailable")}</p>}
-      <SendRefusal
-        refusal={send.refusal}
-        contactId={contactId}
-        review={send.sendReview}
-      />
+      <SendRefusal refusal={send.refusal} />
     </>
   );
 }
@@ -279,7 +294,8 @@ export function ComposeBody({
   voiceMaturity,
   channelLabel,
   carriageBlocks,
-  flagged,
+  send,
+  sendBlocked,
   voice,
   marksIn,
   attach,
@@ -294,7 +310,10 @@ export function ComposeBody({
   voiceMaturity: VoiceProfile["maturity"] | undefined;
   channelLabel: string | undefined;
   carriageBlocks: readonly CarriageViolation[];
-  flagged: ReadonlySet<MissingField>;
+  /** The fields a press of Send flagged; Cmd/Ctrl+Enter is that press. */
+  send: ComposeSend;
+  /** Cmd/Ctrl+Enter is Send, and waits whenever the Send button does. */
+  sendBlocked: boolean;
   voice: VoiceDraft;
   /** Where the editor's marks draw, in the foot; null until it mounts. */
   marksIn: Element | null;
@@ -330,8 +349,16 @@ export function ComposeBody({
         footIn={marksIn}
         revealText={voice.drafted}
         thinking={voice.control.pending ? t("compose.draftingBody") : null}
+        // A held Send still claims the keys, so they type no line break.
+        onSubmit={() => {
+          if (!sendBlocked) send.confirm();
+        }}
+        undoableRevision={fields.undoableRevision}
       />
-      <FieldNeed show={flagged.has("body")} need={t("compose.missingBody")} />
+      <FieldNeed
+        show={send.flagged.has("body")}
+        need={t("compose.missingBody")}
+      />
       {mail && <SignOffPreview body={fields.body} subject={fields.subject} />}
       {earlier}
       <CarriageNotice channel={channelLabel} blocks={carriageBlocks} />
@@ -401,6 +428,7 @@ export function ComposeWhy({
 export function ReplyQuote({
   message,
 }: Readonly<{ message: Activity | undefined }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const [open, setOpen] = useState(false);
@@ -432,7 +460,7 @@ export function ReplyQuote({
                 message.occurred_at,
                 message.occurred_precision,
                 locale,
-                viewerZone(),
+                readerZone,
               ),
               who,
             })}

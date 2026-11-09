@@ -16,8 +16,8 @@ import {
 } from "../../design-system/timeinput";
 import { localDateTimeValue } from "../../format/calendarday";
 import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
+import { useViewerZone } from "../../lib/viewerzone";
 import { scheduleFields, schedulePresets } from "./composeschedule";
 import type { ScheduledSend } from "./scheduledqueue";
 
@@ -49,6 +49,7 @@ export function RescheduleMenu({
   pending: boolean;
   onMove: (move: Move) => void;
 }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const [open, setOpen] = useState(false);
@@ -98,7 +99,7 @@ export function RescheduleMenu({
           >
             <span>{t(preset.key)}</span>
             <span className="t-caption">
-              {formatDateTime(preset.at.toISOString(), locale, viewerZone())}
+              {formatDateTime(preset.at.toISOString(), locale, readerZone)}
             </span>
           </Button>
         ))}

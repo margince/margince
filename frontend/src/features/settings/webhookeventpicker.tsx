@@ -1,8 +1,7 @@
-import { Info } from "lucide-react";
 import { useState } from "react";
 import { Button, Checkbox, SearchField } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
-import { Popover } from "../../design-system/popover";
+import { HelpPopover } from "../../design-system/helppopover";
 import { SetPickerFrame } from "../../design-system/setpicker";
 import { holdsEveryWord, searchWords } from "../../format/collate";
 import { formatNumber } from "../../format/format";
@@ -55,17 +54,7 @@ function EventInfo({ type }: Readonly<{ type: string }>) {
   const t = useT();
   const label = t(eventLabelKey(type));
   return (
-    <Popover
-      className="webhook-help"
-      label={
-        <>
-          <Info aria-hidden />
-          <span className="sr-only">
-            {t("webhooks.events.info", { event: label })}
-          </span>
-        </>
-      }
-    >
+    <HelpPopover label={t("webhooks.events.info", { event: label })}>
       <p className="t-label">{label}</p>
       <p>
         <code>{type}</code>
@@ -74,7 +63,7 @@ function EventInfo({ type }: Readonly<{ type: string }>) {
       <p>{t(eventWhenKey(type))}</p>
       <p className="t-label">{t("webhooks.events.fields")}</p>
       <EventFields type={type} />
-    </Popover>
+    </HelpPopover>
   );
 }
 
@@ -231,19 +220,9 @@ export function WebhookEventPicker({
       <div className="webhook-events-head">
         <span className="webhook-section-title">
           <span className="t-label">{t("webhooks.field.eventTypes")} *</span>
-          <Popover
-            className="webhook-help"
-            label={
-              <>
-                <Info aria-hidden />
-                <span className="sr-only">
-                  {t("webhooks.events.helpLabel")}
-                </span>
-              </>
-            }
-          >
+          <HelpPopover label={t("webhooks.events.helpLabel")}>
             <p>{t("webhooks.events.help")}</p>
-          </Popover>
+          </HelpPopover>
         </span>
         {value.length > 0 && (
           <span className="webhook-events-count">

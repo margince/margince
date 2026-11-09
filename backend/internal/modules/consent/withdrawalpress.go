@@ -121,26 +121,40 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 	// match. A broad press sends NULL for $7, where `= $7` is never true, so
 	// the two arms together leave a broad press matching broad rows only —
 	// exactly the behaviour this dedup had before the column existed.
-	tag, err := tx.Exec(ctx, `
+	// A stop kept from an anonymized or earlier press may hold only the hash of
+	// the address, so the bare-address arm matches either.
+	lowered, hashes := storekit.StopAddressArgs(ref.Address)
+	var stopID ids.UUID
+	err = tx.QueryRow(ctx, `
 		INSERT INTO communication_suppression
-		    (lead_id, address, kind, source, captured_by, decided_by_level, purpose_id)
-		SELECT $1, $2, $3, $6, $4, $5, $7
+		    (lead_id, address, kind, source, captured_by, decided_by_level, purpose_id, recorded_through)
+		SELECT $1, $2, $3, $6, $4, $5, $7, $8
 		 WHERE NOT EXISTS (
 		       SELECT 1 FROM communication_suppression live
 		        WHERE live.revoked_at IS NULL
 		          AND live.kind = $3
 		          AND (live.purpose_id IS NULL OR live.purpose_id = $7)
 		          AND (($1::uuid IS NOT NULL AND live.lead_id = $1)
-		            OR ($1::uuid IS NULL AND lower(live.address) = $2)))`,
+		            OR ($1::uuid IS NULL AND `+storekit.StopOnAddressesSQL("live", "$9", "$10")+`)))
+		RETURNING id`,
 		zeroAsNull(ref.LeadID.UUID), ref.Address, commsauthz.ReasonObjection,
-		by, string(commsauthz.LevelMachine), sourcePublicLink, purposeID)
-	if err != nil {
-		return false, fmt.Errorf("consent: recording the stop this link pressed: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
+		by, string(commsauthz.LevelMachine), sourcePublicLink, purposeID, string(commsauthz.RecordedBySubject),
+		lowered, hashes).Scan(&stopID)
+	if errors.Is(err, pgx.ErrNoRows) {
 		// Already stopped. The press succeeded the first time and this one
 		// changes nothing, which is what a replayed one-click POST is.
 		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("consent: recording the stop this link pressed: %w", err)
+	}
+	// A lead's press owes the receipt its rules require, as a contact's does.
+	// An address no record names has no country to ask.
+	if !ref.LeadID.IsZero() {
+		lead := subject{id: ref.LeadID.UUID, entityType: entityLead}
+		if err := s.acknowledgeOptOutTx(ctx, tx, lead, commsauthz.ReasonObjection, stopID); err != nil {
+			return false, err
+		}
 	}
 	entity, entityID := entityLead, ref.LeadID.UUID
 	if entityID.IsZero() {

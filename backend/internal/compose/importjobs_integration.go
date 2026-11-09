@@ -8,12 +8,15 @@ package compose
 import (
 	"fmt"
 	"log/slog"
+	"net/http"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
@@ -44,6 +47,33 @@ func ImportJobWorkersForTest(pool *pgxpool.Pool, cfg JobRunnerConfig) (ImportJob
 	return workers, nil
 }
 
+// EmbedReindexWorkerForTest builds the reindex worker through
+// addEmbedReindexJobs, the registration the worker role makes.
+func EmbedReindexWorkerForTest(pool *pgxpool.Pool, embedder search.Embedder) (river.Worker[EmbedReindexArgs], error) {
+	reg := newJobRegistry()
+	addEmbedReindexJobs(reg, pool, embedder)
+	var worker river.Worker[EmbedReindexArgs]
+	return worker, governedInto(reg, &worker)
+}
+
+// FinanceSyncWorkerForTest builds the per-workspace finance sync worker
+// through addFinanceJobs, the registration the worker role makes.
+func FinanceSyncWorkerForTest(pool *pgxpool.Pool) (river.Worker[FinanceSyncArgs], error) {
+	reg := newJobRegistry()
+	addFinanceJobs(reg, pool, JobRunnerConfig{}, slog.New(slog.DiscardHandler))
+	var worker river.Worker[FinanceSyncArgs]
+	return worker, governedInto(reg, &worker)
+}
+
+// VoiceBuildWorkerForTest builds the voice build worker through
+// addModelLaneJobs, the registration the worker role makes, over path's lane.
+func VoiceBuildWorkerForTest(pool *pgxpool.Pool, path ModelPath) (river.Worker[VoiceBuildArgs], error) {
+	reg := newJobRegistry()
+	addModelLaneJobs(reg, pool, JobRunnerConfig{VoiceBrain: path.VoiceBuild}, slog.New(slog.DiscardHandler))
+	var worker river.Worker[VoiceBuildArgs]
+	return worker, governedInto(reg, &worker)
+}
+
 // WithImportJobWorkersForTest fills into with the import workers over the
 // object store and upload cap of the server it composes. Passed last, it reads
 // what every earlier option set.
@@ -60,8 +90,31 @@ func WithImportJobWorkersForTest(into *ImportJobWorkers, failed *error) Option {
 // would only spend the bound.
 func WithImportPreviewWaitForTest(clock agents.WaitClock, within time.Duration) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		s.previewWait = agents.WithImportWait(clock, within)
+		s.registryForTest = append(s.registryForTest, agents.WithImportWait(clock, within))
 		s.rebuildToolRegistry(pool)
+	}
+}
+
+// WithToolChecksRecordedForTest hands sink, after each tool call, the verb that
+// ran and what the gates asked of the caller on its way.
+func WithToolChecksRecordedForTest(sink func(verb string, call auth.RecordedCall)) Option {
+	return func(s *Server, pool *pgxpool.Pool) {
+		s.registryForTest = append(s.registryForTest, agents.WithChecksRecordedForTest(sink))
+		s.rebuildToolRegistry(pool)
+	}
+}
+
+// WithRouteChecksRecordedForTest hands sink, after each signed-in /v1 request,
+// its method and path and what the gates noted of its caller.
+func WithRouteChecksRecordedForTest(sink func(method, path string, call auth.RecordedCall)) Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		s.routesForTest = func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				ctx, checks := auth.RecordChecksForTest(r.Context())
+				next.ServeHTTP(w, r.WithContext(ctx))
+				sink(r.Method, r.URL.Path, checks())
+			})
+		}
 	}
 }
 

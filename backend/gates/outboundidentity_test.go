@@ -49,7 +49,7 @@ func TestNoOutboundIdentityIsWrittenAtItsCallSite(t *testing.T) {
 	byDir := map[string][]*ast.File{}
 	paths := map[*ast.File]string{}
 	for _, root := range identitySurfaceRoots {
-		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+		err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil {
 				return walkErr
 			}

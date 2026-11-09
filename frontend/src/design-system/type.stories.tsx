@@ -255,7 +255,7 @@ const figureColumn: CSSProperties = {
  * is never the way to align digits. The column beside it is what a figure
  * without `.t-num` does: every digit its own width, so the column drifts. Code
  * — and only an element that IS code — takes the code face, from one base rule.
- * `design-system/mono.test.ts` and `check-font-lock.sh` fail mono anywhere else.
+ * `census/rules/mono.census.ts` and `check-font-lock.sh` fail mono anywhere else.
  */
 export const MonoIsForCode: Story = {
   render: () => (

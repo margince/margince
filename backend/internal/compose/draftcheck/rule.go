@@ -69,6 +69,7 @@ var (
 	RuleAssumedMemory          = Rule{"assumed-memory", Claim}
 	RuleInventedConversation   = Rule{"invented-conversation", Claim}
 	RuleAttributedClaim        = Rule{"attributed-claim", Claim}
+	RuleUnattachedDocument     = Rule{"unattached-document", Claim}
 	RuleUnscheduledArrangement = Rule{"unscheduled-arrangement", Claim}
 	RuleUnearnedReplyPrefix    = Rule{"unearned-reply-prefix", Claim}
 	RuleInventedHistorySubject = Rule{"invented-history-subject", Claim}

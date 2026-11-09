@@ -34,6 +34,7 @@
       "@composition/extensions": ["./src/composition/extensions.gen"],
       "@composition/schema": ["./src/api/schema"],
       "@composition/screens": ["./src/composition/extscreens.gen"],
+      "@composition/instruments": ["./src/composition/extinstruments.gen"],
       "@composition/copy": ["./src/composition/extlocales.gen"]
     }
   },
@@ -49,14 +50,15 @@
   "include": [
     "vite.config.ts",
     "vite.mcp-apps.config.ts",
-    "vite-proxy.test.ts",
     "vitest.budget.ts",
     "vitest.ext.config.ts",
+    "vitest.census.config.ts",
     "vitest.setup.ts",
     "playwright.config.ts",
     ".storybook/*.ts",
     ".storybook/*.tsx",
     "scripts/**/*.ts",
+    "census/**/*.ts",
     "src",
     "e2e/**/*.ts"
   ]

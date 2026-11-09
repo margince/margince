@@ -167,7 +167,7 @@ func TestErasingTheRecipientEndsTheReview(t *testing.T) {
 	}
 	var dsrProblem map[string]any
 	if status := c.Call(t, "PATCH", "/v1/data-subject-requests/"+request.ID,
-		AnyMap{"status": "fulfilled", "resolution": "erased on the subject's request", "identity_check": "id_document"},
+		AnyMap{"status": "fulfilled", "identity_check": "id_document"},
 		nil, &dsrProblem); status != http.StatusOK {
 		t.Fatalf("fulfilling the erasure case → %d, want 200: %v", status, dsrProblem)
 	}
@@ -225,18 +225,15 @@ func TestAMessageTheEngineComesToAllowClosesItsOwnReview(t *testing.T) {
 		t.Fatal("nothing went out, so this test is not about a message that was sent")
 	}
 
-	// NO INSTRUCTION WAS CONSUMED, which is the whole premise: staging allowed
-	// every recipient, so it never asked for one. If this stops being true the
-	// test is passing for the directed path's reason rather than this one.
-	var consumed int
-	if err := c.Owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM communication_instruction WHERE consumed_at IS NOT NULL`).
-		Scan(&consumed); err != nil {
-		t.Fatalf("counting spent decisions: %v", err)
+	var instructions int
+	var authority string
+	if err := c.Owner.QueryRow(context.Background(), `
+		SELECT (SELECT count(*) FROM communication_instruction), execution_authority
+		FROM comms_outbound WHERE activity_id = $1`, sent.ID).Scan(&instructions, &authority); err != nil {
+		t.Fatal(err)
 	}
-	if consumed != 0 {
-		t.Fatalf("%d instruction(s) were spent on a message the engine allowed: this test no "+
-			"longer exercises the path it was written for", consumed)
+	if instructions != 0 || authority != "supported" {
+		t.Fatalf("now-permitted send recorded %d instructions under %q authority", instructions, authority)
 	}
 
 	state, resolved := closedReview(t, c)
@@ -248,5 +245,35 @@ func TestAMessageTheEngineComesToAllowClosesItsOwnReview(t *testing.T) {
 	// what lets a reader tell a sent message from an abandoned one.
 	if resolved != nil && state != "resolved" {
 		t.Errorf("the sent message left a %q review, want resolved", state)
+	}
+}
+
+func TestCurrentPermissionDoesNotSkipDirectionValidation(t *testing.T) {
+	for _, field := range []string{"acknowledged", "warning_version", "explanation"} {
+		t.Run(field, func(t *testing.T) {
+			c := setupConsent(t)
+			review, _ := refuseAndHold(t, c)
+			c.grantMarketingByConfirmLink(t)
+			var before int
+			if err := c.Owner.QueryRow(t.Context(), `SELECT count(*) FROM comms_outbound`).Scan(&before); err != nil {
+				t.Fatal(err)
+			}
+			in := directed()
+			if field == "acknowledged" {
+				in[field] = false
+			} else {
+				in[field] = ""
+			}
+			if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send", in, nil, nil); status != http.StatusUnprocessableEntity {
+				t.Fatalf("invalid %s answered %d, want 422", field, status)
+			}
+			var deliveries int
+			if err := c.Owner.QueryRow(t.Context(), `SELECT count(*) FROM comms_outbound`).Scan(&deliveries); err != nil {
+				t.Fatal(err)
+			}
+			if deliveries != before {
+				t.Fatalf("invalid %s queued %d new deliveries", field, deliveries-before)
+			}
+		})
 	}
 }

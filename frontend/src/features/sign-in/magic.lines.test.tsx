@@ -7,7 +7,7 @@ import {
   formatNumber,
   formatTimeOfDay,
 } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { line, receipt, renderMagic, stub } from "../../testing/magic.testkit";
 
 afterEach(() => {
@@ -122,7 +122,7 @@ describe("a receipt line is one row", () => {
       "Overnight agent This kind of change cannot be undone.",
     );
     // The hour on the clock the reader is on, the full instant one hover away.
-    const zone = viewerZone();
+    const zone = browserZone();
     expect(row.when?.textContent).toBe(
       formatTimeOfDay("2026-09-13T07:30:00Z", "en", zone),
     );
@@ -141,7 +141,7 @@ describe("a receipt line is one row", () => {
     );
     renderMagic();
     expect(rowOf(await onlyLine("Done for you")).when?.textContent).toBe(
-      formatDayMonth("2026-09-09T14:00:00Z", "en", viewerZone()),
+      formatDayMonth("2026-09-09T14:00:00Z", "en", browserZone()),
     );
   });
 
@@ -179,9 +179,9 @@ describe("a receipt line is one row", () => {
       // The record's name opens what changed on it; the undo stands beside.
       "Fleet retrofit",
       "Undo",
-      // The job's undos are inside, one per record, behind its record count.
-      "Fleet retrofit and 2 more",
-      "Fleet retrofit, and possibly others",
+      // The job's undos are inside, one per record, behind its change count.
+      "View 3 changes",
+      "View at least 1 change",
     ]);
   });
 
@@ -216,7 +216,7 @@ describe("a receipt line is one row", () => {
       within(done)
         .getAllByRole("button", { hidden: true })
         .map((b) => b.textContent),
-    ).toEqual(["Anna Weber and 2,145 more"]);
+    ).toEqual(["View 2,146 changes"]);
   });
 
   it("marks a source to restore in its lane's colour, since the clock does not place it", async () => {

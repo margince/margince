@@ -108,31 +108,14 @@ func ensureAttachmentParentWritableLive(ctx context.Context, tx pgx.Tx, entityTy
 	return auth.HoldWritableLive(ctx, tx, entityType, id)
 }
 
-// requireParentOrHide checks the parent object grant AFTER the attachment row
-// was found (so it exists in this workspace). A caller lacking the grant must
-// not learn the attachment exists, so object denial reads as not-found — the
-// same 404 a row-scope miss returns (existence-hiding). Upload checks the
-// grant before any lookup, so it keeps its plain 403.
-func requireParentOrHide(ctx context.Context, entityType string, action principal.Action) error {
-	if err := auth.Require(ctx, entityType, action); err != nil {
-		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			return apperrors.ErrNotFound
-		}
-		return err
-	}
-	return nil
-}
-
-// resolveAttachmentParent is the ONE spelling of "find a live attachment's
-// parent, then require the caller hold `action` on the parent object type and
-// the matching authority over the parent ROW" — GetAttachmentMeta and
-// ArchiveAttachment both need exactly this. Object denial and row-scope miss
-// both surface as ErrNotFound (existence-hiding), and so does a missing or
-// already-archived row: a soft-deleted attachment has no live parent to
-// resolve against. OpenAttachment does NOT call this: it fetches storage_key
-// in the same round trip, so the key it hands the object store comes from the
-// same snapshot the visibility gates just read rather than from a second query
-// against a row that may have moved since.
+// resolveAttachmentParent finds a live attachment's parent and requires the
+// caller hold `action` on the parent's object type and authority over its row.
+// GetAttachmentMeta and ArchiveAttachment both need this. A row-scope miss is
+// ErrNotFound, and so is an object denial to a caller who cannot read the
+// parent. One who can is refused a change with ErrPermissionDenied. A missing
+// or archived row is ErrNotFound too, having no live parent to resolve.
+// OpenAttachment does not call this. It reads storage_key in the same round
+// trip, so the key it opens is from the snapshot the gates read.
 //
 // The row gate follows the ACTION rather than being visibility for everyone: a
 // read needs only to see the parent, while archiving a file off a record
@@ -151,14 +134,16 @@ func resolveAttachmentParent(ctx context.Context, tx pgx.Tx, id ids.UUID, action
 		return "", scanErr
 	}
 	if err := requireParentOrHide(ctx, entityType, action); err != nil {
-		return "", err
+		if action == principal.ActionRead || !errors.Is(err, apperrors.ErrNotFound) {
+			return "", err
+		}
+		return "", deniedChange(ctx, tx, entityType, entityID)
 	}
-	// This branch is WAIVED in backend/gates/writeauthority_test.go under
-	// readAuthorityOnAWritePath:internal/modules/activities:ensureAttachmentParentVisible,
-	// because that gate walks the call graph and cannot see which arm a caller
-	// takes. The waiver excuses the FUNCTION, so it would keep passing if the
-	// visibility probe were ever moved onto a write path — read the waiver
-	// before adding a third arm here, and revisit it rather than extend it.
+	// The visibility probe is WAIVED in backend/gates/writeauthority_test.go
+	// under readAuthorityOnAWritePath:internal/modules/activities:ensureAttachmentParentVisible.
+	// It admits only this read arm; a write reaches it only through deniedChange
+	// above, after the write is refused, to choose 403 over 404. The waiver
+	// excuses the FUNCTION, so read it before giving the probe any other write reach.
 	if action == principal.ActionRead {
 		if err := ensureAttachmentParentVisible(ctx, tx, entityType, entityID); err != nil {
 			return "", err

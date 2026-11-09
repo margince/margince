@@ -136,6 +136,9 @@ const (
 // buy nothing and would tell an operator their own action failed for the wrong
 // reason.
 func refuseUnlessCallerOutranksTarget(ctx context.Context, tx pgx.Tx, actor Identity, targetID ids.UserID, reach targetReach) error {
+	if err := refuseAgentMemberReach(ctx, tx, targetID); err != nil {
+		return err
+	}
 	if actor.hasRole(roleAdmin) {
 		return nil
 	}
@@ -245,6 +248,9 @@ func masksContained(caller, target []principal.FieldMask) bool {
 // cannot be archived between this read and the assignment. An archived role
 // answers errUnknownRole — it is not a role anybody can be given.
 func roleForAssignment(ctx context.Context, tx pgx.Tx, actor Identity, roleKey string, teams []ids.TeamID) (ids.UUID, error) {
+	if err := refuseAgentAdminRole(ctx, roleKey); err != nil {
+		return ids.UUID{}, err
+	}
 	var roleID ids.UUID
 	var raw []byte
 	err := tx.QueryRow(ctx,
@@ -354,11 +360,24 @@ func usersMatching(ctx context.Context, tx pgx.Tx, query string, users []ids.UUI
 // can widen between a check and the write it admits. One installation per
 // database, so one key.
 func lockAuthorization(ctx context.Context, tx pgx.Tx) error {
-	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext('margince:authz')::bigint)`); err != nil {
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(`+authorizationLockKey+`)`); err != nil {
 		return fmt.Errorf("identity: serializing an authorization change: %w", err)
 	}
 	return nil
 }
+
+// lockAuthorizationShared holds the same lock in shared mode until commit. Reads
+// that admit a write run side by side, and an authorization change waits until
+// the writes they admitted commit. Every holder of either mode takes this lock
+// before app_user, and app_user before any record.
+func lockAuthorizationShared(ctx context.Context, tx pgx.Tx) error {
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock_shared(`+authorizationLockKey+`)`); err != nil {
+		return fmt.Errorf("identity: holding authority steady for a write: %w", err)
+	}
+	return nil
+}
+
+const authorizationLockKey = `hashtext('margince:authz')::bigint`
 
 // administrationObjects are the grants that reach back and change who may do
 // what. Handing one out is handing out authority; handing out record work is
@@ -384,6 +403,9 @@ func AdmitMemberHandover(ctx context.Context, tx pgx.Tx, member ids.UserID) erro
 	}
 	target, err := lockTargetGrants(ctx, tx, member)
 	if err != nil {
+		return err
+	}
+	if err := refuseAgentMemberReach(ctx, tx, member); err != nil {
 		return err
 	}
 	return callerOutranks(Identity{Roles: p.Permissions.RoleKeys, Permissions: p.Permissions}, target, reachDenial)

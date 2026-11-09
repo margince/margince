@@ -50,7 +50,8 @@ var cohortKeys = []string{"cohort_linked", "cohort_promoted"}
 
 // bookkeepingFields are after-image keys that record the machinery's own state
 // rather than anything about the record. A change touching only these tells a
-// reader nothing.
+// reader nothing. They are the whole rule for a record type presentedField does
+// not govern, and an internal classification for the types it does.
 var bookkeepingFields = map[string]bool{
 	"updated_at": true, "version": true, "chunk_count": true, "checksum": true,
 	"audience_reason": true, "owed_verdict_ruleset": true, "reply_verdict_by": true,
@@ -102,13 +103,13 @@ func describe(e entry) (description, bool) {
 			}, true
 		}
 	}
-	if facts, ok := evidence["facts"].([]any); ok && len(facts) > 0 && len(changedFields(objectOf(e.Before), after)) == 0 {
+	if facts, ok := evidence["facts"].([]any); ok && len(facts) > 0 && len(changedFields(e.EntityType, objectOf(e.Before), after)) == 0 {
 		return description{
 			summary: crmcontracts.MagicSentence{Key: "magic.action.company_profile_read"},
 			reason:  &crmcontracts.MagicSentence{Key: "magic.why.public_records"},
 		}, true
 	}
-	fields := changedFields(objectOf(e.Before), after)
+	fields := changedFields(e.EntityType, objectOf(e.Before), after)
 	if len(fields) == 0 {
 		return description{}, false
 	}
@@ -126,11 +127,11 @@ func describe(e entry) (description, bool) {
 }
 
 // changedFields lists, readably and sorted, the fields an update moved: every
-// after-image key that is not bookkeeping and whose value differs from before.
-func changedFields(before, after map[string]any) []string {
+// after-image key a reader is shown whose value differs from before.
+func changedFields(entityType string, before, after map[string]any) []string {
 	var out []string
 	for k, v := range after {
-		if bookkeepingFields[k] {
+		if !presentedField(entityType, k) {
 			continue
 		}
 		if b, had := before[k]; had && equalJSON(b, v) {

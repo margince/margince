@@ -61,7 +61,7 @@ func TestTheExistenceProbeReadsARegisteredUnitTable(t *testing.T) {
 
 	if err := RegisterExtensionKinds([]ExtensionKind{{
 		Verb: "probe_forget", TargetTable: extProbeTable,
-		RbacObject: "ext_probe_row", RbacAction: principal.ActionDelete,
+		RbacObject: "ext_probe_row", RbacAction: principal.ActionDelete, RequiredScope: principal.ScopeWrite,
 	}}); err != nil {
 		t.Fatalf("registering the kind: %v", err)
 	}

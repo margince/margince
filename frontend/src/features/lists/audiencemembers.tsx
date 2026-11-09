@@ -44,6 +44,14 @@ export const AUDIENCE_CHOICES: readonly ActivityAudience[] = [
   "selected",
 ];
 
+export function messageAudienceChoices(
+  internal: boolean,
+): readonly ActivityAudience[] {
+  return internal
+    ? AUDIENCE_CHOICES.filter((value) => value !== "workspace")
+    : AUDIENCE_CHOICES;
+}
+
 export const AUDIENCE_LABEL: Record<ActivityAudience, MessageKey> = {
   workspace: "compose.audienceWorkspace",
   participants: "compose.audienceParticipants",
@@ -86,6 +94,7 @@ export const AUDIENCE_REASON_LABEL: Record<string, MessageKey> = {
   counterparty: "compose.reason.counterparty",
   explicitly_confidential: "compose.reason.explicitlyConfidential",
   members_only: "compose.reason.membersOnly",
+  internal_operational: "compose.reason.internalOperational",
   no_counterparty: "compose.reason.noCounterparty",
 };
 
@@ -110,9 +119,12 @@ export function memberKey(member: AudienceMember): string {
  * question: who a record is shared with. One changing is no reason for
  * the other to.
  */
-export function useAudienceCandidates(enabled: boolean): AudienceCandidates {
+export function useAudienceCandidates(
+  enabled: boolean,
+  usersOnly = false,
+): AudienceCandidates {
   const users = useRoster("user", enabled);
-  const teams = useRoster("team", enabled);
+  const teams = useRoster("team", enabled && !usersOnly);
   const seats = ((users.data ?? []) as User[])
     .filter((seat) => !seat.is_agent)
     .map(
@@ -151,7 +163,9 @@ export function AudienceMembers({
   candidates,
   chosen,
   onChange,
+  usersOnly = false,
 }: Readonly<{
+  usersOnly?: boolean;
   candidates: AudienceCandidates;
   chosen: readonly AudienceMember[];
   onChange: (next: AudienceMember[]) => void;
@@ -169,8 +183,12 @@ export function AudienceMembers({
         : [...chosen, member],
     );
   };
-  const failed = candidates.users.isError || candidates.teams.isError;
-  if (candidates.list.length === 0 && !failed) {
+  const list = usersOnly
+    ? candidates.list.filter((candidate) => candidate.kind === "user")
+    : candidates.list;
+  const failed =
+    candidates.users.isError || (!usersOnly && candidates.teams.isError);
+  if (list.length === 0 && !failed) {
     // The list has not answered yet, or answered with nobody. Either way the
     // reader is told rather than shown an empty box that reads as an
     // company with no contacts in it.
@@ -180,8 +198,8 @@ export function AudienceMembers({
     <fieldset className="compose-audience-members">
       <legend className="t-label">{t("compose.audienceMembersLegend")}</legend>
       <RosterFailedLine kind="user" roster={candidates.users} />
-      <RosterFailedLine kind="team" roster={candidates.teams} />
-      {candidates.list.map((candidate) => {
+      {!usersOnly && <RosterFailedLine kind="team" roster={candidates.teams} />}
+      {list.map((candidate) => {
         const key = `${candidate.kind}:${candidate.id}`;
         return (
           <Checkbox

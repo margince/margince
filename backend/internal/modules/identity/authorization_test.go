@@ -120,7 +120,7 @@ func TestGetCurrentPrincipalForbidsCaching(t *testing.T) {
 		}))
 	rec := httptest.NewRecorder()
 
-	Handlers{}.GetCurrentPrincipal(rec, req)
+	Handlers{}.GetCurrentPrincipal(rec, req, crmcontracts.GetCurrentPrincipalParams{})
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", rec.Code)
@@ -142,7 +142,7 @@ func TestGetCurrentPrincipalForbidsCaching(t *testing.T) {
 func TestGetCurrentPrincipalRejectsAPrincipalWithoutASession(t *testing.T) {
 	rec := httptest.NewRecorder()
 
-	Handlers{}.GetCurrentPrincipal(rec, httptest.NewRequest(http.MethodGet, "/me", nil))
+	Handlers{}.GetCurrentPrincipal(rec, httptest.NewRequest(http.MethodGet, "/me", nil), crmcontracts.GetCurrentPrincipalParams{})
 
 	if rec.Code != http.StatusUnauthorized {
 		t.Errorf("status = %d, want 401 — an agent must not receive a human profile", rec.Code)

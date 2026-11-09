@@ -28,7 +28,6 @@ package gates
 // has — so the marker's own doc comment says to read the handler first.
 
 import (
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -37,6 +36,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -82,7 +82,7 @@ func TestTheClientsModelRouteTableIsTheContracts(t *testing.T) {
 // the way the client spells a route, with the marker's value.
 func contractModelRoutes(t *testing.T) map[string]string {
 	t.Helper()
-	raw, err := os.ReadFile(modelRouteContract)
+	raw, err := gatekit.ReadFile(modelRouteContract)
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}
@@ -204,7 +204,7 @@ func TestTheModelRouteDeadlineReachesNothingTheContractDoesNotMark(t *testing.T)
 // parses, so both censuses read one declaration of the paths.
 func contractPaths(t *testing.T) []string {
 	t.Helper()
-	raw, err := os.ReadFile(modelRouteContract)
+	raw, err := gatekit.ReadFile(modelRouteContract)
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}
@@ -245,7 +245,7 @@ func modelRouteDeadlinePatterns(t *testing.T) []string {
 // shape they read.
 func modelRouteDeadlineList(t *testing.T, name string) []string {
 	t.Helper()
-	source, err := os.ReadFile(modelRouteDeadlineFile)
+	source, err := gatekit.ReadFile(modelRouteDeadlineFile)
 	if err != nil {
 		t.Fatalf("reading %s: %v", modelRouteDeadlineFile, err)
 	}
@@ -306,7 +306,7 @@ var goStringLiteral = regexp.MustCompile(`"([^"]*)"`)
 // leaves the text as the one thing this gate can read.
 func clientModelRoutes(t *testing.T) map[string]string {
 	t.Helper()
-	source, err := os.ReadFile(modelRouteClient)
+	source, err := gatekit.ReadFile(modelRouteClient)
 	if err != nil {
 		t.Fatalf("reading the client: %v", err)
 	}
@@ -357,7 +357,7 @@ const clientDeadlineHeadroomMs = 30_000
 // either way) but never shorter.
 func TestTheClientsModelRouteDeadlineMatchesTheServers(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile(modelRouteClient)
+	source, err := gatekit.ReadFile(modelRouteClient)
 	if err != nil {
 		t.Fatalf("reading the client: %v", err)
 	}

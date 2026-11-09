@@ -2,10 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../../api/schema";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../../testing/story-utils";
 import { DealHowItStands, type DealStandingHead } from "./dealhowitstands";
@@ -81,7 +83,9 @@ const DEAL: Deal = {
   stalled: false,
   last_activity_at: "2026-08-01T10:00:00Z",
   expected_close_date: "2026-09-30",
-  forecast_category: "best_case",
+  win_probability: 60,
+  win_probability_source: "human",
+  stage_win_probability: 40,
   source: "manual",
   captured_by: "human:u1",
   created_at: "2026-06-02T09:00:00Z",
@@ -206,7 +210,10 @@ const drifting: DealStandingInputs = {
 /** A deal the model read as drifting: a reply owed, one seat on the deal. */
 export const Drifting: Story = {
   render: () => {
-    installFetchStub({ "GET /field-history": stageHistory });
+    installFetchStub({
+      "GET /me": meRoute({ deal: ["read"] }),
+      "GET /field-history": stageHistory,
+    });
     return (
       <StoryProviders>
         <DealHowItStands head={read} inputs={drifting} />
@@ -223,7 +230,10 @@ export const DriftingDark: Story = { ...Drifting, globals: { theme: "dark" } };
  */
 export const Won: Story = {
   render: () => {
-    installFetchStub({ "GET /field-history": stageHistory });
+    installFetchStub({
+      "GET /me": meRoute({ deal: ["read"] }),
+      "GET /field-history": stageHistory,
+    });
     return (
       <StoryProviders>
         <DealHowItStands
@@ -241,7 +251,10 @@ export const Won: Story = {
 /** A lost deal says why, in grey, under the outcome. */
 export const Lost: Story = {
   render: () => {
-    installFetchStub({ "GET /field-history": stageHistory });
+    installFetchStub({
+      "GET /me": meRoute({ deal: ["read"] }),
+      "GET /field-history": stageHistory,
+    });
     return (
       <StoryProviders>
         <DealHowItStands
@@ -261,6 +274,59 @@ export const Lost: Story = {
   },
 };
 
+/** A long note keeps the reason as the headline and sits under it, two lines
+ *  until Show more. */
+export const LostWithLongNote: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({ deal: ["read"] }),
+      "GET /field-history": stageHistory,
+      "GET /loss-reasons": () =>
+        jsonResponse({
+          data: [
+            {
+              id: "r-1",
+              key: "no_fit",
+              label: "Product did not fit",
+              active: true,
+              sort_order: 10,
+              system: false,
+              version: 1,
+              created_at: "2026-08-01T08:00:00Z",
+              updated_at: "2026-08-01T08:00:00Z",
+            },
+          ],
+        }),
+    });
+    return (
+      <StoryProviders>
+        <DealHowItStands
+          head={read}
+          inputs={{
+            ...drifting,
+            deal: {
+              ...DEAL,
+              status: "lost",
+              closed_at: "2026-08-12T12:00:00Z",
+              lost_reason_code: "no_fit",
+              lost_reason:
+                "The club's board turned the rollout down. Its members would rather keep the way they work today, so the project met resistance at board level. The sponsor thanked us for the groundwork and is closing the deal on their side. Clubs are not in the customer's target market, so they will not take it further.",
+            },
+          }}
+        />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const more = await canvas.findByRole("button", { name: "Show more" });
+    await userEvent.click(more);
+    await expect(
+      canvas.getByRole("button", { name: "Show less" }),
+    ).toHaveAttribute("aria-expanded", "true");
+  },
+};
+
 /**
  * A new deal nobody has read: no verdict, no history the reader may see, no
  * committee, no activity. Every reading names what it lacks.
@@ -268,6 +334,7 @@ export const Lost: Story = {
 export const NotAssessed: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ deal: ["read"] }),
       "GET /field-history": () => new Response(null, { status: 403 }),
     });
     return (

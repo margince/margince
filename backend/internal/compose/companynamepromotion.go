@@ -126,10 +126,8 @@ type CompanyNamePromoter struct {
 	log       *slog.Logger
 }
 
-// NewCompanyNamePromoter builds the sweep over the pool. Its approvals service is
-// the staging half only: the accept EFFECT is registered on the service the
-// HTTP surface decides through (approvalsServiceWithEffects), which is where a
-// human's decision arrives.
+// NewCompanyNamePromoter stages proposals. The deciding service registers
+// their accept effects through NewApprovalsServiceWithEffects.
 func NewCompanyNamePromoter(pool *pgxpool.Pool, log *slog.Logger) *CompanyNamePromoter {
 	return &CompanyNamePromoter{
 		pool:      pool,

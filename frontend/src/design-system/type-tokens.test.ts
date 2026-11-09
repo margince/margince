@@ -10,7 +10,7 @@ import { normalize, parseBlock, tokenDecls, tokensCss } from "./tokens-testing";
 // a sheet and nothing else, and one file holding both had grown past the point
 // where a reader could hold it.
 //
-// This is the inside of the rule type-source.test.ts holds everywhere else.
+// This is the inside of the rule census/rules/type-source.census.ts holds everywhere else.
 // That gate refuses a size, leading, weight or tracking spelled by value in any
 // file but this one; something still has to say what tokens.css itself may say,
 // and a sheet nobody checks is the one place a second spelling can hide in
@@ -43,6 +43,8 @@ describe("the type scale and the control geometry", () => {
       "--fontDisplayLarge",
       "--fontDisplayMedium",
       "--fontDisplayFigure",
+      "--fontPlateFigure",
+      "--fontPlateLeadFigure",
       "--fontLead",
       "--fontFamilyBody",
       "--controlHeight",
@@ -120,11 +122,11 @@ describe("the type scale and the control geometry", () => {
   });
 
   // Every size in the type scale reads a weight token. A spelled 400 or 700
-  // here is the second spelling type-source.test.ts refuses everywhere else,
+  // here is the second spelling census/rules/type-source.census.ts refuses everywhere else,
   // and this file is the one place that gate cannot speak for.
   it("spells no weight by value in the type scale", () => {
     const spelled = Object.entries(light)
-      .filter(([name]) => /^--font(Body|Heading|Display|Lead)/.test(name))
+      .filter(([name]) => /^--font(Body|Heading|Display|Plate|Lead)/.test(name))
       .filter(([, value]) => !value.startsWith("var(--fontWeight"))
       .map(([name, value]) => `${name}: ${value}`);
     expect(spelled, spelled.join("\n")).toEqual([]);

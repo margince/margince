@@ -30,6 +30,7 @@ export const CanSendAnyway: Story = {
     review: {
       reviewId: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0001",
       actions: ["direct_send"],
+      refusals: [],
       overrulable: [],
     },
   },
@@ -43,6 +44,7 @@ export const OffersNothing: Story = {
     review: {
       reviewId: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0002",
       actions: ["overrule"],
+      refusals: [],
       overrulable: [
         {
           contactId: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0003",

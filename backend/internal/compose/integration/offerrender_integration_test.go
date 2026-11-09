@@ -160,7 +160,7 @@ func TestOfferRenderPrepareRender_DraftNoBuyerCompany_DefaultsLocaleAndOmitsBuye
 	if ing.Locale != "de-DE" {
 		t.Fatalf("an offer with no template must default to locale de-DE, got %q", ing.Locale)
 	}
-	if ing.IssuerName == "" {
+	if ing.Issuer.Name == "" {
 		t.Fatal("PrepareRender must resolve a non-empty live issuer name")
 	}
 	if len(ing.LineItems) != 1 {
@@ -235,10 +235,9 @@ func TestOfferRenderPrepareRender_Sent_UsesFrozenBuyerAndIssuerSnapshot(t *testi
 		t.Fatalf("rename company: %v", err)
 	}
 
-	// Renaming the INSTALLATION (the issuer side) after send must equally
-	// not move — resolveRenderIssuerName's frozen issuer_snapshot is the
-	// legal issuer of record for a sent offer, the same rule as the buyer
-	// side above.
+	// Renaming the installation (the issuer side) after send must not move
+	// it either. resolveRenderIssuer reads the frozen issuer_snapshot, the
+	// issuer of record for a sent offer, by the buyer side's rule above.
 	renamedInstallation := "Renamed Installation After Send"
 	e.WsExec(t, `UPDATE setting SET value = to_jsonb($1::text) WHERE key = 'installation.name'`, renamedInstallation)
 
@@ -249,8 +248,8 @@ func TestOfferRenderPrepareRender_Sent_UsesFrozenBuyerAndIssuerSnapshot(t *testi
 	if ing.BuyerBlock == nil || ing.BuyerBlock["display_name"] != "Frozen Co" {
 		t.Fatalf("a sent offer must render the FROZEN buyer name, got %+v", ing.BuyerBlock)
 	}
-	if ing.IssuerName != "Authz" {
-		t.Fatalf("a sent offer must render the FROZEN issuer_snapshot workspace name %q, not the live (renamed) workspace name, got %q", "Authz", ing.IssuerName)
+	if ing.Issuer.Name != "Authz" {
+		t.Fatalf("a sent offer must render the FROZEN issuer_snapshot workspace name %q, not the live (renamed) workspace name, got %q", "Authz", ing.Issuer.Name)
 	}
 }
 
@@ -322,7 +321,7 @@ func TestOfferRenderPrintsWhatTheTemplateAndOfferFormsSaved(t *testing.T) {
 	if err != nil {
 		t.Fatalf("prepare render: %v", err)
 	}
-	pdf, err := deals.RenderOfferPDF(ing.Offer, ing.LineItems, ing.BuyerBlock, ing.IssuerName, ing.Locale, ing.Layout)
+	pdf, err := deals.RenderOfferPDF(ing.Offer, ing.LineItems, ing.BuyerBlock, deals.PDFIssuer{OfferIssuer: ing.Issuer}, ing.Locale, ing.Layout)
 	if err != nil {
 		t.Fatalf("render: %v", err)
 	}
@@ -651,9 +650,9 @@ func TestOfferRenderIssuerPrefersAConfirmedLegalName(t *testing.T) {
 	if err != nil {
 		t.Fatalf("prepare render: %v", err)
 	}
-	if ing.IssuerName != "Anchor Holding GmbH" {
+	if ing.Issuer.Name != "Anchor Holding GmbH" {
 		t.Errorf("a draft rendered as %q, want the confirmed legal name — the issuer block must "+
-			"mirror the buyer block it shares a page with", ing.IssuerName)
+			"mirror the buyer block it shares a page with", ing.Issuer.Name)
 	}
 }
 
@@ -672,11 +671,11 @@ func TestOfferRenderIssuerIgnoresAnUnconfirmedLegalName(t *testing.T) {
 	if err != nil {
 		t.Fatalf("prepare render: %v", err)
 	}
-	if ing.IssuerName == "Anchor Holding GmbH" {
+	if ing.Issuer.Name == "Anchor Holding GmbH" {
 		t.Error("an unconfirmed proposal reached a document; only a human confirmation may change " +
 			"what an installation issues under")
 	}
-	if ing.IssuerName == "" {
+	if ing.Issuer.Name == "" {
 		t.Error("nothing was printed at all — the settings name is what an installation goes on " +
 			"issuing under until somebody confirms another")
 	}

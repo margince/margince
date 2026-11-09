@@ -295,3 +295,39 @@ describe("a window opened from inside a dialog", () => {
     expect(onCloseDrawer).not.toHaveBeenCalled();
   });
 });
+
+describe("a dialog opened from inside the window", () => {
+  function LinkAsk({ onCloseAsk }: Readonly<{ onCloseAsk: () => void }>) {
+    const [state, setState] = useState<DockState>("open");
+    return (
+      <LocaleProvider initial="en">
+        <DockedWindow
+          title="Re: Budget"
+          state={state}
+          onStateChange={setState}
+          onClose={vi.fn()}
+        >
+          <input aria-label="Words" />
+          <Modal open onClose={onCloseAsk} labelledBy="ask" intent="form">
+            <Heading size="large" id="ask">
+              Add link
+            </Heading>
+            <input aria-label="Address" />
+          </Modal>
+        </DockedWindow>
+      </LocaleProvider>
+    );
+  }
+
+  it("keeps its own Escape, and the window stays open", async () => {
+    const onCloseAsk = vi.fn();
+    const user = userEvent.setup();
+    render(<LinkAsk onCloseAsk={onCloseAsk} />);
+    screen.getByLabelText("Address").focus();
+
+    await user.keyboard("{Escape}");
+
+    expect(onCloseAsk).toHaveBeenCalledOnce();
+    expect(screen.getByRole("dialog", { name: "Re: Budget" })).toBeTruthy();
+  });
+});

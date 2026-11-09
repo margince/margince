@@ -291,7 +291,7 @@ scrape time, and every api replica answers the same numbers, so read them with `
 | `margince_capture_confidentiality_oldest_wait_seconds` | — | how long the longest-held of them has been hidden from the team, counted from the capture of the message that opened the thread; 0 when none waits |
 
 Alert when the age stays above how often the pass runs. An admin then raises the cap under
-Settings → Capture rules, or by `PATCH /v1/capture/settings`, and the next run uses it.
+Settings → Mail capture, or by `PATCH /v1/capture/settings`, and the next run uses it.
 
 ## The operator surface of the worker
 

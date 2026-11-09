@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -48,6 +49,9 @@ func (f *fakeOAuth) Refresh(_ context.Context, _ string, granted []string) (oaut
 }
 
 type fakeAPI struct {
+	// mu guards what GetMIME records: a backfill page fetches concurrently.
+	mu         sync.Mutex
+	fetchedVia map[string]string
 	email      string
 	receivedAt map[string]time.Time
 	// DeltaInit's canned INBOX round (the initial/bounded anchor).
@@ -72,14 +76,18 @@ type fakeAPI struct {
 	deltaCalls   int
 	seenDelta    string
 
-	getErr    error
-	getErrIDs map[string]error // a fault scoped to one message, so a test can fault one folder alone
-	raws      map[string][]byte
+	getErr  error
+	fetched []string // every id GetMIME was asked for, in order
+	// fetchedFrom is the folder each fetch named, "" for mailbox-wide.
+	fetchedFrom []string
+	getErrIDs   map[string]error // a fault scoped to one message, so a test can fault one folder alone
+	raws        map[string][]byte
 
 	estimate      int
 	estimateAfter time.Time
 	listIDs       []string
 	sentIDs       map[string]bool // listed ids Graph filed under Sent Items
+	junkIDs       map[string]bool // listed ids Graph filed under Junk Email
 	skipIDs       map[string]bool // ids GetMIME refuses as a per-message drop
 	sentFolderErr error
 
@@ -217,7 +225,15 @@ func (f *fakeAPI) Delta(_ context.Context, _, deltaLink string) ([]MessageRef, [
 	return f.messageRefs(f.deltaIDs), f.deltaRemoved, f.deltaLink, nil
 }
 
-func (f *fakeAPI) GetMIME(_ context.Context, _, id string) ([]byte, error) {
+func (f *fakeAPI) GetMIME(_ context.Context, _, folder, id string) ([]byte, error) {
+	f.mu.Lock()
+	f.fetched = append(f.fetched, id)
+	f.fetchedFrom = append(f.fetchedFrom, folder)
+	if f.fetchedVia == nil {
+		f.fetchedVia = map[string]string{}
+	}
+	f.fetchedVia[id] = folder
+	f.mu.Unlock()
 	if f.skipIDs[id] {
 		return nil, fmt.Errorf("graph: message %s exceeds the size cap: %w", id, connector.ErrSkip)
 	}
@@ -241,26 +257,33 @@ func (f *fakeAPI) ListAfter(_ context.Context, _ string, _ time.Time, pageToken 
 	msgs := make([]MessageRef, 0, len(f.listIDs))
 	for _, id := range f.listIDs {
 		folder := inboxFolderID
-		if f.sentIDs[id] {
+		switch {
+		case f.sentIDs[id]:
 			folder = sentFolderID
+		case f.junkIDs[id]:
+			folder = junkFolderID
 		}
 		msgs = append(msgs, MessageRef{ID: id, ParentFolderID: folder, ReceivedAt: f.receivedAt[id]})
 	}
 	return msgs, f.listNext, nil
 }
 
-// The stub mailbox's two folder ids: a listed message carries one of them, and
-// SentFolderID names which one means the owner sent it.
+// The stub mailbox's folder ids: a listed message carries one of them, and
+// FolderID names the two the sync reads.
 const (
 	sentFolderID  = "folder-sent"
 	inboxFolderID = "folder-inbox"
+	junkFolderID  = "folder-junk"
 )
 
 func (f *fakeAPI) ListFolders(context.Context, string) ([]connector.NamedContainer, bool, error) {
 	return f.folders, f.foldersCut, f.foldersErr
 }
 
-func (f *fakeAPI) SentFolderID(context.Context, string) (string, error) {
+func (f *fakeAPI) FolderID(_ context.Context, _, wellKnown string) (string, error) {
+	if wellKnown == folderInbox {
+		return inboxFolderID, nil
+	}
 	if f.sentFolderErr != nil {
 		return "", f.sentFolderErr
 	}
@@ -397,6 +420,9 @@ func TestSyncInitialAnchorIsBoundedAndCaptures(t *testing.T) {
 	}
 	if sink.recs[0].Source != "graph:m1@mail.example" {
 		t.Errorf("Source = %q, want graph:m1@mail.example", sink.recs[0].Source)
+	}
+	if got := sink.recs[0].ProviderMessageID; got != "m1" {
+		t.Errorf("provider message id = %q", got)
 	}
 	if sink.recs[0].CapturedBy != "connector:graph" {
 		t.Errorf("CapturedBy = %q, want connector:graph", sink.recs[0].CapturedBy)
@@ -755,13 +781,13 @@ func (s *graphRemovalSink) RemoveMessage(_ context.Context, key connector.Natura
 	return s.err
 }
 
-// A failure on one removal does not stop the ones behind it. Losing a round of
-// mail because a single deletion could not be acted on trades a small wrong for
-// a larger one.
+// Every removal is attempted, and any failure is returned to the sync.
 func TestAFailedRemovalDoesNotStopTheGraphRemovalsBehindIt(t *testing.T) {
 	sink := &graphRemovalSink{err: errors.New("the copy is held by a legal duty")}
 
-	reportRemovals(context.Background(), sink, []string{"a", "b", "c"})
+	if err := reportRemovals(context.Background(), sink, []string{"a", "b", "c"}); err == nil {
+		t.Fatal("removal failures were lost")
+	}
 
 	if len(sink.removed) != 3 {
 		t.Fatalf("reached %d removals, want all 3 — one failure stopped the rest", len(sink.removed))
@@ -774,7 +800,9 @@ func TestAFailedRemovalDoesNotStopTheGraphRemovalsBehindIt(t *testing.T) {
 func TestAGraphSinkThatTakesNoRemovalsIsNotAFailure(t *testing.T) {
 	plain := &recordingSink{}
 
-	reportRemovals(context.Background(), plain, []string{"gone"})
+	if err := reportRemovals(context.Background(), plain, []string{"gone"}); err != nil {
+		t.Fatal(err)
+	}
 
 	if len(plain.recs) != 0 {
 		t.Errorf("a removal reached Upsert: %+v", plain.recs)
@@ -785,7 +813,9 @@ func TestAGraphSinkThatTakesNoRemovalsIsNotAFailure(t *testing.T) {
 func TestAnEmptyGraphRemovalListAsksTheSinkNothing(t *testing.T) {
 	sink := &graphRemovalSink{}
 
-	reportRemovals(context.Background(), sink, nil)
+	if err := reportRemovals(context.Background(), sink, nil); err != nil {
+		t.Fatal(err)
+	}
 
 	if len(sink.removed) != 0 {
 		t.Errorf("an empty list reached the sink: %+v", sink.removed)
@@ -797,7 +827,9 @@ func TestAnEmptyGraphRemovalListAsksTheSinkNothing(t *testing.T) {
 func TestEachGraphRemovalNamesThisConnectorsSourceSystem(t *testing.T) {
 	sink := &graphRemovalSink{}
 
-	reportRemovals(context.Background(), sink, []string{"AAMkAGI2"})
+	if err := reportRemovals(context.Background(), sink, []string{"AAMkAGI2"}); err != nil {
+		t.Fatal(err)
+	}
 
 	if len(sink.removed) != 1 {
 		t.Fatalf("want one removal, got %+v", sink.removed)
