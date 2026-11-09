@@ -8,6 +8,7 @@
 import { globSync } from "node:fs";
 import { join } from "node:path";
 import type { TestSequencer, TestSpecification, Vitest } from "vitest/node";
+import { stable } from "../src/format/collate";
 
 /**
  * Splits `costs` into `count` slices, heaviest first, each onto the slice
@@ -69,7 +70,7 @@ export async function compilerTests(frontendRoot: string): Promise<string[]> {
   const costs = testCosts(files.map((file) => join(frontendRoot, file)));
   return files
     .filter((file) => costs.get(join(frontendRoot, file))?.kind !== "render")
-    .sort();
+    .sort(stable);
 }
 
 export class CostSequencer implements TestSequencer {
