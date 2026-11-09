@@ -32,9 +32,9 @@ func (c *Connector) CalendarRespond(ctx context.Context, auth connector.Auth, ui
 
 // graphAnswers are Microsoft's action names for the contract's answers.
 var graphAnswers = map[string]string{
-	"accepted":  "accept",
-	"tentative": "tentativelyAccept",
-	"declined":  "decline",
+	connector.ResponseAccepted:  "accept",
+	connector.ResponseTentative: "tentativelyAccept",
+	connector.ResponseDeclined:  "decline",
 }
 
 // Respond finds the event by its iCalendar UID and posts the answer action,
@@ -46,7 +46,7 @@ func (a *httpAPI) Respond(ctx context.Context, token, uid, response string) erro
 	}
 	// OData quotes a literal with single quotes and doubles one inside it.
 	filter := "iCalUId eq '" + strings.ReplaceAll(uid, "'", "''") + "'"
-	query := url.Values{"$filter": {filter}, "$select": {"id"}, "$top": {"1"}}
+	query := url.Values{"$filter": {filter}, "$select": {"id"}, topParam: {"1"}}
 	var found struct {
 		Events []struct {
 			ID string `json:"id"`

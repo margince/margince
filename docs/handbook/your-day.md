@@ -235,7 +235,7 @@ Also called: customer request, email nobody answered, email to-do.
 
 ### How do I answer a calendar invitation?
 An email that invites you to a meeting shows **Accept**, **Maybe** and **Decline** in place of **Reply**. That is on Home, in the Worklist, in a record's **History** and in the email reader.
-- Your answer goes out through your own connected calendar, which tells the person who sent the invite. Without a connected calendar, Margince says so under the answers.
+- Your answer goes out through your own connected calendar, which lets the sender know. Without a connected calendar, Margince says so under the answers.
 - The card is tagged **Invitation** and shows when the meeting starts. It stays under **Needs you** until you answer, and Margince files no reminder task for it.
 - You can change your answer later: your current answer shows pressed.
 - **Reply** stays in the email reader, for proposing another time.
