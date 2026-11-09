@@ -176,11 +176,10 @@ it("never shows one contact's threads under the next contact's name", async () =
 });
 
 it("waits for the contact's answer before saying nothing matches", async () => {
-  serveHeld(
-    (query) =>
-      query.get(CAPTURE_CONTACT_PARAM)
-        ? new Promise<Response>(() => undefined)
-        : jsonResponse(heldThreadList()),
+  serveHeld((query) =>
+    query.get(CAPTURE_CONTACT_PARAM)
+      ? new Promise<Response>(() => undefined)
+      : jsonResponse(heldThreadList()),
   );
   steppedClock();
   openFromContact("contact-one");

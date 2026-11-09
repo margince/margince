@@ -198,18 +198,14 @@ export function HeldThreads() {
         />
       )}
       {held.isError && !contactRefused && <ErrorLine error={held.error} />}
-      {/* A failed next page keeps the rows already read; a refused contact shows none. */}
-      {contactRefused ||
-      (held.isError && rows.length === 0) ? null : !active ? (
-        <Button onClick={() => setBrowse(true)}>
-          {t("heldThreads.browse")}
-        </Button>
-      ) : held.isPending ? (
-        <p role="status">{t("common.loading")}</p>
-      ) : rows.length === 0 ? (
-        <EmptyState>{t("heldThreads.noMatch")}</EmptyState>
-      ) : (
-        <HeldThreadTable rows={rows} />
+      {!contactRefused && (
+        <HeldListBody
+          rows={rows}
+          active={active}
+          pending={held.isPending}
+          failed={held.isError}
+          onBrowse={() => setBrowse(true)}
+        />
       )}
       {active && held.hasNextPage && (
         <Button
@@ -221,6 +217,33 @@ export function HeldThreads() {
       )}
     </div>
   );
+}
+
+// A failed next page keeps the rows already read, beside the error and the
+// retry; only a read with no rows at all leaves the error alone.
+function HeldListBody({
+  rows,
+  active,
+  pending,
+  failed,
+  onBrowse,
+}: Readonly<{
+  rows: HeldThread[];
+  active: boolean;
+  pending: boolean;
+  failed: boolean;
+  onBrowse: () => void;
+}>) {
+  const t = useT();
+  if (failed && rows.length === 0) return null;
+  if (!active) {
+    return <Button onClick={onBrowse}>{t("heldThreads.browse")}</Button>;
+  }
+  if (pending) return <p role="status">{t("common.loading")}</p>;
+  if (rows.length === 0) {
+    return <EmptyState>{t("heldThreads.noMatch")}</EmptyState>;
+  }
+  return <HeldThreadTable rows={rows} />;
 }
 
 // The list a contact's timeline opened. The server answers 404 for a contact
