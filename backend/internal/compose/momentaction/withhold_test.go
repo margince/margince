@@ -12,12 +12,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// reader is a rep holding exactly the activity grants named, and row scope over
-// everything — so the only thing the assertions below can be answering is the
-// object grant.
+// reader is a full-seat rep with the activity grants named and row scope over
+// everything. So the assertions below can answer only the object grant.
 func reader(grant principal.ObjectGrant) context.Context {
+	return seated(principal.SeatFull, grant)
+}
+
+func seated(seat principal.SeatType, grant principal.ObjectGrant) context.Context {
 	return principal.WithActor(context.Background(), principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:test", UserID: ids.NewV7(),
+		Type: principal.PrincipalHuman, ID: "human:test", UserID: ids.NewV7(), SeatType: seat,
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"rep"},
 			Objects:  map[string]principal.ObjectGrant{"activity": grant},
@@ -145,5 +148,52 @@ func TestWithholdLeavesAnAlreadyBlockedVerbSayingWhatItSaid(t *testing.T) {
 	}
 	if *got.BlockedReason != reason {
 		t.Errorf("blocked_reason = %q, want the reason the ladder gave: %q", *got.BlockedReason, reason)
+	}
+}
+
+// The composer's send asks `activity.create`, so a reader without it is told
+// before the composer opens rather than at Send.
+func TestWithholdBlocksDraftReplyForAReaderWhoCannotSend(t *testing.T) {
+	draft := func() crmcontracts.ContactMoment {
+		return crmcontracts.ContactMoment{RecommendedAction: crmcontracts.ContactMomentAction{
+			Kind:        crmcontracts.ContactMomentActionKindDraftReply,
+			Label:       "Draft a reply",
+			State:       crmcontracts.ContactMomentActionStateAvailable,
+			Destination: &crmcontracts.ContactMomentDestination{Surface: crmcontracts.ContactMomentDestinationSurfaceComposer},
+		}}
+	}
+
+	readOnly := draft()
+	Withhold(reader(principal.ObjectGrant{Read: true}), "en", &readOnly)
+	got := readOnly.RecommendedAction
+	if got.State != crmcontracts.ContactMomentActionStateBlocked || got.Destination != nil {
+		t.Fatalf("draft_reply for a read-only reader = %q with destination %+v, want blocked with none", got.State, got.Destination)
+	}
+	if got.BlockedReason == nil || *got.BlockedReason != "You do not have permission to send email" {
+		t.Errorf("draft_reply blocked reason = %v, want the send refusal, not the log one", got.BlockedReason)
+	}
+
+	writer := draft()
+	Withhold(reader(principal.ObjectGrant{Read: true, Create: true}), "en", &writer)
+	if writer.RecommendedAction.State != crmcontracts.ContactMomentActionStateAvailable {
+		t.Errorf("draft_reply for a reader who may send = %q, want available", writer.RecommendedAction.State)
+	}
+}
+
+// A read seat writes nothing whatever its role grants, so the create grant on
+// its role still leaves every writing verb blocked.
+func TestWithholdBlocksTheWritingVerbsForAReadSeatWhoseRoleMayLog(t *testing.T) {
+	moment := card()
+
+	Withhold(seated(principal.SeatRead, principal.ObjectGrant{Read: true, Create: true}), "en", &moment)
+
+	if got := moment.RecommendedAction.State; got != crmcontracts.ContactMomentActionStateBlocked {
+		t.Errorf("log_activity state for a read seat = %q, want blocked", got)
+	}
+	if got := (*moment.SecondaryActions)[0].State; got != crmcontracts.ContactMomentActionStateBlocked {
+		t.Errorf("complete_task state for a read seat = %q, want blocked", got)
+	}
+	if got := (*moment.SecondaryActions)[1].State; got != crmcontracts.ContactMomentActionStateAvailable {
+		t.Errorf("open_record state for a read seat = %q, want available — it writes nothing", got)
 	}
 }
