@@ -14,6 +14,7 @@ import { formatDayMonth } from "../../format/format.dates";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { CompanyTab } from "../../lib/companytab";
+import { labelFor } from "../../lib/labelfor";
 import { useMemberName } from "../../lib/membernames";
 import { useViewerZone } from "../../lib/viewerzone";
 import { recordNamesIn } from "./company360";
@@ -89,7 +90,7 @@ function LatestRow({
   const email = activity.email_summary;
   const sub = [
     who,
-    t(KIND_WORD[activity.kind]),
+    t(labelFor(KIND_WORD, activity.kind)),
     activityDay(
       activity.occurred_at,
       activity.occurred_precision,

@@ -18,6 +18,7 @@ import {
   UNIT_LABEL,
   VIEW_OF,
 } from "../../lib/filtersaddress";
+import { labelFor } from "../../lib/labelfor";
 import { useCreateList, useListsAvailable } from "../../lib/lists.queries";
 import { problemMessageOf } from "../../lib/problem";
 import type { Route } from "../../lib/router";
@@ -150,7 +151,7 @@ export function SaveFilterModal({
             {...control}
             value={name}
             placeholder={t("filters.namePlaceholder", {
-              records: t(UNIT_LABEL[tab]),
+              records: t(labelFor(UNIT_LABEL, tab)),
             })}
             onChange={(event) => setName(event.target.value)}
           />

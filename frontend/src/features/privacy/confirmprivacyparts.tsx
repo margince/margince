@@ -8,6 +8,7 @@ import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { periodText } from "../../lib/jurisdictiontext";
+import { labelFor } from "../../lib/labelfor";
 import { keepFor } from "./retention.logic";
 
 type PrivacyInformationPage = components["schemas"]["PrivacyInformationPage"];
@@ -111,7 +112,7 @@ export function HeldCard({ card }: Readonly<{ card: PrivacyInformationPage }>) {
           <ul className="confirm-fields">
             {card.data_categories.map((category) => (
               <li key={category} className="t-body">
-                {t(CATEGORY_LABEL[category])}
+                {t(labelFor(CATEGORY_LABEL, category))}
               </li>
             ))}
           </ul>
@@ -124,7 +125,7 @@ export function HeldCard({ card }: Readonly<{ card: PrivacyInformationPage }>) {
         <ul className="confirm-fields">
           {card.recipients.map((recipient) => (
             <li key={recipient} className="t-body">
-              {t(RECIPIENT_LABEL[recipient])}
+              {t(labelFor(RECIPIENT_LABEL, recipient))}
             </li>
           ))}
         </ul>
@@ -163,7 +164,7 @@ export function RetentionCard({
         <ul className="confirm-fields">
           {named.map(({ rule, scope }) => (
             <li key={rule.scope} className="t-body">
-              {t(ACTION_LABEL[rule.action], {
+              {t(labelFor(ACTION_LABEL, rule.action), {
                 scope: t(scope),
                 days: windowOf(rule.retain_days),
               })}

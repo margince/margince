@@ -1,5 +1,6 @@
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
+import { labelFor } from "./labelfor";
 
 type Kind = components["schemas"]["CaptureConcernKind"];
 export const CAPTURE_CONCERNS: Readonly<Record<Kind, MessageKey>> = {
@@ -19,5 +20,5 @@ export function concernKey(
 ): MessageKey {
   return errorClass === "forbidden"
     ? "captureConcern.roleCannotCapture"
-    : CAPTURE_CONCERNS[concern];
+    : labelFor(CAPTURE_CONCERNS, concern);
 }

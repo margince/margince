@@ -11,6 +11,7 @@ import {
 import { omitted, type SectionState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { navigate } from "../../lib/router";
 import { useWriteRefusal } from "./contactactions";
@@ -222,5 +223,5 @@ export function directionSentence(
   view: Contact360,
   t: ReturnType<typeof useT>,
 ): string {
-  return t(DIRECTION_SENTENCE[view.relationship_direction ?? "none"]);
+  return t(labelFor(DIRECTION_SENTENCE, view.relationship_direction ?? "none"));
 }

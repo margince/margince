@@ -24,6 +24,7 @@ import {
   TAB_LABEL,
   UNIT_LABEL,
 } from "../../lib/filtersaddress";
+import { labelFor } from "../../lib/labelfor";
 import { type Group, isComplete, newGroup } from "../../lib/segmentpredicate";
 import { useFilterDraft } from "./filterdraft";
 import { FilterEditor } from "./filtereditor";
@@ -52,7 +53,7 @@ export function FilterPage({ tab }: Readonly<{ tab: ObjectTab }>) {
   const land = useLandOnSaved(tab, leave);
 
   const empty = draft.tree.children.length === 0;
-  const records = t(UNIT_LABEL[tab]);
+  const records = t(labelFor(UNIT_LABEL, tab));
   const switchTab = (next: ObjectTab) => {
     if (next === tab) {
       return;
@@ -70,7 +71,7 @@ export function FilterPage({ tab }: Readonly<{ tab: ObjectTab }>) {
   return (
     <div className="wrap filters-screen">
       <FocusedHead
-        title={t(NEW_FILTER_LABEL[tab])}
+        title={t(labelFor(NEW_FILTER_LABEL, tab))}
         control={
           <SegmentedControl
             options={OBJECT_TABS}
@@ -125,7 +126,7 @@ export function FilterPage({ tab }: Readonly<{ tab: ObjectTab }>) {
         open={switchTo !== null}
         onClose={() => setSwitchTo(null)}
         title={t("filters.switch.title", {
-          records: switchTo ? t(UNIT_LABEL[switchTo]) : "",
+          records: switchTo ? t(labelFor(UNIT_LABEL, switchTo)) : "",
         })}
         confirmLabel={t("filters.switch.confirm")}
         onConfirm={() => {
@@ -135,7 +136,7 @@ export function FilterPage({ tab }: Readonly<{ tab: ObjectTab }>) {
           setSwitchTo(null);
         }}
       >
-        <p>{t(SWITCH_CLEARS_LABEL[tab])}</p>
+        <p>{t(labelFor(SWITCH_CLEARS_LABEL, tab))}</p>
       </ConfirmModal>
     </div>
   );

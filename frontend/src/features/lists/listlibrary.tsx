@@ -36,6 +36,7 @@ import {
   resourceOf,
 } from "./library";
 import "../voice-knowledge/library.css";
+import { labelFor } from "../../lib/labelfor";
 import {
   type List,
   type ListRecordType,
@@ -263,7 +264,7 @@ export function ListRecordsCount({
   const type = list.entity_type;
   const count = list.visible_count;
   if (count == null) {
-    return <span>{t(RECORD_TYPE_LABEL[type])}</span>;
+    return <span>{t(labelFor(RECORD_TYPE_LABEL, type))}</span>;
   }
   const records = plural(RECORDS_COUNT_LABEL[type], count, {
     count: formatNumber(count, locale),
@@ -286,7 +287,7 @@ export function ListRecordsCount({
 function LibraryRecords({ item }: Readonly<{ item: LibraryItem }>) {
   const t = useT();
   if (item.kind === "view") {
-    return <span>{t(RECORD_TYPE_LABEL[resourceOf(item)])}</span>;
+    return <span>{t(labelFor(RECORD_TYPE_LABEL, resourceOf(item)))}</span>;
   }
   return (
     <span className="library-records">
@@ -416,7 +417,7 @@ export function NewShortlistAction({
               onChange={(next) => setEntityType(next as ListRecordType)}
               options={LIST_RECORD_TYPES.map((type) => ({
                 value: type,
-                label: t(RECORD_TYPE_LABEL[type]),
+                label: t(labelFor(RECORD_TYPE_LABEL, type)),
               }))}
             />
           )}
