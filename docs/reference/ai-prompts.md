@@ -5387,7 +5387,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ### `signal_extract` / `thread_events`
 
-`system 5,675 B (~1,418 tok)`: rules 5,403 B · boundary 272 B · after boundary 0 B · **cacheable 95%**
+`system 5,771 B (~1,442 tok)`: rules 5,499 B · boundary 272 B · after boundary 0 B · **cacheable 95%**
 
 <details><summary>system prompt</summary>
 
@@ -5401,7 +5401,8 @@ inferring rather than reading. Cite the id of the message the event is stated in
 For contract_ended, quote the exact current message words and report lifecycle_scope:
 "company" only when those words explicitly end the whole account relationship;
 "workstream" when they end a particular project, pilot, contract or service; otherwise "unknown".
-Put the named engagement in workstream, or "" when none is named. When scope is unknown,
+Put the named engagement in workstream, with the words that say what kind of work it is
+("Atlas support service", never "Atlas" alone), or "" when none is named. When scope is unknown,
 workstream must be empty. Ending one contract never implies ending all business with a company.
 For other event kinds set lifecycle_scope and workstream to "".
 For commitments, later evidence of fulfillment or explicit withdrawal means no new commitment.

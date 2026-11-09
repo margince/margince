@@ -24,7 +24,8 @@ inferring rather than reading. Cite the id of the message the event is stated in
 For contract_ended, quote the exact current message words and report lifecycle_scope:
 "company" only when those words explicitly end the whole account relationship;
 "workstream" when they end a particular project, pilot, contract or service; otherwise "unknown".
-Put the named engagement in workstream, or "" when none is named. When scope is unknown,
+Put the named engagement in workstream, with the words that say what kind of work it is
+("Atlas support service", never "Atlas" alone), or "" when none is named. When scope is unknown,
 workstream must be empty. Ending one contract never implies ending all business with a company.
 For other event kinds set lifecycle_scope and workstream to "".
 For commitments, later evidence of fulfillment or explicit withdrawal means no new commitment.
