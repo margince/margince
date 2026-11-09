@@ -201,15 +201,13 @@ export function HeldThreads() {
         <ErrorLine
           error={held.error}
           actions={
-            rows.length === 0 && (
-              <Button
-                variant="link"
-                pending={held.isRefetching}
-                onClick={() => void held.refetch()}
-              >
-                {t("common.retry")}
-              </Button>
-            )
+            <Button
+              variant="link"
+              pending={held.isRefetching}
+              onClick={() => void held.refetch()}
+            >
+              {t("common.retry")}
+            </Button>
           }
         />
       )}

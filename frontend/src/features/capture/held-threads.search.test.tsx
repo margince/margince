@@ -210,6 +210,7 @@ it("keeps the rows already read when the next page fails", async () => {
   expect(await screen.findByRole("alert")).toBeVisible();
   expect(screen.getByText("Lena's contract")).toBeVisible();
   expect(screen.getByRole("button", { name: "Load more" })).toBeVisible();
+  expect(screen.getByRole("button", { name: "Retry" })).toBeVisible();
 });
 
 it("retries a contact's list whose first read failed", async () => {
