@@ -2956,6 +2956,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   "common.undo": "Rückgängig",
   "common.close": "Schließen",
+  "common.unknownValue": "Sonstiges",
   "common.opensNewTab": "(Wird in einem neuen Tab geöffnet)",
   "common.expand": "Vergrößern",
   "common.collapse": "Verkleinern",

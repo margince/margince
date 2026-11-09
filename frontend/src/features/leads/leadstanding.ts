@@ -69,6 +69,10 @@ export function terminalBadge(
     case "contacted":
     case "engaged":
       return null;
+    default:
+      // A status a newer server added is not one this build knows to be
+      // terminal, so the lead keeps no badge rather than an undefined one.
+      return null;
   }
 }
 
