@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture/partslim"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -156,12 +157,16 @@ func WithholdStoredOriginalTx(ctx context.Context, tx pgx.Tx, rawCaptureID ids.U
 	}
 	var payload []byte
 	err := tx.QueryRow(ctx,
-		`SELECT payload FROM raw_capture WHERE id = $1 FOR UPDATE`, rawCaptureID).Scan(&payload)
+		`SELECT `+originalstore.SQL("r")+` FROM raw_capture r WHERE id = $1 FOR UPDATE`, rawCaptureID).Scan(&payload)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}
 	if err != nil {
 		return fmt.Errorf("capture: reading the original to withhold its files: %w", err)
+	}
+	payload, err = originalstore.Decode(ctx, payload)
+	if err != nil {
+		return err
 	}
 	original, err := DecodeStoredOriginal(payload)
 	if err != nil {
@@ -194,10 +199,14 @@ func WithholdStoredOriginalTx(ctx context.Context, tx pgx.Tx, rawCaptureID ids.U
 	if err != nil {
 		return fmt.Errorf("capture: encoding the withheld original: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `
-		UPDATE raw_capture SET payload = $2::jsonb, parts_slimmed_at = now() WHERE id = $1`,
-		rawCaptureID, rewritten); err != nil {
+	inline, ref, err := originalstore.PrepareTx(ctx, tx, rewritten)
+	if err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `UPDATE raw_capture
+ SET payload = @payload::jsonb, payload_object = @object::jsonb, payload_offload_checked_at = now(), parts_slimmed_at = now()
+ WHERE id = @id`, pgx.NamedArgs{"id": rawCaptureID, sqlArgPayload: inline, sqlArgObject: ref}); err != nil {
 		return fmt.Errorf("capture: writing the withheld original: %w", err)
 	}
-	return nil
+	return originalstore.Adopt(ctx, tx, ref)
 }

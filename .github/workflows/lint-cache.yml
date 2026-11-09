@@ -15,6 +15,8 @@ on:
       - "go.work.sum"
       - ".github/workflows/lint-cache.yml"
       - ".github/actions/golangci-cache-key/**"
+      - ".github/actions/ci-image/**"
+      - ".github/ci-image/**"
   workflow_dispatch:
 
 permissions:
@@ -35,16 +37,44 @@ env:
   CHECK_BASE_REF: origin/${{ github.ref_name }}
 
 jobs:
-  warm:
-    name: warm golangci
-    timeout-minutes: 30
-    # A dispatch from any other branch would save an entry no pull request reads.
+  # backend-lint runs in the CI image when it can, and golangci keys its cache
+  # on the checkout path, so this writes the entry where backend-lint will read
+  # it: in the image, or on the runner when the image cannot be pulled.
+  ci-image:
+    name: ci-image
+    timeout-minutes: 60
     if: github.event_name == 'push' || github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      # To delete this branch's older entries once the new one is saved.
-      actions: write
+      packages: write
+    outputs:
+      pinned-image: ${{ steps.image.outputs.pinned-image }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Find or build the CI image
+        id: image
+        uses: ./.github/actions/ci-image
+        with:
+          push: "true"
+          token: ${{ github.token }}
+
+  warm:
+    name: warm golangci
+    timeout-minutes: 30
+    needs: [ci-image]
+    # A dispatch from any other branch would save an entry no pull request reads.
+    if: ${{ !cancelled() && (github.event_name == 'push' || github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.ref == 'refs/heads/develop') }}
+    runs-on: ubuntu-latest
+    container: ${{ needs.ci-image.outputs.pinned-image }}
+    permissions:
+      contents: read
+    outputs:
+      saved: ${{ steps.save.outcome }}
+      key: ${{ steps.golangci-key.outputs.key }}
+      prefix: ${{ steps.golangci-key.outputs.restore-keys }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -52,13 +82,14 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: backend/go.mod
+          go-version-file: ${{ needs.ci-image.outputs.pinned-image == '' && 'backend/go.mod' || '' }}
           cache-dependency-path: backend/go.sum
       - name: Restore the Go build cache
         uses: ./.github/actions/go-build-cache
         with:
           flavor: plain
       - name: Gate binaries on PATH
+        if: needs.ci-image.outputs.pinned-image == ''
         uses: ./.github/actions/gate-binaries
         with:
           save: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
@@ -82,17 +113,28 @@ jobs:
         with:
           path: ~/.cache/golangci-lint
           key: ${{ steps.golangci-key.outputs.key }}
-      # A restore takes the newest entry, so the older ones on this branch only
-      # take room under the repository's cache limit. Only entries saved before
-      # this one go, so a newer entry from cache-warm stays.
+
+  # A restore takes the newest entry, so the older ones on this branch only
+  # take room under the repository's cache limit. Only entries saved before
+  # the new one go, so a newer entry from cache-warm stays. On the runner,
+  # because it needs `gh`, which the CI image does not hold.
+  prune:
+    name: prune older golangci entries
+    timeout-minutes: 10
+    needs: [warm]
+    if: ${{ !cancelled() && needs.warm.outputs.saved == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      # To delete this branch's older entries once the new one is saved.
+      actions: write
+    steps:
       - name: Delete this branch's older golangci entries
-        if: ${{ !cancelled() && steps.save.outcome == 'success' }}
         working-directory: .
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          KEEP: ${{ steps.golangci-key.outputs.key }}
-          PREFIX: ${{ steps.golangci-key.outputs.restore-keys }}
+          KEEP: ${{ needs.warm.outputs.key }}
+          PREFIX: ${{ needs.warm.outputs.prefix }}
         run: |
           entries="$(gh cache list --ref "$GITHUB_REF" --key "$PREFIX" --limit 1000 --json key,createdAt)"
           saved="$(jq -r --arg keep "$KEEP" '.[] | select(.key == $keep) | .createdAt' <<<"$entries")"

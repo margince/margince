@@ -196,7 +196,7 @@ func TestFrozenReplayResendsTheStoredBodyVerbatim(t *testing.T) {
 		eventID:      ids.NewV7(),
 		payload:      preMigrationBody,
 	}
-	out := d.attempt(context.Background(), target)
+	out := d.attempt(context.Background(), target, func() bool { return true })
 	if out.failure != "" {
 		t.Fatalf("attempt failed: %s", out.failure)
 	}

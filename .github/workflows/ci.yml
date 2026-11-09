@@ -296,6 +296,11 @@ jobs:
               # unreviewable without the lane it governs, and the one that
               # introduced it would have merged never once executed.
               - '.github/actions/install-playwright-chromium/**'
+              # And the image the lane runs in, and the action that finds or
+              # builds it, for the same reason: they hold its Node, pnpm and
+              # browser.
+              - '.github/ci-image/**'
+              - '.github/actions/ci-image/**'
             e2e:
               - 'backend/**'
               - 'frontend/**'
@@ -382,6 +387,40 @@ jobs:
               - '.github/workflows/**'
               - '.github/actions/**'
 
+  # The image the toolchain jobs run in, named by digest. Beside `changes`, not
+  # behind it: when the image exists this is a lookup that ends first.
+  #
+  # A run that can push builds and pushes a missing image here, so a pull
+  # request that changes an input runs its own jobs on the image it brings. A
+  # fork's token cannot push, and an image only a login can pull is one no job
+  # can start in; in both cases the output is empty and every job sets up on
+  # the runner. scripts/ci-verdict.sh reads this job like any other, so an
+  # image that fails to build fails `ci` rather than skipping the jobs that
+  # need it into a pass.
+  #
+  # Sixty minutes, because a build fetches every Debian package from the
+  # snapshot archive, and that host has taken over twenty minutes for one set.
+  ci-image:
+    name: ci-image
+    timeout-minutes: 60
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      pinned-image: ${{ steps.image.outputs.pinned-image }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Find or build the CI image
+        id: image
+        uses: ./.github/actions/ci-image
+        with:
+          push: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+          token: ${{ github.token }}
+
   # The deterministic merge gate: build, vet, lint (baseline + new-code
   # strict), arch-lint, unit + root fitness tests (incl. audit_log enum
   # coherence and the contract $ref pre-flight), generated-drift, and the
@@ -390,9 +429,13 @@ jobs:
   deterministic-gates:
     name: deterministic-gates (${{ matrix.part }})
     timeout-minutes: 30
-    needs: [changes]
+    needs: [changes, ci-image]
     if: needs.changes.outputs.backend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
+    # In the CI image when this run can pull it, and on the runner when the
+    # name is empty; the steps marked for the runner then install what the
+    # image would have held.
+    container: ${{ needs.ci-image.outputs.pinned-image }}
     permissions:
       contents: read
     # The uncached root fitness packages were most of the test leg, so they get
@@ -420,9 +463,11 @@ jobs:
           # the first time a gate asks for it.
           fetch-depth: 0
           filter: blob:none
+      # In the image Go is already there, so no version is asked for and
+      # setup-go only restores the module cache.
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: backend/go.mod
+          go-version-file: ${{ needs.ci-image.outputs.pinned-image == '' && 'backend/go.mod' || '' }}
           cache-dependency-path: backend/go.sum
       # The shared Go build cache (see .github/actions/go-build-cache): this job
       # compiles the untagged tree twice over — `go build ./...` plus the unit
@@ -436,8 +481,9 @@ jobs:
       # `make tools` compiles golangci-lint, go-arch-lint, govulncheck and
       # oasdiff into ~/go/bin, which setup-go's caches do not cover. Restored,
       # never saved: an entry a PR saves serves that PR alone, so cache-warm.yml
-      # writes the one on main that every PR reads.
+      # writes the one on main that every PR reads. The image holds them.
       - name: Gate binaries on PATH
+        if: needs.ci-image.outputs.pinned-image == ''
         uses: ./.github/actions/gate-binaries
       # The backend half of the merge gate in one pass:
       # check-craft-doc, image pins, contract-breaking, migration-versions,
@@ -558,9 +604,10 @@ jobs:
   backend-lint:
     name: backend-lint (${{ matrix.pass }})
     timeout-minutes: 30
-    needs: [changes]
+    needs: [changes, ci-image]
     if: needs.changes.outputs.backend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
+    container: ${{ needs.ci-image.outputs.pinned-image }}
     permissions:
       contents: read
     # The baseline pass loads the whole tree, so it gets a runner. The strict
@@ -590,7 +637,7 @@ jobs:
           filter: ${{ matrix.filter }}
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: backend/go.mod
+          go-version-file: ${{ needs.ci-image.outputs.pinned-image == '' && 'backend/go.mod' || '' }}
           cache-dependency-path: backend/go.sum
       - name: Restore the Go build cache
         id: go-cache
@@ -598,6 +645,7 @@ jobs:
         with:
           flavor: plain
       - name: Gate binaries on PATH
+        if: needs.ci-image.outputs.pinned-image == ''
         uses: ./.github/actions/gate-binaries
       - name: Compute the golangci cache key
         id: golangci-key
@@ -1310,9 +1358,11 @@ jobs:
   # As with the integration lane, the conditional lives HERE and not inside the
   # lane, so a skip always means the caller skipped the lane.
   frontend:
-    needs: [changes]
+    needs: [changes, ci-image]
     if: needs.changes.outputs.frontend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     uses: ./.github/workflows/_lane-frontend.yml
+    with:
+      ci-image: ${{ needs.ci-image.outputs.pinned-image }}
 
   # The UAT lane: the AC-<screen>-N screen-acceptance criteria as named
   # Playwright tests, plus the axe WCAG 2.2 AA gate, the 390px
@@ -1340,9 +1390,13 @@ jobs:
     # both gate the merge, the sequence would be the aggregate's wall clock on
     # every frontend change. What the order saved was this job's runner minutes
     # on a change biome would have refused, which is cheaper than the wait.
-    needs: [changes]
+    needs: [changes, ci-image]
     if: needs.changes.outputs.frontend == 'true' && needs.changes.outputs.full_lane == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
+    # The image holds Chromium and the libraries it needs, so a hung package
+    # mirror cannot stop this lane before a test runs. An empty name runs it
+    # on the runner, where the install action below fetches both.
+    container: ${{ needs.ci-image.outputs.pinned-image }}
     permissions:
       contents: read
     defaults:
@@ -1354,10 +1408,13 @@ jobs:
           persist-credentials: false
       # No version input: the pin is package.json's "packageManager", which pnpm
       # and corepack read too. A second one here is refused as a mismatch.
+      # The image's corepack holds that pnpm already.
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        if: needs.ci-image.outputs.pinned-image == ''
+      # In the image Node is already there, so only the pnpm store is restored.
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 24
+          node-version: ${{ needs.ci-image.outputs.pinned-image == '' && '24' || '' }}
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - name: Install deps
@@ -1370,6 +1427,7 @@ jobs:
       # apt inside the runner and an unresponsive mirror hangs with no output.
       # It also says which half hung, which one folded step could not.
       - name: Install the Playwright Chromium browser
+        if: needs.ci-image.outputs.pinned-image == ''
         uses: ./.github/actions/install-playwright-chromium
       - name: Screen-acceptance UAT (build → preview → AC + axe)
         run: make frontend-e2e E2E_ARGS=--shard=${{ matrix.shard }}/3
@@ -1476,6 +1534,9 @@ jobs:
     # which is the whole failure mode this job exists to end.
     if: always()
     needs:
+      # A failed image build skips every job that needs it, and a skip passes
+      # on a pull request; this entry is what turns that failure red.
+      - ci-image
       - deterministic-gates
       - test-budget
       - backend-lint

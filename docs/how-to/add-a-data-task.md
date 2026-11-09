@@ -12,8 +12,9 @@ upgrade rules.
 3. Give each step a starting batch limit, a minimum limit, a bounded estimate and its audit policy.
    An unaudited derived-column write must name the runtime writer that follows the same policy.
 4. Implement domain writes in the owning module's exported transaction function. The adapter takes
-   the executor's `pgx.Tx`; it must not call a store that starts another transaction or perform
-   network I/O. Preserve the module's audit and event policy.
+   the executor's `pgx.Tx`; it must not call a store that starts another transaction or make outward product calls. A batch may
+   read its immutable provider original through the bounded object-store reader. Preserve the module's
+   audit and event policy.
 5. Page over an indexed key and advance over every inspected row. A batch that changes nothing may
    still have more rows to inspect. Exclude already corrected rows from writes so a nil-cursor
    replay changes nothing. The estimate must inspect at most its supplied cap plus one row.
