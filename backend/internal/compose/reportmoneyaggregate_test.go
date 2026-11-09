@@ -23,8 +23,10 @@ func TestEveryAggregateOverAConvertedAmountSaysOnlyWhatItCanPrice(t *testing.T) 
 		measures:    map[string]string{"value": amount},
 		sumCoverage: map[string]string{"value": coverage},
 	}
-	strict := deals.StrictBaseTotalSQL("", "sum("+coverage+")")
-	strictHead := strict[:strings.Index(strict, "ELSE")]
+	strictHead, _, found := strings.Cut(deals.StrictBaseTotalSQL("", "sum("+coverage+")"), "ELSE")
+	if !found {
+		t.Fatal("the strict form has no ELSE arm, so the prefix below proves nothing")
+	}
 	row := deals.FinalizeBaseTotalSQL(amount, coverage)
 
 	for _, fn := range reportPlanVocabulary().Functions {
