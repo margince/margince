@@ -66,13 +66,15 @@ const confidentialityFloor = 0.8
 
 // confidentialityOpens says whether answer opens thread: an opening kind at or
 // above the floor. A thread never opens with a document the verdict did not
-// read, left out or unreadable, because what it holds is unknown.
+// read, left out or unreadable, because what it holds is unknown. Nor with an
+// unread attachment its sender named as private, an image among them.
 func confidentialityOpens(answer confidentialityResult, thread capture.PendingThread) bool {
 	status, _ := statusForConfidentiality(answer.Verdict)
 	if status != capture.VerdictCleared || float64(answer.Confidence) < confidentialityFloor || thread.DocumentsOmitted > 0 {
 		return false
 	}
-	return !slices.ContainsFunc(thread.Documents, func(doc capture.ThreadDocument) bool { return doc.Unreadable })
+	return !slices.ContainsFunc(thread.Documents, func(doc capture.ThreadDocument) bool { return doc.Unreadable }) &&
+		!hasUnreadNamedFile(thread, capture.NamedAsPrivate)
 }
 
 // statusForConfidentiality maps a kind to the ledger status it resolves to.

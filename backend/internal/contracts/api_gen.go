@@ -13937,6 +13937,7 @@ const (
 	ImportReasonCodeCurrencyNotACode             ImportReasonCode = "currency_not_a_code"
 	ImportReasonCodeCurrencyUnset                ImportReasonCode = "currency_unset"
 	ImportReasonCodeDealAlreadyClosed            ImportReasonCode = "deal_already_closed"
+	ImportReasonCodeDealCompanyHasContracts      ImportReasonCode = "deal_company_has_contracts"
 	ImportReasonCodeDealLegalGate                ImportReasonCode = "deal_legal_gate"
 	ImportReasonCodeDealNotFound                 ImportReasonCode = "deal_not_found"
 	ImportReasonCodeDealNotFoundDropped          ImportReasonCode = "deal_not_found_dropped"
@@ -14097,6 +14098,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeCurrencyUnset:
 		return true
 	case ImportReasonCodeDealAlreadyClosed:
+		return true
+	case ImportReasonCodeDealCompanyHasContracts:
 		return true
 	case ImportReasonCodeDealLegalGate:
 		return true
@@ -64093,8 +64096,10 @@ type UpdateDealRequest struct {
 
 	// CommercialMotion Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
 	CommercialMotion *UpdateDealRequestCommercialMotion `json:"commercial_motion,omitempty"`
-	CompanyId        *openapi_types.UUID                `json:"company_id,omitempty"`
-	Currency         *string                            `json:"currency,omitempty"`
+
+	// CompanyId The company this deal is for. Changing it is refused 422 (`deal_contracts_cross_company`) while contracts filed against the deal name another company, because a contract on a deal is visible through that deal alone. Detach those contracts (`deal_id: null` on the contract) or file each against a deal of its own company first; an edit never changes a contract's company, only a company merge does. Null clears the company and is not refused.
+	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
+	Currency  *string             `json:"currency,omitempty"`
 
 	// Description The human-authored statement of what the customer needs, what is in scope and what outcome is intended. Distinct from the GENERATED deal briefing: this is what a colleague wrote, and no assembler may overwrite it. It is supplied to the status/advice assembler as evidence, never as an instruction to follow.
 	Description *string `json:"description,omitempty"`

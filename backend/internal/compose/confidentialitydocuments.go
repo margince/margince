@@ -118,12 +118,20 @@ func isPersonnelWithoutAModel(row capture.PendingThread) bool {
 	if capture.ListsStaffCosts(row.Body) {
 		return true
 	}
+	for _, doc := range row.Documents {
+		if doc.Personnel || capture.NamedAsCV(doc.Filename) {
+			return true
+		}
+	}
+	return hasUnreadNamedFile(row, capture.NamedAsPersonnel)
+}
+
+func hasUnreadNamedFile(row capture.PendingThread, named func(string) bool) bool {
 	// Names are counted, not keyed: a readable file must not vouch for an
 	// unread one that shares its name.
 	readByName := map[string]int{}
 	for _, doc := range row.Documents {
-		if doc.Personnel || capture.NamedAsCV(doc.Filename) ||
-			doc.Unreadable && capture.NamedAsPrivate(doc.Filename) {
+		if doc.Unreadable && named(doc.Filename) {
 			return true
 		}
 		if !doc.Unreadable {
@@ -135,7 +143,7 @@ func isPersonnelWithoutAModel(row capture.PendingThread) bool {
 			readByName[name]--
 			continue
 		}
-		if capture.NamedAsPrivate(name) {
+		if named(name) {
 			return true
 		}
 	}

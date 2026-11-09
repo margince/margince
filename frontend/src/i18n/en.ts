@@ -9968,6 +9968,8 @@ export const en = {
     "A lost deal needs the reason it was lost.",
   "import.reason.deal_pipeline_fixed":
     "This deal is in another pipeline than the file names. An import does not move a deal between pipelines, so the row is skipped.",
+  "import.reason.deal_company_has_contracts":
+    "This deal has contracts that name a company other than the one in this row, so the row is skipped. Detach the contracts from the deal, or file each against a deal of its own company, then import again.",
   "import.reason.deal_already_closed":
     "This deal is already closed, so the row is skipped. An import does not reopen a closed deal.",
   "import.reason.fx_rate_missing":
@@ -11459,6 +11461,11 @@ export const en = {
   "aiHealth.callCounts_one": "{count} call, {failures} failed",
   "aiHealth.callCounts_other": "{count} calls, {failures} failed",
   "heldThreads.search": "Search subject or party",
+  "heldThreads.forContact": "Show held mail with this contact",
+  "heldThreads.withContact": "Threads with",
+  "heldThreads.allThreads": "Show all threads",
+  "heldThreads.contactUnavailable":
+    "The contact is archived or not visible to you, so its threads are not listed.",
   "heldThreads.statusFilter": "Status",
   "heldThreads.statusAll": "Any status",
   "heldThreads.noMatch": "No held thread matches.",

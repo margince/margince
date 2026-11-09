@@ -146,6 +146,12 @@ func TestAThreadWithAnUnreadDocumentNeverOpens(t *testing.T) {
 		"every document read":     {capture.PendingThread{Documents: []capture.ThreadDocument{readable}}, true},
 		"one could not be read":   {capture.PendingThread{Documents: []capture.ThreadDocument{readable, unreadable}}, false},
 		"one was left out unread": {capture.PendingThread{Documents: []capture.ThreadDocument{readable}, DocumentsOmitted: 1}, false},
+		"a read file vouches for its own name": {
+			capture.PendingThread{Documents: []capture.ThreadDocument{readable}, Attachments: []string{"invoice.pdf"}}, true,
+		},
+		"an unread image is named private": {
+			capture.PendingThread{Documents: []capture.ThreadDocument{readable}, Attachments: []string{"invoice.pdf", "passport_scan.jpg"}}, false,
+		},
 	} {
 		if got := confidentialityOpens(sure, tc.thread); got != tc.opens {
 			t.Errorf("%s: opens = %v, want %v", name, got, tc.opens)
