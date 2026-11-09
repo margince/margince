@@ -20,7 +20,7 @@ var syntheticAuditFields = setOf(
 	"meeting_documents_added", "meeting_guests_removed", "merged_from_id", "merged_into_id", "note",
 	"nudge_dismissal", "override_category", "overrides_carried", "proposal_status",
 	"provider_claims_received", "qualifying_event", "qualifying_event_retracted", "reachability",
-	"readiness", "reason", "recorded_at_level", "relinked_activity_links", "relinked_emails",
+	"readiness", "reason", "recorded_at_level", "record_link", "relinked_activity_links", "relinked_emails",
 	"relinked_phones", "relinked_relationships", "reminder_status", "reply_verdict", "reply_verdict_by",
 	"research_claims_accepted", "resolved_category", "revoked_by", "revoked_by_level",
 	"revoked_override", "revoked_rows", "scope", "stopped", "stops_carried", "submission_decision",
