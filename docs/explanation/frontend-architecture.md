@@ -80,7 +80,7 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   the `prefers-reduced-motion` rule: with it on, a change shows its end state at
   once, never nothing.
 
-  `conformance.test.ts` is the drift gate over the whole
+  `frontend/census/rules/conformance.census.ts` is the drift gate over the whole
   tree. No file in `design-system/` imports `app/`, `components/` or `features/`. A part
   that needs a feature, such as the record page's mail drawer, lives in that feature.
 - **`src/app/`**: the shell of the app and what holds on every screen.
@@ -172,7 +172,7 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   and for days the server counts on the company's clock. `browserZone()` is for
   public screens, sign-in and a browser's own date-time input.
   `src/format/timezone.ts` states the rule, and the census in
-  `src/format/zone-by-purpose.test.ts` lists every file that uses an exception,
+  `frontend/census/rules/zone-by-purpose.census.ts` lists every file that uses an exception,
   each with its reason. A file that is not on that list reads the reader's
   zone.
 
@@ -189,7 +189,7 @@ The other side holds too: a file in `components/`, `lib/` or `format/` that
 only one feature uses belongs in that feature. Without this rule, a move of one
 feature's code into a shared folder would get past the first.
 
-`frontend/scripts/feature-boundaries.test.ts` fails both. The imports that
+`frontend/census/rules/feature-boundaries.census.ts` fails both. The imports that
 crossed a feature line when it landed are frozen in
 `frontend/scripts/feature-boundaries-waivers.txt`. That list only gets shorter,
 and a new line is never added. The steps for a move are in
@@ -302,7 +302,7 @@ is styled in error.
 The text colours made for the page fail on that field: `--textSecondary` and `--accentText` measure
 under 3:1 there. `src/design-system/inkfield.css` lists every part of the app drawn on the field. Inside
 those parts, it points the text, link and focus tokens at the field's own colours. A link there has a line
-under it. A new part on the field goes in that list; `inkfield.test.ts` fails one that is missing.
+under it. A new part on the field goes in that list; `frontend/census/rules/inkfield.census.ts` fails one that is missing.
 
 Both themes ship, and **the theme resolves before React starts**.
 `main.tsx` calls `startTheme()` above `createRoot(...).render(...)`. That choice
@@ -416,18 +416,18 @@ even if the test tree breaks.
 | Gate | Where it lives | What fails it |
 |---|---|---|
 | Tokens only | `frontend/scripts/check-ds-purity.sh` | a raw hex, `rgb()`, `rgba()`, `hsl()`, `hsla()` or `oklch()` value in a shipped `.ts`, `.tsx` or `.css` file written by hand under `frontend/src` or `extensions/*/frontend`. It skips four names: `tokens.css` (the raw values are its job), `provider-mark.tsx` (the marks of other companies), `*.test.*` (test data) and the generated `schema.d.ts`. `index.html` is skipped too, for a different reason: the script walks `frontend/src` and `extensions/*/frontend`, and `index.html` is above both. Fails closed if it scans zero files |
-| Type list | `frontend/scripts/check-font-lock.sh` | a `font-family` other than Outfit (titles), Geist (body text, numbers too) or Geist Mono (code only), plus the named fallbacks; and Mono in any place but `code`, `pre`, `samp` and `.code-block`, which `design-system/mono.test.ts` refuses too |
+| Type list | `frontend/scripts/check-font-lock.sh` | a `font-family` other than Outfit (titles), Geist (body text, numbers too) or Geist Mono (code only), plus the named fallbacks; and Mono in any place but `code`, `pre`, `samp` and `.code-block`, which `frontend/census/rules/mono.census.ts` refuses too |
 | No emoji | `frontend/scripts/check-icon-glyph.sh` | an emoji in rendered code. Comments are removed first, since the 🟢/🟡 tier marks are our style and render through `AutonomyDot` |
 | Spacing | `frontend/scripts/check-ds-spacing.sh` | a **new** `margin`, `padding` or `gap` in `px`, written in place. It reads only lines changed against `origin/main`, and skips a line marked `// ds:ignore <reason>` |
 | Spacing roles | `frontend/scripts/check-ds-spacing-roles.sh` | a screen rule that sets the space of a design-system part the design system already spaces, or sets the size of one it already sizes: `font-size`, `line-height`, `letter-spacing`. Both lists are derived from `design-system/*.css` on every run. Also a rule that writes a fixed step where a role exists: the `*-actions` gap, the `*-cards` gap, the `*-card` or `*-panel` `padding`, the `*-panes` `gap` or `column-gap` (`--gapPanes`), and the `*-pane` `padding` (`--padPane`). **Whole tree**: moving a CSS class into the design system turns screen rules nobody touched into findings in lines no change holds. A case with no role to name it is skipped with `/* ds:ignore <reason> */` on its line. `check-ds-spacing-roles.test.sh` tests its verdict against test trees |
-| Type source | `design-system/type-source.test.ts` | text type set by value in any file but `tokens.css`. In every `.css` under `frontend/src` and every style object outside tests, `font-size`, `line-height`, `letter-spacing` and `text-transform` may say only `inherit`. `font` takes a `--font*` token and `font-weight` a `--fontWeight*` one. Two values that place things are accepted, only inside the two UA style blocks. It refuses `uppercase` text by every route: `font-variant-caps`, the `font-variant` short form, the `small-caps` features, and a `.toUpperCase()` whose result is rendered. Fails closed: a set with no `app.css`, under 100 CSS files or under 100 component files fails and does not pass empty |
-| Action rows | `design-system/actionrow.test.ts` | an element whose direct parts are two or more buttons and nothing else, and that does not get `gap: var(--gapActions)` from a class it names or from its own `style` value. That includes a class that **no CSS file declares**, which a gate that reads only CSS cannot see. A line is skipped with `{/* ds:ignore <reason> */}` |
+| Type source | `frontend/census/rules/type-source.census.ts` | text type set by value in any file but `tokens.css`. In every `.css` under `frontend/src` and every style object outside tests, `font-size`, `line-height`, `letter-spacing` and `text-transform` may say only `inherit`. `font` takes a `--font*` token and `font-weight` a `--fontWeight*` one. Two values that place things are accepted, only inside the two UA style blocks. It refuses `uppercase` text by every route: `font-variant-caps`, the `font-variant` short form, the `small-caps` features, and a `.toUpperCase()` whose result is rendered. Fails closed: a set with no `app.css`, under 100 CSS files or under 100 component files fails and does not pass empty |
+| Action rows | `frontend/census/rules/actionrow.census.ts` | an element whose direct parts are two or more buttons and nothing else, and that does not get `gap: var(--gapActions)` from a class it names or from its own `style` value. That includes a class that **no CSS file declares**, which a gate that reads only CSS cannot see. A line is skipped with `{/* ds:ignore <reason> */}` |
 | Contract type drift | `make frontend-check` | `pnpm gen:api` changes `src/api/schema.d.ts` or `public-events.ts` |
 | Lint | `pnpm lint` (Biome) | style and lint findings over `src` and `index.html` |
-| Design test | `design-system/conformance.test.ts` | the same rules read from the AST, not from text, plus copy users see that is written in the code outside the `i18n` catalogs, and a wrong web app manifest |
-| Service worker | `frontend/scripts/vite-pwa.test.ts`, `frontend/src/app/serviceworker-registrar.test.ts` | the web app build not writing `/sw.js`. The worker answering from `Cache Storage` anything but a failed page load and the offline page with its script. The worker catching a path the API owns, keeping a cache that is not its own, or keeping its cache name when what it holds changed. Any shipped module but `src/lib/pwa.ts`, in any kind of script, reaching for `navigator.serviceWorker` ([pwa.md](pwa.md)) |
-| CSS file owners | `design-system/stylesheetnamespace.test.ts` | the class names of a screen declared in a CSS file other than the screen's own, in every `.css` under `frontend/src` and in the frontend layer of each extension |
-| Timeline rows | `design-system/timelinerows.test.ts` | a rule that reaches the `li` of a `.timeline` list by anything but `>` from the `.timeline` part, which also reaches `li` items inside a row; a sibling (`+`, `~`) of such a row passes. It reads every `.css` under `frontend/src` and the frontend of each extension. It fails closed when the selectors it parses and a plain count of the text disagree |
+| Design test | `frontend/census/rules/conformance.census.ts`, `design-system/conformance.test.ts` | the same rules read from the AST, not from text, plus copy users see that is written in the code outside the `i18n` catalogs, and a wrong web app manifest |
+| Service worker | `frontend/scripts/vite-pwa.test.ts`, `frontend/census/rules/serviceworker-registrar.census.ts` | the web app build not writing `/sw.js`. The worker answering from `Cache Storage` anything but a failed page load and the offline page with its script. The worker catching a path the API owns, keeping a cache that is not its own, or keeping its cache name when what it holds changed. Any shipped module but `src/lib/pwa.ts`, in any kind of script, reaching for `navigator.serviceWorker` ([pwa.md](pwa.md)) |
+| CSS file owners | `frontend/census/rules/stylesheetnamespace.census.ts` | the class names of a screen declared in a CSS file other than the screen's own, in every `.css` under `frontend/src` and in the frontend layer of each extension |
+| Timeline rows | `frontend/census/rules/timelinerows.census.ts` | a rule that reaches the `li` of a `.timeline` list by anything but `>` from the `.timeline` part, which also reaches `li` items inside a row; a sibling (`+`, `~`) of such a row passes. It reads every `.css` under `frontend/src` and the frontend of each extension. It fails closed when the selectors it parses and a plain count of the text disagree |
 | Token values | `design-system/tokens.test.ts` | a Ledger-Green value that drifts from the design source |
 | Type check and build | `pnpm build` (`tsc -b && vite build`) | any type error |
 | Unit tests | `pnpm test` (Vitest) | the `*.test.tsx` files beside the code |

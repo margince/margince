@@ -347,7 +347,7 @@
 }
 /* The carrying ink, because the date lands ON the fill above. `.t-caption`
    sets the supporting ink with its size, and that ink is measured over the
-   page's grounds rather than over this one — chipfill.test.ts is what says so.
+   page's grounds rather than over this one — census/rules/chipfill.census.ts is what says so.
    Both classes rather than one: `.t-caption` sets its colour at a single class
    of specificity, so a rule naming only `.pn-relay-due` would win or lose on
    whichever sheet the bundler put last. */

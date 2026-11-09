@@ -97,7 +97,7 @@ const preview: Preview = {
   // The viewport tool ships with Storybook itself, so this adds no addon.
   parameters: {
     // A literal: Storybook reads this block out of the file without running it,
-    // and sidebar.test.ts holds its order to the README's tables.
+    // and census/rules/sidebar.census.ts holds its order to the README's tables.
     options: {
       storySort: {
         method: "alphabetical",
