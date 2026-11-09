@@ -31,6 +31,7 @@ fixture:
         from May at a daily rate of 720 EUR and prefers hybrid work in Munich.
 expect:
   outcome: accepted
+  privacy: true
   answer: personnel
   judge: none
   judge_none_reason: >

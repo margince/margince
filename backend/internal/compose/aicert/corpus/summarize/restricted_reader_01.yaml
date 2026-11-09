@@ -20,6 +20,7 @@ fixture:
       at: "2026-07-10T09:00:00Z"
 expect:
   outcome: accepted
+  privacy: true
   # The last contact is all this reader can be told about. A brief that
   # reaches for the pipeline anyway has nothing to cite and its sentence is
   # dropped, which the harness reports as citing nothing of the account.

@@ -212,6 +212,7 @@ expect:
     What the grader is told to score, and why it matters to the product.
   bands: {certified_min: 70, degraded_min: 50, floor: 40}   # required unless judge: none
   caps: {max_tokens: 400, p95_latency_ms: 6000}             # optional ceilings
+  privacy: true                    # optional: a wrong answer leaks; every run must pass
 ```
 
 For each field, and what each one is checked against, see
@@ -235,6 +236,13 @@ These rules decide whether a scenario is worth having:
   `corpusjudgeless_test.go` requires a proof for it. The answer it calls right must reach its outcome. The
   wrong answer that its rubric catches must reach the failure named in the case, not a reply in the wrong form.
   If the reader sees something that the check never reads, such as a free text summary, the judge stays.
+- **`privacy: true`** marks a scenario whose wrong answer shows private content to a reader who must not
+  see it. Examples are a thread that must stay held, a sender that must stay owner-only, an internal note
+  kept out of a draft, or a section withheld from the reader. Such a scenario certifies only
+  when every run passes. With a judge, a run also fails when its score is at or under the floor, or no
+  judge scored it. Leave it off a scenario whose wrong answer only costs quality, because there half the runs
+  may fail and the pool still decides. The flag is part of the scenario's stamp, so setting it sends the
+  scenario's record to `re-check pending`.
 - **A rubric asks only for declared fields**: what the reply of the site can carry. A rubric that scores a
   field the schema does not declare measures nothing. The model cannot make that field, even when the rest of
   its answer is right. So that part of the rubric can only mark a right reply down. Read the request builder

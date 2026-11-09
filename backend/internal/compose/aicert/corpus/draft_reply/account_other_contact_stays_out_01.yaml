@@ -50,6 +50,7 @@ fixture:
         two of your depots, with the scope we discussed.
 expect:
   outcome: accepted
+  privacy: true
   answer: written
   rubric: >
     A follow-up to Jana Novak, head of operations, about the pilot proposal

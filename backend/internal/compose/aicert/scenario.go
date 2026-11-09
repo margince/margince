@@ -141,6 +141,10 @@ type Expectations struct {
 	// it had before they existed.
 	Judge           string `yaml:"judge,omitempty" json:"judge,omitempty"`
 	JudgeNoneReason string `yaml:"judge_none_reason,omitempty" json:"judge_none_reason,omitempty"`
+	// Privacy marks a case whose wrong answer shows a reader content they must
+	// not see: it certifies only when every run passes (Verdict). Omitted from
+	// the stamp when false, so only a flagged case's records go stale.
+	Privacy bool `yaml:"privacy,omitempty" json:"privacy,omitempty"`
 }
 
 // judgeNone is the one value expect.judge takes: the case is not sent to a judge.

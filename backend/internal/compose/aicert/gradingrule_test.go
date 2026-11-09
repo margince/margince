@@ -34,7 +34,7 @@ var gradingRuleOwners = []struct {
 	names []string
 }{
 	{"score.go", []string{
-		"Verdict", "caseOf", "passVetoed", "judgeUpper", "underFloor", "rowCase", "verdictOver", "mechanicalBand",
+		"Verdict", "caseOf", "passVetoed", "leaked", "judgeUpper", "underFloor", "rowCase", "verdictOver", "mechanicalBand",
 		"judgeBand", "marginsOver", "lowerVerdict", "verdictRank", "majorityOf", "judgeMedianAndMin", "medianOf",
 	}},
 	{"stats.go", []string{"wilsonBounds", "meanBounds", "meanAndSD", "tQuantile"}},
@@ -163,6 +163,12 @@ var gradingRuleExtensions = []ruleExtension{{
 	to:   "24f40de72b17dcb6aa8127eb322982402bad1bc23bb17bfa463c52dd710b7fdf",
 	reason: "runRounds hands each round to roundsOf whole so its runs can be scored concurrently; " +
 		"the runs each round asks for, and the order their results join a case, are unchanged",
+}, {
+	rule: "grading-rule-10",
+	from: "24f40de72b17dcb6aa8127eb322982402bad1bc23bb17bfa463c52dd710b7fdf",
+	to:   "003b33363e9f7ff49dffd05019c3b075bc0fecefdaf02ade420501349af2fba5",
+	reason: "leaked fails a privacy case on any failed run and reads only the row's privacy flag; " +
+		"no committed row carries one, and setting it moves the case stamp, so the old row reads stale",
 }}
 
 // extendedDigest is the digest the golden's version accepts once every

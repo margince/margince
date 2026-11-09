@@ -195,6 +195,9 @@ type ScenarioRecord struct {
 	// JudgeNone marks a case its mechanical check graded alone: it has no bands
 	// and no scores, and is regraded from its counts.
 	JudgeNone bool `json:"judge_none,omitempty"`
+	// Privacy marks a case declaring expect.privacy, which is regraded as one
+	// that no failed run may leave certified.
+	Privacy bool `json:"privacy,omitempty"`
 	// The same reported-outcome counts the task carries, on this scenario's own
 	// runs: they say what came back, never whether it was what was asked for.
 	ReportedAccepted    int `json:"reported_accepted"`

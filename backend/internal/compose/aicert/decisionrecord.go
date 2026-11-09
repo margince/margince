@@ -42,6 +42,22 @@ func decisionVerdict(stats DecisionStats) string {
 	return VerdictNotSupported
 }
 
+// decisionLeaked says a privacy scenario was not served right on every run. A
+// wrong kept answer leaks. A fallback leaks unless the LLM row it hands the
+// question to passed every one of its own runs.
+func decisionLeaked(sc Scenario, stats DecisionStats, llm Record) bool {
+	switch {
+	case !sc.Expect.Privacy:
+		return false
+	case stats.KeptWrong > 0:
+		return true
+	case stats.Fallbacks == 0:
+		return false
+	}
+	row, ok := llmRow(llm, sc.Name)
+	return !ok || row.Runs == 0 || row.Passed < row.Runs
+}
+
 // foldDecisionRuns tallies one scenario's runs against what it expects.
 func foldDecisionRuns(sc Scenario, runs []decisionRun) DecisionStats {
 	var stats DecisionStats
@@ -132,7 +148,7 @@ func llmRow(llm Record, scenario string) (ScenarioRecord, bool) {
 func (leg decisionLeg) buildDecisionRecord(site string, sets []scenarioDecisionRuns) (Record, error) {
 	var total DecisionStats
 	var calls []ai.Call
-	runs, served := 0, 0.0
+	runs, served, anyLeaked := 0, 0.0, false
 	rows := make([]ScenarioRecord, 0, len(sets))
 	stamps := make(map[string]string, len(sets))
 	for _, set := range sets {
@@ -148,9 +164,13 @@ func (leg decisionLeg) buildDecisionRecord(site string, sets []scenarioDecisionR
 			calls = append(calls, run.calls...)
 		}
 		row := stats
+		verdict := decisionVerdict(stats)
+		if decisionLeaked(set.scenario, stats, leg.llm) {
+			verdict, anyLeaked = VerdictNotSupported, true
+		}
 		rows = append(rows, ScenarioRecord{
-			Scenario: set.scenario.Name, Site: site, Stamp: set.stamp, Verdict: decisionVerdict(stats),
-			Runs: n, Passed: stats.KeptCorrect, Decision: &row,
+			Scenario: set.scenario.Name, Site: site, Stamp: set.stamp, Verdict: verdict,
+			Runs: n, Passed: stats.KeptCorrect, Privacy: set.scenario.Expect.Privacy, Decision: &row,
 		})
 	}
 	finishStats(&total, runs, served)
@@ -162,6 +182,9 @@ func (leg decisionLeg) buildDecisionRecord(site string, sets []scenarioDecisionR
 	rec.Provider, rec.Model, rec.EnvClass = leg.lane.Provider, leg.lane.Model, string(leg.profile)
 	rec.PromptVersion, rec.CorpusVersion = FoldScenarioStamps(stamps), corpusVersionV1
 	rec.Verdict, rec.Runs, rec.Passed = decisionVerdict(total), runs, total.KeptCorrect
+	if anyLeaked {
+		rec.Verdict = VerdictNotSupported
+	}
 	if runs > 0 {
 		rec.Reliability = float64(total.KeptCorrect) / float64(runs)
 	}

@@ -236,7 +236,6 @@ func confidentialityProofs() map[string]judgelessProof {
 		"a_readable_supplier_invoice_opens_the_thread":                             {"ordinary", "personnel"},
 		"a_consultant_profile_without_cv_headings_stays_private":                   {"personnel", "ordinary"},
 		// A "held" case passes any kind that holds and refuses a confident "ordinary".
-		"an_unreadable_scan_under_an_invoice_note_stays_held":   {"personnel", "ordinary"},
 		"a_cut_off_cost_sheet_by_team_member_stays_held":        {"personnel", "ordinary"},
 		"an_unpatched_vulnerability_is_held_until_it_is_closed": {"security_incident", "ordinary"},
 	} {

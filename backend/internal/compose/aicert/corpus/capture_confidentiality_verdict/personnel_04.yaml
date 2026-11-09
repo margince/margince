@@ -28,6 +28,7 @@ fixture:
         Team member | Role | Monthly gross | Employer cost | Months
 expect:
   outcome: accepted
+  privacy: true
   answer: held
   judge: none
   judge_none_reason: >

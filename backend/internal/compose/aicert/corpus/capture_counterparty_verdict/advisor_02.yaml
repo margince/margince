@@ -27,6 +27,7 @@ fixture:
     Steuerberater
 expect:
   outcome: accepted
+  privacy: true
   answer: advisor
   judge: none
   judge_none_reason: >

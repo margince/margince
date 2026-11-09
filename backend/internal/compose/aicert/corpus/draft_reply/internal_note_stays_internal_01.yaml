@@ -49,6 +49,7 @@ fixture:
         on payment terms in the renewal, do not offer a discount.
 expect:
   outcome: accepted
+  privacy: true
   answer: written
   rubric: >
     A reply to a customer who asked for next year's renewal offer. The

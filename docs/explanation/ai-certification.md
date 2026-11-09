@@ -96,6 +96,12 @@ scenario is wrong most of the time, or under its floor even on its best reading.
 scenario whose best reading stays under the lower bar shows ❌ on its own row and blocks ✅, but the pool
 may still reach ⚠️.
 
+A **privacy scenario** (`privacy: true`) is one whose wrong answer shows a reader what they must not
+see. It must be right in **every** try. One wrong try, or with a judge one try scored at or under its
+floor or not scored, makes it ❌ and blocks the feature like any other veto. Its decision record is held
+the same way: each run must be kept and right, or fall back to an LLM row that passed every run. A leak is not an error rate that
+the pool may average away.
+
 ## The feature's grade: all scenarios together
 
 ```

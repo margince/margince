@@ -58,6 +58,7 @@ func scenarioRow(sc Scenario, stamp string, set ScenarioRuns) ScenarioRecord {
 		JudgeBand:           caseJudgeBand(stats),
 		JudgeScores:         stats.scores,
 		JudgeNone:           set.Mechanical,
+		Privacy:             set.Privacy,
 		CommitmentBand:      sc.CommitmentBand,
 		Runs:                len(results),
 		ReportedAccepted:    tally.accepted,

@@ -153,7 +153,7 @@ type certifyHooks struct {
 func caseSeeds(scenarios []Scenario) []ScenarioRuns {
 	seeds := make([]ScenarioRuns, len(scenarios))
 	for i, sc := range scenarios {
-		seeds[i] = ScenarioRuns{Bands: sc.Expect.Bands, Mechanical: !sc.Expect.Judged()}
+		seeds[i] = ScenarioRuns{Bands: sc.Expect.Bands, Mechanical: !sc.Expect.Judged(), Privacy: sc.Expect.Privacy}
 	}
 	return seeds
 }
