@@ -377,6 +377,41 @@ func TestOfferDraftCaseReportsARefusedLineBesideAnAcceptedAnswer(t *testing.T) {
 	}
 }
 
+// An item declared no_line fails any draft that stages a line from it, however
+// right the rest of the draft is, and passes one that leaves it out.
+func TestOfferDraftCaseFailsALineFromAnItemExpectedToGroundNone(t *testing.T) {
+	expected := offerDraftExpectation(t, map[string]offerDraftExpectedLine{
+		offerDraftKickoffSource: {UnitPriceMinor: 20000, PriceGrounded: true},
+		offerDraftSupportSource: {NoLine: true},
+	})
+	kickoff := kickoffLine(`"conversation_price_minor":20000`)
+	cases := []struct {
+		name       string
+		reply      string
+		wantResult string
+		wantDetail string
+	}{
+		{name: "the item left out", reply: draftReply(kickoff), wantResult: aitasks.OutcomeAccepted},
+		{
+			name:       "a line staged from it beside the right one",
+			reply:      draftReply(kickoff, supportLine()),
+			wantResult: aitasks.OutcomeWrongAnswer,
+			wantDetail: `a staged line cites "activity:2", which the scenario expects no line from`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			outcome, _ := draftOutcome(t, expected, cannedReply(tc.reply))
+			if outcome.Result != tc.wantResult {
+				t.Fatalf("Result = %q (%s), want %q", outcome.Result, outcome.Detail, tc.wantResult)
+			}
+			if !strings.Contains(outcome.Detail, tc.wantDetail) {
+				t.Errorf("Detail = %q, want it to name %q", outcome.Detail, tc.wantDetail)
+			}
+		})
+	}
+}
+
 // A fixture is what PRODUCTION is given; an expectation is what the CORPUS
 // asserts. Keeping them apart is what lets a gate rewrite the fixture's captured
 // text — the canary sweep does exactly that — without rewriting an assertion.

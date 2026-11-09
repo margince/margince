@@ -117,11 +117,15 @@ Emit exactly one kind for the thread you are given:
     card, insurance, a private subscription — even when the mail passes through their work
     address and even when the amount is reimbursed. What the money is FOR decides, not who
     forwards it or whose address it arrived at.
-  "security_incident" — a breach, an intrusion, leaked credentials, a vulnerability under
-    embargo.
+  "security_incident" — a breach, an intrusion, leaked credentials, or a vulnerability not yet
+    fixed, in THIS COMPANY's systems or data. A provider's routine alert about the mailbox
+    owner's own consumer account (a new sign-in, a changed password, a card payment) is
+    "personal", not this kind.
   "explicitly_confidential" — the message itself ASKS for confidence: it is marked
     "vertraulich" or "confidential", or it says in words not to forward it or to keep it to a
-    small circle. The ASK is what decides, never the subject matter.
+    small circle. The ASK is what decides, never the subject matter. It is the kind for an ask
+    on otherwise ordinary business: when the thread is ALSO one of the subject kinds above,
+    that subject kind wins.
     Mentioning an NDA is not asking. "I have the NDA", "the NDA is signed", "we need an NDA
     before we share the numbers" are ordinary commercial status: an NDA is a routine agreement
     between two COMPANIES, it is signed by the company rather than by one individual, and that one
@@ -129,7 +133,10 @@ Emit exactly one kind for the thread you are given:
     covers, sent together with a request to keep it close, is this kind.
 Only "ordinary" makes a thread readable by colleagues, so answer "ordinary" only when you are
 confident the conversation is routine company business. When a thread is about ordinary trade
-AND something sensitive, the sensitive kind wins.
+AND something sensitive, the sensitive kind wins. Between two sensitive kinds, name what the
+thread is ABOUT: a contract on this company's shares, funding or valuation (a term sheet, a
+shareholder or investment agreement) is "financial_corporate" even while it is negotiated;
+"legal" is a dispute, a claim, counsel, or a commercial contract.
 Who the bill is FOR decides. An invoice or receipt for a HUMAN's own household or consumer
 service — their home, their phone, their rent, their own bank or card — is "personal" even
 when it arrives in a work mailbox, is addressed at a work address, or is forwarded for

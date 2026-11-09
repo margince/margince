@@ -206,7 +206,7 @@ func transcriptRequest(lines []string, meetingDay string, lang string, parties [
 			`an unqualified "I will" with a thing and a day is 0.9 or more, while "I will try", "I'll try", `+
 			`"at some point" or "maybe" names no firm commitment and is 0.3 or less even with a stated day. `+
 			`"source_lines" are the line numbers it is stated on, between 1 and %d.`,
-		meetingDay, maxTranscriptProposals, len(lines))
+		meetingDayLabel(meetingDay), maxTranscriptProposals, len(lines))
 
 	prompt.WriteString("\n" + commitmentMeaningInstruction)
 	return model.Request{
@@ -429,4 +429,14 @@ type transcriptReadStore interface {
 	// The Tx form, for the close that has to commit with the proposals it is
 	// closing over — see stageAndFinish.
 	FinishTranscriptReadTx(ctx context.Context, tx pgx.Tx, readID ids.UUID, outcome activities.TranscriptReadOutcome) error
+}
+
+// meetingDayLabel shows the weekday beside the date: "by Friday" resolves
+// against it, and a model working the weekday out from the date gets it wrong.
+func meetingDayLabel(day string) string {
+	parsed, err := time.Parse(time.DateOnly, day)
+	if err != nil {
+		return day
+	}
+	return parsed.Format(time.DateOnly + " (Monday)")
 }

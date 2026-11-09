@@ -224,6 +224,7 @@ func stageEvidenceRequest(
 		`"quote", "met", "commitment", "confidence" } ] } — at most %d, and an empty `+
 		`list when the conversation settles none. `+
 		`"criterion_key" is one of the keys listed above and nothing else. `+
+		`Report each criterion at most once: where several passages bear on it, cite the one that settles it. `+
 		`"source_id" is the span reference the passage is in, such as s1, before the colon. `+
 		`"source_lines" are the numbers after the colon, at most %d of them, `+
 		`ascending and with no line skipped between the first and the last — `+

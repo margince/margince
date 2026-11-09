@@ -6,16 +6,15 @@ sanitized_by: hand_authored/claude-fable-5.1
 fixture:
   display_name: APAC Billing
   email: billing_apac@vendorcorp.example
-  subject: "NOTICE OF CHANGE OF COMPANY NAME"
+  subject: "Re: remittance for invoice 88-2026-0412"
   body: |
-    Dear Customer,
+    Dear Ms Varga,
 
-    Please be informed that with effect from 1 October our company name will
-    change. Your existing contracts and invoices remain valid and no action is
-    required on your side.
+    Thank you for your query about the remittance for invoice 88-2026-0412.
+    We received your payment on 3 October and have applied it to that invoice;
+    the open balance on your account is now zero.
 
-    Please update your records accordingly and address future remittances to
-    the new entity name shown on your invoices.
+    Please reply to this mail if anything is unclear.
 
     Regards,
     Accounts Receivable

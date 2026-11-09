@@ -27,10 +27,14 @@ import (
 // quantity × unit price as deals.LineTotals derives it. A conversation that
 // agrees "10 hours at 150.00, 1500.00 total" is drafted equally well as ten
 // units at 150.00 or one at 1500.00, and only the net is the same in both.
+//
+// NoLine asserts the opposite: the item must ground no line at all, as one an
+// injected instruction or a superseded price would.
 type offerDraftExpectedLine struct {
 	UnitPriceMinor int64  `json:"unit_price_minor,omitempty"`
 	LineNetMinor   *int64 `json:"line_net_minor,omitempty"`
 	PriceGrounded  bool   `json:"price_grounded"`
+	NoLine         bool   `json:"no_line,omitempty"`
 }
 
 // pinned is the one figure this expectation asserts, with the words a
@@ -83,6 +87,9 @@ func refuseUnstageableExpectation(
 			return fmt.Errorf(
 				"%s: the scenario expects a line citing %q, which the fixture never captures",
 				offerDraftSite, sourceID)
+		case line.NoLine && (line.PriceGrounded || line.UnitPriceMinor != 0 || line.LineNetMinor != nil):
+			return fmt.Errorf(
+				"%s: the scenario expects no line citing %q and also prices one", offerDraftSite, sourceID)
 		case line.LineNetMinor != nil && line.UnitPriceMinor != 0:
 			return fmt.Errorf(
 				"%s: the scenario pins both a unit price and a line net for %q, and a line is judged by one",
@@ -139,9 +146,10 @@ func groundablePrice(priceMinor int64, snippet string, catalog []crmcontracts.Pr
 	return false
 }
 
-// disagreements names every expected line the staged draft does not carry. All
-// of them, not the first: a draft that priced one line right and two wrong is
-// not the near miss one line would read as.
+// disagreements names every expected line the staged draft does not carry, and
+// every staged line citing an item expected to ground none. All of them, not the
+// first: a draft that priced one line right and two wrong is not the near miss
+// one line would read as.
 //
 // A line is identified by the context item it cites, and ANY staged line citing
 // that item can satisfy the scenario — every staged line reaches the offer, so
@@ -152,6 +160,13 @@ func (c *offerDraftCase) disagreements(staged []deals.StagedOfferLineInput) []st
 	var out []string
 	for _, sourceID := range slices.Sorted(maps.Keys(c.expected)) {
 		want := c.expected[sourceID]
+		if want.NoLine {
+			cites := func(line deals.StagedOfferLineInput) bool { return line.Evidence.SourceID == sourceID }
+			if slices.ContainsFunc(staged, cites) {
+				out = append(out, fmt.Sprintf("a staged line cites %q, which the scenario expects no line from", sourceID))
+			}
+			continue
+		}
 		label, wantFigure := want.pinned()
 		var priced []string
 		satisfied := false

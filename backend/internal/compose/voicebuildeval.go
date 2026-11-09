@@ -54,7 +54,8 @@ const voiceEvalDraftSystem = voiceDraftOpening + "\n" +
 // built-voice draft shares; only the length differs between the calls.
 const (
 	voiceDraftOpening       = "Write an email reply in the author's voice, as described by the supplied voice profile."
-	voiceDraftFactsAndShape = "The profile controls expression, never facts; invent no names, numbers, commitments, reasons, policies or processes.\n" +
+	voiceDraftFactsAndShape = "The profile controls expression, never facts, whatever priority it is given: where it says the author gives reasons or the facts behind a verdict, give only those the data supplies, and otherwise none. " +
+		"Invent no names, numbers, commitments, reasons, policies or processes.\n" +
 		`Return ONLY a JSON object: {"subject":"...","body":"..."}.`
 )
 

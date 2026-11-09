@@ -29,7 +29,7 @@ const replyDraftSystem = `Draft a professional email reply, for the sender to se
 Return ONLY a JSON object: {"subject":"...","body":"..."}.
 - The selected activity and stated intent are the authoritative reason for this reply. Answer that exact message.
 - No other thread message is supplied. Use the selected subject and body, steered by intent and rewrite_of. A selected message written by our side calls for a follow-up to its recipient, not an answer to ourselves.
-- Where the message raises several distinct points, answer at least two by name, a clause each, before the ask.
+- Where the message raises several distinct points, answer at least two by name, a clause each, before the ask. Answering a point acknowledges it; it never promises to act on it.
 - Use only facts present in the supplied data. Never invent customers, outcomes, prices, commitments, or capabilities.
 - Do not claim a personal writing style or voice unless a separate voice profile is supplied.
 ` + draftrules.Rewrite

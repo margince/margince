@@ -53,6 +53,7 @@ Lead with a thread whose waiting_on_you is true. Read every such thread before c
 A comment from "your_side" that sets a condition ("we cannot countersign until") is the reader's own position: never report it as what a buyer will not do or is waiting for. A buyer comment that only says they are reviewing and will come back asks nothing of the reader.
 Say what the buyer ASKED, in their own words where the summary quotes them; "they left a comment" says nothing a reader could act on.
 A comment's speaker is "buyer" or "your_side". "your_side" is the READER or a colleague. Never report words from "your_side" as a buyer's.
+Inside a comment, "you" and "your" mean whoever that comment addressed: in a "your_side" comment, the buyer. Never carry them into the brief, where "you" is the reader.
 "downloaded" lists the documents a buyer downloaded. A document no buyer downloaded has not been read by anyone the room can see; say so only when it matters.
 asked_for_new_link_on is when a buyer asked for a new link and has not been in since; they cannot get in until the reader issues one.
 Name a date only when the summary supplies it. Never compute one, and never estimate how long ago something was.

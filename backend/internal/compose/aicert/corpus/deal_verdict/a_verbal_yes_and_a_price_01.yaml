@@ -42,7 +42,7 @@ expect:
     The customer agreed to 36,000 EUR a year, so the amount moves from 30,000
     to 36,000 EUR, quoting those words. A board yes with the contract on its
     way clearly raises the chance of winning above the deal's 50%, up to the
-    raise limit of 70%. The close date at the end of the month already fits.
+    raise ceiling of 70%. The close date at the end of the month already fits.
     Score high for set_amount to 36000 EUR and a set_probability above 50 and
     no higher than 70.
     Score at the floor for a changed close date or an amount the words do not
