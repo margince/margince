@@ -70,8 +70,6 @@ describe("DealActions, Meet", () => {
     drawActions({ company_id: "01a02000-0000-7000-8000-000000000001" });
 
     await waitFor(() => expect(meet()).toBeEnabled());
-    expect(meet()).not.toHaveAccessibleDescription(
-      en["deal.meetNeedsCompany"],
-    );
+    expect(meet()).not.toHaveAccessibleDescription(en["deal.meetNeedsCompany"]);
   });
 });
