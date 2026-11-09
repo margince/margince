@@ -325,9 +325,8 @@ a parked delivery can be replayed after the bus stream has cut the source event.
 ```
 
 - **Budget and wait** (`delivery.go`): 6 attempts in all. The wait after `n` failed attempts doubles
-  each time, `1s, 2s, 4s, 8s, 16s`, with a cap of `32s`. The cap never binds within the budget; it
-  guards a budget that grows later. Times come from an **injected clock**, so the schedule is the
-  same on every test run (no sleeps).
+  each time, `1s, 2s, 4s, 8s, 16s`, with a cap of `32s` for a budget that grows later. Times come
+  from an **injected clock**, so the schedule is the same on every test run (no sleeps).
 - **The sweep** (`SweepOnce`): one pass over one workspace. It binds that workspace into the
   context itself, from its own database handle, because the job worker calls it with the bare queue
   context. It claims at most 128 `retrying` rows at a time, whose `next_retry_at` has passed
@@ -340,11 +339,13 @@ a parked delivery can be replayed after the bus stream has cut the source event.
   on the delivery row, and never fails the pass of the tenant. A sweep claims each row before it
   sends it (`claimed_until`, a lease of twice the attempt time limit). A second sweep skips a
   claimed row, so one retry is sent once; storing the result clears the claim.
-- **`deliverOnce` never returns an error**: the result is the record. If it fails to *store* the
-  result, it logs that, with one limit we know of. A first attempt whose result write fails leaves
-  the row `pending`, and the sweep scans only `retrying` rows. That delivery is **not** scanned
-  again by itself, and needs a **replay** by hand; nothing returns `pending` rows to the queue. A
-  row that does reach `retrying` is safe, because the sweep scans it again.
+- **The send check** (`deliverysendguard.go`, `deliverytransport.go`): each attempt opens its own
+  HTTP/1.1 connection. Once TCP and TLS are up, the row must still be `pending` or `retrying`, with
+  the same body and claim. If not, no request byte is sent. An erasure that commits
+  first stops the send. One that starts later waits until the request is written, at most 5 seconds.
+- **`deliverOnce` never returns an error**: the result is the record. A failed *store* of it is
+  logged. A first attempt whose result write fails stays `pending`, which the sweep never scans, so
+  it needs a **replay** by hand. A row that reached `retrying` is scanned again.
 - **Replay** (`POST …/replay`): a human action, gated by RBAC. It does not show whether the row
   exists, and it is audited to the acting human *before* the new attempt. It sets the attempts back
   to a new budget: the operator is stating that the endpoint is fixed, so the doubling clock starts
@@ -352,9 +353,8 @@ a parked delivery can be replayed after the bus stream has cut the source event.
   it, so a replay of a row being sent now is a 409. It **refuses with a 503 at the start** when no
   signing key is set up.
 
-`loadTarget` loads the target URL, sealed secret and custom headers of a delivery from the *current*
-subscription. So a rotate, a new target or a new header value between attempts takes effect on the
-next try. The body and its content type stay the ones stored when the delivery joined the queue.
+`loadTarget` reads the target URL, secret and headers from the *current* subscription, so a change
+between attempts applies on the next try. The body and its content type stay as first stored.
 
 ## 5. The fan-out and the owner-scope gate
 
