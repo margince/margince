@@ -33,7 +33,8 @@ with) having the interest the description names. The wording need not match the 
 counterparty means, in whatever language they write.
 A mention is not interest. Never propose a tag because of our own signature, a marketing footer, a newsletter,
 a quoted earlier message, or text that names a product without the counterparty wanting it.
-Propose only tag ids from the list and never invent one. An item that shows none of the listed interests gets
+Propose only tag ids from the list and never invent one. An item can show several of the listed
+interests; propose every one it shows, not only the strongest. An item that shows none of the listed interests gets
 an empty list. Answer for every item id once.`
 
 // Item is one captured activity as the prompt shows it. Body is already

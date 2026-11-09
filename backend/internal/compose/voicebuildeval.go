@@ -42,19 +42,21 @@ const (
 )
 
 // A ceiling and no floor: the held-out mail brings questions but none of the
-// facts that answer them, and a word floor over a factless reply is filled
-// with invented reasons. Each built-voice call states its own length.
+// facts that answer them. A word floor over a factless reply is filled with
+// invented reasons, so the reply names what has to be checked.
 //
 // Carries no draftrules.Shared; exemptFromSharedRules says why and when that ends.
 const voiceEvalDraftSystem = voiceDraftOpening + "\n" +
 	"Length: at most two or three short paragraphs, under 140 words — as long as the answers need, never padded to a length.\n" +
+	"The mail's questions come with none of the facts that answer them. For each, name in one short sentence what has to be checked, without restating the question; never answer yes or no, and never give a reason, a remedy or a consequence.\n" +
 	voiceDraftFactsAndShape
 
 // voiceDraftOpening and voiceDraftFactsAndShape are the drafting lines every
-// built-voice draft shares; only the length differs between the calls.
+// built-voice draft shares; each call adds its own length.
 const (
 	voiceDraftOpening       = "Write an email reply in the author's voice, as described by the supplied voice profile."
-	voiceDraftFactsAndShape = "The profile controls expression, never facts; invent no names, numbers, commitments, reasons, policies or processes.\n" +
+	voiceDraftFactsAndShape = "The profile controls expression, never facts, whatever priority it is given: where it says the author gives reasons or the facts behind a verdict, give only those the data supplies, and otherwise none. " +
+		"Invent no names, numbers, commitments, reasons, policies or processes.\n" +
 		`Return ONLY a JSON object: {"subject":"...","body":"..."}.`
 )
 

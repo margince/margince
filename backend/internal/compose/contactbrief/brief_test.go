@@ -278,3 +278,22 @@ func TestAMoveWrittenAsAPromiseIsRefusedWithoutSpendingTheAdviceBudget(t *testin
 		t.Fatalf("kept %+v, want only the move addressed to the reader", kept)
 	}
 }
+
+// A move is read off its own message. A newer message the reader may not read
+// can have answered it, so the model is never told an older one waits.
+func TestNoMoveIsShownBehindAMessageTheReaderMayNotRead(t *testing.T) {
+	t.Parallel()
+	open := inputFixture()
+	if !strings.Contains(BriefRequest(open, "en").Messages[0].Content, `"move":"needs_reply"`) {
+		t.Fatal("with no withheld message, the request must still carry the server's move")
+	}
+
+	held := inputFixture()
+	held.Recent = append([]ActIn{{ID: strangerID, Kind: "email", Withheld: true, At: "2026-09-02T08:00:00Z"}}, held.Recent...)
+	if content := BriefRequest(held, "en").Messages[0].Content; strings.Contains(content, `"move"`) {
+		t.Errorf("a move behind a withheld message reached the prompt: %s", content)
+	}
+	if held.Recent[2].Move != "needs_reply" {
+		t.Error("building the request rewrote the caller's input")
+	}
+}

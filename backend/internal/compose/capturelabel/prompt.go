@@ -24,9 +24,11 @@ import (
 )
 
 const system = `You label captured emails for attention routing. For EACH supplied message emit exactly one
-label: "commitment" (a promise or request to act), "meeting" (scheduling or follow-through),
-or "noise" (neither). Labels route attention; they change no data. If a message fits both
-commitment and meeting, choose commitment.
+label: "commitment" (a promise to deliver or do something, or a request for a deliverable, a
+decision or a payment), "meeting" (a request for, offer of or confirmation of time together, such
+as a call, a visit or a slot, or follow-through on one), or "noise" (neither). Asking to meet is
+"meeting", not a request to act. Labels route attention; they change no data. If a message both
+promises or requests something of the first kind AND asks for time, choose commitment.
 
 A message marked "inbound: yes" was sent TO us by someone outside. For those, ALSO judge how
 they answered: "positive" (interest, a question worth answering, a request to meet or to hear

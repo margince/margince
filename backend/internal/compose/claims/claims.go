@@ -67,8 +67,10 @@ type Sentence struct {
 }
 
 // NeverNameTheGap follows every rule that leaves sections_omitted out. A
-// sentence saying something is hidden tells the reader that it exists.
-const NeverNameTheGap = "Never write that anything is withheld, hidden, restricted or not visible to the reader."
+// sentence saying something is hidden tells the reader that it exists, and
+// one saying none exists states a fact the reader was refused.
+const NeverNameTheGap = "Never write that anything is withheld, hidden, restricted or not visible to the reader. " +
+	`Never say whether any of it exists either: "no deals" or "no open deal" states a fact the reader was refused.`
 
 // idInProse matches a record id written into a sentence, spelled ONCE for every
 // surface and the tests that gate them. It is the UUID shape every citable

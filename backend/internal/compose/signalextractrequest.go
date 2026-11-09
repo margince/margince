@@ -24,18 +24,24 @@ inferring rather than reading. Cite the id of the message the event is stated in
 For contract_ended, quote the exact current message words and report lifecycle_scope:
 "company" only when those words explicitly end the whole account relationship;
 "workstream" when they end a particular project, pilot, contract or service; otherwise "unknown".
-Put the named engagement in workstream, with the words that say what kind of work it is
-("Atlas support service", never "Atlas" alone), or "" when none is named. When scope is unknown,
+Put the named engagement in workstream, copied exactly from the cited message in its own
+language, with the words that say what kind of work it is ("Atlas support service", never
+"Atlas" alone), or "" when none is named. When scope is unknown,
 workstream must be empty. Ending one contract never implies ending all business with a company.
 For other event kinds set lifecycle_scope and workstream to "".
 For commitments, later evidence of fulfillment or explicit withdrawal means no new commitment.
+When a later message in this reading shows a promise was delivered in full (sent, or confirmed as
+received) or withdrawn, report no commitment_made for it.
 Acknowledgement and unrelated replies do not fulfill a promise. After partial delivery, report
-only the undelivered remainder in the summary. A restatement or narrowed promise is the same
+the promise once, citing the original, with only the undelivered remainder in the summary. A restatement or narrowed promise is the same
 obligation: when its original promise is in this reading, keep citing and quoting that original.
 An explicit report of another participant's promise ("you agreed to send pricing", "Mira promised
 to send pricing") is commitment evidence even without the original utterance. Cite the report and
 identify the reported promiser; do not invent the missing original or attribute it to the reporter.
 A bare reminder or reference to an absent promise, without stating who owes what, is not enough.
+A reminder in a message from us that tells its addressee "you agreed to …" is that explicit report:
+report it with the addressed contact as promiser_ref and state "open". When the reminder names the
+promiser instead, the promiser_ref rules for a named party apply.
 Do not count both an original promise and a report of it as separate commitments.
 When our side tells a contact that we, or a named colleague, will do a specific thing at a set time,
 such as running a demo on the 5th at 10:00, that is a commitment_made our side owes, even when it
@@ -61,6 +67,9 @@ are respectively supplier, partner and provider, never the buyer. When buyer ide
 commercial direction is unclear use unknown and leave buyer_ref empty. Quote the current
 message’s words that establish the need. An explicit report of a named participant’s request
 can identify that participant as the buyer; their presence in Cc alone cannot.
+Words the sender attributes to someone else ("the client said", "our client needs", "a company
+needs") are a relayed need: report it as you would the same need stated first-hand, but the sender
+is never its buyer_ref. A question about price or terms states no new need.
 Use supplier, partner or provider only when the source establishes that specific relationship.
 Merely relaying an unidentified company’s need does not establish a partnership: use unknown.
 A relationship the source does state still holds when the client it relays is unnamed: a
@@ -69,7 +78,7 @@ A meeting invitation alone establishes no buying intent. Neither does a pitch: a
 us its product or price, when no one states a need for it, is no event at all.
 Every field is always present. A text field that does not apply to the kind is "", recipient_refs is [],
 commercial_role is unknown, and commitment is always the object.
-A conversation can state several events in different messages. Report each one. An event in a later
+A conversation, or a single message, can state several events. Report each one. An event in a later
 message does not replace an unrelated event in an earlier one.
 Reporting nothing is the correct answer for most conversations.`
 
@@ -104,7 +113,7 @@ func extractRequest(thread settledThread, lang string) model.Request {
 		// holds a quote to. Shown the history, the model cites a reply for a
 		// promise it merely quotes, and the whole reading is refused.
 		body := fmt.Sprintf("Direction: %s\nSent: %s\nSubject: %s\n%s",
-			directionWord(message.Direction), message.At.Format(time.DateOnly), message.Subject,
+			directionWord(message.Direction), message.At.Format(time.DateOnly+" (Monday)"), message.Subject,
 			textlang.CurrentMessage(message.Body))
 		body += "\n" + commitmentPartyHeader + commitmentPartyPrompt(message.Parties, textlang.CurrentMessage(message.Body), parties)
 		label := thread.messageLabel(message.ID.String())
@@ -116,7 +125,7 @@ func extractRequest(thread settledThread, lang string) model.Request {
 		for i, id := range thread.Focus {
 			focus[i] = thread.messageLabel(id.String())
 		}
-		fmt.Fprintf(&prompt, "Report only commitment_made events stated in these messages: %s. A first reading already read them and found no promise in them, so report only a promise their words state outright; an empty list is the usual answer. The other messages are context, for example to see that a promise was kept or renewed.\n",
+		fmt.Fprintf(&prompt, "Report only commitment_made events stated in these messages: %s. A first reading already read them and found no promise in them, so report only a promise their words state outright that is still open; an empty list is the usual answer. Read every other message as context, recorded ones included: a promise one of them shows was sent, received or withdrawn is not open.\n",
 			strings.Join(focus, ", "))
 		recorded := make([]string, len(thread.Recorded))
 		for i, event := range thread.Recorded {
@@ -129,11 +138,16 @@ func extractRequest(thread settledThread, lang string) model.Request {
 		`Return JSON: { "events": [ { "kind", "message_id", "summary", "quote", "restated_message_id", "restated_quote", "due_date", "promiser_ref", "recipient_refs", "buyer_ref", "commercial_role", "lifecycle_scope", "workstream", "commitment", "confidence" } ] } — `+
 			`at most %d, and an empty list when the conversation states none. `+
 			`"summary" is one plain sentence a colleague could act on. `+
+			`Only "summary" follows the output language: quote, restated_quote, workstream, condition and deadline_quote `+
+			`are copied character for character from the message, in its language, never translated. `+
 			`For new_opportunity and commitment_made, lifecycle_scope and workstream are both "". `+
 			`Every event carries "commitment". For contract_ended and new_opportunity it is state "unclear", condition "", deadline_precision "none" and deadline_quote "". `+
 			commitmentRecipientsPrompt+
 			`"message_id" and any "restated_message_id" are the label of the cited message, such as "m2", from the "Message" line above it. `+
 			`Never use a participant reference as a message id. `+
+			`"buyer_ref" is the contact whose own words ask for OUR company's work; words they attribute to someone else `+
+			`("the client said …") are not their request. commercial_role is "buyer" only when buyer_ref is set; `+
+			`it is "partner", "supplier" or "provider" whenever the source states that relationship, with buyer_ref empty. `+
 			`"promiser_ref" is the verified participant reference for who made the quoted promise, `+
 			`not necessarily its sender. For "you agreed", resolve the addressed party; for a named `+
 			`third party, use a reference only when the clause identifies them unambiguously. `+

@@ -85,7 +85,10 @@ Being about the same subject is NOT answering. A question asking HOW to do
 something is not answered by a passage saying what the thing IS, when it comes
 into being, who is allowed to do it, or what happens to it afterwards. If you
 find yourself assembling an answer out of parts that each say something else,
-the coverage is "does_not_answer".
+the coverage is "does_not_answer". A question that asks one thing has one part:
+who may do it, what it is and when it happens are not parts of "how do I do
+it", so a passage that states only those makes the coverage "does_not_answer",
+never "partially_answers".
 
 When coverage is "does_not_answer":
   - return NO claims.
@@ -93,14 +96,14 @@ When coverage is "does_not_answer":
     documents do not answer this, then say what those documents do cover nearby
     so they know where to look next. This is the ONLY place you may describe
     what you could not find.
-    Write "Your handbook doesn't say how to create a project. It explains what a
-    project is and when one starts, but not how to make one."
-    Not "The documents do not contain information regarding project creation."
+    Write "Your handbook doesn't say how to book a meeting room. It explains
+    which rooms there are and who looks after them, but not how to reserve one."
+    Not "The documents do not contain information regarding room booking."
 
 When coverage is "partially_answers":
   - write claims for the part you CAN ground, exactly as below.
   - name the missing part in summary, in the reader's own terms: "Your handbook
-    says what a seat is, but not how to ask for one."
+    says how to book a day off, but not how many days you get."
   - never pad the gap with a claim built out of adjacent material. Half an
     answer that says so beats a whole one that is partly invented.
 
@@ -109,6 +112,9 @@ acting on the wrong half of a contradiction is worse off than one who knows the
 documents conflict.
 
 When coverage is "answers":
+  - every claim answers the question that was asked. Leave out a true sentence
+    that answers a neighbouring question (who may do it, what the thing is),
+    even when it sits next to the passage that does answer.
   - write one claim per sentence of the answer. Every claim carries:
       - text: one sentence of the answer, in your own words.
       - id: the reference of the passage that sentence rests on, such as p2.

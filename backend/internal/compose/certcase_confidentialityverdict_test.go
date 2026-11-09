@@ -50,9 +50,9 @@ func TestAHeldScenarioPassesWhatTheEngineKeepsPrivate(t *testing.T) {
 	}
 }
 
-// A wrong kind decides the wrong readers for the thread, so it is a leak. A
-// reply the validator refused reached no reader and is not.
-func TestAWrongConfidentialityKindIsALeakAndARefusedReplyIsNot(t *testing.T) {
+// A wrong kind that opens the thread shows it to colleagues, so it is a leak.
+// A second holding kind, an unsure ordinary and a refused reply reach no one.
+func TestOnlyAWrongKindThatOpensTheThreadIsALeak(t *testing.T) {
 	prepared, err := confidentialityCases{}.Prepare(json.RawMessage(`{"subject":"Statement","body":"Attached."}`), json.RawMessage(`"personnel"`))
 	if err != nil {
 		t.Fatal(err)
@@ -60,6 +60,8 @@ func TestAWrongConfidentialityKindIsALeakAndARefusedReplyIsNot(t *testing.T) {
 	for reply, wantLeak := range map[string]bool{
 		`{"results":[{"id":"t1","verdict":"ordinary","confidence":0.95}]}`:  true,
 		`{"results":[{"id":"t1","verdict":"personnel","confidence":0.95}]}`: false,
+		`{"results":[{"id":"t1","verdict":"legal","confidence":0.95}]}`:     false,
+		`{"results":[{"id":"t1","verdict":"ordinary","confidence":0.5}]}`:   false,
 		`not json`: false,
 	} {
 		if got := prepared.Evaluate(aitasks.Trace{Output: reply}); got.Leak != wantLeak {
