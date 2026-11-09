@@ -15,7 +15,7 @@ import (
 // added later is held to the rule without anyone remembering to list it.
 //
 // A count is not money. Every other function has no answer for a group holding
-// an amount that could not be priced; a sum alone reads an empty group as zero.
+// an amount that could not be priced. A sum alone reads an empty group as zero.
 func TestEveryAggregateOverAConvertedAmountSaysOnlyWhatItCanPrice(t *testing.T) {
 	const amount, coverage = "v.base", "v.unpriced"
 	spec := reportSpec{
