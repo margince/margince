@@ -7,12 +7,13 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { ACTIVITY_KINDS } from "../../design-system/recordtimeline";
 import { pickOption } from "../../design-system/select-testing";
+import { isConversationKind } from "../../design-system/timelineentry";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { pretendReaderZone } from "../../testing/readerzone.testkit";
 import { jsonResponse, stubWithSession } from "../../testing/story-utils";
-import { CONVERSATION_FILTER_KINDS } from "../records/recordconversations";
 import { ContactTimelineTab } from "./contacttabs";
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -128,7 +129,7 @@ describe("the Threads cut", () => {
     expect(await screen.findByText("Re: Fleet renewal")).toBeTruthy();
     expect(screen.queryByText("No threads yet.")).toBeNull();
     expect(reads.at(-1)?.searchParams.getAll("kind")).toEqual([
-      ...CONVERSATION_FILTER_KINDS,
+      ...ACTIVITY_KINDS.filter((kind) => isConversationKind(kind)),
     ]);
   });
 

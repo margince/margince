@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { GroupedTimelineList } from "../../design-system/timeline";
+import { useViewerZone } from "../../lib/viewerzone";
 import { company, company360 } from "../../testing/company.fixtures";
 import {
   installFetchStub,
@@ -14,6 +15,7 @@ import {
 import { useChronologySlots } from "./companies.chronology";
 
 function History() {
+  const zone = useViewerZone();
   const { slots } = useChronologySlots({
     company,
     view: company360,
@@ -25,7 +27,7 @@ function History() {
     <div style={{ maxWidth: 720 }}>
       <div className="timeline-header">{slots.timelineHeader}</div>
       {slots.timelineNotice ?? (
-        <GroupedTimelineList groups={slots.timelineGroups ?? []} zone="UTC" />
+        <GroupedTimelineList groups={slots.timelineGroups ?? []} zone={zone} />
       )}
     </div>
   );

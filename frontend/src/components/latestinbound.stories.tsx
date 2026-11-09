@@ -92,10 +92,18 @@ const MAIL: JustIn = {
   notice,
 };
 
+const MAY_WRITE = meRoute({ activity: ["read", "create"] });
+
 function OnRecord({
   latest,
+  me = MAY_WRITE,
   children,
-}: Readonly<{ latest: JustIn; children: ReactNode }>) {
+}: Readonly<{
+  latest: JustIn;
+  me?: () => Response;
+  children: ReactNode;
+}>) {
+  installFetchStub({ "GET /me": me });
   return (
     <StoryProviders>
       <div style={{ maxWidth: 720 }}>
@@ -130,9 +138,8 @@ export const Email: Story = {
 /** A seat that may not write activities is offered no task. */
 export const EmailTaskRefused: Story = {
   render: () => {
-    installFetchStub({ "GET /me": meRoute({ activity: ["read"] }) });
     return (
-      <OnRecord latest={MAIL}>
+      <OnRecord latest={MAIL} me={meRoute({ activity: ["read"] })}>
         <RecordNextBar />
       </OnRecord>
     );

@@ -41,6 +41,8 @@ export default meta;
 
 type Story = StoryObj<typeof ChannelReplyAction>;
 
+const MAY_WRITE = meRoute({ activity: ["read", "create"] });
+
 // Whether this contact can be reached on one transport. The shape is the
 // record read's own, because that read is what the gate consults — see
 // useChannelReachable, which matches the row's provider against this list.
@@ -77,7 +79,7 @@ function Row({
  *  is not a fact this gate has an opinion about. */
 export const MailReply: Story = {
   render: () => {
-    installFetchStub({});
+    installFetchStub({ "GET /me": MAY_WRITE });
     return (
       <StoryProviders>
         <Row
@@ -132,6 +134,7 @@ export const MailReplyRefused: Story = {
 export const ChannelReply: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": MAY_WRITE,
       "GET /contacts/p-1": contactReachable("telegram", true),
     });
     return (
@@ -157,6 +160,7 @@ export const ChannelReply: Story = {
 export const WithheldWritesEmail: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": MAY_WRITE,
       "GET /contacts/p-1": contactReachable("telegram", true),
     });
     return (
@@ -184,7 +188,7 @@ export const WithheldWritesEmail: Story = {
  *  never a reply to it. */
 export const CallWritesEmail: Story = {
   render: () => {
-    installFetchStub({});
+    installFetchStub({ "GET /me": MAY_WRITE });
     return (
       <StoryProviders>
         <Row
@@ -212,7 +216,7 @@ export const CallWritesEmail: Story = {
  *  offers Write email. */
 export const NoteWithNobodyToWriteTo: Story = {
   render: () => {
-    installFetchStub({});
+    installFetchStub({ "GET /me": MAY_WRITE });
     return (
       <StoryProviders>
         <Row when="24 August, 11:20" said="Asked for the revised annex.">
@@ -251,6 +255,7 @@ export const NoteWithNobodyToWriteTo: Story = {
 export const UnreachableOffersNothing: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": MAY_WRITE,
       "GET /contacts/p-1": contactReachable("telegram", false),
     });
     return (
@@ -289,7 +294,7 @@ export const UnreachableOffersNothing: Story = {
  */
 export const PreparedReply: Story = {
   render: () => {
-    installFetchStub({});
+    installFetchStub({ "GET /me": MAY_WRITE });
     return (
       <StoryProviders>
         <Row

@@ -26,7 +26,7 @@ import (
 
 // seedBusyContact gives a contact 30 recent notes and, two months back, one
 // email each way: the mail sits behind a full page of notes.
-func seedBusyContact(t *testing.T, e *integration.Env, author context.Context) ids.UUID {
+func seedBusyContact(author context.Context, t *testing.T, e *integration.Env) ids.UUID {
 	t.Helper()
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	base := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
@@ -53,7 +53,7 @@ func seedBusyContact(t *testing.T, e *integration.Env, author context.Context) i
 	return contact
 }
 
-func listTimeline(t *testing.T, ctx context.Context, e *integration.Env, params crmcontracts.ListActivitiesParams) crmcontracts.ActivityListResponse {
+func listTimeline(ctx context.Context, t *testing.T, e *integration.Env, params crmcontracts.ListActivitiesParams) crmcontracts.ActivityListResponse {
 	t.Helper()
 	req := httptest.NewRequest(http.MethodGet, "/v1/activities", nil).WithContext(ctx)
 	rec := httptest.NewRecorder()
@@ -71,19 +71,19 @@ func listTimeline(t *testing.T, ctx context.Context, e *integration.Env, params 
 func TestATimelineNarrowedToSeveralKindsPagesOverThoseKindsAlone(t *testing.T) {
 	e := integration.Setup(t)
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
-	contact := seedBusyContact(t, e, reader)
+	contact := seedBusyContact(reader, t, e)
 	entity, id := crmcontracts.ListActivitiesParamsEntityTypeContact, openapi_types.UUID(contact)
 	one := 1
 	mail := []crmcontracts.ListActivitiesParamsKind{crmcontracts.ListActivitiesParamsKindEmail, crmcontracts.ListActivitiesParamsKindMessage}
 	params := crmcontracts.ListActivitiesParams{EntityType: &entity, EntityId: &id, Kind: &mail, Limit: &one}
 
 	var seen []crmcontracts.ActivityKind
-	first := listTimeline(t, reader, e, params)
+	first := listTimeline(reader, t, e, params)
 	if !first.Page.HasMore || first.Page.NextCursor == nil {
 		t.Fatalf("first page of one: has_more=%v cursor=%v, want a second page holding the other email", first.Page.HasMore, first.Page.NextCursor)
 	}
 	params.Cursor = first.Page.NextCursor
-	second := listTimeline(t, reader, e, params)
+	second := listTimeline(reader, t, e, params)
 	if second.Page.HasMore {
 		t.Errorf("second page says more follows; the two emails are all the mail there is")
 	}
@@ -96,7 +96,7 @@ func TestATimelineNarrowedToSeveralKindsPagesOverThoseKindsAlone(t *testing.T) {
 
 	notes := []crmcontracts.ListActivitiesParamsKind{crmcontracts.ListActivitiesParamsKindNote}
 	twenty := 20
-	page := listTimeline(t, reader, e, crmcontracts.ListActivitiesParams{EntityType: &entity, EntityId: &id, Kind: &notes, Limit: &twenty})
+	page := listTimeline(reader, t, e, crmcontracts.ListActivitiesParams{EntityType: &entity, EntityId: &id, Kind: &notes, Limit: &twenty})
 	if len(page.Data) != 20 || !page.Page.HasMore {
 		t.Errorf("kind=note read %d rows, has_more=%v; want a full page of 20 with more to come", len(page.Data), page.Page.HasMore)
 	}
