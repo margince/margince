@@ -70,18 +70,21 @@ func TestParticipantPromptDoesNotAddUnquotedAddresses(t *testing.T) {
 // reads it back to the participant's record key, which never reaches the prompt.
 func TestAParticipantIsListedAndReadBackByItsShortRef(t *testing.T) {
 	t.Parallel()
+	seat, contact := ids.MustParse("0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e07"), ids.MustParse("0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e08")
 	parties := []commitmentParty{
-		{Ref: "seat:0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e07", Role: "from", Name: "Mira Chen"},
+		{Ref: "seat:" + seat.String(), Role: "from", Name: "Mira Chen", Seat: &seat},
 		{Role: "to", Name: "Unverified Sender"},
-		{Ref: "contact:0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e08", Role: "to", Name: "Pat Buyer"},
+		{Ref: "contact:" + contact.String(), Role: "to", Name: "Pat Buyer", Contact: &contact},
 	}
 	refs := commitmentPartyRefs(parties)
 	prompt := commitmentPartyPrompt(parties, "", refs)
 	if strings.Contains(prompt, "seat:") || strings.Contains(prompt, "contact:") {
 		t.Fatalf("a record key reached the participant list:\n%s", prompt)
 	}
-	if !strings.Contains(prompt, `"p1" "from"`) || !strings.Contains(prompt, `"p2" "to" "Pat Buyer"`) {
-		t.Fatalf("participants are not listed as p1 and p2:\n%s", prompt)
+	// The kind is the only sign of who may receive a promise.
+	if !strings.Contains(prompt, `"p1" "colleague" "from"`) || !strings.Contains(prompt, `"p2" "contact" "to" "Pat Buyer"`) ||
+		!strings.Contains(prompt, `"" "" "to" "Unverified Sender"`) {
+		t.Fatalf("participants are not listed as p1 and p2 with their kind:\n%s", prompt)
 	}
 	if got := partyKey(refs, "p2"); got != parties[2].Ref {
 		t.Errorf("p2 reads back to %q, want %q", got, parties[2].Ref)

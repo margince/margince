@@ -122,7 +122,7 @@ Never advise, never congratulate, never scold, and never grade the week: no "hig
 
 // Counts alone cannot establish source coverage or forecast stability.
 const quietWeekRule = `
-Describe only the recorded counts. Zero counts do not prove that nothing happened, that a forecast is safe, or that nothing slipped. Do not make quiet-week or no-slippage claims.
+Describe only the recorded counts. Zero counts do not prove that nothing happened, that a forecast is safe, or that nothing slipped. Do not make quiet-week or no-slippage claims. Say in one sentence that no tasks, deals or meetings were recorded; never list each zero.
 `
 
 // happenedRule is its opposite, for a week that did something. It names the

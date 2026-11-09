@@ -70,9 +70,21 @@ func commitmentPartyPrompt(parties []commitmentParty, source string, refs *promp
 		if party.Ref != "" {
 			ref = refs.For(party.Ref)
 		}
-		fmt.Fprintf(&out, "%q %q %q %q\n", ref, party.Role, party.Name, address)
+		fmt.Fprintf(&out, "%q %q %q %q %q\n", ref, partyKind(party), party.Role, party.Name, address)
 	}
 	return out.String()
+}
+
+// partyKind tells the model which participants are contacts, since only a
+// contact may receive a promise and a short ref no longer shows it.
+func partyKind(party commitmentParty) string {
+	switch {
+	case party.Seat != nil:
+		return "colleague"
+	case party.Contact != nil:
+		return "contact"
+	}
+	return ""
 }
 
 // commitmentPartyRefs names each verified participant p1, p2, … in order; a

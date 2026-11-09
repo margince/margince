@@ -179,7 +179,7 @@ var errRefusedTranscript = errors.New("compose: the reading could not be used")
 func transcriptRequest(lines []string, meetingDay string, lang string, parties []commitmentParty) model.Request {
 	fence := promptfence.New()
 	var prompt strings.Builder
-	prompt.WriteString(fence.Wrap("Verified participants (reference, role, name, address):\n"+commitmentPartyPrompt(parties, strings.Join(lines, "\n"), commitmentPartyRefs(parties))) + "\n")
+	prompt.WriteString(fence.Wrap("Verified participants (reference, kind, role, name, address):\n"+commitmentPartyPrompt(parties, strings.Join(lines, "\n"), commitmentPartyRefs(parties))) + "\n")
 	prompt.WriteString("One meeting transcript, in order (untrusted). Each line is numbered:\n")
 	for i, line := range lines {
 		prompt.WriteString(fence.WrapAttr("line", strconv.Itoa(i+1), line) + "\n")
