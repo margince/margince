@@ -135,26 +135,34 @@ func TestAnEmptyHomeReadsListFails(t *testing.T) {
 }
 
 func TestTheWarmUpWaitsOnlyForStatementsStillTryingCustomPlans(t *testing.T) {
-	statement := func(name string) preparedStatement { return preparedStatement{pid: 7, name: name} }
+	on := func(pid uint32, name string) preparedStatement { return preparedStatement{pid: pid, name: name} }
 	before := map[preparedStatement]planCount{
-		statement("trying"): {custom: 2},
-		statement("custom"): {custom: 4},
-		statement("forced"): {generic: 1},
-		statement("idle"):   {custom: 1},
+		on(7, "trying"):    {custom: 2},
+		on(7, "weighing"):  {custom: 4},
+		on(7, "custom"):    {custom: 5},
+		on(7, "forced"):    {generic: 1},
+		on(7, "idle"):      {custom: 1},
+		on(7, "elsewhere"): {custom: 5},
+		on(8, "elsewhere"): {custom: 4},
 	}
 	after := map[preparedStatement]planCount{
-		statement("trying"): {custom: 3},
-		statement("custom"): {custom: 5},
-		statement("forced"): {generic: 2},
-		statement("idle"):   {custom: 1},
-		statement("new"):    {custom: 1},
+		on(7, "trying"):    {custom: 3},
+		on(7, "weighing"):  {custom: 5},
+		on(7, "custom"):    {custom: 6},
+		on(7, "forced"):    {generic: 2},
+		on(7, "idle"):      {custom: 1},
+		on(7, "new"):       {custom: 1},
+		on(7, "elsewhere"): {custom: 6},
+		on(8, "elsewhere"): {custom: 4},
 	}
-	var names []string
+	var named []string
 	for _, s := range inCustomPlanTrials(before, after) {
-		names = append(names, s.name)
+		named = append(named, fmt.Sprintf("%d/%s", s.pid, s.name))
 	}
-	slices.Sort(names)
-	if !slices.Equal(names, []string{"new", "trying"}) {
-		t.Fatalf("statements in their custom-plan trials = %v, want the new one and the one still trying", names)
+	slices.Sort(named)
+	// The fifth custom plan still trying, and a statement whose SQL ran only on
+	// the other connection, are both still in their trials.
+	if want := []string{"7/new", "7/trying", "7/weighing", "8/elsewhere"}; !slices.Equal(named, want) {
+		t.Fatalf("statements in their custom-plan trials = %v, want %v", named, want)
 	}
 }

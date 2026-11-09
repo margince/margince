@@ -179,19 +179,19 @@ func runHomeCold(t *testing.T, e *apptest.AppEnv, in dailyInput) []dailyRow {
 }
 
 // postgresCustomPlanTrials is how many custom plans Postgres makes for a
-// prepared statement before it weighs the generic plan (choose_custom_plan in
-// plancache.c). It is not a setting.
+// prepared statement before the next run weighs the generic plan
+// (choose_custom_plan in plancache.c). It is not a setting.
 const postgresCustomPlanTrials = 5
 
-// homeWarmPasses bounds the warm passes. On the bench corpus every statement
-// leaves its trials by the ninth pass, with the reads spread over two
-// connections.
-const homeWarmPasses = 16
+// homeWarmPasses bounds the warm passes. On the bench corpus the reads
+// alternate between two connections, so the trials end after about twelve.
+const homeWarmPasses = 20
 
-// warmHomePlans sends the timed reads on the rebooted app until no statement
-// the last pass ran is still in its custom-plan trials. Each pass forgets the
-// kept answers first, so each read assembles. A running server's connections
-// are past them, so the timed read pays the planning a running server pays.
+// warmHomePlans sends the timed reads on the rebooted app until the custom-plan
+// trials are over. Every statement the last pass ran must have ended them on
+// every connection that holds it. Each pass forgets the kept answers first, so
+// each read assembles. A running server's connections are past the trials, so the
+// timed read pays the planning a running server pays.
 func warmHomePlans(t *testing.T, e *apptest.AppEnv, booted *apptest.AppEnv, s Seat, timed []dailyCall) {
 	t.Helper()
 	before := preparedPlans(t, booted)
@@ -262,14 +262,21 @@ func preparedPlans(t *testing.T, booted *apptest.AppEnv) map[preparedStatement]p
 	return plans
 }
 
-// inCustomPlanTrials names the statements that ran between the two readings
-// and are still planned afresh at each run while Postgres tries custom plans.
+// inCustomPlanTrials names, on every connection, the statements still in their
+// custom-plan trials whose SQL ran on any connection between the two readings.
+// A trial ends at the run that weighs the generic plan, so a statement that has
+// made only postgresCustomPlanTrials custom plans is still in it.
 func inCustomPlanTrials(before, after map[preparedStatement]planCount) []preparedStatement {
-	var trying []preparedStatement
+	ran := map[string]bool{}
 	for statement, now := range after {
 		then := before[statement]
-		ran := now.custom+now.generic > then.custom+then.generic
-		if ran && now.generic == 0 && now.custom < postgresCustomPlanTrials {
+		if now.custom+now.generic > then.custom+then.generic {
+			ran[statement.name] = true
+		}
+	}
+	var trying []preparedStatement
+	for statement, now := range after {
+		if ran[statement.name] && now.generic == 0 && now.custom <= postgresCustomPlanTrials {
 			trying = append(trying, statement)
 		}
 	}
