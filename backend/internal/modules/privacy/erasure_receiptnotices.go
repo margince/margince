@@ -16,8 +16,8 @@ import (
 // eraseReceiptNotices takes back every missed-receipt notice about the erased
 // subject or its leads, and detaches it from the record it named.
 //
-// The notice names the subject by its target and nothing else, so retracting
-// it and clearing the target leaves no reference to the subject behind.
+// The notice names the subject by its target. Its dedupe key is the receipt's
+// message id, a threading identity the scrubbed delivery keeps as well.
 func eraseReceiptNotices(ctx context.Context, tx pgx.Tx, subject ids.ContactID, leads []ids.UUID, reason string) error {
 	if leads == nil {
 		leads = []ids.UUID{}

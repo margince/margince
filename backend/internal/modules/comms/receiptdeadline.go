@@ -10,6 +10,7 @@ package comms
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -99,6 +100,25 @@ func scanOverdueReceipt(row pgx.CollectableRow) (OverdueReceipt, error) {
 		r.SubjectType, r.SubjectID = *subjectType, *subjectID
 	}
 	return r, err
+}
+
+// LockOverdueReceiptTx locks one receipt and answers whether it is still overdue
+// and unscrubbed. An erasure scrubs the row under this row lock. A notice raised
+// while the lock is held commits first, and the erasure then retracts it.
+func (s *Store) LockOverdueReceiptTx(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID, now time.Time) (bool, error) {
+	if err := requireSystemReader(ctx); err != nil {
+		return false, err
+	}
+	var locked ids.UUID
+	err := tx.QueryRow(ctx, `SELECT o.id FROM comms_outbound o WHERE o.id = $1 AND `+overdueReceiptSQL+`$2 FOR UPDATE`,
+		deliveryID, now).Scan(&locked)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("comms: locking an overdue controller receipt: %w", err)
+	}
+	return true, nil
 }
 
 // OverdueReceiptBacklog counts every overdue receipt, raised or not, for the log.
