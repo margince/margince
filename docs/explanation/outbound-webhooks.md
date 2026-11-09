@@ -575,8 +575,8 @@ but no buttons that change data.
   cannot own a subscription.
 - `deliverOnce` **records the result**; the sweep takes up `retrying` rows again. A fail to store is
   safe for a row already in `retrying`, since the next scan tries it again. A first attempt whose
-  result write fails leaves the row in `pending`: the sweep does not scan it and a replay refuses it
-  (422), so nothing sends it again.
+  result write fails leaves the row in `pending`. The sweep does not scan it and a replay refuses
+  it (422), so nothing sends it again.
 - **Delivery is a capability that needs a key.** No key → a read-only surface, 503 on the secret
   paths, no worker lane.
 

@@ -133,8 +133,8 @@ var sensitiveFilenameWords = wordSet(`passport passports reisepass reisepässe p
 
 // sensitiveStem names an identity or medical document inside a longer word,
 // as in "employeeidcard". Where an ordinary word also contains the stem, the
-// letters around it are limited: "passporting" and "idcardinality" end in no
-// file-name tail, and "contestresults" starts with no kind of test.
+// letters around it are limited. "Passporting" ends in no file-name tail, and
+// "contestresults" starts with no kind of test.
 type sensitiveStem struct {
 	stem            string
 	tails, prefixes []string
