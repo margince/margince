@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"slices"
@@ -81,6 +82,7 @@ func (h Handlers) oauthRegister(w http.ResponseWriter, r *http.Request) {
 	// map, because the struct decode refuses the unknown keys §2 says to ignore.
 	var members map[string]json.RawMessage
 	if err := httperr.DecodeOrRefusal(w, r, &members); err != nil {
+		logRegistrationRefused(r, oauthErrInvalidClientMetadata, "document")
 		if httperr.BodyTooLarge(err) {
 			oauthError(w, http.StatusRequestEntityTooLarge, oauthErrInvalidClientMetadata,
 				"registration document exceeds the 1 MiB cap")
@@ -92,6 +94,7 @@ func (h Handlers) oauthRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	req, refusal := parseDCR(members)
 	if refusal != nil {
+		logRegistrationRefused(r, refusal.code, refusal.member)
 		oauthError(w, http.StatusBadRequest, refusal.code, refusal.description)
 		return
 	}
@@ -119,6 +122,12 @@ func (h Handlers) oauthRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httperr.WriteJSON(w, http.StatusCreated, req.registered(clientID))
+}
+
+// logRegistrationRefused is the operator's only record of why a registration
+// failed; the client reads the description in its answer.
+func logRegistrationRefused(r *http.Request, code, member string) {
+	slog.InfoContext(r.Context(), "a client registration was refused", "error", code, "member", member)
 }
 
 // authorizePath is the consent endpoint. Four things have to agree on it and
