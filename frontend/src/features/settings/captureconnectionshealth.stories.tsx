@@ -4,7 +4,7 @@ import { StoryProviders } from "../../testing/story-utils";
 import { CaptureConnectionsHealth } from "./captureconnectionshealth";
 
 const meta = {
-  title: "Settings/Governance/System health/Connection concerns",
+  title: "Settings/System/System health/Connection concerns",
   component: CaptureConnectionsHealth,
   decorators: [
     (Story) => (

@@ -125,3 +125,18 @@ it("says why an unreadable figure is missing from its status", () => {
     detail: en["reporting.status.failed"],
   });
 });
+
+it("marks withheld lead figures unavailable without hiding the rest of the week", () => {
+  for (const summary of [undefined, sharedWeeklyNumbers]) {
+    const result = weeklyNumericStatus(summary, true);
+    expect(result.figures.leads.kind).toBe("unavailable");
+    expect(figureShown(result.figures.leads)).toBe(false);
+    expect(figureReading(result.figures.leads, { value: "0" }, place)).toEqual({
+      value: en["reporting.unavailable"],
+      detail: en["brief.weekly.leadsUnavailable"],
+    });
+    expect(result.figures.tasks.kind).toBe("measured");
+    expect(result.partial).toBe(true);
+    expect(beforeRecordedHistory(result.figures)).toBe(false);
+  }
+});

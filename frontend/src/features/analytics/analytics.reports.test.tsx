@@ -6,7 +6,8 @@ import type { components } from "../../api/schema";
 import { formatAnalyticsMoney, MONEY_ABSENT } from "../../format/format";
 import { LocaleProvider } from "../../i18n";
 import { vi as viCatalog } from "../../i18n/vi";
-import { AnalyticsScreen, buildStageAggregates } from "./analytics";
+import { AnalyticsScreen } from "./analytics";
+import { buildStageAggregates } from "./analytics.pipeline";
 import { SECTION_REPORTS } from "./analytics.reports";
 import {
   openPipeline,

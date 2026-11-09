@@ -48,3 +48,12 @@ func NotMarkedSQL(alias string) string {
 func ContactNotMarkedSQL(idExpr string) string {
 	return fmt.Sprintf("EXISTS (SELECT 1 FROM contact mk WHERE mk.id = %s AND %s)", idExpr, NotMarkedSQL("mk"))
 }
+
+// SenderMayRaiseWorkSQL excludes marked senders even when mail also links a company.
+func SenderMayRaiseWorkSQL(activity string) string {
+	return `NOT EXISTS (SELECT 1 FROM activity_participant marked_sender
+      JOIN contact_email marked_email ON lower(btrim(marked_email.email)) = lower(btrim(marked_sender.address)) AND marked_email.archived_at IS NULL
+      JOIN contact marked_contact ON marked_contact.id = marked_email.contact_id
+      WHERE marked_sender.activity_id = ` + activity + `.id AND marked_sender.role = 'from' AND marked_contact.archived_at IS NULL
+        AND NOT (` + NotMarkedSQL("marked_contact") + `))`
+}

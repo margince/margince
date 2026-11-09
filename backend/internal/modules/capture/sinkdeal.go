@@ -31,6 +31,9 @@ type DealCandidates interface {
 	// OpenDealsWithStakeholders is the company's open deals on which one of
 	// contacts is a stakeholder.
 	OpenDealsWithStakeholders(ctx context.Context, tx pgx.Tx, companyID ids.UUID, contacts []ids.UUID) ([]ids.UUID, error)
+	// OpenDealsOfCompanyUpTo is up to limit open deals of one company, the
+	// candidates a topic check weighs for an ambiguous mail.
+	OpenDealsOfCompanyUpTo(ctx context.Context, tx pgx.Tx, companyID ids.UUID, limit int) ([]ids.UUID, error)
 }
 
 // WhichDeal is a mail the rule could not place on one deal of the company or
@@ -49,11 +52,13 @@ type WhichDeal struct {
 type AskWhichDeal func(ctx context.Context, tx pgx.Tx, q WhichDeal) error
 
 // DealAttribution is the rule's seams. A nil Candidates or Filer turns the
-// rule off; a nil Ask places mail and asks nobody.
+// rule off; a nil Ask places mail and asks nobody; a nil Check files no
+// suggested deal.
 type DealAttribution struct {
 	Candidates DealCandidates
 	Ask        AskWhichDeal
 	Filer      DealFiler
+	Check      DealTopicCheck
 }
 
 // WithDealAttribution returns a copy that files captured mail under its deal.
@@ -78,18 +83,14 @@ const (
 )
 
 // DealVerdict is the rule's answer. Deal is set only for DealLinked, and
-// Question only for DealAmbiguous.
+// Question only for DealAmbiguous. Basis is the rung that decided, and
+// Candidates the deals a topic check weighs for a suggestion.
 type DealVerdict struct {
-	Outcome  DealOutcome
-	Deal     ids.UUID
-	Question WhichDeal
-}
-
-// AttributeDealTx applies the rule to one activity and writes the link it
-// concludes. With ask nil it raises no question, which is what a repair of old
-// mail wants.
-func AttributeDealTx(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, rule DealAttribution) (DealVerdict, error) {
-	return fileOnDeal(dealFiling{decider: ctx, writer: ctx, filer: rule.Filer}, tx, activityID, rule.Candidates, rule.Ask)
+	Outcome    DealOutcome
+	Deal       ids.UUID
+	Question   WhichDeal
+	Basis      DealBasis
+	Candidates []ids.UUID
 }
 
 // dealFiling is who decides and who writes. Live capture is both. The repair
@@ -99,38 +100,52 @@ type dealFiling struct {
 	decider, writer context.Context
 	evidence        map[string]any
 	filer           DealFiler
+	topic           *dealTopicState
 }
 
 // fileOnDeal locks the activity row first, as the human relink locks it
 // (activities.relinkActivityRow). Deal links have no one-per-activity index.
 // Without the lock, a relink between the guard and the insert leaves two.
-func fileOnDeal(f dealFiling, tx pgx.Tx, activityID ids.ActivityID, candidates DealCandidates, ask AskWhichDeal) (DealVerdict, error) {
+//
+// A suggested deal still to be checked comes back as a question and writes
+// nothing; the caller asks it and files again (checkedFiling).
+func fileOnDeal(f dealFiling, tx pgx.Tx, activityID ids.ActivityID, candidates DealCandidates, ask AskWhichDeal) (DealVerdict, *topicQuestion, error) {
 	if live, err := lockForDeal(f.writer, tx, activityID); err != nil || !live {
-		return DealVerdict{Outcome: DealNone}, err
+		return DealVerdict{Outcome: DealNone}, nil, err
 	}
 	facts, err := readDealFacts(f.decider, tx, activityID, false)
 	if err != nil || facts.outcome != "" {
-		return DealVerdict{Outcome: facts.outcome}, err
+		return DealVerdict{Outcome: facts.outcome}, nil, err
 	}
-	verdict, err := decideDeal(f.decider, tx, facts, candidates)
-	if err != nil {
-		return DealVerdict{}, err
+	verdict, question, err := decideFiling(f, tx, facts, candidates)
+	if err != nil || question != nil {
+		return verdict, question, err
 	}
 	switch verdict.Outcome {
 	case DealLinked:
 		written, err := linkActivityToDeal(f, tx, activityID, verdict.Deal, candidates)
 		if err != nil || written != DealLinked {
-			return DealVerdict{Outcome: written}, err
+			return DealVerdict{Outcome: written, Basis: verdict.Basis}, nil, err
 		}
 	case DealAmbiguous:
 		verdict.Question.ActivityID = activityID
 		if ask != nil && !facts.meeting {
 			if err := ask(f.decider, tx, verdict.Question); err != nil {
-				return DealVerdict{}, err
+				return DealVerdict{}, nil, err
 			}
 		}
 	}
-	return verdict, nil
+	return verdict, nil, rememberTopicAnswer(f, tx, activityID)
+}
+
+// rememberTopicAnswer stamps the memo once the check has answered, so the
+// hourly passes do not ask the same question again. An abstention is not
+// remembered: the next pass asks.
+func rememberTopicAnswer(f dealFiling, tx pgx.Tx, activityID ids.ActivityID) error {
+	if f.topic == nil || f.topic.answer == nil || !f.topic.answer.answered {
+		return nil
+	}
+	return f.filer.StampDealTopic(f.writer, tx, activityID, f.topic.answer.digest)
 }
 
 func lockForDeal(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) (bool, error) {
@@ -144,8 +159,8 @@ func lockForDeal(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) (boo
 }
 
 // attributeDeal runs the rule after the capture committed, on attributeProject's
-// terms: its own transaction, on every capture so the next one retries a
-// fault. A fault is logged and never returned.
+// terms. It runs in its own transactions, with any topic check between them,
+// on every capture, so the next one retries a fault. A fault is logged.
 func (s *Sink) attributeDeal(ctx context.Context, rec connector.NormalizedRecord, ref datasource.EntityRef) {
 	if s.deals.Candidates == nil || s.deals.Filer == nil || ref.Type != datasource.EntityActivity {
 		return
@@ -153,11 +168,7 @@ func (s *Sink) attributeDeal(ctx context.Context, rec connector.NormalizedRecord
 	if fields, ok := rec.Fields.(ActivityFields); !ok || !dealActivityKind(fields.Kind) {
 		return
 	}
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		_, err := AttributeDealTx(ctx, tx, ids.From[ids.ActivityKind](ref.ID), s.deals)
-		return err
-	})
-	if err != nil {
+	if _, err := FileOnDealChecked(ctx, s.db, ids.From[ids.ActivityKind](ref.ID), s.deals); err != nil {
 		s.logDealAttributionFault(ctx, rec, err)
 	}
 }

@@ -51,19 +51,39 @@ Also called: remove a contact, hard delete, purge, wipe.
 To erase a contact on request, an admin opens **Settings → Privacy and retention**, chooses **Privacy** in the **Requests** panel and then **New request**.
 1. Set **Kind** to **Erasure** and pick the **Contact** (required).
 2. Set **Due**, then choose **Open request**.
-3. Choose the request in the list to open it and write the **Resolution**.
+3. Choose the request in the list to open it. Leave **Resolution** empty: the erasure records its own answer.
 4. Fill **How the identity was checked** and choose **Fulfill**.
 5. Type ERASE in **Type ERASE to confirm** and choose **Erase and suppress**.
 This cannot be undone. A contact that the law says you must still keep is refused with **Blocked by legal hold**.
 Also called: right to be forgotten, Art. 17, delete my data, data subject request, DSR.
 
+The audit details and stored event copies of the records being erased lose their personal values too. The audit still keeps who acted, what happened and when.
+
+### What still needs a human review after erasure?
+
+A **Manual privacy review needed** notification points to retained text that may name the contact.
+Descriptions, signatures, uploaded files and their search copies are kept for a human to review.
+Held notes and possible name matches are flagged too. Open the notice and decide what may be removed.
+An inactive member's signature needs help from whoever runs Margince; the notice names it.
+
+Matching full names and email addresses are removed from notes without contact or lead links.
+Other note text stays. If no active administrator or ops member can read the retained content,
+erasure stops and says how to restore review access and retry.
+
 ### How do I answer a data access request?
 To log a GDPR access request, an admin opens **Settings → Privacy and retention → Requests → Privacy** and chooses **New request**. Set **Kind** to **Access**, fill **Subject reference** and **Due**, and choose **Open request**. The app says: "An access request is fulfilled manually: record what you sent in the resolution. This system does not assemble or export the data for you." Bring the data together (or have the package made, see below) and send it. Then write the **Resolution**, fill **How the identity was checked** and choose **Fulfill**.
+
+Open a closed request to read its proof, including its reference, identity check, answer date and how long the proof is kept.
+An erasure proof also counts changes to stored entries.
+The subject's data package includes their request proofs.
+A request opened through a confirm link already has its identity check filled in.
 
 Also called: subject access request, SAR, Art. 15, what do you hold about me.
 
 ### How do I archive a record?
 To archive a contact or company, open it and choose **More actions → Archive**, then confirm "Archive this record? You can bring it back from its history." For a deal, choose **Archive deal**; for a project, **Archive project**. Leads are not archived: choose **Disqualify**. To see archived records on a list, choose **Show archived**.
+
+Team lead, Management, Ops and Admin may archive a contact, company or deal. So may its owner, if they created it or were given it.
 Also called: hide, remove, retire a record.
 
 ### How do I restore an archived record?
@@ -148,6 +168,8 @@ private folder names.
 
 **Anonymizing a contact** clears the names, title and address, sets the name to "Erased Subject", and clears every custom field. It deletes their email addresses, phone numbers, and their names on other sites and services. No block entry is written: the law allows the contact to come back.
 
+Anonymizing a contact or lead closes their pending duplicate matches. Saved names and values are cleared from all their matches, including matches already decided. The decisions stay.
+
 **Erasing a call transcript** clears the text and puts "Erased" in place of the subject, and deletes the files too. It keeps who the meeting was with and when: the record of the meeting stays and what was said goes.
 
 ### Writing your own retention rule
@@ -201,11 +223,11 @@ Only an **Admin** or **Ops** user can change retention. Everyone else cannot eve
 
 The list of privacy requests, **Settings → Privacy and retention → Requests → Privacy**, holds "Data subject requests with their statutory deadlines." Only admins can open it by default, because the list names whoever asked. An admin can give that access to someone else by itself, without letting them manage members.
 
-A request has a kind (**Access**, **Correction** or **Erasure**), a subject, an assignee, a due date, and a resolution. Choose its subject in the list to open it. It moves through **In progress** and is closed by **Fulfill** or **Reject**. To close one you must write the answer: "Closing a request needs its answer." To give a request back, set **Assignee** to **Unassigned**.
+A request has a kind (**Access**, **Correction** or **Erasure**), a subject, an assignee, a due date, and a resolution. Choose its subject in the list to open it. It moves through **In progress** and is closed by **Fulfill** or **Reject**. To close one you must write the answer: "Closing a request needs its answer." Fulfilling an erasure is the exception: it records its own answer. To give a request back, set **Assignee** to **Unassigned**.
 
 To close a request you also fill **How the identity was checked**. If it could not be checked, the request can only be rejected. Fill **Requester’s email address** when the request came from an address that the subject reference does not name.
 
-**Margince works out the due date.** It counts from the day the request arrived, under the law chosen on **Settings → Governance → Jurisdiction**. With none chosen, it is one calendar month.
+**Margince works out the due date.** It counts from the day the request arrived, under the law chosen on **Settings → Compliance → Jurisdiction**. With none chosen, it is one calendar month.
 
 Set **Received on** for a request you log late. You may choose an earlier due date, never a later one. The request then says which rule set its date.
 
@@ -249,6 +271,13 @@ Carrying one out is hard to do by mistake. You type **ERASE** to confirm, and th
 > audited.
 
 The confirm button reads **Erase and suppress**.
+
+An erasure is not answered in your own words. Typed words could name the contact the erasure removes. Fulfilling records one of two answers:
+
+- **Erased**: the erasure removed or anonymized the contact's data.
+- **Nothing held (already erased)**: there was nothing left to erase, for example after an earlier erasure.
+
+Use the **Resolution** box only when you choose **Reject**. If you typed something and then choose **Fulfill**, the dialog says that your text is not kept.
 
 ## When erasure does not win: the retention floor
 

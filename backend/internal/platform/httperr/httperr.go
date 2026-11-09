@@ -104,16 +104,13 @@ func clientInputValidation(err error) (error, bool) {
 		return Validation(badValue.Field, badValue.Code, badValue.Message), true
 	}
 
-	// A write payload the datasource seam refused to decode — an unknown or
-	// misspelled field, or a value of the wrong type. datasource's own doc
-	// states it maps to 422 on every surface; this is the branch that makes
-	// that true for HTTP rather than letting it fall through to the 500 a
-	// pure client mistake must never answer with.
-	//
-	// The detail names which field and why through the SAME restatement the
-	// native body decode uses, so both paths say one thing about one mistake,
-	// and it ends with what the caller should DO — which a decoder message on
-	// its own never says. Whatever it had to withhold is logged by Write.
+	// A payload the datasource seam refused to decode is a 422, never a 500. A
+	// value outside a contract rule names its field and code, as the REST decode
+	// does. Any other cause is restated as the native body decode restates it,
+	// and Write logs what that withheld.
+	if refused, ok := errors.AsType[*datasource.DecodedValueError](err); ok {
+		return Validation(refused.Field, refused.Code, refused.Error()), true
+	}
 	if badFields, ok := errors.AsType[*datasource.FieldDecodeError](err); ok {
 		detail, _ := fieldDecodeRefusal(badFields.Cause)
 		return Validation("fields", "invalid_field", detail), true
@@ -266,38 +263,6 @@ type Fault struct {
 	RetryAfterSeconds int
 }
 
-// transientCodes are the refusals that clear ON THEIR OWN: a rate limit whose
-// window elapses, a metered budget that refills. Membership is by CODE and not
-// by status range, because the range lies — a 503 is equally the shape of
-// "not bootstrapped yet" or "misconfigured", which no amount of retrying
-// resolves and which an operator must act on. Telling an agent to wait for one
-// of those spends its whole step budget on a call that was already settled.
-var transientCodes = map[string]struct{}{
-	"rate_limited":               {},
-	IdempotencyInProgressCode:    {},
-	"incumbent_budget_exhausted": {},
-	schemaChangedCode:            {},
-	writeContentionCode:          {},
-	SourceBusyCode:               {},
-	AgentBusyCode:                {},
-}
-
-// SourceBusyCode refuses an import test while another run of the same source
-// name is writing. It clears when that write ends.
-const SourceBusyCode = "import_source_busy"
-
-// AgentBusyCode refuses an agent's second import test while its first is still
-// running. It clears when that test ends.
-const AgentBusyCode = "import_agent_busy"
-
-// Transient reports whether repeating the same call unchanged could succeed
-// later. Every other classified fault is settled: something must change (the
-// arguments, a human's decision, an operator's) before a retry means anything.
-func (f Fault) Transient() bool {
-	_, ok := transientCodes[f.Code]
-	return ok
-}
-
 // Classify is the ONE decision tree behind the error taxonomy: what err means
 // to a caller, independent of the surface that caller reached us through. It
 // reports false only for an error outside the taxonomy — a genuine server
@@ -336,8 +301,15 @@ func Classify(err error) (Fault, bool) {
 			if detail := referenced.Error(); detail != "" && !infrastructureCause(err) {
 				fault.Detail = detail
 			}
+			if waits, ok := referenced.(retryAfterFault); ok {
+				fault.RetryAfterSeconds = waits.RetryAfterSeconds()
+			}
 			return fault, true
 		}
+	}
+
+	if fault, ok := unansweredFaultOf(err); ok {
+		return fault, true
 	}
 
 	if withDetails, ok := errors.AsType[*DetailedError](err); ok {

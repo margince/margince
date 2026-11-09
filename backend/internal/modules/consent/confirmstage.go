@@ -22,6 +22,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"strings"
 	"time"
 
@@ -93,7 +94,7 @@ func (s *Store) stageConfirmMail(
 	// carries is a placeholder and a reference; the two meet in memory at
 	// dispatch, so the link is absent from the delivery row, the timeline body,
 	// the audit payload and the outbox event alike.
-	ref, err := s.vault.Put(ctx, in.link)
+	ref, err := s.vault.Put(ctx, linkInLanguage(in.link, rendered.Language))
 	if err != nil {
 		return ids.UUID{}, fmt.Errorf("consent: sealing the one-time confirm link: %w", err)
 	}
@@ -178,6 +179,16 @@ const confirmRoute = "/#/confirm/"
 // confirmLink puts the token in the URL's FRAGMENT, never its path.
 func (s *Store) confirmLink(token string) string {
 	return s.publicBaseURL + confirmRoute + token
+}
+
+// linkInLanguage adds the language the mail is written in, as a send's
+// unsubscribe link does. The page then opens in that language even when the
+// link has expired and the server answers nothing about it.
+func linkInLanguage(link, language string) string {
+	if !mailcopy.Known(language) {
+		return link
+	}
+	return link + "?lang=" + url.QueryEscape(language)
 }
 
 // canSendConfirm reports whether this installation can put a confirm link on the

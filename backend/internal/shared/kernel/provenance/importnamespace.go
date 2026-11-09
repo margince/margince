@@ -77,6 +77,10 @@ const (
 // thread is asked about once.
 const WhichDealSource = "which_deal"
 
+// WhichDealOfferedKey names, in the raw of a WhichDealSource task, the ids of
+// the deals the question offered.
+const WhichDealOfferedKey = "offered_deal_ids"
+
 // WebsiteLeadSource names a lead read off a company's website and accepted by
 // a human. Only that accept writes it. A lead under it is sent an Art. 14
 // notice, held until the notice is through, and deleted when it fails.

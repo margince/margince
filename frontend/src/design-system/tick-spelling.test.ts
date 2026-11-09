@@ -133,9 +133,9 @@ function findTickSpellings(path: string, text: string): string[] {
   if (!/role|aria-checked|checkbox|radio/.test(text)) return [];
   const source = parseSource(path, text);
   const found: string[] = [];
-  // Anything not already TSX is read a SECOND time as TSX and the findings
-  // unioned, for native-controls.test.ts's reason: a file whose JSX the primary
-  // parse cannot see yields ZERO nodes, which is a silent pass.
+  // Anything not already TSX is read a second time as TSX, and the findings
+  // unioned. native-controls.census.ts gives the reason: a file whose JSX the
+  // primary parse cannot see yields zero nodes, which is a silent pass.
   if (scriptKindFor(path) !== ts.ScriptKind.TSX) {
     for (const hit of findTickSpellings(`${path}x`, text)) {
       if (!found.includes(hit)) found.push(hit);

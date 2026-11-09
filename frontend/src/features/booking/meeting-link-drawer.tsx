@@ -1,3 +1,7 @@
+import { HoursSummary, ReplaceAddressConfirm } from "./meeting-link-actions";
+
+export { ReplaceAddressConfirm } from "./meeting-link-actions";
+
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -10,9 +14,7 @@ import {
   SegmentedControl,
   TextInput,
 } from "../../design-system/atoms";
-import { Callout } from "../../design-system/callout";
 import { type Choice, ChoiceList } from "../../design-system/choicelist";
-import { ConfirmModal } from "../../design-system/confirmmodal";
 import {
   DrawerBody,
   DrawerFoot,
@@ -25,7 +27,6 @@ import { ProviderMark } from "../../design-system/provider-mark";
 import {
   type PluralTranslator,
   type Translator,
-  useLocale,
   usePlural,
   useT,
 } from "../../i18n";
@@ -36,13 +37,8 @@ import {
   type VideoApp,
 } from "../../lib/booking-video";
 import { useConnectors } from "../../lib/connectors";
-import {
-  usePatchSchedulingProfile,
-  useSchedulingProfile,
-} from "../../lib/scheduling-profile-query";
-import { BookingAliasField, currentBookingAddress } from "./booking-alias";
-import { hoursSentence } from "./meeting-phrases";
-import { useWorkingHours } from "./working-hours";
+import { usePatchSchedulingProfile } from "../../lib/scheduling-profile-query";
+import { BookingAliasField } from "./booking-alias";
 import "./meeting-cards.css";
 
 type Profile = components["schemas"]["SchedulingProfile"];
@@ -105,6 +101,7 @@ type LinkDraft = Readonly<{
   title: string;
   length: Length;
   minutes: string;
+  offered?: string;
   video: Video;
   location: string;
 }>;
@@ -115,6 +112,7 @@ function draftOf(profile: Profile): LinkDraft {
     title: profile.title,
     length: LENGTHS.find((length) => length === minutes) ?? "other",
     minutes,
+    offered: (profile.offered_lengths ?? []).join(", "),
     video: videoOf(profile),
     location: profile.location,
   };
@@ -139,6 +137,15 @@ export function linkChanges(
   if (title !== original.title) changes.title = title;
   const minutes = minutesOf(draft);
   if (minutes !== original.duration_minutes) changes.duration_minutes = minutes;
+  const offered = (draft.offered ?? (original.offered_lengths ?? []).join(", "))
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .map(Number);
+  if (
+    JSON.stringify(offered) !== JSON.stringify(original.offered_lengths ?? [])
+  )
+    changes.offered_lengths = offered;
   const before = videoOf(original);
   const location = draft.location.trim();
   if (
@@ -218,6 +225,17 @@ function LinkForm({
     !(Number.isInteger(minutes) && minutes >= 15 && minutes <= 480)
       ? t("scheduling.lengthInvalid")
       : undefined;
+  const offered = (draft.offered ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .map(Number);
+  const offeredError =
+    offered.length > 16 ||
+    new Set(offered).size !== offered.length ||
+    offered.some(
+      (length) => !Number.isInteger(length) || length < 15 || length > 480,
+    );
   const locationError =
     draft.video === "own" && draft.location.trim() === ""
       ? t("scheduling.locationRequired")
@@ -297,6 +315,19 @@ function LinkForm({
         ) : (
           <p className="t-caption">{t("scheduling.lengthOtherHelp")}</p>
         )}
+        <Field
+          label={t("scheduling.offeredLengths")}
+          hint={t("scheduling.offeredLengthsHelp")}
+          error={offeredError ? t("scheduling.lengthInvalid") : undefined}
+        >
+          {(control) => (
+            <TextInput
+              {...control}
+              value={draft.offered ?? ""}
+              onChange={(event) => update({ offered: event.target.value })}
+            />
+          )}
+        </Field>
         <VideoChoice
           profile={profile}
           draft={draft}
@@ -316,7 +347,9 @@ function LinkForm({
         <Button
           variant="primary"
           pending={save.isPending}
-          disabled={!!lengthError || !!locationError || titleMissing}
+          disabled={
+            offeredError || !!lengthError || !!locationError || titleMissing
+          }
           onClick={submit}
         >
           {t("scheduling.saveLink")}
@@ -430,63 +463,5 @@ function VideoChoice({
         </Field>
       )}
     </>
-  );
-}
-
-/** The hours a booking through this link is offered in, in one sentence. */
-function HoursSummary({
-  notice,
-  onChangeHours,
-}: Readonly<{ notice: number; onChangeHours: () => void }>) {
-  const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
-  const hours = useWorkingHours().data?.working_hours;
-  if (!hours) return null;
-  return (
-    <Callout
-      title={hoursSentence(t, plural, locale, hours, notice)}
-      actions={
-        <Button variant="link" onClick={onChangeHours}>
-          {t("scheduling.changeHours")}
-        </Button>
-      }
-    />
-  );
-}
-
-/** Replacing the link's address, asked first: the old address stops working. */
-export function ReplaceAddressConfirm({
-  open,
-  onClose,
-}: Readonly<{ open: boolean; onClose: () => void }>) {
-  const t = useT();
-  const replace = usePatchSchedulingProfile();
-  // Read from the cache the settings page already holds.
-  const profile = useSchedulingProfile().data;
-  return (
-    <ConfirmModal
-      open={open}
-      onClose={() => {
-        replace.reset();
-        onClose();
-      }}
-      title={t("scheduling.replaceConfirmTitle")}
-      confirmLabel={t("scheduling.replaceAddress")}
-      pending={replace.isPending}
-      onConfirm={() =>
-        replace.mutate({ replace_link: true }, { onSuccess: onClose })
-      }
-    >
-      <p>{t("scheduling.replaceHelp")}</p>
-      {profile?.alias && (
-        <p>
-          {t("scheduling.replaceAliasHelp", {
-            url: currentBookingAddress(profile, profile.alias),
-          })}
-        </p>
-      )}
-      <ErrorLine error={replace.error} />
-    </ConfirmModal>
   );
 }

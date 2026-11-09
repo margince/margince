@@ -73,7 +73,7 @@ afterAll(async () => {
 
 it("serves a document the admission check would accept", async () => {
   const res = await fetch(`${base}/mcp-apps/create-followups.html`);
-  expect(res.status).toBe(200);
+  expect(res.status, await res.clone().text()).toBe(200);
   expect(res.headers.get("content-type")).toMatch(/text\/html/);
   const doc = await res.text();
   expect(validateDocument(doc, actions["create-followups"])).toEqual([]);
@@ -119,7 +119,7 @@ it("lets a second server stand beside the first", async () => {
     const other = servedAt(second);
     expect(other).not.toBe(base);
     const res = await fetch(`${other}/mcp-apps/create-followups.html`);
-    expect(res.status).toBe(200);
+    expect(res.status, await res.clone().text()).toBe(200);
   } finally {
     await second.close();
   }

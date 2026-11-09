@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useEffect, useId, useState } from "react";
+import {
+  type ComponentProps,
+  type ReactNode,
+  useEffect,
+  useId,
+  useState,
+} from "react";
 import { PageAsideToggle } from "../../components/pageaside";
 import { useTaskUpdate } from "../../components/taskactions";
 import { Modal } from "../../design-system/atoms";
@@ -12,22 +18,25 @@ import { PageZones } from "../../design-system/pagezones";
 import { greetingNameOf } from "../../format/greetingname";
 import { useNow } from "../../format/now";
 import { useT } from "../../i18n";
+import { useCanWrite } from "../../lib/capability";
 import { markJourney } from "../../lib/journeymarks";
 import { useMagic } from "../../lib/magic.queries";
-import { isReviewableReceipt } from "../../lib/receiptreview";
+import { usePendingMarginceChanges } from "../../lib/marginchanges";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { TASK_PARAM } from "../../lib/taskreminders";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
-import { pillCount } from "../../lib/worklistcounts";
+import { readerTask } from "../../lib/worklistcopy";
+import { pillFigure } from "../../lib/worklistcounts";
+import { WORKLIST_VIEW_PARAM } from "../../lib/worklistrouting";
 import { DEFAULT_VIEW } from "../../lib/worklistviews";
 import { LinkedApprovalDrawer } from "../automations/approvaldrawer";
-import { MagicPanel } from "../sign-in/magic";
+import { MagicPanel, WAITING_LANES } from "../sign-in/magic";
 import {
+  ActivityDetailModal,
   MeetingDetailModal,
   TaskDetailModal,
 } from "../worklist/taskdetailmodal";
-import { drawerQueue } from "../worklist/worklist.address";
 import { WorklistPane } from "../worklist/worklist.pane";
 import {
   useHandledForYou,
@@ -35,10 +44,9 @@ import {
   type WorklistItem,
   worklistKey,
 } from "../worklist/worklist.queries";
-import { readerTask } from "../worklist/worklist.reader";
 import { changedSinceBrief } from "./brief.changed";
-import { BriefChanges } from "./brief.changes";
 import { BriefDials } from "./brief.dials";
+import { DoneForYou, shownReceiptIds } from "./brief.doneforyou";
 import { briefDay } from "./brief.facts";
 import { BriefFeed } from "./brief.feed";
 import {
@@ -52,6 +60,7 @@ import { BriefGlance } from "./brief.glance";
 import { BriefIntro } from "./brief.intro";
 import { homeJourneyMarks } from "./brief.journey";
 import { PlanSection } from "./brief.plan";
+import { PlanConstraints } from "./brief.plan.contract";
 import { useMorningBrief, useWeeklyReview } from "./brief.queries";
 import { BriefQueue } from "./brief.queue";
 import { BriefReadingsPending, BriefReadingsStrip } from "./brief.readings";
@@ -59,36 +68,19 @@ import { SchedulePanel } from "./brief.schedule";
 import { BriefSuggestions } from "./brief.suggestions";
 import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
 import { WeeklySection, WeekStepper } from "./brief.weekly";
+import { useWeeklyRailShown, WeeklyRail } from "./brief.weekly.rail";
 import { BriefCoverage } from "./briefcoverage";
 import "./brief.css";
 
-// The queue the button opens, which keeps the drawer's scope and owner from
-// the address. It shares the drawer's query key, so the two report one total.
-function useDrawerDay(
-  params: ReturnType<typeof useUrlParams>[0],
-  drawerOpen: boolean,
-  homeDay: ReturnType<typeof briefDay>,
-) {
-  const owner = params.get("owner") ?? "";
-  const drawer = drawerQueue(params);
-  // The server counts every candidate before it applies a view, so Home's own
-  // read already holds a closed drawer's total over the same queue.
-  const homeQueue = drawer.scope === "mine" && owner === "";
-  const queued = useWorklist(
-    drawer.scope,
-    "all",
-    owner === "" ? undefined : owner,
-    drawerOpen || !homeQueue,
-    drawer.view,
-  );
-  if (homeQueue && !drawerOpen) {
-    // A disabled query stops refetching, so its cached day goes stale.
-    return { drawer, queuedDay: homeDay };
-  }
-  const queuedDay =
-    briefDay(queued.data?.pages) ?? (homeQueue ? homeDay : undefined);
-  return { drawer, queuedDay };
-}
+// The dials that narrow the drawer. The Home button clears them, so it always
+// opens the reader's own Today with every category.
+const DRAWER_DIALS = [
+  "queue_scope",
+  WORKLIST_VIEW_PARAM,
+  "filter",
+  "owner",
+  "selected",
+];
 
 export function BriefScreen() {
   const t = useT();
@@ -100,7 +92,6 @@ export function BriefScreen() {
   const address = addressFrom(params);
   const day = briefDay(query.data?.pages);
   const drawerOpen = params.get("queue") === "1";
-  const { drawer, queuedDay } = useDrawerDay(params, drawerOpen, day);
   const review = useWeeklyReview(address.week, address.view === "weekly");
   const firstName = greetingNameOf(me.data?.user);
   const brief = useMorningBrief();
@@ -111,22 +102,26 @@ export function BriefScreen() {
       onChange={(next) => setParams(paramsFor(next, params))}
     />
   );
-  // The way into the whole queue, with the day's count on it. The count is
-  // the drawer's own total, read off the drawer's own query. It is the figure
-  // the drawer's head sentence ends on, whichever queue it shows.
+  // The way into the reader's own Today, with that list's count on it. It
+  // always opens Mine, Today, every category, whatever view the drawer was
+  // last left on, so the number is the one the opened list shows.
   const queueToggle = (
     <PageAsideToggle
       controlled={{
         open: drawerOpen,
-        count: queuedDay ? pillCount(queuedDay, "all", drawer.view) : undefined,
+        ...(day && pillFigure(day, "all", DEFAULT_VIEW)),
         labels: {
           show: t("brief.queue.show"),
           hide: t("brief.queue.hide"),
         },
         onToggle: () => {
           const next = new Map(params);
-          if (next.get("queue") === "1") next.delete("queue");
-          else next.set("queue", "1");
+          if (next.get("queue") === "1") {
+            next.delete("queue");
+          } else {
+            for (const dial of DRAWER_DIALS) next.delete(dial);
+            next.set("queue", "1");
+          }
           navigate({ screen: "home" }, next);
         },
       }}
@@ -189,16 +184,28 @@ function BriefBody({
   query: ReturnType<typeof useWorklist>;
   queueToggle: ReactNode;
 }>) {
-  if (address.view === "weekly")
-    return (
-      <PageZones
-        shape="single"
-        panes
-        mainClassName="brief-weekly-page"
-        main={<WeeklySection plan={<PlanSection />} />}
-      />
-    );
+  if (address.view === "weekly") return <WeeklyPage />;
   return <PersonalMorning query={query} queueToggle={queueToggle} />;
+}
+
+function WeeklyPage() {
+  const t = useT();
+  // An aside handed over empty still draws its column and landmark.
+  const railShown = useWeeklyRailShown();
+  return (
+    <PageZones
+      shape="aside"
+      panes
+      className="brief-weekly-page"
+      mainClassName="brief-main"
+      asideClassName="brief-rail"
+      asideLabel={t("brief.weekly.rail")}
+      main={<WeeklySection plan={<PlanSection withContract={false} />} />}
+      aside={
+        railShown ? <WeeklyRail constraints={<PlanConstraints />} /> : undefined
+      }
+    />
+  );
 }
 
 function PersonalMorning({
@@ -213,7 +220,11 @@ function PersonalMorning({
   const handled = useHandledForYou();
   const [selected, setSelected] = useState("");
   const [params] = useUrlParams();
-  const update = useTaskUpdate([worklistKey]);
+  // Finishing a task also changes the advice on its deal and contact.
+  const update = useTaskUpdate([worklistKey, ["deal-status"], ["contact360"]]);
+  // A linked task may sit beyond the loaded queue; its own read says whether
+  // this reader may change it, as the Worklist drawer asks.
+  const canUpdateTask = useCanWrite("activity", "update");
   const day = briefDay(query.data?.pages);
   const rows = dayRows(day, query.data?.pages);
   // A row named by the address opens as a click on it does; mail links there.
@@ -236,6 +247,7 @@ function PersonalMorning({
     : query.isError && !day
       ? "failed"
       : "ready";
+  const pendingChanges = usePendingMarginceChanges();
   const magic = useMagic();
   const settled = brief.isSuccess && handled.isSuccess && magic.isSuccess;
   useEffect(() => {
@@ -249,8 +261,8 @@ function PersonalMorning({
   }, [state, day, settled, magic.data]);
   return (
     <>
-      {/* The brief and the work it names in one column; beside it, the
-          figures and the meetings the work is read against. */}
+      {/* The work in one column; beside it, the meetings and the figures
+          the work is read against. */}
       <PageZones
         shape="aside"
         panes
@@ -269,8 +281,27 @@ function PersonalMorning({
               onRetry={() => void query.refetch()}
               queueToggle={queueToggle}
             />
+            {/* What Margince finished stands with the work, where a reader
+                reviews or undoes it, not in the rail beside it. */}
+            <DoneForYou
+              completed={
+                <MagicPanel
+                  lanes={["done"]}
+                  embedded
+                  visibleReceiptIds={
+                    handled.isSuccess && !handled.isRefetchError
+                      ? shownReceiptIds(
+                          handled.data.receipts,
+                          pendingChanges.data?.bundles,
+                        )
+                      : []
+                  }
+                />
+              }
+            />
             <BriefSuggestions />
             <MagicPanel
+              lanes={WAITING_LANES}
               visibleApprovalIds={day?.focus?.items
                 .filter(
                   (item) =>
@@ -278,18 +309,13 @@ function PersonalMorning({
                     item.actions.includes("decide"),
                 )
                 .map((item) => item.id)}
-              visibleReceiptIds={
-                handled.isSuccess && !handled.isRefetchError
-                  ? handled.data.receipts
-                      ?.filter(isReviewableReceipt)
-                      .map((receipt) => receipt.id)
-                  : []
-              }
             />
           </>
         }
         aside={
           <>
+            {/* The day's meetings first: the work is read against them. */}
+            <ScheduleWithMeetings day={day} state={state} />
             {day && (
               <div className="brief-overview">
                 <Eyebrow as="h2" className="brief-section-label">
@@ -303,9 +329,7 @@ function PersonalMorning({
                 />
               </div>
             )}
-            {/* The figures stand above the meetings, so their wait holds
-                their place rather than letting the meetings rise and fall. */}
-            {/* Hidden from a screen reader: the meetings below already
+            {/* Hidden from a screen reader: the meetings above already
                 announce the wait. */}
             {state === "loading" && (
               <div className="brief-overview" aria-hidden="true">
@@ -315,8 +339,6 @@ function PersonalMorning({
                 <BriefReadingsPending />
               </div>
             )}
-            <SchedulePanel day={day} state={state} />
-            <BriefChanges />
           </>
         }
       />
@@ -324,7 +346,7 @@ function PersonalMorning({
         <TaskDetailModal
           activityId={linkedTask}
           item={linkedRow}
-          readOnly={!linkedRow?.actions.includes("complete")}
+          readOnly={!canUpdateTask}
           update={update}
           onClose={() => replaceDial(TASK_PARAM, undefined)}
         />
@@ -371,15 +393,35 @@ function FocusDetails({
     );
   }
   return (
-    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
+    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer" fit>
       <DrawerHead>
         <Heading size="large" id={titleId} className="t-h2">
           {t("brief.focus.context")}
         </Heading>
       </DrawerHead>
-      <DrawerBody>
-        <WorklistPane item={item} />
+      <DrawerBody className="form-stack">
+        {/* The drawer covers the card, so it answers the row in place. */}
+        <WorklistPane item={item} answer />
       </DrawerBody>
     </Modal>
+  );
+}
+
+// The schedule, whose meeting titles open the meeting over Home.
+function ScheduleWithMeetings({
+  day,
+  state,
+}: Readonly<Omit<ComponentProps<typeof SchedulePanel>, "onOpenMeeting">>) {
+  const [meeting, setMeeting] = useState<string | null>(null);
+  return (
+    <>
+      <SchedulePanel day={day} state={state} onOpenMeeting={setMeeting} />
+      {meeting && (
+        <ActivityDetailModal
+          activityId={meeting}
+          onClose={() => setMeeting(null)}
+        />
+      )}
+    </>
   );
 }

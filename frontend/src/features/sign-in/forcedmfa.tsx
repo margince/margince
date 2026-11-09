@@ -3,20 +3,20 @@
 
 import { useId } from "react";
 import { AuthCardTitle, AuthExperience } from "../../components/auth-core";
+import { usePageTitle, Wordmark } from "../../components/auth-identity";
 import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
 import { problemCodeOf } from "../../lib/problem";
 import { useLogout } from "../../lib/session";
-import { usePageTitle, Wordmark } from "./auth";
 import {
   MfaSetupActions,
   MfaSetupSteps,
   useTotpConfirm,
   useTotpStart,
 } from "./mfasetup";
-import "./auth.css";
+import "../../components/auth-core.css";
 
 /**
  * The account the installation requires a second factor from, before it holds

@@ -132,7 +132,7 @@ describe("a reader who cannot register the app", () => {
     // A link to Settings is a dead end: the onboarding gate sends it back.
     expect(screen.queryByRole("link")).toBeNull();
     const request =
-      "Could you register the company’s Google app in Margince, in Settings under Sign-in and apps? Then I can connect my mail and calendar.";
+      "Could you register the company’s Google app in Margince, in Settings under Sign-in and security? Then I can connect my mail and calendar.";
     // The reader sees what they are about to send before they copy it.
     expect(screen.getByText(request)).toBeVisible();
 

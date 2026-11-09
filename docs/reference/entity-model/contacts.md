@@ -567,7 +567,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact
 
-35 columns · primary key `(id)` · referenced by 49 foreign keys
+38 columns · primary key `(id)` · referenced by 49 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -578,7 +578,10 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `address_line2` | `text` |  |  |
 | `address_postal_code` | `text` |  |  |
 | `address_region` | `text` |  |  |
+| `anonymized_address_hashes` | `text[]` |  |  |
+| `anonymized_address_key_id` | `text` |  |  |
 | `converted_from_lead_id` | `uuid` |  | Canonical origin pointer if promoted from a lead. |
+| `created_from_activity_id` | `uuid` |  | The note, mail or quick capture this contact was read out of, where one was named at creation. |
 | `entered_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `first_name` | `text` |  |  |
 | `full_name` | `text` | yes | Always present (display name). |
@@ -612,6 +615,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `converted_from_lead_id` | `lead` | deleting the parent keeps this row and clears the link |
+| `created_from_activity_id` | `activity` | deleting the parent keeps this row and clears the link |
 | `merged_into_id` | `contact` | deleting the parent keeps this row and clears the link |
 | `owner_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `source_author_id` | `app_user` | deleting the parent keeps this row and clears the link |
@@ -633,18 +637,22 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `contact_confidentiality_hold_ix`: `btree (id) WHERE (narrowing_reason = 'confidentiality_hold')`
 - `contact_pkey`: `unique, btree (id)`
+- `idx_contact_created_from`: `btree (created_from_activity_id) WHERE (created_from_activity_id IS NOT NULL)`
 - `idx_contact_created_keyset`: `btree (created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `idx_contact_dedupe_scan`: `btree (updated_at, id) WHERE (archived_at IS NULL)`
 - `idx_contact_exact_digraph_name_key`: `btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(replace(replace(replace(NORMALIZE(lower(full_name), NFC), 'ä', 'ae'), 'ö', 'oe'), 'ü', 'ue'))), 'ς', 'σ'), '\s+', ' ', 'g'))) WHERE (archived_at IS NULL)`
 - `idx_contact_exact_name_key`: `btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(full_name)), 'ς', 'σ'), '\s+', ' ', 'g'))) WHERE (archived_at IS NULL)`
 - `idx_contact_from_lead`: `btree (converted_from_lead_id) WHERE (converted_from_lead_id IS NOT NULL)`
+- `idx_contact_keyed_address_hashes`: `btree (anonymized_address_key_id) WHERE (anonymized_address_key_id IS NOT NULL)`
 - `idx_contact_last_activity_keyset`: `btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `idx_contact_merged_into`: `btree (merged_into_id) WHERE (merged_into_id IS NOT NULL)`
 - `idx_contact_name_keyset`: `btree ("left"(full_name, 256), created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `idx_contact_name_keyset_desc`: `btree ("left"(full_name, 256) DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `idx_contact_name_trgm`: `gin (f_fold_apostrophes(lower(full_name)) gin_trgm_ops)`
+- `idx_contact_name_trigram_candidates`: `btree (hash_array_extended(show_trgm(f_fold_apostrophes(lower(full_name))), (0)::bigint), id) WHERE (archived_at IS NULL)`
 - `idx_contact_owner`: `btree (owner_id) WHERE (archived_at IS NULL)`
 - `idx_contact_search`: `gin (search_tsv)`
+- `idx_contact_unkeyed_address_hashes`: `btree (id) WHERE ((anonymized_address_hashes IS NOT NULL) AND (anonymized_address_key_id IS NULL))`
 - `idx_contact_updated_keyset`: `btree (updated_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `uq_contact_source`: `unique, btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))`
 
@@ -804,6 +812,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `bind_requests_on_address_move`: `BEFORE UPDATE OF contact_id FOR EACH ROW WHEN ((old.contact_id IS DISTINCT FROM new.contact_id)) EXECUTE FUNCTION bind_requests_on_address_move()`
 - `settlement_evidence_share`: `BEFORE INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION settlement_evidence_share_contact_email()`
 - `trg_contact_email_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
@@ -945,27 +954,41 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact_signature_enrich_state
 
-5 columns · primary key `(contact_id)` · referenced by 0 foreign keys
+11 columns · primary key `(contact_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `activity_id` | `uuid` | yes | Points at `activity.id`. |
-| `attempted_at` | `timestamp with time zone`, default `now()` | yes |  |
+| `activity_id` | `uuid` |  | Points at `activity.id`. |
+| `attempted_at` | `timestamp with time zone`, default `now()` |  |  |
 | `contact_id` | `uuid` | yes | Points at `contact.id`. |
+| `deferred_run_id` | `uuid` |  | Points at `capture_backfill.id`. |
+| `due_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `history_depth` | `smallint` |  |  |
-| `last_activity_at` | `timestamp with time zone` | yes |  |
+| `last_activity_at` | `timestamp with time zone` |  |  |
+| `live_generation` | `bigint`, default `0` | yes |  |
+| `processed_generation` | `bigint`, default `0` | yes |  |
+| `read_snapshot` | `pg_snapshot` |  |  |
+| `requested_generation` | `bigint`, default `0` | yes |  |
 
 **Points at**
 
 | Columns | Table | When the parent goes |
 |---|---|---|
-| `activity_id` | `activity` | deleting the parent deletes this row |
+| `activity_id` | `activity` | deleting the parent keeps this row and clears the link |
 | `contact_id` | `contact` | deleting the parent deletes this row |
+| `deferred_run_id` | `capture_backfill` | deleting the parent keeps this row and clears the link |
+
+**Rules**
+
+- `signature_work_generations`: `CHECK (((processed_generation >= 0) AND (requested_generation >= processed_generation) AND (live_generation >= 0) AND (live_generation <= requested_generation)))`
 
 **Indexes**
 
 - `contact_signature_enrich_state_pkey`: `unique, btree (contact_id)`
 - `idx_contact_signature_enrich_state_activity`: `btree (activity_id)`
+- `idx_signature_live_work_due`: `btree (due_at, contact_id) WHERE ((requested_generation > processed_generation) AND (live_generation > processed_generation))`
+- `idx_signature_work_deferred`: `btree (deferred_run_id) WHERE (deferred_run_id IS NOT NULL)`
+- `idx_signature_work_due`: `btree (due_at, contact_id) WHERE ((requested_generation > processed_generation) AND (live_generation <= processed_generation) AND (deferred_run_id IS NULL))`
 
 ## contact_social
 
@@ -1235,7 +1258,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `partner_accepted_by` | `text` |  | Who accepted the lead for its partner. |
 | `partner_company_id` | `uuid` |  | The partner company that referred this lead. |
 | `phone` | `text` |  | E.164, as a contact's number is. |
-| `product_id` | `uuid` |  | Points at `product.id`. |
+| `product_id` | `uuid` |  | The product the lead is interested in, set by hand or by the web form that captured it. |
 | `project_id` | `uuid` |  | The body of work this lead belongs to; a lead has at most one. |
 | `promoted_at` | `timestamp with time zone` |  |  |
 | `promoted_contact_id` | `uuid` |  | Set on promotion (convenience mirror). |

@@ -127,7 +127,7 @@ func (a googleOIDCVerifierAdapter) Verify(ctx context.Context, idToken string) (
 	}
 	return identity.OIDCClaims{
 		Email: claims.Email, Subject: claims.Sub, EmailVerified: claims.EmailVerified,
-		Groups: claims.Groups, GivenName: claims.GivenName,
+		Groups: claims.Groups, GivenName: claims.GivenName, Picture: claims.Picture,
 	}, nil
 }
 

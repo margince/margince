@@ -65,7 +65,7 @@ func (h Handlers) DraftEmail(w http.ResponseWriter, r *http.Request, id crmcontr
 		return
 	}
 	ctx := r.Context()
-	result, err := h.prepareEmailDraft(ctx, ids.UUID(id), draftfloor.NewSteering(req.Intent, req.RewriteOf))
+	result, err := h.prepareEmailDraft(ctx, ids.UUID(id), draftfloor.NewSteering(req.Intent, req.RewriteOf, req.Subject))
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

@@ -14,6 +14,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -99,6 +100,7 @@ func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 		GreetingName: req.GreetingName,
 		Role:         string(req.Role),
 		TeamIDs:      teams,
+		LegalEntity:  legalEntityOf(req.LegalEntityId),
 		Mailed:       h.canSendPasswordLink(),
 	})
 	if err != nil {
@@ -380,47 +382,38 @@ func (h Handlers) sendInvite(r *http.Request, email, rawToken string, inviter Id
 	if !h.canSendPasswordLink() || rawToken == "" {
 		return false
 	}
-	// releaseSend runs in the goroutine, which outlives this handler.
-	workCtx, releaseSend := context.WithTimeout(context.WithoutCancel(r.Context()), h.inviteSendBudget())
-	done := h.resetSendStarted // test seam; nil in production
-	go func() {
-		defer releaseSend()
-		if done != nil {
-			defer done()
-		}
-		defer recoverDetached("invite send")
-		current, live, err := h.svc.InviteMailRecipient(workCtx, inviter, rawToken)
-		if err != nil {
-			slog.Error("reading an invitation before mailing it failed", "err", err)
-			h.recordInviteOutcome(workCtx, inviter, rawToken, err)
-			return
-		}
-		if !live {
-			slog.Info("invitation not mailed: its link or its member changed before the send")
-			return
-		}
-		email = current
-		link := passwordLink(h.passwordLinkBaseURL, rawToken)
-		words := h.mailCopy(workCtx, email)
-		body := words.AccountMessage(true, inviter.DisplayName, inviter.WorkspaceName, link)
-		sendErr := mailer.SendProduct(workCtx, h.resetMailer, email, words.InviteSubject, body)
-		if sendErr != nil {
-			slog.Error("invite email failed", "err", sendErr)
-		}
-		h.recordInviteOutcome(workCtx, inviter, rawToken, sendErr)
-	}()
+	httpserver.DetachedSend{
+		What:   "invite send",
+		Budget: h.inviteSendBudget(),
+		Done:   h.resetSendStarted,
+		Send: func(ctx context.Context) (bool, error) {
+			current, live, err := h.svc.InviteMailRecipient(ctx, inviter, rawToken)
+			if err != nil {
+				slog.Error("reading an invitation before mailing it failed", "err", err)
+				return true, err
+			}
+			if !live {
+				slog.Info("invitation not mailed: its link or its member changed before the send")
+				return false, nil
+			}
+			link := passwordLink(h.passwordLinkBaseURL, rawToken)
+			words := h.mailCopy(ctx, current)
+			body := words.AccountMessage(true, inviter.DisplayName, inviter.WorkspaceName, link)
+			sendErr := mailer.SendProduct(ctx, h.resetMailer, current, words.InviteSubject, body)
+			if sendErr != nil {
+				slog.Error("invite email failed", "err", sendErr)
+			}
+			return true, sendErr
+		},
+		// An invitation that never reached the relay counts as refused, because
+		// the admin can only resend from there.
+		Record: func(ctx context.Context, sendErr error) {
+			if err := h.svc.RecordInviteMailOutcome(ctx, inviter, rawToken, sendErr); err != nil {
+				slog.Error("recording an invite email outcome failed", "err", err)
+			}
+		},
+	}.Start(r.Context())
 	return true
-}
-
-// recordInviteOutcome takes its own budget: a send that ran out of time has spent
-// workCtx, and the refusal must still land on the link. An invitation that never
-// reached the relay counts as refused, because the admin can only resend from there.
-func (h Handlers) recordInviteOutcome(workCtx context.Context, inviter Identity, rawToken string, sendErr error) {
-	outcomeCtx, release := context.WithTimeout(context.WithoutCancel(workCtx), inviteOutcomeTimeout)
-	defer release()
-	if err := h.svc.RecordInviteMailOutcome(outcomeCtx, inviter, rawToken, sendErr); err != nil {
-		slog.Error("recording an invite email outcome failed", "err", err)
-	}
 }
 
 // CreateFormerMember (POST /users/former): record a colleague who already left,

@@ -11,6 +11,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/stagemove"
 )
 
 type stageHistoryInput struct {
@@ -63,20 +64,16 @@ func (s *Store) recordStageHistory(ctx context.Context, tx pgx.Tx, in stageHisto
 	return historyID, nil
 }
 
-// Stage move provenance values: the move was made in Margince, or an import run
-// brought it in from the system the deal came from.
-const (
-	stageMoveRecorded = "recorded"
-	stageMoveImported = "imported"
-)
-
-// stageMoveProvenance answers where a move comes from, read off the import
-// mark the import job sets on the context of every write it makes.
+// stageMoveProvenance answers where a move comes from. The import job and the
+// extension sync each mark the context of every write they make.
 func stageMoveProvenance(ctx context.Context) (string, *ids.UUID) {
 	if run := storekit.ImportRunOf(ctx); run != nil {
-		return stageMoveImported, run
+		return stagemove.Imported, run
 	}
-	return stageMoveRecorded, nil
+	if storekit.Synced(ctx) {
+		return stagemove.Synced, nil
+	}
+	return stagemove.Recorded, nil
 }
 
 // stagePositionsAtMove reads both stages' positions as the move finds them, so

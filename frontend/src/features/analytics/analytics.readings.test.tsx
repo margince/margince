@@ -7,8 +7,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatAnalyticsMoney } from "../../format/format";
 import { en } from "../../i18n/en";
-import { AnalyticsScreen, ForecastTile } from "./analytics";
-import { ForecastStrip } from "./analytics.pipeline";
+import { AnalyticsScreen } from "./analytics";
+import { ForecastStrip, ForecastTile } from "./analytics.pipeline";
 import { ownLensContext, render, reportsStub } from "./analytics.testkit";
 
 // What a reading says when it has no figure to say.
@@ -130,9 +130,11 @@ describe("the seat's own readings when the report answers with nothing", () => {
     );
     await openOutcomes();
 
-    expect(
-      await screen.findAllByText(en["analytics.readingLoading"]),
-    ).toHaveLength(2);
+    await waitFor(() =>
+      expect(screen.getAllByText(en["analytics.readingLoading"])).toHaveLength(
+        2,
+      ),
+    );
     expect(screen.queryByText(en["analytics.readingNone"])).toBeNull();
   });
 

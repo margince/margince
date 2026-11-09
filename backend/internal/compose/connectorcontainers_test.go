@@ -21,7 +21,7 @@ func listContainers(ctx context.Context, t *testing.T, h connectorHandlers, prov
 	t.Helper()
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/connectors/"+provider+"/containers", nil)
-	h.ListConnectorContainers(rec, req.WithContext(ctx), crmcontracts.CaptureProvider(provider))
+	h.ListConnectorContainers(rec, req.WithContext(ctx), crmcontracts.CaptureProvider(provider), crmcontracts.ListConnectorContainersParams{})
 	return rec
 }
 

@@ -2,9 +2,19 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Building2, Globe, Hash, Link2, MapPin, Users } from "lucide-react";
+import {
+  Building2,
+  Globe,
+  Hash,
+  Link2,
+  Mail,
+  MapPin,
+  Users,
+} from "lucide-react";
 import { LocaleProvider } from "../i18n";
 import { Badge } from "./atoms";
+import { Avatar } from "./avatar";
+import { ProviderMark } from "./provider-mark";
 import { BarList, Chip, Meter, SegmentBar, Sparkline } from "./readings";
 
 // The three reading primitives: a proportion, a series, an attribute.
@@ -117,9 +127,38 @@ export const Chips: Story = {
       <Chip icon={Link2} href="https://www.linkedin.com/company/example">
         LinkedIn
       </Chip>
+      {/* Another company's own logo in place of the glyph. */}
+      <Chip
+        lead={<ProviderMark providerKey="linkedin" />}
+        href="https://www.linkedin.com/in/sebastian-sachsinger"
+        label="Sebastian Sachsinger on LinkedIn"
+      >
+        Sebastian Sachsinger
+      </Chip>
       <Chip icon={MapPin}>London, UK</Chip>
       <Chip icon={Building2}>Building products</Chip>
       <Chip icon={Users}>51–200 employees</Chip>
+    </div>
+  ),
+};
+
+// The contacts and accounts a piece of work is with, each led by its own mark.
+export const RecordChips: Story = {
+  render: () => (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
+      <Chip dense icon={Mail}>
+        Email
+      </Chip>
+      <Chip dense lead={<Avatar name="Sonya Beck" identity="contact-sonya" />}>
+        Sonya Beck
+      </Chip>
+      <Chip
+        dense
+        appHref="#/companies/company-kessler"
+        lead={<Avatar name="Kessler Retail" identity="company-kessler" />}
+      >
+        Kessler Retail
+      </Chip>
     </div>
   ),
 };

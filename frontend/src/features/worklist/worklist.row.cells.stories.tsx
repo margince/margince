@@ -28,6 +28,7 @@ const meta: Meta<typeof RowText> = {
 
       sample: [],
       touch: [],
+      pinned: false,
       zone: browserZone(),
     },
   },

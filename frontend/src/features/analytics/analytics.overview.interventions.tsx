@@ -21,8 +21,9 @@ import type { UrlParams } from "../../lib/urlstate";
 import { type AttentionState, attentionState } from "./analytics.attention";
 import type { AnalyticsScope } from "./analytics.context";
 import { useDataCoverage } from "./analytics.coverage";
-import { useInputChecks } from "./analytics.forecast.review";
 import { checkLabel } from "./inputcheck.facts";
+import { useInputChecks } from "./inputchecks.queries";
+import type { Dimensions } from "./reporting.dimensions";
 
 type InputCheck = components["schemas"]["InputCheck"];
 type CheckList = NonNullable<ReturnType<typeof useInputChecks>["data"]>;
@@ -49,9 +50,12 @@ export type Interventions = Readonly<{
  * The findings Sales review acts on and the sources behind them, read under
  * the keys their own sections read them by.
  */
-export function useInterventions(scope: AnalyticsScope): Interventions {
+export function useInterventions(
+  scope: AnalyticsScope,
+  dimensions?: Dimensions,
+): Interventions {
   const canReadForecast = useCan("forecast", "read");
-  const checks = useInputChecks(canReadForecast, scope);
+  const checks = useInputChecks(canReadForecast, scope, dimensions);
   const coverage = useDataCoverage();
   const canReadCoverage = useCan("data_coverage", "read");
   const unread =
@@ -100,16 +104,16 @@ export function InterventionPanel({
       <Panel
         title={t("analytics.attention")}
         flatHead
+        titleAction={
+          findings.length > 0 ? (
+            <AppLink href={forecast()}>
+              {t("analytics.intervention.viewAll")}
+            </AppLink>
+          ) : undefined
+        }
         footer={
-          <>
-            {/* The checks read every pipeline and close date of the scope. */}
-            <p className="t-caption">{t("analytics.intervention.scope")}</p>
-            {findings.length > 0 && (
-              <AppLink href={forecast()}>
-                {t("analytics.intervention.viewAll")}
-              </AppLink>
-            )}
-          </>
+          // The checks read every pipeline and close date of the scope.
+          <p className="t-caption">{t("analytics.intervention.scope")}</p>
         }
       >
         {(findings.length === 0 || state === "failed") && (
@@ -196,7 +200,7 @@ function FindingRows({
           ].join(" · ")}
         </p>
       </div>
-      <AppLink className="btn btn-ghost" href={href(check.id)}>
+      <AppLink href={href(check.id)}>
         {t(
           check.destination?.mode === "read"
             ? "analytics.intervention.open"
@@ -322,7 +326,7 @@ function Groups({
               ].join(" · ")}
             </p>
           </div>
-          <AppLink className="btn btn-ghost" href={href(group.type)}>
+          <AppLink href={href(group.type)}>
             {t("analytics.intervention.show")}
           </AppLink>
         </PanelRow>

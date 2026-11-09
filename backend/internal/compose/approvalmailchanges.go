@@ -69,6 +69,7 @@ func changeMailFacts(approval crmcontracts.Approval, words mailcopy.Copy) approv
 	for _, effect := range reading.Effects {
 		facts.add(words.MailAlsoChanges, effect.Label)
 	}
+	addPreviewSections(&facts, reading, words)
 	facts.add(words.MailWhyYou, reviewerSentence(approval.Preview.ReviewerReason, words))
 	return facts
 }
@@ -146,4 +147,39 @@ func mailPreviewValue(value crmcontracts.ApprovalPreviewValue, words mailcopy.Co
 		}
 	}
 	return value.Text, value.Text != ""
+}
+
+func addPreviewSections(facts *approvalMailFacts, reading agents.PreviewReading, words mailcopy.Copy) {
+	lang := textlang.Lang(words.Language)
+	for _, conflict := range reading.Conflicts {
+		facts.add(agents.PreviewSectionLabel(lang, "conflict"), conflict.Summary)
+	}
+	for _, file := range reading.Files {
+		facts.add(agents.PreviewSectionLabel(lang, "file"), fmt.Sprintf("%s (%s, %d B)", file.Filename, file.ContentType, file.ByteSize))
+	}
+	for _, row := range reading.ImportRows {
+		label := agents.PreviewSectionLabel(lang, "row")
+		label = strings.NewReplacer("{kind}", row.ObjectLabel, "{line}", strconv.Itoa(row.Line), "{key}", row.SourceKey).Replace(label)
+		facts.add(label, row.OutcomeLabel)
+		if row.Target != nil {
+			if value, ok := mailPreviewValue(*row.Target, words); ok {
+				facts.add(label, value)
+			}
+		}
+		for _, change := range row.Changes {
+			before, beforeOK := mailPreviewValue(change.Before, words)
+			after, afterOK := mailPreviewValue(change.After, words)
+			if beforeOK && afterOK {
+				facts.add(change.Label, before+" → "+after)
+			}
+		}
+		for _, detail := range row.Details {
+			if value, ok := mailPreviewValue(detail.Value, words); ok {
+				facts.add(detail.Label, value)
+			}
+		}
+		for _, effect := range row.Effects {
+			facts.add(words.MailAlsoChanges, effect.Label)
+		}
+	}
 }

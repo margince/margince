@@ -48,6 +48,15 @@ const currencyField = "currency"
 // amountField is the other half of a money value.
 const amountField = "amount_minor"
 
+// stageIDColumn is the deal's stage, as a stage move writes and audits it.
+const stageIDColumn = "stage_id"
+
+// lineItemsField is the field a refusal about a whole set of lines points at.
+const lineItemsField = "line_items"
+
+// productsField is a deal's product split, in a refusal and in its audit image.
+const productsField = "products"
+
 // arrField is the recurring figure. It shares the currency with amountField
 // rather than carrying one of its own: a deal quoting its one-off price in one
 // currency and its subscription in another is not a deal anyone can forecast.

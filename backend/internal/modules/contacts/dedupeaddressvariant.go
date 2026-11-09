@@ -74,13 +74,14 @@ func lockAddressBaseLane(ctx context.Context, tx pgx.Tx, emails []string) error 
 // contact are dropped before the limit, as newRivals drops them. Otherwise
 // many contacts on one Gmail base hide the rest.
 var addressVariantQuery = `
-		SELECT e.contact_id, array_agg(e.email)
-		  FROM contact_email e
-		  JOIN contact p ON p.id = e.contact_id AND p.archived_at IS NULL
-		 WHERE ` + addressBaseSQL("e.email") + ` = ANY($1)
-		   AND lower(e.email) <> ALL($2)
-		   AND e.archived_at IS NULL
-		   AND ($3::uuid IS NULL OR (e.contact_id <> $3 AND NOT EXISTS (
+		WITH addresses AS MATERIALIZED (
+          SELECT contact_id,email FROM contact_email e
+          WHERE ` + addressBaseSQL("e.email") + ` = ANY($1)
+          AND lower(e.email) <> ALL($2) AND e.archived_at IS NULL)
+        SELECT e.contact_id, array_agg(e.email)
+          FROM addresses e CROSS JOIN LATERAL (
+          SELECT id,archived_at FROM contact p WHERE p.id=e.contact_id OFFSET 0) p
+         WHERE p.archived_at IS NULL AND ($3::uuid IS NULL OR (e.contact_id <> $3 AND NOT EXISTS (
 		         SELECT 1 FROM dedupe_candidate d
 		          WHERE ` + heldPairSQL("'"+entityContact+"'", "$3", "e.contact_id") + `)))
 		 GROUP BY e.contact_id

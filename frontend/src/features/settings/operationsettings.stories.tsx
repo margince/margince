@@ -39,7 +39,7 @@ const MANAGER = { installation_settings: ["read", "update"] } as const;
 const READER = { installation_settings: ["read"] } as const;
 
 const meta: Meta<typeof BackgroundSchedulesCard> = {
-  title: "Settings/Governance/System health/Schedules and send pacing",
+  title: "Settings/System/System health/Schedules and send pacing",
   component: BackgroundSchedulesCard,
 };
 export default meta;

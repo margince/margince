@@ -43,7 +43,7 @@ func (s *promotionSight) requireWireWithholdsPlan(id ids.ApprovalID, secrets ...
 
 // A contract the mail cites is evidence its approver opens like any record.
 func TestAnAgentsMailCitingAContractIsReadyForAnApproverWhoCanOpenIt(t *testing.T) {
-	s := newKindSight(t)
+	s := newMailSight(t)
 	company := s.company("Contract Account", s.e.Rep1, "")
 	agreement, err := s.e.Contracts.CreateContract(s.e.Admin(), contracts.CreateContractInput{
 		CompanyID: ids.From[ids.CompanyKind](company), Title: "Supply agreement", ValueBasis: contracts.BasisTotal, Source: "manual",
@@ -62,7 +62,7 @@ func TestAnAgentsMailCitingAContractIsReadyForAnApproverWhoCanOpenIt(t *testing.
 // The approver's role masks contact email, so the addresses a mail goes to
 // show as unavailable while the rest of the plan stays readable.
 func TestAnAgentsMailKeepsTheAddressesTheApproversRoleMasks(t *testing.T) {
-	s := newKindSight(t)
+	s := newMailSight(t)
 	s.approver = storedMemberSeat(t, s.e, s.e.Rep2)
 	viewer, _ := principal.Actor(s.approver)
 	viewer.Permissions.FieldMasks = []principal.FieldMask{{Object: "contact", Field: "email", Condition: principal.MaskAlways}}

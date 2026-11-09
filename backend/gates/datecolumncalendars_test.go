@@ -19,10 +19,11 @@ package gates
 // the registry and the schema are held equal in both directions.
 
 import (
-	"os"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // dayCalendar names the calendar a stored day was cut in.
@@ -156,7 +157,7 @@ var dateColumnCalendars = map[string]dateColumnCalendar{
 // "table.column", through the same line shape the undo gate reads.
 func schemaDateColumns(t *testing.T) []string {
 	t.Helper()
-	raw, err := os.ReadFile("migrations/testdata/head_catalog.txt")
+	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
 	}

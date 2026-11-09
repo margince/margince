@@ -40,15 +40,21 @@ type rawEvent struct {
 	// The calendarView delta (client.go) reports occurrences rather than series
 	// masters, and every occurrence of one series carries the same value — so it
 	// names the series and the occurrence's start names the meeting within it.
-	ICalUID     string       `json:"iCalUId"` //nolint:tagliatelle // Microsoft's wire format
-	Subject     string       `json:"subject"`
-	BodyPreview string       `json:"bodyPreview"` //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
-	IsCancelled bool         `json:"isCancelled"` //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
-	IsAllDay    bool         `json:"isAllDay"`    //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
-	End         graphTime    `json:"end"`
-	Start       graphTime    `json:"start"`
-	Organizer   graphActor   `json:"organizer"`
-	Attendees   []graphActor `json:"attendees"`
+	ICalUID     string    `json:"iCalUId"` //nolint:tagliatelle // Microsoft's wire format
+	Subject     string    `json:"subject"`
+	BodyPreview string    `json:"bodyPreview"` //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
+	IsCancelled bool      `json:"isCancelled"` //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
+	IsAllDay    bool      `json:"isAllDay"`    //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
+	End         graphTime `json:"end"`
+	Start       graphTime `json:"start"`
+	// OriginalStart is an occurrence's slot in its series as an instant, which
+	// a move does not change. Graph states it on an occurrence or exception.
+	OriginalStart string `json:"originalStart"` //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
+	// OriginalStartTimeZone is the zone the event was created in, which names
+	// the date of an all-day slot; the Prefer header turns every start to UTC.
+	OriginalStartTimeZone string       `json:"originalStartTimeZone"` //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
+	Organizer             graphActor   `json:"organizer"`
+	Attendees             []graphActor `json:"attendees"`
 	// With hideAttendees set, each attendee's copy lists only themselves; the
 	// organizer's copy lists everyone.
 	HideAttendees bool `json:"hideAttendees"` //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
@@ -133,19 +139,18 @@ func decode(ev rawEvent) meetingmap.Event {
 		})
 	}
 	return meetingmap.Event{
-		ID:        ev.ID,
-		Private:   ev.Sensitivity != "" && ev.Sensitivity != "normal",
-		ICalUID:   strings.TrimSpace(ev.ICalUID),
-		Cancelled: ev.IsCancelled || ev.Removed != nil,
-		// Only "declined". A tentative answer is an attendance somebody may yet
-		// make and "notResponded" is an invitation nobody has read, so neither
-		// takes the meeting off the schedule.
-		OwnerDeclined: strings.EqualFold(strings.TrimSpace(ev.ResponseStatus.Response), "declined"),
+		ID:            ev.ID,
+		Private:       ev.Sensitivity != "" && ev.Sensitivity != "normal",
+		ICalUID:       strings.TrimSpace(ev.ICalUID),
+		Cancelled:     ev.IsCancelled,
+		Removed:       ev.Removed != nil && !ev.IsCancelled,
+		OwnerResponse: guestResponse(ev.ResponseStatus.Response),
 		Subject:       ev.Subject,
 		Description:   ev.BodyPreview,
 		StartsAt:      parseStart(ev.Start, ev.IsAllDay),
 		EndsAt:        parseStart(ev.End, ev.IsAllDay),
 		AllDay:        ev.IsAllDay,
+		SeriesSlot:    seriesSlot(ev),
 		Organizer:     meetingmap.Actor{Email: ev.Organizer.EmailAddress.Address, Name: ev.Organizer.EmailAddress.Name},
 		Attendees:     attendees,
 		PartiesHidden: ev.HideAttendees && !ev.IsOrganizer,
@@ -206,6 +211,47 @@ func parseStart(start graphTime, allDay bool) time.Time {
 		}
 	}
 	return time.Time{}
+}
+
+// seriesSlot reads an occurrence's original start. An all-day slot is a
+// calendar date, anchored the way an all-day start is.
+func seriesSlot(ev rawEvent) time.Time {
+	slot, err := time.Parse(time.RFC3339Nano, strings.TrimSpace(ev.OriginalStart))
+	if err != nil {
+		return time.Time{}
+	}
+	if !ev.IsAllDay {
+		return slot.UTC()
+	}
+	date, ok := allDaySlotDate(slot, ev.OriginalStartTimeZone)
+	if !ok {
+		return time.Time{}
+	}
+	anchored, _ := meetingmap.AllDayStart(date)
+	return anchored
+}
+
+// allDaySlotDate is the date an all-day slot names. Graph states the slot as
+// the instant of local midnight, so east of UTC that instant falls on the day
+// before. Only the event's own zone can name the date. A zone the system
+// database cannot load, such as a Windows zone id, names none, and the
+// occurrence keeps the key of its start.
+func allDaySlotDate(slot time.Time, zone string) (string, bool) {
+	name := strings.TrimSpace(zone)
+	if name == "" {
+		return "", false
+	}
+	loc, err := time.LoadLocation(name)
+	if err != nil {
+		return "", false
+	}
+	return slot.In(loc).Format(time.DateOnly), true
+}
+
+// SeriesIdentityOf reads the identity of one stored occurrence of a series
+// (meetingmap.SeriesIdentityOf).
+func SeriesIdentityOf(raw []byte) (connector.CrossDoorIdentity, bool, error) {
+	return meetingmap.SeriesIdentityOf(raw, decodeEvent)
 }
 
 // RecordOf uses the live provider normalizer when replaying a stored event.

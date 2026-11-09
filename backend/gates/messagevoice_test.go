@@ -14,11 +14,12 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -36,7 +37,7 @@ func TestOnlySpeakerForBuildsABriefSpeaker(t *testing.T) {
 	t.Parallel()
 	owned := 0
 	var offenders []string
-	err := filepath.WalkDir("internal", func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir("internal", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -100,7 +101,7 @@ var authorSideKey = regexp.MustCompile(`"([a-z][a-zA-Z0-9.]*\.(?:theyWrote|youWr
 // shared helper.
 func TestAScreenThatNamesAnAuthorReadsTheProjection(t *testing.T) {
 	t.Parallel()
-	catalog, err := os.ReadFile(voiceKeyCatalog)
+	catalog, err := gatekit.ReadFile(voiceKeyCatalog)
 	if err != nil {
 		t.Fatalf("reading %s: %v", voiceKeyCatalog, err)
 	}
@@ -113,7 +114,7 @@ func TestAScreenThatNamesAnAuthorReadsTheProjection(t *testing.T) {
 	}
 	readsDirection := regexp.MustCompile(`\.direction\b`)
 	checked := 0
-	err = filepath.WalkDir(voiceFrontendRoot, func(path string, d fs.DirEntry, err error) error {
+	err = gatekit.WalkDir(voiceFrontendRoot, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -122,7 +123,7 @@ func TestAScreenThatNamesAnAuthorReadsTheProjection(t *testing.T) {
 			strings.Contains(filepath.ToSlash(path), "/i18n/") || strings.HasSuffix(path, "schema.d.ts") {
 			return nil
 		}
-		body, err := os.ReadFile(path)
+		body, err := gatekit.ReadFile(path)
 		if err != nil {
 			return err
 		}

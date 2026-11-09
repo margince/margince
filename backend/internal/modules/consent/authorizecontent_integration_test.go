@@ -45,6 +45,13 @@ func stageThenTransmit(
 	t *testing.T, e *resolveEnv, delivery ids.UUID, sentSubject, sentBody string,
 ) commsauthz.TransmitTicket {
 	t.Helper()
+	stageDelivery(t, e, delivery)
+	return transmitStaged(t, e, delivery, sentSubject, sentBody)
+}
+
+// stageDelivery is the staging half of stageThenTransmit.
+func stageDelivery(t *testing.T, e *resolveEnv, delivery ids.UUID) {
+	t.Helper()
 	// A live confirm link, which is what authorizes a record-confirmation send.
 	// The category is chosen for how LITTLE it needs: the subject of these tests
 	// is the fingerprint, and an invoice or a deal would put a chain of
@@ -66,6 +73,15 @@ func stageThenTransmit(
 	}); err != nil {
 		t.Fatalf("staging the delivery: %v", err)
 	}
+}
+
+// transmitStaged is the transmit half of stageThenTransmit, for a test that
+// changes something between the two phases.
+func transmitStaged(
+	t *testing.T, e *resolveEnv, delivery ids.UUID, sentSubject, sentBody string,
+) commsauthz.TransmitTicket {
+	t.Helper()
+	recipients := []connector.Recipient{{Email: e.address}}
 	ticket, err := e.gate.AuthorizeTransmit(e.ctx, commsauthz.TransmitRequest{
 		DeliveryID: delivery,
 		Attempt:    1,

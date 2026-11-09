@@ -109,12 +109,13 @@ func RecomputeAudienceTx(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 	// reader could observe, and widening it would be the one write here that
 	// could make a held row more readable than the obligation allows. Leaving
 	// it exactly as it is has neither effect.
+	var internalMail bool
 	var stored string
 	var storedReason *string
 	err := tx.QueryRow(ctx, `
-		SELECT audience, audience_reason FROM activity
+		SELECT audience, audience_reason, internal_mail_authorization IS NOT NULL FROM activity
 		 WHERE id = $1 AND restricted_at IS NULL FOR NO KEY UPDATE`,
-		activityID).Scan(&stored, &storedReason)
+		activityID).Scan(&stored, &storedReason, &internalMail)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			// Erased, deleted, or under a statutory hold. Nothing to derive an
@@ -127,7 +128,7 @@ func RecomputeAudienceTx(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 	// widening publishes what a contact narrowed by hand, and narrowing discards
 	// the member set they named, which no contribution here knows how to
 	// rebuild.
-	if stored == audienceSelected {
+	if internalMail || stored == audienceSelected {
 		return nil
 	}
 	// A human's decision binds in ONE direction, and it is asked BEFORE anything
@@ -264,7 +265,7 @@ func rowCarriedHold(stored string, storedReason *string) (bool, string) {
 	}
 	switch why := deref(storedReason); why {
 	case ReasonNoRecord, ReasonNoCounterparty, ReasonWorkspaceFloor, ReasonCounterparty, ReasonConfidentialMarker,
-		ReasonMembersOnly:
+		ReasonMembersOnly, ReasonInternalOperational:
 		return true, why
 	}
 	return false, ""

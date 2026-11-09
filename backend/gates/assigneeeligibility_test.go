@@ -62,11 +62,11 @@ func TestSeatEligibilityIsAskedTheSameWayEverywhereItIsAsked(t *testing.T) {
 	t.Parallel()
 	found := map[string][]string{}
 	root := filepath.Join(gatekit.ModuleRoot(t), "internal")
-	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}
-		body, readErr := os.ReadFile(path)
+		body, readErr := gatekit.ReadFile(path)
 		if readErr != nil {
 			return readErr
 		}
@@ -140,7 +140,7 @@ func TestTheAssigneePredicatesKeepEveryClauseOfTheirRule(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}
-	src, err := os.ReadFile(path)
+	src, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

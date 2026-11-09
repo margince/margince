@@ -22,9 +22,12 @@ func TestPublicBookingPendingCancellationAndPausedPage(t *testing.T) {
 	base := "/v1/public/booking/" + bookingSlug(t, e)
 	monday := nextMonday()
 	body := AnyMap{"start": monday.Add(time.Hour), "end": monday.Add(90 * time.Minute), "booker": AnyMap{"name": "Guest", "email": "guest@visitor.example"}, "consent": AnyMap{"policy_version": "2026-01", "wording": "Contact me about this meeting."}}
-	query := "?from=" + monday.Format(time.RFC3339) + "&to=" + monday.Add(8*time.Hour).Format(time.RFC3339) + "&duration_minutes=60"
-	if status := publicCall(t, e, "GET", base+"/availability"+query, nil, nil, nil); status != http.StatusUnprocessableEntity {
-		t.Fatalf("unsupported public duration: %d", status)
+	query := "?from=" + monday.Format(time.RFC3339) + "&to=" + monday.Add(8*time.Hour).Format(time.RFC3339)
+	if status := publicCall(t, e, "GET", base+"/availability"+query+"&duration_minutes=60", nil, nil, nil); status != http.StatusUnprocessableEntity {
+		t.Fatalf("unsupported legacy duration: %d", status)
+	}
+	if status := publicCall(t, e, "GET", base+"/availability"+query+"&l=60", nil, nil, nil); status != http.StatusOK {
+		t.Fatalf("unknown length should use the default: %d", status)
 	}
 	if status := publicCall(t, e, "POST", base, body, map[string]string{"Idempotency-Key": "guessable"}, nil); status != http.StatusUnprocessableEntity {
 		t.Fatalf("weak recovery capability: %d", status)

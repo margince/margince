@@ -11,6 +11,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -57,4 +58,20 @@ func (s *Store) PreviewChannelReply(ctx context.Context, anchorID ids.ActivityID
 		return ChannelReplyPreview{}, err
 	}
 	return ChannelReplyPreview{Provider: provider, Recipient: conversation.recipient, Links: inheritedLinks(anchor)}, nil
+}
+
+// PreviewChannelSend asks about the destination the real sender resolves.
+func (s *Store) PreviewChannelSend(ctx context.Context, anchorID ids.ActivityID, in SendMessageInput) (commsauthz.Request, error) {
+	reply, err := s.PreviewChannelReply(ctx, anchorID)
+	if err != nil {
+		return commsauthz.Request{}, err
+	}
+	if _, err := s.PreviewSendAttachments(ctx, in.AttachmentIDs); err != nil {
+		return commsauthz.Request{}, err
+	}
+	message := outboundChannelMessage{
+		in: in, provider: reply.Provider,
+		conversation: channelConversation{recipient: reply.Recipient}, links: reply.Links, anchorID: anchorID,
+	}
+	return message.delivery(ids.ActivityID{}).Authorization, nil
 }

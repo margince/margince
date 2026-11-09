@@ -172,7 +172,7 @@ func captureMailboxHealth(
 		waiting_threads AS (
 		  SELECT v.user_id, count(*) AS n, min(v.created_at) AS oldest
 		    FROM capture_thread_verdict v
-		   WHERE v.status IN ('pending', 'unsure')
+		   WHERE v.status = 'pending' AND v.attempts >= `+fmt.Sprint(capture.PendingMaxAttempts)+` AND EXISTS (SELECT 1 FROM activity m WHERE `+capture.HeldMessageSQL("v", "m")+`)
 		   GROUP BY v.user_id)
 		SELECT coalesce(c.user_id, t.user_id, g.user_id),
 		       u.display_name,
