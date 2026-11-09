@@ -151,8 +151,8 @@ export function ContactTimelineTab({
   // answer, never a second rendering of what another cut already shows.
   const List =
     filter === "conversations" ? ConversationList : GroupedTimelineList;
-  // Withheld on the 360 is withheld on every cut: a narrowed read would only
-  // collect the refusal, and draw it as a failure rather than as the grant.
+  // Withheld on the 360 is withheld on every cut.
+  // A narrowed read would draw the refusal as a failure.
   const withheld = view ? omitted(view, "activities") : false;
   // The 360's own page seeds the list; older pages and every narrowed read
   // come from the activity list itself.

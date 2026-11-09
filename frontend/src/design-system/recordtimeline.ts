@@ -31,15 +31,9 @@ export const ACTIVITY_KINDS: readonly ActivityKind[] = [
 
 /**
  * TimelineFilters is what a reader narrows a record's timeline BY. Every
- * field is sent to the server: a filter applied over the page the client
- * holds answers "which of these 20 rows match", which is not the question —
- * the contact page did that for a release, and a rep filtering for tasks saw
- * none because the newest 20 rows happened to be mail.
- *
- * `after` / `before` are the calendar days the reader picked; the wire wants
- * instants, and `timelineQueryParams` is where a day becomes one.
- *
- * `kinds` is the set an open cut asks for; a `kind` the reader picks wins over it.
+ * field is sent to the server, because a filter over the held page misses rows.
+ * `after` / `before` are calendar days; `timelineQueryParams` makes them instants.
+ * `kinds` is the set an open cut asks for. A `kind` the reader picks wins over it.
  */
 export type TimelineFilters = Readonly<{
   kind?: ActivityKind;
@@ -86,9 +80,8 @@ export function dayStartIso(day: ISODate, zone: string, daysLater = 0): string {
 
 /**
  * timelineQueryParams is the ONE spelling of a record timeline read for the
- * wire. An absent filter is an absent parameter, never `""`: the server reads
- * an empty `q` as "no filter" today, but an empty `kind` is refused, and not
- * sending what was not asked keeps both honest.
+ * wire. An absent filter is an absent parameter, never `""`, because the server
+ * refuses an empty `kind`.
  */
 export function timelineQueryParams(
   entityType: EntityKind,

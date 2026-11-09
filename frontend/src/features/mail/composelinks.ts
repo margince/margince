@@ -56,14 +56,10 @@ export function composedLinks(
 }
 
 /**
- * What a new message is about, from whichever page it was opened on. That is
- * the deal and project the rep chose. On the account path it is also the
- * account's contacts the message is addressed to, which only that path picks.
- * A reply has none of its own, because its thread already files it.
- *
- * A chosen deal travels only from a composer that shows it: the account's
- * filing pick and the contact's deal pick. Elsewhere a deal kept by a draft
- * would file the message under a record nobody on screen named.
+ * What a new message is about: the deal and project the rep chose, plus the
+ * account's contacts on the account path. A reply has none, its thread files it.
+ * A chosen deal travels only from a composer that shows it, or a draft would
+ * file the message under a record nobody on screen named.
  */
 export function groundingOf(where: {
   entityType: RelinkKind;

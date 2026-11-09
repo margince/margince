@@ -27,12 +27,9 @@ import (
 // pressing the verb needs `activity.create`. POST /activities does, where the
 // log form and the task form both post, and so do POST /bookings and every send.
 //
-// EVERY kind carries an answer, including the false ones, because a lookup
-// miss and a "no" are the same value in Go and the miss is the direction that
-// fails open. What makes the false entries load-bearing rather than noise is
-// that nothing here may be absent: gates/momentactionvocabulary_test.go holds
-// these keys equal to the contract's own enum, so a ninth kind cannot reach a
-// reader until somebody has said which of the two it is.
+// Every kind carries an answer, including the false ones. A lookup miss and a
+// "no" are the same value in Go, and the miss fails open.
+// gates/momentactionvocabulary_test.go holds these keys equal to the enum.
 var writesAnActivity = map[crmcontracts.ContactMomentActionKind]bool{
 	// The log form, under its own name and asked as a task. One POST, one grant.
 	crmcontracts.ContactMomentActionKindLogActivity:  true,

@@ -715,8 +715,8 @@ const MAILBOX_NOT_SEND_CAPABLE = {
   detail: "reconnect your mailbox to enable sending",
 };
 
-// Each refusal is a product state with a fix, so each reads as its own copy
-// and never as the generic line the server's detail would land in.
+// Each refusal is a product state with a fix, so each reads as its own copy.
+// None may fall into the generic line.
 describe("ComposeModal send refusals", () => {
   async function expectReconnect(onClose: () => void) {
     expect(await screen.findByText(/without permission to send/i)).toBeTruthy();
