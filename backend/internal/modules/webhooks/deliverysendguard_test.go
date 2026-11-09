@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -241,6 +242,15 @@ func TestAReceiverThatNeverReadsHoldsTheRowOnlyUntilTheWriteLimit(t *testing.T) 
 	case <-released:
 	default:
 		t.Fatal("the attempt returned with the row still held")
+	}
+}
+
+// The pool ends a transaction left idle past IdleTransactionCeiling, which
+// would free the row while the request is still written. The write limit ends
+// the write first, so the database's own ceiling never ends a hold.
+func TestTheWriteLimitEndsAHoldBeforeTheDatabaseWould(t *testing.T) {
+	if writeHoldLimit >= database.IdleTransactionCeiling {
+		t.Errorf("writeHoldLimit %s is not below the idle-transaction ceiling %s", writeHoldLimit, database.IdleTransactionCeiling)
 	}
 }
 
