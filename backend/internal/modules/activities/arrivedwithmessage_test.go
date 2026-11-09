@@ -22,8 +22,8 @@ import (
 // A census of that shape would fail on correct code. The quickest way to green
 // it would be to exclude link rows from erasure.
 var arrivedWithMessageReaders = map[string]bool{
-	"attachmentcounts.go":  false,
-	"emailpresentation.go": false,
+	"attachmentcounts.go":  true,
+	"emailpresentation.go": true,
 }
 
 // These two readers apply the fragment. Dropping it from either puts a link row
@@ -33,6 +33,7 @@ func TestTheFilesAMessageCarriedAreAskedByTwoReaders(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	applying := map[string]bool{}
 	for _, entry := range entries {
 		name := entry.Name()
 		if !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
@@ -43,22 +44,17 @@ func TestTheFilesAMessageCarriedAreAskedByTwoReaders(t *testing.T) {
 			t.Fatal(err)
 		}
 		// The declaration is not an application of it.
-		applies := strings.Contains(string(src), "arrivedWithMessage(\"")
-		seen, listed := arrivedWithMessageReaders[name]
-		switch {
-		case applies && !listed:
+		if !strings.Contains(string(src), "arrivedWithMessage(\"") {
+			continue
+		}
+		applying[name] = true
+		if !arrivedWithMessageReaders[name] {
 			t.Errorf("%s applies arrivedWithMessage and is not one of the two readers that answer "+
 				"what a message carried. If it is a third, add it here with what it answers", name)
-		case !applies && listed && seen:
-			t.Errorf("%s no longer applies arrivedWithMessage: a link row would read as a file the "+
-				"message carried", name)
-		}
-		if applies && listed {
-			arrivedWithMessageReaders[name] = true
 		}
 	}
-	for name, found := range arrivedWithMessageReaders {
-		if !found {
+	for name := range arrivedWithMessageReaders {
+		if !applying[name] {
 			t.Errorf("%s no longer applies arrivedWithMessage, or is gone: a link row would read as "+
 				"a file the message carried", name)
 		}
