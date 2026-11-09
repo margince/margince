@@ -4,6 +4,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import type { Translator } from "../i18n";
 import { unwrap } from "../lib/problem";
 import { worklistKey } from "../lib/workkeys";
 
@@ -125,5 +126,15 @@ export function useDismissDealSuggestion() {
       );
     },
     onSuccess: decided,
+  });
+}
+
+export function suggestedName(
+  suggestion: DealSuggestion,
+  t: Translator,
+): string {
+  return t("dealSuggestion.name", {
+    company: suggestion.company_name,
+    hint: t(`dealSuggestion.hint.${suggestion.name_hint}` as const),
   });
 }

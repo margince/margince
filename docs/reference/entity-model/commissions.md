@@ -10,7 +10,7 @@ The 1 table owned by `commissions`, as the migrations build them. [Back to the e
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `id` | `uuid` | yes | Primary key. |
+| `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `amount_minor` | `bigint` | yes | What the rate produced. |
 | `attribution_at_accrual` | `text` | yes | One of `sourced`, `influenced`. |
 | `basis_amount_minor` | `bigint` | yes | The deal amount the rate applied to. |

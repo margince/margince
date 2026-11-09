@@ -92,7 +92,7 @@ func TestTheReapDestroysAnOrphansBytesAndRetiresItsKey(t *testing.T) {
 	const key = "reap/attachment/orphan"
 	orphanedObject(t, e, blob, key)
 
-	worker := &storedObjectReapWorker{pool: e.Pool, blob: blob, log: slog.New(slog.DiscardHandler), now: time.Now}
+	worker := reapWorkerOver(e, blob)
 	if err := worker.reapWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("reapWorkspace: %v", err)
 	}
@@ -112,7 +112,7 @@ func TestAnObjectTheStoreWillNotDeleteStaysInTheLedger(t *testing.T) {
 	const key = "reap/attachment/stubborn"
 	orphanedObject(t, e, blob, key)
 
-	worker := &storedObjectReapWorker{pool: e.Pool, blob: blob, log: slog.New(slog.DiscardHandler), now: time.Now}
+	worker := reapWorkerOver(e, blob)
 	if err := worker.reapWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("reapWorkspace: %v — one key that will not delete must not stop the pass", err)
 	}
@@ -175,7 +175,7 @@ func TestTheSweepCollectsAnOrphanOfEveryDeclaredKind(t *testing.T) {
 			len(held), len(storedobjects.AllKinds()))
 	}
 
-	worker := &storedObjectReapWorker{pool: e.Pool, blob: blob, log: slog.New(slog.DiscardHandler), now: time.Now}
+	worker := reapWorkerOver(e, blob)
 	if err := worker.reapWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("reapWorkspace: %v", err)
 	}
@@ -215,7 +215,7 @@ func TestAKeyStillInsideItsGracePeriodSurvivesAPass(t *testing.T) {
 		t.Fatalf("recording the in-flight key: %v", err)
 	}
 
-	worker := &storedObjectReapWorker{pool: e.Pool, blob: blob, log: slog.New(slog.DiscardHandler), now: time.Now}
+	worker := reapWorkerOver(e, blob)
 	if err := worker.reapWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("reapWorkspace: %v", err)
 	}
@@ -255,7 +255,7 @@ func TestAReferencedObjectOfEveryKindSurvivesTheSweep(t *testing.T) {
 		t.Fatal("no kinds were planted, so this test asserts nothing about any of them")
 	}
 
-	worker := &storedObjectReapWorker{pool: e.Pool, blob: blob, log: slog.New(slog.DiscardHandler), now: time.Now}
+	worker := reapWorkerOver(e, blob)
 	if err := worker.reapWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("reapWorkspace: %v", err)
 	}
@@ -318,6 +318,8 @@ func referenceKeyFromItsOwner(t *testing.T, e *integration.Env, kind storedobjec
 		e.WsExec(t, `
 			INSERT INTO import_run (connector, status, mapping, source_ref, source, captured_by)
 			VALUES ('csv', 'validating', '{}'::jsonb, $1, 'upload', 'human:test')`, key)
+	case storedobjects.KindAvatar:
+		e.WsExec(t, `UPDATE app_user SET avatar_object_key = $1, avatar_origin = 'upload' WHERE id = $2`, key, e.Rep1)
 	default:
 		t.Fatalf("kind %q has no owning row in this test, so the sweep's answer about it is "+
 			"unproven: add one when the kind is declared", kind)
@@ -386,6 +388,10 @@ func TestEachWriterDeclaresItsOwnKind(t *testing.T) {
 			// that, which is what the real upload path requires.
 			return migration.NewRunStore(db).RecordImportSourceIntent(
 				e.As(e.Rep1, nil, importerPerms()), key)
+		}},
+		{storedobjects.KindAvatar, func(key string) error {
+			return newAvatarPictures(db, blobstore.NewMemory(), nil, slog.New(slog.DiscardHandler)).
+				putPicture(ctx, key, []byte("picture"))
 		}},
 	} {
 		t.Run(string(c.kind), func(t *testing.T) {
@@ -456,4 +462,39 @@ func TestAReferenceCheckThatCannotReachTheDatabaseSaysSoWithoutTheStatement(t *t
 			}
 		}
 	}
+}
+
+// A replaced logo a sent offer printed stays: the offer's issuer snapshot names
+// it, and the sent document embeds it on every later render.
+func TestALogoOnlyASentOfferNamesSurvivesTheSweep(t *testing.T) {
+	e := integration.Setup(t)
+	blob := newReapBlobstore()
+	const printed, dropped = "ws/logo/printed-by-an-offer", "ws/logo/nobody-prints"
+	for _, key := range []string{printed, dropped} {
+		orphanedObjectOfKind(t, e, blob, key, storedobjects.KindLogo)
+	}
+	e.WsExec(t, `
+		INSERT INTO offer (id, deal_id, offer_number, revision, status, currency,
+			issuer_snapshot, source, captured_by)
+		VALUES ($1, $2, 'A-1', 1, 'sent', 'EUR',
+			jsonb_build_object('workspace_name', 'Acme Wien GmbH', 'logo_object_key', $3::text), 'human', 'human:test')`,
+		ids.NewV7(), e.SeedWonDealLinkedTo(t), printed)
+
+	worker := reapWorkerOver(e, blob)
+	if err := worker.reapWorkspace(context.Background(), e.WS); err != nil {
+		t.Fatalf("reapWorkspace: %v", err)
+	}
+	if blob.deleted[printed] {
+		t.Error("the sweep destroyed a logo a sent offer prints")
+	}
+	if !blob.deleted[dropped] {
+		t.Error("the sweep kept a logo nothing names")
+	}
+}
+
+// reapWorkerOver is the sweep over this test's workspace and object store. Its
+// clock is the wall clock, because the provisional keys are dated by the
+// database's own now().
+func reapWorkerOver(e *integration.Env, blob blobstore.Store) *storedObjectReapWorker {
+	return &storedObjectReapWorker{pool: e.Pool, blob: blob, log: slog.New(slog.DiscardHandler), now: time.Now}
 }

@@ -17,9 +17,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -38,6 +40,30 @@ type MeetingMover func(
 func (s *Sink) WithMeetingMover(move MeetingMover) *Sink {
 	c := *s
 	c.moveMeeting = move
+	return &c
+}
+
+// MeetingFolder retires duplicate onto survivor when both hold one meeting and
+// retiring it loses nothing, reporting whether it did. proven says the binding
+// rule already tied the duplicate's seat to the survivor. compose injects it.
+type MeetingFolder func(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.ActivityID, proven bool) (bool, error)
+
+// WithMeetingFolder returns a copy that folds a meeting it finds stored twice.
+func (s *Sink) WithMeetingFolder(fold MeetingFolder) *Sink {
+	c := *s
+	c.foldMeeting = fold
+	return &c
+}
+
+// MeetingHostKeeper names a calendar meeting's organizer as its host when the
+// organizer is a colleague whose own calendar holds it. compose injects it.
+type MeetingHostKeeper func(ctx context.Context, tx pgx.Tx, meeting ids.ActivityID) error
+
+// WithMeetingHostKeeper returns a copy that hands a meeting it replays to its
+// organizer. A guest's calendar often syncs a meeting first and becomes its host.
+func (s *Sink) WithMeetingHostKeeper(keep MeetingHostKeeper) *Sink {
+	c := *s
+	c.keepMeetingHost = keep
 	return &c
 }
 
@@ -78,8 +104,12 @@ func (s *Sink) MoveMeeting(ctx context.Context, key connector.NaturalKey, slot c
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		ctx, err := s.mailboxRunAllowedTx(ctx, tx)
+		if err != nil {
+			return err
+		}
 		var id ids.ActivityID
-		err := tx.QueryRow(ctx, `
+		err = tx.QueryRow(ctx, `
 			SELECT id FROM activity
 			 WHERE source_system = $1 AND source_id = $2
 			   AND kind = 'meeting' AND restricted_at IS NULL AND archived_at IS NULL`,
@@ -109,8 +139,16 @@ func (s *Sink) moveOnReplay(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, viaIdentity bool,
 ) error {
 	fields, ok := rec.Fields.(ActivityFields)
-	if s.moveMeeting == nil || viaIdentity || !ok || fields.Kind != meetingKind || fields.OccurredAt.IsZero() {
+	if s.moveMeeting == nil || !ok || fields.Kind != meetingKind || fields.OccurredAt.IsZero() {
 		return nil
+	}
+	if viaIdentity {
+		// An occurrence of a series keeps its identity when moved, so this
+		// calendar's own row is reached through it too, and moves.
+		own, found, err := ownLiveMeetingTx(ctx, tx, rec.NaturalKey, actorUserID(ctx))
+		if err != nil || !found || own != id {
+			return err
+		}
 	}
 	_, err := s.moveMeeting(ctx, tx, id, connector.MeetingSlot{
 		Start: fields.OccurredAt, Duration: StorableDuration(fields.DurationSeconds), AllDay: fields.DateOnly,
@@ -119,10 +157,28 @@ func (s *Sink) moveOnReplay(
 	return err
 }
 
-// settleMeetingReplay is what a proven replay of a meeting still owes the row:
-// its current identity, its guests and its current start. Only a replay of this
-// calendar's own key moves it. A row reached through the cross-door identity is
-// another door's filing, and a second calendar on the old time would move it back.
+// replayIncumbent is assertedIncumbent for the row a capture replays onto. A
+// meeting's replay settles its guests and start under the row lock, so it takes
+// that lock first. Taken after its own import row shares the row, the lock would
+// wait on a colleague's import of the meeting. That import's recompute waits here.
+// A restricted meeting takes none of those writes, so it is not locked.
+func replayIncumbent(ctx context.Context, tx pgx.Tx, id ids.ActivityID, fields ActivityFields) (string, bool, error) {
+	if fields.Kind == meetingKind {
+		var locked ids.ActivityID
+		err := tx.QueryRow(ctx,
+			`SELECT id FROM activity WHERE id = $1 AND restricted_at IS NULL FOR UPDATE`, id).Scan(&locked)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return "", false, fmt.Errorf("capture: locking the meeting a replay settles: %w", err)
+		}
+	}
+	return assertedIncumbent(ctx, tx, id)
+}
+
+// settleMeetingReplay is what a proven replay of a meeting still owes the row.
+// That is its identity, guests, documents, current start and host. Only this
+// calendar's own row moves. Another door's row reached through the cross-door
+// identity stays, or a second calendar on the old time would move it back.
+// Either replay may hand the host to the organizer.
 func (s *Sink) settleMeetingReplay(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, viaIdentity bool,
 ) error {
@@ -132,5 +188,64 @@ func (s *Sink) settleMeetingReplay(
 	if err := s.stampLaterGuests(ctx, tx, id, rec); err != nil {
 		return err
 	}
-	return s.moveOnReplay(ctx, tx, id, rec, viaIdentity)
+	if err := s.recordMeetingDocuments(ctx, tx, id, rec, true); err != nil {
+		return err
+	}
+	if err := s.moveOnReplay(ctx, tx, id, rec, viaIdentity); err != nil {
+		return err
+	}
+	fields, isActivity := rec.Fields.(ActivityFields)
+	if s.keepMeetingHost == nil || !isActivity || fields.Kind != meetingKind {
+		return nil
+	}
+	return s.keepMeetingHost(ctx, tx, id)
+}
+
+// foldOwnDuplicate answers the row this capture is about when the identity
+// resolved to known (alreadyFiled) while this seat's own key also holds a live meeting. The
+// own row folds onto known. If a human worked it, known folds onto the own row
+// instead, and the own row moves to the record's start. When neither retires
+// cleanly both stay, and the pair is logged.
+func (s *Sink) foldOwnDuplicate(
+	ctx context.Context, tx pgx.Tx, known ids.ActivityID, alreadyFiled bool, rec connector.NormalizedRecord,
+) (ids.ActivityID, error) {
+	if !alreadyFiled || s.foldMeeting == nil || !rec.CrossDoorIdentity.Stated() {
+		return known, nil
+	}
+	own, found, err := ownLiveMeetingTx(ctx, tx, rec.NaturalKey, actorUserID(ctx))
+	if err != nil || !found || own == known {
+		return known, err
+	}
+	if folded, err := s.foldMeeting(ctx, tx, own, known, true); err != nil || folded {
+		return known, err
+	}
+	folded, err := s.foldMeeting(ctx, tx, known, own, false)
+	if err != nil {
+		return known, err
+	}
+	if !folded {
+		slog.WarnContext(ctx, "capture: a meeting stays stored twice because neither row retires cleanly",
+			"kept", own.String(), "holder", known.String())
+		return known, nil
+	}
+	return own, s.moveOnReplay(ctx, tx, own, rec, false)
+}
+
+// ownLiveMeetingTx is the live meeting this seat's calendar stored under the
+// record's own natural key.
+func ownLiveMeetingTx(ctx context.Context, tx pgx.Tx, key connector.NaturalKey, seat ids.UUID) (ids.ActivityID, bool, error) {
+	var own ids.ActivityID
+	err := tx.QueryRow(ctx, `
+		SELECT id FROM activity
+		 WHERE source_system = $1 AND source_id = $2 AND kind = 'meeting'
+		   AND archived_at IS NULL AND restricted_at IS NULL
+		   AND `+auth.ConnectorSeatSQL("activity")+` = $3::text`,
+		key.SourceSystem, key.SourceID, seat.String()).Scan(&own)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ids.ActivityID{}, false, nil
+	}
+	if err != nil {
+		return ids.ActivityID{}, false, fmt.Errorf("capture: finding this calendar's own meeting row: %w", err)
+	}
+	return own, true, nil
 }

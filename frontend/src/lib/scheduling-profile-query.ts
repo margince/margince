@@ -20,6 +20,15 @@ export function useSchedulingProfile({
 }
 
 /**
+ * Whether guests can book on the host's page now: the server's own rule, a
+ * page switched on whose calendar can take bookings. A guest of a paused page
+ * is answered as if the page did not exist.
+ */
+export function bookingPagePaused(profile: Profile): boolean {
+  return !profile.enabled || (profile.blocker ?? "none") !== "none";
+}
+
+/**
  * Writes some fields of the booking profile over the server's latest copy.
  * A card saving one setting then never puts back what another card or tab
  * changed.

@@ -46,6 +46,7 @@ export function findingEffectKey(finding: Finding): MessageKey {
 
 export function findingNextStepKey(finding: Finding): MessageKey {
   if (finding.code === "read_failed") return "health.readFailedNext";
+  if (finding.code === "capture_unread") return "health.unreadNext";
   if (finding.responsible === "mailbox_owner") return "health.ownerHandoff";
   if (finding.code === "queue_unverified") return "health.stoppedNext";
   return healthImpacts[finding.source] ?? "health.operatorHandoff";

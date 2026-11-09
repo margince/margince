@@ -173,6 +173,10 @@ func Misconfigured(err error) bool {
 type TokenGrant struct {
 	RefreshToken string
 	Scopes       []string
+	// ScopesAssumed is true when the provider named no scope, so Scopes is
+	// the configured request. A caller that asked for more than that list
+	// knows the grant covers its whole request.
+	ScopesAssumed bool
 	// AccessToken and ExpiresIn are the first access token the exchange
 	// minted, for a caller that keeps it rather than refreshing at once.
 	AccessToken string
@@ -200,7 +204,8 @@ func (c *Client) Exchange(ctx context.Context, code, redirectURI string) (TokenG
 	}
 	return TokenGrant{
 		RefreshToken: tok.RefreshToken, Scopes: c.grantedScopes(tok.Scope),
-		AccessToken: tok.AccessToken, ExpiresIn: tok.lifetime(),
+		ScopesAssumed: len(strings.Fields(tok.Scope)) == 0,
+		AccessToken:   tok.AccessToken, ExpiresIn: tok.lifetime(),
 	}, nil
 }
 

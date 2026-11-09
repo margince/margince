@@ -52,7 +52,23 @@ type meetingPlanFixture struct {
 	Attendee string                `json:"attendee"`
 	Messages []meetingPlanMessage  `json:"messages"`
 	Claims   []meetingPlanClaimRow `json:"claims"`
+	// Deal is the name of the deal the meeting is about; empty for none.
+	Deal string `json:"deal"`
+	// OtherDeals are deals a message may be filed under instead.
+	OtherDeals []meetingPlanOtherDeal `json:"other_deals"`
 }
+
+// meetingPlanOtherDeal is another deal on the account, labelled so a message
+// can name it.
+type meetingPlanOtherDeal struct {
+	Label string `json:"label"`
+	Name  string `json:"name"`
+	State string `json:"state"`
+}
+
+// thisDealLabel files a message under the meeting's own deal. An expectation
+// names it to accept a citation of the deal itself.
+const thisDealLabel = "this"
 
 // meetingPlanMessage is one captured conversation, labelled so the expectation
 // can name it without naming an id.
@@ -62,6 +78,8 @@ type meetingPlanMessage struct {
 	Direction string `json:"direction"`
 	Subject   string `json:"subject"`
 	Body      string `json:"body"`
+	// Deal is thisDealLabel, an other deal's label, or empty for no deal.
+	Deal string `json:"deal"`
 }
 
 // meetingPlanClaimRow is one extracted commitment or question.
@@ -79,6 +97,12 @@ type meetingPlanExpectation struct {
 	// NamesToken is a word only this account produces. A plan whose prose
 	// never contains it is generic, whatever else it got right.
 	NamesToken string `json:"names_token"`
+	// ObjectiveCitesAny names records the objective or opening must rest on
+	// at least one of: message labels, or thisDealLabel for the deal itself.
+	ObjectiveCitesAny []string `json:"objective_cites_any"`
+	// ObjectiveAvoids is another deal's topic, which the objective and the
+	// opening must not restate as this meeting's goal.
+	ObjectiveAvoids string `json:"objective_avoids"`
 }
 
 // meetingPlanCases serves the site that prepares a rep for one meeting.
@@ -108,11 +132,18 @@ func (meetingPlanCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prep
 		return nil, err
 	}
 	in, byLabel := meetingPlanInput(f)
+	objectiveIDs := make([]string, 0, len(want.ObjectiveCitesAny))
+	for _, label := range want.ObjectiveCitesAny {
+		objectiveIDs = append(objectiveIDs, byLabel[label])
+	}
 	return &meetingPlanCase{
-		in:        in,
-		mustCite:  byLabel[want.CitesLabel],
-		mustName:  want.NamesToken,
-		citeLabel: want.CitesLabel,
+		in:              in,
+		mustCite:        byLabel[want.CitesLabel],
+		mustName:        want.NamesToken,
+		citeLabel:       want.CitesLabel,
+		objectiveIDs:    objectiveIDs,
+		objectiveLabels: want.ObjectiveCitesAny,
+		objectiveAvoids: want.ObjectiveAvoids,
 	}, nil
 }
 
@@ -128,10 +159,53 @@ func refuseUnpreparableMeeting(f meetingPlanFixture, want meetingPlanExpectation
 	// pass forever without the model contributing anything, which is the one
 	// way a certification case fails silently.
 	in, _ := meetingPlanInput(f)
-	if strings.Contains(meetingbrief.PlanProse(meetingbrief.DeterministicPlanFor(in)), want.NamesToken) {
+	floor := meetingbrief.DeterministicPlanFor(in)
+	if strings.Contains(meetingbrief.PlanProse(floor), want.NamesToken) {
 		return fmt.Errorf(
 			"summarize/meeting_plan: the token %q is already in the deterministic plan's own prose, so a reply saying nothing would satisfy this scenario",
 			want.NamesToken)
+	}
+	if want.ObjectiveAvoids != "" && strings.Contains(meetingbrief.ObjectiveProse(floor), want.ObjectiveAvoids) {
+		return fmt.Errorf(
+			"summarize/meeting_plan: the deterministic objective already says %q, so a reply saying nothing would fail this scenario",
+			want.ObjectiveAvoids)
+	}
+	return refuseUnusableDealScenario(f, want)
+}
+
+// refuseUnusableDealScenario holds the deal half of a scenario. Every deal a
+// message or the expectation names must exist. The topic the objective must
+// avoid must live only in another deal's messages.
+func refuseUnusableDealScenario(f meetingPlanFixture, want meetingPlanExpectation) error {
+	deals := map[string]bool{}
+	for _, other := range f.OtherDeals {
+		deals[other.Label] = true
+	}
+	labels := map[string]bool{thisDealLabel: f.Deal != ""}
+	avoidedOnOtherDeal := false
+	for _, message := range f.Messages {
+		labels[message.Label] = true
+		if message.Deal != "" && message.Deal != thisDealLabel && !deals[message.Deal] {
+			return fmt.Errorf("summarize/meeting_plan: the message %q is filed under %q, which names no deal the fixture supplies",
+				message.Label, message.Deal)
+		}
+		if want.ObjectiveAvoids == "" || !strings.Contains(message.Subject+" "+message.Body, want.ObjectiveAvoids) {
+			continue
+		}
+		if message.Deal == thisDealLabel {
+			return fmt.Errorf("summarize/meeting_plan: the avoided topic %q is in %q, a message on this meeting's own deal",
+				want.ObjectiveAvoids, message.Label)
+		}
+		avoidedOnOtherDeal = true
+	}
+	if want.ObjectiveAvoids != "" && !avoidedOnOtherDeal {
+		return fmt.Errorf("summarize/meeting_plan: the avoided topic %q is in no other deal's message, so avoiding it measures nothing",
+			want.ObjectiveAvoids)
+	}
+	for _, label := range want.ObjectiveCitesAny {
+		if !labels[label] {
+			return fmt.Errorf("summarize/meeting_plan: the objective may cite %q, which names no message or deal the fixture supplies", label)
+		}
 	}
 	return nil
 }
@@ -218,6 +292,14 @@ func meetingPlanInput(f meetingPlanFixture) (meetingbrief.Input, map[string]stri
 		},
 	}
 	byLabel := map[string]string{}
+	if f.Deal != "" {
+		in.Deal = &meetingbrief.DealIn{ID: ids.NewV7().String(), Name: f.Deal}
+		byLabel[thisDealLabel] = in.Deal.ID
+	}
+	otherDeals := map[string]*meetingbrief.FiledDeal{}
+	for _, other := range f.OtherDeals {
+		otherDeals[other.Label] = &meetingbrief.FiledDeal{Name: other.Name, State: other.State}
+	}
 	for _, message := range f.Messages {
 		id := ids.NewV7().String()
 		byLabel[message.Label] = id
@@ -225,6 +307,7 @@ func meetingPlanInput(f meetingPlanFixture) (meetingbrief.Input, map[string]stri
 		in.History = append(in.History, meetingbrief.HistoryIn{
 			ID: id, Kind: "email", Subject: message.Subject,
 			Direction: message.Direction, At: at,
+			OnDeal: message.Deal == thisDealLabel, OtherDeal: otherDeals[message.Deal],
 		})
 		in.Excerpts = append(in.Excerpts, meetingbrief.ExcerptIn{
 			ActivityID: id, Subject: message.Subject,
@@ -257,6 +340,11 @@ type meetingPlanCase struct {
 	mustCite  string
 	mustName  string
 	citeLabel string
+	// objectiveIDs and objectiveAvoids hold the objective to the meeting's
+	// deal. Both are empty for a scenario with one deal.
+	objectiveIDs    []string
+	objectiveLabels []string
+	objectiveAvoids string
 }
 
 func (c *meetingPlanCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
@@ -295,8 +383,25 @@ func (c *meetingPlanCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 		wrong = append(wrong, fmt.Sprintf(
 			"the plan never names %q, so it would read the same about any account", c.mustName))
 	}
+	wrong = append(wrong, c.objectiveOnTheWrongDeal(plan)...)
 	if len(wrong) > 0 {
 		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: strings.Join(wrong, "; ")}
 	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}
+}
+
+// objectiveOnTheWrongDeal names how the objective and opening left the
+// meeting's deal: resting on none of its records, or restating another deal's
+// topic as the goal.
+func (c *meetingPlanCase) objectiveOnTheWrongDeal(plan meetingbrief.Plan) []string {
+	var wrong []string
+	if len(c.objectiveIDs) > 0 && !meetingbrief.ObjectiveCites(plan, c.objectiveIDs...) {
+		wrong = append(wrong, fmt.Sprintf(
+			"the objective and opening cite none of %q, the records on this meeting's deal", c.objectiveLabels))
+	}
+	if c.objectiveAvoids != "" && strings.Contains(meetingbrief.ObjectiveProse(plan), c.objectiveAvoids) {
+		wrong = append(wrong, fmt.Sprintf(
+			"the objective or opening restates %q, another deal's topic, as this meeting's goal", c.objectiveAvoids))
+	}
+	return wrong
 }

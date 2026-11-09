@@ -23,13 +23,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/signature"
 )
 
 // SignatureReader answers what the SENDER signs their mail with. It is asked
-// only about the authenticated caller: a send signs with its own sender's
-// sign-off, and there is no call shape here that names anybody else.
+// only about the authenticated caller, and no call shape here names anybody
+// else. The
+// sign-off wears the template, imprint and logo of entity. Zero is the entity
+// the sender works for now.
 type SignatureReader interface {
-	SignatureFor(ctx context.Context, userID ids.UUID) (SenderSignature, error)
+	SignatureFor(ctx context.Context, userID, entity ids.UUID) (SenderSignature, error)
 }
 
 // WithSignature wires the sign-off the send path appends. Compose calls this;
@@ -68,7 +71,7 @@ const (
 // draft is what the recipient gets.
 type SignOff struct {
 	Text string
-	// HTML is the markup the HTML part carries, set only for a template.
+	// HTML is the markup the HTML part carries, set for a template or personal HTML.
 	HTML string
 	// LogoKey is the logo the markup embeds, staged with the message so a
 	// retry sends the same picture. Empty when the markup shows none.
@@ -100,28 +103,34 @@ func (o SignOff) under(body string) string {
 //
 // One lookup for both renderings. Two would be two chances for the plain part
 // and the markup part of one message to disagree about who signed it.
-func (s *Store) PreviewMailSignOff(ctx context.Context, body, subject string) (SignOff, error) {
+//
+// entity is the legal entity the message goes out for, as a frozen message
+// keeps it. Zero is the one the sender works for now.
+func (s *Store) PreviewMailSignOff(ctx context.Context, body, subject string, entity ids.UUID) (SignOff, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return SignOff{}, err
 	}
-	return s.signOff(ctx, body, subject)
+	return s.signOff(ctx, body, subject, entity)
 }
 
-func (s *Store) signOff(ctx context.Context, body, subject string) (SignOff, error) {
+func (s *Store) signOff(ctx context.Context, body, subject string, entity ids.UUID) (SignOff, error) {
 	name, err := s.senderDisplayName(ctx)
 	if err != nil {
 		return SignOff{}, err
 	}
-	return s.signOffAs(ctx, body, subject, name)
+	return s.signOffAs(ctx, body, subject, name, entity)
 }
 
 // signatureDraft is what a settings form has typed and not saved. Each set
 // field stands in for the stored one in a preview; a send never carries one.
 type signatureDraft struct {
-	Template, Title, Phone *string
+	Template, Title, Phone, HTML *string
 }
 
 func (d signatureDraft) over(stored SenderSignature) SenderSignature {
+	if d.HTML != nil {
+		stored.HTML = *d.HTML
+	}
 	if d.Template != nil {
 		stored.Template = *d.Template
 	}
@@ -137,20 +146,25 @@ func (d signatureDraft) over(stored SenderSignature) SenderSignature {
 // previewSignOff is signOff with a form's unsaved values in place of the
 // stored ones, so a settings preview shows what Save would produce.
 func (s *Store) previewSignOff(ctx context.Context, body, subject string, draft signatureDraft) (SignOff, error) {
+	if draft.HTML != nil {
+		if err := signature.ValidateHTML(*draft.HTML); err != nil {
+			return SignOff{}, err
+		}
+	}
 	name, err := s.senderDisplayName(ctx)
 	if err != nil {
 		return SignOff{}, err
 	}
-	return s.signOffDrafted(ctx, body, subject, name, draft)
+	return s.signOffDrafted(ctx, body, subject, name, ids.Nil, draft)
 }
 
 // signOffAs is signOff with the sender's display name already read, so a send
 // writes one name in its From header and its closing.
-func (s *Store) signOffAs(ctx context.Context, body, subject, name string) (SignOff, error) {
-	return s.signOffDrafted(ctx, body, subject, name, signatureDraft{})
+func (s *Store) signOffAs(ctx context.Context, body, subject, name string, entity ids.UUID) (SignOff, error) {
+	return s.signOffDrafted(ctx, body, subject, name, entity, signatureDraft{})
 }
 
-func (s *Store) signOffDrafted(ctx context.Context, body, subject, name string, draft signatureDraft) (SignOff, error) {
+func (s *Store) signOffDrafted(ctx context.Context, body, subject, name string, entity ids.UUID, draft signatureDraft) (SignOff, error) {
 	if s.signature == nil {
 		return SignOff{Kind: SignOffNone}, nil
 	}
@@ -158,24 +172,29 @@ func (s *Store) signOffDrafted(ctx context.Context, body, subject, name string, 
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID == ids.Nil {
 		return SignOff{Kind: SignOffNone}, nil
 	}
-	stored, err := s.signature.SignatureFor(ctx, actor.UserID)
+	stored, err := s.signature.SignatureFor(ctx, actor.UserID, entity)
 	if err != nil {
 		return SignOff{}, err
 	}
 	signature := draft.over(stored)
+	if strings.TrimSpace(signature.HTML) != "" {
+		markup, text, err := signatureMarkup(signature.HTML)
+		if err != nil {
+			return SignOff{}, err
+		}
+		if text != "" {
+			return signatureSignOff(signature, markup, text, SignOffSignature), nil
+		}
+	}
 	if strings.TrimSpace(signature.Template) != "" {
 		markup, text, err := renderSignatureTemplate(signature.Template, signatureValues{
 			Name: draftfloor.NameLine(name), Title: signature.Title, Phone: signature.Phone,
-			HasLogo: signature.LogoKey != "",
+			Imprint: signature.Imprint, HasLogo: signature.LogoKey != "",
 		})
 		if err != nil {
 			return SignOff{}, err
 		}
-		sign := SignOff{Text: text, HTML: markup, Kind: SignOffTemplate}
-		if strings.Contains(markup, signatureLogoSrc) {
-			sign.LogoKey = signature.LogoKey
-		}
-		return sign, nil
+		return signatureSignOff(signature, markup, text, SignOffTemplate), nil
 	}
 	if sign := strings.TrimSpace(signature.Body); sign != "" {
 		return SignOff{Text: sign, Kind: SignOffSignature}, nil
@@ -188,17 +207,22 @@ func (s *Store) signOffDrafted(ctx context.Context, body, subject, name string, 
 	return SignOff{Text: closing, Kind: SignOffClosing}, nil
 }
 
+func signatureSignOff(signature SenderSignature, markup, text string, kind SignOffKind) SignOff {
+	if signature.LogoKey == "" {
+		markup = strings.ReplaceAll(markup, signatureLogoTag, "")
+	}
+	sign := SignOff{Text: text, HTML: markup, Kind: kind}
+	if strings.Contains(markup, signatureLogoSrc) {
+		sign.LogoKey = signature.LogoKey
+	}
+	return sign
+}
+
 // signedHTML is SignOff.under's markup twin: the same sign-off and the same
 // unsubscribe footer, rendered as HTML.
 //
-// The sign-off is PLAIN TEXT, so it is escaped before it reaches a markup
-// document. A member whose sign-off contains "Weiß & Konrad <Recht>" must not
-// have it silently become a broken tag, and one who typed a script tag must
-// not have it run in the recipient's client.
-//
-// An empty markup body stays empty: a message with no HTML alternative is sent
-// as a single text/plain part, and manufacturing markup here would make every
-// plain send multipart for no reader's benefit.
+// Plain sign-offs are escaped; HTML sign-offs were sanitized by the signature
+// renderer. PrepareSend adds the HTML body when a formatted sign-off needs it.
 func signedHTML(htmlBody string, sign SignOff, derived sendDeliverability) string {
 	if strings.TrimSpace(htmlBody) == "" {
 		return ""

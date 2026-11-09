@@ -16,14 +16,14 @@ import (
 )
 
 // proposalsReadable answers, by position, whether p may read each proposal.
-// That takes the grants deciding it needs, a seat it may be shown to, and the
+// That takes a seat it may be shown to, and the
 // content of every activity it cites. One statement asks the whole batch.
 func proposalsReadable(ctx context.Context, tx pgx.Tx, p principal.Principal, rows []row) ([]bool, error) {
 	out := make([]bool, len(rows))
 	cited := make([][]ids.UUID, len(rows))
 	var asked []ids.UUID
 	for i, a := range rows {
-		if requireDecisionGrants(p, a) != nil || withheldFromOtherSeats(p, a) {
+		if withheldFromOtherSeats(p, a) {
 			continue
 		}
 		activities, checkable, err := citedActivities(a)

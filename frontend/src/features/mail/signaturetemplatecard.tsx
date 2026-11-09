@@ -63,7 +63,7 @@ export function SignatureTemplateCard() {
   const preview = useSignOff(
     "",
     "",
-    draft === null ? undefined : { template: draft },
+    draft === null ? { html: "" } : { template: draft, html: "" },
   ).signOff;
   return (
     <Panel title={t("signatureTemplate.title")}>

@@ -297,41 +297,28 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 	}
 	switch in.Ref.Type {
 	case datasource.EntityContact:
-		var req crmcontracts.UpdateContactRequest
-		if err := datasource.StrictDecode(raw, &req); err != nil {
+		update, err := contactUpdateFrom(raw, in)
+		if err != nil {
 			return datasource.EntityRef{}, err
 		}
-		update := contactUpdateInput(req, in.IfVersion)
-		update.Trail = in.Trail
-		update.Clear = in.Clear
 		v, err := p.store.UpdateContact(ctx, ids.From[ids.ContactKind](in.Ref.ID), update)
 		return ref(datasource.EntityContact, v.Id), err
 	case datasource.EntityCompany:
-		var req crmcontracts.UpdateCompanyRequest
-		if err := datasource.StrictDecode(raw, &req); err != nil {
+		update, err := companyUpdateFrom(raw, in)
+		if err != nil {
 			return datasource.EntityRef{}, err
 		}
-		update := companyUpdateInput(req, in.IfVersion)
-		update.Trail = in.Trail
-		update.Clear = in.Clear
 		v, err := p.store.UpdateCompany(ctx, ids.From[ids.CompanyKind](in.Ref.ID), update)
 		return ref(datasource.EntityCompany, v.Id), err
 	case datasource.EntityLead:
-		var req LeadUpdateRequest
-		if err := datasource.StrictDecode(raw, &req); err != nil {
+		update, err := leadUpdateFrom(raw, in)
+		if err != nil {
 			return datasource.EntityRef{}, err
 		}
-		update := leadUpdateInput(req, in.IfVersion)
-		update.Trail = in.Trail
-		update.Clear = in.Clear
 		v, err := p.store.UpdateLead(ctx, ids.From[ids.LeadKind](in.Ref.ID), update)
 		return ref(datasource.EntityLead, v.Id), err
 	case datasource.EntityRelationship:
-		var req crmcontracts.UpdateRelationshipRequest
-		if err := datasource.StrictDecode(raw, &req); err != nil {
-			return datasource.EntityRef{}, err
-		}
-		update, err := relationshipUpdateInput(req, in.IfVersion, in.Clear)
+		update, err := relationshipUpdateFrom(raw, in)
 		if err != nil {
 			return datasource.EntityRef{}, err
 		}
@@ -405,16 +392,22 @@ func (p *Provider) Merge(ctx context.Context, in datasource.MergeInput) (datasou
 // PromoteLead exposes the features/01 §6.4 graduation to the tool surface
 // (a provider extension: interfaces.md §3 has no promotion verb yet).
 func (p *Provider) PromoteLead(
-	ctx context.Context, id ids.UUID, trigger string, evidenceNote *string, ifVersion *int64,
+	ctx context.Context, id ids.UUID, trigger string, evidenceNote *string, ifVersion *int64, choice datasource.PromotionDealChoice,
 ) (datasource.EntityRef, bool, error) {
-	contact, merged, err := p.store.PromoteLead(ctx, ids.From[ids.LeadKind](id), PromoteLeadInput{
-		Trigger: trigger, EvidenceNote: evidenceNote, IfVersion: ifVersion,
-	})
+	in := PromotionDealInput(choice)
+	in.Trigger, in.EvidenceNote, in.IfVersion = trigger, evidenceNote, ifVersion
+	contact, merged, err := p.store.PromoteLead(ctx, ids.From[ids.LeadKind](id), in)
 	return ref(datasource.EntityContact, contact.Id), merged, err
 }
 
 // WithParticipantRosterReader uses the owning module’s authorized reader so preview and execution share its policy.
 func (p *Provider) WithParticipantRosterReader(read ParticipantRosterReader) *Provider {
 	p.store = p.store.WithParticipantRosterReader(read)
+	return p
+}
+
+// WithDealOpener connects machine qualification to the owning deal writer.
+func (p *Provider) WithDealOpener(opener LeadDealOpener) *Provider {
+	p.store = p.store.WithDealOpener(opener)
 	return p
 }

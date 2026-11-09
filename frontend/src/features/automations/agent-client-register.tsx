@@ -13,12 +13,12 @@ import { Heading } from "../../design-system/heading";
 import { TokenInput } from "../../design-system/tokeninput";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useConnectorState } from "../../lib/connector-state";
 import { problemFieldErrorsOf } from "../../lib/problem";
 import {
   type RegisteredAgentClient,
   useRegisterAgentClient,
 } from "./agent-clients.queries";
-import { useConnectorState } from "./connector-state";
 import "./agent-clients.css";
 
 const NAME_MAX = 120;

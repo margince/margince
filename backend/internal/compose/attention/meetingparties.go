@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -23,6 +24,47 @@ import (
 // all is refused with apperrors.ErrPermissionDenied.
 type ContactEmployers interface {
 	CurrentEmployers(ctx context.Context, contactIDs []ids.UUID) (map[ids.UUID]crmcontracts.ContactEmployer, error)
+}
+
+// MeetingOrganizers answers which colleague organized each of a set of
+// meetings, under the caller's own grants. A meeting with no organizing
+// colleague is absent from the answer.
+type MeetingOrganizers interface {
+	MeetingOrganizers(ctx context.Context, meetingIDs []ids.UUID) (map[ids.UUID]ids.UUID, error)
+}
+
+// nameTheOrganizers makes a meeting row's host the colleague who organized
+// the meeting, where one did. The calendar a meeting came off can be an
+// invited colleague's, which synced first. The row's owner is the stored host.
+// On a synced meeting that is the organizer once their calendar holds it too.
+func (s *Service) nameTheOrganizers(ctx context.Context, rows []crmcontracts.WorklistItem) error {
+	if s.organizers == nil {
+		return nil
+	}
+	var meetings []ids.UUID
+	for _, row := range rows {
+		if isMeetingRow(row) && row.Subject != nil {
+			meetings = append(meetings, ids.UUID(row.Subject.Id))
+		}
+	}
+	if len(meetings) == 0 {
+		return nil
+	}
+	organizers, err := s.organizers.MeetingOrganizers(ctx, meetings)
+	if err != nil {
+		return fmt.Errorf("attention: naming who organized the meetings: %w", err)
+	}
+	for i := range rows {
+		if !isMeetingRow(rows[i]) || rows[i].Subject == nil {
+			continue
+		}
+		if organizer, known := organizers[ids.UUID(rows[i].Subject.Id)]; known {
+			rows[i].Host = &crmcontracts.WorklistOwner{
+				Kind: crmcontracts.WorklistOwnerKindWorklistOwnerUser, Id: idPtr(organizer),
+			}
+		}
+	}
+	return nil
 }
 
 // hostOnTheWire is the seat a meeting row's meeting came off, with its name
@@ -41,16 +83,20 @@ func isMeetingRow(row crmcontracts.WorklistItem) bool {
 	return row.Source == sourceMeeting || row.Source == sourceMeetingOutcome
 }
 
-// nameTheEmployers puts the counterparty's employer on every meeting row that
-// names one, in one read for the page.
-func (s *Service) nameTheEmployers(ctx context.Context, rows []crmcontracts.WorklistItem) error {
+// nameTheEmployers puts the contact's employer on every row that names a
+// contact, in one read for the page, so each card can name the account. The
+// employer only decorates a row, so a failed read leaves the rows unchanged
+// and says so instead of failing the page.
+func (s *Service) nameTheEmployers(
+	ctx context.Context, rows []crmcontracts.WorklistItem,
+) *crmcontracts.WorklistSourceUnavailable {
 	if s.employers == nil {
 		return nil
 	}
 	var wanted []ids.UUID
 	seen := map[ids.UUID]bool{}
 	for _, row := range rows {
-		if !isMeetingRow(row) || row.Contact == nil || seen[ids.UUID(row.Contact.Id)] {
+		if row.Contact == nil || seen[ids.UUID(row.Contact.Id)] {
 			continue
 		}
 		seen[ids.UUID(row.Contact.Id)] = true
@@ -59,16 +105,26 @@ func (s *Service) nameTheEmployers(ctx context.Context, rows []crmcontracts.Work
 	if len(wanted) == 0 {
 		return nil
 	}
-	employers, err := s.employers.CurrentEmployers(ctx, wanted)
-	// Refused is withheld: the row still names its contact, and no account.
-	if errors.Is(err, apperrors.ErrPermissionDenied) {
-		return nil
-	}
+	var employers map[ids.UUID]crmcontracts.ContactEmployer
+	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
+		var err error
+		employers, err = s.employers.CurrentEmployers(ctx, wanted)
+		return err
+	})
+	// A refusal is withheld: the row still names its contact, and no account.
 	if err != nil {
-		return fmt.Errorf("attention: naming where the meetings' contacts work: %w", err)
+		rowless := false
+		note := &crmcontracts.WorklistSourceUnavailable{
+			Source: sourceContactEmployers, Reason: crmcontracts.WorklistSourceUnavailableReasonWithheld, ContributesRows: &rowless,
+		}
+		if !errors.Is(err, apperrors.ErrPermissionDenied) {
+			note.Reason = crmcontracts.WorklistSourceUnavailableReasonFailed
+			slog.Log(ctx, laneFailureLevel(ctx), "the contacts' employers could not be read", "error", err)
+		}
+		return note
 	}
 	for i := range rows {
-		if !isMeetingRow(rows[i]) || rows[i].Contact == nil {
+		if rows[i].Contact == nil {
 			continue
 		}
 		if employer, known := employers[ids.UUID(rows[i].Contact.Id)]; known {

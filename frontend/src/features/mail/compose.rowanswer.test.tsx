@@ -38,6 +38,9 @@ function row(
     occurred_at: "2026-07-01T09:30:00Z",
     links: [onContact("p-1")],
     offers_email: over.kind !== "email" && over.kind !== "message",
+    ...(over.kind !== "email" && over.kind !== "message"
+      ? { email_target: { entity_type: "contact" as const, entity_id: "p-1" } }
+      : {}),
     ...over,
   };
 }
@@ -60,7 +63,7 @@ function Verb({
     <ChannelReplyAction
       activityId={activity.id}
       kind={activity.kind}
-      offersEmail={activity.offers_email}
+      emailTarget={activity.email_target}
       entityType={page.type}
       entityId={page.id}
       contactId={page.contactId}
@@ -206,7 +209,12 @@ describe("what a row offers to write", () => {
   it.each([
     [
       "a row the server cannot address",
-      row({ id: "n", kind: "note", offers_email: false }),
+      row({
+        id: "n",
+        kind: "note",
+        offers_email: false,
+        email_target: undefined,
+      }),
     ],
     [
       "a withheld note",
@@ -215,6 +223,7 @@ describe("what a row offers to write", () => {
         kind: "note",
         content_state: "withheld",
         offers_email: false,
+        email_target: undefined,
       }),
     ],
     [
@@ -224,12 +233,18 @@ describe("what a row offers to write", () => {
         kind: "task",
         automatic_kind: "product",
         offers_email: false,
+        email_target: undefined,
       }),
     ],
     [
       "a kind a newer server sends",
       {
-        ...row({ id: "x", kind: "note", offers_email: false }),
+        ...row({
+          id: "x",
+          kind: "note",
+          offers_email: false,
+          email_target: undefined,
+        }),
         // Read off the wire, where the kind union does not bind.
         ...JSON.parse('{"kind":"fax"}'),
       },

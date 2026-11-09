@@ -29,6 +29,13 @@ type metricFactQuery struct {
 	revision                                                                   int64
 	from, where, owner, at, value, key, stage, stageLabel, outcome, provenance string
 	money                                                                      bool
+	state                                                                      bool
+	// allocatable says the reader values a won deal, so a product or value
+	// basis replaces the deal's amount with its allocations.
+	allocatable bool
+	// binds are the values the reader's SQL names as `@name`, bound in the
+	// reader's own argument list so no placeholder is numbered twice.
+	binds map[string]any
 	// group renders the breakdown key and label columns; nil for a metric
 	// with no breakdown.
 	group func(context.Context, *reportingBindings) (key, label string, err error)
@@ -36,19 +43,15 @@ type metricFactQuery struct {
 
 func readDealMetricFacts(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, metric crmcontracts.ReportingMetricID, spec metricFactQuery) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
 	var b reportingBindings
-	_, population, err := analyticsPopulationExpression(ctx, tx, reportingRequested(frame.Scope), spec.owner, b.arg, unownedIsExcluded)
+	for name, value := range spec.binds {
+		placeholder := b.add(value)
+		spec.from = strings.ReplaceAll(spec.from, "@"+name, placeholder)
+		spec.value = strings.ReplaceAll(spec.value, "@"+name, placeholder)
+		spec.where = strings.ReplaceAll(spec.where, "@"+name, placeholder)
+	}
+	population, withheld, err := reportingDealPopulationSQL(ctx, tx, frame, spec.owner, reportingDealFields(metric), &b)
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
-	}
-	if population == "" {
-		population = sqlUnnarrowed
-	}
-	rowScope, err := auth.ScopeClauseFor(ctx, string(recordTypeDeal), "t", b.arg)
-	if err != nil {
-		return nil, crmcontracts.ReportingCoverage{}, err
-	}
-	if rowScope == "" {
-		rowScope = sqlUnnarrowed
 	}
 	value, err := reportingFactValue(ctx, frame, spec, &b)
 	if err != nil {
@@ -58,12 +61,7 @@ func readDealMetricFacts(ctx context.Context, tx pgx.Tx, frame crmcontracts.Repo
 	if strings.Contains(from, "@revision") {
 		from = strings.ReplaceAll(from, "@revision", b.add(spec.revision))
 	}
-	fieldScope, withheld, err := reportingFieldScope(ctx, string(recordTypeDeal), "t", reportingDealFields(metric), &b)
-	if err != nil {
-		return nil, crmcontracts.ReportingCoverage{}, err
-	}
-	where := spec.where + " AND " + population + " AND " + rowScope + " AND " + fieldScope
-	where += reportingFactFilters(frame, metric, spec, &b)
+	where := spec.where + " AND " + population + reportingFactFilters(frame, metric, spec, &b)
 	position := spec.stagePosition
 	if position == "" {
 		position = "0"
@@ -91,6 +89,14 @@ func readDealMetricFacts(ctx context.Context, tx pgx.Tx, frame crmcontracts.Repo
 		return nil, crmcontracts.ReportingCoverage{}, fmt.Errorf("narrow the reporting population before evaluating: %w", apperrors.ErrInvalidArgument)
 	}
 	coverage := crmcontracts.ReportingCoverage{Status: "ok", Withheld: withheld}
+	if spec.state {
+		for i := range facts {
+			facts[i].ContextID = reportingState
+			facts[i].SetEvidenceDate(facts[i].Row.OccurredAt)
+			facts[i].Row.OccurredPrecision = new(crmcontracts.OccurredPrecisionOccurredPrecisionDay)
+		}
+		return facts, coverage, nil
+	}
 	return reportingCohorts(frame, facts), coverage, nil
 }
 
@@ -140,7 +146,7 @@ func readReportingOutcomes(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 }
 
 func closingMetricQuery(money bool) metricFactQuery {
-	query := metricFactQuery{from: deals.CurrentClosingJoin("t", "closing"), where: "t.archived_at IS NULL AND t.status <> 'open'", owner: colOwnerID, at: "t.closed_at", key: "COALESCE(closing.id,t.id)::text", stage: "''", stageLabel: "''", outcome: "t.status", provenance: "'current_closing'", money: money}
+	query := metricFactQuery{from: deals.CurrentClosingJoin("t", "closing"), where: "t.archived_at IS NULL AND t.status <> 'open'", owner: colOwnerID, at: "t.closed_at", key: "COALESCE(closing.id,t.id)::text", stage: "''", stageLabel: "''", outcome: "t.status", provenance: "'current_closing'", money: money, allocatable: money}
 	if money {
 		query.where += " AND t.status='won'"
 	} else {
@@ -165,7 +171,7 @@ func readReportingAge(ctx context.Context, tx pgx.Tx, frame crmcontracts.Reporti
 }
 
 func openMetricQuery(age bool) metricFactQuery {
-	query := metricFactQuery{stagePosition: "COALESCE(s.position,0)", from: "LEFT JOIN stage s ON s.id=t.stage_id", where: "t.archived_at IS NULL AND t.status='open'", owner: colOwnerID, at: "NULL::timestamptz", key: "t.id::text", stage: "t.stage_id::text", stageLabel: "s.name", outcome: "'open'", provenance: "'current_state'", money: !age}
+	query := metricFactQuery{state: true, stagePosition: "COALESCE(s.position,0)", from: "LEFT JOIN stage s ON s.id=t.stage_id", where: "t.archived_at IS NULL AND t.status='open'", owner: colOwnerID, at: "t.expected_close_date", key: "t.id::text", stage: "t.stage_id::text", stageLabel: "s.name", outcome: "'open'", provenance: "'current_state'", money: !age}
 	if age {
 		query.from += " " + currentStageEntryJoin
 		query.value = "current_stage_age"
@@ -179,6 +185,9 @@ func reportingFactValue(ctx context.Context, frame crmcontracts.ReportingContext
 		value = currentStageAgeSQL(b.add(frame.EvaluatedAt) + "::timestamptz")
 	}
 	if spec.money {
+		if value == "" && spec.allocatable && (frame.ProductId != nil || reportingValueBasis(frame) != reportingValueBasisAll) {
+			value = allocationValueSQL(frame, b, "t")
+		}
 		if value == "" {
 			value = deals.BaseValueSQL(b.add(frame.EvaluatedAt), b.add(frame.Currency), "t")
 		}
@@ -202,11 +211,47 @@ func reportingFactFilters(frame crmcontracts.ReportingContext, metric crmcontrac
 	}
 	// The filter starts early enough for every chart subcontext; projection
 	// assigns interval, target, and previous cohorts from the same fact read.
-	if spec.at != "NULL::timestamptz" {
+	if !spec.state && spec.at != "NULL::timestamptz" {
 		where += " AND " + spec.at + " >= " + b.add(reportingEarliest(frame)) + " AND " + spec.at + " < " + b.add(frame.EvaluatedAt)
 	}
 	if metric == reportingOpenPipeline || metric == reportingStageAge {
 		where += reportingClosePredicate(frame, b)
 	}
 	return where
+}
+
+// readReportingBookingsMix reads one row per allocation of a won deal, each
+// under its component kind. The deal's unallocated remainder is a group of
+// its own. A product selection keeps that product's allocations alone and
+// drops the remainder, which is not that product's.
+func readReportingBookingsMix(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, _ crmcontracts.ReportingFramework, _ metricEvaluator) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
+	binds := map[string]any{"currency": frame.Currency}
+	parts := "SELECT dp.product_id::text AS part, COALESCE(dp.component_kind,'unclassified') AS kind, dp.amount_minor AS amount, dp.currency FROM deal_product dp WHERE dp.deal_id=t.id AND dp.amount_minor IS NOT NULL"
+	if frame.ProductId != nil {
+		binds["product"] = *frame.ProductId
+		parts += " AND dp.product_id=@product"
+	} else {
+		parts += " UNION ALL SELECT 'unallocated', 'unallocated', t.amount_minor-(SELECT COALESCE(SUM(x.amount_minor),0) FROM deal_product x WHERE x.deal_id=t.id AND x.currency=t.currency), t.currency"
+	}
+	if basis := reportingValueBasis(frame); basis != reportingValueBasisAll {
+		binds["basis"] = string(basis)
+		parts = "SELECT * FROM (" + parts + ") kinds WHERE kinds.kind=@basis"
+	}
+	said := reporting.ExplanationCopy(frame)
+	query := closingMetricQuery(true)
+	query.allocatable = false
+	query.binds = binds
+	query.from += " JOIN LATERAL (" + parts + ") part ON part.amount>0"
+	query.key = "COALESCE(closing.id,t.id)::text||':'||part.part"
+	query.value = allocationConvertedSQL("part.amount", "part.currency IS DISTINCT FROM t.currency", "t", "@currency")
+	query.group = func(_ context.Context, b *reportingBindings) (string, string, error) {
+		var label strings.Builder
+		label.WriteString("CASE part.kind")
+		for kind, phrase := range reportingComponentKindLabels {
+			label.WriteString(" WHEN '" + kind + "' THEN " + b.add(said.Say(phrase)))
+		}
+		label.WriteString(" END")
+		return "'kind:'||part.kind", label.String(), nil
+	}
+	return readDealMetricFacts(ctx, tx, frame, reportingBookingsMix, query)
 }

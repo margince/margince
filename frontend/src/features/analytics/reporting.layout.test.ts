@@ -4,6 +4,7 @@ import {
   blocksOf,
   cardChoices,
   cardQuestion,
+  hasAssessment,
   laidOut,
   layoutEdits,
   layoutOf,
@@ -215,5 +216,25 @@ describe("a report's layout", () => {
       metric: "open_pipeline",
       width: "full",
     });
+  });
+});
+
+describe("the assessment card", () => {
+  it("is placed once, at the end, and adds no block", () => {
+    const once = layoutEdits.addAssessment(twoSections);
+    expect(hasAssessment(once)).toBe(true);
+    expect(layoutEdits.addAssessment(once)).toEqual(once);
+    const last = once[once.length - 1]?.cards.at(-1);
+    expect(last?.kind).toBe("assessment");
+    expect(blocksOf(once)).toEqual(blocksOf(twoSections));
+    expect(hasAssessment(layoutEdits.removeAssessment(once))).toBe(false);
+  });
+
+  it("lays out as its own item, whatever the charts answered", () => {
+    const sections = laidOut(layoutEdits.addAssessment(twoSections), [
+      chart("stage_distribution", "open_pipeline"),
+    ]);
+    const items = sections.flatMap((section) => section.items);
+    expect(items.some((item) => "assessment" in item)).toBe(true);
   });
 });

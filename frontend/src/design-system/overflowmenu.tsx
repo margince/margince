@@ -1,5 +1,13 @@
 import { MoreHorizontal } from "lucide-react";
-import { type ReactNode, useEffect, useId, useRef, useState } from "react";
+import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+  type RefObject,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { useAnchoredToTrigger } from "./anchored";
 import { Button } from "./button";
@@ -49,6 +57,30 @@ function borrowedReasons(panel: HTMLElement): string[] {
   return [...reasons];
 }
 
+// Up and Down walk the panel's own buttons and links; a field inside it keeps
+// its arrows for itself. A dialog an item opened bubbles here through the
+// portal, so a key from outside the panel's DOM is not the menu's.
+function walkItems(event: ReactKeyboardEvent<HTMLDivElement>) {
+  const step = { ArrowDown: 1, ArrowUp: -1 }[event.key];
+  const here = event.target;
+  if (
+    step === undefined ||
+    !(here instanceof HTMLElement) ||
+    !event.currentTarget.contains(here) ||
+    !here.matches("button, a")
+  ) {
+    return;
+  }
+  const items = [
+    ...event.currentTarget.querySelectorAll<HTMLElement>(
+      "button:not(:disabled), a[href]",
+    ),
+  ];
+  // Consumed at the ends too, or the page scrolls under an open menu.
+  event.preventDefault();
+  items[items.indexOf(here) + step]?.focus();
+}
+
 // OverflowMenu folds the verbs a record offers but a reader rarely wants
 // (merge, archive, share) behind one control. The header then carries identity
 // and the frequent actions. It avoids a row of buttons of equal weight, where
@@ -71,12 +103,24 @@ function borrowedReasons(panel: HTMLElement): string[] {
 export function OverflowMenu({
   label,
   word,
+  text,
   icon = <MoreHorizontal aria-hidden="true" />,
   inline = false,
+  align = "end",
+  within = null,
+  pending = false,
   keepMounted = false,
   children,
 }: Readonly<{
   label: string;
+  /** A trigger that prints its verb after the glyph, as a pill; `label` stays its full name and starts with it. */
+  text?: string;
+  /** The write an item started is out: the trigger shows it as `Button pending` does. */
+  pending?: boolean;
+  /** Where the panel hangs: off the trigger's `end` (a mark at a row's end), its `start`, or its `center`. */
+  align?: "start" | "end" | "center";
+  /** A box the panel stays inside as well as the window, such as the card from `usePanelEdge`. */
+  within?: RefObject<HTMLElement | null> | null;
   /** The trigger's glyph, `aria-hidden`; the three dots unless the menu holds one kind of item (the chats a number opens). */
   icon?: ReactNode;
   /** A trigger inside a line of text, as `IconAction inline`: the square keeps its target and takes one line box. */
@@ -107,7 +151,7 @@ export function OverflowMenu({
   const panel = useRef<HTMLDivElement | null>(null);
   const trigger = useRef<HTMLButtonElement | null>(null);
   const panelId = useId();
-  const at = useAnchoredToTrigger(open, trigger, panel);
+  const at = useAnchoredToTrigger(open, trigger, panel, align, within);
   const { layer, joinLayer, join } = useDialogLayer(wrap, keepMounted);
   const [reasons, setReasons] = useState<readonly string[]>([]);
 
@@ -193,6 +237,29 @@ export function OverflowMenu({
     };
   }, [open, layer]);
 
+  const openFromKeys = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === "ArrowDown" && !open && !pending) {
+      event.preventDefault();
+      join();
+      setEverOpened(true);
+      setOpen(true);
+    }
+  };
+  const triggerProps = {
+    ref: trigger,
+    "aria-expanded": open,
+    "aria-controls": panelId,
+    "aria-label": label,
+    title: label,
+    pending,
+    onClick: () => {
+      join();
+      setEverOpened(true);
+      setOpen((was) => !was);
+    },
+    onKeyDown: openFromKeys,
+  };
+
   return (
     <div
       className={
@@ -211,37 +278,32 @@ export function OverflowMenu({
           worse than announcing the expandable region we do. */}
       {/* `iconOnly`: the ellipsis is the whole label, so the control is the
           catalog's --controlHeight square and its geometry is the button's. */}
-      <Button
-        iconOnly
-        ref={trigger}
-        aria-expanded={open}
-        aria-controls={panelId}
-        aria-label={label}
-        title={label}
-        onClick={() => {
-          join();
-          setEverOpened(true);
-          setOpen((was) => !was);
-        }}
-      >
-        {icon}
-        {word && (
-          <span className="verb-word" aria-hidden="true">
-            {word}
-          </span>
-        )}
-      </Button>
+      {text === undefined ? (
+        <Button iconOnly {...triggerProps}>
+          {icon}
+          {word && (
+            <span className="verb-word" aria-hidden="true">
+              {word}
+            </span>
+          )}
+        </Button>
+      ) : (
+        <Button className="overflow-menu-labelled" {...triggerProps}>
+          {icon}
+          {text}
+        </Button>
+      )}
       {/* Hidden, never unmounted once mounted: the items own their dialogs, and
           `hidden` takes them out of the tab order. When they first mount is
           `keepMounted`'s question. */}
       {createPortal(
-        // biome-ignore lint/a11y/noStaticElementInteractions: not a control — it observes that one of the caller's controls inside it was pressed
-        // biome-ignore lint/a11y/useKeyWithClickEvents: the keyboard path IS this handler; Enter and Space on a button dispatch a click that bubbles here
+        // biome-ignore lint/a11y/noStaticElementInteractions: not a control — it observes presses on the caller's controls inside it, and walks them with the arrows
         <div // NOSONAR: listener observes activation of the caller's own buttons; the panel itself is not pressable
           id={panelId}
           ref={panel}
           className="overflow-menu-items"
           hidden={!open}
+          onKeyDown={walkItems}
           style={{
             top: `${at.top}px`,
             left: `${at.left}px`,

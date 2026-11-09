@@ -2,6 +2,7 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { pickOption } from "../../design-system/select-testing";
 import { meFixture } from "../../testing/mefixture";
 import {
   type Company,
@@ -45,7 +46,7 @@ async function lifecycleControls(): Promise<HTMLElement[]> {
     await userEvent.click(unfold);
   }
   const grid = await screen.findAllByRole("button", {
-    name: "Change Lifecycle",
+    name: /^Change Lifecycle/,
   });
   expect(header).toHaveLength(1);
   expect(grid).toHaveLength(1);
@@ -75,7 +76,7 @@ describe("company view — where the account stands, and what it is to us", () =
     // control; the types stay read-only badges. findAllBy, not getBy: the
     // controls appear only once /me answers with the viewer's grants, which
     // resolves apart from the 360 awaited above. Two controls, the header's
-    // button and the Details grid's inline field. Both show the same value,
+    // button and the Details grid's field. Both show the same value,
     // because both read the one row and write through the same patch.
     for (const control of await lifecycleControls()) {
       expect(control.textContent).toContain("Former customer");
@@ -160,8 +161,7 @@ describe("company view — where the account stands, and what it is to us", () =
     await screen.findByRole("complementary", { name: "Context" });
 
     const [headerControl] = await lifecycleControls();
-    await userEvent.click(headerControl);
-    await userEvent.click(screen.getByRole("option", { name: "Prospect" }));
+    await pickOption(userEvent.setup(), headerControl, "Prospect");
 
     await waitFor(() => expect(patchCount).toBe(1));
     expect(lastIfMatch).toBe("1");

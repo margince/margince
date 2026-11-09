@@ -19,12 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/compose/accountdraft"
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
-	"github.com/margince/margince/backend/internal/compose/company360"
-	"github.com/margince/margince/backend/internal/compose/companybrief"
-	"github.com/margince/margince/backend/internal/compose/companydossier"
-	"github.com/margince/margince/backend/internal/compose/companyscan"
 	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -38,7 +33,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/integrations"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -61,6 +55,7 @@ import (
 // ADR-0054 reason as the stager.
 func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 	return withContactMergeCarriers(InstallationDB(pool), contacts.NewHandlers(InstallationDB(pool))).
+		WithFloorCarry(EntityFloorCarry(pool)).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
 		WithMatchStager(linkedInMatchStager(pool)).
 		WithVCardReviewStager(vcardCreateStager(pool)).
@@ -77,12 +72,9 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 // newActivitiesHandlers builds the timeline transport over the sibling
 // modules its inbound and outbound edges need.
 func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
-	// ONE gate serving both seams. The composer's preview and the send's
-	// default-deny door are two questions of the same authority, and two gates
-	// here would be two answers about one message — the drift this whole
-	// subsystem is shaped to prevent.
 	gate := consentGateFor(pool)
-	return activities.NewHandlers(InstallationDB(pool)).
+	return activities.NewHandlers(InstallationDB(pool)).WithIdentityProver(capture.ProvedUnambiguouslyTx).
+		WithDealFiling(NewActivityDealFiling(InstallationDB(pool))).
 		WithTaskRecommendation(taskRecommendationReader(pool)).
 		WithLeadQualifyTasks(newLeadWorkTasks(InstallationDB(pool), slog.Default())).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
@@ -95,6 +87,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 		// answer one question one way: whether a window was read off the host's
 		// own diary or derived from this CRM's records.
 		WithCalendarConnected(activities.CalendarConnected(calendarBackingResolver(pool))).
+		WithListCalendar(activityListCalendar(captureHealthRegistry(InstallationDB(pool)))).
 		// The public booking capture seams (feedback/14): contacts is the
 		// idempotent-on-email contact path, consent records the
 		// passthrough — both injected here, never sibling imports.
@@ -190,6 +183,7 @@ func (s *Server) wireSurfaces(pool *pgxpool.Pool, log *slog.Logger) {
 	s.wireOnboardingSurface(pool)
 	s.wireSystemOfRecordReads(pool)
 	s.wireBulkSurface(pool)
+	s.companyContactShareHandlers = companyContactShareHandlers{db: InstallationDB(pool), grants: identity.NewService(pool)}
 	s.wireHandoverSurface()
 }
 
@@ -198,7 +192,7 @@ func (s *Server) wireSurfaces(pool *pgxpool.Pool, log *slog.Logger) {
 // queue rather than two readings of it; a second engine here is how the two
 // would come to disagree.
 func (s *Server) wireStagedSurfaces(pool *pgxpool.Pool) {
-	staged := approvalsServiceWithEffects(pool)
+	staged := NewApprovalsServiceWithEffects(pool)
 	s.homeCache = homecache.New(pool)
 	s.attentionHandlers = newAttentionHandlers(pool, staged).WithHomeCache(s.homeCache)
 	s.magicService = newMagicService(pool, staged, time.Now)
@@ -239,12 +233,15 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	// number, and moving it to installation settings is a migration plus a
 	// reader, which is its own change.
 	s.analyticsQueryHandlers = newAnalyticsQueryHandlers(
-		InstallationDB(pool), analyticsquery.DefaultFloor, newAttentionNames(InstallationDB(pool)))
+		InstallationDB(pool), analyticsquery.DefaultFloor, newAttentionNames(InstallationDB(pool)),
+	)
 	s.reportMetrics = reportingService
 	s.analyticsContextHandlers = newAnalyticsContextHandlers(
-		InstallationDB(pool), func() time.Time { return time.Now().UTC() })
+		InstallationDB(pool), func() time.Time { return time.Now().UTC() },
+	)
 	s.sdrSummaryHandlers = newSdrSummaryHandlers(
-		InstallationDB(pool), func() time.Time { return time.Now().UTC() }).withTargets(reportingService)
+		InstallationDB(pool), func() time.Time { return time.Now().UTC() },
+	).withTargets(reportingService)
 	s.analyticsShareHandlers = newAnalyticsShareHandlers(
 		NewAnalyticsShareStore(func() time.Time { return time.Now().UTC() }),
 		newForecastStoreFor(pool),
@@ -355,98 +352,6 @@ func (s *Server) wireOnboardingSurface(pool *pgxpool.Pool) {
 	}
 }
 
-// wireSystemOfRecordReads builds the reads over this system of record — the
-// company view and its grounded prose.
-func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
-	// The contacts store carries the SAME fieldcatalog seam contactsHandlers
-	// gets: the 360 serves the company object, and without it the
-	// company view would silently omit the cf_* columns GET
-	// /companies/{id} returns for the same record.
-	// The brief reads THROUGH the 360 service, so it inherits every gate the
-	// page itself applies and can only describe what this caller may see.
-	// The model lane is nil here: WithCompanyBrief binds the api role's
-	// summarize lane, and without it the brief serves its deterministic
-	// floor.
-	s.contactsStore = newContactsStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil))
-	s.blockedDomainHandlers = blockedDomainHandlers{contacts: s.contactsStore}
-	s.captureExclusionHandlers = captureExclusionHandlers{store: capture.NewExclusionStore(InstallationDB(pool))}
-	// Both stores, because answering a domain question is two different acts:
-	// keeping it settles the triage ledger, discarding it writes the caller's
-	// own capture exclusion.
-	s.domainQuestionHandlers = domainQuestionHandlers{
-		contacts:   s.contactsStore,
-		exclusions: capture.NewExclusionStore(InstallationDB(pool)),
-	}
-	s.threadAudience = NewThreadAudienceSetter(pool)
-	s.captureSenderHandlers = captureSenderHandlers{
-		db:         InstallationDB(pool),
-		store:      capture.NewSenderOverrideStore(InstallationDB(pool)),
-		threadPass: verdictPass(pool, ConfidentialityVerdictArgs{}.Kind()),
-	}
-	s.captureOwnerIdentityHandlers = captureOwnerIdentityHandlers{store: capture.NewOwnerIdentityStore(InstallationDB(pool))}
-	s.captureCounterpartyHoldHandlers = captureCounterpartyHoldHandlers{
-		store:     capture.NewCounterpartyHoldStore(InstallationDB(pool)),
-		recompute: activities.RecomputeAudienceTx,
-		clearHold: activities.ClearCounterpartyHoldTx,
-	}
-	s.claimHandlers = claimHandlers{contacts: s.contactsStore, deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}
-	s.ownershipRequestHandlers = ownershipRequestHandlers{transfers: newOwnershipTransfers(pool)}
-	s.dealCommitmentHandlers = newDealCommitmentHandlers(pool, time.Now)
-	s.promiseTakeOverHandlers = newPromiseTakeOverHandlers(pool)
-	// The importer maps only core columns (see importTargets for why custom
-	// fields are not among them), so it needs no field catalog of its own.
-	s.importHandlers = importHandlers{db: InstallationDB(pool), uploadLimit: s.uploadLimits.CSVImport}
-	s.company360Svc = company360.NewService(pool, s.contactsStore, s.dealsStore, ProjectsStore(pool), NewApprovalsService(InstallationDB(pool)), time.Now).
-		WithActivityFields(activities.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil))).
-		WithSignalWords(signalSummaryWords)
-	s.companyBriefSvc = companybrief.NewService(pool, s.company360Svc, s.contactsStore, nil, "", time.Now).
-		WithEmailSummaries(emailRows(pool))
-	s.companyBriefHandlers = companybrief.NewHandlers(s.companyBriefSvc)
-	// The dossier reads the SAME contacts store the 360 and the brief read, so
-	// the three cannot drift about what a company's facts are. No model lane is
-	// wired yet: every assembly is the deterministic floor and says so.
-	// Both lanes are nil here: WithCompanyDossier and WithGrowthFit bind the
-	// api role's, and without them each surface serves its deterministic floor.
-	// The two floors differ in kind — the dossier's still describes the company,
-	// where growth fit's can only abstain — which is why they are separate
-	// options rather than one.
-	s.companyDossierSvc = companydossier.NewService(pool, s.contactsStore, nil, "", time.Now).
-		WithEmailSummaries(emailRows(pool))
-	s.companyGrowthFitSvc = companydossier.NewGrowthFitService(
-		pool, s.contactsStore, offeringConfirmed(s.contactsStore), nil, "", time.Now,
-	).WithEmailSummaries(emailRows(pool))
-	s.companyDossierHandlers = companydossier.NewHandlers(
-		s.companyDossierSvc, s.companyGrowthFitSvc,
-	)
-	// The account scan over the same composite read and the same dismissals.
-	// No lane and no job runner here: an ensure on this role settles the
-	// rules' floor in-request, and WithAccountScan binds the api role's.
-	s.companyScanSvc = companyscan.NewService(pool, s.company360Svc, s.company360Svc, nil, nil, nil, time.Now, s.log).
-		WithEmailSummaries(emailRows(pool))
-	s.companyScanHandlers = companyscan.NewHandlers(s.companyScanSvc)
-	s.company360Svc.RecogniseScanFindings(s.companyScanSvc)
-	// AFTER the dossier service exists: the drafter takes it as a dependency,
-	// and a nil *Service handed through the interface is not the nil INTERFACE
-	// the drafter guards against — it would pass the guard and panic on the
-	// first account draft.
-	//
-	// The account-started draft reads through the same 360 and writes nothing,
-	// so it needs no pool of its own. Nil lane here for the same reason as the
-	// brief's: WithAccountDraft binds the api role's, and without it the
-	// endpoint answers from its deterministic floor rather than 501-ing.
-	s.firstDrafts.account = accountdraft.NewService(s.company360Svc, nil).
-		WithEnvelope(draftEnvelope(pool, s.log)).
-		WithEmailSummaries(emailRows(pool)).
-		WithDossier(s.companyDossierSvc)
-	s.accountDraftHandlers = accountdraft.NewHandlers(s.firstDrafts.account)
-	s.company360Handlers = company360.NewHandlers(s.company360Svc)
-	// The contact page is the company page's sibling, so it is wired here
-	// rather than beside the handler sets.
-	s.wireContact360(pool)
-	s.wireReversal(pool)
-	s.wireProject360(pool)
-}
-
 // newConsentHandlers binds the consent surface to the four edges it cannot
 // reach for itself.
 //
@@ -466,7 +371,7 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 // confirmation lane's all-three-or-none rule.
 func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 	return consent.NewHandlers(InstallationDB(pool)).
-		WithEraser(privacy.NewEraser(InstallationDB(pool)).WithCountry(identity.CountryForDecision)).
+		WithEraser(ComposedEraser(pool, nil, nil)).
 		WithSubjectAccessAssembler(newSubjectAccessAssembler(InstallationDB(pool))).
 		WithInstallationName(consent.InstallationNameFunc(func(ctx context.Context) (string, error) {
 			return identity.InstallationNameForPublicPage(ctx, pool)
@@ -474,6 +379,7 @@ func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 		WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf)).
 		WithInstallationZone(identity.ZoneAppliedTx).
 		WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf)).
+		WithNoticeHeldReader(privacyNoticeHeld{db: InstallationDB(pool)}).
 		// The controller particulars form reads and writes through the settings
 		// store; without it every read and write of the form is a server fault.
 		WithSettings(StoredConfig(pool)).

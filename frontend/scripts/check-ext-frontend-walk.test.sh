@@ -155,30 +155,52 @@ plant() {
 CLEAN="$TMP/clean"
 plant "$CLEAN" 'const gap = "var(--space-3)";'
 
-for entry in "${CASES[@]}"; do
-  gate="${entry%%|*}"
-  violation="${entry#*|}"
-  dirty="$TMP/${gate%.sh}"
+# judge runs one gate against both fixtures. Each gate walks the whole of
+# frontend/src on every run, so the cases run side by side; each writes its
+# findings and messages to its own files, read once all have finished.
+judge() {
+  local gate="$1" violation="$2" dirty="$TMP/${1%.sh}" out="$TMP/${1%.sh}.out" rel
   plant "$dirty" "$violation"
 
-  MARGINCE_EXT_DIR="$dirty" "$SCRIPT_DIR/$gate" >"$TMP/out" 2>&1 && verdict=0 || verdict=1
+  MARGINCE_EXT_DIR="$dirty" "$SCRIPT_DIR/$gate" >"$out" 2>&1 && verdict=0 || verdict=1
   if [[ "$verdict" -eq 0 ]]; then
     fail "$gate passed with a violation planted in extensions/probe/frontend: $violation"
   else
     for rel in "${DEPTHS[@]}"; do
-      grep -qF "$dirty/$rel" "$TMP/out" && continue
+      grep -qF "$dirty/$rel" "$out" && continue
       fail "$gate failed without naming the planted extensions/$rel — it is not reading that file:"
-      sed 's/^/      /' "$TMP/out" >&2
+      sed 's/^/      /' "$out" >&2
     done
   fi
 
-  MARGINCE_EXT_DIR="$CLEAN" "$SCRIPT_DIR/$gate" >"$TMP/out" 2>&1 || true
+  MARGINCE_EXT_DIR="$CLEAN" "$SCRIPT_DIR/$gate" >"$out" 2>&1 || true
   for rel in "${DEPTHS[@]}"; do
-    if grep -qF "$CLEAN/$rel" "$TMP/out"; then
+    if grep -qF "$CLEAN/$rel" "$out"; then
       fail "$gate reported the clean extensions/$rel — the fixture proves nothing about scope while the gate also reports this:"
-      sed 's/^/      /' "$TMP/out" >&2
+      sed 's/^/      /' "$out" >&2
     fi
   done
+  echo "$FAILURES" >"$TMP/${gate%.sh}.failures"
+}
+
+pids=()
+for entry in "${CASES[@]}"; do
+  gate="${entry%%|*}"
+  judge "$gate" "${entry#*|}" 2>"$TMP/${gate%.sh}.log" &
+  pids+=("$!")
+done
+for pid in "${pids[@]}"; do
+  wait "$pid" || fail "a case ended without reaching its verdict (exit $?)"
+done
+# A case that died before writing its count is not a pass, so it counts as one.
+for entry in "${CASES[@]}"; do
+  gate="${entry%%|*}"
+  cat "$TMP/${gate%.sh}.log" >&2
+  if [[ -f "$TMP/${gate%.sh}.failures" ]]; then
+    FAILURES=$((FAILURES + $(<"$TMP/${gate%.sh}.failures")))
+  else
+    fail "$gate: its case wrote no verdict"
+  fi
 done
 
 if [[ "$FAILURES" -ne 0 ]]; then

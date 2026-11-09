@@ -6,7 +6,8 @@ package contacts
 // Repairing company addresses stored before the splitter existed: the whole
 // text in line 1 and every other part empty. Only text a writer derived is
 // split. Line 1 must still equal the registered_address profile text. No edit
-// of the company's own address fields may have happened since.
+// of the company's own address fields may have happened since. A site read's
+// own entry names the address columns too, and is not such an edit.
 
 import (
 	"context"
@@ -31,7 +32,8 @@ const unsplitCompanyAddress = `SELECT address_line1, address_country FROM compan
 	                WHERE f.company_id = c.id AND f.field = 'registered_address'
 	                  AND btrim(f.value) = btrim(c.address_line1))
 	   AND NOT EXISTS (SELECT 1 FROM audit_log a
-	                    WHERE a.entity_type = 'company' AND a.entity_id = c.id AND a.after ? 'address_line1')`
+	                    WHERE a.entity_type = 'company' AND a.entity_id = c.id AND a.after ? 'address_line1'
+	                      AND a.evidence ->> 'source' IS DISTINCT FROM '` + companySourceSiteRead + `')`
 
 // AddressRepairPage is one batch: every company id it inspected and how many
 // addresses it split.

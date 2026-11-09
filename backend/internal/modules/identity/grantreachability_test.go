@@ -65,7 +65,9 @@ var grantedToNobody = gatekit.Waive(map[string]string{})
 // freely and rise only with a reason. Migration's doors count here because
 // they name ImportRunObject, which the scan cannot follow. So does narrowing an
 // activity read to a record, whose type linkColumn holds to the link vocabulary.
-const dynamicObjectCeiling = 95
+// 96: initiatives.visibleRecords takes the record type of a pick or an
+// exclusion, lead or deal, from its two callers.
+const dynamicObjectCeiling = 96
 
 // dynamicActionCeiling is the same bound for the OTHER unresolved argument: a
 // call site naming a known object and an action computed at runtime, as

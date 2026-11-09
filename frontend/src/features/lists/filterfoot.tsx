@@ -2,22 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // The filter Panel's footer band. The leading edge says what state the filter
-// is in. The trailing edge holds the one accent way to keep it, with the rarer
-// verbs in More beside it.
+// is in. The trailing edge holds the ways to keep it, the one accent last. The
+// export stands on the results panel, beside the count it exports.
 
 import type { ReactNode } from "react";
 import { ActionRow } from "../../design-system/actionrow";
-import { Button, OverflowMenu } from "../../design-system/atoms";
+import { Button } from "../../design-system/atoms";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import type { FilterResource } from "../../lib/filterdata";
 import { isComplete, type Node } from "../../lib/segmentpredicate";
-import {
-  ExportFilterItems,
-  ExportProgress,
-  type FilterExportRun,
-} from "./filterexport";
 import { proposedCount } from "./filterproposal";
 import "./filters.css";
 
@@ -44,19 +38,15 @@ export type FootMode =
     }>;
 
 export function FilterFoot({
-  resource,
   tree,
   mode,
   onSave,
-  exportRun,
   problem,
 }: Readonly<{
-  resource: FilterResource;
   tree: Node;
   mode: FootMode;
   /** Opens "Save this filter": the new filter's Save, or "Save as new view". */
   onSave: () => void;
-  exportRun: FilterExportRun;
   /** Why the last save was refused, with the way out of it. */
   problem?: ReactNode;
 }>) {
@@ -76,15 +66,7 @@ export function FilterFoot({
   return (
     <ActionRow
       className="filters-foot"
-      primary={
-        <FootVerbs
-          resource={resource}
-          tree={tree}
-          mode={mode}
-          onSave={onSave}
-          exportRun={exportRun}
-        />
-      }
+      primary={<FootVerbs tree={tree} mode={mode} onSave={onSave} />}
     >
       <span className="t-caption">{status}</span>
       {mode.kind === "view" && !mode.changed && (
@@ -97,8 +79,6 @@ export function FilterFoot({
           {t("filters.discardChanges")}
         </Button>
       )}
-      {/* An opened view exports from its head, so its progress shows there. */}
-      {mode.kind !== "view" && <ExportProgress run={exportRun} tree={tree} />}
       {problem}
     </ActionRow>
   );
@@ -116,17 +96,13 @@ function statusOf(mode: FootMode): MessageKey {
  * tree the engine refuses, so each waits for a complete filter.
  */
 function FootVerbs({
-  resource,
   tree,
   mode,
   onSave,
-  exportRun,
 }: Readonly<{
-  resource: FilterResource;
   tree: Node;
   mode: FootMode;
   onSave: () => void;
-  exportRun: FilterExportRun;
 }>) {
   const t = useT();
   const complete = isComplete(tree);
@@ -147,23 +123,14 @@ function FootVerbs({
       </>
     ) : null;
   }
-  return (
+  return mode.kind === "list" ? (
     <>
-      {complete && (
-        <OverflowMenu label={t("filters.footMore")}>
-          {mode.kind === "list" && (
-            <Button onClick={onSave}>{t("filters.saveAsNew")}</Button>
-          )}
-          <ExportFilterItems run={exportRun} resource={resource} tree={tree} />
-        </OverflowMenu>
-      )}
-      {mode.kind === "list" ? (
-        mode.saveTo
-      ) : (
-        <Button variant="primary" disabled={!complete} onClick={onSave}>
-          {t("filters.save")}
-        </Button>
-      )}
+      {complete && <Button onClick={onSave}>{t("filters.saveAsNew")}</Button>}
+      {mode.saveTo}
     </>
+  ) : (
+    <Button variant="primary" disabled={!complete} onClick={onSave}>
+      {t("filters.save")}
+    </Button>
   );
 }

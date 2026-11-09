@@ -38,7 +38,7 @@ func TestPromotionApprovalNamesTheContactAndOptionalDeal(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			payload := fmt.Sprintf(`{"lead_id":%q,"trigger":"human_qualify","evidence_note":"Buyer confirmed interest","deal":{"name":"Ignored by tool"}}`, lead.Id)
+			payload := fmt.Sprintf(`{"lead_id":%q,"trigger":"human_qualify","evidence_note":"Buyer confirmed interest"}`, lead.Id)
 			if rest {
 				payload = `{"operation":"PromoteLead","body":{"trigger":"human_qualify","evidence":{"note":"Buyer confirmed interest"},"deal":{"amount_minor":250000,"currency":"USD"}}}`
 			}

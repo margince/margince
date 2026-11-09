@@ -547,6 +547,29 @@ export const ACalendarThatStopped: Story = {
   },
 };
 
+// A used booking page that takes no bookings. Its title names the blocker, and
+// the row opens the booking settings, where the host fixes it.
+export const ABookingPageThatIsPaused: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      occurred_precision: "instant",
+      id: "bh1",
+      source: "booking_health",
+      category: "system",
+      level: 6,
+      consequence: "work_blocked",
+      kind: "calendar_read_only",
+      because: [],
+      actions: [],
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
 // A new lead waiting on a first reply, with the clock the SLA policy is
 // counting. `response_overdue` is the reason the row gives; the phrase is the
 // client's to write.
@@ -652,7 +675,8 @@ export const AMeetingWithNoOutcomeRecorded: Story = {
       title: "Quarterly review with Turbinenbau",
       occurred_at: "2026-09-02T09:00:00Z",
       because: [{ kind: "outcome_unrecorded" }],
-      actions: [],
+      // The seat may answer it, so the row draws Held, Add notes and Cancel.
+      actions: ["decide", "cancel"],
       subject: { type: "activity", id: "11111111-1111-7111-8111-111111111111" },
     },
   },

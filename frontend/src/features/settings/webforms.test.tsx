@@ -74,8 +74,8 @@ const budgetField: CustomField = {
   version: 1,
 };
 
-// The colleagues an owner picker offers: a colleague, plus an agent seat the
-// server refuses as an owner.
+// The roster an owner picker reads: a colleague, and one outside the reader's
+// own scope. A read seat and an agent seat are refused as owners.
 const roster = {
   data: [
     {
@@ -83,6 +83,22 @@ const roster = {
       display_name: "Jane Doe",
       email: "jane@acme.test",
       is_agent: false,
+    },
+    {
+      id: "u-77",
+      display_name: "Sam Field",
+      email: "sam@acme.test",
+      is_agent: false,
+      assignable: false,
+      can_own_records: true,
+    },
+    {
+      id: "u-88",
+      display_name: "Rita Reader",
+      email: "rita@acme.test",
+      is_agent: false,
+      assignable: false,
+      can_own_records: false,
     },
     {
       id: "agent-1",
@@ -241,12 +257,40 @@ describe("WebFormsCard", () => {
     await user.type(screen.getByLabelText(/^Websites/), "https://acme.test");
     await user.click(screen.getByLabelText(/^Owner of new leads/));
     await screen.findByRole("option", { name: "Jane Doe" });
+    expect(screen.getByRole("option", { name: "Sam Field" })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: "Rita Reader" })).toBeNull();
     expect(screen.queryByRole("option", { name: "Runner Bot" })).toBeNull();
     await user.click(screen.getByRole("option", { name: "Jane Doe" }));
     await user.click(screen.getByTestId("save-web-form"));
 
     await waitFor(() => expect(backend.sent).toHaveLength(1));
     expect(backend.sent[0]?.body).toMatchObject({ owner_id: "u-42" });
+  });
+
+  it("names the product each new lead from the form asks about", async () => {
+    const backend = backendFor(OPERATOR, [], {
+      "GET /v1/products": () =>
+        jsonResponse({
+          data: [{ id: "p-suite", name: "Suite" }],
+          page: { next_cursor: null, has_more: false },
+        }),
+      "POST /v1/web-forms": () =>
+        jsonResponse({ ...contactForm, product_id: "p-suite" }, 201),
+    });
+    vi.stubGlobal("fetch", backend.fetch);
+    const user = userEvent.setup();
+    render(<WebFormsCard />);
+    await user.click(await screen.findByTestId("new-web-form"));
+    await user.type(screen.getByLabelText(/^Name/), "Demo request");
+    await user.type(screen.getByLabelText(/^Websites/), "https://acme.test");
+    await user.type(screen.getByLabelText(/^Product/), "Sui");
+    await user.click(await screen.findByRole("button", { name: /Suite/ }));
+    await user.click(screen.getByTestId("save-web-form"));
+
+    // The product search is a GET the backend records too.
+    const posted = () => backend.sent.filter((call) => call.method === "POST");
+    await waitFor(() => expect(posted()).toHaveLength(1));
+    expect(posted()[0]?.body).toMatchObject({ product_id: "p-suite" });
   });
 
   it("sends the privacy notice and the policy it links to", async () => {

@@ -1,8 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useId } from "react";
-import { opensRow } from "./datatable";
+import {
+  createContext,
+  type ReactNode,
+  type RefObject,
+  useContext,
+  useId,
+  useRef,
+} from "react";
+import { opensRow } from "../lib/linkclick";
 import { Heading, type HeadingElement } from "./heading";
 import {
   type SectionDetail,
@@ -40,6 +47,13 @@ const TITLE_ELEMENT: Readonly<Record<2 | 3, HeadingElement>> = {
   2: "h2",
   3: "h3",
 };
+
+const PanelEdge = createContext<RefObject<HTMLElement | null> | null>(null);
+
+/** The `Panel` a control is drawn in, for a popup that must stay inside it; null outside one. */
+export function usePanelEdge(): RefObject<HTMLElement | null> | null {
+  return useContext(PanelEdge);
+}
 
 // The head holds a title and its verbs, never a description; padded text goes
 // in `PanelBody` and edge-to-edge rows in `PanelRow`, as siblings.
@@ -120,35 +134,39 @@ export function Panel({
   // UNTITLED panel claims no landmark — it is a container the caller has
   // chosen not to name, and a nameless region in the list is worse than none.
   const titleId = useId();
+  const edge = useRef<HTMLElement>(null);
   return (
     <section
+      ref={edge}
       className={["panel", tone ? `panel-${tone}` : "", className ?? ""]
         .filter(Boolean)
         .join(" ")}
       aria-labelledby={title ? titleId : undefined}
     >
-      {title && (
-        <header
-          className={flatHead ? "panel-head panel-head-flat" : "panel-head"}
-        >
-          {/* The title is the row's far-end push: it absorbs the free space, so
+      <PanelEdge.Provider value={edge}>
+        {title && (
+          <header
+            className={flatHead ? "panel-head panel-head-flat" : "panel-head"}
+          >
+            {/* The title is the row's far-end push: it absorbs the free space, so
               a titleAction lands at the end of the band whatever the title's
               length. */}
-          <Heading
-            size={flatHead ? "small" : "medium"}
-            as={TITLE_ELEMENT[titleLevel ?? 2]}
-            className="panel-title"
-            id={titleId}
-            tabIndex={-1}
-          >
-            {title}
-          </Heading>
-          {titleAction}
-        </header>
-      )}
-      {children}
-      {actions && <div className="panel-actions">{actions}</div>}
-      {footer && <footer className="panel-foot">{footer}</footer>}
+            <Heading
+              size={flatHead ? "small" : "medium"}
+              as={TITLE_ELEMENT[titleLevel ?? 2]}
+              className="panel-title"
+              id={titleId}
+              tabIndex={-1}
+            >
+              {title}
+            </Heading>
+            {titleAction}
+          </header>
+        )}
+        {children}
+        {actions && <div className="panel-actions">{actions}</div>}
+        {footer && <footer className="panel-foot">{footer}</footer>}
+      </PanelEdge.Provider>
     </section>
   );
 }

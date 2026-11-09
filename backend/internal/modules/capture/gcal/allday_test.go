@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/meetingmap"
 )
 
@@ -39,5 +40,26 @@ func TestATimedEventAtNoonIsNotAllDay(t *testing.T) {
 	}
 	if ev.AllDay {
 		t.Fatal("a timed event decoded as all-day")
+	}
+}
+
+// A moved instance of a recurring series is known by its slot in the series,
+// which Google states as originalStartTime. Its record keeps the new start.
+func TestAMovedInstanceIsKnownByItsSlotInTheSeries(t *testing.T) {
+	raw := []byte(`{"id":"evt_20261103T100000Z","iCalUID":"uid-weekly","status":"confirmed","summary":"Weekly",
+		"start":{"dateTime":"2026-11-03T12:00:00Z"},"end":{"dateTime":"2026-11-03T13:00:00Z"},
+		"originalStartTime":{"dateTime":"2026-11-03T11:00:00+01:00"},
+		"organizer":{"email":"` + gcalOwner + `"},"attendees":[{"email":"client@acme.com"}]}`)
+	ev, err := decodeEvent(raw, gcalOwner)
+	if err != nil {
+		t.Fatalf("decodeEvent: %v", err)
+	}
+	rec := meetingmap.Classify(ev, gcalOwner).ToRecord(connectorName, raw)
+	if slot := time.Date(2026, 11, 3, 10, 0, 0, 0, time.UTC); !rec.CrossDoorIdentity.Occurrence.Equal(slot) {
+		t.Fatalf("identity occurrence = %v, want the series slot %v", rec.CrossDoorIdentity.Occurrence, slot)
+	}
+	fields, ok := rec.Fields.(capture.ActivityFields)
+	if !ok || !fields.OccurredAt.Equal(time.Date(2026, 11, 3, 12, 0, 0, 0, time.UTC)) {
+		t.Fatalf("stored start = %+v, want the moved start", rec.Fields)
 	}
 }

@@ -136,6 +136,9 @@ func (s *Store) CreateStage(ctx context.Context, in CreateStageInput) (crmcontra
 	if _, err := ParseStageSemantic(in.Semantic); err != nil {
 		return crmcontracts.Stage{}, err
 	}
+	if err := refuseAgentSemanticChange(ctx, string(SemanticOpen), &in.Semantic); err != nil {
+		return crmcontracts.Stage{}, err
+	}
 	if err := checkStagePosition(in.Position); err != nil {
 		return crmcontracts.Stage{}, err
 	}
@@ -147,10 +150,16 @@ func (s *Store) CreateStage(ctx context.Context, in CreateStageInput) (crmcontra
 	probability := stageProbability(in.Semantic, in.WinProbability)
 	var out crmcontracts.Stage
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
+		if err := holdLadderForAgent(ctx, tx, in.PipelineID); err != nil {
+			return err
+		}
 		// The pipeline row before the insert, as every ladder write takes it: a
 		// reorder holding it would otherwise wait on this insert's position
 		// while this insert waited on the pipeline.
 		if err := lockLadder(ctx, tx, in.PipelineID); err != nil {
+			return err
+		}
+		if err := refuseAgentOnTrustedLadder(ctx, tx, in.PipelineID); err != nil {
 			return err
 		}
 		var stageID ids.StageID
@@ -161,7 +170,7 @@ func (s *Store) CreateStage(ctx context.Context, in CreateStageInput) (crmcontra
 			in.PipelineID, in.Name, in.Position, in.Semantic, probability).Scan(&stageID)
 		if err != nil {
 			if storekit.IsUniqueViolation(err) {
-				return apperrors.ErrConflict
+				return stagePositionTaken(in.Position)
 			}
 			return fmt.Errorf("insert stage: %w", err)
 		}
@@ -263,6 +272,9 @@ func (s *Store) UpdateStage(ctx context.Context, id ids.StageID, in UpdateStageI
 	}
 	var out crmcontracts.Stage
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		if err := holdStagesLadderForAgent(ctx, tx, id); err != nil {
+			return err
+		}
 		// The pipeline row first, then the stage's own: a reorder and a
 		// removal both reshape this list, and taking the same row first
 		// on both paths is what keeps them queueing rather than
@@ -283,6 +295,9 @@ func (s *Store) UpdateStage(ctx context.Context, id ids.StageID, in UpdateStageI
 		if in.IfVersion != nil && *in.IfVersion != current.version {
 			return apperrors.ErrVersionSkew
 		}
+		if err := refuseAgentSemanticChange(ctx, current.semantic, in.Semantic); err != nil {
+			return err
+		}
 		if err := refuseTerminalWithCriteria(ctx, tx, id, current.semantic, in.Semantic); err != nil {
 			return err
 		}
@@ -293,6 +308,9 @@ func (s *Store) UpdateStage(ctx context.Context, id ids.StageID, in UpdateStageI
 			return err
 		}
 		if in.Position != nil && *in.Position != current.position {
+			if err := refuseAgentOnTrustedLadder(ctx, tx, pipelineID); err != nil {
+				return err
+			}
 			if err := refuseMovingAGatedLadder(ctx, tx, pipelineID); err != nil {
 				return err
 			}
@@ -323,6 +341,9 @@ func writeStageUpdate(ctx context.Context, tx pgx.Tx, lock storekit.RowLock,
 	id ids.StageID, pipelineID ids.PipelineID, patch *storekit.Patch, in UpdateStageInput,
 ) (ids.UUID, error) {
 	if err := patch.ApplyLocked(ctx, tx, lock); err != nil {
+		if storekit.IsUniqueViolation(err) && in.Position != nil {
+			return ids.UUID{}, stagePositionTaken(*in.Position)
+		}
 		if storekit.IsUniqueViolation(err) {
 			return ids.UUID{}, apperrors.ErrConflict
 		}

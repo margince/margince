@@ -9,7 +9,6 @@ package compose
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -25,21 +24,8 @@ type attentionMeetingHorizon struct {
 	store    *activities.Store
 }
 
-func (h attentionMeetingHorizon) Calendar(ctx context.Context) (crmcontracts.WorklistCalendar, error) {
-	reach, err := h.registry.ReachOn(ctx, calendarProviders)
-	if err != nil {
-		return "", err
-	}
-	switch reach {
-	case capture.ReachLive:
-		return crmcontracts.WorklistCalendarConnected, nil
-	case capture.ReachBroken:
-		return crmcontracts.WorklistCalendarUnreadable, nil
-	case capture.ReachNone:
-		return crmcontracts.WorklistCalendarNotConnected, nil
-	default:
-		return "", fmt.Errorf("compose: calendar reach %q has no Worklist answer", reach)
-	}
+func (h attentionMeetingHorizon) Calendar(ctx context.Context) (crmcontracts.ReaderCalendar, error) {
+	return readerCalendar(ctx, h.registry)
 }
 
 // NextCustomerMeeting is the meetings lane's own read moved past today. It

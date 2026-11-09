@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/network"
 	"github.com/margince/margince/backend/internal/compose/roombrief"
 	"github.com/margince/margince/backend/internal/compose/weekly"
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/agents/apps"
@@ -42,15 +41,14 @@ import (
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 )
 
-// Server satisfies crmcontracts.ServerInterface by embedding: every
-// module transport handler set together covers the full contract
-// surface.
+// Server satisfies crmcontracts.ServerInterface by embedding: every module
+// transport handler set together covers the full contract surface.
 type Server struct {
 	reportingHandlers
 	reportingExportHandlers
 	reportingReaderPreviewHandlers
-
 	authHandlers
+	avatarHandlers
 	contactsHandlers
 	dealsHandlers
 	projectsHandlers
@@ -60,6 +58,7 @@ type Server struct {
 	activitiesHandlers
 	approvalsHandlers
 	bulkHandlers
+	companyContactShareHandlers
 	handoverHandlers
 	searchHandlers
 	consentHandlers
@@ -79,13 +78,11 @@ type Server struct {
 	weeklyHandlers weekly.Handlers
 	// The day's one surface, assembled across approvals, dedupe and tasks.
 	// Named rather than embedded: briefs.Handlers already claims the
-	// unqualified name, and two embedded `Handlers` is a compile error rather
-	// than a decision anybody made.
+	// unqualified name.
 	attentionHandlers attention.Handlers
 	magicHandlers     magic.Handlers
 	// magicService is held so wireReversal can bind the undo judge to the SAME
-	// restore seam the reversal route uses — the receipt's offer and the write's
-	// refusal have to be one judgment.
+	// restore seam the reversal route uses: one judgment for offer and refusal.
 	magicService *magic.Service
 	homeCache    *homecache.Cache // Home's cached answers; forgetHomeOnWrite ends a writer's own answers
 	// The relationship-graph reads (ADR-0078): who knows this contact, and
@@ -121,7 +118,9 @@ type Server struct {
 	captureExclusionHandlers
 	captureOwnerIdentityHandlers
 	captureCounterpartyHoldHandlers
+	conversationSuggestionHandlers
 	claimHandlers
+	marginceChangeHandlers
 	ownershipRequestHandlers
 	dealCommitmentHandlers
 	promiseTakeOverHandlers
@@ -135,12 +134,12 @@ type Server struct {
 	exportBundleHandlers
 	agentBundleHandlers
 	companyRollupHandlers
-	reviewAnswerHandlers
 	companyOfferedHandlers
-	strengthHandlers
+	receiptHandlers
 	recordAccessHandlers
 	customfieldsHandlers
 	attachmentExtractionHandlers
+	chatCaptureHandlers
 	outcomeReviewHandlers
 	embedReindexHandlers
 	rateRefreshHandlers
@@ -164,6 +163,7 @@ type Server struct {
 	meetingBriefHandlers
 	dealStatusHandlers
 	roomBriefHandlers
+	readerRenderingHandlers
 	contactResearchHandlers
 	contactDraftHandlers
 	leadDraftHandlers
@@ -199,6 +199,10 @@ type Server struct {
 	// it. In compose because the vocabulary is derived from the report catalog
 	// and narrowed by the caller's grants, both of which live here.
 	analyticsQueryHandlers
+	salesDecisionHandlers
+	salesAssessmentHandlers
+	reportSetupHandlers
+	accountCoverageHandlers
 	analyticsContextHandlers
 	sdrSummaryHandlers
 	assuranceHandlers
@@ -209,6 +213,7 @@ type Server struct {
 	// The introductions transport: one rep asking a colleague to open a door,
 	// the colleague's bounded answer, and what came of it.
 	introductionHandlers
+	initiativeHandlers
 
 	// signInProviders accumulates the federated sign-in providers this
 	// deployment composed, in registration order. It exists because each
@@ -293,9 +298,8 @@ type Server struct {
 	// zero — which would refuse every upload.
 	uploadLimits UploadLimits
 
-	// blob is the object store, injected by WithBlobstore. When configured
-	// it feeds a /readyz probe and backs the attachment handlers; nil means
-	// a role that stores no objects.
+	// blob is the object store WithBlobstore injects, behind /readyz and every
+	// stored file. Nil means a role that stores no objects.
 	blob blobstore.Store
 	// threadAudience applies an owner own decision about a thread they imported.
 	threadAudience *ThreadAudienceSetter
@@ -478,7 +482,6 @@ type Server struct {
 	// the job queue, the event bus, the cache-flush announcement — injected by
 	// WithResetRuntime. Zero value = a Postgres-only reset, which is the honest
 	// posture for a role that wired no queue and no bus.
-	//
 	// dataResetHandlers holds a POINTER to this field rather than a copy:
 	// options run in the order the caller passed them, so a copy taken by
 	// WithDataReset would be the zero value whenever WithResetRuntime is listed
@@ -495,5 +498,3 @@ type Server struct {
 	// leaves /.well-known/security.txt unmounted.
 	securityTxt string
 }
-
-var _ crmcontracts.ServerInterface = Server{}

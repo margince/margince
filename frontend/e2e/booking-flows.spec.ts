@@ -8,6 +8,7 @@ import {
   bookingSlots,
 } from "../src/testing/book.testkit";
 import { copy } from "./copy";
+import { contact360 } from "./mockapi/records";
 import { mockApi } from "./seed";
 import { openedAt } from "./waits";
 
@@ -16,7 +17,15 @@ test.beforeEach(async ({ page, context }) => {
   await page.clock.setFixedTime(new Date("2026-09-27T06:00:00Z"));
 });
 
-test("Meetings opens a booking for the contact", async ({ page }) => {
+test("Meetings opens a booking for the contact", async ({ page, context }) => {
+  await context.route("**/v1/contacts/p-anna/360", (route) =>
+    route.fulfill({
+      json: {
+        ...contact360,
+        contact: { ...contact360.contact, attachable: true },
+      },
+    }),
+  );
   await page.goto("/#/contacts/p-anna/meetings");
   await page
     .getByRole("button", { name: de["scheduling.bookContact"] })
@@ -149,7 +158,7 @@ test("connected calendar setup keeps the draft, then sends and cancels an invita
   await page.getByLabel(de["scheduling.agenda"]).fill("Discuss scope");
   const settingsPromise = page.waitForEvent("popup");
   await page.getByRole("link", { name: de["scheduling.openSettings"] }).click();
-  const settings = await settingsPromise;
+  const settings = await openedAt(settingsPromise, /settings\/meetings/);
   await expect(
     settings.getByRole("heading", {
       name: de["scheduling.calendarTitle"],
@@ -335,10 +344,16 @@ test("meeting settings shows the reusable link, saves hours, and previews a paus
   context,
 }) => {
   const availability: string[] = [];
+  let previewing = false;
+  let probeRead = () => {};
+  const settingsProbeRead = new Promise<void>((resolve) => {
+    probeRead = resolve;
+  });
   await context.route("**/v1/availability?*", async (route) => {
     const url = new URL(route.request().url());
     expect(url.searchParams.get("reliable")).toBe("true");
-    availability.push(url.searchParams.get("from") ?? "");
+    if (previewing) availability.push(url.searchParams.get("from") ?? "");
+    else probeRead();
     await route.fulfill({ json: { slots: bookingSlots, truncated: false } });
   });
   let profile = { ...bookingProfile, enabled: false };
@@ -368,6 +383,9 @@ test("meeting settings shows the reusable link, saves hours, and previews a paus
   ).toBeVisible();
   await expect(page.getByLabel("Unternehmensname")).toHaveCount(0);
   await page
+    .getByRole("button", { name: de["settings.part.meetings.availability"] })
+    .click();
+  await page
     .getByRole("combobox", { name: de["scheduling.noticeRow"] })
     .click();
   await page.getByRole("option", { name: de["scheduling.ruleOther"] }).click();
@@ -381,6 +399,12 @@ test("meeting settings shows the reusable link, saves hours, and previews a paus
   ).toBeVisible();
   expect(writes).toHaveLength(1);
   expect(writes[0]).toMatchObject({ notice_minutes: 1440, enabled: false });
+  // The hours save does not re-key the probe, so its one read has landed.
+  await settingsProbeRead;
+  previewing = true;
+  await page
+    .getByRole("button", { name: de["settings.part.meetings.guests"] })
+    .click();
   await page
     .getByRole("button", { name: de["scheduling.preview"] })
     .first()
@@ -391,11 +415,16 @@ test("meeting settings shows the reusable link, saves hours, and previews a paus
     page.getByRole("heading", { name: bookingProfile.title }),
   ).toBeVisible();
   await page.getByRole("button", { name: de["calendar.nextMonth"] }).click();
-  // October in Berlin holds the clock going back, so it runs past the
-  // server's 31-day bound and is read in two windows after September's one.
+  // September takes one window. October gains an hour at the clock change in
+  // Berlin, so it runs past the 31-day bound and takes two.
   await expect.poll(() => availability.length).toBe(3);
   const slot = page.locator(".bookguest-times .meeting-slots button").first();
   await expect(slot).toBeVisible();
+  expect(availability).toEqual([
+    "2026-09-27T06:00:00.000Z",
+    "2026-09-30T22:00:00.000Z",
+    "2026-10-31T22:00:00.000Z",
+  ]);
   await slot.click();
   await page.getByLabel(de["book.name"], { exact: true }).fill("Demo guest");
   await page
@@ -432,7 +461,7 @@ test("calendar setup enables booking with the existing Account name", async ({
     }
     await route.fulfill({ json: profile });
   });
-  await page.goto("/#/settings/meetings");
+  await page.goto("/#/settings/meetings/guests");
   await expect(
     page.getByText(
       de["scheduling.yourNameHelp"].replace(
@@ -442,6 +471,9 @@ test("calendar setup enables booking with the existing Account name", async ({
       { exact: true },
     ),
   ).toBeVisible();
+  await page
+    .getByRole("button", { name: de["settings.part.meetings.links"] })
+    .click();
   const accept = page.getByRole("switch", {
     name: de["scheduling.acceptBookings"],
     exact: true,

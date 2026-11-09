@@ -228,7 +228,7 @@ function story(
     return (
       <StoryProviders>
         <Rail state={rail}>
-          <AgentRail route={{ screen: "companies" }} />
+          <AgentRail />
         </Rail>
       </StoryProviders>
     );
@@ -287,12 +287,8 @@ type Story = StoryObj<typeof AgentRail>;
 /** Idle: every source reachable, nothing waiting, a model bound, a valid licence.
  *
  *  Which makes it the QUIET installation, and that is most installations most of
- *  the afternoon: one true reading, and it is "Nothing needs attention". What the line
- *  says between turns of it are the tips — standing facts about the product
- *  rather than invented work, one per pass and a different one next time round
- *  (agentrail-copy.ts). Watch it for half a minute rather than a moment; the
- *  first tip names Home and links it, and it is dropped on Home itself, so this
- *  story is mounted on Companies where the whole catalog applies.
+ *  the afternoon: one true reading, and it is "Nothing needs attention". The
+ *  line holds it; no standing advice rotates in beside it.
  *
  *  It is also the block's last line with no figure on it: this seat holds no
  *  `ai_diagnostics:read`, so the row carries the chevron alone. The row is what

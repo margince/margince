@@ -28,7 +28,7 @@ func (s *Store) LabeledCaptureCountSince(ctx context.Context, since time.Time) (
 		return tx.QueryRow(ctx,
 			`SELECT count(*) FROM activity
 			 WHERE capture_labeled_at >= $1
-			   AND `+auth.ActivityAvailableClause("activity"), since,
+			   AND `+auth.ActivityExternalEvidenceClause("activity"), since,
 		).Scan(&count)
 	})
 	if err != nil {

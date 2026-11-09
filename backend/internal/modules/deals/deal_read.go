@@ -85,7 +85,8 @@ func readDealForCaller(ctx context.Context, tx pgx.Tx, id ids.DealID, archived s
 const dealTaggableType = "deal"
 
 type ListDealsInput struct {
-	IDs []ids.UUID
+	IDs          []ids.UUID
+	WritableOnly bool
 	// TagIDs narrows to the deals carrying these tags, combined by TagMode.
 	// The predicate is storekit's, shared with the contact and account lists.
 	TagIDs      []ids.UUID
@@ -110,11 +111,6 @@ type ListDealsInput struct {
 	// partner is named at all.
 	PartnerAttribution *string
 	Status             *string
-	// ForecastCategory narrows to one of the forecast's named buckets —
-	// commit, best_case, pipeline, omitted. The column the FORECAST reads, so
-	// a tile's number and the list behind it are one answer rather than two
-	// derivations that can disagree.
-	ForecastCategory *string
 	// The three commercial-context filters. Each also admits the sentinel
 	// "unset", which no enum value can express: a caller asking for deals
 	// nobody has classified is asking about the absence, not about a value.
@@ -316,6 +312,11 @@ func scanDealPage(rows pgx.Rows, active []fieldcatalog.Column, sorted *storekit.
 // stalled predicate — into WHERE clauses (the cf_ filters and the keyset
 // cursor, which depends on the validated sort, stay in ListDeals).
 func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, arg func(any) int) ([]string, error) {
+	var err error
+	where, err = appendDealWriteScope(ctx, where, in, arg)
+	if err != nil {
+		return nil, err
+	}
 	if len(in.IDs) > 0 {
 		where = append(where, fmt.Sprintf("id = ANY($%d)", arg(in.IDs)))
 	}
@@ -374,13 +375,6 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 	}
 	if in.Status != nil {
 		where = append(where, storekit.SQLf("status = $%d", arg(*in.Status)))
-	}
-	if in.ForecastCategory != nil {
-		// A deal with no category is in no bucket, which the NULL comparison
-		// gives for free: the five tiles partition the CATEGORISED pipeline,
-		// and an uncategorised deal belongs to none of them rather than
-		// quietly joining whichever one is asked for.
-		where = append(where, storekit.SQLf("forecast_category = $%d", arg(*in.ForecastCategory)))
 	}
 	if in.CloseBefore != nil {
 		where = append(where, storekit.SQLf("expected_close_date < $%d", arg(in.CloseBefore.Format(time.DateOnly))))
@@ -446,4 +440,20 @@ func referenceFilterClause(ctx context.Context, column, table string, id ids.UUI
 	}
 	return clause + storekit.SQLf(
 		" AND EXISTS (SELECT 1 FROM %s ref WHERE ref.id = $%d AND %s)", table, pos, scope), nil
+}
+
+func appendDealWriteScope(ctx context.Context, where []string, in ListDealsInput, arg func(any) int) ([]string, error) {
+	if in.WritableOnly {
+		if err := auth.Require(ctx, dealListEntity, principal.ActionUpdate); err != nil {
+			return nil, err
+		}
+		clause, err := auth.WriteAuthorityClauseFor(ctx, dealTable, "deal", arg)
+		if err != nil {
+			return nil, err
+		}
+		if clause != "" {
+			where = append(where, clause)
+		}
+	}
+	return where, nil
 }

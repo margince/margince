@@ -9,8 +9,6 @@ package compose
 import (
 	"context"
 	"fmt"
-	"maps"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -94,33 +92,6 @@ func transcriptCommitmentBody(owner string, sourceLines []int) string {
 		where = "lines " + strings.Join(lines, ", ")
 	}
 	return fmt.Sprintf("Promiser: %s. Commitment in the meeting transcript (%s).", owner, where)
-}
-
-// transcriptReadDetail says what a reading produced besides its questions. A
-// run that finishes with nothing and no reason reads exactly like a broken
-// one, which FinishTranscriptRead refuses to let collapse, and a task written
-// without asking is said here because no question shows it.
-func (said transcriptCopy) transcriptReadDetail(found int, staged transcriptStaging) string {
-	var details []string
-	if staged.tasks > 0 {
-		details = append(details, said.count(staged.tasks, transcriptWords.TasksOne, transcriptWords.Tasks))
-	}
-	if staged.watched > 0 {
-		details = append(details, said.count(staged.watched, transcriptWords.WatchedOne, transcriptWords.Watched))
-	}
-	if len(staged.proposals) > 0 {
-		details = append(details, said.count(len(staged.proposals), transcriptWords.ProposalsOne, transcriptWords.Proposals))
-	}
-	for _, reason := range slices.Sorted(maps.Keys(staged.withheld)) {
-		details = append(details, said.count(staged.withheld[reason], transcriptWords.WithheldOne, transcriptWords.Withheld, said.transcriptWithheldReason(reason)))
-	}
-	if len(details) > 0 {
-		return strings.Join(details, "; ")
-	}
-	if found == 0 {
-		return said.Say(transcriptWords.Empty)
-	}
-	return said.Say(transcriptWords.AlreadyKnown)
 }
 
 func (said transcriptCopy) transcriptWithheldReason(outcome CommitmentOutcome) string {

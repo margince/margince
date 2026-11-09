@@ -13,7 +13,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-const sourceDealAdvice = "deal_advice"
+const (
+	sourceDealAdvice       = "deal_advice"
+	sourceContactEmployers = "contact_employers"
+)
 
 type preparedDealMoves struct {
 	moves map[ids.UUID]crmcontracts.DealStatusCardMove

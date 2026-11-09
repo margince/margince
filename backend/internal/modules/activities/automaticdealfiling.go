@@ -88,8 +88,8 @@ type filingByHand struct {
 }
 
 // retractMachineLinkTx takes one automatic link off under the activity's row
-// lock, unless the human test finds a human's filing. It writes the audit row with the evidence given and the relink event,
-// as the filing did, and answers whether the link came off.
+// lock, unless the human test finds a human's filing. It answers whether the
+// link came off; nothing is written when no link was there.
 func retractMachineLinkTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, entityType string, target ids.UUID, human filingByHand, evidence map[string]any,
 ) (bool, error) {
@@ -106,20 +106,37 @@ func retractMachineLinkTx(
 	if filedByHand {
 		return false, nil
 	}
+	return unlinkRecordedTx(ctx, tx, id, entityType, target, nil, evidence)
+}
+
+// unlinkRecordedTx takes one link off the activity its caller holds locked,
+// with the version bump, the audit row and the relink event. A decision is
+// recorded as the audit row's after even when no link was there; without one,
+// a link that was not there writes nothing. It answers whether a link came off.
+func unlinkRecordedTx(
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID, entityType string, target ids.UUID, decision, evidence map[string]any,
+) (bool, error) {
 	tag, err := tx.Exec(ctx, storekit.SQLf(`DELETE FROM activity_link WHERE activity_id = $1 AND entity_type = $2 AND %s = $3`,
 		linkColumn(entityType)), id, entityType, target)
-	if err != nil || tag.RowsAffected() == 0 {
+	if err != nil {
 		return false, err
+	}
+	removed := tag.RowsAffected() > 0
+	if !removed && decision == nil {
+		return false, nil
 	}
 	if _, err := tx.Exec(ctx, `UPDATE activity SET updated_at = now() WHERE id = $1`, id); err != nil {
 		return false, err
 	}
-	auditID, err := storekit.AuditWithEvidence(ctx, tx, "activity_relink", "activity", id.UUID,
-		map[string]any{fieldEntityType: entityType, fieldEntityID: target}, nil, evidence)
+	var before map[string]any
+	if removed {
+		before = map[string]any{fieldEntityType: entityType, fieldEntityID: target}
+	}
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "activity_relink", "activity", id.UUID, before, decision, evidence)
 	if err != nil {
 		return false, err
 	}
-	return true, storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityUpdated{
+	return removed, storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityUpdated{
 		ChangedFields: relinkedChangedFields(entityType, target),
 	})
 }

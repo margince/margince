@@ -34,6 +34,7 @@ import {
 } from "./offers.cells";
 import { searchProductCandidates } from "./products";
 import { isUnnamedOtherUnit, storedUnitOf, UnitPicker } from "./productunit";
+import { TAX_CATEGORY_LABEL } from "./taxcategory";
 
 const EMPTY_NEW_LINE = {
   description: "",
@@ -204,13 +205,23 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
       key: "taxRate",
       header: t("offer.taxRate"),
       render: (line: OfferLineItem) => (
-        <NumericCell
-          value={line.tax_rate}
-          step="0.01"
-          width={90}
-          testId={`line-tax-rate-${line.id}`}
-          onSave={(num) => saveLine(line.id)({ tax_rate: num })}
-        />
+        <>
+          <NumericCell
+            value={line.tax_rate}
+            step="0.01"
+            width={90}
+            testId={`line-tax-rate-${line.id}`}
+            onSave={(num) => saveLine(line.id)({ tax_rate: num })}
+          />
+          {line.tax_category && (
+            <span
+              className="t-caption"
+              data-testid={`line-tax-category-${line.id}`}
+            >
+              {t(TAX_CATEGORY_LABEL[line.tax_category])}
+            </span>
+          )}
+        </>
       ),
     },
     {

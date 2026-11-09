@@ -116,9 +116,10 @@ export function useSignOff(
       settled.subject,
       settled.draftKey,
     ],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       return unwrap(
         await api.POST("/emails:sign-off", {
+          signal,
           body: {
             body: settled.body,
             subject: settled.subject,
@@ -141,7 +142,10 @@ export function useSignOff(
     settled.subject !== subject ||
     settled.draftKey !== draftKey;
   return {
-    signOff: query.data,
+    signOff:
+      draft !== undefined && (pending || query.isPlaceholderData)
+        ? undefined
+        : query.data,
     stale: pending || query.isPlaceholderData,
     failed: query.isError,
   };

@@ -7,18 +7,14 @@ import { ActionRow } from "../../design-system/actionrow";
 import { Badge, Button } from "../../design-system/atoms";
 import { Disclosure } from "../../design-system/disclosure";
 import { FactList } from "../../design-system/factlist";
-import { FilterPills } from "../../design-system/filterpills";
 import { Heading } from "../../design-system/heading";
 import { QueryGate } from "../../design-system/querystates";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { formatAge } from "../../format/interval";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { useCan } from "../../lib/capability";
 import { useHealthScope } from "../../lib/healthscope";
-import { navigate } from "../../lib/router";
-import { settingsHref } from "../../lib/settingsrouting";
 import { useUrlParams } from "../../lib/urlstate";
+import { useViewerZone } from "../../lib/viewerzone";
 import { PublicOriginCard } from "./public-origin";
 import {
   healthAvailability,
@@ -28,6 +24,11 @@ import {
 } from "./systemhealth.copy";
 import { findingNextStepKey } from "./systemhealth.effect";
 import { useSystemHealth } from "./systemhealth.queries";
+import {
+  HealthChecks,
+  type HealthGroups,
+  healthGroups,
+} from "./systemhealthchecks";
 import { FindingPanel } from "./systemhealthfinding";
 import { healthTone } from "./systemhealthstatus";
 
@@ -41,29 +42,11 @@ export function SystemHealthPage({
   view = "overview",
 }: Readonly<{ view?: string }>) {
   const t = useT();
-  const canConfigure = useCan("installation_settings", "read");
   const query = useSystemHealth(view !== "configuration");
   const scope = useHealthScope();
   const [params] = useUrlParams();
   return (
     <>
-      <FilterPills
-        value={view}
-        label={t("health.views")}
-        pills={[
-          { value: "overview", label: t("health.overview") },
-          { value: "diagnostics", label: t("health.diagnostics") },
-          ...(canConfigure
-            ? [{ value: "configuration", label: t("health.configuration") }]
-            : []),
-        ]}
-        onChange={(next) =>
-          navigate({
-            ...settingsHref("system-health"),
-            id2: next === "overview" ? undefined : next,
-          })
-        }
-      />
       {view === "configuration" ? (
         <Suspense fallback={<p role="status">{t("health.loading")}</p>}>
           <Configuration />
@@ -107,6 +90,8 @@ export function SystemHealthPage({
   );
 }
 
+const NO_GROUPS: HealthGroups = { setup: [], waiting: [], passing: [] };
+
 function Overview({
   report,
   refresh,
@@ -119,10 +104,12 @@ function Overview({
   refreshing: boolean;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const readerZone = useViewerZone();
   const [order, setOrder] = useState<readonly string[]>(
-    report.findings.filter((f) => f.requires_action).map((f) => f.id),
+    actionableFindings(report.findings).map((f) => f.id),
   );
-  const actionable = report.findings.filter((f) => f.requires_action);
+  const actionable = actionableFindings(report.findings);
   const remainingOrder = order.filter((id) =>
     actionable.some((f) => f.id === id),
   );
@@ -132,8 +119,12 @@ function Overview({
       bi = order.indexOf(b.id);
     return (ai < 0 ? order.length : ai) - (bi < 0 ? order.length : bi);
   });
+  // A failed refresh leaves readings that may have changed since; show none.
+  const groups = stale
+    ? NO_GROUPS
+    : healthGroups(report.sources, report.findings);
   const title = stale
-    ? t("health.incomplete")
+    ? t("health.refreshNeeded")
     : actionable.length
       ? t("health.attention")
       : report.complete
@@ -145,24 +136,26 @@ function Overview({
         <Heading size="small" as="h2">
           {title}
         </Heading>
-        <OverviewStatus report={report} stale={stale} />
+        <OverviewStatus findings={actionable} groups={groups} />
         <Button
           pending={refreshing}
           onClick={async () => {
             const refreshed = await refresh();
             if (refreshed)
-              setOrder(
-                refreshed.findings
-                  .filter((f) => f.requires_action)
-                  .map((f) => f.id),
-              );
+              setOrder(actionableFindings(refreshed.findings).map((f) => f.id));
           }}
         >
           {t("health.refresh")}
         </Button>
       </ActionRow>
       {changed && <p role="status">{t("health.prioritiesChanged")}</p>}
+      <p className="t-caption">
+        {t("systemHealth.asOf", {
+          time: formatDateTime(report.generated_at, locale, readerZone),
+        })}
+      </p>
       <OverviewFindings findings={shown} />
+      <HealthChecks groups={groups} />
       <Disclosure summary={t("health.capabilities")}>
         {report.sources
           .filter((source) => source.availability !== "withheld")
@@ -181,7 +174,7 @@ function OverviewFindings({
   const groups = new Map<string, Report["findings"]>();
   for (const finding of findings) {
     const key =
-      finding.source === "capture"
+      finding.source === "capture" && finding.responsible !== "mailbox_owner"
         ? JSON.stringify([
             finding.source,
             finding.responsible,
@@ -191,38 +184,77 @@ function OverviewFindings({
         : finding.id;
     groups.set(key, [...(groups.get(key) ?? []), finding]);
   }
-  return Array.from(groups, ([key, entries]) =>
+  return Array.from(groups, ([key, entries], index) =>
     entries[0] ? (
       <FindingPanel
         key={key}
         finding={entries[0]}
+        lead={index === 0}
         related={entries.length > 1 ? entries : undefined}
       />
     ) : null,
   );
 }
 
+// Older servers emit the mailbox total alongside the same sender and thread choices.
+function actionableFindings(findings: Report["findings"]) {
+  const actionable = findings.filter((finding) => finding.requires_action);
+  const specificMailReview = actionable.some((finding) =>
+    ["capture_uncertain", "capture_thread_uncertain"].includes(finding.code),
+  );
+  return actionable.filter(
+    (finding) => finding.code !== "capture_owner_review" || !specificMailReview,
+  );
+}
+
+// One count per group, so the reader sees the whole page before reading it.
 function OverviewStatus({
-  report,
-}: Readonly<{ report: Report; stale: boolean }>) {
+  findings,
+  groups,
+}: Readonly<{ findings: Report["findings"]; groups: HealthGroups }>) {
   const plural = usePlural();
   const { locale } = useLocale();
-  if (!report.action_count) return null;
-  const tone = report.findings.some(
+  const count = (n: number) => ({ count: formatNumber(n, locale) });
+  const tone = findings.some(
     (f) => f.requires_action && healthTone(f) === "danger",
   )
     ? "danger"
     : "warning";
   return (
-    <Badge tone={tone}>
-      {plural("health.actionsNeeded", report.action_count, {
-        count: formatNumber(report.action_count, locale),
-      })}
-    </Badge>
+    <>
+      {findings.length > 0 && (
+        <Badge tone={tone}>
+          {plural(
+            "health.actionsNeeded",
+            findings.length,
+            count(findings.length),
+          )}
+        </Badge>
+      )}
+      {groups.setup.length > 0 && (
+        <Badge>
+          {plural(
+            "health.notSetUpCount",
+            groups.setup.length,
+            count(groups.setup.length),
+          )}
+        </Badge>
+      )}
+      {groups.passing.length > 0 && (
+        <Badge tone="success">
+          {plural(
+            "health.passingCount",
+            groups.passing.length,
+            count(groups.passing.length),
+          )}
+        </Badge>
+      )}
+    </>
   );
 }
 
 function SourceReading({ source }: Readonly<{ source: Source }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   return (
@@ -241,7 +273,7 @@ function SourceReading({ source }: Readonly<{ source: Source }>) {
       {source.observed_at && (
         <p>
           {t("systemHealth.asOf", {
-            time: formatDateTime(source.observed_at, locale, viewerZone()),
+            time: formatDateTime(source.observed_at, locale, readerZone),
           })}
         </p>
       )}

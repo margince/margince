@@ -6,7 +6,20 @@ package storekit
 import (
 	"reflect"
 	"testing"
+	"time"
 )
+
+func TestTimestampPrecisionDoesNotPublishAFalseColumnChange(t *testing.T) {
+	stored := time.Date(2026, 9, 1, 12, 0, 0, 123456000, time.UTC)
+	before, after := ChangedColumns(map[string]any{"at": stored}, map[string]any{"at": stored.Add(789 * time.Nanosecond)})
+	if len(before) != 0 || len(after) != 0 {
+		t.Fatalf("sub-microsecond difference published as a change: %v -> %v", before, after)
+	}
+	before, after = ChangedColumns(map[string]any{"at": stored}, map[string]any{"at": stored.Add(time.Microsecond)})
+	if len(before) != 1 || len(after) != 1 {
+		t.Fatal("a stored timestamp change was lost")
+	}
+}
 
 func TestAColumnHoldingASliceIsComparedWithoutPanicking(t *testing.T) {
 	before, after := ChangedColumns(

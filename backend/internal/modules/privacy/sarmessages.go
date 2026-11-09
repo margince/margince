@@ -21,6 +21,7 @@ import (
 // installation sent out about or to them.
 func sarMessagingSections(pkg *SARPackage, contactID ids.ContactID, emails []string, leads []ids.UUID) []sarSection {
 	sections := []sarSection{
+		sarPartySourceSection(pkg, emails),
 		{&pkg.CaptureDispositions, `SELECT p.email, p.display_name, p.status, p.disposition_reason, p.created_at, p.resolved_at
 		   FROM capture_pending_counterparty p
 		   WHERE p.email IN (SELECT email FROM contact_email WHERE contact_id = $1)`, nil},
@@ -242,10 +243,20 @@ func sarMessagingSections(pkg *SARPackage, contactID ids.ContactID, emails []str
 func sarDraftSection(pkg *SARPackage, contactID ids.ContactID, emails []string, leads []ids.UUID) sarSection {
 	return sarSection{
 		&pkg.DraftMessages, `SELECT d.subject, d.body, d.html_body,
+              d.editor_state->>'intent' AS drafting_purpose,
+              d.editor_state->>'served_body' AS generated_body,
 		      to_jsonb(d.to_addresses) AS recipients, to_jsonb(d.cc_addresses) AS cc,
 		      (SELECT coalesce(jsonb_agg(addr), '[]'::jsonb)
 		         FROM unnest(d.bcc_addresses) AS addr
 		        WHERE lower(btrim(addr)) = ANY($3::text[])) AS bcc,
+		      -- Named as the sent projection names them, for its reason: a draft may
+		      -- carry any file its author could see. A file gone since keeps its id.
+		      (SELECT coalesce(jsonb_agg(jsonb_build_object(
+		                'attachment_id', chosen.id, 'filename', f.filename,
+		                'content_type', f.content_type, 'byte_size', f.byte_size) ORDER BY chosen.ord), '[]'::jsonb)
+		         FROM unnest(d.attachment_ids) WITH ORDINALITY AS chosen(id, ord)
+		         LEFT JOIN attachment f ON f.id = chosen.id) AS attachments,
+		      d.communication_context, d.scheduled_at, d.scheduled_tz,
 		      d.anchor_type, d.created_at, d.updated_at
 		   FROM mail_draft d
 		   WHERE ` + subjectDraftMatch,
@@ -259,4 +270,12 @@ func sarMeetingSections(pkg *SARPackage, contact ids.ContactID) []sarSection {
 		{&pkg.MeetingProposals, fmt.Sprintf(`SELECT DISTINCT p.request,p.expires_at,p.used_at,p.created_at FROM meeting_proposal p JOIN activity_link l ON l.activity_id=p.activity_id WHERE l.contact_id=$%d`, len(args)), args},
 		{&pkg.MeetingInvitations, fmt.Sprintf(`SELECT DISTINCT i.appointment-'PassportID'-'RequestID'-'EventID'-'CalendarID' AS appointment,i.status,i.command,i.created_at,i.updated_at FROM meeting_invitation i JOIN activity_link l ON l.activity_id=i.activity_id WHERE l.contact_id=$%d`, len(args)), args},
 	}
+}
+
+func sarPartySourceSection(pkg *SARPackage, emails []string) sarSection {
+	return sarSection{&pkg.CapturePartySources, `SELECT ps.activity_id,ps.provider,ps.sent_by_owner,
+ ARRAY(SELECT address FROM unnest(ps.recipients) address WHERE lower(address)=ANY(ARRAY(SELECT lower(btrim(subject_address)) FROM unnest($1::text[]) subject_address))) AS recipients,
+ ARRAY(SELECT address FROM unnest(ps.policy_addresses) address WHERE lower(address)=ANY(ARRAY(SELECT lower(btrim(subject_address)) FROM unnest($1::text[]) subject_address))) AS policy_addresses
+ FROM capture_party_source ps JOIN activity a ON a.id=ps.activity_id
+ WHERE (ps.recipients && ARRAY(SELECT lower(btrim(subject_address)) FROM unnest($1::text[]) subject_address) OR ps.policy_addresses && ARRAY(SELECT lower(btrim(subject_address)) FROM unnest($1::text[]) subject_address)) AND a.restricted_at IS NULL AND ` + sarContentDisclosed, []any{emails}}
 }

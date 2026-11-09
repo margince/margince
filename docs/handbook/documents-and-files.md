@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/voice-knowledge frontend/src/features/deals/dealfiles.tsx frontend/src/features/records/activityfiles.tsx backend/internal/compose/uploadsettings.go backend/internal/modules/activities/attachmenttypes.go backend/internal/modules/activities/documents.go backend/internal/modules/knowledge -->
+<!-- describes: frontend/src/features/voice-knowledge frontend/src/features/deals/dealfiles.tsx frontend/src/features/records/activityfiles.tsx backend/internal/compose/uploadsettings.go backend/internal/modules/activities/attachmenttypes.go backend/internal/modules/activities/documents.go backend/internal/modules/knowledge frontend/src/features/contacts/contactchatcapture.tsx backend/internal/compose/chatcapturefile.go -->
 # Documents and files
 
 Margince holds files in three different places, for three different reasons:
@@ -31,6 +31,7 @@ Also called: upload a file to a contact, add an attachment to a contact, store a
 ### Which email did a file come from?
 To see which email a file came from in Margince, open the contact's or the company's **Documents** tab. A file that arrived with a captured email shows that email under its name: "From {who} · {subject}". Click the line to open the email.
 - The line shows only when you may read the email. A file from an email kept to a smaller audience is not listed for anyone outside that audience.
+- A calendar invitation's file, such as `invite.ics`, is not listed on any **Documents** tab or in a deal room. Small images in a signature are not listed either. Both stay on the email in **History**.
 - An uploaded file has no such line.
 Also called: email attachment sender, where a document came from.
 
@@ -152,6 +153,28 @@ A field the file names but not clearly enough is left out and labelled
 name at all is labelled "omitted (not stated in this file)". Margince does
 not guess a missing value.
 
+## A chat on a contact
+
+### How do I save a chat from WhatsApp on a contact?
+To save a chat from a messaging app on a contact in Margince, open the contact's **Documents** tab and click **Capture a chat**.
+1. Take a screenshot of the chat and paste it, drop it on **Screenshot**, or click to choose it.
+2. AI reads the messages into **What was said**, marked "Copied from the screenshot by AI". Check the text and change it if needed.
+3. Pick the **Chat app** and click **File on this contact**.
+Nothing is saved on the contact's history until you click **File on this contact**. **Discard** removes the screenshot again.
+Also called: save a WhatsApp chat, log a Telegram message, add a chat screenshot.
+
+The chat is saved as one message on the contact, with the screenshot
+attached to it. When the chat's header shows a name or number that is
+not this contact's, the panel says so. Tick the box to save it here all the same. When AI cannot read the screenshot, or no AI model is set up,
+the panel says why and **What was said** stays empty. You can type the text
+yourself or save the screenshot alone.
+
+A message whose text you left as AI read it is recorded as written by AI for
+you. A text you typed or changed is recorded as yours.
+
+The screenshot and the text are part of the contact's data. Deleting the
+contact's data on request removes both.
+
 ## Files on a deal
 
 The **Files** panel on a deal's **Documents** tab holds more than a company's
@@ -164,7 +187,7 @@ where it came from: "Attachment of a message from {who}, {when}". When the
 sender is unknown, it says "an unknown sender".
 
 ### How do I remove a file from a deal?
-To remove a file from a deal in Margince, open the deal's **Documents** tab. Open the file's row actions in the **Files** panel, and choose **Hide from this deal** or **Delete**.
+To remove a file from a deal in Margince, open the deal's **Documents** tab. Open the file's **⋯** menu on its tile or row in the **Files** panel, and choose **Hide from this deal** or **Delete**. The panel's **Grid** and **List** switch shows files as tiles or as rows, and your device keeps the choice.
 - **Hide from this deal**: the deal stops listing the file at once. The message and its attachment stay on the activity and in the company library. The toast "Hidden from this deal" offers **Undo**. Later, bring it back with **Show hidden files** and **Show on this deal again**.
 - **Delete**: asks first, "The file is removed from this deal, and from any Deal Room sharing it."
 Use hide when the file does not matter here; use delete when it should not be on the deal at all.

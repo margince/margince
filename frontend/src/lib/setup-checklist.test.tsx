@@ -26,7 +26,9 @@ type Provider = CaptureConnection["provider"];
 type MailProvider = ConnectorsResult["providers"][number]["provider"];
 type Readiness = ConnectorsResult["providers"][number]["reason"];
 type VoiceProfile = components["schemas"]["VoiceProfile"];
+type VoiceBuild = components["schemas"]["VoiceBuild"];
 type SchedulingProfile = components["schemas"]["SchedulingProfile"];
+type PassportSummary = components["schemas"]["PassportSummary"];
 
 const VOICE_WRITER: GrantSpec = { voice_profile: ["read", "create", "update"] };
 const MAIL_PROVIDERS: readonly MailProvider[] = ["gmail", "graph", "imap"];
@@ -58,6 +60,7 @@ function roster(
 ): ConnectorsResult {
   return {
     notConfigured: false,
+    captureAllowed: true,
     data: [...rows],
     providers: MAIL_PROVIDERS.map((provider) => ({
       provider,
@@ -89,6 +92,29 @@ function voiceProfile(profileVersion: number): VoiceProfile {
   };
 }
 
+function build(status: VoiceBuild["status"]): VoiceBuild {
+  return {
+    id: "00000000-0000-4000-8000-0000000000b1",
+    profile_id: "00000000-0000-4000-8000-0000000000a1",
+    reason: "manual",
+    status,
+    stage: null,
+    source_hash: "h",
+    source_count: 3,
+    result_version: null,
+    candidate_action: "none",
+    status_code: status === "failed" ? "model_unavailable" : null,
+    status_detail: status === "failed" ? "Model down." : null,
+    next_attempt_at: null,
+    version: 1,
+    created_at: "2026-01-05T09:00:00Z",
+    started_at: null,
+    completed_at: null,
+    updated_at: "2026-01-05T09:00:00Z",
+    archived_at: null,
+  };
+}
+
 function scheduling(enabled: boolean): SchedulingProfile {
   return {
     enabled,
@@ -103,6 +129,32 @@ function scheduling(enabled: boolean): SchedulingProfile {
   };
 }
 
+// A passport an AI tool got by signing in, or one a reader minted by hand.
+function passport(
+  clientName: string | null,
+  revokedAt: string | null = null,
+  expiry: { at: string; renewable: boolean } | null = null,
+): PassportSummary {
+  return {
+    id: `00000000-0000-4000-8000-0000000000c${clientName ? 1 : 2}`,
+    label: clientName ?? "Nightly script",
+    scopes: ["read"],
+    areas: { mode: "all", areas: [] },
+    created_at: "2026-11-01T08:00:00Z",
+    last_used_at: null,
+    expires_at: expiry?.at ?? null,
+    revoked_at: revokedAt,
+    ...(clientName && {
+      connection: {
+        client_id: "client-1",
+        client_name: clientName,
+        renewable: expiry?.renewable ?? true,
+        connected_at: "2026-11-01T08:00:00Z",
+      },
+    }),
+  };
+}
+
 function actsFor(allow: GrantSpec = VOICE_WRITER): ReadonlySet<SettingsPageId> {
   return new Set(settingsReach(meFixture({ allow })).acts.map((p) => p.id));
 }
@@ -113,6 +165,8 @@ function reads(overrides: Partial<SetupReads> = {}): SetupReads {
     connectors: roster([]),
     voice: { profile: null },
     scheduling: scheduling(false),
+    passports: null,
+    now: Date.parse("2026-11-05T12:00:00Z"),
     ...overrides,
   };
 }
@@ -302,6 +356,54 @@ describe("deriveSetupSteps", () => {
     expect(built[2]).toMatchObject({ id: "voice", state: "done" });
   });
 
+  it("reads the voice step off the active version, the candidate and the newest build", () => {
+    const voiceState = (profile: VoiceProfile | null) =>
+      deriveSetupSteps(reads({ voice: { profile } })).find(
+        (step) => step.id === "voice",
+      );
+    const ready: VoiceProfile = { ...voiceProfile(0), maturity: "provisional" };
+
+    expect(voiceState(null)?.voice?.state).toBe("needsSamples");
+    expect(voiceState(voiceProfile(0))?.voice?.state).toBe("needsSamples");
+    expect(voiceState(ready)?.voice?.state).toBe("ready");
+    expect(voiceState({ ...ready, candidate_version: 1 })?.voice?.state).toBe(
+      "review",
+    );
+    expect(
+      voiceState({ ...ready, latest_build: build("running") })?.voice?.state,
+    ).toBe("building");
+    expect(
+      voiceState({ ...ready, latest_build: build("queued") })?.voice?.state,
+    ).toBe("building");
+    expect(
+      voiceState({ ...ready, latest_build: build("failed") })?.voice,
+    ).toMatchObject({
+      state: "failed",
+      build: { status_detail: "Model down." },
+    });
+    expect(
+      voiceState({ ...ready, latest_build: build("deferred") })?.voice?.state,
+    ).toBe("deferred");
+    // A succeeded build whose candidate was discarded is ready to build again.
+    expect(
+      voiceState({ ...ready, latest_build: build("succeeded") })?.voice?.state,
+    ).toBe("ready");
+  });
+
+  it("keeps setup complete while an active voice has a newer candidate or a failed rebuild", () => {
+    const active = voiceProfile(2);
+    for (const profile of [
+      { ...active, candidate_version: 3 },
+      { ...active, latest_build: build("failed") },
+      { ...active, latest_build: build("running") },
+    ]) {
+      const step = deriveSetupSteps(reads({ voice: { profile } })).find(
+        (entry) => entry.id === "voice",
+      );
+      expect(step).toMatchObject({ state: "done", voice: { state: "active" } });
+    }
+  });
+
   it("leaves out a step whose page the reader cannot act on", () => {
     const steps = summary(
       reads({ acts: actsFor({ voice_profile: ["read"] }) }),
@@ -323,10 +425,62 @@ describe("deriveSetupSteps", () => {
     ).toEqual(["mail", "calendar"]);
   });
 
+  it("asks a role that cannot capture to connect nothing", () => {
+    const steps = summary(
+      reads({
+        connectors: {
+          ...roster([connection("gmail", "error")], {
+            gmail: "role_cannot_capture",
+            graph: "role_cannot_capture",
+            imap: "role_cannot_capture",
+          }),
+          captureAllowed: false,
+        },
+      }),
+    );
+
+    expect(steps.map((step) => step.id)).toEqual(["voice"]);
+  });
+
+  it("asks to connect an AI tool after the calendar, once the connector is on", () => {
+    expect(summary(reads({ passports: [] })).map((s) => s.id)).toEqual([
+      "mail",
+      "calendar",
+      "ai",
+      "voice",
+      "booking",
+    ]);
+  });
+
+  it("counts an AI tool done only while its signed-in connection lasts", () => {
+    const aiStep = (passports: readonly PassportSummary[]) =>
+      deriveSetupSteps(reads({ passports })).find((s) => s.id === "ai");
+
+    expect(aiStep([passport(null)])?.state).not.toBe("done");
+    expect(
+      aiStep([passport("Claude", "2026-11-02T08:00:00Z")])?.state,
+    ).not.toBe("done");
+    // Past its expiry, a connection that cannot renew has ended; one that can
+    // is only between credentials.
+    const expired = (renewable: boolean) =>
+      passport("Claude", null, { at: "2026-11-04T12:00:00Z", renewable });
+    expect(aiStep([expired(false)])?.state).not.toBe("done");
+    expect(aiStep([expired(true)])?.state).toBe("done");
+    expect(aiStep([passport(null), passport("Claude")])).toMatchObject({
+      state: "done",
+      agent: { name: "Claude" },
+    });
+  });
+
   it("still counts a booking link that is on, whatever the roster says", () => {
     const steps = summary(
       reads({
-        connectors: { notConfigured: true, data: [], providers: [] },
+        connectors: {
+          notConfigured: true,
+          captureAllowed: true,
+          data: [],
+          providers: [],
+        },
         scheduling: scheduling(true),
       }),
     );
@@ -348,8 +502,10 @@ function jsonResponse(body: unknown, status = 200) {
 function serve(answers: Readonly<Record<string, () => Response>>) {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (request: Request) => {
-      const path = new URL(request.url).pathname;
+    // The connector discovery read asks by URL string, the API client by Request.
+    vi.fn(async (request: Request | string) => {
+      const url = typeof request === "string" ? request : request.url;
+      const path = new URL(url, "https://crm.test").pathname;
       const route = Object.keys(answers).find((end) => path.endsWith(end));
       return route ? answers[route]() : jsonResponse({}, 404);
     }),
@@ -372,7 +528,7 @@ afterEach(() => {
 });
 
 describe("useSetupChecklist", () => {
-  it("settles once every read answers, and drops the step a refusal feeds", async () => {
+  it("settles once every read answers, and keeps a failed voice read as unknown", async () => {
     serve({
       "/connectors": () =>
         jsonResponse({
@@ -397,9 +553,48 @@ describe("useSetupChecklist", () => {
     expect(result.current.steps.map((step) => step.id)).toEqual([
       "mail",
       "calendar",
+      "voice",
       "booking",
     ]);
-    expect([result.current.done, result.current.total]).toEqual([1, 3]);
+    // An unknown voice is never counted done, so the reminder cannot read as
+    // complete just because the profile could not be read.
+    expect(result.current.steps[2]).toMatchObject({
+      state: "open",
+      voice: null,
+    });
+    expect([result.current.done, result.current.total]).toEqual([1, 4]);
+  });
+
+  it("is complete only once every read answered and every step is done", async () => {
+    const answers = {
+      "/voice-profiles": () => jsonResponse({ data: [{ profile_version: 1 }] }),
+      "/scheduling/profile": () => jsonResponse(scheduling(true)),
+    };
+    serve({
+      ...answers,
+      "/connectors": () =>
+        jsonResponse({ status: 500, code: "internal", title: "Down" }, 500),
+    });
+    const failed = renderHook(() => useSetupChecklist(REACH), { wrapper });
+    await waitFor(() => expect(failed.result.current.settled).toBe(true));
+    // The failed read dropped mail and calendar, so the rest counts as done.
+    expect(failed.result.current.done).toBe(failed.result.current.total);
+    expect(failed.result.current.complete).toBe(false);
+    failed.unmount();
+
+    serve({
+      ...answers,
+      "/connectors": () =>
+        jsonResponse({
+          data: [connection("gmail"), connection("gcal")],
+          providers: MAIL_PROVIDERS.map((provider) => ({
+            provider,
+            reason: "ready",
+          })),
+        }),
+    });
+    const answered = renderHook(() => useSetupChecklist(REACH), { wrapper });
+    await waitFor(() => expect(answered.result.current.complete).toBe(true));
   });
 
   it("hides the reminder until the seat is forgotten at sign-out", async () => {

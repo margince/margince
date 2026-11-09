@@ -110,6 +110,6 @@ func (s *Store) ReassignLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, ow
 	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
 		return err
 	}
-	_, err := s.updateLeadTx(ctx, tx, id, UpdateLeadInput{OwnerID: &owner, IfVersion: ifVersion}, nil)
+	_, err := s.updateLeadInTx(ctx, tx, id, UpdateLeadInput{OwnerID: &owner, IfVersion: ifVersion}, nil)
 	return err
 }

@@ -113,7 +113,7 @@ func TestAcceptingASeatAddressInTheReviewQueueCreatesNothingAndReleasesNothing(t
 	seedPostureHeldImport(t, e, mail, e.Rep1)
 	disposition := seedPendingDisposition(t, e, address, "home.example", mail)
 	e.WsExec(t, `UPDATE capture_pending_counterparty SET status = 'unsure' WHERE id = $1`, disposition)
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	staged, err := stageCounterpartyReview(e.Admin(), svc, approvalSummaryByLang["en"], capture.PendingCounterparty{
 		ID: disposition, Email: address, Domain: "home.example", ActivityID: mail, OwnerID: e.Rep1,
 	})

@@ -1,0 +1,61 @@
+name: gate-binaries
+description: >-
+  Put the pinned gate binaries that `make tools` installs on PATH, from the
+  cache while the pins hold, so every workflow that needs them spells the key in
+  one place.
+
+inputs:
+  save:
+    description: >-
+      Whether a miss saves the binaries it installed. Only a job on `main` sets
+      it: an entry saved from a pull request can be read by that pull request
+      alone, and it pushes a `main` entry out of the cache quota.
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    # The key is the `make tools` recipe with its pins expanded, plus the Go
+    # that runs it, because `go install` rebuilds a binary another toolchain
+    # built. An edit elsewhere in the Makefile leaves the key alone.
+    - name: Compute the gate binaries key
+      id: key
+      shell: bash
+      working-directory: backend
+      run: |
+        set -euo pipefail
+        recipe="$(make -s -n tools | grep -v '^[[:space:]]*#')"
+        if ! grep -q 'go install ' <<<"$recipe"; then
+          echo "::error::'make -n tools' shows no go install, so the gate binaries key cannot follow the pins" >&2
+          exit 1
+        fi
+        digest="$(printf '%s\n%s\n' "$(go env GOVERSION)" "$recipe" | sha256sum | cut -c1-16)"
+        echo "key=gate-binaries-${{ runner.os }}-${{ runner.arch }}-$digest" >> "$GITHUB_OUTPUT"
+
+    - name: Restore the gate binaries
+      id: restore
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/go/bin
+        key: ${{ steps.key.outputs.key }}
+
+    # Only on a miss: `go install tool@version` does not skip a binary that is
+    # already there, it builds it again against a cold build cache.
+    - name: Install the pinned gate binaries
+      if: steps.restore.outputs.cache-hit != 'true'
+      shell: bash
+      run: make tools
+
+    # Right after the install, so a gate that fails later in the job still
+    # leaves the entry behind.
+    - name: Save the gate binaries
+      if: inputs.save == 'true' && steps.restore.outputs.cache-hit != 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/go/bin
+        key: ${{ steps.key.outputs.key }}
+
+    - name: Gate binaries onto PATH
+      shell: bash
+      run: echo "$HOME/go/bin" >> "$GITHUB_PATH"

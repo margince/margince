@@ -603,3 +603,49 @@ func TestAJournaledRunIsNotReplayedAtAnotherThinkingLevel(t *testing.T) {
 		t.Errorf("three thinking levels rendered %d journal keys: %v", len(keys), keys)
 	}
 }
+
+// Two runs in one resume directory would destroy each other's journal, so the
+// second is refused while the first holds its claim.
+func TestASecondRunIsRefusedTheResumeDirectoryTheFirstHolds(t *testing.T) {
+	dir := t.TempDir()
+	first, err := claimResumeDir(dir)
+	if err != nil {
+		t.Fatalf("the first claim on an empty directory failed: %v", err)
+	}
+	second, err := claimResumeDir(dir)
+	if err == nil {
+		t.Error("a second run claimed the directory the first still holds")
+		if rerr := releaseResumeDir(second); rerr != nil {
+			t.Errorf("release the second claim: %v", rerr)
+		}
+	} else if !strings.Contains(err.Error(), "another certification run holds the resume directory") {
+		t.Errorf("the second claim failed for another reason than the first run's hold: %v", err)
+	}
+	if err := releaseResumeDir(first); err != nil {
+		t.Fatalf("release the first claim: %v", err)
+	}
+	again, err := claimResumeDir(dir)
+	if err != nil {
+		t.Fatalf("the directory stayed claimed after its holder released it: %v", err)
+	}
+	if err := releaseResumeDir(again); err != nil {
+		t.Errorf("release: %v", err)
+	}
+}
+
+// A run killed by the test timeout runs no defer and leaves its lock file
+// behind. With no process holding it, the next run must still claim the
+// directory, or every resume after a timeout waits on a human.
+func TestALockFileNoRunHoldsDoesNotBlockTheNextRun(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "aicert-resume.lock"), nil, 0o600); err != nil {
+		t.Fatalf("plant the file a killed run leaves: %v", err)
+	}
+	lock, err := claimResumeDir(dir)
+	if err != nil {
+		t.Fatalf("a lock file no run holds blocked the next run: %v", err)
+	}
+	if err := releaseResumeDir(lock); err != nil {
+		t.Errorf("release: %v", err)
+	}
+}

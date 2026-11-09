@@ -24,13 +24,13 @@ const (
 	holderCompany = linkEntityCompany
 )
 
-// mailFileIDs is the ids of the live files of live mails that satisfy linkedTo,
-// a fragment over the activity aliased `a`, minus inline mail images.
+// mailFileIDs is the ids of the live, listed files of live mails that satisfy
+// linkedTo. linkedTo is a fragment over the activity aliased `a`.
 func mailFileIDs(linkedTo string) string {
 	return fmt.Sprintf(`SELECT mf.id FROM activity a
 		  JOIN attachment mf ON mf.entity_type = '%s' AND mf.entity_id = a.id AND mf.archived_at IS NULL
 		 WHERE a.archived_at IS NULL AND %s AND %s`,
-		linkEntityActivity, linkedTo, storekit.NotInlineMailImageSQL("mf"))
+		linkEntityActivity, linkedTo, storekit.ListedMailFileSQL("mf"))
 }
 
 // documentMembership says which attachments holder's Documents list holds:

@@ -4,6 +4,7 @@
 package provenance
 
 import (
+	"fmt"
 	"slices"
 	"sort"
 	"strings"
@@ -52,6 +53,10 @@ const (
 // written anew.
 const CommitmentTaskSource = "commitment"
 
+// AnalyticsDecisionSource names a task a manager recorded from a sales review:
+// a decision with an owner, a review date and an expected result.
+const AnalyticsDecisionSource = "analytics_decision"
+
 // The other native writers that create a task with no human behind it. Each
 // stamps one of these, and storekit.TaskSourceFamilies says how its task stays
 // current.
@@ -72,6 +77,10 @@ const (
 // thread is asked about once.
 const WhichDealSource = "which_deal"
 
+// WhichDealOfferedKey names, in the raw of a WhichDealSource task, the ids of
+// the deals the question offered.
+const WhichDealOfferedKey = "offered_deal_ids"
+
 // WebsiteLeadSource names a lead read off a company's website and accepted by
 // a human. Only that accept writes it. A lead under it is sent an Art. 14
 // notice, held until the notice is through, and deleted when it fails.
@@ -81,6 +90,17 @@ const WebsiteLeadSource = "siteread"
 // the form and the submission's key, so a sender's retry lands once. That
 // holds only while no client can spell it.
 const WebFormSource = "web_form"
+
+// WebFormSourceID is a website form submission's source_id: the form, then the
+// submission's own part. WebFormIDSQL reads the form back out of it.
+func WebFormSourceID(form, submission string) string { return form + ":" + submission }
+
+// WebFormIDSQL is the form a row under alias came through, as text, or NULL
+// for a row no website form wrote.
+func WebFormIDSQL(alias string) string {
+	return fmt.Sprintf(`CASE WHEN %[1]s.source_system = '%[2]s' THEN split_part(%[1]s.source_id, ':', 1) END`,
+		alias, WebFormSource)
+}
 
 // internalSourceSystems are the exact identities only an internal writer may
 // spell. Exact names rather than a second prefix: these are already written
@@ -92,6 +112,7 @@ var internalSourceSystems = map[string]bool{
 	NoActivityReminderSource:     true,
 	CheckInCadenceSource:         true,
 	CommitmentTaskSource:         true,
+	AnalyticsDecisionSource:      true,
 	WebsiteLeadSource:            true,
 	WhichDealSource:              true,
 	LeadRepliedSource:            true,

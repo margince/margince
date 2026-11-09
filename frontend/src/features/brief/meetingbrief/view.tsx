@@ -1,8 +1,7 @@
 // The brief's body, as a pure component: state in, prose out, no fetching.
 //
-// Split from the drawer so the four states a reader can land in — assembling,
-// failed, nothing recorded, prepared — can each be rendered from a fixture in
-// a test and a story. The connected drawer holds the query and hands the
+// Split from the drawer so each state renders from a fixture in a test and a
+// story. The states: assembling, failed, withheld, nothing recorded, prepared. The connected drawer holds the query and hands the
 // answer here.
 
 import type { ReactNode } from "react";
@@ -38,12 +37,13 @@ import "./meetingbrief.css";
 
 type MeetingBrief = components["schemas"]["MeetingBrief"];
 
-// The four answers a read can produce. A union rather than three booleans,
-// because "loading and failed" and "ready with no data" are states the caller
-// should not be able to spell by accident.
+// The answers a read can produce, as a union rather than booleans. A caller
+// cannot then spell "loading and failed" or "ready with no data" by accident.
 export type BriefViewState =
   | { kind: "loading" }
-  | { kind: "failed"; message: string; onRetry: () => void }
+  // No onRetry for a failure a retry cannot change.
+  | { kind: "failed"; message: string; onRetry?: () => void }
+  | { kind: "withheld" }
   | { kind: "ready"; brief: MeetingBrief };
 
 function stateOf(state: BriefViewState) {
@@ -52,6 +52,8 @@ function stateOf(state: BriefViewState) {
       return "loading" as const;
     case "failed":
       return "failed" as const;
+    case "withheld":
+      return "withheld" as const;
     default:
       // A brief with no sections but a withheld source is NOT empty. "Nothing
       // is recorded for this meeting" and "you are not being shown what is"

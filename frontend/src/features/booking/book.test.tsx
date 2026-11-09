@@ -5,7 +5,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { formatTimeOfDay } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import {
   bookingConnection,
@@ -76,7 +76,7 @@ function mount(hostSlug?: string) {
 }
 // The guest page lists the chosen day's times by their time alone; the day is
 // the calendar's, and the first day with a free time is chosen for the guest.
-const slotName = (index: number, zone = viewerZone()) =>
+const slotName = (index: number, zone = browserZone()) =>
   formatTimeOfDay(bookingSlots[index].start, "en", zone);
 const CONFIRM = /^Confirm \d/;
 // The month on show is the one the guest opens the page in, so the clock is
@@ -214,4 +214,44 @@ it("shows guest slots in the city selected from the timezone dropdown", async ()
       name: slotName(0, "Asia/Bangkok"),
     }),
   ).toBeTruthy();
+});
+
+// The public booking experience presents the host and their company. Margince
+// does not advertise itself on it, in any state a guest can reach (#10087).
+function expectNoPromotion() {
+  expect(screen.queryByText("Powered by")).toBeNull();
+  expect(screen.queryByAltText("Powered by Margince")).toBeNull();
+}
+it("shows the host's page without a Margince footer and names the booking in the tab", async () => {
+  inBookingMonth();
+  serve();
+  mount("ada-lovelace");
+  expect(await screen.findByRole("button", { name: slotName(0) })).toBeTruthy();
+  expectNoPromotion();
+  expect(document.title).toBe("Book a meeting with Ada Lovelace");
+});
+it("shows the guest's confirmed meeting without a Margince footer", async () => {
+  serve();
+  mount("manage-private-link");
+  expect(
+    await screen.findByRole("heading", { level: 1, name: "Project discovery" }),
+  ).toBeTruthy();
+  expectNoPromotion();
+  expect(document.title).toBe("Your meeting");
+});
+it("shows a missing booking page without a Margince footer or the host's name", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      async () =>
+        new Response(JSON.stringify({ status: 404, title: "Not found" }), {
+          status: 404,
+          headers: { "content-type": "application/problem+json" },
+        }),
+    ),
+  );
+  mount("retired-page");
+  await waitFor(() => expect(document.title).toBe("Book a meeting"));
+  await screen.findByRole("alert");
+  expectNoPromotion();
 });

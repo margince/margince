@@ -55,6 +55,13 @@ func (s *Service) WithDomainQuestions(d DomainQuestions) *Service {
 	return s
 }
 
+// WithBookingHealth binds the reader's own paused booking page. Unbound, the
+// lane is ABSENT rather than empty, for the reason WithDomainQuestions gives.
+func (s *Service) WithBookingHealth(b BookingHealth) *Service {
+	s.bookingHealth = b
+	return s
+}
+
 // WithMachineSender binds the rule that tells a sending system from a contact.
 func (s *Service) WithMachineSender(is MachineSender) *Service {
 	s.machine = is
@@ -96,6 +103,13 @@ func (s *Service) WithCompanyTouch(r CompanyTouch) *Service {
 // row's contact works for. Unbound, the row names the contact and no account.
 func (s *Service) WithContactEmployers(e ContactEmployers) *Service {
 	s.employers = e
+	return s
+}
+
+// WithMeetingOrganizers binds the reader that says which colleague organized
+// a meeting. Unbound, a meeting row's host is whose calendar it came off.
+func (s *Service) WithMeetingOrganizers(o MeetingOrganizers) *Service {
+	s.organizers = o
 	return s
 }
 

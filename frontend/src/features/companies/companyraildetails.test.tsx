@@ -2,7 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -157,6 +157,7 @@ function renderGrid(company: Company) {
       </LocaleProvider>
     </QueryClientProvider>,
   );
+  return client;
 }
 
 // Settles the grid on the grant read: until /me lands every row is read-only,
@@ -170,9 +171,11 @@ async function renderSettledGrid(
 ) {
   const calls = stub(profileFields, answers);
   renderGrid(company);
-  await screen.findByRole("button", { name: "Change Industry" });
+  await screen.findByRole("button", { name: /^Change Industry/ });
   return calls;
 }
+
+const vatBox = () => screen.getByRole("textbox", { name: "VAT ID" });
 
 // The two legal-identity fields that live only in the evidence sidecar. Before
 // these rows a rep could read a VAT number the crawl had found and could not
@@ -277,17 +280,17 @@ describe("the legal identity a contact can state", () => {
       }),
     );
     renderGrid(COMPANY);
-    await screen.findByRole("button", { name: "Change Industry" });
+    await screen.findByRole("button", { name: /^Change Industry/ });
 
     // The industry row edits (it reads the company, which HAS answered);
     // the sidecar rows do not, because their own read has not.
-    expect(screen.queryByRole("button", { name: "Change VAT ID" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Change VAT ID/ })).toBeNull();
 
     releaseFields?.(
       json({ data: [profileField("register_vat", "DE811907980")] }),
     );
     expect(
-      await screen.findByRole("button", { name: "Change VAT ID" }),
+      await screen.findByRole("button", { name: /^Change VAT ID/ }),
     ).toBeTruthy();
   });
 
@@ -308,8 +311,8 @@ describe("the legal identity a contact can state", () => {
     const user = userEvent.setup();
     const calls = await renderSettledGrid(COMPANY);
 
-    await user.click(screen.getByRole("button", { name: "Change VAT ID" }));
-    await user.type(screen.getByLabelText("VAT ID"), "DE811907980");
+    await user.click(screen.getByRole("button", { name: /^Change VAT ID/ }));
+    await user.type(vatBox(), "DE811907980");
     await user.keyboard("{Enter}");
 
     // The endpoint matters as much as the value: this is the write that queues
@@ -337,13 +340,36 @@ describe("the legal identity a contact can state", () => {
     ]);
     await screen.findByText("DE111111111");
 
-    await user.click(screen.getByRole("button", { name: "Change VAT ID" }));
-    await user.clear(screen.getByLabelText("VAT ID"));
-    await user.type(screen.getByLabelText("VAT ID"), "DE811907980");
+    await user.click(screen.getByRole("button", { name: /^Change VAT ID/ }));
+    await user.clear(vatBox());
+    await user.type(vatBox(), "DE811907980");
     await user.keyboard("{Enter}");
 
     // Two contacts correcting the same number: unpinned, the second silently
     // replaces a change its author never saw.
+    const written = await waitFor(() => {
+      const call = calls.find((one) => one.method === "PATCH");
+      expect(call).toBeDefined();
+      return call;
+    });
+    expect(written?.ifMatch).toBe("4");
+  });
+
+  it("pins the version the dialog opened on, not one a refetch brought in", async () => {
+    const user = userEvent.setup();
+    const served = [profileField("register_vat", "DE111111111")];
+    const calls = stub(served);
+    const client = renderGrid(COMPANY);
+    await user.click(
+      await screen.findByRole("button", { name: /^Change VAT ID/ }),
+    );
+
+    served[0] = { ...served[0], version: 5 };
+    await act(() => client.refetchQueries());
+    await user.clear(vatBox());
+    await user.type(vatBox(), "DE811907980");
+    await user.keyboard("{Enter}");
+
     const written = await waitFor(() => {
       const call = calls.find((one) => one.method === "PATCH");
       expect(call).toBeDefined();
@@ -379,8 +405,8 @@ describe("the legal identity a contact can state", () => {
     );
     await screen.findByText("DE811907980");
 
-    await user.click(screen.getByRole("button", { name: "Change VAT ID" }));
-    await user.clear(screen.getByLabelText("VAT ID"));
+    await user.click(screen.getByRole("button", { name: /^Change VAT ID/ }));
+    await user.clear(vatBox());
     await user.keyboard("{Enter}");
 
     expect(
@@ -388,7 +414,7 @@ describe("the legal identity a contact can state", () => {
     ).toBeVisible();
     // The refused write left the claim standing, so the draft is still there to
     // correct rather than the row having gone blank under the reader.
-    expect(screen.getByLabelText("VAT ID")).toBeVisible();
+    expect(vatBox()).toBeVisible();
   });
 
   it.each([
@@ -402,10 +428,10 @@ describe("the legal identity a contact can state", () => {
       const reads = () => calls.filter((one) => one.pathname === "/v1/me");
       const before = reads().length;
 
-      await user.click(screen.getByRole("button", { name: "Change VAT ID" }));
-      await user.type(screen.getByLabelText("VAT ID"), "DE1");
+      await user.click(screen.getByRole("button", { name: /^Change VAT ID/ }));
+      await user.type(vatBox(), "DE1");
       await user.keyboard("{Enter}");
-      await waitFor(() => expect(screen.queryByLabelText("VAT ID")).toBeNull());
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 
       expect(reads().length > before).toBe(refetched);
     },
@@ -417,14 +443,14 @@ describe("the grouped postal address", () => {
     const user = userEvent.setup();
     await renderSettledGrid(COMPANY);
     await user.click(screen.getByRole("button", { name: /Show \d+ empty/ }));
-    await user.click(screen.getByRole("button", { name: "Change Address" }));
+    await user.click(screen.getByRole("button", { name: /^Change Address/ }));
     for (const label of PART_LABELS)
       expect(screen.getByLabelText(new RegExp(label))).toBeVisible();
   });
   it("opens with all existing address parts", async () => {
     const user = userEvent.setup();
     await renderSettledGrid(COMPANY_WITH_CITY);
-    await user.click(screen.getByRole("button", { name: "Change Address" }));
+    await user.click(screen.getByRole("button", { name: /^Change Address/ }));
     expect(screen.getByDisplayValue("Berlin")).toBeVisible();
     for (const label of PART_LABELS)
       expect(screen.getByLabelText(new RegExp(label))).toBeVisible();

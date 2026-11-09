@@ -74,6 +74,8 @@ export function useThreadAudience(options: {
       return { threadKey: variables.threadKey, outcome: data ?? null };
     },
     onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["system-health"] });
+      queryClient.invalidateQueries({ queryKey: ["capture-health"] });
       for (const queryKey of options.invalidate(result)) {
         queryClient.invalidateQueries({ queryKey });
       }

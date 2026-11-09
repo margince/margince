@@ -107,7 +107,8 @@ async function addAttendee(user: UserEvent, label: string, name: RegExp) {
 }
 
 async function logMeeting(user: UserEvent, posted: unknown[]) {
-  await user.type(screen.getByLabelText("Subject *"), "Joint call");
+  // "Subject *" on a meeting; a call's subject is optional, so "Subject".
+  await user.type(screen.getByLabelText(/^Subject( \*)?$/), "Joint call");
   await user.click(screen.getByRole("button", { name: "Log" }));
   await waitFor(() => expect(posted).toHaveLength(1));
   return posted[0];

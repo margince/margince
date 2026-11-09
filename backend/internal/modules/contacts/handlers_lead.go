@@ -265,8 +265,9 @@ func (h Handlers) UpdateLeadSettings(w http.ResponseWriter, r *http.Request) {
 
 // PreviewLeadPromotion serves GET /leads/{id}/promote-preview — what
 // promotion would do, without doing it (ADR-0119/A170).
-func (h Handlers) PreviewLeadPromotion(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	preview, err := h.store.PreviewLeadPromotion(r.Context(), pathID[ids.LeadKind](id))
+func (h Handlers) PreviewLeadPromotion(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.PreviewLeadPromotionParams) {
+	options := PromotionPreviewOptions{DealsCursor: params.DealsCursor, CreateCompany: params.CreateCompany != nil && *params.CreateCompany}
+	preview, err := h.store.PreviewLeadPromotionWithOptions(r.Context(), pathID[ids.LeadKind](id), options)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

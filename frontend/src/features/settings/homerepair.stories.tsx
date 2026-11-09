@@ -63,7 +63,7 @@ function example(
   };
 }
 const meta = {
-  title: "Settings/Governance/System health/Review automatic work",
+  title: "Settings/System/System health/Review automatic work",
   component: HomeRepairControls,
   args: { version: 7, canActivate: true },
 } satisfies Meta<typeof HomeRepairControls>;

@@ -2,10 +2,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { FileOrigin } from "../../components/fileorigin";
+import {
+  AttachmentGrid,
+  AttachmentTile,
+} from "../../components/attachmenttile";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
-import { DataTable } from "../../design-system/datatable";
 import { useFocusHandoff } from "../../design-system/focushandoff";
 import { Panel, PanelBody } from "../../design-system/panel";
 import {
@@ -13,16 +15,10 @@ import {
   SurfaceState,
 } from "../../design-system/surfacestate";
 import { undoAction, useToast } from "../../design-system/toast";
-import { activityDay } from "../../format/activitywhen";
-import { formatDateAbbrev } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
-import { attachmentAnchor } from "../../lib/attachmentlink";
+import { useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { AddDocumentDialog } from "../voice-knowledge/adddocument";
-import "./dealfiles.css";
 import { ROOM_DOCUMENTS_PREFIX } from "./dealroomdocuments.key";
 
 // The deal's Files area: what a rep uploaded on the deal, and what arrived
@@ -38,17 +34,6 @@ import { ROOM_DOCUMENTS_PREFIX } from "./dealroomdocuments.key";
 
 type Deal = components["schemas"]["Deal"];
 type DealDocument = components["schemas"]["DealDocument"];
-type Category = NonNullable<DealDocument["attachment"]["category"]>;
-
-const CATEGORY_LABELS: Record<Category, MessageKey> = {
-  contract: "docs.category.contract",
-  offer: "docs.category.offer",
-  legal: "docs.category.legal",
-  email_attachment: "docs.category.email",
-  message_attachment: "docs.category.message",
-  other: "docs.category.other",
-  link: "docs.category.link",
-};
 
 // Enough for a working set; the area is not a library somebody pages through.
 const PAGE_LIMIT = 100;
@@ -139,7 +124,7 @@ export function DealFiles({
                 : undefined
             }
           >
-            <FilesTable
+            <FilesGrid
               dealId={dealId}
               files={files}
               mayWrite={mayWrite}
@@ -153,7 +138,7 @@ export function DealFiles({
   );
 }
 
-function FilesTable({
+function FilesGrid({
   dealId,
   files,
   mayWrite,
@@ -167,91 +152,39 @@ function FilesTable({
   onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
   return (
-    <DataTable
-      label={t("files.title")}
-      fold
-      rows={[...files]}
-      rowKey={(doc) => doc.attachment.id}
-      columns={[
-        {
-          key: "file",
-          header: t("dealfiles.col.file"),
-          fold: "title",
-          render: (doc) => <FileName doc={doc} />,
-        },
-        {
-          key: "category",
-          header: t("dealfiles.col.category"),
-          render: (doc) =>
-            doc.attachment.category
-              ? t(CATEGORY_LABELS[doc.attachment.category])
-              : null,
-        },
-        {
-          key: "origin",
-          header: t("dealfiles.col.origin"),
-          // A mail's file names who sent the mail, as the contact and company
-          // lists do. A meeting's or a task's file names nothing; an upload
-          // says it was put on the deal.
-          render: (doc) =>
-            doc.attachment.origin ? (
-              <FileOrigin
-                origin={doc.attachment.origin}
-                onOpenEmail={onOpenEmail}
-              />
-            ) : doc.attachment.entity_type === "activity" ? null : (
-              t("dealfiles.origin.upload")
-            ),
-        },
-        {
-          key: "added",
-          header: t("dealfiles.col.added"),
-          render: (doc) =>
-            doc.attachment.origin
-              ? activityDay(
-                  doc.attachment.origin.occurred_at,
-                  doc.attachment.origin.occurred_precision,
-                  locale,
-                  recordZone,
-                  formatDateAbbrev,
-                )
-              : formatDateAbbrev(doc.attachment.created_at, locale, recordZone),
-        },
-        ...(mayWrite
-          ? [
-              {
-                key: "actions",
-                header: t("table.actions"),
-                headerHidden: true,
-                fold: "end" as const,
-                render: (doc: DealDocument) => (
-                  <FileVerbs
-                    dealId={dealId}
-                    doc={doc}
-                    focusLanding={focusLanding}
-                  />
-                ),
-              },
-            ]
-          : []),
-      ]}
-    />
-  );
-}
-
-function FileName({ doc }: Readonly<{ doc: DealDocument }>) {
-  const t = useT();
-  const file = doc.attachment;
-  return (
-    <span className={doc.hidden ? "deal-file deal-file-hidden" : "deal-file"}>
-      <a className="cell-link" {...attachmentAnchor(file)}>
-        {file.title || file.filename}
-      </a>
-      {doc.hidden ? <Badge>{t("files.hiddenBadge")}</Badge> : null}
-    </span>
+    <AttachmentGrid>
+      {files.map((doc) => (
+        <li key={doc.attachment.id}>
+          <AttachmentTile
+            file={doc.attachment}
+            onOpenEmail={onOpenEmail}
+            receded={doc.hidden}
+            note={
+              // A mail's file names who sent the mail; a meeting's or a
+              // task's names nothing; an upload says it was put on the deal.
+              doc.hidden ? (
+                <Badge>{t("files.hiddenBadge")}</Badge>
+              ) : doc.attachment.origin ||
+                doc.attachment.entity_type === "activity" ? null : (
+                <span className="t-caption">
+                  {t("dealfiles.origin.upload")}
+                </span>
+              )
+            }
+            verbs={
+              mayWrite && (
+                <FileVerbs
+                  dealId={dealId}
+                  doc={doc}
+                  focusLanding={focusLanding}
+                />
+              )
+            }
+          />
+        </li>
+      ))}
+    </AttachmentGrid>
   );
 }
 

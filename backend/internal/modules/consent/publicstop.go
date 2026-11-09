@@ -138,7 +138,7 @@ func (s *Store) PublicStop(
 			result = PublicStopResult{Recorded: false, ReceiptReference: publicStopReceipt(sub.id, kind)}
 			return nil
 		}
-		if err := s.suppressAdmittedTx(ctx, tx, in, sub, commsauthz.LevelSubject); err != nil {
+		if err := s.suppressAdmittedTx(ctx, tx, in, sub, commsauthz.LevelSubject, commsauthz.RecordedBySubject); err != nil {
 			return err
 		}
 		result = PublicStopResult{Recorded: true, ReceiptReference: publicStopReceipt(sub.id, kind)}

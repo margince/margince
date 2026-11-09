@@ -18,7 +18,7 @@ package identity
 
 import (
 	"context"
-	"errors"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -53,7 +53,7 @@ type FormerMemberInput struct {
 const defaultFormerRole = "rep"
 
 // CreateFormerMember provisions a DEACTIVATED seat for somebody who already
-// left, with no password and no way in. Admin-only, human-only.
+// left, with no password and no way in. Admin-only.
 //
 // It is InviteUser with three things deliberately absent, and each absence is
 // the point rather than an economy:
@@ -80,11 +80,12 @@ func (s *Service) CreateFormerMember(ctx context.Context, actor Identity, in For
 }
 
 func (s *Service) provisionFormerMember(ctx context.Context, actor Identity, in FormerMemberInput) (ids.UserID, bool, error) {
-	// HUMAN-ONLY, stated here because nothing else states it. The contract's
-	// `x-agent-access: human-only` is a declaration and the generated wrapper
-	// enforces nothing (#5852), and provisioning a human seat is not an act an
-	// agent passport may perform on its own authority.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// Passportless automatic work provisions no seat. An agent never names the
+	// admin role, even on a seat that cannot sign in yet.
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
+		return ids.UserID{}, false, err
+	}
+	if err := refuseAgentAdminRole(ctx, in.Role); err != nil {
 		return ids.UserID{}, false, err
 	}
 	ctx, err := admit(ctx, actor, objectUserAdmin, principal.ActionCreate)
@@ -151,22 +152,70 @@ func (s *Service) provisionFormerMember(ctx context.Context, actor Identity, in 
 }
 
 func mergedFormerSurvivor(ctx context.Context, tx pgx.Tx, email string) (ids.UserID, bool, error) {
-	var survivor ids.UserID
-	var found bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM app_user WHERE lower(email)=lower(@email) AND merged_into_user_id IS NOT NULL)`, pgx.StrictNamedArgs{memberEmailField: email}).Scan(&found); err != nil {
-		return survivor, false, err
+	// The seed can hold a seat per domain spelling, so the address can lead to
+	// more than one lineage. Each seat it matches is walked to its own root. The
+	// walk carries the seat's login and whether it was merged, so the answer
+	// follows the spelling the caller typed.
+	rows, err := tx.Query(ctx, `WITH RECURSIVE lineage AS (
+ SELECT s.id,s.merged_into_user_id,s.removed_at,s.archived_at,s.email AS reached_from,
+        s.merged_into_user_id IS NOT NULL AS from_merged FROM app_user s
+   WHERE `+storekit.SeatLoginIsSQL("s", "@"+memberEmailField, "@"+memberDomainField)+`
+ UNION SELECT u.id,u.merged_into_user_id,u.removed_at,u.archived_at,l.reached_from,l.from_merged
+   FROM app_user u JOIN lineage l ON u.id=l.merged_into_user_id
+ ) SELECT id, reached_from, from_merged, removed_at IS NULL AND archived_at IS NULL FROM lineage
+   WHERE merged_into_user_id IS NULL ORDER BY id, reached_from`, memberLoginArgs(email))
+	if err != nil {
+		return ids.UserID{}, false, err
 	}
-	if !found {
-		return survivor, false, nil
+	roots, err := pgx.CollectRows(rows, pgx.RowToStructByPos[lineageRoot])
+	if err != nil {
+		return ids.UserID{}, false, err
 	}
-	err := tx.QueryRow(ctx, `WITH RECURSIVE lineage AS (
- SELECT id,merged_into_user_id,removed_at,archived_at FROM app_user WHERE lower(email)=lower(@email)
- UNION SELECT u.id,u.merged_into_user_id,u.removed_at,u.archived_at FROM app_user u JOIN lineage l ON u.id=l.merged_into_user_id
- ) SELECT id FROM lineage WHERE merged_into_user_id IS NULL AND removed_at IS NULL AND archived_at IS NULL`, pgx.StrictNamedArgs{memberEmailField: email}).Scan(&survivor)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return survivor, false, errRemovedEmail
+	return survivorFor(roots, typedLoginAddress(email))
+}
+
+// lineageRoot is the seat a merge lineage ends at. It carries the login of the
+// seat the walk started from, and whether that seat had been merged.
+type lineageRoot struct {
+	ID          ids.UserID
+	ReachedFrom string
+	FromMerged  bool
+	Live        bool
+}
+
+// survivorFor answers the live seat a former member's address already lives
+// on, or found false when the address names no merged seat.
+//
+// The seat spelled as the caller typed it decides. An unmerged one is not a
+// survivor at all, so the caller provisions as usual. A merged one answers its
+// own root, or the removed address when that root is gone. An address no seat
+// spells as typed answers the first live root of a merged seat.
+func survivorFor(roots []lineageRoot, typed string) (ids.UserID, bool, error) {
+	for _, root := range roots {
+		if !strings.EqualFold(root.ReachedFrom, typed) {
+			continue
+		}
+		switch {
+		case !root.FromMerged:
+			return ids.UserID{}, false, nil
+		case !root.Live:
+			return ids.UserID{}, false, errRemovedEmail
+		}
+		return root.ID, true, nil
 	}
-	return survivor, err == nil, err
+	merged := false
+	for _, root := range roots {
+		if root.FromMerged {
+			merged = true
+			if root.Live {
+				return root.ID, true, nil
+			}
+		}
+	}
+	if merged {
+		return ids.UserID{}, false, errRemovedEmail
+	}
+	return ids.UserID{}, false, nil
 }
 
 func formerMemberAudit(in FormerMemberInput, role string) map[string]any {

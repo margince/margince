@@ -40,7 +40,7 @@ func CurrentLeadEngagementClause(source string, asOf time.Time, arg func(any) in
  AND lead_source.restricted_at IS NULL AND ` + SourceWithinHorizonSQL("lead_source", asOf, arg) + `
  AND ((` + InboundReplySQL("lead_source") + `
  AND ` + occurredday.BegunSQL("lead_source", instant) + ` AND NOT ` + AnsweredSQL("lead_source", instant) + `)
- OR (lead_source.kind = 'meeting' AND ` + relstrength.MeetingCountsSQL("lead_source") + `)))`
+ OR (lead_source.kind = 'meeting' AND ` + relstrength.MeetingNotCalledOffSQL("lead_source") + `)))`
 }
 
 // TaskDueSQL removes a generated notification timestamp from deadline reads.

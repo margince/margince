@@ -42,6 +42,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
@@ -133,7 +134,17 @@ func fieldsThatMovedSince(ctx context.Context, tx pgx.Tx, row AuditRow) ([]strin
 	if half != "" {
 		moved = append(moved, half)
 	}
-	return reportedAs(moved, imageKeys(after)), nil
+	moved = reportedAs(moved, imageKeys(after))
+	if entityType == entityTypeCompany {
+		// The restore puts back the profile rows beside the columns. A later
+		// write to one of them supersedes the entry like a column write.
+		rows, err := contacts.ProfileFieldsMovedSince(ctx, tx, row.EntityID, row.Evidence)
+		if err != nil {
+			return nil, err
+		}
+		moved = append(moved, rows...)
+	}
+	return moved, nil
 }
 
 // columnsThatMoved names the image keys that are columns of the record and
@@ -209,7 +220,7 @@ func sameInstant(a, b json.RawMessage) bool {
 		return false
 	}
 	right, err := time.Parse(time.RFC3339Nano, y)
-	return err == nil && left.Equal(right)
+	return err == nil && storekit.SameStoredInstant(left, right)
 }
 
 // asSet spells a jsonb expression with an array's elements in a canonical

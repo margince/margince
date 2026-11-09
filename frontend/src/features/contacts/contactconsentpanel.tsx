@@ -3,6 +3,7 @@ import { Ban, Check, Mail } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { ContactStops } from "../../components/stops";
 import { Badge, Button, Modal, Skeleton } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -11,10 +12,14 @@ import { type Translator, useLocale, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
 import { useProviderLabel } from "../../lib/channelproviders";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { ConfirmDetailsAction, ConsentSection } from "../privacy/consent";
 import { consentPurposeName, consentReason } from "./consentreason";
-import { consentWord } from "./contactreadings";
+import { scopedConsentWord } from "./contactreadings";
+import {
+  RetractAcquisitionRequest,
+  RetractRecordedRequest,
+} from "./retractrequest";
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactConsentGuard = components["schemas"]["ContactConsentGuard"];
@@ -100,14 +105,14 @@ export function useConsentRows(
     key: `chat-${channel.provider}`,
     label: providerLabel(channel.provider),
     reachable: channel.reachable,
-    verdict: correspondence?.verdict,
+    entry: correspondence,
     unreachableWord: t("contact.rail.channelNotDeliverable"),
   }));
   return [...transports, ...chats].map((row) => ({
     key: row.key,
     term: row.label,
     value: row.reachable ? (
-      <VerdictWord verdict={row.verdict} />
+      <VerdictWord entry={row.entry} />
     ) : (
       <span className="pe-detail-unknown">{row.unreachableWord}</span>
     ),
@@ -124,7 +129,7 @@ type TransportReading = Readonly<{
 type TransportRow = Readonly<{
   label: string;
   reachable: boolean;
-  verdict: GuardEntry["verdict"] | undefined;
+  entry: GuardEntry | undefined;
   unreachableWord: string;
 }>;
 
@@ -138,30 +143,30 @@ const TRANSPORT_ROWS: Record<
   email: ({ contact, correspondence, t }) => ({
     label: t("contact.consent.businessMail"),
     reachable: (contact.emails?.length ?? 0) > 0,
-    verdict: correspondence?.verdict,
+    entry: correspondence,
     unreachableWord: t("contact.rail.noEmailAddress"),
   }),
   phone: ({ contact, entries, t }) => ({
     label: t("contact.rail.phone"),
     reachable: (contact.phones?.length ?? 0) > 0,
-    verdict: entries.find((entry) => entry.channel === "phone")?.verdict,
+    entry: entries.find((entry) => entry.channel === "phone"),
     unreachableWord: t("contact.rail.noPhoneNumber"),
   }),
 };
 
-// Paired with consentWord's table, with the same fallback. A verdict is a
-// state, so it reads as a badge. A verdict off a newer server reads as
-// unknown, which is a gap and stays grey text.
+// The verdict colours the badge and scopedConsentWord words it. A verdict off
+// a newer server is a gap and stays grey text.
 const VERDICT_BADGE = {
   allowed: { tone: "success", icon: Check },
   blocked: { tone: "warning", icon: Ban },
 } as const;
 
-function VerdictWord({
-  verdict,
-}: Readonly<{ verdict: GuardEntry["verdict"] | undefined }>) {
+function VerdictWord({ entry }: Readonly<{ entry: GuardEntry | undefined }>) {
   const t = useT();
-  const word = consentWord(verdict, t);
+  const verdict = entry?.verdict;
+  const word = entry
+    ? scopedConsentWord(entry, t)
+    : t("contact.consent.fact.nothingRecorded");
   const badge =
     verdict === "allowed" || verdict === "blocked"
       ? VERDICT_BADGE[verdict]
@@ -186,7 +191,7 @@ function VerdictWord({
 export function ContactConsentPanel({ view }: Readonly<{ view: Contact360 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const guard = useConsentGuard(view.contact.id, !view.contact.archived_at);
   const [manage, setManage] = useState(false);
   // Opened once, mounted from then on. The section reads consent and the
@@ -218,15 +223,26 @@ export function ContactConsentPanel({ view }: Readonly<{ view: Contact360 }>) {
                     <Mail size={15} aria-hidden="true" />
                     {consentPurposeName(entry, t)}
                   </span>
-                  <VerdictWord verdict={entry.verdict} />
+                  <VerdictWord entry={entry} />
                 </div>
                 {entry.reason && (
                   <p className="pe-colleague-proof t-caption">
                     {consentReason(entry, t, locale, zone)}
                   </p>
                 )}
+                <RetractRecordedRequest
+                  contactId={view.contact.id}
+                  event={entry.qualifying_event}
+                  mayWrite={mayWrite}
+                />
               </div>
             ))}
+        <RetractAcquisitionRequest
+          contactId={view.contact.id}
+          request={view.contact.acquisition_request}
+          mayWrite={mayWrite}
+        />
+        <ContactStops contactId={view.contact.id} />
         <p>{t("consent.permissionScope")}</p>
         <Button
           variant="ghost"

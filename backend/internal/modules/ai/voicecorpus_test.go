@@ -613,3 +613,18 @@ func TestPreviewStructuredTranscriptWithoutSpeakersIsNotIngestible(t *testing.T)
 		t.Fatalf("a cue file that names nobody keeps its format and cannot be filtered: %+v", preview)
 	}
 }
+
+// The words still missing for a first build reach zero where maturity
+// leaves collecting, so a client quoting the distance agrees with the verdict.
+func TestFirstBuildWordsRemainingEndsWhereCollectingEnds(t *testing.T) {
+	for _, words := range []int{0, 1, StarterVoiceWords - 1, StarterVoiceWords, StarterVoiceWords + 500} {
+		remaining := FirstBuildWordsRemaining(words)
+		collecting := Maturity(words) == voiceMaturityCollecting
+		if (remaining > 0) != collecting {
+			t.Fatalf("words=%d: remaining=%d but collecting=%v", words, remaining, collecting)
+		}
+		if collecting && words+remaining != StarterVoiceWords {
+			t.Fatalf("words=%d: remaining=%d does not close the gap to %d", words, remaining, StarterVoiceWords)
+		}
+	}
+}

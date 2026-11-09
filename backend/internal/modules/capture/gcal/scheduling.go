@@ -99,12 +99,20 @@ func (a *httpAPI) readBusy(ctx context.Context, token, calendar string, from, to
 	if !ok {
 		return nil, connector.NewCalendarUnavailable(calendar, "omitted", nil)
 	}
-	if len(found.Errors) != 0 {
-		return nil, connector.NewCalendarUnavailable(calendar, found.Errors[0].Reason, nil)
+	for _, failure := range found.Errors {
+		if failure.Reason != freeBusyNotFound {
+			return nil, connector.NewCalendarUnavailable(calendar, failure.Reason, nil)
+		}
 	}
 	// Read only occupancy metadata, so rescheduling can exclude its own event.
 	return a.eventBusy(ctx, token, calendar, from, to)
 }
+
+// freeBusyNotFound is the one freeBusy error the events read overrules. Google's
+// freeBusy does not serve some readable calendars, public holidays among them,
+// and answers notFound for them. The events read then decides: a calendar it
+// cannot find either is refused there.
+const freeBusyNotFound = "notFound"
 
 type eventTime struct {
 	At time.Time `json:"dateTime"`

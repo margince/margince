@@ -19,6 +19,8 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/capture/meetingmap"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -26,7 +28,8 @@ import (
 // reads. Unknown fields are ignored — the raw original is stored verbatim as
 // evidence (memory-first), so nothing is lost by reading only what we use.
 type rawEvent struct {
-	ID string `json:"id"`
+	Visibility string `json:"visibility"`
+	ID         string `json:"id"`
 	// ICalUID is the event's cross-provider identity, and `id` is not: `id` is
 	// Google's own numbering, so the same meeting read from Google and from
 	// Graph carries two ids and would dedupe as two meetings.
@@ -45,14 +48,42 @@ type rawEvent struct {
 	Description string        `json:"description"`
 	End         eventDateTime `json:"end"`
 	Start       eventDateTime `json:"start"`
-	Organizer   eventActor    `json:"organizer"`
-	Attendees   []eventActor  `json:"attendees"`
+	// OriginalStart is an occurrence's slot in its series, which a move does
+	// not change. Google states it only on an instance of a recurring event.
+	OriginalStart eventDateTime `json:"originalStartTime"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
+	Organizer     eventActor    `json:"organizer"`
+	Attendees     []eventActor  `json:"attendees"`
 	// Google sets attendeesOmitted when it cut the list short. A guest list
 	// hidden from guests (guestsCanSeeOtherGuests false, default true) is
 	// withheld from every copy but the organizer's.
 	AttendeesOmitted        bool  `json:"attendeesOmitted"`        //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 	GuestsCanSeeOtherGuests *bool `json:"guestsCanSeeOtherGuests"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
+	// Attachments are the Drive files attached to the event. Google attaches
+	// the notes and transcript it writes for a Meet call here.
+	Attachments []eventAttachment `json:"attachments"`
+	// Conference is the call the event carries, read only for its kind.
+	Conference eventConference `json:"conferenceData"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 }
+
+// eventAttachment is one Drive file attached to an event.
+type eventAttachment struct {
+	FileID   string `json:"fileId"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
+	Title    string `json:"title"`
+	MimeType string `json:"mimeType"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
+}
+
+// eventConference is the part of an event's conferenceData that says which
+// kind of call it is.
+type eventConference struct {
+	Solution struct {
+		Key struct {
+			Type string `json:"type"`
+		} `json:"key"`
+	} `json:"conferenceSolution"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
+}
+
+// googleMeetType is the conference type Google states for a Meet call.
+const googleMeetType = "hangoutsMeet"
 
 // partiesHidden reports whether this copy of the event may leave guests out.
 func (ev rawEvent) partiesHidden() bool {
@@ -88,11 +119,6 @@ type eventActor struct {
 	ResponseStatus string `json:"responseStatus"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 }
 
-// roomResourceDomain is where Google Calendar homes every booked room and
-// device. An event stored before the resource flag was read carries the address
-// alone, so the domain is recognised as well as the flag.
-const roomResourceDomain = "resource.calendar.google.com"
-
 // isRoom reports whether this attendee is a booked room or device rather than a
 // contact. A room is not a party to a meeting: it cannot be a counterparty, it
 // cannot be answered, and — the case that matters — it is on no workspace's own
@@ -103,7 +129,7 @@ func (a eventActor) isRoom() bool {
 		return true
 	}
 	dom := domainOf(a.Email)
-	return dom == roomResourceDomain || strings.HasSuffix(dom, "."+roomResourceDomain)
+	return values.IsCalendarResourceDomain(owndomain.Fold(dom))
 }
 
 // decodeEvent reads one raw Calendar event resource into the neutral shape —
@@ -122,25 +148,38 @@ func decodeEvent(raw []byte, owner string) (meetingmap.Event, error) {
 
 // decode maps Google's event resource onto the neutral shape.
 func decode(ev rawEvent, owner string) meetingmap.Event {
+	documents := make([]meetingmap.Document, 0, len(ev.Attachments))
+	for _, a := range ev.Attachments {
+		documents = append(documents, meetingmap.Document{FileID: a.FileID, Title: a.Title, MimeType: a.MimeType})
+	}
 	attendees := make([]meetingmap.Actor, 0, len(ev.Attendees))
 	for _, a := range ev.Attendees {
 		attendees = append(attendees, meetingmap.Actor{
 			Email: a.Email, Name: a.DisplayName, Room: a.isRoom(), Response: guestResponse(a.ResponseStatus),
 		})
 	}
+	answer := ownerCalendarAnswer(ev.Attendees, owner)
+	cancelled := strings.EqualFold(strings.TrimSpace(ev.Status), calendarCanceled)
+	organizer := ev.Organizer.Self || (strings.TrimSpace(owner) != "" && strings.EqualFold(strings.TrimSpace(ev.Organizer.Email), strings.TrimSpace(owner)))
 	return meetingmap.Event{
 		ID:            ev.ID,
+		Private:       ev.Visibility != "" && ev.Visibility != "default" && ev.Visibility != "public",
 		ICalUID:       strings.TrimSpace(ev.ICalUID),
-		Cancelled:     strings.EqualFold(strings.TrimSpace(ev.Status), calendarCanceled),
-		OwnerDeclined: ownerDeclined(ev.Attendees, owner),
+		Cancelled:     cancelled && organizer,
+		Removed:       cancelled && !organizer,
+		OwnerResponse: answer.Response,
+		OwnerAddress:  answer.Address,
 		Subject:       ev.Summary,
 		Description:   ev.Description,
 		StartsAt:      parseStart(ev.Start),
 		EndsAt:        parseStart(ev.End),
 		AllDay:        isAllDay(ev.Start),
+		SeriesSlot:    parseStart(ev.OriginalStart),
 		Organizer:     meetingmap.Actor{Email: ev.Organizer.Email, Name: ev.Organizer.DisplayName},
 		Attendees:     attendees,
 		PartiesHidden: ev.partiesHidden(),
+		GoogleMeet:    ev.Conference.Solution.Key.Type == googleMeetType,
+		Documents:     documents,
 	}
 }
 
@@ -157,29 +196,12 @@ func guestResponse(status string) string {
 	return guestResponses[strings.ToLower(strings.TrimSpace(status))]
 }
 
-// ownerDeclined reports that the connected account answered NO to this
-// invitation.
-//
-// Google's `self` flag is the authority and the address is the FALLBACK, in
-// that order and never as a pair of equals. The flag is the account's own answer
-// to which attendee it is, so it holds when the invitation went to an alias or
-// reached the account through a group — cases where matching the owner's address
-// finds nobody at all. The address answers only for a payload carrying no flag.
-//
-// Asking them as one condition would let either say yes, which is a different
-// rule and a wrong one: an event where the `self` attendee ACCEPTED and some
-// other attendee on the owner's address declined would read as declined, and a
-// meeting the account is going to would leave the schedule. Whichever entry is
-// the owner's, exactly one answer is theirs.
-//
-// Only "declined" counts. A tentative answer is an attendance somebody may yet
-// make, and "needsAction" is an invitation nobody has read; taking either off
-// the schedule would hide a meeting that is still going to happen.
-func ownerDeclined(attendees []eventActor, owner string) bool {
+// ownerCalendarAnswer uses Google's self entry before an address match.
+func ownerCalendarAnswer(attendees []eventActor, owner string) connector.CalendarAnswer {
 	if self, ok := ownerAttendee(attendees, owner); ok {
-		return strings.EqualFold(strings.TrimSpace(self.ResponseStatus), "declined")
+		return connector.CalendarAnswer{Address: self.Email, Response: guestResponse(self.ResponseStatus)}
 	}
-	return false
+	return connector.CalendarAnswer{}
 }
 
 // ownerAttendee picks the attendee entry belonging to the connected account:
@@ -207,6 +229,12 @@ func ownerAttendee(attendees []eventActor, owner string) (eventActor, bool) {
 // participants were recorded.
 func ParticipantsOf(raw []byte, owner string) (connector.Parties, error) {
 	return meetingmap.ParticipantsOf(raw, owner, decodeEvent)
+}
+
+// SeriesIdentityOf reads the identity of one stored occurrence of a series
+// (meetingmap.SeriesIdentityOf).
+func SeriesIdentityOf(raw []byte) (connector.CrossDoorIdentity, bool, error) {
+	return meetingmap.SeriesIdentityOf(raw, decodeEvent)
 }
 
 // RecordOf maps one stored event resource to the record live capture writes

@@ -1,0 +1,115 @@
+/* ImageSlot: a stored picture as the hero of its row, cut to its own shape so
+   a file in the wrong slot looks wrong before anywhere else shows it. */
+.image-slot {
+  --imageSlotSize: calc(var(--space-12) * 2.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  flex: none;
+  inline-size: fit-content;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* The name heads its picture from the picture's own left edge. */
+.image-slot-name {
+  align-self: flex-start;
+}
+
+.image-slot-tile {
+  position: relative;
+  box-sizing: border-box;
+  inline-size: var(--imageSlotSize);
+  block-size: var(--imageSlotSize);
+  max-inline-size: 100%;
+  border: 1px solid var(--borderControl);
+  border-radius: var(--r-md);
+  background: var(--ground);
+}
+
+.image-slot-wide .image-slot-tile {
+  inline-size: calc(var(--imageSlotSize) * 3);
+}
+
+/* A face draws its own ring, so the round tile adds none. */
+.image-slot-round .image-slot-tile {
+  border: 0;
+  border-radius: var(--r-full);
+  corner-shape: round;
+}
+
+/* The zone covers the picture and draws nothing until a file is dragged over
+   it: dropping is a shortcut, and the Edit pill is the way in. */
+.image-slot-tile > .fdz {
+  position: absolute;
+  inset: 0;
+  min-height: 0;
+  padding: 0;
+  border-radius: inherit;
+}
+
+.image-slot-tile > .fdz:not(.dragover) {
+  border-color: transparent;
+  background: none;
+  outline: none;
+}
+
+.image-slot-round .image-slot-tile > .fdz {
+  corner-shape: round;
+}
+
+.image-slot-tile > .fdz > .fdz-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Above the zone and deaf to the pointer, so a drop on the picture still
+   reaches the zone's input. The picture meets the ring with no inset. */
+.image-slot-mark {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.image-slot-mark > .company-logo {
+  width: 100%;
+  height: 100%;
+}
+
+.image-slot-round .image-slot-mark {
+  corner-shape: round;
+}
+
+/* Initials stand in at the slot's own scale, not a list chip's. */
+.image-slot-mark .avatar {
+  box-sizing: border-box;
+  width: auto;
+  height: 100%;
+  aspect-ratio: 1;
+  font: var(--fontHeadingXXLarge);
+}
+
+.image-slot-round .image-slot-mark > .avatar {
+  border: 1px solid var(--borderControl);
+}
+
+.image-slot-tile[aria-busy="true"] .image-slot-mark {
+  opacity: 0.5;
+}
+
+/* An empty logo slot is the company's mesh edge to edge, as a picture would be. */
+.image-slot:not(.image-slot-round) .image-slot-mark > .avatar {
+  width: 100%;
+  aspect-ratio: auto;
+  border-radius: 0;
+}

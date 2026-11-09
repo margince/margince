@@ -1,5 +1,5 @@
 /* ===== the account block =====
-   An avatar in the top bar's trail, and the menu that drops out of it.
+   A glyph in the top bar's trail, and the menu that drops out of it.
 
    One container. The block had a sidebar form once and it went with the foot it
    stood in, so nothing here is scoped by a container any more — what remains is
@@ -7,42 +7,13 @@
    outward at all (the phone rule below). */
 
 .account {
-  position: relative;
-  /* The menu is positioned against this box, and the trail is a flex row that
-     would otherwise squeeze it. */
+  /* The trail is a flex row that would otherwise squeeze it. */
   flex: none;
+  /* Not a block: a block sets the button on a text baseline, which grows the
+     box and lifts the chip off the bar's centre. */
+  display: flex;
 }
 
-/* The trigger is the AVATAR and nothing else. The strip is chrome true of the
-   whole session rather than a row about a contact, so it takes the strip's own
-   control size — from the token, so it stands on the one control height its
-   three neighbours take instead of a number of its own.
-   The name and the address are not drawn: the sentence they carry reaches a
-   screen reader through the clipped line (account.tsx), and the panel prints them
-   when it opens, which is where the reader confirms whose account this is.
-   Sized rather than padded, because a padded row is 40px tall in a 34px strip and
-   pushes every item in the bar 3px off its centre. */
-.account .user {
-  display: grid;
-  place-items: center;
-  width: var(--controlHeight);
-  height: var(--controlHeight);
-  padding: 0;
-  border: 0;
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: transparent;
-  color: var(--textPrimary);
-  font-family: var(--fontFamilyBody);
-  cursor: pointer;
-}
-.account .user:hover {
-  background: var(--groundHover);
-}
-.account .user:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
-}
 /* Two lines in a box that is narrower than either of them can be: both clip
    themselves, and `min-width: 0` is what lets them — a flex item's floor is its
    content width until it is told otherwise, and without it the row grows instead
@@ -65,14 +36,9 @@
   color: var(--textPrimary);
 }
 /* ===== the menu =====
-   Downward and anchored to the trigger's RIGHT edge, which is the top bar's
-   arrangement: the trigger sits at the top-right of the viewport, so a menu
-   anchored on its left edge would open off the screen. */
+   Placed and brought in by `.topbar-popover` (topbar-popover.css), like every
+   panel the strip opens. */
 .accountmenu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  left: auto;
   /* THE MENU ANATOMY's floor (design-system/listtable.css, .lt-menu): one
      option list is one surface, and this one is the product's account menu
      rather than a shape of its own. No block ceiling to go with it — the only
@@ -90,57 +56,19 @@
   padding: var(--controlGap);
   gap: 1px; /* ds:ignore menu rows read as one list, not as spaced blocks */
   border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-sm);
   box-shadow: var(--shadow-pop);
   z-index: 60;
-  /* The menu comes OUT OF the trigger rather than appearing beside it: the
-     transform origin is the control that opened it, so the growth reads as one
-     movement instead of a panel switching on. Short (--dur-state) because this is
-     chrome — a menu you have to wait for is a menu that feels slow — and on the
-     shell's own curve, so it belongs to the same choreography as the sidebar
-     collapse rather than carrying a second easing vocabulary.
-     Transform and opacity only: both composite, so it cannot cost a frame.
-     The fallback repeats `.app`'s curve because the block is also rendered
-     outside the shell (the component workbench), and an unresolved custom
-     property in a shorthand invalidates the whole declaration — which would
-     silently drop the animation there rather than degrade it. */
-  animation: accountmenu-drop var(--dur-state) var(--ease-out) both;
-  transform-origin: top right;
-}
-
-@keyframes accountmenu-drop {
-  from {
-    opacity: 0;
-    transform: translateY(-4px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-/* The end state, immediately — a menu that renders nothing under reduced motion
-   is broken, not accessible.
-   Only the menu here. The flyout's own rule is declared further down, beside the
-   animation it removes: a media query adds no specificity, and `.accountsub` here
-   losing to `.accountsub` there on document order is why the flyout kept
-   animating for readers who had asked it not to. */
-@media (prefers-reduced-motion: reduce) {
-  .accountmenu {
-    animation: none;
-  }
 }
 
 /* ===== the rows =====
-   One class for the popover's rows, the flyout's, and the phone sheet's flat
-   ones: the sheet IS the sidebar, so the surfaces carry the same row geometry and
-   only the chrome around them differs. A class rather than an element selector,
-   because the flyout nests its own buttons inside a row's wrapper and a
-   descendant rule would reach controls that are not rows at all. */
+   One class for the menu's rows and the flyouts'. A class rather than an
+   element selector, because a flyout nests its own controls inside a row's
+   wrapper and a descendant rule would reach controls that are not rows. */
 /* Almost no leading glyphs. A gear beside "Settings" is the word twice, so the
    destinations are labels the eye reads straight down — and the ONE row that
    ends the session keeps its mark, because it is the one row here whose result
-   is not another screen. The theme row's trailing chevron is the panel's other
-   mark, and it means the same kind of thing: there is more behind this row. */
+   is not another screen. The trailing marks say what is behind a row: a chevron
+   for a layer, an arrow out of a box for another tab. */
 .acctrow {
   display: flex;
   align-items: center;
@@ -173,8 +101,8 @@
   outline: var(--focus-ring);
   outline-offset: -2px;
 }
-/* The label takes the room the row has, so what follows it — the flyout's
-   chevron — is pushed to the row's trailing edge instead of sitting against the
+/* The label takes the room the row has, so what follows it — a trailing
+   mark — is pushed to the row's trailing edge instead of sitting against the
    word. */
 .acctrowlabel {
   flex: 1;
@@ -197,30 +125,26 @@
   background: var(--borderSubtle);
 }
 
-/* Who is signed in, at the top of the panel. In the top bar the trigger carries
-   no name, so this is the only place the reader confirms the account before
-   acting on it. It takes the rows' own inset so the block stands on the same left
-   edge as they do, and it is deliberately outside the row rule — no hover and no
-   pointer, because it is a statement about who you are, not a row that goes
-   anywhere. */
+/* Who is signed in, at the top of the panel. The trigger carries no name, so
+   this is where the reader confirms the account, and the row opens its page. */
 .acctmenuwho {
-  display: flex;
+  gap: var(--space-2);
   padding: var(--controlGap) 9px; /* ds:ignore the inline inset is the row inset it lines up with */
 }
 
-/* The release at the foot of the menu. It takes the rows' inset so it stands on
-   their left edge, and like the identity block it sits outside the row rule — no
-   hover and no pointer, because it goes nowhere. */
+/* The build, at the foot of the help flyout. It takes the rows' inset so it
+   stands on their left edge, and it sits outside the row rule — no hover and
+   no pointer, because it goes nowhere. */
 .acctversion {
   padding: var(--controlGap) 9px; /* ds:ignore the inline inset is the row inset it lines up with */
   color: var(--textSecondary);
   overflow-wrap: anywhere;
 }
 
-/* ===== the theme flyout =====
-   The seat is what the flyout is measured against; it is `role="none"` in the
-   markup and draws nothing of its own. */
-.acctthemeseat {
+/* ===== the flyouts =====
+   Theme and help. The seat is what a flyout is measured against; it is
+   `role="none"` in the markup and draws nothing of its own. */
+.acctflyoutseat {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -241,6 +165,9 @@
      (the phone rule at the foot of this file is what answers that). Its rows
      carry the anatomy in full. */
   min-width: 168px;
+  /* Anchored by its right edge outside the seat, it would otherwise shrink to
+     its longest word and wrap every row. */
+  inline-size: max-content;
   display: flex;
   flex-direction: column;
   padding: var(--controlGap);
@@ -253,10 +180,10 @@
   animation: accountsub-open var(--dur-state) var(--ease-out) both;
   transform-origin: top right;
 }
-/* The other half of the reduced-motion rule above, declared after the animation
-   it removes so document order settles the tie in its favour. `both` on the
-   animation means the flyout would otherwise hold its start frame; removing the
-   animation is what puts it in its end state. */
+/* Reduced motion, declared after the animation it removes so document order
+   settles the tie in its favour. `both` on the animation means the flyout would
+   otherwise hold its start frame; removing the animation is what puts it in its
+   end state. */
 @media (prefers-reduced-motion: reduce) {
   .accountsub {
     animation: none;
@@ -288,13 +215,14 @@
     transform: scale(1);
   }
 }
-/* ===== the flyout at phone width =====
+/* ===== the flyouts at phone width =====
    A 168px flyout opening INWARD from a menu that is itself anchored to the right
    edge starts at a negative x once the viewport is narrower than about 430px:
    the menu's own left edge is already close to the window's, and there is no
-   scrollbar to recover what falls off it. It is also the only appearance control
-   at that width, so it may not be the one that goes off screen.
-   Below the sheet's breakpoint (PHONE_MAX_WIDTH in lib/viewport.ts) it stops
+   scrollbar to recover what falls off it. The theme flyout is also the only
+   appearance control at that width, so it may not be the one that goes off
+   screen.
+   Below the phone breakpoint (PHONE_MAX_WIDTH in lib/viewport.ts) it stops
    being a popover and becomes an indented group inside the menu: in the flow, no
    surface of its own, its rows stepped in so they read as belonging to the row
    that opened them. */
@@ -302,6 +230,7 @@
   .accountsub {
     position: static;
     min-width: 0;
+    inline-size: auto;
     padding: var(--space-1) 0 var(--space-1) var(--space-4);
     border: 0;
     border-radius: 0;
@@ -311,6 +240,24 @@
   }
 }
 
+/* The keyboard shortcuts dialog: a group per place the keys work, each a list
+   of what a key does beside its caps. */
+.acctshortcuts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+.acctshortcutsgroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.acctkeys {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
 /* A refused sign-out, stated in the menu it was asked from. It bleeds out
    through the panel's own inset like the separators do, so the callout meets both
    edges instead of floating inside the menu's frame. */
@@ -318,14 +265,31 @@
   padding: var(--space-1) 0 0;
 }
 
-/* The coarse-pointer floor (WCAG 2.2 AA), the way `.stat-card-open` takes it in
-   atoms.css. `max()` for the reason `.btn-federated` gives: a later rise in the
-   shared control height must not be capped by this floor. Declared under
-   `pointer: coarse` and not at a width, because a narrow WINDOW on a desktop is
-   still a mouse — the floor is about what a thumb can hit, not about how much
-   room there is. */
+/* ===== the trigger =====
+   The seat's own chip, filling the bar's square as a circle, inside the same
+   control edge a picture has everywhere, so a pale mesh keeps its edge too. */
+.account-trigger:has(.account-face) {
+  border-radius: var(--r-full);
+  corner-shape: round;
+}
+.account-face {
+  display: flex;
+  inline-size: 100%;
+  block-size: 100%;
+}
+.account-face .avatar {
+  box-sizing: border-box;
+  inline-size: 100%;
+  block-size: 100%;
+  border: 1px solid var(--borderControl);
+}
 @media (pointer: coarse) {
-  .account .user {
-    min-height: max(var(--controlHeight), 44px);
+  .topbar-trail .account-trigger:has(.account-face) {
+    border-radius: var(--r-full);
+    corner-shape: round;
+  }
+  .topbar-trail .account-trigger:has(.account-face):focus-visible::after {
+    border-radius: var(--r-full);
+    corner-shape: round;
   }
 }

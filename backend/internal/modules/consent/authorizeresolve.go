@@ -22,6 +22,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -57,6 +58,11 @@ type resolution struct {
 	// for it — and so would turn an unchecked id into an authorization the
 	// sender could not have obtained themselves.
 	EvidenceChecked bool
+	// MarketingStopsBind says a broad marketing objection recorded at or after
+	// RequestedAt binds this resolution. It is set on a quote that rests on a
+	// recorded request alone, and RequestedAt is that request's date.
+	MarketingStopsBind bool
+	RequestedAt        time.Time
 }
 
 // resolveCategory works out what this message is for one recipient.
@@ -124,7 +130,7 @@ func (g *Gate) resolveCategory(ctx context.Context, tx pgx.Tx, req commsauthz.Re
 			Supported: true,
 		}, nil
 	}
-	live, err := liveDealInLinks(ctx, tx, req.Links, subject)
+	live, err := requestedNegotiation(ctx, tx, req.Links, subject)
 	if err != nil {
 		return resolution{}, err
 	}
@@ -161,11 +167,7 @@ func (g *Gate) resolveFromClaimAndPurpose(ctx context.Context, tx pgx.Tx, req co
 				Reason:    commsauthz.ReasonUnknownPurpose,
 			}, nil
 		}
-		w, err := g.store.packRulesFor(ctx, tx)
-		if err != nil {
-			return resolution{}, err
-		}
-		return g.validate(ctx, tx, req, subject, req.Context, w)
+		return g.validate(ctx, tx, req, subject, req.Context, packRulesFor(subject.Country))
 	}
 	purpose, defined, err := purposeRowFor(ctx, tx, req.LegacyPurposeKey)
 	if err != nil {
@@ -242,7 +244,8 @@ func resolutionForClass(class Class) resolution {
 // they had supported minutes earlier. See authorizeevidencecarry.go.
 func stagedClaims(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (map[string]stagedClaim, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT ON (recipient_address) recipient_address, requested_category, evidence
+		SELECT DISTINCT ON (recipient_address) recipient_address, requested_category, evidence,
+		       legal_entity_id, purpose_key, data_protection_country
 		  FROM communication_decision
 		 WHERE delivery_id = $1 AND phase = 'staging'
 		 -- id, not decided_at: every row of one staging transaction carries the
@@ -257,16 +260,23 @@ func stagedClaims(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (map[stri
 	claims := map[string]stagedClaim{}
 	for rows.Next() {
 		var address string
-		var claimed *string
+		var claimed, purposeKey *string
 		var evidence []byte
-		if err := rows.Scan(&address, &claimed, &evidence); err != nil {
+		var entity *ids.UUID
+		var out stagedClaim
+		if err := rows.Scan(&address, &claimed, &evidence, &entity, &purposeKey, &out.dataProtection); err != nil {
 			return nil, fmt.Errorf("consent: read what this delivery was staged as: %w", err)
 		}
-		var out stagedClaim
 		if claimed != nil {
 			out.category = commsauthz.Category(*claimed)
 		}
 		out.evidence = evidenceFrom(evidence)
+		if entity != nil {
+			out.entity = *entity
+		}
+		if purposeKey != nil {
+			out.purposeKey = *purposeKey
+		}
 		claims[address] = out
 	}
 	if err := rows.Err(); err != nil {
@@ -286,10 +296,20 @@ func stagedClaims(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (map[stri
 // claim, because they describe the message and not one recipient of it.
 func stagedRequestFor(req commsauthz.TransmitRequest, r connector.Recipient, claims map[string]stagedClaim, threadKey string, links []ids.UUID) commsauthz.Request {
 	staged := claims[decisionRecipientKey(r)]
+	// The purpose staging judged, held against the delivery's own key: two
+	// keys that disagree reach CanonicalPurpose and are refused there.
+	purposeKey, deliveryKey := staged.purposeKey, ""
+	if purposeKey == "" {
+		purposeKey = req.PurposeKey
+	} else {
+		deliveryKey = req.PurposeKey
+	}
 	return commsauthz.Request{
 		Recipients:       []connector.Recipient{r},
 		Context:          staged.category,
-		LegacyPurposeKey: req.PurposeKey,
+		LegacyPurposeKey: purposeKey,
+		MarketingPurpose: deliveryKey,
+		SendingEntity:    staged.entity,
 		// The records this recipient's message was staged on. Re-validated
 		// here, never trusted: a voided invoice or an ended employment refuses
 		// at transmit exactly as it would have at staging.
@@ -327,7 +347,7 @@ func deliveryThreadKey(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (str
 		SELECT a.thread_key
 		  FROM comms_outbound o
 		  JOIN activity a ON a.id = o.activity_id
-		 WHERE o.id = $1 AND `+auth.ActivityAvailableClause("a"), deliveryID).Scan(&key)
+		 WHERE o.id = $1 AND `+auth.ActivityExternalEvidenceClause("a"), deliveryID).Scan(&key)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// The delivery (or its activity) is gone, or the activity is held under
 		// a statutory retention restriction. Either way, not this function's
@@ -364,7 +384,7 @@ func deliveryLinks(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) ([]ids.U
 		  FROM comms_outbound o
 		  JOIN activity a ON a.id = o.activity_id
 		  JOIN activity_link l ON l.activity_id = o.activity_id AND l.deal_id IS NOT NULL
-		 WHERE o.id = $1 AND `+auth.ActivityAvailableClause("a"), deliveryID)
+		 WHERE o.id = $1 AND `+auth.ActivityExternalEvidenceClause("a"), deliveryID)
 	if err != nil {
 		return nil, fmt.Errorf("consent: read the delivery's linked records: %w", err)
 	}
@@ -381,4 +401,9 @@ type stagedClaim struct {
 	// evidence is the ids the message was staged on, re-asked at transmit.
 	evidence commsauthz.Evidence
 	category commsauthz.Category
+	// entity and purposeKey are what staging decided the message for.
+	entity     ids.UUID
+	purposeKey string
+	// dataProtection is the country the staged footer was rendered under.
+	dataProtection *string
 }

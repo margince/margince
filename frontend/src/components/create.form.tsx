@@ -134,6 +134,13 @@ export function RecordFormBody({
     )
       onSubmit(submittedValues(fields, answers), rows);
   });
+  // A dialog titled with its one field's name says that name once.
+  const [only, ...others] = shown.filter((field) => !field.divider);
+  const titledByDialog =
+    dialog !== undefined &&
+    only !== undefined &&
+    others.length === 0 &&
+    dialog.title === fieldLabel(only, t);
   const stack = (
     <>
       {shown.map((field) => {
@@ -150,6 +157,7 @@ export function RecordFormBody({
               key={field.key}
               field={field}
               formId={formId}
+              labelHidden={titledByDialog}
               rows={rows[field.key] ?? []}
               setRows={(next) => {
                 setEdited(true);
@@ -163,6 +171,7 @@ export function RecordFormBody({
             <MultiselectField
               key={field.key}
               field={field}
+              labelHidden={titledByDialog}
               value={values[field.key] ?? ""}
               setValue={(next) =>
                 setVisibleValues({ ...values, [field.key]: next })
@@ -174,6 +183,7 @@ export function RecordFormBody({
           <Field
             key={field.key}
             label={fieldLabel(field, t)}
+            labelHidden={titledByDialog}
             required={field.required}
             hint={
               field.offers
@@ -229,7 +239,7 @@ export function RecordFormBody({
   );
   const actions = (
     <>
-      <Button type="button" onClick={onClose}>
+      <Button type="button" onClick={onClose} disabled={pending}>
         {t("create.cancel")}
       </Button>
       <Button
@@ -259,6 +269,7 @@ export function RecordFormBody({
       onClose={onClose}
       fieldCount={fields.filter((field) => !field.divider).length}
       unsaved={edited}
+      closeDisabled={pending}
       form={
         <form id={formId} className="form-stack" onSubmit={submit}>
           {stack}

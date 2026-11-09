@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import type { components } from "../../api/schema";
 import { CommitmentReview } from "../../design-system/commitmentreview";
@@ -12,6 +13,9 @@ import {
 } from "../../format/activitywhen";
 import { useLocale, useT } from "../../i18n";
 import { useActivity } from "../../lib/activityread";
+import { useCanWrite } from "../../lib/capability";
+import { contactQuery } from "../../lib/contact.queries";
+import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { EmailAccessEditor } from "../capture/emailaccesseditor";
 import { ComposeModal } from "./compose";
@@ -121,11 +125,12 @@ export function OpenEmailDrawer({
           <EmailRecordLinks presentation={presentation} />
         )}
         renderActions={(presentation) => (
-          <EmailDrawerActions
+          <DrawerActions
             presentation={presentation}
             onReply={() => setWriting({ kind: "reply", presentation })}
             onForward={() => setWriting({ kind: "forward", presentation })}
             onRelink={() => setRelinking(presentation)}
+            onClose={onClose}
           />
         )}
       />
@@ -149,6 +154,50 @@ export function OpenEmailDrawer({
         />
       )}
     </>
+  );
+}
+
+function DrawerActions({
+  presentation,
+  onReply,
+  onForward,
+  onRelink,
+  onClose,
+}: Readonly<{
+  presentation: EmailPresentation;
+  onReply: () => void;
+  onForward: () => void;
+  onRelink: () => void;
+  onClose: () => void;
+}>) {
+  const contactId =
+    presentation.summary.direction === "inbound" &&
+    presentation.from.length === 1
+      ? (presentation.from[0]?.contact_id ?? undefined)
+      : undefined;
+  const contact = useQuery(contactQuery(contactId));
+  const canBook =
+    useCanWrite("activity", "create") &&
+    !contact.isError &&
+    contact.data?.attachable === true;
+  return (
+    <EmailDrawerActions
+      presentation={presentation}
+      onReply={onReply}
+      onForward={onForward}
+      onRelink={onRelink}
+      onBook={
+        canBook && contactId
+          ? () => {
+              onClose();
+              navigate(
+                { screen: "book", id: `contact-${contactId}` },
+                new Map([["activity", presentation.id]]),
+              );
+            }
+          : undefined
+      }
+    />
   );
 }
 

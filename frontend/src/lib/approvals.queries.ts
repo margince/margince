@@ -240,6 +240,8 @@ export function invalidateApprovalViews(client: QueryClient) {
     [
       ["approvals"],
       ["approval"],
+      ["system-health"],
+      ["capture-health"],
       worklistKey,
       briefKey,
       magicKey,

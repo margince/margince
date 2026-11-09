@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { screen, userEvent, within } from "storybook/test";
 import { SetPicker, type SetPickerOption } from "./setpicker";
 
 const meta: Meta<typeof SetPicker> = {
@@ -91,4 +92,36 @@ export const ReadOnly: Story = {
       disabled
     />
   ),
+};
+
+// A set too large to hold: the panel asks the server for the typed name.
+async function searchTeams(term: string): Promise<SetPickerOption[]> {
+  const words = term.toLowerCase();
+  return TEAMS.filter((team) => team.label.toLowerCase().includes(words));
+}
+
+export const SearchesTheServer: Story = {
+  render: () => (
+    <SetPicker
+      legend="Teams"
+      options={TEAMS.slice(0, 1)}
+      values={["team-0"]}
+      onChange={() => undefined}
+      none="Not on a team yet."
+      addLabel="Add teams"
+      searchLabel="Search teams"
+      noMatch="No team matches."
+      doneLabel="Done"
+      empty="Type a name to find a team."
+      removeLabel={(item) => `Remove from ${item.label}`}
+      search={searchTeams}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      within(canvasElement).getByRole("button", { name: /Add teams/ }),
+    );
+    await userEvent.type(screen.getByRole("searchbox"), "nordics");
+    await screen.findByRole("checkbox", { name: /Nordics Sales/ });
+  },
 };

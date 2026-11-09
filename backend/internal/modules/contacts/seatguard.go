@@ -75,3 +75,20 @@ func seatContactsMatchingTx(ctx context.Context, tx pgx.Tx, contactIDs []ids.Con
 	}
 	return out, nil
 }
+
+// channelAddressIsNotASeat refuses a corroborating address that a workspace
+// seat proves as its own, as the mail path does. The message has no mailbox
+// owner, so only a proven address counts, never a typed alias.
+func channelAddressIsNotASeat(ctx context.Context, tx pgx.Tx, address string) error {
+	if address == "" {
+		return nil
+	}
+	seats, err := storekit.SeatAddressesFor(ctx, tx, address)
+	if err != nil {
+		return err
+	}
+	if seats.Covers(address, ids.UUID{}) {
+		return ErrCounterpartyIsSeat
+	}
+	return nil
+}

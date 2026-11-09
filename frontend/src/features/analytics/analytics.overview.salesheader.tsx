@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useState } from "react";
+import { type ReactNode, Suspense, useState } from "react";
 import type { components } from "../../api/schema";
 import { Badge, Button } from "../../design-system/atoms";
 import { ExpanderChevron } from "../../design-system/disclosure";
@@ -9,6 +9,8 @@ import { FilterBar } from "../../design-system/filterbar";
 import { OverflowMenu } from "../../design-system/overflowmenu";
 import { useT } from "../../i18n";
 import { OverviewSaveActions } from "./analytics.overview.readings";
+import { ReviewDecisionsAction } from "./analytics.overview.work";
+import { DimensionChips } from "./reporting.dimensions";
 import { ReportingExportButton } from "./reporting.export";
 import { ReportingFilters } from "./reporting.filters";
 import type {
@@ -58,9 +60,16 @@ export function SalesHeader({
     <FilterBar
       label={t("analytics.filters")}
       quiet
+      labels="inside"
       // The active filters lead the line that says what the figures cover.
       caption={
         <span className="analytics-chips">
+          <DimensionChips
+            selection={selection}
+            productLabel={evaluation?.context.product_label}
+            initiativeLabel={evaluation?.context.initiative_label}
+            onChange={onChange}
+          />
           <Badge>
             {t("analytics.overview.chipPipeline", {
               name: pipeline?.name ?? t("reporting.allPipelines"),
@@ -95,6 +104,9 @@ export function SalesHeader({
       </Button>
       <OverflowMenu label={t("analytics.overview.more")}>
         <OverviewSaveActions selection={saved} scope={scope} />
+        <Suspense fallback={null}>
+          <ReviewDecisionsAction />
+        </Suspense>
         {evaluation && !charts?.isPending && (
           <ReportingExportButton
             evaluation={evaluation}
@@ -108,6 +120,7 @@ export function SalesHeader({
           showScope={false}
           showTargets={false}
           showPeriod={false}
+          showDimensions
           onChange={onChange}
         />
       )}

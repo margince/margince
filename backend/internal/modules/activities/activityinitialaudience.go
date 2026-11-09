@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -38,7 +39,14 @@ func recordInitialActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in
 		maps.Copy(after, audience)
 		after["source_system"], after["source_activity_id"], after["assignee_id"] = in.SourceSystem, in.SourceActivityID, in.AssigneeID
 	}
-	auditID, err := storekit.Audit(ctx, tx, "create", "activity", id.UUID, nil, after)
+	evidence := map[string]any{}
+	if in.Kind == string(crmcontracts.ActivityKindEmail) && in.RFCMessageID != "" {
+		evidence[fieldRFCMessageID] = in.RFCMessageID
+	}
+	if in.Kind == KindMeeting && in.HostUserID != nil {
+		evidence[storekit.ExplicitMeetingHostEvidence] = in.HostUserID.UUID
+	}
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "create", "activity", id.UUID, nil, after, evidence)
 	if err != nil {
 		return err
 	}

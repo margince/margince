@@ -33,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -377,8 +378,8 @@ func TestMeetingBriefRecallsWhenThisRoomLastMet(t *testing.T) {
 	stranger := e.SeedContact(t, "Someone Else", &e.Rep1)
 
 	newMeeting := func(subject string, when time.Duration, who ids.UUID) {
-		id := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
-			VALUES ($1, 'meeting', $2, $3, 'manual', 'human:x')`, subject, roomAgo(when))
+		id := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, meeting_status, source, captured_by)
+			VALUES ($1, 'meeting', $2, $3, 'held', 'manual', 'human:x')`, subject, roomAgo(when))
 		LinkActivity(t, owner, id, "contact", who)
 		seatInRoom(t, owner, e.WS, id, who)
 	}
@@ -436,6 +437,9 @@ func TestMeetingBriefRecallsADayMeetingOnlyOnceItsDateIsOver(t *testing.T) {
 		}
 		// No writer seats a contact as an attendee, so the seat is a raw row.
 		seatInRoom(t, owner, e.WS, ids.UUID(made.Id), ours)
+		// Both are reported held, so only the date can tell them apart. A
+		// writer refuses held on a day entry dated today, so this is a raw row.
+		e.WsExec(t, `UPDATE activity SET meeting_status = 'held' WHERE id = $1`, made.Id)
 	}
 	newDayMeeting("Held yesterday", roomFixedNow.AddDate(0, 0, -1))
 	newDayMeeting("Dated today", roomFixedNow)
@@ -486,8 +490,8 @@ func TestMeetingBriefRecallsNoMeetingFromAnotherEngagement(t *testing.T) {
 			VALUES ($1, 'project', $2)`, activity, project)
 	}
 	newMeeting := func(subject string, when time.Duration) ids.UUID {
-		id := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
-			VALUES ($1, 'meeting', $2, $3, 'manual', 'human:x')`, subject, roomAgo(when))
+		id := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, meeting_status, source, captured_by)
+			VALUES ($1, 'meeting', $2, $3, 'held', 'manual', 'human:x')`, subject, roomAgo(when))
 		LinkActivity(t, owner, id, "contact", ours)
 		seatInRoom(t, owner, e.WS, id, ours)
 		return id
@@ -552,7 +556,7 @@ func TestMeetingBriefRecallsNoSubjectItMayNotRead(t *testing.T) {
 		e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms),
 		activities.LogActivityInput{
 			Kind: "meeting", Subject: new("Board compensation review"),
-			OccurredAt: &when, Source: "manual",
+			OccurredAt: &when, Source: "manual", MeetingStatus: new(meetingoutcome.Held),
 			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: ours}},
 		})
 	if err != nil {
@@ -694,5 +698,40 @@ func TestMeetingBriefNamesTheMeetingToTheRail(t *testing.T) {
 		if got != want {
 			t.Errorf("call %d was made under subject %+v, want %+v", i, got, want)
 		}
+	}
+}
+
+// A meeting brief spends AI budget on every read. An agent without the enrich
+// scope reads its plain form, and one holding the scope starts the model.
+func TestAMeetingBriefStartsAModelCallOnlyForAnAgentWithEnrich(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	ours := e.SeedContact(t, "Ana Roth", &e.Rep1)
+	meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'meeting', 'Cutover review', $2, 'manual', 'human:x')`, roomTomorrow)
+	LinkActivity(t, owner, meeting, "contact", ours)
+	seatInRoom(t, owner, e.WS, meeting, ours)
+	agent := func(scopes ...principal.Scope) context.Context {
+		ctx := e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, roomPerms)
+		p, ok := principal.Actor(ctx)
+		if !ok {
+			t.Fatal("no actor")
+		}
+		p.Scopes = principal.NewScopeSet(scopes...)
+		return principal.WithActor(ctx, p)
+	}
+
+	lane := &meetingSubjectLane{}
+	if _, err := meetingBriefService(e).WithLane(lane).Get(agent(principal.ScopeRead), meeting); err != nil {
+		t.Fatalf("the agent's read without enrich: %v", err)
+	}
+	if len(lane.subjects) != 0 {
+		t.Errorf("an agent without enrich started %d model calls", len(lane.subjects))
+	}
+	if _, err := meetingBriefService(e).WithLane(lane).Get(agent(principal.ScopeRead, principal.ScopeEnrich), meeting); err != nil {
+		t.Fatalf("the agent's read with enrich: %v", err)
+	}
+	if len(lane.subjects) == 0 {
+		t.Error("an agent with enrich started no model call")
 	}
 }
