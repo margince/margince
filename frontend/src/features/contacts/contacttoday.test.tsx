@@ -730,3 +730,34 @@ it.each([false, undefined])(
     ).toHaveProperty("disabled", true);
   },
 );
+
+describe("the drafting verb on a contact the reader may only read", () => {
+  // The send files the mail under this contact, which a read share refuses.
+  const draft: ContactMoment = {
+    ...THIN,
+    recommended_action: {
+      kind: "draft_reply",
+      label: "Draft a follow-up",
+      state: "available",
+      destination: { surface: "composer", prefill: { intent: "follow_up" } },
+    },
+  };
+
+  it.each([false, undefined])(
+    "is refused even when an older server offers it: %s",
+    async (attachable) => {
+      show({ ...VIEW, contact: { ...VIEW.contact, attachable } }, draft);
+      expect(await screen.findByText(en["contact.attachRefused"])).toBeTruthy();
+      expect(
+        screen.getByRole("button", { name: "Draft a follow-up" }),
+      ).toHaveProperty("disabled", true);
+    },
+  );
+
+  it("stays live on a contact the reader may attach to", async () => {
+    show(VIEW, draft);
+    const verb = screen.getByRole("button", { name: "Draft a follow-up" });
+    await waitFor(() => expect(verb).toHaveProperty("disabled", false));
+    expect(screen.queryByText(en["contact.attachRefused"])).toBeNull();
+  });
+});

@@ -209,6 +209,52 @@ func TestEmailPresentationOffersReplyOnlyToASeatThatMaySend(t *testing.T) {
 	}
 }
 
+// TestAnImporterIsOfferedTheThreadDecisionOnlyWhereItMayDecide holds the
+// captured arm of access.can_change to the grant the thread decision asks.
+func TestAnImporterIsOfferedTheThreadDecisionOnlyWhereItMayDecide(t *testing.T) {
+	e := Setup(t)
+	author := onFullSeat(e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms))
+	sendOnly := principal.Permissions{
+		RoleKeys: []string{"rep"},
+		Objects: map[string]principal.ObjectGrant{
+			"contact":  {Read: true},
+			"activity": {Read: true, Create: true},
+		},
+		RowScope: principal.RowScopeTeam,
+	}
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
+	id := logEmailActivity(author, t, e, contact, "Pricing question", "what does it cost")
+	if _, err := e.Activities.SetAudience(author, id, activities.SetAudienceInput{Audience: "workspace"}); err != nil {
+		t.Fatalf("sharing with the workspace: %v", err)
+	}
+	e.WsExec(t, `INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, id.UUID, e.Rep2)
+
+	for _, importer := range []struct {
+		name   string
+		ctx    context.Context
+		offers bool
+	}{
+		{"full seat that may update", OnSeat(e.As(e.Rep2, []ids.UUID{e.Team1}, activityLifecyclePerms), principal.SeatFull), true},
+		{"read seat that may update", OnSeat(e.As(e.Rep2, []ids.UUID{e.Team1}, activityLifecyclePerms), principal.SeatRead), false},
+		{"full seat without activity.update", OnSeat(e.As(e.Rep2, []ids.UUID{e.Team1}, sendOnly), principal.SeatFull), false},
+	} {
+		got, err := e.Activities.GetEmailPresentation(importer.ctx, id, nil)
+		if err != nil {
+			t.Fatalf("%s reading its import: %v", importer.name, err)
+		}
+		if got.Access.CanChange != importer.offers {
+			t.Errorf("%s: access.can_change=%v, want %v", importer.name, got.Access.CanChange, importer.offers)
+		}
+		wantMode := crmcontracts.EmailAccessChangeModeNone
+		if importer.offers {
+			wantMode = crmcontracts.EmailAccessChangeModeThreadContribution
+		}
+		if got.Access.ChangeMode != wantMode {
+			t.Errorf("%s: access.change_mode=%v, want %v", importer.name, got.Access.ChangeMode, wantMode)
+		}
+	}
+}
+
 // TestSelectedAudienceReadsBackItsMembers is the admit case for the withheld
 // matrix's member check, which would otherwise pass on a field nothing ever
 // fills. It proves the positive arm: a caller who may change the set reads it,

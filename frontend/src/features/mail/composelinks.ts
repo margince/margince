@@ -67,7 +67,7 @@ export function composedLinks(
 
 /**
  * What a new message is about: the deal and project the rep chose, plus the
- * account's contacts on the account path. A reply has none, its thread files it.
+ * account's contacts on the account path. A reply has none; its thread files it.
  * A chosen deal travels only from a composer that shows it, or a draft would
  * file the message under a record nobody on screen named.
  */

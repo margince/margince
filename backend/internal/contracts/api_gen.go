@@ -46767,8 +46767,9 @@ type EmailPresentation struct {
 	CanRelink  bool `json:"can_relink"`
 
 	// CanReply True when this reader may answer the message: they read it inside its audience and
-	// hold `activity.create`, because a reply is a new message they write. False for a
-	// read-only seat, which a send would refuse with `403 permission_denied`.
+	// hold `activity.create`, because a reply is a new message they write. False otherwise:
+	// a read seat's send is refused with `403 seat_tier_insufficient`, and a full seat's
+	// without the grant with `403 permission_denied`.
 	CanReply bool         `json:"can_reply"`
 	Cc       []EmailParty `json:"cc"`
 

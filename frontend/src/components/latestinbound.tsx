@@ -104,6 +104,8 @@ type JustInScopeValue = Readonly<{
   refreshKeys?: readonly QueryKey[];
   // The page's own message drawer, where it has one; else the shell's.
   onOpenEmail?: (activityId: string) => void;
+  // The contact whose page this is: a task from the item files under it.
+  contact?: { readonly attachable?: boolean };
 }>;
 
 const JustInContext = createContext<JustInScopeValue | null>(null);
@@ -355,7 +357,7 @@ function TaskFromItem({
   const t = useT();
   const queryClient = useQueryClient();
   const { activity, kind, accepts_request } = latest;
-  const writable = useActivityWritable();
+  const writable = useActivityWritable(scope.contact);
   const create = useMutation({
     mutationFn: async () => {
       const about = itemWords(activity).subject ?? kindLabel(kind, t);

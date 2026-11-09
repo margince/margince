@@ -83,14 +83,26 @@ function tab(
     width = 760,
     briefs = false,
     writer = false,
-  }: { width?: number; briefs?: boolean; writer?: boolean } = {},
+    sender = false,
+  }: {
+    width?: number;
+    briefs?: boolean;
+    writer?: boolean;
+    sender?: boolean;
+  } = {},
 ) {
   return () => {
     // Routed with no object grants, which is the ordinary seat this tab is
     // drawn for; unrouted, the session reads as malformed and the tab draws a
     // branch these stories are not named for.
     installFetchStub({
-      "GET /me": meRoute(writer ? { activity: ["read", "update"] } : {}),
+      "GET /me": meRoute(
+        sender
+          ? { activity: ["read", "create"] }
+          : writer
+            ? { activity: ["read", "update"] }
+            : {},
+      ),
     });
     return (
       <StoryProviders>
@@ -359,6 +371,22 @@ export const Withheld: Story = {
     activities: undefined,
     sections_omitted: ["activities"],
   }),
+};
+
+/**
+ * A seat that may send, on a contact shared with it read-only: a reply would
+ * file under the contact, so no row offers one.
+ */
+export const ReadShareOffersNoReply: Story = {
+  render: tab(
+    { ...view, contact: { ...view.contact, attachable: false } },
+    { sender: true },
+  ),
+  play: async ({ canvasElement }) => {
+    const page = within(canvasElement.ownerDocument.body);
+    await page.findByRole("button", { name: "Threads" });
+    await expect(page.queryByRole("button", { name: "Reply" })).toBeNull();
+  },
 };
 
 /**

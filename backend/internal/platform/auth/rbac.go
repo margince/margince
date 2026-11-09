@@ -81,8 +81,13 @@ func AllowsWrite(ctx context.Context, object string, action principal.Action) bo
 	if err != nil {
 		return false
 	}
-	mutable := p.Type == principal.PrincipalSystem || p.SeatType.CanMutate()
-	return mutable && Allows(ctx, object, action)
+	return seatAdmitsWrites(p) && Allows(ctx, object, action)
+}
+
+// seatAdmitsWrites is the seat ceiling every offered write sits under. The
+// system principal holds no seat and is trusted by construction.
+func seatAdmitsWrites(p principal.Principal) bool {
+	return p.Type == principal.PrincipalSystem || p.SeatType.CanMutate()
 }
 
 // RequireAny admits when the actor holds ANY of the listed actions on the

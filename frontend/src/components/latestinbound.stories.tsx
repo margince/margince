@@ -97,10 +97,12 @@ const MAY_WRITE = meRoute({ activity: ["read", "create"] });
 function OnRecord({
   latest,
   me = MAY_WRITE,
+  contact,
   children,
 }: Readonly<{
   latest: JustIn;
   me?: () => Response;
+  contact?: { attachable?: boolean };
   children: ReactNode;
 }>) {
   installFetchStub({ "GET /me": me });
@@ -111,6 +113,7 @@ function OnRecord({
           latest={latest}
           entityType="contact"
           entityId="story-contact"
+          contact={contact}
           actions={verbs}
         >
           {children}
@@ -150,6 +153,19 @@ export const EmailTaskRefused: Story = {
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: "Create task" })).toBeNull(),
     );
+  },
+};
+
+/** A contact shared read-only: the task would file under it, so none is offered. */
+export const EmailTaskRefusedOnReadShareContact: Story = {
+  render: () => (
+    <OnRecord latest={MAIL} contact={{ attachable: false }}>
+      <RecordNextBar />
+    </OnRecord>
+  ),
+  play: async () => {
+    await screen.findByRole("button", { name: "Reply" });
+    expect(screen.queryByRole("button", { name: "Create task" })).toBeNull();
   },
 };
 

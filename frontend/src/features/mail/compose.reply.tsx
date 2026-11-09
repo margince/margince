@@ -32,6 +32,7 @@ export function ChannelReplyAction({
   entityType,
   entityId,
   contactId,
+  contact,
   contentWithheld,
   prepared,
   onSent,
@@ -44,6 +45,8 @@ export function ChannelReplyAction({
   entityType: RelinkKind;
   entityId: string;
   contactId?: string;
+  /** The contact whose page draws the row: the reply files under it. */
+  contact?: { readonly attachable?: boolean };
   // Told when the message actually went, for a caller whose own view the send
   // changes. ComposeModal invalidates the RECORD timelines it knows about; a
   // surface listing the unanswered — the worklist's waiting lane — is not one
@@ -81,7 +84,7 @@ export function ChannelReplyAction({
     channelProvider,
   );
   // Every send writes an activity, which a seat without the grant is refused.
-  const writable = useActivityWritable();
+  const writable = useActivityWritable(contact);
   const answer = rowAnswer(kind);
   // A written-about row is withheld through `email_target`, which the server
   // leaves out for it, so only mail reaches the withheld branch below.

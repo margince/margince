@@ -69,6 +69,7 @@ function ContactRowActions({
       entityType="contact"
       entityId={contactId}
       contactId={contactId}
+      contact={view?.contact}
       extra={(row) => (
         <>
           <MeetingBriefAction activity={row} onBriefMeeting={onBriefMeeting} />
@@ -101,6 +102,7 @@ export function ContactLatestInbound({
       latest={latest}
       entityType="contact"
       entityId={contactId}
+      contact={view.contact}
       actions={(activity) => (
         <ContactRowActions
           activity={activity}

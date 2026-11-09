@@ -95,8 +95,9 @@ func readEmailAccess(
 		if err != nil {
 			return crmcontracts.EmailAccess{}, false, err
 		}
-		out.CanChange = sender
-		if sender {
+		// ThreadAudienceSetter.Decide refuses a read seat and a role without activity.update.
+		out.CanChange = sender && mayUpdateActivities(ctx)
+		if out.CanChange {
 			out.ChangeMode = crmcontracts.EmailAccessChangeModeThreadContribution
 			out.ChangeScope = new(crmcontracts.EmailAccessChangeScopeThread)
 		}

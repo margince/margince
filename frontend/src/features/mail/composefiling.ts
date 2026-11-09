@@ -268,25 +268,40 @@ function useProjectFiling(input: {
 /**
  * The contact an address belongs to, read off the two 360s the composer already
  * holds. Addresses compare case-blind, the way a mailbox does. An address
- * neither names is no contact the composer can record anything on.
+ * neither names is no contact the composer can record anything on. Of two
+ * contacts on one address, the first the sender may attach to wins.
  */
 export function contactsByAddress(
   contact: ReturnType<typeof useContact360>["data"],
   company: ReturnType<typeof useCompany360>["data"],
 ): (address: string) => string | undefined {
-  const owners = new Map<string, string>();
-  const own = (address: string | null | undefined, contactId: string) => {
+  const owners = new Map<string, { id: string; attachable: boolean }>();
+  const own = (
+    address: string | null | undefined,
+    owner: { id: string; attachable: boolean },
+  ) => {
     const key = address?.trim().toLowerCase();
-    if (key && !owners.has(key)) owners.set(key, contactId);
+    const held = key ? owners.get(key) : undefined;
+    if (key && (!held || (owner.attachable && !held.attachable))) {
+      owners.set(key, owner);
+    }
   };
   const subject = contact?.contact;
   for (const address of subject?.emails ?? []) {
-    if (subject) own(address.email, subject.id);
+    if (subject) {
+      own(address.email, {
+        id: subject.id,
+        attachable: subject.attachable === true,
+      });
+    }
   }
   for (const member of company?.contacts?.data ?? []) {
-    own(member.primary_email, member.contact_id);
+    own(member.primary_email, {
+      id: member.contact_id,
+      attachable: member.attachable,
+    });
   }
-  return (address) => owners.get(address.trim().toLowerCase());
+  return (address) => owners.get(address.trim().toLowerCase())?.id;
 }
 
 /**

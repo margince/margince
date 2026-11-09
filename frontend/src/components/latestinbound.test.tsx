@@ -85,12 +85,17 @@ function withProviders(node: ReactNode, openSource = vi.fn()) {
   );
 }
 
-function scoped(latest: JustIn | undefined, bar: ReactNode) {
+function scoped(
+  latest: JustIn | undefined,
+  bar: ReactNode,
+  contact?: { attachable?: boolean },
+) {
   return (
     <JustInScope
       latest={latest}
       entityType="contact"
       entityId="contact-1"
+      contact={contact}
       actions={(row) => <button type="button">Reply to {row.id}</button>}
     >
       {bar}
@@ -309,6 +314,24 @@ describe("making the item a task", () => {
     );
     expect(posted).toHaveLength(0);
   });
+
+  // The task files under the contact the item came in on.
+  it.each([
+    [true, 1],
+    [false, 0],
+  ] as const)(
+    "on a contact whose attach right is %s, offers %i Create task",
+    async (attachable, count) => {
+      serveTasks();
+      withProviders(scoped(MAIL_IN, <RecordNextBar />, { attachable }));
+
+      await waitFor(() =>
+        expect(
+          screen.queryAllByRole("button", { name: "Create task" }),
+        ).toHaveLength(count),
+      );
+    },
+  );
 });
 
 describe("the Just in line in the record's head", () => {

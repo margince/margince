@@ -129,6 +129,42 @@ export const MailReplyRefused: Story = {
   },
 };
 
+/** A contact shared read-only: the reply would file under it, so only the
+ *  row on a contact the reader may attach to offers one. */
+export const MailReplyOnReadShareContact: Story = {
+  render: () => {
+    installFetchStub({ "GET /me": MAY_WRITE });
+    return (
+      <StoryProviders>
+        <Row when="24 August, 10:00" said="Your own contact">
+          <ChannelReplyAction
+            activityId="a-1"
+            kind="email"
+            entityType="contact"
+            entityId="p-1"
+            contactId="p-1"
+            contact={{ attachable: true }}
+          />
+        </Row>
+        <Row when="24 August, 11:00" said="A contact shared with you read-only">
+          <ChannelReplyAction
+            activityId="a-2"
+            kind="email"
+            entityType="contact"
+            entityId="p-2"
+            contactId="p-2"
+            contact={{ attachable: false }}
+          />
+        </Row>
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await screen.findByRole("button", { name: "Reply" });
+    expect(screen.getAllByRole("button", { name: "Reply" })).toHaveLength(1);
+  },
+};
+
 /** A channel row whose contact IS reachable on the transport that carried it.
  *  The word is the same as mail's: this is an answer to the message above. */
 export const ChannelReply: Story = {

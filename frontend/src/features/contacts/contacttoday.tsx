@@ -372,8 +372,10 @@ function ActionVerb({
   // A rule ladder picks the verb, not a model. Only the bar's lead verb is
   // filled; a press that has the model write the mail carries the ✦.
   const drafts = momentDrafts(action);
+  // A sent mail files under this contact as a log or booking does.
+  const files = attaches || drafts;
   // Not drawn: the press files an activity the server refuses this seat.
-  if ((attaches || drafts) && gate.refusalKey === permissionRefusal) {
+  if (files && gate.refusalKey === permissionRefusal) {
     return null;
   }
   const variant = verbVariant(drafts, primary === true);
@@ -382,11 +384,11 @@ function ActionVerb({
       <Button
         variant={variant}
         onClick={() => onAction(action)}
-        disabled={attaches && gate.pending}
+        disabled={files && gate.pending}
         reason={
           blocked
             ? blockedReason(action, t)
-            : attaches && gate.refusalKey
+            : files && gate.refusalKey
               ? t(gate.refusalKey)
               : undefined
         }
