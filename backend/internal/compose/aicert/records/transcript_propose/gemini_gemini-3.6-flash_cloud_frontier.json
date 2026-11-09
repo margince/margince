@@ -3,35 +3,35 @@
   "provider": "gemini",
   "served_model": "gemini-3.6-flash",
   "env_class": "cloud_frontier",
-  "prompt_version": "pce92d8af3f78ea72088f84a80c3cc839",
+  "prompt_version": "pc398d930ba0a43fbbcf50d369e9713cc",
   "corpus_version": "v1",
-  "verdict": "supported_degraded",
-  "runs": 96,
-  "passed": 91,
-  "reliability": 0.9479166666666666,
-  "reported_accepted": 91,
-  "reported_wrong_answer": 1,
-  "reported_invalid": 4,
+  "verdict": "certified",
+  "runs": 90,
+  "passed": 90,
+  "reliability": 1,
+  "reported_accepted": 90,
+  "reported_wrong_answer": 0,
+  "reported_invalid": 0,
   "reported_abstained": 0,
   "certified_scope": "full_invocation",
   "context_applied": false,
   "context_scopes": null,
   "judge_score_p50": 97,
-  "judge_score_min": 82,
-  "latency_p50": 1826,
-  "latency_p95": 4856,
-  "mean_tokens": 1664,
-  "mean_tokens_in": 1362,
-  "mean_tokens_out": 302,
+  "judge_score_min": 76,
+  "latency_p50": 1886,
+  "latency_p95": 5044,
+  "mean_tokens": 1661,
+  "mean_tokens_in": 1366,
+  "mean_tokens_out": 294,
   "mean_cached_tokens": 0,
   "mean_cache_write_tokens": 0,
-  "est_cost_microusd": 2154,
+  "est_cost_microusd": 2127,
   "judge_served_model": "claude-sonnet-4-6",
   "judge_provider": "claude_cli",
   "self_judged": false,
   "served_identity_source": "response",
   "thinking_level": "low",
-  "ran_at": "2026-11-09T06:59:41Z",
+  "ran_at": "2026-11-09T07:13:06Z",
   "scenarios": [
     {
       "scenario": "one_side_promises_revised_pricing",
@@ -44,7 +44,7 @@
       "judge_scores": [
         97,
         97,
-        95
+        97
       ],
       "bands": {
         "certified_min": 70,
@@ -69,7 +69,7 @@
       "judge_scores": [
         97,
         97,
-        98
+        95
       ],
       "bands": {
         "certified_min": 70,
@@ -107,7 +107,7 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        97,
+        95,
         95,
         95
       ],
@@ -169,7 +169,7 @@
     {
       "scenario": "transcript_conditional_commitment_preserves_its_meaning_de",
       "site": "next_steps",
-      "stamp": "0321adeb245488ffbe6246d1ec1e8f44c78b82935b03ac3ede3a23eb4fb2d81bf73f677071bf430f102a5864d1b0787d82ec6de1925ef613fd0342b9a385c37d18b23b234dc58d61eb8a66d640e734be4d743f517e9bd89735fb9a28764ad940",
+      "stamp": "6acb18aa8aa02166c9cd7f242c8e24651f760cc929be642321ec09c06897a383f73f677071bf430f102a5864d1b0787d82ec6de1925ef613fd0342b9a385c37d18b23b234dc58d61eb8a66d640e734be4d743f517e9bd89735fb9a28764ad940",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -197,15 +197,15 @@
     {
       "scenario": "transcript_conditional_commitment_preserves_its_meaning_vi",
       "site": "next_steps",
-      "stamp": "7bd32a8e9952b1cd00ce91082fc5a442cb9bc906d83eb95b7f9b8d9fab6705b6914d920269f5cd649ded10144440d9681e5227f2c0b7a9c465515726e9b7d5b618b23b234dc58d61eb8a66d640e734be4d743f517e9bd89735fb9a28764ad940",
-      "verdict": "supported_degraded",
+      "stamp": "75de012c74e4098496eba07543d80f9994c8366266a9209ac79af42635553050914d920269f5cd649ded10144440d9681e5227f2c0b7a9c465515726e9b7d5b618b23b234dc58d61eb8a66d640e734be4d743f517e9bd89735fb9a28764ad940",
+      "verdict": "certified",
       "judge_band": "certified",
-      "runs": 9,
-      "passed": 4,
+      "runs": 3,
+      "passed": 3,
       "judge_none": true,
-      "reported_accepted": 4,
-      "reported_wrong_answer": 1,
-      "reported_invalid": 4,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
       "reported_abstained": 0
     },
     {
@@ -218,8 +218,8 @@
       "passed": 3,
       "judge_scores": [
         97,
-        97,
-        97
+        100,
+        100
       ],
       "bands": {
         "certified_min": 70,
@@ -242,9 +242,9 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        97,
         100,
-        100
+        100,
+        98
       ],
       "bands": {
         "certified_min": 70,
@@ -256,7 +256,7 @@
       "reported_invalid": 0,
       "reported_abstained": 0,
       "commitment_band": "firm",
-      "answer_confidence_min": 0.95,
+      "answer_confidence_min": 0.9,
       "answer_confidence_max": 0.95
     },
     {
@@ -281,7 +281,7 @@
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
       "reported_abstained": 0,
-      "answer_confidence_min": 0.9,
+      "answer_confidence_min": 0.95,
       "answer_confidence_max": 0.95
     },
     {
@@ -293,9 +293,9 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        98,
         97,
-        95
+        97,
+        97
       ],
       "bands": {
         "certified_min": 70,
@@ -359,7 +359,7 @@
       "judge_scores": [
         97,
         95,
-        97
+        95
       ],
       "bands": {
         "certified_min": 70,
@@ -475,7 +475,7 @@
       "reported_invalid": 0,
       "reported_abstained": 0,
       "answer_confidence_min": 0.9,
-      "answer_confidence_max": 0.95
+      "answer_confidence_max": 0.9
     },
     {
       "scenario": "meeting_speaker_reports_customer_promise",
@@ -486,8 +486,8 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        82,
-        82,
+        76,
+        78,
         82
       ],
       "bands": {
@@ -511,8 +511,8 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        98,
-        97,
+        100,
+        100,
         97
       ],
       "bands": {
@@ -524,7 +524,7 @@
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
       "reported_abstained": 0,
-      "answer_confidence_min": 0.9,
+      "answer_confidence_min": 0.95,
       "answer_confidence_max": 0.95
     },
     {
@@ -564,8 +564,8 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        97,
-        97,
+        95,
+        95,
         95
       ],
       "bands": {
@@ -578,7 +578,7 @@
       "reported_invalid": 0,
       "reported_abstained": 0,
       "answer_confidence_min": 0.9,
-      "answer_confidence_max": 0.95
+      "answer_confidence_max": 0.9
     },
     {
       "scenario": "transcript_unclear_creates_no_work",
