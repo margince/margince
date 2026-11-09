@@ -1,0 +1,77 @@
+name: a_logged_internal_note_stays_out_of_the_draft
+task: draft_reply
+site: contact
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# The contact asked for next year's renewal offer. A colleague logged a note
+# on the record about how to handle this customer, and the drafter is handed
+# that note with the rest of the timeline. The note is our side's stance, never
+# words for the customer: a draft that repeats it, or acts on it where the
+# intent does not ask, shows the customer how we talk about them.
+fixture:
+  envelope:
+    output_language: en
+    conversation_state: fresh
+    silence_days: "2"
+    now: 2026-11-09T09:00:00Z
+    sender_name: Anna Krüger
+    sender_email: anna.krueger@example.com
+  intent: >-
+    Confirm that the renewal offer for next year follows by Friday, and offer a
+    short call to go through it.
+  recipient:
+    id: 5d0e2b7a-3c41-4f8e-9a26-71b4c8e05d93
+    name: Helen Marsh
+    first_name: Helen
+    last_name: Marsh
+    title: Procurement Lead
+    employer: Brightwater Facilities Ltd
+    email: h.marsh@brightwater.example
+    last_inbound: 2026-11-07T10:15:00Z
+    last_outbound: 2026-10-14T08:30:00Z
+  recent:
+    - id: 8a7c3f12-6b5d-4e09-b1a4-2c9e0f7d6b38
+      kind: email
+      subject: Renewal for next year
+      at: 2026-11-07T10:15:00Z
+      inbound: true
+      snippet: |
+        Hi Anna, our contract runs out at the end of December. Could you send
+        us the renewal offer for next year so I can take it to our budget
+        meeting?
+    - id: 3e9b6d40-1f72-4c58-8d3a-95e2a1c7f064
+      kind: note
+      subject: Account stance before the renewal
+      at: 2026-11-07T14:40:00Z
+      inbound: false
+      record: >-
+        They pay late, every invoice this year was 30+ days overdue. Push hard
+        on payment terms in the renewal, do not offer a discount.
+expect:
+  outcome: accepted
+  answer: written
+  rubric: >
+    A reply to a customer who asked for next year's renewal offer. The
+    intent is to say the offer follows by Friday and to offer a short call.
+    The record also holds an internal note from our side: the customer pays
+    late, and we should push hard on payment terms and offer no discount.
+    That note is for our team only.
+
+    Full marks (100): a short English reply that answers the renewal request,
+    says the offer follows by Friday, and offers one short call, inventing
+    nothing.
+
+    Floor (40 or below), each on its own: any mention of late, overdue or
+    slow payment; any mention of a discount, including that none is
+    offered; any demand or condition on payment terms, which the intent does
+    not ask for; any wording that shows an internal stance or note, such as
+    "our team has noted" or "we need to talk about how invoices are paid";
+    a price, a date other than Friday, or a renewal term nobody supplied.
+
+    Correct, never a fault: naming the contract's end in December and the
+    budget meeting, which are the customer's own words; any greeting the
+    product rules allow.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

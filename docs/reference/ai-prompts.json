@@ -2263,7 +2263,8 @@
                   "items": {
                     "enum": [
                       "a1",
-                      "a2"
+                      "a2",
+                      "a3"
                     ],
                     "type": "string"
                   },
@@ -2279,7 +2280,8 @@
                       "activity_id": {
                         "enum": [
                           "a1",
-                          "a2"
+                          "a2",
+                          "a3"
                         ],
                         "type": "string"
                       },
@@ -2356,7 +2358,7 @@
         ],
         "type": "object"
       },
-      "spans_in_scenario": 2,
+      "spans_in_scenario": 3,
       "calls": 1,
       "system_bytes": 2588,
       "system_tokens_estimate": 647,

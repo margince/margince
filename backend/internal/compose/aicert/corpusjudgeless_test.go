@@ -234,6 +234,7 @@ func confidentialityProofs() map[string]judgelessProof {
 		"a_termination_agreement_stays_private_whatever_the_attachment_note_says":  {"personnel", "ordinary"},
 		"a_salary_sheet_behind_an_invoice_note_stays_private":                      {"personnel", "ordinary"},
 		"a_readable_supplier_invoice_opens_the_thread":                             {"ordinary", "personnel"},
+		"a_consultant_profile_without_cv_headings_stays_private":                   {"personnel", "ordinary"},
 		// A "held" case passes any kind that holds and refuses a confident "ordinary".
 		"an_unreadable_scan_under_an_invoice_note_stays_held":   {"personnel", "ordinary"},
 		"a_cut_off_cost_sheet_by_team_member_stays_held":        {"personnel", "ordinary"},
@@ -252,6 +253,9 @@ func counterpartyProofs() map[string]judgelessProof {
 	proofs := map[string]judgelessProof{}
 	for name, kinds := range map[string][2]string{
 		"the_owners_own_lawyer_is_not_the_workspaces_contact":                  {"advisor", "contact"},
+		"the_founders_tax_adviser_on_their_own_return_is_an_advisor":           {"advisor", "contact"},
+		"the_founders_accountant_on_a_share_transfer_is_an_advisor":            {"advisor", "contact"},
+		"the_owners_private_landlord_is_not_a_business_contact":                {"personal", "contact"},
 		"a_trade_offices_city_mailbox_names_a_place_not_a_contact":             {"company_sender", "contact"},
 		"a_company_writing_as_itself_does_not_become_a_contact_named_after_it": {"company_sender", "contact"},
 		"real_prospect_must_not_be_noise":                                      {"contact", "spam"},
@@ -497,6 +501,14 @@ func emptyAnswerProofs() map[string]judgelessProof {
 		"a_friendly_check_in_changes_nothing": {
 			correct: literal(`{"actions":[]}`), wrong: probabilityChange(40), wantWrong: aitasks.OutcomeWrongAnswer,
 		},
+		// Our own rep's hunch read as the buyer walking away.
+		"our_own_hunch_does_not_lower_the_chances": {
+			correct: literal(`{"actions":[]}`), wrong: probabilityChange(25), wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+		// The old offer under the buyer's reply read as today's price.
+		"an_old_price_in_quoted_history_sets_no_amount": {
+			correct: literal(`{"actions":[]}`), wrong: amountChange(30000, "30,000 EUR a year"), wantWrong: aitasks.OutcomeWrongAnswer,
+		},
 	}
 }
 
@@ -543,6 +555,16 @@ func probabilityChange(probability int) func([]string) string {
 		return mustJSON(map[string]any{"actions": []map[string]any{{
 			"kind": "set_probability", "probability": probability, "cited_activity_ids": []string{ids[0]},
 			"reason": "A planted change.", "confidence": 0.9,
+		}}})
+	}
+}
+
+// amountChange proposes one set_amount in EUR citing the deal's first activity.
+func amountChange(amount int64, quoted string) func([]string) string {
+	return func(ids []string) string {
+		return mustJSON(map[string]any{"actions": []map[string]any{{
+			"kind": "set_amount", "amount": amount, "currency": "EUR", "quoted_words": quoted,
+			"cited_activity_ids": []string{ids[0]}, "reason": "A planted change.", "confidence": 0.9,
 		}}})
 	}
 }

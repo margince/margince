@@ -1,0 +1,39 @@
+name: a_consultant_profile_without_cv_headings_stays_private
+task: capture_confidentiality_verdict
+site: thread
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# A staffing agency proposes a candidate. The profile is one person's career
+# written as prose, with no "CV" title and no section headings, so the CV
+# rule does not hold it and only the model can tell.
+fixture:
+  subject: "Candidate for your data platform role"
+  attachments:
+    - Jana Novak consultant profile.pdf
+  body: |
+    Hello Tom,
+
+    as discussed, here is the profile of the consultant we would propose for
+    your data platform role. She could start in May.
+
+    Best regards
+    Lena Brandt, Brightpath Staffing
+  documents:
+    - name: Jana Novak consultant profile.pdf
+      excerpt: |
+        Jana Novak, senior data engineer
+        Jana has spent twelve years building data platforms for retailers and
+        logistics firms, the last five as lead engineer at a parcel carrier
+        where she moved the warehouse reporting to a streaming pipeline.
+        Before that she worked as a database developer at a regional bank.
+        She holds a master's degree in computer science from a technical
+        university and speaks Czech, German and English. She is available
+        from May at a daily rate of 720 EUR and prefers hybrid work in Munich.
+expect:
+  outcome: accepted
+  answer: personnel
+  judge: none
+  judge_none_reason: >
+    The answer is one closed kind, and the check requires it exactly. The
+    document describes one candidate's career and terms, which is an
+    application whatever the covering note calls it.

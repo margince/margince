@@ -54,7 +54,7 @@ frames. A 0 means no fenced region was found in that call at all.
 | `cold_start` | `sitereadmessage` | one fenced item | 1 | 1 |
 | `corpus_ask` | `corpus_ask` | one fenced item | 1 | 1 |
 | `deal_health` | `deal_status` | one fenced item | 1 | 1 |
-| `deal_verdict` | `deal_verdict` | several fenced items | 2 | 1 |
+| `deal_verdict` | `deal_verdict` | several fenced items | 3 | 1 |
 | `document_extract` | `cards` | one fenced item | 0 | 1 |
 | `document_extract` | `chat` | one fenced item | 0 | 1 |
 | `document_extract` | `fields` | several fenced items | 2 | 1 |
@@ -3008,7 +3008,8 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
             "items": {
               "enum": [
                 "a1",
-                "a2"
+                "a2",
+                "a3"
               ],
               "type": "string"
             },
@@ -3024,7 +3025,8 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
                 "activity_id": {
                   "enum": [
                     "a1",
-                    "a2"
+                    "a2",
+                    "a3"
                   ],
                   "type": "string"
                 },

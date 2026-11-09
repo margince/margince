@@ -43,8 +43,15 @@ func TestAHeldScenarioPassesWhatTheEngineKeepsPrivate(t *testing.T) {
 	}
 }
 
+// ruleHeldIncidents are scenarios kept as the incident arrived, though a rule
+// now holds them before the model: they prove the prompt reads the document.
+var ruleHeldIncidents = map[string]string{
+	"personnel_02.yaml": "the salary sheet behind an invoice note, which the staff-cost rule now holds",
+}
+
 // The document scenarios measure the model only if no rule holds the thread
-// before the model is asked. The engine asks the rule first.
+// before the model is asked. The engine marks each read document, then asks
+// the rules, as here.
 func TestEveryDocumentScenarioReachesTheModel(t *testing.T) {
 	paths, err := filepath.Glob("aicert/corpus/capture_confidentiality_verdict/*.yaml")
 	if err != nil || len(paths) == 0 {
@@ -85,12 +92,17 @@ func TestEveryDocumentScenarioReachesTheModel(t *testing.T) {
 			t.Fatalf("Prepare returned %T", prepared)
 		}
 		checked++
-		if isPersonnelWithoutAModel(c.row) {
-			t.Errorf("%s: a rule holds this thread before the model is asked, so the scenario measures no model",
-				filepath.Base(path))
+		for i := range c.row.Documents {
+			doc := &c.row.Documents[i]
+			doc.Personnel = !doc.Unreadable && documentReadsAsPersonnel(doc.Excerpt, doc.Excerpt)
+		}
+		_, isIncident := ruleHeldIncidents[filepath.Base(path)]
+		if isPersonnelWithoutAModel(c.row) != isIncident {
+			t.Errorf("%s: a rule holds it before the model is asked = %v, want %v",
+				filepath.Base(path), !isIncident, isIncident)
 		}
 	}
-	if checked < 4 {
-		t.Fatalf("checked %d scenarios with documents, want every one of the four", checked)
+	if checked < 5 {
+		t.Fatalf("checked %d scenarios with documents, want every one of the five", checked)
 	}
 }

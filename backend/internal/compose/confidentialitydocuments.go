@@ -243,13 +243,19 @@ func (d *threadDocuments) excerpt(ctx context.Context, doc *capture.ThreadDocume
 		doc.Unreadable = true
 		return nil
 	}
-	isCV := capture.DescribesACareer(text)
+	read := text
 	if utf8.RuneCountInString(text) > confidentialityDocumentChars {
 		text, truncated = textcut.Runes(text, confidentialityDocumentChars), true
 	}
 	doc.Excerpt, doc.Truncated = text, truncated
-	doc.Personnel = isCV || capture.ListsStaffCosts(text)
+	doc.Personnel = documentReadsAsPersonnel(read, text)
 	return nil
+}
+
+// documentReadsAsPersonnel is how the read step marks a document by its text.
+// The CV rule reads more of the file than the excerpt keeps.
+func documentReadsAsPersonnel(read, excerpt string) bool {
+	return capture.DescribesACareer(read) || capture.ListsStaffCosts(excerpt)
 }
 
 // parse dispatches a PDF to pdftext and everything else to doctext.
