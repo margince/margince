@@ -11191,6 +11191,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiHealth.callCounts_one": "{count} lượt gọi, {failures} lượt bị lỗi",
   "aiHealth.callCounts_other": "{count} lượt gọi, {failures} lượt bị lỗi",
   "heldThreads.search": "Tìm theo tiêu đề hoặc bên liên quan",
+  "heldThreads.forContact": "Xem thư được giữ lại với liên hệ này",
+  "heldThreads.withContact": "Chuỗi thư với",
+  "heldThreads.allThreads": "Xem mọi chuỗi thư",
+  "heldThreads.contactUnavailable":
+    "Liên hệ đã được lưu trữ hoặc bạn không xem được, nên các chuỗi thư của liên hệ không được liệt kê.",
   "heldThreads.statusFilter": "Trạng thái",
   "heldThreads.statusAll": "Mọi trạng thái",
   "heldThreads.noMatch": "Không có chuỗi thư nào khớp.",

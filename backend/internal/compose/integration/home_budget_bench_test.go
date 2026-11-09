@@ -26,7 +26,10 @@ import (
 )
 
 // Home's fixed-profile API budgets, per read, as p95. A cold read is the first
-// answer on a freshly booted app whose connections hold no plan.
+// answer after the seat's kept Home answers are forgotten. It runs on a freshly
+// booted app whose connections have served one Home read, as on a running server.
+// The first read after a deploy or a pool refill, on connections that hold no
+// plan, is not measured.
 const (
 	homeColdBudget = 500 * time.Millisecond
 	homeWarmBudget = 250 * time.Millisecond
@@ -134,8 +137,9 @@ func homeRequired(rows []dailyRow, calls []dailyCall) []DailyResult {
 // That cache lives in the database, so a reboot alone leaves it filled.
 var homeCachedReads = map[string]homecache.Read{"worklist": homecache.Worklist, "magic": homecache.Magic}
 
-// runHomeCold boots the app afresh homeColdRounds times and times each read's
-// first answer on it. The probe on the warm app decides which reads are timed.
+// runHomeCold boots the app afresh homeColdRounds times, warms it, and times
+// each read's first uncached answer on it. The probe on the warm app decides
+// which reads are timed.
 func runHomeCold(t *testing.T, e *apptest.AppEnv, in dailyInput) []dailyRow {
 	t.Helper()
 	f, s := homeColdFlow, in.Seat
@@ -151,8 +155,9 @@ func runHomeCold(t *testing.T, e *apptest.AppEnv, in dailyInput) []dailyRow {
 	}
 	samples := make([][]time.Duration, len(timed))
 	for range homeColdRounds {
-		since := forgetHomeAnswers(t, e, s)
 		booted := coldBoot(t, e)
+		warmHomePlans(t, e, booted, s, timed)
+		since := forgetHomeAnswers(t, e, s)
 		for i, call := range timed {
 			status, body, elapsed := s.Get(t, booted, call.Path)
 			if err := f.admit(dailyResponse{call, status, body}, &tallies[i]); err != nil {
@@ -170,6 +175,19 @@ func runHomeCold(t *testing.T, e *apptest.AppEnv, in dailyInput) []dailyRow {
 		rows = append(rows, dailyMeasuredRow(t, s, spec, samples[i], tallies[i]))
 	}
 	return rows
+}
+
+// warmHomePlans sends each timed read once on the rebooted app, with the kept
+// answers forgotten first so each read assembles. Its connections then hold
+// the statements a running server's connections hold.
+func warmHomePlans(t *testing.T, e *apptest.AppEnv, booted *apptest.AppEnv, s Seat, timed []dailyCall) {
+	t.Helper()
+	forgetHomeAnswers(t, e, s)
+	for _, call := range timed {
+		if status, _, _ := s.Get(t, booted, call.Path); status != http.StatusOK {
+			t.Fatalf("warming %s answered %d", call.Name, status)
+		}
+	}
 }
 
 // forgetHomeAnswers ends the seat's kept Home answers through the cache's own

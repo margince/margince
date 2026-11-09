@@ -8,16 +8,16 @@ package capture
 import (
 	"context"
 	"encoding/base64"
-
-	"github.com/jackc/pgx/v5"
-	"github.com/margince/margince/backend/internal/compose"
-	"github.com/margince/margince/backend/internal/platform/blobstore"
-	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/compose"
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // emailWithFile is email() carrying one attached file.
