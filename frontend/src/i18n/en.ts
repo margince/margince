@@ -4,6 +4,7 @@
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
   "systemJob.import_identity_links": "Attaching imported mail links",
+  "systemJob.optout_receipt": "Raising missed opt-out receipts",
   "systemJob.task_completion": "Completing tasks after email",
   "homeRepair.reason.taskChanged":
     "The task changed while the preview was being built. Preview it again.",
