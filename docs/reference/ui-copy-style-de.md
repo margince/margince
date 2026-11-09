@@ -376,7 +376,7 @@ source file, key and value. Placeholders are removed before the word rules run.
 A last test compares the code-format words of the Never column with the words
 the test retires, and fails a difference in either direction.
 
-`frontend/src/i18n/address-register.test.ts` holds the address: no Sie, Ihr or
+`frontend/census/rules/address-register.census.ts` holds the address: no Sie, Ihr or
 Ihnen outside the four outsider families, and no capitalised du-pronoun
 mid-sentence. A sentence opening with "Sie" as she or they is rephrased, since
 the capital cannot be read off the page.

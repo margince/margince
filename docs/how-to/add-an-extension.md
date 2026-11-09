@@ -528,7 +528,7 @@ time, with an error that does not point at the cause:
 **Import the core only through `@margince/frontend/<subpath>`** (`design-system`, `api`, `app`), as
 `frontend/package.json` publishes them in its `exports` map. That map is this side's
 `//margince:extension-surface`. The Go tier gets its edge from the compiler, and a bundler gives none. So
-`frontend/scripts/ext-imports.test.ts` is the edge. It refuses a relative path that leaves your unit, and a path that `exports` does not publish. It also
+`frontend/census/rules/ext-imports.census.ts` is the edge. It refuses a relative path that leaves your unit, and a path that `exports` does not publish. It also
 refuses any bare package name your own `package.json` does not declare.
 
 `devDependencies` count for test files only, so a screen cannot pull a test runner into the bundle.

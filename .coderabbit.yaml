@@ -115,10 +115,11 @@ reviews:
           singular.
         - The length ceilings, a compound counting as one word.
         Do not flag what frontend/census/rules/copy-style-de.census.ts and
-        address-register.test.ts already enforce (long dashes, quotes,
-        ellipsis, double spaces, exclamation marks, "bitte", abbreviations,
-        contractions, percent spacing, gender marks, ich, wir, retired words,
-        Sie outside the outsider families, capitalised du mid-sentence).
+        frontend/census/rules/address-register.census.ts already enforce
+        (long dashes, quotes, ellipsis, double spaces, exclamation marks,
+        "bitte", abbreviations, contractions, percent spacing, gender marks,
+        ich, wir, retired words, Sie outside the outsider families,
+        capitalised du mid-sentence).
     - path: "{frontend/src/i18n/vi.ts,extensions/**/frontend/**/vi.json}"
       instructions: |
         Vietnamese is translated from the English catalog beside it (en.ts,

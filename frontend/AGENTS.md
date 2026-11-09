@@ -81,7 +81,7 @@ fails one that does.
 Only the shell (`app/`, `App`) imports a feature, and a feature imports no other feature. Code that
 two features need moves down: to `components/` if it draws, to `lib/` if it does not. A test helper
 that features share goes to `testing/`. Code that one feature alone uses lives in that feature,
-never in `components/`, `lib/` or `format/`. `scripts/feature-boundaries.test.ts` fails both, and
+never in `components/`, `lib/` or `format/`. `census/rules/feature-boundaries.census.ts` fails both, and
 its message says where the file goes. Never add a line to its waiver list.
 
 Move a module with `node scripts/move-modules.ts <from> <to>`, so its imports follow and the PR

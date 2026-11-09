@@ -5,7 +5,12 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parseSource } from "../../scripts/lib/source-tree";
 import { plantedFindings, srcDir } from "../tree";
-import { ownWalks, rule, strayImports } from "./no-stray-census.census";
+import {
+  computedImports,
+  ownWalks,
+  rule,
+  strayImports,
+} from "./no-stray-census.census";
 
 const planted = join(srcDir, "features", "planted.test.ts");
 const found = (code: string) =>
@@ -22,11 +27,15 @@ describe("a test file outside census/ that walks the tree", () => {
 
   // A computed name can be a walker's, and only running the test says which.
   it("is found for a dynamic import whose name is computed", () => {
-    expect(found("const m = await import(name);")).toEqual([
+    const computed = (code: string) =>
+      computedImports(parseSource(planted, code));
+    expect(computed("const m = await import(name);")).toEqual([
       "imports a module whose name is computed: import(name)",
     ]);
-    expect(found("const m = await import(`./$" + "{name}`);")).toHaveLength(1);
-    expect(found("const m = await import(`./fixed`);")).toEqual([]);
+    expect(computed("const m = await import(`./$" + "{name}`);")).toHaveLength(
+      1,
+    );
+    expect(computed("const m = await import(`./fixed`);")).toEqual([]);
   });
 
   it("is found through a namespace import and a dynamic import", () => {
@@ -124,7 +133,7 @@ describe("a helper module that walks the tree for a test", () => {
         'import { FILES } from "./plantedhelper";\n',
       ),
     ).toEqual([
-      "src/features/planted-helper.test.ts: walks the tree through src/features/plantedhelper.ts calls filesUnder when it loads",
+      "src/features/planted-helper.test.ts: walks the tree through src/features/plantedhelper.ts, which calls filesUnder from scripts/lib/source-tree.ts when it loads",
     ]);
   });
 
@@ -135,7 +144,7 @@ describe("a helper module that walks the tree for a test", () => {
         'import { files } from "./plantedhelper";\nfiles();\n',
       ),
     ).toEqual([
-      "src/features/planted-helper.test.ts: walks the tree through files() in src/features/plantedhelper.ts",
+      "src/features/planted-helper.test.ts: walks the tree through files() in src/features/plantedhelper.ts, which calls filesUnder from scripts/lib/source-tree.ts",
     ]);
   });
 
@@ -146,5 +155,89 @@ describe("a helper module that walks the tree for a test", () => {
         'import { pure } from "./plantedhelper";\npure(1);\n',
       ),
     ).toEqual([]);
+  });
+
+  const helper2 = join(srcDir, "features", "plantedhelper2.ts");
+  const chain = (first: string, second: string, testText: string) =>
+    plantedFindings(rule, [
+      { path: helper, area: "src", text: first },
+      { path: helper2, area: "src", text: second },
+      { path: test, area: "src", text: testText },
+    ]).filter((finding) => finding.startsWith("src/features/planted-helper"));
+
+  it("is found when a helper walks through a second helper", () => {
+    expect(
+      chain(
+        'import { files } from "./plantedhelper2";\nexport const listed = () => files();\n',
+        `${walker}export function files() {\n  return filesUnder(".");\n}\n`,
+        'import { listed } from "./plantedhelper";\nlisted();\n',
+      ),
+    ).toHaveLength(1);
+    expect(
+      chain(
+        'import { FILES } from "./plantedhelper2";\nexport const count = FILES.length;\n',
+        `${walker}export const FILES = filesUnder(".");\n`,
+        'import { count } from "./plantedhelper";\n',
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("is not a helper that walks only when run as a script", () => {
+    expect(
+      run(
+        `${walker}export const pure = (n: number) => n + 1;\nif (process.argv[1] === "x") {\n  filesUnder(".");\n}\n`,
+        'import { pure } from "./plantedhelper";\npure(1);\n',
+      ),
+    ).toEqual([]);
+  });
+
+  it("is found when a helper writes its own walk", () => {
+    expect(
+      run(
+        'import { readdirSync } from "node:fs";\nexport function deep(dir: string): string[] {\n  return readdirSync(dir).flatMap((name) => deep(name));\n}\n',
+        'import { deep } from "./plantedhelper";\ndeep(".");\n',
+      ),
+    ).toHaveLength(1);
+    expect(
+      run(
+        'export const all = import.meta.glob("../**/*.ts");\n',
+        'import { all } from "./plantedhelper";\n',
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("is found when a helper imports a module by a computed name", () => {
+    expect(
+      run(
+        "export const load = (name: string) => import(name);\n",
+        'import { load } from "./plantedhelper";\n',
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("is found when a test imports a walking helper with a literal import()", () => {
+    expect(
+      run(
+        `${walker}export function files() {\n  return filesUnder(".");\n}\n`,
+        'const helper = await import("./plantedhelper");\nhelper.files();\n',
+      ),
+    ).toHaveLength(1);
+  });
+});
+
+describe("a walker's own test", () => {
+  it("fails when it walks the real tree rather than a planted one", () => {
+    const own = join(srcDir, "..", "scripts", "lib", "story-files.test.ts");
+    expect(
+      plantedFindings(rule, [
+        {
+          path: own,
+          area: "scripts",
+          text: 'import { filesUnder } from "./source-tree";\nfilesUnder(new URL("..", import.meta.url).pathname);\n',
+        },
+      ]),
+    ).toEqual([
+      "scripts/lib/story-files.test.ts is listed as a walker's own test but finds the real tree through import.meta.url",
+    ]);
   });
 });

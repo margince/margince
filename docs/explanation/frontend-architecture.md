@@ -80,7 +80,7 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   the `prefers-reduced-motion` rule: with it on, a change shows its end state at
   once, never nothing.
 
-  `conformance.test.ts` is the drift gate over the whole
+  `frontend/census/rules/conformance.census.ts` is the drift gate over the whole
   tree. No file in `design-system/` imports `app/`, `components/` or `features/`. A part
   that needs a feature, such as the record page's mail drawer, lives in that feature.
 - **`src/app/`**: the shell of the app and what holds on every screen.
@@ -189,7 +189,7 @@ The other side holds too: a file in `components/`, `lib/` or `format/` that
 only one feature uses belongs in that feature. Without this rule, a move of one
 feature's code into a shared folder would get past the first.
 
-`frontend/scripts/feature-boundaries.test.ts` fails both. The imports that
+`frontend/census/rules/feature-boundaries.census.ts` fails both. The imports that
 crossed a feature line when it landed are frozen in
 `frontend/scripts/feature-boundaries-waivers.txt`. That list only gets shorter,
 and a new line is never added. The steps for a move are in
@@ -302,7 +302,7 @@ is styled in error.
 The text colours made for the page fail on that field: `--textSecondary` and `--accentText` measure
 under 3:1 there. `src/design-system/inkfield.css` lists every part of the app drawn on the field. Inside
 those parts, it points the text, link and focus tokens at the field's own colours. A link there has a line
-under it. A new part on the field goes in that list; `inkfield.test.ts` fails one that is missing.
+under it. A new part on the field goes in that list; `frontend/census/rules/inkfield.census.ts` fails one that is missing.
 
 Both themes ship, and **the theme resolves before React starts**.
 `main.tsx` calls `startTheme()` above `createRoot(...).render(...)`. That choice
@@ -424,7 +424,7 @@ even if the test tree breaks.
 | Action rows | `frontend/census/rules/actionrow.census.ts` | an element whose direct parts are two or more buttons and nothing else, and that does not get `gap: var(--gapActions)` from a class it names or from its own `style` value. That includes a class that **no CSS file declares**, which a gate that reads only CSS cannot see. A line is skipped with `{/* ds:ignore <reason> */}` |
 | Contract type drift | `make frontend-check` | `pnpm gen:api` changes `src/api/schema.d.ts` or `public-events.ts` |
 | Lint | `pnpm lint` (Biome) | style and lint findings over `src` and `index.html` |
-| Design test | `design-system/conformance.test.ts` | the same rules read from the AST, not from text, plus copy users see that is written in the code outside the `i18n` catalogs, and a wrong web app manifest |
+| Design test | `frontend/census/rules/conformance.census.ts`, `design-system/conformance.test.ts` | the same rules read from the AST, not from text, plus copy users see that is written in the code outside the `i18n` catalogs, and a wrong web app manifest |
 | Service worker | `frontend/scripts/vite-pwa.test.ts`, `frontend/census/rules/serviceworker-registrar.census.ts` | the web app build not writing `/sw.js`. The worker answering from `Cache Storage` anything but a failed page load and the offline page with its script. The worker catching a path the API owns, keeping a cache that is not its own, or keeping its cache name when what it holds changed. Any shipped module but `src/lib/pwa.ts`, in any kind of script, reaching for `navigator.serviceWorker` ([pwa.md](pwa.md)) |
 | CSS file owners | `frontend/census/rules/stylesheetnamespace.census.ts` | the class names of a screen declared in a CSS file other than the screen's own, in every `.css` under `frontend/src` and in the frontend layer of each extension |
 | Timeline rows | `frontend/census/rules/timelinerows.census.ts` | a rule that reaches the `li` of a `.timeline` list by anything but `>` from the `.timeline` part, which also reaches `li` items inside a row; a sibling (`+`, `~`) of such a row passes. It reads every `.css` under `frontend/src` and the frontend of each extension. It fails closed when the selectors it parses and a plain count of the text disagree |
