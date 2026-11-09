@@ -55,6 +55,30 @@ type ExplainPlan struct {
 // the answer says which so a reader knows they are seeing part.
 const ExplainRowLimit = 200
 
+// CheckCell refuses a cell its question cannot have. That is a group with a
+// value missing or extra for the question's grouping, or a group on an
+// every-cell explanation. The floor matches the cell against the answer's rows
+// by group, so it asks this first.
+func (in Explain) CheckCell() error {
+	if in.AllCells && len(in.Group) > 0 {
+		return &RefusalError{
+			Kind:    RefusalInvalid,
+			Message: "an explanation of every cell names no single cell",
+			Suggest: "name one cell, or ask for every cell with no group",
+		}
+	}
+	if !in.AllCells && len(in.Group) != len(in.Query.GroupBy) {
+		return &RefusalError{
+			Kind: RefusalInvalid,
+			Message: fmt.Sprintf(
+				"the cell names %d group value(s) and the question grouped by %d",
+				len(in.Group), len(in.Query.GroupBy)),
+			Suggest: "pass the cell's own group keys, in the order the answer listed them",
+		}
+	}
+	return nil
+}
+
 // CompileExplain renders the drill-through for one cell.
 //
 // The same scope source as the answer, because the two must read one row set.
@@ -71,21 +95,8 @@ func CompileExplain(in Explain, schema Schema, scope ScopeClauses) (ExplainPlan,
 	if err := in.Query.Validate(schema); err != nil {
 		return ExplainPlan{}, err
 	}
-	if in.AllCells && len(in.Group) > 0 {
-		return ExplainPlan{}, &RefusalError{
-			Kind:    RefusalInvalid,
-			Message: "an explanation of every cell names no single cell",
-			Suggest: "name one cell, or ask for every cell with no group",
-		}
-	}
-	if !in.AllCells && len(in.Group) != len(in.Query.GroupBy) {
-		return ExplainPlan{}, &RefusalError{
-			Kind: RefusalInvalid,
-			Message: fmt.Sprintf(
-				"the cell names %d group value(s) and the question grouped by %d",
-				len(in.Group), len(in.Query.GroupBy)),
-			Suggest: "pass the cell's own group keys, in the order the answer listed them",
-		}
+	if err := in.CheckCell(); err != nil {
+		return ExplainPlan{}, err
 	}
 	entity := schema.Entities[in.Query.Entity]
 

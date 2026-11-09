@@ -1,40 +1,51 @@
 import { type ReactNode, useState } from "react";
 import type { components } from "../../api/schema";
 import { Button, EmptyState } from "../../design-system/atoms";
-import { type ISODate, isoOrBlank } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
 import { FilterBar } from "../../design-system/filterbar";
 import { QueryGate } from "../../design-system/querystates";
-import { startOfDayInZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
+import { useCompanyZone } from "../../lib/companyzone";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { problemCodeOf } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
+import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import {
-  currentParams,
-  replaceDial,
-  replaceParams,
-  useUrlParams,
-} from "../../lib/urlstate";
+  customInterval,
+  useOverviewFilters,
+  validDateRange,
+} from "./reporting.selection";
+
+export {
+  customInterval,
+  useOverviewFilters,
+  validDateRange,
+} from "./reporting.selection";
+
 import { AnalyticsAttention } from "./analytics.attention";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
+import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import { periodCaption } from "./analytics.period";
 import { ReportingCharts } from "./reporting.charts";
 import { CustomReportDrawer } from "./reporting.custombuilder";
-import { valueBasisOf } from "./reporting.dimensions";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import { applyDimensions } from "./reporting.dimensions";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
 import { ReportingExportButton } from "./reporting.export";
-import { REPORTING_PERIODS, ReportingFilters } from "./reporting.filters";
+import { ReportingFilters } from "./reporting.filters";
 import type { ReportingSelection } from "./reporting.model";
 import {
   useReportingCatalog,
   useReportingEvaluation,
+  useReportingFramework,
 } from "./reporting.queries";
 import { SaveReportingDialog } from "./reporting.save";
-import { type ReportingView, VIEW_SHAPE, viewRequest } from "./reporting.views";
+import {
+  type ReportingView,
+  VIEW_SHAPE,
+  viewRequest,
+  workflowMetrics,
+} from "./reporting.views";
 
 type Catalog = components["schemas"]["ReportingCatalog"];
 
@@ -88,121 +99,6 @@ export function ReportingOverview({
   );
 }
 
-/** The page's dials, read from the address; `defaultPeriod` is the view's own. */
-export function useOverviewFilters(
-  pipelines: readonly components["schemas"]["Pipeline"][],
-  defaultPeriod: ReportingSelection["period"] = "this_month",
-) {
-  const [params] = useUrlParams();
-  const from = params.get("from") ?? "";
-  const through = params.get("through") ?? "";
-  const start: ISODate | "" = isoOrBlank(from);
-  const end: ISODate | "" = isoOrBlank(through);
-  const setStart = (value: string) => replaceDial("from", value);
-  const setEnd = (value: string) => replaceDial("through", value);
-  const period =
-    REPORTING_PERIODS.find((value) => value === params.get("period")) ??
-    defaultPeriod;
-  const setPeriod = (value: string) => replaceDial("period", value);
-  const defaultPipeline =
-    pipelines.find((pipeline) => pipeline.is_default)?.id ??
-    pipelines[0]?.id ??
-    "";
-  const pipelineId =
-    params.get("pipeline") === "all"
-      ? ""
-      : (pipelines.find((pipeline) => pipeline.id === params.get("pipeline"))
-          ?.id ?? defaultPipeline);
-  const setPipelineId = (value: string) =>
-    replaceDial("pipeline", value || "all");
-  const targetBasis: ReportingSelection["target_basis"] =
-    period === "this_quarter" ? "fiscal_quarter" : "month";
-  const setTargetBasis = (value: string) => replaceDial("target", value);
-  const closeWindow: ReportingSelection["close_window"] =
-    params.get("close") === "fiscal_quarter" ? "fiscal_quarter" : "all_open";
-  const setCloseWindow = (value: string) => replaceDial("close", value);
-  const dimensions: Dimensions = {
-    product_id: params.get("product") || undefined,
-    initiative_id: params.get("initiative") || undefined,
-    country: params.get("country") || undefined,
-    industry: params.get("industry") || undefined,
-    value_basis:
-      params.get("basis") && params.get("basis") !== "all"
-        ? valueBasisOf(params.get("basis") ?? "")
-        : undefined,
-  };
-  const setDimensions = (next: Dimensions) => {
-    const dials = new Map(currentParams());
-    const pairs: [string, string | undefined][] = [
-      ["product", next.product_id],
-      ["initiative", next.initiative_id],
-      ["country", next.country],
-      ["industry", next.industry],
-      ["basis", next.value_basis === "all" ? undefined : next.value_basis],
-    ];
-    for (const [dial, value] of pairs) {
-      if (value) dials.set(dial, value);
-      else dials.delete(dial);
-    }
-    replaceParams(dials);
-  };
-  return {
-    start,
-    end,
-    setStart,
-    setEnd,
-    period,
-    setPeriod,
-    pipelineId,
-    setPipelineId,
-    targetBasis,
-    setTargetBasis,
-    closeWindow,
-    setCloseWindow,
-    dimensions,
-    setDimensions,
-  };
-}
-
-/** The dials that narrow a report to a product or a market. */
-export type Dimensions = Pick<
-  ReportingSelection,
-  "product_id" | "initiative_id" | "country" | "industry" | "value_basis"
->;
-
-export function dimensionsOf(selection: ReportingSelection): Dimensions {
-  return {
-    product_id: selection.product_id,
-    initiative_id: selection.initiative_id,
-    country: selection.country,
-    industry: selection.industry,
-    value_basis: selection.value_basis,
-  };
-}
-
-function sameDimensions(a: Dimensions, b: Dimensions): boolean {
-  return (
-    a.product_id === b.product_id &&
-    a.initiative_id === b.initiative_id &&
-    a.country === b.country &&
-    a.industry === b.industry &&
-    (a.value_basis ?? "all") === (b.value_basis ?? "all")
-  );
-}
-
-/** Moves the dimension dials to `next` when the selection changed them. */
-export function applyDimensions(
-  filters: Pick<
-    ReturnType<typeof useOverviewFilters>,
-    "dimensions" | "setDimensions"
-  >,
-  next: ReportingSelection,
-): void {
-  const wanted = dimensionsOf(next);
-  if (!sameDimensions(filters.dimensions, wanted))
-    filters.setDimensions(wanted);
-}
-
 function OverviewBody({
   view,
   scope,
@@ -219,7 +115,7 @@ function OverviewBody({
   pipelines: readonly components["schemas"]["Pipeline"][];
 }>) {
   const t = useT();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const { locale } = useLocale();
   const {
     start,
@@ -241,7 +137,21 @@ function OverviewBody({
   const [saving, setSaving] = useState(false);
   const [customizing, setCustomizing] = useState(false);
   const shape = VIEW_SHAPE[view];
-  const { metrics, blocks } = viewRequest(view, catalog, period);
+  const framework = useReportingFramework(view === "sdr");
+  const [params] = useUrlParams();
+  const requested = viewRequest(view, catalog, period);
+  const metrics = defaultDetailMetrics(
+    view,
+    requested.metrics,
+    framework.data?.definition.template,
+    params.has("metrics"),
+  );
+  const blocks = requested.blocks.filter((block) =>
+    catalog.metrics.some(
+      (definition) =>
+        metrics.includes(definition.id) && definition.blocks.includes(block),
+    ),
+  );
   const selection: ReportingSelection = {
     scope: { kind: scope.kind, id: scope.id ?? undefined, label: scope.label },
     pipeline_id: shape.dealFilters ? pipelineId || undefined : undefined,
@@ -257,7 +167,13 @@ function OverviewBody({
   };
   const validDates = validDateRange(period, start, end);
   // A seat whose catalog holds none of the view's metrics has nothing to ask.
-  const validPeriod = validDates && metrics.length > 0;
+  const validPeriod = canEvaluateDetail(
+    validDates,
+    metrics.length,
+    view,
+    framework.isPending,
+    framework.isError,
+  );
   const query = useReportingEvaluation(selection, validPeriod);
   const contextKey = JSON.stringify(selection);
   const { evidence, openEvidence, closeEvidence } =
@@ -266,8 +182,11 @@ function OverviewBody({
     problemCodeOf(query.error) === "reporting_interval_invalid";
   return (
     <>
+      <FrameworkRetry view={view} query={framework} />
       <FilterBar
         label={t("analytics.filters")}
+        quiet
+        labels="inside"
         actions={
           <>
             {query.data && <ReportingExportButton evaluation={query.data} />}
@@ -302,7 +221,7 @@ function OverviewBody({
           showScope={false}
           showCloseWindow={shape.closeWindow}
           showPipeline={shape.dealFilters}
-          showDimensions={shape.dealFilters}
+          showDimensions={shape.dealFilters && "folded"}
           showTargets={false}
           dates={{
             from: start,
@@ -336,7 +255,9 @@ function OverviewBody({
       {invalidSelection && <ErrorLine error={query.error} />}
       {/* Its sources are its own, so a failed or unasked evaluation does not
           take the list down with it. */}
-      {(!validPeriod || query.isError) && <AnalyticsAttention scope={scope} />}
+      {view === "sales" && (!validPeriod || query.isError) && (
+        <AnalyticsAttention scope={scope} />
+      )}
       {validPeriod && !invalidSelection && (
         <QueryGate query={query} pendingLabel={t("reporting.performance")}>
           {(evaluation) => (
@@ -344,7 +265,12 @@ function OverviewBody({
               {emptyNotice?.(evaluation.context.scope_holds_deals)}
               <ReportingCharts
                 evaluation={evaluation}
-                afterSummary={<AnalyticsAttention scope={scope} />}
+                board
+                afterSummary={
+                  view === "sales" ? (
+                    <AnalyticsAttention scope={scope} />
+                  ) : undefined
+                }
                 onEvidence={openEvidence}
                 onApplySelection={(next) => {
                   // The server named the selection; the page only moves its
@@ -392,23 +318,53 @@ function OverviewBody({
   );
 }
 
-export function customInterval(
-  period: string,
-  start: ISODate | "",
-  end: ISODate | "",
-  zone: string,
-): ReportingSelection["interval"] {
-  if (period !== "custom" || !start || !end) return undefined;
-  return {
-    start_at: startOfDayInZone(start, zone),
-    end_at: startOfDayInZone(end, zone, 1),
-  };
+function defaultDetailMetrics(
+  view: ReportingView,
+  metrics: ReportingSelection["metrics"],
+  template: string | undefined,
+  explicit: boolean,
+) {
+  if (view !== "sdr" || !template || explicit) return metrics;
+  return workflowMetrics(metrics, template).filter(
+    (id) => id !== "leads_promoted" && id !== "leads_awaiting_response",
+  );
 }
 
-export function validDateRange(
-  period: string,
-  start: string,
-  end: string,
+function detailFrameworkReady(
+  view: ReportingView,
+  pending: boolean,
+  failed: boolean,
 ): boolean {
-  return period !== "custom" || !!(start && end);
+  return view !== "sdr" || (!pending && !failed);
+}
+
+function canEvaluateDetail(
+  valid: boolean,
+  count: number,
+  view: ReportingView,
+  pending: boolean,
+  failed: boolean,
+) {
+  return valid && count > 0 && detailFrameworkReady(view, pending, failed);
+}
+
+function FrameworkRetry({
+  view,
+  query,
+}: Readonly<{
+  view: ReportingView;
+  query: ReturnType<typeof useReportingFramework>;
+}>) {
+  const t = useT();
+  if (view !== "sdr" || !query.isError) return null;
+  return (
+    <ErrorLine
+      error={query.error}
+      actions={
+        <Button onClick={() => void query.refetch()}>
+          {t("common.retry")}
+        </Button>
+      }
+    />
+  );
 }

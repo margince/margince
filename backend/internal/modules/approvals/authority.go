@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -26,15 +27,13 @@ import (
 
 const objectUserAdmin = "user_admin"
 
+// kindArchiveRecord is the staged archive of one record.
+const kindArchiveRecord = "archive_record"
+
 // objectActivity is the RBAC object every timeline write is governed by, spelled
 // once: three staged kinds and the target-visibility switch below all name it,
 // and a typo in any of them would silently ask for a grant nobody holds.
 const objectActivity = "activity"
-
-// objectDeal is the RBAC object a stage move is governed by. Spelled here
-// rather than imported, for targetImportRun's reason: approvals may not import
-// a module it governs.
-const objectDeal = "deal"
 
 // targetImportRun is the staged target a migrate-in commit names, and the RBAC
 // object the migration module admits on (migration.ImportRunObject). One word
@@ -46,10 +45,10 @@ const targetImportRun = "import_run"
 // tool verb, which is how every other confirm-first verb is keyed here.
 const KindImportCommit = "commit_import"
 
-// grantRequirement is one RBAC pair approving a staged kind requires. Named
+// DecisionGrant is one RBAC pair approving a staged kind requires. Named
 // rather than anonymous because the derivation below appends to the set and the
 // composition layer's satisfiability gate reads the objects back out of it.
-type grantRequirement struct {
+type DecisionGrant struct {
 	Object string
 	Action principal.Action
 }
@@ -90,7 +89,9 @@ const (
 
 // retiredKinds are governed for reading and refused for approving: see
 // kindTranscriptProposal.
-var retiredKinds = map[string]bool{kindTranscriptProposal: true, kindCommunicationReview: true}
+var retiredKinds = map[string]bool{
+	kindTranscriptProposal: true, kindCommunicationReview: true, retiredStageCardKind: true,
+}
 
 // KindScheduledSendHeld is the card a stopped scheduled message raises for the
 // rep who scheduled it (ADR-0104 §5). Exported because compose stages it and
@@ -113,7 +114,7 @@ const objectCommunicationException = "communication_exception"
 // targetResolvedGrants, and approving then requires the UNION — no kind needs
 // both today, and decisionGrantsFor combines them so one that grows a second half
 // gains authority rather than silently losing the first.
-var decisionGrants = map[string][]grantRequirement{
+var decisionGrants = map[string][]DecisionGrant{
 	"merge_members": {{objectUserAdmin, principal.ActionDelete}},
 	// A held message asks its rep to try again or give up. Both answers move the
 	// message's own state — reschedule and cancel — which the store gates on
@@ -294,11 +295,13 @@ var decisionGrants = map[string][]grantRequirement{
 	kindCommitmentTask: {{objectActivity, principal.ActionCreate}, {tableContact, principal.ActionUpdate}},
 	// Retired; read only, see kindTranscriptProposal.
 	kindTranscriptProposal: {{objectActivity, principal.ActionCreate}},
+	// Retired; read only, and a waiting card can still be rejected. Reading one
+	// takes the grant moving the deal took.
+	retiredStageCardKind: {{tableDeal, principal.ActionUpdate}},
 	// A proposed stage move is decided by whoever may MOVE the deal. Approving
 	// it performs the advance, so read is not enough: somebody who can see a
 	// deal but not steer it must not be able to release a move they could not
 	// have made by hand.
-	"stage_progression": {{objectDeal, principal.ActionUpdate}},
 	// An automation's request_approval stages under emit_flow_event, and that
 	// action IS the confirm-first act: approving it performs no downstream
 	// write, it finishes the asking. The grant is the one the action catalog
@@ -351,11 +354,11 @@ var targetResolvedGrants = map[string]principal.Action{
 	// release adds beyond that write — its own provenance and the redeemed
 	// version pin — is enumerated in compose/assignownerrelease.go and changes
 	// nothing about the grant.)
-	"assign_owner":   principal.ActionUpdate,
-	"archive_record": principal.ActionDelete,
-	"merge_records":  principal.ActionUpdate,
-	"update_record":  principal.ActionUpdate,
-	"create_record":  principal.ActionCreate,
+	"assign_owner":    principal.ActionUpdate,
+	kindArchiveRecord: principal.ActionDelete,
+	"merge_records":   principal.ActionUpdate,
+	"update_record":   principal.ActionUpdate,
+	"create_record":   principal.ActionCreate,
 	// A part is written on the record it hangs off (an offer, a company, a
 	// project). Its store gates the write on that record's update grant.
 	"change_record_parts": principal.ActionUpdate,
@@ -404,16 +407,33 @@ func pendingDecidableInScopeAt(ctx context.Context, tx pgx.Tx, id ids.ApprovalID
 }
 
 func requireDecisionGrants(p principal.Principal, a row) error {
-	grants, err := decisionGrantsFor(a.Kind, a.TargetType)
+	checks, err := decisionChecksFor(a)
 	if err != nil {
 		return err
 	}
-	for _, g := range grants {
-		if !p.Permissions.Allows(g.Object, g.Action) {
-			return fmt.Errorf("approving %s needs %s.%s: %w", a.Kind, g.Object, g.Action, apperrors.ErrPermissionDenied)
+	for _, check := range checks {
+		if !check.HeldBy(p) {
+			return fmt.Errorf("approving %s needs %s: %w", a.Kind, check, apperrors.ErrPermissionDenied)
 		}
 	}
 	return nil
+}
+
+// An owner's archive may use update; the row check still proves ownership.
+func decisionChecksFor(a row) ([]auth.Check, error) {
+	grants, err := decisionGrantsFor(a.Kind, a.TargetType)
+	if err != nil {
+		return nil, err
+	}
+	checks := make([]auth.Check, 0, len(grants))
+	for _, grant := range grants {
+		check := auth.Check{Object: grant.Object, Actions: []principal.Action{grant.Action}}
+		if _, ruled := auth.ArchiveRuleFor(grant.Object); ruled && a.Kind == kindArchiveRecord && grant.Action == principal.ActionDelete {
+			check.Actions = append(check.Actions, principal.ActionUpdate)
+		}
+		checks = append(checks, check)
+	}
+	return checks, nil
 }
 
 // decisionGrantsFor derives every grant approving this staging requires: the
@@ -421,7 +441,7 @@ func requireDecisionGrants(p principal.Principal, a row) error {
 // that type's. An unmapped kind, and a target-resolved kind staged with no
 // target type, both error: neither can be decided by anyone, and answering an
 // empty grant set for either would make them decidable by everyone.
-func decisionGrantsFor(kind string, targetType *string) ([]grantRequirement, error) {
+func decisionGrantsFor(kind string, targetType *string) ([]DecisionGrant, error) {
 	fixed, hasFixed := decisionGrants[kind]
 	action, resolvedFromTarget := targetResolvedGrants[kind]
 	if !hasFixed && !resolvedFromTarget {
@@ -431,7 +451,7 @@ func decisionGrantsFor(kind string, targetType *string) ([]grantRequirement, err
 		// it takes. Consulted only AFTER the static maps, so a unit can never
 		// answer for a core kind.
 		if ext, registered := RegisteredExtensionKind(kind); registered {
-			return []grantRequirement{{ext.RbacObject, ext.RbacAction}}, nil
+			return []DecisionGrant{{ext.RbacObject, ext.RbacAction}}, nil
 		}
 		return nil, fmt.Errorf("crmapprovals: kind %q has no decision-grant mapping", kind)
 	}
@@ -443,7 +463,13 @@ func decisionGrantsFor(kind string, targetType *string) ([]grantRequirement, err
 	}
 	// Cloned, not appended in place: fixed is the map's own slice, and appending
 	// into its spare capacity would rewrite what the next caller reads.
-	return append(slices.Clone(fixed), grantRequirement{*targetType, action}), nil
+	return append(slices.Clone(fixed), DecisionGrant{*targetType, action}), nil
+}
+
+// DecisionGrants exposes the same requirements staging and decisions enforce.
+func DecisionGrants(kind, targetType string) ([]DecisionGrant, error) {
+	grants, err := decisionGrantsFor(kind, &targetType)
+	return slices.Clone(grants), err
 }
 
 // DecisionGrantObjects reports the RBAC objects approving a staging of this kind

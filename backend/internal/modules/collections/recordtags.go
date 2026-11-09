@@ -156,5 +156,5 @@ func (s *Store) recordTagRows(ctx context.Context, tx pgx.Tx, entityType string,
 // tagWordsWithheld says the caller holds no read on the tag vocabulary: they
 // may not see which words exist, nor filter records by one.
 func tagWordsWithheld(ctx context.Context) bool {
-	return auth.Require(ctx, "tag", principal.ActionRead) != nil
+	return !auth.Allows(ctx, "tag", principal.ActionRead)
 }

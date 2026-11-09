@@ -27,6 +27,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -275,13 +276,14 @@ func (s *PendingStore) PurgeRawCaptureTx(ctx context.Context, tx pgx.Tx, activit
 	// dropped. An upgraded installation has years of originals whose activity
 	// carries no link. A purge that skipped them would leave those verbatim
 	// payloads behind.
-	if _, err := tx.Exec(ctx, `
-		DELETE FROM raw_capture r
-		 USING activity a
-		 WHERE a.id = ANY($1)
-		   AND `+storekit.StoredOriginalSQL("a", "r"),
-		activityIDs); err != nil {
-		return fmt.Errorf("capture: purging the redacted message's provider originals: %w", err)
+	rows, err := tx.Query(ctx, `DELETE FROM raw_capture r USING activity a
+ WHERE a.id = ANY(@ids) AND `+storekit.StoredOriginalSQL("a", "r")+` RETURNING r.payload_object`,
+		pgx.NamedArgs{sqlArgIDs: activityIDs})
+	if err != nil {
+		return fmt.Errorf("capture: purge provider originals: %w", err)
+	}
+	if _, _, err := originalstore.PurgeReturned(ctx, rows); err != nil {
+		return err
 	}
 	return purgePartySourcesTx(ctx, tx, activityIDs)
 }

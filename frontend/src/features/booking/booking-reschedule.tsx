@@ -6,8 +6,13 @@ import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { MeetingSlots } from "../../design-system/meetingslots";
 import { QueryGate } from "../../design-system/querystates";
 import { formatDateTime } from "../../format/format";
-import { dayInZone, startOfDayInZone, viewerZone } from "../../format/timezone";
+import {
+  browserZone,
+  dayInZone,
+  startOfDayInZone,
+} from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
+import { useViewerZone } from "../../lib/viewerzone";
 import { BookingZone } from "./booking-common";
 import { throwBookingProblem } from "./booking-errors";
 
@@ -24,7 +29,10 @@ export function BookingReschedule({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const [zone, setZone] = useState(viewerZone);
+  // A guest on the public token link has only the browser's clock; a
+  // signed-in host starts from their own zone.
+  const readerZone = useViewerZone();
+  const [zone, setZone] = useState(() => (token ? browserZone() : readerZone));
   const [from, setFrom] = useState(() => new Date().toISOString());
   const [selected, setSelected] = useState<{
     start: string;

@@ -134,10 +134,8 @@ func (w *transcriptProposeWorker) declineUnread(ctx context.Context, args Transc
 		return err
 	}
 	return w.activities.FinishTranscriptRead(ctx, args.TranscriptReadID,
-		activities.TranscriptReadOutcome{
-			Status: activities.TranscriptReadFailed,
-			Detail: transcriptWords.NoModel.In(transcriptCopyFor(string(w.language.Resolve(ctx))).Lang()),
-		})
+		transcriptCopyFor(string(w.language.Resolve(ctx))).failedOutcome(
+			activities.TranscriptFailure{Code: activities.TranscriptFailureNoModel}))
 }
 
 // newTranscriptProposeWorker assembles the worker-role reading. brain may be
@@ -151,7 +149,7 @@ func newTranscriptProposeWorker(pool *pgxpool.Pool, brain completer, log *slog.L
 	}
 	if brain != nil {
 		worker.proposer = NewTranscriptProposer(
-			pool, brain, approvalsServiceWithEffects(pool), time.Now, log)
+			pool, brain, NewApprovalsServiceWithEffects(pool), time.Now, log)
 	}
 	return worker
 }

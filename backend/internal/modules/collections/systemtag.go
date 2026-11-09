@@ -6,18 +6,19 @@ package collections
 import (
 	"context"
 	"errors"
+	"slices"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // ApplySystemTagTx files each record under the tag with this name, as
-// tagNamedTx finds or makes it. A word a user already made is reused. A record
-// already filed there counts as done, so a second run changes nothing. It
-// answers how many records it tagged. System principal only.
+// tagNamedTx finds or makes it. Human removals and archived words are kept.
 func ApplySystemTagTx(ctx context.Context, tx pgx.Tx, name, entityType string, entityIDs []ids.UUID, evidence map[string]any) (int, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return 0, err
@@ -32,9 +33,14 @@ func ApplySystemTagTx(ctx context.Context, tx pgx.Tx, name, entityType string, e
 	if err != nil {
 		return 0, err
 	}
+	if tagID.UUID == ids.Nil {
+		return 0, nil
+	}
+	entityIDs = slices.Clone(entityIDs)
+	slices.SortFunc(entityIDs, func(a, b ids.UUID) int { return strings.Compare(a.String(), b.String()) })
 	applied := 0
 	for _, id := range entityIDs {
-		_, err := applyTagTx(ctx, tx, tagID, entityType, id, evidence)
+		_, err := applyTagWithRemovalPolicyTx(ctx, tx, tagID, entityType, id, evidence, true)
 		if errors.Is(err, apperrors.ErrConflict) {
 			continue
 		}
@@ -46,8 +52,7 @@ func ApplySystemTagTx(ctx context.Context, tx pgx.Tx, name, entityType string, e
 	return applied, nil
 }
 
-// tagNamedTx is the tag holding this name, live first. An archived one is
-// restored rather than coined again, so its records stay under one word.
+// tagNamedTx reuses a live word and leaves an archived word retired.
 // A name no tag ever held is coined.
 func tagNamedTx(ctx context.Context, tx pgx.Tx, name string) (ids.TagID, error) {
 	name, err := ValidateTagName(name)
@@ -66,8 +71,11 @@ func tagNamedTx(ctx context.Context, tx pgx.Tx, name string) (ids.TagID, error) 
 	case err != nil:
 		return ids.TagID{}, err
 	case archived:
-		restored, err := restoreTagTx(ctx, tx, id)
-		return restored.ID, err
+		return ids.TagID{}, nil
 	}
 	return id, nil
+}
+
+func lockTagAssignmentTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, entityType string, entityID ids.UUID) error {
+	return storekit.LockWriteIdentity(ctx, tx, "tag_assignment", tagID.String()+":"+entityType+":"+entityID.String())
 }

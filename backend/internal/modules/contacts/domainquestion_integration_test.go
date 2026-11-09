@@ -73,7 +73,7 @@ func TestAnOpenQuestionReachesItsDirectRecipient(t *testing.T) {
 	// The crawl found nothing that named a company, which is what leaves the
 	// question open with a reason rather than merely queued for a retry.
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return markDispositionUnevidenced(ctx, tx, "unjudged.test", "the site named nobody")
+		return markDispositionUnevidenced(ctx, tx, "unjudged.test", "the site named nobody", false)
 	}); err != nil {
 		t.Fatalf("withholding the verdict: %v", err)
 	}
@@ -95,7 +95,7 @@ func TestASubdomainSenderAsksTheQuestionOfItsDomain(t *testing.T) {
 	ctx := e.as()
 	e.openTriageFirst(ctx, t, "carla@mail.deeper.test", "Carla Example", "deeper.test")
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return markDispositionUnevidenced(ctx, tx, "deeper.test", "the site named nobody")
+		return markDispositionUnevidenced(ctx, tx, "deeper.test", "the site named nobody", false)
 	}); err != nil {
 		t.Fatalf("withholding the verdict: %v", err)
 	}
@@ -131,7 +131,7 @@ func TestDiscardingADomainTakesItsQuestionOffTheQueue(t *testing.T) {
 	ctx := e.as()
 	e.openTriageFirst(ctx, t, "bob@noise.test", "Bob Example", "noise.test")
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return markDispositionUnevidenced(ctx, tx, "noise.test", "the site named nobody")
+		return markDispositionUnevidenced(ctx, tx, "noise.test", "the site named nobody", false)
 	}); err != nil {
 		t.Fatalf("withholding the verdict: %v", err)
 	}
@@ -162,7 +162,7 @@ func TestAColleaguesDiscardLeavesYourOwnQuestionStanding(t *testing.T) {
 	ctx := e.as()
 	e.openTriageFirst(ctx, t, "dana@shared.test", "Dana Example", "shared.test")
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return markDispositionUnevidenced(ctx, tx, "shared.test", "the site named nobody")
+		return markDispositionUnevidenced(ctx, tx, "shared.test", "the site named nobody", false)
 	}); err != nil {
 		t.Fatalf("withholding the verdict: %v", err)
 	}
@@ -187,7 +187,7 @@ func TestAWorkspaceExclusionAnswersItForEveryone(t *testing.T) {
 	ctx := e.as()
 	e.openTriageFirst(ctx, t, "erin@policy.test", "Erin Example", "policy.test")
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return markDispositionUnevidenced(ctx, tx, "policy.test", "the site named nobody")
+		return markDispositionUnevidenced(ctx, tx, "policy.test", "the site named nobody", false)
 	}); err != nil {
 		t.Fatalf("withholding the verdict: %v", err)
 	}
@@ -233,7 +233,7 @@ func TestDomainQuestionsContinueBeyondTheAttentionWindow(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	first, page, err := e.store.DomainQuestionsForOwner(ctx, "", 2)
+	first, page, err := e.store.DomainQuestionsForOwner(ctx, "", 2, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -246,7 +246,7 @@ func TestDomainQuestionsContinueBeyondTheAttentionWindow(t *testing.T) {
 	if _, err := e.store.ResolveUnreadableDomainTriage(ctx, ResolveDomainTriageInput{Domain: first[0].Domain}); err != nil {
 		t.Fatal(err)
 	}
-	second, final, err := e.store.DomainQuestionsForOwner(ctx, page.NextCursor, 2)
+	second, final, err := e.store.DomainQuestionsForOwner(ctx, page.NextCursor, 2, "")
 	if err != nil {
 		t.Fatal(err)
 	}

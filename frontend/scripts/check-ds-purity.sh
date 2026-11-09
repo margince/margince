@@ -8,8 +8,8 @@
 #   1. Hex literals (#abc / #aabbcc / #aabbccdd) — use var(--token)
 #   2. Raw colour functions rgb()/rgba()/hsl()/hsla()/oklch() — use a token
 #
-# This is the fail-closed grep arm on top of the vitest conformance suite
-# (design-system/conformance.test.ts): the same discipline holds even if the
+# This is the fail-closed grep arm on top of the conformance census
+# (census/rules/conformance.census.ts): the same discipline holds even if the
 # test tree regresses. This DS is CSS-custom-property based, not
 # Tailwind-class based, so there are no text-[Npx]/utility-class checks.
 #
@@ -35,7 +35,7 @@ EXT_DIR="${MARGINCE_EXT_DIR:-$(cd "$SCRIPT_DIR/../.." && pwd)/extensions}"
 # marks. Another company's colours are not ours to tokenise, and a provider mark
 # rendered in Ledger Green is a wrong mark. Keep this a NAMED file — widening it
 # to a pattern is how a real drift gets in beside it, and the same one entry is
-# repeated in conformance.test.ts so both arms of the gate say why.
+# repeated in census/rules/conformance.census.ts so both arms of the gate say why.
 #
 # And exactly ONE piece of scaffolding, on the same terms:
 # design-system/tokens-testing.ts is what the token suites READ the sheet with,

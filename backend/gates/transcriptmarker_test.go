@@ -22,9 +22,10 @@ package gates
 // itself while the two real ones disagreed.
 
 import (
-	"os"
 	"regexp"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // A Go const declaration binding a string literal, captured by name.
@@ -78,7 +79,7 @@ func TestTheTranscriptMarkerIsSpelledTheSameInBothModules(t *testing.T) {
 // the one outcome this gate must not have.
 func transcriptMarkerValue(t *testing.T, relPath, name string) string {
 	t.Helper()
-	src, err := os.ReadFile(relPath)
+	src, err := gatekit.ReadFile(relPath)
 	if err != nil {
 		t.Fatalf("read %s: %v", relPath, err)
 	}

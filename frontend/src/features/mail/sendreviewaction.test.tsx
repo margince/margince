@@ -15,6 +15,7 @@ import { SendReviewActions } from "./sendreviewaction";
 const review: SendReview = {
   reviewId: "review-1",
   actions: ["overrule"],
+  refusals: [],
   overrulable: [
     { contactId: "contact-a", category: "marketing" },
     { contactId: "contact-b", category: "marketing" },

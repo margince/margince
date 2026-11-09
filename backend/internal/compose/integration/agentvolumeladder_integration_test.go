@@ -101,7 +101,7 @@ func callTool(t *testing.T, e *apptest.AppEnv, bearer map[string]string, tool st
 // and the same passport changes again through the same door.
 func TestAWritePastItsThresholdIsReleasedByTheHumanWhoLentThePassport(t *testing.T) {
 	e, meter := ladderApp(t, "ladder-write", agentvolume.Limits{Writes: 10})
-	bearer, passport := passportWithID(t, e, "writing agent", "read", "write")
+	bearer, passport := apptest.PassportWithID(t, e, "writing agent", "read", "write")
 	spendCounter(t, e, meter, passport, agentvolume.Writes, 12)
 
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Refused"}, bearer, nil); status != http.StatusTooManyRequests {
@@ -140,7 +140,7 @@ func TestAWritePastItsThresholdIsReleasedByTheHumanWhoLentThePassport(t *testing
 // asked again.
 func TestOneReleaseIsOneMoreAllowanceAndNotAStandingPermission(t *testing.T) {
 	e, meter := ladderApp(t, "ladder-once", agentvolume.Limits{Writes: 10})
-	bearer, passport := passportWithID(t, e, "writing agent", "read", "write")
+	bearer, passport := apptest.PassportWithID(t, e, "writing agent", "read", "write")
 	spendCounter(t, e, meter, passport, agentvolume.Writes, 12)
 	callTool(t, e, bearer, "create_record", AnyMap{
 		"record_type": "contact", "fields": AnyMap{"source": "manual", "full_name": "Metered"},
@@ -162,7 +162,7 @@ func TestOneReleaseIsOneMoreAllowanceAndNotAStandingPermission(t *testing.T) {
 // reaches no inbox. Releasing it would release every other counter at once.
 func TestASpentCallCeilingAsksNobodyAnything(t *testing.T) {
 	e, meter := ladderApp(t, "ladder-calls", agentvolume.Limits{Calls: 5})
-	bearer, passport := passportWithID(t, e, "calling agent", "read", "write")
+	bearer, passport := apptest.PassportWithID(t, e, "calling agent", "read", "write")
 	seedContacts(t, e, 2)
 	spendCounter(t, e, meter, passport, agentvolume.Calls, 5)
 
@@ -188,7 +188,7 @@ func TestASpentCallCeilingAsksNobodyAnything(t *testing.T) {
 // human whose answer changes nothing — and leave the agent waiting for it.
 func TestASpentEgressCeilingAsksNobodyAnything(t *testing.T) {
 	e, meter := ladderApp(t, "ladder-egress", agentvolume.Limits{Egress: 1})
-	bearer, passport := passportWithID(t, e, "sending agent", "read", "send")
+	bearer, passport := apptest.PassportWithID(t, e, "sending agent", "read", "send")
 	spendCounter(t, e, meter, passport, agentvolume.Egress, 5)
 
 	callTool(t, e, bearer, "send_email", AnyMap{

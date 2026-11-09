@@ -231,3 +231,43 @@ func assertDomainMaintenanceGroup(t *testing.T, grouped []ranked, count int) {
 		t.Fatal("batch lost the member identities")
 	}
 }
+
+func TestAForwardedQuestionCarriesItsContextAndKeepsItsVerbs(t *testing.T) {
+	t.Parallel()
+	contact := ids.New[ids.ContactKind]()
+	company := ids.New[ids.CompanyKind]()
+	svc := domainQuestionLaneService(&stubDomainQuestions{rows: []DomainQuestion{{
+		Domain: "alias.example", Reason: "The site redirects elsewhere.",
+		ReasonCode: contacts.PendingForwardedIdentity, AskedAt: readInstant,
+		Context: contacts.DomainQuestionContext{
+			Contacts:      []contacts.DomainQuestionContact{{ID: contact, Name: "Alex Example"}},
+			ContactCount:  2,
+			SenderAddress: "alex@alias.example",
+			Suggestion:    &contacts.DomainQuestionSuggestion{CompanyID: company, Name: "Example Company", Basis: contacts.SuggestionRedirectTarget},
+		},
+	}}})
+	out, err := svc.Assemble(pageReader())
+	if err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	var row *crmcontracts.WorklistItem
+	for _, item := range queueOf(t, out, nil) {
+		if item.Id == "alias.example" {
+			row = &item
+		}
+	}
+	if row == nil {
+		t.Fatal("the forwarded question never reached the worklist")
+	}
+	if want := []crmcontracts.WorklistItemActions{"discard", "reopen"}; !slices.Equal(row.Actions, want) {
+		t.Errorf("actions = %v, want %v: a redirect never offers keep without a chosen company", row.Actions, want)
+	}
+	got := row.DomainContext
+	if got == nil || got.ContactCount != 2 || len(got.Contacts) != 1 || got.Contacts[0].Name != "Alex Example" ||
+		got.SenderAddress == nil || *got.SenderAddress != "alex@alias.example" {
+		t.Fatalf("domain_context = %+v, want the sender and count", got)
+	}
+	if got.SuggestedCompany == nil || got.SuggestedCompany.Name != "Example Company" || got.SuggestedCompany.Basis != crmcontracts.DomainQuestionSuggestionBasisRedirectTarget {
+		t.Fatalf("suggested_company = %+v, want the redirect target's owner", got.SuggestedCompany)
+	}
+}

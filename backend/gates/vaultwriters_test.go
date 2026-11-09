@@ -31,6 +31,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // vaultPut matches a call that seals bytes into the key vault. The receiver name
@@ -98,14 +100,14 @@ func TestEveryKeyVaultWriterHasAVerdict(t *testing.T) {
 	t.Parallel()
 	found := map[string]bool{}
 	root := "internal"
-	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
-		body, err := os.ReadFile(path)
+		body, err := gatekit.ReadFile(path)
 		if err != nil {
 			return err
 		}

@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -26,6 +27,8 @@ func TestClassifySyncError(t *testing.T) {
 		{"auth parks", fmt.Errorf("provider: %w", connector.ErrAuthRejected), classAuth},
 		{"unreachable backs off", fmt.Errorf("provider: %w", connector.ErrUnreachable), classUnreachable},
 		{"cursor gone is its own class", fmt.Errorf("provider: %w", connector.ErrCursorGone), classHistoryGone},
+		{"a role that cannot capture is forbidden", fmt.Errorf("sync: %w", &RoleCannotCaptureError{}), classForbidden},
+		{"a sink write refused by RBAC is forbidden", fmt.Errorf("activity.create: %w", apperrors.ErrPermissionDenied), classForbidden},
 		{"anything else is our bug", errors.New("nil map write"), classInternal},
 	}
 	for _, tc := range cases {

@@ -92,11 +92,7 @@ const empty: View = {
 
 /** Neither half has anything to show: one empty line, not two blank panels. */
 export const Empty: Story = {
-  render: () => (
-    <StoryProviders>
-      <ContactResearchTab view={empty} />
-    </StoryProviders>
-  ),
+  render: () => researchTab(empty),
 };
 
 const neverBought: View = {

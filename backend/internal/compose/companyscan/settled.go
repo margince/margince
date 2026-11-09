@@ -31,6 +31,9 @@ func claimsOwed(kind crmcontracts.Company360SuggestionKind) bool {
 // standingRefusal says why a finding cannot rest on this message for this
 // account, or "" when it can.
 func standingRefusal(kind crmcontracts.Company360SuggestionKind, message MessageIn, noDealAdvice bool) string {
+	if kind == crmcontracts.Company360SuggestionKindCommitmentUnmet {
+		return "promises are handled by the recorded commitment decisions and open work; the scan cannot assign them again"
+	}
 	if message.Settled && claimsOwed(kind) {
 		return "the message was already answered or kept in its thread, so nothing is owed on it"
 	}
@@ -65,6 +68,9 @@ func (s *Service) dropSettled(
 	}
 	kept := make([]crmcontracts.Company360Suggestion, 0, len(findings))
 	for _, finding := range findings {
+		if finding.Kind == crmcontracts.Company360SuggestionKindCommitmentUnmet && finding.WrittenBy != nil && *finding.WrittenBy == crmcontracts.WrittenByModel {
+			continue
+		}
 		if id, ok := owedCitation(finding); ok && settled[id] {
 			continue
 		}

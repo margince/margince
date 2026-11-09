@@ -1,5 +1,6 @@
 import { api } from "../api/client";
 import { ifMatch } from "../api/version";
+import type { EntityKind } from "../lib/entity";
 import { saveIndependentEdit } from "../lib/independentedit";
 import { unwrap } from "../lib/problem";
 import { companyEditComparison } from "./companyform";
@@ -8,7 +9,7 @@ import type { FieldRecord } from "./recordfieldtypes";
 
 // Core and custom fields use the same conditional write and recovery policy.
 export function saveRecordEdit(
-  kind: "company" | "contact" | "deal" | "lead" | "project",
+  kind: EntityKind,
   original: FieldRecord,
   patch: Record<string, unknown>,
 ) {

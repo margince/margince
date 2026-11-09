@@ -7,9 +7,14 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { DecisionApproval } from "../../design-system/decisioncard";
 import { formatDateTime } from "../../format/format";
 import { LocaleProvider, translate } from "../../i18n";
-import { RecordZoneProvider } from "../../lib/recordzone";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
 import { messageApproval } from "../../testing/message-approval";
 import { SourceHost } from "../../testing/sourcehost";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+} from "../../testing/story-utils";
 import { ApprovalEvidence } from "./approvalevidence";
 
 const SOURCE = "22222222-2222-4222-8222-222222222222";
@@ -45,20 +50,17 @@ function show(
   activity: typeof source & { content_state?: string } = source,
   status = 200,
 ) {
-  const fetcher = vi.fn(
-    async () =>
-      new Response(
-        JSON.stringify(
-          status === 200
-            ? activity
-            : { code: status === 403 ? "permission_denied" : "not_found" },
-        ),
-        {
-          status,
-          headers: { "content-type": "application/json" },
-        },
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["read"] }),
+    [`GET /activities/${SOURCE}`]: () =>
+      jsonResponse(
+        status === 200
+          ? activity
+          : { code: status === 403 ? "permission_denied" : "not_found" },
+        status,
       ),
-  );
+  });
+  const fetcher = vi.fn(globalThis.fetch);
   vi.stubGlobal("fetch", fetcher);
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -66,11 +68,11 @@ function show(
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <RecordZoneProvider zone={RECORD_ZONE}>
+        <ViewerZoneProvider zone={RECORD_ZONE}>
           <SourceHost>
             <ApprovalEvidence approval={approval} />
           </SourceHost>
-        </RecordZoneProvider>
+        </ViewerZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );

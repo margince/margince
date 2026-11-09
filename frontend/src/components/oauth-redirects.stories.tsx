@@ -33,7 +33,7 @@ const URIS = [
 ];
 
 const meta: Meta<typeof RedirectUriGroup> = {
-  title: "Settings/Company/Sign-in and apps/Redirect addresses",
+  title: "Settings/Company/Sign-in and security/Redirect addresses",
   component: RedirectUriGroup,
 };
 export default meta;

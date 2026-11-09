@@ -41,10 +41,8 @@ func TestTheConvertedTotalPerCompanyReconcilesWithItsEvidence(t *testing.T) {
 		t.Fatalf("rows = %+v, want the one unowned group", result.Rows)
 	}
 	row := result.Rows[0]
-	// 100000 EUR + 10000 USD × 0.5. The CHF deal has no rate, so it is not
-	// priced at zero or at one: it is left out and the count says so.
-	if got := wireInt(t, row, "base"); got != 105_000 {
-		t.Errorf("converted total = %d, want 105000", got)
+	if row["base"] != nil {
+		t.Errorf("an incomplete converted total was served: %v", row["base"])
 	}
 	if got := wireInt(t, row, "priced"); got != 2 {
 		t.Errorf("priced = %d, want 2 of the 3 deals", got)
@@ -57,8 +55,8 @@ func TestTheConvertedTotalPerCompanyReconcilesWithItsEvidence(t *testing.T) {
 		t.Fatalf("the converted row minted no derivation handle: %+v", row)
 	}
 	derivation := e.explainReport(e.Admin(), t, "open-deals-per-company", handle)
-	if got := asInt(t, derivation.Aggregates["base"]); got != 105_000 {
-		t.Errorf("the evidence recomputes %d, want the 105000 it explains", got)
+	if derivation.Aggregates["base"] != nil {
+		t.Errorf("drill-through served an incomplete converted total: %v", derivation.Aggregates["base"])
 	}
 }
 
@@ -67,7 +65,7 @@ func TestTheConvertedTotalPerCompanyReconcilesWithItsEvidence(t *testing.T) {
 func TestAMaskOnTheAmountWithholdsTheConvertedTotal(t *testing.T) {
 	e := setupForecast(t)
 	own := int64(100_000)
-	e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &own, nil)
+	e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &own)
 
 	result := e.runReport(e.maskedDealReader(principal.MaskAlways), t, "open-deals-per-company", openDealsBasePlan)
 	if len(result.Rows) != 0 {

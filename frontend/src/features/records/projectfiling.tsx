@@ -9,8 +9,9 @@ import { formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { entityTimelineKeys } from "../../lib/activitykeys";
+import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 
 type ProjectFiling = components["schemas"]["ProjectFiling"];
 type RefusalCode = components["schemas"]["ProjectFilingRefusal"]["code"];
@@ -231,7 +232,7 @@ function FilingBody({
         <Callout
           tone="warning"
           kind="standing"
-          title={t(REFUSAL_COPY[state.refusal.code])}
+          title={t(labelFor(REFUSAL_COPY, state.refusal.code))}
         />
       )}
       {!done && state.undoable && (
@@ -266,7 +267,7 @@ function Decisions({
 }: Readonly<{ decisions: ProjectFiling["undone"] }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   if (decisions.length === 0) return null;
   return (
     <section aria-label={t("projectFiling.decisions")}>

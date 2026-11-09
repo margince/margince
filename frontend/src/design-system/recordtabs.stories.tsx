@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, within } from "storybook/test";
+import { expect, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { Button } from "./atoms";
 import { RecordTabs } from "./recordtabs";
@@ -156,7 +156,7 @@ export const ScrollsAtPhoneWidth: Story = {
     const strip = canvasElement.querySelector(".recordtabs-strip");
     if (!(strip instanceof HTMLElement)) throw new Error("no tab strip drawn");
     await expect(strip.scrollWidth).toBeGreaterThan(strip.clientWidth);
-    await expect(strip).toHaveClass("is-clipped-end");
+    await waitFor(() => expect(strip).toHaveClass("is-clipped-end"));
     await expect(strip).not.toHaveClass("is-clipped-start");
   },
 };

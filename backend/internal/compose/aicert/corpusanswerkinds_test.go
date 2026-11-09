@@ -83,9 +83,11 @@ import (
 // never edit it to make a run green.
 var recognisedOwners = []string{
 	"capture_classify/classify",
+	"capture_classify/deal_topic",
 	"capture_confidentiality_verdict/thread",
 	"capture_counterparty_verdict/verdict",
 	"cold_start/acts, cold_start/company_message, cold_start/sitereadmessage",
+	"deal_verdict/deal_verdict",
 	// strong | moderate | weak. The band IS the answer; the claims are why.
 	"growth_fit/growth_fit",
 	"nl_search/filter_propose",

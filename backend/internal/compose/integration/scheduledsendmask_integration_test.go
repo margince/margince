@@ -23,7 +23,7 @@ import (
 // goes out when it fires. Only the timeline row it then writes is masked.
 func TestAScheduledSendDeliversWhatWasTypedAndStoresItMasked(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
 
 	const secret = "Hunter2-Example!"

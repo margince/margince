@@ -1,3 +1,4 @@
+import type { RecordTabId } from "./recordtaborder";
 import type { Route } from "./router";
 
 // The contact record's tabs, and the ONE way to address one.
@@ -31,7 +32,7 @@ export const CONTACT_TABS = [
   "meetings",
   "research",
   "documents",
-] as const;
+] as const satisfies readonly RecordTabId[];
 
 export type ContactTab = (typeof CONTACT_TABS)[number];
 

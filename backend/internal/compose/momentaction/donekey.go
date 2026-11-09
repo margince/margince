@@ -45,7 +45,7 @@ func HeldMarker(ctx context.Context, assignee *ids.UUID) string {
 		return ":ours"
 	}
 	viewer, ok := principal.Actor(ctx)
-	if auth.RequireHuman(ctx) != nil || !ok || viewer.UserID == (ids.UUID{}) || *assignee != viewer.UserID {
+	if auth.RequireHumanOrItsAgent(ctx) != nil || !ok || viewer.UserID == (ids.UUID{}) || *assignee != viewer.UserID {
 		return ":theirs"
 	}
 	return ":ours"
@@ -60,15 +60,14 @@ type DoneSetAside struct {
 }
 
 // DoneSetAsidesTx reads the Not yet answers the reader gave to the named
-// questions. Only a human has answers: an agent carries its human's id and
-// must not read their screen.
+// questions. A user and their agent share answers. Passportless work has none.
 func DoneSetAsidesTx(ctx context.Context, tx pgx.Tx, keys []string) (map[DoneSetAside]bool, error) {
 	out := map[DoneSetAside]bool{}
 	viewer, ok := principal.Actor(ctx)
 	if !ok || viewer.UserID == (ids.UUID{}) || len(keys) == 0 {
 		return out, nil
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return out, nil
 		}

@@ -152,3 +152,16 @@ Move work whose cost grows with records into a
 [background data task](add-a-data-task.md). The worker runs small transactions and saves its place;
 API startup only applies schema changes. Never ship a migration that requires a background task to
 have completed. Reads must be correct before the task has finished.
+
+
+## Email date index
+
+The index uses `activity_participant`. Apply the schema before starting the new worker.
+Run the background corrections described in [Background corrections](add-a-data-task.md#observe-a-correction).
+The reader uses the exact history query until this task finishes.
+
+Wait for the task to finish before starting a history import. The worker also repairs missing
+date fields after the task ends. Database triggers keep each row's date and visibility equal to its activity.
+
+The index reads `address_domain_folded`. It finds both a domain and names under it.
+Erasure clears that field, so the row leaves the index.

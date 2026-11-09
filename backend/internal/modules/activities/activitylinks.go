@@ -177,7 +177,13 @@ func mayAttach(ctx context.Context, tx pgx.Tx, link ActivityLinkInput) error {
 	}
 	// ATTACH: the named record gains an activity that every reader of it
 	// will see, so a share marked read-only does not confer this.
-	return auth.EnsureAttachTarget(ctx, tx, link.EntityType, link.EntityID)
+	if err := auth.EnsureAttachTarget(ctx, tx, link.EntityType, link.EntityID); err != nil {
+		return err
+	}
+	if link.EntityType == linkEntityDeal {
+		return refuseAnotherMembersDeal(ctx, tx, link.EntityID)
+	}
+	return nil
 }
 
 // linkRefusal names the body field when the caller typed the links. Links a
@@ -293,8 +299,8 @@ func (e *InvalidLinkTypeError) FieldFault() (field, code, message string) {
 // removable only by a named member giving a written reason (UndoProjectFiling).
 // relink_activity was raised to confirm-first for a project destination for
 // exactly that reason. The create path reaches the same
-// write and five tools ride it — log_activity, create_task, book_meeting,
-// draft_email, send_company_email — every one of them auto-execute. A passport
+// write and four tools ride it (log_activity, create_task,
+// draft_email, send_company_email), every one of them auto-execute. A passport
 // holding activity:update could call any of them in a loop and mint one mark
 // per call with nobody watching (#2266).
 //

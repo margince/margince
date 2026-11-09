@@ -493,16 +493,21 @@ func TestVoiceBuildWorkEndToEnd(t *testing.T) {
 	}
 }
 
-func TestVoiceBuildWorkSnoozesWhileAnotherClaimIsLive(t *testing.T) {
+func TestVoiceBuildWorkSkipsAnotherSessionOwner(t *testing.T) {
 	env, build := seedVoiceBuild(t, "Contended quote.", 6)
 	ctx := env.workerCtx(t)
+	lease, held, err := env.e.DB().TryWorkLease(ctx, "voice_build", build.ID, discardLogger())
+	if err != nil || !held {
+		t.Fatalf("lease: %v %v", held, err)
+	}
+	defer lease.Close(ctx)
 	if _, claimed, err := env.store.ClaimBuild(ctx, env.profile.ID, build.ID, time.Minute); err != nil || !claimed {
 		t.Fatalf("rival claim: %v claimed=%v", err, claimed)
 	}
 	worker := newVoiceBuildWorker(env.e.Pool, &scriptedBuildBrain{judgeScore: 0.9, quote: "Contended quote."}, slog.New(slog.DiscardHandler))
-	err := worker.Work(context.Background(), voiceBuildJob(env, build))
-	if err == nil {
-		t.Fatal("a live rival claim must snooze the job, never succeed it — success would strand the build")
+	err = worker.Work(context.Background(), voiceBuildJob(env, build))
+	if err != nil {
+		t.Fatalf("a live rival claim should skip the duplicate: %v", err)
 	}
 	current, getErr := env.store.GetBuild(env.owner, env.profile.ID, build.ID)
 	if getErr != nil {

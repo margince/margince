@@ -96,8 +96,12 @@ type worklistCursor struct {
 // A generated client that sends its documented default on page two would
 // otherwise be refused for agreeing with the server.
 func fingerprint(scope, filter string, owner ids.UUID) string {
+	protocol := tailProtocol
+	if normalizedFilter(filter) == string(filterChangedSinceBrief) {
+		protocol = "changed-snapshot1"
+	}
 	sum := sha256.Sum256([]byte(
-		scope + "\x00" + normalizedFilter(filter) + "\x00" + owner.String() + "\x00" + tailProtocol))
+		scope + "\x00" + normalizedFilter(filter) + "\x00" + owner.String() + "\x00" + protocol))
 	return hex.EncodeToString(sum[:8])
 }
 

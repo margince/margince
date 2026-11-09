@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
+	"github.com/margince/margince/backend/internal/shared/kernel/stagemove"
 )
 
 const (
@@ -47,12 +48,12 @@ const (
 var stageCohortOutcomes = []string{cohortAdvanced, cohortWon, cohortLost, cohortRegressed, cohortLeftPipeline, cohortUnresolved, cohortHistoryPartial}
 
 // stageExitSQL names the outcome of an entry from its next move, nx. A next
-// move an import brought in is history_partial: it says nothing about how this
-// team sells. A move saved before provenance was kept counts. Won and lost need
+// move another system made, by import or sync, is history_partial: it says
+// nothing about how this team sells. A move saved before provenance was kept counts. Won and lost need
 // only the meaning the move recorded. A direction needs both of its recorded
 // positions, and without them the outcome is history_partial too.
-const stageExitSQL = `CASE WHEN nx.changed_at IS NULL THEN '` + cohortUnresolved + `'
-	WHEN nx.provenance = 'imported' THEN '` + cohortHistoryPartial + `'
+var stageExitSQL = `CASE WHEN nx.changed_at IS NULL THEN '` + cohortUnresolved + `'
+	WHEN ` + stagemove.MadeElsewhereSQL("nx.provenance") + ` THEN '` + cohortHistoryPartial + `'
 	WHEN nx.semantic_at_change = 'won' THEN '` + cohortWon + `'
 	WHEN nx.semantic_at_change = 'lost' THEN '` + cohortLost + `'
 	WHEN nx.pipeline_id_at_change IS DISTINCT FROM e.pipeline_id THEN '` + cohortLeftPipeline + `'

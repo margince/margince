@@ -61,6 +61,11 @@ func EraseUntoldLeadTx(ctx context.Context, tx pgx.Tx, in UntoldLead) error {
 			 WHERE id = $1`, in.ApprovalID); err != nil {
 			return fmt.Errorf("emptying the proposal the untold lead came from: %w", err)
 		}
+		// The proposal's own history and its requested event carry the name it
+		// was staged under, so emptying the row alone leaves the name behind.
+		if err := tombstoneCollateralScrubs(ctx, tx, "approval", []ids.UUID{in.ApprovalID.UUID}, untoldLeadReason, causeUntoldLead); err != nil {
+			return err
+		}
 	}
 	if in.LeadID.IsZero() {
 		return nil
@@ -79,6 +84,9 @@ func EraseUntoldLeadTx(ctx context.Context, tx pgx.Tx, in UntoldLead) error {
 		map[string]any{evidenceKeyReason: untoldLeadReason, evidenceKeyCause: causeUntoldLead})
 	if err != nil {
 		return fmt.Errorf("tombstoning the untold lead: %w", err)
+	}
+	if err := storekit.RedactAuditHistory(ctx, tx, auditID); err != nil {
+		return err
 	}
 	reason := untoldLeadReason
 	if err := storekit.EmitEventForEntity(ctx, tx, auditID, "lead", in.LeadID.UUID,
@@ -114,10 +122,9 @@ func deleteNoticeActivities(ctx context.Context, tx pgx.Tx, deliveryID, leadID i
 // reaches from it. Those are the captured original, the field stamps, the
 // vectors and the communication record. The rest cascade from the row.
 func deleteLeadRecordsTx(ctx context.Context, tx pgx.Tx, leadID ids.UUID) error {
-	if _, err := tx.Exec(ctx, `
-		DELETE FROM raw_capture rc USING lead l
-		 WHERE l.id = $1 AND rc.source_system = l.source_system AND rc.source_id = l.source_id`,
-		leadID); err != nil {
+	if _, err := deleteRawOriginalsTx(ctx, tx,
+		`EXISTS (SELECT 1 FROM lead l WHERE l.id = @lead AND r.source_system = l.source_system AND r.source_id = l.source_id)`,
+		pgx.NamedArgs{sqlArgLead: leadID}); err != nil {
 		return fmt.Errorf("deleting the untold lead's captured original: %w", err)
 	}
 	if _, err := tx.Exec(ctx,

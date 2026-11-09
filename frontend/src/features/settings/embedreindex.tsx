@@ -317,7 +317,7 @@ export function EmbedReindexCard() {
         {() => (
           <EmptyState>
             {t("embedreindex.unbound")}{" "}
-            <AppLink href={routeHash(settingsHref("models"))}>
+            <AppLink href={routeHash(settingsHref("models", "tiers"))}>
               {t("embedreindex.unboundLink")}
             </AppLink>
           </EmptyState>

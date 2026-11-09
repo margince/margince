@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
+import { heldThreadList } from "../../testing/heldthreads.fixtures";
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
@@ -26,6 +27,8 @@ afterEach(() => {
 
 const HELD: components["schemas"]["HeldThread"] = {
   thread_key: "t-1",
+  activity_id: "01a05500-0000-7000-8000-0000000000a1",
+  subject: "Held mail",
   status: "held",
   pending: false,
   attempts: 1,
@@ -38,7 +41,7 @@ function routes(overrides: RouteMap = {}): RouteMap {
     "GET /me": () => jsonResponse(meFixture()),
     "GET /capture/senders": () => jsonResponse({ data: [] }),
     "GET /capture/contacts-awaiting-decision": () => jsonResponse({ data: [] }),
-    "GET /capture/held-threads": () => jsonResponse({ data: [] }),
+    "GET /capture/held-threads": () => jsonResponse(heldThreadList()),
     "GET /me/linkedin-reach": () => jsonResponse(linkedInReachFixture()),
     ...overrides,
   };
@@ -117,20 +120,24 @@ it("returns focus to the card when the drawer's list empties before it closes", 
   let held = [HELD];
   installFetchStub(
     routes({
-      "GET /capture/held-threads": () => jsonResponse({ data: held }),
+      "GET /capture/held-threads": () => jsonResponse(heldThreadList(held)),
     }),
   );
   const user = userEvent.setup();
   const client = renderCard();
 
   await user.click(
-    await screen.findByRole("button", { name: "View Held threads" }),
+    await screen.findByRole("button", {
+      name: "View Mail not shared with the team",
+    }),
   );
   held = [];
   await client.invalidateQueries({ queryKey: ["held-threads"] });
   await waitFor(() =>
     expect(
-      screen.queryByRole("button", { name: "View Held threads" }),
+      screen.queryByRole("button", {
+        name: "View Mail not shared with the team",
+      }),
     ).not.toBeInTheDocument(),
   );
   await user.keyboard("{Escape}");
@@ -149,7 +156,7 @@ it("returns focus to the card while the drawer's list is still re-reading", asyn
       "GET /capture/held-threads": () => {
         reads += 1;
         return reads === 1
-          ? jsonResponse({ data: [HELD] })
+          ? jsonResponse(heldThreadList([HELD]))
           : new Promise<Response>(() => {});
       },
     }),
@@ -158,7 +165,9 @@ it("returns focus to the card while the drawer's list is still re-reading", asyn
   const client = renderCard();
 
   await user.click(
-    await screen.findByRole("button", { name: "View Held threads" }),
+    await screen.findByRole("button", {
+      name: "View Mail not shared with the team",
+    }),
   );
   void client.invalidateQueries({ queryKey: ["held-threads"] });
   await waitFor(() => expect(reads).toBe(2));
@@ -175,13 +184,15 @@ it("opens the held-mail controls from health and clears only the review paramete
   window.location.hash = "#/settings/capture-activity?review=held&keep=1";
   installFetchStub(
     routes({
-      "GET /capture/held-threads": () => jsonResponse({ data: [HELD] }),
+      "GET /capture/held-threads": () => jsonResponse(heldThreadList([HELD])),
     }),
   );
   const user = userEvent.setup();
   renderCard();
   expect(
-    await screen.findByRole("dialog", { name: "Held threads" }),
+    await screen.findByRole("dialog", {
+      name: "Mail not shared with the team",
+    }),
   ).toBeVisible();
   await user.keyboard("{Escape}");
   await waitFor(() =>

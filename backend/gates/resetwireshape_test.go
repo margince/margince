@@ -24,7 +24,6 @@ package gates
 
 import (
 	"go/ast"
-	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -97,7 +96,7 @@ func resetDataRequiredFields(t *testing.T) []string {
 // from silently matching a neighbour's.
 func operationBlock(t *testing.T, operationID string) []string {
 	t.Helper()
-	raw, err := os.ReadFile(contractPath)
+	raw, err := gatekit.ReadFile(contractPath)
 	if err != nil {
 		t.Fatalf("read contract: %v", err)
 	}

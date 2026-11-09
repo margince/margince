@@ -1,4 +1,4 @@
-import { type ReactNode, useId } from "react";
+import { type ReactNode, useId, useState } from "react";
 import type { components } from "../../api/schema";
 import { Button, Modal } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
@@ -12,12 +12,14 @@ import {
   useBackfillRun,
 } from "../../lib/backfill-run";
 import { useDrawsImportRun } from "../../lib/import-onscreen";
+import { labelFor } from "../../lib/labelfor";
 import { ProblemError, problemCode, problemMessageOf } from "../../lib/problem";
 import {
   IMPORT_WINDOW_LABELS,
   ImportWindowPicker,
 } from "../../mail-history/window-picker";
 import { RunView } from "./backfillrunview";
+import { InternalMailHistoryChoice } from "./internalmailhistorychoice";
 import "../../components/backfill.css";
 
 // The bounded connect-time backfill (ADR-0063). Pick a window, see the scope
@@ -124,6 +126,14 @@ export function BackfillPanel({
   const t = useT();
   const importRun = useBackfillRun({ provider, initial });
   const { status, preview, start, cancel, window, setWindow } = importRun;
+  const [internalConsent, setInternalConsent] = useState<string | null>(null);
+  const internalOffer =
+    !preview.isPending && preview.data?.window === window
+      ? preview.data.internal_mail
+      : undefined;
+  const includeInternal =
+    internalOffer !== undefined &&
+    internalConsent === internalOffer.preview_token;
 
   const { unsupported, narrowing } = classifyBackfillErrors(
     preview.error,
@@ -161,7 +171,25 @@ export function BackfillPanel({
         startErrorMessage={
           start.isError ? problemMessageOf(start.error, t) : null
         }
-        onStart={() => importRun.begin(window, onClose)}
+        onStart={() =>
+          importRun.begin(
+            window,
+            onClose,
+            includeInternal ? internalOffer?.preview_token : undefined,
+          )
+        }
+        internalHistory={
+          <InternalMailHistoryChoice
+            offer={internalOffer}
+            checked={includeInternal}
+            disabled={start.isPending}
+            onChange={(next) =>
+              setInternalConsent(
+                next ? (internalOffer?.preview_token ?? null) : null,
+              )
+            }
+          />
+        }
         onSkip={onClose}
         baseline={baseline}
       />
@@ -201,6 +229,7 @@ function BackfillSetup({
   onStart,
   onSkip,
   baseline,
+  internalHistory,
 }: {
   window: ImportWindow;
   onWindowChange: (w: ImportWindow) => void;
@@ -216,6 +245,7 @@ function BackfillSetup({
   onStart: () => void;
   onSkip: () => void;
   baseline?: ReactNode;
+  internalHistory?: ReactNode;
 }) {
   const t = useT();
 
@@ -244,6 +274,7 @@ function BackfillSetup({
         />
         <p className="t-caption">{t("backfill.extendNote")}</p>
         {baseline}
+        {internalHistory}
         {previewErrorMessage && <ErrorLine>{previewErrorMessage}</ErrorLine>}
         <EstimateCard
           preview={previewData}
@@ -296,7 +327,9 @@ export function EstimateCard({
           agreed to. It also degrades better: the scope sentence is true while
           the count is still arriving, or when it never does. */}
       <p>
-        {t("backfill.scopeIs", { window: t(IMPORT_WINDOW_LABELS[window]) })}
+        {t("backfill.scopeIs", {
+          window: t(labelFor(IMPORT_WINDOW_LABELS, window)),
+        })}
       </p>
       {/* The count is its own line and its own condition. `estimated_messages`
           is required on the wire, so an answer without it is a server too old

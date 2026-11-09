@@ -11,10 +11,15 @@ import {
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { ENTITY_NAME_KEY } from "../../components/entityref.queries";
 import { LocaleProvider } from "../../i18n";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
-import { LeadCompany, useLeadCompanyName } from "./leadcompany";
+import {
+  LeadCompany,
+  useLeadCompanyName,
+  useLeadCompanyNameReading,
+} from "./leadcompany";
 
 type Lead = components["schemas"]["Lead"];
 
@@ -77,11 +82,16 @@ function stubServer() {
 
 // The session is seeded before the first render, so a hidden offer is the
 // grants' answer and not a session still on its way.
-function render(ui: ReactNode, allow: GrantSpec = LINK_GRANTS) {
+function render(
+  ui: ReactNode,
+  allow: GrantSpec = LINK_GRANTS,
+  seed: (client: QueryClient) => void = () => {},
+) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   client.setQueryData(["me"], meFixture({ allow }));
+  seed(client);
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{ui}</LocaleProvider>
@@ -206,5 +216,65 @@ describe("useLeadCompanyName", () => {
     stubServer();
     render(<Name of={lead} />);
     expect(screen.getByRole("status").textContent).toBe("Nordwind Logistik");
+  });
+});
+
+describe("useLeadCompanyNameReading", () => {
+  function Reading({ of }: Readonly<{ of: Lead }>) {
+    const { name, settling } = useLeadCompanyNameReading(of);
+    return <output>{`${name} ${settling ? "settling" : "settled"}`}</output>;
+  }
+
+  it("settles a linked company once its own name arrives", async () => {
+    stubServer();
+    render(<Reading of={{ ...lead, company_id: "c-7" }} />);
+    expect(screen.getByRole("status").textContent).toBe(
+      "Nordwind Logistik settling",
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toBe(
+        "Nordwind Holding SE settled",
+      ),
+    );
+  });
+
+  it("keeps settling while a cached no-name is read again", async () => {
+    let release: () => void = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        await held;
+        return (
+          companyNamesAnswer(request.url, { "c-7": "Nordwind Holding SE" }) ??
+          jsonResponse({})
+        );
+      }),
+    );
+    // An earlier read answered with no name, long enough ago to be read again.
+    render(<Reading of={{ ...lead, company_id: "c-7" }} />, LINK_GRANTS, (c) =>
+      c.setQueryData(["company", ENTITY_NAME_KEY, "c-7"], null, {
+        updatedAt: 0,
+      }),
+    );
+    expect(screen.getByRole("status").textContent).toBe(
+      "Nordwind Logistik settling",
+    );
+    release();
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toBe(
+        "Nordwind Holding SE settled",
+      ),
+    );
+  });
+
+  it("is settled at once for an unlinked company", () => {
+    stubServer();
+    render(<Reading of={lead} />);
+    expect(screen.getByRole("status").textContent).toBe(
+      "Nordwind Logistik settled",
+    );
   });
 });

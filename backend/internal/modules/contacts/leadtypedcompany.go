@@ -27,8 +27,11 @@ func (s *Store) promotionEmployer(ctx context.Context, tx pgx.Tx, lead crmcontra
 		return EmployerChoice{}, "", facts, err
 	}
 	choice := EmployerChoice{
-		CompanyName: lead.CompanyName, CompanyID: idArg[ids.CompanyKind](lead.CompanyId),
-		Role: lead.Title, Source: lead.Source,
+		CompanyName: lead.CompanyName,
+		Role:        lead.Title, Source: lead.Source,
+	}
+	if facts.LinkedCompany != nil {
+		choice.CompanyID = new(ids.From[ids.CompanyKind](*facts.LinkedCompany))
 	}
 	if choice.CompanyID != nil || !choice.named() {
 		return choice, "", facts, nil
