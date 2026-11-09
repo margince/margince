@@ -15,14 +15,14 @@ anything. This page shows what each declared agent pays, how much room that leav
 what to check before adding a tool. Each tool's own cost is the Prompt tokens column of
 [mcp-info.md](mcp-info.md#index).
 
-The heaviest menu is `overnight_at_risk_sweep`: 6603 of the window's 32768 tokens per step (20%).
+The heaviest menu is `overnight_at_risk_sweep`: 6596 of the window's 32768 tokens per step (20%).
 
 ## The declared agents
 
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 5 of 48 | 2138 | 1636 | 4366 | 13% | 18844 | 0 | 5 |
-| `overnight_at_risk_sweep` | 7 | 7 of 48 | 3443 | 2567 | 6603 | 20% | 16607 | 4 | 6 |
+| `morning_brief` | 5 | 5 of 48 | 2131 | 1636 | 4360 | 13% | 18850 | 0 | 5 |
+| `overnight_at_risk_sweep` | 7 | 7 of 48 | 3437 | 2567 | 6596 | 20% | 16614 | 4 | 6 |
 | _whole served catalog's listing, for scale; no run is offered it_ | 48 |  | 39778 |  |  | 121% |  |  |  |
 
 ### `morning_brief`
@@ -39,8 +39,8 @@ existing order. If there are no items, finish without inventing a brief. A tool 
 findings were not saved: correct it before claiming completion.
 ```
 
-Attaches 5 tools and pays 4366 tokens on every step (2138 listing, 1636 step schema), leaving
-18844 of its budget and 28402 tokens of the
+Attaches 5 tools and pays 4360 tokens on every step (2131 listing, 1636 step schema), leaving
+18850 of its budget and 28408 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `annotate_brief`
@@ -62,8 +62,8 @@ summarizing the risk and the evidence (cite the records you read). Do not advanc
 anything, or archive anything.
 ```
 
-Attaches 7 tools and pays 6603 tokens on every step (3443 listing, 2567 step schema), leaving
-16607 of its budget and 26165 tokens of the
+Attaches 7 tools and pays 6596 tokens on every step (3437 listing, 2567 step schema), leaving
+16614 of its budget and 26172 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
