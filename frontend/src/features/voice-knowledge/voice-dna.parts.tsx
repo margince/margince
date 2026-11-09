@@ -165,9 +165,8 @@ function PersonalityEditor({
     onSuccess: () => {
       setError(null);
       onSaved();
-      // The voice a member writes for their own mail is the one save on this
-      // page a reader most wants confirmed, and it said nothing: the button
-      // simply stopped being pressable once the draft matched the server.
+      // A member most wants this save confirmed. Without the toast the only
+      // sign was a button that stopped being pressable.
       toast.show(t("settings.saved"));
     },
     onError: reportFailure(setError, t),
@@ -176,16 +175,12 @@ function PersonalityEditor({
   // A voice profile is the longest thing anybody types in settings, which makes
   // it the draft a silent discard costs the most.
   useUnsavedGuard(dirty);
-  // `settingrow-measure` is the row primitive's own hook for a control that
-  // takes the stacked row's full width: without it the wrapper sizes to its
-  // content and the box inside falls back to a textarea's 20-column intrinsic
-  // width, which is the defect atoms.css already documents for callers who
-  // forgot it.
+  // `settingrow-measure` gives the control the stacked row's full width.
+  // Without it the textarea falls back to its 20-column intrinsic width.
   return (
     <div className="form-stack settingrow-measure">
-      {/* readOnly rather than disabled: the preferences are a READ this seat
-          still holds, and a disabled textarea drops out of the tab order, so a
-          keyboard reader could not reach the words to read them. */}
+      {/* readOnly rather than disabled: this seat may still read the rules.
+          A disabled textarea leaves the tab order, so a keyboard could not reach them. */}
       <Textarea
         {...control}
         rows={4}

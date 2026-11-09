@@ -162,8 +162,8 @@ function VoiceProof({ insights }: Readonly<{ insights: VoiceInsightsData }>) {
   );
 }
 
-// A profile that exists is a page about the voice in four tabs: the voice
-// itself, the writing it learns from, the owner's rules, and its builds.
+// A profile that exists shows four tabs. They hold the voice, the writing it
+// learns from, the owner's rules, and its builds.
 function VoiceDnaBody({
   tab,
   profile,
