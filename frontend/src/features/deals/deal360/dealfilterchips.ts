@@ -1,7 +1,3 @@
-import {
-  DEAL_STATUS_LABEL,
-  DEAL_STATUS_VALUES,
-} from "../../../components/dealdials";
 import type { FilterSpec } from "../../../components/listquery";
 import {
   type AcquisitionSource,
@@ -13,6 +9,7 @@ import {
   bandDialValue,
   WIN_PROBABILITY_BANDS,
 } from "../../../lib/winprobabilitybands";
+import { DEAL_STATUS_LABEL, DEAL_STATUS_VALUES } from "../dealdials";
 import { MOTION_OPTIONS, PRIORITY_OPTIONS } from "./dealcommercialfields";
 
 // The surface's own narrowing chips, beside the stage and company ones

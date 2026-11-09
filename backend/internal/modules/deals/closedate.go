@@ -84,6 +84,11 @@ type CloseDateInput struct {
 	// StageVelocityDays is the workspace-observed median days-per-stage
 	// for won deals in the deal's pipeline; zero means insufficient evidence.
 	StageVelocityDays float64
+	// EstimateHorizonDays is the furthest ahead an estimated date may land:
+	// the installation's SilentCloseDays. A deal silent that long is closed as
+	// lost. A guess further out would keep it off the overdue views for longer
+	// than a silent deal may stay open.
+	EstimateHorizonDays int
 }
 
 // CloseDateHygiene is the §11 per-deal output.
@@ -152,7 +157,7 @@ func CloseDateAssessment(in CloseDateInput, now time.Time, workspaceTZ *time.Loc
 	if in.ExpectedClose != nil && !findings.overdue {
 		proposed = dateOnly(*in.ExpectedClose)
 	} else {
-		proposed = proposedCloseDate(today, in.RemainingOpenStages, in.StageVelocityDays)
+		proposed = proposedCloseDate(today, in.RemainingOpenStages, in.StageVelocityDays, in.EstimateHorizonDays)
 		if proposed.IsZero() {
 			return out
 		}
@@ -194,13 +199,15 @@ func closeDateAction(f closeDateFindings, in CloseDateInput, autoApply bool) Clo
 }
 
 // A missing or overdue date gets whole weeks of observed remaining-stage pace,
-// with a seven-day minimum. The caller requires observed pace.
-func proposedCloseDate(today time.Time, remainingOpenStages int, velocityDays float64) time.Time {
+// at least seven days and at most horizonDays. The cap stops a median inflated
+// by long stints from inventing a date years ahead. The caller requires
+// observed pace.
+func proposedCloseDate(today time.Time, remainingOpenStages int, velocityDays float64, horizonDays int) time.Time {
 	if velocityDays <= 0 {
 		return time.Time{}
 	}
 	days := math.Ceil(float64(StagesToGo(remainingOpenStages))*velocityDays/7) * 7
-	return today.AddDate(0, 0, max(7, int(days)))
+	return today.AddDate(0, 0, max(7, int(min(days, float64(horizonDays)))))
 }
 
 // StagesToGo is how many stage-worths of pace the guess is built from: the

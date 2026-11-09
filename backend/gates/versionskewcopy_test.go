@@ -18,7 +18,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -51,7 +50,7 @@ func TestEveryVersionSkewMessageIsAReadersSentence(t *testing.T) {
 		if !inModule || tracked.symlink || !strings.HasSuffix(rel, ".go") || strings.HasSuffix(rel, "_test.go") {
 			continue
 		}
-		src, err := os.ReadFile(rel)
+		src, err := gatekit.ReadFile(rel)
 		if err != nil {
 			t.Fatalf("reading %s: %v", rel, err)
 		}

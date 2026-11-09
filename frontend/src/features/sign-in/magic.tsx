@@ -39,6 +39,11 @@ const LANES = [
   "done",
 ] as const satisfies readonly MagicLane[];
 
+/** Every lane but the done one, which Home draws in its Done for you section. */
+export const WAITING_LANES: readonly MagicLane[] = LANES.filter(
+  (lane) => lane !== "done",
+);
+
 const LANE_HEADING: Readonly<Record<MagicLane, MessageKey>> = {
   done: "magic.lane.done",
   needs_you: "magic.lane.needsYou",
@@ -46,19 +51,36 @@ const LANE_HEADING: Readonly<Record<MagicLane, MessageKey>> = {
   watching: "magic.lane.watching",
 };
 
-const NOT_SHOWN_REASON: Readonly<Record<MagicNotShown["reason"], MessageKey>> =
-  {
-    unadmitted_action: "magic.notShown.unadmittedAction",
-    unknown_entity_type: "magic.notShown.unknownEntityType",
-    out_of_scope: "magic.notShown.outOfScope",
-  };
+// Housekeeping is left out without a count: it tells the reader nothing.
+type ToldNotShown = MagicNotShown & {
+  reason: Exclude<MagicNotShown["reason"], "unadmitted_action">;
+};
 
+const NOT_SHOWN_REASON: Readonly<Record<ToldNotShown["reason"], MessageKey>> = {
+  unknown_entity_type: "magic.notShown.unknownEntityType",
+  out_of_scope: "magic.notShown.outOfScope",
+};
+
+function told(entry: MagicNotShown): entry is ToldNotShown {
+  return entry.reason !== "unadmitted_action";
+}
+
+/**
+ * The lanes in `lanes`, in reading order. Home draws the waiting lanes here and
+ * the done lane `embedded` in its Done for you section, which brings the
+ * heading. Each part says only what is true of the lanes it draws: the done
+ * lane its coverage, the others the sources and records left out.
+ */
 export function MagicPanel({
   visibleApprovalIds = [],
   visibleReceiptIds = [],
+  lanes = LANES,
+  embedded = false,
 }: Readonly<{
   visibleApprovalIds?: readonly string[];
   visibleReceiptIds?: readonly string[];
+  lanes?: readonly MagicLane[];
+  embedded?: boolean;
 }> = {}) {
   const t = useT();
   const { locale } = useLocale();
@@ -69,7 +91,9 @@ export function MagicPanel({
   const magic = useMagic();
   const titleId = useId();
   const receipt = magic.data;
-  const withheld = receipt?.sources_unavailable ?? [];
+  const drawsDone = lanes.includes("done");
+  const drawsWaiting = lanes.some((lane) => lane !== "done");
+  const withheld = drawsWaiting ? (receipt?.sources_unavailable ?? []) : [];
   const state = queryState(magic);
   // Lines only off a read that answered: a refresh that failed keeps the last
   // answer cached, and drawing it would offer undos under "did not load".
@@ -78,10 +102,12 @@ export function MagicPanel({
     visibleApprovalIds,
     visibleReceiptIds,
   );
-  const drawn = LANES.filter((lane) => hasLines(shown?.[lane]));
+  const drawn = LANES.filter(
+    (lane) => lanes.includes(lane) && hasLines(shown?.[lane]),
+  );
   const done = rowsOf(shown?.done);
   const doneRecords = recordsOf(done);
-  const coverageIncomplete = doneCoverageIncomplete(shown);
+  const coverageIncomplete = drawsDone && doneCoverageIncomplete(shown);
   // The decision source read to its bound and still had more.
   const doneFloor =
     sumIsFloor("done", rowsOf(receipt?.done)) ||
@@ -100,15 +126,13 @@ export function MagicPanel({
     },
   );
   const byDay = shown ? spansDays(shown.since, shown.as_of) : false;
-  const read = sectionRead(state, shown, drawn, coverageIncomplete);
+  const read = sectionRead(state, shown, lanes, drawn, coverageIncomplete);
   if (read === "empty") {
     return null;
   }
-  return (
-    <section className="brief-section" aria-labelledby={titleId}>
-      <Eyebrow as="h2" id={titleId} className="brief-section-label">
-        {t("magic.heading.brief")}
-      </Eyebrow>
+  const notShown = drawsWaiting ? rowsOf(shown?.not_shown).filter(told) : [];
+  const body = (
+    <>
       <PanelBody>
         <SurfaceState
           state={read}
@@ -117,7 +141,7 @@ export function MagicPanel({
           detail={{ onRetry: () => void magic.refetch() }}
         >
           <WithheldSources withheld={withheld} />
-          {shown?.not_shown_count_withheld && (
+          {drawsWaiting && shown?.not_shown_count_withheld && (
             <p className="t-caption">{t("magic.visibleScope")}</p>
           )}
           {coverageIncomplete && (
@@ -129,7 +153,11 @@ export function MagicPanel({
         <MagicLaneSection
           key={lane}
           lane={lane}
-          title={t(LANE_HEADING[lane])}
+          title={t(
+            embedded && lane === "done"
+              ? "magic.lane.doneOther"
+              : LANE_HEADING[lane],
+          )}
           rows={shown?.[lane] ?? []}
           since={shown?.since}
           zone={zone}
@@ -137,11 +165,22 @@ export function MagicPanel({
           fold={lane === "done" ? doneFold : undefined}
         />
       ))}
-      {(shown?.not_shown?.length ?? 0) > 0 && (
+      {notShown.length > 0 && (
         <PanelBody>
-          <NotShown entries={shown?.not_shown ?? []} />
+          <NotShown entries={notShown} />
         </PanelBody>
       )}
+    </>
+  );
+  if (embedded) {
+    return body;
+  }
+  return (
+    <section className="brief-section" aria-labelledby={titleId}>
+      <Eyebrow as="h2" id={titleId} className="brief-section-label">
+        {t("magic.heading.brief")}
+      </Eyebrow>
+      {body}
     </section>
   );
 }
@@ -160,20 +199,25 @@ function queryState(
 function sectionRead(
   state: "loading" | "failed" | "ready",
   shown: MagicReceipt | undefined,
+  lanes: readonly MagicLane[],
   drawn: readonly MagicLane[],
   coverageIncomplete: boolean,
 ): "loading" | "failed" | "ready" | "empty" | "unavailable" {
   if (state !== "ready") return state;
-  if (LANES.some((lane) => !Array.isArray(shown?.[lane]))) {
+  if (lanes.some((lane) => !Array.isArray(shown?.[lane]))) {
     return "unavailable";
   }
-  const complete =
-    rowsOf(shown?.sources_unavailable).length === 0 &&
-    rowsOf(shown?.not_shown).length === 0 &&
-    shown?.not_shown_count_withheld !== true &&
-    shown?.done_is_floor !== true &&
-    !coverageIncomplete;
-  return drawn.length === 0 && complete ? "empty" : "ready";
+  const waitingComplete =
+    !lanes.some((lane) => lane !== "done") ||
+    (rowsOf(shown?.sources_unavailable).length === 0 &&
+      rowsOf(shown?.not_shown).length === 0 &&
+      shown?.not_shown_count_withheld !== true);
+  const doneComplete =
+    !lanes.includes("done") ||
+    (shown?.done_is_floor !== true && !coverageIncomplete);
+  return drawn.length === 0 && waitingComplete && doneComplete
+    ? "empty"
+    : "ready";
 }
 
 function doneCoverageIncomplete(receipt: MagicReceipt | undefined): boolean {
@@ -228,9 +272,7 @@ function WithheldSources({
  * Said rather than dropped, because a page showing five lines that never
  * mentions the sixth is a completeness claim nobody made.
  */
-function NotShown({
-  entries,
-}: Readonly<{ entries: readonly MagicNotShown[] }>) {
+function NotShown({ entries }: Readonly<{ entries: readonly ToldNotShown[] }>) {
   const t = useT();
   const { locale } = useLocale();
   const plural = usePlural();
@@ -259,9 +301,10 @@ function distinctReceipt(
     needs_you: receipt.needs_you?.filter(
       (line) => !approvalIds.includes(line.id),
     ),
+    // A grouped line names every change it stands for, so it leaves only when
+    // all of them are shown elsewhere. A line without ids always stays.
     done: receipt.done?.filter(
       (line) =>
-        (line.count ?? 1) > 1 ||
         !line.receipt_ids?.length ||
         !line.receipt_ids.every((id) => receiptIds.includes(id)),
     ),

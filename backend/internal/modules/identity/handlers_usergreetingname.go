@@ -30,17 +30,18 @@ func (h Handlers) SaveMyGreetingName(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, seatUser(seat))
+	httperr.WriteJSON(w, http.StatusOK, SeatUser(seat))
 }
 
-// seatUser answers a write to the caller's own seat with the seat as it now
-// stands. One mapping for the three self-service saves, so none of them drops
+// SeatUser answers a write to the caller's own seat with the seat as it now
+// stands. One mapping for every self-service save, so none of them drops
 // a field the others send.
-func seatUser(seat Seat) crmcontracts.User {
+func SeatUser(seat Seat) crmcontracts.User {
 	return crmcontracts.User{
 		Id:           openapi_types.UUID(seat.UserID.UUID),
 		Email:        openapi_types.Email(seat.Email),
 		DisplayName:  seat.DisplayName,
+		AvatarUrl:    AvatarURL(seat.UserID.UUID, seat.AvatarKey),
 		GreetingName: seat.GreetingName,
 		Status:       "active",
 		Locale:       contractLocale(seat.Locale),

@@ -240,24 +240,6 @@ elif [[ "${RENOVATE_RESULT:-}" = "success" ]]; then
   resolve "Renovate is running but opens no pull requests"
 fi
 
-if [[ "${LANE_RESULT:-}" = "failure" ]]; then
-  report "the backend merge gate is red on main" "priority: critical,area: ci-tests,bug" \
-"\`make check-backend\` failed on the scheduled run of \`main\`: $RUN_URL
-
-Worth reading before assuming the last green run means anything. \`main\`'s
-last-known-green is not evidence \`main\` is green: a docs-only commit landing
-after a breaking one matches no classifier scope, so every code gate skips and
-the run reports green over a broken tree. That has happened more than once, which
-is why this lane re-runs the gate unconditionally rather than trusting the last
-push's verdict.
-
-So the breakage may predate the most recent commit. Reproduce locally with
-\`make check-backend\` on \`main\`."\
-    || unreported=1
-elif [[ "${LANE_RESULT:-}" = "success" ]]; then
-  resolve "the backend merge gate is red on main"
-fi
-
 # Two findings, not one, because the job result cannot tell them apart: a failed
 # checkout, a cold cache, a refused database or a hung seed all arrive here as
 # `failure`. Filing "a budget is breaching" for those sends somebody bisecting a

@@ -430,6 +430,17 @@
   transition: stroke-dasharray 0.4s var(--ease-in-out);
 }
 
+/* Reduced motion swaps the fallback dress for the canvas, and moves the
+   progress ring, at once: a fade is still motion the reader asked to be
+   spared. */
+@media (prefers-reduced-motion: reduce) {
+  .core-rim,
+  .core-glass,
+  .core-progress .core-progress-value {
+    transition: none;
+  }
+}
+
 @media (max-width: 900px) {
   .core {
     --coreSize: 150px;

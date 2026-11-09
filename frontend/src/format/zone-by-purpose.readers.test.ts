@@ -33,6 +33,7 @@ const companyZoneSites: { file: string; why: string }[] = [
     "analytics.overview.sales.tsx",
     "analytics.overview.team.tsx",
     "analytics.questions.saved.tsx",
+    "analytics.questions.answer.tsx",
     "inputcheck.answer.tsx",
     "inputcheck.facts.tsx",
     "reporting.executions.tsx",
@@ -57,16 +58,18 @@ const companyZoneSites: { file: string; why: string }[] = [
     why: "Home holds the server's day and the weekly's week, both bucketed on the company's clock (decision B1), so the day and week it is labelled with are on that clock; the greeting hour is the reader's.",
   },
   { file: "features/brief/brief.plan.tsx", why: SERVER_WEEK },
-  { file: "features/brief/brief.weekly.tsx", why: SERVER_WEEK },
+  { file: "features/brief/brief.weekly.deals.tsx", why: SERVER_WEEK },
   { file: "features/brief/brief.weekly.figures.tsx", why: SERVER_WEEK },
+  { file: "features/brief/brief.weekly.activity.tsx", why: SERVER_WEEK },
+  { file: "features/brief/brief.weekly.rail.tsx", why: SERVER_WEEK },
   { file: "features/worklist/brief.teamplan.tsx", why: SERVER_WEEK },
   {
     file: "features/worklist/worklist.row.tsx",
     why: "A row's due day is the server's bucket, counted on the company's clock (decision B1), so the day comparison and the due-day text read that clock; every other time on the row is the reader's.",
   },
   {
-    file: "features/brief/brief.focus.tsx",
-    why: "A focus row's due day is the server's bucket, counted on the company's clock (decision B1), so the due-day text reads that clock; every other time on the row is the reader's.",
+    file: "features/brief/brief.taskcard.tsx",
+    why: "A task card's due day is the server's bucket, counted on the company's clock (decision B1), so the due-day text reads that clock; every other time on the row is the reader's.",
   },
   {
     file: "features/brief/brief.intro.tsx",
@@ -130,6 +133,51 @@ type ZoneRef = { source: ZoneSource; file: string; line: number };
 const companyZoneModule = join(srcRoot, "lib", "companyzone.tsx");
 
 /**
+ * Every spelling an identifier can have when the checker resolves it to a
+ * source. A bare name finds its declaration in scope. So it is the source's own
+ * name, or the local name of an import or export bound to it. A property name
+ * (`zones.bz`, `{ bz: local } = zones`) is a name some module exports it under.
+ * Both are collected from every file of the program, not only the swept roots.
+ */
+function namesDenoting(
+  program: ts.Program,
+  checker: ts.TypeChecker,
+  targets: ReadonlyMap<ts.Symbol, ZoneSource>,
+): Set<string> {
+  const names = new Set([...targets.keys()].map((target) => target.name));
+  const denotes = (symbol: ts.Symbol | undefined): boolean => {
+    const resolved =
+      symbol && symbol.flags & ts.SymbolFlags.Alias
+        ? checker.getAliasedSymbol(symbol)
+        : symbol;
+    return resolved !== undefined && targets.has(resolved);
+  };
+  for (const source of program.getSourceFiles()) {
+    if (source.isDeclarationFile) continue;
+    const module = checker.getSymbolAtLocation(source);
+    for (const each of module ? checker.getExportsOfModule(module) : []) {
+      if (denotes(each)) names.add(each.name);
+    }
+    const visit = (node: ts.Node): void => {
+      if (
+        (ts.isImportSpecifier(node) ||
+          ts.isExportSpecifier(node) ||
+          ts.isImportClause(node) ||
+          ts.isImportEqualsDeclaration(node)) &&
+        node.name &&
+        ts.isIdentifier(node.name) &&
+        denotes(checker.getSymbolAtLocation(node.name))
+      ) {
+        names.add(node.name.text);
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
+  }
+  return names;
+}
+
+/**
  * Every reference to the two exported zone sources in the given files. The
  * TypeScript checker resolves them, so a name that only looks the same is not
  * counted. A reference can be called, passed uncalled, renamed on import or read
@@ -158,6 +206,9 @@ function zoneSourceRefs(
   const browser = exported(zoneModule, "browserZone");
   if (company) targets.set(company, "useCompanyZone");
   if (browser) targets.set(browser, "browserZone");
+  // Resolving every identifier makes the checker type the whole tree. Only a
+  // name that can denote a source is resolved; see namesDenoting.
+  const names = namesDenoting(program, checker, targets);
   const refs: ZoneRef[] = [];
   for (const root of roots) {
     const source = program.getSourceFile(root);
@@ -204,7 +255,7 @@ function zoneSourceRefs(
           }
         }
       }
-      if (ts.isIdentifier(node)) {
+      if (ts.isIdentifier(node) && names.has(node.text)) {
         const declares =
           (ts.isFunctionDeclaration(node.parent) ||
             ts.isVariableDeclaration(node.parent)) &&
@@ -288,6 +339,31 @@ describe("a signed-in screen reads the reader's clock unless it says why", () =>
     ]);
     expect(listed.browserZone.has("features/zzplanted.tsx")).toBe(false);
     expect(listed.useCompanyZone.has("features/zzplanted.tsx")).toBe(false);
+  }, 60_000);
+
+  it("catches a zone read through a name another module re-exports it under", () => {
+    const relay = join(srcRoot, "features", "zzrelay.ts");
+    const planted = join(srcRoot, "features", "zzrelayed.tsx");
+    const refs = zoneSourceRefs(
+      [planted],
+      new Map([
+        [relay, 'export { browserZone as clock } from "../format/timezone";'],
+        [
+          planted,
+          [
+            'import * as relay from "./zzrelay";',
+            'import { clock as tick } from "./zzrelay";',
+            "export const zones = [relay.clock(), tick()];",
+            "export const { clock: held } = relay;",
+          ].join("\n"),
+        ],
+      ]),
+    );
+    expect(refs).toEqual([
+      { source: "browserZone", file: "features/zzrelayed.tsx", line: 3 },
+      { source: "browserZone", file: "features/zzrelayed.tsx", line: 3 },
+      { source: "browserZone", file: "features/zzrelayed.tsx", line: 4 },
+    ]);
   }, 60_000);
 
   it("finds no company or browser zone read outside the listed files", () => {

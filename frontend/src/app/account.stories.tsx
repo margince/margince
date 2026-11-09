@@ -2,64 +2,97 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, waitFor, within } from "storybook/test";
 import {
   AccountMenuFrame,
   openMenu,
   openThemeFlyout,
   stubSession,
 } from "../testing/accountmenu-story";
+import { PORTRAIT, WHITE_PORTRAIT } from "../testing/seatphotos";
 import { AccountMenu } from "./account";
+import { AccountPanel } from "./accountpanel";
+import { ThemeSubmenu } from "./accounttheme";
 
 /**
- * Who is signed in, and the two things the product now offers nowhere else: the
- * door into settings, and the appearance choice.
- *
- * One chrome: a contact glyph at the end of the strip's trail. The menu drops
- * out of it, and the theme flyout opens left because the right has no room.
- *
- * The menu's head carries the chip, the design system's `Avatar`. Its mesh is
- * keyed on the seat's user id, so a rename or a new address keeps its colour.
- *
- * fullscreen: the block measures itself against the container it sits in — the
- * strip's trail is flush to the content column's right edge, and the menu's drop
- * offset is computed from the strip's own height — so every story renders the
- * real chrome. Storybook's default canvas padding would frame a geometry the
- * product does not use.
+ * The seat's chip at the end of the top bar, and the menu it opens.
+ * `fullscreen`, because the menu places itself against the real bar; canvas
+ * padding would draw a geometry the product does not have.
  */
 const meta: Meta<typeof AccountMenu> = {
   title: "Shell/Account block",
   component: AccountMenu,
+  subcomponents: { AccountPanel, ThemeSubmenu },
   parameters: { layout: "fullscreen" },
 };
 export default meta;
 type Story = StoryObj<typeof AccountMenu>;
 
 /**
- * The top bar: a contact glyph alone, at the size the bar gives every glyph.
- *
- * Nothing beside it is drawn — no name, no address, no chevron — so the mark is
- * the whole of the affordance, and the sentence it stands for reaches a screen
- * reader through the clipped line instead.
+ * The top bar: the seat's chip alone, a circle filling the bar's square inside
+ * a control-edge ring. The initials are hidden, so the button's name is "Account".
  */
 export const TopBar: Story = {
   name: "Top bar trigger",
   play: async ({ canvasElement }) => {
     const trigger = await within(canvasElement).findByRole("button", {
-      name: /Account$/,
+      name: "Account",
     });
-    const icon = trigger.querySelector("svg");
-    if (!icon) throw new Error("the account trigger draws no glyph");
-    const size = getComputedStyle(trigger).getPropertyValue("--controlIcon");
-    await expect(icon.getBoundingClientRect().width).toBe(
-      Number.parseFloat(size),
+    const face = await waitFor(() => {
+      const chip = trigger.querySelector(".avatar");
+      if (!chip) throw new Error("the account trigger draws no chip");
+      return chip;
+    });
+    const height =
+      getComputedStyle(trigger).getPropertyValue("--controlHeight");
+    await expect(face.getBoundingClientRect().width).toBe(
+      Number.parseFloat(height),
     );
-    await expect(trigger.querySelector(".avatar")).toBeNull();
+    await expect(face.closest("[aria-hidden='true']")).not.toBeNull();
   },
   render: () => {
     stubSession();
     return <AccountMenuFrame />;
   },
+};
+
+/** The same trigger for a seat with a picture: it covers the whole circle. */
+export const TopBarPhoto: Story = {
+  name: "Top bar trigger with a picture",
+  play: async ({ canvasElement }) => {
+    const trigger = await within(canvasElement).findByRole("button", {
+      name: "Account",
+    });
+    await waitFor(() =>
+      expect(trigger.querySelector(".avatar-photo img")).not.toBeNull(),
+    );
+  },
+  render: () => {
+    stubSession({ avatar_url: PORTRAIT });
+    return <AccountMenuFrame />;
+  },
+};
+
+/** A white picture keeps its edge against the bar, by the ring alone. */
+export const TopBarWhitePhoto: Story = {
+  name: "Top bar trigger with a white picture",
+  render: () => {
+    stubSession({ avatar_url: WHITE_PORTRAIT });
+    return <AccountMenuFrame />;
+  },
+};
+
+export const TopBarWhitePhotoDark: Story = {
+  ...TopBarWhitePhoto,
+  name: "Top bar trigger with a white picture (dark)",
+  globals: { theme: "dark" },
+};
+
+export const TopBarPhotoPhone: Story = {
+  ...TopBarPhoto,
+  name: "Top bar trigger with a picture (phone)",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };
 
 /**
@@ -90,6 +123,20 @@ export const TopBarMenu: Story = {
   },
   render: () => {
     stubSession();
+    return <AccountMenuFrame />;
+  },
+};
+
+/** The menu's head for a seat with a picture: the same picture as the trigger. */
+export const TopBarMenuPhoto: Story = {
+  name: "Top bar menu with a picture",
+  play: async (context) => {
+    await openMenu(context);
+    const head = document.querySelector(".acctmenuwho");
+    await expect(head?.querySelector(".avatar-photo img")).not.toBeNull();
+  },
+  render: () => {
+    stubSession({ avatar_url: PORTRAIT });
     return <AccountMenuFrame />;
   },
 };

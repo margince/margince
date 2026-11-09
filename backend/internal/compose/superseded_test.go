@@ -59,6 +59,9 @@ func TestTwoSpellingsOfOneInstantAreTheSameValue(t *testing.T) {
 	}{
 		"same instant, other zone": {`"2026-12-09T10:00:00+00:00"`, `"2026-12-09T17:00:00+07:00"`, true},
 		"different instants":       {`"2026-12-09T10:00:00+00:00"`, `"2026-12-09T11:00:00+00:00"`, false},
+		"stored precision":         {`"2026-12-09T10:00:00.123456Z"`, `"2026-12-09T10:00:00.123456789Z"`, true},
+		"different microseconds":   {`"2026-12-09T10:00:00.123456Z"`, `"2026-12-09T10:00:00.123457001Z"`, false},
+		"fraction before epoch":    {`"1969-12-09T10:00:00.123456Z"`, `"1969-12-09T10:00:00.123456789Z"`, true},
 		"plain text":               {`"Ada"`, `"Ada Lovelace"`, false},
 		"live is not a string":     {`42`, `"2026-12-09T10:00:00Z"`, false},
 		"stated is not a string":   {`"2026-12-09T10:00:00Z"`, `null`, false},

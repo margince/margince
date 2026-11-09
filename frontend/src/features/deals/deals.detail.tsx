@@ -22,6 +22,7 @@ import {
 import { useLocale, useT } from "../../i18n";
 import { useTargetApprovals } from "../../lib/approvals.queries";
 import { useRecordWriteRefusal } from "../../lib/capability";
+import { useDeal } from "../../lib/dealread";
 import { usePipeline } from "../../lib/deals.queries";
 import { useLegalReviewAvailable } from "../../lib/legalreviews.queries";
 import { useOpenEmail } from "../../lib/openemail";
@@ -150,27 +151,6 @@ function DealPulsePills({
   );
 }
 
-/**
- * useDeal is the deal page's read of the deal record itself.
- *
- * A hook rather than a query inline in the screen, so the four record reads
- * are mounted the same way. That lets one suite prove the live cadence over
- * all of them (FE-PARAM-5, app/queryclient.ts). The cadence itself is the
- * client's, keyed on the read: nothing is spread in here to forget.
- */
-export function useDeal(id: string) {
-  return useQuery({
-    queryKey: ["deal", id],
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/deals/{id}", {
-          params: { path: { id } },
-        }),
-      );
-    },
-  });
-}
-
 export function DealScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -233,11 +213,15 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
     },
   });
   const createOffer = useMutation({
-    mutationFn: async (currency: string) => {
+    mutationFn: async (input: { currency: string; fromRevision?: number }) => {
       return unwrap(
         await api.POST("/deals/{id}/offers", {
           params: { path: { id } },
-          body: { currency, source: "manual" },
+          body: {
+            currency: input.currency,
+            source: "manual",
+            from_deal_revision: input.fromRevision,
+          },
         }),
       );
     },
@@ -387,7 +371,9 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                     }
                     creatingOffer={createOffer.isPending}
                     locale={locale}
-                    onCreateOffer={(currency) => createOffer.mutate(currency)}
+                    onCreateOffer={(currency, fromRevision) =>
+                      createOffer.mutate({ currency, fromRevision })
+                    }
                     readOnly={readOnly}
                     refusedReasonId={refusedReasonId}
                     dealApprovals={dealApprovals}

@@ -1,14 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import {
-  Fragment,
-  type MouseEvent,
-  type ReactNode,
-  useId,
-  useRef,
-  useState,
-} from "react";
+import { Fragment, type ReactNode, useId, useRef, useState } from "react";
+import { opensRow } from "../lib/linkclick";
 import { TableScroll } from "./atoms";
 import { ExpanderChevron } from "./disclosure";
 import { type FoldEnds, useFocusHandBack, useFold } from "./fold";
@@ -339,22 +333,6 @@ function cellContent<Row>(
   );
 }
 
-// React bubbles a portal's click into the row that rendered it, so a target
-// outside the row is a popover's. A drag that selects text is not a press.
-export function opensRow(event: MouseEvent<HTMLElement>): boolean {
-  const target = event.target;
-  if (!(target instanceof Element) || !event.currentTarget.contains(target)) {
-    return false;
-  }
-  const control = target.closest(
-    "a, button, input, select, textarea, label, summary, [role='button'], [role='switch'], [role='menuitem'], [role='checkbox'], [role='tab']",
-  );
-  if (control !== null && event.currentTarget.contains(control)) {
-    return false;
-  }
-  return globalThis.getSelection?.()?.isCollapsed !== false;
-}
-
 function foldTitle<Row>(columns: DataTableColumn<Row>[]): string | undefined {
   const named = columns.find((column) => column.fold === "title");
   return (named ?? columns.find((column) => column.fold === undefined))?.key;
@@ -373,10 +351,11 @@ function foldPlace<Row>(
 }
 
 // Both choices are a cell's own, so the heading and every row wear the same
-// class and cannot come apart.
+// class and cannot come apart. A column of verbs (no drawn heading) sits on the
+// end edge too, so the last control of every table lines up with the card's.
 function columnClass<Row>(column: DataTableColumn<Row>): string | undefined {
   const classes = [
-    column.align === "end" ? "datatable-end" : "",
+    column.align === "end" || column.headerHidden ? "datatable-end" : "",
     column.grow ? "datatable-grow" : "",
     column.key === GRIP_COLUMN ? "datatable-grip" : "",
     column.fold === "only" ? "datatable-fold-only" : "",

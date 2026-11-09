@@ -34,7 +34,6 @@ package gates
 import (
 	"go/ast"
 	"go/build"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -97,7 +96,7 @@ func TestEveryGateRunsInParallelWithTheOthers(t *testing.T) {
 	var serial, exemptButParallel []string
 	seen := 0
 	for _, path := range activeGateSources(t) {
-		source, err := os.ReadFile(path)
+		source, err := gatekit.ReadFile(path)
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}

@@ -7,7 +7,6 @@ package gates
 
 import (
 	"go/ast"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -43,7 +42,7 @@ func TestEveryMemberForeignKeyHasARetirementPolicy(t *testing.T) {
 		policies[name] = readMemberGuard(t, entry.Value, constants)
 		return false
 	})
-	catalog, err := os.ReadFile("migrations/testdata/head_catalog.txt")
+	catalog, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
 	if err != nil {
 		t.Fatal(err)
 	}

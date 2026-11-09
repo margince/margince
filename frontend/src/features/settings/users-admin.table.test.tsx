@@ -30,9 +30,9 @@ describe("the members table", () => {
     vi.stubGlobal("fetch", backend([]));
     render(<UsersAdminCard />);
     await waitFor(() =>
-      expect(within(rowFor("Ada Active")).getByText("Nordics")).toBeTruthy(),
+      expect(within(rowFor("Ada Active")).getByText(/Nordics/)).toBeTruthy(),
     );
-    expect(within(rowFor("Ada Active")).getByText("DACH Sales")).toBeTruthy();
+    expect(within(rowFor("Ada Active")).getByText(/DACH Sales/)).toBeTruthy();
   });
 
   it("reads last activity against the clock and claims nothing for a missing one", async () => {

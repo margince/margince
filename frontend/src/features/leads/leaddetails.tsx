@@ -5,7 +5,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { ConversationSuggestionsCard } from "../../components/conversationsuggestions";
 import { EntityRef } from "../../components/entityref";
+import { LinkedInChip } from "../../components/linkedinchip";
 import { saveRecordEdit } from "../../components/recordedit";
+import { LeadStops } from "../../components/stops";
 import { TagsPanel } from "../../components/tagspanel";
 import { Badge } from "../../design-system/atoms";
 import {
@@ -15,7 +17,6 @@ import {
 } from "../../design-system/contactlink";
 import { InlineChoice } from "../../design-system/inlinechoice";
 import { InlineText } from "../../design-system/inlinetext";
-import { OffsiteLink } from "../../design-system/offsitelink";
 import {
   type DetailRow,
   type DetailSection,
@@ -41,6 +42,7 @@ import { LeadCompany, useLeadCompanyFactsSection } from "./leadcompany";
 import { LeadOwnerControl, statusSetBy } from "./leadheader";
 import { leadIndustry } from "./leadindustry";
 import { useLeadPartnerRow } from "./leadpartner";
+import { LeadProductLine } from "./leadproduct";
 import { LeadProjectAttachButton } from "./leadraillinks";
 import type { Lead, LeadWriter } from "./leads";
 import { mapLeadUpdate } from "./leads.form";
@@ -267,9 +269,7 @@ function useAboutRows(
       term: t("create.linkedinUrl"),
       empty: isBlank(lead.linkedin_url),
       value: lead.linkedin_url ? (
-        <OffsiteLink href={lead.linkedin_url}>
-          {t("record.openProfile")}
-        </OffsiteLink>
+        <LinkedInChip href={lead.linkedin_url} name={lead.full_name} />
       ) : (
         <span title={t("record.leadProfileReadOnly")}>{t("field.unset")}</span>
       ),
@@ -288,6 +288,15 @@ function useAboutRows(
           writer={writer}
           reasonId={reasonId}
         />
+      ),
+    },
+    {
+      key: "product_id",
+      term: t("lead.product"),
+      empty: !lead.product_id,
+      block: !lead.product_id,
+      value: (
+        <LeadProductLine lead={lead} writer={writer} reasonId={reasonId} />
       ),
     },
     {
@@ -402,6 +411,7 @@ function LeadDetailsBody({
   return (
     <>
       <RecordDetails sections={sections} footnote={t("lead.aside.footnote")} />
+      <LeadStops leadId={lead.id} />
       {!lead.archived_at && (
         <ConversationSuggestionsCard
           key={lead.id}

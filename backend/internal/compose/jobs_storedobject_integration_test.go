@@ -318,6 +318,8 @@ func referenceKeyFromItsOwner(t *testing.T, e *integration.Env, kind storedobjec
 		e.WsExec(t, `
 			INSERT INTO import_run (connector, status, mapping, source_ref, source, captured_by)
 			VALUES ('csv', 'validating', '{}'::jsonb, $1, 'upload', 'human:test')`, key)
+	case storedobjects.KindAvatar:
+		e.WsExec(t, `UPDATE app_user SET avatar_object_key = $1, avatar_origin = 'upload' WHERE id = $2`, key, e.Rep1)
 	default:
 		t.Fatalf("kind %q has no owning row in this test, so the sweep's answer about it is "+
 			"unproven: add one when the kind is declared", kind)
@@ -386,6 +388,10 @@ func TestEachWriterDeclaresItsOwnKind(t *testing.T) {
 			// that, which is what the real upload path requires.
 			return migration.NewRunStore(db).RecordImportSourceIntent(
 				e.As(e.Rep1, nil, importerPerms()), key)
+		}},
+		{storedobjects.KindAvatar, func(key string) error {
+			return newAvatarPictures(db, blobstore.NewMemory(), nil, slog.New(slog.DiscardHandler)).
+				putPicture(ctx, key, []byte("picture"))
 		}},
 	} {
 		t.Run(string(c.kind), func(t *testing.T) {

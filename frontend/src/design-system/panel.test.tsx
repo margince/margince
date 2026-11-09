@@ -3,18 +3,10 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { createPortal } from "react-dom";
 import { afterEach, describe, expect, it } from "vitest";
 import { selectorList, subjectsOf } from "../../scripts/lib/css-rules";
-import {
-  PANEL_TONES,
-  Panel,
-  PanelBody,
-  PanelGroupHead,
-  PanelIntro,
-  PanelRow,
-} from "./panel";
+import { EmptyState } from "./atoms";
+import { PANEL_TONES, Panel, PanelBody, PanelIntro } from "./panel";
 
 afterEach(cleanup);
 
@@ -94,138 +86,10 @@ describe("a titled panel is a region named by its title", () => {
   });
 });
 
-// The rule and the hover are two shapes, and PanelRow used to hold them
-// together: every row lit up under the pointer, so a panel of ruled blocks a
-// reader is meant to READ told them all five were pressable. The default is
-// therefore inert, and a caller opts in only when the whole row is one press
-// target.
-describe("PanelGroupHead", () => {
-  it("puts its id on the heading, so a table in the group can be named by it", () => {
-    render(<PanelGroupHead title="Notes" level="h3" id="group-notes" />);
-    expect(screen.getByRole("heading", { name: "Notes", level: 3 }).id).toBe(
-      "group-notes",
-    );
-  });
-});
-
-describe("PanelRow separates the hairline from the press", () => {
-  it("draws an inert row by default", () => {
-    const { container } = render(<PanelRow>Renewal date</PanelRow>);
-    const row = container.querySelector(".panel-row");
-    expect(row).not.toBeNull();
-    expect(row?.classList.contains("panel-row-interactive")).toBe(false);
-  });
-
-  it("marks the row a press target when the caller says it is one", () => {
-    const { container } = render(
-      <PanelRow interactive>
-        <button type="button">Q4 — renewals</button>
-      </PanelRow>,
-    );
-    expect(
-      container
-        .querySelector(".panel-row")
-        ?.classList.contains("panel-row-interactive"),
-    ).toBe(true);
-  });
-
-  // The caller's own class survives the variant: a screen names its row for
-  // layout, and the two spellings have to coexist on one element.
-  it("keeps the caller's class beside the variant", () => {
-    const { container } = render(
-      <PanelRow interactive className="panel-row-on">
-        Q3
-      </PanelRow>,
-    );
-    const row = container.querySelector(".panel-row");
-    expect(row?.classList.contains("panel-row-interactive")).toBe(true);
-    expect(row?.classList.contains("panel-row-on")).toBe(true);
-  });
-
-  it("marks a row of a record list apart from a press target", () => {
-    const { container } = render(<PanelRow record>Deep tier</PanelRow>);
-    const row = container.querySelector(".panel-row");
-    expect(row?.classList.contains("panel-row-record")).toBe(true);
-    expect(row?.classList.contains("panel-row-interactive")).toBe(false);
-  });
-
-  it("leaves a plain row out of the record list", () => {
-    const { container } = render(<PanelRow>Renewal date</PanelRow>);
-    expect(
-      container
-        .querySelector(".panel-row")
-        ?.classList.contains("panel-row-record"),
-    ).toBe(false);
-  });
-});
-
-type OpeningRowProps = { opened: string[]; pressed: string[] };
-
-describe("PanelRow onOpen opens on a press that lands on no control", () => {
-  function OpeningRow({ opened, pressed }: Readonly<OpeningRowProps>) {
-    return (
-      <PanelRow record onOpen={() => opened.push("Pricing playbook")}>
-        <span>Pricing playbook</span>
-        <button type="button" onClick={() => pressed.push("menu")}>
-          Actions for Pricing playbook
-        </button>
-        {createPortal(
-          <div role="menu">
-            <span>Archive set</span>
-          </div>,
-          document.body,
-        )}
-      </PanelRow>
-    );
-  }
-
-  it("opens the row on a press on its text, and marks it with the pointer", async () => {
-    const user = userEvent.setup();
-    const opened: string[] = [];
-    const { container } = render(<OpeningRow opened={opened} pressed={[]} />);
-    await user.click(screen.getByText("Pricing playbook"));
-    expect(opened).toEqual(["Pricing playbook"]);
-    expect(
-      container
-        .querySelector(".panel-row")
-        ?.classList.contains("panel-row-opens"),
-    ).toBe(true);
-  });
-
-  it("leaves a press on a button inside the row to that button", async () => {
-    const user = userEvent.setup();
-    const opened: string[] = [];
-    const pressed: string[] = [];
-    render(<OpeningRow opened={opened} pressed={pressed} />);
-    await user.click(
-      screen.getByRole("button", { name: "Actions for Pricing playbook" }),
-    );
-    expect(pressed).toEqual(["menu"]);
-    expect(opened).toEqual([]);
-  });
-
-  // React bubbles a portal's click through the row, though the menu is not in its DOM.
-  it("ignores a press inside a menu the row portalled out", async () => {
-    const user = userEvent.setup();
-    const opened: string[] = [];
-    render(<OpeningRow opened={opened} pressed={[]} />);
-    await user.click(within(screen.getByRole("menu")).getByText("Archive set"));
-    expect(opened).toEqual([]);
-  });
-
-  it("draws no pointer on a row without onOpen", () => {
-    const { container } = render(<PanelRow record>Deep tier</PanelRow>);
-    expect(
-      container
-        .querySelector(".panel-row")
-        ?.classList.contains("panel-row-opens"),
-    ).toBe(false);
-  });
-});
-
 // A deleted rule body still parses and still paints, so the stylesheet is
-// asserted on directly rather than trusting the class list above: the hover
-// fill has to exist, and it has to hang on the interactive class alone.
+// asserted on directly rather than trusting the class list in
+// panel.rows.test.tsx. The hover fill has to exist, and it has to hang on the
+// interactive class alone.
 describe("panel.css keeps the row's hover on its two variants", () => {
   it("declares the hover fill only for an interactive row and a record row", () => {
     const css = stripComments(panelCss());
@@ -985,5 +849,40 @@ describe("the pane insets the state arm it has no body to wrap", () => {
       offences,
       "the pane insets its own un-wrappable state arm — panel.css says it once, for every panel in the product",
     ).toEqual([]);
+  });
+});
+
+// An instructional empty state in a panel body is a card of its own, with a
+// title, a sentence and a verb. The one-line empty state's flush rule must not
+// reach it, or its text sits on its border.
+describe("an instructional empty state in a panel body", () => {
+  it("keeps its instructional class", () => {
+    const { container } = render(
+      <PanelBody>
+        <EmptyState title="No data purchased">
+          A lookup buys details.
+        </EmptyState>
+      </PanelBody>,
+    );
+    expect(
+      container.querySelector(".panel-body > .empty.empty-instructional"),
+    ).not.toBeNull();
+  });
+
+  it("is left out of the rule that strips the one-line state's padding", () => {
+    const css = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "panel.css"),
+      "utf8",
+    );
+    const rules = cssRules(css);
+    const paddingOf = (selector: string) =>
+      rules
+        .filter((rule) => rule.selector === selector)
+        .map((rule) => declaredValue(rule.block, "padding"))
+        .find((value) => value !== undefined);
+    expect(paddingOf(".panel-body > .empty")).toBeUndefined();
+    expect(paddingOf(".panel-body > .empty:not(.empty-instructional)")).toBe(
+      "0",
+    );
   });
 });

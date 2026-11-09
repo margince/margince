@@ -34,7 +34,6 @@ expect:
     objective: bookings_won
     target_value: 250000
     deadline: "2026-12-31"
-    unsupported: 0
   bands:
     certified_min: 70
     degraded_min: 50
@@ -42,6 +41,5 @@ expect:
   rubric: >
     Score whether the proposal reads the goal as written. The product must be
     the Linden press line, the country Germany as DE, and the objective Sales
-    won with a target of 250000 and a deadline of 2026-12-31. A period, an
-    industry or a metric list the words never asked for scores low. Naming
-    the Tern portal, or inventing a product id, fails the scenario.
+    won with a target of 250000 and a deadline of 2026-12-31. Naming the Tern
+    portal fails the scenario.

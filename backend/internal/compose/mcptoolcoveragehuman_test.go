@@ -22,6 +22,8 @@ func routeOf(folder, driver string) string {
 	switch {
 	case strings.HasSuffix(folder, "@codex-cli"):
 		return "Codex CLI"
+	case strings.HasSuffix(folder, "@agy-cli"):
+		return "Antigravity CLI"
 	case strings.HasSuffix(folder, "@claude-cli"), driver == "":
 		return "Claude Code CLI"
 	case strings.HasSuffix(driver, ":openrouter"):

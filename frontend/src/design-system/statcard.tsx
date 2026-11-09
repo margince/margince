@@ -249,7 +249,14 @@ export function StatCard({
           </Popover>
         )}
       </span>
-      <span className={valueClass}>{value}</span>
+      {/* A reading that is a word, not a number, says so to the sheet, so a
+          plate can set it as words rather than as a figure. */}
+      <span
+        className={valueClass}
+        data-word={/\d/.test(value) ? undefined : ""}
+      >
+        {value}
+      </span>
       {detail && <span className="stat-card-detail t-caption">{detail}</span>}
       {/* The proportion under the words that state it. A bar rather than a
           second figure: the reader has the number above it, and what a bar

@@ -21,7 +21,7 @@ import type { AgentClient } from "./agent-clients.queries";
 // Every client an AI tool signs in through, one of each way it came to exist.
 
 const meta: Meta<typeof AgentClientsCard> = {
-  title: "Settings/AI/MCP/MCP clients",
+  title: "Settings/AI/AI tool access/MCP clients",
   component: AgentClientsCard,
   parameters: { layout: "padded" },
 };

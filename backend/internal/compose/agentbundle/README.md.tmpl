@@ -12,7 +12,7 @@ This is the address an AI tool connects to:
 {{.MCPURL}}
 ```
 
-The steps below match **Settings → AI access** in Margince. Each tool also has its own guide,
+The steps below match **Settings → AI assistants** in Margince. Each tool also has its own guide,
 linked under its steps.
 
 <!-- connect: claude-company -->
@@ -180,7 +180,7 @@ passport you make.
 
 ### Save your passport
 
-Create a passport in Margince under **Settings → AI access**, in **For developers**, and copy
+Create a passport in Margince under **Settings → AI assistants**, in **For developers**, and copy
 it. It is shown once. Never type it on a command line, where your shell history keeps it. Save
 it in one of these places, under the name `MARGINCE_PASSPORT`:
 
@@ -232,6 +232,6 @@ curl '{{.BaseURL}}/companies?limit=1' -H "Authorization: Bearer $MARGINCE_PASSPO
 ### When a passport ends
 
 A passport made in Settings lasts 30 days. To stop an agent sooner, choose **Revoke** on
-the passport in **Settings → AI access**, under **For developers**. It loses access on its
+the passport in **Settings → AI assistants**, under **For developers**. It loses access on its
 next call. Then make a new passport and save it under the same name. The skill does not
 change.

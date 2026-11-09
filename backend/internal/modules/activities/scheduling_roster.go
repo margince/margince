@@ -48,7 +48,7 @@ func normalizedAttendees(addresses []string, skip ...string) ([]string, error) {
 		out = append(out, address)
 	}
 	if len(out)+len(skip) > maxInvitationAttendees {
-		return nil, &SchedulingArgumentError{Field: fieldAttendeeEmails, Code: "too_many", Message: "Invite at most 25 attendees to one meeting"}
+		return nil, &SchedulingArgumentError{Field: fieldAttendeeEmails, Code: faultTooMany, Message: "Invite at most 25 attendees to one meeting"}
 	}
 	return out, nil
 }

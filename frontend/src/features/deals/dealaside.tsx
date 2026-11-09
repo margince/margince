@@ -86,6 +86,7 @@ function DealAsideBody({
     locale,
     zone: useViewerZone(),
     row: rowMaker(deal.masked_fields ?? [], t, edit),
+    viewerId,
   };
   const owner = useMemberName(deal.owner_id).data;
   const cf = useObjectCustomFields("deal");
@@ -166,6 +167,7 @@ type Facts = Readonly<{
   locale: Locale;
   zone: string;
   row: RowMaker;
+  viewerId: string | undefined;
 }>;
 
 // A field the reader may not see says so; one nobody filled folds away. A row
@@ -210,12 +212,9 @@ function money(
     : formatMoneyWhole(amountMinor, currency, locale);
 }
 
-function probabilityReading(
-  deal: Deal,
-  t: Translator,
-  locale: Locale,
-): string | null {
-  const words = probabilityWords(deal, t, locale);
+function probabilityReading(facts: Facts): string | null {
+  const { deal, t, locale, viewerId } = facts;
+  const words = probabilityWords(deal, t, locale, viewerId);
   return words
     ? [words.value, words.source, words.stage].filter(Boolean).join(" · ")
     : null;
@@ -277,7 +276,7 @@ function aboutRows(facts: Facts, stages: readonly Stage[]): DetailRow[] {
     row(
       "probability",
       "deal.winProbability",
-      probabilityReading(deal, t, locale),
+      probabilityReading(facts),
       "win_probability",
       // A closed deal's stage fixes its probability.
       deal.status === "won" || deal.status === "lost"

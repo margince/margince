@@ -34,6 +34,17 @@
   corner-shape: round;
   background: var(--accent);
 }
+.report-chart-key-bar::before {
+  width: 0.625rem;
+  height: 0.625rem;
+  border: 0;
+  border-radius: var(--r-xs);
+  background: var(--accent);
+}
+.report-chart-key-bar.report-chart-column-secondary::before {
+  border: 1px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 38%, var(--ground));
+}
 .report-chart-key-range::before {
   border-color: color-mix(in srgb, var(--accent) 35%, var(--bgElevated));
   border-top-width: 6px;
@@ -257,14 +268,19 @@
 }
 /* The "view as table" fold sits right under its chart with no rule of its
    own: the card's foot below it already draws the only line needed there. */
-.report-chart-data {
-  margin-top: var(--space-3);
+/* Two classes, so the base disclosure's rule and gap do not come back by
+   sheet order. */
+.disclosure.report-chart-data {
+  margin: var(--space-3) 0 0;
+  padding-top: 0;
+  border-top: 0;
   color: var(--textSecondary);
   font: var(--fontBodySmall);
 }
 .report-chart-data summary {
   cursor: pointer;
   width: fit-content;
+  font-weight: var(--fontWeightRegular);
 }
 .report-chart-table-scroll {
   position: relative;
@@ -300,6 +316,7 @@
 .report-chart-column-pair {
   display: flex;
   align-items: end;
+  justify-content: center;
   gap: var(--gapActions);
   height: 12rem;
   border-bottom: 1px solid var(--borderSubtle);
@@ -308,7 +325,8 @@
   padding: 0;
   display: block;
   position: relative;
-  width: 50%;
+  /* A bar keeps a bar's width on a wide card instead of filling its week. */
+  width: min(50%, 3.5rem);
   text-align: center;
   text-decoration: none;
   color: var(--textPrimary);

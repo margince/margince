@@ -46,6 +46,7 @@ function show(refusedReasonId?: string) {
     <DealProductsCard
       dealId={DEAL}
       currency="EUR"
+      typedAmount={null}
       refusedReasonId={refusedReasonId}
     />,
   );
@@ -55,7 +56,7 @@ describe("the deal's products", () => {
   it("lists each product with its amount and where it came from", async () => {
     installFetchStub({
       "GET /me": meRoute({ deal: ["read", "update"] }),
-      [`GET ${ROUTE}`]: () => jsonResponse({ data: FROM_OFFER }),
+      [`GET ${ROUTE}`]: () => jsonResponse({ data: FROM_OFFER, tag: "read-1" }),
     });
     show();
     expect(await screen.findByText("ERP licence")).toBeTruthy();
@@ -64,7 +65,9 @@ describe("the deal's products", () => {
   });
 
   it("says a deal with no products has none yet", async () => {
-    installFetchStub({ [`GET ${ROUTE}`]: () => jsonResponse({ data: [] }) });
+    installFetchStub({
+      [`GET ${ROUTE}`]: () => jsonResponse({ data: [], tag: "empty" }),
+    });
     show();
     expect(await screen.findByText(/No products yet/)).toBeTruthy();
   });
@@ -90,7 +93,7 @@ describe("the deal's products", () => {
       },
     ];
     installFetchStub({
-      [`GET ${ROUTE}`]: () => jsonResponse({ data: FROM_OFFER }),
+      [`GET ${ROUTE}`]: () => jsonResponse({ data: FROM_OFFER, tag: "read-1" }),
       "GET /products": () =>
         jsonResponse({
           data: [{ id: "p-impl", name: "Implementation" }],
@@ -99,7 +102,7 @@ describe("the deal's products", () => {
         }),
       [`PUT ${ROUTE}`]: (body) => {
         sent.push(body);
-        return jsonResponse({ data: saved });
+        return jsonResponse({ data: saved, tag: "saved-1" });
       },
     });
     show();
@@ -132,16 +135,63 @@ describe("the deal's products", () => {
 
     await waitFor(() =>
       expect(sent).toEqual([
-        { products: [{ product_id: "p-impl", amount_minor: 500_000 }] },
+        {
+          expected_tag: "read-1",
+          products: [{ product_id: "p-impl", amount_minor: 500_000 }],
+        },
       ]),
     );
     expect(await screen.findByText("Set by hand")).toBeTruthy();
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  it("refuses a save from a stale read, then shows the saved set and saves from it", async () => {
+    const sent: unknown[] = [];
+    const theirs: DealProduct[] = [
+      { ...FROM_OFFER[0], source: "manual", amount_minor: 900_000 },
+    ];
+    let current = { data: FROM_OFFER, tag: "read-1" };
+    installFetchStub({
+      [`GET ${ROUTE}`]: () => jsonResponse(current),
+      [`PUT ${ROUTE}`]: (body) => {
+        sent.push(body);
+        if (sent.length === 1) {
+          current = { data: theirs, tag: "theirs-1" };
+          return jsonResponse(
+            { status: 409, code: "version_skew", title: "Conflict" },
+            409,
+          );
+        }
+        return jsonResponse({ data: theirs, tag: "saved-2" });
+      },
+    });
+    show();
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Set products" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    const save = within(dialog).getByRole("button", { name: "Save products" });
+    await user.click(save);
+
+    expect(
+      await within(dialog).findByText(/Someone saved this deal’s products/),
+    ).toBeTruthy();
+    expect(
+      within(dialog).getByRole<HTMLInputElement>("spinbutton", {
+        name: "Amount for ERP licence",
+      }).value,
+    ).toBe("9000");
+    await user.click(save);
+    await waitFor(() => expect(sent).toHaveLength(2));
+    expect(
+      sent.map((body) => (body as { expected_tag: string }).expected_tag),
+    ).toEqual(["read-1", "theirs-1"]);
+  });
+
   it("refuses the edit on a deal that takes no changes, and points at why", async () => {
     installFetchStub({
-      [`GET ${ROUTE}`]: () => jsonResponse({ data: FROM_OFFER }),
+      [`GET ${ROUTE}`]: () => jsonResponse({ data: FROM_OFFER, tag: "read-1" }),
     });
     show("deal-refused");
     const edit = await screen.findByRole("button", { name: "Set products" });

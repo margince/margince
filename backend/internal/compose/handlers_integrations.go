@@ -166,11 +166,10 @@ func (h integrationsHandlers) CreateContactEnrichmentRun(w http.ResponseWriter, 
 	// capture-private row, which 404s on read, the only thing standing in the
 	// way was not knowing the id. An id is not a secret.
 	//
-	// Visibility is the FLOOR, not the answer to what a paid lookup should
-	// require. Whether a spend needs write authority over the record, or a
-	// grant of its own, is a product question (#4041) — but no reading of it
-	// permits spending on a record the spender cannot open, so this holds
-	// while that is decided.
+	// Visibility is the floor. A lookup also needs the right to edit the
+	// contact, because every run writes the provider's details onto it.
+	// QueueRun asks for the contact write grant and EnsureWritableLive. There
+	// is no separate spend grant.
 	//
 	// EnsureVisibleLive, so an invisible or archived contact answers not-found
 	// exactly as reading it would. A different refusal here would confirm the

@@ -122,9 +122,9 @@ Records, deals and mail in Margince, by page:
 - [How the forecast learns](forecast-learning.md): how each stage's probability
   moves with the deals that closed from it. The risks marked on a deal, and the
   switch that turns it off.
-- [Deals the customer still supports](deals-the-customer-supports.md): the review
-  a deal gets when its customer stops answering. The switch that leaves such deals
-  out of the forecast.
+- [Deals the customer still supports](deals-the-customer-supports.md): how
+  Margince closes a deal as lost when its customer stops answering, and how to
+  undo it.
 - [Your email signature](email-signatures.md): plain text, personal HTML and the company template.
 - [Writing and sending mail](sending-mail.md): the composer, replying to one
   message in a thread, filing a send under a project, and drafting in your
@@ -148,6 +148,8 @@ Records, deals and mail in Margince, by page:
   tiers and where the line falls. Why sending is not held behind a confirmation,
   and what protects it instead. The rule that your edits win field by field,
   what an agent is refused outright, and passports.
+- [How much an agent may do](agent-allowances.md): the allowances per window
+  and how they differ by role. What an agent is told when it stops.
 - [Approvals](approvals.md): what a staged action looks like, and the kinds
   that reach the inbox. How to accept, edit or reject one, and who is allowed to
   decide. The 72-hour expiry, and the one kind that never expires.

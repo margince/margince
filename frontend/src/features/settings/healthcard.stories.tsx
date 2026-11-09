@@ -105,7 +105,7 @@ function story(canSee: boolean, query: QueryLike<Report>) {
 }
 
 const meta: Meta<typeof HealthCard> = {
-  title: "Settings/Governance/System health/Health card shell",
+  title: "Settings/System/System health/Health card shell",
   component: HealthCard,
 };
 export default meta;

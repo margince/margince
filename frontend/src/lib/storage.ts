@@ -22,6 +22,11 @@ export const STORAGE_KEYS = {
     area: "local",
     lifetime: "seat",
   },
+  homeSwipeSeen: {
+    name: "margince.home.swipeSeen",
+    area: "local",
+    lifetime: "device",
+  },
   locale: { name: "margince.locale", area: "local", lifetime: "device" },
   theme: { name: "margince.theme", area: "local", lifetime: "device" },
   sidebarCollapsed: {
@@ -37,6 +42,12 @@ export const STORAGE_KEYS = {
   edgeLight: { name: "margince.edgeLight", area: "local", lifetime: "device" },
   worklistDrawerWide: {
     name: "margince.worklist.drawerWide",
+    area: "local",
+    lifetime: "device",
+  },
+  // Whether Documents tabs draw files as tiles or as rows.
+  documentsView: {
+    name: "margince.documents.view",
     area: "local",
     lifetime: "device",
   },

@@ -54,6 +54,7 @@ var inputChanges = map[string]InputChange{
 	"deal.erased":        {ScopeDeal, "an erased deal leaves the checked set"},
 
 	"offer.created":    {ScopeDeal, "the offer total is compared with the deal amount"},
+	"offer.updated":    {ScopeDeal, "the offer total is compared with the deal amount"},
 	"offer.sent":       {ScopeDeal, "the offer total is compared with the deal amount"},
 	"offer.accepted":   {ScopeDeal, "the offer total is compared with the deal amount"},
 	"offer.rejected":   {ScopeDeal, "the offer total is compared with the deal amount"},

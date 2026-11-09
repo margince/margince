@@ -202,6 +202,7 @@ export const seededLead = {
 
 export const anna = {
   id: "p-anna",
+  attachable: true,
   workspace_id: "w",
   full_name: "Anna Weber",
   title: "Head of Procurement",
@@ -611,6 +612,12 @@ export const agentUsageByUser = {
       egress: usageCounter(2, 20),
       calls: usageCounter(160, 1_000),
       state: "ok",
+      roles: [{ role_key: "rep", role_name: "User" }],
+      allowance: {
+        writes: { limit: 200, role_key: null },
+        egress: { limit: 20, role_key: null },
+        calls: { limit: 1_000, role_key: null },
+      },
     },
   ],
 };
@@ -1152,7 +1159,7 @@ export const installationLicense = {
   checked_at: "2026-08-20T09:00:00Z",
 };
 
-// Settings, Capture activity, both scopes. `funnel` is required by
+// Settings, Connections activity, both scopes. `funnel` is required by
 // CaptureActivityResponse, and the window reads it straight into its counters.
 //
 // One entry per outcome, so each of the funnel's five counters has a row and

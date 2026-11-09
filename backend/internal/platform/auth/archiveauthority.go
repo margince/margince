@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -23,20 +24,23 @@ type ArchiveRule struct {
 	writable func(ctx context.Context, tx pgx.Tx, p principal.Principal, rowIDs []ids.UUID) (map[ids.UUID]bool, error)
 }
 
-// liveDealWrites is the row write gate the deal archive asks, over a page.
-func liveDealWrites(ctx context.Context, tx pgx.Tx, p principal.Principal, rowIDs []ids.UUID) (map[ids.UUID]bool, error) {
-	writable, err := rowWriteSubset(ctx, tx, p, tableDeal, rowIDs)
-	if err != nil {
-		return nil, err
+// liveWrites is the row write gate an owned record's archive asks, over a
+// page: the rows the caller may write that are not archived already.
+func liveWrites(table string) func(context.Context, pgx.Tx, principal.Principal, []ids.UUID) (map[ids.UUID]bool, error) {
+	return func(ctx context.Context, tx pgx.Tx, p principal.Principal, rowIDs []ids.UUID) (map[ids.UUID]bool, error) {
+		writable, err := rowWriteSubset(ctx, tx, p, table, rowIDs)
+		if err != nil {
+			return nil, err
+		}
+		archived, err := archivedAmong(ctx, tx, table, writable)
+		if err != nil {
+			return nil, err
+		}
+		for id := range archived {
+			delete(writable, id)
+		}
+		return writable, nil
 	}
-	archived, err := archivedAmong(ctx, tx, tableDeal, writable)
-	if err != nil {
-		return nil, err
-	}
-	for id := range archived {
-		delete(writable, id)
-	}
-	return writable, nil
 }
 
 func activityWrites(ctx context.Context, tx pgx.Tx, _ principal.Principal, rowIDs []ids.UUID) (map[ids.UUID]bool, error) {
@@ -47,23 +51,50 @@ func activityWrites(ctx context.Context, tx pgx.Tx, _ principal.Principal, rowID
 // correspondence and a colleague's notes keep needing activity.delete.
 var ActivityArchive = ArchiveRule{object: "activity", table: "activity", writable: activityWrites, own: func(alias string, me int, arg func(any) int) string {
 	return fmt.Sprintf(`(%[1]s.kind IN ('note', 'task') AND %[1]s.source = $%[2]d AND %[3]s)`,
-		alias, arg(provenance.RecordSourceManual), activityAuthorSQL(alias, me, arg))
+		alias, arg(provenance.RecordSourceManual), ActivityAuthorSQL(alias, me, arg))
 }}
 
-// DealArchive admits the deal's owner, unless the owner took the deal
+// ownerArchive admits a record's owner, unless the owner took the record
 // themselves. A write share lets its holder name themselves owner, so without
 // that arm the share would carry the archive the decision keeps from it.
-var DealArchive = ArchiveRule{object: tableDeal, table: tableDeal, writable: liveDealWrites, own: func(alias string, me int, _ func(any) int) string {
-	return fmt.Sprintf(`(%[1]s.owner_id IN (%[2]s) AND NOT EXISTS (
+// table is a compile-time literal, formatted in as a name.
+func ownerArchive(table string) ArchiveRule {
+	return ArchiveRule{object: table, table: table, writable: liveWrites(table), own: func(alias string, me int, _ func(any) int) string {
+		return fmt.Sprintf(`(%[1]s.owner_id IN (%[2]s) AND NOT EXISTS (
 	   SELECT 1 FROM (SELECT made.action, made.actor_id, made.on_behalf_of FROM audit_log made
-	     WHERE made.entity_type = 'deal' AND made.entity_id = %[1]s.id
+	     WHERE made.entity_type = '%[4]s' AND made.entity_id = %[1]s.id
 	       AND made.before->'owner_id' IS DISTINCT FROM made.after->'owner_id' AND made.after ? 'owner_id'
 	     ORDER BY made.occurred_at DESC, made.id DESC LIMIT 1) handed
 	   WHERE handed.action <> 'create' AND (handed.on_behalf_of IN (%[2]s)
 	      OR (split_part(handed.actor_id, ':', 1) = '%[3]s'
 	          AND split_part(handed.actor_id, ':', 2) IN (SELECT taker.id::text FROM (%[2]s) taker)))))`,
-		alias, memberIdentitySQL(me), principal.PrincipalHuman)
-}}
+			alias, memberIdentitySQL(me), principal.PrincipalHuman, table)
+	}}
+}
+
+// DealArchive admits the deal's owner; ContactArchive and CompanyArchive the
+// contact's and the company's, by the same rule.
+var (
+	DealArchive    = ownerArchive(tableDeal)
+	ContactArchive = ownerArchive(tableContact)
+	CompanyArchive = ownerArchive(tableCompany)
+)
+
+// ArchiveRuleFor answers the archive rule for a record type, and whether that
+// type has one. A type without one is archived with the delete grant alone.
+func ArchiveRuleFor(table string) (ArchiveRule, bool) {
+	switch table {
+	case ActivityArchive.table:
+		return ActivityArchive, true
+	case tableDeal:
+		return DealArchive, true
+	case tableContact:
+		return ContactArchive, true
+	case tableCompany:
+		return CompanyArchive, true
+	}
+	return ArchiveRule{}, false
+}
 
 // RequireArchiveGrant is the up-front half of EnsureArchivable: it refuses a
 // caller who could archive no row of the table at all, before a transaction.
@@ -88,7 +119,11 @@ func EnsureArchivable(ctx context.Context, tx pgx.Tx, r ArchiveRule, id ids.UUID
 		return err
 	}
 	if !owned[id] {
-		return refusedOn(ctx, deleteCheck, refusal)
+		reason, err := archiveOwnerRefusal(ctx, tx, r, id)
+		if err != nil {
+			return err
+		}
+		return refusedOn(ctx, deleteCheck, reason)
 	}
 	return nil
 }
@@ -122,6 +157,16 @@ func ArchivableSubset(ctx context.Context, tx pgx.Tx, r ArchiveRule, rowIDs []id
 	return ownedArchivable(ctx, tx, r, candidates)
 }
 
+// OwnedArchivableSubset answers EnsureArchivable's rule for a caller without
+// delete, over a page in one statement. It asks no seat or row write gate, so
+// a caller needs to have asked those already.
+func OwnedArchivableSubset(ctx context.Context, tx pgx.Tx, r ArchiveRule, rowIDs []ids.UUID) (map[ids.UUID]bool, error) {
+	if !Allows(ctx, r.object, principal.ActionUpdate) {
+		return map[ids.UUID]bool{}, nil
+	}
+	return ownedArchivable(ctx, tx, r, rowIDs)
+}
+
 func ownedArchivable(ctx context.Context, tx pgx.Tx, r ArchiveRule, rowIDs []ids.UUID) (map[ids.UUID]bool, error) {
 	p, err := rbacActor(ctx)
 	if err != nil {
@@ -148,4 +193,40 @@ func ownedArchivable(ctx context.Context, tx pgx.Tx, r ArchiveRule, rowIDs []ids
 		out[id] = true
 	}
 	return out, nil
+}
+
+// ArchiveAuthorityError names the failed archive rule on every transport.
+type ArchiveAuthorityError struct{ SelfAssigned bool }
+
+func (e *ArchiveAuthorityError) Error() string {
+	code, message := e.MessageFault()
+	return code + ": " + message
+}
+func (e *ArchiveAuthorityError) Unwrap() error { return apperrors.ErrPermissionDenied }
+
+// MessageFault keeps archive refusals identical across HTTP and tool transports.
+func (e *ArchiveAuthorityError) MessageFault() (string, string) {
+	if e.SelfAssigned {
+		return "archive_self_assigned", "You assigned this record to yourself. Ask a manager to archive it."
+	}
+	return "archive_owner_required", "Only the record's owner or a manager can archive this record."
+}
+
+func archiveOwnerRefusal(ctx context.Context, tx pgx.Tx, r ArchiveRule, id ids.UUID) (error, error) {
+	if r.table == "activity" {
+		return fmt.Errorf("only the author or a manager can archive this activity: %w", apperrors.ErrPermissionDenied), nil
+	}
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	idPos, userPos := arg(id), arg(p.UserID)
+	var selfAssigned bool
+	err = tx.QueryRow(ctx, fmt.Sprintf("SELECT coalesce(owner_id IN (%s), false) FROM %s WHERE id = $%d", memberIdentitySQL(userPos), pgx.Identifier{r.table}.Sanitize(), idPos), args...).Scan(&selfAssigned)
+	if err != nil {
+		return nil, fmt.Errorf("auth: reading archive ownership: %w", err)
+	}
+	return &ArchiveAuthorityError{SelfAssigned: selfAssigned}, nil
 }

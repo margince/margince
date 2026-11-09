@@ -28,11 +28,11 @@ package gates
 // scripts/verify-boot.sh failing against a planted ended edge.
 
 import (
-	"os"
 	"regexp"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 )
 
@@ -51,7 +51,7 @@ var employmentCurrencyColumns = []string{"is_current_primary", "ended_at"}
 
 func predicateIn(t *testing.T, path string) string {
 	t.Helper()
-	body, err := os.ReadFile(path)
+	body, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

@@ -21,7 +21,10 @@ export const MORNING_BRIEF = "morning_brief" as const;
  * who granted that agent, so the one answer is written for both. */
 export const OVERNIGHT_AT_RISK_SWEEP = "overnight_at_risk_sweep" as const;
 
-const OVERNIGHT_AGENTS = [MORNING_BRIEF, OVERNIGHT_AT_RISK_SWEEP] as const;
+export const OVERNIGHT_AGENTS = [
+  MORNING_BRIEF,
+  OVERNIGHT_AT_RISK_SWEEP,
+] as const;
 
 const GRANTS_KEY = ["agent-grants"] as const;
 

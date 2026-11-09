@@ -21,7 +21,6 @@ package gates
 // integration test, against the running stack, where it is actually set.
 
 import (
-	"os"
 	"regexp"
 	"slices"
 	"sort"
@@ -30,6 +29,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/capabilitypath"
 )
 
@@ -108,7 +108,7 @@ func publishedTokenOperations(t *testing.T) []string {
 	var doc struct {
 		Paths map[string]map[string]yaml.Node `yaml:"paths"`
 	}
-	raw, err := os.ReadFile("api/crm.yaml")
+	raw, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}
@@ -145,7 +145,7 @@ func publishedTokenOperations(t *testing.T) []string {
 func coveredTokenOperations(t *testing.T) map[string]bool {
 	t.Helper()
 	const census = "internal/compose/integration/publictokencache_integration_test.go"
-	raw, err := os.ReadFile(census)
+	raw, err := gatekit.ReadFile(census)
 	if err != nil {
 		t.Fatalf("reading the census: %v", err)
 	}
