@@ -118,9 +118,20 @@ func openInvitationsTx(
 }
 
 // withCalendarInvitations marks the page's readable emails that are open
-// invitations to the reader.
-func withCalendarInvitations(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity, emailIDs []ids.UUID, asOf time.Time) error {
-	open, err := openInvitationsTx(ctx, tx, emailIDs, readerOrNobody(ctx), asOf)
+// invitations to the reader. Only a row the projection already calls a
+// calendar mail can be one, so a page without such a row reads nothing more.
+func withCalendarInvitations(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity, asOf time.Time) error {
+	var calendarMail []ids.UUID
+	for i := range page {
+		kind := page[i].AutomaticKind
+		if page[i].EmailSummary != nil && kind != nil && *kind == crmcontracts.ActivityAutomaticKindCalendar {
+			calendarMail = append(calendarMail, ids.UUID(page[i].Id))
+		}
+	}
+	if len(calendarMail) == 0 {
+		return nil
+	}
+	open, err := openInvitationsTx(ctx, tx, calendarMail, readerOrNobody(ctx), asOf)
 	if err != nil || len(open) == 0 {
 		return err
 	}
