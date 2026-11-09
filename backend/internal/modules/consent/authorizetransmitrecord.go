@@ -69,7 +69,7 @@ func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Tr
 		protection := claims[decisionRecipientKey(d.Recipient)].dataProtection
 		values := []any{
 			req.DeliveryID, req.Attempt, setID, decisionRecipientKey(d.Recipient),
-			subjectKind, subjectID, string(d.Phase), string(d.Resolved), string(d.Verdict),
+			subjectKind, subjectID, string(d.Phase), nullableCategory(d.Requested), string(d.Resolved), string(d.Verdict),
 			d.ReasonCode, nullableBasis(d.Basis), nullableText(d.Suppression),
 			sum[:], d.LegacyVerdict, string(d.Mode), by,
 			// Named on the REFUSED rows only, as at staging: a message allowed
@@ -82,7 +82,7 @@ func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Tr
 		tag, err := tx.Exec(ctx, `
 			INSERT INTO communication_decision
 			  (delivery_id, attempt, decision_set_id, recipient_address, subject_kind, subject_id,
-			   phase, resolved_category, verdict, reason_code, basis, suppression,
+			   phase, requested_category, resolved_category, verdict, reason_code, basis, suppression,
 			   content_fingerprint, legacy_verdict, mode, actor,
 			   execution_authority, instruction_id, ruleset_version, ruleset_codes,
 			   legal_entity_id, purpose_key, existing_customer_notice_id, existing_customer_offer_id,

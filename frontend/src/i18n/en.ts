@@ -7733,7 +7733,7 @@ export const en = {
   "sendPermission.unprovenRefuses":
     "Sending is refused until a reason is recorded.",
   "sendPermission.missingContext": "This message needs one more detail",
-  "sendPermission.missingPermission": "Consent needed for this message",
+  "sendPermission.missingPermission": "Permission needed for this message",
   "sendPermission.reason.chooseDeal": "Choose the deal for this follow-up.",
   "sendPermission.appliesTo": "This applies to {address}.",
   "sendPermission.appliesToAndMore_one":
@@ -7761,6 +7761,8 @@ export const en = {
     "This address does not accept mail. Correct the address; an override does not apply.",
   "sendPermission.reason.optedOutAfterRequest":
     "The recipient opted out of marketing after asking for this quote. Confirm with them that they still want it, then record their new request.",
+  "sendPermission.reason.permissionRequired":
+    "This marketing message has no recorded permission under the applicable rules. A staff exception cannot replace consent or the required evidence.",
   "sendPermission.reason.consentRequired":
     "Marketing to a recipient in this country needs their prior consent. No exception can replace it.",
   "sendPermission.reason.dealNotRequested":

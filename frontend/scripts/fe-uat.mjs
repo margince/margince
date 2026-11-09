@@ -56,7 +56,14 @@ import {
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const staticDir = join(repoRoot, "frontend/storybook-static");
-const outDir = join(repoRoot, ".tmp/fe-uat");
+const outDir = resolve(
+  process.env.FE_UAT_OUTPUT_DIR || join(repoRoot, ".tmp/fe-uat"),
+);
+const theme = process.env.FE_UAT_THEME ?? "light";
+if (theme !== "light" && theme !== "dark") {
+  console.error("fe-uat: FE_UAT_THEME must be light or dark");
+  process.exit(2);
+}
 const allowMissing = process.argv.includes("--allow-missing");
 let scope = scopeFor(process.argv);
 
@@ -267,7 +274,7 @@ async function captureStory(page, port, story) {
   });
 
   await page.goto(
-    `http://localhost:${port}/iframe.html?id=${story.id}&viewMode=story`,
+    `http://localhost:${port}/iframe.html?id=${story.id}&viewMode=story&globals=theme:${theme}`,
     {
       waitUntil: "networkidle",
     },
@@ -307,9 +314,19 @@ async function captureStory(page, port, story) {
   await page.waitForTimeout(250);
   const png = join(outDir, `${story.id}.png`);
   await page.screenshot({ path: png });
+  const drawnTheme = await page.getAttribute("html", "data-theme");
+  if (drawnTheme !== theme) {
+    errors.push(`theme is ${drawnTheme}, expected ${theme}`);
+  }
   const pass = rendered && errors.length === 0;
   console.log(pass ? `✓ ${story.id}` : `✗ ${story.id} — ${errors.join("; ")}`);
-  return { id: story.id, pass, png: relative(repoRoot, png), errors };
+  return {
+    id: story.id,
+    pass,
+    png: relative(repoRoot, png),
+    theme: drawnTheme,
+    errors,
+  };
 }
 
 async function openPage(browser, lane) {
@@ -346,7 +363,14 @@ function captureThrew(story, error) {
 function writeManifest(fields) {
   mkdirSync(outDir, { recursive: true });
   const fanOutMap = Object.fromEntries(fanOutByReach);
-  const manifest = { scope, base, head, fanOut: fanOutMap, ...fields };
+  const manifest = {
+    scope,
+    base,
+    head,
+    requestedTheme: theme,
+    fanOut: fanOutMap,
+    ...fields,
+  };
   writeFileSync(
     join(outDir, "manifest.json"),
     `${JSON.stringify(manifest, null, 2)}\n`,

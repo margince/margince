@@ -83,6 +83,13 @@ the **proof** that category needs, and records a **decision** per recipient sayi
   record. A standing "write to them all the same" must not live longer than its contact. Article 15 subject
   access exports it (the `communication_overrides` part of `privacy.AssembleSAR`). A subject who asks what is
   held about them has a right to the record that a human decided to write to them, and why.
+  An address that bounced for good, an opt-in not yet confirmed and a recipient the check cannot
+  identify must be corrected before a new send. Staff cannot skip those checks.
+
+  Where marketing needs consent or a route backed by facts, staff cannot replace either with an
+  exception. An unknown country uses the limited baseline: requested mail may go, while marketing
+  needs recorded consent.
+
 - **A restricted subject still gets three message kinds.** Three categories still reach a
   restricted subject through a registered template: `security_notice`, `privacy_notice` and
   `optout_confirmation`. A subject is not helped if they cannot learn that their account is under
@@ -199,10 +206,11 @@ Every role that sends mail holds the grant: `rep`, `manager`, `management` and `
 alone does not say which refusals a seat may send past. Each refusal reason declares what can
 resolve it in `commsauthz.RemediesFor`.
 
-- A reason that lists the plain exception can be sent past by any holder of the grant. Examples are
-  no evidence and no marketing consent.
-- A reason that lists only the admin exception can be sent past only by an admin. An example is a
-  hard bounce.
+- A reason that lists the plain exception can be sent past by any holder of the grant. Missing
+  evidence is one such reason. It does not replace a required marketing basis.
+- A hard bounce, an opt-in not yet confirmed and a recipient that matches no single subject need
+  correction. No staff exception answers them.
+- An unknown purpose or a claim that conflicts with the record needs a corrected request.
 - A contact's own stop lists nothing, so nobody sends past it, an admin included. That covers an
   objection, a withdrawal, a limit on processing and a request to stop. It also covers a quote that
   rests on a request alone when the contact opted out of marketing after that request
@@ -214,9 +222,9 @@ resolve it in `commsauthz.RemediesFor`.
 
 `Review.DirectableBy` is the one check. `DirectSend` and the actions a refusal offers both ask it.
 The direction stores whether an admin gave it. Staging and the transmit check both ask
-`DecisionSet.ExceptionMayAnswer` again before the message goes. So a stop recorded later refuses
-the message, and so does a refusal only an admin may answer under a rep's direction. The direction
-is then not used.
+`DecisionSet.ExceptionMayAnswer` again before the message goes. A new stop leaves the direction
+unused. When a new grant now permits the held message, the resume uses that permission and
+records no exception instruction.
 
 A contact can be written to about a thread when three things hold:
 
