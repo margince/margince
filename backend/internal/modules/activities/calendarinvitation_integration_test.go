@@ -76,13 +76,13 @@ func openInvitationsFor(t *testing.T, e *loadEnv, reader ids.UUID, message ids.U
 }
 
 // answerOverHTTP sends the answer through the route a client calls.
-func answerOverHTTP(t *testing.T, handlers Handlers, ctx context.Context, message ids.UUID, response string) crmcontracts.EmailCalendarInvitation {
+func answerOverHTTP(t *testing.T, handlers Handlers, e *loadEnv, reader, message ids.UUID, response string) crmcontracts.EmailCalendarInvitation {
 	t.Helper()
 	body, err := json.Marshal(map[string]string{"response": response})
 	if err != nil {
 		t.Fatal(err)
 	}
-	request := httptest.NewRequest(http.MethodPut, "/calendar-response", bytes.NewReader(body)).WithContext(ctx)
+	request := httptest.NewRequest(http.MethodPut, "/calendar-response", bytes.NewReader(body)).WithContext(e.asSeat(reader))
 	recorder := httptest.NewRecorder()
 	handlers.AnswerCalendarInvitation(recorder, request, openapi_types.UUID(message))
 	var answer crmcontracts.EmailCalendarInvitation
@@ -118,7 +118,7 @@ func TestAnsweringAnInvitationRecordsItAndTakesItOffTheReadersList(t *testing.T)
 	calendar := &answeringCalendar{}
 	store := handledStore(e).WithSchedulingCalendar(calendar).WithClock(func() time.Time { return clocktest.Now(t) })
 
-	got := answerOverHTTP(t, Handlers{store: store}, e.asSeat(e.rep), message, "tentative")
+	got := answerOverHTTP(t, Handlers{store: store}, e, e.rep, message, "tentative")
 	if got.Response != crmcontracts.EmailCalendarInvitationResponseTentative {
 		t.Errorf("answered %q, want tentative", got.Response)
 	}
