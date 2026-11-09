@@ -3,21 +3,21 @@ task: capture_confidentiality_verdict
 site: thread
 source: hand_authored
 sanitized_by: hand_authored/claude-opus-5
-# A staffing agency proposes a candidate. The profile is one person's career
-# written as prose, with no "CV" title and no section headings, so the CV
-# rule does not hold it and only the model can tell.
+# A recruiter proposes a candidate for a permanent job. The profile is one
+# person's career written as prose, with no "CV" title and no section
+# headings, so the CV rule does not hold it and only the model can tell.
 fixture:
-  subject: "Candidate for your data platform role"
+  subject: "Candidate for your senior data engineer opening"
   attachments:
     - Jana Novak consultant profile.pdf
   body: |
     Hello Tom,
 
-    as discussed, here is the profile of the consultant we would propose for
-    your data platform role. She could start in May.
+    as discussed, here is the profile of the candidate we would put forward
+    for your permanent senior data engineer opening. She could start in May.
 
     Best regards
-    Lena Brandt, Brightpath Staffing
+    Lena Brandt, Brightpath Recruitment
   documents:
     - name: Jana Novak consultant profile.pdf
       excerpt: |
@@ -28,7 +28,8 @@ fixture:
         Before that she worked as a database developer at a regional bank.
         She holds a master's degree in computer science from a technical
         university and speaks Czech, German and English. She is available
-        from May at a daily rate of 720 EUR and prefers hybrid work in Munich.
+        from May, expects a gross salary of 92,000 EUR a year and prefers
+        hybrid work in Munich.
 expect:
   outcome: accepted
   privacy: true

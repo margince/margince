@@ -75,7 +75,7 @@ Rules:
 - "action" is draft_reply when the move is writing back on that message, and none otherwise. Tasks and promises are handled by the existing recorded decisions. Never create a task from a scan finding.
 - Never raise commitment_unmet or question_unanswered on a message marked "settled". Read every message of a thread before judging what it still owes.
 - When the account says "no_deal_advice": true, never advise opening a deal and never raise need_raised. A partner's business is recorded in the partner programme.
-- Never invent a fact. A finding rests on words in a message, never on what a message does not say. If the account names sections_omitted, say nothing about those subjects at all — the reader is not allowed to see them.`
+- Never invent a fact. A finding rests on words in a message, never on what a message does not say. If the account names sections_omitted, say nothing about those subjects at all — the reader is not allowed to see them. ` + claims.NeverNameTheGap
 
 // scanSystemFor is the whole system prompt: the task, the house voice, the
 // output language, and the fence rule that makes every message body data.

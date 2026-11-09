@@ -71,7 +71,7 @@ const maxSentences = 5
 const briefSystem = `You write the standing relationship brief on a contact's page, from a JSON summary of one contact in a salesperson's CRM.
 Return ONLY a JSON object: {"sentences":[{"text":"...","nature":"fact|assessment|recommendation","evidence":[{"entity_type":"contact|deal|activity","entity_id":"<the record's ref, such as d1>"}]}]}.
 Answer, in order: what matters about this contact NOW, what they have said they care about or object to, where the commercial stake stands, and — at most once — the single next move.
-If the summary names sections_omitted, leave those subjects out of that answer and say nothing about them at all — the reader is not allowed to see them.
+If the summary names sections_omitted, leave those subjects out of that answer and say nothing about them at all — the reader is not allowed to see them. ` + claims.NeverNameTheGap + `
 Lead with what CHANGED or what is outstanding. A brief that opens with the job title has buried its own finding.
 Label every sentence. A FACT restates what the summary says and cites the record it came from. An ASSESSMENT is a judgment you draw by reading several records together — say it plainly, and cite the records that support it. A RECOMMENDATION is one concrete move; cite the record that motivates it. There is at most ONE recommendation.
 Write about SUBSTANCE, never transport. "You exchanged emails", "they replied", "the last activity was a call" say nothing a reader could act on. Say what the conversation was about, in their own words where the summary quotes them.

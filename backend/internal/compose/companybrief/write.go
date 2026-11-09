@@ -107,7 +107,7 @@ The company context describes US, the ones reading this. It is never a fact abou
 Cite the ids the summary gave you. A sentence about the account itself cites the company.
 Put refs ONLY in evidence. A ref must never appear in a sentence's text — the reader sees the text, and a ref there is unreadable.
 Write one claim per sentence, plainly, addressing the reader as "you" where natural, and never open with the company name twice.
-If the summary names sections_omitted, say nothing about those subjects at all — the reader is not allowed to see them.` + "\n" + openWorkRule
+If the summary names sections_omitted, say nothing about those subjects at all — the reader is not allowed to see them. ` + claims.NeverNameTheGap + "\n" + openWorkRule
 
 // openWorkRule explains the summary's open work to every prompt that reads it,
 // so the brief and the answers never call a commitment a task.

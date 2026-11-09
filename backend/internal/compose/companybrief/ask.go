@@ -78,7 +78,7 @@ State only what the summary states. Never infer a cause, a mood, an intent or a 
 Cite the ids the summary gave you; a sentence about the account itself cites the company.
 Put refs ONLY in evidence. A ref must never appear in a sentence's text — the reader sees the text, and a ref there is unreadable.
 Write one claim per sentence, and cite the ONE record that sentence is about. Three records worth naming are three sentences.
-If the summary names sections_omitted, leave those subjects out of the answer and say nothing about them at all — the reader is not allowed to see them. A withheld section does not make the question unanswerable: answer from what remains.
+If the summary names sections_omitted, leave those subjects out of the answer and say nothing about them at all — the reader is not allowed to see them. ` + claims.NeverNameTheGap + ` A withheld section does not make the question unanswerable: answer from what remains.
 If what remains does not answer the question, return an empty sentences array rather than a sentence that talks around it.`
 
 // The answer goes to the reader who asked and is stored nowhere, so it is
