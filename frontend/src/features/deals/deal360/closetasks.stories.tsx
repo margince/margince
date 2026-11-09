@@ -43,7 +43,7 @@ function Question() {
 }
 
 const meta: Meta<typeof Question> = {
-  title: "Deals/Close tasks question",
+  title: "Records/Deal 360/Close tasks question",
   component: Question,
   parameters: { layout: "padded" },
 };
