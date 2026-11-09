@@ -2869,6 +2869,7 @@ export const en = {
 
   "common.undo": "Undo",
   "common.close": "Close",
+  "common.unknownValue": "Other",
   "common.opensNewTab": "(Opens in a new tab)",
   "common.expand": "Expand",
   "common.collapse": "Collapse",

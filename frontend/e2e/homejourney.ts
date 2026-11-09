@@ -1,4 +1,5 @@
 import type { Page, Request, Response, Route } from "@playwright/test";
+import { HOME_DAY_TIMING } from "../src/features/brief/elementtiming";
 import {
   JOURNEY_START,
   type JourneyMark,
@@ -255,47 +256,115 @@ export function worklistFetches(page: Page, from: number) {
 }
 
 const VITALS_KEY = "__homeVitals";
+// When the day content last changed or painted, and how to read the paints
+// the browser has not handed over yet.
+const ACTIVITY_KEY = "__homeDayActivity";
+const DRAIN_KEY = "__homeDayDrain";
+
+/** Home's day content: the one element its paints are timed under. */
+export const DAY_ROOT = `#brief-today[elementtiming="${HOME_DAY_TIMING}"]`;
 
 /**
- * Records, from the start of every document the page loads, each
- * largest-contentful-paint entry and each layout shift. Whether a paint sits
- * inside `main` is read when it happens, while its element is still there.
+ * Records, from the start of every document the page loads, each Element
+ * Timing paint inside Home's day content and each layout shift.
+ *
+ * Chrome times a text paint only on the block that holds the text, never on a
+ * marked block around it. So every element inside the day root takes the mark
+ * too, before it first paints.
  */
 export async function recordVitals(page: Page): Promise<void> {
-  await page.addInitScript((key) => {
-    const vitals: Vitals = { paints: [], shifts: [] };
-    Object.assign(window, { [key]: vitals });
-    new PerformanceObserver((list) => {
-      for (const entry of list.getEntries()) {
-        if (!(entry instanceof LargestContentfulPaint)) continue;
-        const shown = entry.element;
-        const inMain = shown?.closest("main") != null;
-        const element = shown
-          ? `${shown.tagName.toLowerCase()}${shown.id ? `#${shown.id}` : ""}${shown.classList[0] ? `.${shown.classList[0]}` : ""}`
-          : "a removed element";
-        vitals.paints.push({ at: entry.startTime, inMain, element });
-      }
-    }).observe({ type: "largest-contentful-paint", buffered: true });
-    new PerformanceObserver((list) => {
-      for (const entry of list.getEntries()) {
-        const value = "value" in entry ? entry.value : undefined;
-        const input = "hadRecentInput" in entry && entry.hadRecentInput;
-        if (typeof value !== "number") continue;
-        vitals.shifts.push({
-          at: entry.startTime,
-          value,
-          input: input === true,
-        });
-      }
-    }).observe({ type: "layout-shift", buffered: true });
-  }, VITALS_KEY);
+  await page.addInitScript(
+    ({ key, activityKey, drainKey, mark, root }) => {
+      const vitals: Vitals = { dayPaints: [], shifts: [], roots: 0 };
+      Object.assign(window, { [key]: vitals });
+      const touched = () => Reflect.set(window, activityKey, performance.now());
+      // Chrome times a block that fades in only when its fade ends. So the day
+      // and every block around it are drawn without their entrance animation.
+      const still = document.createElement("style");
+      still.textContent = `:is(:has(${root}), ${root}, ${root} *) { animation: none !important; }`;
+      // The document has no root element yet when this script runs.
+      new MutationObserver((records) => {
+        if (!still.isConnected) document.documentElement?.append(still);
+        for (const record of records) {
+          const target =
+            record.target instanceof Element
+              ? record.target
+              : record.target.parentElement;
+          if (target?.closest(root)) touched();
+          for (const node of record.addedNodes) {
+            if (!(node instanceof Element)) continue;
+            // React adds a whole tree at once, so the root may sit below it.
+            const days = node.closest(root)
+              ? [node]
+              : node.querySelectorAll(root);
+            for (const day of days) {
+              touched();
+              for (const inner of [day, ...day.querySelectorAll("*")])
+                inner.setAttribute("elementtiming", mark);
+            }
+          }
+        }
+      }).observe(document, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+      const take = (entries: PerformanceEntryList) => {
+        for (const entry of entries) {
+          if (!("identifier" in entry) || entry.identifier !== mark) continue;
+          const shown = "element" in entry ? entry.element : null;
+          if (!(shown instanceof Element) || !shown.closest(root)) continue;
+          const render = "renderTime" in entry ? entry.renderTime : 0;
+          const load = "loadTime" in entry ? entry.loadTime : 0;
+          const rect =
+            "intersectionRect" in entry ? entry.intersectionRect : null;
+          if (typeof render !== "number" || typeof load !== "number") continue;
+          if (!(rect instanceof DOMRectReadOnly)) continue;
+          touched();
+          vitals.dayPaints.push({
+            at: render || load,
+            area: rect.width * rect.height,
+          });
+        }
+      };
+      const paints = new PerformanceObserver((list) => take(list.getEntries()));
+      paints.observe({ type: "element", buffered: true });
+      Object.assign(window, { [drainKey]: () => take(paints.takeRecords()) });
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          const value = "value" in entry ? entry.value : undefined;
+          const input = "hadRecentInput" in entry && entry.hadRecentInput;
+          if (typeof value !== "number") continue;
+          vitals.shifts.push({
+            at: entry.startTime,
+            value,
+            input: input === true,
+          });
+        }
+      }).observe({ type: "layout-shift", buffered: true });
+    },
+    {
+      key: VITALS_KEY,
+      activityKey: ACTIVITY_KEY,
+      drainKey: DRAIN_KEY,
+      mark: HOME_DAY_TIMING,
+      root: DAY_ROOT,
+    },
+  );
 }
 
 /** What the current document has painted and shifted so far. */
 export async function readVitals(page: Page): Promise<Vitals> {
   const vitals: Vitals | null = await page.evaluate(
-    (key) => Reflect.get(window, key) ?? null,
-    VITALS_KEY,
+    ({ key, drainKey, root }) => {
+      const drain: unknown = Reflect.get(window, drainKey);
+      if (typeof drain === "function") drain();
+      const stored: Vitals | undefined = Reflect.get(window, key);
+      return stored
+        ? { ...stored, roots: document.querySelectorAll(root).length }
+        : null;
+    },
+    { key: VITALS_KEY, drainKey: DRAIN_KEY, root: DAY_ROOT },
   );
   if (vitals === null) {
     throw new Error(
@@ -303,6 +372,46 @@ export async function readVitals(page: Page): Promise<Vitals> {
     );
   }
   return vitals;
+}
+
+// A block of the day drawn longer than this after its last change, and after
+// Home's final mark, is not timed.
+const DAY_QUIET_MS = 1_000;
+const FINAL_MARKS: JourneyMark[] = [
+  "home:complete",
+  "home:degraded",
+  "home:failed",
+];
+
+/**
+ * The vitals once Home has set its final mark and its day content has been
+ * still for DAY_QUIET_MS since then. The bound is `timeout`; a load that never
+ * settles is judged on what it painted.
+ */
+export async function settledVitals(
+  page: Page,
+  timeout: number,
+): Promise<Vitals> {
+  await page
+    .waitForFunction(
+      ({ activityKey, finals, quiet }) => {
+        const done = finals.flatMap((name) =>
+          performance.getEntriesByName(name, "mark").map((m) => m.startTime),
+        );
+        if (done.length === 0) return false;
+        const changed = Number(Reflect.get(window, activityKey) ?? 0);
+        return performance.now() - Math.max(changed, ...done) >= quiet;
+      },
+      {
+        activityKey: ACTIVITY_KEY,
+        finals: FINAL_MARKS.map(journeyMarkName),
+        quiet: DAY_QUIET_MS,
+      },
+      { timeout },
+    )
+    // A load that never settles is the judge's to fail, not an error here.
+    .catch(() => undefined);
+  return readVitals(page);
 }
 
 /**

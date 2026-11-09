@@ -66,6 +66,10 @@ func (r approvalPreviewReader) mailPreview(ctx context.Context, approval crmcont
 // mailPreviewOrigin is where the held message would be sent from, and the
 // records that origin files it under.
 func (r approvalPreviewReader) mailPreviewOrigin(ctx context.Context, approval crmcontracts.Approval, message crmcontracts.SendCompanyEmailRequest) (activities.SendOrigin, []activities.ActivityLinkInput, error) {
+	return mailApprovalOrigin(ctx, r.activities, approval, message)
+}
+
+func mailApprovalOrigin(ctx context.Context, store *activities.Store, approval crmcontracts.Approval, message crmcontracts.SendCompanyEmailRequest) (activities.SendOrigin, []activities.ActivityLinkInput, error) {
 	var origin activities.SendOrigin
 	if approval.Kind == previewSendEmail {
 		if approval.TargetEntityType == nil || *approval.TargetEntityType != string(recordTypeActivity) || approval.TargetEntityId == nil {
@@ -79,7 +83,7 @@ func (r approvalPreviewReader) mailPreviewOrigin(ctx context.Context, approval c
 		}
 		origin = activities.FromAccount(links)
 	}
-	links, err := origin.Resolve(ctx, r.activities)
+	links, err := origin.Resolve(ctx, store)
 	return origin, links, err
 }
 

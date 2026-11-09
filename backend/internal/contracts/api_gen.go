@@ -31001,7 +31001,7 @@ type ActivityDealDecline struct {
 	// DeclinedDealIds The deals this call declined on the message. A deal declined before is not listed again.
 	DeclinedDealIds []openapi_types.UUID `json:"declined_deal_ids"`
 
-	// ProjectKept A project link came from a declined deal and stays, because an agent declined or a retention rule keeps it.
+	// ProjectKept A project link came from a declined deal and stays, because a retention rule keeps it or the caller cannot read the project.
 	ProjectKept bool `json:"project_kept"`
 
 	// ProjectUnfiled The project link that came from a declined deal came off the message.
@@ -33297,12 +33297,12 @@ type AiUsage struct {
 // AiUsageBudgetBand < 80% / 80–100% soft-degrade / ≥ 100% non-interactive queued (AIRT-PARAM-9..11).
 type AiUsageBudgetBand string
 
-// AiUsageSummary The month's AI spend so far, summed from the lines GET /ai/usage prices.
+// AiUsageSummary The AI spend over the requested window, summed from the lines GET /ai/usage prices.
 type AiUsageSummary struct {
 	// ComputedAt The instant the window ends at and the figure was computed.
 	ComputedAt time.Time `json:"computed_at"`
 
-	// CostEstMinor Sum of the month's `cost_est_minor` lines from GET /ai/usage, in minor units of `currency`. Omitted, not 0, when no line carries a price: then nobody knows what the month cost, which is not the same as a month that cost nothing.
+	// CostEstMinor Sum of the window's `cost_est_minor` lines from GET /ai/usage, in minor units of `currency`. Omitted, not 0, when no line carries a price: then nobody knows what the window cost, which is not the same as a window that cost nothing.
 	CostEstMinor *int `json:"cost_est_minor,omitempty"`
 
 	// Currency ISO-4217 of cost_est_minor — always USD in phase 1 (ADR-0067).
@@ -35916,7 +35916,7 @@ type AutomationRun struct {
 	// OccurredAt Maps to automation_run.ran_at.
 	OccurredAt time.Time `json:"occurred_at"`
 
-	// Outcome Maps 1:1 to automation_run.status (data-model §12.5); `blocked` added by ADR-0035 Am.1.
+	// Outcome Maps 1:1 to automation_run.status; `blocked` added by ADR-0035 Am.1.
 	Outcome AutomationRunOutcome `json:"outcome"`
 
 	// Reason For failed/blocked/skipped: why (e.g. "provider error", "approval expired", "Passport no longer permits send") — from automation_run.detail.
@@ -35937,7 +35937,7 @@ type AutomationRun struct {
 	TriggerEvidence *string `json:"trigger_evidence,omitempty"`
 }
 
-// AutomationRunOutcome Maps 1:1 to automation_run.status (data-model §12.5); `blocked` added by ADR-0035 Am.1.
+// AutomationRunOutcome Maps 1:1 to automation_run.status; `blocked` added by ADR-0035 Am.1.
 type AutomationRunOutcome string
 
 // AutomationRunTier The tier that fired for this run.
@@ -37858,7 +37858,7 @@ type ColdStartField struct {
 	EvidenceSnippet string              `json:"evidence_snippet"`
 	Field           ColdStartFieldField `json:"field"`
 
-	// SourceKind Where evidence_snippet came from. For self_description the "evidence" is the user's own statement — a self-declared ICP is grounded in that statement (B-E01.13), not fabricated.
+	// SourceKind Where evidence_snippet came from. For self_description the "evidence" is the user's own statement — a self-declared ICP is grounded in that statement, not fabricated.
 	SourceKind ColdStartFieldSourceKind `json:"source_kind"`
 
 	// SourceUrl Present only when source_kind=url; null for text/self_description.
@@ -37869,7 +37869,7 @@ type ColdStartField struct {
 // ColdStartFieldField defines model for ColdStartField.Field.
 type ColdStartFieldField string
 
-// ColdStartFieldSourceKind Where evidence_snippet came from. For self_description the "evidence" is the user's own statement — a self-declared ICP is grounded in that statement (B-E01.13), not fabricated.
+// ColdStartFieldSourceKind Where evidence_snippet came from. For self_description the "evidence" is the user's own statement — a self-declared ICP is grounded in that statement, not fabricated.
 type ColdStartFieldSourceKind string
 
 // ColdStartProposal A staged proposal. NOTHING is written to real records until accepted via /approvals.
@@ -69219,6 +69219,15 @@ type GetAiUsageParams struct {
 	To *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
 }
 
+// GetAiUsageSummaryParams defines parameters for GetAiUsageSummary.
+type GetAiUsageSummaryParams struct {
+	// From Default: the first day of the current UTC month. Must not be after `to`.
+	From *openapi_types.Date `form:"from,omitempty" json:"from,omitempty"`
+
+	// To Default: today. At most 366 days after `from`.
+	To *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
+}
+
 // GetAccountCoverageParams defines parameters for GetAccountCoverage.
 type GetAccountCoverageParams struct {
 	ScopeKind *GetAccountCoverageParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
@@ -90950,9 +90959,9 @@ type ServerInterface interface {
 	// AI usage + budget — the spend is never invisible.
 	// (GET /ai/usage)
 	GetAiUsage(w http.ResponseWriter, r *http.Request, params GetAiUsageParams)
-	// What AI cost this month so far, as one figure.
+	// What AI cost over a window, this month by default, as one figure.
 	// (GET /ai/usage/summary)
-	GetAiUsageSummary(w http.ResponseWriter, r *http.Request)
+	GetAiUsageSummary(w http.ResponseWriter, r *http.Request, params GetAiUsageSummaryParams)
 	// The accounts at risk in one population: single-threaded deals, accounts in pipeline nobody has exchanged a word with, and won accounts gone silent. Each row carries the facts behind its verdict. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework's, and the answer prints them.
 	// (GET /analytics/account-coverage)
 	GetAccountCoverage(w http.ResponseWriter, r *http.Request, params GetAccountCoverageParams)
@@ -94355,9 +94364,9 @@ func (_ Unimplemented) GetAiUsage(w http.ResponseWriter, r *http.Request, params
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// What AI cost this month so far, as one figure.
+// What AI cost over a window, this month by default, as one figure.
 // (GET /ai/usage/summary)
-func (_ Unimplemented) GetAiUsageSummary(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) GetAiUsageSummary(w http.ResponseWriter, r *http.Request, params GetAiUsageSummaryParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -103678,6 +103687,9 @@ func (siw *ServerInterfaceWrapper) GetAiUsage(w http.ResponseWriter, r *http.Req
 // GetAiUsageSummary operation middleware
 func (siw *ServerInterfaceWrapper) GetAiUsageSummary(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -103686,8 +103698,37 @@ func (siw *ServerInterfaceWrapper) GetAiUsageSummary(w http.ResponseWriter, r *h
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAiUsageSummaryParams
+
+	// ------------- Optional query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetAiUsageSummary(w, r)
+		siw.Handler.GetAiUsageSummary(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

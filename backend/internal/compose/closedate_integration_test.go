@@ -83,7 +83,7 @@ func setupCloseDate(t *testing.T) *closeDateEnv {
 	// The seeded deals are Rep1's, and a correction writes as Rep1's agent.
 	e.GrantRole(t, e.Rep1, "rep")
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	e.svc = approvals.NewService(e.DB())
+	e.svc = approvals.NewService(e.DB()).WithEffectActor(NewApprovalEffectActor(e.DB()))
 	e.svc.WithEffect(deals.CloseDateCorrectionKind, closeDateConfirmEffect(e.svc, deals.NewStore(e.DB(), DealsInstallation())))
 	// The policy production builds, not a stub that always says yes: whether a
 	// rep has left close dates to the sweep is exactly what these tests are

@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 233566,
+    "tool_catalog_bytes": 233602,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 59797,
+    "approx_wire_tokens_total": 59806,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 55149,
-      "input_schema_bytes": 114471,
+      "input_schema_bytes": 114507,
       "output_schema_bytes": 51838,
-      "description_plus_input_schema_bytes": 169620
+      "description_plus_input_schema_bytes": 169656
     }
   },
   "tools": {
@@ -10659,7 +10659,7 @@
               "type": "string"
             },
             "from": {
-              "description": "ai_calls, ai_usage, audit_log, fx_rates, held_threads only",
+              "description": "ai_calls, ai_usage, ai_usage_summary, audit_log, fx_rates, held_threads only",
               "type": "string"
             },
             "group": {
@@ -10895,7 +10895,7 @@
               "type": "string"
             },
             "to": {
-              "description": "ai_calls, ai_usage, audit_log, held_threads only",
+              "description": "ai_calls, ai_usage, ai_usage_summary, audit_log, held_threads only",
               "type": "string"
             },
             "to_user_id": {
