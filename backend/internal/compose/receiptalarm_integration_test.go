@@ -20,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
-	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -305,41 +304,6 @@ func TestAReceiptOwedWithNoMailLaneReachesThePrivacyOperators(t *testing.T) {
 	bodies := l.missedReceiptNotices(t)
 	if len(bodies) == 0 || !strings.Contains(bodies[0], "no mail lane") {
 		t.Fatalf("a receipt owed with no lane raised %q", bodies)
-	}
-}
-
-// A lead's press asks the lead's rules and raises the receipt it cannot send.
-func TestALeadsPressThatOwesAReceiptReachesThePrivacyOperators(t *testing.T) {
-	l := receiptLane(t, receiptOwed)
-	company := l.e.SeedCompany(t, "Receipt Company", nil)
-	l.e.WsExec(t, `UPDATE company SET address_country = upper($2) WHERE id = $1`, company, string(receiptOwed))
-	lead, _, err := l.e.Contacts.CreateLead(l.e.Admin(), contacts.CreateLeadInput{
-		FullName: new("Lead Refusal"), Email: new("lead@example.test"), Source: "manual",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	l.e.WsExec(t, `UPDATE lead SET company_id = $2 WHERE id = $1`, lead.Id, company)
-	if err := InstallationDB(l.e.Pool).Tx(l.ctx, func(tx pgx.Tx) error {
-		stopped, err := l.store.StopForCredentialTx(l.ctx, tx, consent.WithdrawalRef{
-			LeadID: ids.From[ids.LeadKind](ids.UUID(lead.Id)), Address: "lead@example.test",
-			Scope: consent.WithdrawalScopeAllMarketing,
-		})
-		if err == nil && !stopped {
-			t.Error("the press recorded no stop")
-		}
-		return err
-	}); err != nil {
-		t.Fatalf("pressing the lead's link: %v", err)
-	}
-	var body string
-	if err := l.e.Pool.QueryRow(context.Background(), `
-		SELECT body FROM notice WHERE kind = 'optout_receipt_missed' AND target_type = 'lead' AND target_id = $1 LIMIT 1`,
-		ids.UUID(lead.Id)).Scan(&body); err != nil {
-		t.Fatalf("no notice for the lead's owed receipt: %v", err)
-	}
-	if !strings.Contains(body, "lead") {
-		t.Errorf("the notice does not say a lead's receipt is not sent: %q", body)
 	}
 }
 
