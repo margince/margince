@@ -6727,7 +6727,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "{count} bản ghi bị ẩn với bạn do quyền trên trường.",
   "extensionReports.excluded_other":
     "{count} bản ghi bị ẩn với bạn do quyền trên trường.",
-  "extensionReports.failed": "Không tải được các báo cáo do tiện ích mở rộng thêm vào.",
+  "extensionReports.failed":
+    "Không tải được các báo cáo do tiện ích mở rộng thêm vào.",
   "brief.deck.later": "Để sau",
   "brief.deck.showMore": "Hiển thị toàn bộ tin nhắn",
   "brief.deck.showLess": "Thu gọn",

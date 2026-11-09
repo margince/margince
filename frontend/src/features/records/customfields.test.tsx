@@ -111,6 +111,7 @@ describe("FieldTable", () => {
         meUserId="u1"
         onRename={() => {}}
         onArchive={() => {}}
+        onKinds={() => {}}
         onSetting={() => {}}
       />,
     );
