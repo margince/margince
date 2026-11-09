@@ -1,5 +1,6 @@
 import { type QueryClient, useQueryClient } from "@tanstack/react-query";
 import { Lock } from "lucide-react";
+import { createContext, type ReactNode, useContext } from "react";
 import type { components } from "../../api/schema";
 import { VoiceKinds } from "../../components/voicekinds";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
@@ -63,23 +64,57 @@ function invalidateVoiceCorpus(qc: QueryClient) {
   }
 }
 
-export function VoiceDnaCard({ tab }: Readonly<{ tab?: string }>) {
-  const t = useT();
-  const open = parseVoiceTab(tab);
-  const canCreate = useCanWrite("voice_profile", "create");
+type VoiceIntakeWork = Readonly<{
+  intake: VoiceIntake;
+  sentMail: SentMailLearning;
+}>;
+
+const VoiceIntakeContext = createContext<VoiceIntakeWork | null>(null);
+
+// Owns the writing still arriving, above every tab and above the swap from
+// no profile to one. Files in flight and open speaker questions survive both.
+export function VoiceIntakeHost({
+  children,
+}: Readonly<{ children: ReactNode }>) {
   const qc = useQueryClient();
   const profile = useVoiceProfile();
-  // Before the first sample there is no section to land on; the dial is still
-  // answered, so pressing the step again works.
-  useSetupFocus(profile.data === null);
-  // Owned above the empty and profile branches. The first sample mints the
-  // profile and swaps one branch for the other. The files still in flight then
-  // belong to the card that remains.
   const intake = useVoiceIntake({
     profileId: profile.data?.id ?? null,
     onChanged: () => invalidateVoiceCorpus(qc),
   });
   const sentMail = useSentMailLearning(() => invalidateVoiceCorpus(qc));
+  return (
+    <VoiceIntakeContext value={{ intake, sentMail }}>
+      {children}
+    </VoiceIntakeContext>
+  );
+}
+
+/** The Writing voice page. Settings hosts its intake above the tabs; drawn on
+ * its own, the card hosts it itself. */
+export function VoiceDnaCard({ tab }: Readonly<{ tab?: string }>) {
+  const work = useContext(VoiceIntakeContext);
+  if (work) {
+    return <VoiceDnaPage tab={tab} work={work} />;
+  }
+  return (
+    <VoiceIntakeHost>
+      <VoiceDnaCard tab={tab} />
+    </VoiceIntakeHost>
+  );
+}
+
+function VoiceDnaPage({
+  tab,
+  work: { intake, sentMail },
+}: Readonly<{ tab?: string; work: VoiceIntakeWork }>) {
+  const t = useT();
+  const open = parseVoiceTab(tab);
+  const canCreate = useCanWrite("voice_profile", "create");
+  const profile = useVoiceProfile();
+  // Before the first sample there is no section to land on; the dial is still
+  // answered, so pressing the step again works.
+  useSetupFocus(profile.data === null);
   return (
     <QueryGate query={profile} pendingLabel={t("settings.voice.title")}>
       {(data) =>

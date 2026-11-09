@@ -14,7 +14,7 @@ import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { candidateVersion } from "../../testing/voice-candidate";
-import { VoiceDnaCard } from "./voice-dna";
+import { VoiceDnaCard, VoiceIntakeHost } from "./voice-dna";
 
 // The Settings Voice DNA card is the ONLY surface outside onboarding where a
 // voice can be started. Its empty state promises samples can be added "below",
@@ -330,6 +330,64 @@ describe("the Settings Voice DNA card with a profile", () => {
     render(<VoiceDnaCard tab={tab} />);
     expect(await screen.findByRole("heading", { name: heading })).toBeTruthy();
     expect(screen.getByText("Only you can see your Voice DNA.")).toBeTruthy();
+  });
+
+  // Settings remounts a tab on every switch; the host above the tabs is what
+  // keeps a speaker question that is still waiting for its answer.
+  it("keeps a waiting speaker question when the tab changes", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const path = new URL(request.url).pathname.replace(/^\/v1/, "");
+        if (path === "/me") {
+          return jsonResponse(meFixture({ allow: VOICE_EDITOR }));
+        }
+        if (path === "/voice-profiles") {
+          return jsonResponse({ data: [PROFILE], page: emptyPage.page });
+        }
+        if (path === "/voice-profiles/vp-1/sources/preview") {
+          return jsonResponse({
+            total_words: 1000,
+            detected_format: "vtt",
+            ingestible_as_transcript: true,
+            unattributed_words: 0,
+            speakers: [
+              { label: "Lars", words: 640, turns: 12 },
+              { label: "Sam", words: 360, turns: 9 },
+            ],
+          });
+        }
+        if (path === "/voice-profiles/vp-1/sources") {
+          return jsonResponse({ data: [SOURCE], summary: SUMMARY });
+        }
+        return jsonResponse(emptyPage);
+      }),
+    );
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const page = (tab: string) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <VoiceIntakeHost>
+            <VoiceDnaCard key={tab} tab={tab} />
+          </VoiceIntakeHost>
+        </LocaleProvider>
+      </QueryClientProvider>
+    );
+    const view = rtlRender(page("samples"));
+    await screen.findByRole("heading", { name: "Make it sharper" });
+    await user.upload(
+      fileInput(),
+      new File(["Lars: we ship Friday. Sam: agreed."], "standup.vtt", {
+        type: "text/plain",
+      }),
+    );
+    expect(await screen.findByText(/Which speaker are you/)).toBeTruthy();
+    view.rerender(page("rules"));
+    await screen.findByRole("heading", { name: "Your rules" });
+    expect(screen.getByText(/Which speaker are you/)).toBeTruthy();
   });
 
   it("sends an owner with no build yet from the builds tab to the first build", async () => {
