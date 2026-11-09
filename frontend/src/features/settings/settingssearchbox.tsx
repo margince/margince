@@ -137,14 +137,14 @@ export function SettingsSearchBox({
     document.addEventListener("mousedown", onPointerDown);
     return () => document.removeEventListener("mousedown", onPointerDown);
   }, [showList]);
-  // The id of one option's element, built HERE rather than interpolated at each
-  // call site. Two reasons, and the second is why it is a function: the row and
-  // the `aria-activedescendant` pointing at it must spell the same id or the
-  // reference dangles, and an index interpolated into JSX is what
-  // `format/jsx-magnitude.test.ts` reads as an unformatted magnitude reaching a
-  // reader. This one never reaches one — it is a DOM id — and the same shape
-  // (`optionDomId` in design-system/suggestlist.tsx) is how the rest of the
-  // tree says so.
+  // The id of one option's element, built here rather than interpolated at each
+  // call site. There are two reasons, and the second is why it is a function.
+  // First, the row and the `aria-activedescendant` pointing at it must spell
+  // the same id or the reference dangles. Second, an index interpolated into
+  // JSX is what `census/rules/jsx-magnitude.census.ts` reads as an unformatted
+  // magnitude reaching a reader. This one never reaches one (it is a DOM id).
+  // The same shape (`optionDomId` in design-system/suggestlist.tsx) is how the
+  // rest of the tree says so.
   const optionDomId = (index: number) => `${listboxId}-option-${index}`;
 
   function go(index: number) {

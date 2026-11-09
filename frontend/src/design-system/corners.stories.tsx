@@ -9,8 +9,8 @@ import type { CSSProperties } from "react";
  *
  * Six rungs, in fours: `--r-xs` 4, `--r-sm` 8, `--r-control` 12, `--r-md` 16,
  * `--r-lg` 20, `--r-full` the pill. Every `border-radius` under `src/` names one
- * of them — the tree ran 3, 5, 6, 9, 10, 11 and 28px beside the tokens before
- * this was one ladder, and `design-system/corners.test.ts` now fails a seventh
+ * of them. The tree ran 3, 5, 6, 9, 10, 11 and 28px beside the tokens before
+ * this was one ladder. `census/rules/corners.census.ts` now fails a seventh
  * value rather than leaving it to review.
  *
  * `tokens.css` also declares `corner-shape: squircle` on `:where(*)` inside an

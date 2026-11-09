@@ -23,6 +23,7 @@ import {
   tabOfListType,
   UNIT_LABEL,
 } from "../../lib/filtersaddress";
+import { labelFor } from "../../lib/labelfor";
 import {
   type List,
   useList,
@@ -128,7 +129,7 @@ function ListFilter({
   const changed = wireSignature(draft.tree) !== wireSignature(tree);
   const leave = useGuardedLeave(changed);
   const land = useLandOnSaved(tab, leave);
-  const records = t(UNIT_LABEL[tab]);
+  const records = t(labelFor(UNIT_LABEL, tab));
 
   const foot = editable ? (
     <FilterFoot
@@ -169,7 +170,7 @@ function ListFilter({
       <FocusedHead
         title={list.name}
         facts={t("filters.listFacts", {
-          records: t(TAB_LABEL[tab]),
+          records: t(labelFor(TAB_LABEL, tab)),
           who: audienceOf(list),
         })}
       />

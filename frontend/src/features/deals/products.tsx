@@ -46,6 +46,7 @@ import {
   currencyOptions,
   type LeadingCurrencies,
 } from "../../format/currencychoices";
+import { labelFor } from "../../lib/labelfor";
 import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
 import {
   OTHER_UNIT,
@@ -135,7 +136,7 @@ function productFields(
         { value: "", label: t("product.taxCategoryUnset") },
         ...TAX_CATEGORIES.map((category) => ({
           value: category,
-          label: t(TAX_CATEGORY_LABEL[category]),
+          label: t(labelFor(TAX_CATEGORY_LABEL, category)),
         })),
       ],
     },
@@ -176,7 +177,7 @@ function productFields(
         { value: "", label: t("product.componentUnset") },
         ...COMPONENT_KINDS.map((kind) => ({
           value: kind,
-          label: t(COMPONENT_LABEL[kind]),
+          label: t(labelFor(COMPONENT_LABEL, kind)),
         })),
       ],
     },
@@ -472,7 +473,7 @@ export function ProductsAdmin() {
               { value: "unclassified", label: "product.taxCategoryUnset" },
               ...TAX_CATEGORIES.map((category) => ({
                 value: category,
-                label: TAX_CATEGORY_LABEL[category],
+                label: labelFor(TAX_CATEGORY_LABEL, category),
               })),
             ],
           },

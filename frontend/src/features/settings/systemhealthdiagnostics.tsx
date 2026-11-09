@@ -18,6 +18,7 @@ import {
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
+import { labelFor } from "../../lib/labelfor";
 import { useUrlParams } from "../../lib/urlstate";
 import { useViewerZone } from "../../lib/viewerzone";
 import { AutomaticWorkHealthCard } from "./automaticworkhealth";
@@ -172,7 +173,7 @@ function JobHistoryBody() {
                         locale,
                         readerZone,
                       ),
-                      state: t(jobStateLabels[report.runs[0].state]),
+                      state: t(labelFor(jobStateLabels, report.runs[0].state)),
                     })}
                   </p>
                   <p>
@@ -241,7 +242,7 @@ function JobHistoryBody() {
                   {
                     key: "state",
                     header: t("jobs.col.state"),
-                    render: (g) => t(jobStateLabels[g.state]),
+                    render: (g) => t(labelFor(jobStateLabels, g.state)),
                   },
                   {
                     key: "count",

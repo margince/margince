@@ -19,6 +19,7 @@ import {
 } from "../../../format/activitywhen";
 import { useLocale, useT } from "../../../i18n";
 import { bucketLabel } from "../../../lib/bucketlabel";
+import { labelFor } from "../../../lib/labelfor";
 import { throwProblem } from "../../../lib/problem";
 import { useViewerZone } from "../../../lib/viewerzone";
 import { CoverageExplorer } from "../../contacts/coverageexplorer";
@@ -223,7 +224,7 @@ export function CompanyContactsList({
             header: t("co.contacts.engagement"),
             cell: (contact: CompanyContact) => (
               <Badge tone={ENGAGEMENT_TONES[contact.engagement]}>
-                {t(ENGAGEMENT_LABELS[contact.engagement])}
+                {t(labelFor(ENGAGEMENT_LABELS, contact.engagement))}
               </Badge>
             ),
           },
