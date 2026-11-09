@@ -141,23 +141,26 @@ export function ComposeBlockers({
       )}
       {/* A channel reply asks no preview, so its status is only ever a
           refused Send. */}
-      {(!isChannelReply || send.permission.refusal) &&
-        !asksWhyAgain &&
-        drawPermission(
-          alternative ? (
-            <ReasonSwitch reason={alternative} onSwitch={fields.setContext} />
-          ) : (
-            target && (
-              <RecordConversationFact
-                key={`${target.contactId}:${target.category}:${send.contextDealId}`}
-                target={target}
-                chosen={send.claimedContext}
-                dealId={send.contextDealId}
-              />
+      {(!isChannelReply || send.permission.refusal) && !asksWhyAgain && (
+        <RecordConversationFact
+          target={alternative ? undefined : target}
+          chosen={send.claimedContext}
+          dealId={send.contextDealId}
+          renderOpener={(opener) =>
+            drawPermission(
+              alternative ? (
+                <ReasonSwitch
+                  reason={alternative}
+                  onSwitch={fields.setContext}
+                />
+              ) : (
+                opener
+              ),
+              asksWhy(anchorActivity),
             )
-          ),
-          asksWhy(anchorActivity),
-        )}
+          }
+        />
+      )}
       <ComposeOutcome
         isChannelReply={isChannelReply}
         bodyKey={bodyKey}

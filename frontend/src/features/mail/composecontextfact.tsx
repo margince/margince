@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, Field, Textarea } from "../../design-system/atoms";
@@ -28,22 +28,39 @@ type Target = Readonly<{
   dealId?: string;
 }>;
 
-export function RecordConversationFact(input: Target) {
+export function RecordConversationFact({
+  target,
+  chosen,
+  dealId,
+  renderOpener,
+}: Readonly<{
+  target?: ReasonTarget;
+  chosen?: Context;
+  dealId?: string;
+  renderOpener?: (opener: ReactNode) => ReactNode;
+}>) {
   const t = useT();
   const mayWrite = useCan("contact", "update");
   const mayMutate = useCanMutate();
-  const [open, setOpen] = useState(false);
-  if (
-    !mayWrite ||
-    !mayMutate ||
-    (input.target.category === "active_deal_followup" && !input.dealId)
-  )
-    return null;
+  const [opened, setOpened] = useState<Target>();
+  const available =
+    mayWrite &&
+    mayMutate &&
+    target &&
+    (target.category !== "active_deal_followup" || dealId);
+  const opener = available && (
+    <Button onClick={() => setOpened({ target, chosen, dealId })}>
+      {t("compose.fact.open")}
+    </Button>
+  );
   return (
     <>
-      <Button onClick={() => setOpen(true)}>{t("compose.fact.open")}</Button>
-      {open && (
-        <ConversationFactDialog {...input} onClose={() => setOpen(false)} />
+      {renderOpener ? renderOpener(opener) : opener}
+      {opened && mayWrite && mayMutate && (
+        <ConversationFactDialog
+          {...opened}
+          onClose={() => setOpened(undefined)}
+        />
       )}
     </>
   );
@@ -76,7 +93,6 @@ function ConversationFactDialog({
     onSuccess: async (_, ask) => {
       await Promise.all(
         [
-          ["send-permission"],
           ["contactConsentGuard", ask.contactId],
           ["contact-consent", ask.contactId],
           contact360Query(ask.contactId).queryKey,

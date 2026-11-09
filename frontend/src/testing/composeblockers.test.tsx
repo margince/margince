@@ -1,24 +1,29 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import "@testing-library/jest-dom/vitest";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { writeMessage } from "../../design-system/richtext-testing";
-import { pickOption } from "../../design-system/select-testing";
-import { meFixture } from "../../testing/mefixture";
-import {
-  allowedPreview,
-  isPreviewDoor,
-  refusedPreview,
-} from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
-import { MailSendNotices } from "./compose.parts";
+import { createQueryClient } from "../app/queryclient";
+import { writeMessage } from "../design-system/richtext-testing";
+import { pickOption } from "../design-system/select-testing";
+import { ComposeModal } from "../features/mail/compose";
+import { MailSendNotices } from "../features/mail/compose.parts";
 import {
   activity202,
   jsonResponse,
   render,
   stubRoutes,
-} from "./compose.testkit";
-import { newContactsOf, reasonTargetOf } from "./composeblockers";
+} from "../features/mail/compose.testkit";
+import {
+  newContactsOf,
+  reasonTargetOf,
+} from "../features/mail/composeblockers";
+import { meFixture } from "./mefixture";
+import {
+  allowedPreview,
+  isPreviewDoor,
+  refusedPreview,
+} from "./sendpermission.testkit";
 
 afterEach(() => {
   cleanup();
@@ -130,6 +135,7 @@ function requestBackend(
 ) {
   let recorded = false;
   const sent = stubRoutes({
+    "GET /users": () => jsonResponse({ data: [], page: { has_more: false } }),
     "GET /deals/deal-one": () =>
       jsonResponse({
         id: "deal-one",
@@ -209,6 +215,7 @@ describe("recording a fact where the refusal is read", () => {
         open
         onClose={vi.fn()}
       />,
+      createQueryClient(),
     );
     await user.type(await screen.findByLabelText("To"), "anna@example.test");
     await user.tab();
@@ -521,4 +528,69 @@ describe("a message with no reason for contact yet", () => {
     ).toBeTruthy();
     expect(checks.getByText("No contact reason.")).toBeTruthy();
   });
+});
+
+it("keeps an open exchange and its note through a background permission check", async () => {
+  requestBackend();
+  const user = userEvent.setup();
+  const { queryClient } = render(
+    <ComposeModal
+      activityId="act-1"
+      entityType="contact"
+      entityId="c-1"
+      contactId="c-1"
+      open
+      onClose={vi.fn()}
+    />,
+    createQueryClient(),
+  );
+  await user.type(await screen.findByLabelText("To"), "anna@example.test");
+  await user.tab();
+  writeMessage("Body", "The agreed follow-up.");
+  await user.click(
+    await screen.findByRole("button", { name: "Record what happened" }),
+  );
+  const dialog = await screen.findByRole("dialog", {
+    name: "Record the exchange with anna@example.test",
+  });
+  await user.type(
+    within(dialog).getByLabelText("What was agreed?"),
+    "Asked for a revised quote.",
+  );
+  let finishCheck: ((answer: Response) => void) | undefined;
+  const pending = new Promise<Response>((resolve) => {
+    finishCheck = resolve;
+  });
+  const fetcher = vi.mocked(fetch);
+  const backend = fetcher.getMockImplementation();
+  if (!backend) throw new Error("Missing test transport");
+  fetcher.mockImplementation((input, init) => {
+    const url = input instanceof Request ? input.url : String(input);
+    return isPreviewDoor(new URL(url, "https://test.local").pathname)
+      ? pending
+      : backend(input, init);
+  });
+  let refreshed: Promise<void> | undefined;
+  act(() => {
+    refreshed = queryClient.invalidateQueries({
+      queryKey: ["send-permission"],
+    });
+  });
+  expect(
+    await screen.findByText("Checking whether this message can be sent…"),
+  ).toBeInTheDocument();
+  expect(within(dialog).getByLabelText("What was agreed?")).toHaveValue(
+    "Asked for a revised quote.",
+  );
+  expect(dialog).toBeInTheDocument();
+  const answerCheck = finishCheck;
+  if (!answerCheck) throw new Error("No preview is waiting");
+  await act(async () => {
+    answerCheck(jsonResponse(allowedPreview(["anna@example.test"])));
+    await refreshed;
+  });
+  expect(dialog).toBeInTheDocument();
+  expect(within(dialog).getByLabelText("What was agreed?")).toHaveValue(
+    "Asked for a revised quote.",
+  );
 });
