@@ -71,10 +71,19 @@ func FinalizeBaseTotalSQL(sumSQL, unpricedSQL string) string {
 	return "CASE WHEN (" + sumSQL + ") IS NULL AND coalesce((" + unpricedSQL + "), 0) > 0 THEN NULL ELSE coalesce((" + sumSQL + "), 0) END"
 }
 
-// IncompleteBaseTotalSQL is a total that is NULL once any amount in it cannot
-// be priced. It is for a figure that claims to be whole.
+// StrictBaseTotalSQL answers null for a group holding an amount that cannot be
+// priced, rather than an aggregate over the rest of it.
+//
+// It is the form for an average, a minimum, a maximum or a percentile. They
+// have no answer for a part of the group standing in for all of it.
+func StrictBaseTotalSQL(aggregateSQL, unpricedSQL string) string {
+	return "CASE WHEN coalesce((" + unpricedSQL + "), 0) > 0 THEN NULL ELSE (" + aggregateSQL + ") END"
+}
+
+// IncompleteBaseTotalSQL is StrictBaseTotalSQL for a sum, which reads an empty
+// group as zero.
 func IncompleteBaseTotalSQL(sumSQL, unpricedSQL string) string {
-	return "CASE WHEN coalesce((" + unpricedSQL + "), 0) > 0 THEN NULL ELSE coalesce((" + sumSQL + "), 0) END"
+	return StrictBaseTotalSQL("coalesce(("+sumSQL+"), 0)", unpricedSQL)
 }
 
 // UnpricedValueCountSQL keeps coverage under the same visibility as its amount.
