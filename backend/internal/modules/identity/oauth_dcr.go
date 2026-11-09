@@ -7,7 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
-	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // oauthGrantTypesSupported is what discovery advertises and what a
@@ -43,10 +44,7 @@ type dcrRefusal struct {
 const dcrLoggedReasonBytes = 200
 
 func (r *dcrRefusal) logged() string {
-	if len(r.description) <= dcrLoggedReasonBytes {
-		return r.description
-	}
-	return strings.ToValidUTF8(r.description[:dcrLoggedReasonBytes], "") + "…"
+	return textcut.BytesMarked(r.description, dcrLoggedReasonBytes, "…")
 }
 
 // parseDCR ignores every member it does not read: a client registering with
@@ -75,8 +73,8 @@ func parseDCR(members map[string]json.RawMessage) (dcrRequest, *dcrRefusal) {
 func (req dcrRequest) validate() *dcrRefusal {
 	// Public clients only: PKCE is the proof of possession, and only an admin
 	// mints a secret. A client asking for a secret method is registered as
-	// public instead, which §3.2.1 allows, and the echo of none tells it so.
-	// The Gemini app is one client that asks for client_secret_basic.
+	// public instead, since a server may replace requested metadata, and the
+	// echo of none tells it so. The Gemini app asks for client_secret_basic.
 	if !slices.Contains(dcrSubstitutableAuthMethods, req.TokenEndpointAuthMethod) {
 		return &dcrRefusal{
 			oauthErrInvalidClientMetadata,
