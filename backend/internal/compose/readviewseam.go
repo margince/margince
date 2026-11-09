@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // read_view serves a REST read by running that route's own handler, in
@@ -126,6 +127,11 @@ func readViewThrough(door *viewDoor) agents.ViewReader {
 	return func(ctx context.Context, view agents.ReadView, path map[string]string, query url.Values) (json.RawMessage, error) {
 		if door == nil || door.api == nil {
 			return nil, fmt.Errorf("read_view: views are served by the API process: %w", apperrors.ErrUnsupportedBySoR)
+		}
+		// Here as well as at the route, because the route's 403 reaches the tool
+		// as a bare refusal and this one names the area.
+		if err := operationAreaRefusal(ctx, mcp.ToolSpec{Name: agents.ReadViewTool}, view.Op); err != nil {
+			return nil, err
 		}
 		rec := door.serveInProcess(ctx, inProcessCall{Method: http.MethodGet, Pattern: view.Pattern, Path: path, Query: query})
 		if rec.overflowed {

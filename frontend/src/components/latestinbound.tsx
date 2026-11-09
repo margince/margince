@@ -17,9 +17,12 @@ import {
 } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { writtenAsMarkdown } from "../design-system/activitytimeline";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
+import { markdownLines } from "../design-system/markdown-text";
 import { NextBar } from "../design-system/nextbar";
+import { isTranscriptActivity } from "../design-system/transcriptread";
 import { activityAgo } from "../format/activitywhen";
 import { emailSummaryText } from "../format/emailtext";
 import { useNow } from "../format/now";
@@ -150,17 +153,24 @@ function itemWords(activity: Activity): {
   const raw = activity.body ?? "";
   const excerpt =
     summary?.preview ??
-    (activity.kind === "email" ? emailSummaryText(raw) : oneLine(raw));
+    (activity.kind === "email"
+      ? emailSummaryText(raw)
+      : oneLine(activity, raw));
   return { subject, excerpt: excerpt || undefined };
 }
 
-// A form's note is one answer per line; the row reads them as one line.
-function oneLine(text: string): string {
-  return text
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .join(" · ");
+// A form's note is one answer per line; the row reads them as one line. Text
+// the timeline renders as markdown reads as the text it renders; a chat
+// message's characters are its own.
+function oneLine(activity: Activity, text: string): string {
+  const markdown = writtenAsMarkdown({
+    kind: activity.kind,
+    transcript: isTranscriptActivity(activity),
+  });
+  const lines = markdown
+    ? markdownLines(text)
+    : text.split("\n").map((line) => line.trim());
+  return lines.filter(Boolean).join(" · ");
 }
 
 function When({ activity }: Readonly<{ activity: Activity }>) {

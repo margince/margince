@@ -9,13 +9,13 @@ import (
 	"fmt"
 	"maps"
 	"math"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/emailview"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // Mail cannot read CSS variables, so emailview writes each design token in as
@@ -85,7 +85,7 @@ type cssTheme map[string]string
 
 func productTokenThemes(t *testing.T) (cssTheme, cssTheme) {
 	t.Helper()
-	source, err := os.ReadFile("../frontend/src/design-system/tokens.css")
+	source, err := gatekit.ReadFile("../frontend/src/design-system/tokens.css")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -47,7 +47,7 @@ func TestTheSameWordsAreFineWhileTheExchangeIsLive(t *testing.T) {
 
 // A wellbeing opener is filler at every band, so it is not gated on one.
 func TestAWellbeingOpenerIsCaughtAtEveryBand(t *testing.T) {
-	body := "Hi Priya, I hope you are doing well. The scope document is attached."
+	body := "Hi Priya, I hope you are doing well. The scope document is ready."
 
 	for _, band := range []convstate.Band{
 		convstate.BandNone, convstate.BandFresh, convstate.BandWeeks, convstate.BandMonths,
@@ -121,7 +121,7 @@ func TestAPhraseInsideAnotherWordIsNotAMatch(t *testing.T) {
 // The wellbeing rule reads the opening only: "I hope that works for you" as a
 // closing line is an ordinary sentence.
 func TestAPleasantryIsOnlyFillerAtTheOpening(t *testing.T) {
-	closing := "Hi Priya,\n\nThe integration scope is attached and the timeline is in " +
+	closing := "Hi Priya,\n\nThe integration scope is ready and the timeline is in " +
 		"section three. It sets out the two phases and what each one needs from your " +
 		"side, including the test window we talked through.\n\n" +
 		"Let me know if the dates work. I hope you are doing well with the rollout."

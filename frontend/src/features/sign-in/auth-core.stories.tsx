@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { IdentityRegion } from "../../components/auth-core";
-import "./auth.css";
+import "../../components/auth-core.css";
 import { StoryProviders } from "../../testing/story-utils";
 
 /**

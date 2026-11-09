@@ -407,23 +407,6 @@
         "null"
       ]
     },
-    "assurance": {
-      "type": [
-        "object",
-        "null"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "qualified_forecast_enforced": {
-          "description": "Leave a deal whose customer stopped answering out of the forecast line of deals the customer supports, and stop the close-date sweep lowering forecast categories.",
-          "type": [
-            "boolean",
-            "null"
-          ],
-          "default": false
-        }
-      }
-    },
     "auth": {
       "type": [
         "object",
@@ -564,6 +547,38 @@
           "items": {
             "type": "string"
           }
+        },
+        "gmail_mailbox_quota": {
+          "description": "Effective Gmail quota units per minute per mailbox. Shared across live and history requests and OAuth apps; 100 units are kept free. Match the limit shown by Google.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 6000
+        },
+        "gmail_project_quota": {
+          "description": "Effective Gmail quota units per minute across this installation's OAuth projects. Use the smallest project limit; 100 units are kept free. Use identical values in every process.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 1200000
+        },
+        "history_concurrency": {
+          "description": "Limit on history imports running at once across the installation. Use the same value in every process.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 1
+        },
+        "history_hold": {
+          "description": "Accept queued history requests without starting another page. Stop older history workers before starting workers with a new admission protocol.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": false
         },
         "mail_sharing": {
           "description": "Let every colleague who can see a contact read the email captured with them; off keeps new mail to those on it.",
@@ -847,6 +862,31 @@
         }
       }
     },
+    "database": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "worker_max_connections": {
+          "description": "Worker connection limit, with the River listener counted. Also bounded by the DSN and queue worker count. Count every process when sizing the installation.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 12
+        },
+        "worker_statement_cache_capacity": {
+          "description": "Limit on cached statements and result types per worker connection. The DSN may lower it. Zero needs a compatible DSN default_query_exec_mode.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 256
+        }
+      }
+    },
     "deals": {
       "type": [
         "object",
@@ -881,12 +921,12 @@
           "default": 120
         },
         "stage_autopilot_enabled": {
-          "description": "Let a deal move to the next stage by itself where the rule of its stage allows it; off stops every automatic move.",
+          "description": "Let Margince move a deal to a later stage when the evidence on the deal shows it reached that stage; off stops every automatic move.",
           "type": [
             "boolean",
             "null"
           ],
-          "default": false
+          "default": true
         }
       }
     },
@@ -1196,6 +1236,36 @@
           "minimum": 1,
           "maximum": 200,
           "default": 20
+        },
+        "agent_role_calls_per_window": {
+          "description": "Calls of any kind, tool or API, one agent passport may make per window, by the role key of the user who connected it, as role:count pairs; 0 uses the installation value. An agent gets the highest value of its user's roles; a role with no value counts as the installation value. Admin gets 20000 while neither Admin nor the installation count has a value set.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "integer"
+          }
+        },
+        "agent_role_egress_per_window": {
+          "description": "Calls that send something out of the workspace one agent passport may make per window, by the role key of the user who connected it, as role:count pairs; 0 uses the installation value. An agent gets the highest value of its user's roles; a role with no value counts as the installation value.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "integer"
+          }
+        },
+        "agent_role_writes_per_window": {
+          "description": "Changing calls one agent passport may make per window, by the role key of the user who connected it, as role:count pairs; 0 uses the installation value. An agent gets the highest value of its user's roles; a role with no value counts as the installation value. Admin gets 2000 while neither Admin nor the installation count has a value set.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "integer"
+          }
         },
         "agent_runner_interval_seconds": {
           "description": "Seconds between the passes of the agent scheduler.",
@@ -1512,7 +1582,7 @@
       "default": "20s"
     },
     "keyvault_root_key": {
-      "description": "Standard Base64 of the 32-byte root key that seals connector credentials; unset disables the vault.",
+      "description": "Standard Base64 of the 32-byte root key that seals connector credentials and keys the erasure list and preference links; unset disables the vault.",
       "type": [
         "string",
         "null"
@@ -1617,7 +1687,7 @@
           "additionalProperties": false,
           "properties": {
             "dynamic": {
-              "description": "Let AI tools register their own OAuth client at /oauth/register (DCR); false keeps it off whatever the admin's switch in Settings \u003e MCP says.",
+              "description": "Let AI tools register their own OAuth client at /oauth/register (DCR); false keeps it off whatever the admin's switch in Settings \u003e AI tool access says.",
               "type": [
                 "boolean",
                 "null"
@@ -1625,7 +1695,7 @@
               "default": true
             },
             "metadata_document": {
-              "description": "Accept a client ID that is the URL of the tool's published metadata document (CIMD); false keeps it off whatever the admin's switch in Settings \u003e MCP says.",
+              "description": "Accept a client ID that is the URL of the tool's published metadata document (CIMD); false keeps it off whatever the admin's switch in Settings \u003e AI tool access says.",
               "type": [
                 "boolean",
                 "null"

@@ -219,7 +219,6 @@ cloudflare
 coach
 code
 cold
-collaborate
 collapse
 colleague
 collection
@@ -500,7 +499,6 @@ go
 goal
 gone
 good
-governance
 grant
 graph
 greeting
@@ -544,7 +542,6 @@ hour
 how
 human
 i
-idea
 if
 ignore
 image
@@ -1045,6 +1042,7 @@ score
 scorecard
 scrape
 screen
+screenshot
 script
 seal
 search

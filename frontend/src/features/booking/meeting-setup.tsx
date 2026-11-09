@@ -12,8 +12,8 @@ import { ConnectRefusal } from "./meeting-calendar";
 
 /**
  * What a host without a calendar does first, as the page's lead card. The
- * calendar step is the only one with a verb. Hours are set in the card below,
- * and bookings turn on once the calendar is there.
+ * calendar step is the only one with a verb. Hours are set on the Availability
+ * tab, and bookings turn on once the calendar is there.
  */
 export function MeetingSetupCard({
   hoursChosen,

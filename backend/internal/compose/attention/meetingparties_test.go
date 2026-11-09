@@ -8,13 +8,14 @@ package attention
 
 import (
 	"context"
-	"slices"
+	"errors"
 	"testing"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -36,6 +37,13 @@ func (e employersSaying) CurrentEmployers(_ context.Context, contactIDs []ids.UU
 		}
 	}
 	return out, nil
+}
+
+// employersFailing answers every employer read with an error.
+type employersFailing struct{ err error }
+
+func (e employersFailing) CurrentEmployers(context.Context, []ids.UUID) (map[ids.UUID]crmcontracts.ContactEmployer, error) {
+	return nil, e.err
 }
 
 func TestAnUnansweredMeetingNamesItsCustomerAndItsHost(t *testing.T) {
@@ -105,10 +113,9 @@ func TestTheHostIsNamedOnlyWhereTheReaderMayResolveTheName(t *testing.T) {
 	}
 }
 
-// The counterparty's employer rides on meeting rows only: every other row's
-// title already names its record. A contact whose employer the reader may not
-// see gets none.
-func TestOnlyAMeetingRowSaysWhereItsContactWorks(t *testing.T) {
+// Every row that names a contact says where that contact works, so a card can
+// name the account. A contact whose employer the reader may not see gets none.
+func TestEveryRowWithAContactSaysWhereItWorks(t *testing.T) {
 	t.Parallel()
 	known, withheld, sender := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	acme := crmcontracts.ContactEmployer{CompanyId: openapi_types.UUID(ids.NewV7()), CompanyName: "Acme"}
@@ -121,9 +128,10 @@ func TestOnlyAMeetingRowSaysWhereItsContactWorks(t *testing.T) {
 		{Source: sourceMeeting, Contact: &crmcontracts.WorklistContactFacts{Id: openapi_types.UUID(known)}},
 		{Source: sourceMeetingOutcome, Contact: &crmcontracts.WorklistContactFacts{Id: openapi_types.UUID(withheld)}},
 		{Source: "waiting", Contact: &crmcontracts.WorklistContactFacts{Id: openapi_types.UUID(sender)}},
+		{Source: "task"},
 	}
-	if err := svc.nameTheEmployers(context.Background(), rows); err != nil {
-		t.Fatalf("naming the employers: %v", err)
+	if note := svc.nameTheEmployers(context.Background(), rows); note != nil {
+		t.Fatalf("naming the employers: %+v", note)
 	}
 	if rows[0].Contact.Employer == nil || rows[0].Contact.Employer.CompanyName != "Acme" {
 		t.Errorf("meeting row employer = %+v, want Acme", rows[0].Contact.Employer)
@@ -131,13 +139,58 @@ func TestOnlyAMeetingRowSaysWhereItsContactWorks(t *testing.T) {
 	if rows[1].Contact.Employer != nil {
 		t.Errorf("a withheld employer is named %+v, want none", rows[1].Contact.Employer)
 	}
-	if rows[2].Contact.Employer != nil {
-		t.Errorf("a waiting row carries employer %+v, want none", rows[2].Contact.Employer)
+	if rows[2].Contact.Employer == nil || rows[2].Contact.Employer.CompanyName != "Acme" {
+		t.Errorf("a waiting row employer = %+v, want Acme", rows[2].Contact.Employer)
 	}
-	if !slices.Contains(asked, known) || !slices.Contains(asked, withheld) {
-		t.Errorf("the employer read was asked about %v, want both meeting contacts", asked)
+	if !sameMembers(asked, []ids.UUID{known, withheld, sender}) {
+		t.Errorf("the employer read was asked about %v, want the three contacts once each", asked)
 	}
-	if slices.Contains(asked, sender) {
-		t.Error("the employer read was asked about a row that is not a meeting")
+}
+
+// The employer only decorates a row, so a failed read keeps every row and names
+// the missing source, as withheld when the reader was refused.
+func TestAFailedEmployerReadKeepsTheRowsAndSaysSo(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct {
+		err  error
+		want crmcontracts.WorklistSourceUnavailableReason
+	}{
+		"failed":  {errors.New("connection reset"), crmcontracts.WorklistSourceUnavailableReasonFailed},
+		"refused": {apperrors.ErrPermissionDenied, crmcontracts.WorklistSourceUnavailableReasonWithheld},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			svc := &Service{employers: employersFailing{err: tc.err}}
+			rows := []crmcontracts.WorklistItem{
+				{Source: "waiting", Contact: &crmcontracts.WorklistContactFacts{Id: openapi_types.UUID(ids.NewV7())}},
+			}
+			note := svc.nameTheEmployers(context.Background(), rows)
+			if note == nil || note.Source != sourceContactEmployers || note.Reason != tc.want {
+				t.Fatalf("note = %+v, want %s %s", note, sourceContactEmployers, tc.want)
+			}
+			if note.ContributesRows == nil || *note.ContributesRows {
+				t.Errorf("an employer read puts no row on the queue, note says %v", note.ContributesRows)
+			}
+			if rows[0].Contact.Employer != nil {
+				t.Errorf("a failed read named an employer %+v", rows[0].Contact.Employer)
+			}
+		})
 	}
+}
+
+// sameMembers holds when got names each wanted id once and nothing else, in any order.
+func sameMembers(got, want []ids.UUID) bool {
+	if len(got) != len(want) {
+		return false
+	}
+	seen := map[ids.UUID]int{}
+	for _, id := range got {
+		seen[id]++
+	}
+	for _, id := range want {
+		if seen[id] != 1 {
+			return false
+		}
+	}
+	return true
 }

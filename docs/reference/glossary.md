@@ -20,6 +20,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | changelog | A file listing the changes of each release, which this repository does not keep. |
 | CI | Continuous integration: the checks GitHub runs on every pull request. |
 | CIMD | Client ID Metadata Document: an AI tool's ID that is the URL of a file describing it. |
+| CLS | Cumulative Layout Shift: how far content moves on screen while a page loads. |
 | Compose | Docker Compose, which starts Postgres and Redis for local work. |
 | Conventional | Conventional Commits, a format for commit messages. |
 | Copilot | Microsoft's AI assistant, whose Copilot Studio builds agents that connect to Margince. |
@@ -34,6 +35,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | dmy | The date order day, month, year, as a setting value. |
 | Docker | The container tool used to run the local stack and the images. |
 | English | The language the docs and the source catalog are written in. |
+| entity | A legal entity: one of the companies an installation trades as, each with its own name and address. |
 | EU | The European Union, whose laws several pages refer to. |
 | GDPR | The EU General Data Protection Regulation, the law on personal data. |
 | German | The language of the German compliance pack and UI catalog. |
@@ -99,6 +101,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | vLLM | A server that runs language models on your own machines. |
 | Webflow | A website builder whose forms can send each entry to a webhook address. |
 | webhook | A message one tool sends to another tool's address when a chosen event happens. |
+| WebP | A modern image file format, saved as .webp. |
 | WhatsApp | A chat app; a link to it opens a chat with a phone number. |
 | Windows | Microsoft's desktop operating system. |
 | Worklist | The app's list of tasks and items that need a user's action. |

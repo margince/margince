@@ -27,7 +27,6 @@ package gates
 // policies agree may not claim to be.
 
 import (
-	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -95,7 +94,7 @@ func TestTheToolCatalogsTiersAreTheContractsTiers(t *testing.T) {
 	// been listed since — which is the direction this baseline is supposed to
 	// move in, and it must be noticed rather than left standing.
 	defer absentFromTheCatalog.AssertAllMatched(t)
-	page, err := os.ReadFile(catalogPage)
+	page, err := gatekit.ReadFile(catalogPage)
 	if err != nil {
 		t.Fatalf("reading %s: %v", catalogPage, err)
 	}

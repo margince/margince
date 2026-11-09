@@ -94,7 +94,7 @@ type vcardCreateProposal struct {
 // vcardCreateStager builds the contacts module's review port: one card's
 // near-match becomes one durable proposal.
 func vcardCreateStager(pool *pgxpool.Pool) func(ctx context.Context, entry contacts.VCardEntry, candidate *ids.ContactID) error {
-	svc := approvalsServiceWithEffects(pool)
+	svc := NewApprovalsServiceWithEffects(pool)
 	return func(ctx context.Context, entry contacts.VCardEntry, candidate *ids.ContactID) error {
 		// Self-only, like the LinkedIn match one seam over: the card is one
 		// member's own uploaded address book, so the importer is recorded as

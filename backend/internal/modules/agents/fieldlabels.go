@@ -26,6 +26,7 @@ import (
 //nolint:goconst,dupl // one row per wire field per language is the table's shape; the census holds the languages in step
 var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 	textlang.English: {
+		"deal_filing":              "Deal filing",
 		"acquisition_source":       "Acquisition source",
 		"active":                   "Active",
 		"address":                  "Address",
@@ -81,6 +82,7 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"occurred_at":              "Occurred",
 		"occurred_precision":       "Time precision",
 		"owner_id":                 "Owner",
+		"product_id":               "Product",
 		"relationship_mark":        "Relationship mark",
 		"parent_company_id":        "Parent company",
 		"partner_attribution":      "Partner attribution",
@@ -118,6 +120,7 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"win_probability":          "Probability",
 	},
 	textlang.German: {
+		"deal_filing":              "Deal-Zuordnung",
 		"acquisition_source":       "Akquisitionsquelle",
 		"active":                   "Aktiv",
 		"address":                  "Adresse",
@@ -173,6 +176,7 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"occurred_at":              "Zeitpunkt",
 		"occurred_precision":       "Zeitgenauigkeit",
 		"owner_id":                 "Verantwortlich",
+		"product_id":               "Produkt",
 		"relationship_mark":        "Beziehungsmarkierung",
 		"parent_company_id":        "Muttergesellschaft",
 		"partner_attribution":      "Partnerzuordnung",
@@ -210,6 +214,7 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"win_probability":          "Abschlusschance",
 	},
 	textlang.Vietnamese: {
+		"deal_filing":              "Gắn vào giao dịch",
 		"acquisition_source":       "Nguồn tiếp cận",
 		"active":                   "Đang hoạt động",
 		"address":                  "Địa chỉ",
@@ -265,6 +270,7 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"occurred_at":              "Thời điểm xảy ra",
 		"occurred_precision":       "Độ chính xác của thời gian",
 		"owner_id":                 "Người chịu trách nhiệm",
+		"product_id":               "Sản phẩm",
 		"relationship_mark":        "Nhãn quan hệ",
 		"parent_company_id":        "Công ty mẹ",
 		"partner_attribution":      "Ghi công đối tác",

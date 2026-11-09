@@ -195,7 +195,7 @@ describe("InstallationSettingsCard", () => {
     const { fetchMock, patch } = backendFor(SETTINGS_EDITOR);
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<InstallationSettingsCard />);
+    render(<InstallationSettingsCard part="forecast" />);
 
     expect(await screen.findByText("90%")).toBeTruthy();
     const dialog = await openFrom(user, /edit likely threshold/i);

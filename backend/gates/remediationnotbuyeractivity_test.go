@@ -23,13 +23,13 @@ package gates
 // later.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -108,7 +108,7 @@ func TestRecencyFunctionsExcludeRemediationWork(t *testing.T) {
 func currentRecencyBodies(t *testing.T) map[string]string {
 	t.Helper()
 	dir := filepath.Join("migrations", "core")
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", dir, err)
 	}
@@ -124,7 +124,7 @@ func currentRecencyBodies(t *testing.T) map[string]string {
 
 	bodies := map[string]string{}
 	for _, fn := range names {
-		raw, err := os.ReadFile(filepath.Join(dir, fn))
+		raw, err := gatekit.ReadFile(filepath.Join(dir, fn))
 		if err != nil {
 			t.Fatalf("reading %s: %v", fn, err)
 		}
@@ -223,7 +223,7 @@ func TestRecencyReadersOutsideTheHelpersExcludeRemediation(t *testing.T) {
 	t.Parallel()
 
 	for file, what := range recencyReadersOutsideTheHelpers {
-		raw, err := os.ReadFile(file)
+		raw, err := gatekit.ReadFile(file)
 		if err != nil {
 			t.Errorf("%s (%s): %v — a reader named here must exist, or this "+
 				"census is guarding a file that moved", file, what, err)

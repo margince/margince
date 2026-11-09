@@ -21,6 +21,8 @@ import "./tokeninput.css";
  */
 export type TokenCard = Readonly<{
   identity: string;
+  // A colleague's own picture; a contact's card has none.
+  photo?: string | null;
   href?: string;
   about?: string;
 }>;
@@ -316,7 +318,13 @@ function TokenChip({
         className={card ? "token token-has-face" : "token"}
         {...anchor}
       >
-        {card && <Avatar name={label ?? value} identity={card.identity} />}
+        {card && (
+          <Avatar
+            name={label ?? value}
+            identity={card.identity}
+            photo={card.photo}
+          />
+        )}
         <span className={named ? "token-label" : "token-value"}>
           {named ? label : value}
         </span>
@@ -347,7 +355,12 @@ function tokenCard(
       {
         key: value,
         lead: card && (
-          <Avatar name={label} identity={card.identity} size="md" />
+          <Avatar
+            name={label}
+            identity={card.identity}
+            photo={card.photo}
+            size="md"
+          />
         ),
         title: label,
         sub: value,

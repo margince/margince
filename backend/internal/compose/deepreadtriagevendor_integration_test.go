@@ -53,7 +53,7 @@ func captureStaffMail(t *testing.T, e *integration.Env, mail staffMail) {
 	t.Helper()
 	authorizeCaptureMailbox(t, e, mail.mailbox, seatEmail(t, mail.mailbox))
 	thread := "thread-" + mail.sourceID
-	seedAttestedOutbound(t, e, "out-"+mail.sourceID+"-"+mail.mailbox.String(), mail.from, thread)
+	seatHoldsSeeded(t, e, mail.mailbox, seedAttestedOutbound(t, e, "out-"+mail.sourceID+"-"+mail.mailbox.String(), mail.from, thread))
 	var participants []connector.MessageParticipant
 	for _, address := range mail.to {
 		participants = append(participants, connector.MessageParticipant{Email: address, Role: connector.ParticipantRoleTo})

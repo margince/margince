@@ -10,7 +10,8 @@ import { INTRO_STATUS_LABELS } from "../../../format/introstatus";
 // coloured circles. The state is textual, never colour alone.
 
 import { Check } from "lucide-react";
-import { Avatar } from "../../../design-system/atoms";
+import type { ReactNode } from "react";
+import { SeatAvatar } from "../../../components/seatavatar";
 import { Panel, PanelBody } from "../../../design-system/panel";
 import { formatDate, formatNumber } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
@@ -29,7 +30,12 @@ type StepState = "done" | "current" | "waiting";
  */
 export function RelayPanel({
   ask,
-}: Readonly<{ ask: IntroRequest | undefined }>) {
+  action,
+}: Readonly<{
+  ask: IntroRequest | undefined;
+  // The panel's own verb, such as recording an introduction made elsewhere.
+  action?: ReactNode;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const readerZone = useViewerZone();
@@ -38,7 +44,7 @@ export function RelayPanel({
   const owner =
     ask && !SETTLED.has(ask.status) ? ownerOf(ask, t, reader) : undefined;
   return (
-    <Panel title={t("contact.intro.relayTitle")}>
+    <Panel title={t("contact.intro.relayTitle")} titleAction={action}>
       <PanelBody>
         <ol className="pn-relay">
           {steps.map((step, index) => (
@@ -70,7 +76,7 @@ export function RelayPanel({
           answer window and belongs only to the step that has one. */}
         {ask && owner ? (
           <p className="pn-relay-owner">
-            <Avatar name={owner} identity={ownerIdOf(ask) ?? owner} size="sm" />
+            <SeatAvatar id={ownerIdOf(ask)} name={owner} size="sm" />
             <span>{t("contact.intro.handoffOwner", { name: owner })}</span>
             {ask.status === "requested" && ask.due_at ? (
               <span className="pn-relay-due t-caption">

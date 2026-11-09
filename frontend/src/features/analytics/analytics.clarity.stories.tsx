@@ -3,7 +3,6 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
-import { formatAnalyticsMoneyOrAbsent } from "../../format/format";
 import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
 import {
   installFetchStub,
@@ -14,7 +13,6 @@ import { AccountCoverageView } from "./analytics.accounts";
 import { CloseMonthTable } from "./analytics.closemonth";
 import { ForecastAnswer } from "./analytics.forecast.answer";
 import { ForecastDeals } from "./analytics.forecast.deals";
-import { QualifiedAnswer } from "./analytics.forecast.qualified";
 import {
   overviewCatalog,
   SELF,
@@ -22,7 +20,6 @@ import {
 } from "./analytics.overview.fixtures";
 import { InitiativePanel } from "./analytics.overview.initiative";
 import { upcomingMeetings } from "./analytics.overview.prospectingdata";
-import { UpcomingMeetings } from "./analytics.overview.prospectingwork";
 import { MetricReading } from "./analytics.overview.readings";
 import {
   overviewRoutes,
@@ -30,15 +27,14 @@ import {
 } from "./analytics.overview.routes.fixtures";
 import { quarterSales } from "./analytics.overview.scenariodata";
 import { SinceLastReview } from "./analytics.overview.since";
+import { UpcomingMeetings } from "./analytics.overview.work";
 import { StageTable } from "./analytics.pipeline";
 import { CallCheckSheet } from "./inputcheck.call";
 import { CheckFacts } from "./inputcheck.facts";
 import { CohortTable } from "./reporting.cohort";
 import { InitiativeDrawer } from "./reporting.initiativedrawer";
-import {
-  InitiativeReports,
-  type SalesInitiative,
-} from "./reporting.initiatives";
+import { InitiativeReports } from "./reporting.initiatives";
+import type { SalesInitiative } from "./reporting.initiatives.queries";
 import { reportingStoryRoutes } from "./reporting.story-fixtures";
 import { TargetComparison } from "./reporting.targetcomparison";
 
@@ -60,9 +56,9 @@ const initiative: SalesInitiative = {
 };
 const readings: components["schemas"]["ForecastReadings"] = {
   period_start: "2026-10-01",
+  qualification_mode: "off",
   period_end: "2026-12-31",
   scope_kind: "workspace",
-  qualification_mode: "off",
   won_minor: 42000000,
   evidence_minor: 34000000,
   likely_threshold: 90,
@@ -95,16 +91,6 @@ const readings: components["schemas"]["ForecastReadings"] = {
       signals: [],
     },
   ],
-  qualified: {
-    evidence_minor: 34000000,
-    weighted_minor: 68000000,
-    excluded_minor: 1000000,
-    unsupported_minor: 0,
-    unknown_minor: 1000000,
-    excluded_count: 1,
-    unsupported_count: 0,
-    unknown_count: 1,
-  },
 };
 const check: components["schemas"]["InputCheck"] = {
   id: "check",
@@ -224,14 +210,6 @@ export const ForecastExplanation: Story = {
 };
 export const ForecastRecords: Story = {
   render: () => <ForecastDeals scope={scope} period="quarter" />,
-};
-export const QualifiedForecast: Story = {
-  render: () => (
-    <QualifiedAnswer
-      readings={readings}
-      money={(value) => formatAnalyticsMoneyOrAbsent(value, "EUR", "en")}
-    />
-  ),
 };
 export const InitiativeProgress: Story = {
   render: () => (

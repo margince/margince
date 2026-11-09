@@ -34,6 +34,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
@@ -83,7 +84,7 @@ type FiledDeal struct {
 	State string `json:"state"`
 }
 
-const historyQuery = `
+var historyQuery = `
 	SELECT a.id, a.kind, COALESCE(a.subject, ''), COALESCE(a.direction, ''),
 	       a.occurred_at, a.occurred_precision = 'day', COALESCE(a.thread_key, ''),
 	       ($%[3]d::uuid IS NOT NULL AND EXISTS (
@@ -105,7 +106,7 @@ const historyQuery = `
 	  AND a.id <> $%[4]d
 	  AND %[5]s
 	  AND %[9]s
-	  AND (a.kind <> 'meeting' OR a.meeting_status IS NULL OR a.meeting_status = 'held')
+	  AND (a.kind <> 'meeting' OR ` + meetingoutcome.HeldSQL("a") + `)
 	  AND (EXISTS (
 	         SELECT 1 FROM activity_participant ap
 	         WHERE ap.activity_id = a.id AND ap.contact_id = ANY($%[6]d))

@@ -16,7 +16,7 @@ import { FilterPills } from "../../design-system/filterpills";
 import { useLocale, useT } from "../../i18n";
 import { WORKLIST_FILTER_PARAM } from "../../lib/worklistrouting";
 import type { WorklistView } from "../../lib/worklistviews";
-import { completenessText, pillCount } from "./worklist.completeness";
+import { completenessText, pillFigure } from "./worklist.completeness";
 import { OwnerPicker } from "./worklist.manager";
 import type {
   Worklist,
@@ -248,7 +248,7 @@ export function WorklistHeader({
             pills={pills.map((value) => ({
               value,
               label: t(`worklist.filter.${value}` as const),
-              count: pillCount(day, value, view),
+              ...pillFigure(day, value, view),
             }))}
             value={filter}
             onChange={onFilter}

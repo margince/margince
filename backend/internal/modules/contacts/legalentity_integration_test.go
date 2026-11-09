@@ -220,8 +220,16 @@ func TestAUserWorksForTheDefaultEntityUntilAssigned(t *testing.T) {
 	} else if refusal, ok := errors.AsType[*LegalEntityRefusal](err); !ok || refusal.code != "legal_entity_has_members" {
 		t.Errorf("archiving an entity with a member answered %v, want legal_entity_has_members", err)
 	}
+	var carried []EntityJurisdiction
+	e.store.WithFloorCarry(func(_ context.Context, _ pgx.Tx, from, to EntityJurisdiction) error {
+		carried = append(carried, from, to)
+		return nil
+	})
 	if err := e.store.AssignLegalEntityMember(admin, defaultEntity(t, e), user); err != nil {
 		t.Fatalf("move back to the default: %v", err)
+	}
+	if len(carried) != 2 || carried[0] != (EntityJurisdiction{Country: "at"}) || !carried[1].Default {
+		t.Errorf("leaving Vienna for the default carried %+v, want the floor carried from at to the default", carried)
 	}
 	var rows int
 	if err := e.owner.QueryRow(context.Background(), `SELECT count(*) FROM legal_entity_member`).Scan(&rows); err != nil || rows != 0 {
@@ -232,6 +240,15 @@ func TestAUserWorksForTheDefaultEntityUntilAssigned(t *testing.T) {
 	}
 	if err := e.store.AssignLegalEntityMember(admin, vienna.ID, user); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("assigning to an archived entity answered %v, want not found", err)
+	}
+	// The writers refuse this state, so only the owner role can leave a member
+	// on an archived entity; the resolver still never answers one.
+	if _, err := e.owner.Exec(context.Background(), `INSERT INTO legal_entity_member (legal_entity_id, user_id, assigned_by)
+		VALUES ($1, $2, 'human:x')`, vienna.ID, user); err != nil {
+		t.Fatal(err)
+	}
+	if got := resolve(); got != defaultEntity(t, e) {
+		t.Errorf("a member of an archived entity resolves to %s, want the default entity", got)
 	}
 }
 
@@ -277,6 +294,7 @@ func TestEveryEntityWriteCommitsItsAuditAndItsEvent(t *testing.T) {
 	if err := e.store.AssignLegalEntityMember(admin, vienna.ID, ids.From[ids.UserKind](e.user)); err != nil {
 		t.Fatalf("assign: %v", err)
 	}
+	e.store.WithFloorCarry(func(context.Context, pgx.Tx, EntityJurisdiction, EntityJurisdiction) error { return nil })
 	if err := e.store.AssignLegalEntityMember(admin, defaultEntity(t, e), ids.From[ids.UserKind](e.user)); err != nil {
 		t.Fatalf("unassign: %v", err)
 	}

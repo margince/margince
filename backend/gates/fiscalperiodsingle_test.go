@@ -10,11 +10,13 @@ package gates
 // start had to land in every copy, or the copies drifted.
 
 import (
-	"os"
+	"io/fs"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // fiscalElapsed is the arithmetic every copy writes: a month folded modulo
@@ -25,11 +27,11 @@ func TestTheFiscalPeriodIsComputedOnce(t *testing.T) {
 	t.Parallel()
 	const owner = "internal/shared/kernel/reportperiod/label.go"
 	var spellings []string
-	err := filepath.Walk("internal", func(path string, info os.FileInfo, err error) error {
+	err := gatekit.WalkDir("internal", func(path string, info fs.DirEntry, err error) error {
 		if err != nil || info.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}
-		body, err := os.ReadFile(path)
+		body, err := gatekit.ReadFile(path)
 		if err != nil {
 			return err
 		}

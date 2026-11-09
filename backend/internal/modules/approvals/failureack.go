@@ -70,23 +70,31 @@ func (s *Service) OwnFailedDecisions(ctx context.Context, limit int) ([]FailedDe
 	}
 	p, _ := principal.Actor(ctx)
 	now := s.now()
-	out := make([]FailedDecision, 0, len(rows))
+	retryable := make([]bool, len(rows))
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		for _, a := range rows {
-			retryable := false
+		for i, a := range rows {
 			if s.owesItsEffect(a) {
-				if retryable, err = decidable(ctx, tx, p, a); err != nil {
+				if retryable[i], err = decidable(ctx, tx, p, a); err != nil {
 					return err
 				}
 			}
-			shown := []crmcontracts.Approval{wire(a, now)}
-			withoutOwnersRecords(ctx, shown)
-			out = append(out, FailedDecision{Approval: shown[0], Retryable: retryable})
 		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
+	}
+	shown := make([]crmcontracts.Approval, 0, len(rows))
+	for _, a := range rows {
+		shown = append(shown, wire(a, now))
+	}
+	if err := s.readPlans(ctx, shown, rows); err != nil {
+		return nil, err
+	}
+	withoutOwnersRecords(ctx, shown)
+	out := make([]FailedDecision, 0, len(rows))
+	for i := range shown {
+		out = append(out, FailedDecision{Approval: shown[i], Retryable: retryable[i]})
 	}
 	return out, nil
 }

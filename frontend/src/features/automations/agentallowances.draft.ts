@@ -96,6 +96,173 @@ export function hasRefusal(parsed: Parsed): boolean {
   return Object.values(parsed).some((value) => value === null);
 }
 
+export type RoleAllowance = components["schemas"]["AgentRoleAllowance"];
+export type RoleAllowanceSet = components["schemas"]["AgentRoleAllowanceSet"];
+
+// One role's counts as typed. An empty box holds no value of the role's own: the
+// role inherits, and the preset's role takes the preset. "0" saves the
+// installation value, which turns the preset off for that count.
+export type RoleDraft = Readonly<Record<Counts, string>>;
+export type RoleDrafts = Readonly<Record<string, RoleDraft>>;
+
+// Only a value the role holds starts typed. A preset or inherited value is not
+// one the admin saved, so it shows as the box's placeholder and is never sent.
+export function roleDraftOf(role: RoleAllowance): RoleDraft {
+  const box = (property: Counts) => {
+    switch (role[property].source) {
+      case "role":
+        return String(role[property].value);
+      case "installation_kept":
+        return "0";
+      default:
+        return "";
+    }
+  };
+  return {
+    agent_writes_per_window: box("agent_writes_per_window"),
+    agent_egress_per_window: box("agent_egress_per_window"),
+    agent_calls_per_window: box("agent_calls_per_window"),
+  };
+}
+
+export function roleDraftsOf(roles: readonly RoleAllowance[]): RoleDrafts {
+  return Object.fromEntries(
+    roles.map((role) => [role.role_key, roleDraftOf(role)]),
+  );
+}
+
+export const EMPTY_ROLE_DRAFT: RoleDraft = {
+  agent_writes_per_window: "",
+  agent_egress_per_window: "",
+  agent_calls_per_window: "",
+};
+
+// The installation value saved for every count: for the preset's role, the
+// way to turn the preset off.
+export const INSTALLATION_ROLE_DRAFT: RoleDraft = {
+  agent_writes_per_window: "0",
+  agent_egress_per_window: "0",
+  agent_calls_per_window: "0",
+};
+
+// A box as a value to save: undefined when empty, 0 for the installation
+// value, else digits inside the installation's own bounds; null when refused.
+export function parseRoleCell(
+  property: Counts,
+  text: string,
+): number | undefined | null {
+  const trimmed = text.trim();
+  if (trimmed === "") {
+    return undefined;
+  }
+  if (!/^\d+$/.test(trimmed)) {
+    return null;
+  }
+  const value = Number(trimmed);
+  const { min, max } = AGENT_ALLOWANCE_BOUNDS[property];
+  return value === 0 || (value >= min && value <= max) ? value : null;
+}
+
+// What a save sends for the roles: for each role, only the counts whose box
+// moved. A box emptied gives the role's value up; a box typed saves it.
+export function roleChangesOf(
+  allowances: Allowances,
+  drafts: RoleDrafts,
+): RoleAllowanceSet[] | undefined {
+  const out = allowances.roles.flatMap((role) => {
+    const change = roleChange(role, drafts[role.role_key]);
+    return change === undefined ? [] : [change];
+  });
+  return out.length > 0 ? out : undefined;
+}
+
+// One role's moved boxes as a save, or undefined when none moved.
+function roleChange(
+  role: RoleAllowance,
+  draft: RoleDraft | undefined,
+): RoleAllowanceSet | undefined {
+  const before = roleDraftOf(role);
+  const after = draft ?? before;
+  const set: RoleAllowanceSet = { role_key: role.role_key };
+  const unset: Counts[] = [];
+  for (const { property } of COUNTS) {
+    if (before[property].trim() === after[property].trim()) {
+      continue;
+    }
+    const value = parseRoleCell(property, after[property]);
+    if (value === undefined) {
+      unset.push(property);
+    } else if (value !== null) {
+      set[property] = value;
+    }
+  }
+  if (unset.length > 0) {
+    set.unset = unset;
+  }
+  return Object.keys(set).length > 1 ? set : undefined;
+}
+
+export type Fallback = RoleAllowance["agent_calls_per_window"]["if_unset"];
+
+// The save being drafted beside the role values: back to defaults, or the
+// installation counts as typed.
+export type PendingInstallation = Readonly<{
+  toDefaults: boolean;
+  installation: Parsed;
+  // A count a boot source sets, which going back to defaults leaves in force.
+  locked: (property: Counts) => boolean;
+}>;
+
+// What an emptied role box gives once this save lands. The server's answer
+// holds unless the same save moves the installation value, which then binds.
+// Putting everything back brings the preset back.
+export function fallbackOf(
+  allowances: Allowances,
+  role: RoleAllowance,
+  property: Counts,
+  pending: PendingInstallation,
+): Fallback {
+  if (pending.toDefaults && pending.locked(property)) {
+    return { value: allowances[property], source: "installation" };
+  }
+  if (pending.toDefaults) {
+    const preset = role.holds_preset
+      ? presetOf(allowances, property)
+      : undefined;
+    return preset === undefined
+      ? { value: allowances.defaults[property], source: "installation" }
+      : { value: preset, source: "admin_preset" };
+  }
+  const next = pending.installation[property];
+  if (next !== null && next !== allowances[property]) {
+    return { value: next, source: "installation" };
+  }
+  return role[property].if_unset;
+}
+
+// The Admin preset for a count; sends have none.
+function presetOf(
+  allowances: Allowances,
+  property: Counts,
+): number | undefined {
+  switch (property) {
+    case "agent_calls_per_window":
+      return allowances.defaults.admin_calls_per_window;
+    case "agent_writes_per_window":
+      return allowances.defaults.admin_writes_per_window;
+    default:
+      return undefined;
+  }
+}
+
+export function hasRoleRefusal(drafts: RoleDrafts): boolean {
+  return Object.values(drafts).some((draft) =>
+    COUNTS.some(
+      ({ property }) => parseRoleCell(property, draft[property]) === null,
+    ),
+  );
+}
+
 // Only what moved is sent, so an untouched count leaves no audit entry.
 export function changesOf(
   allowances: Allowances,

@@ -176,7 +176,7 @@ func (s *Store) allowAdmittedTx(
 	}
 	// The vouch serves the reps of the recorder's own entity and no other, so
 	// a colleague of another legal entity never sends on it.
-	entity, err := sendingEntityTx(ctx, tx, senderOf(ctx))
+	entity, err := sendingEntityOf(ctx, tx)
 	if err != nil {
 		return ids.UUID{}, err
 	}
