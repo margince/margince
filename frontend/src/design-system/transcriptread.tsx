@@ -11,6 +11,7 @@ import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { showsAMessage, TASK_QUEUE_KEY } from "../lib/activitykeys";
+import { labelFor } from "../lib/labelfor";
 import { throwProblem, unwrap } from "../lib/problem";
 import { navigate } from "../lib/router";
 import { worklistKey } from "../lib/workkeys";
@@ -49,6 +50,9 @@ function TranscriptReadOutcome({
   report,
 }: Readonly<{ report: TranscriptReadReport }>) {
   const t = useT();
+  // `detail` is phrased for this reader by the server; `status_detail` is the
+  // stored sentence a reading from before carries instead.
+  const detail = report.detail ?? report.status_detail;
   if (report.status === "failed") {
     return (
       <Callout
@@ -56,7 +60,7 @@ function TranscriptReadOutcome({
         kind="event"
         title={t("transcriptread.failedTitle")}
       >
-        {report.status_detail ?? t("transcriptread.failedFallback")}
+        {detail ?? t("transcriptread.failedFallback")}
       </Callout>
     );
   }
@@ -65,12 +69,29 @@ function TranscriptReadOutcome({
     // other arm lists the proposals — a fact about the transcript, not
     // something the card says about itself.
     return (
-      <EmptyState>
-        {report.status_detail ?? t("transcriptread.nothingStated")}
-      </EmptyState>
+      <EmptyState>{detail ?? t("transcriptread.nothingStated")}</EmptyState>
     );
   }
-  return <TranscriptReadProposals ids={report.proposal_ids} />;
+  const mine = ownProposals(report);
+  return (
+    <>
+      {report.detail && <p className="t-caption">{report.detail}</p>}
+      {mine.length > 0 && <TranscriptReadProposals ids={mine} />}
+    </>
+  );
+}
+
+// The proposals this reader decides. One waiting on a colleague is theirs, and
+// its status is not this reader's to read: the server's sentence already says
+// who it was sent to. A reading from before names nobody, so all of its
+// proposals are read as before.
+function ownProposals(report: TranscriptReadReport): string[] {
+  if (report.proposals.length === 0) {
+    return report.proposal_ids;
+  }
+  return report.proposals
+    .filter((proposal) => proposal.asked_of.is_you)
+    .map((proposal) => proposal.id);
 }
 
 // What became of what the reading staged.
@@ -271,7 +292,7 @@ function TranscriptReadBody({
     <div className="transcript-reading">
       <p className="transcript-status">
         <Badge tone={report.status === "failed" ? "danger" : undefined}>
-          {t(READ_STATUS_LABELS[report.status])}
+          {t(labelFor(READ_STATUS_LABELS, report.status))}
         </Badge>
         {terminal && (
           <span className="t-caption">

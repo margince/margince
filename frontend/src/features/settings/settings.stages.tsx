@@ -202,7 +202,7 @@ function stageColumns(of: ColumnsOf): DataTableColumn<Stage>[] {
               dense
               flat
             />
-            {reading(stage)}
+            <span className="stage-odds-reading">{reading(stage)}</span>
           </span>
           {stage.semantic === "open" && (
             <StageChanceLine stage={stage} chances={chances} />

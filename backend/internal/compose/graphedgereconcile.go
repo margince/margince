@@ -34,7 +34,9 @@ import (
 )
 
 // GraphEdgeReconcileArgs is the nightly pass's (empty) job payload.
-type GraphEdgeReconcileArgs struct{}
+type GraphEdgeReconcileArgs struct {
+	Pending bool `json:"pending,omitempty"`
+}
 
 // Kind is the River job kind for the interaction-projection reconcile.
 func (GraphEdgeReconcileArgs) Kind() string { return "graph_edge_reconcile" }
@@ -58,7 +60,10 @@ func newGraphEdgeReconcileWorker(pool *pgxpool.Pool, log *slog.Logger) *graphEdg
 // rebuilds nothing itself. Per workspace rather than globally, so one tenant's
 // failure leaves the others reconciled — and so no single transaction spans
 // the whole installation.
-func (w *graphEdgeReconcileWorker) Work(ctx context.Context, _ *river.Job[GraphEdgeReconcileArgs]) error {
+func (w *graphEdgeReconcileWorker) Work(ctx context.Context, job *river.Job[GraphEdgeReconcileArgs]) error {
+	if job.Args.Pending {
+		return jobs.FaultContext(ctx, runPendingPass(ctx, w.pool, w.drainWorkspace))
+	}
 	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.reconcileWorkspace))
 }
 
@@ -75,4 +80,15 @@ func (w *graphEdgeReconcileWorker) reconcileWorkspace(ctx context.Context, ws id
 	return database.WithWorkspaceTx(wsCtx, w.pool, func(tx pgx.Tx) error {
 		return search.RebuildEdges(wsCtx, tx)
 	})
+}
+
+func (w *graphEdgeReconcileWorker) drainWorkspace(ctx context.Context) (bool, error) {
+	ctx = principal.SystemActing(ctx, "system:graph_edge_reconcile")
+	more := false
+	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+		var err error
+		more, err = search.DrainPendingGraphTx(ctx, tx, 100)
+		return err
+	})
+	return more, err
 }

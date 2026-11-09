@@ -70,7 +70,7 @@ export function useReturnFocus(surface: RefObject<HTMLElement | null>): void {
     };
     element.addEventListener("focusin", note);
     element.addEventListener("click", note);
-    const wanted = leftFrom.get(entry);
+    let wanted = leftFrom.get(entry);
     leftFrom.delete(entry);
     const restore = (): boolean => {
       if (!wanted || !focusIsFree(element.ownerDocument)) return true;
@@ -81,10 +81,22 @@ export function useReturnFocus(surface: RefObject<HTMLElement | null>): void {
     const watcher = new MutationObserver(() => {
       if (restore()) watcher.disconnect();
     });
-    if (!restore())
-      watcher.observe(element, { childList: true, subtree: true });
+    const arrive = () => {
+      if (!restore())
+        watcher.observe(element, { childList: true, subtree: true });
+    };
+    arrive();
+    // A Suspense boundary can keep the surface mounted, and hidden, while the
+    // next screen shows. Back then returns to it without a new mount.
+    const back = () => {
+      if (historyEntryId() !== entry || !used) return;
+      wanted = used;
+      arrive();
+    };
+    globalThis.addEventListener("popstate", back);
     return () => {
       watcher.disconnect();
+      globalThis.removeEventListener("popstate", back);
       element.removeEventListener("focusin", note);
       element.removeEventListener("click", note);
       if (used) leftFrom.set(entry, used);

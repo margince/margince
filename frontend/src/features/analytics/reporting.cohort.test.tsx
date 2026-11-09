@@ -5,8 +5,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
 import { installFetchStub, StoryProviders } from "../../testing/story-utils";
+import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import { CohortTable } from "./reporting.cohort";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import type { ReportingChart } from "./reporting.model";
 import {
   reportingCatalogClient,

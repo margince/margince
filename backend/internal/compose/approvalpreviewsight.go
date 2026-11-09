@@ -6,16 +6,22 @@ package compose
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/finance"
+	"github.com/margince/margince/backend/internal/platform/approvalplan"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -24,23 +30,32 @@ import (
 type previewEffect func(context.Context) (context.Context, bool, error)
 
 func (r approvalPreviewReader) read(ctx context.Context, approval crmcontracts.Approval) (*crmcontracts.ApprovalPreview, error) {
-	return r.readAs(ctx, approval, approvals.EffectContext)
+	if approval.Status != crmcontracts.ApprovalStatusPending {
+		return nil, nil //nolint:nilnil // A plan no longer pending is read through its footprint.
+	}
+	preview, _, err := r.readAs(ctx, approval, approvals.EffectContext)
+	return preview, err
+}
+
+// footprint builds approval's plan as a pending read does and keeps only what
+// it touched. A writer stores it whatever the status now reads.
+func (r approvalPreviewReader) footprint(ctx context.Context, approval crmcontracts.Approval) (*approvalplan.Footprint, error) {
+	_, footprint, err := r.readAs(ctx, approval, approvals.EffectContext)
+	return footprint, err
 }
 
 // readAs is the one path every kind's preview takes. An agent's proposal is
 // built as the agent, whose retry runs it. Only a viewer who can open every
-// record it touches sees it, and with that viewer's field masks.
-func (r approvalPreviewReader) readAs(ctx context.Context, approval crmcontracts.Approval, effectOf previewEffect) (*crmcontracts.ApprovalPreview, error) {
-	if approval.Status != crmcontracts.ApprovalStatusPending {
-		return nil, nil //nolint:nilnil // Terminal decisions retain their recorded context.
-	}
+// record it touches sees it, and with that viewer's field masks. The
+// footprint is taken from the build, before any viewer's sight narrows it.
+func (r approvalPreviewReader) readAs(ctx context.Context, approval crmcontracts.Approval, effectOf previewEffect) (*crmcontracts.ApprovalPreview, *approvalplan.Footprint, error) {
 	effect, asAgent, err := effectOf(ctx)
 	if previewUnavailable(err) {
 		// An agent that can no longer call cannot spend the approval.
-		return &crmcontracts.ApprovalPreview{Version: 1, State: previewUnavailableState, Changes: []crmcontracts.ApprovalPreviewChange{}, ReviewerReason: previewReviewer(ctx, approval)}, nil
+		return &crmcontracts.ApprovalPreview{Version: 1, State: previewUnavailableState, Changes: []crmcontracts.ApprovalPreviewChange{}, ReviewerReason: previewReviewer(ctx, approval)}, nil, nil
 	}
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	touched := &previewTouched{}
 	builder := r
@@ -49,8 +64,12 @@ func (r approvalPreviewReader) readAs(ctx context.Context, approval crmcontracts
 		builder = builder.recording(touched)
 	}
 	preview, err := builder.buildPreview(effect, approval)
-	if err != nil || preview == nil {
-		return preview, err
+	if err != nil {
+		return nil, nil, err
+	}
+	footprint := planFootprint(approval, preview, touched, asAgent)
+	if preview == nil {
+		return nil, footprint, nil
 	}
 	if asAgent {
 		if preview.ReviewerReason != "" {
@@ -59,14 +78,82 @@ func (r approvalPreviewReader) readAs(ctx context.Context, approval crmcontracts
 		withholdConflictSummaries(preview)
 		open, err := r.viewerOpensPreview(ctx, approval, preview, touched)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if !open {
 			withholdPreview(preview)
-			return preview, nil
+			return preview, footprint, nil
 		}
 	}
-	return preview, maskForViewer(ctx, approval, preview, touched)
+	return preview, footprint, maskForViewer(ctx, approval, preview, touched)
+}
+
+// planFootprint keeps what the sight and mask checks read of a built plan. A
+// plan its build state withholds from every reader keeps none, and a kind
+// with no preview names only its target.
+func planFootprint(approval crmcontracts.Approval, preview *crmcontracts.ApprovalPreview, touched *previewTouched, asAgent bool) *approvalplan.Footprint {
+	if (approvalplan.PreviewRead{Preview: preview, BuiltAsAgent: asAgent}).PayloadWithheld() {
+		return nil
+	}
+	if preview == nil {
+		preview = &crmcontracts.ApprovalPreview{}
+	}
+	refs := previewReferences(approval, preview, touched)
+	objects := previewMaskObjects(approval, refs)
+	if preview.ImportRows != nil {
+		for i := range *preview.ImportRows {
+			objects = append(objects, (*preview.ImportRows)[i].Object)
+		}
+	}
+	slices.Sort(objects)
+	return &approvalplan.Footprint{Refs: refs.byType, Objects: slices.Compact(objects), Fields: previewFieldNames(preview), Files: previewFiles(preview)}
+}
+
+// viewerClears answers whether the caller opens every record a stored plan
+// touched and sees every field it named. Without a footprint only a kind no
+// preview covers clears, as its pending card showed its plan to every decider.
+func (r approvalPreviewReader) viewerClears(ctx context.Context, approval crmcontracts.Approval, footprint *approvalplan.Footprint) (bool, error) {
+	if footprint == nil {
+		return hasTypedProposalDisplay(approval.Kind), nil
+	}
+	viewer, ok := principal.Actor(ctx)
+	if !ok {
+		return false, apperrors.ErrPermissionDenied
+	}
+	writable, err := r.viewerWritesTarget(ctx, viewer, approval)
+	if err != nil {
+		return false, err
+	}
+	masked := maskedFieldsFor(viewer, approvalTargetType(approval), writable, footprint.Objects)
+	if slices.ContainsFunc(footprint.Fields, func(field string) bool { return slices.Contains(masked, field) }) {
+		return false, nil
+	}
+	open, err := r.viewerReadsEvery(ctx, footprint.Refs)
+	if err != nil || !open {
+		return false, err
+	}
+	return r.viewerSendsFiles(ctx, footprint.Files)
+}
+
+// viewerWritesTarget answers whether the viewer may still write the approval's
+// target. Only then does a mask conditioned on write authority lift, because a
+// reader who lost that authority after deciding must not see the value again.
+func (r approvalPreviewReader) viewerWritesTarget(ctx context.Context, viewer principal.Principal, approval crmcontracts.Approval) (bool, error) {
+	target := approvalTargetType(approval)
+	if target == "" || approval.TargetEntityId == nil {
+		return false, nil
+	}
+	if slices.Equal(auth.MaskedFields(viewer, target, true), auth.MaskedFields(viewer, target, false)) {
+		return true, nil
+	}
+	id := ids.UUID(*approval.TargetEntityId)
+	var writable map[ids.UUID]bool
+	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		writable, err = auth.WritableSubset(ctx, tx, target, []ids.UUID{id})
+		return err
+	})
+	return writable[id], err
 }
 
 // recording makes every record a label or a record read resolves count as
@@ -185,12 +272,17 @@ func (t *previewTouched) addDetails(details []crmcontracts.ApprovalPreviewDetail
 
 func (r approvalPreviewReader) viewerOpensPreview(ctx context.Context, approval crmcontracts.Approval, preview *crmcontracts.ApprovalPreview, touched *previewTouched) (bool, error) {
 	open, err := r.viewerReadsEvery(ctx, previewReferences(approval, preview, touched).byType)
-	if err != nil || !open || preview.Files == nil || len(*preview.Files) == 0 {
+	if err != nil || !open {
 		return open, err
 	}
-	files := make([]ids.UUID, 0, len(*preview.Files))
-	for _, file := range *preview.Files {
-		files = append(files, ids.UUID(file.Id))
+	return r.viewerSendsFiles(ctx, previewFiles(preview))
+}
+
+// viewerSendsFiles answers whether the caller could attach every file, by the
+// rule a send applies. A withheld or empty file counts as one they cannot open.
+func (r approvalPreviewReader) viewerSendsFiles(ctx context.Context, files []ids.UUID) (bool, error) {
+	if len(files) == 0 {
+		return true, nil
 	}
 	if _, err := r.activities.PreviewSendAttachments(ctx, files); err != nil {
 		if previewUnavailable(err) {
@@ -199,6 +291,17 @@ func (r approvalPreviewReader) viewerOpensPreview(ctx context.Context, approval 
 		return false, err
 	}
 	return true, nil
+}
+
+func previewFiles(preview *crmcontracts.ApprovalPreview) []ids.UUID {
+	if preview.Files == nil {
+		return nil
+	}
+	files := make([]ids.UUID, 0, len(*preview.Files))
+	for _, file := range *preview.Files {
+		files = append(files, ids.UUID(file.Id))
+	}
+	return files
 }
 
 // viewerReadsEvery answers whether the caller can open every record named. An

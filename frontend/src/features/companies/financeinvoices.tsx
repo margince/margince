@@ -11,7 +11,8 @@ import {
   useT,
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { useRecordZone } from "../../lib/recordzone";
+import { labelFor } from "../../lib/labelfor";
+import { useViewerZone } from "../../lib/viewerzone";
 
 type FinanceSummary = components["schemas"]["CompanyFinanceSummary"];
 type FinanceInvoice = components["schemas"]["FinanceInvoice"];
@@ -34,7 +35,7 @@ export function RecentInvoices({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const invoices = summary.recent_invoices ?? [];
   if (invoices.length === 0) {
     return null;
@@ -124,7 +125,7 @@ function InvoiceStatus({
         ? plural(daysLateBase(invoice.status), invoice.days_late, {
             days: formatNumber(invoice.days_late, locale),
           })
-        : t(STATUS_LABEL[invoice.status])}
+        : t(labelFor(STATUS_LABEL, invoice.status))}
     </Badge>
   );
 }

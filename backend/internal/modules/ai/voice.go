@@ -47,6 +47,9 @@ type VoiceStore struct {
 	// knownSpeakers recognises a quoted speaker inside prose so their words leave
 	// the source; nil knows no one. Wired by WithKnownSpeakers.
 	knownSpeakers KnownSpeakers
+	// sentMail reads the owner's own sent mail when they ask to learn from
+	// it; nil reads none. Wired by WithSentMail.
+	sentMail SentMailReader
 }
 
 // NewVoiceStore opens the voice store on a handle already bound to the
@@ -221,7 +224,7 @@ func ownerOnly(ctx context.Context, p VoiceProfile) error {
 	return nil
 }
 
-// CreateProfile opens the admitted human's one personal profile in the
+// CreateProfile opens the admitted user's one personal profile in the
 // collecting state. Team/workspace scopes remain latent storage capability;
 // the V1 wire cannot create or browse them.
 func (s *VoiceStore) CreateProfile(ctx context.Context, in CreateVoiceProfileInput) (VoiceProfile, error) {
@@ -229,7 +232,7 @@ func (s *VoiceStore) CreateProfile(ctx context.Context, in CreateVoiceProfileInp
 		return VoiceProfile{}, err
 	}
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.UserID.IsZero() || actor.Type != principal.PrincipalHuman {
+	if !ok || actor.UserID.IsZero() || !actor.HumanOrItsAgent() {
 		return VoiceProfile{}, apperrors.ErrPermissionDenied
 	}
 	var p VoiceProfile

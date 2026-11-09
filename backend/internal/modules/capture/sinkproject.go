@@ -28,6 +28,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -120,12 +121,13 @@ func (s *Sink) attributeProject(ctx context.Context, rec connector.NormalizedRec
 		// filed, so the ladder has nothing left to decide and
 		// linkActivityToProject goes straight to the repair below.
 		var projectID ids.UUID
+		var rung string
 		if !filed {
-			if projectID, err = s.decideProject(ctx, tx, rec, activityID); err != nil || projectID.IsZero() {
+			if projectID, rung, err = s.decideProject(ctx, tx, rec, activityID); err != nil || projectID.IsZero() {
 				return err
 			}
 		}
-		return linkActivityToProject(ctx, tx, activityID, projectID, s.stampProject)
+		return linkActivityToProject(ctx, tx, activityID, projectFiling{project: projectID, rung: rung}, s.stampProject)
 	})
 	if err != nil {
 		s.logProjectAttributionFault(ctx, rec, err)
@@ -225,29 +227,32 @@ func (s *Sink) logProjectAttributionFault(ctx context.Context, rec connector.Nor
 // message, and a system that guesses when no key was written asks a question
 // nobody can answer better than the sender could have by typing `[ERP-27]`.
 // Every rung here follows a link a human already made; none invents one.
-func (s *Sink) decideProject(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, activityID ids.ActivityID) (ids.UUID, error) {
+func (s *Sink) decideProject(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, activityID ids.ActivityID) (ids.UUID, string, error) {
 	fields, isActivity := rec.Fields.(ActivityFields)
 	if !isActivity {
-		return ids.Nil, nil
+		return ids.Nil, "", nil
 	}
 	grant, err := readableProjectScope(ctx)
 	if err != nil || grant.deniedOutright {
 		// No project grant at all: this principal may not learn a project id,
 		// let alone have one copied onto their timeline. Not a fault — a role
 		// that never sees projects is a legitimate role.
-		return ids.Nil, err
+		return ids.Nil, "", err
 	}
-	for _, rung := range []func() (ids.UUID, error){
-		func() (ids.UUID, error) { return threadProject(ctx, tx, rec, fields, activityID) },
-		func() (ids.UUID, error) { return dealProject(ctx, tx, activityID) },
-		func() (ids.UUID, error) { return s.subjectProject(ctx, tx, fields) },
+	for _, rung := range []struct {
+		name   string
+		decide func() (ids.UUID, error)
+	}{
+		{provenance.ProjectRungThread, func() (ids.UUID, error) { return threadProject(ctx, tx, rec, fields, activityID) }},
+		{provenance.ProjectRungDeal, func() (ids.UUID, error) { return dealProject(ctx, tx, activityID) }},
+		{provenance.ProjectRungSubject, func() (ids.UUID, error) { return s.subjectProject(ctx, tx, fields) }},
 	} {
-		projectID, err := rung()
+		projectID, err := rung.decide()
 		if err != nil || !projectID.IsZero() {
-			return projectID, err
+			return projectID, rung.name, err
 		}
 	}
-	return ids.Nil, nil
+	return ids.Nil, "", nil
 }
 
 // subjectProject asks the key matcher about the subject's bracketed keys. A

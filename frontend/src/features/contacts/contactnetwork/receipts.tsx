@@ -13,7 +13,7 @@ import { relayProvenance } from "../../../design-system/provenanceof";
 import { ProvenanceTag, type RelaySend } from "../../../design-system/trust";
 import { activityDay } from "../../../format/activitywhen";
 import { useLocale, useT } from "../../../i18n";
-import { useRecordZone } from "../../../lib/recordzone";
+import { useViewerZone } from "../../../lib/viewerzone";
 
 type Receipt = components["schemas"]["ContactGraphReceipt"];
 
@@ -45,7 +45,7 @@ export function ReceiptList({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   return (
     <ul className="pn-receipts">
       {receipts.map((r) => (
@@ -57,7 +57,7 @@ export function ReceiptList({
                 r.occurred_at,
                 r.occurred_precision,
                 locale,
-                recordZone,
+                readerZone,
               )}
               onOpen={
                 onOpenEmail ? () => onOpenEmail(r.activity_id) : undefined
@@ -70,7 +70,7 @@ export function ReceiptList({
                 r.occurred_at,
                 r.occurred_precision,
                 locale,
-                recordZone,
+                readerZone,
               )}
             </>
           )}

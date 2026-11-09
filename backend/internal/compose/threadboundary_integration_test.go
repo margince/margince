@@ -74,16 +74,19 @@ func TestABareReplyPrefixDrawsNoBoundary(t *testing.T) {
 	}
 }
 
-// The sender's own header names the parent. A message the seat never held cannot split
-// or steer the reply, which keeps the root its header gives it.
+// The sender's own header names the parent. A message the seat never held cannot
+// draw the reply into its conversation, or let the reply move it.
 func TestAParentTheSeatDoesNotHoldDecidesNothing(t *testing.T) {
 	e := integration.Setup(t)
 	captureThreadMail(t, e, e.Rep2, subjectMail("Angebot", seatAddress(t, e, e.Rep2), "foreign@counterparty.example", "Mon, 01 Jun 2026 08:00:00 +0000", ""))
 	captureThreadMail(t, e, e.Rep1, subjectMail("Re: Rechnung März", seatAddress(t, e, e.Rep1), "claimed@counterparty.example", "Tue, 02 Jun 2026 08:00:00 +0000",
 		"foreign@counterparty.example", "foreign@counterparty.example"))
 
-	if got := threadKeyOfMessage(t, e, "claimed@counterparty.example"); got != "foreign@counterparty.example" {
-		t.Errorf("a parent only another seat holds moved the reply to %q, want the root its header names", got)
+	if got := threadKeyOfMessage(t, e, "claimed@counterparty.example"); got == "foreign@counterparty.example" {
+		t.Errorf("a parent only another seat holds drew the reply into its conversation %q", got)
+	}
+	if got := threadKeyOfMessage(t, e, "foreign@counterparty.example"); got != "foreign@counterparty.example" {
+		t.Errorf("the other seat's conversation moved to %q", got)
 	}
 }
 

@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -29,13 +29,14 @@ export type AnalyticsSelection = {
  * asking the question itself would be a second answer, and the two would
  * disagree the first time somebody's grants changed.
  */
+export const analyticsContextOptions = queryOptions({
+  queryKey: ANALYTICS_CONTEXT_KEY,
+  queryFn: async ({ signal }) =>
+    unwrap(await api.GET("/analytics/context", { signal })),
+});
+
 export function useAnalyticsContext() {
-  return useQuery({
-    queryKey: ANALYTICS_CONTEXT_KEY,
-    queryFn: async () => {
-      return unwrap(await api.GET("/analytics/context", {}));
-    },
-  });
+  return useQuery(analyticsContextOptions);
 }
 
 /**
@@ -44,28 +45,32 @@ export function useAnalyticsContext() {
  * The scope is part of every query key, so changing it refetches rather than
  * showing the previous population's numbers under the new label.
  */
-export function useAnalyticsSelection(context: AnalyticsContext | undefined) {
-  const [params] = useUrlParams();
-  const named = params.get("scope");
+export function resolveAnalyticsSelection(
+  context: AnalyticsContext | undefined,
+  named: string | undefined,
+) {
   const chosen = context?.allowed_scopes.find(
     (scope) => scopeKey(scope) === named,
   );
-  // A link naming a population this reader may not choose is refused aloud.
-  // Answering it with their default would put other figures under its name.
   const refusedScope = !!context && !!named && !chosen;
+  const selection: AnalyticsSelection | null = context
+    ? { scope: chosen ?? context.default_scope }
+    : null;
+  return { selection, refusedScope };
+}
 
-  const selection = useMemo<AnalyticsSelection | null>(() => {
-    if (!context) {
-      return null;
-    }
-    return { scope: chosen ?? context.default_scope };
-  }, [context, chosen]);
-
-  const selectScope = useCallback((scope: AnalyticsScope) => {
-    replaceDial("scope", scopeKey(scope));
-  }, []);
-
-  return { selection, selectScope, refusedScope };
+export function useAnalyticsSelection(context: AnalyticsContext | undefined) {
+  const [params] = useUrlParams();
+  const named = params.get("scope");
+  const answer = useMemo(
+    () => resolveAnalyticsSelection(context, named),
+    [context, named],
+  );
+  const selectScope = useCallback(
+    (scope: AnalyticsScope) => replaceDial("scope", scopeKey(scope)),
+    [],
+  );
+  return { ...answer, selectScope };
 }
 
 /**

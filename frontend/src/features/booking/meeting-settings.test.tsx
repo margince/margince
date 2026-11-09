@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import { focusManager } from "@tanstack/react-query";
 import {
   cleanup,
   render,
@@ -25,7 +26,7 @@ import {
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
-import { MeetingSettings } from "./meeting-settings";
+import { MeetingSettings, type MeetingsPart } from "./meeting-settings";
 
 type Profile = components["schemas"]["SchedulingProfile"];
 type User = ReturnType<typeof userEvent.setup>;
@@ -42,7 +43,11 @@ const calendars = [
 
 // A server that keeps what it is sent, so every card's GET-latest-then-PUT reads
 // what the card before it wrote. A test can change it underneath.
-function mount(profile: Partial<Profile> = {}, overrides: RouteMap = {}) {
+function mount(
+  profile: Partial<Profile> = {},
+  overrides: RouteMap = {},
+  part: MeetingsPart = "links",
+) {
   const start: Profile = {
     ...bookingProfile,
     provider: "",
@@ -75,7 +80,7 @@ function mount(profile: Partial<Profile> = {}, overrides: RouteMap = {}) {
     <StoryProviders>
       <ToastProvider>
         <SavePageProvider>
-          <MeetingSettings />
+          <MeetingSettings part={part} />
           <PageSaveBar />
         </SavePageProvider>
         <ToastRegion />
@@ -274,6 +279,27 @@ it("states a read-only calendar's saved choices and reconnects it back to Meetin
   ]);
 });
 
+it("dates the calendar's sync from its last success, not its last attempt", async () => {
+  const day = 24 * 60 * 60 * 1000;
+  mount(
+    { provider: "gcal" },
+    {
+      "GET /connectors": () =>
+        jsonResponse({
+          data: [
+            {
+              ...bookingConnection,
+              last_synced_at: new Date(Date.now()).toISOString(),
+              last_success_at: new Date(Date.now() - 3 * day).toISOString(),
+            },
+          ],
+        }),
+    },
+  );
+  expect(await screen.findByText("Synced 3 d ago")).toBeTruthy();
+  expect(screen.queryByText("Synced just now")).toBe(null);
+});
+
 it("explains a missing saved calendar and saves only once another is chosen", async () => {
   const user = userEvent.setup();
   const server = mount({ provider: "gcal", calendar_id: "deleted" });
@@ -306,19 +332,35 @@ it("says bookings are live with nothing landing in an expired calendar, and paus
   ).toBeTruthy();
   expect(screen.getByText(/The connection has expired/)).toBeTruthy();
   expect(screen.getAllByText("Needs attention").length).toBeGreaterThan(0);
-  expect(
-    await screen.findByText(
-      /You can save this while the calendar is being reconnected/,
-    ),
-  ).toBeTruthy();
+  // The link says what its guests see: the page is paused.
+  const links = screen.getByRole("region", { name: "Booking links" });
+  expect(within(links).getAllByText("Paused").length).toBeGreaterThan(0);
   await user.click(screen.getByRole("button", { name: "Pause bookings" }));
   await waitFor(() => expect(server.profileWrites).toHaveLength(1));
   expect(server.profileWrites[0]).toMatchObject({ enabled: false });
 });
 
+it("keeps the booking rules editable while the calendar is reconnected", async () => {
+  mount(
+    { provider: "gcal", enabled: true },
+    {
+      "GET /connectors": () =>
+        jsonResponse({
+          data: [{ ...bookingConnection, status: "reauth_required" }],
+        }),
+    },
+    "availability",
+  );
+  expect(
+    await screen.findByText(
+      /You can save this while the calendar is being reconnected/,
+    ),
+  ).toBeTruthy();
+});
+
 it("writes only the changed rule over another tab's latest profile", async () => {
   const user = userEvent.setup();
-  const server = mount({ provider: "gcal", enabled: true });
+  const server = mount({ provider: "gcal", enabled: true }, {}, "availability");
   await pick(user, await ruleName("Break between meetings"), "15 minutes");
   server.profile = {
     ...server.profile,
@@ -342,6 +384,7 @@ it("saves a paused page's rules with no calendar connected", async () => {
   const server = mount(
     {},
     { "GET /connectors": () => jsonResponse({ data: [] }) },
+    "availability",
   );
   await pick(user, await ruleName("Minimum notice"), "1 day");
   await user.click(await enabledSave());
@@ -361,6 +404,7 @@ it("saves never-chosen hours as offered, without a change first", async () => {
       "GET /me/working-hours": () =>
         jsonResponse({ ...bookingHours, chosen: false }),
     },
+    "availability",
   );
   await user.click(await enabledSave());
   await waitFor(() => expect(server.hourWrites).toHaveLength(1));
@@ -371,12 +415,67 @@ it("saves never-chosen hours as offered, without a change first", async () => {
   expect(server.profileWrites).toEqual([]);
 });
 
+async function barDiscard(user: User) {
+  await enabledSave();
+  const bar = saveBar();
+  if (bar === null) throw new Error("the page has no save bar");
+  await user.click(within(bar).getByRole("button", { name: "Discard" }));
+}
+
+it("discards the only connected calendar offered to a profile never saved", async () => {
+  const user = userEvent.setup();
+  const server = mount();
+  await barDiscard(user);
+  await waitFor(() => expect(saveBar()).toBeNull());
+  expect(server.profileWrites).toEqual([]);
+});
+
+it("offers the next sole calendar after the one discarded is swapped for it", async () => {
+  const user = userEvent.setup();
+  let connected = bookingConnection;
+  const server = mount(
+    {},
+    { "GET /connectors": () => jsonResponse({ data: [connected] }) },
+  );
+  await barDiscard(user);
+  await waitFor(() => expect(saveBar()).toBeNull());
+
+  connected = {
+    ...bookingConnection,
+    id: "outlook",
+    provider: "graphcal",
+    scopes: ["Calendars.ReadWrite"],
+  };
+  // The reader comes back to the tab, and the connections are read again.
+  focusManager.setFocused(false);
+  focusManager.setFocused(true);
+  focusManager.setFocused(undefined);
+  await user.click(await enabledSave());
+  await waitFor(() => expect(server.profileWrites).toHaveLength(1));
+  expect(server.profileWrites[0]).toMatchObject({ provider: "graphcal" });
+});
+
+it("discards never-chosen hours offered through the bar", async () => {
+  const user = userEvent.setup();
+  const server = mount(
+    { provider: "gcal" },
+    {
+      "GET /me/working-hours": () =>
+        jsonResponse({ ...bookingHours, chosen: false }),
+    },
+    "availability",
+  );
+  await barDiscard(user);
+  await waitFor(() => expect(saveBar()).toBeNull());
+  expect(server.hourWrites).toEqual([]);
+});
+
 it.each([
   ["90", 90],
   ["10080", 10080],
 ])("saves an Other notice of %s minutes", async (typed, minutes) => {
   const user = userEvent.setup();
-  const server = mount({ provider: "gcal" });
+  const server = mount({ provider: "gcal" }, {}, "availability");
   await pick(user, await ruleName("Minimum notice"), "Other");
   const field = screen.getByRole("spinbutton", { name: "Minutes" });
   await user.clear(field);
@@ -390,7 +489,7 @@ it.each(["10081", "1.5", ""])(
   "refuses an Other notice of %j minutes before anything is sent",
   async (typed) => {
     const user = userEvent.setup();
-    const server = mount({ provider: "gcal" });
+    const server = mount({ provider: "gcal" }, {}, "availability");
     await pick(user, await ruleName("Minimum notice"), "Other");
     const field = screen.getByRole("spinbutton", { name: "Minutes" });
     await user.clear(field);
@@ -405,7 +504,11 @@ it.each(["10081", "1.5", ""])(
 
 it("keeps an off-preset value as its own choice and leaves it alone on other saves", async () => {
   const user = userEvent.setup();
-  const server = mount({ provider: "gcal", notice_minutes: 50 });
+  const server = mount(
+    { provider: "gcal", notice_minutes: 50 },
+    {},
+    "availability",
+  );
   const notice = await screen.findByRole("combobox", {
     name: "Minimum notice",
   });
@@ -421,7 +524,7 @@ it("keeps an off-preset value as its own choice and leaves it alone on other sav
 
 it("saves hours and rules from one Save, with the days in week order", async () => {
   const user = userEvent.setup();
-  const server = mount({ provider: "gcal" });
+  const server = mount({ provider: "gcal" }, {}, "availability");
   const monday = await screen.findByRole("checkbox", { name: "Monday" });
   // Monday re-ticked would land after Friday in a naive draft.
   await user.click(monday);
@@ -445,6 +548,7 @@ it("keeps hours the server saved when the rules write after them fails", async (
       "PUT /scheduling/profile": () =>
         jsonResponse({ title: "Unavailable", status: 503 }, 503),
     },
+    "availability",
   );
   const saturday = await screen.findByRole("checkbox", { name: "Saturday" });
   await user.click(saturday);
@@ -461,22 +565,6 @@ it("keeps hours the server saved when the rules write after them fails", async (
   expect(server.hourWrites).toHaveLength(1);
 });
 
-it("keeps an availability draft while bookings are switched on and off", async () => {
-  const user = userEvent.setup();
-  mount({ provider: "gcal" });
-  const saturday = await screen.findByRole("checkbox", { name: "Saturday" });
-  await user.click(saturday);
-  const accept = screen.getByRole("switch", { name: "Accept bookings" });
-  await waitFor(() => expect(accept).toHaveProperty("disabled", false));
-  await user.click(accept);
-  await waitFor(() => expect(accept.getAttribute("aria-checked")).toBe("true"));
-  await user.click(accept);
-  await waitFor(() =>
-    expect(accept.getAttribute("aria-checked")).toBe("false"),
-  );
-  expect(saturday).toHaveProperty("checked", true);
-});
-
 it("orders the cards and copies and previews the booking link from its row", async () => {
   const user = userEvent.setup();
   const copy = stubClipboard("accepts");
@@ -485,21 +573,17 @@ it("orders the cards and copies and previews the booking link from its row", asy
   const headings = screen
     .getAllByRole("heading")
     .map((heading) => heading.textContent);
-  const order = [
-    "Booking links",
-    "Calendar",
-    "When people can book",
-    "What guests see",
-  ].map((title) => headings.indexOf(title));
+  const order = ["Booking links", "Calendar"].map((title) =>
+    headings.indexOf(title),
+  );
   expect(order).toEqual([...order].sort((a, b) => a - b));
   expect(order).not.toContain(-1);
   expect(headings).not.toContain("Connect a calendar to take bookings");
   expect(screen.getAllByText("Google Meet").length).toBeGreaterThan(0);
   await user.click(screen.getByRole("button", { name: "Copy link" }));
   expect(copy.written).toEqual([bookingProfile.public_url]);
-  await user.click(
-    screen.getAllByRole("button", { name: "Preview public page" })[0],
-  );
+  await user.click(screen.getByRole("button", { name: /^More actions for / }));
+  await user.click(screen.getByRole("button", { name: "Preview public page" }));
   expect(window.location.hash).toBe("#/book/preview");
 });
 
@@ -585,7 +669,7 @@ it("leads with connecting a calendar when none is connected, and connects back t
 
 it("reads the company and the host's name from where they are kept", async () => {
   const user = userEvent.setup();
-  const server = mount({ logo_url: "" });
+  const server = mount({ logo_url: "" }, {}, "guests");
   expect(await screen.findByText("Company name and logo")).toBeTruthy();
   expect(
     screen.getByText(
@@ -604,7 +688,7 @@ it("reads the company and the host's name from where they are kept", async () =>
 });
 
 it("says the booking page has no company to show rather than leaving it blank", async () => {
-  mount({ company_name: "", logo_url: "" });
+  mount({ company_name: "", logo_url: "" }, {}, "guests");
   expect(
     await screen.findByText(
       "Not set in the company profile yet, so guests see your name only.",
@@ -614,7 +698,11 @@ it("says the booking page has no company to show rather than leaving it blank", 
 });
 
 it("names the legal entity the host works for and who assigns it", async () => {
-  mount({ company_name: "Wien", logo_url: "/v1/public/booking/company-logo" });
+  mount(
+    { company_name: "Wien", logo_url: "/v1/public/booking/company-logo" },
+    {},
+    "guests",
+  );
   expect(
     await screen.findByText("Wien. An admin assigns the company you work for."),
   ).toBeTruthy();
@@ -633,6 +721,7 @@ it("turns the reminder email on only with a mailbox to send it from", async () =
           ],
         }),
     },
+    "guests",
   );
   const reminder = await screen.findByRole("switch", {
     name: "Reminder email",
@@ -655,6 +744,7 @@ it("gives a member without the booking grant their hours alone", async () => {
         return jsonResponse(bookingProfile);
       },
     },
+    "availability",
   );
   expect(
     await screen.findByText(

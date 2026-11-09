@@ -54,13 +54,15 @@ const later = [
     id: "u1",
     category: "upcoming",
     title: "Prepare the renewal offer",
-    due_at: "2026-09-04T09:00:00Z",
+    due_at: "2026-09-03T09:00:00Z",
+    due_group: "tomorrow",
   }),
   row({
     id: "u2",
     category: "upcoming",
     title: "Check in after the pilot",
     due_at: "2026-09-09T09:00:00Z",
+    due_group: "later",
   }),
 ];
 
@@ -106,6 +108,8 @@ export const Opened: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByText(en["worklist.filter.upcoming"]));
     await canvas.findByText("Prepare the renewal offer");
+    await canvas.findByText(en["worklist.dueGroup.tomorrow"]);
+    await canvas.findByText(en["worklist.dueGroup.later"]);
     await canvas.findByText(en["worklist.upcoming.end"]);
   },
 };

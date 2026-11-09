@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { DateFormatsProvider } from "../../app/dateformats";
 import { defaultAgentAllowances } from "../../testing/agentallowances.fixtures";
 import { defaultOperations } from "../../testing/operationsettings.fixtures";
@@ -11,6 +11,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
+  visibleDialog,
 } from "../../testing/story-utils";
 import { InstallationSettingsCard } from "./installation-settings";
 
@@ -30,7 +31,7 @@ const SETTINGS = {
   oauth_access_token_ttl_minutes: 43_200,
   operations: defaultOperations,
   agent_allowances: defaultAgentAllowances,
-  forecast_forward_measure: "commit_evidence",
+  forecast_forward_measure: "likely",
   timezone: "Europe/Berlin",
   base_currency: "EUR",
   date_format: "dmy",
@@ -41,6 +42,7 @@ const SETTINGS = {
   call_zalo: true,
   individual_performance: true,
   forecast_self_correcting: true,
+  forecast_likely_threshold: 90,
 };
 
 const RATE_SHEET_LOCK = {
@@ -82,7 +84,10 @@ function story(
 // is also what puts focus on that row's field.
 async function openFrom(canvasElement: HTMLElement, fact: RegExp) {
   const canvas = within(canvasElement);
-  await userEvent.click(await canvas.findByRole("button", { name: fact }));
+  const trigger = await canvas.findByRole("button", { name: fact });
+  await waitFor(() => expect(trigger).toBeEnabled());
+  await userEvent.click(trigger);
+  await visibleDialog();
 }
 
 const MANAGER = { installation_settings: ["read", "update"] } as const;
@@ -105,7 +110,7 @@ export const Editable: Story = { render: story(SETTINGS, MANAGER) };
 export const ProfileDialog: Story = {
   render: story(SETTINGS, MANAGER),
   play: async ({ canvasElement }) => {
-    await openFrom(canvasElement, /edit reporting timezone/i);
+    await openFrom(canvasElement, /edit company time zone/i);
   },
 };
 

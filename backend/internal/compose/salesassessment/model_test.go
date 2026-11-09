@@ -91,9 +91,41 @@ func TestParseKeepsOnlyADecisionOnACandidateWithItsOwner(t *testing.T) {
 	}
 }
 
-func TestDigitRunsReadSeparatedNumbersAsOne(t *testing.T) {
-	got := strings.Join(digitRuns("€1,200.5 on 2026-11-03 and 370k"), " ")
-	if got != "12005 2026 11 03 370" {
-		t.Fatalf("digit runs %q", got)
+func TestQuantitiesRequireEquivalentValuesRatherThanDigitPrefixes(t *testing.T) {
+	cells := map[string]CellIn{"money": {Value: "216000 EUR", Unit: "EUR"}}
+	for text, want := range map[string]bool{"€216k": true, "216,000 EUR": true, "216.000 EUR": true, "€2.16m": false, "216 deals": false, "216000 percent": false} {
+		if got := numbersCarried(text, []string{"money"}, cells); got != want {
+			t.Errorf("%q: %v, want %v", text, got, want)
+		}
+	}
+}
+
+func TestParagraphsPreserveTheReadingAndBoundTheLegacyProjection(t *testing.T) {
+	in := assessmentInput()
+	in.Actions = []ActionIn{{ID: "review-open", Cell: "metric:open_pipeline"}}
+	sentence := `{"text":"The open pipeline of 370000 EUR is the starting point for the review.","kind":"observation","cells":["metric:open_pipeline"]}`
+	reply := `{"paragraphs":[[` + strings.Join([]string{sentence, sentence, sentence, sentence}, ",") + `],[` + strings.Join([]string{sentence, sentence, sentence, sentence}, ",") + `]],"action_ids":["review-open"]}`
+	got, err := Parse(reply, in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Paragraphs) != 2 || len(got.Paragraphs[1]) != 4 || len(got.Sentences) != 6 || len(got.ActionIDs) != 1 {
+		t.Fatalf("paragraphs and legacy projection: %+v", got)
+	}
+}
+
+func TestParagraphsCannotKeepAnUnsupportedClaimOrInventAnAction(t *testing.T) {
+	in := assessmentInput()
+	for _, reply := range []string{
+		`{"paragraphs":[[{"text":"The pipeline is 42 EUR.","cells":["metric:open_pipeline"]}]]}`,
+		`{"paragraphs":[[{"text":"The pipeline is 370000 EUR.","cells":["metric:open_pipeline"]}]],"action_ids":["send-email"]}`,
+	} {
+		if _, err := Parse(reply, in); err == nil {
+			t.Fatalf("unsupported interpretation was kept: %s", reply)
+		}
+	}
+	in.Cells[1].Coverage = "failed"
+	if _, err := Parse(`{"paragraphs":[[{"text":"The pipeline is 370000 EUR.","cells":["metric:open_pipeline"]}]]}`, in); err == nil {
+		t.Fatal("failed reading supported a claim")
 	}
 }

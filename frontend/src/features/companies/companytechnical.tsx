@@ -11,7 +11,7 @@ import { SurfaceState } from "../../design-system/surfacestate";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { throwProblem, unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { factsKey } from "./companyfactspanel";
 import { derivedSource } from "./evidencesource";
 
@@ -175,14 +175,14 @@ function TechnicalSections({
 function TechnicalRow({ fact }: Readonly<{ fact: CompanyFact }>): ReactNode {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   return (
     <div className="co-field">
       <span className="t-label">{t(technicalFieldLabel(fact.field))}</span>
       <div>
         <EvidenceMark
           value={fact.value}
-          source={derivedSource(fact, locale, recordZone)}
+          source={derivedSource(fact, locale, readerZone)}
         />
       </div>
     </div>

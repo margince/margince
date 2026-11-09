@@ -6,6 +6,7 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { ANSWER } from "./analytics.questions.testkit";
+import { ChartPanel } from "./reporting.chartpanel";
 import { ReportingCharts } from "./reporting.charts";
 import {
   reportingCatalogClient,
@@ -14,6 +15,7 @@ import {
 
 const meta: Meta = {
   title: "Records/Reports/Analytics/Graph layout",
+  subcomponents: { ChartPanel },
   parameters: { layout: "padded" },
 };
 export default meta;

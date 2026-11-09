@@ -17,7 +17,6 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { AutonomyDot } from "../../design-system/trust";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { deferralDetail } from "../../lib/deferral-detail";
@@ -25,10 +24,12 @@ import { throwProblem, unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { factsKey } from "./companyfactspanel";
 import "./companydeepread.css";
+import { labelFor } from "../../lib/labelfor";
 import {
   type ConfiguredStopReason,
   stopIsConfigured,
 } from "../../lib/sitereadkind";
+import { useViewerZone } from "../../lib/viewerzone";
 
 type SiteReadReport = components["schemas"]["SiteReadReport"];
 
@@ -105,7 +106,7 @@ function ScanSteps({ report }: Readonly<{ report: SiteReadReport }>) {
       {SCAN_STAGES.map((stage) => (
         <li key={stage} className={`deepread-step t-sub is-${states[stage]}`}>
           <span className="deepread-step-mark" aria-hidden="true" />
-          {t(SCAN_STAGE_LABELS[stage])}
+          {t(labelFor(SCAN_STAGE_LABELS, stage))}
           {/* The state in words as well as in the mark: three tinted circles
               are three tinted circles to a reader who cannot tell them
               apart. */}
@@ -166,14 +167,15 @@ function statusLabelOf(report: SiteReadReport): MessageKey {
   }
 
   if (report.status !== "partial" || !report.stopped_reason) {
-    return SITE_READ_STATUS_LABELS[report.status];
+    return labelFor(SITE_READ_STATUS_LABELS, report.status);
   }
   return stopIsConfigured(report.stopped_reason)
-    ? SITE_READ_CAPPED_LABELS[report.stopped_reason]
+    ? labelFor(SITE_READ_CAPPED_LABELS, report.stopped_reason)
     : SITE_READ_STATUS_LABELS[report.status];
 }
 
 function SiteReadDeferral({ report }: Readonly<{ report: SiteReadReport }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   if (report.status !== "deferred") {
@@ -186,7 +188,7 @@ function SiteReadDeferral({ report }: Readonly<{ report: SiteReadReport }>) {
         <>
           {" "}
           {t("deepread.resumesAt", {
-            when: formatDateTime(report.next_attempt_at, locale, viewerZone()),
+            when: formatDateTime(report.next_attempt_at, locale, readerZone),
           })}
         </>
       )}

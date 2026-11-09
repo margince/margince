@@ -80,7 +80,7 @@ export function ContactActions({
   refusedReasonId?: string;
 }>): ReactNode {
   const t = useT();
-  const ownGate = useActivityGate();
+  const ownGate = useActivityGate(view.contact);
   const gate = activity ?? ownGate;
   // An archived contact takes no activity either, and the page's one sentence
   // says so for every verb here.
@@ -187,6 +187,11 @@ export function ContactActions({
           }
         />
       </OverflowMenu>
+      {!activity && !archived && gate.refusalKey && (
+        <p id={gate.sentenceId} className="t-caption">
+          {t(gate.refusalKey)}
+        </p>
+      )}
     </>
   );
 }

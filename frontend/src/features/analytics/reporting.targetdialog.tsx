@@ -23,6 +23,7 @@ import { useLocale, useT } from "../../i18n";
 import { fiscalQuarter, opensFiscalQuarter } from "../../lib/fiscalquarter";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { throwProblem } from "../../lib/problem";
+import { REPORTING_EVALUATION_KEY } from "../../lib/reportingfigures";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { AnalyticsScopePicker } from "./analytics.scope";
 import type { ReportingMetricID } from "./reporting.model";
@@ -102,7 +103,7 @@ export function ReportingTargetDialog({
     },
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ["reporting-targets"] });
-      await client.invalidateQueries({ queryKey: ["reporting-evaluation"] });
+      await client.invalidateQueries({ queryKey: REPORTING_EVALUATION_KEY });
       await client.invalidateQueries({ queryKey: ["reporting-live"] });
       await client.invalidateQueries({ queryKey: ["reporting-target"] });
       onClose();

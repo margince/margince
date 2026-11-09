@@ -17,6 +17,7 @@ import { formatNumber } from "../../format/format";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
 import { useCanWrite } from "../../lib/capability";
+import { labelFor } from "../../lib/labelfor";
 import { isOption } from "../../lib/options";
 import {
   MEANING_LABELS,
@@ -62,7 +63,7 @@ function stageColumns({
 }>): DataTableColumn<PartnerStage>[] {
   const meaningOptions = PARTNER_STAGE_MEANINGS.map((meaning) => ({
     value: meaning,
-    label: t(MEANING_LABELS[meaning]),
+    label: t(labelFor(MEANING_LABELS, meaning)),
   }));
   return [
     {

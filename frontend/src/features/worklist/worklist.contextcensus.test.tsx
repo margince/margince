@@ -96,6 +96,7 @@ const CONTEXT = {
   dsr: queue("dsr"),
   notice_case: record("notice_case", "contact"),
   capture_health: queue("capture_health"),
+  booking_health: queue("booking_health"),
   domain_question: {
     item: row({
       source: "domain_question",

@@ -9,6 +9,7 @@ import { Field, Textarea } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { StageLadder } from "../../design-system/stageladder";
 import { useT } from "../../i18n";
+import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import {
   PHASE_LABEL,
@@ -56,7 +57,7 @@ export function PhaseStepper({
       variant={variant}
       steps={PROJECT_PHASES.map((step, rung) => ({
         key: step,
-        label: t(PHASE_LABEL[step]),
+        label: t(labelFor(PHASE_LABEL, step)),
         done: rung < here,
         current: step === phase,
         terminal: step === "closed",
@@ -136,7 +137,9 @@ export function AdvanceProjectModal({
       open={to !== null}
       onClose={onClose}
       title={
-        to ? t("project.advance.title", { phase: t(PHASE_LABEL[to]) }) : ""
+        to
+          ? t("project.advance.title", { phase: t(labelFor(PHASE_LABEL, to)) })
+          : ""
       }
       confirmLabel={
         closing ? t("project.advance.close") : t("project.advance.confirm")

@@ -44,6 +44,7 @@ const draftInputClaims = 6
 // on. It is a projection of the caller's own 360 — nothing here re-queries, so
 // anything absent is absent because that caller may not see it.
 type Input struct {
+	Subject string `json:"subject,omitempty"`
 	// Intent is the caller's own steering ("shorter", "ask for Tuesday"). The
 	// one field they typed, and the one field not fenced.
 	Intent string `json:"intent,omitempty"`

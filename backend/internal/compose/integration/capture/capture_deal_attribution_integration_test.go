@@ -529,7 +529,9 @@ func secondSentMailbox(t *testing.T, e *integration.SearchEnv, user ids.UUID) fu
 	t.Helper()
 	seedCaptureRoleFor(t, e, user)
 	conn := &mailBatchConnector{accountLabel: secondSeatAddress}
-	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{Now: func() time.Time { return captureNow }})
+	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{
+		Now: func() time.Time { return captureNow }, DealTopicBrain: &topicModel{},
+	})
 	registry.Register(conn)
 	connID, err := registry.Connect(humanWithScopes(e, user, []principal.Scope{principal.ScopeRead}), "gmail", connector.Auth("refresh"))
 	if err != nil {
@@ -622,11 +624,12 @@ func (r repairer) run(t *testing.T) int {
 	return out.Changed
 }
 
-// Mail captured before its deal existed is filed by the repair where capture
-// would file it today. The preview says what the run will do. The run links
-// only where one deal fits, leaves a human's link alone and asks nobody. A
-// second run changes nothing.
-func TestTheDealRepairFilesOldMailOnceAndLeavesHumansAlone(t *testing.T) {
+// Mail captured before its deal existed waits for the refile pass when the
+// rule only suggests its deal. The repair calls no model, so it files nothing
+// on a suggestion. The preview says what the run will do. The run leaves a
+// human's link alone and asks nobody. The refile pass then files the mail once
+// the topic check confirms the deal.
+func TestTheDealRepairLeavesASuggestedDealToTheRefilePass(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -651,14 +654,15 @@ func TestTheDealRepairFilesOldMailOnceAndLeavesHumansAlone(t *testing.T) {
 	r := newRepairer(e, w)
 
 	preview := r.preview(t)
-	want := map[capturemod.DealOutcome]int{capturemod.DealLinked: 1, capturemod.DealAmbiguous: 1, capturemod.DealHumanKept: 1}
+	want := map[capturemod.DealOutcome]int{capturemod.DealNone: 1, capturemod.DealAmbiguous: 1, capturemod.DealHumanKept: 1}
 	if !maps.Equal(preview, want) {
 		t.Fatalf("the preview reads %v, want %v", preview, want)
 	}
-	wantDeals(t, e, "old1@acme.example")
-	if applied := r.run(t); applied != preview[capturemod.DealLinked] {
-		t.Fatalf("the repair linked %d mails, the preview said %d", applied, preview[capturemod.DealLinked])
+	if applied := r.run(t); applied != 0 {
+		t.Fatalf("the repair linked %d mails on a suggestion, want none", applied)
 	}
+	wantDeals(t, e, "old1@acme.example")
+	refile(t, refiler(env, w), ids.From[ids.ActivityKind](activityOf(t, e, "old1@acme.example")))
 	wantDeals(t, e, "old1@acme.example", only)
 	wantDeals(t, e, "old2@beta.example")
 	wantDeals(t, e, "old3@acme.example", elsewhere)
@@ -817,14 +821,14 @@ func TestFilingOneMailAnswersTheDealQuestionForItsConversation(t *testing.T) {
 }
 
 // The repair re-checks the links the rule wrote, from the rule's own audit
-// rows. A link the rule still finds stays. One it now finds elsewhere moves,
-// audited as the repair with its reason. A connector's own deal ref has no
-// such record, so it is reported and left alone.
+// rows. A link the rule still finds stays. One the mail's project now files
+// elsewhere moves, audited as the repair with its reason. A connector's own
+// deal ref has no such record, so it is reported and left alone.
 func TestTheDealRepairRechecksOnlyTheRulesOwnLinks(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
-	alice := w.employee(t, "alice@acme.example", w.customer)
+	w.employee(t, "alice@acme.example", w.customer)
 	first := w.deal(t, "Acme rollout")
 	beta := w.at(t, "Beta")
 	beta.employee(t, "bob@beta.example", beta.customer)
@@ -837,10 +841,11 @@ func TestTheDealRepairRechecksOnlyTheRulesOwnLinks(t *testing.T) {
 	wantDeals(t, e, "re1@acme.example", first)
 	wantDeals(t, e, "re2@beta.example", betaDeal)
 
-	// Acme gains a second deal that alice is a stakeholder on, so the rule now
-	// files her mail there.
-	second := w.deal(t, "Acme reporting")
-	w.stakeholder(t, alice, second)
+	// A colleague files the mail under a project whose one open deal is a
+	// second Acme deal, so the rule now files it there.
+	reporting := w.project(t, "Reporting")
+	second := w.dealOnProject(t, "Acme reporting", reporting.ID)
+	relinkAsColleague(t, e, w, activityOf(t, e, "re1@acme.example"), "project", reporting.ID)
 	r := newRepairer(e, w)
 	preview := r.preview(t)
 	want := map[capturemod.DealOutcome]int{

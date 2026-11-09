@@ -6,6 +6,8 @@ import { MAX_RETRIES } from "../app/queryclient";
 import {
   type Answer,
   budgetSamples,
+  type DayPaint,
+  dayPaint,
   degradedReasons,
   expectationFrom,
   type Frame,
@@ -17,7 +19,12 @@ import {
   RequestLedger,
   readerFrom,
   readOf,
+  type Shift,
+  sessionWindowCls,
   tally,
+  type Vitals,
+  vitalsP95,
+  vitalsReasons,
   withheldSources,
 } from "./homejourney.judge";
 import { BUSY_NIGHT } from "./magic.fixtures";
@@ -303,5 +310,86 @@ describe("RequestLedger", () => {
     ledger.finished("magic", ledger.started("magic"), 501);
     ledger.release("load-1");
     expect(ledger.busy("load-1")).toBe(false);
+  });
+});
+
+describe("Home's browser vitals", () => {
+  const paint = (at: number, area = 100) => ({ at, area });
+  const shift = (at: number, value: number, input = false) => ({
+    at,
+    value,
+    input,
+  });
+  const load = (
+    dayPaints: DayPaint[],
+    shifts: Shift[] = [],
+    roots = 1,
+  ): Vitals => ({ dayPaints, shifts, roots });
+
+  it("takes the day content's largest paint, however early or late", () => {
+    expect(dayPaint([paint(100, 50), paint(1_500, 5_000)])?.at).toBe(1_500);
+    expect(dayPaint([paint(100, 5_000), paint(900, 10)])?.at).toBe(100);
+  });
+
+  it("takes the earliest of equally large paints", () => {
+    expect(dayPaint([paint(200), paint(700)])?.at).toBe(200);
+  });
+
+  it("fails a load whose day content never painted, and a run with no load", () => {
+    expect(vitalsReasons([load([]), load([paint(300)])])).toEqual([
+      "load 1: Home's day content never painted",
+    ]);
+    expect(vitalsReasons([])).toEqual(["no load was measured"]);
+  });
+
+  it("fails a load with no day root or with two", () => {
+    expect(vitalsReasons([load([paint(300)], [], 0)])).toEqual([
+      "load 1: Home has 0 day roots, not one",
+    ]);
+    expect(vitalsReasons([load([paint(300)], [], 2)])).toEqual([
+      "load 1: Home has 2 day roots, not one",
+    ]);
+  });
+
+  it("passes a day paint p95 of exactly the budget and fails one past it", () => {
+    expect(vitalsReasons([load([paint(1_000)])])).toEqual([]);
+    expect(vitalsReasons([load([paint(1_001)])])).toEqual([
+      "day paint p95 1001 ms is over 1000 ms",
+    ]);
+  });
+
+  it("judges the run's p95, not its best load", () => {
+    const loads = [
+      ...Array.from({ length: 18 }, () => load([paint(400)])),
+      load([paint(1_500)]),
+      load([paint(1_600)]),
+    ];
+    expect(vitalsP95(loads).dayPaintMs).toBe(1_500);
+    expect(vitalsReasons(loads)).toEqual([
+      "day paint p95 1500 ms is over 1000 ms",
+    ]);
+  });
+
+  it("sums shifts within one session window and keeps the worst window", () => {
+    const shifts = [shift(0, 0.04), shift(500, 0.04), shift(3_000, 0.05)];
+    expect(sessionWindowCls(shifts)).toBeCloseTo(0.08);
+  });
+
+  it("closes a session window at five seconds even without a gap", () => {
+    const steady = [0, 900, 1_800, 2_700, 3_600, 4_500, 5_400].map((at) =>
+      shift(at, 0.02),
+    );
+    expect(sessionWindowCls(steady)).toBeCloseTo(0.12);
+  });
+
+  it("ignores a shift that input caused", () => {
+    expect(sessionWindowCls([shift(0, 0.3, true)])).toBe(0);
+  });
+
+  it("fails a run whose CLS p95 is past 0.1", () => {
+    const shifts = [shift(0, 0.06), shift(200, 0.06)];
+    expect(vitalsReasons([load([paint(300)], shifts)])).toEqual([
+      "CLS p95 0.120 is over 0.1",
+    ]);
   });
 });

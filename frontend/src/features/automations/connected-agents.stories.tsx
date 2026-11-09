@@ -18,6 +18,7 @@ const CLAUDE = {
   revoked_at: null,
   expires_at: "2026-12-01T00:00:00Z",
   scopes: ["read", "draft"],
+  areas: { mode: "custom", areas: ["business", "own_account"] },
   connection: {
     client_name: "Claude Desktop",
     connected_at: "2026-07-30T14:10:00Z",
@@ -34,6 +35,7 @@ const LAPSED = {
   revoked_at: null,
   expires_at: "2026-01-04T00:00:00Z",
   scopes: ["read"],
+  areas: { mode: "all", areas: [] },
   connection: {
     client_name: "Scout",
     connected_at: "2025-12-01T09:00:00Z",
@@ -47,7 +49,11 @@ function story(passports: Record<string, unknown>[]) {
     globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
     installFetchStub({
       "GET /me": meRoute({}),
-      "GET /passports": () => jsonResponse({ data: passports }),
+      "GET /passports": () =>
+        jsonResponse({
+          data: passports,
+          reachable_areas: ["business", "admin_settings", "own_account"],
+        }),
     });
     return (
       <StoryProviders>
@@ -58,7 +64,7 @@ function story(passports: Record<string, unknown>[]) {
 }
 
 const meta: Meta<typeof ConnectedAgentsCard> = {
-  title: "Settings/You/AI access/Your connections",
+  title: "Settings/You/AI assistants/Your connections",
   component: ConnectedAgentsCard,
 };
 export default meta;

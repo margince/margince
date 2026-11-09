@@ -14,9 +14,9 @@
 // layout is a workspace-authored, loosely-typed jsonb bag (crm.yaml's
 // OfferTemplate.layout). This renderer honors exactly the string keys in
 // OfferTemplateLayoutTextKeys, printing each verbatim when present and
-// omitting the section entirely when absent; every other key (including a
-// logo reference) is a decorative ref this offline, network-free renderer
-// does not fetch or embed.
+// omitting the section entirely when absent. It fetches no other key, a logo
+// reference included. The logo it embeds is the issuing legal entity's, whose
+// bytes the caller reads and hands in.
 
 package deals
 
@@ -64,6 +64,10 @@ type pdfLabels struct {
 	committed string
 	periods   string
 	months    string
+	// The issuer block's own labels.
+	vatID    string
+	register string
+	bank     string
 }
 
 // resolvePDFLabels maps a locale to its label set: de-DE (and the empty
@@ -89,6 +93,9 @@ func resolvePDFLabels(locale string) pdfLabels {
 			committed: "Vertragswert",
 			periods:   "Laufzeit",
 			months:    "Monate",
+			vatID:     "USt-IdNr.",
+			register:  "Handelsregister",
+			bank:      "Bankverbindung",
 		}
 	}
 	return pdfLabels{
@@ -108,6 +115,9 @@ func resolvePDFLabels(locale string) pdfLabels {
 		committed: "Committed",
 		periods:   "Term",
 		months:    "months",
+		vatID:     "VAT ID",
+		register:  "Register",
+		bank:      "Bank details",
 	}
 }
 
@@ -166,7 +176,7 @@ type pdfTranslator func(string) string
 // draft with no buyer company is, or one carrying neither display_name nor
 // legal_name — omits the section entirely rather than printing an empty
 // heading.
-func writeOfferPDFHeader(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer, buyerBlock map[string]any, issuerName string, layout map[string]any, labels pdfLabels) {
+func writeOfferPDFHeader(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer, buyerBlock map[string]any, issuer PDFIssuer, layout map[string]any, labels pdfLabels) {
 	number := ""
 	if o.OfferNumber != nil {
 		number = *o.OfferNumber
@@ -182,8 +192,10 @@ func writeOfferPDFHeader(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer,
 	pdf.SetFont("Helvetica", "", 11)
 	pdf.Cell(0, 6, tr(labels.revision+" "+strconv.Itoa(revision)))
 	pdf.Ln(7)
-	pdf.Cell(0, 6, tr(labels.issuer+": "+issuerName))
-	pdf.Ln(10)
+	pdf.Cell(0, 6, tr(labels.issuer+": "+issuer.Name))
+	pdf.Ln(7)
+	writeOfferPDFIssuerBlock(pdf, tr, issuer.OfferIssuer, labels)
+	pdf.Ln(3)
 
 	if headerText := pdfLayoutString(layout, offerLayoutHeader); headerText != "" {
 		pdf.SetFont("Helvetica", "", 10)
@@ -366,19 +378,21 @@ func writeOfferPDFFooter(pdf *fpdf.Fpdf, tr pdfTranslator, layout map[string]any
 	pdf.MultiCell(0, 5, tr(text), "", "L", false)
 }
 
-// RenderOfferPDF builds the branded offer PDF from already-resolved
-// inputs (see offer_render.go's PrepareRender): o carries the offer
-// header (intro and terms included) and its server-computed totals, lines are its accepted line
-// items, buyerBlock is the frozen buyer_snapshot once sent or the live
-// buyer company while still draft (nil when the offer has none),
-// issuerName is the seller's display name, locale drives the DE/EN label
-// set, and layout is the selected template's layout bag (nil or empty
-// when the offer carries no template) — see this file's doc comment for
-// the bounded set of layout keys honored. This function performs no
-// database access and no money arithmetic — every figure it prints was
-// computed and persisted before it was called, so the rendered document
-// can never disagree with the server-computed totals.
-func RenderOfferPDF(o crmcontracts.Offer, lines []crmcontracts.OfferLineItem, buyerBlock map[string]any, issuerName, locale string, layout map[string]any) ([]byte, error) {
+// RenderOfferPDF builds the branded offer PDF from already-resolved inputs
+// (see offer_render.go's PrepareRender).
+//   - o carries the offer header, intro and terms, and its server-computed totals.
+//   - lines are its accepted line items.
+//   - buyerBlock is the frozen buyer_snapshot once sent, the live buyer company
+//     while still draft, and nil when the offer has none.
+//   - issuer is the issuing legal entity's block and logo.
+//   - locale picks the DE or EN labels.
+//   - layout is the selected template's layout bag, nil or empty without one.
+//     This file's doc comment lists the layout keys it honors.
+//
+// It performs no database access and no money arithmetic. Every figure it
+// prints was computed and persisted before it was called, so the rendered
+// document can never disagree with the server-computed totals.
+func RenderOfferPDF(o crmcontracts.Offer, lines []crmcontracts.OfferLineItem, buyerBlock map[string]any, issuer PDFIssuer, locale string, layout map[string]any) ([]byte, error) {
 	labels := resolvePDFLabels(locale)
 	number := ""
 	if o.OfferNumber != nil {
@@ -400,11 +414,12 @@ func RenderOfferPDF(o crmcontracts.Offer, lines []crmcontracts.OfferLineItem, bu
 	// properties survive a non-ASCII issuer/title too.
 	pdf.SetTitle(labels.title+" "+number, true)
 	pdf.SetCreator("margince", true)
-	pdf.SetAuthor(issuerName, true)
+	pdf.SetAuthor(issuer.Name, true)
 	pdf.SetSubject(labels.title+" PDF", true)
 	pdf.AddPage()
 
-	writeOfferPDFHeader(pdf, tr, o, buyerBlock, issuerName, layout, labels)
+	writeOfferPDFLogo(pdf, issuer.Logo)
+	writeOfferPDFHeader(pdf, tr, o, buyerBlock, issuer, layout, labels)
 	writeOfferPDFIntro(pdf, tr, o)
 	writeOfferPDFLineItems(pdf, tr, lines, o.Currency, labels)
 	writeOfferPDFTotals(pdf, tr, o, labels)

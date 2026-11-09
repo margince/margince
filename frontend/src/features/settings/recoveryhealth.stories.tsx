@@ -12,7 +12,7 @@ import {
 import { RecoveryHealthCard } from "./recoveryhealth";
 
 const meta = {
-  title: "Settings/Governance/System health/Restore drills",
+  title: "Settings/System/System health/Restore drills",
   component: RecoveryHealthCard,
 } satisfies Meta<typeof RecoveryHealthCard>;
 export default meta;

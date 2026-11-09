@@ -111,11 +111,17 @@ function cardStory(
   connections: CaptureConnection[],
   providers: components["schemas"]["CaptureProviderAvailability"][] = [],
   allow: GrantSpec = {},
+  seatCapture?: components["schemas"]["SeatCapture"],
 ) {
   return () => {
     stubAsMember(
       {
-        "GET /connectors": () => jsonResponse({ data: connections, providers }),
+        "GET /connectors": () =>
+          jsonResponse({
+            data: connections,
+            providers,
+            seat_capture: seatCapture,
+          }),
       },
       allow,
     );
@@ -365,4 +371,39 @@ export const OAuthError: Story = {
 
 export const OAuthOk: Story = {
   render: outcomeStory("ok", [gmailConnected]),
+};
+
+// A role that cannot create contacts: the server refuses every connect, so
+// the card offers none and says why. A mailbox connected before the role
+// changed names the role as its cause.
+const ROLE_REFUSED: components["schemas"]["SeatCapture"] = {
+  allowed: false,
+  reason: "role_cannot_capture",
+  missing: "contact",
+};
+const refusedProviders = (["gmail", "graph", "imap"] as const).map(
+  (provider) => ({ provider, reason: "role_cannot_capture" as const }),
+);
+
+export const RoleCannotCapture: Story = {
+  render: cardStory([], refusedProviders, {}, ROLE_REFUSED),
+};
+
+export const RoleCannotCaptureConnected: Story = {
+  render: cardStory(
+    [
+      {
+        ...gmailConnected,
+        status: "error",
+        last_sync_error_class: "forbidden",
+      },
+    ],
+    refusedProviders,
+    {},
+    ROLE_REFUSED,
+  ),
+};
+
+export const OAuthRoleCannotCapture: Story = {
+  render: outcomeStory("role_cannot_capture", []),
 };

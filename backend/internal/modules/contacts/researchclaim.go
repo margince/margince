@@ -3,7 +3,7 @@
 
 package contacts
 
-// What a human accepted from a research run (ADR-0096 D4).
+// What a user or their agent accepted from a research run.
 //
 // This is the ONLY write in the whole research surface. A run stages and
 // touches nothing; the record changes here, once somebody has read the claims
@@ -15,9 +15,9 @@ package contacts
 // promised — evidence_snippet and source_ref are both NOT NULL, so a claim
 // that lost its quote or its source cannot be stored at all.
 //
-// captured_by names the HUMAN who accepted it, not the provider that proposed
-// it. The provider's URL rides source_ref, so the chain from record to document
-// stays intact; but the decision was a contact's, and the record says so.
+// captured_by names whoever accepted it, not the provider that proposed it. The
+// provider's URL rides source_ref, so the chain from record to document stays
+// intact. An agent's acceptance never replaces a value a user wrote.
 
 import (
 	"context"
@@ -54,7 +54,7 @@ const (
 	schemeHTTP  = "http"
 )
 
-// researchSource marks these rows as a human's acceptance of a provider's
+// researchSource marks these rows as an acceptance of a provider's
 // claim, distinguishing them from the signature pass that shares the table.
 const researchSource = "contact_research"
 
@@ -98,6 +98,10 @@ func (s *Store) SaveResearchClaims(ctx context.Context, contactID ids.ContactID,
 	// indices, and before authority, which is about the contact rather than the
 	// batch.
 	claims = lastClaimPerField(claims)
+	// A saved claim is somebody's acceptance, so automatic work has none to give.
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
+		return 0, err
+	}
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
 		return 0, err
 	}
@@ -106,12 +110,17 @@ func (s *Store) SaveResearchClaims(ctx context.Context, contactID ids.ContactID,
 		return 0, err
 	}
 
+	precedence := replaceOnAcceptance
+	if p, ok := principal.Actor(ctx); ok && p.Type == principal.PrincipalAgent {
+		precedence = replaceUnlessHumanHeld
+	}
 	saved := 0
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		// Reset inside the closure: WithWorkspaceTx may run it again, and a
 		// counter that survived the retry would tell the caller more claims
 		// landed than exist — and put that inflated number in the audit row.
 		saved = 0
+		var landedClaims []ResearchClaimInput
 		if err := auth.EnsureWritableLive(ctx, tx, "contact", contactID.UUID); err != nil {
 			return err
 		}
@@ -128,23 +137,32 @@ func (s *Store) SaveResearchClaims(ctx context.Context, contactID ids.ContactID,
 			landed, err := writeContactProfileField(ctx, tx, contactID, contactProfileFieldRow{
 				Field: claim.Field, Value: claim.Value, EvidenceSnippet: claim.Quote,
 				SourceRef: claim.SourceURL, Source: researchSource, CapturedBy: by,
-			}, replaceOnAcceptance)
+			}, precedence)
 			if err != nil {
 				return fmt.Errorf("save the research claim %q: %w", claim.Field, err)
 			}
+			if !landed && precedence == replaceUnlessHumanHeld {
+				held, err := humanHoldsProfileField(ctx, tx, contactID, claim)
+				if err != nil {
+					return err
+				}
+				if held {
+					continue
+				}
+			}
 			if !landed {
-				// An acceptance REPLACES, so the only way a row does not land
-				// is the writer refusing it for the subject: an erasure
-				// committed between EnsureWritableLive above and the row lock
-				// the writer takes, which at READ COMMITTED is a fresh
-				// snapshot. The
-				// whole acceptance fails rather than counting a claim that is
-				// not there — the count rides the audit row and the outbox
-				// event, so a saved++ here would record a mutation that never
-				// happened, on the one table whose purpose is traceability.
+				// The only other way a row does not land is the writer refusing it
+				// for the subject: an erasure committed after EnsureWritableLive
+				// above. The whole acceptance fails rather than counting a claim
+				// that is not there, because the count rides the audit row and event.
 				return apperrors.ErrNotFound
 			}
 			saved++
+			landedClaims = append(landedClaims, claim)
+		}
+		// Every claim deferred to a user's value, so nothing happened to record.
+		if saved == 0 {
+			return nil
 		}
 		// The claims land in contact_profile_field, never on the contact row, so
 		// there is no column image to carry — and quoting the values would put a
@@ -154,7 +172,7 @@ func (s *Store) SaveResearchClaims(ctx context.Context, contactID ids.ContactID,
 		// empty records that something happened and cannot say what. How many
 		// landed is context about the write and rides evidence.
 		auditID, err := storekit.AuditEventWithEvidence(ctx, tx, "update", "contact", contactID.UUID,
-			map[string]any{"research_claims_accepted": acceptedClaimFields(claims)},
+			map[string]any{"research_claims_accepted": acceptedClaimFields(landedClaims)},
 			map[string]any{"research_claims_saved": saved})
 		if err != nil {
 			return fmt.Errorf("audit the saved research: %w", err)
@@ -173,6 +191,18 @@ func (s *Store) SaveResearchClaims(ctx context.Context, contactID ids.ContactID,
 		return 0, err
 	}
 	return saved, nil
+}
+
+// humanHoldsProfileField reports whether a user wrote the row this claim would replace.
+func humanHoldsProfileField(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, claim ResearchClaimInput) (bool, error) {
+	var held bool
+	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM contact_profile_field
+		 WHERE contact_id = $1 AND field = $2 AND value_key = $3 AND starts_with(captured_by, $4))`,
+		contactID, claim.Field, profileFieldValueKey(claim.Field, claim.Value), principal.HumanIDPrefix).Scan(&held)
+	if err != nil {
+		return false, fmt.Errorf("read who holds the field %q: %w", claim.Field, err)
+	}
+	return held, nil
 }
 
 // lastClaimPerField keeps one claim per field, the last the caller sent, in the
@@ -201,9 +231,8 @@ func lastClaimPerField(claims []ResearchClaimInput) []ResearchClaimInput {
 	return out
 }
 
-// acceptedClaimFields is the audit image's list of what the human accepted —
-// the field names, which the table's own constraint closes, never the values
-// they carry.
+// acceptedClaimFields is the audit image's list of what landed: the field names,
+// which the table's own constraint closes, never the values they carry.
 func acceptedClaimFields(claims []ResearchClaimInput) []string {
 	out := make([]string, 0, len(claims))
 	for _, claim := range claims {

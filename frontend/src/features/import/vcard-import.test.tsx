@@ -257,6 +257,39 @@ describe("VCardImport", () => {
     expect(within(absent).getByText("Website")).toBeInTheDocument();
   });
 
+  it("names an action this build does not know by the server's own word", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          results: [
+            {
+              index: 0,
+              full_name: "Grace Hopper",
+              outcome: "updated",
+              fields: [
+                {
+                  field: "phone",
+                  value: "+49301234567",
+                  action: "merged_later",
+                },
+              ],
+            },
+          ],
+        }),
+      ),
+    );
+
+    render(<VCardImportPage />);
+    await upload(user);
+
+    const fields = await screen.findByTestId("vcard-import-fields");
+    const row = within(fields).getByText("+49301234567").closest("li");
+    expect(row).toHaveTextContent("merged_later");
+    expect(row).not.toHaveTextContent("Other");
+  });
+
   it("empties the page for the next card and puts focus on the file field", async () => {
     const user = userEvent.setup();
     vi.stubGlobal(

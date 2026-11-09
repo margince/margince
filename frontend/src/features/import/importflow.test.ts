@@ -41,6 +41,12 @@ describe("stepOfRun", () => {
     expect(stepOfRun("pending", "files")).toBe("files");
     expect(stepOfRun(undefined, "map")).toBe("test");
   });
+
+  it("keeps a run in a status this build does not know on the test step", () => {
+    expect(stepOfRun("paused_later" as ImportRun["status"], "map")).toBe(
+      "test",
+    );
+  });
 });
 
 describe("what a run's status says to the screen", () => {

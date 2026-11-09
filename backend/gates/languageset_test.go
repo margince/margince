@@ -22,12 +22,12 @@ package gates
 // a Go change can break.
 
 import (
-	"os"
 	"regexp"
 	"sort"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -46,7 +46,7 @@ var languageEnumSchemas = []string{
 
 func TestEveryLanguageEnumInTheContractListsTheShippedLanguages(t *testing.T) {
 	t.Parallel()
-	contract, err := os.ReadFile("api/crm.yaml")
+	contract, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}

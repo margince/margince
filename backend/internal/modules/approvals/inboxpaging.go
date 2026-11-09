@@ -11,6 +11,7 @@ package approvals
 import (
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -91,9 +92,19 @@ func capPage(out []row, limit int, scanned *row) ([]row, storekit.Page, error) {
 // It answers an error because the token can fail to mint, and the flag beside it
 // would then promise a page the caller has no way to ask for.
 func pageAfter(last row) (storekit.Page, error) {
-	next, err := storekit.EncodeCursor(last.CreatedAt, last.ID.UUID)
+	next, err := resumeAfter(last.CreatedAt, last.ID.UUID)
 	if err != nil {
 		return storekit.Page{}, err
 	}
 	return storekit.Page{HasMore: true, NextCursor: next}, nil
+}
+
+// PositionAfter is the page token that resumes an inbox read just after this
+// approval. A caller can then stop between any two rows of a page.
+func PositionAfter(a crmcontracts.Approval) (string, error) {
+	return resumeAfter(a.CreatedAt, ids.UUID(a.Id))
+}
+
+func resumeAfter(createdAt time.Time, id ids.UUID) (string, error) {
+	return storekit.EncodeCursor(createdAt, id)
 }

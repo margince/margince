@@ -17,9 +17,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -56,10 +59,10 @@ func TestMorningDigestCarriesTheProjectsSection(t *testing.T) {
 	b := setupBackfillWire(t)
 	e := b.env
 	admin := e.Admin()
-	now := time.Now().UTC()
 	company := e.SeedCompany(t, "Digest Client", nil)
 
 	moved := b.seedDigestProject(t, "Moved overnight", company, &e.Rep1)
+	now := b.digestWritesThrough(t)
 	if _, err := e.Projects.AdvanceProjectPhase(admin, moved, projects.AdvanceProjectPhaseInput{ToPhase: projects.PhasePursuing}); err != nil {
 		t.Fatalf("advance the project: %v", err)
 	}
@@ -84,8 +87,9 @@ func TestMorningDigestCarriesTheProjectsSection(t *testing.T) {
 		t.Fatal(err)
 	}
 	b.fileOnProject(t, "meeting", other, now.AddDate(0, 0, -40), nil)
+	now = b.digestWritesThrough(t)
 	granted := capture.NewRegistry(e.DB(), capture.NewSink(e.DB()), projectReadingAuthority{}, keyvault.NewMemory()).
-		WithDigestProjects(digestProjectsSource)
+		WithDigestProjects(digestProjectsSource).SetClock(func() time.Time { return now })
 	b.handlers.registry = granted
 	if err := granted.BuildDigests(b.human, now); err != nil {
 		t.Fatalf("BuildDigests: %v", err)
@@ -138,7 +142,8 @@ type projectReadingAuthority struct{ backfillAuthority }
 func (projectReadingAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
 	return authz.RBAC{Permissions: principal.Permissions{
 		Objects: map[string]principal.ObjectGrant{
-			"activity": {Create: true, Read: true}, "contact": {Read: true},
+			"activity": {Create: true, Read: true}, "contact": {Create: true, Read: true},
+			"lead":    {Create: true, Read: true},
 			"project": {Read: true}, "deal": {Read: true},
 		},
 		RowScope: principal.RowScopeTeam,
@@ -182,4 +187,17 @@ func TestMorningDigestOmitsTheProjectsSectionWithoutTheProjectGrant(t *testing.T
 // authztest.AdmittedFromPair for why the body is not written out here.
 func (r projectReadingAuthority) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
+}
+
+func (b *backfillWireEnv) digestWritesThrough(t *testing.T) time.Time {
+	t.Helper()
+	var last time.Time
+	if err := database.WithWorkspaceTx(b.env.Admin(), b.env.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(t.Context(), `SELECT greatest(
+ (SELECT max(occurred_at) FROM project_phase_history),
+ (SELECT max(created_at) FROM activity))`).Scan(&last)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return last.Add(time.Second)
 }

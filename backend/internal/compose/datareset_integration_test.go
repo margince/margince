@@ -17,8 +17,10 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/config"
@@ -38,7 +40,22 @@ func TestSweepWorkspaceDataClearsDomainKeepsIdentity(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
 
-	e.SeedContact(t, "Alice", nil)
+	contact := e.SeedContact(t, "Alice", nil)
+	direction, subject := "inbound", "Signature source"
+	mail, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{
+		Kind: "email", Direction: &direction, Subject: &subject, Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := e.Contacts.MarkSignatureRead(ctx, ids.From[ids.ContactKind](contact), ids.UUID(mail.Id), 1, contacts.SignatureWork{}); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.WsCount(t, "SELECT count(*) FROM contact_signature_enrich_state WHERE activity_id IS NOT NULL"); got != 1 {
+		t.Fatalf("signature read fixture = %d, want 1", got)
+	}
+
 	e.SeedCompany(t, "Acme", nil)
 	engine, err := newDataTaskEngine(e.Pool, "test", func() time.Time { return clocktest.Now(t) })
 	if err != nil {
@@ -74,6 +91,12 @@ func TestSweepWorkspaceDataClearsDomainKeepsIdentity(t *testing.T) {
 	}
 	if got := e.WsCount(t, "SELECT count(*) FROM company"); got != 0 {
 		t.Errorf("company count after sweep = %d, want 0", got)
+	}
+	if got := e.WsCount(t, "SELECT count(*) FROM contact_signature_enrich_state"); got != 0 {
+		t.Errorf("signature requests after reset = %d, want 0", got)
+	}
+	if got := e.WsCount(t, "SELECT count(*) FROM activity"); got != 0 {
+		t.Errorf("mail after reset = %d, want 0", got)
 	}
 	// The harness seeds four humans (Rep1, Rep2, Rep3 and the admin seat);
 	// identity must survive a reset untouched.
@@ -282,6 +305,7 @@ func TestDropResetCustomFieldColumns(t *testing.T) {
 const settlementEvidenceShare = "the settlement evidence generation, not a guard: it takes a shared advisory lock on the deleted row's conversation keys and refuses no delete. A reset waits only while a settlement verdict holds the same conversation, for that verdict's short transaction"
 
 var deleteGuardedSweepTargets = gatekit.Waive(map[string]string{
+	"activity reopen_deleted_signature_source": "Maintains signature read requests and refuses no delete. Reset removes the contacts and their requests by cascade; TestSweepWorkspaceDataClearsDomainKeepsIdentity proves it with an actual mail source and read watermark.",
 	// Not a guard: the trigger counts fact writes and refuses no delete. Its
 	// counter rows go with their company by FK cascade, so a reset that clears
 	// the companies leaves no counter behind. TestAResetLeavesNoFactRevision holds it.

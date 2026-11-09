@@ -583,7 +583,7 @@ func TestEveryEnumOverTheRecordVocabularyMatchesTheCheckConstraint(t *testing.T)
 			enums: map[string]func(string) bool{
 				"ActivityLink.entity_type":                func(v string) bool { return crmcontracts.ActivityLinkEntityType(v).Valid() },
 				"CreateActivityRequest.links.entity_type": func(v string) bool { return crmcontracts.CreateActivityRequestLinksEntityType(v).Valid() },
-				"bookMeeting.links.entity_type":           func(v string) bool { return crmcontracts.BookMeetingJSONBodyLinksEntityType(v).Valid() },
+				"MeetingRecordLink.entity_type":           func(v string) bool { return crmcontracts.MeetingRecordLinkEntityType(v).Valid() },
 			},
 		},
 	} {
