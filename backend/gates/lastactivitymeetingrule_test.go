@@ -6,7 +6,8 @@
 package gates
 
 // last_activity_at on deal, contact, company and project skips a task and a
-// called-off meeting, and counts only what has happened.
+// canceled or no-show meeting, and counts only what has happened. A past
+// meeting counts whether or not anyone reported it held.
 // relstrength.LastActivityCountsSQL spells all three.
 //
 // The last_activity_of_* SQL functions fold the column and cannot call Go, so
@@ -14,10 +15,10 @@ package gates
 // to it, and holds the Go reads of the same question to the same call.
 
 import (
-	"os"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -53,13 +54,13 @@ func TestNoLastActivityClockCountsACalledOffMeeting(t *testing.T) {
 		}
 	}
 	for file, what := range meetingRuleReaders {
-		src, err := os.ReadFile(file)
+		src, err := gatekit.ReadFile(file)
 		if err != nil {
 			t.Errorf("%s (%s): %v", file, what, err)
 			continue
 		}
-		if !strings.Contains(string(src), "relstrength.LastActivityCountsSQL(") {
-			t.Errorf("%s no longer calls relstrength.LastActivityCountsSQL, so %s can count a called-off "+
+		if !strings.Contains(string(src), "relstrength.LastActivityCountsSQL(") && !strings.Contains(string(src), "relstrength.ExternalActivityCountsSQL(") {
+			t.Errorf("%s no longer calls relstrength.LastActivityCountsSQL, so %s can count a canceled "+
 				"meeting, or one still ahead, as a touch", file, what)
 		}
 	}

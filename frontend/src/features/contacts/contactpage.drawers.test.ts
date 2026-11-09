@@ -29,7 +29,7 @@ it("opens the exact privacy duty without retaining an unrelated queue filter", (
     },
   );
   const params = currentParams();
-  expect(window.location.hash).toContain("#/settings/privacy?");
+  expect(window.location.hash).toContain("#/settings/privacy/duties?");
   expect(params.get("notice_case")).toBe("case-1");
   expect(params.has("queue_scope")).toBe(false);
   expect(params.has("owner")).toBe(false);

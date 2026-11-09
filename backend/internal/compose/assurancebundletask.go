@@ -109,7 +109,7 @@ var bundleTaskSource = provenance.AssuranceTaskSource
 //
 // sourceID is the natural key that makes a retry a no-op:
 // activity.replayedActivity resolves it before inserting, against
-// uq_activity_source. runTaskKey and reviewTaskKey are the two keys.
+// uq_activity_source. runTaskKey is the key.
 func mintBundleTask(
 	ctx context.Context, deps bundleDeps, sourceID string, subject subjectFindings, dueAt *time.Time,
 ) (ids.UUID, error) {

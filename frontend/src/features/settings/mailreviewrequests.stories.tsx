@@ -46,7 +46,7 @@ function Owners() {
   );
 }
 const meta = {
-  title: "Settings/Governance/System health/Mailbox review requests",
+  title: "Settings/System/System health/Mailbox review requests",
   component: MailReviewRequests,
   args: { review: "senders" },
 } satisfies Meta<typeof MailReviewRequests>;

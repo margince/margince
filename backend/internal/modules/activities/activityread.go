@@ -290,7 +290,11 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 	//
 	// The hold says no principal reads restricted content.
 	content := "(" + audience + ") AND " + auth.ActivityAvailableClause("a")
-	q := `SELECT ` + activityColumns(content) + ` FROM activity a WHERE a.id = $1`
+	columns, err := activityColumns(ctx, content, arg)
+	if err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	q := `SELECT ` + columns + ` FROM activity a WHERE a.id = $1`
 	if archived == storekit.LiveOnly {
 		q += ` AND a.archived_at IS NULL`
 	}
@@ -449,13 +453,17 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 		if err != nil {
 			return err
 		}
+		columns, err := activityColumns(ctx, content, func(v any) int { args = append(args, v); return len(args) })
+		if err != nil {
+			return err
+		}
 		// The list's own projection, counted. Not `count(*)` over the join
 		// directly: the content clauses put placeholders in the SELECT list, and
 		// a statement that binds an argument it never mentions is one Postgres
 		// refuses outright ("could not determine data type of parameter"). The
 		// planner reads the wrapper for what it is.
 		return tx.QueryRow(ctx,
-			`SELECT count(*) FROM (SELECT `+activityColumns(content)+
+			`SELECT count(*) FROM (SELECT `+columns+
 				` FROM activity a WHERE `+strings.Join(where, " AND ")+`) counted`, waitingListArgs(in, args)...).Scan(&total)
 	})
 	return total, err

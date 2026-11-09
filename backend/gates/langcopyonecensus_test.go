@@ -172,7 +172,7 @@ func phraseOwners(t *testing.T) map[string]*phraseOwner {
 	census := map[string]string{}
 	walks := map[string][]string{}
 
-	err := filepath.WalkDir(".", func(path string, entry fs.DirEntry, walkErr error) error {
+	err := gatekit.WalkDir(".", func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}

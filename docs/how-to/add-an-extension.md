@@ -12,8 +12,11 @@ retention floors; the example below builds one.
 An extension is its own Go module. It reaches the core only through the `backend/pkg/**` surface that carries
 the allow mark.
 
-**Presence under `extensions/` turns it on**; there is no setting to turn on. `extensions/openchannel`
-is the **reference unit**. It owns data and serves routes. It works with an outside provider through capture, a merge
+**A `require` in `instance/go.mod` turns it on**, with a `replace` to its folder.
+
+[Build a custom Margince](build-a-custom-margince.md) says how to mark an example for development and tests.
+
+`extensions/openchannel` is the **reference unit**. It owns data and serves routes. It works with an outside provider through capture, a merge
 key declaration and a transport that replies leave on, and it ships a screen. Copy it first. `extensions/de`
 (a country pack) and `fixtures/extensions/crm-hello` (the smallest unit that runs) are the smaller shapes.
 
@@ -1281,7 +1284,7 @@ OAuthApps: []extension.OAuthApp{{
 
 What the core does:
 
-1. **Settings → Sign-in and apps** shows a card for the app, named by its `Title`. An admin stores the
+1. **Settings → Sign-in and security** shows a card for the app, named by its `Title`. An admin stores the
    client ID and secret there, and registers the redirect URI the card shows at the vendor.
 2. Your screen starts the sign-in with `POST /v1/ext-oauth/books/connect`, and sends the browser to the
    `authorize_url` it gets back. Only a user who may add an integration can start it.
@@ -1348,10 +1351,15 @@ Check the floors, not only that `New()` returns. A test with no check proves not
 
 ## Compose and check
 
-Presence turns a unit on, so the moment the folder exists, the unit is on. Run `make composition` again and run
-the gates:
+Add the unit to `instance/go.mod`, then run `make composition` again and run the gates. Do not run `go mod tidy`
+on `instance/`: it marks the unit `// indirect`, and `make composition` skips it then:
 
-1. **`make composition`** builds `build/composition/` again from `extensions/`.
+```text
+require github.com/margince/margince/extensions/<name> v0.0.0
+replace github.com/margince/margince/extensions/<name> => ../extensions/<name>
+```
+
+1. **`make composition`** builds `build/composition/` again from the units `instance/go.mod` requires.
    Your unit now shows in the generated `Extensions()`.
    A `manifest.generated.json` lands next to your unit.
    The manifest is the record, read from the code, of the **risk tiers** it asks for.
@@ -1397,19 +1405,21 @@ own line**, `!/extensions/<name>`. If it does not, the pull request opens with n
 ignores files you add to the unit later. `git add -f` stages the files once, but leaves the folder ignored. So
 it does not take the place of the line.
 
-A unit for one installation only should stay ignored. Its presence
-in the working tree already turns it on for that install. List its name in `extensions/operator-units`, one per
+A unit for one installation only belongs in that installation's own `go.mod`
+([install-extensions-as-go-modules.md](install-extensions-as-go-modules.md)), not in `instance/go.mod`. A folder of
+it kept under `extensions/` should stay ignored. List its name in `extensions/operator-units`, one per
 line, so `TestEveryEnabledExtensionIsTracked` lets it stay ignored. Keep that file ignored too.
 
 Commit **the whole unit folder**: every source and test file, plus its module files (`go.mod`, and `go.sum` if it
-uses outside packages). Commit it together with the `.gitignore` line. Do **not** commit `build/composition/`,
+uses outside packages). Commit it together with the `.gitignore` line and its lines in `instance/go.mod`. Do **not** commit `build/composition/`,
 which is generated and ignored. Leave the tracked `composition/` stub as it is, unless you are changing the plain
 baseline. Then follow the normal pull request loop in [CONTRIBUTING.md](../../CONTRIBUTING.md), and merge only when
 the gates are green.
 
 ## Remove a unit
 
-Removing a unit touches only the unit's own folder:
+For a unit this repository ships, remove its `require` and `replace` from `instance/go.mod` and its
+`!/extensions/<name>` line from `.gitignore`, then its folder:
 
 ```bash
 git rm -r extensions/<name>
@@ -1419,10 +1429,11 @@ make check-q
 
 Use `git rm`, never `mv` or a plain `rm`. `make drift` compares the working tree against the index. So a
 `manifest.generated.json` that you delete but do not stage fails the gate, and a moved folder is still a folder
-under `extensions/`. You must run the `rm -rf` after it. `git rm` takes the tracked files and leaves
-`node_modules`, so the folder stays, and presence under `extensions/` turns a unit on. The `composition` tool
-names the folder left behind if you miss this step.
+under `extensions/`. Run the `rm -rf` after it. `git rm` takes the tracked files and leaves `node_modules` behind.
 
-No core file or core test needs an edit. Removing it *turns the unit off* (routes answer 404, the list leaves
+A unit for one installation only is not in git. Remove it from that installation's `go.mod`, and its name from
+`extensions/operator-units`. Then delete its folder under `extensions/`; there is nothing to stage.
+
+No other core file or core test needs an edit. Removing it *turns the unit off* (routes answer 404, the list leaves
 the unit out, migrations skip it), but it does **not erase**. The unit's tables and rows, its `extension_secret`
 rows and any grants of its RBAC objects inside `role.permissions` all stay. There is no tool to erase them.

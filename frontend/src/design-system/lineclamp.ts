@@ -26,8 +26,8 @@ export function useLineClamped(
     };
     measure();
     // A late web font rewraps the text inside a box whose height the clamp
-    // holds, so no resize reports it. `ready` never rejects.
-    document.fonts?.ready.then(measure);
+    // holds, so no resize reports it. A rejection measures too.
+    document.fonts?.ready.then(measure, measure);
     // A width change can start or stop the clipping. jsdom has no observer.
     const observer =
       typeof ResizeObserver === "undefined"

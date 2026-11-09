@@ -67,9 +67,16 @@ export const AI_RATE_DAY_ZONE = UTC_ZONE;
 
 export const FALLBACK_COMPANY_ZONE = "Europe/Berlin";
 
+// Zones already proven: every date drawn asks again, and a zone's validity
+// does not change while the page is open.
+const checkedZones = new Set<string>();
+
 // IANA zone names only (AC-DS-TZ4). Fixed offsets ("+01:00", "Etc/GMT-1")
 // freeze DST rules without a sign, so they throw at the edge.
 export function assertIanaZone(zone: string): void {
+  if (checkedZones.has(zone)) {
+    return;
+  }
   if (/^[+-]\d{2}:?\d{2}$/.test(zone) || /^(Etc\/)?GMT[+-]?\d*$/i.test(zone)) {
     throw new Error(
       `timezone must be an IANA name, got fixed offset "${zone}"`,
@@ -78,6 +85,7 @@ export function assertIanaZone(zone: string): void {
   // Intl rejects unknown names: constructing with the zone throws a RangeError
   // that propagates. format() forces the value to be consumed.
   new Intl.DateTimeFormat("en-US", { timeZone: zone }).format();
+  checkedZones.add(zone);
 }
 
 /**

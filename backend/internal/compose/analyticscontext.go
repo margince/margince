@@ -50,7 +50,15 @@ func newAnalyticsContextHandlers(db *database.DB, now func() time.Time) analytic
 
 // GetAnalyticsContext implements GET /analytics/context.
 func (h analyticsContextHandlers) GetAnalyticsContext(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
+	out, err := h.read(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+func (h analyticsContextHandlers) read(ctx context.Context) (crmcontracts.AnalyticsContext, error) {
 	var out crmcontracts.AnalyticsContext
 	err := h.db.Tx(ctx, func(tx pgx.Tx) error {
 		// This route discloses which teams a caller may measure, which is not
@@ -71,11 +79,7 @@ func (h analyticsContextHandlers) GetAnalyticsContext(w http.ResponseWriter, r *
 		out = resolved
 		return nil
 	})
-	if err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-	httperr.WriteJSON(w, http.StatusOK, out)
+	return out, err
 }
 
 // requireForecastOrDealRead admits a seat that reads forecasts or deals.

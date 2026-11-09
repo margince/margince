@@ -17,7 +17,9 @@
 #   4. Every composed unit's declared channel transport is published by
 #      GET /v1/channel-providers — the boot step really ran.
 #   5. The frontend production build compiles (pnpm build) — a real
-#      compile+bundle, not a stale-dist check.
+#      compile+bundle, not a stale-dist check. VERIFY_BOOT_FRONTEND_BUILT_BY
+#      names the job that already builds it, and then this step says so and
+#      stops; CI sets it, a laptop does not.
 
 set -euo pipefail
 
@@ -328,6 +330,12 @@ else
 fi
 
 echo "== verify-boot 6/6: frontend production build =="
+if [[ -n "${VERIFY_BOOT_FRONTEND_BUILT_BY:-}" ]]; then
+  echo "  SKIP: $VERIFY_BOOT_FRONTEND_BUILT_BY builds the frontend from the same inputs"
+  echo ""
+  echo "verify-boot: ALL CHECKS GREEN"
+  exit 0
+fi
 # --ignore-scripts: no lifecycle scripts run at install; esbuild ships
 # prebuilt platform binaries as optional deps, so the build works without
 # its validating postinstall.

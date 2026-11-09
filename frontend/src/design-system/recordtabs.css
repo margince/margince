@@ -171,6 +171,9 @@
   font-weight: var(--fontWeightMedium);
   white-space: nowrap;
   cursor: pointer;
+  transition:
+    color var(--dur-state) var(--ease-out),
+    border-color var(--dur-state) var(--ease-out);
 }
 
 .recordtabs-tab:first-child {
@@ -202,6 +205,47 @@
   color: var(--textPrimary);
   border-block-end-color: var(--textPrimary);
   cursor: default;
+}
+.recordtabs-tab:hover:not([aria-pressed="true"], [aria-current="page"]) {
+  border-block-end-color: var(--borderStrong);
+}
+
+/* One underline that travels to the tab a reader picks, so the eye follows
+   the move. Anchored in CSS: no script measures the tabs, and a browser
+   without anchor positioning keeps each tab's own underline above. */
+@supports (anchor-name: --a) and
+  (anchor-scope: all) and
+  (position-anchor: --a) and
+  (inset-inline-start: anchor(start)) {
+  .recordtabs-strip {
+    anchor-scope: --recordtabs-open;
+  }
+  .recordtabs-tab[aria-pressed="true"],
+  .recordtabs-tab[aria-current="page"] {
+    anchor-name: --recordtabs-open;
+    border-block-end-color: transparent;
+  }
+  .recordtabs-strip::after {
+    content: "";
+    position: absolute;
+    position-anchor: --recordtabs-open;
+    inset-inline-start: anchor(start);
+    inset-inline-end: anchor(end);
+    inset-block-end: anchor(bottom);
+    block-size: 2px;
+    border-radius: var(--r-full);
+    corner-shape: round;
+    background: var(--textPrimary);
+    pointer-events: none;
+    transition:
+      inset-inline-start var(--dur-move) var(--ease-out),
+      inset-inline-end var(--dur-move) var(--ease-out);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .recordtabs-strip::after {
+    transition: none;
+  }
 }
 
 /* Something waits behind this tab. An accent dot rather than an indigo one:

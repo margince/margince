@@ -47,10 +47,10 @@
 //
 // ## Why this is a parser and not a shell gate
 //
-// The same reason native-controls.test.ts is: `export function Card` inside a
-// comment is not an export, and a component is a PascalCase export that returns
-// markup — both are properties of the language, and TypeScript's parser already
-// knows them. A grep would have to be told, in awk, and would then have a
+// native-controls.census.ts is a parser for the same reason. An
+// `export function Card` in a comment is not an export. A component is a
+// PascalCase export that returns markup. Both are properties of the language,
+// and TypeScript's parser already knows them. A grep would have to be told, in awk, and would then have a
 // second, worse answer to a question the compiler answers for free.
 
 import { existsSync, readFileSync } from "node:fs";

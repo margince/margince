@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, FileText } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, Suspense } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, PendingBody } from "../../design-system/atoms";
@@ -30,41 +30,34 @@ import {
   useAnalyticsSelection,
 } from "./analytics.context";
 import { FirstRunNotice } from "./analytics.firstrun";
-import { ForecastView, SharedForecastView } from "./analytics.forecast";
-import { FramedSection } from "./analytics.framed";
 import { AnalyticsOverview } from "./analytics.overview";
 import {
   OverviewNavigation,
   useOverviewRegistration,
 } from "./analytics.overview.navigation";
-import { QuestionsView } from "./analytics.questions";
 import { AnalyticsScopePicker } from "./analytics.scope";
+import {
+  ForecastView,
+  FramedSection,
+  QuestionsView,
+  ReportBoard,
+  ReportingDefinitions,
+  ReportingLibrary,
+  ReportingOverview,
+  ReportingTargets,
+  SharedForecastView,
+} from "./analytics.sections";
 import {
   SETUP_LABEL,
   type SetupSection,
   useAnalyticsSections,
 } from "./analytics.tabs";
 import { stagesOfEveryPipeline } from "./pipelinestages";
-import { ReportingDefinitions } from "./reporting.definitions";
-import { ReportingLibrary } from "./reporting.library";
-import { ReportingOverview } from "./reporting.overview";
-import { ReportingTargets } from "./reporting.targets";
 import { VIEW_SHAPE, viewOfSection } from "./reporting.views";
 import "./analytics.css";
 
-import { ReportBoard } from "./analytics.reportboard";
-// Analytics: a picker over three reports — deals-by-stage (unweighted beside
-// weighted), forecast (category readings plus the server-derived "slipped"
-// bucket), and open deals per company. "Explain this number" opens the executed
-// plan and the exact rows the headline reconciles to. Both weighted figures come
-// straight off the report's own weighted_amount_minor measure, rounded PER DEAL
-// and then summed, so neither screen re-derives one from the raw total. All
-// three bodies render into ONE panel whose action band carries the explain
-// toggle: the segment changes what the panel holds, not what the page is.
 import { ExtensionReports } from "../../components/extensionreports";
-import { SECTION_REPORTS, useReportRun } from "./analytics.reports";
-
-export { buildStageAggregates, ForecastTile } from "./analytics.pipeline";
+import { SECTION_REPORTS, useReportRun } from "./analytics.reports.queries";
 
 export function AnalyticsScreen({
   reviewActions,
@@ -96,8 +89,6 @@ export function AnalyticsScreen({
         }),
       ).data,
   });
-  // Which population the figures cover, drawn first in the section's own
-  // filter bar so every filter on the page sits in one row.
   const scopeControl =
     selection && context.data ? (
       <div className="analytics-scope-control">
@@ -110,7 +101,17 @@ export function AnalyticsScreen({
     ) : null;
 
   if (route.screen === "analytics" && route.id === "shared" && route.id2)
-    return <SharedForecastView token={route.id2} />;
+    return (
+      <Suspense
+        fallback={
+          <div className="wrap">
+            <PendingBody label={t("analytics.sections")} />
+          </div>
+        }
+      >
+        <SharedForecastView token={route.id2} />
+      </Suspense>
+    );
 
   return (
     <div className="wrap">
@@ -161,19 +162,23 @@ export function AnalyticsScreen({
                 allowed={context.data.allowed_scopes}
               />
             ) : (
-              <SectionBody
-                section={section}
-                locale={locale}
-                context={context.data}
-                contextQuery={context}
-                selection={selection}
-                onSelectScope={selectScope}
-                scopeControl={scopeControl}
-                stages={stagesOfEveryPipeline(
-                  pipelinesQuery.data ?? [],
-                  (name) => t("analytics.retiredPipeline", { name }),
-                )}
-              />
+              <Suspense
+                fallback={<PendingBody label={t("analytics.sections")} />}
+              >
+                <SectionBody
+                  section={section}
+                  locale={locale}
+                  context={context.data}
+                  contextQuery={context}
+                  selection={selection}
+                  onSelectScope={selectScope}
+                  scopeControl={scopeControl}
+                  stages={stagesOfEveryPipeline(
+                    pipelinesQuery.data ?? [],
+                    (name) => t("analytics.retiredPipeline", { name }),
+                  )}
+                />
+              </Suspense>
             )}
           </ReviewActionsContext>
         </div>
@@ -268,8 +273,6 @@ function TabVerbs({
   );
 }
 
-// One section's body, chosen in its own component so the screen's own render
-// stays a header plus a choice rather than a ladder of ternaries.
 function SectionBody({
   section,
   locale,
@@ -397,7 +400,6 @@ function SectionBody({
   }
 }
 
-// Overview waits on the frame it measures, and shows a failed one.
 function OverviewSection({
   context,
   contextQuery,

@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   type ReactNode,
+  Suspense,
   useEffect,
   useMemo,
   useRef,
@@ -13,38 +14,33 @@ import {
 import { ResetRoute } from "./App.screens";
 import { ScreenView } from "./App.views";
 import { useWarmRouteChunks } from "./App.warmchunks";
+import { ApprovalHost } from "./app/approvalhost";
 import { AskFromAddress } from "./app/askfromaddress";
+import {
+  AuthScreen,
+  AvailabilityScreen,
+  ReleaseSkewScreen,
+  SetupClaimScreen,
+} from "./app/authscreens";
 import { isPublicBookingId } from "./app/bookingroute";
 import { AuthSplash } from "./app/bootsplash";
 import { ConfinedAccountScreen, useProbeAnswer } from "./app/confinement";
 import { DateFormatsProvider } from "./app/dateformats";
 import { prefetchHome } from "./app/homeprefetch";
 import { passesOnboardingGate } from "./app/onboarding-gate";
-import {
-  CommandPalette,
-  useBuiltinCommands,
-  usePaletteHotkey,
-} from "./app/palette";
+import { usePaletteHotkey } from "./app/palettehotkey";
 import { Shell, useRoute } from "./app/shell";
 import { SourceHost } from "./app/sourcehost";
 import { CallLogHost } from "./components/calllog.host";
 import { useJourneyProgress } from "./features/onboarding/onboarding-journey";
-import {
-  ReleaseSkewScreen,
-  useSkewedApiRelease,
-} from "./features/settings/releaseskew";
+
 import { WriteToHost } from "./features/settings/writetohost";
-import {
-  type AuthNotice,
-  AuthScreen,
-  AvailabilityScreen,
-  RESET_ROUTE,
-} from "./features/sign-in/auth";
-import {
-  fetchSetupStatus,
-  SetupClaimScreen,
-} from "./features/sign-in/setupclaim";
-import { useLocale } from "./i18n";
+import type { AuthNotice } from "./features/sign-in/auth";
+import { RESET_ROUTE } from "./features/sign-in/auth.route";
+import { fetchSetupStatus } from "./features/sign-in/setupclaim.queries";
+import { CompleteLocale, useLocale } from "./i18n";
+import { lazy } from "./i18n/lazy";
+import { useSkewedApiRelease } from "./lib/capabilities";
 import {
   CompanyZoneProvider,
   useConfiguredCompanyZone,
@@ -68,6 +64,10 @@ import {
   useBrowserZoneOnFirstSignIn,
   ViewerZoneProvider,
 } from "./lib/viewerzone";
+
+const CommandPalette = lazy(async () => ({
+  default: (await import("./app/palette")).BuiltinCommandPalette,
+}));
 
 // The anonymous public surfaces render without a session — their slug in the
 // path is the whole address (security: [] in the contract).
@@ -117,7 +117,9 @@ export function App() {
   if (route.screen === RESET_ROUTE) {
     return (
       <RaillessFrame>
-        <ResetRoute />
+        <CompleteLocale>
+          <ResetRoute />
+        </CompleteLocale>
       </RaillessFrame>
     );
   }
@@ -258,8 +260,10 @@ function AuthedApp({
   // Probed only once the session is known good: an unauthenticated /company
   // would 401 and say nothing about onboarding.
   const authed = !me.isPending && !me.isError;
-  const { described, pending: companyPending } =
-    useInstallationDescribed(authed);
+  const { described, pending: companyPending } = useInstallationDescribed(
+    authed,
+    { readProfile: false },
+  );
   const progress = useJourneyProgress(
     authed,
     authed &&
@@ -306,7 +310,7 @@ function AuthedApp({
     sessionSeenNow,
     sessionSeenNow,
   );
-  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState<boolean | null>(null);
   const gatesPending =
     companyPending || companyZone.pending || progress.pending;
   const shellReady = authed && !gatesPending;
@@ -331,8 +335,7 @@ function AuthedApp({
     }
     return prefetchHome(queryClient, currentParams());
   }, [opensHome, queryClient]);
-  const commands = useBuiltinCommands();
-  usePaletteHotkey(paletteOpen, setPaletteOpen);
+  usePaletteHotkey(paletteOpen === true, setPaletteOpen);
   useTaskReminderNotifications(authed);
 
   if (me.isPending && refusal === null) {
@@ -413,21 +416,26 @@ function AuthedApp({
           <WriteToHost>
             <CallLogHost>
               <SourceHost>
-                <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
-                  <ScreenView
-                    screen={route.screen}
-                    id={route.id}
-                    id2={route.id2}
-                  />
-                </AuthedShell>
+                <ApprovalHost>
+                  <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
+                    <ScreenView
+                      screen={route.screen}
+                      id={route.id}
+                      id2={route.id2}
+                    />
+                  </AuthedShell>
+                </ApprovalHost>
               </SourceHost>
             </CallLogHost>
           </WriteToHost>
-          <CommandPalette
-            open={paletteOpen}
-            onClose={() => setPaletteOpen(false)}
-            commands={commands}
-          />
+          {paletteOpen !== null && (
+            <Suspense fallback={null}>
+              <CommandPalette
+                open={paletteOpen}
+                onClose={() => setPaletteOpen(false)}
+              />
+            </Suspense>
+          )}
           {/* Over whatever the reader was doing, not on a screen of its own. */}
           <AskFromAddress />
         </ViewerZoneProvider>

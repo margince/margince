@@ -80,7 +80,9 @@ type taskSourcePolicy struct {
 }
 
 var taskSourceFamilies = map[string]taskSourcePolicy{
-	provenance.AcceptedRecommendationSource: {currency: currentByItsWriter},
+	// A follow-up the reader accepted from a suggestion is theirs to do even
+	// without a date, so it shows with their tasks.
+	provenance.AcceptedRecommendationSource: {currency: currentByItsWriter, undated: true},
 	provenance.CommitmentTaskSource:         {currency: currentByCommitment, undated: true},
 	provenance.EmailRequestSource:           {currency: currentByRequest, undated: true},
 	provenance.NoActivityReminderSource:     {currency: currentByItsWriter},

@@ -7,6 +7,7 @@ import type { components } from "../../../api/schema";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../../testing/story-utils";
 import { DealHowItStands, type DealStandingHead } from "./dealhowitstands";
@@ -209,7 +210,10 @@ const drifting: DealStandingInputs = {
 /** A deal the model read as drifting: a reply owed, one seat on the deal. */
 export const Drifting: Story = {
   render: () => {
-    installFetchStub({ "GET /field-history": stageHistory });
+    installFetchStub({
+      "GET /me": meRoute({ deal: ["read"] }),
+      "GET /field-history": stageHistory,
+    });
     return (
       <StoryProviders>
         <DealHowItStands head={read} inputs={drifting} />
@@ -226,7 +230,10 @@ export const DriftingDark: Story = { ...Drifting, globals: { theme: "dark" } };
  */
 export const Won: Story = {
   render: () => {
-    installFetchStub({ "GET /field-history": stageHistory });
+    installFetchStub({
+      "GET /me": meRoute({ deal: ["read"] }),
+      "GET /field-history": stageHistory,
+    });
     return (
       <StoryProviders>
         <DealHowItStands
@@ -244,7 +251,10 @@ export const Won: Story = {
 /** A lost deal says why, in grey, under the outcome. */
 export const Lost: Story = {
   render: () => {
-    installFetchStub({ "GET /field-history": stageHistory });
+    installFetchStub({
+      "GET /me": meRoute({ deal: ["read"] }),
+      "GET /field-history": stageHistory,
+    });
     return (
       <StoryProviders>
         <DealHowItStands
@@ -269,6 +279,7 @@ export const Lost: Story = {
 export const LostWithLongNote: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ deal: ["read"] }),
       "GET /field-history": stageHistory,
       "GET /loss-reasons": () =>
         jsonResponse({
@@ -323,6 +334,7 @@ export const LostWithLongNote: Story = {
 export const NotAssessed: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ deal: ["read"] }),
       "GET /field-history": () => new Response(null, { status: 403 }),
     });
     return (

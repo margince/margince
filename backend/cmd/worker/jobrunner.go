@@ -74,6 +74,9 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vaul
 	// attachment would be dropped in production while every test that composes
 	// an api server passed.
 	cfg.captureConfig.Blob = lanes.blob
+	// The deal topic check rides the classify lane: capture asks it before it
+	// files a mail on a deal it only suggests.
+	cfg.captureConfig.DealTopicBrain = modelPath.CaptureClassify
 	captureReg := compose.CaptureSyncRegistry(pool, vault, compose.GmailConfig{
 		ClientID:     cfg.gmailClientID,
 		ClientSecret: cfg.gmailClientSecret,
@@ -274,6 +277,7 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, sch
 		ClassifyBrain:        modelPath.CaptureClassify,
 		OwedBrain:            modelPath.OwedVerdict,
 		SettlementBrain:      modelPath.RequestSettlement,
+		DealVerdictBrain:     modelPath.DealVerdict,
 		TagSuggestBrain:      modelPath.TagSuggest,
 		VerdictBrain:         modelPath.CaptureCounterpartyVerdict,
 		ConfidentialityBrain: modelPath.CaptureConfidentialityVerdict,

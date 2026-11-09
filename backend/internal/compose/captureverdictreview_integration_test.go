@@ -38,13 +38,13 @@ func TestCounterpartyAcceptCreatesTheRecordsAndClosesTheDisposition(t *testing.T
 	dispositionID := seedPendingDisposition(t, e, "dana@acceptco.example", "acceptco.example", activityID)
 	retireToUnsure(t, e, dispositionID)
 
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
-	if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := seedLegacySenderReviews(t, e, engine); err != nil {
 		t.Fatalf("staging reviews: %v", err)
 	}
 	approvalID := stagedProposalID(t, e, dispositionID)
-	assertSenderReviewCount(t, e, e.Rep1, 1)
+	assertSenderReviewCount(t, e, e.Rep1, 0)
 
 	// A REAL app_user with the create grants the mapping demands — the point
 	// being that an actual human can decide this kind. (e.Admin() mints a
@@ -93,9 +93,9 @@ func TestEditingTheCapturedMessageDoesNotCancelItsWaitingReview(t *testing.T) {
 	dispositionID := seedPendingDisposition(t, e, "dana@editco.example", "editco.example", activityID)
 	retireToUnsure(t, e, dispositionID)
 
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
-	if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := seedLegacySenderReviews(t, e, engine); err != nil {
 		t.Fatalf("staging reviews: %v", err)
 	}
 	approvalID := stagedProposalID(t, e, dispositionID)
@@ -199,8 +199,8 @@ func TestAnExhaustedDispositionIsRetiredRatherThanStranded(t *testing.T) {
 	if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("staging reviews: %v", err)
 	}
-	if n := countIn(t, e, `SELECT count(*) FROM approval WHERE kind = 'capture_counterparty'`); n != 1 {
-		t.Fatalf("%d proposals for a retired row, want 1", n)
+	if n := countIn(t, e, `SELECT count(*) FROM approval WHERE kind = 'capture_counterparty'`); n != 0 {
+		t.Fatalf("%d proposals for a retired row, want 0", n)
 	}
 }
 
@@ -214,9 +214,9 @@ func TestADeclinedReviewClosesTheDispositionInsteadOfReasking(t *testing.T) {
 	dispositionID := seedPendingDisposition(t, e, "declined@maybe.example", "maybe.example", activityID)
 	retireToUnsure(t, e, dispositionID)
 
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
-	if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := seedLegacySenderReviews(t, e, engine); err != nil {
 		t.Fatalf("staging reviews: %v", err)
 	}
 	approvalID := stagedProposalID(t, e, dispositionID)
@@ -237,7 +237,7 @@ func TestADeclinedReviewClosesTheDispositionInsteadOfReasking(t *testing.T) {
 	}
 
 	// And the human is not asked again.
-	if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := seedLegacySenderReviews(t, e, engine); err != nil {
 		t.Fatalf("second staging pass: %v", err)
 	}
 	if n := countIn(t, e, `SELECT count(*) FROM approval WHERE kind = 'capture_counterparty'`); n != 1 {
@@ -270,7 +270,7 @@ func TestAnUnansweredReviewAgesOutAndTakesItsOfferWithIt(t *testing.T) {
 	retireToUnsure(t, e, dispositionID)
 
 	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
-	if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := seedLegacySenderReviews(t, e, engine); err != nil {
 		t.Fatalf("staging reviews: %v", err)
 	}
 	approvalID := stagedProposalID(t, e, dispositionID)
@@ -329,9 +329,9 @@ func TestAgeingOutLosesToAHumanWhoDecidedFirst(t *testing.T) {
 	dispositionID := seedPendingDisposition(t, e, "decided@maybe.example", "maybe.example", activityID)
 	retireToUnsure(t, e, dispositionID)
 
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
-	if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := seedLegacySenderReviews(t, e, engine); err != nil {
 		t.Fatalf("staging reviews: %v", err)
 	}
 	approvalID := stagedProposalID(t, e, dispositionID)
@@ -371,7 +371,7 @@ func TestASenderQuestionWhoseMailboxOwnerLeftIsStagedForNobody(t *testing.T) {
 	e.WsExec(t, `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, e.Rep3)
 
 	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
-	if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := seedLegacySenderReviews(t, e, engine); err != nil {
 		t.Fatalf("staging reviews: %v", err)
 	}
 	if n := countIn(t, e, `SELECT count(*) FROM capture_pending_counterparty WHERE id = $1 AND proposal_id IS NOT NULL`, askable); n != 1 {
@@ -422,15 +422,15 @@ func TestSenderReviewHealthFollowsTheOfferExpiryAndDecider(t *testing.T) {
 	retireToUnsure(t, e, dispositionID)
 	assertSenderReviewCount(t, e, e.Rep1, 0)
 	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
-	if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := seedLegacySenderReviews(t, e, engine); err != nil {
 		t.Fatal(err)
 	}
 	approvalID := stagedProposalID(t, e, dispositionID)
-	assertSenderReviewCount(t, e, e.Rep1, 1)
+	assertSenderReviewCount(t, e, e.Rep1, 0)
 	e.WsExec(t, `UPDATE approval SET expires_at=now()-interval '1 hour' WHERE id=$1`, approvalID)
 	assertSenderReviewCount(t, e, e.Rep1, 0)
 	e.WsExec(t, `UPDATE approval SET expires_at=now()+interval '1 hour', requested_decider_id=$2 WHERE id=$1`, approvalID, e.Rep2)
-	assertSenderReviewCount(t, e, e.Rep2, 1)
+	assertSenderReviewCount(t, e, e.Rep2, 0)
 	e.WsExec(t, `UPDATE app_user SET status='deactivated' WHERE id=$1`, e.Rep2)
 	assertSenderReviewCount(t, e, e.Rep2, 0)
 }

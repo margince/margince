@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
@@ -103,45 +104,79 @@ func TestADayMeetingDatedTodayIsBookedUntilItsDateEnds(t *testing.T) {
 	}
 }
 
-// The SQL rule and the meeting statuses: canceled and no-show meetings are
-// not contact, held, booked and untracked ones are.
-func TestTheCountingRuleRefusesMeetingsThatDidNotHappen(t *testing.T) {
+// In touch and took place are two rules. A past meeting nobody called off is in
+// touch whether or not anyone reported it held. Only a recorded held outcome
+// took place (meetingoutcome). A future meeting is neither, and a canceled or
+// no-show meeting is neither.
+func TestInTouchAndTookPlaceSplitAPastUnreportedMeeting(t *testing.T) {
 	t.Parallel()
-	rule := InteractionCountsSQL("a")
+	past := occurredday.Moment{At: now.Add(-2 * time.Hour)}
+	future := occurredday.Moment{At: now.Add(2 * time.Hour)}
+	cases := []struct {
+		name               string
+		status             string
+		at                 occurredday.Moment
+		inTouch, tookPlace bool
+	}{
+		{"a past meeting nobody reported", "", past, true, false},
+		{"a past meeting still booked", "booked", past, true, false},
+		{"a held meeting", "held", past, true, true},
+		{"a future meeting", "booked", future, false, false},
+		{"a future meeting with no status", "", future, false, false},
+		{"a canceled meeting", "canceled", past, false, false},
+		{"a no-show", "no_show", past, false, false},
+	}
+	for _, tc := range cases {
+		if got := HadContact("meeting", tc.status, "", tc.at, now, time.UTC); got != tc.inTouch {
+			t.Errorf("%s: HadContact = %v, want %v", tc.name, got, tc.inTouch)
+		}
+		if got := InteractionCounts("meeting", tc.status, "", "", tc.at, now, time.UTC); got != tc.inTouch {
+			t.Errorf("%s: InteractionCounts = %v, want %v", tc.name, got, tc.inTouch)
+		}
+		if got := meetingoutcome.IsHeld(tc.status) && occurredday.MeetingTookPlace(tc.at, now, time.UTC); got != tc.tookPlace {
+			t.Errorf("%s: took place = %v, want %v", tc.name, got, tc.tookPlace)
+		}
+	}
+	if !InteractionCounts("email", "", "", "", past, now, time.UTC) || InteractionCounts("note", "", "", "", past, now, time.UTC) {
+		t.Error("InteractionCounts must admit an email and refuse a note")
+	}
+}
+
+// The SQL rule is the Go one: a meeting must be in touch at the bound clock
+// (MeetingInTouchSQL). No reader of contact asks for a held outcome.
+func TestTheContactRuleHoldsAMeetingToInTouchAtNow(t *testing.T) {
+	t.Parallel()
+	inTouch := MeetingInTouchSQL("a", "$9")
+	if !strings.Contains(inTouch, MeetingNotCalledOffSQL("a")) || !strings.Contains(inTouch, occurredday.MeetingTookPlaceSQL("a", "$9")) {
+		t.Fatalf("MeetingInTouchSQL = %q, want a meeting nobody called off that took place by $9", inTouch)
+	}
+	rule := InteractionCountsSQL("a", "$9")
 	if !strings.Contains(rule, "a.kind IN "+InteractionKindSQLGroup()) {
 		t.Fatalf("rule %q does not filter on the shared interaction kinds", rule)
 	}
-	meeting := MeetingCountsSQL("a")
-	if !strings.Contains(rule, meeting) {
-		t.Fatalf("rule %q does not apply the meeting status test %q", rule, meeting)
-	}
-	for _, status := range []string{"'booked'", "'held'", "IS NULL"} {
-		if !strings.Contains(meeting, status) {
-			t.Errorf("the meeting test %q does not admit %s", meeting, status)
+	for _, clock := range []string{rule, HadContactSQL("a", "$9"), LastActivityCountsSQL("a", "$9"), DirectionClockSQL("a", "$9"), HappenedByNowSQL("a", "$9")} {
+		if !strings.Contains(clock, inTouch) {
+			t.Errorf("contact rule %q does not hold a meeting to MeetingInTouchSQL", clock)
 		}
-	}
-	for _, status := range []string{"canceled", "no_show"} {
-		if strings.Contains(meeting, status) {
-			t.Errorf("the meeting test %q names %s, which is not contact", meeting, status)
+		if strings.Contains(clock, meetingoutcome.HeldSQL("a")) {
+			t.Errorf("contact rule %q asks for a held outcome, so a past meeting nobody reported is dropped", clock)
 		}
 	}
 }
 
-// The Go predicate and the SQL one answer every meeting status alike.
-func TestTheGoAndSQLMeetingRulesAgree(t *testing.T) {
+// A meeting nobody called off is a broader test than contact: booked, held and
+// untracked meetings pass it, canceled and no-show ones do not.
+func TestANotCalledOffMeetingIsAnyButCanceledOrNoShow(t *testing.T) {
 	t.Parallel()
-	meeting := MeetingCountsSQL("a")
+	meeting := MeetingNotCalledOffSQL("a")
 	for _, status := range []string{"booked", "held", "canceled", "no_show"} {
 		inSQL := strings.Contains(meeting, "'"+status+"'")
-		if MeetingStatusCounts(status) != inSQL {
-			t.Errorf("status %q: Go counts it = %v, SQL %q admits it = %v", status, !inSQL, meeting, inSQL)
+		if MeetingStatusNotCalledOff(status) != inSQL {
+			t.Errorf("status %q: Go admits it = %v, SQL %q admits it = %v", status, !inSQL, meeting, inSQL)
 		}
 	}
-	if !MeetingStatusCounts("") || !strings.Contains(meeting, "IS NULL") {
-		t.Error("an untracked meeting must count in both rules")
-	}
-	if InteractionCounts("meeting", "canceled", "", "") || !InteractionCounts("email", "", "", "") || InteractionCounts("note", "", "", "") {
-		t.Error("InteractionCounts must refuse a canceled meeting and a note, and admit an email")
+	if !MeetingStatusNotCalledOff("") || !strings.Contains(meeting, "IS NULL") {
+		t.Error("an untracked meeting is not called off in both rules")
 	}
 }
 
@@ -154,15 +189,15 @@ func TestOnlyACallThatReachedSomebodyCounts(t *testing.T) {
 		"": true, "reached": true, "put_through": true,
 		"not_reached": false, "voicemail": false, "call_back_later": false,
 	} {
-		if got := InteractionCounts("call", "", outcome, ""); got != want {
+		if got := InteractionCounts("call", "", outcome, "", occurredday.Moment{At: now}, now, time.UTC); got != want {
 			t.Errorf("a call with outcome %q counts: %v, want %v", outcome, got, want)
 		}
 		if got := strings.Contains(CallCountsSQL("a"), "'"+outcome+"'"); outcome != "" && got != want {
 			t.Errorf("the SQL rule lists %q: %v, want %v", outcome, got, want)
 		}
 	}
-	if rule := NotCalledOffSQL("a"); !strings.Contains(rule, CallCountsSQL("a")) || !strings.Contains(rule, MeetingCountsSQL("a")) {
-		t.Errorf("NotCalledOffSQL %q must carry both the meeting and the call rule", rule)
+	if rule := HadContactSQL("a", "now()"); !strings.Contains(rule, CallCountsSQL("a")) || !strings.Contains(rule, MeetingInTouchSQL("a", "now()")) {
+		t.Errorf("HadContactSQL %q must carry both the meeting and the call rule", rule)
 	}
 }
 
@@ -180,18 +215,30 @@ func optionalDaysAhead(n int) *time.Time {
 	return daysAgo(-n)
 }
 
-// Took place and ahead split a meeting by the clock. A booking that took place
-// counts as contact we had whether or not anybody marked it held. Only an
-// untracked or booked meeting still to come counts as one ahead.
-func TestTookPlaceAndAheadSplitByTheClock(t *testing.T) {
+// In touch and ahead split a meeting by the clock. A past meeting nobody called
+// off is in touch. Only an untracked or booked meeting still to come counts as
+// one ahead.
+func TestInTouchAndAheadSplitByTheClock(t *testing.T) {
 	t.Parallel()
-	past := MeetingTookPlaceSQL("m", "$9")
-	if !strings.Contains(past, MeetingCountsSQL("m")) || !strings.Contains(past, occurredday.MeetingTookPlaceSQL("m", "$9")) {
-		t.Errorf("took place = %q, want a meeting nobody called off that already took place", past)
-	}
 	ahead := MeetingAheadSQL("m", "$9")
 	if !strings.Contains(ahead, occurredday.AheadSQL("m", "$9")) || strings.Contains(ahead, "held") {
 		t.Errorf("ahead = %q, want an untracked or booked meeting still to come", ahead)
+	}
+	if past := MeetingInTouchSQL("m", "$9"); strings.Contains(past, occurredday.AheadSQL("m", "$9")) {
+		t.Errorf("in touch = %q admits a meeting still to come", past)
+	}
+}
+
+// The draft's history admits a meeting once it is in touch, and a note unless
+// it was called off.
+func TestTheDraftHistoryAdmitsAPastMeetingNobodyCalledOff(t *testing.T) {
+	t.Parallel()
+	rule := HappenedByNowSQL("a", "$1")
+	if want := "(a.kind <> 'meeting' OR " + MeetingInTouchSQL("a", "$1") + ")"; !strings.Contains(rule, want) {
+		t.Errorf("history rule %q does not hold a meeting to MeetingInTouchSQL", rule)
+	}
+	if !strings.Contains(rule, "a.kind <> 'note' OR "+MeetingNotCalledOffSQL("a")) {
+		t.Errorf("history rule %q no longer refuses a called-off note", rule)
 	}
 }
 

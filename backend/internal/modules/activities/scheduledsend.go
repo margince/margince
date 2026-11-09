@@ -290,12 +290,10 @@ func (s *Store) SendOrSchedule(
 
 // scheduleSend freezes a validated message for later.
 //
-// It runs the SAME preparation an immediate send runs, and throws the rendered
-// result away. That looks wasteful and is the point: the rep learns now that a
-// recipient is unreachable or a purpose unconsented, rather than discovering it
-// tomorrow from a held message. What the row stores is the human's input, not
-// the rendering — the sign-off, the footer and the attachment snapshots are all
-// re-derived at fire, against the state that exists then.
+// It runs the same preparation an immediate send runs and drops the rendering.
+// So the rep learns now, not tomorrow, that a recipient is unreachable. The row
+// stores the human's input and the sending legal entity. The sign-off, the
+// footer and the attachments are re-derived at fire, for that entity.
 func (s *Store) scheduleSend(
 	ctx context.Context,
 	origin SendOrigin,
@@ -311,9 +309,11 @@ func (s *Store) scheduleSend(
 	if err := validateSchedule(sched, s.now()); err != nil {
 		return ScheduledSend{}, err
 	}
-	if _, err := s.PrepareSend(ctx, origin, in, gate, stager); err != nil {
+	prepared, err := s.PrepareSend(ctx, origin, in, gate, stager)
+	if err != nil {
 		return ScheduledSend{}, err
 	}
+	in.SendingEntity = prepared.in.SendingEntity
 
 	actor, err := storekit.Actor(ctx)
 	if err != nil {

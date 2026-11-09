@@ -16,6 +16,7 @@ package activities
 // for. A value that could be any column's is a value this test cannot judge.
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -26,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -340,7 +342,10 @@ func stringOf[T ~string](v *T) *string {
 // arity error somewhere else, at a call site that has nothing to do with the
 // omission.
 func TestTheSelectListAndTheScanAgreeOnLength(t *testing.T) {
-	columns := activityColumns("coalesce(a.audience = 'workspace', false)")
+	columns, err := activityColumns(principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalSystem}), "coalesce(a.audience = 'workspace', false)", func(any) int { return 1 })
+	if err != nil {
+		t.Fatal(err)
+	}
 	dests := activityScanTargets(&activityScan{})
 	if len(dests) != len(activityProjection) {
 		t.Fatalf("the scan asks for %d destinations and the projection declares %d columns",

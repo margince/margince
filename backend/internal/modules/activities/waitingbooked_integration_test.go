@@ -14,6 +14,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -102,19 +105,19 @@ func TestARescheduledMeetingCountsAsBooked(t *testing.T) {
 	}
 	// A length-only edit images occurred_at unchanged on both sides, and is
 	// not a move.
-	e.exec(t, `INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, before, after)
-		VALUES ('system', 'connector:test', 'update', 'activity', $1,
-		        jsonb_build_object('occurred_at', $2::timestamptz, 'duration_seconds', 3600),
-		        jsonb_build_object('occurred_at', $2::timestamptz, 'duration_seconds', 1800))`,
-		meeting, time.Now().Add(48*time.Hour).UTC())
+	e.exec(t, `INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, before, after, occurred_at)
+		VALUES ('system', 'connector:test', 'update', 'activity', @meeting,
+		        jsonb_build_object('occurred_at', @before::timestamptz, 'duration_seconds', 3600),
+		        jsonb_build_object('occurred_at', @before::timestamptz, 'duration_seconds', 1800), @at)`,
+		pgx.StrictNamedArgs{"meeting": meeting, "before": time.Now().Add(48 * time.Hour).UTC(), "at": clocktest.Now(t)})
 	if got := e.waitFor(t, activity); got.MeetingBookedAt != nil {
 		t.Fatal("a length-only edit marked the wait as booked")
 	}
-	e.exec(t, `INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, before, after)
-		VALUES ('system', 'connector:test', 'update', 'activity', $1,
-		        jsonb_build_object('occurred_at', $2::timestamptz),
-		        jsonb_build_object('occurred_at', $3::timestamptz))`,
-		meeting, time.Now().Add(24*time.Hour).UTC(), time.Now().Add(48*time.Hour).UTC())
+	e.exec(t, `INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, before, after, occurred_at)
+		VALUES ('system', 'connector:test', 'update', 'activity', @meeting,
+		        jsonb_build_object('occurred_at', @before::timestamptz),
+		        jsonb_build_object('occurred_at', @after::timestamptz), @at)`,
+		pgx.StrictNamedArgs{"meeting": meeting, "before": time.Now().Add(24 * time.Hour).UTC(), "after": time.Now().Add(48 * time.Hour).UTC(), "at": clocktest.Now(t)})
 
 	if got := e.waitFor(t, activity); got.MeetingBookedAt == nil {
 		t.Fatal("a meeting moved after the ask left the wait unmarked")

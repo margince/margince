@@ -11,7 +11,12 @@ import { ReviewReference, SendReviewActions } from "./sendreviewaction";
 // status. The words come from the status; these are what the rep can do.
 export function SendRefusalRemedies({
   review,
-}: Readonly<{ review: SendReview | null }>) {
+  onDirectSent,
+}: Readonly<{
+  review: SendReview | null;
+  /** What the composer does once the exception has sent the message. */
+  onDirectSent?: () => void;
+}>) {
   if (!review) return null;
   return (
     <>
@@ -20,7 +25,11 @@ export function SendRefusalRemedies({
       <SendReviewActions key={review.reviewId} review={review} />
       {/* The other answer to the same question, for a rep who holds the
           authority. The server offers one or the other, never both. */}
-      <DirectSendAction key={`direct-${review.reviewId}`} review={review} />
+      <DirectSendAction
+        key={`direct-${review.reviewId}`}
+        review={review}
+        onSent={onDirectSent}
+      />
       {/* The reference, whether or not there is an action to offer. A server
           naming an action this build cannot draw leaves the rep with this. */}
       {review.actions.length === 0 && <ReviewReference review={review} />}

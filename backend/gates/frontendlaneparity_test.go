@@ -14,6 +14,8 @@ import (
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The frontend gate is spelled once as `make check-fe` and run by CI as three
@@ -180,7 +182,7 @@ func nameOf(match []string) string {
 // parseMakefile maps every target to what it pulls in and whether it works.
 func parseMakefile(t *testing.T, path string) map[string]*makeTarget {
 	t.Helper()
-	body, err := os.ReadFile(path)
+	body, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}
@@ -311,7 +313,7 @@ func gateWorkflowDeclaring(t *testing.T, job string) string {
 	}
 	var found []string
 	for _, path := range paths {
-		body, err := os.ReadFile(path) // #nosec G304 -- a repo-relative path from the glob above
+		body, err := gatekit.ReadFile(path) // #nosec G304 -- a repo-relative path from the glob above
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}
@@ -343,7 +345,7 @@ func gateWorkflowDeclaring(t *testing.T, job string) string {
 
 func ciGateTargets(t *testing.T, path string) []string {
 	t.Helper()
-	body, err := os.ReadFile(path) // #nosec G304 -- a repo-relative workflow path
+	body, err := gatekit.ReadFile(path) // #nosec G304 -- a repo-relative workflow path
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}
@@ -513,7 +515,7 @@ func TestTheFanOutsOwnLegsAreVisibleToThisGate(t *testing.T) {
 		rootGatesFanOut = "check-root-gates"
 	)
 
-	body, err := os.ReadFile("../Makefile")
+	body, err := gatekit.ReadFile("../Makefile")
 	if err != nil {
 		t.Fatalf("reading ../Makefile: %v", err)
 	}

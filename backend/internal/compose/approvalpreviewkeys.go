@@ -34,6 +34,7 @@ const (
 	previewFieldFirstName          = "first_name"
 	previewFieldGrossMinor         = "gross_minor"
 	previewFieldLocale             = "locale"
+	previewFieldLostReason         = "lost_reason"
 	previewFieldPartnerAttribution = "partner_attribution"
 	previewFieldPriority           = "priority"
 	previewFieldSocial             = "social"

@@ -30,7 +30,7 @@ func TestTheStateIsTheWorstAllowance(t *testing.T) {
 
 func TestUsageWithoutACounterStoreIsUnanswerable(t *testing.T) {
 	for name, meter := range map[string]*Meter{"no store": New(nil, Limits{}, time.Hour), "unmetered": Unmetered()} {
-		if _, err := meter.Usage(t.Context(), ids.NewV7(), []string{"x"}); !errors.Is(err, ErrUnanswerable) {
+		if _, err := meter.Usage(t.Context(), ids.NewV7(), []Holder{{Subject: "x"}}); !errors.Is(err, ErrUnanswerable) {
 			t.Errorf("%s: usage read answered %v, want ErrUnanswerable", name, err)
 		}
 	}

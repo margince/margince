@@ -53,7 +53,6 @@ gates/manifestdigest_test.go#var manifestDigestEncoding
 gates/modulepoolsharing_test.go#var poolConstructors
 gates/netguardparity_test.go#func TestPublishedReservedNetsMatchTheGuard
 gates/outboundanonymity_test.go#func isDefaultClient
-gates/replayscope_test.go#var replayScopeConsts
 gates/restrictedreaders_test.go#var activityReaderScope
 gates/tableownerregistry_test.go#var tableOwners
 internal/compose/agentcommand.go#const block at const opApproveApproval
@@ -200,7 +199,6 @@ internal/compose/reporterrors.go#const reportFieldNotAllowedCode
 internal/compose/routes.go#func WithUploadLimits
 internal/compose/routeshadow_test.go#func pathParameters
 internal/compose/sendpath.go#func consentGateFor
-internal/compose/sendpath.go#func registerLateApprovalEffects
 internal/compose/sendpreflight_test.go#func sendCapableCases
 internal/compose/sendvoiceoutcome_integration_test.go#type witnessDraftOutcome
 internal/compose/serverassembly.go#func NewCollectionsStore

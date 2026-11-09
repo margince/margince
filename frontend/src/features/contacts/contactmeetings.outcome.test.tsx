@@ -107,7 +107,7 @@ async function heldPanel() {
 }
 
 const UPDATE = "Add notes to Discovery call";
-const CANCEL = "Mark as canceled: Discovery call";
+const CANCEL = "Did not happen: Discovery call";
 
 it("records a no-show on a meeting the server says awaits one, then shows it on the row", async () => {
   let stored = meeting({});
@@ -176,7 +176,7 @@ it("offers the outcome on a past booked meeting the server stamps as awaiting on
   mount(() => [meeting({ meeting_status: "booked" })]);
   const panel = await heldPanel();
   expect(
-    within(panel).getByRole("button", { name: "Held: Discovery call" }),
+    within(panel).getByRole("button", { name: "It happened: Discovery call" }),
   ).toBeTruthy();
   expect(within(panel).getByRole("button", { name: UPDATE })).toBeTruthy();
   expect(within(panel).getByRole("button", { name: CANCEL })).toBeTruthy();

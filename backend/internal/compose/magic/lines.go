@@ -8,6 +8,7 @@ package magic
 import (
 	"context"
 	"encoding/json"
+	"maps"
 	"sort"
 	"strings"
 	"time"
@@ -136,9 +137,19 @@ func lineOf(mask imageMask, e entry) (crmcontracts.MagicLine, string, bool) {
 	return line, groupKey(e, d), true
 }
 
-// imagesOf is what a line shows of its row's before and after images.
+// imagesOf is what a line shows of its row's before and after images: the
+// fields a reader is shown, under the reader's mask.
 func imagesOf(mask imageMask, e entry) (before, after *map[string]any) {
-	return mask.withheldFrom(e.EntityType, fieldsOf(e.Before)), mask.withheldFrom(e.EntityType, fieldsOf(e.After))
+	return mask.withheldFrom(e.EntityType, presentedOf(e.EntityType, fieldsOf(e.Before))),
+		mask.withheldFrom(e.EntityType, presentedOf(e.EntityType, fieldsOf(e.After)))
+}
+
+func presentedOf(entityType string, image *map[string]any) *map[string]any {
+	if image == nil {
+		return nil
+	}
+	maps.DeleteFunc(*image, func(key string, _ any) bool { return !presentedField(entityType, key) })
+	return image
 }
 
 // showDeferredImages fills the images of the drawn lines whose rows the arms

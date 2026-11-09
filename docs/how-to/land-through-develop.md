@@ -1,4 +1,4 @@
-<!-- describes: .github/workflows/ci.yml -->
+<!-- describes: .github/workflows/ci.yml Makefile -->
 # Land a change through `develop`
 
 `develop` is a second branch, where a pull request lands after a shorter CI run. Each night a scheduled
@@ -34,7 +34,8 @@ CodeRabbit review; the nightly `develop` into `main` pull request does.
 ```sh
 git switch -c <type>/<slug> origin/develop
 # work, then the smallest lane, then:
-make check
+make check CHECK_BASE_REF=origin/develop
+FE_UAT_BASE_REF=origin/develop make fe-uat # for a frontend change
 git push -u origin <type>/<slug>
 gh pr create --base develop
 gh pr merge <n> --squash
@@ -46,10 +47,22 @@ nightly session fixes it, so it does not need a `claim: main-red` pull request.
 ## The nightly sync
 
 1. On a branch off `origin/develop`, run `git merge origin/main` and resolve every conflict.
-2. Run `make db-up` and `make check-all`, and fix every red on the same branch.
-3. Open a pull request into `develop` and merge it with `gh pr merge <n> --merge`.
-4. Open or update the pull request from `develop` into `main`. Merge it with `gh pr merge <n> --merge`
-   once `ci` and `cla` are green and every review thread is resolved.
+   Keep the migration stamps `main` has, and give anything only `develop` has a stamp above them.
+2. Run `make db-up` and `make check-all CHECK_BASE_REF=origin/develop`, and fix every red on the same
+   branch. With the default base, the run never asks whether the branch kept what `develop` has.
+3. Open the pull request into `main` from the sync branch, never from `develop` itself. Merge it with
+   `gh pr merge <n> --merge` once `ci` and `cla` are green and every review thread is resolved.
+   This repository deletes the head branch of a merged pull request, and the merge runs as a
+   maintainer, so the deletion rule on `develop` does not stop it.
+   A fix that lands on `develop` while this pull request is open is not in it. Merge `develop` into
+   the sync branch, and let the checks run again before you merge.
+4. Bring `develop` level: open a pull request into `develop` from a branch at the merged `main`.
+   Merge it with `gh pr merge <n> --merge` once its required checks are green.
+
+A branch that carries `main` commits `develop` lacks is judged by the migration check against the `main`
+it merged, since `main` sets the order an installation applies. It must also keep every migration on
+`develop`, once, under any stamp. After a sync that re-stamps a migration, a database that ran `develop`
+needs `make dev-fresh`.
 
 The pull request into `main` runs every lane under the usual path filters, and CodeRabbit reviews it.
 Answer its findings with a fix on `develop`, through a pull request of its own.

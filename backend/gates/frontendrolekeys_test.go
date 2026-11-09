@@ -29,6 +29,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // capabilityModule is the one file allowed to read role keys. It holds the
@@ -207,7 +209,7 @@ func TestNoScreenDecidesAuthorizationFromARoleKey(t *testing.T) {
 	}
 
 	scanned := 0
-	err := filepath.WalkDir("../frontend/src", func(path string, d os.DirEntry, err error) error {
+	err := gatekit.WalkDir("../frontend/src", func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -233,7 +235,7 @@ func TestNoScreenDecidesAuthorizationFromARoleKey(t *testing.T) {
 		if filepath.ToSlash(rel) == capabilityModule {
 			return nil
 		}
-		src, readErr := os.ReadFile(path) // #nosec G304 -- a .ts file from walking the trusted source tree
+		src, readErr := gatekit.ReadFile(path) // #nosec G304 -- a .ts file from walking the trusted source tree
 		if readErr != nil {
 			return readErr
 		}
@@ -280,7 +282,7 @@ var seededRoleEntry = regexp.MustCompile(`\{"([a-z_]+)",\s*"[^"]*"\}`)
 // seededRoleKeys reads the keys identity seeds out of its systemRoles table.
 func seededRoleKeys(t *testing.T) map[string]bool {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join("internal", "modules", "identity", "service.go"))
+	raw, err := gatekit.ReadFile(filepath.Join("internal", "modules", "identity", "service.go"))
 	if err != nil {
 		t.Fatalf("reading the identity service source: %v", err)
 	}
@@ -304,11 +306,11 @@ var clientSeededRole = regexp.MustCompile(`(?m)^\s*([a-z_]+): \{ label: "[^"]+",
 // stale name leaves the untranslated English, a renamed role its old label.
 func TestTheClientKnowsEachSeededRoleByTheNameIdentityStores(t *testing.T) {
 	t.Parallel()
-	service, err := os.ReadFile(filepath.Join("internal", "modules", "identity", "service.go"))
+	service, err := gatekit.ReadFile(filepath.Join("internal", "modules", "identity", "service.go"))
 	if err != nil {
 		t.Fatalf("reading the identity service source: %v", err)
 	}
-	client, err := os.ReadFile(filepath.Join("..", "frontend", "src", "lib", "roles.queries.ts"))
+	client, err := gatekit.ReadFile(filepath.Join("..", "frontend", "src", "lib", "roles.queries.ts"))
 	if err != nil {
 		t.Fatalf("reading the client's role table: %v", err)
 	}

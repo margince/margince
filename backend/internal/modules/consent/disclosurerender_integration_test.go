@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
@@ -398,5 +399,60 @@ func TestAWriterWithoutTheReadGrantChangesNothing(t *testing.T) {
 		t.Errorf("the refused request still changed the particulars to %+v: the read gate "+
 			"has to run BEFORE the write, or a 403 arrives after the mutation committed",
 			after)
+	}
+}
+
+// TestAFurtherEntityNamesItselfAsTheController: a message of a further legal
+// entity names that entity's legal name and address as its controller. It
+// keeps the installation's privacy contact, which an entity does not state.
+// The default entity keeps the installation's particulars.
+//
+// Mutation: return the installation's particulars from controllerOf and this
+// fails.
+func TestAFurtherEntityNamesItselfAsTheController(t *testing.T) {
+	e := setupChannelConsent(t)
+	store := inJurisdiction(t, e, "zk",
+		messagingrules.Disclosure{Kind: messagingrules.ControllerIdentity},
+		messagingrules.Disclosure{Kind: messagingrules.PrivacyContact})
+	stateParticulars(t, e, ControllerParticulars{
+		LegalName: "Beispiel GmbH", PostalAddress: "Hauptstraße 1\n10115 Berlin", PrivacyContact: "privacy@beispiel.test",
+	})
+	branch := ids.NewV7()
+	e.exec(t, `INSERT INTO legal_entity (id, display_name, legal_name, country,
+		  address_line1, address_postal_code, address_city, captured_by)
+		VALUES ($1, 'Branch', 'Branch Co Ltd', 'zk', '1 Le Loi', '700000', 'Saigon', 'human:x')`, branch)
+	textOf := func(entity ids.UUID) map[string]string {
+		t.Helper()
+		out := map[string]string{}
+		if err := store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+			lines, err := store.DisclosuresFor(e.ctx, tx, DisclosureQuery{
+				Category: commsauthz.CategoryReplyToInbound, Recipients: []string{recipientAddress(e)}, Entity: entity,
+			})
+			for _, line := range lines {
+				out[line.Kind] = line.Text
+			}
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return out
+	}
+
+	home := textOf(ids.Nil)
+	if !strings.Contains(home[string(messagingrules.ControllerIdentity)], "Beispiel GmbH") {
+		t.Errorf("the default entity's controller line is %q, want the installation's", home[string(messagingrules.ControllerIdentity)])
+	}
+	got := textOf(branch)
+	controller := got[string(messagingrules.ControllerIdentity)]
+	for _, want := range []string{"Branch Co Ltd", "1 Le Loi", "700000 Saigon", "ZK"} {
+		if !strings.Contains(controller, want) {
+			t.Errorf("the branch's controller line %q lacks %q", controller, want)
+		}
+	}
+	if strings.Contains(controller, "Beispiel") {
+		t.Errorf("the branch's controller line %q names the installation", controller)
+	}
+	if got[string(messagingrules.PrivacyContact)] != "privacy@beispiel.test" {
+		t.Errorf("the branch's privacy contact is %q, want the installation's", got[string(messagingrules.PrivacyContact)])
 	}
 }

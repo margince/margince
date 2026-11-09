@@ -58,8 +58,8 @@ func confidentialityRequest(row capture.PendingThread) model.Request {
 	// Attachment names travel with the body because a name carries the answer
 	// on its own: `Aufhebungsvertrag_final.pdf` is a termination agreement
 	// whatever the covering note says.
-	thread := fmt.Sprintf("Subject: %s\nAttachments: %s\n%s",
-		row.Subject, strings.Join(row.Attachments, ", "), row.Body)
+	thread := fmt.Sprintf("Subject: %s\nAttachments: %s\n%s%s",
+		row.Subject, strings.Join(row.Attachments, ", "), row.Body, documentsSection(row))
 	prompt.WriteString(fence.WrapAttr("id", row.ID.String(), thread) + "\n")
 	prompt.WriteString(`Return JSON: { "results": [ { "id", "verdict", "confidence" } ] } — one entry for the supplied id, where "verdict" is the thread kind.`)
 
@@ -70,6 +70,27 @@ func confidentialityRequest(row capture.PendingThread) model.Request {
 		ResponseSchema: confidentialitySchema(row.ID.String()),
 		SecretStripper: ai.NewSecretStripper(),
 	}
+}
+
+// documentsSection is what the thread's documents say, inside the body's
+// fence. Each document shows its excerpt or that it could not be read, and a
+// last line counts the documents left out.
+func documentsSection(row capture.PendingThread) string {
+	var out strings.Builder
+	for _, doc := range row.Documents {
+		switch {
+		case doc.Unreadable:
+			fmt.Fprintf(&out, "\nAttachment %q: could not be read.\n", doc.Filename)
+		case doc.Truncated:
+			fmt.Fprintf(&out, "\nAttachment %q (excerpt, the file continues):\n%s\n", doc.Filename, doc.Excerpt)
+		default:
+			fmt.Fprintf(&out, "\nAttachment %q (excerpt):\n%s\n", doc.Filename, doc.Excerpt)
+		}
+	}
+	if row.DocumentsOmitted > 0 {
+		fmt.Fprintf(&out, "\n%d more attached documents were not read.\n", row.DocumentsOmitted)
+	}
+	return out.String()
 }
 
 // confidentialitySchema is the generation-time shape guardrail. Its enum is

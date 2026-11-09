@@ -10,12 +10,16 @@ package capture
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -110,12 +114,17 @@ func newPairEnv(t *testing.T) *pairEnv {
 // guest seat and one outside contact. Each calendar numbers the event its own
 // way, and both state one iCal UID.
 func (p *pairEnv) book(start time.Time) {
+	p.bookOrganizedBy(start, captureOwner)
+}
+
+// bookOrganizedBy is book with the event's organizer named.
+func (p *pairEnv) bookOrganizedBy(start time.Time, organizer string) {
 	for label, self := range map[string]string{"a": captureOwner, "b": guestColleagueA} {
 		other := guestColleagueA
 		if label == "b" {
 			other = captureOwner
 		}
-		ev := lateGuestEvent("review-"+label, "confirmed", start, captureOwner,
+		ev := lateGuestEvent("review-"+label, "confirmed", start, organizer,
 			selfEntry(self, "accepted"), guestEntry(other, "accepted"), guestEntry(guestKnown, "accepted"))
 		ev["iCalUID"] = crossSeatUID
 		p.cals.set(label, ev)
@@ -198,6 +207,16 @@ func (p *pairEnv) wantOneMeeting(t *testing.T, start time.Time) ids.UUID {
 	return survivor
 }
 
+// withLockDetail words err with the lock waits Postgres reports for a deadlock,
+// which the wrapped message drops. The statements involved are in the server log.
+func withLockDetail(err error) string {
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) {
+		return err.Error()
+	}
+	return fmt.Sprintf("%v (detail: %s; where: %s)", err, pgErr.Detail, pgErr.Where)
+}
+
 func TestTwoSeatsFirstSyncsRacingFileOneMeeting(t *testing.T) {
 	p := newPairEnv(t)
 	start := captureNow.AddDate(0, 0, -3).Truncate(time.Hour)
@@ -215,10 +234,15 @@ func TestTwoSeatsFirstSyncsRacingFileOneMeeting(t *testing.T) {
 	ready.Done()
 	done.Wait()
 	close(errs)
+	syncFailed := false
 	for err := range errs {
 		if err != nil {
-			t.Fatalf("SyncOnce: %v", err)
+			t.Errorf("SyncOnce: %s", withLockDetail(err))
+			syncFailed = true
 		}
+	}
+	if syncFailed {
+		t.FailNow()
 	}
 
 	p.wantOneMeeting(t, start)

@@ -22,6 +22,7 @@ export function savedFieldsOf(
     files,
     context: fields.context,
     sendAt: fields.sendAt,
+    editorState: fields.editorState,
   };
 }
 
@@ -41,6 +42,7 @@ export function fieldsOfDraft(draft: MailDraft): SavedDraftFields {
     })),
     context: draft.communication_context ?? "",
     sendAt: draft.scheduled_at ? localDateTimeValue(draft.scheduled_at) : "",
+    editorState: draft.editor_state,
     grounding: (draft.grounding ?? []).map((ground) => ({
       type: ground.anchor_type,
       id: ground.anchor_id,
@@ -50,6 +52,20 @@ export function fieldsOfDraft(draft: MailDraft): SavedDraftFields {
 
 function sameList(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
+function sameEditorState(
+  a: SavedDraftFields["editorState"],
+  b: SavedDraftFields["editorState"],
+) {
+  return (
+    (a?.intent ?? "") === (b?.intent ?? "") &&
+    (a?.ai_generated ?? false) === (b?.ai_generated ?? false) &&
+    (a?.ai_disclosure ?? "") === (b?.ai_disclosure ?? "") &&
+    a?.voice_profile_version === b?.voice_profile_version &&
+    (a?.voice_degraded ?? false) === (b?.voice_degraded ?? false) &&
+    (a?.served_body ?? "") === (b?.served_body ?? "")
+  );
 }
 
 const idsOf = (files: readonly ChosenFile[]) => files.map((file) => file.id);
@@ -74,6 +90,7 @@ export function sameFields(a: SavedDraftFields, b: SavedDraftFields): boolean {
     a.html === b.html &&
     sameList(idsOf(a.files), idsOf(b.files)) &&
     a.context === b.context &&
-    a.sendAt === b.sendAt
+    a.sendAt === b.sendAt &&
+    sameEditorState(a.editorState, b.editorState)
   );
 }

@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
 )
 
 // WithholdVendorDomain opens the vendor question instead of settling the
@@ -94,15 +95,14 @@ func (s *Store) KeepDomainAsVendor(ctx context.Context, domain string) error {
 	})
 }
 
-// vendorMailSQL selects the inbound mail a contact at the domain sent inside
-// the shared waiting horizon (storekit.WaitingHorizonSQL), archived or not.
+// vendorMailSQL selects unmarked senders at the domain inside the waiting horizon.
 // The From participant names the sender, never the page's contact.
 //
 // The host is matched through idx_aparticipant_sender_domain_reversed. Without
 // it every question would read all inbound mail in the horizon.
 func vendorMailSQL(mail, domain string, asOf time.Time, arg func(any) int) string {
 	instant := fmt.Sprintf("$%d::timestamptz", arg(asOf))
-	return mail + `.kind = 'email' AND ` + mail + `.direction = 'inbound'
+	return relationshipmark.SenderMayRaiseWorkSQL(mail) + ` AND ` + mail + `.kind = 'email' AND ` + mail + `.direction = 'inbound'
  AND EXISTS (SELECT 1 FROM activity_participant vendor_sender
   WHERE vendor_sender.activity_id = ` + mail + `.id AND vendor_sender.role = 'from'
   AND vendor_sender.address_domain_folded IS NOT NULL

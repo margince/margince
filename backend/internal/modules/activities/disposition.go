@@ -157,7 +157,7 @@ func threadOf(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (threadIdentity
 	var thread threadIdentity
 	var key, provider, direction *string
 	if err := tx.QueryRow(ctx,
-		`SELECT thread_key, kind, channel_provider, direction FROM activity WHERE id = $1`,
+		`SELECT thread_key, kind, channel_provider, direction FROM activity WHERE id = $1 FOR SHARE`,
 		id).Scan(&key, &thread.kind, &provider, &direction); err != nil {
 		return threadIdentity{}, fmt.Errorf("activities: reading the message's thread: %w", err)
 	}
@@ -169,6 +169,9 @@ func threadOf(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (threadIdentity
 			Field: "id", Code: "message_has_no_thread",
 			Message: "this message belongs to no conversation, so there is no thread to judge",
 		}
+	}
+	if err := storekit.LockThreadKeysTx(ctx, tx, *key); err != nil {
+		return threadIdentity{}, err
 	}
 	thread.key = *key
 	if provider != nil {
@@ -443,7 +446,7 @@ func (s *Store) judgeMessage(ctx context.Context, id ids.ActivityID, write judge
 	if err != nil {
 		return err
 	}
-	return s.tx(ctx, func(tx pgx.Tx) error {
+	return s.txRetryingLockCycles(ctx, pgx.ReadCommitted, func(tx pgx.Tx) error {
 		if err := auth.EnsureActivityContentVisibleLive(ctx, tx, id.UUID); err != nil {
 			return err
 		}

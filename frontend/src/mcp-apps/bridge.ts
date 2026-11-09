@@ -31,6 +31,12 @@
 //   declared in actions.json and nothing else; a view that does not import it
 //   carries no code that sends a request. The host routes the call through the
 //   same passport and approval checks as any other.
+//
+//   It sends only the message shapes a view needs. sendToHost is the one
+//   sender (an ESLint rule keeps it so), and OPEN_MESSAGES fixes each open
+//   method's params. The host is trusted. This limits what our code sends; it
+//   does not stop a substituted document from messaging the host, which is what
+//   the api's build digest is for.
 
 import { followContentSize } from "./size";
 import { applyTheme, followHostChange } from "./theme";
@@ -92,16 +98,96 @@ export function onResponse(
   capabilityHandler = capabilities;
 }
 
-// What a view may send without declaring anything: its handshake, its size and
-// a chat message. The transport refuses any other method. So no code path of
-// the view can ask the host for more than the view declared. A view with no
-// actions registers nothing, and its document carries no tool call at all.
-const OPEN_METHODS: ReadonlySet<string> = new Set([
-  "ui/initialize",
-  "ui/notifications/initialized",
-  "ui/notifications/size-changed",
-  "ui/message",
-]);
+/** MAX_MESSAGE_CHARS caps the one text part a chat message may carry. */
+export const MAX_MESSAGE_CHARS = 4000;
+
+/** hasOnly reports whether a record carries the given keys and no others. */
+function hasOnly(
+  record: Record<string, unknown>,
+  keys: readonly string[],
+): boolean {
+  const own = Object.keys(record);
+  return (
+    own.length === keys.length &&
+    keys.every((key) => Object.hasOwn(record, key))
+  );
+}
+
+function isEmptyRecord(value: unknown): boolean {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.keys(value).length === 0
+  );
+}
+
+function isRequest(message: Record<string, unknown>): boolean {
+  return (
+    typeof message.id === "number" &&
+    hasOnly(message, ["id", "method", "params"])
+  );
+}
+
+function isNotification(message: Record<string, unknown>): boolean {
+  return hasOnly(message, ["method", "params"]);
+}
+
+function isInitialize(message: Record<string, unknown>): boolean {
+  const params = asRecord(message.params);
+  const appInfo = asRecord(params.appInfo);
+  return (
+    isRequest(message) &&
+    hasOnly(params, ["protocolVersion", "appInfo", "appCapabilities"]) &&
+    params.protocolVersion === PROTOCOL_VERSION &&
+    hasOnly(appInfo, ["name", "version"]) &&
+    typeof appInfo.name === "string" &&
+    typeof appInfo.version === "string" &&
+    isEmptyRecord(params.appCapabilities)
+  );
+}
+
+function isInitialized(message: Record<string, unknown>): boolean {
+  return isNotification(message) && isEmptyRecord(message.params);
+}
+
+function isSizeChanged(message: Record<string, unknown>): boolean {
+  const params = asRecord(message.params);
+  return (
+    isNotification(message) &&
+    hasOnly(params, ["width", "height"]) &&
+    [params.width, params.height].every(
+      (side) => typeof side === "number" && Number.isFinite(side) && side >= 0,
+    )
+  );
+}
+
+function isChatMessage(message: Record<string, unknown>): boolean {
+  const params = asRecord(message.params);
+  const content = asRecord(params.content);
+  return (
+    isRequest(message) &&
+    hasOnly(params, ["role", "content"]) &&
+    params.role === "user" &&
+    hasOnly(content, ["type", "text"]) &&
+    content.type === "text" &&
+    typeof content.text === "string" &&
+    content.text.length > 0 &&
+    content.text.length <= MAX_MESSAGE_CHARS
+  );
+}
+
+// What a view may send without declaring anything, and the one shape each may
+// take: the shapes announce, completeHandshake, size.ts and askAssistant send.
+// Any other method, and a message with no method, needs allowOutbound's check.
+const OPEN_MESSAGES: Readonly<
+  Record<string, (message: Record<string, unknown>) => boolean>
+> = {
+  "ui/initialize": isInitialize,
+  "ui/notifications/initialized": isInitialized,
+  "ui/notifications/size-changed": isSizeChanged,
+  "ui/message": isChatMessage,
+};
 let mayAlsoSend: (message: Record<string, unknown>) => boolean = () => false;
 
 /** allowOutbound replaces the check for the other messages a view may send. */
@@ -139,8 +225,14 @@ function fromHost(event: MessageEvent): boolean {
  */
 export function sendToHost(message: Record<string, unknown>): void {
   const method = asText(message.method);
-  if (method !== "" && !OPEN_METHODS.has(method) && !mayAlsoSend(message))
-    return;
+  const shape = Object.hasOwn(OPEN_MESSAGES, method)
+    ? OPEN_MESSAGES[method]
+    : undefined;
+  const allowed =
+    shape !== undefined
+      ? shape(message)
+      : method !== "" && mayAlsoSend(message);
+  if (!allowed) return;
   const target =
     hostOrigin === null || hostOrigin === "null" ? "*" : hostOrigin;
   window.parent.postMessage({ jsonrpc: "2.0", ...message }, target);

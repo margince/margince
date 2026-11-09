@@ -20,7 +20,7 @@ import { Button } from "../../design-system/atoms";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { intentAbout } from "../../lib/compose.intent";
 import { useViewerZone } from "../../lib/viewerzone";
-import { phrasedReasons, reasonText } from "../../lib/worklistcopy";
+import { partyName, phrasedReasons, reasonText } from "../../lib/worklistcopy";
 import {
   ChannelReplyAction,
   ComposeModal,
@@ -142,7 +142,7 @@ function replyIntent(
   zone: string,
 ): string {
   const why = phrasedReasons(item, false).flatMap(
-    (reason) => reasonText(reason, t, locale, zone) ?? [],
+    (reason) => reasonText(reason, t, locale, zone, partyName(item)) ?? [],
   )[0];
   // The composer's own phrase for answering a message, not a second spelling
   // of it: one sentence reaches the model whichever surface opened the drawer.

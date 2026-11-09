@@ -105,11 +105,9 @@ export function SettingRow({
           {label}
         </span>
         {description !== undefined && (
-          // A div, not a paragraph: a row may put its verbs under the name.
-          // A button menu is a block that a <p> cannot hold.
-          <div className="settingrow-description" id={descriptionId}>
+          <SettingDescription id={descriptionId}>
             {description}
-          </div>
+          </SettingDescription>
         )}
       </div>
       <div className="settingrow-control">
@@ -155,6 +153,23 @@ export function SettingList({
         .join(" ")}
       data-testid={testId}
     >
+      {children}
+    </div>
+  );
+}
+
+/**
+ * A setting's description in the row's own type, for a card that describes a
+ * control it draws without a `SettingRow` (the Brand card's file note).
+ */
+export function SettingDescription({
+  id,
+  children,
+}: Readonly<{ id?: string; children: ReactNode }>) {
+  return (
+    // A div, not a paragraph: a row may put its verbs under the name.
+    // A button menu is a block that a <p> cannot hold.
+    <div className="settingrow-description" id={id}>
       {children}
     </div>
   );

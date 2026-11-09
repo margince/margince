@@ -86,6 +86,9 @@ func (s *Service) evaluateAt(ctx context.Context, tx pgx.Tx, selection crmcontra
 	if err := s.applyTargets(ctx, tx, &out); err != nil {
 		return Evaluation{}, err
 	}
+	if err := distinguishOwnerNames(ctx, tx, out.Result.Charts); err != nil {
+		return Evaluation{}, err
+	}
 	out.Result.EvaluationKey, err = evaluationKey(out)
 	return out, err
 }

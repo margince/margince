@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { unwrap } from "../../lib/problem";
+import { contact360Query } from "../../lib/contact.queries";
 import "./contact360.css";
 
 export type Contact360 = components["schemas"]["Contact360"];
@@ -17,14 +16,7 @@ export type Contact360 = components["schemas"]["Contact360"];
 export function useContact360(id: string, enabled = true) {
   return useQuery({
     enabled,
-    queryKey: ["contact360", id],
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/contacts/{id}/360", {
-          params: { path: { id } },
-        }),
-      );
-    },
+    ...contact360Query(id),
   });
 }
 

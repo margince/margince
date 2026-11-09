@@ -10,9 +10,9 @@ import { QueryStates } from "../../design-system/querystates";
 import { useToast } from "../../design-system/toast";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { useThreadProject } from "../../lib/activityfiling";
 import { problemStatus } from "../../lib/problem";
 import { ComposeModal } from "./compose";
-import { useThreadProject } from "./composeanchor";
 import {
   type EditSeed,
   editSeedOf,

@@ -49,6 +49,7 @@ export type FigureState =
       kind: "unavailable";
       status?: NumericCoverage["status"];
       withheld?: boolean;
+      why?: MessageKey;
     };
 
 // A source's coverage is said in the reader's language from its status and
@@ -111,7 +112,10 @@ function figureState(
 
 export type WeeklyFigures = Record<WeeklyFigure, FigureState>;
 
-export function weeklyNumericStatus(summary: Summary | undefined): {
+export function weeklyNumericStatus(
+  summary: Summary | undefined,
+  leadsWithheld = false,
+): {
   basis: "brief.weekly.sharedDefinitions" | "brief.weekly.legacyDefinitions";
   partial: boolean;
   figures: WeeklyFigures;
@@ -123,7 +127,13 @@ export function weeklyNumericStatus(summary: Summary | undefined): {
     moved: of("moved"),
     tasks: of("tasks"),
     meetings: of("meetings"),
-    leads: of("leads"),
+    leads: leadsWithheld
+      ? {
+          kind: "unavailable",
+          withheld: true,
+          why: "brief.weekly.leadsUnavailable",
+        }
+      : of("leads"),
     commitments: of("commitments"),
   };
   const incomplete = (coverage: NumericCoverage | undefined) =>
@@ -133,6 +143,7 @@ export function weeklyNumericStatus(summary: Summary | undefined): {
       ? "brief.weekly.sharedDefinitions"
       : "brief.weekly.legacyDefinitions",
     partial:
+      leadsWithheld ||
       incomplete(summary?.bookings_coverage) ||
       incomplete(summary?.meetings_coverage),
     figures,
@@ -185,6 +196,7 @@ function unavailableWhy(
   state: Extract<FigureState, { kind: "unavailable" }>,
   t: Translate,
 ): string | undefined {
+  if (state.why) return t(state.why);
   if (state.withheld) {
     return t("reporting.withheld");
   }

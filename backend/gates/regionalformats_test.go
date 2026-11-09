@@ -6,17 +6,18 @@
 package gates
 
 import (
-	"os"
 	"reflect"
 	"regexp"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func TestRegionalFormatReadAndWriteContractsAgree(t *testing.T) {
 	t.Parallel()
-	contract, err := os.ReadFile("api/crm.yaml")
+	contract, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
