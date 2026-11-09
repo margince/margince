@@ -47,6 +47,12 @@ container started without one stops with a message naming it rather than
 failing later against a database it cannot use.
 
 They stay apart so that the role serving requests cannot change the schema.
+Both name the same database. Migrations run as the owner and the API serves as
+the app role, so two databases would leave the API on a schema nothing migrated.
+
+The custom-field DDL runs on `MARGINCE_SCHEMA_DSN`, which the entrypoint sets to
+`MARGINCE_OWNER_DSN` when it is unset. Set it yourself only to a role that may
+change the schema, or adding a custom field fails.
 
 ## The first company
 
@@ -57,14 +63,21 @@ workspace that already exists.
 
 The password arrives by reference rather than as a literal: `password_file`
 naming a path, or `password` as `${file:/path}` or `${env:NAME}`. It has to be
-at least twelve characters.
+at least twelve characters. When both are set, `password` wins.
 
 Mount the secret and point `password_file` at it. In a container the literal in
 an environment variable is readable by anyone who can inspect the container,
-which is a wider audience than the file is.
+which is a wider audience than the file is. That holds only while the file is
+readable by the API's user alone, and a platform's default file mode can be
+wider.
 
 Seeding also wants `workspace.name`: the API refuses a `bootstrap_admin` that
-has none, so an empty database takes both.
+has none, so seeding takes both.
+
+An empty database without `bootstrap_admin` is not refused either. The API
+writes a one-time setup token to `/app/config/margince-setup-token`, logs that
+path, and keeps serving. The first admin presents the token to claim the
+installation.
 
 The entrypoint also accepts `MARGINCE_ADMIN_PASSWORD` directly. A boot that
 finds an active workspace binds to it and seeds nothing, so the variable can
@@ -72,7 +85,12 @@ stay set in a deployment without a restart reseeding anything.
 
 Taking that route pins the path. The entrypoint writes the value to
 `/app/secrets/admin-password`, and `password_file` has to name that same one,
-which is `secrets/admin-password` as the API reads it.
+which is `secrets/admin-password` as the API reads it. Leave `password` unset
+on that route, since it would win over the file.
+
+Once a company exists, every start deletes `secrets/admin-password`, whether
+the variable is set or not. Keep the password somewhere else, and never mount
+a file you need at that path.
 
 ## What this does not cover
 
