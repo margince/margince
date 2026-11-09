@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useId } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Modal } from "../design-system/atoms";
 import { DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
@@ -100,11 +100,10 @@ export const DismissedPair: Story = {
   render: () => review(() => jsonResponse(contactCase())),
   play: async () => {
     const body = within(document.body);
-    await expect(
-      await body.findByRole("button", {
-        name: "Undo: Mira Kovac and Mira Kovacs",
-      }),
-    ).toBeVisible();
+    const undo = await body.findByRole("button", {
+      name: "Undo: Mira Kovac and Mira Kovacs",
+    });
+    await waitFor(() => expect(undo).toBeVisible());
   },
 };
 
@@ -148,11 +147,27 @@ export const TooLargePairMerge: Story = {
         name: "Merge these two: Mira Kovac and Mira Kovač",
       }),
     );
-    await expect(
-      body.getByRole("button", { name: "Keep Mira Kovač" }),
-    ).toBeVisible();
+    await waitFor(() =>
+      expect(
+        body.getByRole("button", { name: "Keep Mira Kovač" }),
+      ).toBeVisible(),
+    );
   },
 };
+
+/**
+ * The review opens with only Ana ticked, the contact it was opened from; the
+ * reader picks every duplicate. Tick Ben, the strongest pair, after proving he
+ * did not start ticked.
+ */
+async function tickBen(body: ReturnType<typeof within>) {
+  const ana = await body.findByRole("checkbox", { name: /Mira Kovac\b/ });
+  const ben = body.getByRole("checkbox", { name: /Mira Kovač/ });
+  await expect(ana).toBeChecked();
+  await expect(ben).not.toBeChecked();
+  await userEvent.click(ben);
+  await expect(ben).toBeChecked();
+}
 
 /** Someone merged this contact before the reader got to it. */
 export const Resolved: Story = {
@@ -171,14 +186,14 @@ export const Stale: Story = {
     }),
   play: async () => {
     const body = within(document.body);
+    await tickBen(body);
     await userEvent.click(
       await body.findByRole("button", { name: "Preview merge" }),
     );
-    await expect(
-      await body.findByText(
-        "The duplicates changed while you reviewed them. Check the selection again.",
-      ),
-    ).toBeVisible();
+    const notice = await body.findByText(
+      "The duplicates changed while you reviewed them. Check the selection again.",
+    );
+    await waitFor(() => expect(notice).toBeVisible());
   },
 };
 
@@ -190,10 +205,13 @@ export const Preview: Story = {
     }),
   play: async () => {
     const body = within(document.body);
+    await tickBen(body);
+    await userEvent.click(body.getByRole("checkbox", { name: /M\. Kovac/ }));
     await userEvent.click(
       await body.findByRole("button", { name: "Preview merge" }),
     );
-    await expect(await body.findByText("Cleo Reader, can view")).toBeVisible();
+    const reader = await body.findByText("Cleo Reader, can view");
+    await waitFor(() => expect(reader).toBeVisible());
   },
 };
 

@@ -7,7 +7,9 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { reachedModules, SRC_ROOT } from "../../scripts/lib/bundle-reach";
 import { parseSource } from "../../scripts/lib/source-tree";
-import { LOCALES } from "./index";
+import { bootstrapCopy } from "./bootstrapcopy_gen";
+import { en } from "./en";
+import { isMessageKey, LOCALES } from "./index";
 
 // A table of English sentences outside the catalogs reaches every reader in
 // English, whatever language they chose. Its captions belong in en, de and vi.
@@ -125,9 +127,18 @@ describe("the caption-table finder, over planted modules", () => {
 });
 
 describe("tables the shipped bundle loads", () => {
+  it("derives every bootstrap error caption from the English catalog", () => {
+    for (const [key, value] of Object.entries(bootstrapCopy)) {
+      if (!isMessageKey(key))
+        throw new Error(`Unknown bootstrap message ${key}`);
+      expect(value).toBe(en[key]);
+    }
+  });
+
   const catalogs = new Set(
     LOCALES.map((locale) => join(SRC_ROOT, "i18n", `${locale}.ts`)),
   );
+  catalogs.add(join(SRC_ROOT, "i18n/bootstrapcopy_gen.ts"));
   const shipped = [...reachedModules({ catalogs }).keys()].filter(
     (path) => !catalogs.has(path),
   );

@@ -187,7 +187,14 @@ func (id Identity) hasRole(key string) bool {
 // methods that take an explicit Identity are their own admission gate,
 // so they must not depend on a transport middleware having bound the
 // actor for the audit stamp — a direct service caller is just as valid.
+//
+// An agent acting for id keeps its own principal. The audit names the agent
+// and the passport, its grants stay the ones its passport lends, and the agent
+// limits still see an agent.
 func actorCtx(ctx context.Context, id Identity) context.Context {
+	if p, ok := principal.Actor(ctx); ok && p.ActsAsItsUser() && p.OnBehalfOf == id.UserID.UUID {
+		return ctx
+	}
 	return principal.WithActor(ctx, principal.Principal{
 		Type:        principal.PrincipalHuman,
 		ID:          "human:" + id.UserID.String(),
@@ -349,8 +356,13 @@ func endCredentialAuthority(ctx context.Context, tx pgx.Tx, userID ids.UserID, r
 	if err := revokeGrantsOfUserTx(ctx, tx, userID, reason); err != nil {
 		return err
 	}
+	// A code committed after this transaction began was created later than
+	// now(). Ending it at now() would date its expiry before its creation, and
+	// the lifetime check would refuse the whole revocation. Such a code closes
+	// just after its own creation instead, which is still before anyone uses it.
 	if _, err := tx.Exec(ctx,
-		`UPDATE oauth_authorization_code SET expires_at = now()
+		`UPDATE oauth_authorization_code
+		    SET expires_at = greatest(now(), created_at + interval '1 microsecond')
 		  WHERE user_id = $1 AND consumed_at IS NULL AND expires_at > now()`,
 		userID); err != nil {
 		return err

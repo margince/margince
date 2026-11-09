@@ -16,10 +16,11 @@ package gates
 // the tree and fails when they disagree, in either direction.
 
 import (
-	"os"
 	"regexp"
 	"strconv"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func TestTheWorklistsCopyOfALaneBoundMatchesTheLaneItself(t *testing.T) {
@@ -73,7 +74,7 @@ func TestTheWorklistsCopyOfALaneBoundMatchesTheLaneItself(t *testing.T) {
 
 func read(t *testing.T, path string) string {
 	t.Helper()
-	body, err := os.ReadFile(path)
+	body, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read %s: %v", path, err)
 	}

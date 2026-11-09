@@ -62,17 +62,26 @@ func storeRawCapture(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRec
 	// rule above means the second delivery of one message stores nothing — and
 	// its activity still has to name the original the FIRST delivery stored,
 	// or the row that keeps the bytes is the one nothing points at.
+	return insertOriginalRowTx(ctx, tx, rec.NaturalKey, payload, "")
+}
+
+// insertOriginalRowTx is the one insert of a stored original. A non-empty
+// slimmed outcome stamps the row as the part sweep would. The sweep then never
+// reads an original that names its files instead of carrying them.
+func insertOriginalRowTx(
+	ctx context.Context, tx pgx.Tx, key connector.NaturalKey, payload []byte, slimmed partSlimOutcome,
+) (ids.UUID, error) {
 	var id ids.UUID
-	err = tx.QueryRow(ctx, `
-		INSERT INTO raw_capture (source_system, source_id, payload)
-		VALUES ($1, $2, $3)
+	err := tx.QueryRow(ctx, `
+		INSERT INTO raw_capture (source_system, source_id, payload, parts_slimmed_at, parts_slim_outcome)
+		VALUES ($1, $2, $3, CASE WHEN $4 <> '' THEN now() END, NULLIF($4, ''))
 		ON CONFLICT (source_system, source_id) DO NOTHING
 		RETURNING id`,
-		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID, payload).Scan(&id)
+		key.SourceSystem, key.SourceID, payload, string(slimmed)).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		err = tx.QueryRow(ctx, `
 			SELECT id FROM raw_capture WHERE source_system = $1 AND source_id = $2`,
-			rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID).Scan(&id)
+			key.SourceSystem, key.SourceID).Scan(&id)
 	}
 	if err != nil {
 		return ids.Nil, fmt.Errorf("capture: raw store: %w", err)

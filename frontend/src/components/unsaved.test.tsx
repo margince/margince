@@ -4,6 +4,7 @@ import {
   cleanup,
   fireEvent,
   render,
+  renderHook,
   screen,
   waitFor,
 } from "@testing-library/react";
@@ -14,7 +15,12 @@ import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { LocaleProvider } from "../i18n";
 import { navigate, useHash } from "../lib/router";
-import { UnsavedGuard, useGuardedLeave, useUnsavedGuard } from "./unsaved";
+import {
+  UnsavedGuard,
+  useBeforeUnload,
+  useGuardedLeave,
+  useUnsavedGuard,
+} from "./unsaved";
 
 afterEach(() => {
   cleanup();
@@ -398,5 +404,33 @@ describe("useGuardedLeave", () => {
     await user.click(screen.getByRole("button", { name: "keep it" }));
 
     await waitFor(() => expect(window.location.hash).toBe("#/lists/L1"));
+  });
+});
+
+describe("useBeforeUnload", () => {
+  const asked = () => {
+    const event = new Event("beforeunload", { cancelable: true });
+    globalThis.dispatchEvent(event);
+    return event.defaultPrevented;
+  };
+
+  it("asks the window only while its caller holds something unsaved", () => {
+    const view = renderHook(({ dirty }) => useBeforeUnload(dirty), {
+      initialProps: { dirty: false },
+    });
+    expect(asked()).toBe(false);
+
+    view.rerender({ dirty: true });
+    expect(asked()).toBe(true);
+
+    view.rerender({ dirty: false });
+    expect(asked()).toBe(false);
+  });
+
+  it("stops asking once its caller is gone", () => {
+    const view = renderHook(() => useBeforeUnload(true));
+    view.unmount();
+
+    expect(asked()).toBe(false);
   });
 });

@@ -151,7 +151,7 @@ func screenWithColumns(t *testing.T, name string, read map[string]bool) string {
 func assertEveryColumnModuleRead(t *testing.T, read map[string]bool) {
 	t.Helper()
 	var modules []string
-	err := filepath.WalkDir(frontendSrc, func(path string, _ fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(frontendSrc, func(path string, _ fs.DirEntry, err error) error {
 		if err == nil && strings.HasSuffix(path, ".columns.tsx") {
 			modules = append(modules, path)
 		}

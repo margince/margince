@@ -19,12 +19,18 @@ import (
 
 // AgentAllowancePatch is a sparse write of the agent allowances: a nil field is
 // left as it is. WindowHours is scheduled, never written straight
-// (scheduleAgentWindowTx).
+// (scheduleAgentWindowTx). Roles is sparse too: each set changes only the
+// counts it names, and a role or count no set names keeps its value
+// (saveRoleAllowancesTx).
 type AgentAllowancePatch struct {
 	WritesPerWindow *int
 	EgressPerWindow *int
 	CallsPerWindow  *int
 	WindowHours     *int
+	Roles           *[]RoleAllowanceSet
+	// ToDefaults removes the stored counts and role values first, so they read
+	// as shipped and nobody's choice (resetAgentAllowancesTx).
+	ToDefaults bool
 }
 
 func (p AgentAllowancePatch) writes() ([]pendingWrite, error) {
@@ -77,14 +83,15 @@ func (v allowanceValues) policy(c *config.Config) agentvolume.Policy {
 // readAgentPolicy instead.
 func AgentPolicyTx(ctx context.Context, tx pgx.Tx, c *config.Config) (agentvolume.Policy, error) {
 	var values allowanceValues
+	var chosen installationChosen
 	var err error
-	if values[0], err = config.StoredApplyTx(ctx, tx, c, AgentWritesPerWindow); err != nil {
+	if values[0], chosen[0], err = config.StoredApplyChosenTx(ctx, tx, c, AgentWritesPerWindow); err != nil {
 		return agentvolume.Policy{}, err
 	}
-	if values[1], err = config.StoredApplyTx(ctx, tx, c, AgentEgressPerWindow); err != nil {
+	if values[1], chosen[1], err = config.StoredApplyChosenTx(ctx, tx, c, AgentEgressPerWindow); err != nil {
 		return agentvolume.Policy{}, err
 	}
-	if values[2], err = config.StoredApplyTx(ctx, tx, c, AgentCallsPerWindow); err != nil {
+	if values[2], chosen[2], err = config.StoredApplyChosenTx(ctx, tx, c, AgentCallsPerWindow); err != nil {
 		return agentvolume.Policy{}, err
 	}
 	if values[3], err = config.StoredApplyTx(ctx, tx, c, AgentWindowHours); err != nil {
@@ -96,32 +103,91 @@ func AgentPolicyTx(ctx context.Context, tx pgx.Tx, c *config.Config) (agentvolum
 	if values[5], err = settings.ApplyTx(ctx, tx, AgentWindowNextFrom); err != nil {
 		return agentvolume.Policy{}, err
 	}
-	return values.policy(c), nil
+	maps, err := applyRoleMapsTx(ctx, tx, c)
+	if err != nil {
+		return agentvolume.Policy{}, err
+	}
+	policy := values.policy(c)
+	policy.Roles = roleValuesOf(chosen, maps).Roles()
+	return policy, nil
 }
 
-// readAgentPolicy reads the allowances for the settings page, each through
-// its read gate.
-func (s *InstallationSettingsStore) readAgentPolicy(ctx context.Context) (agentvolume.Policy, error) {
+// applyRoleMapsTx is the machinery read of the three role maps.
+func applyRoleMapsTx(ctx context.Context, tx pgx.Tx, c *config.Config) (savedRoleMaps, error) {
+	writes, err := config.StoredApplyTx(ctx, tx, c, AgentRoleWritesPerWindow)
+	if err != nil {
+		return nil, err
+	}
+	egress, err := config.StoredApplyTx(ctx, tx, c, AgentRoleEgressPerWindow)
+	if err != nil {
+		return nil, err
+	}
+	calls, err := config.StoredApplyTx(ctx, tx, c, AgentRoleCallsPerWindow)
+	if err != nil {
+		return nil, err
+	}
+	return savedRoleMaps{agentvolume.Writes: writes, agentvolume.Egress: egress, agentvolume.Calls: calls}, nil
+}
+
+// readRoleMapsTx is the gated read of the three role maps, for the page.
+func readRoleMapsTx(ctx context.Context, tx pgx.Tx, c *config.Config) (savedRoleMaps, error) {
+	writes, err := config.StoredValTx(ctx, tx, c, AgentRoleWritesPerWindow)
+	if err != nil {
+		return nil, err
+	}
+	egress, err := config.StoredValTx(ctx, tx, c, AgentRoleEgressPerWindow)
+	if err != nil {
+		return nil, err
+	}
+	calls, err := config.StoredValTx(ctx, tx, c, AgentRoleCallsPerWindow)
+	if err != nil {
+		return nil, err
+	}
+	return savedRoleMaps{agentvolume.Writes: writes, agentvolume.Egress: egress, agentvolume.Calls: calls}, nil
+}
+
+// readAgentPolicy reads the allowances and every live role's values for the
+// settings page, each setting through its read gate.
+func (s *InstallationSettingsStore) readAgentPolicy(ctx context.Context) (agentvolume.Policy, []RoleAllowance, error) {
 	var values allowanceValues
+	var chosen installationChosen
+	var policy agentvolume.Policy
+	var roles []RoleAllowance
 	err := s.settings.WriteTx(ctx, func(tx pgx.Tx) error {
 		for i, setting := range agentAllowanceEntries {
-			value, err := config.StoredValTx(ctx, tx, s.config, setting)
+			value, picked, err := config.StoredChosenTx(ctx, tx, s.config, setting)
 			if err != nil {
 				return err
 			}
 			values[i] = value
+			if i < len(chosen) {
+				chosen[i] = picked
+			}
 		}
 		var err error
 		if values[4], err = settings.GetTx(ctx, tx, AgentWindowNextHours); err != nil {
 			return err
 		}
-		values[5], err = settings.GetTx(ctx, tx, AgentWindowNextFrom)
-		return err
+		if values[5], err = settings.GetTx(ctx, tx, AgentWindowNextFrom); err != nil {
+			return err
+		}
+		maps, err := readRoleMapsTx(ctx, tx, s.config)
+		if err != nil {
+			return err
+		}
+		policy = values.policy(s.config)
+		held := roleValuesOf(chosen, maps)
+		live, err := liveRolesTx(ctx, tx)
+		if err != nil {
+			return err
+		}
+		policy.Roles, roles = held.Roles(), roleAllowances(live, held)
+		return nil
 	})
 	if err != nil {
-		return agentvolume.Policy{}, fmt.Errorf("identity: reading the agent allowances: %w", err)
+		return agentvolume.Policy{}, nil, fmt.Errorf("identity: reading the agent allowances: %w", err)
 	}
-	return values.policy(s.config), nil
+	return policy, roles, nil
 }
 
 // scheduleAgentWindowTx turns a requested window length into a plan that takes

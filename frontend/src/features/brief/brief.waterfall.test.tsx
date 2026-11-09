@@ -23,12 +23,11 @@ const horizon = (over: Partial<Outlook> = {}): Outlook => ({
   period_end: "2026-06-30",
   base_currency: "EUR",
   won_minor: 180_00,
-  commit_minor: 120_00,
-  best_case_minor: 390_00,
+  likely_minor: 120_00,
   weighted_minor: 240_00,
   opening_landing_minor: 260_00,
   closing_landing_minor: 300_00,
-  forward_measure: "commit_evidence",
+  forward_measure: "likely",
   movement: [
     { bar: "created", delta_minor: 90_00 },
     { bar: "slipped", delta_minor: -50_00 },
@@ -57,16 +56,14 @@ describe("the frozen outlook", () => {
     expect(screen.queryByText(en["brief.weekly.outlook.landing"])).toBeNull();
   });
 
-  // The figure includes commit, so a reader adding the two would double-count
-  // the overlap. The basis line is what stops that, and it sits under the
-  // reading rather than inside its name: the label names what is measured.
-  it("says under best case that the figure already contains commit", () => {
+  it("draws the Likely reading the week froze, and no best case", () => {
     show([horizon()]);
 
-    expect(screen.getByText(en["brief.weekly.outlook.bestCase"])).toBeTruthy();
-    expect(
-      screen.getByText(en["brief.weekly.outlook.bestCaseDetail"]),
-    ).toBeTruthy();
+    const row = screen
+      .getByText(en["brief.weekly.outlook.likely"])
+      .closest("tr");
+    expect(row?.lastElementChild?.textContent).toContain("120");
+    expect(screen.queryByText("Best case")).toBeNull();
   });
 
   // A period frozen with no base currency cannot be said as money. Its cells
@@ -80,7 +77,7 @@ describe("the frozen outlook", () => {
     const figures = [...table.querySelectorAll("tbody tr")].map(
       (row) => row.lastElementChild?.textContent,
     );
-    expect(figures).toHaveLength(5);
+    expect(figures).toHaveLength(4);
     expect(new Set(figures)).toEqual(new Set([en["format.notForecast"]]));
   });
 
@@ -104,7 +101,7 @@ describe("the frozen outlook", () => {
     show([horizon()]);
 
     expect(
-      screen.getByText(en["brief.weekly.outlook.measure.commit_evidence"]),
+      screen.getByText(en["brief.weekly.outlook.measure.likely"]),
     ).toBeTruthy();
   });
 
@@ -117,7 +114,23 @@ describe("the frozen outlook", () => {
       screen.getByText(en["brief.weekly.outlook.measure.weighted"]),
     ).toBeTruthy();
     expect(
-      screen.queryByText(en["brief.weekly.outlook.measure.commit_evidence"]),
+      screen.queryByText(en["brief.weekly.outlook.measure.likely"]),
+    ).toBeNull();
+  });
+
+  // A week frozen under the retired qualified forecast shows its landing with
+  // no measure word, never as Likely.
+  it("shows a landing frozen under a retired measure without a label", () => {
+    show([
+      horizon({
+        forward_measure: "qualified_likely",
+        closing_landing_minor: 1_234_500,
+      }),
+    ]);
+
+    expect(screen.getByText(en["brief.weekly.outlook.landing"])).toBeTruthy();
+    expect(
+      screen.queryByText(en["brief.weekly.outlook.measure.likely"]),
     ).toBeNull();
   });
 });

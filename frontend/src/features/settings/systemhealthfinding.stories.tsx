@@ -11,7 +11,7 @@ import { overdueFinding } from "./systemhealth.fixtures";
 import { FindingPanel } from "./systemhealthfinding";
 
 const meta = {
-  title: "Settings/Governance/System health/Finding",
+  title: "Settings/System/System health/Finding",
   component: FindingPanel,
   args: { finding: overdueFinding },
   render: (args) => {

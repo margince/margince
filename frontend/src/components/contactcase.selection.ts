@@ -53,21 +53,6 @@ function offeredJoining(
 }
 
 /**
- * The two members a `pair`-mode review starts on: the ends of an offered
- * pair, touching `start` when one does. The server merges no more than two.
- */
-function offeredPair(
-  contactCase: ContactCase,
-  start: string,
-): readonly string[] | undefined {
-  const offered = offeredEdges(contactCase);
-  const touching = offered.find((edge) => otherEnd(edge, start));
-  const other = touching && otherEnd(touching, start);
-  if (other) return [start, other];
-  return offered[0] && [offered[0].left_id, offered[0].right_id];
-}
-
-/**
  * The member that must survive when the ticked members are one offered pair
  * the reader may merge only one way. The server refuses any other survivor.
  */
@@ -106,32 +91,20 @@ export function pairLocked(
 }
 
 /**
- * The members ticked when the review opens: one pair, never a chain. In `pair`
- * mode it is the offered pair. Otherwise it is `startId` and its strongest open
- * pair, because A matching B and B matching C says nothing about A and C.
+ * The members ticked when the review opens: never a second contact. The
+ * reader picks who is a duplicate. Only the contact they opened the review
+ * from starts ticked, and only when it is in a pair they may merge.
  */
 export function defaultSelection(
   contactCase: ContactCase,
-  startId: string,
+  startId: string | undefined,
 ): readonly string[] {
-  const ids = new Set(contactCase.members.map((member) => member.id));
-  const start = ids.has(startId) ? startId : contactCase.anchor_id;
-  return offeredPair(contactCase, start) ?? strongestPair(contactCase, start);
-}
-
-function strongestPair(
-  contactCase: ContactCase,
-  start: string,
-): readonly string[] {
-  const ids = new Set(contactCase.members.map((member) => member.id));
-  let best: Edge | undefined;
-  for (const edge of contactCase.edges) {
-    const other = edge.status === "open" ? otherEnd(edge, start) : undefined;
-    if (!other || !ids.has(other)) continue;
-    if (!best || edge.confidence > best.confidence) best = edge;
-  }
-  const other = best && otherEnd(best, start);
-  return other ? [start, other] : [start];
+  if (!startId) return [];
+  const pairs =
+    contactCase.merge_mode === "pair"
+      ? offeredEdges(contactCase)
+      : contactCase.edges.filter((edge) => edge.status === "open");
+  return pairs.some((edge) => otherEnd(edge, startId)) ? [startId] : [];
 }
 
 /** Whether the ticked members are joined by open pairs among themselves. */

@@ -49,20 +49,30 @@ import (
 // The thread matters: an exchange is a reply to something we wrote, and the two
 // halves are joined by the thread key rather than by the address. A seeded
 // outbound with no thread cannot be answered.
-func seedAttestedOutbound(t *testing.T, e *integration.Env, sourceID, counterparty, threadKey string) {
+func seedAttestedOutbound(t *testing.T, e *integration.Env, sourceID, counterparty, threadKey string) ids.UUID {
 	t.Helper()
+	var id ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(context.Background(), `
+		return tx.QueryRow(context.Background(), `
 			INSERT INTO activity (kind, subject, body, direction, source_system, source_id,
 			                      source, captured_by, thread_key, counterparty_email,
 			                      counterparty_outbound_attested)
 			VALUES ('email', 'Angebot', 'Anbei.', 'outbound', 'gmail', $1,
-			        'gmail:'||$1, 'connector:gmail', $3, $2, true)`,
-			sourceID, counterparty, threadKey)
-		return err
+			        'gmail:'||$1, 'connector:gmail', $3, $2, true)
+			RETURNING id`,
+			sourceID, counterparty, threadKey).Scan(&id)
 	}); err != nil {
 		t.Fatalf("seeding the workspace's own mail to %s: %v", counterparty, err)
 	}
+	return id
+}
+
+// seatHoldsSeeded writes the import row a mailbox's importer writes for mail it
+// holds. Capture files the seat's later mail into a thread only when the seat
+// holds every message already under it.
+func seatHoldsSeeded(t *testing.T, e *integration.Env, seat, activity ids.UUID) {
+	t.Helper()
+	e.WsExec(t, `INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, activity, seat)
 }
 
 // captureInboundThroughRealSink lands one INBOUND mail through the sink compose
@@ -415,7 +425,7 @@ func TestAReopenedThreadKeepsSomethingToAskAbout(t *testing.T) {
 	const stranger = "anwalt@kanzlei.example"
 
 	seedClassifiedGmail(t, e, e.Rep1)
-	seedAttestedOutbound(t, e, "reopen-out-1", first, "reopen-t1")
+	seatHoldsSeeded(t, e, e.Rep1, seedAttestedOutbound(t, e, "reopen-out-1", first, "reopen-t1"))
 	captureInboundThroughRealSink(t, e, e.Rep1, "reopen-in-1", first, "reopen-t1")
 
 	// The thread is settled as ordinary, recording the sender it read.
@@ -555,11 +565,13 @@ func TestAContactTheCeilingRefusedIsAskedAboutByTheSweep(t *testing.T) {
 	// room to ask.
 	for i := range capture.PendingDeferralDomainCap {
 		other := fmt.Sprintf("filler%d@partner.example", i)
-		seedAttestedOutbound(t, e, fmt.Sprintf("quiet-fill-out-%d", i), other, fmt.Sprintf("quiet-fill-t%d", i))
+		outbound := seedAttestedOutbound(t, e, fmt.Sprintf("quiet-fill-out-%d", i), other, fmt.Sprintf("quiet-fill-t%d", i))
+		seatHoldsSeeded(t, e, e.Rep1, outbound)
 		captureInboundThroughRealSink(t, e, e.Rep1, fmt.Sprintf("quiet-fill-in-%d", i), other, fmt.Sprintf("quiet-fill-t%d", i))
 	}
 
-	seedAttestedOutbound(t, e, "quiet-out-1", sender, "quiet-t1")
+	outbound := seedAttestedOutbound(t, e, "quiet-out-1", sender, "quiet-t1")
+	seatHoldsSeeded(t, e, e.Rep1, outbound)
 	captureInboundThroughRealSink(t, e, e.Rep1, "quiet-in-1", sender, "quiet-t1")
 
 	visibility, found := contactVisibility(t, e, sender)

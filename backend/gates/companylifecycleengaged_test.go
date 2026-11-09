@@ -17,7 +17,6 @@ import (
 	"go/ast"
 	"go/token"
 	"maps"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -56,7 +55,7 @@ func TestEveryCompanyLifecycleIsJudgedEngagedOrNot(t *testing.T) {
 
 func TestTheBrowserOffersTheLifecyclesInWireOrder(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile(frontendLifecycleList)
+	source, err := gatekit.ReadFile(frontendLifecycleList)
 	if err != nil {
 		t.Fatalf("reading the browser's lifecycle list: %v", err)
 	}
@@ -77,7 +76,7 @@ func TestTheBrowserOffersTheLifecyclesInWireOrder(t *testing.T) {
 // keyed by its enum type.
 func contractEnumValues(t *testing.T) map[string][]string {
 	t.Helper()
-	entries, err := os.ReadDir(contractsPkgDir)
+	entries, err := gatekit.ReadDir(contractsPkgDir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", contractsPkgDir, err)
 	}

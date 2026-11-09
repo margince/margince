@@ -57,12 +57,21 @@ type Registry struct {
 	// typedArgs[tool] is the JSON type its schema declares for each top-level
 	// argument, read off the schema once at registration.
 	typedArgs map[string][]typedArg
+	// uniqueArgs[tool] names its list arguments whose schema declares uniqueItems.
+	uniqueArgs map[string][]string
 	// unitOwned[tool] is true when an extension unit shipped that tool's
 	// handler, read off the registered tool once (mcp.UnitScopedTool). It is
 	// remembered rather than re-asserted because two decisions depend on it and
 	// must not diverge: what the schema advertises (withRetryKey) and what a
 	// call carrying `idempotency_key` is answered with (refuseUnkeyableCall).
 	unitOwned map[string]bool
+	// routeServed names the verbs that run a REST route's own handler. Their
+	// answers carry no replay evidence, so withRetryKey and
+	// refuseUnkeyableCall both read this one set.
+	routeServed map[string]bool
+	// routeActions are the contract's route-backed actions per router name,
+	// added to that router's own targets when it registers.
+	routeActions map[string]map[string]string
 	// approvals closes the 🟡 loop (stage on refusal, redeem on retry).
 	// Nil is a legal composition — the gate still refuses; refused calls
 	// just have nowhere to land.
@@ -74,6 +83,8 @@ type Registry struct {
 	// tierFloor carries the contract's per-record-type tier declarations, which
 	// a verb's own tier cannot express (tierfloor.go, #982).
 	tierFloor TierFloor
+	// toolGate decides which callers a Gated tool exists for. Nil offers it to no one.
+	toolGate ToolGate
 	// volume budget is the MCP-SESS-* meter this surface CHARGES. The gate holds the
 	// same meter and does the refusing; the split is deliberate — a bound is
 	// enforced where admission is decided and paid where records and effects
@@ -98,6 +109,9 @@ type Registry struct {
 	// seats names the owner every served record row carries (queryowner.go).
 	// Nil leaves owners unnamed but still disclosed.
 	seats SeatNamer
+	// listCalendar says whether a meeting list is the reader's diary
+	// (listcalendar.go). Nil says nothing.
+	listCalendar ActivityListCalendar
 	// changeWords describes what a write changed (changewords.go). Nil
 	// answers no changes.
 	changeWords ChangeWords
@@ -106,6 +120,12 @@ type Registry struct {
 	contactCases ContactCaseMerger
 	// importWait is how long preview_import waits for its test's report.
 	importWait importWait
+	// required is each verb's measured checks (toolchecks.go), which narrow
+	// what an agent is offered and never what it may call.
+	required map[string][]auth.Check
+	// recordCall, set only by the integration build, records the checks one
+	// call asks; settle hands them on once the call returns.
+	recordCall func(ctx context.Context, verb string) (recorded context.Context, settle func())
 }
 
 // NewRegistry builds the tool surface over its approvals engine and admission
@@ -120,10 +140,14 @@ func NewRegistry(approvals Approvals, gate *auth.Gate, opts ...RegistryOption) *
 		enumArgs:     map[string][]enumArg{},
 		requiredArgs: map[string][]string{},
 		typedArgs:    map[string][]typedArg{},
+		uniqueArgs:   map[string][]string{},
 		unitOwned:    map[string]bool{},
+		routeServed:  map[string]bool{},
+		routeActions: map[string]map[string]string{},
 		approvals:    approvals,
 		gate:         gate,
 		importWait:   defaultImportWait(),
+		required:     requiredChecks,
 	}
 	for _, opt := range opts {
 		opt(r)
@@ -159,7 +183,12 @@ func (r *Registry) InvokeServed(ctx context.Context, name string, in json.RawMes
 	if target != name {
 		served.Router = name
 	}
+	settle := func() {}
+	if r.recordCall != nil {
+		ctx, settle = r.recordCall(ctx, target)
+	}
 	served.Output, served.Records, err = r.InvokeServing(ctx, target, args)
+	settle()
 	return served, err
 }
 
@@ -185,6 +214,10 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 	spec := r.specs[name]
 	r.mu.RUnlock()
 	if !ok {
+		return nil, 0, &UnknownToolError{Name: name}
+	}
+
+	if spec.Gated && !r.offersGated(ctx) {
 		return nil, 0, &UnknownToolError{Name: name}
 	}
 
@@ -214,6 +247,7 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 	// names, and only the call can say which type that is (tierfloor.go).
 	// Applied before Admit, because the tier is what Admit decides on.
 	spec = r.tightened(t, spec, args)
+	spec = placedCall(t, spec, args)
 
 	admitted, err := r.gate.Admit(ctx, spec, r.tierResolverFor(ctx, t, name, args))
 	// Static-tier tools, whose resolver Admit never runs. After authority and

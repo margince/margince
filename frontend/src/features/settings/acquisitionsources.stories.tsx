@@ -103,7 +103,7 @@ function story(
 }
 
 const meta = {
-  title: "Settings/Sales/Acquisition sources/Sources",
+  title: "Settings/Sales/Deals/Acquisition sources",
   component: AcquisitionSourcesCard,
 } satisfies Meta<typeof AcquisitionSourcesCard>;
 export default meta;

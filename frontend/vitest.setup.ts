@@ -1,3 +1,4 @@
+import { loadLocale } from "./src/i18n/catalogs";
 import { afterEach, beforeEach, vi } from "vitest";
 import { restoreClipboardStubs } from "./src/design-system/clipboard-testing";
 import { disarmHoverIntent } from "./src/design-system/hoverintent-testing";
@@ -5,6 +6,8 @@ import { forgetListAddresses } from "./src/lib/listreturn";
 import { fetchTheNetwork } from "./src/testing/no-network";
 import { takeUnroutedSessionProbes } from "./src/testing/unrouted-session";
 import { ASYNC_UTIL_TIMEOUT_MS } from "./vitest.budget";
+
+await Promise.all([loadLocale("en"), loadLocale("de"), loadLocale("vi")]);
 
 // Every waiter that states no timeout gets the one per-waiter budget
 // vitest.budget.ts derives. vitest has no setting for `vi.waitFor`'s default, so

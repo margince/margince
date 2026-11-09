@@ -18,11 +18,11 @@ import { useToast } from "../../design-system/toast";
 import { useTruncationTooltip } from "../../design-system/tooltip";
 import { formatActivityWhen } from "../../format/activitywhen";
 import { formatDate, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
+import { kindLabel, SENDERS_KEY } from "./capture-senderquery";
 import "./capture-senders.css";
 
 // What the classifier decided about each sender this mailbox brought in, and
@@ -42,36 +42,33 @@ type AwaitingContact = components["schemas"]["CaptureAwaitingContact"];
 
 // The classifier's vocabulary, in the reader's words. A kind absent from the
 // map is one the server learned to say and this screen has not.
-const kindLabel: Record<string, MessageKey> = {
-  contact: "senders.kind.contact",
-  role_mailbox: "senders.kind.roleMailbox",
-  company_sender: "senders.kind.companySender",
-  newsletter: "senders.kind.newsletter",
-  transactional: "senders.kind.transactional",
-  spam: "senders.kind.spam",
-  personal: "senders.kind.personal",
-  advisor: "senders.kind.advisor",
-};
-
 // Which kinds mean "this sender's mail is in the CRM as a contact". The tone
 // carries it at a glance down the column; the words still say it, because
 // colour is never the only signal.
 const admitted = new Set(["contact", "role_mailbox", "company_sender"]);
 
-const SENDERS_KEY = ["capture-senders"] as const;
 const AWAITING_KEY = ["capture-contacts-awaiting-decision"] as const;
 
 // A decision on a sender also settles the contacts that waited on it.
 function invalidateSenderLists(queryClient: QueryClient) {
   queryClient.invalidateQueries({ queryKey: SENDERS_KEY });
   queryClient.invalidateQueries({ queryKey: AWAITING_KEY });
+  for (const key of [
+    "held-threads",
+    "capture-health",
+    "system-health",
+    "worklist",
+  ])
+    queryClient.invalidateQueries({ queryKey: [key] });
 }
 
 export function useSenders() {
   return useQuery({
     queryKey: SENDERS_KEY,
     queryFn: async () => {
-      const { data, error, response } = await api.GET("/capture/senders");
+      const { data, error, response } = await api.GET("/capture/senders", {
+        params: { query: { limit: 1 } },
+      });
       if (error || !response.ok) {
         throwProblem(error);
       }
@@ -203,7 +200,7 @@ function SenderTable({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const columns: DataTableColumn<SenderDecision>[] = [
     {
       key: "address",
@@ -350,7 +347,7 @@ export function AwaitingContacts({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const name = (row: AwaitingContact) =>
     row.display_name ?? row.emails[0] ?? null;
   const open = (row: AwaitingContact) =>
@@ -416,7 +413,7 @@ export function AwaitingContacts({
 function DecisionCell({ row }: Readonly<{ row: SenderDecision }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   if (row.overruled) {
     return (
       <CellStack>

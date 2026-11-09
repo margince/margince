@@ -72,19 +72,7 @@ func (l webFormLeads) lead(ctx context.Context, landing webforms.Landing) (*acti
 	}
 	in := webFormLeadInput(landing)
 	in.CustomFields = webFormCustomFields(active, landing.Enquiry)
-	lead, _, err := l.leads.CreateLead(ctx, in)
-	if _, fieldGone := errors.AsType[storekit.CustomFieldErrors](err); fieldGone {
-		// A field was retired or changed since the catalog read. The values
-		// are on the note, so the lead lands without them.
-		in.CustomFields = nil
-		lead, _, err = l.leads.CreateLead(ctx, in)
-	}
-	if _, ownerGone := errors.AsType[*auth.AssigneeNotAllowedError](err); ownerGone {
-		// The form's owner was deactivated after it was saved. The lead goes to
-		// the unassigned queue rather than being refused to the visitor.
-		in.OwnerID = nil
-		lead, _, err = l.leads.CreateLead(ctx, in)
-	}
+	lead, err := l.createLead(ctx, in)
 	if duplicate, ok := errors.AsType[*contacts.DuplicateLeadError](err); ok {
 		return &activities.ActivityLinkInput{EntityType: string(recordTypeLead), EntityID: duplicate.ExistingID.UUID}, nil
 	}
@@ -105,6 +93,29 @@ func (l webFormLeads) lead(ctx context.Context, landing webforms.Landing) (*acti
 	return &activities.ActivityLinkInput{EntityType: string(recordTypeLead), EntityID: ids.UUID(lead.Id)}, nil
 }
 
+// createLead lands the lead without whatever the form names that has gone since
+// it was saved. A visitor is never refused over the form's own setup. Each retry
+// clears one thing, and any of them can be the one refused first.
+func (l webFormLeads) createLead(ctx context.Context, in contacts.CreateLeadInput) (crmcontracts.Lead, error) {
+	for {
+		lead, _, err := l.leads.CreateLead(ctx, in)
+		_, fieldGone := errors.AsType[storekit.CustomFieldErrors](err)
+		_, ownerGone := errors.AsType[*auth.AssigneeNotAllowedError](err)
+		switch {
+		case fieldGone && in.CustomFields != nil:
+			// The values are on the note, so the lead lands without them.
+			in.CustomFields = nil
+		case errors.Is(err, contacts.ErrLeadProductRetired) && in.ProductID != nil:
+			in.ProductID = nil
+		case ownerGone && in.OwnerID != nil:
+			// The unassigned queue takes the lead of a deactivated owner.
+			in.OwnerID = nil
+		default:
+			return lead, err
+		}
+	}
+}
+
 func webFormLeadInput(landing webforms.Landing) contacts.CreateLeadInput {
 	e := landing.Enquiry
 	system, key := provenance.WebFormSource, landing.SourceKey
@@ -117,6 +128,7 @@ func webFormLeadInput(landing webforms.Landing) contacts.CreateLeadInput {
 		owner := ids.From[ids.UserKind](*landing.OwnerID)
 		in.OwnerID = &owner
 	}
+	in.ProductID = landing.ProductID
 	// A number without its country prefix is kept on the note rather than
 	// refusing the visitor's whole submission over it.
 	if _, err := values.ParsePhone(e.Phone); err == nil {

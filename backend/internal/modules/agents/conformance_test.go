@@ -79,7 +79,7 @@ func dispatchWith(t *testing.T, tool mcp.Tool, log *strings.Builder) *Dispatcher
 func scopedAgentCtx(scopes ...principal.Scope) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:conformance", OnBehalfOf: ids.NewV7(),
+		Type: principal.PrincipalAgent, ID: "agent:conformance", OnBehalfOf: ids.NewV7(), SeatType: principal.SeatFull, Permissions: everyRecordedGrant(),
 		Scopes: principal.NewScopeSet(scopes...),
 	})
 }
@@ -195,8 +195,8 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterIntentTools(r, inertRetriever{}, nil, nil, nil, inertLifecycle{})
 	RegisterChannelProviderTools(r, inertChannelProviderDirectory{})
 	RegisterSlippingTools(r,
-		func(context.Context, int) ([]SlippingDeal, error) { return nil, nil },
-		func(context.Context, SlippingDeal) (ids.UUID, string, error) { return ids.UUID{}, "", nil }, testStalledDays)
+		func(context.Context, int, *ids.UUID) ([]SlippingDeal, error) { return nil, nil },
+		func(context.Context, SlippingDeal) (ids.UUID, string, error) { return ids.UUID{}, "", nil }, testStalledDays, testStalledDays)
 	RegisterCommitmentTool(r, func(context.Context, CommitmentQuery) (CommitmentSweep, error) {
 		return CommitmentSweep{}, nil
 	})
@@ -210,7 +210,7 @@ func fullRegistry(t *testing.T) *Registry {
 		func(context.Context, ids.UUID) (WhoKnowsReading, error) { return WhoKnowsReading{}, nil },
 		func(context.Context, ids.UUID) (DealCoverageAnswer, error) { return DealCoverageAnswer{}, nil },
 		func(context.Context, ids.UUID) ([]IntroRoute, bool, error) { return nil, false, nil },
-		func(context.Context) (AtRiskReport, error) { return AtRiskReport{}, nil })
+		func(context.Context, *ids.UUID) (AtRiskReport, error) { return AtRiskReport{}, nil })
 	RegisterCommsTools(r, &recordingComms{}, &multiLinkProvider{})
 	RegisterLifecycleTools(r, nil, inertLifecycle{}, inertLifecycle{}, inertLifecycle{}, inertLifecycle{}, inertLifecycle{})
 	RegisterEnrichTool(r, nil, inertLifecycle{})
@@ -224,6 +224,7 @@ func fullRegistry(t *testing.T) *Registry {
 	// where the production renderer belongs and the encoding walk would be
 	// checking the double's schema.
 	RegisterReportVocabularyTool(r, NewReportVocabularyResource(probeReportCatalog))
+	RegisterReadViewsTool(r, NewReadViewsResource(nil))
 	// The real resource again, and for the same reason: the write vocabulary is
 	// composed from the contract shapes alone — no pool, no seam — so a stub
 	// would put a double where the production renderer belongs.
@@ -243,6 +244,10 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterWhoamiTool(r, func(context.Context) (ActingIdentity, error) { return ActingIdentity{}, nil })
 	RegisterColleaguesTool(r, func(context.Context, ColleagueQuery) ([]Colleague, bool, error) { return nil, false, nil })
 	RegisterTagTools(r, stubTags{})
+	RegisterRouteVerbs(r, []RouteVerb{shareRecordVerb, revertStageVerb, downloadVerbForTest}, func(context.Context, RouteCall) (json.RawMessage, error) {
+		return json.RawMessage(`{}`), nil
+	})
+	RegisterClientCheckTool(r, discardLog())
 	RegisterDocumentTools(r, &fakeDocuments{})
 	RegisterDuplicateTools(r, stubDuplicateQueue{})
 	RegisterListTools(r, &stubLists{})
@@ -262,6 +267,8 @@ func fullRegistry(t *testing.T) *Registry {
 // walks that only need a tool's SPEC and argument shape: they never reach a
 // handler, so a seam that answers nothing is the honest stand-in.
 type inertLifecycle struct{}
+
+func (inertLifecycle) CheckDisqualifyReason(context.Context, ids.UUID) error { return nil }
 
 func (inertLifecycle) Read(context.Context, ids.UUID) (MeetingPreparationResult, bool, error) {
 	return MeetingPreparationResult{}, false, nil
@@ -283,7 +290,7 @@ func (inertLifecycle) RelinkActivities(context.Context, []ids.UUID, string, ids.
 	return nil, nil
 }
 
-func (inertLifecycle) DisqualifyLead(context.Context, ids.UUID, *int64) (json.RawMessage, error) {
+func (inertLifecycle) DisqualifyLead(context.Context, ids.UUID, LeadDisqualification, *int64) (json.RawMessage, error) {
 	return nil, nil
 }
 

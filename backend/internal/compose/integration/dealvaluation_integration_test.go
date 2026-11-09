@@ -35,7 +35,7 @@ type valuationFixture struct {
 func setupValuation(t *testing.T) valuationFixture {
 	t.Helper()
 	e := Setup(t)
-	e.Deals.WithClock(func() time.Time { return valuationDate })
+	e.Deals.SetClock(func() time.Time { return valuationDate })
 	pipeline, open, won := DealFixture(t, e)
 	if _, err := e.Deals.UpdateStage(e.Admin(), open, deals.UpdateStageInput{WinProbability: new(60)}); err != nil {
 		t.Fatal(err)
@@ -47,7 +47,7 @@ func setupValuation(t *testing.T) valuationFixture {
 
 func (f valuationFixture) rate(t *testing.T, currency, rate string, date time.Time) {
 	t.Helper()
-	f.e.Deals.WithClock(func() time.Time { return date })
+	f.e.Deals.SetClock(func() time.Time { return date })
 	if _, err := f.e.Deals.SetFxRate(f.e.Admin(), deals.SetFxRateInput{FromCurrency: currency, Rate: rate, EffectiveDate: date}); err != nil {
 		t.Fatal(err)
 	}
@@ -123,14 +123,15 @@ func TestProjectAndBoardValueTheSameMixedCurrencyDealsAsAnalytics(t *testing.T) 
 	if len(rows) != 1 || cell(rows[0], "open_deal_value_minor") != fmt.Sprint(want) || cell(rows[0], "open_deal_unpriced") != "1" {
 		t.Fatalf("delivery report = %v, want %d and one unpriced", rows, want)
 	}
-	if _, err := f.e.Deals.UpdateDeal(f.e.Admin(), usd, deals.UpdateDealInput{ForecastCategory: new("commit")}); err != nil {
+	if _, err := f.e.Deals.UpdateDeal(f.e.Admin(), usd, deals.UpdateDealInput{WinProbability: new(95)}); err != nil {
 		t.Fatal(err)
 	}
-	cards, _, err := f.e.Deals.ListDeals(f.e.Admin(), deals.ListDealsInput{ProjectID: &f.project, ForecastCategory: new("commit")})
+	likely := deals.ListDealsInput{ProjectID: &f.project, WinProbabilityMin: new(90)}
+	cards, _, err := f.e.Deals.ListDeals(f.e.Admin(), likely)
 	if err != nil || len(cards) != 1 {
-		t.Fatalf("forecast-filtered cards = %d, %v", len(cards), err)
+		t.Fatalf("probability-filtered cards = %d, %v", len(cards), err)
 	}
-	filtered := strings.Replace(valuationPlan(f.project), `"project_id":`, `"forecast_category":"commit","project_id":`, 1)
+	filtered := strings.Replace(valuationPlan(f.project), `"project_id":`, `"win_probability_band":"90_plus","project_id":`, 1)
 	rows = runPrebuiltReport(f.e.Admin(), t, f.e, "deals-by-stage", filtered)
 	if len(rows) != 1 || cell(rows[0], "deals") != "1" || cell(rows[0], "base_minor") != "10001" {
 		t.Fatalf("forecast-filtered totals disagree with their cards: %v", rows)

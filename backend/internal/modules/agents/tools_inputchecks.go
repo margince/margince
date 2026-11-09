@@ -18,8 +18,11 @@ type InputChecksReader func(ctx context.Context, args InputChecksArgs) (json.Raw
 
 // InputChecksArgs narrows list_input_checks the way its route's query does.
 type InputChecksArgs struct {
-	ScopeKind string `json:"scope_kind,omitempty"`
-	ScopeID   string `json:"scope_id,omitempty"`
+	ScopeKind string  `json:"scope_kind,omitempty"`
+	ScopeID   string  `json:"scope_id,omitempty"`
+	ProductID string  `json:"product_id,omitempty"`
+	Country   *string `json:"country,omitempty"`
+	Industry  *string `json:"industry,omitempty"`
 }
 
 // RegisterInputChecksTool joins list_input_checks to the surface.
@@ -41,7 +44,8 @@ func (t listInputChecks) Spec() mcp.ToolSpec {
 		OpenAPIOp: "listInputChecks",
 		InputSchema: schema(`{"type":"object","properties":{
 			"scope_kind":{"type":"string","enum":["workspace","team","owner"],"description":"Only the findings on the deals of this population. Omit for every finding you can see."},
-			"scope_id":{"type":"string","format":"uuid","description":"The team or owner, for a team or owner scope_kind"}},
+			"scope_id":{"type":"string","format":"uuid","description":"The team or owner, for a team or owner scope_kind"},
+ "product_id":{"type":"string","format":"uuid"},"country":{"type":"string"},"industry":{"type":"string"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[InputChecksResult](),
 	}

@@ -159,8 +159,12 @@ func (s *Service) dueForExpiry(ctx context.Context) ([]ExpiredApproval, error) {
 // a retry — the clock lost that race and the human won it, which is the right
 // way round.
 func (s *Service) expireOne(ctx context.Context, id ids.ApprovalID) (bool, error) {
+	footprint, err := s.footprintToStore(ctx, id, nil)
+	if err != nil {
+		return false, err
+	}
 	swept := false
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var locked ids.ApprovalID
 		if err := tx.QueryRow(ctx, `SELECT id FROM approval WHERE id = $1 FOR UPDATE`, id).Scan(&locked); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
@@ -182,9 +186,9 @@ func (s *Service) expireOne(ctx context.Context, id ids.ApprovalID) (bool, error
 		}
 
 		if _, err := tx.Exec(ctx,
-			`UPDATE approval SET status = $2, decided_at = now(),
+			`UPDATE approval SET status = $2, decided_at = now(), plan_footprint = $3,
 			        decision_reason = 'the approval window closed with nobody deciding'
-			  WHERE id = $1`, id, StatusExpired); err != nil {
+			  WHERE id = $1`, id, StatusExpired, footprint); err != nil {
 			return fmt.Errorf("crmapprovals: recording an expiry: %w", err)
 		}
 

@@ -173,7 +173,7 @@ func TestTheShippedReadingRunsTheValidator(t *testing.T) {
 	fake := ai.NewFakeClient().Script(allFour(
 		statedField("name", "Invented", "Programme name: Invented"), "", "", ""))
 	d := NewDocumentExtractor(nil, fakeDocumentBrain{fake}, discardLogger())
-	if _, err := d.ask(t.Context(), uatSource()); err == nil {
+	if _, err := d.ask(t.Context(), dealFactsQuestion(), uatSource()); err == nil {
 		t.Fatal("the shipping path grounded a fabricated quote the validator refuses")
 	}
 }

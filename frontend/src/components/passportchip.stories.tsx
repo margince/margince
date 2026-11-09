@@ -9,7 +9,7 @@ import { ResolvedPassportChip } from "./passportchip";
 const ROTATED = "01a11ea4-9c2e-7d10-a1b2-3c4d5e6f7a8b";
 
 const meta: Meta<typeof ResolvedPassportChip> = {
-  title: "Settings/Governance/Audit log/Passport chip",
+  title: "Settings/Compliance/Audit log/Passport chip",
   component: ResolvedPassportChip,
 };
 export default meta;

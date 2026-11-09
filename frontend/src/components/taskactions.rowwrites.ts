@@ -77,6 +77,7 @@ export type MeetingOutcomeWrite = {
   // later one wins with no warning.
   version: number | undefined;
   status: "held" | "no_show" | "canceled";
+  dealFiling?: components["schemas"]["ActivityDealFiling"];
   // Each sent only when given, so an answer alone never touches the notes.
   subject?: string;
   body?: string | null;
@@ -84,6 +85,8 @@ export type MeetingOutcomeWrite = {
     occurred_at: string;
     occurred_precision: components["schemas"]["OccurredPrecision"];
   }>;
+  // The custom-field values the writer changes, by their cf_ keys.
+  custom?: Record<string, unknown>;
 };
 
 /**
@@ -93,8 +96,8 @@ export type MeetingOutcomeWrite = {
 export async function writeMeetingOutcome(
   input: MeetingOutcomeWrite,
   t: ReturnType<typeof useT>,
-): Promise<void> {
-  unwrap(
+): Promise<components["schemas"]["Activity"]> {
+  return unwrap(
     await api.PATCH("/activities/{id}", {
       params: {
         path: { id: input.id },
@@ -102,9 +105,11 @@ export async function writeMeetingOutcome(
       },
       body: {
         meeting_status: input.status,
+        ...(input.dealFiling ? { deal_filing: input.dealFiling } : {}),
         ...(input.subject === undefined ? {} : { subject: input.subject }),
         ...(input.body === undefined ? {} : { body: input.body }),
         ...input.start,
+        ...input.custom,
       },
     }),
     t,

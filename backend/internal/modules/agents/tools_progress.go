@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"strings"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
@@ -111,7 +112,7 @@ func (t progressDeal) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	if err != nil {
 		return nil, err
 	}
-	if _, err := t.p.AdvanceDeal(ctx, datasource.AdvanceDealInput{
+	moved, err := t.p.AdvanceDeal(ctx, datasource.AdvanceDealInput{
 		DealID:                   args.DealID,
 		ToStageID:                args.ToStageID,
 		LostReason:               args.LostReason,
@@ -120,10 +121,11 @@ func (t progressDeal) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 		WonWithoutContractDetail: args.WonWithoutContractDetail,
 		Source:                   ToolSource,
 		IfVersion:                pin,
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, err
 	}
-	var result ProgressDealResult
+	result := ProgressDealResult{ProbabilityNote: moved.ProbabilityNote}
 	if args.Note != nil && strings.TrimSpace(*args.Note) != "" {
 		fields, err := json.Marshal(map[string]any{
 			"kind": "note",
@@ -194,4 +196,25 @@ func (t progressDeal) answerForOpenTasks(
 	}
 	result.OpenTasks = open
 	return nil
+}
+
+// ProgressDealResult is what progress_deal answers: the deal as it now stands,
+// and the note it left if it left one.
+type ProgressDealResult struct {
+	Deal wireRecord `json:"deal"`
+	// ProbabilityNote says the probability the move set from the new stage,
+	// absent when the move changed no stage.
+	ProbabilityNote string `json:"probability_note,omitempty"`
+	// OpenTasks are the deal's tasks still open after the move. Closing a deal
+	// never settles them silently. So a caller is told what it left behind, and
+	// can settle it with the settle argument.
+	OpenTasks []crmcontracts.DealOpenTask `json:"open_tasks,omitempty"`
+	// SettledTaskIDs are the tasks this call completed, present only when the
+	// caller asked for that. Empty and absent are the same claim here, which is
+	// why it carries no count beside it.
+	SettledTaskIDs []ids.UUID `json:"settled_task_ids,omitempty"`
+	// NoteActivityID is absent when the call carried no note. It is a pointer
+	// rather than a zero uuid: "no note was asked for" and "a note whose id is
+	// all zeroes" are different claims. Only one of them is true.
+	NoteActivityID *ids.UUID `json:"note_activity_id,omitempty"`
 }

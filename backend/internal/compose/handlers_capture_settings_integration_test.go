@@ -75,3 +75,40 @@ func TestCaptureSettingsHandlers(t *testing.T) {
 		t.Fatal("PATCH auto_enrich = true, want false after the toggle")
 	}
 }
+
+func TestInternalMailSourceControlsRequireAdminEvenWithCaptureSettingsWrite(t *testing.T) {
+	e := integration.Setup(t)
+	h := captureSettingsHandlers{store: capture.NewSettings(NewSettingsStore(e.Pool), StoredConfig(e.Pool))}
+	granted := captureSettingsHumanCtx(e, principal.ObjectGrant{Read: true, Update: true})
+	actor, ok := principal.Actor(granted)
+	if !ok {
+		t.Fatal("missing fixture actor")
+	}
+	actor.UserID, actor.ID, actor.SeatType = e.AdminUser, "human:"+e.AdminUser.String(), principal.SeatFull
+	for _, role := range []string{"ops", "rep", "admin"} {
+		actor.Permissions.RoleKeys = []string{role}
+		ctx := principal.WithActor(granted, actor)
+		request := httptest.NewRequest(http.MethodPatch, "/v1/capture/settings", strings.NewReader(`{"internal_mail":{"enabled":false,"sources":[]}}`)).WithContext(ctx)
+		response := httptest.NewRecorder()
+		h.UpdateCaptureSettings(response, request)
+		want := http.StatusForbidden
+		if role == "admin" {
+			want = http.StatusOK
+		}
+		if response.Code != want {
+			t.Fatalf("%s PATCH: %d, want %d: %s", role, response.Code, want, response.Body)
+		}
+		get := httptest.NewRecorder()
+		h.GetCaptureSettings(get, httptest.NewRequest(http.MethodGet, "/v1/capture/settings", nil).WithContext(ctx))
+		if get.Code != http.StatusOK {
+			t.Fatalf("%s GET: %d %s", role, get.Code, get.Body)
+		}
+		var settings crmcontracts.CaptureSettings
+		if err := json.Unmarshal(get.Body.Bytes(), &settings); err != nil {
+			t.Fatal(err)
+		}
+		if (settings.InternalMail != nil) != (role == "admin") {
+			t.Fatalf("%s source controls visibility: %+v", role, settings.InternalMail)
+		}
+	}
+}

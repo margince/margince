@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 )
 
 type importRunMappingDTO struct {
@@ -31,7 +32,7 @@ func readRunMapping(t *testing.T, e *apptest.AppEnv, id string) importRunMapping
 
 func TestARunReturnsTheMappingThatWasSavedOnIt(t *testing.T) {
 	e := setupImportApp(t)
-	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
+	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
 	want := map[string]string{"Email": "email", "Full Name": "full_name"}
 	if status := e.Call(t, http.MethodPatch, "/v1/imports/"+profile.RunID, AnyMap{
 		"version": 1, "object": "lead", "mapping": want,
@@ -47,7 +48,7 @@ func TestARunReturnsTheMappingThatWasSavedOnIt(t *testing.T) {
 
 func TestAnUploadedRunReturnsTheMappingItWasStagedWith(t *testing.T) {
 	e := setupImportApp(t)
-	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
+	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
 
 	got := readRunMapping(t, e, profile.RunID)
 	if len(got.Parts) != 1 || !maps.Equal(got.Parts[0].Mapping, profile.SuggestedMapping) {

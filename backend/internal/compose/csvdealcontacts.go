@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -38,7 +39,8 @@ func (r *linkResolver) resolveContact(ctx context.Context, raw string) (linkAnsw
 // caller's row scope. An address is unique among live contacts, so one row is
 // the whole answer.
 func (r *linkResolver) visibleContactByEmail(ctx context.Context, key string) (linkAnswer, error) {
-	if !strings.Contains(key, "@") {
+	// A technical address names no contact, even one stored before the rule.
+	if !strings.Contains(key, "@") || mailidentity.HasMachineLocalpart(key) {
 		return linkAnswer{}, nil
 	}
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
