@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -222,19 +223,14 @@ func mergeAnchorRegister(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID
 	return rows.Err()
 }
 
-// UserLegalEntity is the entity a user works for: the one their assignment
-// names, or the default entity when they have none.
+// UserLegalEntity is the entity a user works for, signs mail for and issues
+// offers for. storekit.LegalEntityOf answers it, as it does for the send path.
 func UserLegalEntity(ctx context.Context, tx pgx.Tx, user ids.UserID) (ids.LegalEntityID, error) {
-	var id ids.LegalEntityID
-	var args legalEntityArgs
-	err := tx.QueryRow(ctx,
-		`SELECT coalesce(
-		    (SELECT legal_entity_id FROM legal_entity_member WHERE user_id = `+args.add(user)+`),
-		    (SELECT id FROM legal_entity WHERE is_default))`, args...).Scan(&id)
+	entity, err := storekit.LegalEntityOf(ctx, tx, user.UUID)
 	if err != nil {
 		return ids.LegalEntityID{}, fmt.Errorf("resolve the legal entity of a user: %w", err)
 	}
-	return id, nil
+	return ids.From[ids.LegalEntityKind](entity), nil
 }
 
 // ListLegalEntities lists the entities, the default first and then by name.

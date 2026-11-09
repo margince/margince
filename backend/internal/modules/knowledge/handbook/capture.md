@@ -1,19 +1,21 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/capture backend/internal/compose/capturejobs.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkdealdecide.go backend/internal/modules/capture/dealrefile.go backend/internal/compose/dealrefiletrigger.go backend/internal/compose/jobs_dealrefile.go backend/internal/modules/capture/threadboundary.go frontend/src/features/worklist/worklist.domainquestion.tsx frontend/src/features/worklist/worklist.domainreview.tsx backend/internal/modules/contacts/domainquestioncontext.go -->
+<!-- describes: frontend/src/features/capture backend/internal/compose/capturejobs.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/activities/dealdecline.go frontend/src/features/records/dealdecline.tsx frontend/src/components/whichdealdecline.tsx backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkdealdecide.go backend/internal/modules/capture/dealrefile.go backend/internal/modules/capture/dealtopic.go backend/internal/modules/capture/dealrecheck.go backend/internal/compose/capturedealtopic.go backend/internal/compose/dealrefiletrigger.go backend/internal/compose/jobs_dealrefile.go backend/internal/modules/capture/threadboundary.go frontend/src/features/worklist/worklist.domainquestion.tsx frontend/src/features/worklist/worklist.domainreview.tsx backend/internal/modules/contacts/domainquestioncontext.go -->
 # Capture: how conversations get into Margince
 
 Nobody should have to copy an email into a CRM by hand. **Capture** is the part of Margince that connects to your mailbox, your calendar and your chat. It files what arrives against the right contacts, their companies and projects. Connecting a mailbox or calendar, and importing your older mail, is its own page: [Connecting your mailbox and calendar](connecting-mail-and-calendars.md).
 
 ### How does email get into Margince?
 Email gets into Margince through a mailbox you connect at **Settings → Connections**: Gmail, Outlook or an IMAP mailbox. On each sync, capture reads new mail and files it on the timelines of the contacts on it.
-There is no address to forward to and no step to copy and paste. Mail between colleagues is never stored, and senders judged to be newsletters, automated tools or spam create no contact.
-For older mail, choose **Import older email** in the account's menu; to see what happened to one message, open **Settings → Capture activity**.
+There is no address to forward to and no step to copy and paste. Mail between colleagues is not stored by default.
+
+An admin can choose sources for [internal mail about work](who-can-see-an-email.md#mail-between-colleagues). Other mail follows the usual rules, and senders judged to be newsletters, automated tools or spam create no contact.
+For older mail, choose **Import older email** in the account's menu; to see what happened to one message, open **Settings → Connections → Activity**.
 
 ### How do I see emails I sent from Outlook or Gmail in Margince?
 Emails you send from Outlook or Gmail itself are captured into Margince too. A connected Gmail or Outlook mailbox is read in your inbox and your sent mail. So each sent message lands on the contact timelines of its recipients, marked **Sent**.
 1. Connect the mailbox at **Settings → Connections**; mail sent before that comes in with the **Past email** import.
 2. Open the contact's **History** tab and pick **Threads** or **All** to see what you sent beside their replies.
-Mail sent only to colleagues is never stored. An IMAP mailbox reads only the one **Mailbox** it was set up with.
+Mail sent only to colleagues is not stored unless an admin chose that source for internal mail about work. An IMAP mailbox reads only the one **Mailbox** it was set up with.
 
 ## What happens to one message
 
@@ -37,16 +39,16 @@ When Margince captures a message, it stores passwords, PINs, access keys and tok
 
 **4. Deciding about the sender.** See the ladder below.
 
-You can watch all of this in **Settings → Capture activity**, in **Last 24
+You can watch all of this in **Settings → Connections → Activity**, in **Last 24
 hours**. Under **Messages**, press a message's row, or its **Show every
 processing step** button. **How this
 message was handled** lists every step in order, each marked Done, Skipped,
 Waiting, Failed, Not applicable, or Unknown.
 
 ### Why was my email not captured?
-To find out why an email is missing, open **Settings → Capture activity**, find it under **Messages** and press its row.
+To find out why an email is missing, open **Settings → Connections → Activity**, find it under **Messages** and press its row.
 **How this message was handled** marks each step Done, Skipped, Waiting, Failed, Not applicable or Unknown, with the reason.
-Common causes: every address was on your own domains, so it was never stored. Or the sender is on your **Capture exclusions**, the sender was judged a newsletter or automated tool, or the mailbox shows **Needs reconnect**.
+Common causes: every address was on your own domains and the source was not allowed to capture internal mail, so it was not stored. Or the sender is on your **Capture exclusions**, the sender was judged a newsletter or automated tool, or the mailbox shows **Needs reconnect**.
 The log keeps 24 hours and shows only your own connections.
 Also called: missing email, email did not sync, email not logged.
 
@@ -70,7 +72,7 @@ Create no contact and no company.
 **Have we already decided about this address?** Use that decision again.
 
 **Is it a consumer mail domain?** These are personal mailboxes, and Margince ships with a long
-list of them; the Capture rules screen shows the count. A sender on one never makes a company.
+list of them; the **Mail capture** settings page shows the count. A sender on one never makes a company.
 They become a contact at once after a meeting, or after mail both ways, with someone at your company.
 An older decision that let them in also counts. If not, they become a contact only once Margince has
 sorted them.
@@ -129,15 +131,14 @@ capture works as normal and only this judging step is skipped.
 ### Low confidence never deletes anything
 
 Below a confidence of 0.7, the sender is asked about once more on its own. If it
-is still below, it becomes **unsure** and goes to a human. A low score costs one
-more question; it never deletes anything by mistake.
+is still below, it stays unsure. There is no task or approval to clear.
+A low score costs one more question; it never deletes anything by mistake.
 
-An unsure sender reaches you as an approval card, **Add contact from mail**.
-Only the colleague whose mailbox the sender wrote to gets the card. If that
-colleague has left, nobody else is asked: the sender stays unsure, and after 30
-days the question closes with no contact created. Accept creates the contact.
-**Reject does nothing at all**: the mail stays where it is. These proposals can
-only add, so rejecting one by mistake deletes nothing.
+Open **Settings** → **Capture activity** → **Sender decisions** to find a sender
+and correct a decision. Search by address, name or domain, or choose **My overrides**.
+You can mark a sender as business, exclude them, or withdraw your own override.
+Withdrawing an override does not restore mail already destroyed. Leaving an unsure
+sender unshared is a valid outcome and needs no action.
 
 ### Two limits on the queue
 
@@ -151,21 +152,23 @@ Margince puts a captured email on a deal by itself only when one deal, and no ot
 
 1. **The project.** An email filed under a project goes on that project's one open deal. If the project has no open deal, or several, the email goes on no deal. The company's deals are not asked.
 2. **Your thread.** Your own sent email in the thread is on a deal. The reply goes on that deal if it is the reply's company's deal.
-3. **The company.** If neither fits, the email goes on the one open deal of the one company its contacts work at. With several open deals, a contact who is a stakeholder on only one of them picks it.
+3. **The company.** If neither fits, the company's one open deal is suggested. With several open deals, a stakeholder on only one of them suggests it. An AI check reads the email and files it only when it is fully sure it is about that deal. Without an AI answer, the email waits for a later pass.
 
-An email stays on no deal when:
+An email stays on no deal when nothing picks one of several open deals, or the AI check is not sure. It also stays off when its contacts work at two companies, or when a colleague said it is not about the deal that fits. An email already on a deal keeps it, and a deal you chose by hand is never changed.
 
-- the company has several open deals and nothing picks one;
-- its contacts work at two companies;
-- it is already on a deal. A deal you chose by hand is never changed.
+When several deals fit, the AI check reads the email first. A sure pick files it, and a sure "none" files nothing. Only when it is not sure does one colleague get one task per thread: "Which deal is this about?".
 
-When several deals fit, one colleague gets one task per thread: "Which deal is this about?". That is the colleague who sent the email, or the one colleague it was addressed to. Nobody else is asked. If no colleague is named that way, nobody is asked. An email older than the waiting horizon asks nobody, even when it is captured today.
+That is the colleague who sent the email, or the one colleague it was addressed to. Nobody else is asked. If no colleague is named that way, nobody is asked. An email older than the waiting horizon asks nobody, even when it is captured today.
 
-To answer, use **Relink** on any email of that conversation and pick the deal. The other emails of the conversation with the same contact go on that deal too, with the promises read from them. An email already on a deal keeps it. The task is then done.
+To answer, use **Relink** on any email of that conversation and pick the deal. The other emails of the conversation with the same contact go on that deal too, with the promises read from them. An email already on a deal keeps it. The task is then done. If it is about none of them, choose **None of these deals** on the task. Margince then never files that conversation on those deals.
+
+To take an email off a deal it is not about, choose **Not about this deal** in its **More actions** menu on the deal's timeline. Margince never files it on that deal again by itself; other deals can still fit it, and **Relink** still files it on any record. A project link that came with that deal comes off too, unless its retention rules keep it. This holds when an agent declines the deal for you as well.
 
 Meetings use the same contact and company rules. They never follow an email thread or ask you to choose a deal. If several deals fit, the meeting stays off them.
 
-Margince checks recent mail and meetings again when a deal opens or changes company, a lead becomes a contact, or a contact's employer changes. A guest found later is checked too. These checks run in the background and ask nobody. Existing deal links stay where you put them. An hourly pass picks up work left behind; it uses the same waiting horizon as other automatic work.
+Margince checks recent mail and meetings again when a deal opens or changes company, a lead becomes a contact, or a contact's employer changes. A guest found later is checked too. These checks run in the background and ask nobody. Existing deal links stay where you put them.
+
+An hourly pass picks up work left behind; it uses the same waiting horizon as other automatic work. It also checks, once, the deal links Margince suggested on mail of the last 90 days before the AI check existed. A link the AI says is not about its deal comes off.
 
 An email only its participants can read still appears on the deal's timeline. It does not change the deal's last activity date.
 
@@ -253,7 +256,7 @@ Also called: open an email, read a conversation, forward an email.
 ### How do I move an email to the right contact or deal?
 To move a captured email that was filed on the wrong record, choose **Relink** on it in the timeline. Search for the right contact, company, deal, lead or project.
 Tick **Replace existing link** to replace it instead of adding a second link, and choose **Relink**. Tick **Move rest of thread** to move the whole conversation.
-Also called: email on the wrong deal, refile an email, change which deal an email belongs to.
+Also called: email on the wrong deal, refile an email, change which deal an email belongs to, remove an email from a deal.
 
 ## What capture refuses to do
 
@@ -284,16 +287,17 @@ The last row matters most. A business letter (Handelsbrief) cannot be deleted
 this way while the law requires keeping it, no matter how you delete it at the
 provider. The record says why it was kept.
 
-**Mail between colleagues is never stored.** If every address on a message
-belongs to your own domains, capture logs one line and drops it. The app says:
-"Messages between colleagues are not stored for anyone, including you."
+**Mail between colleagues is skipped by default.** If every address belongs to
+an own domain, Margince drops the message before storing its content. An Admin
+can add a mailbox and its folders under **Internal operational mail** in
+**Settings → Mail capture**. The source still follows **Capture exclusions**.
+See [Who can see an email](who-can-see-an-email.md) for setup, history and
+sharing.
 
-The check runs before the message is stored, so no copy exists at all. The
-log line does not record the address or the subject. Those would show what
-dropping the message keeps private.
-
-This covers more than readers expect. A colleague's short report *about* a
-client is still internal mail, because it is not correspondence with the client.
+Authorized internal mail stays with its participants unless a participant shares
+that one message with named colleagues. It creates no customer contact or
+automatic record link. A colleague's report about a client still counts as
+internal mail when the client is not on the message.
 
 **Capture cannot send anything.** It only reads. Sending is apart from it: each
 message is saved as its own record. It is checked against the current permissions
@@ -327,8 +331,8 @@ agreement requires it. There is no switch in the app, so no member can change it
 for their colleagues. When it is off, the log says so once, above its entries.
 
 ### How do I stop capturing emails from a domain or address?
-To stop Margince capturing mail from a domain or address, open **Settings → Capture activity** and press **New exclusion** in **Capture exclusions**. Enter the address or domain, and press **Exclude**.
-1. Open **Settings**, then **Capture activity**.
+To stop Margince capturing mail from a domain or address, open **Settings → Connections → Activity** and press **New exclusion** in **Capture exclusions**. Enter the address or domain, and press **Exclude**.
+1. Open **Settings**, then **Connections**, then **Activity**.
 2. In **Capture exclusions**, press **New exclusion**.
 3. Choose **Applies to** (**Your mailboxes** or **Whole company**) and the **Kind** (**Address**, **Domain**, or **Label, folder or mailbox**).
 4. Enter the value and press **Exclude**.
@@ -336,8 +340,8 @@ It applies from the next message; captured mail stays. **Whole company** rules b
 Also called: block a sender, ignore a domain, blacklist, do not log.
 
 ### How do I tell Margince a sender is business, or exclude one?
-To correct what Margince decided about a sender, open **Settings → Capture activity** and find the address in **Senders**. In its **…** (**Actions**) menu, choose **Mark as business** to let it back in, or **Exclude** to hide its mail for good.
-1. Open **Settings**, then **Capture activity**, and go down to **Senders**.
+To correct what Margince decided about a sender, open **Settings → Connections → Activity** and find the address in **Senders**. In its **…** (**Actions**) menu, choose **Mark as business** to let it back in, or **Exclude** to hide its mail for good.
+1. Open **Settings**, then **Connections**, then **Activity**, and go down to **Senders**.
 2. Find the address; the **Decision** column shows what was decided. **Contact** opens the contact that holds the address. **Messages** counts your stored mail with it. **Last seen** is when the newest of those arrived or went out.
 3. Open its **…** (**Actions**) menu and choose **Mark as business**, or choose **Exclude** and confirm **Exclude and destroy**.
 **Exclude** creates no contact and destroys the mail that sender sent into your mailbox; copies a colleague imported stay theirs. Margince still receives their later mail, but hides and destroys it, so it never shows. **Capture exclusions** work earlier: they stop new mail before it is stored. What Margince sorts by itself never writes over a decision you make.
@@ -345,7 +349,7 @@ Also called: mark as not spam, whitelist a sender.
 
 ## Things you control yourself
 
-**Own email domains** (Settings → Capture rules): the domains that belong to your company. A sales
+**Own email domains** (Settings → Mail capture): the domains that belong to your company. A sales
 seat can add one; changing or removing an entry is for Admin and Ops. This is what makes internal
 mail internal. Adding one cannot be taken back for mail already skipped: "Mail skipped while
 registered is never offered again by any mailbox."
@@ -355,15 +359,15 @@ read, an address you forward from. Mail between them is not captured and never c
 Private to you. Removing one takes effect at once, and **Undo** on the notice puts it back. Removing
 an address Margince found also stops Margince finding it again.
 
-**Capture exclusions** (Settings → Capture activity): addresses and domains whose messages never
+**Capture exclusions** (Settings → Connections → Activity): addresses and domains whose messages never
 enter the CRM. Your own rules cover only the mailboxes you connected. The company's rules cover
 everyone, and only an administrator may change one of those. A rule a member added names that
 member. "Applies from the next message. Messages already captured stay."
 
-**Consumer mail domains** (Settings → Capture rules): which domains count as personal mailboxes.
+**Consumer mail domains** (Settings → Mail capture): which domains count as personal mailboxes.
 [Who the message belongs to](#who-the-message-belongs-to) says what happens to their senders.
 
-**Refused domains** (Settings → Capture rules): the domains this installation will not create a
+**Refused domains** (Settings → Mail capture): the domains this installation will not create a
 company for. Each shows what decided it: an AI model, a fixed rule, or a human. Letting a domain
 back in asks the company question again.
 
@@ -376,7 +380,7 @@ company** makes it the company of the contacts on the domain; contacts at anothe
 **Choose another** opens the question with a company search and **Create company**. **Not now** puts
 it off until new mail arrives. **Stop capturing in your mailboxes** stops saving mail from the domain.
 
-**Senders** (Settings → Capture activity): every address that came in through your mailbox, and
+**Senders** (Settings → Connections → Activity): every address that came in through your mailbox, and
 what Margince decided about each. That is a contact, a role mailbox, an
 automated tool, a newsletter, an advisor, or personal. You can change any of them.
 
@@ -385,12 +389,12 @@ later ([how](#how-do-i-tell-margince-a-sender-is-business-or-exclude-one)). **Wa
 list, names the contacts only you see until their sender is decided. An administrator sees only
 how many there are.
 
-**Held threads** (Settings → Capture activity): the threads your mailbox is holding
+**Held threads** (Settings → Connections → Activity): the threads your mailbox is holding
 back right now, with the reason and the outside addresses on each. **Share with
 the team** releases one.
 
 Three settings decide who may read captured mail. **Mail visibility** is in
 each mailbox's settings in Settings → Connections. **Private correspondence** is on a
-contact's or company's page. **Mail sharing and sync** is in Settings → Capture rules,
+contact's or company's page. **Mail sharing and sync** is in Settings → Mail capture,
 for administrators only. They are explained in [Who can see an email](who-can-see-an-email.md),
 together with whose capture activity you can see.

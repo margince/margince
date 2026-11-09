@@ -189,9 +189,10 @@ var replayableOperations = map[string]replayTarget{
 			{table: tableDeal, idPath: dealIDField},
 		},
 	},
-	"POST /v1/companies":            {object: tableCompany, table: tableCompany, idPath: "id"},
-	"PATCH /v1/companies/{id}":      {object: tableCompany, table: tableCompany, idPath: "id"},
-	"POST /v1/companies/{id}/merge": {object: tableCompany, table: tableCompany, idPath: "id"},
+	"POST /v1/companies":                     {object: tableCompany, table: tableCompany, idPath: "id"},
+	"PATCH /v1/companies/{id}":               {object: tableCompany, table: tableCompany, idPath: "id"},
+	"POST /v1/companies/{id}/merge":          {object: tableCompany, table: tableCompany, idPath: "id"},
+	"POST /v1/companies/{id}/share-contacts": {object: tableCompany, table: tableCompany, pathParam: "id"}, //nolint:goconst // the replay gates read this map's keys as string literals
 	"POST /v1/companies/{id}/link-contacts": {
 		object: tableCompany, table: tableCompany, pathParam: "id",
 		companions: []companionRef{
@@ -230,19 +231,11 @@ var replayableOperations = map[string]replayTarget{
 		companions: []companionRef{{table: tableDeal, idPath: dealIDField}},
 	},
 	"POST /v1/deal-suggestions/{id}/dismiss": {object: tableDeal, moduleProbe: probeDealSuggestion, idPath: "id"},
-	// Taking back an automatic stage move answers the deal, and the deal's
-	// grant governs it — the progression ledger carries no authority of its
-	// own. A retried undo must replay rather than re-execute: the second run
-	// would find the move already reversed and refuse with a 409, telling the
-	// caller their own retry had failed.
-	"POST /v1/deals/{id}/stage-progressions/{approvalId}/revert": {
-		object: tableDeal, table: tableDeal, idPath: "id",
-	},
-	"POST /v1/contracts":             {object: probeContract, moduleProbe: probeContract, idPath: "id", rowNote: "a contract carries no owner column; visibility is inherited from its deal or company, so the contracts store owns the probe"},
-	"POST /v1/deal-rooms":            {object: probeDealRoom, moduleProbe: probeDealRoom, idPath: "id", rowNote: "a Deal Room carries no owner column; its visibility is its parent deal's, so the dealrooms store owns the probe"},
-	"POST /v1/projects":              {object: tableProject, table: tableProject, idPath: "id"},
-	"PATCH /v1/projects/{id}":        {object: tableProject, table: tableProject, idPath: "id"},
-	"POST /v1/projects/{id}/advance": {object: tableProject, table: tableProject, idPath: "id"},
+	"POST /v1/contracts":                     {object: probeContract, moduleProbe: probeContract, idPath: "id", rowNote: "a contract carries no owner column; visibility is inherited from its deal or company, so the contracts store owns the probe"}, //nolint:goconst // the replay gates read this map's keys as string literals
+	"POST /v1/deal-rooms":                    {object: probeDealRoom, moduleProbe: probeDealRoom, idPath: "id", rowNote: "a Deal Room carries no owner column; its visibility is its parent deal's, so the dealrooms store owns the probe"},
+	"POST /v1/projects":                      {object: tableProject, table: tableProject, idPath: "id"},
+	"PATCH /v1/projects/{id}":                {object: tableProject, table: tableProject, idPath: "id"},
+	"POST /v1/projects/{id}/advance":         {object: tableProject, table: tableProject, idPath: "id"},
 	"POST /v1/bulk/execute": {
 		objectNote:  "one route over three record types: the change was gated per record on the caller's grant and write authority when it ran",
 		moduleProbe: probeBulkBatch, idPath: "batch_id",
@@ -352,14 +345,7 @@ var replayableOperations = map[string]replayTarget{
 	// retry must replay rather than re-execute into its own version_skew.
 	"PUT /v1/pipelines/{id}/stage-order": {object: objectPipeline, rowNote: "pipeline config, no owner column"},
 	"POST /v1/stages":                    {object: objectPipeline, rowNote: noOwnerStage},
-	// A transition's automation rule is pipeline config, governed by the
-	// pipeline's object grant and owned by nobody. A retried save must replay:
-	// re-executing would bump the row's version, so an admin's own retry would
-	// make their next if_version write conflict with itself.
-	"PUT /v1/stage-automation/policies/{id}": {
-		object: objectPipeline, rowNote: "a transition rule is pipeline config, no owner column",
-	},
-	"PATCH /v1/stages/{id}": {object: objectPipeline, rowNote: noOwnerStage},
+	"PATCH /v1/stages/{id}":              {object: objectPipeline, rowNote: noOwnerStage}, //nolint:goconst // the replay gates read this map's keys as string literals
 	// A criterion is stage config one level down, governed by the same
 	// pipeline grant and carrying no owner column of its own.
 	"POST /v1/stages/{id}/exit-criteria": {object: objectPipeline, rowNote: noOwnerStage},

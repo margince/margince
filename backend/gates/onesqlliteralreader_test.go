@@ -146,7 +146,7 @@ func walkGoFilesUnder(
 	t *testing.T, fset *token.FileSet, root string, visit func(path string, file *ast.File),
 ) {
 	t.Helper()
-	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+	err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}

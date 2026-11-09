@@ -32,10 +32,12 @@ export type ContactVerdict = Readonly<{
 
 // The wire carries no tone for a rule. An owed thing that slipped is danger,
 // an owed thing still on time is warning, a reply after silence is good news.
+// A wait on their answer asks nothing of the reader yet.
 const MOMENT_TONE: Readonly<Record<ContactMomentRule, ReadingTone>> = {
   privacy_notice_due: "warning",
   overdue_promise: "danger",
   gone_quiet: "danger",
+  awaiting_reply: "neutral",
   open_promise: "warning",
   missing_next_step: "warning",
   meeting_prep: "warning",

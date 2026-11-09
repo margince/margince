@@ -7,6 +7,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/backoff"
 )
 
@@ -26,6 +27,9 @@ const (
 // transaction and has no effect outside it — the condition a caller opts into
 // by wrapping its Tx here. The last attempt's error is returned as it came.
 func RetryLockCycles(ctx context.Context, run func() error) error {
+	if database.InWorkspaceTransaction(ctx) {
+		return run()
+	}
 	var err error
 	for attempt := range lockCycleAttempts {
 		if attempt > 0 {

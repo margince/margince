@@ -83,14 +83,15 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 	if !ok {
 		return ids.UUID{}, errors.New("compose: staging a controller delivery outside workspace context")
 	}
-	rendered, body, err := presentControllerMailTx(ctx, tx, in.Rendered)
+	mail, err := presentControllerMailTx(ctx, tx, in.Rendered)
 	if err != nil {
 		return ids.UUID{}, err
 	}
-	in.Rendered = rendered
-	subject := rendered.Subject
+	in.Rendered = mail.rendered
+	body := mail.body
+	subject := in.Rendered.Subject
 	// Members read the activity; only the delivery keeps the placeholder the dispatcher fills.
-	readable := strings.ReplaceAll(body, comms.LinkPlaceholder, mailcopy.For(rendered.Language).SentLinkMarker)
+	readable := strings.ReplaceAll(body, comms.LinkPlaceholder, mailcopy.For(in.Rendered.Language).SentLinkMarker)
 	outbound := string(crmcontracts.ActivityDirectionOutbound)
 	activity, _, err := q.activities.LogActivityTx(ctx, tx, activities.SentRecord(activities.LogActivityInput{
 		Kind:      string(crmcontracts.ActivityKindEmail),
@@ -120,6 +121,7 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 		DueAt:            in.DueAt,
 		LinkID:           in.LinkID,
 		FromAddress:      q.from,
+		InlineLogoKey:    mail.logoKey,
 	}, q.templates)
 	if err != nil {
 		return ids.UUID{}, err
@@ -152,22 +154,22 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 // preview shows the same From, subject and text, and refuses what staging
 // would refuse.
 func (q controllerMailQueue) PresentConfirmationTx(ctx context.Context, tx pgx.Tx, in consent.ConfirmationSend) (consent.PresentedMail, error) {
-	rendered, body, err := presentControllerMailTx(ctx, tx, in.Rendered)
+	mail, err := presentControllerMailTx(ctx, tx, in.Rendered)
 	if err != nil {
 		return consent.PresentedMail{}, err
 	}
-	in.Rendered = rendered
+	in.Rendered = mail.rendered
 	if q.authority == nil {
 		return consent.PresentedMail{}, errNoControllerAuthority
 	}
-	set, err := q.authority.PreviewTx(ctx, tx, stagingRequest(in, body))
+	set, err := q.authority.PreviewTx(ctx, tx, stagingRequest(in, mail.body))
 	if err != nil {
 		return consent.PresentedMail{}, err
 	}
 	if err := refuseAtStaging(set); err != nil {
 		return consent.PresentedMail{}, err
 	}
-	return consent.PresentedMail{From: q.from, Subject: rendered.Subject, Text: body}, nil
+	return consent.PresentedMail{From: q.from, Subject: mail.rendered.Subject, Text: mail.body}, nil
 }
 
 // stagingRequest is what the engine is asked about one controller mail, at
@@ -184,24 +186,37 @@ func stagingRequest(in consent.ConfirmationSend, body string) commsauthz.Request
 
 var errNoControllerAuthority = errors.New("compose: no authorization authority is wired on the controller mail lane")
 
+// presentedControllerMail is one notice dressed in the installation's brand.
+// The plain text opens with the brand line. logoKey is the stored logo the
+// HTML letterhead shows, "" for none.
+type presentedControllerMail struct {
+	rendered consent.Rendered
+	body     string
+	logoKey  string
+}
+
 // presentControllerMailTx adds the brand the installation's mail is sent
-// under: an HTML alternative, and the brand line atop the plain text.
-func presentControllerMailTx(ctx context.Context, tx pgx.Tx, rendered consent.Rendered) (consent.Rendered, string, error) {
-	body := rendered.Body
+// under. The HTML alternative is headed by the logo or the name.
+func presentControllerMailTx(ctx context.Context, tx pgx.Tx, rendered consent.Rendered) (presentedControllerMail, error) {
+	mail := presentedControllerMail{rendered: rendered, body: rendered.Body}
 	if rendered.Language == "" && rendered.HTMLBody == "" {
-		return rendered, body, nil
+		return mail, nil
 	}
-	// The same name product mail is headed by (mailletterhead.go). The logo is
-	// not attached on this lane yet, so the name heads the notice alone.
-	brand, _, err := letterheadNameTx(ctx, tx)
+	// The same name and logo product mail is headed by (mailletterhead.go).
+	// The logo is read at send; one gone by then leaves the name.
+	brand, key, err := letterheadNameTx(ctx, tx)
 	if err != nil {
-		return consent.Rendered{}, "", err
+		return presentedControllerMail{}, err
 	}
-	rendered.HTMLBody = consent.RenderControllerPresentation(rendered, brand)
+	logoContentID := ""
+	if key != "" {
+		logoContentID, mail.logoKey = connector.LetterheadLogoContentID, key
+	}
+	mail.rendered.HTMLBody = consent.RenderControllerPresentation(rendered, brand, logoContentID)
 	if brand != "" {
-		body = brand + "\n\n" + body
+		mail.body = brand + "\n\n" + mail.body
 	}
-	return rendered, body, nil
+	return mail, nil
 }
 
 // controllerMailSubject files the notice under the record it was sent to: the

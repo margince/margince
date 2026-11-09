@@ -59,7 +59,7 @@ function picking(ai: string, place?: string, ...then: string[]) {
 }
 
 const meta: Meta<typeof ConnectAiToolCard> = {
-  title: "Settings/You/AI access/Connect your AI tool",
+  title: "Settings/You/AI assistants/Connect your AI tool",
   component: ConnectAiToolCard,
 };
 export default meta;

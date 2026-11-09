@@ -37,7 +37,6 @@ package gates
 import (
 	"go/ast"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -119,14 +118,14 @@ func testExists(t *testing.T, name string) bool {
 	t.Helper()
 	needle := "func " + name + "("
 	var found bool
-	err := filepath.WalkDir("..", func(path string, d os.DirEntry, err error) error {
+	err := gatekit.WalkDir("..", func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if found || d.IsDir() || !strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
-		src, readErr := os.ReadFile(path)
+		src, readErr := gatekit.ReadFile(path)
 		if readErr != nil {
 			return readErr
 		}

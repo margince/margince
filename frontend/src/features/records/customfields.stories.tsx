@@ -20,7 +20,7 @@ import { FieldBuilder } from "./customfields.builder";
 // story that only mounted the default builder three times captured the same
 // screenshot three times and proved nothing about any of the three branches.
 const meta: Meta = {
-  title: "Settings/Sales/Fields/Custom fields",
+  title: "Settings/Sales/Records and fields/Custom fields",
   parameters: { layout: "padded" },
 };
 export default meta;

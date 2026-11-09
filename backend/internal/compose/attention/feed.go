@@ -127,8 +127,9 @@ type Service struct {
 	// the seam refuses a principal with no human behind it, and the lane
 	// renders that as withheld.
 	captureHealth CaptureHealth
-	// aiWork is OPTIONAL and per-user exactly as captureHealth is.
-	aiWork AIWork
+	// aiWork and bookingHealth are optional and per-user, as captureHealth is.
+	aiWork        AIWork
+	bookingHealth BookingHealth
 	// pins is OPTIONAL like the lanes above it: nil means this feed applies no
 	// reader override, and the day ranks as it did before pinning existed.
 	pins Pins
@@ -221,7 +222,6 @@ type Service struct {
 	namedTeams  NamedTeams
 	weeklyPlans WeeklyPlans
 	planRows    []ranked
-	reviews     reviewRead
 	followUps   followUpRead
 	// planCoverage is whose plans a team read looked at; nil under every other scope.
 	planCoverage *crmcontracts.WorklistPlanCoverage
@@ -343,7 +343,7 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 		out.Counts.DealSuggestionsOpen = count.suggestions
 		out.Counts.TagSuggestionsOpen = count.tagSuggestions
 	})
-	beside := besideDay{failed: count.failed, until: until, zone: loc}
+	beside := besideDay{failed: count.failed, until: until, zone: loc, approvalsFrom: count.approvalsFrom}
 	if err != nil {
 		return crmcontracts.Attention{}, besideDay{}, err
 	}
@@ -390,13 +390,12 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 
 // laneCount carries the totals behind a lane the reader only sees a slice of.
 type laneCount struct {
-	items      int
-	duplicates int
-	approvals  int
+	items, duplicates, approvals int
 	// suggestions is nil when the reader may not read suggestions at all, or
 	// when the read failed — and then failed names it.
 	suggestions, tagSuggestions *int
 	failed                      []*crmcontracts.WorklistSourceUnavailable
+	approvalsFrom               string // the inbox position after the last approval kept
 }
 
 // decisions is the needs_you lane: staged approvals, open duplicate pairs and
@@ -474,9 +473,10 @@ func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontrac
 	}
 	count := laneCount{items: openCases + openPairs + openStaged, duplicates: openCases + openPairs, approvals: openStaged}
 	suggestions, tagged := s.suggestionLanes(ctx, depth, &count)
-	// Cases lead each round, so a reader's own case is never behind a pile of
-	// other pairs.
-	return interleave(depth, cases, duplicates, approvals, suggestions, tagged), count, nil
+	// Cases lead each round, so a reader's own case is never behind a pile of other pairs.
+	lane := interleave(depth, cases, duplicates, approvals, suggestions, tagged)
+	count.approvalsFrom, err = approvalTailStart(lane, staged)
+	return lane, count, err
 }
 
 // done is the receipt lane: what ran without asking, so a rep can see it and

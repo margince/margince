@@ -93,9 +93,13 @@ func (s *Service) WithTaskBacklog(b TaskBacklog) *Service {
 // backlogState is the backlog readers, and on one request's copy what they
 // counted.
 type backlogState struct {
-	tasks   TaskBacklog
-	waiting WaitingBacklog
-	risk    RiskBacklog
+	tasks     TaskBacklog
+	waiting   WaitingBacklog
+	risk      RiskBacklog
+	approvals ApprovalBacklog
+	// approvalsFrom is where the approval tail starts: after the last
+	// approval the ranked rows hold.
+	approvalsFrom string
 	// exact is each source's whole count per category, for this request only.
 	exact map[totalKey]int
 	// whole names the windows read short of their cap, whose rows on the page
@@ -118,17 +122,16 @@ type totalKey struct {
 // task lane. It counts on a first page only, because a client keeps the first
 // page's counts. A count that fails leaves its category a floor, so a failed
 // count never fails the page.
-func (s *Service) readingBacklog(
-	ctx context.Context, day crmcontracts.Attention, until time.Time, zone *time.Location, first bool,
-) *Service {
+func (s *Service) readingBacklog(ctx context.Context, day crmcontracts.Attention, beside besideDay, first bool) *Service {
 	reading := *s
 	reading.backlog.exact, reading.backlog.whole = map[totalKey]int{}, map[totalKey]bool{}
-	reading.backlog.until, reading.backlog.zone = until, zone
+	reading.backlog.until, reading.backlog.zone = beside.until, beside.zone
+	reading.backlog.approvalsFrom = beside.approvalsFrom
 	if !first || s.marked.probe != nil || s.backlog.tasks == nil {
 		return &reading
 	}
 	todayCut, laterCut := plannedWindowsAtCap(day.Planned, true)
-	for key, window := range s.taskWindows(day.AsOf, until) {
+	for key, window := range s.taskWindows(day.AsOf, beside.until) {
 		cut := laterCut
 		if window.From.IsZero() {
 			cut = todayCut

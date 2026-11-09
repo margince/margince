@@ -49,6 +49,21 @@ const EXTERNAL: DataSubjectRequest = {
 };
 
 const CLOSED: DataSubjectRequest = {
+  proof: {
+    request_number: "DSR-2026-0003",
+    received_at: "2026-07-20T00:00:00Z",
+    request_kind: "rectify",
+    identity_check: "confirm_link",
+    result: "fulfilled",
+    answered_at: "2026-08-12T10:00:00Z",
+    keep_until: "2030-01-01T00:00:00Z",
+    requester_email: "subject@demo.test",
+    erased_counts: {},
+    erased_uncounted: [],
+    erased_counts_known: true,
+    completed_by_type: "human",
+    completed_by_id: "00000000-0000-4000-8000-000000000001",
+  },
   id: "d3",
   kind: "rectify",
   subject_ref: "00000000-0000-4000-8000-0000000000c3",
@@ -113,7 +128,7 @@ function drawer(dsr: DataSubjectRequest, allow: GrantSpec = WORKS) {
 }
 
 const meta: Meta<typeof DsrDetail> = {
-  title: "Settings/Governance/Privacy and retention/Subject request",
+  title: "Settings/Compliance/Privacy and retention/Subject request",
   component: DsrDetail,
 };
 export default meta;

@@ -11,7 +11,7 @@ two tiers, what waits for a human, passports and allowances) are on
 ### What does the AI do in Margince?
 The AI in Margince drafts emails, reads deal documents for deal fields, and fills in company records from the web. It answers questions from a document set you filed, and ranks your Morning brief during the night.
 
-Everything it suggests carries its evidence. Changes to your records either wait as an approval, or appear as an automatic change. You can turn off each kind of automatic change in **Settings → AI access**, on the **Agent rules** tab under **For developers**.
+Everything it suggests carries its evidence. Changes to your records either wait as an approval, or appear as an automatic change. You can turn off each kind of automatic change in **Settings → AI assistants**, on the **Agent rules** tab under **For developers**.
 Also called: AI features, assistant, copilot, what can Margince AI do.
 
 ### Can the AI send email on my behalf?
@@ -88,7 +88,7 @@ question**. See [Documents and files](documents-and-files.md). It answers only
 from the set of documents you filed, and refuses a question that set does not
 cover.
 
-An agent can ask a document set for you if its passport has **Buy contact data**, the permission that also covers AI work like this. It gets the same answer you would, with the same passages under each sentence, for the sets you may read.
+An agent can ask a document set for you if its passport has **Use AI and buy data**, the permission for AI work like this. It gets the same answer you would, with the same passages under each sentence, for the sets you may read.
 
 **The brief during the night.** The Morning brief looks at your companies during
 the night and ranks what most needs your first hour. If it found nothing, it
@@ -163,6 +163,11 @@ These stay with you, in the app, because they would give it more than you want t
 
 ## Seeing work in progress
 
+The risk sweep during the night looks only at the open deals you own. Nobody
+sweeps the deals of a colleague who has not turned it on. On a quiet deal it
+writes at most one risk note a night. That note does not count as activity, so
+the deal stays in the list of slipping deals.
+
 While the AI in Margince works for you, you can see it in the agent panel
 (**Open agent panel**, under **Running now**). These kinds of work show there:
 
@@ -213,7 +218,7 @@ timing, how quickly things move, and how warm the contact is.
 The **AI** group in Settings holds four pages: **AI usage**, **AI models**,
 **AI call log** and **Automations**.
 
-In **Settings → AI access** you connect your AI tool. Under **For developers**
+In **Settings → AI assistants** you connect your AI tool. Under **For developers**
 there, you create your own passports on **API keys** and switch **Automatic changes** on or off on **Agent rules**.
 
 The full record of actions is in **Settings → Audit log**: every action, with the

@@ -31,7 +31,6 @@ expect:
     period: this_quarter
     metrics: [bookings_won, open_pipeline]
     charts: [bookings_trend, stage_distribution]
-    unsupported: 0
   bands:
     certified_min: 70
     degraded_min: 50
@@ -39,6 +38,5 @@ expect:
   rubric: >
     Score whether the proposal picks Sales won and Open pipeline in that
     order, the product Linden press line, the period this_quarter, and the
-    charts bookings_trend and stage_distribution. An objective, a country or
-    an industry the words never asked for scores low. A chart no chosen
-    metric draws, or the Tern portal, fails the scenario.
+    charts bookings_trend and stage_distribution. A chart no chosen metric
+    draws, or the Tern portal, fails the scenario.

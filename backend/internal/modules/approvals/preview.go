@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -57,19 +58,29 @@ func (s *Service) checkPreview(ctx context.Context, a row, edited json.RawMessag
 	if s.preview == nil {
 		return nil
 	}
-	proposal := wire(a, s.now())
-	if len(edited) > 0 {
-		change, err := diffhash.DecodeObject(edited)
-		if err != nil {
-			return &InvalidEditError{Cause: err}
-		}
-		proposal.ProposedChange = &change
+	proposal, err := editedProposal(a, edited, s.now())
+	if err != nil {
+		return err
 	}
 	preview, _, err := s.proposalPreview(ctx, a, proposal)
 	if err != nil {
 		return err
 	}
 	return PreviewRefusal(preview)
+}
+
+// editedProposal is a in the contract shape, carrying edited in place of
+// the staged call when a decision edits it.
+func editedProposal(a row, edited json.RawMessage, now time.Time) (crmcontracts.Approval, error) {
+	proposal := wire(a, now)
+	if len(edited) > 0 {
+		change, err := diffhash.DecodeObject(edited)
+		if err != nil {
+			return proposal, &InvalidEditError{Cause: err}
+		}
+		proposal.ProposedChange = &change
+	}
+	return proposal, nil
 }
 
 // PreviewRefusal keeps decision gates and action affordances on the same context verdict.
@@ -98,6 +109,12 @@ func (s *Service) readDecisionContext(ctx context.Context, rows []crmcontracts.A
 	if err := s.readAssignmentStates(ctx, rows); err != nil {
 		return err
 	}
+	return s.readPlans(ctx, rows, subjects)
+}
+
+// readPlans attaches each approval's preview and keeps back the plan its
+// reader may not see. Every reader of approvals in the contract shape calls it.
+func (s *Service) readPlans(ctx context.Context, rows []crmcontracts.Approval, subjects []row) error {
 	if s.preview == nil {
 		return nil
 	}
@@ -107,9 +124,18 @@ func (s *Service) readDecisionContext(ctx context.Context, rows []crmcontracts.A
 			return err
 		}
 		rows[i].Preview = preview
-		if (approvalplan.PreviewRead{Preview: preview, BuiltAsAgent: s.runsAsAgent(stagedByRow(subjects[i])), HeldBack: heldBack}).PayloadWithheld() {
+		read := approvalplan.PreviewRead{Preview: preview, BuiltAsAgent: s.runsAsAgent(subjects[i]), HeldBack: heldBack}
+		if rows[i].Status != crmcontracts.ApprovalStatusPending {
+			if read.FootprintHidden, err = s.pastPlanHidden(ctx, rows[i], subjects[i]); err != nil {
+				return err
+			}
+		}
+		if read.PayloadWithheld() {
 			// The staged call and its summary say what the preview held back.
 			withholdPayload(&rows[i])
+		}
+		if read.FootprintHidden {
+			rows[i].Preview = withheldPlan()
 		}
 	}
 	return nil
@@ -144,7 +170,7 @@ func (s *Service) proposalPreview(ctx context.Context, subject row, proposal crm
 		}
 		return s.previewContextPin(ctx, tx, subject)
 	})
-	if errors.Is(err, apperrors.ErrVersionSkew) || errors.Is(err, apperrors.ErrNotFound) {
+	if errors.Is(err, apperrors.ErrVersionSkew) || errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
 		preview.State = "stale"
 		return preview, heldBack, nil
 	}
@@ -157,9 +183,9 @@ func previewCoTargetPinned(subject row, proposal crmcontracts.Approval) bool {
 	}
 	var entityType, field string
 	switch subject.Kind {
-	case "advance_deal", "progress_deal", previewStageProgression:
+	case "advance_deal", "progress_deal":
 		entityType, field = "stage", "to_stage_id"
-	case "merge_tags":
+	case previewMergeTags:
 		entityType, field = "tag", "into_tag_id"
 	default:
 		return true
@@ -198,8 +224,10 @@ func proposalDestination(proposal crmcontracts.Approval, field string) ids.UUID 
 const PreviewNeedsWiderSight = approvalplan.NeedsWiderSight
 
 const (
-	previewIncomplete       = "incomplete"
-	previewStageProgression = "stage_progression"
+	previewIncomplete = "incomplete"
 )
 
-const previewMergeRecords = "merge_records"
+const (
+	previewMergeRecords = "merge_records"
+	previewMergeTags    = "merge_tags"
+)

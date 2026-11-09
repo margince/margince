@@ -33,7 +33,6 @@ package gates
 
 import (
 	"go/ast"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -49,7 +48,7 @@ const (
 func TestSeveralAudiencesAreRecomputedInOneOrder(t *testing.T) {
 	t.Parallel()
 
-	entries, err := os.ReadDir(audienceRecomputeTree)
+	entries, err := gatekit.ReadDir(audienceRecomputeTree)
 	if err != nil {
 		t.Fatalf("reading %s: %v", audienceRecomputeTree, err)
 	}

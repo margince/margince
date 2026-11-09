@@ -170,7 +170,7 @@ describe("the empty Mail and calendar card", () => {
     expect(within(microsoft).getByText("Not set up")).toBeInTheDocument();
     expect(
       within(microsoft).getByText(
-        "An administrator turns Microsoft 365 on in Sign-in and apps.",
+        "An administrator turns Microsoft 365 on in Sign-in and security.",
       ),
     ).toBeInTheDocument();
     // Nothing on the tile can start a connect that would only be refused.
@@ -183,7 +183,7 @@ describe("the empty Mail and calendar card", () => {
     ).toBeEnabled();
   });
 
-  it("hands whoever can register the company app the way to Sign-in and apps", async () => {
+  it("hands whoever can register the company app the way to Sign-in and security", async () => {
     stubEmptyRoster(
       [
         { provider: "gmail", reason: "ready" },
@@ -195,9 +195,9 @@ describe("the empty Mail and calendar card", () => {
 
     const microsoft = await screen.findByTestId("connect-tile-microsoft");
     const link = await within(microsoft).findByRole("link", {
-      name: "Open Sign-in and apps",
+      name: "Open Sign-in and security",
     });
-    expect(link).toHaveAttribute("href", "/#/settings/authentication");
+    expect(link).toHaveAttribute("href", "/#/settings/authentication/apps");
     expect(
       within(microsoft).getByText(
         "Set up the company Microsoft 365 app to turn it on.",

@@ -94,7 +94,9 @@ it("shows the exact deal suggestion before activating its reviewed retirement", 
   fireEvent.click(inspect);
   expect(await screen.findByRole("dialog")).toBeInTheDocument();
   expect(
-    screen.getByText(/The buyer requested a platform migration proposal/),
+    await screen.findByText(
+      /The buyer requested a platform migration proposal/,
+    ),
   ).toBeInTheDocument();
   expect(writes).toEqual([]);
   fireEvent.click(screen.getByRole("button", { name: "Close" }));

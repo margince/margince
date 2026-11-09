@@ -78,7 +78,7 @@ func TestTheProposersIdentityHasOneSpelling(t *testing.T) {
 	const root = "internal/modules/approvals"
 	fset := gatekit.SourceFileSet()
 	compared, permitted := 0, 0
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 			strings.HasSuffix(path, "_test.go") {
 			return err

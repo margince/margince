@@ -1,24 +1,24 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useState } from "react";
+import {
+  type QueryClient,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useCallback, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import {
-  Button,
-  Field,
-  Modal,
-  SearchField,
-  TextInput,
-} from "../design-system/atoms";
+import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { DateInput, type ISODate } from "../design-system/dateinput";
 import { Heading } from "../design-system/heading";
+import { RecordPicker } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { currentEmployerCompanyIds } from "../lib/employmentpages";
 import { isOption } from "../lib/options";
-import { unwrap } from "../lib/problem";
+import { ProblemError, unwrap } from "../lib/problem";
 import {
   BILLING_ROLES,
   DEAL_ROLES,
@@ -31,9 +31,8 @@ import { type Candidate, searchByEntity } from "../lib/relationshipcandidates";
 import { KIND_LABELS } from "../lib/relationshipkinds";
 import { SEARCH_HIT_KIND_KEY } from "../lib/searchkinds";
 import type { CreateField } from "./create";
-import "./candidatepicker.css";
+import { entityNameQuery } from "./entityref.queries";
 import "../design-system/querystates.css";
-import "./relationships.css";
 import { ErrorLine } from "../design-system/errorline";
 import { refuseUnreadableField } from "../design-system/formvalidity";
 import {
@@ -117,12 +116,23 @@ export function roleSent(
     : typed.trim();
 }
 
-const SEARCH_DEBOUNCE_MS = 250;
+async function withCompanyCaption(
+  client: QueryClient,
+  candidate: Candidate,
+  failedName: string,
+): Promise<Candidate> {
+  if (!candidate.companyId) return candidate;
+  try {
+    const name = await client.fetchQuery(
+      entityNameQuery("company", candidate.companyId),
+    );
+    return { ...candidate, detail: name ?? undefined };
+  } catch {
+    // Company captions must not withhold readable deal choices.
+    return { ...candidate, detail: failedName };
+  }
+}
 
-// The "add relationship" affordance: kind + role + start date, plus the
-// other-side target picker (mirrors merge.tsx's debounced search-and-pick —
-// the source of the edge is fixed by scope, so there is no "exclude self"
-// filtering here).
 export function AddRelationshipAction({
   scope,
   refusedReasonId,
@@ -175,48 +185,45 @@ export function AddRelationshipAction({
       ? (seatRole ?? "")
       : roleSent(kind, typedRole, t, seatRole ? [seatRole] : []);
   const [startedAt, setStartedAt] = useState<ISODate | "">("");
-  const [term, setTerm] = useState("");
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [target, setTarget] = useState<Candidate | null>(null);
-  // The caught failure itself, not a sentence about it: the effect below
-  // runs debounced and must not depend on the translator, which is a new
-  // function every render. It is turned into copy where it is rendered.
-  const [searchFailure, setSearchFailure] = useState<unknown>(null);
   // Kind fixes the picked endpoint; a stale kind can't outlive its scope
   // because the tab remounts per record, so the first option is always valid.
   const endpoint = options.find((o) => o.kind === kind) ?? defaultOption;
   const entity = endpoint.entity;
 
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    const query = term.trim();
-    if (!query) {
-      setCandidates([]);
-      setSearchFailure(null);
-      return;
-    }
-    let cancelled = false;
-    const timer = setTimeout(async () => {
-      try {
-        const results = await searchByEntity(entity, query);
-        if (!cancelled) {
-          setCandidates(results);
-          setSearchFailure(null);
+  const contactId = "contact_id" in scope ? scope.contact_id : undefined;
+  const employerUnavailableMessage = t("rel.employerUnavailable");
+  const nameLoadFailed = t("ref.nameLoadFailed");
+  const searchTargets = useCallback(
+    async (query: string) => {
+      let companyIds: string[] = [];
+      if (entity === "deal" && contactId) {
+        let employers: string[] | undefined;
+        try {
+          employers = await currentEmployerCompanyIds(queryClient, contactId);
+        } catch {
+          employers = undefined;
         }
-      } catch (error) {
-        if (!cancelled) {
-          setCandidates([]);
-          setSearchFailure(error);
-        }
+        if (employers === undefined && !query.trim())
+          throw new ProblemError({ detail: employerUnavailableMessage });
+        companyIds = employers ?? [];
       }
-    }, SEARCH_DEBOUNCE_MS);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [open, term, entity]);
+      const candidates = await searchByEntity(entity, query, companyIds);
+      if (entity !== "deal") return candidates;
+      return Promise.all(
+        candidates.map((candidate) =>
+          withCompanyCaption(queryClient, candidate, nameLoadFailed),
+        ),
+      );
+    },
+    [
+      contactId,
+      entity,
+      queryClient,
+      nameLoadFailed,
+      employerUnavailableMessage,
+    ],
+  );
 
   // EVERY answer the form holds arrives as the mutation's variable, not through
   // this closure: react-query re-arms a mutation's options in a passive effect,
@@ -256,10 +263,7 @@ export function AddRelationshipAction({
   // pending pick and search results from the old entity must clear.
   function selectKind(next: CreatableRelationshipKind) {
     setKind(next);
-    setTerm("");
-    setCandidates([]);
     setTarget(null);
-    setSearchFailure(null);
   }
 
   function close() {
@@ -267,10 +271,7 @@ export function AddRelationshipAction({
     setKind(defaultOption.kind);
     setTypedRole(null);
     setStartedAt("");
-    setTerm("");
-    setCandidates([]);
     setTarget(null);
-    setSearchFailure(null);
     mutation.reset();
   }
 
@@ -314,29 +315,16 @@ export function AddRelationshipAction({
               "other side", reusing the same singular each search result
               screen already carries for its own kind. */}
           <p className="t-caption">{t(SEARCH_HIT_KIND_KEY[entity])}</p>
-          <SearchField
-            placeholder={t("merge.searchPlaceholder")}
-            aria-label={t("merge.searchPlaceholder")}
-            value={term}
-            onChange={(event) => {
-              setTerm(event.target.value);
-              setTarget(null);
-            }}
+          <RecordPicker
+            key={kind}
+            label={t("merge.searchPlaceholder")}
+            searchTargets={searchTargets}
+            searchOnFocus={entity === "deal"}
+            selected={target}
+            onPick={setTarget}
+            onSearchChange={() => setTarget(null)}
+            disabled={mutation.isPending}
           />
-          <ErrorLine error={searchFailure} />
-          <ul className="relationships-candidates">
-            {candidates.map((candidate) => (
-              <li key={candidate.id}>
-                <Button
-                  className="candidate-option"
-                  aria-pressed={target?.id === candidate.id}
-                  onClick={() => setTarget(candidate)}
-                >
-                  {candidate.name}
-                </Button>
-              </li>
-            ))}
-          </ul>
           <Field label={t("rel.role")}>
             {(control) => (
               <TextInput

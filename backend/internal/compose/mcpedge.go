@@ -300,11 +300,21 @@ func mcpEdge(next http.Handler, lim mcpLimiters, allowedOrigin string) http.Hand
 	})
 }
 
+// limitDetailKey and limitKindKey are where a refusal's details name the limit
+// that refused it, as the agent allowances' refusals name theirs.
+const (
+	limitDetailKey = "limit"
+	limitKindKey   = "kind"
+)
+
 // writeMCPRateLimited answers an MCP edge ceiling with the ceiling named and the
 // wait a client needs, so it does not have to guess a backoff.
 func writeMCPRateLimited(w http.ResponseWriter, r *http.Request, bucket *ratelimit.Limiter, what string) {
 	wait := bucket.RetryAfterSeconds()
-	writeMCPWait(w, r, wait, fmt.Sprintf("too many %s: the limit is %d every %d seconds. Wait %d seconds and send the request again.",
+	// Named as pacing, apart from the window allowances, because waiting the
+	// seconds ends it and it spends none of the allowance.
+	pacing := map[string]any{limitDetailKey: map[string]any{limitKindKey: "pacing", "ceiling": bucket.Limit()}}
+	writeMCPWait(w, r, wait, pacing, fmt.Sprintf("too many %s: the limit is %d every %d seconds. Wait %d seconds and send the request again.",
 		what, bucket.Limit(), wait, wait))
 }
 
@@ -313,14 +323,15 @@ func writeMCPRateLimited(w http.ResponseWriter, r *http.Request, bucket *ratelim
 // caller never reached would be false.
 func writeMCPRefused(w http.ResponseWriter, r *http.Request, bucket *ratelimit.Limiter) {
 	wait := bucket.RetryAfterSeconds()
-	writeMCPWait(w, r, wait, fmt.Sprintf("requests from this caller are refused for now. Wait %d seconds and send the request again.", wait))
+	writeMCPWait(w, r, wait, nil, fmt.Sprintf("requests from this caller are refused for now. Wait %d seconds and send the request again.", wait))
 }
 
-func writeMCPWait(w http.ResponseWriter, r *http.Request, wait int, detail string) {
+func writeMCPWait(w http.ResponseWriter, r *http.Request, wait int, details map[string]any, detail string) {
 	httperr.Write(w, r, &httperr.DetailedError{
 		Status:            http.StatusTooManyRequests,
 		Code:              "rate_limited",
 		Detail:            detail,
+		Details:           details,
 		RetryAfterSeconds: wait,
 	})
 }

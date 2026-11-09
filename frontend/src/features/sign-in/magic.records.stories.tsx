@@ -82,8 +82,8 @@ const meta = {
   args: {
     line: LINE,
     since: "2026-09-12T08:00:00Z",
-    // A line names its records, and the names are what opens them.
-    summary: "GEM and 1 more",
+    // A grouped line opens on the count of changes it holds.
+    summary: "View 2 changes",
   },
   render: opener,
 } satisfies Meta<typeof LineRecordsOpener>;
@@ -95,7 +95,7 @@ export const Opened: Story = {
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(
-      await body.findByRole("button", { name: "GEM and 1 more" }),
+      await body.findByRole("button", { name: "View 2 changes" }),
     );
     const dialog = within(await body.findByRole("dialog"));
     await dialog.findByRole("heading", { name: en["magic.records.title"] });

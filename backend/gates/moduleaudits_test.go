@@ -179,7 +179,7 @@ func modulesOwningTables() []string {
 // audit writer.
 func moduleWritesAuditRow(module string, subjects map[string]bool) (bool, error) {
 	found := false
-	err := filepath.WalkDir(module, func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(module, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

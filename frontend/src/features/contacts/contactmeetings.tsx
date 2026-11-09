@@ -1,9 +1,9 @@
 import { Link } from "lucide-react";
 import { type Ref, useRef, useState } from "react";
 import type { components } from "../../api/schema";
+import { useActivityGate } from "../../components/activitygate";
 import { RecordMeetingOutcome } from "../../components/meetingoutcome";
 import { Badge, Button, type ButtonVariant } from "../../design-system/atoms";
-import { useClipboardCopy } from "../../design-system/clipboardcopy";
 import {
   Panel,
   PanelBody,
@@ -24,11 +24,16 @@ import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { entityTimelineKeys } from "../../lib/activitykeys";
 import { useActivity } from "../../lib/activityread";
-import { useCanWrite } from "../../lib/capability";
+import { useCopyBookingLink } from "../../lib/bookinglinkcopy";
+import { useCan } from "../../lib/capability";
 import { navigate } from "../../lib/router";
 import { useSchedulingProfile } from "../../lib/scheduling-profile-query";
-import { useMe } from "../../lib/session";
-import { HeldMeetingsTable } from "./contactmeetings.held";
+import {
+  bookedCount,
+  MeetingFigures,
+  timelineRead,
+} from "./contactmeetings.figures";
+import { HeldMeetingsList } from "./contactmeetings.held";
 import { MeetingRow, NextMeetingCard } from "./contactmeetings.rows";
 import {
   type CopiedLink,
@@ -137,7 +142,12 @@ function splitMeetings(
   listed: readonly Activity[],
   asOf: string,
   nextId: string | undefined,
-): Readonly<{ ahead: Activity[]; held: Activity[]; pastReached: boolean }> {
+): Readonly<{
+  ahead: Activity[];
+  held: Activity[];
+  happened: Activity[];
+  pastReached: boolean;
+}> {
   const now = Date.parse(asOf);
   const at = (activity: Activity) => Date.parse(activity.occurred_at);
   // A meeting called off keeps its date, and the server's next-meeting read
@@ -145,12 +155,15 @@ function splitMeetings(
   const isAhead = (activity: Activity) =>
     at(activity) > now && !calledOff(activity);
   const others = listed.filter((activity) => activity.id !== nextId);
+  // Newest first: the row on top answers "what just happened".
+  const held = others
+    .filter((activity) => !isAhead(activity))
+    .sort((a, b) => at(b) - at(a));
   return {
     ahead: others.filter(isAhead).sort((a, b) => at(a) - at(b)),
-    // Newest first: the row on top answers "what just happened".
-    held: others
-      .filter((activity) => !isAhead(activity))
-      .sort((a, b) => at(b) - at(a)),
+    held,
+    // What the figures count as held: one called off keeps its row, unheld.
+    happened: held.filter((activity) => !calledOff(activity)),
     // The list arrives newest first, so once a page reaches a meeting already
     // behind the read, every meeting still ahead is on the pages read so far.
     pastReached: listed.some((activity) => at(activity) <= now),
@@ -176,11 +189,11 @@ function heldState(
 }
 
 /**
- * ContactMeetingsTab reads as three panels: what is booked, what is still
- * waiting on the contact's answer, and what has already been held. The booked
- * meeting leads, from the server's own next-meeting read taken through this
- * contact's activity link rather than their account's — the company's answer
- * names a meeting this contact may not be in.
+ * ContactMeetingsTab reads as its figures, then three panels: what is
+ * booked, what is still waiting on the contact's answer, and what has already
+ * been held. The booked meeting leads, from the server's own next-meeting read.
+ * That read goes through this contact's activity link, not their account's.
+ * The company's answer names a meeting this contact may not be in.
  */
 export function ContactMeetingsTab({
   view,
@@ -198,16 +211,17 @@ export function ContactMeetingsTab({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const canBook = useCanWrite("activity", "create");
-  // Only a reader who may book reads the proposals: the list answers 403 to
-  // anyone else, and the section they fill is theirs alone.
-  const proposals = useMeetingProposals(canBook ? view?.contact.id : undefined);
+  const canReadActivity = useCan("activity", "read");
+  // Reading past proposals does not attach anything to the contact.
+  const proposals = useMeetingProposals(
+    canReadActivity ? view?.contact.id : undefined,
+  );
   const listed = useRecordTimeline("contact", view?.contact.id ?? "", {
     filters: MEETINGS_ONLY,
     enabled: view !== undefined && !omitted(view, "activities"),
   });
   const next = view?.next_meeting;
-  const { ahead, held, pastReached } = splitMeetings(
+  const { ahead, held, happened, pastReached } = splitMeetings(
     listed.activities,
     view?.as_of ?? "",
     next?.activity_id,
@@ -243,26 +257,36 @@ export function ContactMeetingsTab({
       {briefOf(activity)}
     </>
   );
+  const { withheld, ...timeline } = timelineRead(view, listed);
+  const booked = bookedCount(upcoming, timeline, pastReached, [next, ...ahead]);
+  const figured = view && (upcoming === "ready" || upcoming === "empty");
   return (
     <div className="record-stack pe-meetings">
-      <Panel
-        title={t("contact.meetings.upcoming")}
-        titleAction={
-          // A count only once it is the whole count: meetings still ahead can
-          // sit on a page not read yet until the list has reached the past.
-          upcoming === "ready" &&
-          (pastReached || !listed.hasNextPage) && (
-            <Badge>{formatNumber((next ? 1 : 0) + ahead.length, locale)}</Badge>
-          )
-        }
-      >
+      <div className="pe-meetings-head">
+        {figured && (
+          <MeetingFigures
+            next={next}
+            booked={booked}
+            held={timeline.isSuccess ? happened : null}
+            heldMore={listed.hasNextPage}
+            withheld={withheld}
+            asOf={view.as_of}
+          />
+        )}
         <MeetingsToolbar
           view={view}
           loading={loading}
-          canBook={canBook}
           copied={copied}
           bookButton={bookButton}
         />
+      </div>
+      <Panel
+        title={t("contact.meetings.upcoming")}
+        titleAction={
+          upcoming === "ready" &&
+          booked !== null && <Badge>{formatNumber(booked, locale)}</Badge>
+        }
+      >
         {upcoming === "ready" ? (
           <>
             {view && next && (
@@ -310,7 +334,7 @@ export function ContactMeetingsTab({
         detail={{ onRetry: () => void listed.refetch() }}
         footer={listed.hasNextPage ? <LoadMoreButton query={listed} /> : null}
       >
-        {held.length > 0 && <HeldMeetingsTable held={held} verbs={heldVerbs} />}
+        {held.length > 0 && <HeldMeetingsList held={held} verbs={heldVerbs} />}
       </RailPanel>
     </div>
   );
@@ -383,27 +407,20 @@ function NextMeeting({
 function MeetingsToolbar({
   view,
   loading,
-  canBook,
   copied,
   bookButton,
 }: Readonly<{
   view?: Contact360;
   loading: boolean;
-  canBook: boolean;
   copied: CopiedLink;
   bookButton: Ref<HTMLButtonElement>;
 }>) {
   const t = useT();
   const bookingLink = useBookingLink(copied);
   return (
-    <PanelBody className="pe-meetings-toolbar">
+    <div className="pe-meetings-toolbar">
       <div className="pe-meetings-verbs">
-        <BookMeeting
-          view={view}
-          loading={loading}
-          canBook={canBook}
-          ref={bookButton}
-        />
+        <BookMeeting view={view} loading={loading} ref={bookButton} />
         {bookingLink.url && (
           <Button onClick={bookingLink.copy.copy}>
             <Link aria-hidden="true" />
@@ -421,7 +438,7 @@ function MeetingsToolbar({
           <p className="pe-copy-url">{bookingLink.url}</p>
         </div>
       )}
-    </PanelBody>
+    </div>
   );
 }
 
@@ -429,25 +446,20 @@ function MeetingsToolbar({
 function BookMeeting({
   view,
   loading,
-  canBook,
   ref,
 }: Readonly<{
   view?: Contact360;
   loading: boolean;
-  canBook: boolean;
   ref: Ref<HTMLButtonElement>;
 }>) {
   const t = useT();
-  const me = useMe();
-  const grantKnown = me.data?.authorization !== undefined;
+  const gate = useActivityGate(view?.contact ?? null, "scheduling.bookRefused");
   return (
     <Button
       ref={ref}
       variant="primary"
-      disabled={loading || !view || !grantKnown}
-      reason={
-        view && grantKnown && !canBook ? t("scheduling.bookRefused") : undefined
-      }
+      disabled={loading || !view || gate.pending}
+      reason={gate.refusalKey ? t(gate.refusalKey) : undefined}
       onClick={() => {
         if (view)
           navigate({ screen: "book", id: `contact-${view.contact.id}` });
@@ -465,7 +477,7 @@ function useBookingLink(copied: CopiedLink) {
   const t = useT();
   const profile = useSchedulingProfile();
   const url = profile.data?.enabled ? (profile.data.public_url ?? "") : "";
-  const copy = useClipboardCopy(
+  const copy = useCopyBookingLink(
     url,
     {
       copy: t("contact.meetings.copyBookingLink"),

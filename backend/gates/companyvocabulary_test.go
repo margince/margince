@@ -32,7 +32,6 @@ package gates
 
 import (
 	"bytes"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -202,7 +201,7 @@ func TestTheRecordTypeIsCalledCompany(t *testing.T) {
 		if pathNamesTheOtherWord(f.path) {
 			t.Errorf("%s is NAMED for the record type's old name. It is called company.", f.path)
 		}
-		body, err := os.ReadFile(filepath.Join(repoRoot, f.path))
+		body, err := gatekit.ReadFile(filepath.Join(repoRoot, f.path))
 		if err != nil {
 			t.Fatalf("reading %s: %v", f.path, err)
 		}

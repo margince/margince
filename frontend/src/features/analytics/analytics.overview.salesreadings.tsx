@@ -62,3 +62,56 @@ export function OpenPipelineLine({
     </p>
   );
 }
+
+/**
+ * All open pipeline in the head of the stage chart, which draws that stock:
+ * the figure and its deal count.
+ */
+export function OpenPipelineMeta({
+  evaluation,
+}: Readonly<{ evaluation: ReportingEvaluation }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const open = metricOf(evaluation, "open_pipeline");
+  if (!open) return null;
+  const count = open.coverage.eligible_count;
+  const label = t(
+    evaluation.context.close_interval
+      ? "analytics.overview.openClosing"
+      : "analytics.overview.allOpen",
+  );
+  return (
+    <span className="reporting-meta t-num">
+      {[
+        `${label}: ${readingValue(open, evaluation, t, locale)}`,
+        count != null &&
+          plural("analytics.outlook.dealCount", count, {
+            count: formatAnalyticsNumber(count, locale),
+          }),
+      ]
+        .filter(Boolean)
+        .join(" · ")}
+    </span>
+  );
+}
+
+/**
+ * What all open pipeline leaves out, said above the stage chart's bars. A
+ * reason the chart already states (`chartReason`) is not said twice.
+ */
+export function OpenPipelineNote({
+  evaluation,
+  chartReason,
+}: Readonly<{ evaluation: ReportingEvaluation; chartReason?: string }>) {
+  const t = useT();
+  const open = metricOf(evaluation, "open_pipeline");
+  if (!open) return null;
+  const reason = open.coverage.status !== "ok" && open.coverage.reason;
+  const caveats = [
+    open.coverage.withheld && t("analytics.overview.partlyHidden"),
+    reason !== chartReason && reason,
+  ].filter(Boolean);
+  if (caveats.length === 0) return null;
+  return <p className="t-caption">{caveats.join(" · ")}</p>;
+}

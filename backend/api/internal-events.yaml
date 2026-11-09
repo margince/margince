@@ -15,6 +15,34 @@ info:
     coverage gate that walks the subscribable set.
 components:
   schemas:
+    InternalEventInternalMailHistoryCreated:
+      type: object
+      x-event-type: internal_mail_history.created
+      x-entity-type: capture_connection
+      x-version: 1
+      description: A mailbox owner explicitly authorized an internal history import within the administrator's current source policy.
+      required: [backfill_id, received_after, received_before]
+      properties:
+        backfill_id: { type: string, format: uuid }
+        received_after: { type: string, format: date-time }
+        received_before: { type: string, format: date-time }
+      additionalProperties: false
+
+    InternalEventCaptureSettingsUpdated:
+      type: object
+      x-event-type: capture_settings.updated
+      x-entity-type: capture_settings
+      x-version: 1
+      description: Capture source authorization changed. Source content and private folder names are omitted.
+      required:
+        - changed_keys
+      properties:
+        changed_keys:
+          type: array
+          items:
+            type: string
+      additionalProperties: false
+
     InternalEventReportingChanged:
       type: object
       x-event-type: reporting.changed

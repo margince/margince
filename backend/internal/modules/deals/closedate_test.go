@@ -38,7 +38,13 @@ func activeDeal(expectedClose *time.Time) CloseDateInput {
 		StageWinProbability: 20,
 		RemainingOpenStages: 2,
 		StageVelocityDays:   14,
+		EstimateHorizonDays: defaultSilentCloseDays(),
 	}
+}
+
+func defaultSilentCloseDays() int {
+	days, _ := SilentCloseDays.Spec().Default.Get()
+	return days
 }
 
 func hasFlag(h CloseDateHygiene, f CloseDateFlag) bool {
@@ -201,10 +207,28 @@ func TestProposedCloseDateUsesVelocityAndStageFloor(t *testing.T) {
 		{"at least one stage-worth even on the last stage", 0, 18, 21},
 	}
 	for _, c := range cases {
-		got := proposedCloseDate(today, c.remaining, c.velocity)
+		got := proposedCloseDate(today, c.remaining, c.velocity, defaultSilentCloseDays())
 		if want := today.AddDate(0, 0, c.wantDays); !got.Equal(want) {
 			t.Errorf("%s: proposed = %s, want %s", c.name, got.Format(time.DateOnly), want.Format(time.DateOnly))
 		}
+	}
+}
+
+// A median inflated by month-long stints, on a deal with many stages to go,
+// still lands the estimate on the horizon.
+func TestAnOutlierPaceCannotPushTheEstimatePastTheHorizon(t *testing.T) {
+	in := activeDeal(nil)
+	in.RemainingOpenStages = 6
+	in.StageVelocityDays = 400
+	in.EstimateHorizonDays = 90
+
+	got := CloseDateAssessment(in, closeClock, time.UTC)
+
+	if want := dateAt(closeClock, time.UTC).AddDate(0, 0, 90); got.ProposedClose == nil || !got.ProposedClose.Equal(want) {
+		t.Fatalf("proposed = %v, want the horizon %s", got.ProposedClose, want.Format(time.DateOnly))
+	}
+	if !got.Provisional {
+		t.Error("a capped estimate is still an estimate, want it provisional")
 	}
 }
 
@@ -330,7 +354,7 @@ func TestThinHistoryDoesNotInventAReplacementDate(t *testing.T) {
 			t.Fatalf("thin history must retain findings without inventing a date: %+v", got)
 		}
 	}
-	if got := proposedCloseDate(closeClock, 2, 0); !got.IsZero() {
+	if got := proposedCloseDate(closeClock, 2, 0, defaultSilentCloseDays()); !got.IsZero() {
 		t.Fatalf("missing pace invented %v", got)
 	}
 }

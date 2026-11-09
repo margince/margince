@@ -2,8 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
+import type { components } from "../../api/schema";
 import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
+import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -13,10 +15,17 @@ import {
 } from "../../testing/story-utils";
 import { AccountSettings } from "./account-settings";
 
-function story(roles: string[], routes: RouteMap = {}) {
+type User = components["schemas"]["User"];
+
+export function accountStory(
+  roles: string[],
+  routes: RouteMap = {},
+  user: Partial<User> = {},
+) {
   return () => {
+    const me = meFixture({ roles });
     installFetchStub({
-      "GET /me": () => jsonResponse(meFixture({ roles })),
+      "GET /me": () => jsonResponse({ ...me, user: { ...me.user, ...user } }),
       ...routes,
     });
     return (
@@ -36,33 +45,38 @@ const meta = {
   title: "Settings/You/Account/Account settings",
   component: AccountSettings,
   parameters: { layout: "padded" },
+  excludeStories: ["accountStory"],
 } satisfies Meta<typeof AccountSettings>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
 // Profile, sign-in, language, this browser and scheduled emails, each under its own title.
-export const Admin: Story = { render: story(["admin"]) };
+export const Admin: Story = { render: accountStory(["admin"]) };
 
 // A rep sees the same panels: every row here is the reader's own.
-export const Rep: Story = { render: story(["rep"]) };
+export const Rep: Story = { render: accountStory(["rep"]) };
 
 export const AdminDark: Story = {
   globals: { theme: "dark" },
-  render: story(["admin"]),
+  render: accountStory(["admin"]),
 };
 
 export const RepPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
-  render: story(["rep"]),
+  render: accountStory(["rep"]),
 };
 
 // A refused save keeps the page in the current language and says so on the save bar.
 export const LanguageRefused: Story = {
-  render: story(["rep"], {
+  render: accountStory(["rep"], {
     "PUT /me/locale": () =>
       new Response(
-        JSON.stringify({ status: 503, code: "service_unavailable" }),
+        JSON.stringify({
+          status: 503,
+          code: "service_unavailable",
+          detail: "The language could not be saved.",
+        }),
         {
           status: 503,
           headers: { "content-type": "application/problem+json" },
@@ -76,7 +90,12 @@ export const LanguageRefused: Story = {
     );
     await userEvent.click(await page.findByRole("option", { name: "Deutsch" }));
     await userEvent.click(await page.findByRole("button", { name: "Save" }));
-    await page.findByRole("alert");
+    const bar = await page.findByRole("region", {
+      name: en["saveBar.unsaved"],
+    });
+    await expect(await within(bar).findByRole("alert")).toHaveTextContent(
+      "The language could not be saved.",
+    );
   },
 };
 

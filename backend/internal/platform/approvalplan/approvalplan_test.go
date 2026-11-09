@@ -64,3 +64,12 @@ func TestOnlyADecidersProposalThatIsNotReadyKeepsItsStagedCall(t *testing.T) {
 		t.Error("an approval with no preview lost its staged call")
 	}
 }
+
+func TestAHiddenFootprintWithholdsThePlanWhateverThePreview(t *testing.T) {
+	ready := &crmcontracts.ApprovalPreview{Version: 2, State: "ready"}
+	for _, preview := range []*crmcontracts.ApprovalPreview{nil, ready} {
+		if !(PreviewRead{Preview: preview, FootprintHidden: true}).PayloadWithheld() {
+			t.Errorf("a hidden footprint left the plan on the approval (preview %+v)", preview)
+		}
+	}
+}

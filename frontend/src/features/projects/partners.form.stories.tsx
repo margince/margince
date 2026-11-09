@@ -21,7 +21,7 @@ type Story = StoryObj;
 export const Setup: Story = {
   render: () => {
     installFetchStub({
-      "GET /me": meRoute({}),
+      "GET /me": meRoute({ company: ["read", "update"], partner: ["update"] }),
       "GET /companies/o-1/partner": () =>
         jsonResponse({ title: "Not found", detail: "no partner" }, 404),
     });

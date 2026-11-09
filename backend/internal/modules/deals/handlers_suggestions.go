@@ -58,7 +58,7 @@ func (h Handlers) GetDealSuggestion(w http.ResponseWriter, r *http.Request, id c
 // one the suggestion's own values stand.
 func (h Handlers) AcceptDealSuggestion(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.AcceptDealSuggestionParams) {
 	var req crmcontracts.AcceptDealSuggestionRequest
-	if err := httperr.DecodeOrRefusal(w, r, &req); err != nil && !errors.Is(err, io.EOF) {
+	if err := httperr.DecodeJudgedOrRefusal(w, r, &req, amountIsJudged); err != nil && !errors.Is(err, io.EOF) {
 		httperr.Write(w, r, err)
 		return
 	}

@@ -80,16 +80,14 @@ const mergeVerdictPasses = 3
 // answer was given about the messages this seat holds, and the other half holds
 // none of theirs.
 //
-// Merges are serialized against each other by one advisory lock, and verdict
-// creation does not take it. So a seat holding a verdict on `from` alone can
-// gain one on `to` (threadverdict.go) between the pair read and the move.
-//
-// The move leaves that row where it is rather than colliding with
-// `capture_thread_verdict_thread_user_key`. The next pass folds it by the rank
-// rule, like any other pair.
+// The component coordinator excludes current writers. The fold also absorbs
+// contributions from callers running an older protocol during an upgrade.
 func ThreadVerdictMergeTx(ctx context.Context, tx pgx.Tx, from, to string) error {
 	if from == "" || to == "" || from == to {
 		return nil
+	}
+	if err := storekit.LockThreadKeysTx(ctx, tx, from, to); err != nil {
+		return err
 	}
 	for pass := 1; pass <= mergeVerdictPasses; pass++ {
 		if err := foldVerdictPairs(ctx, tx, from, to); err != nil {

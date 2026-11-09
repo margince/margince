@@ -108,15 +108,16 @@ func contactCreateInputAdmitting(req crmcontracts.CreateContactRequest, importer
 		return CreateContactInput{}, err
 	}
 	in := CreateContactInput{
-		FullName:     req.FullName,
-		FirstName:    req.FirstName,
-		LastName:     req.LastName,
-		Title:        req.Title,
-		Source:       req.Source,
-		SourceSystem: req.SourceSystem,
-		SourceID:     req.SourceId,
-		Author:       author,
-		OwnerID:      idArg[ids.UserKind](req.OwnerId),
+		FullName:              req.FullName,
+		FirstName:             req.FirstName,
+		LastName:              req.LastName,
+		Title:                 req.Title,
+		Source:                req.Source,
+		SourceSystem:          req.SourceSystem,
+		SourceID:              req.SourceId,
+		Author:                author,
+		OwnerID:               idArg[ids.UserKind](req.OwnerId),
+		CreatedFromActivityID: (*ids.UUID)(req.CreatedFromActivityId),
 		// The body's extra top-level keys (custom-field values); the
 		// store decides which land (active catalog columns only).
 		CustomFields:   req.AdditionalProperties,
@@ -424,6 +425,7 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 		Author:              author,
 		OwnerID:             idArg[ids.UserKind](req.OwnerId),
 		ProjectID:           idArg[ids.ProjectKind](req.ProjectId),
+		ProductID:           uuidArg(req.ProductId),
 		PartnerCompanyID:    idArg[ids.CompanyKind](req.PartnerCompanyId),
 		CustomFields:        req.AdditionalProperties,
 		RequestedContactID:  idArg[ids.ContactKind](req.ContactId),
@@ -484,6 +486,7 @@ func leadUpdateInput(req LeadUpdateRequest, ifVersion *int64) UpdateLeadInput {
 		ClearScoreOverride:  req.scoreNull || req.reasonNull,
 		OwnerID:             idArg[ids.UserKind](req.OwnerId),
 		ProjectID:           idArg[ids.ProjectKind](req.ProjectId),
+		ProductID:           uuidArg(req.ProductId),
 		PartnerCompanyID:    idArg[ids.CompanyKind](req.PartnerCompanyId),
 		IfVersion:           ifVersion,
 		CustomFields:        req.AdditionalProperties,

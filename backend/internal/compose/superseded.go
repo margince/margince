@@ -220,7 +220,7 @@ func sameInstant(a, b json.RawMessage) bool {
 		return false
 	}
 	right, err := time.Parse(time.RFC3339Nano, y)
-	return err == nil && left.Equal(right)
+	return err == nil && storekit.SameStoredInstant(left, right)
 }
 
 // asSet spells a jsonb expression with an array's elements in a canonical

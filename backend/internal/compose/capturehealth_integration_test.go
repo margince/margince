@@ -52,6 +52,7 @@ func TestCaptureHealthCountsABacklogAnAdminCannotSee(t *testing.T) {
 	activity := ids.NewV7()
 	e.WsExec(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'email', 'Hello', now(), 'capture', 'connector:gmail')`, activity)
+	e.WsExec(t, `UPDATE capture_thread_verdict SET first_activity_id=$1,attempts=$2 WHERE thread_key='thread:open'`, activity, capture.PendingMaxAttempts)
 
 	// A sender the classifier has not answered, and one it gave up on.
 	e.WsExec(t, `INSERT INTO capture_pending_counterparty (email, owner_id, activity_id, status, next_attempt_at)

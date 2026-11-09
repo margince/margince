@@ -46,6 +46,11 @@ func (r approvalPreviewReader) invitationPreview(ctx context.Context, approval c
 	if err != nil {
 		return nil, err
 	}
+	for _, attendee := range appointment.Roster {
+		if attendee.Basis == connector.AttendeeContact || attendee.Basis == connector.AttendeeLead {
+			r.touch(map[string][]ids.UUID{attendee.Basis: {attendee.ID}})
+		}
+	}
 	hostValue, contact, err := r.invitationParticipants(ctx, host, in)
 	if previewUnavailable(err) {
 		return out, nil

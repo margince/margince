@@ -27,18 +27,8 @@ expect:
   outcome: accepted
   answer:
     - verdict: unsure
-  rubric: >
-    "Ok." is not an answer and not a deferral. It might mean the documents went
-    out in the same breath, it might mean the request was merely noted, and the
-    conversation does not say which. The honest reading is that the words do not
-    decide it.
-    Score high for unsure. Score in the middle for still_owed: it errs toward
-    keeping the work visible, which is the cheap direction — the request stays
-    owed under unsure anyway — but it asserts an obligation the text does not
-    support. Score at the floor for settled: reading a two-letter
-    acknowledgement as delivery is exactly the failure that closes work nobody
-    did, and it is the shape this whole site exists to refuse.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The answer is one closed verdict, and the check fails any other. The rubric
+    ranked still_owed above settled, but both are wrong here and the check
+    fails both.

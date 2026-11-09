@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -195,7 +196,7 @@ var meetingFollowUpsSQL = `
 // past meeting owes an outcome, which the outcome lane asks for once; it owes
 // no follow-up yet.
 func meetingHeldSQL(alias, now string) string {
-	return "(" + alias + ".meeting_status = 'held' AND " + occurredday.BegunSQL(alias, now) + ")"
+	return "(" + meetingoutcome.HeldSQL(alias) + " AND " + occurredday.BegunSQL(alias, now) + ")"
 }
 
 func meetingFollowUpsStatement(ctx context.Context, asOf time.Time, windowDays int, narrow func(func(any) int) (string, error), limit int) (string, []any, error) {
@@ -219,7 +220,7 @@ func meetingFollowUpsStatement(ctx context.Context, asOf time.Time, windowDays i
 	candidates := meetingCandidatesSQL(at, fmt.Sprintf("$%d", window), fmt.Sprintf("$%d", reader), held)
 	return followUpStatement(candidates, g, fmt.Sprintf(meetingFollowUpsSQL,
 		instant, g.content, g.links, window, AwaitingReplyLookbackDays,
-		g.later, relstrength.InteractionCountsSQL("later"), reader,
+		g.later, relstrength.InteractionCountsSQL("later", at), reader,
 		messageSnoozeLiftedSQL(at, g.back), g.customer, limit,
 		held, addressable, maxActivityLinks, narrowed, occurredday.FromSQL("later", followUpFromSQL),
 	)), args, nil
