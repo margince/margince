@@ -5,13 +5,16 @@ import { LocaleProvider } from "../i18n";
 
 // A screen under test with the two contexts every data screen reads. The query
 // client does not retry, so a stubbed failure shows at once. The locale is English.
+// A wrapper rather than a wrapped tree, so `rerender` keeps the providers.
 export function renderWithQueryClient(ui: ReactNode): RenderResult {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return render(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
+  return render(ui, {
+    wrapper: ({ children }) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">{children}</LocaleProvider>
+      </QueryClientProvider>
+    ),
+  });
 }

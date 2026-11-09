@@ -239,7 +239,7 @@ export function CommandPalette({
   }
 
   return (
-    <div // NOSONAR: backdrop dismiss only; keyboard path (Esc) is handled on the input inside
+    <div // NOSONAR: backdrop dismiss only; keyboard path (Esc) is handled by useDialogFocus
       className="overlay palette-overlay"
       data-state={state}
       // Painted and nothing else while it leaves: `inert` stops Tab and hit

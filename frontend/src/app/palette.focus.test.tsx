@@ -1,10 +1,8 @@
 /** @vitest-environment happy-dom */
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { holdExits, watchHiding } from "../design-system/presence-testing";
-import { LocaleProvider } from "../i18n";
 import { renderWithQueryClient } from "../testing/queryrender";
 import { steppedClock } from "../testing/steppedclock";
 import { type Command, CommandPalette } from "./palette";
@@ -75,14 +73,6 @@ function overlay(): Element {
   return found;
 }
 
-// Focus is out of the overlay before it leaves the accessibility tree, and the
-// overlay did leave it: a check that saw no hiding at all would pass vacuously.
-function expectHiddenAfterFocusLeft() {
-  expect(hiding.hidings.filter((write) => write.heldFocus)).toEqual([]);
-  expect(hiding.hidings.map((write) => write.element)).toContain(overlay());
-  expect(overlay().hasAttribute("inert")).toBe(true);
-}
-
 describe("the palette hands focus back before it hides its overlay", () => {
   async function openFromButton() {
     const user = steppedClock();
@@ -96,7 +86,7 @@ describe("the palette hands focus back before it hides its overlay", () => {
   it("on Escape", async () => {
     const { user, opener } = await openFromButton();
     await user.keyboard("{Escape}");
-    expectHiddenAfterFocusLeft();
+    hiding.expectHiddenAfterFocusLeft(overlay());
     expect(document.activeElement).toBe(opener);
   });
 
@@ -105,7 +95,7 @@ describe("the palette hands focus back before it hides its overlay", () => {
     fireEvent.pointerDown(overlay());
     fireEvent.pointerUp(overlay());
     fireEvent.click(overlay());
-    expectHiddenAfterFocusLeft();
+    hiding.expectHiddenAfterFocusLeft(overlay());
     expect(document.activeElement).toBe(opener);
   });
 
@@ -114,21 +104,18 @@ describe("the palette hands focus back before it hides its overlay", () => {
     await user.type(screen.getByRole("searchbox"), "deals");
     await user.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/deals");
-    expectHiddenAfterFocusLeft();
+    hiding.expectHiddenAfterFocusLeft(overlay());
     expect(document.activeElement).toBe(opener);
   });
 
   it("when the page behind closes it", () => {
-    const client = new QueryClient();
     const page = (open: boolean) => (
-      <QueryClientProvider client={client}>
-        <LocaleProvider initial="en">
-          <button type="button">Search</button>
-          <CommandPalette open={open} onClose={() => {}} commands={commands} />
-        </LocaleProvider>
-      </QueryClientProvider>
+      <>
+        <button type="button">Search</button>
+        <CommandPalette open={open} onClose={() => {}} commands={commands} />
+      </>
     );
-    const { rerender } = render(page(false));
+    const { rerender } = renderWithQueryClient(page(false));
     const opener = screen.getByRole("button", { name: "Search" });
     opener.focus();
     rerender(page(true));
@@ -136,7 +123,7 @@ describe("the palette hands focus back before it hides its overlay", () => {
 
     rerender(page(false));
 
-    expectHiddenAfterFocusLeft();
+    hiding.expectHiddenAfterFocusLeft(overlay());
     expect(document.activeElement).toBe(opener);
   });
 });

@@ -29,13 +29,6 @@ function overlayOf(name: string): Element {
   return found;
 }
 
-// Focus is out of the overlay before it leaves the accessibility tree, and the
-// overlay did leave it: a check that saw no hiding at all would pass vacuously.
-function expectHiddenAfterFocusLeft(overlay: Element) {
-  expect(hiding.hidings.filter((write) => write.heldFocus)).toEqual([]);
-  expect(hiding.hidings.map((write) => write.element)).toContain(overlay);
-}
-
 function LogActivity({ named }: Readonly<{ named?: boolean }>) {
   const [open, setOpen] = useState(false);
   const row = useRef<HTMLButtonElement>(null);
@@ -61,6 +54,36 @@ function LogActivity({ named }: Readonly<{ named?: boolean }>) {
   );
 }
 
+function OpenerInInertPage() {
+  const [open, setOpen] = useState(false);
+  const [locked, setLocked] = useState(false);
+  return (
+    <>
+      <div inert={locked}>
+        <Button onClick={() => setOpen(true)}>Open</Button>
+      </div>
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        labelledBy="lock"
+        intent="form"
+      >
+        <Heading size="large" id="lock">
+          Lock the page
+        </Heading>
+        <Button
+          onClick={() => {
+            setLocked(true);
+            setOpen(false);
+          }}
+        >
+          Lock and close
+        </Button>
+      </Modal>
+    </>
+  );
+}
+
 describe("a dialog hands focus back before it hides its overlay", () => {
   it("returns focus to the opener", async () => {
     const user = userEvent.setup();
@@ -69,26 +92,53 @@ describe("a dialog hands focus back before it hides its overlay", () => {
     await user.click(opener);
     await user.click(screen.getByRole("button", { name: "Save" }));
 
-    expectHiddenAfterFocusLeft(overlayOf("log"));
+    hiding.expectHiddenAfterFocusLeft(overlayOf("log"));
     expect(document.activeElement).toBe(opener);
   });
 
-  it("still lands on the target the caller names", async () => {
+  it("goes straight to the target the caller names, never via the opener", async () => {
     const user = userEvent.setup();
     render(<LogActivity named />);
-    await user.click(screen.getByRole("button", { name: "Open" }));
-    await user.keyboard("{Escape}");
+    const opener = screen.getByRole("button", { name: "Open" });
+    await user.click(opener);
+    const focused: EventTarget[] = [];
+    const record = (event: FocusEvent) => {
+      if (event.target) focused.push(event.target);
+    };
+    document.addEventListener("focusin", record);
+    try {
+      await user.keyboard("{Escape}");
+    } finally {
+      document.removeEventListener("focusin", record);
+    }
 
-    expectHiddenAfterFocusLeft(overlayOf("log"));
-    expect(document.activeElement).toBe(
-      screen.getByRole("button", { name: "The new row" }),
-    );
+    hiding.expectHiddenAfterFocusLeft(overlayOf("log"));
+    const row = screen.getByRole("button", { name: "The new row" });
+    expect(document.activeElement).toBe(row);
+    expect(focused).toContain(row);
+    expect(focused).not.toContain(opener);
+  });
+
+  it("drops focus rather than hand it to an opener the page made inert", async () => {
+    const user = userEvent.setup();
+    render(<OpenerInInertPage />);
+    const opener = screen.getByRole("button", { name: "Open" });
+    await user.click(opener);
+    await user.click(screen.getByRole("button", { name: "Lock and close" }));
+
+    hiding.expectHiddenAfterFocusLeft(overlayOf("lock"));
+    expect(opener.closest("[inert]")).not.toBeNull();
+    expect(document.activeElement).toBe(document.body);
   });
 });
 
 function NoteInsideDeal() {
   const [deal, setDeal] = useState(false);
   const [note, setNote] = useState(false);
+  const closeBoth = () => {
+    setNote(false);
+    setDeal(false);
+  };
   return (
     <>
       <Button onClick={() => setDeal(true)}>Open deal</Button>
@@ -113,6 +163,7 @@ function NoteInsideDeal() {
           Note
         </Heading>
         <Button onClick={() => setNote(false)}>Done</Button>
+        <Button onClick={closeBoth}>Close the deal too</Button>
       </Modal>
     </>
   );
@@ -127,11 +178,26 @@ describe("a dialog opened from inside another", () => {
     await user.click(addNote);
     await user.click(screen.getByRole("button", { name: "Done" }));
 
-    expectHiddenAfterFocusLeft(overlayOf("note"));
+    hiding.expectHiddenAfterFocusLeft(overlayOf("note"));
     expect(document.activeElement).toBe(addNote);
     const beneath = overlayOf("deal");
     expect(beneath.hasAttribute("aria-hidden")).toBe(false);
     expect(beneath.hasAttribute("inert")).toBe(false);
     expect(screen.getByRole("dialog", { name: "Deal" })).toBeDefined();
+  });
+
+  it("drops focus when its opener's dialog closes in the same commit", async () => {
+    const user = userEvent.setup();
+    render(<NoteInsideDeal />);
+    const openDeal = screen.getByRole("button", { name: "Open deal" });
+    await user.click(openDeal);
+    await user.click(screen.getByRole("button", { name: "Add a note" }));
+    await user.click(
+      screen.getByRole("button", { name: "Close the deal too" }),
+    );
+
+    hiding.expectHiddenAfterFocusLeft(overlayOf("note"));
+    hiding.expectHiddenAfterFocusLeft(overlayOf("deal"));
+    expect(document.activeElement).toBe(openDeal);
   });
 });
