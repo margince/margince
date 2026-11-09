@@ -67,7 +67,7 @@ func FromConfig(ctx context.Context, c *config.Config) (store Store, configured 
 // The settings that turn object storage on. Endpoint or Path enables it: with
 // both unset the other five are never read, which is why none is required.
 var (
-	storeRoles = []config.Role{config.RoleAPI, config.RoleWorker}
+	storeRoles = []config.Role{config.RoleAPI, config.RoleWorker, config.RoleMigrate}
 
 	endpointSetting = config.Define(config.Spec[string]{
 		Key: "blobstore_endpoint", Env: EnvEndpoint, Type: config.String, Roles: storeRoles,

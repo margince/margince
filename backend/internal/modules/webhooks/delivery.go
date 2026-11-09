@@ -65,6 +65,7 @@ type Deliverer struct {
 	log      *slog.Logger
 	// publicBaseURL is the app's origin for record links; empty sends none.
 	publicBaseURL string
+	beforeSend    func(context.Context) error
 }
 
 // WithPublicBaseURL sets the origin that record links in a delivery start
@@ -388,7 +389,10 @@ func (d *Deliverer) Replay(ctx context.Context, subID, deliveryID ids.UUID) (Del
 // it is logged (the sweeper's re-scan is the recovery, and the row's prior
 // state is safe).
 func (d *Deliverer) deliverOnce(ctx context.Context, t attemptTarget) {
-	res := d.attempt(ctx, t)
+	res := d.attempt(ctx, t, func() bool { return d.sendAuthorized(ctx, t) })
+	if res.suppressed {
+		return
+	}
 	if err := d.store.recordOutcome(ctx, t, res, d.clock()); err != nil {
 		d.log.Error("webhooks: recording delivery outcome", "delivery", t.deliveryID, "err", err)
 	}
@@ -397,7 +401,7 @@ func (d *Deliverer) deliverOnce(ctx context.Context, t attemptTarget) {
 // attempt signs and POSTs the stored body, returning the outcome. A
 // non-2xx or a transport error is a failure; the receiver's response body
 // is read (capped) only to keep the connection reusable and is discarded.
-func (d *Deliverer) attempt(ctx context.Context, t attemptTarget) outcome {
+func (d *Deliverer) attempt(ctx context.Context, t attemptTarget, authorize func() bool) outcome {
 	if d.store.cipher == nil {
 		return outcome{failure: "signing key not configured"}
 	}
@@ -441,6 +445,9 @@ func (d *Deliverer) attempt(ctx context.Context, t attemptTarget) outcome {
 	req.Header.Set(HeaderWebhookTimestamp, strconv.FormatInt(ts, 10))
 	req.Header.Set(HeaderWebhookSignature, sig)
 
+	if authorize == nil || !authorize() {
+		return outcome{suppressed: true}
+	}
 	resp, err := d.client.Do(req)
 	if err != nil {
 		return outcome{failure: "request failed: " + err.Error()}

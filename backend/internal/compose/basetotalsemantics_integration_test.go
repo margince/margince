@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/shared/kernel/moneytotal"
 )
 
 // pricedAndNot is three priced amounts and two that carry money no rate
@@ -50,7 +51,7 @@ func TestASumSaysWhatItCouldPriceAndAStrictTotalSaysNothing(t *testing.T) {
 
 	// The sum keeps its documented answer: the priced part, with the unpriced
 	// count beside it for the caller to read.
-	if got := totalOver(t, e, pricedAndNot, deals.FinalizeBaseTotalSQL("sum(v.base)", unpriced)); got != "600" {
+	if got := totalOver(t, e, pricedAndNot, moneytotal.FinalizeBaseTotalSQL("sum(v.base)", unpriced)); got != "600" {
 		t.Errorf("the sum answered %q, want 600, the three amounts it could price", got)
 	}
 	if got := totalOver(t, e, pricedAndNot, unpriced); got != "2" {
@@ -59,11 +60,11 @@ func TestASumSaysWhatItCouldPriceAndAStrictTotalSaysNothing(t *testing.T) {
 
 	// An average has no zero to fall back on. A group holding an unpriced
 	// amount has no average, rather than the average of the rest.
-	if got := totalOver(t, e, pricedAndNot, deals.StrictBaseTotalSQL("avg(v.base)", unpriced)); got != "" {
+	if got := totalOver(t, e, pricedAndNot, moneytotal.StrictBaseTotalSQL("avg(v.base)", unpriced)); got != "" {
 		t.Errorf("the average answered %q, want nothing: 200 is the average of the "+
 			"three it could price, read as the average of five", got)
 	}
-	if got := totalOver(t, e, pricedAndNot, deals.StrictBaseTotalSQL("max(v.base)", unpriced)); got != "" {
+	if got := totalOver(t, e, pricedAndNot, moneytotal.StrictBaseTotalSQL("max(v.base)", unpriced)); got != "" {
 		t.Errorf("the maximum answered %q, want nothing: the largest amount may be "+
 			"one of the two no rate reaches", got)
 	}
@@ -71,7 +72,7 @@ func TestASumSaysWhatItCouldPriceAndAStrictTotalSaysNothing(t *testing.T) {
 
 func TestAFullyPricedGroupStillAnswers(t *testing.T) {
 	e := integration.Setup(t)
-	strict := deals.StrictBaseTotalSQL("avg(v.base)", deals.UnpricedValueCountSQL("v.base", "v.native", "TRUE"))
+	strict := moneytotal.StrictBaseTotalSQL("avg(v.base)", deals.UnpricedValueCountSQL("v.base", "v.native", "TRUE"))
 	if got := totalOver(t, e, fullyPriced, strict); got != "200.0000000000000000" {
 		t.Errorf("a fully priced group answered %q, want its real average", got)
 	}

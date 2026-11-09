@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/events"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/platform/providerhealthstore"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -166,6 +167,8 @@ func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg wo
 	// Before the runner lane: an offer a Surface-B run changes reclaims its
 	// retired rendering from this store.
 	lanes.blob = blob
+	laneCtx = originalstore.Bind(laneCtx, compose.InstallationDB(pool), blob)
+	lanes.ctx = laneCtx
 
 	if err := startRunnerLane(laneCtx, cfg, pool, rdb, vault, modelPath, &lanes, logger, stdout); err != nil {
 		return lanes, err

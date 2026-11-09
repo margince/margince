@@ -30,6 +30,7 @@ type bulkRow struct {
 
 // bulkTarget is one record type's share of a bulk change.
 type bulkTarget interface {
+	hold(ctx context.Context, tx pgx.Tx, id ids.UUID) error
 	lock(ctx context.Context, tx pgx.Tx, id ids.UUID) (bulkRow, error)
 }
 

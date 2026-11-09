@@ -29,7 +29,7 @@ func TestTheReadingsDoNotShrinkAsAReaderPagesThroughTheQueue(t *testing.T) {
 	}
 	considered := classifyDay(day, rankInstant, dayMoney{})
 
-	whole := readingsOf(considered, nil, nil)
+	whole := readingsOf(considered, considered, nil, nil)
 	// The same day read one row at a time. `pageFrom` is what a page cut is, so
 	// this walks the real one rather than a slice invented here.
 	var pages []crmcontracts.WorklistReadings
@@ -38,7 +38,7 @@ func TestTheReadingsDoNotShrinkAsAReaderPagesThroughTheQueue(t *testing.T) {
 		if len(shown) == 0 {
 			t.Fatalf("the walk ran dry at offset %d with rows still owed", at)
 		}
-		pages = append(pages, readingsOf(considered, nil, nil))
+		pages = append(pages, readingsOf(considered, considered, nil, nil))
 	}
 
 	for at, page := range pages {
@@ -68,8 +68,8 @@ func TestAFilterDoesNotEmptyTheOtherReadings(t *testing.T) {
 	// What a page filtered to decisions would carry, against the snapshot the
 	// readings are actually taken over.
 	narrowed := keepFiltered(considered, crmcontracts.WorklistFilter(categoryDecisions))
-	overNarrowed := readingsOf(narrowed, nil, nil)
-	overConsidered := readingsOf(considered, nil, nil)
+	overNarrowed := readingsOf(narrowed, narrowed, nil, nil)
+	overConsidered := readingsOf(considered, considered, nil, nil)
 
 	if overNarrowed.RevenueAtRiskMinor != nil {
 		t.Fatal("reading the filtered rows priced a deal the filter removed — the wrong snapshot")
@@ -95,7 +95,7 @@ func TestAnUnpricedDealIsLeftOutRatherThanCountedAsZero(t *testing.T) {
 		),
 	}
 
-	got := readingsOf(classifyDay(day, rankInstant, dayMoney{}), nil, nil)
+	got := readingsOf(classifyDay(day, rankInstant, dayMoney{}), classifyDay(day, rankInstant, dayMoney{}), nil, nil)
 
 	if got.RevenueAtRiskMinor == nil {
 		t.Fatal("a day with one priced deal reported no figure at all")
@@ -113,7 +113,7 @@ func TestADayThatCouldPriceNothingStatesNoFigure(t *testing.T) {
 		AtRisk: lane(item("d", "deal_at_risk")),
 	}
 
-	got := readingsOf(classifyDay(day, rankInstant, dayMoney{}), nil, nil)
+	got := readingsOf(classifyDay(day, rankInstant, dayMoney{}), classifyDay(day, rankInstant, dayMoney{}), nil, nil)
 
 	if got.RevenueAtRiskMinor != nil {
 		t.Fatalf("stated %d over a day it could price nothing on", *got.RevenueAtRiskMinor)
@@ -132,7 +132,7 @@ func TestAnUnconvertedSumClaimsNoCurrency(t *testing.T) {
 		AtRisk: lane(item("d", "deal_at_risk", withDeal(700_00))),
 	}
 
-	got := readingsOf(classifyDay(day, rankInstant, dayMoney{}), nil, nil)
+	got := readingsOf(classifyDay(day, rankInstant, dayMoney{}), classifyDay(day, rankInstant, dayMoney{}), nil, nil)
 
 	if got.RevenueAtRiskMinor == nil {
 		t.Fatal("an unconverted day should still state its raw sum")
@@ -157,7 +157,7 @@ func TestAConvertedSumNamesTheBaseCurrency(t *testing.T) {
 		byItem: map[string]int64{"d1": 150_00, "d2": 250_00},
 	}
 
-	got := readingsOf(classifyDay(day, rankInstant, money), nil, nil)
+	got := readingsOf(classifyDay(day, rankInstant, money), classifyDay(day, rankInstant, money), nil, nil)
 
 	if got.RevenueCurrency == nil || *got.RevenueCurrency != "EUR" {
 		t.Fatalf("named %v as the base currency, wanted EUR", got.RevenueCurrency)
@@ -195,7 +195,7 @@ func TestTheSumCoversBothDealsAtRiskLanes(t *testing.T) {
 		t.Fatalf("the fixture produced %d brief rows, wanted one", brief)
 	}
 
-	got := readingsOf(rows, nil, nil)
+	got := readingsOf(rows, rows, nil, nil)
 
 	if got.RevenueAtRiskMinor == nil {
 		t.Fatal("the at-risk deal should still be summed")
@@ -237,7 +237,7 @@ func TestPricedRowsThatDisagreeAboutUnitsNameNoCurrency(t *testing.T) {
 		t.Fatalf("the fixture priced %d rows; this needs two to disagree", priced)
 	}
 
-	got := readingsOf(rows, nil, nil)
+	got := readingsOf(rows, rows, nil, nil)
 
 	if got.RevenueAtRiskMinor == nil {
 		t.Fatal("dropped the sum entirely; only the currency is in doubt")
@@ -259,7 +259,7 @@ func TestReviewCountsTheFoldedWorkRatherThanTheRowsDrawn(t *testing.T) {
 	considered := classifyDay(day, rankInstant, dayMoney{})
 
 	folded := foldRoutineDecisionsBounded(append([]ranked(nil), considered...), nil)
-	got := readingsOf(considered, nil, nil)
+	got := readingsOf(considered, considered, nil, nil)
 
 	// The fixture has to actually fold, or the assertion below passes for the
 	// wrong reason: over rows that were never folded, "counted the work" and
@@ -286,8 +286,8 @@ func TestATruncatedSourceMarksTheWholeRowAsAFloor(t *testing.T) {
 	}
 	considered := classifyDay(day, rankInstant, dayMoney{})
 
-	complete := readingsOf(considered, map[crmcontracts.WorklistItemSource]bool{sourceAtRisk: false}, nil)
-	cut := readingsOf(considered, map[crmcontracts.WorklistItemSource]bool{sourceAtRisk: true}, nil)
+	complete := readingsOf(considered, considered, map[crmcontracts.WorklistItemSource]bool{sourceAtRisk: false}, nil)
+	cut := readingsOf(considered, considered, map[crmcontracts.WorklistItemSource]bool{sourceAtRisk: true}, nil)
 
 	if complete.MoreAvailable {
 		t.Fatal("called the row a floor over sources that all read to the end")
@@ -383,7 +383,7 @@ func TestThePermanentlyWithheldPrivacyLaneDoesNotMarkEveryDayAFloor(t *testing.T
 	day := crmcontracts.Attention{AsOf: rankInstant, LanesOmitted: &omitted}
 
 	got := readingsOf(
-		classifyDay(day, rankInstant, dayMoney{}), boundedSources(day),
+		classifyDay(day, rankInstant, dayMoney{}), classifyDay(day, rankInstant, dayMoney{}), boundedSources(day),
 		unavailable(pageReader(), day))
 
 	if got.MoreAvailable {
@@ -402,7 +402,7 @@ func TestEachReadingCountsItsOwnCategory(t *testing.T) {
 		AtRisk: lane(item("d1", "deal_at_risk", withDeal(100_00))),
 	}
 
-	got := readingsOf(classifyDay(day, rankInstant, dayMoney{}), nil, nil)
+	got := readingsOf(classifyDay(day, rankInstant, dayMoney{}), classifyDay(day, rankInstant, dayMoney{}), nil, nil)
 
 	if got.Review != 1 {
 		t.Fatalf("counted %d in review, wanted the one approval", got.Review)
@@ -439,7 +439,7 @@ func TestTheDecisionCountLeavesOutWhatThisReaderCannotSettle(t *testing.T) {
 		},
 	}
 
-	got := readingsOf(classifyDay(day, rankInstant, dayMoney{}), nil, nil)
+	got := readingsOf(classifyDay(day, rankInstant, dayMoney{}), classifyDay(day, rankInstant, dayMoney{}), nil, nil)
 
 	if got.Review != 1 {
 		t.Errorf("counted %d decisions, want the one this reader can actually take", got.Review)
@@ -461,7 +461,7 @@ func TestTheDecisionCountKeepsAPairOnlyTheDismissalCanSettle(t *testing.T) {
 		},
 	}
 
-	got := readingsOf(classifyDay(day, rankInstant, dayMoney{}), nil, nil)
+	got := readingsOf(classifyDay(day, rankInstant, dayMoney{}), classifyDay(day, rankInstant, dayMoney{}), nil, nil)
 
 	if got.Review != 1 {
 		t.Errorf("counted %d decisions over a pair this reader is the one to clear", got.Review)
@@ -471,7 +471,7 @@ func TestTheDecisionCountKeepsAPairOnlyTheDismissalCanSettle(t *testing.T) {
 func TestProspectingCountsAndFiltersPlannedLeadTasks(t *testing.T) {
 	leadTask := classifyTask(taskItem(Task{ID: ids.NewV7(), Subject: "Call selected prospect", LinkType: "lead", LinkID: ids.NewV7()}, rankInstant, rankInstant.AddDate(0, 0, 7), time.UTC), rankInstant)
 	otherTask := classifyTask(taskItem(Task{ID: ids.NewV7(), Subject: "Review offer", LinkType: "deal", LinkID: ids.NewV7()}, rankInstant, rankInstant.AddDate(0, 0, 7), time.UTC), rankInstant)
-	got := readingsOf([]ranked{leadTask, otherTask}, nil, nil)
+	got := readingsOf([]ranked{leadTask, otherTask}, []ranked{leadTask, otherTask}, nil, nil)
 	if got.Prospecting != 1 {
 		t.Fatalf("prospecting tasks = %d", got.Prospecting)
 	}
@@ -492,7 +492,7 @@ func TestTheDecisionCountKeepsEveryContactCaseItsLaneRaised(t *testing.T) {
 		},
 	}
 
-	got := readingsOf(classifyDay(day, rankInstant, dayMoney{}), nil, nil)
+	got := readingsOf(classifyDay(day, rankInstant, dayMoney{}), classifyDay(day, rankInstant, dayMoney{}), nil, nil)
 
 	if got.Review != 2 {
 		t.Errorf("counted %d decisions, want both cases the lane raised", got.Review)

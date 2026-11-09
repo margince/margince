@@ -100,13 +100,17 @@ func planFootprint(approval crmcontracts.Approval, preview *crmcontracts.Approva
 	}
 	refs := previewReferences(approval, preview, touched)
 	objects := previewMaskObjects(approval, refs)
+	var rows []approvalplan.ImportRowFields
 	if preview.ImportRows != nil {
 		for i := range *preview.ImportRows {
-			objects = append(objects, (*preview.ImportRows)[i].Object)
+			row := &(*preview.ImportRows)[i]
+			objects = append(objects, row.Object)
+			fields := previewFieldNames(&crmcontracts.ApprovalPreview{Changes: row.Changes, Details: &row.Details})
+			rows = append(rows, approvalplan.ImportRowFields{Object: row.Object, Fields: fields})
 		}
 	}
 	slices.Sort(objects)
-	return &approvalplan.Footprint{Refs: refs.byType, Objects: slices.Compact(objects), Fields: previewFieldNames(preview), Files: previewFiles(preview)}
+	return &approvalplan.Footprint{Refs: refs.byType, Objects: slices.Compact(objects), Fields: previewFieldNames(preview), Rows: rows, Files: previewFiles(preview)}
 }
 
 // viewerClears answers whether the caller opens every record a stored plan
@@ -127,6 +131,12 @@ func (r approvalPreviewReader) viewerClears(ctx context.Context, approval crmcon
 	masked := maskedFieldsFor(viewer, approvalTargetType(approval), writable, footprint.Objects)
 	if slices.ContainsFunc(footprint.Fields, func(field string) bool { return slices.Contains(masked, field) }) {
 		return false, nil
+	}
+	for _, row := range footprint.Rows {
+		rowMasked := auth.MaskedFields(viewer, row.Object, true)
+		if slices.ContainsFunc(row.Fields, func(field string) bool { return slices.Contains(rowMasked, field) }) {
+			return false, nil
+		}
 	}
 	open, err := r.viewerReadsEvery(ctx, footprint.Refs)
 	if err != nil || !open {

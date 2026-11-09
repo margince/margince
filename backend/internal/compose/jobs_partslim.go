@@ -111,7 +111,12 @@ func (w *capturePartSlimWorker) Work(ctx context.Context, _ *river.Job[CapturePa
 	ctx = partSlimJobActor(ctx)
 	store := w.slim(InstallationDB(w.pool))
 	got, batches, err := drainPartSlim(ctx, func(ctx context.Context) (capture.PartSlimResult, error) {
-		return store.SlimBatch(ctx, capture.PartSlimBatch)
+		got, err := store.SlimBatch(ctx, capture.PartSlimBatch)
+		if err != nil {
+			return got, err
+		}
+		got.OffloadConsidered, got.Offloaded, err = store.OffloadBatch(ctx, capture.PartSlimBatch)
+		return got, err
 	}, capturePartSlimDrainBudget, time.Now)
 	if err != nil {
 		// The counts ride on the fault, so a pass that stops mid-drain still
@@ -120,7 +125,7 @@ func (w *capturePartSlimWorker) Work(ctx context.Context, _ *river.Job[CapturePa
 			"capture_part_slim: slimming batch %d after %d considered, %d slimmed: %w",
 			batches, got.Considered, got.Slimmed, err))
 	}
-	if got.Considered == 0 {
+	if got.Considered == 0 && got.OffloadConsidered == 0 {
 		// The backlog is drained. Said at debug so a quiet installation does
 		// not print a line every cadence forever.
 		w.log.DebugContext(ctx, "raw capture part sweep found nothing to consider")
@@ -128,7 +133,8 @@ func (w *capturePartSlimWorker) Work(ctx context.Context, _ *river.Job[CapturePa
 	}
 	w.log.InfoContext(ctx, "raw capture part sweep",
 		"batches", batches, "considered", got.Considered, "slimmed", got.Slimmed,
-		"unproved_parts", got.Unproved, "payload_bytes_freed", got.Freed)
+		"unproved_parts", got.Unproved, "payload_bytes_freed", got.Freed,
+		"original_sizes_checked", got.OffloadConsidered, "originals_offloaded", got.Offloaded)
 	return nil
 }
 
@@ -149,10 +155,12 @@ func drainPartSlim(
 		total.Slimmed += got.Slimmed
 		total.Freed += got.Freed
 		total.Unproved += got.Unproved
+		total.OffloadConsidered += got.OffloadConsidered
+		total.Offloaded += got.Offloaded
 		if err != nil {
 			return total, batches, err
 		}
-		if got.Considered < capture.PartSlimBatch || got.Unproved > 0 || now().Sub(start) >= budget {
+		if (got.Considered < capture.PartSlimBatch && got.OffloadConsidered < capture.PartSlimBatch) || got.Unproved > 0 || now().Sub(start) >= budget {
 			return total, batches, nil
 		}
 		// Asked before the next batch rather than left to it, so a stopping

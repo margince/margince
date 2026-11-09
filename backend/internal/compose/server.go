@@ -162,10 +162,10 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// hook therefore sees no correlation id or principal on the context.
 	// r.RemoteAddr is still the proxy (before ResolveClientIP). The body is
 	// not yet capped (before LimitBodies).
-	return httpserver.RecoverPanics(log, instrument.HTTP(
+	return originalStorageHTTP(pool, srv.blob, httpserver.RecoverPanics(log, instrument.HTTP(
 		httpserver.ResolveClientIP(srv.trustedProxies,
 			httpserver.LimitBodies(ceiling,
-				httpserver.SecureHeaders(noStoreOnCredentialPaths(mux))))))
+				httpserver.SecureHeaders(noStoreOnCredentialPaths(mux)))))))
 }
 
 // newServer assembles the module handler sets. Every cross-module edge is

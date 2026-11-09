@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"context"
 	"encoding/json"
 	"slices"
 	"strings"
@@ -12,7 +13,9 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/approvalplan"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // A footprint is stored on the approval for good. It holds the references and
@@ -48,10 +51,13 @@ func TestAPlanFootprintHoldsReferencesAndFieldNamesButNoValue(t *testing.T) {
 			t.Errorf("the footprint keeps the value %q: %s", value, raw)
 		}
 	}
-	for _, field := range []string{"to", "title", "phone", "company_id"} {
+	for _, field := range []string{"to", "title", "company_id"} {
 		if !slices.Contains(footprint.Fields, field) {
 			t.Errorf("the footprint does not name the field %q: %s", field, raw)
 		}
+	}
+	if len(footprint.Rows) != 1 || footprint.Rows[0].Object != "lead" || !slices.Contains(footprint.Rows[0].Fields, "phone") || slices.Contains(footprint.Fields, "phone") {
+		t.Fatalf("import field ownership lost: %s", raw)
 	}
 	if !slices.Contains(footprint.Refs[entityCompany], company) || !slices.Contains(footprint.Refs[contactType], contact) {
 		t.Errorf("the footprint lost a record the plan touched: %s", raw)
@@ -70,5 +76,28 @@ func TestAnAgentsUnreadyPlanLeavesNoFootprint(t *testing.T) {
 	}
 	if footprint := planFootprint(crmcontracts.Approval{Kind: toolUpdateRecord}, stale, nil, false); footprint == nil {
 		t.Fatal("a decider's own stale plan, which its pending card showed, left no footprint")
+	}
+}
+
+func TestImportFootprintsKeepEachFieldsObjectAndLegacyMasks(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		footprint approvalplan.Footprint
+		condition principal.MaskCondition
+		visible   bool
+	}{
+		{"new row keeps its pending authority", approvalplan.Footprint{Objects: []string{"lead"}, Rows: []approvalplan.ImportRowFields{{Object: "lead", Fields: []string{"full_name"}}}}, principal.MaskOutsideWriteAuthority, true},
+		{"permanent mask still withholds", approvalplan.Footprint{Objects: []string{"lead"}, Rows: []approvalplan.ImportRowFields{{Object: "lead", Fields: []string{"full_name"}}}}, principal.MaskAlways, false},
+		{"another objects field is not this field", approvalplan.Footprint{Objects: []string{"lead", "company"}, Rows: []approvalplan.ImportRowFields{{Object: "lead", Fields: []string{"email"}}, {Object: "company", Fields: []string{"full_name"}}}}, principal.MaskAlways, true},
+		{"old footprint stays strict", approvalplan.Footprint{Objects: []string{"lead"}, Fields: []string{"full_name"}}, principal.MaskOutsideWriteAuthority, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			viewer := principal.Principal{Type: principal.PrincipalHuman, Permissions: principal.Permissions{FieldMasks: []principal.FieldMask{{Object: "lead", Field: "full_name", Condition: test.condition}}}}
+			ctx := principal.WithActor(context.Background(), viewer)
+			visible, err := (approvalPreviewReader{}).viewerClears(ctx, crmcontracts.Approval{}, &test.footprint)
+			if err != nil || visible != test.visible {
+				t.Fatalf("visible=%v,error=%v, want %v", visible, err, test.visible)
+			}
+		})
 	}
 }
