@@ -3,14 +3,6 @@
 
 package privacy
 
-// GDPR Art. 15 subject-access assembly (admin-mediated in V1): one
-// operation gathers everything held about a contact — the normalized
-// row, channels, relationships, deals they hold a stake in, timeline
-// activities, consent state and proof log, and the raw capture
-// payloads that mention them — into a single export package. The
-// export is itself audited (action=export): who pulled whose data,
-// when.
-
 import (
 	"context"
 	"fmt"
@@ -276,7 +268,11 @@ func AssembleSAR(ctx context.Context, db *database.DB, contactID ids.ContactID) 
 		if err != nil {
 			return err
 		}
-		sections, err := sarSections(ctx, &pkg, contactID, emails, leads, identities, authored)
+		external, err := subjectExternalOriginalsTx(ctx, tx, contactID, emails)
+		if err != nil {
+			return err
+		}
+		sections, err := sarSections(ctx, &pkg, contactID, emails, leads, identities, authored, external)
 		if err != nil {
 			return err
 		}
@@ -303,6 +299,9 @@ func AssembleSAR(ctx context.Context, db *database.DB, contactID ids.ContactID) 
 				return err
 			}
 			*section.dest = rows
+		}
+		if err := resolveSAROriginals(ctx, pkg.RawCapture); err != nil {
+			return err
 		}
 		if err := appendActivityCustomValues(ctx, tx, pkg.Activities); err != nil {
 			return err

@@ -39,6 +39,8 @@ import (
 //   - the job runtime, which is River's to manage and not ours to truncate
 //     underneath a running worker.
 var preservedResetTables = map[string]bool{
+	// Cleanup authority must outlive the domain rows that retire their objects.
+	"stored_object_intent":    true,
 	"report_projection_fence": true,
 	"home_read_fence":         true,
 	"data_task_run":           true,
@@ -335,18 +337,7 @@ func collectWorkspaceSecretRefs(ctx context.Context, tx pgx.Tx) ([]string, error
 	return refs, nil
 }
 
-// likeEscaped makes a literal safe as a LIKE pattern, using `!` as the escape
-// character rather than a backslash.
-//
-// `_` is a LIKE WILDCARD, so the suffix went in as "any character followed by
-// ref" — which finds `href` and `pref` as readily as `_ref`. Harmless only
-// because the vault decides what is a handle, and that is not a reason to ask
-// the wrong question.
-//
-// `!` and not `\`: a backslash has to survive a Go string, an SQL string and
-// LIKE itself, and Postgres rejects an ESCAPE that is not exactly one
-// character — which is what the first attempt produced. `!` cannot appear in a
-// pg_attribute name, so nothing needs escaping that is not being escaped here.
+// The escape character must survive Go and SQL quoting unchanged.
 func likeEscaped(s string) string {
 	return strings.NewReplacer("!", "!!", "_", "!_", "%", "!%").Replace(s)
 }

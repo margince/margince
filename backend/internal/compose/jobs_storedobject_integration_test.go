@@ -318,6 +318,10 @@ func referenceKeyFromItsOwner(t *testing.T, e *integration.Env, kind storedobjec
 		e.WsExec(t, `
 			INSERT INTO import_run (connector, status, mapping, source_ref, source, captured_by)
 			VALUES ('csv', 'validating', '{}'::jsonb, $1, 'upload', 'human:test')`, key)
+	case storedobjects.KindRawOriginal:
+		e.WsExec(t, `INSERT INTO raw_capture (source_system, source_id, payload, payload_object)
+			VALUES ('telegram', 'referenced-original', '{}'::jsonb,
+			jsonb_build_object('key', $1::text, 'sha256', repeat('a', 64), 'bytes', 20))`, key)
 	case storedobjects.KindAvatar:
 		e.WsExec(t, `UPDATE app_user SET avatar_object_key = $1, avatar_origin = 'upload' WHERE id = $2`, key, e.Rep1)
 	default:

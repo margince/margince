@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/moneytotal"
 	"github.com/margince/margince/backend/internal/shared/kernel/reportperiod"
 )
 
@@ -200,7 +201,7 @@ func closedInWeek(
 		return nil, nil, err
 	}
 	coverage := deals.UnpricedValueCountSQL(amountSQL, nativeAmount, "TRUE")
-	value := deals.IncompleteBaseTotalSQL("sum("+amountSQL+")", coverage)
+	value := moneytotal.IncompleteBaseTotalSQL("sum("+amountSQL+")", coverage)
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT
 		  (SELECT %[5]s FROM deal d

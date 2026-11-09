@@ -37,7 +37,7 @@ func (s *Sink) threadKeyMembershipTx(ctx context.Context, tx pgx.Tx, seat ids.UU
          WHERE a.thread_key = ANY(@keys::text[])
            AND (a.archived_at IS NULL OR EXISTS (SELECT 1 FROM capture_import i WHERE i.activity_id = a.id))) m
  GROUP BY m.thread_key`,
-		pgx.NamedArgs{"keys": keys, "asserted": assertedProvenancePrefix + seat.String(), "seat": seat})
+		pgx.NamedArgs{sqlArgKeys: keys, "asserted": assertedProvenancePrefix + seat.String(), "seat": seat})
 	if err != nil {
 		return threadKeyMembership{}, fmt.Errorf("capture: checking thread membership: %w", err)
 	}

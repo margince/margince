@@ -33,7 +33,7 @@ func TestAttemptRefusesWithoutAUsableSecret(t *testing.T) {
 
 	// No signing key configured → refuse before any dial, never an unsigned POST.
 	d := NewDeliverer(NewStore(nil, nil), nil, clock, nil, log)
-	if out := d.attempt(context.Background(), attemptTarget{}); out.failure == "" {
+	if out := d.attempt(context.Background(), attemptTarget{}, nil); out.failure == "" {
 		t.Fatal("attempt with no cipher must fail, not dial")
 	}
 
@@ -43,7 +43,7 @@ func TestAttemptRefusesWithoutAUsableSecret(t *testing.T) {
 		t.Fatalf("cipher: %v", err)
 	}
 	d2 := NewDeliverer(NewStore(nil, cipher), nil, clock, nil, log)
-	if out := d2.attempt(context.Background(), attemptTarget{sealedSecret: "not-a-valid-sealed-secret"}); out.failure == "" {
+	if out := d2.attempt(context.Background(), attemptTarget{sealedSecret: "not-a-valid-sealed-secret"}, nil); out.failure == "" {
 		t.Fatal("attempt with an unsealable secret must fail, not dial")
 	}
 }
