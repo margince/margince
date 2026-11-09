@@ -186,22 +186,22 @@ describe("problemFieldErrors", () => {
     expect(
       problemFieldErrors({
         code: "validation_error",
-        detail: "reconnect your mailbox",
+        detail: "one addressee at a time",
         details: {
           errors: [
             {
-              field: "from",
-              code: "mailbox_not_send_capable",
-              message: "reconnect your mailbox",
+              field: "recipients",
+              code: "shared_unsubscribe_token",
+              message: "one addressee at a time",
             },
           ],
         },
       }),
     ).toEqual([
       {
-        field: "from",
-        code: "mailbox_not_send_capable",
-        message: "reconnect your mailbox",
+        field: "recipients",
+        code: "shared_unsubscribe_token",
+        message: "one addressee at a time",
       },
     ]);
   });
@@ -229,9 +229,9 @@ describe("problemFieldErrors", () => {
         details: {
           errors: [
             {
-              field: "from",
-              code: "mailbox_not_send_capable",
-              message: "reconnect your mailbox",
+              field: "recipients",
+              code: "shared_unsubscribe_token",
+              message: "one addressee at a time",
             },
           ],
         },
@@ -247,7 +247,7 @@ describe("problemFieldErrors", () => {
         code: "validation_error",
         details: {
           errors: [
-            { field: "from", code: "mailbox_not_send_capable" },
+            { field: "recipients", code: "shared_unsubscribe_token" },
             { code: "shared_unsubscribe_token", message: "one at a time" },
             null,
           ],
@@ -260,7 +260,7 @@ describe("problemFieldErrors", () => {
     const problem = {
       code: "validation_error",
       details: {
-        errors: [{ field: "from", code: "not_send_capable", message: "fix" }],
+        errors: [{ field: "to", code: "invalid_address", message: "fix" }],
       },
     };
     let thrown: unknown;
@@ -270,7 +270,7 @@ describe("problemFieldErrors", () => {
       thrown = error;
     }
     expect(problemFieldErrorsOf(thrown)).toEqual([
-      { field: "from", code: "not_send_capable", message: "fix" },
+      { field: "to", code: "invalid_address", message: "fix" },
     ]);
     expect(problemFieldErrorsOf(new Error("network down"))).toEqual([]);
     expect(problemFieldErrorsOf(problem)).toEqual([]);

@@ -17,7 +17,7 @@ type ActivityPage = components["schemas"]["ActivityListResponse"];
 type ListActivitiesQuery = NonNullable<
   operations["listActivities"]["parameters"]["query"]
 >;
-export type ActivityKind = NonNullable<ListActivitiesQuery["kind"]>;
+export type ActivityKind = NonNullable<ListActivitiesQuery["kind"]>[number];
 
 /** Every kind the list accepts, in the order the filter offers them. */
 export const ACTIVITY_KINDS: readonly ActivityKind[] = [
@@ -38,9 +38,12 @@ export const ACTIVITY_KINDS: readonly ActivityKind[] = [
  *
  * `after` / `before` are the calendar days the reader picked; the wire wants
  * instants, and `timelineQueryParams` is where a day becomes one.
+ *
+ * `kinds` is the set an open cut asks for; a `kind` the reader picks wins over it.
  */
 export type TimelineFilters = Readonly<{
   kind?: ActivityKind;
+  kinds?: readonly ActivityKind[];
   q?: string;
   after?: ISODate | "";
   before?: ISODate | "";
@@ -49,7 +52,13 @@ export type TimelineFilters = Readonly<{
 export const NO_TIMELINE_FILTERS: TimelineFilters = {};
 
 export function hasTimelineFilters(filters: TimelineFilters): boolean {
-  return Boolean(filters.kind || filters.q || filters.after || filters.before);
+  return Boolean(
+    filters.kind ||
+      filters.kinds?.length ||
+      filters.q ||
+      filters.after ||
+      filters.before,
+  );
 }
 
 /**
@@ -78,7 +87,7 @@ export function dayStartIso(day: ISODate, zone: string, daysLater = 0): string {
 /**
  * timelineQueryParams is the ONE spelling of a record timeline read for the
  * wire. An absent filter is an absent parameter, never `""`: the server reads
- * an empty `q` as "no filter" today, but an empty `kind` is a 400, and not
+ * an empty `q` as "no filter" today, but an empty `kind` is refused, and not
  * sending what was not asked keeps both honest.
  */
 export function timelineQueryParams(
@@ -94,7 +103,8 @@ export function timelineQueryParams(
     limit: TIMELINE_PAGE_SIZE,
   };
   if (cursor) query.cursor = cursor;
-  if (filters.kind) query.kind = filters.kind;
+  const kinds = filters.kind ? [filters.kind] : filters.kinds;
+  if (kinds?.length) query.kind = [...kinds];
   if (filters.q?.trim()) query.q = filters.q.trim();
   if (filters.after) query.occurred_after = dayStartIso(filters.after, zone);
   if (filters.before)

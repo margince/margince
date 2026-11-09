@@ -459,7 +459,7 @@ describe("what the composer says it is answering", () => {
     // The record still scopes the read; a project only narrows it further.
     expect(asked.params?.get("entity_type")).toBe("company");
     expect(asked.params?.get("entity_id")).toBe("company-1");
-    expect(asked.params?.get("kind")).toBe("email");
+    expect(asked.params?.getAll("kind")).toEqual(["email"]);
     // And no project is selected here, so none is asked for.
     expect(asked.params?.get("project_id")).toBeNull();
   });

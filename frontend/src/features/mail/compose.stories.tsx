@@ -346,23 +346,27 @@ export const ConsentBlockedUnknownAction: Story = {
   },
 };
 
-// The mailbox is connected for capture but holds no send grant (422). The
-// refusal names the only fix — reconnect — and links to the connect surface,
-// because the provider will not widen an existing grant in place.
+// No mailbox here can send (422, its code at the top level and no field).
+// The refusal names the fix and links to the connect surface.
 export const MailboxNotSendCapable: Story = {
   render: composeStory({
     "POST /activities/act-1/send-email": () =>
       jsonResponse(
-        validationProblem(
-          "from",
-          "mailbox_not_send_capable",
-          "reconnect your mailbox to enable sending",
-        ),
+        {
+          status: 422,
+          code: "mailbox_not_send_capable",
+          title: "Unprocessable Entity",
+          detail: "reconnect your mailbox to enable sending",
+        },
         422,
       ),
   }),
   play: async () => {
     await fillAndSend();
+    await screen.findByRole("link", { name: "Reconnect your mailbox" });
+    await expect(
+      screen.queryByText("reconnect your mailbox to enable sending"),
+    ).toBeNull();
   },
 };
 

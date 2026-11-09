@@ -158,7 +158,12 @@ export function useTaskReminderNotifications(signedIn: boolean): void {
         const page = unwrap(
           await api.GET("/activities", {
             params: {
-              query: { reminder_due: true, kind: "task", limit: PAGE, cursor },
+              query: {
+                reminder_due: true,
+                kind: ["task"],
+                limit: PAGE,
+                cursor,
+              },
             },
           }),
           t,

@@ -5,6 +5,7 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -152,16 +153,35 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 	}
 	out.Thread = &thread
 
-	// Replying needs only the message: a reader inside the audience may answer
-	// it. Relinking is a WRITE — it changes what the message is filed against —
-	// so it follows the same writability the access block just decided, rather
-	// than being promised to every reader and refused on click.
-	out.CanReply = true
+	// Reply and forward are writes, so they follow the send's grant; relink follows
+	// the row's writability.
+	mayWrite, err := mayWriteMessages(ctx)
+	if err != nil {
+		return crmcontracts.EmailPresentation{}, err
+	}
+	out.CanReply, out.CanForward = mayWrite, mayWrite
 	out.CanRelink = access.CanChange && access.ChangeMode == crmcontracts.EmailAccessChangeModeMessageAudience
 	if activity.CanShareInternal != nil {
 		out.CanRelink = writable
 	}
 	return out, nil
+}
+
+// mayWriteMessages says whether the caller holds the grant every send asks.
+// Unrecorded, because this read offers the control and does not need the grant.
+func mayWriteMessages(ctx context.Context) (bool, error) {
+	if !mayMutate(ctx) {
+		return false, nil
+	}
+	_, err := auth.Unrecorded(ctx, "activity", principal.ActionCreate)
+	switch {
+	case err == nil:
+		return true, nil
+	case errors.Is(err, apperrors.ErrPermissionDenied):
+		return false, nil
+	default:
+		return false, err
+	}
 }
 
 // withheldPresentation is the whole answer for a caller who may know the

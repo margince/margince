@@ -8,7 +8,7 @@ import {
   hasTimelineFilters,
   useRecordTimeline,
 } from "../../design-system/recordtimeline";
-import { SurfaceState } from "../../design-system/surfacestate";
+import { omitted, SurfaceState } from "../../design-system/surfacestate";
 import { GroupedTimelineList } from "../../design-system/timeline";
 import { TimelineFilterBar } from "../../design-system/timelinefilterbar";
 import { groupChronology } from "../../design-system/timelinegroups";
@@ -144,18 +144,22 @@ export function ContactTimelineTab({
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const readerZone = useViewerZone();
-  const { filter, filters, setFilters, openCut, kinds } =
+  const { filter, filters, setFilters, openCut, kinds, read } =
     useChronologyCut(contactId);
   // Every cut renders through the ONE chronicle, off the same groups: the
   // Conversations list is the same rows cut to the exchanges somebody can
   // answer, never a second rendering of what another cut already shows.
   const List =
     filter === "conversations" ? ConversationList : GroupedTimelineList;
+  // Withheld on the 360 is withheld on every cut: a narrowed read would only
+  // collect the refusal, and draw it as a failure rather than as the grant.
+  const withheld = view ? omitted(view, "activities") : false;
   // The 360's own page seeds the list; older pages and every narrowed read
   // come from the activity list itself.
   const timeline = useRecordTimeline("contact", contactId, {
-    filters,
+    filters: read,
     firstPage: view?.activities,
+    enabled: !withheld,
   });
   const chronology = useRecordChronology({
     onOpenEmail,
@@ -235,7 +239,7 @@ export function ContactTimelineTab({
               view,
               chronology,
               timeline,
-              hasTimelineFilters(filters),
+              hasTimelineFilters(read) && !withheld,
               loading,
             )}
             emptyLabel={

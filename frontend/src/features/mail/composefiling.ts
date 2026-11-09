@@ -278,13 +278,17 @@ export function contactsByAddress(
 }
 
 /**
- * Who an account-started message is to: the first address in To that belongs
- * to one of the account's contacts. The draft is written for that contact, and
- * the send is linked to them. A second picker could only disagree with To.
+ * Who an account-started message is to. The draft is written for the first
+ * account contact in To; the send is linked to every account contact in To,
+ * Cc and Bcc. A second picker could only disagree with the address fields.
  */
 export function useAccountRecipient(
   companyId: string | undefined,
-  to: readonly string[],
+  addressed: Readonly<{
+    to: readonly string[];
+    cc: readonly string[];
+    bcc: readonly string[];
+  }>,
   // The contact a verb on the account started from, offered into an empty To
   // unless the caller holds the record's own address.
   started: Readonly<{ contactId?: string; recordAddress?: string }>,
@@ -293,12 +297,20 @@ export function useAccountRecipient(
   const contacts = company.data?.contacts?.data ?? [];
   const ownerOf = contactsByAddress(undefined, company.data);
   const recipientId =
-    to.map(ownerOf).find((owner) => owner !== undefined) ?? "";
+    addressed.to.map(ownerOf).find((owner) => owner !== undefined) ?? "";
+  const contactIds = [
+    ...new Set(
+      [...addressed.to, ...addressed.cc, ...addressed.bcc]
+        .map(ownerOf)
+        .filter((owner) => owner !== undefined),
+    ),
+  ];
   const startedFrom = contacts.find(
     (contact) => contact.contact_id === started.contactId,
   );
   return {
     recipientId,
+    contactIds,
     offeredAddress:
       started.recordAddress ?? startedFrom?.primary_email ?? undefined,
     // An account with no contact leaves the draft nobody to write for.

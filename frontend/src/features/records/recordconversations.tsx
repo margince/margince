@@ -52,6 +52,17 @@ export function conversationFilters(filters: TimelineFilters): TimelineFilters {
 }
 
 /**
+ * conversationRead is what the cut asks the server for: the conversation kinds,
+ * unless the reader picked one. Not a cut of the newest page on the client: a
+ * thread behind twenty notes would read as none.
+ */
+export function conversationRead(filters: TimelineFilters): TimelineFilters {
+  return filters.kind
+    ? filters
+    : { ...filters, kinds: CONVERSATION_FILTER_KINDS };
+}
+
+/**
  * useChronologyCut holds how a record's chronology is being read: which cut,
  * and the dials narrowing it.
  *
@@ -65,6 +76,8 @@ export function useChronologyCut(recordId: string): Readonly<{
   openCut: (next: TimelineFilter) => void;
   filters: TimelineFilters;
   setFilters: (next: TimelineFilters) => void;
+  /** The filters the record's timeline read sends for the open cut. */
+  read: TimelineFilters;
   /** The kinds THIS cut can draw, or every kind. */
   kinds: readonly ActivityKind[] | undefined;
 }> {
@@ -83,6 +96,7 @@ export function useChronologyCut(recordId: string): Readonly<{
       }
     },
     kinds: filter === "conversations" ? CONVERSATION_FILTER_KINDS : undefined,
+    read: filter === "conversations" ? conversationRead(filters) : filters,
   };
 }
 

@@ -375,6 +375,7 @@ const sonyaMessage = {
   links: [],
   thread: { members: [], next_cursor: null },
   can_reply: false,
+  can_forward: true,
   can_relink: false,
   access: {
     content_state: "available",

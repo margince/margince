@@ -414,6 +414,70 @@ describe("what a sent message files under", () => {
     ]);
   });
 
+  it("files under every account contact the message is addressed to, on the preview and the send", async () => {
+    const sent = stubRoutes({
+      "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
+    });
+    render(
+      <ComposeModal
+        entityType="company"
+        entityId="company-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByLabelText("Related to");
+    await userEvent.type(screen.getByLabelText("To"), "sara@acme.test");
+    await userEvent.tab();
+    await fillBody();
+    await pickBy("Reason for contact", "Active deal");
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => expect(linksOf(sent)).toBeDefined());
+    const both = [
+      { entity_type: "company", entity_id: "company-1" },
+      { entity_type: "contact", entity_id: "per-2" },
+      { entity_type: "contact", entity_id: "per-1" },
+    ];
+    expect(linksOf(sent)).toEqual(both);
+    const previews = sent.filter((r) => isPreviewDoor(r.key));
+    expect(
+      (previews.at(-1)?.body as { links?: unknown[] } | undefined)?.links,
+    ).toEqual(both);
+  });
+
+  it("files under an account contact who is only copied, once", async () => {
+    const sent = stubRoutes({
+      "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
+    });
+    render(
+      <ComposeModal
+        entityType="company"
+        entityId="company-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByLabelText("Related to");
+    await fillBody();
+    await userEvent.click(screen.getByRole("button", { name: "Cc and Bcc" }));
+    await userEvent.type(screen.getByLabelText("Cc"), "sara@acme.test");
+    await userEvent.tab();
+    await userEvent.type(screen.getByLabelText("Bcc"), "SARA@acme.test");
+    await userEvent.tab();
+    await pickBy("Reason for contact", "Active deal");
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => expect(linksOf(sent)).toBeDefined());
+    expect(linksOf(sent)).toEqual([
+      { entity_type: "company", entity_id: "company-1" },
+      { entity_type: "contact", entity_id: "per-1" },
+      { entity_type: "contact", entity_id: "per-2" },
+    ]);
+  });
+
   it("keeps a deal whose id happens to match the company's", async () => {
     // A link is identified by its TYPE and its id together, which is how the
     // server identifies one. Two records of different kinds live in different

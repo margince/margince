@@ -74,8 +74,8 @@ const LONG: components["schemas"]["Activity"][] = Array.from(
   },
 );
 
-/** A long record: the list scrolls inside the menu, and the menu itself
- *  scrolls no further than its last control. */
+/** A long record: the bar's count is a floor, and the list, not the menu,
+ *  scrolls. */
 export const LongRecord: StoryObj = {
   render: () => {
     installFetchStub({
@@ -99,9 +99,11 @@ export const LongRecord: StoryObj = {
   },
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));
-    await userEvent.click(
-      await dialog.findByRole("button", { name: /Continue a thread$/ }),
-    );
+    const bar = await dialog.findByRole("button", {
+      name: /Continue a thread$/,
+    });
+    await expect(bar).toHaveTextContent("12+ earlier threads");
+    await userEvent.click(bar);
     await screen.findByRole("button", { name: "Show more" });
     const menu = document.querySelector<HTMLElement>(".compose-threadmenu");
     const list = document.querySelector<HTMLElement>(".compose-threadlist");

@@ -238,3 +238,32 @@ it("keeps the threads read so far when an older page fails", async () => {
   ).toBeTruthy();
   expect(menu.getByRole("button", { name: "Show more" })).toBeTruthy();
 });
+
+it("counts the threads read so far as a floor while older mail is unread", () => {
+  render(
+    bar({
+      conversations: [
+        pricing,
+        { ...pricing, anchorId: "b1", memberIds: ["b1"] },
+      ],
+      more: true,
+    }),
+  );
+
+  expect(screen.getByText("2+ earlier threads")).toBeTruthy();
+  expect(screen.queryByText("2 earlier threads")).toBeNull();
+});
+
+it("counts the threads exactly once every page is read", () => {
+  render(
+    bar({
+      conversations: [
+        pricing,
+        { ...pricing, anchorId: "b1", memberIds: ["b1"] },
+      ],
+      more: false,
+    }),
+  );
+
+  expect(screen.getByText("2 earlier threads")).toBeTruthy();
+});

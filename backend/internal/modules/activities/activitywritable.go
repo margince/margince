@@ -40,7 +40,7 @@ func stampActivitiesWritable(ctx context.Context, tx pgx.Tx, page []crmcontracts
 		named[i] = ids.UUID(page[i].Id)
 	}
 	may := make(map[ids.UUID]bool)
-	if mayMutate(ctx) && auth.Allows(ctx, "activity", principal.ActionUpdate) && len(page) > 0 {
+	if mayUpdateActivities(ctx) && len(page) > 0 {
 		var err error
 		if may, err = auth.ActivityWritableSubset(ctx, tx, named); err != nil {
 			return err
@@ -92,6 +92,12 @@ func stampAwaitingOutcome(ctx context.Context, tx pgx.Tx, page []crmcontracts.Ac
 		page[at[id]].AwaitingOutcome = new(true)
 	}
 	return nil
+}
+
+// mayUpdateActivities is the object half of every activity write offered to a
+// reader. The row authority is asked after it.
+func mayUpdateActivities(ctx context.Context) bool {
+	return mayMutate(ctx) && auth.Allows(ctx, "activity", principal.ActionUpdate)
 }
 
 // mayMutate is the seat ceiling the mutation admission applies before any

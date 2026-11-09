@@ -147,3 +147,32 @@ func TestWithholdLeavesAnAlreadyBlockedVerbSayingWhatItSaid(t *testing.T) {
 		t.Errorf("blocked_reason = %q, want the reason the ladder gave: %q", *got.BlockedReason, reason)
 	}
 }
+
+// The composer's send asks `activity.create`, so a reader without it is told
+// before the composer opens rather than at Send.
+func TestWithholdBlocksDraftReplyForAReaderWhoCannotSend(t *testing.T) {
+	draft := func() crmcontracts.ContactMoment {
+		return crmcontracts.ContactMoment{RecommendedAction: crmcontracts.ContactMomentAction{
+			Kind:        crmcontracts.ContactMomentActionKindDraftReply,
+			Label:       "Draft a reply",
+			State:       crmcontracts.ContactMomentActionStateAvailable,
+			Destination: &crmcontracts.ContactMomentDestination{Surface: crmcontracts.ContactMomentDestinationSurfaceComposer},
+		}}
+	}
+
+	readOnly := draft()
+	Withhold(reader(principal.ObjectGrant{Read: true}), "en", &readOnly)
+	got := readOnly.RecommendedAction
+	if got.State != crmcontracts.ContactMomentActionStateBlocked || got.Destination != nil {
+		t.Fatalf("draft_reply for a read-only reader = %q with destination %+v, want blocked with none", got.State, got.Destination)
+	}
+	if got.BlockedReason == nil || *got.BlockedReason != "You do not have permission to send email" {
+		t.Errorf("draft_reply blocked reason = %v, want the send refusal, not the log one", got.BlockedReason)
+	}
+
+	writer := draft()
+	Withhold(reader(principal.ObjectGrant{Read: true, Create: true}), "en", &writer)
+	if writer.RecommendedAction.State != crmcontracts.ContactMomentActionStateAvailable {
+		t.Errorf("draft_reply for a reader who may send = %q, want available", writer.RecommendedAction.State)
+	}
+}

@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The email viewer's read is the one place a reader meets a message whole, so
@@ -49,6 +50,17 @@ func logEmailActivity(author context.Context, t *testing.T, e *Env, contact ids.
 	return ids.From[ids.ActivityKind](ids.UUID(logged.Id))
 }
 
+// onFullSeat puts ctx's actor on a full seat, the one a signed-in member holds:
+// a read seat is offered no write whatever its role grants.
+func onFullSeat(ctx context.Context) context.Context {
+	p, ok := principal.Actor(ctx)
+	if !ok {
+		panic("onFullSeat: the context carries no actor")
+	}
+	p.SeatType = principal.SeatFull
+	return principal.WithActor(ctx, p)
+}
+
 // TestEmailPresentationAccessMatrix walks every audience against every reader.
 //
 // The rule it holds: an audience decides who reads CONTENT, and row scope
@@ -59,9 +71,9 @@ func logEmailActivity(author context.Context, t *testing.T, e *Env, contact ids.
 // prevent.
 func TestEmailPresentationAccessMatrix(t *testing.T) {
 	e := Setup(t)
-	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	participant := e.As(e.Rep2, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)
+	author := onFullSeat(e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms))
+	participant := onFullSeat(e.As(e.Rep2, []ids.UUID{e.Team1}, activityLifecyclePerms))
+	colleague := onFullSeat(e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms))
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 
 	for _, tc := range []struct {
@@ -87,7 +99,7 @@ func TestEmailPresentationAccessMatrix(t *testing.T) {
 			}{
 				{"the author", author, true},
 				{"a colleague in another team", colleague, false},
-				{"an unbounded admin", e.Admin(), true},
+				{"an unbounded admin", onFullSeat(e.Admin()), true},
 			},
 		},
 		{
@@ -104,7 +116,7 @@ func TestEmailPresentationAccessMatrix(t *testing.T) {
 				{"a colleague in another team", colleague},
 				// The one that matters most: scope admits the admin, the
 				// audience does not, and the audience wins.
-				{"an unbounded admin", e.Admin()},
+				{"an unbounded admin", onFullSeat(e.Admin())},
 				{"a colleague who is not a participant", participant},
 			},
 		},
@@ -129,10 +141,10 @@ func TestEmailPresentationAccessMatrix(t *testing.T) {
 				if got.Body == nil {
 					t.Errorf("%s: no body on a message they may read", reader.name)
 				}
-				// Replying needs only the message; relinking is a write, so it
-				// is offered to a writer and to nobody else.
-				if !got.CanReply {
-					t.Errorf("%s: cannot reply to a message they may read", reader.name)
+				// Every reader here holds activity.create, so a reply and a forward
+				// are theirs; relinking is a write of this row, offered to its writers.
+				if !got.CanReply || !got.CanForward {
+					t.Errorf("%s: can_reply=%v can_forward=%v on a message they may read, want both", reader.name, got.CanReply, got.CanForward)
 				}
 				if got.CanRelink != reader.writer {
 					t.Errorf("%s: can_relink=%v, want %v — relinking is a write", reader.name, got.CanRelink, reader.writer)
@@ -149,13 +161,56 @@ func TestEmailPresentationAccessMatrix(t *testing.T) {
 	}
 }
 
+// TestEmailPresentationOffersReplyOnlyToASeatThatMaySend holds every offered
+// control to the grant its write asks. A seat that may only read the message is
+// offered no reply, forward, relink or audience change.
+func TestEmailPresentationOffersReplyOnlyToASeatThatMaySend(t *testing.T) {
+	e := Setup(t)
+	author := onFullSeat(e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms))
+	readOnly := onFullSeat(e.As(e.Rep2, []ids.UUID{e.Team1}, principal.Permissions{
+		RoleKeys: []string{"read_only"},
+		Objects: map[string]principal.ObjectGrant{
+			"contact":  {Read: true},
+			"activity": {Read: true},
+		},
+		RowScope: principal.RowScopeTeam,
+	}))
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
+	id := logEmailActivity(author, t, e, contact, "Pricing question", "what does it cost")
+	if _, err := e.Activities.SetAudience(author, id, activities.SetAudienceInput{Audience: "workspace"}); err != nil {
+		t.Fatalf("sharing with the workspace: %v", err)
+	}
+
+	got, err := e.Activities.GetEmailPresentation(readOnly, id, nil)
+	if err != nil {
+		t.Fatalf("read-only seat reading a workspace message: %v", err)
+	}
+	if got.Access.ContentState != crmcontracts.EmailAccessContentStateAvailable {
+		t.Fatalf("content_state=%v, want available: the seat reads the message whole", got.Access.ContentState)
+	}
+	if got.CanReply || got.CanForward {
+		t.Errorf("read-only seat: can_reply=%v can_forward=%v, want both false — its send is refused", got.CanReply, got.CanForward)
+	}
+	if got.CanRelink || got.Access.CanChange {
+		t.Errorf("read-only seat: can_relink=%v access.can_change=%v, want both false — both writes ask activity.update", got.CanRelink, got.Access.CanChange)
+	}
+
+	asAuthor, err := e.Activities.GetEmailPresentation(author, id, nil)
+	if err != nil {
+		t.Fatalf("author reading: %v", err)
+	}
+	if !asAuthor.CanReply || !asAuthor.CanForward {
+		t.Errorf("author: can_reply=%v can_forward=%v, want both true", asAuthor.CanReply, asAuthor.CanForward)
+	}
+}
+
 // TestSelectedAudienceReadsBackItsMembers is the admit case for the withheld
 // matrix's member check, which would otherwise pass on a field nothing ever
 // fills. It proves the positive arm: a caller who may change the set reads it,
 // and one who may only read the message does not.
 func TestSelectedAudienceReadsBackItsMembers(t *testing.T) {
 	e := Setup(t)
-	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
+	author := onFullSeat(e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms))
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	id := logEmailActivity(author, t, e, contact, "Q3 renewal terms", "confidential pricing")
 
@@ -186,7 +241,7 @@ func TestSelectedAudienceReadsBackItsMembers(t *testing.T) {
 	// The team matters — a colleague sharing the contact's team holds write
 	// authority through the linked record, which is a different question from
 	// having been named on this message.
-	named := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)
+	named := onFullSeat(e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms))
 	asMember, err := e.Activities.GetEmailPresentation(named, id, nil)
 	if err != nil {
 		t.Fatalf("named member reading: %v", err)
