@@ -451,11 +451,8 @@ function TaskFromItem({
   );
 }
 
-/**
- * The item as one line. It shows in the record's head on the other tabs, and
- * above a Next bar that has something more urgent. With no
- * `onOpen` it only says what came in.
- */
+/** The item as one line: in the record's head on the other tabs, and above a
+ *  Next bar with more urgent work. Without `onOpen` it says what came in. */
 export function LatestInboundLine({
   latest,
   onOpen,
