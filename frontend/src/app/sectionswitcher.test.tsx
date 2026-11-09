@@ -56,6 +56,7 @@ const trigger = () =>
 async function openSheet(user: ReturnType<typeof userEvent.setup>) {
   await user.click(trigger());
   await screen.findByRole("dialog");
+  await screen.findByRole("combobox");
 }
 
 async function expectClosedOnTrigger() {

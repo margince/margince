@@ -25,7 +25,7 @@ const GROUND = "var(--ground)";
 
 // Layers the tree floats today, so a detector that goes blind fails.
 export const KNOWN_LAYERS = [
-  ".notifbell-loose",
+  ".notifbell-loose.topbar-popover",
   ".popover-panel",
   ".accountmenu",
 ];

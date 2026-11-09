@@ -172,8 +172,7 @@ var meetingFollowUpsSQL = `
 	                                  UNION ALL
 	                                  SELECT reached.activity_id FROM activity_participant reached
 	                                   WHERE reached.contact_id = ANY(attendees.recipients))
-	                   SELECT 1 FROM touched CROSS JOIN LATERAL (SELECT ` + laterActivityColumns + ` FROM activity keyed
-	                     WHERE keyed.id = touched.activity_id LIMIT 1) later
+	                   SELECT 1 FROM touched CROSS JOIN LATERAL ` + laterActivityFromLinkSQL + ` later
 	                    WHERE later.id <> a.id
 	                      AND later.archived_at IS NULL
 	                      AND later.direction IS DISTINCT FROM 'inbound'
@@ -192,6 +191,11 @@ var meetingFollowUpsSQL = `
 const laterActivityColumns = `keyed.id, keyed.kind, keyed.direction, keyed.origin, keyed.occurred_at,
 	keyed.occurred_precision, keyed.archived_at, keyed.restricted_at, keyed.meeting_status, keyed.call_outcome,
 	keyed.calendar_method, keyed.sender_is_machine, keyed.bulk_mail_attested, keyed.internal_mail_authorization`
+
+// The limit keeps the keyed lookup ahead of predicates on the later activity,
+// even when stale statistics favor scanning the whole activity table.
+const laterActivityFromLinkSQL = `(SELECT ` + laterActivityColumns + ` FROM activity keyed
+ WHERE keyed.id = touched.activity_id LIMIT 1)`
 
 // meetingHeldSQL is a meeting somebody said took place: its outcome was saved
 // as held, and it has started (occurredday.BegunSQL). A booked or unmarked
@@ -277,7 +281,8 @@ func meetingNeedSQL() string {
 	   JOIN (SELECT heard.activity_id, heard.contact_id FROM activity_link heard WHERE heard.contact_id IS NOT NULL
 	         UNION ALL SELECT reached.activity_id, reached.contact_id FROM activity_participant reached
 	          WHERE reached.contact_id IS NOT NULL) touched ON touched.contact_id = recipient.contact_id
-	   JOIN activity later ON later.id = touched.activity_id AND later.restricted_at IS NULL
+	   CROSS JOIN LATERAL ` + laterActivityFromLinkSQL + ` later
+	  WHERE later.restricted_at IS NULL
 	    AND later.occurred_at >= recipient.since -- occurred_at raw: FromSQL implies it, so the set is never narrower
 `
 }

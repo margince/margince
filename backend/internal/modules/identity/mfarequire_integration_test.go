@@ -5,14 +5,14 @@
 
 package identity
 
-// Require-MFA confinement: while the installation requires a second factor, a
-// member who holds none is flagged must-enrol at admission — the same mechanism
-// a forced password change uses — and the flag clears the moment they confirm a
-// factor. An installation that requires nothing pays nothing for the check.
+// Password sessions need a confirmed factor when the policy requires one.
+// Provider sessions rely on the provider’s authentication policy.
 
 import (
 	"context"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 )
 
 func (e *revocationEnv) requireMFAOn() {
@@ -113,5 +113,59 @@ func TestRequireMFAOffLeavesTheMemberUnconfined(t *testing.T) {
 	}
 	if id.MustEnrolMFA {
 		t.Error("must-enrol is set with require-MFA off")
+	}
+}
+
+func TestProviderSessionsAreExemptFromPasswordMFAConfinement(t *testing.T) {
+	for _, provider := range []string{"google", "microsoft"} {
+		t.Run(provider, func(t *testing.T) {
+			e := setupRevocationEnv(t, "provider-mfa-"+provider)
+			e.withVault()
+			e.requireMFAOn()
+			token, err := e.svc.LoginViaFederatedIdentity(e.wsOnlyCtx(), provider,
+				OIDCClaims{Subject: "provider-member", Email: e.member.Email})
+			if err != nil {
+				t.Fatal(err)
+			}
+			id, err := e.svc.Authenticate(e.wsOnlyCtx(), token)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if id.MustEnrolMFA {
+				t.Fatal("provider session confined to Margince MFA enrolment")
+			}
+			_, passwordSession, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice)
+			if err != nil {
+				t.Fatal(err)
+			}
+			passwordID, err := e.svc.Authenticate(e.wsOnlyCtx(), passwordSession.Token)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !passwordID.MustEnrolMFA {
+				t.Fatal("a provider link exempted a password session")
+			}
+		})
+	}
+}
+
+func TestASessionWithoutSignInProvenanceKeepsThePasswordMFARule(t *testing.T) {
+	e := setupRevocationEnv(t, "legacy-session-mfa")
+	e.withVault()
+	e.requireMFAOn()
+	token, hash, err := mintSessionToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(t.Context(), `INSERT INTO session (user_id, token_hash, idle_expires_at, expires_at)
+  VALUES (@user, @hash, now()+interval '1 hour', now()+interval '1 hour')`, pgx.StrictNamedArgs{"user": e.member.UserID, "hash": hash}); err != nil {
+		t.Fatal(err)
+	}
+	id, err := e.svc.Authenticate(e.wsOnlyCtx(), token)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !id.MustEnrolMFA {
+		t.Fatal("an unknown sign-in method bypassed password MFA enrolment")
 	}
 }

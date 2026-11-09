@@ -3333,6 +3333,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "list.headActions": "Thao tác khác",
   "list.search": "Tìm kiếm",
+  "list.searchFor": "Tìm “{query}”",
+  "list.filterSuggestionsFailed": "Không tải được gợi ý bộ lọc.",
   "list.showArchived": "Hiển thị mục trong kho lưu trữ",
   "list.viewToggleOn": "Bật",
   "list.viewToggleOff": "Tắt",
@@ -12244,7 +12246,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forcedMfa.pageTitle": "Thiết lập đăng nhập hai bước",
   "forcedMfa.title": "Thiết lập đăng nhập hai bước",
   "forcedMfa.body":
-    "Bản cài đặt này yêu cầu đăng nhập hai bước. Thiết lập ứng dụng xác thực để tiếp tục.",
+    "Đăng nhập bằng mật khẩu yêu cầu đăng nhập hai bước. Thiết lập ứng dụng xác thực để tiếp tục.",
   "forcedMfa.alreadyOn": "Đăng nhập hai bước đã bật.",
   "forcedMfa.continue": "Tiếp tục",
   "forcedPassword.pageTitle": "Đặt mật khẩu",
@@ -14813,14 +14815,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Luôn khả dụng, nên không ai bị khóa ngoài khi một phương thức khác bị tắt.",
   "signInMethods.noneConfigured":
     "Bản cài đặt này chưa cấu hình nhà cung cấp bên ngoài nào. Chỉ có thể đăng nhập bằng mật khẩu.",
-  "signInMethods.requireMfa": "Yêu cầu yếu tố thứ hai",
+  "signInMethods.requireMfa": "Yêu cầu yếu tố thứ hai khi dùng mật khẩu",
+  "signInMethods.requireMfaAction": "Yêu cầu",
   "signInMethods.requireMfaHint":
-    "Mọi thành viên cần bật đăng nhập hai bước để dùng Margince.",
-  "signInMethods.requireMfaConfirmTitle": "Yêu cầu yếu tố thứ hai?",
+    "Đăng nhập bằng mật khẩu yêu cầu đăng nhập hai bước của Margince. Google và Microsoft quản lý MFA riêng.",
+  "signInMethods.requireMfaConfirmTitle":
+    "Yêu cầu yếu tố thứ hai khi dùng mật khẩu?",
   "signInMethods.requireMfaConfirmBody":
-    "Thành viên chưa bật đăng nhập hai bước sẽ được yêu cầu thiết lập trước khi tiếp tục.",
+    "Thành viên đăng nhập bằng mật khẩu phải thiết lập đăng nhập hai bước trước khi tiếp tục.",
   "signInMethods.requireMfaConfirmSelf":
-    "Bạn chưa thiết lập đăng nhập hai bước, nên bạn cũng sẽ được yêu cầu thiết lập.",
+    "Tài khoản này cũng cần thiết lập đăng nhập hai bước khi đăng nhập bằng mật khẩu.",
   "groupRoles.title": "Cấp vai trò theo nhóm",
   "groupRoles.sub":
     "Khi ai đó bạn đã mời đăng nhập bằng Google hoặc Microsoft, họ nhận vai trò được ánh xạ với một nhóm họ thuộc về trong thư mục công ty bạn. Không ai vào được nếu chưa được mời.",

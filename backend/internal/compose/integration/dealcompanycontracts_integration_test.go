@@ -82,10 +82,9 @@ func (f companyMoveFixture) dealStillNames(t *testing.T, deal ids.DealID, want *
 	}
 }
 
-// The state the refusal exists against, seeded past every writer. A contract
-// with a deal is visible through that deal alone. So a deal naming Contoso
-// shows Acme's contract to a rep who cannot see Acme at all.
-func TestADealAnchorShowsAContractOfAnotherCompanyToTheDealsReaders(t *testing.T) {
+// A legacy mismatch follows the contract's own company rather than widening
+// its audience through another company's deal.
+func TestALegacyCrossCompanyContractFollowsItsOwnCompanyScope(t *testing.T) {
 	f := newCompanyMoveFixture(t)
 	e := f.e
 	acme := e.SeedCompany(t, "Acme private", &e.Rep1)
@@ -104,12 +103,14 @@ func TestADealAnchorShowsAContractOfAnotherCompanyToTheDealsReaders(t *testing.T
 	unanchored := seed("Acme pilot", nil)
 
 	rep3 := e.As(e.Rep3, []ids.UUID{e.Team2}, ContractRepPerms)
-	if _, err := e.Contracts.GetContract(rep3, unanchored); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("Acme's unanchored contract answered %v; this reader must not see Acme", err)
-	}
-	if leaked, err := e.Contracts.GetContract(rep3, misfiled); err != nil || leaked.Title != "Acme MSA" {
-		t.Fatalf("the deal arm no longer admits the mismatched contract (%v); if the visibility "+
-			"rule changed, re-decide whether the deal company move still needs refusing", err)
+	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, ContractRepPerms)
+	for _, contract := range []ids.ContractID{unanchored, misfiled} {
+		if _, err := e.Contracts.GetContract(rep3, contract); !errors.Is(err, apperrors.ErrNotFound) {
+			t.Fatalf("another company's reader opened the contract: %v", err)
+		}
+		if got, err := e.Contracts.GetContract(rep1, contract); err != nil || ids.From[ids.ContractKind](ids.UUID(got.Id)) != contract {
+			t.Fatalf("the contract company's reader could not open it: %v", err)
+		}
 	}
 }
 
@@ -130,7 +131,7 @@ func TestMovingADealsCompanyIsRefusedWhileItsContractsNameAnother(t *testing.T) 
 
 			blocked, ok := errors.AsType[*contracts.DealContractsCrossCompanyError](err)
 			if !ok {
-				t.Fatalf("the move was admitted (err = %v); Acme's contract is now readable through Contoso's deal", err)
+				t.Fatalf("the move was admitted (err = %v); the deal and contract now name different companies", err)
 			}
 			if blocked.Count != 1 || len(blocked.Named) != 1 || blocked.Named[0] != "MSA-2026" {
 				t.Errorf("the refusal names %d %v, want the one contract by its number", blocked.Count, blocked.Named)

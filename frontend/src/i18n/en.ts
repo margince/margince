@@ -3376,6 +3376,8 @@ export const en = {
 
   "list.headActions": "More actions",
   "list.search": "Search",
+  "list.searchFor": "Search for “{query}”",
+  "list.filterSuggestionsFailed": "Filter suggestions did not load.",
   "list.showArchived": "Show archived",
   "list.viewToggleOn": "On",
   "list.viewToggleOff": "Off",
@@ -12560,7 +12562,7 @@ export const en = {
   "forcedMfa.pageTitle": "Set up two-step sign-in",
   "forcedMfa.title": "Set up two-step sign-in",
   "forcedMfa.body":
-    "This installation requires two-step sign-in. Set up an authenticator app to continue.",
+    "Password sign-in requires two-step sign-in. Set up an authenticator app to continue.",
   "forcedMfa.alreadyOn": "Two-step sign-in is already on.",
   "forcedMfa.continue": "Continue",
   "forcedPassword.pageTitle": "Set password",
@@ -15123,14 +15125,16 @@ export const en = {
     "Always available, so nobody is locked out when another method is off.",
   "signInMethods.noneConfigured":
     "This installation has no external provider configured. Password is the only sign-in method.",
-  "signInMethods.requireMfa": "Require second factor",
+  "signInMethods.requireMfa": "Require second factor for passwords",
+  "signInMethods.requireMfaAction": "Require",
   "signInMethods.requireMfaHint":
-    "Every member needs two-step sign-in turned on to use Margince.",
-  "signInMethods.requireMfaConfirmTitle": "Require second factor?",
+    "Password sign-in requires Margince two-step sign-in. Google and Microsoft manage their own MFA.",
+  "signInMethods.requireMfaConfirmTitle":
+    "Require second factor for passwords?",
   "signInMethods.requireMfaConfirmBody":
-    "Members without two-step sign-in are asked to set it up before they can continue.",
+    "Members signing in with a password must set up two-step sign-in before they can continue.",
   "signInMethods.requireMfaConfirmSelf":
-    "You have not set up two-step sign-in yet, so you are asked to set it up too.",
+    "Signing in with a password will require setting up two-step sign-in for this account too.",
   "groupRoles.title": "Group role grants",
   "groupRoles.sub":
     "When someone you invited signs in with Google or Microsoft, they get the role mapped to a group they belong to in your company directory. Nobody gets in without an invitation.",

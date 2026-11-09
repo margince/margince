@@ -389,7 +389,6 @@ internal/modules/contacts/strength.go#func contactScopePredicate
 internal/modules/contracts/contract_links.go#func ensureLinksVisible
 internal/modules/contracts/contract_write.go#func contractPatch
 internal/modules/contracts/store.go#const contractColumns
-internal/modules/contracts/visibility.go#func VisibleClause
 internal/modules/customfields/create.go#func marshalOptions
 internal/modules/customfields/create.go#func unmarshalOptions
 internal/modules/customfields/engine.go#const codeUnsupportedObject

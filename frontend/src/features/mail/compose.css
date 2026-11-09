@@ -14,6 +14,7 @@
 }
 
 .compose-fields {
+  position: relative;
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
@@ -31,6 +32,7 @@
 /* The composer window's scrolling sheet: the envelope rows and strips run edge
    to edge and sit flush on one another; what follows keeps the margin. */
 .compose-sheet {
+  position: relative;
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
@@ -357,6 +359,7 @@
 /* What stands between the message and its send, above the foot. Nothing is
    drawn while nothing stands in the way. */
 .compose-blockers {
+  position: relative;
   flex: none;
   display: flex;
   flex-direction: column;

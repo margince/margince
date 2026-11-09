@@ -685,6 +685,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | Gate | Hardness | What it holds |
 |---|---|---|
 | `docspagelength_test.go` | H3 | A docs page an agent cannot navigate is a page it does not read, and the failure is silent: it greps, lands in the middle of six hundred lines, and answers from the part it happened to see. |
+| `entitymodelcoupling_test.go` | H3 | _(no doc comment)_ |
 | `laneconnbudget_test.go` | H3 | The integration lane's connection demand is concurrent packages times what one package may hold, and that product has to fit inside the compose Postgres's max\_connections. |
 | `mcptoolcount_test.go` | H2 | How much of a user's tool budget this server spends. |
 | `rulebooklength_test.go` | H3 | A rulebook is read in full by every session and, for its Craftsmanship section, by every gate prompt, so its length is a running cost rather than a matter of taste. |

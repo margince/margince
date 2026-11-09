@@ -3437,6 +3437,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   "list.headActions": "Weitere Aktionen",
   "list.search": "Suchen",
+  "list.searchFor": "Nach „{query}“ suchen",
+  "list.filterSuggestionsFailed":
+    "Die Filtervorschläge konnten nicht geladen werden.",
   "list.showArchived": "Archivierte anzeigen",
   "list.viewToggleOn": "An",
   "list.viewToggleOff": "Aus",
@@ -12559,7 +12562,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forcedMfa.pageTitle": "Zweistufige Anmeldung einrichten",
   "forcedMfa.title": "Zweistufige Anmeldung einrichten",
   "forcedMfa.body":
-    "Diese Installation verlangt die zweistufige Anmeldung. Richte eine Authenticator-App ein, um fortzufahren.",
+    "Die Anmeldung mit Passwort verlangt die zweistufige Anmeldung. Richte eine Authenticator-App ein, um fortzufahren.",
   "forcedMfa.alreadyOn": "Die zweistufige Anmeldung ist schon an.",
   "forcedMfa.continue": "Weiter",
   "forcedPassword.pageTitle": "Passwort festlegen",
@@ -15207,14 +15210,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Immer verfügbar. Alle Nutzenden können sich so anmelden, daher lassen sich die anderen Methoden gefahrlos deaktivieren.",
   "signInMethods.noneConfigured":
     "Für diese Installation ist kein externer Anbieter konfiguriert. Das Passwort ist die einzige Anmeldemethode.",
-  "signInMethods.requireMfa": "Zweiten Faktor verlangen",
+  "signInMethods.requireMfa": "Zweiten Faktor für Passwörter verlangen",
+  "signInMethods.requireMfaAction": "Verlangen",
   "signInMethods.requireMfaHint":
-    "Jedes Mitglied braucht die zweistufige Anmeldung, um Margince zu nutzen.",
-  "signInMethods.requireMfaConfirmTitle": "Zweiten Faktor verlangen?",
+    "Die Anmeldung mit Passwort erfordert die zweistufige Anmeldung in Margince. Google und Microsoft verwalten ihre eigene MFA.",
+  "signInMethods.requireMfaConfirmTitle":
+    "Zweiten Faktor für Passwörter verlangen?",
   "signInMethods.requireMfaConfirmBody":
-    "Mitglieder ohne zweistufige Anmeldung werden gebeten, sie einzurichten, bevor sie weitermachen können.",
+    "Mitglieder, die sich mit Passwort anmelden, müssen die zweistufige Anmeldung einrichten, bevor sie weitermachen können.",
   "signInMethods.requireMfaConfirmSelf":
-    "Du hast die zweistufige Anmeldung noch nicht eingerichtet, deshalb wirst auch du gebeten, sie einzurichten.",
+    "Auch für dieses Konto muss bei der Anmeldung mit Passwort die zweistufige Anmeldung eingerichtet werden.",
   "groupRoles.title": "Rollen aus IdP-Gruppen",
   "groupRoles.sub":
     "Vergibt bei der Anmeldung über SSO eine Rolle an jedes eingeladene Mitglied einer IdP-Gruppe. Die Gruppe muss genau so geschrieben sein wie im groups-Anspruch des ID-Tokens. Ein Nutzerkonto entsteht dabei nicht: Eine nicht eingeladene E-Mail-Adresse wird abgewiesen, mit oder ohne Gruppen.",
