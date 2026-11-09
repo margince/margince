@@ -6,7 +6,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { jsonResponse } from "../../testing/company.fixtures";
-import { type AccountScan, useAccountScan } from "./accountscan";
+import {
+  type AccountScan,
+  ENSURE_SHARED_MS,
+  useAccountScan,
+} from "./accountscan";
 
 // The scan is asked for once on open and polled only while a read runs. The
 // server decides whether an open costs a model call; the page's part is to
@@ -118,6 +122,38 @@ describe("useAccountScan", () => {
     second();
     await waitFor(() => expect(screen.getAllByRole("status")).toHaveLength(2));
     expect(calls.filter((call) => call.startsWith("POST"))).toHaveLength(1);
+  });
+
+  // The read and the ensure share one cache key, so a reader coming back finds
+  // the scan still cached. Past the shared window the open asks again, because
+  // only the ensure tells the server to compare the account as it now stands.
+  it("asks again for a reader who comes back after the shared window", async () => {
+    const calls = stubScan(["queued"]);
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const page = () => (
+      <QueryClientProvider client={client}>
+        <Probe enabled />
+      </QueryClientProvider>
+    );
+    const first = render(page());
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toBe("queued"),
+    );
+    first.unmount();
+
+    const later = Date.now() + ENSURE_SHARED_MS + 1;
+    const clock = vi.spyOn(Date, "now").mockReturnValue(later);
+    try {
+      expect(client.getQueryData(["account-scan", "o-1"])).toBeDefined();
+      render(page());
+      await waitFor(() =>
+        expect(calls.filter((call) => call.startsWith("POST"))).toHaveLength(2),
+      );
+    } finally {
+      clock.mockRestore();
+    }
   });
 
   it("polls while the read runs and stops once it has settled", async () => {

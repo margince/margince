@@ -4,7 +4,13 @@
 // The account scan as the company page holds it: asked for once on open,
 // polled while it runs, and then left alone until the account moves.
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  type QueryClient,
+  type QueryKey,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useEffect } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -35,6 +41,20 @@ export function scanHasSettled(scan: AccountScan | undefined): boolean {
 // slow enough to cost nothing, fast enough that the pending row gives way
 // the moment the findings land.
 const POLL_LIVE_MS = 3000;
+
+// ENSURE_SHARED_MS is how long one ensure answers for every consumer of its
+// account. It covers panels mounting on one page load. Past it, an open asks
+// again, and the server's own floor keeps that from costing a model call.
+export const ENSURE_SHARED_MS = 10_000;
+
+// ensuredRecently reports an ensure for this account that succeeded within the
+// shared window.
+function ensuredRecently(client: QueryClient, key: QueryKey): boolean {
+  return client
+    .getMutationCache()
+    .findAll({ mutationKey: key, status: "success" })
+    .some((done) => Date.now() - done.state.submittedAt < ENSURE_SHARED_MS);
+}
 
 /**
  * useAccountScan asks for the reader's scan of one account and keeps it
@@ -92,13 +112,17 @@ export function useAccountScan(
     // can cost a model call.
     //
     // Two consumers mounting together are held by `isMutating`, because
-    // `mutate` registers before the next one's effect runs. One mounting
-    // afterwards is held by the answer the ensure left in the cache, which
-    // `isMutating` no longer reports.
-    if (client.getQueryData(accountScanKey(companyId)) !== undefined) {
-      return;
-    }
-    if (client.isMutating({ mutationKey: accountScanKey(companyId) }) > 0) {
+    // `mutate` registers before the next one's effect runs. One mounting just
+    // after is held by the ensure that settled moments ago.
+    //
+    // Cached scan data does not hold it. The read fills the same key, so a
+    // reader coming back to the account would find an answer and never ask
+    // whether the account moved.
+    const key = accountScanKey(companyId);
+    if (
+      client.isMutating({ mutationKey: key }) > 0 ||
+      ensuredRecently(client, key)
+    ) {
       return;
     }
     fire(companyId);
