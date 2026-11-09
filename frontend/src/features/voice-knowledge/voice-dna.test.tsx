@@ -390,6 +390,89 @@ describe("the Settings Voice DNA card with a profile", () => {
     expect(screen.getByText(/Which speaker are you/)).toBeTruthy();
   });
 
+  it("holds the rebuild on another tab until an upload lands", async () => {
+    const user = userEvent.setup();
+    let releasePreview: () => void = () => {};
+    const previewHeld = new Promise<void>((resolve) => {
+      releasePreview = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const path = new URL(request.url).pathname.replace(/^\/v1/, "");
+        if (path === "/me") {
+          return jsonResponse(meFixture({ allow: VOICE_EDITOR }));
+        }
+        if (path === "/voice-profiles") {
+          const built = {
+            ...PROFILE,
+            maturity: "provisional",
+            profile_version: 2,
+          };
+          return jsonResponse({ data: [built], page: emptyPage.page });
+        }
+        if (path === "/voice-profiles/vp-1/sources/preview") {
+          await previewHeld;
+          return jsonResponse({
+            total_words: 1000,
+            detected_format: "txt",
+            ingestible_as_transcript: false,
+            unattributed_words: 1000,
+            speakers: [],
+          });
+        }
+        if (path === "/voice-profiles/vp-1/sources") {
+          return request.method === "POST"
+            ? jsonResponse(
+                {
+                  source: {},
+                  summary: SUMMARY,
+                  ingest_stats: {
+                    input_words: 4,
+                    kept_words: 4,
+                    kept_turns: 0,
+                    discarded_turns: 0,
+                    speakers_seen: [],
+                  },
+                },
+                201,
+              )
+            : jsonResponse({ data: [SOURCE], summary: SUMMARY });
+        }
+        return jsonResponse(emptyPage);
+      }),
+    );
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const page = (tab: string) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <VoiceIntakeHost>
+            <VoiceDnaCard key={tab} tab={tab} />
+          </VoiceIntakeHost>
+        </LocaleProvider>
+      </QueryClientProvider>
+    );
+    const view = rtlRender(page("samples"));
+    await screen.findByRole("heading", { name: "Make it sharper" });
+    await user.upload(
+      fileInput(),
+      new File(["We ship on Friday."], "notes.txt", { type: "text/plain" }),
+    );
+    view.rerender(page("builds"));
+    const rebuild = await screen.findByRole("button", {
+      name: /Rebuild Voice DNA/,
+    });
+    expect(rebuild).toHaveProperty("disabled", true);
+    releasePreview();
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /Rebuild Voice DNA/ }),
+      ).toHaveProperty("disabled", false),
+    );
+  });
+
   it("sends an owner with no build yet from the builds tab to the first build", async () => {
     const user = userEvent.setup();
     stubProfile();
