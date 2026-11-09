@@ -37,7 +37,10 @@ func evidenceOf(in Input) evidence {
 		ev.deals[candidate.ID] = candidate.Name
 	}
 	for _, decision := range in.Decisions {
-		recorded := strings.Join(strings.Fields(decision.Text+" "+decision.Result+" "+decision.ReviewOn), " ")
+		// The review day also reads as its parts, so "due 17 November" is the
+		// recorded date and not a number no source carries.
+		reviewDay := strings.ReplaceAll(decision.ReviewOn, "-", " ")
+		recorded := strings.Join(strings.Fields(decision.Text+" "+decision.Result+" "+decision.ReviewOn+" "+reviewDay), " ")
 		add(CellIn{ID: decision.ID, Label: decision.Text, Value: recorded, Coverage: "ok"})
 	}
 	return ev

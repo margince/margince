@@ -182,6 +182,17 @@ func TestParseDropsARecordSentenceWhoseNumberTheCitedRecordDoesNotCarry(t *testi
 	}
 }
 
+func TestParseKeepsADecisionsReviewDayWrittenAsADate(t *testing.T) {
+	won := `{"text":"Nothing is won yet at 0 EUR.","kind":"observation","cells":["metric:bookings_won"]}`
+	for _, text := range []string{"The call to the buyer is due 17 November.", "The call to the buyer is due November 17."} {
+		line := `{"text":"` + text + `","kind":"claim","cells":["metric:open_pipeline"],"records":["decision-1"]}`
+		written, err := parseCited(`{"sentences":[`+won+`,`+line+`],"next_decision":null}`, decisionInput())
+		if err != nil || len(written.Sentences) != 2 {
+			t.Errorf("%q: kept %+v (%v), want the review day read as the decision's own", text, written.Sentences, err)
+		}
+	}
+}
+
 func TestParseRefusesARecordIDSpelledInText(t *testing.T) {
 	for _, text := range []string{"The deal deal-globex is still open.", "The decision decision-1 is still owed."} {
 		reply := `{"sentences":[{"text":"` + text + `","cells":["metric:open_pipeline"],"records":["deal-globex","decision-1"]}],"next_decision":null}`

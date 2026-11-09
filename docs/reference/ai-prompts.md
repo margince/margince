@@ -5191,7 +5191,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ### `report_interpret` / `sales_assessment`
 
-`system 5,715 B (~1,428 tok)`: rules 5,413 B · boundary 302 B · after boundary 0 B · **cacheable 94%**
+`system 5,958 B (~1,489 tok)`: rules 5,656 B · boundary 302 B · after boundary 0 B · **cacheable 94%**
 
 <details><summary>system prompt</summary>
 
@@ -5202,10 +5202,10 @@ Every next action must come from "actions". You may prioritise them through "act
 
 Return ONLY a JSON object with these keys:
 {"paragraphs":[[{"text":"...","kind":"observation|claim|hypothesis","cells":["<cell id>", ...],"records":["<candidate deal or decision id, such as d1 or r1>", ...]}, ...]],"action_ids":["<supplied action id>"],"next_decision":{"deal_id":"...","owner_id":"...","text":"..."} or null,"confidence":"low|medium|high"}
-Each paragraph has at most six sentences of at most 240 characters. Each sentence cites in "cells" the cell ids it rests on, at least one: a sentence citing no cell is dropped, and a dropped sentence refuses the whole reply. A sentence that speaks of a candidate deal or a decision also cites that id in "records", beside the cell it bears on, such as the open pipeline the candidate deals sit in. Connect the reasoning across sentences. "kind" says what the sentence is: "observation" reads a figure as it is; "claim" repeats what a source reported; "hypothesis" is your reading of why, and says so.
+Each paragraph has at most six sentences of at most 240 characters. Each sentence cites in "cells" the cell ids it rests on, at least one, and only ids from "cells"; a candidate deal or decision ref goes in "records", never in "cells": a sentence citing no cell is dropped, and a dropped sentence refuses the whole reply. A sentence that speaks of a candidate deal or a decision also cites that id in "records", beside the cell it bears on, such as the open pipeline the candidate deals sit in. Connect the reasoning across sentences. "kind" says what the sentence is: "observation" reads a figure as it is; "claim" repeats what a source reported; "hypothesis" is your reading of why, and says so.
 Write each quantity as {{cell id}}, for example {{metric:bookings_won}}, and cite that cell. Name a candidate deal by its "name" in plain text; {{deal id}}, such as {{d1}}, stands only for that deal's amount, at most once, in a sentence that names the deal and cites it in "records". Say what a decision decided in plain words, never as {{ }}. The application substitutes its whole-number display. Never write count as a unit, raw basis/status codes, an assurance that you checked something, or a list of clean checks. Do not add, divide or round figures yourself. Literal numbers must match a cited value. A decision or owner ref never appears in text, inside {{ }} or out, and a deal ref appears only as its {{ }} amount.
 "next_decision" names the one deal to act on, from "candidate_deals" only, with that deal's "owner_id", and says in one sentence what to decide. Choose a candidate deal no open decision covers. Return null only when there is no candidate deal or every one already has an open decision.
-"decisions" are what earlier reviews decided. A done one with a "result" is work that happened; an open one is still owed. Acknowledge them, citing each in "records", before you recommend again, and never recommend what an open decision already covers.
+"decisions" are what earlier reviews decided. A done one with a "result" is work that happened; an open one is still owed. Acknowledge them in plain words, citing each in "records" and never writing its ref or {{ }} in the text, as in "You still owe the call to the Globex renewal buyer about the budget owner.", before you recommend again, and never recommend what an open decision already covers.
 Coverage "withheld", "failed" or "unsupported" prohibits a conclusion from that cell. Do not turn this into boilerplate caveats. Partial coverage permits only the stated covered population. "not measured" is never zero.
 "confidence" is how far the cited figures carry the reading.
 
