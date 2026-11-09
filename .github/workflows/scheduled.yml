@@ -296,8 +296,9 @@ jobs:
       # Every step that needs the network has finished by here.
       - name: Start the dev infra stack (compose + app role)
         run: make db-up
-      - name: Compile the suites at the real date
-        run: make -C backend build
+      # `build` alone leaves out the modules only a test imports.
+      - name: Download every module and compile at the real date
+        run: make -C backend mod-download build
       # The offset comes from BACKEND_CLOCK_SKEW rather than being spelled again.
       # The restore below is the copy that matters: raising the skew here and
       # leaving a literal there hands the runner back with its clock in the
