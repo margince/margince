@@ -19379,7 +19379,7 @@ export const en = {
   "worklist.verb.meetingAddNotes": "Add notes",
   "worklist.verb.meetingUpdateTitle": "Meeting",
   "worklist.verb.meetingReading": "Loading meeting…",
-  "worklist.verb.meetingWhatHappened": "Meeting notes",
+  "worklist.verb.meetingWhatHappened": "What happened",
   "worklist.verb.meetingBodyHint":
     "Discussion and next steps. Calendar notes can be edited here.",
   "worklist.verb.meetingHeld": "It happened",

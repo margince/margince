@@ -19580,7 +19580,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingAddNotes": "Notizen hinzufügen",
   "worklist.verb.meetingUpdateTitle": "Termin",
   "worklist.verb.meetingReading": "Termin wird geladen…",
-  "worklist.verb.meetingWhatHappened": "Terminnotizen",
+  "worklist.verb.meetingWhatHappened": "Was passiert ist",
   "worklist.verb.meetingBodyHint":
     "Besprochenes und nächste Schritte. Kalendernotizen lassen sich hier bearbeiten.",
   "worklist.verb.meetingHeld": "Hat stattgefunden",
