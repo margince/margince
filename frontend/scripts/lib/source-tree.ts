@@ -224,7 +224,7 @@ const RESOLVED_EXTENSIONS = [".mjs", ".js", ".mts", ".ts", ".jsx", ".tsx"];
 
 // A module FILE: taking the directory `./x` would end a walk before its
 // `index.tsx`, and `./x.css` is no module a walk can parse.
-function isModuleOnDisk(path: string): boolean {
+export function isModuleOnDisk(path: string): boolean {
   return MODULE_FILE.test(path) && existsSync(path) && statSync(path).isFile();
 }
 

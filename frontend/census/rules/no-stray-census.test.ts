@@ -5,14 +5,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parseSource } from "../../scripts/lib/source-tree";
 import { plantedFindings, srcDir } from "../tree";
-import {
-  ownWalks,
-  readWaivers,
-  rule,
-  strayImports,
-  WAIVED_FILES,
-  waiverCount,
-} from "./no-stray-census.census";
+import { ownWalks, rule, strayImports } from "./no-stray-census.census";
 
 const planted = join(srcDir, "features", "planted.test.ts");
 const found = (code: string) =>
@@ -25,6 +18,15 @@ describe("a test file outside census/ that walks the tree", () => {
         'import { filesUnder as walk } from "../../scripts/lib/source-tree";\nwalk(".");',
       ),
     ).toEqual(["imports filesUnder from scripts/lib/source-tree.ts"]);
+  });
+
+  // A computed name can be a walker's, and only running the test says which.
+  it("is found for a dynamic import whose name is computed", () => {
+    expect(found("const m = await import(name);")).toEqual([
+      "imports a module whose name is computed: import(name)",
+    ]);
+    expect(found("const m = await import(`./$" + "{name}`);")).toHaveLength(1);
+    expect(found("const m = await import(`./fixed`);")).toEqual([]);
   });
 
   it("is found through a namespace import and a dynamic import", () => {
@@ -48,12 +50,6 @@ describe("a test file outside census/ that walks the tree", () => {
         'import { parseSource } from "../../scripts/lib/source-tree";\nimport type { filesUnder } from "../../scripts/lib/source-tree";\nimport { type filesMatching } from "../../scripts/lib/source-tree";',
       ),
     ).toEqual([]);
-  });
-
-  it("reads the waiver list as paths, past comments and blank lines", () => {
-    expect([
-      ...readWaivers("# why\n\nsrc/a.test.ts\n  src/b.test.ts  \n"),
-    ]).toEqual(["src/a.test.ts", "src/b.test.ts"]);
   });
 });
 
@@ -93,17 +89,8 @@ describe("a test file that writes its own walk", () => {
   });
 });
 
-describe("the waiver list", () => {
-  const listOf = (size: number) =>
-    new Set(Array.from({ length: size }, (_, at) => `src/w${at}.test.ts`));
-
-  it("fails when it grows past its pin, and asks for a lower pin when it shrinks", () => {
-    expect(waiverCount(listOf(WAIVED_FILES))).toEqual([]);
-    expect(waiverCount(listOf(WAIVED_FILES + 1))).toHaveLength(1);
-    expect(waiverCount(listOf(WAIVED_FILES - 1))).toHaveLength(1);
-  });
-
-  it("is read by the rule itself, which fails a stray it does not list", () => {
+describe("the no-stray-census rule", () => {
+  it("fails a stray through its own corpus and across", () => {
     const stray = join(srcDir, "features", "planted-stray.test.ts");
     expect(
       plantedFindings(rule, [
@@ -116,5 +103,48 @@ describe("the waiver list", () => {
     ).toContain(
       "src/features/planted-stray.test.ts: imports filesUnder from scripts/lib/source-tree.ts",
     );
+  });
+});
+
+describe("a helper module that walks the tree for a test", () => {
+  const helper = join(srcDir, "features", "plantedhelper.ts");
+  const test = join(srcDir, "features", "planted-helper.test.ts");
+  const run = (helperText: string, testText: string) =>
+    plantedFindings(rule, [
+      { path: helper, area: "src", text: helperText },
+      { path: test, area: "src", text: testText },
+    ]).filter((finding) => finding.startsWith("src/features/planted-helper"));
+  const walker =
+    'import { filesUnder } from "../../scripts/lib/source-tree";\n';
+
+  it("is found when the helper walks as it loads", () => {
+    expect(
+      run(
+        `${walker}export const FILES = filesUnder(".");\n`,
+        'import { FILES } from "./plantedhelper";\n',
+      ),
+    ).toEqual([
+      "src/features/planted-helper.test.ts: walks the tree through src/features/plantedhelper.ts calls filesUnder when it loads",
+    ]);
+  });
+
+  it("is found when the test calls a helper function that walks", () => {
+    expect(
+      run(
+        `${walker}export function files() {\n  return filesUnder(".");\n}\n`,
+        'import { files } from "./plantedhelper";\nfiles();\n',
+      ),
+    ).toEqual([
+      "src/features/planted-helper.test.ts: walks the tree through files() in src/features/plantedhelper.ts",
+    ]);
+  });
+
+  it("is not a helper whose walk the test never reaches", () => {
+    expect(
+      run(
+        `${walker}export function files() {\n  return filesUnder(".");\n}\nexport const pure = (n: number) => n + 1;\n`,
+        'import { pure } from "./plantedhelper";\npure(1);\n',
+      ),
+    ).toEqual([]);
   });
 });

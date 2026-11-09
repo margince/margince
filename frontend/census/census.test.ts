@@ -18,6 +18,7 @@ import {
   gitListedFiles,
   repoRoot,
   ruleFindings,
+  settles,
 } from "./tree";
 
 const rulesDir = join(dirname(fileURLToPath(import.meta.url)), "rules");
@@ -34,7 +35,7 @@ function isRule(value: unknown): value is CensusRule {
     typeof value.corpus === "function" &&
     "advice" in value &&
     typeof value.advice === "string" &&
-    ("visit" in value || "across" in value)
+    ("visit" in value || "across" in value || "settle" in value)
   );
 }
 
@@ -49,10 +50,27 @@ for (const name of ruleFiles) {
   rules.push(loaded);
 }
 
+// A settled rule's work starts with the tree and is awaited after every other
+// rule. So it runs beside them rather than inside one test's budget.
+const ordered = [
+  ...rules.filter((rule) => !settles(rule)),
+  ...rules.filter(settles),
+];
+
 describe("census", () => {
   let tree: CensusTree;
+  const pending = new Map<CensusRule, Promise<readonly string[]>>();
   beforeAll(() => {
     tree = buildTree();
+    // The shared typed program, built here so no one rule pays for it.
+    tree.checked().getTypeChecker();
+    for (const rule of rules.filter(settles)) {
+      const work = rule.settle(rule.corpus(tree), tree);
+      // Awaited in the rule's own case; this keeps an early failure from
+      // reading as an unhandled rejection before then.
+      work.catch(() => undefined);
+      pending.set(rule, work);
+    }
   });
 
   // A walk that skips a folder reads a smaller tree, and every rule passes.
@@ -67,12 +85,14 @@ describe("census", () => {
     expect(rules.map((rule) => `${rule.name}.census.ts`)).toEqual(ruleFiles);
   });
 
-  for (const rule of rules) {
-    it(rule.name, () => {
+  for (const rule of ordered) {
+    it(rule.name, async () => {
       const corpus = rule.corpus(tree);
       expect(corpus.length, `${rule.name} read no file`).toBeGreaterThan(0);
       expect(rule.floors?.(corpus, tree) ?? []).toEqual([]);
-      expect(ruleFindings(rule, corpus, tree), rule.advice).toEqual([]);
+      const found = await (pending.get(rule) ??
+        ruleFindings(rule, corpus, tree));
+      expect(found, rule.advice).toEqual([]);
     });
   }
 });

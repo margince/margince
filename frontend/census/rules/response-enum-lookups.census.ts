@@ -4,11 +4,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
-import { appCompilerOptions } from "../../scripts/lib/source-tree";
 import {
   type CensusFile,
   type CensusRule,
-  type CensusTree,
   frontendRoot,
   repoRoot,
 } from "../tree";
@@ -661,27 +659,6 @@ export const shipped = (file: CensusFile) =>
   !/fixture[^/]*$/.test(file.rel) &&
   !/(^|\/)src\/(api|testing)\//.test(file.rel);
 
-/** A checked program over the corpus, built from the trees the census parsed. */
-export function programOf(
-  corpus: readonly CensusFile[],
-  tree: CensusTree,
-): ts.Program {
-  const options = {
-    ...appCompilerOptions(frontendRoot),
-    noEmit: true,
-    incremental: false,
-  };
-  const host = ts.createCompilerHost(options, true);
-  const read = host.getSourceFile.bind(host);
-  host.getSourceFile = (name, version, onError, create) =>
-    tree.at(name)?.source ?? read(name, version, onError, create);
-  return ts.createProgram(
-    corpus.map((file) => file.path),
-    options,
-    host,
-  );
-}
-
 const waiverFile = join(
   frontendRoot,
   "census",
@@ -796,7 +773,7 @@ export const rule: CensusRule = {
   },
   across: (corpus, tree) => {
     const { sets } = responseEnums(readFileSync(contractPath, "utf8"));
-    const program = programOf(corpus, tree);
+    const program = tree.checked();
     const checker = program.getTypeChecker();
     const values = new ResponseValues(checker, sets);
     const findings = corpus.flatMap((file) => {

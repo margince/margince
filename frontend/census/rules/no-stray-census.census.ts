@@ -5,16 +5,16 @@
 // imports a tree walker parses the tree again in its own module graph.
 //
 // The import is matched in the syntax tree by the exported name, so an alias
-// counts. A walk the file writes itself counts too. census/stray-census-waivers.txt lists the files not moved yet. It
-// only shrinks: an entry that no longer imports a walker is a finding.
+// counts. A walk the file writes itself counts too, and so does a walk a
+// helper module does for it. The rule has no waiver list.
 
-import { readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import ts from "typescript";
-import { resolveRelative } from "../../scripts/lib/source-tree";
+import { isModuleOnDisk, resolveRelative } from "../../scripts/lib/source-tree";
 import {
   type CensusFile,
   type CensusRule,
+  type CensusTree,
   frontendRoot,
   scriptsDir,
   srcDir,
@@ -48,8 +48,6 @@ export const WALKERS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
   walker(lib("dialoglayout.ts"), "markupFiles", "sheetTexts"),
   walker(lib("import-reach.ts"), "productionModulesUnder"),
   walker(lib("bundle-reach.ts"), "reachedModules", "documentEntries"),
-  walker(lib("locale-catalogs.ts"), "localeCatalogs"),
-  walker(lib("rendered-inside.ts"), "renderedInside", "drawnElements"),
   walker(lib("story-files.ts"), "storyCensus"),
   walker(lib("essential-copy.ts"), "essentialKeys"),
   walker(
@@ -62,12 +60,13 @@ export const WALKERS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
     "readGraph",
     "shippedInTree",
   ),
-  walker(join(srcDir, "format", "zone-by-purpose.testkit.ts"), "sourceFiles"),
 ]);
 
 // Tests of a walker itself: each walks a temporary directory it plants, not
 // the tree, so it costs no parse of the tree.
 const WALKER_TESTS: ReadonlySet<string> = new Set([
+  "scripts/ext-imports.test.ts",
+  "scripts/feature-boundaries.test.ts",
   "scripts/lib/essential-copy.test.ts",
   "scripts/lib/import-reach.test.ts",
   "scripts/lib/source-tree.test.ts",
@@ -75,17 +74,6 @@ const WALKER_TESTS: ReadonlySet<string> = new Set([
 ]);
 
 const TEST_FILE = /\.test\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)$/;
-
-const waiverFile = join(frontendRoot, "census", "stray-census-waivers.txt");
-
-export function readWaivers(text: string): Set<string> {
-  return new Set(
-    text
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line !== "" && !line.startsWith("#")),
-  );
-}
 
 const shown = (module: string) =>
   relative(frontendRoot, module).split(sep).join("/");
@@ -127,11 +115,19 @@ export function strayImports(path: string, source: ts.SourceFile): string[] {
     if (
       ts.isCallExpression(node) &&
       node.expression.kind === ts.SyntaxKind.ImportKeyword &&
-      node.arguments[0] &&
-      ts.isStringLiteralLike(node.arguments[0])
+      node.arguments[0]
     ) {
-      const module = walkerAt(node.arguments[0].text);
-      if (module) found.push(`imports all of ${shown(module)}`);
+      const specifier = node.arguments[0];
+      if (!ts.isStringLiteralLike(specifier)) {
+        // A computed specifier can name any module, a walker included, and
+        // nothing short of running the test says which.
+        found.push(
+          `imports a module whose name is computed: import(${specifier.getText(source)})`,
+        );
+      } else {
+        const module = walkerAt(specifier.text);
+        if (module) found.push(`imports all of ${shown(module)}`);
+      }
     }
     ts.forEachChild(node, visit);
   };
@@ -238,37 +234,213 @@ export function ownWalks(source: ts.SourceFile): string[] {
   return found;
 }
 
-// The waiver list's length. It may only fall: a move deletes a line and lowers
-// this number in the same change.
-export const WAIVED_FILES = 97;
-
-export function waiverCount(
-  waived: ReadonlySet<string>,
-  pinned = WAIVED_FILES,
-): string[] {
-  if (waived.size > pinned) {
-    return [
-      `census/stray-census-waivers.txt lists ${waived.size} files and the pin is ${pinned}; the list only shrinks, so move the census instead`,
-    ];
-  }
-  if (waived.size < pinned) {
-    return [
-      `census/stray-census-waivers.txt lists ${waived.size} files; lower WAIVED_FILES in no-stray-census.census.ts to ${waived.size}`,
-    ];
-  }
-  return [];
-}
-
-const strays = (file: CensusFile) =>
+const walks = (file: CensusFile) =>
   file.source
     ? [...strayImports(file.path, file.source), ...ownWalks(file.source)]
     : [];
+
+type Imported = Readonly<{
+  path: string;
+  /** The imported file as the tree holds it, if it does. */
+  module: CensusFile | undefined;
+  /** Each imported name and the local name it binds; `*` for a namespace. */
+  names: Map<string, string>;
+}>;
+
+// Each module's imports, read once a run: helpers are shared by many tests.
+const importsRead = new WeakMap<CensusFile, Imported[]>();
+
+/** The non-type imports of one module by a relative specifier. */
+function localImports(file: CensusFile, tree: CensusTree): Imported[] {
+  const known = importsRead.get(file);
+  if (known) return known;
+  const found = readImports(file, tree);
+  importsRead.set(file, found);
+  return found;
+}
+
+function readImports(file: CensusFile, tree: CensusTree): Imported[] {
+  if (!file.source) return [];
+  const out: Imported[] = [];
+  for (const statement of file.source.statements) {
+    if (
+      !ts.isImportDeclaration(statement) ||
+      !ts.isStringLiteral(statement.moduleSpecifier) ||
+      statement.importClause?.phaseModifier === ts.SyntaxKind.TypeKeyword
+    ) {
+      continue;
+    }
+    const path = resolveRelative(
+      file.path,
+      statement.moduleSpecifier.text,
+      (candidate) =>
+        tree.at(candidate) !== undefined || isModuleOnDisk(candidate),
+    );
+    if (path === null) continue;
+    const names = new Map<string, string>();
+    const bindings = statement.importClause?.namedBindings;
+    if (bindings && ts.isNamedImports(bindings)) {
+      for (const element of bindings.elements) {
+        if (element.isTypeOnly) continue;
+        names.set(
+          (element.propertyName ?? element.name).text,
+          element.name.text,
+        );
+      }
+    }
+    if (bindings && ts.isNamespaceImport(bindings)) {
+      names.set("*", bindings.name.text);
+    }
+    out.push({ path, module: tree.at(path), names });
+  }
+  return out;
+}
+
+/** The local names a module binds to walking exports of a walker module. */
+function walkerNames(file: CensusFile, tree: CensusTree): Set<string> {
+  const names = new Set<string>();
+  for (const { path, names: bound } of localImports(file, tree)) {
+    const walking = WALKERS.get(path);
+    if (!walking) continue;
+    for (const [imported, local] of bound) {
+      if (imported === "*" || walking.has(imported)) names.add(local);
+    }
+  }
+  return names;
+}
+
+const enclosingFunction = (node: ts.Node): ts.Node | undefined =>
+  ts.findAncestor(node.parent, ts.isFunctionLike);
+
+/** The calls in a module to the names in `walkers`. Each comes with the
+ * function it sits in, or none for a call made when the module loads. */
+function walkerCalls(
+  source: ts.SourceFile,
+  walkers: ReadonlySet<string>,
+): { call: ts.CallExpression; inside: ts.Node | undefined }[] {
+  const out: { call: ts.CallExpression; inside: ts.Node | undefined }[] = [];
+  const visit = (node: ts.Node) => {
+    if (ts.isCallExpression(node)) {
+      const callee = ts.isPropertyAccessExpression(node.expression)
+        ? node.expression.expression
+        : node.expression;
+      if (ts.isIdentifier(callee) && walkers.has(callee.text)) {
+        out.push({ call: node, inside: enclosingFunction(node) });
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return out;
+}
+
+const exported = (node: ts.Node) =>
+  (ts.getCombinedModifierFlags(node as ts.Declaration) &
+    ts.ModifierFlags.Export) !==
+  0;
+
+/** The name a module exports a function under, if it does: an exported
+ * declaration, or an exported const that holds the function. */
+function exportedName(fn: ts.Node): string | undefined {
+  if (ts.isFunctionDeclaration(fn) && fn.name && exported(fn)) {
+    return fn.name.text;
+  }
+  const holder = fn.parent;
+  return ts.isVariableDeclaration(holder) &&
+    ts.isIdentifier(holder.name) &&
+    exported(holder)
+    ? holder.name.text
+    : undefined;
+}
+
+/** The exported functions of a module that call a walker in their body. */
+function walkingExports(calls: { inside: ts.Node | undefined }[]): Set<string> {
+  const names = new Set<string>();
+  for (const { inside } of calls) {
+    for (let at = inside; at; at = enclosingFunction(at)) {
+      const name = exportedName(at);
+      if (name) names.add(name);
+    }
+  }
+  return names;
+}
+
+// Each helper's walking exports, read once a run.
+const walkingRead = new WeakMap<CensusFile, Set<string>>();
+
+function exportsThatWalk(module: CensusFile, tree: CensusTree): Set<string> {
+  const known = walkingRead.get(module);
+  if (known) return known;
+  const walkers = walkerNames(module, tree);
+  const found =
+    walkers.size === 0 || !module.source
+      ? new Set<string>()
+      : walkingExports(walkerCalls(module.source, walkers));
+  walkingRead.set(module, found);
+  return found;
+}
+
+/**
+ * A non-test module a test imports that walks the tree for it. It walks when
+ * it loads, by a call to a walker outside any function or by importing a
+ * module that does. It also walks when the test imports one of its functions
+ * that calls a walker. A walker module itself counts only for the walking names a test
+ * imports, which `walks` reads.
+ */
+function helperWalks(
+  file: CensusFile,
+  tree: CensusTree,
+  known: Map<string, string | null>,
+): string[] {
+  const onLoad = (helper: CensusFile): string | null => {
+    const cached = known.get(helper.path);
+    if (cached !== undefined) return cached;
+    known.set(helper.path, null);
+    let found: string | null = null;
+    if (helper.source) {
+      const loading = walkerCalls(
+        helper.source,
+        walkerNames(helper, tree),
+      ).find(({ inside }) => inside === undefined);
+      if (loading) {
+        found = `${helper.rel} calls ${loading.call.expression.getText(helper.source)} when it loads`;
+      }
+    }
+    for (const { path, module } of localImports(helper, tree)) {
+      if (found) break;
+      if (!module || WALKERS.has(path) || TEST_FILE.test(path)) continue;
+      const deeper = onLoad(module);
+      if (deeper) found = `${helper.rel} imports ${deeper}`;
+    }
+    known.set(helper.path, found);
+    return found;
+  };
+  return localImports(file, tree).flatMap(({ path, module, names }) => {
+    if (!module || WALKERS.has(path) || TEST_FILE.test(path)) return [];
+    const loading = onLoad(module);
+    if (loading) return [`walks the tree through ${loading}`];
+    if (!module.source) return [];
+    const walking = exportsThatWalk(module, tree);
+    return [...names.keys()]
+      .filter((name) => walking.has(name))
+      .map((name) => `walks the tree through ${name}() in ${module.rel}`);
+  });
+}
+
+const strays = (
+  file: CensusFile,
+  tree: CensusTree,
+  known: Map<string, string | null>,
+) => [...walks(file), ...helperWalks(file, tree, known)];
 
 export const rule: CensusRule = {
   name: "no-stray-census",
   corpus: (tree) =>
     tree.files.filter(
-      (file) => TEST_FILE.test(file.path) && !WALKER_TESTS.has(file.rel),
+      (file) =>
+        TEST_FILE.test(file.path) &&
+        !WALKER_TESTS.has(file.rel) &&
+        !file.rel.startsWith("census/"),
     ),
   floors: (corpus, tree) => [
     ...(corpus.length > 500 ? [] : ["fewer than 500 test files were read"]),
@@ -276,22 +448,11 @@ export const rule: CensusRule = {
       .filter((rel) => !tree.at(join(frontendRoot, rel)))
       .map((rel) => `${rel} is listed as a walker's own test and is gone`),
   ],
-  across: (corpus) => {
-    const waived = readWaivers(readFileSync(waiverFile, "utf8"));
-    const byRel = new Map(corpus.map((file) => [file.rel, file]));
-    const stale = [...waived]
-      .filter((rel) => {
-        const file = byRel.get(rel);
-        return file === undefined || strays(file).length === 0;
-      })
-      .map(
-        (rel) =>
-          `${rel} is waived in census/stray-census-waivers.txt and walks no tree; delete its line`,
-      );
-    const found = corpus
-      .filter((file) => !waived.has(file.rel))
-      .flatMap((file) => strays(file).map((what) => `${file.rel}: ${what}`));
-    return [...waiverCount(waived), ...found, ...stale];
+  across: (corpus, tree) => {
+    const known = new Map<string, string | null>();
+    return corpus.flatMap((file) =>
+      strays(file, tree, known).map((what) => `${file.rel}: ${what}`),
+    );
   },
   advice:
     "A test file outside census/ walks the tree. Move the census into a rule in " +

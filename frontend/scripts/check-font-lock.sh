@@ -21,7 +21,7 @@
 #        style string, a constant) unless that string is itself a code rule.
 #
 # Fail-closed grep arm on top of the vitest suites (conformance.test.ts for the
-# families, design-system/mono.test.ts for mono) — same discipline even if the
+# families, census/rules/mono.census.ts for mono) — same discipline even if the
 # test tree regresses. check-font-lock.test.sh plants each shape and requires
 # a verdict about it.
 #

@@ -264,7 +264,7 @@ distorted value.
 ## Vocabulary
 
 One German word per concept, the same word on every screen. In the Never
-column a word in code format is retired by `copy-style-de.test.ts`: it fails
+column a word in code format is retired by `frontend/census/rules/copy-style-de.census.ts`: it fails
 as a whole word, case-sensitive, anywhere outside the keys the test names with
 a reason. A plain word is held by the reviewer, and only in the sense its row
 gives, because it is ordinary German in another sense.
@@ -352,7 +352,7 @@ committee role, as on the role picker).
 
 ## What the gate holds
 
-`frontend/src/i18n/copy-style-de.test.ts` checks every value of `de.ts` and of
+`frontend/census/rules/copy-style-de.census.ts` checks every value of `de.ts` and of
 every extension `de.json`, one test per rule, and lists each offender as its
 source file, key and value. Placeholders are removed before the word rules run.
 

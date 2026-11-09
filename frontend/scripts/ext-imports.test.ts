@@ -76,58 +76,21 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, relative } from "node:path";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   astSpecifiers,
   auditLayers,
-  extensionsDir,
   layersThatReadNothing,
   parse,
   publishedSubpaths,
-  repoRoot,
   surfacePkg,
   unmarked,
 } from "./ext-imports";
-import { extensionPackageLayers } from "./lib/source-tree";
 
-describe("a unit reaches the core only through the published surface", () => {
-  it("finds no import escaping the unit, the exports map, or its own package.json", () => {
-    expect(
-      publishedSubpaths(surfacePkg).length,
-      "frontend/package.json publishes no exports — the gate has no surface to hold a unit to",
-    ).toBeGreaterThan(0);
-
-    const { violations, layers, files } = auditLayers({
-      extensions: extensionsDir,
-      surface: surfacePkg,
-    });
-    // An empty scan means the gate is pointed at the wrong tree. A census that
-    // judged nothing certifies nothing, and this one is fail-closed by design.
-    expect(
-      layers.length,
-      "no extension frontend layer was found — this gate is dark",
-    ).toBeGreaterThan(0);
-    // And a file floor per layer (see layersThatReadNothing). Only a layer
-    // with a package.json holds source; one of copy alone has none to read.
-    const packageLayers = extensionPackageLayers(extensionsDir);
-    expect(
-      packageLayers.length,
-      "no extension frontend layer holds a package.json — the floor is dark",
-    ).toBeGreaterThan(0);
-    expect(
-      layersThatReadNothing(packageLayers, files).map((l) =>
-        relative(repoRoot, l),
-      ),
-      "these layers were found but no file inside them was read",
-    ).toEqual([]);
-    expect(violations).toEqual([]);
-  });
-});
-
-// The half that makes the census above mean anything. Every case here is one
-// the shell gate's own suite planted, plus the ones its regex could not have
-// been asked.
+// The half that makes the census in census/rules/ext-imports.census.ts mean
+// anything. Every case here is one the shell gate's own suite planted, plus
+// the ones its regex could not have been asked.
 describe("the extension-import detector sees what it claims to", () => {
   // A synthetic unit, because the real ones are supposed to pass.
   function scaffold(files: Record<string, string>, manifest?: string): string {

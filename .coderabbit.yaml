@@ -114,7 +114,7 @@ reviews:
         - Inclusive plurals (Nutzende, Mitarbeitende) and no gendered
           singular.
         - The length ceilings, a compound counting as one word.
-        Do not flag what frontend/src/i18n/copy-style-de.test.ts and
+        Do not flag what frontend/census/rules/copy-style-de.census.ts and
         address-register.test.ts already enforce (long dashes, quotes,
         ellipsis, double spaces, exclamation marks, "bitte", abbreviations,
         contractions, percent spacing, gender marks, ich, wir, retired words,
@@ -135,7 +135,7 @@ reviews:
           English.
         - The Vocabulary table: the Vietnamese word for each concept.
         - The length ceilings.
-        Do not flag what frontend/src/i18n/copy-style-vi.test.ts already
+        Do not flag what frontend/census/rules/copy-style-vi.census.ts already
         enforces (NFC, kiểu cũ tone marks with no kiểu-mới form, dashes,
         quotes, ellipsis, exclamation marks, double spaces, abbreviations,
         plural arms, tôi, chúng tôi, chúng ta, mình, quý vị, quý khách or vui
