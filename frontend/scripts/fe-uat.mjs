@@ -1,10 +1,3 @@
-// Change-scoped Storybook render + capture UAT lane. For frontend-only diffs:
-// renders the CHANGED component's stories in isolation and screenshots them —
-// no live stack, no DB. It is a GATE: it fails on a render error, on a changed
-// component that has no story, and on a changed story the build does not
-// register — and writes a machine-readable manifest a UAT runner can consume.
-// Built for this repo's plain frontend/.
-//
 // Usage: node frontend/scripts/fe-uat.mjs [--allow-missing | --all-stories]
 //   --allow-missing  do not fail when a changed component has no story yet
 //   --all-stories    render every story the build registers, whatever the diff
@@ -314,9 +307,15 @@ async function captureStory(page, port, story) {
   await page.waitForTimeout(250);
   const png = join(outDir, `${story.id}.png`);
   await page.screenshot({ path: png });
+  const expectedTheme = await page.evaluate(
+    (requested) =>
+      globalThis.__STORYBOOK_PREVIEW__?.currentRender?.story?.storyGlobals
+        ?.theme ?? requested,
+    theme,
+  );
   const drawnTheme = await page.getAttribute("html", "data-theme");
-  if (drawnTheme !== theme) {
-    errors.push(`theme is ${drawnTheme}, expected ${theme}`);
+  if (drawnTheme !== expectedTheme) {
+    errors.push(`theme is ${drawnTheme}, expected ${expectedTheme}`);
   }
   const pass = rendered && errors.length === 0;
   console.log(pass ? `✓ ${story.id}` : `✗ ${story.id} — ${errors.join("; ")}`);
@@ -325,6 +324,7 @@ async function captureStory(page, port, story) {
     pass,
     png: relative(repoRoot, png),
     theme: drawnTheme,
+    expectedTheme,
     errors,
   };
 }
