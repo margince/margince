@@ -122,7 +122,8 @@ export function useLeadCompanyName(lead: Lead): string | null {
 // linked company's own name is still being read, including a refetch behind a
 // cached "no name". A place that SAVES the name waits on it, because the typed
 // name standing in may be the stale one. A read that failed has settled: the
-// typed name is then the best there will be.
+// typed name is then the best there will be. A paused read has not: it resumes
+// when the connection does, and nothing can be saved without one anyway.
 export function useLeadCompanyNameReading(lead: Lead): {
   name: string | null;
   settling: boolean;

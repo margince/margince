@@ -311,7 +311,7 @@ function QualificationForm({
     { selectedDeal, withDeal, invalidSelection },
     preview,
     { amountInvalid, amountWaitsForCurrency },
-    company.settling && !dealName.trim(),
+    { nameSettling: company.settling && !dealName.trim() },
   );
   const name = leadIdentityName(lead);
 

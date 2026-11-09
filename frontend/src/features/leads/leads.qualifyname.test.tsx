@@ -22,10 +22,8 @@ afterEach(() => {
   localStorage.clear();
 });
 
-// A new deal is named after the lead's company. While the linked company's own
-// name is still being read, the typed name stands in, and it may be the stale
-// one. Confirming waits for the read, so the stale name is never saved.
-it("waits for the linked company's own name before opening a deal named after it", async () => {
+// The dialog under a held company-name read. `body` is what the promotion sent.
+function heldNameDialog() {
   const user = steppedClock();
   vi.setSystemTime(new Date("2026-10-05T12:00:00Z"));
   let releaseName: () => void = () => {};
@@ -61,7 +59,14 @@ it("waits for the linked company's own name before opening a deal named after it
     />,
     new QueryClient({ defaultOptions: { queries: { retry: false } } }),
   );
+  return { user, releaseName: () => releaseName(), body: () => body };
+}
 
+// A new deal is named after the lead's company. While the linked company's own
+// name is still being read, the typed name stands in, and it may be the stale
+// one. Confirming waits for the read, so the stale name is never saved.
+it("waits for the linked company's own name before opening a deal named after it", async () => {
+  const { user, releaseName, body } = heldNameDialog();
   await user.click(
     await screen.findByRole("radio", { name: "Open a new deal" }),
   );
@@ -72,8 +77,23 @@ it("waits for the linked company's own name before opening a deal named after it
   await waitFor(() => expect(confirm).toBeEnabled());
   await user.click(confirm);
   await waitFor(() =>
-    expect(body).toMatchObject({
+    expect(body()).toMatchObject({
       deal: { name: expect.stringContaining("Nordwind Holding SE") },
     }),
+  );
+});
+
+// A deal name the reader typed is not the company's, so nothing waits on it.
+it("does not wait for the company's name when the deal is named by hand", async () => {
+  const { user, body } = heldNameDialog();
+  await user.click(
+    await screen.findByRole("radio", { name: "Open a new deal" }),
+  );
+  await user.type(screen.getByLabelText("Deal name"), "Fleet renewal");
+  const confirm = screen.getByRole("button", { name: "Qualify and open deal" });
+  expect(confirm).toBeEnabled();
+  await user.click(confirm);
+  await waitFor(() =>
+    expect(body()).toMatchObject({ deal: { name: "Fleet renewal" } }),
   );
 });
