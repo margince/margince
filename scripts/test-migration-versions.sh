@@ -185,14 +185,30 @@ renumbers_one() {
 }
 
 # declare_renumber <dir> <line> — one line of backend/migrations/renumbered.txt.
+# The gate reads the first four columns; a Go test holds the digest in the
+# fifth, so a placeholder stands in for it here.
 declare_renumber() {
-  printf '%s\n' "$2" >> "$1/backend/migrations/renumbered.txt"
+  printf '%s olddigest\n' "$2" >> "$1/backend/migrations/renumbered.txt"
 }
 
 # The same renumber, declared: `migrate up` moves the ledger row forward.
 renumbers_one_declared() {
   renumbers_one "$1" || return 1
   declare_renumber "$1" "core 0002 1799999999 beta"
+}
+
+# The same renumber, declared, but the SQL changed on the way: the declaration
+# claims bytes the new file does not have.
+renumbers_one_changed_declared() {
+  renumbers_one_declared "$1" || return 1
+  printf -- '-- probe, edited\n' > "$1/backend/migrations/core/1799999999_beta.up.sql"
+}
+
+# A second copy of a shipped migration under a new version, the old one kept:
+# a fresh database runs its SQL twice.
+keeps_old_and_adds_same_name() {
+  printf -- '-- probe\n' > "$1/backend/migrations/core/1799999999_beta.up.sql"
+  printf -- '-- probe\n' > "$1/backend/migrations/core/1799999999_beta.down.sql"
 }
 
 # The same renumber with a declaration for some other pair: only the exact
@@ -436,7 +452,11 @@ expect "an undeclared renumber with identical SQL names the missing declaration"
 expect "a declared renumber passes" \
   0 plain    renumbers_one_declared "OK: check-migration-versions"
 expect "a renumber declared under another pair fails" \
-  1 plain    renumbers_one_declared_elsewhere "add the line 'core 0002 1799999999 beta'"
+  1 plain    renumbers_one_declared_elsewhere "'core 0002 1799999999 beta <old digest>'"
+expect "a declared renumber whose SQL changed fails" \
+  1 plain    renumbers_one_changed_declared "but its SQL changed since base"
+expect "a branch keeping a migration and adding it under a second version fails" \
+  1 plain    keeps_old_and_adds_same_name "carries 'beta' twice"
 expect "a repair that keeps one collision claimant is not read as vanished" \
   0 plain    repairs_a_base_collision "repairing, not colliding"
 expect "emptying a namespace still reports its vanished versions" \
@@ -500,7 +520,7 @@ expect "a branch cut from develop stays judged against develop" \
 # So the total is also pinned. A literal here is not duplication of the case
 # list: it is the one fact the case list cannot state about itself, which is how
 # many of it there should be.
-expected_cases=29
+expected_cases=31
 
 declared_cases="$(grep -c '^expect "' "$SELF")"
 if [[ "$ran" -ne "$declared_cases" ]]; then
