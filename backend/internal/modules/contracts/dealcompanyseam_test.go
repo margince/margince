@@ -11,7 +11,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // The refusal tells the user which contracts block, the rule, and what clears
@@ -37,17 +36,30 @@ func TestTheDealCompanyRefusalNamesTheContractsAndWhatToDo(t *testing.T) {
 // A long list is cut and says so, and the whole sentence fits the transport's
 // ceiling, so no name is cut off by it.
 func TestALongListOfBlockingContractsIsCutAndFitsTheFaultText(t *testing.T) {
-	long := strings.Repeat("Master services agreement ", 4)
-	refusal := &DealContractsCrossCompanyError{Count: 9}
-	for range namedInRefusal {
-		refusal.Named = append(refusal.Named, textcut.RunesMarked(long, nameRunes, "…"))
-	}
-	message := refusal.Error()
-	if !strings.Contains(message, "and 6 more") {
-		t.Errorf("a cut list reads as complete: %q", message)
-	}
-	if utf8.RuneCountInString(message) > httperr.MaxFaultText {
-		t.Errorf("the message is %d runes, over the %d the transport keeps", utf8.RuneCountInString(message), httperr.MaxFaultText)
+	for name, long := range map[string]string{
+		"ascii":     strings.Repeat("Master services agreement ", 4),
+		"multibyte": strings.Repeat("契約書", 40),
+		"four-byte": strings.Repeat("𝔘", 60),
+	} {
+		t.Run(name, func(t *testing.T) {
+			refusal := &DealContractsCrossCompanyError{Count: 999}
+			for range namedInRefusal {
+				refusal.Named = append(refusal.Named, refusalName(long))
+			}
+			message := refusal.Error()
+			if !strings.Contains(message, "and 996 more") {
+				t.Errorf("a cut list reads as complete: %q", message)
+			}
+			if len(message) > httperr.MaxFaultText {
+				t.Errorf("the message is %d bytes, over the %d the transport keeps", len(message), httperr.MaxFaultText)
+			}
+			if !strings.HasSuffix(message, "before changing the company.") {
+				t.Errorf("the instructions were cut off: %q", message)
+			}
+			if !utf8.ValidString(message) {
+				t.Errorf("a name was cut inside a character: %q", message)
+			}
+		})
 	}
 }
 
