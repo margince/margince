@@ -62,16 +62,18 @@ export function useDraftRestore(input: {
   return useCallback(
     (saved: SavedDraftFields) => {
       settle();
+      const hasFiling = saved.editorState?.filing !== undefined;
+      const filing = groundedFiling(
+        saved.editorState?.filing?.map((ground) => ({
+          type: ground.anchor_type,
+          id: ground.anchor_id,
+        })) ?? saved.grounding,
+      );
+      if (hasFiling || filing.dealId) setDealId(filing.dealId);
+      if (hasFiling || filing.projectId) setProjectId(filing.projectId);
       restoreSaved(saved);
       setFiles(() => saved.files);
       adoptSavedSubject(saved.subject);
-      const filing = groundedFiling(saved.grounding);
-      if (filing.dealId) {
-        setDealId(filing.dealId);
-      }
-      if (filing.projectId) {
-        setProjectId(filing.projectId);
-      }
     },
     [
       settle,

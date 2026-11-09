@@ -146,6 +146,8 @@ Margince keeps a message you have not finished as a draft while you type. The
 foot says **Draft saved**, and closing the window keeps it too. It does not send
 anything. **Delete draft** deletes the message.
 
+A saved draft also keeps the deal and project you chose. Margince checks that you can still use them when you open the draft again.
+
 ### The four rewrites
 
 The AI draft offers four rewrites on its line, beside the note that AI

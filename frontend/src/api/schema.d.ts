@@ -41455,6 +41455,8 @@ export interface components {
         };
         /** @description The author's drafting purpose and presentation state, restored with the words. These client-supplied values grant no send permission and do not attest model execution. */
         MailDraftEditorState: {
+            /** @description The deal and project selected in the composer. An empty list clears the selection. Omission keeps the older draft's grounding as the restore default. These are filing choices, not evidence of a request or permission to send. The send checks each link. */
+            filing?: components["schemas"]["MailDraftGround"][];
             /** @description Server binding to the saved words, used only to retire stale editor state. */
             readonly content_fingerprint?: string;
             intent?: string;
