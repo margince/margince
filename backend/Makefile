@@ -117,7 +117,7 @@ TEST_EXEC_FLAGS = $(if $(TEST_EXEC),-count=1 -exec $(TEST_EXEC))
 
 .DEFAULT_GOAL := help
 
-.PHONY: perfdoc config-gen help check check-static build mod-download testtest-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint lint-base lint-strict lint-modules lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
+.PHONY: perfdoc config-gen help check check-static build fetch-test-deps test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint lint-base lint-strict lint-modules lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
 
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -227,10 +227,15 @@ test-extensions: composition ## Every enabled extension's own test lane (each un
 build: composition ## Compile every package (composed workspace)
 	$(GOWORK_COMPOSED) $(GO) build ./...
 
-# `build` fetches only what the product imports. A module that only a test
-# imports, tagged or not, would otherwise download on the first run that needs it.
-mod-download: composition ## Download every module the composed workspace builds or tests with
-	$(GOWORK_COMPOSED) $(GO) mod download
+# fetch-test-deps resolves what only a TAGGED TEST imports, which `build` never
+# reaches: `go build ./...` reads no `_test.go`, so a module imported from one
+# is still missing after it.
+#
+# The clock-drift lane is why this is a target. It downloads at the real date
+# because a runner 200 days ahead verifies no certificate, and a fetch there
+# fails as `[setup failed]` on a package that reads as a test finding.
+fetch-test-deps: composition ## Download what the tagged suites import, nothing else
+	$(GOWORK_COMPOSED) $(GO) list -tags=integration -deps -test ./... > /dev/null
 
 vet: composition ## Run go vet over every package, untagged (composed workspace)
 	# UNTAGGED, and only untagged. The tagged lanes are vetted by `make lint`:
