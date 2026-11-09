@@ -4,12 +4,12 @@ import {
   acquisitionFilterOptions,
 } from "../../../lib/acquisitionsources.queries";
 import { WIN_PROBABILITY_DIAL } from "../../../lib/dealranges";
-import type { LinkType } from "../../../lib/recordlinks.queries";
 import {
   bandDialValue,
   WIN_PROBABILITY_BANDS,
 } from "../../../lib/winprobabilitybands";
 import { DEAL_STATUS_LABEL, DEAL_STATUS_VALUES } from "../dealdials";
+import type { LinkType } from "../recordlinks.queries";
 import { MOTION_OPTIONS, PRIORITY_OPTIONS } from "./dealcommercialfields";
 
 // The surface's own narrowing chips, beside the stage and company ones

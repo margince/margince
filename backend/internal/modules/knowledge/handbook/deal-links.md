@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/deals/deal360/deallinkscard.tsx frontend/src/lib/recordlinks.queries.ts backend/internal/modules/recordlinks/write.go backend/internal/modules/recordlinks/read.go -->
+<!-- describes: frontend/src/features/deals/deal360/deallinkscard.tsx frontend/src/features/deals/recordlinks.queries.ts backend/internal/modules/recordlinks/write.go backend/internal/modules/recordlinks/read.go -->
 # Links between records
 
 A link says how two records belong together. It can tie a deal that follows up another deal, a renewal of an

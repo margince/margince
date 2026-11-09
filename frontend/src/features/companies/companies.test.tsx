@@ -139,9 +139,8 @@ describe("CompaniesScreen — what an account is to us", () => {
     expect(screen.getByText("Supplier")).toBeTruthy();
     expect(screen.queryByText("ext:acme:reseller")).toBeNull();
 
-    await user.click(await screen.findByRole("button", { name: "Filter" }));
-    await user.click(screen.getByRole("button", { name: "Relationship type" }));
-    await user.click(screen.getByRole("radio", { name: "Reseller" }));
+    const values = await openFilterValues(user, "Relationship type");
+    await user.click(within(values).getByRole("radio", { name: "Reseller" }));
     await waitFor(() =>
       expect(
         urls.some(

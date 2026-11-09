@@ -38,7 +38,6 @@ import {
 } from "../../lib/deals.queries";
 import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
 import { defaultPipelineOf } from "../../lib/pipelines.queries";
-import { useLinkTypes } from "../../lib/recordlinks.queries";
 import { heldRefusedDials } from "../../lib/refusedfilters";
 import { useMe } from "../../lib/session";
 import { useInstallationSettings } from "../../lib/uploadlimit";
@@ -49,6 +48,7 @@ import { DealBulkBar } from "./dealbulk";
 import { admittedDealFilters, useAppliedCompanyName } from "./dealdials";
 import type { Deal, Pipeline, Stage } from "./deals";
 import { dealRangeChips } from "./deals.rangefilters";
+import { useLinkTypes } from "./recordlinks.queries";
 
 // Bespoke selects for the filters whose option labels are runtime strings
 // (pipeline/stage/company names). A chip's option label is a MessageKey, so

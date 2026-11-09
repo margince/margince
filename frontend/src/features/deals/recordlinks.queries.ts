@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../api/client";
-import type { components } from "../api/schema";
-import { throwProblem } from "./problem";
+import { api } from "../../api/client";
+import type { components } from "../../api/schema";
+import { throwProblem } from "../../lib/problem";
 
 export type RecordLink = components["schemas"]["RecordLink"];
 export type LinkType = components["schemas"]["LinkType"];

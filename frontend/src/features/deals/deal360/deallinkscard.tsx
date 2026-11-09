@@ -14,6 +14,8 @@ import { Select } from "../../../design-system/select";
 import { useT } from "../../../i18n";
 import { useCanWriteRecord } from "../../../lib/capability";
 import { recordRoute } from "../../../lib/entity";
+import { useRecordTargets } from "../../../lib/recordtargets";
+import { routeHash } from "../../../lib/router";
 import {
   type LinkedRecordType,
   type LinkType,
@@ -22,9 +24,7 @@ import {
   useLinkTypes,
   useRecordLinks,
   useRecordLinkWrites,
-} from "../../../lib/recordlinks.queries";
-import { useRecordTargets } from "../../../lib/recordtargets";
-import { routeHash } from "../../../lib/router";
+} from "../recordlinks.queries";
 
 const LINK_ENDS: readonly string[] = ["deal", "company", "contact"];
 
