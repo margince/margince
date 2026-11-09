@@ -55,9 +55,9 @@ func TestAnUnreachableCounterRefusesTheAgentRatherThanAdmittingIt(t *testing.T) 
 		if !reading.Exceeded {
 			t.Errorf("a meter with no counter admitted %s; the bound is removable by stopping Redis", c)
 		}
-		if reading.Limit != meter.window(t.Context()).limits.of(c) {
+		if reading.Limit != meter.window(t.Context()).limits.Of(c) {
 			t.Errorf("the %s refusal reported limit %d, not the configured %d — a caller cannot act on a limit that is not the real one",
-				c, reading.Limit, meter.window(t.Context()).limits.of(c))
+				c, reading.Limit, meter.window(t.Context()).limits.Of(c))
 		}
 		if reading.Counter != c {
 			t.Errorf("a reading of %s named itself %s; a refusal that misnames its quota cannot be acted on", c, reading.Counter)
@@ -210,8 +210,8 @@ func TestRebindingReachesEveryHolderOfTheSharedPointer(t *testing.T) {
 
 	shared.RebindFrom(New(nil, Limits{Writes: 50}, time.Hour))
 
-	if held.window(t.Context()).limits.of(Writes) != 50 {
-		t.Errorf("a holder that took the pointer before the rebind still reads limit %d, not the rebound 50", held.window(t.Context()).limits.of(Writes))
+	if held.window(t.Context()).limits.Of(Writes) != 50 {
+		t.Errorf("a holder that took the pointer before the rebind still reads limit %d, not the rebound 50", held.window(t.Context()).limits.Of(Writes))
 	}
 }
 

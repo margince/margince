@@ -176,3 +176,9 @@ func (h Handlers) WithListCalendar(calendar ListCalendar) Handlers {
 	h.listCalendar = calendar
 	return h
 }
+
+// WithIdentityProver binds mailbox ownership checks to the HTTP identity-binding path.
+func (h Handlers) WithIdentityProver(prover AddressProver) Handlers {
+	h.store = h.store.WithIdentityProver(prover)
+	return h
+}

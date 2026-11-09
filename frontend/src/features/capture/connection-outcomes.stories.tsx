@@ -100,7 +100,7 @@ const NOTHING: Lists = { senders: 0, waiting: 0, held: 0, reach: 0 };
 const SOME: Lists = { senders: 24, waiting: 2, held: 3, reach: 1 };
 
 const meta = {
-  title: "Settings/You/Capture activity/Connection outcomes",
+  title: "Settings/You/Connections/Connection outcomes",
   component: ConnectionOutcomesCard,
 } satisfies Meta<typeof ConnectionOutcomesCard>;
 export default meta;
@@ -134,7 +134,9 @@ export const OneListFailed: Story = {
     const canvas = within(canvasElement);
     await expect(await canvas.findByText("Could not load")).toBeVisible();
     await expect(
-      canvas.getByRole("button", { name: "Retry Held threads" }),
+      canvas.getByRole("button", {
+        name: "Retry Mail not shared with the team",
+      }),
     ).toBeVisible();
   },
 };

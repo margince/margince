@@ -360,10 +360,9 @@ domains are skipped.
 is still below, the row becomes `unsure`. A small score never makes a row `noise`, which is the only
 verdict that hides anything. It costs one more question, never a wrong delete.
 
-**`unsure` goes to a human.** A proposal shows up in the review queue and points at the *message*,
-since the sender has no record yet. **Accept** creates the contact. **Reject** does nothing at all:
-the mail stays where it is. Proposals can only add, so an old proposal, or one rejected in error,
-can never delete anything.
+**`unsure` needs no review.** The sender decision can be found by search under Capture activity.
+The owner may correct it there. The sweep ends older automatic offers instead of raising another task.
+Reserved domains and senders already linked to leads close without a proposal.
 
 **Noise: hide first, delete later.** The engine hides the mail at once. After the undo window it erases
 the content and keeps the activity row. A model verdict alone only hides: the content is erased only
@@ -374,17 +373,13 @@ inbound mail that links to no contact, except a contact who was only copied on i
 from an address we have never written to, which no live contact holds as two-way mail. An address that a channel connector
 only stands behind does not keep it safe.
 
-**What runs each hour, in order:**
+One worker settles a workspace before moving to the next. It judges due senders, applies owner decisions,
+and publishes answered contacts before sharing their mail. It then retires automatic review offers
+and applies the retention windows. See `counterpartyVerdictWorker.judgeWorkspace` in
+`backend/internal/compose/capturejobs.go` for the stage order.
 
-1. **AI**: decide about senders whose turn has come. Skipped if no model is set up.
-2. End rows that used up their retries, and end proposals a human rejected.
-3. Create review proposals for `unsure` rows.
-4. End proposals that stayed open too long.
-5. Hide new mail from senders already marked as noise.
-6. Erase the content of noise whose undo window has passed.
-
-Steps 2–6 run even with AI switched off. Turning off AI does not mean keeping the content of messages
-the workspace already decided were noise.
+Owner decisions, address rules and retention still run with AI switched off.
+Turning off AI does not mean keeping messages the workspace already marked as noise.
 
 ### Mail that reached an address before we learned it was yours
 
@@ -455,10 +450,10 @@ path that later deletes content, and only after the undo window.
 |---|---|---|
 | `PendingDeferralCap` | 500 | Most open questions per workspace. Past this, messages still come in but get no decision |
 | `PendingDeferralDomainCap` | 50 | Most open questions from one sender domain, so one domain cannot use up all 500 |
-| `verdictConfidenceFloor` | 0.7 | Below this: ask again, then give up and ask a human |
+| `verdictConfidenceFloor` | 0.7 | Below this: ask again, then keep the decision as `unsure` |
 | `PendingMaxAttempts` | 2 | Verdict retries before the row becomes `unsure` |
 | `NoiseUndoWindow` | 7 days | How long mail the engine hides can still come back before it is erased |
-| `UnsureReviewWindow` | 30 days | How long a review proposal stands |
+| `UnsureReviewWindow` | 30 days | How long an `unsure` sender uses its ledger slot |
 | `noiseVerdictReach` | 14 days | How far back a `noise` decision applies to later mail |
 | Claim time / claim size / cap | `45m` / 8 / 200 | How long a claim holds, rows per claim, senders decided per run |
 | Message size limits | section 1 | What one message may store |
@@ -468,12 +463,12 @@ path that later deletes content, and only after the undo window.
 When either cap is reached, a `capture_deferral_capped` log row records **which** one. So "the queue
 is full" and "one domain is filling it" are never read as the same thing.
 
-## 7. Where to see it: Capture activity
+## 7. Where to see it: Connection activity
 
-Every decision above can be read, per user, in **Settings → Capture activity**.
+Every decision above can be read, per user, in **Settings → Connections → Activity**.
 
 The tab holds two things. First, **Keep out of capture**: the addresses and domains whose mail never
-comes into the CRM. It lives here instead of under the admin's Capture settings. Blocking a sender is
+comes into the CRM. It lives here instead of under the admin's **Mail capture** settings. Blocking a sender is
 how the reader answers what this page reports. It is no setting for the whole
 installation.
 
@@ -538,7 +533,7 @@ Say `acme.com` is a registered own domain, and the client is `dana@client.io`.
 | Someone new writes for the first time | Message kept, **T4**: no contact until the verdict engine answers |
 | …verdict `contact` | Contact created, owned by the user whose connection captured it. Domain queued for `site_triage` |
 | …verdict `spam` | The engine hides the mail now, domain marked as not a company, content erased after 7 days |
-| …score below 0.7 twice | `unsure`: a proposal goes to the review queue. Rejecting it changes nothing |
+| …score below 0.7 twice | `unsure`: available for an optional change; no review task is raised |
 | A DocuSign mail comes in | Message kept, **T2**: no contact, and `eu.docusign.net` never becomes a company |
 | A newsletter from someone you have emailed | **T1 keeps them.** A known contact is not a mail system |
 | A first-time sender at `gmail.com` | **T3**: no company. No contact until the verdict engine answers |
@@ -587,7 +582,7 @@ has a right to.
 | Creating or taking over the human behind a channel account | `backend/internal/modules/contacts/ensurechannel.go`, `ensurechanneladopt.go` |
 | Address as identity against address as two-way mail | `contact_email.from_correspondence`, created in `backend/migrations/core/0001_baseline.up.sql` and carried to its current table by `1789170001_the_record_is_called_a_contact.up.sql` |
 | The ledger of decisions and its caps | `backend/internal/modules/capture/pending.go`, `pendingcap.go` |
-| Review queue and sweeps | `backend/internal/modules/capture/pendingreview.go`, `pendingsweeps.go` |
+| Ledger retention and sweeps | `backend/internal/modules/capture/pendingreview.go`, `pendingsweeps.go` |
 | Own domains, personal mail list, settings | `owndomainstore.go`, `freemaildomain.go`, `baselinelist.go`, `settings.go` |
 | T2 registry and its config keys | `capture/transactional.go`, `compose/capturesettings.go` |
 | Verdict engine, prompt, sweeps, accept | `backend/internal/compose/captureverdict{,ask,sweeps,accept}.go` |

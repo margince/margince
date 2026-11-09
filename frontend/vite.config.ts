@@ -11,8 +11,9 @@ import {
   preloadEntries,
 } from "./scripts/vite-entry-chunks.ts";
 import { serveMcpApps } from "./scripts/vite-inline-views.ts";
-import { materialSymbolsLicense } from "./scripts/vite-licenses.ts";
+import { thirdPartyNotices } from "./scripts/vite-licenses.ts";
 import { pwa } from "./scripts/vite-pwa.ts";
+import { CostSequencer, compilerTests } from "./scripts/vitest-shards.ts";
 import { TEST_TIMEOUT_MS } from "./vitest.budget.ts";
 
 // The composition alias — the runtime half of the two-lane type story whose
@@ -100,6 +101,11 @@ const analyticsPreparation = entryChunks(
 );
 const analytics = entryChunks("analytics", entries.analytics);
 
+// Classifying the suite reads every test file, so only a test run pays for it.
+const sourceScans = process.env.VITEST ? await compilerTests(frontendRoot) : [];
+// census/ is its own lane, `make fe-census`: one parse serves every rule.
+const testExclude = ["**/node_modules/**", "e2e/**", "census/**"];
+
 export default defineConfig({
   build: {
     rolldownOptions: {
@@ -140,7 +146,7 @@ export default defineConfig({
     // The Material files say 48px; without dimensions the glyph's `size` prop decides.
     svgr({ svgrOptions: { dimensions: false } }),
     serveMcpApps(),
-    materialSymbolsLicense(),
+    thirdPartyNotices(),
     pwa({ release }),
   ],
   // The release this bundle was built from, compiled IN.
@@ -360,10 +366,25 @@ export default defineConfig({
     // The 10s default sits under it: one screen import on a loaded suite ran
     // past it. A hook doing a test's work earns a test's ceiling.
     hookTimeout: TEST_TIMEOUT_MS,
+    // Shards by expected cost and runs the costliest files first; see the file.
+    sequence: { sequencer: CostSequencer },
     // Rebinds jsdom's Web Storage over the Node ≥23 global stub — see the file.
     setupFiles: ["./vitest.setup.ts"],
     // Playwright owns e2e/ — vitest must not collect its specs
-    exclude: ["**/node_modules/**", "e2e/**"],
+    exclude: testExclude,
+    // The files that load the TypeScript compiler run unisolated. A worker then
+    // loads the compiler and fills the scripts/lib parse caches once, not per
+    // file. Every other file keeps its own module graph.
+    projects: [
+      {
+        extends: true,
+        test: { name: "unit", exclude: [...testExclude, ...sourceScans] },
+      },
+      {
+        extends: true,
+        test: { name: "source-scan", include: sourceScans, isolate: false },
+      },
+    ],
     // The lcov report is written for ONE reader, the SonarCloud scanner, and
     // the scanner resolves an `SF:` path against ITS base directory — the repo
     // root. Vitest's root is frontend/, so the default report says

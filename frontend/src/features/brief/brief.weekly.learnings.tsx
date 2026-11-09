@@ -6,11 +6,13 @@ import { Badge } from "../../design-system/atoms";
 import { PanelBody, PanelRow } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import type { WeeklyReview } from "./brief.queries";
 
 import "./brief.weekly.css";
 
-// What the week taught, as a chapter of the report, which names it.
+// What the week taught, as a chapter of the report, which names it. A week
+// that taught nothing, or that nobody read, has no chapter.
 //
 // EVERY LEARNING SHOWS WHAT IT RESTS ON. The narrative above this describes a
 // week the reader can already see; a learning is a claim about cause that they
@@ -35,16 +37,9 @@ export function LearningsPanel({
   learnings,
 }: Readonly<{ learnings: Learnings | undefined }>) {
   const t = useT();
-  // A review written before this lane existed carries nothing at all. Drawing
-  // an empty panel would state a verdict about a week nobody looked at.
-  if (!learnings) return null;
-
-  if (learnings.items.length === 0)
-    return (
-      <PanelBody>
-        <EmptyLearnings state={learnings.state} />
-      </PanelBody>
-    );
+  // A week with no learning draws no chapter: an empty one would read as a
+  // lesson the week did not teach.
+  if (!learnings?.items.length) return null;
   return (
     <>
       {learnings.items.map((item) => (
@@ -62,29 +57,12 @@ export function LearningsPanel({
   );
 }
 
-// NOBODY LOOKED and FOUND NOTHING are different weeks.
-//
-// The state column exists for exactly this sentence. A rep whose lane was
-// unbound, whose budget ran out or whose provider was down has not been told
-// their week held no lesson — nothing has read it — and saying otherwise is a
-// claim the product has not earned.
-function EmptyLearnings({ state }: Readonly<{ state: Learnings["state"] }>) {
-  const t = useT();
-  return (
-    <p className="weekly-learnings-empty">
-      {state === "not_run"
-        ? t("brief.weekly.learnings.notRun")
-        : t("brief.weekly.learnings.insufficient")}
-    </p>
-  );
-}
-
 function LearningItem({ learning }: Readonly<{ learning: Learning }>) {
   const t = useT();
   return (
     <PanelRow>
       <div className="brief-weekly-learning">
-        <Badge>{t(KIND_LABEL[learning.kind])}</Badge>
+        <Badge>{t(labelFor(KIND_LABEL, learning.kind))}</Badge>
         <p>{learning.text}</p>
         <ul className="weekly-learnings-citations">
           {learning.citations.map((c) => (

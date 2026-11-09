@@ -26,6 +26,8 @@ import (
 // contract between the table and the Sprintf that reads it, so it is written
 // down here rather than derived from the English entry it has to hold.
 var approvalSummaryHoles = map[string][]string{
+	"taskCompleted":                {"%s", "%s"},
+	"taskContact":                  nil,
 	"signaturePrivate":             nil,
 	"draftedReplyWaiting":          {"%q"},
 	"counterpartyWorthKeeping":     {"%s"},

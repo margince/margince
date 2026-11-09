@@ -95,3 +95,4 @@
 1793983529_internal_history_authorization_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1793983530_a_kept_stop_holds_only_its_hash.up.sql | communication_suppression | communication_suppression holds one row per stop a colleague, a subject or a bounce recorded, a handful per stopped contact; the UPDATE clears one column on the stops that name no record, a handful per anonymized contact or pressed link
 1793983530_a_kept_stop_holds_only_its_hash.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1794189652_the_lifetime_bounds_are_validated.up.sql | meeting_proposal | only proposals whose expiry is not after their creation are touched; the writer produced those only for an option offered with zero notice, so the set is a handful of links that were never openable

@@ -44,3 +44,14 @@ export function MeetingDetailModal({
     />
   );
 }
+
+/** One activity, opened by its id alone, as a meeting title on Home opens it. */
+export function ActivityDetailModal({
+  activityId,
+  onClose,
+}: Readonly<{ activityId: string; onClose: () => void }>) {
+  const zone = useViewerZone();
+  return (
+    <OpenActivityDrawer activityId={activityId} zone={zone} onClose={onClose} />
+  );
+}

@@ -94,20 +94,17 @@ func (s *RetentionService) CheckPurgeAuthority(ctx context.Context, anonymising 
 	return nil
 }
 
-// PurgeActivities destroys the named messages and everything they left behind.
-//
-// One transaction per activity, not one for all of them. A purge can name
-// thousands of messages, and a single transaction over that many would hold
-// locks across every one of their attachments, vectors and delivery rows — so a
-// failure halfway leaves the earlier ones destroyed, which is the honest
-// outcome: destruction that partially succeeded has genuinely destroyed
-// something, and pretending otherwise by rolling back would restore content the
-// owner asked to be rid of.
-//
-// Returns how many were destroyed. A message already gone is not an error: the
-// executor is idempotent, and a second purge of the same rule reports zero
-// rather than failing.
+// PurgeActivities uses retention's executor so statutory holds and derived
+// content receive the same checks as other erasure paths.
 func (s *RetentionService) PurgeActivities(ctx context.Context, ids []ids.UUID, reason PurgeReason) (int, error) {
+	return s.PurgeActivitiesIf(ctx, ids, reason, nil)
+}
+
+// ActivityStillPurgeable rechecks an external claim while the activity is locked.
+type ActivityStillPurgeable func(context.Context, pgx.Tx, ids.UUID) (bool, error)
+
+// PurgeActivitiesIf shares the erase transaction with the caller's final check.
+func (s *RetentionService) PurgeActivitiesIf(ctx context.Context, ids []ids.UUID, reason PurgeReason, check ActivityStillPurgeable) (int, error) {
 	// Gated here, not only at the seam that assembles the purge: this is
 	// exported, so a second caller can reach it.
 	if err := requireActivityPurge(ctx); err != nil {
@@ -115,7 +112,7 @@ func (s *RetentionService) PurgeActivities(ctx context.Context, ids []ids.UUID, 
 	}
 	destroyed := 0
 	for _, id := range ids {
-		kept, err := s.purgeOneActivity(ctx, id, reason)
+		kept, err := s.purgeOneActivity(ctx, id, reason, check)
 		if err != nil {
 			return destroyed, fmt.Errorf("privacy: purging a captured message: %w", err)
 		}
@@ -128,9 +125,29 @@ func (s *RetentionService) PurgeActivities(ctx context.Context, ids []ids.UUID, 
 
 // purgeOneActivity runs the retention module's own activity/erase executor and
 // audits it as an owner's act. kept reports a message the floor now in force
-// shields, which is left as it is.
-func (s *RetentionService) purgeOneActivity(ctx context.Context, id ids.UUID, reason PurgeReason) (kept bool, err error) {
+// shields, or a row already gone. Both leave nothing to erase.
+func (s *RetentionService) purgeOneActivity(ctx context.Context, id ids.UUID, reason PurgeReason, check ActivityStillPurgeable) (kept bool, err error) {
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var locked ids.UUID
+		err := tx.QueryRow(ctx, `SELECT id FROM activity
+ WHERE id = @id AND restricted_at IS NULL FOR UPDATE`, pgx.NamedArgs{"id": id}).Scan(&locked)
+		if errors.Is(err, pgx.ErrNoRows) {
+			kept = true
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if check != nil {
+			allowed, err := check(ctx, tx, id)
+			if err != nil {
+				return err
+			}
+			if !allowed {
+				kept = true
+				return nil
+			}
+		}
 		// The SAME executor retention runs. It nulls the text, then calls
 		// purgeContentDerivedFrom for the provider original, the vectors, the
 		// attachments, the delivery copies and the field provenance — the list

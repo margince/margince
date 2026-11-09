@@ -71,19 +71,43 @@ async function settleAnimations(page: Page) {
   // allSettled rather than all: a cancelled animation REJECTS `finished`, and
   // that is a settled outcome here — the animation is over, which is all this
   // waits for.
-  await page.evaluate(async () => {
+  //
+  // One look is not enough: a boot transition can start after it. So the wait
+  // repeats until a pass finds no finite clock-driven animation running. The
+  // round count is a backstop against a page that keeps starting new ones.
+  // Hitting it names them rather than handing them on as a finding.
+  const unsettled = await page.evaluate(async () => {
     const lands = (animation: Animation) =>
+      animation.timeline instanceof DocumentTimeline &&
       Number.isFinite(
         animation.effect?.getComputedTiming().activeDuration ?? Infinity,
       );
-    await Promise.allSettled(
+    const landing = () =>
       document
         .getAnimations()
         .filter((animation) => animation.playState === "running")
-        .filter(lands)
-        .map((animation) => animation.finished),
-    );
+        .filter(lands);
+    for (let round = 0; round < 50; round++) {
+      const running = landing();
+      if (running.length === 0) {
+        return [];
+      }
+      await Promise.allSettled(running.map((animation) => animation.finished));
+    }
+    return landing().map((animation) => {
+      const target =
+        animation.effect instanceof KeyframeEffect
+          ? animation.effect.target
+          : null;
+      return target
+        ? `${target.tagName.toLowerCase()}.${target.className}`
+        : "?";
+    });
   });
+  expect(
+    unsettled,
+    "finite animations kept starting through 50 rounds of waiting for them to land",
+  ).toEqual([]);
   const motion = await page.evaluate(() => {
     const describe = (element: Element) =>
       `${element.tagName.toLowerCase()}.${element.className}`;
@@ -1117,7 +1141,7 @@ test("AC-automations-1 (B-EP09.15): create from the catalog arrives paused; enab
 }) => {
   // Scoped to the editor's own region rather than to the page, so the criterion
   // still reads what it names if the page ever carries a second card.
-  await page.goto("/#/settings/automations");
+  await page.goto("/#/settings/automations/library");
   const automations = page.locator("[data-automations-admin]");
   await expect(automations.getByText("Stillstands-Erinnerung")).toBeVisible();
   await automations
@@ -1133,12 +1157,13 @@ test("AC-automations-1 (B-EP09.15): create from the catalog arrives paused; enab
   ).toHaveValue("3");
   await form.getByRole("button", { name: "Erstellen" }).click();
   // The outcome lands on the CARD: by the time it is true the dialog that
-  // produced it is gone.
+  // produced it is gone. The new row is on the other tab, so it says where.
   await expect(
     page.getByText(
-      "Pausiert erstellt. Nichts läuft, bis die Automatisierung aktiviert ist.",
+      "Pausiert erstellt. Schalte sie unter „Deine Automatisierungen“ ein.",
     ),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Deine Automatisierungen" }).click();
   const row = page.getByTestId("automation-au-2");
   // The row states its status on the control that changes it, rather than on a
   // badge beside a button whose label named the OTHER state. So the criterion
@@ -1156,7 +1181,7 @@ test("AC-automations-2 (features/10 §1): anti-DSL — no free-form rule body, n
   // that surface's region rather than over the page: an input elsewhere on the
   // page has nothing to do with rule authoring, and counting it in would say
   // something else entirely.
-  await page.goto("/#/settings/automations");
+  await page.goto("/#/settings/automations/library");
   const automations = page.locator("[data-automations-admin]");
   await expect(automations.getByText("Stillstands-Erinnerung")).toBeVisible();
   await automations
@@ -1223,7 +1248,7 @@ test("AC-settings-16: the audit log renders attributed entries, filters live, an
 test("AC-settings: the passport list is metadata-only and strikes revoked rows", async ({
   page,
 }) => {
-  // Passports are a credential the COLLEAGUE holds, so they live on AI access,
+  // Passports are a credential the COLLEAGUE holds, so they live on AI assistants,
   // behind "For developers": a reader connecting an AI tool never meets one.
   await page.goto("/#/settings/agents");
   await expect(page.getByText("Marcus' Claude", { exact: true })).toBeHidden();

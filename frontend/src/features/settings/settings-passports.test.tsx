@@ -658,6 +658,12 @@ describe("PassportCard: this window", () => {
     }
     // Once in the row, once among the three it opens onto.
     expect(screen.getAllByRole("meter", { name: "Changes" })).toHaveLength(2);
+    // The opened row names the limit that stopped it, its ceiling and the reset.
+    expect(
+      screen.getByText(
+        /Stopped by the changes limit: 200 of 200\..*2026.* UTC/,
+      ),
+    ).toBeTruthy();
   });
 
   it("shows no empty state over the toggle when every passport is revoked", async () => {

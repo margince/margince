@@ -117,21 +117,16 @@ describe("a worklist row at list density", () => {
     ).toBeTruthy();
   });
 
-  // What the row says about itself, as ONE fragment with ONE truncation over
-  // it — drawn as separate spans the line would clip whichever happened to be
-  // last and leave the reader no way to see what went.
-  it("says why the row is here on the line, in one fragment", () => {
+  // What the row says about itself is one current reason: the others are
+  // facts its Details lists.
+  it("says one reason on the line", () => {
     const { container } = render(
       row({ because: MANY_REASONS, consequence: "deal_drifts" }),
     );
 
-    // ONE element, holding the reasons AND what it costs, dot-separated. Two
-    // elements is the shape this replaced: the line then clipped whichever was
-    // last and the reader had no way to see what went.
     const inline = container.querySelectorAll(".worklist-row-because");
     expect(inline).toHaveLength(1);
-    expect(inline[0].textContent).not.toContain("If ignored");
-    expect(inline[0].textContent).toContain(" · ");
+    expect(inline[0].textContent).not.toContain(" · ");
   });
 
   // The pin rides the name at this density too.

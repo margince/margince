@@ -105,10 +105,14 @@ func (s *Service) recordDecision(ctx context.Context, id ids.ApprovalID, approve
 	if err := s.runPrecheck(ctx, id, approve, edited); err != nil {
 		return row{}, err
 	}
+	footprint, err := s.footprintToStore(ctx, id, edited)
+	if err != nil {
+		return row{}, err
+	}
 	var a row
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		a, err = s.decideInTx(ctx, tx, p, id, approve, reason, edited, by)
+		a, err = s.decideInTx(ctx, tx, p, id, approve, reason, edited, footprint, by)
 		if err != nil {
 			return err
 		}
@@ -142,11 +146,14 @@ func (s *Service) recordDecision(ctx context.Context, id ids.ApprovalID, approve
 
 // Preflight refuses unsafe context before a verdict can strand an unapplied effect.
 func (s *Service) runPrecheck(ctx context.Context, id ids.ApprovalID, approve bool, edited json.RawMessage) error {
-	if !approve || (len(s.prechecks) == 0 && s.preview == nil) {
+	if !approve {
 		return nil
 	}
 	a, err := s.Get(ctx, id)
 	if err != nil {
+		if _, automatic := policyActorFor(ctx, id); automatic && errors.Is(err, apperrors.ErrNotFound) {
+			return ErrPolicyWithdrawn
+		}
 		return err
 	}
 	// An approved but unapplied effect retries through its execution guards.
@@ -206,9 +213,7 @@ func landEditedPayload(
 	return applyEditedPayload(ctx, tx, id, edited, a, auditEvidence, decidedPayload)
 }
 
-// readToDecide reads the locked approval as the decider sees it. An
-// undecidable approval reads as absent; one whose automatic apply the owner
-// withdrew says so.
+// readToDecide hides rows the decider cannot open.
 func readToDecide(ctx context.Context, tx pgx.Tx, p principal.Principal, id ids.ApprovalID, by decider) (row, error) {
 	a, err := get(ctx, tx, id)
 	if err != nil {
@@ -226,30 +231,19 @@ func readToDecide(ctx context.Context, tx pgx.Tx, p principal.Principal, id ids.
 	return a, nil
 }
 
-func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Principal, id ids.ApprovalID, approve bool, reason *string, edited json.RawMessage, by decider) (row, error) {
-	// An automatic apply binds the owner, reads the mode and holds the target
-	// before the row lock (bindUnderPolicy has the lock order).
-	if by == decidedBySystem {
-		var err error
-		if ctx, p, err = bindUnderPolicy(ctx, tx, id); err != nil {
-			return row{}, err
-		}
-	}
-	// The row lock makes the pending pre-read and the status write below
-	// one race-free unit: two concurrent decisions cannot both pass the
-	// pending guard. Taken raw — the approval table has no archived_at,
-	// so storekit.LockRow's live filter does not apply here.
-	var locked ids.ApprovalID
-	if err := tx.QueryRow(ctx, `SELECT id FROM approval WHERE id = $1 FOR UPDATE`, id).Scan(&locked); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return row{}, apperrors.ErrNotFound
-		}
-		return row{}, err
-	}
+// pendingToDecide reads the locked approval as one the caller may decide now.
+// A refusal for a decided row carries that row; recordDecision reads it.
+func (s *Service) pendingToDecide(ctx context.Context, tx pgx.Tx, p principal.Principal, id ids.ApprovalID, approve bool, edited json.RawMessage, by decider) (row, error) {
 	a, err := readToDecide(ctx, tx, p, id, by)
 	if err != nil {
 		return row{}, err
 	}
+	if approve && agentCallNeedsRecheck(a) {
+		if _, err := s.agentCallAuthority(ctx, tx, a); err != nil {
+			return row{}, err
+		}
+	}
+
 	// After visibility, so a caller who cannot see this row is told it is absent
 	// rather than that their credential is short a cap — the existence-hiding
 	// this module keeps everywhere. Before the status check, because what a
@@ -279,6 +273,33 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 	if approve && retiredKinds[a.Kind] {
 		return row{}, fmt.Errorf("crmapprovals: %s is retired and can no longer be applied: %w",
 			a.Kind, apperrors.ErrConflict)
+	}
+	return a, nil
+}
+
+func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Principal, id ids.ApprovalID, approve bool, reason *string, edited, footprint json.RawMessage, by decider) (row, error) {
+	// An automatic apply binds the owner, reads the mode and holds the target
+	// before the row lock (bindUnderPolicy has the lock order).
+	if by == decidedBySystem {
+		var err error
+		if ctx, p, err = bindUnderPolicy(ctx, tx, id); err != nil {
+			return row{}, err
+		}
+	}
+	// The row lock makes the pending pre-read and the status write below
+	// one race-free unit: two concurrent decisions cannot both pass the
+	// pending guard. Taken raw: the approval table has no archived_at,
+	// so storekit.LockRow's live filter does not apply here.
+	var locked ids.ApprovalID
+	if err := tx.QueryRow(ctx, `SELECT id FROM approval WHERE id = $1 FOR UPDATE`, id).Scan(&locked); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return row{}, apperrors.ErrNotFound
+		}
+		return row{}, err
+	}
+	a, err := s.pendingToDecide(ctx, tx, p, id, approve, edited, by)
+	if err != nil {
+		return a, err
 	}
 
 	status, action, verdict := approvalStatusRejected, "reject", approvalStatusRejected
@@ -313,9 +334,9 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 	}
 	if _, err := tx.Exec(ctx,
 		`UPDATE approval SET status = $2, decided_by = $3, decided_at = now(), decision_reason = $4,
-		        decided_by_system = $5
+		        decided_by_system = $5, plan_footprint = $6
 		 WHERE id = $1`,
-		id, status, p.UserID, reason, bool(by)); err != nil {
+		id, status, p.UserID, reason, bool(by), footprint); err != nil {
 		return row{}, err
 	}
 	// The track record the autonomy ladder is earned on, counted in the same

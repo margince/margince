@@ -44,6 +44,18 @@ func (s *Store) OpenDealsOfCompany(ctx context.Context, tx pgx.Tx, companyID ids
 		ORDER BY d.id LIMIT 2`, companyID)
 }
 
+// OpenDealsOfCompanyUpTo answers up to limit open deals of one company, the
+// candidates a deal topic check weighs.
+func (s *Store) OpenDealsOfCompanyUpTo(ctx context.Context, tx pgx.Tx, companyID ids.UUID, limit int) ([]ids.UUID, error) {
+	if denied, err := candidateReadDenied(ctx); denied || err != nil {
+		return nil, err
+	}
+	var args []any
+	arg := func(v any) string { args = append(args, v); return fmt.Sprintf("$%d", len(args)) }
+	query := `SELECT d.id FROM deal d WHERE d.company_id = ` + arg(companyID) + ` AND ` + openDealSQL + ` ORDER BY d.id LIMIT ` + arg(limit)
+	return collectCandidates(ctx, tx, query, args...)
+}
+
 // IsOpenDealOfCompanies answers whether deal is an open deal of one of the
 // companies. A seat without the deal read grant learns no deal.
 func (s *Store) IsOpenDealOfCompanies(ctx context.Context, tx pgx.Tx, deal ids.UUID, companies []ids.UUID) (bool, error) {
@@ -86,6 +98,26 @@ func (s *Store) OpenDealsWithStakeholders(
 		                  AND r.contact_id = ANY($2) AND r.archived_at IS NULL
 		                  AND (`+edgeScope+`))
 		 ORDER BY d.id LIMIT 2`, args...)
+}
+
+// maxOfferedDeals bounds the deals one deal question records as offered.
+const maxOfferedDeals = 50
+
+// OfferedDeals answers the open deals a deal question offers: those of the
+// project when it names one, else those of the company.
+func (s *Store) OfferedDeals(ctx context.Context, tx pgx.Tx, projectID, companyID ids.UUID) ([]ids.UUID, error) {
+	if denied, err := candidateReadDenied(ctx); denied || err != nil {
+		return nil, err
+	}
+	var args []any
+	arg := func(v any) string { args = append(args, v); return fmt.Sprintf("$%d", len(args)) }
+	owner := `d.company_id = ` + arg(companyID)
+	if !projectID.IsZero() {
+		args = nil
+		owner = `d.project_id = ` + arg(projectID)
+	}
+	query := `SELECT d.id FROM deal d WHERE ` + owner + ` AND ` + openDealSQL + ` ORDER BY d.id LIMIT ` + arg(maxOfferedDeals)
+	return collectCandidates(ctx, tx, query, args...)
 }
 
 // candidateReadDenied answers whether the caller may not read deals at all. A

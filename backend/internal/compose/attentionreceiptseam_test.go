@@ -8,7 +8,9 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestAVerdictCloseDateKeepsItsOwnReceiptKind(t *testing.T) {
@@ -21,8 +23,8 @@ func TestAVerdictCloseDateKeepsItsOwnReceiptKind(t *testing.T) {
 		if receipt.Kind != want || receipt.Undo == nil {
 			t.Errorf("receipt of a %s change = kind %q undo %v, want kind %q with an Undo", correction, receipt.Kind, receipt.Undo, want)
 		}
-		if !deals.IsCorrectionReceiptKind(receipt.Kind) {
-			t.Errorf("kind %q is not a correction receipt kind, so the sign-in page offers it as an approval", receipt.Kind)
+		if receipt.Source != attention.ReceiptFromCorrection {
+			t.Errorf("a %s receipt is not marked as a correction, so the sign-in page offers it as an approval", receipt.Kind)
 		}
 	}
 }
@@ -79,5 +81,66 @@ func TestAChangeWithNoRecordedReasonSendsNoHeadline(t *testing.T) {
 		if wire.Headline != nil || wire.Reason != nil || wire.CustomerQuote != nil {
 			t.Errorf("%s: headline %v reason %v quote %v, want all absent when nothing was recorded", correction, wire.Headline, wire.Reason, wire.CustomerQuote)
 		}
+	}
+}
+
+func TestEveryCorrectionReceiptNamesItsAuditEntryEvenWithoutAnUndo(t *testing.T) {
+	t.Parallel()
+	for _, correction := range []string{
+		deals.CloseLostCorrection, deals.VerdictStageMoveCorrection, deals.DealOpenCorrection,
+		deals.DealReviveCorrection, deals.VerdictAmountCorrection, deals.VerdictProbabilityCorrection,
+		string(deals.CloseDateOverdue),
+	} {
+		audit := ids.NewV7()
+		receipt := correctionReceipt(deals.CorrectionReceipt{Correction: correction, AuditLogID: audit, Fields: []string{"expected_close_date"}})
+		receipt.Undo = nil
+		wire := attention.WireReceipt(receipt)
+		if wire.Source == nil || *wire.Source != crmcontracts.ReceiptSourceCorrection {
+			t.Errorf("a %s receipt names no correction source: %v", correction, wire.Source)
+		}
+		if wire.AuditLogId == nil || ids.UUID(*wire.AuditLogId) != audit {
+			t.Errorf("a %s receipt without an Undo lost its audit entry: %v", correction, wire.AuditLogId)
+		}
+	}
+}
+
+func TestAnApprovalReceiptCarriesNoAuditEntry(t *testing.T) {
+	t.Parallel()
+	wire := attention.WireReceipt(attention.Receipt{Source: attention.ReceiptFromApproval, ID: ids.NewV7(), Kind: "send_email"})
+	if wire.Source == nil || *wire.Source != crmcontracts.ReceiptSourceApproval || wire.AuditLogId != nil {
+		t.Fatalf("an approval receipt must say approval and name no audit entry: %v %v", wire.Source, wire.AuditLogId)
+	}
+}
+
+func TestADecidedCorrectionOffersTheUndoItsReviewAllows(t *testing.T) {
+	t.Parallel()
+	audit := ids.NewV7()
+	correction := func(review crmcontracts.AppliedDealChangeReview, reversed bool) attention.Receipt {
+		return attention.Receipt{
+			Source: attention.ReceiptFromCorrection, ID: audit, AuditLogID: audit, Review: &review,
+			Undo: &attention.ReceiptUndo{AuditLogID: audit, Version: review.Version, Reversed: reversed},
+		}
+	}
+	live := crmcontracts.AppliedDealChangeReview{Version: 7, CanUndo: true, CanAccept: true, Writable: true}
+	for name, tc := range map[string]struct {
+		receipt attention.Receipt
+		reason  Reason
+	}{
+		"reversed":       {correction(live, true), ReasonAlreadyUndone},
+		"not writable":   {correction(crmcontracts.AppliedDealChangeReview{Version: 7, CanUndo: true, CanAccept: true}, false), ReasonNotWritableByCaller},
+		"edited since":   {correction(crmcontracts.AppliedDealChangeReview{Version: 7, Writable: true}, false), ReasonSuperseded},
+		"without review": {attention.Receipt{Source: attention.ReceiptFromCorrection, Undo: &attention.ReceiptUndo{AuditLogID: audit}}, ReasonNotRestorableByThisPath},
+	} {
+		undo := decidedUndo(tc.receipt)
+		if undo == nil || undo.Undoable || undo.Reason == nil || *undo.Reason != string(tc.reason) {
+			t.Errorf("%s: want a refusal %q, got %+v", name, tc.reason, undo)
+		}
+	}
+	offered := decidedUndo(correction(live, false))
+	if offered == nil || !offered.Undoable || offered.AuditId == nil || offered.Version == nil || *offered.Version != 7 {
+		t.Fatalf("a live correction must offer Undo with its audit entry and version, got %+v", offered)
+	}
+	if decidedUndo(attention.Receipt{Source: attention.ReceiptFromApproval, ID: audit}) != nil {
+		t.Fatal("an approval must carry no Undo on the done lane")
 	}
 }

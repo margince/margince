@@ -24,7 +24,7 @@ import type { WorklistItem, WorklistReason } from "./worklisttypes";
 const t: Translator = (key, params) => translate("en", key, params);
 // The "still renders a full date" case below only asserts the year, so the
 // viewer's own zone stands in rather than a pinned literal
-// (format/zone-by-purpose.test.ts).
+// (census/rules/zone-by-purpose.census.ts).
 const zone = browserZone();
 
 // The move that became performable.
@@ -269,9 +269,11 @@ describe("reasonText — day-count plural", () => {
       kind: "quiet_days",
       value: { kind: "days", days: 14 },
     };
-    expect(reasonText(one, t, "en", zone, undefined)).toBe("quiet for 1 day");
+    expect(reasonText(one, t, "en", zone, undefined)).toBe(
+      "no activity for 1 day",
+    );
     expect(reasonText(many, t, "en", zone, undefined)).toBe(
-      "quiet for 14 days",
+      "no activity for 14 days",
     );
   });
 });

@@ -132,10 +132,10 @@ function heldDays(
 }
 
 /**
- * MeetingOutcome is the row's answer: it was held, it was cancelled, or say
- * more about what came of it.
+ * MeetingOutcome is the row's answer to How did it go? It happened (held), it
+ * did not happen (canceled), or the reader says more about what came of it.
  *
- * "Held" is the commonest answer and a fact with nothing to add, so it writes
+ * "It happened" is the commonest answer and a fact with nothing to add, so it writes
  * at once, as Cancel does. "Add notes" opens the dialog, which also offers
  * No-show and moves the date.
  */
@@ -188,6 +188,7 @@ export function MeetingOutcome({
     );
   return (
     <>
+      <span className="t-caption">{t("worklist.verb.meetingHowDidItGo")}</span>
       <Button
         pending={record.isPending}
         aria-label={

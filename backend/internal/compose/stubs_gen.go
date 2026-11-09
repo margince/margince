@@ -87,6 +87,10 @@ func (stubs) SetActivityAudience(w nethttp.ResponseWriter, r *nethttp.Request, i
 	httperr.NotImplemented(w, r, "SetActivityAudience")
 }
 
+func (stubs) DeclineActivityDeal(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DeclineActivityDeal")
+}
+
 func (stubs) ClearActivityDisposition(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ClearActivityDispositionParams) {
 	httperr.NotImplemented(w, r, "ClearActivityDisposition")
 }
@@ -371,7 +375,7 @@ func (stubs) GetAiUsage(w nethttp.ResponseWriter, r *nethttp.Request, params crm
 	httperr.NotImplemented(w, r, "GetAiUsage")
 }
 
-func (stubs) GetAiUsageSummary(w nethttp.ResponseWriter, r *nethttp.Request) {
+func (stubs) GetAiUsageSummary(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetAiUsageSummaryParams) {
 	httperr.NotImplemented(w, r, "GetAiUsageSummary")
 }
 
@@ -991,7 +995,7 @@ func (stubs) RestoreCaptureOwnerIdentity(w nethttp.ResponseWriter, r *nethttp.Re
 	httperr.NotImplemented(w, r, "RestoreCaptureOwnerIdentity")
 }
 
-func (stubs) ListCaptureSenders(w nethttp.ResponseWriter, r *nethttp.Request) {
+func (stubs) ListCaptureSenders(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListCaptureSendersParams) {
 	httperr.NotImplemented(w, r, "ListCaptureSenders")
 }
 
@@ -3283,7 +3287,7 @@ func (stubs) GetPublicBookingPreview(w nethttp.ResponseWriter, r *nethttp.Reques
 	httperr.NotImplemented(w, r, "GetPublicBookingPreview")
 }
 
-func (stubs) GetPublicSchedulingProfile(w nethttp.ResponseWriter, r *nethttp.Request, hostSlug string) {
+func (stubs) GetPublicSchedulingProfile(w nethttp.ResponseWriter, r *nethttp.Request, hostSlug string, params crmcontracts.GetPublicSchedulingProfileParams) {
 	httperr.NotImplemented(w, r, "GetPublicSchedulingProfile")
 }
 

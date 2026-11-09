@@ -58,7 +58,7 @@ import (
 // ruleVersion stamps the ladder that selected a moment. It changes whenever a
 // rung's condition or order changes, so the same evidence rendering differently
 // across two clients is visible rather than silent.
-const ruleVersion = "contact-moment-ladder-v7"
+const ruleVersion = "contact-moment-ladder-v8"
 
 // meetingHorizonHours is how far ahead a meeting is worth preparing for
 // (ADR-0096 D2 rung 1). Three days, not the week the earlier ladder used: a
@@ -224,7 +224,7 @@ type ladderRung = func(context.Context, time.Time, *crmcontracts.Contact360) (cr
 // A meeting deadline wins over a reply, followed by promises and relationship gaps.
 // Role changes need recorded role-change evidence; reply gaps cannot establish them.
 func (said momentCopy) ladder() []ladderRung {
-	return []ladderRung{said.meetingPrepMoment, said.reEngagedMoment, said.overduePromiseMoment, said.goneQuietMoment, said.openPromiseMoment, said.missingNextStepMoment, said.thinRelationshipMoment}
+	return []ladderRung{said.meetingPrepMoment, said.reEngagedMoment, said.overduePromiseMoment, said.goneQuietMoment, said.awaitingReplyMoment, said.openPromiseMoment, said.missingNextStepMoment, said.thinRelationshipMoment}
 }
 
 // momentLadderNames names the rungs in ladder order, for tests that
@@ -236,6 +236,7 @@ var momentLadderNames = []string{
 	"re_engaged",
 	"overdue_promise",
 	"gone_quiet",
+	"awaiting_reply",
 	"open_promise",
 	"missing_next_step",
 	"thin_relationship",

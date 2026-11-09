@@ -1,10 +1,10 @@
 import { Avatar, Badge } from "../../design-system/atoms";
 import { CellStack } from "../../design-system/cellstack";
-import { CellStrip } from "../../design-system/listtable";
 import { StatusBadge, type StatusKind } from "../../design-system/statusbadge";
 import { formatDateAbbrev, formatDateTime } from "../../format/format";
 import { formatRelativeTime } from "../../format/relativetime";
 import { useLocale, useT } from "../../i18n";
+import { valueFor } from "../../lib/labelfor";
 import { useViewerZone } from "../../lib/viewerzone";
 import { memberAnchorId, type User } from "./users-members";
 
@@ -12,7 +12,12 @@ export function MemberIdentity({ member }: Readonly<{ member: User }>) {
   const t = useT();
   return (
     // Focusable by script only: the deactivate confirm hands focus back here.
-    <span id={memberAnchorId(member.id)} className="users-member" tabIndex={-1}>
+    <span
+      id={memberAnchorId(member.id)}
+      className="users-member"
+      data-status={member.status}
+      tabIndex={-1}
+    >
       <Avatar
         name={member.display_name}
         identity={member.id}
@@ -56,15 +61,7 @@ export function MemberTeams({
   if (known.length === 0) {
     return null;
   }
-  return (
-    <span className="users-teams" title={known.join(", ")}>
-      <CellStrip>
-        {known.map((name) => (
-          <Badge key={name}>{name}</Badge>
-        ))}
-      </CellStrip>
-    </span>
-  );
+  return <span className="users-teams">{known.join(", ")}</span>;
 }
 
 // Active is every seat's ordinary state, so only the exceptions are marked.
@@ -99,7 +96,7 @@ function MemberStatus({
   }
   return (
     <StatusBadge
-      kind={STATUS_KIND[status]}
+      kind={valueFor(STATUS_KIND, status, "neutral")}
       label={t(`users.status.${status}`)}
     />
   );

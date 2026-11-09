@@ -10,6 +10,7 @@ import { formatDateAbbrev } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { attachmentAnchor } from "../lib/attachmentlink";
+import { labelFor } from "../lib/labelfor";
 import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
 import { useViewerZone } from "../lib/viewerzone";
 import { FileOrigin } from "./fileorigin";
@@ -87,14 +88,14 @@ export function AttachmentTile({
       mark={
         file.doc_state ? (
           <Badge tone={superseded ? "warning" : undefined}>
-            {t(STATE_LABELS[file.doc_state])}
+            {t(labelFor(STATE_LABELS, file.doc_state))}
           </Badge>
         ) : null
       }
       meta={[
         // The name it saves as, when a human gave it another title.
         title === file.filename ? null : file.filename,
-        file.category ? t(CATEGORY_LABELS[file.category]) : null,
+        file.category ? t(labelFor(CATEGORY_LABELS, file.category)) : null,
         withSource ? file.source : null,
         // A mail's file arrived when the mail did, not when it was filed.
         file.origin

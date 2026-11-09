@@ -151,6 +151,20 @@ A missing value stays unknown. `source_occurred_at` keeps the message date apart
 A reply can join mail sent from Margince before the mailbox captures its sent copy.
 The stored sender identity proves ownership. A message from another seat cannot join this way.
 
+Gmail sends the mailbox message id when mail is gone for good. Margince uses that id to delete its own copy.
+
+Normal Gmail, Outlook and calendar syncs fill `capture_import.provider_message_ids`.
+Each id holds the provider and connection `generation`.
+When a calendar reports an event is gone, its event id finds the meeting through these ids.
+Only the syncing seat's own ids count.
+
+Older mail with no id stays until a normal sync sees it again.
+
+A colleague's copy, mail sent from Margince and the law can keep a message.
+A hold or an open request to erase data can keep it too.
+Changes to a folder in Outlook do not delete the copy in Margince.
+A move to an archive can look like mail gone for good, so Outlook mail stays.
+
 ## Credentials & the vault
 
 A connector credential (an OAuth refresh token, or a standing IMAP password) is never stored in plain

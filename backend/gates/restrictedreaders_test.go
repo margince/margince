@@ -195,7 +195,7 @@ func boundToAnotherRecordType(statement string) bool {
 // path probes with it and nothing else, and a reader inside such a transaction
 // is guarded by a call this gate could not otherwise see.
 var heldScopeMarkers = []string{
-	"ActivityDiscoverClause", "ActivityContentClause", "ActivityAvailableClause", "ActivityExternalEvidenceClause",
+	"HeldMessageSQL", "ActivityDiscoverClause", "ActivityContentClause", "ActivityAvailableClause", "ActivityExternalEvidenceClause",
 	"EnsureActivityVisible", "EnsureActivityVisibleLive",
 	"EnsureActivityContentVisible", "EnsureActivityContentVisibleLive",
 	"EnsureActivityWritable",
@@ -275,6 +275,7 @@ const senderStampReader = "the sender_is_machine repair reads only the id and se
 // ClassifyBacklogPredicate, which filters archived rows. A reason a gate can
 // work out is better computed than written down.
 var restrictedReadersAdmitted = gatekit.Waive(map[string]string{
+	"internal/modules/activities/dealdeclineproject.go:projectCameFromDeal":             "reads the link and audit rows of the one message the decline already locked and write-checked; only a boolean leaves, never content",
 	"internal/modules/privacy/linkedhistoricalaudit.go:legacyAuditEntries":              "system-only audit-key walk returns metadata and reduction flags. Each matching record is checked for current holds and correspondence floors before a per-entry proof changes its payload; no activity image leaves the database",
 	"internal/modules/privacy/historicalaudit.go:RedactHistoricalAuditPageTx":           "scans audit IDs, entity references and a certificate flag, not activity content. Each candidate is checked against current holds and the shared correspondence floor before any payload is erased",
 	"internal/modules/activities/participantevidence.go:lockParticipantEvidenceParents": "Locks only opaque parent IDs before derived-clock backfill takes child row locks. Held parents must share the cascade lock order too; no date or content leaves this function, and evidence readers separately exclude held rows.",
@@ -284,7 +285,6 @@ var restrictedReadersAdmitted = gatekit.Waive(map[string]string{
 	"internal/platform/database/storekit/threadlocks.go:LockActivityThreadTx":           "Pins an opaque component key under a row share lock. Held rows must use the same coordinator so privacy changes and merges serialize. Callers retain their own authorization and content gates; this returns no message content.",
 	"internal/modules/privacy/entityfloor.go:FloorPolicy.ForMessagesTx":                 "reads only the user ids behind the messages a purge kept, to name the legal entity floor that kept them on its receipt. No subject, body or participant leaves it. A held row is still a message the floor kept, so leaving it out would name a shorter floor than the one that applies",
 	"internal/modules/privacy/noticedisclosurelead.go:leadActivityScopes":               "answers only whether a website lead has any activity, transcript or stored original, so the privacy page lists the retention rules that reach that data. No subject, body or participant leaves it. A held or archived row is still data the installation holds, so leaving it out would understate the retention that applies",
-	"internal/modules/deals/correctionreceipts.go:correctionReceiptSelect":              "reads the audit image of a DEAL correction (close date, amount, probability), never an activity's: the join is on deal_correction.audit_log_id, whose rows are entity_type deal. No subject, body or participant leaves it",
 	"internal/modules/activities/companyscope.go:companyLinkReach":                      "returns a SQL set of activity and company IDs for membership, not message content. Every visible reader composes its activity content or availability gate on the outer activity; internal follow-up and last-touch writers need the same membership to invalidate old account facts when an activity becomes held",
 	"internal/modules/activities/companyscope.go:companyReach":                          "adds participant-derived activity IDs to the same membership fragment. No subject, body, attachment or participant address leaves it; outer readers carry ActivityContentClause or ActivityAvailableClause. Filtering held rows here would change the shared membership used for internal account invalidation",
 

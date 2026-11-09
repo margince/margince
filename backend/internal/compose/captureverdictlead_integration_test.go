@@ -45,7 +45,7 @@ func TestALeadsAddressIsNotOfferedAsANewContact(t *testing.T) {
 		t.Errorf("%d contact proposals for a live lead's address, want none", n)
 	}
 	if got := dispositionStatus(t, e, dispositionID); got != capture.PendingStatusReal {
-		t.Errorf("the lead's question is %q, want it closed as real: left unsure it returns on every pass", got)
+		t.Errorf("the lead's question is %q, want it resolved as an existing lead", got)
 	}
 }
 
@@ -57,7 +57,7 @@ func TestAnOfferAcceptedAfterTheSenderBecameALeadMakesNoContact(t *testing.T) {
 	retireToUnsure(t, e, dispositionID)
 	svc := NewApprovalsServiceWithEffects(e.Pool)
 	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
-	if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+	if err := seedLegacySenderReviews(t, e, engine); err != nil {
 		t.Fatalf("staging reviews: %v", err)
 	}
 	approvalID := stagedProposalID(t, e, dispositionID)

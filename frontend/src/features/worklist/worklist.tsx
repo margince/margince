@@ -4,6 +4,7 @@ import { SurfaceState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
 import { useOpenEmail } from "../../lib/openemail";
 import { problemCodeOf } from "../../lib/problem";
+import { listIsComplete } from "../../lib/worklistcounts";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { useWorklistAddress } from "./worklist.address";
 import { WORKLIST_FILTER_PARAM } from "./worklist.header";
@@ -149,6 +150,7 @@ export function WorklistScreen({
             onSelect={setSelectedId}
             onOpenEmail={setOpenEmail}
             cursor={day.data?.pages.at(-1)?.next_cursor ?? undefined}
+            complete={listIsComplete(day.data?.pages.at(-1))}
             loadingMore={day.isFetchingNextPage}
             moreFailed={day.isFetchNextPageError}
             onMore={() => void day.fetchNextPage()}

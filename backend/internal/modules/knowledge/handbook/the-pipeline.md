@@ -60,7 +60,7 @@ A deal that went cold is still open unless someone closed it. Margince marks an 
 Any real activity clears the mark; opening the record does not. If the deal was closed as lost, reopen it instead. Also called: revive, re-engage, stale deal.
 
 ### How do I change the pipeline stages?
-To add, rename, reorder or remove stages, open the account menu → **Settings** → **Pipelines** (in the **Sales** group). With more than one pipeline, choose it under **All pipelines**.
+To add, rename, reorder or remove stages, open the account menu → **Settings** → **Deals** (in the **Sales** group). With more than one pipeline, choose it under **All pipelines**.
 1. To add a stage, choose **New stage**. Fill in **Name**, **Stage type** (Open, Won or Lost) and **Win probability** (0 to 100).
 2. A new open stage goes after the other open stages.
 3. To change a stage, open the **…** menu on its row and choose **Edit stage**.
@@ -74,7 +74,7 @@ A stage whose win probability is lower than the stage above it is marked, but th
 An agent acting for someone who may edit pipelines can do the same. It cannot add a won or lost stage or change what a stage means. While a move runs by itself on the pipeline, it cannot change the stages or **Exit criteria** either. Also called: deal stages, sales process, customise the pipeline, reorder stages.
 
 ### How do I create another pipeline?
-To add a pipeline, open **Settings** → **Pipelines** and choose **New pipeline**.
+To add a pipeline, open **Settings** → **Deals** and choose **New pipeline**.
 Give it a **Name** and choose **Default** or **Not default**. It starts with a Won and a Lost stage, so add its open stages with **New stage**. Once there are two, **All pipelines** at the top lists each one with its count of open stages. Drag one by its handle to change the order pipelines are offered in. Choose **Make default** on a pipeline to make new deals go there.
 
 New deals need a default pipeline. To stop using a pipeline, choose **Retire**. It leaves the pickers and the forms for new deals, its deals keep their stage and history, and **Restore** brings it back. You cannot retire the default pipeline until another one is the default. Margince does not delete pipelines. Also called: second sales process, separate pipeline.
@@ -117,7 +117,7 @@ stages: Qualified, Discovery, Proposal, Negotiation, Won and Lost.
 Rename them, reorder them, add your own. Two rules you cannot change: a won stage
 is always 100 and a lost stage is always 0.
 
-You edit pipelines and stages at **Settings → Pipelines**, in the Sales group.
+You edit pipelines and stages at **Settings → Deals**, in the Sales group.
 An agent acting for you can edit them too. What a stage means stays with you, and so do the
 stages while a move runs by itself: automatic moves are judged on them.
 
@@ -265,7 +265,8 @@ A deal carries an **acquisition source**: the business channel it came from. It
 is a different field from a lead origin. A lead origin records where a lead
 came from; an acquisition source records which channel won the business.
 
-The list is for an administrator, at **Settings → Acquisition sources**. A name
+The list is for an administrator, at **Settings → Deals**, on the
+**Acquisition sources** tab. A name
 you add makes a key that never changes after that, so renaming it later keeps
 the reports behind it whole. You can retire a source instead of deleting it.
 Deals that already name it still read "(retired)" instead of going empty. A deal
@@ -287,7 +288,7 @@ close date counts as **Likely**.
 
 Each night, Margince gives a new close date to an open deal whose expected close is missing or past. It keeps a future date, even one it set on an earlier night. A stalled deal keeps its date; a probability not set by hand is halved, down to a step of 5 (0% under 10%).
 
-The new date is today plus the usual days per stage on won deals, times the stages still open. It is rounded up to whole weeks and is at least 7 days away. It is never further away than the setting `deals.silent_close_days`, which is 120 days unless an admin changed it. Stage moves that an import brought in are left out, and with fewer than 20 won deals Margince leaves the date as it is.
+The new date is today plus the usual days per stage on won deals, times the stages still open. It is rounded up to whole weeks and is at least 7 days away. It is never further away than the setting `deals.silent_close_days`, which is 120 days unless an admin changed it. Stage moves that an import brought in or another CRM synced in are left out. With fewer than 20 won deals, Margince leaves the date as it is.
 
 A date Margince set is a guess, marked "provisional close date, not confirmed by a human", and reports count it as not confirmed. It asks you to confirm or change the forecast; it is not a customer promise. Each change shows under **Done for you** on **Home**, to mark reviewed or undo; see [Your day](your-day.md#done-for-you). To stop these changes on your deals, see [Approvals](approvals.md).
 

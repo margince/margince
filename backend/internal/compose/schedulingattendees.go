@@ -100,22 +100,20 @@ func hostSees(err error) (bool, error) {
 
 func (c schedulingCalendar) attendeeCandidates(ctx, hostCtx context.Context, address string) (attendeeCandidates, error) {
 	args := []any{address, owndomain.OfAddress(address)}
-	scope, err := auth.ScopeClauseFor(hostCtx, "contact", "c", func(v any) int { args = append(args, v); return len(args) })
-	if err != nil {
-		return attendeeCandidates{}, err
+	scope := jsonFalse
+	if auth.ReadGranted(hostCtx, "contact") && !mailidentity.HasMachineLocalpart(address) {
+		var err error
+		scope, err = auth.ScopeClauseFor(hostCtx, "contact", "c", func(v any) int { args = append(args, v); return len(args) })
+		if err != nil {
+			return attendeeCandidates{}, err
+		}
+		if scope == "" {
+			scope = jsonTrue
+		}
 	}
-	switch {
-	case !auth.ReadGranted(hostCtx, "contact"):
-		scope = "false"
-	case scope == "":
-		scope = "true"
-	}
-	// A technical address names no contact, even one stored before the rule.
-	if mailidentity.HasMachineLocalpart(address) {
-		scope, args = "false", args[:2]
-	}
+
 	var found attendeeCandidates
-	err = database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
+	err := database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT 'contact', e.contact_id, '' FROM contact_email e JOIN contact c ON c.id = e.contact_id
 			 WHERE e.email = $1 AND e.archived_at IS NULL AND c.archived_at IS NULL AND (`+scope+`)

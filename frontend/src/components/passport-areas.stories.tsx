@@ -31,7 +31,7 @@ function drawer(areas: PassportAreas) {
 }
 
 const meta: Meta<typeof PassportAreasDrawer> = {
-  title: "Settings/You/AI access/Change areas",
+  title: "Settings/You/AI assistants/Change areas",
   component: PassportAreasDrawer,
 };
 export default meta;

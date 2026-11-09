@@ -567,7 +567,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact
 
-37 columns · primary key `(id)` · referenced by 49 foreign keys
+38 columns · primary key `(id)` · referenced by 49 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -579,6 +579,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `address_postal_code` | `text` |  |  |
 | `address_region` | `text` |  |  |
 | `anonymized_address_hashes` | `text[]` |  |  |
+| `anonymized_address_key_id` | `text` |  |  |
 | `converted_from_lead_id` | `uuid` |  | Canonical origin pointer if promoted from a lead. |
 | `created_from_activity_id` | `uuid` |  | The note, mail or quick capture this contact was read out of, where one was named at creation. |
 | `entered_at` | `timestamp with time zone`, default `now()` | yes |  |
@@ -642,6 +643,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_contact_exact_digraph_name_key`: `btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(replace(replace(replace(NORMALIZE(lower(full_name), NFC), 'ä', 'ae'), 'ö', 'oe'), 'ü', 'ue'))), 'ς', 'σ'), '\s+', ' ', 'g'))) WHERE (archived_at IS NULL)`
 - `idx_contact_exact_name_key`: `btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(full_name)), 'ς', 'σ'), '\s+', ' ', 'g'))) WHERE (archived_at IS NULL)`
 - `idx_contact_from_lead`: `btree (converted_from_lead_id) WHERE (converted_from_lead_id IS NOT NULL)`
+- `idx_contact_keyed_address_hashes`: `btree (anonymized_address_key_id) WHERE (anonymized_address_key_id IS NOT NULL)`
 - `idx_contact_last_activity_keyset`: `btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `idx_contact_merged_into`: `btree (merged_into_id) WHERE (merged_into_id IS NOT NULL)`
 - `idx_contact_name_keyset`: `btree ("left"(full_name, 256), created_at DESC, id DESC) WHERE (archived_at IS NULL)`
@@ -650,6 +652,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_contact_name_trigram_candidates`: `btree (hash_array_extended(show_trgm(f_fold_apostrophes(lower(full_name))), (0)::bigint), id) WHERE (archived_at IS NULL)`
 - `idx_contact_owner`: `btree (owner_id) WHERE (archived_at IS NULL)`
 - `idx_contact_search`: `gin (search_tsv)`
+- `idx_contact_unkeyed_address_hashes`: `btree (id) WHERE ((anonymized_address_hashes IS NOT NULL) AND (anonymized_address_key_id IS NULL))`
 - `idx_contact_updated_keyset`: `btree (updated_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `uq_contact_source`: `unique, btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))`
 
@@ -2186,6 +2189,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Rules**
 
+- `technical_lookup_cache_expires_after_creation`: `CHECK ((expires_at > fetched_at))`
 - `technical_lookup_cache_kind_check`: `CHECK ((record_kind = ANY (ARRAY['mx', 'txt', 'dmarc', 'dkim', 'address', 'cname', 'reverse', 'certlog'])))`
 
 **Indexes**

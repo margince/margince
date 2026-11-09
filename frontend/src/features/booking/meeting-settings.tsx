@@ -24,7 +24,12 @@ import { useWorkingHours } from "./working-hours";
 
 type Profile = components["schemas"]["SchedulingProfile"];
 
-export function MeetingSettings() {
+/** Which tab of the Meetings page is open. */
+export type MeetingsPart = "links" | "availability" | "guests";
+
+export function MeetingSettings({
+  part = "links",
+}: Readonly<{ part?: MeetingsPart }>) {
   const t = useT();
   const me = useMe();
   const canBook = useCanWrite("activity", "create");
@@ -35,20 +40,21 @@ export function MeetingSettings() {
     return (
       <>
         <Callout kind="standing" title={t("scheduling.bookNeedsGrant")} />
-        <AvailabilityCard hoursOnly />
+        {part === "availability" && <AvailabilityCard hoursOnly />}
       </>
     );
-  return <MeetingPreferences />;
+  return <MeetingPreferences part={part} />;
 }
 
-function MeetingPreferences() {
+function MeetingPreferences({ part }: Readonly<{ part: MeetingsPart }>) {
   const t = useT();
   const profile = useSchedulingProfile();
   return (
     <>
-      <MeetingsLanding />
+      {/* The OAuth return lands on the first tab, which holds the calendar. */}
+      {part === "links" && <MeetingsLanding />}
       <QueryGate pendingLabel={t("common.loading")} query={profile}>
-        {(saved) => <MeetingCards profile={saved} />}
+        {(saved) => <MeetingCards profile={saved} part={part} />}
       </QueryGate>
     </>
   );
@@ -79,10 +85,21 @@ function MeetingsLanding() {
 
 // In board order. The setup card leads only while no calendar is connected;
 // until the roster answers, nobody is told to connect what they may have.
-function MeetingCards({ profile }: Readonly<{ profile: Profile }>) {
+function MeetingCards({
+  profile,
+  part,
+}: Readonly<{ profile: Profile; part: MeetingsPart }>) {
   const { standing } = useCalendarStanding(profile);
   const hours = useWorkingHours();
   const setup = standing === "none";
+  if (part === "availability")
+    return (
+      <AvailabilityCard
+        profile={profile}
+        attention={needsAttention(profile, standing)}
+      />
+    );
+  if (part === "guests") return <GuestViewCard profile={profile} />;
   return (
     <>
       {setup && (
@@ -93,11 +110,6 @@ function MeetingCards({ profile }: Readonly<{ profile: Profile }>) {
       )}
       <BookingLinksCard profile={profile} />
       <MeetingCalendarCard profile={profile} />
-      <AvailabilityCard
-        profile={profile}
-        attention={needsAttention(profile, standing)}
-      />
-      <GuestViewCard profile={profile} />
     </>
   );
 }

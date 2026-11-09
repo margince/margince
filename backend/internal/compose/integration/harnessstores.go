@@ -27,7 +27,7 @@ import (
 )
 
 func (e *Env) bindStores(db *database.DB) {
-	e.Activities = activities.NewStore(db)
+	e.Activities = activities.NewStore(db).WithIdentityProver(capture.ProvedUnambiguouslyTx)
 	// A no-op rename: the installation-name edge is compose's, which this package
 	// cannot import, and compose's installationname suites prove it.
 	// Merge readers use stored plan dates; no current-week calculation is needed.

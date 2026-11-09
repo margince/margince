@@ -25,6 +25,7 @@ import (
 // map value, a oneOf branch, an inline response. No decoder holds them, so each
 // says who does instead.
 var untaggableBounds = gatekit.Waive(map[string]string{
+	"components.schemas.SchedulingProfile.properties.offered_lengths.items":                                  "activities.validateSchedulingProfile validates every offered minute value before saving the existing policy JSON.",
 	"components.schemas.WorkingHours.properties.days.items":                                                  "a response; the request twin is SaveWorkingHoursRequest",
 	"components.schemas.SaveWorkingHoursRequest.properties.days.items":                                       "identity.validWorkingHours refuses a weekday outside 1..7",
 	"components.schemas.ApprovalEvidence.properties.source_lines.items":                                      "a response; the server numbers the lines",

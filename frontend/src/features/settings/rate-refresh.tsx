@@ -28,11 +28,11 @@ type RefreshPath = "/fx-rates/propose-refresh";
 export function RefreshFromSources({ path }: Readonly<{ path: RefreshPath }>) {
   const t = useT();
   const refresh = useMutation({
-    // The path travels as a VARIABLE rather than closing over the render that
+    // The path travels as a variable rather than closing over the render that
     // drew the button. React Query re-arms a mutation's options in a passive
-    // effect, so a click landing before that effect runs would carry the
-    // previous render's closure — and `mutation-variable-coverage.test.ts`
-    // walks the TSX for exactly this shape.
+    // effect. A click landing before that effect runs would carry the previous
+    // render's closure. `census/rules/mutation-variable-coverage.census.ts`
+    // walks the TSX for this shape.
     mutationFn: async (target: RefreshPath) => {
       unwrap(await api.POST(target));
     },

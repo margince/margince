@@ -24,11 +24,6 @@
   margin: 0;
 }
 
-/* The absence, as the prose it is: the body's own gutter is the interval. */
-.weekly-learnings-empty {
-  margin: 0;
-}
-
 /* What a lesson RESTS ON, beside the claim: a set of references rather than a
    bulleted list, so the browser's disc and its 40px indent both go. */
 .weekly-learnings-citations {
@@ -219,40 +214,12 @@
   flex: none;
 }
 
-/* ── The side column ──────────────────────────────────────────────────────
- * The headline figures as one list: the name, the count at the end, and the
- * share as a bar under them. */
-.brief-weekly-summary .brief-report-tiles {
-  grid-template-columns: minmax(0, 1fr);
-}
-.brief-weekly-summary .brief-report-tile {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: baseline;
-  gap: var(--space-1) var(--space-3);
-  padding: var(--space-3) var(--space-4); /* ds:ignore a list row, not a tile */
-}
-.brief-weekly-summary .brief-report-tile-figure {
-  justify-self: end;
-}
-.brief-weekly-summary .brief-report-tile-value {
-  font: var(--fontHeadingSmall);
-}
-.brief-weekly-summary .brief-report-tile-of {
-  font: var(--fontBodySmall);
-}
-.brief-weekly-summary
-  :is(
-    .brief-report-tile-bar,
-    .brief-report-figure-line,
-    .brief-report-figure-delta
-  ) {
-  grid-column: 1 / -1;
-}
-.brief-weekly-summary > .t-caption {
+/* The headline's comparison line, on the report panel's own inset. */
+.brief-report-summary > .t-caption {
   margin: 0;
-  padding: var(--space-3) var(--space-4); /* ds:ignore the plate's own inset */
+  padding: var(--padPanel);
 }
+/* ── The side column ────────────────────────────────────────────────────── */
 /* The weeks to open, the one shown on a raised ground. */
 .brief-weekly-weeks {
   display: flex;

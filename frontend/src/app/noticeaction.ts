@@ -9,6 +9,7 @@ import {
 import type { MessageKey } from "../i18n/en";
 import { approvalHref } from "../lib/approvalhref";
 import { type EntityKind, isEntityKind, recordRoute } from "../lib/entity";
+import { labelFor } from "../lib/labelfor";
 import { routeHash } from "../lib/router";
 import { settingsHref } from "../lib/settingsrouting";
 
@@ -57,7 +58,12 @@ export function noticeAction(
   }
   if (target.type === "legal_entity" || target.type === "signature_template") {
     return {
-      href: routeHash(settingsHref("company")),
+      href: routeHash(
+        settingsHref(
+          "company",
+          target.type === "legal_entity" ? "entities" : "email",
+        ),
+      ),
       label: "signatureTemplate.title",
     };
   }
@@ -69,5 +75,5 @@ export function noticeAction(
   }
   const route = recordRoute(target.type, target.id);
   if (!route || !isEntityKind(target.type)) return undefined;
-  return { href: routeHash(route), label: OPEN_RECORD[target.type] };
+  return { href: routeHash(route), label: labelFor(OPEN_RECORD, target.type) };
 }

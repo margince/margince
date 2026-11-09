@@ -71,6 +71,9 @@ type Store struct {
 	// the timeline, silently.
 	identity       MessageIdentityReconciler
 	partyAdmission func(context.Context, ids.ActivityID) error
+	// receiptPage bounds one overdue-receipt read; zero is defaultReceiptPage.
+	receiptPage     int
+	partySettlement func(context.Context, pgx.Tx, ids.ActivityID) error
 	// bounce is told when a delivery dies permanently, so the module owning
 	// communication policy can stop writing to the address. An OPTION rather
 	// than a required parameter, unlike identity beside it: a store without one

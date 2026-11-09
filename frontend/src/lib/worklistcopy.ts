@@ -1,3 +1,4 @@
+import { taskHref } from "./taskreminders";
 import { sourceName } from "./worklistsources";
 
 export { sourceName } from "./worklistsources";
@@ -27,6 +28,7 @@ import type { Worklist, WorklistItem } from "./worklisttypes";
 
 export {
   dealFactsText,
+  factReasons,
   partyName,
   phrasedReasons,
   reasonText,
@@ -58,7 +60,7 @@ export function subjectHref(
 
 // Sources without record pages link to their existing work surface.
 const SOURCE_QUEUE: Partial<Record<WorklistItem["source"], string>> = {
-  dsr: routeHash(settingsHref("privacy")),
+  dsr: routeHash(settingsHref("privacy", "requests")),
   capture_health: routeHash(settingsHref("connections")),
   booking_health: routeHash({ screen: "book" }),
   // A rule that failed, and the page that lists the rules.
@@ -227,8 +229,10 @@ export function moveHref(item: WorklistItem): string | undefined {
   if (move.action === "open_meeting_brief") {
     return briefHref(item);
   }
+  if (move.action === "open_task" && move.activity_id) {
+    return taskHref(move.activity_id);
+  }
   const record = subjectHref(item);
-  if (move.action === "open_task") return record;
   if (!record || item.subject?.type !== "contact") {
     return record;
   }

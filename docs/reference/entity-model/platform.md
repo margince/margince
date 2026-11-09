@@ -85,6 +85,7 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 
 **Rules**
 
+- `data_task_review_expires_after_creation`: `CHECK ((expires_at > created_at))`
 - `data_task_review_token_hash_check`: `CHECK ((octet_length(token_hash) = 32))`
 
 **Indexes**
@@ -315,6 +316,7 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 - `idx_system_log_action`: `btree (action, occurred_at DESC)`
 - `idx_system_log_actor`: `btree (actor_id, occurred_at DESC)`
 - `idx_system_log_time`: `btree (occurred_at DESC)`
+- `idx_system_log_unkeyed_email`: `btree (id) WHERE ((action = 'login') AND (detail ? 'email_hash') AND (NOT (detail ? 'email_key_id')))`
 - `system_log_pkey`: `unique, btree (id)`
 
 **Triggers**

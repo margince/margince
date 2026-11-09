@@ -54,7 +54,7 @@ func RetireSeatEmploymentEdgesTx(ctx context.Context, tx pgx.Tx, after ids.UUID,
 		if !seats[edge.contact] {
 			continue
 		}
-		retired, err := retireSeatEmploymentEdge(ctx, tx, edge, runID)
+		retired, err := retireInferredEmploymentEdge(ctx, tx, edge, runID, "workspace_seat_address")
 		if err != nil {
 			return SeatEmploymentPage{}, err
 		}
@@ -110,10 +110,10 @@ func inferredEmploymentPage(ctx context.Context, tx pgx.Tx, after ids.UUID, limi
 	return page, retirable, nil
 }
 
-// retireSeatEmploymentEdge archives one edge under its contact's employment
+// retireInferredEmploymentEdge archives one edge under its contact's employment
 // lock, which the seat check came before (lockorder.go). An edge edited since
 // the page was read has another version and stays.
-func retireSeatEmploymentEdge(ctx context.Context, tx pgx.Tx, edge inferredEdge, runID string) (bool, error) {
+func retireInferredEmploymentEdge(ctx context.Context, tx pgx.Tx, edge inferredEdge, runID, reason string) (bool, error) {
 	if err := storekit.LockWriteIdentity(ctx, tx, employmentKind, edge.contact.String()); err != nil {
 		return false, err
 	}
@@ -125,11 +125,11 @@ func retireSeatEmploymentEdge(ctx context.Context, tx pgx.Tx, edge inferredEdge,
 		return false, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("contacts: retiring a seat's inferred employment: %w", err)
+		return false, fmt.Errorf("contacts: retiring an inferred employment: %w", err)
 	}
-	evidence := map[string]any{"data_task_run": runID, auditKeyReason: "workspace_seat_address"}
+	evidence := map[string]any{evidenceKeyDataTaskRun: runID, auditKeyReason: reason}
 	if err := emitRelationshipChangeWithEvidence(ctx, tx, "archive", nil, archived, evidence); err != nil {
-		return false, fmt.Errorf("contacts: recording a retired seat employment: %w", err)
+		return false, fmt.Errorf("contacts: recording a retired employment: %w", err)
 	}
 	return true, nil
 }

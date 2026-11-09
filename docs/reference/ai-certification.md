@@ -888,7 +888,7 @@ well the others do.
 | Tries per test case | 3 at first (`RUNS=` changes it for one run); a borderline case gets 3 more at a time, up to 9 |
 | Quality opinions per try | 1; a 2nd when it is within 10 points of a bar or under the lowest, a 3rd when the two are more than 5 apart; the middle one counts |
 | How sure every bound is | one-sided 90% (z = 1.2816 for a pass rate, Student's t for an average score, whose spread is taken as at least 5 points) |
-| Quality bar 70 / 50 / 40: 145 test cases | ✅ Ready needs scores averaging at least 70, allowing for doubt, no case whose best-case average is under 70, and no single try under 40; ⚠️ Usable with care needs at least 50, and no case whose best-case average is under 40 |
+| Quality bar 70 / 50 / 40: 148 test cases | ✅ Ready needs scores averaging at least 70, allowing for doubt, no case whose best-case average is under 70, and no single try under 40; ⚠️ Usable with care needs at least 50, and no case whose best-case average is under 40 |
 | Quality bar 80 / 60 / 50: 22 test cases | ✅ Ready needs scores averaging at least 80, allowing for doubt, no case whose best-case average is under 80, and no single try under 50; ⚠️ Usable with care needs at least 60, and no case whose best-case average is under 50 |
 | Quality bar 75 / 55 / 45: 2 test cases | ✅ Ready needs scores averaging at least 75, allowing for doubt, no case whose best-case average is under 75, and no single try under 45; ⚠️ Usable with care needs at least 55, and no case whose best-case average is under 45 |
 
@@ -1276,12 +1276,12 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 | | |
 |---|---:|
-| Shipped invocation sites | 55 |
+| Shipped invocation sites | 56 |
 | … best state `current` | 35 |
 | … best state `partial` | 1 |
 | … best state `stale` | 14 |
-| … `absent` on every binding | 5 |
-| Scenarios in the corpus | 291 |
+| … `absent` on every binding | 6 |
+| Scenarios in the corpus | 294 |
 | Committed records | 356 |
 | Bindings measured | 18 |
 
@@ -1345,7 +1345,7 @@ today. It says nothing about how well the model did; that is the band.
 <details>
 <summary>Every site, and the best model tested on it</summary>
 
-### Index of sites (55)
+### Index of sites (56)
 
 Which model to run each site on, and what that choice rests on.
 
@@ -1356,6 +1356,7 @@ Which model to run each site on, and what that choice rests on.
 | [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 13 |
 | [`brief_ranking/rank`](#brief_rankingrank) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 14 |
 | [`capture_classify/classify`](#capture_classifyclassify) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 5 | 10 |
+| [`capture_classify/deal_topic`](#capture_classifydeal_topic) | - | - | - | `absent` | 3 | 0 |
 | [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 15 | 8 |
 | [`capture_counterparty_verdict/verdict`](#capture_counterparty_verdictverdict) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 18 | 8 |
 | [`cert_judge/judge`](#cert_judgejudge) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 14 |
@@ -1977,6 +1978,25 @@ Records (10):
 | `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 5/5 | `not_supported` | 15 | 9 | 0.60 | 3169ms | 4467ms | 9 | 6 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 758ms | 1000ms | 15 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 5/5 | `not_supported` | 15 | 12 | 0.80 | 12864ms | 27764ms | 12 | 3 | 0 | 0 |
+
+</details>
+
+<details>
+<summary><code>capture_classify/deal_topic</code>: 3 scenario(s), 0 record(s), best state absent</summary>
+
+##### `capture_classify/deal_topic`
+
+Scope a run of it can claim: `full_invocation`.
+
+Scenarios (3):
+
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `a_bare_call_request_gives_no_ground_to_pick_between_two_deals` | `accepted` | judge | [deal_topic_unsure_01.yaml](../../backend/internal/compose/aicert/corpus/capture_classify/deal_topic_unsure_01.yaml) |
+| `a_rollout_question_is_about_the_rollout_deal_and_not_the_support_renewal` | `accepted` | judge | [deal_topic_about_01.yaml](../../backend/internal/compose/aicert/corpus/capture_classify/deal_topic_about_01.yaml) |
+| `an_invoice_for_other_work_is_not_about_the_customers_only_open_deal` | `accepted` | judge | [deal_topic_not_about_01.yaml](../../backend/internal/compose/aicert/corpus/capture_classify/deal_topic_not_about_01.yaml) |
+
+No record: this site has never been certified on any binding.
 
 </details>
 

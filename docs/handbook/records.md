@@ -115,7 +115,7 @@ The first merge settles the group for every owner, and it cannot be undone. A co
 Also called: combine, deduplicate, remove a duplicate, merge several contacts, duplicate group.
 
 ### How do I call a contact?
-To call a contact, click its number in **Details** or in the header's **Phone** field. It dials that number in your phone app. Margince does not make or record calls, but it opens **Log activity** on **Call** for that contact; close it and nothing is recorded. A logged call's **Call**, the **Call** in a task and the open card under **Your tasks** on **Home** do the same. A seat that may not log activity, or an archived contact, only dials; a contact with no number has nothing to dial. A call logged this way is not linked to the task and does not complete it.
+To call a contact, click its number in **Details** or in the header's **Phone** field. It dials that number in your phone app. Margince does not make or record calls, but it opens **Log activity** on **Call** for that contact; close it and nothing is recorded. A logged call's **Call**, the **Call** in a task and the open card under **Needs you** on **Home** do the same. A seat that may not log activity, or an archived contact, only dials; a contact with no number has nothing to dial. A call logged this way is not linked to the task and does not complete it.
 
 To write to a contact, press **Email** in its header; a contact reached only on chat shows **Message on** there. Only a number that starts with + gets a chat button, in the header **Phone** field and in **Details**, for **WhatsApp**, **Telegram** and **Zalo**. Each sends the number to the app's website and opens a chat, where you start the call; it does not open **Log activity**. Telegram finds the contact only if the contact allows it. An administrator can turn each link off in [Settings](settings.md).
 Also called: phone a contact, click to call, dial, call result, not reached.
@@ -283,7 +283,7 @@ One activity can link to many records at once, such as a contact and a deal. Eve
 A meeting holds a status: **booked, held, no-show, canceled.** **Activities are never fully deleted.** If something is filed on the wrong record, the fix is **Relink**, not delete.
 
 ### How do I edit or delete a note, call or meeting I logged?
-You cannot edit a logged activity in the Margince app. An activity on the timeline has **Relink**, **Change visibility** (except on email) and **Archive**, all under **More actions** (⋯) on its row, but no Edit. To fix one, log a new activity; a started meeting with no outcome takes **Held** or **Add notes** to [record what came of it](meetings-and-booking.md#how-do-i-record-what-came-of-a-meeting). You can still move an open task with **Move to** (a new date), **Snooze 1 day** or **Done**. To move an activity to the right record, choose **Relink** and search under "Search contacts, companies, deals, leads or projects". Tick **Replace existing link** to change the link and not add one, then choose **Relink**.
+You cannot edit a logged activity in the Margince app. An activity on the timeline has **Relink**, **Change visibility** (except on email) and **Archive**, all under **More actions** (⋯) on its row, but no Edit. To fix one, log a new activity; a started meeting with no outcome takes **It happened** or **Add notes** to [record what came of it](meetings-and-booking.md#how-do-i-record-what-came-of-a-meeting). You can still move an open task with **Move to** (a new date), **Snooze 1 day** or **Done**. To move an activity to the right record, choose **Relink** and search under "Search contacts, companies, deals, leads or projects". Tick **Replace existing link** to change the link and not add one, then choose **Relink**.
 
 To take an activity off the History, choose **Archive** and confirm. You may archive a note or task you wrote yourself, including one your agent logged for you. Captured email, meetings, calls and a colleague's notes need a role that may delete activities: Team lead, Management, Ops or Admin. Anyone else sees **Archive** greyed out with the reason.
 Also called: fix a note, delete a note, remove a duplicate note, change a task's due date, move an email.
@@ -340,7 +340,7 @@ Also called: edit conflict, simultaneous editing, someone overwrote my change.
 Custom fields in Margince are fields your company adds to the ones every Margince has. The types are **text**, **number**, **date**, **currency**, **picklist**, **multiple choice** and **yes/no**, on contacts, companies, deals, leads, projects, contracts and activities. A field of many choices holds many answers at once, and a filter finds the record by any one of them.
 
 ### How do I add a custom field?
-To add a custom field in Margince, open Settings → **Fields**, pick the **Object**, and choose **New field**.
+To add a custom field in Margince, open Settings → **Records and fields**, pick the **Object**, and choose **New field**.
 1. Choose the **Object**: Deal, Company, Contact, Lead, Project, Contract or Activity.
 2. Choose **New field**, enter a **Label** and pick a **Type**. A picklist needs its choices, and a currency field needs its currency. Untick **In create forms** to keep the field out of the dialog that creates a record.
 3. Confirm with **Add field**.
@@ -366,7 +366,7 @@ To tag a contact, company or deal in Margince, open the record, find its **Tags*
 
 To see who put a tag on a record and when, point at the tag or move to it with the keyboard.
 
-Anyone can put a tag on a record, but only Admin and Ops users can create, rename or retire one, in **Settings → Tags**. If no tag matches, an Admin or Ops user gets **Create tag {name}**, also in a bulk change. It creates the tag and adds it, or makes it the tag of the bulk change. If the tag is created but not added, the picker says so, and you can pick it in the list again. Others are told who can add a tag, and with lists on, a seat that may create lists also gets **Add to a Shortlist instead**.
+Anyone can put a tag on a record; only Admin and Ops users create, rename or retire one, in **Settings → Records and fields → Tags**. If no tag matches, an Admin or Ops user gets **Create tag {name}**, also in a bulk change. It creates the tag and adds it, or makes it the tag of the bulk change. If the tag is created but not added, the picker says so, and you can pick it in the list again. Others are told who can add a tag, and with lists on, a seat that may create lists also gets **Add to a Shortlist instead**.
 Also called: label, add a label, categorise a record.
 
 Renaming a tag renames it everywhere, because every record shares the one tag.
@@ -383,7 +383,7 @@ Renaming a tag renames it everywhere, because every record shares the one tag.
 ### Can Margince suggest a tag from mail and meeting notes?
 Yes, for tags an admin marks as suggested. Margince never adds such a tag by itself: you accept or dismiss each suggestion.
 
-1. In **Settings → Tags**, choose **Edit** on the tag.
+1. In **Settings → Records and fields → Tags**, choose **Edit** on the tag.
 2. Under **What shows interest**, describe it in plain words, for example "asks about pricing or a demo of Product X".
 3. Tick "Suggest this tag when mail, meetings, notes or calls show this interest" and save.
 

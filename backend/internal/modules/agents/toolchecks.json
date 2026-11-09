@@ -754,6 +754,12 @@
         "legal_review.update"
       ]
     },
+    "decline_activity_deal": {
+      "checks": [
+        "activity.update",
+        "deal.read"
+      ]
+    },
     "delete_anchor_company_logo": {
       "checks": [
         "admin",
@@ -1415,7 +1421,9 @@
     },
     "get_handled_for_you": {
       "checks": [
-        "deal.read"
+        "activity.read",
+        "deal.read",
+        "pipeline.read"
       ]
     },
     "get_hidden_backlog": {

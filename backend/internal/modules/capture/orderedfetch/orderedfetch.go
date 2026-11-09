@@ -94,18 +94,19 @@ func (w Walk[T]) InOrder(
 	return halt.cause()
 }
 
-// work fetches what the queue hands it into each item's slot. An item handed
-// over as the walk halted is answered with the halting error rather than sent
-// to the provider.
+// work fetches what the queue hands it into each item's slot. An item after
+// the halting one is answered with the halting error rather than sent to the
+// provider. An item before it is still fetched, because the consumer reaches
+// it before the halt.
 func (w Walk[T]) work(ctx context.Context, next <-chan queued, slots []chan ordered[T], halt *halting, fetch func(context.Context, int) (T, error)) {
 	for item := range next {
-		if cause := halt.cause(); cause != nil {
+		if cause := halt.after(item.index); cause != nil {
 			slots[item.index] <- ordered[T]{err: cause, reservation: item.reservation}
 			continue
 		}
 		v, err := fetch(item.reservation.Context(ctx), item.index)
 		if err != nil && w.Halts != nil && w.Halts(err) {
-			halt.stop(err)
+			halt.stop(item.index, err)
 		}
 		if w.Retained != nil {
 			item.reservation.Shrink(w.Retained(v))
@@ -136,18 +137,28 @@ func await[T any](ctx context.Context, i int, slot <-chan ordered[T], queuedAll 
 	}
 }
 
-// halting is the first fetch error that ended the page.
+// halting is the first fetch error that ended the page, and the item it
+// came from.
 type halting struct {
 	once    sync.Once
+	index   int
 	err     error
 	stopped chan struct{}
 }
 
-func (h *halting) stop(err error) {
+func (h *halting) stop(index int, err error) {
 	h.once.Do(func() {
-		h.err = err
+		h.index, h.err = index, err
 		close(h.stopped)
 	})
+}
+
+// after answers the halting error for an item past the one that halted.
+func (h *halting) after(index int) error {
+	if cause := h.cause(); cause != nil && index > h.index {
+		return cause
+	}
+	return nil
 }
 
 func (h *halting) cause() error {

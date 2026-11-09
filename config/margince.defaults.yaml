@@ -151,6 +151,9 @@ identity:
 installation:
   agent_calls_per_window: 1000
   agent_egress_per_window: 20
+  agent_role_calls_per_window: null
+  agent_role_egress_per_window: null
+  agent_role_writes_per_window: null
   agent_runner_interval_seconds: 30
   agent_window_hours: 24
   agent_writes_per_window: 200

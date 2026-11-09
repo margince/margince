@@ -985,6 +985,69 @@ func (e AgentContextItemOccurredPrecision) Valid() bool {
 	}
 }
 
+// Defines values for AgentRoleAllowanceFallbackSource.
+const (
+	AgentRoleAllowanceFallbackSourceAdminPreset  AgentRoleAllowanceFallbackSource = "admin_preset"
+	AgentRoleAllowanceFallbackSourceInstallation AgentRoleAllowanceFallbackSource = "installation"
+)
+
+// Valid indicates whether the value is a known member of the AgentRoleAllowanceFallbackSource enum.
+func (e AgentRoleAllowanceFallbackSource) Valid() bool {
+	switch e {
+	case AgentRoleAllowanceFallbackSourceAdminPreset:
+		return true
+	case AgentRoleAllowanceFallbackSourceInstallation:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AgentRoleAllowanceSetUnset.
+const (
+	AgentRoleAllowanceSetUnsetAgentCallsPerWindow  AgentRoleAllowanceSetUnset = "agent_calls_per_window"
+	AgentRoleAllowanceSetUnsetAgentEgressPerWindow AgentRoleAllowanceSetUnset = "agent_egress_per_window"
+	AgentRoleAllowanceSetUnsetAgentWritesPerWindow AgentRoleAllowanceSetUnset = "agent_writes_per_window"
+)
+
+// Valid indicates whether the value is a known member of the AgentRoleAllowanceSetUnset enum.
+func (e AgentRoleAllowanceSetUnset) Valid() bool {
+	switch e {
+	case AgentRoleAllowanceSetUnsetAgentCallsPerWindow:
+		return true
+	case AgentRoleAllowanceSetUnsetAgentEgressPerWindow:
+		return true
+	case AgentRoleAllowanceSetUnsetAgentWritesPerWindow:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AgentRoleAllowanceValueSource.
+const (
+	AgentRoleAllowanceValueSourceAdminPreset      AgentRoleAllowanceValueSource = "admin_preset"
+	AgentRoleAllowanceValueSourceInstallation     AgentRoleAllowanceValueSource = "installation"
+	AgentRoleAllowanceValueSourceInstallationKept AgentRoleAllowanceValueSource = "installation_kept"
+	AgentRoleAllowanceValueSourceRole             AgentRoleAllowanceValueSource = "role"
+)
+
+// Valid indicates whether the value is a known member of the AgentRoleAllowanceValueSource enum.
+func (e AgentRoleAllowanceValueSource) Valid() bool {
+	switch e {
+	case AgentRoleAllowanceValueSourceAdminPreset:
+		return true
+	case AgentRoleAllowanceValueSourceInstallation:
+		return true
+	case AgentRoleAllowanceValueSourceInstallationKept:
+		return true
+	case AgentRoleAllowanceValueSourceRole:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AgentToolTier.
 const (
 	AgentToolTierAutoExecute          AgentToolTier = "auto_execute"
@@ -8319,6 +8382,7 @@ func (e ContactMomentMayBeDonePromiseType) Valid() bool {
 
 // Defines values for ContactMomentRule.
 const (
+	ContactMomentRuleAwaitingReply    ContactMomentRule = "awaiting_reply"
 	ContactMomentRuleGoneQuiet        ContactMomentRule = "gone_quiet"
 	ContactMomentRuleJobChange        ContactMomentRule = "job_change"
 	ContactMomentRuleMeetingPrep      ContactMomentRule = "meeting_prep"
@@ -8335,6 +8399,8 @@ const (
 // Valid indicates whether the value is a known member of the ContactMomentRule enum.
 func (e ContactMomentRule) Valid() bool {
 	switch e {
+	case ContactMomentRuleAwaitingReply:
+		return true
 	case ContactMomentRuleGoneQuiet:
 		return true
 	case ContactMomentRuleJobChange:
@@ -16018,6 +16084,63 @@ func (e MagicActorType) Valid() bool {
 	}
 }
 
+// Defines values for MagicFieldChangePrecision.
+const (
+	MagicFieldChangePrecisionDay     MagicFieldChangePrecision = "day"
+	MagicFieldChangePrecisionInstant MagicFieldChangePrecision = "instant"
+)
+
+// Valid indicates whether the value is a known member of the MagicFieldChangePrecision enum.
+func (e MagicFieldChangePrecision) Valid() bool {
+	switch e {
+	case MagicFieldChangePrecisionDay:
+		return true
+	case MagicFieldChangePrecisionInstant:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MagicFieldChangeType.
+const (
+	MagicFieldChangeTypeBoolean   MagicFieldChangeType = "boolean"
+	MagicFieldChangeTypeDate      MagicFieldChangeType = "date"
+	MagicFieldChangeTypeEnum      MagicFieldChangeType = "enum"
+	MagicFieldChangeTypeMember    MagicFieldChangeType = "member"
+	MagicFieldChangeTypeMoney     MagicFieldChangeType = "money"
+	MagicFieldChangeTypeNumber    MagicFieldChangeType = "number"
+	MagicFieldChangeTypeReference MagicFieldChangeType = "reference"
+	MagicFieldChangeTypeStage     MagicFieldChangeType = "stage"
+	MagicFieldChangeTypeText      MagicFieldChangeType = "text"
+)
+
+// Valid indicates whether the value is a known member of the MagicFieldChangeType enum.
+func (e MagicFieldChangeType) Valid() bool {
+	switch e {
+	case MagicFieldChangeTypeBoolean:
+		return true
+	case MagicFieldChangeTypeDate:
+		return true
+	case MagicFieldChangeTypeEnum:
+		return true
+	case MagicFieldChangeTypeMember:
+		return true
+	case MagicFieldChangeTypeMoney:
+		return true
+	case MagicFieldChangeTypeNumber:
+		return true
+	case MagicFieldChangeTypeReference:
+		return true
+	case MagicFieldChangeTypeStage:
+		return true
+	case MagicFieldChangeTypeText:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MagicLineLane.
 const (
 	MagicLineLaneMagicLaneCouldNotComplete MagicLineLane = "could_not_complete"
@@ -18289,6 +18412,24 @@ func (e ProductTaxCategory) Valid() bool {
 	}
 }
 
+// Defines values for ProgressDealRequestSettle.
+const (
+	ProgressDealRequestSettleComplete ProgressDealRequestSettle = "complete"
+	ProgressDealRequestSettleKeep     ProgressDealRequestSettle = "keep"
+)
+
+// Valid indicates whether the value is a known member of the ProgressDealRequestSettle enum.
+func (e ProgressDealRequestSettle) Valid() bool {
+	switch e {
+	case ProgressDealRequestSettleComplete:
+		return true
+	case ProgressDealRequestSettleKeep:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ProgressDealRequestWonWithoutContractReason.
 const (
 	ProgressDealRequestWonWithoutContractReasonImported       ProgressDealRequestWonWithoutContractReason = "imported"
@@ -18820,6 +18961,24 @@ func (e ReaderCalendar) Valid() bool {
 	case ReaderCalendarNotConnected:
 		return true
 	case ReaderCalendarUnreadable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReceiptSource.
+const (
+	ReceiptSourceApproval   ReceiptSource = "approval"
+	ReceiptSourceCorrection ReceiptSource = "correction"
+)
+
+// Valid indicates whether the value is a known member of the ReceiptSource enum.
+func (e ReceiptSource) Valid() bool {
+	switch e {
+	case ReceiptSourceApproval:
+		return true
+	case ReceiptSourceCorrection:
 		return true
 	default:
 		return false
@@ -30792,6 +30951,24 @@ type ActivityAuthor struct {
 // ActivityAuthorKind `colleague` is a seat in this workspace, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
 type ActivityAuthorKind string
 
+// ActivityDealDecline defines model for ActivityDealDecline.
+type ActivityDealDecline struct {
+	// DeclinedDealIds The deals this call declined on the message. A deal declined before is not listed again.
+	DeclinedDealIds []openapi_types.UUID `json:"declined_deal_ids"`
+
+	// ProjectKept A project link came from a declined deal and stays, because a retention rule keeps it or the caller cannot read the project.
+	ProjectKept bool `json:"project_kept"`
+
+	// ProjectUnfiled The project link that came from a declined deal came off the message.
+	ProjectUnfiled bool `json:"project_unfiled"`
+
+	// QuestionsClosed The open deal questions of the conversation this call marked done.
+	QuestionsClosed int `json:"questions_closed" minimum:"0"`
+
+	// Unlinked A deal link came off the message.
+	Unlinked bool `json:"unlinked"`
+}
+
 // ActivityDealFiling defines model for ActivityDealFiling.
 type ActivityDealFiling struct {
 	// DealId Explicitly selected deal; omitted for automatic filing.
@@ -31142,10 +31319,24 @@ type AdvanceProjectPhaseRequestToPhase string
 
 // AgentAllowanceDefaults What each agent allowance is before an admin changes it, so a screen never restates them.
 type AgentAllowanceDefaults struct {
+	// AdminCallsPerWindow The Admin preset for calls of any kind. The preset leaves sends at the installation value.
+	AdminCallsPerWindow int `json:"admin_calls_per_window"`
+
+	// AdminWritesPerWindow The Admin preset for changing calls.
+	AdminWritesPerWindow int `json:"admin_writes_per_window"`
 	AgentCallsPerWindow  int `json:"agent_calls_per_window"`
 	AgentEgressPerWindow int `json:"agent_egress_per_window"`
 	AgentWindowHours     int `json:"agent_window_hours"`
 	AgentWritesPerWindow int `json:"agent_writes_per_window"`
+}
+
+// AgentAllowanceFrom defines model for AgentAllowanceFrom.
+type AgentAllowanceFrom struct {
+	Limit int `json:"limit" minimum:"1"`
+
+	// RoleKey The role whose own value, or the Admin preset, gives this count: the highest among the
+	// user's roles. Null when it is the installation value.
+	RoleKey *string `json:"role_key"`
 }
 
 // AgentAllowanceSettings How much one agent may do in one window. A passport a user minted has its own allowance;
@@ -31156,6 +31347,12 @@ type AgentAllowanceDefaults struct {
 // a count applies within a minute, in the window that is running: a raised count gives
 // headroom within that minute, and a lowered one refuses an agent already past it on its
 // next call. The per-minute limits are fixed by the build and shown here read-only.
+//
+// The three counts here are the installation value. `roles` lists what each live role gives.
+// An agent gets, for each count, the highest allowance among the live roles of the user who
+// connected it, where a role with no value of its own gives the installation value. Roles
+// choose the limit only: the count is still one per passport or connection, for tool calls
+// and API requests together, and a change of role or value resets nothing.
 type AgentAllowanceSettings struct {
 	// AgentCallsPerWindow How many calls of any kind one passport or connection may make per window, a tool call or an API request, reads included. Default 1000.
 	AgentCallsPerWindow int `json:"agent_calls_per_window" maximum:"20000" minimum:"50"`
@@ -31190,6 +31387,9 @@ type AgentAllowanceSettings struct {
 
 	// McpStreamOpensPerMinute How many streams one passport may open per minute. Fixed by the build.
 	McpStreamOpensPerMinute int `json:"mcp_stream_opens_per_minute"`
+
+	// Roles Every live role, the seeded ones first in their order, then the others by name.
+	Roles []AgentRoleAllowance `json:"roles"`
 }
 
 // AgentAssembledContext What `catch_me_up_on` answers: the record asked about and the sections assembled around it.
@@ -31320,8 +31520,8 @@ type AgentContextSection struct {
 
 // AgentCounterUsage One allowance in the running window.
 type AgentCounterUsage struct {
-	// Limit The allowance in force: the installation's value, plus one more allowance for each
-	// release a user granted in this window.
+	// Limit The allowance in force: what the roles of the user who connected the agent give, plus
+	// one more allowance for each release a user granted in this window.
 	Limit int `json:"limit" minimum:"0"`
 
 	// Released How many times a user released more in this window.
@@ -31454,6 +31654,88 @@ type AgentRecordRef struct {
 	RecordType string             `json:"record_type"`
 }
 
+// AgentRoleAllowance One live role and the allowance its users' agents get for each count.
+type AgentRoleAllowance struct {
+	AgentCallsPerWindow  AgentRoleAllowanceValue `json:"agent_calls_per_window"`
+	AgentEgressPerWindow AgentRoleAllowanceValue `json:"agent_egress_per_window"`
+	AgentWritesPerWindow AgentRoleAllowanceValue `json:"agent_writes_per_window"`
+
+	// HoldsPreset True for the built-in Admin role, which the Admin preset is for, whether or not the
+	// preset binds a count now. Left out of a save, this role returns to the preset.
+	HoldsPreset bool `json:"holds_preset"`
+
+	// RoleKey The role's key: its identity, which a rename leaves alone.
+	RoleKey  string `json:"role_key"`
+	RoleName string `json:"role_name"`
+
+	// System True for a role Margince ships.
+	System bool `json:"system"`
+}
+
+// AgentRoleAllowanceFallback What the count would give once the role's own value is given up (`unset`).
+type AgentRoleAllowanceFallback struct {
+	Source AgentRoleAllowanceFallbackSource `json:"source"`
+	Value  int                              `json:"value" minimum:"1"`
+}
+
+// AgentRoleAllowanceFallbackSource defines model for AgentRoleAllowanceFallback.Source.
+type AgentRoleAllowanceFallbackSource string
+
+// AgentRoleAllowanceSet One role's changes in a save. A count sent is saved for the role; `0` saves the
+// installation value, which for the built-in Admin role turns the preset off for that count.
+// A count named in `unset` loses the role's value: the role uses the installation value
+// again, and Admin returns to the preset. A count neither sent nor unset is left as it is.
+type AgentRoleAllowanceSet struct {
+	// AgentCallsPerWindow 0, or 50 to 20000, the installation bounds.
+	AgentCallsPerWindow *int `json:"agent_calls_per_window,omitempty" minimum:"0"`
+
+	// AgentEgressPerWindow 0, or 1 to 200, the installation bounds.
+	AgentEgressPerWindow *int `json:"agent_egress_per_window,omitempty" minimum:"0"`
+
+	// AgentWritesPerWindow 0, or 10 to 5000, the installation bounds.
+	AgentWritesPerWindow *int `json:"agent_writes_per_window,omitempty" minimum:"0"`
+
+	// RoleKey The key of a live role.
+	RoleKey string `json:"role_key"`
+
+	// Unset The counts whose saved value this role gives up. A count may not be both sent and unset.
+	Unset *[]AgentRoleAllowanceSetUnset `json:"unset,omitempty"`
+}
+
+// AgentRoleAllowanceSetUnset defines model for AgentRoleAllowanceSet.Unset.
+type AgentRoleAllowanceSetUnset string
+
+// AgentRoleAllowanceValue defines model for AgentRoleAllowanceValue.
+type AgentRoleAllowanceValue struct {
+	// IfUnset What the count would give once the role's own value is given up (`unset`).
+	IfUnset AgentRoleAllowanceFallback `json:"if_unset"`
+
+	// Source Where the value comes from. `role` is a value saved for this role. `admin_preset` is the
+	// Admin preset, which binds the built-in Admin role for a count while nobody saved an
+	// Admin value for it and nobody chose the installation value. `installation` is the
+	// installation value, which the role inherits. `installation_kept` is the installation
+	// value saved for the role as `0`, which keeps Admin off the preset for that count.
+	Source AgentRoleAllowanceValueSource `json:"source"`
+
+	// Value The allowance this role gives for the count.
+	Value int `json:"value" minimum:"1"`
+}
+
+// AgentRoleAllowanceValueSource Where the value comes from. `role` is a value saved for this role. `admin_preset` is the
+// Admin preset, which binds the built-in Admin role for a count while nobody saved an
+// Admin value for it and nobody chose the installation value. `installation` is the
+// installation value, which the role inherits. `installation_kept` is the installation
+// value saved for the role as `0`, which keeps Admin off the preset for that count.
+type AgentRoleAllowanceValueSource string
+
+// AgentRoleResolvedAllowance What each one of this user's passports or connections may do per window, before any release,
+// and the role each count comes from.
+type AgentRoleResolvedAllowance struct {
+	Calls  AgentAllowanceFrom `json:"calls"`
+	Egress AgentAllowanceFrom `json:"egress"`
+	Writes AgentAllowanceFrom `json:"writes"`
+}
+
 // AgentTool defines model for AgentTool.
 type AgentTool struct {
 	// Actions A router's choices. Each runs one verb and is admitted at that verb's tier, so a router whose actions differ lists its own tier as dynamic. Absent on a tool that is not a router.
@@ -31530,10 +31812,21 @@ type AgentUsageByUser struct {
 // that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
 type AgentUsageState string
 
-// AgentUserUsage One user's agents in the running window. Each count and allowance is the sum over
-// their live passports and connections, so a user with two passports has twice the
-// allowance. `state` is the worst state of any one of them.
+// AgentUserRole defines model for AgentUserRole.
+type AgentUserRole struct {
+	RoleKey  string `json:"role_key"`
+	RoleName string `json:"role_name"`
+}
+
+// AgentUserUsage One user's agents in the running window. Each count is the sum over their live
+// passports and connections, so a user with two passports has twice the limit there.
+// `allowance` is what one of those passports may do, and is not summed. `state` is the
+// worst state of any one of them.
 type AgentUserUsage struct {
+	// Allowance What each one of this user's passports or connections may do per window, before any release,
+	// and the role each count comes from.
+	Allowance AgentRoleResolvedAllowance `json:"allowance"`
+
 	// Calls One allowance in the running window.
 	Calls       AgentCounterUsage `json:"calls"`
 	DisplayName string            `json:"display_name"`
@@ -31543,6 +31836,9 @@ type AgentUserUsage struct {
 
 	// PassportCount Live passports and connections. A connection counts once.
 	PassportCount int `json:"passport_count" minimum:"1"`
+
+	// Roles The user's live roles, which choose their agents' allowance, by name.
+	Roles []AgentUserRole `json:"roles"`
 
 	// State The worst of the three allowances. `stopped` when one is used up, so the next call of
 	// that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
@@ -32956,12 +33252,12 @@ type AiUsage struct {
 // AiUsageBudgetBand < 80% / 80–100% soft-degrade / ≥ 100% non-interactive queued (AIRT-PARAM-9..11).
 type AiUsageBudgetBand string
 
-// AiUsageSummary The month's AI spend so far, summed from the lines GET /ai/usage prices.
+// AiUsageSummary The AI spend over the requested window, summed from the lines GET /ai/usage prices.
 type AiUsageSummary struct {
 	// ComputedAt The instant the window ends at and the figure was computed.
 	ComputedAt time.Time `json:"computed_at"`
 
-	// CostEstMinor Sum of the month's `cost_est_minor` lines from GET /ai/usage, in minor units of `currency`. Omitted, not 0, when no line carries a price: then nobody knows what the month cost, which is not the same as a month that cost nothing.
+	// CostEstMinor Sum of the window's `cost_est_minor` lines from GET /ai/usage, in minor units of `currency`. Omitted, not 0, when no line carries a price: then nobody knows what the window cost, which is not the same as a window that cost nothing.
 	CostEstMinor *int `json:"cost_est_minor,omitempty"`
 
 	// Currency ISO-4217 of cost_est_minor — always USD in phase 1 (ADR-0067).
@@ -35566,7 +35862,7 @@ type AutomationRun struct {
 	// OccurredAt Maps to automation_run.ran_at.
 	OccurredAt time.Time `json:"occurred_at"`
 
-	// Outcome Maps 1:1 to automation_run.status (data-model §12.5); `blocked` added by ADR-0035 Am.1.
+	// Outcome Maps 1:1 to automation_run.status; `blocked` added by ADR-0035 Am.1.
 	Outcome AutomationRunOutcome `json:"outcome"`
 
 	// Reason For failed/blocked/skipped: why (e.g. "provider error", "approval expired", "Passport no longer permits send") — from automation_run.detail.
@@ -35587,7 +35883,7 @@ type AutomationRun struct {
 	TriggerEvidence *string `json:"trigger_evidence,omitempty"`
 }
 
-// AutomationRunOutcome Maps 1:1 to automation_run.status (data-model §12.5); `blocked` added by ADR-0035 Am.1.
+// AutomationRunOutcome Maps 1:1 to automation_run.status; `blocked` added by ADR-0035 Am.1.
 type AutomationRunOutcome string
 
 // AutomationRunTier The tier that fired for this run.
@@ -37048,7 +37344,9 @@ type CaptureSenderDecisionDecision string
 
 // CaptureSenderListResponse defines model for CaptureSenderListResponse.
 type CaptureSenderListResponse struct {
-	Data []CaptureSenderDecision `json:"data"`
+	Data       []CaptureSenderDecision `json:"data"`
+	NextCursor *string                 `json:"next_cursor,omitempty"`
+	Total      *int                    `json:"total,omitempty"`
 }
 
 // CaptureSettings The workspace-shared capture posture (ADR-0072, CAP-PARAM-7). Read by every role,
@@ -37506,7 +37804,7 @@ type ColdStartField struct {
 	EvidenceSnippet string              `json:"evidence_snippet"`
 	Field           ColdStartFieldField `json:"field"`
 
-	// SourceKind Where evidence_snippet came from. For self_description the "evidence" is the user's own statement — a self-declared ICP is grounded in that statement (B-E01.13), not fabricated.
+	// SourceKind Where evidence_snippet came from. For self_description the "evidence" is the user's own statement — a self-declared ICP is grounded in that statement, not fabricated.
 	SourceKind ColdStartFieldSourceKind `json:"source_kind"`
 
 	// SourceUrl Present only when source_kind=url; null for text/self_description.
@@ -37517,7 +37815,7 @@ type ColdStartField struct {
 // ColdStartFieldField defines model for ColdStartField.Field.
 type ColdStartFieldField string
 
-// ColdStartFieldSourceKind Where evidence_snippet came from. For self_description the "evidence" is the user's own statement — a self-declared ICP is grounded in that statement (B-E01.13), not fabricated.
+// ColdStartFieldSourceKind Where evidence_snippet came from. For self_description the "evidence" is the user's own statement — a self-declared ICP is grounded in that statement, not fabricated.
 type ColdStartFieldSourceKind string
 
 // ColdStartProposal A staged proposal. NOTHING is written to real records until accepted via /approvals.
@@ -43027,7 +43325,7 @@ type CreateActivityRequest struct {
 	RfcMessageId *string `json:"rfc_message_id,omitempty"`
 	Source       string  `json:"source"`
 
-	// SourceActivityId The non-task activity this task follows from, including email and messages. The caller and assignee need access to the source content. The task preserves its audience and inherits its visible links when no links are supplied. This reference does not accept or settle a request.
+	// SourceActivityId For a task, the conversation or note it follows from. The caller and assignee need access to that source. The task preserves its audience and inherits its visible links when no links are supplied. For a logged note, call or meeting, the task whose outcome is being recorded. This reference alone does not complete that task or accept a request.
 	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
@@ -45117,6 +45415,16 @@ type DealNextBestActionEvidence struct {
 	Text              string            `json:"text"`
 }
 
+// DealOpenTask One task still open on a deal that just closed.
+type DealOpenTask struct {
+	// DueAt When it is due, absent on a task nobody dated.
+	DueAt *time.Time         `json:"due_at,omitempty"`
+	Id    openapi_types.UUID `json:"id"`
+
+	// Subject What the task says to do.
+	Subject string `json:"subject"`
+}
+
 // DealProbabilitySet defines model for DealProbabilitySet.
 type DealProbabilitySet struct {
 	// Note The same fact as one English sentence, for a model or a log. A web client writes its own from the two fields.
@@ -45940,6 +46248,12 @@ type DeclaredExtensionSetting struct {
 
 // DeclaredExtensionSettingKind The control the core draws.
 type DeclaredExtensionSettingKind string
+
+// DeclineActivityDealRequest defines model for DeclineActivityDealRequest.
+type DeclineActivityDealRequest struct {
+	// DealId The deal the message is not about. Leave it out to answer "none of them".
+	DealId *openapi_types.UUID `json:"deal_id,omitempty"`
+}
 
 // DedupeCandidate One DH-DDL-1 review-queue row: the canonical unordered pair, its confidence, and the detection-time evidence snapshot (DH-N-8).
 type DedupeCandidate struct {
@@ -49720,6 +50034,12 @@ type InstallationSettings struct {
 	// a count applies within a minute, in the window that is running: a raised count gives
 	// headroom within that minute, and a lowered one refuses an agent already past it on its
 	// next call. The per-minute limits are fixed by the build and shown here read-only.
+	//
+	// The three counts here are the installation value. `roles` lists what each live role gives.
+	// An agent gets, for each count, the highest allowance among the live roles of the user who
+	// connected it, where a role with no value of its own gives the installation value. Roles
+	// choose the limit only: the count is still one per passport or connection, for tool calls
+	// and API requests together, and a change of role or value resets nothing.
 	AgentAllowances AgentAllowanceSettings `json:"agent_allowances"`
 
 	// BaseCurrency ISO-4217 code every money roll-up converts to.
@@ -49814,8 +50134,8 @@ type InstallationSettings struct {
 
 	// ForecastSelfCorrecting Let the forecast correct itself. On by default. On, each open stage's chance moves
 	// toward the outcomes of deals recorded entering it in the last two years, weighted
-	// against the typed chance as if that were 20 deals; imported and older moves without
-	// a recorded origin count for nothing. A risk signal changes a deal's weight only
+	// against the typed chance as if that were 20 deals; imported, synced and older moves
+	// without a recorded origin count for nothing. A risk signal changes a deal's weight only
 	// after settled frozen forecasts show its effect. Off, every forecast surface weights
 	// a deal by its stage's typed chance.
 	ForecastSelfCorrecting bool `json:"forecast_self_correcting"`
@@ -52327,17 +52647,44 @@ type MagicEntityRef struct {
 	Type  string  `json:"type"`
 }
 
-// MagicFieldChange defines model for MagicFieldChange.
+// MagicFieldChange One field a change moved. Only fields a reader can understand are listed: a
+// field of the record's update request, a custom field, or a stored column the
+// server declares as readable. Internal columns are never listed.
+//
+// `before` and `after` keep the stored value (minor units, ids, enum codes).
+// The optional fields beside them say how to read it. A client that does not
+// know `type` must not print a raw value.
 type MagicFieldChange struct {
 	// After The value after the change; absent when the change cleared it.
 	After interface{} `json:"after,omitempty"`
 
+	// AfterLabel The name of the stage or member `after` names, where the reader may read it. Absent rather than guessed.
+	AfterLabel *string `json:"after_label,omitempty"`
+
 	// Before The value before the change; absent when the field was empty.
 	Before interface{} `json:"before,omitempty"`
 
+	// BeforeLabel The name of the stage or member `before` names, where the reader may read it. Absent rather than guessed.
+	BeforeLabel *string `json:"before_label,omitempty"`
+
+	// Currency The ISO 4217 code a `money` value is in. Absent when the server cannot tell which currency the record held at the change; a client then shows no amount.
+	Currency *string `json:"currency,omitempty"`
+
 	// Field The field's key as the record stores it (`industry`, `legal_name`).
 	Field string `json:"field"`
+
+	// Precision For a `date`, whether the value is a calendar day or an instant.
+	Precision *MagicFieldChangePrecision `json:"precision,omitempty"`
+
+	// Type How to read `before` and `after`. `money` is an integer in minor units of `currency`. `stage` and `member` are ids named by `before_label` and `after_label`. `enum` is a code of the field's own value set. `reference` is an id of another record, never printed. Absent for a custom field or a structured value; such a value is not printable as text.
+	Type *MagicFieldChangeType `json:"type,omitempty"`
 }
+
+// MagicFieldChangePrecision For a `date`, whether the value is a calendar day or an instant.
+type MagicFieldChangePrecision string
+
+// MagicFieldChangeType How to read `before` and `after`. `money` is an integer in minor units of `currency`. `stage` and `member` are ids named by `before_label` and `after_label`. `enum` is a code of the field's own value set. `reference` is an id of another record, never printed. Absent for a custom field or a structured value; such a value is not printable as text.
+type MagicFieldChangeType string
 
 // MagicLine One thing the machinery did, needs, could not finish, or is watching.
 //
@@ -52671,11 +53018,14 @@ type MailDraftEditorState struct {
 	AiGenerated  *bool   `json:"ai_generated,omitempty"`
 
 	// ContentFingerprint Server binding to the saved words, used only to retire stale editor state.
-	ContentFingerprint  *string `json:"content_fingerprint,omitempty"`
-	Intent              *string `json:"intent,omitempty"`
-	ServedBody          *string `json:"served_body,omitempty"`
-	VoiceDegraded       *bool   `json:"voice_degraded,omitempty"`
-	VoiceProfileVersion *int    `json:"voice_profile_version,omitempty" minimum:"1"`
+	ContentFingerprint *string `json:"content_fingerprint,omitempty"`
+
+	// Filing The deal and project selected in the composer. An empty list clears the selection. Omission keeps the older draft's grounding as the restore default. These are filing choices, not evidence of a request or permission to send. The send checks each link.
+	Filing              *[]MailDraftGround `json:"filing,omitempty"`
+	Intent              *string            `json:"intent,omitempty"`
+	ServedBody          *string            `json:"served_body,omitempty"`
+	VoiceDegraded       *bool              `json:"voice_degraded,omitempty"`
+	VoiceProfileVersion *int               `json:"voice_profile_version,omitempty" minimum:"1"`
 }
 
 // MailDraftGround One record the draft was written from. A saved agent draft keeps these so the composer files the sent mail where the draft was grounded, rather than rebuilding links from whichever page it was opened on.
@@ -52745,12 +53095,15 @@ type MailLanguage string
 
 // MarginceChangeBundle Every open change Margince made to one deal. Its Undo takes them all back.
 type MarginceChangeBundle struct {
-	// AuditLogIds The changes, newest first.
+	// AuditLogIds The changes the list shows for this deal, newest first.
 	AuditLogIds []openapi_types.UUID        `json:"audit_log_ids"`
 	DealId      openapi_types.UUID          `json:"deal_id"`
 	DealName    string                      `json:"deal_name"`
 	Kinds       []MarginceChangeBundleKinds `json:"kinds"`
 	LatestAt    time.Time                   `json:"latest_at"`
+
+	// UndoableAuditLogIds The part of `audit_log_ids` that Undo can still take back, newest first. A change edited since is listed but never named here, so an Undo of the bundle cannot send it. Absent on older responses.
+	UndoableAuditLogIds *[]openapi_types.UUID `json:"undoable_audit_log_ids,omitempty"`
 
 	// ValueBaseMinor The deal's value in the base currency, in minor units. Absent when the deal has no amount or no rate.
 	ValueBaseMinor *int64 `json:"value_base_minor,omitempty"`
@@ -52777,7 +53130,7 @@ type MarginceChangeSummary struct {
 	// Closed Deals Margince closed as lost.
 	Closed int `json:"closed"`
 
-	// Deals Deals with at least one open change.
+	// Deals Deals the changes list shows: each has an open change that Undo can still take back, or one edited since that was made in the last 14 days. An edited change older than that leaves this count and stays in the deal's history.
 	Deals int `json:"deals"`
 
 	// Moved Deals Margince moved to a later stage.
@@ -52800,6 +53153,9 @@ type MarginceChangeSummary struct {
 
 	// Truncated True when more bundles exist than were returned. The counts are never cut.
 	Truncated bool `json:"truncated"`
+
+	// UndoableDeals Deals among `deals` with at least one change Undo can still take back. Absent on older responses.
+	UndoableDeals *int `json:"undoable_deals,omitempty"`
 }
 
 // MeResponse defines model for MeResponse.
@@ -55579,6 +55935,11 @@ type Problem struct {
 
 	// Details Structured machine context — e.g. `existing_id` on 409 duplicate, or an
 	// `errors` array of `{ field, code, message }` on 422 validation.
+	//
+	// A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
+	// `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
+	// `ceiling` is the limit in force, and a window allowance adds `used` and `resets_at`.
+	// The `Retry-After` header says how many seconds until the call can succeed.
 	Details *map[string]interface{} `json:"details,omitempty"`
 
 	// Instance URI of the specific occurrence.
@@ -55695,6 +56056,9 @@ type ProgressDealRequest struct {
 	// Note Logged as a note on the deal's timeline after the move.
 	Note *string `json:"note,omitempty"`
 
+	// Settle What becomes of the deal's open tasks when this move closes it. Omitted keeps them.
+	Settle *ProgressDealRequestSettle `json:"settle,omitempty"`
+
 	// ToStageId The stage to move to. Its semantic decides whether the move is confirm-first.
 	ToStageId openapi_types.UUID `json:"to_stage_id"`
 
@@ -55704,6 +56068,9 @@ type ProgressDealRequest struct {
 	// WonWithoutContractReason Why a win has no contract behind it. Omit it when the deal has a signed contract with its paper attached.
 	WonWithoutContractReason *ProgressDealRequestWonWithoutContractReason `json:"won_without_contract_reason,omitempty"`
 }
+
+// ProgressDealRequestSettle What becomes of the deal's open tasks when this move closes it. Omitted keeps them.
+type ProgressDealRequestSettle string
 
 // ProgressDealRequestWonWithoutContractReason Why a win has no contract behind it. Omit it when the deal has a signed contract with its paper attached.
 type ProgressDealRequestWonWithoutContractReason string
@@ -55716,8 +56083,14 @@ type ProgressDealResult struct {
 	// NoteActivityId The note logged on the deal, absent when the call carried none.
 	NoteActivityId *openapi_types.UUID `json:"note_activity_id,omitempty"`
 
+	// OpenTasks The deal's tasks still open after a move that closed it. Absent when the move left it open, or when the call settled them.
+	OpenTasks *[]DealOpenTask `json:"open_tasks,omitempty"`
+
 	// ProbabilityNote The probability the move set from the new stage, as one sentence. Absent when the move changed no stage.
 	ProbabilityNote *string `json:"probability_note,omitempty"`
+
+	// SettledTaskIds The tasks this call completed, present only when it asked to settle them.
+	SettledTaskIds *[]openapi_types.UUID `json:"settled_task_ids,omitempty"`
 }
 
 // Project A project — the body of work a client relationship is made of. Mirrors the `project` table.
@@ -56815,6 +57188,9 @@ type Receipt struct {
 	// Actor Who did it: the member or agent that proposed an applied decision, or the job that made a correction. Absent on older responses.
 	Actor *ReceiptActor `json:"actor,omitempty"`
 
+	// AuditLogId The audit entry a `correction` wrote, present whether or not an Undo is offered, so a client matches this receipt to a change list or a bundle by this id and never by `id` alone. Absent on an approval and on older responses.
+	AuditLogId *openapi_types.UUID `json:"audit_log_id,omitempty"`
+
 	// Changes Every field the act moved, old value to new, read from the audit rows it wrote and masked to what the reader may see on the record. Values travel whole, never cut short. Absent when no audit row of the act can be read, which is not the same as an act that moved nothing (an empty list).
 	Changes *[]MagicFieldChange `json:"changes,omitempty"`
 
@@ -56842,6 +57218,9 @@ type Receipt struct {
 	// Review The recorded automatic change and its current review state.
 	Review *AppliedDealChangeReview `json:"review,omitempty"`
 
+	// Source What kind of act `id` names: a change Margince applied itself (`correction`, where `id` is its audit entry) or an approval the system decided (`approval`, where `id` is the approval). Absent on older responses.
+	Source *ReceiptSource `json:"source,omitempty"`
+
 	// SourceRecord The email, thread or meeting the act was read from, where it names one. Checked against the reader's access on every read: a source the reader may not open is left out, not named. Absent also when the act cites no message.
 	SourceRecord *AttentionSubject `json:"source_record,omitempty"`
 
@@ -56858,6 +57237,9 @@ type Receipt struct {
 	// A receipt for an approval the system decided carries none: that decision is revisitable through the record it named. A change made without asking — the close-date sweep's corrections — has this receipt as its only telling, so the way back travels with it.
 	Undo *AppliedUndo `json:"undo,omitempty"`
 }
+
+// ReceiptSource What kind of act `id` names: a change Margince applied itself (`correction`, where `id` is its audit entry) or an approval the system decided (`approval`, where `id` is the approval). Absent on older responses.
+type ReceiptSource string
 
 // ReceiptActor Who did the act, and on whose behalf.
 //
@@ -58631,9 +59013,9 @@ type ReportingPoint struct {
 	// instant. Every member is in exactly one outcome, so the counts add
 	// up to `observations`. `unresolved` members have not reached an
 	// outcome yet and are never counted as lost; `history_partial`
-	// members left by a move an import brought in, which does not show
-	// how the team sells, or by a move recorded before Margince kept the
-	// stage order, so its direction is unknown.
+	// members left by a move an import brought in or another CRM synced
+	// in, which does not show how the team sells, or by a move recorded
+	// before Margince kept the stage order, so its direction is unknown.
 	Outcomes *[]ReportingCohortCount `json:"outcomes,omitempty"`
 
 	// Status `failed` means the database could not calculate this figure on this
@@ -60028,9 +60410,12 @@ type SchedulingProfile struct {
 	Location string  `json:"location"`
 
 	// LogoUrl The logo of the legal entity the host works for and absent when it has none; request values are ignored. Absolute when the public origin is configured; otherwise relative to the API origin.
-	LogoUrl       *string                   `json:"logo_url,omitempty"`
-	NoticeMinutes int                       `json:"notice_minutes" maximum:"10080" minimum:"0"`
-	Provider      SchedulingProfileProvider `json:"provider"`
+	LogoUrl       *string `json:"logo_url,omitempty"`
+	NoticeMinutes int     `json:"notice_minutes" maximum:"10080" minimum:"0"`
+
+	// OfferedLengths Additional meeting lengths offered by this host. The default duration is always offered.
+	OfferedLengths *[]int                    `json:"offered_lengths,omitempty" unique:"items"`
+	Provider       SchedulingProfileProvider `json:"provider"`
 
 	// PublicUrl The address to share: `/book/{alias}` when an alias is set, else `/book/{slug}`, on the configured public origin. Absent when no usable public origin is configured.
 	PublicUrl   *string `json:"public_url,omitempty"`
@@ -62683,7 +63068,8 @@ type TeamWeeklyCoveragePeriodKind string
 // TeamWeeklyFunnelDeviation One stage where the rep converts differently from the team. Entries and conversions are
 // attributed to the owner at the time of each move. "Converted" is a later move to a won
 // stage or to a later stage, compared by the stage order as it was configured when the
-// week was assembled. Moves an import brought in neither enter nor convert a deal.
+// week was assembled. Moves an import brought in or another CRM synced in neither enter nor
+// convert a deal.
 type TeamWeeklyFunnelDeviation struct {
 	// DeviationBp The rep's conversion rate less the team's, in basis points.
 	DeviationBp int `json:"deviation_bp" maximum:"10000" minimum:"-10000"`
@@ -63892,11 +64278,23 @@ type UpdateImportRunRequest struct {
 
 // UpdateInstallationSettingsRequest A sparse installation-settings patch (admin/ops, human-only).
 type UpdateInstallationSettingsRequest struct {
+	// AgentAllowancesToDefaults Put the agent counts and every role's values back to what Margince ships: their stored
+	// values are removed, so they read as the defaults and the built-in Admin role takes its
+	// preset again. A value a boot source sets stays. Applied before the other fields of the
+	// same patch, so a count sent beside it is saved as a choice again.
+	AgentAllowancesToDefaults *bool `json:"agent_allowances_to_defaults,omitempty"`
+
 	// AgentCallsPerWindow Set the value `AgentAllowanceSettings.agent_calls_per_window` describes. Applies within a minute, in the running window.
 	AgentCallsPerWindow *int `json:"agent_calls_per_window,omitempty" maximum:"20000" minimum:"50"`
 
 	// AgentEgressPerWindow Set the value `AgentAllowanceSettings.agent_egress_per_window` describes. Applies within a minute, in the running window.
 	AgentEgressPerWindow *int `json:"agent_egress_per_window,omitempty" maximum:"200" minimum:"1"`
+
+	// AgentRoleAllowances Change some roles' own allowances. Each item names a live role by its `role_key` and
+	// says which counts it sets and which it gives up; everything else is left as it is,
+	// the values of a role that is archived now included. Applies within a minute, in the
+	// running window, and resets no count.
+	AgentRoleAllowances *[]AgentRoleAllowanceSet `json:"agent_role_allowances,omitempty"`
 
 	// AgentRunnerIntervalSeconds Set the value `OperationSettings.agent_runner_interval_seconds` describes.
 	AgentRunnerIntervalSeconds *int `json:"agent_runner_interval_seconds,omitempty" maximum:"3600" minimum:"10"`
@@ -66305,12 +66703,13 @@ type WorkingHours struct {
 // there too, but the totals the first page stated stay as they were: they still count
 // the rows that source holds, and the list stops short of them.
 //
-// **Traversal.** Only the first rows are ranked. Past them, the tasks, waiting customers
-// and deals at risk that the ranked rows left out continue as a tail, merged in one
-// order (oldest due date, arrival or expected close first) and reached through
-// `next_cursor` to their end. Items past the read limit of any other source are not
-// reachable through `next_cursor`. They join a later read as the items in front of
-// them are handled.
+// **Traversal.** Only the first rows are ranked. Past them, the tasks, waiting customers,
+// deals at risk and staged approvals that the ranked rows left out continue as a tail,
+// merged in one order and reached through `next_cursor` to their end. The order is the
+// oldest due date, arrival or expected close first. Approvals carry no date in it, so
+// they come after the dated rows, newest staged first. Items past the read limit of any
+// other source are not reachable through `next_cursor`. They join a later read as the
+// items in front of them are handled.
 type Worklist struct {
 	// AsOf The instant every source below was read at.
 	AsOf time.Time `json:"as_of"`
@@ -67650,9 +68049,10 @@ type WorklistPromiseRecipientStatus string
 // `considered` is how many candidates were read and ranked. It is NOT a total: when
 // `more_available` is true there are candidates past the bound that this read never
 // saw, and no field here claims to know how many; `counts[].total` is the exact figure
-// per category where one exists. For tasks, waiting customers and deals at risk the
-// rest is reached through `next_cursor`. For any other source a reader who needs the
-// rest narrows the queue or opens that source's own screen, which pages its own data.
+// per category where one exists. For tasks, waiting customers, deals at risk and
+// approvals the rest is reached through `next_cursor`. For any other source a reader
+// who needs the rest narrows the queue or opens that source's own screen, which pages
+// its own data.
 //
 // `shown` is how many of those candidates survived filtering and the page cut, so
 // `shown` under `considered` means the rest were folded, filtered or below the cut —
@@ -68743,6 +69143,15 @@ type GetAiUsageParams struct {
 	To *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
 }
 
+// GetAiUsageSummaryParams defines parameters for GetAiUsageSummary.
+type GetAiUsageSummaryParams struct {
+	// From Default: the first day of the current UTC month. Must not be after `to`.
+	From *openapi_types.Date `form:"from,omitempty" json:"from,omitempty"`
+
+	// To Default: today. At most 366 days after `from`.
+	To *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
+}
+
 // GetAccountCoverageParams defines parameters for GetAccountCoverage.
 type GetAccountCoverageParams struct {
 	ScopeKind *GetAccountCoverageParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
@@ -69620,10 +70029,24 @@ type ListHeldThreadsParams struct {
 
 	// ContactId Only the threads with this contact. A contact you may not read, or one that is archived, answers 404.
 	ContactId *openapi_types.UUID `form:"contact_id,omitempty" json:"contact_id,omitempty"`
+	From      *time.Time          `form:"from,omitempty" json:"from,omitempty"`
+	To        *time.Time          `form:"to,omitempty" json:"to,omitempty"`
+	Reason    *string             `form:"reason,omitempty" json:"reason,omitempty"`
 }
 
 // ListHeldThreadsParamsStatus defines parameters for ListHeldThreads.
 type ListHeldThreadsParamsStatus string
+
+// ListCaptureSendersParams defines parameters for ListCaptureSenders.
+type ListCaptureSendersParams struct {
+	Q         *string `form:"q,omitempty" json:"q,omitempty"`
+	Decision  *string `form:"decision,omitempty" json:"decision,omitempty"`
+	Overrides *bool   `form:"overrides,omitempty" json:"overrides,omitempty"`
+	Cursor    *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
+}
 
 // SetCaptureSenderDecisionJSONBody defines parameters for SetCaptureSenderDecision.
 type SetCaptureSenderDecisionJSONBody struct {
@@ -74354,6 +74777,9 @@ type BookPublicMeetingJSONBody struct {
 
 // BookPublicMeetingParams defines parameters for BookPublicMeeting.
 type BookPublicMeetingParams struct {
+	// L Offered meeting length in minutes. Unknown lengths use the default.
+	L *int `form:"l,omitempty" json:"l,omitempty"`
+
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
@@ -74390,6 +74816,15 @@ type GetPublicAvailabilityParams struct {
 	From            time.Time `form:"from" json:"from"`
 	To              time.Time `form:"to" json:"to"`
 	DurationMinutes *int      `form:"duration_minutes,omitempty" json:"duration_minutes,omitempty"`
+
+	// L Offered meeting length in minutes. Unknown lengths use the default.
+	L *int `form:"l,omitempty" json:"l,omitempty"`
+}
+
+// GetPublicSchedulingProfileParams defines parameters for GetPublicSchedulingProfile.
+type GetPublicSchedulingProfileParams struct {
+	// L Offered meeting length in minutes. Unknown lengths use the default.
+	L *int `form:"l,omitempty" json:"l,omitempty"`
 }
 
 // SubmitConfirmDetailsJSONBody defines parameters for SubmitConfirmDetails.
@@ -76213,6 +76648,9 @@ type UpdateActivityJSONRequestBody = UpdateActivityRequest
 
 // SetActivityAudienceJSONRequestBody defines body for SetActivityAudience for application/json ContentType.
 type SetActivityAudienceJSONRequestBody = SetActivityAudienceRequest
+
+// DeclineActivityDealJSONRequestBody defines body for DeclineActivityDeal for application/json ContentType.
+type DeclineActivityDealJSONRequestBody = DeclineActivityDealRequest
 
 // SetActivityDispositionJSONRequestBody defines body for SetActivityDisposition for application/json ContentType.
 type SetActivityDispositionJSONRequestBody = SetActivityDispositionRequest
@@ -90223,6 +90661,9 @@ type ServerInterface interface {
 	// Limit (or re-open) who may see this activity's content.
 	// (PATCH /activities/{id}/audience)
 	SetActivityAudience(w http.ResponseWriter, r *http.Request, id Id, params SetActivityAudienceParams)
+	// Say a captured message is not about a deal, or about none of the deals its question offered.
+	// (POST /activities/{id}/deal-decline)
+	DeclineActivityDeal(w http.ResponseWriter, r *http.Request, id Id)
 	// Pick the message back up — the undo behind every set-aside verb.
 	// (DELETE /activities/{id}/disposition)
 	ClearActivityDisposition(w http.ResponseWriter, r *http.Request, id Id, params ClearActivityDispositionParams)
@@ -90436,9 +90877,9 @@ type ServerInterface interface {
 	// AI usage + budget — the spend is never invisible.
 	// (GET /ai/usage)
 	GetAiUsage(w http.ResponseWriter, r *http.Request, params GetAiUsageParams)
-	// What AI cost this month so far, as one figure.
+	// What AI cost over a window, this month by default, as one figure.
 	// (GET /ai/usage/summary)
-	GetAiUsageSummary(w http.ResponseWriter, r *http.Request)
+	GetAiUsageSummary(w http.ResponseWriter, r *http.Request, params GetAiUsageSummaryParams)
 	// The accounts at risk in one population: single-threaded deals, accounts in pipeline nobody has exchanged a word with, and won accounts gone silent. Each row carries the facts behind its verdict. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework's, and the answer prints them.
 	// (GET /analytics/account-coverage)
 	GetAccountCoverage(w http.ResponseWriter, r *http.Request, params GetAccountCoverageParams)
@@ -90903,7 +91344,7 @@ type ServerInterface interface {
 	RestoreCaptureOwnerIdentity(w http.ResponseWriter, r *http.Request, id Id)
 	// Every decision this product made about your senders.
 	// (GET /capture/senders)
-	ListCaptureSenders(w http.ResponseWriter, r *http.Request)
+	ListCaptureSenders(w http.ResponseWriter, r *http.Request, params ListCaptureSendersParams)
 	// Withdraw your decision and hand the sender back to the classifier.
 	// (DELETE /capture/senders/{address}/decision)
 	DeleteCaptureSenderDecision(w http.ResponseWriter, r *http.Request, address string)
@@ -92622,7 +93063,7 @@ type ServerInterface interface {
 	GetPublicBookingPreview(w http.ResponseWriter, r *http.Request, hostSlug string)
 	// Read the host-approved booking page identity and meeting details.
 	// (GET /public/booking/{host_slug}/profile)
-	GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request, hostSlug string)
+	GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicSchedulingProfileParams)
 	// What the workspace holds about this contact (anonymous, token-authed).
 	// (GET /public/confirm/{token})
 	GetConfirmDetails(w http.ResponseWriter, r *http.Request, token string)
@@ -93403,6 +93844,12 @@ func (_ Unimplemented) SetActivityAudience(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Say a captured message is not about a deal, or about none of the deals its question offered.
+// (POST /activities/{id}/deal-decline)
+func (_ Unimplemented) DeclineActivityDeal(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Pick the message back up — the undo behind every set-aside verb.
 // (DELETE /activities/{id}/disposition)
 func (_ Unimplemented) ClearActivityDisposition(w http.ResponseWriter, r *http.Request, id Id, params ClearActivityDispositionParams) {
@@ -93829,9 +94276,9 @@ func (_ Unimplemented) GetAiUsage(w http.ResponseWriter, r *http.Request, params
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// What AI cost this month so far, as one figure.
+// What AI cost over a window, this month by default, as one figure.
 // (GET /ai/usage/summary)
-func (_ Unimplemented) GetAiUsageSummary(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) GetAiUsageSummary(w http.ResponseWriter, r *http.Request, params GetAiUsageSummaryParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -94761,7 +95208,7 @@ func (_ Unimplemented) RestoreCaptureOwnerIdentity(w http.ResponseWriter, r *htt
 
 // Every decision this product made about your senders.
 // (GET /capture/senders)
-func (_ Unimplemented) ListCaptureSenders(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) ListCaptureSenders(w http.ResponseWriter, r *http.Request, params ListCaptureSendersParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -98199,7 +98646,7 @@ func (_ Unimplemented) GetPublicBookingPreview(w http.ResponseWriter, r *http.Re
 
 // Read the host-approved booking page identity and meeting details.
 // (GET /public/booking/{host_slug}/profile)
-func (_ Unimplemented) GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request, hostSlug string) {
+func (_ Unimplemented) GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicSchedulingProfileParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -100529,6 +100976,40 @@ func (siw *ServerInterfaceWrapper) SetActivityAudience(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SetActivityAudience(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeclineActivityDeal operation middleware
+func (siw *ServerInterfaceWrapper) DeclineActivityDeal(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeclineActivityDeal(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -103084,6 +103565,9 @@ func (siw *ServerInterfaceWrapper) GetAiUsage(w http.ResponseWriter, r *http.Req
 // GetAiUsageSummary operation middleware
 func (siw *ServerInterfaceWrapper) GetAiUsageSummary(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -103092,8 +103576,37 @@ func (siw *ServerInterfaceWrapper) GetAiUsageSummary(w http.ResponseWriter, r *h
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAiUsageSummaryParams
+
+	// ------------- Optional query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetAiUsageSummary(w, r)
+		siw.Handler.GetAiUsageSummary(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -110047,6 +110560,45 @@ func (siw *ServerInterfaceWrapper) ListHeldThreads(w http.ResponseWriter, r *htt
 		return
 	}
 
+	// ------------- Optional query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "reason" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "reason", r.URL.Query(), &params.Reason, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "reason"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "reason", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListHeldThreads(w, r, params)
 	}))
@@ -110173,6 +110725,9 @@ func (siw *ServerInterfaceWrapper) RestoreCaptureOwnerIdentity(w http.ResponseWr
 // ListCaptureSenders operation middleware
 func (siw *ServerInterfaceWrapper) ListCaptureSenders(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -110181,8 +110736,76 @@ func (siw *ServerInterfaceWrapper) ListCaptureSenders(w http.ResponseWriter, r *
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListCaptureSendersParams
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "decision" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "decision", r.URL.Query(), &params.Decision, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "decision"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "decision", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "overrides" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "overrides", r.URL.Query(), &params.Overrides, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "overrides"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "overrides", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListCaptureSenders(w, r)
+		siw.Handler.ListCaptureSenders(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -135419,6 +136042,19 @@ func (siw *ServerInterfaceWrapper) BookPublicMeeting(w http.ResponseWriter, r *h
 	// Parameter object where we will unmarshal all parameters from the context
 	var params BookPublicMeetingParams
 
+	// ------------- Optional query parameter "l" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "l", r.URL.Query(), &params.L, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "l"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "l", Err: err})
+		}
+		return
+	}
+
 	headers := r.Header
 
 	// ------------- Optional header parameter "Idempotency-Key" -------------
@@ -135508,6 +136144,19 @@ func (siw *ServerInterfaceWrapper) GetPublicAvailability(w http.ResponseWriter, 
 		return
 	}
 
+	// ------------- Optional query parameter "l" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "l", r.URL.Query(), &params.L, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "l"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "l", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetPublicAvailability(w, r, hostSlug, params)
 	}))
@@ -135560,8 +136209,24 @@ func (siw *ServerInterfaceWrapper) GetPublicSchedulingProfile(w http.ResponseWri
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetPublicSchedulingProfileParams
+
+	// ------------- Optional query parameter "l" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "l", r.URL.Query(), &params.L, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "l"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "l", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetPublicSchedulingProfile(w, r, hostSlug)
+		siw.Handler.GetPublicSchedulingProfile(w, r, hostSlug, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -145350,6 +146015,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/activities/{id}/audience", wrapper.SetActivityAudience)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/activities/{id}/deal-decline", wrapper.DeclineActivityDeal)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/activities/{id}/disposition", wrapper.ClearActivityDisposition)

@@ -126,6 +126,10 @@ var erasureCascadeFiles = []string{
 	// transaction, so it counts here; leaving it off would let a table look
 	// uncovered the moment its purge moved file.
 	"internal/modules/privacy/erasuretimeline.go",
+	// The webhook bodies rendered from the subject, cleared through the
+	// purger seam, and the call that reaches it.
+	"internal/modules/privacy/retentioncopies.go",
+	"internal/modules/webhooks/deliveryretention.go",
 	// The external identities the emptied messages answered to. Its own file
 	// because BOTH erasure arms call it — the per-activity content purge and
 	// this cascade — and a spelling per arm is how the cascade came to have
@@ -174,6 +178,9 @@ var erasureCascadeFiles = []string{
 	// destructive engine and both reach it.
 	"internal/modules/privacy/erasure_approvals.go",
 	"internal/modules/privacy/erasure_approvalnotices.go",
+	// The missed-receipt notices that name the subject. Same Art. 17
+	// transaction; retracted and detached from the erased record.
+	"internal/modules/privacy/erasure_receiptnotices.go",
 	// The readings of the transcripts the timeline scrub just emptied — same
 	// transaction, its own file for the same both-engines reason.
 	"internal/modules/privacy/transcriptreadings.go",

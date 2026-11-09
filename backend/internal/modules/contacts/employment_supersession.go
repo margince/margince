@@ -39,6 +39,8 @@ func retireSupersededEmployment(ctx context.Context, tx pgx.Tx, id ids.UUID, pro
 	if err := emitRelationshipChange(ctx, tx, "update", relationshipFieldImage(current), updated); err != nil {
 		return err
 	}
+	// The twins are filed once, after the import's last episode, so they are
+	// scored against the employer the import leaves current.
 	if current.ContactID != nil {
 		return promoteLoneSurvivingEmployment(ctx, tx, *current.ContactID)
 	}

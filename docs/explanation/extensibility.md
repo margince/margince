@@ -470,8 +470,8 @@ checked against the full budget for names, so a name a unit takes today stays go
 
 - **Its own frontend**: a `frontend/` folder whose screen is linked into the SPA. The SPA shows it at the
   route of the unit. To remove a unit takes one step: delete the unit folder. An import gate
-  (`frontend/scripts/ext-imports.test.ts`) holds a unit screen to the public surface, the same way the Go
-  mark gate holds its handlers.
+  (`frontend/census/rules/ext-imports.census.ts`) holds a unit screen to the public surface, the same way
+  the Go mark gate holds its handlers. Its rules are in `frontend/scripts/ext-imports.test.ts`.
 
 **The npm dependencies of a unit.** A unit frontend may declare npm dependencies of its own. They resolve
 in the generated workspace under `build/composition-frontend/workspace/`. `gen-composition` writes that
@@ -557,9 +557,9 @@ The fitness tests and `scripts/` checks guard the tier, so the promises cannot d
 | A declaration the composer cannot follow is refused instead of dropped: an unknown job role, governed fields declared on the wrong one of two parts, a `$ref` in a schema it shows, a core contract with more than one document | `backend/tools/gen-composition` |
 | Every declared extension operation is served, and every route the server serves was declared | `backend/internal/compose/extparity_test.go` |
 | Only the route of a unit sends a call to its served tool, so one unit cannot take the handler of another by naming its verb | `backend/internal/compose/extparity_test.go` |
-| A unit screen reaches the core only through the public surface (the `exports` in `frontend/package.json`), and npm only through what its own package declares | `frontend/scripts/ext-imports.test.ts`, a vitest fitness function over the TypeScript AST, with its own set of fixture tests |
+| A unit screen reaches the core only through the public surface (the `exports` in `frontend/package.json`), and npm only through what its own package declares | `frontend/census/rules/ext-imports.census.ts`, a census over the TypeScript AST, with fixture tests in `frontend/scripts/ext-imports.test.ts` |
 | A unit screen keeps to the same design system as core: tokens, the font, each icon, spacing | These gates scan `extensions/*/frontend` and also `frontend/src`: `check-ds-purity.sh`, `check-font-lock.sh`, `check-icon-glyph.sh`, `check-space-tokens.sh`, `check-ds-spacing-roles.sh` and `check-ds-spacing.sh` (the last one scoped to the change, through git paths instead of a walk). `check-ext-frontend-walk.test.sh` holds that they all still reach the tier. It puts a known fault in a fixture unit at two levels and requires each gate to name it. It reads its list of subjects out of the `fe-ds-gates` target, so no gate is added to the lane without being read. It names the two gates it cannot measure, with the reason: its fixture files are `*.tsx`, and the spacing gates read CSS files. `check-ds-spacing-roles.test.sh` puts unit CSS files at both levels instead |
-| …and uses no plain `<select>` and no date input of the browser's own | `frontend/src/design-system/native-controls.test.ts`, a vitest fitness function over the TypeScript AST, that reaches every extension frontend layer at any level |
+| …and uses no plain `<select>` and no date input of the browser's own | `frontend/census/rules/native-controls.census.ts`, a census rule over the TypeScript AST in `make fe-census`, that reaches every extension frontend layer at any level |
 | A unit cannot ship a second copy of state the host owns (the hook dispatcher of React, the `QueryClient` of `react-query`) | `gen-composition` refuses them as direct dependencies; `resolve.dedupe` catches one that comes in through another package |
 | The copy of a unit sits in the namespace of that unit and cannot change a core string | `gen-composition` (`mergeUnitLocales`), and core keys win the lookup |
 | The tests of a unit screen run, not only the type check | `frontend/vitest.ext.config.ts` through `make fe-test-ext`, which `make check-fe` calls |

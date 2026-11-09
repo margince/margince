@@ -19,7 +19,7 @@ both lanes, plus the craftsmanship gate, the license gate and the frontend lane,
 - an error that code drops without a trace;
 - a UI regression.
 
-Three lanes run without blocking: `vuln`, the SonarCloud scan and `live-boot`. `scheduled.yml` checks
+Four lanes run without blocking: `vuln`, the SonarCloud scan, `live-boot` and `home-budget`. `scheduled.yml` checks
 `vuln` and the scan again daily on `main`. See [the workflows beside the merge gate](../reference/ci-workflows.md)
 for why a gate that does not block needs that second check. Why they do not block yet is under
 [The `ci` aggregate](#the-ci-aggregate-is-the-only-required-context).
@@ -145,10 +145,10 @@ to run the Go unit gates. The other is to boot the sharded Postgres databases.
 |---|---|---|
 | `backend_db` | `backend/**`, `docker-compose.dev.yml`, `go.mod`, `go.work`, `go.work.sum`, `Makefile`, `scripts/**`, `instance/**`, `extensions/**`, `fixtures/**`, `composition/**`, `.github/workflows/ci.yml`, `.github/workflows/_lane-*.yml` (the caller plus every lane it calls, matched by a glob so a new lane is covered the day it lands), `.github/actions/**`, `sonar-project.properties`, `frontend/src/mcp-apps/forbidden.json` | the integration shards and the `integration` fan-in: every lane that opens a database |
 | `backend` | `backend_db` (by YAML anchor, so the two cannot drift) plus every file a Go gate reads without running (listed below) | Go build and gate, the staged `crm-hello` walk, craftsmanship, unit coverage, vuln |
-| `frontend` | `frontend/**`, `backend/api/**` (the contract drives FE types), the composition inputs the lane type checks against (`instance/**`, `extensions/**`, `fixtures/**`, `composition/**`, `backend/tools/gen-composition/**`, `Makefile`, `scripts/**`), and the install inputs `pnpm-lock.yaml`, `pnpm-workspace.yaml` and the root `package.json`, plus `.github/actions/install-playwright-chromium/**` (it decides whether the UAT part can run at all, so a change to it cannot be reviewed without the lane it governs), and for the same reason the CI image, `.github/ci-image/**` and `.github/actions/ci-image/**` | frontend lane, UAT |
+| `frontend` | `third-party-files.txt`, `frontend/**`, `backend/api/**` (the contract drives FE types), the composition inputs the lane type checks against (`instance/**`, `extensions/**`, `fixtures/**`, `composition/**`, `backend/tools/gen-composition/**`, `Makefile`, `scripts/**`), and the install inputs `pnpm-lock.yaml`, `pnpm-workspace.yaml` and the root `package.json`, plus `.github/actions/install-playwright-chromium/**` (it decides whether the UAT part can run at all, so a change to it cannot be reviewed without the lane it governs), and for the same reason the CI image `.github/ci-image/**` and `.github/actions/ci-image/**` | frontend lane, UAT |
 | `e2e` | `backend/**`, `frontend/**`, `docker-compose.dev.yml`, `instance/**`, `extensions/**`, `fixtures/**`, `composition/**`, `scripts/**`, `Makefile` | full stack live-boot |
 | `images` | `Dockerfile`, `.dockerignore`, `docker-bake.hcl` | `images (build only)` |
-| `deps` | `go.work`, `go.work.sum`, `**/go.mod`, `**/go.sum`, `**/package.json`, `**/pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.syft.yaml`, `.grant.yaml`, `sbom-schemas/**`, `Makefile`, `scripts/sbom-census.sh`, `scripts/test-sbom-census.sh`, `scripts/install-sbom-python.sh`, `scripts/test-install-sbom-python.sh`, `scripts/sbom-license-parity.sh`, `scripts/test-sbom-license-parity.sh`, `embedded-binaries.txt`, `scripts/embedded-binary-licenses.sh`, `scripts/test-embedded-binary-licenses.sh`, `.github/workflows/**`, `.github/actions/**` | the license gate |
+| `deps` | `go.work`, `go.work.sum`, `**/go.mod`, `**/go.sum`, `**/package.json`, `**/pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.syft.yaml`, `.grant.yaml`, `sbom-schemas/**`, `Makefile`, `scripts/sbom-census.sh`, `scripts/test-sbom-census.sh`, `scripts/install-sbom-python.sh`, `scripts/test-install-sbom-python.sh`, `scripts/sbom-license-parity.sh`, `scripts/test-sbom-license-parity.sh`, `third-party-files.txt`, `scripts/third_party_files.py`, `scripts/third-party-files.sh`, `scripts/test-third-party-files.sh`, `embedded-binaries.txt`, `scripts/embedded-binary-licenses.sh`, `scripts/test-embedded-binary-licenses.sh`, `.github/workflows/**`, `.github/actions/**` | the license gate |
 
 What the `backend` scope adds on top of `backend_db`:
 
@@ -181,8 +181,7 @@ What follows from this:
   prose run, and the sharded integration fleet does not. `docs/**` is in `backend`, and not in
   `backend_db`, for that reason.
   - `make ci-doc-parity` holds the table above to the filters in `ci.yml`, and it runs in
-    `deterministic-gates`. So an edit to this file alone still runs the gate that can tell it has gone
-    stale.
+    `deterministic-gates`. So an edit to this file alone still runs the gate that can tell it is stale.
   - A prose PR that touches nothing under `docs/` (the root `README.md`, say) still matches `backend`,
     because the root Markdown files are in that scope. With the queue on, the prose entry is also gated
     against the full tree it merges into.
@@ -208,13 +207,10 @@ What follows from this:
     boot no Postgres shard. They still match `backend` (through `.github/**`) and `deps` (through
     `.github/workflows/**`). So the Go gates and the license gate run on them.
   - Neither workflow proves itself on a schedule, since both only run by hand. The next user to start
-    one finds a change that made it fail. So a PR that touches either is worth starting from its own branch
-    before merging.
+    one finds a change that made it fail. So start a PR that touches either from its branch before merging.
 - A **PR into `develop`** skips `integration`, `uat`, `live-boot`, `images` and `sonarcloud`, plus the
-  test-input census. The
-  `full_lane` output of `changes` is false only there. The `develop` into `main` pull request runs
-  them under the usual path filters:
-  [land-through-develop.md](../how-to/land-through-develop.md).
+  test-input census. The `full_lane` output of `changes` is false only there. The `develop` into `main`
+  pull request runs them under the usual path filters: [land-through-develop.md](../how-to/land-through-develop.md).
 - **A draft PR runs nothing** until marked ready (`draft == false` guards every job). That is because the
   many agents push many commits while the work is not done.
 - `craft-residue` and `secret-scan` are the exceptions: both run on **every** change that is not a
@@ -242,7 +238,7 @@ changes ──┬─> deterministic-gates *
           │                  fe-unit (×4)*├─> fan-in * (+ merge) │   │
           │                  fe-bundle *  ┘                     │   │
           ├─> uat *  (`frontend` scope, beside the lane)        │   │
-          ├─> live-boot                                         │   │
+          ├─> live-boot, home-budget                            │   │
           v                                                     v   v
  deterministic-gates + integration + frontend ──> sonarcloud
   craft-residue  (every non-draft change, independent)
@@ -251,8 +247,8 @@ changes ──┬─> deterministic-gates *
   ci  ── the ONE required context. needs: ci-image, deterministic-gates,
          test-budget, backend-lint, craftsmanship, craft-residue,
          secret-scan, integration, frontend, uat, license-gate, images
-         (twelve — vuln and live-boot stay advisory and are NOT in the
-         fan-in)
+         (twelve — vuln, live-boot and home-budget stay advisory and are
+         NOT in the fan-in)
 ```
 
 ### Two lanes are called, not inlined
@@ -309,8 +305,6 @@ job links each package's test binary with the shards' flags, and each shard runs
 the package directory. A compile error fails the build job, so no shard starts. Each shard still pays
 start-up, the fetch and its own template, so size the matrix from `scripts/integration-test-timing.txt`.
 
-
-
 ### The `ci` aggregate is the only required build context
 
 A **ruleset** requires two checks: **`ci`**, and **`cla`**, which asks an author outside the Margince
@@ -344,8 +338,8 @@ These jobs are not in `needs`:
 - `fe-quality`, `fe-unit`, `fe-bundle`: taken in by the `frontend` fan-in.
 - `integration-build`, `integration-shards`, `integration-unit-coverage`: the `integration` fan-in checks them.
 - `sonarcloud`: not blocking, by decision. Listing it here would make it required in a hidden way.
-- `vuln`, `live-boot`: advisory. They are the plain next ones to add, since each runs on every change
-  that counts, and a red one does not stop a merge.
+- `vuln`, `live-boot`, `home-budget`: advisory. They are the plain next ones to add, since each runs on every change
+  that counts, and a red one does not stop a merge. `home-budget` waits for runs that show its budgets hold.
   - The batch is the reason to wait. Under a merge queue, a flaky job does not cost one more run. It
     fails the whole group it was checked in, and every entry in that group is queued again.
   - Nothing has tested these two under a blocking gate. Make them block once the queue has a measured
@@ -413,7 +407,7 @@ output can be used again as well as a green run's.
 
 ### The lint caches are saved on `main`, and the golangci one on `develop` too
 
-Two smaller caches follow the same rule: `ci.yml` loads them and never saves them. An entry that a PR
+Three smaller caches follow the same rule: `ci.yml` loads them and never saves them. An entry that a PR
 saves can be read by that PR alone. It still counts against the 10 GB cache quota of the repository,
 and there it pushes out the `main` entries that every PR loads.
 
@@ -421,6 +415,7 @@ and there it pushes out the `main` entries that every PR loads.
 |---|---|---|
 | Gate binaries, `~/go/bin` | [`gate-binaries`](../../.github/actions/gate-binaries/action.yml): the `make -n tools` recipe with its pins filled in, plus `go env GOVERSION` | `cache-warm.yml`, `main-health.yml` and `scheduled.yml`, on a miss on `main` |
 | golangci analysis, `~/.cache/golangci-lint` | [`golangci-cache-key`](../../.github/actions/golangci-cache-key/action.yml): `go.mod`, `go.sum`, both lint configs, then the commit | `cache-warm.yml` job `plain`, and [`lint-cache.yml`](../../.github/workflows/lint-cache.yml) after each push to `main` or `develop` |
+| Type check and compiler lint, under `frontend/node_modules` | [`frontend-cache-key`](../../.github/actions/frontend-cache-key/action.yml): `pnpm-lock.yaml`, `frontend/eslint.config.js`, then the commit | `cache-warm.yml` job `frontend`; `fe-quality` and `fe-bundle` load it |
 
 - **The gate binaries key reads the recipe.** An edit elsewhere in `backend/Makefile` keeps the
   key, and a new tool or pin in `make tools` changes it.
@@ -434,6 +429,8 @@ and there it pushes out the `main` entries that every PR loads.
   Lint keeps the result of each package whose inputs did not change; the job then deletes older entries.
 - **A new dependency or lint config lints cold.** The key prefix of such a PR matches no `main`
   entry until `cache-warm` runs after the merge.
+- **An old frontend entry is never wrong.** tsc checks the hash of each input against what it stored.
+  The compiler lint checks the hash of each file and its own version, so the lockfile is in the key.
 
 ### Test results replay only on a stable mtime
 
@@ -499,14 +496,17 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md). `determ
   level makes a path skip report as passing. The copy of the gate in `sbom.yml` fires just before a
   signing run.
 - **`fe-quality`** is the only frontend job with a Go toolchain, because the composed lane needs the
-  output of `gen-composition`, which nothing else makes.
+  output of `gen-composition`, which nothing else makes. It also runs `make fe-census`.
 - **`fe-unit` uploads a blob report, not an lcov.** One part measures only the part of the tree its
   tests loaded, until the four are added up. Four is where the measure stops paying off; the comment
-  above the job holds the math.
+  above the job holds the math. The parts are cut by expected cost, not by a hash of the path. A few
+  files type-check the whole tree for minutes each, so an even file count does not give even times.
 - **The SPA jobs run at the same time**, because they share no state. One after the other, the lane
   needed about `340s`, of which vitest alone needed about `207s`.
 - **`live-boot`** exists because the integration shards never boot the api or run the seed script.
   Without it, the seed that runs through the API and the boot proof would break with no one seeing.
+- **`home-budget`** holds Home to its fixed budgets on every PR that can reach Home, `develop` included.
+  What it runs and when it skips: [ci-jobs.md](../reference/ci-jobs.md).
 
 ### What `secret-scan` runs
 

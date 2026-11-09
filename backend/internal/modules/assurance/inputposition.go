@@ -17,7 +17,9 @@ type inputPosition struct {
 	events     []ids.UUID
 }
 
-func markingEventTypes() []string {
+// MarkingEventTypes are the event types the check reads from the outbox. An
+// event of one stays in the outbox until the check has read it.
+func MarkingEventTypes() []string {
 	var out []string
 	for _, name := range DecidedInputEvents() {
 		change, ok := InputChangeOf(name)
@@ -31,7 +33,7 @@ func markingEventTypes() []string {
 func unreadInputEvents(ctx context.Context, tx pgx.Tx) ([]ids.UUID, error) {
 	rows, err := tx.Query(ctx, `SELECT (envelope->>'event_id')::uuid FROM event_outbox
 		WHERE NOT assurance_inputs_read AND envelope->>'type' = ANY(@types::text[])`,
-		pgx.NamedArgs{"types": markingEventTypes()})
+		pgx.NamedArgs{"types": MarkingEventTypes()})
 	if err != nil {
 		return nil, fmt.Errorf("assurance: reading committed input events: %w", err)
 	}
@@ -42,7 +44,7 @@ func inputsAwaitReading(ctx context.Context, tx pgx.Tx) (bool, error) {
 	var pending bool
 	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM event_outbox
 		WHERE NOT assurance_inputs_read AND envelope->>'type' = ANY(@types::text[]))`,
-		pgx.NamedArgs{"types": markingEventTypes()}).Scan(&pending)
+		pgx.NamedArgs{"types": MarkingEventTypes()}).Scan(&pending)
 	if err != nil {
 		return false, fmt.Errorf("assurance: checking for unread committed inputs: %w", err)
 	}

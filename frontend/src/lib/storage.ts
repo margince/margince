@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The one door to the browser's Web Storage. `storage-spelling.test.ts` fails
+// The one door to the browser's Web Storage. `census/rules/storage-spelling.census.ts` fails
 // any other file that reaches for `localStorage` or `sessionStorage`.
 
 type StorageArea = "local" | "session";
@@ -21,6 +21,11 @@ export const STORAGE_KEYS = {
     name: "margince.palette.recents",
     area: "local",
     lifetime: "seat",
+  },
+  homeSwipeSeen: {
+    name: "margince.home.swipeSeen",
+    area: "local",
+    lifetime: "device",
   },
   locale: { name: "margince.locale", area: "local", lifetime: "device" },
   theme: { name: "margince.theme", area: "local", lifetime: "device" },

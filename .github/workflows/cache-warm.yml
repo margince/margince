@@ -290,3 +290,53 @@ jobs:
         with:
           path: ~/.cache/go-build
           key: ${{ steps.go-cache.outputs.key }}
+
+  # What fe-quality and fe-bundle read: tsc's build info for all four projects
+  # and the compiler lint's cache. It restores the last entry first, unlike the
+  # Go jobs: tsc rewrites its build info whole, and ESLint drops the entry of
+  # each file that is gone, so the entry cannot grow with history.
+  frontend:
+    name: warm frontend
+    timeout-minutes: 30
+    # Default branch only, for the reason spelled out on `plain` above.
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # No version input: the pin is package.json's "packageManager".
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      # The composed typecheck composes first, and only the Go generator can.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Compute the frontend cache key
+        id: frontend-key
+        uses: ./.github/actions/frontend-cache-key
+      - name: Restore tsc's build info and the compiler lint's cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.frontend-key.outputs.path }}
+          key: ${{ steps.frontend-key.outputs.key }}
+          restore-keys: ${{ steps.frontend-key.outputs.restore-keys }}
+      - name: Type-check and lint what the frontend lane does
+        run: make fe-typecheck fe-typecheck-composed fe-compiler-lint
+      # !cancelled(): a red typecheck still wrote build info for every file it read.
+      - name: Refresh the frontend cache
+        if: ${{ !cancelled() }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.frontend-key.outputs.path }}
+          key: ${{ steps.frontend-key.outputs.key }}

@@ -8,6 +8,7 @@ import { browserZone } from "../../format/timezone";
 import { en } from "../../i18n/en";
 import {
   jsonResponse,
+  pendingSummaryFor,
   render,
   stubApi,
   writes,
@@ -37,6 +38,8 @@ it("marks the exact recorded stage change reviewed and keeps its Undo", async ()
         truncated: false,
         receipts: [{ ...change, review: { ...change.review, accepted } }],
       }),
+    "GET /deal-corrections/pending": () =>
+      jsonResponse(pendingSummaryFor(accepted ? [] : [change])),
     [`GET /deals/${change.subject?.id}`]: () =>
       jsonResponse({ name: "PIM Rollout" }),
     [`POST ${path}`]: () => {
@@ -103,6 +106,8 @@ it("dates a change from today by its hour and an older one by its day", async ()
         truncated: false,
         receipts: [today, older],
       }),
+    "GET /deal-corrections/pending": () =>
+      jsonResponse(pendingSummaryFor([today, older])),
     [`GET /deals/${today.subject?.id}`]: () =>
       jsonResponse({ name: "PIM Rollout" }),
   });
@@ -117,7 +122,7 @@ it("dates a change from today by its hour and an older one by its day", async ()
   ]);
 });
 
-it("offers no write for a superseded change", () => {
+it("says a superseded change changed since, and offers no write", () => {
   stubApi({});
   render(
     <ReceiptReview
@@ -136,6 +141,7 @@ it("offers no write for a superseded change", () => {
     />,
   );
   expect(screen.queryByRole("button")).toBeNull();
+  expect(screen.getByText(en["brief.changes.superseded"])).toBeTruthy();
 });
 
 it("keeps an undo-only applied change visible until it is reversed", async () => {
@@ -149,6 +155,8 @@ it("keeps an undo-only applied change visible until it is reversed", async () =>
         truncated: false,
         receipts: [change],
       }),
+    "GET /deal-corrections/pending": () =>
+      jsonResponse(pendingSummaryFor([change])),
     [`GET /deals/${change.subject?.id}`]: () =>
       jsonResponse({ name: "PIM Rollout" }),
   });

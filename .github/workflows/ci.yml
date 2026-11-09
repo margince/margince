@@ -246,6 +246,7 @@ jobs:
               - 'SECURITY.md'
               - 'SUPPORT.md'
             frontend:
+              - 'third-party-files.txt'
               - 'frontend/**'
               - 'backend/api/**'
               # The frontend job runs BOTH SPA lanes (ADR-0120), and the
@@ -364,6 +365,10 @@ jobs:
               # Its corpus is the build's own package list, so a dependency
               # change can add a binary without either file being touched; the
               # `deps` filter below covers that side.
+              - 'third-party-files.txt'
+              - 'scripts/third_party_files.py'
+              - 'scripts/third-party-files.sh'
+              - 'scripts/test-third-party-files.sh'
               - 'embedded-binaries.txt'
               - 'scripts/embedded-binary-licenses.sh'
               - 'scripts/test-embedded-binary-licenses.sh'
@@ -918,6 +923,12 @@ jobs:
         run: make embedded-binary-licenses
       - name: the embedded-binary check still refuses each way
         run: make test-embedded-binary-licenses
+      # The backend lane runs this too, but a change to third-party-files.txt
+      # alone does not start it, and only this check reads the allowed licences.
+      - name: every copied file declares provenance and an allowed licence
+        run: make third-party-files
+      - name: the copied-file check still refuses each way
+        run: make test-third-party-files
       # syft and grant run through digest-pinned Docker images (see the Makefile),
       # so the runner needs only Docker — pre-installed on ubuntu-latest.
       # One step, because the retry has to wrap BOTH: `.syft.yaml` sets
@@ -1230,6 +1241,116 @@ jobs:
         if: failure()
         run: cat "$RUNNER_TEMP/api.log" || true
 
+  # Home's per-PR budget (scripts/home-budget.sh): the API p95 of Home's reads,
+  # cold and warm, on a small corpus of its own, then the day paint and CLS of a
+  # production bundle against an api booted the way live-boot boots it.
+  # ADVISORY: it is not in the `ci` fan-in, and a red run stops no merge. The
+  # scope step skips the rest when the diff cannot reach Home
+  # (scripts/home-budget-scope.sh); a push or a merge group always runs.
+  home-budget:
+    name: home-budget (advisory)
+    timeout-minutes: 30
+    needs: [changes]
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # The scope step diffs against the pull request's base branch.
+          fetch-depth: 0
+      # No version input: the pin is package.json's "packageManager".
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      # The scope step walks the frontend's import graph, which needs TypeScript.
+      - name: Install deps
+        working-directory: frontend
+        timeout-minutes: 5
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Decide whether the change can reach Home
+        id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            bash scripts/home-budget-scope.sh "origin/$BASE_REF"
+          else
+            echo "home-budget-scope: run=true ($EVENT runs the whole check)"
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        if: steps.scope.outputs.run == 'true'
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Restore the Go build cache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/go-build-cache
+        with:
+          flavor: plain
+      - name: Boot the dev stack and migrate
+        if: steps.scope.outputs.run == 'true'
+        run: make db-up && make migrate
+      # The same throwaway first-run configuration live-boot writes.
+      - name: Write the deployment configuration
+        if: steps.scope.outputs.run == 'true'
+        run: |
+          printf '%s' "operator-supplied-first-password" > "$RUNNER_TEMP/admin-password"
+          chmod 600 "$RUNNER_TEMP/admin-password"
+          cat > "$RUNNER_TEMP/margince.yaml" <<EOF
+          version: 1
+          workspace:
+            name: Demo Workspace
+            base_currency: EUR
+            timezone: Europe/Berlin
+          bootstrap_admin:
+            email: admin@demo.test
+            display_name: Demo Admin
+            password_file: $RUNNER_TEMP/admin-password
+          EOF
+      - name: Start the api
+        if: steps.scope.outputs.run == 'true'
+        working-directory: backend
+        env:
+          MARGINCE_ENV: dev
+        run: |
+          GOWORK="$PWD/../go.work" go run ./tools/gen-composition -include-development
+          GOWORK="$PWD/../build/composition/go.work" \
+            go run ./cmd/api --dsn "postgres://margince_app:margince_app_dev@localhost:15432/margince" \
+            --config "$RUNNER_TEMP/margince.yaml" \
+            > "$RUNNER_TEMP/api.log" 2>&1 &
+          for _ in $(seq 1 60); do
+            curl -fsS http://localhost:8080/readyz >/dev/null 2>&1 && exit 0
+            sleep 1
+          done
+          echo "api never became ready" >&2
+          cat "$RUNNER_TEMP/api.log" >&2
+          exit 1
+      - name: Seed the demo workspace
+        if: steps.scope.outputs.run == 'true'
+        run: make seed-dev
+      - name: Install the Playwright Chromium browser
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/install-playwright-chromium
+      # Writes the wall time of each half, the API rows and the vitals line to
+      # the job summary, pass or fail.
+      - name: Home budget
+        if: steps.scope.outputs.run == 'true'
+        run: make home-budget BENCH_API_PORT=8080
+      - name: API log (on failure)
+        if: failure()
+        run: cat "$RUNNER_TEMP/api.log" || true
+
   # The SPA lane. Its four jobs live in
   # .github/workflows/_lane-frontend.yml (fe-quality, fe-unit, fe-bundle and the
   # fan-in that carries their verdict).
@@ -1330,6 +1451,8 @@ jobs:
   #                                blocking by the back door.
   #   vuln, live-boot            — advisory today, and deliberately still
   #                                advisory here. See below.
+  #   home-budget                — advisory while its budgets are measured
+  #                                for feasibility; it joins as its own change.
   #
   # WHAT THE REPOSITORY ACTUALLY REQUIRES, said once and only here so the file
   # cannot answer it twice with different answers: `ci` — this job — is the ONE

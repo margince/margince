@@ -58,25 +58,8 @@ func (s *Sink) WithThreadJoin(j ThreadJoiner) *Sink {
 	return &c
 }
 
-// joinThread records what this email replies to and merges every thread its
-// reply links reach into one.
-//
-// It runs after this seat's import row is written. That holds on every path a
-// capture can take: a new row, a replay, and an import this mailbox took over.
-// The take-over is where an importer's key meets a mailbox's. created says this
-// capture minted the row.
-//
-// The References header is the sender's text, so three rules keep a stranger
-// from steering the join:
-//
-//   - The seat must hold this message (its own import row), and a link counts
-//     only toward a neighbour the seat also holds or is proved to have sent.
-//   - A row this capture just minted got its key from its own header. That key
-//     is merged as a thread only when no other message carries it yet;
-//     otherwise the row stays under it, as every row did before thread
-//     joining, and the conversation its header named is left where it was.
-//   - Only the keys of held neighbours, and a key the row already had before
-//     this capture, are merged whole.
+// joinThread joins keys only when this seat claims every message under them.
+// Import provenance must be written first, including on replays and takeovers.
 func (s *Sink) joinThread(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, created bool,
 ) error {
@@ -174,7 +157,7 @@ func (s *Sink) keysToMerge(
 		keys = append(keys, own)
 		slices.Sort(keys)
 	}
-	return keys, nil
+	return s.seatClaimsThreadKeysTx(ctx, tx, seat, keys)
 }
 
 // seatHoldsTx answers whether this seat's own mailbox delivered the message:

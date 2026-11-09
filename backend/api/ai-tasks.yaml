@@ -115,7 +115,7 @@ tasks:
     execution_mode: background
     on_budget_exhausted: queue
     status: shipped
-    sites: [classify]
+    sites: [classify, deal_topic]
     company_context: none
     cost_unit: per_message
     no_payload: true

@@ -86,7 +86,12 @@ async function openList(
       name: translate("en", "connectionOutcomes.viewNamed", { name: list }),
     }),
   );
-  return within(await screen.findByRole("dialog", { name: list }));
+  const dialog = await screen.findByRole("dialog", { name: list });
+  if (list === "Sender decisions")
+    await user.click(
+      within(dialog).getByRole("button", { name: "Browse recent senders" }),
+    );
+  return within(dialog);
 }
 
 function settingRowOf(label: HTMLElement): HTMLElement {

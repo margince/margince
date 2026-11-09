@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -97,6 +98,47 @@ func TestOneDealChangedThreeWaysCountsOnceAndItsUndoReportsWhatWasKept(t *testin
 	}
 	if after.Deals != 1 || after.Revalued != 1 || after.Redated != 0 {
 		t.Fatalf("summary after the undo = %+v, want only the kept amount open", after)
+	}
+}
+
+// A change edited since stays on the list, never in the bundle Undo sends,
+// and leaves the list once the reporting window has passed.
+func TestAChangeEditedSinceIsListedButNotUndoneAndLeavesAfterTheWindow(t *testing.T) {
+	v := setupDealVerdict(t)
+	v.run(t)
+	h := newMarginceChangeHandlers(v.Pool)
+	amount := int64(3_000_000)
+	if _, err := v.Deals.UpdateDeal(v.Admin(), ids.From[ids.DealKind](v.deal), deals.UpdateDealInput{AmountMinor: &amount}); err != nil {
+		t.Fatal(err)
+	}
+
+	summary, err := h.deals.PendingChangesOwnedBy(v.owner(t), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if summary.Deals != 1 || summary.UndoableDeals != 1 || len(summary.Bundles) != 1 {
+		t.Fatalf("summary = %+v, want the one deal listed and still undoable", summary)
+	}
+	bundle := summary.Bundles[0]
+	if len(bundle.AuditLogIDs) != 3 || len(bundle.UndoableAuditLogIDs) != 2 {
+		t.Fatalf("bundle lists %d and offers %d, want three listed and the date and probability offered",
+			len(bundle.AuditLogIDs), len(bundle.UndoableAuditLogIDs))
+	}
+	amountChange := v.WsScalar(t, `SELECT audit_log_id::text FROM deal_correction WHERE deal_id = $1 AND correction = $2`,
+		v.deal, deals.VerdictAmountCorrection)
+	for _, id := range bundle.UndoableAuditLogIDs {
+		if id.String() == amountChange {
+			t.Fatal("the amount a colleague edited since is offered to Undo")
+		}
+	}
+
+	h.deals.SetClock(func() time.Time { return clocktest.Now(t).Add(15 * 24 * time.Hour) })
+	later, err := h.deals.PendingChangesOwnedBy(v.owner(t), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if later.Deals != 1 || len(later.Bundles) != 1 || len(later.Bundles[0].AuditLogIDs) != 2 {
+		t.Fatalf("after the window = %+v, want only the two undoable changes listed", later)
 	}
 }
 
@@ -521,4 +563,41 @@ func TestLastNightStartsWhenThePreviousMorningWasSent(t *testing.T) {
 			}
 		})
 	}
+}
+
+// A stage move's receipt names the stages only for a reader who may read
+// pipelines, the grant every other stage name is held to.
+func TestAStageMoveReceiptNamesNoStageToAReaderWithoutPipelineRead(t *testing.T) {
+	v := setupBundle(t)
+	withStages, err := v.Deals.RecentCorrectionsOwnedBy(v.owner(t), v.now.Add(-24*time.Hour), 20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !namesAStage(withStages) {
+		t.Fatalf("the owner who may read pipelines sees no stage names: %+v", withStages)
+	}
+	noPipeline := v.As(v.Rep1, []ids.UUID{v.Team1}, principal.Permissions{
+		RoleKeys: []string{"rep"},
+		Objects:  map[string]principal.ObjectGrant{"deal": {Read: true, Update: true}},
+		RowScope: principal.RowScopeOwn,
+	})
+	without, err := v.Deals.RecentCorrectionsOwnedBy(noPipeline, v.now.Add(-24*time.Hour), 20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(without) == 0 {
+		t.Fatal("the reader without pipeline read lost the receipts, not just the stage names")
+	}
+	if namesAStage(without) {
+		t.Fatalf("a reader without pipeline read is told stage names: %+v", without)
+	}
+}
+
+func namesAStage(receipts []deals.CorrectionReceipt) bool {
+	for _, receipt := range receipts {
+		if receipt.FromStage != nil || receipt.ToStage != nil {
+			return true
+		}
+	}
+	return false
 }

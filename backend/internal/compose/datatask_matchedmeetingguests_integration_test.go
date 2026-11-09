@@ -216,6 +216,9 @@ func guest(address string) connector.MessageParticipant {
 func TestTwoCalendarsDoNotRetireEachOthersGuests(t *testing.T) {
 	e := integration.Setup(t)
 	meeting := captureMeeting(t, e, e.AdminUser)
+	for seat, address := range map[ids.UUID]string{e.Rep1: rep1Address, e.Rep2: rep2Address} {
+		e.WsExec(t, `INSERT INTO capture_connection (provider, user_id, status, account_label) VALUES ('gcal', $1, 'connected', $2)`, seat, address)
+	}
 	settleRoster(t, e, meeting, e.Rep1, true, guest(rep1Address), guest("ana@client.test"))
 	settleRoster(t, e, meeting, e.Rep2, true, guest(rep2Address), guest("ben@client.test"))
 

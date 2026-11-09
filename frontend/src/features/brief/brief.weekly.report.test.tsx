@@ -136,6 +136,29 @@ describe("BriefScreen — the weekly report", () => {
     ).toBeNull();
   });
 
+  // The headline states the week once, in the report. The detail and its
+  // definitions wait behind openers, and the rail repeats none of it.
+  it("states the figures once and keeps the detail behind openers", async () => {
+    openReport(["2026-06-29", "2026-06-22"]);
+
+    const strip = await screen.findByTestId("weekly-strip");
+    expect(strip.closest("#brief-weekly")).not.toBeNull();
+    expect(screen.getAllByTestId("weekly-strip")).toHaveLength(1);
+    for (const opener of [
+      en["brief.report.breakdown"],
+      en["brief.report.howCounted"],
+    ]) {
+      const summary = screen.getByText(opener).closest("summary");
+      expect(summary?.getAttribute("aria-expanded")).toBe("false");
+    }
+    const table = screen.getByRole("table", {
+      name: en["brief.report.chapter.figures"],
+    });
+    expect(
+      table.closest("details")?.querySelector("summary")?.textContent,
+    ).toBe(en["brief.report.breakdown"]);
+  });
+
   it("lists the newest weeks beside the report, and opens one", async () => {
     openReport(["2026-06-29", "2026-06-22"]);
     const user = userEvent.setup();

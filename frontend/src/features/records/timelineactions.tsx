@@ -26,6 +26,7 @@ import { useT } from "../../i18n";
 import { entityTimelineKeys, taskWriteKeys } from "../../lib/activitykeys";
 import { useMessageAudience } from "../../lib/audienceservice";
 import { useCanWriteRecord } from "../../lib/capability";
+import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import {
@@ -45,6 +46,7 @@ import {
   RelinkModal,
 } from "../mail/compose";
 import { ActivityFilesAction } from "./activityfiles";
+import { DealDeclineAction } from "./dealdecline";
 import { MoveButton } from "./movebutton";
 import { ProjectFilingAction } from "./projectfiling";
 
@@ -138,6 +140,11 @@ export function TimelineActions(props: RowVerbProps) {
           entityType={entityType}
           entityId={entityId}
         />
+        {/* An email on a deal's timeline may have been filed there by
+            capture alone, so this is where a reader says it is not. */}
+        {entityType === "deal" && activity.kind === "email" && (
+          <DealDeclineAction activity={activity} dealId={entityId} />
+        )}
         {/* Every row on a project's timeline is filed under that project, so
             this is the one surface where taking the filing back is always
             meaningful. */}
@@ -370,8 +377,8 @@ export function AudienceAction({
             onChange={setChoice}
             choices={messageAudienceChoices(internal).map((value) => ({
               value,
-              label: t(AUDIENCE_LABEL[value]),
-              description: t(AUDIENCE_HINT[value]),
+              label: t(labelFor(AUDIENCE_LABEL, value)),
+              description: t(labelFor(AUDIENCE_HINT, value)),
             }))}
           />
           {/* The picker only where the choice needs one. A limited-to-nobody

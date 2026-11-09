@@ -244,3 +244,217 @@ function scheduledEdit(dealId: string): EditSeed {
     projectId: "",
   };
 }
+
+it("saves the chosen deal and uses the same filing after reopening", async () => {
+  const user = userEvent.setup();
+  let saved: object | undefined;
+  const sent: Sent = stubRoutes({
+    "GET /contacts/c-1/360": () => jsonResponse(contactView()),
+    "GET /mail-drafts": () =>
+      saved ? jsonResponse(saved) : jsonResponse({}, 404),
+    "PUT /mail-drafts": () => {
+      const call = sent
+        .filter((item) => item.key === "PUT /mail-drafts")
+        .at(-1);
+      const body = call?.body;
+      if (!body || typeof body !== "object")
+        throw new Error("No saved draft request");
+      saved = { ...body, id: "draft-one", version: 1, agent_drafted: false };
+      return jsonResponse(saved);
+    },
+    "POST /emails": () => jsonResponse({ id: "sent-1" }, 202),
+  });
+  const composer = () => (
+    <ComposeModal
+      entityType="contact"
+      entityId="c-1"
+      contactId="c-1"
+      open
+      onClose={vi.fn()}
+    />
+  );
+  const first = render(composer());
+  await writeToAnna();
+  await pickWhy("Active deal");
+  await pickOption(
+    user,
+    await screen.findByRole("combobox", { name: DEAL_PICK }),
+    "Deal: Acme Renewal",
+  );
+  await user.click(screen.getByRole("button", { name: "Close" }));
+  await waitFor(() =>
+    expect(saved).toMatchObject({
+      editor_state: {
+        filing: [{ anchor_type: "deal", anchor_id: "deal-open" }],
+      },
+    }),
+  );
+  first.unmount();
+  render(composer());
+  await screen.findByText("Saved draft restored");
+  expect(
+    (await screen.findByRole("combobox", { name: DEAL_PICK })).textContent,
+  ).toContain("Acme Renewal");
+  const expected = [
+    { entity_type: "contact", entity_id: "c-1" },
+    { entity_type: "deal", entity_id: "deal-open" },
+  ];
+  await waitFor(() =>
+    expect(linksOf(sent, "POST /emails:preview")).toEqual(expected),
+  );
+  expect(sent.filter((item) => item.key === "POST /emails")).toHaveLength(0);
+  const sendButton = screen.getByRole("button", { name: "Send" });
+  await waitFor(() => expect(sendButton.hasAttribute("disabled")).toBe(false));
+  await user.click(sendButton);
+  await waitFor(() => expect(linksOf(sent, "POST /emails")).toEqual(expected));
+  expect(sent.filter((item) => item.key === "POST /emails")).toHaveLength(1);
+});
+
+it("keeps an explicit cleared filing instead of reviving an agent's old deal", async () => {
+  const sent = stubRoutes({
+    "GET /contacts/c-1/360": () => jsonResponse(contactView()),
+    "GET /mail-drafts": () =>
+      jsonResponse({
+        id: "draft-one",
+        anchor_type: "contact",
+        anchor_id: "c-1",
+        version: 2,
+        to: ["anna@acme.test"],
+        cc: [],
+        bcc: [],
+        subject: "Next steps",
+        body: "The latest words.",
+        communication_context: "requested_followup",
+        agent_drafted: false,
+        grounding: [{ anchor_type: "deal", anchor_id: "deal-open" }],
+        editor_state: { filing: [] },
+      }),
+  });
+  render(
+    <ComposeModal
+      entityType="contact"
+      entityId="c-1"
+      contactId="c-1"
+      open
+      onClose={vi.fn()}
+    />,
+  );
+  await screen.findByText("Saved draft restored");
+  await waitFor(() =>
+    expect(linksOf(sent, "POST /emails:preview")).toEqual([
+      { entity_type: "contact", entity_id: "c-1" },
+    ]),
+  );
+  expect(screen.queryByRole("combobox", { name: DEAL_PICK })).toBeNull();
+});
+
+it("keeps the saved deal while its visible choices are still loading", async () => {
+  const user = userEvent.setup();
+  const sent: Sent = stubRoutes({
+    "GET /contacts/c-1/360": () => new Promise<Response>(() => {}),
+    "GET /mail-drafts": () =>
+      jsonResponse({
+        id: "draft-one",
+        anchor_type: "contact",
+        anchor_id: "c-1",
+        version: 2,
+        to: ["anna@acme.test"],
+        cc: [],
+        bcc: [],
+        subject: "Next steps",
+        body: "Saved words.",
+        communication_context: "active_deal_followup",
+        agent_drafted: false,
+        editor_state: {
+          filing: [{ anchor_type: "deal", anchor_id: "deal-open" }],
+        },
+      }),
+    "PUT /mail-drafts": () =>
+      jsonResponse({
+        id: "draft-one",
+        anchor_type: "contact",
+        anchor_id: "c-1",
+        version: 3,
+        to: ["anna@acme.test"],
+        cc: [],
+        bcc: [],
+        subject: "Next steps",
+        body: "Edited while loading.",
+      }),
+  });
+  render(
+    <ComposeModal
+      entityType="contact"
+      entityId="c-1"
+      contactId="c-1"
+      open
+      onClose={vi.fn()}
+    />,
+  );
+  await screen.findByText("Saved draft restored");
+  await waitFor(() =>
+    expect(linksOf(sent, "POST /emails:preview")).toEqual([
+      { entity_type: "contact", entity_id: "c-1" },
+    ]),
+  );
+  await user.click(screen.getByRole("button", { name: "Send" }));
+  expect(sent.some((item) => item.key === "POST /emails")).toBe(false);
+  writeMessage("Body", "Edited while loading.");
+  await user.click(screen.getByRole("button", { name: "Close" }));
+  await waitFor(() =>
+    expect(
+      sent.find((item) => item.key === "PUT /mail-drafts")?.body,
+    ).toMatchObject({
+      editor_state: {
+        filing: [{ anchor_type: "deal", anchor_id: "deal-open" }],
+      },
+    }),
+  );
+});
+
+it("saves a cleared deal from an older draft even when its words stay the same", async () => {
+  const user = userEvent.setup();
+  const onClose = vi.fn();
+  const saved = {
+    id: "draft-old",
+    version: 3,
+    anchor_type: "contact",
+    anchor_id: "c-1",
+    to: ["anna@acme.test"],
+    cc: [],
+    bcc: [],
+    subject: "Next steps",
+    body: "The current draft.",
+    communication_context: "active_deal_followup",
+    grounding: [{ anchor_type: "deal", anchor_id: "deal-open" }],
+    agent_drafted: false,
+  };
+  const sent = stubRoutes({
+    "GET /contacts/c-1/360": () => jsonResponse(contactView()),
+    "GET /mail-drafts": () => jsonResponse(saved),
+    "PUT /mail-drafts": () => jsonResponse({ ...saved, version: 4 }),
+  });
+  render(
+    <ComposeModal
+      entityType="contact"
+      entityId="c-1"
+      contactId="c-1"
+      open
+      onClose={onClose}
+    />,
+  );
+  await screen.findByText("Saved draft restored");
+  const deal = await screen.findByRole("combobox", { name: DEAL_PICK });
+  expect(deal.textContent).toContain("Acme Renewal");
+  await pickOption(user, deal, "No deal");
+  await user.click(screen.getByRole("button", { name: "Close" }));
+  await waitFor(() => expect(onClose).toHaveBeenCalled());
+  const writes = sent.filter((call) => call.key === "PUT /mail-drafts");
+  expect(writes).toHaveLength(1);
+  expect(writes[0]?.body).toMatchObject({
+    body: saved.body,
+    editor_state: { filing: [] },
+  });
+  expect(writes[0]?.headers.get("If-Match")).toBe("3");
+  expect(sent.some((call) => call.key === "POST /emails")).toBe(false);
+});

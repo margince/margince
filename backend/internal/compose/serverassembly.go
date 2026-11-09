@@ -73,7 +73,7 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 // modules its inbound and outbound edges need.
 func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 	gate := consentGateFor(pool)
-	return activities.NewHandlers(InstallationDB(pool)).
+	return activities.NewHandlers(InstallationDB(pool)).WithIdentityProver(capture.ProvedUnambiguouslyTx).
 		WithDealFiling(NewActivityDealFiling(InstallationDB(pool))).
 		WithTaskRecommendation(taskRecommendationReader(pool)).
 		WithLeadQualifyTasks(newLeadWorkTasks(InstallationDB(pool), slog.Default())).
@@ -372,6 +372,9 @@ func (s *Server) wireOnboardingSurface(pool *pgxpool.Pool) {
 func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 	return consent.NewHandlers(InstallationDB(pool)).
 		WithEraser(ComposedEraser(pool, nil, nil)).
+		// Wired with or without a mail lane. A receipt owed where no lane can
+		// send it is one the privacy operators must hear about.
+		WithMissedReceipts(receiptAlarm{db: InstallationDB(pool)}).
 		WithSubjectAccessAssembler(newSubjectAccessAssembler(InstallationDB(pool))).
 		WithInstallationName(consent.InstallationNameFunc(func(ctx context.Context) (string, error) {
 			return identity.InstallationNameForPublicPage(ctx, pool)

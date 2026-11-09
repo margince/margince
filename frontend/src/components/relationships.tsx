@@ -35,6 +35,7 @@ import { entityNameQuery } from "./entityref.queries";
 import "../design-system/querystates.css";
 import { ErrorLine } from "../design-system/errorline";
 import { refuseUnreadableField } from "../design-system/formvalidity";
+import { labelFor } from "../lib/labelfor";
 import {
   type EdgeOption,
   edgeOptions,
@@ -303,7 +304,7 @@ export function AddRelationshipAction({
                   }}
                   options={options.map((option) => ({
                     value: option.kind,
-                    label: t(KIND_LABELS[option.kind]),
+                    label: t(labelFor(KIND_LABELS, option.kind)),
                   }))}
                 />
               )}
@@ -347,7 +348,7 @@ export function AddRelationshipAction({
             <p>
               {t("rel.addConfirm", {
                 target: target.name,
-                kind: t(KIND_LABELS[kind]),
+                kind: t(labelFor(KIND_LABELS, kind)),
               })}
             </p>
           )}

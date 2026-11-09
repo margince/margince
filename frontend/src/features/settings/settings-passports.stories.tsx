@@ -83,7 +83,7 @@ function story(
 }
 
 const meta: Meta<typeof PassportCard> = {
-  title: "Settings/You/AI access/Passports",
+  title: "Settings/You/AI assistants/Passports",
   component: PassportCard,
 };
 export default meta;

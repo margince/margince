@@ -15,10 +15,13 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // stageCall stages one call as proposer: the agent through its gate, or a
@@ -78,6 +81,32 @@ func (s *promotionSight) deal(name string, owner ids.UUID) ids.UUID {
 func newKindSight(t *testing.T) *promotionSight {
 	s := newPromotionSight(t, "admin", approverIsRep2, "rep")
 	s.approver = storedMemberSeat(t, s.e, s.e.Rep1)
+	return s
+}
+
+func newMailSight(t *testing.T) *promotionSight {
+	t.Helper()
+	s := newKindSight(t)
+	actor, ok := principal.Actor(s.agent)
+	if !ok {
+		t.Fatal("no proposing agent")
+	}
+	s.e.WsExec(t, `UPDATE passport SET scopes=ARRAY['read','write','send'] WHERE id=$1`, actor.PassportID)
+	s.agentOn(actor.PassportID)
+	for _, address := range []string{"buyer@example.test", "buyer@masked.test"} {
+		contact, err := s.e.Contacts.CreateContact(s.e.Admin(), contacts.CreateContactInput{
+			FullName: "Buyer", Source: "manual", OwnerID: new(ids.From[ids.UserKind](s.e.Rep2)),
+			Emails: []contacts.ContactEmailInput{{Email: address, EmailType: "work", IsPrimary: true}},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := consent.NewStore(s.e.DB()).RecordQualifyingEvent(s.e.Admin(), ids.From[ids.ContactKind](ids.UUID(contact.Id)), consent.RecordQualifyingEventInput{
+			Kind: consent.KindRequestedBySubject, Note: "Buyer asked for a follow-up.", OccurredAt: clocktest.Now(t),
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
 	return s
 }
 
@@ -174,7 +203,7 @@ func TestAnAgentsRelinkWaitsForAnApproverWhoCanOpenItsDestination(t *testing.T) 
 }
 
 func TestAnAgentsCompanyMailWaitsForAnApproverWhoCanOpenWhereItIsFiled(t *testing.T) {
-	s := newKindSight(t)
+	s := newMailSight(t)
 	company := s.privateCompany("Discreet Account", s.e.Rep1)
 	id := s.stageCall(s.agent, approvals.StageInput{Kind: previewSendCompanyEmail, TargetType: "activity"}, fmt.Sprintf(`{
 		"to":["buyer@example.test"],"subject":"Delivery plan","body":"Delivery on Friday.",

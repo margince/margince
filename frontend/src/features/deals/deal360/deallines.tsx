@@ -18,6 +18,7 @@ import {
 import { formatMoneyOrAbsent, formatNumber } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
+import { labelFor } from "../../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../../lib/problem";
 import { REPORTING_EVALUATION_KEY } from "../../../lib/reportingfigures";
 import {
@@ -247,7 +248,7 @@ export function DealLinesTotal({ state }: Readonly<{ state: DealCommercial }>) {
           locale,
         ),
         missing: state.missing
-          .map((reason) => t(MISSING_LABEL[reason]))
+          .map((reason) => t(labelFor(MISSING_LABEL, reason)))
           .join(", "),
       })}
     </p>
