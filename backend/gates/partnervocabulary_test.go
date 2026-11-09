@@ -12,7 +12,6 @@ package gates
 // fails here, not as a refusal of a valid word.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -57,7 +56,7 @@ func TestThePartnerVocabulariesMatchTheContractEverywhere(t *testing.T) {
 	} {
 		want := wordsIn(`"` + strings.Join(crmYAMLNamedEnum(t, schema), `","`) + `"`)
 		for _, c := range copies {
-			body, err := os.ReadFile(filepath.Join(root, c.file))
+			body, err := gatekit.ReadFile(filepath.Join(root, c.file))
 			if err != nil {
 				t.Fatalf("reading %s: %v", c.file, err)
 			}
@@ -97,7 +96,7 @@ func checkKindsCheckConstraint(t *testing.T, root string) {
 	check := regexp.MustCompile(`partner_kinds <@ ARRAY\[([^\]]*)\]`)
 	var newest []string
 	for _, file := range files {
-		body, err := os.ReadFile(file)
+		body, err := gatekit.ReadFile(file)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -128,7 +127,7 @@ func checkVocabularyMessages(t *testing.T, root string) {
 			if strings.HasSuffix(file, "_test.go") {
 				continue
 			}
-			body, err := os.ReadFile(file)
+			body, err := gatekit.ReadFile(file)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -10,11 +10,21 @@ import { translate } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { companyContextShown } from "../../lib/companycontextreach";
 import { navigate } from "../../lib/router";
-import { SETTINGS_PAGES, type SettingsPageId } from "../../lib/settingscatalog";
+import {
+  SETTINGS_PAGES,
+  type SettingsPageId,
+  visibleSettingsTabs,
+} from "../../lib/settingscatalog";
 import { settingsHref } from "../../lib/settingsrouting";
+import { meFixture } from "../../testing/mefixture";
 import * as stories from "./settings.stories";
-import { COMPANY_CONTEXT_OFF } from "./settingspages.fixtures";
-import { settingsPageSections } from "./settingssearch";
+import { catalogContext } from "./settingsnav";
+import { COMPANY_CONTEXT_OFF, EVERY_GRANT } from "./settingspages.fixtures";
+import {
+  COMPANY_CONTEXT_SECTIONS,
+  settingsSectionKeys,
+} from "./settingssections";
+import { settingsTabLabel } from "./settingstabs";
 import { healthSourceLabels } from "./systemhealth.copy";
 import { healthReport } from "./systemhealth.fixtures";
 import { healthSectionForSource } from "./systemhealthnavigation";
@@ -28,11 +38,12 @@ type NotOffered = Readonly<{
   why: "empty-state" | "grant" | "record-filter";
 }>;
 
-const DRAWN_NOT_OFFERED: Partial<
-  Record<SettingsPageId, readonly NotOffered[]>
-> = {
+// Keyed by page, or by `page/tab` for a name one tab draws.
+const DRAWN_NOT_OFFERED: Readonly<Record<string, readonly NotOffered[]>> = {
   members: [{ key: "users.search", why: "record-filter" }],
-  "capture-activity": [{ key: "captureActivity.scope.label", why: "grant" }],
+  "connections/activity": [
+    { key: "captureActivity.scope.label", why: "grant" },
+  ],
   "model-calls": [
     { key: "aicalls.filter.search", why: "record-filter" },
     { key: "aicalls.filter.window", why: "record-filter" },
@@ -96,6 +107,7 @@ async function healthNames(Story: (typeof pageStories)[number]) {
   await user.click(
     await screen.findByRole("button", { name: t("health.diagnostics") }),
   );
+  // The tab strip routes, so each tab below is a fresh render of the page.
   for (const source of healthReport.sources) {
     const key = healthSectionForSource(source.id);
     if (!key) throw new Error(`Missing health section for ${source.id}`);
@@ -123,6 +135,76 @@ async function healthNames(Story: (typeof pageStories)[number]) {
   return names;
 }
 
+// Every tab the stories' admin may open, or the page itself when it has none.
+// A tab offering composed units opens only in a build that composed some. This
+// build's context decides it as the strip does.
+function tabsOf(page: SettingsPageId): readonly (string | undefined)[] {
+  const row = SETTINGS_PAGES.find((each) => each.id === page);
+  if (row === undefined || !("tabs" in row)) return [undefined];
+  const admin = meFixture({ roles: ["admin"], allow: EVERY_GRANT });
+  const context = { ...catalogContext(), companyContextShown: true };
+  return visibleSettingsTabs(row, admin, context).map((tab) => tab.id);
+}
+
+// The names search offers for one tab, less the tab's own name: the strip
+// draws that, not a panel.
+function drawnSections(page: SettingsPageId, tab: string | undefined) {
+  const keys = settingsSectionKeys(
+    page,
+    (each) => tab === undefined || each === tab,
+  );
+  return [
+    ...keys.filter((key) => !TAB_NAMES.has(key)),
+    ...(page === "company" && (tab === undefined || tab === "profile")
+      ? COMPANY_CONTEXT_SECTIONS
+      : []),
+  ].map(t);
+}
+
+const TAB_NAMES = new Set<string>(
+  SETTINGS_PAGES.flatMap((page) =>
+    "tabs" in page
+      ? page.tabs.flatMap((tab) => settingsTabLabel(page.id, tab.id) ?? [])
+      : [],
+  ),
+);
+
+async function expectTabDraws(
+  Story: (typeof pageStories)[number],
+  page: SettingsPageId,
+  tab: string | undefined,
+) {
+  const address = tab === undefined ? page : `${page}/${tab}`;
+  const notOffered = [
+    ...(DRAWN_NOT_OFFERED[page] ?? []),
+    ...(tab === undefined ? [] : (DRAWN_NOT_OFFERED[address] ?? [])),
+  ];
+  const view = render(<Story route={settingsHref(page, tab)} />);
+  await waitFor(() => {
+    // A tab that drew no panel at all crashed or never loaded.
+    expect(view.container.querySelector(".panel"), address).not.toBeNull();
+    expect(view.container.querySelector("[aria-busy=true]")).toBeNull();
+    // Sorted lists rather than sets, so a failure names the odd one out.
+    expect([...drawnNames(view.container)].sort(), address).toEqual(
+      [
+        ...new Set([
+          ...drawnSections(page, tab),
+          ...notOffered.map(({ key }) => t(key)),
+        ]),
+      ].sort(),
+    );
+  });
+  const filters = notOffered
+    .filter(({ why }) => why === "record-filter")
+    .map(({ key }) => t(key));
+  for (const element of namingElements(view.container)) {
+    if (filters.includes(visibleText(element))) {
+      expect(element.closest(".filter-bar")).not.toBeNull();
+    }
+  }
+  view.unmount();
+}
+
 describe("each settings page's sections are the names it draws", () => {
   it("has one page story for every catalog page", () => {
     const covered = pageStories.map((story) => story.parameters.settingsPage);
@@ -142,44 +224,37 @@ describe("each settings page's sections are the names it draws", () => {
       }
       if (page === "system-health") {
         expect(await healthNames(Story)).toEqual(
-          new Set(settingsPageSections(page, t, { seesCompanyContext: true })),
+          new Set(drawnSections(page, undefined)),
         );
         return;
       }
-      const view = render(<Story />);
-      await waitFor(() => {
-        // A page that drew no panel at all crashed or never loaded.
-        expect(view.container.querySelector(".panel")).not.toBeNull();
-        expect(view.container.querySelector("[aria-busy=true]")).toBeNull();
-        expect(drawnNames(view.container)).toEqual(
-          new Set([
-            ...settingsPageSections(page, t, { seesCompanyContext: true }),
-            ...(DRAWN_NOT_OFFERED[page] ?? []).map(({ key }) => t(key)),
-          ]),
-        );
-      });
-      const filters = (DRAWN_NOT_OFFERED[page] ?? [])
-        .filter(({ why }) => why === "record-filter")
-        .map(({ key }) => t(key));
-      for (const element of namingElements(view.container)) {
-        if (filters.includes(visibleText(element))) {
-          expect(element.closest(".filter-bar")).not.toBeNull();
-        }
+      for (const tab of tabsOf(page)) {
+        await expectTabDraws(Story, page, tab);
       }
     },
   );
 
-  it("offers none of the company-context names while the rollout hides the card", async () => {
+  it("opens Company profile on its next tab while the rollout hides the card", async () => {
     const seesCompanyContext = companyContextShown(true, COMPANY_CONTEXT_OFF);
     expect(seesCompanyContext).toBe(false);
     const { CompanyPageContextOff } = composeStories(stories);
-    const view = render(<CompanyPageContextOff />);
-    await waitFor(() => {
-      expect(view.container.querySelector("[aria-busy=true]")).toBeNull();
-      expect(drawnNames(view.container)).toEqual(
-        new Set(settingsPageSections("company", t, { seesCompanyContext })),
-      );
-    });
+    render(<CompanyPageContextOff />);
+    // The profile tab draws only that card, so it leaves the strip and the
+    // page's bare address opens the legal entities instead.
+    expect(
+      await screen.findByRole("button", {
+        name: t("settings.part.company.entities"),
+        pressed: true,
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", {
+        name: t("settings.part.company.profile"),
+      }),
+    ).toBeNull();
+    for (const key of COMPANY_CONTEXT_SECTIONS) {
+      expect(screen.queryByText(t(key))).toBeNull();
+    }
   });
 
   // An empty state or a grant cannot be checked from one render. Each entry

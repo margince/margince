@@ -56,6 +56,19 @@ func seamCreate(ctx context.Context, t *testing.T, seam *dealrooms.Provider, ent
 	return ref
 }
 
+// postedThread opens a thread on the seller's route and names it as the seam does.
+func postedThread(t *testing.T, e *apptest.AppEnv, room string, body AnyMap) datasource.EntityRef {
+	t.Helper()
+	body["source"] = "manual"
+	var opened struct {
+		ID ids.UUID `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room+"/threads", body, nil, &opened); status != http.StatusCreated {
+		t.Fatalf("opening a thread = %d", status)
+	}
+	return datasource.EntityRef{Type: datasource.EntityDealRoomThread, ID: opened.ID}
+}
+
 func seamList(ctx context.Context, t *testing.T, seam *dealrooms.Provider, entity datasource.EntityType, filters map[string]string) []ids.UUID {
 	t.Helper()
 	records, _, _, err := seam.SearchEntity(ctx, entity, nil, 25, nil, filters)
@@ -94,14 +107,11 @@ func TestAnAgentOpensARoomAndHoldsItsConversationOnTheSeam(t *testing.T) {
 	}
 
 	inRoom := map[string]string{"deal_room_id": room.ID.String()}
-	thread := seamCreate(w, t, seam, datasource.EntityDealRoomThread, map[string]any{
-		"deal_room_id": room.ID.String(), "body": "Any questions on the terms?",
-	})
-	answered := seamCreate(w, t, seam, datasource.EntityDealRoomComment, map[string]any{
-		"deal_room_id": room.ID.String(), "thread_id": thread.ID.String(), "body": "Clause 4 is settled.",
-	})
-	if answered != thread {
-		t.Errorf("a reply reads back as %+v, want the thread it answers %+v", answered, thread)
+	thread := postedThread(t, e, room.ID.String(), AnyMap{"body": "Any questions on the terms?"})
+	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.ID.String()+"/threads/"+thread.ID.String()+"/comments", AnyMap{
+		"body": "Clause 4 is settled.", "source": "manual",
+	}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("replying in the thread = %d", status)
 	}
 	record, err := seam.Read(w, thread)
 	if err != nil {
@@ -180,12 +190,8 @@ func TestARoomsDocumentsAndTheirThreadsReadOnTheSeam(t *testing.T) {
 		t.Errorf("reading a document no room holds answered %v, want not found", err)
 	}
 
-	seamCreate(w, t, seam, datasource.EntityDealRoomThread, map[string]any{
-		"deal_room_id": room.roomID, "body": "Welcome to the room.",
-	})
-	onDocument := seamCreate(w, t, seam, datasource.EntityDealRoomThread, map[string]any{
-		"deal_room_id": room.roomID, "document_id": doc.ID, "body": "Please change clause 4.", "required_change": true,
-	})
+	postedThread(t, e, room.roomID, AnyMap{"body": "Welcome to the room."})
+	onDocument := postedThread(t, e, room.roomID, AnyMap{"document_id": doc.ID, "body": "Please change clause 4.", "required_change": true})
 	if record, err := seam.Read(w, onDocument); err != nil || !strings.Contains(string(record.Fields), `"required_change":true`) {
 		t.Errorf("the document's thread reads back as %s (%v), want a required change", record.Fields, err)
 	}

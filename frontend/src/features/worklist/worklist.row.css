@@ -185,21 +185,18 @@
   gap: var(--space-2);
   margin: 0;
 }
-/* A name long enough to wrap reads from the row's start edge, not centred as a
-   verb's label is, whether it sits in the title or in the title's heading. */
-.worklist-row-title > .btn-valuelabel,
-.worklist-row-title > .heading > .btn-valuelabel {
-  justify-content: flex-start;
-  text-align: start;
-}
 /* A flex item's floor is its content's width, which would hold a long
    headline wider than the card. */
 .worklist-row-title > .heading {
   min-width: 0;
 }
+.worklist-row-pinned {
+  display: inline-flex;
+  color: var(--textSecondary);
+}
 
 .worklist-row-detail,
-.worklist-row-verdict,
+.worklist-row-verdict-body,
 .worklist-row-when,
 .worklist-row-facts,
 .worklist-row-sample,
@@ -271,12 +268,16 @@
   order: 1;
 }
 
-/* The standing line: a badge, who is speaking, and the sentence.
+/* An earlier assessment, once opened: a badge and the sentence.
 
    Laid out as a row rather than as prose so the badge reads as a label on the
    sentence beside it, and wrapping so a long line falls under the badge rather
    than pushing the row wide. */
-.worklist-row-verdict {
+/* The row text's gap spaces the earlier assessment; a disclosure margin doubles it. */
+.disclosure.worklist-row-verdict {
+  margin-bottom: 0;
+}
+.worklist-row-verdict-body {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;

@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/currencylock"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 type installationSettingsHandlers struct {
@@ -61,12 +62,20 @@ func (h installationSettingsHandlers) GetInstallationSettings(w http.ResponseWri
 		httperr.NotImplemented(w, r, "GetInstallationSettings")
 		return
 	}
-	s, err := h.store.GetInstallation(r.Context())
+	s, err := h.read(r.Context())
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, h.toContract(s))
+	httperr.WriteJSON(w, http.StatusOK, s)
+}
+
+func (h installationSettingsHandlers) read(ctx context.Context) (crmcontracts.InstallationSettings, error) {
+	s, err := h.store.GetInstallation(ctx)
+	if err != nil {
+		return crmcontracts.InstallationSettings{}, err
+	}
+	return h.toContract(s), nil
 }
 
 // GetAuthenticationPolicy answers the sign-in half on its own grant.
@@ -145,15 +154,10 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 		// the floor carry in the same transaction.
 		Country:      req.Country,
 		CallWhatsApp: req.CallWhatsapp, CallTelegram: req.CallTelegram, CallZalo: req.CallZalo, IndividualPerformance: req.IndividualPerformance, ForecastSelfCorrecting: req.ForecastSelfCorrecting,
+		ForecastLikelyThreshold: req.ForecastLikelyThreshold, McpClientCheck: req.McpClientCheck,
 	}
-	if req.DateFormat != nil {
-		value := string(*req.DateFormat)
-		patch.DateFormat = &value
-	}
-	if req.TimeFormat != nil {
-		value := string(*req.TimeFormat)
-		patch.TimeFormat = &value
-	}
+	patch.DateFormat = enumText(req.DateFormat)
+	patch.TimeFormat = enumText(req.TimeFormat)
 	if req.BaseLanguage != nil {
 		// The generated enum refuses an unknown value at the edge, so a code
 		// that reaches here is one the contract admits. The entry validates it
@@ -179,14 +183,10 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 	patch.DeadWorkBannerHours = req.DeadWorkBannerHours
 	patch.OAuthAccessTokenTTLMinutes = req.OauthAccessTokenTtlMinutes
 	// Same reasoning as the month above: the entry validates against the shared
-	// kernel's set, so an unknown measure comes back naming this field and
-	// quoting the value. Converted to a plain string because the patch carries
-	// what was ASKED for, and the generated enum type would claim it had already
-	// been checked against the vocabulary the projection enforces.
-	if req.ForecastForwardMeasure != nil {
-		measure := string(*req.ForecastForwardMeasure)
-		patch.ForecastForwardMeasure = &measure
-	}
+	// kernel's set. An unknown measure comes back naming this field and quoting
+	// the value. The two qualified spellings map to their base measures. It is a
+	// plain string because the generated enum type would claim a check not yet run.
+	patch.ForecastForwardMeasure = savedForwardMeasure(req.ForecastForwardMeasure)
 	// Passed through unvalidated against the deployment's list on purpose. A key
 	// this deployment holds no credentials for enables nothing — the effective
 	// answer is the intersection — so refusing it would be refusing a request
@@ -224,12 +224,12 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 		TimeScanIntervalSeconds:          req.TimeScanIntervalSeconds,
 		WebhookRetryIntervalSeconds:      req.WebhookRetryIntervalSeconds,
 	}
-	patch.AgentAllowances = identity.AgentAllowancePatch{
-		WritesPerWindow: req.AgentWritesPerWindow,
-		EgressPerWindow: req.AgentEgressPerWindow,
-		CallsPerWindow:  req.AgentCallsPerWindow,
-		WindowHours:     req.AgentWindowHours,
+	allowances, err := agentAllowancePatch(&req)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
 	}
+	patch.AgentAllowances = allowances
 	s, err := h.store.UpdateInstallation(r.Context(), patch)
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -257,7 +257,8 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 		FiscalYearStartMonth: s.FiscalYearStartMonth,
 		DeadWorkBannerHours:  s.DeadWorkBannerHours,
 		ForecastForwardMeasure: crmcontracts.InstallationSettingsForecastForwardMeasure(
-			s.ForecastForwardMeasure),
+			s.ForecastForwardMeasure,
+		),
 		OauthAccessTokenTtlMinutes: s.OAuthAccessTokenTTLMinutes,
 		BaseCurrencyLocked:         s.BaseCurrencyLocked,
 		CallWhatsapp:               s.CallWhatsApp,
@@ -265,10 +266,11 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 		CallZalo:                   s.CallZalo,
 		IndividualPerformance:      s.IndividualPerformance,
 		ForecastSelfCorrecting:     s.ForecastSelfCorrecting,
+		ForecastLikelyThreshold:    s.ForecastLikelyThreshold,
 		MaxUploadBytes:             h.maxUploadBytes,
 		SignInProviders:            h.signInProviders(s.EnabledOidcProviders),
 		Operations:                 crmcontracts.OperationSettings(s.Operations),
-		AgentAllowances:            toAgentAllowances(s.AgentAllowances, h.clock()),
+		AgentAllowances:            toAgentAllowances(s.AgentAllowances, s.AgentRoleAllowances, h.clock()),
 		Locks:                      loadedLocks(identity.Settings()),
 	}
 	dateFormat := crmcontracts.InstallationSettingsDateFormat(s.DateFormat)
@@ -335,4 +337,23 @@ func (h installationSettingsHandlers) clock() time.Time {
 		return h.now()
 	}
 	return time.Now()
+}
+
+// savedForwardMeasure keeps the two deprecated qualified measures sendable. The
+// qualified forecast is retired, so each saves as the measure it was built on.
+// Any other value stays as sent, for the entry's validator to judge.
+func savedForwardMeasure[T ~string](value *T) *string {
+	text := enumText(value)
+	if text != nil {
+		*text = values.SavedForwardMeasure(*text)
+	}
+	return text
+}
+
+func enumText[T ~string](value *T) *string {
+	if value == nil {
+		return nil
+	}
+	text := string(*value)
+	return &text
 }

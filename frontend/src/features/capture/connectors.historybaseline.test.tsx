@@ -10,7 +10,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
@@ -73,7 +73,7 @@ it("saves the chosen date in the reader's own zone", async () => {
   await user.click(save);
 
   await waitFor(() =>
-    expect(sent).toEqual([{ date: "2026-03-01", timezone: viewerZone() }]),
+    expect(sent).toEqual([{ date: "2026-03-01", timezone: browserZone() }]),
   );
 });
 

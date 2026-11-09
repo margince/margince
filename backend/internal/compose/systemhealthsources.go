@@ -181,9 +181,8 @@ func (s Server) captureSummary(ctx context.Context) (crmcontracts.HealthSource, 
 	}
 	add("capture_processing", healthProcessing, classifier.Pending, "records", "operator")
 	add("capture_uncertain", healthWaitingHuman, categories.SenderReviews, "records", "mailbox_owner")
-	add("capture_exhausted", healthTechnical, classifier.Exhausted, "records", "operator")
+	add("capture_exhausted", healthTechnical, classifier.Exhausted+categories.StalledThreads, "records", "operator")
 	add("capture_thread_processing", healthProcessing, categories.MachineThreads, "threads", "operator")
-	add("capture_thread_uncertain", healthWaitingHuman, categories.UncertainThreads, "threads", "mailbox_owner")
 	add("capture_unread", healthUnverified, categories.UnreadMailboxes, "mailboxes", "mailbox_owner")
 	add("capture_held", healthProcessing, held.Count, "records", "operator")
 	repairUnverified := false

@@ -16,6 +16,7 @@ import (
 	"sync"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // writtenBrief is what the two writers produced, and which writer produced it.
@@ -47,6 +48,7 @@ func (s *Service) write(ctx context.Context, in Input) writtenBrief {
 		both sync.WaitGroup
 	)
 	both.Add(2)
+	lane, _ := ai.ReadLane(ctx, s.lane)
 	go func() {
 		defer both.Done()
 		// A panic in a goroutine takes the PROCESS down, not the request. The
@@ -59,7 +61,7 @@ func (s *Service) write(ctx context.Context, in Input) writtenBrief {
 				out.sections, out.sectionsBy = Deterministic(in), crmcontracts.WrittenByDeterministic
 			}
 		}()
-		out.sections, out.sectionsBy = Write(ctx, s.lane, in, lang)
+		out.sections, out.sectionsBy = Write(ctx, lane, in, lang)
 	}()
 	go func() {
 		defer both.Done()
@@ -69,7 +71,7 @@ func (s *Service) write(ctx context.Context, in Input) writtenBrief {
 				out.plan, out.planBy = floor, crmcontracts.WrittenByDeterministic
 			}
 		}()
-		out.plan, out.planBy = WritePlan(ctx, s.lane, in, floor, lang)
+		out.plan, out.planBy = WritePlan(ctx, lane, in, floor, lang)
 	}()
 	both.Wait()
 	return out

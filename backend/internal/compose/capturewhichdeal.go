@@ -44,16 +44,24 @@ var (
 		Vi: "Thư này thuộc về thương vụ nào?",
 	}
 	whichDealBody = langcopy.Phrase{
-		En: "Several open deals fit this mail, so Margince filed it on none of them. Open the mail and use Relink to put it on the right deal.",
-		De: "Mehrere offene Deals passen zu dieser Mail, deshalb hat Margince sie keinem zugeordnet. Öffnen Sie die Mail und ordnen Sie sie mit Neu verknüpfen dem richtigen Deal zu.",
-		Vi: "Nhiều thương vụ đang mở phù hợp với thư này, nên Margince chưa gắn thư vào thương vụ nào. Hãy mở thư và dùng Liên kết lại để gắn vào đúng thương vụ.",
+		En: "Several open deals fit this mail, so Margince filed it on none of them. Open the mail and use Relink to put it on the right deal, or choose None of these deals.",
+		De: "Mehrere offene Deals passen zu dieser Mail, deshalb hat Margince sie keinem zugeordnet. Öffnen Sie die Mail und ordnen Sie sie mit Neu verknüpfen dem richtigen Deal zu, oder wählen Sie Keiner dieser Deals.",
+		Vi: "Nhiều thương vụ đang mở phù hợp với thư này, nên Margince chưa gắn thư vào thương vụ nào. Hãy mở thư và dùng Liên kết lại để gắn vào đúng thương vụ, hoặc chọn Không thuộc deal nào.",
 	}
 )
 
 // whichDealAsker writes the question as a task through the activities store.
+// The deals it offers are recorded on the task, so "none of them" declines
+// those and no others.
 type whichDealAsker struct {
 	tasks *activities.Store
+	deals offeredDeals
 	now   func() time.Time
+}
+
+// offeredDeals reads the open deals a question offers, from the deals module.
+type offeredDeals interface {
+	OfferedDeals(ctx context.Context, tx pgx.Tx, projectID, companyID ids.UUID) ([]ids.UUID, error)
 }
 
 // Ask raises the question at most once per thread. The task is keyed on the
@@ -104,6 +112,12 @@ func (a whichDealAsker) Ask(ctx context.Context, tx pgx.Tx, q capture.WhichDeal)
 			in.Links = append(in.Links, activities.ActivityLinkInput{EntityType: string(record.kind), EntityID: record.id})
 		}
 	}
+	offered, err := a.deals.OfferedDeals(ctx, tx, q.ProjectID, q.CompanyID)
+	if err != nil {
+		return err
+	}
+	raw := map[string]any{provenance.WhichDealOfferedKey: append([]ids.UUID{}, offered...)}
+	in.Raw = &raw
 	in.AdmitInvitedAssignee()
 	if !shared {
 		in.VisibleOnlyTo(seat)
@@ -176,6 +190,13 @@ func (ActivityDealFiler) FileOnDealIfUnfiled(
 ) (landed, filed bool, err error) {
 	outcome, err := activities.FileOnDealIfUnfiledTx(ctx, tx, id, deal, evidence)
 	return outcome == activities.DealFilingLanded, outcome == activities.DealFilingAlreadyFiled, err
+}
+
+// StampDealTopic is activities.StampDealTopicCheckedTx. A held or archived
+// mail keeps no memo, and needs none: no pass files it.
+func (ActivityDealFiler) StampDealTopic(ctx context.Context, tx pgx.Tx, id ids.ActivityID, digest string) error {
+	_, err := activities.StampDealTopicCheckedTx(ctx, tx, id, digest)
+	return err
 }
 
 // RetractMachineDeal is activities.RetractMachineDealTx.

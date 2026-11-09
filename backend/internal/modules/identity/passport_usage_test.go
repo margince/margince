@@ -6,6 +6,7 @@ package identity
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -17,14 +18,18 @@ import (
 
 // recordedUsage answers a fixed usage per subject and records what it was asked.
 type recordedUsage struct {
-	asked  []string
+	asked  []agentvolume.Holder
 	answer map[string]agentvolume.Usage
 	err    error
 }
 
-func (r *recordedUsage) Usage(_ context.Context, _ ids.UUID, subjects []string) (map[string]agentvolume.Usage, error) {
+func (r *recordedUsage) Usage(_ context.Context, _ ids.UUID, subjects []agentvolume.Holder) (map[string]agentvolume.Usage, error) {
 	r.asked = subjects
 	return r.answer, r.err
+}
+
+func (r *recordedUsage) AllowanceFor(context.Context, []string) agentvolume.Allowance {
+	return agentvolume.Allowance{}
 }
 
 func (r *recordedUsage) ResetsAt(context.Context) time.Time { return time.Time{} }
@@ -39,11 +44,14 @@ func TestOnlyALivePassportIsAskedForUsage(t *testing.T) {
 	reader := &recordedUsage{}
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 
-	Handlers{}.WithPassportUsage(reader).liveUsage(ctx, []PassportRow{live, revoked, expired, connection}, now)
+	Handlers{}.WithPassportUsage(reader).liveUsage(ctx, []PassportRow{live, revoked, expired, connection}, []string{"admin"}, now)
 
 	want := []string{live.ID.String(), connection.Connection.GrantID.String()}
-	if len(reader.asked) != 2 || reader.asked[0] != want[0] || reader.asked[1] != want[1] {
-		t.Errorf("asked for %v, want the live passport and the connection's grant %v", reader.asked, want)
+	if len(reader.asked) != 2 || reader.asked[0].Subject != want[0] || reader.asked[1].Subject != want[1] {
+		t.Fatalf("asked for %v, want the live passport and the connection's grant %v", reader.asked, want)
+	}
+	if !slices.Equal(reader.asked[0].Roles, []string{"admin"}) {
+		t.Errorf("a passport was asked for against roles %v, want its owner's", reader.asked[0].Roles)
 	}
 }
 
@@ -51,7 +59,7 @@ func TestThePassportListSurvivesAnUnreadableCounter(t *testing.T) {
 	reader := &recordedUsage{err: errors.New("redis down")}
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 
-	usage := Handlers{}.WithPassportUsage(reader).liveUsage(ctx, []PassportRow{passportRowForTest()}, clocktest.Now(t))
+	usage := Handlers{}.WithPassportUsage(reader).liveUsage(ctx, []PassportRow{passportRowForTest()}, nil, clocktest.Now(t))
 
 	if usage != nil {
 		t.Errorf("an unreadable counter answered %v, want no usage", usage)

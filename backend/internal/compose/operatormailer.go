@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/mailer"
@@ -108,7 +109,10 @@ func declaredSMTPPassword(c *config.Config) (string, error) {
 //
 // A password declared removed sends without AUTH, whatever username the file
 // still names: the mailer authenticates whenever it has a username.
-func OperatorMailer(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, c *config.Config, log *slog.Logger) (mailer.SMTP, error) {
+//
+// blob is the object store the company logo is read from for the letterhead.
+// Nil heads every mail with the company name alone.
+func OperatorMailer(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, blob blobstore.Store, c *config.Config, log *slog.Logger) (mailer.SMTP, error) {
 	password, err := sealedSMTPPassword(ctx, pool, vault, c, log)
 	if err != nil {
 		return mailer.SMTP{}, err
@@ -123,5 +127,6 @@ func OperatorMailer(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vaul
 		Username:    username,
 		Password:    password,
 		FromAddress: config.Val(c, EmailFromAddress),
+		Letterhead:  newMailLetterhead(pool, blob),
 	}, nil
 }

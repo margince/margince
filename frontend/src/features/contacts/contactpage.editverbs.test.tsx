@@ -49,16 +49,22 @@ describe("a live contact that is not the viewer's to change refuses its core wri
   });
 });
 
-describe("a seat without the delete grant is not offered archive", () => {
+describe("a reader the server does not let archive this contact", () => {
   it("shows archive disabled with the reason and no dialog opens", async () => {
-    mount("overview", view, [], {}, { contact: ["read", "update"] });
+    // A rep who does not own the contact: update, no delete, and the server's
+    // per-row answer says no.
+    const notTheirs: Contact360 = {
+      ...view,
+      contact: { ...view.contact, archivable: false },
+    };
+    mount("overview", notTheirs, [], {}, { contact: ["read", "update"] });
     await openRecordMenu();
     const verb = await screen.findByTestId("archive-record");
     await waitFor(() => expect(verb.hasAttribute("disabled")).toBe(true));
     expect(
       document.getElementById(verb.getAttribute("aria-describedby") ?? "")
         ?.textContent,
-    ).toBe(en["record.actionRefused"]);
+    ).toBe(en["contact.archiveRefused"]);
   });
 });
 

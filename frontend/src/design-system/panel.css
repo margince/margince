@@ -45,7 +45,7 @@
 .panel-head-flat {
   align-items: baseline;
   min-height: 0;
-  padding: var(--space-5) var(--space-5) var(--space-2);
+  padding: var(--padPanel) var(--padPanel) var(--space-2);
   border-bottom: none;
 }
 /* The zone's title in the display face: the one word a reader finds a zone
@@ -165,15 +165,20 @@
  * `settingrow.css` holds the same cap for an empty state inside a row. Two
  * parents, one reading. */
 .panel-body > .empty {
-  padding: 0;
   text-align: left;
   /* The body is already a card: a second ground under one grey sentence, with
      the text flush to its edge, read as a plate that had lost its padding. */
   background: none;
 }
+/* The one-line state sits flush in the body. The instructional state is a card
+   of its own, with a title, a sentence and a verb: it keeps its padding, or its
+   text sits on its border. */
+.panel-body > .empty:not(.empty-instructional) {
+  padding: 0;
+}
 /* Except the plate, whose ground and dashed edge are what it says with. */
 .panel-body > .empty-plate {
-  padding: var(--space-5) var(--space-4);
+  padding: var(--space-5) var(--padCard);
   text-align: center;
   background: var(--groundHover);
 }
@@ -196,6 +201,13 @@
   text-align: left;
   background: none;
 }
+/* Nor the card's edge: the pane around the sentence already draws the one
+   edge it sits in. The plate keeps its dashed one. */
+.panel-body > .empty:not(.empty-plate),
+.panel > .empty:not(.empty-plate),
+.panel > [role="alert"] > .empty:not(.empty-plate) {
+  border: 0;
+}
 
 /* A DISCLOSURE standing where full-bleed rows stand is a row of the panel: its
  * summary is one line among `PanelRow`s and pays the row's own interval and the
@@ -209,7 +221,7 @@
  * sheet; it is the panel's to make once. `:where` on the summary keeps a rail
  * that shapes its own (a heading, a badge pushed to the far end) ahead of this
  * by specificity rather than by sheet order; the body's rule is spelt plainly
- * because `disclosure-inset.test.ts` reads the combinator, and every rail's
+ * because `census/rules/disclosure-inset.census.ts` reads the combinator, and every rail's
  * own body rule agrees with it. */
 .panel > .disclosure {
   padding-top: 0;
@@ -350,8 +362,10 @@
   display: none;
 }
 /* Directly under the header there is no body above to be spaced off, so the
- * strip pays for its own top interval; so it does under a list's last row. */
+ * strip pays for its own top interval; so it does under a list's last row,
+ * and at the top of an untitled panel that holds nothing else. */
 .panel-head + .panel-actions,
+.panel > .panel-actions:first-child,
 .panel-row-record + .panel-actions,
 .panel > .settinglist-bleed + .panel-actions,
 .panel > .table-scroll-bleed + .panel-actions {
@@ -528,5 +542,70 @@
 }
 .staging-card {
   border-radius: var(--r-md);
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-4) var(--padPane);
+}
+
+/* A record tab past Overview is one body, so its plain panels are sections of
+   the sheet split by hairlines, not boxes inside a box. Overview is always the
+   strip's first tab (lib/recordtaborder.ts), so a first tab not pressed means
+   another body is open. Toned panels keep their box: the tone is what they
+   say. Here, with the head band's other shapes, so the band has one sheet. */
+.record-split-sheet:has(
+    > .record-split-tabs .recordtabs-tab:first-child[aria-pressed="false"]
+  )
+  .record-split-feed
+  .panel:not(
+    .panel .panel,
+    .panel-ai,
+    .panel-accent,
+    .panel-info,
+    .panel-success,
+    .panel-warning,
+    .panel-danger,
+    .panel-discovery
+  ) {
+  margin-inline: calc(-1 * var(--padPanel));
+  border: 0;
+  border-block-start: 1px solid var(--borderSubtle);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.record-split-sheet:has(
+    > .record-split-tabs .recordtabs-tab:first-child[aria-pressed="false"]
+  )
+  .record-split-feed
+  .panel:not(
+    .panel .panel,
+    .panel-ai,
+    .panel-accent,
+    .panel-info,
+    .panel-success,
+    .panel-warning,
+    .panel-danger,
+    .panel-discovery
+  )
+  > .panel-head {
+  min-block-size: 0;
+  padding-block: var(--space-4) 0;
+  border-block-end: 0;
+}
+/* The first section sits right under the tab rule, which is its line. */
+.record-split-sheet:has(
+  > .record-split-tabs .recordtabs-tab:first-child[aria-pressed="false"]
+)
+.panel:not(
+  .panel .panel,
+  .panel-ai,
+  .panel-accent,
+  .panel-info,
+  .panel-success,
+  .panel-warning,
+  .panel-danger,
+  .panel-discovery
+):first-child:is(
+  .record-split-feed > *,
+  .record-split-feed > :first-child > *
+) {
+  border-block-start-color: transparent;
 }

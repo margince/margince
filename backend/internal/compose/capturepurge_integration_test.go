@@ -15,6 +15,7 @@ package compose
 import (
 	"context"
 	"log/slog"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -425,6 +426,57 @@ func nullIfEmpty(resolution string) *string {
 	return &resolution
 }
 
+// seedSubjectRefOnlyRequest files an open request that names its subject only by
+// subject_ref, the contact id as text, with contact_id left NULL. An officer opens
+// such a case by hand before the subject resolves to a contact row. With upper set,
+// the id is written in capitals, as a hand-typed reference may be.
+func seedSubjectRefOnlyRequest(t *testing.T, e *integration.Env, address string, upper bool) {
+	t.Helper()
+	subject := e.SeedContact(t, "Der Mandant", nil)
+	owner := integration.OwnerConn(t)
+	if _, err := owner.Exec(context.Background(), `
+		INSERT INTO contact_email (id, contact_id, email, email_type, is_primary, source, captured_by)
+		VALUES ($1, $2, $3, 'work', true, 'manual', 'human:x')`,
+		ids.NewV7(), subject, address); err != nil {
+		t.Fatalf("seeding the subject's address: %v", err)
+	}
+	if _, err := owner.Exec(context.Background(), `
+		INSERT INTO data_subject_request (id, kind, status, subject_ref, contact_id, due_at)
+		VALUES ($1, 'erasure', 'open',
+		        CASE WHEN $3 THEN upper($2::text) ELSE $2::text END, NULL, now() + interval '30 days')`,
+		ids.NewV7(), subject, upper); err != nil {
+		t.Fatalf("seeding the subject-ref-only request: %v", err)
+	}
+}
+
+// A request that names its subject only by subject_ref still shields the mail.
+// With contact_id NULL, the shield rests on the guarded subject_ref::uuid arm.
+// This test keeps a later rewrite of the id comparison from dropping that arm.
+// The capitalised case keeps the guard from narrowing back to lower case.
+func TestAnOpenRequestCarryingOnlyASubjectRefStillShields(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		upper bool
+	}{{"lower case", false}, {"upper case", true}} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := integration.Setup(t)
+			const address = "anwalt@kanzlei.example"
+			evidence := seedPurgeableMail(t, e, address, "Mandat", e.Rep1)
+			seedSubjectRefOnlyRequest(t, e, address, tc.upper)
+
+			rule := seedOwnExclusion(t, e, e.Rep1, capture.ExclusionKindDomain, "kanzlei.example")
+			outcome := runPurge(t, e, e.Rep1, rule, false)
+			if outcome.Skipped != 1 || outcome.Destroyed != 0 {
+				t.Fatalf("skipped=%d destroyed=%d, want 1 and 0. A request that names its subject only "+
+					"by subject_ref must still shield the subject's mail", outcome.Skipped, outcome.Destroyed)
+			}
+			if body := activityBody(t, e, evidence); body == "" {
+				t.Fatal("mail an open subject-ref-only request is about was destroyed")
+			}
+		})
+	}
+}
+
 // A message a data-subject request has not finished with survives an owner's
 // purge, and the count says so.
 //
@@ -480,9 +532,9 @@ func TestAPurgeIsNotShieldedByAFinishedRequest(t *testing.T) {
 
 func TestAMailboxSideDeletionDestroysAMessageNobodyElseHas(t *testing.T) {
 	e := integration.Setup(t)
-	mine := seedPurgeableMail(t, e, "freundin@example.com", "privat", e.Rep1)
+	mine := captureProviderMail(t, e, "freundin@example.com", "privat", e.Rep1)
 
-	if err := purgerFor(t, e).PurgeRemoved(purgeCtx(e, e.Rep1), e.Rep1, "gmail", sourceIDOf(t, e, mine)); err != nil {
+	if err := purgerFor(t, e).PurgeRemoved(purgeCtx(e, e.Rep1), e.Rep1, "gmail", providerIDOf(t, e, mine)); err != nil {
 		t.Fatalf("PurgeRemoved: %v", err)
 	}
 	if body := activityBody(t, e, mine); body != "" {
@@ -492,10 +544,9 @@ func TestAMailboxSideDeletionDestroysAMessageNobodyElseHas(t *testing.T) {
 
 func TestAMailboxSideDeletionLeavesAColleaguesCopyAlone(t *testing.T) {
 	e := integration.Setup(t)
-	shared := seedPurgeableMail(t, e, "kunde@example.com", "auch bei der Kollegin", e.Rep1)
-	addImporter(t, e, shared, e.Rep2)
+	shared := captureProviderMail(t, e, "kunde@example.com", "auch bei der Kollegin", e.Rep1, e.Rep2)
 
-	if err := purgerFor(t, e).PurgeRemoved(purgeCtx(e, e.Rep1), e.Rep1, "gmail", sourceIDOf(t, e, shared)); err != nil {
+	if err := purgerFor(t, e).PurgeRemoved(purgeCtx(e, e.Rep1), e.Rep1, "gmail", providerIDOf(t, e, shared)); err != nil {
 		t.Fatalf("PurgeRemoved: %v", err)
 	}
 	if body := activityBody(t, e, shared); body == "" {
@@ -508,10 +559,10 @@ func TestAMailboxSideDeletionLeavesAColleaguesCopyAlone(t *testing.T) {
 
 func TestAMailboxSideDeletionDoesNotOutrankTheStatutoryFloor(t *testing.T) {
 	e := integration.Setup(t)
-	shielded := seedPurgeableMail(t, e, "kunde@example.com", "Handelsbrief", e.Rep1)
+	shielded := captureProviderMail(t, e, "kunde@example.com", "Handelsbrief", e.Rep1)
 	restrict(t, e, shielded)
 
-	if err := purgerFor(t, e).PurgeRemoved(purgeCtx(e, e.Rep1), e.Rep1, "gmail", sourceIDOf(t, e, shielded)); err != nil {
+	if err := purgerFor(t, e).PurgeRemoved(purgeCtx(e, e.Rep1), e.Rep1, "gmail", providerIDOf(t, e, shielded)); err != nil {
 		t.Fatalf("PurgeRemoved: %v", err)
 	}
 	if body := activityBody(t, e, shielded); body == "" {
@@ -519,9 +570,8 @@ func TestAMailboxSideDeletionDoesNotOutrankTheStatutoryFloor(t *testing.T) {
 	}
 }
 
-// sourceIDOf reads back the natural key seedPurgeableMail minted, which is what
-// a connector reports a removal under.
-func sourceIDOf(t *testing.T, e *integration.Env, activityID ids.UUID) string {
+// providerIDOf reverses the test fixture's Message-ID suffix.
+func providerIDOf(t *testing.T, e *integration.Env, activityID ids.UUID) string {
 	t.Helper()
 	var sourceID string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -530,7 +580,7 @@ func sourceIDOf(t *testing.T, e *integration.Env, activityID ids.UUID) string {
 	}); err != nil {
 		t.Fatalf("reading the source id: %v", err)
 	}
-	return sourceID
+	return strings.TrimSuffix(sourceID, "@capture.test")
 }
 
 // What a mailbox-side deletion destroys, and what it leaves standing.
@@ -541,10 +591,10 @@ func sourceIDOf(t *testing.T, e *integration.Env, activityID ids.UUID) string {
 // three outcomes PurgeRemoved sorts a removal into, and two of them keep it.
 func TestAMailboxDeletionDestroysOnlyTheOwnersSoleCopy(t *testing.T) {
 	e := integration.Setup(t)
-	mine := seedPurgeableMail(t, e, "anwalt@kanzlei.example", "nur meine", e.Rep1)
+	mine := captureProviderMail(t, e, "anwalt@kanzlei.example", "nur meine", e.Rep1)
 
 	if err := purgerFor(t, e).PurgeRemoved(
-		purgeCtx(e, e.Rep1), e.Rep1, "gmail", "pg-"+mine.String()); err != nil {
+		purgeCtx(e, e.Rep1), e.Rep1, "gmail", providerIDOf(t, e, mine)); err != nil {
 		t.Fatalf("acting on the deletion: %v", err)
 	}
 
@@ -562,11 +612,10 @@ func TestAMailboxDeletionDestroysOnlyTheOwnersSoleCopy(t *testing.T) {
 // rather than being special-cased.
 func TestAMailboxDeletionLeavesAColleaguesCopyStanding(t *testing.T) {
 	e := integration.Setup(t)
-	shared := seedPurgeableMail(t, e, "anwalt@kanzlei.example", "auch bei der Kollegin", e.Rep1)
-	addImporter(t, e, shared, e.Rep2)
+	shared := captureProviderMail(t, e, "anwalt@kanzlei.example", "auch bei der Kollegin", e.Rep1, e.Rep2)
 
 	if err := purgerFor(t, e).PurgeRemoved(
-		purgeCtx(e, e.Rep1), e.Rep1, "gmail", "pg-"+shared.String()); err != nil {
+		purgeCtx(e, e.Rep1), e.Rep1, "gmail", providerIDOf(t, e, shared)); err != nil {
 		t.Fatalf("acting on the deletion: %v", err)
 	}
 
@@ -595,10 +644,10 @@ func TestAMailboxDeletionForUncapturedMailIsNotAnError(t *testing.T) {
 // mailbox it does not own cannot reach a colleague's copy through this door.
 func TestAMailboxDeletionCannotReachAnotherSeatsImport(t *testing.T) {
 	e := integration.Setup(t)
-	theirs := seedPurgeableMail(t, e, "anwalt@kanzlei.example", "der Kollegin ihre", e.Rep2)
+	theirs := captureProviderMail(t, e, "anwalt@kanzlei.example", "der Kollegin ihre", e.Rep2)
 
 	if err := purgerFor(t, e).PurgeRemoved(
-		purgeCtx(e, e.Rep1), e.Rep1, "gmail", "pg-"+theirs.String()); err != nil {
+		purgeCtx(e, e.Rep1), e.Rep1, "gmail", providerIDOf(t, e, theirs)); err != nil {
 		t.Fatalf("acting on the deletion: %v", err)
 	}
 

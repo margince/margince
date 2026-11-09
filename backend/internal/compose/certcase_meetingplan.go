@@ -40,6 +40,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -313,8 +315,11 @@ func meetingPlanInput(f meetingPlanFixture) (meetingbrief.Input, map[string]stri
 			ActivityID: id, Subject: message.Subject,
 			Direction: message.Direction, At: at, Text: message.Body,
 		})
+		direction := crmcontracts.ActivityDirection(message.Direction)
+		ours, known := activities.WroteItOurSide(crmcontracts.Activity{Direction: &direction})
 		in.Recent = append(in.Recent, meetingbrief.ActIn{
 			ID: id, Kind: "email", Subject: message.Subject, Direction: message.Direction, At: at,
+			WroteOurSide: ours, SideKnown: known,
 		})
 	}
 	// Production folds Recent and the attendee's last touch from the contact's

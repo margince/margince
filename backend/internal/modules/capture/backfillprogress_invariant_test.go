@@ -127,9 +127,13 @@ func TestEveryBackfillRunWriteSettlesTheInFlightTally(t *testing.T) {
 			break
 		}
 	}
-	var writers int
+	var writers, promotions int
 	for _, file := range files {
 		writers += auditRunWrites(t, fset, file, consts)
+		promotions += auditRunPromotions(t, file, consts)
+	}
+	if promotions != 1 {
+		t.Fatalf("found %d running promotions, want one admission writer", promotions)
 	}
 	if writers != 1 {
 		t.Fatalf("found %d statements that SET the whole in-flight tally from parameters, want exactly 1 (flushBackfillProgress) — two live writers of one transient tally cannot both be right", writers)
@@ -172,9 +176,10 @@ func auditRunWrites(t *testing.T, fset *token.FileSet, file *ast.File, consts ma
 		clause := setClauseRe.FindStringSubmatch(sql)
 		endsAPage := clause != nil && assignsStatusRe.MatchString(clause[1])
 		switch {
-		case !updates || !endsAPage:
+		case !updates:
 		case matchesEveryColumn(sql, fromParameter):
 			writers++
+		case !endsAPage:
 		case !matchesEveryColumn(sql, toZero):
 			t.Errorf("%s writes an existing capture_backfill row without settling the whole running-page tally (%s) — a write that assigns status ends or moves a page, so it must end with resetInflightProgress, or the status read keeps counting that page's messages:\n%s",
 				fset.Position(expr.Pos()), strings.Join(inflightColumns, ", "), sql)
@@ -216,4 +221,26 @@ func collectStringConsts(file *ast.File, consts map[string]string) {
 			}
 		}
 	}
+}
+
+func auditRunPromotions(t *testing.T, file *ast.File, constants map[string]string) int {
+	t.Helper()
+	promotions := 0
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok {
+			continue
+		}
+		for _, sql := range gatekit.SQLStatementsWithConstants(fn, constants) {
+			clause := setClauseRe.FindStringSubmatch(sql)
+			if !updateRunRe.MatchString(sql) || clause == nil || !assignsStatusRe.MatchString(clause[1]) || !strings.Contains(clause[1], "'running'") {
+				continue
+			}
+			promotions++
+			if fn.Name.Name != "admitBackfillTx" {
+				t.Errorf("%s promotes a run outside installation admission", fn.Name.Name)
+			}
+		}
+	}
+	return promotions
 }

@@ -101,6 +101,9 @@ type FloorPolicy struct {
 	// Carried also binds rows that occurred before its Before. Nil when no
 	// change ever weakened the floor.
 	Carried *CarriedFloor
+	// ByEntity binds the mail of each further legal entity whose floor is
+	// stricter than Current (entityfloor.go). Nil when none is.
+	ByEntity map[ids.UUID]jurisdiction.RetentionClass
 }
 
 // FloorCarry is the stored form of a carried floor. Its zero value is "none".
@@ -187,7 +190,11 @@ func resolveFloorPolicyAt(ctx context.Context, tx pgx.Tx, country CountryReader,
 	if err != nil {
 		return FloorPolicy{}, err
 	}
-	return FloorPolicy{Selected: code, Current: current, Carried: carry.carried()}, nil
+	byEntity, err := entityFloorsAt(ctx, tx, current, ref)
+	if err != nil {
+		return FloorPolicy{}, err
+	}
+	return FloorPolicy{Selected: code, Current: current, Carried: carry.carried(), ByEntity: byEntity}, nil
 }
 
 // floorFor is the correspondence floor a jurisdiction setting puts in force:
@@ -243,6 +250,13 @@ func CarryOnChangeTx(ctx context.Context, tx pgx.Tx, store *settings.Store, from
 	if err != nil {
 		return err
 	}
+	return carryWeakeningTx(ctx, tx, store, oldFloor, newFloor, now)
+}
+
+// carryWeakeningTx is the one carry every floor change runs. When newFloor is
+// weaker than oldFloor, the mail held until now keeps the stricter of
+// oldFloor and the carry already stored.
+func carryWeakeningTx(ctx context.Context, tx pgx.Tx, store *settings.Store, oldFloor, newFloor jurisdiction.RetentionClass, now time.Time) error {
 	if !newFloor.ProtectedSince(now).After(oldFloor.ProtectedSince(now)) {
 		return nil
 	}
@@ -265,11 +279,12 @@ func CarryOnChangeTx(ctx context.Context, tx pgx.Tx, store *settings.Store, from
 }
 
 // sqlArgs renders the policy as the two JSON arguments floorWindowEnd reads:
-// the current floor, and the carried floor or NULL. Built by hand because each
+// the current floor with the further entities' floors, and the carried floor
+// or NULL. Built by hand because each
 // field is an ISO 8601 period, a bool or an RFC 3339 instant. So the encoding
 // has no failure to report.
 func (p FloorPolicy) sqlArgs() (current string, carried *string) {
-	current = fmt.Sprintf(`{"keep":%q,"year_end":%t}`, p.Current.Keep.String(), p.Current.Anchor == jurisdiction.AnchorCalendarYearEnd)
+	current = "{" + floorJSON(p.Current) + entitiesJSON(p.ByEntity) + "}"
 	if p.Carried != nil {
 		c := fmt.Sprintf(`{"keep":%q,"year_end":%t,"before":%q}`, p.Carried.Class.Keep.String(),
 			p.Carried.Class.Anchor == jurisdiction.AnchorCalendarYearEnd, p.Carried.Before.UTC().Format(time.RFC3339Nano))

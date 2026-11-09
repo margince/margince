@@ -24,7 +24,6 @@ import (
 	"go/ast"
 	"go/token"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -72,7 +71,7 @@ func TestTheLinkCeilingHasOneValue(t *testing.T) {
 
 	mirrors := 0
 	root := filepath.Join(repoRoot, "backend", "internal")
-	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+	err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
@@ -83,7 +82,7 @@ func TestTheLinkCeilingHasOneValue(t *testing.T) {
 		if rel == ceilingOwner {
 			return nil
 		}
-		raw, readErr := os.ReadFile(path)
+		raw, readErr := gatekit.ReadFile(path)
 		if readErr != nil {
 			return readErr
 		}
@@ -185,7 +184,7 @@ func mustRel(t *testing.T, path string) string {
 func migrationDeclaring(t *testing.T, function string) (string, string) {
 	t.Helper()
 	dir := filepath.Join(repoRoot, "backend", "migrations", "core")
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading the core migrations: %v", err)
 	}
@@ -195,7 +194,7 @@ func migrationDeclaring(t *testing.T, function string) (string, string) {
 		if !strings.HasSuffix(entry.Name(), ".up.sql") {
 			continue
 		}
-		raw, readErr := os.ReadFile(filepath.Join(dir, entry.Name()))
+		raw, readErr := gatekit.ReadFile(filepath.Join(dir, entry.Name()))
 		if readErr != nil {
 			t.Fatalf("reading %s: %v", entry.Name(), readErr)
 		}

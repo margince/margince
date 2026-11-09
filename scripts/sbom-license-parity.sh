@@ -186,3 +186,5 @@ if problems:
 shared = len(set(cdx) & set(s22) & set(s30))
 print(f"OK: three SBOMs name no conflicting license across {shared} shared packages")
 PY
+
+python3 "$(dirname "$0")/third_party_files.py" parity "$dir" "${3:-third-party-files.txt}"

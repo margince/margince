@@ -178,7 +178,7 @@ func namesAny(stmt string, tables []string) bool {
 func interactionProjectionTables(t *testing.T) []string {
 	t.Helper()
 	const catalog = "migrations/testdata/head_catalog.txt"
-	schema, err := os.ReadFile(catalog)
+	schema, err := gatekit.ReadFile(catalog)
 	if err != nil {
 		t.Fatalf("reading the schema head: %v", err)
 	}
@@ -286,7 +286,7 @@ type goPackage struct {
 func goPackagesUnder(t *testing.T, root string) []goPackage {
 	t.Helper()
 	byDir := map[string][]goFile{}
-	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
 		if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") ||
 			strings.HasSuffix(path, "_test.go") || strings.Contains(path, "/internal/contracts/") {
 			return err

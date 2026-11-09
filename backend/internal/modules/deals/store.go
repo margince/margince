@@ -93,6 +93,12 @@ type Installation struct {
 	IssuerLegalName InstallationValue
 	// BaseCurrency is the currency amounts are reported in and frozen against.
 	BaseCurrency InstallationValue
+	// Country is the installation's own country, lower case, empty when unset.
+	// The first tax rate recorded for it classifies the rate card.
+	Country InstallationValue
+	// KnownCountry answers whether a code is an assigned ISO 3166-1 alpha-2
+	// country. `contacts` owns the list.
+	KnownCountry KnownCountry
 	// Timezone is the IANA zone a "today" is computed in.
 	Timezone InstallationValue
 	// BaseCurrencyApplied and TimezoneApplied answer the same two values
@@ -122,6 +128,10 @@ type Installation struct {
 	// ContractVisible is the contracts module's row rule, which stage
 	// evidence asks before it calls a cited contract openable.
 	ContractVisible ContractVisibleClause
+	// AuthorEntity and IssuerEntity answer which legal entity an offer is
+	// issued by, and what it prints about it. `contacts` owns the entities.
+	AuthorEntity AuthorEntity
+	IssuerEntity IssuerEntityReader
 }
 
 // EnsurePartner answers whether a company may be named as a deal's
@@ -152,7 +162,7 @@ func (i Installation) orRefusing() Installation {
 	for name, f := range map[string]*InstallationValue{
 		"Name": &i.Name, "BaseCurrency": &i.BaseCurrency, "Timezone": &i.Timezone,
 		"IssuerLegalName": &i.IssuerLegalName, "BaseCurrencyApplied": &i.BaseCurrencyApplied,
-		"TimezoneApplied": &i.TimezoneApplied,
+		"TimezoneApplied": &i.TimezoneApplied, "Country": &i.Country,
 	} {
 		if *f == nil {
 			*f = refusing(name)
@@ -176,6 +186,21 @@ func (i Installation) orRefusing() Installation {
 	if i.ContractVisible == nil {
 		i.ContractVisible = refusingContractVisible()
 	}
+	if i.KnownCountry == nil {
+		i.KnownCountry = func(string) (bool, error) {
+			return false, errEntitySeamUnwired("KnownCountry")
+		}
+	}
+	if i.AuthorEntity == nil {
+		i.AuthorEntity = func(context.Context, pgx.Tx, ids.UserID) (ids.LegalEntityID, error) {
+			return ids.LegalEntityID{}, errEntitySeamUnwired("AuthorEntity")
+		}
+	}
+	if i.IssuerEntity == nil {
+		i.IssuerEntity = func(context.Context, pgx.Tx, *ids.LegalEntityID) (IssuerEntity, error) {
+			return IssuerEntity{}, errEntitySeamUnwired("IssuerEntity")
+		}
+	}
 	return i
 }
 
@@ -198,8 +223,6 @@ func refusing(field string) InstallationValue {
 	}
 }
 
-// WithClock overrides the "today" source (tests only). Returns the store
-// for chaining.
 // WithOwnDomains binds the own-domain reader the stage-move check judges an
 // activity's author with, so a card is held to the domains as they stand.
 func (s *Store) WithOwnDomains(own OwnDomainReader) *Store {
@@ -207,7 +230,8 @@ func (s *Store) WithOwnDomains(own OwnDomainReader) *Store {
 	return s
 }
 
-func (s *Store) WithClock(clock func() time.Time) *Store {
+// SetClock sets the clock on this store itself and returns it for chaining.
+func (s *Store) SetClock(clock func() time.Time) *Store {
 	s.clock = clock
 	return s
 }

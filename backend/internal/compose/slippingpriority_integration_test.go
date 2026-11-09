@@ -19,7 +19,7 @@ func TestOverdueDealIsFoundBehindMoreThanOnePageOfCurrentDeals(t *testing.T) {
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
 	now := time.Date(2090, 1, 15, 12, 0, 0, 0, time.UTC)
-	store := e.Deals.WithClock(func() time.Time { return now.AddDate(0, 0, -7) })
+	store := e.Deals.SetClock(func() time.Time { return now.AddDate(0, 0, -7) })
 	closes := now.AddDate(0, 0, -1)
 	overdue, err := store.CreateDeal(e.Admin(), deals.CreateDealInput{Name: "Renewal recovery", PipelineID: pipeline, StageID: stage, Source: "manual", ExpectedClose: &closes})
 	if err != nil {

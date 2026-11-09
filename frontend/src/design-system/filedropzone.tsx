@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type DragEvent, useState } from "react";
+import { type DragEvent, useEffect, useState } from "react";
 import { Field, type FieldControl } from "./atoms";
 import "./filedropzone.css";
 import type { Glyph } from "./materialsymbols";
@@ -44,6 +44,7 @@ export function FileDropzone({
   files,
   accept,
   disabled,
+  pasteable,
 }: Readonly<{
   label: string;
   hint?: string;
@@ -65,6 +66,8 @@ export function FileDropzone({
   accept?: string;
   // Takes no file, by click or by drop: for a form whose write is out.
   disabled?: boolean;
+  // Also takes a file pasted anywhere on the page while the zone is shown.
+  pasteable?: boolean;
 }>) {
   return (
     <Field label={label} hint={hint}>
@@ -78,6 +81,7 @@ export function FileDropzone({
           files={files}
           accept={accept}
           disabled={disabled}
+          pasteable={pasteable}
         />
       )}
     </Field>
@@ -100,6 +104,7 @@ export function FileDropzoneControl({
   files,
   accept,
   disabled,
+  pasteable,
   icon: Icon,
 }: Readonly<{
   control: FieldControl;
@@ -112,6 +117,7 @@ export function FileDropzoneControl({
   disabled?: boolean;
   // A mark above the prompt, for a zone tall enough to stand as a panel.
   icon?: Glyph;
+  pasteable?: boolean;
 }>) {
   const [over, setOver] = useState(false);
 
@@ -134,6 +140,25 @@ export function FileDropzoneControl({
       onPick(first);
     }
   };
+
+  // A paste carrying a file is the screenshot a reader just took. It is heard
+  // on the whole page, because nothing focuses a file input to paste into it.
+  // A paste of text carries no file and goes on to the field it was meant for.
+  useEffect(() => {
+    if (!pasteable || disabled) {
+      return;
+    }
+    const onPaste = (event: ClipboardEvent) => {
+      const pasted = event.clipboardData?.files;
+      if (!pasted || pasted.length === 0) {
+        return;
+      }
+      event.preventDefault();
+      take(pasted);
+    };
+    document.addEventListener("paste", onPaste);
+    return () => document.removeEventListener("paste", onPaste);
+  });
 
   // What the live region says. With several files the NAMES are what a reader
   // needs — a bare count cannot tell them they dropped nine of the ten they

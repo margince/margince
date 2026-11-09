@@ -5,6 +5,7 @@ import { Heading } from "../../../design-system/heading";
 import { formatNumber } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
+import { labelFor } from "../../../lib/labelfor";
 import type { BuildStage } from "./conversation-machine";
 import { bandLabelKeys } from "./narration";
 import type { CorpusManifestEntry } from "./use-voice-corpus";
@@ -157,7 +158,7 @@ function CorpusMeter({ summary }: Readonly<{ summary: CorpusSummary }>) {
         </span>
         <span>
           {t("ob.conv.voice.meterBand", {
-            band: t(bandLabelKeys[summary.quality_band]),
+            band: t(labelFor(bandLabelKeys, summary.quality_band)),
           })}
         </span>
       </div>

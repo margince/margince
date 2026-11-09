@@ -27,6 +27,7 @@ const ownerIDColumn = "owner_id"
 // Store owns this module's tables (data-seam ownership, ADR-0014 Am.1);
 // every write rides the storekit audit+outbox shape in one transaction.
 type Store struct {
+	floorCarry              FloorCarry
 	mergeSignalReader       MergeSignalReader
 	mergeCommitmentReader   MergeCommitmentReader
 	mergeNoticeReader       MergeNoticeReader
@@ -248,5 +249,5 @@ func workspaceID(ctx context.Context) ids.WorkspaceID {
 	return ids.From[ids.WorkspaceKind](storekit.MustWorkspace(ctx))
 }
 
-// WithClock keeps event timestamps reproducible for reporting attribution.
-func (s *Store) WithClock(clock func() time.Time) *Store { s.clock = clock; return s }
+// SetClock keeps event timestamps reproducible for reporting attribution.
+func (s *Store) SetClock(clock func() time.Time) *Store { s.clock = clock; return s }

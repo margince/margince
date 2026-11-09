@@ -162,7 +162,7 @@ function lanes(routes: RouteMap = ROUTES) {
 }
 
 const meta = {
-  title: "Settings/Governance/Privacy and retention/Page",
+  title: "Settings/Compliance/Privacy and retention/Page",
   component: PrivacyLanes,
 } satisfies Meta<typeof PrivacyLanes>;
 export default meta;

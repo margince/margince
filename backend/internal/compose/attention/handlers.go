@@ -31,9 +31,10 @@ type Handlers struct {
 func NewHandlers(svc *Service) Handlers { return Handlers{svc: svc} }
 
 // GetAttention answers the day: what needs deciding, what is planned, and what
-// already ran.
+// already ran. A deal suggestion waits on its company owner, so this read shows
+// the reader only their own.
 func (h Handlers) GetAttention(w http.ResponseWriter, r *http.Request) {
-	out, err := h.svc.Assemble(r.Context())
+	out, err := h.svc.withReadersSuggestions().Assemble(r.Context())
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

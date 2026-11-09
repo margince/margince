@@ -50,7 +50,15 @@ func newAnalyticsContextHandlers(db *database.DB, now func() time.Time) analytic
 
 // GetAnalyticsContext implements GET /analytics/context.
 func (h analyticsContextHandlers) GetAnalyticsContext(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
+	out, err := h.read(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+func (h analyticsContextHandlers) read(ctx context.Context) (crmcontracts.AnalyticsContext, error) {
 	var out crmcontracts.AnalyticsContext
 	err := h.db.Tx(ctx, func(tx pgx.Tx) error {
 		// This route discloses which teams a caller may measure, which is not
@@ -71,11 +79,7 @@ func (h analyticsContextHandlers) GetAnalyticsContext(w http.ResponseWriter, r *
 		out = resolved
 		return nil
 	})
-	if err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-	httperr.WriteJSON(w, http.StatusOK, out)
+	return out, err
 }
 
 // requireForecastOrDealRead admits a seat that reads forecasts or deals.
@@ -116,7 +120,7 @@ func analyticsContextFor(ctx context.Context, tx pgx.Tx, now time.Time) (crmcont
 	// the screen can hide the action rather than render a button whose save
 	// returns 403 — the shape the review called out as advertising an action
 	// the backend will reject.
-	maySubmit := auth.Require(ctx, objectForecast, principal.ActionCreate) == nil
+	maySubmit := auth.Allows(ctx, objectForecast, principal.ActionCreate)
 
 	defaultScope := scopeToWire(def)
 	markAssertable(ctx, p, &defaultScope)

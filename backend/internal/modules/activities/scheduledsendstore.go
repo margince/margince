@@ -257,11 +257,16 @@ func (s *Store) RescheduleInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, sche
 		// state-shape CHECK enforces the pairing, so this is not optional.
 		tag, err := tx.Exec(ctx, `
 			UPDATE scheduled_send
-			   SET scheduled_at = $1, scheduled_tz = $2,
+			   SET scheduled_at = @at, scheduled_tz = @zone,
+			       payload = CASE WHEN held_reason = @replied
+			         THEN jsonb_set(payload, '{replies_reviewed_at}', to_jsonb(@reviewed::timestamptz))
+			         ELSE payload END,
 			       status = 'scheduled', held_reason = NULL,
 			       version = version + 1, updated_at = now()
-			 WHERE id = $3 AND status IN ('scheduled','held') AND version = $4`,
-			sched.At.UTC(), sched.TZ, id, expectedVersion)
+			 WHERE id = @id AND status IN ('scheduled','held') AND version = @version`, pgx.NamedArgs{
+			"at": sched.At.UTC(), "zone": sched.TZ, "id": id, "version": expectedVersion,
+			"replied": HeldRecipientReplied, "reviewed": s.now(),
+		})
 		if err != nil {
 			return fmt.Errorf("scheduled send: moving the due moment: %w", err)
 		}

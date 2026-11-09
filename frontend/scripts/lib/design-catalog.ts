@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 // The tables of src/design-system/README.md, read once for the two gates that
-// hold the tree to them: catalog.test.ts and sidebar.test.ts.
+// hold the tree to them: census/rules/catalog.census.ts and census/rules/sidebar.census.ts.
 
 // Found by their HEADINGS rather than by line number: a line number would be a
 // second copy of the file's shape, and every edit to the prose above would move it.

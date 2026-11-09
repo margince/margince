@@ -14,9 +14,11 @@ import { AiPending } from "../../design-system/aipending";
 import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ErrorLine } from "../../design-system/errorline";
+import { QuietVerbs } from "../../design-system/verbvolume";
 import { countryOptions } from "../../format/assignedcountries";
 import { industryWords } from "../../format/industry";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { UNKNOWN_VALUE_LABEL } from "../../lib/labelfor";
 import { problemCodeOf, unwrap } from "../../lib/problem";
 import { blockLabel } from "./reporting.model";
 
@@ -66,46 +68,49 @@ export function SetupProposalStep({
     return <ErrorLine>{t("reporting.setup.noModel")}</ErrorLine>;
   }
   return (
-    <div className="form-stack">
-      <div className="form-actions">
-        <Button
-          variant="ai"
-          onClick={ask}
-          pending={propose.isPending}
-          busyLabel={t("reporting.setup.busy")}
-          disabled={words === ""}
-        >
-          {t(
-            site === "initiative_setup"
-              ? "reporting.setup.suggestInitiative"
-              : "reporting.setup.suggestReport",
-          )}
-        </Button>
+    // A step inside a form whose footer holds the one fill, so it is quiet.
+    <QuietVerbs>
+      <div className="form-stack">
+        <div className="form-actions">
+          <Button
+            variant="ai"
+            onClick={ask}
+            pending={propose.isPending}
+            busyLabel={t("reporting.setup.busy")}
+            disabled={words === ""}
+          >
+            {t(
+              site === "initiative_setup"
+                ? "reporting.setup.suggestInitiative"
+                : "reporting.setup.suggestReport",
+            )}
+          </Button>
+        </div>
+        {propose.isPending && (
+          <AiPending label={t("reporting.setup.busy")} lines={3} />
+        )}
+        {propose.isError && (
+          <ErrorLine
+            error={propose.error}
+            actions={
+              <Button variant="ghost" onClick={ask}>
+                {t("reporting.setup.retry")}
+              </Button>
+            }
+          />
+        )}
+        {proposal && (
+          <ProposalCard
+            proposal={proposal}
+            onApply={() => {
+              onApply(proposal);
+              setProposal(null);
+            }}
+            onDismiss={() => setProposal(null)}
+          />
+        )}
       </div>
-      {propose.isPending && (
-        <AiPending label={t("reporting.setup.busy")} lines={3} />
-      )}
-      {propose.isError && (
-        <ErrorLine
-          error={propose.error}
-          actions={
-            <Button variant="ghost" onClick={ask}>
-              {t("reporting.setup.retry")}
-            </Button>
-          }
-        />
-      )}
-      {proposal && (
-        <ProposalCard
-          proposal={proposal}
-          onApply={() => {
-            onApply(proposal);
-            setProposal(null);
-          }}
-          onDismiss={() => setProposal(null)}
-        />
-      )}
-    </div>
+    </QuietVerbs>
   );
 }
 
@@ -208,6 +213,8 @@ function fieldName(field: Source["field"], t: Translator): string {
       return t("reporting.targetValue");
     case "deadline":
       return t("reporting.deadline");
+    default:
+      return t(UNKNOWN_VALUE_LABEL);
   }
 }
 

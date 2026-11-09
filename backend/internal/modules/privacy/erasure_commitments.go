@@ -19,16 +19,17 @@ import (
 )
 
 // redactWorkingRecords clears the subject's name where it survives inside
-// somebody else's working record: an automation run addressed to them, a commitment a
-// colleague wrote about them on their own weekly plan, and an introduction one
-// colleague asked another for about them.
+// somebody else's working record. Two are an automation run addressed to them
+// and a voice sample that names them. The others are a commitment on a
+// colleague's weekly plan and an introduction one colleague asked another for.
 //
-// The three are one step because they answer one question — what does an erasure
-// owe a record that is not the subject's and not about them, but names them in
-// passing — and because EraseContact reads as a sequence of such questions
-// rather than a list of tables.
-func redactWorkingRecords(ctx context.Context, tx pgx.Tx, subject ids.ContactID, emails []string) error {
-	if err := redactWorkflowRuns(ctx, tx, emails); err != nil {
+// The four are one step because they answer one question. What does an erasure
+// owe a record that is not the subject's, but names them in passing?
+func (e *Eraser) redactWorkingRecords(ctx context.Context, tx pgx.Tx, subject ids.ContactID, keys subjectKeys) error {
+	if err := redactWorkflowRuns(ctx, tx, keys.emails); err != nil {
+		return err
+	}
+	if err := e.purgeTextNaming(ctx, tx, keys); err != nil {
 		return err
 	}
 	if err := redactCommitmentsNaming(ctx, tx, subject); err != nil {
@@ -88,7 +89,7 @@ const erasedMention = "(erased: the contact this named exercised erasure)"
 // tableownership_test.go both, and the tidier form turns a proven write into an
 // unproven one while the gates stay green.
 func redactCommitmentsNaming(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) error {
-	if _, err := tx.Exec(ctx, `
+	scrubbed, err := scrubbedIDs(ctx, tx, `
 		UPDATE weekly_plan_commitment
 		   SET label = $2,
 		       help_requested = '',
@@ -97,9 +98,10 @@ func redactCommitmentsNaming(ctx context.Context, tx pgx.Tx, contactID ids.Conta
 		       responded_at = NULL,
 		       linked_record_type = NULL,
 		       linked_record_id = NULL
-		 WHERE linked_record_type = 'contact' AND linked_record_id = $1`,
-		contactID, erasedMention); err != nil {
+		 WHERE linked_record_type = 'contact' AND linked_record_id = $1 RETURNING id`,
+		contactID, erasedMention)
+	if err != nil {
 		return fmt.Errorf("privacy: redacting the weekly commitments naming the subject: %w", err)
 	}
-	return nil
+	return tombstoneCollateralScrubs(ctx, tx, "weekly_plan_commitment", scrubbed, subjectRedactionReason, subjectRedactionCause)
 }

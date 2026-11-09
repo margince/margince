@@ -15,6 +15,8 @@ package compose
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -22,7 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -62,13 +64,16 @@ type ThreadAudienceOutcome struct {
 type ThreadAudienceSetter struct {
 	pool    *pgxpool.Pool
 	threads *capture.ThreadVerdictStore
+	// released ends the contact holds a shared thread no longer justifies.
+	released *heldContactReleaser
 }
 
 // NewThreadAudienceSetter builds the setter over one database.
 func NewThreadAudienceSetter(pool *pgxpool.Pool) *ThreadAudienceSetter {
 	return &ThreadAudienceSetter{
-		pool:    pool,
-		threads: capture.NewThreadVerdictStore(InstallationDB(pool)),
+		pool:     pool,
+		threads:  capture.NewThreadVerdictStore(InstallationDB(pool)),
+		released: newHeldContactReleaser(pool, slog.Default()),
 	}
 }
 
@@ -80,7 +85,7 @@ func NewThreadAudienceSetter(pool *pgxpool.Pool) *ThreadAudienceSetter {
 // another for even a moment is a thread somebody screenshotted.
 func (s *ThreadAudienceSetter) Decide(ctx context.Context, threadKey string, share bool) (ThreadAudienceOutcome, error) {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID == ids.Nil {
+	if !ok || !actor.HumanOrItsAgent() || actor.UserID == ids.Nil {
 		return ThreadAudienceOutcome{}, apperrors.ErrPermissionDenied
 	}
 	// A read seat is licensed to look, not to change what colleagues can read.
@@ -96,41 +101,20 @@ func (s *ThreadAudienceSetter) Decide(ctx context.Context, threadKey string, sha
 		return ThreadAudienceOutcome{}, apperrors.ErrNotFound
 	}
 	var outcome ThreadAudienceOutcome
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		// The seat's OWN messages on the thread. A caller who imported none has
-		// nothing to decide about, and answering not-found rather than zero
-		// keeps a thread key from confirming that somebody else's thread exists.
-		messages, err := capture.ThreadActivityIDsTx(ctx, tx, threadKey, actor.UserID)
+	var anchor ids.UUID
+	err := withRetryingWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+		outcome = ThreadAudienceOutcome{}
+
+		current, messages, err := ownedDecisionThread(ctx, tx, threadKey, actor.UserID, &anchor)
 		if err != nil {
 			return err
 		}
-		if len(messages) == 0 {
-			return apperrors.ErrNotFound
-		}
+		threadKey = current
 		if err := s.threads.DecideAsOwner(ctx, tx, threadKey, share); err != nil {
 			return err
 		}
-		// A hold a CLASSIFIER placed is the owner's to disagree with, and the
-		// row carries it independently of the ledger: the derivation below reads
-		// `audience_reason` off the activity, and a row-carried hold outranks an
-		// opening contribution. Without this the share was inert — the ledger
-		// said shared_by_owner, the recompute read the verdict's own reason off
-		// the row, and the message stayed held however often it was pressed.
-		//
-		// The two modules answer the halves each owns: capture reads its ledger
-		// to say whether a CLASSIFIER is what judged this thread — a verdict
-		// records the kind it concluded, a sender's marking records none — and
-		// activities writes the column. Neither can do the other's half, which
-		// is what makes this a seam rather than indirection.
-		//
-		// Only when SHARING. Re-holding a thread removes nothing, and the
-		// reasons this leaves alone — a sender's own subject marking, a
-		// counterparty hold, the workspace floor — are not a recipient's to
-		// lift. ClearConfidentialityVerdictHoldTx enumerates them.
-		//
-		// Any share lifts a members-only hold. That hold only stops automatic
-		// promotion of colleagues' mail. An owner pressing Share is the
-		// human decision it waits for.
+		// Sharing lifts classifier and members-only holds. Sender and counterparty
+		// holds remain independent of the owner's thread verdict.
 		if share {
 			activityIDs := asActivityIDs(messages)
 			if err := activities.ClearMembersOnlyHoldTx(ctx, tx, activityIDs); err != nil {
@@ -150,13 +134,7 @@ func (s *ThreadAudienceSetter) Decide(ctx context.Context, threadKey string, sha
 			return err
 		}
 		outcome.Messages = len(messages)
-		// The ids the CALLER may read, which is narrower than the set whose
-		// audience was just recomputed. An import row satisfies one arm of the
-		// audience gate but says nothing about discoverability: a message this
-		// seat imported that is filed only against records outside their row
-		// scope is not theirs to read, and handing back its stable id would say
-		// that record exists. The decision still reached it — that is what
-		// Messages counts — the client is simply not told which one it was.
+		// Import ownership does not grant access to every linked record.
 		readable, err := readableActivityIDsTx(ctx, tx, messages)
 		if err != nil {
 			return err
@@ -172,6 +150,9 @@ func (s *ThreadAudienceSetter) Decide(ctx context.Context, threadKey string, sha
 	})
 	if err != nil {
 		return ThreadAudienceOutcome{}, err
+	}
+	if outcome.Shared {
+		s.released.releaseThread(ctx, threadKey)
 	}
 	return outcome, nil
 }
@@ -268,4 +249,29 @@ func othersHoldingTx(ctx context.Context, tx pgx.Tx, messages []ids.UUID, user i
 		return 0, fmt.Errorf("compose: counting the seats still holding a thread: %w", err)
 	}
 	return len(holding), nil
+}
+
+func ownedDecisionThread(ctx context.Context, tx pgx.Tx, key string, user ids.UUID, anchor *ids.UUID) (string, []ids.UUID, error) {
+	if *anchor == ids.Nil {
+		messages, err := capture.ThreadActivityIDsTx(ctx, tx, key, user)
+		if err != nil {
+			return "", nil, err
+		}
+		if len(messages) == 0 {
+			return "", nil, apperrors.ErrNotFound
+		}
+		*anchor = messages[0]
+	}
+	current, err := storekit.LockActivityThreadTx(ctx, tx, *anchor)
+	if err != nil {
+		return "", nil, err
+	}
+	messages, err := capture.ThreadActivityIDsTx(ctx, tx, current, user)
+	if err != nil {
+		return "", nil, err
+	}
+	if !slices.Contains(messages, *anchor) {
+		return "", nil, apperrors.ErrNotFound
+	}
+	return current, messages, nil
 }

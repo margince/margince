@@ -6,6 +6,7 @@ package ai
 import (
 	"context"
 	"errors"
+	"net/http"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -13,6 +14,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -106,6 +108,12 @@ func (s *VoiceStore) updateVoiceSource(ctx context.Context, tx pgx.Tx, profileID
 	}
 	if in.IfVersion != nil && *in.IfVersion != before.Version {
 		return VoiceCorpusSource{}, CorpusSummary{}, apperrors.ErrVersionSkew
+	}
+	if actor, ok := principal.Actor(ctx); ok && actor.Type == principal.PrincipalAgent && before.Excluded && excluded != nil && !*excluded {
+		return VoiceCorpusSource{}, CorpusSummary{}, &httperr.DetailedError{
+			Status: http.StatusForbidden, Code: "agent_restores_no_source",
+			Detail: "this sample was left out of the voice, and an agent does not put it back; ask the user to do it in the app",
+		}
 	}
 	source, err := scanVoiceSource(tx.QueryRow(ctx, storekit.SQLf(`
 			UPDATE voice_corpus_source SET
@@ -209,7 +217,7 @@ func (s *VoiceStore) DeleteSource(ctx context.Context, profileID, sourceID ids.U
 		now := s.now().UTC()
 		removed, err = scanVoiceSource(tx.QueryRow(ctx, storekit.SQLf(`
 			UPDATE voice_corpus_source SET
-			  content = NULL, content_erased_at = $3, archived_at = $3,
+			  content = NULL, content_erased_at = $3, archived_at = $3, `+sentMailScrubSQL+`,
 			  excluded = true, exclusion_reason = 'owner_removed',
 			  version = version + 1, updated_at = $3
 			WHERE id = $1 AND voice_profile_id = $2 AND version = $4
@@ -278,7 +286,7 @@ func (s *VoiceStore) ClearCorpus(ctx context.Context, profileID ids.UUID, ifVers
 		}
 		now := s.now().UTC()
 		if _, err := tx.Exec(ctx, `
-			UPDATE voice_corpus_source SET content = NULL, content_erased_at = $2,
+			UPDATE voice_corpus_source SET content = NULL, content_erased_at = $2, `+sentMailScrubSQL+`,
 			  archived_at = coalesce(archived_at, $2), excluded = true,
 			  exclusion_reason = coalesce(exclusion_reason, 'corpus_cleared'),
 			  version = version + 1, updated_at = $2

@@ -4,9 +4,14 @@
 package company360
 
 import (
+	"context"
+
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/briefevidence"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // decorate is what runs over the finished sections rather than as one of them.
@@ -42,7 +47,9 @@ func (a *assembly) decorate() error {
 func (a *assembly) attachEmailSummaries() error {
 	return briefevidence.Attach(
 		a.ctx,
-		briefevidence.InTx(a.tx, activities.EmailSummariesByIDBatch),
+		briefevidence.InTx(a.tx, func(ctx context.Context, tx pgx.Tx, wanted []ids.UUID) (map[ids.UUID]crmcontracts.EmailSummary, error) {
+			return activities.EmailSummariesByIDBatch(ctx, tx, wanted, a.now)
+		}),
 		a.evidenceRows(),
 	)
 }

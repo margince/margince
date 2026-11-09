@@ -27,20 +27,19 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// Narrate writes the week's sentence onto an existing review.
-//
-// A SECOND WRITE onto a row the deterministic pass already committed, never
-// part of assembling it. The counts and the deal lines are the review; this is
-// what a colleague would say about them, and it must be able to fail without
-// costing the rep any of it.
-//
-// Idempotent by replacement: a later pass over the same week is a correction,
-// not an addition. The stamp moves with it.
-//
-// Empty prose stores as NULL with the stamp still written — the CHECK admits
-// that deliberately, so a pass that ran and found the week unremarkable is
-// distinguishable from one that never ran.
+// Narrate writes or corrects the week's sentence. Empty prose still records
+// that narration ran, so an unstamped week remains eligible for a retry.
 func (e *Engine) Narrate(ctx context.Context, reviewID ids.UUID, sentence string, now time.Time) error {
+	return e.writeNarration(ctx, reviewID, sentence, now, true)
+}
+
+// RecordNarrationFallback stamps an unmeasured week without replacing prose
+// that a reader's current permissions may have hidden.
+func (e *Engine) RecordNarrationFallback(ctx context.Context, reviewID ids.UUID, now time.Time) error {
+	return e.writeNarration(ctx, reviewID, "", now, false)
+}
+
+func (e *Engine) writeNarration(ctx context.Context, reviewID ids.UUID, sentence string, now time.Time, replace bool) error {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return err
 	}
@@ -72,6 +71,10 @@ func (e *Engine) Narrate(ctx context.Context, reviewID ids.UUID, sentence string
 			return apperrors.ErrNotFound
 		case err != nil:
 			return err
+		}
+
+		if !replace && beforeStamp != nil {
+			return nil
 		}
 
 		stamp := now.UTC()

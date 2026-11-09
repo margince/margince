@@ -13,7 +13,7 @@ import { SurfaceState } from "../../design-system/surfacestate";
 import { formatNumber, identifierNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { VOICE_SECTIONS } from "./voice-hero";
 import { parseVoiceInsights, VoiceInsights } from "./voice-insights";
 import { reviewReasonText } from "./voice-review-reason";
@@ -235,7 +235,7 @@ export function VoiceHistory({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const [restoring, setRestoring] = useState<VoiceProfileVersion | null>(null);
   const rolledBack = useRef(false);
   const headingId = useId();
@@ -356,7 +356,7 @@ export function VoiceChangeLog({ profileId }: Readonly<{ profileId: string }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const [deltaCursor, setDeltaCursor] = useState<string | undefined>();
   const [allDeltas, setAllDeltas] = useState<VoiceProfileDelta[]>([]);
   const deltas = useQuery({

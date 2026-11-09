@@ -36,11 +36,17 @@ export type ListColumn<Row> = {
 export type ListSelection<Row> = {
   /** Keys (rowKey) of the selected rows. */
   selected: ReadonlySet<string>;
-  onToggle: (row: Row) => void;
+  /** Tick or untick these rows. `useRowSelection` holds a selection that keeps the rules. */
+  onChange: (rows: readonly Row[], selected: boolean) => void;
   /** The checkbox's accessible name for a row, e.g. "Select Anna Weber". */
   label: (row: Row) => string;
   /** Rows the verbs cannot act on carry no checkbox. Default: every row. */
   selectable?: (row: Row) => boolean;
   /** The bulk bar: the count and the verbs. Rendered while anything is selected. */
   bar: ReactNode;
+  /**
+   * The most rows one selection holds: what one bulk change takes. "Select
+   * all" reads the list's next pages until it holds every row or this many.
+   */
+  limit?: number;
 };

@@ -29,7 +29,8 @@ name: cache-warm
 on:
   schedule:
     # Every three hours. Ten-ish merges of drift against a content-addressed
-    # cache, which is still a warm restore.
+    # cache, which is still a warm restore. pace.yml starts a run from a push once
+    # the newest is three hours old, because GitHub drops some of these.
     - cron: "0 */3 * * *"
   workflow_dispatch:
 
@@ -55,10 +56,43 @@ env:
   GOPROXY: https://proxy.golang.org|direct
 
 jobs:
-  # The untagged compile every non-integration Go job reads.
+  # The CI image for main's tree, built here when no pull request pushed it.
+  ci-image:
+    name: ci-image
+    timeout-minutes: 60
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      pinned-image: ${{ steps.image.outputs.pinned-image }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Find or build the CI image
+        id: image
+        uses: ./.github/actions/ci-image
+        with:
+          push: "true"
+          token: ${{ github.token }}
+
+  # The untagged compile every non-integration Go job reads, once on the runner
+  # and once in the CI image: the two put the checkout and the module cache at
+  # different paths, so neither can read the other's entry. The image leg runs
+  # only when the image can be pulled. Both legs wait on `ci-image`, which is a
+  # lookup unless no run has pushed main's image yet; a failed build still
+  # leaves the runner leg to run.
   plain:
-    name: warm plain
+    name: warm plain (${{ matrix.where }})
     timeout-minutes: 45
+    needs: [ci-image]
+    strategy:
+      fail-fast: false
+      matrix:
+        where: ${{ fromJSON(needs.ci-image.outputs.pinned-image == '' && '["runner"]' || '["runner", "image"]') }}
+    container: ${{ matrix.where == 'image' && needs.ci-image.outputs.pinned-image || '' }}
     # Default branch only, dispatch included. A cache entry is scoped to the
     # branch that wrote it, so a run dispatched from a feature branch spends ~10
     # minutes and ~550 MB of the 10 GB quota on an entry no PR lane and no queue
@@ -66,7 +100,7 @@ jobs:
     # the scheduled main run that would have written a usable one. The workflow
     # says above that the writer has to run on main; this is what makes that true
     # rather than merely intended.
-    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    if: ${{ !cancelled() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -78,9 +112,11 @@ jobs:
           # would silently disarm it and warm a different set of artifacts than
           # the gate actually compiles.
           fetch-depth: 0
+      # The image has Go, so its leg asks for no version and setup-go restores
+      # and saves only that leg's module cache.
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: backend/go.mod
+          go-version-file: ${{ matrix.where == 'runner' && 'backend/go.mod' || '' }}
           cache-dependency-path: backend/go.sum
       # KEY ONLY, no restore. This job exists to produce the entry every other Go
       # job restores, and restoring the previous entry before compiling is what
@@ -119,32 +155,30 @@ jobs:
           restore: "false"
       # `make check-backend` runs golangci over every module, so the gate
       # binaries have to be here or lint-modules fails before it compiles
-      # anything — which is what this job exists to do. Same cache and same key
-      # as the ci lane's own step, so the two share one entry rather than each
-      # paying the ~75s compile.
-      - name: Cache the gate binaries
-        id: gate-binaries
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # anything — which is what this job exists to do. The action keys them
+      # as the ci lane does, and saves a miss here, on main, where every PR
+      # can read it. The image holds them.
+      - name: Gate binaries on PATH
+        if: matrix.where == 'runner'
+        uses: ./.github/actions/gate-binaries
         with:
-          path: ~/go/bin
-          key: gate-binaries-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('backend/go.mod', 'backend/Makefile') }}
-      - name: Install the pinned gate binaries
-        if: steps.gate-binaries.outputs.cache-hit != 'true'
-        working-directory: .
-        run: make tools
-      # The entry every PR's first push restores: a PR can read only its own
-      # entries and main's, and ci.yml runs on no push to main.
+          save: "true"
+      # The entry every PR restores: a PR can read only its own entries and
+      # main's, and ci.yml saves none.
       - name: Compute the golangci cache key
         id: golangci-key
         uses: ./.github/actions/golangci-cache-key
-      - name: Cache the golangci-lint analysis cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - name: Restore the golangci-lint analysis cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/golangci-lint
           key: ${{ steps.golangci-key.outputs.key }}
           restore-keys: ${{ steps.golangci-key.outputs.restore-keys }}
-      - name: Gate binaries onto PATH
-        run: echo "$HOME/go/bin" >> "$GITHUB_PATH"
+      # Anything in the cache newer than this stamp was written by a lint run.
+      - name: Stamp the restored golangci-lint analysis cache
+        run: |
+          mkdir -p ~/.cache/golangci-lint
+          touch "$RUNNER_TEMP/golangci-restored.stamp"
       - name: Compile what the gate compiles (make check-backend)
         working-directory: .
         env:
@@ -152,6 +186,24 @@ jobs:
           CONTRACT_BREAKING_REQUIRE_BASE: "1"
           MIGRATION_VERSIONS_REQUIRE_BASE: "1"
         run: make check-backend
+      # A red check-backend can stop before lint runs, and then the cache is the
+      # one restored above: saving it again would only spend quota.
+      - name: Check whether lint wrote to the golangci-lint analysis cache
+        id: golangci-wrote
+        if: ${{ !cancelled() }}
+        run: |
+          if [ -n "$(find ~/.cache/golangci-lint -type f -newer "$RUNNER_TEMP/golangci-restored.stamp" -print -quit)" ]; then
+            echo "wrote=true" >> "$GITHUB_OUTPUT"
+          fi
+      # !cancelled(), for the reason given on the build cache save below: a red
+      # lint still analysed the tree. The census does not hold this one back,
+      # because golangci replays no test result.
+      - name: Refresh the golangci-lint analysis cache
+        if: ${{ !cancelled() && steps.golangci-wrote.outputs.wrote == 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/golangci-lint
+          key: ${{ steps.golangci-key.outputs.key }}
       # The entry about to be saved replays test results, and a replay is only
       # honest if the cache can see every input the test read. Go never rechecks
       # a file outside the test's module, so each such read must go through its
@@ -176,9 +228,10 @@ jobs:
           path: ~/.cache/go-build
           key: ${{ steps.go-cache.outputs.key }}
 
-  # The `-tags=integration -cover -coverpkg=./...` compile the twelve shards
-  # read. ONE shard is enough: every shard compiles substantially the same set,
-  # which is why the lane it mirrors also elects a single writer.
+  # What the integration lane reads: the `-tags=integration -cover
+  # -coverpkg=./...` compile of its build job, and the `go run` tools its shards
+  # use. It does what the lane does, the build and then one shard from its
+  # binaries, so the entry holds both.
   integration:
     name: warm integration
     timeout-minutes: 45
@@ -218,9 +271,14 @@ jobs:
           restore: "false"
       - name: Start the dev infra stack (compose + app role)
         run: make db-up
-      - name: Compile and run one shard
+      - name: Compile every integration test binary
         env:
-          INTEGRATION_SHARD: 1/12
+          INTEGRATION_BUILD_OUT: ${{ runner.temp }}/integration-bin
+        run: make test-integration
+      - name: Run one shard from the binaries
+        env:
+          INTEGRATION_SHARD: 1/8
+          INTEGRATION_BIN_DIR: ${{ runner.temp }}/integration-bin
           INTEGRATION_SHARD_OUT: ${{ runner.temp }}/shard-out
           # The value of the shard it mirrors, in _lane-integration.yml, for its
           # reason: sixteen ran the 16GB runner out of memory and got it signalled.
@@ -232,3 +290,53 @@ jobs:
         with:
           path: ~/.cache/go-build
           key: ${{ steps.go-cache.outputs.key }}
+
+  # What fe-quality and fe-bundle read: tsc's build info for all four projects
+  # and the compiler lint's cache. It restores the last entry first, unlike the
+  # Go jobs: tsc rewrites its build info whole, and ESLint drops the entry of
+  # each file that is gone, so the entry cannot grow with history.
+  frontend:
+    name: warm frontend
+    timeout-minutes: 30
+    # Default branch only, for the reason spelled out on `plain` above.
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # No version input: the pin is package.json's "packageManager".
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      # The composed typecheck composes first, and only the Go generator can.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Compute the frontend cache key
+        id: frontend-key
+        uses: ./.github/actions/frontend-cache-key
+      - name: Restore tsc's build info and the compiler lint's cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.frontend-key.outputs.path }}
+          key: ${{ steps.frontend-key.outputs.key }}
+          restore-keys: ${{ steps.frontend-key.outputs.restore-keys }}
+      - name: Type-check and lint what the frontend lane does
+        run: make fe-typecheck fe-typecheck-composed fe-compiler-lint
+      # !cancelled(): a red typecheck still wrote build info for every file it read.
+      - name: Refresh the frontend cache
+        if: ${{ !cancelled() }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.frontend-key.outputs.path }}
+          key: ${{ steps.frontend-key.outputs.key }}

@@ -13,7 +13,8 @@ import {
   messageText,
   writeMessage,
 } from "../../design-system/richtext-testing";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
+import { meFixture } from "../../testing/mefixture";
 import {
   activity202,
   jsonResponse,
@@ -27,6 +28,7 @@ type EmailPresentation = components["schemas"]["EmailPresentation"];
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  window.location.hash = "";
 });
 
 const MESSAGE = "01a05500-0000-7000-8000-0000000000a1";
@@ -107,7 +109,7 @@ function drawer(
   const view = render(
     <OpenEmailDrawer
       activityId={MESSAGE}
-      zone={viewerZone()}
+      zone={browserZone()}
       onClose={vi.fn()}
     />,
   );
@@ -338,3 +340,58 @@ describe("the email drawer's verbs", () => {
     expect(messageText("Body")).toContain("Können wir Dienstag kurz sprechen?");
   });
 });
+
+it("books with the sender of an incoming email and carries the message as context", async () => {
+  const user = userEvent.setup();
+  drawer(
+    {
+      ...PRESENTATION,
+      summary: { ...PRESENTATION.summary, direction: "inbound" },
+      from: [{ address: "ana@brandt.example", contact_id: ANA }],
+    },
+    {
+      [`GET /contacts/${ANA}`]: () =>
+        jsonResponse({ id: ANA, attachable: true }),
+      "GET /me": () =>
+        jsonResponse(meFixture({ allow: { activity: ["read", "create"] } })),
+    },
+  );
+  await user.click(await screen.findByRole("button", { name: "More actions" }));
+  await user.click(
+    await screen.findByRole("button", { name: "Book a meeting" }),
+  );
+  expect(window.location.hash).toBe(
+    `#/book/contact-${ANA}?activity=${MESSAGE}`,
+  );
+});
+
+it.each([false, undefined, "forbidden"])(
+  "hides booking when the sender contact cannot take activities: %s",
+  async (attachable) => {
+    const { queryClient } = drawer(
+      {
+        ...PRESENTATION,
+        summary: { ...PRESENTATION.summary, direction: "inbound" },
+        from: [{ address: "ana@brandt.example", contact_id: ANA }],
+      },
+      {
+        "GET /me": () =>
+          jsonResponse(
+            meFixture({
+              allow: { contact: ["read"], activity: ["read", "create"] },
+            }),
+          ),
+        [`GET /contacts/${ANA}`]: () =>
+          attachable === "forbidden"
+            ? jsonResponse({ title: "Forbidden", status: 403 }, 403)
+            : jsonResponse({ id: ANA, attachable }),
+      },
+    );
+    await waitFor(() =>
+      expect(queryClient.getQueryState(["contact", ANA])?.status).toBe(
+        attachable === "forbidden" ? "error" : "success",
+      ),
+    );
+    expect(screen.queryByRole("button", { name: "Book a meeting" })).toBeNull();
+  },
+);

@@ -35,7 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/events"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -49,10 +49,19 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	if err := run(ctx, os.Args[1:], os.Stdout); err != nil {
+	if err := start(ctx, os.Args[1:], os.Stdout); err != nil {
 		fmt.Fprintln(os.Stderr, config.RoleWorker.Refusal(err))
 		os.Exit(1)
 	}
+}
+
+// start is --version when args ask for it, and the boot otherwise.
+func start(ctx context.Context, args []string, stdout io.Writer) error {
+	if buildinfo.AsksForVersion(args) {
+		_, err := fmt.Fprintln(stdout, buildinfo.VersionLine("margince-worker"))
+		return err
+	}
+	return run(ctx, args, stdout)
 }
 
 // run is the worker's boot sequence — the debug subcommands, flags,
@@ -60,29 +69,30 @@ func main() {
 // runner, then the relay it blocks on — in the order the process depends on;
 // boot.go and jobrunner.go hold the phases.
 func run(ctx context.Context, args []string, stdout io.Writer) error {
-	if handled, err := runDebugSubcommand(ctx, args, stdout); handled {
-		return err
-	}
-	if checked, err := checkWorkerConfig(workerFlags(args), config.Environ(), stdout); checked || err != nil {
+	if handled, err := runPreBootSubcommand(ctx, args, stdout); handled {
 		return err
 	}
 
-	boot, err := configureWorker(workerFlags(args), stdout)
+	boot, err := configureWorker(ctx, workerFlags(args), stdout)
 	if err != nil {
 		return err
 	}
+	// Deferred before every closer below, so it runs last: what a draining job
+	// or lane logs is still flushed.
+	defer compose.FlushInstrumentation(ctx)
 	cfg, bootstrap, logger := boot.cfg, boot.deploy, boot.log
 
-	pool, err := database.NewPool(ctx, cfg.dsn)
+	pool, err := openWorkerPool(ctx, cfg, logger)
 	if err != nil {
 		return err
 	}
 	// Registered before the lanes' join below, so LIFO closes the pool after it.
 	defer pool.Close()
-	if err := assertMayWorkAgainst(ctx, pool, logger); err != nil {
-		return err
-	}
 	resolveVault := workerVault(ctx, pool, cfg.settings)
+	// Before any subcommand too: replay-erasures matches the erasure list.
+	if err := storekit.RefuseForeignSuppressionKey(ctx, pool); err != nil {
+		return fmt.Errorf("worker: %w", err)
+	}
 	if handled, err := runDatabaseSubcommand(ctx, pool, resolveVault, cfg.settings, args, stdout); handled {
 		return err
 	}
@@ -129,12 +139,12 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	rdb, err := openBus(ctx, cfg)
+	rdb, coordination, err := openBus(ctx, cfg)
 	if err != nil {
 		return err
 	}
-	// Same ordering obligation as pool.Close above: the lanes read this client.
-	defer closeBus(rdb, logger)
+	// Same ordering obligation as pool.Close above: the lanes read these clients.
+	defer closeBus(logger, rdb, coordination)
 
 	// Before the lanes and the runner: a listener started after them reports
 	// nothing during exactly the window a slow boot needs explaining. /readyz
@@ -180,7 +190,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 
 	// The operator relay, resolved in THIS role. Unattended work runs here, so
 	// the weekly retrospective's mail has no request to arrive on.
-	weeklyMail := weeklyMailConfig(ctx, cfg, pool, vault, logger)
+	weeklyMail := weeklyMailConfig(ctx, cfg, pool, vault, lanes.blob, logger)
 	_, _ = fmt.Fprintln(stdout, weeklyMailBanner(weeklyMail))
 
 	stopJobs, err := startJobRunner(ctx, pool, vault,
@@ -253,17 +263,13 @@ type workerBoot struct {
 	log        *slog.Logger
 }
 
-// configureWorker runs the phases that can fail on configuration alone, in the
-// order they depend on each other: flags, then extensions (a failing
-// registration aborts the boot before anything is opened), then the deployment
-// file, then the logger — and the capture posture last, because it carries the
-// logger into the Sink's post-commit steps, where a fault is reported rather
-// than returned.
+// configureWorker runs the phases that can fail on configuration alone. In
+// order: flags, extensions, the deployment file, the units' instrumentation,
+// the logger that wraps it, and the capture posture that carries the logger.
 //
-// Grouped because they share one property the phases after them do not: none
-// of them opens a connection, so a deployment misconfigured in any of these
-// ways fails before a pool, a bus client or a listener exists to clean up.
-func configureWorker(args []string, stdout io.Writer) (workerBoot, error) {
+// None opens a core connection, so a misconfigured deployment fails before a
+// pool, bus client or listener exists. A unit's Start may do its own I/O.
+func configureWorker(ctx context.Context, args []string, stdout io.Writer) (workerBoot, error) {
 	cfg, loaded, err := loadWorkerConfig(args, config.Environ())
 	if err != nil {
 		return workerBoot{}, err
@@ -275,6 +281,9 @@ func configureWorker(args []string, stdout io.Writer) (workerBoot, error) {
 	compose.BindExtensionEgress(cfg.posture)
 	bootstrap, err := loadBootstrap(cfg)
 	if err != nil {
+		return workerBoot{}, err
+	}
+	if err := startInstrumentation(ctx, cfg, stdout); err != nil {
 		return workerBoot{}, err
 	}
 	log, err := newWorkerLogger(cfg, stdout)

@@ -64,7 +64,12 @@ export const PickingAContact: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Fill from a contact" }),
+      await canvas.findByRole("button", { name: "More actions" }),
+    );
+    await userEvent.click(
+      await within(document.body).findByRole("button", {
+        name: "Fill from a contact",
+      }),
     );
     const panel = within(await within(document.body).findByRole("dialog"));
     await userEvent.type(panel.getByRole("combobox"), "jonas");

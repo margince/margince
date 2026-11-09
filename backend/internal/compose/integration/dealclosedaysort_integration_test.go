@@ -30,7 +30,7 @@ func TestTheDealsListSortsByTheCloseDayItDraws(t *testing.T) {
 	ctx := e.Admin()
 
 	now := clocktest.Now(t)
-	e.Deals.WithClock(func() time.Time { return now })
+	e.Deals.SetClock(func() time.Time { return now })
 	local := now.In(zone)
 	today := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.UTC)
 	create := func(name string, forecast *time.Time) ids.DealID {

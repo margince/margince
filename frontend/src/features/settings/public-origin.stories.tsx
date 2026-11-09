@@ -34,7 +34,7 @@ function originStory(publicOrigin: PublicOrigin) {
 }
 
 const meta: Meta<typeof PublicOriginCard> = {
-  title: "Settings/Governance/System health/Links in outgoing mail",
+  title: "Settings/System/System health/Links in outgoing mail",
   component: PublicOriginCard,
 };
 export default meta;
