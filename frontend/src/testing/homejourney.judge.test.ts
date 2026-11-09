@@ -6,15 +6,15 @@ import { MAX_RETRIES } from "../app/queryclient";
 import {
   type Answer,
   budgetSamples,
+  type DayPaint,
+  dayPaint,
   degradedReasons,
   expectationFrom,
   type Frame,
   framesLostAfterReturn,
   type Journey,
   longestLoss,
-  mainContentLcp,
   outcomeOf,
-  type Paint,
   QUERY_RETRIES,
   RequestLedger,
   readerFrom,
@@ -314,39 +314,47 @@ describe("RequestLedger", () => {
 });
 
 describe("Home's browser vitals", () => {
-  const paint = (at: number, inMain = true) => ({ at, inMain });
+  const paint = (at: number, area = 100) => ({ at, area });
   const shift = (at: number, value: number, input = false) => ({
     at,
     value,
     input,
   });
-  const load = (paints: Paint[], shifts: Shift[] = []): Vitals => ({
-    paints,
-    shifts,
+  const load = (
+    dayPaints: DayPaint[],
+    shifts: Shift[] = [],
+    roots = 1,
+  ): Vitals => ({ dayPaints, shifts, roots });
+
+  it("takes the day content's largest paint, however early or late", () => {
+    expect(dayPaint([paint(100, 50), paint(1_500, 5_000)])?.at).toBe(1_500);
+    expect(dayPaint([paint(100, 5_000), paint(900, 10)])?.at).toBe(100);
   });
 
-  it("takes the page's final LCP as main-content LCP when it sits in main", () => {
-    expect(mainContentLcp([paint(100, false), paint(300)])).toBe(300);
+  it("takes the earliest of equally large paints", () => {
+    expect(dayPaint([paint(200), paint(700)])?.at).toBe(200);
   });
 
-  it("refuses an earlier paint in main once a larger one lands outside it", () => {
-    expect(mainContentLcp([paint(100), paint(400, false)])).toBeNull();
-    expect(vitalsReasons([load([paint(100), paint(400, false)])])).toEqual([
-      "load 1: the largest contentful paint is outside main",
-    ]);
-  });
-
-  it("fails a load that painted nothing, and a run with no load", () => {
-    expect(vitalsReasons([load([])])).toEqual([
-      "load 1: no largest contentful paint",
+  it("fails a load whose day content never painted, and a run with no load", () => {
+    expect(vitalsReasons([load([]), load([paint(300)])])).toEqual([
+      "load 1: Home's day content never painted",
     ]);
     expect(vitalsReasons([])).toEqual(["no load was measured"]);
   });
 
-  it("passes an LCP p95 of exactly the budget and fails one past it", () => {
+  it("fails a load with no day root or with two", () => {
+    expect(vitalsReasons([load([paint(300)], [], 0)])).toEqual([
+      "load 1: Home has 0 day roots, not one",
+    ]);
+    expect(vitalsReasons([load([paint(300)], [], 2)])).toEqual([
+      "load 1: Home has 2 day roots, not one",
+    ]);
+  });
+
+  it("passes a day paint p95 of exactly the budget and fails one past it", () => {
     expect(vitalsReasons([load([paint(1_000)])])).toEqual([]);
     expect(vitalsReasons([load([paint(1_001)])])).toEqual([
-      "main-content LCP p95 1001 ms is over 1000 ms",
+      "day paint p95 1001 ms is over 1000 ms",
     ]);
   });
 
@@ -356,9 +364,9 @@ describe("Home's browser vitals", () => {
       load([paint(1_500)]),
       load([paint(1_600)]),
     ];
-    expect(vitalsP95(loads).lcpMs).toBe(1_500);
+    expect(vitalsP95(loads).dayPaintMs).toBe(1_500);
     expect(vitalsReasons(loads)).toEqual([
-      "main-content LCP p95 1500 ms is over 1000 ms",
+      "day paint p95 1500 ms is over 1000 ms",
     ]);
   });
 
