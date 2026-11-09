@@ -29,7 +29,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if err := os.WriteFile(*contract, marked, 0o600); err != nil {
+		if err := os.WriteFile(*contract, marked, 0o600); err != nil { //nolint:gosec // the contract path is a flag the developer passed
 			log.Fatal(err)
 		}
 		log.Printf("check-openenums: marked %d response enums open", count)
