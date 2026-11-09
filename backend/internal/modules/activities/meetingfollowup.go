@@ -117,10 +117,10 @@ var followUpFromSQL = `(CASE WHEN a.occurred_precision = 'day' THEN ` + occurred
 //  1. as of, 2. content gate on a, 3. link visibility on wl, 4. the follow-up
 //     window in days, 5. the lookback in days past it, 6. content gate on later,
 //  7. what counts as contact for later, 8. the reader, 9. a snooze lifted,
-//  10. the customer arms the reader may read, 11. the cap, 12. the meeting
-//     took place, 13. the contacts the reader may write to, 14. the recipient
-//     cap, 15. which meetings the caller narrowed the read to, 16. later comes
-//     after the meeting.
+//  10. the customer arms the reader may read, 11. the page limit, if any,
+//  12. the meeting took place, 13. the contacts the reader may write to,
+//  14. the recipient cap, 15. which meetings the caller narrowed the read to,
+//  16. later comes after the meeting.
 //
 // The attendees are read once, in the LATERAL, and both the recipient list and
 // the "nothing sent since" test use that one set.
@@ -171,13 +171,18 @@ var meetingFollowUpsSQL = `
 	   -- follow-up already made. Only the recipients count, uncapped: a
 	   -- contact the reader cannot see must not make a row vanish. Their own
 	   -- mail after it is the waiting queue's business, not this reminder's.
-	   -- The recipient set must not be scanned once per later activity.
+	   -- The recipient set must not be scanned once per later activity, and a
+	   -- later activity is read by its key alone. The LIMIT keeps the tests
+	   -- below out of that read, so no planner can walk everything logged
+	   -- since the meeting instead, whatever its statistics say. The columns
+	   -- are the ones those tests read; a test that needs another fails loudly.
 	   AND NOT EXISTS (WITH touched AS MATERIALIZED (SELECT heard.activity_id FROM activity_link heard
 	                                   WHERE heard.contact_id = ANY(attendees.recipients)
 	                                  UNION ALL
 	                                  SELECT reached.activity_id FROM activity_participant reached
 	                                   WHERE reached.contact_id = ANY(attendees.recipients))
-	                   SELECT 1 FROM touched JOIN activity later ON later.id = touched.activity_id
+	                   SELECT 1 FROM touched CROSS JOIN LATERAL (SELECT ` + laterActivityColumns + ` FROM activity keyed
+	                     WHERE keyed.id = touched.activity_id LIMIT 1) later
 	                    WHERE later.id <> a.id
 	                      AND later.archived_at IS NULL
 	                      AND later.direction IS DISTINCT FROM 'inbound'
@@ -189,7 +194,13 @@ var meetingFollowUpsSQL = `
 	   AND NOT ` + readerSetAsideSQL("$%[8]d", "%[9]s") + `
 	 GROUP BY a.id, a.subject, a.occurred_at, a.occurred_precision, attendees.recipients
 	 ORDER BY a.occurred_at DESC, a.id DESC
-	 LIMIT %[11]d`
+	 %[11]s`
+
+// laterActivityColumns are the columns the "nothing sent since" tests read from
+// a later activity.
+const laterActivityColumns = `keyed.id, keyed.kind, keyed.direction, keyed.origin, keyed.occurred_at,
+	keyed.occurred_precision, keyed.archived_at, keyed.restricted_at, keyed.meeting_status, keyed.call_outcome,
+	keyed.calendar_method, keyed.sender_is_machine, keyed.bulk_mail_attested, keyed.internal_mail_authorization`
 
 // meetingHeldSQL is a meeting somebody said took place: its outcome was saved
 // as held, and it has started (occurredday.BegunSQL). A booked or unmarked
@@ -218,10 +229,14 @@ func meetingFollowUpsStatement(ctx context.Context, asOf time.Time, windowDays i
 	at := fmt.Sprintf("$%d", instant)
 	held := meetingHeldSQL("a", at)
 	candidates := meetingCandidatesSQL(at, fmt.Sprintf("$%d", window), fmt.Sprintf("$%d", reader), held)
+	page := ""
+	if limit > 0 {
+		page = fmt.Sprintf("LIMIT %d", limit)
+	}
 	return followUpStatement(candidates, g, fmt.Sprintf(meetingFollowUpsSQL,
 		instant, g.content, g.links, window, AwaitingReplyLookbackDays,
 		g.later, relstrength.InteractionCountsSQL("later", at), reader,
-		messageSnoozeLiftedSQL(at, g.back), g.customer, limit,
+		messageSnoozeLiftedSQL(at, g.back), g.customer, page,
 		held, addressable, maxActivityLinks, narrowed, occurredday.FromSQL("later", followUpFromSQL),
 	)), args, nil
 }

@@ -62,8 +62,13 @@ func TestTheMeetingFollowUpMaterializesRecipientsBeforeCheckingLaterActivities(t
 		t.Fatal(err)
 	}
 	normalized := strings.Join(strings.Fields(query), " ")
-	// The fence prevents recipient links from being scanned once per later activity.
-	for _, part := range []string{"NOT EXISTS (WITH touched AS MATERIALIZED (", "SELECT 1 FROM touched JOIN activity later"} {
+	// The fence prevents recipient links from being scanned once per later
+	// activity, and each later activity is read by its key alone.
+	for _, part := range []string{
+		"NOT EXISTS (WITH touched AS MATERIALIZED (",
+		"SELECT 1 FROM touched CROSS JOIN LATERAL (SELECT keyed.id,",
+		"FROM activity keyed WHERE keyed.id = touched.activity_id LIMIT 1) later",
+	} {
 		if !strings.Contains(normalized, part) {
 			t.Fatalf("meeting recipients are not materialized before checking later activities: missing %q", part)
 		}
