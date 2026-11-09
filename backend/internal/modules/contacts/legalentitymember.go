@@ -72,46 +72,84 @@ func (s *Store) ListLegalEntityMembers(ctx context.Context, id ids.LegalEntityID
 // the one they worked for before. Assigning them where they already are writes
 // nothing.
 func (s *Store) AssignLegalEntityMember(ctx context.Context, id ids.LegalEntityID, user ids.UserID) error {
-	for _, object := range []string{legalEntityObject, userAdminObject} {
-		if err := auth.Require(ctx, object, principal.ActionUpdate); err != nil {
-			return err
-		}
-	}
-	if err := httperr.RequireBodyID(auditKeyUser, user.UUID); err != nil {
-		return err
-	}
-	by, err := storekit.CapturedBy(ctx)
+	by, err := admitAssignment(ctx, user)
 	if err != nil {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		// ArchiveLegalEntity takes this lock before it counts the members.
-		if _, err := storekit.LockRow(ctx, tx, legalEntityTable, id.UUID, storekit.LiveOnly); err != nil {
-			return err
-		}
-		if err := requireUserExists(ctx, tx, user); err != nil {
-			return err
-		}
-		previous, err := UserLegalEntity(ctx, tx, user)
-		if err != nil || previous == id {
-			return err
-		}
-		if err := writeMembership(ctx, tx, id, user, by); err != nil {
-			return err
-		}
-		auditID, err := storekit.Audit(ctx, tx, actionAssign, legalEntityObject, id.UUID,
-			map[string]any{auditKeyUser: user, auditKeyEntity: previous},
-			map[string]any{auditKeyUser: user, auditKeyEntity: id})
-		if err != nil {
-			return err
-		}
-		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.InternalEventLegalEntityMemberAdded{
-			UserId: openapi_types.UUID(user.UUID), PreviousLegalEntityId: openapi_types.UUID(previous.UUID),
-		}); err != nil {
-			return fmt.Errorf("emit legal_entity.member_added: %w", err)
-		}
-		return nil
+		return s.assignMember(ctx, tx, id, user, by)
 	})
+}
+
+// AssignLegalEntityMemberTx is AssignLegalEntityMember inside the caller's
+// transaction, for an invite that seats a new user and places them in one
+// commit. An entity that is unknown or archived answers ErrNotFound.
+func (s *Store) AssignLegalEntityMemberTx(ctx context.Context, tx pgx.Tx, id ids.LegalEntityID, user ids.UserID) error {
+	by, err := admitAssignment(ctx, user)
+	if err != nil {
+		return err
+	}
+	return s.assignMember(ctx, tx, id, user, by)
+}
+
+// admitAssignment asks both grants an assignment needs and returns the stamp
+// it is written under.
+func admitAssignment(ctx context.Context, user ids.UserID) (string, error) {
+	for _, object := range []string{legalEntityObject, userAdminObject} {
+		if err := auth.Require(ctx, object, principal.ActionUpdate); err != nil {
+			return "", err
+		}
+	}
+	if err := httperr.RequireBodyID(auditKeyUser, user.UUID); err != nil {
+		return "", err
+	}
+	return storekit.CapturedBy(ctx)
+}
+
+func (s *Store) assignMember(ctx context.Context, tx pgx.Tx, id ids.LegalEntityID, user ids.UserID, by string) error {
+	// ArchiveLegalEntity takes this lock before it counts the members.
+	if _, err := storekit.LockRow(ctx, tx, legalEntityTable, id.UUID, storekit.LiveOnly); err != nil {
+		return err
+	}
+	if err := requireUserExists(ctx, tx, user); err != nil {
+		return err
+	}
+	previous, err := UserLegalEntity(ctx, tx, user)
+	if err != nil || previous == id {
+		return err
+	}
+	if err := s.carryMemberFloor(ctx, tx, previous, id); err != nil {
+		return err
+	}
+	if err := writeMembership(ctx, tx, id, user, by); err != nil {
+		return err
+	}
+	auditID, err := storekit.Audit(ctx, tx, actionAssign, legalEntityObject, id.UUID,
+		map[string]any{auditKeyUser: user, auditKeyEntity: previous},
+		map[string]any{auditKeyUser: user, auditKeyEntity: id})
+	if err != nil {
+		return err
+	}
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.InternalEventLegalEntityMemberAdded{
+		UserId: openapi_types.UUID(user.UUID), PreviousLegalEntityId: openapi_types.UUID(previous.UUID),
+	}); err != nil {
+		return fmt.Errorf("emit legal_entity.member_added: %w", err)
+	}
+	return nil
+}
+
+// carryMemberFloor keeps the floor the member's held mail had under the
+// entity they leave.
+func (s *Store) carryMemberFloor(ctx context.Context, tx pgx.Tx, from, to ids.LegalEntityID) error {
+	left, err := entityJurisdiction(ctx, tx, from)
+	if err != nil {
+		return err
+	}
+	joined, err := entityJurisdiction(ctx, tx, to)
+	if err != nil {
+		return err
+	}
+	return s.carryFloor(ctx, tx, left, joined)
 }
 
 // writeMembership stores the assignment, or removes it when the target is the

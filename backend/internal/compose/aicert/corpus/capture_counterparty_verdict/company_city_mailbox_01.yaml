@@ -22,26 +22,8 @@ fixture:
 expect:
   outcome: accepted
   answer: company_sender
-  rubric: >
-    A trade office's shared mailbox, named after the CITY it sits in. This is
-    the case a deterministic word list cannot reach and the model must:
-    "singapore" is not a role word — no vocabulary of functions can hold every
-    place name without also refusing contacts called Paris or Milan — so nothing
-    upstream catches it and the answer here is the only defence.
-    Both halves are present. The correspondence is genuine: it cites an
-    agreement this business signed and asks for a reply. And nobody is named
-    anywhere — the signature is an office, and "Sir or Madam" says the writer
-    does not know who they are writing to either.
-    "company_sender" scores highest: the company is writing as itself.
-    "role_mailbox" is wrong but withholds a contact and scores in the middle:
-    the tiebreak between the two reads the address's local part, and a city
-    name is not a function like support@ or info@.
-    "contact" is the failure this exists to catch and scores zero above the
-    floor: it files a contact called "Singapore AC", which is what a founder
-    actually found in his CRM. "spam" scores zero — hiding a counterparty's
-    letter about a live contract is the expensive mistake in the other
-    direction.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The answer is one closed kind, and the check requires it exactly.
+    The rubric only ranked the other kinds by the harm each does, and
+    "contact", the answer this scenario exists to catch, fails the check outright.

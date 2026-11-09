@@ -6,7 +6,7 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 
 ## audit_log
 
-14 columns · primary key `(id)` · referenced by 2 foreign keys
+15 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -24,6 +24,7 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 | `occurred_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `on_behalf_of` | `uuid` |  | Points at `app_user.id`. |
 | `passport_id` | `uuid` |  |  |
+| `source_xid` | `xid8`, default `pg_current_xact_id()` |  |  |
 
 **Points at**
 
@@ -156,11 +157,12 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 
 ## event_outbox
 
-6 columns · primary key `(id)` · referenced by 0 foreign keys
+7 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `assurance_inputs_read` | `boolean`, default `false` | yes |  |
 | `envelope` | `jsonb` | yes |  |
 | `published_at` | `timestamp with time zone` |  |  |
 | `seq` | `bigint` | yes |  |
@@ -169,6 +171,10 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 
 **Indexes**
 
+- `event_outbox_assurance_unread`: `btree (((envelope ->> 'type'))) WHERE (NOT assurance_inputs_read)`
+- `event_outbox_audit_record`: `btree ((((envelope -> 'trace') ->> 'audit_log_id')))`
+- `event_outbox_entity_record`: `btree ((((envelope -> 'entity') ->> 'type')), (((envelope -> 'entity') ->> 'id')))`
+- `event_outbox_event_id`: `btree (((envelope ->> 'event_id')))`
 - `event_outbox_pkey`: `unique, btree (id)`
 - `idx_event_outbox_unpublished`: `btree (seq) WHERE (published_at IS NULL)`
 
@@ -309,6 +315,7 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 - `idx_system_log_action`: `btree (action, occurred_at DESC)`
 - `idx_system_log_actor`: `btree (actor_id, occurred_at DESC)`
 - `idx_system_log_time`: `btree (occurred_at DESC)`
+- `idx_system_log_unkeyed_email`: `btree (id) WHERE ((action = 'login') AND (detail ? 'email_hash') AND (NOT (detail ? 'email_key_id')))`
 - `system_log_pkey`: `unique, btree (id)`
 
 **Triggers**

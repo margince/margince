@@ -239,7 +239,7 @@ describe("recording a reason to write where the refusal is read", () => {
     await pickOption(user, why, "Follow-up they requested");
     await user.click(
       await checks.findByRole("button", {
-        name: "Record this reason: Follow-up they requested, for anna@example.test",
+        name: "Keep as a standing reason: Follow-up they requested, for anna@example.test",
       }),
     );
 
@@ -280,7 +280,7 @@ describe("recording a reason to write where the refusal is read", () => {
 
     await checks.findByText("Choose the deal for this follow-up.");
     expect(
-      checks.queryByRole("button", { name: /^Record this reason/ }),
+      checks.queryByRole("button", { name: /^Keep as a standing reason/ }),
     ).toBeNull();
     expect(
       checks.queryByRole("combobox", {

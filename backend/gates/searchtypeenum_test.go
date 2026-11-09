@@ -15,12 +15,13 @@ package gates
 // The Go half is parsed from searchBranches, not restated.
 
 import (
-	"os"
 	"regexp"
 	"slices"
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func TestEverySearchTypeEnumIsTheSearchModulesBranchTable(t *testing.T) {
@@ -123,7 +124,7 @@ func propertyEnum(t *testing.T, schema, property string, array bool) typeSpellin
 // searchTypesParameterEnum reads the `types` filter's item spelling off GET /search.
 func searchTypesParameterEnum(t *testing.T) typeSpelling {
 	t.Helper()
-	raw, err := os.ReadFile(contractFile)
+	raw, err := gatekit.ReadFile(contractFile)
 	if err != nil {
 		t.Fatalf("reading %s: %v", contractFile, err)
 	}

@@ -29,8 +29,8 @@ func (s Server) ListSlippingDeals(w http.ResponseWriter, r *http.Request, params
 }
 
 // ListAtRiskRelationships serves at_risk_relationships.
-func (s Server) ListAtRiskRelationships(w http.ResponseWriter, r *http.Request) {
-	serveTool(w, r, s.toolRegistry.Invoke, "at_risk_relationships", noArguments{})
+func (s Server) ListAtRiskRelationships(w http.ResponseWriter, r *http.Request, params crmcontracts.ListAtRiskRelationshipsParams) {
+	serveTool(w, r, s.toolRegistry.Invoke, "at_risk_relationships", params)
 }
 
 // CatchUpOnRecord serves catch_me_up_on.
@@ -147,6 +147,11 @@ func (s Server) DescribeRouterActions(w http.ResponseWriter, r *http.Request, pa
 // DescribeListFilters serves describe_list_filters.
 func (s Server) DescribeListFilters(w http.ResponseWriter, r *http.Request) {
 	serveTool(w, r, s.toolRegistry.Invoke, "describe_list_filters", noArguments{})
+}
+
+// DescribeReadViews serves describe_views.
+func (s Server) DescribeReadViews(w http.ResponseWriter, r *http.Request) {
+	serveTool(w, r, s.toolRegistry.Invoke, "describe_views", noArguments{})
 }
 
 // DescribeReportBlocks serves describe_report_blocks.

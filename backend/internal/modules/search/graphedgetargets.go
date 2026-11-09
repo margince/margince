@@ -23,29 +23,51 @@ import (
 type edgeTargets struct {
 	contactPairs []contactPair
 	pairs        []pair
-	// dropped are contacts whose edges are removed outright, after the folds
-	// so a drop outlasts anything that could have refolded them.
+	history      graphHistoryTargets
+	// Drops outlast every fold so a removed contact cannot be recreated by this batch.
 	dropped []ids.UUID
 }
 
-// addActivities names the pairs the activities touch. Reads only: the pairs
-// are resolved BEFORE any fold, so a pair whose rows have all gone is still
-// named and can be deleted by it.
-func (t *edgeTargets) addActivities(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) error {
+// addActivities includes prior pairs when a change could have displaced evidence.
+// Captures name current participants, without unrelated colleague edges.
+func (t *edgeTargets) addActivities(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, includePrior bool) error {
+	if !includePrior {
+		// Nothing was displaced, so an activity that does not count adds no
+		// evidence. Opening it to the workspace later is folded as an update.
+		counting, err := countingActivities(ctx, tx, activityIDs)
+		if err != nil {
+			return err
+		}
+		activityIDs = counting
+	}
 	if len(activityIDs) == 0 {
 		return nil
 	}
-	contactPairs, err := affectedContactPairs(ctx, tx, activityIDs)
+	contactPairs, err := affectedContactPairs(ctx, tx, activityIDs, includePrior)
 	if err != nil {
 		return err
 	}
-	pairs, err := affectedPairs(ctx, tx, activityIDs)
+	pairs, err := affectedPairs(ctx, tx, activityIDs, includePrior)
 	if err != nil {
 		return err
 	}
 	t.contactPairs = append(t.contactPairs, contactPairs...)
 	t.pairs = append(t.pairs, pairs...)
 	return nil
+}
+
+// countingActivities keeps the activities that count towards an edge now, by
+// the join every fold makes to activity.
+func countingActivities(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) ([]ids.UUID, error) {
+	if len(activityIDs) == 0 {
+		return nil, nil
+	}
+	rows, err := tx.Query(ctx, `SELECT a.id FROM activity a WHERE a.id = ANY($1) AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
+		   AND `+graphCountedActivity, activityIDs)
+	if err != nil {
+		return nil, fmt.Errorf("search: reading which arrivals count towards an edge: %w", err)
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 }
 
 // addContact names every edge touching one contact. Reads only.
@@ -81,7 +103,21 @@ func (t *edgeTargets) addContact(ctx context.Context, tx pgx.Tx, contactID ids.U
 
 // apply writes the gathered targets: contact table first, interaction second.
 func (t *edgeTargets) apply(ctx context.Context, tx pgx.Tx) error {
-	if err := recomputeContactPairs(ctx, tx, t.contactPairs); err != nil {
+	if err := lockGraphWrites(ctx, tx); err != nil {
+		return err
+	}
+	missingContacts, err := t.lockContactPairs(ctx, tx)
+	if err != nil {
+		return err
+	}
+	if err := recomputeContactPairs(ctx, tx, t.contactPairs, missingContacts); err != nil {
+		return err
+	}
+
+	if err := t.history.markContacts(ctx, tx); err != nil {
+		return err
+	}
+	if err := t.history.prepareContacts(ctx, tx, missingContacts); err != nil {
 		return err
 	}
 	if len(t.dropped) > 0 {
@@ -89,7 +125,18 @@ func (t *edgeTargets) apply(ctx context.Context, tx pgx.Tx) error {
 			return fmt.Errorf("search: dropping a contact's observed peer edges: %w", err)
 		}
 	}
-	if err := recomputePairs(ctx, tx, t.pairs); err != nil {
+	missingInteractions, err := t.lockInteractionPairs(ctx, tx)
+	if err != nil {
+		return err
+	}
+	if err := recomputePairs(ctx, tx, t.pairs, missingInteractions); err != nil {
+		return err
+	}
+
+	if err := t.history.markInteractions(ctx, tx); err != nil {
+		return err
+	}
+	if err := t.history.prepareInteractions(ctx, tx, missingInteractions); err != nil {
 		return err
 	}
 	if len(t.dropped) > 0 {

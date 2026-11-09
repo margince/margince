@@ -22,6 +22,8 @@ run:
     - voicelive
     - vendorlive
     - rolesweep
+    # The mail-import load test (docs/how-to/measure-mail-import.md).
+    - loadrig
 
 issues:
   # Only findings introduced after the merge-base with origin/main fail.

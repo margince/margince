@@ -26,7 +26,6 @@ package gates
 // than being silently unreachable.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -35,6 +34,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // keyShape mirrors the CHECK on setting.key. Both exist on purpose: the
@@ -93,7 +93,7 @@ func TestEverySettingIsUniqueWellFormedAndGoverned(t *testing.T) {
 
 func TestEverySettingKeyIsPrefixedByItsOwningModule(t *testing.T) {
 	t.Parallel()
-	modules, err := os.ReadDir(filepath.Join("internal", "modules"))
+	modules, err := gatekit.ReadDir(filepath.Join("internal", "modules"))
 	if err != nil {
 		t.Fatalf("listing modules: %v", err)
 	}

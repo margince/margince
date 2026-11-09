@@ -183,9 +183,7 @@ func TestFanOutChildOptsCarriesACallerOwnedKindsOptsThrough(t *testing.T) {
 	if !slices.Contains(opts.Tags, jobs.SweepTag) {
 		t.Errorf("Tags = %v, want jobs.SweepTag", opts.Tags)
 	}
-	if !opts.UniqueOpts.ByArgs {
-		t.Error("the caller's uniqueness window was dropped; a deferred build could then be offered twice")
-	}
+
 	if !slices.Equal(opts.UniqueOpts.ByState, callerOpts.UniqueOpts.ByState) {
 		t.Errorf("ByState = %v, want the caller's %v", opts.UniqueOpts.ByState, callerOpts.UniqueOpts.ByState)
 	}

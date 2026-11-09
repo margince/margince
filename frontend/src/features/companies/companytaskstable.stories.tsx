@@ -64,6 +64,42 @@ export const LateDueAndUndatedDark: Story = {
   globals: { theme: "dark" },
 };
 
+// A promise task we may have kept in a later mail asks the Worklist's
+// question under its subject, where the list offers the tick.
+export const PromiseKeptByMail: Story = {
+  render: () => (
+    <StoryProviders>
+      <div style={{ maxWidth: 880 }}>
+        <CompanyTaskTable
+          view={{
+            ...tasks,
+            next_steps: {
+              ...tasks.next_steps,
+              data: [
+                {
+                  activity_id: "a-1",
+                  subject: "Send Dana the renewal paperwork",
+                  due_at: "2026-07-25T12:00:00Z",
+                  overdue: true,
+                  may_be_done: {
+                    contact_id: "p-1",
+                    email_activity_id: "e-1",
+                    wrote_at: "2026-08-12T10:00:00Z",
+                    wrote_precision: "instant",
+                    claim_key: "moment:may_be_done:a-1",
+                    evidence_fingerprint: "fp-1",
+                  },
+                },
+              ],
+            },
+          }}
+          renderTick={() => null}
+        />
+      </div>
+    </StoryProviders>
+  ),
+};
+
 export const NoOpenTasks: Story = {
   render: () => (
     <StoryProviders>

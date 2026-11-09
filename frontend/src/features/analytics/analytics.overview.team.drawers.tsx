@@ -10,8 +10,8 @@ import {
   type HandoffScope,
   MoreRows,
   useHandoffPages,
-  WaitingRow,
-} from "./analytics.outcomes.sdr";
+} from "./analytics.outcomes.handoffpages";
+import { WaitingRow } from "./analytics.outcomes.sdr";
 import { EvidenceFrame } from "./reporting.evidenceframe";
 import { reportingPeriodLabel } from "./reporting.model";
 

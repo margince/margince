@@ -17,6 +17,8 @@ import (
 	"path/filepath"
 	"slices"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const mergeGate = "check"
@@ -97,7 +99,7 @@ func TestMakeCheckRunsEveryLegItsTwoHalvesRun(t *testing.T) {
 
 func TestTheLegCheckFailsWhenTheMergeGateDropsALeg(t *testing.T) {
 	t.Parallel()
-	body, err := os.ReadFile(rootMakefile)
+	body, err := gatekit.ReadFile(rootMakefile)
 	if err != nil {
 		t.Fatalf("reading %s: %v", rootMakefile, err)
 	}

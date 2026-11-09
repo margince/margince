@@ -56,25 +56,27 @@ const noticeNoteLimit = 500
 // NoticeCase is one duty as a reader of the queue sees it, with everything the
 // three writes below can have put on it.
 type NoticeCase struct {
-	ID               ids.UUID
-	ContactID        ids.ContactID
-	AcquisitionID    ids.UUID
-	Rule             NoticeRule
-	DueAt            *time.Time
-	SourceKind       *string
-	SourceObtainedAt *time.Time
-	SourceReviewNote *string
-	State            NoticeState
-	AllowedRoutes    []string
-	OwnerUserID      *ids.UUID
-	AssignedAt       *time.Time
-	Attempts         int
-	ResolutionNote   *string
-	ResolvedBy       *ids.UUID
-	BlockedReason    *string
-	CompletedAt      *time.Time
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID                 ids.UUID
+	ContactID          ids.ContactID
+	AcquisitionID      ids.UUID
+	Rule               NoticeRule
+	DueAt              *time.Time
+	SourceKind         *string
+	SourceObtainedAt   *time.Time
+	SourceReviewNote   *string
+	SourceEvidenceKind *string
+	SourceEvidenceID   *ids.UUID
+	State              NoticeState
+	AllowedRoutes      []string
+	OwnerUserID        *ids.UUID
+	AssignedAt         *time.Time
+	Attempts           int
+	ResolutionNote     *string
+	ResolvedBy         *ids.UUID
+	BlockedReason      *string
+	CompletedAt        *time.Time
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 	// Acquisition is read beside the row rather than in noticeCaseColumns,
 	// because it lives in the table the deadline was computed from.
 	Acquisition *NoticeAcquisition
@@ -90,7 +92,7 @@ type NoticeCase struct {
 const noticeCaseColumns = `
 	id, contact_id, acquisition_id, rule, due_at, state, allowed_routes,
 	owner_user_id, assigned_at, attempts, resolution_note, resolved_by,
-	blocked_reason, completed_at, created_at, updated_at, source_kind, source_obtained_at, source_review_note`
+	blocked_reason, completed_at, created_at, updated_at, source_kind, source_obtained_at, source_review_note, source_evidence_kind, source_evidence_id`
 
 func scanNoticeCase(row pgx.Row) (NoticeCase, error) {
 	var c NoticeCase
@@ -98,7 +100,7 @@ func scanNoticeCase(row pgx.Row) (NoticeCase, error) {
 		&c.ID, &c.ContactID, &c.AcquisitionID, &c.Rule, &c.DueAt, &c.State,
 		&c.AllowedRoutes, &c.OwnerUserID, &c.AssignedAt, &c.Attempts,
 		&c.ResolutionNote, &c.ResolvedBy, &c.BlockedReason, &c.CompletedAt,
-		&c.CreatedAt, &c.UpdatedAt, &c.SourceKind, &c.SourceObtainedAt, &c.SourceReviewNote)
+		&c.CreatedAt, &c.UpdatedAt, &c.SourceKind, &c.SourceObtainedAt, &c.SourceReviewNote, &c.SourceEvidenceKind, &c.SourceEvidenceID)
 	return c, err
 }
 

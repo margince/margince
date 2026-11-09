@@ -61,6 +61,11 @@ func EraseUntoldLeadTx(ctx context.Context, tx pgx.Tx, in UntoldLead) error {
 			 WHERE id = $1`, in.ApprovalID); err != nil {
 			return fmt.Errorf("emptying the proposal the untold lead came from: %w", err)
 		}
+		// The proposal's own history and its requested event carry the name it
+		// was staged under, so emptying the row alone leaves the name behind.
+		if err := tombstoneCollateralScrubs(ctx, tx, "approval", []ids.UUID{in.ApprovalID.UUID}, untoldLeadReason, causeUntoldLead); err != nil {
+			return err
+		}
 	}
 	if in.LeadID.IsZero() {
 		return nil
@@ -79,6 +84,9 @@ func EraseUntoldLeadTx(ctx context.Context, tx pgx.Tx, in UntoldLead) error {
 		map[string]any{evidenceKeyReason: untoldLeadReason, evidenceKeyCause: causeUntoldLead})
 	if err != nil {
 		return fmt.Errorf("tombstoning the untold lead: %w", err)
+	}
+	if err := storekit.RedactAuditHistory(ctx, tx, auditID); err != nil {
+		return err
 	}
 	reason := untoldLeadReason
 	if err := storekit.EmitEventForEntity(ctx, tx, auditID, "lead", in.LeadID.UUID,

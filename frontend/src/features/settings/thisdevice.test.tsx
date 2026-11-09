@@ -88,6 +88,8 @@ afterEach(() => {
 /** A fresh page, because the install store lives as long as the page does. */
 async function page() {
   vi.resetModules();
+  const { loadLocale } = await import("../../i18n/catalogs");
+  await loadLocale("en");
   const pwa = await import("../../lib/pwa");
   const { InstallSettingRow } = await import("./thisdevice");
   listening.push(pwa.listenForInstall());

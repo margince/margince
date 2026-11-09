@@ -186,6 +186,82 @@ def run_codex(route, mcp_url, token_env, prompt, out_path, timeout=CODEX_TIMEOUT
     return code
 
 
+# agy has no turn cap either, so the same wall clock stands in for one. agy
+# ends its own turn at --print-timeout; the grace past it is for its shutdown.
+AGY_TIMEOUT = CODEX_TIMEOUT
+AGY_GRACE = 60
+
+# The agent agy runs as: the lane's one server and none of the operator's own
+# servers, rules or skills. agy reads no header from the environment, so the
+# passport is written into this file, inside a directory only this run reads.
+_AGY_AGENT = """---
+name: margince-e2e-llm
+description: The e2e-llm lane's candidate, attached to the lane's MCP server alone.
+mainAgent: true
+inheritMcp: false
+inheritCustomizations: false
+mcpServers:
+  - name: {server}
+    url: {url}
+    headers:
+      Authorization: Bearer {token}
+---
+"""
+# Headless agy refuses every action that needs a permission; the lane's server
+# is allowed, and only it.
+_AGY_SETTINGS = json.dumps({"permissions": {"allow": [f"mcp({transcript.SERVER}/*)"]}})
+
+
+def run_agy(route, mcp_url, token_env, prompt, out_path, timeout=AGY_TIMEOUT):
+    """Drive one prompt through `agy -p` and write it as a transcript.
+
+    Run from an empty directory that holds only the agent definition, so no
+    workspace file is within reach of a tool that slips through.
+    """
+    driver = f"{route.candidate}:{route.via}"
+    # agy names the effort in the model id (gemini-3.8-flash-high), so an effort
+    # set apart from it would be filed under a label the run never used.
+    if route.effort != candidates.table()[route.candidate]["effort"]:
+        print(f"the agy route takes its effort from the model id; set E2E_LLM_MODEL to that "
+              f"model's {route.effort.split()[-1]} tier instead of E2E_LLM_EFFORT", file=sys.stderr)
+        return HARNESS
+    token = os.environ.get(token_env, "")
+    try:
+        _instructions, tools = mcpclient.Session(mcp_url, token).open()
+    except mcpclient.McpFault as fault:
+        with transcript.Transcript(out_path) as out:
+            out.init(route.model, driver, "cli-default", "failed", [])
+            out.finish(True, f"HARNESS: {fault}", 0)
+        print(fault, file=sys.stderr)
+        return HARNESS
+    with tempfile.TemporaryDirectory(prefix="e2e-llm-agy.") as workspace:
+        agents = os.path.join(workspace, ".agents", "agents")
+        os.makedirs(agents)
+        with open(os.path.join(agents, "margince-e2e-llm.md"), "w", encoding="utf-8") as handle:
+            handle.write(_AGY_AGENT.format(server=transcript.SERVER, url=mcp_url, token=token))
+        argv = [
+            "agy", "-p", prompt, "--agent", "margince-e2e-llm", "--model", route.model,
+            "--output-format", "stream-json", "--print-timeout", f"{timeout}s",
+            "--disable-slash-commands", "--settings", _AGY_SETTINGS,
+        ]
+        try:
+            done = subprocess.run(argv, cwd=workspace, stdin=subprocess.DEVNULL, capture_output=True,
+                                  text=True, timeout=timeout + AGY_GRACE, check=False)
+            lines, stderr, exited = done.stdout.splitlines(), done.stderr, done.returncode
+        except subprocess.TimeoutExpired as expired:
+            partial = expired.stdout or b""
+            lines = (partial.decode("utf-8", "replace") if isinstance(partial, bytes) else partial).splitlines()
+            stderr, exited = f"agy overran its {timeout}s wall clock and was killed", "killed"
+    code = transcript.from_agy(lines, out_path, route.model, driver, [t["name"] for t in tools], workspace)
+    # A non-zero exit, or a kill at the wall clock, is a program failure
+    # whatever the stream says.
+    if exited:
+        code = HARNESS
+    if code:
+        print(stderr.strip()[-2000:], file=sys.stderr)
+    return code
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--candidate", required=True)
@@ -216,6 +292,11 @@ def main():
         if rest:
             os.environ["MARGINCE_REST_TOKEN"] = os.environ.get(args.token_env, "")
         return run_codex(route, args.mcp_url, args.token_env, prompt, args.out, rest=rest)
+    if route.wire == "agy-cli":
+        if args.rest_skill_dir:
+            print("the agy route has no REST door", file=sys.stderr)
+            return HARNESS
+        return run_agy(route, args.mcp_url, args.token_env, prompt, args.out)
     key = os.environ.get(route.key_env, "")
     token = os.environ.get(args.token_env, "")
     if not key or not token:

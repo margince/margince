@@ -69,7 +69,7 @@ const (
 // makes the liveness rule above impossible to have on one path and miss on
 // the other.
 func agentAuthQuery(predicate string) string {
-	return `SELECT p.id, p.on_behalf_of, p.scopes, u.seat_type, p.oauth_grant_id
+	return `SELECT p.id, p.on_behalf_of, p.scopes, u.seat_type, p.oauth_grant_id, p.work_areas
 		FROM passport p
 		JOIN app_user u ON u.id = p.on_behalf_of` + agentLivenessJoins + `
 		WHERE ` + predicate + agentLivenessWhere
@@ -94,13 +94,14 @@ var agentLivenessWhere = `
 		  AND u.must_change_password = false` + agentLivenessPredicate
 
 // passportStillLiveQuery re-asks the liveness rule about a passport already
-// authenticated, and about the human it is still supposed to answer to.
+// authenticated, and about the human it is still supposed to answer to. It
+// answers the passport's work areas as they stand, which bind from this call.
 //
 // on_behalf_of is compared rather than trusted: the principal carries a
 // granting human stamped when the run started, and "agent ≤ human" is a runtime
 // property. A passport re-granted to somebody else in between must not keep
 // admitting calls against the authority of the human it left.
-var passportStillLiveQuery = `SELECT 1
+var passportStillLiveQuery = `SELECT p.work_areas
 		FROM passport p
 		JOIN app_user u ON u.id = p.on_behalf_of` + agentLivenessJoins + `
 		WHERE p.id = $1 AND p.on_behalf_of = $2` + agentLivenessWhere

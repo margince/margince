@@ -84,7 +84,11 @@ func EmailSummariesByIDBatch(
 		where = append(where, scope)
 	}
 
-	sql := "SELECT " + activityColumns(contentArm) + " FROM activity a WHERE " +
+	columns, err := activityColumns(ctx, contentArm, arg)
+	if err != nil {
+		return nil, err
+	}
+	sql := "SELECT " + columns + " FROM activity a WHERE " +
 		strings.Join(where, " AND ")
 	rows, err := tx.Query(ctx, sql, args...)
 	if err != nil {

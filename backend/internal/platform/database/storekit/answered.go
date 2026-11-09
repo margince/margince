@@ -10,6 +10,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -74,7 +75,7 @@ func offThreadAnswerArms(inbound, until string) []answerArm {
 	// a voicemail or a call nobody took is no answer.
 	touch := `((answer_touch.kind = '` + string(crmcontracts.ActivityKindCall) + `' AND ` + relstrength.CallCountsSQL("answer_touch") + `)
 	      OR (answer_touch.kind = '` + string(crmcontracts.ActivityKindMeeting) + `'
-	        AND answer_touch.meeting_status = '` + string(crmcontracts.ActivityMeetingStatusHeld) + `'))
+	        AND ` + meetingoutcome.HeldSQL("answer_touch") + `))
 	    AND ` + everyoneReads("answer_touch") + `
 	    AND ` + later("answer_touch")
 	return []answerArm{

@@ -31,7 +31,6 @@ package gates
 import (
 	"go/ast"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -55,8 +54,10 @@ const deadlineOwner = "internal/shared/kernel/deadline"
 // now()` — and nothing in the SQL says which is being asked. A pattern that
 // could tell them apart would be a pattern that could be fooled.
 var schedulerClaims = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/signaturework.go":  "Selects retry work whose scheduled time has arrived; equality is runnable, with no overdue status shown to a reader.",
 	"internal/compose/runnerservice.go":           "fires a cron-seeded agent when its scheduled moment has arrived. `!now.Before(due)` is the inclusive reading on purpose: a job due exactly on a tick must run on that tick, and nothing here is shown to a reader as late.",
 	"internal/modules/agents/runner/claimjobs.go": "claims the next runner job whose scheduled moment has arrived. This is the scheduler's question, and a job due exactly now must run rather than wait a tick; nothing here is shown to a reader as late.",
+	"internal/compose/backfillscheduler.go":       "decides whether a history page's next River job is due now or later, so River inserts it available or scheduled. This is the scheduler's question, and nothing here is shown to a reader as late.",
 })
 
 // asksIfLateInSQL matches a statement asking whether a due column has been
@@ -136,7 +137,7 @@ func TestOnlyOnePlaceDecidesWhetherSomethingIsLate(t *testing.T) {
 	var inGo, inSQL []string
 	judged := 0
 	for _, root := range []string{"internal", "../extensions"} {
-		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+		err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil {
 				return walkErr
 			}
@@ -154,7 +155,7 @@ func TestOnlyOnePlaceDecidesWhetherSomethingIsLate(t *testing.T) {
 			if strings.Contains(rel, deadlineOwner) {
 				return nil
 			}
-			source, readErr := os.ReadFile(path) // #nosec G304 -- a *.go path from walking the trusted source tree
+			source, readErr := gatekit.ReadFile(path) // #nosec G304 -- a *.go path from walking the trusted source tree
 			if readErr != nil {
 				return readErr
 			}

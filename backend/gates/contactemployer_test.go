@@ -10,11 +10,11 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // TestEveryContactInsertResolvesItsEmployer derives the obligation from the actual insert statements.
@@ -25,7 +25,7 @@ func TestEveryContactInsertResolvesItsEmployer(t *testing.T) {
 		if strings.HasSuffix(path, "_test.go") || path == "internal/compose/integration/seed.go" {
 			continue
 		}
-		body, err := os.ReadFile(path)
+		body, err := gatekit.ReadFile(path)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -47,7 +47,7 @@ func contactWriterSources(t *testing.T) []string {
 	t.Helper()
 	paths := goSourceFiles(t, ".")
 	// An installation may enable no extensions; the backend census must still be nonempty.
-	err := filepath.WalkDir("../extensions", func(path string, entry fs.DirEntry, err error) error {
+	err := gatekit.WalkDir("../extensions", func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -108,7 +108,7 @@ func contactEmployerWriters(t *testing.T, body string) (int, []string) {
 
 func TestContactEmployerCensusRejectsMissingAndNewWriters(t *testing.T) {
 	t.Parallel()
-	body, err := os.ReadFile("internal/modules/contacts/resolvecreate.go")
+	body, err := gatekit.ReadFile("internal/modules/contacts/resolvecreate.go")
 	if err != nil {
 		t.Fatal(err)
 	}

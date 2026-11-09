@@ -44,6 +44,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -325,27 +326,34 @@ func (j *runJournal) close() error {
 // an unlinked inode — so the first journals every remaining run into a file
 // nobody will ever read, with no error, and its crash recovery silently does not
 // exist. The cost is exactly the re-paid corpus this file was written to prevent.
+//
+// The claim is a kernel lock, not the file's existence: a run killed by
+// `go test -timeout` runs no defer, and the kernel still releases its lock.
 func claimResumeDir(dir string) (*os.File, error) {
 	path := filepath.Join(dir, "aicert-resume.lock")
-	lock, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600) // #nosec G304 -- see openRunJournal
-	if errors.Is(err, os.ErrExist) {
-		return nil, fmt.Errorf("aicert: another certification run holds the resume directory %s; "+
-			"wait for it, or point this run elsewhere with RESUME=<dir> — and if no run is going, "+
-			"a previous one was killed and %s is stale: delete it", dir, path)
-	}
+	lock, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|syscall.O_NOFOLLOW, 0o600) // #nosec G304 -- see openRunJournal
 	if err != nil {
 		return nil, fmt.Errorf("aicert: claiming resume directory %s: %w", dir, err)
+	}
+	if ferr := syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); ferr != nil {
+		closeErr := lock.Close()
+		if errors.Is(ferr, syscall.EWOULDBLOCK) {
+			return nil, errors.Join(fmt.Errorf("aicert: another certification run holds the resume directory %s; "+
+				"wait for it, or point this run elsewhere with RESUME=<dir>", dir), closeErr)
+		}
+		return nil, errors.Join(fmt.Errorf("aicert: claiming resume directory %s: %w", dir, ferr), closeErr)
 	}
 	return lock, nil
 }
 
 // releaseResumeDir drops the claim. Nil-safe, so every error path out of
-// openRunJournal can join it unconditionally.
+// openRunJournal can join it unconditionally. The file stays: removing it would
+// let a run that opened it a moment earlier lock an unlinked inode.
 func releaseResumeDir(lock *os.File) error {
 	if lock == nil {
 		return nil
 	}
-	return errors.Join(lock.Close(), os.Remove(lock.Name()))
+	return lock.Close()
 }
 
 // forTask is the journal as ONE task's certification sees it: the file, plus

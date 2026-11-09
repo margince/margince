@@ -62,7 +62,7 @@ type SlippingDeal struct {
 // than quietDays, plus open deals past their expected close date. Compose
 // implements it over the deals module's list path so RBAC and row scope apply
 // unchanged.
-type SlippingLister func(ctx context.Context, quietDays int) ([]SlippingDeal, error)
+type SlippingLister func(ctx context.Context, quietDays int, owner *ids.UUID) ([]SlippingDeal, error)
 
 // FollowUpDrafter drafts one follow-up for a slipping deal and persists
 // it as a draft activity on the deal's timeline — a proposal, never a
@@ -86,12 +86,13 @@ type FollowUpDrafter func(ctx context.Context, deal SlippingDeal) (draftActivity
 // tools — a surface that cannot ground does not pretend to; the drafting
 // tool additionally needs somewhere for its drafts to land. stalledDays is
 // the deals module's stalled threshold, the window both tools ask at unless
-// a caller names another.
-func RegisterSlippingTools(r *Registry, list SlippingLister, draft FollowUpDrafter, stalledDays int) {
+// a caller names another. A scheduled run asks at sweepQuietDays instead, the
+// window its goal names and its preflight reads.
+func RegisterSlippingTools(r *Registry, list SlippingLister, draft FollowUpDrafter, stalledDays, sweepQuietDays int) {
 	if list == nil {
 		return
 	}
-	r.Register(whatsSlippingThisWeek{list: list, stalledDays: stalledDays, language: r.BaseLanguage()})
+	r.Register(whatsSlippingThisWeek{list: list, stalledDays: stalledDays, sweepQuietDays: sweepQuietDays, language: r.BaseLanguage()})
 	if draft != nil {
 		r.Register(draftFollowUpsFor{list: list, draft: draft, stalledDays: stalledDays, language: r.BaseLanguage()})
 	}
@@ -104,9 +105,10 @@ func RegisterSlippingTools(r *Registry, list SlippingLister, draft FollowUpDraft
 const maxQuietDays = 365
 
 type whatsSlippingThisWeek struct {
-	list        SlippingLister
-	stalledDays int
-	language    baselanguage.Resolver
+	list           SlippingLister
+	stalledDays    int
+	sweepQuietDays int
+	language       baselanguage.Resolver
 }
 
 func (t whatsSlippingThisWeek) Spec() mcp.ToolSpec {
@@ -118,6 +120,7 @@ func (t whatsSlippingThisWeek) Spec() mcp.ToolSpec {
 		Unlisted:  true,
 		OpenAPIOp: "listSlippingDeals",
 		InputSchema: schema(fmt.Sprintf(`{"type":"object","properties":{
+			"owner_id":{"type":"string","format":"uuid","description":"Narrow to deals owned by this member; existing read scope still applies"},
 			"quiet_days":{"type":"integer","minimum":1,"maximum":%d,"default":%d,"description":"Days without recorded activity after which a deal counts as gone quiet; omit it for the product-wide stalled threshold"},
 			"limit":{"type":"integer","minimum":1,"maximum":50,"description":"Cap the ranked set; omit for the full evidenced set"}},
 			"additionalProperties":false}`, maxQuietDays, t.stalledDays)),
@@ -127,8 +130,9 @@ func (t whatsSlippingThisWeek) Spec() mcp.ToolSpec {
 
 func (t whatsSlippingThisWeek) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args struct {
-		QuietDays int `json:"quiet_days"`
-		Limit     int `json:"limit"`
+		QuietDays int       `json:"quiet_days"`
+		Owner     *ids.UUID `json:"owner_id"`
+		Limit     int       `json:"limit"`
 	}
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
@@ -137,9 +141,9 @@ func (t whatsSlippingThisWeek) Handle(ctx context.Context, in json.RawMessage) (
 	// schema's minimum of 1 before the handler runs.
 	quietDays := args.QuietDays
 	if quietDays == 0 {
-		quietDays = t.stalledDays
+		quietDays = t.defaultQuietDays(ctx)
 	}
-	candidates, err := t.list(ctx, quietDays)
+	candidates, err := t.list(ctx, quietDays, args.Owner)
 	if err != nil {
 		return nil, err
 	}
@@ -156,6 +160,16 @@ func (t whatsSlippingThisWeek) Handle(ctx context.Context, in json.RawMessage) (
 		items = append(items, it.wire(i+1))
 	}
 	return json.Marshal(WhatsSlippingResult{Deals: items})
+}
+
+// defaultQuietDays is the window an omitted quiet_days asks at. A scheduled
+// run asks at the sweep's window, so the tool and the run's preflight read
+// the same list.
+func (t whatsSlippingThisWeek) defaultQuietDays(ctx context.Context) int {
+	if _, scheduled := principal.AgentRunID(ctx); scheduled {
+		return t.sweepQuietDays
+	}
+	return t.stalledDays
 }
 
 // --- draft_follow_ups_for (🟢 draft — proposes, never sends) ---
@@ -211,7 +225,7 @@ func (t draftFollowUpsFor) Handle(ctx context.Context, in json.RawMessage) (json
 			Guidance: fmt.Sprintf("omit it, or ask for 1..%d", maxFollowUpDrafts),
 		}
 	}
-	candidates, err := t.list(ctx, t.stalledDays)
+	candidates, err := t.list(ctx, t.stalledDays, nil)
 	if err != nil {
 		return nil, err
 	}

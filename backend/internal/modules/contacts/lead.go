@@ -32,11 +32,13 @@ type CreateLeadInput struct {
 	CompanyName         *string
 	CandidateCompanyKey *string
 	// Industry is a code by the time it reaches the column (leadIndustryWrite).
-	Industry     *string
-	LinkedInURL  *string
-	Status       string
-	OwnerID      *ids.UserID
-	ProjectID    *ids.ProjectID
+	Industry    *string
+	LinkedInURL *string
+	Status      string
+	OwnerID     *ids.UserID
+	ProjectID   *ids.ProjectID
+	// ProductID is the product the lead is interested in (ensureLeadProduct).
+	ProductID    *ids.UUID
 	SourceSystem *string
 	SourceID     *string
 	// Source is how the row reached Margince; it never scores.
@@ -218,6 +220,7 @@ func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []
 		id, in.FullName, in.Email, in.Title, in.CompanyName, in.CandidateCompanyKey,
 		in.LinkedInURL, in.Status, fit.Score, in.OwnerID, in.ProjectID, in.SourceSystem, in.SourceID, in.Source, by,
 		in.Phone, in.Origin, in.OriginDetail, leadEmailDomain(in.Email), in.Industry, in.OwnerID, in.PartnerCompanyID,
+		in.ProductID,
 	}
 	holders := strings.Split(storekit.Placeholders(fixed), ",")
 	// The email is the third bind: lower() holds the dedupe key's spelling at the column, whatever door wrote it.
@@ -230,7 +233,7 @@ func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []
 	_, err = tx.Exec(ctx,
 		`INSERT INTO lead (id, full_name, email, title, company_name, candidate_company_key,
 		                   linkedin_url, status, score, owner_id, project_id, source_system, source_id, source, captured_by,
-		                   phone, origin, origin_detail, email_domain_folded, `+leadIndustryField+`, `+arrivalOwnerColumn+`, `+leadPartnerField+authorCols+cfCols+`)
+		                   phone, origin, origin_detail, email_domain_folded, `+leadIndustryField+`, `+arrivalOwnerColumn+`, `+leadPartnerField+`, `+leadProductField+authorCols+cfCols+`)
 		 VALUES (`+strings.Join(holders, ", ")+authorHolders+cfHolders+`)`,
 		args...)
 	if err != nil {
@@ -450,6 +453,9 @@ func admitLeadCreate(ctx context.Context, tx pgx.Tx, in CreateLeadInput) error {
 		if err := auth.EnsureReferenceTarget(ctx, tx, "project_id", "project", in.ProjectID.UUID); err != nil {
 			return err
 		}
+	}
+	if err := ensureLeadProduct(ctx, tx, in.ProductID); err != nil {
+		return err
 	}
 	if in.OwnerID != nil {
 		if err := auth.EnsureNewRecordOwner(ctx, tx, in.OwnerID.UUID); err != nil {

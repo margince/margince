@@ -31,6 +31,7 @@ import { useT } from "../../i18n";
 import { taskWriteKeys } from "../../lib/activitykeys";
 import { useActivity } from "../../lib/activityread";
 import { useCan } from "../../lib/capability";
+import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { NewDealAction } from "../companies/companyactions";
@@ -155,7 +156,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         <>
           {/* Neutral here: the phase is a fact about the project, and How
               it stands carries the reading of how it is going. */}
-          <Badge>{t(PHASE_LABEL[project.phase])}</Badge>
+          <Badge>{t(labelFor(PHASE_LABEL, project.phase))}</Badge>
           {project.key && <ProjectKeyChip projectKey={project.key} dense />}
           <ProjectSharedPill projectId={project.id} />
         </>
@@ -306,7 +307,6 @@ function useNextTaskVerbs(
   if (!next || !task) {
     return {};
   }
-  const nextDue = snoozedDueAt(next.dueAt, task.due_has_time, zone);
   return {
     // No due date here: the bar draws its own Snooze beside Done.
     action: (
@@ -317,14 +317,17 @@ function useNextTaskVerbs(
         update={update}
       />
     ),
-    snooze: nextDue
+    snooze: next.dueAt
       ? {
-          onSnooze: () =>
-            update.mutate({
-              id: next.activityId,
-              version: task.version,
-              body: nextDue,
-            }),
+          onSnooze: () => {
+            const nextDue = snoozedDueAt(next.dueAt, task.due_has_time, zone);
+            if (nextDue)
+              update.mutate({
+                id: next.activityId,
+                version: task.version,
+                body: nextDue,
+              });
+          },
           pending: update.isPending && update.variables?.id === next.activityId,
         }
       : undefined,

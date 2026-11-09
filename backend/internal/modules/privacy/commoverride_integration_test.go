@@ -24,6 +24,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -259,7 +260,7 @@ func TestRetentionAnonymizeDeletesAMergedPredecessorsOverride(t *testing.T) {
 
 // TestRetentionAnonymizeKeepsAMergedPredecessorsSuppression is the stop twin
 // of the override case above, with the opposite outcome. An override goes. A
-// stop is pinned to the subject's address, so it never expires.
+// stop is pinned to the hash of the subject's address, so it never expires.
 func TestRetentionAnonymizeKeepsAMergedPredecessorsSuppression(t *testing.T) {
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
@@ -291,8 +292,8 @@ func TestRetentionAnonymizeKeepsAMergedPredecessorsSuppression(t *testing.T) {
 	var onPredecessor, onAddress int
 	if err := tx.QueryRow(ctx, `
 		SELECT count(*) FILTER (WHERE contact_id = $1),
-		       count(*) FILTER (WHERE contact_id IS NULL AND address = 'hedda@anon.test' AND revoked_at IS NULL)
-		  FROM communication_suppression`, predecessor).Scan(&onPredecessor, &onAddress); err != nil {
+		       count(*) FILTER (WHERE contact_id IS NULL AND address_hash = $2 AND revoked_at IS NULL)
+		  FROM communication_suppression`, predecessor, storekit.SuppressionHash("hedda@anon.test")).Scan(&onPredecessor, &onAddress); err != nil {
 		t.Fatalf("counting the predecessor's suppressions: %v", err)
 	}
 	if onPredecessor != 0 || onAddress != 1 {
@@ -335,7 +336,7 @@ func TestRetentionAnonymizePinsOnlyActiveStops(t *testing.T) {
 
 	var liveOnAddresses, liftedWithAddress, liftedKept int
 	if err := tx.QueryRow(ctx, `
-		SELECT count(*) FILTER (WHERE revoked_at IS NULL AND contact_id IS NULL AND address IS NOT NULL),
+		SELECT count(*) FILTER (WHERE revoked_at IS NULL AND contact_id IS NULL AND address_hash IS NOT NULL),
 		       count(*) FILTER (WHERE revoked_at IS NOT NULL AND address IS NOT NULL),
 		       count(*) FILTER (WHERE revoked_at IS NOT NULL AND contact_id = $1)
 		  FROM communication_suppression`, contact).Scan(&liveOnAddresses, &liftedWithAddress, &liftedKept); err != nil {

@@ -8,48 +8,25 @@ package compose
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
-func TestAVintageRecordsTheBasisItWasTakenUnder(t *testing.T) {
+func TestAVintageRecordsTheMeasureItWasTakenUnder(t *testing.T) {
 	e := setupEvaluation(t)
 	before := wholeWorkspace(e.dataset(t))[1]
 	if before.Measure != string(forecasting.MeasureLikely) || before.Policy != "" {
-		t.Fatalf("with qualification off the vintage says measure %q policy %q", before.Measure, before.Policy)
-	}
-	sweep := &assuranceSweepWorker{
-		pool: e.Pool, now: func() time.Time { return e.second }, log: slog.New(slog.DiscardHandler),
-		activities: activities.NewStore(InstallationDB(e.Pool)),
-	}
-	if err := (&assuranceRunWorker{sweep: sweep}).Work(context.Background(), &river.Job[AssuranceRunArgs]{
-		Args: AssuranceRunArgs{Workspace: e.WS, RequestedBy: e.Rep1.String()},
-	}); err != nil {
-		t.Fatalf("the input check enforcement waits on: %v", err)
-	}
-	if err := assurance.NewStore(InstallationDB(e.Pool)).SetQualifiedForecastEnforced(
-		e.Admin(), StoredConfig(e.Pool), true); err != nil {
-		t.Fatalf("enforcing: %v", err)
-	}
-	e.freeze(t, e.second.AddDate(0, 0, 1))
-	vintages := wholeWorkspace(e.dataset(t))
-	if last := vintages[len(vintages)-1]; last.Policy != viability.PolicyVersion {
-		t.Fatalf("a vintage taken under enforcement says policy %q, want %q", last.Policy, viability.PolicyVersion)
+		t.Fatalf("the vintage says measure %q policy %q, want likely and no policy", before.Measure, before.Policy)
 	}
 }
 

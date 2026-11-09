@@ -15,7 +15,6 @@ package gates
 // public-events.yaml.
 
 import (
-	"os"
 	"path/filepath"
 	"slices"
 	"testing"
@@ -23,6 +22,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -76,7 +76,7 @@ func TestAnExtensionListenerLeavesImportedEventsOut(t *testing.T) {
 // event type's stream.
 func TestEveryStreamTheImportMarkerRidesIsOneThatConsumersAreDecidedFor(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile(filepath.Join(repoRoot, "backend", publicEventsPath))
+	raw, err := gatekit.ReadFile(filepath.Join(repoRoot, "backend", publicEventsPath))
 	if err != nil {
 		t.Fatalf("reading the public event contract: %v", err)
 	}

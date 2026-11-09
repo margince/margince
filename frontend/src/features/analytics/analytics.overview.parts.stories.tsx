@@ -311,8 +311,13 @@ export const MyProspectingPageOnPhone = {
 export const IncompletePipelineReadings: Story = {
   ...story("sales", <SalesReadings evaluation={gaps} />),
   play: async ({ canvasElement }) => {
+    const label = await within(canvasElement).findByText(
+      "Pipeline due this quarter",
+    );
+    const card = label.closest("section");
+    if (!card) throw new Error("the pipeline reading drew no card");
     await userEvent.click(
-      within(canvasElement).getByRole("button", { name: "Evidence" }),
+      within(card).getByRole("button", { name: "Evidence" }),
     );
     const body = within(document.body);
     await expect(body.getByText(/2 deals with no amount/)).toBeVisible();
