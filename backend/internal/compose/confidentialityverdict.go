@@ -238,7 +238,8 @@ func (e *ConfidentialityVerdictEngine) judgeOne(
 	// A thread with documents the verdict never read cannot open: the sender
 	// names the files, so the unread ones are theirs to choose.
 	if status == capture.VerdictCleared &&
-		(float64(answer.Confidence) < confidentialityFloor || read.DocumentsOmitted > 0) {
+		(float64(answer.Confidence) < confidentialityFloor || read.DocumentsOmitted > 0 ||
+			hasUnreadNamedFile(read, capture.NamedAsPrivate)) {
 		// Below the floor the OPENING answer is discarded and the thread holds.
 		// The kind is kept as the model gave it, because "the model thought
 		// this was ordinary and was not sure" is what a human reviewing the

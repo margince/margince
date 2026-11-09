@@ -11458,6 +11458,11 @@ export const en = {
   "aiHealth.callCounts_one": "{count} call, {failures} failed",
   "aiHealth.callCounts_other": "{count} calls, {failures} failed",
   "heldThreads.search": "Search subject or party",
+  "heldThreads.forContact": "Show held mail with this contact",
+  "heldThreads.withContact": "Threads with",
+  "heldThreads.allThreads": "Show all threads",
+  "heldThreads.contactUnavailable":
+    "The contact is archived or not visible to you, so its threads are not listed.",
   "heldThreads.statusFilter": "Status",
   "heldThreads.statusAll": "Any status",
   "heldThreads.noMatch": "No held thread matches.",

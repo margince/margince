@@ -11486,6 +11486,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiHealth.callCounts_one": "Aufrufe: {count}, fehlgeschlagen: {failures}",
   "aiHealth.callCounts_other": "Aufrufe: {count}, fehlgeschlagen: {failures}",
   "heldThreads.search": "Betreff oder Beteiligte suchen",
+  "heldThreads.forContact": "Zurückgehaltene E-Mails mit diesem Kontakt zeigen",
+  "heldThreads.withContact": "Threads mit",
+  "heldThreads.allThreads": "Alle Threads zeigen",
+  "heldThreads.contactUnavailable":
+    "Der Kontakt ist archiviert oder für dich nicht sichtbar, daher werden seine Threads nicht angezeigt.",
   "heldThreads.statusFilter": "Status",
   "heldThreads.statusAll": "Jeder Status",
   "heldThreads.noMatch": "Kein zurückgehaltener Thread passt.",

@@ -18,6 +18,8 @@ func TestWhichFilesAThreadVerdictMustRead(t *testing.T) {
 		{"notes", "text/plain", true},
 		{"invite.ics", "text/plain", false},
 		{"logo.png", "image/png", false},
+		{"passport.png", "image/png", true},
+		{"test_result.jpg", "image/jpeg", true},
 		{"smime.p7s", "application/octet-stream", false},
 	} {
 		if got := IsThreadDocument(c.filename, c.contentType); got != c.want {
