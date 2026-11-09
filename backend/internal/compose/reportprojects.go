@@ -236,13 +236,27 @@ func projectsGoneQuietSpec() reportSpec {
 	}
 }
 
+// reportMoneyAggregateSQL renders one aggregate over a measure. Over a
+// converted amount it answers only what it can price.
+//
+// A group holding an unpriced amount has no answer, whatever the function, so a
+// function added to the vocabulary later is held to it too. A sum over an empty
+// group reads zero. Every other function folds the rows as each row reads, and
+// a project with no deals reads zero because its measure does.
 func reportMoneyAggregateSQL(spec reportSpec, aggregate reportAggregate, expression string) string {
-	rendered := fmt.Sprintf("%s(%s)", aggregate.Fn, expression)
-	if aggregate.Fn == aggFnMedian || aggregate.Fn == aggFnP75 {
-		rendered = analyticsquery.PercentileExpr(expression, analyticsquery.AggFn(aggregate.Fn))
+	rendered := aggregateOver(aggregate.Fn, expression)
+	coverage, ok := spec.sumCoverage[aggregate.Field]
+	if !ok {
+		return rendered
 	}
-	if coverage := spec.sumCoverage[aggregate.Field]; coverage != "" && aggregate.Fn != aggFnCount {
-		return moneytotal.CompleteAggregateSQL(rendered, "sum("+coverage+")", aggregate.Fn == aggFnSum)
+	return moneytotal.CompleteAggregateSQL(rendered, "sum("+coverage+")", aggregate.Fn == aggFnSum)
+}
+
+// aggregateOver is one function over an expression. A percentile is rendered by
+// analyticsquery.PercentileExpr, which the typed query also renders it with.
+func aggregateOver(fn, expression string) string {
+	if fn == aggFnMedian || fn == aggFnP75 {
+		return analyticsquery.PercentileExpr(expression, analyticsquery.AggFn(fn))
 	}
-	return rendered
+	return fmt.Sprintf("%s(%s)", fn, expression)
 }
