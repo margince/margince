@@ -34,7 +34,6 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -53,6 +52,7 @@ import (
 var scrubTombstoneWriters = map[string]bool{
 	// Carries the verb itself; every call is a scrub.
 	"tombstoneCollateralScrubs": true,
+	"certifyCollateralScrub":    true,
 	// Generic audit doors, which are scrub sites only when the verb they are
 	// handed is one.
 	"AuditWithEvidence": true,
@@ -67,6 +67,16 @@ var scrubTombstoneWriters = map[string]bool{
 // comment. Adding it here is a product decision about frozen weekly reviews, not
 // a test fix.
 var scrubbedEntityTypes = map[string]bool{
+	// These records have no restore endpoint. Their audit readers stop at erasure;
+	// weekly deal reconstruction reads none of their images.
+	"data_subject_request":   true,
+	"deal_room_comment":      true,
+	"dedupe_candidate":       true,
+	"intro_request":          true,
+	"weekly_plan_commitment": true,
+	// Approval verdicts remain in their row and audit verb. Erased proposal images
+	// end at this boundary; deal reconstruction never reads approval images.
+	"approval":              true,
 	"contact":               true,
 	"lead":                  true,
 	"activity":              true,
@@ -145,7 +155,7 @@ func scrubbedTypesInPrivacy(t *testing.T) (map[string]bool, []string) {
 	var opaque []string
 	dir := filepath.Join(gatekit.ModuleRoot(t), "internal", "modules", "privacy")
 	fset := gatekit.SourceFileSet()
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading the privacy module: %v", err)
 	}
@@ -161,7 +171,7 @@ func scrubbedTypesInPrivacy(t *testing.T) (map[string]bool, []string) {
 		var insideCollateralWriter bool
 		ast.Inspect(file, func(n ast.Node) bool {
 			if fn, ok := n.(*ast.FuncDecl); ok {
-				insideCollateralWriter = fn.Name.Name == "tombstoneCollateralScrubs"
+				insideCollateralWriter = fn.Name.Name == "tombstoneCollateralScrubs" || fn.Name.Name == "certifyCollateralScrub"
 				return true
 			}
 			call, ok := n.(*ast.CallExpr)
@@ -254,7 +264,7 @@ func isScrubTombstoneCall(call *ast.CallExpr) bool {
 	if !scrubTombstoneWriters[name] {
 		return false
 	}
-	if name == "tombstoneCollateralScrubs" {
+	if name == "tombstoneCollateralScrubs" || name == "certifyCollateralScrub" {
 		return true
 	}
 	for _, arg := range call.Args {

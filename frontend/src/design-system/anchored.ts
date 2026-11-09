@@ -27,13 +27,13 @@ export function useAnchoredToTrigger(
   open: boolean,
   trigger: RefObject<HTMLElement | null>,
   panel: RefObject<HTMLElement | null>,
-  // Which of the trigger's edges the panel lines up with. A menu hangs off the
-  // END of its button, which is a small mark at a known place. A panel opened
-  // by a SENTENCE cannot: the sentence runs the width of the row, so its end
-  // is somewhere off at the margin and the panel arrives detached from the
-  // words that opened it. Those triggers ask for "start" and the panel begins
-  // where the reading does.
-  align: "start" | "end" = "end",
+  // A menu hangs off the END of its small button. A sentence's end is off at
+  // the margin, so a panel it opens asks for "start", where the reading does.
+  // A pill centred under what it edits asks for "center".
+  align: "start" | "end" | "center" = "end",
+  // A card the panel stays inside sideways. Up and down it keeps to the window
+  // alone: a popover may hang below its card, as a menu does.
+  within?: RefObject<HTMLElement | null> | null,
 ): { top: number; left: number; maxHeight: number } {
   const [at, setAt] = useState({ top: 0, left: 0, maxHeight: 0 });
   useEffect(() => {
@@ -46,11 +46,21 @@ export function useAnchoredToTrigger(
         return;
       }
       const width = panel.current?.offsetWidth ?? 0;
-      const room = globalThis.innerWidth - width - MENU_EDGE_GAP;
-      const wanted = align === "start" ? anchor.left : anchor.right - width;
+      const card = within?.current?.getBoundingClientRect();
+      const floor = Math.max(MENU_EDGE_GAP, card?.left ?? 0);
+      const room =
+        Math.min(
+          globalThis.innerWidth - MENU_EDGE_GAP,
+          card?.right ?? Infinity,
+        ) - width;
+      const wanted = {
+        start: anchor.left,
+        end: anchor.right - width,
+        center: anchor.left + (anchor.width - width) / 2,
+      }[align];
       setAt({
         ...verticalPlacement(anchor, wantedHeight(panel.current)),
-        left: Math.max(MENU_EDGE_GAP, Math.min(wanted, room)),
+        left: Math.max(floor, Math.min(wanted, room)),
       });
     };
     place();
@@ -85,7 +95,7 @@ export function useAnchoredToTrigger(
       globalThis.removeEventListener("resize", place);
       globalThis.removeEventListener("scroll", place, true);
     };
-  }, [open, trigger, panel, align]);
+  }, [open, trigger, panel, align, within]);
   return at;
 }
 

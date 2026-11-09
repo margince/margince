@@ -67,15 +67,15 @@ func (p *closesUnderneath) Read(context.Context, datasource.EntityRef) (datasour
 	return rec, nil
 }
 
-func (p *closesUnderneath) AdvanceDeal(_ context.Context, in datasource.AdvanceDealInput) (datasource.EntityRef, error) {
+func (p *closesUnderneath) AdvanceDeal(_ context.Context, in datasource.AdvanceDealInput) (datasource.AdvanceDealResult, error) {
 	p.gotIfVersion = in.IfVersion
 	if in.IfVersion != nil && *in.IfVersion != p.version {
 		// The store's own answer: Patch.ApplyGuarded refuses a write whose
 		// pinned version is not the row's.
-		return datasource.EntityRef{}, apperrors.ErrVersionSkew
+		return datasource.AdvanceDealResult{}, apperrors.ErrVersionSkew
 	}
 	p.wrote = true
-	return datasource.EntityRef{Type: datasource.EntityDeal, ID: in.DealID}, nil
+	return datasource.AdvanceDealResult{Ref: datasource.EntityRef{Type: datasource.EntityDeal, ID: in.DealID}}, nil
 }
 
 // agentInvoking is a full-seat agent principal with the scope a deal move

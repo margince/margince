@@ -8,7 +8,7 @@ import { StoryProviders } from "../../testing/story-utils";
 import { ReviewTemplateEditor } from "./reviewtemplateeditor";
 
 const meta: Meta<typeof ReviewTemplateEditor> = {
-  title: "Settings/Sales/Outcome reviews/Edit questions",
+  title: "Settings/Sales/Deals/Edit questions",
   component: ReviewTemplateEditor,
   decorators: [
     (Story) => (

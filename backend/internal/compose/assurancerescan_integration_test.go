@@ -70,12 +70,17 @@ func (e *freshnessEnv) queuedRescans(t *testing.T) int {
 func TestAOneDealPassCannotClearAnotherDealsFindings(t *testing.T) {
 	e := setupFreshness(t)
 	if _, err := e.Deals.UpdateDeal(e.Admin(), ids.From[ids.DealKind](e.healthy), deals.UpdateDealInput{
-		ForecastCategory: new("commit"),
+		WinProbability: new(95),
 	}); err != nil {
 		t.Fatalf("committing the other deal with no next step: %v", err)
 	}
 	if err := e.run(t); err != nil {
 		t.Fatalf("the pass over every deal: %v", err)
+	}
+	// The worker creates follow-up tasks after scanning; read those inputs
+	// before checking which later deal edits the one-deal pass clears.
+	if err := e.scan(t); err != nil {
+		t.Fatalf("reading the follow-up work: %v", err)
 	}
 	before := e.findingsOf(t, e.healthy)
 	if len(before) == 0 || len(e.findingsOf(t, e.faulted)) == 0 {

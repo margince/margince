@@ -27,6 +27,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // gitIgnored reports whether the repo declares this path as generated rather
@@ -57,7 +59,7 @@ func TestEveryConfigPathAMakefileNamesExists(t *testing.T) {
 	makefiles := []string{"Makefile", "../Makefile"}
 	checked := 0
 	for _, mk := range makefiles {
-		raw, err := os.ReadFile(mk)
+		raw, err := gatekit.ReadFile(mk)
 		if err != nil {
 			t.Fatalf("read %s: %v", mk, err)
 		}

@@ -50,7 +50,7 @@ type accountCoverage struct {
 // A reader without the activity grant gets the single-threaded view alone,
 // and the answer says so rather than counting the other two as zero.
 func (s accountCoverage) Read(ctx context.Context, params crmcontracts.GetAccountCoverageParams) (crmcontracts.AccountCoverage, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.AccountCoverage{}, err
 	}
 	for _, object := range []string{tableDeal, "company"} {

@@ -135,7 +135,7 @@ func (t queryWorkspace) Spec() mcp.ToolSpec {
 		// and the live column catalog — a second copy of it in this schema
 		// would be a hand-maintained list of exactly the thing that is derived,
 		// and it would go stale the first time a workspace added a field.
-		InputSchema: schema(`{"type":"object","required":["plan"],"properties":{
+		InputSchema: schema(`{"type":"object","required":["plan"],"properties":{` + compactRecordsProperty + `
 			"plan":{"type":"object","description":"A query plan, in the grammar published at margince://schema/query. That document, not this description, holds the record types, fields, operators and relationships this workspace admits: a name outside it is refused by name, never guessed at."}},
 			"additionalProperties":false}`),
 		UnkeyedArguments: map[string]string{
@@ -158,7 +158,8 @@ func (t queryWorkspace) CoverageClasses() []string {
 
 func (t queryWorkspace) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args struct {
-		Plan json.RawMessage `json:"plan"`
+		Plan    json.RawMessage `json:"plan"`
+		Compact bool            `json:"compact"`
 	}
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
@@ -184,6 +185,13 @@ func (t queryWorkspace) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 	result, err := t.hydrate(ctx, answer)
 	if err != nil {
 		return nil, err
+	}
+	if args.Compact {
+		for i := range result.Rows {
+			if err := compactActivityRecord(&result.Rows[i].Record); err != nil {
+				return nil, err
+			}
+		}
 	}
 	return json.Marshal(result)
 }

@@ -13,13 +13,12 @@ tree, with no add-ons of its own, ships three units:
 | `extensions/vn` | The Vietnamese jurisdiction pack: the advertising-mail rules, and no retention floor |
 | `extensions/openchannel` | The reference unit. It uses every capability the tier has: its own tables, governed agent tools, an inbound edge with no sign-in that checks a signature, a job that empties a queue, a subscription, ingress with a merge key, a transport it carries replies out on, and its own screen |
 
-Read this page for the whole tier first and then each part. To *build* a unit, go to
-[how-to/add-an-extension.md](../how-to/add-an-extension.md).
+Read this page for the whole tier. To *build* a unit, go to [how-to/add-an-extension.md](../how-to/add-an-extension.md).
 
 ## The whole tier in one map
 
 ```text
-extensions/<name>/                 one Go module per unit — its PRESENCE is the enablement
+extensions/<name>/                 one Go module per unit, on when instance/go.mod requires it
    │  New() extension.Extension     an inert declaration: plain data, no handle into the core
    ▼
 make composition ─▶ build/composition/     generated wiring (ignored); an empty extensions/
@@ -67,9 +66,9 @@ fails.
 
 Four rules hold the tier together:
 
-1. **Being there is what turns it on.** A unit is enabled because its folder exists under `extensions/`.
-   There is no flag, no config list and no registry file to add a line to. The set that is turned on is a
-   fact about the tree, so it cannot fall out of date.
+1. **A `require` is what turns it on.** A unit is enabled because the instance's `go.mod` requires it:
+   `instance/go.mod` here, or a client's own. The same file marks example units.
+   [Build a custom Margince](../how-to/build-a-custom-margince.md) states when they join a build.
 2. **A declaration is plain data that does nothing.** `New()` returns a plain value with no handle into
    the running server, and it registers nothing itself. Only the check and apply step at boot does
    anything, after the whole set has passed its checks. Nothing is wired through the declaration, so a
@@ -123,6 +122,7 @@ already exists:
 | `OAuthApps` | Vendors whose sign-in the core runs for an admin. The core keeps the tokens and gives the unit a live access token through `Runtime.OAuthAccessToken` |
 | `Migrations` | The SQL schema layer the unit owns, built into the binary instead of read from the tree |
 | `Entries` | Buttons on core screens that open the unit's screen. The unit names a slot, a label key, an icon and an RBAC object, and the core draws and places the button |
+| `Instrumentation` | Watches the whole process: the root log handler, every request, each job and extension delivery, and each panic the core catches. In the browser it sees errors and screen changes. It may serve an edge with no sign-in at `/v1/public/instrument/<unit>/`. It names no vendor. The core logs and skips a `Start` that fails or panics, and a hook that panics. A `Start` that never returns still holds up boot, and an `HTTP` wrapper that panics fails that request |
 
 `Channels` and `Ingress` are separate fields, and neither one means the other. A unit may capture from a
 provider it cannot send on, and the channel declaration says which.
@@ -196,9 +196,8 @@ fields of the tool (id, operation, scopes, tier) and its digest. Declaring a too
 the manifest. Whether the tool is also *served* depends on whether the declaration carries a handler (see
 below). Policy that an extension only supplies asks for no risk tier and does not show.
 
-A jurisdiction pack exposes no governed operation (the core reads its policy at boot; the pack never does
-anything) and asks for no tier. So a unit with only a jurisdiction pack, such as `de`, carries an empty
-list of risk tiers, with nothing to approve.
+A jurisdiction pack exposes no governed operation. The core reads its policy at boot, and the pack never
+does anything. So a unit with only a pack, such as `de`, carries no risk tier and has nothing to approve.
 
 Beyond the risk tiers, the manifest records what a unit **reaches**. An operator can then read how far
 the harm could go before turning the unit on:
@@ -213,6 +212,7 @@ the harm could go before turning the unit on:
 | `finance_sources` | `FinanceSources` | Which accounting systems it reads |
 | `entries` | `Entries` | Which core screens offer a way into the unit, and the object a reader needs `read` on to see it |
 | `oauth_apps` | `OAuthApps` | Which vendors an admin is sent to, the scopes asked for, and the token URL that receives the client secret |
+| `instrumentation` | `Instrumentation` | Which of its three parts the unit has: `start` (a backend part), `browser` (the named export the SPA calls) and `edge` (a session-less path under `/v1/public/instrument/<unit>/`) |
 
 The `extension.Extension` value the unit returns, and every field the manifest derives, must be written
 out in full in the source. A field the generate step does not know fails it, with the place in the file.
@@ -470,8 +470,8 @@ checked against the full budget for names, so a name a unit takes today stays go
 
 - **Its own frontend**: a `frontend/` folder whose screen is linked into the SPA. The SPA shows it at the
   route of the unit. To remove a unit takes one step: delete the unit folder. An import gate
-  (`frontend/scripts/ext-imports.test.ts`) holds a unit screen to the public surface, the same way the Go
-  mark gate holds its handlers.
+  (`frontend/census/rules/ext-imports.census.ts`) holds a unit screen to the public surface, the same way
+  the Go mark gate holds its handlers. Its rules are in `frontend/scripts/ext-imports.test.ts`.
 
 **The npm dependencies of a unit.** A unit frontend may declare npm dependencies of its own. They resolve
 in the generated workspace under `build/composition-frontend/workspace/`. `gen-composition` writes that
@@ -557,9 +557,9 @@ The fitness tests and `scripts/` checks guard the tier, so the promises cannot d
 | A declaration the composer cannot follow is refused instead of dropped: an unknown job role, governed fields declared on the wrong one of two parts, a `$ref` in a schema it shows, a core contract with more than one document | `backend/tools/gen-composition` |
 | Every declared extension operation is served, and every route the server serves was declared | `backend/internal/compose/extparity_test.go` |
 | Only the route of a unit sends a call to its served tool, so one unit cannot take the handler of another by naming its verb | `backend/internal/compose/extparity_test.go` |
-| A unit screen reaches the core only through the public surface (the `exports` in `frontend/package.json`), and npm only through what its own package declares | `frontend/scripts/ext-imports.test.ts`, a vitest fitness function over the TypeScript AST, with its own set of fixture tests |
+| A unit screen reaches the core only through the public surface (the `exports` in `frontend/package.json`), and npm only through what its own package declares | `frontend/census/rules/ext-imports.census.ts`, a census over the TypeScript AST, with fixture tests in `frontend/scripts/ext-imports.test.ts` |
 | A unit screen keeps to the same design system as core: tokens, the font, each icon, spacing | These gates scan `extensions/*/frontend` and also `frontend/src`: `check-ds-purity.sh`, `check-font-lock.sh`, `check-icon-glyph.sh`, `check-space-tokens.sh`, `check-ds-spacing-roles.sh` and `check-ds-spacing.sh` (the last one scoped to the change, through git paths instead of a walk). `check-ext-frontend-walk.test.sh` holds that they all still reach the tier. It puts a known fault in a fixture unit at two levels and requires each gate to name it. It reads its list of subjects out of the `fe-ds-gates` target, so no gate is added to the lane without being read. It names the two gates it cannot measure, with the reason: its fixture files are `*.tsx`, and the spacing gates read CSS files. `check-ds-spacing-roles.test.sh` puts unit CSS files at both levels instead |
-| …and uses no plain `<select>` and no date input of the browser's own | `frontend/src/design-system/native-controls.test.ts`, a vitest fitness function over the TypeScript AST, that reaches every extension frontend layer at any level |
+| …and uses no plain `<select>` and no date input of the browser's own | `frontend/census/rules/native-controls.census.ts`, a census rule over the TypeScript AST in `make fe-census`, that reaches every extension frontend layer at any level |
 | A unit cannot ship a second copy of state the host owns (the hook dispatcher of React, the `QueryClient` of `react-query`) | `gen-composition` refuses them as direct dependencies; `resolve.dedupe` catches one that comes in through another package |
 | The copy of a unit sits in the namespace of that unit and cannot change a core string | `gen-composition` (`mergeUnitLocales`), and core keys win the lookup |
 | The tests of a unit screen run, not only the type check | `frontend/vitest.ext.config.ts` through `make fe-test-ext`, which `make check-fe` calls |

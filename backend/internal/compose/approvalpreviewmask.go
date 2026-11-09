@@ -35,7 +35,7 @@ var previewDetailSources = map[string][]string{
 // previewAddressDetails repeat an email address, so a mask on a contact's or a
 // lead's email reaches them.
 var previewAddressDetails = []string{
-	"to", "cc", "bcc", "intended_attendee", "confirmation_recipient", "relink_participant_address",
+	"to", "cc", "bcc", "intended_attendee", previewHostNamedAttendee, "confirmation_recipient", "relink_participant_address",
 	"merge_participant_address", "merge_confirmation", "merge_draft_to", "merge_draft_cc", "merge_draft_bcc",
 	"promotion_withdrawal_address",
 }
@@ -89,18 +89,28 @@ func maskForViewer(ctx context.Context, approval crmcontracts.Approval, preview 
 }
 
 // viewerMaskedFields collects the fields the viewer's role masks on the target
-// and on the objects the preview read. Only the target, which the viewer may decide,
-// lifts a mask conditioned on write authority.
+// and on the objects the preview read.
 func viewerMaskedFields(viewer principal.Principal, approval crmcontracts.Approval, preview *crmcontracts.ApprovalPreview, touched *previewTouched) []string {
-	var masked []string
-	target := ""
-	if approval.TargetEntityType != nil {
-		target = *approval.TargetEntityType
-		masked = auth.MaskedFields(viewer, target, true)
-	}
+	return maskedFieldsFor(viewer, approvalTargetType(approval), true, previewMaskObjects(approval, previewReferences(approval, preview, touched)))
+}
+
+// previewMaskObjects names the objects whose masks reach a plan: those of the
+// records it refers to, and those its kind repeats before a record exists.
+func previewMaskObjects(approval crmcontracts.Approval, refs *previewTouched) []string {
 	objects := slices.Clone(previewMaskedObjects[approval.Kind])
-	for object := range previewReferences(approval, preview, touched).byType {
+	for object := range refs.byType {
 		objects = append(objects, object)
+	}
+	return objects
+}
+
+// maskedFieldsFor collects the fields the viewer's role masks on target and on
+// objects. Only the target lifts a mask conditioned on write authority, and
+// only when targetWritable says the viewer still holds it.
+func maskedFieldsFor(viewer principal.Principal, target string, targetWritable bool, objects []string) []string {
+	var masked []string
+	if target != "" {
+		masked = auth.MaskedFields(viewer, target, targetWritable)
 	}
 	for _, object := range objects {
 		if object != target {
@@ -113,6 +123,13 @@ func viewerMaskedFields(viewer principal.Principal, approval crmcontracts.Approv
 		}
 	}
 	return masked
+}
+
+func approvalTargetType(approval crmcontracts.Approval) string {
+	if approval.TargetEntityType == nil {
+		return ""
+	}
+	return *approval.TargetEntityType
 }
 
 // maskChanges and maskDetails tell the approvals service each value they
@@ -129,17 +146,48 @@ func maskChanges(ctx context.Context, changes []crmcontracts.ApprovalPreviewChan
 
 func maskDetails(ctx context.Context, details []crmcontracts.ApprovalPreviewDetail, masked []string) {
 	isMasked := func(field string) bool { return slices.Contains(masked, field) }
-	named := namedFieldGroups(details)
-	for i := range details {
-		sources := append([]string{details[i].Field}, previewDetailSources[details[i].Field]...)
-		if named[i] != "" {
-			sources = append(sources, named[i])
-		}
+	for i, sources := range detailFieldNames(details) {
 		if slices.ContainsFunc(sources, isMasked) {
 			approvals.RecordMasked(ctx)
 			details[i].Value = crmcontracts.ApprovalPreviewValue{Kind: previewValueUnavailable}
 		}
 	}
+}
+
+// detailFieldNames answers, by position, every field name a detail repeats:
+// its own, the record fields it copies, and the one its namer says it carries.
+func detailFieldNames(details []crmcontracts.ApprovalPreviewDetail) [][]string {
+	named := namedFieldGroups(details)
+	out := make([][]string, len(details))
+	for i := range details {
+		sources := append([]string{details[i].Field}, previewDetailSources[details[i].Field]...)
+		if named[i] != "" {
+			sources = append(sources, named[i])
+		}
+		out[i] = sources
+	}
+	return out
+}
+
+// previewFieldNames lists, once each, every field name the mask checks compare
+// in a plan's own changes and details.
+func previewFieldNames(preview *crmcontracts.ApprovalPreview) []string {
+	var fields []string
+	add := func(changes []crmcontracts.ApprovalPreviewChange, details []crmcontracts.ApprovalPreviewDetail) {
+		for i := range changes {
+			fields = append(fields, changes[i].Field)
+		}
+		for _, sources := range detailFieldNames(details) {
+			fields = append(fields, sources...)
+		}
+	}
+	var details []crmcontracts.ApprovalPreviewDetail
+	if preview.Details != nil {
+		details = *preview.Details
+	}
+	add(preview.Changes, details)
+	slices.Sort(fields)
+	return slices.Compact(fields)
 }
 
 // namedFieldGroups answers, by position, the field a namer says the detail

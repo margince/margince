@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { heldThreadList } from "../../testing/heldthreads.fixtures";
 import { linkedInReachFixture } from "../../testing/reachfixture";
 import {
   installFetchStub,
@@ -11,6 +12,7 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
+import { SenderCorrections } from "./capture-sendercorrections";
 import { ConnectionOutcomesCard } from "./connection-outcomes";
 
 // The senders drawer, in the three states a reader tells apart at a glance: a
@@ -136,19 +138,23 @@ const OVERRULED: SenderDecision[] = [
   ...EVERY_KIND.slice(0, 2),
 ];
 
-function story(rows: SenderDecision[], waiting: AwaitingContact[] = []) {
+function story(
+  rows: SenderDecision[],
+  waiting: AwaitingContact[] = [],
+  corrections = false,
+) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({}),
       "GET /capture/senders": () => jsonResponse({ data: rows }),
       "GET /capture/contacts-awaiting-decision": () =>
         jsonResponse({ data: waiting }),
-      "GET /capture/held-threads": () => jsonResponse({ data: [] }),
+      "GET /capture/held-threads": () => jsonResponse(heldThreadList()),
       "GET /me/linkedin-reach": () => jsonResponse(linkedInReachFixture()),
     });
     return (
       <StoryProviders>
-        <ConnectionOutcomesCard />
+        {corrections ? <SenderCorrections /> : <ConnectionOutcomesCard />}
       </StoryProviders>
     );
   };
@@ -159,21 +165,25 @@ async function openList(canvasElement: HTMLElement, name: string) {
   await userEvent.click(
     await within(canvasElement).findByRole("button", { name: `View ${name}` }),
   );
-  return within(
-    await within(canvasElement.ownerDocument.body).findByRole("dialog", {
-      name,
-    }),
+  const dialog = await within(canvasElement.ownerDocument.body).findByRole(
+    "dialog",
+    { name },
   );
+  if (name === "Sender decisions")
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Browse recent senders" }),
+    );
+  return within(dialog);
 }
 
 const openSenders = async ({
   canvasElement,
 }: Readonly<{ canvasElement: HTMLElement }>) => {
-  await openList(canvasElement, "Senders");
+  await openList(canvasElement, "Sender decisions");
 };
 
 const meta = {
-  title: "Settings/You/Capture activity/Senders",
+  title: "Settings/You/Connections/Senders",
   component: ConnectionOutcomesCard,
 } satisfies Meta<typeof ConnectionOutcomesCard>;
 export default meta;
@@ -197,12 +207,12 @@ export const LastSeenOnADay: Story = {
     },
   ]),
   play: async ({ canvasElement }) => {
-    const list = await openList(canvasElement, "Senders");
+    const list = await openList(canvasElement, "Sender decisions");
     await list.findByText("jana@commercetools.com");
     const drawer = within(canvasElement.ownerDocument.body).getByRole(
       "dialog",
       {
-        name: "Senders",
+        name: "Sender decisions",
       },
     );
     await expect(drawer.textContent).not.toMatch(/\d:\d\d/);
@@ -250,7 +260,7 @@ export const WaitingOnDecision: Story = {
 export const RowMenu: Story = {
   render: story(OVERRULED),
   play: async ({ canvasElement }) => {
-    const drawer = await openList(canvasElement, "Senders");
+    const drawer = await openList(canvasElement, "Sender decisions");
     await userEvent.click(
       drawer.getByRole("button", { name: "Actions for news@substack.com" }),
     );
@@ -269,4 +279,15 @@ export const EveryKindPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   play: openSenders,
+};
+
+export const SearchCorrections: Story = {
+  render: story(EVERY_KIND, [], true),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(canvas.getByRole("searchbox"), "jana");
+    await expect(
+      await canvas.findByText("jana@commercetools.com"),
+    ).toBeVisible();
+  },
 };

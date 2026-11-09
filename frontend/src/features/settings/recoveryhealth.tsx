@@ -9,12 +9,12 @@ import { type Fact, FactList } from "../../design-system/factlist";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { StatusBadge, type StatusKind } from "../../design-system/statusbadge";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
 import { useHealthScope, useHealthVisible } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { HealthCard } from "./healthcard";
 
 // GET /admin/recovery-health: when the restore procedure was last rehearsed,
@@ -233,7 +233,7 @@ export function useRecoveryHealth() {
 
 export function RecoveryHealthCard() {
   const t = useT();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const { canSee, query } = useRecoveryHealth();
 
   return (

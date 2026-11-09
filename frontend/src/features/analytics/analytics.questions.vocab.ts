@@ -11,9 +11,10 @@
 
 import type { components } from "../../api/schema";
 import type { Reference } from "../../components/filterreference";
-import { formatNumber } from "../../format/format";
+import { formatAnalyticsNumber } from "../../format/format";
 import { isMessageKey, type useT, type Words } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { problemDetails } from "../../lib/problembody";
 import type { FilterOp } from "../../lib/segmentpredicate";
 
@@ -185,8 +186,8 @@ export function coverageLines(
       ? [
           plural("analytics.q.fieldCoverage", field.records, {
             label: customFieldLabel(t, field),
-            held: formatNumber(field.with_value, locale),
-            count: formatNumber(field.records, locale),
+            held: formatAnalyticsNumber(field.with_value, locale),
+            count: formatAnalyticsNumber(field.records, locale),
           }),
         ]
       : [];
@@ -218,11 +219,11 @@ export function analyticsFieldLabel(
 }
 
 export function fnLabel(t: Translate, fn: MeasureFn): string {
-  return t(FN_LABEL_KEY[fn]);
+  return t(labelFor(FN_LABEL_KEY, fn));
 }
 
 export function opLabel(t: Translate, op: QuestionOp): string {
-  return t(OP_LABEL_KEY[op]);
+  return t(labelFor(OP_LABEL_KEY, op));
 }
 
 // Summing a stage name means nothing, so these four take a measure; counting

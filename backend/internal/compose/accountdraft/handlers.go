@@ -77,7 +77,7 @@ func requestFrom(body crmcontracts.DraftCompanyEmailJSONRequestBody) (Request, e
 		project := ids.From[ids.ProjectKind](ids.UUID(*body.ProjectId))
 		req.ProjectID = &project
 	}
-	steering := draftfloor.NewSteering(body.Intent, body.RewriteOf)
-	req.Intent, req.RewriteOf = steering.Intent, steering.RewriteOf
+	steering := draftfloor.NewSteering(body.Intent, body.RewriteOf, body.Subject)
+	req.Intent, req.RewriteOf, req.Subject = steering.Intent, steering.RewriteOf, steering.Subject
 	return req, nil
 }

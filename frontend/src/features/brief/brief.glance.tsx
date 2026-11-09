@@ -13,10 +13,9 @@ import {
   formatTimeOfDay,
   hourInZone,
 } from "../../format/format";
-import { startOfDayInZone, viewerZone } from "../../format/timezone";
+import { startOfDayInZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { useRecordZone } from "../../lib/recordzone";
 import type { Worklist } from "../worklist/worklist.queries";
 import type { WeeklyReview } from "./brief.queries";
 import { type BriefSentence, briefSentence } from "./brief.sentence";
@@ -24,6 +23,8 @@ import type { BriefView } from "./brief.view";
 import { weekSentence } from "./brief.weeksentence";
 
 import "./brief.css";
+import { useCompanyZone } from "../../lib/companyzone";
+import { useViewerZone } from "../../lib/viewerzone";
 
 // Four greetings, and the boundaries are the reader's day rather than the
 // clock's quarters: work starts before noon, the afternoon runs to the end of
@@ -135,14 +136,17 @@ function GlanceWhen({
   now,
   week,
 }: Readonly<{ view: BriefView; now: Date; week: GlanceFacts["week"] }>) {
+  const readerZone = useViewerZone();
+  // Home's contents are the server's day, bucketed on the company's clock
+  // (B1), so the day it is labelled with is that day.
+  const companyZone = useCompanyZone();
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
   if (view === "morning") {
     const date = now.toISOString();
     return (
       <p className="glance-date">
-        <time dateTime={date}>{formatDayLong(date, locale, viewerZone())}</time>
+        <time dateTime={date}>{formatDayLong(date, locale, companyZone)}</time>
       </p>
     );
   }
@@ -150,7 +154,7 @@ function GlanceWhen({
   return (
     <p className="glance-frozen">
       {t("brief.report.frozenAt", {
-        at: formatDateTime(week.generated_at, locale, recordZone),
+        at: formatDateTime(week.generated_at, locale, readerZone),
       })}
     </p>
   );
@@ -163,7 +167,8 @@ function GlanceWhen({
 function WeekTitle({ weekStart }: Readonly<{ weekStart: string | undefined }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  // The week is the server's, bucketed on the company's clock.
+  const companyZone = useCompanyZone();
   return (
     <>
       <span className="glance-greeting-lead">
@@ -180,9 +185,9 @@ function WeekTitle({ weekStart }: Readonly<{ weekStart: string | undefined }>) {
         {weekStart
           ? formatDayRange(
               weekStart,
-              startOfDayInZone(weekStart, recordZone, 6),
+              startOfDayInZone(weekStart, companyZone, 6),
               locale,
-              recordZone,
+              companyZone,
             )
           : t("brief.panel.weekly")}
       </span>
@@ -201,43 +206,46 @@ export function BriefGlance({
   controls,
   titleAside,
 }: GlanceProps) {
+  const readerZone = useViewerZone();
   const t = useT();
-  const hour = hourInZone(now, viewerZone());
+  const hour = hourInZone(now, readerZone);
   const { locale } = useLocale();
   const sentence = glanceSentence({ view, day, week }, t, locale);
+  // Small facts over the title, the title, then the day in one sentence; the
+  // view's dial stands at the end of the head.
   return (
     <header className="glance arrive" data-testid="brief-glance">
-      <div className="glance-title">
-        <Heading size="large" as="h1" className="glance-greeting">
-          {view === "weekly" ? (
-            <WeekTitle weekStart={week?.local_week_start} />
-          ) : (
-            <Greeting
-              text={greetingText(firstName, hour, t)}
-              firstName={firstName}
-            />
-          )}
-        </Heading>
-        {titleAside}
-      </div>
-      <div className="glance-row">
-        <div className="glance-facts">
+      <div className="glance-head">
+        <div className="glance-facts t-caption">
           <GlanceWhen view={view} now={now} week={week} />
-          {!narratedWeek(view, week) && (
-            <GlanceOpening view={view} sentence={sentence} pending={pending} />
-          )}
           {briefedAt && (
             <p>
               <Badge tone="ai">
                 {t("brief.briefedAt", {
-                  time: formatTimeOfDay(briefedAt, locale, viewerZone()),
+                  time: formatTimeOfDay(briefedAt, locale, readerZone),
                 })}
               </Badge>
             </p>
           )}
         </div>
-        {controls}
+        <div className="glance-title">
+          <Heading size="large" as="h1" className="glance-greeting">
+            {view === "weekly" ? (
+              <WeekTitle weekStart={week?.local_week_start} />
+            ) : (
+              <Greeting
+                text={greetingText(firstName, hour, t)}
+                firstName={firstName}
+              />
+            )}
+          </Heading>
+          {titleAside}
+        </div>
+        {!narratedWeek(view, week) && (
+          <GlanceOpening view={view} sentence={sentence} pending={pending} />
+        )}
       </div>
+      {controls}
     </header>
   );
 }

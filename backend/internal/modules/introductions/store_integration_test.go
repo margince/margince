@@ -894,3 +894,48 @@ func TestSuggestingSomebodyElseNamesAThirdColleague(t *testing.T) {
 		t.Errorf("naming a third colleague was refused: %v", err)
 	}
 }
+
+// An agent's note never reads as typed by a person, whatever the call says.
+// A user's unstated note stays theirs.
+func TestAnAgentsAskRecordsItsNoteAsModelProse(t *testing.T) {
+	human := func(e *introEnv) context.Context { return e.asUser(e.requester) }
+	agent := func(e *introEnv) context.Context {
+		ctx := e.asUser(e.requester)
+		p, ok := principal.Actor(ctx)
+		if !ok {
+			t.Fatal("no actor")
+		}
+		p.Type, p.ID, p.PassportID, p.OnBehalfOf = principal.PrincipalAgent, "agent:"+ids.NewV7().String(), ids.NewV7(), p.UserID
+		return principal.WithActor(ctx, p)
+	}
+	for name, tc := range map[string]struct {
+		as       func(*introEnv) context.Context
+		stated   string
+		wantBy   string
+		wantByAI bool
+	}{
+		"a user states nothing":         {human, "", "human", false},
+		"an agent states nothing":       {agent, "", "model", true},
+		"an agent claims a user":        {agent, "human", "model", true},
+		"an agent states deterministic": {agent, "deterministic", "deterministic", false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := setupIntro(t)
+			req := e.ask()
+			req.NoteGeneratedBy = tc.stated
+			id, err := e.store.Create(tc.as(e), req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var by string
+			var byAI bool
+			if err := e.owner.QueryRow(context.Background(),
+				`SELECT note_generated_by, note_ai_generated FROM intro_request WHERE id = $1`, id).Scan(&by, &byAI); err != nil {
+				t.Fatal(err)
+			}
+			if by != tc.wantBy || byAI != tc.wantByAI {
+				t.Errorf("note_generated_by = %q, note_ai_generated = %t, want %q and %t", by, byAI, tc.wantBy, tc.wantByAI)
+			}
+		})
+	}
+}

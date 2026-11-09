@@ -58,7 +58,9 @@ type Service struct {
 	// generic edit scope pins entity references, so a field that matters and is
 	// not shaped like a uuid — an address, a declared purpose — has nowhere
 	// else to be defended.
-	prechecks map[string]ReleasePrecheck
+	prechecks      map[string]ReleasePrecheck
+	stagePrechecks map[string]StagePrecheck
+	stageAdmission StagePrecheck
 	// declines are the mirror of effects: what runs when a human says NO.
 	//
 	// Most kinds need nothing here, because rejecting a PROPOSAL is simply not
@@ -88,6 +90,8 @@ type Service struct {
 	contextPins map[string]ContextPin
 	// effectActor is who an agent's proposal runs as (effectactor.go).
 	effectActor EffectActor
+	// planSight checks a reader against what a plan no longer pending touched.
+	planSight PlanSight
 }
 
 const (
@@ -155,10 +159,11 @@ type ExpiredEffect func(ctx context.Context, tx pgx.Tx, approvalID ids.ApprovalI
 func NewService(db *database.DB) *Service {
 	return &Service{
 		db: db, now: time.Now,
-		effects:   map[string]ApprovedEffect{},
-		prechecks: map[string]ReleasePrecheck{},
-		declines:  map[string]DeclinedEffect{},
-		expiries:  map[string]ExpiredEffect{},
+		effects:        map[string]ApprovedEffect{},
+		prechecks:      map[string]ReleasePrecheck{},
+		stagePrechecks: map[string]StagePrecheck{},
+		declines:       map[string]DeclinedEffect{},
+		expiries:       map[string]ExpiredEffect{},
 
 		contextPins: map[string]ContextPin{},
 	}

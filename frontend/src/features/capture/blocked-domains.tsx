@@ -17,12 +17,13 @@ import { CountLine } from "../../design-system/listsurface";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { formatDate } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
+import { labelFor, valueFor } from "../../lib/labelfor";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   ADMISSION_LABEL,
   BLANK_DECISION,
@@ -58,6 +59,7 @@ const DECIDER_LABEL: Partial<Record<BlockedDomain["source"], MessageKey>> = {
   verdict: "blockedDomains.source.verdict",
   heuristic: "blockedDomains.source.heuristic",
   human: "blockedDomains.source.human",
+  agent: "blockedDomains.source.agent",
 };
 
 // Why the domain stands where it does, in the reader's language. `stated`
@@ -138,7 +140,7 @@ export function BlockedDomainsCard() {
   // time on their own wall clock, the same choice the audit trail makes — a
   // fixed installation zone would put the moment they are correlating against
   // an hour they were not working.
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const canManage = useCanWrite("company", "update");
   const query = useBlockedDomains();
   const set = useSetBlockedDomain();
@@ -239,7 +241,7 @@ export function BlockedDomainsCard() {
               // One short sentence, so the heading says all of it.
               title={t("blockedDomains.stored", {
                 domain: set.data.domain,
-                admission: t(ADMISSION_LABEL[set.data.admission]),
+                admission: t(labelFor(ADMISSION_LABEL, set.data.admission)),
               })}
             />
           )}
@@ -325,7 +327,7 @@ function decisionColumns({
         return (
           <CellStack>
             <Badge tone={admissionTone(row.admission)}>
-              {t(ADMISSION_LABEL[row.admission])}
+              {t(labelFor(ADMISSION_LABEL, row.admission))}
             </Badge>
             {reason && <span className="t-caption">{reason}</span>}
           </CellStack>
@@ -374,12 +376,12 @@ function reasonWords(row: BlockedDomain, t: ReturnType<typeof useT>): string {
     case "bulk_sender":
       return t(
         row.sender_kind
-          ? BULK_LABEL[row.sender_kind]
+          ? labelFor(BULK_LABEL, row.sender_kind)
           : "blockedDomains.reason.bulkSender",
       );
     default: {
       // An older server sends no code: its English sentence beats a blank.
-      const label = REASON_LABEL[row.reason_code];
+      const label = valueFor(REASON_LABEL, row.reason_code, undefined);
       return label ? t(label) : row.reason;
     }
   }

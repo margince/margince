@@ -15,6 +15,10 @@ import { navigate } from "./lib/router";
 import { memoryStorage, renderApp, teardownApp } from "./testing/appharness";
 import { formatFixture } from "./testing/import.fixtures";
 import { meFixture } from "./testing/mefixture";
+// The screens these cases open, loaded while the file is collected. A screen's
+// first import costs seconds; inside a case it races the case's own waiters.
+import "./App.settings";
+import "./features/settings/settings";
 
 // The run page's unsaved guard is the shell's own (App.tsx), which holds the
 // address without its query; a guard wired in the test would prove only itself.

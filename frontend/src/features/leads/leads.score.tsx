@@ -12,6 +12,7 @@ import {
 import { formatNumber, formatSignedNumber } from "../../format/format";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { originLabelFor, useLeadOrigins } from "../../lib/leadorigins";
 import { scoreFactorLabel } from "./leadpresentation";
 import type { Lead, LeadWriter } from "./leads";
@@ -94,7 +95,7 @@ function factorKind(factor: ScoreFactor, t: Translator): ReactNode {
   if (factor.signal_kind) {
     return (
       <>
-        {t(SIGNAL_KIND[factor.signal_kind])}
+        {t(labelFor(SIGNAL_KIND, factor.signal_kind))}
         {factor.set_by && (
           <>
             {" · "}

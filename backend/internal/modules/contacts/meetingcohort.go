@@ -27,6 +27,23 @@ import (
 // Held by: TestTheLinkCeilingHasOneValue (backend/gates/linkceilingparity_test.go)
 const maxMeetingLinksPerActivity = 25
 
+// attendedMeetingSQL is the predicate on activity a for a meeting
+// linkAttendedMeetings files under contact @cohort_contact.
+const attendedMeetingSQL = `a.kind = 'meeting'
+	   AND a.captured_by LIKE 'connector:%'
+	   AND a.restricted_at IS NULL
+	   AND a.archived_at IS NULL
+	   AND EXISTS (
+	       SELECT 1 FROM activity_participant ap
+	         JOIN contact att ON att.id = ap.contact_id
+	        WHERE ap.activity_id = a.id
+	          AND coalesce(att.merged_into_id, att.id) = @cohort_contact)
+	   AND NOT EXISTS (
+	       SELECT 1 FROM activity_link l
+	        WHERE l.activity_id = a.id AND l.contact_id = @cohort_contact)
+	   AND (SELECT count(*) FROM activity_link cap
+	         WHERE cap.activity_id = a.id) < @ceiling`
+
 // linkAttendedMeetings files a meeting under a contact who was IN it.
 //
 // This is the arm linkCapturedCohort cannot be. That one keys on
@@ -68,29 +85,17 @@ const maxMeetingLinksPerActivity = 25
 // NUMBER. A meeting already at the cap is left alone rather than failed: the
 // cohort scan carries this same guard, so a row this refuses is not offered
 // again on every pass, and the sweep still drains.
-func linkAttendedMeetings(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) ([]ids.UUID, error) {
+func linkAttendedMeetings(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, held []ids.UUID) ([]ids.UUID, error) {
 	rows, err := tx.Query(ctx, `
 		INSERT INTO activity_link (activity_id, entity_type, contact_id)
-		SELECT a.id, 'contact', $1
+		SELECT a.id, 'contact', @cohort_contact
 		  FROM activity a
-		 WHERE a.kind = 'meeting'
-		   AND a.captured_by LIKE 'connector:%'
-		   AND a.restricted_at IS NULL
-		   AND a.archived_at IS NULL
-		   AND EXISTS (
-		       SELECT 1 FROM activity_participant ap
-		         JOIN contact att ON att.id = ap.contact_id
-		        WHERE ap.activity_id = a.id
-		          AND coalesce(att.merged_into_id, att.id) = $1)
-		   AND NOT EXISTS (
-		       SELECT 1 FROM activity_link l
-		        WHERE l.activity_id = a.id AND l.contact_id = $1)
-		   AND (SELECT count(*) FROM activity_link cap
-		         WHERE cap.activity_id = a.id) < $3
+		 WHERE a.id = ANY(@held)
+		   AND `+attendedMeetingSQL+`
 		 ORDER BY a.occurred_at DESC, a.id
-		 LIMIT $2
+		 LIMIT @batch
 		ON CONFLICT DO NOTHING
-		RETURNING activity_id`, contactID, cohortRepairBatch, maxMeetingLinksPerActivity)
+		RETURNING activity_id`, cohortArgs(contactID, held))
 	if err != nil {
 		return nil, fmt.Errorf("contacts: filing a contact's attended meetings: %w", err)
 	}

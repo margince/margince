@@ -36,7 +36,6 @@ import (
 	"fmt"
 	"io/fs"
 	"maps"
-	"os"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -98,7 +97,7 @@ var sharedRequestBody = regexp.MustCompile(`#/components/requestBodies/`)
 // sender's reason. Those are the doors a sender's own word reaches the engine by.
 func sendDoors(t *testing.T) []string {
 	t.Helper()
-	contract, err := os.ReadFile(sendPermissionContract)
+	contract, err := gatekit.ReadFile(sendPermissionContract)
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}
@@ -285,7 +284,7 @@ func isSendSurfaceSource(rel string) bool {
 func sendSurfaceSources(t *testing.T) map[string]string {
 	t.Helper()
 	sources := map[string]string{}
-	walkErr := filepath.WalkDir(sendPermissionFrontend, func(file string, entry fs.DirEntry, err error) error {
+	walkErr := gatekit.WalkDir(sendPermissionFrontend, func(file string, entry fs.DirEntry, err error) error {
 		if err != nil || entry.IsDir() {
 			return err
 		}
@@ -297,7 +296,7 @@ func sendSurfaceSources(t *testing.T) map[string]string {
 		if !isSendSurfaceSource(rel) {
 			return nil
 		}
-		raw, readErr := os.ReadFile(file)
+		raw, readErr := gatekit.ReadFile(file)
 		if readErr != nil {
 			return readErr
 		}
@@ -328,7 +327,7 @@ func TestEverySurfaceThatSendsAsksTheEngineFirst(t *testing.T) {
 	// skip the stale-waiver report.
 	defer silentSendSurfaces.AssertAllMatched(t)
 
-	component, err := os.ReadFile(sendPermissionComponent)
+	component, err := gatekit.ReadFile(sendPermissionComponent)
 	if err != nil {
 		t.Fatalf("reading the shared component: %v", err)
 	}

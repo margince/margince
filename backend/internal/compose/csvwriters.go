@@ -17,6 +17,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
@@ -132,7 +133,7 @@ func newCSVWriters(
 			WithLeadArrivals(newLeadWorkTasks(db, slog.Default())).
 			WithInstallationRenamer(installationRenamer(db.Pool())),
 		deals:            dealsStoreOver(db),
-		activities:       activities.NewStore(db),
+		activities:       activities.NewStore(db).WithIdentityProver(capture.ProvedUnambiguouslyTx),
 		tags:             collections.NewStore(db),
 		identities:       migration.NewRunStore(db),
 		runID:            runID,

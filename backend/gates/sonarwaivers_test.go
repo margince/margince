@@ -25,11 +25,12 @@ package gates
 // moment it is committed.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // sonarWaiver is one `sonar.issue.ignore.multicriteria.<id>` entry. The id is
@@ -46,7 +47,7 @@ var sonarWaiverKey = regexp.MustCompile(
 // sonarWaivers reads the scan configuration and parses it.
 func sonarWaivers(t *testing.T) (map[string]*sonarWaiver, []string) {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join(repoRoot, "sonar-project.properties"))
+	raw, err := gatekit.ReadFile(filepath.Join(repoRoot, "sonar-project.properties"))
 	if err != nil {
 		t.Fatalf("reading the scan configuration: %v", err)
 	}

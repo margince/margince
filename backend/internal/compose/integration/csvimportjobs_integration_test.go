@@ -11,7 +11,6 @@ package integration
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -48,38 +47,9 @@ func importCall(t *testing.T, e *apptest.AppEnv, id, verb string, body, out any)
 	return status
 }
 
-// testCall posts a request that starts a test run, then works the job it
-// queued. out then holds the run as the worker left it, or the refusal.
-//
-//craft:ignore naked-any out is whichever shape the caller reads the run or the refusal into, as e.Call takes it
-func testCall(t *testing.T, e *apptest.AppEnv, path string, body, out any) int {
+func readRun(t *testing.T, e *apptest.AppEnv, id string) importjobtest.Run {
 	t.Helper()
-	var answer json.RawMessage
-	status := e.Call(t, http.MethodPost, path, body, nil, &answer)
-	if status == http.StatusAccepted {
-		var queued struct {
-			ID     string `json:"id"`
-			Status string `json:"status"`
-		}
-		if err := json.Unmarshal(answer, &queued); err != nil || queued.Status != "validating" {
-			t.Fatalf("POST %s → 202 %s (%v), want the run at validating", path, answer, err)
-		}
-		importjobtest.Drain(t, e)
-		if got := e.Call(t, http.MethodGet, "/v1/imports/"+queued.ID, nil, nil, &answer); got != http.StatusOK {
-			t.Fatalf("GET the run after its test → %d, want 200", got)
-		}
-	}
-	if out != nil && len(answer) > 0 {
-		if err := json.Unmarshal(answer, out); err != nil {
-			t.Fatalf("decoding the answer to POST %s: %v", path, err)
-		}
-	}
-	return status
-}
-
-func readRun(t *testing.T, e *apptest.AppEnv, id string) importRunDTO {
-	t.Helper()
-	var run importRunDTO
+	var run importjobtest.Run
 	if status := e.Call(t, http.MethodGet, "/v1/imports/"+id, nil, nil, &run); status != http.StatusOK {
 		t.Fatalf("GET the run → %d, want 200", status)
 	}
@@ -107,10 +77,10 @@ func storedLeads(t *testing.T, e *apptest.AppEnv) int {
 }
 
 // testedLeadRun uploads a lead file and test-runs it, ready to approve.
-func testedLeadRun(t *testing.T, e *apptest.AppEnv, csv string) importRunDTO {
+func testedLeadRun(t *testing.T, e *apptest.AppEnv, csv string) importjobtest.Run {
 	t.Helper()
-	profile, _ := uploadCSV(t, e, "lead", csv)
-	run, status := createRunWithMapping(t, e, "lead", profile.SourceRef, map[string]string{"Email": "email", "Full Name": "full_name"})
+	profile, _ := importjobtest.UploadCSV(t, e, "lead", csv)
+	run, status := importjobtest.CreateRunWithMapping(t, e, "lead", profile.SourceRef, map[string]string{"Email": "email", "Full Name": "full_name"})
 	if status != http.StatusAccepted || run.Status != "awaiting_approval" {
 		t.Fatalf("test run → %d %q, want 202 awaiting approval", status, run.Status)
 	}
@@ -120,7 +90,7 @@ func testedLeadRun(t *testing.T, e *apptest.AppEnv, csv string) importRunDTO {
 // approveQueued approves a run and leaves its commit job queued.
 func approveQueued(t *testing.T, e *apptest.AppEnv, id string) {
 	t.Helper()
-	var approved importRunDTO
+	var approved importjobtest.Run
 	if status := e.Call(t, http.MethodPost, "/v1/imports/"+id+"/approve", nil, nil, &approved); status != http.StatusAccepted || approved.Status != "running" {
 		t.Fatalf("approve → %d %q, want 202 running", status, approved.Status)
 	}
@@ -160,7 +130,7 @@ func TestUndoAnswersBeforeAnyRowIsReversed(t *testing.T) {
 	run := testedLeadRun(t, e, prospectCSV)
 	approveAndRead(t, e, run.ID)
 
-	var undoing importRunDTO
+	var undoing importjobtest.Run
 	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/undo", nil, nil, &undoing); status != http.StatusAccepted || undoing.Status != "undoing" {
 		t.Fatalf("undo → %d %q, want 202 undoing", status, undoing.Status)
 	}
@@ -175,8 +145,8 @@ func TestUndoAnswersBeforeAnyRowIsReversed(t *testing.T) {
 
 func TestTagsAreCreatedOnlyByTheCommitJob(t *testing.T) {
 	e := setupImportApp(t)
-	profile, _ := uploadCSV(t, e, "company", "Name,Tags\nTagged Jobs GmbH,Fresh\n")
-	run, _ := createRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "Tags": "tags"})
+	profile, _ := importjobtest.UploadCSV(t, e, "company", "Name,Tags\nTagged Jobs GmbH,Fresh\n")
+	run, _ := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "Tags": "tags"})
 	tagsBefore := tagCount(t, e)
 	approveQueued(t, e, run.ID)
 	if got := tagCount(t, e); got != tagsBefore {

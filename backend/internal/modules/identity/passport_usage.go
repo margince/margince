@@ -15,9 +15,11 @@ import (
 )
 
 // PassportUsageReader reads the running window of each subject
-// (agentvolume.SubjectOf) in one round trip. compose wires the meter.
+// (agentvolume.SubjectOf) in one round trip, each against the allowance its
+// human's roles give. compose wires the meter.
 type PassportUsageReader interface {
-	Usage(ctx context.Context, ws ids.UUID, subjects []string) (map[string]agentvolume.Usage, error)
+	Usage(ctx context.Context, ws ids.UUID, subjects []agentvolume.Holder) (map[string]agentvolume.Usage, error)
+	AllowanceFor(ctx context.Context, roles []string) agentvolume.Allowance
 	ResetsAt(ctx context.Context) time.Time
 }
 
@@ -28,17 +30,18 @@ func (h Handlers) WithPassportUsage(r PassportUsageReader) Handlers {
 	return h
 }
 
-// liveUsage answers the usage of every live row, keyed by subject. A failure
-// is logged and answers nothing: the list is still worth showing without it.
-func (h Handlers) liveUsage(ctx context.Context, rows []PassportRow, now time.Time) map[string]agentvolume.Usage {
+// liveUsage answers the usage of every live row, keyed by subject, against the
+// allowance roles give: the rows are the caller's own passports. A failure is
+// logged and answers nothing: the list is still worth showing without it.
+func (h Handlers) liveUsage(ctx context.Context, rows []PassportRow, roles []string, now time.Time) map[string]agentvolume.Usage {
 	ws, bound := principal.WorkspaceID(ctx)
 	if h.passportUsage == nil || !bound {
 		return nil
 	}
-	subjects := make([]string, 0, len(rows))
+	subjects := make([]agentvolume.Holder, 0, len(rows))
 	for _, p := range rows {
 		if p.live(now) {
-			subjects = append(subjects, p.UsageSubject())
+			subjects = append(subjects, agentvolume.Holder{Subject: p.UsageSubject(), Roles: roles})
 		}
 	}
 	usage, err := h.passportUsage.Usage(ctx, ws, subjects)

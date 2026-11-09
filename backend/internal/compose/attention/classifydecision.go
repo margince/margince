@@ -21,12 +21,18 @@ func classifyDecision(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	level, consequence, why := levelRoutine, crmcontracts.WorklistItemConsequence("data_drifts"), "routine"
 	if item.Kind != nil {
 		switch *item.Kind {
-		case "advance_deal", "progress_deal", "stage_progression":
+		case "advance_deal", "progress_deal":
 			level, consequence, why = levelAgreed, valueNone, ""
 		}
 	}
 	if blocksCustomerWork(item) {
 		level, consequence, why = levelBlocking, "work_blocked", "blocks_customer_work"
+	}
+	// A deal the evidence says should exist is a possible opportunity. It
+	// ranks above cleanup and below what a customer or a promise waits on.
+	// Matched on source, since its kind shares the approval kinds' names.
+	if item.Source == sourceDealSuggestion {
+		level, consequence, why = levelBlocking, valueNone, ""
 	}
 	if item.Staged != nil && item.Staged.AccountTermination != nil && *item.Staged.AccountTermination {
 		level, consequence, why = levelWaiting, "work_blocked", "account_termination"

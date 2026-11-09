@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -62,7 +63,7 @@ func assessMailBodiesBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) 
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
-	rows, err := tx.Query(ctx, `SELECT a.id, a.body, `+capturedByMailConnector+`, rc.payload `+unassessedMailBodyScope+`
+	rows, err := tx.Query(ctx, `SELECT a.id, a.body, `+capturedByMailConnector+`, `+originalstore.SQL("rc")+` `+unassessedMailBodyScope+`
 		AND a.id > @unassessed_after ORDER BY a.id LIMIT @batch_limit FOR UPDATE OF a`, pgx.NamedArgs{"unassessed_after": after, "batch_limit": in.Limit})
 	if err != nil {
 		return datatask.BatchOut{}, err
@@ -75,6 +76,12 @@ func assessMailBodiesBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) 
 	assessments := make([]activities.MailBodyAssessment, 0, len(candidates))
 	for _, candidate := range candidates {
 		scanned = append(scanned, candidate.ID)
+		if candidate.Connector && candidate.Body != nil {
+			candidate.Payload, err = originalstore.RepairPayload(ctx, candidate.Payload)
+			if err != nil {
+				return datatask.BatchOut{}, err
+			}
+		}
 		if completeness, ok := assessStoredMailBody(candidate); ok {
 			assessments = append(assessments, activities.MailBodyAssessment{
 				Activity: candidate.ID, Completeness: string(completeness), Body: *candidate.Body,

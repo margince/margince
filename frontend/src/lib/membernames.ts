@@ -58,8 +58,18 @@ export function useDepartedName(id: string | null | undefined): string | null {
   return read.data?.departed ? read.data.name : null;
 }
 
-/** A named seat, and whether that colleague left. */
-type Seat = Readonly<{ name: string; departed: boolean }>;
+/** A named seat, whether that colleague left, and their picture if they have one. */
+type Seat = Readonly<{ name: string; departed: boolean; avatarUrl?: string }>;
+
+/** The picture behind one id: null for none, for an unnamed id, and while the read runs. */
+export function useMemberAvatar(id: string | null | undefined): string | null {
+  const read = useQuery({
+    ...memberNameQueryOptions(id ?? ""),
+    enabled: Boolean(id),
+    select: (seat: Seat | null) => seat?.avatarUrl ?? null,
+  });
+  return read.data ?? null;
+}
 
 /**
  * The name a screen prints. A colleague who left is marked, because the work
@@ -81,18 +91,33 @@ export function useMemberNames(
   ids: readonly string[],
 ): ReadonlyMap<string, string> {
   const t = useT();
+  return useSeatField(ids, (seat) => seatLabel(seat, t));
+}
+
+/** The pictures of every id a caller holds; an id with none is absent. */
+export function useMemberAvatars(
+  ids: readonly string[],
+): ReadonlyMap<string, string> {
+  return useSeatField(ids, (seat) => seat.avatarUrl);
+}
+
+function useSeatField(
+  ids: readonly string[],
+  field: (seat: Seat) => string | undefined,
+): ReadonlyMap<string, string> {
   const unique = [...new Set(ids.filter(Boolean))];
   const reads = useQueries({
     queries: unique.map((id) => memberNameQueryOptions(id)),
   });
-  const names = new Map<string, string>();
+  const values = new Map<string, string>();
   reads.forEach((read, index) => {
     const id = unique[index];
-    if (id !== undefined && read.data != null) {
-      names.set(id, seatLabel(read.data, t));
+    const value = read.data == null ? undefined : field(read.data);
+    if (id !== undefined && value !== undefined) {
+      values.set(id, value);
     }
   });
-  return names;
+  return values;
 }
 
 // Every id asked about within one tick shares one `GET /users/names` read.
@@ -108,7 +133,11 @@ const nameOf = idBatcher<Seat>(MAX_SEATS_PER_REQUEST, async (page) => {
   return new Map(
     data.data.map((seat) => [
       seat.id,
-      { name: seat.display_name, departed: seat.departed === true },
+      {
+        name: seat.display_name,
+        departed: seat.departed === true,
+        avatarUrl: seat.avatar_url || undefined,
+      },
     ]),
   );
 });

@@ -58,16 +58,22 @@ remember() { # pid
     # A SIGNATURE OR NOTHING. An empty one matches every command line the case
     # statement in reap tries it against — `*""*` is true of anything — so a pid
     # ps could not see would have licensed the trap to SIGKILL whatever holds
-    # that number later. Retried once, because the miss is a scheduling
-    # accident rather than a fact about the process.
-    local signature
+    # that number later. Retried, because the miss is a scheduling accident
+    # rather than a fact about the process. So is a fixture that has not yet
+    # run its `exec -a`: until then ps shows the wrapping `bash -c`, which no
+    # probe below recognises, and on a loaded machine that lasts long enough to
+    # turn a recognised stack into a FAIL. A wrapper that is still there when
+    # the retries run out is no signature either: the exec changes the command
+    # line later, and the trap would then not find the process.
+    local signature tries=0
     signature=$(signature_of "$1")
-    if [[ -z "$signature" ]]; then
+    while [[ -z "$signature" || "$signature" == *'exec-a"$0"'* ]] && ((tries < 50)); do
         sleep 0.1
+        tries=$((tries + 1))
         signature=$(signature_of "$1")
-    fi
-    if [[ -z "$signature" ]]; then
-        printf '  FAIL a fixture (pid %s) had no command line to sign, so the trap could not tell it from a recycled pid\n' "$1" >&2
+    done
+    if [[ -z "$signature" || "$signature" == *'exec-a"$0"'* ]]; then
+        printf '  FAIL a fixture (pid %s) had no final command line to sign, so the trap could not tell it from a recycled pid\n' "$1" >&2
         failures=$((failures + 1))
         return
     fi

@@ -213,8 +213,8 @@ func proveG01OwnPipeline(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {
-		e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &amount, nil)
-		e.seedOpenDeal(t, "Theirs", 20, &e.Rep3, &amount, nil)
+		e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &amount)
+		e.seedOpenDeal(t, "Theirs", 20, &e.Rep3, &amount)
 	}
 	got, err := askTool(e.ownLensRepCtx(e.Rep1), t, e,
 		`{"entity":"pipeline-current","measures":[{"fn":"count","as":"deals"}]}`)
@@ -236,7 +236,7 @@ func proveG02WorkspaceRefused(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {
-		e.seedOpenDeal(t, "Somebody's", 20, &e.Rep3, &amount, nil)
+		e.seedOpenDeal(t, "Somebody's", 20, &e.Rep3, &amount)
 	}
 	total, err := askTool(e.ownLensRepCtx(e.Rep1), t, e,
 		`{"entity":"pipeline-current","measures":[{"fn":"count","as":"deals"}],"scope_kind":"workspace"}`)
@@ -295,11 +295,9 @@ func proveG03OneBaseCurrencyNumber(t *testing.T) {
 	if row["deals"] != float64(6) {
 		t.Errorf("counted %v deals, want all 6 including the unrated one", row["deals"])
 	}
-	// 3×10,000 EUR native + 2×40,000 USD at 0.5 = 30,000 + 40,000. The
-	// unrated VND deal's nine million minor are NOT in it: excluded, never
-	// guessed at rate 1 — and the count above still says six.
-	if row["base_total"] != float64(70_000) {
-		t.Errorf("base total = %v, want 70000 exactly — per-deal conversion, no native-minor addition", row["base_total"])
+	// An unrated amount makes the converted total incomplete.
+	if row["base_total"] != nil {
+		t.Errorf("base total = %v, want null for an incomplete conversion", row["base_total"])
 	}
 }
 
@@ -309,10 +307,10 @@ func proveM04OneRowPerStage(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 5 {
-		e.seedOpenDeal(t, "Early", 20, &e.Rep1, &amount, nil)
-		e.seedOpenDeal(t, "Late", 60, &e.Rep1, &amount, nil)
+		e.seedOpenDeal(t, "Early", 20, &e.Rep1, &amount)
+		e.seedOpenDeal(t, "Late", 60, &e.Rep1, &amount)
 		// Somebody else's pipeline, which "my" must exclude.
-		e.seedOpenDeal(t, "Not mine", 20, &e.Rep3, &amount, nil)
+		e.seedOpenDeal(t, "Not mine", 20, &e.Rep3, &amount)
 	}
 	// Closed deals in the same stages, so "open only" has something to leak.
 	seedPricedDeal(t, e, "Won already", 90_000, "EUR", "won")

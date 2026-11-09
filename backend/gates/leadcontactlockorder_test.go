@@ -70,6 +70,9 @@ func TestOneLockOrderOverTheLeadAndItsContact(t *testing.T) {
 	files := gatekit.Scope{
 		Roots:   lockOrderRoots,
 		Subject: locksALeadOrItsContact,
+		Exempt: gatekit.Waive(map[string]string{
+			"internal/compose/bulkrowlocks.go": "a bulk request locks rows of one entity type only; it cannot lock both a lead and its promoted contact. The target owner still performs every mutation after this row-lock phase",
+		}),
 	}.Files(t)
 
 	// Bodies are keyed by name alone, and a name with several bodies keeps all

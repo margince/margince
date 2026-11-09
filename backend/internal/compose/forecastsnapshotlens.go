@@ -20,9 +20,26 @@ import (
 )
 
 // newForecastStore is the one way compose builds a forecasting store, so every
-// snapshot read passes through forecastSnapshotLens.
+// snapshot read passes through forecastSnapshotReadLens.
 func newForecastStore(db *database.DB) *forecasting.Store {
-	return forecasting.NewStore(db).WithSnapshotLens(forecastSnapshotLens)
+	return forecasting.NewStore(db).WithSnapshotLens(forecastSnapshotReadLens)
+}
+
+// forecastSnapshotReadLens is forecastSnapshotLens for a snapshot read whole,
+// such as a movement or a call's baseline. A frozen total of a population is
+// that population's figure, so it meets the small-group floor as a live one
+// does.
+func forecastSnapshotReadLens(
+	ctx context.Context, tx pgx.Tx, scope forecasting.Scope, pipelineID *ids.UUID, rows []forecasting.Contribution,
+) ([]forecasting.Contribution, error) {
+	readable, err := forecastSnapshotLens(ctx, tx, scope, pipelineID, rows)
+	if err != nil {
+		return nil, err
+	}
+	if err := requireRequestedPopulationFloor(ctx, tx, requestedFromForecastScope(scope)); err != nil {
+		return nil, err
+	}
+	return readable, nil
 }
 
 func newForecastStoreFor(pool *pgxpool.Pool) *forecasting.Store {

@@ -26,7 +26,7 @@ import {
 import { PrivacyNotice } from "./confirmprivacy";
 import { RequestReceipts, type RightsCaseReceipt } from "./confirmreceipts";
 import { SubscriptionConfirm } from "./confirmsubscription";
-import { useMailLanguage } from "./publiclocale";
+import { useMailLanguage, usePublicLocale } from "./publiclocale";
 import "../settings/preferences.css";
 import "./confirm.css";
 
@@ -44,6 +44,9 @@ import "./confirm.css";
 
 export function ConfirmDetailsScreen({ token }: Readonly<{ token?: string }>) {
   const t = useT();
+  // The link names its mail's language, so an expired link that the server
+  // answers with nothing still speaks it.
+  usePublicLocale();
   if (!token) {
     return (
       <div className="pref-page">

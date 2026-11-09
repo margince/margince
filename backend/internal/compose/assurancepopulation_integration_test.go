@@ -17,14 +17,15 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The findings for one population are the ones on that population's deals,
 // narrowed by the rule the forecast and reports use for it.
 func TestFindingsFollowTheRequestedPopulation(t *testing.T) {
 	e := setupForecast(t)
-	team1Deal := e.seedOpenDeal(t, "North deal", 20, &e.Rep1, nil, nil)
-	team2Deal := e.seedOpenDeal(t, "South deal", 20, &e.Rep3, nil, nil)
+	team1Deal := e.seedOpenDeal(t, "North deal", 20, &e.Rep1, nil)
+	team2Deal := e.seedOpenDeal(t, "South deal", 20, &e.Rep3, nil)
 	for _, deal := range []ids.UUID{team1Deal, team2Deal} {
 		if _, err := e.owner.Exec(t.Context(),
 			`INSERT INTO assurance_exception (logical_key, type, subject_kind, subject_id, severity, captured_by)
@@ -33,7 +34,16 @@ func TestFindingsFollowTheRequestedPopulation(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	admin := e.Admin()
+	company := e.seedID(t, `INSERT INTO company (id, display_name, industry, address_country, source, captured_by) VALUES ($1, 'Filtered company', 'manufacturing', 'DE', 'manual', 'test')`)
+	product := e.seedID(t, `INSERT INTO product (id, name, unit_price_minor, currency, source, captured_by) VALUES ($1, 'Filtered product', 100, 'EUR', 'manual', 'test')`)
+	if _, err := e.owner.Exec(t.Context(), `UPDATE deal SET company_id=@company WHERE id=@deal`, pgx.StrictNamedArgs{"company": company, "deal": team1Deal}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(t.Context(), `INSERT INTO deal_product (deal_id, product_id, source) VALUES (@deal, @product, 'manual')`, pgx.StrictNamedArgs{"deal": team1Deal, "product": product}); err != nil {
+		t.Fatal(err)
+	}
+	country, industry := "DE", "manufacturing"
+	admin := sectionsReader(e, ids.NewV7(), nil, principal.RowScopeAll)
 	read := func(population assurance.Population) ([]ids.UUID, error) {
 		var subjects []ids.UUID
 		err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
@@ -51,6 +61,10 @@ func TestFindingsFollowTheRequestedPopulation(t *testing.T) {
 		population assurance.Population
 		want       []ids.UUID
 	}{
+		{"country", assurance.Population{Country: &country}, []ids.UUID{team1Deal}},
+		{"industry", assurance.Population{Industry: &industry}, []ids.UUID{team1Deal}},
+		{"product", assurance.Population{ProductID: &product}, []ids.UUID{team1Deal}},
+		{"product in another team", assurance.Population{Kind: "team", ID: &e.Team2, ProductID: &product}, nil},
 		{"unscoped", assurance.Population{}, []ids.UUID{team1Deal, team2Deal}},
 		{"team", assurance.Population{Kind: "team", ID: &e.Team1}, []ids.UUID{team1Deal}},
 		{"owner", assurance.Population{Kind: "owner", ID: &e.Rep3}, []ids.UUID{team2Deal}},
@@ -69,5 +83,13 @@ func TestFindingsFollowTheRequestedPopulation(t *testing.T) {
 
 	if _, err := read(assurance.Population{ID: &e.Team1}); !errors.Is(err, apperrors.ErrInvalidArgument) {
 		t.Errorf("an id without a kind: err = %v, want invalid argument", err)
+	}
+	admin = sectionsReader(e, ids.NewV7(), nil, principal.RowScopeAll, "company")
+	if _, err := read(assurance.Population{Country: &country}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("country without company read: %v", err)
+	}
+	admin = sectionsReader(e, ids.NewV7(), nil, principal.RowScopeAll, "product")
+	if _, err := read(assurance.Population{ProductID: &product}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("product without product read: %v", err)
 	}
 }

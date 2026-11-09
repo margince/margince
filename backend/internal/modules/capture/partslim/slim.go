@@ -220,16 +220,36 @@ func spliceFor(raw []byte, part StoredPart) (splice, error) {
 // restore that rebuilt an LF-wrapped body with CRLF would produce different
 // bytes and fail the digest this same call recorded.
 func locateEncoded(raw, body []byte) ([]byte, int, []byte, error) {
-	b64 := base64.StdEncoding.EncodeToString(body)
+	b64 := make([]byte, base64.StdEncoding.EncodedLen(len(body)))
+	base64.StdEncoding.Encode(b64, body)
+	// Sized for the narrowest candidate with CRLF, so no candidate grows it.
+	folded := make([]byte, 0, len(b64)+2*(len(b64)/64+1))
 	for _, width := range candidateWraps {
 		for _, eol := range [][]byte{[]byte("\r\n"), []byte("\n")} {
-			candidate := wrapBase64WithEOL([]byte(b64), width, eol)
-			if bytes.Count(raw, candidate) == 1 {
-				return candidate, width, eol, nil
+			// One buffer serves every candidate, so a large attachment is held
+			// twice while it is located, not once per width tried.
+			folded = foldInto(folded[:0], b64, width, eol)
+			if bytes.Count(raw, folded) == 1 {
+				at := bytes.Index(raw, folded)
+				return raw[at : at+len(folded)], width, eol, nil
 			}
 		}
 	}
 	return nil, 0, nil, ErrPartNotLocated
+}
+
+// foldInto appends b64 folded as wrapBase64WithEOL folds it to dst.
+func foldInto(dst, b64 []byte, width int, eol []byte) []byte {
+	if width <= 0 || len(b64) <= width {
+		return append(dst, b64...)
+	}
+	for at := 0; at < len(b64); at += width {
+		if at > 0 {
+			dst = append(dst, eol...)
+		}
+		dst = append(dst, b64[at:min(at+width, len(b64))]...)
+	}
+	return dst
 }
 
 // headerSpan says where a part's header fields end, just before the blank line

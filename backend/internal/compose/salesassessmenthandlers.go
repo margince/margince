@@ -10,6 +10,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
@@ -25,7 +26,11 @@ func (h salesAssessmentHandlers) AssessSalesReview(w http.ResponseWriter, r *htt
 		return
 	}
 	refresh := body.Refresh != nil && *body.Refresh
-	out, err := h.svc.Assess(r.Context(), body.Selection, refresh)
+	var receipt *reporting.EvidenceExpectation
+	if body.Receipt != nil {
+		receipt = &reporting.EvidenceExpectation{Key: body.Receipt.Key, At: body.Receipt.At, FrameworkRevision: body.Receipt.FrameworkRevision}
+	}
+	out, err := h.svc.AssessView(r.Context(), body.Selection, refresh, body.View, receipt)
 	if err != nil {
 		modelfailure.Write(w, r, err)
 		return

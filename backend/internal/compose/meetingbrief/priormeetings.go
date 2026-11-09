@@ -25,6 +25,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
@@ -132,16 +133,17 @@ func (s *Service) readPriorMeetings(ctx context.Context, tx pgx.Tx, room meeting
 // with it. DISTINCT because a meeting with three of the same attendees is one
 // meeting, not three.
 //
-// A meeting has been held once it took place, so a day entry dated today is not
-// yet (occurredday.MeetingTookPlaceSQL).
-const priorMeetingsQuery = `
+// A prior meeting is one with a recorded held outcome (meetingoutcome.HeldSQL)
+// that took place, so a day entry dated today is not yet
+// (occurredday.MeetingTookPlaceSQL). One awaiting its outcome is left out.
+var priorMeetingsQuery = `
 	SELECT DISTINCT m.id, m.subject, m.occurred_at, m.occurred_precision = 'day'
 	FROM activity m
 	JOIN activity_participant mp ON mp.activity_id = m.id
 	WHERE m.kind = 'meeting' AND m.archived_at IS NULL
 	  AND m.id <> $%[3]d AND %[5]s
 	  AND %[4]s
-	  AND (m.meeting_status IS NULL OR m.meeting_status = 'held')
+	  AND ` + meetingoutcome.HeldSQL("m") + `
 	  AND mp.contact_id = ANY($%[6]d)
 	  AND %[1]s
 	  AND %[2]s

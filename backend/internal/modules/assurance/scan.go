@@ -5,7 +5,6 @@ package assurance
 
 import (
 	"context"
-	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -35,28 +34,7 @@ type Scanner struct {
 	// dealSubjects reads one deal, for a pass queued because it changed.
 	dealSubjects DealSubjectsFunc
 	coverage     CoverageFunc
-	// queueReviews commits the review deliveries with the pass's findings.
-	queueReviews ReviewDeliveryFunc
 	cfg          Config
-}
-
-// ReviewDeliveryFunc queues the delivery of the reviews a run observed. It runs
-// in the run's own transaction, so a delivery commits with its finding or not at all.
-type ReviewDeliveryFunc func(ctx context.Context, tx pgx.Tx, runID ids.UUID) error
-
-// WithReviewDelivery wires the queue the run's reviews are delivered through.
-func (s *Scanner) WithReviewDelivery(queue ReviewDeliveryFunc) *Scanner {
-	wired := *s
-	wired.queueReviews = queue
-	return &wired
-}
-
-// queueReviewDeliveries runs the wired queue, if any.
-func (s *Scanner) queueReviewDeliveries(ctx context.Context, tx pgx.Tx, runID ids.UUID) error {
-	if s.queueReviews == nil {
-		return nil
-	}
-	return s.queueReviews(ctx, tx, runID)
 }
 
 // NewScanner wires a pass to its store and its two seams.
@@ -176,7 +154,7 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 		out.RunID = runID
 		// Before the deals are read, so every change at or below it was
 		// committed before this pass looked (freshness.go).
-		generation, err := s.store.inputGeneration(ctx, tx)
+		position, err := s.store.readInputPosition(ctx, tx)
 		if err != nil {
 			return err
 		}
@@ -233,10 +211,7 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 		if err := s.closeAbsent(ctx, tx, coverage, pass, &out); err != nil {
 			return err
 		}
-		if err := s.queueReviewDeliveries(ctx, tx, runID); err != nil {
-			return err
-		}
-		return s.conclude(ctx, tx, runID, generation, coverage, pass, &out)
+		return s.conclude(ctx, tx, runID, position, coverage, pass, &out)
 	})
 	if err != nil {
 		return Result{}, err
@@ -279,7 +254,7 @@ func (s *Scanner) closeAbsent(ctx context.Context, tx pgx.Tx, coverage []SourceC
 // conclude grades a pass that read the deals and closes its run. Only a
 // complete run records what it read: a missed source's changes went unread.
 func (s *Scanner) conclude(
-	ctx context.Context, tx pgx.Tx, runID ids.UUID, generation int64, coverage []SourceCoverage, pass walked, out *Result,
+	ctx context.Context, tx pgx.Tx, runID ids.UUID, position inputPosition, coverage []SourceCoverage, pass walked, out *Result,
 ) error {
 	out.Readiness = Readiness(coverage, pass.findings(), s.cfg)
 	out.Status = StatusComplete
@@ -287,7 +262,7 @@ func (s *Scanner) conclude(
 		out.Status = StatusIncomplete
 	}
 	if out.Status == StatusComplete {
-		if err := s.store.recordReadThrough(ctx, tx, runID, generation); err != nil {
+		if err := s.store.recordReadThrough(ctx, tx, runID, position); err != nil {
 			return err
 		}
 	}
@@ -302,14 +277,11 @@ func (s *Scanner) conclude(
 //
 // A retired type is clearable on the same terms. No rule raises it, so a pass
 // that read its sources finds it absent everywhere it walked.
-//
-// A review type never clears in absence. A reply ends the silence and not the
-// review: only somebody's validated answer, or the deal leaving, closes it.
 func clearableTypes(coverage []SourceCoverage) []string {
 	read := sourcesRead(coverage)
 	var out []string
 	for _, rule := range append(Rules(), retiredRules...) {
-		if read(rule) && !slices.Contains(ReviewTypes(), rule.Type) {
+		if read(rule) {
 			out = append(out, rule.Type)
 		}
 	}

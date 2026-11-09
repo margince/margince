@@ -46,8 +46,10 @@ import (
 // costs its own retry, never its neighbours'.
 func (g *GraphEdgeGen) HandleBatch(ctx context.Context, envs []events.Envelope) error {
 	var activityIDs []ids.UUID
+	var arrivals []events.Envelope
 	var contactEnvs []events.Envelope
 	seenActivity := map[ids.UUID]bool{}
+	seenArrival := map[string]bool{}
 	seenContact := map[string]bool{}
 	for _, env := range envs {
 		id := env.Entity.ID
@@ -56,7 +58,13 @@ func (g *GraphEdgeGen) HandleBatch(ctx context.Context, envs []events.Envelope) 
 		}
 		switch env.Entity.Type {
 		case entityActivity:
-			if refoldsActivity(env.Type) && !seenActivity[id] {
+			if graphArrivalCanWait(env) {
+				key := env.Type + "/" + id.String() + "/" + env.Trace.AuditLogID.String()
+				if !seenArrival[key] {
+					seenArrival[key] = true
+					arrivals = append(arrivals, env)
+				}
+			} else if refoldsActivity(env.Type) && !seenActivity[id] {
 				seenActivity[id] = true
 				activityIDs = append(activityIDs, id)
 			}
@@ -68,7 +76,7 @@ func (g *GraphEdgeGen) HandleBatch(ctx context.Context, envs []events.Envelope) 
 			}
 		}
 	}
-	if len(activityIDs) == 0 && len(contactEnvs) == 0 {
+	if len(activityIDs)+len(arrivals)+len(contactEnvs) == 0 {
 		return nil
 	}
 
@@ -81,8 +89,11 @@ func (g *GraphEdgeGen) HandleBatch(ctx context.Context, envs []events.Envelope) 
 	}
 	return g.store.db.Tx(ctx, func(tx pgx.Tx) error {
 		var targets edgeTargets
-		if err := targets.addActivities(ctx, tx, activityIDs); err != nil {
+		if err := targets.addActivities(ctx, tx, activityIDs, true); err != nil {
 			return fmt.Errorf("graph-edge: a batch of %d activities: %w", len(activityIDs), err)
+		}
+		if err := targets.addArrivals(ctx, tx, g.historyResolver, arrivals); err != nil {
+			return fmt.Errorf("graph-edge: naming captured activity pairs: %w", err)
 		}
 		for _, env := range contactEnvs {
 			if err := targets.addContactEvent(ctx, tx, env, env.Entity.ID); err != nil {

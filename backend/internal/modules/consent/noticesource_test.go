@@ -34,6 +34,16 @@ func TestSourceAssessmentRequiresEvidenceAndRejectsFutureDates(t *testing.T) {
 	}
 }
 
+func TestSourcePreviewRefusesLegacyCasesWhoseNoticeIsAlreadyQueuedOrFinished(t *testing.T) {
+	for _, state := range []NoticeState{NoticeQueued, NoticeCompleted, NoticeSourceReview} {
+		current := NoticeCase{State: state, Acquisition: &NoticeAcquisition{Kind: "unknown_legacy"}}
+		_, err := projectSourceAssessment(current, SourceAssessment{Kind: "subject_initiated", Note: "Original correspondence"})
+		if (err == nil) != (state == NoticeSourceReview) {
+			t.Fatalf("state %s: %v", state, err)
+		}
+	}
+}
+
 func TestConfirmedIndirectSourcesKeepTheirNoticeDuty(t *testing.T) {
 	for _, kind := range []string{"referral", "purchased_or_imported", "public_or_business_source", "event_or_form"} {
 		duty, owed := DutyFor(kind)

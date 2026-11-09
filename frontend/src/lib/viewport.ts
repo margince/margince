@@ -3,26 +3,19 @@
 
 import { useEffect, useState } from "react";
 
-// The phone breakpoint, spelled once for the code that has to KNOW it rather
-// than merely be laid out by it: at this width the sidebar is a bottom bar of
-// three destinations, the agent and More, which changes what the panel renders
-// and where it is measured from, not only how it looks. The
-// `@media (max-width: 700px)` block in app/shell.css is the other half of the
-// same rule — a stylesheet cannot read a TypeScript constant, so that block
-// cites this file and the two are changed together.
+// The phone breakpoint, for the code that has to know it rather than be laid out
+// by it. At this width the sidebar is a bottom bar of three destinations, the
+// agent and More. That changes what the panel renders and where it is measured.
+// Stylesheets spell it in their own `@media (max-width: 700px)` blocks, and
+// census/rules/viewport.census.ts fails a phone block that spells another
+// number.
 export const PHONE_MAX_WIDTH = 700;
 
-// The width at which the LAYOUT turns: the tree's own narrow breakpoint, which
-// thirteen stylesheets already spell as `@media (max-width: 720px)` — the modal,
-// the record head, the page zones and the worklist row among them. It is here
-// for the code that must AGREE with that fold rather than merely be laid out by
-// it: the worklist's set-aside verbs are drawn as buttons above this width and
-// answered by a swipe below it, and a component keying that on a different
-// number would draw both at the widths between the two.
-//
-// A stylesheet cannot read a TypeScript constant, so those blocks and this line
-// are changed together, the same pairing PHONE_MAX_WIDTH keeps with
-// app/shell.css.
+// The width at which the layout folds, for code that must agree with the
+// stylesheets' fold. The worklist draws its set-aside verbs as buttons above it
+// and answers a swipe below it, so another number would draw both in between.
+// A stylesheet cannot read this constant, so census/rules/viewport.census.ts
+// fails a fold block that spells another number.
 export const FOLD_MAX_WIDTH = 720;
 
 // The width at which a LIST HEADER stops fitting its verbs. Below it the row of
@@ -32,8 +25,13 @@ export const FOLD_MAX_WIDTH = 720;
 // of room a long way above the width at which the sidebar becomes a bar.
 export const NARROW_MAX_WIDTH = 1100;
 
+/** The media query the hooks below ask for `maxWidth`. */
+export function widthMedia(maxWidth: number): string {
+  return `(max-width: ${maxWidth}px)`;
+}
+
 function widthQuery(maxWidth: number): MediaQueryList | undefined {
-  return globalThis.matchMedia?.(`(max-width: ${maxWidth}px)`);
+  return globalThis.matchMedia?.(widthMedia(maxWidth));
 }
 
 /**

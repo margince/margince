@@ -5,6 +5,7 @@ import type { components } from "../../../api/schema";
 import { webUrl } from "../../../format/weburl";
 import type { MessageKey } from "../../../i18n/en";
 import { FACT_CATEGORY_ORDER } from "../../../lib/factview";
+import { labelFor } from "../../../lib/labelfor";
 import type { ReviewRow } from "./company-review-state";
 
 // The citation and grouping arithmetic shared by the article and the sidebar:
@@ -106,7 +107,7 @@ const PAGE_KIND_LABELS: Readonly<Record<PageKind, MessageKey>> = {
 export function pageKindLabelKey(
   kind: PageKind | null | undefined,
 ): MessageKey {
-  return kind ? PAGE_KIND_LABELS[kind] : PAGE_KIND_LABELS.other;
+  return kind ? labelFor(PAGE_KIND_LABELS, kind) : PAGE_KIND_LABELS.other;
 }
 
 /** The read's own record of a cited page, when it walked that exact URL — a

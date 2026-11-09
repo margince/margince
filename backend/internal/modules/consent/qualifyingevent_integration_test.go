@@ -122,14 +122,22 @@ func (e *qualifyingEnv) verdict(t *testing.T) Verdict {
 
 // verdictSince reads the verdict against an explicit window start, which is
 // what lets a test move the window rather than the clock. The row keeps its
-// real timestamp and only the rule's reach changes, so a failure is about the
-// bound under test and not about a fixture that time-travelled.
+// real timestamp and only the rule's reach changes. A failure is then about the
+// bound under test, not a fixture that time-travelled. The clock is the
+// window's end.
 func (e *qualifyingEnv) verdictSince(t *testing.T, since time.Time) Verdict {
+	t.Helper()
+	return e.verdictAt(t, since, since.Add(defaultReplyWindow))
+}
+
+// verdictAt reads the verdict on a clock of the caller's, which may differ from
+// the database's own now().
+func (e *qualifyingEnv) verdictAt(t *testing.T, since, asOf time.Time) Verdict {
 	t.Helper()
 	var out Verdict
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = VerdictForContact(e.ctx, tx, e.contact.String(), e.correspondence, since, MarketingContext{})
+		out, err = GuardVerdictForContact(e.ctx, tx, e.contact.String(), e.correspondence, since, asOf, MarketingContext{})
 		return err
 	}); err != nil {
 		t.Fatalf("reading the verdict: %v", err)

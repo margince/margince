@@ -62,14 +62,12 @@ const (
 
 // readerOrNobody is whose set-asides a read should apply.
 //
-// The nil UUID for a caller with no contact behind it, which matches no
-// reader_state row — so a system pass sees every waiting message, because a
-// background job has set nothing aside. Returning the acting user of an agent
-// or connector principal instead would apply a human's private snoozes to work
-// that human never asked for.
+// An agent on its user's passport reads and sets aside as that user. The nil
+// UUID is for a caller with no colleague behind it, which matches no reader_state
+// row, so a system pass sees every waiting message.
 func readerOrNobody(ctx context.Context) ids.UUID {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
+	if !ok || !actor.HumanOrItsAgent() {
 		return ids.UUID{}
 	}
 	return actor.UserID
@@ -159,7 +157,7 @@ func threadOf(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (threadIdentity
 	var thread threadIdentity
 	var key, provider, direction *string
 	if err := tx.QueryRow(ctx,
-		`SELECT thread_key, kind, channel_provider, direction FROM activity WHERE id = $1`,
+		`SELECT thread_key, kind, channel_provider, direction FROM activity WHERE id = $1 FOR SHARE`,
 		id).Scan(&key, &thread.kind, &provider, &direction); err != nil {
 		return threadIdentity{}, fmt.Errorf("activities: reading the message's thread: %w", err)
 	}
@@ -171,6 +169,9 @@ func threadOf(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (threadIdentity
 			Field: "id", Code: "message_has_no_thread",
 			Message: "this message belongs to no conversation, so there is no thread to judge",
 		}
+	}
+	if err := storekit.LockThreadKeysTx(ctx, tx, *key); err != nil {
+		return threadIdentity{}, err
 	}
 	thread.key = *key
 	if provider != nil {
@@ -346,9 +347,8 @@ func (s *Store) writeReaderState(
 	return func(ctx context.Context, tx pgx.Tx, capturedBy string) error {
 		reader := readerOrNobody(ctx)
 		if reader.IsZero() {
-			// A reader-scoped judgement needs a reader. An agent or system
-			// principal has no queue of its own to clear, and writing one under
-			// the acting human's id would set aside work on their behalf.
+			// A reader-scoped judgement needs a reader, which passportless work
+			// has none of.
 			return apperrors.ErrPermissionDenied
 		}
 		if shape != nil {
@@ -446,7 +446,7 @@ func (s *Store) judgeMessage(ctx context.Context, id ids.ActivityID, write judge
 	if err != nil {
 		return err
 	}
-	return s.tx(ctx, func(tx pgx.Tx) error {
+	return s.txRetryingLockCycles(ctx, pgx.ReadCommitted, func(tx pgx.Tx) error {
 		if err := auth.EnsureActivityContentVisibleLive(ctx, tx, id.UUID); err != nil {
 			return err
 		}

@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { removeStored, STORAGE_KEYS } from "../../lib/storage";
 import { ContactFilesTab } from "./contactfiles";
 
 type Attachment = components["schemas"]["Attachment"];
@@ -36,6 +37,7 @@ function attachment(
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  removeStored(STORAGE_KEYS.documentsView);
 });
 
 // The session and the installation read that the upload in this tab's header
@@ -159,7 +161,7 @@ describe("the contact's files tab", () => {
       ],
       page: { has_more: false },
     });
-    show(<ContactFilesTab contactId="p-1" />);
+    show(<ContactFilesTab contactId="p-1" contactName="Dana Buyer" />);
 
     const quote = await screen.findByRole("link", { name: "quote.pdf" });
     expect(quote.getAttribute("href")).toBe("/v1/attachments/f-1");
@@ -168,6 +170,37 @@ describe("the contact's files tab", () => {
     const signed = screen.getByRole("link", { name: "signed.pdf" });
     expect(signed.getAttribute("href")).toBe("/v1/attachments/f-2");
     expect(signed.getAttribute("download")).toBe("signed.pdf");
+  });
+
+  it("draws the files as a list once the reader asks, and keeps that choice", async () => {
+    const user = userEvent.setup();
+    stub({
+      data: [
+        attachment({ id: "f-1", entity_id: "p-1", filename: "quote.pdf" }),
+      ],
+      page: { has_more: false },
+    });
+    const first = show(
+      <ContactFilesTab contactId="p-1" contactName="Dana Buyer" />,
+    );
+    const file = await screen.findByRole("article", { name: "quote.pdf" });
+    expect(file.classList.contains("board-doc-row")).toBe(false);
+
+    await user.click(screen.getByRole("button", { name: "List" }));
+    expect(
+      screen
+        .getByRole("article", { name: "quote.pdf" })
+        .classList.contains("board-doc-row"),
+    ).toBe(true);
+    expect(screen.getByRole("link", { name: "quote.pdf" })).toBeTruthy();
+
+    first.unmount();
+    show(<ContactFilesTab contactId="p-1" contactName="Dana Buyer" />);
+    const again = await screen.findByRole("article", { name: "quote.pdf" });
+    expect(again.classList.contains("board-doc-row")).toBe(true);
+    expect(
+      screen.getByRole("button", { name: "List" }).getAttribute("aria-pressed"),
+    ).toBe("true");
   });
 
   it("opens a document link in a new tab instead of downloading it", async () => {
@@ -192,7 +225,7 @@ describe("the contact's files tab", () => {
       ],
       page: { has_more: false },
     });
-    show(<ContactFilesTab contactId="p-1" />);
+    show(<ContactFilesTab contactId="p-1" contactName="Dana Buyer" />);
 
     const link = await screen.findByRole("link", { name: "Q4 plan" });
     expect(link.getAttribute("href")).toBe(
@@ -219,7 +252,7 @@ describe("the contact's files tab", () => {
       ],
       page: { has_more: false },
     });
-    show(<ContactFilesTab contactId="p-1" />);
+    show(<ContactFilesTab contactId="p-1" contactName="Dana Buyer" />);
 
     const named = await screen.findByRole("link", {
       name: "Signed offer letter",
@@ -237,7 +270,7 @@ describe("the contact's files tab", () => {
       ],
       page: { has_more: false },
     });
-    show(<ContactFilesTab contactId="p-1" />);
+    show(<ContactFilesTab contactId="p-1" contactName="Dana Buyer" />);
 
     expect(
       await screen.findByRole("link", { name: "scan_0007.pdf" }),
@@ -256,11 +289,11 @@ describe("the contact's files tab", () => {
       ],
       page: { has_more: false },
     });
-    show(<ContactFilesTab contactId="p-1" />);
+    show(<ContactFilesTab contactId="p-1" contactName="Dana Buyer" />);
 
     await screen.findByRole("link", { name: "contract.pdf" });
     expect(
-      within(screen.getByRole("table")).getByText("SOW/Contract"),
+      within(screen.getByRole("list")).getByText(/^SOW\/Contract ·/),
     ).toBeTruthy();
   });
 
@@ -284,7 +317,7 @@ describe("the contact's files tab", () => {
       page: { has_more: false },
     });
     const user = userEvent.setup();
-    show(<ContactFilesTab contactId="p-1" />);
+    show(<ContactFilesTab contactId="p-1" contactName="Dana Buyer" />);
 
     await screen.findByRole("link", { name: "offer.pdf" });
     expect(screen.getByText("Current")).toBeTruthy();
@@ -307,7 +340,7 @@ describe("the contact's files tab", () => {
       ],
       page: { has_more: true, next_cursor: "cur-2" },
     });
-    show(<ContactFilesTab contactId="p-1" />);
+    show(<ContactFilesTab contactId="p-1" contactName="Dana Buyer" />);
 
     await screen.findByRole("link", { name: "offer.pdf" });
     const offer = screen.getByRole("button", { name: /Proposal\/Offer/ });
@@ -332,15 +365,15 @@ describe("the contact's files tab", () => {
       ],
       page: { has_more: false },
     });
-    show(<ContactFilesTab contactId="p-1" />);
+    show(<ContactFilesTab contactId="p-1" contactName="Dana Buyer" />);
 
     await screen.findByRole("link", { name: "deck.png" });
-    const table = within(screen.getByRole("table"));
-    expect(table.getByText("Message attachment")).toBeTruthy();
+    const table = within(screen.getByRole("list"));
+    expect(table.getByText(/^Message attachment ·/)).toBeTruthy();
     // The negative is the point. A missing label falls back to the raw key or
     // the neighbouring one, and a photo from a chat reported as mail is the
     // wrong record this category exists to stop.
-    expect(table.queryByText("Email attachment")).toBeNull();
+    expect(table.queryByText(/Email attachment/)).toBeNull();
   });
 
   it("says nothing about a category the file was never filed under", async () => {
@@ -348,26 +381,26 @@ describe("the contact's files tab", () => {
       data: [attachment({ id: "f-1", entity_id: "p-1", filename: "scan.pdf" })],
       page: { has_more: false },
     });
-    show(<ContactFilesTab contactId="p-1" />);
+    show(<ContactFilesTab contactId="p-1" contactName="Dana Buyer" />);
 
     await screen.findByRole("link", { name: "scan.pdf" });
     // No category was set: the row leaves the cell empty rather than printing
     // an "uncategorised" placeholder for a fact the record never asserted.
-    const table = within(screen.getByRole("table"));
+    const table = within(screen.getByRole("list"));
     expect(table.queryByText("SOW/Contract")).toBeNull();
     expect(table.queryByText("Other")).toBeNull();
   });
 
   it("says the contact has no files rather than leaving the tab blank", async () => {
     stub({ data: [], page: { has_more: false } });
-    show(<ContactFilesTab contactId="p-1" />);
+    show(<ContactFilesTab contactId="p-1" contactName="Dana Buyer" />);
 
     expect(await screen.findByText(en["contact.documents.empty"])).toBeTruthy();
   });
 
   it("says the read failed, with a way to retry, rather than reading as empty", async () => {
     stub({ error: "boom" }, 500);
-    show(<ContactFilesTab contactId="p-1" />);
+    show(<ContactFilesTab contactId="p-1" contactName="Dana Buyer" />);
 
     expect(await screen.findByText("This section did not load.")).toBeTruthy();
     expect(
@@ -381,7 +414,7 @@ describe("the contact's files tab", () => {
       data: [attachment({ id: "f-1", entity_id: "p-1", filename: "one.pdf" })],
       page: { has_more: true },
     });
-    show(<ContactFilesTab contactId="p-1" />);
+    show(<ContactFilesTab contactId="p-1" contactName="Dana Buyer" />);
 
     expect(await screen.findByRole("link", { name: "one.pdf" })).toBeTruthy();
     expect(screen.getByText("Showing part of the list")).toBeTruthy();
@@ -390,7 +423,7 @@ describe("the contact's files tab", () => {
   it("reads the older files behind the first page when the reader asks for more", async () => {
     stubTwoPages();
     const user = userEvent.setup();
-    show(<ContactFilesTab contactId="p-1" />);
+    show(<ContactFilesTab contactId="p-1" contactName="Dana Buyer" />);
 
     await screen.findByRole("link", { name: "newest.pdf" });
     expect(screen.getByText("Showing part of the list")).toBeTruthy();
@@ -410,7 +443,7 @@ describe("the contact's files tab", () => {
   it("says nothing about a cut list once the last page has arrived", async () => {
     stubTwoPages();
     const user = userEvent.setup();
-    show(<ContactFilesTab contactId="p-1" />);
+    show(<ContactFilesTab contactId="p-1" contactName="Dana Buyer" />);
 
     await screen.findByRole("link", { name: "newest.pdf" });
     await user.click(screen.getByRole("button", { name: "Load more" }));
@@ -445,7 +478,7 @@ describe("the contact's files tab", () => {
       return json({ title: "Error" }, 500);
     });
     const user = userEvent.setup();
-    show(<ContactFilesTab contactId="p-1" />);
+    show(<ContactFilesTab contactId="p-1" contactName="Dana Buyer" />);
 
     await screen.findByRole("link", { name: "newest.pdf" });
     await user.click(screen.getByRole("button", { name: "Load more" }));
@@ -489,7 +522,7 @@ describe("the contact's files tab", () => {
       }),
     );
     const user = userEvent.setup();
-    show(<ContactFilesTab contactId="p-7" />);
+    show(<ContactFilesTab contactId="p-7" contactName="Dana Buyer" />);
 
     // The verb the tab shipped without: a reader who wants a CV on a contact
     // had to reach the upload from the account's library and change its parent.
@@ -511,7 +544,7 @@ describe("the contact's files tab", () => {
 
   it("scopes the request to the contact whose files these are", async () => {
     stub({ data: [], page: { has_more: false } });
-    show(<ContactFilesTab contactId="p-42" />);
+    show(<ContactFilesTab contactId="p-42" contactName="Dana Buyer" />);
 
     await screen.findByText(en["contact.documents.empty"]);
     if (!lastRequest) {
@@ -546,7 +579,13 @@ describe("a file a mail carried, on the contact's files tab", () => {
       page: { has_more: false },
     });
     const onOpenEmail = vi.fn();
-    show(<ContactFilesTab contactId="p-1" onOpenEmail={onOpenEmail} />);
+    show(
+      <ContactFilesTab
+        contactId="p-1"
+        contactName="Dana Buyer"
+        onOpenEmail={onOpenEmail}
+      />,
+    );
 
     const origin = await screen.findByRole("button", {
       name: "From Bea Buyer · Signed order",
@@ -557,7 +596,13 @@ describe("a file a mail carried, on the contact's files tab", () => {
 
   it("names nothing about a mail the server sent no origin for", async () => {
     stub({ data: [MAIL_FILE], page: { has_more: false } });
-    show(<ContactFilesTab contactId="p-1" onOpenEmail={vi.fn()} />);
+    show(
+      <ContactFilesTab
+        contactId="p-1"
+        contactName="Dana Buyer"
+        onOpenEmail={vi.fn()}
+      />,
+    );
 
     await screen.findByRole("link", { name: "order.pdf" });
     expect(screen.queryByText(/^From /)).toBeNull();
@@ -569,9 +614,18 @@ describe("a file a mail carried, on the contact's files tab", () => {
       data: [attachment({ id: "f-1", entity_id: "p-1", filename: "cv.pdf" })],
       page: { has_more: false },
     });
-    show(<ContactFilesTab contactId="p-1" onOpenEmail={vi.fn()} />);
+    show(
+      <ContactFilesTab
+        contactId="p-1"
+        contactName="Dana Buyer"
+        onOpenEmail={vi.fn()}
+      />,
+    );
 
     const name = await screen.findByRole("link", { name: "cv.pdf" });
-    expect(name.closest(".contact-file")?.textContent).toBe("cv.pdf");
+    expect(name.textContent).toBe("cv.pdf");
+    expect(
+      name.closest(".board-doc")?.querySelector(".file-origin"),
+    ).toBeNull();
   });
 });

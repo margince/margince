@@ -341,7 +341,8 @@ var waitingEligibleFromSQL = `FROM activity a
 	   -- deletes the state row. handled lifts only by undo; the customer's next
 	   -- message is a new row with no state.
 	   AND (%[20]s OR NOT ` + readerSetAsideSQL("$%[9]d", "%[15]s") + `)
-		   AND ` + filedUnderALiveContactSQL + ` %[18]s`
+		   AND ` + relationshipmark.SenderMayRaiseWorkSQL("a") + `
+           AND ` + filedUnderALiveContactSQL + ` %[18]s`
 
 // waitingGroupSQL folds the joined links back to one row per message.
 const waitingGroupSQL = `

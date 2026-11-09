@@ -14,7 +14,7 @@ import { SettingsSavePage } from "./settingssavepage";
 import Configuration from "./systemhealthconfiguration";
 
 const meta = {
-  title: "Settings/Governance/System health/Configuration",
+  title: "Settings/System/System health/Configuration",
   component: Configuration,
 } satisfies Meta<typeof Configuration>;
 export default meta;
