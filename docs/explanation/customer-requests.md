@@ -17,6 +17,9 @@ is owed only when the owed verdict says `asks_us` or someone took it on. Capture
 method the mail's calendar part names (`REPLY`, `COUNTER` or `DECLINECOUNTER`). The owed verdict
 still reads every such mail, because a sender can put that method on any mail.
 
+A calendar invite the reader may still answer files no reminder task. Its own row offers the answers
+on the reader's calendar instead, so the request writer skips it (`answerableInvitationSQL`).
+
 The activities module owns the request state. Its shared checks serve the email brief, the waiting
 queue and the queue of mail still to classify. They also serve the reminders it files on its own, and
 the deal's read of its own requests. That last read runs apart from the newest history, so a request can

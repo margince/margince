@@ -233,6 +233,14 @@ It is due on a day the email names, such as "Deadline: 27 October", and has **No
 - Private mail is left out. When it is not clear whose task it is, Margince leaves the email for review.
 Also called: customer request, email nobody answered, email to-do.
 
+### How do I answer a calendar invitation?
+An email that invites you to a meeting shows **Accept**, **Maybe** and **Decline** in place of **Reply**. That is on Home, in the Worklist, in a record's **History** and in the email reader.
+- Your answer goes out through your own connected calendar, which tells the person who sent the invite. Without a connected calendar, Margince says so under the answers.
+- The card is tagged **Invitation** and shows when the meeting starts. It stays under **Needs you** until you answer, and Margince files no reminder task for it.
+- You can change your answer later: your current answer shows pressed.
+- **Reply** stays in the email reader, for proposing another time.
+Also called: meeting invite, accept an invite, decline a meeting.
+
 ## The Worklist
 
 A lead record does not come into the Worklist because someone created it, imported it or set its owner. A planned task linked to a lead, or a request that came in, can come in through the list of tasks or of waiting messages. Choose prospects in **Leads**, then plan when to reach out.
