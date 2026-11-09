@@ -266,7 +266,7 @@ func TestTheContactFilterKeepsTheThreadsWithThatContact(t *testing.T) {
 	e.WsExec(t, `INSERT INTO activity_participant(activity_id,contact_id,address,role) VALUES($1,$2,'lena@prospect.test','from')`, message, lena)
 	seedHeldThread(t, e, e.Rep1, "with-sam", "held", 1, day, false, "sam@northwind.test")
 
-	listed := heldByContact(t, e, purgeCtx(e, e.Rep1), lena)
+	listed := heldByContact(purgeCtx(e, e.Rep1), t, e, lena)
 	if listed.Code != http.StatusOK {
 		t.Fatalf("filtering by Lena answered %d: %s", listed.Code, listed.Body.String())
 	}
@@ -293,20 +293,20 @@ func TestTheContactFilterKeepsTheThreadsWithThatContact(t *testing.T) {
 		{"a reader with no contact grant", noContactGrant, lena},
 	}
 	for _, refusal := range refusals {
-		if got := heldByContact(t, e, refusal.ctx, refusal.contact); got.Code != http.StatusNotFound {
+		if got := heldByContact(refusal.ctx, t, e, refusal.contact); got.Code != http.StatusNotFound {
 			t.Errorf("filtering by %s answered %d, want 404: %s", refusal.name, got.Code, got.Body.String())
 		}
 	}
 
 	e.WsExec(t, `UPDATE contact SET archived_at = now() WHERE id = $1`, lena)
-	if got := heldByContact(t, e, purgeCtx(e, e.Rep1), lena); got.Code != http.StatusNotFound {
+	if got := heldByContact(purgeCtx(e, e.Rep1), t, e, lena); got.Code != http.StatusNotFound {
 		t.Errorf("filtering by an archived contact answered %d, want 404: %s", got.Code, got.Body.String())
 	}
 }
 
 // heldByContact asks GET /capture/held-threads?contact_id= through the
 // generated router, which is what parses the parameter off the address.
-func heldByContact(t *testing.T, e *integration.Env, ctx context.Context, contact ids.UUID) *httptest.ResponseRecorder {
+func heldByContact(ctx context.Context, t *testing.T, e *integration.Env, contact ids.UUID) *httptest.ResponseRecorder {
 	t.Helper()
 	server := Server{captureSenderHandlers: captureSenderHandlers{db: InstallationDB(e.Pool)}}
 	router := crmcontracts.HandlerFromMuxWithBaseURL(server, chi.NewRouter(), "/v1")
