@@ -7,6 +7,7 @@ package compose
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -241,5 +243,43 @@ func TestAReplyOnTheThreadFoundBySubjectIsNotCalledASeparateEmail(t *testing.T) 
 	}
 	if seen != 1 {
 		t.Fatalf("the reply reaches the model %d times, want once", seen)
+	}
+}
+
+// Our reply filed before a request dated by its day, at that day's stored instant, answers it (occurredday.Answers).
+// The model reads that reply even under another subject, so the request the pass offers is judged.
+func TestADayTieReplyFiledFirstReachesTheModel(t *testing.T) {
+	o := setupOwed(t)
+	o.contact(t, "Pat Buyer", "pat@customer.example")
+	reply := o.weWrite(t, owedMail{
+		to: "pat@customer.example", subject: "Countersigned copy", inReplyTo: "dated@customer.example",
+		at: o.now.Add(-72 * time.Hour),
+	})
+	request := o.capture(t, owedMail{
+		from: "pat@customer.example", to: o.seat, subject: "Signed NDA",
+		messageID: "dated@customer.example", at: o.now.Add(-72 * time.Hour),
+	})
+	if o.threadKey(t, reply) != o.threadKey(t, request) {
+		t.Fatal("capture left the reply off the request's thread; the fixture proves nothing")
+	}
+	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `UPDATE activity
+			SET occurred_at = $3, occurred_precision = CASE WHEN id = $1 THEN 'day' ELSE occurred_precision END
+			WHERE id IN ($1, $2)`, request, reply, occurredday.Anchor(o.now.Add(-72*time.Hour)))
+		return err
+	}); err != nil {
+		t.Fatalf("dating the request by its day: %v", err)
+	}
+	if applied, err := o.e.Activities.SetOwedVerdict(o.judge(), request, activities.OwedVerdictAsksUs,
+		"prompts-test", time.Now()); err != nil || !applied {
+		t.Fatalf("judging the request: applied=%v err=%v", applied, err)
+	}
+
+	candidate, ok := o.offered(t, request)
+	if !ok {
+		t.Fatal("a request our reply answers by its day was never offered")
+	}
+	if !slices.ContainsFunc(o.evidence(t, candidate), func(message threadMessage) bool { return message.ID == reply }) {
+		t.Fatal("the reply that answers the request never reaches the model")
 	}
 }

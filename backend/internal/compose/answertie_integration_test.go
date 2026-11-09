@@ -17,8 +17,10 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -166,5 +168,100 @@ func TestAHandLoggedTieLeavesTheStripTheSameMove(t *testing.T) {
 				t.Errorf("the last exchange leaves the move %q, want %q", got, c.whoseMove())
 			}
 		})
+	}
+}
+
+// tieRow is one row of a tie, in the order it is logged.
+type tieRow struct {
+	direction crmcontracts.CreateActivityRequestDirection
+	precision crmcontracts.OccurredPrecision
+}
+
+// At one stored instant our day entry answers their instant, and our instant does not. So a page reads our side
+// of a tie as its day entry and theirs as its instant, whichever was logged last.
+func TestATieOfThreeReadsAsTheRowsThatDecideIt(t *testing.T) {
+	day, instant := crmcontracts.OccurredPrecisionOccurredPrecisionDay, crmcontracts.OccurredPrecisionOccurredPrecisionInstant
+	in, out := crmcontracts.CreateActivityRequestDirectionInbound, crmcontracts.CreateActivityRequestDirectionOutbound
+	for _, c := range []struct {
+		name              string
+		rows              []tieRow
+		inbound, outbound crmcontracts.OccurredPrecision
+		answered          bool
+	}{
+		{"our day entry beside our instant", []tieRow{{in, instant}, {out, day}, {out, instant}}, instant, day, true},
+		{"their instant beside their day entry", []tieRow{{in, instant}, {out, instant}, {in, day}}, instant, instant, false},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			o := setupOwed(t)
+			address := "pat-" + ids.NewV7().String() + "@tie.example"
+			company := o.accountOf(t, "Tie of three", address)
+			contact := o.contactWriting(t, address)
+			at, thread := occurredday.Anchor(o.now.Add(-26*time.Hour)), "tie-"+ids.NewV7().String()
+			for _, row := range c.rows {
+				o.handLogged(t, contact, row.direction, thread, at, row.precision)
+			}
+			view := contactView(t, o.e, contact, func() time.Time { return o.now })
+			if got := view.LastInboundPrecision; got == nil || *got != c.inbound {
+				t.Errorf("the contact page reads their side as %s, want %s", stated(got), c.inbound)
+			}
+			if got := view.LastOutboundPrecision; got == nil || *got != c.outbound {
+				t.Errorf("the contact page reads our side as %s, want %s", stated(got), c.outbound)
+			}
+			awaiting := view.Moment != nil && view.Moment.Rule == crmcontracts.ContactMomentRuleAwaitingReply
+			if awaiting != c.answered {
+				t.Errorf("the contact page waits on their reply = %v, want %v", awaiting, c.answered)
+			}
+			if !c.answered {
+				return
+			}
+			if _, _, engagement := o.whoseMove(t, company); engagement != crmcontracts.ContactEngagementAnswered {
+				t.Errorf("the Contacts tab reads %q, want answered", engagement)
+			}
+		})
+	}
+}
+
+// stated is a precision the page may leave out, "none" when it does.
+func stated(precision *crmcontracts.OccurredPrecision) string {
+	if precision == nil {
+		return "none"
+	}
+	return string(*precision)
+}
+
+// A deal's quiet sentence reads each side of a tie as the row that decides it: ours as its day entry, theirs as
+// its instant.
+func TestADealsQuietSidesReadATieAsTheRowsThatDecideIt(t *testing.T) {
+	e := integration.Setup(t)
+	pipeline, open, _ := integration.DealFixture(t, e)
+	dealUUID := e.SeedDeal(t, "Tie quiet deal", pipeline, open, nil)
+	at := occurredday.Anchor(time.Now().AddDate(0, 0, -6))
+	for _, row := range []struct{ direction, precision string }{
+		{"inbound", activities.PrecisionInstant},
+		{"outbound", activities.PrecisionDay},
+		{"inbound", activities.PrecisionDay},
+		{"outbound", activities.PrecisionInstant},
+	} {
+		subject := "Terms"
+		if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+			Kind: "email", Subject: &subject, Direction: &row.direction, OccurredAt: &at,
+			OccurredPrecision: row.precision, Source: "manual",
+			Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: dealUUID}},
+		}); err != nil {
+			t.Fatalf("logging the %s %s mail: %v", row.precision, row.direction, err)
+		}
+	}
+	var facts deals.QuietFacts
+	inWorkspaceTx(t, e, func(tx pgx.Tx) error {
+		var err error
+		facts, err = deals.ReadQuietFacts(e.Admin(), tx, ids.From[ids.DealKind](dealUUID))
+		return err
+	})
+	if facts.LastInbound == nil || facts.LastOutbound == nil {
+		t.Fatalf("the deal reads no side of the tie: %+v", facts)
+	}
+	if facts.LastInbound.DateOnly || !facts.LastOutbound.DateOnly {
+		t.Errorf("the deal reads their side dated = %v and ours = %v, want their instant and our day entry",
+			facts.LastInbound.DateOnly, facts.LastOutbound.DateOnly)
 	}
 }

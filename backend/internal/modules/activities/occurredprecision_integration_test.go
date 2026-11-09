@@ -498,6 +498,28 @@ func TestLatestPrecisionNamesTheNewestAdmittedRow(t *testing.T) {
 	}
 }
 
+// occurredday.LatestAnswerPrecisionSQL reads a day entry that ties an instant as day: the row that answers there.
+func TestLatestAnswerPrecisionNamesTheDayEntryAtATie(t *testing.T) {
+	e := setupSend(t)
+	noon := time.Date(2026, 10, 22, 12, 0, 0, 0, time.UTC)
+	for _, c := range []struct{ name, filter, want string }{
+		{"an instant ties a day entry's noon", "a.occurred_at <= $1", "day"},
+		{"the newest row is an instant", "a.direction = 'outbound'", "instant"},
+		{"the filter admits no row", "a.direction = 'internal'", "none"},
+	} {
+		var got string
+		if err := e.owner.QueryRow(context.Background(), fmt.Sprintf(
+			`SELECT coalesce(%s, 'none') FROM (VALUES ($1::timestamptz, 'day', 'inbound'), ($1, 'instant', 'outbound'),
+			   ($1 + interval '1 day', 'day', 'inbound')) AS a(occurred_at, occurred_precision, direction)`,
+			occurredday.LatestAnswerPrecisionSQL("a", c.filter)), noon).Scan(&got); err != nil {
+			t.Fatalf("%s: %v", c.name, err)
+		}
+		if got != c.want {
+			t.Errorf("%s: precision = %s, want %s", c.name, got, c.want)
+		}
+	}
+}
+
 // employment.InPlaceForSQL reads a day entry by its date. It is in place from
 // the edge's start date, or once its date begins after capture saw the edge.
 // In Auckland a day entry's stored noon falls on the next local date.
