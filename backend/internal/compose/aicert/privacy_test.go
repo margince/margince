@@ -143,11 +143,11 @@ func TestAnOrdinaryCaseScoredAtTheFloorIsNotALeak(t *testing.T) {
 	}
 }
 
-// decisionRuns is n decision runs of sc: the first kept of them answered with
-// got, the rest fallen back to the LLM ladder.
-func decisionRuns(sc Scenario, kept, n int, got string) scenarioDecisionRuns {
+// decisionRuns is nine decision runs of sc: the first kept of them answered
+// with got, the rest fallen back to the LLM ladder.
+func decisionRuns(sc Scenario, kept int, got string) scenarioDecisionRuns {
 	set := scenarioDecisionRuns{scenario: sc, stamp: "stamp"}
-	for i := range n {
+	for i := range 9 {
 		run := decisionRun{probe: ai.DecisionProbe{Decided: i < kept, Reason: "decision_below_floor"}}
 		if i < kept {
 			run.outcome.Result = got
@@ -173,12 +173,12 @@ func TestAPrivacyDecisionRecordCertifiesOnlyWhenEveryRunIsServedRight(t *testing
 		llm  Record
 		want string
 	}{
-		{"every run kept and right", privacy, decisionRuns(privacy, 9, 9, aitasks.OutcomeAccepted), Record{}, VerdictCertified},
-		{"one kept answer wrong", privacy, decisionRuns(privacy, 9, 9, aitasks.OutcomeWrongAnswer), Record{}, VerdictNotSupported},
-		{"a fallback to an LLM row that passed every run", privacy, decisionRuns(privacy, 8, 9, aitasks.OutcomeAccepted), llmPassing(9), VerdictCertified},
-		{"a fallback to an LLM row that failed a run", privacy, decisionRuns(privacy, 8, 9, aitasks.OutcomeAccepted), llmPassing(8), VerdictNotSupported},
-		{"a fallback with no LLM row", privacy, decisionRuns(privacy, 8, 9, aitasks.OutcomeAccepted), Record{}, VerdictNotSupported},
-		{"an ordinary fallback to an LLM row that failed a run", ordinary, decisionRuns(ordinary, 8, 9, aitasks.OutcomeAccepted), llmPassing(8), VerdictCertified},
+		{"every run kept and right", privacy, decisionRuns(privacy, 9, aitasks.OutcomeAccepted), Record{}, VerdictCertified},
+		{"one kept answer wrong", privacy, decisionRuns(privacy, 9, aitasks.OutcomeWrongAnswer), Record{}, VerdictNotSupported},
+		{"a fallback to an LLM row that passed every run", privacy, decisionRuns(privacy, 8, aitasks.OutcomeAccepted), llmPassing(9), VerdictCertified},
+		{"a fallback to an LLM row that failed a run", privacy, decisionRuns(privacy, 8, aitasks.OutcomeAccepted), llmPassing(8), VerdictNotSupported},
+		{"a fallback with no LLM row", privacy, decisionRuns(privacy, 8, aitasks.OutcomeAccepted), Record{}, VerdictNotSupported},
+		{"an ordinary fallback to an LLM row that failed a run", ordinary, decisionRuns(ordinary, 8, aitasks.OutcomeAccepted), llmPassing(8), VerdictCertified},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			rec, err := decisionLeg{llm: tc.llm}.buildDecisionRecord("verdict", []scenarioDecisionRuns{tc.set})

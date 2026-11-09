@@ -32,12 +32,12 @@ func (a fixedAnswer) Complete(context.Context, model.Request) (model.Response, e
 func journaledAnswer(t *testing.T, sc Scenario, answer string, score int) journaledRun {
 	t.Helper()
 	census := testCensus(t)
-	_, prepared, err := prepareCase(census, ai.TaskSummarize, sc)
+	bound, err := prepareCase(census, ai.TaskSummarize, sc)
 	if err != nil {
 		t.Fatalf("preparing the case: %v", err)
 	}
 	recorder := &recordingCompleter{next: fixedAnswer(answer)}
-	caseTrace, err := prepared.Run(wsContext(t), recorder)
+	caseTrace, err := bound.prepared.Run(wsContext(t), recorder)
 	if err != nil {
 		t.Fatalf("running the case: %v", err)
 	}

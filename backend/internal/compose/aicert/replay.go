@@ -192,12 +192,12 @@ func reevaluate(ctx context.Context, census *aitasks.Registry, task ai.Task, sc 
 	case !kept.delivered():
 		return kept, nil
 	}
-	factory, prepared, err := prepareCase(census, task, sc)
+	bound, err := prepareCase(census, task, sc)
 	if err != nil {
 		return runOutcome{}, err
 	}
 	replay := &replayCompleter{evidence: ev}
-	caseTrace, runErr := prepared.Run(ctx, replay)
+	caseTrace, runErr := bound.prepared.Run(ctx, replay)
 	if err := replay.finished(runErr); err != nil {
 		return runOutcome{}, err
 	}
@@ -207,7 +207,7 @@ func reevaluate(ctx context.Context, census *aitasks.Registry, task ai.Task, sc 
 		CacheWriteTokens: kept.CacheWriteTokens, ReasoningTokens: ev.ReasoningTokens,
 		LatencyMS: kept.LatencyMS, Truncated: ev.Truncated,
 	}
-	scored, err := scoreAnswer(ctx, prepared, aitasks.ScopeOf(factory), caseTrace, sc, task, pooled, log)
+	scored, err := scoreAnswer(ctx, bound.prepared, bound.scope, caseTrace, sc, task, pooled, log)
 	if err != nil {
 		return runOutcome{}, err
 	}

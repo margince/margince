@@ -29,7 +29,6 @@ type requestKeyedClient struct {
 
 func (requestKeyedClient) Caps() model.Capabilities { return model.Capabilities{} }
 
-//nolint:ireturn // the port's own signature
 func (requestKeyedClient) Stream(context.Context, model.Request) (model.TokenStream, error) {
 	return nil, errors.New("the test client completes only")
 }
@@ -42,7 +41,7 @@ func (c requestKeyedClient) Complete(_ context.Context, req model.Request) (mode
 	return model.Response{Text: c.answer(req)}, nil
 }
 
-// requestText is every text a request carries, for a client to key its answer on.
+// requestText joins the system prompt and the message texts, for a client to key its answer on.
 func requestText(req model.Request) string {
 	parts := []string{req.System}
 	for _, m := range req.Messages {

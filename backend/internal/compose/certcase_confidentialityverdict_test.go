@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // heldCase is a thread whose scenario expects it held, ready to grade replies.
@@ -46,14 +47,15 @@ func TestAHeldScenarioPassesWhatTheEngineKeepsPrivate(t *testing.T) {
 
 // ruleHeldIncidents are scenarios kept as the incident arrived, though a rule
 // now holds them before the model: they prove the prompt reads the document.
-var ruleHeldIncidents = map[string]string{
+var ruleHeldIncidents = gatekit.Waive(map[string]string{
 	"personnel_02.yaml": "the salary sheet behind an invoice note, which the staff-cost rule now holds",
-}
+})
 
 // The document scenarios measure the model only if no rule holds the thread
 // before the model is asked. The engine marks each read document, then asks
 // the rules, as here.
 func TestEveryDocumentScenarioReachesTheModel(t *testing.T) {
+	defer ruleHeldIncidents.AssertAllMatched(t)
 	paths, err := filepath.Glob("aicert/corpus/capture_confidentiality_verdict/*.yaml")
 	if err != nil || len(paths) == 0 {
 		t.Fatalf("no confidentiality scenarios found (%v)", err)
@@ -97,10 +99,8 @@ func TestEveryDocumentScenarioReachesTheModel(t *testing.T) {
 			doc := &c.row.Documents[i]
 			doc.Personnel = !doc.Unreadable && documentReadsAsPersonnel(doc.Excerpt, doc.Excerpt)
 		}
-		_, isIncident := ruleHeldIncidents[filepath.Base(path)]
-		if isPersonnelWithoutAModel(c.row) != isIncident {
-			t.Errorf("%s: a rule holds it before the model is asked = %v, want %v",
-				filepath.Base(path), !isIncident, isIncident)
+		if isPersonnelWithoutAModel(c.row) && !ruleHeldIncidents.Waived(t, filepath.Base(path)) {
+			t.Errorf("%s: a rule holds it before the model is asked, so it measures no model", filepath.Base(path))
 		}
 	}
 	if checked < 4 {

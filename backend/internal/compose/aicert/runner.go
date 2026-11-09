@@ -340,6 +340,7 @@ func certifyTask(ctx context.Context, task ai.Task, scenarios []Scenario, census
 	judgeExtra = append(judgeTransport(judgeBinding), judgeExtra...)
 	lanes := make([]runLane, parallel)
 	for i := range lanes {
+		//nolint:contextcheck // a router outlives this call; the health writes it may queue run on the drain goroutine, which owns its own deadline by design
 		if lanes[i], err = newRunLane(candidateCfg, judgeCfg, candidateExtra, judgeExtra); err != nil {
 			return Record{}, fmt.Errorf("aicert: task %s: %w", task, err)
 		}

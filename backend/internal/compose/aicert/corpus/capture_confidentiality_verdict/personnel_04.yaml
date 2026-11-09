@@ -4,7 +4,7 @@ site: thread
 source: hand_authored
 sanitized_by: hand_authored/claude-opus-5
 # The excerpt stops before the first row of figures. What it shows is a cost
-# overview whose columns are per person, role and monthly gross, and the
+# overview whose columns are name, role and monthly gross, and the
 # prompt says the file continues. No line carries an amount next to a name,
 # so the staff-cost rule does not hold it first.
 fixture:

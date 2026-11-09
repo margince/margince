@@ -66,14 +66,14 @@ type Sentence struct {
 	Evidence []Evidence `json:"evidence"`
 }
 
-// idInProse matches a record id written into a sentence, spelled ONCE for every
-// surface and the tests that gate them. It is the UUID shape every citable
-// record carries, so a reply that pastes one anywhere in its prose is caught
-// wherever in the clause it landed.
 // NeverNameTheGap follows every rule that leaves sections_omitted out. A
 // sentence saying something is hidden tells the reader that it exists.
 const NeverNameTheGap = "Never write that anything is withheld, hidden, restricted or not visible to the reader."
 
+// idInProse matches a record id written into a sentence, spelled ONCE for every
+// surface and the tests that gate them. It is the UUID shape every citable
+// record carries, so a reply that pastes one anywhere in its prose is caught
+// wherever in the clause it landed.
 var idInProse = regexp.MustCompile(`(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`)
 
 // SpellsRecordID reports whether prose hands the reader a raw record id. It is

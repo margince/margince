@@ -164,11 +164,11 @@ Claude candidates.
 **The judge sets the pace of a run**, and its time grows with the thinking it writes.
 `claude-sonnet-4-6` takes about 20 seconds a call, `claude-sonnet-5-5` about 7, and
 `MAX_THINKING_TOKENS=<n>` caps a `claude_cli` judge. A new judge changes scores on its own:
-`claude-sonnet-5-5` scores about nine points under `claude-sonnet-4-6`. Compare two records only when
+`claude-sonnet-5-5` scores about 9 points under `claude-sonnet-4-6`. Compare two records only when
 they name the same judge.
 
-To shorten a run (parallel runs, part of a task, fixing in batches), see
-[Make a run fast](re-certify-the-whole-corpus.md#make-a-run-fast).
+To cut the time a run takes (runs at once, part of a task, fixing in batches), see
+[Make a run take less time](re-certify-the-whole-corpus.md#make-a-run-take-less-time).
 
 ## 3. Read the report
 
@@ -309,7 +309,7 @@ the judge said, and stands in for a new one only when neither could say somethin
 - and **within 6 hours**.
 
 Edit a prompt, and the stamp of that scenario changes, so those runs are measured again. A Go edit
-does not throw the journal away: the code you build now grades every stored answer again. Make a
+does not empty the journal: the code you build now grades every stored answer again. Make a
 validator stricter, and a replayed answer it now refuses fails as a live one would. A replayed run
 passes the same gates as a live one, for the model that served it and for a degraded answer. So a
 record built from stored runs is the same measure.

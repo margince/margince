@@ -144,20 +144,20 @@ type runOutcome struct {
 // is the one the site's own validator reaches, so a run measures what ships
 // instead of a corpus author's description of it.
 func runOnce(ctx context.Context, lane runLane, sc Scenario, task ai.Task, census *aitasks.Registry, log *slog.Logger, trace *payloadTrace, run, attempt int) (measuredRun, error) {
-	factory, prepared, err := prepareCase(census, task, sc)
+	bound, err := prepareCase(census, task, sc)
 	if err != nil {
 		return measuredRun{}, err
 	}
 
 	recorder := &recordingCompleter{next: routedCompleter{router: lane.candidate, task: task}}
-	caseTrace, pooled, err := driveCandidate(ctx, prepared, recorder, lane.candidateRec, task, sc, run, attempt, trace, log)
+	caseTrace, pooled, err := driveCandidate(ctx, bound.prepared, recorder, lane.candidateRec, task, sc, run, attempt, trace, log)
 	if err != nil {
 		return measuredRun{}, err
 	}
 	if pooled.Degraded {
 		return measuredRun{outcome: runOutcome{RunResult: RunResult{Degraded: true}}}, nil
 	}
-	scored, err := scoreAnswer(ctx, prepared, aitasks.ScopeOf(factory), caseTrace, sc, task, pooled, log)
+	scored, err := scoreAnswer(ctx, bound.prepared, bound.scope, caseTrace, sc, task, pooled, log)
 	if err != nil {
 		return measuredRun{}, err
 	}
@@ -206,18 +206,25 @@ func runOnce(ctx context.Context, lane runLane, sc Scenario, task ai.Task, censu
 	return measured, nil
 }
 
+// boundCase is the certification case a scenario's site binds, prepared from
+// the scenario's fixture, with the scope its factory certifies.
+type boundCase struct {
+	prepared aitasks.PreparedCase
+	scope    string
+}
+
 // prepareCase builds the certification case the scenario's site binds, from
 // the scenario's own fixture.
-func prepareCase(census *aitasks.Registry, task ai.Task, sc Scenario) (aitasks.CaseFactory, aitasks.PreparedCase, error) {
+func prepareCase(census *aitasks.Registry, task ai.Task, sc Scenario) (boundCase, error) {
 	factory, bound := census.CaseFor(task, sc.Site)
 	if !bound {
-		return nil, nil, fmt.Errorf("no certification case is bound to site %s/%s", task, sc.Site)
+		return boundCase{}, fmt.Errorf("no certification case is bound to site %s/%s", task, sc.Site)
 	}
 	prepared, err := factory.Prepare(json.RawMessage(sc.Fixture), json.RawMessage(sc.Expect.Answer))
 	if err != nil {
-		return nil, nil, fmt.Errorf("preparing the case: %w", err)
+		return boundCase{}, fmt.Errorf("preparing the case: %w", err)
 	}
-	return factory, prepared, nil
+	return boundCase{prepared: prepared, scope: aitasks.ScopeOf(factory)}, nil
 }
 
 // scoredAnswer is a run's candidate side as this build grades it, and whether

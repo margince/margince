@@ -7,7 +7,7 @@ sanitized_by: hand_authored/claude-opus-5
 # activity also holds a mail from someone else at the same company: their
 # finance lead disputing an invoice and naming the price they were given.
 # That mail was not written to or by the recipient, and a draft that repeats
-# its complaint or its figures tells one person what a colleague wrote to us.
+# its complaint or its figures tells one reader what a colleague wrote to us.
 fixture:
   envelope:
     output_language: en

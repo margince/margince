@@ -3,8 +3,8 @@ task: capture_confidentiality_verdict
 site: thread
 source: hand_authored
 sanitized_by: hand_authored/claude-opus-5
-# A recruiter proposes a candidate for a permanent job. The profile is one
-# person's career written as prose, with no "CV" title and no section
+# A recruiter proposes a candidate for a permanent job. The profile is the
+# candidate's career written as prose, with no "CV" title and no section
 # headings, so the CV rule does not hold it and only the model can tell.
 fixture:
   subject: "Candidate for your senior data engineer opening"

@@ -8,38 +8,35 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // shapeBlindFields are the request fields a replay may ignore, each with why
 // it cannot change an answer.
-var shapeBlindFields = map[string]string{
+var shapeBlindFields = gatekit.Waive(map[string]string{
 	"SecretStripper":        "hygiene over the outbound payload, the same on every run",
 	"ContextBytes":          "trace metadata of the context block ContextFingerprint already digests",
 	"ContextTokensEstimate": "trace metadata of the context block ContextFingerprint already digests",
-}
+})
 
 // Every model.Request field either moves the shape or is named above with a
 // reason. The census reads the struct, so a field added later fails here until
 // someone decides which it is.
 func TestEveryRequestFieldThatCanChangeAnAnswerMovesItsShape(t *testing.T) {
+	defer shapeBlindFields.AssertAllMatched(t)
 	base := model.Request{System: "Describe the subject.", Messages: []model.Message{{Role: "user", Content: "a widget"}}}
 	baseShape := shapeOf(t, base)
 	fields := reflect.TypeFor[model.Request]().NumField()
 	for i := range fields {
 		field := reflect.TypeFor[model.Request]().Field(i)
-		if _, blind := shapeBlindFields[field.Name]; blind {
+		if shapeBlindFields.Waived(t, field.Name) {
 			continue
 		}
 		changed := base
 		setNonZero(t, reflect.ValueOf(&changed).Elem().Field(i), field.Name)
 		if shapeOf(t, changed) == baseShape {
 			t.Errorf("model.Request.%s changed and the shape did not: a replay would answer a request it was never asked", field.Name)
-		}
-	}
-	for name := range shapeBlindFields {
-		if _, ok := reflect.TypeFor[model.Request]().FieldByName(name); !ok {
-			t.Errorf("shapeBlindFields names %s, which model.Request no longer has", name)
 		}
 	}
 }
