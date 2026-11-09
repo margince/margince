@@ -252,7 +252,7 @@ func (h Handlers) DownloadBuyerRoomDocument(w http.ResponseWriter, r *http.Reque
 	// refused, and a bookkeeping failure is still answerable as an error
 	// rather than as a truncated file.
 	if err := h.store.NoteDocumentDelivered(r.Context(), sess, documentIDOf(documentID)); err != nil {
-		writeBuyerFault(w, r, err)
+		writeBuyerFault(w, r, errors.Join(err, body.Close()))
 		return
 	}
 	contentType := "application/octet-stream"
