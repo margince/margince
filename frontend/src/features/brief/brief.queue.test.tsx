@@ -11,6 +11,7 @@ import {
   STORAGE_KEYS,
   writeStored,
 } from "../../lib/storage";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
 import {
   failedApprovalRow,
   readingsDay,
@@ -682,7 +683,13 @@ it("snoozes the Home task before a slow day refresh and pins the next click to i
       return jsonResponse(task());
     },
   });
-  const { client } = render(<BriefScreen />);
+  // The reader's zone, so the wall time the snooze keeps is the same on
+  // every machine. 16:00 in Berlin summer time is 15:00Z once winter time starts.
+  const { client } = render(
+    <ViewerZoneProvider zone="Europe/Berlin">
+      <BriefScreen />
+    </ViewerZoneProvider>,
+  );
   await user.click(
     await screen.findByRole("button", { name: en["brief.focus.context"] }),
   );
@@ -700,7 +707,7 @@ it("snoozes the Home task before a slow day refresh and pins the next click to i
   await waitFor(() =>
     expect(within(card).queryByText(en["worklist.overdue"])).toBeNull(),
   );
-  expect(dueAt).toBe("2026-11-06T14:00:00.000Z");
+  expect(dueAt).toBe("2026-11-06T15:00:00.000Z");
   expect(client.isFetching({ queryKey: ["worklist"] })).toBeGreaterThan(0);
   const cached = client.getQueryData<{
     pages: components["schemas"]["Worklist"][];
@@ -717,7 +724,7 @@ it("snoozes the Home task before a slow day refresh and pins the next click to i
         : [],
     );
   expect(sentVersions).toEqual(["1", "2"]);
-  expect(dueAt).toBe("2026-11-07T14:00:00.000Z");
+  expect(dueAt).toBe("2026-11-07T15:00:00.000Z");
   releaseDay(jsonResponse(day));
   vi.useRealTimers();
 });
