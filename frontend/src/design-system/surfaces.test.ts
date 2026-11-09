@@ -57,7 +57,7 @@ import { blocks, resolve } from "./tokens-testing";
 const LEDGER_CEILING = { spellings: 76, states: 6 };
 
 // Joining or leaving the ladder is a decision, so it moves these numbers too.
-const LADDER_SIZE = { surfaces: 80, overlays: 19 };
+const LADDER_SIZE = { surfaces: 79, overlays: 19 };
 
 const ledgerPath = join(here, "surfaces.ledger.txt");
 const tokensPath = join(here, "tokens.css");
