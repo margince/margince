@@ -345,7 +345,7 @@ a parked delivery can be replayed after the bus stream has cut the source event.
   first stops the send. One that starts later waits until the request is written, at most 5 seconds.
 - **`deliverOnce` never returns an error**: the result is the record. A failed *store* of it is
   logged. A first attempt whose result write fails stays `pending`: no sweep scans it and a replay
-  refuses it (422), though it may have reached the endpoint. A `retrying` row is scanned again.
+  refuses it (422), but it may have reached the endpoint. A `retrying` row is scanned again.
 - **Replay** (`POST …/replay`): a human action, gated by RBAC. It does not show whether the row
   exists, and it is audited to the acting human *before* the new attempt. It sets the attempts back
   to a new budget: the operator is stating that the endpoint is fixed, so the doubling clock starts

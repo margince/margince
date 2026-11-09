@@ -403,6 +403,10 @@ func waitForAWaiterOn(t *testing.T, owner *pgx.Conn, holder int32) {
 	defer cancel()
 	for {
 		var waiting int
+		if _, err := owner.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
+			t.Errorf("clearing the activity snapshot: %v", err)
+			return
+		}
 		if err := owner.QueryRow(ctx, `SELECT count(*) FROM pg_stat_activity
 			WHERE $1 = ANY(pg_blocking_pids(pid))`, holder).Scan(&waiting); err != nil {
 			t.Errorf("no session came to wait on the erasure's row lock: %v", err)
