@@ -260,7 +260,7 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 // this recipient, which every step of one decision then shares.
 func (g *Gate) decideOneIn(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, phase commsauthz.Phase, country RecipientCountry) (commsauthz.Decision, error) {
 	req, agree := req.CanonicalPurpose()
-	d := commsauthz.Decision{Recipient: r, Resolved: commsauthz.CategoryMarketing,
+	d := commsauthz.Decision{Recipient: r, Requested: req.Context, Resolved: commsauthz.CategoryMarketing,
 		SendingEntity: req.SendingEntity, PurposeKey: req.LegacyPurposeKey}
 	if !agree {
 		return denyContradiction(d, commsauthz.CategoryMarketing), nil
