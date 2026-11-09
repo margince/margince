@@ -35,15 +35,20 @@ function TakeButton({ item }: Readonly<{ item: WorklistItem }>) {
   return (
     <Button
       pending={take.isPending}
+      // mutateAsync, not per-call callbacks: the refetch after the write takes
+      // the row off the Unassigned list, and React Query drops the callbacks
+      // of an unmounted button. The promise still settles, so the line shows.
       onClick={() =>
-        take.mutate(
-          { activityId: item.id, version: item.version, assigneeId: reader },
-          {
-            onSuccess: () => toast.show(t("worklist.take.done")),
-            onError: () =>
-              toast.show(t("worklist.take.failed"), { tone: "danger" }),
-          },
-        )
+        take
+          .mutateAsync({
+            activityId: item.id,
+            version: item.version,
+            assigneeId: reader,
+          })
+          .then(
+            () => toast.show(t("worklist.take.done")),
+            () => toast.show(t("worklist.take.failed"), { tone: "danger" }),
+          )
       }
     >
       {t("worklist.take.action")}
