@@ -362,7 +362,7 @@ func endCredentialAuthority(ctx context.Context, tx pgx.Tx, userID ids.UserID, r
 	// lifetime check would refuse the whole revocation.
 	if _, err := tx.Exec(ctx,
 		`UPDATE oauth_authorization_code SET expires_at = clock_timestamp()
-		  WHERE user_id = $1 AND consumed_at IS NULL AND expires_at > now()`,
+		  WHERE user_id = $1 AND consumed_at IS NULL AND expires_at > clock_timestamp()`,
 		userID); err != nil {
 		return err
 	}

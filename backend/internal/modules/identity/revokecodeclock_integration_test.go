@@ -27,18 +27,23 @@ func TestARevocationEndsACodeIssuedAfterItBegan(t *testing.T) {
 	codeID := ids.NewV7()
 
 	err := e.svc.db.Tx(ctx, func(tx pgx.Tx) error {
-		// Pins the transaction's now() before the code exists.
+		// The revocation's own now(), fixed when its transaction began.
 		var began time.Time
 		if err := tx.QueryRow(ctx, `SELECT now()`).Scan(&began); err != nil {
 			return err
 		}
 		// Issued and committed on another connection, after the revocation began.
-		if _, err := e.owner.Exec(context.Background(), `INSERT INTO oauth_authorization_code
+		var created time.Time
+		if err := e.owner.QueryRow(context.Background(), `INSERT INTO oauth_authorization_code
 			(id, client_id, code_hash, code_challenge, redirect_uri, scopes, user_id, expires_at)
 			VALUES ($1, 'client-under-test', $2, 'challenge', 'https://client.test/cb', '{}', $3,
-			        now() + interval '10 minutes')`,
-			codeID, "hash-"+codeID.String(), e.member.UserID); err != nil {
-			return err
+			        now() + interval '10 minutes')
+			RETURNING created_at`,
+			codeID, "hash-"+codeID.String(), e.member.UserID).Scan(&created); err != nil {
+			t.Fatalf("seed the code issued mid-revocation: %v", err)
+		}
+		if !created.After(began) {
+			t.Fatalf("the code was created at %v, not after the revocation began at %v; the case is not staged", created, began)
 		}
 		return endCredentialAuthority(selfActorCtx(ctx, e.member.UserID), tx, e.member.UserID, passwordResetRevokeReason)
 	})
