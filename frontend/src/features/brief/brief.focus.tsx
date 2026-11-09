@@ -45,9 +45,9 @@ export function Triage({
   const viewer = useMe(false).data?.user;
   const listed = useListed();
   const writeTo = useWriteTo();
-  // A press removes the pressed button from the list, and a finished task
-  // takes its card away; either way focus moves onto the card now in hand.
-  // A first render takes no focus.
+  // A press removes the pressed button, and a finished task takes its card
+  // away. Either way focus moves onto the card now in hand. A first render
+  // takes no focus.
   const pressed = useRef(false);
   const held = useRef<string | null>(null);
   const takeFocus = (frame: HTMLDivElement | null) => {
