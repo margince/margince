@@ -14,7 +14,11 @@ import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
-import { LeadCompany, useLeadCompanyName } from "./leadcompany";
+import {
+  LeadCompany,
+  useLeadCompanyName,
+  useLeadCompanyNameReading,
+} from "./leadcompany";
 
 type Lead = components["schemas"]["Lead"];
 
@@ -206,5 +210,33 @@ describe("useLeadCompanyName", () => {
     stubServer();
     render(<Name of={lead} />);
     expect(screen.getByRole("status").textContent).toBe("Nordwind Logistik");
+  });
+});
+
+describe("useLeadCompanyNameReading", () => {
+  function Reading({ of }: Readonly<{ of: Lead }>) {
+    const { name, settling } = useLeadCompanyNameReading(of);
+    return <output>{`${name} ${settling ? "settling" : "settled"}`}</output>;
+  }
+
+  it("settles a linked company once its own name arrives", async () => {
+    stubServer();
+    render(<Reading of={{ ...lead, company_id: "c-7" }} />);
+    expect(screen.getByRole("status").textContent).toBe(
+      "Nordwind Logistik settling",
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toBe(
+        "Nordwind Holding SE settled",
+      ),
+    );
+  });
+
+  it("is settled at once for an unlinked company", () => {
+    stubServer();
+    render(<Reading of={lead} />);
+    expect(screen.getByRole("status").textContent).toBe(
+      "Nordwind Logistik settled",
+    );
   });
 });

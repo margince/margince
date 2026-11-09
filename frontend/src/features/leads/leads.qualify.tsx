@@ -25,7 +25,7 @@ import { defaultPipelineOf, usePipelines } from "../../lib/pipelines.queries";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { useViewerZone } from "../../lib/viewerzone";
-import { useLeadCompanyName } from "./leadcompany";
+import { useLeadCompanyNameReading } from "./leadcompany";
 import {
   ExistingQualificationDeal,
   type QualificationDealChoice,
@@ -243,7 +243,8 @@ function QualificationForm({
   // The linked company's own name, which a rename there may have moved away
   // from what the lead typed. The deal this dialog offers to open carries the
   // name into a record of its own, so the stale one would outlive the lead.
-  const companyName = useLeadCompanyName(lead) ?? leadIdentityName(lead);
+  const company = useLeadCompanyNameReading(lead);
+  const companyName = company.name ?? leadIdentityName(lead);
   const suggestedName = chosenStage
     ? `${companyName} — ${chosenStage.name}`
     : companyName;
@@ -310,6 +311,7 @@ function QualificationForm({
     { selectedDeal, withDeal, invalidSelection },
     preview,
     { amountInvalid, amountWaitsForCurrency },
+    company.settling && !dealName.trim(),
   );
   const name = leadIdentityName(lead);
 

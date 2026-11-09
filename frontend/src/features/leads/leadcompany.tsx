@@ -66,6 +66,7 @@ function LinkCompanyOffer({
     <>
       <Button
         variant="link"
+        align="start"
         className="btn-valuelabel lead-company-offer"
         aria-describedby={reasonId}
         onClick={() => setOpen(true)}
@@ -114,8 +115,25 @@ export function LeadCompanyName({ lead }: Readonly<{ lead: Lead }>): ReactNode {
 // The name a figure prints for the lead's company. A linked company's own name
 // comes from the cache entry its link reads, and the typed name stands in until then.
 export function useLeadCompanyName(lead: Lead): string | null {
+  return useLeadCompanyNameReading(lead).name;
+}
+
+// The same name, and whether it may still change. `settling` holds while a
+// linked company's own name is still being read. A place that SAVES the name
+// waits on it, because the typed name standing in may be the stale one. A read
+// that failed has settled: the typed name is then the best there will be.
+export function useLeadCompanyNameReading(lead: Lead): {
+  name: string | null;
+  settling: boolean;
+} {
   const linked = useEntityName("company", lead.company_id);
-  return linked.name ?? (lead.company_name?.trim() || null);
+  return {
+    name: linked.name ?? (lead.company_name?.trim() || null),
+    settling:
+      Boolean(lead.company_id) &&
+      linked.name === null &&
+      linked.reading === "pending",
+  };
 }
 
 // The company a lead names. `nameShown` is for a place that draws the typed
