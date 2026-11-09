@@ -34,6 +34,7 @@ import {
   serviceReason,
 } from "../../../lib/connector-status";
 import { captureRefusalOf, useConnectors } from "../../../lib/connectors";
+import { labelFor } from "../../../lib/labelfor";
 import { problemMessageOf } from "../../../lib/problem";
 import { IMPORT_WINDOW_LABELS } from "../../../mail-history/window-picker";
 import { ConnectPostureStep } from "../connect-posture";
@@ -398,7 +399,7 @@ export function ConnectedWayOnward({
         onClick={() => choice.begin(choice.window, onFinish)}
       >
         {t("ob.conv.connect.importAndContinue", {
-          period: t(IMPORT_WINDOW_LABELS[choice.window]),
+          period: t(labelFor(IMPORT_WINDOW_LABELS, choice.window)),
         })}
       </Button>
     </StageActions>

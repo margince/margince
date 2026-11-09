@@ -26,6 +26,7 @@ import { useT } from "../../i18n";
 import { entityTimelineKeys, taskWriteKeys } from "../../lib/activitykeys";
 import { useMessageAudience } from "../../lib/audienceservice";
 import { useCanWriteRecord } from "../../lib/capability";
+import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import {
@@ -376,8 +377,8 @@ export function AudienceAction({
             onChange={setChoice}
             choices={messageAudienceChoices(internal).map((value) => ({
               value,
-              label: t(AUDIENCE_LABEL[value]),
-              description: t(AUDIENCE_HINT[value]),
+              label: t(labelFor(AUDIENCE_LABEL, value)),
+              description: t(labelFor(AUDIENCE_HINT, value)),
             }))}
           />
           {/* The picker only where the choice needs one. A limited-to-nobody

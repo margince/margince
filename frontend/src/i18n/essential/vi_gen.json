@@ -875,6 +875,7 @@
   "ext.notFound": "Bản cài đặt này không bật tiện ích mở rộng nào tên “{name}”.",
   "search.kind.deal": "Deal",
   "common.close": "Đóng",
+  "common.unknownValue": "Khác",
   "common.expand": "Mở rộng",
   "common.collapse": "Thu gọn",
   "format.notForecast": "Chưa dự báo",

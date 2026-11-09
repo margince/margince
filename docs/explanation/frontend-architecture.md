@@ -119,6 +119,18 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   reader uses (`format/plural.ts`). The census rule `one-plural-rule` refuses a
   `count === 1` that chooses a message key in any file outside this folder.
 
+  An enum a response carries is open, so a newer server can send a value this
+  build does not list. The generated union in `src/api/schema.d.ts` stays
+  closed. So a map read by such a value goes through `labelFor` or `valueFor`
+  in `src/lib/labelfor.ts`. An unknown value then reads `common.unknownValue`,
+  or the fallback the caller names.
+
+  The census rule `response-enum-lookups` refuses a plain index by such a
+  value. It also refuses a `switch` with a case for every value and no
+  `default`. It reads which enum a response carries from the
+  `x-extensible-enum` markers in `crm.yaml`. A value counts only when its type
+  comes from `src/api/schema.d.ts`, so a union the app writes itself does not.
+
   `catalogs.ts` loads the language in use. `bootstrap.ts` starts that read while the app loads.
   `LocaleProvider` waits for the catalog before drawing its content.
   The error fallback uses a small copy generated from `en`, so a failed load can still offer Retry.

@@ -4,6 +4,7 @@
 import type { components } from "../api/schema";
 import type { Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { labelFor } from "./labelfor";
 
 // How an automation run ended and why, in the reader's language. The run
 // history and the Home brief both name a run, and both read these maps.
@@ -39,7 +40,9 @@ function isOutcome(word: string): word is Outcome {
 /** The outcome as a word; one from a newer server reads as a plain failure. */
 export function runOutcomeWord(outcome: string, t: Translator): string {
   return t(
-    isOutcome(outcome) ? RUN_OUTCOME_WORD[outcome] : "auto.runs.outcomeFailed",
+    isOutcome(outcome)
+      ? labelFor(RUN_OUTCOME_WORD, outcome)
+      : "auto.runs.outcomeFailed",
   );
 }
 

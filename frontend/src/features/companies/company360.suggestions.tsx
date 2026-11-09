@@ -10,6 +10,7 @@ import { activityDay } from "../../format/activitywhen";
 import { formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor, valueFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
@@ -93,11 +94,11 @@ function SuggestionActionButton({
   const t = useT();
   return (
     <Button
-      variant={SUGGESTION_ACTION_VARIANT[action.kind]}
+      variant={valueFor(SUGGESTION_ACTION_VARIANT, action.kind, "ghost")}
       pending={pending}
       onClick={() => onPerform(action)}
     >
-      {t(SUGGESTION_ACTION_LABELS[action.kind])}
+      {t(labelFor(SUGGESTION_ACTION_LABELS, action.kind))}
     </Button>
   );
 }

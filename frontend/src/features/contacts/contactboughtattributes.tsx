@@ -5,6 +5,7 @@ import { FieldRow } from "../../design-system/fieldgrid";
 import { providerBrandName } from "../../design-system/provider-mark";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { type BoughtField, BoughtText } from "./boughtmarks";
 
 type Profile = components["schemas"]["ContactProviderProfile"];
@@ -88,7 +89,7 @@ function attributeFacts(
             </span>
           ))}
         </span>
-        <span className="t-caption">{t(KIND_LABEL[kind])}</span>
+        <span className="t-caption">{t(labelFor(KIND_LABEL, kind))}</span>
       </span>,
     ];
   });
