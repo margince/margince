@@ -59338,6 +59338,10 @@ components:
       required: [kind, note, occurred_at]
       description: One exchange that makes ordinary business correspondence lawful.
       properties:
+        about_deal:
+          type: string
+          format: uuid
+          description: The visible deal this exchange concerned. Omit for a request with no deal.
         kind:
           type: string
           enum: [in_person, requested_by_subject]

@@ -44,12 +44,14 @@ func activityCapturedPayload(ctx context.Context, kind, channelProvider string) 
 }
 
 type LogActivityInput struct {
-	identityProver     AddressProver
-	DealFiling         *crmcontracts.ActivityDealFiling
-	dealFilingResolver DealFilingResolver
-	Recommendation     *crmcontracts.RecommendationReceipt
-	FollowUpTask       *LogActivityInput
-	recordedAt         *time.Time
+	// Queued mail keeps its original entity when the sender changes company.
+	correspondenceEntity ids.UUID
+	identityProver       AddressProver
+	DealFiling           *crmcontracts.ActivityDealFiling
+	dealFilingResolver   DealFilingResolver
+	Recommendation       *crmcontracts.RecommendationReceipt
+	FollowUpTask         *LogActivityInput
+	recordedAt           *time.Time
 	// Internal creation policy; public activity input cannot set an audience.
 	audienceMembers []AudienceMember
 	// invitedAssignee admits an invited colleague as the task's assignee. The
@@ -336,6 +338,10 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	if err := storekit.RefuseUnknownSeat(ctx, tx, in.Author); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
+	entity, err := loggedCorrespondenceEntity(ctx, tx, in, host)
+	if err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
 	authorCols, authorHolders, args := storekit.AuthorInsertFragments(in.Author, []any{
 		// NULLIF on channel_provider: the column FKs into channel_provider, and
 		// '' names no provider, so anything without a transport stores NULL.
@@ -344,6 +350,8 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		in.ThreadKey, counterparty, in.CounterpartyOutboundAttested, origin,
 		in.SourceActivityID, in.Raw, in.DurationSeconds, loggedSenderIsMachine(in), in.DueHasTime, in.CallOutcome,
 	})
+	args = append(args, entity)
+	entityHolder := storekit.SQLf("$%d", len(args))
 	precisionCol, precisionHolder, args := precisionInsertFragment(in.OccurredPrecision, args)
 	languageCol, languageHolder, args := languageInsertFragment(in, args)
 	cfCols, cfHolders, args, err := storekit.InsertFragments(in.customColumns, in.CustomFields, args)
@@ -357,9 +365,9 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		`INSERT INTO activity (id, kind, channel_provider, subject, body, occurred_at, direction, meeting_status,
 		                       due_at, remind_at, assignee_id, host_user_id, claims_host_slot, booking_interval_exact, source_system, source_id, source, captured_by,
 		                       thread_key, counterparty_email, counterparty_outbound_attested, origin,
-		                       source_activity_id, raw, duration_seconds, sender_is_machine, due_has_time, call_outcome`+authorCols+precisionCol+languageCol+cfCols+`)
+		                       source_activity_id, raw, duration_seconds, sender_is_machine, due_has_time, call_outcome`+authorCols+`, legal_entity_id`+precisionCol+languageCol+cfCols+`)
 		 VALUES ($1, $2, NULLIF($3, ''), $4, $5, coalesce($6, now()), $7, $8, $9, $10, $11, $12, $13, $13, $14, $15, $16, $17, NULLIF($18, ''),
-		         NULLIF($19, ''), $20, $21, $22, $23, $24, $25, $26, $27`+authorHolders+precisionHolder+languageHolder+cfHolders+`) RETURNING occurred_at`,
+		         NULLIF($19, ''), $20, $21, $22, $23, $24, $25, $26, $27`+authorHolders+`, `+entityHolder+precisionHolder+languageHolder+cfHolders+`) RETURNING occurred_at`,
 		args...).Scan(&occurredAt)
 	if err != nil {
 		if storekit.IsUniqueViolation(err) {

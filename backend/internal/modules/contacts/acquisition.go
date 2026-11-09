@@ -94,10 +94,14 @@ type Acquisition struct {
 // question unasked.
 func recordAcquisition(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, in Acquisition, capturedBy string) error {
 	in = normalizedAcquisition(in)
+	entity, err := storekit.LegalEntityOf(ctx, tx, storekit.SenderOf(ctx))
+	if err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO contact_acquisition_evidence (contact_id, kind, occurred_at, captured_by)
-		VALUES ($1, $2, $3, $4)`,
-		contactID, in.Kind, in.OccurredAt, capturedBy); err != nil {
+		INSERT INTO contact_acquisition_evidence (contact_id, kind, occurred_at, captured_by, legal_entity_id)
+		VALUES (@contact, @kind, @occurred, @actor, @entity)`,
+		pgx.StrictNamedArgs{"contact": contactID, "kind": in.Kind, "occurred": in.OccurredAt, "actor": capturedBy, "entity": entity}); err != nil {
 		return fmt.Errorf("contacts: recording how this contact was acquired: %w", err)
 	}
 	return nil

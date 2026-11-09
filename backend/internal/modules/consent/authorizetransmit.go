@@ -316,7 +316,7 @@ func (g *Gate) decideOneIn(ctx context.Context, tx pgx.Tx, r connector.Recipient
 	address, channelProvider, channelUserID := recipientSubjectAddress(r)
 	d, sendPurpose, err := g.decideResolved(ctx, tx, req, subjectRef{
 		Kind: entityContact, ID: contactID, Address: address,
-		ChannelProvider: channelProvider, ChannelUserID: channelUserID, Country: country,
+		ChannelProvider: channelProvider, ChannelUserID: channelUserID, Country: country, SendingEntity: req.SendingEntity,
 	}, d, phase, stops)
 	if err != nil {
 		return commsauthz.Decision{}, err

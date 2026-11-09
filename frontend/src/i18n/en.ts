@@ -7530,12 +7530,16 @@ export const en = {
   "compose.newThread": "New thread",
   "compose.copies": "Cc and Bcc",
   "compose.signsOffAs": "Signs off as “{closing}”.",
-  "compose.reasonRecord": "Keep as a standing reason",
-  "compose.reasonStanding":
-    "A standing reason covers this kind of message to {address} from your company until someone revokes it. It is your word, not their consent.",
-  "compose.reasonRecordFor":
-    "Keep as a standing reason: {reason}, for {address}",
-  "compose.reasonLabel": "Why you may write to {address}",
+  "compose.fact.open": "Record what happened",
+  "compose.fact.title": "Record the exchange with {address}",
+  "compose.fact.scope":
+    "Keeps this fact for {address}. It does not send this email or record marketing consent.",
+  "compose.fact.kind": "What happened?",
+  "compose.fact.request": "They asked me to write",
+  "compose.fact.quoteRequest": "They asked for this quote",
+  "compose.fact.met": "We met in person",
+  "compose.fact.note": "What was agreed?",
+  "compose.fact.save": "Record the exchange",
   "compose.replyIntent": "Purpose of the reply",
   "compose.newIntent": "Purpose of the email",
   "compose.draftReply": "Draft reply",

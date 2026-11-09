@@ -43295,6 +43295,11 @@ export interface components {
         /** @description One exchange that makes ordinary business correspondence lawful. */
         RecordQualifyingEventRequest: {
             /**
+             * Format: uuid
+             * @description The visible deal this exchange concerned. Omit for a request with no deal.
+             */
+            about_deal?: string;
+            /**
              * @description The two kinds a human may state. `in_person` is an exchange that happened in a room —
              *     a card handed over at a stand. `requested_by_subject` is the contact asking us to write
              *     to them away from every system: a phone call, a conversation at a counter.

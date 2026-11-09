@@ -2,12 +2,14 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import {
   allowedPreview,
   isPreviewDoor,
   refusedPreview,
 } from "../../testing/sendpermission.testkit";
+import { meFixture } from "../../testing/mefixture";
 import { ComposeModal } from "./compose";
 import { MailSendNotices } from "./compose.parts";
 import {
@@ -83,15 +85,17 @@ describe("who a reason to write is recorded on", () => {
     ).toBeUndefined();
   });
 
-  // The remedy for an unbacked deal claim is the deal. A vouch in the
-  // category the engine resolved instead would pass on a reason never given.
-  it("is nobody where the rep's claim did not resolve", () => {
+  it("keeps the requested category when its factual evidence is missing", () => {
     expect(
       reasonTargetOf(
         settled(refusedPreview("anna@example.test", DEAL_CLAIM_UNBACKED)),
         contactOf,
       ),
-    ).toBeUndefined();
+    ).toEqual({
+      contactId: "c-1",
+      address: "anna@example.test",
+      category: "active_deal_followup",
+    });
     expect(
       reasonTargetOf(
         settled(
@@ -109,8 +113,6 @@ describe("who a reason to write is recorded on", () => {
     });
   });
 
-  // A vouch resting on an answer the engine is replacing would be recorded
-  // for the wrong message.
   it("is nobody while the answer is still out or failed", () => {
     const refused = refusedPreview("anna@example.test", NOTHING_ON_RECORD);
     expect(
@@ -122,12 +124,10 @@ describe("who a reason to write is recorded on", () => {
   });
 });
 
-// The backend a vouch is recorded against: the preview door answers from the
-// vouch, as the engine would.
-function vouchBackend(
+function requestBackend(
   refused: Parameters<typeof refusedPreview>[1] = NOTHING_ON_RECORD,
 ) {
-  let vouched = false;
+  let recorded = false;
   const sent = stubRoutes({
     "GET /activities/act-1": () =>
       jsonResponse({ ...activity202, direction: "inbound" }),
@@ -141,9 +141,15 @@ function vouchBackend(
           emails: [{ email: "anna@example.test" }],
         },
       }),
-    "POST /contacts/c-1/consent/allow": () => {
-      vouched = true;
-      return jsonResponse({ override_id: "o-1" }, 201);
+    "GET /me": () =>
+      jsonResponse(
+        meFixture({
+          allow: { contact: ["read", "update"], activity: ["read", "update"] },
+        }),
+      ),
+    "POST /contacts/c-1/consent/qualifying-events": () => {
+      recorded = true;
+      return jsonResponse({ id: "fact-one" }, 201);
     },
   });
   const fetcher = vi.mocked(fetch);
@@ -153,7 +159,7 @@ function vouchBackend(
     const url = input instanceof Request ? input.url : String(input);
     if (isPreviewDoor(new URL(url, "https://test.local").pathname)) {
       return jsonResponse(
-        vouched
+        recorded
           ? allowedPreview(["anna@example.test"])
           : refusedPreview("anna@example.test", refused),
       );
@@ -163,10 +169,10 @@ function vouchBackend(
   return sent;
 }
 
-describe("recording a reason to write where the refusal is read", () => {
-  it("records it on the contact for the category the engine resolved, then asks again", async () => {
+describe("recording a fact where the refusal is read", () => {
+  it("records the exchange for this recipient and rechecks without sending or granting consent", async () => {
     const user = userEvent.setup();
-    const sent = vouchBackend();
+    const sent = requestBackend();
     render(
       <ComposeModal
         activityId="act-1"
@@ -177,42 +183,62 @@ describe("recording a reason to write where the refusal is read", () => {
         onClose={vi.fn()}
       />,
     );
-    await screen.findByText(/Replying to/);
-    await user.type(screen.getByLabelText("To"), "anna@example.test");
+    await user.type(await screen.findByLabelText("To"), "anna@example.test");
     await user.tab();
-
-    // The refusal carries the pick itself: choosing a reason records it.
-    const checks = within(screen.getAllByRole("dialog")[0]);
+    writeMessage("Body", "The agreed follow-up.");
+    await user.click(
+      await screen.findByRole("button", { name: "Record what happened" }),
+    );
+    const dialog = within(
+      await screen.findByRole("dialog", {
+        name: "Record the exchange with anna@example.test",
+      }),
+    );
     await pickOption(
       user,
-      await checks.findByRole("combobox", {
-        name: "Why you may write to anna@example.test",
-      }),
-      "Follow-up they requested",
+      dialog.getByRole("combobox", { name: "What happened?" }),
+      "They asked me to write",
     );
-
+    await user.type(
+      dialog.getByLabelText("What was agreed?"),
+      "They asked by phone for the next steps.",
+    );
+    await user.type(dialog.getByLabelText("Date"), "2020-03-02");
+    await user.tab();
+    await user.type(dialog.getByLabelText("Time"), "09:00");
+    await user.tab();
+    await user.click(
+      dialog.getByRole("button", { name: "Record the exchange" }),
+    );
     await waitFor(() =>
       expect(
-        sent.find((call) => call.key === "POST /contacts/c-1/consent/allow")
-          ?.body,
-      ).toEqual({
-        category: "requested_followup",
-        reason: "Follow-up they requested",
+        sent.find(
+          (call) => call.key === "POST /contacts/c-1/consent/qualifying-events",
+        )?.body,
+      ).toMatchObject({
+        kind: "requested_by_subject",
+        note: "They asked by phone for the next steps.",
+        asks_for_quote: false,
       }),
     );
-    // Asked again, the engine allows it and the warning goes.
     await waitFor(() =>
       expect(
-        screen.queryByRole("combobox", {
-          name: "Why you may write to anna@example.test",
-        }),
+        screen.queryByRole("button", { name: "Record what happened" }),
       ).toBeNull(),
     );
+    expect(
+      sent.some(
+        (call) =>
+          call.key.endsWith("/consent/allow") ||
+          call.key.endsWith("/send-email") ||
+          call.key === "POST /emails",
+      ),
+    ).toBe(false);
   });
 
-  it("asks once on a new message, then records the reason it names", async () => {
+  it("asks for the message's reason first and makes no standing override from that choice", async () => {
     const user = userEvent.setup();
-    const sent = vouchBackend();
+    const sent = requestBackend();
     render(
       <ComposeModal
         entityType="contact"
@@ -224,41 +250,27 @@ describe("recording a reason to write where the refusal is read", () => {
     );
     await user.type(await screen.findByLabelText("To"), "anna@example.test");
     await user.tab();
-
-    // Until the message says why, the engine's refusal does not ask again.
-    const checks = within(screen.getAllByRole("dialog")[0]);
-    const why = await checks.findByRole("combobox", {
-      name: "Reason for contact",
-    });
     expect(
-      checks.queryByRole("combobox", {
-        name: "Why you may write to anna@example.test",
-      }),
+      screen.queryByRole("button", { name: "Record what happened" }),
     ).toBeNull();
-
-    await pickOption(user, why, "Follow-up they requested");
-    await user.click(
-      await checks.findByRole("button", {
-        name: "Keep as a standing reason: Follow-up they requested, for anna@example.test",
-      }),
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Reason for contact" }),
+      "Follow-up they requested",
     );
-
-    await waitFor(() =>
-      expect(
-        sent.find((call) => call.key === "POST /contacts/c-1/consent/allow")
-          ?.body,
-      ).toEqual({
-        category: "requested_followup",
-        reason: "Follow-up they requested",
-      }),
-    );
+    await screen.findByRole("button", { name: "Record what happened" });
+    expect(
+      sent.some(
+        (call) =>
+          call.key.endsWith("/consent/allow") ||
+          call.key.endsWith("/consent/qualifying-events"),
+      ),
+    ).toBe(false);
   });
 
-  // The refusal names the missing deal, so the band offers no vouch: one in
-  // another category would let the next check pass with no deal chosen.
-  it("offers no vouch for an active-deal claim no deal backs", async () => {
+  it("asks for a deal before offering a factual request for that deal", async () => {
     const user = userEvent.setup();
-    const sent = vouchBackend(DEAL_CLAIM_UNBACKED);
+    const sent = requestBackend(DEAL_CLAIM_UNBACKED);
     render(
       <ComposeModal
         entityType="contact"
@@ -280,15 +292,14 @@ describe("recording a reason to write where the refusal is read", () => {
 
     await checks.findByText("Choose the deal for this follow-up.");
     expect(
-      checks.queryByRole("button", { name: /^Keep as a standing reason/ }),
+      checks.queryByRole("button", { name: "Record what happened" }),
     ).toBeNull();
     expect(
-      checks.queryByRole("combobox", {
-        name: "Why you may write to anna@example.test",
-      }),
-    ).toBeNull();
-    expect(
-      sent.some((call) => call.key === "POST /contacts/c-1/consent/allow"),
+      sent.some(
+        (call) =>
+          call.key === "POST /contacts/c-1/consent/allow" ||
+          call.key === "POST /contacts/c-1/consent/qualifying-events",
+      ),
     ).toBe(false);
   });
 });

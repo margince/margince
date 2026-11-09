@@ -202,10 +202,14 @@ func (s *Store) RecordContext(
 // recordFaceToFaceTx, the writer the source review shares. A statement against
 // a message about a deal is about that deal, so the next message reuses it.
 func (s *Store) recordStatement(ctx context.Context, in RecordContextInput, refusal RefusedRecipient) error {
+	entity := refusal.SendingEntity
+	if entity == nil {
+		entity = new(ids.UUID)
+	}
 	if in.Kind == kindInPerson {
 		if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 			return s.recordFaceToFaceTx(ctx, tx, in.SubjectID, faceToFaceMeeting{
-				note: in.Note, met: in.OccurredAt, aboutDeal: refusal.dealID(),
+				note: in.Note, met: in.OccurredAt, aboutDeal: refusal.dealID(), entity: entity,
 			})
 		}); err != nil {
 			return err
@@ -219,7 +223,8 @@ func (s *Store) recordStatement(ctx context.Context, in RecordContextInput, refu
 		OccurredAt: in.OccurredAt,
 		AsksForQuote: in.Kind == KindRequestedBySubject &&
 			refusal.claim() == commsauthz.CategoryPrecontractQuote,
-		AboutDeal: refusal.dealID(),
+		AboutDeal:     refusal.dealID(),
+		sendingEntity: entity,
 	})
 	return err
 }

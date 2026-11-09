@@ -162,7 +162,7 @@ func repliedOrWasRecorded(ctx context.Context, tx pgx.Tx, subject subjectRef, as
 	if subject.Kind != entityContact {
 		return wroteToUsWithin(ctx, tx, subject, since)
 	}
-	_, source, err := latestQualifyingEvent(ctx, tx, subject.ID, since, asOf, &subject.Address)
+	_, source, err := latestQualifyingEvent(ctx, tx, subject.ID, since, asOf, &subject.Address, subject.SendingEntity)
 	if err != nil {
 		return false, err
 	}

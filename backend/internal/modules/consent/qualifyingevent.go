@@ -101,9 +101,10 @@ const clockSkewAllowance = 5 * time.Minute
 // RecordQualifyingEventInput is one exchange, as the contact who was there
 // states it.
 type RecordQualifyingEventInput struct {
-	Kind       string
-	Note       string
-	OccurredAt time.Time
+	sendingEntity *ids.UUID
+	Kind          string
+	Note          string
+	OccurredAt    time.Time
 	// AsksForQuote says the contact asked for a quote or an offer. Only a
 	// request the subject made may say so. Only such a request bears out a
 	// quote; a request to be called back does not.
@@ -295,20 +296,24 @@ func writeExchangeTx(
 	// Matched on the contact, the moment and the words, which two different
 	// exchanges with one contact never all share. A retracted row matches too,
 	// so a replay answers the row as it stands and does not bring it back.
+	entity, err := qualifyingWriterEntity(ctx, tx, in.sendingEntity)
+	if err != nil {
+		return err
+	}
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO consent_qualifying_event
-			(contact_id, kind, note, occurred_at, source, captured_by, asks_for_quote, about_deal_id)
-		SELECT $1, $2, $3, $4, $7, $5, $6, $8
-		 WHERE NOT EXISTS (
-			SELECT 1 FROM consent_qualifying_event
-			 WHERE contact_id = $1 AND kind = $2 AND note = $3 AND occurred_at = $4
-			   AND about_deal_id IS NOT DISTINCT FROM $8)
-		RETURNING id::text`,
-		contactID, in.Kind, note, in.OccurredAt, by, in.AsksForQuote, handRecordedSource(ctx), zeroUUIDAsNull(in.AboutDeal)).Scan(&out.ID); err != nil {
+ INSERT INTO consent_qualifying_event
+ (contact_id,kind,note,occurred_at,source,captured_by,asks_for_quote,about_deal_id,recorded_for_entities)
+ SELECT @contact,@kind,@note,@occurred,@source,@actor,@quote,@deal,ARRAY[@entity]::uuid[]
+ WHERE NOT EXISTS (SELECT 1 FROM consent_qualifying_event
+ WHERE contact_id=@contact AND kind=@kind AND note=@note AND occurred_at=@occurred
+ AND about_deal_id IS NOT DISTINCT FROM @deal AND @entity=ANY(recorded_for_entities))
+ RETURNING id::text`, pgx.StrictNamedArgs{
+		"contact": contactID, "kind": in.Kind, "note": note, "occurred": in.OccurredAt,
+		"source": handRecordedSource(ctx), "actor": by, "quote": in.AsksForQuote,
+		"deal": zeroUUIDAsNull(in.AboutDeal), "entity": entity,
+	}).Scan(&out.ID); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			// Already on file. Nothing was written twice, so there is
-			// nothing to audit, and the answer is the standing row.
-			return standingExchange(ctx, tx, contactID, in.AboutDeal, out)
+			return standingExchange(ctx, tx, contactID, in.AboutDeal, entity, out)
 		}
 		return fmt.Errorf("consent: recording the exchange: %w", err)
 	}
@@ -320,8 +325,9 @@ func writeExchangeTx(
 	// against and the row this changes the sendability of. Naming
 	// `contact_consent` would have put a rule in the trail
 	// (`contact_consent.create`) that authorized nothing here.
-	_, err := storekit.AuditEvent(ctx, tx, "update", "contact", contactID.UUID, map[string]any{
+	_, err = storekit.AuditEvent(ctx, tx, "update", "contact", contactID.UUID, map[string]any{
 		"qualifying_event": in.Kind,
+		"legal_entity_id":  entity,
 		fieldNote:          note,
 		fieldOccurredAt:    in.OccurredAt.UTC().Format(time.RFC3339),
 		"about_deal":       zeroUUIDAsNull(in.AboutDeal),
@@ -331,13 +337,15 @@ func writeExchangeTx(
 
 // standingExchange fills out with the row a retried record matched, retracted
 // or not.
-func standingExchange(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, deal ids.UUID, out *QualifyingEvent) error {
+func standingExchange(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, deal, entity ids.UUID, out *QualifyingEvent) error {
 	if err := tx.QueryRow(ctx, `
-		SELECT id::text, asks_for_quote, retracted_at IS NOT NULL FROM consent_qualifying_event
-		 WHERE contact_id = $1 AND kind = $2 AND note = $3 AND occurred_at = $4
-		   AND about_deal_id IS NOT DISTINCT FROM $5
-		 ORDER BY created_at LIMIT 1`, contactID, out.Kind, out.Note, out.OccurredAt, zeroUUIDAsNull(deal)).
-		Scan(&out.ID, &out.AsksForQuote, &out.Retracted); err != nil {
+ SELECT id::text,asks_for_quote,retracted_at IS NOT NULL FROM consent_qualifying_event
+ WHERE contact_id=@contact AND kind=@kind AND note=@note AND occurred_at=@occurred
+ AND about_deal_id IS NOT DISTINCT FROM @deal AND @entity=ANY(recorded_for_entities)
+ ORDER BY created_at LIMIT 1`, pgx.StrictNamedArgs{
+		"contact": contactID, "kind": out.Kind, "note": out.Note, "occurred": out.OccurredAt,
+		"deal": zeroUUIDAsNull(deal), "entity": entity,
+	}).Scan(&out.ID, &out.AsksForQuote, &out.Retracted); err != nil {
 		return fmt.Errorf("consent: reading the exchange already on file: %w", err)
 	}
 	return nil

@@ -89,15 +89,16 @@ func (m outboundMessage) activity(chain threading) LogActivityInput {
 		recorded += "\n\n[" + htmlAlternativeNote + "]"
 	}
 	return SentRecord(LogActivityInput{
-		Kind:         "email",
-		Subject:      &m.in.Subject,
-		Body:         &recorded,
-		Direction:    &direction,
-		Links:        m.links,
-		Source:       sourceManual,
-		SourceSystem: &sourceSystem,
-		SourceID:     &m.messageID,
-		ThreadKey:    chain.threadKey,
+		correspondenceEntity: m.in.SendingEntity,
+		Kind:                 "email",
+		Subject:              &m.in.Subject,
+		Body:                 &recorded,
+		Direction:            &direction,
+		Links:                m.links,
+		Source:               sourceManual,
+		SourceSystem:         &sourceSystem,
+		SourceID:             &m.messageID,
+		ThreadKey:            chain.threadKey,
 		// This row IS the sent copy — its natural key is the one the provider's
 		// echo carries, so the echo's upsert will find it and write nothing.
 		// The correspondence evidence the echo used to bring therefore has to

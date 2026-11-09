@@ -7519,12 +7519,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.newThread": "Neuer Thread",
   "compose.copies": "Cc und Bcc",
   "compose.signsOffAs": "Die Nachricht endet mit „{closing}“.",
-  "compose.reasonRecord": "Als dauerhaften Grund festhalten",
-  "compose.reasonStanding":
-    "Ein dauerhafter Grund gilt für diese Art von Nachricht an {address} aus deinem Unternehmen, bis ihn jemand widerruft. Er ist deine Angabe, keine Einwilligung.",
-  "compose.reasonRecordFor":
-    "Als dauerhaften Grund festhalten: {reason}, für {address}",
-  "compose.reasonLabel": "Warum du an {address} schreiben darfst",
+  "compose.fact.open": "Gespräch festhalten",
+  "compose.fact.title": "Gespräch mit {address} festhalten",
+  "compose.fact.scope":
+    "Hält den Sachverhalt für {address} fest. Sendet keine E-Mail und erfasst keine Werbeeinwilligung.",
+  "compose.fact.kind": "Was ist passiert?",
+  "compose.fact.request": "Die Person hat mich gebeten zu schreiben",
+  "compose.fact.quoteRequest": "Die Person hat um dieses Angebot gebeten",
+  "compose.fact.met": "Wir haben uns persönlich getroffen",
+  "compose.fact.note": "Was wurde vereinbart?",
+  "compose.fact.save": "Gespräch festhalten",
   "compose.replyIntent": "Zweck der Antwort",
   "compose.newIntent": "Zweck der E-Mail",
   "compose.draftReply": "Antwort entwerfen",

@@ -57604,6 +57604,9 @@ type RecordListsResponse struct {
 
 // RecordQualifyingEventRequest One exchange that makes ordinary business correspondence lawful.
 type RecordQualifyingEventRequest struct {
+	// AboutDeal The visible deal this exchange concerned. Omit for a request with no deal.
+	AboutDeal *openapi_types.UUID `json:"about_deal,omitempty"`
+
 	// AsksForQuote The contact asked for a quote or an offer. Only a `requested_by_subject` exchange may say so,
 	// and only such a request bears out a quote sent before any deal exists. A request to be
 	// called back supports a follow-up and not a quote.

@@ -107,7 +107,7 @@ function NewMessage({ preview }: Readonly<{ preview: object }>) {
 
 function Composer() {
   installFetchStub({
-    "GET /me": meRoute({}),
+    "GET /me": meRoute({ contact: ["read", "update"], activity: ["read", "update"] }),
     "GET /activities/act-1": () =>
       jsonResponse({
         id: "act-1",
@@ -133,17 +133,13 @@ function Composer() {
   );
 }
 
-/** Nothing on record says the rep may write to this address. The strip above
- *  the foot carries a reason pick that records it under their own name. */
 export const ReasonMissing: StoryObj = {
   render: () => <Composer />,
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));
     await userEvent.type(dialog.getByLabelText("To"), "anna@example.test");
     await userEvent.tab();
-    await dialog.findByRole("combobox", {
-      name: "Why you may write to anna@example.test",
-    });
+    await dialog.findByRole("button", { name: "Record what happened" });
   },
 };
 
