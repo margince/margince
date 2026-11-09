@@ -21,8 +21,8 @@ export function HealthSessionPage() {
         <div className="settings-stack">
           <Heading size="xlarge" as="h1">
             {t(
-              route.id === "capture-activity"
-                ? "settings.tab.capture-activity"
+              route.id === "connections"
+                ? "settings.tab.connections"
                 : "settings.tab.system-health",
             )}
           </Heading>

@@ -31,11 +31,12 @@ package gates
 // no cross-document reference.
 
 import (
-	"os"
 	"regexp"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // retentionActionCheck reads the values the database admits, out of the schema
@@ -45,7 +46,7 @@ func retentionActionCheck(t *testing.T) []string {
 	t.Helper()
 	const catalog = "migrations/testdata/head_catalog.txt"
 	const constraint = "public.retention_policy.retention_policy_action_check "
-	raw, err := os.ReadFile(catalog)
+	raw, err := gatekit.ReadFile(catalog)
 	if err != nil {
 		t.Fatalf("reading the schema head: %v", err)
 	}

@@ -181,7 +181,7 @@ func bindIdentifier(query string, arg func(any) int) identifierBinder {
 // rather than inlined so the discard is a decision with a reason on it instead
 // of an error value that goes quietly missing.
 func mayRead(ctx context.Context, entity string) bool {
-	return auth.Require(ctx, entity, principal.ActionRead) == nil
+	return auth.Allows(ctx, entity, principal.ActionRead)
 }
 
 // projectSnippet is `key · company`, with the company named only to a caller

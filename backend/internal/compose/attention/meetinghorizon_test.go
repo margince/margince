@@ -21,7 +21,7 @@ import (
 
 // stubHorizon answers both questions and records the window it was asked about.
 type stubHorizon struct {
-	calendar    crmcontracts.WorklistCalendar
+	calendar    crmcontracts.ReaderCalendar
 	calendarErr error
 	next        *crmcontracts.Contact360NextMeeting
 	nextErr     error
@@ -30,7 +30,7 @@ type stubHorizon struct {
 	before      time.Time
 }
 
-func (h *stubHorizon) Calendar(context.Context) (crmcontracts.WorklistCalendar, error) {
+func (h *stubHorizon) Calendar(context.Context) (crmcontracts.ReaderCalendar, error) {
 	return h.calendar, h.calendarErr
 }
 
@@ -69,11 +69,11 @@ func readHorizonPage(t *testing.T, svc *Service, scope string) crmcontracts.Work
 }
 
 func TestAnEmptyDayNamesTheCalendarAndTheNextCustomerMeeting(t *testing.T) {
-	horizon := &stubHorizon{calendar: crmcontracts.WorklistCalendarConnected, next: threeDaysOut()}
+	horizon := &stubHorizon{calendar: crmcontracts.ReaderCalendarConnected, next: threeDaysOut()}
 
 	page := readHorizonPage(t, horizonService(&stubMeetings{}, horizon), scopeMine)
 
-	if page.Calendar == nil || *page.Calendar != crmcontracts.WorklistCalendarConnected {
+	if page.Calendar == nil || *page.Calendar != crmcontracts.ReaderCalendarConnected {
 		t.Errorf("calendar = %v, want connected", page.Calendar)
 	}
 	if page.NextMeeting == nil || page.NextMeeting.ActivityId != horizon.next.ActivityId {
@@ -89,7 +89,7 @@ func TestAnEmptyDayNamesTheCalendarAndTheNextCustomerMeeting(t *testing.T) {
 // A meeting still ahead today is the next conversation, so nothing points past it.
 func TestADayWithAMeetingLeftNamesNoNextMeeting(t *testing.T) {
 	today := &stubMeetings{rows: []Meeting{{ID: ids.NewV7(), Subject: "later", StartsAt: readInstant.Add(time.Hour)}}}
-	horizon := &stubHorizon{calendar: crmcontracts.WorklistCalendarConnected, next: threeDaysOut()}
+	horizon := &stubHorizon{calendar: crmcontracts.ReaderCalendarConnected, next: threeDaysOut()}
 
 	page := readHorizonPage(t, horizonService(today, horizon), scopeMine)
 
@@ -105,7 +105,7 @@ func TestADayWithAMeetingLeftNamesNoNextMeeting(t *testing.T) {
 // withheld source is named by the word the meetings reading matches on.
 func TestAWithheldMeetingsLaneIsNamedAsTheMeetingSourceAndPointsNowhere(t *testing.T) {
 	refused := &stubMeetings{err: apperrors.ErrPermissionDenied}
-	horizon := &stubHorizon{calendar: crmcontracts.WorklistCalendarConnected, next: threeDaysOut()}
+	horizon := &stubHorizon{calendar: crmcontracts.ReaderCalendarConnected, next: threeDaysOut()}
 
 	page := readHorizonPage(t, horizonService(refused, horizon), scopeMine)
 
@@ -123,7 +123,7 @@ func TestAWithheldMeetingsLaneIsNamedAsTheMeetingSourceAndPointsNowhere(t *testi
 
 // A wider scope has no single calendar and no single next meeting.
 func TestOnlyTheReadersOwnDayCarriesTheCalendar(t *testing.T) {
-	horizon := &stubHorizon{calendar: crmcontracts.WorklistCalendarConnected, next: threeDaysOut()}
+	horizon := &stubHorizon{calendar: crmcontracts.ReaderCalendarConnected, next: threeDaysOut()}
 
 	page := readHorizonPage(t, horizonService(&stubMeetings{}, horizon), scopeAll)
 
@@ -165,7 +165,7 @@ func TestAFailedCalendarReadIsNamedAndARefusedOneIsAbsent(t *testing.T) {
 // A failed next-meeting read leaves the field unknown and names it under the
 // meetings reading, so an empty month is never claimed over a read that broke.
 func TestAFailedNextMeetingReadIsNamedUnderMeetings(t *testing.T) {
-	horizon := &stubHorizon{calendar: crmcontracts.WorklistCalendarConnected, nextErr: errors.New("statement timeout")}
+	horizon := &stubHorizon{calendar: crmcontracts.ReaderCalendarConnected, nextErr: errors.New("statement timeout")}
 
 	page := readHorizonPage(t, horizonService(&stubMeetings{}, horizon), scopeMine)
 

@@ -6,7 +6,7 @@ import { expect, screen } from "storybook/test";
 import type { components } from "../../api/schema";
 import { useLocale, useT } from "../../i18n";
 import { en } from "../../i18n/en";
-import { useRecordZone } from "../../lib/recordzone";
+import { useCompanyZone } from "../../lib/companyzone";
 import { company360 } from "../../testing/company.fixtures";
 import { StoryProviders } from "../../testing/story-utils";
 import { NextMeetingStat } from "./companynextmeeting";
@@ -27,7 +27,7 @@ function Stat({ view }: Readonly<{ view: Company360 }>) {
     <NextMeetingStat
       view={view}
       locale={locale}
-      recordZone={useRecordZone()}
+      recordZone={useCompanyZone()}
       t={t}
     />
   );

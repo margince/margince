@@ -19,6 +19,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -46,7 +47,7 @@ func TestApprovalExpiryClosesTheDecisionGate(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
-	svc := approvals.NewService(e.DB())
+	svc := approvalEngineWithLiveProposer(t, e)
 
 	deal := e.SeedDeal(t, "Mine", pipeline, open, &e.Rep1)
 	approvalID, diffHash := stageAdvance(t, svc, e, deal)
@@ -83,7 +84,7 @@ func TestRedemptionWindowExpiresTheDecision(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
-	svc := approvals.NewService(e.DB())
+	svc := approvalEngineWithLiveProposer(t, e)
 
 	deal := e.SeedDeal(t, "Mine", pipeline, open, &e.Rep1)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -118,4 +119,10 @@ func TestRedemptionWindowExpiresTheDecision(t *testing.T) {
 	if _, _, err := svc.Redeem(e.AgentCtx(), freshID, "advance_deal", freshHash); !errors.Is(err, apperrors.ErrApprovalTokenInvalid) {
 		t.Fatalf("second redemption → %v, want ErrApprovalTokenInvalid (single-use)", err)
 	}
+}
+
+func approvalEngineWithLiveProposer(t *testing.T, e *Env) *approvals.Service {
+	t.Helper()
+	e.GrantRole(t, e.Rep1, "rep")
+	return approvals.NewService(e.DB()).WithEffectActor(compose.NewApprovalEffectActor(e.DB()))
 }

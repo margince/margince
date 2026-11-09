@@ -168,7 +168,7 @@ func subscriberRegistrations(t *testing.T) map[string]bool {
 	t.Helper()
 
 	names := map[string]bool{}
-	err := filepath.WalkDir(workerCmdDir, func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(workerCmdDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
 			return err
 		}

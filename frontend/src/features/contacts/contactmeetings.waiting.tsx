@@ -18,11 +18,11 @@ import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDayMonth, formatNumber } from "../../format/format";
 import { formatTimeRange } from "../../format/meetingtime";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { entityTimelineKeys } from "../../lib/activitykeys";
 import { proposalEmailBody } from "../../lib/booking-proposal-message";
 import { unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { ComposeModal } from "../mail/compose";
 import { contactFirstName } from "./contactfirstname";
 
@@ -193,13 +193,14 @@ function ResendComposer({
   proposal,
   onClose,
 }: Readonly<{ contact: Contact; proposal: Proposal; onClose: () => void }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const body = proposalEmailBody(
     t,
     { description: "", options: proposal.options, url: proposal.url },
     locale,
-    viewerZone(),
+    readerZone,
   );
   return (
     <ComposeModal
@@ -228,7 +229,7 @@ function ProposalRow({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const copy = useClipboardCopy(
     proposal.url,
     {

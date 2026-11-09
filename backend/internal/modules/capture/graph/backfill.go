@@ -2,10 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // The bounded backfill (ADR-0063): Graph enumerates a mailbox backward from a
-// date boundary via /me/messages $filter=receivedDateTime ge. The estimate is
-// the provider's @odata.count; the page walk uses the same GetMIME + capture
-// discipline as incremental sync, so a message the two paths both see lands
-// once (the capture key dedupes).
+// date boundary via /me/messages $filter=receivedDateTime ge. The walk keeps to
+// the folders the standing sync reads, and the estimate is the provider's
+// @odata.count over those folders. The page walk uses the same GetMIME and
+// capture path as incremental sync, so a message both paths see lands once.
 
 package graph
 
@@ -14,7 +14,10 @@ import (
 	"errors"
 	"time"
 
+	"golang.org/x/sync/semaphore"
+
 	"github.com/margince/margince/backend/internal/modules/capture/graphconn"
+	"github.com/margince/margince/backend/internal/modules/capture/orderedfetch"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -56,15 +59,11 @@ func (c *Connector) BackfillPage(ctx context.Context, auth connector.Auth, after
 		return connector.BackfillPageResult{}, err
 	}
 	access := refreshed.AccessToken
-	// The backfill walks the whole mailbox in one pass, so unlike the
-	// incremental delta — which follows the two folders separately and knows
-	// which one it is in — it has to ask which folder holds sent mail before
-	// it can collect the T1 correspondence evidence (ADR-0072 §1). Resolved
-	// BEFORE anything is captured: a page that cannot tell sent mail from
-	// received would stamp its whole window un-attested, and the natural key
-	// makes that permanent. Treated like any other provider fault — the page
-	// stops without advancing and the engine retries from its committed token.
-	sentFolder, err := c.api.SentFolderID(ctx, access)
+	// The listing spans the whole mailbox, so the page resolves the synced
+	// folders' opaque ids first and steps over mail filed anywhere else. Sent
+	// Items is also the proof the owner sent a message. Without it the page
+	// would store its mail as unattested for good, so a failure stops the page.
+	folders, err := c.syncedFolderIDs(ctx, access)
 	if err != nil {
 		return connector.BackfillPageResult{}, err
 	}
@@ -72,34 +71,62 @@ func (c *Connector) BackfillPage(ctx context.Context, auth connector.Auth, after
 	if err != nil {
 		return connector.BackfillPageResult{}, err
 	}
-	res := connector.BackfillPageResult{NextToken: next, Scanned: len(msgs)}
-	// One page is a hundred messages of provider I/O and capture work, so the
-	// engine hears the tally per message rather than once at the end. Scanned
-	// counts messages WALKED so far, not the page's listing: a page that dies
-	// mid-walk is retried from the committed token, and reporting the listing
-	// up front would show progress the retry then repeats.
+	res := connector.BackfillPageResult{NextToken: next}
+	// The engine hears the tally per message. Scanned counts messages walked so
+	// far, because a page that dies mid-walk is retried from its committed
+	// token. Mail outside the synced folders is not counted, as in the estimate.
 	progress := connector.BackfillProgressFrom(ctx)
-	for walked, msg := range msgs {
-		captured, err := c.backfillOne(ctx, access, msg, sink, st.Owner, sentFolder)
-		if err != nil {
-			return connector.BackfillPageResult{}, err
+	var walked []MessageRef
+	for _, msg := range msgs {
+		if _, synced := folders[msg.ParentFolderID]; synced {
+			walked = append(walked, msg)
 		}
-		if captured {
-			res.Captured++
-		} else {
-			res.Skipped++
-		}
-		progress.Observed(ctx, walked+1, res.Captured, res.Skipped)
+	}
+	err = backfillWalk.InOrder(ctx, len(walked),
+		func(ctx context.Context, i int) ([]byte, error) {
+			// Through the folder the listing found it in, so a message moved to
+			// Junk Email since is refused by Graph instead of read.
+			return c.api.GetMIME(ctx, access, walked[i].ParentFolderID, walked[i].ID)
+		},
+		func(i int, raw []byte, err error) error {
+			msg := walked[i]
+			captured, err := c.backfillOne(ctx, raw, err, msg, sink, st.Owner, folders[msg.ParentFolderID] == folderSent)
+			if err != nil {
+				return err
+			}
+			res.Scanned++
+			if captured {
+				res.Captured++
+			} else {
+				res.Skipped++
+			}
+			progress.Observed(ctx, res.Scanned, res.Captured, res.Skipped)
+			return nil
+		})
+	if err != nil {
+		return connector.BackfillPageResult{}, err
 	}
 	return res, nil
 }
 
-// backfillOne walks ONE listed message: fetch its MIME, then capture it. Its
-// bool is the page's tally decision — captured, or skipped for any of the
-// ordinary reasons a message yields no row.
-func (c *Connector) backfillOne(ctx context.Context, access string, msg MessageRef, sink connector.Sink, owner, sentFolder string) (bool, error) {
-	raw, err := c.api.GetMIME(ctx, access, msg.ID)
-	if errors.Is(err, connector.ErrSkip) {
+// syncedFolderIDs maps each synced folder's opaque id to its well-known name.
+func (c *Connector) syncedFolderIDs(ctx context.Context, access string) (map[string]string, error) {
+	out := make(map[string]string, len(syncedFolders))
+	for _, folder := range syncedFolders {
+		id, err := c.api.FolderID(ctx, access, folder)
+		if err != nil {
+			return nil, err
+		}
+		out[id] = folder
+	}
+	return out, nil
+}
+
+// backfillOne settles one listed message from its fetched MIME. Its bool is the
+// page's tally: captured, or skipped for an ordinary reason a message yields no
+// row.
+func (c *Connector) backfillOne(ctx context.Context, raw []byte, fetchErr error, msg MessageRef, sink connector.Sink, owner string, sentByOwner bool) (bool, error) {
+	if errors.Is(fetchErr, connector.ErrSkip) {
 		// A message the provider refuses to hand over: deleted between the
 		// listing and the fetch, or an oversized MIME blob that truncated
 		// would not be honest evidence. Both are per-message drops, counted
@@ -109,12 +136,26 @@ func (c *Connector) backfillOne(ctx context.Context, access string, msg MessageR
 		// message, forever.
 		return false, nil
 	}
-	if err != nil {
+	if fetchErr != nil {
 		// Stop the page without advancing, so a retry resumes from the
 		// committed token. Whether there IS a retry is the engine's call on
 		// the class this error carries: a rate limit or an unreachable
 		// provider is waited out, anything else ends the run.
-		return false, err
+		return false, fetchErr
 	}
-	return captureOne(ctx, raw, sink, c.bounces, owner, msg.ParentFolderID, msg.ParentFolderID == sentFolder, msg.ReceivedAt)
+	return captureOne(ctx, raw, sink, c.bounces, owner, msg.ParentFolderID, msg.ID, sentByOwner, msg.ReceivedAt)
+}
+
+// backfillWalk fetches a few messages of a page at once and captures them in
+// the page's order. Microsoft allows four concurrent requests per mailbox. Two
+// leave one for live sync and one for a send. A fetch reserves twice the MIME cap, since
+// reading grows its buffer past what it keeps, from a budget every walk in the
+// process shares.
+var backfillWalk = orderedfetch.Walk[[]byte]{
+	Workers: 2, Lookahead: 4,
+	Budget: semaphore.NewWeighted(8 * 2 * maxMIMELen), Reserve: 2 * maxMIMELen,
+	Retained: func(raw []byte) int64 { return int64(cap(raw)) },
+	// Every fetch error but a refused message ends the page (backfillOne).
+	// So none is worth the rest of the look-ahead, a rate limit least of all.
+	Halts: func(err error) bool { return !errors.Is(err, connector.ErrSkip) },
 }

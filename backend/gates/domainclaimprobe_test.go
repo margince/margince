@@ -27,9 +27,9 @@ package gates
 
 import (
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -70,10 +70,20 @@ var readsDomainClaim = regexp.MustCompile(
 // it silently. A reason a reviewer can disagree with is worth more than a
 // regular expression nobody can see the edge of.
 var domainResolvers = gatekit.Waive(map[string]string{
-	"internal/modules/contacts/dedupecompany.go":    "exactCompanyByDomain is dedupe tier 1: it resolves which live company a candidate's domains already belong to so the record LANDS on it. The id goes to the merge, never to a caller, so there is no 409 and nothing to gate the disclosure of.",
-	"internal/modules/contacts/companysubdomain.go": "subdomainClaimants finds the accounts holding the registrable domain of a candidate's subdomain, to file a review pair. The ids go to the review queue, never to a caller, so there is no 409 and nothing to gate the disclosure of.",
-	"internal/modules/signals/resolver.go":          "the signal resolver scores which companies a domain points at, joining company to skip anchors. Its ids become ranked candidates inside the resolution, not an answer any client receives.",
+	"internal/modules/contacts/dedupecompany.go":        "exactCompanyByDomain is dedupe tier 1: it resolves which live company a candidate's domains already belong to so the record LANDS on it. nameDomainClaimant names the company a display name's domain belongs to, as a rival for review. Both ids go to the merge or the review queue, never to a caller, so there is no 409 and nothing to gate the disclosure of.",
+	"internal/modules/contacts/companysubdomain.go":     "subdomainClaimants finds the accounts holding the registrable domain of a candidate's subdomain, to file a review pair. The ids go to the review queue, never to a caller, so there is no 409 and nothing to gate the disclosure of.",
+	"internal/modules/contacts/providerclaimtargets.go": "companyByDomain resolves which live company a bought employer's domain belongs to, so a provider claim's employment lands on it. The id goes to the claim fill, never to a caller, so there is no 409 and nothing to gate the disclosure of. It became visible to this census when its predicate stopped hiding the comparison inside lower().",
+	"internal/modules/signals/resolver.go":              "the signal resolver scores which companies a domain points at, joining company to skip anchors. Its ids become ranked candidates inside the resolution, not an answer any client receives.",
 })
+
+// ratifiedStatements is how many statements a ratification names: one resolver
+// each, except where its reason names more.
+func ratifiedStatements(file string) int {
+	if file == "internal/modules/contacts/dedupecompany.go" {
+		return 2
+	}
+	return 1
+}
 
 func TestEveryDomainClaimAnswersThroughOneProbe(t *testing.T) {
 	t.Parallel()
@@ -84,8 +94,11 @@ func TestEveryDomainClaimAnswersThroughOneProbe(t *testing.T) {
 
 	var findings []string
 	judged, owned := 0, 0
+	// A ratification names one resolver, so it admits one statement. Counted,
+	// so a second probe added beside a resolver is a finding, not a waiver.
+	admitted := map[string]int{}
 	for _, root := range []string{".", "../extensions", "../fixtures"} {
-		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+		err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil {
 				return walkErr
 			}
@@ -102,7 +115,7 @@ func TestEveryDomainClaimAnswersThroughOneProbe(t *testing.T) {
 			if filepath.Base(path) == "domainclaimprobe_test.go" {
 				return nil
 			}
-			source, readErr := os.ReadFile(path) // #nosec G304 -- a *.go path from walking the trusted source tree
+			source, readErr := gatekit.ReadFile(path) // #nosec G304 -- a *.go path from walking the trusted source tree
 			if readErr != nil {
 				return readErr
 			}
@@ -116,6 +129,7 @@ func TestEveryDomainClaimAnswersThroughOneProbe(t *testing.T) {
 					continue
 				}
 				if domainResolvers.Waived(t, rel) {
+					admitted[rel]++
 					continue
 				}
 				findings = append(findings, rel+": "+gatekit.FirstLineOf(statement))
@@ -134,6 +148,11 @@ func TestEveryDomainClaimAnswersThroughOneProbe(t *testing.T) {
 	// let a second probe live beside the first — the same defect, at the one
 	// address the census trusts. Zero means the statement has moved and the
 	// census is guarding an empty file.
+	for file, n := range admitted {
+		if n > ratifiedStatements(file) {
+			findings = append(findings, file+": "+strconv.Itoa(n)+" statements under one resolver's ratification")
+		}
+	}
 	if owned != 1 {
 		t.Errorf("%s holds %d statements asking who owns a domain, want exactly 1 — "+
 			"the owner may hold THE probe, not a second one beside it", claimProbeOwner, owned)

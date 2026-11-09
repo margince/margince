@@ -25,7 +25,7 @@ import (
 
 func enqueueHealthFixtures(t *testing.T, e *apptest.AppEnv, n int) {
 	t.Helper()
-	inserter := insertOnlyRunner(t)
+	inserter := apptest.InsertOnlyRunner(t)
 	err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
 		for range n {
 			if err := inserter.EnqueueTx(t.Context(), tx, compose.CaptureClassifyArgs{}, &river.InsertOpts{ScheduledAt: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)}); err != nil {
@@ -34,6 +34,18 @@ func enqueueHealthFixtures(t *testing.T, e *apptest.AppEnv, n int) {
 		}
 		return nil
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func finishHealthFixtures(t *testing.T, e *apptest.AppEnv, state string) {
+	t.Helper()
+	// The API clock bounds history, so the fixture must finish before that clock's read.
+	at := clocktest.Now(t).Add(-time.Minute)
+	_, err := e.Owner.Exec(t.Context(), `UPDATE river_job SET state=@state,
+ created_at=least(created_at,@at::timestamptz - interval '1 second'), finalized_at=@at
+ WHERE kind=@kind`, pgx.StrictNamedArgs{"state": state, "at": at, "kind": (compose.CaptureClassifyArgs{}).Kind()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,9 +78,7 @@ func TestJobHistoryPagesCompleteGroupsAndDisclosesRetentionChanges(t *testing.T)
 	e.BootstrapWorkspace(t)
 	enqueueHealthFixtures(t, e, 65)
 	// River's terminal transition is the database boundary; insertion uses the production writer.
-	if _, err := e.Owner.Exec(t.Context(), `UPDATE river_job SET state='discarded',finalized_at=now() WHERE kind=$1`, (compose.CaptureClassifyArgs{}).Kind()); err != nil {
-		t.Fatal(err)
-	}
+	finishHealthFixtures(t, e, "discarded")
 	var first crmcontracts.JobHealthHistory
 	if status := e.Call(t, "GET", "/v1/admin/job-health/history", nil, nil, &first); status != http.StatusOK {
 		t.Fatalf("status %d", status)
@@ -134,9 +144,7 @@ func TestHistoryCursorCannotChangeItsFilters(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	enqueueHealthFixtures(t, e, 51)
-	if _, err := e.Owner.Exec(context.Background(), `UPDATE river_job SET state='discarded',finalized_at=now() WHERE kind=$1`, (compose.CaptureClassifyArgs{}).Kind()); err != nil {
-		t.Fatal(err)
-	}
+	finishHealthFixtures(t, e, "discarded")
 	var first crmcontracts.JobHealthHistory
 	if status := e.Call(t, "GET", "/v1/admin/job-health/history", nil, nil, &first); status != http.StatusOK || first.NextCursor == nil {
 		t.Fatalf("history: %d %+v", status, first)
@@ -243,7 +251,7 @@ func TestSystemHealthProjectsRevokedSourcesAndKeepsSearchReadable(t *testing.T) 
 }
 
 func TestSystemHealthDoesNotTreatAMatchingSearchModelAsCompleteIndexEvidence(t *testing.T) {
-	router := embedReindexRouter(t, "health-marker-model")
+	router := apptest.EmbedReindexRouter(t, "health-marker-model")
 	e := setupEmbedReindex(t, router)
 	var report crmcontracts.SystemHealth
 	if status := e.Call(t, "GET", "/v1/admin/system-health", nil, nil, &report); status != http.StatusOK {
@@ -299,9 +307,7 @@ func TestHistoryExcludesAnotherWorkspacesRetainedRuns(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	enqueueHealthFixtures(t, e, 1)
-	if _, err := e.Owner.Exec(t.Context(), `UPDATE river_job SET state='discarded',finalized_at=now() WHERE kind=$1`, (compose.CaptureClassifyArgs{}).Kind()); err != nil {
-		t.Fatal(err)
-	}
+	finishHealthFixtures(t, e, "discarded")
 	seedRiverRow(t, e, riverRow{kind: (compose.CaptureClassifyArgs{}).Kind(), workspace: ids.NewV7().String(), state: "discarded", attempt: 1})
 	var report crmcontracts.JobHealthHistory
 	if status := e.Call(t, "GET", "/v1/admin/job-health/history", nil, nil, &report); status != http.StatusOK {
@@ -315,7 +321,7 @@ func TestHistoryExcludesAnotherWorkspacesRetainedRuns(t *testing.T) {
 func TestExpectedQueueWorkAndCancellationDoNotBecomeProblems(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	inserter := insertOnlyRunner(t)
+	inserter := apptest.InsertOnlyRunner(t)
 	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
 		return inserter.EnqueueTx(t.Context(), tx, compose.CaptureClassifyArgs{}, &river.InsertOpts{ScheduledAt: clocktest.Now(t).Add(time.Hour)})
 	}); err != nil {
@@ -339,9 +345,7 @@ func TestExpectedQueueWorkAndCancellationDoNotBecomeProblems(t *testing.T) {
 			t.Fatalf("scheduled work needs no intervention: %+v", finding)
 		}
 	}
-	if _, err := e.Owner.Exec(t.Context(), `UPDATE river_job SET state='cancelled',finalized_at=now() WHERE kind=$1`, (compose.CaptureClassifyArgs{}).Kind()); err != nil {
-		t.Fatal(err)
-	}
+	finishHealthFixtures(t, e, "cancelled")
 	if status := e.Call(t, "GET", "/v1/admin/system-health", nil, nil, &report); status != http.StatusOK {
 		t.Fatalf("summary: %d", status)
 	}
@@ -361,9 +365,7 @@ func TestHistoryContinuationExcludesRunsFinishedAfterItsCutoff(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	enqueueHealthFixtures(t, e, 51)
 	kind := (compose.CaptureClassifyArgs{}).Kind()
-	if _, err := e.Owner.Exec(t.Context(), `UPDATE river_job SET state='discarded',finalized_at=now() WHERE kind=$1`, kind); err != nil {
-		t.Fatal(err)
-	}
+	finishHealthFixtures(t, e, "discarded")
 	var first crmcontracts.JobHealthHistory
 	if status := e.Call(t, "GET", "/v1/admin/job-health/history", nil, nil, &first); status != http.StatusOK || first.NextCursor == nil {
 		t.Fatalf("first history page: %d %+v", status, first)

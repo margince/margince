@@ -16,6 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -60,11 +61,11 @@ func companyField(t *testing.T, e *apptest.AppEnv, displayName, column string) s
 func TestACustomFieldColumnLandsOnCreateAndOnUpdate(t *testing.T) {
 	e := setupCustomFieldImportApp(t)
 	column := apptest.CreateCustomField(t, e, AnyMap{"object": "company", "label": "Tier", "type": "picklist", "options": []string{"A", "B"}, "source": "manual"})
-	profile, _ := uploadCSV(t, e, "company", "Name,Tier\nCustom One GmbH,A\n")
+	profile, _ := importjobtest.UploadCSV(t, e, "company", "Name,Tier\nCustom One GmbH,A\n")
 	if profile.SuggestedMapping["Tier"] != column {
 		t.Errorf("suggested mapping = %v, want Tier onto %s by its label", profile.SuggestedMapping, column)
 	}
-	run, status := createRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "Tier": column})
+	run, status := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "Tier": column})
 	if status != http.StatusAccepted {
 		t.Fatalf("stage → %d, want 202", status)
 	}
@@ -72,8 +73,8 @@ func TestACustomFieldColumnLandsOnCreateAndOnUpdate(t *testing.T) {
 	if got := companyField(t, e, "Custom One GmbH", column); got != "A" {
 		t.Fatalf("%s = %q after create, want A", column, got)
 	}
-	again, _ := uploadCSV(t, e, "company", "Name,Tier\nCustom One GmbH,B\n")
-	second, _ := createRunWithMapping(t, e, "company", again.SourceRef, map[string]string{"Name": "display_name", "Tier": column})
+	again, _ := importjobtest.UploadCSV(t, e, "company", "Name,Tier\nCustom One GmbH,B\n")
+	second, _ := importjobtest.CreateRunWithMapping(t, e, "company", again.SourceRef, map[string]string{"Name": "display_name", "Tier": column})
 	approveAndRead(t, e, second.ID)
 	if got := companyField(t, e, "Custom One GmbH", column); got != "B" {
 		t.Fatalf("%s = %q after update, want B", column, got)
@@ -101,8 +102,8 @@ func TestAZipPartSuggestsAndLandsAContactCustomFieldByItsLabel(t *testing.T) {
 func TestTheDryRunAndTheCommitSkipTheSameRowForTheSameCell(t *testing.T) {
 	e := setupCustomFieldImportApp(t)
 	column := apptest.CreateCustomField(t, e, AnyMap{"object": "company", "label": "Tier", "type": "picklist", "options": []string{"Gold", "Silver"}, "source": "manual"})
-	profile, _ := uploadCSV(t, e, "company", "Name,Tier\nGood GmbH,Gold\nBad GmbH,Bronze\n")
-	run, status := createRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "Tier": column})
+	profile, _ := importjobtest.UploadCSV(t, e, "company", "Name,Tier\nGood GmbH,Gold\nBad GmbH,Bronze\n")
+	run, status := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "Tier": column})
 	if status != http.StatusAccepted {
 		t.Fatalf("stage → %d, want 202", status)
 	}
@@ -139,8 +140,8 @@ func TestATypedCustomFieldLandsInItsTypeAndAReimportIsUnchanged(t *testing.T) {
 	value := apptest.CreateCustomField(t, e, AnyMap{"object": "company", "label": "Value", "type": "currency", "currency": "EUR", "source": "manual"})
 	body := "Name,Active,Value\nTyped GmbH,Yes,12000.50\n"
 	mapping := map[string]string{"Name": "display_name", "Active": active, "Value": value}
-	profile, _ := uploadCSV(t, e, "company", body)
-	run, _ := createRunWithMapping(t, e, "company", profile.SourceRef, mapping)
+	profile, _ := importjobtest.UploadCSV(t, e, "company", body)
+	run, _ := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef, mapping)
 	approveAndRead(t, e, run.ID)
 	if got := companyField(t, e, "Typed GmbH", active); got != "true" {
 		t.Fatalf("%s = %q, want true", active, got)
@@ -148,8 +149,8 @@ func TestATypedCustomFieldLandsInItsTypeAndAReimportIsUnchanged(t *testing.T) {
 	if got, err := strconv.ParseFloat(companyField(t, e, "Typed GmbH", value), 64); err != nil || got != 1200050 {
 		t.Fatalf("%s = %v (%v), want 1200050 minor units", value, got, err)
 	}
-	again, _ := uploadCSV(t, e, "company", body)
-	second, _ := createRunWithMapping(t, e, "company", again.SourceRef, mapping)
+	again, _ := importjobtest.UploadCSV(t, e, "company", body)
+	second, _ := importjobtest.CreateRunWithMapping(t, e, "company", again.SourceRef, mapping)
 	approveAndRead(t, e, second.ID)
 	if report := readImportReport(t, e, second.ID); report.Disposition.Unchanged != 1 {
 		t.Fatalf("re-import report = %+v, want the row unchanged", report)

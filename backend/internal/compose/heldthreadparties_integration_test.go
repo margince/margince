@@ -97,13 +97,8 @@ func TestAHeldThreadNamesNobodyOnAMessageItsReaderMayNotRead(t *testing.T) {
 	message := seedHeldMessage(t, e, e.Rep1, e.Rep2, "thread-withheld", "participants")
 	seedParty(t, e, message, nil, nil, "anwalt@kanzlei.example", "from")
 
-	got := heldThreads(t, e, e.Rep1)
-	if len(got) != 1 {
-		t.Fatalf("%d threads, want 1", len(got))
-	}
-	if got[0].ParticipantCount != 0 || len(got[0].Participants) != 0 {
-		t.Errorf("a withheld message named %d of %d parties, want none",
-			len(got[0].Participants), got[0].ParticipantCount)
+	if got := heldThreads(t, e, e.Rep1); len(got) != 0 {
+		t.Fatalf("unreadable threads=%+v", got)
 	}
 }
 

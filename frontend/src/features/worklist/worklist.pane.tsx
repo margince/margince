@@ -23,22 +23,28 @@ import {
   formatActivityWhen,
   type OccurredPrecision,
 } from "../../format/activitywhen";
-import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { useViewerZone } from "../../lib/viewerzone";
 import { useContact360 } from "../contacts/contact360";
 import { NoticeDuty } from "../privacy/noticeduty";
+import { ConversationPanel } from "./worklist.pane.conversation";
+import { DealPanel } from "./worklist.pane.deal";
 import type { WorklistItem } from "./worklist.queries";
 import { WorklistWhy } from "./worklist.why";
 
 // The pane, for whichever record the selected row is about.
 //
-// Why the row is here comes first, for every row. The record's own read
-// follows only for a contact. A deal-bearing row already carries its own
-// figures (amount, close date, owner, risk evidence). A pane repeating them
-// would be the second spelling this file exists to avoid.
-export function WorklistPane({ item }: Readonly<{ item: WorklistItem }>) {
+// Why the row is here comes first, for every row. Then what a reader needs to
+// act without leaving: the messages behind it, who it is with, and the deal.
+// Each is the record's own read, never a second assembly of the same facts.
+export function WorklistPane({
+  item,
+  answer = false,
+}: Readonly<{ item: WorklistItem; answer?: boolean }>) {
   const subject = item.subject;
-  const contactId = subject?.type === "contact" ? subject.id : undefined;
+  const contactId = paneContactId(item);
+  const dealId = subject?.type === "deal" ? subject.id : undefined;
+  const messageId = item.email_summary?.activity_id;
   return (
     <>
       {/* A privacy-notice duty draws what it is and how to discharge it. The
@@ -46,11 +52,25 @@ export function WorklistPane({ item }: Readonly<{ item: WorklistItem }>) {
       {item.source === "notice_case" && contactId ? (
         <NoticeDuty item={item} contactId={contactId} />
       ) : (
-        <WorklistWhy item={item} />
+        <WorklistWhy item={item} answer={answer} />
       )}
-      {contactId && <ContactContext id={contactId} label={subject?.label} />}
+      {messageId && <ConversationPanel activityId={messageId} />}
+      {contactId && (
+        <ContactContext
+          id={contactId}
+          label={
+            subject?.type === "contact" ? subject.label : item.contact?.label
+          }
+        />
+      )}
+      {dealId && <DealPanel id={dealId} label={subject?.label} />}
     </>
   );
+}
+
+// The contact a row is with: its subject, or the party a deal row names.
+function paneContactId(item: WorklistItem): string | undefined {
+  return item.subject?.type === "contact" ? item.subject.id : item.contact?.id;
 }
 
 // Whether this row HAS a pane, asked before one is rendered.
@@ -142,7 +162,7 @@ function ContactFacts({
 }: Readonly<{ view: NonNullable<ReturnType<typeof useContact360>["data"]> }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   // Both come off `contact`, which is required on the wire — so an answer
   // without it is version skew, and the two facts it carries are simply
   // absent. Absent is already this list's ordinary case: a row is dropped

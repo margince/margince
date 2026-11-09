@@ -139,7 +139,7 @@
 }
 /* --ai does not lift in dark, so its ink is --textOnAccent, the light ink
  * shared by every fill that stays put: the dark --textOnAccentControl would
- * read 3.26:1 on it. */
+ * read 3.73:1 on it. */
 .badge-primary.badge-ai {
   background: var(--ai);
   color: var(--textOnAccent);

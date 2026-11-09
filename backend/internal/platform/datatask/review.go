@@ -25,7 +25,7 @@ const paramOperator = "operator"
 // SealReviewTx binds nondeterministic predictions to their reader until activation.
 func SealReviewTx(ctx context.Context, tx pgx.Tx, taskID string, review ReviewRequest, now time.Time) (string, error) {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
+	if !ok || !actor.HumanOrItsAgent() {
 		return "", apperrors.ErrPermissionDenied
 	}
 	if err := auth.Require(ctx, "data_task", principal.ActionRead); err != nil {

@@ -7,8 +7,7 @@ package compose
 
 // capture.skip_reserved_domain_proposals over the real path: the mail lands
 // through the production sink into a shared mailbox, the model answers below
-// the confidence floor so the sender retires to `unsure`, and the review sweep
-// decides whether a human is asked.
+// the confidence floor. Reserved domains close when configured; other uncertainty stays searchable.
 
 import (
 	"context"
@@ -38,17 +37,17 @@ func TestAReservedDomainSenderRaisesNoContactProposal(t *testing.T) {
 		 WHERE p.id = $1 AND a.archived_at IS NULL`, reserved); n != 1 {
 		t.Error("the reserved sender's mail left the timeline; only the proposal may be withheld")
 	}
-	if n := counterpartyProposals(t, e, ordinary); n != 1 {
-		t.Errorf("%d contact proposals for an ordinary sender with the rule on, want 1", n)
+	if n := counterpartyProposals(t, e, ordinary); n != 0 {
+		t.Errorf("%d contact proposals for an ordinary sender with the rule on, want 0", n)
 	}
 }
 
-func TestTheRuleSwitchedOffProposesAReservedDomainSender(t *testing.T) {
+func TestDisablingTheReservedRuleRaisesNoUncertaintyProposal(t *testing.T) {
 	e := setupWithOwnMailbox(t)
 	disposition := reviewQuestionThroughRealCapture(t, e, CaptureConfig{}, "buyer@acme.test", "reserved-off-1")
 
-	if n := counterpartyProposals(t, e, disposition); n != 1 {
-		t.Errorf("%d contact proposals for a .test sender with the rule off, want 1", n)
+	if n := counterpartyProposals(t, e, disposition); n != 0 {
+		t.Errorf("%d automatic contact proposals with the rule off, want 0", n)
 	}
 }
 

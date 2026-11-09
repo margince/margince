@@ -36,9 +36,11 @@ func (h Handlers) ListAgentUsageByUser(w http.ResponseWriter, r *http.Request) {
 		httperr.ServiceUnavailable(w, r, "Agent usage cannot be read on this server. Try again shortly.")
 		return
 	}
-	var subjects []string
+	var subjects []agentvolume.Holder
 	for _, holder := range holders {
-		subjects = append(subjects, holder.Subjects...)
+		for _, subject := range holder.Subjects {
+			subjects = append(subjects, agentvolume.Holder{Subject: subject, Roles: holder.RoleKeys()})
+		}
 	}
 	usage, err := h.passportUsage.Usage(r.Context(), ws, subjects)
 	if err != nil {
@@ -52,7 +54,7 @@ func (h Handlers) ListAgentUsageByUser(w http.ResponseWriter, r *http.Request) {
 	}
 	data := make([]crmcontracts.AgentUserUsage, 0, len(holders))
 	for _, holder := range holders {
-		data = append(data, userUsage(holder, usage))
+		data = append(data, userUsage(holder, usage, h.passportUsage.AllowanceFor(r.Context(), holder.RoleKeys())))
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.AgentUsageByUser{
 		Data: data, ResetsAt: h.resetsAt(r.Context(), usage),
@@ -61,7 +63,7 @@ func (h Handlers) ListAgentUsageByUser(w http.ResponseWriter, r *http.Request) {
 
 // userUsage sums a user's subjects into one row. Its state is the worst any
 // one subject is in, since one stopped agent is stopped whatever the sum.
-func userUsage(holder AgentUsageHolder, usage map[string]agentvolume.Usage) crmcontracts.AgentUserUsage {
+func userUsage(holder AgentUsageHolder, usage map[string]agentvolume.Usage, allowance agentvolume.Allowance) crmcontracts.AgentUserUsage {
 	var total agentvolume.Usage
 	state := agentvolume.UsageOK
 	for _, subject := range holder.Subjects {
@@ -69,11 +71,31 @@ func userUsage(holder AgentUsageHolder, usage map[string]agentvolume.Usage) crmc
 		state = state.Worst(usage[subject].State())
 	}
 	wire := toAgentUsage(total)
+	roles := make([]crmcontracts.AgentUserRole, 0, len(holder.Roles))
+	for _, role := range holder.Roles {
+		roles = append(roles, crmcontracts.AgentUserRole{RoleKey: role.Key, RoleName: role.Name})
+	}
 	return crmcontracts.AgentUserUsage{
 		UserId: openapi_types.UUID(holder.UserID), DisplayName: holder.DisplayName,
 		PassportCount: len(holder.Subjects),
 		Writes:        wire.Writes, Egress: wire.Egress, Calls: wire.Calls,
 		State: crmcontracts.AgentUsageState(state),
+		Roles: roles, Allowance: toResolvedAllowance(allowance),
+	}
+}
+
+// toResolvedAllowance reports one passport's allowance and the role each count
+// comes from; an empty role is the installation value and answers as null.
+func toResolvedAllowance(a agentvolume.Allowance) crmcontracts.AgentRoleResolvedAllowance {
+	from := func(c agentvolume.Counter) crmcontracts.AgentAllowanceFrom {
+		out := crmcontracts.AgentAllowanceFrom{Limit: a.Limits.Of(c)}
+		if role := a.From[c]; role != "" {
+			out.RoleKey = &role
+		}
+		return out
+	}
+	return crmcontracts.AgentRoleResolvedAllowance{
+		Writes: from(agentvolume.Writes), Egress: from(agentvolume.Egress), Calls: from(agentvolume.Calls),
 	}
 }
 

@@ -180,9 +180,7 @@ func newGmailAuthorizer(resolve appResolver, c GmailConfig) googleAppAuthorizer 
 	}
 }
 
-// newGcalAuthorizer is the calendar half of the SAME app. It requests the
-// calendar scope alone, which is why it builds its own client rather than
-// sharing the mail one: a shared credential would accrete the other's grant.
+// newGcalAuthorizer is the calendar half of Gmail's app, on its own client so no mail scope accretes into its grant.
 func newGcalAuthorizer(resolve appResolver, c GmailConfig) googleAppAuthorizer {
 	var env googleconn.Authorizer
 	if c.canSync() {

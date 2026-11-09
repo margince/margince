@@ -97,16 +97,7 @@ func SetupAppWithOriginOptions(t *testing.T, opts func(origin string) []compose.
 		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
 	}
 	ctx := context.Background()
-
-	owner, err := pgx.Connect(ctx, ownerDSN)
-	if err != nil {
-		t.Fatalf("connecting as owner: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := owner.Close(context.Background()); err != nil {
-			t.Errorf("closing owner connection: %v", err)
-		}
-	})
+	owner := connectOwner(t, ownerDSN)
 
 	if err := testdb.EnsureSchema(ctx, owner); err != nil {
 		t.Fatalf("migrating schema: %v", err)
@@ -374,9 +365,7 @@ func BootstrapWorkspaceSession(t *testing.T, e *AppEnv, workspaceName, adminEmai
 	if err := compose.EnsureInstallation(context.Background(), e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), cfg); err != nil {
 		t.Fatalf("bootstrap: %v", err)
 	}
-	if status := e.Call(t, "POST", "/v1/auth/login", map[string]any{
-		"email": adminEmail, "password": operatorSupplied,
-	}, nil, nil); status != http.StatusOK {
+	if status := e.signIn(t, adminEmail, operatorSupplied); status != http.StatusOK {
 		t.Fatalf("login → %d", status)
 	}
 	// A configured bootstrap hands the admin a password the operator chose, and

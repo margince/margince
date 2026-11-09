@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { writeMessage } from "../../design-system/richtext-testing";
+import { en } from "../../i18n/en";
 import { draftButton } from "../../testing/composedraft.testkit";
 import { steppedClock } from "../../testing/steppedclock";
 import { ComposeModal } from "./compose";
@@ -607,3 +608,44 @@ describe("the composer's conversation pane", () => {
     ).toBe(true);
   });
 });
+
+it.each([false, true])(
+  "uses the initial reason and lets the sender change it: %s",
+  async (change) => {
+    const sent = stubRoutes({
+      "POST /emails": () => jsonResponse(activity202, 202),
+      "GET /deals/d-1": () =>
+        jsonResponse({ id: "d-1", name: "Open negotiation", status: "open" }),
+    });
+    render(
+      <ComposeModal
+        entityType="contact"
+        entityId="p-1"
+        initialDealId="d-1"
+        initialReason="active_deal_followup"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+    const reason = await screen.findByRole("combobox", { name: WHY_ASK });
+    expect(reason.textContent).toContain(en["compose.why.activeDeal"]);
+    await userEvent.type(screen.getByLabelText("To"), "a@x.com");
+    await userEvent.tab();
+    await userEvent.type(screen.getByLabelText("Subject"), "Meeting proposal");
+    writeMessage("Body", "Please choose a time.");
+    if (change) await pickWhy(WHY_LABEL.requestedFollowup);
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await waitFor(() =>
+      expect(sent.find((r) => r.key === "POST /emails")).toBeTruthy(),
+    );
+    expect(sent.find((r) => r.key === "POST /emails")?.body).toMatchObject({
+      links: expect.arrayContaining([
+        { entity_type: "deal", entity_id: "d-1" },
+        { entity_type: "contact", entity_id: "p-1" },
+      ]),
+      communication_context: change
+        ? "requested_followup"
+        : "active_deal_followup",
+    });
+  },
+);

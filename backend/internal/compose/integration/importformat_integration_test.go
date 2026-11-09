@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
@@ -95,8 +96,8 @@ func TestTheTemplateHeadersAreTheFormatsColumns(t *testing.T) {
 func TestProblemsCSVListsTheReportsIssues(t *testing.T) {
 	e := setupCustomFieldImportApp(t)
 	column := apptest.CreateCustomField(t, e, AnyMap{"object": "company", "label": "Tier", "type": "picklist", "options": []string{"Gold"}, "source": "manual"})
-	profile, _ := uploadCSV(t, e, "company", "Name,Tier\nGood GmbH,Gold\nBad GmbH,Bronze\n")
-	run, status := createRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "Tier": column})
+	profile, _ := importjobtest.UploadCSV(t, e, "company", "Name,Tier\nGood GmbH,Gold\nBad GmbH,Bronze\n")
+	run, status := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "Tier": column})
 	if status != http.StatusAccepted {
 		t.Fatalf("stage → %d, want 202", status)
 	}

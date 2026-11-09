@@ -42,7 +42,7 @@ func TestChangedSourceCannotReleaseACompanyTermination(t *testing.T) {
 		t.Fatal("fixture did not stage the account-wide proposal")
 	}
 	reader := e.As(e.Rep1, nil, integration.AdminWithSignals)
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	proposalID := ids.From[ids.ApprovalKind](stagedOffer(t, e, company))
 	before, err := svc.GetWire(reader, proposalID)
 	if err != nil || before.Preview == nil || before.Preview.State != previewReadyState {
@@ -144,7 +144,7 @@ func TestAnActiveAgreementPreventsEndingTheAccount(t *testing.T) {
 				return
 			}
 			reader := e.As(e.Rep1, nil, integration.AdminWithSignals)
-			svc := approvalsServiceWithEffects(e.Pool)
+			svc := NewApprovalsServiceWithEffects(e.Pool)
 			proposal := ids.From[ids.ApprovalKind](stagedOffer(t, e, company))
 			view, err := svc.GetWire(reader, proposal)
 			if err != nil || view.Preview == nil || view.Preview.State != previewStaleState {

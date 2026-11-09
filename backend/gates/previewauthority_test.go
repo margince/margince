@@ -25,7 +25,6 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -89,7 +88,7 @@ func declaredAuthorityLevels(t *testing.T) map[string]bool {
 func TestTheAuthorityLevelsAgreeAcrossTheWire(t *testing.T) {
 	t.Parallel()
 
-	contract, err := os.ReadFile("api/crm.yaml")
+	contract, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}

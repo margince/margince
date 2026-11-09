@@ -52,7 +52,10 @@ type Service struct {
 	// decided is OPTIONAL for the same reason: unbound, the done lane holds
 	// the audit rows alone.
 	decided DecidedReceipts
-	now     func() time.Time
+	// names is OPTIONAL for the same reason: unbound, a changed stage or member
+	// carries no name.
+	names ReferenceNames
+	now   func() time.Time
 }
 
 // NewService binds the read.

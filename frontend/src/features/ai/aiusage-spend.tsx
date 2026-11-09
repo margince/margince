@@ -5,9 +5,9 @@ import type { components } from "../../api/schema";
 import { CellStack } from "../../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { formatDayMonth, formatMoney, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { aiTaskLabel } from "../../lib/ai-task-label";
+import { useViewerZone } from "../../lib/viewerzone";
 import { tierLabel, tierRank } from "./ai-decision-labels";
 import { TaskName } from "./ai-task-name";
 
@@ -279,7 +279,7 @@ export function SpendByDay({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   return (
     <DataTable<DayRow>
       bleed

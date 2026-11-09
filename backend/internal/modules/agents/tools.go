@@ -54,6 +54,27 @@ type StageResolver interface {
 	StageSemantic(ctx context.Context, stageID ids.UUID) (semantic string, pipelineID ids.UUID, err error)
 }
 
+// WithDealTaskSettler injects the seam that answers a closing deal's open
+// tasks. A registry composed without one reports none and settles none.
+func WithDealTaskSettler(settler DealTaskSettler) RegistryOption {
+	return func(r *Registry) { r.closeTasks = settler }
+}
+
+// DealTaskSettler answers, and settles, the open tasks a closing deal leaves
+// behind. Closing a deal never settles them silently (#7475), so the surface
+// that closes it has to be able to ask.
+//
+// Narrow rather than on the provider port. The read is an activities concern,
+// and three fakes assert that port without embedding it. Widening it would put
+// stubs for this in modules that never close a deal.
+type DealTaskSettler interface {
+	// OpenTasksOnDeal lists the deal's open tasks, newest first.
+	OpenTasksOnDeal(ctx context.Context, dealID ids.UUID) ([]crmcontracts.DealOpenTask, error)
+	// CompleteOpenTasksOnDeal ticks them done through the write the bulk
+	// change applies, so the audit rows match the web's "Complete all".
+	CompleteOpenTasksOnDeal(ctx context.Context, dealID ids.UUID) ([]ids.UUID, error)
+}
+
 // RegisterCoreTools wires the record CRUD set over one provider. It holds the 🟢
 // tools, `advance_deal` (dynamic), and `archive_record`, `promote_lead` and
 // `merge_records`, which a tier floor can make confirm-first. `qualify_lead` and
@@ -70,7 +91,7 @@ func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages 
 	r.Register(logActivity{p: p})
 	r.Register(createTask{p: p})
 	r.Register(advanceDeal{p: p, stages: stages, language: r.language})
-	r.Register(progressDeal{p: p, stages: stages, language: r.language})
+	r.Register(progressDeal{p: p, stages: stages, language: r.language, closeTasks: r.closeTasks})
 	r.Register(qualifyLead{p: p, consumerMail: consumerMail})
 	r.Register(archiveRecord{p: p, language: r.language})
 	r.Register(promoteLead{p: p, promoter: promoter, language: r.language})
@@ -200,9 +221,9 @@ func (t createRecord) Spec() mcp.ToolSpec {
 		Description:   createRecordCopy.render(),
 		Instead:       createRecordCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "createContact/createCompany/createDeal/createLead/createProject/createRelationship/createProduct/createOfferTemplate/createOffer/createDealRoom/openDealRoomThread/replyDealRoomThread",
+		OpenAPIOp: "createContact/createCompany/createDeal/createLead/createProject/createRelationship/createProduct/createOfferTemplate/createOffer/createDealRoom",
 		InputSchema: schema(`{"type":"object","required":["record_type","fields"],"properties":{
-			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","relationship","product","offer_template","offer","deal_room","deal_room_thread","deal_room_comment"]},
+			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","relationship","product","offer_template","offer","deal_room"]},
 			"fields":{"type":"object","description":` + jsonString(recordFieldsDescription) + `},
 			"offer_tag":{"type":"string","maxLength":64,"description":"A tag word the user said fits this record, such as the event they met at. It offers the tag to the user and applies nothing."},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
@@ -359,19 +380,20 @@ func (t logActivity) Spec() mcp.ToolSpec {
 		// — the refusal that actually binds is the server's.
 		InputSchema: schema(`{"type":"object","required":["kind"],"properties":{
 			"kind":{"type":"string","enum":` + activityKindEnum + `},
-			"channel_provider":{"type":"string","description":"Required when kind is \"message\", else refused; a provider the workspace's channel provider list names."},
+			"channel_provider":{"type":"string","description":"Required for kind \"message\", else refused; one the workspace's channel providers name."},
 			"subject":{"type":"string","description":` + proseLanguageNote + `},
 			"body":{"type":"string","description":` + proseLanguageSeeSubject + `},
 			"occurred_at":{"type":"string","format":"date-time"` + timestampNote + `},
 			"occurred_precision":{"enum":["instant","day"]},
 			"direction":{"type":"string","enum":["inbound","outbound"]},
+			"meeting_status":{"type":"string","enum":` + activityMeetingStatusEnum + `,"description":"held only if the user says it happened"},
 			"due_at":{"type":"string","format":"date-time"` + timestampNote + `},
 			"links":{"type":"array","items":{"type":"object","required":["entity_type","entity_id"],"properties":{
 				"entity_type":{"type":"string","enum":` + activityLinkEntityTypeEnum + `},
 				"entity_id":{"type":"string","format":"uuid"}},"additionalProperties":false},
 				"description":"Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES because filing there marks commercial correspondence. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval that waits for the user's yes before it takes effect."},
 			"attendee_user_ids":{"type":"array","maxItems":25,"items":{"type":"string","format":"uuid"},
-				"description":"Meeting or call only: the workspace members who attended besides you, ids from the colleague roster. The meeting then counts toward each one's relationship with every linked contact. An id that is not an active member is refused."},
+				"description":"Meeting or call only: the workspace members who attended besides you, ids from the colleague roster. An id that is not an active member is refused."},
 			"source_activity_id":{"type":"string","format":"uuid","description":` + followUpSourceDescription + `},
 			"follow_up_task":` + string(argumentSchemaFor[crmcontracts.ActivityFollowUpTask](timestampRule)) + `,
 			"source_system":{"type":"string"},"source_id":{"type":"string"}},

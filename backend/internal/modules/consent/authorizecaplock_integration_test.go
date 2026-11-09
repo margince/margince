@@ -126,8 +126,9 @@ func testJurisdiction(t *testing.T) jurisdiction.Code {
 	return code
 }
 
-// cappedGate registers a ceiling under a freshly minted jurisdiction and returns
-// a gate bound to it.
+// cappedGate registers a ceiling under a freshly minted jurisdiction, puts the
+// env's recipient in it, and returns a gate. grantMarketingTo places later
+// recipients there too.
 func (e *capEnv) cappedGate(t *testing.T, messages int) *Gate {
 	t.Helper()
 	code := testJurisdiction(t)
@@ -135,10 +136,9 @@ func (e *capEnv) cappedGate(t *testing.T, messages int) *Gate {
 		Jurisdiction: code, Version: 1,
 		FrequencyCap: &messagingrules.FrequencyCap{Messages: messages, Window: capWindow},
 	})
-	return NewGate(e.store).WithInstallationCountry(
-		InstallationCountryFunc(func(context.Context, pgx.Tx) (jurisdiction.Code, error) {
-			return code, nil
-		}))
+	e.capCountry = string(code)
+	e.subjectLivesIn(t, e.capCountry)
+	return NewGate(e.store)
 }
 
 // grantMarketingTo gives a SECOND address a contact with a live marketing grant,
@@ -150,8 +150,8 @@ func (e *capEnv) grantMarketingTo(t *testing.T, address string) {
 	ctx := context.Background()
 	contactID := ids.New[ids.ContactKind]()
 	if _, err := e.owner.Exec(ctx, `
-		INSERT INTO contact (id, full_name, source, captured_by)
-		VALUES ($1, 'Other Cap Subject', 'manual', 'human:x')`, contactID); err != nil {
+		INSERT INTO contact (id, full_name, source, captured_by, address_country)
+		VALUES ($1, 'Other Cap Subject', 'manual', 'human:x', upper($2))`, contactID, e.capCountry); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.owner.Exec(ctx, `

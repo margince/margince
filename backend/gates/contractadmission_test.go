@@ -8,7 +8,6 @@ package gates
 import (
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -16,6 +15,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // A route the contract declares `security: []` is reachable without a session.
@@ -80,7 +80,7 @@ var preAuthPathTemplate = regexp.MustCompile(`\{[^}]*\}`)
 // being a MAPPING that makes a key an operation.
 func preAuthOperations(t *testing.T) []preAuthRoute {
 	t.Helper()
-	src, err := os.ReadFile("api/crm.yaml")
+	src, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading api/crm.yaml: %v", err)
 	}

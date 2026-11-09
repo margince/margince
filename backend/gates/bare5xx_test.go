@@ -35,7 +35,6 @@ package gates
 
 import (
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -109,14 +108,14 @@ func TestEveryBare5xxNamesASurfaceThatIsNotTheContract(t *testing.T) {
 // server answers nobody's client.
 func walkGoFiles(t *testing.T, root string, fn func(rel string, body []byte)) {
 	t.Helper()
-	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
 			return err
 		}
 		if strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") {
 			return nil
 		}
-		body, err := os.ReadFile(path) // #nosec G304 -- a *.go file from walking the trusted backend tree
+		body, err := gatekit.ReadFile(path) // #nosec G304 -- a *.go file from walking the trusted backend tree
 		if err != nil {
 			return err
 		}

@@ -25,6 +25,8 @@ export type EditableValueProps = Readonly<{
    * The link keeps its action; the padding and the bubble open the editor.
    */
   link?: boolean;
+  /** The value is a block (a record card) that fills its row, not a line of text. */
+  block?: boolean;
   testId?: string;
 }>;
 
@@ -39,6 +41,7 @@ export function EditableValue({
   editable = true,
   placeholder,
   link = false,
+  block = false,
   testId,
 }: EditableValueProps) {
   const verbId = useId();
@@ -75,7 +78,13 @@ export function EditableValue({
     // biome-ignore lint/a11y/noStaticElementInteractions: a pointer shortcut to the edit button inside, which is the keyboard's way in
     // biome-ignore lint/a11y/useKeyWithClickEvents: the edit button inside is the keyboard's way in; a key here would land on the link first
     <span
-      className={link ? "editable-value editable-value-link" : "editable-value"}
+      className={[
+        "editable-value",
+        link ? "editable-value-link" : "",
+        block ? "editable-value-block" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       data-testid={testId}
       onClick={pressPadding}
     >

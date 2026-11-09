@@ -42,7 +42,7 @@ func TestExistingRequestTaskRequiresItsAssigneeToBeAddressed(t *testing.T) {
 				t.Fatal(err)
 			}
 			contact := e.SeedContact(t, "Request buyer", &e.AdminUser)
-			e.Contacts.WithClock(func() time.Time { return at.Add(time.Hour) })
+			e.Contacts.SetClock(func() time.Time { return at.Add(time.Hour) })
 			lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{FullName: new("Request prospect"), Source: "manual"})
 			if err != nil {
 				t.Fatal(err)

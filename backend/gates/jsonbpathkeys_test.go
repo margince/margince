@@ -24,7 +24,6 @@ package gates
 
 import (
 	"go/ast"
-	"os"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -138,7 +137,7 @@ func sqlStatementsUnder(t *testing.T, root string) []pathStatement {
 		if strings.HasSuffix(path, "_test.go") {
 			continue
 		}
-		body, err := os.ReadFile(path)
+		body, err := gatekit.ReadFile(path)
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}

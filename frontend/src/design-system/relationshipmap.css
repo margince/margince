@@ -50,6 +50,7 @@
  * thumbnail, and below it the drawing keeps its size and scrolls inside its
  * own box rather than making the page scroll sideways. */
 .rmap-scroll {
+  position: relative;
   overflow-x: auto;
   border: 1px solid var(--groundEdge);
   border-radius: var(--r-lg);

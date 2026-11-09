@@ -114,9 +114,7 @@ type stored struct {
 // Get serves the brief, regenerating when the cache no longer matches.
 // force skips the cache entirely — the explicit refresh.
 func (s *Service) Get(ctx context.Context, contactID ids.ContactID, force bool) (crmcontracts.ContactBrief, error) {
-	// A brief is a reading aid for a contact; an agent reading records through
-	// a passport has the records themselves.
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.ContactBrief{}, err
 	}
 	userID, err := actingUser(ctx)
@@ -147,7 +145,8 @@ func (s *Service) Get(ctx context.Context, contactID ids.ContactID, force bool) 
 
 	// The contact is NAMED to the rail here, where the assembled input holds
 	// the name the product shows for them everywhere else.
-	sentences, by, err := Write(ai.WithSubject(ctx, contactID.Ref(), in.Name), s.lane, contactID.String(), in, lang)
+	lane, withheld := ai.ReadLane(ctx, s.lane)
+	sentences, by, err := Write(ai.WithSubject(ctx, contactID.Ref(), in.Name), lane, contactID.String(), in, lang)
 	if err != nil {
 		return crmcontracts.ContactBrief{}, err
 	}
@@ -157,6 +156,9 @@ func (s *Service) Get(ctx context.Context, contactID ids.ContactID, force bool) 
 		GeneratedAt: s.now().UTC(),
 		GeneratedBy: by,
 		Sentences:   sentences,
+	}
+	if withheld {
+		return s.enrich(ctx, written.wire(contactID))
 	}
 	if err := s.save(ctx, userID, contactID, written); err != nil {
 		return crmcontracts.ContactBrief{}, err

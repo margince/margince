@@ -48,6 +48,9 @@ type connectState struct {
 	// Then is the calendar provider whose consent follows this one, so one
 	// click connects mail and calendar. Empty ends the chain at this callback.
 	Then string
+	// SharedConsent marks a mail consent that already asked for Then's scopes.
+	// The callback then connects the calendar from the same grant.
+	SharedConsent bool
 	// WindowMonths is the past-email window asked for at connect. A mail leg
 	// imports it once its grant lands. A calendar leg carries it only when the
 	// mail leg did not start it, so its landing can offer the start.
@@ -63,6 +66,7 @@ type wireState struct {
 	Nonce        string `json:"n"`
 	ReturnTo     string `json:"rt,omitempty"`
 	Then         string `json:"th,omitempty"`
+	Shared       bool   `json:"sh,omitempty"`
 	WindowMonths int    `json:"iw,omitempty"`
 	Version      int    `json:"v,omitempty"`
 	Exp          int64  `json:"exp"` // unix seconds
@@ -99,6 +103,7 @@ func (s stateSigner) sign(st connectState, exp time.Time) string {
 		Nonce:        st.Nonce,
 		ReturnTo:     st.ReturnTo,
 		Then:         st.Then,
+		Shared:       st.SharedConsent,
 		WindowMonths: st.WindowMonths,
 		Version:      st.Version,
 		Exp:          exp.Unix(),
@@ -143,7 +148,7 @@ func (s stateSigner) verify(token string, now time.Time) (connectState, error) {
 	return connectState{
 		Workspace: ws, User: user, Provider: w.Provider,
 		Nonce: w.Nonce, ReturnTo: w.ReturnTo, Version: w.Version,
-		Then: w.Then, WindowMonths: w.WindowMonths,
+		Then: w.Then, SharedConsent: w.Shared, WindowMonths: w.WindowMonths,
 	}, nil
 }
 

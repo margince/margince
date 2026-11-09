@@ -23,6 +23,9 @@ func readContact(ctx context.Context, tx pgx.Tx, id ids.ContactID, archived stor
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}
+	if out.AcquisitionRequest, err = liveAcquisitionRequest(ctx, tx, id); err != nil {
+		return crmcontracts.Contact{}, err
+	}
 	return withContactCreator(ctx, tx, out)
 }
 

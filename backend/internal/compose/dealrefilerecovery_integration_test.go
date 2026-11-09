@@ -27,10 +27,11 @@ import (
 )
 
 func TestARefileRetriesCommittedActivitiesWhenItsQueueTransactionIsLost(t *testing.T) {
-	f := newDealRefileFixture(t, 201)
+	f := newDealRefileFixture(t, refileTestPage+1)
 	e := f.o.e
 	integration.ApplyRiverSchema(t)
-	production := newCapturedDealRefileWorker(e.Pool)
+	production := newCapturedDealRefileWorker(e.Pool, aboutEveryDeal)
+	production.page = refileTestPage
 	if _, err := production.repairCohorts(principal.SystemActing(e.Admin(), dealRefileActor), []ids.UUID{f.contact}); err != nil {
 		t.Fatal(err)
 	}
@@ -54,11 +55,11 @@ func TestARefileRetriesCommittedActivitiesWhenItsQueueTransactionIsLost(t *testi
 	if result.EventKind != river.EventKindJobSnoozed {
 		t.Fatalf("first page ended as %s", result.EventKind)
 	}
-	if got := e.WsCount(t, `SELECT count(*) FROM activity_link WHERE deal_id=$1`, f.deal); got != capture.DealRefileLimit {
+	if got := e.WsCount(t, `SELECT count(*) FROM activity_link WHERE deal_id=$1`, f.deal); got != refileTestPage {
 		t.Fatalf("domain transactions committed %d links", got)
 	}
-	f.run(t, args)
-	if got := e.WsCount(t, `SELECT count(*) FROM activity_link WHERE deal_id=$1`, f.deal); got != 203 {
+	f.runPaged(t, args, refileTestPage)
+	if got := e.WsCount(t, `SELECT count(*) FROM activity_link WHERE deal_id=$1`, f.deal); got != refileTestPage+3 {
 		t.Fatalf("recovery left %d links", got)
 	}
 	before := e.WsCount(t, `SELECT count(*) FROM audit_log`)
@@ -144,7 +145,7 @@ func (c *editedDealCandidates) OpenDealsOfCompany(ctx context.Context, tx pgx.Tx
 func TestRefileRechecksADealEditedAfterTheCandidateRead(t *testing.T) {
 	f := newDealRefileFixture(t, 0)
 	e := f.o.e
-	worker := newCapturedDealRefileWorker(e.Pool)
+	worker := newCapturedDealRefileWorker(e.Pool, aboutEveryDeal)
 	ctx := principal.SystemActing(e.Admin(), dealRefileActor)
 	if _, err := worker.repairCohorts(ctx, []ids.UUID{f.contact}); err != nil {
 		t.Fatal(err)
@@ -154,10 +155,7 @@ func TestRefileRechecksADealEditedAfterTheCandidateRead(t *testing.T) {
 		_, err := e.Deals.UpdateDeal(e.Admin(), ids.From[ids.DealKind](f.deal), deals.UpdateDealInput{CompanyID: &other})
 		return err
 	}}
-	if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
-		_, err := worker.repair.RefileTx(ctx, tx, ids.From[ids.ActivityKind](f.mail), f.o.now)
-		return err
-	}); err != nil {
+	if _, err := worker.repair.Refile(ctx, e.DB(), ids.From[ids.ActivityKind](f.mail), f.o.now); err != nil {
 		t.Fatal(err)
 	}
 	if e.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id=$1 AND entity_type='deal'`, f.mail) != 0 {

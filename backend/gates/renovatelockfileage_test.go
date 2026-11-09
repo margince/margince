@@ -25,15 +25,16 @@ package gates
 
 import (
 	"encoding/json"
-	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func TestTheLockfileRefreshOverridesTheReleaseAgeFloor(t *testing.T) {
 	t.Parallel()
 
-	raw, err := os.ReadFile(filepath.Join(repoRoot, "renovate.json"))
+	raw, err := gatekit.ReadFile(filepath.Join(repoRoot, "renovate.json"))
 	if err != nil {
 		t.Fatalf("reading renovate.json: %v", err)
 	}

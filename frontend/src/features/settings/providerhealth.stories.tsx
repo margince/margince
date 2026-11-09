@@ -14,7 +14,7 @@ import { ProviderHealthCard } from "./providerhealth";
 // own, and each of the four failures says who can fix it.
 
 const meta: Meta<typeof ProviderHealthCard> = {
-  title: "Settings/Governance/System health/AI provider status",
+  title: "Settings/System/System health/AI provider status",
   component: ProviderHealthCard,
 };
 export default meta;

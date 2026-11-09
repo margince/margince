@@ -67,6 +67,7 @@ type orphanIngest struct {
 	embedder *gatedEmbedder
 	doc      ids.UUID
 	passages int
+	blob     blobstore.Store
 }
 
 func newOrphanIngest(t *testing.T, embedder *gatedEmbedder) *orphanIngest {
@@ -80,7 +81,8 @@ func newOrphanIngest(t *testing.T, embedder *gatedEmbedder) *orphanIngest {
 		},
 		RowScope: principal.RowScopeAll,
 	})
-	worker := newKnowledgeIngestWorker(e.Pool, blobstore.NewMemory(), embedder, slog.Default())
+	blob := blobstore.NewMemory()
+	worker := newKnowledgeIngestWorker(e.Pool, blob, embedder, slog.Default())
 	corpus, err := worker.store.CreateCorpus(uploader, knowledge.NewCorpus{Name: "How-to", TopicStatement: "How this product is operated."})
 	if err != nil {
 		t.Fatalf("create corpus: %v", err)
@@ -95,7 +97,7 @@ func newOrphanIngest(t *testing.T, embedder *gatedEmbedder) *orphanIngest {
 	if err != nil {
 		t.Fatalf("upload: %v", err)
 	}
-	return &orphanIngest{e: e, worker: worker, embedder: embedder, doc: ids.UUID(doc.Id), passages: len(knowledge.ChunkText(body))}
+	return &orphanIngest{e: e, worker: worker, embedder: embedder, doc: ids.UUID(doc.Id), passages: len(knowledge.ChunkText(body)), blob: blob}
 }
 
 func (o *orphanIngest) work(t *testing.T) error {
@@ -218,13 +220,13 @@ func TestAnIngestWhoseHoldingConnectionDiedDoesNotBlockTheNext(t *testing.T) {
 	}
 
 	// The holder's process dies: the server drops its connection and its lock.
+	// The 5 s wait returns once the backend is gone. Without it the lock can
+	// outlive the call, and the next run reads a holder that is still dying.
 	var killed int
 	if err := o.e.Pool.QueryRow(ctx, `
-		SELECT count(*) FROM (
-		  SELECT pg_terminate_backend(pid) FROM pg_locks
-		  WHERE locktype = 'advisory' AND granted
-		    AND ((classid::bigint << 32) | (objid::bigint & 4294967295)) = hashtextextended($1, 0)
-		) AS ended`, "knowledge_ingest:"+o.doc.String()).Scan(&killed); err != nil || killed != 1 {
+		SELECT count(*) FILTER (WHERE pg_terminate_backend(pid, 5000)) FROM pg_locks
+		WHERE locktype = 'advisory' AND granted
+		  AND ((classid::bigint << 32) | (objid::bigint & 4294967295)) = hashtextextended($1, 0)`, "knowledge_ingest:"+o.doc.String()).Scan(&killed); err != nil || killed != 1 {
 		t.Fatalf("ending the holder's connection: ended=%d err=%v", killed, err)
 	}
 

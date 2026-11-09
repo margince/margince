@@ -243,7 +243,9 @@ export function LeadOriginsCard() {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const { canCreate, canEdit, canRemove, refusal } = useVocabGrants("leads");
+  const { canCreate, canEdit, canRemove, refusal } = useVocabGrants({
+    page: "leads",
+  });
   const query = useLeadOrigins();
   const { create, update, rename, remove } = useOriginMutations();
   const [adding, setAdding] = useState(false);

@@ -96,6 +96,8 @@
    padded and never stretched. */
 .avatar-has-logo {
   position: relative;
+}
+.avatar-has-logo:not(.avatar-mesh) {
   background: var(--bgInset);
   color: var(--textSecondary);
 }
@@ -108,4 +110,17 @@
   object-fit: contain;
   border-radius: var(--r-full);
   corner-shape: round;
+}
+
+/* A seat's own picture fills the circle inside a control's edge, the hairline
+   strong enough that a white picture keeps its edge on any ground. */
+.avatar-photo {
+  box-sizing: border-box;
+  border: 1px solid var(--borderControl);
+}
+.avatar-photo .avatar-img {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
