@@ -61,7 +61,16 @@ func agentGate(reg *agents.Registry, staging agents.Approvals, stages agents.Sta
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 			p, ok := principal.Actor(ctx)
-			if !ok || p.Type != principal.PrincipalAgent || servedByTheRegistry(r) || admittedByTheTool(r) {
+			if !ok || p.Type != principal.PrincipalAgent {
+				next.ServeHTTP(w, r)
+				return
+			}
+			// Before the passes below: a tool's in-process call lands here too,
+			// and an area is held to the route whichever door reached it.
+			if refusedOutsideAreas(w, r, reg) {
+				return
+			}
+			if servedByTheRegistry(r) || admittedByTheTool(r) {
 				next.ServeHTTP(w, r)
 				return
 			}

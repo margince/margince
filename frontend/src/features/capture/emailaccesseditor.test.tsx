@@ -459,3 +459,28 @@ describe("the mark under the subject", () => {
     expect(container.querySelector(".emailaccess__sentence")).toBeNull();
   });
 });
+
+it("keeps internal operational sharing on the individual message and offers no workspace grant", async () => {
+  const user = userEvent.setup();
+  draw(
+    <EmailAccessEditor
+      presentation={presentation({
+        display_status: "participants",
+        audience: "participants",
+        explanation: "internal_operational",
+        can_change: true,
+        change_mode: "message_audience",
+        change_scope: "message",
+      })}
+    />,
+  );
+  await user.click(screen.getByRole("button", { name: /change|access/i }));
+  expect(
+    screen.queryByRole("radio", { name: /everyone|workspace/i }),
+  ).toBeNull();
+  expect(
+    screen.getByText(
+      "This changes the named readers of this message only. Participants retain access. Saving a new selection replaces the previous named readers.",
+    ),
+  ).toBeTruthy();
+});

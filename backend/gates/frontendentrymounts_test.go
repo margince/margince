@@ -12,12 +12,12 @@ package gates
 import (
 	"fmt"
 	"io/fs"
-	"os"
-	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -34,7 +34,7 @@ var slotAttr = regexp.MustCompile(`(?:^|\s)slot="([^"]*)"`)
 // not a literal is an error: a slot this gate cannot read could be any slot.
 func mountedSlots(root, element string) ([]string, error) {
 	var slots []string
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -42,7 +42,7 @@ func mountedSlots(root, element string) ([]string, error) {
 			strings.Contains(path, ".test.") || strings.Contains(path, ".stories.") {
 			return nil
 		}
-		source, err := os.ReadFile(path) // #nosec G304 -- a path the walk of the frontend tree produced
+		source, err := gatekit.ReadFile(path) // #nosec G304 -- a path the walk of the frontend tree produced
 		if err != nil {
 			return err
 		}

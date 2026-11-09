@@ -33,6 +33,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // composedBuildInvocation is a builder driving the composed lane: `pnpm
@@ -58,7 +60,7 @@ func TestEveryComposedFrontendBuilderInstallsTheWorkspace(t *testing.T) {
 		if file.symlink || file.path == "backend/gates/composedfrontendbuilders_test.go" {
 			continue
 		}
-		body, err := os.ReadFile(filepath.Join(repoRoot, file.path))
+		body, err := gatekit.ReadFile(filepath.Join(repoRoot, file.path))
 		if err != nil {
 			// Tracked but absent happens mid-rebase and after `git rm`.
 			if os.IsNotExist(err) {
@@ -86,7 +88,7 @@ func TestEveryComposedFrontendBuilderInstallsTheWorkspace(t *testing.T) {
 func composedWorkspaceDir(t *testing.T) string {
 	t.Helper()
 	const emitter = "tools/gen-composition/emitfrontend.go"
-	body, err := os.ReadFile(emitter)
+	body, err := gatekit.ReadFile(emitter)
 	if err != nil {
 		t.Fatalf("reading %s: %v", emitter, err)
 	}

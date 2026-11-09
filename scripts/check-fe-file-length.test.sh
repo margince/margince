@@ -122,6 +122,11 @@ for name in "screens/a.fixtures.ts" "screens/fixtures.ts" "screens/fixture.ts" "
   if ! run; then fail "$name was not read as a fixture, so it took the product cap"; fi
 done
 
+# 5b. A test's sweep module is test code too.
+reset
+lines "screens/a.sweep.ts" 15
+if ! run; then fail "a .sweep.ts was not read as test code, so it took the product cap"; fi
+
 # 6. A waived file AT its frozen count is the ordinary state of the debt list.
 reset
 lines "screens/waived.tsx" 30

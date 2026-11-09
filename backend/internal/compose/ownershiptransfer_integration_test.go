@@ -62,14 +62,14 @@ func requestHandover(ctx context.Context, t *testing.T, e *integration.Env, reco
 
 func decideHandover(ctx context.Context, t *testing.T, e *integration.Env, id ids.ApprovalID, approve bool) error {
 	t.Helper()
-	_, err := approvalsServiceWithEffects(e.Pool).Decide(ctx, id, approve, nil)
+	_, err := NewApprovalsServiceWithEffects(e.Pool).Decide(ctx, id, approve, nil)
 	return err
 }
 
 func transfersInInbox(reader context.Context, t *testing.T, e *integration.Env) int {
 	t.Helper()
 	kind, pending := ownershipTransferKind, approvals.StatusPending
-	rows, _, err := approvalsServiceWithEffects(e.Pool).ListWire(reader, approvals.ListInput{Kind: &kind, Status: &pending})
+	rows, _, err := NewApprovalsServiceWithEffects(e.Pool).ListWire(reader, approvals.ListInput{Kind: &kind, Status: &pending})
 	if err != nil {
 		t.Fatalf("reading the inbox: %v", err)
 	}
@@ -410,6 +410,9 @@ func TestAColleagueAndTheirAgentHoldOneOwnershipRequest(t *testing.T) {
 		t.Errorf("the owner sees %d requests, want the one the agent filed", n)
 	}
 	if err := decideHandover(giver(e), t, e, filed.ApprovalID, true); err != nil {
-		t.Errorf("the owner accepting the agent's request: %v", err)
+		t.Fatalf("the owner accepting the agent's request: %v", err)
+	}
+	if owner := ownerOf(t, e, "company", company); owner != e.Rep3 {
+		t.Fatalf("accepted handover left owner %s, want requester %s", owner, e.Rep3)
 	}
 }

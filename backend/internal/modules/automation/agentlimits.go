@@ -43,7 +43,7 @@ func refuseAgentRuleChange(ctx context.Context, before Automation, in UpdateAuto
 	if !isAgent {
 		return nil
 	}
-	if in.OwnerID != nil && (before.OwnerID == nil || *in.OwnerID != *before.OwnerID) {
+	if changesOwner(before, in) {
 		return agentRuleLimit("agent_hands_on_no_rule",
 			"an agent does not change who owns a rule, because it runs with its owner's authority; ask the user to do it in the app")
 	}
@@ -51,9 +51,7 @@ func refuseAgentRuleChange(ctx context.Context, before Automation, in UpdateAuto
 	if !known {
 		return nil
 	}
-	turnsOff := in.Enabled != nil && !*in.Enabled && before.Enabled
-	retunes := in.Params != nil && !sameParams(before.Params, in.Params)
-	if seededRow(entry, before) && (turnsOff || retunes) {
+	if seededRow(entry, before) && quietsRule(before, in) {
 		return seededLimit()
 	}
 	if in.Enabled != nil && *in.Enabled && entry.Action == string(ActionTypeDraftEmail) && !actor.Scopes.Has(principal.ScopeEnrich) {
@@ -61,6 +59,16 @@ func refuseAgentRuleChange(ctx context.Context, before Automation, in UpdateAuto
 			"this rule writes a draft with AI each time it fires, so enabling it needs a passport with the enrich scope")
 	}
 	return nil
+}
+
+func changesOwner(before Automation, in UpdateAutomationInput) bool {
+	return in.OwnerID != nil && (before.OwnerID == nil || *in.OwnerID != *before.OwnerID)
+}
+
+// quietsRule reports an update that turns a running rule off or changes its tuning.
+func quietsRule(before Automation, in UpdateAutomationInput) bool {
+	turnsOff := in.Enabled != nil && !*in.Enabled && before.Enabled
+	return turnsOff || (in.Params != nil && !sameParams(before.Params, in.Params))
 }
 
 func refuseAgentArchivingSeeded(ctx context.Context, before Automation) error {

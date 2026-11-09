@@ -34,7 +34,6 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -81,7 +80,7 @@ func TestEveryOperationDeclaringSortHasAHandlerThatReadsIt(t *testing.T) {
 // twice.
 func operationsDeclaringSort(t *testing.T) []string {
 	t.Helper()
-	raw, err := os.ReadFile("api/crm.yaml")
+	raw, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}
@@ -423,7 +422,9 @@ func typeString(expr ast.Expr) string {
 var listSortHandlerScope = gatekit.Scope{
 	Roots:   []string{"internal"},
 	Subject: func(_ string, file *ast.File) bool { return declaresAnHTTPHandler(file) },
-	Exempt:  gatekit.Waive(map[string]string{}),
+	Exempt: gatekit.Waive(map[string]string{
+		"tools/fakegmail/server.go": "a stand-in for Google's API in local load tests; it serves no operation of the contract",
+	}),
 }
 
 func declaresAnHTTPHandler(file *ast.File) bool {

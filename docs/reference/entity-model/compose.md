@@ -895,7 +895,7 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## team_weekly_review
 
-28 columns · primary key `(id)` · referenced by 4 foreign keys
+29 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -912,6 +912,7 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `leads_answered_in_target` | `integer`, default `0` | yes |  |
 | `leads_breached` | `integer`, default `0` | yes |  |
 | `leads_routed` | `integer`, default `0` | yes |  |
+| `leads_withheld` | `boolean`, default `false` | yes | True when lead figures were not measured with lead-read authority, or the reader lacks that authority now. |
 | `local_week_start` | `date` | yes |  |
 | `meetings_held` | `integer`, default `0` | yes |  |
 | `meetings_with_next_step` | `integer`, default `0` | yes |  |
@@ -1221,7 +1222,7 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## weekly_review
 
-35 columns · primary key `(id)` · referenced by 7 foreign keys
+37 columns · primary key `(id)` · referenced by 7 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1232,6 +1233,7 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `brief_items_dismissed` | `integer`, default `0` | yes |  |
 | `commitments_due` | `integer`, default `0` | yes |  |
 | `commitments_kept` | `integer`, default `0` | yes |  |
+| `daily_activity` | `jsonb` |  | What the rep did on each day of the week, Monday first, frozen with the review. |
 | `deals_lost` | `integer`, default `0` | yes |  |
 | `deals_moved` | `integer`, default `0` | yes |  |
 | `deals_won` | `integer`, default `0` | yes |  |
@@ -1239,6 +1241,7 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `leads_answered_in_target` | `integer`, default `0` | yes |  |
 | `leads_breached` | `integer`, default `0` | yes |  |
 | `leads_routed` | `integer`, default `0` | yes |  |
+| `leads_withheld` | `boolean`, default `false` | yes | True when lead figures were not measured with lead-read authority, or the reader lacks that authority now. |
 | `learned_at` | `timestamp with time zone` |  |  |
 | `learnings_state` | `text`, default `'not_run'::text` | yes | One of `not_run`, `insufficient_evidence`, `synthesized`. |
 | `local_week_start` | `date` | yes | The Monday of the week under review, in the installation reporting timezone. |

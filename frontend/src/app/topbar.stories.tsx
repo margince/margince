@@ -422,7 +422,7 @@ const SETTINGS_SECTION: NavSection = {
     {
       headingKey: "settings.group.sales",
       items: [
-        { id: "fields", labelKey: "settings.tab.fields", icon: Database },
+        { id: "records", labelKey: "settings.tab.records", icon: Database },
       ],
     },
   ],

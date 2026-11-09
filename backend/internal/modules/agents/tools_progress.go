@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"strings"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
@@ -30,13 +31,18 @@ type progressDealArgs struct {
 	LostReasonCode *string `json:"lost_reason_code"`
 	Note           *string `json:"note"`
 	IfVersion      *int64  `json:"if_version"`
+	// Settle answers the question a close owes: what becomes of the deal's
+	// open tasks. "complete" ticks them done, "keep" leaves them. Absent is
+	// "keep", so a caller that never heard the question settles nothing.
+	Settle *string `json:"settle"`
 	WinEvidenceArgs
 }
 
 type progressDeal struct {
-	p        datasource.SystemOfRecordProvider
-	stages   StageResolver
-	language baselanguage.Resolver
+	p          datasource.SystemOfRecordProvider
+	stages     StageResolver
+	language   baselanguage.Resolver
+	closeTasks DealTaskSettler
 }
 
 func (t progressDeal) Spec() mcp.ToolSpec {
@@ -58,6 +64,7 @@ func (t progressDeal) Spec() mcp.ToolSpec {
 			"lost_reason_code":{"type":"string","description":"An active loss reason key, expected when the target stage closes the deal as lost. A loss with only a note is recorded as unmapped"}` + winEvidenceProperties + `,
 			"note":{"type":"string","description":"Logged as a note on the deal's timeline after the move"},
 			"if_version":{"type":"integer"},
+			"settle":{"type":"string","enum":["complete","keep"],"description":"What becomes of the deal's open tasks when this move closes it. Omitted keeps them"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on retry after a human approved a won/lost move"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ProgressDealResult](),
@@ -141,10 +148,73 @@ func (t progressDeal) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 		result.NoteActivityID = &ref.ID
 		noteEvidence(ctx, datasource.EntityActivity, ref.ID)
 	}
+	if err := t.answerForOpenTasks(ctx, args, &result); err != nil {
+		return nil, err
+	}
 	deal, err := readBackRecord(ctx, t.p, datasource.EntityRef{Type: datasource.EntityDeal, ID: args.DealID})
 	if err != nil {
 		return nil, err
 	}
 	result.Deal = deal
 	return json.Marshal(result)
+}
+
+// settleComplete is the choice that ticks a closing deal's open tasks done.
+const settleComplete = "complete"
+
+// answerForOpenTasks fills the close's answer about the deal's open tasks.
+//
+// Only a move that CLOSES asks. An ordinary stage change leaves the work where
+// it was, and dealmove reads a non-open target as the close.
+//
+// Reported rather than settled unless the caller said so, because closing a
+// deal never settles its tasks silently.
+func (t progressDeal) answerForOpenTasks(
+	ctx context.Context, args progressDealArgs, result *ProgressDealResult,
+) error {
+	if t.closeTasks == nil {
+		return nil
+	}
+	semantic, _, err := t.stages.StageSemantic(ctx, args.ToStageID)
+	if err != nil {
+		return err
+	}
+	if semantic == stageSemanticOpen {
+		return nil
+	}
+	if args.Settle != nil && *args.Settle == settleComplete {
+		settled, err := t.closeTasks.CompleteOpenTasksOnDeal(ctx, args.DealID)
+		if err != nil {
+			return err
+		}
+		result.SettledTaskIDs = settled
+		return nil
+	}
+	open, err := t.closeTasks.OpenTasksOnDeal(ctx, args.DealID)
+	if err != nil {
+		return err
+	}
+	result.OpenTasks = open
+	return nil
+}
+
+// ProgressDealResult is what progress_deal answers: the deal as it now stands,
+// and the note it left if it left one.
+type ProgressDealResult struct {
+	Deal wireRecord `json:"deal"`
+	// ProbabilityNote says the probability the move set from the new stage,
+	// absent when the move changed no stage.
+	ProbabilityNote string `json:"probability_note,omitempty"`
+	// OpenTasks are the deal's tasks still open after the move. Closing a deal
+	// never settles them silently. So a caller is told what it left behind, and
+	// can settle it with the settle argument.
+	OpenTasks []crmcontracts.DealOpenTask `json:"open_tasks,omitempty"`
+	// SettledTaskIDs are the tasks this call completed, present only when the
+	// caller asked for that. Empty and absent are the same claim here, which is
+	// why it carries no count beside it.
+	SettledTaskIDs []ids.UUID `json:"settled_task_ids,omitempty"`
+	// NoteActivityID is absent when the call carried no note. It is a pointer
+	// rather than a zero uuid: "no note was asked for" and "a note whose id is
+	// all zeroes" are different claims. Only one of them is true.
+	NoteActivityID *ids.UUID `json:"note_activity_id,omitempty"`
 }

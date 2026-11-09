@@ -50,7 +50,7 @@ type uniqueIndex struct {
 func uniqueIndexesByTable(t *testing.T) map[string][]uniqueIndex {
 	t.Helper()
 	catalog := filepath.Join(gatekit.ModuleRoot(t), "migrations", "testdata", "head_catalog.txt")
-	body, err := os.ReadFile(catalog)
+	body, err := gatekit.ReadFile(catalog)
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
 	}
@@ -367,7 +367,7 @@ func sqlScriptsBelow(t *testing.T, tree, root string) []upsertStatement {
 	t.Helper()
 	migrations := absolutePath(t, filepath.Join(root, "migrations"))
 	var found []upsertStatement
-	err := filepath.WalkDir(tree, func(path string, entry os.DirEntry, err error) error {
+	err := gatekit.WalkDir(tree, func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -380,7 +380,7 @@ func sqlScriptsBelow(t *testing.T, tree, root string) []upsertStatement {
 		if !strings.HasSuffix(path, ".sql") {
 			return nil
 		}
-		body, err := os.ReadFile(path)
+		body, err := gatekit.ReadFile(path)
 		if err != nil {
 			return err
 		}

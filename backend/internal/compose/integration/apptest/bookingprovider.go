@@ -68,7 +68,10 @@ func (b *BookingProvider) RoundTrip(r *http.Request) (*http.Response, error) {
 
 // BookingProviderResponse is a 200 answer to r carrying the JSON body.
 func BookingProviderResponse(r *http.Request, body string) *http.Response {
-	return &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"application/json"}}, Body: io.NopCloser(strings.NewReader(body)), Request: r}
+	return &http.Response{
+		StatusCode: http.StatusOK, Header: http.Header{"Content-Type": []string{"application/json"}},
+		Body: io.NopCloser(strings.NewReader(body)), ContentLength: int64(len(body)), Request: r,
+	}
 }
 
 // EnableGoogleBookingPage connects the signed-in caller's Google calendar

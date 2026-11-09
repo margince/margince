@@ -14,6 +14,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"slices"
 	"sync"
 	"testing"
 
@@ -21,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -340,5 +342,33 @@ func TestAStageMoveALandedRecordMakesIsInTheDealsAuditTrail(t *testing.T) {
 		ids.MustParse(made.Ref.ID))
 	if rows != 1 {
 		t.Errorf("advance_stage audit rows for the deal = %d, want 1", rows)
+	}
+}
+
+// A stage move a unit mirrors in was made in another CRM, so its history row
+// says synced and names no import run. A user's later move on the same deal is
+// recorded as made here.
+func TestAStageMoveALandedRecordMakesIsSynced(t *testing.T) {
+	e := setupCRMIngress(t)
+	made := e.mustIngest(t, e.dealRecord("opp-synced", nil))
+	e.mustIngest(t, e.dealRecord("opp-synced", func(d *extension.DealFields) { d.StageID = e.lost.String(); d.LostReason = "price" }))
+	deal := ids.MustParse(made.Ref.ID)
+	if _, err := e.Deals.AdvanceDeal(e.Admin(), ids.From[ids.DealKind](deal), deals.AdvanceDealInput{ToStageID: e.open}); err != nil {
+		t.Fatalf("reopening by hand: %v", err)
+	}
+
+	var got []string
+	e.readAsWorkspace(t, func(ctx context.Context, tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `SELECT provenance || ':' || (import_run_id IS NULL)::text FROM deal_stage_history
+			WHERE deal_id = $1 ORDER BY changed_at, write_seq`, deal)
+		if err != nil {
+			return err
+		}
+		got, err = pgx.CollectRows(rows, pgx.RowTo[string])
+		return err
+	})
+	want := []string{"synced:true", "synced:true", "recorded:true"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("stage history provenance = %v, want %v", got, want)
 	}
 }

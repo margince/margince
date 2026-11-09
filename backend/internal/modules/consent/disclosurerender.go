@@ -58,13 +58,13 @@ type DisclosureQuery struct {
 	// Recipients are the addresses the one body goes to. Each one's country
 	// adds the marketing obligations of their own pack.
 	Recipients []string
-	// Sender is the user the message goes out for; zero sends for the
-	// installation's default legal entity.
-	Sender ids.UUID
+	// Entity is the legal entity the message goes out for; zero is the
+	// installation's default entity.
+	Entity ids.UUID
 }
 
 // Disclosures answers what this message must disclose, opening its own
-// transaction. The sender is the acting principal's user.
+// transaction. A zero entity is the one the acting principal's user sends for.
 //
 // The send path composes a body without a transaction of its own to hand in —
 // the unsubscribe linker beside it has the same shape — so this is the door the
@@ -75,13 +75,18 @@ type DisclosureQuery struct {
 // it reads is committed record and settings state and an in-process pack
 // registry, none of which the outer transaction writes.
 func (s *Store) Disclosures(
-	ctx context.Context, category commsauthz.Category, recipients []string,
+	ctx context.Context, category commsauthz.Category, recipients []string, entity ids.UUID,
 ) ([]DisclosureLine, error) {
 	var out []DisclosureLine
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
+		if entity.IsZero() {
+			if entity, err = sendingEntityOf(ctx, tx); err != nil {
+				return err
+			}
+		}
 		out, err = s.DisclosuresFor(ctx, tx, DisclosureQuery{
-			Category: category, Recipients: recipients, Sender: senderOf(ctx),
+			Category: category, Recipients: recipients, Entity: entity,
 		})
 		return err
 	})
@@ -101,7 +106,11 @@ func (s *Store) Disclosures(
 func (s *Store) DisclosuresFor(
 	ctx context.Context, tx pgx.Tx, q DisclosureQuery,
 ) ([]DisclosureLine, error) {
-	senderCountry, err := s.dataProtectionCountryTx(ctx, tx, q.Sender)
+	entity, err := sendingEntityFactsTx(ctx, tx, q.Entity)
+	if err != nil {
+		return nil, err
+	}
+	senderCountry, err := s.dataProtectionCountryOf(ctx, tx, entity)
 	if err != nil {
 		return nil, err
 	}
@@ -124,10 +133,11 @@ func (s *Store) DisclosuresFor(
 	// StoredApplyTx, not StoredValTx: the particulars must reach whoever composes the
 	// message, and a worker dispatching a scheduled send holds no settings
 	// grant. See ControllerIdentity's own note on why that is safe here.
-	particulars, err := config.StoredApplyTx(ctx, tx, config.Bound(), ControllerIdentity)
+	installation, err := config.StoredApplyTx(ctx, tx, config.Bound(), ControllerIdentity)
 	if err != nil {
 		return nil, err
 	}
+	particulars := controllerOf(installation, entity)
 	// An UNKNOWN category is treated as not-marketing, which is the safe
 	// direction: it carries the obligations binding every first contact and
 	// leaves out the advertising-only ones. A send that names no category is

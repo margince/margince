@@ -3,11 +3,10 @@
 
 package storekit
 
-// RequestAddressesSQL is the list a contact merge binds a request to: the live
-// addresses of the contact named by column, never NULL. Contacts writes it on
-// the acquisition evidence and consent on the qualifying events, each on its
-// own table, so the expression lives here once.
+// RequestAddressesSQL lists every live address for consent, acquisition and dedupe.
+// The fence keeps the archive predicate from selecting a domain-wide partial index.
 func RequestAddressesSQL(column string) string {
-	return "(SELECT coalesce(array_agg(ce.email ORDER BY ce.email), '{}') FROM contact_email ce " +
-		"WHERE ce.contact_id = " + column + " AND ce.archived_at IS NULL)"
+	return "(SELECT coalesce(array_agg(ce.email ORDER BY ce.email), '{}') FROM " +
+		"(SELECT email, archived_at FROM contact_email WHERE contact_id = " + column +
+		" OFFSET 0) ce WHERE ce.archived_at IS NULL)"
 }

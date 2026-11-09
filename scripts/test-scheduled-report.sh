@@ -809,10 +809,9 @@ done
 #
 # The census above is main-health's, and it keys on a job name DERIVED from the
 # variable (MAIN_UAT_RESULT -> uat). scheduled.yml cannot be asked that way:
-# GATE_RESULT is quality-gate, LANE_RESULT is backend-lane, CLOCK_RESULT is
-# fe-clock-drift. Nothing mechanical connects the two halves of those names, and
-# a census that needed a hand-kept mapping would be a second copy of the wiring
-# it checks — stale the first time somebody edits one and not the other.
+# GATE_RESULT is quality-gate and CLOCK_RESULT is fe-clock-drift. Nothing
+# mechanical connects the two halves of those names, and a census that needed
+# a hand-kept mapping would be a second copy of the wiring it checks — stale the first time somebody edits one and not the other.
 #
 # So this asks the two questions that ARE mechanical, and between them they close
 # the same hole from both ends:

@@ -83,6 +83,19 @@ func (k capturedFileKeeper) Record(
 	}, owned)
 }
 
+func (k capturedFileKeeper) Stored(staged []capture.StagedFile) ([]capture.StoredFile, error) {
+	out := make([]capture.StoredFile, 0, len(staged))
+	for _, file := range staged {
+		typed, ok := file.(activities.StagedFile)
+		if !ok {
+			return nil, errStagedFileNotOurs
+		}
+		part, key, checksum, size := typed.Location()
+		out = append(out, capture.StoredFile{PartID: part, StorageKey: key, Sha256: checksum, Bytes: int64(size)})
+	}
+	return out, nil
+}
+
 func (k capturedFileKeeper) RecordWithheld(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 	from capture.FileSource, files []capture.CapturedFile,

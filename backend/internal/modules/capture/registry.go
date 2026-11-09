@@ -44,6 +44,8 @@ type Registry struct {
 	// maxBackfillMonths is the installation's ceiling on how far back a
 	// mailbox import may reach, or 0 for none. See backfillcap.go.
 	maxBackfillMonths int
+	backfillLimit     int
+	backfillHeld      bool
 	// vault seals and resolves a connection's credential bundle. The row
 	// carries an opaque credential_ref, never the credential bytes; the vault
 	// is the custodian. May be nil for a role composed before WithKeyvault
@@ -59,6 +61,9 @@ type Registry struct {
 	// setting (MailSyncIntervalSeconds), read when the sync records itself.
 	now            func() time.Time
 	progressPacing time.Duration
+	// ownershipWatch is how often a running page checks it still owns its
+	// execution (backfillwatch.go).
+	ownershipWatch time.Duration
 
 	// digestProjects answers the morning digest's projects section
 	// (digestprojects.go); nil builds a digest without one.
@@ -82,6 +87,8 @@ func NewRegistry(db *database.DB, sink *Sink, authority authz.Resolver, vault ke
 		vault:          vault,
 		now:            time.Now,
 		progressPacing: defaultProgressPacing,
+		ownershipWatch: time.Second,
+		backfillLimit:  1,
 	}
 }
 
@@ -102,6 +109,17 @@ func (r *Registry) SetClock(now func() time.Time) *Registry {
 // sensible when the pages are short enough that the volume is not the point.
 func (r *Registry) WithProgressPacing(d time.Duration) *Registry {
 	r.progressPacing = d
+	return r
+}
+
+// WithOwnershipWatch overrides how often a running page checks that it still
+// owns its execution. Each check is a transaction. A test that counts a page's
+// statements sets it past the page's length. The transaction fence still
+// refuses a stale page's writes.
+func (r *Registry) WithOwnershipWatch(d time.Duration) *Registry {
+	if d > 0 {
+		r.ownershipWatch = d
+	}
 	return r
 }
 
@@ -191,6 +209,18 @@ func (r *Registry) ChannelCarriage() map[string]connector.Carriage {
 // Completion must still match the connection generation, sync revision and starting cursor.
 // A newer pull or changed grant supersedes this snapshot.
 func (r *Registry) SyncOnce(ctx context.Context, connectionID ids.UUID) error {
+	lease, held, err := r.db.TryWorkLease(ctx, "capture:sync", connectionID, slog.Default())
+	if err != nil {
+		return err
+	}
+	if !held {
+		return nil
+	}
+	defer lease.Close(ctx)
+	return r.syncConnection(ctx, connectionID)
+}
+
+func (r *Registry) syncConnection(ctx context.Context, connectionID ids.UUID) error {
 	var (
 		name          string
 		grantedBy     ids.UserID
@@ -230,6 +260,7 @@ func (r *Registry) SyncOnce(ctx context.Context, connectionID ids.UUID) error {
 	}
 	// Before the credential and the provider: a member who may no longer
 	// capture costs the provider nothing and parks under its own class.
+	runCtx = withMailboxConnection(runCtx, connectionID, generation)
 	auth, err := r.syncCredential(runCtx, credentialRef, authBytes)
 	if err != nil {
 		if recErr := r.recordSyncFailure(runCtx, snapshot, credentialRef, err); recErr != nil {
@@ -433,7 +464,7 @@ func (r *Registry) connectorContext(ctx context.Context, name string, grantedBy 
 	if err != nil {
 		return nil, err
 	}
-	return principal.WithCorrelationID(runCtx, ids.NewV7()), nil
+	return asMailboxRun(principal.WithCorrelationID(runCtx, ids.NewV7())), nil
 }
 
 func (r *Registry) connector(name string) (connector.Connector, error) {

@@ -27,6 +27,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -96,7 +98,7 @@ func TestTheZoneGateSeesEachWayToCountInUTC(t *testing.T) {
 func elapsedCallerFiles(t *testing.T) []string {
 	t.Helper()
 	var out []string
-	err := filepath.WalkDir("internal", func(path string, d os.DirEntry, err error) error {
+	err := gatekit.WalkDir("internal", func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -104,7 +106,7 @@ func elapsedCallerFiles(t *testing.T) []string {
 			strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") {
 			return nil
 		}
-		raw, err := os.ReadFile(path)
+		raw, err := gatekit.ReadFile(path)
 		if err != nil {
 			return err
 		}

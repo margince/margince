@@ -18,7 +18,9 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // stagedCorrection is the proposal as the card will read it.
@@ -71,6 +73,10 @@ func (e *closeDateEnv) grantOwnerWithoutContacts(t *testing.T, userID ids.UUID) 
 func (e *closeDateEnv) grantOwnerRole(t *testing.T, userID ids.UUID, document string) {
 	t.Helper()
 	ctx := context.Background()
+	// Grants add up across roles, so the role under test has to be the only one.
+	if _, err := e.owner.Exec(ctx, `DELETE FROM role_assignment WHERE user_id = $1`, userID); err != nil {
+		t.Fatalf("clearing the owner's roles: %v", err)
+	}
 	roleID := ids.NewV7()
 	if _, err := e.owner.Exec(ctx,
 		`INSERT INTO role (id, key, name, permissions)
@@ -348,6 +354,11 @@ func TestQuietReviewWithoutActivityReadReadsNoCorrespondence(t *testing.T) {
 		   "contact":{"read":true},"company":{"read":true}},"row_scope":"all"}`)
 	id := e.seedSweepDeal(t, "No activity grant", e.late, new(95), new(30), 90)
 	e.seedDealEmail(t, id, "inbound", "Anna Weber", 90)
+	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), closeDateSweepActor)
+	authority, _, err := identity.NewService(e.Pool).EffectiveAuthority(ctx, e.WS, e.Rep1)
+	if err != nil || authority.Permissions.Objects["activity"].Read {
+		t.Fatalf("the restricted owner still reads activities: authority %+v, error %v", authority.Permissions, err)
+	}
 
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)

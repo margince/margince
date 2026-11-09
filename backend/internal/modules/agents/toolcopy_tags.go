@@ -89,7 +89,7 @@ var readTagsCopy = toolCopy{
 		"true means the vocabulary is hidden from this caller, NOT that the record has no tags — " +
 		"never report it as none.",
 	Retain: "A word the user says fits a contact you are creating goes to create_record as " +
-		"offer_tag, which offers it without applying it.",
+		"offer_tag, which applies and stores nothing and says whether the tag exists.",
 }
 
 var changeTagsCopy = toolCopy{

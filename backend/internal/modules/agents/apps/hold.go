@@ -67,9 +67,9 @@ const (
 	// meant both views were permanently unadvertised in every dev stack —
 	// measured, not predicted.
 	primeRetryInterval = time.Second
-	// refreshInterval is how often a held document is re-read. The web tier and
-	// the api deploy separately, so a view replaced by a deploy reaches the api
-	// within this window rather than at the next restart.
+	// refreshInterval is how often a held document is re-read. A pinned build
+	// accepts only its own bytes again, so a document the web tier replaced is
+	// refused and the held copy stays. An unpinned build takes the new one.
 	refreshInterval = 5 * time.Minute
 	// logInterval rate-limits the per-view failure line. A view that has been
 	// missing for a week must still be findable in the log, and must not be the
@@ -83,6 +83,8 @@ type Provider struct {
 	fetcher *Fetcher
 	log     *slog.Logger
 	now     func() time.Time
+	// pins is the digest manifest this binary was linked with.
+	pins viewPins
 	// retryEvery paces the startup re-attempt. Injected rather than read from
 	// the constant so a spec can drive the loop without sleeping: a real clock
 	// in a unit test is flake waiting to happen, and the rest of this file
@@ -97,6 +99,7 @@ type Provider struct {
 
 	fetchFailures     atomic.Uint64
 	admissionFailures atomic.Uint64
+	digestMismatches  atomic.Uint64
 	titleMismatches   atomic.Int64
 
 	// quiet holds the last time each view's failure was logged. Guarded by a
@@ -113,7 +116,7 @@ type Provider struct {
 // simply never calls this.
 func NewProvider(fetcher *Fetcher, log *slog.Logger) *Provider {
 	p := &Provider{
-		fetcher: fetcher, log: log, now: time.Now,
+		fetcher: fetcher, log: log, now: time.Now, pins: pinsFrom(ViewDigests, buildinfo.ReleaseVersion),
 		retryEvery: primeRetryInterval, quiet: map[string]time.Time{},
 	}
 	empty := map[string]string{}
@@ -151,6 +154,7 @@ func (p *Provider) Prime(ctx context.Context) error {
 	if !p.fetcher.configured() {
 		return ErrNoViewsOrigin
 	}
+	p.notePins()
 	ctx, cancel := context.WithTimeout(ctx, primeDeadline)
 	defer cancel()
 	admitted, refused := p.primeUntilDeadline(ctx)
@@ -290,6 +294,11 @@ func (p *Provider) read(ctx context.Context, v view) (string, error) {
 		p.fetchFailures.Add(1)
 		return "", err
 	}
+	if err := p.pins.check(v.uri, doc); err != nil {
+		p.digestMismatches.Add(1)
+		p.reportDigest(v.uri, err)
+		return "", err
+	}
 	findings, titleMismatch := admit(doc, v.title, len(v.actions()) > 0)
 	if len(findings) > 0 {
 		p.admissionFailures.Add(1)
@@ -306,17 +315,41 @@ func (p *Provider) read(ctx context.Context, v view) (string, error) {
 	return doc, nil
 }
 
+// notePins says at boot which digest rule this binary runs under. Unpinned is
+// a development build; a refusal means no view will be served.
+func (p *Provider) notePins() {
+	switch {
+	case p.pins.refusal != nil:
+		p.log.Error("mcp apps: no view will be served, because this build cannot check view digests",
+			"err", p.pins.refusal)
+	case p.pins.unpinned:
+		p.log.Warn("mcp apps: this development build has no view digest manifest, so views are served unpinned")
+	}
+}
+
+// reportDigest logs a refused document with both digests, at most once per
+// logInterval per view.
+func (p *Provider) reportDigest(uri string, err error) {
+	var want, got string
+	if mismatch, ok := errors.AsType[*digestMismatch](err); ok {
+		want, got = mismatch.want, mismatch.got
+	}
+	p.logQuietly(uri+"#digest", func() {
+		p.log.Error("mcp apps: a view document is not the one this build produced, so it is refused",
+			"uri", uri, "err", err, "want_sha256", want, "got_sha256", got)
+	})
+}
+
 // revisionPattern reads the build stamp the inliner wrote into the document.
 var revisionPattern = regexp.MustCompile(`<!--\s*margince-build-revision:\s*(\S+)\s*-->`)
 
 // noteSkew reports whether this document came from a different build than this
 // api — and REPORTS is the whole of it.
 //
-// It does not refuse: the api and the web tier deploy separately, so a rolling
-// deploy would otherwise take the views down for the length of the rollout, which
-// is a self-inflicted outage in exchange for a signal. It is diagnostic
-// metadata, not an integrity signature; transport integrity rests on HTTPS and
-// on control of the origin.
+// It does not refuse. The digest check in read decides whether the bytes are
+// this build's, and in a pinned build it refuses another build's document. The
+// revision stamp is diagnostic metadata, never an integrity
+// signature, so this reports what an unpinned development build is serving.
 //
 // An unknown revision on EITHER side disables the comparison. A developer's
 // binary is built from a dirty worktree that no commit SHA describes, so
@@ -410,6 +443,10 @@ func (p *Provider) WriteMetrics(w io.Writer) {
 	httpserver.WriteLine(w, "# HELP margince_mcp_app_admission_failures_total View documents that arrived and were refused.\n")
 	httpserver.WriteLine(w, "# TYPE margince_mcp_app_admission_failures_total counter\n")
 	httpserver.WriteLine(w, "margince_mcp_app_admission_failures_total %d\n", p.admissionFailures.Load())
+	httpserver.WriteLine(w, "# HELP margince_mcp_app_digest_mismatches_total View documents refused because "+
+		"their bytes are not the ones this build produced, or it pinned none for them.\n")
+	httpserver.WriteLine(w, "# TYPE margince_mcp_app_digest_mismatches_total counter\n")
+	httpserver.WriteLine(w, "margince_mcp_app_digest_mismatches_total %d\n", p.digestMismatches.Load())
 	httpserver.WriteLine(w, "# HELP margince_mcp_app_title_mismatches_total Served documents whose title differs from the catalog's.\n")
 	httpserver.WriteLine(w, "# TYPE margince_mcp_app_title_mismatches_total counter\n")
 	httpserver.WriteLine(w, "margince_mcp_app_title_mismatches_total %d\n", p.titleMismatches.Load())

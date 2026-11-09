@@ -153,20 +153,12 @@ const SALES_READS: readonly {
 }[] = [
   {
     object: "custom_field",
-    opens: [
-      "leads",
-      "acquisition",
-      "lossreasons",
-      "partners",
-      "reviewtemplates",
-      "recordroles",
-      "fields",
-    ],
+    opens: ["deals", "leads", "partners", "records"],
   },
-  { object: "pipeline", opens: ["pipelines", "stageautomation"] },
+  { object: "pipeline", opens: ["deals"] },
   { object: "product", opens: ["products"] },
   { object: "offer_template", opens: ["products"] },
-  { object: "tag", opens: ["tags"] },
+  { object: "tag", opens: ["records"] },
 ];
 
 // The seeded grant matrix's READ verbs. manager, read_only and rep hold the
@@ -237,23 +229,15 @@ const SEEDED_READ_PAGES = pagesNamed(
   // write the calling seat's own rows, so it opens for every fixture here.
   "notifications",
   "connections",
-  "capture-activity",
   // `company` is NOT here: it opens on the installation write or the rate
   // read, and no seeded role below ops holds either.
   //
   // Nor `members`/`teams`: only the `admin` role is seeded `user_admin` or
   // `team_admin`, so no seeded role below it reaches either page.
-  "pipelines",
-  // The same `pipeline:read` that opens Pipelines. The report is read-only, so
-  // a seat that may see the stages may see what their transitions have earned.
-  "stageautomation",
+  "deals",
   "leads",
-  "acquisition",
-  "lossreasons",
   "partners",
-  "reviewtemplates",
-  "recordroles",
-  "fields",
+  "records",
   "products",
   "capture",
   "knowledge",
@@ -266,23 +250,15 @@ const SEEDED_OPS_PAGES = pagesNamed(
   "agents",
   "notifications",
   "connections",
-  "capture-activity",
   "company",
   // Not `members`/`teams`: ops holds neither `user_admin` nor `team_admin` in
   // the seeded matrix. Administering colleagues is the admin's, and the roster
   // ops reads for pickers is answered by the endpoint, not by this page.
   "seats",
-  "pipelines",
-  // The same `pipeline:read` that opens Pipelines. The report is read-only, so
-  // a seat that may see the stages may see what their transitions have earned.
-  "stageautomation",
+  "deals",
   "leads",
-  "acquisition",
-  "lossreasons",
   "partners",
-  "reviewtemplates",
-  "recordroles",
-  "fields",
+  "records",
   "products",
   "capture",
   "integrations",
@@ -407,14 +383,14 @@ describe("SettingsScreen page visibility", () => {
       "fetch",
       settingsNavBackend({
         roles: ["ops"],
-        // The witness rides along: `pipeline:read` opens Pipelines and Stage
-        // automation and nothing else, so those rows prove /me resolved before
-        // this asserts that the WRITES bought no page.
+        // The witness rides along: `pipeline:read` opens Deals and nothing
+        // else, so that row proves /me resolved before this asserts that the
+        // WRITES bought no page.
         allow: { custom_field: ["create", "update"], pipeline: ["read"] },
       }),
     );
     renderHome();
-    await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
+    await expectNavSettlesTo(floorPlus("deals"));
   });
 
   it.each(SALES_READS)(
@@ -440,15 +416,14 @@ describe("SettingsScreen page visibility", () => {
         "fetch",
         settingsNavBackend({
           roles: ["ops"],
-          // The witness alongside the object under test: `pipeline` opens
-          // Pipelines and Stage automation and nothing else, so waiting for
-          // those rows proves the snapshot resolved before this asserts what
-          // is NOT there.
+          // The witness: `pipeline` opens Deals and nothing else. Waiting
+          // for those rows proves the snapshot resolved before this asserts
+          // what is not there.
           allow: { ...readOn(object), pipeline: ["read"] },
         }),
       );
       const { unmount } = renderHome();
-      await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
+      await expectNavSettlesTo(floorPlus("deals"));
       unmount();
 
       vi.stubGlobal(

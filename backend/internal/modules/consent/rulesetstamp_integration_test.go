@@ -204,3 +204,94 @@ func TestTheSendersCountryIsNotStampedOnARecipientWithNone(t *testing.T) {
 		}
 	}
 }
+
+// dataProtectionOf reads back the data-protection country a decision recorded.
+func dataProtectionOf(t *testing.T, e *resolveEnv, delivery ids.UUID, phase string) *string {
+	t.Helper()
+	var country *string
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT data_protection_country FROM communication_decision
+		 WHERE delivery_id = $1 AND phase = $2 LIMIT 1`, delivery, phase).Scan(&country); err != nil {
+		t.Fatalf("reading the %s decision: %v", phase, err)
+	}
+	return country
+}
+
+// TestADecisionRecordsTheDataProtectionCountryOfItsEntity: beside the
+// recipient's marketing ruleset, each decision names the country of the legal
+// entity the message went out for. A sender of no further entity sends for the
+// default one, which takes the installation's country.
+//
+// Mutation: stamp the installation country in dataProtectionStamp and the
+// branch case fails; stamp nil and both fail.
+func TestADecisionRecordsTheDataProtectionCountryOfItsEntity(t *testing.T) {
+	e := setupResolve(t)
+	e.gate = e.gate.WithInstallationCountry(
+		InstallationCountryFunc(func(context.Context, pgx.Tx) (jurisdiction.Code, error) { return "de", nil }))
+	home := e.plantDelivery(t)
+	stageThenTransmit(t, e, home, stagedSubject, stagedBody)
+
+	branch := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO legal_entity (id, display_name, legal_name, country, captured_by)
+		VALUES ($1, 'Branch', 'Branch Ltd', 'vn', 'human:x')`, branch); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO legal_entity_member (legal_entity_id, user_id, assigned_by)
+		VALUES ($1, $2, 'human:x')`, branch, e.user); err != nil {
+		t.Fatal(err)
+	}
+	abroad := e.plantDelivery(t)
+	stageThenTransmit(t, e, abroad, stagedSubject, stagedBody)
+
+	for _, tc := range []struct {
+		delivery ids.UUID
+		want     string
+	}{{home, "de"}, {abroad, "vn"}} {
+		for _, phase := range []string{"staging", "transmit"} {
+			if got := dataProtectionOf(t, e, tc.delivery, phase); got == nil || *got != tc.want {
+				t.Errorf("the %s decision recorded data-protection country %v, want %s", phase, got, tc.want)
+			}
+		}
+	}
+}
+
+// TestTransmitKeepsTheStagedDataProtectionCountry: the footer that goes out was
+// rendered under the country staging recorded. A change to the entity's
+// country and to installation.country while the message waits leaves the
+// transmit stamp equal to the staging one.
+//
+// Mutation: resolve the country again in recordDecisions and this fails.
+func TestTransmitKeepsTheStagedDataProtectionCountry(t *testing.T) {
+	e := setupResolve(t)
+	installation := jurisdiction.Code("de")
+	e.gate = e.gate.WithInstallationCountry(
+		InstallationCountryFunc(func(context.Context, pgx.Tx) (jurisdiction.Code, error) { return installation, nil }))
+	branch := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO legal_entity (id, display_name, legal_name, country, captured_by)
+		VALUES ($1, 'Branch', 'Branch Ltd', 'vn', 'human:x')`, branch); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO legal_entity_member (legal_entity_id, user_id, assigned_by)
+		VALUES ($1, $2, 'human:x')`, branch, e.user); err != nil {
+		t.Fatal(err)
+	}
+	delivery := e.plantDelivery(t)
+	stageDelivery(t, e, delivery)
+
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE legal_entity SET country = 'at' WHERE id = $1`, branch); err != nil {
+		t.Fatal(err)
+	}
+	installation = "fr"
+	transmitStaged(t, e, delivery, stagedSubject, stagedBody)
+
+	staged := dataProtectionOf(t, e, delivery, "staging")
+	sent := dataProtectionOf(t, e, delivery, "transmit")
+	if staged == nil || *staged != "vn" || sent == nil || *sent != *staged {
+		t.Errorf("staging recorded %v and transmit %v, want vn for both", staged, sent)
+	}
+}

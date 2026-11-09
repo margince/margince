@@ -19,7 +19,7 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { AnalyticsScreen } from "./analytics";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import { layoutOf } from "./reporting.layout";
 import { ReportingOverview } from "./reporting.overview";
 import { ReportingReportDetail } from "./reporting.report";

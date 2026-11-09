@@ -162,7 +162,12 @@ describe("a related record opened from a record that came from the Worklist", ()
         kind: "draft_reply",
         label: "Draft a follow-up",
         state: "available",
-        destination: { surface: "composer", prefill: { intent: "follow_up" } },
+        destination: {
+          surface: "composer",
+          entity_type: "activity",
+          entity_id: "a-1",
+          prefill: { intent: "follow_up" },
+        },
       },
       t,
       { ...handlers, openComposer },
@@ -171,6 +176,7 @@ describe("a related record opened from a record that came from the Worklist", ()
     expect(openComposer).toHaveBeenCalledWith(
       translate("en", "contact.composer.intentFollowUp"),
       true,
+      "a-1",
     );
   });
 

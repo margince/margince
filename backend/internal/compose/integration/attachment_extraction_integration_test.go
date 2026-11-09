@@ -43,7 +43,7 @@ func TestGetAttachmentExtractionOfAnUnreadDocumentIs404(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/attachments/"+att.Id.String()+"/extraction", nil).WithContext(ctx)
-	h.GetAttachmentExtraction(rec, req, att.Id)
+	h.GetAttachmentExtraction(rec, req, att.Id, crmcontracts.GetAttachmentExtractionParams{})
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404 (body %s)", rec.Code, rec.Body.String())
 	}
@@ -70,7 +70,7 @@ func TestGetAttachmentExtractionPartitionsAStoredReading(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/attachments/"+att.Id.String()+"/extraction", nil).WithContext(ctx)
-	h.GetAttachmentExtraction(rec, req, att.Id)
+	h.GetAttachmentExtraction(rec, req, att.Id, crmcontracts.GetAttachmentExtractionParams{})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200 (body %s)", rec.Code, rec.Body.String())
 	}
@@ -105,7 +105,7 @@ func TestGetAttachmentExtractionReadsAnyEntityType(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/attachments/"+att.Id.String()+"/extraction", nil).WithContext(ctx)
-	h.GetAttachmentExtraction(rec, req, att.Id)
+	h.GetAttachmentExtraction(rec, req, att.Id, crmcontracts.GetAttachmentExtractionParams{})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("non-deal attachment extraction read: status %d, want 200 (body %s)", rec.Code, rec.Body.String())
 	}
@@ -152,7 +152,7 @@ func TestGetAttachmentExtractionHidesAnInvisibleParent(t *testing.T) {
 	repCtx := e.As(e.Rep3, []ids.UUID{e.Team2}, ownContactPerms())
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/attachments/"+att.Id.String()+"/extraction", nil).WithContext(repCtx)
-	h.GetAttachmentExtraction(rec, req, att.Id)
+	h.GetAttachmentExtraction(rec, req, att.Id, crmcontracts.GetAttachmentExtractionParams{})
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("extraction read through an invisible parent: status %d, want 404", rec.Code)
 	}
@@ -160,7 +160,7 @@ func TestGetAttachmentExtractionHidesAnInvisibleParent(t *testing.T) {
 	missing := openapi_types.UUID(ids.NewV7())
 	missRec := httptest.NewRecorder()
 	missReq := httptest.NewRequest(http.MethodGet, "/v1/attachments/x/extraction", nil).WithContext(adminCtx)
-	h.GetAttachmentExtraction(missRec, missReq, missing)
+	h.GetAttachmentExtraction(missRec, missReq, missing, crmcontracts.GetAttachmentExtractionParams{})
 	if missRec.Code != http.StatusNotFound {
 		t.Errorf("extraction read of a missing attachment: status %d, want 404", missRec.Code)
 	}

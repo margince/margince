@@ -48,6 +48,9 @@ export function clearSentence(
   if (filter === "tasks") {
     return t("worklist.clearOfTasksToday");
   }
+  if (filter === "urgent") {
+    return t("worklist.clearOfUrgent");
+  }
   return colleague
     ? t("worklist.clearFor", { name: colleague })
     : t("worklist.clear");

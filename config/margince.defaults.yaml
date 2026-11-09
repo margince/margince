@@ -75,9 +75,6 @@ ai:
 analytics:
   performance_enabled: false
 
-assurance:
-  qualified_forecast_enforced: false
-
 auth:
   password:
     enabled: true
@@ -88,6 +85,10 @@ capture:
   confidentiality_pass_cap: 40
   freemail_extra: null
   freemail_never: null
+  gmail_mailbox_quota: 6000
+  gmail_project_quota: 1200000
+  history_concurrency: 1
+  history_hold: false
   mail_sharing: true
   mail_sync_interval_seconds: 120
   max_backfill_months: 0
@@ -118,11 +119,15 @@ contacts:
 data_tasks:
   pace: 1s
 
+database:
+  worker_max_connections: 12
+  worker_statement_cache_capacity: 256
+
 deals:
   legal_review_enabled: true
   maintenance_writes_enabled: true
   silent_close_days: 120
-  stage_autopilot_enabled: false
+  stage_autopilot_enabled: true
 
 email:
   enabled: false
@@ -146,6 +151,9 @@ identity:
 installation:
   agent_calls_per_window: 1000
   agent_egress_per_window: 20
+  agent_role_calls_per_window: null
+  agent_role_egress_per_window: null
+  agent_role_writes_per_window: null
   agent_runner_interval_seconds: 30
   agent_window_hours: 24
   agent_writes_per_window: 200

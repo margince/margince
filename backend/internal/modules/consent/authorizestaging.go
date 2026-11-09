@@ -179,6 +179,10 @@ func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID
 	if err != nil {
 		return err
 	}
+	protection, err := g.store.dataProtectionStamp(ctx, tx, req.SendingEntity)
+	if err != nil {
+		return err
+	}
 	for i, d := range set.Decisions {
 		// The ids THIS RECIPIENT'S decision was taken on, so the transmit phase
 		// can put the same questions to the same records.
@@ -224,22 +228,25 @@ func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID
 			id := instruction
 			authority, instructionID = AuthorityInstruction, &id
 		}
+		values := []any{
+			deliveryID, 0, setID, decisionRecipientKey(d.Recipient),
+			subjectKind, subjectID, string(d.Phase), nullableCategory(d.Requested),
+			string(d.Resolved), string(d.Verdict), d.ReasonCode,
+			nullableBasis(d.Basis), nullableText(d.Suppression),
+			sum[:], string(d.Mode), by, evidence, authority, instructionID,
+			ruleset.Version, ruleset.Codes, zeroAsNull(d.SendingEntity), nullableText(d.PurposeKey),
+			groundNotice(d), groundOffer(d), groundSoldAt(d), protection,
+		}
 		_, err = tx.Exec(ctx, `
 			INSERT INTO communication_decision
 			  (delivery_id, attempt, decision_set_id, recipient_address, subject_kind, subject_id,
 			   phase, requested_category, resolved_category, verdict, reason_code, basis, suppression,
 			   content_fingerprint, mode, actor, evidence, execution_authority, instruction_id,
 			   ruleset_version, ruleset_codes, legal_entity_id, purpose_key,
-			   existing_customer_notice_id, existing_customer_offer_id, existing_customer_sold_at)
-			VALUES ($1,0,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)
-			ON CONFLICT (decision_set_id, recipient_address, phase) DO NOTHING`,
-			deliveryID, setID, decisionRecipientKey(d.Recipient),
-			subjectKind, subjectID, string(d.Phase), nullableCategory(d.Requested),
-			string(d.Resolved), string(d.Verdict), d.ReasonCode,
-			nullableBasis(d.Basis), nullableText(d.Suppression),
-			sum[:], string(d.Mode), by, evidence, authority, instructionID,
-			ruleset.Version, ruleset.Codes, zeroAsNull(d.SendingEntity), nullableText(d.PurposeKey),
-			groundNotice(d), groundOffer(d), groundSoldAt(d))
+			   existing_customer_notice_id, existing_customer_offer_id, existing_customer_sold_at,
+			   data_protection_country)
+			VALUES (`+storekit.Placeholders(values)+`)
+			ON CONFLICT (decision_set_id, recipient_address, phase) DO NOTHING`, values...)
 		if err != nil {
 			return fmt.Errorf("consent: record the staging decision: %w", err)
 		}

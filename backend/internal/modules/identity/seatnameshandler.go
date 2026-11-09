@@ -38,7 +38,7 @@ func (h Handlers) NameSeats(w http.ResponseWriter, r *http.Request, params crmco
 	for _, id := range asked {
 		seats = append(seats, ids.From[ids.UserKind](ids.UUID(id)))
 	}
-	named, err := h.svc.SeatNames(r.Context(), seats)
+	named, err := h.svc.seatFaces(r.Context(), seats)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -52,11 +52,14 @@ func (h Handlers) NameSeats(w http.ResponseWriter, r *http.Request, params crmco
 	// map order, so ranging would answer one request two ways.
 	data := make([]crmcontracts.SeatName, 0, len(named))
 	for _, id := range asked {
-		name, resolved := named[ids.UUID(id)]
+		face, resolved := named[ids.UUID(id)]
 		if !resolved {
 			continue
 		}
-		data = append(data, crmcontracts.SeatName{Id: id, DisplayName: name, Departed: departed[ids.UUID(id)]})
+		data = append(data, crmcontracts.SeatName{
+			Id: id, DisplayName: face.name, AvatarUrl: AvatarURL(ids.UUID(id), face.avatarKey),
+			Departed: departed[ids.UUID(id)],
+		})
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.SeatNameListResponse{Data: data})
 }

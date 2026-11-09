@@ -2,10 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Button } from "../../design-system/atoms";
+import { Button, PendingBody } from "../../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import {
   formatAnalyticsHours,
@@ -15,16 +15,17 @@ import {
 } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
-import { type HandoffScope, upcomingThrough } from "./analytics.outcomes.sdr";
+import type { HandoffScope } from "./analytics.outcomes.handoffpages";
+import { upcomingThrough } from "./analytics.outcomes.sdr";
 import { readingState } from "./analytics.overview.prospectinghero";
-import { UpcomingMeetings } from "./analytics.overview.prospectingwork";
 import { metricOf } from "./analytics.overview.readings";
 import {
   type Decided,
   ReasonsDrawer,
   WaitingDrawer,
 } from "./analytics.overview.team.drawers";
-import { figureWithheld } from "./analytics.overview.team.members";
+import { figureWithheld } from "./analytics.overview.team.model";
+import { UpcomingMeetings } from "./analytics.overview.work";
 import { EvidenceFrame } from "./reporting.evidenceframe";
 import { useSelectionHeld } from "./reporting.evidenceselection";
 import type {
@@ -221,7 +222,9 @@ function UpcomingLine({
           lines={[upcomingThrough(data.upcoming_window, t, locale)]}
           onClose={() => setOpened(false)}
         >
-          <UpcomingMeetings self="" summary={summary} title={label} />
+          <Suspense fallback={<PendingBody label={t("common.loading")} />}>
+            <UpcomingMeetings self="" summary={summary} title={label} />
+          </Suspense>
         </EvidenceFrame>
       )}
     </>

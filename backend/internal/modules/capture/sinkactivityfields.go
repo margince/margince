@@ -9,18 +9,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
-
-// occurredPrecision is the activity column's word for DateOnly.
-func (f ActivityFields) occurredPrecision() string {
-	if f.DateOnly {
-		return string(crmcontracts.OccurredPrecisionOccurredPrecisionDay)
-	}
-	return string(crmcontracts.OccurredPrecisionOccurredPrecisionInstant)
-}
 
 // settledFields fills in what the capture does not take as sent. That is the
 // time and its day anchor, the storable length, and the envelope's judgement.

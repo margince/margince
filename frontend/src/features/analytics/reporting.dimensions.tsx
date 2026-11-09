@@ -12,8 +12,15 @@ import { countryOptions } from "../../format/assignedcountries";
 import { formatAnalyticsNumber } from "../../format/format";
 import { INDUSTRY_CODES, industryLabelKey } from "../../format/industry";
 import { type Translator, useLocale, useT } from "../../i18n";
-import { useSalesInitiatives } from "./reporting.initiatives";
+import { useSalesInitiatives } from "./reporting.initiatives.queries";
 import type { ReportingSelection } from "./reporting.model";
+import { VALUE_BASES, valueBasisOf } from "./reporting.selection";
+
+export {
+  VALUE_BASES,
+  type ValueBasis,
+  valueBasisOf,
+} from "./reporting.selection";
 
 /**
  * The product, country, industry and value basis of a selection: the dials
@@ -60,14 +67,6 @@ export function applyDimensions(
   if (!sameDimensions(filters.dimensions, wanted))
     filters.setDimensions(wanted);
 }
-
-export type ValueBasis = NonNullable<ReportingSelection["value_basis"]>;
-
-export const VALUE_BASES: readonly ValueBasis[] = [
-  "all",
-  "software",
-  "implementation",
-];
 
 const DIMENSION_KEYS = [
   "product_id",
@@ -118,10 +117,6 @@ export function withoutDimensions(
   const next = { ...selection };
   for (const key of DIMENSION_KEYS) delete next[key];
   return next;
-}
-
-export function valueBasisOf(value: string): ValueBasis {
-  return VALUE_BASES.find((basis) => basis === value) ?? "all";
 }
 
 export function DimensionFilters({

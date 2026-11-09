@@ -354,14 +354,39 @@ export function MoveFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
 export function TimelineWhen({
   entry,
   zone,
-}: Readonly<{ entry: TimelineMoment; zone: string }>) {
+  repeatsDay = false,
+}: Readonly<{
+  entry: TimelineMoment;
+  zone: string;
+  // The row above fell on the same day. The day then stays for a screen
+  // reader and leaves the screen, so the gutter reads as one date per day.
+  repeatsDay?: boolean;
+}>) {
   const { locale } = useLocale();
   const time = entryTimeOfDay(entry, locale, zone);
+  const day = entryDay(entry, locale, zone);
   return (
     <span className="tl-when t-num">
-      {entryDay(entry, locale, zone)}
+      {repeatsDay ? <span className="sr-only">{day}</span> : day}
       {time && <span className="tl-when-time">{time}</span>}
     </span>
+  );
+}
+
+/**
+ * dayRepeats says, for each moment in a newest-first list, whether the one
+ * above it fell on the same day.
+ */
+export function dayRepeats(
+  moments: readonly (TimelineMoment | undefined)[],
+  locale: Locale,
+  zone: string,
+): boolean[] {
+  const days = moments.map((moment) =>
+    moment ? entryDay(moment, locale, zone) : undefined,
+  );
+  return days.map(
+    (day, index) => index > 0 && day !== undefined && day === days[index - 1],
   );
 }
 

@@ -69,3 +69,16 @@ export function areaUnder(points: string, baseline: number): string {
 export function chartX(index: number, count: number, width: number) {
   return 56 + (index / Math.max(1, count - 1)) * (width - 76);
 }
+
+// Round axis tops whose half is round too. Finer than 1-2-5, so the plot keeps
+// the line in its upper part instead of under half of it.
+const AXIS_STEPS = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
+
+// The axis top: the largest value drawn, raised to a round step so the two
+// grid lines above zero read as round amounts.
+export function niceTop(value: number): number {
+  if (value <= 0) return 1;
+  const magnitude = 10 ** Math.floor(Math.log10(value));
+  const step = AXIS_STEPS.find((m) => m * magnitude >= value * 1.04);
+  return (step ?? 10) * magnitude;
+}

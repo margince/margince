@@ -39,6 +39,12 @@ import (
 const perfRecordDir = "docs/reference/perfbench"
 
 // PerfRecordDir resolves the record directory as an absolute path.
+func PerfRecordDir(t *testing.T) string {
+	t.Helper()
+	return filepath.Join(RepositoryRoot(t), perfRecordDir)
+}
+
+// RepositoryRoot is the absolute path of the repository root.
 //
 // It WALKS UP to the repository root rather than counting `..` segments the way
 // identity's repoArtifact does. That helper is fixed at three levels because
@@ -46,7 +52,7 @@ const perfRecordDir = "docs/reference/perfbench"
 // sit at different depths (integration, and capture one below it), so a shared
 // constant would be wrong for one of them, and a per-caller count is a number
 // nobody re-derives when a package moves.
-func PerfRecordDir(t *testing.T) string {
+func RepositoryRoot(t *testing.T) string {
 	t.Helper()
 	dir, err := os.Getwd()
 	if err != nil {
@@ -57,11 +63,11 @@ func PerfRecordDir(t *testing.T) string {
 		// module has a go.mod, the tools and extensions have their own, and only
 		// the root has the workspace that ties them together.
 		if _, err := os.Stat(filepath.Join(dir, "go.work")); err == nil {
-			return filepath.Join(dir, perfRecordDir)
+			return dir
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			t.Fatalf("no go.work above %s — the perf record has no repository root to write into", dir)
+			t.Fatalf("no go.work above %s — the bench has no repository root to read or write in", dir)
 		}
 		dir = parent
 	}

@@ -39,9 +39,10 @@ func (r approvalPreviewReader) scheduledApprovalPreview(ctx context.Context, app
 	if err != nil {
 		return out, nil //nolint:nilerr // Invalid persisted mail input leaves the held decision incomplete.
 	}
-	links := message.Links
+	links, origin := message.Links, activities.FromAccount(message.Links)
 	if !message.Anchor.IsZero() {
-		links, err = activities.FromActivity(message.Anchor).Resolve(ctx, r.activities)
+		origin = activities.FromActivity(message.Anchor)
+		links, err = origin.Resolve(ctx, r.activities)
 		if previewUnavailable(err) {
 			return out, nil
 		}
@@ -59,7 +60,7 @@ func (r approvalPreviewReader) scheduledApprovalPreview(ctx context.Context, app
 	scheduledDecisionDetails(out)
 	senderApproval := approval
 	senderApproval.ProposedBy = sender
-	if err := r.appendMailPresentation(ctx, senderApproval, input, out); err != nil {
+	if err := r.appendMailPresentation(ctx, senderApproval, origin, links, input, out); err != nil {
 		if previewUnavailable(err) {
 			return out, nil
 		}

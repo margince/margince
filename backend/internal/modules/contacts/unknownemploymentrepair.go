@@ -88,7 +88,7 @@ func (s *Store) repairUnknownEmploymentLinkTx(ctx context.Context, tx pgx.Tx, ca
 	if current {
 		status = "current"
 	}
-	_, err = s.updateRelationshipInTx(ctx, tx, candidate, UpdateRelationshipInput{EmploymentStatus: &status, IfVersion: &version, Evidence: map[string]any{"data_task_run": runID, auditKeyReason: "manual_employment_status_follows_dates"}}, capturedBy)
+	_, err = s.updateRelationshipInTx(ctx, tx, candidate, UpdateRelationshipInput{EmploymentStatus: &status, IfVersion: &version, Evidence: map[string]any{evidenceKeyDataTaskRun: runID, auditKeyReason: "manual_employment_status_follows_dates"}}, capturedBy)
 	return err == nil, err
 }
 

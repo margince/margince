@@ -76,8 +76,9 @@ function coverage(view: AccountCoverage["view"]): AccountCoverage {
           name: "Acme rollout",
           closed_at: "2026-10-24T10:00:00Z",
         },
+        last_inbound: "2026-10-22T10:00:00Z",
         last_outbound: "2026-10-20T10:00:00Z",
-        days_silent: 10,
+        days_silent: 8,
       },
     ],
   };
@@ -143,5 +144,6 @@ it("switches to the silent view and shows the won deal and its silence", async (
   answered = "silent";
   await user.click(screen.getByRole("button", { name: /Won but silent/ }));
   expect(await screen.findByText("Acme rollout")).toBeInTheDocument();
-  expect(screen.getByText(/10 days ago/)).toBeInTheDocument();
+  // The newer of the two moments is the one printed, whichever side sent it.
+  expect(screen.getByText(/22\/10\/2026.*8 days ago/)).toBeInTheDocument();
 });

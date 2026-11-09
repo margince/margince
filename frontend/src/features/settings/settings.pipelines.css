@@ -106,6 +106,12 @@
 .stage-odds > [role="meter"] {
   inline-size: 64px;
 }
+/* The reading holds the width of "100%", so every bar starts on one line. */
+.stage-odds-reading {
+  min-inline-size: 5ch;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
 @media (width < 768px) {
   .stage-odds > [role="meter"] {
     display: none;

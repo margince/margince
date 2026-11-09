@@ -119,7 +119,10 @@ export function recipientSuggestions(
     ) {
       continue;
     }
-    offer(member.email, member.display_name, { identity: member.id });
+    offer(member.email, member.display_name, {
+      identity: member.id,
+      photo: member.avatar_url,
+    });
   }
   return out;
 }

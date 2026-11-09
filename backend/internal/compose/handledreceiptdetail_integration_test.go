@@ -14,12 +14,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -27,18 +32,37 @@ import (
 )
 
 // appliedUnderPolicy decides a staged proposal the way the auto-apply sweep
-// does: as an agent carrying the owner's own grants.
-func appliedUnderPolicy(ctx context.Context, t *testing.T, svc *approvals.Service, id ids.ApprovalID, owner ids.UUID) {
+// does. It acts as an agent with the owner's own grants, bound again in each
+// of the apply's transactions.
+func appliedUnderPolicy(
+	ctx context.Context, t *testing.T, pool *pgxpool.Pool, svc *approvals.Service, id ids.ApprovalID, owner ids.UUID,
+) {
 	t.Helper()
-	actor, ok := principal.Actor(ctx)
-	if !ok {
-		t.Fatal("the reader has no principal to act for")
+	applier, decision := ownersApplier(ctx, t, pool, svc, id, owner)
+	ownerCtx, err := applier.asOwnersAgent(ctx, owner)
+	if err != nil {
+		t.Fatalf("binding the owner's agent: %v", err)
 	}
-	actor.Type, actor.ID, actor.OnBehalfOf = principal.PrincipalAgent, autoApplyActorID, owner
-	actor.Scopes = principal.NewScopeSet(principal.ScopeRead, principal.ScopeWrite)
-	if _, err := svc.ApplyUnderPolicy(principal.WithActor(ctx, actor), id); err != nil {
+	if _, err := svc.ApplyUnderPolicy(ownerCtx, id, applier.ownerNow(decision)); err != nil {
 		t.Fatalf("applying under policy: %v", err)
 	}
+}
+
+// ownersApplier is the production applier over the bound workspace, and its
+// decision to apply one approval for owner. The approval may be one an agent
+// staged, which the sweep itself never picks up.
+func ownersApplier(
+	ctx context.Context, t *testing.T, pool *pgxpool.Pool, svc *approvals.Service, id ids.ApprovalID, owner ids.UUID,
+) (autoApplier, autoApplyDecision) {
+	t.Helper()
+	decision := autoApplyDecision{approval: id, owner: owner}
+	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT kind, target_entity_type, target_entity_id FROM approval WHERE id = $1`, id).
+			Scan(&decision.target.kind, &decision.target.entityType, &decision.target.entityID)
+	}); err != nil {
+		t.Fatalf("reading what approval %s targets: %v", id, err)
+	}
+	return autoApplier{pool: pool, svc: svc, users: identity.NewService(pool)}, decision
 }
 
 // stageDateCard stages a close-date card citing `message`, as the caller.
@@ -102,7 +126,7 @@ func TestAReceiptNamesWhoDidItAndWhatItMoved(t *testing.T) {
 	}
 	moved := today().AddDate(0, 0, 45)
 	card := e.stageDateCard(reader, t, carded, ids.UUID(message.Id), moved)
-	appliedUnderPolicy(reader, t, e.svc, card, e.Rep1)
+	appliedUnderPolicy(reader, t, e.Pool, e.svc, card, e.Rep1)
 	agentDeal := e.seedSweepDeal(t, "Moved by an agent", e.late, new(95), new(30), 1)
 	agent := principal.WithActor(reader, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test", UserID: e.Rep1, OnBehalfOf: e.Rep1,
@@ -110,7 +134,7 @@ func TestAReceiptNamesWhoDidItAndWhatItMoved(t *testing.T) {
 		Scopes: principal.NewScopeSet(principal.ScopeRead, principal.ScopeWrite), Permissions: integration.AdminPerms,
 	})
 	agentCard := e.stageDateCard(agent, t, agentDeal, ids.UUID(message.Id), moved)
-	appliedUnderPolicy(reader, t, e.svc, agentCard, e.Rep1)
+	appliedUnderPolicy(reader, t, e.Pool, e.svc, agentCard, e.Rep1)
 
 	handled, err := newAttentionService(e.Pool, e.svc, time.Now).HandledForYou(reader, nil)
 	if err != nil {
@@ -118,12 +142,18 @@ func TestAReceiptNamesWhoDidItAndWhatItMoved(t *testing.T) {
 	}
 
 	correction := receiptByID(t, handled, e.correctionAuditIDFor(t, swept))
-	if correction.Actor == nil || correction.Actor.Type != crmcontracts.ReceiptActorTypeReceiptActorSystem ||
-		correction.Actor.Id != closeDateSweepActor || correction.Actor.Label.Key != "magic.by.system" {
-		t.Errorf("the sweep's correction names %+v, want the system close-date job", correction.Actor)
+	if correction.Actor == nil || correction.Actor.Type != crmcontracts.ReceiptActorTypeReceiptActorAgent ||
+		correction.Actor.Id != marginceActorID || correction.Actor.Label.Key != "magic.by.agent" ||
+		correction.Actor.OnBehalfOf == nil || ids.UUID(*correction.Actor.OnBehalfOf) != e.Rep1 {
+		t.Errorf("the sweep's correction names %+v, want Margince acting for the deal's owner", correction.Actor)
 	}
-	if change, ok := changeOf(correction, "expected_close_date"); !ok || change.After == nil || change.Before == change.After {
-		t.Errorf("the correction's moved close date reads %+v (found=%t)", change, ok)
+	if change, ok := changeOf(correction, "expected_close_date"); !ok || change.After == nil || change.Before == change.After ||
+		change.Precision == nil || *change.Precision != crmcontracts.MagicFieldChangePrecisionDay {
+		t.Errorf("the correction's moved close date reads %+v (found=%t), want a calendar day", change, ok)
+	}
+	requireImageKey(t, e.Env, ids.UUID(correction.Id), "close_date_provisional")
+	if change, leaked := changeOf(correction, "close_date_provisional"); leaked {
+		t.Errorf("the correction lists close_date_provisional: %+v", change)
 	}
 	if correction.SourceRecord != nil {
 		t.Errorf("a correction cites no message, and names %+v", correction.SourceRecord)
@@ -163,7 +193,7 @@ func TestASourceTheReaderMayNotOpenIsWithheld(t *testing.T) {
 		t.Fatal(err)
 	}
 	card := e.stageDateCard(reader, t, deal, ids.UUID(message.Id), today().AddDate(0, 0, 40))
-	appliedUnderPolicy(reader, t, e.svc, card, e.Rep1)
+	appliedUnderPolicy(reader, t, e.Pool, e.svc, card, e.Rep1)
 	feed := newAttentionService(e.Pool, e.svc, time.Now)
 
 	before, err := feed.HandledForYou(reader, nil)
@@ -186,14 +216,25 @@ func TestASourceTheReaderMayNotOpenIsWithheld(t *testing.T) {
 // A truncated first page continues on the second, which carries every receipt
 // the first left out and none that landed after it was read.
 func TestATruncatedPageContinuesWhereItStopped(t *testing.T) {
-	e := integration.Setup(t)
-	ctx := e.Admin()
+	e := setupCloseDate(t)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	now := clocktest.Now(t)
-	pipeline, open := signedStage(t, e)
-	var svc *approvals.Service
-	for i := range 55 {
-		svc, _ = appliedStageReceiptIn(t, e, now, fmt.Sprintf("Paged project %02d", i), pipeline, open)
+	subject := "Renewal call"
+	message, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{Kind: "call", Subject: &subject, Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
 	}
+	moved := today().AddDate(0, 0, 45)
+	applied := func(name string) ids.ApprovalID {
+		deal := e.seedSweepDeal(t, name, e.late, new(95), new(30), 1)
+		card := e.stageDateCard(ctx, t, deal, ids.UUID(message.Id), moved)
+		appliedUnderPolicy(ctx, t, e.Pool, e.svc, card, e.Rep1)
+		return card
+	}
+	for i := range 55 {
+		applied(fmt.Sprintf("Paged project %02d", i))
+	}
+	svc := e.svc
 	feed := newAttentionService(e.Pool, svc, func() time.Time { return now })
 	first, err := feed.HandledForYou(ctx, nil)
 	if err != nil {
@@ -203,7 +244,7 @@ func TestATruncatedPageContinuesWhereItStopped(t *testing.T) {
 		t.Fatalf("first page: %d receipts, truncated=%t, cursor=%v; want 50, truncated, a cursor",
 			len(first.Receipts), first.Truncated, first.NextCursor)
 	}
-	_, late := appliedStageReceiptIn(t, e, now, "Landed between pages", pipeline, open)
+	late := applied("Landed between pages")
 	second, err := feed.HandledForYou(ctx, first.NextCursor)
 	if err != nil {
 		t.Fatal(err)
@@ -225,8 +266,8 @@ func TestATruncatedPageContinuesWhereItStopped(t *testing.T) {
 		if receipt.Actor == nil {
 			t.Errorf("receipt %s names nobody", id)
 		}
-		if _, ok := changeOf(receipt, "stage_id"); !ok {
-			t.Errorf("stage receipt %s carries no stage change: %+v", id, receipt.Changes)
+		if _, ok := changeOf(receipt, "expected_close_date"); !ok {
+			t.Errorf("receipt %s carries no close-date change: %+v", id, receipt.Changes)
 		}
 	}
 	if _, err := feed.HandledForYou(ctx, new("not-a-cursor")); err == nil {

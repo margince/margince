@@ -32,7 +32,7 @@ func packagesUnder(t *testing.T, root string) []string {
 	t.Helper()
 	seen := map[string]bool{}
 	var pkgs []string
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -187,7 +187,7 @@ var modelPathAssemblySeam = map[string]bool{
 // role has a pool and belongs on the metered compose.NewModelPath.
 func TestNoModelClientOutsideTheGate(t *testing.T) {
 	t.Parallel()
-	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -198,7 +198,7 @@ func TestNoModelClientOutsideTheGate(t *testing.T) {
 		if strings.HasPrefix(rel, "internal/modules/ai/") {
 			return nil // the gate's own module: constructing clients here is its job
 		}
-		src, err := os.ReadFile(path) // #nosec G304 G122 -- path is a *.go file from walking the trusted source tree
+		src, err := gatekit.ReadFile(path) // #nosec G304 G122 -- path is a *.go file from walking the trusted source tree
 		if err != nil {
 			return err
 		}
@@ -234,7 +234,7 @@ func TestNoModelClientOutsideTheGate(t *testing.T) {
 // resolution.
 func funcsCallingSelector(t *testing.T, dir, pkgIdent, funcName string) []string {
 	t.Helper()
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", dir, err)
 	}

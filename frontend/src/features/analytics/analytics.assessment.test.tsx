@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { formatAnalyticsMoney } from "../../format/format";
 import {
   installFetchStub,
   jsonResponse,
@@ -287,7 +288,7 @@ it("omits legacy checking assurances while keeping measured actions", async () =
 });
 
 it.each(["de", "vi"] as const)(
-  "keeps grouped whole amounts in %s prose and the decision",
+  "writes grouped whole amounts in %s prose and the decision with their sign",
   async (locale) => {
     const line = {
       text: "Pipeline is 12.345 EUR.",
@@ -318,9 +319,18 @@ it.each(["de", "vi"] as const)(
       undefined,
       locale,
     );
-    expect(await screen.findByText("Pipeline is 12.345 EUR.")).toBeVisible();
-    expect(screen.getByText(/Review the 12\.345 EUR pipeline/)).toBeVisible();
-    expect(screen.queryByText(/≈12 EUR/)).toBeNull();
+    // The money format spaces its sign with a no-break space.
+    const spaced = (text: string) => text.replace(/\s+/g, " ");
+    const amount = spaced(formatAnalyticsMoney(1_234_500, "EUR", locale));
+    expect(
+      await screen.findByText(`Pipeline is ${amount}.`, { normalizer: spaced }),
+    ).toBeVisible();
+    expect(
+      screen.getByText(new RegExp(`Review the ${amount} pipeline`), {
+        normalizer: spaced,
+      }),
+    ).toBeVisible();
+    expect(screen.queryByText(/EUR/)).toBeNull();
   },
 );
 it("omits unsupported compact legacy prose", async () => {

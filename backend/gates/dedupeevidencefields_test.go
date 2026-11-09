@@ -6,13 +6,13 @@
 package gates
 
 import (
-	"os"
 	"regexp"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The dedupe evidence snapshot is stored as free JSON, so nothing about a field
@@ -79,7 +79,7 @@ func TestEveryDedupeEvidenceSignalIsNameableOnTheWire(t *testing.T) {
 // verdicts and reporting confident nonsense.
 func publishedEvidenceEnum(t *testing.T, property string) []string {
 	t.Helper()
-	source, err := os.ReadFile("api/crm.yaml")
+	source, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { components } from "../../src/api/schema";
 import {
   reportingStoryCatalog,
   reportingStoryEvaluation,
@@ -298,6 +299,14 @@ export const routes: readonly MockRoute[] = [
     method: "GET",
     path: /^\/deals\/([^/]+)\/commitments$/,
     handle: reply({ data: [], has_more: false, complete: true }),
+  },
+  {
+    method: "GET",
+    path: /^\/deals\/[^/]+\/products$/,
+    handle: reply({
+      data: [],
+      tag: "empty",
+    } satisfies components["schemas"]["DealProductListResponse"]),
   },
   { path: (path) => path.startsWith("/deals/"), handle: records.getDeal },
   { method: "GET", path: "/magic", handle: reply(work.magicReceipt) },

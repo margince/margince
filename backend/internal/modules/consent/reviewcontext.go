@@ -40,6 +40,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -188,24 +189,76 @@ func (s *Store) RecordContext(
 			return Review{}, err
 		}
 	}
+	if err := s.recordStatement(ctx, in, refusal); err != nil {
+		return Review{}, err
+	}
+	// Read again instead of patching the copy in hand: the caller needs to know
+	// whether the message can go now. A suppression recorded while the rep was
+	// typing is the case a patched copy would miss.
+	return s.ReviewForReader(ctx, reviewID)
+}
+
+// recordStatement writes the rep's statement. A meeting in person goes through
+// recordFaceToFaceTx, the writer the source review shares. A statement against
+// a message about a deal is about that deal, so the next message reuses it.
+func (s *Store) recordStatement(ctx context.Context, in RecordContextInput, refusal RefusedRecipient) error {
+	if in.Kind == kindInPerson {
+		if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+			return s.recordFaceToFaceTx(ctx, tx, in.SubjectID, faceToFaceMeeting{
+				note: in.Note, met: in.OccurredAt, aboutDeal: refusal.dealID(),
+			})
+		}); err != nil {
+			return err
+		}
+		return s.settleSourceReviewsByMeeting(ctx, in)
+	}
 	// A request stated against a refused quote is a request for that quote.
-	// One stated against a message about a deal is about that deal. So the
-	// rep confirms once and the next message about the deal reuses it.
-	if _, err := s.RecordQualifyingEvent(ctx, in.SubjectID, RecordQualifyingEventInput{
+	_, err := s.RecordQualifyingEvent(ctx, in.SubjectID, RecordQualifyingEventInput{
 		Kind:       in.Kind,
 		Note:       in.Note,
 		OccurredAt: in.OccurredAt,
 		AsksForQuote: in.Kind == KindRequestedBySubject &&
 			refusal.claim() == commsauthz.CategoryPrecontractQuote,
 		AboutDeal: refusal.dealID(),
-	}); err != nil {
-		return Review{}, err
+	})
+	return err
+}
+
+// mayChangeNoticeCases reports whether the caller passes the notice-case gate.
+func mayChangeNoticeCases(ctx context.Context) bool {
+	return requireNoticeCaseUpdate(ctx) == nil
+}
+
+// settleSourceReviewsByMeeting settles the contact's open source reviews with
+// the meeting, through AssessNoticeSource and its gate. A caller without the
+// notice-case grant leaves them for the privacy officer.
+func (s *Store) settleSourceReviewsByMeeting(ctx context.Context, in RecordContextInput) error {
+	if !mayChangeNoticeCases(ctx) {
+		return nil
 	}
-	// RE-READ, rather than patching the copy in hand. What the caller needs to
-	// know is whether the message can go NOW, and the only honest source for
-	// that is the row as it stands after the write — a suppression recorded
-	// while the rep was typing is exactly the case a patched copy would miss.
-	return s.ReviewForReader(ctx, reviewID)
+	var reviews []ids.UUID
+	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		reviews, err = collectIDs(ctx, tx, `
+			SELECT id FROM privacy_notice_case WHERE contact_id = $1 AND state = $2 ORDER BY created_at`,
+			in.SubjectID, string(NoticeSourceReview))
+		return err
+	}); err != nil {
+		return fmt.Errorf("consent: reading the source reviews a meeting answers: %w", err)
+	}
+	now := s.now().UTC()
+	met := in.OccurredAt
+	if met.After(now) {
+		met = now
+	}
+	for _, review := range reviews {
+		if _, err := s.AssessNoticeSource(ctx, review, SourceAssessment{
+			Kind: faceToFaceSource, MetInPerson: true, ObtainedAt: &met, Note: in.Note, Now: now,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // requestAnswersClaim reports whether the claim's validator reads this
@@ -268,22 +321,16 @@ func HeldSubjectsForReview(review Review) []ids.ContactID {
 // and no longer supports an unprompted message — and the next move is a
 // recorded exception, not a differently worded sentence.
 func (s *Store) refuseAnExchangeTooOldToCount(ctx context.Context, subject ids.ContactID, occurredAt time.Time) error {
+	var counts bool
 	var window time.Duration
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		country, err := recipientCountryTx(ctx, tx, ruleSubject{Kind: entityContact, ID: subject.String()})
-		if err != nil {
-			return err
-		}
-		window = packRulesFor(country).reply
-		return nil
+		var err error
+		counts, window, err = exchangeStillCountsTx(ctx, tx, subject, occurredAt, s.now())
+		return err
 	}); err != nil {
 		return err
 	}
-	// NOT-BEFORE rather than after, matching recordedQualifyingEvent's own
-	// `occurred_at >= since`. An exclusive bound here would refuse a statement
-	// exactly at the edge that the verdict would have read — a refusal the rep
-	// cannot act on, about a fact that would have worked.
-	if !occurredAt.Before(time.Now().Add(-window)) {
+	if counts {
 		return nil
 	}
 	return &ContextNotAnswerableError{
@@ -340,14 +387,15 @@ func aStopThatBindsTheMessage(
 	ctx context.Context, db *database.DB, subject ids.ContactID, refusal RefusedRecipient,
 ) (string, error) {
 	var stops []liveStop
+	lowered, hashes := storekit.StopAddressArgs(refusal.Address)
 	err := db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT DISTINCT kind, purpose_id FROM communication_suppression
+			SELECT DISTINCT kind, purpose_id FROM communication_suppression s
 			 WHERE revoked_at IS NULL
 			   AND (contact_id = $1
 			        OR lead_id = $1
-			        OR (address IS NOT NULL AND $2 <> '' AND lower(address) = lower($2)))`,
-			subject.UUID, refusal.Address)
+			        OR `+storekit.StopOnAddressesSQL("s", "$2", "$3")+`)`,
+			subject.UUID, lowered, hashes)
 		if err != nil {
 			return err
 		}

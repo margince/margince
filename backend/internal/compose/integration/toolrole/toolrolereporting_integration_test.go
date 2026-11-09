@@ -136,12 +136,6 @@ var reportingFixtures = map[string]func(p *recordPool) map[string]any{
 		return map[string]any{"id": p.take("sales_decision"), "request_body": map[string]any{"result": "They took the pilot."}}
 	},
 	"revoke_forecast_share": byID("forecast_share_id"),
-	"wait_input_check": func(p *recordPool) map[string]any {
-		return map[string]any{"id": p.take("deal_finding"), "request_body": map[string]any{"until": p.sweepStart.AddDate(0, 0, 30).Format(time.DateOnly)}}
-	},
-	"close_lost_input_check": func(p *recordPool) map[string]any {
-		return map[string]any{"id": p.take("deal_finding"), "request_body": map[string]any{"lost_reason": "They chose a rival."}}
-	},
 	"resolve_input_check": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("next_step_finding"), "request_body": map[string]any{"outcome": "value_correct", "reason": "Checked with the buyer."}}
 	},
@@ -264,7 +258,6 @@ func reportingSeeders(s sweepSeed) map[string]func() string {
 		"forecast_share_id": func() string {
 			return s.post("/v1/forecast/shares", integration.AnyMap{"kind": "live", "target": "forecast"})
 		},
-		"deal_finding":      func() string { return finding("deal_viability") },
 		"next_step_finding": func() string { return finding("no_next_step") },
 	}
 }

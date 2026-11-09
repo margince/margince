@@ -32,7 +32,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"io/fs"
-	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -193,7 +192,7 @@ func modelReplyUnmarshalSites(t *testing.T) map[string]bool {
 	// Relative to backend/, not to this package: gates_test.go's TestMain chdirs
 	// one level up so every gate reads the tree from the same place.
 	root := "internal"
-	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	if err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

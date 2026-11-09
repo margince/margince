@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer names Sofia Meier by full name and pronoun ('her'), and explicitly states that 'contacting or visiting them is her decision,' establishing that the visit is the owner's call.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 6. The answer tells the reader to go through the account's owner before visiting: to ask, check with or tell the owner first, or that the visit is the owner's call. Naming the owner by first name, full name or a pronoun that follows the name all count. Answer no if it only names who owns each company without saying what that means for the visit, or if it advises calling or checking first without naming whom to go through.",
+  "answer": "There are three companies in Köln in the CRM. All three are owned by Sofia Meier, so contacting or visiting them is her decision: Dom Digital GmbH, Rheinufer AG and Vorort Systeme KG."
+}

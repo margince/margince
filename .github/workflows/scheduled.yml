@@ -252,41 +252,6 @@ jobs:
           REPO: ${{ github.repository }}
         run: ./scripts/check-renovate-liveness.sh
 
-  backend-lane:
-    # The DAILY cadence. Spelled per job because a job with no `if` runs on
-    # every trigger the workflow has, so the weekly perf cron would otherwise
-    # run this a second time on Mondays — a second 45-minute gate, and a
-    # second "still failing" comment on every issue the 01:00 run just filed.
-    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 1 * * *'
-    name: backend lane (main)
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          # rbacbaselineerafixture_test.go reads the migration baseline commit and
-          # fail rather than degrade on a shallow checkout.
-          fetch-depth: 0
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: backend/go.mod
-          cache-dependency-path: backend/go.sum
-      - name: Restore the Go build cache
-        uses: ./.github/actions/go-build-cache
-        with:
-          flavor: plain
-      - name: Gate binaries on PATH
-        uses: ./.github/actions/gate-binaries
-        with:
-          # A dispatch from another branch would save an entry only it can read.
-          save: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && 'true' || 'false' }}
-      - name: Backend merge gate (make check-backend)
-        working-directory: .
-        run: make check-backend
-
   # The backend's counterpart to fe-clock-drift: the suite's verdict must not
   # depend on the calendar. It moves the runner's own clock, and
   # scripts/clock-drift-host.sh says why no other shift reaches both Go and
@@ -296,12 +261,12 @@ jobs:
   # pull all finish at the real date, because a 200-day jump expires the TLS
   # certificates they verify. Only then does the clock move.
   backend-clock-drift:
-    # The DAILY cadence, spelled per job for the reason backend-lane states: a
-    # job with no `if` runs on every trigger the workflow has.
+    # The DAILY cadence, spelled per job: a job with no `if` runs on every
+    # trigger the workflow has, so the weekly perf cron would run this too.
     if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 1 * * *'
     name: backend clock drift (main, +200 days)
     runs-on: ubuntu-latest
-    # Longer than backend-lane's 45: this runs the integration lane too, on one
+    # This runs the integration lane too, on one
     # runner rather than across the shards ci.yml splits it into.
     timeout-minutes: 90
     permissions:
@@ -1220,7 +1185,7 @@ jobs:
   # fails, so it is guarded on !cancelled() rather than needs alone.
   report:
     name: report
-    needs: [vuln, quality-gate, renovate-liveness, backend-lane, backend-clock-drift, fe-clock-drift, fe-all-stories, perf-budgets, perf-mobile, llm-use-cases, records, records-pr, reap-caches, slop-trend, vendor-live, role-sweep]
+    needs: [vuln, quality-gate, renovate-liveness, backend-clock-drift, fe-clock-drift, fe-all-stories, perf-budgets, perf-mobile, llm-use-cases, records, records-pr, reap-caches, slop-trend, vendor-live, role-sweep]
     # Every result, not only the failures — see the same condition in
     # main-health.yml for why. In short: the reporter now retracts a finding
     # whose check came back green, and a job gated on a failure is never reached
@@ -1262,7 +1227,6 @@ jobs:
           RENOVATE_RESULT: ${{ needs['renovate-liveness'].result }}
           RENOVATE_STATUS: ${{ needs['renovate-liveness'].outputs.status }}
           RENOVATE_OUTCOME: ${{ needs['renovate-liveness'].outputs.outcome }}
-          LANE_RESULT: ${{ needs.backend-lane.result }}
           CLOCK_RESULT: ${{ needs['fe-clock-drift'].result }}
           BACKEND_CLOCK_RESULT: ${{ needs['backend-clock-drift'].result }}
           STORIES_RESULT: ${{ needs['fe-all-stories'].result }}
