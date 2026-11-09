@@ -118,6 +118,35 @@ func TestAnInvitedColleaguesLoginIsInternalBeforeAndAfterActivation(t *testing.T
 	}
 }
 
+// An invited login reserves its address. Another seat's typed alias for it no
+// longer makes that seat answer its mail, and the invitation owes no answer.
+func TestAnInvitedLoginReservesItsAddressFromAnotherSeatsAlias(t *testing.T) {
+	e := integration.Setup(t)
+	const address = "shared@colleague.example"
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	if _, err := capture.NewOwnerIdentityStore(e.DB()).Add(rep, capture.IdentityKindAddress, address); err != nil {
+		t.Fatal(err)
+	}
+	if !seatAnswers(answeringSeats(t, e), e.Rep1.String(), address) {
+		t.Fatal("the alias did not make its seat answer the address; this case proves nothing")
+	}
+	invitedColleague(t, e, address)
+	for seat, addresses := range answeringSeats(t, e) {
+		if seatAnswers(map[string][]string{seat: addresses}, seat, address) {
+			t.Fatalf("seat %s answers %s after it became an invited login", seat, address)
+		}
+	}
+}
+
+func seatAnswers(seats map[string][]string, seat, address string) bool {
+	for _, held := range seats[seat] {
+		if strings.EqualFold(held, address) {
+			return true
+		}
+	}
+	return false
+}
+
 // A revoked invitation makes the address an outside party again.
 func TestARevokedInvitationMakesTheAddressOutsideAgain(t *testing.T) {
 	e := integration.Setup(t)
@@ -204,7 +233,12 @@ func TestInvitationWritersWaitForASeatCheckInFlight(t *testing.T) {
 			second, _, err = users.InviteUser(e.Admin(), admin, identity.InviteUserInput{Email: "second@colleague.example", DisplayName: "Second", Role: "rep"})
 			return err
 		}},
-		{"email change", "moved@colleague.example", nil, func() error {
+		{"email change, new address", "interim@colleague.example", nil, func() error {
+			return users.UpdateMember(e.Admin(), admin, seat, identity.MemberEdit{
+				Name: "Invited colleague", Email: "interim@colleague.example", ExpectedUpdatedAt: memberUpdatedAt(t, e, seat),
+			})
+		}},
+		{"email change, old address", "interim@colleague.example", nil, func() error {
 			return users.UpdateMember(e.Admin(), admin, seat, identity.MemberEdit{
 				Name: "Invited colleague", Email: "moved@colleague.example", ExpectedUpdatedAt: memberUpdatedAt(t, e, seat),
 			})

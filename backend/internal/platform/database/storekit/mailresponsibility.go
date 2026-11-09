@@ -88,8 +88,9 @@ func UnambiguousMailSeatIdentities(ctx context.Context, tx pgx.Tx) (map[string][
 		case loginSource, provedMailboxSource:
 			claim(record.seat, record.label, 2)
 		case invitedLoginSource:
-			// An invitation makes the address internal but owes no answer to
-			// mail until the seat is redeemed.
+			// An invited login reserves its address at login strength, so no
+			// other seat's alias takes it, and owes no answer until redeemed.
+			claim("", record.label, 2)
 		case "user":
 			claim(record.seat, record.label, 1)
 		default:
