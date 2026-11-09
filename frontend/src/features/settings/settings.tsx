@@ -144,7 +144,7 @@ export function tabContent(
     case "meetings":
       return <MeetingSettings part={meetingsPart(tab)} />;
     case "voice":
-      return <VoiceDnaCard />;
+      return <VoiceDnaCard tab={tab} />;
     case "agents":
       return <AiAccessTab />;
     case "connections":

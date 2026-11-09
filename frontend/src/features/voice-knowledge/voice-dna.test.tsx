@@ -4,6 +4,7 @@ import {
   cleanup,
   render as rtlRender,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -168,6 +169,7 @@ function render(ui: ReactNode) {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  globalThis.location.hash = "";
 });
 
 // The zone's input is the one control the intake has; a file is handed to it
@@ -319,15 +321,20 @@ describe("the Settings Voice DNA card with a profile", () => {
     );
   }
 
-  it("gives every subject its own named card", async () => {
+  it.each([
+    ["samples", "Make it sharper"],
+    ["rules", "Your rules"],
+    ["builds", "Builds"],
+  ])("gives the %s tab its own named card", async (tab, heading) => {
     stubProfile();
-    render(<VoiceDnaCard />);
+    render(<VoiceDnaCard tab={tab} />);
+    expect(await screen.findByRole("heading", { name: heading })).toBeTruthy();
+    expect(screen.getByText("Only you can see your Voice DNA.")).toBeTruthy();
+  });
 
-    for (const heading of ["Make it sharper", "Your rules", "Builds"]) {
-      expect(
-        await screen.findByRole("heading", { name: heading }),
-      ).toBeTruthy();
-    }
+  it("keeps the rules the writer sets as rows of the rules card", async () => {
+    stubProfile();
+    render(<VoiceDnaCard tab="rules" />);
     // The preferences and the derived text are the rules the writer sets, as
     // rows inside that card rather than as two more header bands. "Derived
     // voice" is there only while the profile is not ready: a ready one is
@@ -340,7 +347,6 @@ describe("the Settings Voice DNA card with a profile", () => {
     }
     expect(within(rules).getByText("Preferences")).toBeTruthy();
     expect(within(rules).getByText("Derived voice")).toBeTruthy();
-    expect(screen.getByText("Only you can see your Voice DNA.")).toBeTruthy();
   });
 
   it("keeps the corpus and the way to add to it in one card", async () => {
@@ -369,14 +375,20 @@ describe("the Settings Voice DNA card with a profile", () => {
   // content starts to matter.
   it("names every writing box without relying on its placeholder", async () => {
     stubProfile();
-    render(<VoiceDnaCard />);
+    render(<VoiceDnaCard tab="rules" />);
     // The preferences box takes its name from the row that names the decision,
     // so the words on screen and the name it announces are one string.
     expect(
       await screen.findByRole("textbox", { name: "Preferences" }),
     ).toBeTruthy();
-    // The file control takes its name from the row above the zone.
-    expect(screen.getByLabelText("Add writing samples")).toBe(fileInput());
+  });
+
+  it("names the file control from the row above the zone", async () => {
+    stubProfile();
+    render(<VoiceDnaCard tab="samples" />);
+    expect(await screen.findByLabelText("Add writing samples")).toBe(
+      fileInput(),
+    );
   });
 });
 
@@ -676,15 +688,15 @@ describe("what the build button is called", () => {
       status: "ready",
       profile_version: 2,
     });
-    render(<VoiceDnaCard />);
+    render(<VoiceDnaCard tab="builds" />);
     expect(
       await screen.findByRole("button", { name: /Rebuild Voice DNA/ }),
     ).toBeTruthy();
   });
 
   // A finished first build refetches the profile, so the hero stops offering
-  // the first build and the Builds card takes over the rebuild.
-  it("hands the build to the Builds card once the first build succeeds", async () => {
+  // the first build; the Builds tab offers the rebuild from then on.
+  it("stops offering the first build in the hero once it succeeds", async () => {
     let profile: VoiceProfile = { ...PROFILE, maturity: "provisional" };
     vi.stubGlobal(
       "fetch",
@@ -719,12 +731,11 @@ describe("what the build button is called", () => {
       await within(hero).findByRole("button", { name: /Build Voice DNA/ }),
     );
 
-    expect(
-      await screen.findByRole("button", { name: /Rebuild Voice DNA/ }),
-    ).toBeTruthy();
-    expect(
-      within(hero).queryByRole("button", { name: /Build Voice DNA/ }),
-    ).toBeNull();
+    await waitFor(() =>
+      expect(
+        within(hero).queryByRole("button", { name: /Build Voice DNA/ }),
+      ).toBeNull(),
+    );
   });
 });
 
@@ -775,6 +786,17 @@ describe("a version awaiting review", () => {
     expect(
       within(hero).queryByRole("button", { name: /Build Voice DNA/ }),
     ).toBeNull();
+  });
+
+  it("opens the rules tab from the hero once a voice is learned", async () => {
+    stubWith([{ ...candidateVersion([]), id: "v-1", status: "active" }]);
+    globalThis.location.hash = "#/settings/voice";
+    render(<VoiceDnaCard />);
+    const hero = await screen.findByRole("region", { name: "Your Voice DNA" });
+    await userEvent.click(
+      await within(hero).findByRole("button", { name: "Edit your rules" }),
+    );
+    expect(globalThis.location.hash).toMatch(/^#\/settings\/voice\/rules\b/);
   });
 
   it("keeps the active voice on top and reviews a newer one under it", async () => {
