@@ -109,7 +109,7 @@ Return ONLY a JSON object: {"narrative":"..."}
 
 "narrative" is ONE or TWO sentences. Not a list, not a heading, not a greeting.
 
-Say what the week WAS, in the order a colleague would say it: the thing that most changed, then the thing most worth doing something about. A won deal outranks a count. A promise broken outranks a promise kept.
+Say what the week WAS, in the order a colleague would say it: the thing that most changed, then the thing most worth doing something about. A won deal outranks a count. A promise broken outranks a promise kept. A proposal accepted or a deal moved is never left out.
 
 Every number and every name you write must appear in the summary. Name the deal that most changed the week by its label, because that is how the reader knows it; naming any other deal is optional. Never add a fact the summary does not carry — no company you were not given, no reason nobody stated, no comparison to a week you cannot see.
 
