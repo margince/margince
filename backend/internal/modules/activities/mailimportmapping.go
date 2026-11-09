@@ -8,6 +8,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The fields an importer supplies about a message it is handing over: who it
@@ -21,6 +22,7 @@ const (
 	fieldParticipants  = "participants"
 	fieldRFCMessageID  = "rfc_message_id"
 	fieldThreadKey     = "thread_key"
+	fieldInReplyTo     = "in_reply_to_activity_id"
 	fieldICalUID       = "ical_uid"
 	fieldICalInstance  = "ical_instance"
 	fieldDirection     = "direction"
@@ -175,6 +177,7 @@ func mailIdentityFrom(req crmcontracts.CreateActivityRequest, in *LogActivityInp
 		{req.Participants != nil, isEmail, fieldParticipants, onlyAnEmail},
 		{req.RfcMessageId != nil, isEmail, fieldRFCMessageID, onlyAnEmail},
 		{req.ThreadKey != nil, isEmail, fieldThreadKey, onlyAnEmail},
+		{req.InReplyToActivityId != nil, isEmail, fieldInReplyTo, onlyAnEmail},
 		{req.IcalUid != nil, isMeeting, fieldICalUID, onlyAMeeting},
 		{req.IcalInstance != nil, isMeeting, fieldICalInstance, onlyAMeeting},
 	} {
@@ -191,11 +194,20 @@ func mailIdentityFrom(req crmcontracts.CreateActivityRequest, in *LogActivityInp
 	if req.ThreadKey != nil {
 		in.ThreadKey = strings.TrimSpace(*req.ThreadKey)
 	}
+	if req.InReplyToActivityId != nil {
+		if in.ThreadKey != "" {
+			return &ReplyFieldError{Field: fieldInReplyTo, Message: "Name the mail this replies to or its thread_key, not both."}
+		}
+		in.InReplyTo = new(ids.UUID(*req.InReplyToActivityId))
+	}
 	// A message with no stated conversation starts one under its own id, which
 	// is what capture does for a mail that begins a thread.
 	if in.ThreadKey == "" {
 		in.ThreadKey = in.RFCMessageID
 	}
+	// A mail typed in by hand, with no identity of its own, starts a thread under
+	// its activity id (ownThreadKey). A later logged reply can then join it.
+	in.ownThread = isEmail && in.ThreadKey == "" && req.SourceSystem == nil
 	return meetingIdentityInto(req, in)
 }
 

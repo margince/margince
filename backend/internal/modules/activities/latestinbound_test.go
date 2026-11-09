@@ -85,17 +85,21 @@ func TestWhoseMoveFollowsTheMailBadgeThenTheDirection(t *testing.T) {
 		name      string
 		move      *crmcontracts.EmailSummaryMove
 		direction string
+		owed      bool
 		want      crmcontracts.LastExchangeWhoseMove
 	}{
-		{"a mail we wait on", badge(crmcontracts.EmailSummaryMoveWaitingForThem), in, crmcontracts.LastExchangeWhoseMoveThem},
-		{"a mail that needs our reply", badge(crmcontracts.EmailSummaryMoveNeedsReply), out, crmcontracts.LastExchangeWhoseMoveUs},
-		{"a mail that settles the thread", badge(crmcontracts.EmailSummaryMoveNone), in, crmcontracts.LastExchangeWhoseMoveNeither},
-		{"a call we made", nil, out, crmcontracts.LastExchangeWhoseMoveThem},
-		{"a call they made", nil, in, crmcontracts.LastExchangeWhoseMoveUs},
-		{"a meeting", nil, "", crmcontracts.LastExchangeWhoseMoveNeither},
+		{"a mail we wait on", badge(crmcontracts.EmailSummaryMoveWaitingForThem), in, false, crmcontracts.LastExchangeWhoseMoveThem},
+		{"a mail that needs our reply", badge(crmcontracts.EmailSummaryMoveNeedsReply), out, false, crmcontracts.LastExchangeWhoseMoveUs},
+		{"a mail that settles the thread", badge(crmcontracts.EmailSummaryMoveNone), in, false, crmcontracts.LastExchangeWhoseMoveNeither},
+		{"a call we made", nil, out, false, crmcontracts.LastExchangeWhoseMoveThem},
+		{"a call they made", nil, in, false, crmcontracts.LastExchangeWhoseMoveUs},
+		{"a meeting", nil, "", false, crmcontracts.LastExchangeWhoseMoveNeither},
+		{"our reply that left their mail owed", badge(crmcontracts.EmailSummaryMoveWaitingForThem), out, true, crmcontracts.LastExchangeWhoseMoveUs},
+		{"our unbadged reply that left their mail owed", badge(crmcontracts.EmailSummaryMoveNone), out, true, crmcontracts.LastExchangeWhoseMoveUs},
+		{"their mail never turns on an earlier one", badge(crmcontracts.EmailSummaryMoveWaitingForThem), in, true, crmcontracts.LastExchangeWhoseMoveThem},
 	}
 	for _, c := range cases {
-		if got := WhoseMove(c.move, c.direction); got != c.want {
+		if got := WhoseMove(c.move, c.direction, c.owed); got != c.want {
 			t.Errorf("%s: whose move = %s, want %s", c.name, got, c.want)
 		}
 	}
