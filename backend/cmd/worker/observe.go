@@ -213,6 +213,7 @@ func startObserveListener(ctx context.Context, cfg workerConfig, pool *pgxpool.P
 func writeProcessSections(w io.Writer) {
 	ai.WriteProcessMetrics(w)
 	compose.WriteCaptureProcessMetrics(w)
+	compose.WriteJobProcessMetrics(w)
 }
 
 // mountPprof puts Go's runtime profiles on the observe mux, and ONLY there.

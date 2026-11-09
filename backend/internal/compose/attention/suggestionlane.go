@@ -13,17 +13,19 @@ import (
 	"log/slog"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 const sourceDealSuggestion = "deal_suggestion"
 
-// DealSuggestions reads the open suggestions THIS reader may see, newest first,
-// and how many there are. Both answer under the deals store's own visibility
-// rule, so the count is never of suggestions the page could not show.
+// DealSuggestions reads the open suggestions this reader may see whose company
+// owner is in owners, newest first, and how many there are. Both answer
+// under the deals store's own visibility rule, so the count is never of
+// suggestions the page could not show. Nil owners is unrestricted.
 type DealSuggestions interface {
-	OpenSuggestions(ctx context.Context, limit int) ([]crmcontracts.DealSuggestion, error)
-	CountOpen(ctx context.Context) (int, error)
+	OpenSuggestions(ctx context.Context, owners *storekit.OwnerSet, limit int) ([]crmcontracts.DealSuggestion, error)
+	CountOpen(ctx context.Context, owners *storekit.OwnerSet) (int, error)
 }
 
 // WithDealSuggestions binds the suggestion reader. Unbound, the lane carries
@@ -53,17 +55,31 @@ func (s *Service) suggestionLanes(ctx context.Context, depth int, count *laneCou
 	return deal, tag
 }
 
-// openSuggestionItems renders up to depth deal suggestions and answers their total.
+// openSuggestionItems renders up to depth deal suggestions and answers their
+// total. The company owner decides a suggestion, so both reads are narrowed to
+// the scope's owners the way the at-risk lane is. Mine with no human behind it
+// is denied, which shows no suggestions and no count.
 func (s *Service) openSuggestionItems(
 	ctx context.Context, depth int,
 ) ([]crmcontracts.AttentionItem, *int, *crmcontracts.WorklistSourceUnavailable) {
-	if s.suggestions == nil || !s.unassignedDecisions() {
+	if s.suggestions == nil {
 		return nil, nil, nil
 	}
+	scoped := s
+	if s.suggestionsOfReader {
+		scoped = s.forReader()
+	}
+	var owners *storekit.OwnerSet
 	return readSuggestionLane(ctx, s, sourceDealSuggestion,
 		func(ctx context.Context) ([]crmcontracts.DealSuggestion, error) {
-			return s.suggestions.OpenSuggestions(ctx, depth)
-		}, s.suggestions.CountOpen, suggestionItem)
+			var err error
+			if owners, err = scoped.recordOwners(ctx); err != nil {
+				return nil, err
+			}
+			return s.suggestions.OpenSuggestions(ctx, owners, depth)
+		}, func(ctx context.Context) (int, error) {
+			return s.suggestions.CountOpen(ctx, owners)
+		}, suggestionItem)
 }
 
 // readSuggestionLane reads one suggestion producer's page and total.
@@ -105,7 +121,8 @@ func readSuggestionLane[T any](
 
 // suggestionItem renders one suggestion. Its subject is the company, which is
 // where `open` leads; `decide` opens the deal and `dismiss` records that it is
-// not one. It carries no title: the client words the row from its source and
+// not one. The company's current owner is its decider, so the scope filters
+// route it to that owner. It carries no title: the client words the row from its source and
 // the company's name, so the row repeats no text from the evidence.
 func suggestionItem(suggestion crmcontracts.DealSuggestion) crmcontracts.AttentionItem {
 	kind := string(suggestion.Kind)
@@ -121,6 +138,7 @@ func suggestionItem(suggestion crmcontracts.DealSuggestion) crmcontracts.Attenti
 		Actions: []crmcontracts.AttentionItemActions{
 			crmcontracts.AttentionItemActionsDecide, actionDismiss, crmcontracts.AttentionItemActionsOpen,
 		},
+		RequestedDeciderId: suggestion.OwnerId,
 	}
 }
 

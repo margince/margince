@@ -56,3 +56,18 @@ func TestOnlyAHumanRoutingEditorMaySaveTaskOverrides(t *testing.T) {
 		t.Fatalf("an agent read: %d %s", rec.Code, rec.Body)
 	}
 }
+
+// A task key is arbitrary, and a stored override outlives its task. So a dotted
+// key's timeout stays with the task layer too.
+func TestEveryTaskTimeoutPathIsLeftToTheTaskLayer(t *testing.T) {
+	for path, want := range map[string]bool{
+		"capture_classify.decision_timeout_ms": true,
+		"retired.task.attempt_timeout_ms":      true,
+		"capture_classify.thinking":            false,
+		"decision_timeout_ms":                  false,
+	} {
+		if got := taskOverrideBoundIsOwned(path); got != want {
+			t.Errorf("taskOverrideBoundIsOwned(%q) = %v, want %v", path, got, want)
+		}
+	}
+}

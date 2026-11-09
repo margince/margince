@@ -19,11 +19,13 @@ package approvals
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -90,10 +92,14 @@ func (s *Service) DecideBundle(ctx context.Context, bundleID ids.UUID, approve b
 	if err != nil {
 		return nil, err
 	}
+	footprints, err := s.bundleFootprints(ctx, bundleID)
+	if err != nil {
+		return nil, err
+	}
 	var members []BundleMember
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		members, err = s.decideBundleInTx(ctx, tx, p, bundleID, approve, reason, ready)
+		members, err = s.decideBundleInTx(ctx, tx, p, bundleID, approve, reason, ready, footprints)
 		return err
 	})
 	if err != nil {
@@ -115,17 +121,17 @@ func (s *Service) DecideBundle(ctx context.Context, bundleID ids.UUID, approve b
 // closes everywhere else. And a bundle past the cap must be refused whole rather
 // than applied to a prefix, which is only possible while nothing has been
 // decided yet.
-func (s *Service) decideBundleInTx(ctx context.Context, tx pgx.Tx, p principal.Principal, bundleID ids.UUID, approve bool, reason *string, ready map[ids.ApprovalID]bool) ([]BundleMember, error) {
+func (s *Service) decideBundleInTx(ctx context.Context, tx pgx.Tx, p principal.Principal, bundleID ids.UUID, approve bool, reason *string, ready map[ids.ApprovalID]bool, footprints map[ids.ApprovalID]json.RawMessage) ([]BundleMember, error) {
 	rows, oversized, err := bundleMembers(ctx, tx, bundleID, true)
 	if err != nil {
 		return nil, err
 	}
-	mine, err := s.decidableMembers(ctx, tx, p, rows, approve)
+	mine, visible, err := s.decidableMembers(ctx, tx, p, rows, approve)
 	if err != nil {
 		return nil, err
 	}
 	if len(mine) == 0 {
-		return nil, apperrors.ErrNotFound
+		return nil, hiddenBundle(ctx, len(rows), visible)
 	}
 	if oversized {
 		return nil, &BundleTooLargeError{Cap: bundleDecisionCap}
@@ -143,7 +149,7 @@ func (s *Service) decideBundleInTx(ctx context.Context, tx pgx.Tx, p principal.P
 			out = append(out, BundleMember{Approval: a, Outcome: BundleRefused})
 			continue
 		}
-		member, err := s.decideMemberInTx(ctx, tx, p, a, approve, reason)
+		member, err := s.decideMemberInTx(ctx, tx, p, a, approve, reason, footprints[a.ID])
 		if err != nil {
 			return nil, err
 		}
@@ -153,6 +159,16 @@ func (s *Service) decideBundleInTx(ctx context.Context, tx pgx.Tx, p principal.P
 		return nil, apperrors.ErrNotFound
 	}
 	return out, nil
+}
+
+// hiddenBundle answers a bundle with no member this caller may decide. With no
+// members it is absent. With members the caller sees, an agent rule kept them,
+// which is no row scope; otherwise the gate hides them.
+func hiddenBundle(ctx context.Context, members, visible int) error {
+	if members == 0 || visible > 0 {
+		return apperrors.ErrNotFound
+	}
+	return auth.HideRow(ctx, "approval")
 }
 
 // decidableMembers keeps the members this caller could decide one at a time, by
@@ -167,18 +183,25 @@ func (s *Service) decideBundleInTx(ctx context.Context, tx pgx.Tx, p principal.P
 // and one held message, answered by a credential carrying no send cap, decides
 // the five and leaves the message where it was, which is what deciding "on its
 // own terms" means everywhere else in this file.
-func (s *Service) decidableMembers(ctx context.Context, tx pgx.Tx, p principal.Principal, rows []row, approve bool) ([]row, error) {
+//
+// It also counts the members the caller sees, decidable or not.
+func (s *Service) decidableMembers(ctx context.Context, tx pgx.Tx, p principal.Principal, rows []row, approve bool) ([]row, int, error) {
 	mine := make([]row, 0, len(rows))
+	seen := 0
 	for _, a := range rows {
 		visible, err := decidable(ctx, tx, p, a)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
-		if visible && agentMayDecide(p, a, approve, s.ownReleaseFor(ctx, tx, a)) == nil {
+		if !visible {
+			continue
+		}
+		seen++
+		if agentMayDecide(p, a, approve, s.ownReleaseFor(ctx, tx, a)) == nil {
 			mine = append(mine, a)
 		}
 	}
-	return mine, nil
+	return mine, seen, nil
 }
 
 // decideMemberInTx decides ONE member through the same path a single decision
@@ -197,8 +220,8 @@ func (s *Service) decidableMembers(ctx context.Context, tx pgx.Tx, p principal.P
 // status the REFUSAL named rather than from re-judging that fresh row against
 // the older clock, which would see it as still pending and answer
 // "already_decided" — telling a human somebody decided a question nobody did.
-func (s *Service) decideMemberInTx(ctx context.Context, tx pgx.Tx, p principal.Principal, a row, approve bool, reason *string) (BundleMember, error) {
-	decided, err := s.decideInTx(ctx, tx, p, a.ID, approve, reason, nil, decidedByContact)
+func (s *Service) decideMemberInTx(ctx context.Context, tx pgx.Tx, p principal.Principal, a row, approve bool, reason *string, footprint json.RawMessage) (BundleMember, error) {
+	decided, err := s.decideInTx(ctx, tx, p, a.ID, approve, reason, nil, footprint, decidedByContact)
 	if err == nil {
 		return BundleMember{Approval: decided, Outcome: BundleDecided}, nil
 	}

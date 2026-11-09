@@ -167,10 +167,10 @@ func UnboundedFor(p principal.Principal, tables ...string) bool {
 
 // ownerScopedTables is the closed set of table names the row-scope
 // primitives interpolate into SQL. It is NOT every table carrying an
-// owner_id column: fourteen carry one and nine are here, because on the
-// other five that column names the MEASURED or ATTRIBUTED subject rather
-// than an access owner. signal is the case that matters: its owner_id
-// names the rep a signal is ABOUT, so it stays out of this set and
+// owner_id column: fifteen carry one and ten are here. On the other five
+// that column names the MEASURED or ATTRIBUTED subject rather than an
+// access owner. signal is the case that matters: its owner_id
+// names the rep a signal is ABOUT. So it stays out of this set, and
 // anyone holding signal.read sees every one. Deriving this set from the
 // column would add those tables back and silently narrow such a read: an
 // availability regression wearing a security fix's clothes.
@@ -186,6 +186,7 @@ func UnboundedFor(p principal.Principal, tables ...string) bool {
 var ownerScopedTables = map[string]bool{
 	tableContact: true, tableCompany: true, tableDeal: true, tableLead: true, tableProject: true,
 	tableList: true, "saved_view": true, "automation": true, "voice_profile": true,
+	"sales_initiative": true,
 }
 
 // VisiblePredicate is the FULL row-visibility test for one table, in
@@ -337,16 +338,26 @@ func VisibleToExisting(ctx context.Context, tx pgx.Tx, table string, id ids.UUID
 	return visibleThrough(ctx, tx, table, id, EnsureVisibleExisting)
 }
 
+// probeRead notes table's read check and records no refusal, for a caller that
+// answers a missing grant as "withheld" rather than refusing the call.
+func probeRead(ctx context.Context, table string) error {
+	read := Check{Object: table, Actions: []principal.Action{principal.ActionRead}}
+	noteCheck(ctx, read)
+	return probeCheck(ctx, read)
+}
+
+// visibleThrough's "no" is an answer the caller branches on, so its row probe
+// records no refusal either.
 func visibleThrough(ctx context.Context, tx pgx.Tx, table string, id ids.UUID,
-	probe func(context.Context, pgx.Tx, string, ids.UUID) error,
+	ensure func(context.Context, pgx.Tx, string, ids.UUID) error,
 ) (bool, error) {
-	if err := Require(ctx, table, principal.ActionRead); err != nil {
+	if err := probeRead(ctx, table); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return false, nil
 		}
 		return false, err
 	}
-	err := probe(ctx, tx, table, id)
+	err := ensure(withoutRecorder(ctx), tx, table, id)
 	switch {
 	case err == nil:
 		return true, nil
@@ -392,7 +403,7 @@ func VisibleSubset(ctx context.Context, tx pgx.Tx, table string, rowIDs []ids.UU
 	out := make(map[ids.UUID]bool, len(rowIDs))
 	// No grant on the referenced type: every id is withheld, and the caller
 	// cannot tell that from the rows simply not being there.
-	if err := Require(ctx, table, principal.ActionRead); err != nil {
+	if err := probeRead(ctx, table); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return out, nil
 		}

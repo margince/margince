@@ -25,13 +25,13 @@ package gates
 // loud rather than green (AGENTS.md rule 8).
 
 import (
-	"os"
 	"testing"
 
 	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func TestEveryWorklistCategoryIsPlacedInTheMorning(t *testing.T) {
@@ -94,7 +94,7 @@ func worklistCategories(t *testing.T) []string {
 			} `yaml:"schemas"`
 		} `yaml:"components"`
 	}
-	raw, err := os.ReadFile("api/crm.yaml")
+	raw, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}

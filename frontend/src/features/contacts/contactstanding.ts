@@ -11,6 +11,7 @@ import {
   translatePlural,
 } from "../../i18n";
 import { bucketLabel } from "../../lib/bucketlabel";
+import { valueFor } from "../../lib/labelfor";
 import { omitted } from "./contact360";
 import { directionSentence } from "./contactrail";
 import { changeSentence } from "./relationshipchange";
@@ -32,10 +33,12 @@ export type ContactVerdict = Readonly<{
 
 // The wire carries no tone for a rule. An owed thing that slipped is danger,
 // an owed thing still on time is warning, a reply after silence is good news.
+// A wait on their answer asks nothing of the reader yet.
 const MOMENT_TONE: Readonly<Record<ContactMomentRule, ReadingTone>> = {
   privacy_notice_due: "warning",
   overdue_promise: "danger",
   gone_quiet: "danger",
+  awaiting_reply: "neutral",
   open_promise: "warning",
   missing_next_step: "warning",
   meeting_prep: "warning",
@@ -61,7 +64,7 @@ export function contactVerdict(
   if (moment && moment.rule !== "nothing_needed") {
     // The Next bar above already says why now, so the sentence here is the
     // relationship's own reading and the two never print one line twice.
-    const tone = MOMENT_TONE[moment.rule];
+    const tone = valueFor(MOMENT_TONE, moment.rule, "neutral");
     const change = changeUnder(view, tone);
     return {
       word: t(`contact.moment.rule.${moment.rule}`),
@@ -260,6 +263,14 @@ export function colleaguesInTouch(view: Contact360) {
   return colleagues.filter((colleague) => colleague.two_way === true);
 }
 
+// Colleagues who sent the contact a message and got no reply. Being copied on
+// someone else's mail is not writing, so `sent_90d`, not `outbound_90d`.
+function colleaguesWhoWrote(view: Contact360) {
+  return (view.network?.colleagues ?? []).filter(
+    (colleague) => colleague.two_way !== true && (colleague.sent_90d ?? 0) > 0,
+  );
+}
+
 function reachDim(
   view: Contact360,
   t: Translator,
@@ -277,14 +288,25 @@ function reachDim(
       value: t("record.notShown"),
       tone: "neutral",
     };
+  const wrote = colleaguesWhoWrote(view)
+    .map((colleague) => colleague.display_name)
+    .join(", ");
   if (inTouch.length === 0) {
     return {
       key: "reach",
       label,
-      value: t("contact.standing.dim.reachNone"),
+      value: t(
+        wrote
+          ? "contact.standing.dim.reachOneWay"
+          : "contact.standing.dim.reachNone",
+      ),
+      sub: wrote
+        ? t("contact.standing.dim.wroteNoReply", { names: wrote })
+        : undefined,
       tone: "neutral",
     };
   }
+  const names = inTouch.map((colleague) => colleague.display_name).join(", ");
   return {
     key: "reach",
     label,
@@ -296,7 +318,9 @@ function reachDim(
         count: formatNumber(inTouch.length, locale),
       },
     ),
-    sub: inTouch.map((colleague) => colleague.display_name).join(", "),
+    sub: wrote
+      ? `${names} · ${t("contact.standing.dim.alsoWrote", { names: wrote })}`
+      : names,
     // One colleague in touch is a single thread, not coverage.
     tone: inTouch.length > 1 ? "success" : "warning",
   };

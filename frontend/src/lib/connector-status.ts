@@ -8,6 +8,7 @@ import {
 } from "../design-system/statusbadge";
 import type { ConnectionAccount } from "../format/connectorprovider";
 import type { MessageKey } from "../i18n/en";
+import { UNKNOWN_VALUE_LABEL } from "./labelfor";
 
 // The shared connector-status vocabulary: Settings (the connected-inboxes
 // card) and the Brief's digest both render connector health, and they must never
@@ -80,6 +81,8 @@ export function statusTone(
       return "danger";
     case "disconnected":
       return undefined;
+    default:
+      return undefined;
   }
 }
 
@@ -96,6 +99,8 @@ export function statusLabel(status: ConnectorStatus): MessageKey {
       return "connectors.statusError";
     case "disconnected":
       return "connectors.statusDisconnected";
+    default:
+      return UNKNOWN_VALUE_LABEL;
   }
 }
 
@@ -114,6 +119,8 @@ export function errorClassKey(cls: string | null | undefined): MessageKey {
       return "connectors.errAuth";
     case "history_gone":
       return "connectors.errHistoryGone";
+    case "forbidden":
+      return "connectors.errForbidden";
     case "internal":
       return "connectors.errInternal";
     default:
@@ -131,7 +138,7 @@ export function isUnhealthy(status: ConnectorStatus): boolean {
   return status === "error" || status === "reauth_required";
 }
 
-// Mirror of capture.calendarWriteGranted; its Go parity test reads this table.
+// Mirror of capture.CalendarWriteGranted; its Go parity test reads this table.
 const CALENDAR_WRITE_SCOPES: Readonly<Record<string, readonly string[]>> = {
   gcal: [
     "https://www.googleapis.com/auth/calendar.events.owned",
@@ -242,6 +249,8 @@ export function serviceHealth(service: ServiceFacts): ConnectorHealth {
       return "not_connected";
     case "connected":
       return service.last_sync_error_class ? "needs_attention" : "up_to_date";
+    default:
+      return "needs_attention";
   }
 }
 

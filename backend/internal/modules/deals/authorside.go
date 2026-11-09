@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/owndomain"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 )
 
 // AuthorSide is the Go spelling of deal_stage_evidence.author_side.
@@ -171,13 +172,6 @@ func domainSideOf(address string, ownDomains []string) domainSide {
 // backend/gates/transcriptmarker_test.go is what fails when they drift.
 const TranscriptSourceSystem = "transcript"
 
-// The activity.meeting_status vocabulary this rule reads.
-const (
-	meetingHeld     = "held"
-	meetingNoShow   = "no_show"
-	meetingCanceled = "canceled"
-)
-
 // CountsAsBuyerParticipant reports whether one participant is evidence that
 // somebody from the OTHER side was on the activity. seatDomains are the folded
 // domains of our seats on it (SeatDomains).
@@ -227,44 +221,20 @@ type MeetingProof struct {
 }
 
 // MeetingWasHeld judges whether a meeting is proof that an event took place.
+// Authorship does not decide it. Capture stamps our seat as every synced
+// meeting's sender, so a rule keyed on the author rejects real meetings.
 //
-// AUTHORSHIP IS THE WRONG QUESTION FOR A MEETING, which is what an earlier
-// version of this file got wrong. For a message the author is the whole signal
-// — the buyer wrote words. For a meeting the signal is that it happened at all,
-// and who pressed "create event" says nothing about that. Capture stamps our
-// own seat as the `from` participant on a synced meeting whatever the calendar
-// said, so a rule keyed on authorship rejected every real meeting and no
-// event_held criterion could ever be settled.
-//
-// Two proofs, in order of strength:
-//
-//   - A TRANSCRIPT. It is a recording of contacts talking, so it cannot exist
-//     for a meeting that did not happen, and it carries text a human can read
-//     to see who was there. This is the strong one: it is a document with
-//     content, not a status somebody clicked.
-//   - Otherwise, meeting_status = held AND somebody from outside our domains
-//     on the participant list. A meeting only we attended is one we held with
-//     ourselves.
-//
-// A canceled or no_show meeting settles nothing on either path. It is the
-// status's whole purpose to say the meeting did not happen, and a transcript
-// on a canceled meeting is a recording of something else.
-//
-// What this deliberately does NOT decide is whether the transcript is of the
-// meeting the criterion means. That is a reading question, and reading is the
-// model's half of this ledger — which is why the row it writes carries the
-// cited lines for a human to check.
+// Only a recorded held outcome counts (meetingoutcome.IsHeld). A transcript
+// may be of another conversation, so it is not that report. A held meeting
+// proves the event with a transcript, or with an outside party on it.
 func MeetingWasHeld(status string, hasTranscript bool, buyerParticipants int) MeetingProof {
-	if status == meetingCanceled || status == meetingNoShow {
+	if !meetingoutcome.IsHeld(status) {
 		return MeetingProof{}
 	}
 	if hasTranscript {
 		return MeetingProof{Held: true, FromTranscript: true}
 	}
-	if status == meetingHeld && buyerParticipants > 0 {
-		return MeetingProof{Held: true}
-	}
-	return MeetingProof{}
+	return MeetingProof{Held: buyerParticipants > 0}
 }
 
 // transcriptLineCount counts a transcript's lines the way ADR-0058's canonical

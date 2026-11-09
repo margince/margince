@@ -13,6 +13,7 @@ import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { type ImportWindow, useBackfillRun } from "../../lib/backfill-run";
 import { useDrawsImportRun } from "../../lib/import-onscreen";
+import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf } from "../../lib/problem";
 import {
   IMPORT_WINDOW_LABELS,
@@ -90,7 +91,7 @@ export function usePastEmail({
   const window = held ?? ran;
   const name = isImportWindow(window)
     ? t("connectors.svc.pastEmailWindow", {
-        window: t(IMPORT_WINDOW_LABELS[window]),
+        window: t(labelFor(IMPORT_WINDOW_LABELS, window)),
       })
     : t("connectors.svc.pastEmail");
 

@@ -129,6 +129,20 @@ func (r BackfillReporter) Observed(ctx context.Context, scanned, captured, skipp
 	}
 }
 
+// BackfillCheckpointer saves a provider cursor and absolute counts since this page began.
+// Only settled messages belong in the counts; a failed save stops the page.
+type BackfillCheckpointer interface {
+	Checkpoint(context.Context, string, BackfillPageResult) error
+}
+
+// Checkpoint returns false when the engine has no durable checkpoint support.
+func (r BackfillReporter) Checkpoint(ctx context.Context, cursor string, tally BackfillPageResult) (bool, error) {
+	if p, ok := r.to.(BackfillCheckpointer); ok {
+		return true, p.Checkpoint(ctx, cursor, tally)
+	}
+	return false, nil
+}
+
 // BackfillProgressFrom returns the reporter for the running page — usable
 // whether or not one was installed. Absence is ordinary: incremental sync
 // installs no reporter, and neither do a connector's own tests.

@@ -17,6 +17,8 @@ it again changes nothing.
 | `2026-10-03-4_open_duties_the_captured_mail_already_answers.up.sql` | capture-made duties opened before the counterparty verdict's contacts were settled by their own mail, and before sent mail's To and Cc counted | settles open capture-made duties whose contact wrote to us, or was on To or Cc of mail the seat sent before connecting |
 | `2026-10-03-5_a_group_post_is_its_authors_mail.up.sql` | the installation captured Google Group posts before capture read their author | names the X-Original-From author as counterparty and sender of each stored group post, and clears the bulk flag the group's own unsubscribe links set |
 | `2026-10-06_an_imported_emails_sender_is_who_its_headers_name.up.sql` | the installation logged or imported emails before the participant-role fix, so every linked contact was recorded as the sender (margince#6914) | gives each linked contact of a live, unrestricted email with stated headers and at least one contact-only participant row the role its address appears on — a contact the headers do not name keeps the receiving side (cc inbound, to otherwise), bcc rows are never touched; the only delete collapses two identical contact-only rows into one, and any email whose stated address ever belonged to more than one contact is skipped whole |
+| `2026-11-03_a_reply_on_a_new_topic_is_its_own_conversation.up.sql` | do not run | refuses to run; use the reviewed topic fix below |
+| `2026-11-03-2_replies_share_meaningful_topic_words.up.sql` | older mail has replies on separate topics stored together | splits only when a reply and the message it answers share no topic word, using the same database function as capture; requires an approved preview and never joins conversations |
 
 Where you need more than one, run them in the order of this table. Each later one reads what an
 earlier one wrote. The older-mail notice fix runs through the data-task worker;
@@ -35,3 +37,25 @@ psql "$DSN" -v ON_ERROR_STOP=1 --single-transaction -f <file>
 On a large installation, run the work in batches instead of the whole file at once. For example,
 limit the first statement to a range of `capture_import.id` per run. Repeat until a run changes
 nothing.
+
+## Review the topic fix
+
+The topic fix stays on hold until an operator reviews a preview. Install the current schema first.
+On a restored copy, run a preview in one session:
+
+```sql
+BEGIN;
+SET LOCAL margince.reply_topic_repair_approved = 'on';
+\i backend/migrations/datafix/2026-11-03-2_replies_share_meaningful_topic_words.up.sql
+SELECT g.id, g.old_key, g.new_key, child.subject, parent.subject AS parent_subject
+  FROM regroup g
+  JOIN activity child ON child.id = g.id
+  JOIN regroup_parent edge ON edge.child = g.id
+  JOIN activity parent ON parent.id = edge.parent
+ ORDER BY g.old_key, g.id;
+ROLLBACK;
+```
+
+After review, run the approved scope in a transaction with the same setting and commit it. Keep the
+scope used for the preview. The fix copies settled privacy verdicts and moves consent bases and
+deliveries with their source messages. It does not join conversations already split by an earlier rule.

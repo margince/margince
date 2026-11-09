@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -121,6 +122,16 @@ func routeExact(lanes []exactLane) (ContactResolution, bool) {
 	return ContactResolution{}, false
 }
 
+// Capture defers review work until it owns the review lanes.
+func dedupeExactContact(ctx context.Context, tx pgx.Tx, candidate ContactCandidate) (ContactResolution, bool, error) {
+	lanes, err := exactLanes(ctx, tx, candidate)
+	if err != nil {
+		return ContactResolution{}, false, err
+	}
+	match, found := routeExact(lanes)
+	return match, found, nil
+}
+
 // rivalOf finds the one contact to report alongside the routed one.
 //
 // A LATER LANE FIRST, which is the order this has always reported in and is
@@ -153,19 +164,24 @@ func rivalOf(routed exactLane, later []exactLane) *LaneConflict {
 // exactContactByEmail is PO-F-1 tier 1. Every candidate email is checked;
 // the lowest contact id wins so a candidate colliding on two emails
 // against two contacts resolves the same way on every run.
+//
+// The other spelling of a domain, Unicode or punycode, is one mailbox too. A
+// contact holding the spelling as typed still comes first, so where each
+// spelling already has its own contact, mail lands on its own.
 func exactContactByEmail(ctx context.Context, tx pgx.Tx, emails []string) ([]ids.ContactID, error) {
 	if len(emails) == 0 {
 		return nil, nil
 	}
-	lowered := make([]string, 0, len(emails))
+	typed := make([]string, 0, len(emails))
 	for _, e := range emails {
-		lowered = append(lowered, normalizeEmail(e))
+		typed = append(typed, normalizeEmail(e))
 	}
 	return exactContactIDs(ctx, tx, `
-		SELECT DISTINCT contact_id FROM contact_email
+		SELECT contact_id FROM contact_email
 		WHERE email = ANY($1) AND archived_at IS NULL
-		ORDER BY contact_id
-		LIMIT 2`, lowered)
+		GROUP BY contact_id
+		ORDER BY bool_or(email = ANY($2)) DESC, contact_id
+		LIMIT 2`, storekit.EmailLookups(emails...), typed)
 }
 
 // exactContactIDs collects what one exact lane's keys reach: the distinct

@@ -283,6 +283,37 @@ func TestVoiceBuildFailsWhenTheCorpusChangedSinceQueueing(t *testing.T) {
 	}
 }
 
+// The profile read carries the newest build in every status. A page opened
+// after the build ended elsewhere still learns that it failed and why.
+func TestVoiceProfileViewCarriesTheNewestBuild(t *testing.T) {
+	env, build := seedVoiceBuild(t, "A quote for the view.", 6)
+	queued, err := env.store.ProfileView(env.owner, env.profile.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if queued.LatestBuild == nil || queued.LatestBuild.ID != build.ID || queued.LatestBuild.Status != "queued" {
+		t.Fatalf("latest build while queued = %+v, want build %s queued", queued.LatestBuild, build.ID)
+	}
+	if queued.CandidateVersion != nil {
+		t.Fatalf("candidate before any build finished = %d, want none", *queued.CandidateVersion)
+	}
+	if _, _, _, err := env.store.IngestSource(env.owner, env.profile.ID, ai.IngestSourceInput{
+		Kind: "other", SourceLabel: "late addition", Content: "text arriving after the snapshot was taken",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := env.store.ClaimBuild(env.workerCtx(t), env.profile.ID, build.ID, time.Minute); err != nil {
+		t.Fatal(err)
+	}
+	failed, err := env.store.ProfileView(env.owner, env.profile.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if failed.LatestBuild == nil || failed.LatestBuild.Status != "failed" || failed.LatestBuild.StatusDetail == nil {
+		t.Fatalf("latest build after a failed claim = %+v, want failed with its detail", failed.LatestBuild)
+	}
+}
+
 func TestVoiceBuildDefersOnBudgetAndTheSweepFindsItWhenDue(t *testing.T) {
 	env, build := seedVoiceBuild(t, "Deferred quote.", 6)
 	ctx := env.workerCtx(t)
@@ -462,16 +493,21 @@ func TestVoiceBuildWorkEndToEnd(t *testing.T) {
 	}
 }
 
-func TestVoiceBuildWorkSnoozesWhileAnotherClaimIsLive(t *testing.T) {
+func TestVoiceBuildWorkSkipsAnotherSessionOwner(t *testing.T) {
 	env, build := seedVoiceBuild(t, "Contended quote.", 6)
 	ctx := env.workerCtx(t)
+	lease, held, err := env.e.DB().TryWorkLease(ctx, "voice_build", build.ID, discardLogger())
+	if err != nil || !held {
+		t.Fatalf("lease: %v %v", held, err)
+	}
+	defer lease.Close(ctx)
 	if _, claimed, err := env.store.ClaimBuild(ctx, env.profile.ID, build.ID, time.Minute); err != nil || !claimed {
 		t.Fatalf("rival claim: %v claimed=%v", err, claimed)
 	}
 	worker := newVoiceBuildWorker(env.e.Pool, &scriptedBuildBrain{judgeScore: 0.9, quote: "Contended quote."}, slog.New(slog.DiscardHandler))
-	err := worker.Work(context.Background(), voiceBuildJob(env, build))
-	if err == nil {
-		t.Fatal("a live rival claim must snooze the job, never succeed it — success would strand the build")
+	err = worker.Work(context.Background(), voiceBuildJob(env, build))
+	if err != nil {
+		t.Fatalf("a live rival claim should skip the duplicate: %v", err)
 	}
 	current, getErr := env.store.GetBuild(env.owner, env.profile.ID, build.ID)
 	if getErr != nil {

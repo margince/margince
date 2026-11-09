@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The one door to the browser's Web Storage. `storage-spelling.test.ts` fails
+// The one door to the browser's Web Storage. `census/rules/storage-spelling.census.ts` fails
 // any other file that reaches for `localStorage` or `sessionStorage`.
 
 type StorageArea = "local" | "session";
@@ -22,6 +22,11 @@ export const STORAGE_KEYS = {
     area: "local",
     lifetime: "seat",
   },
+  homeSwipeSeen: {
+    name: "margince.home.swipeSeen",
+    area: "local",
+    lifetime: "device",
+  },
   locale: { name: "margince.locale", area: "local", lifetime: "device" },
   theme: { name: "margince.theme", area: "local", lifetime: "device" },
   sidebarCollapsed: {
@@ -40,9 +45,20 @@ export const STORAGE_KEYS = {
     area: "local",
     lifetime: "device",
   },
+  // Whether Documents tabs draw files as tiles or as rows.
+  documentsView: {
+    name: "margince.documents.view",
+    area: "local",
+    lifetime: "device",
+  },
   // v2: widths saved under content sizing pin columns wrongly under shares.
   tableWidths: {
     prefix: "margince.table.widths.v2.",
+    area: "local",
+    lifetime: "device",
+  },
+  tableOrder: {
+    prefix: "margince.table.order.",
     area: "local",
     lifetime: "device",
   },
@@ -139,6 +155,11 @@ export const STORAGE_KEYS = {
   analyticsOverviewTab: {
     prefix: "margince.analytics.overviewTab:",
     area: "session",
+    lifetime: "seat",
+  },
+  sessionSeen: {
+    name: "margince.session.seen",
+    area: "local",
     lifetime: "seat",
   },
 } as const satisfies Record<string, Declared>;

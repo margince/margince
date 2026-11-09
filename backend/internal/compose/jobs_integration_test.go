@@ -146,7 +146,7 @@ func TestRiverCloseDateSweepAppliesTheSameProvisionalAsDirectSweep(t *testing.T)
 	integration.ApplyRiverSchema(t)
 	// The exact fixture the direct-Sweep test uses: an overdue, active,
 	// commit-override deal — never auto-final, always a staged proposal.
-	id := e.seedSweepDeal(t, "Commit slipped", e.late, new("commit"), new(-10), 3)
+	id := e.seedSweepDeal(t, "Commit slipped", e.late, new(95), new(-10), 3)
 
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
 	runner, err := NewJobRunner(e.Pool, quiet, JobRunnerConfig{})
@@ -201,12 +201,12 @@ func TestRiverCloseDateSweepAppliesTheSameProvisionalAsDirectSweep(t *testing.T)
 	if !swept.provisional {
 		t.Error("the replacement is the sweep's own estimate and must say so")
 	}
-	if swept.forecastCat == nil || *swept.forecastCat != "commit" {
-		// The tier comes with it. best_case here is what the downgrade notch
-		// writes, reached only from a stalled finding this fixture does not
-		// carry. Naming the decision says which of the two an occurrence was.
-		t.Errorf("forecast_category = %s, want the untouched commit override (%s)",
-			shownString(swept.forecastCat), e.sweptTier(t, id))
+	if swept.probability == nil || *swept.probability != 95 {
+		// The tier comes with it. 45 here is what the downgrade notch writes,
+		// reached only from a stalled finding this fixture does not carry.
+		// Naming the decision says which of the two an occurrence was.
+		t.Errorf("probability = %s, want the untouched 95 (%s)",
+			shownInt(swept.probability), e.sweptTier(t, id))
 	}
 	if got := e.pendingCorrections(t, id); got != 0 {
 		t.Errorf("the job-driven pass raised %d cards, want none — it must do exactly "+
@@ -214,13 +214,17 @@ func TestRiverCloseDateSweepAppliesTheSameProvisionalAsDirectSweep(t *testing.T)
 	}
 }
 
-// shownString renders a nullable column for a failure message.
-//
-// `%v` on a *string prints the ADDRESS, and this bug is the reason that
-// matters: "forecast_category = 0x6e8b29e0dc40" says the column was non-nil
-// and not what was wanted, which is a different defect from the column being
-// absent — and the message could not tell the two apart, so the one failure
-// anybody had caught reported a number nobody can act on.
+// shownInt renders a nullable column for a failure message. `%v` on a
+// pointer prints the address, which says nothing anybody can act on.
+func shownInt(value *int) string {
+	if value == nil {
+		return "NULL"
+	}
+	return fmt.Sprint(*value)
+}
+
+// shownString renders a nullable text column for a failure message, for the
+// same reason as shownInt.
 func shownString(value *string) string {
 	if value == nil {
 		return "NULL"

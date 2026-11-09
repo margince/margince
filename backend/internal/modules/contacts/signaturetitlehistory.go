@@ -22,7 +22,7 @@ type SignatureHistoryPage struct {
 }
 
 // oneMailWatermark is the rows the repair inspects and the estimate counts.
-const oneMailWatermark = "st.history_depth IS NULL"
+const oneMailWatermark = "st.history_depth IS NULL AND st.activity_id IS NOT NULL"
 
 // Only legacy one-mail watermarks reopen. A depth written by the current pass
 // keeps a second repair from reopening work it already considered.
@@ -31,10 +31,10 @@ var reopenSignatureHistorySQL = `
 	    SELECT st.contact_id FROM contact_signature_enrich_state st
 	     WHERE ` + oneMailWatermark + ` AND st.contact_id > $1
 	     ORDER BY st.contact_id
-	     LIMIT $2
+	     LIMIT $2 FOR UPDATE OF st
 	), reopened AS (
-	    DELETE FROM contact_signature_enrich_state st
-	     USING page, contact p
+	    UPDATE contact_signature_enrich_state st SET ` + signatureReopenSetSQL + `
+	     FROM page, contact p
 	     WHERE st.contact_id = page.contact_id AND p.id = st.contact_id
 	       AND p.archived_at IS NULL AND p.merged_into_id IS NULL
 	       AND ` + olderMailMayFillTitleSQL("p") + `
@@ -48,7 +48,7 @@ var reopenSignatureHistorySQL = `
 // ReopenSignatureTitleHistoryTx reopens one page of the watermarks the one-mail
 // signature pass left on contacts without a title. It pages over the rows
 // CountOneMailSignatureWatermarks counts, so the estimate is the rows it
-// inspects. Only the bookkeeping row goes: no field is written.
+// inspects. It clears the read result and keeps a durable request; no field changes.
 // defaultEnabled is the workspace answer for a mailbox that never chose
 // whether its mail may be read.
 func ReopenSignatureTitleHistoryTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int, defaultEnabled bool) (SignatureHistoryPage, error) {

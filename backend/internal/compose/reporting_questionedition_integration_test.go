@@ -44,7 +44,7 @@ func newQuestionEditionsShowing(t *testing.T, limit *int) *questionEditions {
 	reportingWorkerIdentity(t, e)
 	amount := int64(100_000)
 	for range 7 {
-		e.seedOpenDeal(t, "Counted", 20, &e.Rep1, &amount, nil)
+		e.seedOpenDeal(t, "Counted", 20, &e.Rep1, &amount)
 	}
 	at := time.Date(2026, 9, 24, 13, 0, 0, 0, time.UTC)
 	service := newReportingService(e.Pool, func() time.Time { return at })

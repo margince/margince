@@ -24,6 +24,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/storedobjects"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -104,11 +105,25 @@ func (s *Store) SendOffer(ctx context.Context, id ids.OfferID, ifVersion *int64)
 		p.SetDate(fxRateDateColumn, storekit.PlainDate(current.FxRateDate), &rateDate)
 		p.Set("buyer_snapshot", nil, storekit.JSONArg(buyer))
 		p.Set("issuer_snapshot", nil, storekit.JSONArg(issuer))
+		// A draft's rendering printed the live issuer and buyer. The sent
+		// document prints the snapshots, so it is rendered again from them.
+		// The dropped object is left to the sweep.
+		if retired := retireRendering(p, current); retired != nil {
+			if err := storedobjects.RecordTx(ctx, tx, storedobjects.KindOffer, *retired); err != nil {
+				return err
+			}
+		}
 		if err := p.ApplyGuarded(ctx, tx, "offer", id.UUID, ifVersion); err != nil {
 			return fmt.Errorf("apply send transition: %w", err)
 		}
-
-		auditID, err := storekit.Audit(ctx, tx, "update", "offer", id.UUID, p.Before(), p.After())
+		// The FX rate's day also picks each category line's tax rate. It runs
+		// after the version guard, so the totals write cannot trip that guard.
+		retax, err := s.retaxAtSend(ctx, tx, &current, rateDate)
+		if err != nil {
+			return err
+		}
+		before, after := retax.images(p.Before(), p.After())
+		auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "offer", id.UUID, before, after, retax.evidence())
 		if err != nil {
 			return fmt.Errorf("audit offer send: %w", err)
 		}
@@ -157,40 +172,6 @@ func offerAcceptedPayload(current crmcontracts.Offer) crmcontracts.PublicEventOf
 	}
 }
 
-// sendSnapshots captures the buyer and issuer legal blocks at send time:
-// the sent document stays truthful even when the company or workspace is
-// later renamed.
-func (s *Store) sendSnapshots(ctx context.Context, tx pgx.Tx, baseCurrency string,
-	offer crmcontracts.Offer,
-) (buyer, issuer map[string]any, err error) {
-	if offer.BuyerCompanyId != nil {
-		var displayName string
-		var legalName *string
-		err := tx.QueryRow(ctx,
-			`SELECT display_name, legal_name FROM company WHERE id = $1`, offer.BuyerCompanyId).
-			Scan(&displayName, &legalName)
-		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil, fmt.Errorf("snapshot buyer company: %w", err)
-		}
-		if err == nil {
-			buyer = map[string]any{filterCompanyID: offer.BuyerCompanyId, "display_name": displayName}
-			if legalName != nil {
-				buyer["legal_name"] = *legalName
-			}
-		}
-	}
-	// The currency is the caller's resolved base, not a second read: the
-	// snapshot must record the basis this offer was actually priced in.
-	// The same resolver the render takes, so what a customer saw on the draft
-	// is what the snapshot freezes as having been sent.
-	name, err := s.issuerName(ctx, tx)
-	if err != nil {
-		return nil, nil, fmt.Errorf("snapshot issuer name: %w", err)
-	}
-	issuer = map[string]any{"workspace_name": name, "base_currency": baseCurrency}
-	return buyer, issuer, nil
-}
-
 // AcceptOffer runs sent → accepted: sets accepted_at, SYNCS the deal's
 // amount_minor/currency from the accepted offer's gross (P12: one audit
 // row; the paired deal.updated event rides the same correlation), and
@@ -229,6 +210,11 @@ func (s *Store) AcceptOffer(ctx context.Context, id ids.OfferID, ifVersion *int6
 		if err != nil {
 			return err
 		}
+		allocated, err := syncDealProductsFromOffer(ctx, tx, dealID, current)
+		if err != nil {
+			return err
+		}
+		dealChanged = noteAllocations(dealChanged, allocated)
 
 		auditID, err := storekit.Audit(ctx, tx, "update", "offer", id.UUID, p.Before(),
 			acceptedOfferImage(now, dealChanged))
@@ -358,6 +344,12 @@ func (s *Store) RegenerateOffer(ctx context.Context, id ids.OfferID) (crmcontrac
 		if err := copyOfferIntoRevision(ctx, tx, id, newID, nextRevision, by); err != nil {
 			return err
 		}
+		// The revision is a new draft: its category lines take today's rates,
+		// and its typed lines stay as copied.
+		retax, err := retaxOffer(ctx, tx, newID, s.draftTaxBasis(ctx, tx, legalEntityIDOf(current)))
+		if err != nil {
+			return err
+		}
 
 		supersede := storekit.NewPatch()
 		supersede.Set("status", current.Status, "superseded")
@@ -365,9 +357,9 @@ func (s *Store) RegenerateOffer(ctx context.Context, id ids.OfferID) (crmcontrac
 			return fmt.Errorf("mark prior revision superseded: %w", err)
 		}
 
-		auditID, err := storekit.Audit(ctx, tx, "create", "offer", newID.UUID, nil, map[string]any{
-			"offer_number": current.OfferNumber, "from_revision": current.Revision, "revision": nextRevision,
-		})
+		auditID, err := storekit.AuditWithEvidence(ctx, tx, "create", "offer", newID.UUID, nil, map[string]any{
+			offerNumberColumn: current.OfferNumber, "from_revision": current.Revision, "revision": nextRevision,
+		}, retax.evidence())
 		if err != nil {
 			return fmt.Errorf("audit offer regenerate: %w", err)
 		}
@@ -420,10 +412,12 @@ func copyOfferIntoRevision(ctx context.Context, tx pgx.Tx, fromID, newID ids.Off
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO offer (id, deal_id, offer_number, revision, status, currency,
 		                    buyer_company_id, valid_until, intro_text, terms_text,
-		                    net_minor, tax_minor, gross_minor, source, captured_by)
+		                    net_minor, tax_minor, gross_minor, source, captured_by, legal_entity_id, language,
+		                    source_commercial_revision)
 		 SELECT $1, deal_id, offer_number, $3, 'draft', currency,
 		        buyer_company_id, valid_until, intro_text, terms_text,
-		        net_minor, tax_minor, gross_minor, source, $4
+		        net_minor, tax_minor, gross_minor, source, $4, legal_entity_id, language,
+		        source_commercial_revision
 		 FROM offer WHERE id = $2`,
 		newID, fromID, nextRevision, by); err != nil {
 		return fmt.Errorf("copy offer into new revision: %w", err)
@@ -432,19 +426,15 @@ func copyOfferIntoRevision(ctx context.Context, tx pgx.Tx, fromID, newID ids.Off
 	// not silently become accepted (and start counting toward totals)
 	// just because the offer grew a revision.
 	//
-	// So does the billing classification. It is a SNAPSHOT, and a revision is
-	// the same document renumbered — a line that repeated monthly for a year
-	// in revision 1 repeats monthly for a year in revision 2. Dropping it here
-	// would silently unclassify every recurring line, zero the offer's annual
-	// and committed figures, and let the new revision be accepted without ever
-	// stating the deal's recurring value.
+	// So does the billing classification, a snapshot of the same document. The
+	// source deal line travels too, so a revision made from the deal can be refreshed.
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO offer_line_item (id, offer_id, position, product_id, description,
 		                              unit, quantity, unit_price_minor, discount_pct, tax_rate, evidence, proposal_state, price_grounded,
-		                              billing_model, billing_interval_months, interval_count)
+		                              billing_model, billing_interval_months, interval_count, tax_category, source_deal_line_id)
 		 SELECT uuidv7(), $2, position, product_id, description,
 		        unit, quantity, unit_price_minor, discount_pct, tax_rate, evidence, proposal_state, price_grounded,
-		        billing_model, billing_interval_months, interval_count
+		        billing_model, billing_interval_months, interval_count, tax_category, source_deal_line_id
 		 FROM offer_line_item WHERE offer_id = $1`,
 		fromID, newID); err != nil {
 		return fmt.Errorf("copy lines into new revision: %w", err)

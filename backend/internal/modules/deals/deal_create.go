@@ -83,6 +83,9 @@ type CreateDealInput struct {
 	// CustomFields carries the request body's cf_* keys. A key no active catalog
 	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
+	// auditEvidence rides into the create's audit row. Margince opening a deal
+	// sets it, so the receipt can say why.
+	auditEvidence map[string]any
 }
 
 // CreateDeal inserts the deal, its first stage-history row, the audit row and
@@ -396,7 +399,7 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 		return crmcontracts.Deal{}, fmt.Errorf("insert deal: %w", err)
 	}
 
-	if err := s.recordStageHistory(ctx, tx, stageHistoryInput{
+	if _, err := s.recordStageHistory(ctx, tx, stageHistoryInput{
 		DealID: id, ToStageID: in.StageID, ChangedBy: born.by, OwnerID: uuidOfFilter(in.OwnerID), PipelineID: in.PipelineID.UUID,
 		Amount: in.AmountMinor, Currency: in.Currency,
 	}); err != nil {
@@ -404,7 +407,7 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 	}
 
 	imported, importRun := storekit.ImportMark(ctx)
-	auditID, err := storekit.Audit(ctx, tx, "create", "deal", id.UUID, nil, map[string]any{dealNameColumn: in.Name})
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "create", "deal", id.UUID, nil, map[string]any{dealNameColumn: in.Name}, in.auditEvidence)
 	if err != nil {
 		return crmcontracts.Deal{}, fmt.Errorf("audit deal create: %w", err)
 	}

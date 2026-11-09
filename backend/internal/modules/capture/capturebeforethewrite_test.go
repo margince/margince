@@ -34,16 +34,7 @@ func joiningSink(t *testing.T) *Sink {
 	})
 }
 
-// The lock is off the common path, which is the claim takeMergeLockFirst's comment
-// makes and the reason the probe is there at all. A workspace-wide lock taken by
-// every capture would serialise the whole sync.
-//
-// An email is NOT here, even one carrying no References. A stored reply can point
-// at it, which makes it a merge candidate its own header cannot reveal, so the
-// probe has to ask — see takeMergeLockFirst.
-//
-// The case passes a nil transaction on purpose: a decision that reaches for one
-// has already failed, and the nil would panic rather than pass quietly.
+// Non-mail records need no mail component locks.
 func TestTheMergeLockIsSkippedByACaptureThatCannotMerge(t *testing.T) {
 	t.Parallel()
 
@@ -141,9 +132,9 @@ func (c countingTx) Exec(_ context.Context, sql string, _ ...any) (pgconn.Comman
 	return pgconn.NewCommandTag("SELECT 1"), nil
 }
 
-// probingSink answers the neighbour question with whatever a case needs, which is
-// what lets an EMAIL case reach the decision the source-system guard would
-// otherwise short-circuit.
+// probingSink answers the neighbour question with whatever a case needs. That
+// lets an email case reach the decision the source-system guard would otherwise
+// short-circuit.
 func probingSink(links []ids.ActivityID, probeErr error) *Sink {
 	return (&Sink{}).WithThreadJoin(ThreadJoiner{
 		RecordReferences: func(context.Context, pgx.Tx, ids.ActivityID, []string) error { return nil },
@@ -161,35 +152,9 @@ func anEmail() connector.NormalizedRecord {
 	}
 }
 
-// The email branches the fix rests on, which the source-system guard cannot reach.
-//
-// An email with no stored link takes no lock — that is what keeps a workspace-wide
-// lock off the common path once the ReplyTo gate is gone, and it is the only thing
-// left doing so. An email WITH one takes it, before anything is written.
-func TestAnEmailTakesTheLockOnlyWhenSomethingStoredLinksToIt(t *testing.T) {
-	t.Parallel()
-
-	for name, c := range map[string]struct {
-		links []ids.ActivityID
-		want  int
-	}{
-		"nothing stored links to it": {links: nil, want: 0},
-		"one stored message does":    {links: []ids.ActivityID{{UUID: ids.NewV7()}}, want: 1},
-	} {
-		locks := 0
-		if err := probingSink(c.links, nil).takeMergeLockFirst(
-			context.Background(), countingTx{locks: &locks}, anEmail()); err != nil {
-			t.Fatalf("%s: %v", name, err)
-		}
-		if locks != c.want {
-			t.Errorf("%s: took the lock %d time(s), want %d", name, locks, c.want)
-		}
-	}
-}
-
-// And a probe that fails stops the capture rather than carrying on unlocked: a
-// capture that cannot tell whether it may merge must not proceed to write a row it
-// would then lock out of order.
+// And a probe that fails stops the capture rather than carrying on unlocked. A
+// capture that cannot tell whether it may merge must not write a row it would
+// then lock out of order.
 func TestAFailingNeighbourProbeStopsTheCaptureBeforeItLocks(t *testing.T) {
 	t.Parallel()
 

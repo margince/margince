@@ -45,6 +45,30 @@ func (h Handlers) PutSchedulingProfile(w http.ResponseWriter, r *http.Request) {
 	httperr.WriteJSON(w, http.StatusOK, profile)
 }
 
+// PutSchedulingAlias claims, changes or clears the caller's own friendly
+// booking address.
+func (h Handlers) PutSchedulingAlias(w http.ResponseWriter, r *http.Request) {
+	var req crmcontracts.SchedulingAliasRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	profile, err := h.store.SetSchedulingAlias(r.Context(), req.Alias)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, profile)
+}
+
+// MarkBookingPageShared records that the caller copied their booking link.
+func (h Handlers) MarkBookingPageShared(w http.ResponseWriter, r *http.Request) {
+	if err := h.store.MarkBookingPageShared(r.Context()); err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // CreateMeetingInvitation queues delivery through the shared booking engine.
 func (h Handlers) CreateMeetingInvitation(w http.ResponseWriter, r *http.Request, _ crmcontracts.CreateMeetingInvitationParams) {
 	var req crmcontracts.MeetingInvitationRequest

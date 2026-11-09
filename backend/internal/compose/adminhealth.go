@@ -32,10 +32,9 @@ import (
 // report, writing the refusal itself when they may not.
 //
 // Every report gates on `job_health:read` and on a human session. One object
-// for every card keeps the page's access rules statable. Human-only is asserted
-// here rather than inferred from RBAC, because an admin-minted read-scoped
-// passport satisfies every object grant. This rung does not depend on the
-// wiring being right.
+// for every card keeps the page's access rules statable. A user or their agent
+// passes, on that user's grants; passportless automatic work acts for nobody.
+// This rung does not depend on the wiring being right.
 func admitHealthReader(w http.ResponseWriter, r *http.Request) bool {
 	return admitOperator(w, r, "job_health", principal.ActionRead)
 }
@@ -43,11 +42,11 @@ func admitHealthReader(w http.ResponseWriter, r *http.Request) bool {
 func admitOperator(w http.ResponseWriter, r *http.Request, object string, action principal.Action) bool {
 	ctx := r.Context()
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
+	if !ok || !actor.HumanOrItsAgent() {
 		httperr.Write(w, r, apperrors.ErrPermissionDenied)
 		return false
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		httperr.Write(w, r, err)
 		return false
 	}

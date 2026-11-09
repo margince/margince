@@ -62,7 +62,7 @@ func TestSuccessfulEmailDeliveryDatesSilenceAndDismissal(t *testing.T) {
 	if _, err := owner.Exec(ctx, `UPDATE capture_connection SET connected_at = $1 WHERE id = $2`, at.Add(-time.Hour), id); err != nil {
 		t.Fatal(err)
 	}
-	reg.WithClock(func() time.Time { return at })
+	reg.SetClock(func() time.Time { return at })
 	if err := reg.SyncOnce(ctx, id); err != nil {
 		t.Fatal(err)
 	}
@@ -177,7 +177,7 @@ func TestReauthenticationKeepsSilenceDismissalAndRebindClearsIt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	reg.WithClock(func() time.Time { return at })
+	reg.SetClock(func() time.Time { return at })
 	if _, err := owner.Exec(ctx, `UPDATE capture_connection SET connected_at = $1 WHERE id = $2`, at.Add(-time.Hour), id); err != nil {
 		t.Fatal(err)
 	}

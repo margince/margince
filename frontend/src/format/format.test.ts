@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatBytes,
   formatDate,
+  formatDateAbbrevRange,
   formatDateTime,
   formatDayMonth,
   formatDayMonthNearYear,
@@ -125,6 +126,17 @@ describe("a money figure abbreviated for a KPI slot", () => {
     );
     expect(formatMoneyCompact(18_690_000, "EUR", "en").toLowerCase()).toBe(
       "€186.9k",
+    );
+  });
+
+  // One decimal of a million is a step of €100k, so €1,062,548 and €1,094,000
+  // both read "€1m" with it. Millions keep three significant digits.
+  it("keeps three significant digits on a million", () => {
+    expect(formatMoneyCompact(106_254_800, "EUR", "en").toLowerCase()).toBe(
+      "€1.06m",
+    );
+    expect(formatMoneyCompact(109_400_000, "EUR", "en").toLowerCase()).toBe(
+      "€1.09m",
     );
   });
 
@@ -507,6 +519,27 @@ describe("formatDayRange", () => {
     expect(
       formatDayRange("2026-06-29", "2026-07-05", "en", "Europe/Berlin"),
     ).toMatch(/29 June\s*[–-]\s*5 July/);
+  });
+});
+
+describe("formatDateAbbrevRange", () => {
+  it("names the month and year the two ends share once", () => {
+    expect(
+      formatDateAbbrevRange(
+        "2026-11-01T00:00:00Z",
+        "2026-11-06T12:00:00Z",
+        "en",
+        "Europe/Berlin",
+      ),
+    ).toMatch(/^1\s*[–-]\s*6 Nov 2026$/);
+    expect(
+      formatDateAbbrevRange(
+        "2026-10-01T00:00:00Z",
+        "2026-12-31T12:00:00Z",
+        "en",
+        "Europe/Berlin",
+      ),
+    ).toMatch(/^1 Oct\s*[–-]\s*31 Dec 2026$/);
   });
 });
 

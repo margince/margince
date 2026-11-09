@@ -5,7 +5,6 @@ import {
 import { formatNumber } from "../../format/format";
 import type { Locale, PluralTranslator, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { WON_REASON_LABELS, WON_REASONS } from "../../lib/winreason";
 
 // Re-exported so the surfaces that read the map by name keep their import, and
 // so this file stays the one place a reader looks for approval-kind vocabulary.
@@ -135,34 +134,6 @@ export const EDITABLE_FIELDS: Readonly<
   // back. An edit to any of them would silently do nothing, so none is
   // offered rather than each looking like a live field that quietly is not.
   vcard_create: [],
-  // The ONE thing on a stage card a rep may change, and only when the move
-  // lands on a won stage with no signed agreement: why this deal was won
-  // without paper. The proposer cannot answer it — no reading of a mailbox
-  // establishes why there is no contract — so the card carries the question,
-  // and the server refuses the move until it is answered.
-  //
-  // Everything else in the payload is what the question is ABOUT: which deal,
-  // which stages, which criteria were met and what they rest on. A reader who
-  // disagrees with any of that says no rather than editing it into a different
-  // move.
-  //
-  // The vocabulary and its labels come from deals.tsx rather than a second copy
-  // here: both are derived from the generated contract type, so a reason added
-  // to crm.yaml stops this file compiling until it has a label.
-  stage_progression: [
-    {
-      field: "won_without_contract_reason",
-      as: "choice",
-      label: "deals.winReason",
-      options: WON_REASONS,
-      optionLabels: WON_REASON_LABELS,
-    },
-    {
-      field: "won_without_contract_detail",
-      as: "text",
-      label: "deals.winReasonDetail",
-    },
-  ],
 };
 
 // A rate proposal's apply re-reads the sheet, so its lost race is answered by

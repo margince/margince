@@ -22,12 +22,13 @@ func (s *Service) preflightBundle(ctx context.Context, p principal.Principal, bu
 		if err != nil {
 			return err
 		}
-		mine, err = s.decidableMembers(ctx, tx, p, rows, approve)
+		var visible int
+		mine, visible, err = s.decidableMembers(ctx, tx, p, rows, approve)
 		if err != nil {
 			return err
 		}
 		if len(mine) == 0 {
-			return apperrors.ErrNotFound
+			return hiddenBundle(ctx, len(rows), visible)
 		}
 		if oversized {
 			return &BundleTooLargeError{Cap: bundleDecisionCap}
@@ -68,6 +69,12 @@ func (s *Service) precheckMember(ctx context.Context, a row, edited json.RawMess
 			return err
 		}
 	}
+	if agentCallNeedsRecheck(a) {
+		if edited != nil {
+			a.ProposedChange = edited
+		}
+		return s.precheckAgentCall(ctx, a)
+	}
 	check, ok := s.prechecks[a.Kind]
 	if !ok || !serverProposed(a) {
 		return nil
@@ -81,5 +88,5 @@ func decisionContextRefusal(err error) bool {
 	var message apperrors.MessageFault
 	return errors.As(err, &field) || errors.As(err, &fields) || errors.As(err, &message) ||
 		errors.Is(err, apperrors.ErrVersionSkew) || errors.Is(err, apperrors.ErrNotFound) ||
-		errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrInvalidArgument) || errors.Is(err, apperrors.ErrConflict)
+		errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrConsentNotGranted) || errors.Is(err, apperrors.ErrSeatTierInsufficient) || errors.Is(err, apperrors.ErrInvalidArgument) || errors.Is(err, apperrors.ErrConflict)
 }

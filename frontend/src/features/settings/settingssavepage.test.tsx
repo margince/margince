@@ -111,3 +111,32 @@ it("offers a default through the bar without asking on the way out", async () =>
   await user.click(screen.getByRole("button", { name: "Save" }));
   expect(write).toHaveBeenCalledTimes(1);
 });
+
+it("keeps asking about a real edit after an offer was put aside, and saves only the edit", async () => {
+  const user = userEvent.setup();
+  const offer = vi.fn();
+  const name = vi.fn();
+  render(
+    <LocaleProvider initial="en">
+      <UnsavedGuard address="account" onKeep={vi.fn()}>
+        {() => (
+          <SettingsSavePage>
+            <OfferedCard write={offer} />
+            <NameCard write={name} />
+          </SettingsSavePage>
+        )}
+      </UnsavedGuard>
+    </LocaleProvider>,
+  );
+  await user.click(screen.getByRole("button", { name: "Discard" }));
+  expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+
+  await user.type(screen.getByRole("textbox", { name: "Name" }), "Jane");
+  const reload = new Event("beforeunload", { cancelable: true });
+  globalThis.dispatchEvent(reload);
+  expect(reload.defaultPrevented).toBe(true);
+
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  expect(name).toHaveBeenCalledWith("Jane");
+  expect(offer).not.toHaveBeenCalled();
+});

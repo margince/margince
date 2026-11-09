@@ -26,12 +26,15 @@ description: >-
 # "the lane timed out". The command exits 124 on expiry, so the step fails where
 # it hung.
 #
-# The download half is also cached, keyed on the resolved Playwright version, so
-# the usual run does not reach the network for it at all. The apt half cannot be
-# cached — system libraries live outside the cached path — which is why the
-# retry is what answers a hung mirror; the cache only shortens the exposure.
-# A hang is answered too: the killed install's leftovers are cleared, then it
-# runs once more. Every path ends in a step that fails the action or succeeds.
+# Both halves are cached, so the usual run does not reach the network for either.
+# The browser download is keyed on the resolved Playwright version. The apt half
+# caches the .deb files apt downloads (about 21 MB, mostly fonts): the installed
+# libraries live outside any cacheable path, but apt reuses a matching .deb it
+# finds in its archive directory and then needs no package download. On an
+# exact hit dpkg installs those files directly: `install-deps` would still run
+# `apt-get update` against the mirror first, and that call is what hangs. The
+# retry and the clearing of a killed install remain for the run that misses.
+# Every path ends in a step that fails the action or succeeds.
 
 inputs:
   working-directory:
@@ -57,6 +60,22 @@ runs:
           *) echo "playwright --version did not yield a version: '$v'" >&2; exit 1 ;;
         esac
         echo "v=$v" >> "$GITHUB_OUTPUT"
+        echo "image=${ImageVersion:-unknown}" >> "$GITHUB_OUTPUT"
+
+    # The runner image version is in the key because the mirror's package versions
+    # move with it; a stale entry would never be refreshed after an exact hit.
+    - name: Restore the downloaded system packages
+      id: apt-cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/playwright-apt-archives
+        key: playwright-apt-${{ runner.os }}-${{ steps.version.outputs.image }}-${{ steps.version.outputs.v }}
+
+    - name: Point apt at the cached package directory
+      shell: bash
+      run: |
+        mkdir -p "$HOME/playwright-apt-archives"
+        echo "Dir::Cache::archives \"$HOME/playwright-apt-archives\";" | sudo tee /etc/apt/apt.conf.d/99playwright-archives >/dev/null
 
     - name: Restore the browser cache
       id: cache
@@ -65,8 +84,26 @@ runs:
         path: ~/.cache/ms-playwright
         key: playwright-chromium-${{ runner.os }}-${{ steps.version.outputs.v }}
 
+    # The entry holds exactly what install-deps downloaded on this runner image
+    # for this Playwright version, so it installs with no mirror at all. An empty
+    # entry means the image already had every library. Any dpkg failure falls
+    # through to install-deps below.
+    - name: Install the cached system libraries without the mirror
+      id: offline
+      if: steps.apt-cache.outputs.cache-hit == 'true'
+      continue-on-error: true
+      shell: bash
+      run: |
+        shopt -s nullglob
+        debs=("$HOME"/playwright-apt-archives/*.deb)
+        echo "installing ${#debs[@]} cached package(s)"
+        if [ "${#debs[@]}" -gt 0 ]; then
+          sudo DEBIAN_FRONTEND=noninteractive timeout --kill-after=30s 2m dpkg -i "${debs[@]}"
+        fi
+
     - name: Install the system libraries Chromium needs
       id: deps
+      if: steps.offline.outcome != 'success'
       continue-on-error: true
       working-directory: ${{ inputs.working-directory }}
       shell: bash
@@ -125,6 +162,12 @@ runs:
           echo "::error::the system libraries did not install inside their bound, even after the first hang was cleared" >&2
         fi
         exit $code
+
+    # apt writes the directory as root, with files the runner cannot read; the
+    # cache save at the end of the job runs as the runner.
+    - name: Hand the downloaded packages to the runner
+      shell: bash
+      run: sudo chown -R "$(id -u):$(id -g)" "$HOME/playwright-apt-archives"
 
     - name: Download the Chromium build
       id: browser

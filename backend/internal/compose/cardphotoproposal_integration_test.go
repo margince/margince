@@ -68,7 +68,7 @@ func TestPhotoCardsBecomeApprovalsAndCreateNothingUntilApproved(t *testing.T) {
 		}
 	}
 
-	svc := approvalsServiceWithEffects(e.Pool)
+	svc := NewApprovalsServiceWithEffects(e.Pool)
 	status, kind := "pending", vcardCreateKind
 	rows, _, err := svc.ListWire(ctx, approvals.ListInput{Status: &status, Kind: &kind, Limit: 10})
 	if err != nil {
@@ -107,7 +107,7 @@ func stagePhotoCard(ctx context.Context, t *testing.T, e *integration.Env, entry
 		t.Fatal(err)
 	}
 	status, kind := "pending", vcardCreateKind
-	rows, _, err := approvalsServiceWithEffects(e.Pool).ListWire(ctx, approvals.ListInput{Status: &status, Kind: &kind, Limit: 10})
+	rows, _, err := NewApprovalsServiceWithEffects(e.Pool).ListWire(ctx, approvals.ListInput{Status: &status, Kind: &kind, Limit: 10})
 	if err != nil || len(rows) != 1 {
 		t.Fatalf("pending approvals = %d (err %v), want the one card", len(rows), err)
 	}
@@ -126,7 +126,7 @@ func TestPhotoCardsShowTheNameTheApprovalWrites(t *testing.T) {
 	if shown != "Hanna FOTOGRAF" {
 		t.Fatalf("the approval shows %q, want the name as the create writes it", shown)
 	}
-	if _, err := approvalsServiceWithEffects(e.Pool).Decide(ctx, ids.From[ids.ApprovalKind](ids.UUID(row.Id)), true, nil); err != nil {
+	if _, err := NewApprovalsServiceWithEffects(e.Pool).Decide(ctx, ids.From[ids.ApprovalKind](ids.UUID(row.Id)), true, nil); err != nil {
 		t.Fatalf("approving: %v", err)
 	}
 	var written string
@@ -154,7 +154,7 @@ func TestPhotoCardsApprovedAfterTheAddressWasTakenCreateNothing(t *testing.T) {
 		t.Fatalf("the colleague's contact: %v", err)
 	}
 
-	_, err := approvalsServiceWithEffects(e.Pool).Decide(ctx, ids.From[ids.ApprovalKind](ids.UUID(row.Id)), true, nil)
+	_, err := NewApprovalsServiceWithEffects(e.Pool).Decide(ctx, ids.From[ids.ApprovalKind](ids.UUID(row.Id)), true, nil)
 	if err == nil {
 		t.Error("approving a card whose address a contact now holds reported success")
 	}

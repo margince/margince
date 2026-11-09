@@ -27,10 +27,11 @@ package gates
 // `file` reports.
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // executableMagic is the first few bytes of a compiled artifact, one entry per
@@ -69,7 +70,7 @@ func TestNoCompiledBinaryIsTracked(t *testing.T) {
 		if file.symlink {
 			continue
 		}
-		head, err := os.ReadFile(filepath.Join(repoRoot, file.path))
+		head, err := gatekit.ReadFile(filepath.Join(repoRoot, file.path))
 		if err != nil {
 			// A tracked path that is not on disk is another gate's finding, and
 			// reporting it here would send the reader looking for a binary.

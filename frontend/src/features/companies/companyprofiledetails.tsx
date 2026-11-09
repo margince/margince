@@ -4,9 +4,11 @@
 import type { components } from "../../api/schema";
 import { RELATIONSHIP_TYPE_LABELS } from "../../components/companylookups";
 import { EntityRef } from "../../components/entityref";
+import { LinkedInChip } from "../../components/linkedinchip";
 import { FieldGrid, FieldRow } from "../../design-system/fieldgrid";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
+import { labelFor } from "../../lib/labelfor";
 import { type Edit, useRowBuilders } from "./companyrail";
 import { SidecarFieldValue } from "./companyraildetails";
 import { CompanyTagsSection } from "./companyrailtags";
@@ -17,7 +19,7 @@ type ProfileField = components["schemas"]["CompanyProfileField"];
 /**
  * The account's filed fields that the record's details column does not draw:
  * legal name, relationship types, parent company, LinkedIn, registered
- * address and tags. They sit here, every one visible and editable in place.
+ * address and tags. They sit here, every one visible and editable.
  * The details column then holds only what the design shows, and no value on
  * the record becomes unreachable.
  */
@@ -43,7 +45,9 @@ export function CompanyProfileDetails({
       "relationship_types",
       t("company.relationshipTypes"),
       types.length > 0
-        ? types.map((type) => t(RELATIONSHIP_TYPE_LABELS[type])).join(", ")
+        ? types
+            .map((type) => t(labelFor(RELATIONSHIP_TYPE_LABELS, type)))
+            .join(", ")
         : undefined,
     ),
     compound(
@@ -52,10 +56,15 @@ export function CompanyProfileDetails({
       company.parent_company_id ? (
         <EntityRef kind="company" id={company.parent_company_id} />
       ) : undefined,
+      { link: true },
     ),
-    text("linkedin_url", "create.linkedinUrl"),
+    text("linkedin_url", "create.linkedinUrl", {
+      link: company.linkedin_url && (
+        <LinkedInChip href={company.linkedin_url} name={company.display_name} />
+      ),
+    }),
     text("phone", "create.phone"),
-    text("email", "create.email", "email"),
+    text("email", "create.email", { type: "email" }),
     {
       key: "registered_address",
       term: t("co.profileField.registered_address"),

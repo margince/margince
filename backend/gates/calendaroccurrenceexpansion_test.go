@@ -29,10 +29,11 @@ package gates
 // masters (the /me/events collection is the one that returns masters).
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // occurrenceExpansion names, per calendar connector, the file that issues its
@@ -64,7 +65,7 @@ func TestEveryCalendarPullListsOccurrencesRatherThanSeriesMasters(t *testing.T) 
 	for where, want := range occurrenceExpansion {
 		t.Run(where, func(t *testing.T) {
 			t.Parallel()
-			source, err := os.ReadFile(filepath.FromSlash(where))
+			source, err := gatekit.ReadFile(filepath.FromSlash(where))
 			if err != nil {
 				// The pull moved or the file was renamed. That is exactly the
 				// edit this gate exists to notice: a census that cannot find

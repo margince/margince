@@ -133,14 +133,14 @@ describe("the lead page's head", () => {
     expect(window.location.hash).toBe("#/share/lead/l-1");
   });
 
-  it("keeps the owner and its Assign control in the details card, once", async () => {
+  it("keeps the owner and its edit in the details card, once", async () => {
     stubLead();
     render(<LeadScreen id="l-1" />);
 
     await screen.findByRole("heading", { level: 1, name: "Jonas Petersen" });
     const details = document.querySelector(".record-aside") as HTMLElement;
     expect(
-      within(details).getAllByRole("button", { name: "Assign" }),
+      await within(details).findAllByRole("button", { name: /^Change Owner/ }),
     ).toHaveLength(1);
     // No facts strip is left in the head to hold a second copy.
     expect(

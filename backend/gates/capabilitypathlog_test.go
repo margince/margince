@@ -45,7 +45,6 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -183,7 +182,7 @@ func TestTheOneTrustedPathWrapperStillRedacts(t *testing.T) {
 	t.Parallel()
 
 	const wrapper = trustedPathWrapperFile
-	body, err := os.ReadFile(wrapper)
+	body, err := gatekit.ReadFile(wrapper)
 	if err != nil {
 		t.Fatalf("reading the trusted path wrapper: %v", err)
 	}

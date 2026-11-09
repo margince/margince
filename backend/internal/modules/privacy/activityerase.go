@@ -39,6 +39,7 @@ func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, 
 
 func clearActivityContent(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	_, err := tx.Exec(ctx, `UPDATE activity SET body = NULL, raw = NULL, agenda_fingerprint = NULL, subject = @subject,
+ internal_mail_authorization = `+erasedInternalMailAuthorizationSQL+`,
  language = NULL, source_author_name = NULL, reply_verdict = NULL, reply_verdict_at = NULL,
  reply_verdict_by = NULL, archived_at = coalesce(archived_at, now()) WHERE id = @id`, pgx.StrictNamedArgs{"subject": erasedActivitySubject, "id": id})
 	if err != nil {
@@ -46,3 +47,7 @@ func clearActivityContent(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	}
 	return clearActivityCustomValues(ctx, tx, []ids.UUID{id})
 }
+
+// A tombstone keeps replay restricted after source identifiers and folder names are erased.
+const erasedInternalMailAuthorizationSQL = `CASE WHEN internal_mail_authorization IS NULL THEN NULL
+ ELSE '{"connection_id":null,"owner_user_id":null,"provider":null,"generation":null,"enrolled_at":null,"enrolled_by":null,"policy_since":null}'::jsonb END`

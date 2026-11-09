@@ -8,53 +8,71 @@ package capture
 
 import (
 	"context"
-	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// takeMergeLockFirst takes the thread-merge lock BEFORE this capture writes a
-// row, when the record is a reply that could reach a stored message.
-//
-// The ordering is the whole point. mergeLinkedThreads takes the same lock and
-// then updates every row of the threads it merges; a concurrent capture that has
-// already written — and so locked — one of those rows and then waits for the
-// merge lock closes a cycle, and Postgres breaks it by aborting one of them. The
-// aborted capture is retried and loses nothing, so a busy shared conversation
-// captured by two mailboxes pays for it in repeated retries rather than in data.
-//
-// Taking the coarse lock before any fine one removes the cycle: a transaction
-// that will ever hold this lock holds it before it owns a row anybody else wants.
-//
-// The probe is what keeps the lock off the common path. It asks the neighbour
-// question this capture would ask later, minus the exclusion of its own
-// not-yet-written row, so it can only answer with MORE rows than the real join
-// finds, never fewer — a capture that merges never slips past it. A non-email
-// record and a message nothing stored links skip the lock entirely.
-//
-// It is NOT gated on the record carrying References of its own, and that is the
-// whole reason it asks the database rather than reading the header. MailNeighbours
-// matches a stored message that references THIS one as well as the ones this one
-// references, so a backfill capturing a parent after its reply has a neighbour
-// while its own header names nobody. Gating on ReplyTo skipped the lock exactly
-// there, and left the deadlock ordering in place for the one capture order that
-// produces it.
+// takeMergeLockFirst fences identities and components before capture owns rows.
+// Re-reading catches a canonical key that moved while the first locks waited.
 func (s *Sink) takeMergeLockFirst(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) error {
 	if !s.threadJoin.complete() || rec.NaturalKey.SourceSystem != connector.EmailSourceSystem {
 		return nil
 	}
-	linked, err := s.threadJoin.Neighbours(ctx, tx, ids.ActivityID{}, rec.NaturalKey.SourceID, rec.ReplyTo)
-	if err != nil || len(linked) == 0 {
+	keys, err := s.captureThreadLocks(ctx, tx, rec)
+	if err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx, mergeLockStatement); err != nil {
-		return fmt.Errorf("capture: taking the thread merge lock before the row: %w", err)
+	if err := storekit.WaitThreadKeysTx(ctx, tx, keys); err != nil {
+		return err
+	}
+	current, err := s.captureThreadLocks(ctx, tx, rec)
+	if err != nil {
+		return err
+	}
+	if slices.Equal(keys, current) {
+		return nil
+	}
+	if err := storekit.LockThreadKeysTx(ctx, tx, current...); err != nil {
+		return err
+	}
+	stable, err := s.captureThreadLocks(ctx, tx, rec)
+	if err != nil {
+		return err
+	}
+	for _, key := range stable {
+		if !slices.Contains(keys, key) && !slices.Contains(current, key) {
+			return storekit.RetryThreadTransaction(ctx, tx)
+		}
 	}
 	return nil
+}
+
+func (s *Sink) captureThreadLocks(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) ([]string, error) {
+	keys := append(slices.Clone(rec.ReplyTo), rec.NaturalKey.SourceID)
+	linked, err := s.threadJoin.Neighbours(ctx, tx, ids.ActivityID{}, rec.NaturalKey.SourceID, keys)
+	if err != nil {
+		return nil, err
+	}
+	keys = append(keys, rec.ThreadKey)
+	if len(linked) > 0 {
+		rows, err := tx.Query(ctx, `SELECT DISTINCT thread_key FROM activity WHERE id = ANY(@linked::uuid[]) AND thread_key IS NOT NULL`, pgx.NamedArgs{"linked": linked})
+		if err != nil {
+			return nil, err
+		}
+		current, err := pgx.CollectRows(rows, pgx.RowTo[string])
+		if err != nil {
+			return nil, err
+		}
+		keys = append(keys, current...)
+	}
+	slices.Sort(keys)
+	return slices.Compact(keys), nil
 }
 
 // invitationAlreadyFiled answers the row a meeting invitation already filed, so a

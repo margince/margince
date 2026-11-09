@@ -89,9 +89,9 @@ function MarkChip({
         {...peekProps}
       >
         <Icon aria-hidden="true" />
-        {members.length === 1 && newest.direction && (
+        {members.length === 1 && newest.side && (
           <span className="standing-timeline-mark-way">
-            {newest.direction === "inbound" ? (
+            {newest.side === "theirs" ? (
               <ArrowDownLeft aria-hidden="true" />
             ) : (
               <ArrowUpRight aria-hidden="true" />

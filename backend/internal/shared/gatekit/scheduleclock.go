@@ -24,7 +24,6 @@ package gatekit
 // write sites are derived from source, and only the column is named.
 
 import (
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -116,10 +115,12 @@ var clampFunctions = []string{"least", "greatest", "coalesce"}
 // databaseClocked reports whether a written value can only have come from the
 // database's own clock or from what the row already held.
 //
-// Four shapes qualify. `now()` and anything built on it is the rule itself. A
+// Five shapes qualify. `now()` and anything built on it is the rule itself. A
 // NULL writes no deadline at all, so no clock is involved. A bare column
 // forwards a value the database already stores — the sibling column's own
-// obligation, not this write's. And a clamp qualifies when every argument does.
+// obligation, not this write's. A column offset by a literal interval forwards
+// it too, moved by a constant no process chose. And a clamp qualifies when
+// every argument does.
 func databaseClocked(value string) bool {
 	v := strings.TrimSpace(value)
 	if strings.HasPrefix(v, databaseClock) || v == unscheduled {
@@ -133,7 +134,23 @@ func databaseClocked(value string) bool {
 		}
 		return true
 	}
-	return storedColumn(v)
+	return storedColumn(v) || offsetStoredColumn(v)
+}
+
+// offsetStoredColumn reports whether value is a stored column plus a literal
+// interval, as in `created_at + interval '1 microsecond'`. The offset must be
+// written into the statement: a bound one is a value this rule cannot read.
+func offsetStoredColumn(value string) bool {
+	column, offset, ok := strings.Cut(value, "+")
+	if !ok || !storedColumn(strings.TrimSpace(column)) {
+		return false
+	}
+	literal, ok := strings.CutPrefix(strings.TrimSpace(offset), "interval '")
+	if !ok {
+		return false
+	}
+	body, ok := strings.CutSuffix(literal, "'")
+	return ok && body != "" && !strings.ContainsAny(body, "'$")
 }
 
 // clampArguments returns the arguments of a clamp call, or false for anything
@@ -192,7 +209,7 @@ func requireSubjects(t testing.TB, dir, column string, found int) {
 // clock.
 func packageSourceFiles(t testing.TB, dir string) []string {
 	t.Helper()
-	entries, err := os.ReadDir(dir)
+	entries, err := ReadDir(dir)
 	if err != nil {
 		t.Errorf("reading the package directory %s: %v", dir, err)
 		return nil

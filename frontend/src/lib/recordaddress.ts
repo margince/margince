@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { bookingSlugFromPath, isShareableBookingSlug } from "./bookingaddress";
 import { opensElsewhere } from "./linkclick";
 
 const IDENTIFIER =
@@ -12,6 +13,17 @@ const RECORD_PATH = new RegExp(
   `^/r/(deals|companies|contacts)/(${IDENTIFIER})$`,
 );
 
+/**
+ * Whether a pathname is one this module publishes or restores: a record, a
+ * booking page or the consent screen.
+ *
+ * Exported so the served-path check reads this notion rather than keeping a
+ * second copy. Two copies disagree the first time one gains an address.
+ */
+export function namesAnAppAddress(pathname: string): boolean {
+  return isMirroredPath(pathname) || pathname === CONSENT_PATH;
+}
+
 export function appHref(href: string): string;
 export function appHref(href: string | undefined): string | undefined;
 export function appHref(href: string | undefined): string | undefined {
@@ -21,9 +33,26 @@ export function appHref(href: string | undefined): string | undefined {
   return `${recordPath(hash)}${hash}`;
 }
 
+const BOOKING = /^#\/book\/([^/?]+)(?:[/?]|$)/;
+
+// The server-visible path an address mirrors: a record card, a host's public
+// booking page, or the root. Any other booking id maps to the root. A guest's
+// token so never leaves the fragment.
 function recordPath(hash: string): string {
   const record = RECORD.exec(hash);
-  return record ? `/r/${record[1]}/${record[2]}` : "/";
+  if (record) return `/r/${record[1]}/${record[2]}`;
+  const booking = BOOKING.exec(hash);
+  if (booking && isShareableBookingSlug(booking[1]))
+    return `/book/${booking[1]}`;
+  return "/";
+}
+
+function isMirroredPath(pathname: string): boolean {
+  return (
+    pathname === "/" ||
+    RECORD_PATH.test(pathname) ||
+    bookingSlugFromPath(pathname) !== null
+  );
 }
 
 type LinkPress = Readonly<{
@@ -50,7 +79,7 @@ export function followAppLink(event: LinkPress): void {
   if (
     link.origin !== location.origin ||
     !link.hash.startsWith("#/") ||
-    (link.pathname !== "/" && !RECORD_PATH.test(link.pathname))
+    !isMirroredPath(link.pathname)
   )
     return;
   event.preventDefault();
@@ -61,18 +90,42 @@ export function followAppLink(event: LinkPress): void {
 export function restoreRecordAddress(): void {
   if (location.hash) return;
   const record = RECORD_PATH.exec(location.pathname);
-  if (record)
+  if (record) {
     history.replaceState(
       history.state,
       "",
       `${location.pathname}${location.search}#/${record[1]}/${record[2]}`,
     );
+    return;
+  }
+  const slug = bookingSlugFromPath(location.pathname);
+  if (slug)
+    history.replaceState(
+      history.state,
+      "",
+      `/book/${slug}${location.search}#/book/${slug}`,
+    );
 }
+
+/** The consent screen's own path, which nginx serves without COOP same-origin. */
+export const CONSENT_PATH = "/consent";
+const CONSENT_ROUTE = /^#\/oauth-consent(?:[/?]|$)/;
 
 // Keep the hash router while making the record identity visible to preview fetchers.
 export function publishRecordAddress(): void {
   const { pathname, search, hash } = globalThis.location;
-  if (pathname !== "/" && !pathname.startsWith("/r/")) return;
+  // Any other screen here would leave a window handle open to whoever opened it.
+  // So it reloads at the root, under the app's own policy.
+  if (pathname === CONSENT_PATH && !CONSENT_ROUTE.test(hash)) {
+    globalThis.location.replace(`/${search}${hash}`);
+    return;
+  }
+  if (
+    pathname !== "/" &&
+    !pathname.startsWith("/r/") &&
+    !pathname.startsWith("/book/")
+  )
+    return;
   const next = recordPath(hash);
   if (pathname !== next)
     history.replaceState(history.state, "", `${next}${search}${hash}`);

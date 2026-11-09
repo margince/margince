@@ -141,8 +141,8 @@ export function EmailDetail({
   );
 }
 
-// The drawer's body: the thread once it is read, or the state of the read.
-function ThreadState({
+// A thread's body, in the drawer or a panel: the thread once read, or the read's state.
+export function ThreadState({
   read,
   formatWhen,
   viewerUserId,

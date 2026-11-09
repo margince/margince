@@ -19,11 +19,10 @@ import (
 	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
-)
 
-// routePrefix is the base path the generated router mounts every operation
-// under; the chi pattern a request matches carries it.
-const routePrefix = "/v1"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/tools/internal/apideprecation"
+)
 
 type queryEnum struct {
 	Name   string
@@ -59,7 +58,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("gen-queryenums: %v", err)
 	}
-	formatted, err := format.Source([]byte(render(table)))
+	notices, err := renderDeprecations(doc)
+	if err != nil {
+		log.Fatalf("gen-queryenums: %v", err)
+	}
+	formatted, err := format.Source([]byte(render(table) + notices))
 	if err != nil {
 		log.Fatalf("gen-queryenums: formatting the generated table: %v", err)
 	}
@@ -82,7 +85,7 @@ func deriveTable(doc *openapi3.T) (map[string]routeQuery, error) {
 				var minimums []queryMinimum
 				minimums, err = minimumsOf(byName)
 				if len(enums)+len(minimums) > 0 {
-					table[method+" "+routePrefix+path] = routeQuery{enums: enums, minimums: minimums}
+					table[method+" "+httpserver.BaseURL+path] = routeQuery{enums: enums, minimums: minimums}
 				}
 			}
 			if err != nil {
@@ -249,4 +252,33 @@ func render(table map[string]routeQuery) string {
 	}
 	b.WriteString("}\n")
 	return b.String()
+}
+
+func renderDeprecations(doc *openapi3.T) (string, error) {
+	notices, err := apideprecation.Notices(doc)
+	if err != nil {
+		return "", err
+	}
+	routes := make([]string, 0, len(notices))
+	for route := range notices {
+		routes = append(routes, route)
+	}
+	sort.Strings(routes)
+	var out strings.Builder
+	out.WriteString("\nvar deprecationTable = map[string]map[string]string{\n")
+	for _, route := range routes {
+		headers, err := notices[route].Headers()
+		if err != nil {
+			return "", err
+		}
+		fmt.Fprintf(&out, "%q: {", route)
+		for _, name := range []string{"Deprecation", "Sunset", "Link"} {
+			if value := headers.Get(name); value != "" {
+				fmt.Fprintf(&out, "%q: %q,", name, value)
+			}
+		}
+		out.WriteString("},\n")
+	}
+	out.WriteString("}\n")
+	return out.String(), nil
 }

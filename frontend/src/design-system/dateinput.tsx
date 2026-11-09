@@ -192,7 +192,7 @@ export function DateInput({
             if (event.key === "Enter" && !isImeCommit(event)) {
               settleTyped();
             }
-            // The first Escape takes back typed text, as InlineText's does.
+            // The first Escape takes back typed text.
             // Marked handled, so a dialog around it hears only the next one.
             if (event.key === "Escape" && openedOn === null && unsettled) {
               event.preventDefault();

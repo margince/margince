@@ -9,6 +9,8 @@ import (
 	"context"
 	"net/http"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 // Asking a colleague to decide a refused send is not offered, and neither is
@@ -46,7 +48,7 @@ func TestTheRetiredAskAndQueueAreGone(t *testing.T) {
 // cannot be approved: nothing would carry out a yes.
 func TestARetiredReviewCardIsReadableAndCannotBeApproved(t *testing.T) {
 	c := setupConsent(t)
-	seat := sessionUserID(t, c.AppEnv)
+	seat := apptest.SessionUserID(t, c.AppEnv)
 	ctx := context.Background()
 	var pending, decided string
 	for status, into := range map[string]*string{"pending": &pending, "approved": &decided} {

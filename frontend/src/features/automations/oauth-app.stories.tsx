@@ -19,7 +19,7 @@ import { OAuthAppCard } from "./oauth-app";
 // checking exactly what the shared card is allowed to vary.
 
 const meta: Meta<typeof OAuthAppCard> = {
-  title: "Settings/Company/Sign-in and apps/Connector app",
+  title: "Settings/Company/Sign-in and security/Connector app",
   component: OAuthAppCard,
   parameters: { layout: "padded" },
 };

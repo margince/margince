@@ -30,7 +30,7 @@ func meetingGuestAnswersDataTask(pool *pgxpool.Pool) datatask.Task {
 	db := InstallationDB(pool)
 	authority := identity.NewService(pool)
 	return datatask.Task{
-		ID: "core/1793003497_meeting_guest_answers", Version: 1,
+		ID: "core/1793003497_meeting_guest_answers", Version: 2,
 		Title: "Recording what calendar guests answered", Requires: []string{"core/1793003496"},
 		Steps: []datatask.Step{{
 			Name: "fill_guest_answers", Limit: 100, MinLimit: 1,

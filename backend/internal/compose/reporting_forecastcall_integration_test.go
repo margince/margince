@@ -34,7 +34,7 @@ func TestAReaderWhoMayNotSeeTheCallGetsTheLandingWithoutIt(t *testing.T) {
 	if basis == nil || basis.CallMinor != nil || overHTTP.CurrentCall != nil || overHTTP.Landing == nil || !reflect.DeepEqual(basis.Landing, *overHTTP.Landing) {
 		t.Fatalf("the team-lens basis %+v beside GET /forecast's call %v and landing %+v, want no call and one landing", basis, overHTTP.CurrentCall, overHTTP.Landing)
 	}
-	if basis.Landing.Measure != "commit_evidence" || basis.Landing.Caveat == nil || *basis.Landing.Caveat != "call_absent" {
+	if basis.Landing.Measure != "likely" || basis.Landing.Caveat == nil || *basis.Landing.Caveat != "call_absent" {
 		t.Fatalf("the team-lens landing %+v, want the records' projection with call_absent", basis.Landing)
 	}
 	assertNoCallInCSV(t, evaluation)

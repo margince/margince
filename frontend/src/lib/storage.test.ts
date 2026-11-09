@@ -101,13 +101,16 @@ describe("a stored value", () => {
       ),
     ).toEqual([
       "margince.palette.recents",
+      "margince.home.swipeSeen",
       "margince.locale",
       "margince.theme",
       "margince.sidebarCollapsed",
       "margince.pageAside.collapsed",
       "margince.edgeLight",
       "margince.worklist.drawerWide",
+      "margince.documents.view",
       "margince.table.widths.v2.*",
+      "margince.table.order.*",
       "margince.agent.faults-seen",
       "margince.brief.introShown",
       "margince.leads.segregationNoteDismissed",
@@ -124,6 +127,7 @@ describe("a stored value", () => {
       "margince.analytics.overviewView",
       "margince.analytics.overview:*",
       "margince.analytics.overviewTab:*",
+      "margince.session.seen",
     ]);
   });
 });

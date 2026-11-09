@@ -163,6 +163,7 @@ func TestSchema_companyOpenPipelineRollupIsSecurityInvoker(t *testing.T) {
 var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"company_offered_value.company_id": "child row: what a feed offered for a company, written by contacts.RecordOfferedValues from an extension landing under the service member's own update right on the company and auth.EnsureWritableLive, never from a request body, and read only through contacts.ListOfferedValues, which gates the company with auth.EnsureReadable and answers 404 for an archived one. ON DELETE CASCADE, and the erasure path deletes a row by statement",
 	// Client-supplied references — visibility-gated at the store:
+	"contact.created_from_activity_id":     "gated: refuseUnreadableSource (the activity read grant, then auth.EnsureActivityContentVisibleLive) at CreateContact and CreateContactTx, so a caller cannot name a record they may not read",
 	"site_read.company_id":                 "gated: auth.EnsureVisible in StartSiteRead (the one human entry point); Begin/Finish only re-address a row Start created, and GetSiteRead re-checks EnsureVisible on every read",
 	"deal.company_id":                      "gated: auth.EnsureLinkTarget in CreateDeal/UpdateDeal (H1)",
 	"project.company_id":                   "gated: auth.EnsureLinkTarget in CreateProject/UpdateProject (H1) — the anchor company is client-supplied, so naming it is a read of it",
@@ -188,7 +189,7 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"record_assignment.deal_id":            "gated: the same pair in ensureParentReadable and ensureParentWritable, on deal",
 	"record_assignment.project_id":         "gated: the same pair in ensureParentReadable and ensureParentWritable, on project",
 	"contract.company_id":                  "gated: auth.EnsureLinkTarget in createContractTx (H1) — the counterparty is client-supplied, so naming it is a read of it",
-	"project_health_assessment.project_id": "gated: auth.Require plus auth.HoldWritableLive on the project in RecordHealth and CorrectHealth, and auth.Require plus auth.EnsureVisible in ListHealth — the project comes from the ROUTE and every path probes it before a row is written or served",
+	"project_health_assessment.project_id": "gated: auth.Require plus auth.HoldWritableLive on the project in RecordHealthTx, CorrectHealth, RecordAIHealthTx and UndoAIHealth, and auth.Require plus auth.EnsureVisible in ListHealth — the project comes from the ROUTE and every path probes it before a row is written or served",
 	// The deal and project links carry a SECOND obligation the sibling columns
 	// above do not, and it is the reason this table's gate is not just a copy.
 	// A contract's row visibility is INHERITED from its deal (falling back to
@@ -311,9 +312,10 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// same transaction that created it. There is no client-supplied reference
 	// to gate: nothing outside the triage resolve ever writes this column, and
 	// no human surface reads the row.
-	"company_domain_disposition.company_id": "server-derived: set only by ResolveDomainTriage, to the company that same transaction created or adopted through the gated dedupe chokepoint",
-	"contact_email.contact_id":              "child row: written through the contact's own gated paths",
-	"contact_phone.contact_id":              "child row: written through the contact's own gated paths",
+	"company_domain_disposition.company_id":           "server-derived: set only by ResolveDomainTriage, to the company that same transaction created or adopted through the gated dedupe chokepoint",
+	"company_domain_disposition.candidate_company_id": "server-derived: set only by withholdForNearDuplicate, to the rival the dedupe chokepoint ranked; the read that offers it keeps only companies inside the reader's company scope",
+	"contact_email.contact_id":                        "child row: written through the contact's own gated paths",
+	"contact_phone.contact_id":                        "child row: written through the contact's own gated paths",
 	// The licensed-data-provider platform (ADR-0101). A run names the subject
 	// it spends credits on, so admitting one IS a read of that contact: QueueRun
 	// takes auth.EnsureVisible inside the queueing transaction, before any
@@ -358,11 +360,12 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// arrives from the caller, and is stamped only after auth.EnsureWritable
 	// has admitted the loser and auth.WritableBy the survivor. A lead either
 	// end of the pair cannot be written to answers before the pointer is set.
-	"lead.merged_into_id":              "gated then stamped: MergeLead puts BOTH leads through mergePair's row-scope writability probes before archiveMergedAway writes the pointer",
-	"contact.converted_from_lead_id":   "server-derived: stamped by PromoteLead",
-	"deal_stage_history.deal_id":       "server-derived: appended by CreateDeal/AdvanceDeal",
-	"project_phase_history.project_id": "server-derived: appended by CreateProject/AdvanceProjectPhase from the project row they just wrote or advanced, never from a request body",
-	"brief_item.deal_id":               "server-derived: written only by the brief ranker from its own row-scoped candidate query, never from a request body",
+	"lead.merged_into_id":               "gated then stamped: MergeLead puts BOTH leads through mergePair's row-scope writability probes before archiveMergedAway writes the pointer",
+	"contact.converted_from_lead_id":    "server-derived: stamped by PromoteLead",
+	"deal_stage_history.deal_id":        "server-derived: appended by CreateDeal/AdvanceDeal",
+	"project_phase_history.project_id":  "server-derived: appended by CreateProject/AdvanceProjectPhase from the project row they just wrote or advanced, never from a request body",
+	"brief_item.deal_id":                "server-derived: written only by the brief ranker from its own row-scoped candidate query, never from a request body",
+	"sales_initiative_baseline.deal_id": "server-derived: frozen by initiatives.Store.Launch from the membership the same transaction resolved under the caller's deal grant and row scope (visibleRecords and the rule engine), never from a request body",
 	// The capture disposition ledger (CAP-DDL-8): capture writes the row in
 	// the same transaction as the activity it just created, from that
 	// activity's own id — a connector principal supplies message bytes, never
@@ -384,6 +387,8 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"company_fact.company_id":              "child rows written only through the deepread accept effect, whose approval was staged from a visibility-checked read",
 	"company_fact_revision.company_id":     "internal counter, never named by a caller: written by the company_fact trigger for the company whose fact row changed and by the company merge for its survivor (contacts/mergerelink_company.go settleFactRevisions), and read only by the technical lookup and its Undo (contacts/technicalrestore.go), after the company's own write or visibility gate. No read returns it to a client",
 	"offer.deal_id":                        "gated: auth.EnsureLinkTarget in CreateOffer; every later offer read/write re-probes the deal (H1)",
+	"deal_line_item.deal_id":               "gated: every line write takes the deal from the path, locks it and asks auth.EnsureWritable in deals.openDealLines before the insert; the body never names a deal",
+	"deal_product.deal_id":                 "gated: auth.EnsureWritableLive on the deal in deals.Store.ReplaceDealProducts, the one caller-supplied door; syncDealProductsFromOffer runs inside the offer accept, whose deal the accept already probed",
 	"offer.buyer_company_id":               "gated: auth.EnsureLinkTarget in CreateOffer/UpdateOffer (H1)",
 	"signal.resolved_company_id":           "gated: the resolver attributes only to a caller-visible company (visibleCandidates → auth.EnsureLinkTarget)",
 	"signal.resolved_contact_id":           "gated: consentedContact links only a caller-visible contact (auth.EnsureLinkTarget); else company-level",
@@ -437,7 +442,8 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// store already put through auth.EnsureLinkTarget. Reads inherit the
 	// activity's own visibility (the link walk), so a participant row never
 	// discloses an activity its reader could not already open.
-	"activity_participant.activity_id": "child row: written only beside the activity itself, inside the transaction that mints it",
+	"activity_participant.activity_id":                    "child row: written only beside the activity itself, inside the transaction that mints it",
+	"activity_participant.domain_evidence_parent_version": "server-derived: the database copies the clock version from the already-gated activity_id. It names no independent target and is never accepted from a client",
 	// The external identities one message answers to, and the row a second
 	// provider's copy of it resolves to.
 	"activity_mail_reference.activity_id": "gated: the WRITE is a child row stored beside the email a capture just landed or took over, on the id the capture itself resolved, inside that capture's transaction. The READ (activities.MailNeighboursTx) answers activity ids only to capture's thread join, which acts on a neighbour solely when the capturing seat holds it (its own capture_import row) and only ever rewrites thread keys; no id, subject or content reaches a caller. ON DELETE CASCADE, plus an explicit purge on the erasure path beside activity_identity, because erasure archives rather than deletes",
@@ -568,7 +574,7 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"capture_party_source_replay.activity_id":                "server-derived maintenance ledger: the sink marks the activity it just processed, or the system-only historical repair marks an activity selected from stored originals. No client supplies this reference and no reader serves ledger rows; ON DELETE CASCADE",
 	"activity.source_activity_id":                            "server-derived: the transcript accept path names the meeting whose reading produced the proposal, off the staged payload's own ActivityID rather than off a request body — the rep decides an approval, they do not supply an id. Reading it is a separate act under the caller's own scope: the task carries the reference, and opening the meeting goes through the ordinary activity read, which answers 404 to a reader who may not see it. ON DELETE SET NULL, so erasing the meeting leaves the work standing",
 	"intro_request.source_activity_id":                       "server-derived: the reply consumer names the activity it is already processing, and a human marking the handshake names one from the timeline they are already reading. ON DELETE SET NULL, so the ask still answers after the message is gone",
-	"stage_progression_outcome.deal_id":                      "server-derived: the ledger row names the deal the transaction is ALREADY processing. RecordProgressionProposed is reached only from StageProgressionProposer.stageCard, which writes it from the facts ReadStageProgressionFacts read on that same deal in that same transaction; RecordProgressionDecided names the entity off the approval event's own envelope. Neither takes an id from a request body, and the proposer runs under a system principal — there is no caller scope for a target probe to test. What the act is gated on instead is authority over the move itself: auth.Require(deal, update), on the ledger write as much as on the decision, because opening a proposal to move a deal is a write about that deal",
+	"stage_progression_outcome.deal_id":                      "server-derived history: no code writes this table any more. Its rows were written by the retired stage-move card path, under a system principal, naming the deal that path was already processing, never an id from a request body. ON DELETE CASCADE",
 	"deal_correction.deal_id":                                "server-derived: the row names the deal the sweep is correcting inside that correction's own transaction, off the candidate it is already holding — no id reaches it from a request body, and the nightly pass runs under the workspace's system principal with no caller scope for a target probe to test. The one path where a HUMAN names one is the Undo, and it does not name a deal at all: RevertCorrection takes a correction id, reads the deal out of that row, and then takes auth.EnsureWritable on it before touching anything — a stronger question than visibility, because taking a machine's change back is changing the record. ON DELETE CASCADE, so erasing a deal takes its correction history with it",
 	"activity_reminder_delivery.activity_id":                 "caller-supplied in the path, but a claim is written only for a row the caller's own reminder_due list returns: ClaimReminderDelivery reads the row through ListActivities, narrowed to that id, so every gate the list applies (row scope, content, the Worklist's queue and window) applies to the claim. Any other id writes nothing and answers claimed=false, the same answer a claimed reminder gets, so the response tells a probe nothing about a row it cannot see. ON DELETE CASCADE, so the claim leaves with its task",
 	"activity_request_settlement.request_activity_id":        "server-derived, and an OWNED CHILD of the row it names. The settlement pass writes it over a request the pass itself selected — RepliedRequests reads the waiting queue's own predicates under the workspace's system principal — so no id reaches this column from a request body and there is no caller scope for a target probe to test. One row per request, keyed on it, meaningless without it. Authority is taken over the ACT instead: auth.Require(activity, update) on SettleRequest, plus a re-test inside the write transaction that the request is still live, unrestricted and workspace-audience, because the model call happens between the read and the write and a narrowing can land in that gap. ON DELETE CASCADE, so erasing the message takes the judgement about it with it",

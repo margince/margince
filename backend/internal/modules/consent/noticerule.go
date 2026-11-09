@@ -104,7 +104,7 @@ func DutyFor(acquisitionKind string) (NoticeDuty, bool) {
 	case "referral", "public_or_business_source", "purchased_or_imported":
 		return strictNotice(), true
 
-	case "unknown_legacy":
+	case acquiredUnknownLegacy:
 		return sourceReview(), true
 	}
 	return sourceReview(), true

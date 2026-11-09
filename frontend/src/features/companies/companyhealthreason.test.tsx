@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import { useHealthReason } from "../../components/companylookups";
 import { LocaleProvider } from "../../i18n";
-import { RecordZoneProvider } from "../../lib/recordzone";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
 
 // The server rates relationship and commercial health and names a reason code
 // beside its English sentence. The reader sees the code in their language, and
@@ -16,7 +16,7 @@ import { RecordZoneProvider } from "../../lib/recordzone";
 function wrapper(locale: "en" | "de" | "vi", zone = "UTC") {
   return ({ children }: { children: ReactNode }) => (
     <LocaleProvider initial={locale}>
-      <RecordZoneProvider zone={zone}>{children}</RecordZoneProvider>
+      <ViewerZoneProvider zone={zone}>{children}</ViewerZoneProvider>
     </LocaleProvider>
   );
 }
@@ -63,7 +63,7 @@ describe("useHealthReason", () => {
 
   // The day is the record zone's, not UTC's: 17:30Z is already the next
   // morning in Ho Chi Minh City.
-  it("names a booked meeting's day in the record's zone", () => {
+  it("names a booked meeting's day in the reader's zone", () => {
     const en = renderHook(() => useHealthReason(), {
       wrapper: wrapper("en", "Asia/Ho_Chi_Minh"),
     });

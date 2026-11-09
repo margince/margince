@@ -9,7 +9,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useUnsavedGuard } from "../../components/unsaved";
 import { VoiceKinds } from "../../components/voicekinds";
-import { Badge, Button, Disclosure, Textarea } from "../../design-system/atoms";
+import { Button, Disclosure, Textarea } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { JumpBar, type JumpTarget } from "../../design-system/jumpbar";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
@@ -20,13 +20,13 @@ import {
   SettingRow,
 } from "../../design-system/settingrow";
 import { useToast } from "../../design-system/toast";
-import { identifierNumber } from "../../format/format";
 import { type Translator, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useVoiceProfile } from "../../lib/voice-profile";
 import { useVoiceIntake, type VoiceIntake } from "./use-voice-intake";
 import { VoiceCorpusIntake } from "./voice-corpus-settings";
+import { DerivedVoice, VoiceStanding } from "./voice-dna.standing";
 import {
   SharpenStrip,
   VOICE_SECTIONS,
@@ -43,6 +43,11 @@ import {
 } from "./voice-insights";
 import { useVoiceSources, VoiceSamples } from "./voice-samples";
 import {
+  LearnFromSentMail,
+  type SentMailLearning,
+  useSentMailLearning,
+} from "./voice-sentmail";
+import {
   CandidateBanner,
   CandidateReview,
   loadedVersions,
@@ -53,6 +58,7 @@ import {
 } from "./voice-versions";
 import "./voice-dna.css";
 import { BuildControls, reportFailure } from "./voice-dna.build";
+import { useFollowBuildOutcome, useSetupFocus } from "./voice-dna.setup";
 
 export type VoiceProfile = components["schemas"]["VoiceProfile"];
 
@@ -79,6 +85,9 @@ export function VoiceDnaCard() {
   const canCreate = useCanWrite("voice_profile", "create");
   const qc = useQueryClient();
   const profile = useVoiceProfile();
+  // Before the first sample there is no section to land on; the dial is still
+  // answered, so pressing the step again works.
+  useSetupFocus(profile.data === null);
   // Owned above the empty and profile branches. The first sample mints the
   // profile and swaps one branch for the other. The files still in flight then
   // belong to the card that remains.
@@ -86,11 +95,12 @@ export function VoiceDnaCard() {
     profileId: profile.data?.id ?? null,
     onChanged: () => invalidateVoiceCorpus(qc),
   });
+  const sentMail = useSentMailLearning(() => invalidateVoiceCorpus(qc));
   return (
     <QueryGate query={profile} pendingLabel={t("settings.voice.title")}>
       {(data) =>
         data ? (
-          <VoiceDnaBody profile={data} intake={intake} />
+          <VoiceDnaBody profile={data} intake={intake} sentMail={sentMail} />
         ) : (
           // A profile is minted by the first add rather than by a step of
           // its own, so the add control renders here too. Without it an owner
@@ -98,20 +108,23 @@ export function VoiceDnaCard() {
           // DNA at all, and everything the profile unlocks stayed unreachable.
           <div className="vdna-page">
             <VoiceStart />
-            <Panel tone="ai" title={t("settings.voice.start.addTitle")}>
-              <PanelBody>
-                <PanelIntro>{t("settings.voice.emptyBody")}</PanelIntro>
-                <VoiceKinds />
-                {!canCreate && <p>{t("settings.voice.readOnly")}</p>}
-              </PanelBody>
-              {/* The first sample mints the profile, so adding it takes the
+            <VoiceSection id={VOICE_SECTIONS.sharpen}>
+              <Panel tone="ai" title={t("settings.voice.start.addTitle")}>
+                <PanelBody>
+                  <PanelIntro>{t("settings.voice.emptyBody")}</PanelIntro>
+                  <VoiceKinds />
+                  {!canCreate && <p>{t("settings.voice.readOnly")}</p>}
+                </PanelBody>
+                {/* The first sample mints the profile, so adding it takes the
                   create grant rather than the update one. */}
-              {canCreate && (
-                <SettingList bleed="settings">
-                  <VoiceCorpusIntake first intake={intake} />
-                </SettingList>
-              )}
-            </Panel>
+                {canCreate && (
+                  <SettingList bleed="settings">
+                    <LearnFromSentMail learning={sentMail} />
+                    <VoiceCorpusIntake first intake={intake} />
+                  </SettingList>
+                )}
+              </Panel>
+            </VoiceSection>
           </div>
         )
       }
@@ -191,7 +204,12 @@ function VoiceProof({ insights }: Readonly<{ insights: VoiceInsightsData }>) {
 function VoiceDnaBody({
   profile,
   intake,
-}: Readonly<{ profile: VoiceProfile; intake: VoiceIntake }>) {
+  sentMail,
+}: Readonly<{
+  profile: VoiceProfile;
+  intake: VoiceIntake;
+  sentMail: SentMailLearning;
+}>) {
   const t = useT();
   // useCanWrite, not useCan: every affordance these children hold issues a
   // mutation, and the seat ceiling has to fold in — a read seat holding the
@@ -203,7 +221,10 @@ function VoiceDnaBody({
   const [intakeBusy, setIntakeBusy] = useState(false);
   const [deltasAsked, setDeltasAsked] = useState(false);
   const invalidate = () => invalidateVoiceCorpus(qc);
-  const versions = loadedVersions(useVoiceVersions(profile.id).data?.pages);
+  const versionsRead = useVoiceVersions(profile.id);
+  const versions = loadedVersions(versionsRead.data?.pages);
+  useSetupFocus(!versionsRead.isPending);
+  useFollowBuildOutcome(profile, qc);
   const active = versions.find((version) => version.status === "active");
   const candidate = versions.find((version) => version.status === "candidate");
   // A first version awaiting review is the only voice there is. The page draws
@@ -286,6 +307,7 @@ function VoiceDnaBody({
           />
           {canEdit && (
             <SettingList bleed="settings">
+              <LearnFromSentMail learning={sentMail} />
               <VoiceCorpusIntake intake={intake} onBusyChange={setIntakeBusy} />
             </SettingList>
           )}
@@ -369,36 +391,6 @@ function VoiceSection({
     <div id={id} tabIndex={-1} className="vdna-section">
       {children}
     </div>
-  );
-}
-
-// The profile's standing at the end of the jump bar. A state shows only when
-// it wants something, since ready is normal. The version follows.
-function VoiceStanding({ profile }: Readonly<{ profile: VoiceProfile }>) {
-  const t = useT();
-  return (
-    <span className="vdna-status">
-      {profile.status !== "ready" && (
-        <Badge>{t(`settings.voice.status.${profile.status}`)}</Badge>
-      )}
-      {/* Version 0 is a profile no build has written yet: nothing to name. */}
-      {Boolean(profile.profile_version) && (
-        <span className="t-caption">
-          {t("settings.voice.version", {
-            n: identifierNumber(profile.profile_version ?? 0),
-          })}
-        </span>
-      )}
-    </span>
-  );
-}
-
-function DerivedVoice({ profile }: Readonly<{ profile: VoiceProfile }>) {
-  const t = useT();
-  return profile.voice_profile_md ? (
-    <p className="vdna-derived">{profile.voice_profile_md}</p>
-  ) : (
-    <p>{t("settings.voice.derivedEmpty")}</p>
   );
 }
 

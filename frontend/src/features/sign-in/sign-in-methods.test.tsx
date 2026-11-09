@@ -66,6 +66,7 @@ function mount(
     app?: "none" | "stored" | "environment";
     microsoftTenant?: string;
     onScreen?: string[];
+    part?: "methods" | "grants";
   } = {},
 ) {
   const calls: unknown[] = [];
@@ -140,7 +141,7 @@ function mount(
       <LocaleProvider initial="en">{children}</LocaleProvider>
     </QueryClientProvider>
   );
-  render(<SignInMethodsCard />, { wrapper: Wrap });
+  render(<SignInMethodsCard part={server.part} />, { wrapper: Wrap });
   return { calls, appReads, refusing, qc };
 }
 
@@ -420,8 +421,13 @@ describe("the second-factor requirement", () => {
 });
 
 describe("the group role grant editor", () => {
+  const mountGrants = (
+    groupRoleMap: Record<string, string>,
+    allow: GrantSpec = fullSignInGrants,
+  ) => mount([], groupRoleMap, allow, { part: "grants" });
+
   it("renders each stored mapping with its group and granted role", async () => {
-    mount([], { engineering: "manager" });
+    mountGrants({ engineering: "manager" });
     expect(await screen.findByDisplayValue("engineering")).toBeTruthy();
     // Its own region, with headings that outlast whatever is typed in a row.
     const panel = screen.getByRole("region", { name: "Group role grants" });
@@ -439,7 +445,7 @@ describe("the group role grant editor", () => {
   // The whole map travels: the setting replaces rather than merges, so the
   // stored mapping must ride along with the added one.
   it("adds a mapping and saves the whole map", async () => {
-    const { calls } = mount([], { sales: "rep" });
+    const { calls } = mountGrants({ sales: "rep" });
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: /add group/i }));
     const groups = screen.getAllByRole("textbox", { name: /directory group/i });
@@ -466,7 +472,7 @@ describe("the group role grant editor", () => {
   });
 
   it("removes a mapping and saves the map without it", async () => {
-    const { calls } = mount([], { sales: "rep", engineering: "manager" });
+    const { calls } = mountGrants({ sales: "rep", engineering: "manager" });
     const user = userEvent.setup();
     await user.click(
       await screen.findByRole("button", { name: "Remove the sales mapping" }),
@@ -480,7 +486,7 @@ describe("the group role grant editor", () => {
   });
 
   it("hands focus to Add group once the saved map clears Save away", async () => {
-    mount([], { sales: "rep", engineering: "manager" });
+    mountGrants({ sales: "rep", engineering: "manager" });
     const user = userEvent.setup();
     await user.click(
       await screen.findByRole("button", { name: "Remove the sales mapping" }),
@@ -505,7 +511,7 @@ describe("the group role grant editor", () => {
         "rep",
       ]),
     );
-    mount([], full);
+    mountGrants(full);
     const user = userEvent.setup();
     const groups = await screen.findAllByRole("textbox", {
       name: /directory group/i,
@@ -529,7 +535,7 @@ describe("the group role grant editor", () => {
   // Mirrors the server's refusal so it reaches the admin before a request
   // does: the save is barred and says why, and nothing is sent.
   it("refuses a blank group name before any request is made", async () => {
-    const { calls } = mount([], {});
+    const { calls } = mountGrants({});
     const user = userEvent.setup();
     // The empty map says what it costs: nothing extra is granted.
     expect(await screen.findByText(/no groups are mapped/i)).toBeTruthy();
@@ -544,7 +550,7 @@ describe("the group role grant editor", () => {
   // The directory only ever grants, and mapping a group onto Admin grants
   // admin. That cost stands beside the editor once a row exists to weigh.
   it("carries the grant-only warning once a mapping is drafted", async () => {
-    mount([], {});
+    mountGrants({});
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: /add group/i }));
     expect(screen.getByText(/groups only ever add a role/i)).toBeTruthy();
@@ -565,7 +571,10 @@ describe("the group role grant editor", () => {
   // installation_settings:update, stay theirs to work; this asserts only that
   // the grant editor withholds itself.
   it("shows the map read-only to a caller without the sign-in-policy grant", async () => {
-    mount([], { sales: "rep" }, { installation_settings: ["read", "update"] });
+    mountGrants(
+      { sales: "rep" },
+      { installation_settings: ["read", "update"] },
+    );
     const group = await screen.findByRole("textbox", {
       name: /directory group/i,
     });
@@ -578,7 +587,7 @@ describe("the group role grant editor", () => {
 
   // Save stands only while the draft differs from what is stored.
   it("offers save only once the draft changes", async () => {
-    mount([], { sales: "rep" });
+    mountGrants({ sales: "rep" });
     const user = userEvent.setup();
     expect(await screen.findByDisplayValue("sales")).toBeTruthy();
     expect(

@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
@@ -36,7 +37,7 @@ const reachable: components["schemas"]["Contact360"] = {
   },
 };
 
-function mountHeader() {
+function mountHeader(contact = reachable.contact) {
   installFetchStub({
     "GET /me": meRoute(
       { contact: ["read", "update"], activity: ["create"] },
@@ -47,7 +48,7 @@ function mountHeader() {
   render(
     <StoryProviders>
       <ContactActions
-        view={reachable}
+        view={{ ...reachable, contact }}
         contactId={reachable.contact.id}
         onWrite={() => undefined}
         onResearch={() => undefined}
@@ -85,4 +86,41 @@ describe("the contact header", () => {
       expect(screen.getByRole("button", { name: verb })).toBeTruthy();
     }
   });
+});
+
+it.each([false, undefined])(
+  "refuses booking and logging without an attach right: %s",
+  async (attachable) => {
+    const user = userEvent.setup();
+    mountHeader({ ...reachable.contact, attachable });
+    const reason = await screen.findByText(en["contact.attachRefused"]);
+    const log = screen.getByRole("button", { name: en["log.title"] });
+    expect(log).toHaveProperty("disabled", true);
+    expect(log.getAttribute("aria-describedby")).toBe(reason.id);
+    await user.click(
+      screen.getByRole("button", { name: en["record.moreActions"] }),
+    );
+    const book = screen.getByRole("button", { name: en["scheduling.new"] });
+    expect(book).toHaveProperty("disabled", true);
+    expect(book.getAttribute("aria-describedby")).toBe(reason.id);
+    expect(
+      screen.getByRole("button", { name: en["contact.action.addTask"] }),
+    ).toHaveProperty("disabled", true);
+  },
+);
+
+it("allows attaching to a readable contact even when its row cannot be edited", async () => {
+  const user = userEvent.setup();
+  mountHeader({ ...reachable.contact, writable: false, attachable: true });
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: en["log.title"] }),
+    ).toHaveProperty("disabled", false),
+  );
+  await user.click(
+    screen.getByRole("button", { name: en["record.moreActions"] }),
+  );
+  expect(
+    screen.getByRole("button", { name: en["scheduling.new"] }),
+  ).toHaveProperty("disabled", false);
 });

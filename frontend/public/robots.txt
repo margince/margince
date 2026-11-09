@@ -1,4 +1,5 @@
-# Record cards are public metadata; full records require a session and access.
+# Record cards and booking-page previews are public metadata; full records
+# require a session and access.
 User-agent: Twitterbot
 User-agent: LinkedInBot
 User-agent: Slackbot-LinkExpanding
@@ -31,4 +32,7 @@ Disallow: /
 User-agent: *
 Allow: /r/
 Allow: /v1/public/record-previews/
+Allow: /book/
+Allow: /v1/public/booking/*/preview$
+Allow: /v1/public/booking/company-logo
 Disallow: /

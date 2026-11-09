@@ -166,8 +166,7 @@ func dailyAIActivityPath() string {
 const worklistDay = "/v1/worklist?filter=all&limit=100&relationships=omit&scope="
 
 // worklistCalls sends the view and scope the screen opens on: Today, over the
-// reader's own queue. A manager also times the team scope they pick. Home's
-// read names no view, so homeCalls times that one.
+// reader's own queue. A manager also times the team scope they pick.
 func worklistCalls(in dailyInput) []dailyCall {
 	calls := []dailyCall{{Path: worklistDay + "mine&view=today"}, {Name: "handled", Path: "/v1/worklist/handled"}}
 	if in.Seat.Role == "manager" {
@@ -177,12 +176,13 @@ func worklistCalls(in dailyInput) []dailyCall {
 }
 
 // homeCalls are what a browser on Today sends once the shell's gates clear.
+// The day is the Today view of the reader's queue, as readWorklistPage sends it.
 // The weekly review is the Weekly view's read, which Today never sends. Every
 // seat has a brief from the brief step, so its 404 fails the run.
 func homeCalls(dailyInput) []dailyCall {
 	return []dailyCall{
 		{Name: "brief", Path: "/v1/brief"},
-		{Name: "worklist", Path: worklistDay + "mine"},
+		{Name: "worklist", Path: worklistDay + "mine&view=today"},
 		{Name: "handled", Path: "/v1/worklist/handled"},
 		{Name: "magic", Path: "/v1/magic?limit=100"},
 		{Name: "digest", Path: "/v1/digest", Optional: true},

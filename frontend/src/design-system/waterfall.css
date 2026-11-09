@@ -1,4 +1,5 @@
 .waterfall-scroll {
+  position: relative;
   overflow-x: auto;
   padding-block: var(--space-4) var(--space-2);
 }

@@ -31,12 +31,21 @@ export function strengthSentence(
   if (strength.bucket !== "weak") {
     return t(`contact.strength.sentence.${strength.bucket}`, { last });
   }
-  return t(weakSentence(strength), { last });
+  const key = weakSentence(strength);
+  if (key === "contact.strength.sentence.weakStale" && strength.last_engaged) {
+    // Recency counts from their part, so the stale sentence dates it.
+    return t(key, {
+      last: formatDayMonth(strength.last_engaged, locale, zone),
+    });
+  }
+  return t(key, { last });
 }
 
 function weakSentence(strength: Strength) {
   const { recency, reciprocity } = strength.factors;
-  if (recency < STALE_BELOW) {
+  // With nothing from them, recency is zero for want of a reply, which the
+  // direction sentences below name.
+  if (recency < STALE_BELOW && strength.last_engaged) {
     return "contact.strength.sentence.weakStale";
   }
   const inbound = strength.inbound_90d;

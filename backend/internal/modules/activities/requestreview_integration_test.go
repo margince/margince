@@ -32,7 +32,7 @@ func TestAnotherReaderSeesCoverageWithoutReadingAPrivateReminder(t *testing.T) {
 	other.UserID, other.ID = e.other, "human:"+e.other.String()
 	other.Permissions.Objects["activity"] = principal.ObjectGrant{Read: true, Create: true}
 	reader := principal.WithActor(e.as(), other)
-	summaries, err := store.EmailSummariesByID(reader, []ids.UUID{id})
+	summaries, err := readingAtRequest(store).EmailSummariesByID(reader, []ids.UUID{id})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +128,7 @@ func TestUnthreadedUnclassifiedMailNeedsRequestEvidence(t *testing.T) {
 		}
 	}
 	assertListed(false)
-	if _, err := store.SetCaptureLabel(asClassifier(e), ids.UUID(source.Id), "meeting"); err != nil {
+	if _, err := labelCurrent(asClassifier(e), store, ids.UUID(source.Id), "meeting"); err != nil {
 		t.Fatal(err)
 	}
 	assertListed(true)

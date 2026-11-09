@@ -12,6 +12,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -30,6 +31,19 @@ func (h backfillHandlers) begin(ctx context.Context, ws ids.UUID, provider strin
 	if startOver {
 		start = h.registry.StartBackfillOver
 	}
+	return h.beginWith(ctx, ws, provider, userID, months, estimate, start)
+}
+
+type backfillStarter func(context.Context, string, ids.UserID, int, connector.BackfillEstimate, capture.EnqueueBackfill) (capture.BackfillRun, error)
+
+func (h backfillHandlers) beginInternalHistory(ctx context.Context, ws ids.UUID, provider string, owner ids.UserID, months int, estimate connector.BackfillEstimate, token string) (capture.BackfillRun, error) {
+	start := func(ctx context.Context, provider string, owner ids.UserID, months int, estimate connector.BackfillEstimate, enqueue capture.EnqueueBackfill) (capture.BackfillRun, error) {
+		return h.registry.StartBackfillWithInternalHistory(ctx, provider, owner, months, estimate, token, enqueue)
+	}
+	return h.beginWith(ctx, ws, provider, owner, months, estimate, start)
+}
+
+func (h backfillHandlers) beginWith(ctx context.Context, ws ids.UUID, provider string, userID ids.UserID, months int, estimate connector.BackfillEstimate, start backfillStarter) (capture.BackfillRun, error) {
 	// Kept apart from the run's own error so a refused queue keeps its own
 	// answer instead of the generic connector-fault mapping.
 	var enqueueErr error
@@ -37,12 +51,12 @@ func (h backfillHandlers) begin(ctx context.Context, ws ids.UUID, provider strin
 		func(ctx context.Context, tx pgx.Tx, backfillID ids.UUID) error {
 			enqueueErr = h.inserter.EnqueueTx(ctx, tx, CaptureBackfillArgs{
 				Workspace: ws, BackfillID: backfillID.String(),
-			}, &river.InsertOpts{
+			}, jobs.QueuedAs[CaptureBackfillArgs](&river.InsertOpts{
 				// One attempt: the backfill row owns the outcome (api/jobs.yaml), and
 				// a River retry would re-page a run the engine already ended.
 				MaxAttempts: rowOwnedMaxAttempts,
 				UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
-			})
+			}))
 			return enqueueErr
 		})
 	if enqueueErr != nil {

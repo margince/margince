@@ -71,19 +71,12 @@ const captureConnector = "testcal"
 
 var startsAt = time.Date(2026, 3, 4, 9, 0, 0, 0, time.UTC)
 
-// The defect this whole path exists for: a meeting called off, or declined,
-// reaches the sink as a CANCELLATION. Before this, both returned nil and the row
-// stayed booked forever.
-func TestACancelledOrDeclinedEventCancelsTheCapturedMeeting(t *testing.T) {
+func TestAnOrganizerCancellationCancelsTheCapturedMeeting(t *testing.T) {
 	t.Parallel()
 	external := []Actor{{Email: "client@acme.test"}}
 	for name, ev := range map[string]Event{
 		"cancelled": {
 			ID: "evt-1", Cancelled: true, StartsAt: startsAt,
-			Organizer: Actor{Email: owner}, Attendees: external,
-		},
-		"declined": {
-			ID: "evt-1", OwnerDeclined: true, StartsAt: startsAt,
 			Organizer: Actor{Email: owner}, Attendees: external,
 		},
 	} {
@@ -196,5 +189,35 @@ func TestACancellationSkipIsNotAFault(t *testing.T) {
 	}
 	if err := CaptureOne(context.Background(), rawEvent(t, off), sink, owner, captureConnector, testDecode); err != nil {
 		t.Fatalf("CaptureOne err = %v, want a skip to be absorbed", err)
+	}
+}
+
+type meetingReplaySink struct {
+	recordingSink
+	replayed []connector.NormalizedRecord
+}
+
+func (s *meetingReplaySink) ReplayMeeting(_ context.Context, rec connector.NormalizedRecord) error {
+	s.replayed = append(s.replayed, rec)
+	return nil
+}
+
+func TestAMovedMeetingReplaysItsRosterWithoutCreatingAnotherMeeting(t *testing.T) {
+	sink := &meetingReplaySink{}
+	ev := Event{ID: "moved", Organizer: Actor{Email: "buyer@customer.test"}, Attendees: []Actor{{Email: owner, Response: connector.ResponseDeclined}}, StartsAt: startsAt}
+	if err := MoveOne(context.Background(), rawEvent(t, ev), sink, owner, captureConnector, testDecode); err != nil {
+		t.Fatal(err)
+	}
+	if len(sink.replayed) != 1 || len(sink.upserted) != 0 || len(sink.cancelled) != 0 {
+		t.Fatalf("replayed=%d inserted=%d cancelled=%d", len(sink.replayed), len(sink.upserted), len(sink.cancelled))
+	}
+	found := false
+	for _, party := range sink.replayed[0].Participants {
+		if party.Email == owner && party.Response == connector.ResponseDeclined {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("the existing-meeting replay lost the attendee response")
 	}
 }
