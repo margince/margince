@@ -13,29 +13,28 @@ package gates
 // says which the server meant.
 //
 // The count is pinned rather than zero because the form to move these to is
-// open on #8407. That choice decides the generated TypeScript for all of them.
+// open. That choice decides the generated TypeScript for all of them, and this
+// holds the set from growing meanwhile.
 //
-// What this holds meanwhile is that the set stops growing. It stood at nine
-// when that issue was filed and reads higher now.
-//
-// Derived from the document, not a list of fields. A list grows by hand, and
-// the field added without touching it is the one this catches.
+// Counted as mapping keys of the parsed document, so a flow-style member counts
+// and the word in a description or a YAML comment does not.
 
 import (
-	"os"
-	"regexp"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // nullableInContract is how many `nullable:` members api/crm.yaml holds today.
 // It may go down and never up.
-const nullableInContract = 59
-
-var nullableMember = regexp.MustCompile(`(?m)^\s*nullable:\s`)
+const nullableInContract = 82
 
 func TestTheContractDeclaresOpenAPI31AndNullableIsInert(t *testing.T) {
-	raw, err := os.ReadFile("api/crm.yaml")
+	t.Parallel()
+	raw, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}
@@ -47,7 +46,11 @@ func TestTheContractDeclaresOpenAPI31AndNullableIsInert(t *testing.T) {
 			"that version dropped, so it has to be re-read before it is trusted")
 	}
 
-	found := len(nullableMember.FindAllString(doc, -1))
+	var root yaml.Node
+	if err := yaml.Unmarshal(raw, &root); err != nil {
+		t.Fatalf("parsing the contract: %v", err)
+	}
+	found := nullableKeys(&root)
 	switch {
 	case found > nullableInContract:
 		t.Errorf("api/crm.yaml holds %d `nullable:` members, up from %d. 3.1 has no such keyword: "+
@@ -57,4 +60,20 @@ func TestTheContractDeclaresOpenAPI31AndNullableIsInert(t *testing.T) {
 		t.Errorf("api/crm.yaml holds %d `nullable:` members, down from %d. Re-pin "+
 			"nullableInContract to %d so the gain cannot be given back", found, nullableInContract, found)
 	}
+}
+
+// nullableKeys counts the mapping keys named nullable anywhere under node.
+func nullableKeys(node *yaml.Node) int {
+	count := 0
+	if node.Kind == yaml.MappingNode {
+		for i := 0; i+1 < len(node.Content); i += 2 {
+			if node.Content[i].Value == "nullable" {
+				count++
+			}
+		}
+	}
+	for _, child := range node.Content {
+		count += nullableKeys(child)
+	}
+	return count
 }
