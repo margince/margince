@@ -93,6 +93,9 @@ type Sink struct {
 	// claimOwnSentMail corrects a colleague's earlier reading of this seat's
 	// sent mail; nil leaves the first reading standing.
 	claimOwnSentMail OwnSentMailClaim
+	// adoptSentEcho re-keys the seat's send onto its echo's identity
+	// (sentecho.go). Nil lands such an echo as a second row.
+	adoptSentEcho SentEchoAdoption
 	// mailIdentityKind is activities.IdentityKindMail, and the two identity
 	// seams below are that module's own resolve and claim. All three are set
 	// together by WithMessageIdentity or none is: an empty kind is what

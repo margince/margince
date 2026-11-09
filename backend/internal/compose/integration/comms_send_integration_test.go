@@ -34,6 +34,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -43,7 +44,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
@@ -159,8 +159,14 @@ func (p *preflightEnv) dispatchOnce(t *testing.T, deliveryID ids.UUID, stampAs s
 func (p *preflightEnv) dispatchOnceWith(t *testing.T, deliveryID ids.UUID, stampAs string, policies []comms.SendPolicy) (comms.Outcome, sentMail, *gmail.Connector) {
 	t.Helper()
 	var captured sentMail
-	stub := gmailSendStub(t, &captured, stampAs)
+	outcome, gmailConnector := p.dispatchThrough(t, deliveryID, gmailSendStub(t, &captured, stampAs), policies)
+	return outcome, captured, gmailConnector
+}
 
+// dispatchThrough runs one real dispatch against whatever stub Gmail a case
+// built, so a case can make the read-back after the send fail.
+func (p *preflightEnv) dispatchThrough(t *testing.T, deliveryID ids.UUID, stub *httptest.Server, policies []comms.SendPolicy) (comms.Outcome, *gmail.Connector) {
+	t.Helper()
 	// The credential is built the way the OAuth callback builds it, so the
 	// grant the dispatcher's authority gate reads is a real exchange result
 	// rather than a hand-written bundle.
@@ -187,7 +193,7 @@ func (p *preflightEnv) dispatchOnceWith(t *testing.T, deliveryID ids.UUID, stamp
 	// would not be exercised by these tests, and the pacing knobs below are
 	// deliberately inert (no policies, a bound nothing here reaches).
 	dispatcher := comms.NewDispatcher(
-		comms.NewStore(compose.InstallationDB(p.Pool), time.Now, activities.NewStore(compose.InstallationDB(p.Pool))),
+		compose.NewMailDeliveryStore(p.Pool, nil),
 		stubMailbox{sender: gmailConnector, auth: auth},
 		compose.NewSendSeatAuthority(p.Pool),
 		// nil object store: this lane sends no files, and a role wired without
@@ -208,7 +214,7 @@ func (p *preflightEnv) dispatchOnceWith(t *testing.T, deliveryID ids.UUID, stamp
 	if err != nil {
 		t.Fatalf("dispatch: %v", err)
 	}
-	return outcome, captured, gmailConnector
+	return outcome, gmailConnector
 }
 
 // drivenProvider is the connector this suite actually drives, read from its own

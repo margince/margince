@@ -41,6 +41,8 @@ var messageStateReaders = gatekit.Waive(map[string]string{
 	"internal/compose/signalscan.go": "asks whether the account's newest message is ours; a colleague's reply " +
 		"at the account answers us there by design",
 	"internal/modules/activities/awaitingreply.go": "asks whether our message on a thread is still waiting for any answer",
+	"internal/modules/capture/sentecho.go": "finds the seat's own captured copy of one sent message by its provider id; " +
+		"it never counts which side of a relationship wrote",
 	"internal/modules/activities/meetingfollowup.go": "asks whether anything of ours followed a meeting, " +
 		"not who on their side wrote",
 })
