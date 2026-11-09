@@ -69,7 +69,8 @@ func TestTheAccountCardWithholdsItsLogVerbFromAReaderWhoCannotLog(t *testing.T) 
 
 	// The control: the same account and the same rung for a rep who may log.
 	// Without it, a card that stopped firing at all would pass everything above.
-	granted, err := svc.Assemble(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms), companyID)
+	rep := integration.OnSeat(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms), principal.SeatFull)
+	granted, err := svc.Assemble(rep, companyID)
 	if err != nil {
 		t.Fatalf("assemble for a rep who may log: %v", err)
 	}

@@ -165,7 +165,7 @@ export function stubRoutes(
       if (override) return override();
       if (key === "GET /me") {
         return jsonResponse(
-          meFixture({ allow: { activity: ["read", "update"] } }),
+          meFixture({ allow: { activity: ["read", "create", "update"] } }),
         );
       }
       if (key === "GET /consent-purposes") return jsonResponse(PURPOSES);

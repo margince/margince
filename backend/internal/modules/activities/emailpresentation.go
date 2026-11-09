@@ -152,11 +152,10 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 	}
 	out.Thread = &thread
 
-	// Replying needs only the message: a reader inside the audience may answer
-	// it. Relinking is a WRITE — it changes what the message is filed against —
-	// so it follows the same writability the access block just decided, rather
-	// than being promised to every reader and refused on click.
-	out.CanReply = true
+	// Reply and forward are writes, so they follow the send's grant; relink follows
+	// the row's writability.
+	mayWrite := auth.AllowsWrite(ctx, "activity", principal.ActionCreate)
+	out.CanReply, out.CanForward = mayWrite, mayWrite
 	out.CanRelink = access.CanChange && access.ChangeMode == crmcontracts.EmailAccessChangeModeMessageAudience
 	if activity.CanShareInternal != nil {
 		out.CanRelink = writable

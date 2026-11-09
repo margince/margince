@@ -8825,7 +8825,14 @@ paths:
         - $ref: '#/components/parameters/IncludeArchived'
         - name: kind
           in: query
-          schema: { type: string, enum: [email, call, meeting, note, task, message] }
+          description: >-
+            Activities of these kinds. Repeat the parameter for several (`kind=email&kind=message`),
+            so a page of one kind of work is never filled by another kind it does not show.
+          schema:
+            type: array
+            items: { type: string, enum: [email, call, meeting, note, task, message] }
+          style: form
+          explode: true
         - name: call_outcome
           in: query
           description: Calls that ended this way. Matches calls only.
@@ -10051,6 +10058,13 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Activity' }
+        '201':
+          description: |
+            Scheduled, not sent (ADR-0104). No activity and no delivery row exist yet;
+            the timeline stays silent until it fires.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ScheduledSend' }
         '403':
           description: Approval token missing for a 🟡 send, or RBAC denied.
           content:
@@ -10066,7 +10080,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
-        '422': { $ref: '#/components/responses/ValidationError' }
+        '422': { $ref: '#/components/responses/SendValidationError' }
 
   /emails:
     post:
@@ -10150,7 +10164,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
-        '422': { $ref: '#/components/responses/ValidationError' }
+        '422': { $ref: '#/components/responses/SendValidationError' }
 
   /scheduled-sends:
     get:
@@ -36976,6 +36990,28 @@ components:
                 details:
                   errors:
                     - { field: 'emails[0].email', code: invalid_email }
+    SendValidationError:
+      description: |
+        The send failed validation, or no mailbox can carry it. The second answers with the top-level
+        `code: mailbox_not_send_capable` and no `details.errors`, because no field of the request can
+        fix it: the sender must connect a mailbox that can send, or an administrator must set up
+        sending for the installation. A scheduled send is checked the same way when it is created.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          examples:
+            invalid:
+              value:
+                type: 'https://errors.gradion.com/validation_error'
+                title: Validation failed
+                status: 422
+                code: validation_error
+                detail: One or more fields are invalid.
+                details:
+                  errors:
+                    - { field: to, code: required }
+            mailboxNotSendCapable:
+              value: { type: 'https://errors.gradion.com/mailbox_not_send_capable', title: Unprocessable Entity, status: 422, code: mailbox_not_send_capable, detail: reconnect your mailbox to enable sending }
 
   # ------------------------------- schemas ----------------------------------
   schemas:
@@ -41298,7 +41334,7 @@ components:
 
         A withheld presentation carries the markers and refuses the rest: no subject, no body,
         no parties, no attachments, no thread, no reason, no member names.
-      required: [id, lifecycle, occurred_at, occurred_precision, summary, access, version, from, to, cc, bcc, attachments, links, bcc_withheld, can_reply, can_relink]
+      required: [id, lifecycle, occurred_at, occurred_precision, summary, access, version, from, to, cc, bcc, attachments, links, bcc_withheld, can_reply, can_forward, can_relink]
       properties:
         id: { type: string, format: uuid }
         lifecycle:
@@ -41372,7 +41408,19 @@ components:
           $ref: '#/components/schemas/EmailThreadPage'
         access:
           $ref: '#/components/schemas/EmailAccess'
-        can_reply: { type: boolean }
+        can_reply:
+          type: boolean
+          description: |
+            True when this reader may answer the message: they read it inside its audience and
+            hold `activity.create`, because a reply is a new message they write. False otherwise:
+            a read seat's send is refused with `403 seat_tier_insufficient`, and a full seat's
+            without the grant with `403 permission_denied`.
+        can_forward:
+          type: boolean
+          description: |
+            True when this reader holds `activity.create`. A forward is a new message the reader
+            writes to whoever they choose, so it asks nothing of the message's audience beyond
+            this read.
         can_relink: { type: boolean }
         version:
           allOf: [{ $ref: '#/components/schemas/RowVersion' }]
@@ -47255,10 +47303,17 @@ components:
     Company360Contact:
       type: object
       description: One current employee of the account, as the company view shows them.
-      required: [contact_id, full_name, strength, deal_roles, consent]
+      required: [contact_id, full_name, strength, deal_roles, consent, attachable]
       properties:
         contact_id: { type: string, format: uuid }
         full_name: { type: string }
+        attachable:
+          type: boolean
+          description: >-
+            Whether this caller may file an activity under this contact. Computed with the
+            same row-scope and write-share predicate the attach gate uses, so a mail started
+            from the company links only the recipients this is true for. A read-only share
+            grants no attach right. The server rechecks every write.
         title: { type: [string, 'null'] }
         provider_title:
           type: [string, 'null']

@@ -59,6 +59,8 @@ type RowVerbProps = Readonly<{
   entityType: RelinkKind;
   entityId: string;
   contactId?: string;
+  /** The contact whose page draws the row, whose attach right gates a reply. */
+  contact?: { readonly attachable?: boolean };
   extra?: (activity: Activity) => ReactNode;
 }>;
 
@@ -74,6 +76,7 @@ export function RowAnswerActions({
   entityType,
   entityId,
   contactId,
+  contact,
   extra,
 }: RowVerbProps) {
   const t = useT();
@@ -96,6 +99,7 @@ export function RowAnswerActions({
         entityType={entityType}
         entityId={entityId}
         contactId={contactId}
+        contact={contact}
         contentWithheld={activity.content_state === "withheld"}
       />
       {activity.invitation_status && activity.content_state !== "withheld" && (
