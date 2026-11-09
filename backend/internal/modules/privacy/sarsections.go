@@ -12,6 +12,7 @@ package privacy
 import (
 	"context"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -200,7 +201,7 @@ func sarRecordSections(pkg *SARPackage, contactID ids.ContactID, leads []ids.UUI
 
 // sarContentDisclosed is the export's one rule for whether an activity's (alias
 // `a`) own content travels: only workspace-audience mail.
-const sarContentDisclosed = `a.audience = 'workspace'`
+var sarContentDisclosed = `` + auth.WorkspaceAudienceSQL("a") + ``
 
 // sarRawCaptureLink correlates one raw_capture row to the activities read from
 // it. The clause below asks it four times, twice to decide disclosure and twice

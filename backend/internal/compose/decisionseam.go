@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // A decision recorded from a sales review is a task on its deal. It is
@@ -104,6 +105,7 @@ func (s salesDecisions) Record(ctx context.Context, in crmcontracts.SalesDecisio
 			body = &expected
 		}
 		task, _, err := s.activities.LogActivityTx(ctx, tx, activities.LogActivityInput{
+			SystemText:       &systemtext.Message{Subject: systemtext.Prose(systemtext.Quote, ""), Body: systemtext.Prose(systemtext.Quote, "")},
 			Kind:             kind,
 			Subject:          &decision,
 			Body:             body,

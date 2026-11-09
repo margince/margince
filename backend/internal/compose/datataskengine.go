@@ -15,14 +15,11 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/datatask"
-	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 const introductionValidationMigration = "core/1792842046"
-
-// dataTaskTitleBound keeps the task title inside the notice subject's cap with
-// room for the words in front of it.
-const dataTaskTitleBound = 150
 
 func newDataTaskEngine(pool *pgxpool.Pool, release string, now func() time.Time) (*datatask.Engine, error) {
 	return datatask.New(pool, dataTaskCatalog(pool, now), release, now, dataTaskFailureNotice(pool))
@@ -37,9 +34,12 @@ func dataTaskFailureNotice(pool *pgxpool.Pool) func(context.Context, pgx.Tx, dat
 		}
 		store := notices.NewStore(InstallationDB(pool))
 		for _, recipient := range recipients {
-			subject, body := dataTaskFailureWords(p)
-			_, err := store.CreateTx(ctx, tx, notices.NewNotice{
-				Recipient: recipient, Kind: "data_task_failed", Subject: subject, Body: body,
+			subject, body, err := dataTaskFailureWords(p)
+			if err != nil {
+				return err
+			}
+			_, err = store.CreateTx(ctx, tx, notices.NewNotice{
+				Recipient: recipient, Kind: "data_task_failed", Subject: subject, Body: body, SystemText: dataTaskFailureMessage(p),
 				DedupeKey: fmt.Sprintf("%s:%s:%d", p.RunID, p.Step, p.Version),
 				Target:    notices.Target{Type: notices.TargetDataTask, ID: p.RunID},
 			})
@@ -53,19 +53,35 @@ func dataTaskFailureNotice(pool *pgxpool.Pool) func(context.Context, pgx.Tx, dat
 
 // dataTaskFailureWords names the correction that stopped and why, so an
 // operator knows which of several dozen tasks to look at before opening any.
-func dataTaskFailureWords(p datatask.Progress) (subject, body string) {
+func dataTaskFailureWords(p datatask.Progress) (subject, body string, err error) {
+	message := dataTaskFailureMessage(p)
+	subject, err = message.Subject.Render(textlang.English)
+	if err != nil {
+		return "", "", err
+	}
+	body, err = message.Body.Render(textlang.English)
+	if err != nil {
+		return "", "", err
+	}
+	return subject, body, nil
+}
+
+func dataTaskFailureMessage(p datatask.Progress) *systemtext.Message {
 	title := p.Title
 	if title == "" {
 		title = p.TaskID
 	}
-	subject = "Background correction stopped: " + textcut.Runes(title, dataTaskTitleBound)
-	reason := "Its last failure could not be classified."
+	subject := systemtext.Sentence("datatask.stopped", systemtext.Reference(dataTaskTitleCode(p.TaskID), title))
+	reason := systemtext.Sentence("datatask.unclassified")
 	if detail, ok := dataTaskFailure(p); ok {
-		reason = "Last failure: " + strings.TrimSuffix(detail.Sentence, ".") + ". " + detail.Remedy
+		reason = systemtext.Sentence("datatask.failure", systemtext.Reference("jobs."+detail.Class+".sentence", detail.Sentence), systemtext.Reference("jobs."+detail.Class+".remedy", detail.Remedy))
 	}
-	body = fmt.Sprintf("It stopped at step %s after %d failed attempts in a row and will not run again on its own. %s "+
-		"Open System health to retry it once the cause is fixed.", p.Step, p.ConsecutiveFailures, reason)
-	return subject, body
+	body := systemtext.Sequence(systemtext.Sentence("datatask.progress", systemtext.Text(p.Step), systemtext.Count(int64(p.ConsecutiveFailures))), reason, systemtext.Sentence("datatask.retry"))
+	return &systemtext.Message{Subject: subject, Body: body}
+}
+
+func dataTaskTitleCode(taskID string) string {
+	return "datatask.title." + strings.ReplaceAll(taskID, "/", ".")
 }
 
 func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {

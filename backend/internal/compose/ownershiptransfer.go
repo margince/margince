@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 const (
@@ -154,7 +155,7 @@ func (t ownershipTransfers) stageTx(ctx context.Context, tx pgx.Tx, transfer app
 	if err != nil {
 		return fmt.Errorf("compose: encoding the handover request's identity: %w", err)
 	}
-	summary, err := t.askedSummary(ctx, tx, transfer)
+	summary, metadata, err := t.askedSummary(ctx, tx, transfer)
 	if err != nil {
 		return err
 	}
@@ -167,6 +168,7 @@ func (t ownershipTransfers) stageTx(ctx context.Context, tx pgx.Tx, transfer app
 		TargetType:     transfer.RecordType,
 		TargetID:       transfer.RecordID,
 		Summary:        summary,
+		SystemText:     metadata,
 		JoinPending:    true,
 		Identity:       identityKey,
 		TTL:            &window,
@@ -177,23 +179,23 @@ func (t ownershipTransfers) stageTx(ctx context.Context, tx pgx.Tx, transfer app
 // askedSummary is the card's sentence: who staged it, and what moves with the
 // record. The counts are the giver's, read when the transfer is filed through
 // the selectors the move itself uses.
-func (t ownershipTransfers) askedSummary(ctx context.Context, tx pgx.Tx, transfer approvalsubject.OwnershipTransfer) (string, error) {
+func (t ownershipTransfers) askedSummary(ctx context.Context, tx pgx.Tx, transfer approvalsubject.OwnershipTransfer) (string, *systemtext.Message, error) {
 	asker, err := colleagueName(ctx, tx, transfer.RequestedBy)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	from := ids.From[ids.UserKind](transfer.FromID)
 	dealCount, err := countOrNone(t.deals.CountRecordDealsHeldByTx(ctx, tx, transfer.RecordType, transfer.RecordID, from))
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	link := activities.RecordLink{EntityType: transfer.RecordType, ID: transfer.RecordID}
 	taskCount, err := countOrNone(t.tasks.CountRecordTasksHeldByTx(ctx, tx, link, from))
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	phrase := cardPhrase(transfer)
-	return fmt.Sprintf(phrase.In(identity.BaseLanguageForRecord(ctx, tx)), asker, dealCount.Moved, taskCount.Moved), nil
+	return fmt.Sprintf(phrase.In(identity.BaseLanguageForRecord(ctx, tx)), asker, dealCount.Moved, taskCount.Moved), &systemtext.Message{Subject: systemtext.Sentence(cardCode(transfer), systemtext.Label(asker), systemtext.Count(int64(dealCount.Moved)), systemtext.Count(int64(taskCount.Moved)))}, nil
 }
 
 // countOrNone reads a refused count as nothing to count.

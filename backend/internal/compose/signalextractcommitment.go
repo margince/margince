@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -223,6 +224,7 @@ func (x *SignalExtractor) emailCommitment(
 		return Commitment{}, false, err
 	}
 	c.NeedsConfirmation = message.Direction != connector.DirectionOutbound || !commitmentPartyHasRole(verified, promiser, commitmentSenderRole)
+	c.SystemText = &systemtext.Message{Version: 1, Subject: systemtext.Prose(systemtext.Generated, ""), Body: systemtext.Sentence("commitment.explanation", systemtext.Text(c.Party), systemtext.Text(message.Subject), systemtext.Date(message.At.Format(time.DateOnly)))}
 	c.Body = fmt.Sprintf("Promiser: %s. Commitment in the email %q, sent %s.", c.Party, message.Subject, message.At.Format(time.DateOnly))
 	c.Span = span
 	c.Locator = commitmentLocator(cited, kind, party, span)
@@ -230,6 +232,7 @@ func (x *SignalExtractor) emailCommitment(
 		// The model sums up a window of messages, and the promiser may open only
 		// the one they wrote. Their own sentence is all the task may say.
 		c.Summary = span
+		c.SystemText.Subject = systemtext.Prose(systemtext.Quote, "")
 	}
 	return x.withRestatedCommitment(ctx, tx, thread, event, c)
 }

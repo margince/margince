@@ -458,7 +458,6 @@ internal/modules/search/binding.go#const systemPrincipalID
 internal/modules/search/binding.go#func releaseReembeddingTx
 internal/modules/search/binding.go#method Store.SeedBinding
 internal/modules/search/embedgen.go#const block at const entityContact
-internal/modules/search/graphedge.go#const audienceWorkspaceOnly
 internal/modules/search/graphtrust.go#var block at var humanWriterPrefix
 internal/modules/search/querybudget.go#func NewQueryExecutorWithBudget
 internal/modules/search/queryjoins.go#const block at const columnArchivedAt

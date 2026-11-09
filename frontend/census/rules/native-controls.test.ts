@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { deriveDateHosts } from "../../scripts/lib/input-type";
+import { stable } from "../../src/format/collate";
 import { plantedFindings, srcDir } from "../tree";
 import {
   clearedSpreads,
@@ -529,7 +530,7 @@ describe("the native-control detector sees what it claims to", () => {
       "a name in notHosts that the derivation no longer finds as a host",
     ).toEqual([...notHosts]);
     expect(
-      [...dateHosts.opaque].sort(),
+      [...dateHosts.opaque].sort(stable),
       "a component spreads a value of unknown shape onto an input: make the spread resolvable, or clear it in clearedSpreads with its reason",
     ).toEqual(clearedSpreads);
   });

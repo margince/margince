@@ -35,6 +35,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // coldStartEngine stages a read-back over the shared extractor.
@@ -187,6 +188,7 @@ func (e *coldStartEngine) stage(ctx context.Context, proposal crmcontracts.ColdS
 		ProposedChange: proposedChange,
 		DiffHash:       hex.EncodeToString(digest[:]),
 		Summary:        summary,
+		SystemText:     coldStartSummaryMetadata(announce),
 		Announce: []approvals.AnnouncedEvent{{
 			Payload: announce,
 		}},
@@ -344,4 +346,16 @@ func coldStartInputKind(req crmcontracts.ColdStartRequest) string {
 	default:
 		return "self_description"
 	}
+}
+
+func coldStartSummaryMetadata(announce crmcontracts.PublicEventColdstartReadBackProposed) *systemtext.Message {
+	code := "approval.coldStartFromText"
+	var args []systemtext.Argument
+	if announce.SourceUrl != nil {
+		code = "approval.coldStartFromURL"
+		args = []systemtext.Argument{systemtext.Text(*announce.SourceUrl)}
+	} else if announce.SourceKind != nil && *announce.SourceKind == string(crmcontracts.ColdStartProposalSourceKindSelfDescription) {
+		code = "approval.coldStartFromSelfDescription"
+	}
+	return &systemtext.Message{Version: 1, Subject: systemtext.Sentence(code, args...)}
 }

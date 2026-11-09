@@ -14,6 +14,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -70,15 +71,18 @@ func (r *contactCaseResolver) Subject(ctx context.Context, cmd ContactCaseComman
 		return StageInfo{}, err
 	}
 	said := summaryIn(ctx, r.language)
+	code := "agent.mergeCase"
 	sentence := said.mergeCase
 	if cmd.Preview {
 		sentence = said.previewCase
+		code = "agent.previewCase"
 	}
 	return StageInfo{
 		TargetType:    string(datasource.EntityContact),
 		TargetID:      cmd.SurvivorID,
 		TargetVersion: &rec.Version,
 		Summary:       fmt.Sprintf(sentence, len(cmd.MemberIDs), recordLabel(rec)),
+		SystemText:    &systemtext.Message{Subject: systemtext.Sentence(code, systemtext.Count(int64(len(cmd.MemberIDs))), systemtext.Label(recordLabel(rec)))},
 	}, nil
 }
 

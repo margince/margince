@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -127,7 +128,10 @@ func (t memberTool) StageInfo(ctx context.Context, in json.RawMessage) (StageInf
 	if len(preview.Blockers) > 0 || preview.SurvivorName == nil || preview.SurvivorEmail == nil {
 		return StageInfo{}, apperrors.ErrConflict
 	}
-	return StageInfo{TargetType: memberAdminObject, TargetID: args.SourceID, Summary: fmt.Sprintf(summaryIn(ctx, t.language).mergeMembers, preview.SourceName, preview.SourceEmail, *preview.SurvivorName, *preview.SurvivorEmail)}, nil
+	return StageInfo{
+		TargetType: memberAdminObject, TargetID: args.SourceID, SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.mergeMembers", systemtext.Text(fmt.Sprint(preview.SourceName)), systemtext.Text(fmt.Sprint(preview.SourceEmail)), systemtext.Text(fmt.Sprint(*preview.SurvivorName)), systemtext.Text(fmt.Sprint(*preview.SurvivorEmail)))},
+		Summary: fmt.Sprintf(summaryIn(ctx, t.language).mergeMembers, preview.SourceName, preview.SourceEmail, *preview.SurvivorName, *preview.SurvivorEmail),
+	}, nil
 }
 
 type memberPreviewTool struct{ tool memberTool }

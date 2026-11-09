@@ -21,6 +21,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 const auditProposalStatus = "proposal_status"
@@ -81,8 +83,8 @@ func (s *Store) CreateProposal(ctx context.Context, in crmcontracts.MeetingPropo
 	}
 	var id ids.UUID
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		subject := "Meeting proposed: " + in.Subject
-		row, _, err := s.LogActivityTx(ctx, tx, LogActivityInput{Kind: "note", Subject: &subject, Body: &in.Description, Links: []ActivityLinkInput{{EntityType: linkEntityContact, EntityID: ids.UUID(in.ContactId)}}, Source: sourceManual})
+		subject := fmt.Sprintf(systemtext.Copy("booking.proposed", textlang.English), in.Subject)
+		row, _, err := s.LogActivityTx(ctx, tx, LogActivityInput{SystemText: &systemtext.Message{Subject: systemtext.Sentence("booking.proposed", systemtext.Text(in.Subject))}, Kind: "note", Subject: &subject, Body: &in.Description, Links: []ActivityLinkInput{{EntityType: linkEntityContact, EntityID: ids.UUID(in.ContactId)}}, Source: sourceManual})
 		if err != nil {
 			return err
 		}

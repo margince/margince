@@ -86,7 +86,7 @@ func seedLegacyContactArrivalRepair(t *testing.T) legacyRepairFixture {
 	}
 	writer := newLeadWorkTasks(InstallationDB(e.Pool), slog.Default())
 	writer.now = func() time.Time { return now }
-	in := writer.arrivalTaskInput(contacts.LeadArrival{ContactID: ids.From[ids.ContactKind](ids.UUID(contact.Id)), OwnerID: e.Rep2, Key: "legacy-demo-arrival"}, "Review an arrival", "An arrival for an existing contact.")
+	in := writer.arrivalTaskInput(contacts.LeadArrival{ContactID: ids.From[ids.ContactKind](ids.UUID(contact.Id)), OwnerID: e.Rep2, Key: "legacy-demo-arrival"}, "Review an arrival", "An arrival for an existing contact.", nil)
 	in.DueAt = &now
 	task, _, err := e.Activities.LogActivity(principal.SystemActing(e.Admin(), "system:lead-for-contact"), in)
 	if err != nil {

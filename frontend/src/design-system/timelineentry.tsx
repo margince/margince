@@ -56,6 +56,8 @@ type AutomaticKind = NonNullable<
 >;
 
 export type TimelineEntry = {
+  sourceVersion?: number;
+  systemDisplay?: components["schemas"]["SystemDisplay"];
   id: string;
   // The backend's activity kinds, not a reduced set: collapsing call, task
   // and the chat kinds into "note" told the reader an email was a note.

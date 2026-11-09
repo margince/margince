@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // stageSiteLeads records the published contacts of ONE act as thin "site_lead"
@@ -232,6 +233,7 @@ func siteLeadStageInput(said approvalSummaryCopy, readID, companyID ids.UUID, se
 		JoinPending:    true,
 		BundleID:       bundleID,
 		Summary:        fmt.Sprintf(said.siteLeadFound, siteLeadHost(seedURL), contact.Name, contact.Role),
+		SystemText:     &systemtext.Message{Version: 1, Subject: systemtext.Sentence("approval.siteLeadFound", systemtext.Text(siteLeadHost(seedURL)), systemtext.Text(contact.Name), systemtext.Text(contact.Role))},
 	}, nil
 }
 

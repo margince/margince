@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { stable } from "../../format/collate";
 import { ProblemError } from "../../lib/problem";
 import type { RetentionAction, RetentionScope } from "./retention.logic";
 import {
@@ -147,14 +148,14 @@ describe("the authorable scope list and the contract enum", () => {
   it("offers every scope the contract admits, exactly once", () => {
     const offered = [...RETENTION_SCOPES];
     const admitted = Object.keys(SCOPE_LABEL_KEYS) as RetentionScope[];
-    expect([...offered].sort()).toEqual([...admitted].sort());
+    expect([...offered].sort(stable)).toEqual([...admitted].sort(stable));
     expect(new Set(offered).size).toBe(offered.length);
   });
 
   it("offers every action the contract admits, exactly once", () => {
     const offered = [...RETENTION_ACTIONS];
     const admitted = Object.keys(ACTION_LABEL_KEYS) as RetentionAction[];
-    expect([...offered].sort()).toEqual([...admitted].sort());
+    expect([...offered].sort(stable)).toEqual([...admitted].sort(stable));
     expect(new Set(offered).size).toBe(offered.length);
   });
 });

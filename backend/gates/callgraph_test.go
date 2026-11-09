@@ -204,7 +204,33 @@ func packageCallGraph(t *testing.T, dir string) map[string]*graphFunc {
 			entry.statements = append(entry.statements, held[name]...)
 		}
 	}
+	bindings := packageBindingNames(files)
+	for _, entry := range graph {
+		includeBindingReads(entry, bindings)
+	}
 	return graph
+}
+
+func includeBindingReads(entry *graphFunc, bindings map[string]map[string]bool) {
+	pending := []string{}
+	for name := range entry.reads {
+		if !entry.shadowed[name] {
+			pending = append(pending, name)
+		}
+	}
+	seen := map[string]bool{}
+	for len(pending) > 0 {
+		name := pending[len(pending)-1]
+		pending = pending[:len(pending)-1]
+		if seen[name] {
+			continue
+		}
+		seen[name] = true
+		for referred := range bindings[name] {
+			entry.reads[referred] = true
+			pending = append(pending, referred)
+		}
+	}
 }
 
 // parsePackageFiles reads a package's product files once.

@@ -134,7 +134,10 @@ export function linkChanges(
 ): Partial<Profile> {
   const changes: Partial<Profile> = {};
   const title = draft.title.trim();
-  if (title !== original.title) changes.title = title;
+  if (title !== original.title) {
+    changes.title = title;
+    changes.use_default_title = false;
+  }
   const minutes = minutesOf(draft);
   if (minutes !== original.duration_minutes) changes.duration_minutes = minutes;
   const offered = (draft.offered ?? (original.offered_lengths ?? []).join(", "))

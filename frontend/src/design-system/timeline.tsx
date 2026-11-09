@@ -5,6 +5,7 @@ import { useLocale, useT } from "../i18n";
 import { Button } from "./atoms";
 import { EmailEntry } from "./emailentry";
 import { Eyebrow } from "./eyebrow";
+import { GeneratedText } from "./generatedtext";
 import { ProvenanceTag } from "./trust";
 import { VisibilityBadge } from "./visibility";
 import "./composed.css";
@@ -381,7 +382,15 @@ export function TimelineRow({
             {t("timeline.withheld")}
           </span>
         ) : (
-          <span className="tl-title">{entry.title}</span>
+          <span className="tl-title">
+            <GeneratedText
+              activityId={entry.id}
+              display={entry.systemDisplay}
+              inline
+            >
+              {entry.title}
+            </GeneratedText>
+          </span>
         )}
         {/* Never for a withheld entry: the title above already says the
             content is for participants only, and a row must not show the

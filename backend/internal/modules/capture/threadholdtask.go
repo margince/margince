@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/threadverdict"
 )
 
 // heldThreadImportsSQL joins one seat's import rows to that seat's own closing
@@ -37,7 +38,7 @@ func EstimateOpenUnderHeldThreads(ctx context.Context, q datatask.Querier, maxim
 	var count int64
 	err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT i.id `+heldThreadImportsSQL+`
 	   AND i.verdict_status = ANY(@opened) LIMIT @cap) AS candidates`,
-		pgx.NamedArgs{"closing": closingVerdicts, "opened": openedVerdicts, "cap": maximum + 1}).Scan(&count)
+		pgx.NamedArgs{"closing": threadverdict.HoldingStatuses(), "opened": openedVerdicts, "cap": maximum + 1}).Scan(&count)
 	if err != nil {
 		return 0, false, fmt.Errorf("capture: counting messages open under held threads: %w", err)
 	}
@@ -72,7 +73,7 @@ func OpenUnderHeldThreadsTx(
 		   AND (i.verdict_status IS NULL OR i.verdict_status = ANY(@taken))
 		 ORDER BY a.id, i.user_id`,
 		pgx.NamedArgs{
-			"closing": closingVerdicts, "taken": siblingStatusesTaken(VerdictHeld),
+			"closing": threadverdict.HoldingStatuses(), "taken": siblingStatusesTaken(VerdictHeld),
 			"after": after, "page_size": limit,
 		})
 	if err != nil {

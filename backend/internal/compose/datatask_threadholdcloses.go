@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // threadHoldClosesDataTask closes the messages a thread had already opened when
@@ -28,7 +29,7 @@ func threadHoldClosesDataTask(pool *pgxpool.Pool) datatask.Task {
 	threads := capture.NewThreadVerdictStore(InstallationDB(pool))
 	return datatask.Task{
 		ID: "core/1794240000_held_threads_close_opened_messages", Version: 1,
-		Title: "Closing messages left open in held threads",
+		Title: systemtext.Literal("datatask.title.core.1794240000_held_threads_close_opened_messages"),
 		Steps: []datatask.Step{{
 			Name: "close_opened_messages", Limit: 200, MinLimit: 10,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

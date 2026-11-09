@@ -84,6 +84,22 @@ export function App() {
   // credential out of it (lib/router.tsx). A credential must leave the bar
   // whatever this function renders instead.
   const route = useRoute();
+  const queryClient = useQueryClient();
+  const { locale } = useLocale();
+  const previousLocale = useRef(locale);
+  useEffect(() => {
+    if (previousLocale.current === locale) return;
+    previousLocale.current = locale;
+    queryClient.removeQueries({
+      queryKey: ["reader-rendering"],
+      type: "inactive",
+    });
+    void queryClient.invalidateQueries({
+      predicate: (entry) =>
+        entry.queryKey[0] !== "me" && entry.queryKey[0] !== "reader-rendering",
+    });
+  }, [locale, queryClient]);
+
   // BEFORE every other gate, the public screens included. A bundle and an api
   // from different releases disagree about the contract between them, so nothing
   // below here — the session probe, the booking page, the preference centre —

@@ -99,7 +99,7 @@ func readSummaryParts(stored json.RawMessage) *crmcontracts.ApprovalSummaryParts
 // staged call back. That is the call, its evidence and both summary forms.
 func withholdPayload(approval *crmcontracts.Approval) {
 	approval.ProposedChange, approval.Evidence = nil, nil
-	approval.Summary, approval.SummaryParts = nil, nil
+	approval.Summary, approval.SummaryParts, approval.SystemDisplay = nil, nil, nil
 }
 
 // boundRunes truncates so the RESULT is at most n bytes, marking that it did

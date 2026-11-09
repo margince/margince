@@ -3,6 +3,7 @@
 
 import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
+import { stable } from "./stable.mjs";
 
 /** The manifest's file name beside the documents. */
 export const DIGESTS_FILE = "digests.json";
@@ -18,7 +19,7 @@ export const DIGESTS_FILE = "digests.json";
 export async function writeDigests(outDir, files) {
   /** @type {Record<string, string>} */
   const manifest = {};
-  for (const file of [...files].sort()) {
+  for (const file of [...files].sort(stable)) {
     const bytes = await readFile(`${outDir}/${file}`);
     manifest[file] = createHash("sha256").update(bytes).digest("hex");
   }

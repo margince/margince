@@ -110,7 +110,7 @@ func MeetingAheadSQL(alias string) string {
 		JOIN activity ahead ON ahead.id = ahead_link.activity_id
 		WHERE ahead_link.deal_id = ` + deal + `.id AND ahead.archived_at IS NULL
 		  AND ahead.kind = 'meeting' AND ` + relstrength.MeetingNotCalledOffSQL("ahead") +
-		auth.OriginIsEngagement("ahead") + ` AND ahead.audience = 'workspace'
+		auth.OriginIsEngagement("ahead") + ` AND ` + auth.WorkspaceAudienceSQL("ahead") + `
 		  AND coalesce(` + deal + `.last_activity_at, '-infinity') < ahead.occurred_at -- occurred_at raw: the stored clock holds an occurred_at
 		)`
 }

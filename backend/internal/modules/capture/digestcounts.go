@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -19,7 +20,7 @@ func readDigestCounts(ctx context.Context, tx pgx.Tx, userID ids.UUID, since, un
 	args := []any{}
 	arg := func(v any) string { args = append(args, v); return fmt.Sprintf("$%d", len(args)) }
 	start, end, reader := arg(since), arg(until), arg(userID)
-	imported := " AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.audience = 'workspace' AND EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id AND ci.user_id = " + reader + ")"
+	imported := " AND a.archived_at IS NULL AND a.restricted_at IS NULL AND " + auth.WorkspaceAudienceSQL("a") + " AND EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id AND ci.user_id = " + reader + ")"
 	created := "created_at >= " + start + " AND created_at <= " + end
 	labeled := "capture_labeled_at >= " + start + " AND capture_labeled_at <= " + end
 	err := tx.QueryRow(ctx, `SELECT
