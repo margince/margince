@@ -6,6 +6,7 @@ import type { MessageKey } from "./en";
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
+  "systemJob.optout_receipt": "Fehlende Abmeldebestätigungen melden",
   "systemJob.task_completion": "Aufgaben nach E-Mail erledigen",
   "homeRepair.reason.taskChanged":
     "Die Aufgabe wurde während der Vorschau geändert. Erstelle die Vorschau erneut.",

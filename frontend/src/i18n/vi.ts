@@ -15,6 +15,7 @@ import type { MessageKey } from "./en";
 //     string in this catalog and must stay that way.
 export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.import_identity_links": "Liên kết email đã nhập",
+  "systemJob.optout_receipt": "Báo biên nhận hủy đăng ký bị lỡ",
   "systemJob.task_completion": "Hoàn tất công việc sau email",
   "homeRepair.reason.taskChanged":
     "Công việc đã thay đổi trong khi tạo bản xem trước. Hãy xem trước lần nữa.",

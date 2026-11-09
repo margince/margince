@@ -1,5 +1,6 @@
 {
   "systemJob.import_identity_links": "Liên kết email đã nhập",
+  "systemJob.optout_receipt": "Báo biên nhận hủy đăng ký bị lỡ",
   "systemJob.task_completion": "Hoàn tất công việc sau email",
   "dealSuggestion.changed": "Đề xuất này không còn khả dụng. Tải lại các mục cần kiểm tra để xem trạng thái hiện tại.",
   "roles.object.data_task": "Cập nhật dữ liệu",
