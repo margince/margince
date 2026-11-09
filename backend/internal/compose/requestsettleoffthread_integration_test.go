@@ -285,15 +285,15 @@ func TestADayTieReplyFiledFirstReachesTheModel(t *testing.T) {
 	}
 }
 
-// Their second mail in the request's own second is no answer, but the model still reads it: it may correct the ask.
-func TestTheirMailAtTheRequestsInstantReachesTheModel(t *testing.T) {
-	o := setupOwed(t)
+// askWithTiedCorrection captures a request, their second mail in its own second on its thread, and our later reply.
+func (o *owedEnv) askWithTiedCorrection(t *testing.T) (request, correction ids.UUID) {
+	t.Helper()
 	o.contact(t, "Pat Buyer", "pat@customer.example")
 	asked := clocktest.Now(t).Add(-3 * time.Hour).Truncate(time.Second)
-	request := o.capture(t, owedMail{
+	request = o.capture(t, owedMail{
 		from: "pat@customer.example", to: o.seat, subject: "Signed NDA", messageID: "same-second@customer.example", at: asked,
 	})
-	correction := o.capture(t, owedMail{
+	correction = o.capture(t, owedMail{
 		from: "pat@customer.example", to: o.seat, subject: "Re: Signed NDA", inReplyTo: "same-second@customer.example",
 		messageID: "correction@customer.example", at: asked, authenticated: true,
 	})
@@ -308,6 +308,13 @@ func TestTheirMailAtTheRequestsInstantReachesTheModel(t *testing.T) {
 		to: "pat@customer.example", subject: "Re: Signed NDA", inReplyTo: "same-second@customer.example",
 		at: asked.Add(time.Hour),
 	})
+	return request, correction
+}
+
+// Their second mail in the request's own second is no answer, but the model still reads it: it may correct the ask.
+func TestTheirMailAtTheRequestsInstantReachesTheModel(t *testing.T) {
+	o := setupOwed(t)
+	request, correction := o.askWithTiedCorrection(t)
 
 	candidate, ok := o.offered(t, request)
 	if !ok {
@@ -318,5 +325,29 @@ func TestTheirMailAtTheRequestsInstantReachesTheModel(t *testing.T) {
 	}
 	if !slices.ContainsFunc(o.evidence(t, candidate), func(message threadMessage) bool { return message.ID == correction }) {
 		t.Fatal("their mail at the request's instant never reaches the model")
+	}
+}
+
+// The verdict is bound to their tied mail as well. Edited after the model read it, the verdict is dropped.
+func TestAVerdictOverAnEditedTiedMailIsDropped(t *testing.T) {
+	o := setupOwed(t)
+	request, correction := o.askWithTiedCorrection(t)
+	candidate, ok := o.offered(t, request)
+	if !ok || !o.owed(t, request) {
+		t.Fatalf("the request was not offered while owed: offered=%v", ok)
+	}
+
+	body := "Please send the countersigned copy instead."
+	if _, err := o.e.Activities.UpdateActivity(o.e.Admin(), ids.From[ids.ActivityKind](correction),
+		activities.UpdateActivityInput{Body: &body}); err != nil {
+		t.Fatalf("editing their tied mail: %v", err)
+	}
+	if err := activities.NewStore(o.e.DB()).SettleRequest(o.judge(), activities.RequestSettlementInput{
+		Request: candidate, Verdict: activities.RequestSettled, Confidence: 0.95, DecidedBy: "test-model",
+	}); err != nil {
+		t.Fatalf("settling: %v", err)
+	}
+	if !o.owed(t, request) {
+		t.Fatal("a verdict over a tied mail edited after the model read it settled the request")
 	}
 }
