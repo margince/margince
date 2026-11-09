@@ -208,6 +208,22 @@ func TestAPromiseOnACutPageDoesNotNameItsMessage(t *testing.T) {
 	}
 }
 
+// The cut flag decides the names a brief is stored with, so a brief cached
+// before the page was cut is not served after it.
+func TestACutCommitmentsPageChangesTheFingerprint(t *testing.T) {
+	whole := Input{OpenWorkCapped: true}
+	cut := whole
+	cut.OpenCommitmentsCut = true
+	a, errA := Fingerprint(whole, "r", "en")
+	b, errB := Fingerprint(cut, "r", "en")
+	if errA != nil || errB != nil {
+		t.Fatalf("fingerprint: %v, %v", errA, errB)
+	}
+	if a == b {
+		t.Error("the fingerprint ignores OpenCommitmentsCut: a cached brief would keep a claim name")
+	}
+}
+
 func TestTheFloorNamesClaimHolderAndDateInEveryLanguage(t *testing.T) {
 	in := Input{OpenCommitments: []CommitmentIn{
 		{ID: "c1", ActivityID: commitmentActivity, Claim: "OURS-CLAIM", Side: sideOurs, Due: "2026-07-28T09:00:00Z"},
