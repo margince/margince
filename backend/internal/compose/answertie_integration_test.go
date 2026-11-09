@@ -21,6 +21,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -235,7 +236,7 @@ func TestADealsQuietSidesReadATieAsTheRowsThatDecideIt(t *testing.T) {
 	e := integration.Setup(t)
 	pipeline, open, _ := integration.DealFixture(t, e)
 	dealUUID := e.SeedDeal(t, "Tie quiet deal", pipeline, open, nil)
-	at := occurredday.Anchor(time.Now().AddDate(0, 0, -6))
+	at := occurredday.Anchor(clocktest.Now(t).AddDate(0, 0, -6))
 	for _, row := range []struct{ direction, precision string }{
 		{"inbound", activities.PrecisionInstant},
 		{"outbound", activities.PrecisionDay},

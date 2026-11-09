@@ -15,6 +15,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -271,7 +272,7 @@ func TestADayTieReplyFiledFirstReachesTheModel(t *testing.T) {
 		t.Fatalf("dating the request by its day: %v", err)
 	}
 	if applied, err := o.e.Activities.SetOwedVerdict(o.judge(), request, activities.OwedVerdictAsksUs,
-		"prompts-test", time.Now()); err != nil || !applied {
+		"prompts-test", clocktest.Now(t)); err != nil || !applied {
 		t.Fatalf("judging the request: applied=%v err=%v", applied, err)
 	}
 
