@@ -258,9 +258,9 @@ const (
 // awaitingTheirAnswerSQL is a mail on alias a the reader sent that still waits
 // on the other side, for the badge and the follow-up lane. sentByReader is
 // sentByReaderSQL. laterContent gates the later message, so a reply the reader
-// may not read decides nothing. A calendar copy asks nobody a question. The
-// sender chooses a thread key, so a later message counts only under the same
-// record. Their message counts only when our mail does not answer it.
+// may not read decides nothing. A calendar copy asks nobody a question. A
+// thread key is chosen by the sender, so a later message counts only when
+// filed under the same record. Id order only picks which of our two mails waits.
 func awaitingTheirAnswerSQL(asOf, sentByReader, laterContent, kinds string) string {
 	return `(a.kind IN (` + kinds + `)
 	   AND a.direction = 'outbound'
@@ -326,11 +326,8 @@ func awaitingNeedSQL() string {
 `
 }
 
-// awaitingHeardSinceSQL lists the candidates whose recipients were in contact
-// since, on any channel: a call or a meeting with them is a follow-up already
-// made. Their message our mail answers (occurredday.Answers) came before it.
-// It is one set over every candidate. Asked per candidate, it walked each
-// recipient's whole history once per mail. It reads awaitingRepliesSQL's slots.
+// awaitingHeardSinceSQL is the candidates whose recipients were in touch since: by a call or meeting, or
+// by a message our mail does not answer. It reads awaitingRepliesSQL's slots.
 var awaitingHeardSinceSQL = followUpHeardSince + ` AS MATERIALIZED (
 	SELECT DISTINCT c.id FROM ` + followUpCandidates + ` c
 	  JOIN activity_link sent ON sent.activity_id = c.id AND sent.contact_id IS NOT NULL

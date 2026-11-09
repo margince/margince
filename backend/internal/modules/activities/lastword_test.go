@@ -23,7 +23,7 @@ func readTied(at time.Time) func(tiedRow) (occurredday.Moment, bool) {
 }
 
 // At one stored instant the record's move is read off their message, unless a
-// day on either side makes ours its answer. The logging order never decides.
+// day on either side makes ours its answer. Only two of ours go by the order listed.
 func TestLastWordReadsTheMoveByTheAnswerRuleNotTheId(t *testing.T) {
 	at := time.Date(2026, 11, 6, 12, 0, 0, 0, time.UTC)
 	for _, c := range []struct {

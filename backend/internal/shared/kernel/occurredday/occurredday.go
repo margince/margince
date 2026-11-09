@@ -126,10 +126,8 @@ func Happened(kind string, m Moment, asOf time.Time, zone *time.Location) bool {
 	return Begun(m, asOf, zone)
 }
 
-// Answers reports whether answer is late enough to answer message: stored after
-// it, or at the same instant when either names only a date. Two instants in
-// one second stay unordered, since an id orders capture, not messages.
-// AnswersSQL is the same rule in SQL.
+// Answers reports whether answer is stored after message, or at one stored instant with a date on
+// either side. Two instants at one stored instant stay unordered: an id orders capture, not messages.
 func Answers(answer, message Moment) bool {
 	if answer.At.Equal(message.At) {
 		return answer.DateOnly || message.DateOnly

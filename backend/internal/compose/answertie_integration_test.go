@@ -5,9 +5,8 @@
 
 package compose
 
-// Their mail and our reply logged by hand at one stored instant. A day on
-// either side makes ours the answer, and two instants in one second stay owed.
-// The History badge, the Next bar's list and the Contacts tab all agree.
+// Their mail and our reply logged by hand at one stored instant. A day on either side makes ours the
+// answer, and two instants stay owed. Every surface reads the tie alike.
 
 import (
 	"context"
@@ -25,8 +24,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
-// handLogged posts one mail the way the log form does, filed under the
-// contact on a thread both mails share.
+// handLogged posts one mail through POST /activities, filed under the contact on a thread both mails
+// share. The log form sends no thread, and no answer arm can then match the pair.
 func (o *owedEnv) handLogged(t *testing.T, contact ids.UUID, direction crmcontracts.CreateActivityRequestDirection,
 	thread string, at time.Time, precision crmcontracts.OccurredPrecision,
 ) ids.UUID {
@@ -73,8 +72,8 @@ func handTies() []handTie {
 	return []handTie{
 		{"by their date, the reply logged last", day, true, false},
 		{"by their date, the reply logged first", day, false, false},
-		{"at one second, the reply logged last", instant, true, true},
-		{"at one second, the reply logged first", instant, false, true},
+		{"at one stored instant, the reply logged last", instant, true, true},
+		{"at one stored instant, the reply logged first", instant, false, true},
 	}
 }
 

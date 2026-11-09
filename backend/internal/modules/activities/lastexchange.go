@@ -36,8 +36,7 @@ func WhoseMove(move *crmcontracts.EmailSummaryMove, direction string) crmcontrac
 }
 
 // lastExchange reads the record's newest call, meeting, email or message, by
-// the interaction rule the account's strip reads its newest message with. At a
-// tie the row that decides the move is LastWord's.
+// the interaction rule the account's strip reads its newest message with.
 func (s *Store) lastExchange(
 	ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID, now time.Time, columns CustomColumns,
 ) (*crmcontracts.LastExchange, error) {
@@ -63,13 +62,12 @@ func (s *Store) lastExchange(
 	return &crmcontracts.LastExchange{Activity: row, WhoseMove: WhoseMove(move, direction)}, nil
 }
 
-// newestTied reads the rows in at the newest stored instant, newest first,
-// paging until that instant ends.
+// newestTied reads the rows at the newest stored instant in the timeline's order, at most NewestTiedCap.
 func (s *Store) newestTied(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([]crmcontracts.Activity, error) {
-	size := tiedPageSize
-	in.Limit = &size
+	size := NewestTiedFirstPage
 	var tied []crmcontracts.Activity
 	for {
+		in.Limit = &size
 		rows, page, err := s.ListActivitiesIn(ctx, tx, in)
 		if err != nil {
 			return nil, err
@@ -80,15 +78,18 @@ func (s *Store) newestTied(ctx context.Context, tx pgx.Tx, in ListActivitiesInpu
 			}
 			tied = append(tied, row)
 		}
-		if !page.HasMore {
+		if !page.HasMore || len(tied) >= NewestTiedCap {
 			return tied, nil
 		}
-		in.Cursor = &page.NextCursor
+		in.Cursor, size = &page.NextCursor, NewestTiedCap-len(tied)
 	}
 }
 
-// tiedPageSize covers the usual tie, an inbound and its reply, in one read.
-const tiedPageSize = 4
+// NewestTiedCap bounds one stored instant's read: a day-only import can file hundreds of rows on one date.
+const NewestTiedCap = 200
+
+// NewestTiedFirstPage covers the usual tie, an inbound and its reply, in one read.
+const NewestTiedFirstPage = 4
 
 func exchangeMoment(row crmcontracts.Activity) (occurredday.Moment, bool) {
 	inbound := row.Direction != nil && *row.Direction == crmcontracts.ActivityDirectionInbound

@@ -51,12 +51,8 @@ const (
 	EngagementUntried Engagement = "untried"
 )
 
-// EngagementOf reads the state off the strength fold. The direction counts say who
-// wrote inside the 90-day window. Answered needs our latest mail to answer theirs,
-// because an unprompted mail nobody answered is the account's most urgent row.
-// When their latest message is a mail, its History badge says whether we owe a
-// reply. A mail it owes nothing on, such as a calendar copy, reads answered when
-// our mail answers it. Otherwise it reads as though it had not arrived.
+// EngagementOf reads the state off the strength fold. An unprompted mail nobody answered is the account's
+// most urgent row. One its History badge owes no reply, such as a calendar copy, reads as not arrived.
 func EngagementOf(rs RelationshipStrength) Engagement {
 	replied := rs.LastInbound != nil && rs.LastOutbound != nil && occurredday.Answers(
 		occurredday.Moment{At: *rs.LastOutbound, DateOnly: occurredday.IsDay(rs.LastOutboundPrecision)},

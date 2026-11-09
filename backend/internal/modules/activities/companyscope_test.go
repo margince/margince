@@ -281,11 +281,8 @@ func TestTheWaitingQueryReturnsOneRowPerMessage(t *testing.T) {
 	}
 }
 
-// Mail carries second precision, so two messages in one thread sharing a
-// timestamp are ordinary. The newest-inbound walk breaks the tie by id, or two
-// equal-second inbounds would both be the wait. An answer never does: an id
-// says when a row was captured, not which message came first. So every answer
-// arm asks occurredday.AnswersSQL, where only a day entry answers at a tie.
+// The newest-inbound walk breaks an equal-second tie by id, or two inbounds would both be the wait. An
+// answer never does, since an id orders capture: every answer arm asks occurredday.AnswersSQL.
 func TestTheWaitingQueryBreaksTimestampTies(t *testing.T) {
 	if strings.Count(waitingRepliesSQL, "newer.id) > (a.occurred_at, a.id)") == 0 {
 		t.Fatal("the newest-inbound walk no longer breaks equal-second ties by id")
@@ -302,7 +299,7 @@ func TestTheWaitingQueryBreaksTimestampTies(t *testing.T) {
 		}
 		rest = strings.ReplaceAll(rest, ordered, "")
 	}
-	if regexp.MustCompile(`answer_\w+\.occurred_at\s*[<>]=?\s*a\.occurred_at`).MatchString(rest) {
+	if regexp.MustCompile(`answer_\w+\.occurred_at\s*[<>]=?\s*\ba\.occurred_at|\ba\.occurred_at\s*[<>]=?\s*answer_\w+\.occurred_at`).MatchString(rest) {
 		t.Fatal("an answer arm orders itself against the message outside occurredday.AnswersSQL")
 	}
 }

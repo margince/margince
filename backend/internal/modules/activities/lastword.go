@@ -9,10 +9,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
-// LastWord picks, from a record's exchanges at its newest stored instant listed
-// newest first, the one whose move the record reads. That is their message none
-// of ours at that instant answers (occurredday.Answers), or else our newest.
-// tied is never empty.
+// LastWord picks, from a non-empty tie group in the timeline's order, their message none of ours answers
+// (occurredday.Answers), or else the first of ours. Capture order may rank two of ours, never an answer.
 func LastWord[T any](tied []T, read func(T) (at occurredday.Moment, inbound bool)) T {
 	ours := -1
 	for i, row := range tied {

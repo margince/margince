@@ -107,9 +107,9 @@ test("a day each way on one date reads as answered", async () => {
   expect(within(row as HTMLElement).queryByText(/They wrote/)).toBeNull();
 });
 
-// Two instants in one second have no order to read, so the server's
+// Two instants at one stored instant have no order to read, so the server's
 // engagement keeps their mail owed, and the last touch must agree.
-test("a mail each way in one second reads as theirs to answer", async () => {
+test("a mail each way at one stored instant reads as theirs to answer", async () => {
   const [, waiting] = contactsFixture();
   const second = "2026-08-30T09:00:00Z";
   stubContacts([

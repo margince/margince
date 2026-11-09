@@ -50,7 +50,7 @@ func TestEngagementOfReadsTheStatesOffWhoWroteLast(t *testing.T) {
 			EngagementAnswered,
 		},
 		{
-			"their mail and ours carry one second",
+			"their mail and ours carry one stored instant",
 			RelationshipStrength{
 				Inbound90d: 1, Outbound90d: 1, LastInbound: at(0), LastOutbound: at(0),
 				LastInboundPrecision: "instant", LastOutboundPrecision: "instant",

@@ -78,9 +78,9 @@ A message that is not a request is answered by any of:
 - a logged call, or a meeting that did happen, with the contact of the sender. The same with a colleague
   of theirs does not count.
 
-An answer must be later than the mail. At the same stored moment it answers only when either entry
-was logged by its date alone. Every such entry of one date is stored at one time. A reply in the same
-second stays owed: mail carries time only to the second, and nothing else says which was first. Evidence off the thread
+An answer must be later than the mail. At one stored moment it answers only when either entry was
+logged by its date alone. Every such entry of one date is stored at one time. Two entries with a time
+of day at one stored moment stay owed, because nothing says which came first. Evidence off the thread
 counts only when the whole workspace may read it. A colleague's private reply or meeting must not clear
 another seat's row, since a row going silent would show that the reply or meeting exists.
 

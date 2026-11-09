@@ -41,6 +41,8 @@ import (
 // counterparty on it.
 type QuietSide struct {
 	At time.Time
+	// DateOnly is an entry logged by its date alone, whose At is that date's anchor.
+	DateOnly bool
 	// Kind is the activity kind the message was — an email, a call, a meeting.
 	// The reason says what actually happened, and "wrote" on a phone call is a
 	// small lie that costs the sentence its authority.
@@ -165,7 +167,7 @@ func readQuietSide(ctx context.Context, tx pgx.Tx, dealID ids.DealID, direction,
 	var side QuietSide
 	var contactID *ids.UUID
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT a.occurred_at, a.kind,
+		SELECT a.occurred_at, a.occurred_precision = 'day', a.kind,
 		       (SELECT sole.contact_id FROM activity_participant sole
 		         WHERE sole.activity_id = a.id AND sole.role = $%[3]d
 		           AND sole.contact_id IS NOT NULL
@@ -177,7 +179,7 @@ func readQuietSide(ctx context.Context, tx pgx.Tx, dealID ids.DealID, direction,
 		ORDER BY a.occurred_at DESC, a.id DESC
 		LIMIT 1`, dealPos, directionPos, rolePos, scope, healthInteraction("now()"),
 		relstrength.ExternalActivityCountsSQL("a", "now()")), args...).
-		Scan(&side.At, &side.Kind, &contactID)
+		Scan(&side.At, &side.DateOnly, &side.Kind, &contactID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return QuietSide{}, false, nil
 	}
