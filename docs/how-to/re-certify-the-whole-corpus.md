@@ -247,19 +247,17 @@ tokens a second, which often costs more. Pin one with `UPSTREAM='{"only":["<prov
 when the price matters more than the time.
 
 **Update this table after every full run.** Replace the row of the model family you ran; add a row
-for a new one. Take each number from that run:
+for a new one. Save the run's output to a file, then let the script read it, the journal and the trace:
 
-- **Time:** the `--- PASS/FAIL: TestE2ECertify (<n>s)` line at the end of the run's output.
-- **Model calls:** the `ai.call` lines of the candidate's provider in that output.
-- **Tokens:** add them up over the journal that the run's `RESUME=` names:
+```bash
+make -C backend e2e-ai MODEL=<provider>:<model> RESUME=$PWD/.tmp/aicert/resume-<family> > run.log 2>&1
+scripts/aicert-run-cost.sh run.log .tmp/aicert/resume-<family>
+```
 
-  ```bash
-  jq -s 'map(.outcome) | {runs: length, tokens_in: (map(.tokens_in) | add), tokens_out: (map(.tokens_out) | add)}' \
-    <resume dir>/aicert-resume.jsonl
-  ```
-
-- **Served by:** the `served_provider` of the candidate calls in `.tmp/aicert/aicert-trace-*.jsonl`.
-- **Cost:** the tokens times that provider's price on its model page.
+It prints the time, the calls, and the tokens, serving provider and cost of each model. It looks up an
+OpenRouter model's price for the provider that served it. Give any other model's price in USD per
+1,000,000 tokens, as `PRICE_gemini_3_6_flash="0.75,3.75"` before the command. A change to the script
+runs its own test: `bash scripts/aicert-run-cost.test.sh`.
 
 ## What this loop does not tell you
 
