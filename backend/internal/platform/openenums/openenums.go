@@ -12,6 +12,10 @@
 // response-side when a response body or header reaches it through $ref, and
 // request-side when a request body or parameter does. An enum both reach is
 // response-side; the server still validates the request value.
+//
+// A form whose side this walk cannot tell is refused rather than skipped:
+// callbacks and webhooks invert the direction, a writeOnly enum is request-only
+// inside a shared schema, and an external $ref leaves the file.
 package openenums
 
 import (
@@ -51,8 +55,15 @@ func Classify(raw []byte) ([]Enum, error) {
 	if paths == nil {
 		return nil, errors.New("openenums: the contract has no paths")
 	}
+	if webhooks := mapValue(w.root, "webhooks"); webhooks != nil {
+		w.refuse(webhooks, "top-level webhooks send requests to a client, which this rule does not classify")
+	}
 	for i := 1; i < len(paths.Content); i += 2 {
 		w.pathItem(w.resolve(paths.Content[i]))
+	}
+	if len(w.problems) > 0 {
+		return nil, fmt.Errorf("openenums: the contract uses forms this rule cannot classify:\n%s",
+			strings.Join(w.problems, "\n"))
 	}
 	out := make([]Enum, 0, len(w.found))
 	for _, e := range w.found {
@@ -82,9 +93,15 @@ func Violations(path string, enums []Enum) []string {
 
 // walker follows the contract from its operations to the enums they reach.
 type walker struct {
-	root  *yaml.Node
-	found map[*yaml.Node]*Enum
-	seen  map[string]bool
+	root     *yaml.Node
+	found    map[*yaml.Node]*Enum
+	seen     map[string]bool
+	problems []string
+}
+
+// refuse records a form the walk cannot classify, by line.
+func (w *walker) refuse(node *yaml.Node, why string) {
+	w.problems = append(w.problems, fmt.Sprintf("line %d: %s", node.Line, why))
 }
 
 var operationVerbs = []string{"get", "put", "post", "delete", "patch", "head", "options", "trace"}
@@ -97,6 +114,9 @@ func (w *walker) pathItem(item *yaml.Node) {
 			continue
 		}
 		w.parameters(mapValue(op, "parameters"))
+		if callbacks := mapValue(op, "callbacks"); callbacks != nil {
+			w.refuse(callbacks, "callbacks send requests to a client, which this rule does not classify")
+		}
 		if body := w.resolve(mapValue(op, "requestBody")); body != nil {
 			w.content(mapValue(body, "content"), false)
 		}
@@ -106,7 +126,9 @@ func (w *walker) pathItem(item *yaml.Node) {
 			w.content(mapValue(response, "content"), true)
 			headers := mapValue(response, "headers")
 			for j := 1; headers != nil && j < len(headers.Content); j += 2 {
-				w.schema(mapValue(w.resolve(headers.Content[j]), "schema"), true)
+				header := w.resolve(headers.Content[j])
+				w.schema(mapValue(header, "schema"), true)
+				w.content(mapValue(header, "content"), true)
 			}
 		}
 	}
@@ -117,7 +139,9 @@ func (w *walker) parameters(params *yaml.Node) {
 		return
 	}
 	for _, param := range params.Content {
-		w.schema(mapValue(w.resolve(param), "schema"), false)
+		param = w.resolve(param)
+		w.schema(mapValue(param, "schema"), false)
+		w.content(mapValue(param, "content"), false)
 	}
 }
 
@@ -138,6 +162,7 @@ var (
 )
 
 func (w *walker) schema(node *yaml.Node, response bool) {
+	node = deref(node)
 	if node == nil || node.Kind != yaml.MappingNode {
 		return
 	}
@@ -150,6 +175,9 @@ func (w *walker) schema(node *yaml.Node, response bool) {
 		return
 	}
 	if values := mapValue(node, "enum"); values != nil {
+		if writeOnly := mapValue(node, "writeOnly"); writeOnly != nil && writeOnly.Value == "true" {
+			w.refuse(values, "a writeOnly enum is request-only inside a shared schema; classify it by hand")
+		}
 		e := w.found[node]
 		if e == nil {
 			e = &Enum{Line: values.Line, node: node}
@@ -173,25 +201,54 @@ func (w *walker) schema(node *yaml.Node, response bool) {
 			}
 		}
 	}
+	w.discriminator(mapValue(node, "discriminator"), response)
+}
+
+// discriminator walks the schemas a discriminator's mapping names, which a
+// payload can reach even when the oneOf does not list them.
+func (w *walker) discriminator(node *yaml.Node, response bool) {
+	mapping := mapValue(node, "mapping")
+	for i := 1; mapping != nil && i < len(mapping.Content); i += 2 {
+		ref := &yaml.Node{Kind: yaml.MappingNode, Line: mapping.Content[i].Line, Content: []*yaml.Node{
+			{Kind: yaml.ScalarNode, Value: "$ref"}, mapping.Content[i],
+		}}
+		w.schema(ref, response)
+	}
 }
 
 // resolve follows a local $ref, repeatedly, to the node it names.
 func (w *walker) resolve(node *yaml.Node) *yaml.Node {
-	for node != nil {
+	for node = deref(node); node != nil; {
 		ref := mapValue(node, "$ref")
 		if ref == nil {
 			return node
 		}
+		if !strings.HasPrefix(ref.Value, "#/") {
+			w.refuse(ref, "an external $ref leaves this file, so its enums cannot be classified")
+			return nil
+		}
 		target := w.root
 		for part := range strings.SplitSeq(strings.TrimPrefix(ref.Value, "#/"), "/") {
 			target = mapValue(target, strings.ReplaceAll(strings.ReplaceAll(part, "~1", "/"), "~0", "~"))
+		}
+		if target == nil {
+			w.refuse(ref, "a $ref names nothing in this file")
 		}
 		node = target
 	}
 	return nil
 }
 
+// deref follows a YAML alias to the node its anchor names.
+func deref(node *yaml.Node) *yaml.Node {
+	for node != nil && node.Kind == yaml.AliasNode {
+		node = node.Alias
+	}
+	return node
+}
+
 func listItems(node *yaml.Node) []*yaml.Node {
+	node = deref(node)
 	if node == nil || node.Kind != yaml.SequenceNode {
 		return nil
 	}
@@ -200,12 +257,13 @@ func listItems(node *yaml.Node) []*yaml.Node {
 
 // mapValue is the value under key in a mapping node, or nil.
 func mapValue(node *yaml.Node, key string) *yaml.Node {
+	node = deref(node)
 	if node == nil || node.Kind != yaml.MappingNode {
 		return nil
 	}
 	for i := 0; i+1 < len(node.Content); i += 2 {
 		if node.Content[i].Value == key {
-			return node.Content[i+1]
+			return deref(node.Content[i+1])
 		}
 	}
 	return nil

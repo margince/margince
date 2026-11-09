@@ -151,3 +151,87 @@ func TestMarkOpenMarksBlockAndFlowResponseEnumsAndNothingElse(t *testing.T) {
 		t.Errorf("marking a marked contract changed it (count %d, err %v)", count, err)
 	}
 }
+
+// minimal is a contract with one GET whose 200 answers the given schema, and
+// whose operation carries the given extra lines.
+func minimal(op, schema, components string) string {
+	return "openapi: 3.1.0\npaths:\n  /x:\n    get:\n" + op +
+		"      responses:\n        '200':\n          description: ok\n          content:\n" +
+		"            application/json:\n              schema: " + schema + "\n" + components
+}
+
+func TestClassifyRefusesTheFormsItCannotClassify(t *testing.T) {
+	cases := map[string]struct{ raw, names string }{
+		"operation callbacks": {
+			minimal("      callbacks:\n        done: {}\n", "{ type: string }", ""),
+			"callbacks send requests to a client",
+		},
+		"top-level webhooks": {
+			minimal("", "{ type: string }", "webhooks:\n  ping: {}\n"),
+			"top-level webhooks send requests to a client",
+		},
+		"an external $ref": {
+			minimal("", "{ $ref: 'other.yaml#/X' }", ""),
+			"an external $ref leaves this file",
+		},
+		"a $ref that names nothing": {
+			minimal("", "{ $ref: '#/components/schemas/Missing' }", ""),
+			"a $ref names nothing in this file",
+		},
+		"a writeOnly enum": {
+			minimal("", "{ type: string, enum: [a, b], writeOnly: true }", ""),
+			"a writeOnly enum is request-only",
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			_, err := Classify([]byte(tc.raw))
+			if err == nil || !strings.Contains(err.Error(), tc.names) {
+				t.Fatalf("Classify → %v, want a refusal naming %q", err, tc.names)
+			}
+		})
+	}
+}
+
+func TestClassifyFollowsAliasesDiscriminatorsAndMediaTypeContent(t *testing.T) {
+	cases := map[string]struct {
+		raw, enum string
+		response  bool
+	}{
+		"an enum reached only through an alias": {
+			"x-shapes:\n  kind: &kind { type: string, enum: [aliased] }\n" + minimal("", "*kind", "")[len("openapi: 3.1.0\n"):],
+			"enum: [aliased]", true,
+		},
+		"an enum reached only through a discriminator mapping": {
+			minimal("", "{ $ref: '#/components/schemas/Union' }", "components:\n  schemas:\n"+
+				"    Union:\n      type: object\n      discriminator:\n        propertyName: k\n"+
+				"        mapping:\n          only: '#/components/schemas/Only'\n"+
+				"    Only:\n      type: object\n      properties:\n        k: { type: string, enum: [mapped] }\n"),
+			"enum: [mapped]", true,
+		},
+		"a response header described by content": {
+			"openapi: 3.1.0\npaths:\n  /x:\n    get:\n      responses:\n        '200':\n          description: ok\n" +
+				"          headers:\n            X-State:\n              content:\n                text/plain:\n" +
+				"                  schema: { type: string, enum: [header_content] }\n",
+			"enum: [header_content]", true,
+		},
+		"a parameter described by content": {
+			minimal("      parameters:\n        - name: q\n          in: query\n          content:\n"+
+				"            application/json:\n              schema: { type: string, enum: [by_content] }\n",
+				"{ type: string }", ""),
+			"enum: [by_content]", false,
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			got := sides(t, tc.raw)
+			e, ok := got[lineOf(t, tc.raw, tc.enum)]
+			if !ok {
+				t.Fatalf("the enum %q was not reached: %+v", tc.enum, got)
+			}
+			if e.Response != tc.response || e.Request == tc.response {
+				t.Errorf("response=%v request=%v, want response=%v", e.Response, e.Request, tc.response)
+			}
+		})
+	}
+}
