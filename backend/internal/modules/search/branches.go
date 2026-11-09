@@ -235,11 +235,13 @@ func leadSnippet(ctx context.Context, fallback string, arg func(any) int) (strin
 	if scope != "" {
 		scope = " AND " + scope
 	}
-	// Only where the lead carries a full name, as the typed fallback does. A
-	// lead that is only a company is titled by that company already.
-	return fmt.Sprintf(`CASE WHEN t.full_name IS NOT NULL THEN
-		coalesce((SELECT o.display_name FROM company o
-			WHERE o.id = t.company_id AND o.archived_at IS NULL%s), t.company_name) END`, scope), nil
+	linked := fmt.Sprintf(`(SELECT o.display_name FROM company o
+			WHERE o.id = t.company_id AND o.archived_at IS NULL%s)`, scope)
+	// A lead with a full name is excerpted by its company. One that is only a
+	// company is titled by the typed name. Its excerpt adds the company's own
+	// name only where a rename has moved it away from that title.
+	return fmt.Sprintf(`CASE WHEN t.full_name IS NOT NULL THEN coalesce(%[1]s, t.company_name)
+		ELSE nullif(%[1]s, t.company_name) END`, linked), nil
 }
 
 // excerpt renders the branch's snippet expression for this caller.

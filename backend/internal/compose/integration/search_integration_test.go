@@ -770,3 +770,38 @@ func TestALinkedLeadsExcerptFollowsTheCompanysName(t *testing.T) {
 		t.Errorf("after the rename the excerpt reads %q, want the new name", got)
 	}
 }
+
+// A lead that is only a company is titled by the typed name, which a rename on
+// the linked company leaves behind. Its excerpt then carries the company's own
+// name. Until a rename it adds nothing, since the title already says it.
+func TestACompanyOnlyLeadsExcerptNamesARenamedCompany(t *testing.T) {
+	e := SetupSearch(t)
+	ctx := e.Admin()
+	company := e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by)
+		VALUES ($1, 'Nordwind Logistik', 'manual', 'human:x')`)
+	e.SeedID(t, `INSERT INTO lead (id, owner_id, company_name, company_id, source, captured_by)
+		VALUES ($1, $2, 'Nordwind Logistik', $3, 'manual', 'human:x')`, e.Rep1, company)
+
+	hit := func() search.Hit {
+		t.Helper()
+		page, err := e.Store.Search(ctx, search.Input{Query: "Nordwind Logistik", Types: []string{"lead"}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(page.Hits) != 1 {
+			t.Fatalf("searching the lead → %+v, want the one lead", page.Hits)
+		}
+		return page.Hits[0]
+	}
+	if got := hit().Snippet; got != "" {
+		t.Fatalf("before any rename the excerpt reads %q, want none beside the title", got)
+	}
+
+	if _, err := e.Pool.Exec(context.Background(),
+		`UPDATE company SET display_name = 'Nordwind Fracht' WHERE id = $1`, company); err != nil {
+		t.Fatal(err)
+	}
+	if got := hit().Snippet; got != "Nordwind Fracht" {
+		t.Errorf("after the rename the excerpt reads %q, want the company's own name", got)
+	}
+}

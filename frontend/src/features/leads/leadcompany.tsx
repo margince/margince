@@ -119,9 +119,10 @@ export function useLeadCompanyName(lead: Lead): string | null {
 }
 
 // The same name, and whether it may still change. `settling` holds while a
-// linked company's own name is still being read. A place that SAVES the name
-// waits on it, because the typed name standing in may be the stale one. A read
-// that failed has settled: the typed name is then the best there will be.
+// linked company's own name is still being read, including a refetch behind a
+// cached "no name". A place that SAVES the name waits on it, because the typed
+// name standing in may be the stale one. A read that failed has settled: the
+// typed name is then the best there will be.
 export function useLeadCompanyNameReading(lead: Lead): {
   name: string | null;
   settling: boolean;
@@ -132,7 +133,7 @@ export function useLeadCompanyNameReading(lead: Lead): {
     settling:
       Boolean(lead.company_id) &&
       linked.name === null &&
-      linked.reading === "pending",
+      (linked.reading === "pending" || linked.fetching),
   };
 }
 
