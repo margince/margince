@@ -4,7 +4,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
-import { captureReviewTarget } from "../../lib/capturereview";
+import {
+  CAPTURE_CONTACT_PARAM,
+  captureReviewTarget,
+} from "../../lib/capturereview";
 import { routeHash } from "../../lib/router";
 import { hashWithParams } from "../../lib/urlstate";
 import { heldThreadList } from "../../testing/heldthreads.fixtures";
@@ -368,7 +371,7 @@ function fromContact(filtered: () => Response) {
           globalThis.location.href,
         );
         return url.pathname.endsWith("/capture/held-threads") &&
-          url.searchParams.has("contact_id")
+          url.searchParams.has(CAPTURE_CONTACT_PARAM)
           ? Promise.resolve(filtered())
           : routed(input, init);
       }) as typeof fetch;

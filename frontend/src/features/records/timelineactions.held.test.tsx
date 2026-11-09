@@ -7,7 +7,10 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import { captureReviewTarget } from "../../lib/capturereview";
+import {
+  CAPTURE_CONTACT_PARAM,
+  captureReviewTarget,
+} from "../../lib/capturereview";
 import { routeHash } from "../../lib/router";
 import { StoryProviders, stubWithSession } from "../../testing/story-utils";
 import { TimelineActions } from "./timelineactions";
@@ -63,13 +66,13 @@ it("links a held mail to the held list narrowed to the contact", async () => {
   const params = new URLSearchParams(query);
   expect(path).toBe(routeHash(captureReviewTarget("held").route));
   expect(params.get("review")).toBe("held");
-  expect(params.get("contact_id")).toBe("contact-one");
+  expect(params.get(CAPTURE_CONTACT_PARAM)).toBe("contact-one");
 });
 
 it.each<[string, Activity]>([
   ["withheld from the reader", { ...held, content_state: "withheld" }],
   ["shared with the workspace", { ...held, audience: "workspace" }],
-  ["limited by a person", { ...held, audience_reason: "manual" }],
+  ["set by hand", { ...held, audience_reason: "manual" }],
   ["limited by nothing derived", { ...held, audience_reason: null }],
   ["not a mail", { ...held, kind: "message" }],
 ])("offers no held-list link on a row %s", async (_, activity) => {

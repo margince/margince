@@ -1,4 +1,4 @@
-import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { Fragment, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -61,7 +61,7 @@ export type HeldFilters = Readonly<{
   from?: string;
   to?: string;
   reason?: string;
-  contact_id?: string;
+  [CAPTURE_CONTACT_PARAM]?: string;
 }>;
 
 // Why a thread is held, in the reader's words. A kind absent from the map is
@@ -80,8 +80,9 @@ export function useHeldThreads(filters: HeldFilters = {}) {
   // One key for one question: an empty search is no search, so the card and
   // the unfiltered drawer share a read.
   const narrowed = { ...filters, q: filters.q || undefined };
+  const contact = narrowed[CAPTURE_CONTACT_PARAM] ?? null;
   return useInfiniteQuery({
-    queryKey: ["held-threads", narrowed],
+    queryKey: ["held-threads", contact, narrowed],
     initialPageParam: undefined as string | undefined,
     queryFn: async ({ pageParam }) =>
       unwrap(
@@ -100,8 +101,10 @@ export function useHeldThreads(filters: HeldFilters = {}) {
     // second read of the same list.
     staleTime: 30_000,
     // A new search keeps the rows it replaces until its answer lands, so the
-    // table never reads as empty while the server is still looking.
-    placeholderData: keepPreviousData,
+    // table never reads as empty while the server is still looking. Another
+    // contact's rows never stand in under this contact's name.
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey[1] === contact ? previous : undefined,
   });
 }
 
@@ -123,7 +126,7 @@ export function HeldThreads() {
     q,
     status: status || undefined,
     reason: reason || undefined,
-    contact_id: contact,
+    [CAPTURE_CONTACT_PARAM]: contact,
     from: from
       ? new Date(startOfDayInZone(from, zone)).toISOString()
       : undefined,
