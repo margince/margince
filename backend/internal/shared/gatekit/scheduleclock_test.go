@@ -273,3 +273,23 @@ func TestForwardingAStoredColumnIsAcceptedButExcludedIsNot(t *testing.T) {
 		t.Errorf("a conflict clause laundered a bound instant: %q", got)
 	}
 }
+
+// A stored column moved by a constant written into the statement is still the
+// database's value. A bound offset is not readable here, and EXCLUDED stays
+// refused however it is offset.
+func TestAStoredColumnOffsetByALiteralIntervalIsAccepted(t *testing.T) {
+	const literal = "package store\n\nconst q = `UPDATE code SET expires_at = greatest(now(), created_at + interval '1 microsecond') WHERE id = $1`\n"
+	if got := reportOn(t, literal, "expires_at"); got != "" {
+		t.Errorf("a stored column offset by a literal interval was reported: %s", got)
+	}
+
+	for name, value := range map[string]string{
+		"a bound offset":     "created_at + $2::interval",
+		"an offset EXCLUDED": "EXCLUDED.expires_at + interval '1 day'",
+	} {
+		source := "package store\n\nconst q = `UPDATE code SET expires_at = " + value + " WHERE id = $1`\n"
+		if got := reportOn(t, source, "expires_at"); !strings.Contains(got, value) {
+			t.Errorf("%s escaped the gate: %q", name, got)
+		}
+	}
+}

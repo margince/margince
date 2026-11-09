@@ -273,7 +273,7 @@ func TestEveryInvitedMemberCanBeSentANewInvitation(t *testing.T) {
 	expiredID := inviteThrough(t, e, sent, "expired@acme.test")
 	<-sentDone
 	if _, err := e.owner.Exec(context.Background(),
-		`UPDATE auth_token SET expires_at = now() - interval '1 hour' WHERE user_id = $1`, expiredID); err != nil {
+		`UPDATE auth_token SET created_at = now() - interval '2 hours', expires_at = now() - interval '1 hour' WHERE user_id = $1`, expiredID); err != nil {
 		t.Fatal(err)
 	}
 	unmailed := NewHandlers(e.svc).WithPasswordLinkBase("https://crm.example.test")
