@@ -206,6 +206,28 @@ Then run the whole package, and not only your own tests by name:
 `go test ./internal/compose/ -count=1`. A drift gate that you would not think to name
 may be the one that catches this.
 
+## Make a run fast
+
+A run calls the candidate and then the judge, for every run of every scenario. These settings decide
+how long that takes:
+
+- **`PARALLEL=<n>`** (default `4`) measures that many runs of a task at once. The record is the same one
+  `PARALLEL=1` writes. Raise it until the plan of the judge or the rate limit of the candidate pushes
+  back.
+- **`SITE=<variant>` and `SCENARIO=<regexp>`** measure part of a task, such as the one site a prompt fix
+  changed. The rows measured replace theirs in the committed record, and the verdict is worked out
+  again from every row. The task needs a committed record for this.
+- **`RUNS=3`** while you look for a fix. Leave it out for the run that writes the record you commit.
+- **A restart replays.** The journal under `RESUME=` keeps what the models said, and the code you
+  build now grades it again. Only a scenario whose case, prompt or judge request changed costs money
+  again ([resume](certify-an-ai-model.md#5-when-the-network-drops-in-the-middle-of-a-run)).
+- **Separate tasks can run side by side.** Give each `TASK=` its own `RESUME=<dir>` ([resume](certify-an-ai-model.md#5-when-the-network-drops-in-the-middle-of-a-run)), and
+  watch the memory of the machine.
+
+Fix in batches. Wait for a run to end, read every failed scenario in the trace ([trace](certify-an-ai-model.md#4-see-the-prompts--trace-requestresponse-for-tuning)), fix the
+prompt, case or validator each one points to, and run again once. A fix made while a run is still
+going leaves that run measuring a prompt you have already changed.
+
 ## What this loop does not tell you
 
 - **The `frontier` rung** (section 2), and any binding that no

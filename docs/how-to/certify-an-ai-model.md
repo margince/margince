@@ -161,37 +161,14 @@ Use it when a plan costs less than to pay for each token. Each call costs 2–5 
 against the limits of the plan. It has no setting for `temperature` or for the most tokens. It refuses
 Claude candidates.
 
-**The judge sets the pace of a run.** Its time grows with the tokens it writes, and most of those are
-thinking that never reaches the score. `claude-sonnet-4-6` writes about 1,000 tokens a call and takes
-about 20 seconds. `claude-sonnet-5-5` writes about 100 and takes about 7. `MAX_THINKING_TOKENS=<n>` in
-the environment caps the thinking of a `claude_cli` judge. A judge that thinks less may grade
-differently, so compare its scores on traced runs before a sweep uses it.
+**The judge sets the pace of a run**, and its time grows with the thinking it writes.
+`claude-sonnet-4-6` takes about 20 seconds a call, `claude-sonnet-5-5` about 7, and
+`MAX_THINKING_TOKENS=<n>` caps a `claude_cli` judge. A new judge changes scores on its own:
+`claude-sonnet-5-5` scores about nine points under `claude-sonnet-4-6`. Compare two records only when
+they name the same judge.
 
-A new judge changes scores even where nothing else changed. `claude-sonnet-5-5` scores about nine
-points under `claude-sonnet-4-6` on the same answers. A record names the model that graded it, so read
-two records side by side only when they name the same judge.
-
-## Make a run fast
-
-A run calls the candidate and then the judge, for every run of every scenario. These settings decide
-how long that takes:
-
-- **`PARALLEL=<n>`** (default `4`) measures that many runs of a task at once. The record is the same one
-  `PARALLEL=1` writes. Raise it until the plan of the judge or the rate limit of the candidate pushes
-  back.
-- **`SITE=<variant>` and `SCENARIO=<regexp>`** measure part of a task, such as the one site a prompt fix
-  changed. The rows measured replace theirs in the committed record, and the verdict is worked out
-  again from every row. The task needs a committed record for this.
-- **`RUNS=3`** while you look for a fix. Leave it out for the run that writes the record you commit.
-- **A restart replays.** The journal under `RESUME=` keeps what the models said, and the code you
-  build now grades it again. Only a scenario whose case, prompt or judge request changed costs money
-  again (section 5).
-- **Separate tasks can run side by side.** Give each `TASK=` its own `RESUME=<dir>` (section 5), and
-  watch the memory of the machine.
-
-Fix in batches. Wait for a run to end, read every failed scenario in the trace (section 4), fix the
-prompt, case or validator each one points to, and run again once. A fix made while a run is still
-going leaves that run measuring a prompt you have already changed.
+To shorten a run (parallel runs, part of a task, fixing in batches), see
+[Make a run fast](re-certify-the-whole-corpus.md#make-a-run-fast).
 
 ## 3. Read the report
 
@@ -328,7 +305,7 @@ the run reached the model, and the model could not end its answer.
 what it can (`… run(s) replayable`), and does not pay again. A stored run keeps what the candidate and
 the judge said, and stands in for a new one only when neither could say something else:
 
-- the **same candidate binding, judge, profile, corpus version, scenario stamp and run number**;
+- the same candidate binding, judge, profile, corpus version, scenario stamp and run number;
 - and **within 6 hours**.
 
 Edit a prompt, and the stamp of that scenario changes, so those runs are measured again. A Go edit
