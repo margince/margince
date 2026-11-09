@@ -88,9 +88,11 @@ func activityForThread(t *testing.T, e *integration.Env, threadKey string) ids.U
 func heldThreadReadCost(t *testing.T, e *integration.Env, user ids.UUID) (int64, int) {
 	t.Helper()
 	metered, meter := database.WithStatementMeter(purgeCtx(e, user))
-	got, err := capture.HeldThreadsFor(metered, InstallationDB(e.Pool))
+	// One default page holds every thread seeded here, so the count is the
+	// whole queue's.
+	page, err := capture.HeldThreadsFor(metered, InstallationDB(e.Pool), capture.HeldThreadQuery{})
 	if err != nil {
 		t.Fatalf("listing held threads: %v", err)
 	}
-	return meter.Cost().Statements, len(got)
+	return meter.Cost().Statements, len(page.Threads)
 }
