@@ -94,7 +94,7 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 	var (
 		out     ReplyRecipient
 		written bool
-		filed   string
+		target  EmailTarget
 	)
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The activity read applies the link-walk scope. Reaching a contact
@@ -104,7 +104,7 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		if err != nil {
 			return err
 		}
-		if written, filed, err = writtenAboutAddress(ctx, tx, id, activity.Kind); err != nil {
+		if written, target, err = writtenAboutTarget(ctx, tx, id, activity.Kind); err != nil {
 			return err
 		}
 
@@ -187,21 +187,28 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 	if err != nil {
 		return ReplyRecipient{}, err
 	}
-	out.WrittenAbout, out.FiledAddress = written, filed
+	out.WrittenAbout = written
+	if target.offered() {
+		out.FiledAddress = target.Address
+	}
+	// A lead has no contact record to greet by, so its own name is used.
+	if out.FullName == "" && target.EntityType == crmcontracts.ActivityEmailTargetEntityTypeLead && target.offered() {
+		out.FullName = target.Name
+	}
 	return out, nil
 }
 
-// writtenAboutAddress says whether a reply to this kind writes about the record,
-// and the address it offers when it does.
-func writtenAboutAddress(ctx context.Context, tx pgx.Tx, id ids.ActivityID, kind crmcontracts.ActivityKind) (bool, string, error) {
+// writtenAboutTarget says whether a reply to this kind writes about the record,
+// and the target it writes to when it does.
+func writtenAboutTarget(ctx context.Context, tx pgx.Tx, id ids.ActivityID, kind crmcontracts.ActivityKind) (bool, EmailTarget, error) {
 	if !slices.Contains(writtenAboutKinds, kind) {
-		return false, "", nil
+		return false, EmailTarget{}, nil
 	}
-	offered, err := offeredEmails(ctx, tx, []ids.UUID{id.UUID})
+	targets, err := emailTargets(ctx, tx, []ids.UUID{id.UUID})
 	if err != nil {
-		return false, "", err
+		return false, EmailTarget{}, err
 	}
-	return true, offered[id.UUID], nil
+	return true, targets[id.UUID], nil
 }
 
 // GreetingName is the one name a floor draft greets by, or empty.

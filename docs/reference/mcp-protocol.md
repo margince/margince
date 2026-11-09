@@ -88,6 +88,14 @@ caller, tool or set of arguments, or one older than ten minutes, gets the questi
 through the client, so it only decides what the client could decide by itself. A change a human must approve still
 goes to the approval inbox. A client with no form support, or a server with no key, gets the answer it had before.
 
+`check_client` measures whether a client can answer such a form. It is off until a seat with `agent_client` update
+turns it on in Settings → MCP. Then `tools/list` names it only for a passport whose human is an admin, and any other
+caller gets the unknown-tool answer. The tool has no REST route, because a REST caller cannot answer a form.
+
+A client that can be asked gets one form with a pick of three values. The retry reports the user's `action`, and
+`supported: true` for `decline`, `cancel`, or `accept` with an offered value. An `accept` without one reports
+`supported: false` and a reason. A client that cannot be asked gets `supported: false`, a reason and what it declared.
+
 **`resources/list` and `prompts/list` answer empty, not `-32601`**, when nothing is wired. `claude.ai` calls both
 right after `initialize` no matter what. A feature the server does not list that answers "method not found" reads as a
 broken server, not an empty catalog. When `resources/read` refuses a missing item, it answers `-32002` in the
@@ -133,6 +141,22 @@ of the AI budget of the workspace.
 The three limits and the window length are installation settings (`agent_allowances` on `/installation/settings`),
 read through a cache of one minute (`agentvolume.PolicyRefresh`). The defaults are 200 `writes`, 20 `egress` and
 1,000 `calls` in a 24-hour window. A changed limit binds in the running window.
+
+A role may set its own value for each limit, keyed by role key (`installation.agent_role_*_per_window`). The cache
+holds the installation values and every role's values. Each call takes its own limits from that cache and the live
+roles of the human who gave the passport (`agentvolume.Policy.For`). Per counter it takes the highest of those
+roles, and a role with no value of its own gives the installation value. Nothing per caller is cached, so one caller's
+limits never reach the next.
+
+The built-in `admin` role starts at 20,000 `calls` and 2,000 `writes` (`identity.AdminAllowancePreset`). That holds
+for a counter whose installation value nobody set: no stored row and no boot source. Roles choose the limit and
+never the counter. A save of role values changes only the role counts it names. An archived role keeps its
+value and a boot source that locks one map refuses only a save that touches it.
+
+A refused REST request answers `429 rate_limited` with `details.limit` (`kind`, `ceiling`, `used`, `resets_at`) and
+a `Retry-After` header. A refused tool call names the same limit, ceiling and reset in its error text. A per-minute
+refusal at the transport carries `details.limit.kind = "pacing"`. A counter that cannot be read refuses an agent
+with `503 agent_volume_unavailable` and a `Retry-After` of a few seconds, never as a limit reached.
 
 A changed length waits for a reset. It takes the first reset that is a minute or more later, so a save in the last
 minute waits for the reset after that. The bucket number comes from the moment and the length, so a length that

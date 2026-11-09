@@ -115,6 +115,7 @@ const PREVIEW_DETAIL_LABELS: Record<string, MessageKey> = {
   promotion_contact_owner: "approval.preview.promotionContactOwner",
   promotion_contact_email: "approval.preview.promotionContactEmail",
   promotion_contact_phone: "approval.preview.promotionContactPhone",
+  promotion_existing_deal: "approval.preview.promotionExistingDeal",
   promotion_existing_contact: "approval.preview.promotionExistingContact",
   promotion_set_origin: "approval.preview.promotionSetOrigin",
   promotion_company_industry: "approval.preview.promotionCompanyIndustry",
@@ -213,6 +214,8 @@ export function previewFieldLabel(field: string, t: Translator): string {
       return t("approval.preview.meetingHost");
     case "intended_attendee":
       return t("approval.preview.intendedAttendee");
+    case "attendee_host_named":
+      return t("approval.preview.hostNamedAttendee");
     case "target_url":
       return t("approval.preview.targetURL");
     case "enrichment_depth":

@@ -3,19 +3,8 @@
 
 package activities
 
-// The system closes the loops it opens: an automation-minted follow-up
-// task ("Follow up with the new lead") stays open forever unless somebody
-// remembers to tick a box the system created — so the system watches for
-// the loop actually closing and completes its own tasks. A quiet-account
-// reminder ("no activity since …") is such a loop too: the activity that
-// proves the silence over closes it. Registered as
-// SYSTEM workflows (always on, never a pausable user automation), the
-// same shape as contacts's lead-score recompute, and living here because
-// the tasks are activity rows and completing one is this module's write.
-//
-// Only SYSTEM tasks (activity.source = 'system') are ever completed.
-// Completing a human's own task is claiming work happened that they may
-// not consider done; theirs stay theirs.
+// Contact tasks complete on a qualifying later email. System follow-ups also
+// resolve when an activity closes their lead or quiet-account loop.
 
 import (
 	"context"
@@ -116,6 +105,7 @@ func FollowUpWorkflows(store *Store) []workflow.Handler {
 		followUpAutoResolve{store: store, name: "follow_up_auto_resolve", trigger: activityCapturedTrigger, leadsFromLinks: true},
 		followUpAutoResolve{store: store, name: "follow_up_auto_resolve_on_promoted", trigger: leadPromotedTrigger},
 		followUpAutoResolve{store: store, name: "follow_up_auto_resolve_on_disqualified", trigger: leadDisqualifiedTrigger},
+		followUpAutoResolve{store: store, name: "follow_up_auto_resolve_on_sent_proof", trigger: activityUpdatedTrigger, leadsFromLinks: true},
 	}
 }
 
@@ -124,6 +114,7 @@ func FollowUpWorkflows(store *Store) []workflow.Handler {
 // check), and a third literal beside two names is the spelling that drifts.
 const (
 	activityCapturedTrigger = "activity.captured"
+	activityUpdatedTrigger  = "activity.updated"
 	// leadPromotedTrigger is the one trigger whose Apply also has to resolve
 	// by CONTACT rather than by lead — see the comment on Apply for why.
 	leadPromotedTrigger     = "lead.promoted"
@@ -162,6 +153,13 @@ func (w followUpAutoResolve) Match(_ context.Context, ev workflow.Event) (bool, 
 	if !w.leadsFromLinks {
 		return true, nil
 	}
+	if w.trigger == activityUpdatedTrigger {
+		var updated crmcontracts.PublicEventActivityUpdated
+		if err := json.Unmarshal(ev.Payload, &updated); err != nil {
+			return false, fmt.Errorf("activities: decoding sent proof: %w", err)
+		}
+		return updated.ChangedFields.OutboundAttested != nil && *updated.ChangedFields.OutboundAttested, nil
+	}
 	var captured crmcontracts.PublicEventActivityCaptured
 	if len(ev.Payload) > 0 {
 		if err := json.Unmarshal(ev.Payload, &captured); err != nil {
@@ -196,9 +194,14 @@ func (w followUpAutoResolve) Apply(ctx context.Context, ev workflow.Event, eff w
 	}
 	completed := 0
 	if w.leadsFromLinks {
-		done, err := w.store.CompleteQuietRemindersReachedBy(ctx, ids.From[ids.ActivityKind](ev.Entity.ID))
+		done, err := w.store.completeContactTasksAnsweredBy(ctx, ids.From[ids.ActivityKind](ev.Entity.ID))
 		if err != nil {
-			return workflow.RunResult{}, fmt.Errorf("resolving quiet reminders answered by activity %s: %w", ev.Entity.ID, err)
+			return workflow.RunResult{}, err
+		}
+		completed += done
+		done, err = w.store.CompleteQuietRemindersReachedBy(ctx, ids.From[ids.ActivityKind](ev.Entity.ID))
+		if err != nil {
+			return workflow.RunResult{}, err
 		}
 		completed += done
 	}

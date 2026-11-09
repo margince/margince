@@ -943,7 +943,7 @@
 /* The type is .t-eyebrow; the padding is the panel's own, because the heading
    sits between full-bleed rows and has to line up with their content. */
 .co-timeline-day-heading {
-  padding: var(--space-3) var(--space-5) 0;
+  padding: var(--space-3) var(--padPanel) 0;
 }
 
 /* The growth-fit bars: the band taken apart, one row per dimension. The
@@ -1315,10 +1315,6 @@
 .rec-foot-action {
   margin-left: auto;
 }
-/* The staged reading is about the row above it and spans the whole panel. */
-.rec-reading {
-  display: block;
-}
 
 /* The stages of a site read in flight. A ladder rather than a bar: a bar
    claims a fraction nobody measured, and these two stages are the only
@@ -1526,4 +1522,11 @@
    records put there; a button on that baseline sits visibly low. */
 .co-name-control {
   align-self: center;
+}
+
+/* A fact's provenance names its kind with a glyph before its words, on one line. */
+.pe-source {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
 }

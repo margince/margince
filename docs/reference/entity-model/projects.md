@@ -67,7 +67,7 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
-- `home_read_fence_project_owner`: `AFTER UPDATE FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR (old.archived_at IS DISTINCT FROM new.archived_at))) EXECUTE FUNCTION advance_home_read_fence()`
+- `home_read_fence_project_owner`: `AFTER UPDATE FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()`
 - `project_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
 - `trg_project_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
@@ -86,7 +86,7 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 | `supersedes_assessment_id` | `uuid` |  | The reading this one corrects, when it is a correction. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `source` | `text` | yes | What recorded this assessment. |
+| `source` | `text` | yes | What recorded this assessment: `human` for a user, `agent` for the agent acting for a user, `ai` for the health job, which judges from the project's quiet and overdue state and says why in `note`, and `undo` for a user undoing an AI reading. |
 
 **Points at**
 

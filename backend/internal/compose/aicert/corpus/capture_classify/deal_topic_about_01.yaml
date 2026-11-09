@@ -1,0 +1,34 @@
+name: a_rollout_question_is_about_the_rollout_deal_and_not_the_support_renewal
+task: capture_classify
+site: deal_topic
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  subject: 'Re: cut-over plan for the warehouse sites'
+  body: |
+    Thanks for the draft plan. Before we sign off we need the second warehouse
+    moved to the October wave, and the training days for the site leads fixed.
+    Can you send the revised schedule with the licence count for both sites?
+  deals:
+    - name: Northwind warehouse rollout
+      project: Warehouse system
+      recent: ['Kickoff agenda for the warehouse rollout', 'Draft cut-over plan']
+    - name: Northwind support renewal
+      project: ''
+      recent: ['Support contract renewal terms']
+expect:
+  outcome: accepted
+  answer: [about, not_about]
+  rubric: >
+    The email asks for a revised cut-over schedule and a licence count for the
+    warehouse sites: the business of the rollout deal, whose filed mail is the
+    kickoff and the draft cut-over plan. "about" on the rollout and "not_about"
+    on the support renewal score high. The failure this scenario exists to catch
+    is "about" on the renewal, or "unsure" on both: the sender is the same
+    customer, and a model that judges by sender rather than content files the
+    mail on the wrong deal or on none. Score the confidence too: the rollout
+    verdict is clear, so a correct "about" below 0.85 files nothing and scores lower.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

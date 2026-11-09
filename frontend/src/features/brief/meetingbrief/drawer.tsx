@@ -17,9 +17,9 @@ import {
 import { formatDate } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
 import { ENTITY, isEntityKind } from "../../../lib/entity";
-import { problemMessageOf, unwrap } from "../../../lib/problem";
-import { useRecordZone } from "../../../lib/recordzone";
+import { problemMessageOf, problemStatus, unwrap } from "../../../lib/problem";
 import { navigate } from "../../../lib/router";
+import { useViewerZone } from "../../../lib/viewerzone";
 import type { MeetingFacts, PreparedFor } from "./header";
 import { type BriefViewState, MeetingBriefView } from "./view";
 
@@ -68,7 +68,7 @@ export function ContactMeetingBrief({
   // The brief's days are formatted here, not by the page that opened the
   // drawer: the locale and the record zone are this tier's to know. A caller's
   // pre-formatted string would be a second formatter.
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   // The project the reader chose to prepare for. It belongs to ONE meeting:
   // the same drawer is reused for the next meeting on the page, and a scope
   // chosen for a room about the ERP rollout must not narrow the brief for a
@@ -104,6 +104,14 @@ export function ContactMeetingBrief({
   let state: BriefViewState;
   if (brief.isSuccess && brief.data) {
     state = { kind: "ready", brief: brief.data };
+  } else if (
+    brief.isError &&
+    isWithheld(problemStatus(brief.error), projectId)
+  ) {
+    state = { kind: "withheld" };
+  } else if (brief.isError && problemStatus(brief.error) === 404) {
+    // The meeting is filed under another project: the picker is the way out.
+    state = { kind: "failed", message: problemMessageOf(brief.error, t) };
   } else if (brief.isError) {
     state = {
       kind: "failed",
@@ -150,4 +158,11 @@ export function ContactMeetingBrief({
       />
     </Modal>
   );
+}
+
+// A refusal, or a 404 for no named project: a meeting outside the reader's rows,
+// which must read like a refusal. A 404 for a named project means the meeting is
+// filed under another one, and the server's sentence and the picker say so.
+function isWithheld(status: number, projectId: string): boolean {
+  return status === 403 || (status === 404 && projectId === "");
 }

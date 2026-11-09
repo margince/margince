@@ -44,6 +44,8 @@ type Registry struct {
 	// maxBackfillMonths is the installation's ceiling on how far back a
 	// mailbox import may reach, or 0 for none. See backfillcap.go.
 	maxBackfillMonths int
+	backfillLimit     int
+	backfillHeld      bool
 	// vault seals and resolves a connection's credential bundle. The row
 	// carries an opaque credential_ref, never the credential bytes; the vault
 	// is the custodian. May be nil for a role composed before WithKeyvault
@@ -59,6 +61,9 @@ type Registry struct {
 	// setting (MailSyncIntervalSeconds), read when the sync records itself.
 	now            func() time.Time
 	progressPacing time.Duration
+	// ownershipWatch is how often a running page checks it still owns its
+	// execution (backfillwatch.go).
+	ownershipWatch time.Duration
 
 	// digestProjects answers the morning digest's projects section
 	// (digestprojects.go); nil builds a digest without one.
@@ -82,23 +87,16 @@ func NewRegistry(db *database.DB, sink *Sink, authority authz.Resolver, vault ke
 		vault:          vault,
 		now:            time.Now,
 		progressPacing: defaultProgressPacing,
+		ownershipWatch: time.Second,
+		backfillLimit:  1,
 	}
 }
 
-// WithClock replaces the source of the instants this registry STAMPS — the
-// sync-state timestamps, not the schedule.
-//
-// The schedule is deliberately out of reach: next_sync_at is a delay the
-// database applies to its own clock, so nothing here can move it, which is the
-// property syncclock_test.go holds.
-//
-// It exists for the failure-streak case. failing_since is set once and left
-// alone across every failure after it, and the only way to see that is to fail
-// several times at instants an hour apart — which real time cannot do without
-// a sleep, and a test whose verdict depends on elapsed wall time is the
-// flakiness the suite refuses. A nil clock is ignored rather than installed:
-// a registry with no clock would panic on its first write.
-func (r *Registry) WithClock(now func() time.Time) *Registry {
+// SetClock replaces the clock for the sync-state timestamps this registry
+// stamps. next_sync_at stays on the database clock (syncclock_test.go).
+// A failure-streak test fails at instants an hour apart without a sleep.
+// A nil clock is ignored: a registry with none would panic on its first write.
+func (r *Registry) SetClock(now func() time.Time) *Registry {
 	if now != nil {
 		r.now = now
 	}
@@ -111,6 +109,17 @@ func (r *Registry) WithClock(now func() time.Time) *Registry {
 // sensible when the pages are short enough that the volume is not the point.
 func (r *Registry) WithProgressPacing(d time.Duration) *Registry {
 	r.progressPacing = d
+	return r
+}
+
+// WithOwnershipWatch overrides how often a running page checks that it still
+// owns its execution. Each check is a transaction. A test that counts a page's
+// statements sets it past the page's length. The transaction fence still
+// refuses a stale page's writes.
+func (r *Registry) WithOwnershipWatch(d time.Duration) *Registry {
+	if d > 0 {
+		r.ownershipWatch = d
+	}
 	return r
 }
 
@@ -200,6 +209,18 @@ func (r *Registry) ChannelCarriage() map[string]connector.Carriage {
 // Completion must still match the connection generation, sync revision and starting cursor.
 // A newer pull or changed grant supersedes this snapshot.
 func (r *Registry) SyncOnce(ctx context.Context, connectionID ids.UUID) error {
+	lease, held, err := r.db.TryWorkLease(ctx, "capture:sync", connectionID, slog.Default())
+	if err != nil {
+		return err
+	}
+	if !held {
+		return nil
+	}
+	defer lease.Close(ctx)
+	return r.syncConnection(ctx, connectionID)
+}
+
+func (r *Registry) syncConnection(ctx context.Context, connectionID ids.UUID) error {
 	var (
 		name          string
 		grantedBy     ids.UserID
@@ -237,7 +258,10 @@ func (r *Registry) SyncOnce(ctx context.Context, connectionID ids.UUID) error {
 	if err != nil {
 		return err
 	}
-	auth, err := r.resolveCredential(ctx, credentialRef, authBytes)
+	// Before the credential and the provider: a member who may no longer
+	// capture costs the provider nothing and parks under its own class.
+	runCtx = withMailboxConnection(runCtx, connectionID, generation)
+	auth, err := r.syncCredential(runCtx, credentialRef, authBytes)
 	if err != nil {
 		if recErr := r.recordSyncFailure(runCtx, snapshot, credentialRef, err); recErr != nil {
 			return errors.Join(err, recErr)
@@ -440,7 +464,7 @@ func (r *Registry) connectorContext(ctx context.Context, name string, grantedBy 
 	if err != nil {
 		return nil, err
 	}
-	return principal.WithCorrelationID(runCtx, ids.NewV7()), nil
+	return asMailboxRun(principal.WithCorrelationID(runCtx, ids.NewV7())), nil
 }
 
 func (r *Registry) connector(name string) (connector.Connector, error) {
@@ -460,3 +484,8 @@ func (r *Registry) connector(name string) (connector.Connector, error) {
 // would quietly never fire. An unparseable label is returned as it came: it is
 // then judged as an address, which is what it was before this.
 func bareAddress(label string) string { return mailidentity.BareAddress(label) }
+
+// AdmitActivityParties keeps receipt follow-up on this registry configured sink.
+func (r *Registry) AdmitActivityParties(ctx context.Context, activity ids.ActivityID) error {
+	return r.sink.AdmitActivityParties(ctx, activity)
+}

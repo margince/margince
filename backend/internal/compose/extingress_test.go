@@ -119,11 +119,12 @@ func aRecord() extension.Record {
 		System: "probe-system",
 		Key:    "42",
 		Activity: extension.ActivityFields{
-			Kind:       "note",
-			Subject:    "a directed message",
-			Body:       "the body",
-			OccurredAt: time.Date(2026, 8, 13, 9, 30, 0, 0, time.UTC),
-			Direction:  extension.DirectionInbound,
+			ProviderPrivate: true,
+			Kind:            "note",
+			Subject:         "a directed message",
+			Body:            "the body",
+			OccurredAt:      time.Date(2026, 8, 13, 9, 30, 0, 0, time.UTC),
+			Direction:       extension.DirectionInbound,
 		},
 		ThreadKey:    "probe:1:2",
 		Counterparty: extension.Counterparty{Email: "outside@example.com", Domain: "example.com", Direction: extension.DirectionInbound},
@@ -354,6 +355,8 @@ func TestTheConversionCarriesAWholeRecord(t *testing.T) {
 	switch {
 	case fields.Kind != rec.Activity.Kind:
 		t.Errorf("kind = %q, want %q", fields.Kind, rec.Activity.Kind)
+	case fields.ProviderPrivate != rec.Activity.ProviderPrivate:
+		t.Error("provider privacy hold was lost")
 	case fields.Subject != rec.Activity.Subject:
 		t.Errorf("subject = %q, want %q", fields.Subject, rec.Activity.Subject)
 	case fields.Body != rec.Activity.Body:

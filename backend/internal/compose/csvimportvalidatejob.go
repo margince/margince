@@ -53,6 +53,9 @@ type importValidateWorker struct {
 	blobs blobstore.Store
 	// uploadCap is the cap the upload applied, so the read accepts what it accepted.
 	uploadCap int64
+	// readBudget ends the read of one test run that long after its claim; zero
+	// sets none beyond the job's timeout.
+	readBudget time.Duration
 }
 
 // Work answers River for one attempt: done, stopped on the run, which then says
@@ -90,7 +93,13 @@ func (w *importValidateWorker) validate(ctx context.Context, slice importSlice) 
 	if err != nil {
 		return false, testRunRefusal(err)
 	}
-	report, err := w.readBeating(ctx, slice, func(reading context.Context) (migration.Report, error) {
+	budgeted := ctx
+	if w.readBudget > 0 {
+		var end context.CancelFunc
+		budgeted, end = context.WithTimeout(ctx, w.readBudget)
+		defer end()
+	}
+	report, err := w.readBeating(budgeted, slice, func(reading context.Context) (migration.Report, error) {
 		return validateParts(reading, slice.db, run.ID, source, skipped, run.Mapping, progress)
 	})
 	if err != nil {

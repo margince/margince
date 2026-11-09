@@ -144,16 +144,10 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 	}
 	switch in.Ref.Type {
 	case datasource.EntityDeal:
-		var req crmcontracts.UpdateDealRequest
-		if err := datasource.StrictDecode(raw, &req); err != nil {
+		update, err := dealUpdateFrom(raw, in)
+		if err != nil {
 			return datasource.EntityRef{}, err
 		}
-		if err := refuseClosingFields(req); err != nil {
-			return datasource.EntityRef{}, err
-		}
-		update := dealUpdateInput(req, in.IfVersion)
-		update.Trail = in.Trail
-		update.Clear = in.Clear
 		v, err := p.store.UpdateDeal(ctx, ids.From[ids.DealKind](in.Ref.ID), update)
 		return ref(datasource.EntityDeal, v.Id), err
 	case datasource.EntityProduct, datasource.EntityOfferTemplate:
@@ -207,7 +201,7 @@ func (p *Provider) ArchiveAt(ctx context.Context, in datasource.ArchiveInput) (d
 	}
 }
 
-func (p *Provider) AdvanceDeal(ctx context.Context, in datasource.AdvanceDealInput) (datasource.EntityRef, error) {
+func (p *Provider) AdvanceDeal(ctx context.Context, in datasource.AdvanceDealInput) (datasource.AdvanceDealResult, error) {
 	v, err := p.store.AdvanceDeal(ctx, ids.From[ids.DealKind](in.DealID), AdvanceDealInput{
 		WonWithoutContractReason: in.WonWithoutContractReason,
 		WonWithoutContractDetail: in.WonWithoutContractDetail,
@@ -216,7 +210,11 @@ func (p *Provider) AdvanceDeal(ctx context.Context, in datasource.AdvanceDealInp
 		LostReasonCode:           in.LostReasonCode,
 		IfVersion:                in.IfVersion,
 	})
-	return ref(datasource.EntityDeal, v.Id), err
+	out := datasource.AdvanceDealResult{Ref: ref(datasource.EntityDeal, v.Id)}
+	if v.Probability != nil {
+		out.ProbabilityNote = v.Probability.Note
+	}
+	return out, err
 }
 
 // StageSemantic feeds the advance_deal tier resolver (interfaces.md

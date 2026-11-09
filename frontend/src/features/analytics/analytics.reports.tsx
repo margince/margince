@@ -1,8 +1,17 @@
-import { useQuery } from "@tanstack/react-query";
+import {
+  type CardKey,
+  reportOf,
+  useReportRun,
+} from "./analytics.reports.queries";
+
+export {
+  type CardKey,
+  SECTION_REPORTS,
+  useReportRun,
+} from "./analytics.reports.queries";
+
 import { Info } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
-import { api } from "../../api/client";
-import type { components } from "../../api/schema";
 import { IconAction } from "../../design-system/iconaction";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
@@ -12,16 +21,10 @@ import { INTL_LOCALE } from "../../format/intllocale";
 import { zoneNameAndOffset } from "../../format/timezone";
 import { type Locale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import type { Section } from "../../lib/analytics.address";
-import { unwrap } from "../../lib/problem";
-import { FIELD_CURRENCY, type ReportRow, type Stage } from "./analytics.cells";
+import type { ReportRow, Stage } from "./analytics.cells";
 import { CloseMonthTable } from "./analytics.closemonth";
 import { CompanyTable } from "./analytics.company";
-import {
-  type AnalyticsScope,
-  reportScope,
-  scopeKey,
-} from "./analytics.context";
+import type { AnalyticsScope } from "./analytics.context";
 import {
   ProjectCommitmentsTable,
   ProjectsByPhaseTable,
@@ -31,87 +34,8 @@ import { ExplainFrame, ExplainPanel } from "./analytics.explain";
 import { ForecastStrip, StageTable } from "./analytics.pipeline";
 import { ENTITY_LABEL_KEY } from "./analytics.questions.vocab";
 
-type ReportKey =
-  | "pipeline-current"
-  | "forecast"
-  | "open-deals-per-company"
-  | "projects-by-phase"
-  | "project-commitments"
-  | "projects-gone-quiet";
-
-// A card is one report asked one way. Most cards are their report; a card that
-// asks a report a second question names which report it runs.
-type CardKey = ReportKey | "pipeline-by-close-month";
-
-const CARD_REPORT: Record<CardKey, ReportKey> = {
-  "pipeline-current": "pipeline-current",
-  "pipeline-by-close-month": "pipeline-current",
-  forecast: "forecast",
-  "open-deals-per-company": "open-deals-per-company",
-  "projects-by-phase": "projects-by-phase",
-  "project-commitments": "project-commitments",
-  "projects-gone-quiet": "projects-gone-quiet",
-};
-
-const reportOf = (card: CardKey): ReportKey => CARD_REPORT[card];
-
 const CARD_TITLE: Partial<Record<CardKey, MessageKey>> = {
   "pipeline-by-close-month": "analytics.reportPipelineByCloseMonth",
-};
-
-// Which results each section holds, in the order they are drawn. The tab strip
-// and the bodies both read this, so a section cannot come to list a report it
-// does not draw.
-export const SECTION_REPORTS = {
-  // The opening view composes its own readings, like the forecast.
-  overview: [],
-  reports: [],
-  targets: [],
-  definitions: [],
-  // The forecast section draws its own view (readings, a call and a receipt,
-  // none of them a row set), so it lists no report card.
-  forecast: [],
-  // The forecast-category breakdown lives here. It is a real report and the
-  // only place a reader sees how the pipeline divides by category. It is not
-  // the forecast, which is an answer rather than a table.
-  pipeline: [
-    "pipeline-current",
-    "pipeline-by-close-month",
-    "forecast",
-    "open-deals-per-company",
-  ],
-  // Performance and its sibling views draw the evaluated overview instead.
-  performance: [],
-  sdr: [],
-  leads: [],
-  partners: [],
-  conversion: [],
-  // The rep's own week: a composed view like the forecast, not report cards.
-  outcomes: [],
-  // Source health: an ops view over the nightly check's own coverage rows.
-  coverage: [],
-  // What was sold becoming what is delivered: the three project reports.
-  delivery: ["project-commitments", "projects-gone-quiet", "projects-by-phase"],
-  questions: [],
-} as const satisfies Record<Section, readonly CardKey[]>;
-
-// A plan that sums native money groups by currency as well as by its own
-// dimension. amount_minor is a minor-unit integer in the deal's own currency,
-// so a total spanning currencies is a number with no unit.
-//
-// pipeline-current does not, because the server converted each deal before
-// summing. One stage is one row in the installation's base currency; that is
-// why the report exists beside deals-by-stage rather than replacing it.
-const REPORT_GROUP_BY: Record<CardKey, string[]> = {
-  "pipeline-current": ["stage_id"],
-  "pipeline-by-close-month": ["close_month"],
-  forecast: ["forecast_category"],
-  "open-deals-per-company": ["company_id", FIELD_CURRENCY],
-  // The specs' own defaults: an empty plan takes each report's declared
-  // grouping and aggregates, which is what these three need.
-  "projects-by-phase": [],
-  "project-commitments": [],
-  "projects-gone-quiet": [],
 };
 
 // The line under a report's title, for the reports whose copy says something
@@ -119,46 +43,6 @@ const REPORT_GROUP_BY: Record<CardKey, string[]> = {
 // explanation beside a report it does not describe is worse than none.
 const reportSub: Partial<Record<CardKey, MessageKey>> = {
   "pipeline-current": "analytics.sub",
-};
-
-type ReportAggregate = NonNullable<
-  components["schemas"]["RunReportRequest"]["aggregates"]
->[number];
-
-// Which aggregates each report's own vocabulary serves (report.go's
-// per-spec measures). `weighted_amount_minor` only exists where a stage join
-// computes it (deals-by-stage, forecast). Requesting it against
-// open-deals-per-company's narrower vocabulary would 422.
-const REPORT_AGGREGATES: Record<CardKey, ReportAggregate[]> = {
-  "pipeline-by-close-month": [
-    { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
-    { fn: "sum", field: "weighted_base_minor", as: "weighted_minor" },
-    { fn: "count", as: "deal_count" },
-    { fn: "count", field: "amount_base_minor", as: "priced_deals" },
-  ],
-  "pipeline-current": [
-    { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
-    { fn: "sum", field: "weighted_base_minor", as: "weighted_minor" },
-    { fn: "count", as: "deal_count" },
-    // How many of deal_count the sums above cover. A deal in a currency the
-    // rate sheet cannot price is counted but adds nothing to either total.
-    // A row printing only the money reads as complete when it is short
-    // (margince#4201).
-    { fn: "count", field: "amount_base_minor", as: "priced_deals" },
-  ],
-  forecast: [
-    { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
-    { fn: "sum", field: "weighted_base_minor", as: "weighted_minor" },
-    { fn: "count", as: "deal_count" },
-    { fn: "count", field: "amount_base_minor", as: "priced_deals" },
-  ],
-  "open-deals-per-company": [
-    { fn: "sum", field: "amount_minor", as: "raw_minor" },
-    { fn: "count", as: "deal_count" },
-  ],
-  "projects-by-phase": [],
-  "project-commitments": [],
-  "projects-gone-quiet": [],
 };
 
 // Which table a report's rows become: a switch in its own component, so the
@@ -258,36 +142,6 @@ function ReportRemainder({
   );
 }
 
-// One query per card and scope, shared by every reader of it. A screen that
-// needs the card's population flag asks through the same key and costs no
-// second request.
-export function useReportRun(
-  card: CardKey,
-  scope?: AnalyticsScope,
-  enabled = true,
-) {
-  const report = reportOf(card);
-  return useQuery({
-    enabled,
-    queryKey: ["report", card, scope ? scopeKey(scope) : null],
-    queryFn: async () => {
-      return unwrap(
-        await api.POST("/reports/{report}", {
-          params: { path: { report } },
-          // An empty list and an absent one both take the report's declared defaults
-          // (report.go branches on len==0). So the delivery reports' empty plans ask
-          // for what their specs declare.
-          body: {
-            scope: scope ? reportScope(scope) : undefined,
-            group_by: REPORT_GROUP_BY[card],
-            aggregates: REPORT_AGGREGATES[card],
-          },
-        }),
-      );
-    },
-  });
-}
-
 // One report: its own query, its own explain disclosure, its own card. A
 // section may hold several, and each has to load, fail and be explained on its
 // own. A single query per screen would show one spinner for both of a
@@ -297,6 +151,7 @@ export function ReportCard({
   stages,
   locale,
   scope,
+  section = false,
 }: Readonly<{
   report: CardKey;
   stages: readonly Stage[];
@@ -304,6 +159,8 @@ export function ReportCard({
   // The picker's record scope. Absent, the report measures its own default:
   // the reader's lens for deals, every readable project for delivery.
   scope?: AnalyticsScope;
+  // A section of a larger sheet or rail: its title sits flat over the report.
+  section?: boolean;
 }>) {
   const t = useT();
   const [explain, setExplain] = useState(false);
@@ -324,6 +181,7 @@ export function ReportCard({
         >
           <Panel
             title={title}
+            flatHead={section}
             // The verb that reveals the derivation under this panel, in the
             // head beside the title it explains. It announces its open state
             // and names what it controls, so a reader who cannot see the panel

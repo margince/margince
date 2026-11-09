@@ -83,6 +83,17 @@ jobs:
         with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
+      # Restore only: an entry a PR saved would serve that PR alone, so
+      # cache-warm.yml writes the one on main that every PR reads.
+      - name: Compute the frontend cache key
+        id: frontend-key
+        uses: ./.github/actions/frontend-cache-key
+      - name: Restore tsc's build info and the compiler lint's cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.frontend-key.outputs.path }}
+          key: ${{ steps.frontend-key.outputs.key }}
+          restore-keys: ${{ steps.frontend-key.outputs.restore-keys }}
       # FE_COVERAGE=1 so the unit-screen lane inside fe-quality writes its own
       # lcov. It is the only job that runs `fe-test-ext`, so it is the only one
       # that can produce that report — and without it every .tsx a unit ships is
@@ -100,16 +111,19 @@ jobs:
           # a tier measured at zero, silently.
           if-no-files-found: error
           retention-days: 1
+      # The whole-tree censuses, on one runner: one parse of the tree serves
+      # every rule, so a fe-unit shard would pay that parse again.
+      - run: make fe-census
 
   # FOUR shards, and the number comes from a measurement rather than from the
   # runner budget.
   #
   # The suite is ~750 files and 652s of test work on a two-core runner (vitest's
   # own figure, summed across the four blobs). The fixed cost of a leg —
-  # checkout, pnpm install, the node setup — is around 65s, and vitest slices by
-  # a hash of the file path, which distributes file COUNT evenly and duration
-  # only approximately: the four legs measured 156s, 180s, 178s and 243s, so the
-  # heaviest quarter runs about a third longer than an even one would.
+  # checkout, pnpm install, the node setup — is around 65s. The slices are cut
+  # by each file's expected cost (frontend/scripts/vitest-shards.ts), because
+  # vitest's own split by a hash of the path evens out the file count and leaves
+  # the heaviest quarter about a third longer than an even one.
   #
   #   1 shard   632s (measured on main)    4 shards   243s + 30s merge (measured)
   #   2 shards  ~440s                      6 shards  ~212s + 30s
@@ -191,6 +205,16 @@ jobs:
           node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
+      # Restore only, for the reason given in fe-quality.
+      - name: Compute the frontend cache key
+        id: frontend-key
+        uses: ./.github/actions/frontend-cache-key
+      - name: Restore tsc's build info and the compiler lint's cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.frontend-key.outputs.path }}
+          key: ${{ steps.frontend-key.outputs.key }}
+          restore-keys: ${{ steps.frontend-key.outputs.restore-keys }}
       # The production bundle and the Storybook catalog: a story that fails to
       # compile or register is caught deterministically here. The change-scoped
       # render capture (make fe-uat) stays a coordinator lane, not a required gate.

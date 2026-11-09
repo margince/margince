@@ -28,6 +28,7 @@ import (
 
 func TestRealWorklistKeepsRecordedSilenceOptionalAndHonorsTheReadersChoice(t *testing.T) {
 	e := integration.Setup(t)
+	e.GrantRole(t, e.Rep1, "rep")
 	now := quietLaneNow
 	seat := sharedMailbox(t, e, e.Rep1)
 	owner := ids.From[ids.UserKind](e.Rep1)

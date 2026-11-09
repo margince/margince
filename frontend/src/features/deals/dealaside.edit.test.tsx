@@ -1,5 +1,11 @@
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
 import type { components } from "../../api/schema";
@@ -52,18 +58,22 @@ function mount(grant: ("read" | "update")[], current = deal) {
 it("saves a changed value from the left column's money form as that field alone", async () => {
   const user = userEvent.setup();
   const sent = mount(["read", "update"]);
-  await user.click(await screen.findByRole("button", { name: "Change Value" }));
-  const amount = screen.getByRole("spinbutton", { name: "Value" });
+  await user.click(
+    await screen.findByRole("button", { name: /^Change Value €48,000$/ }),
+  );
+  const dialog = await screen.findByRole("dialog", { name: "Value" });
+  const amount = within(dialog).getByRole("spinbutton", { name: "Value" });
   await user.clear(amount);
   await user.type(amount, "52000");
-  await user.click(screen.getByRole("button", { name: "Save" }));
+  await user.click(within(dialog).getByRole("button", { name: "Save" }));
   await waitFor(() => expect(sent).toEqual([{ amount_minor: 5200000 }]));
 });
 
 it("offers no change to a reader without the update grant", async () => {
   mount(["read"]);
   await screen.findByText("Value");
-  expect(screen.queryByRole("button", { name: "Change Value" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Change / })).toBeNull();
+  expect(document.querySelector(".editable-value")).toBeNull();
 });
 
 it("changes an open deal's forecast close day and leaves a won deal's close day alone", async () => {
@@ -78,13 +88,13 @@ it("changes an open deal's forecast close day and leaves a won deal's close day 
     status: "won",
     closed_at: "2026-10-01T00:00:00Z",
   });
-  await screen.findByRole("button", { name: "Change Value" });
+  await screen.findByRole("button", { name: /^Change Value/ });
   expect(screen.queryByRole("button", { name: /^Change Close/ })).toBeNull();
 });
 
 it("changes the amount of a deal whose ARR an offer set", async () => {
   mount(["read", "update"], { ...deal, arr_source_offer_id: "o1" });
   expect(
-    await screen.findByRole("button", { name: "Change Value" }),
+    await screen.findByRole("button", { name: /^Change Value/ }),
   ).toBeTruthy();
 });

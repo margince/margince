@@ -112,13 +112,9 @@ export function RecordTeamAssign({
     [offered],
   );
 
-  // Kept on the kind and a string. RecordPicker reads a new `searchTargets`
-  // as a new search space and clears its list, which would empty it as the
-  // reader types.
-  const invitedDetail = t("assignments.invited");
   const searchTargets = useCallback(
-    (q: string) => searchSubjects(subjectKind, q, invitedDetail),
-    [subjectKind, invitedDetail],
+    (q: string) => searchSubjects(subjectKind, q),
+    [subjectKind],
   );
 
   function close() {
@@ -247,7 +243,6 @@ const ROSTER_PAGE = 200;
 async function searchSubjects(
   kind: AssignmentSubjectKind,
   q: string,
-  invitedDetail: string,
 ): Promise<RecordPickerCandidate[]> {
   const term = q.trim() || undefined;
   if (kind === "team") {
@@ -261,31 +256,13 @@ async function searchSubjects(
   }
   const { data, error, response } = await api.GET("/users", {
     params: {
-      query: { q: term, limit: ROSTER_PAGE, include_invited: true },
+      query: { q: term, limit: ROSTER_PAGE },
     },
   });
   if (error || !response.ok) {
     throwProblem(error);
   }
-  return (
-    data.data
-      // An agent seat holds no responsibility a human can be asked about.
-      //
-      // `invited` STAYS. The server admits it deliberately — staffing a record
-      // is part of onboarding somebody, and refusing it would mean nobody
-      // could be given work until their first login. Only the two statuses the
-      // server itself refuses are dropped here, so the picker offers exactly
-      // what a save would accept.
-      .filter(
-        (user) =>
-          !user.is_agent &&
-          user.status !== "suspended" &&
-          user.status !== "deactivated",
-      )
-      .map((user) => ({
-        id: user.id,
-        name: user.display_name,
-        detail: user.status === "invited" ? invitedDetail : undefined,
-      }))
-  );
+  return data.data
+    .filter((user) => !user.is_agent && user.status === "active")
+    .map((user) => ({ id: user.id, name: user.display_name }));
 }

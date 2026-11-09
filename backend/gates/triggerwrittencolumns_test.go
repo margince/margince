@@ -38,7 +38,6 @@ package gates
 import (
 	"go/ast"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -282,7 +281,7 @@ var touchStatements = gatekit.Waive(map[string]string{
 	"internal/modules/identity/memberretirement.go:recordMemberSurvivor":          "the survivor's merged aliases change its account editor and retirement preview, so its locked revision must move",
 	"internal/modules/identity/teams.go:recordTeamChange":                         "team membership is part of the member editor snapshot; the authorization lock serializes access changes and its revision must move",
 	"internal/modules/identity/userrole.go:changeUserRoleTx":                      "role assignments are part of the member editor snapshot; the authorization lock serializes role changes and its revision must move",
-	"internal/modules/activities/automaticdealfiling.go:retractMachineLinkTx":     "taking an automatic deal link back changes who the activity reaches, so it moves the version a staged approval pinned, as finalizeRelinkedActivity does for a filing",
+	"internal/modules/activities/automaticdealfiling.go:unlinkRecordedTx":         "taking a deal link back, automatically or by a colleague's decline, changes who the activity reaches, so it moves the version a staged approval pinned, as finalizeRelinkedActivity does for a filing",
 	"internal/modules/activities/relinkbatch.go:finalizeRelinkedActivity":         "a staged approval pins activity.version, and that pin is the only thing between an approved \"send this body on this conversation\" and the conversation being repointed before the approval redeems; a relink that changes who the activity reaches must move the version the pin re-checks",
 	"internal/modules/capture/sinkprojectwrite.go:linkActivityToProject":          "the automatic half of the same relink: filing under a project changes who the activity reaches, so it must move the version a staged approval pinned, for the reason the human path gives",
 	"internal/modules/contacts/providerclaimrevertfields.go:touchRevertedContact": "taking a bought profile link or address back off a record changes what that record says without writing a contact column, and the contact's version is what an editor's If-Match is checked against — the same claim touchContact makes for the write direction. Distinct from it because a revert must reach an ARCHIVED contact: archiving is not erasure, the purchase is still on the record, and touchContact's liveness refusal would roll the whole revert back while the action reported success. The caller holds the row FOR UPDATE, so the bump is not a blind write",
@@ -308,7 +307,7 @@ const judgedWriteFloor = 120
 // trigger already writes.
 func touchTriggerTables(t *testing.T) map[string]map[string]bool {
 	t.Helper()
-	raw, err := os.ReadFile("migrations/testdata/head_catalog.txt")
+	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
 	}
@@ -343,7 +342,7 @@ func TestNoStatementWritesAColumnItsTriggerAlreadyWrites(t *testing.T) {
 	touched := touchTriggerTables(t)
 	judged := 0
 	for _, root := range []string{"internal/modules", "internal/compose", "internal/platform", "internal/shared"} {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 				strings.HasSuffix(path, "_test.go") || isIntegrationTagged(path) {
 				return err
@@ -430,7 +429,7 @@ func declarationName(decl ast.Decl) string {
 // wrong in the direction of deleting a live assignment.
 func TestTheTouchTriggerFunctionsStillWriteWhatThisGateSays(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile("migrations/testdata/head_catalog.txt")
+	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
 	}
@@ -470,11 +469,11 @@ func TestNothingInGoTurnsOffTheTouchTrigger(t *testing.T) {
 	const guc = "margince.last_activity_move"
 	found := 0
 	for _, root := range []string{"internal", "cmd", "tools"} {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
 				return err
 			}
-			raw, err := os.ReadFile(path) // #nosec G304 -- a *.go path from walking this repository's own tree
+			raw, err := gatekit.ReadFile(path) // #nosec G304 -- a *.go path from walking this repository's own tree
 			if err != nil {
 				return err
 			}
@@ -491,7 +490,7 @@ func TestNothingInGoTurnsOffTheTouchTrigger(t *testing.T) {
 	}
 	// And the setting still exists where it is supposed to, or this test is
 	// reading for a string nothing uses and passing for the wrong reason.
-	raw, err := os.ReadFile("migrations/testdata/head_catalog.txt")
+	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
 	}

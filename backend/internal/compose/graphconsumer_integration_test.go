@@ -504,3 +504,72 @@ func grantContactsRole(t *testing.T, e *integration.Env, user ids.UUID, rowScope
 		t.Fatalf("granting the %s-scope role: %v", rowScope, err)
 	}
 }
+
+// An arrival the workspace cannot see yet, or one that has not happened, adds
+// no evidence, so it folds nothing. Opening it to the workspace is the update that folds it.
+func TestAnArrivalHiddenFromTheWorkspaceFoldsWhenItOpens(t *testing.T) {
+	e := integration.Setup(t)
+	contact := seedGraphContact(t, e, "Hidden Arrival")
+	gen := search.NewGraphEdgeGen(search.NewStore(e.DB()))
+	ctx := context.Background()
+	if err := gen.HandleEvent(ctx, envelopeFor(e.WS, "activity.captured", "activity", seedExchange(t, e, contact))); err != nil {
+		t.Fatal(err)
+	}
+	type edge struct {
+		total    int
+		computed time.Time
+	}
+	edgeOf := func() edge {
+		t.Helper()
+		var out edge
+		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			return tx.QueryRow(ctx, `SELECT count_total, computed_at FROM graph_interaction_edge WHERE contact_id = $1`, contact).Scan(&out.total, &out.computed)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return out
+	}
+	setAudience := func(activity ids.UUID, audience string) {
+		t.Helper()
+		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			_, err := tx.Exec(ctx, `UPDATE activity SET audience = $2, occurred_at = now() - interval '3 days' WHERE id = $1`, activity, audience)
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	before := edgeOf()
+
+	hidden := seedExchange(t, e, contact)
+	setAudience(hidden, "participants")
+	if err := gen.HandleEvent(ctx, envelopeFor(e.WS, "activity.captured", "activity", hidden)); err != nil {
+		t.Fatal(err)
+	}
+	if got := edgeOf(); got != before {
+		t.Fatalf("a hidden arrival refolded the edge: %+v, was %+v", got, before)
+	}
+
+	ahead := seedExchange(t, e, contact)
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE activity SET occurred_at = now() + interval '1 day' WHERE id = $1`, ahead)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := gen.HandleEvent(ctx, envelopeFor(e.WS, "activity.captured", "activity", ahead)); err != nil {
+		t.Fatal(err)
+	}
+	if got := edgeOf(); got != before {
+		t.Fatalf("a workspace arrival that has not happened yet refolded the edge: %+v, was %+v", got, before)
+	}
+
+	setAudience(hidden, "workspace")
+	opened := envelopeFor(e.WS, "activity.updated", "activity", hidden)
+	opened.Payload = []byte(`{"changed_fields":{"audience":"workspace"}}`)
+	if err := gen.HandleEvent(ctx, opened); err != nil {
+		t.Fatal(err)
+	}
+	if got := edgeOf(); got.total != before.total+1 {
+		t.Fatalf("opening the arrival left the edge at %d interactions, want %d", got.total, before.total+1)
+	}
+}

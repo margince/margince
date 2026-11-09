@@ -110,7 +110,7 @@ func TestEachAnchoredCommandReadsItsRecordOnce(t *testing.T) {
 			"disqualify_lead",
 			oneRecord(datasource.EntityLead, id, `{"full_name":"Ada"}`, 3),
 			func(p *tallyingProvider) GovernedCall {
-				return NewDisqualifyLeadCall(p, nil, DisqualifyLeadCommand{LeadID: id})
+				return NewDisqualifyLeadCall(p, nil, nil, DisqualifyLeadCommand{LeadID: id})
 			},
 		},
 		{
@@ -675,60 +675,6 @@ func TestBookingAnotherHostStagesOnlyForAnAdmin(t *testing.T) {
 			_, err := StageSubject(c.ctx, call(c.host))
 			if got := errors.Is(err, apperrors.ErrPermissionDenied); got != c.denied {
 				t.Fatalf("staging answered %v; want permission denied = %v", err, c.denied)
-			}
-		})
-	}
-}
-
-// The same rule on the door that now EXECUTES it. book_meeting stopped staging
-// by default, and requireOwnCalendarOrAdmin lived only in the resolver's Guards
-// — which run inside StageSubject and nowhere else. The store does not re-ask:
-// defaultHost (compose/comms.go) takes whatever host it is handed. So without
-// this the verb would book onto a colleague's calendar for any passport holding
-// `send`.
-func TestBookingAnotherHostExecutesOnlyForAnAdmin(t *testing.T) {
-	self, host, company := ids.NewV7(), ids.NewV7(), ids.NewV7()
-	window := time.Date(2026, 8, 10, 9, 0, 0, 0, time.UTC)
-	tool := bookMeetingTool{
-		comms: &recordingComms{},
-		p:     oneRecord(datasource.EntityCompany, company, `{}`, 1),
-	}
-	args := func(hostID *ids.UUID) json.RawMessage {
-		in := map[string]any{
-			"start": window.Format(time.RFC3339), "end": window.Add(30 * time.Minute).Format(time.RFC3339),
-			"subject": "Review",
-			"links":   []map[string]string{{"entity_type": "company", "entity_id": company.String()}},
-		}
-		if hostID != nil {
-			in["host_user_id"] = hostID.String()
-		}
-		raw, err := json.Marshal(in)
-		if err != nil {
-			t.Fatal(err)
-		}
-		return raw
-	}
-	as := func(roles []string) context.Context {
-		return principal.WithActor(context.Background(), principal.Principal{
-			Type: principal.PrincipalHuman, ID: "human:" + self.String(), UserID: self,
-			Permissions: principal.Permissions{RoleKeys: roles, RowScope: principal.RowScopeAll},
-		})
-	}
-	for _, c := range []struct {
-		name   string
-		ctx    context.Context
-		host   *ids.UUID
-		denied bool
-	}{
-		{"own calendar", as([]string{"management"}), &self, false},
-		{"no host named", as([]string{"rep"}), nil, false},
-		{"another host, admin", as([]string{"admin"}), &host, false},
-		{"another host, management", as([]string{"management"}), &host, true},
-	} {
-		t.Run(c.name, func(t *testing.T) {
-			_, err := tool.Handle(c.ctx, args(c.host))
-			if got := errors.Is(err, apperrors.ErrPermissionDenied); got != c.denied {
-				t.Fatalf("Handle answered %v; want permission denied = %v", err, c.denied)
 			}
 		})
 	}

@@ -71,7 +71,7 @@ func (h Handlers) WithContactMailLane(wired bool) Handlers {
 // for more.
 func (h Handlers) canRequestConfirmation(ctx context.Context, id Identity) bool {
 	return h.confirmLaneWired &&
-		auth.Require(actorCtx(ctx, id), "contact", principal.ActionUpdate) == nil &&
+		auth.Allows(actorCtx(ctx, id), "contact", principal.ActionUpdate) &&
 		principal.SeatType(id.SeatType).CanMutate()
 }
 
@@ -116,7 +116,7 @@ func (h Handlers) canIssuePasswordLink(ctx context.Context, id Identity) bool {
 	// It also needs no definition of "healthy", which is what the two obvious
 	// fixes were both waiting on. Whether a wired relay actually works is
 	// #5585's question; this half is true either way.
-	return auth.Require(actorCtx(ctx, id), objectUserAdmin, principal.ActionUpdate) == nil &&
+	return auth.Allows(actorCtx(ctx, id), objectUserAdmin, principal.ActionUpdate) &&
 		principal.SeatType(id.SeatType).CanMutate() &&
 		h.passwordLinkBaseURL != ""
 }

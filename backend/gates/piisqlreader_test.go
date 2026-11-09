@@ -66,9 +66,9 @@ func withoutComments(literal string) string {
 	return out.String()
 }
 
-// sqlLiterals returns every Go string literal in one source file. Both the
-// write-target and read-target scans run over these.
-func sqlLiterals(t *testing.T, path string) []string {
+// sqlLiterals resolves supplied constants before reading their literals, so
+// one statement cannot become several incomplete assignment lists.
+func sqlLiterals(t *testing.T, path string, constants ...map[string]string) []string {
 	t.Helper()
 	file, err := gatekit.ParseFile(path, 0)
 	if err != nil {
@@ -76,6 +76,12 @@ func sqlLiterals(t *testing.T, path string) []string {
 	}
 	var out []string
 	ast.Inspect(file, func(n ast.Node) bool {
+		if join, ok := n.(*ast.BinaryExpr); ok && len(constants) > 0 {
+			if text := renderSQL(join, constants[0]); !strings.Contains(text, unresolved) {
+				out = append(out, text)
+				return false
+			}
+		}
 		lit, ok := n.(*ast.BasicLit)
 		if !ok || lit.Kind != token.STRING {
 			return true
@@ -88,15 +94,21 @@ func sqlLiterals(t *testing.T, path string) []string {
 	return out
 }
 
-// erasureCascadeFiles are the sources that make up the Art. 17 cascade — the
-// files EraseContact's own transaction executes SQL from. It is a LIST because
-// the cascade spans more than one file, and a gate pinned to a single path
-// silently stops covering a table the moment its scrub is extracted to a
-// neighbour. It is deliberately NOT the whole privacy
-// package: retention.go also writes subject tables, and letting a retention
-// sweep satisfy "Art. 17 reaches this table" is exactly the confusion this test
-// exists to prevent.
+// erasureCascadeFiles are the files EraseContact's own transaction executes SQL
+// from: the Art. 17 cascade. It is a list because a gate pinned to one path stops
+// covering a table once its scrub moves to a neighbour file. It is not the whole
+// privacy package: retention.go also writes subject tables, and a retention sweep
+// must not satisfy "Art. 17 reaches this table".
 var erasureCascadeFiles = []string{
+	"internal/platform/database/storekit/auditredaction.go",
+	// Capture owns the projection purge reached through privacy.RawCapturePurger.
+	"internal/modules/capture/partysourceerase.go",
+	// ai owns the voice samples copied from sent mail, emptied through the
+	// same seam's PurgeTextCopiesTx.
+	"internal/modules/ai/voicesentmailerase.go",
+	"internal/modules/privacy/partyprojections.go",
+	// The addresses a merge bound the subject's recorded requests to.
+	"internal/modules/privacy/requestaddresses.go",
 	"internal/modules/privacy/commitmentlegacy.go",
 	"internal/modules/privacy/activityerase.go",
 	"internal/modules/privacy/commitmenterasure.go",
@@ -114,6 +126,10 @@ var erasureCascadeFiles = []string{
 	// transaction, so it counts here; leaving it off would let a table look
 	// uncovered the moment its purge moved file.
 	"internal/modules/privacy/erasuretimeline.go",
+	// The webhook bodies rendered from the subject, cleared through the
+	// purger seam, and the call that reaches it.
+	"internal/modules/privacy/retentioncopies.go",
+	"internal/modules/webhooks/deliveryretention.go",
 	// The external identities the emptied messages answered to. Its own file
 	// because BOTH erasure arms call it — the per-activity content purge and
 	// this cascade — and a spelling per arm is how the cascade came to have
@@ -149,6 +165,9 @@ var erasureCascadeFiles = []string{
 	// timeline has one — and named here so weekly_plan_commitment cannot look
 	// uncovered the moment its redaction moves.
 	"internal/modules/privacy/erasure_commitments.go",
+	"internal/modules/privacy/erasure_unlinkednotes.go",
+	"internal/modules/privacy/erasure_manualreview.go",
+	"internal/modules/privacy/notementionlocks.go",
 	"internal/modules/privacy/erasure_rivals.go",
 	// What a licensed data provider was PAID to tell us about the subject,
 	// and the runs that bought it (ADR-0101). Same Art. 17 transaction, its
@@ -159,6 +178,9 @@ var erasureCascadeFiles = []string{
 	// destructive engine and both reach it.
 	"internal/modules/privacy/erasure_approvals.go",
 	"internal/modules/privacy/erasure_approvalnotices.go",
+	// The missed-receipt notices that name the subject. Same Art. 17
+	// transaction; retracted and detached from the erased record.
+	"internal/modules/privacy/erasure_receiptnotices.go",
 	// The readings of the transcripts the timeline scrub just emptied — same
 	// transaction, its own file for the same both-engines reason.
 	"internal/modules/privacy/transcriptreadings.go",
@@ -204,10 +226,13 @@ var erasureCascadeFiles = []string{
 // the derivation names everything and this register accounts for what is not
 // cascade, one entry at a time.
 var reachedButNotCascade = gatekit.Waive(map[string]string{
+	"internal/modules/ai/voice_corpus_summary.go":      "the voice meter and staleness helpers the sample erasure calls after it empties a sample. They read the corpus counts and mark the profile stale; they write no subject text",
+	"internal/modules/ai/voice_source_mutations.go":    "reached for voiceCorpusChangedPayload, a payload builder living here. Its own SQL is the owner's remove, exclude and clear, never the cascade's",
 	"internal/modules/privacy/erasuretally.go":         "the counting transaction every arm of the cascade runs on. Its Exec, Query and QueryRow pass the arm's own statement through and count the rows it touched; it names no table and holds no statement of its own",
 	"internal/modules/privacy/retention.go":            "the nightly time-based evaluator. EraseContact reaches it through the statutory correspondence floor it shares, not to erase anything: its writes are the sweep's own, on the sweep's trigger, and admitting them here would let a retention pass answer for a subject's request",
 	"internal/modules/privacy/retention_floor.go":      "the shared floor itself — the statutory minimum both engines apply. It computes a cutoff and writes nothing",
 	"internal/modules/privacy/floorpolicy.go":          "the floor policy the cascade resolves before it erases. It reads the jurisdiction and the carried floor, and its only write is the carry a jurisdiction change records, never a subject's PII",
+	"internal/modules/privacy/entityfloor.go":          "the further legal entities' floors the policy above resolves. It reads entity ids and countries and writes nothing",
 	"internal/modules/privacy/retentionscope.go":       "the sweep's due-list scoping. Reached through the floor above, and it writes nothing",
 	"internal/modules/privacy/erasure_tombstone.go":    "the suppression record written AFTER the cascade commits, so a re-capture cannot resurrect the subject. It is the same transaction and it writes no subject PII — the tombstone holds hashes, which is the point of it",
 	"internal/modules/privacy/scheduledsends.go":       "the queued sends cancelled on the way through. Reached from the cascade and executing no SQL of its own — it hands its statements to a helper this scan already reads at that call site",
@@ -236,6 +261,7 @@ var reachedButNotCascade = gatekit.Waive(map[string]string{
 // failure mode a glob buys here, and it is the one with no failing assertion
 // to notice it.
 var retentionSweepFiles = []string{
+	"internal/platform/database/storekit/auditredaction.go",
 	"internal/modules/privacy/commitmenterasure.go",
 	"internal/modules/privacy/reportingredaction.go",
 	"internal/modules/privacy/reportingquestions.go",
@@ -562,16 +588,14 @@ func unreadableWriteOn(statements []string, assembledFragment string) string {
 	return assembledFragment
 }
 
-// assembledSweepTargets returns, per table, a swept SQL literal that is joined
-// to a runtime value — `"UPDATE provider_run SET" + storekit.Scrub…`. The table
-// comes from the literal's own text, which is where the write target is even
-// when the assignments are not.
+// assembledSweepTargets reports SQL joined to values the reader cannot resolve.
+// The readable fragment names the table even when assignments do not.
 //
 // This reads the CONCATENATION, not the string, and that is the whole point.
 // assembledSetTarget can only judge the text it is handed, and a fragment that
 // reads as a finished statement is indistinguishable from one that is; the `+`
 // node is the only place the fact that more follows is written down.
-func assembledSweepTargets(t *testing.T, path string) map[string]string {
+func assembledSweepTargets(t *testing.T, path string, constants ...map[string]string) map[string]string {
 	t.Helper()
 	file, err := gatekit.ParseFile(path, 0)
 	if err != nil {
@@ -626,6 +650,9 @@ func assembledSweepTargets(t *testing.T, path string) map[string]string {
 		join, ok := n.(*ast.BinaryExpr)
 		if !ok || join.Op != token.ADD {
 			return true
+		}
+		if len(constants) > 0 && !strings.Contains(renderSQL(join, constants[0]), unresolved) {
+			return false
 		}
 		// One side a literal and the other not. Two literals joined are still
 		// one literal as far as the text is concerned — sqlLiterals reads both

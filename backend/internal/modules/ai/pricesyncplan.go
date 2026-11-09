@@ -53,7 +53,16 @@ func (p *pricePlan) apply(t catalogueTarget, cur *ModelRateRow, price func(*Mode
 	switch {
 	case !ok:
 		return
-	case cur != nil && sameMicroUSD(rateInput(*cur), next):
+	case cur != nil && cur.LongContext != nil && next.LongContext == nil:
+		// The catalogue publishes no band for a model whose row carries one,
+		// so it cannot say whether the band moved with a new base price.
+		if !sameMicroUSD(rateInput(*cur), next) {
+			line.Review = append(line.Review, t.modelID)
+			return
+		}
+		line.Unchanged++
+		return
+	case cur != nil && sameMicroUSD(rateInput(*cur), next) && sameBand(cur.LongContext, next.LongContext):
 		line.Unchanged++
 		return
 	case cur != nil:

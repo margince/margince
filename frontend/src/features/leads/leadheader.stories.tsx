@@ -3,7 +3,11 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
-import { StoryProviders } from "../../testing/story-utils";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../../testing/story-utils";
 import { LeadPulse, LeadSubtitle } from "./leadheader";
 
 // The head of a lead record: what it does and where, then the two pills that
@@ -38,12 +42,15 @@ const lead = (over: Partial<Lead> = {}): Lead =>
     ...over,
   }) as Lead;
 
-const head = (over: Partial<Lead> = {}) => (
-  <StoryProviders>
-    <LeadSubtitle lead={lead(over)} />
-    <LeadPulse lead={lead(over)} />
-  </StoryProviders>
-);
+function head(over: Partial<Lead> = {}) {
+  installFetchStub({ "GET /me": meRoute({ lead: ["read"] }) });
+  return (
+    <StoryProviders>
+      <LeadSubtitle lead={lead(over)} />
+      <LeadPulse lead={lead(over)} />
+    </StoryProviders>
+  );
+}
 
 /** A lead being worked: the accent pill says somebody has written to them. */
 export const Contacted: Story = { render: () => head() };

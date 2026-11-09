@@ -29,8 +29,13 @@ var momentWords = struct {
 	Reply             langcopy.Phrase
 	Quiet             langcopy.Phrase
 	QuietWhy          langcopy.Phrase
+	Awaiting          langcopy.Phrase
+	AwaitingToday     langcopy.Phrase
+	AwaitingYesterday langcopy.Phrase
+	AwaitingWhy       langcopy.Phrase
 	FollowUp          langcopy.Phrase
 	AskUnavailable    langcopy.Phrase
+	ReplyUnavailable  langcopy.Phrase
 	Ask               langcopy.Phrase
 	Log               langcopy.Phrase
 	QuietNothing      langcopy.Phrase
@@ -66,9 +71,14 @@ var momentWords = struct {
 	Replied:           langcopy.Phrase{En: "They wrote back; your last message was %d days earlier", De: "Eine Antwort ist eingegangen; Ihre letzte Nachricht lag %d Tage davor", Vi: "Họ đã trả lời; tin nhắn gần nhất của bạn được gửi trước đó %d ngày"},
 	RepliedWhy:        langcopy.Phrase{En: "Their latest message has no later outgoing message recorded. Your last recorded message is older than the re-engagement rule allows.", De: "Nach der letzten Nachricht dieses Kontakts ist keine ausgehende Nachricht erfasst. Ihre letzte erfasste Nachricht liegt länger zurück, als die Regel zur erneuten Kontaktaufnahme vorsieht.", Vi: "Chưa ghi nhận tin nhắn gửi đi sau tin nhắn gần nhất của họ. Tin nhắn gần nhất của bạn đã quá thời hạn theo quy tắc liên hệ lại."},
 	Reply:             langcopy.Phrase{En: "Draft a reply", De: "Antwort entwerfen", Vi: "Soạn phản hồi"},
-	Quiet:             langcopy.Phrase{En: "No reply recorded for %d days", De: "Seit %d Tagen keine Antwort erfasst", Vi: "Chưa ghi nhận phản hồi trong %d ngày"},
-	QuietWhy:          langcopy.Phrase{En: "The last recorded message to them went out %d days ago. The rule flags a missing recorded reply after %d days.", De: "Die letzte erfasste Nachricht an diesen Kontakt wurde vor %d Tagen gesendet. Die Regel meldet eine fehlende erfasste Antwort nach %d Tagen.", Vi: "Tin nhắn gửi đi gần nhất được ghi nhận là %d ngày trước. Quy tắc đánh dấu khi chưa ghi nhận phản hồi sau %d ngày."},
+	Quiet:             langcopy.Phrase{En: "No reply to the last message for %d days", De: "Seit %d Tagen keine Antwort auf die letzte Nachricht", Vi: "Chưa có phản hồi cho tin nhắn gần nhất trong %d ngày"},
+	QuietWhy:          langcopy.Phrase{En: "The last message to them went out %d days ago, and no reply appears in the messages you can access. The rule flags a missing reply after %d days.", De: "Die letzte Nachricht an diesen Kontakt wurde vor %d Tagen gesendet, und in den Nachrichten, auf die Sie zugreifen können, ist keine Antwort erfasst. Die Regel meldet eine fehlende Antwort nach %d Tagen.", Vi: "Tin nhắn gần nhất gửi cho họ đã được gửi %d ngày trước và chưa có phản hồi trong các tin nhắn bạn được truy cập. Quy tắc đánh dấu khi chưa có phản hồi sau %d ngày."},
+	Awaiting:          langcopy.Phrase{En: "Waiting for their reply", De: "Warten auf ihre Antwort", Vi: "Đang chờ họ phản hồi"},
+	AwaitingToday:     langcopy.Phrase{En: "Your last message went out today and is the newest on the record. The rule flags a missing reply after %d days.", De: "Ihre letzte Nachricht wurde heute gesendet und ist die neueste im Datensatz. Die Regel meldet eine fehlende Antwort nach %d Tagen.", Vi: "Tin nhắn gần nhất của bạn đã được gửi hôm nay và là tin mới nhất trong hồ sơ. Quy tắc đánh dấu khi chưa có phản hồi sau %d ngày."},
+	AwaitingYesterday: langcopy.Phrase{En: "Your last message went out yesterday and is the newest on the record. The rule flags a missing reply after %d days.", De: "Ihre letzte Nachricht wurde gestern gesendet und ist die neueste im Datensatz. Die Regel meldet eine fehlende Antwort nach %d Tagen.", Vi: "Tin nhắn gần nhất của bạn đã được gửi hôm qua và là tin mới nhất trong hồ sơ. Quy tắc đánh dấu khi chưa có phản hồi sau %d ngày."},
+	AwaitingWhy:       langcopy.Phrase{En: "Your last message went out %d days ago and is the newest on the record. The rule flags a missing reply after %d days.", De: "Ihre letzte Nachricht wurde vor %d Tagen gesendet und ist die neueste im Datensatz. Die Regel meldet eine fehlende Antwort nach %d Tagen.", Vi: "Tin nhắn gần nhất của bạn đã được gửi %d ngày trước và là tin mới nhất trong hồ sơ. Quy tắc đánh dấu khi chưa có phản hồi sau %d ngày."},
 	FollowUp:          langcopy.Phrase{En: "Draft a follow-up", De: "Nachfassnachricht entwerfen", Vi: "Soạn tin nhắn theo dõi"},
+	ReplyUnavailable:  langcopy.Phrase{En: "The original message is unavailable. Open a new email and describe its purpose.", De: "Die ursprüngliche Nachricht ist nicht verfügbar. Öffne eine neue E-Mail und beschreibe ihren Zweck.", Vi: "Tin nhắn gốc không khả dụng. Hãy mở email mới và mô tả mục đích."},
 	AskUnavailable:    langcopy.Phrase{En: "Asking a colleague for context isn't available yet", De: "Das Einholen von Kontext bei Kollegen ist noch nicht verfügbar", Vi: "Chức năng hỏi đồng nghiệp về bối cảnh chưa khả dụng"},
 	Ask:               langcopy.Phrase{En: "Ask for context", De: "Nach Kontext fragen", Vi: "Hỏi thêm bối cảnh"},
 	Log:               langcopy.Phrase{En: "Log an interaction", De: "Interaktion erfassen", Vi: "Ghi lại tương tác"}, //nolint:misspell // German translation uses German spelling.

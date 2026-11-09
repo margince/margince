@@ -163,7 +163,7 @@ export const CallWritesEmail: Story = {
           <ChannelReplyAction
             activityId="a-6"
             kind="call"
-            offersEmail
+            emailTarget={{ entity_type: "contact", entity_id: "p-1" }}
             entityType="contact"
             entityId="p-1"
             contactId="p-1"
@@ -188,7 +188,6 @@ export const NoteWithNobodyToWriteTo: Story = {
           <ChannelReplyAction
             activityId="a-7"
             kind="note"
-            offersEmail={false}
             entityType="contact"
             entityId="p-1"
             contactId="p-1"
@@ -198,7 +197,7 @@ export const NoteWithNobodyToWriteTo: Story = {
           <ChannelReplyAction
             activityId="a-8"
             kind="call"
-            offersEmail
+            emailTarget={{ entity_type: "contact", entity_id: "p-1" }}
             entityType="contact"
             entityId="p-1"
             contactId="p-1"

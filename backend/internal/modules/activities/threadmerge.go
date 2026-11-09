@@ -5,14 +5,14 @@ package activities
 
 // Two threads that turn out to be one conversation become one.
 //
-// A captured email's thread_key is the FIRST id of its References header, and
-// mail programs shorten that header: iPhone Mail sends only the direct parent,
-// so every reply it makes starts a new root and one conversation lands under
+// A captured email's thread_key is the first id of its References header.
+// Mail programs shorten that header: iPhone Mail sends only the direct parent,
+// so every reply it makes starts a new root. One conversation then lands under
 // several keys. An import states its own key (the importer's thread), which a
 // mailbox capturing the same messages never derives. Capture notices when a
-// message links two keys (capture/threadjoin.go) and compose merges them
-// (compose/threadmerge.go); this file owns the two tables of this module that
-// carry a thread key, and the reply links that make the join possible.
+// message links two keys (capture/threadjoin.go). Compose merges them
+// (compose/threadmerge.go). This file owns this module's two tables that carry
+// a thread key, and the reply links that make the join possible.
 
 import (
 	"context"
@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -28,11 +29,17 @@ import (
 // RecordMailReferencesTx stores the Message-IDs one email says it answers.
 //
 // Idempotent: a re-sync of the same message states the same links. The ids are
-// the sender's text; nothing here trusts them — MailNeighboursTx only reports
+// the sender's text, so nothing here trusts them. MailNeighboursTx only reports
 // candidates, and capture acts on one only when the same seat holds both ends.
 func RecordMailReferencesTx(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, referenced []string) error {
 	if len(referenced) == 0 {
 		return nil
+	}
+	if _, err := storekit.LockActivityThreadTx(ctx, tx, activityID.UUID); err != nil {
+		return err
+	}
+	if err := storekit.LockThreadKeysTx(ctx, tx, referenced...); err != nil {
+		return err
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO activity_mail_reference (activity_id, referenced_id)
@@ -45,31 +52,43 @@ func RecordMailReferencesTx(ctx context.Context, tx pgx.Tx, activityID ids.Activ
 }
 
 // MailNeighboursTx answers the live messages directly linked to one email by a
-// reply: the ones it names (its In-Reply-To and References, resolved through
-// activity_identity, which holds every door's Message-ID) and the ones that
-// name it.
+// reply. These are the ones it names (its In-Reply-To and References, resolved
+// through activity_identity, which holds every door's Message-ID) and the ones
+// that name it.
 //
 // Both directions, because messages arrive in any order. A backfill walks a
-// mailbox newest first, so the reply is routinely stored before the message it
+// mailbox newest first. So the reply is often stored before the message it
 // answers, and only the reverse read can find it.
 func MailNeighboursTx(
 	ctx context.Context, tx pgx.Tx, self ids.ActivityID, messageID string, referenced []string,
 ) ([]ids.ActivityID, error) {
-	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT a.id
-		  FROM activity a
-		 WHERE a.id <> $1
-		   AND a.archived_at IS NULL
-		   AND a.thread_key IS NOT NULL
-		   AND (a.id IN (SELECT activity_id FROM activity_identity
-		                  WHERE identity_kind = $4 AND identity_key = ANY($3::text[]))
-		        -- A message sent from here is filed under its minted Message-ID
-		        -- as its natural key and claims no identity row, so a reply to
-		        -- it is found by that key.
-		        OR (a.source_system = $5 AND a.source_id = ANY($3::text[]))
-		        OR ($2 <> '' AND a.id IN (SELECT activity_id FROM activity_mail_reference
-		                                   WHERE referenced_id = $2)))`,
-		self, messageID, referenced, IdentityKindMail, connector.EmailSourceSystem)
+	var args []any
+	arg := func(value any) int { args = append(args, value); return len(args) }
+	selfPos, messagePos, referencesPos := arg(self), arg(messageID), arg(referenced)
+	identityPos, sourcePos := arg(IdentityKindMail), arg(connector.EmailSourceSystem)
+	// Fence point probes from flattening; apply row filters outside so stale statistics cannot favor a partial index.
+	query := fmt.Sprintf(`
+  WITH candidates AS (
+   SELECT activity_id AS id FROM activity_identity
+   WHERE identity_kind = $%[1]d AND identity_key = ANY($%[2]d::text[])
+   UNION
+   -- Sent mail may claim only its natural Message-ID key, without an identity row.
+   SELECT matched.id FROM unnest($%[4]d::text[]) AS reference(key)
+   JOIN LATERAL (
+    SELECT id FROM activity WHERE source_system = $%[3]d AND source_id = reference.key
+    OFFSET 0
+   ) matched ON true
+   UNION
+   SELECT activity_id FROM activity_mail_reference WHERE $%[5]d <> '' AND referenced_id = $%[6]d
+  )
+  SELECT a.id FROM candidates c
+  JOIN LATERAL (
+   SELECT id, archived_at, thread_key FROM activity WHERE id = c.id
+   OFFSET 0
+  ) a ON true
+  WHERE a.id <> $%[7]d AND a.archived_at IS NULL AND a.thread_key IS NOT NULL`,
+		identityPos, referencesPos, sourcePos, referencesPos, messagePos, messagePos, selfPos)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading the messages a reply links: %w", err)
 	}
@@ -81,17 +100,16 @@ func MailNeighboursTx(
 }
 
 // EarliestThreadKeyTx orders candidate thread keys by the earliest live message
-// each holds, and answers the first; ties go to the smaller key so two
+// each holds, and answers the first. Ties go to the smaller key so two
 // concurrent joins agree.
 //
 // The earliest message is the conversation's opener as far as this workspace
-// knows it, which is the root a capture with an unshortened References chain
-// would have chosen — so the surviving key is the one later mail most likely
-// derives by itself.
+// knows it. A capture with an unshortened References chain would have chosen
+// that root, so later mail most likely derives the surviving key by itself.
 //
-// No live message under any of the keys answers "": the messages were archived
-// between the caller reading the keys and this read, and there is nothing left
-// to join into. That is not an error, or the capture that asked fails on it.
+// It answers "" when no live message remains under any of the keys. The
+// messages were archived after the caller read the keys, and nothing is left to
+// join into. That is not an error, or the capture that asked would fail on it.
 func EarliestThreadKeyTx(ctx context.Context, tx pgx.Tx, keys []string) (string, error) {
 	var key string
 	err := tx.QueryRow(ctx, `
@@ -123,6 +141,9 @@ func EarliestThreadKeyTx(ctx context.Context, tx pgx.Tx, keys []string) (string,
 func ThreadMergeTx(ctx context.Context, tx pgx.Tx, from, to string) error {
 	if from == "" || to == "" || from == to {
 		return nil
+	}
+	if err := storekit.LockThreadKeysTx(ctx, tx, from, to); err != nil {
+		return err
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE activity SET thread_key = $2

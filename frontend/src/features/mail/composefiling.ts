@@ -11,6 +11,7 @@ import {
   type PickableProject,
   useSoleProjectDefault,
 } from "../../design-system/projectpicker";
+import { useThreadProject } from "../../lib/activityfiling";
 import { unwrap } from "../../lib/problem";
 import { useCompany360 } from "../companies/company360";
 import { useContact360 } from "../contacts/contact360";
@@ -20,7 +21,6 @@ import {
   useProjectRecord,
   withSubjectTag,
 } from "../projects/projectrecord";
-import { useThreadProject } from "./composeanchor";
 import { recipientSuggestions } from "./composehead";
 import { deadRecipientsAmong } from "./composereachability";
 import type { RelinkKind } from "./composerelink";

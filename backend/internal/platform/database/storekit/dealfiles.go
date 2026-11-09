@@ -14,12 +14,26 @@ import "fmt"
 // parts, so size is the proxy: a contract scan is never this small.
 const InlineMailImageCeiling = 65536
 
-// NotInlineMailImageSQL is true unless file, an attachment alias, is an inline
-// image of a captured message. A part with no content type is not one; a
-// missing size counts as 0.
-func NotInlineMailImageSQL(file string) string {
+// ListedMailFileSQL is true when file, an attachment alias, belongs on a
+// Documents list. An inline image or a calendar payload stays on its message.
+func ListedMailFileSQL(file string) string {
+	return notInlineMailImageSQL(file) + " AND " + notCalendarPayloadSQL(file)
+}
+
+// notInlineMailImageSQL is true unless file is an inline image of a captured
+// message. A part with no content type is not one; a missing size counts as 0.
+func notInlineMailImageSQL(file string) string {
 	return fmt.Sprintf(`NOT (COALESCE(%[1]s.content_type, '') LIKE 'image/%%' AND COALESCE(%[1]s.byte_size, 0) < %[2]d)`,
 		file, InlineMailImageCeiling)
+}
+
+// notCalendarPayloadSQL is true unless file is the calendar part of an
+// invitation mail. Its bytes sniff as text/plain, so text/calendar survives
+// only in declared_type; a named part is caught by its .ics name.
+func notCalendarPayloadSQL(file string) string {
+	return fmt.Sprintf(`NOT (lower(COALESCE(%[1]s.declared_type, '')) LIKE 'text/calendar%%'
+		OR lower(COALESCE(%[1]s.content_type, '')) LIKE 'text/calendar%%'
+		OR lower(%[1]s.filename) LIKE '%%.ics')`, file)
 }
 
 // MessageOnDealSQL is true when the message whose id is message is linked to

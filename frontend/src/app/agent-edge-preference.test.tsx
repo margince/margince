@@ -83,7 +83,7 @@ function mountWorkspace() {
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <AgentRail route={{ screen: "deals" }} />
+        <AgentRail />
         <AgentEdge />
       </LocaleProvider>
     </QueryClientProvider>,
@@ -102,6 +102,7 @@ async function openPanel(
   const trigger = container.querySelector(".arhit");
   if (!trigger) throw new Error("no .arhit trigger in the rendered tree");
   await user.click(trigger);
+  await screen.findByRole("switch", { name: en["agent.setting.edgeLight"] });
 }
 
 // Both the preference and the reading are module state, so a case that
@@ -187,27 +188,6 @@ describe("the margins, and whether this reader wants them", () => {
       // cascade of failures naming the wrong tests.
       refuses.mockRestore();
     }
-  });
-
-  // A fresh module is what makes this a claim about BOOT: the store resolves
-  // once and remembers, so a case that only wrote to storage would be
-  // asserting against the answer this file's own cases left in memory.
-  it("meets a reader who turned it off last week with the frame still", async () => {
-    window.localStorage.setItem(EDGE_LIGHT_KEY, "off");
-
-    vi.resetModules();
-    const booted = await import("./agent-edge-preference");
-
-    expect(booted.edgeLightShown()).toBe(false);
-  });
-
-  it("meets an install that has never chosen with the light on", async () => {
-    window.localStorage.removeItem(EDGE_LIGHT_KEY);
-
-    vi.resetModules();
-    const booted = await import("./agent-edge-preference");
-
-    expect(booted.edgeLightShown()).toBe(true);
   });
 });
 

@@ -17,6 +17,7 @@ package assurance
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -69,4 +70,27 @@ func (s *Store) RecordRunFindings(
 		return fmt.Errorf("assurance: recording which findings this run saw: %w", err)
 	}
 	return nil
+}
+
+// LatestRunObserving is the newest finished run that observed the finding. A
+// delivery reads its findings from it, so a later check that saw more is not
+// lost to the run the delivery was queued from.
+func (s *Store) LatestRunObserving(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID) (ids.UUID, bool, error) {
+	if err := auth.Require(ctx, "forecast", principal.ActionRead); err != nil {
+		return ids.UUID{}, false, err
+	}
+	var run ids.UUID
+	err := tx.QueryRow(ctx, `
+		SELECT r.id FROM assurance_run_finding f
+		  JOIN assurance_run r ON r.id = f.run_id
+		 WHERE f.exception_id = $1 AND r.status <> $2
+		 ORDER BY r.as_of DESC, r.id DESC
+		 LIMIT 1`, exceptionID, StatusRunning).Scan(&run)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ids.UUID{}, false, nil
+	}
+	if err != nil {
+		return ids.UUID{}, false, fmt.Errorf("assurance: reading the newest run that saw the finding: %w", err)
+	}
+	return run, true, nil
 }

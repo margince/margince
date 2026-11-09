@@ -69,7 +69,12 @@ type ActivityFields struct {
 
 	// Envelope is what the mail parser read about addressing and links; nil
 	// for anything not parsed from a mail, and for list mail.
-	Envelope *MailEnvelope
+	ProviderPrivate bool
+	Envelope        *MailEnvelope
+
+	// MeetingDocuments are the notes and transcripts the provider attached to a
+	// meeting (meetingmap.NotesDocuments); empty for anything else.
+	MeetingDocuments []MeetingDocument
 
 	// judged is what the sink concluded from Envelope. Unexported so no
 	// connector can state the conclusion for it.

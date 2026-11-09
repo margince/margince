@@ -26,6 +26,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strings"
@@ -91,6 +92,7 @@ func gitPaths(t testing.TB, root string, args ...string) []string {
 	t.Helper()
 	cmd := exec.Command("git", append(args, "-z")...)
 	cmd.Dir = root
+	cmd.Env = withoutGitVariables(callerGitRouting)
 	out, err := cmd.Output()
 	if err != nil {
 		// git's own diagnostic, not just the status. cmd.Output() puts it in
@@ -172,6 +174,18 @@ func TestTheRepositoryIsReadThroughGitRatherThanTheWorkingTree(t *testing.T) {
 	}
 }
 
+// A git hook exports GIT_DIR, and a census read under it would list the
+// hook's repository instead of the tree it was pointed at.
+func TestAnExportedGitDirDoesNotSteerTheCensus(t *testing.T) {
+	root, other := t.TempDir(), t.TempDir()
+	initRepo(t, root, map[string]string{"here.md": "x"})
+	initRepo(t, other, map[string]string{"elsewhere.md": "y"})
+	t.Setenv("GIT_DIR", filepath.Join(other, ".git"))
+	if tracked := gitTracked(t, root); !tracked["here.md"] || tracked["elsewhere.md"] {
+		t.Errorf("the census followed GIT_DIR to another repository: %v", tracked)
+	}
+}
+
 // gitFixture answers the two things a purpose-built repository is made of: a
 // way to run git in it, and a way to put a file in it.
 //
@@ -204,12 +218,42 @@ func initRepo(t *testing.T, root string, committed map[string]string) (run func(
 	return run, write
 }
 
+// fixtureGitEnv is the environment a fixture's git runs in: the caller's, less
+// what would reach past the fixture. A global commit.gpgsign fails the fixture's
+// commits, and an exported GIT_DIR points them at the real repository.
+// scripts/lib-git-fixture.sh holds the same list for the shell tests.
+func fixtureGitEnv() []string {
+	return append(withoutGitVariables(callerGitVariable),
+		"GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null", "GIT_TERMINAL_PROMPT=0")
+}
+
+func withoutGitVariables(drop *regexp.Regexp) []string {
+	env := []string{}
+	for _, entry := range os.Environ() {
+		name, _, _ := strings.Cut(entry, "=")
+		if !drop.MatchString(name) {
+			env = append(env, entry)
+		}
+	}
+	return env
+}
+
+// callerGitRouting names the variables that send git to a repository other
+// than the one its working directory is in. gitPaths drops only these: on the
+// real tree, the caller's global excludes file still decides what is ignored.
+var callerGitRouting = regexp.MustCompile(`^GIT_(` + gitRoutingNames + `)$`)
+
+const gitRoutingNames = `DIR|WORK_TREE|INDEX_FILE|OBJECT_DIRECTORY|ALTERNATE_OBJECT_DIRECTORIES|COMMON_DIR|CEILING_DIRECTORIES`
+
+var callerGitVariable = regexp.MustCompile(`^GIT_(` + gitRoutingNames + `|CONFIG|CONFIG_COUNT|CONFIG_PARAMETERS|CONFIG_KEY_\d+|CONFIG_VALUE_\d+|CONFIG_GLOBAL|CONFIG_SYSTEM|TERMINAL_PROMPT|TEMPLATE_DIR)$`)
+
 func gitFixture(t *testing.T, root string) (run func(...string), write func(rel, body string)) {
 	t.Helper()
 	run = func(args ...string) {
 		t.Helper()
 		cmd := exec.Command("git", args...)
 		cmd.Dir = root
+		cmd.Env = fixtureGitEnv()
 		if out, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
 		}

@@ -52,6 +52,19 @@ func customerMeetingClause(ctx context.Context, arg func(any) int) (string, erro
 	   AND ` + customerLinkSQL + ` AND (` + visible + `))`, nil
 }
 
+// appendOutsidePartyClause keeps the meetings with somebody from outside on
+// them, when the read asks for WithOutsideParty.
+func appendOutsidePartyClause(in ListActivitiesInput, arg func(any) int, where []string) ([]string, error) {
+	if in.outsideParty == nil {
+		return where, nil
+	}
+	outside, err := in.outsideParty(arg)
+	if err != nil {
+		return nil, err
+	}
+	return append(where, outside), nil
+}
+
 func appendAwaitingOutcomeClause(ctx context.Context, in ListActivitiesInput, arg func(any) int, where []string) ([]string, error) {
 	if in.AwaitingOutcomeAsOf == nil {
 		return where, nil

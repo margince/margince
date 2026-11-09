@@ -1,0 +1,397 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Trash2 } from "lucide-react";
+import { useState } from "react";
+import { api } from "../../../api/client";
+import type { components } from "../../../api/schema";
+import { Badge, Button } from "../../../design-system/atoms";
+import { ConfirmModal } from "../../../design-system/confirmmodal";
+import { ErrorLine } from "../../../design-system/errorline";
+import { IconAction } from "../../../design-system/iconaction";
+import { MoneyInput } from "../../../design-system/moneyinput";
+import {
+  OverviewCard,
+  OverviewList,
+  OverviewRow,
+  OverviewText,
+} from "../../../design-system/overviewcard";
+import {
+  RecordPicker,
+  type RecordPickerCandidate,
+} from "../../../design-system/recordpicker";
+import { formatMoneyOrAbsent, formatNumber } from "../../../format/format";
+import { type Translator, useLocale, useT } from "../../../i18n";
+import {
+  isVersionSkewOf,
+  problemMessageOf,
+  problemStatus,
+  unwrap,
+} from "../../../lib/problem";
+import { REPORTING_EVALUATION_KEY } from "../../../lib/reportingfigures";
+import { searchProductCandidates } from "../products";
+import {
+  type DealCommercial,
+  DealLinesEditor,
+  DealLinesTotal,
+  useDealLines,
+} from "./deallines";
+
+type DealProduct = components["schemas"]["DealProduct"];
+type DealProductList = components["schemas"]["DealProductListResponse"];
+
+/** One product the editor holds, with the amount in the deal's currency. */
+type Allocation = {
+  productId: string;
+  name: string;
+  amountMinor: number | null;
+};
+
+export const dealProductsKey = (dealId: string) =>
+  ["deal-products", dealId] as const;
+
+// The card and the editor read the set the same way. So the tag a save sends
+// is the tag of the rows the editor shows.
+function dealProductsQuery(dealId: string, t: Translator) {
+  return {
+    queryKey: dealProductsKey(dealId),
+    queryFn: async (): Promise<DealProductList> =>
+      unwrap(
+        await api.GET("/deals/{id}/products", {
+          params: { path: { id: dealId } },
+        }),
+        t,
+      ),
+  };
+}
+
+/**
+ * The products a deal sells. A deal priced from its own lines shows them, with
+ * the value they add up to, and edits them in the line editor. Any other deal
+ * shows the split an accepted offer or a writer set, and may start pricing
+ * from lines.
+ */
+export function DealProductsCard({
+  dealId,
+  currency,
+  typedAmount,
+  refusedReasonId,
+}: Readonly<{
+  dealId: string;
+  // Amounts are written in the deal's currency. A deal nobody priced takes
+  // products without amounts.
+  currency: string | null;
+  // The value a human typed on the deal, as the reader sees it, or null.
+  typedAmount: string | null;
+  // The page's sentence about why the deal takes no changes, when it does not.
+  refusedReasonId?: string;
+}>) {
+  const t = useT();
+  const [editing, setEditing] = useState<"split" | "lines" | null>(null);
+  const query = useQuery(dealProductsQuery(dealId, t));
+  const lines = useDealLines(dealId);
+  const title = t("deal.products.title");
+  if (query.isError) {
+    return (
+      <OverviewCard title={title}>
+        {problemStatus(query.error) === 403 ? (
+          <OverviewText>{t("deal.products.denied")}</OverviewText>
+        ) : (
+          <ErrorLine error={query.error} standing />
+        )}
+      </OverviewCard>
+    );
+  }
+  if (!query.data || lines.isPending) {
+    return <OverviewCard title={title} />;
+  }
+  // A failed lines read leaves the card as it was before deals had lines.
+  const state = lines.data;
+  const linesMode = state?.mode === "lines";
+  return (
+    <>
+      <OverviewCard
+        title={title}
+        action={
+          <DealProductsActions
+            state={state}
+            refusedReasonId={refusedReasonId}
+            onEdit={setEditing}
+          />
+        }
+        empty={linesMode ? t("deal.lines.empty") : t("deal.products.empty")}
+        foot={state && linesMode ? <DealLinesTotal state={state} /> : undefined}
+      >
+        {state && linesMode
+          ? state.lines.length > 0 && <DealLineRows state={state} />
+          : query.data.data.length > 0 && (
+              <AllocationRows rows={query.data.data} />
+            )}
+      </OverviewCard>
+      {/* Beside the card, not inside it: the card draws its empty words only
+          while it holds no body. */}
+      {editing === "split" && (
+        <DealProductsEditor
+          dealId={dealId}
+          currency={currency}
+          current={query.data}
+          onClose={() => setEditing(null)}
+        />
+      )}
+      {editing === "lines" && state && (
+        <DealLinesEditor
+          dealId={dealId}
+          state={state}
+          typedAmount={typedAmount}
+          onClose={() => setEditing(null)}
+        />
+      )}
+    </>
+  );
+}
+
+function DealProductsActions({
+  state,
+  refusedReasonId,
+  onEdit,
+}: Readonly<{
+  // Undefined when the lines could not be read: the card then edits the
+  // hand-set split only.
+  state: DealCommercial | undefined;
+  refusedReasonId?: string;
+  onEdit: (editor: "split" | "lines") => void;
+}>) {
+  const t = useT();
+  // Why the lines take no change, when the page itself takes changes.
+  const refusedReason =
+    refusedReasonId || state?.writable
+      ? undefined
+      : t("deal.lines.notWritable");
+  if (state?.mode === "lines") {
+    return (
+      <Button
+        variant="link"
+        reasonId={refusedReasonId}
+        reason={refusedReason}
+        onClick={() => onEdit("lines")}
+      >
+        {t("deal.lines.edit")}
+      </Button>
+    );
+  }
+  return (
+    <>
+      {state && (
+        <Button
+          variant="link"
+          reasonId={refusedReasonId}
+          reason={refusedReason}
+          onClick={() => onEdit("lines")}
+        >
+          {t("deal.lines.start")}
+        </Button>
+      )}
+      <Button
+        variant="link"
+        reasonId={refusedReasonId}
+        onClick={() => onEdit("split")}
+      >
+        {t("deal.products.edit")}
+      </Button>
+    </>
+  );
+}
+
+function DealLineRows({ state }: Readonly<{ state: DealCommercial }>) {
+  const { locale } = useLocale();
+  return (
+    <OverviewList>
+      {state.lines.map((line) => (
+        <OverviewRow
+          key={line.id}
+          title={line.description}
+          sub={
+            line.quantity == null
+              ? undefined
+              : `${formatNumber(line.quantity, locale)} ${line.unit}`
+          }
+          right={formatMoneyOrAbsent(
+            line.committed_net_minor,
+            line.currency,
+            locale,
+          )}
+        />
+      ))}
+    </OverviewList>
+  );
+}
+
+function AllocationRows({ rows }: Readonly<{ rows: readonly DealProduct[] }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  return (
+    <OverviewList>
+      {rows.map((row) => (
+        <OverviewRow
+          key={row.product_id}
+          title={row.product_name}
+          sub={formatMoneyOrAbsent(row.amount_minor, row.currency, locale)}
+          right={
+            <Badge>
+              {row.source === "offer"
+                ? t("deal.products.fromOffer")
+                : t("deal.products.setByHand")}
+            </Badge>
+          }
+        />
+      ))}
+    </OverviewList>
+  );
+}
+
+function allocationsOf(set: DealProductList): Allocation[] {
+  return set.data.map((row) => ({
+    productId: row.product_id,
+    name: row.product_name,
+    amountMinor: row.amount_minor ?? null,
+  }));
+}
+
+/** Replaces the deal's products with the list the writer builds here. */
+export function DealProductsEditor({
+  dealId,
+  currency,
+  current,
+  onClose,
+}: Readonly<{
+  dealId: string;
+  currency: string | null;
+  current: DealProductList;
+  onClose: () => void;
+}>) {
+  const t = useT();
+  const client = useQueryClient();
+  // The set the list was seeded from. Its tag is the save's precondition, and
+  // it moves only when the editor reseeds, never when the card rerenders.
+  const [read, setRead] = useState(current);
+  const [list, setList] = useState<Allocation[]>(() => allocationsOf(current));
+  const [reseeded, setReseeded] = useState(false);
+  const replace = useMutation({
+    mutationFn: async (next: {
+      allocations: readonly Allocation[];
+      expectedTag: string;
+    }) =>
+      unwrap(
+        await api.PUT("/deals/{id}/products", {
+          params: { path: { id: dealId } },
+          body: {
+            expected_tag: next.expectedTag,
+            products: next.allocations.map((row) => ({
+              product_id: row.productId,
+              amount_minor: currency ? row.amountMinor : null,
+            })),
+          },
+        }),
+        t,
+      ),
+    onSuccess: (saved) => {
+      client.setQueryData(dealProductsKey(dealId), saved);
+      // The commercial mix and product bookings read these allocations.
+      void client.invalidateQueries({ queryKey: REPORTING_EVALUATION_KEY });
+      onClose();
+    },
+    onError: async (error) => {
+      if (!isVersionSkewOf(error)) return;
+      // Somebody saved the set since it was read: show theirs, so the next
+      // save starts from it. A failed reload leaves the skew's own message up.
+      const fresh = await client
+        .fetchQuery({ ...dealProductsQuery(dealId, t), staleTime: 0 })
+        .catch(() => null);
+      if (!fresh) return;
+      setRead(fresh);
+      setList(allocationsOf(fresh));
+      setReseeded(true);
+    },
+  });
+  const fromOffer = read.data.some((row) => row.source === "offer");
+  const listed = new Set(list.map((row) => row.productId));
+  const add = (candidate: RecordPickerCandidate) =>
+    setList((rows) => [
+      ...rows,
+      { productId: candidate.id, name: candidate.name, amountMinor: null },
+    ]);
+  const update = (productId: string, amountMinor: number | null) =>
+    setList((rows) =>
+      rows.map((row) =>
+        row.productId === productId ? { ...row, amountMinor } : row,
+      ),
+    );
+  const remove = (productId: string) =>
+    setList((rows) => rows.filter((row) => row.productId !== productId));
+  return (
+    <ConfirmModal
+      open
+      intent="form"
+      onClose={onClose}
+      title={t("deal.products.editTitle")}
+      confirmLabel={t("deal.products.save")}
+      pending={replace.isPending}
+      error={
+        replace.error && !reseeded ? problemMessageOf(replace.error, t) : null
+      }
+      onConfirm={() => {
+        setReseeded(false);
+        replace.mutate({ allocations: list, expectedTag: read.tag });
+      }}
+    >
+      {reseeded && (
+        <p className="t-caption" role="status">
+          {t("deal.products.changedWhileEditing")}
+        </p>
+      )}
+      <p className="t-body">
+        {fromOffer
+          ? t("deal.products.replacesOffer")
+          : t("deal.products.intro")}
+      </p>
+      {list.length === 0 && (
+        <p className="t-caption">{t("deal.products.emptyTakesOffer")}</p>
+      )}
+      {list.length > 0 && (
+        <ul className="deal-products-edit">
+          {list.map((row) => (
+            <li key={row.productId} className="deal-products-edit-row">
+              <span className="t-body">{row.name}</span>
+              {currency && (
+                <MoneyInput
+                  aria-label={t("deal.products.amount", { name: row.name })}
+                  currency={currency}
+                  valueMinor={row.amountMinor ?? 0}
+                  blankWhenZero
+                  onChangeMinor={(minor) => update(row.productId, minor)}
+                  onClear={() => update(row.productId, null)}
+                />
+              )}
+              <IconAction
+                icon={<Trash2 />}
+                label={t("deal.products.remove", { name: row.name })}
+                onClick={() => remove(row.productId)}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+      <RecordPicker
+        label={t("deal.products.add")}
+        searchTargets={searchProductCandidates}
+        unavailableReason={(candidate) =>
+          listed.has(candidate.id)
+            ? t("deal.products.alreadyListed")
+            : undefined
+        }
+        onPick={add}
+      />
+    </ConfirmModal>
+  );
+}

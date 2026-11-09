@@ -2,15 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import type { ListQuery } from "../../components/listquery";
+import { ListSurface } from "../../design-system/listsurface";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import { SaveViewAction } from "./savedviews";
+import { SavedViewsFailure, SaveViewAction } from "./savedviews";
 
 // A saved view is per-user list state, by name: saved beside a list's own
 // tools through the catalog's one naming dialog, and managed from the same
@@ -98,7 +99,7 @@ export const NamingAView: Story = {
   // The naming dialog, opened.
   render: () => {
     routes();
-    return <SaveViewAction resource="contacts" query={NARROWED} />;
+    return <SaveViewAction resource="contacts" state={{ query: NARROWED }} />;
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -113,7 +114,7 @@ export const NothingWorthSaving: Story = {
   // to rename or delete.
   render: () => {
     routes();
-    return <SaveViewAction resource="contacts" query={UNNARROWED} />;
+    return <SaveViewAction resource="contacts" state={{ query: UNNARROWED }} />;
   },
 };
 
@@ -125,7 +126,7 @@ export const ManagingViews: Story = {
       "PATCH /views/v-1": () => jsonResponse(VIEWS.data[0]),
       "DELETE /views/v-1": () => jsonResponse(VIEWS.data[0]),
     });
-    return <SaveViewAction resource="contacts" query={UNNARROWED} />;
+    return <SaveViewAction resource="contacts" state={{ query: UNNARROWED }} />;
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -139,14 +140,34 @@ export const ManagingViews: Story = {
   },
 };
 
+// The failure stands on the toolbar under the search, seen without opening
+// View, and it names the saved views beside the dials it sits among.
 export const TheRailFailedToLoad: Story = {
-  // The one place that says the saved-view rail did not load, and it says WHICH
-  // surface: the notice lands beside a list's Columns and Compact buttons, where
-  // an unnamed "this section did not load" could be any of the three.
   render: () => {
     routes({
       "GET /views": () => jsonResponse({ title: "Server error" }, 500),
     });
-    return <SaveViewAction resource="contacts" query={NARROWED} />;
+    return (
+      <ListSurface
+        search={{ value: "", onChange: () => undefined }}
+        saveView={
+          <SaveViewAction resource="contacts" state={{ query: NARROWED }} />
+        }
+        notice={<SavedViewsFailure resource="contacts" />}
+      >
+        <p>Rows</p>
+      </ListSurface>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const failed = await canvas.findByRole("alert");
+    await expect(failed).toHaveTextContent("Saved views did not load.");
+    await expect(canvas.queryByRole("heading")).toBeNull();
+    await expect(failed.closest(".lt-tools")).not.toBeNull();
+    await expect(
+      within(failed).getByRole("button", { name: "Retry" }),
+    ).toBeVisible();
+    await expect(canvas.queryByRole("dialog")).toBeNull();
   },
 };

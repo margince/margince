@@ -1,15 +1,23 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Button, Field } from "../../design-system/atoms";
 import { TimezoneSelect } from "../../design-system/timezoneselect";
 import { useT } from "../../i18n";
 import { navigate } from "../../lib/router";
-import { PoweredBy } from "../deals/buyerroomframe";
 
-export function BookingFooter() {
-  return (
-    <PoweredBy className="book-powered" markClassName="book-powered-mark" />
-  );
+// A guest's tab names the booking they are on, never the product. The shell's
+// "Margince" title comes back when the screen leaves. null leaves the title
+// alone, for the host's own signed-in views of the same screens.
+export function useBookingTitle(title: string | null) {
+  useEffect(() => {
+    if (title === null) return;
+    const previous = document.title;
+    document.title = title;
+    return () => {
+      document.title = previous;
+    };
+  }, [title]);
 }
+
 export function BookingZone({
   value,
   onChange,

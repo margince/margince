@@ -219,6 +219,18 @@ func (s *Service) optionalLanes(
 	return append(lanes, s.operationalLanes(ctx, asOf, out)...)
 }
 
+// bookingLane is the reader's own paused booking page, at most one card.
+func (s *Service) bookingLane(ctx context.Context, out *crmcontracts.Attention) optionalLane {
+	return optionalLane{
+		name: "booking_health", bound: s.bookingHealth != nil,
+		read: func() ([]crmcontracts.AttentionItem, error) {
+			concerns, err := s.bookingHealth.BookingConcerns(ctx)
+			return renderEach(concerns, bookingItem), err
+		},
+		into: &out.BookingHealth, count: &out.Counts.BookingHealth,
+	}
+}
+
 // operationalLanes is the second half of the list: what is broken between
 // this reader and the world — their mailboxes, their delegated AI work, their
 // sends. Split from optionalLanes on the function-length
@@ -235,6 +247,7 @@ func (s *Service) operationalLanes(
 			},
 			into: &out.CaptureHealth, count: &out.Counts.CaptureHealth,
 		},
+		s.bookingLane(ctx, out),
 		{
 			name: "domain_questions", bound: s.domainQuestions != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {

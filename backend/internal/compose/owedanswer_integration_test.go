@@ -95,6 +95,7 @@ type owedEnv struct {
 func setupOwed(t *testing.T) *owedEnv {
 	t.Helper()
 	e := integration.Setup(t)
+	e.GrantRole(t, e.Rep1, "rep")
 	o := &owedEnv{e: e, owner: e.Rep1, seat: seatAddress(t, e, e.Rep1), now: time.Now()}
 	// A shared mailbox, so captured mail is workspace mail: the classifier
 	// judges only mail the workspace may read.
@@ -430,10 +431,9 @@ func TestMailJudgedToAskNothingIsHiddenWithItsFigure(t *testing.T) {
 	}
 }
 
-// The badge and the lane agree on every message of a mixed mailbox. The one
-// difference allowed is a queue rule, and each such rule has its figure in
-// /worklist/hidden: here, mail past the horizon is still owed on its badge,
-// absent from the lane, and counted as past_horizon.
+// The badge and the lane agree on every message of a mixed mailbox, mail past
+// the horizon included: it is off the lane and no longer owed on its badge, and
+// /worklist/hidden counts it as past_horizon.
 func TestTheBadgeAndTheLaneAgreeOnEveryOwedMail(t *testing.T) {
 	o := setupOwed(t)
 	// One sender per answered case: a call with a sender answers every earlier
@@ -502,8 +502,8 @@ func TestTheBadgeAndTheLaneAgreeOnEveryOwedMail(t *testing.T) {
 		}
 	}
 
-	if !o.badged(t, old) || o.waiting(t, old) {
-		t.Fatalf("mail past the horizon: badge=%v lane=%v, want owed on the badge and off the lane",
+	if o.badged(t, old) || o.waiting(t, old) {
+		t.Fatalf("mail past the horizon: badge=%v lane=%v, want neither",
 			o.badged(t, old), o.waiting(t, old))
 	}
 	after, err := store.HiddenWaiting(o.reader(), time.Now())

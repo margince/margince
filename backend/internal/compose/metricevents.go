@@ -19,6 +19,12 @@ func readReportingQualified(ctx context.Context, tx pgx.Tx, frame crmcontracts.R
 	if !reportingHasQualification(frame, framework) {
 		return nil, reportingGap("not_configured", reporting.ExplanationCopy(frame).Say(reportingCoverageWords.Qualification)), nil
 	}
+	return readDealMetricFacts(ctx, tx, frame, reportingQualifiedPipelineCreated, qualifiedMetricQuery(framework))
+}
+
+// qualifiedMetricQuery reads each deal's first qualifying stage entry under
+// the framework revision in force when it happened.
+func qualifiedMetricQuery(framework crmcontracts.ReportingFramework) metricFactQuery {
 	// Revisions apply prospectively; an explicit reversal voids its event,
 	// whereas an ordinary regression leaves the first qualifying entry intact.
 	from := `JOIN LATERAL (SELECT h.* FROM deal_stage_history h
@@ -28,8 +34,7 @@ func readReportingQualified(ctx context.Context, tx pgx.Tx, frame crmcontracts.R
  AND EXISTS(SELECT 1 FROM jsonb_array_elements(f.definition->'qualification') q
  WHERE q->>'pipeline_id'=h.pipeline_id_at_change::text AND (q->'stage_ids') ? h.to_stage_id::text)
  ORDER BY h.changed_at,h.id LIMIT 1) qualified ON true`
-	query := metricFactQuery{pipeline: "qualified.pipeline_id_at_change", revision: framework.Revision, from: from, where: "t.archived_at IS NULL", owner: "qualified.owner_id_at_change", at: "qualified.changed_at", key: "qualified.id::text", stage: "qualified.to_stage_id::text", stageLabel: "''", outcome: "'qualified'", provenance: "COALESCE(qualified.valuation_provenance,'legacy_unavailable')", value: "qualified.base_minor_at_change", money: true}
-	return readDealMetricFacts(ctx, tx, frame, reportingQualifiedPipelineCreated, query)
+	return metricFactQuery{pipeline: "qualified.pipeline_id_at_change", revision: framework.Revision, from: from, where: "t.archived_at IS NULL", owner: "qualified.owner_id_at_change", at: "qualified.changed_at", key: "qualified.id::text", stage: "qualified.to_stage_id::text", stageLabel: "''", outcome: "'qualified'", provenance: "COALESCE(qualified.valuation_provenance,'legacy_unavailable')", value: "qualified.base_minor_at_change", money: true}
 }
 
 func reportingGap(status crmcontracts.ReportingStatus, reason string) crmcontracts.ReportingCoverage {

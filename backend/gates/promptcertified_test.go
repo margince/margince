@@ -192,7 +192,7 @@ func walkPromptTree(t *testing.T, root string) promptGraph {
 		cert bool
 	}
 	var files []parsed
-	err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

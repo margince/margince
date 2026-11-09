@@ -11,9 +11,9 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
+import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import { ReportingComparison } from "./reporting.comparison";
 import { ReportingDefinitions } from "./reporting.definitions";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { ReportingExecutions } from "./reporting.executions";
 import { ReportingExportButton } from "./reporting.export";
 import { ReportingForecastGraphs } from "./reporting.forecast";

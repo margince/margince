@@ -33,10 +33,24 @@ type ReadView struct {
 	Query      []ViewQuery
 }
 
-// ViewQuery is one query parameter of a view's route, with its JSON type.
+// viewNameSchema names where the catalog lives. One view stands as an example,
+// so a caller and the role sweep's filler have a real name to start from.
+func viewNameSchema(views []ReadView) string {
+	schema := `{"type":"string","description":"a view named in ` + ReadViewsURI + ` or describe_views"`
+	if names := viewNames(views); len(names) > 0 {
+		schema += `,"examples":[` + strconv.Quote(names[0]) + `]`
+	}
+	return schema + "}"
+}
+
+// ViewQuery is one query parameter of a route: what read_view binds, and what
+// the views document and a route verb tell a caller about it.
 type ViewQuery struct {
-	Name string
-	Type string
+	Name     string   `json:"name"`
+	Type     string   `json:"type"`
+	Required bool     `json:"required,omitempty"`
+	Enum     []string `json:"enum,omitempty"`
+	Format   string   `json:"format,omitempty"`
 }
 
 // queryNames are the names of a view's query parameters.
@@ -112,7 +126,6 @@ func viewArgSchema(arg string, byType map[string][]string) string {
 }
 
 func (t readView) Spec() mcp.ToolSpec {
-	names := make([]string, 0, len(t.views))
 	ops := make([]string, 0, len(t.views))
 	types := map[string]map[string][]string{} // argument → JSON type → views
 	note := func(arg, jsonType, view string) {
@@ -122,7 +135,6 @@ func (t readView) Spec() mcp.ToolSpec {
 		types[arg][jsonType] = append(types[arg][jsonType], view)
 	}
 	for _, v := range t.views {
-		names = append(names, v.Name)
 		ops = append(ops, v.Op)
 		for _, p := range v.PathParams {
 			note(p, schemaString, v.Name)
@@ -133,8 +145,7 @@ func (t readView) Spec() mcp.ToolSpec {
 		note("cursor", schemaString, v.Name)
 		note("limit", "integer", v.Name)
 	}
-	slices.Sort(names)
-	properties := []string{strconv.Quote(viewArg) + `:{"type":"string","enum":` + mustJSON(names) + `}`}
+	properties := []string{strconv.Quote(viewArg) + ":" + viewNameSchema(t.views)}
 	for _, arg := range slices.Sorted(maps.Keys(types)) {
 		properties = append(properties, strconv.Quote(arg)+":"+viewArgSchema(arg, types[arg]))
 	}
@@ -160,7 +171,10 @@ func (t readView) Handle(ctx context.Context, in json.RawMessage) (json.RawMessa
 	}
 	idx := slices.IndexFunc(t.views, func(v ReadView) bool { return v.Name == name })
 	if idx < 0 {
-		return nil, &BadArgsError{Field: viewArg, Cause: fmt.Errorf("%q is not a view", name)}
+		return nil, &BadArgsError{
+			Field: viewArg, Cause: fmt.Errorf("%q is not a view", name),
+			Guidance: "the views are " + strings.Join(viewNames(t.views), ", "),
+		}
 	}
 	view := t.views[idx]
 	path := map[string]string{}

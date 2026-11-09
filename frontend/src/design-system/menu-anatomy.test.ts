@@ -136,7 +136,8 @@ const SURFACES: readonly Surface[] = [
     rows: [".accountsub .choicelist-choice"],
     floor:
       "it opens inward from a right-anchored menu, so width is distance toward the window's own left edge",
-    ceiling: "three theme radios; it cannot grow",
+    ceiling:
+      "three theme radios, or help's five rows over the build; neither roster grows",
   },
   {
     selector: ".overflow-menu-items",
@@ -416,7 +417,12 @@ function classesUnderAnOptionRole(): string[] {
   // `is-active`, `active` and the like are STATES a row wears, not rows: they
   // ride the same attribute and say nothing about a box.
   const states = /^(is-|active$|selected$|open$|right$)/;
-  return [...found].filter((one) => !states.test(one)).sort();
+  // A class that only places a surface (app/topbar-popover.css) says nothing
+  // about its box either.
+  const placements = new Set(["topbar-popover"]);
+  return [...found]
+    .filter((one) => !states.test(one) && !placements.has(one))
+    .sort();
 }
 
 // The two sizes are TOKENS, and every call site spells the value as a fallback

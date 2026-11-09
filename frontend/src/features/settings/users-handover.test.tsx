@@ -27,7 +27,9 @@ describe("handing over a member's work", () => {
     const dialog = await screen.findByRole("dialog");
     await waitFor(() =>
       expect(
-        within(dialog).getByText("Otto Off still owns 16 deals and 4 leads."),
+        within(dialog).getByText(
+          "Otto Off still owns 16 deals, 4 leads and 2 webhooks.",
+        ),
       ).toBeTruthy(),
     );
 
@@ -71,7 +73,7 @@ describe("handing over a member's work", () => {
     await waitFor(() =>
       expect(
         within(dialog).getByText(
-          /Ada Active still owns 16 deals and 4 leads\./,
+          /Ada Active still owns 16 deals, 4 leads and 2 webhooks\./,
         ),
       ).toBeTruthy(),
     );

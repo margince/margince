@@ -24,7 +24,7 @@ import (
 // the task resolves the seat's live authority the way it does in production.
 func asLeadReadingSeat(t *testing.T, l *leadMailEnv) {
 	t.Helper()
-	l.e.WsExec(t, `INSERT INTO role_assignment (role_id, user_id) SELECT r.id, $1 FROM role r WHERE r.key = 'rep'`, l.owner)
+	l.e.GrantRole(t, l.owner, "rep")
 }
 
 // leadFilingPass runs every batch at limit 1 on one transaction, rolled back

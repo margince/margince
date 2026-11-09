@@ -1,0 +1,57 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package comms
+
+import (
+	"context"
+	"errors"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+// WithPartySettlement adds domain effects that must succeed before a receipt's derivation work retires.
+func WithPartySettlement(settle func(context.Context, pgx.Tx, ids.ActivityID) error) StoreOption {
+	return func(s *Store) { s.partySettlement = settle }
+}
+
+// SettlePartyAdmission retires derivation work for one durable send receipt.
+func (s *Store) SettlePartyAdmission(ctx context.Context, delivery ids.UUID) error {
+	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
+		return err
+	}
+	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var activity, owner ids.UUID
+		err := tx.QueryRow(ctx, `SELECT activity_id,user_id FROM comms_outbound WHERE id=@delivery AND sender_kind='user' AND status='sent'`, pgx.NamedArgs{"delivery": delivery}).Scan(&activity, &owner)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		actor, ok := principal.Actor(ctx)
+		if !ok {
+			return apperrors.ErrPermissionDenied
+		}
+		if actor.Type != principal.PrincipalSystem {
+			if actor.UserID != owner && actor.OnBehalfOf != owner {
+				return apperrors.ErrPermissionDenied
+			}
+		}
+		if err := auth.EnsureActivityContentVisibleLive(ctx, tx, activity); err != nil {
+			return err
+		}
+		if s.partySettlement != nil {
+			if err := s.partySettlement(ctx, tx, ids.From[ids.ActivityKind](activity)); err != nil {
+				return err
+			}
+		}
+		_, err = tx.Exec(ctx, `UPDATE comms_outbound SET party_admission_pending=false WHERE id=@delivery AND status='sent'`, pgx.NamedArgs{"delivery": delivery})
+		return err
+	})
+}

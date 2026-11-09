@@ -113,14 +113,38 @@ export const AudienceOpen: Story = {
     activity: { ...BASE, kind: "call", subject: "Rückfragen zum Angebot" },
   },
   play: async ({ canvasElement }) => {
-    // The control waits for the reader's grants, which arrive after the first paint.
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "Change visibility",
+        name: "More actions for Rückfragen zum Angebot",
       }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Change visibility" }),
     );
     await screen.findByRole("dialog", { name: "Who may read this message?" });
   },
+};
+
+/** Captured mail on a deal's timeline: "Not about this deal", open. */
+export const NotAboutThisDeal: Story = {
+  args: { activity: { ...CAPTURED, subject: "Rechnungslauf Oktober" } },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "More actions for Rechnungslauf Oktober",
+      }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Not about this deal" }),
+    );
+    await screen.findByRole("dialog", {
+      name: "Take this email off the deal?",
+    });
+  },
+};
+export const NotAboutThisDealDark: Story = {
+  ...NotAboutThisDeal,
+  globals: { theme: "dark" },
 };
 
 export const InvitationPending: Story = {

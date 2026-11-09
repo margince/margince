@@ -7,7 +7,7 @@ package gates
 
 import (
 	"go/ast"
-	"os"
+	"maps"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -35,6 +35,43 @@ import (
 func TestEveryFileTheCascadeExecutesSQLFromIsCensused(t *testing.T) {
 	t.Parallel()
 	reached := filesReachableFrom(t, "internal/modules/privacy", "EraseContact")
+	delegated := false
+	for path := range reached {
+		file, err := gatekit.ParseFile(path, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		delegated = delegated || gatekit.CallsAny(file, []string{"PurgePartySourcesForEmailsTx"})
+	}
+	if !delegated {
+		t.Fatal("subject erasure no longer calls the party-source owner's purge seam")
+	}
+	maps.Copy(reached, filesReachableFrom(t, "internal/modules/capture", "PurgePartySourcesForEmailsTx"))
+	copied := false
+	for path := range reached {
+		file, err := gatekit.ParseFile(path, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		copied = copied || gatekit.CallsAny(file, []string{"PurgeTextCopiesTx"})
+	}
+	if !copied {
+		t.Fatal("subject erasure no longer calls the seam that empties copies of the erased mail text")
+	}
+	maps.Copy(reached, filesReachableFrom(t, "internal/modules/ai", "EraseSamplesCopiedFromTx"))
+	scrubbed := false
+	for path := range reached {
+		file, err := gatekit.ParseFile(path, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		scrubbed = scrubbed || gatekit.CallsAny(file, []string{"ScrubDeliveryCopiesTx"})
+	}
+	if !scrubbed {
+		t.Fatal("subject erasure no longer calls the seam that clears webhook bodies rendered from the subject")
+	}
+	maps.Copy(reached, filesReachableFrom(t, "internal/modules/webhooks", "ScrubSubjectDeliveriesTx"))
+	maps.Copy(reached, filesReachableFrom(t, "internal/platform/database/storekit", "RedactAuditHistory"))
 
 	cascade := map[string]bool{}
 	for _, path := range erasureCascadeFiles {
@@ -91,7 +128,7 @@ func filesReachableFrom(t *testing.T, dir, entry string) map[string]bool {
 	// reason that bites here: it associates files with packages without reading
 	// build tags. This walk wants every non-test source in the directory, which
 	// is a simpler question and one a directory read answers exactly.
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", dir, err)
 	}
@@ -160,7 +197,7 @@ func filesReachableFrom(t *testing.T, dir, entry string) map[string]bool {
 // census has anything to say about.
 func executesSQL(t *testing.T, path string) bool {
 	t.Helper()
-	body, err := os.ReadFile(path)
+	body, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

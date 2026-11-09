@@ -12,8 +12,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
-const overrideCarryCandidates = `SELECT DISTINCT ON (live.category)
- live.id, live.category, live.reason, live.decided_by_level
+const overrideCarryCandidates = `SELECT DISTINCT ON (live.legal_entity_id, live.category)
+ live.id, live.category, live.reason, live.decided_by_level, live.legal_entity_id
  FROM communication_override live
  WHERE ((@from_contact::uuid IS NOT NULL AND live.contact_id=@from_contact)
  OR (@from_lead::uuid IS NOT NULL AND live.lead_id=@from_lead))
@@ -21,10 +21,10 @@ const overrideCarryCandidates = `SELECT DISTINCT ON (live.category)
  AND NOT EXISTS (SELECT 1 FROM communication_override held
  WHERE ((@to_contact::uuid IS NOT NULL AND held.contact_id=@to_contact)
  OR (@to_lead::uuid IS NOT NULL AND held.lead_id=@to_lead))
- AND held.category=live.category AND held.revoked_at IS NULL
+ AND held.category=live.category AND held.legal_entity_id=live.legal_entity_id AND held.revoked_at IS NULL
  AND coalesce(array_position(@ladder::text[],held.decided_by_level),array_length(@ladder::text[],1)+1)
  >= coalesce(array_position(@ladder::text[],live.decided_by_level),array_length(@ladder::text[],1)+1))
- ORDER BY live.category,
+ ORDER BY live.legal_entity_id, live.category,
  coalesce(array_position(@ladder::text[],live.decided_by_level),array_length(@ladder::text[],1)+1) DESC,
  live.recorded_at DESC, live.id`
 

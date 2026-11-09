@@ -67,9 +67,9 @@ func (s *Store) WithFieldCatalog(catalog fieldcatalog.Reader) *Store {
 	return s
 }
 
-// WithClock replaces the "today" source, so a test can state the date a phase
+// SetClock replaces the "today" source, so a test can state the date a phase
 // transition is measured against instead of racing the wall clock.
-func (s *Store) WithClock(clock func() time.Time) *Store {
+func (s *Store) SetClock(clock func() time.Time) *Store {
 	s.clock = clock
 	return s
 }

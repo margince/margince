@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { webUrl } from "../format/weburl";
 
 // A destination OFF our origin, drawn as a link when the address is one we may
@@ -32,25 +32,32 @@ export function OffsiteLink({
   children,
   className = "link-button",
   label,
-}: Readonly<{
-  href: string;
-  // What the reader sees. Callers pass a shortened or humanized form of the
-  // address; the full one stays in `href`, so the row reads as a value rather
-  // than as a URL.
-  children: ReactNode;
-  // The affordance this link wears. Defaults to the product's secondary text
-  // affordance; a caller whose surface already styles its own anchors passes
-  // its class instead.
-  className?: string;
-  // What the link does, where the visible text names only the place it goes.
-  label?: string;
-}>) {
+  ...anchor
+}: Readonly<
+  Omit<
+    ComponentProps<"a">,
+    "href" | "children" | "className" | "target" | "rel" | "aria-label"
+  > & {
+    href: string;
+    // What the reader sees: a shortened form of the address. The full one stays
+    // in `href`, so the row reads as a value, not a URL.
+    children: ReactNode;
+    // The affordance this link wears. Defaults to the product's secondary text
+    // affordance; a caller whose surface already styles its own anchors passes
+    // its class instead.
+    className?: string;
+    // What the link does, where the visible text names only the place it goes.
+    label?: string;
+  }
+>) {
   const destination = webUrl(href);
+  // Refused, it is text: a menu item's role and tabstop would promise a link.
   if (!destination) {
     return <span className={className}>{children}</span>;
   }
   return (
     <a
+      {...anchor}
       className={className}
       aria-label={label}
       href={destination.toString()}

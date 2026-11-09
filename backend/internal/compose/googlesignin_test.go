@@ -107,7 +107,7 @@ func TestGoogleOIDCVerifierAdapterTranslatesClaims(t *testing.T) {
 	rig := newOIDCTestRig(t)
 	v := newGoogleOIDCVerifier(rig.jwksURL(), identityResolvedPerRequest).
 		withHTTPClient(rig.srv.Client()).
-		withClock(func() time.Time { return rig.base })
+		setClock(func() time.Time { return rig.base })
 	adapter := googleOIDCVerifierAdapter{v: v, matchIdentity: func(oidcClaims) error { return nil }}
 
 	// A Google token typically carries NO groups claim: the adapter must
@@ -115,6 +115,7 @@ func TestGoogleOIDCVerifierAdapterTranslatesClaims(t *testing.T) {
 	// grants nothing.
 	tok := rig.mint(t, testKID, "RS256", map[string]any{
 		"sub": "sub-1", "email": "carol@example.com", "given_name": "Carol",
+		"picture": "https://lh3.googleusercontent.com/a/carol",
 	})
 	claims, err := adapter.Verify(context.Background(), tok)
 	if err != nil {
@@ -125,6 +126,9 @@ func TestGoogleOIDCVerifierAdapterTranslatesClaims(t *testing.T) {
 	}
 	if claims.GivenName != "Carol" {
 		t.Fatalf("given name = %q, want the token's given_name claim", claims.GivenName)
+	}
+	if claims.Picture != "https://lh3.googleusercontent.com/a/carol" {
+		t.Fatalf("picture = %q, want the token's picture claim", claims.Picture)
 	}
 	if len(claims.Groups) != 0 {
 		t.Fatalf("groups = %v for a token carrying no groups claim, want none", claims.Groups)

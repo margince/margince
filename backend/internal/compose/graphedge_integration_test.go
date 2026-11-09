@@ -29,10 +29,18 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/contact360"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/network"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/comms"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // edgeEnv seeds interactions directly as participant rows — the shape capture
@@ -89,6 +97,20 @@ func (v edgeEnv) contact(t *testing.T, name string) ids.ContactID {
 	return id
 }
 
+// copyColleague puts user on the activity in copy, as a colleague cc'd on
+// someone else's mail.
+func (v edgeEnv) copyColleague(t *testing.T, activityID, user ids.UUID) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO activity_participant (activity_id, user_id, role) VALUES ($1, $2, 'cc')`,
+			activityID, user)
+		return err
+	}); err != nil {
+		t.Fatalf("copying a colleague: %v", err)
+	}
+}
+
 // recompute folds the named activities, as the consumer does.
 func (v edgeEnv) recompute(t *testing.T, activityIDs ...ids.UUID) {
 	t.Helper()
@@ -115,12 +137,12 @@ func (v edgeEnv) edgesFor(t *testing.T, contact ids.ContactID) []search.Interact
 
 // snapshot reads the whole projection as comparable tuples — what the rebuild
 // and the incremental path must agree on.
-func (v edgeEnv) snapshot(t *testing.T) map[string][4]int {
+func (v edgeEnv) snapshot(t *testing.T) map[string][5]int {
 	t.Helper()
-	out := map[string][4]int{}
+	out := map[string][5]int{}
 	if err := database.WithWorkspaceTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
-			SELECT user_id, contact_id, count_90d, in_count_90d, out_count_90d, count_total
+			SELECT user_id, contact_id, count_90d, in_count_90d, out_count_90d, sent_count_90d, count_total
 			  FROM graph_interaction_edge ORDER BY user_id, contact_id`)
 		if err != nil {
 			return err
@@ -128,11 +150,11 @@ func (v edgeEnv) snapshot(t *testing.T) map[string][4]int {
 		defer rows.Close()
 		for rows.Next() {
 			var u, p ids.UUID
-			var c, in, o, tot int
-			if err := rows.Scan(&u, &p, &c, &in, &o, &tot); err != nil {
+			var c, in, o, sent, tot int
+			if err := rows.Scan(&u, &p, &c, &in, &o, &sent, &tot); err != nil {
 				return err
 			}
-			out[u.String()+"/"+p.String()] = [4]int{c, in, o, tot}
+			out[u.String()+"/"+p.String()] = [5]int{c, in, o, sent, tot}
 		}
 		return rows.Err()
 	}); err != nil {
@@ -324,6 +346,8 @@ func TestTheNightlyRebuildAgreesWithTheIncrementalPath(t *testing.T) {
 		all = append(all, v.interaction(t, v.e.Rep1, c1, now.AddDate(0, 0, -i), "inbound", "from"))
 		all = append(all, v.interaction(t, v.e.Rep2, c1, now.AddDate(0, 0, -i-10), "outbound", "to"))
 		all = append(all, v.interaction(t, v.e.Rep1, c2, now.AddDate(0, 0, -i-20), "outbound", "cc"))
+		// Rep2 only copied on Rep1's mail: outbound for both, sent by Rep1 alone.
+		v.copyColleague(t, all[len(all)-1], v.e.Rep2)
 	}
 	v.recompute(t, all...)
 	incremental := v.snapshot(t)
@@ -346,7 +370,7 @@ func TestTheNightlyRebuildAgreesWithTheIncrementalPath(t *testing.T) {
 	}
 }
 
-func equalSnapshots(a, b map[string][4]int) bool {
+func equalSnapshots(a, b map[string][5]int) bool {
 	if len(a) != len(b) {
 		return false
 	}
@@ -442,5 +466,124 @@ func TestOneMessageCountsOnceHoweverManyRolesItNames(t *testing.T) {
 	}
 	if edges[0].CountTotal != 1 {
 		t.Errorf("total counted %d for one message", edges[0].CountTotal)
+	}
+}
+
+func TestOnlyTheSenderOfAMessageHasWrittenToTheContact(t *testing.T) {
+	v := edgeEnv{integration.Setup(t)}
+	now := clocktest.Now(t)
+	contact := v.contact(t, "Anna Buyer")
+
+	// Rep2 sends the contact one mail with Rep1 on copy. Both were on an
+	// outbound mail; only Rep2 wrote it.
+	mail := v.interaction(t, v.e.Rep2, contact, now.AddDate(0, 0, -1), "outbound", "to")
+	v.copyColleague(t, mail, v.e.Rep1)
+	// Rep2 is also in copy of their own mail, which must not count it twice.
+	v.copyColleague(t, mail, v.e.Rep2)
+	v.recompute(t, mail)
+
+	byUser := map[ids.UUID]search.InteractionEdge{}
+	for _, e := range v.edgesFor(t, contact) {
+		byUser[e.UserID] = e
+	}
+	sender, copied := byUser[v.e.Rep2], byUser[v.e.Rep1]
+	if sentCount(sender) != 1 || sender.OutCount90d != 1 {
+		t.Errorf("the sender folded to %d sent / %d out, want 1/1", sentCount(sender), sender.OutCount90d)
+	}
+	if sentCount(copied) != 0 || copied.OutCount90d != 1 {
+		t.Errorf("the colleague in copy folded to %d sent / %d out, want 0/1", sentCount(copied), copied.OutCount90d)
+	}
+}
+
+// sentCount reads a folded edge's sent count; a fold always writes one.
+func sentCount(e search.InteractionEdge) int {
+	if e.SentCount90d == nil {
+		return -1
+	}
+	return *e.SentCount90d
+}
+
+func TestAColleagueCopiedBothWaysIsNotInTouch(t *testing.T) {
+	v := edgeEnv{integration.Setup(t)}
+	now := clocktest.Now(t)
+	contact := v.contact(t, "Anna Buyer")
+
+	// Rep1 and the contact write both ways; Rep2 is copied on each mail.
+	in := v.interaction(t, v.e.Rep1, contact, now.AddDate(0, 0, -2), "inbound", "from")
+	out := v.interaction(t, v.e.Rep1, contact, now.AddDate(0, 0, -1), "outbound", "to")
+	v.copyColleague(t, in, v.e.Rep2)
+	v.copyColleague(t, out, v.e.Rep2)
+	v.recompute(t, in, out)
+
+	for _, e := range v.edgesFor(t, contact) {
+		colleague := network.WireColleague(e, "", now)
+		want := e.UserID == v.e.Rep1
+		if colleague.TwoWay == nil || *colleague.TwoWay != want {
+			t.Errorf("colleague %s two_way = %v, want %v", e.UserID, colleague.TwoWay, want)
+		}
+	}
+}
+
+func TestACallOrMeetingIsNotAMessageTheColleagueSent(t *testing.T) {
+	v := edgeEnv{integration.Setup(t)}
+	now := clocktest.Now(t)
+	contact := v.contact(t, "Anna Buyer")
+
+	var logged []ids.UUID
+	for _, kind := range []string{"call", "meeting"} {
+		activity := v.interaction(t, v.e.Rep1, contact, now.AddDate(0, 0, -1), "outbound", "to")
+		v.e.WsExec(t, `UPDATE activity SET kind = $2 WHERE id = $1`, activity, kind)
+		logged = append(logged, activity)
+	}
+	v.recompute(t, logged...)
+
+	edges := v.edgesFor(t, contact)
+	if len(edges) != 1 || sentCount(edges[0]) != 0 {
+		t.Fatalf("a logged call and meeting folded to %+v, want one edge with 0 sent", edges)
+	}
+}
+
+func TestAReaderWithoutActivityReadGetsNoSentCount(t *testing.T) {
+	v := edgeEnv{integration.Setup(t)}
+	now := clocktest.Now(t)
+	contact := v.contact(t, "Anna Buyer")
+	v.recompute(t, v.interaction(t, v.e.Rep1, contact, now.AddDate(0, 0, -1), "outbound", "to"))
+
+	// The pooled counts stand on the contact grant; who sent the mail is
+	// activity content.
+	contactOnly := v.e.As(v.e.Rep2, nil, principal.Permissions{
+		Objects:  map[string]principal.ObjectGrant{"contact": {Read: true}},
+		RowScope: principal.RowScopeAll,
+	})
+	if err := database.WithWorkspaceTx(contactOnly, v.e.Pool, func(tx pgx.Tx) error {
+		one, err := search.EdgesForContact(contactOnly, tx, contact.UUID, 50)
+		if err != nil {
+			return err
+		}
+		set, err := search.EdgesForContacts(contactOnly, tx, []ids.UUID{contact.UUID})
+		if err != nil {
+			return err
+		}
+		for _, edges := range [][]search.InteractionEdge{one, set} {
+			if len(edges) != 1 || edges[0].SentCount90d != nil || edges[0].Count90d != 1 {
+				t.Errorf("a contact-only reader got %+v, want one edge with its counts and no sent count", edges)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("reading edges as a contact-only reader: %v", err)
+	}
+
+	clock := func() time.Time { return now }
+	svc := contact360.NewService(v.e.Pool, v.e.Contacts, v.e.Deals, v.e.Projects,
+		consent.NewStore(InstallationDB(v.e.Pool)),
+		comms.NewStore(InstallationDB(v.e.Pool), clock, activities.NewStore(InstallationDB(v.e.Pool))),
+		ai.NewFeedbackStore(InstallationDB(v.e.Pool)), clock)
+	page, err := svc.Assemble(contactOnly, contact)
+	if err != nil {
+		t.Fatalf("the contact page did not render for a contact-only reader: %v", err)
+	}
+	if page.Network == nil || len(page.Network.Colleagues) != 1 || page.Network.Colleagues[0].Sent90d != nil {
+		t.Errorf("network = %+v, want the colleague without sent_90d", page.Network)
 	}
 }

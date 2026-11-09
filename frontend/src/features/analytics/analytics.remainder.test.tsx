@@ -79,14 +79,14 @@ describe("a report the server answered in full", () => {
     expect(card.queryByText(/more not shown/)).toBeNull();
   });
 
-  it("draws an empty forecast as its category slots, not as a none", async () => {
+  it("draws an empty forecast as its band slots, not as a none", async () => {
     vi.stubGlobal(
       "fetch",
       reportsStub({ forecastRows: [], totalRows: { forecast: 0 } }),
     );
     render(<AnalyticsScreen />);
-    const card = await reportCard("Forecast categories");
-    expect(await card.findByText("Commit")).toBeTruthy();
+    const card = await reportCard("Forecast by probability");
+    expect(await card.findByText("90% or more")).toBeTruthy();
     expect(card.queryByText(/more not shown/)).toBeNull();
   });
 });

@@ -14,8 +14,9 @@ package gates
 
 import (
 	"io/fs"
-	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -67,11 +68,11 @@ func TestOnlyMailIdentitySpellsTheCorrespondenceLockKey(t *testing.T) {
 	owned, judged := 0, 0
 	var findings []string
 	for _, root := range []string{"internal", "../extensions"} {
-		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+		err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") {
 				return walkErr
 			}
-			source, readErr := os.ReadFile(path) // #nosec G304 -- a *.go path from the trusted source tree
+			source, readErr := gatekit.ReadFile(path) // #nosec G304 -- a *.go path from the trusted source tree
 			if readErr != nil {
 				return readErr
 			}
@@ -103,5 +104,108 @@ func TestOnlyMailIdentitySpellsTheCorrespondenceLockKey(t *testing.T) {
 			"Take it from mailidentity.CorrespondenceLockKey, which folds the address first. "+
 			"A key that differs by a spelling takes a second lock and serializes nothing.",
 			len(findings), strings.Join(findings, ", "))
+	}
+}
+
+// foldsADomainInSQL matches a statement that normalizes a domain with SQL
+// lower() instead of the shared fold.
+//
+// Three arms, because the mistake has three spellings. lower() wrapped around a
+// domain column, which also costs the index on it. And a domain column compared
+// to a lower() of the caller's value, on either side of the `=`. None matches
+// domain_folded, which its writers fold.
+var foldsADomainInSQL = regexp.MustCompile(
+	`(?is)lower\(\s*[a-z_]*\.?domain|[a-z_.]*domain\s*=\s*lower\(|lower\([^()]*\)\s*=\s*[a-z_.]*domain\b`)
+
+// sqlFoldsAdmitted are the statements that may still lower() a domain, by name
+// and with the reason, because no fold reaches them.
+var sqlFoldsAdmitted = gatekit.Waive(map[string]string{
+	"internal/modules/search/branches.go":     "ranks a company by the trigram similarity of a typed query to its domains, through the expression idx_company_domain_trgm indexes. It scores how alike two strings look and answers no question of which domain is which, so a punycode spelling ranking lower is a search result, not two domains.",
+	"internal/compose/company360/contacts.go": "compares a stored provider claim's company_domain against the company's own domains, both sides stored, inside a correlated subquery over every claim. Postgres cannot fold IDNA and no Go value passes through, so folding it needs a folded column on both sides, which is a schema change rather than a predicate change.",
+})
+
+// TestNoSQLStatementFoldsADomainWithLower censuses the SQL that compares a
+// domain, which TestOnlyTheSharedFoldReadsIDNA cannot see.
+//
+// That gate reads imports. So a statement folding a domain with lower() passes
+// it, while reading a Unicode and a punycode spelling of one domain as two.
+// owndomain.Spellings is how a comparison reaches both stored spellings.
+func TestNoSQLStatementFoldsADomainWithLower(t *testing.T) {
+	t.Parallel()
+	defer sqlFoldsAdmitted.AssertAllMatched(t)
+
+	var findings []string
+	judged := 0
+	// An admission names one statement. Counted, so a second fold added to an
+	// admitted file is a finding rather than riding on its waiver.
+	admitted := map[string]int{}
+	for _, root := range []string{"internal", "../extensions"} {
+		err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+			if walkErr != nil || entry.IsDir() {
+				return walkErr
+			}
+			if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_gen.go") ||
+				strings.HasSuffix(path, "_test.go") {
+				return nil
+			}
+			judged++
+			rel := filepath.ToSlash(path)
+			for _, statement := range gatekit.SQLStatementsIn(t, path, readSource(t, path)) {
+				if !foldsADomainInSQL.MatchString(statement) {
+					continue
+				}
+				if sqlFoldsAdmitted.Waived(t, rel) {
+					admitted[rel]++
+					continue
+				}
+				findings = append(findings, rel+": "+gatekit.FirstLineOf(statement))
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("walking %s: %v", root, err)
+		}
+	}
+	// A walk that read nothing passes as a clean tree does.
+	if judged < 500 {
+		t.Fatalf("the census read only %d Go files, so it covered almost nothing", judged)
+	}
+	for file, n := range admitted {
+		if n > 1 {
+			findings = append(findings, file+": "+strconv.Itoa(n)+" statements under one admission")
+		}
+	}
+	if len(findings) > 0 {
+		t.Errorf("%d statement(s) fold a domain with SQL lower():\n\t%s\n\n"+
+			"Compare against the column the fold writes, or pass owndomain.Spellings so both "+
+			"spellings of one domain are read. lower() answers them as two domains, and "+
+			"wrapping the column in it also costs the index.",
+			len(findings), strings.Join(findings, "\n\t"))
+	}
+}
+
+// The census reads every spelling of the mistake and none of the fold. Planted
+// here, because a pattern that misses one spelling still reports a clean tree.
+func TestTheDomainFoldCensusReadsEverySpelling(t *testing.T) {
+	t.Parallel()
+	for _, statement := range []string{
+		`SELECT 1 FROM company_domain d WHERE lower(d.domain) = $1`,
+		`SELECT 1 FROM company_domain WHERE domain = lower($1)`,
+		`SELECT 1 FROM company_domain WHERE lower($1) = domain`,
+		`SELECT 1 FROM provider_claim c WHERE c.company_domain = lower($1)`,
+		`SELECT 1 FROM provider_claim c WHERE lower($1) = c.company_domain`,
+	} {
+		if !foldsADomainInSQL.MatchString(statement) {
+			t.Errorf("the census misses %q", statement)
+		}
+	}
+	for _, statement := range []string{
+		`SELECT 1 FROM company_domain WHERE domain = ANY($1)`,
+		`SELECT 1 FROM company_domain WHERE domain_folded = $1`,
+		`SELECT 1 FROM company_domain WHERE lower($1) = domain_folded`,
+	} {
+		if foldsADomainInSQL.MatchString(statement) {
+			t.Errorf("the census flags %q, which compares a fold or both spellings", statement)
+		}
 	}
 }

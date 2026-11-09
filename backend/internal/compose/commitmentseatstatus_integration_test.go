@@ -120,7 +120,7 @@ func TestAnUnsurePromiseIsProposedToItsColleagueAlone(t *testing.T) {
 			if time.Duration(hours)*time.Hour != window {
 				t.Errorf("the %s colleague's card waits %dh, want %s", status, hours, window)
 			}
-			queue := approvalsServiceWithEffects(e.Pool)
+			queue := NewApprovalsServiceWithEffects(e.Pool)
 			for name, reader := range map[string]context.Context{
 				"the admin":         e.Admin(),
 				"a third colleague": e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms),
@@ -141,6 +141,7 @@ func TestAnUnsurePromiseIsProposedToItsColleagueAlone(t *testing.T) {
 func seedMailedPromise(t *testing.T, status string) (*integration.Env, string) {
 	t.Helper()
 	e := integration.Setup(t)
+	e.GrantRole(t, e.Rep2, "rep")
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	ines := e.SeedContact(t, "Ines Huber", &e.Rep1)
 	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)

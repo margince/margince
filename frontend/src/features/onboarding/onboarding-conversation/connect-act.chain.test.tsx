@@ -191,7 +191,20 @@ describe("one press for mail and calendar", () => {
 });
 
 describe("the ask before the vendor's screens", () => {
-  it("says the vendor asks twice when both are ticked", async () => {
+  it("says Google asks once for mail and calendar together", async () => {
+    stub();
+    renderAct();
+    const user = userEvent.setup();
+    await pick(user, /Google/);
+    expect(
+      screen.getByText("Google asks once, then brings you back here"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(en["ob.conv.connect.asksTwiceBody"], { exact: false }),
+    ).toBeNull();
+  });
+
+  it("says Microsoft asks twice when both are ticked", async () => {
     stub();
     renderAct();
     const user = userEvent.setup();

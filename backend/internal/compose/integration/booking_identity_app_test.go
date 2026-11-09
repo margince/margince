@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
@@ -23,7 +24,7 @@ func TestBookingPageUsesTheCurrentAccountName(t *testing.T) {
 	if status := e.Call(t, "GET", "/v1/scheduling/profile", nil, nil, &profile); status != http.StatusOK || profile.HostName == nil || *profile.HostName != "Account name" {
 		t.Fatalf("initial profile: %d %+v", status, profile)
 	}
-	enableBookingPage(t, e)
+	apptest.EnableGoogleBookingPage(t, e)
 	if status := e.Call(t, "GET", "/v1/scheduling/profile", nil, nil, &profile); status != http.StatusOK || profile.HostName == nil || *profile.HostName != "Account name" || !profile.Enabled || profile.PublicUrl == nil {
 		t.Fatalf("enabled profile: %d %+v", status, profile)
 	}

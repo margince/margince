@@ -117,7 +117,7 @@ func newTestClients(t *testing.T) (OAuth, API) {
 		AuthURL:      "https://accounts.example/auth",
 		TokenURL:     srv.URL + "/token",
 	})
-	api := NewAPI(srv.Client(), srv.URL)
+	api := newTestAPI(t, srv.Client(), srv.URL)
 	return oauth, api
 }
 
@@ -199,7 +199,7 @@ func TestBothMessageListingsSayIncludeSpamTrashFalse(t *testing.T) {
 	})
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
-	api := NewAPI(srv.Client(), srv.URL)
+	api := newTestAPI(t, srv.Client(), srv.URL)
 
 	if _, err := api.ListRecent(context.Background(), "access-2", 50); err != nil {
 		t.Fatalf("ListRecent: %v", err)
@@ -364,7 +364,7 @@ func TestGmailTransportCarriesGooglesReasonAndSharesTheQuotaVerdict(t *testing.T
 	})
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
-	api := NewAPI(srv.Client(), srv.URL)
+	api := newTestAPI(t, srv.Client(), srv.URL)
 
 	_, _, err := api.Profile(context.Background(), "access")
 	if !errors.Is(err, ErrAuthRejected) {
@@ -420,7 +420,7 @@ func TestWatchTreatsThrottlingAsThrottlingNotRejectedAuth(t *testing.T) {
 			srv := httptest.NewServer(mux)
 			t.Cleanup(srv.Close)
 
-			_, _, err := NewAPI(srv.Client(), srv.URL).Watch(context.Background(), "access", "projects/p/topics/t")
+			_, _, err := newTestAPI(t, srv.Client(), srv.URL).Watch(context.Background(), "access", "projects/p/topics/t")
 
 			if errors.Is(err, ErrAuthRejected) {
 				t.Fatalf("throttled watch classified as rejected auth: %v", err)
@@ -449,7 +449,7 @@ func TestForbiddenWithoutALimitReasonStaysRejectedAuth(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 
-	_, _, err := NewAPI(srv.Client(), srv.URL).Profile(context.Background(), "access")
+	_, _, err := newTestAPI(t, srv.Client(), srv.URL).Profile(context.Background(), "access")
 
 	if _, ok := errors.AsType[*connector.RateLimitedError](err); ok {
 		t.Fatalf("prose mentioning a quota literal was read as throttling: %v", err)

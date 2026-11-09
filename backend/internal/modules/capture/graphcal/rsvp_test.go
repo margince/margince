@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/capture/meetingmap"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 const rsvpOwner = "rep@myco.com"
@@ -59,23 +60,33 @@ func TestTheOwnersDeclineIsReadOffTheResponseStatus(t *testing.T) {
 			if err != nil {
 				t.Fatalf("decodeEvent: %v", err)
 			}
-			if ev.OwnerDeclined != want {
-				t.Fatalf("OwnerDeclined = %v for response %q, want %v", ev.OwnerDeclined, response, want)
+			if (ev.OwnerResponse == connector.ResponseDeclined) != want {
+				t.Fatalf("OwnerResponse = %v for response %q, want %v", ev.OwnerResponse, response, want)
+			}
+			if ev.OwnerResponse != "" {
+				found := false
+				for _, party := range meetingmap.Classify(ev, rsvpOwner).Participants().Participants {
+					if party.Email == rsvpOwner && party.Response == ev.OwnerResponse {
+						found = true
+					}
+				}
+				if !found {
+					t.Fatal("the connected calendar's own answer was not carried to its participant row")
+				}
 			}
 		})
 	}
 }
 
-// End to end through this vendor's decode: a declined meeting settles as a
-// cancellation, so the row already captured gets closed.
-func TestADeclinedInvitationSettlesAsACancellation(t *testing.T) {
+// An attendee answer changes the roster and leaves the shared meeting booked.
+func TestADeclinedInvitationKeepsTheSharedMeetingBooked(t *testing.T) {
 	t.Parallel()
 	ev, err := decodeEvent(rsvpEventJSON(t, "declined"), rsvpOwner)
 	if err != nil {
 		t.Fatalf("decodeEvent: %v", err)
 	}
-	if _, got := meetingmap.Classify(ev, rsvpOwner).Settle(); got != meetingmap.SettleCancel {
-		t.Fatalf("Settle() = %v, want the declined meeting closed", got)
+	if _, got := meetingmap.Classify(ev, rsvpOwner).Settle(); got != meetingmap.SettleCapture {
+		t.Fatalf("Settle() = %v, want the shared meeting kept booked", got)
 	}
 }
 

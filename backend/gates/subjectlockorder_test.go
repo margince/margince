@@ -76,7 +76,7 @@ var mutatingStatement = regexp.MustCompile(
 // function takes first. That is a claim about privacy/erasure.go, so write down
 // which rows and why the eraser never holds them.
 var locksBeforeTheSubject = gatekit.Waive(map[string]string{
-	"internal/modules/contacts:Store.EnsureCounterpartyTx":        "SeatAddressesFor takes the seat-address advisory mutex before resolution, not an erasure-owned child row. Resolution either inserts a private new contact or holds the incumbent before filling it; the later employer hold repeats that subject lock.",
+	"internal/modules/contacts:Store.ensureCapturedCounterparty":  "SeatAddressesFor takes the seat-address advisory mutex before resolution, not an erasure-owned child row. Resolution either inserts a private new contact or holds the incumbent before filling it; the later employer hold repeats that subject lock.",
 	"internal/modules/contacts:Store.SetProjectStakeholder":       "UpdateRelationship and CreateRelationship each open and finish their own transaction. The earlier update branch and the later create branch never hold locks in one transaction.",
 	"internal/modules/contacts:Store.applyEmploymentEpisode":      "ApplyEmploymentImport holds this contact with HoldWritableLive before calling applyEmploymentEvidence and this private helper. Its earlier outcome or company writes run under that same held subject.",
 	"internal/modules/contacts:Store.applyEmploymentEvidence":     "Private iteration called only after ApplyEmploymentImport holds the contact with HoldWritableLive. Every copied outcome and episode refers to that same held contact.",

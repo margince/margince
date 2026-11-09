@@ -31,9 +31,7 @@ func (s *Server) rebuildToolRegistry(pool *pgxpool.Pool) {
 	// bound, the other pays into it, and a surface where those were two
 	// counters would step an agent up against a number nothing was charging.
 	opts := []agents.RegistryOption{agents.WithVolumeCharger(s.volumeMeter), agents.WithCostShare(s.volumeMeter)}
-	if s.previewWait != nil {
-		opts = append(opts, s.previewWait)
-	}
+	opts = append(opts, s.registryForTest...)
 	s.toolRegistry = registryWithGate(InstallationDB(pool),
 		auth.NewGate(identity.NewService(pool), auth.WithVolumeMeter(s.volumeMeter)),
 		s.replyDrafter, s.send, companyEnricher{srv: s},

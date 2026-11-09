@@ -55,11 +55,10 @@ func TestEveryCascadingKeyCanFindItsChildren(t *testing.T) {
 	}
 }
 
-// TestTheCascadeIndexQueryNoticesAWithdrawnIndex takes an index the schema is
-// relying on away again, inside a transaction it rolls back. An empty result is
-// the one way the gate above can fail short — a `covered` clause that matches
-// everything reads as a clean schema — so the discrimination is proven rather
-// than assumed.
+// TestTheCascadeIndexQueryNoticesAWithdrawnIndex takes away an index the schema
+// relies on, inside a transaction it rolls back. An empty result is the one way
+// the gate above can fail short: a `covered` clause that matches everything
+// reads as a clean schema. This test proves the gate tells the two apart.
 func TestTheCascadeIndexQueryNoticesAWithdrawnIndex(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)

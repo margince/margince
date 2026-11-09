@@ -10,6 +10,7 @@ import { vi } from "vitest";
 import type { components } from "../api/schema";
 import type { NavSection } from "../app/nav";
 import { LocaleProvider } from "../i18n";
+import { PHONE_MAX_WIDTH, widthMedia } from "../lib/viewport";
 
 // The doubles the shell's chrome suites share, in one place.
 //
@@ -43,12 +44,6 @@ export const renderWith = (client: QueryClient, ui: ReactNode): RenderResult =>
       <LocaleProvider initial="en">{ui}</LocaleProvider>
     </QueryClientProvider>,
   );
-
-/**
- * The head's stage marker: the house Badge on the attribution row, carrying no
- * class of its own. Temporary, with app/betabadge.tsx.
- */
-export const MARKER = ".ws-company .badge";
 
 /**
  * The `/me` snapshot of a rep — a seat that may not read the company profile —
@@ -88,13 +83,38 @@ export const ignoreSearch = () => undefined;
  * Only the QUERY the app asks for matches: a stub that answered true to
  * everything would also tell the theme the reader prefers a dark one.
  */
-export function stubPhoneViewport(): void {
+export function stubPhoneViewport({ wide: startsWide = false } = {}): {
+  widen: () => void;
+  narrow: () => void;
+} {
+  const phone = widthMedia(PHONE_MAX_WIDTH);
+  const listeners = new Set<() => void>();
+  let wide = startsWide;
   vi.stubGlobal("matchMedia", (query: string) => ({
-    matches: query === "(max-width: 700px)",
+    get matches() {
+      return query === phone && !wide;
+    },
     media: query,
-    addEventListener: () => undefined,
-    removeEventListener: () => undefined,
+    addEventListener: (_: string, listener: () => void) => {
+      if (query === phone) {
+        listeners.add(listener);
+      }
+    },
+    removeEventListener: (_: string, listener: () => void) =>
+      listeners.delete(listener),
   }));
+  const resize = (toWide: boolean) => {
+    wide = toWide;
+    for (const listener of listeners) {
+      listener();
+    }
+  };
+  return {
+    /** The window widens past the phone width, as a rotate or a resize does. */
+    widen: () => resize(true),
+    /** The window narrows to the phone width. */
+    narrow: () => resize(false),
+  };
 }
 
 /**
@@ -132,7 +152,7 @@ export function fixtureSection(activeId?: string): NavSection {
             children: [
               {
                 id: "deeper",
-                labelKey: "settings.tab.fields",
+                labelKey: "settings.tab.records",
                 icon: Database,
               },
             ],

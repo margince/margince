@@ -106,9 +106,10 @@ func TestEveryListedReasonTravelsAsACode(t *testing.T) {
 	e.releaseQuestion(ctx, t, "stale.example")
 
 	e.openTriage(ctx, t, "hello@twin.example", "", "twin.example")
+	twin := e.createNamedCompany(ctx, t, "Twin GmbH")
 	e.inTx(ctx, t, "withholding for a name twin", func(tx pgx.Tx) error {
 		return withholdForNearDuplicate(ctx, tx, ResolveDomainTriageInput{Domain: "twin.example"},
-			CompanyCandidateScore{CandidateValue: "Twin", IncumbentValue: "Twin GmbH"})
+			CompanyCandidateScore{CompanyID: twin, CandidateValue: "Twin", IncumbentValue: "Twin GmbH"})
 	})
 	e.releaseQuestion(ctx, t, "twin.example")
 
@@ -177,9 +178,10 @@ func TestANameTwinQuestionTellsItsOwnerWhy(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.openTriage(ctx, t, "hello@twin.example", "", "twin.example")
+	twin := e.createNamedCompany(ctx, t, "Twin GmbH")
 	e.inTx(ctx, t, "withholding for a name twin", func(tx pgx.Tx) error {
 		return withholdForNearDuplicate(ctx, tx, ResolveDomainTriageInput{Domain: "twin.example"},
-			CompanyCandidateScore{CandidateValue: "Twin", IncumbentValue: "Twin GmbH"})
+			CompanyCandidateScore{CompanyID: twin, CandidateValue: "Twin", IncumbentValue: "Twin GmbH"})
 	})
 
 	backlog, err := e.store.OpenDomainQuestionsForOwner(ctx)

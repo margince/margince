@@ -8,9 +8,9 @@ package integration
 // An agent's archive, once per target-visibility arm. Each arm is a target type
 // the seam routes differently, so each is driven over a real passport.
 //
-// A tag and an offer template are ordinary work, so the archive performs. A
-// saved view and a webhook subscription are human-only configuration, so the
-// agent is refused and nothing is staged.
+// A tag, a saved view and an offer template are ordinary work, so the archive
+// performs. A webhook subscription is human-only configuration, so the agent is
+// refused and nothing is staged.
 
 import (
 	"bytes"
@@ -44,7 +44,7 @@ func TestAnAgentArchivePerformsOrIsRefusedForEveryTargetArm(t *testing.T) {
 		id := createdID(t, e, "/v1/views", AnyMap{
 			"resource": "contacts", "name": "My contacts", "query": AnyMap{"columns": []any{"full_name"}},
 		})
-		archiveIsRefusedAsHumanOnly(t, e, bearer, "/v1/views/"+id, "saved_view", id)
+		archivesOnItsOwnPassport(t, e, bearer, "/v1/views/"+id)
 	})
 
 	t.Run("offer_template", func(t *testing.T) {

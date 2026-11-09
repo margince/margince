@@ -3,8 +3,8 @@
 
 import { DataTable } from "../../design-system/datatable";
 import {
-  formatMoneyOrAbsent,
-  formatNumber,
+  formatAnalyticsMoneyOrAbsent,
+  formatAnalyticsNumber,
   monthAndYear,
 } from "../../format/format";
 import { type Locale, useT } from "../../i18n";
@@ -82,7 +82,7 @@ export function CloseMonthTable({
           header: t("analytics.count"),
           align: "end",
           render: (row: ReportRow) =>
-            formatNumber(rowCount(row, "deal_count"), locale),
+            formatAnalyticsNumber(rowCount(row, "deal_count"), locale),
         },
         {
           key: "raw",
@@ -110,7 +110,7 @@ export function CloseMonthTable({
                 label={t("analytics.unweighted")}
               >
                 <span className="analytics-money-cell">
-                  {formatMoneyOrAbsent(
+                  {formatAnalyticsMoneyOrAbsent(
                     rowMoney(row, "raw_minor"),
                     baseCurrency,
                     locale,
@@ -126,7 +126,7 @@ export function CloseMonthTable({
           header: t("analytics.weighted"),
           align: "end",
           render: (row: ReportRow) =>
-            formatMoneyOrAbsent(
+            formatAnalyticsMoneyOrAbsent(
               rowMoney(row, "weighted_minor"),
               baseCurrency,
               locale,

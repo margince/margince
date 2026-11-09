@@ -72,7 +72,7 @@ const LONG: AuditLogEntry = {
 };
 
 const meta: Meta<typeof AuditDetail> = {
-  title: "Settings/Governance/Audit log/Change detail",
+  title: "Settings/Compliance/Audit log/Change detail",
   component: AuditDetail,
   render: (args) => (
     <StoryProviders>

@@ -12,6 +12,7 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SEARCH_DEBOUNCE_MS } from "../design-system/debouncedsearch";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { steppedClock } from "../testing/steppedclock";
 import { CommandPalette } from "./palette";
 
@@ -26,6 +27,8 @@ function renderPalette() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  client.setQueryDefaults(["me"], { staleTime: Infinity });
+  client.setQueryData(["me"], meFixture({}));
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">

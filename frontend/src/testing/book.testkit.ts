@@ -21,7 +21,7 @@ export const bookingProfile: components["schemas"]["SchedulingProfile"] = {
   host_name: "Ada Lovelace",
   company_name: "Gradion",
   slug: "ada-lovelace",
-  public_url: "https://crm.example.test/#/book/ada-lovelace",
+  public_url: "https://crm.example.test/book/ada-lovelace",
 };
 export const bookingInvitation: components["schemas"]["MeetingInvitation"] = {
   id: "0198f011-aaaa-7000-8000-000000000001",
@@ -32,6 +32,7 @@ export const bookingInvitation: components["schemas"]["MeetingInvitation"] = {
   location: "Video call",
 };
 export const bookingContact = {
+  attachable: true,
   id: "0198f011-aaaa-7000-8000-000000000002",
   full_name: "Nina Weber",
   primary_email: "nina@brandt.example",

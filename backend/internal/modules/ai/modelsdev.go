@@ -31,7 +31,21 @@ type modelsDevCost struct {
 	Output     *json.Number `json:"output"`
 	CacheRead  *json.Number `json:"cache_read"`
 	CacheWrite *json.Number `json:"cache_write"`
+	// ContextOver200k is the band a model bills every token of a call at once
+	// its prompt passes 200k tokens.
+	ContextOver200k *modelsDevTier `json:"context_over_200k"`
 }
+
+// modelsDevTier is one band's figures.
+type modelsDevTier struct {
+	Input      *json.Number `json:"input"`
+	Output     *json.Number `json:"output"`
+	CacheRead  *json.Number `json:"cache_read"`
+	CacheWrite *json.Number `json:"cache_write"`
+}
+
+// modelsDevBandLine is the prompt size the catalogue's one band starts above.
+const modelsDevBandLine = 200_000
 
 // modelsDevModel is one entry; figures stay json.Number so the decimal the
 // file wrote is the decimal the sheet parses.
@@ -170,5 +184,42 @@ func (m modelsDevModel) price(current *ModelRateRow) (SetModelRateInput, bool) {
 	if _, _, _, _, err := modelRateMicroUSD(next); err != nil {
 		return SetModelRateInput{}, false
 	}
+	band, ok := m.Cost.ContextOver200k.band()
+	if !ok {
+		return SetModelRateInput{}, false
+	}
+	next.LongContext = band
 	return next, true
+}
+
+// band reads the tier as a band, nil when the catalogue states none. A tier
+// that states figures but no input is no price, as for the base.
+func (t *modelsDevTier) band() (*ModelRateBand, bool) {
+	if t == nil {
+		return nil, true
+	}
+	if t.Input == nil {
+		return nil, false
+	}
+	out := &ModelRateBand{AboveTokens: modelsDevBandLine, OutputUsd: "0", CacheReadUsd: "0", CacheWriteUsd: "0"}
+	for _, f := range []struct {
+		stated *json.Number
+		into   *string
+	}{
+		{t.Input, &out.InputUsd}, {t.Output, &out.OutputUsd},
+		{t.CacheRead, &out.CacheReadUsd}, {t.CacheWrite, &out.CacheWriteUsd},
+	} {
+		if f.stated == nil {
+			continue
+		}
+		v, ok := usdPerMTok(*f.stated)
+		if !ok {
+			return nil, false
+		}
+		*f.into = v
+	}
+	if _, err := bandMicro(out); err != nil {
+		return nil, false
+	}
+	return out, true
 }

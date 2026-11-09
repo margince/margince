@@ -84,6 +84,8 @@ type contactsEnsurer struct {
 
 func (p contactsEnsurer) EnsureCounterparty(ctx context.Context, in capture.EnsureRequest) (capture.EnsureOutcome, error) {
 	res, err := p.store.EnsureCounterparty(ctx, contacts.EnsureCounterpartyInput{
+		HoldAuthority:   in.HoldAuthority,
+		Admission:       in.Admission,
 		Email:           in.Email,
 		DisplayName:     in.DisplayName,
 		Domain:          in.Domain,

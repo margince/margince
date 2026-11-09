@@ -76,16 +76,39 @@ func meetingTenureEnv(t *testing.T) (context.Context, *pgxpool.Pool) {
 // invited to, at a given age, with no contact behind the participant row —
 // which is the state the bare-address arm exists to read.
 func seedMeetingWith(ctx context.Context, tx pgx.Tx, address string, ago time.Duration) error {
+	return seedMeetingAt(ctx, tx, address, "now() - @age::interval", "instant", ago)
+}
+
+// seedDayMeetingWith is seedMeetingWith for a meeting known only by its UTC
+// date, daysAgo days before today, stored at that date's noon anchor.
+func seedDayMeetingWith(ctx context.Context, tx pgx.Tx, address string, daysAgo int) error {
+	return seedMeetingAt(ctx, tx, address,
+		"date_trunc('day', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC' + interval '12 hours' - @age::interval",
+		"day", time.Duration(daysAgo)*24*time.Hour)
+}
+
+// seedMeetingAt records the meeting at the SQL time at, which may read @age.
+func seedMeetingAt(ctx context.Context, tx pgx.Tx, address, at, precision string, ago time.Duration) error {
+	ownerID := ids.NewV7()
+	if _, err := tx.Exec(ctx, `INSERT INTO app_user (id,email,display_name,status)
+ VALUES (@owner,@email,'Meeting Owner','active')`, pgx.NamedArgs{"owner": ownerID, "email": "owner-" + ownerID.String() + "@example.test"}); err != nil {
+		return err
+	}
 	var activityID ids.UUID
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO activity (kind, occurred_at, direction, source, captured_by, counterparty_email)
-		VALUES ('meeting', now() - $2::interval, 'inbound', 'imap', 'connector:imap', $1)
-		RETURNING id`, address, ago.String()).Scan(&activityID); err != nil {
+		INSERT INTO activity (kind, occurred_at, occurred_precision, direction, source, captured_by, counterparty_email)
+		VALUES ('meeting', `+at+`, @precision, 'inbound', 'imap', @stamp, @address)
+		RETURNING id`, pgx.NamedArgs{
+		"address": address, "age": ago.String(), "precision": precision,
+		"stamp": "connector:imap:" + ownerID.String(),
+	}).Scan(&activityID); err != nil {
 		return err
 	}
 	_, err := tx.Exec(ctx, `
-		INSERT INTO activity_participant (activity_id, address, role)
-		VALUES ($1, $2, 'attendee')`, activityID, address)
+		INSERT INTO activity_participant (activity_id,address,role,user_id,roster_seat,response)
+ VALUES (@activity,@address,'attendee',NULL,@owner,'accepted'),
+ (@activity,@owner_address,'organizer',@owner,@owner,'accepted')`, pgx.NamedArgs{
+		"activity": activityID, "address": address, "owner": ownerID, "owner_address": "owner-" + ownerID.String() + "@example.test"})
 	return err
 }
 
@@ -175,5 +198,66 @@ func TestAMeetingWithAnAddressThatNeverChangedHandsIsStillEvidence(t *testing.T)
 	if !met {
 		t.Error("a meeting with an address nobody ever retired was refused as evidence — " +
 			"the tenure bound has narrowed the arm to nothing")
+	}
+}
+
+// A captured meeting is evidence only once its time has passed. A booking still
+// in the diary mints no contact and lifts no suppression; the same meeting
+// counts once it is over.
+func TestAMeetingStillInTheDiaryIsNotEvidenceUntilItsTimePasses(t *testing.T) {
+	ctx, pool := meetingTenureEnv(t)
+
+	for name, tc := range map[string]struct {
+		address string
+		ago     time.Duration
+		want    bool
+	}{
+		"booked for next week": {"ahead@company.example", -7 * 24 * time.Hour, false},
+		"held an hour ago":     {"behind@company.example", time.Hour, true},
+	} {
+		var met bool
+		if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+			if err := seedMeetingWith(ctx, tx, tc.address, tc.ago); err != nil {
+				return err
+			}
+			var err error
+			met, _, err = metInPersonTx(ctx, tx, tc.address, ids.NewV7())
+			return err
+		}); err != nil {
+			t.Fatalf("%s: reading whether the workspace has met the address: %v", name, err)
+		}
+		if met != tc.want {
+			t.Errorf("a captured meeting %s counted as met: %v, want %v", name, met, tc.want)
+		}
+	}
+}
+
+// A captured meeting known only by today's date has not taken place until the
+// date ends. Yesterday's has.
+func TestADayMeetingDatedTodayIsNotEvidenceUntilItsDateEnds(t *testing.T) {
+	ctx, pool := meetingTenureEnv(t)
+
+	for name, tc := range map[string]struct {
+		address string
+		daysAgo int
+		want    bool
+	}{
+		"dated today":     {"today@company.example", 0, false},
+		"dated yesterday": {"yesterday@company.example", 1, true},
+	} {
+		var met bool
+		if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+			if err := seedDayMeetingWith(ctx, tx, tc.address, tc.daysAgo); err != nil {
+				return err
+			}
+			var err error
+			met, _, err = metInPersonTx(ctx, tx, tc.address, ids.NewV7())
+			return err
+		}); err != nil {
+			t.Fatalf("%s: reading whether the workspace has met the address: %v", name, err)
+		}
+		if met != tc.want {
+			t.Errorf("a day meeting %s counted as met: %v, want %v", name, met, tc.want)
+		}
 	}
 }
