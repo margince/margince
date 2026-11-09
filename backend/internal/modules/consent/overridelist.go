@@ -25,6 +25,7 @@ type listedOverride struct {
 	savedAt time.Time
 }
 
+// ListContactOverrides keeps read access separate from the authority to revoke an exception.
 func (s *Store) ListContactOverrides(ctx context.Context, contactID ids.ContactID, limit int, cursor string) ([]crmcontracts.StandingOverride, storekit.Page, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
@@ -47,7 +48,7 @@ func (s *Store) ListContactOverrides(ctx context.Context, contactID ids.ContactI
 		table := overrideListTable(pre, subjectID)
 		scan := func(rows pgx.Rows, _ []fieldcatalog.Column, _ *storekit.ListSort) ([]listedOverride, []*string, error) {
 			items, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (listedOverride, error) {
-				return scanListedOverride(row, ctx, admitted)
+				return scanListedOverride(ctx, row, admitted)
 			})
 			return items, make([]*string, len(items)), err
 		}
@@ -76,7 +77,7 @@ func readableOverrideContact(ctx context.Context, tx pgx.Tx, sub subject) (ids.U
 	if err != nil {
 		return ids.UUID{}, false, err
 	}
-	admitted, err := mayRetractSubject(ctx, tx, sub, requireUpdateOnSubject)
+	admitted, err := mayRetractSubject(ctx, tx, sub, requireUpdateOnSubject(ctx, sub.entityType))
 	if err != nil {
 		return ids.UUID{}, false, err
 	}
@@ -85,7 +86,7 @@ func readableOverrideContact(ctx context.Context, tx pgx.Tx, sub subject) (ids.U
 			return ids.UUID{}, false, err
 		}
 		sub.id = target
-		may, err := mayRetractSubject(ctx, tx, sub, requireUpdateOnSubject)
+		may, err := mayRetractSubject(ctx, tx, sub, requireUpdateOnSubject(ctx, sub.entityType))
 		if err != nil {
 			return ids.UUID{}, false, err
 		}
@@ -109,7 +110,7 @@ func overrideListTable(pre *storekit.ListPrelude, subjectID ids.UUID) string {
 	   WHERE o.contact_id = $%d AND o.revoked_at IS NULL) standing`, agent, human, contact)
 }
 
-func scanListedOverride(row pgx.CollectableRow, ctx context.Context, admitted bool) (listedOverride, error) {
+func scanListedOverride(ctx context.Context, row pgx.CollectableRow, admitted bool) (listedOverride, error) {
 	var out listedOverride
 	var id ids.UUID
 	var entity *ids.UUID

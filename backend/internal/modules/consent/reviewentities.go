@@ -8,17 +8,20 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // EntityNameReader keeps the default company's name with the owner of its profile.
 type EntityNameReader func(context.Context, pgx.Tx, ids.UUID) (string, error)
 
+// WithEntityNames uses the company profile owner for names that consent does not store.
 func (s *Store) WithEntityNames(reader EntityNameReader) *Store {
 	s.entityNames = reader
 	return s
 }
 
+// WithEntityNames shares company identity resolution across reviews and exception lists.
 func (h Handlers) WithEntityNames(reader EntityNameReader) Handlers {
 	h.store = h.store.WithEntityNames(reader)
 	return h

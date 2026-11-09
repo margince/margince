@@ -51,10 +51,8 @@ its **proof**, and records a **decision** per recipient:
   Article 21 objection, a legal limit on use, a subject's request to stop, a hard bounce. No stop
   ends by itself, and no mode turns either one off.
 - **A user may override a refused send.** The override stands separate from consent.
-  `communication_override` (`consent.Allow`) records a standing statement per category. It says a
-  refusal by the machine for want of proof may be set to one side for one contact. It covers one
-  category and the sending company stamped on the record. An older row with no company gains none
-  from the reader. It grants no consent; each message still gets its own check.
+  `communication_override` (`consent.Allow`) records a statement for one contact, category and
+  sending company. It grants no consent. Each message gets its own check.
 
   It turns nothing absolute. `Decision.CanBeOverruledByCategory` asks the question only for a
   reading by the machine that is not absolute and that has a category. The `absoluteDenials` below
@@ -65,18 +63,17 @@ its **proof**, and records a **decision** per recipient:
   absolute, but the request named a purpose key the engine does not know. So there is no category,
   and an override per category has nothing to answer. The fix there is to send again with a purpose the engine knows.
 
-  The user must write a reason. The contact's consent panel lists live standing exceptions, their
-  category and sending company. It shows the first author and date only while marked source rows
-  still prove them. Old unmarked rows and copies whose source was erased state that the source is
-  unknown. An admin with access to change that contact can
-  revoke one with a reason (`consent.RevokeOverride`). The list uses the writer's own authority check
-  for each action. The list is paged, so older exceptions stay in reach.
+  The user must write a reason. The consent panel lists live exceptions by category and company.
+  It shows the first author and date only while saved source rows prove them. If the source is
+  gone or its mark is missing, the panel says it is unknown.
 
-  An override lives on through a merge, on the contact that is kept (`consent.CarryOverridesTx`). It
-  keeps its first `decided_by_level` and its reason, so a merge cannot drop its authority
-  level. So a revoke reaches every copy a merge made of it, from the old ID the caller holds.
-  Each copy is reported as lifted on the stream that carried its record. An override left standing
-  under an ID that the user who made it does not know would go on allowing the send.
+  An admin with access to change the contact can revoke an exception with a reason
+  (`consent.RevokeOverride`). The list uses the same access check as that write. It is paged,
+  so older exceptions stay in reach.
+
+  A merge copies the override to the contact that is kept (`consent.CarryOverridesTx`). Each copy
+  keeps the company, reason and first `decided_by_level`. A revoke with any copy's ID reaches
+  every copy. Each contact's stream names the copies it took back.
 
   Article 17 erasure and the retention sweep delete it with the rest of the contact's consent
   record. A standing "write to them all the same" must not live longer than its contact. Article 15 subject
@@ -155,7 +152,7 @@ about a named subject exists is itself something to keep private. A principal th
 nor a user's agent is refused before the query runs.
 
 The exception dialog shows each refused address, its purpose, company and reason. A new review or
-warning version starts with no check in the box that asks the user to take responsibility.
+warning version starts with its check box empty.
 
 **An instruction overrides one refusal, by name.** It is a named user sending one refused message all
 the same. At times the installation has a reason the engine cannot see. It may be a contract clause, a legal

@@ -512,6 +512,7 @@
     "listConsumerMailDomains": "workspace_settings",
     "listContactCases": "business",
     "listContactConversationSuggestions": "capture",
+    "listContactOverrides": "compliance",
     "listContactStops": "compliance",
     "listContacts": "business",
     "listCorpora": "business",
@@ -1889,6 +1890,9 @@
     ],
     "list_consumer_mail_domains": [
       "workspace_settings"
+    ],
+    "list_contact_overrides": [
+      "compliance"
     ],
     "list_contact_stops": [
       "compliance"

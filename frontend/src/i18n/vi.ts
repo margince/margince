@@ -3451,7 +3451,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "consent.acquisitionRequest":
     "Khi được thêm vào, liên hệ này đã yêu cầu báo giá hoặc cuộc hẹn, hoặc đã đồng ý trực tiếp để nhận thư.",
   "consent.exceptionUnknownOrigin":
-    "Không có thông tin về người ghi nhận ban đầu và ngày ghi nhận.",
+    "Không rõ ai đã ghi nhận ban đầu và vào ngày nào.",
   "consent.exceptionsTitle": "Ngoại lệ thường trực",
   "consent.exceptionsScope":
     "Mỗi ngoại lệ áp dụng cho một mục đích và một công ty gửi. Ngoại lệ không cấp sự đồng ý nhận quảng cáo. Mỗi thư đều được kiểm tra lại.",

@@ -23,6 +23,10 @@ import (
 //
 //craft:ignore naked-any an argument takes whichever JSON type its verb's schema names
 var complianceFixtures = map[string]func(p *recordPool) map[string]any{
+	"list_contact_overrides": func(p *recordPool) map[string]any {
+		vouch := p.take("consent_override")
+		return map[string]any{"id": p.fact(vouch, "contact")}
+	},
 	"record_consent": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("mail_contact"), "request_body": map[string]any{
 			"purpose_id": p.take("consent_purpose"), "new_state": "granted", "lawful_basis": "consent",

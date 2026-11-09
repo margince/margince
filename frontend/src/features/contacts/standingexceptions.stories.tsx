@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -83,3 +83,19 @@ export const Historical: Story = {
 };
 
 export const ScopedPhone: Story = { ...Scoped, tags: ["uat-phone"] };
+
+export const Revoking: Story = {
+  ...Scoped,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Revoke exception" }),
+    );
+    await expect(
+      within(canvasElement.ownerDocument.body).findByRole("dialog", {
+        name: "Revoke exception",
+      }),
+    ).resolves.toBeVisible();
+  },
+};
+export const RevokingPhone: Story = { ...Revoking, tags: ["uat-phone"] };

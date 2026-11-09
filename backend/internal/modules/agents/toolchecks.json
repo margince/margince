@@ -1971,6 +1971,11 @@
         "capture_settings.read"
       ]
     },
+    "list_contact_overrides": {
+      "checks": [
+        "contact.read"
+      ]
+    },
     "list_contact_stops": {
       "checks": [
         "contact.read"

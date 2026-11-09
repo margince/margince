@@ -11,6 +11,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// ListContactOverrides exposes the same scoped exception read to HTTP and agents.
 func (h Handlers) ListContactOverrides(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.ListContactOverridesParams) {
 	limit, cursor := 0, ""
 	if params.Limit != nil {

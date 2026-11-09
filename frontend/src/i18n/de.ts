@@ -3561,7 +3561,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Wer den Eintrag zuerst erfasst hat und wann, ist unbekannt.",
   "consent.exceptionsTitle": "Dauerhafte Ausnahmen",
   "consent.exceptionsScope":
-    "Jede Ausnahme gilt für einen Zweck und ein absendendes Unternehmen. Sie erteilt keine Werbeeinwilligung. Jede Nachricht wird erneut geprüft.",
+    "Jede Ausnahme gilt für einen Zweck und ein absendendes Unternehmen. Eine Ausnahme ist keine Einwilligung in Werbung. Jede Nachricht wird erneut geprüft.",
   "consent.exceptionOtherPurpose": "Anderer erfasster Zweck",
   "consent.exceptionCompany": "Absendendes Unternehmen: {name}",
   "consent.exceptionUnnamedCompany":

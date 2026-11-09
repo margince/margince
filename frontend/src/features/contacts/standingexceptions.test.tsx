@@ -142,7 +142,7 @@ it("reads the next page instead of hiding older exceptions", async () => {
   expect(screen.getByText("Asked for next steps.")).toBeTruthy();
 });
 
-it("does not attribute an erased origin to the person who saved a merged copy", async () => {
+it("does not attribute an erased origin to the colleague who saved a merged copy", async () => {
   installFetchStub({
     "GET /contacts/p-1/consent/allow": () =>
       jsonResponse({
