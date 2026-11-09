@@ -269,8 +269,8 @@ func TestTheHoldEndsBeforeTheResponseIsAwaited(t *testing.T) {
 }
 
 // wroteAfterRelease records a request write that reached the wire after the
-// hold ended. Writes once the response is being read are the TLS close, not
-// the request.
+// hold ended. Writes once a read started after the release are the TLS close,
+// not the request; a read under the hold excuses no later write.
 type wroteAfterRelease struct {
 	net.Conn
 	held, released, reading *atomic.Bool
@@ -285,7 +285,7 @@ func (c wroteAfterRelease) Write(p []byte) (int, error) {
 }
 
 func (c wroteAfterRelease) Read(p []byte) (int, error) {
-	if c.held.Load() {
+	if c.released.Load() {
 		c.reading.Store(true)
 	}
 	return c.Conn.Read(p)
