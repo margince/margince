@@ -114,13 +114,15 @@ export function transportForActivity(
   transports: readonly Transport[],
   view: Contact360,
   activityId: string | undefined,
+  readActivity?: components["schemas"]["Activity"],
 ): AnchoredTransport {
   if (!activityId) {
     return { chosen: undefined, stale: false };
   }
-  const named = (view.activities?.data ?? []).find(
-    (activity) => activity.id === activityId,
-  );
+  const named =
+    (view.activities?.data ?? []).find(
+      (activity) => activity.id === activityId,
+    ) ?? (readActivity?.id === activityId ? readActivity : undefined);
   if (!named) {
     return { chosen: undefined, stale: true };
   }

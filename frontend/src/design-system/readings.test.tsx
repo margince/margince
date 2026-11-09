@@ -256,7 +256,7 @@ describe("Chip is a fact, and a link when the fact has somewhere to go", () => {
     expect(screen.getByText("glazedfrog.example")).toBeTruthy();
   });
 
-  it("opens an off-origin destination in a new tab without a referrer", () => {
+  it("opens an off-origin destination in a new tab without an opener or referrer", () => {
     render(
       <Chip icon={Globe} href="https://glazedfrog.example">
         glazedfrog.example
@@ -264,7 +264,7 @@ describe("Chip is a fact, and a link when the fact has somewhere to go", () => {
     );
     const link = screen.getByRole("link", { name: "glazedfrog.example" });
     expect(link.getAttribute("target")).toBe("_blank");
-    expect(link.getAttribute("rel")).toBe("noreferrer");
+    expect(link.getAttribute("rel")).toBe("noopener noreferrer");
   });
 });
 

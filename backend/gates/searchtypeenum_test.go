@@ -14,11 +14,12 @@ package gates
 // anchor gate parses it, rather than restated.
 
 import (
-	"os"
 	"slices"
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func TestEverySearchTypeEnumIsTheSearchModulesBranchTable(t *testing.T) {
@@ -87,7 +88,7 @@ func propertyEnum(t *testing.T, schema, property string, array bool) []string {
 // searchTypesParameterEnum reads the `types` filter's item enum off GET /search.
 func searchTypesParameterEnum(t *testing.T) []string {
 	t.Helper()
-	raw, err := os.ReadFile(contractFile)
+	raw, err := gatekit.ReadFile(contractFile)
 	if err != nil {
 		t.Fatalf("reading %s: %v", contractFile, err)
 	}

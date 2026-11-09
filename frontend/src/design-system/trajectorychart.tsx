@@ -4,7 +4,7 @@
 import { useEffect, useId, useState } from "react";
 import { Badge, Button } from "./atoms";
 import { ReadingTable } from "./report-charts";
-import type { ChartReading } from "./report-charts.model";
+import { type ChartReading, niceTop } from "./report-charts.model";
 import "./trajectorychart.css";
 
 /** A running total read through one moment of the period, `at` from 0 to 1. */
@@ -353,15 +353,6 @@ function FinishMarks({
       )}
     </>
   );
-}
-
-// The axis top: the largest value drawn, raised to a round step so the two
-// grid lines above zero read as round amounts.
-function niceTop(value: number): number {
-  if (value <= 0) return 1;
-  const magnitude = 10 ** Math.floor(Math.log10(value));
-  const step = [1, 2, 2.5, 5, 10].find((m) => m * magnitude >= value * 1.04);
-  return (step ?? 10) * magnitude;
 }
 
 // A monotone curve through every point (Fritsch-Butland tangents), so a

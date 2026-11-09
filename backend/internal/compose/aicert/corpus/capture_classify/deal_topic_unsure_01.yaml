@@ -1,0 +1,32 @@
+name: a_bare_call_request_gives_no_ground_to_pick_between_two_deals
+task: capture_classify
+site: deal_topic
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  subject: 'Quick call?'
+  body: |
+    Hi, do you have twenty minutes tomorrow afternoon? I would like to go
+    through a few open points with you.
+  deals:
+    - name: Contoso fleet telematics
+      project: Fleet
+      recent: ['Telematics pilot results']
+    - name: Contoso driver app
+      project: Driver app
+      recent: ['Driver app mock-ups']
+expect:
+  outcome: accepted
+  answer: [unsure, unsure]
+  rubric: >
+    The email asks for a call about "a few open points" and names nothing else.
+    Both deals are plausible and neither is named. "unsure" on both scores high:
+    a confident pick here files the conversation on a deal by guess, and a
+    colleague must then find and move it. "about" on either deal is the failure
+    this scenario exists to catch and scores lowest. "not_about" on both scores
+    low too: the mail may well concern one of them, and ruling both out stops
+    the colleague from being asked.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

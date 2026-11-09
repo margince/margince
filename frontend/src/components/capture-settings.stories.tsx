@@ -49,7 +49,7 @@ const MANAGER = { capture_settings: ["read", "update"] } as const;
 const READER = { capture_settings: ["read"] } as const;
 
 const meta = {
-  title: "Settings/Data/Capture rules/Enrichment and website reads",
+  title: "Settings/Data/Mail capture/Enrichment and website reads",
   component: CaptureSettingsCard,
 } satisfies Meta<typeof CaptureSettingsCard>;
 export default meta;

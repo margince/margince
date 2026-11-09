@@ -38,3 +38,19 @@ func TestPermissionReasonsFollowCardLanguage(t *testing.T) {
 		}
 	}
 }
+
+func TestABlockedBookingVerbNamesBooking(t *testing.T) {
+	for language, want := range map[string]string{
+		"en": "You do not have permission to book meetings",
+		"de": "Sie haben keine Berechtigung, Termine zu buchen",
+		"vi": "Bạn không có quyền đặt lịch họp",
+	} {
+		moment := card()
+		moment.RecommendedAction.Kind = contracts.ContactMomentActionKindScheduleMeeting
+		Withhold(reader(principal.ObjectGrant{Read: true}), language, &moment)
+		got := moment.RecommendedAction
+		if got.State != contracts.ContactMomentActionStateBlocked || got.BlockedReason == nil || *got.BlockedReason != want {
+			t.Fatalf("%s: %+v, want blocked saying %q", language, got, want)
+		}
+	}
+}

@@ -128,15 +128,12 @@ export function ProjectPicker({
   /**
    * Drawn inside a row whose value names it. The label
    * is for a screen reader alone. The scope line is left to the surface, whose
-   * subject tag already says which project the message files under. The row
-   * keeps the picker with no projects to offer, disabled on "No project".
+   * subject tag already says which project the message files under.
    */
   compact?: boolean;
 }>) {
   const t = useT();
-  // A compact row keeps its place and says there is nothing to choose.
-  // Anywhere else, a picker with no projects is a dead control.
-  if (projects.length === 0 && !compact) {
+  if (projects.length === 0) {
     return null;
   }
   const chosen = projects.find((project) => project.project_id === projectId);
@@ -156,7 +153,6 @@ export function ProjectPicker({
             ]}
             value={projectId}
             onChange={onChange}
-            disabled={projects.length === 0}
           />
         )}
       </Field>

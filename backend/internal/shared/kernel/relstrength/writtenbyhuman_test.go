@@ -6,6 +6,9 @@ package relstrength
 import (
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 func TestAutomaticNamesWhatSentARowNoHumanWrote(t *testing.T) {
@@ -38,11 +41,11 @@ func TestAutomaticNamesWhatSentARowNoHumanWrote(t *testing.T) {
 func TestAnAutomaticRowIsNoInteraction(t *testing.T) {
 	t.Parallel()
 	for _, kind := range AutomaticKinds() {
-		if InteractionCounts("email", "", "", kind) {
+		if InteractionCounts("email", "", "", kind, occurredday.Moment{At: now}, now, time.UTC) {
 			t.Errorf("a %s mail counts as an interaction", kind)
 		}
 	}
-	if !InteractionCounts("email", "", "", "") {
+	if !InteractionCounts("email", "", "", "", occurredday.Moment{At: now}, now, time.UTC) {
 		t.Error("a human's mail must count as an interaction")
 	}
 }
@@ -51,7 +54,7 @@ func TestAnAutomaticRowIsNoInteraction(t *testing.T) {
 // evaluates both over the same rows (TestTheGoAndSQLWrittenByHumanRulesAgree).
 func TestTheCountingRuleAsksWhoWroteTheRow(t *testing.T) {
 	t.Parallel()
-	rule := InteractionCountsSQL("a")
+	rule := InteractionCountsSQL("a", "now()")
 	for _, clause := range []string{"NOT a.sender_is_machine", "a.calendar_method IS NULL", "NOT a.bulk_mail_attested", OriginIsEngagementSQL("a")} {
 		if !strings.Contains(rule, clause) {
 			t.Errorf("InteractionCountsSQL = %q lacks %q", rule, clause)

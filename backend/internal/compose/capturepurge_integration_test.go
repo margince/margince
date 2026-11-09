@@ -15,6 +15,7 @@ package compose
 import (
 	"context"
 	"log/slog"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -531,9 +532,9 @@ func TestAPurgeIsNotShieldedByAFinishedRequest(t *testing.T) {
 
 func TestAMailboxSideDeletionDestroysAMessageNobodyElseHas(t *testing.T) {
 	e := integration.Setup(t)
-	mine := seedPurgeableMail(t, e, "freundin@example.com", "privat", e.Rep1)
+	mine := captureProviderMail(t, e, "freundin@example.com", "privat", e.Rep1)
 
-	if err := purgerFor(t, e).PurgeRemoved(purgeCtx(e, e.Rep1), e.Rep1, "gmail", sourceIDOf(t, e, mine)); err != nil {
+	if err := purgerFor(t, e).PurgeRemoved(purgeCtx(e, e.Rep1), e.Rep1, "gmail", providerIDOf(t, e, mine)); err != nil {
 		t.Fatalf("PurgeRemoved: %v", err)
 	}
 	if body := activityBody(t, e, mine); body != "" {
@@ -543,10 +544,9 @@ func TestAMailboxSideDeletionDestroysAMessageNobodyElseHas(t *testing.T) {
 
 func TestAMailboxSideDeletionLeavesAColleaguesCopyAlone(t *testing.T) {
 	e := integration.Setup(t)
-	shared := seedPurgeableMail(t, e, "kunde@example.com", "auch bei der Kollegin", e.Rep1)
-	addImporter(t, e, shared, e.Rep2)
+	shared := captureProviderMail(t, e, "kunde@example.com", "auch bei der Kollegin", e.Rep1, e.Rep2)
 
-	if err := purgerFor(t, e).PurgeRemoved(purgeCtx(e, e.Rep1), e.Rep1, "gmail", sourceIDOf(t, e, shared)); err != nil {
+	if err := purgerFor(t, e).PurgeRemoved(purgeCtx(e, e.Rep1), e.Rep1, "gmail", providerIDOf(t, e, shared)); err != nil {
 		t.Fatalf("PurgeRemoved: %v", err)
 	}
 	if body := activityBody(t, e, shared); body == "" {
@@ -559,10 +559,10 @@ func TestAMailboxSideDeletionLeavesAColleaguesCopyAlone(t *testing.T) {
 
 func TestAMailboxSideDeletionDoesNotOutrankTheStatutoryFloor(t *testing.T) {
 	e := integration.Setup(t)
-	shielded := seedPurgeableMail(t, e, "kunde@example.com", "Handelsbrief", e.Rep1)
+	shielded := captureProviderMail(t, e, "kunde@example.com", "Handelsbrief", e.Rep1)
 	restrict(t, e, shielded)
 
-	if err := purgerFor(t, e).PurgeRemoved(purgeCtx(e, e.Rep1), e.Rep1, "gmail", sourceIDOf(t, e, shielded)); err != nil {
+	if err := purgerFor(t, e).PurgeRemoved(purgeCtx(e, e.Rep1), e.Rep1, "gmail", providerIDOf(t, e, shielded)); err != nil {
 		t.Fatalf("PurgeRemoved: %v", err)
 	}
 	if body := activityBody(t, e, shielded); body == "" {
@@ -570,9 +570,8 @@ func TestAMailboxSideDeletionDoesNotOutrankTheStatutoryFloor(t *testing.T) {
 	}
 }
 
-// sourceIDOf reads back the natural key seedPurgeableMail minted, which is what
-// a connector reports a removal under.
-func sourceIDOf(t *testing.T, e *integration.Env, activityID ids.UUID) string {
+// providerIDOf reverses the test fixture's Message-ID suffix.
+func providerIDOf(t *testing.T, e *integration.Env, activityID ids.UUID) string {
 	t.Helper()
 	var sourceID string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -581,7 +580,7 @@ func sourceIDOf(t *testing.T, e *integration.Env, activityID ids.UUID) string {
 	}); err != nil {
 		t.Fatalf("reading the source id: %v", err)
 	}
-	return sourceID
+	return strings.TrimSuffix(sourceID, "@capture.test")
 }
 
 // What a mailbox-side deletion destroys, and what it leaves standing.
@@ -592,10 +591,10 @@ func sourceIDOf(t *testing.T, e *integration.Env, activityID ids.UUID) string {
 // three outcomes PurgeRemoved sorts a removal into, and two of them keep it.
 func TestAMailboxDeletionDestroysOnlyTheOwnersSoleCopy(t *testing.T) {
 	e := integration.Setup(t)
-	mine := seedPurgeableMail(t, e, "anwalt@kanzlei.example", "nur meine", e.Rep1)
+	mine := captureProviderMail(t, e, "anwalt@kanzlei.example", "nur meine", e.Rep1)
 
 	if err := purgerFor(t, e).PurgeRemoved(
-		purgeCtx(e, e.Rep1), e.Rep1, "gmail", "pg-"+mine.String()); err != nil {
+		purgeCtx(e, e.Rep1), e.Rep1, "gmail", providerIDOf(t, e, mine)); err != nil {
 		t.Fatalf("acting on the deletion: %v", err)
 	}
 
@@ -613,11 +612,10 @@ func TestAMailboxDeletionDestroysOnlyTheOwnersSoleCopy(t *testing.T) {
 // rather than being special-cased.
 func TestAMailboxDeletionLeavesAColleaguesCopyStanding(t *testing.T) {
 	e := integration.Setup(t)
-	shared := seedPurgeableMail(t, e, "anwalt@kanzlei.example", "auch bei der Kollegin", e.Rep1)
-	addImporter(t, e, shared, e.Rep2)
+	shared := captureProviderMail(t, e, "anwalt@kanzlei.example", "auch bei der Kollegin", e.Rep1, e.Rep2)
 
 	if err := purgerFor(t, e).PurgeRemoved(
-		purgeCtx(e, e.Rep1), e.Rep1, "gmail", "pg-"+shared.String()); err != nil {
+		purgeCtx(e, e.Rep1), e.Rep1, "gmail", providerIDOf(t, e, shared)); err != nil {
 		t.Fatalf("acting on the deletion: %v", err)
 	}
 
@@ -646,10 +644,10 @@ func TestAMailboxDeletionForUncapturedMailIsNotAnError(t *testing.T) {
 // mailbox it does not own cannot reach a colleague's copy through this door.
 func TestAMailboxDeletionCannotReachAnotherSeatsImport(t *testing.T) {
 	e := integration.Setup(t)
-	theirs := seedPurgeableMail(t, e, "anwalt@kanzlei.example", "der Kollegin ihre", e.Rep2)
+	theirs := captureProviderMail(t, e, "anwalt@kanzlei.example", "der Kollegin ihre", e.Rep2)
 
 	if err := purgerFor(t, e).PurgeRemoved(
-		purgeCtx(e, e.Rep1), e.Rep1, "gmail", "pg-"+theirs.String()); err != nil {
+		purgeCtx(e, e.Rep1), e.Rep1, "gmail", providerIDOf(t, e, theirs)); err != nil {
 		t.Fatalf("acting on the deletion: %v", err)
 	}
 

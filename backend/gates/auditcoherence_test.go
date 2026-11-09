@@ -28,7 +28,6 @@ package gates
 // the same reason enumsync_test.go derives the DDL sets by regex.
 
 import (
-	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -130,7 +129,7 @@ func TestEveryAuditVerbTheCodeWritesIsLegal(t *testing.T) {
 	found := map[string][]string{}
 	for _, dir := range []string{"internal", "../extensions"} {
 		for _, path := range goSourceFiles(t, dir) {
-			src, err := os.ReadFile(path)
+			src, err := gatekit.ReadFile(path)
 			if err != nil {
 				t.Fatalf("read %s: %v", path, err)
 			}
@@ -160,7 +159,7 @@ func TestEveryAuditVerbTheCodeWritesIsLegal(t *testing.T) {
 // enums. AuditLogEntry and AuditHistoryEntry must both $ref AuditAction.
 func auditLogContractEnums(t *testing.T) (action, actorType []string) {
 	t.Helper()
-	raw, err := os.ReadFile("api/crm.yaml")
+	raw, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("read contract: %v", err)
 	}

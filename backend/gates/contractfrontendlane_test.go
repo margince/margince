@@ -30,11 +30,12 @@ package gates
 // this test covers the pull-request path instead.
 
 import (
-	"os"
 	"slices"
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -55,7 +56,7 @@ const theFrontendFilter = "frontend"
 // longer run the CI job that regenerates and diffs the frontend schema.
 func TestTheContractReachesTheFrontendLane(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile(ciWorkflowForContractLane)
+	raw, err := gatekit.ReadFile(ciWorkflowForContractLane)
 	if err != nil {
 		t.Fatalf("reading %s: %v", ciWorkflowForContractLane, err)
 	}

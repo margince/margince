@@ -189,3 +189,27 @@
   flex-wrap: wrap;
   gap: var(--space-1);
 }
+
+/* The picture and its verbs keep the control column's right edge when a
+   refusal under them is wider; a phone row starts every control at the left. */
+.settings-picture {
+  align-items: flex-end;
+}
+@media (max-width: 640px) {
+  .settings-picture {
+    align-items: flex-start;
+  }
+}
+
+/* A setup step reads as the last line of its explanation, a step below it
+ * rather than pressed against the facts. */
+.health-setup-action {
+  margin-block-start: var(--space-2);
+}
+
+/* What to do next, its button and the evidence below stand apart as steps. */
+.health-next {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}

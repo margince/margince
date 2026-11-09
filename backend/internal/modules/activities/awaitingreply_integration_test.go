@@ -187,6 +187,34 @@ func TestAReplyOrACallSettlesTheFollowUp(t *testing.T) {
 	}
 }
 
+// A meeting with the contact since the message settles it once its time has
+// passed, whether or not anyone reported it held. One still to come, a
+// canceled one and a no-show settle nothing.
+func TestAMeetingInTouchSinceSettlesTheFollowUp(t *testing.T) {
+	e := setupLoad(t)
+	s := storeAddressing(e, readerAddress)
+
+	for name, tc := range map[string]struct {
+		status  string
+		ago     time.Duration
+		settles bool
+	}{
+		"nobody reported it": {"", 2 * time.Hour, true},
+		"still booked":       {"booked", 2 * time.Hour, true},
+		"held":               {"held", 2 * time.Hour, true},
+		"still to come":      {"booked", -2 * 24 * time.Hour, false},
+		"canceled":           {"canceled", 2 * time.Hour, false},
+		"a no-show":          {"no_show", 2 * time.Hour, false},
+	} {
+		contact := e.customerAt(t, "prospect")
+		owed, _ := e.sentTo(t, contact, "", 3*24*time.Hour)
+		e.metWith(t, contact, e.rep, tc.status, tc.ago)
+		if got := !awaited(t, s, e, owed); got != tc.settles {
+			t.Errorf("a meeting %s since settled the follow-up: %v, want %v", name, got, tc.settles)
+		}
+	}
+}
+
 func TestOnlyTheReadersOwnMailToACustomerIsAFollowUp(t *testing.T) {
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)

@@ -34,12 +34,16 @@ export function leadsColumn<Row>(
 }
 
 type VocabVerbs = Readonly<{ canEdit: boolean; canRemove: boolean }>;
-type VocabPage = "leads" | "acquisition" | "recordroles";
+// Where a vocabulary card is drawn: a page, and on a tabbed page its tab.
+type VocabPart =
+  | Readonly<{ page: "leads"; tab?: undefined }>
+  | Readonly<{ page: "deals"; tab: "sources" }>
+  | Readonly<{ page: "records"; tab: "roles" }>;
 
 // A page the seat only consults carries its own notice, so a card states a
 // partial posture only where the page leaves it unsaid.
-export function useVocabGrants(page: VocabPage) {
-  const readOnlyPage = usePageReadOnly(page);
+export function useVocabGrants(part: VocabPart) {
+  const readOnlyPage = usePageReadOnly(part.page, part.tab);
   const canCreate = useCanWrite("custom_field", "create");
   const canEdit = useCanWrite("custom_field", "update");
   const canRemove = useCanWrite("custom_field", "delete");

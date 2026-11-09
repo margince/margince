@@ -169,15 +169,9 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 	if err != nil {
 		return reporting.Evaluation{}, err
 	}
-	if err := requireInitiativeRead(ctx, frame); err != nil {
-		return reporting.Evaluation{}, err
-	}
-	members, err := loadInitiativeMembership(ctx, tx, e.initiatives, frame)
+	ctx, err = withInitiativeMembers(ctx, tx, e.initiatives, frame)
 	if err != nil {
 		return reporting.Evaluation{}, err
-	}
-	if members != nil {
-		ctx = withInitiativeMembership(ctx, members)
 	}
 	e.compared = &forecastCapture{}
 	out := reporting.Evaluation{Result: crmcontracts.ReportingEvaluation{Context: frame, Selection: selection, Metrics: []crmcontracts.ReportingMetric{}, Charts: []crmcontracts.ReportingChart{}}, Facts: []reporting.Fact{}}

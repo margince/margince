@@ -22,13 +22,13 @@ package gates
 // dead entry is how a reader learns the map is not maintained.
 
 import (
-	"os"
 	"regexp"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The map lives in its own file: approvalkind.ts is frozen by the frontend
@@ -78,7 +78,7 @@ func labelledKinds(t *testing.T, source string) []string {
 
 func TestEveryStageableKindHasAFrontendLabel(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile(frontendApprovalKinds)
+	source, err := gatekit.ReadFile(frontendApprovalKinds)
 	if err != nil {
 		t.Fatalf("reading the frontend approval-kind map: %v", err)
 	}

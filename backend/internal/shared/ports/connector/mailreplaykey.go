@@ -17,17 +17,17 @@ import "strings"
 // A second spelling in either module is how a reply comes to thread onto
 // nothing.
 
-// mailSeatMarker separates the shared Message-ID from the seat that could not
+// MailSeatMarker separates the shared Message-ID from the seat that could not
 // claim it. A space, because ValidMessageID refuses one: no genuine Message-ID
 // can carry this sequence, so a scoped key never collides with a bare key
 // somebody files later, and a scoped key never passes as an identity.
-const mailSeatMarker = " seat "
+const MailSeatMarker = " seat "
 
 // SeatScopedMailKey is the natural key one seat files a message under when the
 // shared key is held by a row they can prove nothing about. Deterministic, so
 // the same seat's next sync of the same message is the ordinary replay.
 func SeatScopedMailKey(messageID, seat string) string {
-	return messageID + mailSeatMarker + seat
+	return messageID + MailSeatMarker + seat
 }
 
 // SharedMailKey is the Message-ID behind a stored natural key, whether the row
@@ -36,7 +36,7 @@ func SeatScopedMailKey(messageID, seat string) string {
 // Every reader that thinks in Message-IDs goes through this: the seat-scoping
 // is an artefact of who filed the row, never of which message it is.
 func SharedMailKey(sourceID string) string {
-	if before, _, ok := strings.Cut(sourceID, mailSeatMarker); ok {
+	if before, _, ok := strings.Cut(sourceID, MailSeatMarker); ok {
 		return before
 	}
 	return sourceID

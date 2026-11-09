@@ -98,7 +98,7 @@ func dealDimensionSQL(ctx context.Context, frame crmcontracts.ReportingContext, 
 	if frame.ProductId != nil {
 		where += " AND EXISTS (SELECT 1 FROM deal_product dp WHERE dp.deal_id=" + alias + ".id AND dp.product_id=" + b.add(*frame.ProductId) + ")"
 	}
-	company, err := companyDimensionSQL(ctx, frame, b, alias+".company_id", "")
+	company, err := companyDimensionSQL(ctx, frame, b, string(recordTypeDeal), alias+".company_id", "")
 	return where + company, err
 }
 
@@ -111,16 +111,21 @@ func leadDimensionSQL(ctx context.Context, frame crmcontracts.ReportingContext, 
 		product := b.add(*frame.ProductId)
 		where += " AND (" + alias + ".product_id=" + product + " OR EXISTS (SELECT 1 FROM deal_product dp WHERE dp.deal_id=" + alias + ".qualified_deal_id AND dp.product_id=" + product + "))"
 	}
-	company, err := companyDimensionSQL(ctx, frame, b, alias+".company_id", alias+".industry")
+	company, err := companyDimensionSQL(ctx, frame, b, string(recordTypeLead), alias+".company_id", alias+".industry")
 	return where + company, err
 }
 
 // companyDimensionSQL reads the company's address country and industry through
 // storekit.LinkedCompanyColumn, as the deal and lead list filters do. So the
-// filter needs the company read grant and follows the company row scope.
-func companyDimensionSQL(ctx context.Context, frame crmcontracts.ReportingContext, b *reportingBindings, companyID, ownIndustry string) (string, error) {
+// filter needs the company read grant and follows the company row scope. A role
+// that masks the record's company cannot filter through it, because a match
+// would name what the mask hid.
+func companyDimensionSQL(ctx context.Context, frame crmcontracts.ReportingContext, b *reportingBindings, object, companyID, ownIndustry string) (string, error) {
 	where := ""
 	if frame.Country != nil {
+		if err := auth.RefuseMaskedFilter(ctx, object, "country", fieldCompanyID); err != nil {
+			return "", err
+		}
 		country, err := storekit.LinkedCompanyColumn(ctx, companyID, "address_country", b.arg)
 		if err != nil {
 			return "", err
@@ -128,6 +133,9 @@ func companyDimensionSQL(ctx context.Context, frame crmcontracts.ReportingContex
 		where += " AND " + country + "=" + b.add(*frame.Country)
 	}
 	if frame.Industry != nil {
+		if err := auth.RefuseMaskedFilter(ctx, object, "industry", fieldCompanyID); err != nil {
+			return "", err
+		}
 		linked, err := storekit.LinkedCompanyColumn(ctx, companyID, "industry", b.arg)
 		if err != nil {
 			return "", err

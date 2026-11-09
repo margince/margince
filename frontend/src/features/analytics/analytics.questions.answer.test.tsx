@@ -398,3 +398,27 @@ describe("a converted amount with no base currency", () => {
     expect(screen.queryByText("Mixed currencies")).toBeNull();
   });
 });
+
+it("keeps the answer’s conversion frame when the page currency differs", async () => {
+  stubServer();
+  renderAnswer(
+    {
+      ...ANSWER,
+      columns: ["stage_id", "sum_amount_base_minor"],
+      rows: [
+        { stage_id: "s-qual", sum_amount_base_minor: 100000, _withheld: false },
+      ],
+      base_currency: "USD",
+      rate_date: "2026-08-12T10:00:00Z",
+      excluded_by_permission: 7,
+    },
+    {
+      ...QUERY,
+      group_by: ["stage_id"],
+      measures: [{ fn: "sum", field: "amount_base_minor" }],
+    },
+  );
+  expect(await screen.findByText(/USD.*12/)).toBeTruthy();
+  expect(screen.getByText("US$1,000")).toBeTruthy();
+  expect(screen.getByText(/7 records are left out/)).toBeTruthy();
+});

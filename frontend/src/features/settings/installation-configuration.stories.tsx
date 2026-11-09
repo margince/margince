@@ -98,7 +98,7 @@ function page(hash = "#/settings/configuration") {
 }
 
 const meta = {
-  title: "Settings/Governance/Configuration/Page",
+  title: "Settings/System/Configuration/Page",
   component: InstallationConfigurationPage,
 } satisfies Meta<typeof InstallationConfigurationPage>;
 export default meta;

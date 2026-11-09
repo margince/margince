@@ -78,6 +78,19 @@ func reportingInitiativeContext(ctx context.Context, tx pgx.Tx, selection crmcon
 	return nil
 }
 
+// withInitiativeMembers carries the frame's initiative membership on ctx, for
+// initiativeMemberSQL, after checking the reader may read it.
+func withInitiativeMembers(ctx context.Context, tx pgx.Tx, store *initiatives.Store, frame crmcontracts.ReportingContext) (context.Context, error) {
+	if err := requireInitiativeRead(ctx, frame); err != nil {
+		return ctx, err
+	}
+	members, err := loadInitiativeMembership(ctx, tx, store, frame)
+	if err != nil || members == nil {
+		return ctx, err
+	}
+	return withInitiativeMembership(ctx, members), nil
+}
+
 // loadInitiativeMembership reads the membership the metric readers narrow by.
 func loadInitiativeMembership(ctx context.Context, tx pgx.Tx, store *initiatives.Store, frame crmcontracts.ReportingContext) (*initiativeMembership, error) {
 	if frame.InitiativeId == nil || store == nil {

@@ -110,7 +110,7 @@ func (s Scope) Files(t testing.TB) []ParsedFile {
 // them, because every root owes its own evidence of not being vacuous.
 func (s Scope) sweep(tree string, roots []string) (inside []ParsedFile, outside []string, perRoot []int, err error) {
 	perRoot = make([]int, len(roots))
-	err = filepath.WalkDir(tree, func(path string, entry fs.DirEntry, walkErr error) error {
+	err = WalkDir(tree, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}

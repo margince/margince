@@ -324,7 +324,7 @@ describe("MailSharingPlate", () => {
     expect(screen.getByText("Whole company")).toBeTruthy();
     expect(
       screen
-        .getByRole("link", { name: "Change in Capture rules" })
+        .getByRole("link", { name: "Change in Mail capture" })
         .getAttribute("href"),
     ).toBe("/#/settings/capture");
   });

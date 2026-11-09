@@ -19,6 +19,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"sort"
 	"time"
@@ -299,4 +300,18 @@ func (c *CloseDateCorrector) reversedSameQuestion(
 		return nil
 	})
 	return found, err
+}
+
+// reversesCorrectionEvidenceKey names, in each audit row an Undo writes, the
+// correction it takes back. An Undo puts back an earlier choice, so a read of
+// who chose a value looks past these rows (probabilitysetter.go).
+const reversesCorrectionEvidenceKey = "reverses_correction"
+
+func reversalEvidence(evidence map[string]any, correction ids.UUID) map[string]any {
+	out := maps.Clone(evidence)
+	if out == nil {
+		out = map[string]any{}
+	}
+	out[reversesCorrectionEvidenceKey] = correction.String()
+	return out
 }

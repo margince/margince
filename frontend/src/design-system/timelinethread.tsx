@@ -301,10 +301,12 @@ function ThreadMessage({
 export function ThreadRow({
   group,
   zone,
+  repeatsDay,
   onOpenThread,
 }: Readonly<{
   group: TimelineGroup;
   zone: string;
+  repeatsDay?: boolean;
   onOpenThread?: (threadKey: string) => void;
 }>) {
   const { locale } = useLocale();
@@ -339,7 +341,7 @@ export function ThreadRow({
       {/* The same three columns a single row sits on (date, rail, what
           happened), because a conversation is a row of the chronology. Its
           mark is the kind's own icon: a dot would say it was one message. */}
-      <TimelineWhen entry={newest} zone={zone} />
+      <TimelineWhen entry={newest} zone={zone} repeatsDay={repeatsDay} />
       <span className="tl-rail" aria-hidden="true">
         <span className="tl-icon">
           <Icon aria-hidden />

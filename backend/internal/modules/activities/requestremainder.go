@@ -12,8 +12,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/salutation"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // RequestSettlementRule names the rule a settlement verdict was reached under.
@@ -29,11 +29,15 @@ const minRemainderWords = 2
 // history and the signature. Our reply never supplies them, so a question we
 // asked cannot become work we owe.
 func RequestRemainderGrounded(body, remaining string) bool {
-	words := strings.FieldsFunc(remaining, func(r rune) bool { return !unicode.IsLetter(r) && !unicode.IsNumber(r) })
+	words := strings.FieldsFunc(remaining, func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsNumber(r) && !unicode.IsMark(r)
+	})
 	if len(words) < minRemainderWords {
 		return false
 	}
-	return values.Quoted(textlang.MessageOpening(body, utf8.RuneCountInString(body)), remaining)
+	// The greeting and the sign-off ask for nothing, so a quote of them alone
+	// grounds no remainder.
+	return salutation.QuotedPast(textlang.MessageOpening(body, utf8.RuneCountInString(body)), remaining)
 }
 
 // groundedRemainderTx is the remaining text a verdict may record, re-read

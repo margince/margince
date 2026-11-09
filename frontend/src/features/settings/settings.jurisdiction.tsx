@@ -21,17 +21,17 @@ import {
 import { lockFor } from "../../format/settinglocks";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
-import { DSR_KIND_LABEL } from "../../lib/privacy.logic";
-import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
-import { useInstallationSettings } from "../../lib/uploadlimit";
-import { useViewerZone } from "../../lib/viewerzone";
 import {
   AUDIENCE_LABEL,
   DOCUMENT_KIND_LABEL,
   deadlineText,
   documentFilename,
   floorText,
-} from "./settings.jurisdiction.text";
+} from "../../lib/jurisdictiontext";
+import { DSR_KIND_LABEL } from "../../lib/privacy.logic";
+import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
+import { useInstallationSettings } from "../../lib/uploadlimit";
+import { useViewerZone } from "../../lib/viewerzone";
 
 // Settings → Governance → Jurisdiction: which country's pack this installation
 // runs under, what that selection puts in force, and the documents the pack

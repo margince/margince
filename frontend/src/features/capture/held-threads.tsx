@@ -1,24 +1,38 @@
-import { useQuery } from "@tanstack/react-query";
-import { Fragment, useId, useState } from "react";
+import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
+import { Fragment, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
-import { Badge, Button } from "../../design-system/atoms";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  SearchField,
+} from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { CellStack } from "../../design-system/cellstack";
 import { DataTable } from "../../design-system/datatable";
+import { DateInput, type ISODate } from "../../design-system/dateinput";
+import { useSettledValue } from "../../design-system/debouncedsearch";
 import { EmailReference } from "../../design-system/emailreference";
-import { useToast } from "../../design-system/toast";
+import { ErrorLine } from "../../design-system/errorline";
+import { Select } from "../../design-system/select";
 import { formatActivityWhen } from "../../format/activitywhen";
 import { formatNumber } from "../../format/format";
+import { startOfDayInZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { useThreadAudience } from "../../lib/audienceservice";
 import { useOpenEmail } from "../../lib/openemail";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+import { unwrap } from "../../lib/problem";
+import { useUrlParams } from "../../lib/urlstate";
 import { useViewerZone } from "../../lib/viewerzone";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
-import { VerdictPassNote } from "./verdictpass";
+import {
+  HELD_STATUSES,
+  type HeldStatus,
+  heldStatusLabel,
+} from "./held-threads.counts";
+
 import "./held-threads.css";
 
 // What this mailbox is holding back from the team, and the one press that
@@ -35,7 +49,16 @@ import "./held-threads.css";
 // exactly what holding them prevents.
 
 type HeldThread = components["schemas"]["HeldThread"];
-type HeldThreadList = components["schemas"]["HeldThreadListResponse"];
+
+/** What the list is narrowed to. Every filter runs on the server. */
+export type HeldFilters = Readonly<{
+  q?: string;
+  status?: HeldStatus;
+  from?: string;
+  to?: string;
+  reason?: string;
+  contact_id?: string;
+}>;
 
 // Why a thread is held, in the reader's words. A kind absent from the map is
 // one the server learned to say and this screen has not.
@@ -48,90 +71,149 @@ const kindLabel: Record<string, MessageKey> = {
   explicitly_confidential: "heldThreads.kind.explicitlyConfidential",
 };
 
-export function useHeldThreads() {
-  return useQuery({
-    queryKey: ["held-threads"],
-    queryFn: async () => {
-      return unwrap(await api.GET("/capture/held-threads"));
-    },
+/** One seat's held threads, a page at a time, narrowed on the server. */
+export function useHeldThreads(filters: HeldFilters = {}) {
+  // One key for one question: an empty search is no search, so the card and
+  // the unfiltered drawer share a read.
+  const narrowed = { ...filters, q: filters.q || undefined };
+  return useInfiniteQuery({
+    queryKey: ["held-threads", narrowed],
+    initialPageParam: undefined as string | undefined,
+    queryFn: async ({ pageParam }) =>
+      unwrap(
+        await api.GET("/capture/held-threads", {
+          params: {
+            query: {
+              cursor: pageParam,
+              ...narrowed,
+            },
+          },
+        }),
+      ),
+    // A server older than paging sent the whole list and no page.
+    getNextPageParam: (last) => last.page?.next_cursor ?? undefined,
+    // The drawer opens over the card's own read, so opening it is not a
+    // second read of the same list.
+    staleTime: 30_000,
+    // A new search keeps the rows it replaces until its answer lands, so the
+    // table never reads as empty while the server is still looking.
+    placeholderData: keepPreviousData,
   });
 }
 
-export function HeldThreads({ list }: Readonly<{ list: HeldThreadList }>) {
-  return (
-    <>
-      <HeldThreadNotices list={list} />
-      <HeldThreadTable rows={list.data} />
-    </>
+/** The held list with its search and status filter, read on the server. */
+export function HeldThreads() {
+  const t = useT();
+  const zone = useViewerZone();
+  const [params] = useUrlParams();
+  const contact = params.get("contact_id") ?? params.get("contact");
+  const [typed, setTyped] = useState("");
+  const [status, setStatus] = useState<HeldStatus | "">("");
+  const [reason, setReason] = useState("");
+  const [from, setFrom] = useState<ISODate | "">("");
+  const [to, setTo] = useState<ISODate | "">("");
+  const [browse, setBrowse] = useState(false);
+  const q = useSettledValue(typed.trim());
+  const active = Boolean(
+    q || status || reason || from || to || contact || browse,
   );
-}
-
-function HeldThreadNotices({ list }: Readonly<{ list: HeldThreadList }>) {
-  const stalled = list.data.some(
-    (row) => row.pending && row.attempts >= backlogStallAttempts,
-  );
-  // Only where a row waits on the pass. A thread judged personnel waits for
-  // nothing, so naming the next pass would promise a change.
-  const waiting = list.data.some((row) => row.pending);
-  if (!stalled && !waiting) {
-    return null;
-  }
+  const held = useHeldThreads({
+    q,
+    status: status || undefined,
+    reason: reason || undefined,
+    contact_id: contact,
+    from: from
+      ? new Date(startOfDayInZone(from, zone)).toISOString()
+      : undefined,
+    to: to ? new Date(startOfDayInZone(to, zone, 1)).toISOString() : undefined,
+  });
+  const first = held.data?.pages[0];
+  const rows = [
+    ...new Map(
+      (held.data?.pages ?? [])
+        .flatMap((page) => page.data)
+        .filter((row) => row.has_message && row.activity_id)
+        .map((row) => [row.thread_key, row]),
+    ).values(),
+  ];
   return (
     <div className="form-stack">
-      <BacklogCallout rows={list.data} />
-      {waiting && (
-        <VerdictPassNote clock={list.thread_verdict} subject="threads" />
+      <p>{t("heldThreads.sub")}</p>
+      <SearchField
+        aria-label={t("heldThreads.search")}
+        placeholder={t("heldThreads.search")}
+        value={typed}
+        onChange={(event) => setTyped(event.target.value)}
+      />
+      <div className="held-threads-filters">
+        <Select
+          aria-label={t("heldThreads.statusFilter")}
+          value={status}
+          options={[
+            { value: "", label: t("heldThreads.statusAll") },
+            ...HELD_STATUSES.map((value) => ({
+              value,
+              label: t(heldStatusLabel[value]),
+            })),
+          ]}
+          onChange={(value) =>
+            setStatus(HELD_STATUSES.find((status) => status === value) ?? "")
+          }
+        />
+        <Select
+          aria-label={t("heldThreads.reasonFilter")}
+          value={reason}
+          options={[
+            { value: "", label: t("heldThreads.anyReason") },
+            ...Object.entries(kindLabel).map(([value, key]) => ({
+              value,
+              label: t(key),
+            })),
+          ]}
+          onChange={setReason}
+        />
+        <DateInput
+          aria-label={t("heldThreads.from")}
+          value={from}
+          onChange={(event) => setFrom(event.target.value)}
+        />
+        <DateInput
+          aria-label={t("heldThreads.to")}
+          value={to}
+          onChange={(event) => setTo(event.target.value)}
+        />
+      </div>
+      {first && <BacklogCallout stalled={first.counts.stalled} />}
+      {held.isError && <ErrorLine error={held.error} />}
+      {!active ? (
+        <Button onClick={() => setBrowse(true)}>
+          {t("heldThreads.browse")}
+        </Button>
+      ) : rows.length === 0 ? (
+        <EmptyState>{t("heldThreads.noMatch")}</EmptyState>
+      ) : (
+        <HeldThreadTable rows={rows} />
+      )}
+      {active && held.hasNextPage && (
+        <Button
+          pending={held.isFetchingNextPage}
+          onClick={() => void held.fetchNextPage()}
+        >
+          {t("heldThreads.loadMore")}
+        </Button>
       )}
     </div>
   );
 }
 
 function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
-  const readerZone = useViewerZone();
+  const zone = useViewerZone();
   const t = useT();
-  const plural = usePlural();
   const { locale } = useLocale();
-  const toast = useToast();
-  // Which thread another owner still holds, so a release that changed nothing
-  // says so instead of looking broken. Keyed by thread, because two rows can be
-  // released before either answer arrives.
-  const [heldByOthers, setHeldByOthers] = useState<Record<string, number>>({});
-
-  // The same write the timeline's own control performs, through the same
-  // service. It was spelled twice before — here and in the action cluster,
-  // byte for byte — and what differs is only what a release refreshes and
-  // that this queue says so out loud.
-  const release = useThreadAudience({
-    invalidate: () => [["held-threads"]],
-    onSettled: ({ threadKey, outcome }) => {
-      if (outcome && !outcome.shared) {
-        // Somebody else imported this message too and has not released their
-        // own contribution. Saying which is the difference between a control
-        // that looks broken and one that reports what happened.
-        setHeldByOthers((held) => ({
-          ...held,
-          [threadKey]: outcome.held_by_others ?? 0,
-        }));
-        return;
-      }
-      setHeldByOthers((held) => {
-        const { [threadKey]: _released, ...rest } = held;
-        return rest;
-      });
-      toast.show(t("heldThreads.released"));
-    },
-  });
-
-  const stillHeld = Object.entries(heldByOthers);
-  // The message a held row opens. This table is the one place a reader meets
-  // these threads, so the drawer belongs to it.
   const [openEmail, setOpenEmail] = useOpenEmail();
-  const base = useId();
-  const erasedId = (row: HeldThread) => `${base}-${row.thread_key}`;
-  const subjectId = (row: HeldThread) => `${base}-subject-${row.thread_key}`;
   return (
     <>
-      <DataTable<HeldThread>
+      <DataTable
         fold
         label={t("heldThreads.title")}
         rows={rows}
@@ -142,30 +224,11 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
             header: t("heldThreads.colThread"),
             grow: true,
             render: (row) => (
-              <>
-                {/* Three states, not two: a subject, a message that carries
-                    none, and no message at all, which still governs later mail. */}
-                <span className="held-threads-subject" id={subjectId(row)}>
-                  {row.has_message ? (
-                    <ThreadSubject row={row} onOpen={setOpenEmail} />
-                  ) : (
-                    <CellStack>
-                      <span>{t("heldThreads.noSubject")}</span>
-                      <span className="t-caption" id={erasedId(row)}>
-                        {t("heldThreads.nothingToShare")}
-                      </span>
-                    </CellStack>
-                  )}
-                </span>
+              <CellStack>
+                <ThreadSubject row={row} onOpen={setOpenEmail} />
                 <ThreadParticipants row={row} beside />
-              </>
+              </CellStack>
             ),
-          },
-          {
-            key: "parties",
-            header: t("heldThreads.colParties"),
-            fold: "only",
-            render: (row) => <ThreadParticipants row={row} />,
           },
           {
             key: "why",
@@ -175,14 +238,13 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
           {
             key: "when",
             header: t("heldThreads.colWhen"),
-            align: "end",
             render: (row) =>
               row.occurred_at
                 ? formatActivityWhen(
                     row.occurred_at,
                     row.occurred_precision ?? "instant",
                     locale,
-                    readerZone,
+                    zone,
                   )
                 : "—",
           },
@@ -190,77 +252,26 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
             key: "actions",
             header: t("table.actions"),
             headerHidden: true,
-            align: "end",
             fold: "end",
             render: (row) => (
               <Button
-                // The release endpoint works on the seat's messages on the
-                // thread, so with none left it could only answer not-found.
-                reasonId={row.has_message ? undefined : erasedId(row)}
-                aria-describedby={subjectId(row)}
-                pending={
-                  release.isPending &&
-                  release.variables?.threadKey === row.thread_key
-                }
-                onClick={() =>
-                  release.mutate({ threadKey: row.thread_key, share: true })
-                }
+                disabled={!row.activity_id}
+                onClick={() => row.activity_id && setOpenEmail(row.activity_id)}
               >
-                {t("heldThreads.release")}
+                {t("heldThreads.preview")}
               </Button>
             ),
           },
         ]}
       />
-      {(release.isError || stillHeld.length > 0) && (
-        <div className="form-stack">
-          {release.isError && (
-            <Callout
-              tone="danger"
-              kind="outcome"
-              title={t("heldThreads.releaseFailed")}
-            >
-              {problemMessageOf(release.error, t)}
-            </Callout>
-          )}
-          {/* One notice listing every thread, so releasing several rows adds
-              no stack of identical bands. */}
-          {stillHeld.length > 0 && (
-            <Callout kind="outcome" title={t("heldThreads.stillHeldTitle")}>
-              <ul>
-                {stillHeld.map(([threadKey, owners]) => (
-                  <li key={threadKey}>
-                    {plural("heldThreads.heldByOthers", owners, {
-                      count: formatNumber(owners, locale),
-                    })}
-                  </li>
-                ))}
-              </ul>
-            </Callout>
-          )}
-        </div>
-      )}
-      {/* One email drawer for the table, not one per row, so a long list
-          mounts one dialog. */}
       <OpenEmailDrawer
         activityId={openEmail}
-        zone={readerZone}
+        zone={zone}
         onClose={() => setOpenEmail(null)}
       />
     </>
   );
 }
-
-// backlogStallAttempts is when a pending thread has been asked about as often as
-// it ever will be.
-//
-// The ledger claims a row only while `attempts < 2` (PendingMaxAttempts), so 2
-// is the ceiling and a threshold above it can never be crossed — the first
-// version of this used 3 and rendered nothing, ever. A thread sitting at the
-// ceiling and still pending is one the lane has stopped answering: a healthy
-// pass would have resolved it, and a spent one would have retired it to `unsure`
-// and taken it out of this list.
-const backlogStallAttempts = 2;
 
 /**
  * Whether the classifier is answering at all, derived from the rows already
@@ -272,14 +283,11 @@ const backlogStallAttempts = 2;
  * for the reader in front of it — their own backlog, not a global lane that may
  * be healthy while their mail sits.
  */
-function BacklogCallout({ rows }: Readonly<{ rows: HeldThread[] }>) {
+function BacklogCallout({ stalled }: Readonly<{ stalled: number }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const stalled = rows.filter(
-    (row) => row.pending && row.attempts >= backlogStallAttempts,
-  );
-  if (stalled.length === 0) {
+  if (stalled === 0) {
     // Pending but not yet at the ceiling is ordinary latency, and saying "your
     // mail is stuck" about it would cry wolf every time a thread arrives.
     return null;
@@ -290,8 +298,8 @@ function BacklogCallout({ rows }: Readonly<{ rows: HeldThread[] }>) {
       kind="event"
       title={t("heldThreads.backlogStalledTitle")}
     >
-      {plural("heldThreads.backlogStalled", stalled.length, {
-        count: formatNumber(stalled.length, locale),
+      {plural("heldThreads.backlogStalled", stalled, {
+        count: formatNumber(stalled, locale),
       })}
     </Callout>
   );

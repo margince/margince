@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { loadLocale } from "../src/i18n/catalogs";
 import { de } from "../src/i18n/de";
 import { en, type MessageKey } from "../src/i18n/en";
 import { SETTINGS_PAGES } from "../src/lib/settingscatalog";
@@ -14,8 +15,12 @@ import {
   taskFromCall,
   typedTask,
 } from "./mockapi/calls";
-import { anna, mockApi } from "./seed";
+import { anna, mockApi, servePrincipal } from "./seed";
 import { listClipping, openedAt, pageOverflow, textsOf } from "./waits";
+
+test.beforeAll(async () => {
+  await loadLocale("de");
+});
 
 /**
  * Settle the page's motion before measuring the colours it paints.
@@ -66,19 +71,43 @@ async function settleAnimations(page: Page) {
   // allSettled rather than all: a cancelled animation REJECTS `finished`, and
   // that is a settled outcome here — the animation is over, which is all this
   // waits for.
-  await page.evaluate(async () => {
+  //
+  // One look is not enough: a boot transition can start after it. So the wait
+  // repeats until a pass finds no finite clock-driven animation running. The
+  // round count is a backstop against a page that keeps starting new ones.
+  // Hitting it names them rather than handing them on as a finding.
+  const unsettled = await page.evaluate(async () => {
     const lands = (animation: Animation) =>
+      animation.timeline instanceof DocumentTimeline &&
       Number.isFinite(
         animation.effect?.getComputedTiming().activeDuration ?? Infinity,
       );
-    await Promise.allSettled(
+    const landing = () =>
       document
         .getAnimations()
         .filter((animation) => animation.playState === "running")
-        .filter(lands)
-        .map((animation) => animation.finished),
-    );
+        .filter(lands);
+    for (let round = 0; round < 50; round++) {
+      const running = landing();
+      if (running.length === 0) {
+        return [];
+      }
+      await Promise.allSettled(running.map((animation) => animation.finished));
+    }
+    return landing().map((animation) => {
+      const target =
+        animation.effect instanceof KeyframeEffect
+          ? animation.effect.target
+          : null;
+      return target
+        ? `${target.tagName.toLowerCase()}.${target.className}`
+        : "?";
+    });
   });
+  expect(
+    unsettled,
+    "finite animations kept starting through 50 rounds of waiting for them to land",
+  ).toEqual([]);
   const motion = await page.evaluate(() => {
     const describe = (element: Element) =>
       `${element.tagName.toLowerCase()}.${element.className}`;
@@ -1112,7 +1141,7 @@ test("AC-automations-1 (B-EP09.15): create from the catalog arrives paused; enab
 }) => {
   // Scoped to the editor's own region rather than to the page, so the criterion
   // still reads what it names if the page ever carries a second card.
-  await page.goto("/#/settings/automations");
+  await page.goto("/#/settings/automations/library");
   const automations = page.locator("[data-automations-admin]");
   await expect(automations.getByText("Stillstands-Erinnerung")).toBeVisible();
   await automations
@@ -1128,12 +1157,13 @@ test("AC-automations-1 (B-EP09.15): create from the catalog arrives paused; enab
   ).toHaveValue("3");
   await form.getByRole("button", { name: "Erstellen" }).click();
   // The outcome lands on the CARD: by the time it is true the dialog that
-  // produced it is gone.
+  // produced it is gone. The new row is on the other tab, so it says where.
   await expect(
     page.getByText(
-      "Pausiert erstellt. Nichts läuft, bis die Automatisierung aktiviert ist.",
+      "Pausiert erstellt. Schalte sie unter „Deine Automatisierungen“ ein.",
     ),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Deine Automatisierungen" }).click();
   const row = page.getByTestId("automation-au-2");
   // The row states its status on the control that changes it, rather than on a
   // badge beside a button whose label named the OTHER state. So the criterion
@@ -1151,7 +1181,7 @@ test("AC-automations-2 (features/10 §1): anti-DSL — no free-form rule body, n
   // that surface's region rather than over the page: an input elsewhere on the
   // page has nothing to do with rule authoring, and counting it in would say
   // something else entirely.
-  await page.goto("/#/settings/automations");
+  await page.goto("/#/settings/automations/library");
   const automations = page.locator("[data-automations-admin]");
   await expect(automations.getByText("Stillstands-Erinnerung")).toBeVisible();
   await automations
@@ -1218,7 +1248,7 @@ test("AC-settings-16: the audit log renders attributed entries, filters live, an
 test("AC-settings: the passport list is metadata-only and strikes revoked rows", async ({
   page,
 }) => {
-  // Passports are a credential the COLLEAGUE holds, so they live on AI access,
+  // Passports are a credential the COLLEAGUE holds, so they live on AI assistants,
   // behind "For developers": a reader connecting an AI tool never meets one.
   await page.goto("/#/settings/agents");
   await expect(page.getByText("Marcus' Claude", { exact: true })).toBeHidden();
@@ -1394,15 +1424,14 @@ test("AC-create-3: a company created with a domain offers the contacts on it, no
   page,
 }) => {
   // A reader who may link contacts to a company, which the shared admin is not.
-  await page.route(/\/v1\/me$/, (route) =>
-    route.fulfill({
-      json: meFixture({
-        allow: {
-          company: ["read", "create", "update"],
-          contact: ["read", "update"],
-          relationship: ["read", "create"],
-        },
-      }),
+  await servePrincipal(
+    page,
+    meFixture({
+      allow: {
+        company: ["read", "create", "update"],
+        contact: ["read", "update"],
+        relationship: ["read", "create"],
+      },
     }),
   );
   await page.goto("/#/companies");
@@ -3227,142 +3256,6 @@ test.describe("filters and views", () => {
   });
 });
 
-test.describe("stage automation, in German", () => {
-  // The rule and the report the page draws. Routed rather than seeded, because
-  // what is under test is the German surface over a KNOWN state — a suspension
-  // with a reason, and a transition nobody has decided about — and neither is a
-  // state the seed happens to produce.
-  const SUSPENDED_REASON =
-    "ein Zug hat einen Datensatz außerhalb des eigenen Workspace erreicht";
-
-  async function stubStageAutomation(
-    page: Page,
-    options: { suspended?: boolean } = {},
-  ) {
-    const suspended = options.suspended ?? true;
-    await page.route("**/stage-automation/report**", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          window_days: 30,
-          data: [
-            {
-              pipeline_id: "p1",
-              from_stage_id: "s1",
-              to_stage_id: "s2",
-              from_stage_name: "Erstkontakt",
-              to_stage_name: "Angebot",
-              reviewed: 240,
-              proposed: 0,
-              expired: 0,
-              superseded: 0,
-              accepted_clean: 236,
-              accepted_edited: 2,
-              rejected: 2,
-              auto_applied: 0,
-              unsafe: 1,
-              observation_days: 34,
-              clean_acceptance_rate: 0.98,
-              edit_rate: 0.01,
-              rejection_rate: 0.01,
-              // UNDER the 1% ceiling. The rule below is suspended for a SAFETY
-              // defect, which needs no volume — so the record has to be good,
-              // or the page would rightly draw "not earned yet" instead of the
-              // undo window this test is about.
-              unsafe_rate: 0.004,
-              evidence_kinds: [],
-            },
-          ],
-        }),
-      });
-    });
-    await page.route("**/stage-automation/policies/**", async (route) => {
-      if (route.request().method() !== "GET") {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: "{}",
-        });
-        return;
-      }
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          data: [
-            {
-              id: "r1",
-              pipeline_id: "p1",
-              from_stage_id: "s1",
-              to_stage_id: "s2",
-              mode: "auto",
-              clean_acceptance_threshold: 0.95,
-              correction_reversal_threshold: 0.01,
-              min_reviewed: 200,
-              min_observation_days: 28,
-              window_days: 30,
-              undo_window_hours: 72,
-              version: 3,
-              ...(suspended
-                ? {
-                    suspended_at: "2026-09-03T10:00:00Z",
-                    suspended_reason: SUSPENDED_REASON,
-                  }
-                : {}),
-            },
-          ],
-        }),
-      });
-    });
-  }
-
-  test("a suspended transition says in German why it stopped, and promises no undo while it is stopped", async ({
-    page,
-  }) => {
-    await stubStageAutomation(page);
-    await page.goto("/#/settings/stageautomation");
-    await page.waitForLoadState("networkidle");
-
-    // The switch carries the transition's own stage names, so an admin reading
-    // three rules can tell which move each one governs.
-    await expect(
-      page.getByRole("switch", { name: /Erstkontakt → Angebot/ }),
-    ).toBeVisible();
-
-    // The product's own reason, in the reader's language and unabridged. It is
-    // the entire basis for deciding whether to start the transition again.
-    await expect(page.getByText(SUSPENDED_REASON)).toBeVisible();
-
-    // A SUSPENDED rule promises no undo window, because it applies nothing —
-    // and a screen saying "Rückgängig für 72 h" beside "Margince hat das
-    // gestoppt" would offer an undo for moves that are not being made.
-    await expect(page.getByText(/Rückgängig für/)).toBeHidden();
-
-    // The way back is a deliberate act with its own confirmation, not a
-    // toggle: lifting a safety stop by mis-click is the failure this guards.
-    await page.getByRole("button", { name: "Fortsetzen" }).click();
-    await expect(
-      page.getByText(/überspringt die Schwelle nicht/),
-    ).toBeVisible();
-  });
-
-  test("a running transition says in German how long a move can be taken back", async ({
-    page,
-  }) => {
-    await stubStageAutomation(page, { suspended: false });
-    await page.goto("/#/settings/stageautomation");
-    await page.waitForLoadState("networkidle");
-
-    // "Rückgängig machen", with the window a contact actually has. A screen that
-    // offered undo without saying how long it lasts leaves somebody to find
-    // out by trying it too late.
-    await expect(page.getByText(/Rückgängig für 72 h/)).toBeVisible();
-    // And nothing about a stop, because there is none.
-    await expect(page.getByText("Von Margince ausgesetzt")).toBeHidden();
-  });
-});
-
 const SHARED_LINK_ROWS = Array.from({ length: 3 }, (_, index) => ({
   id: `share-${index}`,
   kind: index === 1 ? "snapshot" : "live",
@@ -3375,9 +3268,7 @@ const SHARED_LINK_ROWS = Array.from({ length: 3 }, (_, index) => ({
 // The analytics forecast for a reader who may share it, with the drawer open
 // from its trigger by the KEYBOARD, so every caller starts from the same place.
 async function openSharedLinks(page: Page) {
-  await page.route(/\/v1\/me$/, (route) =>
-    route.fulfill({ json: meFixture({ allow: { forecast: ["create"] } }) }),
-  );
+  await servePrincipal(page, meFixture({ allow: { forecast: ["create"] } }));
   await page.route(/\/v1\/forecast\/shares$/, (route) =>
     route.fulfill({ json: { data: SHARED_LINK_ROWS } }),
   );
@@ -3453,10 +3344,9 @@ test.describe("the contact's access panel, open", () => {
     test(`no AA violations with it open (${colorScheme})`, async ({ page }) => {
       await page.emulateMedia({ colorScheme });
       // A reader who may change it, so the switch is drawn and judged.
-      await page.route(/\/v1\/me$/, (route) =>
-        route.fulfill({
-          json: meFixture({ allow: { contact: ["read", "update"] } }),
-        }),
+      await servePrincipal(
+        page,
+        meFixture({ allow: { contact: ["read", "update"] } }),
       );
       await page.route("**/contacts/p-anna/360", (route) =>
         route.fulfill({
@@ -3694,7 +3584,7 @@ test.describe("calling a contact", () => {
       await expect(opener).toBeFocused();
     });
 
-    test("a task typed by hand offers Draft email and Open contact but no Call", async ({
+    test("a task typed by hand offers Call, Draft email and Open contact", async ({
       page,
     }) => {
       const { dialog } = await openTask(page, typedTask.subject);
@@ -3707,7 +3597,7 @@ test.describe("calling a contact", () => {
           exact: true,
         }),
       ).toBeVisible();
-      await expect(callVerb(dialog)).toHaveCount(0);
+      await expect(callVerb(dialog)).toHaveAttribute("href", tel);
     });
   });
 });

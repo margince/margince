@@ -1,23 +1,22 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useRef, useState } from "react";
-import { api } from "../../api/client";
+import { useState } from "react";
 import type { components } from "../../api/schema";
+import { PassportAreasDrawer } from "../../components/passport-areas";
 import { usePassportRevoke } from "../../components/passport-revoke";
+import {
+  offersWorkAreas,
+  type WorkArea,
+  WorkAreasCell,
+} from "../../components/workareas";
 import {
   Badge,
   Button,
-  Checkbox,
   EmptyState,
-  Field,
-  Modal,
   OverflowMenu,
-  TextInput,
 } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
-import { Heading } from "../../design-system/heading";
 import {
   Panel,
   PanelBody,
@@ -25,30 +24,29 @@ import {
   PanelIntro,
 } from "../../design-system/panel";
 import { ScopeChips, scopeChipLabel } from "../../design-system/passportselect";
-import { QueryStates, WriteRefused } from "../../design-system/querystates";
+import { QueryStates } from "../../design-system/querystates";
 import { formatDate, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
 import { usePassports } from "../../lib/passports.queries";
-import { throwProblem } from "../../lib/problem";
-import { resetToSignedOut } from "../../lib/session";
 import {
   PassportUsageLine,
   usePassportUsageDetail,
 } from "../automations/agentusage";
-import { MintedPassport, PassportUses } from "./settings.passportuse";
+import { PassportUses } from "./settings.passportuse";
+import { MintDialog } from "./settings-passports-mint";
 import "./settings.css";
 import { useViewerZone } from "../../lib/viewerzone";
 import "./settings-agents.css";
 
-const PASSPORT_SCOPES = ["read", "draft", "write", "send", "enrich"] as const;
-type PassportScope = (typeof PASSPORT_SCOPES)[number];
 type PassportSummary = components["schemas"]["PassportSummary"];
 
-// Annotated, so an added scope is a missing-key compile error rather than a
-// checkbox labelled with its wire token.
-function scopeLabelKey(scope: PassportScope): MessageKey {
-  return `passport.scope.${scope}`;
+// Only a live passport is offered a change of areas. The server would take one
+// on a dead passport too, where it changes nothing anyone can use.
+function isLive(passport: PassportSummary, now: number): boolean {
+  return (
+    passport.revoked_at == null &&
+    (passport.expires_at == null || Date.parse(passport.expires_at) > now)
+  );
 }
 
 // The revoke confirm hands focus back to the passport's name. The row stays
@@ -69,6 +67,10 @@ export function PassportCard() {
   // ConnectedAgentsCard; the `oauth:` label prefix decides nothing.
   const minted = (list.data?.data ?? []).filter(
     (passport) => passport.connection == null,
+  );
+  const reachable = list.data?.reachable_areas ?? [];
+  const [changingAreas, setChangingAreas] = useState<PassportSummary | null>(
+    null,
   );
   // A revoked passport can do nothing more, so it waits behind a toggle. One
   // revoked from this view stays, struck, so focus has its row to land on.
@@ -108,7 +110,12 @@ export function PassportCard() {
       </PanelBody>
       <PanelGroupHead title={t("settings.passportsYours")} level="h3" />
       {list.isSuccess && shown.length > 0 ? (
-        <PassportTable passports={shown} onRevoke={askRevoke} />
+        <PassportTable
+          passports={shown}
+          reachable={reachable}
+          onRevoke={askRevoke}
+          onChangeAreas={setChangingAreas}
+        />
       ) : list.isSuccess && hidden.length > 0 ? null : (
         <PanelBody>
           <QueryStates query={list} pendingLabel={t("settings.passports")}>
@@ -134,8 +141,21 @@ export function PassportCard() {
         open={minting}
         onClose={() => setMinting(false)}
         apiBaseUrl={list.data?.api_base_url}
+        reachable={reachable}
         onMinted={() => list.refetch()}
       />
+      {changingAreas && (
+        <PassportAreasDrawer
+          key={changingAreas.id}
+          subject={{
+            id: changingAreas.id,
+            name: changingAreas.label,
+            areas: changingAreas.areas,
+          }}
+          reachable={reachable}
+          onClose={() => setChangingAreas(null)}
+        />
+      )}
       {revoke.confirm}
     </Panel>
   );
@@ -143,13 +163,21 @@ export function PassportCard() {
 
 function PassportTable({
   passports,
+  reachable,
   onRevoke,
+  onChangeAreas,
 }: Readonly<{
   passports: readonly PassportSummary[];
+  reachable: readonly WorkArea[];
   onRevoke: (id: string) => void;
+  onChangeAreas: (passport: PassportSummary) => void;
 }>) {
   const t = useT();
   const dates = usePassportDates();
+  // Read once: a passport that expires while the page is open is refused by
+  // the server, and the drawer says so.
+  const [now] = useState(() => Date.now());
+  const areas = offersWorkAreas(reachable);
   const usageDetail = usePassportUsageDetail<PassportSummary>(
     (passport) => passport.label,
   );
@@ -177,6 +205,19 @@ function PassportTable({
         </span>
       ),
     },
+    ...(areas
+      ? [
+          {
+            key: "areas",
+            header: t("settings.passportColAreas"),
+            render: (passport: PassportSummary) => (
+              <span className="agents-scopes">
+                <WorkAreasCell areas={passport.areas} />
+              </span>
+            ),
+          },
+        ]
+      : []),
     {
       key: "used",
       header: t("settings.passportColLastUsed"),
@@ -201,6 +242,17 @@ function PassportTable({
             <OverflowMenu
               label={t("table.rowActions", { name: passport.label })}
             >
+              {areas && isLive(passport, now) && (
+                <Button
+                  aria-label={t("passportAreas.openNamed", {
+                    name: passport.label,
+                  })}
+                  aria-haspopup="dialog"
+                  onClick={() => onChangeAreas(passport)}
+                >
+                  {t("passportAreas.open")}
+                </Button>
+              )}
               <Button
                 variant="danger"
                 aria-label={t("settings.revokeNamed", { name: passport.label })}
@@ -280,174 +332,4 @@ function usePassportDates() {
         : t("settings.passportNoExpiry"),
     ].join(" · ");
   return { lastUsed, expires, caption };
-}
-
-function MintDialog({
-  open,
-  onClose,
-  apiBaseUrl,
-  onMinted,
-}: Readonly<{
-  open: boolean;
-  onClose: () => void;
-  apiBaseUrl: string | undefined;
-  onMinted: () => unknown;
-}>) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  const [label, setLabel] = useState("");
-  const [scopes, setScopes] = useState<Set<PassportScope>>(
-    new Set(["read", "draft"]),
-  );
-  const tokenRegion = useRef<HTMLDivElement | null>(null);
-  const titleId = useId();
-  const formId = useId();
-  const scopeHintId = useId();
-
-  const mint = useMutation({
-    mutationFn: async (request: { label: string; scopes: PassportScope[] }) => {
-      const { data, error, response } = await api.POST("/passports", {
-        body: { label: request.label.trim() || null, scopes: request.scopes },
-      });
-      // An expired session must not read as a mint that did nothing. Drop every
-      // cached answer before the probe re-asks, so the next sign-in sees none.
-      if (response.status === 401) {
-        await resetToSignedOut(queryClient);
-      }
-      if (error) {
-        throwProblem(error);
-      }
-      if (!response.ok) {
-        throwProblem({
-          type: "about:blank",
-          title: response.statusText || "Request failed",
-          status: response.status,
-        });
-      }
-      return data;
-    },
-    onSuccess: () => onMinted(),
-  });
-
-  // The token is shown once and never re-served, so focus goes to it.
-  const minted = mint.isSuccess;
-  useEffect(() => {
-    if (minted) {
-      tokenRegion.current?.focus();
-    }
-  }, [minted]);
-
-  const close = () => {
-    onClose();
-    setLabel("");
-    setScopes(new Set(["read", "draft"]));
-    mint.reset();
-  };
-  // Refused mid-flight, as `mint.reset()` does not cancel the POST. Once the
-  // token shows, Done is the only exit: anything else would lose it.
-  const dismiss = () => {
-    if (!mint.isPending && !mint.isSuccess) {
-      close();
-    }
-  };
-
-  return (
-    <Modal
-      open={open}
-      onClose={dismiss}
-      closeDisabled={mint.isPending || mint.isSuccess}
-      labelledBy={titleId}
-      intent="form"
-    >
-      <Heading size="large" className="t-h2 modal-title" id={titleId}>
-        {t("settings.mint")}
-      </Heading>
-      {/* Mounted for the dialog's whole life: a live region inserted with its
-          content is not reliably announced. */}
-      <div className="passport-token" ref={tokenRegion} tabIndex={-1}>
-        <div role="status">
-          {mint.isSuccess && <p>{t("settings.passportCreated")}</p>}
-        </div>
-        {mint.isSuccess && (
-          <MintedPassport token={mint.data.token} apiBaseUrl={apiBaseUrl} />
-        )}
-      </div>
-      {!mint.isSuccess && (
-        <form
-          id={formId}
-          className="form-stack"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (scopes.size > 0 && !mint.isPending) {
-              mint.mutate({ label, scopes: [...scopes] });
-            }
-          }}
-        >
-          <Field label={t("settings.passportLabel")}>
-            {(control) => (
-              <TextInput
-                {...control}
-                value={label}
-                onChange={(event) => setLabel(event.target.value)}
-              />
-            )}
-          </Field>
-          <fieldset
-            className="field-multiselect"
-            aria-describedby={scopeHintId}
-          >
-            <legend className="t-name">{t("settings.passportScopes")}</legend>
-            <p id={scopeHintId} className="t-caption">
-              {t("settings.passportScopesHint")}
-            </p>
-            {PASSPORT_SCOPES.map((scope) => (
-              <Checkbox
-                key={scope}
-                checked={scopes.has(scope)}
-                onChange={(event) => {
-                  const next = new Set(scopes);
-                  if (event.target.checked) {
-                    next.add(scope);
-                  } else {
-                    next.delete(scope);
-                  }
-                  setScopes(next);
-                }}
-                label={t(scopeLabelKey(scope))}
-              />
-            ))}
-          </fieldset>
-          <WriteRefused titleKey="settings.mintFailed" error={mint.error} />
-        </form>
-      )}
-      <div className="actions">
-        {mint.isSuccess ? (
-          // Open on success: closing would take the one sight of the token.
-          <Button variant="primary" onClick={close}>
-            {t("settings.mintDone")}
-          </Button>
-        ) : (
-          <>
-            <Button disabled={mint.isPending} onClick={dismiss}>
-              {t("settings.mintCancel")}
-            </Button>
-            <Button
-              type="submit"
-              form={formId}
-              variant="primary"
-              reason={
-                scopes.size === 0 && !mint.isPending
-                  ? t("settings.passportScopesRequired")
-                  : undefined
-              }
-              pending={mint.isPending}
-              busyLabel={t("settings.minting")}
-            >
-              {t("settings.mint")}
-            </Button>
-          </>
-        )}
-      </div>
-    </Modal>
-  );
 }

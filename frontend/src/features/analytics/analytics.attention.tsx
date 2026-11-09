@@ -24,9 +24,10 @@ import { useMemberNames } from "../../lib/membernames";
 import { type UrlParams, useUrlParams } from "../../lib/urlstate";
 import type { AnalyticsScope } from "./analytics.context";
 import { useDataCoverage } from "./analytics.coverage";
-import { useInputChecks } from "./analytics.forecast.review";
 import { useForecastReadings } from "./forecast.queries";
 import { checkLabel } from "./inputcheck.facts";
+import { useInputChecks } from "./inputchecks.queries";
+import type { Dimensions } from "./reporting.dimensions";
 
 type InputCheck = components["schemas"]["InputCheck"];
 
@@ -79,7 +80,7 @@ export function AttentionPanel({
     return null;
   }
   return (
-    <Panel title={t("analytics.attention")}>
+    <Panel title={t("analytics.attention")} flatHead>
       {state !== undefined && items.length === 0 && (
         <PanelBody>
           <SurfaceState
@@ -109,10 +110,7 @@ export function AttentionPanel({
             )}
             <p className="t-caption">{item.detail}</p>
           </div>
-          <AppLink
-            className="btn btn-ghost"
-            href={analyticsSectionHref(item.section, dials ?? params)}
-          >
+          <AppLink href={analyticsSectionHref(item.section, dials ?? params)}>
             {item.action}
           </AppLink>
         </PanelRow>
@@ -159,12 +157,13 @@ function findingDetail(
 export function useAttentionList(
   scope: AnalyticsScope,
   withReadings = true,
+  dimensions?: Dimensions,
 ): Readonly<{ items: AttentionItem[]; state: AttentionState }> {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   const canReadForecast = useCan("forecast", "read");
-  const checks = useInputChecks(canReadForecast, scope);
+  const checks = useInputChecks(canReadForecast, scope, dimensions);
   // An undefined scope holds the read, which is what a reader without the
   // forecast grant needs: no request, rather than a refused one.
   const readings = useForecastReadings(
@@ -214,7 +213,7 @@ export function useAttentionList(
         priced: formatAnalyticsNumber(forecast.priced_count, locale),
         eligible: formatAnalyticsNumber(forecast.eligible_count, locale),
       }),
-      detail: t("analytics.attentionUnpricedDetail"),
+      detail: unpricedDetail(t, dimensions),
       action: t("analytics.attentionUnpricedAction"),
       section: "forecast",
     });
@@ -246,4 +245,18 @@ export function attentionState(
   if (!reads) return "ready";
   if (checks.isError) return "failed";
   return checks.isPending ? "pending" : "ready";
+}
+
+function unpricedDetail(
+  t: ReturnType<typeof useT>,
+  dimensions?: Dimensions,
+): string {
+  const filtered =
+    dimensions?.product_id || dimensions?.country || dimensions?.industry;
+  return [
+    t("analytics.attentionUnpricedDetail"),
+    filtered ? t("analytics.wholeScopeForecast") : undefined,
+  ]
+    .filter(Boolean)
+    .join(" ");
 }

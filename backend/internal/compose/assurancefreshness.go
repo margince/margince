@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -90,7 +91,14 @@ func (f *AssuranceFreshness) HandleBatch(ctx context.Context, envs []events.Enve
 		if err := f.store.MarkInputsChanged(ctx, tx, subjects); err != nil {
 			return err
 		}
-		return f.queueRescans(ctx, tx, ws.UUID, subjects)
+		if err := f.queueRescans(ctx, tx, ws.UUID, subjects); err != nil {
+			return err
+		}
+		eventIDs := make([]ids.UUID, len(envs))
+		for i, env := range envs {
+			eventIDs[i] = env.EventID
+		}
+		return storekit.RecordAssuranceInputsRead(ctx, tx, eventIDs)
 	})
 }
 

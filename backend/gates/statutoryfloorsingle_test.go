@@ -17,10 +17,12 @@ package gates
 // wrong.
 
 import (
-	"os"
+	"io/fs"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func TestTheStatutoryFloorIsSpelledOnce(t *testing.T) {
@@ -33,12 +35,12 @@ func TestTheStatutoryFloorIsSpelledOnce(t *testing.T) {
 
 	var spellings []string
 	root := filepath.Join("internal")
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	err := gatekit.WalkDir(root, func(path string, info fs.DirEntry, err error) error {
 		if err != nil || info.IsDir() || !strings.HasSuffix(path, ".go") ||
 			strings.HasSuffix(path, "_test.go") {
 			return err
 		}
-		body, err := os.ReadFile(path)
+		body, err := gatekit.ReadFile(path)
 		if err != nil {
 			return err
 		}

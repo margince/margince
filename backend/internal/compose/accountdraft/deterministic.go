@@ -46,6 +46,9 @@ func Deterministic(in Input) Draft {
 // language. Nothing here is a thread subject - this drafter opens a NEW
 // conversation - so none of it earns a reply prefix.
 func deterministicSubject(in Input) string {
+	if subject := in.RequestedSubject(); subject != "" {
+		return subject
+	}
 	lang, band := in.Envelope.Lang(), in.Envelope.Band()
 	if in.Deal != nil {
 		return draftfloor.Subject(lang, band, in.Deal.Name, false)

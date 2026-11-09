@@ -470,13 +470,9 @@ func (h analyticsQueryHandlers) labelledExplanation(
 func (h analyticsQueryHandlers) labelledAnswer(
 	ctx context.Context, q analyticsquery.Query, answer AnalyticsAnswer,
 ) crmcontracts.AnalyticsAnswer {
-	return crmcontracts.AnalyticsAnswer{
-		Columns: answer.Columns, Rows: answer.Rows,
-		Withheld: answer.Withheld, TotalSafe: answer.TotalSafe,
-		SchemaVersion:      answer.SchemaVersion,
-		PopulationNarrowed: populationNarrowedWire(answer.PopulationNarrowed),
-		Labels:             idLabelsWire(analyticsIDLabels(ctx, h.names, q, answer.Rows)),
-	}
+	out := analyticsAnswerWire(answer)
+	out.Labels = idLabelsWire(analyticsIDLabels(ctx, h.names, q, answer.Rows))
+	return out
 }
 
 // idLabelsWire omits the map when nothing was named, rather than sending {}.

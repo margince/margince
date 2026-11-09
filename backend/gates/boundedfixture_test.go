@@ -39,7 +39,7 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
+	"io/fs"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -282,7 +282,7 @@ func readIntegrationFixtures(
 	suiteSet := map[string]bool{}
 	fset := gatekit.SourceFileSet()
 
-	err := filepath.Walk(integrationSuiteRoot, func(path string, info os.FileInfo, err error) error {
+	err := gatekit.WalkDir(integrationSuiteRoot, func(path string, info fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

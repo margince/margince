@@ -50,7 +50,7 @@ function story(rule: string, dueAt: string, initial = EMPTY_DEADLINE) {
 }
 
 const meta: Meta<typeof DsrDeadlineFields> = {
-  title: "Settings/Governance/Privacy and retention/Request deadline",
+  title: "Settings/Compliance/Privacy and retention/Request deadline",
   component: DsrDeadlineFields,
 };
 export default meta;

@@ -21,7 +21,6 @@ import (
 	"go/token"
 	"io/fs"
 	"maps"
-	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -33,7 +32,7 @@ func TestTheRefusalKindEnumIsTheKindsTheEngineConstructs(t *testing.T) {
 	t.Parallel()
 	kinds := refusalKindConstants(t)
 	census := refusalCensus{kinds: map[string]bool{}}
-	err := filepath.WalkDir("internal", func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir("internal", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}
