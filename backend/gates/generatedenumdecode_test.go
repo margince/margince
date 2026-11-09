@@ -96,7 +96,8 @@ func methodsByReceiver(files []*ast.File) (map[string]bool, map[string]map[strin
 	return valid, methods
 }
 
-// callsValid reports whether a function calls a method named exactly Valid.
+// callsValid reports whether a function calls a method named Valid, and not
+// one whose name only contains it, such as ValidUntil.
 func callsValid(fn *ast.FuncDecl) bool {
 	found := false
 	ast.Inspect(fn, func(n ast.Node) bool {

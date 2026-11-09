@@ -129,8 +129,10 @@ func (w *walker) content(content *yaml.Node, response bool) {
 
 // The keys whose value is one schema, a list of schemas, or a map of them.
 var (
-	schemaChildren = []string{"items", "additionalProperties", "not", "contains", "if", "then", "else",
-		"unevaluatedProperties", "unevaluatedItems", "propertyNames"}
+	schemaChildren = []string{
+		"items", "additionalProperties", "not", "contains", "if", "then", "else",
+		"unevaluatedProperties", "unevaluatedItems", "propertyNames",
+	}
 	schemaLists = []string{"allOf", "oneOf", "anyOf", "prefixItems"}
 	schemaMaps  = []string{"properties", "patternProperties", "dependentSchemas", "$defs"}
 )
@@ -181,7 +183,7 @@ func (w *walker) resolve(node *yaml.Node) *yaml.Node {
 			return node
 		}
 		target := w.root
-		for _, part := range strings.Split(strings.TrimPrefix(ref.Value, "#/"), "/") {
+		for part := range strings.SplitSeq(strings.TrimPrefix(ref.Value, "#/"), "/") {
 			target = mapValue(target, strings.ReplaceAll(strings.ReplaceAll(part, "~1", "/"), "~0", "~"))
 		}
 		node = target

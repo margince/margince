@@ -39,8 +39,8 @@ func TestAProposalReadsTheCompanyContextOnlyWhenAskedTo(t *testing.T) {
 	}
 }
 
-// A request enum stays closed while response enums are open: a resource this
-// server does not know is refused with the field named, not passed on.
+// A request enum stays closed while response enums are open. A resource this
+// server does not know is refused with the field named.
 func TestAFilterProposalForAnUnknownResourceIsRefused(t *testing.T) {
 	_, err := proposalText(crmcontracts.FilterProposalRequest{Resource: "a_resource_from_a_later_release", Text: "anything"})
 	refusal, ok := errors.AsType[*httperr.DetailedError](err)
