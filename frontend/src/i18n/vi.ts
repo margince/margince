@@ -16450,6 +16450,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.activity.updated.label": "Đã đổi hoạt động",
   "webhooks.event.activity.updated.when":
     "Hoạt động được sửa hoặc liên kết với hồ sơ khác.",
+  "webhooks.event.activity.invitation_answered.label": "Đã trả lời lời mời",
+  "webhooks.event.activity.invitation_answered.when":
+    "Ai đó chấp nhận, từ chối hoặc trả lời có thể cho một lời mời lịch trong Margince.",
   "webhooks.event.activity.archived.label":
     "Đã chuyển hoạt động vào kho lưu trữ",
   "webhooks.event.activity.archived.when":

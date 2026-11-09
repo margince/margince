@@ -16883,6 +16883,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.activity.updated.label": "Aktivität geändert",
   "webhooks.event.activity.updated.when":
     "Eine Aktivität wird bearbeitet oder mit anderen Datensätzen verknüpft.",
+  "webhooks.event.activity.invitation_answered.label": "Einladung beantwortet",
+  "webhooks.event.activity.invitation_answered.when":
+    "Jemand sagt in Margince zu einer Kalendereinladung zu, ab oder mit Vorbehalt zu.",
   "webhooks.event.activity.archived.label": "Aktivität archiviert",
   "webhooks.event.activity.archived.when": "Eine Aktivität wird archiviert.",
   "webhooks.event.activity.disposition_recorded.label":

@@ -16751,6 +16751,9 @@ export const en = {
   "webhooks.event.activity.updated.label": "Activity changed",
   "webhooks.event.activity.updated.when":
     "An activity is edited or linked to other records.",
+  "webhooks.event.activity.invitation_answered.label": "Invitation answered",
+  "webhooks.event.activity.invitation_answered.when":
+    "Someone accepts, declines or says maybe to a calendar invitation in Margince.",
   "webhooks.event.activity.archived.label": "Activity archived",
   "webhooks.event.activity.archived.when": "An activity is archived.",
   "webhooks.event.activity.disposition_recorded.label":
