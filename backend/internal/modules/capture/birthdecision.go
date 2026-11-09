@@ -283,12 +283,9 @@ func standingHoldsTx(
 }
 
 // Settled holds apply to every sibling; pending has not judged the conversation.
+// The list is closingVerdicts, so a hold here and a closing sibling stamp agree.
 func holdingVerdict(status string) bool {
-	switch status {
-	case VerdictHeld, VerdictUnsure, VerdictHeldByOwner:
-		return true
-	}
-	return false
+	return ClosesOpenMessages(status)
 }
 
 // mailboxPostureTx reads the posture of the connection that DELIVERED this

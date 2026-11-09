@@ -307,7 +307,7 @@ All the detail (IMAP settings, importing past mail, reconnecting, and what captu
 The **Activity** tab of Connections says what your connected mail turned into,
 and holds the decisions you make about it. The cards, in order:
 
-**Held threads.** Threads your mailbox is holding back from the team right now, with the reason. **Share with the team** releases one; only you can release yours.
+**Held threads.** Threads your mailbox is holding back from the team right now, with the reason. **Share with the team** releases one; only you can release yours. When a thread is held, its earlier messages that the team could already read are held too. Sharing the thread again opens them.
 
 **Capture exclusions** are addresses and domains whose messages never come into the CRM. Your rules apply only to mailboxes you connected. The company's rules apply to everyone, and only an administrator may add or remove one of those. A rule applies from the next message; what is already captured stays.
 
