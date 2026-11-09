@@ -54,7 +54,9 @@ node -e '
   }
 ' "$REPORT" "$FRONTEND_ROOT" >"$TMP/ran.txt"
 
-sed '/^$/d' "$DISCOVERED" | sort >"$TMP/discovered.sorted"
+# With more than one vitest project, `vitest list` names each file's project
+# first: `[source-scan] src/a.test.ts`.
+sed -E '/^$/d; s/^\[[^]]+\] //' "$DISCOVERED" | sort >"$TMP/discovered.sorted"
 sed '/^$/d' "$TMP/ran.txt" | sort >"$TMP/ran.sorted"
 
 RAN_TOTAL="$(wc -l <"$TMP/ran.sorted" | tr -d ' ')"

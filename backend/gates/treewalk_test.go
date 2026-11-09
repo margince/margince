@@ -17,10 +17,11 @@ package gates
 
 import (
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // walkTextFiles reads every file under root and hands each to visit. The trees
@@ -28,7 +29,7 @@ import (
 // narrowing the sweep in silence.
 func walkTextFiles(t *testing.T, root string, visit func(path, text string)) {
 	t.Helper()
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -47,7 +48,7 @@ func walkTextFiles(t *testing.T, root string, visit func(path, text string)) {
 		if !d.Type().IsRegular() {
 			return nil
 		}
-		b, err := os.ReadFile(path) // #nosec G304 G122 -- path comes from walking a fixed root inside the trusted source tree
+		b, err := gatekit.ReadFile(path) // #nosec G304 G122 -- path comes from walking a fixed root inside the trusted source tree
 		if err != nil {
 			return err
 		}

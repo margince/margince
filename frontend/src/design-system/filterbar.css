@@ -119,3 +119,15 @@
   .field:has([aria-invalid="true"]):focus-within {
   box-shadow: var(--focus-glow-danger);
 }
+
+/* On a phone the dials own the line: a labelled field spans the bar, so its
+   control starts and ends on the card's edges instead of at its own content
+   width. Two short pickers still share a line. */
+@media (max-width: 720px) {
+  .filter-bar:not([data-labels="inside"]) .filter-bar-controls {
+    flex: 1 1 100%;
+  }
+  .filter-bar:not([data-labels="inside"]) .filter-bar-controls > .field {
+    flex: 1 1 9rem;
+  }
+}

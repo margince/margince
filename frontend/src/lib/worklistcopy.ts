@@ -1,10 +1,12 @@
+import { taskHref } from "./taskreminders";
 import { sourceName } from "./worklistsources";
 
 export { sourceName } from "./worklistsources";
 
+import { summarySentence } from "../design-system/approvalsummary";
 import { floorFigure } from "../format/figure";
 import { formatNumber } from "../format/format";
-import type { Locale, useT } from "../i18n";
+import type { Locale, Translator, useT } from "../i18n";
 import { isMessageKey, translatePlural } from "../i18n";
 import { aiTaskLabel } from "./ai-task-label";
 import {
@@ -16,12 +18,18 @@ import { ENTITY, recordRoute } from "./entity";
 import { caseHref } from "./privacycaselink";
 import { routeHash } from "./router";
 import { settingsHref } from "./settingsrouting";
-import { connectionName, connectionTitleKey } from "./worklistconnection";
+import {
+  bookingTitleKey,
+  connectionName,
+  connectionTitleKey,
+} from "./worklistconnection";
 import { nonBuyerRequest } from "./worklisteyebrow";
 import type { Worklist, WorklistItem } from "./worklisttypes";
 
 export {
   dealFactsText,
+  factReasons,
+  partyName,
   phrasedReasons,
   reasonText,
   whenText,
@@ -52,8 +60,9 @@ export function subjectHref(
 
 // Sources without record pages link to their existing work surface.
 const SOURCE_QUEUE: Partial<Record<WorklistItem["source"], string>> = {
-  dsr: routeHash(settingsHref("privacy")),
+  dsr: routeHash(settingsHref("privacy", "requests")),
   capture_health: routeHash(settingsHref("connections")),
+  booking_health: routeHash({ screen: "book" }),
   // A rule that failed, and the page that lists the rules.
   //
   // The row named a broken automation and offered no address at all — not the
@@ -220,8 +229,10 @@ export function moveHref(item: WorklistItem): string | undefined {
   if (move.action === "open_meeting_brief") {
     return briefHref(item);
   }
+  if (move.action === "open_task" && move.activity_id) {
+    return taskHref(move.activity_id);
+  }
   const record = subjectHref(item);
-  if (move.action === "open_task") return record;
   if (!record || item.subject?.type !== "contact") {
     return record;
   }
@@ -357,6 +368,7 @@ export function itemTitle(
     nonBuyerRequest(item)
       ? "worklist.source.awaiting_reply"
       : (connectionTitleKey(item) ??
+          bookingTitleKey(item) ??
           (`worklist.untitled.${item.source}` as const)),
   );
   return named ? `${title} · ${named}` : title;
@@ -409,7 +421,6 @@ export const KNOWN_SOURCES = {
   meeting_follow_up: true,
   lead_response: true,
   deal_at_risk: true,
-  deal_review: true,
   meeting: true,
   meeting_outcome: true,
   relationship_decay: true,
@@ -417,6 +428,7 @@ export const KNOWN_SOURCES = {
   dsr: true,
   notice_case: true,
   capture_health: true,
+  booking_health: true,
   ai_work_health: true,
   bounce: true,
   undelivered: true,
@@ -431,4 +443,56 @@ function knownSource(
   source: WorklistItem["source"],
 ): source is keyof typeof KNOWN_SOURCES {
   return source in KNOWN_SOURCES;
+}
+
+export type Viewer = Readonly<{ id: string; display_name: string }>;
+
+/** An approval goes by its summary sentence, without the field list. */
+export function sentenceTitled(item: WorklistItem): WorklistItem {
+  const sentence = summarySentence({
+    summary: item.title,
+    summary_parts: item.summary_parts,
+  });
+  return item.summary_parts && sentence ? { ...item, title: sentence } : item;
+}
+
+/** Responsibility comes from the assigned user ID; the stored promise stays verbatim. */
+export function readerTask(
+  item: WorklistItem,
+  viewer: Viewer | undefined,
+  t: Translator,
+): WorklistItem {
+  if (
+    item.source !== "task" ||
+    !viewer ||
+    item.owner?.kind !== "user" ||
+    item.owner.id !== viewer.id ||
+    !item.title
+  )
+    return item;
+  const prefix = `${viewer.display_name.trim()} will `;
+  if (!viewer.display_name.trim() || !item.title.startsWith(prefix))
+    return item;
+  return {
+    ...item,
+    title: t("home.task.yours", { action: item.title.slice(prefix.length) }),
+  };
+}
+
+// The contact behind a row, as an address: a thread's sender, a meeting's
+// attendee. It goes through the entity registry, so the page is spelled once.
+export function contactHref(contact: NonNullable<WorklistItem["contact"]>) {
+  return routeHash(ENTITY.contact.route(contact.id));
+}
+
+/** The account the row's contact works for, linked, where the server sent one. */
+export function employerOf(
+  contact: NonNullable<WorklistItem["contact"]>,
+): { href: string; label: string } | undefined {
+  const employer = contact.employer;
+  if (!employer) return undefined;
+  return {
+    href: routeHash(ENTITY.company.route(employer.company_id)),
+    label: employer.company_name,
+  };
 }

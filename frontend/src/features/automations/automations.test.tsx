@@ -49,11 +49,13 @@ const render = (ui: ReactNode) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
+  return rtlRender(ui, {
+    wrapper: ({ children }) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">{children}</LocaleProvider>
+      </QueryClientProvider>
+    ),
+  });
 };
 
 type CatalogEntry = components["schemas"]["AutomationCatalogEntry"];
@@ -213,7 +215,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
   // contributes neither.
   it("renders as a settings section: no reading column of its own, no page heading", async () => {
     vi.stubGlobal("fetch", automationsBackend([], []));
-    const { container } = render(<AutomationsAdmin />);
+    const { container } = render(<AutomationsAdmin view="library" />);
     await waitFor(() =>
       expect(screen.getByText("Stalled-deal nudge")).toBeTruthy(),
     );
@@ -226,7 +228,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
 
   it("anti-DSL guard: form fields derive only from params_schema + name — no rule body, no trigger input", async () => {
     vi.stubGlobal("fetch", automationsBackend([], []));
-    render(<AutomationsAdmin />);
+    render(<AutomationsAdmin view="library" />);
     await waitFor(() =>
       expect(screen.getByText("Stalled-deal nudge")).toBeTruthy(),
     );
@@ -260,7 +262,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     const automations: Automation[] = [];
     const calls: Recorded[] = [];
     vi.stubGlobal("fetch", automationsBackend(automations, calls));
-    render(<AutomationsAdmin />);
+    const { rerender } = render(<AutomationsAdmin view="library" />);
     await waitFor(() =>
       expect(screen.getByText("Stalled-deal nudge")).toBeTruthy(),
     );
@@ -272,6 +274,13 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
       name: "Stalled-deal nudge",
       params: { due_in_days: 3 },
     });
+    // The new row lands on the other tab, so the library says where.
+    expect(
+      await screen.findByText(
+        "Created paused. Turn it on under Your automations.",
+      ),
+    ).toBeTruthy();
+    rerender(<AutomationsAdmin view="mine" />);
     // the honest post-create state: paused until the user enables it
     await waitFor(() =>
       expect(
@@ -474,23 +483,31 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
 
   // Two lists, two panes, each named for what it holds; neither repeats the
   // page's own title.
-  it("gives the configured rules and the starter library a pane each", async () => {
+  it("gives the configured rules and the starter library a tab each", async () => {
     vi.stubGlobal("fetch", automationsBackend([instance({})], []));
-    render(<AutomationsAdmin />);
+    const { rerender } = render(<AutomationsAdmin />);
     await screen.findByText("Nudge stalled fleet deals");
     expect(
       screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
-    ).toEqual(["Configured automations", "Starter library"]);
-    for (const name of ["Configured automations", "Starter library"]) {
-      expect(screen.getByRole("region", { name })).toBeTruthy();
-    }
+    ).toEqual(["Configured automations"]);
+    expect(
+      screen.getByRole("region", { name: "Configured automations" }),
+    ).toBeTruthy();
+    rerender(<AutomationsAdmin view="library" />);
+    await screen.findByText("Stalled-deal nudge");
+    expect(
+      screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
+    ).toEqual(["Starter library"]);
+    expect(
+      screen.getByRole("region", { name: "Starter library" }),
+    ).toBeTruthy();
   });
 
   // Every template is one row: its name, what it does, and what sets it off in
   // words. The wire's own identifiers never reach the screen.
   it("gives every library entry a row with its trigger in words", async () => {
     vi.stubGlobal("fetch", automationsBackend([], []));
-    render(<AutomationsAdmin />);
+    render(<AutomationsAdmin view="library" />);
     const stalled = await screen.findByTestId("template-stalled_deal_nudge");
     expect(screen.getByTestId("template-task_on_stage_entry")).toBeTruthy();
     expect(within(stalled).getByText("Stalled-deal nudge")).toBeTruthy();
@@ -605,14 +622,16 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
         "Read-only: you do not have permission to change automations.",
       ),
     ).toBeNull();
+    expect(screen.getByRole("switch", { name: /is enabled$/ })).toBeTruthy();
+    await openRowMenu();
+    expect(screen.getByRole("button", { name: "Delete" })).toBeTruthy();
+    cleanup();
+    render(<AutomationsAdmin view="library" />);
     await waitFor(() =>
       expect(
         screen.getAllByRole("button", { name: /^Use template/ }).length,
       ).toBeGreaterThan(0),
     );
-    expect(screen.getByRole("switch", { name: /is enabled$/ })).toBeTruthy();
-    await openRowMenu();
-    expect(screen.getByRole("button", { name: "Delete" })).toBeTruthy();
   });
 });
 

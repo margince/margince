@@ -14,6 +14,7 @@ export {
   displayDay,
   formatDate,
   formatDateAbbrev,
+  formatDateAbbrevRange,
   formatDateTime,
   formatDayLong,
   formatDayMonth,
@@ -133,6 +134,7 @@ export function formatMoneyCompact(
   amountMinor: number,
   currency: string,
   locale: Locale,
+  significantDigits = 3,
 ): string {
   // Our scale, Intl's formatting: see formatMoney for why.
   const major = toMajorUnits(amountMinor, currency);
@@ -158,7 +160,7 @@ export function formatMoneyCompact(
     maximumFractionDigits: abbreviated ? 1 : 0,
     // One decimal alone cuts €1,062,548 and €1,094,000 both to "€1m". Three
     // significant digits keep them apart, and the more precise rule wins.
-    maximumSignificantDigits: 3,
+    maximumSignificantDigits: significantDigits,
     roundingPriority: "morePrecision",
     // Half-up turns CHF 999,999.99 into "CHF 1M", a figure the record does
     // not reach; truncating drops digits but never adds any.

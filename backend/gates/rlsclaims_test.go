@@ -27,12 +27,13 @@ package gates
 
 import (
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // rlsClaim matches RLS asserted as a live scoping control. The verb list is
@@ -101,7 +102,7 @@ func TestNoGoSourceClaimsRLSStillScopesARead(t *testing.T) {
 	var claims []string
 	checked := 0
 	for _, tree := range licensedTrees {
-		err := filepath.WalkDir(tree.root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(tree.root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
@@ -122,7 +123,7 @@ func TestNoGoSourceClaimsRLSStillScopesARead(t *testing.T) {
 			case gateDir + "/rlsclaims_test.go", gateDir + "/rlsclaimsprose_test.go":
 				return nil
 			}
-			b, err := os.ReadFile(path) // #nosec G304 G122 -- path is a *.go file from walking the trusted source tree
+			b, err := gatekit.ReadFile(path) // #nosec G304 G122 -- path is a *.go file from walking the trusted source tree
 			if err != nil {
 				return err
 			}
@@ -132,7 +133,7 @@ func TestNoGoSourceClaimsRLSStillScopesARead(t *testing.T) {
 				return nil
 			}
 			for i, line := range strings.Split(string(b), "\n") {
-				if rlsClaim.MatchString(line) {
+				if mayHoldFolded(line, "rls") && rlsClaim.MatchString(line) {
 					claims = append(claims, filepath.ToSlash(path)+":"+strconv.Itoa(i+1)+": "+strings.TrimSpace(line))
 				}
 			}

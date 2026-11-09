@@ -37,10 +37,9 @@ import (
 )
 
 // The identity vocabulary, the Go spelling of the table's CHECKs. The kinds
-// are the exclusion kinds by design: both lists answer "which addresses does
-// this rule cover", and one spelling of address-or-domain is what lets them
-// share ValidExclusionValue rather than growing a second parser that folds
-// case differently on some path nobody tests.
+// are exclusion kinds by design: both answer "which addresses does this rule
+// cover". One spelling lets them share validRuleValue, so no second parser
+// folds case differently on some path nobody tests.
 const (
 	IdentityKindAddress = ExclusionKindAddress
 	IdentityKindDomain  = ExclusionKindDomain
@@ -158,7 +157,7 @@ func (s *OwnerIdentityStore) Add(ctx context.Context, kind, raw string) (OwnerId
 	if err != nil {
 		return OwnerIdentity{}, err
 	}
-	value, err := ValidExclusionValue(kind, raw)
+	value, err := validRuleValue(identityKinds, kind, raw)
 	if err != nil {
 		return OwnerIdentity{}, err
 	}
@@ -180,6 +179,7 @@ func (s *OwnerIdentityStore) Add(ctx context.Context, kind, raw string) (OwnerId
 			Scan(&out.ID, &out.UserID, &out.Kind, &out.Value, &out.Source, &out.CreatedAt); err != nil {
 			return fmt.Errorf("capture: adding an owner identity: %w", err)
 		}
+		database.Forget(tx, ownerIdentitiesMemo)
 		// A claim about an address already WAITING on a verdict retires that
 		// question. Without this the gates only bind mail that arrives from
 		// now on: an address deferred moments before the claim keeps its
@@ -224,6 +224,7 @@ func (s *OwnerIdentityStore) Remove(ctx context.Context, id ids.UUID) error {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
+		database.Forget(tx, ownerIdentitiesMemo)
 		if err != nil {
 			return fmt.Errorf("capture: removing an owner identity: %w", err)
 		}
@@ -265,16 +266,27 @@ func ownerIdentityAuditImage(identity OwnerIdentity) map[string]any {
 // background sweep, a system principal). An empty set changes no decision: it
 // leaves every gate exactly where it was before a seat declared anything.
 func ownerIdentitiesTx(ctx context.Context, tx pgx.Tx) (SelfSet, error) {
+	_, user := capturePrincipal(ctx)
+	if user == ids.Nil {
+		return SelfSet{}, nil
+	}
+	// A message asks this about eight times in one transaction; the
+	// transaction remembers it, and every writer of what it reads forgets it.
+	return database.Remember(tx, ownerIdentitiesMemo+user.String(), func() (SelfSet, error) { return readOwnerIdentitiesTx(ctx, tx, user) })
+}
+
+// ownerIdentitiesMemo prefixes a seat's identities in a transaction's memo.
+// Every writer of an owner identity or a connection label forgets it
+// (TestEveryWriterOfAMemoizedReadForgetsIt).
+const ownerIdentitiesMemo = "capture.owner_identities:"
+
+func readOwnerIdentitiesTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (SelfSet, error) {
 	// The MAILBOX OWNER, resolved the way the creation ladder resolves them:
 	// OnBehalfOf when a connector names one, else UserID. Reading UserID
 	// directly would load one seat's claims while ingesting and assigning
 	// records for another — the two fields agree in every principal the
 	// registry builds today, and a gate that depends on that agreement without
 	// asking for it is one refactor away from applying A's claims to B's mail.
-	_, user := capturePrincipal(ctx)
-	if user == ids.Nil {
-		return SelfSet{}, nil
-	}
 	// The connected mailbox's OWN address is part of the set, and it is not in
 	// the table: nobody declares it, the grant established it. Without it the
 	// gates protect a seat's aliases and leave their primary address exposed —

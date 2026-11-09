@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/identity/internal/password"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -98,10 +99,11 @@ func (s *Service) checkCredentials(ctx context.Context, tx pgx.Tx, email, plaint
 	var hash *string
 	var lock lockoutState
 	err := tx.QueryRow(ctx,
-		`SELECT id, password_hash, display_name, seat_type, failed_login_count, locked_until, updated_at
-		 FROM app_user
-		 WHERE lower(email) = lower($1) AND `+LiveMemberSQL("")+``,
-		email).Scan(&account.UserID, &hash, &account.DisplayName, &account.SeatType,
+		`SELECT u.id, u.password_hash, u.display_name, u.seat_type, u.failed_login_count, u.locked_until, u.updated_at
+		 FROM app_user u
+		 WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$2")+` AND `+LiveMemberSQL("u")+`
+		 `+storekit.SeatLoginPrefersTypedSQL("u", "$1")+``,
+		typedLoginAddress(email), owndomain.OfAddress(email)).Scan(&account.UserID, &hash, &account.DisplayName, &account.SeatType,
 		&lock.FailedCount, &lock.LockedUntil, &lock.LastFailure)
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && hash == nil) {
 		//craft:ignore swallowed-errors the decoy verification exists only to equalize timing; its result is meaningless by design
@@ -193,6 +195,21 @@ func (s *Service) countFailure(ctx context.Context, tx pgx.Tx, userID ids.UserID
 	return next.locked(now) && !state.locked(now), nil
 }
 
+// auditLoginTarget is the login a failed attempt is recorded against. It is
+// the stored login of any seat the address names, in either spelling. An
+// address no seat holds is recorded as typed.
+func auditLoginTarget(ctx context.Context, tx pgx.Tx, email string) (string, error) {
+	var stored string
+	err := tx.QueryRow(ctx,
+		`SELECT u.email FROM app_user u WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$2")+`
+		 `+storekit.SeatLoginPrefersTypedSQL("u", "$1"),
+		typedLoginAddress(email), owndomain.OfAddress(email)).Scan(&stored)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return email, nil
+	}
+	return stored, err
+}
+
 func (s *Service) recordFailedLogin(ctx context.Context, email string) error {
 	ctx, cancel := detachedForFailure(ctx)
 	defer cancel()
@@ -200,14 +217,21 @@ func (s *Service) recordFailedLogin(ctx context.Context, email string) error {
 		outcome := "failed"
 		var userID ids.UserID
 		var state lockoutState
+		target := email
 		err := tx.QueryRow(ctx,
-			`SELECT id, failed_login_count, locked_until, updated_at FROM app_user
-			 WHERE lower(email) = lower($1) AND `+LiveMemberSQL("")+`
+			`SELECT u.id, u.email, u.failed_login_count, u.locked_until, u.updated_at FROM app_user u
+			 WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$2")+` AND `+LiveMemberSQL("u")+`
+			 `+storekit.SeatLoginPrefersTypedSQL("u", "$1")+`
 			 FOR UPDATE`,
-			email).Scan(&userID, &state.FailedCount, &state.LockedUntil, &state.LastFailure)
+			typedLoginAddress(email), owndomain.OfAddress(email)).Scan(&userID, &target, &state.FailedCount, &state.LockedUntil, &state.LastFailure)
 		switch {
 		case errors.Is(err, pgx.ErrNoRows):
-			// no account to count against; only the audit row lands
+			// No account to count against, so only the audit row lands. It is
+			// still hashed by a seat's own login when one holds the address, so
+			// a seat that stops being live stays one target.
+			if target, err = auditLoginTarget(ctx, tx, email); err != nil {
+				return err
+			}
 		case err != nil:
 			return err
 		default:
@@ -228,14 +252,16 @@ func (s *Service) recordFailedLogin(ctx context.Context, email string) error {
 		// The attempted address is logged as an irreversible hash, never
 		// plaintext: system_log is widely retained, and the failed-login path
 		// has no resolved user, so the address is the only target identifier.
-		// SuppressionHash (the one identifier hashing rule — trimmed+lowercased
-		// sha256) keeps a brute-force against one target correlatable across
-		// attempts (identical hash) without retaining the PII.
+		// SuppressionHash is the one identifier hashing rule, keyed when the
+		// installation has a root key. It keeps a brute-force against one target
+		// correlatable across attempts (identical hash) without retaining the PII.
+		// A resolved seat is hashed by its own login, so both spellings of its
+		// domain are one target.
 		_, err = tx.Exec(ctx,
 			`INSERT INTO system_log (actor_type, actor_id, action, detail)
-			 VALUES ('human', 'human:unauthenticated', 'login',
-			         jsonb_build_object('outcome', $1::text, 'email_hash', $2::text))`,
-			outcome, storekit.SuppressionHash(email))
+			 VALUES ('human', 'human:unauthenticated', 'login', jsonb_strip_nulls(
+			         jsonb_build_object('outcome', $1::text, 'email_hash', $2::text, 'email_key_id', $3::text)))`,
+			outcome, storekit.SuppressionHash(target), storekit.SuppressionKeyID())
 		return err
 	})
 }

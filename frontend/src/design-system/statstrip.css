@@ -250,6 +250,17 @@
   backdrop-filter: none;
   min-block-size: 0;
 }
+/* The cells share the strip's three rows, so a label that wraps lowers every
+   figure in its row with it and the figures stay on one line. A wrapped cell
+   takes the same three rows, so the next cell still lands beside it. */
+.stat-strip[data-density="plate"] > * {
+  grid-row: span 3;
+}
+/* Not the lead cell: its size container would cut it off from the rows. */
+.stat-strip[data-density="plate"]:not([data-lead]) > .stat-card,
+.stat-strip[data-lead] > .stat-card:not(:first-child) {
+  grid-template-rows: subgrid;
+}
 .stat-strip[data-density="plate"] > :last-child,
 .stat-strip[data-density="plate"] > :last-child > .stat-card {
   border-inline-end: 0;
@@ -321,18 +332,40 @@
   border-block-start: 0;
 }
 /* Where two cells no longer fit, a lead plate stacks like any other row of
-   readings, its lead first. */
+   readings, its lead first. So does a plate whose cells asked to fold. */
 @container (max-width: 40rem) {
-  .stat-strip[data-density="plate"][data-lead] {
+  .stat-strip[data-density="plate"]:is(
+    [data-lead],
+    :has(.stat-card-narrow-row, .stat-card-narrow-stack)
+  ) {
     grid-template-columns: minmax(0, 1fr);
   }
   /* Stacked cells part with a rule across, never one down the edge. */
-  .stat-strip[data-density="plate"][data-lead] > .stat-card,
-  .stat-strip[data-density="plate"][data-lead] > * > .stat-card {
+  .stat-strip[data-density="plate"]:is(
+    [data-lead],
+    :has(.stat-card-narrow-row, .stat-card-narrow-stack)
+  ) > .stat-card,
+  .stat-strip[data-density="plate"]:is(
+      [data-lead],
+      :has(.stat-card-narrow-row, .stat-card-narrow-stack)
+    )
+    > *
+    > .stat-card {
     border-inline-end: 0;
   }
-  .stat-strip[data-density="plate"][data-lead] > * + .stat-card,
-  .stat-strip[data-density="plate"][data-lead] > * + * > .stat-card {
+  .stat-strip[data-density="plate"]:is(
+      [data-lead],
+      :has(.stat-card-narrow-row, .stat-card-narrow-stack)
+    )
+    > *
+    + .stat-card,
+  .stat-strip[data-density="plate"]:is(
+      [data-lead],
+      :has(.stat-card-narrow-row, .stat-card-narrow-stack)
+    )
+    > *
+    + *
+    > .stat-card {
     border-block-start: 1px solid var(--borderSubtle);
   }
   /* A plate keeps its cells' column shape when they fold, so the figure

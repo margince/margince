@@ -1,4 +1,5 @@
 {"type": "system", "subtype": "init", "tools": ["mcp__margince__run_analytics_query", "mcp__margince__compose_analytics_report"]}
 {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__run_analytics_query", "input": {"save": true}}]}}
 {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__compose_analytics_report", "input": {}}]}}
+{"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "t1", "content": "{\"open_amount_minor\": 420000000, \"open_deals\": 37, \"weighted_display\": \"1,240,000.00 EUR\"}"}]}}
 {"type": "result", "subtype": "success", "is_error": false, "result": "Board pack section composed off the saved run.\n\nOpen pipeline is EUR 4.2m across 37 open deals; weighted, that is 1,240,000 EUR."}

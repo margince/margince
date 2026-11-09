@@ -177,6 +177,16 @@ func (s dailySeeder) moveLastActivity() {
 // what the flows open. Seats come first: reps own every record and capture every email.
 func seedDailyCorpus(t *testing.T, e *apptest.AppEnv, seats Seats, scale float64) DailyCorpus {
 	t.Helper()
+	s := loadDailyCorpus(t, e, seats, scale)
+	corpus := s.pickCorpus(seats)
+	s.dropOrdinals()
+	return corpus
+}
+
+// loadDailyCorpus loads the corpus at a scale and asserts its census. Its
+// ordinal tables stay until dropOrdinals, for a caller that picks from them.
+func loadDailyCorpus(t *testing.T, e *apptest.AppEnv, seats Seats, scale float64) dailySeeder {
+	t.Helper()
 	if len(seats.Reps) == 0 {
 		t.Fatal("the daily corpus needs the rep seats: run the seats subtest first")
 	}
@@ -218,10 +228,12 @@ func seedDailyCorpus(t *testing.T, e *apptest.AppEnv, seats Seats, scale float64
 	t.Logf("seed total %s at scale %g", time.Since(start).Round(time.Millisecond), scale)
 
 	assertDailyCensus(t, e, before.plus(s.n))
-	corpus := s.pickCorpus(seats)
+	return s
+}
+
+func (s dailySeeder) dropOrdinals() {
 	s.exec("drop", `DROP TABLE daily_seed_rep, daily_seed_company, daily_seed_contact, daily_seed_deal,
 	      daily_seed_thread, daily_seed_activity`)
-	return corpus
 }
 
 func (s dailySeeder) companies() {

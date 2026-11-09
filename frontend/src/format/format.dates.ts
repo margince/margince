@@ -129,6 +129,27 @@ export function formatDateAbbrev(
 }
 
 /**
+ * Two dates as one span that names their shared month and year once, as
+ * "1–6 Nov 2026" or "1 Oct – 31 Dec 2026", in each locale's own range form.
+ */
+export function formatDateAbbrevRange(
+  fromIso: string,
+  toIso: string,
+  locale: Locale,
+  zone: string,
+): string {
+  if (dateTimePreferences().dateFormat !== "locale")
+    return `${formatDate(fromIso, locale, zone)} – ${formatDate(toIso, locale, zone)}`;
+  assertIanaZone(zone);
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    timeZone: zone,
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).formatRange(displayDay(fromIso, zone), displayDay(toIso, zone));
+}
+
+/**
  * A run of calendar days as one span, "29 June – 5 July". Intl's own range
  * form, so each locale joins and shortens the two ends its own way.
  */

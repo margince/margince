@@ -52,6 +52,7 @@ type MailDraftContent struct {
 	AttachmentIDs []ids.UUID
 	Context       commsauthz.Category
 	Schedule      *SendSchedule
+	EditorState   crmcontracts.MailDraftEditorState
 }
 
 // MailDraft is one saved draft.
@@ -87,7 +88,7 @@ const (
 
 const mailDraftColumns = `id, anchor_type, anchor_id, to_addresses, cc_addresses, bcc_addresses,
 	subject, body, html_body, version, agent_drafted, grounding, attachment_ids,
-	communication_context, scheduled_at, scheduled_tz, created_at, updated_at`
+	communication_context, scheduled_at, scheduled_tz, created_at, updated_at, editor_state`
 
 // InvalidMailDraftError refuses a draft the store will not keep.
 type InvalidMailDraftError struct {
@@ -200,14 +201,15 @@ func insertMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor Mai
 	query := fmt.Sprintf(`
 		INSERT INTO mail_draft (id, author_id, anchor_type, anchor_id, to_addresses, cc_addresses,
 		                        bcc_addresses, subject, body, html_body, attachment_ids,
-		                        communication_context, scheduled_at, scheduled_tz)
-		VALUES ($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)
+		                        communication_context, scheduled_at, scheduled_tz, editor_state)
+		VALUES ($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)
 		ON CONFLICT (author_id, anchor_type, anchor_id) DO NOTHING
 		RETURNING `+mailDraftColumns,
 		arg(ids.NewV7()), arg(author), arg(string(anchor.Type)), arg(anchor.ID),
 		arg(addressLine(content.To)), arg(addressLine(content.Cc)), arg(addressLine(content.Bcc)),
 		arg(content.Subject), arg(content.Body), arg(nullableText(content.HTMLBody)),
-		arg(content.AttachmentIDs), arg(nullableText(string(content.Context))), arg(at), arg(tz))
+		arg(content.AttachmentIDs), arg(nullableText(string(content.Context))), arg(at), arg(tz),
+		arg(content.EditorState))
 	row := tx.QueryRow(ctx, query, args...)
 	saved, err := scanMailDraft(row)
 	if errors.Is(err, apperrors.ErrNotFound) {
@@ -232,13 +234,14 @@ func replaceMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor Ma
 		UPDATE mail_draft
 		   SET to_addresses = $%d, cc_addresses = $%d, bcc_addresses = $%d,
 		       subject = $%d, body = $%d, html_body = $%d, attachment_ids = $%d,
-		       communication_context = $%d, scheduled_at = $%d, scheduled_tz = $%d,
+		       communication_context = $%d, scheduled_at = $%d, scheduled_tz = $%d, editor_state = $%d,
 		       version = version + 1, agent_drafted = false, updated_at = now()
 		 WHERE author_id = $%d AND anchor_type = $%d AND anchor_id = $%d AND version = $%d
 		RETURNING `+mailDraftColumns,
 		arg(addressLine(content.To)), arg(addressLine(content.Cc)), arg(addressLine(content.Bcc)),
 		arg(content.Subject), arg(content.Body), arg(nullableText(content.HTMLBody)),
 		arg(content.AttachmentIDs), arg(nullableText(string(content.Context))), arg(at), arg(tz),
+		arg(content.EditorState),
 		arg(author), arg(string(anchor.Type)), arg(anchor.ID), arg(expected))
 	row := tx.QueryRow(ctx, query, args...)
 	saved, err := scanMailDraft(row)
@@ -346,9 +349,11 @@ func validateDraft(anchor MailDraftAnchor, content MailDraftContent, now time.Ti
 // canonicalDraft keeps each address the way the send path compares it, so
 // erasure and the subject export find a draft by the address they hold.
 func canonicalDraft(content MailDraftContent) MailDraftContent {
+	content.EditorState = boundedDraftEditorState(content.EditorState)
 	content.To = canonicalAddresses(content.To)
 	content.Cc = canonicalAddresses(content.Cc)
 	content.Bcc = canonicalAddresses(content.Bcc)
+	content.EditorState.ContentFingerprint = new(draftContentFingerprint(content))
 	return content
 }
 
@@ -398,7 +403,7 @@ func scanMailDraft(row pgx.Row) (MailDraft, error) {
 	err := row.Scan(&out.ID, &anchorType, &out.Anchor.ID, &out.Content.To, &out.Content.Cc,
 		&out.Content.Bcc, &out.Content.Subject, &out.Content.Body, &html, &out.Version,
 		&out.AgentDrafted, &grounding, &out.Content.AttachmentIDs, &claimed, &at, &tz,
-		&out.CreatedAt, &out.UpdatedAt)
+		&out.CreatedAt, &out.UpdatedAt, &out.Content.EditorState)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return MailDraft{}, apperrors.ErrNotFound
 	}
@@ -408,6 +413,9 @@ func scanMailDraft(row pgx.Row) (MailDraft, error) {
 	out.Anchor.Type = crmcontracts.MailDraftAnchorType(anchorType)
 	if html != nil {
 		out.Content.HTMLBody = *html
+	}
+	if out.Content.EditorState.ContentFingerprint == nil || *out.Content.EditorState.ContentFingerprint != draftContentFingerprint(out.Content) {
+		out.Content.EditorState = crmcontracts.MailDraftEditorState{}
 	}
 	for _, ground := range grounding {
 		out.Grounding = append(out.Grounding, MailDraftAnchor(ground))

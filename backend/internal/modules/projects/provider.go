@@ -134,23 +134,10 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 	if in.Ref.Type != datasource.EntityProject {
 		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.Ref.Type)}
 	}
-	raw, err := datasource.RawFields(in.Patch)
+	update, err := projectUpdateFrom(in)
 	if err != nil {
 		return datasource.EntityRef{}, err
 	}
-	var req crmcontracts.UpdateProjectRequest
-	if err := datasource.ClaimKeys(raw, claimCallerChosenKey); err != nil {
-		return datasource.EntityRef{}, err
-	}
-	if err := datasource.StrictDecode(raw, &req); err != nil {
-		return datasource.EntityRef{}, err
-	}
-	update, err := projectUpdateInput(req, in.IfVersion)
-	if err != nil {
-		return datasource.EntityRef{}, err
-	}
-	update.Trail = in.Trail
-	update.Clear = in.Clear
 	v, err := p.store.UpdateProject(ctx, ids.From[ids.ProjectKind](in.Ref.ID), update)
 	return ref(v.Id), err
 }

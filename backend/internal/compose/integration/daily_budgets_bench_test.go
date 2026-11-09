@@ -130,16 +130,26 @@ func allows5xx(flow, row string) bool { return knownEntryFor(flow, row).Allow5xx
 // and listed, the issue that tracks it. A p95 equal to the budget is over, as
 // gen-perfdoc renders it.
 func JudgeDaily(flow, row string, p95, budget time.Duration, samples int) (DailyVerdict, int) {
-	switch {
-	case samples == 0:
-		return DailyNoData, 0
-	case p95 < budget:
-		return DailyWithin, 0
+	verdict := judgeP95(p95, budget, samples)
+	if verdict != DailyOver {
+		return verdict, 0
 	}
 	if issue := knownIssueFor(flow, row); issue != 0 {
 		return DailyOverKnown, issue
 	}
 	return DailyOver, 0
+}
+
+// judgeP95 is the budget rule every daily judge shares, before any known issue
+// is asked. No samples is no data, and a p95 at the budget is over.
+func judgeP95(p95, budget time.Duration, samples int) DailyVerdict {
+	switch {
+	case samples == 0:
+		return DailyNoData
+	case p95 < budget:
+		return DailyWithin
+	}
+	return DailyOver
 }
 
 // DailyGate fails the run on every unlisted breach, every 5xx outside an

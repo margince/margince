@@ -48,10 +48,54 @@ func TestNoElementCarriesTwoClassAttributes(t *testing.T) {
 	if found := doubled.FindString(rendered); found != "" {
 		t.Fatalf("a second class attribute is ignored, so its dark or narrow rule never applies: %s", found)
 	}
-	for _, layout := range []string{"pad", "facts", "stats", "items"} {
-		if !regexp.MustCompile(`class="[^"]*\b` + layout + `\b`).MatchString(rendered) {
-			t.Errorf("no element carries the %q class the stylesheet targets", layout)
+	targets := regexp.MustCompile(`\.([a-z]+)\b`).FindAllStringSubmatch(layoutSheet(), -1)
+	if len(targets) == 0 {
+		t.Fatal("the layout sheet targets no class; this check can no longer see its subject")
+	}
+	for _, target := range targets {
+		if !regexp.MustCompile(`class="[^"]*\b` + target[1] + `\b`).MatchString(rendered) {
+			t.Errorf("no element carries the %q class the layout sheet targets", target[1])
 		}
+	}
+}
+
+// Gmail discards a whole style block over one rule it rejects, so the layout
+// must not share a block with the dark sheet.
+func TestThePhoneLayoutSurvivesAClientThatDropsTheDarkSheet(t *testing.T) {
+	rendered := Render(weekWithItems().Message("Week", "en", ""), Letterhead{})
+	blocks := regexp.MustCompile(`<style>(.*?)</style>`).FindAllStringSubmatch(rendered, -1)
+	var layout, dark int
+	for _, block := range blocks {
+		if strings.Contains(block[1], layoutSheet()) {
+			layout++
+		}
+		if strings.Contains(block[1], "prefers-color-scheme") {
+			dark++
+			if strings.Contains(block[1], "max-width") {
+				t.Fatal("the phone layout shares a style block with the dark sheet")
+			}
+		}
+	}
+	if layout != 1 || dark != 1 {
+		t.Fatalf("want one layout block and one dark block, got %d and %d", layout, dark)
+	}
+	queries := strings.Count(layoutSheet(), "@media")
+	if queries == 0 || strings.Count(layoutSheet(), "@media screen and (") != queries {
+		t.Fatal("write each media query as `@media screen and (…)`, the form every mail client parses")
+	}
+	if !strings.Contains(rendered, "<!--[if mso]><style>"+wideFigures()+"</style><![endif]-->") {
+		t.Fatal("Outlook on Windows reads no media query and lost the desktop figures")
+	}
+}
+
+func TestOnAPhoneAnItemsLinkDropsUnderItsText(t *testing.T) {
+	main, _ := renderBlocks(weekWithItems().Blocks, "")
+	cells := regexp.MustCompile(`<td valign="top" class="itemtext">.*?</td><td[^>]*class="itemlink"[^>]*><a href="https://example.test/#deal/1"`)
+	if !cells.MatchString(main) {
+		t.Fatal("the linked item lacks the text and link cells the phone layout stacks")
+	}
+	if strings.Count(main, `class="itemlink"`) != 1 {
+		t.Fatal("an item without a link drew an empty link cell")
 	}
 }
 

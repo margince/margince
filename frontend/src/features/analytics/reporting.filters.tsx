@@ -17,14 +17,9 @@ import { AnalyticsScopePicker } from "./analytics.scope";
 import { DimensionFilters, FoldedDimensions } from "./reporting.dimensions";
 import type { ReportingSelection } from "./reporting.model";
 
-export const REPORTING_PERIODS: readonly ReportingSelection["period"][] = [
-  "this_week",
-  "this_month",
-  "last_month",
-  "last_week",
-  "this_quarter",
-  "custom",
-];
+import { REPORTING_PERIODS } from "./reporting.selection";
+
+export { REPORTING_PERIODS } from "./reporting.selection";
 
 export function ReportingFilters({
   selection,

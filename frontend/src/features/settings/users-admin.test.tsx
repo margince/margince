@@ -537,6 +537,11 @@ describe("UsersAdminCard", () => {
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Otto Off")).toBeTruthy());
 
+    const trigger = within(rowFor("Otto Off")).getByRole("button", {
+      name: /actions for Otto Off/i,
+    });
+    trigger.focus();
+    await user.keyboard("{Enter}");
     await user.click((await rowMenu(user, "Otto Off")).getByText("Reactivate"));
 
     await waitFor(() =>

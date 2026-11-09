@@ -130,7 +130,7 @@ export function LossReasonsCard() {
   const canEdit = useCanWrite("custom_field", "update");
   // A page the seat only reads says so itself; the card names only the
   // partial case it leaves unsaid.
-  const readOnlyPage = usePageReadOnly("lossreasons");
+  const readOnlyPage = usePageReadOnly("deals", "loss");
   const refusal =
     !readOnlyPage && !canEdit && canCreate
       ? ("leadSources.addOnlyTitle" as const)

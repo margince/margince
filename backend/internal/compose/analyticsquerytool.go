@@ -96,7 +96,14 @@ func analyticsQueryToolRunner(db *database.DB) agents.AnalyticsQueryRunner {
 			Columns:  emptyIfNilStrings(answer.Columns),
 			Rows:     rows,
 			Withheld: answer.Withheld, TotalSafe: answer.TotalSafe,
-			SchemaVersion: answer.SchemaVersion,
+			SchemaVersion:        answer.SchemaVersion,
+			ExcludedByPermission: answer.ExcludedByPermission,
+		}
+		if answer.BaseCurrency != "" {
+			out.BaseCurrency = &answer.BaseCurrency
+		}
+		if !answer.RateDate.IsZero() {
+			out.RateDate = &answer.RateDate
 		}
 		if answer.PopulationNarrowed != "" {
 			out.PopulationNarrowed = &answer.PopulationNarrowed

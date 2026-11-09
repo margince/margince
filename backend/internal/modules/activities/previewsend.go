@@ -73,6 +73,7 @@ type PreviewSendInput struct {
 	// exists to prevent.
 	LegacyPurposeKey string
 	MarketingPurpose string
+	OperatorReason   string
 	Evidence         commsauthz.Evidence
 }
 
@@ -113,6 +114,7 @@ func (s *Store) PreviewSend(ctx context.Context, origin SendOrigin, in PreviewSe
 		Context:          in.Context,
 		LegacyPurposeKey: in.LegacyPurposeKey,
 		MarketingPurpose: in.MarketingPurpose,
+		OperatorReason:   in.OperatorReason,
 		Evidence:         in.evidenceWithAnchor(origin),
 		AnchorActivityID: origin.anchor.UUID,
 		Links:            linkedRecordIDs(links),

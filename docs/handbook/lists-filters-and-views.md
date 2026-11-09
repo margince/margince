@@ -251,8 +251,9 @@ Also called: save a segment, keep an advanced search.
 ## Selecting several records
 
 ### How do I select several records at once?
-To select many records in Margince, open **Contacts**, **Companies**, **Leads** or **Deals** as a **Table**. Tick the box at the start of each row. A bar shows above the rows saying "{count} selected", with the actions for that list.
-There is no box to tick every row: tick each row. Archived rows have no box, and neither do closed deals or qualified and disqualified leads. **Projects** have no way to tick many rows: change those one at a time.
+To select many records in Margince, open **Contacts**, **Companies**, **Leads** or **Deals** as a **Table**. Tick the box at the start of each row. A bar shows above the rows saying "{count} selected", with the actions for that list. Archived rows have no box, and neither do closed deals or qualified and disqualified leads. **Projects** have no way to tick many rows: change those one at a time.
+
+The box in the name column's heading ticks every row on the page that has a box. Once one row is ticked, the bar ends with **Select all**, which ticks every record that matches the list. One change takes at most 500 records, so **Select all** stops at 500 and says so. **Clear selection** unticks them all.
 
 Also called: multi-select, bulk edit, mass update, select all.
 
@@ -341,11 +342,11 @@ Margince keeps a note of when you last opened each list. In the **Filters and vi
 Also called: list history, list activity, who joined, who left, new members.
 
 ### How do I act on a list's members?
-To change many members of a list at once in Margince, open the list. Tick the members you want, or press **Select all**, and use the bar under **Members**.
+To change many members of a list at once in Margince, open the list. Tick the members you want, or tick one and press **Select all** in the bar under **Members**, and use that bar.
 1. The bar offers **Assign owner**, **Add tag**, **Remove tag**, **Create task**, **Add to Shortlist** and, except for leads, **Archive**. On a Shortlist you may change, it also offers **Remove from this Shortlist**.
 2. Every change shows a preview first: how many records will change and some examples. It names each record left as it is, with its reason. A change of more than 10 records shows a "Large change" warning you confirm.
 3. The message after that has an **Undo** button.
-One change takes at most 500 records, so **Select all** selects the first 500 and says so. Act on them, then select the rest. **Export CSV** beside the list's name downloads the members you can see. **Exported** on the list's page says how many times the list was exported, and when.
+One change takes at most 500 records, so **Select all** stops at 500 and says so. Act on them, then select the rest. **Export CSV** beside the list's name downloads the members you can see. **Exported** on the list's page says how many times the list was exported, and when.
 Also called: bulk edit a list, reassign everyone on a list, export a list.
 
 ### What does "Uses a retired field" mean on a list?

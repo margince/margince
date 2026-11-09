@@ -221,9 +221,15 @@ function SubscriptionRow({
         // and the deliveries toggle opens a log.
         value={
           <span className="webhook-answer">
-            <Badge tone={subscriptionStateTone(subscription.state)}>
-              {t(`webhooks.state.${subscription.state}`)}
-            </Badge>
+            {/* An owner who left sees nothing, so nothing is delivered
+                whatever the state says. */}
+            {subscription.owner_active === false ? (
+              <Badge tone="warning">{t("webhooks.row.ownerInactive")}</Badge>
+            ) : (
+              <Badge tone={subscriptionStateTone(subscription.state)}>
+                {t(`webhooks.state.${subscription.state}`)}
+              </Badge>
+            )}
             {subscription.body_template && (
               <Badge tone="default">{t("webhooks.row.customBody")}</Badge>
             )}

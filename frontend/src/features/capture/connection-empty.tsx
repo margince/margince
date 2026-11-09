@@ -136,7 +136,7 @@ function UnwiredFoot({
       {t("connectors.tile.registerApp", { vendor })}{" "}
       <AppLink
         className="link-button"
-        href={routeHash(settingsHref("authentication"))}
+        href={routeHash(settingsHref("authentication", "apps"))}
       >
         {t("connectors.tile.openPage", { page })}
       </AppLink>
@@ -155,7 +155,7 @@ export function ConnectTiles({
   onImap: () => void;
 }>) {
   const t = useT();
-  // The grant the company-app endpoints enforce, as Sign-in and apps asks it.
+  // The grant the company-app endpoints enforce, as Sign-in and security asks it.
   const canSetUp = useCanWrite("capture_settings", "update");
   const imapUnwired = accountUnwired("imap", availability);
   const lead = VENDORS.find((vendor) => !accountUnwired(vendor, availability));

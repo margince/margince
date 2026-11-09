@@ -15,7 +15,6 @@ import (
 	"go/parser"
 	"go/token"
 	"io"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
@@ -25,6 +24,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func sourceTaskIDs(source string) ([]string, error) {
@@ -126,7 +126,7 @@ func currentTaskLiterals() ([]string, error) {
 		if strings.HasSuffix(path, "_test.go") {
 			continue
 		}
-		raw, err := os.ReadFile(path)
+		raw, err := gatekit.ReadFile(path)
 		if err != nil {
 			return nil, err
 		}

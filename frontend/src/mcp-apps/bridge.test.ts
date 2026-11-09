@@ -684,3 +684,145 @@ describe("the render helpers refuse to render nonsense", () => {
     expect(bridge.warned([], "sweep_truncated")).toBe(false);
   });
 });
+
+describe("the bridge sends only the shapes a view needs", () => {
+  async function handshaken() {
+    const parent = stubParent();
+    const bridge = await loadBridge(parent.win);
+    deliver(parent.win, "https://host.example", {
+      jsonrpc: "2.0",
+      id: parent.sent[0].msg.id,
+      result: {},
+    });
+    return { parent, bridge };
+  }
+
+  // Matched by content rather than by count: a size report an earlier test's
+  // frame clock schedules can still land on this test's parent.
+  function wasSent(parent: { sent: Sent[] }, message: Record<string, unknown>) {
+    return parent.sent.some(
+      (s) =>
+        JSON.stringify(s.msg) ===
+        JSON.stringify({ jsonrpc: "2.0", ...message }),
+    );
+  }
+
+  const chat = (params: Record<string, unknown>) => ({
+    id: 90,
+    method: "ui/message",
+    params,
+  });
+  const userText = (text: string) => ({
+    role: "user",
+    content: { type: "text", text },
+  });
+
+  it.each([
+    ["no method at all", { id: 7, result: {} }],
+    ["a method that is only params", { params: {} }],
+    [
+      "ui/initialize claiming a capability",
+      {
+        id: 91,
+        method: "ui/initialize",
+        params: {
+          protocolVersion: PROTOCOL_VERSION,
+          appInfo: { name: "margince-view", version: "1" },
+          appCapabilities: { tools: {} },
+        },
+      },
+    ],
+    [
+      "ui/initialize carrying an extra member",
+      {
+        id: 92,
+        method: "ui/initialize",
+        params: {
+          protocolVersion: PROTOCOL_VERSION,
+          appInfo: { name: "margince-view", version: "1" },
+          appCapabilities: {},
+        },
+        extra: true,
+      },
+    ],
+    [
+      "initialized carrying params",
+      { method: "ui/notifications/initialized", params: { mode: "x" } },
+    ],
+    [
+      "a size given as text",
+      {
+        method: "ui/notifications/size-changed",
+        params: { width: "640", height: 400 },
+      },
+    ],
+    [
+      "a size with an extra member",
+      {
+        method: "ui/notifications/size-changed",
+        params: { width: 640, height: 400, url: "https://elsewhere.example" },
+      },
+    ],
+    [
+      "an infinite size",
+      {
+        method: "ui/notifications/size-changed",
+        params: { width: 640, height: Number.POSITIVE_INFINITY },
+      },
+    ],
+    [
+      "a chat message as the assistant",
+      chat({ ...userText("hi"), role: "assistant" }),
+    ],
+    [
+      "a chat message with two parts",
+      chat({
+        role: "user",
+        content: [userText("a").content, userText("b").content],
+      }),
+    ],
+    ["a chat message over the length cap", chat(userText("x".repeat(4001)))],
+    ["an empty chat message", chat(userText(""))],
+    [
+      "a chat message with no id",
+      { method: "ui/message", params: userText("hi") },
+    ],
+  ])("drops %s", async (_name, message) => {
+    const { parent, bridge } = await handshaken();
+    bridge.sendToHost(message as Record<string, unknown>);
+    expect(wasSent(parent, message as Record<string, unknown>)).toBe(false);
+  });
+
+  it("drops a tool call the view did not declare", async () => {
+    const { parent, bridge } = await handshaken();
+    const call = {
+      id: 93,
+      method: "tools/call",
+      params: { name: "delete_everything", arguments: {} },
+    };
+    bridge.sendToHost(call);
+    expect(wasSent(parent, call)).toBe(false);
+  });
+
+  it("still sends the chat message askAssistant writes, at the cap", async () => {
+    const { parent } = await handshaken();
+    const actions = await import("./actions");
+    actions.askAssistant("y".repeat(4000));
+    const chats = parent.sent.filter((s) => s.msg.method === "ui/message");
+    expect(chats).toHaveLength(1);
+    expect(chats[0].msg.params).toEqual({
+      role: "user",
+      content: { type: "text", text: "y".repeat(4000) },
+    });
+  });
+
+  it("still sends a size report of plain numbers", async () => {
+    const { parent, bridge } = await handshaken();
+    const size = {
+      method: "ui/notifications/size-changed",
+      params: { width: 640, height: 400 },
+    };
+    bridge.sendToHost(size);
+    expect(wasSent(parent, size)).toBe(true);
+  });
+});

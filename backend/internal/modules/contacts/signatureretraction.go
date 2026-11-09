@@ -135,9 +135,11 @@ func (s *Store) RetractMisattributedSignatureFields(ctx context.Context) (int64,
 		// a contact whose only signature was somebody else's can still gain
 		// their own from a later message.
 		if _, err := tx.Exec(ctx, `
-			DELETE FROM contact_signature_enrich_state st
-			 USING activity a
-			 WHERE st.activity_id = a.id AND NOT `+relstrength.SenderSQL("st.contact_id", "a")); err != nil {
+			WITH locked AS (SELECT st.contact_id FROM contact_signature_enrich_state st
+ JOIN activity a ON a.id=st.activity_id WHERE NOT `+relstrength.SenderSQL("st.contact_id", "a")+`
+ ORDER BY st.contact_id FOR UPDATE OF st)
+ UPDATE contact_signature_enrich_state st SET `+signatureReopenSetSQL+`
+ FROM locked WHERE st.contact_id=locked.contact_id`); err != nil {
 			return fmt.Errorf("contacts: reopening the misread signature watermarks: %w", err)
 		}
 		return nil

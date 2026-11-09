@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/contractterm"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -169,22 +170,10 @@ const contractColumns = `id, company_id, deal_id, project_id, contract_number, t
 	status, signed_on, cancellation_notice_on, cancellation_effective_on,
 	superseded_by_id, source, captured_by, version, created_at, updated_at, archived_at`
 
-// UnderContractSQL is CONTRACT-FORM-1 as a SQL expression, taking the as-of
-// date as its one parameter.
-//
-// The effective end is the EARLIER of the term end and the cancellation
-// effective date — LEAST ignores NULLs in Postgres, which is exactly the
-// null-safe behaviour wanted here, and an absent value on both means the
-// agreement is open-ended. A cancellation never extends a term that already
-// ran out.
+// UnderContractSQL is CONTRACT-FORM-1 (contractterm.InForceSQL) over the bare
+// columns, taking the as-of date as its one parameter.
 func UnderContractSQL(asOfPos int) string {
-	return storekit.SQLf(`(
-		archived_at IS NULL
-		AND status NOT IN ('draft', 'superseded')
-		AND (starts_on IS NULL OR starts_on <= $%[1]d)
-		AND (LEAST(ends_on, cancellation_effective_on) IS NULL
-		     OR $%[1]d <= LEAST(ends_on, cancellation_effective_on))
-	)`, asOfPos)
+	return contractterm.InForceSQL("", storekit.SQLf("$%d", asOfPos))
 }
 
 // scanContract reads one row. `active` is the custom-field columns the caller

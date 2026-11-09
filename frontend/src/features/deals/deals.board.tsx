@@ -32,7 +32,7 @@ import {
   ownerDialParams,
   type useStageTotals,
 } from "../../lib/deals.queries";
-import { useMemberNames } from "../../lib/membernames";
+import { useMemberAvatars, useMemberNames } from "../../lib/membernames";
 import type { usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
@@ -255,9 +255,11 @@ export function DealBoardBody({
   const loadedDeals = stageColumns.deals;
   // Named by id, batched into one request for every card's owner at once.
   // An unowned deal contributes no id, so a board of them asks nothing.
-  const ownerNames = useMemberNames(
-    loadedDeals.flatMap((deal) => (deal.owner_id ? [deal.owner_id] : [])),
+  const ownerIds = loadedDeals.flatMap((deal) =>
+    deal.owner_id ? [deal.owner_id] : [],
   );
+  const ownerNames = useMemberNames(ownerIds);
+  const ownerPhotos = useMemberAvatars(ownerIds);
   // Every company the cards name. The picker's capped page answers most of
   // them for free. The rest are resolved by id (useCompanyMarks), so no card
   // stands over a company the board failed to look up.
@@ -298,6 +300,7 @@ export function DealBoardBody({
               totalsWithheld ? t(totalsWithheld) : undefined,
               rosterOwnerNaming(ownerNames),
               uncountedStages(stageColumns.columns),
+              ownerPhotos,
             )}
             onOpen={openDeal}
             cardDragHandlers={cardDragHandlers}

@@ -3,7 +3,10 @@
 
 package privacy
 
-import "github.com/margince/margince/backend/internal/platform/database/storekit"
+import (
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/retentionscope"
+)
 
 // The selector table: which records each (object_type, category) policy scope
 // governs. Split out of retention.go because it is also the AUTHORABLE
@@ -42,14 +45,14 @@ var retentionSelectors = map[string]string{
 		  AND a.occurred_at < now() - make_interval(days => $1) -- occurred_at raw: a retention age in days
 		  AND a.created_at < now() - make_interval(days => $1)
 		  ` + correspondenceFloorPredicate(3, 4) + `
-		  AND NOT ` + activityHeld + `
+		  AND NOT ` + retentionscope.HeldThroughAnyLink("a.id") + `
 		LIMIT $2`,
 	"activity/transcript": `SELECT a.id FROM activity a
 		WHERE a.source_system = 'transcript' AND a.body IS NOT NULL
 		  AND a.occurred_at < now() - make_interval(days => $1) -- occurred_at raw: a retention age in days
 		  AND a.created_at < now() - make_interval(days => $1)
 		  ` + correspondenceFloorPredicate(3, 4) + `
-		  AND NOT ` + activityHeld + `
+		  AND NOT ` + retentionscope.HeldThroughAnyLink("a.id") + `
 		LIMIT $2`,
 	"contact/no_consent_no_deal": `SELECT p.id FROM contact p
 		WHERE p.archived_at IS NULL AND NOT p.legal_hold
@@ -97,7 +100,7 @@ var retentionSelectors = map[string]string{
 		        WHERE ` + storekit.StoredOriginalSQL("a", "r") + `
 		          AND (a.archived_at IS NULL
 		               ` + correspondenceFloorPredicate(3, 4) + `
-		               AND NOT ` + activityHeld + `) IS NOT TRUE)
+		               AND NOT ` + retentionscope.HeldThroughAnyLink("a.id") + `) IS NOT TRUE)
 		LIMIT $2`,
 	// The queue's recorded risk days, aged on the day they describe. A day and
 	// its verdicts exist to answer the same-day next-step figure over its
@@ -107,15 +110,3 @@ var retentionSelectors = map[string]string{
 	"deal_risk_day/": `SELECT id FROM deal_risk_day
 		WHERE day_start < now() - make_interval(days => $1) LIMIT $2`,
 }
-
-// activityHeld is true when a record the activity aliased a is linked to sits
-// under a legal hold.
-const activityHeld = `EXISTS (SELECT 1 FROM activity_link l
-		        LEFT JOIN contact p ON p.id = l.contact_id
-		        LEFT JOIN company o ON o.id = l.company_id
-		        LEFT JOIN deal d ON d.id = l.deal_id
-		        LEFT JOIN lead ld ON ld.id = l.lead_id
-		        LEFT JOIN project pj ON pj.id = l.project_id
-		        WHERE l.activity_id = a.id
-		          AND (coalesce(p.legal_hold, false) OR coalesce(o.legal_hold, false) OR coalesce(d.legal_hold, false)
-		               OR coalesce(ld.legal_hold, false) OR coalesce(pj.legal_hold, false)))`

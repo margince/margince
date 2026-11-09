@@ -26,11 +26,12 @@ package gates
 // awkward rather than merely forbidden.
 
 import (
-	"os"
 	"regexp"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // theConfirmProjection is the read this gate judges.
@@ -86,7 +87,7 @@ var sqlLiteralRe = regexp.MustCompile("(?s)`([^`]*(?:SELECT|FROM)[^`]*)`")
 
 func TestTheConfirmCardDisclosesOnlyWhatItsSubjectMaySee(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile(theConfirmProjection)
+	source, err := gatekit.ReadFile(theConfirmProjection)
 	if err != nil {
 		t.Fatalf("read the confirm projection: %v", err)
 	}

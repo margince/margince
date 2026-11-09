@@ -17,12 +17,13 @@ package gates
 // migration and the declaration, not a value assembled at runtime.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The constraint's list and the module's list name the same tokens.
@@ -92,7 +93,7 @@ func newestFileMatching(t *testing.T, pattern string) []byte {
 		t.Fatalf("nothing matched %s: %v", pattern, err)
 	}
 	sort.Strings(matches)
-	body, err := os.ReadFile(matches[len(matches)-1])
+	body, err := gatekit.ReadFile(matches[len(matches)-1])
 	if err != nil {
 		t.Fatalf("reading %s: %v", matches[len(matches)-1], err)
 	}

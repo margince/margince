@@ -27,7 +27,6 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -220,7 +219,7 @@ func TestOnlyOnePlaceDerivesACalendarDay(t *testing.T) {
 	judged := 0
 	fset := gatekit.SourceFileSet()
 	for _, root := range []string{"internal", "../extensions"} {
-		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+		err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil {
 				return walkErr
 			}
@@ -241,7 +240,7 @@ func TestOnlyOnePlaceDerivesACalendarDay(t *testing.T) {
 			if rel == calendarDayOwner || strings.HasPrefix(rel, calendarDayOwner+"/") {
 				return nil
 			}
-			source, readErr := os.ReadFile(path) // #nosec G304 -- a *.go path from walking the trusted source tree
+			source, readErr := gatekit.ReadFile(path) // #nosec G304 -- a *.go path from walking the trusted source tree
 			if readErr != nil {
 				return readErr
 			}

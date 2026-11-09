@@ -192,6 +192,7 @@ export function DraftOffer({
               {...control}
               placeholder={t(ask)}
               value={intent}
+              maxLength={400}
               onChange={(event) => onIntentChange(event.target.value)}
             />
             {/* Outlined with its sparkle: Send is the composer's one filled

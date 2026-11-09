@@ -68,6 +68,7 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["partner_company_id", "history.field.partner_company_id"],
   ["phones", "history.field.phones"],
   ["project_id", "history.field.project_id"],
+  ["product_id", "history.field.product_id"],
   ["relationship_types", "history.field.relationship_types"],
   ["due_has_time", "history.field.due_has_time"],
   ["remind_at", "history.field.remind_at"],
@@ -97,6 +98,7 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
 // Apart from both maps above, because no `Update<Type>Request` names these and
 // no hand-built image writes them, so each census would call them orphans.
 const STORED_COLUMN_LABELS = new Map<string, MessageKey>([
+  ["stage_id", "history.field.stage_id"],
   ["win_probability_override", "history.field.win_probability_override"],
   ["win_probability_set_by", "history.field.win_probability_set_by"],
 ]);
@@ -155,6 +157,7 @@ const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
   ["guest_links_added", "history.field.guest_links_added"],
   ["meeting_documents_added", "history.field.meeting_documents_added"],
   ["guests_retired", "history.field.guests_retired"],
+  ["meeting_guests_removed", "history.field.meeting_guests_removed"],
   ["guest_answers_changed", "history.field.guest_answers_changed"],
   ["guests_left_out", "history.field.guests_left_out"],
   ["relinked_emails", "history.field.relinked_emails"],

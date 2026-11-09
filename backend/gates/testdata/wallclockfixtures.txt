@@ -36,7 +36,6 @@ internal/compose/canceledmeetingfolds_integration_test.go 6
 internal/compose/capturedigestprojects_integration_test.go 2
 internal/compose/capturedigestreview_integration_test.go 2
 internal/compose/captureenrich_integration_test.go 1
-internal/compose/captureenrichtrigger_test.go 3
 internal/compose/capturehealth_integration_test.go 4
 internal/compose/capturepurgereceipt_test.go 1
 internal/compose/capturesweepreceipt_integration_test.go 3
@@ -50,7 +49,6 @@ internal/compose/company_integration_test.go 1
 internal/compose/companyautoenrich_test.go 2
 internal/compose/companyconnections_integration_test.go 2
 internal/compose/companyrollup_handlers_test.go 1
-internal/compose/companyscan/words_integration_test.go 1
 internal/compose/confidentialityverdict_integration_test.go 1
 internal/compose/connectors_authority_test.go 1
 internal/compose/connectors_csrf_test.go 1
@@ -104,6 +102,7 @@ internal/compose/integration/bouncestop_integration_test.go 1
 internal/compose/integration/brief_e2e_integration_test.go 2
 internal/compose/integration/canceledmeetingleadtouch_integration_test.go 1
 internal/compose/integration/capture/capture_providerrecovery_integration_test.go 2
+internal/compose/integration/capture/capture_sqlprofile_integration_test.go 1
 internal/compose/integration/capture/capture_syncstate_integration_test.go 1
 internal/compose/integration/capture/fieldprovenance_integration_test.go 1
 internal/compose/integration/capture/gmail_connector_integration_test.go 1
@@ -114,8 +113,6 @@ internal/compose/integration/channels/telegram_sinkerasure_integration_test.go 1
 internal/compose/integration/collections/listlive_integration_test.go 1
 internal/compose/integration/comms_send_integration_test.go 2
 internal/compose/integration/company360/company360_integration_test.go 1
-internal/compose/integration/company360/companyscanlifecycle_integration_test.go 14
-internal/compose/integration/company360/companyscanwithhold_integration_test.go 1
 internal/compose/integration/company_computed_integration_test.go 1
 internal/compose/integration/companylogo_integration_test.go 4
 internal/compose/integration/companyobjectgrant_integration_test.go 1
@@ -156,6 +153,8 @@ internal/compose/integration/fieldhistoryclient_integration_test.go 1
 internal/compose/integration/fxrate_integration_test.go 1
 internal/compose/integration/grants_integration_test.go 3
 internal/compose/integration/growthfit_e2e_integration_test.go 1
+internal/compose/integration/home_budget_bench_test.go 2
+internal/compose/integration/home_budget_seed_bench_test.go 2
 internal/compose/integration/idempotency_integration_test.go 2
 internal/compose/integration/installation_integration_test.go 1
 internal/compose/integration/installationseam_integration_test.go 1
@@ -217,7 +216,7 @@ internal/compose/integration/signalextract_integration_test.go 1
 internal/compose/integration/signals_integration_test.go 3
 internal/compose/integration/signalscan_integration_test.go 3
 internal/compose/integration/signalscan_project_integration_test.go 2
-internal/compose/integration/stageevidencesource_integration_test.go 2
+internal/compose/integration/stageevidencesource_integration_test.go 1
 internal/compose/integration/standardfilterfields_http_integration_test.go 1
 internal/compose/integration/testmailbox_integration_test.go 2
 internal/compose/integration/toolschema_conformance_integration_test.go 5
@@ -293,7 +292,7 @@ internal/compose/systemhealthcost_bench_test.go 1
 internal/compose/systemreminder_integration_test.go 8
 internal/compose/tagscout_integration_test.go 18
 internal/compose/tasklistorder_integration_test.go 6
-internal/compose/transcriptpropose_integration_test.go 3
+internal/compose/transcriptpropose_integration_test.go 2
 internal/compose/undoabilityagreement_integration_test.go 1
 internal/compose/unsetstakeholderrole_integration_test.go 2
 internal/compose/vcardingest_integration_test.go 1
@@ -307,7 +306,6 @@ internal/compose/weekly/weeklyscorecard_integration_test.go 1
 internal/compose/weeklymetricscoverage_integration_test.go 1
 internal/compose/weeklyplancapacity_integration_test.go 1
 internal/compose/worklistageout_integration_test.go 1
-internal/compose/worklistbacklog_integration_test.go 2
 internal/modules/activities/activityread_test.go 2
 internal/modules/activities/answertouchequivalence_integration_test.go 2
 internal/modules/activities/awaitingreply_integration_test.go 1
@@ -359,7 +357,6 @@ internal/modules/automation/handlers_event_route_lead_test.go 1
 internal/modules/automation/listrulefire_test.go 1
 internal/modules/capture/gcal/gcal_test.go 2
 internal/modules/capture/gmail/backfill_test.go 16
-internal/modules/capture/gmail/backfillpool_test.go 3
 internal/modules/capture/gmail/metrics_test.go 6
 internal/modules/capture/graph/client_test.go 2
 internal/modules/capture/handlers_trace_test.go 2
@@ -408,7 +405,7 @@ internal/modules/contacts/geocode_test.go 1
 internal/modules/contacts/leadconstraints_integration_test.go 2
 internal/modules/contacts/leadladder_integration_test.go 2
 internal/modules/contacts/leadreopen_integration_test.go 2
-internal/modules/contacts/leadsla_integration_test.go 21
+internal/modules/contacts/leadsla_integration_test.go 17
 internal/modules/contacts/leadsla_test.go 1
 internal/modules/contacts/leadworkqueue_test.go 1
 internal/modules/contacts/nudgedismissal_integration_test.go 6
@@ -416,13 +413,10 @@ internal/modules/contacts/occurrenceimage_integration_test.go 1
 internal/modules/contacts/profilefieldprecedence_integration_test.go 1
 internal/modules/contacts/promoteconsent_integration_test.go 1
 internal/modules/contacts/strengthasof_integration_test.go 2
-internal/modules/contacts/vcardimport_integration_test.go 2
+internal/modules/contacts/vcardimport_integration_test.go 1
 internal/modules/deals/edgegrant_test.go 5
 internal/modules/deals/fxrates_integration_test.go 2
 internal/modules/deals/stageevidence_integration_test.go 5
-internal/modules/deals/stageprogression_integration_test.go 3
-internal/modules/deals/stageprogressionpolicy_integration_test.go 1
-internal/modules/deals/stageprogressionsuspend_integration_test.go 1
 internal/modules/forecasting/movement_test.go 1
 internal/modules/identity/oauth_cimd_integration_test.go 1
 internal/modules/identity/revocation_integration_test.go 2

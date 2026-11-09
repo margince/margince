@@ -114,7 +114,7 @@ func restoreMergeDroppedPrimary(ctx context.Context, tx pgx.Tx, contact ids.Cont
 	}
 	before := relationshipFieldImage(promoted)
 	before["is_current_primary"] = false
-	evidence := map[string]any{"data_task_run": runID, auditKeyReason: "merge_dropped_primary"}
+	evidence := map[string]any{evidenceKeyDataTaskRun: runID, auditKeyReason: "merge_dropped_primary"}
 	if err := emitRelationshipChangeWithEvidence(ctx, tx, "update", before, promoted, evidence); err != nil {
 		return false, fmt.Errorf("contacts: recording a restored primary employer: %w", err)
 	}

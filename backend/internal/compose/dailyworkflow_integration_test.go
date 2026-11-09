@@ -18,10 +18,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -445,4 +448,99 @@ func TestCorrectedSourceContentLeavesOneRowOfWork(t *testing.T) {
 	if tasks != 1 {
 		t.Errorf("%d request tasks name the corrected message, want one", tasks)
 	}
+}
+
+// Later evidence renews a promise and the day keeps the one row it had.
+//
+// A renewal is an upsert on the commitment's own key. The admission moves its
+// evidence and its renewal instant rather than opening a second one.
+//
+// The work a reader sees derives from that admission, so a second row here
+// would be the same promise counted twice on one day.
+func TestRenewedEvidenceKeepsTheOnePromiseItRenews(t *testing.T) {
+	o := setupOwed(t)
+	readers := o.day(t)
+	o.contact(t, "Buyer", "buyer@customer.example")
+	first := o.capture(t, owedMail{
+		from: "buyer@customer.example", to: o.seat, subject: "Account plan for the rollout",
+		body: "Please send the account plan.", at: o.now.Add(-2 * time.Hour),
+		messageID: ids.NewV7().String() + "@customer.example",
+	})
+	if _, err := o.e.LabelCapture(o.judge(), first, "commitment"); err != nil {
+		t.Fatal(err)
+	}
+	runOwedWorker(t, o.e, &owedBrainStub{verdict: activities.OwedVerdictAsksUs, confidence: .99})
+
+	// The promise is read out of the first mail and dispatched, so the day
+	// holds its own task beside the request the owed worker filed.
+	promise := Commitment{
+		Meaning: openCommitmentMeaning("", "Please send the account plan."), AsOf: o.now.Add(-2 * time.Hour),
+		SourceActivityID: first, ReadMessages: []ids.UUID{first}, Extractor: signalScanActor,
+		Locator: commitmentLocator(first, claimKindOurs, o.e.Rep1.String(), "Send the account plan"),
+		Seat:    &o.e.Rep1, Summary: "Send the account plan", Quote: "Please send the account plan.", Confidence: 0.95,
+	}
+	o.dispatch(t, promise, CommitmentTaskWritten)
+	before := rowIDs(o.page(readers.rep1, t, "mine", o.now))
+	if tasks := o.promiseTasks(t, first); tasks != 1 {
+		t.Fatalf("the first reading wrote %d tasks for the promise, want one to renew", tasks)
+	}
+
+	// A later message in the same conversation, naming the same promise. The
+	// admission is keyed by the source and the locator, so this renews rather
+	// than admits.
+	renewal := o.capture(t, owedMail{
+		from: "buyer@customer.example", to: o.seat, subject: "Re: Account plan for the rollout",
+		body: "Still waiting on the account plan, end of next week is fine.", at: o.now.Add(-time.Hour),
+		messageID: ids.NewV7().String() + "@customer.example",
+	})
+	// A renewal moves what the later mail restates: here, the day it is due.
+	// Today, so the promise stays on the day the reader is looking at.
+	renewedAt, due := o.now, o.now.UTC().Format(time.DateOnly)
+	promise.AsOf, promise.ReadMessages, promise.DueDate = renewedAt, []ids.UUID{first, renewal}, due
+	promise.AdmissionSourceID, promise.RenewedAt = &renewal, &renewedAt
+	o.dispatch(t, promise, CommitmentRetained)
+
+	if after := rowIDs(o.page(readers.rep1, t, "mine", o.now)); !slices.Equal(after, before) {
+		t.Errorf("after the renewal the day holds %v, want the same rows %v", after, before)
+	}
+	if tasks := o.promiseTasks(t, first); tasks != 1 {
+		t.Errorf("%d tasks name the promise after the renewal, want the one it renewed", tasks)
+	}
+	if moved := o.e.WsCount(t, `SELECT count(*) FROM activity
+		WHERE kind = 'task' AND source_system = $1 AND source_activity_id = $2 AND due_at IS NOT NULL`,
+		activities.CommitmentTaskSource, first); moved != 1 {
+		t.Errorf("the promise's task carries no due date after a renewal that stated %s", due)
+	}
+	if admissions := o.e.WsCount(t, `SELECT count(*) FROM activity_commitment_admission
+		WHERE source_activity_id = $1`, first); admissions != 1 {
+		t.Errorf("%d admissions name the promise, want the one it renewed", admissions)
+	}
+	if renewals := o.e.WsCount(t, `SELECT count(*) FROM activity_commitment_admission
+		WHERE source_activity_id = $1 AND renewed_at IS NOT NULL AND renewed_by = $2`, first, renewal); renewals != 1 {
+		t.Errorf("the admission does not name %s as what renewed it", renewal)
+	}
+}
+
+// dispatch runs one reading of a promise through the production dispatcher,
+// as the signal scan does, and requires the outcome that reading should have.
+func (o *owedEnv) dispatch(t *testing.T, c Commitment, want CommitmentOutcome) {
+	t.Helper()
+	ctx := withTranscriptReader(principal.WithWorkspaceID(context.Background(), o.e.WS), "human:"+o.e.Rep1.String(), ids.NewV7())
+	dispatcher := NewCommitmentDispatcher(o.e.Pool, approvals.NewService(o.e.DB()))
+	if err := database.WithWorkspaceTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
+		outcome, _, err := dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
+		if err == nil && outcome != want {
+			t.Errorf("dispatch = %q, want %q", outcome, want)
+		}
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// promiseTasks counts the commitment tasks read out of one source mail.
+func (o *owedEnv) promiseTasks(t *testing.T, source ids.UUID) int {
+	t.Helper()
+	return o.e.WsCount(t, `SELECT count(*) FROM activity
+		WHERE kind = 'task' AND source_system = $1 AND source_activity_id = $2`, activities.CommitmentTaskSource, source)
 }

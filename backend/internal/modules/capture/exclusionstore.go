@@ -23,6 +23,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -271,9 +272,35 @@ func parseSingleAddress(raw string) (string, bool) {
 	return strings.ToLower(addr.Address), true
 }
 
-// ValidExclusionValue vets one rule's value and returns its stored form: a
-// lowercased address, or an IDNA ASCII domain through the own-domain vetting.
+// parsedRuleKinds are the kinds validRuleValue can parse. Each surface takes
+// the part of it that its contract enum admits, so a refusal names only kinds
+// that surface accepts.
+var parsedRuleKinds = []string{ExclusionKindAddress, ExclusionKindDomain, ExclusionKindContainer}
+
+// kindsAdmittedBy returns the parsed kinds that admitted accepts.
+func kindsAdmittedBy(admitted func(kind string) bool) []string {
+	return slices.DeleteFunc(slices.Clone(parsedRuleKinds), func(kind string) bool { return !admitted(kind) })
+}
+
+var (
+	exclusionKinds = kindsAdmittedBy(func(kind string) bool { return crmcontracts.CaptureExclusionKind(kind).Valid() })
+	holdKinds      = kindsAdmittedBy(func(kind string) bool { return crmcontracts.CreateCaptureCounterpartyHoldRequestKind(kind).Valid() })
+	identityKinds  = kindsAdmittedBy(func(kind string) bool { return crmcontracts.CaptureOwnerIdentityKind(kind).Valid() })
+)
+
+// ValidExclusionValue vets one exclusion rule's value and returns its stored
+// form.
 func ValidExclusionValue(kind, raw string) (string, error) {
+	return validRuleValue(exclusionKinds, kind, raw)
+}
+
+// validRuleValue vets a value of one of the admitted kinds and returns its
+// stored form. That is a lowercased address, an IDNA ASCII domain, or a
+// provider-qualified container.
+func validRuleValue(admitted []string, kind, raw string) (string, error) {
+	if !slices.Contains(admitted, kind) {
+		return "", &InvalidExclusionError{Field: "kind", Reason: "kind is " + oneOf(admitted)}
+	}
 	switch kind {
 	case ExclusionKindAddress:
 		address, ok := parseSingleAddress(raw)
@@ -290,7 +317,16 @@ func ValidExclusionValue(kind, raw string) (string, error) {
 	case ExclusionKindContainer:
 		return validContainer(raw)
 	}
-	return "", &InvalidExclusionError{Field: "kind", Reason: "kind is address, domain or container"}
+	return "", fmt.Errorf("capture: kind %q is admitted but has no parser", kind)
+}
+
+// oneOf spells a list of allowed values the way a refusal reads it:
+// "address or domain", "address, domain or container".
+func oneOf(values []string) string {
+	if len(values) < 2 {
+		return strings.Join(values, "")
+	}
+	return strings.Join(values[:len(values)-1], ", ") + " or " + values[len(values)-1]
 }
 
 // validContainer vets a provider-qualified container and returns its stored

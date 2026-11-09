@@ -375,7 +375,7 @@ func requestedNegotiation(ctx context.Context, tx pgx.Tx, deals []ids.UUID, subj
 			        WHERE l.entity_type = 'deal' AND l.deal_id = d.id
 			          AND a.archived_at IS NULL
 			          AND ((`+correspondence.AuthenticatedInboundSQL("a")+` AND `+authorIsTheSubject+`)
-			               OR (`+capturedMeetingSQL+` AND `+participantIsTheSubject+`)))
+			               OR (`+capturedMeetingSQL("$10")+` AND `+participantIsTheSubject+`)))
 			  OR EXISTS (
 			       SELECT 1 FROM consent_qualifying_event q
 			        WHERE q.contact_id = $2::uuid
@@ -394,7 +394,7 @@ func requestedNegotiation(ctx context.Context, tx pgx.Tx, deals []ids.UUID, subj
 			          AND `+requestCoversSQL("e.recorded_for_addresses", "$3")+`))
 		)`, subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID,
 		deals, handRecordedRequestKinds, followupRequests.acquisitionKinds,
-		time.Now().Add(clockSkewAllowance)).Scan(&found)
+		time.Now().Add(clockSkewAllowance), time.Now()).Scan(&found)
 	if err != nil {
 		return false, fmt.Errorf("consent: read whether the contact asked about this deal: %w", err)
 	}

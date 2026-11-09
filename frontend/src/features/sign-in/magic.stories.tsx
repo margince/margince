@@ -3,14 +3,11 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { MagicReceipt } from "../../lib/magic.queries";
-import { BUSY_NIGHT } from "../../testing/magic.fixtures";
 import {
   jsonResponse,
   StoryProviders,
   stubWithSession,
 } from "../../testing/story-utils";
-import { automaticStageReceipt } from "../../testing/worklist.receiptreview.fixtures";
-import { BriefChanges } from "../brief/brief.changes";
 import { MagicPanel } from "./magic";
 
 const meta: Meta<typeof MagicPanel> = {
@@ -82,7 +79,11 @@ const EVERY_LANE: MagicReceipt = {
       lane: "could_not_complete",
       summary: {
         key: "magic.action.automation_troubled",
-        values: { name: "Nightly follow-up", outcome: "timed out" },
+        values: {
+          name: "Nightly follow-up",
+          outcome: "failed",
+          reason_code: "target_missing",
+        },
       },
       consequence: "magic.consequence.automation_did_nothing",
       undo: { undoable: false, reason: "no_completed_change" },
@@ -108,44 +109,6 @@ const EVERY_LANE: MagicReceipt = {
 };
 
 export const EveryLane: Story = { render: () => panel(EVERY_LANE) };
-
-/** On Home: the receipt in the work column, the changes waiting for a word in the rail. */
-export const OnHome: Story = {
-  render: () => {
-    // Accept and Undo answer as the server would: the change reads as
-    // answered on the next read, rather than offering both again.
-    const change = automaticStageReceipt;
-    const deal = change.subject?.id;
-    let review = change.review;
-    const answer = (patch: { accepted?: boolean; reversed?: boolean }) => {
-      review = review && { ...review, ...patch };
-      return new Response(null, { status: 204 });
-    };
-    stubWithSession(
-      {
-        "GET /magic": () => jsonResponse(BUSY_NIGHT),
-        "GET /worklist/handled": () =>
-          jsonResponse({
-            as_of: "2026-09-13T08:00:00Z",
-            receipts: [{ ...change, review }],
-            truncated: false,
-          }),
-        [`POST /deals/${deal}/applied-changes/${change.id}/accept`]: () =>
-          answer({ accepted: true }),
-        [`POST /deals/${deal}/stage-progressions/${change.id}/revert`]: () =>
-          answer({ reversed: true }),
-        [`GET /deals/${deal}`]: () => jsonResponse({ name: "PIM Rollout" }),
-      },
-      { deal: ["read", "update"] },
-    );
-    return (
-      <StoryProviders>
-        <MagicPanel />
-        <BriefChanges />
-      </StoryProviders>
-    );
-  },
-};
 
 /** Nothing ran: the panel stays away rather than drawing four empty lanes. */
 export const QuietNight: Story = { render: () => panel(QUIET) };

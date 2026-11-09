@@ -8,10 +8,14 @@
 // dist/mcp-apps/<view>.html, which is the path nginx serves and the Go catalog
 // names. Without the relocation nginx would serve nothing there and the api
 // would hold no view at all.
+//
+// It also writes dist/mcp-apps/digests.json, the SHA-256 of each final
+// document. The api build links that manifest and serves only matching bytes.
 
 import { existsSync } from "node:fs";
 import { cp, mkdir, readdir, rm } from "node:fs/promises";
 import { build } from "vite";
+import { writeDigests } from "./lib/mcp-app-digests.mjs";
 
 const SOURCES = "src/mcp-apps";
 const CONFIG = "vite.mcp-apps.config.ts";
@@ -64,5 +68,9 @@ for (const view of VIEWS) {
 }
 
 await rm(STAGING, { recursive: true, force: true });
+await writeDigests(
+  OUT,
+  VIEWS.map((view) => `${view}.html`),
+);
 // biome-ignore lint/suspicious/noConsole: a build step reports what it produced — this line IS its output
 console.log(`mcp-apps: built ${VIEWS.length} documents into ${OUT}`);

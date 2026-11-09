@@ -12,6 +12,7 @@ package capture
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -144,4 +145,35 @@ func awaitRecomputeDoneOrQueued(t *testing.T, e *integration.SearchEnv, seat *ra
 			queued, err := testdb.QueuedBehind(ctx, e.Owner, holder)
 			return queued > 0, err
 		})
+}
+
+// A colleague's import of a meeting holds a key share on its row, then
+// recomputes the audience. A second seat's replay of the meeting takes the row
+// lock before its own import row. So it waits for the colleague, and the
+// recompute never waits on it.
+func TestAMeetingReplayWaitsForAColleaguesImportBeforeItSharesTheRow(t *testing.T) {
+	p := newPairEnv(t)
+	start := captureNow.AddDate(0, 0, -3).Truncate(time.Hour)
+	p.book(start)
+	p.sync(t, "a")
+	e := p.env.e
+	colleague := beginImport(t, e, p.rowOf(t, "a"), e.Rep3, "shared")
+
+	synced, returned := make(chan error, 1), make(chan struct{})
+	go func() {
+		defer close(returned)
+		synced <- p.env.registry.SyncOnce(principal.WithWorkspaceID(context.Background(), e.WS), p.conns["b"])
+	}()
+	testdb.AwaitQueuedBehind(t, e.Owner, colleague.pid, 1, returned, "the guest's replay")
+	colleague.recompute()
+	testdb.AwaitReturnWithoutWaiting(t, e.Owner, colleague.pid, colleague.recomputed,
+		"the colleague's recompute, beside the replay waiting on the colleague,")
+	colleague.release()
+	if err := colleague.wait(); err != nil {
+		t.Fatalf("the colleague's import: %v", err)
+	}
+	if err := <-synced; err != nil {
+		t.Fatalf("SyncOnce b: %v", err)
+	}
+	p.wantOneMeeting(t, start)
 }
