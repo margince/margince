@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/platform/auth backend/internal/shared/kernel/principal backend/internal/compose/agentgate.go backend/internal/modules/identity/passport.go backend/internal/modules/identity/meresponse.go backend/internal/modules/identity/roster.go frontend/src/lib/settingscatalog.ts frontend/src/features/settings/settingsnav.tsx backend/internal/platform/database/database.go backend/internal/compose/dbrole.go scripts/check-rls-store-path.sh backend/api/crm.yaml backend/internal/modules/contacts/contactcasedecide.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/duplicatepairmerge.go -->
+<!-- describes: backend/internal/compose/briefmailjobs.go backend/internal/compose/weeklymailjobs.go backend/internal/compose/routineclaim.go backend/internal/modules/identity/authority.go backend/internal/compose/sendbasis.go backend/internal/compose/sendbasishold.go backend/internal/compose/dealownernotify.go backend/internal/compose/jobs_approvalownernotice.go backend/internal/platform/auth backend/internal/shared/kernel/principal backend/internal/compose/agentgate.go backend/internal/modules/identity/passport.go backend/internal/modules/identity/meresponse.go backend/internal/modules/identity/roster.go frontend/src/lib/settingscatalog.ts frontend/src/features/settings/settingsnav.tsx backend/internal/platform/database/database.go backend/internal/compose/dbrole.go scripts/check-rls-store-path.sh backend/api/crm.yaml backend/internal/modules/contacts/contactcasedecide.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/duplicatepairmerge.go -->
 # Authorization & access control
 
 How Margince decides who may do what, and where that decision is made. You may look for the auth check in
@@ -133,6 +133,20 @@ These often must run inside the same transaction as the read or write they guard
 would read a different snapshot. More is in [rbac-roles-and-teams.md](rbac-roles-and-teams.md). It covers what the roles grant, and how
 row scope (own, team or all) and teams decide which rows. It also covers how a share per record adds
 visibility on top.
+
+### Keep authority until the transaction ends
+
+`identity.EffectiveAuthorityTx` takes a shared authorization lock before reading current roles,
+teams and seat rights. Changes to those rights wait until the transaction ends.
+The lock comes before member and record locks. Mail sent later takes it before holding the
+rows its words describe, and checks the basis again with the current permissions.
+
+A deal owner change moves pending requests and takes back old notices in one transaction.
+Its new notice is queued with that change. The worker takes the authorization lock first. After waiting for the request, it checks that it has not expired.
+It checks who is still asked and what they may read before writing the notice and its mail job.
+An old job cannot take back the current owner's notice.
+
+For each request that moves, the owner change queues a job. A running job cannot hide a later change.
 
 ### Capture privacy, and the one actor it does not hold a row back from
 

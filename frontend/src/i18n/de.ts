@@ -2353,6 +2353,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.ai_price_sync": "Aktualisierung der Modellpreise",
   "systemJob.alias_discovery": "Erkennung von E-Mail-Adressen",
   "systemJob.approval_expiry": "Ablauf von Freigaben",
+  "systemJob.approval_owner_notice": "Hinweis zur Freigabeübergabe",
   "systemJob.approval_notice_reconcile": "Bereinigung offener Freigabehinweise",
   "systemJob.approval_notice_retract": "Rücknahme von Freigabehinweisen",
   "systemJob.approval_notify": "Freigabebenachrichtigung",

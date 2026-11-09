@@ -2270,6 +2270,7 @@ export const en = {
   "systemJob.ai_price_sync": "Model price update",
   "systemJob.alias_discovery": "Mail address discovery",
   "systemJob.approval_expiry": "Approval expiry",
+  "systemJob.approval_owner_notice": "Approval handover notice",
   "systemJob.approval_notice_reconcile": "Pending approval notice cleanup",
   "systemJob.approval_notice_retract": "Approval notice withdrawal",
   "systemJob.approval_notify": "Approval notification",

@@ -82,11 +82,22 @@ func (s *Service) EffectiveAuthority(ctx context.Context, workspaceID, humanID i
 	return rbac, seat, err
 }
 
-// EffectiveAuthorityTx is EffectiveAuthority read in the caller's transaction.
-// It answers only whether a member is told about something, never what they
-// may do, so the caller's isolation level is enough. ErrNotFound for a member
-// who is not live.
+// HoldAuthorizationTx orders a claim before changes to the rights it will check.
+// Acquire it before member or record locks and read permissions while it is held.
+func HoldAuthorizationTx(ctx context.Context, tx pgx.Tx) error {
+	return lockAuthorizationShared(ctx, tx)
+}
+
+// EffectiveAuthorityTx holds live authority until the caller's transaction ends.
+// Take it before member and record locks, as authorization writers do.
 func EffectiveAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	if err := HoldAuthorizationTx(ctx, tx); err != nil {
+		return authz.RBAC{}, "", err
+	}
+	return readEffectiveAuthorityTx(ctx, tx, humanID)
+}
+
+func readEffectiveAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	seatType, err := liveSeatType(ctx, tx, humanID)
 	if err != nil {
 		return authz.RBAC{}, "", err
@@ -217,13 +228,13 @@ func liveSeatType(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (string, err
 func (*Service) EffectiveAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	// The order every authorization change takes too: the authorization lock,
 	// then app_user, then records. A change that moves deals cannot deadlock it.
-	if err := lockAuthorizationShared(ctx, tx); err != nil {
+	if err := HoldAuthorizationTx(ctx, tx); err != nil {
 		return authz.RBAC{}, "", err
 	}
 	if err := holdMemberRow(ctx, tx, humanID); err != nil {
 		return authz.RBAC{}, "", err
 	}
-	return EffectiveAuthorityTx(ctx, tx, humanID)
+	return readEffectiveAuthorityTx(ctx, tx, humanID)
 }
 
 // HeldAuthorityTx is EffectiveAuthorityTx without the member's app_user row
@@ -232,8 +243,8 @@ func (*Service) EffectiveAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids
 // authorization lock alone still holds the authority until commit: every
 // authorization change takes it exclusively.
 func (*Service) HeldAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	if err := lockAuthorizationShared(ctx, tx); err != nil {
+	if err := HoldAuthorizationTx(ctx, tx); err != nil {
 		return authz.RBAC{}, "", err
 	}
-	return EffectiveAuthorityTx(ctx, tx, humanID)
+	return readEffectiveAuthorityTx(ctx, tx, humanID)
 }

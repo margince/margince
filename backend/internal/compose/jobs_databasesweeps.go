@@ -75,6 +75,7 @@ func addDatabaseOnlySweepJobs(
 		sweeper: NewAgentTaskRetentionSweeper(pool, log), identity: identity.NewService(pool),
 	})
 	addDeclaredWorker[ApprovalNoticeReconcileArgs](reg, newApprovalNoticeReconcileWorker(pool))
+	addDeclaredWorker[ApprovalOwnerNoticeArgs](reg, &approvalOwnerNoticeWorker{pool: pool, now: time.Now})
 	addDeclaredWorker[ApprovalExpiryArgs](reg, &approvalExpiryWorker{
 		pool: pool, identity: identity.NewService(pool), log: log,
 	})

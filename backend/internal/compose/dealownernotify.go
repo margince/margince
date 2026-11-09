@@ -12,7 +12,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
@@ -20,19 +19,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
-// ownerChangeMail stages the email about a moved request. Deal stores are
-// built without a job client, so this one holds no pool and only inserts
-// through the deal writer's transaction.
+// Deal stores have no job client; this inserter uses the caller's transaction.
 var ownerChangeMail = sync.OnceValues(func() (*jobs.Runner, error) {
 	return jobs.NewTxInserter(slog.Default())
 })
 
 // followDealOwnerAndTell hands a deal's pending requests to its new owner and
-// tells the members concerned, in the deal writer's transaction. It writes no
-// approval event, so webhook subscribers do not see a request twice.
+// queues their announcements in the deal writer's transaction. No second
+// approval event is emitted for an existing request.
 func followDealOwnerAndTell(ctx context.Context, tx pgx.Tx, dealID ids.UUID, from, to *ids.UUID) error {
 	done, err := approvals.MoveDealRequestsInTx(ctx, tx, dealID, from, to)
 	if err != nil {
@@ -47,13 +43,29 @@ func followDealOwnerAndTell(ctx context.Context, tx pgx.Tx, dealID ids.UUID, fro
 	if to == nil || len(done.Moved) == 0 {
 		return nil
 	}
-	return tellNewDecider(ctx, tx, store, *to, done.Moved)
+	wsID, ok := principal.WorkspaceID(ctx)
+	if !ok {
+		return errors.New("compose: a deal's owner changed outside a bound workspace")
+	}
+	queue, err := ownerChangeMail()
+	if err != nil {
+		return err
+	}
+	for _, request := range done.Moved {
+		if _, err := store.Retract(ctx, tx, approvalNoticeDedupeKey(request.ID.UUID)); err != nil {
+			return err
+		}
+		if err := queue.EnqueueTx(ctx, tx, ApprovalOwnerNoticeArgs{Workspace: wsID, ApprovalID: request.ID.UUID, DeciderID: *to}, nil); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // tellNewDecider gives the new owner a line about each request they may
 // decide, and takes the former holders' lines back. The check is the staging
 // announcement's, asked under the new owner's own authority.
-func tellNewDecider(ctx context.Context, tx pgx.Tx, store *notices.Store, decider ids.UUID, moved []approvals.MovedRequest) error {
+func tellNewDecider(ctx context.Context, tx pgx.Tx, store *notices.Store, decider ids.UUID, moved []ids.ApprovalID, clock func() time.Time) error {
 	wsID, ok := principal.WorkspaceID(ctx)
 	if !ok {
 		return errors.New("compose: a deal's owner changed outside a bound workspace")
@@ -66,21 +78,15 @@ func tellNewDecider(ctx context.Context, tx pgx.Tx, store *notices.Store, decide
 	if err != nil {
 		return err
 	}
-	now := time.Now()
-	for _, request := range moved {
-		key := approvalNoticeDedupeKey(request.ID.UUID)
-		decidable := false
-		var parts *crmcontracts.ApprovalSummaryParts
-		var metadata *systemtext.Message
-		if live {
-			if decidable, parts, metadata, err = approvals.PendingAskOfAtTx(seatCtx, tx, request.ID, now); err != nil {
-				return err
-			}
+	if !live {
+		return nil
+	}
+	for _, id := range moved {
+		request, parts, metadata, err := approvals.PendingNoticeTx(seatCtx, tx, id, clock)
+		if err != nil {
+			return err
 		}
-		if !decidable {
-			if _, err := store.Retract(ctx, tx, key); err != nil {
-				return err
-			}
+		if request == nil {
 			continue
 		}
 		var target notices.Target
@@ -95,8 +101,7 @@ func tellNewDecider(ctx context.Context, tx pgx.Tx, store *notices.Store, decide
 	return nil
 }
 
-// deciderContextTx binds the new owner's own authority, read in the deal
-// writer's transaction. live is false for a member who is not live.
+// deciderContextTx holds the recipient's current authority until commit.
 func deciderContextTx(ctx context.Context, tx pgx.Tx, seat ids.UUID) (context.Context, bool, error) {
 	rbac, seatType, err := identity.EffectiveAuthorityTx(ctx, tx, seat)
 	if errors.Is(err, apperrors.ErrNotFound) {
