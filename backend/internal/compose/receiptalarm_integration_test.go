@@ -17,10 +17,15 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
@@ -149,7 +154,7 @@ func TestAnOverdueReceiptIsRaisedOnceAndSettledWhenSent(t *testing.T) {
 		t.Errorf("the notice does not say the receipt is overdue: %q", bodies[0])
 	}
 
-	l.e.WsExec(t, `UPDATE comms_outbound SET status = 'sent', sent_at = now() WHERE template_key = 'optout_acknowledgement'`)
+	l.recordReceiptSent(t)
 	if err := DriveControllerPayloadSweepForTest(context.Background(), l.e.Pool, vault, dueAt.Add(2*time.Minute)); err != nil {
 		t.Fatalf("sweeping: %v", err)
 	}
@@ -172,4 +177,186 @@ func TestAFailingAlarmCannotRollBackTheRefusal(t *testing.T) {
 	l.e.WsExec(t, `DELETE FROM contact_email WHERE contact_id = $1`, l.contact)
 	l.store = l.store.WithMissedReceipts(brokenAlarm{})
 	l.object(t)
+}
+
+// recordReceiptSent closes the lane's receipt through the send transition the
+// dispatcher uses.
+func (l *confirmLaneEnv) recordReceiptSent(t *testing.T) {
+	t.Helper()
+	var delivery ids.UUID
+	if err := l.e.Pool.QueryRow(context.Background(),
+		`SELECT id FROM comms_outbound WHERE template_key = 'optout_acknowledgement'`).Scan(&delivery); err != nil {
+		t.Fatal(err)
+	}
+	store := comms.NewStore(InstallationDB(l.e.Pool), func() time.Time { return clocktest.Now(t) }, activities.NewStore(InstallationDB(l.e.Pool)))
+	if err := store.RecordSent(sendWorkerScope(l.ctx), delivery, connector.SendReceipt{ProviderMessageID: "relay-accepted"}); err != nil {
+		t.Fatalf("recording the receipt sent: %v", err)
+	}
+}
+
+// liveNoticeTargets counts the missed-receipt notices still naming target.
+func (l *confirmLaneEnv) liveNoticeTargets(t *testing.T, target ids.UUID) int {
+	t.Helper()
+	return l.e.WsCount(t, `SELECT count(*) FROM notice WHERE kind = 'optout_receipt_missed' AND target_id = $1`, target)
+}
+
+// A subject erased before the deadline is never raised, and a notice already
+// raised about them is taken back and stops naming them.
+func TestAnErasedSubjectKeepsNoMissedReceiptNotice(t *testing.T) {
+	t.Run("erased before the deadline", func(t *testing.T) {
+		l := receiptLane(t, receiptOwed)
+		l.object(t)
+		var dueAt time.Time
+		if err := l.e.Pool.QueryRow(context.Background(),
+			`SELECT delivery_due_at FROM comms_outbound WHERE template_key = 'optout_acknowledgement'`).Scan(&dueAt); err != nil {
+			t.Fatal(err)
+		}
+		if err := ComposedEraser(l.e.Pool, nil, nil).EraseContact(l.e.Admin(), l.contact, "Art. 17 request"); err != nil {
+			t.Fatalf("erasing the subject: %v", err)
+		}
+		if err := DriveControllerPayloadSweepForTest(context.Background(), l.e.Pool, keyvault.NewMemory(), dueAt.Add(time.Minute)); err != nil {
+			t.Fatalf("sweeping: %v", err)
+		}
+		if n := l.e.WsCount(t, `SELECT count(*) FROM notice WHERE kind = 'optout_receipt_missed'`); n != 0 {
+			t.Fatalf("%d notices raised about a subject erased before the deadline", n)
+		}
+	})
+	t.Run("erased after the notice", func(t *testing.T) {
+		l := receiptLane(t, receiptOwed)
+		l.e.WsExec(t, `DELETE FROM contact_email WHERE contact_id = $1`, l.contact)
+		l.object(t)
+		if l.liveNoticeTargets(t, l.contact) == 0 {
+			t.Fatal("no notice to take back; the test proves nothing")
+		}
+		if err := ComposedEraser(l.e.Pool, nil, nil).EraseContact(l.e.Admin(), l.contact, "Art. 17 request"); err != nil {
+			t.Fatalf("erasing the subject: %v", err)
+		}
+		if n := l.liveNoticeTargets(t, l.contact); n != 0 {
+			t.Fatalf("%d notices still name the erased subject", n)
+		}
+		if n := l.e.WsCount(t, `SELECT count(*) FROM notice WHERE kind = 'optout_receipt_missed' AND retracted_at IS NULL`); n != 0 {
+			t.Fatalf("%d notices about the erased subject are still open", n)
+		}
+	})
+}
+
+// A backlog longer than one page is raised and settled across passes.
+func TestAReceiptBacklogLongerThanAPageIsRaisedAndSettledInFull(t *testing.T) {
+	l := receiptLane(t, receiptOwed)
+	l.object(t)
+	second := l.e.SeedContact(t, "Second Refusal", &l.e.Rep1)
+	l.e.WsExec(t, `INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
+		VALUES ($1, 'second@example.test', true, 'manual', 'human:test')`, second)
+	l.e.WsExec(t, `UPDATE contact SET address_country = upper($2) WHERE id = $1`, second, string(receiptOwed))
+	if err := l.store.Suppress(l.ctx, consent.SuppressInput{
+		ContactID: ids.From[ids.ContactKind](second), Kind: commsauthz.ReasonObjection, Reason: "No more ads.",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var dueAt time.Time
+	if err := l.e.Pool.QueryRow(context.Background(),
+		`SELECT max(delivery_due_at) FROM comms_outbound WHERE template_key = 'optout_acknowledgement'`).Scan(&dueAt); err != nil {
+		t.Fatal(err)
+	}
+	onePerPage := comms.WithReceiptPage(1)
+	sweep := func() {
+		t.Helper()
+		if err := DriveControllerPayloadSweepForTest(context.Background(), l.e.Pool, keyvault.NewMemory(), dueAt.Add(time.Minute), onePerPage); err != nil {
+			t.Fatalf("sweeping: %v", err)
+		}
+	}
+	open := func() int {
+		return l.e.WsCount(t, `SELECT count(DISTINCT dedupe_key) FROM notice WHERE kind = 'optout_receipt_missed' AND retracted_at IS NULL`)
+	}
+	sweep()
+	sweep()
+	if n := open(); n != 2 {
+		t.Fatalf("%d receipts raised after two one-row passes, want both", n)
+	}
+	store := comms.NewStore(InstallationDB(l.e.Pool), func() time.Time { return clocktest.Now(t) }, activities.NewStore(InstallationDB(l.e.Pool)))
+	rows, err := l.e.Pool.Query(context.Background(), `SELECT id FROM comms_outbound WHERE template_key = 'optout_acknowledgement'`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deliveries, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, delivery := range deliveries {
+		if err := store.RecordSent(sendWorkerScope(l.ctx), delivery, connector.SendReceipt{ProviderMessageID: "relay-accepted"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sweep()
+	sweep()
+	if n := open(); n != 0 {
+		t.Fatalf("%d notices still open after their receipts were sent and two one-row passes ran", n)
+	}
+}
+
+// A receipt owed where no mail lane can send it is raised, not dropped.
+func TestAReceiptOwedWithNoMailLaneReachesThePrivacyOperators(t *testing.T) {
+	l := receiptLane(t, receiptOwed)
+	l.store = consent.NewStore(InstallationDB(l.e.Pool)).WithMissedReceipts(receiptAlarm{db: InstallationDB(l.e.Pool)})
+	l.object(t)
+
+	bodies := l.missedReceiptNotices(t)
+	if len(bodies) == 0 || !strings.Contains(bodies[0], "no mail lane") {
+		t.Fatalf("a receipt owed with no lane raised %q", bodies)
+	}
+}
+
+// A lead's press asks the lead's rules and raises the receipt it cannot send.
+func TestALeadsPressThatOwesAReceiptReachesThePrivacyOperators(t *testing.T) {
+	l := receiptLane(t, receiptOwed)
+	company := l.e.SeedCompany(t, "Receipt Company", nil)
+	l.e.WsExec(t, `UPDATE company SET address_country = upper($2) WHERE id = $1`, company, string(receiptOwed))
+	lead, _, err := l.e.Contacts.CreateLead(l.e.Admin(), contacts.CreateLeadInput{
+		FullName: new("Lead Refusal"), Email: new("lead@example.test"), Source: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	l.e.WsExec(t, `UPDATE lead SET company_id = $2 WHERE id = $1`, lead.Id, company)
+	if err := InstallationDB(l.e.Pool).Tx(l.ctx, func(tx pgx.Tx) error {
+		stopped, err := l.store.StopForCredentialTx(l.ctx, tx, consent.WithdrawalRef{
+			LeadID: ids.From[ids.LeadKind](ids.UUID(lead.Id)), Address: "lead@example.test",
+			Scope: consent.WithdrawalScopeAllMarketing,
+		})
+		if err == nil && !stopped {
+			t.Error("the press recorded no stop")
+		}
+		return err
+	}); err != nil {
+		t.Fatalf("pressing the lead's link: %v", err)
+	}
+	var body string
+	if err := l.e.Pool.QueryRow(context.Background(), `
+		SELECT body FROM notice WHERE kind = 'optout_receipt_missed' AND target_type = 'lead' AND target_id = $1 LIMIT 1`,
+		ids.UUID(lead.Id)).Scan(&body); err != nil {
+		t.Fatalf("no notice for the lead's owed receipt: %v", err)
+	}
+	if !strings.Contains(body, "lead") {
+		t.Errorf("the notice does not say a lead's receipt is not sent: %q", body)
+	}
+}
+
+// Two different refusals on one day each owe their own receipt.
+func TestTwoDifferentSameDayWithdrawalsEachGetAReceipt(t *testing.T) {
+	l := receiptLane(t, receiptOwed)
+	for _, key := range []string{"receipt_one", "receipt_two"} {
+		l.e.WsExec(t, `INSERT INTO consent_purpose (key, label, class) VALUES ($1, $1, 'marketing')`, key)
+	}
+	for _, key := range []string{"receipt_one", "receipt_two"} {
+		withdrawn, err := l.store.PublicWithdrawAll(l.ctx, ids.From[ids.ContactKind](l.contact), []string{key})
+		if err != nil || len(withdrawn) != 1 {
+			t.Fatalf("withdrawing %s: %v %v", key, withdrawn, err)
+		}
+	}
+	if n := l.e.WsCount(t, `SELECT count(*) FROM comms_outbound WHERE template_key = 'optout_acknowledgement'`); n != 2 {
+		t.Fatalf("%d receipts for two refusals, want 2", n)
+	}
+	if bodies := l.missedReceiptNotices(t); len(bodies) != 0 {
+		t.Fatalf("the second refusal's receipt was reported missed: %q", bodies)
+	}
 }

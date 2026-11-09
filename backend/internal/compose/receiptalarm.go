@@ -11,7 +11,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -21,18 +20,15 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/noticekeys"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 const (
-	// receiptAlarmKeyPrefix starts every missed-receipt notice's dedupe key.
-	receiptAlarmKeyPrefix = "optout-receipt:"
 	// receiptAlarmActor is the system actor that raises and settles the alarm.
 	receiptAlarmActor = "system:optout_receipt"
 	// receiptAlarmObject is what a recipient must read: the rights cases.
 	receiptAlarmObject = "privacy_request"
-	// receiptAlarmSettleBatch bounds one settling pass.
-	receiptAlarmSettleBatch = 200
 )
 
 // errNoReceiptOperator is a missed receipt nobody could be told about.
@@ -65,7 +61,7 @@ func (a receiptAlarm) RaiseMissedReceiptTx(ctx context.Context, tx pgx.Tx, misse
 		if _, err := store.CreateTx(system, tx, notices.NewNotice{
 			Recipient: recipient, Kind: notices.KindOptOutReceiptMissed,
 			Subject: "A required opt-out receipt was not sent", Body: missedReceiptText(missed),
-			Target: target, DedupeKey: receiptAlarmKeyPrefix + missed.MessageID,
+			Target: target, DedupeKey: noticekeys.OptOutReceipt(missed.MessageID),
 		}); err != nil {
 			return fmt.Errorf("compose: raising a missed opt-out receipt: %w", err)
 		}
@@ -79,6 +75,10 @@ func missedReceiptText(missed consent.MissedReceipt) string {
 	switch missed.Reason {
 	case consent.MissedReceiptNoAddress:
 		return "This refusal requires a receipt, and the subject has no email address on record, so none was sent." + stands
+	case consent.MissedReceiptNoMailLane:
+		return "This refusal requires a receipt, and this installation has no mail lane to send it on, so none was sent." + stands
+	case consent.MissedReceiptNoLeadReceipt:
+		return "This refusal by a lead requires a receipt, and receipts are not yet sent to leads, so none was sent." + stands
 	case consent.MissedReceiptOverdue:
 		return fmt.Sprintf("This refusal's receipt was due by %s and has not been delivered. Delivery status: %s.",
 			missed.DueAt.UTC().Format(time.RFC3339), missed.DeliveryStatus) + stands
@@ -106,22 +106,14 @@ func (a receiptAlarm) raiseOverdue(ctx context.Context, overdue []comms.OverdueR
 
 // settleSent takes back the notices whose receipt has since been sent.
 func (a receiptAlarm) settleSent(ctx context.Context, store *comms.Store) error {
+	sent, err := store.SentReceiptsWithOpenNotice(ctx, noticekeys.OptOutReceiptPrefix)
+	if err != nil || len(sent) == 0 {
+		return err
+	}
 	system := principal.SystemActing(ctx, receiptAlarmActor)
 	return a.db.Tx(system, func(tx pgx.Tx) error {
-		keys, err := notices.NewStore(a.db).OpenDedupeKeys(system, tx, receiptAlarmKeyPrefix, receiptAlarmSettleBatch)
-		if err != nil {
-			return err
-		}
-		messageIDs := make([]string, 0, len(keys))
-		for _, key := range keys {
-			messageIDs = append(messageIDs, strings.TrimPrefix(key, receiptAlarmKeyPrefix))
-		}
-		sent, err := store.SentControllerReceipts(ctx, messageIDs)
-		if err != nil {
-			return err
-		}
 		for _, messageID := range sent {
-			if _, err := notices.NewStore(a.db).Retract(system, tx, receiptAlarmKeyPrefix+messageID); err != nil {
+			if _, err := notices.NewStore(a.db).Retract(system, tx, noticekeys.OptOutReceipt(messageID)); err != nil {
 				return err
 			}
 		}

@@ -21,6 +21,10 @@ const (
 	MissedReceiptNoAddress = "no_address"
 	// MissedReceiptOverdue is a receipt staged and not delivered by its deadline.
 	MissedReceiptOverdue = "overdue"
+	// MissedReceiptNoMailLane is an installation with no lane to send it on.
+	MissedReceiptNoMailLane = "no_mail_lane"
+	// MissedReceiptNoLeadReceipt is a lead's refusal: receipts go to contacts only.
+	MissedReceiptNoLeadReceipt = "no_lead_receipt"
 )
 
 // MissedReceipt is one required receipt the controller has to see to.

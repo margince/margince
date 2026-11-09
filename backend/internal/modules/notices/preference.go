@@ -69,7 +69,7 @@ const (
 	KindPrivacyReviewRequired = "privacy_review_required"
 	// KindOptOutReceiptMissed tells the privacy operators a receipt a refusal
 	// requires did not go out.
-	KindOptOutReceiptMissed = "optout_receipt_missed"
+	KindOptOutReceiptMissed = noticekeys.OptOutReceiptMissedKind
 
 	KindApprovalPending  = "approval_pending"
 	ClassApprovalPending = KindApprovalPending

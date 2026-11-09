@@ -34,6 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/noticekeys"
 )
 
 // ControllerPayloadSweepArgs carries nothing: the pass reads what has expired
@@ -84,12 +85,16 @@ func newControllerPayloadSweepWorker(
 // alarmMissedReceipts tells the privacy operators about each receipt past its
 // deadline, and takes back the notices whose receipt has since been sent.
 func (w *controllerPayloadSweepWorker) alarmMissedReceipts(ctx context.Context) error {
-	overdue, err := w.store.OverdueControllerReceipts(ctx, w.clock())
+	backlog, err := w.store.OverdueReceiptBacklog(ctx, w.clock())
 	if err != nil {
 		return fmt.Errorf("reading controller receipt deadlines: %w", err)
 	}
-	if len(overdue) > 0 {
-		w.log.ErrorContext(ctx, "controller receipts remain undelivered after their deadline", "count", len(overdue))
+	if backlog > 0 {
+		w.log.ErrorContext(ctx, "controller receipts remain undelivered after their deadline", "count", backlog)
+	}
+	overdue, err := w.store.UnraisedOverdueReceipts(ctx, w.clock(), noticekeys.OptOutReceiptPrefix)
+	if err != nil {
+		return fmt.Errorf("reading controller receipt deadlines: %w", err)
 	}
 	if failed := w.alarm.raiseOverdue(ctx, overdue); failed > 0 {
 		w.log.ErrorContext(ctx, "overdue controller receipts could not be raised to the privacy operators", "count", failed)
