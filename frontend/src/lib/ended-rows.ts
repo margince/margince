@@ -3,9 +3,9 @@
 
 import { useState } from "react";
 
-// An ended row can do nothing more, so it waits behind a toggle. One ended from
-// this view (`keep`, once the end succeeded) stays, struck, so focus has its row
-// to land on, until the reader hides the ended rows.
+// An ended row can do nothing more, so it waits behind a toggle. A row ended
+// from this view (`keep`, once the end succeeded) stays, struck, so focus has
+// its row to land on. Hiding the ended rows folds it too.
 export function useEndedRows<Row extends { id: string }>(
   rows: readonly Row[],
   isEnded: (row: Row) => boolean,
