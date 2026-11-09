@@ -18,7 +18,8 @@ import (
 const extractSystem = `You read one email conversation and report only MATERIAL events — things that change
 what someone should do about this account. Emit an event only when the text SAYS it:
 "contract_ended" (they state the agreement is ending or has ended), "new_opportunity"
-(they raise a new need, project or budget), "commitment_made" (either side promises a
+(they raise a new need, project or budget; a question about the price or terms of work already under
+discussion is not one), "commitment_made" (either side promises a
 specific thing). Report nothing for pleasantries, status chatter, or anything you are
 inferring rather than reading. Cite the id of the message the event is stated in.
 For contract_ended, quote the exact current message words and report lifecycle_scope:
@@ -33,7 +34,8 @@ For commitments, later evidence of fulfillment or explicit withdrawal means no n
 When a later message in this reading shows a promise was delivered in full (sent, or confirmed as
 received) or withdrawn, report no commitment_made for it.
 Acknowledgement and unrelated replies do not fulfill a promise. After partial delivery, report
-the promise once, citing the original, with only the undelivered remainder in the summary. A restatement or narrowed promise is the same
+the promise once, citing the original, with only the undelivered remainder in the summary. The
+delivered part gets no event of its own, not even a completed one. A restatement or narrowed promise is the same
 obligation: when its original promise is in this reading, keep citing and quoting that original.
 An explicit report of another participant's promise ("you agreed to send pricing", "Mira promised
 to send pricing") is commitment evidence even without the original utterance. Cite the report and
@@ -44,7 +46,7 @@ report it with the addressed contact as promiser_ref and state "open". When the 
 promiser instead, the promiser_ref rules for a named party apply.
 Do not count both an original promise and a report of it as separate commitments.
 When our side tells a contact that we, or a named colleague, will do a specific thing at a set time,
-such as running a demo on the 5th at 10:00, that is a commitment_made our side owes, even when it
+such as holding a workshop on Tuesday at 14:00, that is a commitment_made our side owes, even when it
 reads like a meeting notice. An invitation from their side is not our promise.
 When later words explicitly renew the promise or its deadline, also give restated_message_id and
 restated_quote from that later message. Resolve its deadline against that later message date.
@@ -145,9 +147,7 @@ func extractRequest(thread settledThread, lang string) model.Request {
 			commitmentRecipientsPrompt+
 			`"message_id" and any "restated_message_id" are the label of the cited message, such as "m2", from the "Message" line above it. `+
 			`Never use a participant reference as a message id. `+
-			`"buyer_ref" is the contact whose own words ask for OUR company's work; words they attribute to someone else `+
-			`("the client said …") are not their request. commercial_role is "buyer" only when buyer_ref is set; `+
-			`it is "partner", "supplier" or "provider" whenever the source states that relationship, with buyer_ref empty. `+
+			extractReferenceFields+
 			`"promiser_ref" is the verified participant reference for who made the quoted promise, `+
 			`not necessarily its sender. For "you agreed", resolve the addressed party; for a named `+
 			`third party, use a reference only when the clause identifies them unambiguously. `+
@@ -155,13 +155,15 @@ func extractRequest(thread settledThread, lang string) model.Request {
 			`attribution, same-name ambiguity, and non-commitment events. When two participants share a name, `+
 			`that name alone cannot select a reference: leave it empty even if one is a colleague and another is external. `+
 			`Only that participant's exact address in the quoted clause may resolve that tie. Never choose the first match. `+
+			`This tie rule wins over every other promiser rule, the "you agreed" reminder rule included. `+
 			`When the words name a colleague other than the writer as the one who will act and that colleague is not on the message, use "". Never put the writer in their place. `+
 			`Still report that commitment_made, with promiser_ref "". `+
 			`Never invent a reference. `+
 			`"quote" is the words of that message the event is stated in, copied exactly; `+
 			`for "commitment_made" it is the clause the promise is made in, one promise per event. `+
 			`"due_date" is the day a commitment is due, as YYYY-MM-DD, resolving anything relative `+
-			`against the day that message was sent — "by Friday" is the Friday after it. `+
+			`against the day that message was sent — "by Friday" is the Friday after it, and a day of the month given `+
+			`alone ("the 12th") is the next such day on or after it; a due_date is never before the day the message was sent. `+
 			`For a renewed promise, restated_message_id names its later message and restated_quote quotes `+
 			`the renewed promise exactly. Both are empty otherwise. Resolve a renewed deadline against `+
 			`the restatement date, while message_id and quote keep the original promise identity. `+
@@ -199,3 +201,12 @@ func directionWord(direction string) string {
 		return directionUnknown
 	}
 }
+
+// extractReferenceFields defines the reference fields in the reply format,
+// where a model follows a field's definition more closely than a system rule.
+const extractReferenceFields = `A reference is a value from the first column of a "Verified participants" list, such as "p1"; a name or an ` +
+	`address is never a reference. When that column holds none for the person meant, buyer_ref and promiser_ref ` +
+	`are "" and recipient_refs is []. ` +
+	`"buyer_ref" is the contact whose own words ask for OUR company's work; words they attribute to someone else ` +
+	`("the client said …") are not their request. commercial_role is "buyer" only when buyer_ref is set; ` +
+	`it is "partner", "supplier" or "provider" whenever the source states that relationship, with buyer_ref empty. `

@@ -238,6 +238,7 @@ list price of the provider that served them.
 | Model family | Served by | Scope | Time | Model calls | Tokens in / out | Cost |
 |---|---|---|---|---|---|---|
 | `openai/gpt-oss-120b` | OpenRouter, mostly Cerebras (`fp16`) | 28 tasks | 57 minutes | 1,712 | 3,440,000 / 1,140,000 | about $2 |
+| `google/gemma-4-31b-it` | OpenRouter, provider `crusoe` (`bf16`), pinned | every task but `document_extract` | 53 minutes | 1,581 | 2,720,000 / 215,000 | about $0.50 |
 | Gemini preset (`gemini-3.6-flash`, `gemini-3.1-flash-lite`) | Gemini API | the stale tasks of both models | 56 minutes | 1,528 | 2,870,000 / 472,000 | about $3 |
 
 A run after a fix batch measures only the cases whose stamp moved. Each of those ran for 12 to 35 minutes.

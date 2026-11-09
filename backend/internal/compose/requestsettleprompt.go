@@ -46,7 +46,7 @@ A held meeting settles a request to meet or talk: the meeting is the answer. For
 For EACH conversation emit exactly one verdict:
 "settled" — the evidence shows the request was answered, declined, delivered, scheduled, handed to a named colleague, or explicitly confirmed complete by the same correspondent. Nothing is left for us to do.
 "still_owed" — the evidence leaves something outstanding: we said we would do it, or we answered one of two asks, or they re-asked after us.
-"unsure" — the words do not establish whether this request is complete. A bare acknowledgement like "Ok." might mean the thing went out in the same breath, or might mean the request was only noted, and the conversation does not say which. Answer unsure rather than asserting an obligation the words do not support; the request stays owed under unsure either way, so nothing is lost by saying you cannot tell.
+"unsure" — the words do not establish whether this request is complete. A bare acknowledgement like "Ok." might mean the thing went out in the same breath, or might mean the request was only noted, and the conversation does not say which. Answer unsure rather than asserting an obligation the words do not support; the request stays open under unsure either way, so nothing is lost by saying you cannot tell.
 
 still_owed and unsure are not the same answer. still_owed is for a reply whose words SHOW work left — a promise to come back, one of two asks answered. unsure is for a reply too thin to tell either way.
 
@@ -125,7 +125,8 @@ func settleRequest(batch []settleCandidate) model.Request {
 			refs.For(candidate.Request.RequestID.String()), conversation.String()) + "\n")
 	}
 	prompt.WriteString(`Return JSON: { "results": [ { "id", "verdict", "remaining", "due_at", "confidence" } ] } — ` +
-		`one entry per supplied id. "remaining" and "due_at" are empty strings unless the verdict is still_owed. ` + settleRemainingEvidence)
+		`one entry per supplied id. "remaining" and "due_at" are empty strings unless the verdict is still_owed. ` +
+		`"confidence" is your own certainty in the verdict, from 0 to 1. ` + settleRemainingEvidence)
 
 	return model.Request{
 		System:         settleSystemFor(fence),
@@ -273,9 +274,9 @@ func settleSchema(requested []string) json.RawMessage {
 				map[string]schema.Node{
 					"id":                    requestedIDNode(requested),
 					settleVerdictKey:        schema.Enum(activities.RequestSettled, activities.RequestStillOwed, activities.RequestUnsure),
-					settleRemainingKey:      schema.String().Describe(settleRemainingEvidence),
+					settleRemainingKey:      schema.String().Describe("Empty unless the verdict is still_owed. " + settleRemainingEvidence),
 					settleDueKey:            schema.String(),
-					extractionConfidenceKey: schema.Number(),
+					extractionConfidenceKey: schema.Number().Describe("Your own certainty in the verdict, from 0 to 1."),
 				},
 				"id", settleVerdictKey, settleRemainingKey, extractionConfidenceKey)),
 		},
