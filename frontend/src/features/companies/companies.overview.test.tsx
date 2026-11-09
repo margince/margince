@@ -574,6 +574,7 @@ describe("CompanyScreen — the Overview and the details beside it", () => {
           data: [
             {
               contact_id: "p-1",
+              attachable: true,
               full_name: "Anna Brandt",
               title: "Head of Procurement",
               primary_email: "anna.brandt@brandt-automotive.de",
