@@ -3,7 +3,7 @@
   "provider": "gemini",
   "served_model": "gemini-3.1-flash-lite",
   "env_class": "cloud_frontier",
-  "prompt_version": "p54756f7edb899a5f9a11a656c2fe9290",
+  "prompt_version": "pc9e296b5d9541975669831eb3a9b6c14",
   "corpus_version": "v1",
   "verdict": "not_supported",
   "runs": 84,
@@ -21,7 +21,7 @@
     "proof",
     "market"
   ],
-  "judge_score_p50": 88,
+  "judge_score_p50": 90,
   "judge_score_min": 17,
   "latency_p50": 1321,
   "latency_p95": 2911,
@@ -122,15 +122,15 @@
     {
       "scenario": "contact_first_touch_in_german",
       "site": "contact",
-      "stamp": "aece6fd79f1978e2d70c5dcc61581a4afc42dab42a6f3e9ea13427fb2ee1f32640f97da2db298f056b60ca3ef4c71617133f46f0f357b4ed115a70a98ed871eed6c81e9b81c558261b5a6884b0c9f5b9c5ee011aa0286448f26f805c0afbd205",
+      "stamp": "aece6fd79f1978e2d70c5dcc61581a4afc42dab42a6f3e9ea13427fb2ee1f326eb57694d3dc1ffd3bb1f6cd3c2b4570d5d2a6de0a58834f72c5e95401f94cdcbc8a3225749bb3a95d15fefff6fb5bb4d6ab43b7d49b58eaddc2c9c85619ada6b",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
+        95,
         88,
-        90,
-        77
+        90
       ],
       "bands": {
         "certified_min": 70,
@@ -168,27 +168,27 @@
     {
       "scenario": "a_logged_internal_note_stays_out_of_the_draft",
       "site": "contact",
-      "stamp": "b9c575dddc879e525766510b59c8494d00adb8f21f8bfbb005ee037db20c13a488ffa48e2e5637a5ad8bc307ef043a2176f017dc9dc285986762672679c312564ad830585dca5fe05a3b92aa503b47312b29d0a45f1326234566ed3414842e66",
+      "stamp": "b9c575dddc879e525766510b59c8494d00adb8f21f8bfbb005ee037db20c13a4a919152da2bfba63b1b1adae941d22cacf077562493c78803a585153da39070de0602baa20d338a2fbded9185f6dfd0ea5a511ecbac361908f4294f34725b421",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 15,
       "passed": 15,
       "judge_scores": [
-        95,
-        85,
+        97,
+        97,
+        92,
         93,
-        97,
-        97,
-        97,
-        92,
-        97,
         92,
         95,
-        96,
-        88,
+        93,
+        92,
+        95,
+        93,
+        92,
         97,
-        90,
-        96
+        95,
+        97,
+        90
       ],
       "bands": {
         "certified_min": 70,
