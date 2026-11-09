@@ -7,6 +7,7 @@ package integration
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -130,5 +131,30 @@ func TestAnEmptyHomeReadsListFails(t *testing.T) {
 	}
 	if gaps := homeReadsGaps([]byte(`export const HOME_READS = ["brief", "deals"] as const;`), timed); len(gaps) != 1 {
 		t.Errorf("a read homeCalls does not time must be named, got %v", gaps)
+	}
+}
+
+func TestTheWarmUpWaitsOnlyForStatementsStillTryingCustomPlans(t *testing.T) {
+	statement := func(name string) preparedStatement { return preparedStatement{pid: 7, name: name} }
+	before := map[preparedStatement]planCount{
+		statement("trying"): {custom: 2},
+		statement("custom"): {custom: 4},
+		statement("forced"): {generic: 1},
+		statement("idle"):   {custom: 1},
+	}
+	after := map[preparedStatement]planCount{
+		statement("trying"): {custom: 3},
+		statement("custom"): {custom: 5},
+		statement("forced"): {generic: 2},
+		statement("idle"):   {custom: 1},
+		statement("new"):    {custom: 1},
+	}
+	var names []string
+	for _, s := range inCustomPlanTrials(before, after) {
+		names = append(names, s.name)
+	}
+	slices.Sort(names)
+	if !slices.Equal(names, []string{"new", "trying"}) {
+		t.Fatalf("statements in their custom-plan trials = %v, want the new one and the one still trying", names)
 	}
 }

@@ -12,7 +12,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -27,14 +26,15 @@ import (
 )
 
 // Home's fixed-profile API budgets, per read, as p95. A cold read is the first
-// answer after the seat's kept Home answers are forgotten. It runs on a freshly
-// booted app whose connections have served one Home read, as on a running server.
-// The first read after a deploy or a pool refill, on connections that hold no
-// plan, is not measured.
+// answer after the seat's kept Home answers are forgotten. It runs on a booted
+// app whose connections have served Home until Postgres stopped trying custom
+// plans, as on a running server. The first reads after a deploy or a pool
+// refill, on connections that hold no plan or are still trying, are not
+// measured.
 const (
 	homeColdBudget = 500 * time.Millisecond
 	homeWarmBudget = 250 * time.Millisecond
-	// homeColdRounds is how many boots the cold p95 is taken over.
+	// homeColdRounds is how many cold reads the cold p95 is taken over.
 	homeColdRounds = 10
 )
 
@@ -81,7 +81,7 @@ func TestHomeBudget(t *testing.T) {
 }
 
 // homePlannedSamples is how many samples each pass takes per read: one per
-// cold boot, and the daily sampler's count warm.
+// cold round, and the daily sampler's count warm.
 var homePlannedSamples = map[string]int{homeColdFlow.Name: homeColdRounds, homeWarmFlow.Name: dailySamples}
 
 // HomeBudgetFailures names every reason the Home check fails. It judges each
@@ -138,9 +138,9 @@ func homeRequired(rows []dailyRow, calls []dailyCall) []DailyResult {
 // That cache lives in the database, so a reboot alone leaves it filled.
 var homeCachedReads = map[string]homecache.Read{"worklist": homecache.Worklist, "magic": homecache.Magic}
 
-// runHomeCold boots the app afresh homeColdRounds times, warms it, and times
-// each read's first uncached answer on it. The probe on the warm app decides
-// which reads are timed.
+// runHomeCold boots the app afresh, warms it, and times each read's first
+// uncached answer homeColdRounds times. The probe on the warm app decides which
+// reads are timed.
 func runHomeCold(t *testing.T, e *apptest.AppEnv, in dailyInput) []dailyRow {
 	t.Helper()
 	f, s := homeColdFlow, in.Seat
@@ -155,36 +155,18 @@ func runHomeCold(t *testing.T, e *apptest.AppEnv, in dailyInput) []dailyRow {
 		}
 	}
 	samples := make([][]time.Duration, len(timed))
+	booted := coldBoot(t, e)
+	defer booted.Close()
+	warmHomePlans(t, e, booted, s, timed)
 	for range homeColdRounds {
-		booted := coldBoot(t, e)
-		warmHomePlans(t, e, booted, s, timed)
 		since := forgetHomeAnswers(t, e, s)
 		for i, call := range timed {
-			before := booted.Pool.Stat()
-			var ms0, ms1 runtime.MemStats
-			runtime.ReadMemStats(&ms0)
-			cpu0, _ := os.ReadFile("/proc/stat")
 			status, body, elapsed := s.Get(t, booted, call.Path)
-			cpu1, _ := os.ReadFile("/proc/stat")
-			load, _ := os.ReadFile("/proc/loadavg")
-			runtime.ReadMemStats(&ms1)
-			after := booted.Pool.Stat()
-			t.Logf("DIAGCPU %s before=%q after=%q load=%q", call.Name, firstLine(cpu0), firstLine(cpu1), strings.TrimSpace(string(load)))
-			t.Logf("DIAG %s %dms total=%d->%d newconns=%d->%d acquires=%d emptywait=%d gcs=%d gcpause=%s heap=%dMB", call.Name, elapsed.Milliseconds(),
-				before.TotalConns(), after.TotalConns(), before.NewConnsCount(), after.NewConnsCount(),
-				after.AcquireCount()-before.AcquireCount(), after.EmptyAcquireCount()-before.EmptyAcquireCount(),
-				ms1.NumGC-ms0.NumGC, time.Duration(ms1.PauseTotalNs-ms0.PauseTotalNs), ms1.HeapAlloc>>20)
 			if err := f.admit(dailyResponse{call, status, body}, &tallies[i]); err != nil {
 				t.Fatalf("cold %s: %v", call.Name, err)
 			}
 			samples[i] = append(samples[i], elapsed)
 		}
-		var av string
-		_ = e.Owner.QueryRow(context.Background(), `SELECT coalesce(string_agg(datname||':'||left(query,60), ' | '),'none') FROM pg_stat_activity WHERE backend_type = 'autovacuum worker'`).Scan(&av)
-		var stats string
-		_ = e.Owner.QueryRow(context.Background(), `SELECT coalesce(string_agg(relname||' av='||coalesce(to_char(last_autovacuum,'HH24:MI:SS'),'-')||' aa='||coalesce(to_char(last_autoanalyze,'HH24:MI:SS'),'-')||' mod='||n_mod_since_analyze||' dead='||n_dead_tup, '; ' ORDER BY relname),'') FROM pg_stat_user_tables WHERE last_autovacuum IS NOT NULL OR last_autoanalyze IS NOT NULL OR n_mod_since_analyze > 50`).Scan(&stats)
-		t.Logf("DIAGAV now=%s workers=%s stats=%s", time.Now().Format("15:04:05"), av, stats)
-		booted.Close()
 		if missed := cacheHits(t, e, s, timed, since); len(missed) > 0 {
 			t.Fatalf("cold reads %v were served from home_read_cache, so they timed no assembly", missed)
 		}
@@ -196,23 +178,102 @@ func runHomeCold(t *testing.T, e *apptest.AppEnv, in dailyInput) []dailyRow {
 	return rows
 }
 
-// warmHomePlans sends each timed read once on the rebooted app, with the kept
-// answers forgotten first so each read assembles. Its connections then hold
-// the statements a running server's connections hold.
+// postgresCustomPlanTrials is how many custom plans Postgres makes for a
+// prepared statement before it weighs the generic plan (choose_custom_plan in
+// plancache.c). It is not a setting.
+const postgresCustomPlanTrials = 5
+
+// homeWarmPasses bounds the warm passes. On the bench corpus every statement
+// leaves its trials by the ninth pass, with the reads spread over two
+// connections.
+const homeWarmPasses = 16
+
+// warmHomePlans sends the timed reads on the rebooted app until no statement
+// the last pass ran is still in its custom-plan trials. Each pass forgets the
+// kept answers first, so each read assembles. A running server's connections
+// are past them, so the timed read pays the planning a running server pays.
 func warmHomePlans(t *testing.T, e *apptest.AppEnv, booted *apptest.AppEnv, s Seat, timed []dailyCall) {
 	t.Helper()
-	forgetHomeAnswers(t, e, s)
-	for _, call := range timed {
-		before := booted.Pool.Stat()
-		status, _, el := s.Get(t, booted, call.Path)
-		after := booted.Pool.Stat()
-		t.Logf("DIAGWARM %s %dms total=%d->%d newconns=%d->%d acquires=%d", call.Name, el.Milliseconds(),
-			before.TotalConns(), after.TotalConns(), before.NewConnsCount(), after.NewConnsCount(),
-			after.AcquireCount()-before.AcquireCount())
-		if status != http.StatusOK {
-			t.Fatalf("warming %s answered %d", call.Name, status)
+	before := preparedPlans(t, booted)
+	var trying []preparedStatement
+	for pass := 1; pass <= homeWarmPasses; pass++ {
+		forgetHomeAnswers(t, e, s)
+		for _, call := range timed {
+			if status, _, _ := s.Get(t, booted, call.Path); status != http.StatusOK {
+				t.Fatalf("warming %s answered %d", call.Name, status)
+			}
+		}
+		after := preparedPlans(t, booted)
+		if trying = inCustomPlanTrials(before, after); len(trying) == 0 {
+			t.Logf("home-budget: warm after %d passes", pass)
+			return
+		}
+		before = after
+	}
+	t.Fatalf("after %d warm passes, %d statements Home runs are still in their custom-plan trials, %v among them",
+		homeWarmPasses, len(trying), trying[0])
+}
+
+// preparedStatement names one prepared statement on one server connection.
+type preparedStatement struct {
+	pid  uint32
+	name string
+}
+
+// planCount is how often Postgres planned a prepared statement each way.
+type planCount struct{ custom, generic int64 }
+
+// preparedPlans reads every prepared statement on every connection of the
+// booted pool. All of them must be idle, or a busy one's statements would be
+// missed and the warm-up would end early.
+func preparedPlans(t *testing.T, booted *apptest.AppEnv) map[preparedStatement]planCount {
+	t.Helper()
+	ctx := context.Background()
+	idle := booted.Pool.AcquireAllIdle(ctx)
+	defer func() {
+		for _, conn := range idle {
+			conn.Release()
+		}
+	}()
+	if total := booted.Pool.Stat().TotalConns(); int(total) != len(idle) {
+		t.Fatalf("reading prepared plans: %d of %d connections are idle", len(idle), total)
+	}
+	plans := map[preparedStatement]planCount{}
+	for _, conn := range idle {
+		// The simple protocol prepares nothing, so the census does not count itself.
+		rows, err := conn.Query(ctx, `SELECT name, custom_plans, generic_plans FROM pg_prepared_statements`,
+			pgx.QueryExecModeSimpleProtocol)
+		if err != nil {
+			t.Fatalf("reading prepared plans: %v", err)
+		}
+		pid := conn.Conn().PgConn().PID()
+		for rows.Next() {
+			var name string
+			var count planCount
+			if err := rows.Scan(&name, &count.custom, &count.generic); err != nil {
+				t.Fatalf("reading prepared plans: %v", err)
+			}
+			plans[preparedStatement{pid, name}] = count
+		}
+		if err := rows.Err(); err != nil {
+			t.Fatalf("reading prepared plans: %v", err)
 		}
 	}
+	return plans
+}
+
+// inCustomPlanTrials names the statements that ran between the two readings
+// and are still planned afresh at each run while Postgres tries custom plans.
+func inCustomPlanTrials(before, after map[preparedStatement]planCount) []preparedStatement {
+	var trying []preparedStatement
+	for statement, now := range after {
+		then := before[statement]
+		ran := now.custom+now.generic > then.custom+then.generic
+		if ran && now.generic == 0 && now.custom < postgresCustomPlanTrials {
+			trying = append(trying, statement)
+		}
+	}
+	return trying
 }
 
 // forgetHomeAnswers ends the seat's kept Home answers through the cache's own
@@ -277,11 +338,6 @@ func coldBoot(t *testing.T, e *apptest.AppEnv) *apptest.AppEnv {
 		}
 	}
 	return booted
-}
-
-func firstLine(b []byte) string {
-	line, _, _ := strings.Cut(string(b), "\n")
-	return line
 }
 
 // homeReadsDeclaration is HOME_READS in the frontend's Home judge, the reads the
