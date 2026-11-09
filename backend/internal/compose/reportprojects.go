@@ -11,10 +11,12 @@ package compose
 
 import (
 	"fmt"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/moneytotal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -62,7 +64,7 @@ var (
 )
 
 func projectDealMoneySQL(status string, unpriced bool) string {
-	expression := deals.BaseValueSumSQL(reportAsOfToken, reportBaseCurrencyToken, "d", reportDealMaskToken)
+	expression := "coalesce(" + deals.BaseValueSumSQL(reportAsOfToken, reportBaseCurrencyToken, "d", reportDealMaskToken) + ", 0)"
 	if unpriced {
 		expression = deals.UnpricedCountSQL(reportAsOfToken, reportBaseCurrencyToken, "d", reportDealMaskToken)
 	}
@@ -235,9 +237,12 @@ func projectsGoneQuietSpec() reportSpec {
 }
 
 func reportMoneyAggregateSQL(spec reportSpec, aggregate reportAggregate, expression string) string {
-	sum := fmt.Sprintf("%s(%s)", aggregate.Fn, expression)
-	if coverage, ok := spec.sumCoverage[aggregate.Field]; ok && aggregate.Fn == aggFnSum {
-		return deals.FinalizeBaseTotalSQL(sum, "sum("+coverage+")")
+	rendered := fmt.Sprintf("%s(%s)", aggregate.Fn, expression)
+	if aggregate.Fn == aggFnMedian || aggregate.Fn == aggFnP75 {
+		rendered = analyticsquery.PercentileExpr(expression, analyticsquery.AggFn(aggregate.Fn))
 	}
-	return sum
+	if coverage := spec.sumCoverage[aggregate.Field]; coverage != "" && aggregate.Fn != aggFnCount {
+		return moneytotal.CompleteAggregateSQL(rendered, "sum("+coverage+")", aggregate.Fn == aggFnSum)
+	}
+	return rendered
 }

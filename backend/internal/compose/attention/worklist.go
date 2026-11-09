@@ -280,8 +280,9 @@ func (s *Service) worklistFrom(
 	// and the group they became untested: an incident group whose members were all
 	// stale reached a page asking only for what changed, because the three rows the
 	// filter had approved were replaced afterwards by one it never saw.
+	drawn := dropDone(s.foldAndRepin(rows, bounded), s.marked, day.AsOf)
 	if !opensTheDeck(filter) && !opensTheDeck(s.view) {
-		rows = dropDone(s.foldAndRepin(rows, bounded), s.marked, day.AsOf)
+		rows = drawn
 	}
 	rows = keepInView(rows, s.view, filter)
 	narrowed := filter != "" && filter != string(crmcontracts.WorklistFilterAll)
@@ -383,7 +384,7 @@ func (s *Service) worklistFrom(
 		// merely convenient: DSR rows classify as `system` and feed none of the
 		// four readings, so a suppressed DSR lane hides no work these figures
 		// count. A lane whose rows DID feed one would have to be named.
-		Readings: readingsOf(considered, bounded, missing),
+		Readings: readingsOf(considered, drawn, bounded, missing),
 	}
 	s.echoAsked(&out, filter)
 	// The token for the row this page stopped on, minted ONLY when there is more

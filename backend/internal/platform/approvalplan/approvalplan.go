@@ -42,8 +42,15 @@ type Footprint struct {
 	Refs    map[string][]ids.UUID `json:"refs"`
 	Objects []string              `json:"objects,omitempty"`
 	Fields  []string              `json:"fields,omitempty"`
+	Rows    []ImportRowFields     `json:"rows,omitempty"`
 	// Files are the attachments a send would carry, checked as a send checks them.
 	Files []ids.UUID `json:"files,omitempty"`
+}
+
+// ImportRowFields binds field names to their import object without keeping values.
+type ImportRowFields struct {
+	Object string   `json:"object"`
+	Fields []string `json:"fields,omitempty"`
 }
 
 // PayloadWithheld reports an approval whose staged call, summary and evidence

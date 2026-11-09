@@ -7596,12 +7596,20 @@ public.raw_capture.id uuid NOT NULL gen=- def=uuidv7()
 public.raw_capture.parts_slim_outcome text gen=- def=-
 public.raw_capture.parts_slimmed_at timestamp with time zone gen=- def=-
 public.raw_capture.payload jsonb NOT NULL gen=- def=-
+public.raw_capture.payload_object jsonb gen=- def=-
+public.raw_capture.payload_offload_checked_at timestamp with time zone gen=- def=-
 public.raw_capture.raw_capture_parts_slim_outcome_known CHECK (((parts_slim_outcome IS NULL) OR (parts_slim_outcome = ANY (ARRAY['slimmed'::text, 'no_proved_parts'::text, 'unreadable_spelling'::text, 'unrewritable_original'::text, 'nothing_came_out'::text, 'unencodable_result'::text, 'no_bytes_saved'::text]))))
+public.raw_capture.raw_capture_payload_object_shape CHECK (((payload_object IS NULL) OR (((jsonb_typeof(payload_object) = 'object'::text) AND (jsonb_typeof((payload_object -> 'key'::text)) = 'string'::text) AND (jsonb_typeof((payload_object -> 'sha256'::text)) = 'string'::text) AND ((payload_object ->> 'sha256'::text) ~ '^[0-9a-f]{64}$'::text) AND (jsonb_typeof((payload_object -> 'bytes'::text)) = 'number'::text) AND (((payload_object ->> 'bytes'::text))::numeric > (0)::numeric)) IS TRUE)))
 public.raw_capture.raw_capture_pkey PRIMARY KEY (id)
 public.raw_capture.raw_capture_source_unique UNIQUE (source_system, source_id)
+public.raw_capture.raw_original_object_retired CREATE TRIGGER raw_original_object_retired BEFORE DELETE OR UPDATE OF payload, payload_object ON public.raw_capture FOR EACH ROW EXECUTE FUNCTION retire_raw_original_object()
 public.raw_capture.received_at timestamp with time zone NOT NULL gen=- def=now()
 public.raw_capture.source_id text NOT NULL gen=- def=-
 public.raw_capture.source_system text NOT NULL gen=- def=-
+public.raw_capture_original_legacy_hints CREATE INDEX raw_capture_original_legacy_hints ON public.raw_capture USING btree (id) WHERE ((payload_object IS NOT NULL) AND ((((payload_object -> 'subjects'::text) ->> 'version'::text) IS DISTINCT FROM '1'::text) OR (jsonb_typeof(((payload_object -> 'subjects'::text) -> 'email_bits'::text)) IS DISTINCT FROM 'array'::text) OR (COALESCE(((payload_object -> 'subjects'::text) ->> 'email_saturated'::text), 'false'::text) <> 'false'::text)))
+public.raw_capture_original_subject_hints CREATE INDEX raw_capture_original_subject_hints ON public.raw_capture USING gin (payload_object jsonb_path_ops) WHERE (payload_object IS NOT NULL)
+public.raw_capture_payload_object_key CREATE INDEX raw_capture_payload_object_key ON public.raw_capture USING btree (((payload_object ->> 'key'::text))) WHERE (payload_object IS NOT NULL)
+public.raw_capture_payload_offload_unchecked CREATE INDEX raw_capture_payload_offload_unchecked ON public.raw_capture USING btree (id) WHERE ((payload_offload_checked_at IS NULL) AND (payload_object IS NULL))
 public.raw_capture_pkey CREATE UNIQUE INDEX raw_capture_pkey ON public.raw_capture USING btree (id)
 public.raw_capture_source_unique CREATE UNIQUE INDEX raw_capture_source_unique ON public.raw_capture USING btree (source_system, source_id)
 public.raw_capture_unslimmed_idx CREATE INDEX raw_capture_unslimmed_idx ON public.raw_capture USING btree (received_at) WHERE (parts_slimmed_at IS NULL)
@@ -7710,6 +7718,11 @@ public.record_role.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.record_role.version bigint NOT NULL gen=- def=1
 public.record_role_key_key CREATE UNIQUE INDEX record_role_key_key ON public.record_role USING btree (key)
 public.record_role_pkey CREATE UNIQUE INDEX record_role_pkey ON public.record_role USING btree (id)
+public.record_stored_object_intent(requested_kind text, requested_key text) secdef=false cfg=- acl==X/margince_owner,margince_owner=X/margince_owner,margince_app=X/margince_owner INSERT INTO stored_object_intent (storage_key, kind)
+    VALUES (requested_key, requested_kind)
+    ON CONFLICT (storage_key) DO UPDATE
+       SET kind = excluded.kind, recorded_at = now();
+
 public.refresh_last_activity_for_link(cid uuid, did uuid, oid uuid) secdef=false cfg=- acl=- 
 DECLARE
   reached record;
@@ -8050,6 +8063,26 @@ public.retention_policy.retention_policy_retain_days_check CHECK (((retain_days 
 public.retention_policy.retention_policy_unique UNIQUE NULLS NOT DISTINCT (object_type, category)
 public.retention_policy_pkey CREATE UNIQUE INDEX retention_policy_pkey ON public.retention_policy USING btree (id)
 public.retention_policy_unique CREATE UNIQUE INDEX retention_policy_unique ON public.retention_policy USING btree (object_type, category) NULLS NOT DISTINCT
+public.retire_raw_original_object() secdef=false cfg=- acl=- BEGIN
+    IF TG_OP = 'UPDATE' THEN
+        IF OLD.payload_object IS NOT NULL
+           AND OLD.payload_object->>'key' = NEW.payload_object->>'key'
+           AND (OLD.payload IS DISTINCT FROM NEW.payload
+                OR (OLD.payload_object - 'matched_subjects') IS DISTINCT FROM (NEW.payload_object - 'matched_subjects')) THEN
+            RAISE EXCEPTION 'A stored original rewrite requires a new object reference';
+        END IF;
+        IF OLD.payload_object IS NOT NULL
+           AND (OLD.payload_object->>'key') IS DISTINCT FROM (NEW.payload_object->>'key') THEN
+            PERFORM record_stored_object_intent('raw_original', OLD.payload_object->>'key');
+        END IF;
+        RETURN NEW;
+    END IF;
+    IF OLD.payload_object IS NOT NULL THEN
+        PERFORM record_stored_object_intent('raw_original', OLD.payload_object->>'key');
+    END IF;
+    RETURN OLD;
+END;
+
 public.role acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.role.archived_at timestamp with time zone gen=- def=-
 public.role.created_at timestamp with time zone NOT NULL gen=- def=now()
