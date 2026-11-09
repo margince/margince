@@ -349,6 +349,27 @@ could carry is **recorded, never used**. Every failure comes down to one result:
 one duplicate timeline row*, with a `comms_identity_reconcile_failed` note in `system_log` for the
 operator.
 
+### When the read-back fails
+
+The connector reads the sent copy back to learn the identity the provider set. That read can fail
+after the send worked. `connector.SendReceipt.IdentityUnread` says how, and the send still counts as
+sent:
+
+- **Denied** (a refused read, such as a missing read scope): no later read answers either.
+  `RecordSent` writes a `comms_identity_reconcile_failed` note with the reason `read_denied`.
+- **Transient** (a rate limit, a server fault, a lost connection): the captured copy of the message
+  carries the identity. `RecordSent` looks for that copy by the provider's message id
+  (`capture.EchoIdentityTx`) and moves the send onto it, as for a read-back that answered.
+
+The copy can also come after the receipt, which is the usual order. The capture sink then calls
+`comms.Store.AdoptEchoIdentityTx` in its own transaction, before it writes anything. That moves the
+seat's send onto the copy's identity, so the copy lands on the send as a replay. It looks only at the
+seat's own deliveries, by seat, provider and provider message id.
+
+Both sides first take one lock on that seat, provider and message id
+(`storekit.LockSentEchoKey`). Whichever comes second sees what the first committed. Nothing is sent
+again, and no table or job is added: the mailbox's normal sync delivers the copy.
+
 `thread_key` moves only when it was the same as the message's own identity. The first message of a
 conversation moves onto the identity others will reply to. The thread key of a **reply** belongs to the
 conversation it is part of.
