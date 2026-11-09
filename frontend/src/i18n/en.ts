@@ -5890,6 +5890,8 @@ export const en = {
   "deal.aside.partner": "Partner",
   "deal.aside.partnerNone": "None",
   "deal.editDetails": "Edit details",
+  "deal.meetNeedsCompany":
+    "This deal has no company yet. Add one under Edit details to book a meeting.",
   "deal.committee.card": "Committee",
   "deal.committee.change": "Change or remove stakeholders",
   "deal.committee.legendEngaged": "Engaged",

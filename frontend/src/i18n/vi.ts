@@ -18454,6 +18454,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.aside.partner": "Đối tác",
   "deal.aside.partnerNone": "Không có",
   "deal.editDetails": "Sửa chi tiết",
+  "deal.meetNeedsCompany":
+    "Deal này chưa có công ty. Thêm công ty trong “Sửa chi tiết” để đặt lịch họp.",
   "deal.committee.card": "Hội đồng mua",
   "deal.committee.change": "Sửa hoặc gỡ bên liên quan",
 

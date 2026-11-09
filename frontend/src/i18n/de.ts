@@ -18926,6 +18926,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.aside.partner": "Partner",
   "deal.aside.partnerNone": "Keiner",
   "deal.editDetails": "Details bearbeiten",
+  "deal.meetNeedsCompany":
+    "Dieser Deal hat noch kein Unternehmen. Trag es unter „Details bearbeiten“ ein, um einen Termin zu buchen.",
   "deal.committee.card": "Gremium",
   "deal.committee.change": "Stakeholder ändern oder entfernen",
 
