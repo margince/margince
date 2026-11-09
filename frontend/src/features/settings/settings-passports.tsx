@@ -77,15 +77,12 @@ export function PassportCard() {
     minted,
     (passport) => passport.revoked_at != null,
   );
-  const askRevoke = (id: string) => {
-    keep(id);
-    revoke.ask(id);
-  };
 
   const revoke = usePassportRevoke({
     verb: "settings.revoke",
     question: "settings.revokeConfirm",
     focusAfter: passportAnchor,
+    onRevoked: (id) => keep(id),
   });
 
   return (
@@ -106,7 +103,7 @@ export function PassportCard() {
         <PassportTable
           passports={shown}
           reachable={reachable}
-          onRevoke={askRevoke}
+          onRevoke={revoke.ask}
           onChangeAreas={setChangingAreas}
         />
       ) : list.isSuccess && hidden.length > 0 ? null : (

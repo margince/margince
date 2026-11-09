@@ -340,6 +340,7 @@ export function ConnectedAgentsCard() {
       document.querySelector<HTMLElement>(`[data-connection="${id}"]`) ??
       document.querySelector<HTMLElement>("[data-connection]") ??
       emptyRegion.current,
+    onRevoked: (id) => keep(id),
   });
 
   // Read here rather than in the render prop: the expiry timer is a hook.
@@ -352,10 +353,6 @@ export function ConnectedAgentsCard() {
     connections,
     (connection) => connection.revoked_at != null,
   );
-  const askDisconnect = (id: string) => {
-    keep(id);
-    disconnect.ask(id);
-  };
   const reachable = list.data?.reachable_areas ?? [];
   const [changingAreas, setChangingAreas] = useState<Connection | null>(null);
 
@@ -378,7 +375,7 @@ export function ConnectedAgentsCard() {
           connections={shown}
           now={now}
           reachable={reachable}
-          onEnd={askDisconnect}
+          onEnd={disconnect.ask}
           onChangeAreas={setChangingAreas}
         />
       )}

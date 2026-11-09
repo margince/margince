@@ -455,11 +455,10 @@ describe("ConnectedAgentsCard: disconnected tools", () => {
     expect(screen.queryByText("Old Gemini")).toBeNull();
     expect(screen.getByTestId("connection-pp-lapsed")).toBeTruthy();
 
-    await userEvent.click(toggle);
+    const user = userEvent.setup();
+    await user.click(toggle);
     expect(await screen.findByText("Old Gemini")).toBeTruthy();
-    await userEvent.click(
-      screen.getByRole("button", { name: "Hide disconnected" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Hide disconnected" }));
     expect(screen.queryByText("Old Gemini")).toBeNull();
   });
 

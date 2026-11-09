@@ -4,7 +4,8 @@
 import { useState } from "react";
 
 // An ended row can do nothing more, so it waits behind a toggle. One ended from
-// this view stays, struck, so focus has its row to land on.
+// this view (`keep`, once the end succeeded) stays, struck, so focus has its row
+// to land on.
 export function useEndedRows<Row extends { id: string }>(
   rows: readonly Row[],
   isEnded: (row: Row) => boolean,
