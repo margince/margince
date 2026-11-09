@@ -303,7 +303,17 @@ time of a PR. And `deterministic-gates` itself still catches a broken build.
 The lane **compiles once**: a part picked per test reaches nearly every package. The `integration build`
 job links each package's test binary with the shards' flags, and each shard runs its part from them in
 the package directory. A compile error fails the build job, so no shard starts. Each shard still pays
-start-up, the fetch and its own template, so size the matrix from `scripts/integration-test-timing.txt`.
+start-up, the fetch and its own template, so size the matrix from the measured test times.
+
+The shards **split by measured test time**, so they end close together. The fan-in uploads the time
+of every test (`test-timing-integration`). On `main`, the `integration-timing` job of `cache-warm.yml`
+takes each test's mean time over the five newest uploads. It saves the result as the cache entry
+`integration-test-timing-<run>`.
+
+The build job restores the newest entry, or takes the committed `scripts/integration-test-timing.txt`
+when none is there, and packs it with the binaries. So every shard of a run splits by one file, and the
+fan-in fails a run whose shards name another digest of it. A test the file does not name counts as its
+package's mean, so old times cost balance and never a test. Each shard starts its slowest part first.
 
 ### The `ci` aggregate is the only required build context
 
@@ -576,29 +586,16 @@ Wiring details:
     nothing is not a measure of zero.
   - On a pull request the rule does not apply. New code there is the diff, and a diff that skipped a
     part of the tree has no lines of that part to cover.
-  - On `merge_group` the classifier is overridden and every coverage job runs, so the clause holds
-    each time the lane is green. It stays because it would catch a later event, or a later skip, that
-    brings back a partial scan.
-- **A `merge_group` scan publishes as `main`** (`-Dsonar.branch.name=main`). The queue builds `main` +
-  the queued entries, which is byte for byte the tree `main` becomes when the batch merges. So this is
-  the same measure a scan on a push to `main` would take, one step earlier and once per batch.
-
-  Without the override, the scanner reads `GITHUB_REF`, and files the analysis under
-  `gh-readonly-queue/main/pr-N-<sha>`. That is a branch deleted minutes later, and nothing would ever
-  update `main` again. A stored analysis does not go away when it stops being refreshed; it is **frozen** in place.
-  The `quality-gate` job that runs daily in `scheduled.yml` reads `?branch=main`. It would keep
-  reporting that stale verdict with no end. Its own comment says a *missing* analysis
-  `reads identically to green on every dashboard`; a frozen one reads the same way.
-
-  **Publishing waits for the `ci` aggregate verdict.** This job's other conditions cover only the jobs
-  that make its *coverage*.
-  - Without that clause, a `merge_group` build whose `secret-scan`, `license-gate` or `craft-residue`
-    failed would still publish a tree that does not merge. It would replace the stored analysis that
-    every scheduled check reads for `main`.
-  - Requiring `needs.ci.result == 'success'` on `merge_group` makes "published as `main`" mean "is now
-    `main`".
-  - Nothing waits on this job in turn. The aggregate leaves `sonarcloud` out of its own `needs`, so the
-    queue merges on `ci` alone, and the scan may end after the merge.
+- It waits for its coverage jobs and nothing else, so it starts as the last of them ends. On a full run
+  that is the `integration` fan-in.
+  SonarCloud reads coverage only from the report files there when the scanner runs. It takes no coverage
+  after an analysis, and a second analysis of a pull request replaces the first. So no part of the scan
+  can start earlier, and the `ci` aggregate, which makes no coverage, is not in its `needs`.
+- **A `merge_group` build is not scanned.** To file it as `main`, the scan had to wait for `ci`. Else a
+  build that does not merge would replace the stored analysis of `main`. That wait held every pull
+  request's scan behind `ci` too. `main-health.yml` publishes the analysis of `main` from `main`. The
+  daily `quality-gate` job in `scheduled.yml` reads `?branch=main`; an analysis nothing refreshes is
+  **frozen** in place, and reads like a green one.
 - **Report paths resolve from the repo root**, not from the directory that wrote the report. The scanner
   resolves every `SF:` entry in an lcov against its own base directory. It drops a record it cannot
   resolve, with no warning.
