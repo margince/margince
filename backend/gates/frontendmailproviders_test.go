@@ -21,13 +21,13 @@ package gates
 // is this gate's own copy, and a provider added to one alone fails.
 
 import (
-	"os"
 	"regexp"
 	"sort"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const frontendMailProviders = "../frontend/src/format/connectorprovider.ts"
@@ -40,7 +40,7 @@ var tsProviderEntry = regexp.MustCompile(`["']([a-z]+)["']`)
 
 func TestTheFrontendMailProvidersMatchTheGoOnes(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile(frontendMailProviders)
+	source, err := gatekit.ReadFile(frontendMailProviders)
 	if err != nil {
 		t.Fatalf("reading the frontend provider split: %v", err)
 	}

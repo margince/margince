@@ -55,6 +55,7 @@ import {
   visibleGroups,
 } from "./library";
 import "../voice-knowledge/library.css";
+import { labelFor } from "../../lib/labelfor";
 import { useListsAvailable } from "../../lib/lists.queries";
 import {
   LibraryTable,
@@ -251,7 +252,7 @@ function TypePills({
     { value: "all", label: t("filters.library.all"), count: counts?.all },
     ...OBJECT_TABS.map((tab) => ({
       value: tab,
-      label: t(TAB_LABEL[tab]),
+      label: t(labelFor(TAB_LABEL, tab)),
       count: counts?.[tab],
     })),
     ...(projects
@@ -292,7 +293,7 @@ function NewFilterAction({ type }: Readonly<{ type: LibraryType | "all" }>) {
         onClick={() => open(type)}
       >
         <Plus aria-hidden />
-        {t(NEW_FILTER_LABEL[type])}
+        {t(labelFor(NEW_FILTER_LABEL, type))}
       </Button>
     );
   }
@@ -311,7 +312,7 @@ function NewFilterAction({ type }: Readonly<{ type: LibraryType | "all" }>) {
       <div className="library-types">
         {OBJECT_TABS.map((tab) => (
           <Button key={tab} onClick={() => open(tab)}>
-            {t(TAB_LABEL[tab])}
+            {t(labelFor(TAB_LABEL, tab))}
           </Button>
         ))}
       </div>
@@ -328,7 +329,7 @@ function NoHits({ cut }: Readonly<{ cut: LibraryCut }>) {
   if (searched) {
     said = t("filters.library.noHits", { q });
   } else if (cut.type !== "all") {
-    said = t(NO_TYPE_HITS_LABEL[cut.type]);
+    said = t(labelFor(NO_TYPE_HITS_LABEL, cut.type));
   } else {
     return null;
   }

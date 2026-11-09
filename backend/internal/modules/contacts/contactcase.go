@@ -230,10 +230,11 @@ func readCaseEdges(ctx context.Context, tx pgx.Tx, memberIDs []ids.UUID) ([]case
 
 // caseGrant is one share on a member, as far as a merge's carry reads it.
 type caseGrant struct {
-	ID      ids.UUID
-	Version int64
-	Access  string
-	Live    bool
+	RecordID ids.UUID
+	ID       ids.UUID
+	Version  int64
+	Access   string
+	Live     bool
 }
 
 // readCaseGrants reads the shares on the members. A merge carries them and
@@ -241,7 +242,7 @@ type caseGrant struct {
 // the merge would write.
 func readCaseGrants(ctx context.Context, tx pgx.Tx, memberIDs []ids.UUID) ([]caseGrant, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT id, version, access, (expires_at IS NULL OR expires_at > now())
+		SELECT id, record_id, version, access, (expires_at IS NULL OR expires_at > now())
 		  FROM record_grant
 		 WHERE record_type = 'contact' AND record_id = ANY(@shared)
 		 ORDER BY id`, pgx.NamedArgs{"shared": memberIDs})
@@ -250,7 +251,7 @@ func readCaseGrants(ctx context.Context, tx pgx.Tx, memberIDs []ids.UUID) ([]cas
 	}
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (caseGrant, error) {
 		var g caseGrant
-		return g, row.Scan(&g.ID, &g.Version, &g.Access, &g.Live)
+		return g, row.Scan(&g.ID, &g.RecordID, &g.Version, &g.Access, &g.Live)
 	})
 }
 

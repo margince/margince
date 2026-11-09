@@ -159,10 +159,11 @@ func extensionStagingKinds(tools []mcp.Tool) []approvals.ExtensionKind {
 			continue
 		}
 		kinds = append(kinds, approvals.ExtensionKind{
-			Verb:        t.spec.Name,
-			TargetTable: t.subject.Table,
-			RbacObject:  t.rbacObject,
-			RbacAction:  principal.Action(t.rbacAction),
+			Verb:          t.spec.Name,
+			TargetTable:   t.subject.Table,
+			RbacObject:    t.rbacObject,
+			RbacAction:    principal.Action(t.rbacAction),
+			RequiredScope: t.spec.RequiredScope,
 		})
 	}
 	return kinds

@@ -24,6 +24,8 @@ package capture
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -35,6 +37,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/partslim"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -103,9 +107,11 @@ func (c *CandidatePart) UnmarshalJSON(data []byte) error {
 
 // PartSlimResult is what one pass did, for the operator watching the backlog.
 type PartSlimResult struct {
-	Considered int
-	Slimmed    int
-	Freed      int64
+	OffloadConsidered int
+	Offloaded         int
+	Considered        int
+	Slimmed           int
+	Freed             int64
 	// Unproved counts parts left in place because the object store could not
 	// vouch for them. It is the number that says the store is not answering, as
 	// distinct from a message whose encoding simply could not be located.
@@ -336,12 +342,14 @@ func attemptSlim(payload []byte, proved []partslim.StoredPart) slimAttempt {
 
 // payloadOf reads one row's stored original.
 func (s *PartSlimStore) payloadOf(ctx context.Context, id ids.UUID) ([]byte, error) {
+	ctx = originalstore.Bind(ctx, s.db, s.blob)
 	var payload []byte
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
-			`SELECT payload FROM raw_capture WHERE id = $1`, id).Scan(&payload)
+		var err error
+		payload, err = GetRawCapturePayloadTx(ctx, tx, id)
+		return err
 	})
-	if errors.Is(err, pgx.ErrNoRows) {
+	if errors.Is(err, apperrors.ErrNotFound) {
 		return nil, nil
 	}
 	if err != nil {
@@ -351,26 +359,38 @@ func (s *PartSlimStore) payloadOf(ctx context.Context, id ids.UUID) ([]byte, err
 }
 
 // write replaces one payload, refusing to land stale bytes.
+const slimSnapshotWhere = `id = @id AND parts_slimmed_at IS NULL
+ AND ((payload_object IS NULL AND payload = @was::jsonb)
+      OR payload_object->>'sha256' = @sha)`
+
 func (s *PartSlimStore) write(ctx context.Context, id ids.UUID, was, now []byte) error {
+	ctx = originalstore.Bind(ctx, s.db, s.blob)
+	sum := sha256.Sum256(was)
+	args := pgx.NamedArgs{"id": id, "was": was, "sha": hex.EncodeToString(sum[:])}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// The payload guard is the concurrency story: InsertRawCaptureTx's
-		// ON CONFLICT DO UPDATE can refresh this payload from a redelivery while
-		// the sweep holds the old bytes. That redelivery leaves parts_slimmed_at
-		// NULL, so the row is re-read next cadence — what must never happen is
-		// this write landing the STALE stripped bytes over the fresh ones.
-		tag, err := tx.Exec(ctx, `
-			UPDATE raw_capture
-			   SET payload = $2::jsonb, parts_slimmed_at = now(),
-			       parts_slim_outcome = $4
-			 WHERE id = $1 AND parts_slimmed_at IS NULL AND payload = $3::jsonb`,
-			id, now, was, string(outcomeSlimmed))
+		locked, err := tx.Exec(ctx, `SELECT id FROM raw_capture WHERE `+slimSnapshotWhere+` FOR UPDATE`, args)
+		if err != nil {
+			return fmt.Errorf("capture: lock an original to slim: %w", err)
+		}
+		if locked.RowsAffected() == 0 {
+			return errPartSlimRaced
+		}
+		inline, ref, err := originalstore.PrepareTx(ctx, tx, now)
+		if err != nil {
+			return err
+		}
+		args["payload"], args["object"], args["outcome"] = inline, ref, string(outcomeSlimmed)
+		tag, err := tx.Exec(ctx, `UPDATE raw_capture
+ SET payload = @payload::jsonb, payload_object = @object::jsonb, payload_offload_checked_at = now(),
+     parts_slimmed_at = now(), parts_slim_outcome = @outcome
+ WHERE `+slimSnapshotWhere, args)
 		if err != nil {
 			return fmt.Errorf("capture: slimming an original: %w", err)
 		}
 		if tag.RowsAffected() == 0 {
 			return errPartSlimRaced
 		}
-		return nil
+		return originalstore.Adopt(ctx, tx, ref)
 	})
 }
 

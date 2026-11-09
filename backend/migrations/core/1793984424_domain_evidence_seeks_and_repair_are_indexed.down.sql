@@ -1,0 +1,3 @@
+DROP INDEX CONCURRENTLY IF EXISTS idx_participant_domain_evidence_incomplete;
+DROP INDEX CONCURRENTLY IF EXISTS idx_participant_domain_evidence_latest;
+DROP INDEX CONCURRENTLY IF EXISTS idx_participant_domain_evidence_parent;

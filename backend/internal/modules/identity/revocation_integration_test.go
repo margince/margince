@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"sync"
 	"testing"
@@ -112,6 +113,7 @@ var (
 // plus a plain second user with a known password.
 type revocationEnv struct {
 	owner *pgx.Conn
+	pool  *pgxpool.Pool
 	svc   *Service
 	// ws is the workspace this env bootstrapped, for the fixtures that build a
 	// second service of their own — a pinned handle is what they need, since
@@ -130,6 +132,40 @@ const memberPassword = "correct horse battery staple"
 // admin. Named, because what makes it interesting is who chose it: every
 // account holding this one owes a rotation.
 const bootstrapPassword = "a bootstrap password!"
+
+// Stored work asks whether its passport is live now, even from inside a snapshot
+// that predates the revocation.
+func TestStoredWorkSeesARevocationAfterTheSnapshotBegan(t *testing.T) {
+	e := setupRevocationEnv(t, "stored-snapshot")
+	ctx := e.wsCtx(e.member)
+	issued, err := e.svc.IssuePassport(ctx, e.member, IssuePassportInput{Scopes: []string{"read"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = database.WithWorkspaceSnapshot(ctx, e.svc.db.Pool(), func(ctx context.Context) error {
+		if _, err := e.svc.AgentForStoredWork(ctx, e.member.UserID.UUID, issued.ID, ids.UUID{}); err != nil {
+			return fmt.Errorf("the live passport before the revocation: %w", err)
+		}
+		// A statement on the snapshot itself, which fixes what it can see.
+		if err := e.svc.db.Tx(ctx, func(tx pgx.Tx) error {
+			_, err := tx.Exec(ctx, `SELECT 1 FROM passport`)
+			return err
+		}); err != nil {
+			return err
+		}
+		if _, err := e.owner.Exec(ctx, `UPDATE passport SET revoked_at = now() WHERE id = $1`, issued.ID); err != nil {
+			return err
+		}
+		_, err := e.svc.AgentForStoredWork(ctx, e.member.UserID.UUID, issued.ID, ids.UUID{})
+		if !errors.Is(err, apperrors.ErrNotFound) {
+			t.Errorf("the revoked passport inside the snapshot answered %v, want not found", err)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
 
 func setupRevocationEnv(t *testing.T, slug string) *revocationEnv {
 	t.Helper()
@@ -185,7 +221,7 @@ func setupRevocationEnv(t *testing.T, slug string) *revocationEnv {
 	}
 
 	return &revocationEnv{
-		owner: owner, svc: svc, ws: wsID, slug: slug, admin: admin,
+		owner: owner, pool: pool, svc: svc, ws: wsID, slug: slug, admin: admin,
 		member: Identity{UserID: memberID, WorkspaceID: admin.WorkspaceID, Email: memberEmail},
 	}
 }

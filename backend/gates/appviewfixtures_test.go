@@ -98,7 +98,7 @@ func TestEveryAppViewFixtureMatchesItsToolsOutputSchema(t *testing.T) {
 		}
 		dir := viewDirOf(spec.UI.ResourceURI)
 		path := appFixtureDir + "/" + dir + "/fixture.ts"
-		source, err := os.ReadFile(path)
+		source, err := gatekit.ReadFile(path)
 		if os.IsNotExist(err) {
 			// A FINDING, not a skip. A tool carrying both a view and an output
 			// schema is one whose payload a fixture is supposed to model, and

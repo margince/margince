@@ -249,6 +249,7 @@ function CompanyTasksTab({
             activityId={step.activity_id}
             version={step.version}
             dueAt={step.due_at}
+            dueHasTime={step.due_has_time}
             update={update}
             showComplete={false}
           />

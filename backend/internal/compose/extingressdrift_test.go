@@ -46,10 +46,12 @@ import (
 // not supply, each with the reason it is absent. A waiver is a DECISION, so it
 // is spelled out rather than a name in a list.
 var waivedEnvelopeFields = gatekit.Waive(map[string]string{
-	"EntityType": "the port stamps it: one kind is landable, and a Record has one payload",
-	"Source":     "core-stamped from the invoking unit and its DECLARED source, so a unit cannot attribute its records to another unit or to a core connector",
-	"CapturedBy": "core-stamped, and equal to the acting principal's id — which is what makes capture's own 'a connector cannot claim to be another one' check pass by construction",
-	"NaturalKey": "half core-derived: the published Record carries the provider's own Key and the port pairs it with the derived source system",
+	"ProviderMessageID": "an opaque Gmail or Graph mailbox id used only for core connection deletion. Extension sources have no core mailbox connection or deletion namespace; an empty value adds no mailbox mapping",
+	"CalendarAnswer":    "the core calendar connector attests its own mailbox owner response. An extension cannot assert a mailbox identity; nil leaves ordinary participant responses subject to the existing capture checks",
+	"EntityType":        "the port stamps it: one kind is landable, and a Record has one payload",
+	"Source":            "core-stamped from the invoking unit and its DECLARED source, so a unit cannot attribute its records to another unit or to a core connector",
+	"CapturedBy":        "core-stamped, and equal to the acting principal's id — which is what makes capture's own 'a connector cannot claim to be another one' check pass by construction",
+	"NaturalKey":        "half core-derived: the published Record carries the provider's own Key and the port pairs it with the derived source system",
 	"Links": "deliberately absent — a record naming the core rows it attaches to would make the link-visibility probe a per-row existence oracle over the scope the ingest runs under. " +
 		"What a message is about is decided by the core's counterparty resolution",
 	"CrossDoorIdentity": "what a record is called to EVERY door, which is a CLAIM rather than a description: a record stating one asks to be bound to whatever row already holds it, and binding is what makes two rows' content reachable through each other. " +
@@ -139,6 +141,9 @@ var waivedActivityFields = gatekit.Waive(map[string]string{
 	"InvitationFromSeat": "zero is the right answer for a unit, for the reason SentByColleague's is: the sink " +
 		"sets it from a From address it authenticated against a seat; a unit stating it would credit a " +
 		"colleague with an invitation the core never checked",
+	"MeetingDocuments": "empty is the right answer for a unit. The sink reads these notes and transcripts " +
+		"from a calendar provider's event and links them on the meeting; a unit hands over no provider " +
+		"event, so it has no attachment to name",
 	"AgendaFingerprint": "empty is the right answer for a unit. The sink stores it from a calendar provider's " +
 		"own invite description, and a unit hands over no invite. Empty gives the meeting no agenda fact, " +
 		"as for a meeting booked by hand",

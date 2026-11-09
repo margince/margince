@@ -375,7 +375,10 @@ func TestTheFunnelAttributesEachMoveToItsOwnerThen(t *testing.T) {
 	e.WsExec(t, `INSERT INTO deal_stage_history (deal_id, to_stage_id, changed_by, changed_at,
 		owner_id_at_change, semantic_at_change) VALUES ($1, $2, 'human:x', $3, $4, 'open')`,
 		legacy, entered, teamClock.AddDate(0, 0, -30), e.Rep1)
-	seedImportedFunnelMoves(t, e, pipeline, entered, next)
+	run := integration.SeedIDRow(t, integration.OwnerConn(t), `INSERT INTO import_run (id, connector, status, source_ref, source, captured_by)
+		VALUES ($1, 'csv', 'running', 'deals.csv', 'upload', 'human:test')`)
+	seedFunnelMovesMadeElsewhere(t, e, pipeline, entered, next, "imported", &run)
+	seedFunnelMovesMadeElsewhere(t, e, pipeline, entered, next, "synced", nil)
 	writeRepWeek(t, e, e.Rep1)
 	writeRepWeek(t, e, e.Rep2)
 
@@ -386,10 +389,11 @@ func TestTheFunnelAttributesEachMoveToItsOwnerThen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Rep1's sixth entry stayed put by hand and only an import moved it on.
+	// Rep1's sixth and seventh entries stayed put by hand. Only an import and a
+	// sync moved them on, so neither converts.
 	want := map[ids.UUID]weekly.FunnelDeviation{
-		e.Rep1: {RepEntered: 6, RepConverted: 1, TeamEntered: 11, TeamConverted: 5, DeviationBp: -2879},
-		e.Rep2: {RepEntered: 5, RepConverted: 4, TeamEntered: 11, TeamConverted: 5, DeviationBp: 3455},
+		e.Rep1: {RepEntered: 7, RepConverted: 1, TeamEntered: 12, TeamConverted: 5, DeviationBp: -2738},
+		e.Rep2: {RepEntered: 5, RepConverted: 4, TeamEntered: 12, TeamConverted: 5, DeviationBp: 3834},
 	}
 	for _, rep := range read.Reps {
 		if len(rep.Funnel) != 1 {
@@ -496,18 +500,17 @@ func seedFunnel(
 	}
 }
 
-// seedImportedFunnelMoves gives Rep1 four deals an import touched:
-//   - an entry an import brought in, which is no entry;
-//   - an entry an import moved on next, which is left out;
-//   - an entry whose next move was made by hand in the same instant as an
-//     imported move written before it, so the imported move came next and the
-//     entry is left out, whatever the two ids say;
-//   - an entry a hand move kept in its stage and an import then moved on, which
-//     enters but does not convert.
-func seedImportedFunnelMoves(t *testing.T, e *teamEnv, pipeline ids.PipelineID, stage, next ids.UUID) {
+// seedFunnelMovesMadeElsewhere gives Rep1 four deals another system touched,
+// by import or by sync as origin says:
+//   - an entry the other system brought in, which is no entry;
+//   - an entry the other system moved on next, which is left out;
+//   - an entry whose next move was made by hand in the same instant as a move
+//     from elsewhere written before it, so that move came next and the entry
+//     is left out, whatever the two ids say;
+//   - an entry a hand move kept in its stage and the other system then moved
+//     on, which enters but does not convert.
+func seedFunnelMovesMadeElsewhere(t *testing.T, e *teamEnv, pipeline ids.PipelineID, stage, next ids.UUID, origin string, run *ids.UUID) {
 	t.Helper()
-	run := integration.SeedIDRow(t, integration.OwnerConn(t), `INSERT INTO import_run (id, connector, status, source_ref, source, captured_by)
-		VALUES ($1, 'csv', 'running', 'deals.csv', 'upload', 'human:test')`)
 	at := teamClock.AddDate(0, 0, -30)
 	move := `INSERT INTO deal_stage_history (id, deal_id, from_stage_id, to_stage_id, changed_by, changed_at,
 		owner_id_at_change, pipeline_id_at_change, semantic_at_change, provenance, import_run_id)
@@ -515,12 +518,12 @@ func seedImportedFunnelMoves(t *testing.T, e *teamEnv, pipeline ids.PipelineID, 
 	deal := func(name string) ids.UUID {
 		return e.SeedDeal(t, name, pipeline, ids.From[ids.StageKind](stage), &e.Rep1)
 	}
-	imported := deal("Imported entry")
-	e.WsExec(t, move, ids.NewV7(), imported, nil, stage, at, e.Rep1, pipeline, "imported", run)
+	broughtIn := deal("Entry from elsewhere")
+	e.WsExec(t, move, ids.NewV7(), broughtIn, nil, stage, at, e.Rep1, pipeline, origin, run)
 
-	movedOn := deal("Moved on by an import")
+	movedOn := deal("Moved on from elsewhere")
 	e.WsExec(t, move, ids.NewV7(), movedOn, nil, stage, at, e.Rep1, pipeline, "recorded", nil)
-	e.WsExec(t, move, ids.NewV7(), movedOn, stage, next, at.AddDate(0, 0, 3), e.Rep1, pipeline, "imported", run)
+	e.WsExec(t, move, ids.NewV7(), movedOn, stage, next, at.AddDate(0, 0, 3), e.Rep1, pipeline, origin, run)
 
 	sameInstant := deal("Moved twice in one instant")
 	e.WsExec(t, move, ids.NewV7(), sameInstant, nil, stage, at, e.Rep1, pipeline, "recorded", nil)
@@ -528,11 +531,11 @@ func seedImportedFunnelMoves(t *testing.T, e *teamEnv, pipeline ids.PipelineID, 
 	if smaller.String() > larger.String() {
 		smaller, larger = larger, smaller
 	}
-	e.WsExec(t, move, larger, sameInstant, stage, next, at.AddDate(0, 0, 3), e.Rep1, pipeline, "imported", run)
+	e.WsExec(t, move, larger, sameInstant, stage, next, at.AddDate(0, 0, 3), e.Rep1, pipeline, origin, run)
 	e.WsExec(t, move, smaller, sameInstant, stage, next, at.AddDate(0, 0, 3), e.Rep1, pipeline, "recorded", nil)
 
-	keptThenImported := deal("Kept by hand, moved by an import")
-	e.WsExec(t, move, ids.NewV7(), keptThenImported, nil, stage, at, e.Rep1, pipeline, "recorded", nil)
-	e.WsExec(t, move, ids.NewV7(), keptThenImported, stage, stage, at.AddDate(0, 0, 1), e.Rep1, pipeline, "recorded", nil)
-	e.WsExec(t, move, ids.NewV7(), keptThenImported, stage, next, at.AddDate(0, 0, 3), e.Rep1, pipeline, "imported", run)
+	keptThenMovedElsewhere := deal("Kept by hand, moved from elsewhere")
+	e.WsExec(t, move, ids.NewV7(), keptThenMovedElsewhere, nil, stage, at, e.Rep1, pipeline, "recorded", nil)
+	e.WsExec(t, move, ids.NewV7(), keptThenMovedElsewhere, stage, stage, at.AddDate(0, 0, 1), e.Rep1, pipeline, "recorded", nil)
+	e.WsExec(t, move, ids.NewV7(), keptThenMovedElsewhere, stage, next, at.AddDate(0, 0, 3), e.Rep1, pipeline, origin, run)
 }

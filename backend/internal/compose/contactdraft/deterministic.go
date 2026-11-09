@@ -56,9 +56,10 @@ func deterministicSubject(in Input) string {
 	if in.Deal != nil {
 		topic = in.Deal.Name
 	}
-	// A thread outranks the deal and the employer, whoever wrote last, and the
-	// model's draft gets the same subject from the same call.
-	return draftcore.ContinueThread(draftfloor.Subject(lang, band, topic, false), in)
+	if subject := in.RequestedSubject(); subject != "" {
+		return subject
+	}
+	return draftfloor.Subject(lang, band, topic, false)
 }
 
 // The body: a greeting, where the conversation stands, the one thing there is
@@ -90,7 +91,7 @@ func deterministicOpener(in Input) string {
 	if in.Deal != nil {
 		return draftfloor.Fill(lines.Deal, dealLine(in.Deal))
 	}
-	if mail, ok := in.threadMail(); ok {
+	if mail, ok := in.recentMail(); ok {
 		return draftfloor.Fill(lines.Thread, mailsubject.WithoutReplyPrefix(mail.Subject))
 	}
 	return ""
@@ -203,7 +204,7 @@ func deterministicReasons(in Input) []Reason {
 			EntityID:   in.Deal.ID,
 		})
 	}
-	if mail, ok := in.threadMail(); ok && !hasClaim && in.Deal == nil {
+	if mail, ok := in.recentMail(); ok && !hasClaim && in.Deal == nil {
 		reasons = append(reasons, Reason{
 			Kind:       crmcontracts.AccountDraftReasonKindConversation,
 			Label:      mail.Subject,

@@ -282,3 +282,29 @@ func TestReportingFrozenOwnerLabelsKeepTheirOriginalMeaning(t *testing.T) {
 		})
 	}
 }
+
+func TestReportingEmptyEventWeeksCountZero(t *testing.T) {
+	start := time.Date(2026, 9, 28, 0, 0, 0, 0, time.UTC)
+	frame := crmcontracts.ReportingContext{Timezone: "UTC", PeriodKind: "last_week", Interval: crmcontracts.ReportingWindow{StartAt: start, EndAt: start.AddDate(0, 0, 7)}, EvaluatedAt: start.AddDate(0, 0, 8)}
+	matched := 0
+	for _, spec := range reportingMetrics {
+		def := spec.definition
+		// The legacy promotion count uses arrivals as its population.
+		if def.Id == reportingLeadsPromoted {
+			continue
+		}
+		if def.TemporalBasis != reportingEventPeriod || def.Unit != reportingCountUnit || !slices.Contains(def.Blocks, reportingSdrOutcomes) {
+			continue
+		}
+		matched++
+		t.Run(string(def.Id), func(t *testing.T) {
+			chart := reportingWeekly(&reporting.Evaluation{Result: crmcontracts.ReportingEvaluation{Context: frame}}, crmcontracts.ReportingChart{Metric: def.Id, Coverage: crmcontracts.ReportingCoverage{Status: "ok"}})
+			if len(chart.Points) != 1 || chart.Points[0].Value == nil || *chart.Points[0].Value != 0 {
+				t.Fatalf("empty event week: %+v", chart.Points)
+			}
+		})
+	}
+	if matched == 0 {
+		t.Fatal("no count-based SDR outcome metrics were checked")
+	}
+}

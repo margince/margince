@@ -51,6 +51,11 @@ name: scheduled
 #                        tests read a recording of the vendor's API, which stays
 #                        green when the vendor changes it.
 #
+#   role sweep         — every MCP tool and action called as every seeded role,
+#                        weekly. It takes longer than a merge-gate shard allows,
+#                        so the per-PR lane holds the committed matrix to the
+#                        registry and the listing, and this re-measures it.
+#
 #   slop trend         — the slop scores and the comment numbers, once a week,
 #                        beside last week's. Not a verdict: the comment checks
 #                        judge only added lines, and this is what shows whether
@@ -92,6 +97,10 @@ on:
         default: false
       trend:
         description: "Also record the slop trend (craft slop and craft stats against last week's run)"
+        type: boolean
+        default: false
+      roles:
+        description: "Also run the MCP role sweep (`make test-roles`, about an hour on a runner)"
         type: boolean
         default: false
 
@@ -243,48 +252,6 @@ jobs:
           REPO: ${{ github.repository }}
         run: ./scripts/check-renovate-liveness.sh
 
-  backend-lane:
-    # The DAILY cadence. Spelled per job because a job with no `if` runs on
-    # every trigger the workflow has, so the weekly perf cron would otherwise
-    # run this a second time on Mondays — a second 45-minute gate, and a
-    # second "still failing" comment on every issue the 01:00 run just filed.
-    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 1 * * *'
-    name: backend lane (main)
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          # rbacbaselineerafixture_test.go reads the migration baseline commit and
-          # fail rather than degrade on a shallow checkout.
-          fetch-depth: 0
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: backend/go.mod
-          cache-dependency-path: backend/go.sum
-      - name: Restore the Go build cache
-        uses: ./.github/actions/go-build-cache
-        with:
-          flavor: plain
-      - name: Cache the gate binaries
-        id: gate-binaries
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/go/bin
-          key: gate-binaries-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('backend/go.mod', 'backend/Makefile') }}
-      - name: Install the pinned gate binaries
-        if: steps.gate-binaries.outputs.cache-hit != 'true'
-        working-directory: .
-        run: make tools
-      - name: Gate binaries onto PATH
-        run: echo "$HOME/go/bin" >> "$GITHUB_PATH"
-      - name: Backend merge gate (make check-backend)
-        working-directory: .
-        run: make check-backend
-
   # The backend's counterpart to fe-clock-drift: the suite's verdict must not
   # depend on the calendar. It moves the runner's own clock, and
   # scripts/clock-drift-host.sh says why no other shift reaches both Go and
@@ -294,12 +261,12 @@ jobs:
   # pull all finish at the real date, because a 200-day jump expires the TLS
   # certificates they verify. Only then does the clock move.
   backend-clock-drift:
-    # The DAILY cadence, spelled per job for the reason backend-lane states: a
-    # job with no `if` runs on every trigger the workflow has.
+    # The DAILY cadence, spelled per job: a job with no `if` runs on every
+    # trigger the workflow has, so the weekly perf cron would run this too.
     if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 1 * * *'
     name: backend clock drift (main, +200 days)
     runs-on: ubuntu-latest
-    # Longer than backend-lane's 45: this runs the integration lane too, on one
+    # This runs the integration lane too, on one
     # runner rather than across the shards ci.yml splits it into.
     timeout-minutes: 90
     permissions:
@@ -324,10 +291,8 @@ jobs:
         uses: ./.github/actions/go-build-cache
         with:
           flavor: integration
-      - name: Install the pinned gate binaries
-        run: make tools
-      - name: Gate binaries onto PATH
-        run: echo "$HOME/go/bin" >> "$GITHUB_PATH"
+      - name: Gate binaries on PATH
+        uses: ./.github/actions/gate-binaries
       - name: Start the dev infra stack (compose + app role)
         run: make db-up
       - name: Compile the suites at the real date
@@ -1186,12 +1151,47 @@ jobs:
               --title "chore(records): weekly measurements of $day" --body-file "$BODY"
           fi
 
+  # The MCP role sweep, weekly. Every tool and action is called as every seeded
+  # role, and the answers must equal the committed mcp-tool-roles.json and
+  # toolchecks.json. It outgrew a merge-gate shard, so the per-PR lane checks the
+  # committed matrix against the registry and the listing, and this measures it.
+  role-sweep:
+    name: MCP role sweep (weekly)
+    if: >-
+      github.event.schedule == '0 2 * * 1'
+        || (github.event_name == 'workflow_dispatch' && inputs.roles)
+    runs-on: ubuntu-latest
+    # The make target's own go-test timeout is 45 minutes; this leaves room for
+    # the stack to start.
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Restore the Go build cache
+        uses: ./.github/actions/go-build-cache
+        with:
+          flavor: integration
+      - name: Start the dev infra stack (compose + app role)
+        run: make db-up
+      - name: The role sweep
+        run: make test-roles
+
   # The one job holding `issues: write`, and it runs no build code — the same
   # permission isolation sbom.yml's signing job uses. It must RUN when an upstream
   # fails, so it is guarded on !cancelled() rather than needs alone.
   report:
     name: report
-    needs: [vuln, quality-gate, renovate-liveness, backend-lane, backend-clock-drift, fe-clock-drift, fe-all-stories, perf-budgets, perf-mobile, llm-use-cases, records, records-pr, reap-caches, slop-trend, vendor-live]
+    needs: [vuln, quality-gate, renovate-liveness, backend-clock-drift, fe-clock-drift, fe-all-stories, perf-budgets, perf-mobile, llm-use-cases, records, records-pr, reap-caches, slop-trend, vendor-live, role-sweep]
     # Every result, not only the failures — see the same condition in
     # main-health.yml for why. In short: the reporter now retracts a finding
     # whose check came back green, and a job gated on a failure is never reached
@@ -1233,7 +1233,6 @@ jobs:
           RENOVATE_RESULT: ${{ needs['renovate-liveness'].result }}
           RENOVATE_STATUS: ${{ needs['renovate-liveness'].outputs.status }}
           RENOVATE_OUTCOME: ${{ needs['renovate-liveness'].outputs.outcome }}
-          LANE_RESULT: ${{ needs.backend-lane.result }}
           CLOCK_RESULT: ${{ needs['fe-clock-drift'].result }}
           BACKEND_CLOCK_RESULT: ${{ needs['backend-clock-drift'].result }}
           STORIES_RESULT: ${{ needs['fe-all-stories'].result }}
@@ -1250,4 +1249,5 @@ jobs:
           VENDOR_LIVE_RESULT: ${{ needs['vendor-live'].result }}
           VENDOR_LIVE_OUTCOME: ${{ needs['vendor-live'].outputs.outcome }}
           VENDOR_LIVE_DETAIL: ${{ needs['vendor-live'].outputs.detail }}
+          ROLE_SWEEP_RESULT: ${{ needs['role-sweep'].result }}
         run: ./scripts/scheduled-report.sh

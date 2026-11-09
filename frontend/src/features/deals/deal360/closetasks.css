@@ -1,0 +1,33 @@
+/* The tasks a close would complete, as a quiet list inside the question. */
+.closetasks-preview {
+  display: grid;
+  gap: var(--space-1);
+  margin-block-end: var(--space-1);
+}
+.closetasks-preview ul {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-sm);
+}
+.closetasks-preview li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+}
+.closetasks-preview li + li {
+  border-top: 1px solid var(--borderSubtle);
+}
+.closetasks-subject {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.closetasks-preview .t-caption {
+  flex-shrink: 0;
+}

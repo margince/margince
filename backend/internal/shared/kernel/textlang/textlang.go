@@ -177,6 +177,18 @@ func DetectFirst(texts ...string) Lang {
 	return Unknown
 }
 
+// OfMessage is the language label a stored message carries: its opening, read
+// up to the first quoted reply, then its subject. Capture and the hand-logged
+// note, meeting and call all stamp activity.language with it, so a label means
+// the same thing whichever path wrote the row.
+func OfMessage(body, subject string) Lang {
+	return DetectFirst(MessageOpening(body, messageLabelRunes), subject)
+}
+
+// messageLabelRunes bounds the opening a label is read from: enough for the
+// detector's three stopword hits, short of a long quoted tail.
+const messageLabelRunes = 1200
+
 // FirstKnown is the ladder every caller that must end up with a language walks:
 // the texts in order, then whatever fallbacks the caller can offer, then
 // English.

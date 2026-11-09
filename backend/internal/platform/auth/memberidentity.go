@@ -11,7 +11,11 @@ import "fmt"
 // The family is one SQL function: a recursive CTE spelled into each clause was
 // planned once per copy, and a connection keeps the planner's memory.
 func memberIdentitySQL(position int) string {
-	return fmt.Sprintf("SELECT unnest(member_identity_family($%d::uuid)) AS id", position)
+	return memberIdentityExpressionSQL(fmt.Sprintf("$%d::uuid", position))
+}
+
+func memberIdentityExpressionSQL(member string) string {
+	return "SELECT unnest(member_identity_family(" + member + ")) AS id"
 }
 
 func memberIdentitySetSQL(position int) string {

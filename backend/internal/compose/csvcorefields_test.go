@@ -124,3 +124,27 @@ func TestACsvUpdateCarriesAStoredLegacyCountryForward(t *testing.T) {
 		t.Fatalf("merged = %+v (changed %v, err %v), want Berlin with the stored country kept", merged, changed, err)
 	}
 }
+
+// An address is the name a row with no name falls back to, so a re-import that
+// states the parts names the contact. A typed name stays with the store's rule.
+func TestAReimportNamesAContactStillNamedByItsAddress(t *testing.T) {
+	fields := map[string]string{"first_name": "Jane", "last_name": "Doe"}
+	stored := func(fullName string) []byte {
+		return []byte(`{"full_name":"` + fullName + `",` +
+			`"emails":[{"email":"jane@acme.test","email_type":"work","is_primary":true}]}`)
+	}
+	changed, err := changedFields(stored("jane@acme.test"), fields, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if changed[fieldFullName] != "Jane Doe" {
+		t.Fatalf("changed = %v, want the full name the parts spell", changed)
+	}
+	changed, err = changedFields(stored("Dr. Jane"), fields, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, sent := changed[fieldFullName]; sent {
+		t.Fatalf("changed = %v, want a typed name left to the store", changed)
+	}
+}

@@ -101,6 +101,9 @@ func (s *Service) nameWorklistRows(
 	if err := advised.nameRows(ctx, rows, findings); err != nil {
 		return err
 	}
+	if employersErr := advised.nameTheEmployers(ctx, rows); employersErr != nil {
+		page.SourcesUnavailable = append(page.SourcesUnavailable, s.stampSources([]crmcontracts.WorklistSourceUnavailable{*employersErr})...)
+	}
 	for _, list := range lists {
 		rows = rows[copy(*list, rows):]
 	}
@@ -119,9 +122,6 @@ func (s *Service) nameRows(ctx context.Context, rows []crmcontracts.WorklistItem
 		return err
 	}
 	if err := s.nameTheCompanies(ctx, rows); err != nil {
-		return err
-	}
-	if err := s.nameTheEmployers(ctx, rows); err != nil {
 		return err
 	}
 	if err := s.nameTheOrganizers(ctx, rows); err != nil {

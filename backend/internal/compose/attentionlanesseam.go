@@ -292,7 +292,7 @@ func (f attentionDealFacts) Figures(
 			Currency:             figures.Currency,
 			ExpectedCloseDate:    figures.ExpectedCloseDate,
 			CloseDateProvisional: figures.CloseDateProvisional,
-			ForecastCategory:     figures.ForecastCategory,
+			WinProbability:       figures.WinProbability,
 			CloseOverdue:         figures.CloseOverdue,
 		}
 	}
@@ -315,6 +315,7 @@ func taskFromActivity(row crmcontracts.Activity, reader ids.UUID, asOf time.Time
 		ID:          ids.UUID(row.Id),
 		Subject:     subjectOfActivity(row),
 		DueAt:       row.DueAt,
+		DueHasTime:  row.DueHasTime != nil && *row.DueHasTime,
 		LinkType:    linkType,
 		LinkID:      linkID,
 		ReminderDue: contentReadable(row) && activities.ReminderDueFor(row, reader, asOf),

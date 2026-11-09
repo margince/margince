@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { browserZone } from "../format/timezone";
 import { activityRequestBody, freshDraft, NO_ATTENDEES } from "./activitybody";
 
 afterEach(() => {
@@ -97,3 +98,74 @@ describe("the time a logged meeting sends", () => {
     });
   });
 });
+
+it("files a company call on its selected deal beside attendee contacts", () => {
+  const zone = browserZone();
+  const body = activityRequestBody(
+    {
+      ...freshDraft(zone, "call"),
+      dealFiling: {
+        context: { record_type: "company", record_id: "o1", skip: false },
+        dealId: "d2",
+      },
+    },
+    "company",
+    "o1",
+    zone,
+    { contacts: [{ id: "p1", name: "Buyer" }], colleagueIds: [] },
+  );
+  expect(body.links).toEqual([
+    { entity_type: "contact", entity_id: "p1" },
+    { entity_type: "deal", entity_id: "d2" },
+  ]);
+  expect(body.deal_filing).toEqual({
+    record_type: "company",
+    record_id: "o1",
+    skip: false,
+  });
+});
+
+describe("a call's transcript marker", () => {
+  it.each([true, false])(
+    "sends a transcript only when opted in: %s",
+    (asTranscript) => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-01-10T09:00:00Z"));
+      const raw = "\nAnna: I will send the offer by Friday.\n";
+      const body = activityRequestBody(
+        { ...freshDraft("UTC", "call"), body: raw, asTranscript },
+        "contact",
+        "p1",
+        "UTC",
+        NO_ATTENDEES,
+      );
+      if (asTranscript) {
+        expect(body.source_system).toBe("transcript");
+        expect(body.body).toBe(raw);
+      } else {
+        expect(body).not.toHaveProperty("source_system");
+        expect(body.body).toBe(raw.trim());
+      }
+    },
+  );
+});
+
+it.each(["note", "task"] satisfies ("note" | "task")[])(
+  "drops a carried transcript marker on %s",
+  (kind) => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-01-10T09:00:00Z"));
+    const body = activityRequestBody(
+      {
+        ...freshDraft("UTC", kind),
+        asTranscript: true,
+        body: "Anna: I will send the offer.",
+      },
+      "contact",
+      "p1",
+      "UTC",
+      NO_ATTENDEES,
+    );
+    expect(body).not.toHaveProperty("source_system");
+  },
+);

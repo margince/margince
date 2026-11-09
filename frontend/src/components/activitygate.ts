@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useId } from "react";
+import type { MessageKey } from "../i18n/en";
 import { useCanWrite } from "../lib/capability";
 import { useMe } from "../lib/session";
 
@@ -16,18 +17,29 @@ export type ActivityGate = Readonly<{
   refusedId: string | undefined;
   pending: boolean;
   sentenceId: string;
+  refusalKey?: MessageKey;
 }>;
 
-export function useActivityGate(): ActivityGate {
+export function useActivityGate(
+  contact?: { readonly attachable?: boolean } | null,
+  permissionRefusal: MessageKey = "record.logActivityRefused",
+): ActivityGate {
   // useCanWrite, not useCan: Log and Add task issue the same POST, and a read
   // seat is refused before RBAC is consulted.
   const me = useMe();
   const canLog = useCanWrite("activity", "create");
   const sentenceId = useId();
   const known = me.data?.authorization !== undefined;
+  const refusalKey =
+    known && !canLog
+      ? permissionRefusal
+      : contact && contact.attachable !== true
+        ? "contact.attachRefused"
+        : undefined;
   return {
-    refusedId: known && !canLog ? sentenceId : undefined,
-    pending: !known,
+    refusedId: refusalKey ? sentenceId : undefined,
+    refusalKey,
+    pending: !known || contact === null,
     sentenceId,
   };
 }

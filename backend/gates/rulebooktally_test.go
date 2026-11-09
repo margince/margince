@@ -25,6 +25,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const moduleCatalog = "../docs/reference/modules.md"
@@ -89,7 +91,7 @@ var countable = regexp.MustCompile(`(?i)\b(?:bounded capabilit\w*|modules?|exten
 // true/false, the gate restated the same `numberWord && countable` scan inline,
 // and the two were free to drift.
 func tallyParagraphs(path string) ([]prosePara, error) {
-	raw, err := os.ReadFile(path)
+	raw, err := gatekit.ReadFile(path)
 	if err != nil {
 		// Returned, never swallowed. Answering "no tallies" for a file nobody
 		// could read is the same PASS a clean file gets, which is the one way

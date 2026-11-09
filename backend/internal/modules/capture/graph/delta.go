@@ -64,6 +64,11 @@ const (
 	folderSent  = "sentitems"
 )
 
+// syncedFolders are the only folders mail capture reads, Sent Items first. The
+// standing sync walks them and a history import keeps to them, so Junk Email,
+// Deleted Items, Drafts and every other folder are never fetched.
+var syncedFolders = [...]string{folderSent, folderInbox}
+
 // deltaPage is one page of a messages delta. A tombstoned entry
 // carries @removed instead of message fields — nothing to fetch for it.
 type deltaPage struct {
@@ -224,18 +229,9 @@ func (a *httpAPI) Delta(ctx context.Context, accessToken, deltaLink string) ([]M
 	if err != nil {
 		return nil, nil, "", err
 	}
-	return fetchableEntries(entries), removedIDs(entries), next, nil
-}
-
-// removedIDs names the messages Graph tombstoned in this round.
-func removedIDs(entries []deltaEntry) []string {
-	var out []string
-	for _, e := range entries {
-		if e.removed {
-			out = append(out, e.id)
-		}
-	}
-	return out
+	// Folder tombstones include archive moves, which change even immutable ids.
+	// They cannot authorize irreversible deletion.
+	return fetchableEntries(entries), nil, next, nil
 }
 
 // deltaWalk follows a delta round from startURL through every nextLink until

@@ -4,6 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { currentMonth } from "../features/ai/aiusage";
 import { providerName } from "../format/connectorprovider";
 import { formatPercent } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -14,6 +15,7 @@ import { type CaptureProgress, liveCapture } from "../lib/capture-progress";
 import { serviceHealth } from "../lib/connector-status";
 import { useConnectors } from "../lib/connectors";
 import { type LicensePosture, useLicensePosture } from "../lib/license-posture";
+import { useViewerZone } from "../lib/viewerzone";
 
 // WHAT THE AGENT SECTION READS. The rail's row, the state it derives and the
 // panel beside it all stand on these answers and on nothing else: approvals
@@ -257,17 +259,24 @@ export function useAiSpend(): Spend {
   const admin = useHoldsAdminRole();
   const granted = useCan("ai_diagnostics", "read");
   const allowed = admin && granted;
+  // The reader's month, which is the month the usage screen names. Left to the
+  // server this reads the installation's UTC month, and the two surfaces
+  // disagree in the first hours of a month east of UTC. Read once, so the key
+  // and the request name the same month across a midnight between them.
+  const month = currentMonth(useViewerZone());
   // Under the "ai-usage" key, so whatever refreshes the usage view refreshes
   // this figure too.
   const summary = useQuery({
-    queryKey: ["ai-usage", "agentrail-month"],
+    queryKey: ["ai-usage", "agentrail-month", month.from, month.to],
     enabled: allowed,
     // The month's spend does not move between two page opens, and this read sits
     // in the chrome, so a short staleness would put a request behind every
     // navigation.
     staleTime: 5 * 60_000,
     queryFn: async () => {
-      const { data, error } = await api.GET("/ai/usage/summary");
+      const { data, error } = await api.GET("/ai/usage/summary", {
+        params: { query: { from: month.from, to: month.to } },
+      });
       if (error) {
         // Chrome must not take a page down over a reading: an unreadable figure
         // is a state this surface draws, not an error it throws.

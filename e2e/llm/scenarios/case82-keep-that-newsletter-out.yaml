@@ -1,0 +1,28 @@
+# CASE 82 — Keeping a domain out of the user's own capture runs through change_capture, at the user's scope. No company is rejected for it.
+name: case82_keep_that_newsletter_out
+criteria: [1]
+writes: true
+
+prompt: |
+  Mail from newsletter.branchenblatt.test keeps turning up in my CRM. Keep that domain out of my capture from now on.
+
+must_call:
+  - change_capture
+
+must_call_with:
+  - change_capture.action=add_exclusion|change_capture.action=discard_domain
+
+must_call_matching:
+  - change_capture~newsletter\.branchenblatt\.test
+
+must_not_call_with:
+  - change_capture~set_blocked_domain
+  - archive_record~.
+  - update_record~.
+
+may_call:
+  - read_workspace
+  - whoami
+
+runs: 3
+pass_at: 2

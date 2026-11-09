@@ -39,19 +39,8 @@ expect:
   answer:
     - verdict: settled
     - verdict: settled
-  rubric: >
-    Both are settled, by the two different routes that are not delivery.
-    The first declines and hands the ask to a named colleague. We are not doing
-    what was asked and we never will, and that is precisely why nothing is
-    outstanding on our side — a reader told they still owe this panel a speaker
-    has been told something false.
-    The second delivers: the accesses are created and the mail is sent, in the
-    same reply.
-    Score at the floor if either is judged still_owed. Reading a decline as an
-    outstanding obligation is the failure that matters most here, because it
-    keeps a task alive for work that will never be done and can never be
-    completed by doing it.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The answer is one closed verdict per conversation, and the check fails any
+    other verdict. The rubric only said both are settled and that still_owed,
+    the reading of a decline this case exists to catch, scores at the floor.

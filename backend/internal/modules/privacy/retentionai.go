@@ -76,6 +76,9 @@ func (s *RetentionService) eraseVoiceSignalContent(ctx context.Context, id ids.U
 		if err != nil {
 			return err
 		}
+		if err := storekit.RedactAuditHistory(ctx, tx, auditID); err != nil {
+			return err
+		}
 		return storekit.EmitEventForEntity(ctx, tx, auditID, "voice_learning_signal", id, retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, nil))
 	})
 }
@@ -146,6 +149,9 @@ func (s *RetentionService) eraseEmbedCall(ctx context.Context, id ids.UUID) erro
 			evidenceKeyRetentionAction: actionErase, "retain_days": embedCallRetention,
 		})
 		if err != nil {
+			return err
+		}
+		if err := storekit.RedactAuditHistory(ctx, tx, auditID); err != nil {
 			return err
 		}
 		return storekit.EmitEventForEntity(ctx, tx, auditID, "ai_call", id, retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, nil))

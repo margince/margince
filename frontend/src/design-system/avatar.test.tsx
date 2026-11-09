@@ -41,6 +41,18 @@ describe("Avatar", () => {
     expect(screen.getByText("VS")).toBeTruthy();
   });
 
+  // A seat with no picture yet looks as a contact without one does.
+  it("waits for a seat's picture on the mesh, and drops it once painted", () => {
+    const { container } = render(
+      <Avatar name="Lena Hoffmann" identity="seat-1" photo={LOGO} />,
+    );
+    expect(meshOf(container)).toContain("--avatar-hue-a");
+    const img = document.querySelector("img");
+    if (img) fireEvent.load(img);
+    expect(meshOf(container)).toBeUndefined();
+    expect(chipOf(container)).toContain("avatar-photo");
+  });
+
   it("falls back to the monogram when the logo fails to load", () => {
     render(<Avatar name="Voltaq Systems" identity={ID} src={LOGO} />);
     const img = document.querySelector("img");

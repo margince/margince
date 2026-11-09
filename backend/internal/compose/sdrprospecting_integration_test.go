@@ -75,7 +75,7 @@ func (f *sdrFixture) returned(ctx context.Context, t *testing.T, owner ids.UUID)
 func (f *sdrFixture) logMeeting(t *testing.T, name string, start time.Time, status string) ids.UUID {
 	t.Helper()
 	clock := func() time.Time { return f.at }
-	customer, err := contacts.NewStore(InstallationDB(f.e.Pool)).WithClock(clock).CreateContact(f.ctx, contacts.CreateContactInput{FullName: name, Source: "manual"})
+	customer, err := contacts.NewStore(InstallationDB(f.e.Pool)).SetClock(clock).CreateContact(f.ctx, contacts.CreateContactInput{FullName: name, Source: "manual"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +87,28 @@ func (f *sdrFixture) logMeeting(t *testing.T, name string, start time.Time, stat
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The window bounds creation by the answer's clock, which here is the fixture's.
+	if _, err := f.e.Pool.Exec(context.Background(), `UPDATE activity SET created_at=$2 WHERE id=$1`, meeting.Id, f.at); err != nil {
+		t.Fatal(err)
+	}
 	return ids.UUID(meeting.Id)
+}
+
+// A meeting booked after the instant asked for did not exist at that instant,
+// though it starts inside the window.
+func TestSdrUpcomingMeetingsLeaveOutOneBookedAfterAsOf(t *testing.T) {
+	f := newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSales)
+	asked := f.at
+	f.at = f.at.Add(time.Hour)
+	f.logMeeting(t, "Booked later", asked.Add(24*time.Hour), "booked")
+	f.at = asked
+	if got := f.summary(f.ctx, t, f.e.Rep1).UpcomingMeetings; got == nil || *got != 0 {
+		t.Fatalf("a meeting booked after as_of is counted: %v", got)
+	}
+	f.at = asked.Add(2 * time.Hour)
+	if got := f.summary(f.ctx, t, f.e.Rep1).UpcomingMeetings; got == nil || *got != 1 {
+		t.Fatalf("a meeting booked before as_of is left out: %v", got)
+	}
 }
 
 // Meetings on each side of both edges of the window. Only those that have not

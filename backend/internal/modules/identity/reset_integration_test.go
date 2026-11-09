@@ -298,7 +298,8 @@ func TestPasswordResetSupersedesAndExpires(t *testing.T) {
 	//craft:ignore swallowed-errors error-path safety net only — the Commit below is asserted, after which this rollback is a designed no-op
 	defer func() { _ = expireTx.Rollback(context.Background()) }()
 	tag, err := expireTx.Exec(context.Background(),
-		`UPDATE auth_token SET expires_at = now() - interval '1 minute'
+		`UPDATE auth_token SET created_at = now() - interval '2 minutes',
+		                      expires_at = now() - interval '1 minute'
 		 WHERE user_id = $1 AND used_at IS NULL`, e.member.UserID)
 	if err != nil {
 		t.Fatal(err)

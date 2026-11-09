@@ -11,17 +11,18 @@ package gates
 // and not the other fails here.
 
 import (
-	"os"
 	"regexp"
 	"strconv"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const meetingSettingsSections = "../frontend/src/features/booking/meeting-link-drawer.tsx"
 
 func TestTheMeetingSettingsScreenStopsTextAtTheContractsLengths(t *testing.T) {
 	t.Parallel()
-	source, err := os.ReadFile(meetingSettingsSections)
+	source, err := gatekit.ReadFile(meetingSettingsSections)
 	if err != nil {
 		t.Fatalf("reading the meeting link drawer: %v", err)
 	}

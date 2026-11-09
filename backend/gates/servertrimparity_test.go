@@ -43,6 +43,8 @@ import (
 	"strings"
 	"testing"
 	"unicode"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 var updateServerTrim = flag.Bool("update-server-trim", false,
@@ -126,7 +128,7 @@ func TestTheServerTrimCorpusIsWhatGoAnswers(t *testing.T) {
 		return
 	}
 
-	committed, err := os.ReadFile(serverTrimCorpus)
+	committed, err := gatekit.ReadFile(serverTrimCorpus)
 	if err != nil {
 		t.Fatalf("reading %s: %v — regenerate it with -update-server-trim", serverTrimCorpus, err)
 	}
@@ -149,7 +151,7 @@ func TestTheServerTrimCorpusIsWhatGoAnswers(t *testing.T) {
 // without failing.
 func TestTheServerTrimCorpusReachesEveryCharacterGoCallsASpace(t *testing.T) {
 	t.Parallel()
-	committed, err := os.ReadFile(serverTrimCorpus)
+	committed, err := gatekit.ReadFile(serverTrimCorpus)
 	if err != nil {
 		t.Fatalf("reading %s: %v", serverTrimCorpus, err)
 	}

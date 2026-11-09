@@ -14,6 +14,7 @@ import {
   useDedupeDisposition,
   useDedupeUndo,
 } from "../lib/dedupe.queries";
+import { labelFor } from "../lib/labelfor";
 import type { ContactCase, ContactCaseMember } from "./contactcase.queries";
 
 type Edge = components["schemas"]["ContactCaseEdge"];
@@ -88,7 +89,7 @@ export function PairActions({
       onStale();
       return;
     }
-    toast.show(t(FAILURE_MESSAGES[failure]), {
+    toast.show(t(labelFor(FAILURE_MESSAGES, failure)), {
       tone: "danger",
       sticky: failure === "refused",
     });

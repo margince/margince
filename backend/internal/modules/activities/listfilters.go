@@ -7,6 +7,7 @@ import (
 	"errors"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -17,6 +18,7 @@ import (
 const (
 	filterKind             = "kind"
 	filterChannelProvider  = "channel_provider"
+	filterCallOutcome      = "call_outcome"
 	filterEntityType       = "entity_type"
 	filterEntityID         = "entity_id"
 	filterAssigneeID       = "assignee_id"
@@ -34,7 +36,16 @@ const (
 var activityListFilters = storekit.FilterSet[ListActivitiesInput]{
 	filterKind:            storekit.FilterWord(func(in *ListActivitiesInput, v *string) { in.Kind = v }),
 	filterChannelProvider: storekit.FilterWord(func(in *ListActivitiesInput, v *string) { in.ChannelProvider = v }),
-	filterEntityType:      storekit.FilterWord(func(in *ListActivitiesInput, v *string) { in.EntityType = v }),
+	// Checked against the contract's list here: a typo would otherwise answer
+	// an empty list, which reads as "no such calls".
+	filterCallOutcome: func(in *ListActivitiesInput, value string) error {
+		if !crmcontracts.ListActivitiesParamsCallOutcome(value).Valid() {
+			return errors.New("takes one of reached, not_reached, voicemail, call_back_later, put_through")
+		}
+		in.CallOutcome = &value
+		return nil
+	},
+	filterEntityType: storekit.FilterWord(func(in *ListActivitiesInput, v *string) { in.EntityType = v }),
 	// The polymorphic activity_link target, so the id stays untyped: the paired
 	// entity_type names it.
 	filterEntityID: func(in *ListActivitiesInput, value string) error {
@@ -70,10 +81,11 @@ func instantFilter(set func(*ListActivitiesInput, *time.Time)) storekit.FilterBi
 	}
 }
 
-// ListFilters names what the timeline can be narrowed by on the seam.
+// ListFilters names what the timeline can be narrowed by on the seam. The cf_
+// prefix says SearchEntity binds custom-field keys too, as the route does.
 func (p *Provider) ListFilters(t datasource.EntityType) []string {
 	if t != datasource.EntityActivity {
 		return nil
 	}
-	return activityListFilters.Names()
+	return append(activityListFilters.Names(), datasource.CustomFieldPrefix)
 }

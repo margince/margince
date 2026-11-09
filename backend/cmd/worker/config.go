@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/dbsettings"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
@@ -26,11 +27,13 @@ import (
 
 // workerConfig is the parsed boot configuration of the worker process.
 type workerConfig struct {
-	dataTasksPace time.Duration
-	dsn           string
-	publicBaseURL string
-	listsEnabled  bool
-	captureConfig compose.CaptureConfig
+	dataTasksPace       time.Duration
+	databaseConnections int
+	databaseCache       int
+	dsn                 string
+	publicBaseURL       string
+	listsEnabled        bool
+	captureConfig       compose.CaptureConfig
 	// allowDataReset is operations.allow_data_reset: whether this installation
 	// armed the destructive reset at all. The worker's only stake is the cache
 	// flush it subscribes to, which exists solely to serve that reset — so an
@@ -127,9 +130,11 @@ func checkWorkerConfig(args, environ []string, stdout io.Writer) (bool, error) {
 // cmd/worker reads.
 func fromRegistry(loaded *config.Config, posture runtimeenv.Environment) workerConfig {
 	return workerConfig{
-		dsn:           config.Val(loaded, dbsettings.DSN),
-		publicBaseURL: config.Val(loaded, ps.PublicBaseURL),
-		redisAddr:     config.Val(loaded, ps.Redis), redisPassword: config.Val(loaded, ps.RedisPassword),
+		databaseConnections: config.Val(loaded, ps.WorkerDatabaseConnections),
+		databaseCache:       config.Val(loaded, ps.WorkerDatabaseCache),
+		dsn:                 config.Val(loaded, dbsettings.DSN),
+		publicBaseURL:       config.Val(loaded, ps.PublicBaseURL),
+		redisAddr:           config.Val(loaded, ps.Redis), redisPassword: config.Val(loaded, ps.RedisPassword),
 		routingPath: config.Val(loaded, ps.AIRouting), fakeBrain: config.Val(loaded, ps.AIFake),
 		gmailClientID: config.Val(loaded, ps.GmailClientID), gmailClientSecret: config.Val(loaded, ps.GmailClientSecret),
 		graphClientID: config.Val(loaded, ps.GraphClientID), graphClientSecret: config.Val(loaded, ps.GraphClientSecret),
@@ -153,6 +158,12 @@ func fromRegistry(loaded *config.Config, posture runtimeenv.Environment) workerC
 func workerFaults(c *config.Config, posture runtimeenv.Environment) []error {
 	var faults []error
 	for _, err := range []error{dbsettings.Require(c), ps.ObserveFault(c), ps.FakeModelFault(c, posture)} {
+		if err != nil {
+			faults = append(faults, err)
+		}
+	}
+	if dsn := config.Val(c, dbsettings.DSN); dsn != "" {
+		_, err := database.WorkerPoolConfig(dsn, compose.WorkerQueueConcurrency(), config.Val(c, ps.WorkerDatabaseConnections), config.Val(c, ps.WorkerDatabaseCache))
 		if err != nil {
 			faults = append(faults, err)
 		}

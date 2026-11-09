@@ -5,7 +5,7 @@ description: >-
 
 outputs:
   key:
-    description: The primary key, ending in the commit SHA so every run saves its refreshed cache.
+    description: The primary key, ending in the commit SHA so cache-warm can save a new entry for each main commit.
     value: ${{ steps.key.outputs.key }}
   restore-keys:
     description: The prefix that matches the newest entry with the same dependencies and lint config.
@@ -17,11 +17,13 @@ runs:
     # A toolchain, dependency or lint-config change shifts the prefix and starts
     # clean. The golangci version pin is not in the key: golangci versions its
     # cache entries itself, and hashing the whole Makefile went cold on every edit.
+    # The CI image checks out at another path, and golangci partitions its cache
+    # by that path, so a job in the image keeps entries of its own.
     - name: Compute the golangci cache key
       id: key
       shell: bash
       run: |
-        prefix="golangci-analysis-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('backend/go.mod', 'backend/go.sum', 'backend/.golangci.yml', 'backend/.golangci.strict.yml') }}"
+        prefix="golangci-analysis-${MARGINCE_CI_IMAGE:+in-image-}${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('backend/go.mod', 'backend/go.sum', 'backend/.golangci.yml', 'backend/.golangci.strict.yml') }}"
         {
           echo "key=$prefix-${{ github.sha }}"
           echo "restore-keys=$prefix-"

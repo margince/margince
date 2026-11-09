@@ -48,9 +48,10 @@ func TestTroubledRunsCarriesFailedAndBlockedAcrossLiveRulesOnly(t *testing.T) {
 	if len(troubled) != 2 {
 		t.Fatalf("TroubledRuns = %+v, want exactly the live rule's failed and blocked firings", troubled)
 	}
-	outcomes := map[string]string{}
+	outcomes, codes := map[string]string{}, map[string]string{}
 	for _, run := range troubled {
 		outcomes[run.Outcome] = stringOrEmpty(run.Reason)
+		codes[run.Outcome] = run.ReasonCode
 		if run.Name != "stage_change_create_task" {
 			t.Errorf("run names rule %q, want the automation's own name", run.Name)
 		}
@@ -63,6 +64,9 @@ func TestTroubledRunsCarriesFailedAndBlockedAcrossLiveRulesOnly(t *testing.T) {
 	}
 	if outcomes["failed"] != "provider error" || outcomes["blocked"] != "approval rejected" {
 		t.Fatalf("outcomes = %v, want failed/blocked with the engine's own reasons", outcomes)
+	}
+	if codes["failed"] != RunReasonNotCompleted || codes["blocked"] != RunReasonBlocked {
+		t.Fatalf("reason codes = %v, want each run's code read from its stored reason", codes)
 	}
 
 	// The window is real: a read opening after every firing carries nothing.

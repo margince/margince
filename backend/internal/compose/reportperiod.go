@@ -367,6 +367,7 @@ func winLossSpec() reportSpec {
 			fieldAmountBaseMinor: wonSalesValueSQL(reportAsOfToken, reportBaseCurrencyToken, "t"),
 			fieldDaysToClose:     daysToCloseExpr,
 		},
+		sumCoverage:    baseMoneyCoverage(fieldAmountBaseMinor),
 		nativeMeasures: nativeMoney(fieldAmountMinor),
 		// Every dimension also filters (REPORT-VOCAB-1): the period grains
 		// included, so "won deals in 2026" is one call rather than a group-by

@@ -49,9 +49,15 @@ const participantStandsRule = "ParticipantStandsSQL"
 // "package-dir:FuncName". Every entry says why a guessed owner cannot matter
 // there; an entry whose declaration stops reading the table fails as stale.
 var presenceReadsAdmitted = gatekit.Waive(map[string]string{
+	"internal/modules/activities:participantCandidatesSQL": "the participant backfill's batch: its NOT EXISTS asks " +
+		"whether an activity has any participant row, with no user_id test, so a guessed owner's row defers the " +
+		"activity until the guess is retired. The user_id it selects is the owner it writes. No presence is decided here",
 	"internal/modules/activities:RetireGuessedMailboxSeatsTx": "the repair that takes guessed mailbox owners off an " +
 		"activity. It is the one reader whose subject is the rows the rule distrusts, so composing the rule would make " +
 		"it skip every row it exists to remove and quietly repair nothing.",
+	"internal/modules/activities:MeetingCopyCarriedGuestsTx": "compares the survivor's guest rows a fold inserted with the copy's rows, column by " +
+		"column, to tell which rows the fold carried. It concludes nothing about a seat's presence, and a guessed owner " +
+		"row the fold copied is one the split must take back.",
 	"internal/modules/activities:TurnBackColleagueCopyTx": "undoes a stamp this code made, keyed on sent_by_colleague " +
 		"and the stamp's own address rather than on a participant row standing. Only the stamp writes that state, so a " +
 		"guessed owner cannot put a row into it.",

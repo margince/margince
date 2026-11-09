@@ -66,6 +66,7 @@ const OPEN_TASKS = {
       is_done: false,
       version: 2,
       occurred_at: "2026-10-01T09:00:00Z",
+      due_at: "2026-11-04T16:00:00Z",
     },
     {
       id: "t-device",
@@ -208,6 +209,8 @@ const lostWithTasks = advance({
 async function askedAboutTheTasks() {
   const dialog = within(await screen.findByRole("dialog"));
   await dialog.findByText("Send the final invoice");
+  await dialog.findByText(/^Due \S/);
+  await dialog.findByText("No due date");
   await dialog.findByRole("radio", { name: /Complete all/ });
 }
 

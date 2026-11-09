@@ -3,6 +3,7 @@ import { Badge } from "../../design-system/atoms";
 import { LEAD_STATUS_LABEL } from "../../format/leadstatus";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { isOpenStatus } from "./leadpresentation.board";
 
 export {
@@ -22,14 +23,14 @@ type StatusOption = Readonly<{ value: Lead["status"]; label: MessageKey }>;
 
 export const LEAD_STATUS_FILTER_OPTIONS: readonly StatusOption[] = (
   ["new", "contacted", "engaged", "promoted", "disqualified"] as const
-).map((value) => ({ value, label: LEAD_STATUS_LABEL[value] }));
+).map((value) => ({ value, label: labelFor(LEAD_STATUS_LABEL, value) }));
 
 /**
  * The catalogue key for a status, shared by the badge and the readings strip,
  * so one lead cannot read "Qualified" in a pill and "promoted" beside it.
  */
 export function leadStatusLabel(status: Lead["status"]): MessageKey {
-  return LEAD_STATUS_LABEL[status];
+  return labelFor(LEAD_STATUS_LABEL, status);
 }
 
 // The ladder's colours: a new lead is quiet, contact is in motion, engaged

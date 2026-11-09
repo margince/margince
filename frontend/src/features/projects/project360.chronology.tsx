@@ -13,7 +13,7 @@ import { TimelineFilterBar } from "../../design-system/timelinefilterbar";
 import { groupChronology } from "../../design-system/timelinegroups";
 import { useLocale, useT } from "../../i18n";
 import { useOpenEmail } from "../../lib/openemail";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import {
   ChronologyFilter,
@@ -42,7 +42,7 @@ export function ProjectHistory({
   view,
   kind,
 }: Readonly<{ view: Project360; kind?: ActivityKind }>) {
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const story = useProjectChronology(view, kind);
   return (
     <RecordStory
@@ -51,7 +51,7 @@ export function ProjectHistory({
       timelineHeader={story.timelineHeader}
       timelineFooter={story.timelineFooter}
       timelineNotice={story.timelineNotice}
-      zone={recordZone}
+      zone={readerZone}
     />
   );
 }
@@ -68,7 +68,7 @@ function useProjectChronology(
 ): ChronologySlots {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const [filter, setFilter] = useChronologyFilter(view.project.id);
   const activities = view.activities;
   const activitiesState = sectionState(
@@ -99,7 +99,7 @@ function useProjectChronology(
     // What a stored value needs to be read as what it means. This record holds
     // no money of its own, so the currency is absent, and a minor-unit column
     // says so rather than printing a bare integer.
-    values: { currency: null, locale, zone: recordZone },
+    values: { currency: null, locale, zone: readerZone },
     renderActions: (activity) => (
       <TimelineActions
         activity={activity}
@@ -142,7 +142,7 @@ function useProjectChronology(
         {/* One drawer over the project, beside the chronology it opens from. */}
         <OpenEmailDrawer
           activityId={openEmail}
-          zone={recordZone}
+          zone={readerZone}
           onClose={() => setOpenEmail(null)}
         />
       </>

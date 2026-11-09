@@ -12,6 +12,9 @@ package capture
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"io"
 	"log/slog"
 	"strconv"
@@ -25,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -141,10 +145,28 @@ func seedParkedSenders(t *testing.T, env captureEnv) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	// The offer is staged by the verdict engine's own sweep, as in production.
-	engine := compose.NewCounterpartyVerdictEngine(e.Pool, nil, compose.CaptureConfig{}, quietLog())
-	if err := engine.StageReviewsWorkspace(wsCtx, 0); err != nil {
-		t.Fatalf("staging the review offers: %v", err)
+
+	rows, err := store.AwaitingReview(wsCtx, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range rows {
+		if row.Email != "offered@stranger.example" {
+			continue
+		}
+		body, err := json.Marshal(approvalsubject.Counterparty{DispositionID: row.ID, Email: row.Email, DisplayName: row.DisplayName, Domain: row.Domain, OwnerID: row.OwnerID, ActivityID: row.ActivityID})
+		if err != nil {
+			t.Fatal(err)
+		}
+		digest := sha256.Sum256(body)
+		acting := principal.WithCorrelationID(e.Admin(), ids.NewV7())
+		offer, err := approvals.NewService(e.DB()).Stage(acting, approvals.StageInput{Kind: "capture_counterparty", ProposedChange: body, DiffHash: hex.EncodeToString(digest[:]), TargetType: "activity", TargetID: row.ActivityID, Summary: "Legacy sender review"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := store.LinkProposal(acting, row.ID, offer.UUID); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	// A human rejects one: the ledger row leaves `unsure` through the real writer.

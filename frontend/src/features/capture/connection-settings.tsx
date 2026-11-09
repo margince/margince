@@ -16,12 +16,14 @@ import { Switch } from "../../design-system/switch";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { throwProblem } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
 import { ConnectorContextTagRow } from "./connectors.contexttag";
 import { HistoryBaselineRow } from "./connectors.historybaseline";
 import { useHeldThreads } from "./held-threads";
+import { heldTotal } from "./held-threads.counts";
 
 // The standing decisions about one connected mailbox, drawn under its account
 // on Connections. They cover who may read what it brings in, where its held
@@ -106,7 +108,8 @@ function HeldPointerRow() {
   const plural = usePlural();
   const { locale } = useLocale();
   const held = useHeldThreads();
-  const count = held.data?.data.length ?? null;
+  const first = held.data?.pages[0];
+  const count = first ? heldTotal(first) : null;
   let description = t("connectors.heldPointer.unknown");
   if (count === 0) {
     description = t("connectors.heldPointer.none");
@@ -123,7 +126,7 @@ function HeldPointerRow() {
       control={
         <Button
           variant="link"
-          onClick={() => navigate(settingsHref("capture-activity"))}
+          onClick={() => navigate(settingsHref("connections", "activity"))}
         >
           {t("connectors.heldPointer.review")}
           <ArrowRight aria-hidden="true" />
@@ -189,7 +192,7 @@ function MailPostureRow({ conn }: Readonly<{ conn: CaptureConnection }>) {
     },
     discard,
   });
-  const help = t(postureHelp[shown]);
+  const help = t(labelFor(postureHelp, shown));
 
   return (
     <>

@@ -109,7 +109,7 @@ function mount(answers: Answers) {
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <AgentRail route={{ screen: "deals" }} />
+        <AgentRail />
       </LocaleProvider>
     </QueryClientProvider>,
   );
