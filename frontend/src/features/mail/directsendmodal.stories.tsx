@@ -14,7 +14,14 @@ const review: components["schemas"]["CommunicationReview"] = {
   state: "needs_repair",
   kind: "single",
   reason_code: "no_marketing_consent",
-  refusals: [],
+  refusals: [
+    {
+      address: "alex@example.test",
+      reason_code: "no_compatible_evidence",
+      category: "requested_followup",
+      sending_entity_name: "Example Company",
+    },
+  ],
   warning: {
     version: "override-v2",
     text:

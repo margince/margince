@@ -52,9 +52,9 @@ its **proof**, and records a **decision** per recipient:
   ends by itself, and no mode turns either one off.
 - **A user may override a refused send.** The override stands separate from consent.
   `communication_override` (`consent.Allow`) records a standing statement per category. It says a
-  refusal by the machine for want of proof may be set to one side for one contact. It covers the category
-  the engine gave the send, and only that one. So an override for `marketing` says nothing about
-  `customer_service`.
+  refusal by the machine for want of proof may be set to one side for one contact. It covers one
+  category and the sending company stamped on the record. An older row with no company gains none
+  from the reader. It grants no consent; each message still gets its own check.
 
   It turns nothing absolute. `Decision.CanBeOverruledByCategory` asks the question only for a
   reading by the machine that is not absolute and that has a category. The `absoluteDenials` below
@@ -65,12 +65,10 @@ its **proof**, and records a **decision** per recipient:
   absolute, but the request named a purpose key the engine does not know. So there is no category,
   and an override per category has nothing to answer. The fix there is to send again with a purpose the engine knows.
 
-  The user must write a reason. A stop may pass on a phone call alone, but an override is the user's own
-  call, and the record must say why. Only a caller whose authority level `CanRevoke` the level the
-  override holds may revoke it (`consent.RevokeOverride`). That is `CanOverrule` plus one step,
-  because no human authority sits above admin. Without it, an override an admin recorded would have no
-  seat that could take it back. `lift.go` keeps the `CanOverrule` test, which asks for more, for a stop, where not
-  sending is the safe side.
+  The user must write a reason. The contact's consent panel lists live standing exceptions, their
+  category, sending company, first author and date. An admin with access to change that contact can
+  revoke one with a reason (`consent.RevokeOverride`). The list uses the writer's own authority check
+  for each action. The list is paged, so older exceptions stay in reach.
 
   An override lives on through a merge, on the contact that is kept (`consent.CarryOverridesTx`). It
   keeps its first `decided_by_level` and its reason, so a merge cannot drop its authority
@@ -153,6 +151,9 @@ of the message. A review can be read by the user who started it, or by a user wh
 `communication_exception:read`. Any other user gets 404, not 403. The fact that a refused message
 about a named subject exists is itself something to keep private. A principal that is neither a user
 nor a user's agent is refused before the query runs.
+
+The exception dialog shows each refused address, its purpose, company and reason. A new review or
+warning version starts with no check in the box that asks the user to take responsibility.
 
 **An instruction overrides one refusal, by name.** It is a named user sending one refused message all
 the same. At times the installation has a reason the engine cannot see. It may be a contract clause, a legal

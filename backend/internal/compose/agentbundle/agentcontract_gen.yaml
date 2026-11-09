@@ -17924,6 +17924,28 @@ paths:
   /contacts/{id}/consent/allow:
     parameters:
       - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Compliance]
+      operationId: listContactOverrides
+      security: [{bearerAuth: []}]
+      summary: List the contact's standing exceptions and their exact scope.
+      description: |-
+        Live standing exceptions, newest saved or carried record first. Each names its message category and sending
+        company. These records grant no marketing consent. Every message is checked separately.
+        An older record with no sending company is shown without inferring one.
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: The live standing exceptions and their scope.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/StandingOverridesPage'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
     post:
       tags: [Compliance]
       operationId: allowContact
@@ -49495,6 +49517,9 @@ components:
         subject_id: {type: string, format: uuid}
         reason_code: {type: string}
         category: {type: string}
+        sending_entity_id: {type: string, format: uuid}
+        sending_entity_name: {type: string}
+        requested_category: {type: string}
     CommunicationReview:
       type: object
       description: |-
@@ -51397,6 +51422,28 @@ components:
             again. `restriction`: lifting it owes the contact notice first, which Margince cannot
             send yet. `subject_decision`: the contact set it and only they change it. `level`: it
             was recorded at your level or above. Null when `may_lift` is true.
+    StandingOverride:
+      type: object
+      description: A recorded exception for one contact, message category and sending company.
+      required: [override_id, category, reason, authority, recorded_at, may_revoke]
+      properties:
+        override_id: {type: string, format: uuid}
+        category:
+          type: string
+          description: The message category recorded by the exception; an older category is not a new permission.
+        reason: {type: string}
+        authority: {type: string}
+        recorded_at: {type: string, format: date-time}
+        recorded_by_name: {type: [string, 'null']}
+        sending_entity_id: {type: [string, 'null'], format: uuid}
+        sending_entity_name: {type: [string, 'null']}
+        may_revoke: {type: boolean}
+    StandingOverridesPage:
+      type: object
+      required: [data, page]
+      properties:
+        data: {type: array, items: {$ref: '#/components/schemas/StandingOverride'}}
+        page: {$ref: '#/components/schemas/PageInfo'}
     RecordedOverride:
       type: object
       description: >-

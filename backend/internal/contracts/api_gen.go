@@ -57866,11 +57866,14 @@ type RefreshAcceptedStatus string
 // reason code without one says a message was refused and not who for, which is the question
 // the rep is actually asking — and it is why an erasure clears this list.
 type RefusedRecipient struct {
-	Address     string                       `json:"address"`
-	Category    *string                      `json:"category,omitempty"`
-	ReasonCode  string                       `json:"reason_code"`
-	SubjectId   *openapi_types.UUID          `json:"subject_id,omitempty"`
-	SubjectKind *RefusedRecipientSubjectKind `json:"subject_kind,omitempty"`
+	Address           string                       `json:"address"`
+	Category          *string                      `json:"category,omitempty"`
+	ReasonCode        string                       `json:"reason_code"`
+	RequestedCategory *string                      `json:"requested_category,omitempty"`
+	SendingEntityId   *openapi_types.UUID          `json:"sending_entity_id,omitempty"`
+	SendingEntityName *string                      `json:"sending_entity_name,omitempty"`
+	SubjectId         *openapi_types.UUID          `json:"subject_id,omitempty"`
+	SubjectKind       *RefusedRecipientSubjectKind `json:"subject_kind,omitempty"`
 }
 
 // RefusedRecipientSubjectKind defines model for RefusedRecipient.SubjectKind.
@@ -62601,6 +62604,27 @@ type StageTransitionRecord struct {
 
 	// UnsafeRate The safety number, held to a ceiling rather than a floor.
 	UnsafeRate float64 `json:"unsafe_rate" maximum:"1" minimum:"0"`
+}
+
+// StandingOverride A recorded exception for one contact, message category and sending company.
+type StandingOverride struct {
+	Authority string `json:"authority"`
+
+	// Category The message category recorded by the exception; an older category is not a new permission.
+	Category          string              `json:"category"`
+	MayRevoke         bool                `json:"may_revoke"`
+	OverrideId        openapi_types.UUID  `json:"override_id"`
+	Reason            string              `json:"reason"`
+	RecordedAt        time.Time           `json:"recorded_at"`
+	RecordedByName    *string             `json:"recorded_by_name,omitempty"`
+	SendingEntityId   *openapi_types.UUID `json:"sending_entity_id,omitempty"`
+	SendingEntityName *string             `json:"sending_entity_name,omitempty"`
+}
+
+// StandingOverridesPage defines model for StandingOverridesPage.
+type StandingOverridesPage struct {
+	Data []StandingOverride `json:"data"`
+	Page PageInfo           `json:"page"`
 }
 
 // StartBackfillRequest defines model for StartBackfillRequest.
@@ -71511,6 +71535,22 @@ type RecordConsentParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// ListContactOverridesParams defines parameters for ListContactOverrides.
+type ListContactOverridesParams struct {
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
+
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // AllowContactJSONBody defines parameters for AllowContact.
@@ -91878,6 +91918,9 @@ type ServerInterface interface {
 	// Grant or withdraw consent for one purpose — writes an append-only proof row.
 	// (POST /contacts/{id}/consent)
 	RecordConsent(w http.ResponseWriter, r *http.Request, id Id, params RecordConsentParams)
+	// List the contact's standing exceptions and their exact scope.
+	// (GET /contacts/{id}/consent/allow)
+	ListContactOverrides(w http.ResponseWriter, r *http.Request, id Id, params ListContactOverridesParams)
 	// Record a standing vouch that a machine-level refusal for one category may be overruled.
 	// (POST /contacts/{id}/consent/allow)
 	AllowContact(w http.ResponseWriter, r *http.Request, id Id)
@@ -96138,6 +96181,12 @@ func (_ Unimplemented) GetContactConsent(w http.ResponseWriter, r *http.Request,
 // Grant or withdraw consent for one purpose — writes an append-only proof row.
 // (POST /contacts/{id}/consent)
 func (_ Unimplemented) RecordConsent(w http.ResponseWriter, r *http.Request, id Id, params RecordConsentParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the contact's standing exceptions and their exact scope.
+// (GET /contacts/{id}/consent/allow)
+func (_ Unimplemented) ListContactOverrides(w http.ResponseWriter, r *http.Request, id Id, params ListContactOverridesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -117239,6 +117288,69 @@ func (siw *ServerInterfaceWrapper) RecordConsent(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RecordConsent(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListContactOverrides operation middleware
+func (siw *ServerInterfaceWrapper) ListContactOverrides(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListContactOverridesParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListContactOverrides(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -147232,6 +147344,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/consent", wrapper.RecordConsent)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/contacts/{id}/consent/allow", wrapper.ListContactOverrides)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/consent/allow", wrapper.AllowContact)

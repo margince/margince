@@ -3448,6 +3448,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Các thư sẽ không còn dựa vào yêu cầu này, kể cả thư đã xếp hàng chờ gửi. Yêu cầu vẫn nằm trong hồ sơ ở trạng thái đã rút lại và không thể khôi phục.",
   "consent.acquisitionRequest":
     "Khi được thêm vào, liên hệ này đã yêu cầu báo giá hoặc cuộc hẹn, hoặc đã đồng ý trực tiếp để nhận thư.",
+  "consent.exceptionsTitle": "Ngoại lệ thường trực",
+  "consent.exceptionsScope":
+    "Mỗi ngoại lệ áp dụng cho một mục đích và một công ty gửi. Ngoại lệ không cấp sự đồng ý nhận quảng cáo. Mỗi thư đều được kiểm tra lại.",
+  "consent.exceptionOtherPurpose": "Mục đích khác đã ghi nhận",
+  "consent.exceptionCompany": "Công ty gửi: {name}",
+  "consent.exceptionUnknownCompany": "Chưa ghi nhận công ty gửi.",
+  "consent.exceptionRevoke": "Thu hồi ngoại lệ",
+  "consent.exceptionRevokeBody":
+    "Các thư sau không thể dùng ngoại lệ này. Hồ sơ đồng ý và yêu cầu của liên hệ vẫn được giữ nguyên.",
   "consent.stopsTitle": "Lệnh dừng",
   "consent.stopKind.subject_request": "Đã yêu cầu ngừng liên hệ",
   "consent.stopKind.marketing_objection": "Đã phản đối tiếp thị",

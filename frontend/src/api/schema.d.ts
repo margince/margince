@@ -17459,7 +17459,16 @@ export interface paths {
             };
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List the contact's standing exceptions and their exact scope.
+         * @description Live standing exceptions, newest saved or carried record first. Each names its message category and sending
+         *     company. These records grant no marketing consent. Every message is checked separately.
+         *     An older record with no sending company is shown without inferring one.
+         *
+         *     `may_revoke` uses the same authority and record-access checks as `revokeOverride`.
+         *     Revocation takes back that recorded exception and its carried copies, with a reason.
+         */
+        get: operations["listContactOverrides"];
         put?: never;
         /**
          * Record a standing vouch that a machine-level refusal for one category may be overruled.
@@ -51031,6 +51040,10 @@ export interface components {
             subject_id?: string;
             reason_code: string;
             category?: string;
+            /** Format: uuid */
+            sending_entity_id?: string;
+            sending_entity_name?: string;
+            requested_category?: string;
         };
         /**
          * @description What a refused send left behind. A SNAPSHOT of the engine's answer at the moment it was
@@ -53711,6 +53724,26 @@ export interface components {
              * @enum {string|null}
              */
             lift_blocked_by?: "address" | "restriction" | "subject_decision" | "level" | "permission" | null;
+        };
+        /** @description A recorded exception for one contact, message category and sending company. */
+        StandingOverride: {
+            /** Format: uuid */
+            override_id: string;
+            /** @description The message category recorded by the exception; an older category is not a new permission. */
+            category: string;
+            reason: string;
+            authority: string;
+            /** Format: date-time */
+            recorded_at: string;
+            recorded_by_name?: string | null;
+            /** Format: uuid */
+            sending_entity_id?: string | null;
+            sending_entity_name?: string | null;
+            may_revoke: boolean;
+        };
+        StandingOverridesPage: {
+            data: components["schemas"]["StandingOverride"][];
+            page: components["schemas"]["PageInfo"];
         };
         /** @description The standing override just recorded, by id. The category and reason are what the caller sent and the authority is their own session's, so the id is the one fact the caller could not have known — and the handle a later revoke takes. */
         RecordedOverride: {
@@ -85689,6 +85722,47 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listContactOverrides: {
+        parameters: {
+            query?: {
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
+                limit?: components["parameters"]["Limit"];
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The live standing exceptions and their scope. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StandingOverridesPage"];
+                };
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
