@@ -193,6 +193,21 @@ func TestAModelWrittenCitationOfOnePromiseNamesIt(t *testing.T) {
 	}
 }
 
+// A cut commitments page can hold one of a message's two promises, so a single
+// promise on it names nothing.
+func TestAPromiseOnACutPageDoesNotNameItsMessage(t *testing.T) {
+	in := Input{OpenCommitmentsCut: true, OpenCommitments: []CommitmentIn{
+		{ID: "c1", ActivityID: commitmentActivity, Claim: "Send the price list", Side: sideOurs},
+	}}
+	written := []Sentence{{
+		Text:     "They are waiting on the price list.",
+		Evidence: []Evidence{{EntityType: citeActivity, EntityID: commitmentActivity}},
+	}}
+	if got := withEvidenceNames(written, in)[0].Evidence[0].Name; got != "" {
+		t.Errorf("chip name = %q, want empty: the page may have cut a second promise", got)
+	}
+}
+
 func TestTheFloorNamesClaimHolderAndDateInEveryLanguage(t *testing.T) {
 	in := Input{OpenCommitments: []CommitmentIn{
 		{ID: "c1", ActivityID: commitmentActivity, Claim: "OURS-CLAIM", Side: sideOurs, Due: "2026-07-28T09:00:00Z"},

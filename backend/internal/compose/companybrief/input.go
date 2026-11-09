@@ -98,9 +98,12 @@ type Input struct {
 	// OpenWorkWithheld says the reader's scope hid some. Either way a list of
 	// open work is not the whole of it, and the answer must not read as if it
 	// were.
-	OpenWorkCapped   bool    `json:"open_work_capped,omitempty"`
-	OpenWorkWithheld bool    `json:"open_work_withheld,omitempty"`
-	Recent           []ActIn `json:"recent,omitempty"`
+	OpenWorkCapped bool `json:"open_work_capped,omitempty"`
+	// OpenCommitmentsCut says the commitments page was cut, which can split two
+	// promises of one message. Not for the prompt: OpenWorkCapped tells it.
+	OpenCommitmentsCut bool    `json:"-"`
+	OpenWorkWithheld   bool    `json:"open_work_withheld,omitempty"`
+	Recent             []ActIn `json:"recent,omitempty"`
 	// LastContact is the activity the page's "Last contact" tile names, nil
 	// when it names none. Tasks and notes can push it out of Recent, so it
 	// rides the fingerprint on its own. Two readers who see different activity

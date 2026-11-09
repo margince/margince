@@ -414,16 +414,15 @@ func recordNames(in Input) map[recordKey]string {
 	for _, task := range in.OpenTasks {
 		names[recordKey{citeActivity, task.ID}] = task.Name
 	}
-	// A commitment's message is named by the promise rather than the subject
-	// line. Two promises cannot both name one message, and a citation carries no
-	// claim to pick by, so neither does: its subject is true of both.
+	// A commitment's message is named by its promise. A citation cannot pick
+	// between two, and a cut page may hide a second. Then the subject stands.
 	claims := make(map[recordKey]int, len(in.OpenCommitments))
 	for _, commitment := range in.OpenCommitments {
 		claims[recordKey{citeActivity, commitment.ActivityID}]++
 	}
 	for _, commitment := range in.OpenCommitments {
 		key := recordKey{citeActivity, commitment.ActivityID}
-		if claims[key] == 1 {
+		if claims[key] == 1 && !in.OpenCommitmentsCut {
 			names[key] = commitment.Claim
 		}
 	}
