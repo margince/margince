@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -234,10 +235,31 @@ func projectsGoneQuietSpec() reportSpec {
 	}
 }
 
+// reportMoneyAggregateSQL renders one aggregate over a measure. Over a
+// converted amount it answers only what it can price.
+//
+// A sum keeps the total of what was priced. Every other function folds the rows
+// beneath it as each row reads, so a project with no deals counts as zero. A
+// group holding an unpriced amount then has no answer, and so does a function
+// added to the vocabulary later.
 func reportMoneyAggregateSQL(spec reportSpec, aggregate reportAggregate, expression string) string {
-	sum := fmt.Sprintf("%s(%s)", aggregate.Fn, expression)
-	if coverage, ok := spec.sumCoverage[aggregate.Field]; ok && aggregate.Fn == aggFnSum {
-		return deals.FinalizeBaseTotalSQL(sum, "sum("+coverage+")")
+	coverage, ok := spec.sumCoverage[aggregate.Field]
+	if !ok {
+		return aggregateOver(aggregate.Fn, expression)
 	}
-	return sum
+	unpriced := "sum(" + coverage + ")"
+	if aggregate.Fn == aggFnSum {
+		return deals.FinalizeBaseTotalSQL(aggregateOver(aggFnSum, expression), unpriced)
+	}
+	row := deals.FinalizeBaseTotalSQL(expression, coverage)
+	return deals.StrictBaseTotalSQL(aggregateOver(aggregate.Fn, row), unpriced)
+}
+
+// aggregateOver is one function over an expression. A percentile is rendered by
+// analyticsquery.PercentileExpr, which the typed query also renders it with.
+func aggregateOver(fn, expression string) string {
+	if fn == aggFnMedian || fn == aggFnP75 {
+		return analyticsquery.PercentileExpr(expression, analyticsquery.AggFn(fn))
+	}
+	return fmt.Sprintf("%s(%s)", fn, expression)
 }
