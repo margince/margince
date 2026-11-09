@@ -63,19 +63,11 @@ export function ChannelReplyAction(props: ReplyActionProps) {
   return <ReplyAction {...props} />;
 }
 
-// The reply affordance for ONE captured conversation, on its own so the two
-// surfaces that offer it cannot come to offer different things.
+// The reply affordance for one conversation, shared so two surfaces cannot
+// drift. The conversation-memory card wants it without Relink.
 //
-// It exists as a separate export because the conversation-memory card wants
-// exactly this and nothing else: Relink below is a raw-ledger act — "this
-// activity is filed against the wrong record" — and a summary card is not where
-// a reader re-files anything.
-//
-// The gate is the same one TimelineActions applies, and that sameness is the
-// point of the extraction rather than a happy accident: a `message` row is
-// withheld when the contact behind it cannot be reached on the transport that
-// carried it, and a rep offered a reply on one surface and refused it on the
-// other would have no way to tell which answer was true.
+// The gate is the one TimelineActions applies: a `message` row is withheld
+// when its contact cannot be reached on the transport that carried it.
 function ReplyAction({
   activityId,
   kind,

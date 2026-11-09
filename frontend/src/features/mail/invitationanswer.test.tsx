@@ -3,8 +3,8 @@
 
 /** @vitest-environment happy-dom */
 
-// An invitation asks for an RSVP, so every surface that would offer a reply
-// offers its answers instead, and a press answers on the reader's calendar.
+// An invitation asks for an RSVP. Every surface that would offer a reply offers
+// its answers instead, and a press answers on the reader's calendar.
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {

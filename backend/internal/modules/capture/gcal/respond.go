@@ -30,7 +30,7 @@ func (c *Connector) CalendarRespond(ctx context.Context, auth connector.Auth, ui
 	return api.Respond(ctx, token, uid, response)
 }
 
-// invitedEvent keeps every attendee as Google sent it: a patch replaces the
+// invitedEvent keeps every attendee as Google sent it. A patch replaces the
 // whole list, so a field this code does not name must still go back.
 type invitedEvent struct {
 	ID        string           `json:"id"`

@@ -30,8 +30,8 @@ type CalendarResponder interface {
 	CalendarRespond(ctx context.Context, auth Auth, uid, response string) error
 }
 
-// ErrCalendarEventMissing is a calendar that holds no event with the UID an
-// invitation names, or holds one that does not list its owner as a guest.
+// ErrCalendarEventMissing is a calendar with no event of the invitation's UID,
+// or with one that does not list its owner as a guest.
 var ErrCalendarEventMissing = errors.New("calendar: the invited event is not on this calendar")
 
 // CalendarInterval exposes occupancy without event titles or attendee identities.

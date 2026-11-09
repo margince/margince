@@ -58,6 +58,7 @@ func openInvitationsFor(t *testing.T, e *loadEnv, reader ids.UUID, message ids.U
 	if err != nil {
 		t.Fatal(err)
 	}
+	//craft:ignore swallowed-errors a read-only test transaction has nothing to keep
 	defer func() { _ = tx.Rollback(ctx) }()
 	open, err := openInvitationsTx(ctx, tx, []ids.UUID{message}, reader, clocktest.Now(t))
 	if err != nil {
@@ -140,8 +141,8 @@ func TestAColleagueCannotAnswerSomebodyElsesInvitation(t *testing.T) {
 	}
 }
 
-// An invitation that asks us is answered on the calendar, so the request pass
-// files no reminder task for it; a plain request beside it still gets one.
+// An invitation that asks us is answered on the calendar. The request pass
+// files no reminder task for it, and a plain request beside it still gets one.
 func TestAnInvitationThatAsksUsFilesNoReminderTask(t *testing.T) {
 	e := setupLoad(t)
 	invitation := seedEmailRequest(t, e, "Invitation: Kickoff", "meeting", OwedVerdictAsksUs)

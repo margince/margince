@@ -29,8 +29,8 @@ func TestTheMeetingUIDIndexIsBuiltOnTheReadersOwnExpression(t *testing.T) {
 	}
 }
 
-// An invitation a reader may answer asks for an RSVP, so the row stops claiming
-// it is owed a written reply even when the classifier said it asks us.
+// An invitation a reader may answer asks for an RSVP. The row stops claiming
+// it is owed a written reply, even when the classifier said it asks us.
 func TestAnOpenInvitationOwesNoWrittenReply(t *testing.T) {
 	t.Parallel()
 	summary := crmcontracts.EmailSummary{Move: crmcontracts.EmailSummaryMoveNeedsReply}

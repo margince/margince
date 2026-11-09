@@ -86,8 +86,8 @@ func TestAWaitWithoutABookingStillCountsItsDays(t *testing.T) {
 	}
 }
 
-// An unanswered invitation books the very meeting it asks about, so the booking
-// does not demote it: answering it is today's work, and no reply is drafted.
+// An unanswered invitation books the meeting it asks about. That booking does
+// not demote it: answering it is today's work, and no reply is drafted.
 func TestAnUnansweredInvitationStaysTodaysWork(t *testing.T) {
 	start := rankInstant.Add(48 * time.Hour)
 	waiting := WaitingCustomer{

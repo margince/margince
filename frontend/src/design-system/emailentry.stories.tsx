@@ -96,8 +96,8 @@ export const NoSubject: Story = {
 };
 
 /** Nothing the sender wrote: a forward carrying no words of its own. */
-// A calendar invitation names an event, so the row draws the event's start
-// and an Invitation mark where the mail's words and its move would be.
+// A calendar invitation names an event. The row draws the event's start and
+// an Invitation mark where the mail's words and its move would be.
 export const Invitation: Story = {
   args: {
     summary: {

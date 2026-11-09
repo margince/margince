@@ -195,11 +195,8 @@ func Parse(raw []byte, owner string) (Message, error) {
 	// is the opposite of this rule's purpose. The wrong contacts came from the
 	// outbound direction: the owner invites, and every attendee reads as
 	// somebody the workspace writes to.
-	calendarNotice := direction == connector.DirectionOutbound &&
-		calendarNotification(header, hasCalendarPart)
-	if calendarNotice {
-		machineTouched = true
-	}
+	calendarNotice := direction == connector.DirectionOutbound && calendarNotification(header, hasCalendarPart)
+	machineTouched = machineTouched || calendarNotice
 
 	return Message{
 		messageID:        strings.TrimSpace(messageID),

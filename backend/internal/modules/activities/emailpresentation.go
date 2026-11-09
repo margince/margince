@@ -144,12 +144,8 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 	if out.ControllerSend, err = withEmailStateOn(ctx, tx, activity.Id, &out.Summary, asOf); err != nil {
 		return crmcontracts.EmailPresentation{}, err
 	}
-	open, err := openInvitationsTx(ctx, tx, []ids.UUID{id.UUID}, readerOrNobody(ctx), asOf)
-	if err != nil {
+	if err := markOpenInvitation(ctx, tx, id, &out.Summary, asOf); err != nil {
 		return crmcontracts.EmailPresentation{}, err
-	}
-	if found, ok := open[id.UUID]; ok {
-		found.mark(&out.Summary)
 	}
 
 	thread, err := readThreadPage(ctx, tx, activity, threadCursor)
@@ -168,6 +164,19 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 		out.CanRelink = writable
 	}
 	return out, nil
+}
+
+// markOpenInvitation turns the summary into an invitation's when the reader
+// may still answer it.
+func markOpenInvitation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, summary *crmcontracts.EmailSummary, asOf time.Time) error {
+	open, err := openInvitationsTx(ctx, tx, []ids.UUID{id.UUID}, readerOrNobody(ctx), asOf)
+	if err != nil {
+		return err
+	}
+	if found, ok := open[id.UUID]; ok {
+		found.mark(summary)
+	}
+	return nil
 }
 
 // withheldPresentation is the whole answer for a caller who may know the

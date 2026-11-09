@@ -7,9 +7,9 @@ package activities
 // written reply. The row says so (EmailSummary.calendar_invitation) and the
 // reader answers it here, on their own calendar, which tells the organizer.
 //
-// The invitation and the meeting the calendar connector captured meet on the
-// event's iCalendar UID: the mail parser stores it as activity.calendar_uid,
-// and a meeting's identity key starts with it (MeetingIdentityKey).
+// The invitation and the captured meeting meet on the event's iCalendar UID.
+// The mail parser stores it as activity.calendar_uid, and a meeting's identity
+// key starts with it (MeetingIdentityKey).
 
 import (
 	"context"
@@ -63,12 +63,12 @@ func (o openInvitation) mark(summary *crmcontracts.EmailSummary) {
 }
 
 // openInvitationsTx reads which of these messages are invitations this reader
-// may still answer. Only the reader's own mailbox received an invitation to
-// them, so a colleague reading the same row is offered no answer. An event
+// may still answer. Only the reader's own mailbox received the invitation.
+// A colleague reading the same row is offered no answer. An event
 // that has started, or was cancelled, is no longer asking.
 //
 // The meeting is the event's next occurrence, or its latest when none is
-// ahead, so a weekly series reads the answer the reader gave it last.
+// ahead. A weekly series reads the answer the reader gave it last.
 func openInvitationsTx(
 	ctx context.Context, tx pgx.Tx, messages []ids.UUID, reader ids.UUID, asOf time.Time,
 ) (map[ids.UUID]openInvitation, error) {
@@ -210,7 +210,7 @@ func (s *Store) openInvitationTx(ctx context.Context, tx pgx.Tx, id ids.Activity
 }
 
 // recordInvitationAnswerTx stores the answer on the reader's own place in the
-// meeting, so the row reads it before the calendar next syncs, and writes the
+// meeting, so the row reads it before the calendar next syncs. It writes the
 // audit row and the announcement beside it.
 func recordInvitationAnswerTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, invitation openInvitation, reader ids.UUID,
