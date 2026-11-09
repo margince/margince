@@ -178,6 +178,43 @@ export const DayEntry: Story = {
   },
 };
 
+/**
+ * Their mail and ours stored in one second. Two instants have no order to read,
+ * so their mail stays owed and the row says they wrote last.
+ */
+export const SameSecondExchange: Story = {
+  args: { companyId: "o-1" },
+  decorators: [
+    (Story) => {
+      stub([
+        contact("Sabine Vogel", "waiting", {
+          title: "Head of Partnerships",
+          last_inbound_at: "2026-08-30T09:00:00Z",
+          last_inbound_precision: "instant",
+          last_outbound_at: "2026-08-30T09:00:00Z",
+          last_outbound_precision: "instant",
+        }),
+      ]);
+      return (
+        <StoryProviders>
+          <Story />
+        </StoryProviders>
+      );
+    },
+  ],
+  play: async ({ canvasElement }) => {
+    const row = await within(canvasElement).findByRole("row", {
+      name: /Sabine Vogel/,
+    });
+    await expect(
+      within(row).getByText(new RegExp(`^${en["co.contacts.theyWrote"]} · `)),
+    ).toBeTruthy();
+    await expect(
+      within(row).queryByText(new RegExp(`^${en["co.contacts.weWrote"]}`)),
+    ).toBeNull();
+  },
+};
+
 /** Contacts on the company’s domain that nobody has linked to it yet. */
 export const DomainContactsUnlinked: Story = {
   args: { companyId: "o-1" },

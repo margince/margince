@@ -107,6 +107,28 @@ test("a day each way on one date reads as answered", async () => {
   expect(within(row as HTMLElement).queryByText(/They wrote/)).toBeNull();
 });
 
+// Two instants in one second have no order to read, so the server's
+// engagement keeps their mail owed, and the last touch must agree.
+test("a mail each way in one second reads as theirs to answer", async () => {
+  const [, waiting] = contactsFixture();
+  const second = "2026-08-30T09:00:00Z";
+  stubContacts([
+    {
+      ...waiting,
+      last_inbound_at: second,
+      last_inbound_precision: "instant",
+      last_outbound_at: second,
+      last_outbound_precision: "instant",
+    },
+  ]);
+  render(<CompanyContactsList companyId="o-1" />);
+
+  const row = (await screen.findByText("Sabine Vogel")).closest("tr");
+  expect(row).not.toBeNull();
+  expect(within(row as HTMLElement).getByText("Needs reply")).not.toBeNull();
+  expect(within(row as HTMLElement).getByText(/They wrote/)).not.toBeNull();
+});
+
 test("asks the server for the account's own contacts and lets it choose the order", async () => {
   const calls = stubContacts(contactsFixture());
   render(<CompanyContactsList companyId="o-1" />);

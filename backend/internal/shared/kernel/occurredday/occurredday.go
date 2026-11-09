@@ -126,6 +126,17 @@ func Happened(kind string, m Moment, asOf time.Time, zone *time.Location) bool {
 	return Begun(m, asOf, zone)
 }
 
+// Answers reports whether answer is late enough to answer message: stored after
+// it, or at the same instant when either names only a date. Two instants in
+// one second stay unordered, since an id orders capture, not messages.
+// AnswersSQL is the same rule in SQL.
+func Answers(answer, message Moment) bool {
+	if answer.At.Equal(message.At) {
+		return answer.DateOnly || message.DateOnly
+	}
+	return answer.At.After(message.At)
+}
+
 // DaysSince counts the calendar days from the date an activity names to
 // today's date in zone. A day entry dated today is zero days old.
 func DaysSince(m Moment, asOf time.Time, zone *time.Location) int {
@@ -149,6 +160,13 @@ func DaysBetween(from, to Moment, zone *time.Location) int {
 func BegunSQL(alias, asOf string) string {
 	return fmt.Sprintf(`(%[1]s.occurred_at <= greatest(%[2]s, %[3]s) AND (%[1]s.occurred_precision = 'day' OR %[1]s.occurred_at <= %[2]s))`,
 		alias, asOf, TodayAnchorSQL(asOf))
+}
+
+// AnswersSQL is Answers for the activities under the aliases answer and
+// message. Its leading bound alone keeps a range scan on an index ending in occurred_at.
+func AnswersSQL(answer, message string) string {
+	return fmt.Sprintf(`(%[1]s.occurred_at >= %[2]s.occurred_at AND (%[1]s.occurred_at > %[2]s.occurred_at OR %[1]s.occurred_precision = 'day' OR %[2]s.occurred_precision = 'day'))`,
+		answer, message)
 }
 
 // MeetingTookPlaceSQL is MeetingTookPlace for the meeting under alias at asOf,

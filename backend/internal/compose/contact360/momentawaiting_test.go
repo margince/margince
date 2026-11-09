@@ -105,3 +105,20 @@ func ourClaim(said time.Time, due *time.Time) crmcontracts.ConversationClaim {
 		OccurredAt: &said, DueAt: due,
 	}
 }
+
+// Their mail and ours on one stored instant. A day on either side makes ours
+// the answer and the wait theirs. Two instants in one second leave the move ours.
+func TestATieWaitsOnThemOnlyForADayEntry(t *testing.T) {
+	day, instant := crmcontracts.OccurredPrecisionOccurredPrecisionDay, crmcontracts.OccurredPrecisionOccurredPrecisionInstant
+	for precision, awaiting := range map[crmcontracts.OccurredPrecision]bool{day: true, instant: false} {
+		page := &crmcontracts.Contact360{
+			LastOutboundAt: new(at(2)), LastOutboundPrecision: new(precision),
+			LastInboundAt: new(at(2)), LastInboundPrecision: new(precision),
+			LastLiveInboundAt: new(at(2)), LastLiveInboundPrecision: new(precision),
+		}
+		got := momentCopyFor("en").deriveMoment(readerCtx(), now, page)
+		if (got.Rule == crmcontracts.ContactMomentRuleAwaitingReply) != awaiting {
+			t.Errorf("%s tie: rule = %q, want awaiting_reply = %v", precision, got.Rule, awaiting)
+		}
+	}
+}

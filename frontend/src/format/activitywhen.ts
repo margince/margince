@@ -168,6 +168,19 @@ export function activityIsAhead(
   return Date.parse(at) > now;
 }
 
+/**
+ * Whether `answer` is late enough to answer `message`, the mirror of
+ * occurredday.Answers. At one stored instant only a `day` entry answers.
+ */
+export function activityAnswers(
+  answer: ActivityMoment,
+  message: ActivityMoment,
+): boolean {
+  const gap = Date.parse(answer.at) - Date.parse(message.at);
+  if (gap !== 0) return gap > 0;
+  return answer.precision === "day" || message.precision === "day";
+}
+
 /** Whether an activity has begun by `now`. */
 export function activityHasBegun(
   at: string,

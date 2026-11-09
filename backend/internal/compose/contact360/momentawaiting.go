@@ -23,7 +23,7 @@ func (said momentCopy) awaitingReplyMoment(_ context.Context, now time.Time, pag
 		return crmcontracts.ContactMoment{}, false
 	}
 	outbound := *page.LastOutboundAt
-	if page.LastInboundAt != nil && !page.LastInboundAt.Before(outbound) {
+	if theyWroteSince(page) {
 		return crmcontracts.ContactMoment{}, false
 	}
 	if owesCommitment(page) {
@@ -81,4 +81,15 @@ func (said momentCopy) awaitingWhyNow(waiting int) string {
 	default:
 		return fmt.Sprintf(said.Say(momentWords.AwaitingWhy), waiting, goneQuietAfterDays)
 	}
+}
+
+// theyWroteSince reports whether their latest message leaves the move ours:
+// our latest mail does not answer it. The caller has our latest mail.
+func theyWroteSince(page *crmcontracts.Contact360) bool {
+	return page.LastInboundAt != nil && !occurredday.Answers(lastOutbound(page),
+		occurredday.Moment{At: *page.LastInboundAt, DateOnly: occurredday.IsStatedDay(page.LastInboundPrecision)})
+}
+
+func lastOutbound(page *crmcontracts.Contact360) occurredday.Moment {
+	return occurredday.Moment{At: *page.LastOutboundAt, DateOnly: occurredday.IsStatedDay(page.LastOutboundPrecision)}
 }

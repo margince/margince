@@ -70,8 +70,8 @@ func (s *Store) LatestInbound(ctx context.Context, entityType string, entityID i
 }
 
 // unansweredInbound merges the waiting mail and messages with the website
-// forms no later answer follows, newest first and at most latestInboundLimit.
-// newestAnswer is the record's newest row that answers them, if any.
+// forms the newest answer does not answer, newest first and at most
+// latestInboundLimit. newestAnswer is the record's newest row that answers them, if any.
 func unansweredInbound(waiting, forms, newestAnswer []crmcontracts.Activity) []crmcontracts.LatestInbound {
 	items := []crmcontracts.LatestInbound{}
 	for _, row := range waiting {
@@ -83,7 +83,7 @@ func unansweredInbound(waiting, forms, newestAnswer []crmcontracts.Activity) []c
 		}
 	}
 	for _, row := range forms {
-		if len(newestAnswer) == 0 || !newestAnswer[0].OccurredAt.After(row.OccurredAt) {
+		if len(newestAnswer) == 0 || !occurredday.Answers(momentOf(newestAnswer[0]), momentOf(row)) {
 			items = append(items, crmcontracts.LatestInbound{Activity: row, Kind: crmcontracts.LatestInboundKindWebForm})
 		}
 	}
@@ -94,6 +94,10 @@ func unansweredInbound(waiting, forms, newestAnswer []crmcontracts.Activity) []c
 		items = items[:latestInboundLimit]
 	}
 	return items
+}
+
+func momentOf(row crmcontracts.Activity) occurredday.Moment {
+	return occurredday.Moment{At: row.OccurredAt, DateOnly: occurredday.IsDay(row.OccurredPrecision)}
 }
 
 // answersThemSQL keeps a row under alias a that answers them at now. That is

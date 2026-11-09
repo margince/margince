@@ -395,6 +395,42 @@ func TestHappenedSQLAnswersTheSharedCases(t *testing.T) {
 	}
 }
 
+// occurredday.AnswersSQL answers the tie cases occurredday.Answers and the
+// frontend's activityAnswers share, so every reader of a tie agrees.
+func TestAnswersSQLAnswersTheSharedCases(t *testing.T) {
+	e := setupSend(t)
+	raw, err := os.ReadFile("../../shared/kernel/occurredday/testdata/answers.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cases []struct {
+		Name             string    `json:"name"`
+		MessageAt        time.Time `json:"message_at"`
+		MessagePrecision string    `json:"message_precision"`
+		AnswerAt         time.Time `json:"answer_at"`
+		AnswerPrecision  string    `json:"answer_precision"`
+		Answers          bool      `json:"answers"`
+	}
+	if err := json.Unmarshal(raw, &cases); err != nil {
+		t.Fatal(err)
+	}
+	if len(cases) < 9 {
+		t.Fatalf("read %d cases, want the whole table", len(cases))
+	}
+	for _, c := range cases {
+		var answers bool
+		if err := e.owner.QueryRow(context.Background(), fmt.Sprintf(
+			`SELECT %s FROM (VALUES ($1::timestamptz, $2::text)) AS message(occurred_at, occurred_precision),
+			   (VALUES ($3::timestamptz, $4::text)) AS answer(occurred_at, occurred_precision)`,
+			occurredday.AnswersSQL("answer", "message")), c.MessageAt, c.MessagePrecision, c.AnswerAt, c.AnswerPrecision).Scan(&answers); err != nil {
+			t.Fatalf("%s: %v", c.Name, err)
+		}
+		if answers != c.Answers {
+			t.Errorf("%s: SQL says answers = %v, want %v", c.Name, answers, c.Answers)
+		}
+	}
+}
+
 // setInstallationZone names the zone the owner's SQL reads which date is today in.
 func setInstallationZone(t *testing.T, e *sendEnv, name string) {
 	t.Helper()

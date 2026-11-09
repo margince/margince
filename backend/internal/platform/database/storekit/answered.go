@@ -23,20 +23,20 @@ type answerArm struct {
 	id   string
 }
 
-// Answers follow the source strictly in event time. Capture order cannot break timestamp ties.
+// An answer follows its source in event time (occurredday.AnswersSQL); capture order never breaks a tie.
 // Private off-thread evidence cannot clear another reader's work.
 func answerArms(inbound, until string) []answerArm {
 	return append([]answerArm{threadAnswerArm(inbound, answerLater("answer_thread", inbound, until))},
 		offThreadAnswerArms(inbound, until)...)
 }
 
-// answerLater is a row that is live and happened strictly after the inbound
-// row and no later than until.
+// answerLater is a row that is live, late enough to answer the inbound row,
+// and no later than until.
 func answerLater(row, inbound, until string) string {
 	return fmt.Sprintf(`%[1]s.archived_at IS NULL
 	    AND %[3]s
-	    AND %[1]s.occurred_at > %[2]s.occurred_at -- occurred_at raw: strictly after the inbound row, an ordering of rows
-	`, row, inbound, occurredday.BegunSQL(row, until))
+	    AND %[2]s
+	`, row, occurredday.AnswersSQL(row, inbound), occurredday.BegunSQL(row, until))
 }
 
 // Off-thread mail must be attested and name the sender; Bcc never proves delivery.

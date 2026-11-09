@@ -25,7 +25,6 @@ package company360
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -37,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -112,9 +112,7 @@ func newestMessage(
 	if err != nil {
 		return lastMessage{}, false, err
 	}
-	var found lastMessage
-	var direction, subject, excerpt *string
-	query := fmt.Sprintf(`
+	query := fmt.Sprintf(`SELECT * FROM (
 		SELECT a.id, a.direction, a.occurred_at, a.occurred_precision = 'day', a.kind,
 		       CASE WHEN %[3]s THEN a.subject END,
 		       CASE WHEN %[3]s THEN left(a.body, %[4]d) END,
@@ -122,16 +120,32 @@ func newestMessage(
 		FROM activity a
 		WHERE %[5]s AND a.archived_at IS NULL AND %[1]s
 		  AND %[2]s`+opts.projectScope(arg)+`
-		ORDER BY a.occurred_at DESC, a.id DESC
-		LIMIT 1`, activityScope, activities.CompanyLinkedActivityExists(companyPos), audience, excerptRunes,
+		ORDER BY a.occurred_at DESC
+		FETCH FIRST 1 ROW WITH TIES) newest
+		ORDER BY newest.id DESC`, activityScope, activities.CompanyLinkedActivityExists(companyPos), audience, excerptRunes,
 		relstrength.InteractionCountsAtSQL("a", fmt.Sprintf("$%d::timestamptz", nowPos)), move)
-	err = tx.QueryRow(ctx, query, args...).
-		Scan(&found.ID, &direction, &found.At, &found.DateOnly, &found.Kind, &subject, &excerpt, &found.Move)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return lastMessage{}, false, nil
-	}
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return lastMessage{}, false, fmt.Errorf("read the account's newest message: %w", err)
+	}
+	tied, err := pgx.CollectRows(rows, scanLastMessage)
+	if err != nil {
+		return lastMessage{}, false, fmt.Errorf("read the account's newest message: %w", err)
+	}
+	if len(tied) == 0 {
+		return lastMessage{}, false, nil
+	}
+	// At a tie the move is read as every record's last exchange reads it.
+	return activities.LastWord(tied, func(m lastMessage) (occurredday.Moment, bool) {
+		return occurredday.Moment{At: m.At, DateOnly: m.DateOnly}, m.Direction == string(crmcontracts.ActivityDirectionInbound)
+	}), true, nil
+}
+
+func scanLastMessage(row pgx.CollectableRow) (lastMessage, error) {
+	var found lastMessage
+	var direction, subject, excerpt *string
+	if err := row.Scan(&found.ID, &direction, &found.At, &found.DateOnly, &found.Kind, &subject, &excerpt, &found.Move); err != nil {
+		return lastMessage{}, err
 	}
 	if direction != nil {
 		found.Direction = *direction
@@ -142,7 +156,7 @@ func newestMessage(
 	if excerpt != nil {
 		found.Excerpt = oneLine(*excerpt)
 	}
-	return found, true, nil
+	return found, nil
 }
 
 // oneLine folds a body excerpt into the one line a chip's receipt quotes:
