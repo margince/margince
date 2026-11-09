@@ -3,13 +3,13 @@
   "provider": "gemini",
   "served_model": "gemini-3.1-flash-lite",
   "env_class": "cloud_frontier",
-  "prompt_version": "p606036f17e2e3a767b0c3bbe4c5e4954",
+  "prompt_version": "p64525eb29edf08fba75281372ad02a11",
   "corpus_version": "v1",
   "verdict": "not_supported",
-  "runs": 81,
-  "passed": 81,
+  "runs": 90,
+  "passed": 90,
   "reliability": 1,
-  "reported_accepted": 81,
+  "reported_accepted": 90,
   "reported_wrong_answer": 0,
   "reported_invalid": 0,
   "reported_abstained": 0,
@@ -22,20 +22,20 @@
     "market"
   ],
   "judge_score_p50": 85,
-  "judge_score_min": 5,
-  "latency_p50": 1243,
-  "latency_p95": 2559,
+  "judge_score_min": 0,
+  "latency_p50": 1213,
+  "latency_p95": 2458,
   "mean_tokens": 3268,
-  "mean_tokens_in": 3106,
-  "mean_tokens_out": 161,
-  "mean_cached_tokens": 23,
+  "mean_tokens_in": 3114,
+  "mean_tokens_out": 153,
+  "mean_cached_tokens": 20,
   "mean_cache_write_tokens": 0,
-  "est_cost_microusd": 1012,
+  "est_cost_microusd": 1003,
   "judge_served_model": "claude-sonnet-5-5",
   "judge_provider": "claude_cli",
   "self_judged": false,
   "served_identity_source": "response",
-  "ran_at": "2026-11-09T19:45:48Z",
+  "ran_at": "2026-11-09T20:47:57Z",
   "scenarios": [
     {
       "scenario": "account_first_touch_with_a_deal_in_flight",
@@ -100,14 +100,17 @@
     {
       "scenario": "reply_to_pricing_question",
       "site": "reply",
-      "stamp": "19349d9ed80115718651163f6b815977dd595921b06c128ead7ef70b21a9c49548493fecaa0c8da31d1d0e81229c8ce0a811bcd40679b2c6a005de40e70c914ca82772f86fcce13b1f0250282338eb3848f35a9109adc16efad107662e73562f",
+      "stamp": "19349d9ed80115718651163f6b815977dd595921b06c128ead7ef70b21a9c495274fe0890ef98bb34921e4a8ca1b4b2341bc0257ccf84acf8f8e5fcdeac48071eca2b62f39d5c4762a66f4b53ded7d7ff399fcbc565fd68b3e7c456f3cd455c8",
       "verdict": "certified",
       "judge_band": "certified",
-      "runs": 3,
-      "passed": 3,
+      "runs": 6,
+      "passed": 6,
       "judge_scores": [
         90,
-        90,
+        68,
+        93,
+        62,
+        93,
         90
       ],
       "bands": {
@@ -115,7 +118,7 @@
         "degraded_min": 50,
         "floor": 40
       },
-      "reported_accepted": 3,
+      "reported_accepted": 6,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
       "reported_abstained": 0
@@ -146,21 +149,21 @@
     {
       "scenario": "german_thread_with_an_introduction_in_it",
       "site": "reply",
-      "stamp": "7d3623c19a146dbf495a4f97213aeabc3a0538b39118fc24661aade92ab00ccf53f27cefd0eedb49436c04d66306d5c7b4a0a0b61a614a262c42fa90ccf9ecde870cd92275864c3d722be547f356e9e01fc977f3f4dff3fa2c71536ef5c740b5",
+      "stamp": "7d3623c19a146dbf495a4f97213aeabc3a0538b39118fc24661aade92ab00ccffed68186be9763e4702accf8188e292cb1378a7749034855816a2906a9721f62340e588f98433b97b2b7a6d088f9074ad2757e3fc24e687f3c3efd6de6b231aa",
       "verdict": "supported_degraded",
       "judge_band": "supported_degraded",
       "runs": 9,
       "passed": 9,
       "judge_scores": [
-        62,
-        6,
-        62,
-        62,
+        57,
+        0,
+        8,
+        90,
         80,
-        30,
         88,
         82,
-        55
+        70,
+        30
       ],
       "bands": {
         "certified_min": 70,
@@ -333,18 +336,18 @@
     {
       "scenario": "rich_german_thread_with_a_long_ask",
       "site": "reply",
-      "stamp": "1b19322d4e42f214baadfa3a3d2c2e0a5e7236b052e1756e33c7c1989700d1dd52cf51e11f3c5ba0d6326dbe8784d852dc7112bc90f2ffd3634b6b1002acfca8908ab7006908804f54a6d0c844b60a2e25c12e4c4e64c3d876e7d821ef90b777",
-      "verdict": "not_supported",
-      "judge_band": "not_supported",
+      "stamp": "1b19322d4e42f214baadfa3a3d2c2e0a5e7236b052e1756e33c7c1989700d1ddb22ae27df7c0c43baf02d65fb8145e2f629c17b7eb03ac0161eb7e8df83480542581d403bf26a9af28f1b6eb75a1fc7b5ac1bfb1649e0f946777a0181c890abe",
+      "verdict": "supported_degraded",
+      "judge_band": "supported_degraded",
       "runs": 6,
       "passed": 6,
       "judge_scores": [
-        45,
-        30,
-        64,
-        35,
-        40,
-        40
+        50,
+        53,
+        55,
+        52,
+        80,
+        62
       ],
       "bands": {
         "certified_min": 70,
@@ -359,22 +362,25 @@
     {
       "scenario": "selected_old_request_for_materials",
       "site": "reply",
-      "stamp": "7806f2c297786f7c94a15a0cb174ebf0b86c4a2a0b920cd0a3fd4a77caf219f823c0a05432ad3665070943e39e36bed23873c1d575e9a245b351c3751b3b791f083902ddf2969b0e194ecbace3f0a3b180d29e4ba54ef5349de767ecd8220962",
-      "verdict": "supported_degraded",
-      "judge_band": "supported_degraded",
-      "runs": 3,
-      "passed": 3,
+      "stamp": "7806f2c297786f7c94a15a0cb174ebf0b86c4a2a0b920cd0a3fd4a77caf219f8eba8f654aa3abd42d41ad0c6f39053ba731ae03211a6d322b5e0210f44cd18d7d9f6c350a28ece729fa75b47bab9584dab64793727d69a49d94b57aac0ae7e07",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 6,
+      "passed": 6,
       "judge_scores": [
-        55,
-        66,
-        62
+        56,
+        80,
+        88,
+        80,
+        88,
+        88
       ],
       "bands": {
         "certified_min": 70,
         "degraded_min": 50,
         "floor": 40
       },
-      "reported_accepted": 3,
+      "reported_accepted": 6,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
       "reported_abstained": 0
@@ -382,22 +388,25 @@
     {
       "scenario": "replying_to_a_thread_eight_months_old",
       "site": "reply",
-      "stamp": "91e45c1dec927847c1c4dd93b2f28da3b70abbed3dcd7ef094cb015aaf2c8366d6df728530031ec13424417c78bd1d11e6c27b666e65026595c0cfd671fae0e86ef8fef3ac5578a699e4d61a64406497e0a2ec7876ce67f62350c8f936b61051",
+      "stamp": "91e45c1dec927847c1c4dd93b2f28da3b70abbed3dcd7ef094cb015aaf2c836611de4ce609b59df44f027b40d7134ce99bf66d27a0231d74b450e295a97bc12d31efd4a15810e3875956a0ab80cb6385a63ec86aa804995a3e22ad54fe4bab62",
       "verdict": "certified",
       "judge_band": "certified",
-      "runs": 3,
-      "passed": 3,
+      "runs": 6,
+      "passed": 6,
       "judge_scores": [
         80,
-        88,
-        80
+        71,
+        72,
+        72,
+        81,
+        81
       ],
       "bands": {
         "certified_min": 70,
         "degraded_min": 50,
         "floor": 40
       },
-      "reported_accepted": 3,
+      "reported_accepted": 6,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
       "reported_abstained": 0

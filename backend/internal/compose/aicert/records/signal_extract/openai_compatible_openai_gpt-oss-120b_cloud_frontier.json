@@ -3,7 +3,7 @@
   "provider": "openai_compatible",
   "served_model": "openai/gpt-oss-120b",
   "env_class": "cloud_frontier",
-  "prompt_version": "p91dd0cb9cdde12b56fb321a8ef81a0c1",
+  "prompt_version": "p21c69f073e5a461bca374b07aabcb240",
   "corpus_version": "v1",
   "verdict": "not_supported",
   "runs": 234,
@@ -20,12 +20,12 @@
   "judge_score_min": 3,
   "latency_p50": 1528,
   "latency_p95": 6213,
-  "mean_tokens": 5642,
+  "mean_tokens": 5644,
   "mean_tokens_in": 4590,
-  "mean_tokens_out": 1052,
-  "mean_cached_tokens": 1720,
+  "mean_tokens_out": 1054,
+  "mean_cached_tokens": 1715,
   "mean_cache_write_tokens": 0,
-  "est_cost_microusd": 348,
+  "est_cost_microusd": 349,
   "judge_served_model": "claude-sonnet-5-5",
   "judge_provider": "claude_cli",
   "self_judged": false,
@@ -43,7 +43,7 @@
     "preferred_max_latency_p90": 0,
     "reasoning_effort": ""
   },
-  "ran_at": "2026-11-09T19:35:54Z",
+  "ran_at": "2026-11-09T21:12:15Z",
   "scenarios": [
     {
       "scenario": "ambiguous_termination_scope",
@@ -462,7 +462,7 @@
     {
       "scenario": "conditional_commitment_preserves_its_meaning_de",
       "site": "thread_events",
-      "stamp": "3ec6e1bc105a07ee947a7ccb2d8b72e8951fa509f749be0cc833212e9a494b1abfb83504345ab02bc0ca812b7c35c6351b1354d39ce084fa0ef96be79ef6130a18b23b234dc58d61eb8a66d640e734be4d743f517e9bd89735fb9a28764ad940",
+      "stamp": "d824cc20b99aaff23a4049ead6c2ddeb151c7d38f37ea3695b14721bbe347665bfb83504345ab02bc0ca812b7c35c6351b1354d39ce084fa0ef96be79ef6130a18b23b234dc58d61eb8a66d640e734be4d743f517e9bd89735fb9a28764ad940",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,

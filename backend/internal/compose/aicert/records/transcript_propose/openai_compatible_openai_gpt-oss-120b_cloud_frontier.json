@@ -3,7 +3,7 @@
   "provider": "openai_compatible",
   "served_model": "openai/gpt-oss-120b",
   "env_class": "cloud_frontier",
-  "prompt_version": "pa677c78955233fb4b3aaa06ae103c4e9",
+  "prompt_version": "p2a3f4d886c55621ee413895b29fa90a9",
   "corpus_version": "v1",
   "verdict": "supported_degraded",
   "runs": 111,
@@ -18,12 +18,12 @@
   "context_scopes": null,
   "judge_score_p50": 96,
   "judge_score_min": 10,
-  "latency_p50": 932,
+  "latency_p50": 934,
   "latency_p95": 1444,
-  "mean_tokens": 2434,
+  "mean_tokens": 2438,
   "mean_tokens_in": 1837,
-  "mean_tokens_out": 596,
-  "mean_cached_tokens": 362,
+  "mean_tokens_out": 600,
+  "mean_cached_tokens": 356,
   "mean_cache_write_tokens": 0,
   "est_cost_microusd": 169,
   "judge_served_model": "claude-sonnet-5-5",
@@ -43,7 +43,7 @@
     "preferred_max_latency_p90": 0,
     "reasoning_effort": ""
   },
-  "ran_at": "2026-11-09T18:33:17Z",
+  "ran_at": "2026-11-09T21:14:24Z",
   "scenarios": [
     {
       "scenario": "one_side_promises_revised_pricing",
@@ -181,7 +181,7 @@
     {
       "scenario": "transcript_conditional_commitment_preserves_its_meaning_de",
       "site": "next_steps",
-      "stamp": "6acb18aa8aa02166c9cd7f242c8e24651f760cc929be642321ec09c06897a383699c5e6d78cb5a483efeb178f314336b002e8fc13edbabaef6b6e1466124c09718b23b234dc58d61eb8a66d640e734be4d743f517e9bd89735fb9a28764ad940",
+      "stamp": "c575ae7dfa1064638676c0bcd3282e828058892a1bc1af35710f59a5d5601ad8699c5e6d78cb5a483efeb178f314336b002e8fc13edbabaef6b6e1466124c09718b23b234dc58d61eb8a66d640e734be4d743f517e9bd89735fb9a28764ad940",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
