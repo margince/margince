@@ -25,10 +25,9 @@ var searchRecordsCopy = toolCopy{
 
 var listRecordsCopy = toolCopy{
 	Purpose: "List one page of matching records, such as the deals in a pipeline.",
-	Limits:  "Only declared record_type filters apply. Further pages may exist.",
-	Instead: "Use search_records to find a record by what it is called, and run_report for a count " +
-		"or a total.",
-	Retain: "Pass next_cursor for the next page. `owner` names the holder. " + sayWhoseItIs,
+	Limits:  "Only declared record_type filters apply.",
+	Instead: "Use search_records to find a record by name, and run_report for a count or total.",
+	Retain:  "Pass next_cursor for the next page. `owner` names the holder. " + sayWhoseItIs,
 }
 
 var readViewCopy = toolCopy{
