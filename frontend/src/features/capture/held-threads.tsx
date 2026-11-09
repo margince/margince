@@ -22,8 +22,12 @@ import { formatNumber } from "../../format/format";
 import { startOfDayInZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import {
+  CAPTURE_CONTACT_PARAM,
+  withoutCaptureContact,
+} from "../../lib/capturereview";
 import { useOpenEmail } from "../../lib/openemail";
-import { unwrap } from "../../lib/problem";
+import { problemCodeOf, unwrap } from "../../lib/problem";
 import { useUrlParams } from "../../lib/urlstate";
 import { useViewerZone } from "../../lib/viewerzone";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
@@ -105,8 +109,8 @@ export function useHeldThreads(filters: HeldFilters = {}) {
 export function HeldThreads() {
   const t = useT();
   const zone = useViewerZone();
-  const [params] = useUrlParams();
-  const contact = params.get("contact_id") ?? params.get("contact");
+  const [params, setParams] = useUrlParams();
+  const contact = params.get(CAPTURE_CONTACT_PARAM);
   const [typed, setTyped] = useState("");
   const [status, setStatus] = useState<HeldStatus | "">("");
   const [reason, setReason] = useState("");
@@ -114,9 +118,7 @@ export function HeldThreads() {
   const [to, setTo] = useState<ISODate | "">("");
   const [browse, setBrowse] = useState(false);
   const q = useSettledValue(typed.trim());
-  const active = Boolean(
-    q || status || reason || from || to || contact || browse,
-  );
+  const active = [q, status, reason, from, to, contact, browse].some(Boolean);
   const held = useHeldThreads({
     q,
     status: status || undefined,
@@ -128,6 +130,7 @@ export function HeldThreads() {
     to: to ? new Date(startOfDayInZone(to, zone, 1)).toISOString() : undefined,
   });
   const first = held.data?.pages[0];
+  const contactRefused = problemCodeOf(held.error) === "not_found";
   const rows = [
     ...new Map(
       (held.data?.pages ?? [])
@@ -184,8 +187,15 @@ export function HeldThreads() {
         />
       </div>
       {first && <BacklogCallout stalled={first.counts.stalled} />}
-      {held.isError && <ErrorLine error={held.error} />}
-      {!active ? (
+      {contact && (
+        <ContactFilter
+          contactId={contact}
+          refused={contactRefused}
+          onClear={() => setParams(withoutCaptureContact(params))}
+        />
+      )}
+      {held.isError && !contactRefused && <ErrorLine error={held.error} />}
+      {held.isError ? null : !active ? (
         <Button onClick={() => setBrowse(true)}>
           {t("heldThreads.browse")}
         </Button>
@@ -202,6 +212,31 @@ export function HeldThreads() {
           {t("heldThreads.loadMore")}
         </Button>
       )}
+    </div>
+  );
+}
+
+// The list a contact's timeline opened. The server answers 404 for a contact
+// the reader may not read or one that is archived, which is not an empty list.
+function ContactFilter({
+  contactId,
+  refused,
+  onClear,
+}: Readonly<{ contactId: string; refused: boolean; onClear: () => void }>) {
+  const t = useT();
+  return (
+    <div className="held-threads-contact">
+      {refused ? (
+        <ErrorLine>{t("heldThreads.contactUnavailable")}</ErrorLine>
+      ) : (
+        <span>
+          {t("heldThreads.withContact")}{" "}
+          <EntityRef kind="contact" id={contactId} newTab />
+        </span>
+      )}
+      <Button variant="link" onClick={onClear}>
+        {t("heldThreads.allThreads")}
+      </Button>
     </div>
   );
 }

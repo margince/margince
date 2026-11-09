@@ -4,6 +4,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { captureReviewTarget } from "../../lib/capturereview";
+import { routeHash } from "../../lib/router";
+import { hashWithParams } from "../../lib/urlstate";
 import { heldThreadList } from "../../testing/heldthreads.fixtures";
 import { linkedInReachFixture } from "../../testing/reachfixture";
 import {
@@ -327,5 +330,90 @@ export const SearchFirst: Story = {
         name: "Browse recent conversations",
       }),
     ).toBeVisible();
+  },
+};
+
+// A contact's timeline links here with the contact in the address, so the
+// drawer opens on that contact's threads and says whose they are.
+const CONTACT_ID = "0190b7a2-0000-7000-8000-0000000000c7";
+
+// Only the read narrowed to the contact answers `filtered`; the card's own
+// unfiltered read answers the whole list, as it does in the product.
+function fromContact(filtered: () => Response) {
+  const target = captureReviewTarget("held", CONTACT_ID);
+  const hash = hashWithParams(routeHash(target.route), target.params);
+  return {
+    beforeEach: () => {
+      const prior = globalThis.location.hash;
+      globalThis.location.hash = hash;
+      return () => {
+        globalThis.location.hash = prior;
+      };
+    },
+    render: () => {
+      installFetchStub({
+        "GET /me": meRoute({}),
+        "GET /capture/held-threads": () => jsonResponse(heldThreadList(MIXED)),
+        [`GET /contacts/${CONTACT_ID}`]: () =>
+          jsonResponse({ id: CONTACT_ID, full_name: "Katharina Huber" }),
+        "GET /capture/senders": () => jsonResponse({ data: [] }),
+        "GET /capture/contacts-awaiting-decision": () =>
+          jsonResponse({ data: [] }),
+        "GET /me/linkedin-reach": () => jsonResponse(linkedInReachFixture()),
+      });
+      const routed = globalThis.fetch;
+      globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = new URL(
+          input instanceof Request ? input.url : String(input),
+          globalThis.location.href,
+        );
+        return url.pathname.endsWith("/capture/held-threads") &&
+          url.searchParams.has("contact_id")
+          ? Promise.resolve(filtered())
+          : routed(input, init);
+      }) as typeof fetch;
+      globalThis.location.hash = hash;
+      return (
+        <StoryProviders>
+          <ConnectionOutcomesCard />
+        </StoryProviders>
+      );
+    },
+  };
+}
+
+export const FromContact: Story = {
+  ...fromContact(() => jsonResponse(heldThreadList([HELD_LEGAL]))),
+  play: async ({ canvasElement }) => {
+    const drawer = await within(canvasElement.ownerDocument.body).findByRole(
+      "dialog",
+      { name: "Mail not shared with the team" },
+    );
+    await within(drawer).findByRole("button", {
+      name: "Entwurf Aufhebungsvertrag",
+    });
+    await waitFor(() =>
+      expect(
+        within(drawer).getByRole("button", { name: "Show all threads" }),
+      ).toBeVisible(),
+    );
+  },
+};
+
+// An archived contact, or one the reader may not read, is refused, which is
+// not the same as a contact with nothing held.
+export const FromRefusedContact: Story = {
+  ...fromContact(() =>
+    jsonResponse({ status: 404, code: "not_found", title: "Not found" }, 404),
+  ),
+  play: async ({ canvasElement }) => {
+    const drawer = await within(canvasElement.ownerDocument.body).findByRole(
+      "dialog",
+      { name: "Mail not shared with the team" },
+    );
+    await within(drawer).findByRole("alert");
+    await expect(
+      within(drawer).queryByText("No held thread matches."),
+    ).toBeNull();
   },
 };
