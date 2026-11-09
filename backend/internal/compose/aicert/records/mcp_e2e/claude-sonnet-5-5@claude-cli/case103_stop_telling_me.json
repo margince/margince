@@ -9,15 +9,15 @@
   "driver": "claude:cli",
   "effort": "thinking off",
   "system_prompt": "cli-default",
-  "search": "semantic",
+  "search": "lexical",
   "self_judged": true,
   "usage": {
-    "input_tokens": 10,
-    "output_tokens": 1293,
-    "cache_creation_input_tokens": 14540,
-    "cache_read_input_tokens": 301719,
+    "input_tokens": 8,
+    "output_tokens": 1097,
+    "cache_creation_input_tokens": 10902,
+    "cache_read_input_tokens": 246388,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.1013
+    "cost_usd": 0.1577
   }
 }

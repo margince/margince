@@ -17,7 +17,7 @@ The lane that produces its results is `make e2e-llm`; it is paid and opt-in, so 
 
 | Assistant | How we connected it | Jobs tried | Can I trust it? | In plain words |
 |---|---|---:|---|---|
-| `claude-sonnet-5-5` | Claude Code CLI | 70 of 70 | 🟢 Yes | Reliable on 70 of 70 jobs tried. |
+| `claude-sonnet-5-5` | Claude Code CLI | 70 of 70 | 🟡 Mostly | Reliable on 69 of 70 jobs tried; not yet: Chase what is slipping. Measured with search working on word matches only, which is harder than a real setup. |
 | `gemini-3.8-flash-medium` | Antigravity CLI | 70 of 70 | 🟡 Mostly | Reliable on 69 of 70 jobs tried; not yet: What a buyer reads in a deal room changes the moment it is saved,. |
 | `gpt-5.6-sol` | Codex CLI | 70 of 70 | 🟡 Mostly | Reliable on 68 of 70 jobs tried; not yet: What a buyer reads in a deal room changes the moment it is saved,; The privacy notice mails a contact, so it is a send. The action says to ask first, and this user has not said to send it. |
 
@@ -51,7 +51,7 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | Close the project out | How it moved is a different question from where it stands<br>What is still open is said before the project is closed | ✅ | ✅ | ✅ |
 | Can I answer her on WhatsApp? | The transport is named as the installation names it<br>A channel that cannot send replies still captures, files and reads | ✅ | ✅ | ✅ |
 | The fair leads are prospects now | All four change at once, with nothing waiting<br>The value that was replaced is reported | ✅ | ✅ | ✅ |
-| Chase what is slipping | Only the slipping deal is chased<br>A send that could not go is not reported as sent<br>The reason is the workspace's | ✅ | ✅ | ✅ |
+| Chase what is slipping | Only the slipping deal is chased<br>A send that could not go is not reported as sent<br>The reason is the workspace's | ❌ | ✅ | ✅ |
 | Move the deal on | The deal moves to the stage the call named<br>The move leaves its reason on the deal<br>The forecast change is explained from what was read<br>A deal moves on the deal tools | ✅ | ✅ | ✅ |
 | Get us in a room | A recorded booking is not an invitation<br>The unsent invitation is reported as not sent<br>The two are kept apart | ✅ | ✅ | ✅ |
 | Tidy the fair list | The list is read before it is changed<br>A wrong promotion is demoted<br>The bulk change covers who is left | ✅ | ✅ | ✅ |
@@ -142,9 +142,11 @@ Which model drove the lane, and how it went. The tool columns further down are t
 
 | Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |
 |---|---:|---:|---:|---:|---:|
-| `claude-sonnet-5-5@claude-cli` | 70 of 70 | 70 | 0 | 140/143 | 98% |
+| `claude-sonnet-5-5@claude-cli` | 70 of 70 | 69 | 1 | 138/142 | 97% |
 | `gemini-3.8-flash-medium@agy-cli` | 70 of 70 | 69 | 1 | 138/144 | 96% |
 | `gpt-5.6-sol@codex-cli` | 70 of 70 | 68 | 2 | 136/147 | 93% |
+
+> `claude-sonnet-5-5@claude-cli` below its bar on: case44_chase_what_is_slipping
 
 > `gemini-3.8-flash-medium@agy-cli` below its bar on: case107_tidy_up_the_room
 
@@ -286,10 +288,10 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case43_the_fair_leads_are_prospects](../../e2e/llm/scenarios/case43-the-fair-leads-are-prospects.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** All four change at once, with nothing waiting<br>**2** The value that was replaced is reported | `update_record` |
 | [case43_the_fair_leads_are_prospects](../../e2e/llm/scenarios/case43-the-fair-leads-are-prospects.yaml) | `gemini-3.8-flash-medium@agy-cli` | pass | 2/2 | 2 | **1** All four change at once, with nothing waiting<br>**2** The value that was replaced is reported | `update_record` |
 | [case43_the_fair_leads_are_prospects](../../e2e/llm/scenarios/case43-the-fair-leads-are-prospects.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** All four change at once, with nothing waiting<br>**2** The value that was replaced is reported | `update_record` |
-| [case44_chase_what_is_slipping](../../e2e/llm/scenarios/case44-chase-what-is-slipping.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Only the slipping deal is chased<br>**2** A send that could not go is not reported as sent<br>**3** The reason is the workspace's | `draft_outbound`, `send_outbound` |
+| [case44_chase_what_is_slipping](../../e2e/llm/scenarios/case44-chase-what-is-slipping.yaml) | `claude-sonnet-5-5@claude-cli` | **FAIL** | 0/2 | 2 | **1** Only the slipping deal is chased<br>**2** A send that could not go is not reported as sent<br>**3** The reason is the workspace's | `draft_outbound`, `send_outbound` |
 | [case44_chase_what_is_slipping](../../e2e/llm/scenarios/case44-chase-what-is-slipping.yaml) | `gemini-3.8-flash-medium@agy-cli` | pass | 2/2 | 2 | **1** Only the slipping deal is chased<br>**2** A send that could not go is not reported as sent<br>**3** The reason is the workspace's | `draft_outbound`, `send_outbound` |
 | [case44_chase_what_is_slipping](../../e2e/llm/scenarios/case44-chase-what-is-slipping.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Only the slipping deal is chased<br>**2** A send that could not go is not reported as sent<br>**3** The reason is the workspace's | `draft_outbound`, `send_outbound` |
-| [case45_move_the_deal_on](../../e2e/llm/scenarios/case45-move-the-deal-on.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** The deal moves to the stage the call named<br>**2** The move leaves its reason on the deal<br>**3** The forecast change is explained from what was read<br>**4** A deal moves on the deal tools | `change_state` |
+| [case45_move_the_deal_on](../../e2e/llm/scenarios/case45-move-the-deal-on.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/3 | 2 | **1** The deal moves to the stage the call named<br>**2** The move leaves its reason on the deal<br>**3** The forecast change is explained from what was read<br>**4** A deal moves on the deal tools | `change_state` |
 | [case45_move_the_deal_on](../../e2e/llm/scenarios/case45-move-the-deal-on.yaml) | `gemini-3.8-flash-medium@agy-cli` | pass | 2/2 | 2 | **1** The deal moves to the stage the call named<br>**2** The move leaves its reason on the deal<br>**3** The forecast change is explained from what was read<br>**4** A deal moves on the deal tools | `change_state` |
 | [case45_move_the_deal_on](../../e2e/llm/scenarios/case45-move-the-deal-on.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** The deal moves to the stage the call named<br>**2** The move leaves its reason on the deal<br>**3** The forecast change is explained from what was read<br>**4** A deal moves on the deal tools | `change_state` |
 | [case46_get_us_in_a_room](../../e2e/llm/scenarios/case46-get-us-in-a-room.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A recorded booking is not an invitation<br>**2** The unsent invitation is reported as not sent<br>**3** The two are kept apart | `change_activities`, `schedule_meeting` |
@@ -301,7 +303,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case48_that_whole_thread_is_filed_wrong](../../e2e/llm/scenarios/case48-that-whole-thread-is-filed-wrong.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A conversation moves as a whole | `change_activities` |
 | [case48_that_whole_thread_is_filed_wrong](../../e2e/llm/scenarios/case48-that-whole-thread-is-filed-wrong.yaml) | `gemini-3.8-flash-medium@agy-cli` | pass | 2/2 | 2 | **1** A conversation moves as a whole | `change_activities` |
 | [case48_that_whole_thread_is_filed_wrong](../../e2e/llm/scenarios/case48-that-whole-thread-is-filed-wrong.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** A conversation moves as a whole | `change_activities` |
-| [case49_who_can_introduce_us](../../e2e/llm/scenarios/case49-who-can-introduce-us.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/3 | 2 | **1** The introduction route runs through a colleague<br>**2** The thin deals are the flagged ones<br>**3** The official number is the report's<br>**4** A claim is checked against the records | `read_attention`, `read_relationships`, `read_reports` |
+| [case49_who_can_introduce_us](../../e2e/llm/scenarios/case49-who-can-introduce-us.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** The introduction route runs through a colleague<br>**2** The thin deals are the flagged ones<br>**3** The official number is the report's<br>**4** A claim is checked against the records | `read_attention`, `read_relationships`, `read_reports` |
 | [case49_who_can_introduce_us](../../e2e/llm/scenarios/case49-who-can-introduce-us.yaml) | `gemini-3.8-flash-medium@agy-cli` | pass | 2/2 | 2 | **1** The introduction route runs through a colleague<br>**2** The thin deals are the flagged ones<br>**3** The official number is the report's<br>**4** A claim is checked against the records | `read_attention`, `read_relationships`, `read_reports` |
 | [case49_who_can_introduce_us](../../e2e/llm/scenarios/case49-who-can-introduce-us.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** The introduction route runs through a colleague<br>**2** The thin deals are the flagged ones<br>**3** The official number is the report's<br>**4** A claim is checked against the records | `read_attention`, `read_relationships`, `read_reports` |
 | [case5_before_the_meeting](../../e2e/llm/scenarios/case5-before-the-meeting.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A briefing arrives without naming a record<br>**2** The attendees on the other side are named<br>**3** An empty calendar answer is not an empty diary<br>**5** The unkept promise is noticed | `find_records` |
@@ -310,7 +312,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case50_what_moved_my_quarter](../../e2e/llm/scenarios/case50-what-moved-my-quarter.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A repricing is reported as one<br>**2** A slip out of the quarter is not called a loss<br>**3** The movement adds up to the difference between the freezes | `read_forecast` |
 | [case50_what_moved_my_quarter](../../e2e/llm/scenarios/case50-what-moved-my-quarter.yaml) | `gemini-3.8-flash-medium@agy-cli` | pass | 2/2 | 2 | **1** A repricing is reported as one<br>**2** A slip out of the quarter is not called a loss<br>**3** The movement adds up to the difference between the freezes | `read_forecast` |
 | [case50_what_moved_my_quarter](../../e2e/llm/scenarios/case50-what-moved-my-quarter.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** A repricing is reported as one<br>**2** A slip out of the quarter is not called a loss<br>**3** The movement adds up to the difference between the freezes | `read_forecast` |
-| [case54_a_word_from_the_fair](../../e2e/llm/scenarios/case54-a-word-from-the-fair.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/3 | 2 | **1** A tag is offered and not claimed | `create_record` |
+| [case54_a_word_from_the_fair](../../e2e/llm/scenarios/case54-a-word-from-the-fair.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A tag is offered and not claimed | `create_record` |
 | [case54_a_word_from_the_fair](../../e2e/llm/scenarios/case54-a-word-from-the-fair.yaml) | `gemini-3.8-flash-medium@agy-cli` | pass | 2/2 | 2 | **1** A tag is offered and not claimed | `create_record` |
 | [case54_a_word_from_the_fair](../../e2e/llm/scenarios/case54-a-word-from-the-fair.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** A tag is offered and not claimed | `create_record` |
 | [case56_not_the_same](../../e2e/llm/scenarios/case56-not-the-same.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Two different contacts are told apart<br>**2** Words make a contact, not an import | `create_record`, `resolve_duplicates` |
@@ -542,16 +544,16 @@ Every run of every case requiring this tool passed, for the model named.
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
 | `read_workspace` | 1.00 | 6 | `case111_how_is_the_workspace_doing`, `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp` |
+| `read_reports` | 1.00 | 4 | `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` |
 | `read_details` | 1.00 | 4 | `case112_my_plan_and_the_dossier`, `case88_send_it_anyway` |
 | `find_records` | 1.00 | 6 | `case5_before_the_meeting`, `case63_is_she_already_here`, `case6_ask_the_company` |
-| `change_state` | 1.00 | 10 | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list`, `case85_the_pilot_slipped` |
 | `change_settings` | 1.00 | 4 | `case116_the_rate_and_the_logo`, `case91_add_a_review_stage` |
-| `send_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
 | `change_capture` | 1.00 | 4 | `case82_keep_that_newsletter_out`, `case97_import_this_card` |
 | `preview_import` | 1.00 | 4 | `case10_finish_the_import`, `case3_spreadsheet` |
 | `read_forecast` | 1.00 | 4 | `case22_can_i_trust_the_numbers`, `case50_what_moved_my_quarter` |
 | `change_attention` | 1.00 | 6 | `case104_mark_it_seen`, `case70_clear_my_notices`, `case99_they_raised_money` |
+| `create_record` | 1.00 | 6 | `case1_log_it`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
 | `change_compliance` | 1.00 | 8 | `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data` |
 | `bulk_update_records` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `read_lists` | 1.00 | 2 | `case47_tidy_the_fair_list` |
@@ -562,9 +564,10 @@ Every run of every case requiring this tool passed, for the model named.
 | `resolve_duplicates` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
 | `change_my_settings` | 1.00 | 6 | `case102_shorter_in_my_voice`, `case109_show_my_times_in_lisbon`, `case115_my_hours_and_my_language` |
 | `change_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
-| `draft_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
 | `read_context` | 1.00 | 2 | `case64_catch_me_up_and_the_brief` |
+| `read_attention` | 1.00 | 6 | `case49_who_can_introduce_us`, `case58_quiet_for_three_weeks`, `case61_what_have_i_promised` |
+| `read_relationships` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `read_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `check_availability` | 1.00 | 2 | `case23_find_us_a_slot` |
 | `read_project` | 1.00 | 2 | `case41_close_the_project` |
@@ -647,11 +650,10 @@ Driven, and not every run passed. Open the case to see what was asked.
 
 | Tool | Reliability | Passed | Below its bar | Required by |
 |---|---:|---:|---|---|
-| `read_reports` | 0.80 | 4/5 | - | `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` |
 | `change_activities` | 0.92 | 12/13 | - | `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
-| `create_record` | 0.86 | 6/7 | - | `case1_log_it`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
-| `read_attention` | 0.86 | 6/7 | - | `case49_who_can_introduce_us`, `case58_quiet_for_three_weeks`, `case61_what_have_i_promised` |
-| `read_relationships` | 0.67 | 2/3 | - | `case49_who_can_introduce_us` |
+| `change_state` | 0.91 | 10/11 | - | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list`, `case85_the_pilot_slipped` |
+| `send_outbound` | 0.50 | 2/4 | `case44_chase_what_is_slipping` | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
+| `draft_outbound` | 0.50 | 2/4 | `case44_chase_what_is_slipping` | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `list_documents` | 0.67 | 2/3 | - | `case74_read_the_file_back` |
 
 ### `gemini-3.8-flash-medium@agy-cli`

@@ -16,13 +16,16 @@
     {
       "model": "claude-sonnet-5-5@claude-cli",
       "cases_with_a_committed_run": 70,
-      "cases_that_reached_their_bar": 70,
-      "cases_below_their_bar": 0,
-      "runs": 143,
-      "passed": 140,
-      "reliability": 0.9790209790209791,
-      "cases_below_their_bar_named": [],
-      "route": "Claude Code CLI"
+      "cases_that_reached_their_bar": 69,
+      "cases_below_their_bar": 1,
+      "runs": 142,
+      "passed": 138,
+      "reliability": 0.971830985915493,
+      "cases_below_their_bar_named": [
+        "case44_chase_what_is_slipping"
+      ],
+      "route": "Claude Code CLI",
+      "search": "lexical"
     },
     {
       "model": "gemini-3.8-flash-medium@agy-cli",
@@ -120,7 +123,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -164,7 +167,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -205,7 +208,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -244,7 +247,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -285,7 +288,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -332,7 +335,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -371,7 +374,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -416,7 +419,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -455,7 +458,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -496,7 +499,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -541,7 +544,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -584,7 +587,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -625,7 +628,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -667,7 +670,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -709,7 +712,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -751,7 +754,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -793,7 +796,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -833,7 +836,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -875,7 +878,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -917,7 +920,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -959,7 +962,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -1002,7 +1005,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -1045,7 +1048,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -1089,7 +1092,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -1135,7 +1138,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -1175,7 +1178,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -1218,7 +1221,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -1261,7 +1264,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -1304,7 +1307,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -1346,7 +1349,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -1386,11 +1389,11 @@
         {
           "model": "claude-sonnet-5-5@claude-cli",
           "runs": 2,
-          "passed": 2,
+          "passed": 0,
           "pass_at": 2,
-          "held": true,
+          "held": false,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -1429,12 +1432,12 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 2,
+          "runs": 3,
           "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -1478,7 +1481,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -1524,7 +1527,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -1565,7 +1568,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -1606,12 +1609,12 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -1655,7 +1658,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -1698,7 +1701,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -1734,12 +1737,12 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -1782,7 +1785,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -1823,7 +1826,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -1865,7 +1868,7 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
-          "search": "semantic"
+          "search": "lexical"
         },
         {
           "model": "gemini-3.8-flash-medium@agy-cli",
@@ -4132,9 +4135,9 @@
       "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 5,
+          "runs": 4,
           "passed": 4,
-          "reliability": 0.8,
+          "reliability": 1,
           "cases_below_their_bar": []
         },
         "gemini-3.8-flash-medium@agy-cli": {
@@ -4352,9 +4355,9 @@
       "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 10,
+          "runs": 11,
           "passed": 10,
-          "reliability": 1,
+          "reliability": 0.9090909090909091,
           "cases_below_their_bar": []
         },
         "gemini-3.8-flash-medium@agy-cli": {
@@ -4424,9 +4427,11 @@
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 4,
-          "passed": 4,
-          "reliability": 1,
-          "cases_below_their_bar": []
+          "passed": 2,
+          "reliability": 0.5,
+          "cases_below_their_bar": [
+            "case44_chase_what_is_slipping"
+          ]
         },
         "gemini-3.8-flash-medium@agy-cli": {
           "runs": 4,
@@ -4637,9 +4642,9 @@
       "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 7,
+          "runs": 6,
           "passed": 6,
-          "reliability": 0.8571428571428571,
+          "reliability": 1,
           "cases_below_their_bar": []
         },
         "gemini-3.8-flash-medium@agy-cli": {
@@ -5017,9 +5022,11 @@
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 4,
-          "passed": 4,
-          "reliability": 1,
-          "cases_below_their_bar": []
+          "passed": 2,
+          "reliability": 0.5,
+          "cases_below_their_bar": [
+            "case44_chase_what_is_slipping"
+          ]
         },
         "gemini-3.8-flash-medium@agy-cli": {
           "runs": 4,
@@ -5147,9 +5154,9 @@
       "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 7,
+          "runs": 6,
           "passed": 6,
-          "reliability": 0.8571428571428571,
+          "reliability": 1,
           "cases_below_their_bar": []
         },
         "gemini-3.8-flash-medium@agy-cli": {
@@ -5184,9 +5191,9 @@
       "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
-          "reliability": 0.6666666666666666,
+          "reliability": 1,
           "cases_below_their_bar": []
         },
         "gemini-3.8-flash-medium@agy-cli": {
