@@ -10,14 +10,13 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Inbound says the other side wrote it, which the row's voice answers where it
 // names a side. A colleague's mail can arrive inbound, and reading the
 // transport alone credits it to the contact.
-//
-// Threaded() then puts "Re:" on a draft that replies to our own colleague.
 func TestAColleaguesInboundMailIsNotTheContactsWord(t *testing.T) {
 	inbound := crmcontracts.ActivityDirectionInbound
 	colleague := crmcontracts.ActivityAuthorKindColleague
@@ -43,7 +42,7 @@ func TestAColleaguesInboundMailIsNotTheContactsWord(t *testing.T) {
 					Author: &crmcontracts.ActivityAuthor{Kind: *tc.kind},
 				}
 			}
-			if got := foldAbout(act, time.Now(), time.UTC).Inbound; got != tc.want {
+			if got := foldAbout(act, clocktest.Now(t), time.UTC).Inbound; got != tc.want {
 				t.Errorf("Inbound = %v, want %v for an inbound row %s", got, tc.want, tc.name)
 			}
 		})
