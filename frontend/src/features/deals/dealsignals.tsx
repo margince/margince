@@ -19,6 +19,7 @@ import type { components } from "../../api/schema";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import type { Signal, SignalTone } from "../records/record360";
 import { useDealCoverage } from "./deal360/usedealcoverage";
 
@@ -69,7 +70,7 @@ export function useDealSignals(dealId: string) {
     ? []
     : (coverage?.risks ?? []).map((risk) => ({
         key: risk.kind,
-        label: t(RISK_LABELS[risk.kind]),
+        label: t(labelFor(RISK_LABELS, risk.kind)),
         // The trigger number, when the rule has one. A rule with no figure
         // renders its label alone rather than a blank where a number goes.
         figure:

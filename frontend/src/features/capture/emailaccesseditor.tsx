@@ -36,6 +36,7 @@ import {
   useMessageAudience,
   useThreadAudience,
 } from "../../lib/audienceservice";
+import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf } from "../../lib/problem";
 import {
   AUDIENCE_HINT,
@@ -314,8 +315,8 @@ function MessageAudience({
             onChange={setChoice}
             choices={messageAudienceChoices(internal).map((value) => ({
               value,
-              label: t(AUDIENCE_LABEL[value]),
-              description: t(AUDIENCE_HINT[value]),
+              label: t(labelFor(AUDIENCE_LABEL, value)),
+              description: t(labelFor(AUDIENCE_HINT, value)),
             }))}
           />
           {/* The picker only where the choice needs one. A limited-to-nobody

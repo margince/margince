@@ -30,6 +30,7 @@ import { type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { taskWriteKeys, timelineBaseKey } from "../lib/activitykeys";
 import type { EntityKind } from "../lib/entity";
+import { UNKNOWN_VALUE_LABEL } from "../lib/labelfor";
 import { useSourceOpener } from "../lib/opensource";
 import { unwrap } from "../lib/problem";
 import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
@@ -136,6 +137,8 @@ function kindLabel(kind: LatestInboundKind, t: Translator): string {
       return t("latest.kind.message");
     case "web_form":
       return t("latest.kind.webForm");
+    default:
+      return t(UNKNOWN_VALUE_LABEL);
   }
 }
 
@@ -198,6 +201,8 @@ function readLabel(kind: LatestInboundKind, t: Translator): string {
       return t("latest.read.message");
     case "web_form":
       return t("latest.read.webForm");
+    default:
+      return t(UNKNOWN_VALUE_LABEL);
   }
 }
 

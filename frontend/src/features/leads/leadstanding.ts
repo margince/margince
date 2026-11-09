@@ -5,6 +5,7 @@ import { formatDateAbbrev } from "../../format/format";
 import { leadIdentityName } from "../../format/leadname";
 import type { Locale, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import {
   disqualifyReasonLabel,
   type LeadDisqualifyReason,
@@ -167,7 +168,7 @@ function engagedSentence(
   if (!evidence?.occurred_at) {
     return t("lead.standing.engagedBecause");
   }
-  return t(EVIDENCE_SENTENCE[evidence.trigger], {
+  return t(labelFor(EVIDENCE_SENTENCE, evidence.trigger), {
     name: leadIdentityName(lead) || t("lead.unnamed"),
     at: when(evidence.occurred_at, evidence.occurred_precision ?? "instant"),
   });

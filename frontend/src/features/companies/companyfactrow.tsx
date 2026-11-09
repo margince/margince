@@ -16,6 +16,7 @@ import { provenanceLabel } from "../../design-system/trust";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { factFieldLabelKey } from "../../lib/factview";
+import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import { settleFacts } from "./companyfactspanel";
@@ -98,7 +99,7 @@ export function FactRow({
         {fact.suspect_reason && (
           <span className="co-fact-suspect">
             <Badge tone="warning">
-              {t(FACT_SUSPECT_LABELS[fact.suspect_reason])}
+              {t(labelFor(FACT_SUSPECT_LABELS, fact.suspect_reason))}
             </Badge>
           </span>
         )}

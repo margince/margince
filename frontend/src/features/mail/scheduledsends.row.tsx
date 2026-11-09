@@ -11,6 +11,7 @@ import { INTL_LOCALE } from "../../format/intllocale";
 import { zoneNameAndOffset } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { logUnexpectedError } from "../../lib/problem";
 import { useSendPermission } from "../../lib/usesendpermission";
 import { dropsOperatorReason, isEditable } from "./schedulededit";
@@ -233,7 +234,7 @@ export function SendRow({
   const refusalId = useId();
   const actionable = STILL_MOVABLE.has(send.status);
   const heldReasonKey = send.held_reason
-    ? HELD_REASON_LABEL[send.held_reason]
+    ? labelFor(HELD_REASON_LABEL, send.held_reason)
     : undefined;
   const preview = previewOf(send.body);
   // What the engine says about this message now, for a message that will still
@@ -297,7 +298,7 @@ export function SendRow({
         ) : (
           send.status !== "scheduled" && (
             <Badge tone={STATUS_TONE[send.status]}>
-              {t(STATUS_LABEL[send.status])}
+              {t(labelFor(STATUS_LABEL, send.status))}
             </Badge>
           )
         )}

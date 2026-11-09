@@ -15,6 +15,7 @@ import { Panel } from "../../../design-system/panel";
 import { relayMemberFor } from "../../../design-system/provenanceof";
 import { formatNumber } from "../../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../../i18n";
+import { labelFor } from "../../../lib/labelfor";
 import { useViewerId } from "../../../lib/session";
 import { BAND_BADGE } from "../companygraph";
 import {
@@ -79,7 +80,7 @@ export function LeadPanel({
               : "success"
           }
         >
-          {blocked ?? t(BAND_BADGE[route.strength_bucket ?? "none"])}
+          {blocked ?? t(labelFor(BAND_BADGE, route.strength_bucket ?? "none"))}
         </Badge>
       }
     >

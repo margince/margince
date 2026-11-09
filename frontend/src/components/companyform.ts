@@ -22,6 +22,7 @@ import type { RecordPickerCandidate } from "../design-system/recordpicker";
 import { industryOptions } from "../format/industry";
 import type { Locale, Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { labelFor } from "../lib/labelfor";
 import { unwrap } from "../lib/problem";
 import {
   formatSizeBand,
@@ -362,7 +363,7 @@ export function companyEditFields(
       type: "select",
       options: LIFECYCLE_OPTIONS.map((value) => ({
         value,
-        label: t(LIFECYCLE_LABELS[value]),
+        label: t(labelFor(LIFECYCLE_LABELS, value)),
       })),
     },
     {
@@ -371,7 +372,7 @@ export function companyEditFields(
       type: "multiselect",
       options: RELATIONSHIP_TYPE_OPTIONS.map((value) => ({
         value,
-        label: t(RELATIONSHIP_TYPE_LABELS[value]),
+        label: t(labelFor(RELATIONSHIP_TYPE_LABELS, value)),
       })),
     },
     // The company's own LinkedIn page. A canonical column since ADR-0085,

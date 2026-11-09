@@ -122,5 +122,7 @@ export function saveRecordEdit(
           );
         },
       });
+    default:
+      throw new Error(`no edit path for a ${String(kind)} record`);
   }
 }

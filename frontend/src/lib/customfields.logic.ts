@@ -75,6 +75,8 @@ function storageNote(type: CfType, currency: string): string {
       return "enum";
     case "boolean":
       return "boolean";
+    default:
+      return type;
   }
 }
 

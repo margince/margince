@@ -21,6 +21,7 @@ import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { providerName } from "../../lib/ai-provider-names";
 import { aiTaskLabel } from "../../lib/ai-task-label";
+import { valueFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
@@ -370,7 +371,7 @@ export function CallDrawer({
         </Heading>
         <div className="aicalls-drawer-meta">
           <StatusBadge
-            kind={OUTCOME_KIND[outcome]}
+            kind={valueFor(OUTCOME_KIND, outcome, "neutral")}
             label={outcomeLabel(outcome, t)}
           />
           {call.decision_attempted && (

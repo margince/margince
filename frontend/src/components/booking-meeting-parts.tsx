@@ -10,6 +10,7 @@ import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody } from "../design-system/panel";
 import { type Translator, useT } from "../i18n";
 import { PROVIDER_VIDEO_APP, VIDEO_APP_NAME } from "../lib/booking-video";
+import { valueFor } from "../lib/labelfor";
 import { INVITATION_IN_FLIGHT } from "../lib/meeting-invitation-query";
 
 type Invitation = components["schemas"]["MeetingInvitation"];
@@ -50,7 +51,10 @@ export function InvitationBadge({
 }: Readonly<{ status: Invitation["status"] }>) {
   const t = useT();
   return (
-    <Badge tone={STATUS_TONE[status]} live={INVITATION_IN_FLIGHT.has(status)}>
+    <Badge
+      tone={valueFor(STATUS_TONE, status, "default")}
+      live={INVITATION_IN_FLIGHT.has(status)}
+    >
       {t(`scheduling.${status}`)}
     </Badge>
   );

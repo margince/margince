@@ -13,6 +13,7 @@ import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatDate, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
+import { valueFor } from "../../lib/labelfor";
 import { useMemberNames } from "../../lib/membernames";
 import { problemMessageOf } from "../../lib/problem";
 import { navigate, routeHash } from "../../lib/router";
@@ -298,7 +299,7 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
               key: "status",
               header: t("import.recent.col.status"),
               render: (one) => (
-                <Badge tone={STATUS_TONE[one.status]}>
+                <Badge tone={valueFor(STATUS_TONE, one.status, "default")}>
                   {t(`import.status.${one.status}`)}
                 </Badge>
               ),
