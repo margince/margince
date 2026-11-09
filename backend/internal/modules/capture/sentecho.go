@@ -64,6 +64,12 @@ func (s *Sink) adoptSentEchoTx(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	if err := storekit.LockSentEchoKey(ctx, tx, seat, provider, rec.ProviderMessageID); err != nil {
 		return err
 	}
+	return s.adoptInSavepointTx(ctx, tx, seat, provider, rec, since)
+}
+
+// adoptInSavepointTx re-keys inside a savepoint, so a failed re-key rolls back
+// alone and the capture keeps its own writes.
+func (s *Sink) adoptInSavepointTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, provider string, rec connector.NormalizedRecord, since *time.Time) error {
 	sp, err := tx.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("capture: opening the sent-echo adoption savepoint: %w", err)
