@@ -75,7 +75,9 @@ const thisDealLabel = "this"
 // meetingPlanMessage is one captured conversation, labelled so the expectation
 // can name it without naming an id.
 type meetingPlanMessage struct {
-	Label     string `json:"label"`
+	Label string `json:"label"`
+	// Kind is the activity kind, such as call or meeting; empty is an email.
+	Kind      string `json:"kind"`
 	DaysAgo   int    `json:"days_ago"`
 	Direction string `json:"direction"`
 	Subject   string `json:"subject"`
@@ -253,6 +255,9 @@ func refuseUnusableMeetingFixture(site string, f meetingPlanFixture, want meetin
 				site, i+1, claim.FromLabel)
 		}
 	}
+	if err := refuseATokenTheClaimsHandOver(site, f, want); err != nil {
+		return err
+	}
 	// The token has to be in the CITED message, not merely somewhere in the
 	// fixture. meeting_brief requires one sentence to both cite that message
 	// and carry the token, so a token living only in a distractor describes an
@@ -264,6 +269,31 @@ func refuseUnusableMeetingFixture(site string, f meetingPlanFixture, want meetin
 				"cite that conversation and say it", site, want.NamesToken, want.CitesLabel)
 	}
 	return nil
+}
+
+// refuseATokenTheClaimsHandOver refuses a token a claim row already carries.
+// Both prompts show each claim with its body and the name of its source, so a
+// reply copying the row would say the token without reading any conversation.
+func refuseATokenTheClaimsHandOver(site string, f meetingPlanFixture, want meetingPlanExpectation) error {
+	for i, claim := range f.Claims {
+		if strings.Contains(claim.Body+" "+claimSourceLabel(f, claim), want.NamesToken) {
+			return fmt.Errorf(
+				"%s: the token %q is in the claim at position %d or the name of its source, so copying that claim "+
+					"would satisfy this scenario", site, want.NamesToken, i+1)
+		}
+	}
+	return nil
+}
+
+// claimSourceLabel names a claim's source the way production does: by the
+// subject or title of the conversation it was captured from.
+func claimSourceLabel(f meetingPlanFixture, claim meetingPlanClaimRow) string {
+	for _, message := range f.Messages {
+		if message.Label == claim.FromLabel {
+			return message.Subject
+		}
+	}
+	return ""
 }
 
 // citedMessageText is the subject and body of the one message an expectation
@@ -306,8 +336,12 @@ func meetingPlanInput(f meetingPlanFixture) (meetingbrief.Input, map[string]stri
 		id := ids.NewV7().String()
 		byLabel[message.Label] = id
 		at := now.AddDate(0, 0, -message.DaysAgo)
+		kind := message.Kind
+		if kind == "" {
+			kind = "email"
+		}
 		in.History = append(in.History, meetingbrief.HistoryIn{
-			ID: id, Kind: "email", Subject: message.Subject,
+			ID: id, Kind: kind, Subject: message.Subject,
 			Direction: message.Direction, At: at,
 			OnDeal: message.Deal == thisDealLabel, OtherDeal: otherDeals[message.Deal],
 		})
@@ -318,7 +352,7 @@ func meetingPlanInput(f meetingPlanFixture) (meetingbrief.Input, map[string]stri
 		direction := crmcontracts.ActivityDirection(message.Direction)
 		ours, known := activities.WroteItOurSide(crmcontracts.Activity{Direction: &direction})
 		in.Recent = append(in.Recent, meetingbrief.ActIn{
-			ID: id, Kind: "email", Subject: message.Subject, Direction: message.Direction, At: at,
+			ID: id, Kind: kind, Subject: message.Subject, Direction: message.Direction, At: at,
 			WroteOurSide: ours, SideKnown: known,
 		})
 	}
@@ -333,7 +367,7 @@ func meetingPlanInput(f meetingPlanFixture) (meetingbrief.Input, map[string]stri
 	for _, claim := range f.Claims {
 		in.Commitments = append(in.Commitments, meetingbrief.ClaimIn{
 			ContactName: f.Attendee, Kind: claim.Kind, Body: claim.Body,
-			Status: "open", SourceID: byLabel[claim.FromLabel],
+			Status: "open", SourceID: byLabel[claim.FromLabel], SourceLabel: claimSourceLabel(f, claim),
 		})
 	}
 	return in, byLabel

@@ -7,10 +7,11 @@ fixture:
   subject: Coffee with Rainer
   company: Asia Flight Services
   attendee: Rainer Vogt
-  # Two moments and a wall of noise. The wish list is what this meeting is
-  # about; the newsletter is what a recency-ordered reader would have shown
-  # instead, and it is here so that citing the right one is a choice rather
-  # than the only option.
+  # The wish list is what this meeting is about; the newsletter is what a
+  # recency-ordered reader would have shown instead, so citing the right one is
+  # a choice rather than the only option. The open question was asked on a
+  # call, so the claim row points at the call and never names the wish list:
+  # finding it takes reading the conversations, not copying the claim.
   messages:
     - label: wish_list
       days_ago: 62
@@ -19,8 +20,13 @@ fixture:
       body: >
         We keep losing track of issues and quotes. What we need is issue
         tracking, quote tracking and multi-channel capture in one place, so
-        nobody has to ask three contacts where a request went. How do we get
-        started on this?
+        nobody has to ask three contacts where a request went.
+    - label: intro_call
+      kind: call
+      days_ago: 55
+      subject: Intro call
+      body: >
+        Rainer asked how we would get started on the CRM work.
     - label: ownership_change
       days_ago: 30
       direction: inbound
@@ -38,7 +44,7 @@ fixture:
   claims:
     - kind: open_question
       body: How do we get started on the CRM work?
-      from_label: wish_list
+      from_label: intro_call
 expect:
   outcome: accepted
   # A right plan reads the wish list, because that is the conversation this

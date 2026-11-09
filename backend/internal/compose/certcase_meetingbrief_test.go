@@ -198,6 +198,14 @@ func TestTheMeetingBriefCaseRefusesScenariosThatMeasureNothing(t *testing.T) {
 			want:     "not in the summary the sections prompt is sent",
 		},
 		{
+			// Production names a claim's source by its subject, so a claim taken
+			// from the cited thread puts that thread's name in the prompt for free.
+			name:     "a token the claim row carries is copied, not read",
+			fixture:  strings.Replace(planFixture, `"from_label":"intro_call"`, `"from_label":"wish_list"`, 1),
+			expected: briefExpectation,
+			want:     "copying that claim would satisfy this scenario",
+		},
+		{
 			name:     "a fixture of the wrong shape",
 			fixture:  `["not an object"]`,
 			expected: briefExpectation,

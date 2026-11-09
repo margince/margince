@@ -90,7 +90,9 @@ about each criterion, never what the deal should do next or which stage it belon
 A speaker reporting what somebody else said or agreed ("she confirmed the budget")
 is not their own statement, and settles nothing.
 Say met=false where the text states the thing has NOT happened: it is still awaited,
-only forecast, floated and deferred, or denied. Silence about a criterion is not
+only forecast, floated and deferred, or denied. A plan or expectation to do it ("we expect
+to close by month end") states it has not happened yet: report it as met=false, citing that
+line, not nothing. Silence about a criterion is not
 evidence either way; omit it. Reporting nothing is the correct answer for many conversations.`
 
 // stageEvidenceSystemFor names THIS call's data boundary; see

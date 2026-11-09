@@ -72,11 +72,13 @@ const planFixture = `{
 	"attendee": "Rainer Vogt",
 	"messages": [
 		{"label":"wish_list","days_ago":62,"direction":"inbound","subject":"CRM requirements",
-		 "body":"We need issue tracking and quote tracking in one place. How do we get started?"},
+		 "body":"We need issue tracking and quote tracking in one place."},
+		{"label":"intro_call","kind":"call","days_ago":55,"subject":"Intro call",
+		 "body":"Rainer asked how we would get started."},
 		{"label":"newsletter","days_ago":1,"direction":"outbound","subject":"Product news",
 		 "body":"This month's release notes."}
 	],
-	"claims": [{"kind":"open_question","body":"How do we get started?","from_label":"wish_list"}]
+	"claims": [{"kind":"open_question","body":"How do we get started?","from_label":"intro_call"}]
 }`
 
 const planExpectation = `{"cites_label":"wish_list","names_token":"quote tracking"}`
@@ -180,12 +182,21 @@ func TestTheMeetingPlanCaseRefusesAFixtureThatMeasuresNothing(t *testing.T) {
 			wants:    "which the fixture does not carry",
 		},
 		{
-			name:    "a token the floor already says would pass on an empty reply",
-			fixture: planFixture,
-			// The deterministic plan quotes the captured claim verbatim, so a
-			// token drawn from it is in the prose whatever the model returns.
-			expected: `{"cites_label":"wish_list","names_token":"How do we get started?"}`,
+			name: "a token the floor already says would pass on an empty reply",
+			// The deterministic plan asks whether the topic is "still a priority",
+			// so a token the message shares with that wording is in the prose
+			// whatever the model returns.
+			fixture:  strings.Replace(planFixture, "in one place.", "in one place, as a priority.", 1),
+			expected: `{"cites_label":"wish_list","names_token":"priority"}`,
 			wants:    "already in the deterministic plan's own prose",
+		},
+		{
+			name: "a token the claim row carries would pass by copying it",
+			// The claim is shown with its source's subject, so a claim taken
+			// from the named message hands over every word of that subject.
+			fixture:  strings.Replace(planFixture, `"from_label":"intro_call"`, `"from_label":"wish_list"`, 1),
+			expected: `{"cites_label":"wish_list","names_token":"requirements"}`,
+			wants:    "copying that claim would satisfy this scenario",
 		},
 		{
 			name:     "no token at all would accept a generic plan",

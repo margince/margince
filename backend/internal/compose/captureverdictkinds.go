@@ -140,8 +140,9 @@ sells, or supplies something it was engaged to supply. Someone offering to sell 
 service it shows no sign of having asked for — financing, capital, leads, SEO, staffing,
 development, an introduction for a fee — is "vendor_pitch" when a human is named and "spam"
 when nobody is, no matter how courteous the mail or how complete the sender's signature
-block, address and job title. An offer priced for a job of THIS business — its event, its
-site, its dates — answers a request: that is the genuine correspondence below, not a pitch.
+block, address and job title. Only a sign that THIS business asked — thanks for its enquiry, a
+call referred to, its own order, stand or site — makes an offer genuine correspondence; dates
+any outsider can look up do not.
 You are NOT told the relationship history, so decide it from the message. Mail that continues
 work already agreed is GENUINE CORRESPONDENCE: a quote for a named job with dates and scope, a
 delivery date, a reply in a thread, an answer to a question. That settles only that the mail is

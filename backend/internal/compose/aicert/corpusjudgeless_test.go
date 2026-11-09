@@ -235,6 +235,12 @@ func confidentialityProofs() map[string]judgelessProof {
 		"a_salary_sheet_behind_an_invoice_note_stays_private":                      {"personnel", "ordinary"},
 		"a_readable_supplier_invoice_opens_the_thread":                             {"ordinary", "personnel"},
 		"a_consultant_profile_without_cv_headings_stays_private":                   {"personnel", "ordinary"},
+		"a_chinese_salary_sheet_behind_an_invoice_note_stays_private":              {"personnel", "ordinary"},
+		"a_japanese_salary_sheet_behind_an_invoice_note_stays_private":             {"personnel", "ordinary"},
+		"a_korean_salary_sheet_behind_an_invoice_note_stays_private":               {"personnel", "ordinary"},
+		"a_vietnamese_salary_sheet_behind_an_invoice_note_stays_private":           {"personnel", "ordinary"},
+		"a_japanese_resume_stays_private":                                          {"personnel", "ordinary"},
+		"a_chinese_supplier_invoice_opens_the_thread":                              {"ordinary", "personnel"},
 		// A "held" case passes any kind that holds and refuses a confident "ordinary".
 		"a_cut_off_cost_sheet_by_team_member_stays_held":        {"personnel", "ordinary"},
 		"an_unpatched_vulnerability_is_held_until_it_is_closed": {"security_incident", "ordinary"},

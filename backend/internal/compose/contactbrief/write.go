@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
@@ -126,8 +127,24 @@ func BriefRequest(in Input, lang string) model.Request {
 // Input is our own struct of scalars and slices. An empty prompt still reaches
 // the model fenced, and the grounding filter refuses the reply that comes back.
 func encodeInput(in Input) string {
-	encoded, _ := json.Marshal(in) //nolint:errchkjson // Input is a plain struct of scalars; marshal cannot fail
+	encoded, _ := json.Marshal(withNoTurnBehindAWithheldRow(in)) //nolint:errchkjson // Input is a plain struct of scalars; marshal cannot fail
 	return string(encoded)
+}
+
+// withNoTurnBehindAWithheldRow drops the move from every message older than a
+// withheld one: each move is read off its own message, and the newer message
+// this reader cannot read may have answered it. Recent is newest first.
+func withNoTurnBehindAWithheldRow(in Input) Input {
+	recent := slices.Clone(in.Recent)
+	behindWithheld := false
+	for i := range recent {
+		if behindWithheld {
+			recent[i].Move = ""
+		}
+		behindWithheld = behindWithheld || recent[i].Withheld
+	}
+	in.Recent = recent
+	return in
 }
 
 // shownRefs names each record id the relationship prompt shows by a ref, and

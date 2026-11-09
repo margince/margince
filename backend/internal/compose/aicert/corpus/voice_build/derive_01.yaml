@@ -143,7 +143,9 @@ expect:
     quoted numbers, or the sign-off as the author's voice: those are what the
     author was writing ABOUT, not how they write. The corpus carries both a
     customer register and an internal one, and a profile that notices only one of
-    them has read half the author.
+    them has read half the author. S2 and S4 arrive labelled "general", so a
+    profile that describes them as the general register and says how it
+    differs from the email register has read both.
   bands:
     certified_min: 70
     degraded_min: 50

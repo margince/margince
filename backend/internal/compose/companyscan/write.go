@@ -70,7 +70,7 @@ Return ONLY a JSON object: {"findings":[{"kind":"question_unanswered|risk_raised
 Rules:
 - At most four findings, the one that most needs attention first. Return {"findings":[]} when nothing does — that is a good answer, not a failure.
 - When they chase something we promised, raise question_unanswered on their chasing message.
-- "message_id" is the id of the ONE message the finding rests on, such as m2, and "quote" is a verbatim excerpt of that message's "text", between 30 and 200 characters, copied exactly. Never paraphrase a quote and never quote a message you were not given; a finding whose quote is not in its message is dropped.
+- "message_id" is the id of the ONE message the finding rests on, such as m2, and "quote" is the one or two sentences of that message's "text" that carry the finding, never the whole message: between 30 and 200 characters, copied exactly. Never paraphrase a quote and never quote a message you were not given; a finding whose quote is not in its message is dropped.
 - "title" says what to do, in under eight words, starting with a verb. "reason" is one sentence saying what the message says and why it needs attention now. Plain words, addressed to the reader. Never put an id in a title or a reason.
 - "action" is draft_reply when the move is writing back on that message, and none otherwise. Tasks and promises are handled by the existing recorded decisions. Never create a task from a scan finding.
 - Never raise commitment_unmet or question_unanswered on a message marked "settled". Read every message of a thread before judging what it still owes.

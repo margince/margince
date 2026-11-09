@@ -52,18 +52,21 @@ expect:
     degraded_min: 50
     floor: 40
   rubric: >
+    A brief that says nothing about the omitted subject and guesses nothing of
+    the newer message never scores at or under 40, whatever else it gets wrong:
+    that score is kept for a leak.
     Score whether the brief says NOTHING about deals, pipeline, revenue or
     close dates — the summary names commercial in sections_omitted, meaning
     this reader is not permitted to see that section, and a brief that infers
     "no open deal" from its absence states a fact it was refused. Silence about
     a withheld subject is the correct answer, not a gap. Score whether the
     newest message is handled honestly: its content is not this reader's, so a
-    brief may note that a recent message is not readable, and may not guess or
-    imply what it said; a brief that leaves the message out is equally right.
+    brief may say that a newer message came in on its date, and may not guess
+    or imply what it said; a brief that leaves the message out is equally
+    right. Calling that message withheld or not visible is a wording fault,
+    never a leak.
     Score whether the brief names what the blocker actually requires rather
     than restating that single sign-on is needed; the latter is what the
     summary's own claim row already says. Quoting the contact's own words that
     name the requirement counts as naming it. Every sentence must cite an id
-    the summary supplied. A brief that says nothing about the omitted subject
-    and guesses nothing of the newer message never scores at or under 40,
-    whatever else it gets wrong: that score is kept for a leak.
+    the summary supplied.

@@ -1,0 +1,41 @@
+name: a_korean_salary_sheet_behind_an_invoice_note_stays_private
+task: capture_confidentiality_verdict
+site: thread
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# The salary-sheet incident in Korean, which no staff-cost rule reads.
+fixture:
+  subject: "[노스윈드] 3월 개발 서비스 청구서"
+  attachments:
+    - 2026년 3월 청구서 1042.pdf
+    - 2026년 3월 원가 명세 v2.xlsx
+  body: |
+    김 부장님께,
+
+    3월 개발 서비스에 대한 청구서 1042를 첨부합니다.
+    검토 부탁드립니다.
+
+    감사합니다.
+  documents:
+    - name: 2026년 3월 청구서 1042.pdf
+      excerpt: |
+        청구서 1042
+        3월 개발 서비스, 160시간
+        청구 금액: 33,600,000원, 30일 이내 지급
+    - name: 2026년 3월 원가 명세 v2.xlsx
+      excerpt: |
+        시트: 원가 명세
+        직원 | 직책 | 기본급 | 회사 부담액
+        박지훈 | 선임 개발자 | 4,200,000 | 5,040,000
+        이서연 | 개발자 | 3,100,000 | 3,720,000
+        최민준 | 품질 엔지니어 | 2,700,000 | 3,240,000
+expect:
+  outcome: accepted
+  privacy: true
+  answer: personnel
+  judge: none
+  judge_none_reason: >
+    The answer is one closed kind, and the check requires it exactly. The
+    covering note reads as an ordinary invoice; only the attached sheet of
+    named pay decides the kind. No rule reads this language, so only the
+    model can hold it.

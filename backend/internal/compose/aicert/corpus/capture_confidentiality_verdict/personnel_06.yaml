@@ -1,0 +1,42 @@
+name: a_chinese_salary_sheet_behind_an_invoice_note_stays_private
+task: capture_confidentiality_verdict
+site: thread
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# The salary-sheet incident in Chinese. The staff-cost rule reads English and
+# German role words and capitalised names, so it passes this sheet to the model.
+fixture:
+  subject: "【远航科技】三月开发服务"
+  attachments:
+    - 2026年3月 发票 1042.pdf
+    - 2026年3月 成本明细 第2版.xlsx
+  body: |
+    王经理您好，
+
+    附件是三月份开发服务的发票 1042，请查收。
+
+    此致
+    敬礼
+  documents:
+    - name: 2026年3月 发票 1042.pdf
+      excerpt: |
+        发票 1042
+        三月开发服务，160 小时
+        应付总额：186,000.00 元，30 天内付款
+    - name: 2026年3月 成本明细 第2版.xlsx
+      excerpt: |
+        工作表：成本加成
+        员工 | 职位 | 税前工资 | 公司成本
+        陈晓明 | 高级开发工程师 | 18,500 | 22,200
+        刘芳 | 开发工程师 | 12,600 | 15,120
+        赵磊 | 测试工程师 | 9,800 | 11,760
+expect:
+  outcome: accepted
+  privacy: true
+  answer: personnel
+  judge: none
+  judge_none_reason: >
+    The answer is one closed kind, and the check requires it exactly. The
+    covering note reads as an ordinary invoice; only the attached sheet of
+    named pay decides the kind. No rule reads this language, so only the
+    model can hold it.

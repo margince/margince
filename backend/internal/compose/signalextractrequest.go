@@ -30,18 +30,18 @@ language, with the words that say what kind of work it is ("Atlas support servic
 workstream must be empty. Ending one contract never implies ending all business with a company.
 For other event kinds set lifecycle_scope and workstream to "".
 For commitments, later evidence of fulfillment or explicit withdrawal means no new commitment.
-When a later message in this reading shows a promise was delivered or withdrawn, the promise is
-not open: report no commitment_made for it.
+When a later message in this reading shows a promise was delivered in full (sent, or confirmed as
+received) or withdrawn, report no commitment_made for it.
 Acknowledgement and unrelated replies do not fulfill a promise. After partial delivery, report
-only the undelivered remainder in the summary. A restatement or narrowed promise is the same
+the promise once, citing the original, with only the undelivered remainder in the summary. A restatement or narrowed promise is the same
 obligation: when its original promise is in this reading, keep citing and quoting that original.
 An explicit report of another participant's promise ("you agreed to send pricing", "Mira promised
 to send pricing") is commitment evidence even without the original utterance. Cite the report and
 identify the reported promiser; do not invent the missing original or attribute it to the reporter.
 A bare reminder or reference to an absent promise, without stating who owes what, is not enough.
-A reminder that does state who agreed to what ("you agreed to send the payment by Friday") is that
-explicit report, also in a message from us: report it with the addressed contact as promiser_ref
-and state "open".
+A reminder in a message from us that tells its addressee "you agreed to …" is that explicit report:
+report it with the addressed contact as promiser_ref and state "open". When the reminder names the
+promiser instead, the promiser_ref rules for a named party apply.
 Do not count both an original promise and a report of it as separate commitments.
 When our side tells a contact that we, or a named colleague, will do a specific thing at a set time,
 such as running a demo on the 5th at 10:00, that is a commitment_made our side owes, even when it
@@ -68,7 +68,7 @@ commercial direction is unclear use unknown and leave buyer_ref empty. Quote the
 message’s words that establish the need. An explicit report of a named participant’s request
 can identify that participant as the buyer; their presence in Cc alone cannot.
 Words the sender attributes to someone else ("the client said", "our client needs", "a company
-needs") are a relayed need: never make the sender buyer_ref.
+needs") are a relayed need: still report the new_opportunity, but the sender is never its buyer_ref.
 Use supplier, partner or provider only when the source establishes that specific relationship.
 Merely relaying an unidentified company’s need does not establish a partnership: use unknown.
 A relationship the source does state still holds when the client it relays is unnamed: a
@@ -124,7 +124,7 @@ func extractRequest(thread settledThread, lang string) model.Request {
 		for i, id := range thread.Focus {
 			focus[i] = thread.messageLabel(id.String())
 		}
-		fmt.Fprintf(&prompt, "Report only commitment_made events stated in these messages: %s. A first reading already read them and found no promise in them, so report only a promise their words state outright; an empty list is the usual answer. The other messages are context, for example to see that a promise was kept or renewed.\n",
+		fmt.Fprintf(&prompt, "Report only commitment_made events stated in these messages: %s. A first reading already read them and found no promise in them, so report only a promise their words state outright that is still open; an empty list is the usual answer. Read every other message as context, recorded ones included: a promise one of them shows was sent, received or withdrawn is not open.\n",
 			strings.Join(focus, ", "))
 		recorded := make([]string, len(thread.Recorded))
 		for i, event := range thread.Recorded {
@@ -144,6 +144,8 @@ func extractRequest(thread settledThread, lang string) model.Request {
 			commitmentRecipientsPrompt+
 			`"message_id" and any "restated_message_id" are the label of the cited message, such as "m2", from the "Message" line above it. `+
 			`Never use a participant reference as a message id. `+
+			`"buyer_ref" is the contact whose own words ask for OUR company's work; words they attribute to someone else `+
+			`("the client said …") are not their request. commercial_role is "buyer" only when buyer_ref is set. `+
 			`"promiser_ref" is the verified participant reference for who made the quoted promise, `+
 			`not necessarily its sender. For "you agreed", resolve the addressed party; for a named `+
 			`third party, use a reference only when the clause identifies them unambiguously. `+

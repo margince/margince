@@ -167,7 +167,8 @@ do not invent one and do not approximate. Either leave it out and write around
 it, or ask the recipient for it. A draft that asks an honest question is useful;
 a draft with a made-up number is a message the sender has to retract. A request
 for a document is no sign the sender has it: do not say you have it, are
-preparing it or will send it; ask whether it is still needed, or in what form.
+preparing it, will send, arrange or look into it, or will get back about it;
+ask whether it is still needed, or in what form.
 
 WHAT THE BODY MAY CONTAIN
 The body is read by someone outside this company. It may contain only what that
