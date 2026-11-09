@@ -98,6 +98,8 @@ func (r *fakeRuntime) Caller() extension.Caller { return r.caller }
 
 func (r *fakeRuntime) Activities() extension.Activities { return nil }
 
+func (r *fakeRuntime) SetAside() extension.SetAside { return nil }
+
 // The batch pair is unused by this unit; the seam's shape is all it answers for.
 func (r *fakeRuntime) IngestBatch(context.Context, extension.UserID, extension.SourceName, []extension.Record, extension.BatchPosition) ([]extension.Result, error) {
 	return nil, nil
