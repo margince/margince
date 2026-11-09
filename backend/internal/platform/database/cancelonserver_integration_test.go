@@ -48,8 +48,15 @@ func TestACancelledStatementEndsOnTheServer(t *testing.T) {
 		}()
 		awaitBackend(ctx, t, pool, pid, true)
 		cancel()
-		if err := <-done; !errors.Is(err, context.Canceled) {
-			t.Fatalf("%s: the cancelled sleep returned %v", name, err)
+		returned := time.NewTimer(10 * time.Second)
+		select {
+		case err := <-done:
+			returned.Stop()
+			if !errors.Is(err, context.Canceled) {
+				t.Fatalf("%s: the cancelled sleep returned %v", name, err)
+			}
+		case <-returned.C:
+			t.Fatalf("%s: the cancelled sleep had not returned after 10s", name)
 		}
 		awaitBackend(ctx, t, pool, pid, false)
 	}

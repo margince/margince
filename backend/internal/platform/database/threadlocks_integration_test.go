@@ -264,7 +264,7 @@ func TestCancellationDuringComponentAcquisitionReleasesItsBarrier(t *testing.T) 
 	defer cancel()
 	config := pool.Config()
 	config.ConnConfig.Tracer = multitracer.New(config.ConnConfig.Tracer, cancelComponentWait{cancel: cancel})
-	config.ConnConfig.DialFunc = lateClosingDial(config.ConnConfig.DialFunc)
+	config.ConnConfig.DialFunc = lateClosingDial(t, config.ConnConfig.DialFunc)
 	waiter, err := testdb.OwnPoolFromConfig(t.Context(), config)
 	if err != nil {
 		t.Fatal(err)
@@ -274,8 +274,8 @@ func TestCancellationDuringComponentAcquisitionReleasesItsBarrier(t *testing.T) 
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("cancelled wait returned %v", err)
 	}
-	// Before the holder lets go: a waiter whose cancel reached only Go would
-	// still be blocked on the component, holding the barrier it took first.
+	// Before the holder lets go: a waiter whose transaction outlived the cancel
+	// would still hold the barrier it took before the component.
 	awaitBarrierHolders(ctx, t, pool, 1)
 	release()
 	var keys []string
@@ -287,9 +287,9 @@ func TestCancellationDuringComponentAcquisitionReleasesItsBarrier(t *testing.T) 
 	}
 }
 
-// awaitBarrierHolders waits until want backends hold the thread barrier. A
-// cancelled backend lets go once pgx's cancel reaches it, which is prompt but
-// not instant.
+// awaitBarrierHolders waits until want backends in this database hold the
+// thread barrier. A cancelled waiter's backend lets go once it reads pgx's
+// Terminate, which is prompt but not instant.
 func awaitBarrierHolders(ctx context.Context, t *testing.T, pool *pgxpool.Pool, want int) {
 	t.Helper()
 	deadline, stop := context.WithTimeout(ctx, 10*time.Second)
@@ -298,6 +298,7 @@ func awaitBarrierHolders(ctx context.Context, t *testing.T, pool *pgxpool.Pool, 
 	for deadline.Err() == nil {
 		if err := pool.QueryRow(deadline, `SELECT count(DISTINCT pid) FROM pg_locks
 			WHERE locktype = 'advisory' AND objsubid = 1 AND granted
+			  AND database = (SELECT oid FROM pg_database WHERE datname = current_database())
 			  AND ((classid::bigint << 32) | objid::bigint) = hashtextextended('thread_merge', 0)`).Scan(&holders); err != nil {
 			if deadline.Err() != nil {
 				break
@@ -311,17 +312,20 @@ func awaitBarrierHolders(ctx context.Context, t *testing.T, pool *pgxpool.Pool, 
 	t.Fatalf("%d backends still hold the thread barrier, want %d: a cancelled wait kept it", holders, want)
 }
 
-// lateClosingDial hands back connections that say goodbye 300 ms late. A
-// cancelled transaction's backend lets go once it reads pgx's Terminate. The
-// delay holds that window open on every run; a loaded runner opens it only by
-// chance.
-func lateClosingDial(dial pgconn.DialFunc) pgconn.DialFunc {
+// lateClosingDial sends each Terminate 300 ms late. The waiter's backend sits
+// idle in its transaction and lets go only on that Terminate. So the window CI
+// hit by chance is open on every run. A CancelRequest is forwarded at once;
+// neither test proves pgx sent one.
+func lateClosingDial(t *testing.T, dial pgconn.DialFunc) pgconn.DialFunc {
+	t.Helper()
+	pending := &sync.WaitGroup{}
+	t.Cleanup(pending.Wait)
 	return func(ctx context.Context, network, addr string) (net.Conn, error) {
 		conn, err := dial(ctx, network, addr)
 		if err != nil {
 			return nil, err
 		}
-		return &lateClosingConn{Conn: conn}, nil
+		return &lateClosingConn{Conn: conn, t: t, pending: pending}, nil
 	}
 }
 
@@ -330,6 +334,8 @@ var terminateMessage = []byte{'X', 0, 0, 0, 4}
 
 type lateClosingConn struct {
 	net.Conn
+	t          *testing.T
+	pending    *sync.WaitGroup
 	once       sync.Once
 	terminated atomic.Bool
 }
@@ -342,19 +348,22 @@ func (c *lateClosingConn) Write(p []byte) (int, error) {
 	return c.Conn.Write(p)
 }
 
+// Close returns at once and says goodbye later. A failure there is logged: the
+// server then learns of the closed connection the ordinary way.
 func (c *lateClosingConn) Close() error {
 	c.once.Do(func() {
+		c.pending.Add(1)
 		time.AfterFunc(300*time.Millisecond, func() {
+			defer c.pending.Done()
 			if c.terminated.Load() {
 				if err := c.SetWriteDeadline(time.Time{}); err != nil {
-					panic(fmt.Sprintf("clearing the delayed socket's deadline: %v", err))
-				}
-				if _, err := c.Conn.Write(terminateMessage); err != nil && !errors.Is(err, net.ErrClosed) {
-					panic(fmt.Sprintf("sending the delayed Terminate: %v", err))
+					c.t.Logf("clearing the delayed socket's deadline: %v", err)
+				} else if _, err := c.Conn.Write(terminateMessage); err != nil && !errors.Is(err, net.ErrClosed) {
+					c.t.Logf("sending the delayed Terminate: %v", err)
 				}
 			}
 			if err := c.Conn.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
-				panic(fmt.Sprintf("closing the delayed socket: %v", err))
+				c.t.Logf("closing the delayed socket: %v", err)
 			}
 		})
 	})
