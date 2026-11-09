@@ -156,10 +156,10 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// else, so every per-IP limiter behind it — /v1, /oauth, /mcp, the
 	// webhooks, the extension inbound routes — keys on the one address it
 	// decided rather than on whichever proxy the request happened to arrive by.
-	return httpserver.RecoverPanics(log,
+	return originalStorageHTTP(pool, srv.blob, httpserver.RecoverPanics(log,
 		httpserver.ResolveClientIP(srv.trustedProxies,
 			httpserver.LimitBodies(ceiling,
-				httpserver.SecureHeaders(noStoreOnCredentialPaths(mux)))))
+				httpserver.SecureHeaders(noStoreOnCredentialPaths(mux))))))
 }
 
 // newServer assembles the module handler sets. Every cross-module edge is
