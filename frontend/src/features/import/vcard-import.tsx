@@ -17,7 +17,7 @@ import { RecordBack } from "../../design-system/recordview";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { ACCEPTED_ATTACHMENT_EXTENSIONS } from "../../lib/attachmentupload";
-import { labelFor, valueFor } from "../../lib/labelfor";
+import { valueFor } from "../../lib/labelfor";
 import { ACTION_PARAM, QUALIFY_ACTION } from "../../lib/leads.address";
 import { postMultipart } from "../../lib/multipart";
 import { problemMessageOf } from "../../lib/problem";
@@ -332,7 +332,7 @@ function CardFields({ fields }: Readonly<{ fields: readonly VCardField[] }>) {
             const action =
               f.action === "not_in_card"
                 ? undefined
-                : labelFor(ACTION_LABELS, f.action);
+                : valueFor(ACTION_LABELS, f.action, undefined);
             return (
               <li key={`${f.field}:${f.value ?? ""}`} data-action={f.action}>
                 <span className="vcard-import-field-label">
