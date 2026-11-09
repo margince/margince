@@ -349,6 +349,8 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 #### Build and merge
 
 - [ci-pipeline.md](explanation/ci-pipeline.md): how the merge check runs on GitHub.
+- [ci-image.md](explanation/ci-image.md): the image some merge check jobs run in, when it can be pulled,
+  and its pins.
 
 ### Run it in production
 
