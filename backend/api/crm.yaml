@@ -41138,6 +41138,7 @@ components:
         response:
           type: string
           enum: [needs_action, accepted, tentative, declined]
+          x-extensible-enum: true
           description: |
             What the reader's calendar holds. `needs_action` until they answer, and while their
             calendar has not synced the event.
