@@ -6,6 +6,7 @@ export function Avatar({
   name,
   identity,
   src,
+  photo,
   size = "sm",
 }: Readonly<{
   name: string;
@@ -21,6 +22,9 @@ export function Avatar({
   // if it fails to load, and whenever no logo resolved. So a company is never
   // a broken image or an empty slot.
   src?: string | null;
+  // A seat's own picture, in place of `src`: it covers the whole
+  // circle inside a hairline, so a white picture still has an edge.
+  photo?: string | null;
   /**
    * The four sizes: `sm` every list row, `md` a record header, `lg` a wide
    * one, `xl` a record page's own mark. They replace four numbers in four
@@ -29,12 +33,13 @@ export function Avatar({
    */
   size?: "sm" | "md" | "lg" | "xl";
 }>) {
+  const picture = photo || src;
   // An image that fails to load falls back to the monogram for the rest of
   // this mount. Keyed by src so a record whose logo changes gets a fresh try
   // rather than inheriting the previous one's failure.
   const [brokenSrc, setBrokenSrc] = useState<string | null>(null);
-  const broken = Boolean(src) && brokenSrc === src;
-  const setBroken = () => setBrokenSrc(src ?? null);
+  const broken = Boolean(picture) && brokenSrc === picture;
+  const setBroken = () => setBrokenSrc(picture ?? null);
   // The monogram is the floor under the mark. It has to stop being drawn the
   // moment the mark is on screen, or a logo with transparency shows the
   // initials through it. Tracked by src for the same reason as the failure
@@ -44,31 +49,35 @@ export function Avatar({
   // screen, so it stops holding the monogram down. Without the `!broken`, the
   // image is removed while the fallback stays suppressed. The avatar is then
   // empty.
-  const painted = Boolean(src) && paintedSrc === src && !broken;
+  const painted = Boolean(picture) && paintedSrc === picture && !broken;
   const initials = monogramOf(name);
   // A chip with a live logo draws no mesh at any moment. The initials wait on
   // a neutral ground, and only a logo that failed falls back to the mesh.
-  const logo = Boolean(src) && !broken;
+  const logo = Boolean(picture) && !broken;
+  // A seat waits for its picture on the mesh a contact without one shows.
+  const meshed = !logo || (Boolean(photo) && !painted);
   const classes = [
     "avatar",
-    logo ? "avatar-has-logo" : "avatar-mesh",
+    logo ? "avatar-has-logo" : "",
+    meshed ? "avatar-mesh" : "",
+    logo && photo ? "avatar-photo" : "",
     `avatar-${size}`,
-  ];
+  ].filter(Boolean);
   return (
     <span
       className={classes.join(" ")}
-      style={logo ? undefined : meshStyle(meshOf(identity || name))}
+      style={meshed ? meshStyle(meshOf(identity || name)) : undefined}
     >
       {logo ? (
         // The monogram stays underneath: it is what the chip shows until the
         // image paints, and what is left if the image never does.
         <img
           className="avatar-img"
-          src={src ?? undefined}
+          src={picture ?? undefined}
           alt=""
           loading="lazy"
           onError={setBroken}
-          onLoad={() => setPaintedSrc(src ?? null)}
+          onLoad={() => setPaintedSrc(picture ?? null)}
         />
       ) : null}
       {!painted && initials}

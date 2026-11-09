@@ -120,6 +120,9 @@ func (s *Store) ArchiveStage(ctx context.Context, id ids.StageID, ifVersion *int
 		return err
 	}
 	return s.Tx(ctx, func(tx pgx.Tx) error {
+		if err := holdStagesLadderForAgent(ctx, tx, id); err != nil {
+			return err
+		}
 		// The pipeline row is the serialization point for every write
 		// that reshapes its stage list — see lockStageConfig. Taken
 		// before the stage's own lock, and by the reorder path too, so
@@ -133,6 +136,9 @@ func (s *Store) ArchiveStage(ctx context.Context, id ids.StageID, ifVersion *int
 			return err
 		}
 		if err := refuseUnremovableStage(ctx, tx, id, ifVersion); err != nil {
+			return err
+		}
+		if err := refuseAgentOnTrustedLadder(ctx, tx, pipelineID); err != nil {
 			return err
 		}
 		if gated, err := stageCarriesLegalGate(ctx, tx, id.UUID); err != nil {

@@ -5,6 +5,7 @@ import { ChevronRight } from "lucide-react";
 import {
   type MouseEvent,
   type RefObject,
+  Suspense,
   useCallback,
   useEffect,
   useRef,
@@ -19,7 +20,6 @@ import { usePrefersReducedMotion } from "../design-system/motion";
 import { formatMoney } from "../format/format";
 import { useNow } from "../format/now";
 import { type Translator, useLocale, usePlural, useT } from "../i18n";
-import type { Route } from "../lib/router";
 import { usePhoneViewport } from "../lib/viewport";
 import { clearAgentEdge, publishAgentEdge } from "./agent-edge-signal";
 import { useAgentFault } from "./agent-fault";
@@ -31,7 +31,6 @@ import {
   type RailWords,
   railWords,
   restingReadings,
-  restingTips,
   stillNews,
   useRestingLine,
 } from "./agentrail-resting";
@@ -63,7 +62,12 @@ import "./agentrail.css";
 // a row whose read is pending, or that this seat may not make, is absent
 // instead. Nothing here can be put into a state by hand: the section reaches a
 // state because something was read, or it does not reach it at all.
-import { AgentPanel } from "./agentpanel";
+import { lazy } from "../i18n/lazy";
+
+const AgentPanel = lazy(async () => ({
+  default: (await import("./agentpanel")).AgentPanel,
+}));
+
 import { looseStyle, usePanelFrame } from "./agentpanelframe";
 import { barLine, causeLine, derive } from "./agentreading";
 
@@ -215,10 +219,8 @@ export function RailSaying({ line }: Readonly<{ line: SpokenLine }>) {
 }
 
 export function AgentRail({
-  route,
   bar,
 }: Readonly<{
-  route: Route;
   /**
    * The bottom bar this block is a cell of, at phone width.
    *
@@ -306,7 +308,6 @@ export function AgentRail({
       },
       said,
     ),
-    restingTips(route.screen, t, navigator.platform),
   );
 
   // Two things can hold the line, and this is their order: whatever the state
@@ -351,18 +352,20 @@ export function AgentRail({
             data-core-state={state}
             style={looseStyle(frame)}
           >
-            <AgentPanel
-              state={state}
-              signals={signals}
-              model={model}
-              panel={panel}
-              frame={frame}
-              line={line}
-              running={server.running}
-              unnamed={server.unnamed}
-              settled={server.answered ? server.recent : undefined}
-              spend={spend}
-            />
+            <Suspense fallback={null}>
+              <AgentPanel
+                state={state}
+                signals={signals}
+                model={model}
+                panel={panel}
+                frame={frame}
+                line={line}
+                running={server.running}
+                unnamed={server.unnamed}
+                settled={server.answered ? server.recent : undefined}
+                spend={spend}
+              />
+            </Suspense>
           </div>,
           document.body,
         )}

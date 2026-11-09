@@ -168,12 +168,7 @@ export function searchHitRoute(type: SearchHitType, id: string): Route | null {
     return { screen: "tags", id };
   }
   if (type === "product" || type === "offer_template") {
-    // Through settingsHref rather than a path spelled here, and naming a page
-    // the SCREEN renders today. The catalog already splits this entry into
-    // fields/tags/products, but the screen still renders the combined one, so
-    // minting `products` would send a reader to a page that falls back to
-    // Account. It moves to `products` in the same change that splits the cards.
-    return settingsHref("fields");
+    return settingsHref("products");
   }
   return null;
 }

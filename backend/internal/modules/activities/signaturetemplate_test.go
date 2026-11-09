@@ -22,7 +22,7 @@ func TestATemplateSignsWithTheSendersOwnValuesEscaped(t *testing.T) {
 		}).
 		WithSenderName(&stubSenderName{name: "Anna Example"})
 
-	sign, err := store.signOffAs(humanCtx(ids.NewV7()), "Hello", "Hi", "Anna Example")
+	sign, err := store.signOffAs(humanCtx(ids.NewV7()), "Hello", "Hi", "Anna Example", ids.Nil)
 	if err != nil {
 		t.Fatalf("signing: %v", err)
 	}
@@ -47,7 +47,7 @@ func TestATemplateSignsWithTheSendersOwnValuesEscaped(t *testing.T) {
 func TestWithoutATemplateTheSendersOwnTextSigns(t *testing.T) {
 	t.Parallel()
 	store := (&Store{}).WithSignature(&stubSignature{body: "Anna\nCompany A"})
-	sign, err := store.signOffAs(humanCtx(ids.NewV7()), "Hello", "Hi", "Anna")
+	sign, err := store.signOffAs(humanCtx(ids.NewV7()), "Hello", "Hi", "Anna", ids.Nil)
 	if err != nil {
 		t.Fatalf("signing: %v", err)
 	}
@@ -85,6 +85,26 @@ func TestTheLogoPlaceholderEmbedsTheWorkspaceLogoAndNothingRemote(t *testing.T) 
 	}
 	if strings.Contains(without, "<img") {
 		t.Errorf("markup %q shows an image though the workspace has no logo", without)
+	}
+}
+
+// {imprint} is the sender's entity imprint: escaped like every other value,
+// with its lines kept as lines in both parts.
+func TestTheImprintPlaceholderKeepsItsLinesAndIsEscaped(t *testing.T) {
+	t.Parallel()
+	store := (&Store{}).WithSignature(&stubSignature{
+		template: "<p>{name}</p><p>{imprint}</p>",
+		imprint:  "Acme Wien GmbH\nFN 123456 a <HG Wien>",
+	})
+	sign, err := store.signOffAs(humanCtx(ids.NewV7()), "Hello", "Hi", "Anna", ids.Nil)
+	if err != nil {
+		t.Fatalf("signing: %v", err)
+	}
+	if !strings.Contains(sign.HTML, "Acme Wien GmbH<br>FN 123456 a &lt;HG Wien&gt;") {
+		t.Errorf("markup %q lacks the escaped imprint on two lines", sign.HTML)
+	}
+	if sign.Text != "Anna\nAcme Wien GmbH\nFN 123456 a <HG Wien>" {
+		t.Errorf("text part = %q, want the imprint on its own lines", sign.Text)
 	}
 }
 
@@ -132,7 +152,7 @@ func TestPersonalMarkupUsesTheSignaturePolicyWithoutExpandingPlaceholders(t *tes
 		html:     `<p onclick="bad()"><b>Personal</b><br><i>{name}</i> <u>{title}</u> {phone} {logo}<span style="color:#2a7;font-size:12px;background:url(x)">Team</span><a href="javascript:bad()">Link</a><img src="https://tracker.test/pixel"><script>bad()</script></p>`,
 		template: "<p>Company</p>", body: "Saved plain text",
 	})
-	sign, err := store.signOffAs(humanCtx(ids.NewV7()), "Hello", "Hi", "Anna")
+	sign, err := store.signOffAs(humanCtx(ids.NewV7()), "Hello", "Hi", "Anna", ids.Nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,7 +184,7 @@ func TestPersonalMarkupFallsThroughOnlyWhenItHasNoVisibleText(t *testing.T) {
 			{"", "", SignOffClosing, "Best regards,\nAnna"},
 		} {
 			store := (&Store{}).WithSignature(&stubSignature{html: own, template: fallback.template, body: fallback.body})
-			sign, err := store.signOffAs(humanCtx(ids.NewV7()), "Hello, I am sending the requested documents for your review.", "Documents", "Anna")
+			sign, err := store.signOffAs(humanCtx(ids.NewV7()), "Hello, I am sending the requested documents for your review.", "Documents", "Anna", ids.Nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -187,7 +207,7 @@ func TestPersonalMarkupPreviewOverridesAndClearingShareTheSendDecision(t *testin
 		{"", SignOffTemplate, "Company", ""},
 		{"<p>Personal</p>" + signatureLogoTag, SignOffSignature, "Personal", "logos/company.png"},
 	} {
-		sign, err := store.signOffDrafted(humanCtx(ids.NewV7()), "", "", "Anna", signatureDraft{HTML: &test.markup})
+		sign, err := store.signOffDrafted(humanCtx(ids.NewV7()), "", "", "Anna", ids.Nil, signatureDraft{HTML: &test.markup})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -203,7 +223,7 @@ func TestMarkupWithoutAnAvailableLogoDoesNotSendABrokenEmbeddedImage(t *testing.
 		{html: "<p>Personal</p>" + signatureLogoTag},
 		{template: "<p>Company</p>" + signatureLogoTag},
 	} {
-		sign, err := (&Store{}).WithSignature(signature).signOffAs(humanCtx(ids.NewV7()), "Hello", "Hello", "Anna")
+		sign, err := (&Store{}).WithSignature(signature).signOffAs(humanCtx(ids.NewV7()), "Hello", "Hello", "Anna", ids.Nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -215,7 +235,7 @@ func TestMarkupWithoutAnAvailableLogoDoesNotSendABrokenEmbeddedImage(t *testing.
 
 func TestPersonalMarkupSignsOnceAboveDisclosuresAndTheUnsubscribeFooter(t *testing.T) {
 	t.Parallel()
-	sign, err := (&Store{}).WithSignature(&stubSignature{html: "<p><b>Personal</b></p>"}).signOffAs(humanCtx(ids.NewV7()), "Hello", "Hello", "Anna")
+	sign, err := (&Store{}).WithSignature(&stubSignature{html: "<p><b>Personal</b></p>"}).signOffAs(humanCtx(ids.NewV7()), "Hello", "Hello", "Anna", ids.Nil)
 	if err != nil {
 		t.Fatal(err)
 	}

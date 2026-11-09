@@ -64,7 +64,7 @@ func TestEveryDetachedContextSaysWhatBoundsIt(t *testing.T) {
 	read := 0
 	waivedDetaches := map[string]int{}
 	for _, root := range []string{"cmd", "internal"} {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 				strings.HasSuffix(path, "_test.go") {
 				return err

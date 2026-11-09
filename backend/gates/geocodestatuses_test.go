@@ -16,7 +16,6 @@ package gates
 // same constant.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -24,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // arrayLiteral is one quoted value in a CHECK's ARRAY[...] as the catalog
@@ -32,7 +32,7 @@ var arrayLiteral = regexp.MustCompile(`'([^']*)'::text`)
 
 func TestTheGeocodeStatusesAreTheColumnsCheck(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile(filepath.Join(repoRoot, headCatalogPath))
+	raw, err := gatekit.ReadFile(filepath.Join(repoRoot, headCatalogPath))
 	if err != nil {
 		t.Fatalf("reading %s: %v", headCatalogPath, err)
 	}

@@ -44,6 +44,11 @@ func (s *Store) PreviewContactCreationForActor(ctx context.Context, in CreateCon
 		return out, err
 	}
 	err = s.txSnapshot(ctx, func(tx pgx.Tx) error {
+		// The write probes the source as the creator, so the preview does too.
+		// Otherwise an approval reads ready and then fails as not found.
+		if err := refuseUnreadableSource(creatorCtx, tx, in.CreatedFromActivityID); err != nil {
+			return err
+		}
 		owner, err := storekit.NewRecordOwnerWithDefault(ctx, tx, in.OwnerID, storekit.OwnerOrActor(creatorCtx))
 		if err != nil {
 			return err

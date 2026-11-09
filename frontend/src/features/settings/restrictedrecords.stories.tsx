@@ -62,7 +62,7 @@ async function openHeld({ canvasElement }: { canvasElement: HTMLElement }) {
 }
 
 const meta = {
-  title: "Settings/Governance/Privacy and retention/Restricted records",
+  title: "Settings/Compliance/Privacy and retention/Restricted records",
   component: RequestsPanel,
   play: openHeld,
 } satisfies Meta<typeof RequestsPanel>;

@@ -30,7 +30,7 @@ func TestReportingMovementUsesTheDailyTeamPipelineProducer(t *testing.T) {
 		t.Fatal(err)
 	}
 	writer := principal.WithCorrelationID(principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:movement-fixture"), ids.NewV7())
-	store := deals.NewStore(InstallationDB(e.Pool), DealsInstallation()).WithClock(now)
+	store := deals.NewStore(InstallationDB(e.Pool), DealsInstallation()).SetClock(now)
 	owner := ids.From[ids.UserKind](e.Rep1)
 	closeDate := time.Date(2026, 9, 25, 0, 0, 0, 0, time.UTC)
 	amount, currency := int64(10000), "EUR"

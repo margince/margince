@@ -14,6 +14,7 @@ import { formatMoneyCompact, formatNumber } from "../../format/format";
 import { formatDayMonth } from "../../format/format.dates";
 import type { Locale, PluralTranslator, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { ENGAGEMENT_LABELS } from "./company360.strip";
 import { upcomingMeeting } from "./companynextmeeting";
 import { activityHeadline } from "./companyrecent";
@@ -129,7 +130,7 @@ function pastStop(
             count: formatNumber(run.length, words.locale),
           }),
       sub: alone
-        ? `${dayOf(newest)} · ${words.t(KIND_WORD[newest.kind])}`
+        ? `${dayOf(newest)} · ${words.t(labelFor(KIND_WORD, newest.kind))}`
         : `${dayOf(oldest)}–${dayOf(newest)}`,
       kind: "done",
       activityIds: run.map((row) => row.id),
@@ -163,7 +164,7 @@ function lastContact(
       title: row
         ? activityHeadline(row, words.t)
         : words.t("co.spine.lastSpoke"),
-      sub: `${activityStopDay(last.at, last.occurred_precision, words)} · ${words.t(row ? "co.spine.lastSpoke" : KIND_WORD[last.kind])}`,
+      sub: `${activityStopDay(last.at, last.occurred_precision, words)} · ${words.t(row ? "co.spine.lastSpoke" : labelFor(KIND_WORD, last.kind))}`,
       kind: "last",
       activityIds: [last.activity_id],
     },
@@ -270,6 +271,6 @@ function silence(
     title: words.plural("standing.days", days, {
       count: formatNumber(days, words.locale),
     }),
-    sub: words.t(ENGAGEMENT_LABELS[state]),
+    sub: words.t(labelFor(ENGAGEMENT_LABELS, state)),
   };
 }

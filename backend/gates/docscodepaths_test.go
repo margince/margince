@@ -37,12 +37,13 @@ package gates
 // the Go and testdata files under migrations/ are cited like any other code.
 
 import (
-	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // pathShaped matches a span that could be a path: no spaces, no punctuation a
@@ -261,7 +262,7 @@ func TestEverySourcePathNamedInProseExists(t *testing.T) {
 
 	idx := indexTree(t)
 	for _, page := range prosePages(t) {
-		body, err := os.ReadFile(filepath.Join(repoRoot, page))
+		body, err := gatekit.ReadFile(filepath.Join(repoRoot, page))
 		if err != nil {
 			t.Fatalf("reading %s: %v", page, err)
 		}

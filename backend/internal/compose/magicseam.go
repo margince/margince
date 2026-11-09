@@ -19,9 +19,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -49,8 +51,9 @@ func newMagicService(
 		WithPendingDecisions(magicPendingDecisions{svc: staged}).
 		WithSourceHealth(magicSourceHealth{registry: captureHealthRegistry(db)}).
 		WithDecidedReceipts(magicDecidedReceipts{
-			receipts: attentionReceipts{svc: staged, deals: deals.NewStore(db, DealsInstallation())},
-		})
+			receipts: attentionReceipts{tasks: activities.NewStore(db).WithRecordZone(installationZoneTx), svc: staged, deals: deals.NewStore(db, DealsInstallation())},
+		}).
+		WithReferenceNames(newAttentionNames(db))
 }
 
 // magicDecidedReceipts hands the done lane the receipts the worklist reads,
@@ -67,10 +70,38 @@ func (m magicDecidedReceipts) DecidedSince(ctx context.Context, since time.Time,
 		out = append(out, magic.DecidedReceipt{
 			ID: receipt.ID, Kind: receipt.Kind, Summary: receipt.Summary, OccurredAt: receipt.OccurredAt,
 			TargetType: receipt.TargetType, TargetID: receipt.TargetID, TargetLabel: receipt.TargetLabel,
-			Approval: receipt.Kind != deals.CloseDateCorrectionKind,
+			Approval: receipt.Source == attention.ReceiptFromApproval,
+			Undo:     decidedUndo(receipt),
 		})
 	}
 	return out, more, nil
+}
+
+// decidedUndo is the way back a correction's own review allows, judged as the
+// done-for-you list judges it; an approval has none here.
+func decidedUndo(receipt attention.Receipt) *crmcontracts.MagicUndo {
+	if receipt.Source != attention.ReceiptFromCorrection || receipt.Undo == nil {
+		return nil
+	}
+	if receipt.TargetType == entityTypeActivity && receipt.Kind == "task_completed" && !receipt.Undo.Reversed {
+		undo := magicOffer(receipt.Undo.AuditLogID)
+		undo.Version = &receipt.Undo.Version
+		return undo
+	}
+	review := receipt.Review
+	switch {
+	case receipt.Undo.Reversed || (review != nil && review.Reversed):
+		return magicRefusal(string(ReasonAlreadyUndone))
+	case review == nil:
+		return magicRefusal(string(ReasonNotRestorableByThisPath))
+	case !review.Writable:
+		return magicRefusal(string(ReasonNotWritableByCaller))
+	case !review.CanUndo:
+		return magicRefusal(string(ReasonSuperseded))
+	}
+	undo := magicOffer(receipt.Undo.AuditLogID)
+	undo.Version = &review.Version
+	return undo
 }
 
 // Home uses the owning inbox policy for both authority and explicit responsibility.
@@ -202,7 +233,7 @@ func (g undoGrants) holds(ctx context.Context, row AuditRow) bool {
 	key := row.EntityType + "/" + string(grant)
 	held, asked := g[key]
 	if !asked {
-		held = auth.Require(ctx, row.EntityType, grant) == nil
+		held = auth.Allows(ctx, row.EntityType, grant)
 		g[key] = held
 	}
 	return held
@@ -285,6 +316,20 @@ func (j magicUndoJudge) judgeCorrection(
 	}
 	if correction.Reversed() {
 		return magicRefusal(string(ReasonAlreadyUndone)), true, nil
+	}
+	key := deals.AppliedChangeKey{DealID: correction.DealID, ChangeID: auditID}
+	reviews, err := j.corrections.AppliedChangeReviewsTx(ctx, tx, []deals.AppliedChangeKey{key})
+	if err != nil {
+		return nil, false, err
+	}
+	review, ok := reviews[key]
+	switch {
+	case !ok:
+		return magicRefusal(string(ReasonNotRestorableByThisPath)), true, nil
+	case !review.Writable:
+		return magicRefusal(string(ReasonNotWritableByCaller)), true, nil
+	case !review.CanUndo:
+		return magicRefusal(string(ReasonSuperseded)), true, nil
 	}
 	return magicOffer(auditID), true, nil
 }

@@ -249,3 +249,24 @@ export const CappedHistoryDark: Story = {
   ...CappedHistory,
   globals: { theme: "dark" },
 };
+
+export const InternalHistoryOffered: Story = {
+  render: panelStory(
+    "gmail",
+    { state: "none" },
+    {
+      "POST /connectors/gmail/backfill/preview": () =>
+        jsonResponse({
+          window: "6m",
+          estimated_messages: 1234,
+          after_date: "2026-01-23",
+          computed_at: "2026-07-23T10:00:00Z",
+          internal_mail: {
+            preview_token: "owner-preview",
+            received_after: "2026-01-23T00:00:00Z",
+            folders: ["Customer Operations"],
+          },
+        }),
+    },
+  ),
+};

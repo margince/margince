@@ -3,8 +3,8 @@ import { usePeek } from "../../design-system/peek";
 import { formatActivityWhen } from "../../format/activitywhen";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
 import { partialFoot } from "../../lib/standingpeeks";
+import { useViewerZone } from "../../lib/viewerzone";
 
 type ScoreFactor = components["schemas"]["LeadScoreFactor"];
 
@@ -20,7 +20,7 @@ export function FactorSources({ factor }: Readonly<{ factor: ScoreFactor }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
 
   // The count is the id array's length, never the named list's. The server
   // omits an id this reader cannot discover, so the list can be shorter. A

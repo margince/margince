@@ -30,50 +30,32 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/extraction"
 )
 
-// BeginExtractionRead claims a queued reading, moving it to running.
-//
-// The compare-and-set is the claim, and it has TWO arms because a second
-// delivery of the same job means two different things. A live holder is inside
-// its lease and must be left alone — reading the document twice bills it twice.
-// A holder past its lease is a dead attempt: the worker was killed, timed out,
-// or the process went away mid-model-call, and the row it left behind is
-// running with nobody working it.
-//
-// Without the second arm every retry after a transient provider failure finds
-// the row already running, declines it as somebody else's, and returns. The
-// reading is then stranded running forever — and because the in-flight index
-// counts running as in flight, the document becomes permanently unreadable.
+// BeginExtractionRead reclaims running work only after its timer or with a session lease.
 func (s *Store) BeginExtractionRead(ctx context.Context, readID ids.UUID, reclaimAfter time.Duration) (ExtractionRead, error) {
 	if reclaimAfter <= 0 {
 		return ExtractionRead{}, errors.New("activities: the extraction-reading reclaim interval must be positive")
 	}
+	owned, err := s.db.WorkLeaseOwned(ctx, "document_extract", readID)
+	if err != nil {
+		return ExtractionRead{}, err
+	}
 	var out ExtractionRead
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.tx(ctx, func(tx pgx.Tx) error {
 		if err := requireExtractionAuthority(ctx, tx, readID); err != nil {
 			return err
 		}
 		var err error
-		// RETURNING hands the worker the CLAIMED row's own identity, so the
-		// reading is attributed to whoever the row says asked for it rather than
-		// to a job payload that could in principle disagree with it.
-		// The RECLAIM arm begins a new attempt; the ordinary arm does not.
-		//
-		// Both are one statement, so the CASE reads the row's OLD status — and
-		// that distinction is load-bearing. Taking a queued reading is the
-		// attempt that was already queued. Taking one away from a dead holder is
-		// a SECOND claim on the same attempt number, and a projection ordering
-		// on (attempt, state) cannot tell that from a redelivery of the first:
-		// it would keep the dead worker's started_at and its expired lease, and
-		// render an actively-running retry as stalled for its whole run.
 		out, err = scanExtractionRead(tx.QueryRow(ctx, `
 			UPDATE attachment_extraction
-			   SET status = 'running', status_detail = NULL, started_at = now(),
+			   SET status = 'running', status_detail = NULL, started_at = GREATEST(now(), started_at + interval '1 microsecond'),
 			       attempt    = attempt + CASE WHEN status = 'running' THEN 1 ELSE 0 END,
 			       attempt_at = CASE WHEN status = 'running' THEN now() ELSE attempt_at END
-			 WHERE id = $1
+			 WHERE id = @id
 			   AND (status = 'queued'
-			     OR (status = 'running' AND started_at < now() - ($2 * interval '1 microsecond')))
-			RETURNING `+extractionReadColumns, readID, reclaimAfter.Microseconds()))
+			     OR (status = 'running' AND (@owned OR started_at < now() - (@micros * interval '1 microsecond'))))
+			RETURNING `+extractionReadColumns, pgx.StrictNamedArgs{
+			"id": readID, "owned": owned, "micros": reclaimAfter.Microseconds(),
+		}))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("%w: extraction reading %s is not claimable", apperrors.ErrConflict, readID)
 		}

@@ -110,7 +110,7 @@ The **task** names come from the contract (`backend/api/ai-tasks.yaml`). Only a 
 like any other task. Read the list from the build: `make ai-probe ARGS='list'` prints every site we
 ship, from the same census the report reads. Leave out `TASK=` to run the whole corpus.
 
-A `planned` task (`nl_search`, `transcript`) has no scenarios, so a run that names it fails with
+A `planned` task (`transcript`) has no scenarios, so a run that names it fails with
 `task "…" has no scenarios under corpus`. A scenario for a prompt that we do not ship would score a
 copy, and `aicert/corpus_test.go` holds the rule both ways.
 
@@ -308,7 +308,7 @@ answer. So a record built from stored runs is the same measure.
 It is on by default, and out of git, like the trace. `RESUME=<dir>` sets its folder; `RESUME=` measures
 everything again. A stored file cut off in the middle of a write still replays every whole run before the
 cut. One run owns a folder at a time. So runs of more than one `TASK=` at once each need their own
-`RESUME=<dir>`. A run that ends early leaves a `.lock` file to delete.
+`RESUME=<dir>`. A run that ends early, even one its timeout stops, frees the folder for the next run.
 
 ## How the verdict is decided
 

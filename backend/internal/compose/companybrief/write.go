@@ -116,7 +116,7 @@ const openWorkRule = `In the summary, open_tasks are tasks somebody filed. open_
 
 // briefSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 //
-// The brief takes the installation's language, like every other AI surface.
+// The brief takes the installation's language, like every shared AI section.
 // It is cached per reader, but that split is about PERMISSIONS — the brief is
 // assembled from records that reader may see, and two contacts with different
 // access get different facts — not about preference. Language is not a

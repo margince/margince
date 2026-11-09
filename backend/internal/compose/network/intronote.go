@@ -310,9 +310,7 @@ func contactCorrespondence(
 	if err != nil {
 		return "", err
 	}
-	if scope == "" {
-		scope = "TRUE"
-	}
+	scope += " AND " + auth.ActivityExternalEvidenceClause("a")
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT coalesce(a.subject, ''), coalesce(a.body, '')
 		  FROM activity a

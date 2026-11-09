@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/projects"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -754,8 +753,8 @@ func TestAProjectCreatedWithoutAnOwnerBelongsToItsCreator(t *testing.T) {
 	}
 }
 
-// The owner named at create is an assignment, so the row scope that bounds
-// reassignment must bound it too.
+// The owner named at create is an assignment, so it takes any colleague a
+// reassignment may name, whatever the creator's own row scope.
 func TestAProjectMayBeCreatedForAColleagueTheCreatorMayAssignTo(t *testing.T) {
 	e := Setup(t)
 	company := companyIDOf(e.SeedCompany(t, "BAER Pharma", &e.Rep1))
@@ -786,29 +785,31 @@ func TestAProjectMayBeCreatedForAColleagueTheCreatorMayAssignTo(t *testing.T) {
 		}
 	})
 
-	t.Run("a rep may not create a project owned by a colleague", func(t *testing.T) {
-		const name = "Rollout handed off at birth"
-		_, err := e.Projects.CreateProject(rep, projects.CreateProjectInput{
-			Name: name, CompanyID: company, Source: "manual", OwnerID: &colleague,
+	t.Run("a rep creates a project owned by a colleague", func(t *testing.T) {
+		p, err := e.Projects.CreateProject(rep, projects.CreateProjectInput{
+			Name: "Rollout handed off at birth", CompanyID: company, Source: "manual", OwnerID: &colleague,
 		})
-		if !errors.As(err, new(*auth.AssigneeNotAllowedError)) {
-			t.Fatalf("a rep creating a project owned by a colleague → %v, want AssigneeNotAllowedError", err)
+		if err != nil {
+			t.Fatalf("a rep creating a project owned by a colleague → %v, want it created", err)
 		}
-		if n := e.WsCount(t, `SELECT count(*) FROM project WHERE name = $1`, name); n != 0 {
-			t.Errorf("the refused create landed %d project row(s), want 0", n)
+		if p.OwnerId == nil || ids.UUID(*p.OwnerId) != e.Rep2 {
+			t.Fatalf("owner = %v, want the named colleague %s", p.OwnerId, e.Rep2)
 		}
 	})
 
-	t.Run("the same rep may not reassign their own project to that colleague", func(t *testing.T) {
+	t.Run("the same rep reassigns their own project to that colleague", func(t *testing.T) {
 		p, err := e.Projects.CreateProject(rep, projects.CreateProjectInput{
-			Name: "Rollout kept by its creator", CompanyID: company, Source: "manual",
+			Name: "Rollout passed on by its creator", CompanyID: company, Source: "manual",
 		})
 		if err != nil {
 			t.Fatalf("a rep creating their own project: %v", err)
 		}
-		_, err = e.Projects.UpdateProject(rep, projectIDOf(ids.UUID(p.Id)), projects.UpdateProjectInput{OwnerID: &colleague})
-		if !errors.As(err, new(*auth.AssigneeNotAllowedError)) {
-			t.Fatalf("a rep reassigning their project to a colleague → %v, want AssigneeNotAllowedError", err)
+		got, err := e.Projects.UpdateProject(rep, projectIDOf(ids.UUID(p.Id)), projects.UpdateProjectInput{OwnerID: &colleague})
+		if err != nil {
+			t.Fatalf("a rep reassigning their project to a colleague → %v, want it moved", err)
+		}
+		if got.OwnerId == nil || ids.UUID(*got.OwnerId) != e.Rep2 {
+			t.Errorf("owner = %v, want the colleague %s", got.OwnerId, e.Rep2)
 		}
 	})
 }

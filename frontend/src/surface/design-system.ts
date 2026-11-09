@@ -73,7 +73,7 @@ export { useClipboardCopy } from "../design-system/clipboardcopy";
 // page with it. A unit's listing is the second shape, and publishing the first
 // would promise a contract the core changes for its own record screens.
 export { DataTable } from "../design-system/datatable";
-// DateInput, because native-controls.test.ts refuses the browser's date field in
+// DateInput, because native-controls.census.ts refuses the browser's date field in
 // unit screens too, and a unit has no other control that asks for a day.
 export {
   DateInput,
@@ -139,10 +139,10 @@ export {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
-// Select and its option type, because a unit offering a CLOSED choice has no
-// other way to: design-system/native-controls.test.ts refuses a bare <select>
-// in extensions/*/frontend exactly as it does in core, and a unit left with only
-// TextInput has to accept free text where the contract declares an enum.
+// Select and its option type: a unit offering a closed choice has no other way.
+// census/rules/native-controls.census.ts refuses a bare <select> in
+// extensions/*/frontend as it does in core. A unit left with only TextInput
+// has to accept free text where the contract declares an enum.
 export { Select, type SelectOption } from "../design-system/select";
 // Stack and Row, because a unit ships no stylesheet and therefore cannot put
 // space between two things it renders.

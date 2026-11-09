@@ -74,9 +74,11 @@ BEGIN {
 # knew only the dotted form would hand the other three the product cap, which
 # is a rule nobody wrote applied to files nobody meant.
 # The build scripts are written in plain ESM as well as TypeScript, and
-# fe-uat.test.mjs is a test by every reading but the extension.
+# fe-uat.test.mjs is a test by every reading but the extension. A `.sweep.ts`
+# is test code too, moved out of its test so it can run in a worker thread.
 function istest(f) {
   return f ~ /\.test\.(tsx?|mjs)$/ ||
+         f ~ /\.sweep\.ts$/ ||
          f ~ /\.stories\.(tsx?|mjs)$/ ||
          f ~ /\.testkit\.(tsx?|mjs)$/ ||
          f ~ /(^|[\/.-])fixtures?\.(tsx?|mjs)$/

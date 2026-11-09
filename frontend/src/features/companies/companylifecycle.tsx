@@ -11,6 +11,7 @@ import { Badge, Field } from "../../design-system/atoms";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
+import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf } from "../../lib/problem";
 import {
   useCompanyFieldPatch,
@@ -75,7 +76,8 @@ export function CompanyLifecycleControl({
   useEffect(() => {
     latestStored.current = stored;
   }, [stored]);
-  const label = (value: string) => t(LIFECYCLE_LABELS[value as Lifecycle]);
+  const label = (value: string) =>
+    t(labelFor(LIFECYCLE_LABELS, value as Lifecycle));
   if (!canUpdate || readOnlyReason) {
     // A reader who may not change the stage is shown the stage. A button that
     // looks pressable and then refuses is the defect InlineChoice was built

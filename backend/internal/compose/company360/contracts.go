@@ -233,13 +233,13 @@ func roundRat(r *big.Rat) int64 {
 // converted total rendered under a currency fetched from somewhere else is the
 // unlabelled cross-currency sum the page rules forbid.
 func fillContractStrip(out *struct {
-	ActiveCount              int                 `json:"active_count"`
+	ActiveCount              int                 `json:"active_count" minimum:"0"`
 	AnnualizedValueMinorBase *int                `json:"annualized_value_minor_base,omitempty"`
 	BaseCurrency             *string             `json:"base_currency,omitempty"`
 	CancellationEffectiveOn  *openapi_types.Date `json:"cancellation_effective_on,omitempty"`
 	CancellationPending      bool                `json:"cancellation_pending"`
 	NearestRenewalOn         *openapi_types.Date `json:"nearest_renewal_on,omitempty"`
-	PricedCount              *int                `json:"priced_count,omitempty"`
+	PricedCount              *int                `json:"priced_count,omitempty" minimum:"0"`
 	TotalBasisValueMinorBase *int                `json:"total_basis_value_minor_base,omitempty"`
 }, read contractStrip,
 ) {

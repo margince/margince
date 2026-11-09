@@ -10,7 +10,9 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/filterpropose"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -34,5 +36,15 @@ func TestAProposalReadsTheCompanyContextOnlyWhenAskedTo(t *testing.T) {
 	req.IncludeCompanyContext = true
 	if _, err := provider.Prepare(context.Background(), ai.TaskNlSearch, req); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("an opted-in read did not reach the reader: err=%v calls=%v", err, reader.calls)
+	}
+}
+
+// A request enum stays closed while response enums are open. A resource this
+// server does not know is refused with the field named.
+func TestAFilterProposalForAnUnknownResourceIsRefused(t *testing.T) {
+	_, err := proposalText(crmcontracts.FilterProposalRequest{Resource: "a_resource_from_a_later_release", Text: "anything"})
+	refusal, ok := errors.AsType[*httperr.DetailedError](err)
+	if !ok || len(refusal.Fields) != 1 || refusal.Fields[0].Field != "resource" {
+		t.Fatalf("an unknown resource was not refused on its field: %v", err)
 	}
 }

@@ -64,14 +64,14 @@ func (w *siteDeepReadWorker) reclaimParkedLogo(ctx context.Context, readID ids.U
 // caller's string rather than a read id because the upload path has no read:
 // the detached-context rule above is the invariant, and a second copy of it
 // spelled for uploads is how one of the two paths quietly loses it.
-func deleteUnreferencedLogo(ctx context.Context, blob blobstore.Store, log *slog.Logger, subject string, key *string) {
+func deleteUnreferencedObject(ctx context.Context, blob blobstore.Store, log *slog.Logger, subject string, key *string) {
 	if blob == nil || key == nil || *key == "" {
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), logoReclaimBudget)
 	defer cancel()
 	if err := blob.Delete(ctx, *key); err != nil {
-		log.WarnContext(ctx, "reclaiming an unreferenced logo object failed",
+		log.WarnContext(ctx, "reclaiming an unreferenced stored object failed",
 			"subject", subject, "key", *key, "err", err)
 	}
 }
@@ -79,5 +79,5 @@ func deleteUnreferencedLogo(ctx context.Context, blob blobstore.Store, log *slog
 // reclaimLogoObject binds the worker's own object store and logger to the
 // collection every write path in this lane ends with.
 func (w *siteDeepReadWorker) reclaimLogoObject(ctx context.Context, readID ids.UUID, key *string) {
-	deleteUnreferencedLogo(ctx, w.blob, w.log, "read "+readID.String(), key)
+	deleteUnreferencedObject(ctx, w.blob, w.log, "read "+readID.String(), key)
 }

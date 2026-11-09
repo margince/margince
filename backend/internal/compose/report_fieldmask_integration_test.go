@@ -80,8 +80,8 @@ func TestADealOutsideThePopulationIsNotAPermissionExclusion(t *testing.T) {
 	e := setupForecast(t)
 	own := int64(100_000)
 	other := int64(250_000)
-	mine := e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &own, nil)
-	theirs := e.seedOpenDeal(t, "Theirs", 20, &e.Rep3, &other, nil)
+	mine := e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &own)
+	theirs := e.seedOpenDeal(t, "Theirs", 20, &e.Rep3, &other)
 
 	rep := e.maskedDealReader(principal.MaskOutsideWriteAuthority)
 	result := e.runReport(rep, t, "open-deals-per-company", sumAmountBody())
@@ -132,8 +132,8 @@ func TestAnAlwaysMaskEmptiesTheAggregateAndSaysSo(t *testing.T) {
 	e := setupForecast(t)
 	own := int64(100_000)
 	other := int64(250_000)
-	e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &own, nil)
-	e.seedOpenDeal(t, "Theirs", 20, &e.Rep3, &other, nil)
+	e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &own)
+	e.seedOpenDeal(t, "Theirs", 20, &e.Rep3, &other)
 
 	rep := e.maskedDealReader(principal.MaskAlways)
 	result := e.runReport(rep, t, "open-deals-per-company", sumAmountBody())
@@ -151,7 +151,7 @@ func TestAnAlwaysMaskEmptiesTheAggregateAndSaysSo(t *testing.T) {
 func TestARevokedUpdateVerbKeepsTheMaskOnTheRepsOwnRows(t *testing.T) {
 	e := setupForecast(t)
 	own := int64(100_000)
-	e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &own, nil)
+	e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &own)
 
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	rep := principal.WithActor(ctx, principal.Principal{

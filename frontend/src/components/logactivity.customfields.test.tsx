@@ -4,8 +4,9 @@ import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { viewerZone } from "../format/timezone";
-import { RecordZoneProvider } from "../lib/recordzone";
+import { pickOption } from "../design-system/select-testing";
+import { browserZone } from "../format/timezone";
+import { CompanyZoneProvider } from "../lib/companyzone";
 import { meFixture } from "../testing/mefixture";
 import { renderWithQueryClient } from "../testing/queryrender";
 import { installFetchStub, jsonResponse } from "../testing/story-utils";
@@ -50,9 +51,9 @@ it("logs an activity with the value of a field the workspace added", async () =>
   });
   const user = userEvent.setup();
   renderWithQueryClient(
-    <RecordZoneProvider zone={viewerZone()}>
+    <CompanyZoneProvider zone={browserZone()}>
       <LogActivityForm entityType="contact" entityId="contact-one" />
-    </RecordZoneProvider>,
+    </CompanyZoneProvider>,
   );
   fireEvent.change(screen.getByRole("textbox", { name: "Subject" }), {
     target: { value: "Plant walk-through" },
@@ -72,4 +73,64 @@ it("logs an activity with the value of a field the workspace added", async () =>
         .value,
     ).toBe(""),
   );
+});
+
+const VISIT_REPORT: CustomField = {
+  ...VISIT_NOTE,
+  id: "cf-visit-report",
+  label: "Visit report",
+  slug: "visit_report",
+  column_name: "cf_visit_report",
+  activity_kinds: ["meeting"],
+};
+
+it("offers a meeting-only field on a meeting and drops its value on another kind", async () => {
+  vi.setSystemTime(new Date("2026-07-06T09:00:00Z"));
+  const posted: unknown[] = [];
+  installFetchStub({
+    "GET /me": () =>
+      jsonResponse(meFixture({ allow: { activity: ["create"] } })),
+    "GET /custom-fields": () =>
+      jsonResponse({
+        data: [VISIT_NOTE, VISIT_REPORT],
+        page: { has_more: false },
+      }),
+    "POST /activities": (body) => {
+      posted.push(body);
+      return jsonResponse({ id: "logged-call" }, 201);
+    },
+  });
+  const user = userEvent.setup();
+  renderWithQueryClient(
+    <CompanyZoneProvider zone={browserZone()}>
+      <LogActivityForm entityType="contact" entityId="contact-one" />
+    </CompanyZoneProvider>,
+  );
+  await screen.findByRole("textbox", { name: "Visit note" });
+  expect(screen.queryByRole("textbox", { name: "Visit report" })).toBeNull();
+
+  await pickOption(user, screen.getByLabelText("Type"), "Meeting");
+  fireEvent.change(
+    await screen.findByRole("textbox", { name: "Visit report" }),
+    { target: { value: "Saw the new line" } },
+  );
+  await pickOption(user, screen.getByLabelText("Type"), "Call");
+  expect(screen.queryByRole("textbox", { name: "Visit report" })).toBeNull();
+  await pickOption(user, screen.getByLabelText("Type"), "Meeting");
+  expect(
+    (
+      (await screen.findByRole("textbox", {
+        name: "Visit report",
+      })) as HTMLInputElement
+    ).value,
+  ).toBe("");
+
+  await pickOption(user, screen.getByLabelText("Type"), "Call");
+  fireEvent.change(screen.getByRole("textbox", { name: "Subject" }), {
+    target: { value: "Quick call" },
+  });
+  await user.click(screen.getByRole("button", { name: "Log" }));
+  await waitFor(() => expect(posted).toHaveLength(1));
+  expect(posted[0]).not.toHaveProperty("cf_visit_report");
+  expect(posted[0]).toHaveProperty("cf_visit_note");
 });

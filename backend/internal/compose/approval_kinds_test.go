@@ -14,7 +14,6 @@ package compose
 
 import (
 	"context"
-	"encoding/json"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -97,10 +96,6 @@ func (stubComms) Availability(context.Context, *ids.UUID, time.Time, time.Time, 
 	return agents.AvailabilityResult{}, nil
 }
 
-func (stubComms) BookMeeting(context.Context, agents.BookMeetingArgs) (json.RawMessage, error) {
-	return nil, nil
-}
-
 // stubSoR satisfies the record reader the 🟡 comms verbs stage against. This
 // walk only reads Specs(), so nothing calls it — but RegisterCommsTools now
 // refuses a nil provider at wiring time, because a surface that advertises
@@ -137,7 +132,7 @@ func TestEveryConfirmationRequiredToolHasADecisionGrantMapping(t *testing.T) {
 // system actually guarantees, rather than "every tool", which is where the
 // first version of this test happened to look.
 func TestEveryRegisteredEffectKindHasADecisionGrantMapping(t *testing.T) {
-	svc := approvalsServiceWithEffects(nil)
+	svc := NewApprovalsServiceWithEffects(nil)
 	kinds := svc.EffectKinds()
 	if len(kinds) == 0 {
 		t.Fatal("no effect kinds registered — the scan found nothing to check, which means it is broken")
@@ -164,7 +159,7 @@ func TestEveryRegisteredEffectKindHasADecisionGrantMapping(t *testing.T) {
 // The list below is the evidence that the guarantee is load-bearing — if it
 // ever empties, the collision is gone and this test should go with it.
 func TestCollidingEffectKindsAreCoveredByProvenance(t *testing.T) {
-	svc := approvalsServiceWithEffects(nil)
+	svc := NewApprovalsServiceWithEffects(nil)
 	effects := map[string]bool{}
 	for _, kind := range svc.EffectKinds() {
 		effects[kind] = true
@@ -435,7 +430,6 @@ var crossPackageKinds = map[string]string{
 	"approvals.KindScheduledSendHeld": approvals.KindScheduledSendHeld,
 	"deals.CloseDateCorrectionKind":   deals.CloseDateCorrectionKind,
 	"deals.FollowUpReconcileKind":     deals.FollowUpReconcileKind,
-	"deals.StageProgressionKind":      deals.StageProgressionKind,
 }
 
 // isPackageQualifier reports whether an identifier names an imported package
@@ -552,7 +546,7 @@ func TestEveryKindAnAutomationCanStageIsDecidable(t *testing.T) {
 // completes the run inside that write's transaction. Anything in neither bucket
 // is a card that lies about what approving it does.
 func TestEveryStageableKindEitherAsksOnlyOrHasAReleaseEffect(t *testing.T) {
-	svc := approvalsServiceWithEffects(nil)
+	svc := NewApprovalsServiceWithEffects(nil)
 	registered := map[string]bool{}
 	for _, kind := range svc.EffectKinds() {
 		registered[kind] = true

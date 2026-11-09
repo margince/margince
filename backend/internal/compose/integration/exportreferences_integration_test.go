@@ -38,8 +38,8 @@ func seedDealOnAPrivateCompany(t *testing.T, e *SearchEnv) (deal, hidden ids.UUI
 	hidden = e.SeedID(t, `INSERT INTO company (id, display_name, owner_id, visibility, source, captured_by)
 		VALUES ($1, 'Meridian Labs', $2, 'owner', 'manual', 'human:x')`, e.Rep3)
 	deal = e.SeedID(t, `INSERT INTO deal (id, owner_id, name, pipeline_id, stage_id, company_id,
-		forecast_category, source, captured_by)
-		VALUES ($1, $2, 'Meridian renewal', $3, $4, $5, 'commit', 'manual', 'human:x')`,
+		win_probability_override, win_probability_set_by, source, captured_by)
+		VALUES ($1, $2, 'Meridian renewal', $3, $4, $5, 95, 'human', 'manual', 'human:x')`,
 		e.Rep1, pipelineID, stageID, hidden)
 	return deal, hidden
 }
@@ -72,7 +72,7 @@ func TestAFilteredExportWithholdsACompanyTheExporterCannotOpen(t *testing.T) {
 
 	ctx := e.dealAndCompanyReader(e.Rep1)
 	result, err := compose.NewFilteredExportWriter(e.Pool).WriteFiltered(
-		ctx, dealEngine(ctx, t, e), storekit.Predicate{Field: "forecast_category", Op: "eq", Value: "commit"}, "csv",
+		ctx, dealEngine(ctx, t, e), storekit.Predicate{Field: "win_probability", Op: "eq", Value: 95}, "csv",
 	)
 	if err != nil {
 		t.Fatalf("filtered export: %v", err)
@@ -104,7 +104,7 @@ func TestAFilteredExportKeepsACompanyTheExporterCanOpen(t *testing.T) {
 
 	ctx := e.dealAndCompanyReader(e.Rep3)
 	result, err := compose.NewFilteredExportWriter(e.Pool).WriteFiltered(
-		ctx, dealEngine(ctx, t, e), storekit.Predicate{Field: "forecast_category", Op: "eq", Value: "commit"}, "csv",
+		ctx, dealEngine(ctx, t, e), storekit.Predicate{Field: "win_probability", Op: "eq", Value: 95}, "csv",
 	)
 	if err != nil {
 		t.Fatalf("filtered export: %v", err)

@@ -143,11 +143,15 @@ function EntryButton({
     ? ENTRY_ICONS[entry.icon]
     : undefined;
   return (
+    // The span lets a verb bar's narrow tile cut the label at its end; the
+    // title still shows all of it.
     <Button
       data-testid={`ext-entry-${entry.unit}`}
+      title={label}
       onClick={() => navigate(entryRoute(entry), entryParams(record))}
     >
-      {Icon && <Icon aria-hidden="true" />} {label}
+      {Icon && <Icon aria-hidden="true" />}{" "}
+      <span className="verb-label">{label}</span>
     </Button>
   );
 }

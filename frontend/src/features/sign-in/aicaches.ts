@@ -12,9 +12,10 @@ import type { components } from "../../api/schema";
  * old one, and nothing on screen says why.
  *
  * The list is declared once here rather than spelled at the mutation, because
- * the failure it prevents is forgetting to add to it. `aicaches.test.ts` walks
- * the screens and fails when a query key looks like one of these and is not
- * named, which is the half a list cannot hold on its own.
+ * the failure it prevents is forgetting to add to it.
+ * `census/rules/aicaches.census.ts` walks the screens and fails when a query
+ * key looks like one of these and is missing from the list. A list cannot hold
+ * that half on its own.
  */
 export const LANGUAGE_DEPENDENT_QUERY_PREFIXES = [
   ["company-dossier"],

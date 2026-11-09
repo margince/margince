@@ -11,6 +11,7 @@ import {
 } from "../../format/format";
 import type { Locale, PluralTranslator, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { hasLabel } from "./voice-samples";
 
 type VoiceProfileVersion = components["schemas"]["VoiceProfileVersion"];
@@ -55,7 +56,7 @@ function labelOf<Key extends string>(
   labels: Record<Key, MessageKey>,
   value: string,
 ): string {
-  return hasLabel(labels, value) ? t(labels[value]) : value;
+  return hasLabel(labels, value) ? t(labelFor(labels, value)) : value;
 }
 
 type Columns = Readonly<{

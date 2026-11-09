@@ -60,11 +60,11 @@ func assertNoFileFields(t *testing.T, where string, raw json.RawMessage) {
 
 func (p *preflightEnv) uploadToAnchor(t *testing.T) string {
 	t.Helper()
-	status, raw := uploadAs(t, p.AppEnv, nil, "activity", p.activityID, []byte("%PDF the quote"))
+	status, raw := apptest.UploadAs(t, p.AppEnv, nil, "activity", p.activityID, []byte("%PDF the quote"))
 	if status != http.StatusCreated {
 		t.Fatalf("uploading a file → %d: %s", status, raw)
 	}
-	return attachmentIDOf(t, raw)
+	return apptest.AttachmentIDOf(t, raw)
 }
 
 func (p *preflightEnv) withholdBytes(t *testing.T, file string) {
@@ -79,7 +79,7 @@ func (p *preflightEnv) withholdBytes(t *testing.T, file string) {
 
 func TestAScheduledMessageReadsBackWhatAnEditRebuildsItFrom(t *testing.T) {
 	p := setupPreflight(t, compose.WithBlobstore(blobstore.NewMemory()))
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	files := []string{p.uploadToAnchor(t), p.uploadToAnchor(t), p.uploadToAnchor(t), p.uploadToAnchor(t)}
 	const markup = "<p>Written <b>the night before</b>.</p>"

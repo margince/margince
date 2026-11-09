@@ -10,7 +10,10 @@ import (
 	"testing"
 	"time"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -29,7 +32,7 @@ func enrichEvent(t *testing.T, eventType, entityType string, payload json.RawMes
 	return events.Envelope{
 		Type:       eventType,
 		EventID:    ids.NewV7(),
-		OccurredAt: time.Now().UTC(),
+		OccurredAt: clocktest.Now(t),
 		Entity:     events.EntityRef{Type: entityType, ID: ids.NewV7()},
 		Payload:    payload,
 	}
@@ -61,8 +64,9 @@ func audienceChange(t *testing.T, to crmcontracts.PublicEventActivityChangedFiel
 // quietTrigger is the subject with no pool and no runner. Every case below
 // stops at the envelope, so neither is ever reached — and a nil pool is the
 // assertion that it was not: anything that queued or queried would panic.
-func quietTrigger() *CaptureEnrichTrigger {
-	return &CaptureEnrichTrigger{log: slog.New(slog.DiscardHandler)}
+func quietTrigger(t *testing.T) *CaptureEnrichTrigger {
+	now := clocktest.Now(t)
+	return &CaptureEnrichTrigger{log: slog.New(slog.DiscardHandler), now: func() time.Time { return now }}
 }
 
 // The three doors, each named by what it is the only notice of. Without the
@@ -70,7 +74,7 @@ func quietTrigger() *CaptureEnrichTrigger {
 // is read by nothing until the next day's reconciler, because the contact did
 // not exist when their mail landed and no later event says it now does.
 func TestTheSignaturePassIsQueuedByEveryDoorThatMakesSomebodyReadable(t *testing.T) {
-	g := quietTrigger()
+	g := quietTrigger(t)
 	ctx := context.Background()
 
 	for name, env := range map[string]events.Envelope{
@@ -86,7 +90,7 @@ func TestTheSignaturePassIsQueuedByEveryDoorThatMakesSomebodyReadable(t *testing
 
 // The refusals, and each one costs a model-backed pass when it is wrong.
 func TestTheSignaturePassIsNotQueuedByWhatCannotMakeSomebodyReadable(t *testing.T) {
-	g := quietTrigger()
+	g := quietTrigger(t)
 	ctx := context.Background()
 
 	for name, env := range map[string]events.Envelope{
@@ -116,14 +120,14 @@ func TestTheSignaturePassIsNotQueuedByWhatCannotMakeSomebodyReadable(t *testing.
 // it without an error — a group that wedged on one malformed payload would stop
 // reading every later one.
 func TestAnUnreadablePayloadQueuesNothingAndWedgesNothing(t *testing.T) {
-	g := quietTrigger()
+	g := quietTrigger(t)
 	ctx := context.Background()
 
 	for _, eventType := range []string{"activity.captured", "activity.updated"} {
 		env := events.Envelope{
 			Type:       eventType,
 			EventID:    ids.NewV7(),
-			OccurredAt: time.Now().UTC(),
+			OccurredAt: clocktest.Now(t),
 			Entity:     events.EntityRef{Type: "activity", ID: ids.NewV7()},
 			Payload:    json.RawMessage(`{"kind":`),
 		}
@@ -140,7 +144,7 @@ func TestAnUnreadablePayloadQueuesNothingAndWedgesNothing(t *testing.T) {
 // position 0 — and the reconciler owns everything that old. The nil pool is the
 // assertion: reaching the enqueue would panic rather than fail.
 func TestAStaleEventQueuesNothing(t *testing.T) {
-	g := quietTrigger()
+	g := quietTrigger(t)
 	ctx := context.Background()
 
 	for name, env := range map[string]events.Envelope{
@@ -148,9 +152,24 @@ func TestAStaleEventQueuesNothing(t *testing.T) {
 		"a stale contact": enrichEvent(t, "contact.created", "contact", noPayload),
 		"a stale opening": audienceChange(t, crmcontracts.Workspace),
 	} {
-		env.OccurredAt = time.Now().UTC().Add(-2 * captureEnrichFreshWindow)
+		env.OccurredAt = clocktest.Now(t).Add(-2 * captureEnrichFreshWindow)
 		if err := g.HandleEvent(ctx, env); err != nil {
 			t.Errorf("%s: HandleEvent returned %v, want a silent skip", name, err)
 		}
+	}
+}
+
+func TestSignatureRelinksOnlyRequestTheNewContact(t *testing.T) {
+	g := quietTrigger(t)
+	for _, kind := range []string{"contact", "deal", "company", "lead", "project"} {
+		t.Run(kind, func(t *testing.T) {
+			body, err := json.Marshal(crmcontracts.PublicEventActivityUpdated{ChangedFields: crmcontracts.PublicEventActivityChangedFields{Relinked: &crmcontracts.PublicEventActivityRelinkedRef{EntityType: kind, EntityId: openapi_types.UUID(ids.NewV7())}}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := g.queues(context.Background(), enrichEvent(t, "activity.updated", "activity", body)); got != (kind == "contact") {
+				t.Fatalf("%s relink queued=%t", kind, got)
+			}
+		})
 	}
 }

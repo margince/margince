@@ -66,7 +66,7 @@ func (p *fakeCreateRecorder) Update(context.Context, datasource.UpdateInput) (da
 	panic("fakeCreateRecorder: Update not stubbed for this test")
 }
 
-func (p *fakeCreateRecorder) AdvanceDeal(context.Context, datasource.AdvanceDealInput) (datasource.EntityRef, error) {
+func (p *fakeCreateRecorder) AdvanceDeal(context.Context, datasource.AdvanceDealInput) (datasource.AdvanceDealResult, error) {
 	panic("fakeCreateRecorder: AdvanceDeal not stubbed for this test")
 }
 

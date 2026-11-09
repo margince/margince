@@ -3,8 +3,8 @@
 
 import { type ReactNode, useState } from "react";
 import { useOpenEmail } from "../../lib/openemail";
-import { useRecordZone } from "../../lib/recordzone";
 import { SEARCH_ACTIVITY_SEGMENT } from "../../lib/searchkinds";
+import { useViewerZone } from "../../lib/viewerzone";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { OpenActivityDrawer } from "./activitydrawer";
 
@@ -25,7 +25,7 @@ export function useSearchPanels(
   openActivityId: string | undefined,
   openAs: string | undefined,
 ): Readonly<{ onOpen: OpenHit; drawers: ReactNode }> {
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const routedToActivity = openAs === SEARCH_ACTIVITY_SEGMENT;
   const [openEmail, setOpenEmail] = useOpenEmail(
     routedToActivity ? undefined : openActivityId,

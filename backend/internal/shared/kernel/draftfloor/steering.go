@@ -10,18 +10,22 @@ import "strings"
 // call is a rewrite. Both are trimmed, and empty means absent. A route therefore cannot
 // read "   " as a first draft on one surface and as a rewrite on another.
 type Steering struct {
+	Subject   string
 	Intent    string
 	RewriteOf string
 }
 
 // NewSteering reads the two optional request fields of crm.yaml's DraftSteering.
-func NewSteering(intent, rewriteOf *string) Steering {
+func NewSteering(intent, rewriteOf, subject *string) Steering {
 	var out Steering
 	if intent != nil {
 		out.Intent = strings.TrimSpace(*intent)
 	}
 	if rewriteOf != nil {
 		out.RewriteOf = strings.TrimSpace(*rewriteOf)
+	}
+	if subject != nil {
+		out.Subject = strings.TrimSpace(*subject)
 	}
 	return out
 }

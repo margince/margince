@@ -87,14 +87,9 @@ function readingsCard(answer: Record<string, unknown>): HTMLElement {
       picture: bars([
         { label: "Won", value: amount("won_minor"), shown: shown("won_minor") },
         {
-          label: "With evidence",
+          label: "Likely",
           value: amount("evidence_minor"),
           shown: shown("evidence_minor"),
-        },
-        {
-          label: "Best case",
-          value: amount("best_case_minor"),
-          shown: shown("best_case_minor"),
         },
         {
           label: "Open",
@@ -124,16 +119,6 @@ function readingsCard(answer: Record<string, unknown>): HTMLElement {
       ),
     );
   }
-  const qualified = asRecord(answer.qualified);
-  if ("weighted_minor" in qualified) {
-    body.appendChild(
-      el(
-        "p",
-        "readings-floor",
-        `Counting only deals the customer still backs: ${compactMoney(qualified.weighted_minor, currency)} weighted.`,
-      ),
-    );
-  }
   body.appendChild(
     rowAction("What moved it", () =>
       askAssistant(
@@ -160,6 +145,12 @@ function bucketLabel(name: string): string {
       return "Forecast category changes";
     case "stage_weight":
       return "Stage weight changes";
+    case "excluded":
+      return "Left out after review";
+    case "reinstated":
+      return "Counted again after review";
+    case "not_checked":
+      return "Not checked";
     case "won":
       return "Won";
     case "lost":

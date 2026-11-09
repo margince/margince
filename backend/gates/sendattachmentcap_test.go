@@ -24,11 +24,12 @@ package gates
 // standing between one request and thousands of per-file transactions.
 
 import (
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // goAttachmentCaps are the Go statements of the cap, each read out of its own
@@ -61,7 +62,7 @@ func TestTheSendAttachmentCapMatchesTheContract(t *testing.T) {
 	t.Parallel()
 	want := contractAttachmentCap(t)
 	for name, site := range goAttachmentCaps {
-		src, err := os.ReadFile(site.file)
+		src, err := gatekit.ReadFile(site.file)
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
@@ -92,7 +93,7 @@ func TestTheSendAttachmentCapMatchesTheContract(t *testing.T) {
 // listed here, and a fourth request growing the field would then go unchecked.
 func contractAttachmentCap(t *testing.T) int {
 	t.Helper()
-	raw, err := os.ReadFile(contractPath)
+	raw, err := gatekit.ReadFile(contractPath)
 	if err != nil {
 		t.Fatal(err)
 	}

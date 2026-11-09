@@ -93,13 +93,20 @@ func referencedBranch(entity string, field Field) (searchBranch, bool) {
 	if _, member, nested := strings.Cut(column, memberPathSeparator); nested {
 		column = lastMember(member)
 	}
+	return branchFor(referenceTarget(entity, column))
+}
+
+// referenceTarget answers the record type a reference column names. The
+// predicate guard and the hop derivation (contractRelations) both read it, so
+// a column the guard closes is the column a hop runs on.
+func referenceTarget(entity, column string) string {
 	if selfReferences[column] {
-		return branchFor(entity)
+		return entity
 	}
 	if target, declared := roleNamedReferences[column]; declared {
-		return branchFor(target)
+		return target
 	}
-	return branchFor(strings.TrimSuffix(column, relationSuffix))
+	return strings.TrimSuffix(column, relationSuffix)
 }
 
 // lastMember answers the final segment of a dotted member path.
@@ -119,21 +126,22 @@ const memberPathSeparator = "."
 // roleNamedReferences are the columns that name what a reference is FOR rather
 // than what it points at. A deal's `partner_company_id` and a company's
 // `parent_company_id` are both companies, and no derivation from the name can
-// say so.
+// say so. The same entry gives the column its hop, named for the role.
 //
 // Declared here and checked against the schema's own foreign keys by
 // TestEveryQueryableReferenceResolvesToItsRecordType, so a role-named column
 // added later fails rather than quietly resolving to nothing — which is the
 // only way this list can be wrong and the only way that would not be noticed.
 var roleNamedReferences = map[string]string{
-	"partner_company_id":      entityCompany,
-	"parent_company_id":       entityCompany,
-	"counterparty_company_id": entityCompany,
-	"promoted_contact_id":     entityContact,
-	"from_contact_id":         entityContact,
-	"qualified_deal_id":       entityDeal,
-	"converted_from_lead_id":  entityLead,
-	"source_activity_id":      entityActivity,
+	"partner_company_id":       entityCompany,
+	"parent_company_id":        entityCompany,
+	"counterparty_company_id":  entityCompany,
+	"promoted_contact_id":      entityContact,
+	"from_contact_id":          entityContact,
+	"qualified_deal_id":        entityDeal,
+	"converted_from_lead_id":   entityLead,
+	"source_activity_id":       entityActivity,
+	"created_from_activity_id": entityActivity,
 }
 
 // selfReferences name another row of the SAME record type, so their target is

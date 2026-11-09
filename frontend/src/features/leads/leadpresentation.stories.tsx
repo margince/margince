@@ -3,6 +3,9 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
+import type { ListQuery } from "../../components/listquery";
+import { translate } from "../../i18n";
+import { UNNARROWED_LIST_QUERY } from "../../testing/listquery.fixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -10,8 +13,8 @@ import {
 } from "../../testing/story-utils";
 import { LeadBoard } from "./leadpresentation";
 
-// The board's terminal columns count from the leads-by-status report, so a
-// board with a failed report must say the zeros are not figures.
+// The board's terminal columns count from the leads-by-status report. A failed
+// report says the zeros are not figures; a withheld or refused one says why.
 const meta: Meta = {
   title: "Records/Leads/Board",
   parameters: { layout: "padded" },
@@ -45,10 +48,13 @@ const rows = [
   },
 ];
 
-function Board() {
+function Board({
+  query = UNNARROWED_LIST_QUERY,
+}: Readonly<{ query?: ListQuery }>) {
   return (
     <StoryProviders>
       <LeadBoard
+        query={query}
         rows={rows}
         onMoved={() => undefined}
         hasMore={false}
@@ -85,5 +91,57 @@ export const CountsUnavailable: Story = {
     await expect(
       await within(canvasElement).findByRole("alert"),
     ).toHaveTextContent("Qualified and Disqualified counts did not load.");
+  },
+};
+
+export const CountsWithheld: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /leads": () =>
+        jsonResponse({
+          data: [],
+          page: { has_more: false, next_cursor: null },
+        }),
+    });
+    return (
+      <Board
+        query={{ ...UNNARROWED_LIST_QUERY, filters: { min_score: "80" } }}
+      />
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const qualified = await within(canvasElement).findByRole("region", {
+      name: translate("en", "lead.statusPromoted"),
+    });
+    await expect(qualified).toHaveTextContent(
+      translate("en", "lead.boardCountsNoScoreFilter"),
+    );
+  },
+};
+
+export const CountsRefused: Story = {
+  render: () => {
+    installFetchStub({
+      "POST /reports/leads-by-status": () =>
+        jsonResponse({ title: "Forbidden", status: 403 }, 403),
+    });
+    return (
+      <Board
+        query={{
+          ...UNNARROWED_LIST_QUERY,
+          filters: { owner_id: "u-colleague" },
+        }}
+      />
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const disqualified = await within(canvasElement).findByRole("region", {
+      name: translate("en", "lead.statusDisqualified"),
+    });
+    await expect(
+      await within(disqualified).findByText(
+        translate("en", "lead.boardCountsOwnerNotMeasurable"),
+      ),
+    ).toBeInTheDocument();
   },
 };

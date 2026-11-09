@@ -64,6 +64,12 @@ const (
 // the one record kind this flow writes.
 const acceptDealEntity = "deal"
 
+// extractionIDField is the field a refusal about the named reading points at.
+const extractionIDField = "extraction_id"
+
+// refusalRequired is the code of a refusal naming what the caller left out.
+const refusalRequired = "required"
+
 // ExtractionAccept executes acceptAttachmentExtraction: resolve the
 // reading the human was shown, validate the whole request against what
 // THAT reading grounded, write the deal once, then audit per field.
@@ -135,6 +141,13 @@ func (a *ExtractionAccept) Accept(ctx context.Context, attachmentID ids.UUID, re
 	read, err := a.attachments.GetExtractionRead(ctx, attachmentID, readID)
 	if err != nil {
 		return zero, err
+	}
+	// Only a deal-facts reading holds values a deal can take.
+	if read.Question != activities.ExtractionQuestionDealFacts {
+		return zero, &ExtractionAcceptError{
+			Field: extractionIDField, Code: "not_deal_facts",
+			Message: "extraction_id names a reading that was not read for deal facts",
+		}
 	}
 	accepted, patch, err := buildExtractionAcceptPatch(req, groundedExtractionFields(read.Fields))
 	if err != nil {
@@ -238,7 +251,7 @@ func acceptedReadingID(req crmcontracts.AcceptExtractionRequest) (ids.UUID, erro
 	id := ids.UUID(req.ExtractionId)
 	if id == (ids.UUID{}) {
 		return ids.UUID{}, &ExtractionAcceptError{
-			Field: "extraction_id", Code: "required",
+			Field: extractionIDField, Code: refusalRequired,
 			Message: "extraction_id must name the reading these values were read from",
 		}
 	}
@@ -276,7 +289,7 @@ func groundedExtractionFields(fields []extraction.ExtractedField) map[string]ext
 func buildExtractionAcceptPatch(req crmcontracts.AcceptExtractionRequest, grounded map[string]extraction.ExtractedField) ([]acceptedExtractionField, deals.UpdateDealInput, error) {
 	if len(req.FieldKeys) == 0 {
 		return nil, deals.UpdateDealInput{}, &ExtractionAcceptError{
-			Field: "field_keys", Code: "required",
+			Field: "field_keys", Code: refusalRequired,
 			Message: "field_keys must name at least one grounded field",
 		}
 	}
@@ -354,12 +367,11 @@ func refuseUnpairedAmount(seen map[string]bool) error {
 // setAcceptedDealField coerces one accepted value onto its UpdateDealInput
 // slot. The switch IS the closed allowlist, derived from what the deals
 // partial-update path accepts as a plain document fact. Its remaining
-// fields are deliberately refused: the row references (company_id,
-// owner_id, partner_company_id) are links to records, not facts a quote can
-// carry, and each demands its own link-target visibility gate;
-// forecast_category is a rep's pipeline judgment; wait_until is a
-// workflow timer; a cf_* passthrough would hand the extractor an open
-// column surface. A grounded field outside this set answers
+// fields are refused. The row references (company_id, owner_id,
+// partner_company_id) link to records a quote cannot carry, and each
+// demands its own link-target visibility gate. win_probability is a rep's
+// pipeline judgment. wait_until is a workflow timer. A cf_* passthrough
+// would hand the extractor an open column surface. A grounded field outside this set answers
 // not_deal_writable, whole-request.
 func setAcceptedDealField(patch *deals.UpdateDealInput, position int, field acceptedExtractionField) error {
 	switch field.Field {

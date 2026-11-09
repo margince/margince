@@ -23,10 +23,11 @@ package gates
 // remember to update a second list.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -45,7 +46,7 @@ var localeErrorKey = regexp.MustCompile(`"extOpenchannel\.error\.([a-zA-Z0-9_]+)
 func TestOpenchannelLocalesNameExactlyTheDeclaredFailureClasses(t *testing.T) {
 	t.Parallel()
 
-	source, err := os.ReadFile(openchannelFailureClasses)
+	source, err := gatekit.ReadFile(openchannelFailureClasses)
 	if err != nil {
 		t.Fatalf("reading %s: %v", openchannelFailureClasses, err)
 	}
@@ -58,7 +59,7 @@ func TestOpenchannelLocalesNameExactlyTheDeclaredFailureClasses(t *testing.T) {
 		declared[m[1]] = true
 	}
 
-	entries, err := os.ReadDir(openchannelLocaleDir)
+	entries, err := gatekit.ReadDir(openchannelLocaleDir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", openchannelLocaleDir, err)
 	}
@@ -69,7 +70,7 @@ func TestOpenchannelLocalesNameExactlyTheDeclaredFailureClasses(t *testing.T) {
 		}
 		found++
 		path := filepath.Join(openchannelLocaleDir, entry.Name())
-		body, readErr := os.ReadFile(path)
+		body, readErr := gatekit.ReadFile(path)
 		if readErr != nil {
 			t.Fatalf("reading %s: %v", path, readErr)
 		}

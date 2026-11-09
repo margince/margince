@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/compose/integration/jobtest"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/search"
@@ -129,7 +130,7 @@ func TestEmbedReindexRebuildsTheCorpusInOnePassAndHandsTheMarkerBack(t *testing.
 // forever. `force` on its own must NOT steal, or the escape hatch becomes the
 // normal path and two runs fan out over each other.
 func TestEmbedReindexForceTakesTheMarkerBackFromAWedgedRun(t *testing.T) {
-	router := embedReindexRouter(t, "reindex-wedged-v1")
+	router := apptest.EmbedReindexRouter(t, "reindex-wedged-v1")
 	e := setupEmbedReindex(t, router)
 
 	if status, _, _ := embedConfirm(t, e, AnyMap{"force": true}); status != http.StatusAccepted {

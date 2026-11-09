@@ -43,12 +43,13 @@ package gates
 // question the page is for.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The two files, from the module root the gates package chdirs to.
@@ -225,7 +226,7 @@ func listedIn(page, heading, prefix string, bare bool) []string {
 
 func declaredLabels(t *testing.T) []string {
 	t.Helper()
-	source, err := os.ReadFile(labelSourcePath)
+	source, err := gatekit.ReadFile(labelSourcePath)
 	if err != nil {
 		t.Fatalf("reading %s: %v", labelSourcePath, err)
 	}
@@ -245,7 +246,7 @@ func declaredLabels(t *testing.T) []string {
 
 func readLabelDoc(t *testing.T) string {
 	t.Helper()
-	page, err := os.ReadFile(labelDocPath)
+	page, err := gatekit.ReadFile(labelDocPath)
 	if err != nil {
 		t.Fatalf("reading %s: %v", labelDocPath, err)
 	}

@@ -22,6 +22,23 @@ import {
 
 const GMAIL_SEND = "https://www.googleapis.com/auth/gmail.send";
 
+// A status a newer server sends gets no tone, the neutral label, and the
+// "needs a look" word, never the healthy one.
+describe("a connector status this build does not know", () => {
+  const later = "paused_later" as ConnectorStatus;
+
+  it("reads as neutral rather than as a blank", () => {
+    expect(statusTone(later)).toBe(undefined);
+    expect(statusLabel(later)).toBe("common.unknownValue");
+    expect(
+      serviceHealth({
+        status: "paused_later" as CaptureConnection["status"],
+        last_sync_error_class: null,
+      }),
+    ).toBe("needs_attention");
+  });
+});
+
 describe("statusTone", () => {
   it("gives each status its own tone so four states never collapse to two", () => {
     expect(statusTone("connected")).toBe("success");

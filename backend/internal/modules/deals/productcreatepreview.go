@@ -47,6 +47,11 @@ func prepareProductCreation(in CreateProductInput) (ProductCreationPreview, erro
 	if err := validBillingShape(in.BillingModel, in.BillingIntervalMonths); err != nil {
 		return ProductCreationPreview{}, err
 	}
+	if in.TaxCategory != nil {
+		if err := checkTaxCategory(*in.TaxCategory); err != nil {
+			return ProductCreationPreview{}, err
+		}
+	}
 	return ProductCreationPreview{Input: in, TaxRate: tax}, nil
 }
 

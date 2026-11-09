@@ -48,20 +48,37 @@ func (CapturedDealRefileSweepArgs) Kind() string { return "captured_deal_refile_
 // FleetWide permits the scheduler to enumerate installations.
 func (CapturedDealRefileSweepArgs) FleetWide() {}
 
+// dealTopicCallsPerPass bounds the model calls one pass makes before it
+// snoozes, so a pass stays inside its job timeout and the model's rate.
+const dealTopicCallsPerPass = 20
+
 type capturedDealRefileWorker struct {
 	db      *database.DB
 	repair  capture.DealRepair
 	cohorts *contacts.Store
+	// page is how many candidates one pass inspects before it snoozes.
+	page int
+	// calls is how many topic checks one pass asks before it snoozes.
+	calls int
 }
 
-func newCapturedDealRefileWorker(pool *pgxpool.Pool) *capturedDealRefileWorker {
+// newCapturedDealRefileWorker builds the pass over the deal topic lane; a nil
+// brain files no suggested deal, and a later pass with a model files it.
+func newCapturedDealRefileWorker(pool *pgxpool.Pool, topicBrain completer) *capturedDealRefileWorker {
 	db := InstallationDB(pool)
-	return &capturedDealRefileWorker{db: db, repair: mailDealRepair(pool), cohorts: cohortRepairStore(contacts.NewStore(db))}
+	repair := mailDealRepair(pool)
+	repair.Check = NewDealTopicCheck(pool, topicBrain)
+	return &capturedDealRefileWorker{
+		db: db, repair: repair, cohorts: cohortRepairStore(contacts.NewStore(db)),
+		page: capture.DealRefileLimit, calls: dealTopicCallsPerPass,
+	}
 }
 
 type dealRefileCursor struct {
-	After       ids.UUID `json:"deal_refile_after"`
-	CohortsDone bool     `json:"deal_refile_cohorts_done"`
+	After        ids.UUID `json:"deal_refile_after"`
+	CohortsDone  bool     `json:"deal_refile_cohorts_done"`
+	RefileDone   bool     `json:"deal_refile_done"`
+	RecheckAfter ids.UUID `json:"deal_recheck_after"`
 }
 
 func (w *capturedDealRefileWorker) Work(ctx context.Context, job *river.Job[CapturedDealRefileArgs]) error {
@@ -97,15 +114,26 @@ func (w *capturedDealRefileWorker) Work(ctx context.Context, job *river.Job[Capt
 			return jobs.FaultContext(ctx, err)
 		}
 	}
-	after, more, err := w.refilePage(passCtx, job.Args, cursor.After)
+	// The refile pages run first, then, for the recovery sweep, the recheck
+	// pages. Each phase keeps its own cursor across snoozes.
+	page, afterKey, after := w.refilePage, "deal_refile_after", cursor.After
+	if cursor.RefileDone {
+		page, afterKey, after = w.recheckPage, "deal_recheck_after", cursor.RecheckAfter
+	}
+	next, more, err := page(passCtx, job.Args, after)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	if !more {
+	switch {
+	case more:
+		// A crash before metadata is saved replays completed writes under their normal locks.
+		err = river.MetadataSet(ctx, afterKey, next)
+	case !cursor.RefileDone && job.Args.Scope.Recheck:
+		err = river.MetadataSet(ctx, "deal_refile_done", true)
+	default:
 		return nil
 	}
-	// A crash before metadata is saved replays completed writes under their normal locks.
-	if err := river.MetadataSet(ctx, "deal_refile_after", after); err != nil {
+	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
 	return river.JobSnooze(0)
@@ -133,29 +161,62 @@ func (w *capturedDealRefileWorker) refilePage(ctx context.Context, args Captured
 	var scanned []ids.UUID
 	err := w.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		scanned, err = w.repair.RefileCandidatesTx(ctx, tx, args.Scope, args.AsOf, after, args.Ceiling)
+		scanned, err = w.repair.RefileCandidatesTx(ctx, tx, args.Scope, args.AsOf, after, args.Ceiling, w.page)
 		return err
 	})
 	if err != nil {
 		return after, false, err
 	}
+	return w.walk(ctx, scanned, after, "capture_deal_refile_fault", func(activity ids.ActivityID) (bool, error) {
+		return w.repair.Refile(ctx, w.db, activity, args.AsOf)
+	})
+}
+
+// recheckPage asks the topic check about one page of the rule's older links
+// from the last capture.DealRecheckWindowDays days.
+func (w *capturedDealRefileWorker) recheckPage(ctx context.Context, args CapturedDealRefileArgs, after ids.UUID) (ids.UUID, bool, error) {
+	var scanned []ids.UUID
+	err := w.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		scanned, err = w.repair.RecheckCandidatesTx(ctx, tx, args.AsOf, after, args.Ceiling, w.page)
+		return err
+	})
+	if err != nil {
+		return after, false, err
+	}
+	return w.walk(ctx, scanned, after, "capture_deal_recheck_fault", func(activity ids.ActivityID) (bool, error) {
+		return w.repair.Recheck(ctx, w.db, activity)
+	})
+}
+
+// walk files each scanned activity, logging a row fault and going on. It
+// stops early once the pass has asked its share of topic checks, and answers
+// where to resume and whether work remains.
+func (w *capturedDealRefileWorker) walk(
+	ctx context.Context, scanned []ids.UUID, after ids.UUID, fault string, file func(ids.ActivityID) (bool, error),
+) (ids.UUID, bool, error) {
+	asked := 0
 	for _, activity := range scanned {
-		if err := w.db.Tx(ctx, func(tx pgx.Tx) error {
-			_, err := w.repair.RefileTx(ctx, tx, ids.From[ids.ActivityKind](activity), args.AsOf)
-			return err
-		}); err != nil {
+		called, err := file(ids.From[ids.ActivityKind](activity))
+		if err != nil {
 			if logErr := w.db.Tx(ctx, func(tx pgx.Tx) error {
-				_, logErr := storekit.LogSystem(ctx, tx, "capture_deal_refile_fault", map[string]any{"activity_id": activity, "error": err.Error()})
+				_, logErr := storekit.LogSystem(ctx, tx, fault, map[string]any{"activity_id": activity, "error": err.Error()})
 				return logErr
 			}); logErr != nil {
 				return after, false, errors.Join(err, logErr)
 			}
 		}
+		if called {
+			asked++
+		}
+		if asked >= w.calls {
+			return activity, true, nil
+		}
 	}
 	if len(scanned) == 0 {
 		return after, false, nil
 	}
-	return scanned[len(scanned)-1], len(scanned) == capture.DealRefileLimit, nil
+	return scanned[len(scanned)-1], len(scanned) == w.page, nil
 }
 
 type capturedDealRefileSweepWorker struct {
@@ -173,11 +234,11 @@ func (w *capturedDealRefileSweepWorker) scheduleWorkspace(ctx context.Context, w
 	var args CapturedDealRefileArgs
 	err := InstallationDB(w.pool).Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		args, err = dealRefilePassArgs(ctx, tx, capture.DealRefileScope{All: true}, w.now(), ids.Nil)
+		args, err = dealRefilePassArgs(ctx, tx, capture.DealRefileScope{All: true, Recheck: true}, w.now(), ids.Nil)
 		return err
 	})
 	if err != nil {
 		return err
 	}
-	return dispatchOne(ctx, args, nil)
+	return dispatchOne(ctx, w.pool, args, nil)
 }
