@@ -1,0 +1,137 @@
+{
+  "task": "deal_health",
+  "provider": "openai_compatible",
+  "served_model": "google/gemma-4-31b-it",
+  "env_class": "cloud_frontier",
+  "prompt_version": "p4df92710a20c9e6cc39489e0691a9731",
+  "corpus_version": "v1",
+  "verdict": "supported_degraded",
+  "runs": 27,
+  "passed": 27,
+  "reliability": 1,
+  "reported_accepted": 27,
+  "reported_wrong_answer": 0,
+  "reported_invalid": 0,
+  "reported_abstained": 0,
+  "certified_scope": "full_invocation",
+  "context_applied": false,
+  "context_scopes": null,
+  "judge_score_p50": 81,
+  "judge_score_min": 39,
+  "latency_p50": 2779,
+  "latency_p95": 3794,
+  "mean_tokens": 2533,
+  "mean_tokens_in": 2238,
+  "mean_tokens_out": 295,
+  "mean_cached_tokens": 1325,
+  "mean_cache_write_tokens": 0,
+  "est_cost_microusd": 0,
+  "judge_served_model": "claude-sonnet-5-5",
+  "judge_provider": "claude_cli",
+  "self_judged": false,
+  "served_identity_source": "echo",
+  "candidate_upstream": {
+    "only": [
+      "crusoe"
+    ],
+    "ignore": null,
+    "quantizations": [
+      "bf16"
+    ],
+    "sort": "",
+    "require_parameters": null,
+    "allow_fallbacks": null,
+    "preferred_max_latency_p90": 0,
+    "reasoning_effort": ""
+  },
+  "ran_at": "2026-11-09T22:21:41Z",
+  "scenarios": [
+    {
+      "scenario": "deal_status_offer_left_hanging",
+      "site": "deal_status",
+      "stamp": "b5dd42155aa5aeb8e531812b630f738d1e5c359d6db281c8543350d76f588539d304cf9b7bcc84b5fbf4200d38931c9ead4d4bd2c1ac582343e502e86a0adc34734267108c373a7887f5612cd9852b2a394b84b425fdcb11a1bc32a79deea9c2",
+      "verdict": "supported_degraded",
+      "judge_band": "supported_degraded",
+      "runs": 9,
+      "passed": 9,
+      "judge_scores": [
+        39,
+        45,
+        62,
+        60,
+        62,
+        62,
+        64,
+        50,
+        54
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 9,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "deal_status_an_overdue_task_is_not_done_work",
+      "site": "deal_status",
+      "stamp": "818b6808812c9cba67e5e18f3c73cc6a117afde441459ca09c6aaf972bb12789ea8e05e882df2117bcf40a63124841b87e32b8acf892e0ce6df8e6deac9a80af112ff496d18504fd251ae957373fe8f91bd9cca37644c6f3f7823e8e6a0ad208",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 9,
+      "passed": 9,
+      "judge_scores": [
+        90,
+        90,
+        90,
+        88,
+        82,
+        80,
+        90,
+        88,
+        88
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 9,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "deal_status_says_nothing_is_wrong_when_nothing_is",
+      "site": "deal_status",
+      "stamp": "9539ccc4bca3d80343882cfcf5e83846a56cfc60bb0ae42940b8fe868fdffeabeb317274da25dad3adb9aa6910d7731d3be11e80d4610731143490b4272e9b848b60c5e5c9b1ebb5e3719d7f837327c5d03b1c6d85f424baa0ea637459547cb5",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 9,
+      "passed": 9,
+      "judge_scores": [
+        80,
+        81,
+        88,
+        81,
+        82,
+        82,
+        80,
+        88,
+        80
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 9,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    }
+  ]
+}
