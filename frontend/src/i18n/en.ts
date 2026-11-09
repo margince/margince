@@ -18825,6 +18825,8 @@ export const en = {
     "The overnight review flagged this deal. Act on it, set it aside, or dismiss it.",
   "worklist.ask.conversation_claim":
     "You committed to this in a conversation. Do it, then mark it done.",
+  "worklist.ask.invitation":
+    "This is a calendar invitation. Accept, say maybe or decline, and the organizer gets your answer.",
   "worklist.ask.customer_waiting":
     "A customer wrote and nobody has answered yet. Reply to them.",
   "worklist.ask.lead_response":

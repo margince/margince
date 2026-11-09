@@ -19012,6 +19012,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die nächtliche Prüfung hat diesen Deal markiert. Reagiere darauf, stelle ihn zurück oder verwirf ihn.",
   "worklist.ask.conversation_claim":
     "Du hast das in einem Gespräch zugesagt. Erledige es und markiere es dann als erledigt.",
+  "worklist.ask.invitation":
+    "Das ist eine Kalendereinladung. Sag zu, mit Vorbehalt zu oder ab, und der Organisator erhält deine Antwort.",
   "worklist.ask.customer_waiting":
     "Ein Kunde hat geschrieben, und noch niemand hat geantwortet. Beantworte die Nachricht.",
   "worklist.ask.lead_response":

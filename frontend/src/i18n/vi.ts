@@ -18537,6 +18537,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Lượt rà soát ban đêm đã đánh dấu deal này. Xử lý, tạm gác, hoặc bỏ qua.",
   "worklist.ask.conversation_claim":
     "Bạn đã cam kết việc này trong một cuộc trao đổi. Làm xong rồi đánh dấu là xong.",
+  "worklist.ask.invitation":
+    "Đây là lời mời lịch. Hãy chấp nhận, trả lời có thể hoặc từ chối, và bên tổ chức sẽ nhận được câu trả lời của bạn.",
   "worklist.ask.customer_waiting":
     "Khách hàng đã viết và chưa có ai trả lời. Trả lời khách hàng.",
   "worklist.ask.lead_response":

@@ -272,13 +272,7 @@ function PreparedMove({
       }
     },
   );
-  // An invitation's answers stand where its reply would (WaitingReply), so a
-  // drafted reply is never its move.
-  if (
-    replyIsTheMove(item) ||
-    (item.email_summary?.calendar_invitation &&
-      item.move?.action === "draft_reply")
-  ) {
+  if (replyIsTheMove(item)) {
     return null;
   }
   const replyActivity =
