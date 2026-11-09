@@ -3,24 +3,27 @@ import "@testing-library/jest-dom/vitest";
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createQueryClient } from "../../app/queryclient";
-import { writeMessage } from "../../design-system/richtext-testing";
-import { pickOption } from "../../design-system/select-testing";
-import { meFixture } from "../../testing/mefixture";
-import {
-  allowedPreview,
-  isPreviewDoor,
-  refusedPreview,
-} from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
-import { MailSendNotices } from "./compose.parts";
+import { createQueryClient } from "../app/queryclient";
+import { writeMessage } from "../design-system/richtext-testing";
+import { pickOption } from "../design-system/select-testing";
+import { ComposeModal } from "../features/mail/compose";
+import { MailSendNotices } from "../features/mail/compose.parts";
 import {
   activity202,
   jsonResponse,
   render,
   stubRoutes,
-} from "./compose.testkit";
-import { newContactsOf, reasonTargetOf } from "./composeblockers";
+} from "../features/mail/compose.testkit";
+import {
+  newContactsOf,
+  reasonTargetOf,
+} from "../features/mail/composeblockers";
+import { meFixture } from "./mefixture";
+import {
+  allowedPreview,
+  isPreviewDoor,
+  refusedPreview,
+} from "./sendpermission.testkit";
 
 afterEach(() => {
   cleanup();
