@@ -7,6 +7,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -29,8 +31,9 @@ func (r *Registry) offersGated(ctx context.Context) bool {
 // them, so a scheduled run never holds one.
 func (r *Registry) gatedFor(ctx context.Context, all []mcp.ToolSpec) []mcp.ToolSpec {
 	var out []mcp.ToolSpec
+	p, _ := principal.Actor(ctx)
 	for _, spec := range all {
-		if spec.Gated && invocableByCaller(ctx, spec) && r.offersGated(ctx) {
+		if spec.Gated && invocableByCaller(ctx, spec) && auth.AreasAdmit(p, spec) && r.offersGated(ctx) {
 			out = append(out, r.asSeenBy(ctx, spec))
 		}
 	}

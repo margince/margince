@@ -148,11 +148,11 @@ func TestWithNoRecordedOutcomeTheForecastUsesTheTypedChance(t *testing.T) {
 	}
 }
 
-// Twenty recorded wins from a stage typed at 20% move its chance to 60%. A move
-// an import made into the stage, and one saved before moves kept their origin,
-// count for nothing even though both ended lost. The tool answers the same
+// Twenty recorded wins from a stage typed at 20% move its chance to 60%. Three
+// lost deals count for nothing. An import moved the first into the stage, a
+// sync moved the second, and the third was saved before moves kept an origin. The tool answers the same
 // numbers as the HTTP door.
-func TestRecordedOutcomesMoveTheChanceAndImportedOrLegacyMovesDoNot(t *testing.T) {
+func TestRecordedOutcomesMoveTheChanceAndImportedSyncedOrLegacyMovesDoNot(t *testing.T) {
 	f := newStageCohortFixture(t)
 	s0, s1 := f.stage(0), f.stage(1)
 	for range 20 {
@@ -161,6 +161,9 @@ func TestRecordedOutcomesMoveTheChanceAndImportedOrLegacyMovesDoNot(t *testing.T
 	importedEntry := f.deal(t, f.env.Rep1, s1)
 	f.importMove(f.importer(t), t, importedEntry, s0)
 	f.lose(t, importedEntry)
+	syncedEntry := f.deal(t, f.env.Rep1, s1)
+	f.syncMove(t, syncedEntry, s0)
+	f.lose(t, syncedEntry)
 	legacy := f.deal(t, f.env.Rep1, s0, f.lost)
 	f.forgetProvenance(t, legacy, &s0)
 

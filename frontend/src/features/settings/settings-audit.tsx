@@ -7,6 +7,7 @@ import { useState } from "react";
 import { api, FIRST_PAGE } from "../../api/client";
 import { NAV } from "../../app/nav";
 import { EntityRef } from "../../components/entityref";
+import { SeatAvatar } from "../../components/seatavatar";
 import {
   Avatar,
   Badge,
@@ -55,7 +56,7 @@ import {
 } from "./settings-audit.format";
 import "./settings-audit.css";
 
-type Viewer = Readonly<{ id?: string; name?: string }>;
+type Viewer = Readonly<{ id?: string; name?: string; photo?: string }>;
 
 const RELATIVE_TICK_MS = 60_000;
 
@@ -71,7 +72,11 @@ export function AuditLogCard() {
       <Panel>
         <AuditLogEntries
           filters={asked}
-          viewer={{ id: user?.id, name: user?.display_name }}
+          viewer={{
+            id: user?.id,
+            name: user?.display_name,
+            photo: user?.avatar_url,
+          }}
         />
       </Panel>
     </>
@@ -289,6 +294,9 @@ function AuditWhen({ at, now }: Readonly<{ at: string; now: number }>) {
 
 const HUMAN_ID = /^(?:human|buyer):/;
 
+// Only a member's seat has a picture; a buyer has none.
+const SEAT_ID = /^human:/;
+
 function AuditActor({
   entry,
   viewer,
@@ -340,7 +348,12 @@ function ActorFace({
   you: boolean;
 }>) {
   if (you && viewer.name && viewer.id) {
-    return <Avatar name={viewer.name} identity={viewer.id} />;
+    return (
+      <Avatar name={viewer.name} identity={viewer.id} photo={viewer.photo} />
+    );
+  }
+  if (name && SEAT_ID.test(entry.actor_id)) {
+    return <SeatAvatar id={entry.actor_id.replace(SEAT_ID, "")} name={name} />;
   }
   if (name) {
     const identity = HUMAN_ID.test(entry.actor_id)

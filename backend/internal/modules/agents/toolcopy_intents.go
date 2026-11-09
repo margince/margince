@@ -217,8 +217,8 @@ var readRelationshipsCopy = toolCopy{
 }
 
 var readProjectCopy = toolCopy{
-	Purpose: "Read one project. overview: its whole page — company, phase history with time per " +
-		"phase, deals, stakeholders, contracts, documents, open commitments, timeline, filing " +
+	Purpose: "Read one project. overview: its whole page — company, phase history (each move with " +
+		"its reason, and time per phase), deals, stakeholders, contracts, documents, open commitments, timeline, filing " +
 		"coverage, totals. handoff: what the delivery side needs from sales — who owns it, who " +
 		"to call at the client, what was sold, by when, what is already promised — with a named " +
 		"gap for each the records do not answer.",

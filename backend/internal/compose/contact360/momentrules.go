@@ -259,3 +259,22 @@ func (said momentCopy) recordedSeat(role *string) string {
 	}
 	return fmt.Sprintf(said.Say(momentWords.RecordedRole), strings.ReplaceAll(dealrole.Word(*role, string(said.Lang())), "_", " "))
 }
+
+func (said momentCopy) replyAction(label, intent string, activityID *openapi_types.UUID) crmcontracts.ContactMomentAction {
+	action := crmcontracts.ContactMomentAction{
+		Kind:  crmcontracts.ContactMomentActionKindDraftReply,
+		Label: label,
+		State: crmcontracts.ContactMomentActionStateWillConfirm,
+		Destination: &crmcontracts.ContactMomentDestination{
+			Surface:    crmcontracts.ContactMomentDestinationSurfaceComposer,
+			EntityType: new(crmcontracts.ContactMomentDestinationEntityTypeActivity),
+			EntityId:   activityID,
+			Prefill:    new(map[string]string{prefillIntent: intent}),
+		},
+	}
+	if activityID == nil {
+		action.State = crmcontracts.ContactMomentActionStateBlocked
+		action.BlockedReason = new(said.Say(momentWords.ReplyUnavailable))
+	}
+	return action
+}

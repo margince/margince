@@ -47,7 +47,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## communication_decision
 
-29 columns · primary key `(id)` · referenced by 0 foreign keys
+30 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -56,6 +56,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `attempt` | `integer`, default `0` | yes |  |
 | `basis` | `text` |  | One of `contract`, `precontract_request`, `subject_initiated_correspondence`, `legitimate_interests`, `legal_obligation`, `vital_or_security_interest` and 3 more. |
 | `content_fingerprint` | `bytea` |  |  |
+| `data_protection_country` | `text` |  |  |
 | `decided_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `decision_set_id` | `uuid` | yes |  |
 | `delivery_id` | `uuid` | yes | Points at `comms_outbound.id`. |
@@ -252,12 +253,14 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## communication_suppression
 
-12 columns · primary key `(id)` · referenced by 1 foreign key
+16 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `address` | `text` |  |  |
+| `address_hash` | `text` |  |  |
+| `address_key_id` | `text` |  |  |
 | `carried_from` | `uuid` |  | Points at `communication_suppression.id`. |
 | `contact_id` | `uuid` |  | Points at `contact.id`. |
 | `decided_by_level` | `text` | yes | One of `machine`, `user`, `admin`, `subject`. |
@@ -265,6 +268,8 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `lead_id` | `uuid` |  | Points at `lead.id`. |
 | `purpose_id` | `uuid` |  | Points at `consent_purpose.id`. |
 | `recorded_at` | `timestamp with time zone`, default `now()` | yes |  |
+| `recorded_for_addresses` | `text[]` |  |  |
+| `recorded_through` | `text`, default `'unknown'::text` | yes | One of `colleague`, `agent`, `subject`, `machine`, `unknown`. |
 | `revoked_at` | `timestamp with time zone` |  |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
@@ -282,12 +287,14 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 - `communication_suppression_decided_by_level`: `CHECK ((decided_by_level = ANY (ARRAY['machine', 'user', 'admin', 'subject'])))`
 - `communication_suppression_kind`: `CHECK ((kind = ANY (ARRAY['marketing_objection', 'processing_restriction', 'hard_bounce', 'subject_request'])))`
-- `communication_suppression_names_a_target`: `CHECK (((contact_id IS NOT NULL) OR (lead_id IS NOT NULL) OR (address IS NOT NULL)))`
+- `communication_suppression_names_a_target`: `CHECK (((contact_id IS NOT NULL) OR (lead_id IS NOT NULL) OR (address IS NOT NULL) OR (address_hash IS NOT NULL)))`
+- `communication_suppression_recorded_through`: `CHECK ((recorded_through = ANY (ARRAY['colleague', 'agent', 'subject', 'machine', 'unknown'])))`
 
 **Indexes**
 
 - `communication_suppression_carried_from_ix`: `btree (carried_from) WHERE (carried_from IS NOT NULL)`
 - `communication_suppression_live_address`: `btree (lower(address)) WHERE ((address IS NOT NULL) AND (revoked_at IS NULL))`
+- `communication_suppression_live_address_hash`: `btree (address_hash) WHERE ((address_hash IS NOT NULL) AND (revoked_at IS NULL))`
 - `communication_suppression_one_live_bounce`: `unique, btree (lower(address)) WHERE ((kind = 'hard_bounce') AND (address IS NOT NULL) AND (revoked_at IS NULL))`
 - `communication_suppression_pkey`: `unique, btree (id)`
 - `idx_communication_suppression_contact`: `btree (contact_id)`
@@ -563,7 +570,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## contact_consent
 
-9 columns · primary key `(id)` · referenced by 0 foreign keys
+10 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -574,6 +581,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `lead_id` | `uuid` |  | Points at `lead.id`. |
 | `policy_version` | `text` |  |  |
 | `purpose_id` | `uuid` | yes | Points at `consent_purpose.id`. |
+| `recorded_for_addresses` | `text[]` |  |  |
 | `state` | `text`, default `'unknown'::text` | yes | One of `unknown`, `granted`, `withdrawn`. |
 | `source` | `text` |  | Which internal channel the record arrived by. |
 
@@ -754,7 +762,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## preference_token
 
-8 columns · primary key `(id)` · referenced by 0 foreign keys
+9 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -764,7 +772,8 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `expires_at` | `timestamp with time zone` | yes |  |
 | `revoked_at` | `timestamp with time zone` |  |  |
 | `revoked_reason` | `text` |  | One of `rotated`, `expired`, `erasure`, `compromise`, `merged_predecessor`, `merged_into_survivor`. |
-| `token` | `text` | yes |  |
+| `token` | `text` |  |  |
+| `token_hash` | `text` |  |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Points at**
@@ -785,12 +794,13 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 - `idx_preference_token_contact`: `btree (contact_id)`
 - `preference_token_contact_email_ix`: `btree (contact_email_id) WHERE (contact_email_id IS NOT NULL)`
 - `preference_token_pkey`: `unique, btree (id)`
+- `preference_token_token_hash_key`: `unique, btree (token_hash) WHERE (token_hash IS NOT NULL)`
 - `preference_token_token_key`: `unique, btree (token)`
 - `uq_preference_token_contact_address`: `unique, btree (contact_id, contact_email_id) NULLS NOT DISTINCT WHERE (revoked_at IS NULL)`
 
 ## privacy_notice_case
 
-21 columns · primary key `(id)` · referenced by 0 foreign keys
+23 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -809,6 +819,8 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `resolution_note` | `text` |  | At most 500 characters. |
 | `resolved_by` | `uuid` |  | Points at `app_user.id`. |
 | `rule` | `text` | yes | One of `unassessed`, `none`, `art13`, `art14`. |
+| `source_evidence_id` | `uuid` |  |  |
+| `source_evidence_kind` | `text` |  |  |
 | `source_kind` | `text` |  |  |
 | `source_obtained_at` | `timestamp with time zone` |  |  |
 | `source_review_note` | `text` |  |  |
@@ -837,7 +849,8 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 - `privacy_notice_case_resolution_shape`: `CHECK (((state = ANY (ARRAY['exempt_with_reason', 'provided_elsewhere'])) = (resolution_note IS NOT NULL)))`
 - `privacy_notice_case_review_shape`: `CHECK ((((state = 'source_review') = (rule = 'unassessed')) AND ((state <> 'source_review') OR ((source_kind IS NULL) AND (due_at IS NULL) AND (cardinality(allowed_routes) = 0)))))`
 - `privacy_notice_case_rule`: `CHECK ((rule = ANY (ARRAY['unassessed', 'none', 'art13', 'art14'])))`
-- `privacy_notice_case_source_note`: `CHECK ((((source_kind IS NULL) = (source_review_note IS NULL)) AND ((source_review_note IS NULL) OR ((char_length(btrim(source_review_note)) >= 1) AND (char_length(btrim(source_review_note)) <= 500)))))`
+- `privacy_notice_case_source_evidence_shape`: `CHECK ((((source_evidence_kind IS NULL) AND (source_evidence_id IS NULL)) OR ((source_evidence_kind = ANY (ARRAY['acquisition', 'activity'])) AND (source_evidence_kind IS NOT NULL) AND (source_evidence_id IS NOT NULL))))`
+- `privacy_notice_case_source_note`: `CHECK ((((source_kind IS NULL) = (source_review_note IS NULL)) AND ((source_review_note IS NULL) OR ((char_length(btrim(source_review_note)) <= 500) AND ((char_length(btrim(source_review_note)) > 0) OR (source_evidence_id IS NOT NULL))))))`
 - `privacy_notice_case_state`: `CHECK ((state = ANY (ARRAY['source_review', 'open', 'assigned', 'queued', 'delivery_failed', 'completed', 'provided_elsewhere', 'exempt_with_reason', 'blocked', 'not_required'])))`
 
 **Indexes**

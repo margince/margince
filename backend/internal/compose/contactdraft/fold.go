@@ -28,6 +28,7 @@ import (
 func FromView(view crmcontracts.Contact360, req Request) Input {
 	in := Input{
 		Intent:          strings.TrimSpace(req.Intent),
+		Subject:         strings.TrimSpace(req.Subject),
 		RewriteOf:       strings.TrimSpace(req.RewriteOf),
 		Envelope:        req.Envelope,
 		Recipient:       recipientOf(view),
@@ -38,6 +39,7 @@ func FromView(view crmcontracts.Contact360, req Request) Input {
 	}
 	foldCommercial(&in, view)
 	foldProject(&in, view, req.ProjectID)
+	in.Subject = in.RequestedSubject()
 	foldClaims(&in, view, req.Envelope.At())
 	foldMeeting(&in, view, req.Envelope.At())
 	return in
@@ -338,33 +340,16 @@ func omittedNames(omitted []crmcontracts.Contact360SectionsOmitted) []string {
 	return contactcontext.OmittedNames(omitted)
 }
 
-// Threaded reports whether a real inbound message earns this draft a reply
-// prefix. Only a message THEY sent counts: our own last outbound carries a
-// subject too, and "Re:" on it replies to ourselves.
-func (in Input) Threaded() bool {
-	mail, ok := in.threadMail()
-	return ok && mail.Inbound
+// RequestedSubject excludes filing tags that would give drafting no topic.
+func (in Input) RequestedSubject() string {
+	key := ""
+	if in.Project != nil {
+		key = in.Project.Key
+	}
+	return draftcore.SubjectForDraft(in.Subject, key)
 }
 
-// ContinuesThread reports whether the record has an email thread this draft
-// continues, whoever wrote last.
-func (in Input) ContinuesThread() bool {
-	_, ok := in.ThreadSubject()
-	return ok
-}
-
-// ThreadSubject is the subject of the newest email on the record, whoever sent
-// it. A draft that continues that thread keeps its subject; Threaded asks the
-// narrower question of whether the newest email is theirs.
-func (in Input) ThreadSubject() (string, bool) {
-	mail, ok := in.threadMail()
-	return mail.Subject, ok
-}
-
-// threadMail is the thread a draft answers: draftcore.ThreadMail on Recent.
-// A draft that follows up a named activity is about that activity, not about
-// whichever email is newest, so it continues no thread.
-func (in Input) threadMail() (ActIn, bool) {
+func (in Input) recentMail() (ActIn, bool) {
 	if in.About != nil {
 		return ActIn{}, false
 	}

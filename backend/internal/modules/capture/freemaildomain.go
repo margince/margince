@@ -204,6 +204,7 @@ func (s *FreemailDomainStore) Add(ctx context.Context, domain, kind string) (Fre
 			Scan(&out.ID, &out.Domain, &out.Kind, &out.CreatedAt); err != nil {
 			return err
 		}
+		database.Forget(tx, freemailMemo)
 		if before != nil && *before == kind {
 			// Nothing changed — no audit row for a re-add that said the same
 			// thing, so the trail records decisions rather than clicks.
@@ -253,6 +254,7 @@ func (s *FreemailDomainStore) Remove(ctx context.Context, id ids.UUID) error {
 		if err != nil {
 			return err
 		}
+		database.Forget(tx, freemailMemo)
 		// 'archive', not 'delete': the audit vocabulary is closed (0018) and
 		// carries no delete verb, and withdrawing a list entry IS retiring it.
 		_, auditErr := storekit.Audit(ctx, tx, "archive", freemailDomainObject, id,
@@ -299,7 +301,18 @@ func freemailEntryAuthor(ctx context.Context) *ids.UUID {
 // pool deadlocks under load. The table holds a handful of rows behind a unique
 // index, so the read costs less than the correspondence check already run for
 // every captured message.
+//
+// One message asks it about ten times in one transaction, so the transaction
+// remembers the answer; an admin's edit lands in its own transaction.
 func MatcherTx(ctx context.Context, tx pgx.Tx) (*freemail.Matcher, error) {
+	return database.Remember(tx, freemailMemo, func() (*freemail.Matcher, error) { return readMatcherTx(ctx, tx) })
+}
+
+// freemailMemo keys the matcher in a transaction's memo. Every writer of the
+// list forgets it (TestEveryWriterOfAMemoizedReadForgetsIt).
+const freemailMemo = "capture.freemail"
+
+func readMatcherTx(ctx context.Context, tx pgx.Tx) (*freemail.Matcher, error) {
 	rows, err := tx.Query(ctx, `SELECT domain, kind FROM capture_freemail_domain`)
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading the workspace consumer-mail list: %w", err)

@@ -26,6 +26,8 @@ import (
 //nolint:goconst,dupl // one row per wire field per language is the table's shape; the census holds the languages in step
 var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 	textlang.English: {
+		"deal_filing":                  "Deal filing",
+		"product_id":                   "Product",
 		"acquisition_source":           "Acquisition source",
 		"active":                       "Active",
 		"address":                      "Address",
@@ -119,6 +121,8 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"extension_relationship_types": "Extension relationship types",
 	},
 	textlang.German: {
+		"deal_filing":                  "Deal-Zuordnung",
+		"product_id":                   "Produkt",
 		"acquisition_source":           "Akquisitionsquelle",
 		"active":                       "Aktiv",
 		"address":                      "Adresse",
@@ -212,6 +216,8 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"extension_relationship_types": "Erweiterungs-Beziehungstypen",
 	},
 	textlang.Vietnamese: {
+		"deal_filing":                  "Gắn vào giao dịch",
+		"product_id":                   "Sản phẩm",
 		"acquisition_source":           "Nguồn tiếp cận",
 		"active":                       "Đang hoạt động",
 		"address":                      "Địa chỉ",

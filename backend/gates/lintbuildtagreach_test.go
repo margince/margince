@@ -296,7 +296,7 @@ var govetDisables = gatekit.Waive(map[string]string{
 // needs.
 func forEachGoFile(t *testing.T, visit func(rel, dir, name string)) {
 	t.Helper()
-	err := filepath.WalkDir(repoRoot, func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(repoRoot, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

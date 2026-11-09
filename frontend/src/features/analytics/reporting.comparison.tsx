@@ -12,7 +12,7 @@ import { QueryGate } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
 import { useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import {
   editionLabel,
   type ReportingEdition,

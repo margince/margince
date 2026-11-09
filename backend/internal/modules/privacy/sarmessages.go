@@ -243,6 +243,8 @@ func sarMessagingSections(pkg *SARPackage, contactID ids.ContactID, emails []str
 func sarDraftSection(pkg *SARPackage, contactID ids.ContactID, emails []string, leads []ids.UUID) sarSection {
 	return sarSection{
 		&pkg.DraftMessages, `SELECT d.subject, d.body, d.html_body,
+              d.editor_state->>'intent' AS drafting_purpose,
+              d.editor_state->>'served_body' AS generated_body,
 		      to_jsonb(d.to_addresses) AS recipients, to_jsonb(d.cc_addresses) AS cc,
 		      (SELECT coalesce(jsonb_agg(addr), '[]'::jsonb)
 		         FROM unnest(d.bcc_addresses) AS addr

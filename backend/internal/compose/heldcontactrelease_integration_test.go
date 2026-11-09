@@ -18,12 +18,12 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -348,13 +348,7 @@ func releaseUnder(e *integration.Env, email string, id ids.ContactID) error {
 	})
 }
 
-func isLockTimeout(err error) bool {
-	pgErr, ok := errors.AsType[*pgconn.PgError](err)
-	return ok && pgErr.Code == "55P03"
-}
-
-// An owner holding the thread again while a release runs: the release waits
-// for the owner, then reads the hold.
+// A contended release retries without publishing. Its next attempt reads the owner's hold.
 func TestAReleaseWaitsForAnOwnerHoldingTheThreadAgain(t *testing.T) {
 	e := setupWithOwnMailbox(t)
 	const email = "einkauf@rehold.example"
@@ -368,9 +362,10 @@ func TestAReleaseWaitsForAnOwnerHoldingTheThreadAgain(t *testing.T) {
 		if err := capture.NewThreadVerdictStore(InstallationDB(e.Pool)).DecideAsOwner(owner, tx, "thr-rehold", false); err != nil {
 			return err
 		}
-		if err := releaseUnder(e, email, id); !isLockTimeout(err) {
-			t.Errorf("a release during the owner's re-hold returned %v, want a lock wait", err)
+		if err := releaseUnder(e, email, id); !storekit.IsLockCycle(err) {
+			t.Errorf("a release during the owner's re-hold returned %v, want a transaction retry", err)
 		}
+		requireNarrowed(t, e, email, contacts.NarrowedConfidentialityHold)
 		return nil
 	})
 	if err != nil {

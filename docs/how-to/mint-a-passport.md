@@ -31,6 +31,39 @@ The server keeps only its SHA-256, so copy the token now. The scopes are the kin
 RBAC of the human who made the passport, both together. `ttl_hours` is 720 (30 days) when you leave it out,
 and it can be 2160 (90 days) at most.
 
+## Limit where it may work
+
+A passport starts with `"mode": "all"`. To limit it, send an `areas` object with the mint:
+
+```sh
+curl -X POST http://localhost:8080/v1/passports \
+  --cookie 'crm_session=<your session>' \
+  -H 'Content-Type: application/json' \
+  -d '{"label": "Claude Desktop", "scopes": ["read"], "areas": {"mode": "custom", "areas": ["business"]}}'
+```
+
+Or change it later, with the same object as the body:
+
+```sh
+curl -X PUT http://localhost:8080/v1/passports/<passport id>/areas \
+  --cookie 'crm_session=<your session>' \
+  -H 'Content-Type: application/json' \
+  -d '{"mode": "custom", "areas": ["business", "compliance"]}'
+```
+
+`GET /v1/passports` lists each passport's `areas` and the `reachable_areas` your role reaches. A
+change holds from the passport's next call. On a connection's passport it also holds for each token
+it gets on refresh. A refused request answers `422` with one of these codes:
+
+| Code | Why |
+|---|---|
+| `no_area_chosen` | `custom` with an empty list. |
+| `unknown_area` | A value no passport can be limited to. |
+| `area_repeated` | One value named twice. |
+| `area_not_reachable` | A value your role reaches nothing in. |
+| `areas_with_all` | A list sent with `all`. |
+| `unknown_mode` | A mode other than `all` or `custom`. |
+
 ## Use
 
 Send it as `Authorization: Bearer mgp_…` to the `/v1` REST API. A 🟢
@@ -52,7 +85,7 @@ checked there. See [connect-an-mcp-client.md](connect-an-mcp-client.md).
 ## Give the passport to an AI tool
 
 An AI tool such as Claude Code, Codex or Antigravity learns the API from the Margince skill. Download it
-from **Settings → AI access**, under **For developers** (**Download skill**), or with your session:
+from **Settings → AI assistants**, under **For developers** (**Download skill**), or with your session:
 
 ```sh
 curl http://localhost:8080/v1/agent-bundle \

@@ -55,11 +55,13 @@ func (s *Service) Redeem(ctx context.Context, id ids.ApprovalID, tool, diffHash 
 // same transaction. Effects that can expose a half-applied state use this
 // path: a failed domain write leaves the approval unconsumed and retryable.
 func (s *Service) RedeemAndApply(ctx context.Context, id ids.ApprovalID, tool, diffHash string, apply func(pgx.Tx) error) error {
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if _, _, err := s.RedeemInTx(ctx, tx, id, tool, diffHash); err != nil {
-			return err
-		}
-		return apply(tx)
+	return storekit.RetryLockCycles(ctx, func() error {
+		return s.db.Tx(ctx, func(tx pgx.Tx) error {
+			if _, _, err := s.RedeemInTx(ctx, tx, id, tool, diffHash); err != nil {
+				return err
+			}
+			return apply(tx)
+		})
 	})
 }
 
@@ -79,12 +81,14 @@ func (s *Service) RedeemAndApplyPinned(
 	ctx context.Context, id ids.ApprovalID, tool, diffHash string,
 	apply func(tx pgx.Tx, version int64, pinned bool) error,
 ) error {
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		version, pinned, err := s.RedeemInTx(ctx, tx, id, tool, diffHash)
-		if err != nil {
-			return err
-		}
-		return apply(tx, version, pinned)
+	return storekit.RetryLockCycles(ctx, func() error {
+		return s.db.Tx(ctx, func(tx pgx.Tx) error {
+			version, pinned, err := s.RedeemInTx(ctx, tx, id, tool, diffHash)
+			if err != nil {
+				return err
+			}
+			return apply(tx, version, pinned)
+		})
 	})
 }
 
@@ -108,6 +112,10 @@ func (s *Service) redeemRow(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, t
 	if !ok {
 		return row{}, errors.New("crmapprovals: no actor bound to context")
 	}
+	owner, ownerP, underPolicy, err := bindForRedemption(ctx, tx, id)
+	if err != nil {
+		return row{}, err
+	}
 	a, err := get(ctx, tx, id)
 	if err != nil {
 		// An unknown approval id reads as an invalid token, not a 404:
@@ -120,6 +128,11 @@ func (s *Service) redeemRow(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, t
 
 	if err := s.validateRedemptionTarget(ctx, tx, a); err != nil {
 		return row{}, err
+	}
+	if underPolicy {
+		if err := stillUnderPolicy(owner, tx, ownerP, a); err != nil {
+			return row{}, err
+		}
 	}
 
 	tag, err := tx.Exec(ctx,

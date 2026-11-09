@@ -51,6 +51,14 @@ import (
 // blocked is the permission gate having already said no.
 const runStatusFailed = "failed"
 
+// RetryableTriggerSQL is true when a failed run names the event_outbox row
+// aliased alias as its trigger. RetryRun rebuilds the firing from that row's
+// envelope, so a sweep that removed it would end the retry.
+func RetryableTriggerSQL(alias string) string {
+	return `EXISTS (SELECT 1 FROM workflow_run retryable WHERE retryable.trigger_event = ` + alias +
+		`.id AND retryable.status = '` + runStatusFailed + `')`
+}
+
 // RetryRefusal names why a failed run may not be re-driven, in the vocabulary
 // an operator reads rather than the one the tables use.
 type RetryRefusal string

@@ -14,7 +14,9 @@ action needs a reason.
   one answer.
 - **What about a legal or lasting act?** It stays open, and the agent asks first. The
   tool description tells it to ask, and `ask_user_first` marks the action. Recording consent is one
-  such act: the agent helps the user do it, and the user decides.
+  such act: the agent helps the user do it, and the user decides. A run that no human watches has no
+  one to ask, so its passport and tools bound it instead
+  ([Who asks first](../explanation/agent-surface.md#who-asks-first)).
 - **Who did it?** The agent. Its write names the agent, reads as no one's confirmation, and never
   replaces a value someone typed.
 - **What about AI work?** It needs the `enrich` scope, because it costs AI budget. It runs at once,

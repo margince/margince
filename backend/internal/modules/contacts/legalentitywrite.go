@@ -135,6 +135,13 @@ func (s *Store) UpdateLegalEntity(ctx context.Context, id ids.LegalEntityID, in 
 		} else if err != nil {
 			return err
 		}
+		out, err = readLegalEntity(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		if err := s.carryFloor(ctx, tx, jurisdictionOf(before), jurisdictionOf(out)); err != nil {
+			return err
+		}
 		auditID, err := storekit.Audit(ctx, tx, actionUpdate, legalEntityObject, id.UUID, p.Before(), p.After())
 		if err != nil {
 			return err
@@ -143,8 +150,7 @@ func (s *Store) UpdateLegalEntity(ctx context.Context, id ids.LegalEntityID, in 
 			crmcontracts.InternalEventLegalEntityUpdated{ChangedFields: changed}); err != nil {
 			return fmt.Errorf("emit legal_entity.updated: %w", err)
 		}
-		out, err = readLegalEntity(ctx, tx, id)
-		return err
+		return nil
 	})
 	return out, err
 }

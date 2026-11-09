@@ -1,23 +1,59 @@
 import { Menu, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  type ComponentProps,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { AppLink } from "../design-system/applink";
-import { Avatar } from "../design-system/atoms";
+import { Avatar, BusyMark } from "../design-system/atoms";
+import { SilentCardBoundary } from "../design-system/cardboundary";
 import { Heading } from "../design-system/heading";
 import { Logomark } from "../design-system/logomark";
 import { useTruncationTooltip } from "../design-system/tooltip";
 import { useSettingsSection } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
+import { lazy } from "../i18n/lazy";
 import { entryDepth } from "../lib/historydepth";
 import { type Route, routeHash, useHash } from "../lib/router";
 import { useMe } from "../lib/session";
 import { usePhoneViewport } from "../lib/viewport";
-import { AgentRail } from "./agentrail";
+import "./agentrail.css";
 import { currentClaim, MOBILE_PRIMARY, NAV, type NavSection } from "./nav";
 import { DESTINATION_ROW, NavLevelView, useNavLevel } from "./navlevel";
 import { useNavTip } from "./navtip";
 import { usePopoverDismiss } from "./popover";
 import type { ShellCounts } from "./shell";
 import { useSquareMark } from "./squaremark";
+
+const AgentRailBody = lazy(
+  async () => ({
+    default: (await import("./agentrail")).AgentRail,
+  }),
+  "essential",
+  SilentCardBoundary,
+);
+
+function AgentRail(props: ComponentProps<typeof AgentRailBody>) {
+  const t = useT();
+  return (
+    <Suspense
+      fallback={
+        <span
+          className="arblock"
+          role="status"
+          aria-label={t("common.loading")}
+        >
+          <BusyMark />
+        </span>
+      }
+    >
+      <AgentRailBody {...props} />
+    </Suspense>
+  );
+}
 
 // The installation's own name and marks (ADR-0061: one installation, one
 // company). They come from /me, which carries them to every seat. The full
@@ -322,7 +358,7 @@ export function WorkspaceRail({
           // the foot of a column that is not there. It sits in the row stream,
           // so a thumb and a Tab key read the bar in the same order. One Core
           // either way: the foot below renders only above the breakpoint.
-          centre={phone ? <AgentRail route={route} bar={nav} /> : undefined}
+          centre={phone ? <AgentRail bar={nav} /> : undefined}
         />
         {/* Carries the active state for every destination the menu holds, so
             the closed bar always shows where you are. */}
@@ -365,7 +401,7 @@ export function WorkspaceRail({
             cell above, and two would be two Cores. */}
         {!phone && (
           <div className="railagent">
-            <AgentRail route={route} />
+            <AgentRail />
           </div>
         )}
       </nav>

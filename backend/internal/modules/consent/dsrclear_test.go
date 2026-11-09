@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/erasureaccount"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -55,17 +56,41 @@ func TestChangingAnAnswerIsRefusedWhereTheRequestEndsClosed(t *testing.T) {
 func TestAReplayedErasureIsNotARewrite(t *testing.T) {
 	erased := erasedResolution
 	closed := dsrRow{Status: "fulfilled", Resolution: &erased}
-	replay := UpdateDSRInput{Status: new("fulfilled"), Resolution: new("sent the export")}
+	echo := UpdateDSRInput{Status: new("fulfilled"), Resolution: new(erasedResolution)}
 
-	if verr := validateDSRUpdate(closed, withoutReplayedAnswer(closed, replay)); verr != nil {
-		t.Errorf("a repeated erasure fulfilment was refused: %v", verr)
+	if got := withoutReplayedAnswer(closed, echo); got.Resolution != nil {
+		t.Errorf("a replay echoing the recorded answer kept it as new text: %v", *got.Resolution)
 	}
-	if verr := validateDSRUpdate(closed, replay); verr == nil {
-		t.Error("a plain patch put prose over the erased answer")
+	// Prose is not dropped here: FulfilErasure refuses it with a 422 instead.
+	prose := UpdateDSRInput{Status: new("fulfilled"), Resolution: new("sent the export")}
+	if got := withoutReplayedAnswer(closed, prose); got.Resolution == nil {
+		t.Error("prose on a replay was dropped without a word")
 	}
-	open := dsrRow{Status: "in_progress", Resolution: &erased}
-	if got := withoutReplayedAnswer(open, replay); got.Resolution == nil {
-		t.Error("an open request lost the answer it was being closed with")
+	open := dsrRow{Status: "in_progress"}
+	if got := withErasureAnswer(open, UpdateDSRInput{Status: new("fulfilled")}); validateDSRUpdate(open, got) != nil {
+		t.Error("a first erasure fulfilment with no typed answer was refused")
+	}
+}
+
+// The erasure's answer comes from its own account. Rows it only inserted are
+// its records of the work, not something it found.
+func TestAnErasureAnswersFromWhatItFound(t *testing.T) {
+	cases := []struct {
+		name string
+		acct erasureaccount.Account
+		want string
+	}{
+		{"nothing at all", erasureaccount.Empty(), erasureAnswerNothingHeld},
+		{"all zero", erasureaccount.Account{Rows: map[string]int64{"contact.updated": 0, "activity.deleted": 0}}, erasureAnswerNothingHeld},
+		{"only its own records", erasureaccount.Account{Rows: map[string]int64{"erasure_tombstone.inserted": 3}}, erasureAnswerNothingHeld},
+		{"one row updated", erasureaccount.Account{Rows: map[string]int64{"contact.updated": 1}}, erasedResolution},
+		{"one row deleted", erasureaccount.Account{Rows: map[string]int64{"activity.deleted": 4}}, erasedResolution},
+		{"only outside the database", erasureaccount.Account{Rows: map[string]int64{}, Uncounted: []string{"blob"}}, erasedResolution},
+	}
+	for _, c := range cases {
+		if got := erasureAnswerFor(c.acct); got != c.want {
+			t.Errorf("%s: answer = %q, want %q", c.name, got, c.want)
+		}
 	}
 }
 

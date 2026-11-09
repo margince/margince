@@ -9,18 +9,13 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { forReader } from "../../format/collate";
 import { formatAnalyticsNumber, formatDuration } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
+import { figureWithheld } from "./analytics.overview.team.model";
 import type { ReportingMetricID } from "./reporting.model";
 import { reportingPeriodLabel } from "./reporting.model";
 import { useMetricNames } from "./reporting.queries";
 
 type Review = components["schemas"]["SdrTeamReview"];
 type Member = components["schemas"]["SdrTeamMember"];
-type Withheld = Review["withheld_figures"][number];
-
-/** Whether the server left a figure out because this reader may not see it. */
-export function figureWithheld(review: Review, figure: Withheld): boolean {
-  return review.withheld_figures.includes(figure);
-}
 
 // A count column. A cell the server sent no figure for stays empty, since the
 // table's notes say why; a zero is a measured zero.

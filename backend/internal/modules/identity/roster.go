@@ -43,9 +43,7 @@ type ListUsersInput struct {
 	// place, because two ways to spell one authorization decision is how the
 	// two come to disagree.
 	IncludeInactive bool
-	// IncludeInvited widens the roster to invited seats for any member. The
-	// responsibility picker asks for it, because an invited colleague may be
-	// given work before their first sign-in. Each row carries its status.
+	// IncludeInvited retains the deprecated roster option for older clients.
 	IncludeInvited bool
 	// Actor is the human asking, when one is. The management view carries each
 	// member's allowed actions for a human caller only, because every member
@@ -92,6 +90,8 @@ type userRow struct {
 	CanOwnRecords *bool
 	// ConnectedMailboxes counts live capture connections; nil when not read.
 	ConnectedMailboxes *int
+	// AvatarKey is where the member's picture bytes live, nil when they have none.
+	AvatarKey *string
 }
 
 // roleKeys aggregates the member's assigned role keys, sorted so a member
@@ -127,7 +127,7 @@ const lastActive = `CASE WHEN $1::boolean THEN
 
 var userColumns = `id, email, display_name, status, is_agent, seat_type, ` +
 	roleKeys + `, ` + teamIDs + `, ` + lastActive + `, created_at, service_extension, updated_at, ` + mergedAccounts + `, ` + unusedMemberSQL("app_user") +
-	`, ` + inviteMailState
+	`, ` + inviteMailState + `, avatar_object_key`
 
 // $1 is the "read role keys?" flag on every user query below, so the aggregate
 // stays inside ONE fixed query string instead of two the caller picks between.
@@ -197,7 +197,7 @@ func scanUser(r pgx.Row) (userRow, error) {
 	var u userRow
 	err := r.Scan(&u.ID, &u.Email, &u.DisplayName, &u.Status, &u.IsAgent, &u.SeatType,
 		&u.Roles, &u.TeamIDs, &u.LastActiveAt, &u.CreatedAt, &u.ServiceExtension, &u.UpdatedAt, &u.MergedFrom, &u.Unused,
-		&u.InviteMailState)
+		&u.InviteMailState, &u.AvatarKey)
 	return u, err
 }
 

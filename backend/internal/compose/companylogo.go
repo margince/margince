@@ -158,12 +158,33 @@ func (h companyHandlers) writeCompany(w http.ResponseWriter, r *http.Request) {
 // the file part, decoded as an image and re-encoded as this server's own PNG.
 // It writes the refusal itself and reports whether the caller may continue.
 func decodeCompanyLogoUpload(w http.ResponseWriter, r *http.Request) (png []byte, filename string, ok bool) {
-	// upload:route /v1/company/logo, /v1/company/logo/icon, /v1/legal-entities/{id}/logo
+	source, filename, ok := readImageUpload(w, r, companyLogoUploadBytes)
+	if !ok {
+		return nil, "", false
+	}
+	img, err := imagenorm.Decode(source)
+	if err != nil {
+		writeMarkDecodeRefusal(w, r, err)
+		return nil, "", false
+	}
+	png, err = imagenorm.FitPNG(img, companyLogoEdge)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return nil, "", false
+	}
+	return png, boundedFilename(filename), true
+}
+
+// readImageUpload reads the request's one `file` part, for every route that
+// takes a single image. It writes the refusal itself and reports whether the
+// caller may continue.
+func readImageUpload(w http.ResponseWriter, r *http.Request, limit int64) (source []byte, filename string, ok bool) {
+	// upload:route /v1/company/logo, /v1/company/logo/icon, /v1/legal-entities/{id}/logo, /v1/me/avatar
 	// The ceiling this parse runs under is granted to every path in compose.uploadCeilings,
 	// and TestEveryMultipartParseNamesItsRoute holds them together.
 	//nolint:gosec // G120 wants a bound here, and the bound is the route ceiling the chassis already applied: this argument is only the in-memory/spill threshold.
 	if err := r.ParseMultipartForm(companyLogoSpillBytes); err != nil {
-		httperr.WriteMultipartRefusal(w, r, err, companyLogoUploadBytes)
+		httperr.WriteMultipartRefusal(w, r, err, limit)
 		return nil, "", false
 	}
 	// An upload past the in-memory threshold is spilled to a temporary file that
@@ -181,47 +202,48 @@ func decodeCompanyLogoUpload(w http.ResponseWriter, r *http.Request) (png []byte
 	}
 	defer func(ctx context.Context) {
 		if cerr := file.Close(); cerr != nil {
-			slog.WarnContext(ctx, "closing the uploaded company logo", "err", cerr)
+			slog.WarnContext(ctx, "closing the uploaded image", "err", cerr)
 		}
 	}(r.Context())
 
-	source, err := io.ReadAll(file)
+	source, err = io.ReadAll(file)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return nil, "", false
 	}
-	img, err := imagenorm.Decode(source)
-	if err != nil {
-		if errors.Is(err, imagenorm.ErrSVGTextNotOutlined) {
-			httperr.Write(w, r, &httperr.DetailedError{
-				Status: http.StatusUnprocessableEntity, Code: "svg_text_not_outlined",
-				Detail: "the SVG draws its words as text, which this server cannot render; convert the text to outlines in your design tool, or upload a PNG",
-			})
-			return nil, "", false
-		}
-		if errors.Is(err, imagenorm.ErrSVGNotDrawable) {
-			httperr.Write(w, r, &httperr.DetailedError{
-				Status: http.StatusUnprocessableEntity, Code: "svg_not_drawable",
-				Detail: "the SVG has parts this server cannot draw, such as embedded images; export it as a PNG",
-			})
-			return nil, "", false
-		}
-		if errors.Is(err, imagenorm.ErrUnsupported) {
-			httperr.Write(w, r, &httperr.DetailedError{
-				Status: http.StatusUnsupportedMediaType, Code: "unsupported_media_type",
-				Detail: "the upload is not an image this server can read; PNG, JPEG, GIF, WebP, ICO and SVG work",
-			})
-			return nil, "", false
-		}
+	return source, header.Filename, true
+}
+
+// errPicturesBusy answers an upload whose decode found no free slot in time. The picture
+// itself was not judged, so the reader is told to send the same file again.
+var errPicturesBusy = &httperr.DetailedError{
+	Status: http.StatusServiceUnavailable, Code: "pictures_busy", RetryAfterSeconds: 10,
+	Detail: "the server is reading other pictures right now; send the same file again in a few seconds",
+}
+
+// writeMarkDecodeRefusal names what a mark the decoder refused would need.
+func writeMarkDecodeRefusal(w http.ResponseWriter, r *http.Request, err error) {
+	switch {
+	case errors.Is(err, imagenorm.ErrSVGTextNotOutlined):
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusUnprocessableEntity, Code: "svg_text_not_outlined",
+			Detail: "the SVG draws its words as text, which this server cannot render; convert the text to outlines in your design tool, or upload a PNG",
+		})
+	case errors.Is(err, imagenorm.ErrSVGNotDrawable):
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusUnprocessableEntity, Code: "svg_not_drawable",
+			Detail: "the SVG has parts this server cannot draw, such as embedded images; export it as a PNG",
+		})
+	case errors.Is(err, imagenorm.ErrDecodeBusy):
+		httperr.Write(w, r, errPicturesBusy)
+	case errors.Is(err, imagenorm.ErrUnsupported):
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusUnsupportedMediaType, Code: "unsupported_media_type",
+			Detail: "the upload is not an image this server can read; PNG, JPEG, GIF, WebP, ICO and SVG work",
+		})
+	default:
 		httperr.Write(w, r, err)
-		return nil, "", false
 	}
-	png, err = imagenorm.FitPNG(img, companyLogoEdge)
-	if err != nil {
-		httperr.Write(w, r, err)
-		return nil, "", false
-	}
-	return png, boundedFilename(header.Filename), true
 }
 
 // boundedFilename is what the field's history will show for this change. A
@@ -243,5 +265,5 @@ func boundedFilename(name string) string {
 // the write the caller asked for has happened, and an object nobody names costs
 // storage and nothing else.
 func (h companyHandlers) collectLogoObject(ctx context.Context, key *string) {
-	deleteUnreferencedLogo(ctx, h.blob, slog.Default(), "the installation's company", key)
+	deleteUnreferencedObject(ctx, h.blob, slog.Default(), "the installation's company", key)
 }

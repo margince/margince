@@ -15,15 +15,15 @@ anything. This page shows what each declared agent pays, how much room that leav
 what to check before adding a tool. Each tool's own cost is the Prompt tokens column of
 [mcp-info.md](mcp-info.md#index).
 
-The heaviest menu is `overnight_at_risk_sweep`: 6446 of the window's 32768 tokens per step (19%).
+The heaviest menu is `overnight_at_risk_sweep`: 6600 of the window's 32768 tokens per step (20%).
 
 ## The declared agents
 
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 5 of 48 | 2146 | 1604 | 4343 | 13% | 18867 | 0 | 5 |
-| `overnight_at_risk_sweep` | 7 | 7 of 48 | 3385 | 2469 | 6446 | 19% | 16764 | 4 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 48 |  | 39187 |  |  | 119% |  |  |  |
+| `morning_brief` | 5 | 5 of 48 | 2143 | 1629 | 4364 | 13% | 18846 | 0 | 5 |
+| `overnight_at_risk_sweep` | 7 | 7 of 48 | 3448 | 2560 | 6600 | 20% | 16610 | 4 | 6 |
+| _whole served catalog's listing, for scale; no run is offered it_ | 48 |  | 39738 |  |  | 121% |  |  |  |
 
 ### `morning_brief`
 
@@ -39,8 +39,8 @@ existing order. If there are no items, finish without inventing a brief. A tool 
 findings were not saved: correct it before claiming completion.
 ```
 
-Attaches 5 tools and pays 4343 tokens on every step (2146 listing, 1604 step schema), leaving
-18867 of its budget and 28425 tokens of the
+Attaches 5 tools and pays 4364 tokens on every step (2143 listing, 1629 step schema), leaving
+18846 of its budget and 28404 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `annotate_brief`
@@ -52,16 +52,18 @@ window for the goal, the grounding and everything it reads.
 ### `overnight_at_risk_sweep`
 
 ```text
-Sweep this workspace's open deals for risk: deals with no activity in 14+ days, stakeholders gone
-quiet, or missing next steps. First call whats_slipping_this_week: it returns the at-risk deals
-across the whole workspace. A deal the retrieved context mentions is one example, not the sweep, so
-do not read or log on it before that list. Then read each listed deal and log ONE note activity per
-at-risk deal summarizing the risk and the evidence (cite the records you read). Do not advance
-stages, send anything, or archive anything.
+Sweep the open deals your member owns for risk: deals with no activity in 14+ days, stakeholders
+gone quiet, or missing next steps. First call whats_slipping_this_week: in this run it returns only
+the at-risk deals your member owns. Each other member's run sweeps that member's deals, and a deal
+whose owner has not granted this sweep is swept by nobody, so do not read or log on a deal outside
+that list. A deal the retrieved context mentions is one example, not the sweep, so do not read or
+log on it before that list. Then read each listed deal and log ONE note activity per at-risk deal
+summarizing the risk and the evidence (cite the records you read). Do not advance stages, send
+anything, or archive anything.
 ```
 
-Attaches 7 tools and pays 6446 tokens on every step (3385 listing, 2469 step schema), leaving
-16764 of its budget and 26322 tokens of the
+Attaches 7 tools and pays 6600 tokens on every step (3448 listing, 2560 step schema), leaving
+16610 of its budget and 26168 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`

@@ -86,7 +86,7 @@ export function FindingPanel({
             ) && <p>{t(findingEffectKey(entry))}</p>}
         </PanelBody>
       ))}
-      <PanelBody>
+      <PanelBody className="health-next">
         {![
           "capture_uncertain",
           "capture_owner_review",

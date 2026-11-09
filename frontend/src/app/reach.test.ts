@@ -336,8 +336,7 @@ function doorsIn(
 }
 
 /**
- * This gate's own ceiling, for the reason `one-plural-rule.test.ts` states at
- * length: the default timeout is arithmetic over WAITING, and this test waits
+ * This gate's own ceiling. The default timeout is arithmetic over WAITING, and this test waits
  * for nothing. Its cost is the CORPUS — it type-parses every shipped module in
  * the tree — and the two numbers have no relationship. It passed locally in
  * about a second and died at `Test timed out in 10437ms` on a CI runner
@@ -348,9 +347,7 @@ function doorsIn(
  * refuses a ceiling it cannot statically fold, correctly, since one no reader
  * can evaluate is one no reader can audit.
  *
- * 40ms a file is an order of magnitude over the local measurement. The plural
- * gate measured the same allowance on the same corpus with the same parser.
- * The body asserts the corpus size, so outgrowing it fails by name and count
+ * 40ms a file is an order of magnitude over the local measurement. The body asserts the corpus size, so outgrowing it fails by name and count
  * instead of as an opaque timeout.
  */
 const PARSE_BUDGET_PER_FILE_MS = 40;

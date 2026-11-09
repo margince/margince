@@ -58,29 +58,12 @@ var ownedTables = map[string]string{
 	"company": "company",
 }
 
-// kindPolicy answers whether ONE proposal of an admin-governed kind may apply
-// right now, in the transaction that would apply it.
-//
-// A seam rather than a call, because the answer lives in the module that owns
-// the kind — stage automation's thresholds are deals' — and compose may not
-// reach into a module's judgement any more than a module may reach into a
-// sibling's. What compose owns is which seam answers for which kind.
-//
-// It takes the OWNER'S context, the same one the apply runs under, so a policy
-// that reads the acting principal reads the one that will do the writing.
-type kindPolicy func(ctx context.Context, approvalID ids.ApprovalID) (bool, error)
-
 // autoApplier decides and applies proposals that their owner has put on
-// automatic, or that an admin's governing policy has earned.
+// automatic.
 type autoApplier struct {
 	pool  *pgxpool.Pool
 	svc   *approvals.Service
 	users *identity.Service
-	// governed answers for the admin-governed kinds, keyed by kind. A kind in
-	// AdminGovernedAutoKinds with no seam here NEVER applies: an unanswerable
-	// policy is a refusal, because the alternative is applying on the absence
-	// of a judgement.
-	governed map[string]kindPolicy
 }
 
 // Apply runs one pending proposal if its owner has this kind on automatic.
@@ -96,20 +79,29 @@ type autoApplier struct {
 // left: EffectiveAuthority answers ErrNotFound for an archived or suspended
 // member, and this treats that as "do not apply".
 func (a autoApplier) Apply(ctx context.Context, approvalID ids.ApprovalID) (bool, error) {
-	target, err := a.proposalToApply(ctx, approvalID)
-	if err != nil {
+	decision, ownerCtx, ok, err := a.decide(ctx, approvalID)
+	if err != nil || !ok {
 		return false, err
 	}
-	if target.kind == "" {
-		return false, nil
-	}
-	admin := approvals.AdminGovernedAutoKinds[target.kind]
-	if !admin && !approvals.AutoApplyKinds[target.kind] {
-		return false, nil
+	return a.applyAs(ownerCtx, decision)
+}
+
+// autoApplyDecision is one proposal an owner's policy says to apply.
+type autoApplyDecision struct {
+	approval ids.ApprovalID
+	target   proposalTarget
+	owner    ids.UUID
+}
+
+// decide reads whether a proposal applies, and binds its owner's agent.
+func (a autoApplier) decide(ctx context.Context, approvalID ids.ApprovalID) (autoApplyDecision, context.Context, bool, error) {
+	target, err := a.proposalToApply(ctx, approvalID)
+	if err != nil || target.kind == "" || !approvals.AutoApplyKinds[target.kind] {
+		return autoApplyDecision{}, nil, false, err
 	}
 	owner, err := a.ownerOf(ctx, target.entityType, target.entityID)
 	if err != nil || owner.IsZero() {
-		return false, err
+		return autoApplyDecision{}, nil, false, err
 	}
 	ownerCtx, err := a.asOwnersAgent(ctx, owner)
 	if err != nil {
@@ -117,50 +109,67 @@ func (a autoApplier) Apply(ctx context.Context, approvalID ids.ApprovalID) (bool
 		// not a failure of the caller that offered the proposal. The row keeps
 		// waiting for a contact, which is the safe direction.
 		if errors.Is(err, apperrors.ErrNotFound) {
-			return false, nil
+			return autoApplyDecision{}, nil, false, nil
 		}
-		return false, err
+		return autoApplyDecision{}, nil, false, err
 	}
 	// Read the policy AS the owner, not before becoming them: the policy read
 	// takes its subject from the acting principal, so asking first would ask
 	// about whoever the sweep happened to be running as.
-	//
-	// WHICH policy depends on the ladder. A rep's own kinds read the rep's own
-	// row; an admin-governed kind reads the rule the admin set for the
-	// transition, through the seam its module supplies. Asking the rep's
-	// ladder about a governed kind would answer 'manual' for every rep who
-	// never opted into a setting they are not offered.
-	may, err := a.mayApply(ownerCtx, target.kind, admin, approvalID)
-	if err != nil || !may {
-		return false, err
+	mode, err := a.svc.AutoApplyMode(ownerCtx, target.kind)
+	if err != nil || mode != approvals.ModeAuto {
+		return autoApplyDecision{}, nil, false, err
 	}
-	if _, err := a.svc.ApplyUnderPolicy(ownerCtx, approvalID); err != nil {
+	return autoApplyDecision{approval: approvalID, target: target, owner: owner}, ownerCtx, true, nil
+}
+
+// applyAs applies a decided proposal as the owner's agent bound before. The
+// owner may leave, lose the record or turn the kind off in between, so the
+// decision and the effect bind them again (ownerNow).
+func (a autoApplier) applyAs(ownerCtx context.Context, decision autoApplyDecision) (bool, error) {
+	_, err := a.svc.ApplyUnderPolicy(ownerCtx, decision.approval, a.ownerNow(decision))
+	if errors.Is(err, approvals.ErrPolicyWithdrawn) {
+		return false, nil
+	}
+	if err != nil {
 		return false, err
 	}
 	return true, nil
 }
 
-// mayApply asks the ladder that governs this kind.
-//
-// The two are not interchangeable and neither is a fallback for the other. A
-// governed kind whose seam is missing answers NO — an unwired policy is an
-// unanswered question, and applying on an unanswered question is the one thing
-// this whole path exists to prevent.
-func (a autoApplier) mayApply(
-	ctx context.Context, kind string, admin bool, approvalID ids.ApprovalID,
-) (bool, error) {
-	if !admin {
-		mode, err := a.svc.AutoApplyMode(ctx, kind)
-		if err != nil {
-			return false, err
-		}
-		return mode == approvals.ModeAuto, nil
+// ownerNow is how a decided apply acts for its owner in each of its
+// transactions.
+func (a autoApplier) ownerNow(decision autoApplyDecision) ownerPolicy {
+	return ownerPolicy{bind: ownersAgentTx(a.users, decision.owner, autoApplyActorID), decision: decision}
+}
+
+// ownerPolicy binds the owner's agent as of a transaction. It holds the record,
+// so the owner stays the one the apply acts for until the write.
+type ownerPolicy struct {
+	bind     deals.OwnerAuthorityTx
+	decision autoApplyDecision
+}
+
+// Bind answers false for an owner who is no longer live.
+func (o ownerPolicy) Bind(ctx context.Context, tx pgx.Tx) (context.Context, bool, error) {
+	actor, err := o.bind(ctx, tx)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return nil, false, nil
 	}
-	policy, wired := a.governed[kind]
-	if !wired {
-		return false, nil
+	if err != nil {
+		return nil, false, err
 	}
-	return policy(ctx, approvalID)
+	return actor, true, nil
+}
+
+// HoldTarget locks the record for update, since every eligible effect writes
+// it in this same transaction. A record that changed hands answers false.
+func (o ownerPolicy) HoldTarget(ctx context.Context, tx pgx.Tx) (bool, error) {
+	owner, err := ownerOfTx(ctx, tx, o.decision.target.entityType, o.decision.target.entityID, true)
+	if err != nil {
+		return false, err
+	}
+	return owner == o.decision.owner, nil
 }
 
 // proposalTarget is the proposal's kind and what it points at.
@@ -206,18 +215,30 @@ func (a autoApplier) proposalToApply(ctx context.Context, approvalID ids.Approva
 // automatically. That is the reading consistent with never applying under an
 // authority nobody currently holds.
 func (a autoApplier) ownerOf(ctx context.Context, entityType string, entityID ids.UUID) (ids.UUID, error) {
+	var owner ids.UUID
+	err := database.WithWorkspaceTx(ctx, a.pool, func(tx pgx.Tx) error {
+		var err error
+		owner, err = ownerOfTx(ctx, tx, entityType, entityID, false)
+		return err
+	})
+	return owner, err
+}
+
+// ownerOfTx is ownerOf read in the caller's transaction. hold locks the
+// record for update until that transaction ends.
+func ownerOfTx(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID, hold bool) (ids.UUID, error) {
 	table, ok := ownedTables[entityType]
 	if !ok {
 		return ids.Nil, nil
 	}
+	query := `SELECT owner_id FROM ` + table + ` WHERE id = $1 AND archived_at IS NULL`
+	if hold {
+		query += ` FOR UPDATE`
+	}
 	var owner *ids.UUID
-	err := database.WithWorkspaceTx(ctx, a.pool, func(tx pgx.Tx) error {
-		// The table name is a value from ownedTables, a compile-time literal
-		// chosen by a key that had to match — never text off the approval row.
-		return tx.QueryRow(ctx,
-			`SELECT owner_id FROM `+table+` WHERE id = $1 AND archived_at IS NULL`,
-			entityID).Scan(&owner)
-	})
+	// The table name is a compile-time literal from ownedTables, chosen by a
+	// key that had to match, never text off the approval row.
+	err := tx.QueryRow(ctx, query, entityID).Scan(&owner)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.Nil, nil
 	}
@@ -271,18 +292,15 @@ func (a autoApplier) asOwnersAgent(ctx context.Context, owner ids.UUID) (context
 func (a autoApplier) duePending(ctx context.Context, limit int) ([]ids.ApprovalID, error) {
 	var due []ids.ApprovalID
 	err := database.WithWorkspaceTx(ctx, a.pool, func(tx pgx.Tx) error {
-		// The kinds come from the module that owns them, as the UNION of both
-		// ladders: the scan must not come to look for a set the applier would
-		// then refuse, nor miss one it would accept. They travel as one
-		// parameter in a stable order, so a map-ordered list cannot send the
-		// same set differently on every tick and make two runs incomparable.
+		// The kinds come from the module that owns them, so the scan looks for
+		// the set the applier accepts. A stable order sends the same set twice.
 		rows, err := tx.Query(ctx, `
 			SELECT id FROM approval
 			 WHERE status = 'pending' AND passport_id IS NULL
 			   AND expires_at > now()
 			   AND kind = ANY($1)
 			 ORDER BY created_at
-			 LIMIT $2`, approvals.AutoAppliableKinds(), limit)
+			 LIMIT $2`, approvals.SortedAutoApplyKinds(), limit)
 		if err != nil {
 			return err
 		}
@@ -373,9 +391,8 @@ func refusesThisRow(err error) bool {
 // it is assembled from.
 func SweepAutoApply(ctx context.Context, pool *pgxpool.Pool) (int, error) {
 	return autoApplier{
-		pool:     pool,
-		svc:      approvalsServiceWithEffects(pool),
-		users:    identity.NewService(pool),
-		governed: governedKindPolicies(pool, deals.NewStore(InstallationDB(pool), DealsInstallation())),
+		pool:  pool,
+		svc:   NewApprovalsServiceWithEffects(pool),
+		users: identity.NewService(pool),
 	}.Sweep(ctx)
 }

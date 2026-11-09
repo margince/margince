@@ -77,6 +77,7 @@ func mcpResourceProviders(
 		capabilities, vocabulary,
 		agents.RecordFieldsResource{},
 		agents.NewReportVocabularyResource(reportToolCatalog()),
+		agents.NewReadViewsResource(readViews(agentPolicies)),
 		agents.NewReportBlocksResource(reportBlockGrammar()),
 		analyticsSchemaResource{db: db},
 	}

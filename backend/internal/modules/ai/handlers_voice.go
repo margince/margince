@@ -258,14 +258,14 @@ func (h Handlers) PreviewVoiceCorpusSource(w http.ResponseWriter, r *http.Reques
 	}
 	speakers := make([]struct {
 		Label string `json:"label"`
-		Turns int    `json:"turns"`
-		Words int    `json:"words"`
+		Turns int    `json:"turns" minimum:"0"`
+		Words int    `json:"words" minimum:"0"`
 	}, 0, len(preview.Speakers))
 	for _, speaker := range preview.Speakers {
 		speakers = append(speakers, struct {
 			Label string `json:"label"`
-			Turns int    `json:"turns"`
-			Words int    `json:"words"`
+			Turns int    `json:"turns" minimum:"0"`
+			Words int    `json:"words" minimum:"0"`
 		}{Label: speaker.Label, Turns: speaker.Turns, Words: speaker.Words})
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.VoiceCorpusPreviewResult{

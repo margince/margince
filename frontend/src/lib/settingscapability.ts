@@ -83,6 +83,9 @@ export const available = (
 export const flagged = (
   flag: "data_reset_available",
 ): CapabilityExpression => ({ kind: "flag", flag });
+export const companyContext: CapabilityExpression = {
+  kind: "company-context",
+};
 export const composedUnits = (
   scope: UnitSecretScope,
 ): CapabilityExpression => ({

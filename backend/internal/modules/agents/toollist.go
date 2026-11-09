@@ -121,9 +121,8 @@ func DescribeForClient(spec mcp.ToolSpec) string {
 	return fmt.Sprintf("%s (Governance: %s%s; %s.)", spec.Description, tier, askUserFirst(spec), scope)
 }
 
-// askUserFirst tells the client to get the user's yes before a call that runs
-// with no human approval. It is a request to the model, which the server does not
-// check. A call a human approves already gets that yes, so it is never named here.
+// askUserFirst is for an MCP client's model only, never the loop agent, which has no one to ask.
+// The server cannot check the yes, and a call a human approves already has it.
 func askUserFirst(spec mcp.ToolSpec) string {
 	const ask = "; the user's yes is needed for %s, so tell them what the call will change and " +
 		"get it before calling, unless they asked for this call themselves"

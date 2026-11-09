@@ -193,6 +193,7 @@ func (m outboundMessage) authorization(origin SendOrigin) commsauthz.Request {
 		// Staging refuses this body if a recipient resolves to marketing and
 		// the body was composed without the advertising duties.
 		OmitsAdvertisingDuties: !m.advertising,
+		SendingEntity:          m.in.SendingEntity,
 	}
 }
 

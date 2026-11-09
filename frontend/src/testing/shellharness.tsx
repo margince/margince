@@ -152,7 +152,7 @@ export function fixtureSection(activeId?: string): NavSection {
             children: [
               {
                 id: "deeper",
-                labelKey: "settings.tab.fields",
+                labelKey: "settings.tab.records",
                 icon: Database,
               },
             ],

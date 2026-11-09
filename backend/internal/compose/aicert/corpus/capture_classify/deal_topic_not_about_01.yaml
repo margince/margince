@@ -1,0 +1,31 @@
+name: an_invoice_for_other_work_is_not_about_the_customers_only_open_deal
+task: capture_classify
+site: deal_topic
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  subject: 'Invoice 2026-0412 for the September maintenance hours'
+  body: |
+    Please find attached our invoice for the maintenance hours booked in
+    September under the existing service agreement. Payment terms as usual,
+    30 days net. Let me know if the cost centre needs to change.
+  deals:
+    - name: Fabrikam analytics platform
+      project: Analytics
+      recent: ['Analytics platform: scope workshop', 'Proposal for the analytics platform']
+expect:
+  outcome: accepted
+  answer: [not_about]
+  rubric: >
+    The customer has one open deal, a new analytics platform. The email is an
+    invoice for maintenance hours under an existing service agreement: other
+    work, not the deal's offer, scope or decision. "not_about" scores high. The
+    failure this scenario exists to catch is "about": filing an invoice on the
+    only open deal because the company matches is exactly the wrong link the
+    check replaces. "unsure" scores low: nothing in the mail touches the
+    analytics platform. A correct "not_about" below 0.85 files nothing either
+    way, but scores lower than a confident one.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

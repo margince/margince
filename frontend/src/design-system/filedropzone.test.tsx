@@ -285,3 +285,62 @@ it("marks the label as an answer once a file is chosen, and not before", () => {
   show(vi.fn(), new File(["x"], "contract.pdf", { type: "application/pdf" }));
   expect(screen.getByText(/contract\.pdf/).className).toContain("chosen");
 });
+
+// A screenshot is pasted, not chosen: nothing focuses a file input to paste
+// into, so an opted-in zone hears a paste on the whole page.
+describe("pasting a file", () => {
+  const SCREENSHOT = () =>
+    new File(["png"], "image.png", { type: "image/png" });
+
+  function paste(files: File[]) {
+    const event = new Event("paste", { bubbles: true, cancelable: true });
+    Object.defineProperty(event, "clipboardData", {
+      value: { files, getData: () => "" },
+    });
+    document.body.dispatchEvent(event);
+    return event;
+  }
+
+  function showPasteable(onPick: (file: File) => void, pasteable: boolean) {
+    return render(
+      <LocaleProvider initial="en">
+        <FileDropzone
+          label="Screenshot"
+          emptyLabel="Paste a screenshot"
+          onPick={onPick}
+          pasteable={pasteable}
+        />
+      </LocaleProvider>,
+    );
+  }
+
+  it("takes a pasted image when the zone asks for pastes", () => {
+    const picked = vi.fn();
+    showPasteable(picked, true);
+
+    const event = paste([SCREENSHOT()]);
+
+    expect(picked).toHaveBeenCalledTimes(1);
+    expect(picked.mock.calls[0][0].name).toBe("image.png");
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it("leaves a paste of text alone", () => {
+    const picked = vi.fn();
+    showPasteable(picked, true);
+
+    const event = paste([]);
+
+    expect(picked).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it("ignores pastes unless the caller asked for them", () => {
+    const picked = vi.fn();
+    showPasteable(picked, false);
+
+    paste([SCREENSHOT()]);
+
+    expect(picked).not.toHaveBeenCalled();
+  });
+});

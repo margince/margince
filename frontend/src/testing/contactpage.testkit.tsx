@@ -40,6 +40,9 @@ export const view: Contact360 = {
     // page asks for. Absent it the fixture describes a contact this reader
     // may not write, and the controls correctly disappear.
     writable: true,
+    attachable: true,
+    // The server's per-row archive answer, which the Archive verb reads.
+    archivable: true,
     version: 1,
     primary_email: "dana@brandt.example",
     emails: [
@@ -99,6 +102,7 @@ export function mount(
 ) {
   installFetchStub({
     "GET /me": meRoute(allow, { seat: "full" }),
+    "GET /contacts/p-1": () => jsonResponse(page.contact),
     "GET /contacts/p-1/360": () => jsonResponse(page),
     "GET /contacts/p-1/brief": () =>
       jsonResponse({ contact_id: "p-1", sentences: [], generated_by: "rules" }),

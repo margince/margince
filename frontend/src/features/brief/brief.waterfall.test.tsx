@@ -117,6 +117,22 @@ describe("the frozen outlook", () => {
       screen.queryByText(en["brief.weekly.outlook.measure.likely"]),
     ).toBeNull();
   });
+
+  // A week frozen under the retired qualified forecast shows its landing with
+  // no measure word, never as Likely.
+  it("shows a landing frozen under a retired measure without a label", () => {
+    show([
+      horizon({
+        forward_measure: "qualified_likely",
+        closing_landing_minor: 1_234_500,
+      }),
+    ]);
+
+    expect(screen.getByText(en["brief.weekly.outlook.landing"])).toBeTruthy();
+    expect(
+      screen.queryByText(en["brief.weekly.outlook.measure.likely"]),
+    ).toBeNull();
+  });
 });
 
 describe("the movement bridge", () => {

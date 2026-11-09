@@ -245,7 +245,7 @@ func resolutionForClass(class Class) resolution {
 func stagedClaims(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (map[string]stagedClaim, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT ON (recipient_address) recipient_address, requested_category, evidence,
-		       legal_entity_id, purpose_key
+		       legal_entity_id, purpose_key, data_protection_country
 		  FROM communication_decision
 		 WHERE delivery_id = $1 AND phase = 'staging'
 		 -- id, not decided_at: every row of one staging transaction carries the
@@ -263,10 +263,10 @@ func stagedClaims(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (map[stri
 		var claimed, purposeKey *string
 		var evidence []byte
 		var entity *ids.UUID
-		if err := rows.Scan(&address, &claimed, &evidence, &entity, &purposeKey); err != nil {
+		var out stagedClaim
+		if err := rows.Scan(&address, &claimed, &evidence, &entity, &purposeKey, &out.dataProtection); err != nil {
 			return nil, fmt.Errorf("consent: read what this delivery was staged as: %w", err)
 		}
-		var out stagedClaim
 		if claimed != nil {
 			out.category = commsauthz.Category(*claimed)
 		}
@@ -297,7 +297,7 @@ func stagedClaims(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (map[stri
 func stagedRequestFor(req commsauthz.TransmitRequest, r connector.Recipient, claims map[string]stagedClaim, threadKey string, links []ids.UUID) commsauthz.Request {
 	staged := claims[decisionRecipientKey(r)]
 	// The purpose staging judged, held against the delivery's own key: two
-	// keys that disagree reach canonicalPurpose and are refused there.
+	// keys that disagree reach CanonicalPurpose and are refused there.
 	purposeKey, deliveryKey := staged.purposeKey, ""
 	if purposeKey == "" {
 		purposeKey = req.PurposeKey
@@ -347,7 +347,7 @@ func deliveryThreadKey(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (str
 		SELECT a.thread_key
 		  FROM comms_outbound o
 		  JOIN activity a ON a.id = o.activity_id
-		 WHERE o.id = $1 AND `+auth.ActivityAvailableClause("a"), deliveryID).Scan(&key)
+		 WHERE o.id = $1 AND `+auth.ActivityExternalEvidenceClause("a"), deliveryID).Scan(&key)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// The delivery (or its activity) is gone, or the activity is held under
 		// a statutory retention restriction. Either way, not this function's
@@ -384,7 +384,7 @@ func deliveryLinks(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) ([]ids.U
 		  FROM comms_outbound o
 		  JOIN activity a ON a.id = o.activity_id
 		  JOIN activity_link l ON l.activity_id = o.activity_id AND l.deal_id IS NOT NULL
-		 WHERE o.id = $1 AND `+auth.ActivityAvailableClause("a"), deliveryID)
+		 WHERE o.id = $1 AND `+auth.ActivityExternalEvidenceClause("a"), deliveryID)
 	if err != nil {
 		return nil, fmt.Errorf("consent: read the delivery's linked records: %w", err)
 	}
@@ -404,4 +404,6 @@ type stagedClaim struct {
 	// entity and purposeKey are what staging decided the message for.
 	entity     ids.UUID
 	purposeKey string
+	// dataProtection is the country the staged footer was rendered under.
+	dataProtection *string
 }

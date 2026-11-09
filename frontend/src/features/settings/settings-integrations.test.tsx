@@ -96,15 +96,12 @@ describe("SettingsScreen connections and integrations tabs", () => {
         name: "Mail and calendar",
       }),
     ).toBeTruthy();
-    expect(
-      screen.getByRole("heading", { name: "LinkedIn network" }),
-    ).toBeTruthy();
     // And nothing workspace-wide: a key everybody spends from, the
     // subscriptions everybody's writes fire and the company's one bot.
     for (const heading of ["Contact data", "Webhooks", "Telegram bot"]) {
       expect(screen.queryByRole("heading", { name: heading })).toBeNull();
     }
-    // What the mailbox did with mail is Capture activity's, and the address in
+    // What the mailbox did with mail is the Activity tab's, and the address in
     // outgoing links is a System health reading: neither is a connection.
     for (const heading of [
       "What your connections found",
@@ -114,9 +111,23 @@ describe("SettingsScreen connections and integrations tabs", () => {
     }
   });
 
-  it("renders what the connections found on Capture activity", async () => {
+  it("renders the LinkedIn network on its own Connections tab", async () => {
+    vi.stubGlobal(
+      "fetch",
+      wiringSettingsBackend({ roles: ["admin"], allow: WIRING_WRITES }),
+    );
+    renderSettings("connections", "linkedin");
+    expect(
+      await screen.findByRole("heading", { name: "LinkedIn network" }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("heading", { name: "Mail and calendar" }),
+    ).toBeNull();
+  });
+
+  it("renders what the connections found on the Activity tab", async () => {
     vi.stubGlobal("fetch", wiringSettingsBackend({ roles: ["admin"] }));
-    renderSettings("capture-activity");
+    renderSettings("connections", "activity");
     expect(
       await screen.findByRole("heading", {
         name: "What your connections found",
@@ -136,10 +147,21 @@ describe("SettingsScreen connections and integrations tabs", () => {
     expect(
       await screen.findByRole("heading", { name: "Contact data" }),
     ).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Webhooks" })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Telegram bot" })).toBeTruthy();
     for (const heading of ["Mail and calendar", "LinkedIn network"]) {
       expect(screen.queryByRole("heading", { name: heading })).toBeNull();
     }
+  });
+
+  it.each([
+    ["webhooks", "Webhooks"],
+    ["telegram", "Telegram bot"],
+  ])("renders %s on its own Integrations tab", async (tab, heading) => {
+    vi.stubGlobal(
+      "fetch",
+      wiringSettingsBackend({ roles: ["admin"], allow: WIRING_WRITES }),
+    );
+    renderSettings("integrations", tab);
+    expect(await screen.findByRole("heading", { name: heading })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Contact data" })).toBeNull();
   });
 });
