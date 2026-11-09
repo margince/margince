@@ -13,9 +13,9 @@
 // request-side when a request body or parameter does. An enum both reach is
 // response-side; the server still validates the request value.
 //
-// A form whose side this walk cannot tell is refused rather than skipped:
-// callbacks and webhooks invert the direction, a writeOnly enum is request-only
-// inside a shared schema, and an external $ref leaves the file.
+// A form whose side this walk cannot tell is refused rather than skipped.
+// Callbacks and webhooks invert the direction. A writeOnly enum is request-only
+// inside a shared schema. An external $ref leaves the file.
 package openenums
 
 import (
@@ -174,18 +174,31 @@ func (w *walker) schema(node *yaml.Node, response bool) {
 		}
 		return
 	}
-	if values := mapValue(node, "enum"); values != nil {
-		if writeOnly := mapValue(node, "writeOnly"); writeOnly != nil && writeOnly.Value == "true" {
-			w.refuse(values, "a writeOnly enum is request-only inside a shared schema; classify it by hand")
-		}
-		e := w.found[node]
-		if e == nil {
-			e = &Enum{Line: values.Line, node: node}
-			w.found[node] = e
-		}
-		e.Response = e.Response || response
-		e.Request = e.Request || !response
+	w.record(node, response)
+	w.children(node, response)
+	w.discriminator(mapValue(node, "discriminator"), response)
+}
+
+// record notes a schema that holds an enum, and the side it was reached from.
+func (w *walker) record(node *yaml.Node, response bool) {
+	values := mapValue(node, "enum")
+	if values == nil {
+		return
 	}
+	if writeOnly := mapValue(node, "writeOnly"); writeOnly != nil && writeOnly.Value == "true" {
+		w.refuse(values, "a writeOnly enum is request-only inside a shared schema; classify it by hand")
+	}
+	e := w.found[node]
+	if e == nil {
+		e = &Enum{Line: values.Line, node: node}
+		w.found[node] = e
+	}
+	e.Response = e.Response || response
+	e.Request = e.Request || !response
+}
+
+// children walks every subschema a schema holds.
+func (w *walker) children(node *yaml.Node, response bool) {
 	for _, key := range schemaChildren {
 		w.schema(mapValue(node, key), response)
 	}
@@ -201,7 +214,6 @@ func (w *walker) schema(node *yaml.Node, response bool) {
 			}
 		}
 	}
-	w.discriminator(mapValue(node, "discriminator"), response)
 }
 
 // discriminator walks the schemas a discriminator's mapping names, which a
