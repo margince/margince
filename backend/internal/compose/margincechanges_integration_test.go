@@ -442,7 +442,7 @@ func (l bundleLane) Complete(ctx context.Context, req model.Request) (model.Resp
 func setupBundle(t *testing.T) *stageMoveEnv {
 	t.Helper()
 	v := setupStageMove(t)
-	v.pass = newDealVerdictPass(v.Pool, bundleLane{move: v.move, date: v.lane.date}, slog.New(slog.DiscardHandler))
+	v.pass = newDealVerdictPass(v.Pool, dealVerdictRefs(bundleLane{move: v.move, date: v.lane.date}), slog.New(slog.DiscardHandler))
 	v.pass.now = func() time.Time { return v.now.Add(time.Minute) }
 	v.run(t)
 	if n := v.WsCount(t, `SELECT count(*) FROM deal_correction WHERE deal_id = $1`, v.deal); n != 3 {

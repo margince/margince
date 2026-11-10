@@ -1,5 +1,6 @@
 {
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
+  "systemJob.optout_receipt": "Fehlende Abmeldebestätigungen melden",
   "systemJob.task_completion": "Aufgaben nach E-Mail erledigen",
   "dealSuggestion.changed": "Dieser Vorschlag ist nicht mehr verfügbar. Lade die Prüfpunkte neu, um den aktuellen Stand zu sehen.",
   "roles.object.data_task": "Datenaktualisierungen",
@@ -874,6 +875,7 @@
   "ext.notFound": "In dieser Installation ist keine Erweiterung namens „{name}“ aktiviert.",
   "search.kind.deal": "Deal",
   "common.close": "Schließen",
+  "common.unknownValue": "Sonstiges",
   "common.expand": "Vergrößern",
   "common.collapse": "Verkleinern",
   "format.notForecast": "Nicht prognostiziert",

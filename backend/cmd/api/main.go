@@ -17,9 +17,9 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"slices"
 	"strings"
 	"syscall"
-	"time"
 	// Embedded tzdata: workspace timezones must resolve on scratch
 	// containers that ship no zoneinfo.
 	_ "time/tzdata"
@@ -85,6 +85,13 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
+	// The flush is deferred before the pool and the other closers, so it runs
+	// last. Events logged while shutting down still leave.
+	if err := startInstrumentation(ctx, cfg, stdout); err != nil {
+		return err
+	}
+	defer compose.FlushInstrumentation(ctx)
+
 	// INSTALLED as the process default, not merely built. Everything below is
 	// handed this logger explicitly, but the tree also logs through the
 	// package-level slog functions — jobs.faultFor is the one whose line is the
@@ -115,11 +122,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	// AllowTestMailbox is an operations.* kill switch, not a capture.* tuning
-	// knob, so it is set here rather than folded into CaptureConfigFromDeploy.
-	captureCfg := compose.CaptureConfigFromDeploy(cfg.settings, logger)
-	compose.WarnStaleRates(cfg.settings, logger)
-	captureCfg.AllowTestMailbox = config.Val(cfg.settings, programsettings.AllowTestMailbox)
+	captureCfg := captureConfig(cfg, logger)
 	opts, schemaPool, closeSchemaPool, err := baseComposeOptions(ctx, cfg, captureCfg, pool, vault, logger, stdout, license)
 	if err != nil {
 		return err
@@ -166,10 +169,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	opts = append(opts, modelOpts...)
-	opts = append(opts, compose.WithCompanyContextRollout(config.Val(cfg.settings, compose.CompanyContextRollout)))
-	opts = append(opts, compose.WithListsEnabled(config.Val(cfg.settings, programsettings.ListsEnabled)))
-	opts = append(opts, compose.SecurityTxtOption(cfg.settings, time.Now(), logger))
+	opts = append(opts, slices.Concat(modelOpts, settingOptions(cfg, logger))...)
 
 	viewOpts, stopViewRefresh, err := mcpAppViewsLane(ctx, cfg, logger)
 	if err != nil {

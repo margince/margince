@@ -28,3 +28,21 @@
   flex: none;
   max-inline-size: calc(100% - 2ch);
 }
+/* An address with its copy glyph in a list cell: the address takes the cut,
+   the glyph keeps its whole box. */
+.contactlink-copyable {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+.contactlink-copyable > :not(.copy-action) {
+  display: block;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-align: start;
+  text-overflow: ellipsis;
+}
+.contactlink-copyable > .copy-action {
+  flex: none;
+}

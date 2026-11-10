@@ -150,6 +150,7 @@ export function Modal({
     container: dialog,
     returnFocusTo,
     initialFocusTo,
+    overlay,
   });
   const leaving = state === "closing";
   const backdrop = useBackdropDismiss(requestClose, leaving);
@@ -166,11 +167,6 @@ export function Modal({
   // menu — would otherwise be hidden along with it, and the click that opened
   // the dialog is the same click that collapses the menu.
   return createPortal(
-    // The two a11y suppressions this element used to carry are gone rather than
-    // kept: `aria-hidden` below takes the overlay out of the accessibility tree
-    // while it is leaving, and the rules that wanted a keyboard handler beside
-    // the backdrop click no longer fire on it. Escape is still the keyboard
-    // path, and it is `useDialogFocus`'s, not this element's.
     <div // NOSONAR: backdrop dismiss only; keyboard path (Esc) handled by the effect above
       className={
         box?.split(" ").includes("modal-drawer")
@@ -178,20 +174,9 @@ export function Modal({
           : "overlay"
       }
       data-state={state}
-      // A dialog on its way out is a picture of a dialog. `inert` takes it out
-      // of the tab order and out of hit testing, so the fifth of a second it is
-      // still painted cannot swallow the click meant for the page it is
-      // uncovering.
+      // `inert` stops Tab and hit testing now. An inert node keeps its role, so
+      // `useDialogFocus` adds `aria-hidden` once focus is out of it.
       inert={leaving}
-      // And `aria-hidden` takes it out of the accessibility TREE, which `inert`
-      // does not: an inert node keeps its role, so a dialog mid-exit is still a
-      // dialog to a screen reader — and to anything else reading roles. Two
-      // dialogs answered "the dialog" for the length of one exit, which is a
-      // reader being told about a surface that is leaving and, where a verb
-      // opens the next dialog straight from the last, an assistive technology
-      // announcing the wrong one. Safe only because `inert` is here too: an
-      // `aria-hidden` subtree must hold nothing focusable.
-      aria-hidden={leaving || undefined}
       ref={overlay}
       {...backdrop}
     >

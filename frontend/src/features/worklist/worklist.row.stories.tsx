@@ -377,9 +377,9 @@ export const ATaskBeingHandedOn: Story = {
 
 // The five sources the row could draw and no story showed.
 //
-// Each is drawn from the shape its own producer emits, so the story is a
-// picture of what a reader actually meets rather than of a fixture invented
-// here. Held by TestEverySourceHasARowStory in worklist.storycensus.test.ts,
+// Each is drawn from the shape its own producer emits. So the story is a
+// picture of what a reader meets rather than of a fixture invented here.
+// Held by TestEverySourceHasARowStory in census/rules/worklist.storycensus.census.ts,
 // which fails when a source the queue can draw has no story naming it.
 
 // A brief item: the overnight ranking's pick, with the three verbs it carries.

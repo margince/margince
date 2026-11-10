@@ -260,7 +260,7 @@ const (
 // sentByReaderSQL. laterContent gates the later message, so a reply the reader
 // may not read decides nothing. A calendar copy asks nobody a question. A
 // thread key is chosen by the sender, so a later message counts only when
-// filed under the same record.
+// filed under the same record. Id order only picks which of our two mails waits.
 func awaitingTheirAnswerSQL(asOf, sentByReader, laterContent, kinds string) string {
 	return `(a.kind IN (` + kinds + `)
 	   AND a.direction = 'outbound'
@@ -277,7 +277,8 @@ func awaitingTheirAnswerSQL(asOf, sentByReader, laterContent, kinds string) stri
 	                      AND later.thread_key = a.thread_key
 	                      AND later.kind = a.kind
 	                      AND later.channel_provider IS NOT DISTINCT FROM a.channel_provider
-	                      AND (later.occurred_at, later.id) > (a.occurred_at, a.id)
+	                      AND (later.direction = 'inbound' AND NOT ` + occurredday.AnswersSQL("a", "later") + `
+	                        OR later.direction IS DISTINCT FROM 'inbound' AND (later.occurred_at, later.id) > (a.occurred_at, a.id))
 	                      AND ` + occurredday.BegunSQL("later", asOf) + `
 	                      AND EXISTS (SELECT 1 FROM activity_link heard
 	                                    JOIN activity_link sent ON sent.activity_id = a.id
@@ -301,7 +302,7 @@ func sentByReaderSQL(reader, addresses string) string {
 // reader sent inside the window and its lookback. Its terms are ones
 // awaitingRepliesSQL also tests, so it never drops a row the lane reports.
 func awaitingCandidatesSQL(asOf, sentByReader, window string) string {
-	return `SELECT a.id, a.thread_key, a.kind, a.channel_provider, a.occurred_at FROM activity a
+	return `SELECT a.id, a.thread_key, a.kind, a.channel_provider, a.occurred_at, a.occurred_precision FROM activity a
 	 WHERE a.kind IN (` + mailKinds + `) AND a.direction = 'outbound' AND a.archived_at IS NULL
 	   AND ` + sentByReader + `
 	   ` + fmt.Sprintf("AND a.occurred_at <= %s::timestamptz - make_interval(days => %s::int) -- occurred_at raw: an age of whole days\n", asOf, window) + `
@@ -321,14 +322,12 @@ func awaitingNeedSQL() string {
 	         GROUP BY 1) recipient
 	   JOIN activity_link heard ON heard.contact_id = recipient.contact_id
 	   JOIN activity later ON later.id = heard.activity_id AND later.restricted_at IS NULL
-	    AND later.occurred_at > recipient.since -- occurred_at raw: the statement's own after-the-mail order, which this set may not narrow
+	    AND later.occurred_at >= recipient.since -- occurred_at raw: the statement's own after-the-mail order, which this set may not narrow
 `
 }
 
-// awaitingHeardSinceSQL lists the candidates whose recipients were in contact
-// since, on any channel: a call or a meeting with them is a follow-up already
-// made. It is one set over every candidate. Asked per candidate, it walked each
-// recipient's whole history once per mail. It reads awaitingRepliesSQL's slots.
+// awaitingHeardSinceSQL is the candidates whose recipients were in touch since: by a call or meeting, or
+// by a message our mail does not answer. It reads awaitingRepliesSQL's slots.
 var awaitingHeardSinceSQL = followUpHeardSince + ` AS MATERIALIZED (
 	SELECT DISTINCT c.id FROM ` + followUpCandidates + ` c
 	  JOIN activity_link sent ON sent.activity_id = c.id AND sent.contact_id IS NOT NULL
@@ -338,7 +337,9 @@ var awaitingHeardSinceSQL = followUpHeardSince + ` AS MATERIALIZED (
 	   AND later.archived_at IS NULL
 	   AND %[7]s
 	   AND %[8]s
-	   AND later.occurred_at > c.occurred_at -- occurred_at raw: heard after the mail, an ordering of rows
+	   AND (later.direction = 'inbound' AND NOT ` + occurredday.AnswersSQL("c", "later") + `
+	     OR later.direction IS DISTINCT FROM 'inbound'
+	       AND later.occurred_at > c.occurred_at) -- occurred_at raw: a touch of ours counts only once our mail was out, an ordering of rows
 	   AND ` + occurredday.BegunSQL("later", "$%[1]d") + `)`
 
 // awaitingRepliesSQL: every rule sits before the cap.

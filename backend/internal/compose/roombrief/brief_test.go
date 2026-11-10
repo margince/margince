@@ -115,7 +115,7 @@ func TestTheModelReplyKeepsOnlyGroundedSentences(t *testing.T) {
 		{"text":"Answer the cap first.","nature":"recommendation","evidence":[{"entity_type":"thread","entity_id":"` + capID + `"}]},
 		{"text":"Then issue a link.","nature":"recommendation","evidence":[{"entity_type":"participant","entity_id":"` + tomasID + `"}]}
 	]}` + "\n```"
-	got, err := ParseBrief(reply, room())
+	got, err := parseCitedBrief(reply, room())
 	if err != nil {
 		t.Fatalf("ParseBrief: %v", err)
 	}
@@ -151,7 +151,7 @@ func TestWriteFallsBackToTheFloorAndSaysSo(t *testing.T) {
 		}
 	}
 	reply := `{"sentences":[{"text":"Tomas is blocked on the liability cap.","nature":"fact","evidence":[{"entity_type":"thread","entity_id":"` + capID + `"}]}]}`
-	if _, by := Write(context.Background(), stubLane{reply: reply}, room(), "en"); by != crmcontracts.WrittenByModel {
+	if _, by := Write(context.Background(), stubLane{reply: cited(room(), reply)}, room(), "en"); by != crmcontracts.WrittenByModel {
 		t.Errorf("a grounded reply is written by %s, want model", by)
 	}
 }
@@ -189,6 +189,32 @@ func TestFromRoomFoldsTheReadsTheTabMakes(t *testing.T) {
 	}
 	if in.Threads[1].WaitingOnYou || in.Threads[1].Comments[0].Speaker != speakerYourSide {
 		t.Errorf("the seller's last word reads as waiting or as a buyer's: %+v", in.Threads[1])
+	}
+}
+
+// A buyer comment shows the ref of the seat that wrote it, so the brief can
+// cite who set a condition. A seller comment, and a name two seats share,
+// link to no seat.
+func TestABuyerCommentShowsItsAuthorsSeat(t *testing.T) {
+	at := time.Date(2026, 10, 22, 12, 0, 0, 0, time.UTC)
+	says := func(name, side string) crmcontracts.DealRoomComment {
+		return crmcontracts.DealRoomComment{Author: crmcontracts.DealRoomAuthor{Name: name, Side: side}, Body: "Noted.", CreatedAt: at}
+	}
+	seat := func(name string) crmcontracts.DealRoomParticipant {
+		return crmcontracts.DealRoomParticipant{Id: openapi_types.UUID(ids.NewV7()), FullName: name}
+	}
+	in := FromRoom(crmcontracts.DealRoom{Title: "Room", State: "live"},
+		[]crmcontracts.DealRoomParticipant{seat("Lena Vogt"), seat("Rasmus Berg"), seat("Alex Kim"), seat("Alex Kim")}, nil,
+		[]crmcontracts.DealRoomThread{{Id: openapi_types.UUID(ids.NewV7()), CreatedAt: at, Comments: []crmcontracts.DealRoomComment{
+			says("Rasmus Berg", "buyer"), says("Lena Vogt", "seller"), says("Alex Kim", "buyer"),
+		}}})
+	comments := in.Threads[0].Comments
+	if comments[0].AuthorID != in.Buyers[1].ID || comments[1].AuthorID != "" || comments[2].AuthorID != "" {
+		t.Fatalf("author seats = %q, %q, %q; want Rasmus's seat, then none for a seller and a shared name",
+			comments[0].AuthorID, comments[1].AuthorID, comments[2].AuthorID)
+	}
+	if shown := BriefRequest(in, "en").Messages[0].Content; !strings.Contains(shown, `"author":"Rasmus Berg","author_id":"p2"`) {
+		t.Errorf("the request does not show the author's seat by its ref:\n%s", shown)
 	}
 }
 
@@ -250,7 +276,7 @@ func TestAMoveWrittenAsAPromiseIsRefusedWithoutSpendingTheAdviceBudget(t *testin
 		moves = append(moves, move("I'll send Tomas the revised liability cap once legal completes its review."))
 	}
 	moves = append(moves, move("Send Tomas the revised liability cap once legal finishes its review."))
-	got, err := ParseBrief(`{"sentences":[`+strings.Join(moves, ",")+`]}`, room())
+	got, err := parseCitedBrief(`{"sentences":[`+strings.Join(moves, ",")+`]}`, room())
 	if err != nil {
 		t.Fatalf("ParseBrief: %v", err)
 	}

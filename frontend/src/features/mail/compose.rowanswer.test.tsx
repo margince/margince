@@ -8,6 +8,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { meFixture } from "../../testing/mefixture";
 import { ChannelReplyAction } from "./compose";
 import {
   type Activity,
@@ -52,12 +53,19 @@ async function toField(dialog: HTMLElement): Promise<HTMLElement> {
   return field;
 }
 
+type Page = {
+  type: RelinkKind;
+  id: string;
+  contactId?: string;
+  contact?: { attachable?: boolean };
+};
+
 function Verb({
   activity,
   page,
 }: Readonly<{
   activity: Activity;
-  page: { type: RelinkKind; id: string; contactId?: string };
+  page: Page;
 }>) {
   return (
     <ChannelReplyAction
@@ -67,6 +75,7 @@ function Verb({
       entityType={page.type}
       entityId={page.id}
       contactId={page.contactId}
+      contact={page.contact}
       contentWithheld={activity.content_state === "withheld"}
     />
   );
@@ -84,7 +93,7 @@ const ADDRESSED_CALL = row({
 // Each row's reply-recipient answers the address the server would fill To with.
 function draw(
   rows: Activity[],
-  page: { type: RelinkKind; id: string; contactId?: string },
+  page: Page,
   routes: Record<string, () => Response> = {},
 ) {
   stubRoutes({
@@ -166,6 +175,42 @@ describe("what a row offers to write", () => {
       within(dialog).getByRole("button", { name: "Draft reply" }),
     ).toBeTruthy();
   });
+
+  it.each([
+    ["Reply", EMAIL],
+    ["Write email", ADDRESSED_CALL],
+  ] as const)(
+    "offers no %s to a seat that may not write activities",
+    async (verb, activity) => {
+      draw([activity], CONTACT_PAGE, {
+        "GET /me": () =>
+          jsonResponse(meFixture({ allow: { activity: ["read"] } })),
+      });
+
+      // Drawn while the grants are unknown, gone once /me refuses the write.
+      await screen.findByRole("button", { name: verb });
+      await waitFor(() =>
+        expect(screen.queryByRole("button", { name: verb })).toBeNull(),
+      );
+    },
+  );
+
+  // The reply files under the contact whose page draws it.
+  it.each([
+    [true, 1],
+    [false, 0],
+  ] as const)(
+    "on a contact whose attach right is %s, draws %i Reply",
+    async (attachable, count) => {
+      draw([EMAIL], { ...CONTACT_PAGE, contact: { attachable } });
+
+      await waitFor(() =>
+        expect(screen.queryAllByRole("button", { name: "Reply" })).toHaveLength(
+          count,
+        ),
+      );
+    },
+  );
 
   // Whose thread it is matters only to a reply. A new email written about a
   // call joins no thread, so the same answer draws no notice there.

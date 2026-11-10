@@ -4,6 +4,7 @@ import { StatusBadge, type StatusKind } from "../../design-system/statusbadge";
 import { formatDateAbbrev, formatDateTime } from "../../format/format";
 import { formatRelativeTime } from "../../format/relativetime";
 import { useLocale, useT } from "../../i18n";
+import { valueFor } from "../../lib/labelfor";
 import { useViewerZone } from "../../lib/viewerzone";
 import { memberAnchorId, type User } from "./users-members";
 
@@ -95,7 +96,7 @@ function MemberStatus({
   }
   return (
     <StatusBadge
-      kind={STATUS_KIND[status]}
+      kind={valueFor(STATUS_KIND, status, "neutral")}
       label={t(`users.status.${status}`)}
     />
   );

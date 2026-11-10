@@ -70,7 +70,7 @@ func TestProjectCurrencyDerivationKeepsTheSamePricesAndCoverage(t *testing.T) {
 	if err != nil || len(detail.Rows) != 1 {
 		t.Fatalf("drill-through = %+v, %v", detail, err)
 	}
-	for key, want := range map[string]string{measureOpenDealValue: "15000", measureOpenDealUnpriced: "1"} {
+	for key, want := range map[string]string{measureOpenDealValue: "null", measureOpenDealUnpriced: "1"} {
 		if got := valuationJSON(t, outcome.Rows[0], key); got != want {
 			t.Errorf("report %s = %s, want %s", key, got, want)
 		}
@@ -136,7 +136,7 @@ func TestProjectMoneyDistinguishesAnEmptyPopulationFromUnpricedAmounts(t *testin
 		{name: "empty", value: "0", unpriced: "0"},
 		{name: "amountless", value: "0", unpriced: "0"},
 		{name: "unpriced beside empty", currency: "GBP", amount: new(int64(10000)), value: "null", unpriced: "1"},
-		{name: "partial priced", currency: "EUR", amount: new(int64(15000)), value: "15000", unpriced: "1"},
+		{name: "partial priced", currency: "EUR", amount: new(int64(15000)), value: "null", unpriced: "1"},
 	} {
 		t.Run(step.name, func(t *testing.T) {
 			if step.name != "empty" {
@@ -167,6 +167,10 @@ func TestProjectMoneyDistinguishesAnEmptyPopulationFromUnpricedAmounts(t *testin
 			}
 			for key, want := range map[string]string{measureOpenDealValue: step.value, measureWonDealValue: "0"} {
 				for label, row := range map[string]map[string]any{"header": header, "report": outcome.Rows[0]} {
+					want := want
+					if label == "header" && step.name == "partial priced" && key == measureOpenDealValue {
+						want = "15000"
+					}
 					if got := valuationJSON(t, row, key); got != want {
 						t.Errorf("%s %s = %s, want %s", label, key, got, want)
 					}

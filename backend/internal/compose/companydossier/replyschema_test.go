@@ -17,7 +17,7 @@ import (
 
 // fullGrowthFit is a reply naming every key growthFitClaims decodes.
 func fullGrowthFit(in Input, angle string) string {
-	cite := `[{"entity_type":"profile_field","entity_id":"` + in.ProfileFields[0].Id.String() + `"}]`
+	cite := `[{"entity_type":"profile_field","entity_id":"` + firstFieldRef + `"}]`
 	claim := func(nature string) string {
 		return `{"text":"They sell load-shifting software.","nature":"` + nature + `","evidence":` + cite + `}`
 	}
@@ -59,7 +59,7 @@ func TestTheDossierRequestSendsTheShapeItsParserReads(t *testing.T) {
 	req := DossierRequest(in, string(textlang.English))
 	good := `{"sections":[{"kind":"summary","sentences":[{"text":"They sell load-shifting software.","nature":"fact",
 		"evidence":[{"entity_type":"profile_field","entity_id":"` + in.ProfileFields[0].Id.String() + `"}]}]}]}`
-	if kept, err := ParseDossier(good, in); err != nil || len(kept) != 1 {
+	if kept, err := parseCitedDossier(good, in); err != nil || len(kept) != 1 {
 		t.Fatalf("the parser kept %d sections of the well-formed reply (%v), want 1", len(kept), err)
 	}
 	if err := schema.ValidateJSON(req.ResponseSchema, good); err != nil {

@@ -21,16 +21,22 @@ import (
 )
 
 // laneReturning answers one canned reply, and records the request it was sent.
+// in, when set, is the meeting the request shows. Each record id in reply is
+// then spelled as the ref that request showed, as a model writes it.
 type laneReturning struct {
 	reply string
 	err   error
 	sent  *model.Request
+	in    *Input
 }
 
 func (l *laneReturning) Complete(_ context.Context, req model.Request) (model.Response, error) {
 	l.sent = &req
 	if l.err != nil {
 		return model.Response{}, l.err
+	}
+	if l.in != nil {
+		return model.Response{Text: citedFor(req, *l.in, l.reply)}, nil
 	}
 	return model.Response{Text: l.reply}, nil
 }
@@ -58,7 +64,7 @@ func TestALaneThatFailsFallsBackAndSaysSo(t *testing.T) {
 
 func TestARepliedBriefIsAttributedToTheModel(t *testing.T) {
 	in := fullInput()
-	lane := &laneReturning{reply: `{"sections":[{"kind":"goal","sentences":[
+	lane := &laneReturning{in: &in, reply: `{"sections":[{"kind":"goal","sentences":[
 		{"text":"Get them to name a date.","nature":"recommendation",
 		 "evidence":[{"entity_type":"activity","entity_id":"` + in.ActivityID + `"}]}]}]}`}
 	sections, by := Write(context.Background(), lane, in, string(textlang.English))
@@ -75,7 +81,7 @@ func TestARepliedBriefIsAttributedToTheModel(t *testing.T) {
 
 func TestASentenceCitingARecordTheBriefNeverSawIsDropped(t *testing.T) {
 	in := fullInput()
-	lane := &laneReturning{reply: `{"sections":[{"kind":"goal","sentences":[
+	lane := &laneReturning{in: &in, reply: `{"sections":[{"kind":"goal","sentences":[
 		{"text":"Invented.","nature":"fact",
 		 "evidence":[{"entity_type":"deal","entity_id":"0198f000-0000-7000-8000-0000000000ff"}]},
 		{"text":"Real.","nature":"fact",
@@ -106,7 +112,7 @@ func TestAReplyThatCitesNothingRealFallsBackToTheFloor(t *testing.T) {
 
 func TestAJudgementIsRefusedInASectionThatMayOnlyStateFacts(t *testing.T) {
 	in := fullInput()
-	lane := &laneReturning{reply: `{"sections":[
+	lane := &laneReturning{in: &in, reply: `{"sections":[
 		{"kind":"attendees","sentences":[{"text":"They are stalling.","nature":"assessment",
 		 "evidence":[{"entity_type":"activity","entity_id":"` + in.ActivityID + `"}]}]},
 		{"kind":"risks","sentences":[{"text":"They are stalling.","nature":"assessment",
@@ -130,7 +136,7 @@ func TestAJudgementIsRefusedInASectionThatMayOnlyStateFacts(t *testing.T) {
 func TestTheAdviceIsCappedAcrossTheWholeBriefNotPerSection(t *testing.T) {
 	in := fullInput()
 	one := `{"text":"Do a thing.","nature":"recommendation","evidence":[{"entity_type":"activity","entity_id":"` + in.ActivityID + `"}]}`
-	lane := &laneReturning{reply: `{"sections":[
+	lane := &laneReturning{in: &in, reply: `{"sections":[
 		{"kind":"goal","sentences":[` + one + `,` + one + `]},
 		{"kind":"talking_points","sentences":[` + one + `,` + one + `,` + one + `]}]}`}
 	sections, _ := Write(context.Background(), lane, in, string(textlang.English))
@@ -174,7 +180,7 @@ func TestTheRequestFencesTheMeetingAndNamesTheLanguageItWasGiven(t *testing.T) {
 func TestASparseReplyKeepsTheFloorsCoverage(t *testing.T) {
 	in := fullInput()
 	floor := Deterministic(in)
-	lane := &laneReturning{reply: `{"sections":[{"kind":"goal","sentences":[
+	lane := &laneReturning{in: &in, reply: `{"sections":[{"kind":"goal","sentences":[
 		{"text":"Get them to name a date.","nature":"recommendation",
 		 "evidence":[{"entity_type":"activity","entity_id":"` + in.ActivityID + `"}]}]}]}`}
 	sections, by := Write(context.Background(), lane, in, string(textlang.English))
@@ -212,7 +218,7 @@ func TestAMoveWrittenAsAPromiseIsRefusedWithoutSpendingTheAdviceBudget(t *testin
 		moves = append(moves, move(promises[i%len(promises)]))
 	}
 	moves = append(moves, move("Send them the revised pricing once legal finishes its review."))
-	sections, err := ParseBriefSections(`{"sections":[{"kind":"goal","sentences":[`+strings.Join(moves, ",")+`]}]}`, in)
+	sections, err := parseCitedSections(`{"sections":[{"kind":"goal","sentences":[`+strings.Join(moves, ",")+`]}]}`, in)
 	if err != nil {
 		t.Fatalf("ParseBriefSections: %v", err)
 	}

@@ -36,6 +36,7 @@ import { Switch } from "../../design-system/switch";
 import { INTL_LOCALE } from "../../format/format";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf } from "../../lib/problem";
 import { useVocabGrants, vocabMenuColumn } from "../leads/leadvocab.rows";
 
@@ -61,7 +62,9 @@ function RoleReach({ role }: Readonly<{ role: RecordRole }>) {
   const records = new Intl.ListFormat(INTL_LOCALE[locale], {
     style: "long",
     type: "conjunction",
-  }).format(rowsOf(role.record_types).map((kind) => t(RECORD_KINDS[kind])));
+  }).format(
+    rowsOf(role.record_types).map((kind) => t(labelFor(RECORD_KINDS, kind))),
+  );
   const heldBy = heldByKey(rowsOf(role.assignee_kinds));
   return (
     <CellStack>

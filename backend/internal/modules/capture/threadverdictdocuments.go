@@ -48,6 +48,9 @@ type ThreadDocument struct {
 // counts only without an extension: a calendar invite sniffs as text/plain,
 // and its .ics extension keeps it out.
 func IsThreadDocument(filename, contentType string) bool {
+	if NamedAsPrivate(filename) {
+		return true
+	}
 	ext := strings.ToLower(path.Ext(filename))
 	bare, _, _ := strings.Cut(contentType, ";")
 	bare = strings.ToLower(strings.TrimSpace(bare))

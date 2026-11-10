@@ -5,6 +5,7 @@ import type { components } from "../../api/schema";
 import { formatNumber } from "../../format/format";
 import type { Translator, Words } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { domainReasonLabels } from "./worklist.domainreason";
 
 export type DomainQuestionContext =
@@ -75,7 +76,7 @@ export function suggestionBasis(
   t: Translator,
   suggestion: DomainSuggestion,
 ): string {
-  return t(BASES[suggestion.basis]);
+  return t(labelFor(BASES, suggestion.basis));
 }
 
 // What confirming a company does. The count is the contacts the confirm will

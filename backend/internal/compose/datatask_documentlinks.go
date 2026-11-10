@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -51,7 +52,7 @@ func recordDocumentLinksBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchI
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
-	rows, err := tx.Query(ctx, `SELECT a.id, a.source_system, a.source_id, a.captured_by, rc.payload `+
+	rows, err := tx.Query(ctx, `SELECT a.id, a.source_system, a.source_id, a.captured_by, `+originalstore.SQL("rc")+` `+
 		mailRecipientOriginalScope+` AND a.id > @scan_after ORDER BY a.id LIMIT @scan_limit FOR UPDATE OF a`,
 		pgx.NamedArgs{"scan_after": after, "scan_limit": in.Limit})
 	if err != nil {
@@ -71,6 +72,10 @@ func recordDocumentLinksBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchI
 	}
 	keeper := capturedFileKeeper{store: activities.NewStore(nil)}
 	for _, mail := range mails {
+		mail.Payload, err = originalstore.RepairPayload(ctx, mail.Payload)
+		if err != nil {
+			return datatask.BatchOut{}, err
+		}
 		// An unreadable original is an outcome of the run. The batch moves past it.
 		if err := recordStoredMailLinks(ctx, tx, keeper, mail); err != nil && !errors.Is(err, errUnreadableOriginal) {
 			return datatask.BatchOut{}, err

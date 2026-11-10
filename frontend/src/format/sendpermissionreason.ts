@@ -38,6 +38,7 @@ export function refusalKindOf(
     case "no_marketing_consent":
     case "unconfirmed_double_opt_in":
     case "marketing_consent_required":
+    case "marketing_permission_required":
       return "missingPermission";
     default:
       return "restricted";
@@ -67,6 +68,8 @@ export function sendPermissionReasonKey(
       return "sendPermission.reason.tooMany" as const;
     case "opted_out_after_request":
       return "sendPermission.reason.optedOutAfterRequest" as const;
+    case "marketing_permission_required":
+      return "sendPermission.reason.permissionRequired" as const;
     case "marketing_consent_required":
       return "sendPermission.reason.consentRequired" as const;
     case "recipient_resolves_to_no_single_subject":

@@ -474,7 +474,7 @@ describe("Call on the move a call left owed", () => {
 
   beforeEach(() =>
     installFetchStub({
-      "GET /me": meRoute({ activity: ["read"] }),
+      "GET /me": meRoute({ activity: ["read", "create"] }),
       "GET /activities/call-1": () =>
         jsonResponse({
           id: "call-1",
@@ -618,6 +618,43 @@ describe("the face of the move's verb", () => {
   });
 });
 
+describe("the move's verb for a seat that may not write activities", () => {
+  const draftsMail: ContactMoment = {
+    ...QUIET,
+    rule: "gone_quiet",
+    headline: "No reply recorded for 233 days",
+    recommended_action: {
+      kind: "draft_reply",
+      label: "Draft a follow-up",
+      state: "available",
+      destination: { surface: "composer", prefill: { intent: "follow_up" } },
+    },
+  };
+  const logsAnInteraction: ContactMoment = {
+    ...QUIET,
+    rule: "thin_relationship",
+    recommended_action: {
+      kind: "log_activity",
+      label: "Log an interaction",
+      state: "available",
+      destination: { surface: "activity_log" },
+    },
+  };
+
+  it.each([
+    ["drafts the mail", draftsMail, "Draft a follow-up"],
+    ["logs an interaction", logsAnInteraction, "Log an interaction"],
+  ])("does not draw the verb that %s", async (_, moment, label) => {
+    installFetchStub({ "GET /me": meRoute({ activity: ["read"] }) });
+    show(VIEW, moment);
+
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: label })).toBeNull(),
+    );
+    expect(screen.getByText(moment.headline)).toBeTruthy();
+  });
+});
+
 it("shows a privacy duty in place of the quiet answer and opens its review action", async () => {
   const action = vi.fn();
   const privacy: ContactMoment = {
@@ -693,3 +730,34 @@ it.each([false, undefined])(
     ).toHaveProperty("disabled", true);
   },
 );
+
+describe("the drafting verb on a contact the reader may only read", () => {
+  // The send files the mail under this contact, which a read share refuses.
+  const draft: ContactMoment = {
+    ...THIN,
+    recommended_action: {
+      kind: "draft_reply",
+      label: "Draft a follow-up",
+      state: "available",
+      destination: { surface: "composer", prefill: { intent: "follow_up" } },
+    },
+  };
+
+  it.each([false, undefined])(
+    "is refused even when an older server offers it: %s",
+    async (attachable) => {
+      show({ ...VIEW, contact: { ...VIEW.contact, attachable } }, draft);
+      expect(await screen.findByText(en["contact.attachRefused"])).toBeTruthy();
+      expect(
+        screen.getByRole("button", { name: "Draft a follow-up" }),
+      ).toHaveProperty("disabled", true);
+    },
+  );
+
+  it("stays live on a contact the reader may attach to", async () => {
+    show(VIEW, draft);
+    const verb = screen.getByRole("button", { name: "Draft a follow-up" });
+    await waitFor(() => expect(verb).toHaveProperty("disabled", false));
+    expect(screen.queryByText(en["contact.attachRefused"])).toBeNull();
+  });
+});

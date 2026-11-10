@@ -211,7 +211,7 @@ func complianceSeeders(s sweepSeed) map[string]func() string {
 			return s.ownerScalar(`INSERT INTO contact_confirm_submission (contact_id, token_id, kind, field, proposed_value)
 				VALUES ($1, $2, 'correction', 'full_name', 'Role Sweep Corrected') RETURNING id::text`, contact, token)
 		},
-		"communication_review":  func() string { return refusedSendReview(s, "marketing_email") },
+		"communication_review":  func() string { return refusedSendReview(s, "business_correspondence") },
 		"correspondence_review": func() string { return refusedSendReview(s, "business_correspondence") },
 	}
 }

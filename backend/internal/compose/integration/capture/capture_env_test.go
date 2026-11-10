@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -331,11 +332,16 @@ func newCaptureEnv(t *testing.T) captureEnv {
 // newCaptureEnvAt is the harness on another fixed clock.
 func newCaptureEnvAt(t *testing.T, now time.Time) captureEnv {
 	t.Helper()
+	return newCaptureEnvWithBlob(t, now, nil)
+}
+
+func newCaptureEnvWithBlob(t *testing.T, now time.Time, blob blobstore.Store) captureEnv {
+	t.Helper()
 	e := integration.SetupSearch(t)
 	conn := &mailBatchConnector{}
 	topic := &topicModel{}
 	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{
-		Now: func() time.Time { return now }, DealTopicBrain: topic,
+		Now: func() time.Time { return now }, DealTopicBrain: topic, Blob: blob,
 	})
 	registry.Register(conn)
 

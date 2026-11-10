@@ -333,9 +333,9 @@ export function formatSignedMoney(
  * the two are opposite defects and no single answer covers both.
  *
  * It is a FUNCTION and not a bare interpolation because the name is where the
- * decision is recorded. `format/jsx-magnitude.test.ts` refuses a raw number in
- * anything a reader is shown, so every site has had to pick between this,
- * `ordinalNumber` and a formatter — which is what makes the gate absolute
+ * decision is recorded. `census/rules/jsx-magnitude.census.ts` refuses a raw
+ * number in anything a reader is shown. So every site has had to pick between
+ * this, `ordinalNumber` and a formatter. That choice makes the gate absolute
  * instead of a list of blessed exceptions. `format/collate.ts` reached the same
  * shape first, for the same reason: `forReader` and `stable` both order, and
  * only the name says which order was meant.

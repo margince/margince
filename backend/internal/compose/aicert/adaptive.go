@@ -20,17 +20,40 @@ import (
 // ONE loop for the live run and for the journal's "is everything replayable"
 // check, so the two can never disagree about which runs a task makes.
 func runRounds(seeds []ScenarioRuns, repeats, maxRuns int, score func(i, run int) (RunResult, error)) ([]ScenarioRuns, error) {
+	return roundsOf(seeds, repeats, maxRuns, func(jobs []runJob) ([]RunResult, error) {
+		results := make([]RunResult, 0, len(jobs))
+		for _, job := range jobs {
+			result, err := score(job.caseIndex, job.run)
+			if err != nil {
+				return nil, err
+			}
+			results = append(results, result)
+		}
+		return results, nil
+	})
+}
+
+// runJob is one run a round asks for: the case's index and the 1-based run number.
+type runJob struct{ caseIndex, run int }
+
+// roundsOf is runRounds with each round handed over whole, so a caller may score
+// its runs concurrently. scoreRound returns one result per job, in job order.
+func roundsOf(seeds []ScenarioRuns, repeats, maxRuns int, scoreRound func(jobs []runJob) ([]RunResult, error)) ([]ScenarioRuns, error) {
 	sets := slices.Clone(seeds)
-	target := slices.Repeat([]int{repeats}, len(seeds))
+	target := firstRunCounts(seeds, repeats)
 	for {
+		var jobs []runJob
 		for i := range sets {
 			for run := len(sets[i].Runs) + 1; run <= target[i]; run++ {
-				result, err := score(i, run)
-				if err != nil {
-					return nil, err
-				}
-				sets[i].Runs = append(sets[i].Runs, result)
+				jobs = append(jobs, runJob{caseIndex: i, run: run})
 			}
+		}
+		results, err := scoreRound(jobs)
+		if err != nil {
+			return nil, err
+		}
+		for k, job := range jobs {
+			sets[job.caseIndex].Runs = append(sets[job.caseIndex].Runs, results[k])
 		}
 		next := nextRunCounts(sets, maxRuns)
 		if slices.Equal(next, target) {
@@ -38,6 +61,19 @@ func runRounds(seeds []ScenarioRuns, repeats, maxRuns int, score func(i, run int
 		}
 		target = next
 	}
+}
+
+// firstRunCounts is each case's first round: repeats, raised to privacyMinRuns
+// for a privacy case. That round is past maxRuns, so it is the case's only one.
+func firstRunCounts(seeds []ScenarioRuns, repeats int) []int {
+	counts := make([]int, len(seeds))
+	for i, seed := range seeds {
+		counts[i] = repeats
+		if seed.Privacy {
+			counts[i] = max(repeats, privacyMinRuns)
+		}
+	}
+	return counts
 }
 
 // nextRunCounts answers how many runs each case should have once the round just

@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -51,7 +52,8 @@ func signatureEnrichRequest(cand contacts.SignatureCandidate, lines string) mode
 	// question and miss the number that changed.
 	prompt.WriteString("Fields to extract when stated: " + signatureFieldList + "\n")
 	prompt.WriteString("Signature block (untrusted; the trailing lines of their last email):\n")
-	prompt.WriteString(fence.WrapAttr("source_id", cand.ActivityID.String(), lines) + "\n")
+	// The reply cites nothing, so the one mail is named by a ref, never its id.
+	prompt.WriteString(fence.WrapAttr("source_id", promptref.New("m").For(cand.ActivityID.String()), lines) + "\n")
 	prompt.WriteString(`Return JSON: { "fields": [ { "field", "value", "evidence_snippet", "confidence" } ], "name": { "family_name", "given_names", "middle", "order", "evidence_snippet", "confidence" } }`)
 
 	return model.Request{

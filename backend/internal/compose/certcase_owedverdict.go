@@ -26,6 +26,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/owedverdict"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -245,7 +246,7 @@ func (c *owedVerdictCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 // no business in a record.
 func (c *owedVerdictCase) disagreements(payload owedPayload) []string {
 	judged := make(map[string]string, len(payload.Results))
-	for _, r := range payload.Results {
+	for _, r := range resolveBatchRefs(payload.Results, owedverdict.Refs(c.batch)) {
 		judged[r.ID] = r.Verdict
 	}
 	var out []string

@@ -9,6 +9,7 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import {
   forgetHashCredential,
@@ -348,7 +349,7 @@ function RoomView({
     return (
       <>
         {view.preview ? <PreviewBanner /> : null}
-        <Panel title={t(ACCESS_TITLE[view.access])}>
+        <Panel title={t(labelFor(ACCESS_TITLE, view.access))}>
           <PanelBody>
             <p>
               {t(

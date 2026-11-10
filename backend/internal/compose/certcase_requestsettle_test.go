@@ -92,7 +92,7 @@ func TestACertificationCaseChecksTheQuoteAgainstItsRequest(t *testing.T) {
 	if !ok {
 		t.Fatalf("Prepare returned %T", prepared)
 	}
-	result := settleResult{ID: settleCase.batch[0].Request.RequestID.String(), Verdict: activities.RequestStillOwed, Remaining: "send the report", Confidence: 1}
+	result := settleResult{ID: "r1", Verdict: activities.RequestStillOwed, Remaining: "send the report", Confidence: 1}
 	if msg := validateSettlePayload(settlePayload{Results: []settleResult{result}}, settleCase.batch); msg != "" {
 		t.Fatalf("a quote of the request was refused: %s", msg)
 	}

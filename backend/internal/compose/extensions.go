@@ -262,6 +262,9 @@ func validateExtensionSet(exts []extension.Extension) error {
 		if err := preflightInbound(e); err != nil {
 			return err
 		}
+		if err := preflightInstrumentation(e); err != nil {
+			return err
+		}
 		if err := reserveInboundMounts(e, inboundMounts); err != nil {
 			return err
 		}
