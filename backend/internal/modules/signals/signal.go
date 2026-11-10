@@ -102,7 +102,7 @@ func (s *Store) CreateSignal(ctx context.Context, in CreateSignalInput) (crmcont
 			return fmt.Errorf("insert signal: %w", err)
 		}
 		auditID, err := storekit.Audit(ctx, tx, "create", "signal", id.UUID, nil,
-			map[string]any{"kind": in.Kind, "source_channel": sourceChannel, "resolution_state": resolutionState})
+			map[string]any{"kind": in.Kind, sourceChannelField: sourceChannel, "resolution_state": resolutionState})
 		if err != nil {
 			return fmt.Errorf("audit signal create: %w", err)
 		}
