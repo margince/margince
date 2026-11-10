@@ -284,8 +284,8 @@ A stage move sets it back to the new stage's and says so:
 it, and one at 90% or more (the **Likely threshold** setting) with a confirmed
 close date counts as **Likely**.
 
-An open deal's card on the board shows its probability beside its value, as a
-small ring filled to the percent. A closed deal's card shows none.
+An open deal's card on the board shows its probability beside its value, with
+a small round mark that fills to match it. A closed deal's card shows none.
 
 ## Close dates Margince sets
 
