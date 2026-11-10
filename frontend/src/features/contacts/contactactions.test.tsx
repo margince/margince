@@ -157,6 +157,11 @@ describe("the record keys", () => {
     const log = screen.getByRole("button", { name: en["log.title"] });
     await waitFor(() => expect(log).toHaveProperty("disabled", false));
     expect(log.getAttribute("aria-keyshortcuts")).toBe("n");
+    expect(
+      screen
+        .getByRole("button", { name: en["contact.action.email"] })
+        .getAttribute("aria-keyshortcuts"),
+    ).toBe("m");
 
     await user.keyboard("n");
     expect(verbs.onLogActivity).toHaveBeenCalledOnce();

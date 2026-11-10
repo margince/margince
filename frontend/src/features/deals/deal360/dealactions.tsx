@@ -33,7 +33,7 @@ import { useLocale, useT } from "../../../i18n";
 import { dealRecordKeys } from "../../../lib/activitykeys";
 import { unwrap } from "../../../lib/problem";
 import { navigate } from "../../../lib/router";
-import { useShortcutAria, useShortcutHandler } from "../../../lib/shortcuts";
+import { useShortcut } from "../../../lib/shortcuts";
 import { RecordEmailVerb } from "../../records/recordemail";
 import { ShareAction } from "../../records/share";
 import { probabilitySetNote } from "../dealprobability";
@@ -52,12 +52,14 @@ function DealEmailVerb({
   deal,
   disabledReasonId,
   disabled,
+  keyShortcuts,
   open,
   onOpenChange,
 }: Readonly<{
   deal: Deal;
   disabledReasonId?: string;
   disabled?: boolean;
+  keyShortcuts?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }>) {
@@ -76,6 +78,7 @@ function DealEmailVerb({
       recordAddress={recordAddress}
       disabledReasonId={disabledReasonId}
       disabled={disabled}
+      keyShortcuts={keyShortcuts}
       open={open}
       onOpenChange={onOpenChange}
     />
@@ -209,11 +212,21 @@ export function DealActions({
   const logPending = !refusedByArchive && activity.pending;
   const [writing, setWriting] = useState(false);
   const logOpen = !logPending && !logRefused;
-  useShortcutHandler("record.logActivity", () => setDrawer("log"), logOpen);
-  useShortcutHandler("record.addTask", () => setDrawer("task"), logOpen);
-  useShortcutHandler("record.writeEmail", () => setWriting(true), logOpen);
-  const logKeys = useShortcutAria("record.logActivity");
-  const taskKeys = useShortcutAria("record.addTask");
+  const logKeys = useShortcut(
+    "record.logActivity",
+    () => setDrawer("log"),
+    logOpen,
+  );
+  const taskKeys = useShortcut(
+    "record.addTask",
+    () => setDrawer("task"),
+    logOpen,
+  );
+  const writeKeys = useShortcut(
+    "record.writeEmail",
+    () => setWriting(true),
+    logOpen,
+  );
   return (
     <>
       {!refusedByArchive && activity.refusedId && (
@@ -229,6 +242,7 @@ export function DealActions({
         disabled={logPending}
         open={writing}
         onOpenChange={setWriting}
+        keyShortcuts={writeKeys}
       />
       <Button
         disabled={logPending}

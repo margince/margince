@@ -9,7 +9,7 @@ import { IconAction, VerbWord } from "../../design-system/iconaction";
 import { leadIdentityName } from "../../format/leadname";
 import { useT } from "../../i18n";
 import { ACTION_PARAM, CALL_ACTION } from "../../lib/leads.address";
-import { useShortcutAria, useShortcutHandler } from "../../lib/shortcuts";
+import { useShortcut } from "../../lib/shortcuts";
 import { useUrlParams } from "../../lib/urlstate";
 import { RecordEmailVerb } from "../records/recordemail";
 import { ShareAction } from "../records/share";
@@ -104,15 +104,21 @@ export function LeadActions({
     }
   }, [askedToLogCall]);
   const logOpen = !logPending && !logRefused;
-  useShortcutHandler("record.logActivity", () => setDrawer("log"), logOpen);
-  useShortcutHandler("record.addTask", () => setDrawer("task"), logOpen);
-  useShortcutHandler(
+  const logKeys = useShortcut(
+    "record.logActivity",
+    () => setDrawer("log"),
+    logOpen,
+  );
+  const taskKeys = useShortcut(
+    "record.addTask",
+    () => setDrawer("task"),
+    logOpen,
+  );
+  const writeKeys = useShortcut(
     "record.writeEmail",
     () => onEmailOpenChange(true),
     logOpen,
   );
-  const logKeys = useShortcutAria("record.logActivity");
-  const taskKeys = useShortcutAria("record.addTask");
   return (
     <>
       <ClosedReason lead={lead} writer={writer} id={terminalReasonId} />
@@ -145,6 +151,7 @@ export function LeadActions({
         disabled={logPending}
         open={emailOpen}
         onOpenChange={onEmailOpenChange}
+        keyShortcuts={writeKeys}
       />
       {/* A lead has no phone screen or calendar of its own, so Call and
           Meet record what happened, the drawer opened on that kind. */}

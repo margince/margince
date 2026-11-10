@@ -12,6 +12,7 @@ import {
   setSingleKeyShortcutsOn,
   shortcutHandler,
   singleKeyShortcutsOn,
+  useShortcut,
   useShortcutAria,
   useShortcutHandler,
 } from "./shortcuts";
@@ -245,6 +246,34 @@ describe("the handler a binding runs", () => {
     view.rerender({ word: "second" });
     shortcutHandler("record.logActivity")?.();
     expect(calls).toEqual(["second"]);
+  });
+});
+
+describe("a shortcut a control answers", () => {
+  const mounted = createShortcutDispatcher({ singleKeysOn: () => true });
+  const pressN = () =>
+    mounted.onKeyDown(
+      new KeyboardEvent("keydown", {
+        key: "n",
+        code: "KeyN",
+        cancelable: true,
+      }),
+    );
+
+  it("runs, and names its key, only while enabled", () => {
+    const logged = vi.fn();
+    const control = renderHook(
+      ({ enabled }) => useShortcut("record.logActivity", logged, enabled),
+      { initialProps: { enabled: false } },
+    );
+    pressN();
+    expect(logged).not.toHaveBeenCalled();
+    expect(control.result.current).toBeUndefined();
+
+    control.rerender({ enabled: true });
+    pressN();
+    expect(logged).toHaveBeenCalledOnce();
+    expect(control.result.current).toBe("n");
   });
 });
 

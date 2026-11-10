@@ -18,7 +18,7 @@ import {
   useTransports,
 } from "../../lib/contacttransports";
 import { navigate } from "../../lib/router";
-import { useShortcutAria, useShortcutHandler } from "../../lib/shortcuts";
+import { useShortcut } from "../../lib/shortcuts";
 import { EmailVerb } from "../records/recordemail";
 import { ShareAction } from "../records/share";
 import { openContactTab } from "../worklist/worklist.return";
@@ -95,11 +95,13 @@ export function ContactActions({
   const WriteIcon = write.icon;
   const refusal = writeRefusal({ transports }, t);
   const logOpen = !logPending && !logRefused;
-  useShortcutHandler("record.logActivity", onLogActivity, logOpen);
-  useShortcutHandler("record.addTask", onAddTask, logOpen);
-  useShortcutHandler("record.writeEmail", onWrite, logOpen && !refusal);
-  const logKeys = useShortcutAria("record.logActivity");
-  const taskKeys = useShortcutAria("record.addTask");
+  const logKeys = useShortcut("record.logActivity", onLogActivity, logOpen);
+  const taskKeys = useShortcut("record.addTask", onAddTask, logOpen);
+  const writeKeys = useShortcut(
+    "record.writeEmail",
+    onWrite,
+    logOpen && !refusal,
+  );
   return (
     <>
       <EmailVerb
@@ -110,6 +112,7 @@ export function ContactActions({
         reasonId={logRefused ?? (refusal ? writeRefusalId : undefined)}
         onClick={onWrite}
         word={t("record.verb.email")}
+        keyShortcuts={writeKeys}
       />
       <IconAction
         label={t("contact.action.meetings")}

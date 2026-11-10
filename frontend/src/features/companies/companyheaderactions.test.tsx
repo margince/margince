@@ -442,6 +442,11 @@ describe("the record keys", () => {
     const log = await screen.findByRole("button", { name: en["log.title"] });
     await waitFor(() => expect(log.hasAttribute("disabled")).toBe(false));
     expect(log.getAttribute("aria-keyshortcuts")).toBe("n");
+    expect(
+      screen
+        .getByRole("button", { name: en["contact.action.email"] })
+        .getAttribute("aria-keyshortcuts"),
+    ).toBe("m");
 
     await user.keyboard("m");
     expect(onComposerOpen).toHaveBeenCalledWith(true);
@@ -481,5 +486,25 @@ describe("the record keys", () => {
     await user.keyboard("ntm");
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(onComposerOpen).not.toHaveBeenCalled();
+  });
+
+  it("name no key on an archived account's verbs, since no key presses them", async () => {
+    stubGrants({ activity: ["create"] });
+    const user = userEvent.setup();
+    renderInApp(
+      <ActionsHost
+        company={{ ...COMPANY, archived_at: "2026-06-02T08:00:00Z" }}
+      />,
+    );
+    await screen.findByText(en["record.archivedReadOnly"]);
+
+    const verbs = [
+      screen.getByRole("button", { name: en["log.title"] }),
+      screen.getByRole("button", { name: en["contact.action.email"] }),
+      await findAddTask(user),
+    ];
+    for (const verb of verbs) {
+      expect(verb.hasAttribute("aria-keyshortcuts")).toBe(false);
+    }
   });
 });

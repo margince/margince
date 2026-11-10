@@ -13,7 +13,7 @@ import { VerbWord } from "../../design-system/iconaction";
 import { ListPopover } from "../../design-system/listpopover";
 import { useT } from "../../i18n";
 import { navigate } from "../../lib/router";
-import { useShortcutAria, useShortcutHandler } from "../../lib/shortcuts";
+import { useShortcut } from "../../lib/shortcuts";
 import { ComposeModal } from "../mail/compose";
 import { EmailVerb } from "../records/recordemail";
 
@@ -72,9 +72,16 @@ export function CompanyHeaderActions({
   const logRefused = archived ?? activity.refusedId;
   const logPending = !archived && activity.pending;
   const logOpen = !logPending && !logRefused;
-  useShortcutHandler("record.logActivity", () => onDrawer("log"), logOpen);
-  useShortcutHandler("record.writeEmail", () => onComposerOpen(true), logOpen);
-  const logKeys = useShortcutAria("record.logActivity");
+  const logKeys = useShortcut(
+    "record.logActivity",
+    () => onDrawer("log"),
+    logOpen,
+  );
+  const writeKeys = useShortcut(
+    "record.writeEmail",
+    () => onComposerOpen(true),
+    logOpen,
+  );
   return (
     <>
       {archived && !archivedReasonId && (
@@ -93,6 +100,7 @@ export function CompanyHeaderActions({
         onOpen={onComposerOpen}
         disabledReasonId={logRefused}
         disabled={logPending}
+        keyShortcuts={writeKeys}
       />
       <CompanyBookMeeting
         companyId={company.id}
@@ -193,12 +201,14 @@ function CompanyWriteEmail({
   onOpen,
   disabledReasonId,
   disabled,
+  keyShortcuts,
 }: Readonly<{
   company: Company;
   open: boolean;
   onOpen: (open: boolean) => void;
   disabledReasonId?: string;
   disabled?: boolean;
+  keyShortcuts?: string;
 }>) {
   // Whether the verb has ever been pressed. `open` belongs to the page, so
   // this is the composer's own memory of having been asked for.
@@ -213,6 +223,7 @@ function CompanyWriteEmail({
       <EmailVerb
         disabled={disabled}
         reasonId={disabledReasonId}
+        keyShortcuts={keyShortcuts}
         onClick={() => onOpen(true)}
       />
       {/* Not drawn until the verb has been pressed once, and mounted from

@@ -7,7 +7,7 @@ import { LogActivityAction } from "../../components/logactivity.action";
 import { Button } from "../../design-system/atoms";
 import { VerbWord } from "../../design-system/iconaction";
 import { useT } from "../../i18n";
-import { useShortcutAria, useShortcutHandler } from "../../lib/shortcuts";
+import { useShortcut } from "../../lib/shortcuts";
 
 export type LogDrawer = "log" | "task" | null;
 
@@ -31,12 +31,11 @@ export function ProjectLogVerbs({
 }>) {
   const t = useT();
   const refusedId = refusedReasonId ?? activity.refusedId;
-  useShortcutHandler(
+  const logKeys = useShortcut(
     "record.logActivity",
     () => onDrawer("log"),
     !activity.pending && !refusedId,
   );
-  const logKeys = useShortcutAria("record.logActivity");
   return (
     <>
       {!refusedReasonId && activity.refusedId && (

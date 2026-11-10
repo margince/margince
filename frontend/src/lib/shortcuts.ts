@@ -79,6 +79,18 @@ export function useShortcutHandler(
   );
 }
 
+/** Answer `id` while `enabled`, and give its `aria-keyshortcuts` then only, so
+ *  a control never names a key that does nothing. */
+export function useShortcut(
+  id: ShortcutId,
+  handler: () => void,
+  enabled = true,
+): string | undefined {
+  useShortcutHandler(id, handler, enabled);
+  const keys = useShortcutAria(id);
+  return enabled ? keys : undefined;
+}
+
 export function useGoToShortcuts(): void {
   useEffect(() => {
     const unmount = KEYMAP.flatMap((entry) => {

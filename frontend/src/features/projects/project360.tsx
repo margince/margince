@@ -34,7 +34,7 @@ import { useCan } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
-import { useShortcutAria, useShortcutHandler } from "../../lib/shortcuts";
+import { useShortcut } from "../../lib/shortcuts";
 import { NewDealAction } from "../companies/companyactions";
 import { ShareAction } from "../records/share";
 import { TaskDetailModal } from "../worklist/taskdetailmodal";
@@ -383,12 +383,11 @@ function ProjectActions({
   const t = useT();
   const owner = useOwnerPicker(project.owner_id);
   const taskRefusedId = refusedReasonId ?? activity.refusedId;
-  useShortcutHandler(
+  const taskKeys = useShortcut(
     "record.addTask",
     onAddTask,
     !activity.pending && !taskRefusedId,
   );
-  const taskKeys = useShortcutAria("record.addTask");
   return (
     <OverflowMenu label={t("record.moreActions")} word={t("record.verb.more")}>
       {/* First: the most frequent verb in the menu. */}

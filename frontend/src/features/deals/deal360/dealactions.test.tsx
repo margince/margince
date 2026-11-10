@@ -134,6 +134,10 @@ describe("the deal's record keys", () => {
     const user = userEvent.setup();
     const log = await mountLive();
     expect(log).toHaveAttribute("aria-keyshortcuts", "n");
+    expect(screen.getByRole("button", { name: "Email" })).toHaveAttribute(
+      "aria-keyshortcuts",
+      "m",
+    );
 
     await user.keyboard("m");
     expect(

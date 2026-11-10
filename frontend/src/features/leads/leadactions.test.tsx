@@ -287,10 +287,15 @@ describe("the lead's record keys", () => {
     expect(await screen.findByRole("dialog", { name })).toBeTruthy();
   });
 
-  it("name their keys on Log activity and Add task", async () => {
+  it("name their keys on Log activity, Email and Add task", async () => {
     const user = userEvent.setup();
     const logButton = await mountLive();
     expect(logButton.getAttribute("aria-keyshortcuts")).toBe("n");
+    expect(
+      screen
+        .getByRole("button", { name: "Email" })
+        .getAttribute("aria-keyshortcuts"),
+    ).toBe("m");
     await user.click(screen.getByRole("button", { name: "More actions" }));
     const addTask = await screen.findByRole("button", { name: "Add task" });
     expect(addTask.getAttribute("aria-keyshortcuts")).toBe("t");
