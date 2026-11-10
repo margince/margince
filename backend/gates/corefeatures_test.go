@@ -49,6 +49,7 @@ func coreFeatureEnums(t *testing.T) map[string][]string {
 }
 
 func TestTheFileSwitchAcceptsEveryContractCoreFeature(t *testing.T) {
+	t.Parallel()
 	features := coreFeatureEnums(t)["CoreFeature"]
 	if err := corefeatures.ValidateDisabled(features); err != nil {
 		t.Fatal(err)
