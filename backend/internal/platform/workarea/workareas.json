@@ -925,6 +925,7 @@
     "advanceProjectPhase": "projects",
     "allowContact": "consent",
     "annotateMorningBrief": "worklist",
+    "answerCalendarInvitation": "activities",
     "answerReportingQuestionCard": "reports",
     "answerWeeklyPlanCommitment": "worklist",
     "applyContactEmploymentImport": "contacts",
@@ -2020,6 +2021,9 @@
     ],
     "annotate_brief": [
       "worklist"
+    ],
+    "answer_calendar_invitation": [
+      "activities"
     ],
     "answer_reporting_question_card": [
       "reports"
