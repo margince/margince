@@ -13,7 +13,6 @@ import "./composed.css";
 import {
   AutomaticFlag,
   CommitmentReviewFlag,
-  dayRepeats,
   dotClass,
   groupCountLabel,
   MoveFlag,
@@ -25,10 +24,10 @@ import {
   TIMELINE_KIND_LABEL,
   type TimelineEntry,
   type TimelineGroup,
-  TimelineWhen,
 } from "./timelineentry";
 import { TimelineBody } from "./timelinetext";
 import { ThreadRow } from "./timelinethread";
+import { dayRepeats, TimelineWhen } from "./timelinewhen";
 
 export function TimelineList({
   entries,

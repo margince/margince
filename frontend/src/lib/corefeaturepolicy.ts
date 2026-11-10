@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import recordFeatures from "./corefeature-records.json";
+import recordFeatures from "./corefeature-records.json" with { type: "json" };
 import type { Screen } from "./router";
 
 export type CoreFeature = components["schemas"]["CoreFeature"];

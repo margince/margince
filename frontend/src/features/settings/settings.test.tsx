@@ -160,7 +160,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     // The menu's own radio, read through the menu rather than through the store
     // underneath it. `setThemeChoice` publishes to `useSyncExternalStore`
     // subscribers, and this is one of them.
-    await user.click(screen.getByRole("button", { name: "Account" }));
+    await user.click(screen.getByRole("button", { name: /account$/i }));
     await user.click(await screen.findByRole("menuitem", { name: "Theme" }));
     expect(screen.getByRole("radio", { name: "Dark" })).toBeChecked();
   });

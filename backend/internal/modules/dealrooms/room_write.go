@@ -78,6 +78,13 @@ func createRoomTx(ctx context.Context, tx pgx.Tx, in CreateRoomInput, by string)
 		stewardArg = &steward
 	}
 
+	// created_at defaults to this transaction's now(), the bound an expiry must clear.
+	now, err := transactionNow(ctx, tx)
+	if err != nil {
+		return crmcontracts.DealRoom{}, err
+	}
+	expiresAt := storedExpiry(in.ExpiresAt, nil, now, now)
+
 	id := ids.New[ids.DealRoomKind]()
 	_, err = tx.Exec(ctx,
 		// A room is LIVE from creation. There is no publish step to promote it
@@ -86,7 +93,7 @@ func createRoomTx(ctx context.Context, tx pgx.Tx, in CreateRoomInput, by string)
 		`INSERT INTO deal_room (id, deal_id, title, welcome_message, steward_user_id,
 		                        expires_at, state, source, captured_by)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-		id, in.DealID, in.Title, in.WelcomeMessage, stewardArg, in.ExpiresAt, stateLive, in.Source, by)
+		id, in.DealID, in.Title, in.WelcomeMessage, stewardArg, expiresAt, stateLive, in.Source, by)
 	if err != nil {
 		if storekit.IsUniqueViolation(err) {
 			return crmcontracts.DealRoom{}, errRoomAlreadyOpen
@@ -299,8 +306,9 @@ func buildRoomPatch(current crmcontracts.DealRoom, in UpdateRoomInput) *storekit
 // Widening the window in which an outside party reads the deal's material is
 // the user's act, or their agent's for them, never automatic work's.
 //
-// A nil expiry removes the bound. A past instant is accepted and binds at once,
-// which is how access is cut short without ending the room.
+// A nil expiry removes the bound. A past instant takes effect at once, which
+// cuts access short without ending the room. One at or before creation is
+// stored as the time of the call; a standing expiry already passed is kept.
 func (s *Store) SetExpiry(ctx context.Context, id ids.DealRoomID, expiresAt *time.Time, ifVersion *int64) (crmcontracts.DealRoom, error) {
 	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.DealRoom{}, err
@@ -319,11 +327,16 @@ func (s *Store) SetExpiry(ctx context.Context, id ids.DealRoomID, expiresAt *tim
 		if err != nil {
 			return err
 		}
+		now, err := transactionNow(ctx, tx)
+		if err != nil {
+			return err
+		}
+		stored := storedExpiry(expiresAt, current.ExpiresAt, current.CreatedAt, now)
 		// The probe follows the DIRECTION of the change, not the method. Pulling
 		// an expiry in is the retraction this method's own doc describes, and an
 		// archived deal must not freeze it; pushing one out or removing it hands
 		// more buyer access out, which an archived deal must refuse.
-		if cutsAccessShort(current.ExpiresAt, expiresAt) {
+		if grantsNoMoreAccess(current.ExpiresAt, stored) {
 			err = ensureDealRetractable(ctx, tx, current)
 		} else {
 			err = ensureDealWritable(ctx, tx, current)
@@ -332,7 +345,7 @@ func (s *Store) SetExpiry(ctx context.Context, id ids.DealRoomID, expiresAt *tim
 			return err
 		}
 		p := storekit.NewPatch()
-		p.Set("expires_at", current.ExpiresAt, expiresAt)
+		p.Set("expires_at", current.ExpiresAt, stored)
 		if p.Empty() {
 			if err := storekit.EnsureIfMatch(ctx, tx, roomObject, id.UUID, ifVersion); err != nil {
 				return err
@@ -360,14 +373,42 @@ func (s *Store) SetExpiry(ctx context.Context, id ids.DealRoomID, expiresAt *tim
 	return out, err
 }
 
-// cutsAccessShort reports whether the new expiry ends buyer access sooner than
-// the standing one. Removing the bound never does; setting one where there was
-// none always does.
-func cutsAccessShort(standing, next *time.Time) bool {
-	if next == nil {
-		return false
+// storedExpiry writes an expiry at or before the room's creation, which
+// deal_room_expires_after_creation refuses, as the time of the call: access still
+// ends at once. A standing expiry already passed is kept, so a repeat changes
+// nothing. The microsecond keeps the stored instant after a same-tick creation.
+func storedExpiry(want, standing *time.Time, createdAt, now time.Time) *time.Time {
+	if want == nil || want.After(createdAt) {
+		return want
 	}
-	return standing == nil || next.Before(*standing)
+	if standing != nil && !standing.After(now) {
+		return standing
+	}
+	at := now
+	if !at.After(createdAt) {
+		at = createdAt.Add(time.Microsecond)
+	}
+	return &at
+}
+
+// transactionNow reads the clock created_at and the buyer-credential checks run
+// on, so a clamped expiry is ordered against creation on one clock.
+func transactionNow(ctx context.Context, tx pgx.Tx) (time.Time, error) {
+	var now time.Time
+	if err := tx.QueryRow(ctx, `SELECT now()`).Scan(&now); err != nil {
+		return time.Time{}, fmt.Errorf("read the transaction clock: %w", err)
+	}
+	return now, nil
+}
+
+// grantsNoMoreAccess reports whether the new expiry ends buyer access no later
+// than the standing one. An unchanged expiry grants nothing, removing a bound
+// always grants more, and setting one where there was none never does.
+func grantsNoMoreAccess(standing, next *time.Time) bool {
+	if next == nil {
+		return standing == nil
+	}
+	return standing == nil || !next.After(*standing)
 }
 
 // changedFields names the editorial columns this patch moved, sorted so a

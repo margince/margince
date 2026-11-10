@@ -144,7 +144,8 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 		}
 		if asserted && alreadyFiled && s.takeOverAsserted != nil {
 			err := s.takeOverAsserted(
-				ctx, tx, id, fields.Subject, fields.Body, wasCapturedBy, capturedByFor(ctx, rec), senderIsMachine(rec, fields))
+				ctx, tx, id, fields.Subject, fields.Body, wasCapturedBy, capturedByFor(ctx, rec), senderIsMachine(rec, fields),
+			)
 			// Archived under us between the resolve and here — an erasure racing
 			// this capture. Skipping advances the watermark; propagating would
 			// stall this mailbox on this message on every pass forever.
@@ -171,18 +172,10 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 			// advances the watermark and no later pass retries it.
 			return s.fileUnderOwnReplayKey(ctx, tx, rec, fields, birth, memberBound)
 		}
-		// Before this seat's own import and participant rows: the claim asks who
-		// the STORED row names as sender, and this capture is about to add itself.
-		if err := s.claimOwnSentMailTx(ctx, tx, id, rec); err != nil {
-			return datasource.EntityRef{}, false, counterpartyDecision{}, err
-		}
-		if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
-			return datasource.EntityRef{}, false, counterpartyDecision{}, err
-		}
-		if err := s.joinThread(ctx, tx, id, rec, false); err != nil {
-			return datasource.EntityRef{}, false, counterpartyDecision{}, err
-		}
-		if err := s.settleMeetingReplay(ctx, tx, id, rec, alreadyFiled); err != nil {
+		if err := s.finishJoinedActivity(
+			ctx, tx, id, rec, fields, birth,
+			joinedCapture{memberBound: memberBound, alreadyFiled: alreadyFiled},
+		); err != nil {
 			return datasource.EntityRef{}, false, counterpartyDecision{}, err
 		}
 		return ref, false, counterpartyDecision{}, nil
@@ -490,8 +483,9 @@ func capturedActivityInsert(ctx context.Context, rec connector.NormalizedRecord,
 		fields.occurredPrecision(),
 		nullableID(fields.InvitationFromSeat),
 		nullableString(fields.AgendaFingerprint),
+		nullableString(fields.CalendarUID),
 	}
-	query := `INSERT INTO activity(kind,channel_provider,subject,body,occurred_at,direction,source_system,source_id,source,captured_by,thread_key,counterparty_email,counterparty_outbound_attested,bulk_mail_attested,audience,audience_reason,has_calendar_part,host_user_id,language,raw_capture_id,duration_seconds,sent_by_colleague,calendar_method,foreign_link,sender_was_stranger,inbound_sender_authenticated,body_completeness,sender_is_machine,occurred_precision,invitation_sender,agenda_fingerprint)
+	query := `INSERT INTO activity(kind,channel_provider,subject,body,occurred_at,direction,source_system,source_id,source,captured_by,thread_key,counterparty_email,counterparty_outbound_attested,bulk_mail_attested,audience,audience_reason,has_calendar_part,host_user_id,language,raw_capture_id,duration_seconds,sent_by_colleague,calendar_method,foreign_link,sender_was_stranger,inbound_sender_authenticated,body_completeness,sender_is_machine,occurred_precision,invitation_sender,agenda_fingerprint,calendar_uid)
  VALUES (` + storekit.Placeholders(args) + `) ON CONFLICT(source_system,source_id) WHERE source_system IS NOT NULL AND source_id IS NOT NULL DO NOTHING RETURNING id`
 	return query, args
 }

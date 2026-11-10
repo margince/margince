@@ -10,6 +10,7 @@ package identity
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -96,6 +97,79 @@ func TestAVaultlessServiceNeverChallengesConfinesOrEnrols(t *testing.T) {
 	// And enrolment itself stays the not-composed refusal.
 	if _, err := bare.StartTOTPEnrolment(e.asMember()); err == nil {
 		t.Error("a vaultless service accepted a TOTP enrolment; the secret had nowhere safe to live")
+	}
+}
+
+// With require_mfa on, a Google or Microsoft sign-in counts as the second
+// factor. The provider session is never confined or challenged.
+//
+// A password session is confined while the member holds no factor. Once they
+// hold one, the password path asks for it.
+func TestRequireMFATrustsTheProviderAndAsksThePasswordPath(t *testing.T) {
+	e := setupRevocationEnv(t, "require-mfa-paths")
+	e.withVault()
+	e.requireMFAOn()
+
+	// No factor yet: the provider session is not confined.
+	token, err := e.svc.LoginViaFederatedIdentity(e.wsOnlyCtx(), "google",
+		OIDCClaims{Subject: "sub-mfa-paths", Email: e.member.Email})
+	if err != nil {
+		t.Fatalf("provider sign-in: %v", err)
+	}
+	id, err := e.svc.Authenticate(e.wsOnlyCtx(), token)
+	if err != nil {
+		t.Fatalf("authenticate a provider session: %v", err)
+	}
+	if id.MustEnrolMFA {
+		t.Error("a provider session for a member with no factor is confined, want it trusted")
+	}
+
+	// No factor yet: the password session is confined to enrolment.
+	_, login, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice)
+	if err != nil {
+		t.Fatalf("password sign-in with no factor: %v", err)
+	}
+	passwordID, err := e.svc.Authenticate(e.wsOnlyCtx(), login.Token)
+	if err != nil {
+		t.Fatalf("authenticate a password session: %v", err)
+	}
+	if !passwordID.MustEnrolMFA {
+		t.Error("a password session for a member with no factor is not confined")
+	}
+
+	// The member confirms a factor. The password path now challenges, and the
+	// provider path still signs them in.
+	ctx := e.asMember()
+	secret, err := e.svc.StartTOTPEnrolment(ctx)
+	if err != nil {
+		t.Fatalf("start enrolment: %v", err)
+	}
+	code, err := totpCodeAt(secret, e.svc.now(), totpDigits)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.svc.ConfirmTOTP(ctx, code, hashToken(token)); err != nil {
+		t.Fatalf("confirm: %v", err)
+	}
+
+	if _, _, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice); !errors.Is(err, errMFARequired) {
+		t.Errorf("password sign-in with a confirmed factor: err = %v, want %v", err, errMFARequired)
+	}
+	signedIn, err := e.svc.LoginViaFederatedIdentity(e.wsOnlyCtx(), "google",
+		OIDCClaims{Subject: "sub-mfa-paths", Email: e.member.Email})
+	if err != nil {
+		t.Fatalf("provider sign-in with a confirmed factor: %v", err)
+	}
+	unconfined, err := e.svc.Authenticate(e.wsOnlyCtx(), signedIn)
+	if err != nil {
+		t.Fatalf("authenticate the provider session: %v", err)
+	}
+	if unconfined.MustEnrolMFA {
+		t.Error("provider session with a confirmed factor is confined, want an unconfined session")
+	}
+	if unconfined.UserID != e.member.UserID {
+		t.Errorf("provider session belongs to %v, want the member %v who confirmed the factor",
+			unconfined.UserID, e.member.UserID)
 	}
 }
 

@@ -35,6 +35,7 @@ var actDefinitions = map[string]Definition{
 	"act.verbs.advance_project_phase":              {Words: langcopy.Phrase{En: "Advance project phase", De: "Projekt in die nächste Phase bringen", Vi: "Chuyển dự án sang giai đoạn kế tiếp"}},
 	"act.verbs.allow_contact":                      {Words: langcopy.Phrase{En: "Allow contact", De: "Abgelehnte Kategorie für einen Kontakt erlauben", Vi: "Cho phép một danh mục bị từ chối cho liên hệ"}},
 	"act.verbs.annotate_brief":                     {Words: langcopy.Phrase{En: "Annotate brief", De: "Anmerkung zum Morgenbericht hinzufügen", Vi: "Thêm ghi chú vào bản tóm tắt"}},
+	"act.verbs.answer_calendar_invitation":         {Words: langcopy.Phrase{En: "Answer calendar invitation", De: "Auf eine Kalendereinladung antworten", Vi: "Trả lời lời mời lịch"}},
 	"act.verbs.answer_weekly_plan_commitment":      {Words: langcopy.Phrase{En: "Answer weekly plan commitment", De: "Auf eine Bitte um Hilfe antworten", Vi: "Trả lời yêu cầu hỗ trợ của đồng nghiệp"}},
 	"act.verbs.apply_contact_employment_import":    {Words: langcopy.Phrase{En: "Apply contact employment import", De: "Arbeitgeberangaben eines Kontakts übernehmen", Vi: "Áp dụng thông tin nơi làm việc của liên hệ"}},
 	"act.verbs.apply_legacy_loss_reasons":          {Words: langcopy.Phrase{En: "Apply legacy loss reasons", De: "Alte Verlustgründe auf verlorene Deals anwenden", Vi: "Áp dụng lý do thua cũ cho các deal đã thua"}},

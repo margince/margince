@@ -50,6 +50,13 @@ func MeetingIdentityKey(icalUID, instance string) string {
 	return strings.TrimSpace(icalUID) + "/" + normalizedInstant(strings.TrimSpace(instance))
 }
 
+// meetingUIDOfKeySQL is the event UID a meeting identity key on column key
+// names: the key before its last slash, undoing MeetingIdentityKey. The index
+// activity_identity_meeting_uid is built on this exact expression.
+func meetingUIDOfKeySQL(key string) string {
+	return "left(" + key + ", length(" + key + ") - strpos(reverse(" + key + "), '/'))"
+}
+
 // normalizedInstant folds an occurrence start to one spelling, so the same
 // instant written by two callers compares equal.
 //

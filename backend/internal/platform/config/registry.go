@@ -31,7 +31,7 @@ type Any interface {
 	decodeYAML(n *yaml.Node) (any, error)
 	check(any) error
 	allowNone() bool
-	format(any) string
+	format(any) (string, bool)
 	defaultValue() (any, bool)
 }
 

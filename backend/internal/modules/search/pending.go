@@ -184,28 +184,9 @@ func (s *Store) workspacePending(ctx context.Context, currentIdentity string) (c
 			// it. The per-workspace shape survives only because the re-embed
 			// fan-out still enqueues one pass per workspace; the two collapse
 			// together.
-			// The embedding anti-join runs BEFORE the text is read. Filtering on
-			// btrim(text) in the scan detoasts every body of the table, embedded
-			// or not, to answer a count that is zero in steady state.
-			sql := fmt.Sprintf(`
-				WITH unembedded AS MATERIALIZED (
-				    SELECT t.id FROM %s t
-				    WHERE t.archived_at IS NULL
-				      AND %s
-				      AND NOT EXISTS (
-				            SELECT 1 FROM embedding e
-				            WHERE e.entity_type = '%s' AND e.entity_id = t.id AND e.model = $1)),
-				pending_text AS MATERIALIZED (
-				    SELECT btrim(%s) AS trimmed
-				    FROM %s t
-				    JOIN unembedded u ON u.id = t.id)
-				SELECT count(*), coalesce(sum(octet_length(trimmed)), 0)
-				FROM pending_text
-				WHERE trimmed <> ''`,
-				src.table, src.embeddablePredicate(), entityType, src.text, src.table)
 			var c int
 			var l int64
-			if err := tx.QueryRow(ctx, sql, currentIdentity).Scan(&c, &l); err != nil {
+			if err := tx.QueryRow(ctx, src.pendingStatsSQL(entityType), currentIdentity).Scan(&c, &l); err != nil {
 				return fmt.Errorf("search: scanning pending %s: %w", entityType, err)
 			}
 			count += c
@@ -217,6 +198,40 @@ func (s *Store) workspacePending(ctx context.Context, currentIdentity string) (c
 		return 0, 0, txErr
 	}
 	return count, length, nil
+}
+
+// pendingTextCTE defines `pending_text (id, trimmed)`: live, embeddable rows
+// with no embedding at identity $1 and non-empty text. The backlog count and
+// the drift sweep both build on it, so they admit the same rows (#10966).
+// The anti-join runs before the text is read. Trimming in the scan would
+// detoast every body in the table, and for activity that is every mail.
+func (p pendingSource) pendingTextCTE(entityType string) string {
+	return fmt.Sprintf(`
+		unembedded AS MATERIALIZED (
+		    SELECT t.id FROM %[1]s t
+		    WHERE t.archived_at IS NULL
+		      AND %[2]s
+		      AND NOT EXISTS (
+		            SELECT 1 FROM embedding e
+		            WHERE e.entity_type = '%[3]s' AND e.entity_id = t.id AND e.model = $1)),
+		pending_text AS MATERIALIZED (
+		    SELECT t.id, btrim(%[4]s) AS trimmed
+		    FROM %[1]s t
+		    JOIN unembedded u ON u.id = t.id
+		    WHERE btrim(%[4]s) <> '')`,
+		p.table, p.embeddablePredicate(), entityType, p.text)
+}
+
+// pendingStatsSQL counts and measures the pending set (workspacePending).
+func (p pendingSource) pendingStatsSQL(entityType string) string {
+	return `WITH ` + p.pendingTextCTE(entityType) + `
+		SELECT count(*), coalesce(sum(octet_length(trimmed)), 0) FROM pending_text`
+}
+
+// pendingIDsSQL lists the pending set's ids (the drift sweep's pendingEntityIDs).
+func (p pendingSource) pendingIDsSQL(entityType string) string {
+	return `WITH ` + p.pendingTextCTE(entityType) + `
+		SELECT id FROM pending_text`
 }
 
 func activityIndexable(alias string) string {

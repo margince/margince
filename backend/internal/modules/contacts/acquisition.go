@@ -105,13 +105,20 @@ func recordAcquisition(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, 
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO contact_acquisition_evidence (contact_id, kind, occurred_at, captured_by, legal_entity_id)
 		VALUES (@contact, @kind, @occurred, @actor, @entity)`,
-		pgx.StrictNamedArgs{"contact": contactID, "kind": in.Kind, "occurred": in.OccurredAt, "actor": capturedBy, "entity": entity}); err != nil {
+		pgx.StrictNamedArgs{contactKey: contactID, acquisitionKindField: in.Kind, "occurred": in.OccurredAt, actorKey: capturedBy, "entity": entity}); err != nil {
 		return fmt.Errorf("contacts: recording how this contact was acquired: %w", err)
 	}
 	return nil
 }
 
 const acquisitionActivityEntity = "activity"
+
+// The named arguments for the contact a write is about and the seat it records
+// as its author.
+const (
+	contactKey = "contact"
+	actorKey   = "actor"
+)
 
 // RecordSubjectWroteTx records, once, that an existing contact has written to
 // us — evidence that arrived after the contact was created.
@@ -137,7 +144,7 @@ func RecordSubjectWroteTx(
  (contact_id, kind, source_entity_type, source_entity_id, occurred_at, captured_by)
  SELECT @proof_contact, @kind, @proof_entity, @mail, @sent, @actor
  WHERE NOT EXISTS (SELECT 1 FROM contact_acquisition_evidence WHERE contact_id = @proof_contact AND kind = @kind)
- RETURNING id`, pgx.NamedArgs{"proof_contact": contactID, "proof_entity": acquisitionActivityEntity, acquisitionKindField: AcquiredSubjectInitiated, "mail": mail, "sent": sent, "actor": capturedBy}).Scan(&proof)
+ RETURNING id`, pgx.NamedArgs{"proof_contact": contactID, "proof_entity": acquisitionActivityEntity, acquisitionKindField: AcquiredSubjectInitiated, "mail": mail, "sent": sent, actorKey: capturedBy}).Scan(&proof)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}

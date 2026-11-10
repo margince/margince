@@ -29,6 +29,7 @@ const CONTRACT: components["schemas"]["Contract"] = {
   captured_by: "human:u-1",
   status: "active",
   under_contract: true,
+  term_state: "in_force",
   auto_renew: false,
   value_basis: "annualized_12m",
   version: 1,

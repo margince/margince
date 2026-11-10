@@ -133,13 +133,15 @@ it("keeps the next card in hand when the completed selection leaves the queue", 
     taskRow("task-2", "Call Lumen"),
   ];
   const view = render(<BriefFeed day={readingsDay({}, rows)} state="ready" />);
-  await user.click(
-    screen.getByRole("button", { name: en["brief.pager.next"] }),
-  );
+  const frame = () => view.container.querySelector(".brief-triage-frame");
+  expect(document.activeElement).toBe(document.body);
+  const [nextCard] = waitingCards(view.container);
+  await user.click(within(nextCard).getByText("Send the sheet"));
   expect(
     view.container.querySelector(".brief-triage-lead .worklist-row-title")
       ?.textContent,
   ).toBe("Send the sheet");
+  expect(document.activeElement).toBe(frame());
   view.rerender(
     <BriefFeed day={readingsDay({}, [rows[0], rows[2]])} state="ready" />,
   );
@@ -147,4 +149,5 @@ it("keeps the next card in hand when the completed selection leaves the queue", 
     view.container.querySelector(".brief-triage-lead .worklist-row-title")
       ?.textContent,
   ).toBe("Call Lumen");
+  expect(document.activeElement).toBe(frame());
 });

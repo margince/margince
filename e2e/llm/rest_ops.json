@@ -796,6 +796,7 @@
     "POST /v1/worklist/done/undo": "reopen_worklist_rows",
     "POST /v1/worklist/ready/undo": "undo_meeting_ready",
     "POST /v1/workspace-queries": "query_workspace",
+    "PUT /v1/activities/{id}/calendar-response": "answer_calendar_invitation",
     "PUT /v1/activities/{id}/disposition": "set_activity_disposition",
     "PUT /v1/ai/price-sync": "set_ai_price_sync",
     "PUT /v1/analytics/framework": "publish_reporting_framework",

@@ -150,6 +150,32 @@ other way.
                                                answer as the right one
   one meaning per word: "the subject kind      "about", "ordinary business" used
    wins"                                       twice in two senses
+  "a reference is a value from the first       an empty list under its header:
+   column, such as p1; a name never is"        the model fills the field with a name
+  "the 12th is the next such day on or         only a "by Friday" example: "the
+   after the date sent"                        5th" lands on a past day
+  "each paragraph is itself a LIST of          "[[{...}]]" alone, read as a flat
+   sentence objects"                           list of objects
+  "confidence, from 0 to 1"                    "confidence" with no scale, which
+                                               came back as 5
+  "a title before a name stays, written as     a "do" rule inside a list of "never"
+   the reader's language writes it"            rules, read as one more "never"
+  "a time given in words, such as "this        "never invent a date" alone: "this
+   week", stays in those words"                week" comes back as a date
+  "use Sie, even after a greeting by           "use Sie" alone: a first-name
+   first name"                                 greeting pulls the draft to du
+  "in the customer's own words; our side's     a list of what counts, which our
+   feeling or guess moves nothing"             own note then matches
+  "unsure is for a mail that names no          "unsure when you cannot tell": a
+   subject; one naming other work is           mail about other work comes back
+   not_about"                                  as unsure
+  "a lawyer on the company's own shareholder   "advisor: about the owner's own
+   agreement is advisor"                       affairs": the company's matter
+                                               reads as ordinary business
+  "a date is a literal number: name a time     "literal numbers must match a
+   in words"                                   cited value": a date slips past
+  "name a chart for each chosen metric: a      "a chart must be one a metric
+   report with no chart shows nothing"         draws": read as optional
 ```
 
 - **Say what still holds.** A rule that says only "never" is read as "report
@@ -163,6 +189,24 @@ other way.
   case is measured on the whole task before it ships.
 - **Never write a case's fixture into a prompt.** Names, subjects and figures
   from a case make the case measure copying. Use an example on another subject.
+- **Put a limit inside the definition it limits.** "A price question is not a
+  new need" works in the definition of the kind. At the end of another
+  paragraph, a model misses it. The same holds for "unless it already holds
+  that value" on each action.
+- **Describe only what the schema allows.** A field the prompt explains but the
+  schema refuses gets filed under some other field.
+- **Name the placeholder you forbid.** A free text field with no example is
+  filled with "decide the next step" unless the prompt names that as wrong.
+- **Say where an input list already goes.** Items named "question" are copied
+  into the answer as questions unless the prompt says the reader sees them.
+- **One field, one order.** When a field has two ordering rules, say which
+  comes first.
+- **Bound a permission where you give it.** "It may skip stages" is read as
+  leave to skip past a stage whose rule does not hold. Say how far, in the same
+  sentence.
+- **A rule needs the fact it rests on.** A prompt cannot tell the model to
+  answer only the recipient's mail when the data does not say who wrote each
+  one. Fix the input instead.
 
 ---
 

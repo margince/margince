@@ -1007,6 +1007,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.deals.colSignals": "Risikosignale",
   "forecast.deals.colAmount": "Betrag",
   "forecast.deals.colWeighted": "Gewichtet",
+  "forecast.deals.foldedAmount": "Betrag {amount}",
+  "forecast.deals.foldedWeighted": "{amount} gewichtet",
   "forecast.signal.close_pushed": "Abschlussdatum verschiebt sich",
   "forecast.signal.no_next_step": "Kein nächster Schritt geplant",
   "forecast.signal.quiet": "Kunde schweigt",
@@ -1154,6 +1156,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.draftOpen": "Entwurf {revision} ist noch nicht veröffentlicht",
   "reporting.draftHidden":
     "Wer den Bericht liest, sieht weiter die veröffentlichte Fassung. Den Entwurf vor dem Veröffentlichen ansehen.",
+  "reporting.draftUnpublished":
+    "In diesem Bericht ist noch nichts veröffentlicht, darum steht hier der Entwurf. Nach dem Veröffentlichen sind diese Diagramme der Bericht.",
   "reporting.draftPreviewing":
     "Hier steht der Entwurf. Wer den Bericht liest, sieht weiter die veröffentlichte Fassung.",
   "reporting.previewDraft": "Entwurf ansehen",
@@ -2157,6 +2161,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.bandCount_one": "{count} Eintrag",
   "worklist.bandCount_other": "{count} Einträge",
   "brief.focus.context": "Details anzeigen",
+  "brief.focus.next": "Nächste Aufgabe",
   "brief.queue.back": "Zurück zur Worklist",
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Worklist einblenden",
@@ -2268,7 +2273,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.plan.period": "Aktueller Plan · Woche vom {date}",
   "brief.coverage.retry": "Morgenbericht aktualisieren",
   "brief.reply.owed": "Kontakt wartet auf deine Antwort",
-  "brief.changes.superseded": "Seit dieser Änderung erneut geändert",
+  "brief.changes.superseded": "Durch eine spätere Änderung ersetzt",
   "brief.changes.undone": "Rückgängig gemacht",
   "brief.updates.title": "Updates",
   "brief.task.undated": "Kein Fälligkeitsdatum",
@@ -2940,6 +2945,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "palette.recent": "Zuletzt verwendet",
   "palette.clearRecent": "Leeren",
   "palette.typeScreen": "Ansicht",
+  "palette.typeSetting": "Einstellung",
   "palette.typeAction": "Aktion",
   "palette.typeRecord": "Datensatz",
   "palette.seeAll": "Alle Ergebnisse für „{query}“ anzeigen",
@@ -4907,6 +4913,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "visibility.private": "Privat",
   "visibility.withheld": "Zurückgehalten",
   "email.access.unnamedMember": "Ehemaliges Nutzerkonto",
+  "email.invitation.badge": "Einladung",
+  "email.invitation.startsAt": "Beginnt {when}",
   "email.move.needsReply": "Antwort nötig",
   "email.move.waitingForThem": "Wartet auf Antwort der Gegenseite",
   "email.detail.loading": "Nachricht wird geladen…",
@@ -4939,7 +4947,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "email.thread.count_other": "{count} Nachrichten",
   "email.thread.countLatest_one": "Die letzte Nachricht",
   "email.thread.countLatest_other": "Die letzten {count} Nachrichten",
-  "email.thread.fold": "Nachricht von {name} einklappen",
   "email.thread.toLine": "an {names}",
   "email.thread.details": "Details",
   "email.thread.textForwarded":
@@ -6661,11 +6668,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.briefedAt": "Von Margince zusammengefasst um {time}",
   "brief.task.done": "Als erledigt markieren: {title}",
   "brief.task.reply": "{name} antworten: {subject}",
-  "brief.pager.label": "Aufgaben",
-  "brief.pager.previous": "Vorherige Aufgabe",
-  "brief.pager.next": "Nächste Aufgabe",
-  "brief.pager.hint":
-    "Nach links oder rechts wischen, um Aufgaben anzusehen. Auf den Navigationsschaltflächen funktionieren auch die Pfeiltasten.",
   "brief.first.title": "Braucht dich",
   "brief.intro.waiting": "Wartet auf dich",
   "brief.intro.meetings": "Termine heute",
@@ -7429,6 +7431,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieser Kontakt ist jetzt privat für das verantwortliche Teammitglied. Nutzende und Teams, mit denen der Kontakt geteilt wurde, behalten den Zugriff.",
   "recordAccess.contact.leftYourAccess":
     "Dieser Kontakt ist jetzt privat für das verantwortliche Teammitglied. Du hast keinen Zugriff mehr auf diesen Kontakt.",
+  "recordAccess.contact.handedOver":
+    "{owner} ist jetzt für diesen Kontakt verantwortlich. Er ist privat, deshalb hast du keinen Zugriff mehr darauf.",
   "recordAccess.company.title": "Wer dieses Unternehmen sehen kann",
   "recordAccess.company.shared":
     "Alle Nutzenden im Unternehmen können diesen Datensatz sehen.",
@@ -7444,6 +7448,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieses Unternehmen ist jetzt privat für das verantwortliche Teammitglied. Deals, Kontakte und E-Mails, die diesem Unternehmen zugeordnet sind, behalten ihre eigene Sichtbarkeit.",
   "recordAccess.company.leftYourAccess":
     "Dieses Unternehmen ist jetzt privat für das verantwortliche Teammitglied. Du hast keinen Zugriff mehr auf dieses Unternehmen.",
+  "recordAccess.company.handedOver":
+    "{owner} ist jetzt für dieses Unternehmen verantwortlich. Es ist privat, deshalb hast du keinen Zugriff mehr darauf.",
   "recordAccess.option.owner": "Nur das verantwortliche Teammitglied",
   "recordAccess.option.ownerHint":
     "Nutzende und Teams, mit denen der Datensatz geteilt ist, behalten den Zugriff.",
@@ -7512,6 +7518,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "whoCanSee.emails.company":
     "E-Mails zu diesem Unternehmen haben ihre eigene Zielgruppe. Öffne eine E-Mail im Verlauf, um zu sehen, wer sie lesen kann.",
   "compose.reply": "Antworten",
+  "invitation.answer.label": "Auf die Einladung antworten",
+  "invitation.answer.accepted": "Zusagen",
+  "invitation.answer.tentative": "Vielleicht",
+  "invitation.answer.declined": "Absagen",
   "compose.writeEmail": "E-Mail schreiben",
   "compose.relink": "Neu verknüpfen",
   "compose.previewEmail": "Vorschau",
@@ -7722,6 +7732,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.scheduleGoesOut": "Versand: {when}",
   "compose.willGoOut": "Versand: {when}",
   "compose.scheduleAfternoon": "Morgen Nachmittag",
+  "compose.draftLanguage": "Sprache des Entwurfs",
   "compose.rewrite": "Umschreiben",
   "compose.rewriteShorter": "Kürzer",
   "compose.rewriteShorterAsk":
@@ -8640,6 +8651,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "review.colDeal": "Deal",
   "review.colAtStake": "Gefährdeter Betrag",
   "review.colSeenSince": "Offen seit",
+  "review.foldedAtStake": "{amount} gefährdet",
+  "review.foldedSeenSince": "Offen seit {date}",
   "review.severityHigh": "Hoch",
   "review.severityMedium": "Mittel",
   "review.severityLow": "Niedrig",
@@ -13476,6 +13489,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.page.records.sub":
     "Eigene Felder, gemeinsame Tags und die Zuständigkeiten, die Datensätze tragen.",
   "settings.partsLabel": "Bereiche dieser Seite",
+  "settings.part.voice.overview": "Dein Schreibstil",
+  "settings.part.voice.samples": "Schreibproben",
+  "settings.part.voice.rules": "Deine Regeln",
+  "settings.part.voice.builds": "Versionen",
   "settings.part.meetings.links": "Buchungslinks",
   "settings.part.meetings.availability": "Verfügbarkeit",
   "settings.part.meetings.guests": "Gastseite",
@@ -14100,13 +14117,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "voice.insights.provenance": "Aus deinen Schreibproben erstellt · v{n}",
   "voice.insights.statWords": "W\u00f6rter: {count}",
   "voice.insights.statSources": "Quellen: {count}",
-  "settings.voice.jumpLabel": "Auf dieser Seite",
-  "settings.voice.jump.voice": "Dein Schreibstil",
-  "settings.voice.jump.moves": "Typische Züge",
   "settings.voice.jump.drafts": "Probeentwürfe",
-  "settings.voice.jump.sharpen": "Schärfen",
-  "settings.voice.jump.rules": "Deine Regeln",
-  "settings.voice.jump.builds": "Versionen",
   "settings.voice.editRules": "Regeln bearbeiten",
   "settings.voice.addMore": "Weitere Texte hinzufügen",
   "settings.voice.start.title": "Dein Schreibstil",
@@ -14334,6 +14345,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das Stilprofil wird aufgebaut. Das dauert etwa eine Minute und läuft weiter, wenn du die Seite verlässt.",
   "settings.voice.rebuild": "Voice DNA neu aufbauen",
   "settings.voice.buildFirst": "Voice DNA aufbauen",
+  "settings.voice.firstBuildHint":
+    "Den ersten Aufbau startest du im Tab „Dein Schreibstil“.",
+  "settings.voice.firstBuildGo": "„Dein Schreibstil“ öffnen",
   "settings.voice.buildNeedsWords":
     "Ein erster Aufbau braucht noch etwa {n} Wörter. Darunter gibt es nicht genug Text, um daraus zu lernen.",
   "settings.voice.buildProvisional":
@@ -15992,6 +16006,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Jede Stufe ordnet eine Art von Arbeit einem Anbieter und einem Modell zu. Gespeicherte Änderungen gelten innerhalb einer Minute.",
   "aiRouting.profileLine":
     "Installationsprofil: {profile}. Das Profil begrenzt, welche Anbieter eine Stufe nutzen kann, und wird von der Systemadministration festgelegt.",
+  "aiRouting.profile.eu_hosted":
+    "„EU-Hosting“ (Inferenz von Partnern; das Profil begrenzt nicht, wo eine Stufe läuft, das bestimmt die Verbindung jeder Stufe)",
+  "aiRouting.profile.sovereign":
+    "Souverän (KI läuft nur auf den eigenen Hosts der Installation, Cloud-Anbieter werden abgelehnt)",
+  "aiRouting.profile.cloud_frontier":
+    "Cloud (Cloud-Anbieter mit den eigenen API-Schlüsseln der Installation)",
+  "aiRouting.profile.unset": "Nicht festgelegt",
   "aiRouting.notBound": "Nicht zugeordnet",
   "aiRouting.lastResponse": "Letzte Antwort {when}",
   "aiTerms.provider": "Anbieter",
@@ -16625,7 +16646,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.setup.copyAddress": "Adresse kopieren",
   "webForms.steps.browser.address": "Kopiere die Formularadresse.",
   "webForms.steps.browser.builder":
-    "Öffne in Webflow, WordPress oder einem anderen Baukasten die Einstellungen deines Formulars. Trag diese Adresse als Ziel ein (in Webflow heißt das Action) und als Methode POST.",
+    "Öffne in Webflow, WordPress oder einem anderen Baukasten die Einstellungen deines Formulars. Trage diese Adresse als Ziel ein (in Webflow heißt das Action) und als Methode POST.",
   "webForms.steps.browser.fields":
     "Nenne das E-Mail-Feld email. Margince liest auch full_name, phone, company und message und legt jedes andere Feld in der Notiz am Lead ab.",
   "webForms.steps.browser.code":
@@ -16941,6 +16962,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.activity.updated.label": "Aktivität geändert",
   "webhooks.event.activity.updated.when":
     "Eine Aktivität wird bearbeitet oder mit anderen Datensätzen verknüpft.",
+  "webhooks.event.activity.invitation_answered.label": "Einladung beantwortet",
+  "webhooks.event.activity.invitation_answered.when":
+    "Jemand sagt in Margince zu einer Kalendereinladung zu, ab oder mit Vorbehalt zu.",
   "webhooks.event.activity.archived.label": "Aktivität archiviert",
   "webhooks.event.activity.archived.when": "Eine Aktivität wird archiviert.",
   "webhooks.event.activity.disposition_recorded.label":
@@ -18980,6 +19004,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.aside.partner": "Partner",
   "deal.aside.partnerNone": "Keiner",
   "deal.editDetails": "Details bearbeiten",
+  "deal.meetNeedsCompany":
+    "Dieser Deal hat noch kein Unternehmen. Trage es unter „Details bearbeiten“ ein, um einen Termin zu buchen.",
   "deal.committee.card": "Gremium",
   "deal.committee.change": "Stakeholder ändern oder entfernen",
 
@@ -19069,6 +19095,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die nächtliche Prüfung hat diesen Deal markiert. Reagiere darauf, stelle ihn zurück oder verwirf ihn.",
   "worklist.ask.conversation_claim":
     "Du hast das in einem Gespräch zugesagt. Erledige es und markiere es dann als erledigt.",
+  "worklist.ask.invitation":
+    "Das ist eine Kalendereinladung. Sag zu, mit Vorbehalt zu oder ab, und der Organisator erhält deine Antwort.",
   "worklist.ask.customer_waiting":
     "Ein Kunde hat geschrieben, und noch niemand hat geantwortet. Beantworte die Nachricht.",
   "worklist.ask.lead_response":
@@ -19634,7 +19662,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingAddNotes": "Notizen hinzufügen",
   "worklist.verb.meetingUpdateTitle": "Termin",
   "worklist.verb.meetingReading": "Termin wird geladen…",
-  "worklist.verb.meetingWhatHappened": "Terminnotizen",
+  "worklist.verb.meetingWhatHappened": "Was passiert ist",
   "worklist.verb.meetingBodyHint":
     "Besprochenes und nächste Schritte. Kalendernotizen lassen sich hier bearbeiten.",
   "worklist.verb.meetingHeld": "Hat stattgefunden",
@@ -20103,6 +20131,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.company.linkWhyDomain": "{name} nutzt die Website-Domain dieses Leads.",
   "lead.company.linkWhyName":
     "{name} trägt den Unternehmensnamen dieses Leads.",
+  "lead.company.nameFollowsLink":
+    "Der Name kommt vom verknüpften Unternehmen. Benenne es auf der Seite des Unternehmens um.",
   "lead.details.fromCompany": "Von {name}",
   "lead.details.fromCompanyRecord": "Aus dem Unternehmenseintrag",
   "lead.details.companyDecides":
@@ -21639,6 +21669,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Für {count} erste Qualifizierung ist keine Verantwortung gespeichert. Die Mitgliederzahlen enthalten nur zugeordnete Ereignisse.",
   "analytics.team.qualificationUnattributed_other":
     "Für {count} erste Qualifizierungen ist keine Verantwortung gespeichert. Die Mitgliederzahlen enthalten nur zugeordnete Ereignisse.",
+  "brief.done.changeCount_one": "{count} Änderung",
+  "brief.done.changeCount_other": "{count} Änderungen",
+  "brief.done.steps": "Änderungen an diesem Deal, neueste zuerst",
   "brief.done.title": "Für dich erledigt",
   "brief.done.waiting_one": "{count} Deal wartet auf deine Prüfung",
   "brief.done.waiting_other": "{count} Deals warten auf deine Prüfung",
@@ -21653,7 +21686,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.done.viewChanges_one": "{count} Änderung ansehen",
   "brief.done.viewChanges_other": "{count} Änderungen ansehen",
   "brief.done.showNew": "Neue Änderungen zeigen",
-  "brief.done.history": "Änderungsverlauf ansehen",
+  "brief.done.history": "Änderungsverlauf",
   "brief.done.dealsLabel": "Deals, die Margince geändert hat",
   "brief.done.noReason": "Grund nicht verfügbar",
   "brief.done.markedLost": "Als verloren markiert",

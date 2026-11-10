@@ -332,10 +332,10 @@ describe("what the axis marks", () => {
     expect(kept.map(([key]) => key)).toEqual(["m6", "m5", "m4", "m3", "m2"]);
   });
 
-  it("titles a closed deal's close by its outcome, never as expected", () => {
-    const close = timelineEvents(
+  const closeOf = (over: Parameters<typeof deal>[0]) =>
+    timelineEvents(
       {
-        deal: deal({ status: "lost", closed_at: "2026-05-20T12:00:00Z" }),
+        deal: deal(over),
         stages,
         asOf: AS_OF,
         activities: [],
@@ -349,7 +349,24 @@ describe("what the axis marks", () => {
       },
       words,
     ).find((event) => event.key === "close");
+
+  it("titles a closed deal's close by its outcome, never as expected", () => {
+    const close = closeOf({
+      status: "lost",
+      closed_at: "2026-05-20T12:00:00Z",
+    });
     expect(close?.title).toBe(en["deals.statusLost"]);
+  });
+
+  it("flags the day a deal was won or lost, never an open deal's expected close", () => {
+    const decided = "2026-05-20T12:00:00Z";
+    expect(closeOf({ status: "won", closed_at: decided })?.outcome).toBe("won");
+    expect(closeOf({ status: "lost", closed_at: decided })?.outcome).toBe(
+      "lost",
+    );
+    expect(
+      closeOf({ expected_close_date: "2026-06-30" })?.outcome,
+    ).toBeUndefined();
   });
 
   it("draws no close on a deal that closed without a day", () => {

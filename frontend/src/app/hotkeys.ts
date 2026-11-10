@@ -11,6 +11,11 @@ export function modifierCap(platform: string): string {
   return APPLE_PLATFORM.test(platform) ? "⌘" : "Ctrl";
 }
 
+/** The same modifier as `aria-keyshortcuts` spells it. */
+export function modifierKeyName(platform: string): string {
+  return APPLE_PLATFORM.test(platform) ? "Meta" : "Control";
+}
+
 const SIDEBAR_KEY = "b";
 
 type Chord = Pick<

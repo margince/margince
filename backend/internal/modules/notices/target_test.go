@@ -4,9 +4,10 @@
 package notices
 
 import (
+	"testing"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
-	"testing"
 )
 
 func TestOnlyACompleteStoredSignatureDescriptorSuppliesAMissingTarget(t *testing.T) {

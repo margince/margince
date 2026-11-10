@@ -18,15 +18,46 @@ import "fmt"
 // open-ended. A cancellation never extends a term that already ran out. An
 // empty alias names the columns bare.
 func InForceSQL(alias, asOf string) string {
-	p := ""
-	if alias != "" {
-		p = alias + "."
-	}
+	p := prefix(alias)
 	return fmt.Sprintf(`(
 		%[1]sarchived_at IS NULL
 		AND %[1]sstatus NOT IN ('draft', 'superseded')
-		AND (%[1]sstarts_on IS NULL OR %[1]sstarts_on <= %[2]s)
-		AND (LEAST(%[1]sends_on, %[1]scancellation_effective_on) IS NULL
-		     OR %[2]s <= LEAST(%[1]sends_on, %[1]scancellation_effective_on))
-	)`, p, asOf)
+		AND %[2]s
+		AND %[3]s
+	)`, p, startedSQL(p, asOf), notEndedSQL(p, asOf))
+}
+
+// The term states TermStateSQL yields, spelled as the API spells them.
+const (
+	TermNotStarted = "not_started"
+	TermInForce    = "in_force"
+	TermEnded      = "ended"
+)
+
+// TermStateSQL is where the day asOf falls in the contract's dated term, as an
+// SQL expression yielding one of the Term* states. It reads the dates alone.
+// InForceSQL adds the status and archival to the same two date tests.
+func TermStateSQL(alias, asOf string) string {
+	p := prefix(alias)
+	return fmt.Sprintf(`(CASE
+		WHEN NOT %[1]s THEN '%[3]s'
+		WHEN NOT %[2]s THEN '%[4]s'
+		ELSE '%[5]s'
+	END)`, startedSQL(p, asOf), notEndedSQL(p, asOf), TermNotStarted, TermEnded, TermInForce)
+}
+
+func startedSQL(p, asOf string) string {
+	return fmt.Sprintf(`(%[1]sstarts_on IS NULL OR %[1]sstarts_on <= %[2]s)`, p, asOf)
+}
+
+func notEndedSQL(p, asOf string) string {
+	return fmt.Sprintf(`(LEAST(%[1]sends_on, %[1]scancellation_effective_on) IS NULL
+		     OR %[2]s <= LEAST(%[1]sends_on, %[1]scancellation_effective_on))`, p, asOf)
+}
+
+func prefix(alias string) string {
+	if alias == "" {
+		return ""
+	}
+	return alias + "."
 }

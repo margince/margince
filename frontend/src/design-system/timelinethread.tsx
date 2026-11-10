@@ -13,9 +13,6 @@ import "./composed.css";
 import {
   automaticLabel,
   CommitmentReviewFlag,
-  entryDay,
-  entryMove,
-  entryTimeOfDay,
   groupCountLabel,
   MoveFlag,
   sideClass,
@@ -24,9 +21,9 @@ import {
   TIMELINE_KIND_LABEL,
   type TimelineEntry,
   type TimelineGroup,
-  TimelineWhen,
 } from "./timelineentry";
 import { TimelineBody } from "./timelinetext";
+import { entryDay, entryTimeOfDay, TimelineWhen } from "./timelinewhen";
 
 // How many of a thread's messages stand open before the rest fold behind a
 // count. Three is a conversation a reader takes in at a glance: the ask,
@@ -355,7 +352,7 @@ export function ThreadRow({
           {/* Whose move the conversation waits on, read off its newest
                 message. It goes on the row that stands for it, never on the
                 members inside. */}
-          {entryMove(newest) && <MoveFlag entry={newest} />}
+          <MoveFlag entry={newest} />
           <CommitmentReviewFlag
             count={group.entries.reduce(
               (count, entry) =>

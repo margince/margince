@@ -116,17 +116,11 @@ Also called: AI writer, generate an email, write it for me.
 
 ### Drafting with AI
 
-**Draft email** writes an email from what the record holds, in your voice.
-**Why this draft**, closed until you open it, shows what it read
-("Based on: {inputs}"), with a link to each record it read.
+**Draft email** writes an email from what the record holds, in your voice. **Why this draft**, closed until you open it, shows what it read ("Based on: {inputs}"), with a link to each record it read.
 
-A restored draft keeps its purpose and AI note. The **Saved draft restored** notice makes clear that you are opening saved work. Every AI draft is marked **AI-assisted draft**, with a note that AI wrote it and
-that you should check and edit it before sending.
+A restored draft keeps its purpose and AI note. The **Saved draft restored** notice makes clear that you are opening saved work. Every AI draft is marked **AI-assisted draft**, with a note that AI wrote it and that you should check and edit it before sending.
 
-Your voice profile has a number that goes up with each build, shown after
-"Built from your writing samples". A profile Margince is still building is
-marked **Provisional voice**. It still shapes the draft the same way a finished
-one does.
+Your voice profile has a number that goes up with each build, shown after "Built from your writing samples". A profile Margince is still building is marked **Provisional voice**. It still shapes the draft the same way a finished one does.
 
 If Margince could not load the profile, the draft says so:
 
@@ -134,26 +128,27 @@ If Margince could not load the profile, the draft says so:
 > Your voice profile could not be loaded,
 > so this draft does not use your voice. Draft again, or edit before sending.
 
-Once a draft stands, **Change the ask** opens the ask again, so you can change
-what the next draft says.
+Once a draft stands, **Change the ask** opens the ask again, so you can change what the next draft says.
 
-**Discard draft** marks the draft as a miss for your Voice DNA. Margince never
-keeps the text it wrote.
+**Discard draft** marks the draft as a miss for your Voice DNA. Margince never keeps the text it wrote.
 
-Margince keeps a message you have not finished as a draft while you type. The
-foot says **Draft saved**, and closing the window keeps it too. It does not send
-anything. **Delete draft** deletes the message.
+Margince keeps a message you have not finished as a draft while you type. The foot says **Draft saved**, and closing the window keeps it too. It does not send anything. **Delete draft** deletes the message.
 
 A saved draft also keeps the deal and project you chose. Margince checks that you can still use them when you open the draft again.
 
 ### The four rewrites
 
-The AI draft offers four rewrites on its line, beside the note that AI
-wrote it. They work on text the model wrote that you have not edited yet. They are **Shorter**, **Warmer**, **More formal** and
-**Add a deadline**.
+The AI draft offers four rewrites on its line, beside the note that AI wrote it. They work on text the model wrote that you have not edited yet. They are **Shorter**, **Warmer**, **More formal** and **Add a deadline**.
 
-They are gone the moment you type, because they rewrite the model's text, not
-yours.
+They are gone the moment you type, because they rewrite the model's text, not yours.
+
+### How do I change the language of an AI draft?
+To change the language of an AI draft, pick another language in the list on the AI line above the message. The list shows the language the draft is in, and names each language in its own words, such as **Deutsch**. Margince writes the words in the message again in that language, for the same purpose.
+
+If you edited the words, only an AI model writes your edited words again. With no model set up, or with a link or format you added, your words and the language stay as they are. The composer then says "Your edits were kept. Draft again when ready."
+
+Once you pick a language, **Draft email**, **Change the ask**, the four rewrites and a saved draft keep it. Until then, Margince takes the language from the mail on the thread. If the new draft fails, your words and the language stay. When Margince cannot tell the language of a draft, it shows no list.
+Also called: draft in another language, write the email in German, change the email language.
 
 ### Why are you writing?
 The **Reason for contact** field says why you are writing. The composer explains

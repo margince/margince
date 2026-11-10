@@ -102,7 +102,6 @@ describe("a stored value", () => {
       ),
     ).toEqual([
       "margince.palette.recents",
-      "margince.home.swipeSeen",
       "margince.locale",
       "margince.theme",
       "margince.sidebarCollapsed",

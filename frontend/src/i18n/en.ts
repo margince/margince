@@ -956,6 +956,8 @@ export const en = {
   "forecast.deals.colSignals": "Risk signals",
   "forecast.deals.colAmount": "Amount",
   "forecast.deals.colWeighted": "Weighted",
+  "forecast.deals.foldedAmount": "Amount {amount}",
+  "forecast.deals.foldedWeighted": "{amount} weighted",
   "forecast.signal.close_pushed": "Close date keeps moving",
   "forecast.signal.no_next_step": "No next step booked",
   "forecast.signal.quiet": "Customer quiet",
@@ -1101,6 +1103,8 @@ export const en = {
   "reporting.draftOpen": "Draft {revision} is not published yet",
   "reporting.draftHidden":
     "Readers still see the published report. Preview the draft before you publish it.",
+  "reporting.draftUnpublished":
+    "Nothing on this report is published yet, so you see its draft. Publish it to make these charts the report.",
   "reporting.draftPreviewing":
     "You are looking at the draft. Readers still see the published report.",
   "reporting.previewDraft": "Preview draft",
@@ -2070,6 +2074,7 @@ export const en = {
   "worklist.bandCount_one": "{count} item",
   "worklist.bandCount_other": "{count} items",
   "brief.focus.context": "View details",
+  "brief.focus.next": "Next task",
   "brief.queue.back": "Back to Worklist",
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Show Worklist",
@@ -2175,7 +2180,7 @@ export const en = {
   "brief.plan.period": "Current plan · week of {date}",
   "brief.coverage.retry": "Refresh brief",
   "brief.reply.owed": "Customer awaiting your reply",
-  "brief.changes.superseded": "Changed since this update",
+  "brief.changes.superseded": "Replaced by a later change",
   "brief.changes.undone": "Undone",
   "brief.updates.title": "Updates",
   "brief.task.undated": "No due date",
@@ -2853,6 +2858,7 @@ export const en = {
   "palette.recent": "Recent",
   "palette.clearRecent": "Clear",
   "palette.typeScreen": "Screen",
+  "palette.typeSetting": "Setting",
   "palette.typeAction": "Action",
   "palette.typeRecord": "Record",
   "palette.seeAll": "See all results for “{query}”",
@@ -4874,6 +4880,8 @@ export const en = {
   "visibility.private": "Private",
   "visibility.withheld": "Withheld",
   "email.access.unnamedMember": "Former user",
+  "email.invitation.badge": "Invitation",
+  "email.invitation.startsAt": "Starts {when}",
   "email.move.needsReply": "Needs reply",
   "email.move.waitingForThem": "Awaiting their reply",
   "email.detail.loading": "Loading message…",
@@ -4905,7 +4913,6 @@ export const en = {
   "email.thread.count_other": "{count} messages",
   "email.thread.countLatest_one": "Latest message",
   "email.thread.countLatest_other": "Latest {count} messages",
-  "email.thread.fold": "Fold the message from {name}",
   "email.thread.toLine": "to {names}",
   "email.thread.details": "Details",
   "email.thread.textForwarded":
@@ -5908,6 +5915,8 @@ export const en = {
   "deal.aside.partner": "Partner",
   "deal.aside.partnerNone": "None",
   "deal.editDetails": "Edit details",
+  "deal.meetNeedsCompany":
+    "This deal has no company yet. Add one under Edit details to book a meeting.",
   "deal.committee.card": "Committee",
   "deal.committee.change": "Change or remove stakeholders",
   "deal.committee.legendEngaged": "Engaged",
@@ -6644,11 +6653,6 @@ export const en = {
   "brief.briefedAt": "Briefed by Margince at {time}",
   "brief.task.done": "Mark done: {title}",
   "brief.task.reply": "Reply to {name}: {subject}",
-  "brief.pager.label": "Tasks",
-  "brief.pager.previous": "Previous task",
-  "brief.pager.next": "Next task",
-  "brief.pager.hint":
-    "Swipe left or right to browse tasks. You can also use the arrow keys on the navigation buttons.",
   "brief.first.title": "Needs you",
   "brief.intro.waiting": "Waiting on you",
   "brief.intro.meetings": "Meetings today",
@@ -7443,6 +7447,8 @@ export const en = {
     "This contact is now private to its owner. Users and teams it was shared with keep access.",
   "recordAccess.contact.leftYourAccess":
     "This contact is now private to its owner. You no longer have access to it.",
+  "recordAccess.contact.handedOver":
+    "{owner} now owns this contact. It is private to them, so you no longer have access to it.",
   "recordAccess.company.title": "Who can see this company",
   "recordAccess.company.shared":
     "All users in the company can see this record.",
@@ -7457,6 +7463,8 @@ export const en = {
     "This company is now private to its owner. Deals, contacts and mail filed against it keep their own visibility.",
   "recordAccess.company.leftYourAccess":
     "This company is now private to its owner. You no longer have access to it.",
+  "recordAccess.company.handedOver":
+    "{owner} now owns this company. It is private to them, so you no longer have access to it.",
   // The switch behind the header's access chip. The owner's answer carries
   // what it does not take away, because a share outlives it; to anyone but the
   // owner it says what it takes from them, and without an owner it is refused.
@@ -7520,6 +7528,10 @@ export const en = {
   "whoCanSee.emails.company":
     "Emails filed to this company have their own audience. Open an email in the timeline to see who can read it.",
   "compose.reply": "Reply",
+  "invitation.answer.label": "Answer the invitation",
+  "invitation.answer.accepted": "Accept",
+  "invitation.answer.tentative": "Maybe",
+  "invitation.answer.declined": "Decline",
   "compose.writeEmail": "Write email",
   "compose.relink": "Relink",
   "compose.previewEmail": "Preview",
@@ -7727,6 +7739,7 @@ export const en = {
   "compose.scheduleGoesOut": "Sends {when}",
   "compose.willGoOut": "Sends {when}",
   "compose.scheduleAfternoon": "Tomorrow afternoon",
+  "compose.draftLanguage": "Draft language",
   "compose.rewrite": "Rewrite",
   "compose.rewriteShorter": "Shorter",
   "compose.rewriteShorterAsk": "Keep the meaning and use fewer words.",
@@ -8614,6 +8627,8 @@ export const en = {
   "review.colDeal": "Deal",
   "review.colAtStake": "At stake",
   "review.colSeenSince": "Seen since",
+  "review.foldedAtStake": "{amount} at stake",
+  "review.foldedSeenSince": "Seen since {date}",
   "review.severityHigh": "High",
   "review.severityMedium": "Medium",
   "review.severityLow": "Low",
@@ -13443,6 +13458,10 @@ export const en = {
   "settings.page.records.sub":
     "Custom fields, shared tags and the responsibility roles records carry.",
   "settings.partsLabel": "Parts of this page",
+  "settings.part.voice.overview": "Your voice",
+  "settings.part.voice.samples": "Writing samples",
+  "settings.part.voice.rules": "Your rules",
+  "settings.part.voice.builds": "Builds",
   "settings.part.meetings.links": "Booking links",
   "settings.part.meetings.availability": "Availability",
   "settings.part.meetings.guests": "Guest page",
@@ -14045,13 +14064,7 @@ export const en = {
   "voice.insights.provenance": "Built from your writing samples · v{n}",
   "voice.insights.statWords": "Words: {count}",
   "voice.insights.statSources": "Sources: {count}",
-  "settings.voice.jumpLabel": "On this page",
-  "settings.voice.jump.voice": "Your voice",
-  "settings.voice.jump.moves": "Signature moves",
   "settings.voice.jump.drafts": "See it write",
-  "settings.voice.jump.sharpen": "Make it sharper",
-  "settings.voice.jump.rules": "Your rules",
-  "settings.voice.jump.builds": "Builds",
   "settings.voice.editRules": "Edit your rules",
   "settings.voice.addMore": "Add more writing",
   "settings.voice.start.title": "Your writing voice",
@@ -14271,6 +14284,9 @@ export const en = {
     "Building voice. This takes about a minute and continues if you leave this page.",
   "settings.voice.rebuild": "Rebuild Voice DNA",
   "settings.voice.buildFirst": "Build Voice DNA",
+  "settings.voice.firstBuildHint":
+    "Your first build starts on the Your voice tab.",
+  "settings.voice.firstBuildGo": "Go to Your voice",
   "settings.voice.buildNeedsWords":
     "A first build needs about {n} more words. Below that there is not enough writing to learn from.",
   "settings.voice.buildProvisional":
@@ -15886,6 +15902,13 @@ export const en = {
     "Each tier binds a class of work to one provider and model; saved changes apply within a minute.",
   "aiRouting.profileLine":
     "Installation profile: {profile}. It limits which providers a tier can use and is set by the operator.",
+  "aiRouting.profile.eu_hosted":
+    "EU-hosted (partner inference; it does not limit where a tier runs, which each tier’s connection decides)",
+  "aiRouting.profile.sovereign":
+    "Sovereign (AI runs only on the installation’s own hosts; cloud providers are refused)",
+  "aiRouting.profile.cloud_frontier":
+    "Cloud (cloud providers with the installation’s own API keys)",
+  "aiRouting.profile.unset": "Not set",
   "aiRouting.notBound": "Not bound",
   "aiRouting.lastResponse": "Last response {when}",
   "aiTerms.provider": "Provider",
@@ -16806,6 +16829,9 @@ export const en = {
   "webhooks.event.activity.updated.label": "Activity changed",
   "webhooks.event.activity.updated.when":
     "An activity is edited or linked to other records.",
+  "webhooks.event.activity.invitation_answered.label": "Invitation answered",
+  "webhooks.event.activity.invitation_answered.when":
+    "Someone accepts, declines or says maybe to a calendar invitation in Margince.",
   "webhooks.event.activity.archived.label": "Activity archived",
   "webhooks.event.activity.archived.when": "An activity is archived.",
   "webhooks.event.activity.disposition_recorded.label":
@@ -18878,6 +18904,8 @@ export const en = {
     "The overnight review flagged this deal. Act on it, set it aside, or dismiss it.",
   "worklist.ask.conversation_claim":
     "You committed to this in a conversation. Do it, then mark it done.",
+  "worklist.ask.invitation":
+    "This is a calendar invitation. Accept, say maybe or decline, and the organizer gets your answer.",
   "worklist.ask.customer_waiting":
     "A customer wrote and nobody has answered yet. Reply to them.",
   "worklist.ask.lead_response":
@@ -19428,7 +19456,7 @@ export const en = {
   "worklist.verb.meetingAddNotes": "Add notes",
   "worklist.verb.meetingUpdateTitle": "Meeting",
   "worklist.verb.meetingReading": "Loading meeting…",
-  "worklist.verb.meetingWhatHappened": "Meeting notes",
+  "worklist.verb.meetingWhatHappened": "What happened",
   "worklist.verb.meetingBodyHint":
     "Discussion and next steps. Calendar notes can be edited here.",
   "worklist.verb.meetingHeld": "It happened",
@@ -19903,6 +19931,8 @@ export const en = {
   "lead.company.matchedByName": "Same company name",
   "lead.company.linkWhyDomain": "{name} uses the website domain on this lead.",
   "lead.company.linkWhyName": "{name} has the company name on this lead.",
+  "lead.company.nameFollowsLink":
+    "The name comes from the linked company. Rename it on the company’s page.",
   "lead.details.fromCompany": "From {name}",
   "lead.details.fromCompanyRecord": "From the company record",
   "lead.details.companyDecides":
@@ -21384,6 +21414,9 @@ export const en = {
     "{count} first qualification has no recorded owner. Member counts cover attributed events only.",
   "analytics.team.qualificationUnattributed_other":
     "{count} first qualifications have no recorded owner. Member counts cover attributed events only.",
+  "brief.done.changeCount_one": "{count} change",
+  "brief.done.changeCount_other": "{count} changes",
+  "brief.done.steps": "Changes on this deal, newest first",
   "brief.done.title": "Done for you",
   "brief.done.waiting_one": "{count} deal waits for your review",
   "brief.done.waiting_other": "{count} deals wait for your review",
@@ -21398,7 +21431,7 @@ export const en = {
   "brief.done.viewChanges_one": "View {count} change",
   "brief.done.viewChanges_other": "View {count} changes",
   "brief.done.showNew": "Show new changes",
-  "brief.done.history": "View change history",
+  "brief.done.history": "Change history",
   "brief.done.dealsLabel": "Deals Margince changed",
   "brief.done.noReason": "Reason unavailable",
   "brief.done.markedLost": "Marked lost",

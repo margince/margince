@@ -89,7 +89,7 @@ func repliesToTheSubject(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subjec
 	}
 	args := []any{subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID, anchor, entity}
 	entityArg := storekit.SQLf("$%d", len(args))
-	visible, err := activityEvidenceSQL(ctx, "a", entityArg, &args)
+	visible, err := activityEvidenceSQL(ctx, entityArg, &args)
 	if err != nil {
 		return false, err
 	}
@@ -152,7 +152,7 @@ func wroteIntoThread(ctx context.Context, tx pgx.Tx, threadKey string, subject s
 	}
 	args := []any{subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID, threadKey, entity}
 	entityArg := storekit.SQLf("$%d", len(args))
-	visible, err := activityEvidenceSQL(ctx, "a", entityArg, &args)
+	visible, err := activityEvidenceSQL(ctx, entityArg, &args)
 	if err != nil {
 		return false, err
 	}
@@ -286,7 +286,7 @@ func wroteToUsWithin(ctx context.Context, tx pgx.Tx, subject subjectRef, since t
 	}
 	args := []any{subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID, since, entity}
 	entityArg := storekit.SQLf("$%d", len(args))
-	visible, err := activityEvidenceSQL(ctx, "a", entityArg, &args)
+	visible, err := activityEvidenceSQL(ctx, entityArg, &args)
 	if err != nil {
 		return false, err
 	}

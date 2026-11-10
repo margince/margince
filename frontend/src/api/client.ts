@@ -7,6 +7,7 @@ import {
   reportReached,
   reportUnreached,
 } from "../lib/connectivity";
+import { EmptySuccessError } from "../lib/problem";
 import { beginModelCall, endModelCall } from "./model-inflight";
 
 // The ONE API seam (architecture/01: the frontend depends on the generated
@@ -162,12 +163,11 @@ async function fetchWithDeadline(request: Request): Promise<Response> {
   }, timeoutMs);
   // Read as the request leaves: a device offline then sent nothing at all.
   const unsent = connectivityNow() === "offline";
+  let response: Response;
   try {
-    const response = await globalThis.fetch(request, {
+    response = await globalThis.fetch(request, {
       signal: deadline.signal,
     });
-    reportAnswer(response, request);
-    return withGatewayProblem(response, request);
   } catch (failure) {
     throw reportFailure(failure, request, deadline.signal, unsent);
   } finally {
@@ -175,6 +175,23 @@ async function fetchWithDeadline(request: Request): Promise<Response> {
     // from holding the page awake, and — on a request that failed for its own
     // reasons — from aborting a controller nobody is listening to any more.
     globalThis.clearTimeout(expiry);
+  }
+  reportAnswer(response, request);
+  refuseForeignReadAnswer(response, request);
+  return withGatewayProblem(response, request);
+}
+
+// The success statuses no read in the contract answers with; client.test.ts
+// derives that from crm.yaml. A read answered with one heard an intermediary.
+const NO_READ_ANSWERS = new Set([202, 205]);
+
+// An intermediary can answer a read with a challenge, such as a bodiless 202.
+// openapi-fetch reads that as no data and no error, so it is refused here.
+// It runs after the request's try block: the connection answered, so this is
+// no outage.
+function refuseForeignReadAnswer(response: Response, request: Request): void {
+  if (request.method === "GET" && NO_READ_ANSWERS.has(response.status)) {
+    throw new EmptySuccessError(response.status);
   }
 }
 

@@ -371,7 +371,7 @@ func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert) (ids.
 
 func connectionGrantArgs(ctx context.Context, tx pgx.Tx, in connectionUpsert, priorID ids.UUID, rebound bool) (pgx.StrictNamedArgs, error) {
 	args := pgx.StrictNamedArgs{
-		"provider": in.provider, "user": in.userID, "scopes": in.scopes,
+		sqlArgProvider: in.provider, "user": in.userID, "scopes": in.scopes,
 		"ref": string(in.ref), "label": in.accountLabel, "provider_scopes": in.providerScopes,
 		"rebound": rebound, "bound": nil,
 	}

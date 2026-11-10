@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
   cleanup,
+  fireEvent,
   render as rtlRender,
   screen,
   waitFor,
@@ -81,11 +82,10 @@ const renderNamed = (displayName: string) => {
   );
 };
 
-// Expanded, the trigger's accessible name carries the visible name as well as
-// what the control does, so it is matched by suffix rather than by equality.
-// Glyph-only there is no visible text to carry, and the name is exact.
-const railTrigger = () => screen.getByRole("button", { name: /Account$/ });
-const glyphTrigger = () => screen.getByRole("button", { name: "Account" });
+// A named seat's trigger leads with its initials; an unnamed one is "Account".
+const glyphTrigger = () =>
+  screen.getByRole("button", { name: /^(\p{Lu}{1,2} )?Account$/u });
+const railTrigger = glyphTrigger;
 
 const openMenu = async (user: UserEvent, trigger: HTMLElement) => {
   await user.click(trigger);
@@ -489,13 +489,13 @@ describe("AccountMenu", () => {
 
   // The trigger is the seat's chip alone, so its name is all that identifies
   // it. The panel is where the reader confirms whose account they act on.
+  // WCAG 2.5.3: the name starts with the initials the chip prints.
   it("names the top bar's chip-only trigger, and prints the identity in the panel", async () => {
     const user = userEvent.setup();
     const { container } = render(<AccountMenu />);
     const trigger = glyphTrigger();
     expect(container.querySelector(".acctwho")).toBeNull();
-    expect(trigger.getAttribute("aria-label")).toBe("Account");
-    // The initials are drawn and hidden, so they never join the name.
+    expect(screen.getByRole("button", { name: "TU Account" })).toBe(trigger);
     const chip = trigger.querySelector(".avatar");
     expect(chip?.textContent).toBe("TU");
     expect(chip?.closest("[aria-hidden='true']")).not.toBeNull();
@@ -560,10 +560,12 @@ describe("AccountMenu for a seat with a picture", () => {
       </QueryClientProvider>,
     );
     const trigger = glyphTrigger();
-    expect(trigger.querySelector(".avatar-photo img")).toHaveAttribute(
-      "src",
-      picture,
-    );
+    const photo = trigger.querySelector(".avatar-photo img");
+    expect(photo).toHaveAttribute("src", picture);
+    // Once the picture paints the chip prints no initials, and the name drops them.
+    expect(trigger).toHaveAccessibleName("TU Account");
+    if (photo) fireEvent.load(photo);
+    expect(trigger).toHaveAccessibleName("Account");
     await openMenu(user, trigger);
     expect(
       container.querySelector(".acctmenuwho .avatar-photo img"),
@@ -575,6 +577,7 @@ describe("AccountMenu before /me names the seat", () => {
   it("starts on Settings and walks only the rows it draws", async () => {
     const user = userEvent.setup();
     renderHeadless();
+    expect(screen.getByRole("button", { name: "Account" })).toBeTruthy();
     await openMenu(user, glyphTrigger());
     expect(screen.queryByRole("menuitem", { name: /account settings/ })).toBe(
       null,

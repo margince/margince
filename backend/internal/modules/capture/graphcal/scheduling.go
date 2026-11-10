@@ -152,7 +152,7 @@ func (a *httpAPI) Busy(ctx context.Context, token, calendar string, from, to tim
 }
 
 func (a *httpAPI) readBusy(ctx context.Context, token, calendar string, from, to time.Time) ([]connector.CalendarInterval, error) {
-	query := url.Values{"startDateTime": {from.Format(time.RFC3339)}, "endDateTime": {to.Format(time.RFC3339)}, "$top": {"100"}, "$select": {"id,start,end,isAllDay,isCancelled,showAs,responseStatus"}}
+	query := url.Values{"startDateTime": {from.Format(time.RFC3339)}, "endDateTime": {to.Format(time.RFC3339)}, topParam: {"100"}, "$select": {"id,start,end,isAllDay,isCancelled,showAs,responseStatus"}}
 	next := a.base + calendarPath(calendar) + "/calendarView?" + query.Encode()
 	busy := []connector.CalendarInterval{}
 	for page := 0; next != "" && page < 100; page++ {

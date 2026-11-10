@@ -14,6 +14,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// RequirePrivacyReviewTx admits only a signed-in human whom the stored policy
+// names as privacy reviewer for object. It holds the authorization lock so a
+// grant cannot change during the caller's transaction.
 func (*Service) RequirePrivacyReviewTx(ctx context.Context, tx pgx.Tx, object string) error {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {

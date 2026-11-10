@@ -29,7 +29,7 @@ func TestTheLeadExchangeDowngradeKeepsRecordedEvidence(t *testing.T) {
  VALUES(@event,@lead,'requested_by_subject','Asked for the document.','2020-03-02T09:00:00Z','human','human:fixture')`, pgx.StrictNamedArgs{"event": event, "lead": lead}); err != nil {
 		t.Fatal(err)
 	}
-	down, err := os.ReadFile("core/1794266732_a_recorded_exchange_can_name_a_lead.down.sql")
+	down, err := os.ReadFile("core/1794291315_a_recorded_exchange_can_name_a_lead.down.sql")
 	if err != nil {
 		t.Fatal(err)
 	}

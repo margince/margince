@@ -75,6 +75,7 @@
     "advanceProjectPhase": "business",
     "allowContact": "compliance",
     "annotateMorningBrief": "business",
+    "answerCalendarInvitation": "business",
     "answerReportingQuestionCard": "business",
     "answerWeeklyPlanCommitment": "business",
     "applyContactEmploymentImport": "business",
@@ -924,6 +925,7 @@
     "advanceProjectPhase": "projects",
     "allowContact": "consent",
     "annotateMorningBrief": "worklist",
+    "answerCalendarInvitation": "activities",
     "answerReportingQuestionCard": "reports",
     "answerWeeklyPlanCommitment": "worklist",
     "applyContactEmploymentImport": "contacts",
@@ -2019,6 +2021,9 @@
     ],
     "annotate_brief": [
       "worklist"
+    ],
+    "answer_calendar_invitation": [
+      "activities"
     ],
     "answer_reporting_question_card": [
       "reports"
@@ -4097,6 +4102,9 @@
       "compliance"
     ],
     "annotate_brief": [
+      "business"
+    ],
+    "answer_calendar_invitation": [
       "business"
     ],
     "answer_reporting_question_card": [

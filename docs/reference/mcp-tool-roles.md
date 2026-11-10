@@ -39,7 +39,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 
 | Group | Calls | admin | management | manager | ops | read_only | rep |
 |---|---:|---|---|---|---|---|---|
-| [Business operations](#business-operations) | 376 | 375✓ 1✗ | 349✓ 27✗ | 350✓ 26✗ | 349✓ 27✗ | 176✓ 200✗ | 320✓ 56✗ |
+| [Business operations](#business-operations) | 377 | 376✓ 1✗ | 350✓ 27✗ | 351✓ 26✗ | 350✓ 27✗ | 177✓ 200✗ | 321✓ 56✗ |
 | [Compliance and privacy](#compliance-and-privacy) | 48 | 48✓ 0✗ | 28✓ 20✗ | 28✓ 20✗ | 32✓ 16✗ | 10✓ 38✗ | 27✓ 21✗ |
 | [Capture and connectors](#capture-and-connectors) | 38 | 38✓ 0✗ | 32✓ 6✗ | 32✓ 6✗ | 38✓ 0✗ | 26✓ 12✗ | 31✓ 7✗ |
 | [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | 38 | 38✓ 0✗ | 38✓ 0✗ | 38✓ 0✗ | 38✓ 0✗ | 34✓ 4✗ | 38✓ 0✗ |
@@ -228,6 +228,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | `read_details.project_filing` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_details.scheduled_send` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_details.scheduled_sends` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `send_outbound.answer_invitation` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `send_outbound.chat_reply` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `send_outbound.email_new` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `send_outbound.email_reply` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
@@ -1203,6 +1204,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Activities, mail and tasks | `read_details.project_filing` | `get_activity_project_filing` | `activity.read` |
 | Activities, mail and tasks | `read_details.scheduled_send` | `get_scheduled_send` | `activity.read` |
 | Activities, mail and tasks | `read_details.scheduled_sends` | `list_scheduled_sends` | `activity.read` |
+| Activities, mail and tasks | `send_outbound.answer_invitation` | `answer_calendar_invitation` | `activity.read` |
 | Activities, mail and tasks | `send_outbound.chat_reply` | `send_message` | `activity.create` `activity.read` |
 | Activities, mail and tasks | `send_outbound.email_new` | `send_company_email` | `activity.create` `activity.read` `company.read` `contact.create` `contact.read` `deal.read` `lead.read` `project.read` |
 | Activities, mail and tasks | `send_outbound.email_reply` | `send_email` | `activity.create` `activity.read` |

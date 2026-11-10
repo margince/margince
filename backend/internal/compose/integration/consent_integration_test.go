@@ -884,3 +884,13 @@ func TestASentMessageCarriesTheDisclosuresItOwes(t *testing.T) {
 			"body without it means the edge is not wired", body)
 	}
 }
+
+// A mail logged by hand starts a thread of its own, and that thread is not the
+// subject writing in. So a marketing send that answers it still needs a grant.
+func TestAMarketingSendAnsweringAHandLoggedMailStillNeedsAGrant(t *testing.T) {
+	c := setupConsent(t)
+	c.activityID = logConsentInbound(t, c.AppEnv, c.contactID)
+	if status, code := c.send(t, "marketing_email"); status != http.StatusConflict {
+		t.Fatalf("marketing send answering a hand-logged mail → %d %q, want 409", status, code)
+	}
+}

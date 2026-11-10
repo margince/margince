@@ -42,6 +42,10 @@ var languageEnumSchemas = []string{
 	// `null` beside the codes — which is not a language and is dropped before
 	// the comparison below.
 	"Activity",
+	"DraftSteering",
+	"EmailDraft",
+	"CompanyEmailDraft",
+	"MailDraftEditorState",
 }
 
 func TestEveryLanguageEnumInTheContractListsTheShippedLanguages(t *testing.T) {

@@ -115,6 +115,7 @@ export function WaitingReply({
       kind="email"
       entityType={to.type}
       entityId={to.id}
+      invitation={item.email_summary?.calendar_invitation}
       prepared={prepared}
       // `worklistKey`, not `[worklistKey]`. The key IS the segment array, so
       // wrapping it once more asks for a query whose first segment is itself

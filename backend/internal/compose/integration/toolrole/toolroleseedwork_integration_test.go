@@ -55,6 +55,18 @@ func workSeeders(s sweepSeed) map[string]func() string {
 				"source": "manual", "rfc_message_id": "<sweep-" + ids.NewV7().String() + "@role-sweep.test>",
 			})
 		},
+		// An invitation the seat's own mailbox received, for an event its calendar holds.
+		"calendar_invitation": func() string {
+			uid := "sweep-" + ids.NewV7().String() + "@role-sweep.test"
+			email := s.post("/v1/activities", integration.AnyMap{
+				"kind": "email", "direction": "inbound", "subject": "Invitation: Role sweep", "source": "manual",
+				"rfc_message_id": "<" + uid + ">",
+			})
+			s.ownerExec(`UPDATE activity SET calendar_method = 'REQUEST', calendar_uid = $2 WHERE id = $1`, email, uid)
+			s.ownerExec(`INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, email, apptest.SessionUserID(s.t, s.e))
+			sweepCalendar.Invite(uid)
+			return email
+		},
 		"mail_draft": func() string {
 			company := s.create["company"]()
 			var draft struct {

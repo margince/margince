@@ -235,30 +235,45 @@ func (s *Service) CreateReport(ctx context.Context, in crmcontracts.ReportingRep
 	if err := requireReadWrite(ctx, "report_definition", principal.ActionCreate); err != nil {
 		return crmcontracts.ReportingReport{}, err
 	}
-	return s.insertReport(ctx, in)
+	return s.insertReport(ctx, in, false)
 }
 
-func (s *Service) insertReport(ctx context.Context, in crmcontracts.ReportingReportInput) (crmcontracts.ReportingReport, error) {
+// insertReport stores a new report. A drafted one publishes a revision with no
+// charts and holds the input's charts as its open draft.
+func (s *Service) insertReport(ctx context.Context, in crmcontracts.ReportingReportInput, drafted bool) (crmcontracts.ReportingReport, error) {
 	owner, err := actorID(ctx)
 	if err != nil {
 		return crmcontracts.ReportingReport{}, err
 	}
-	out := crmcontracts.ReportingReport{Id: openapi_types.UUID(ids.NewV7()), OwnerId: openapi_types.UUID(owner), Name: strings.TrimSpace(in.Name), Description: reportDescription(in.Description), Audience: crmcontracts.ReportingReportAudience(in.Audience), AudienceTeamId: in.AudienceTeamId, Selection: in.Selection, Revision: 1, Version: 1, CreatedAt: s.now()}
+	out := crmcontracts.ReportingReport{Id: openapi_types.UUID(ids.NewV7()), OwnerId: openapi_types.UUID(owner), Name: strings.TrimSpace(in.Name), Description: reportDescription(in.Description), Audience: crmcontracts.ReportingReportAudience(in.Audience), AudienceTeamId: in.AudienceTeamId, Revision: 1, Version: 1, CreatedAt: s.now()}
 	err = s.store.db.Tx(ctx, func(tx pgx.Tx) error {
 		if err := s.validateReport(ctx, tx, &in); err != nil {
 			return err
 		}
 		out.Selection = in.Selection
+		draft := out
+		if drafted {
+			out.Selection = withoutCharts(in.Selection)
+			draft.Revision = out.Revision + 1
+			out.DraftRevision = &draft.Revision
+		}
 		var b bindings
-		values := []string{b.add(out.Id), b.add(owner), b.add(out.Name), b.add(out.Description), b.add(out.Audience), b.add(out.AudienceTeamId), b.add(1), b.add(1), b.add(out.CreatedAt)}
-		_, err := tx.Exec(ctx, "INSERT INTO report_definition(id,owner_id,name,description,audience,audience_team_id,revision,version,created_at) VALUES ("+strings.Join(values, ",")+")", b.values...)
+		values := []string{b.add(out.Id), b.add(owner), b.add(out.Name), b.add(out.Description), b.add(out.Audience), b.add(out.AudienceTeamId), b.add(out.Revision), b.add(out.DraftRevision), b.add(out.Version), b.add(out.CreatedAt)}
+		_, err := tx.Exec(ctx, "INSERT INTO report_definition(id,owner_id,name,description,audience,audience_team_id,revision,draft_revision,version,created_at) VALUES ("+strings.Join(values, ",")+")", b.values...)
 		if err != nil {
 			return err
 		}
 		if err := s.saveReportRevision(ctx, tx, &out); err != nil {
 			return err
 		}
-		return recordChange(ctx, tx, "report_definition", ids.UUID(out.Id), "create", nil, out)
+		created := reportImage{ReportingReport: out}
+		if drafted {
+			if err := s.saveReportRevision(ctx, tx, &draft); err != nil {
+				return err
+			}
+			created.DraftSelection = &draft.Selection
+		}
+		return recordChange(ctx, tx, "report_definition", ids.UUID(out.Id), "create", nil, created)
 	})
 	return out, err
 }

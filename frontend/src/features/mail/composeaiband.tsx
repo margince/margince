@@ -6,7 +6,9 @@ import { useId, useState } from "react";
 import type { components } from "../../api/schema";
 import { ErrorLine } from "../../design-system/errorline";
 import { IconAction } from "../../design-system/iconaction";
+import { LanguageSelect } from "../../design-system/languageselect";
 import { useT } from "../../i18n";
+import { isLocale, LOCALES, type Locale } from "../../i18n/locale";
 import { DraftBand, RewriteRow } from "./composedraftband";
 import { DraftOffer } from "./composedraftcontext";
 import type { ComposeFields } from "./composefields";
@@ -38,6 +40,15 @@ export function AiDraftBand({
   const untouched = fields.body !== "" && fields.body === fields.servedBody;
   const discard = voice.discardControl;
   const control = voice.control;
+  const shownLanguage = draftLanguage(fields);
+  const languagePick = shownLanguage && (
+    <DraftLanguagePick
+      language={shownLanguage}
+      onPick={voice.relanguage}
+      pending={control.pending}
+      disabled={control.pending || control.disabled}
+    />
+  );
   const offerId = useId();
   // Held per draft: a new draft is a new provenance, which folds the ask away.
   const [askingOver, setAskingOver] = useState<typeof provenance>(null);
@@ -52,7 +63,12 @@ export function AiDraftBand({
     />
   );
   if (!drafted || !provenance) {
-    return <div className="compose-aiband">{offer}</div>;
+    return (
+      <div className="compose-aiband">
+        {offer}
+        {languagePick}
+      </div>
+    );
   }
   const asking = askingOver === provenance;
   return (
@@ -63,6 +79,7 @@ export function AiDraftBand({
         reasons={account.reasoning}
         actions={
           <>
+            {languagePick}
             {untouched && (
               <RewriteRow
                 disabled={control.pending || control.disabled}
@@ -97,5 +114,42 @@ export function AiDraftBand({
       )}
       {discard?.error && <ErrorLine>{discard.error}</ErrorLine>}
     </div>
+  );
+}
+
+// The rep's pick, else the language the server reported for the last draft
+// that filled the body. A code this build does not ship offers no picker.
+function draftLanguage(fields: ComposeFields): Locale | null {
+  if (fields.language) return fields.language;
+  const reported = fields.provenance?.language;
+  return reported !== undefined && isLocale(reported) ? reported : null;
+}
+
+// Unlike a rewrite verb, the pick stays over edited words, which it sends to
+// be written again in another language under the same ask.
+function DraftLanguagePick({
+  language,
+  onPick,
+  pending,
+  disabled,
+}: Readonly<{
+  language: Locale;
+  onPick: (next: Locale) => void;
+  pending: boolean;
+  disabled: boolean;
+}>) {
+  const t = useT();
+  return (
+    <LanguageSelect
+      className="compose-draftlanguage"
+      aria-label={t("compose.draftLanguage")}
+      aria-busy={pending}
+      languages={LOCALES}
+      value={language}
+      disabled={disabled}
+      onChange={(next) => {
+        if (next !== language) onPick(next);
+      }}
+    />
   );
 }

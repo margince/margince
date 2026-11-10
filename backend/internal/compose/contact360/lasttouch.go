@@ -185,18 +185,18 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 		       inbound.touched_id, outbound.touched_id, live.touched_id
 		FROM contact c
 		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision, a.id AS touched_id
-		                     %[1]s AND %[2]s %[8]s) inbound ON true
+		                     %[1]s AND %[2]s %[11]s) inbound ON true
 		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision, a.id AS touched_id
-		                     %[1]s AND %[5]s %[8]s) outbound ON true
+		                     %[1]s AND %[5]s %[12]s) outbound ON true
 		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision, a.id AS touched_id
-		                     %[1]s AND %[2]s AND NOT %[6]s %[8]s) live ON true
+		                     %[1]s AND %[2]s AND NOT %[6]s %[11]s) live ON true
 		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
 		                     %[1]s AND %[7]s %[8]s) exchange ON true
 		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
 		                     %[1]s AND %[7]s AND a.occurred_at < inbound.touched_at %[8]s) preceding ON true -- occurred_at raw: the touch before the newest inbound, an ordering of rows
 		WHERE c.id = ANY($%[3]d) AND c.archived_at IS NULL AND (%[4]s)`,
 		reached, inbound, wantedPos, visible, outbound, activities.ImportedHistorySQL, exchange, newestRow, readable,
-		fmt.Sprintf(contactReach, wantedPos))
+		fmt.Sprintf(contactReach, wantedPos), newestTheirs, newestOurs)
 	// Inside a composed read it reuses its generic plan. It keys on the contacts
 	// and spells every kind as a literal, and it plans far slower than it runs.
 	err = database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
@@ -236,3 +236,10 @@ const contactReach = `
 
 // newestRow picks a direction's newest row, the one max(a.occurred_at) names.
 const newestRow = "ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1"
+
+// newestTheirs and newestOurs break a tie by precision, so occurredday.Answers between the two picks decides the
+// whole tie.
+var (
+	newestTheirs = "ORDER BY a.occurred_at DESC, " + occurredday.AnsweredTieOrderSQL("a") + ", a.id DESC LIMIT 1"
+	newestOurs   = "ORDER BY a.occurred_at DESC, " + occurredday.AnswerTieOrderSQL("a") + ", a.id DESC LIMIT 1"
+)

@@ -7,11 +7,13 @@ import {
   screen,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { Heading } from "./heading";
 import { armHoverIntent, takeHoverClock } from "./hoverintent-testing";
 import { Modal } from "./modal";
 import { Popover } from "./popover";
+import { Select } from "./select";
 
 afterEach(() => {
   cleanup();
@@ -152,6 +154,53 @@ it("stays open when the reader clicks inside the panel", async () => {
   await user.click(screen.getByRole("link", { name: "The three invoices" }));
 
   expect(screen.getByRole("link", { name: "The three invoices" })).toBeTruthy();
+});
+
+function SelectInPopover() {
+  const [colleague, setColleague] = useState("");
+  return (
+    <Popover label="Access">
+      <Select
+        aria-label="Hand over to"
+        placeholder="Choose a colleague"
+        options={[
+          { value: "rep-one", label: "Rep One" },
+          { value: "rep-two", label: "Rep Two" },
+        ]}
+        value={colleague}
+        onChange={setColleague}
+      />
+    </Popover>
+  );
+}
+
+// A select's list is portalled to the body, outside the panel. A mouse press
+// on its option must not count as a press away from the panel.
+it("keeps the panel and the pick when an option of a select inside it is clicked", async () => {
+  const user = userEvent.setup();
+  render(<SelectInPopover />);
+  await user.click(screen.getByRole("button", { name: "Access" }));
+  await user.click(screen.getByRole("combobox", { name: "Hand over to" }));
+
+  await user.click(screen.getByRole("option", { name: "Rep Two" }));
+
+  expect(
+    screen.getByRole("combobox", { name: "Hand over to" }).textContent,
+  ).toContain("Rep Two");
+});
+
+it("closes an open select list on Escape before the panel around it", async () => {
+  const user = userEvent.setup();
+  render(<SelectInPopover />);
+  await user.click(screen.getByRole("button", { name: "Access" }));
+  await user.click(screen.getByRole("combobox", { name: "Hand over to" }));
+
+  await user.keyboard("{Escape}");
+  expect(screen.queryByRole("option", { name: "Rep Two" })).toBeNull();
+  expect(screen.getByRole("combobox", { name: "Hand over to" })).toBeTruthy();
+
+  await user.keyboard("{Escape}");
+  expect(screen.queryByRole("combobox", { name: "Hand over to" })).toBeNull();
 });
 
 // A panel with controls in it is a panel a keyboard reader has to be able to

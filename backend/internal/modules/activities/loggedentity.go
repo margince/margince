@@ -21,7 +21,7 @@ func loggedCorrespondenceEntity(ctx context.Context, tx pgx.Tx, in LogActivityIn
 		user = host.UUID
 	}
 	if user.IsZero() {
-		return nil, nil
+		return nil, nil //nolint:nilnil // automatic work with no seat names no company; the nil binds as a NULL legal_entity_id
 	}
 	entity, err := storekit.LegalEntityOf(ctx, tx, user)
 	if err != nil {
