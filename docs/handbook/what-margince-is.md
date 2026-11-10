@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/app/nav.ts frontend/src/app/palette.tsx frontend/src/app/palettesearch.ts frontend/src/app/paletterecents.ts frontend/src/app/paletterecents.reader.ts frontend/src/app/paletterecents.storage.ts frontend/src/features/voice-knowledge/search.tsx backend/internal/modules/search frontend/src/lib/keymap.ts frontend/src/lib/keyguard.ts -->
+<!-- describes: frontend/src/app/nav.ts frontend/src/app/palette.tsx frontend/src/app/palettesearch.ts frontend/src/app/paletterecents.ts frontend/src/app/paletterecents.reader.ts frontend/src/app/paletterecents.storage.ts frontend/src/features/voice-knowledge/search.tsx backend/internal/modules/search frontend/src/lib/keymap.ts frontend/src/lib/keyguard.ts frontend/src/app/palettehotkey.ts -->
 # What Margince is
 
 Margince is a CRM. It is one place for the contacts you sell to, the companies
@@ -171,13 +171,14 @@ On Windows and Linux, press Ctrl where this list says ⌘.
 | `G`, then a key | **Go to** a page in the sidebar: `G` then `C` for Contacts, `G` then `D` for Deals. Point at a page in the sidebar to see its key. |
 | `N` | **Log activity**, on a record |
 | `T` | **Add task**, on a record |
-| `M` | **Write email**, on a record |
-| `⌘↵` | **Save multi-line field**, **Send email**, or **Submit dialog** in a dialog with a form |
+| `M` | **Write a message**, on a record |
+| `⌘↵` | **Save multi-line field** in a field with many lines that you edit, **Send email** in the email editor, or **Submit dialog** in a dialog that holds a form |
 | `⌘B` | **Show or hide sidebar** |
 | `Esc` | **Close dialog or menu** |
 
-A shortcut that is one key, with no ⌘ or Ctrl, never acts while you type in a field. It also waits while a dialog or menu is open.
-`N`, `T` and `M` act only where the record shows the same button and you may use it. A project has no email button, so `M` does nothing there.
+A shortcut that is one key, with no ⌘ or Ctrl, never acts while you type in a field. It also does nothing while a dialog or menu is open.
+
+`N`, `T` and `M` act only where the record shows the same button and you may use it. On a contact, `M` opens the button that writes to them, such as **Email** or **Message on …**. A project has no such button, so `M` does nothing there.
 To turn off the shortcuts that are one key, see [Your own settings](your-own-settings.md#how-do-i-turn-off-single-key-shortcuts).
 Also called: keys, shortcut list, keyboard, key for a page.
 

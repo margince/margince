@@ -54,7 +54,6 @@ function verbs(activity: ActivityGate, opened: LogDrawer = null) {
   };
 }
 
-/** Log activity for a seat that may log. */
 export const Live: Story = { render: verbs(OPEN) };
 
 /** A seat that may not log: the verb stays, refused, over the one sentence. */
