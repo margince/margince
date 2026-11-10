@@ -40,7 +40,7 @@ it("reads a 404 as no case rather than as a failure", async () => {
 });
 
 it("reads a visible case as the case", async () => {
-  const body = { id: "case-1", anchor_id: ANA, members: [], pairs: [] };
+  const body = { anchor_id: ANA, revision: "r1", status: "open", members: [] };
   vi.stubGlobal(
     "fetch",
     vi.fn(
@@ -55,5 +55,5 @@ it("reads a visible case as the case", async () => {
     wrapper: wrap(),
   });
   await waitFor(() => expect(result.current.isSuccess).toBe(true));
-  expect(result.current.data?.id).toBe("case-1");
+  expect(result.current.data?.revision).toBe("r1");
 });
