@@ -289,6 +289,13 @@ describe("the label rows", () => {
       expect.arrayContaining(["late", "last", "ahead", "end"]),
     );
   });
+
+  it("name a deal's outcome before six more telling labels", () => {
+    const late = [5, 20, 35, 50, 65, 80].map((at) => box(at, "late", 4, 4));
+    const outcome: LabelBox = { ...box(12, "done", 4, 4), decided: true };
+    const places = placeLabels([outcome, ...late], CANVAS);
+    expect(places[0]).not.toBeNull();
+  });
 });
 
 describe("the grid-line labels", () => {

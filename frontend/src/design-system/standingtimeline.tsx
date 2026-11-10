@@ -198,6 +198,7 @@ export function StandingTimeline({
     labels.map(({ event, at, sub }) => ({
       pct: at,
       kind: event?.kind ?? "done",
+      decided: event?.outcome !== undefined,
       titleChars: event?.title.length ?? 0,
       subChars: sub.length,
     })),

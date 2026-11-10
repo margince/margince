@@ -260,11 +260,12 @@ function outranks(
   return kindA === "ahead" ? a < b : a > b;
 }
 
-/** One label to place: its dot's share of the axis, its kind, and the length
- *  of its two lines in characters. */
+/** One label to place: its dot's share of the axis, its kind, whether it
+ *  names a deal's outcome, and the length of its two lines in characters. */
 export type LabelBox = Readonly<{
   pct: number;
   kind: TimelineKind;
+  decided?: boolean;
   titleChars: number;
   subChars: number;
 }>;
