@@ -70,7 +70,11 @@ func (s *Store) recordFaceToFaceTx(ctx context.Context, tx pgx.Tx, contactID ids
 func exchangeStillCountsTx(
 	ctx context.Context, tx pgx.Tx, subject ids.ContactID, occurredAt, now time.Time,
 ) (bool, time.Duration, error) {
-	country, err := recipientCountryTx(ctx, tx, ruleSubject{Kind: entityContact, ID: subject.String()})
+	return subjectExchangeStillCountsTx(ctx, tx, ruleSubject{Kind: entityContact, ID: subject.String()}, occurredAt, now)
+}
+
+func subjectExchangeStillCountsTx(ctx context.Context, tx pgx.Tx, subject ruleSubject, occurredAt, now time.Time) (bool, time.Duration, error) {
+	country, err := recipientCountryTx(ctx, tx, subject)
 	if err != nil {
 		return false, 0, err
 	}

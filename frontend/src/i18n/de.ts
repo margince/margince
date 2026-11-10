@@ -2777,7 +2777,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.product_id": "Produkt",
   "history.field.legal_entity_id": "Absendendes Unternehmen",
   "history.field.about_deal": "Betreffender Deal",
-  "history.field.qualifying_event": "Qualifizierendes Ereignis",
+  "history.field.qualifying_event": "Erfasster Austausch",
+  "history.value.exchange.requested": "Um eine Nachricht gebeten",
   "history.field.qualifying_event_retracted":
     "Erfasster Austausch zurückgenommen",
   "history.field.acquisition_request_retracted":
@@ -7845,7 +7846,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.sendMessageBody":
     "Die Nachricht wird sofort gesendet. Das lässt sich nicht rückgängig machen.",
   "directSend.open": "Mit erfasster Ausnahme senden",
-  "directSend.sent": "Als festgehaltene Ausnahme gesendet.",
+  "directSend.queued": "Zum Senden als festgehaltene Ausnahme vorgemerkt.",
   "directSend.opening": "Wird geöffnet…",
   "directSend.alreadySettled":
     "Darüber wurde bereits entschieden. Öffne die Prüfung, um das Ergebnis zu sehen.",
@@ -17800,9 +17801,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.consent.fact.noMarketingPermission": "Keine Werbeerlaubnis erfasst",
   "contact.consent.fact.notAllowed": "Für diesen Zweck nicht erlaubt",
   "contact.consent.fact.nothingRecorded": "Noch nichts erfasst",
-  "contact.consent.allowedWord": "Erlaubt",
-  "contact.consent.blockedWord": "Blockiert",
-  "contact.consent.unknownWord": "Unbekannt",
+  "contact.consent.fact.purposeSupported":
+    "Grundlage für diesen Zweck vorhanden",
 
   "contact.moment.rule.privacy_notice_due": "Datenschutzhinweis ausstehend",
   "contact.moment.rule.meeting_prep": "Termin steht bevor",

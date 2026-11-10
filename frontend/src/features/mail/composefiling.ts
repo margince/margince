@@ -445,7 +445,6 @@ export function useComposeRecords({
       entityType === "contact"
         ? contact.data?.contact?.full_name
         : anchorCompany.data?.company?.display_name,
-    contactOf: contactsByAddress(contact.data, anchorCompany.data),
     reachableProjects,
     projectFiling,
     // Addresses known not to arrive, warned under the fields.

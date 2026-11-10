@@ -74,6 +74,7 @@ type SendRequest = {
     // Left out on a reply: the engine resolves it from the anchor, and a
     // contradicting claim is recorded as unsupported.
     communication_context?: CommunicationContext;
+    evidence?: components["schemas"]["CommunicationEvidence"];
     scheduled_at?: string;
     scheduled_tz?: string;
   };
@@ -161,6 +162,7 @@ function sendRequest(
     files: readonly ChosenFile[];
     heldDraftId: string | undefined;
     context: CommunicationContext | undefined;
+    evidence?: components["schemas"]["CommunicationEvidence"];
     links: Link[];
     answerAtSend: Preview | undefined;
   }>,
@@ -184,6 +186,7 @@ function sendRequest(
       draft_ref: fields.draftRef ?? undefined,
       mail_draft_id: where.heldDraftId,
       communication_context: where.context,
+      evidence: where.evidence,
       ...scheduleFields(fields.sendAt),
     },
     channelBody: {
@@ -224,7 +227,7 @@ function messageOf(request: SendRequest): string {
   });
 }
 
-// 201 is a message that goes later; 202 is one that has gone.
+// Both responses accept delivery; only 201 names a scheduled release.
 type SendOutcome =
   | { sent: false }
   | { sent: true; scheduled: boolean; activity: unknown };
@@ -326,12 +329,11 @@ export function useComposeSend({
       finishSent();
     },
   });
-  // A message sent past its refusal as a recorded exception. The refusal it
-  // answered is cleared with the rest, so nothing on screen invites a second
-  // send of a message that has gone.
+  // Clearing the refusal and draft after staging keeps this composer from
+  // offering the same held message again.
   const directSent = () => {
     send.reset();
-    toast.show(t("directSend.sent"));
+    toast.show(t("directSend.queued"));
     finishSent();
   };
 
@@ -361,6 +363,10 @@ export function useComposeSend({
     grounding,
     projectId,
   );
+  const contextDealId = (answering ? anchorActivity?.links : links)?.find(
+    (link) => link.entity_type === "deal",
+  )?.entity_id;
+  const evidence = contextDealId ? { deal_id: contextDealId } : undefined;
   // The engine's answer, asked while the rep writes. Bcc is in the question,
   // because consent is owed to everyone who receives the message.
   const answer = useSendPermission({
@@ -368,6 +374,7 @@ export function useComposeSend({
     anchorActivityId: answering,
     links,
     context: claimedContext,
+    evidence,
     enabled: open && !isChannelReply,
   });
   // A consent refusal joins the engine's answer as one status, and only while
@@ -378,6 +385,7 @@ export function useComposeSend({
     files,
     heldDraftId: savedDraft.held?.id,
     context: claimedContext,
+    evidence,
     links,
     answerAtSend: answer.preview,
   });
@@ -433,9 +441,7 @@ export function useComposeSend({
     sendReview,
     sendError,
     claimedContext,
-    contextDealId: (answering ? anchorActivity?.links : links)?.find(
-      (link) => link.entity_type === "deal",
-    )?.entity_id,
+    contextDealId,
     permission,
     flagged,
     fieldsRef,

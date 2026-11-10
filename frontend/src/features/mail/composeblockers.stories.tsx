@@ -24,6 +24,7 @@ const UNPROVEN = {
     {
       address: "anna@example.test",
       verdict: "review",
+      evidence_subject: { entity_type: "contact", entity_id: "c-1" },
       reason_code: "no_compatible_evidence",
       decided_by: "machine",
       would_refuse: true,

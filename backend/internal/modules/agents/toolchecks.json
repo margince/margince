@@ -2864,6 +2864,11 @@
         "introduction.read"
       ]
     },
+    "record_lead_qualifying_event": {
+      "checks": [
+        "lead.update"
+      ]
+    },
     "record_qualifying_event": {
       "checks": [
         "contact.update"
@@ -3225,6 +3230,11 @@
     "retract_acquisition_request": {
       "checks": [
         "contact.update"
+      ]
+    },
+    "retract_lead_qualifying_event": {
+      "checks": [
+        "lead.update"
       ]
     },
     "retract_qualifying_event": {

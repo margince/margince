@@ -17747,7 +17747,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Record the exchange that makes business correspondence lawful.
+         * Record an exchange for scoped correspondence.
          * @description A qualifying event is what a `business_correspondence` verdict reads to answer whether
          *     we may write to somebody at all (`getContactConsentGuard`). Most arrive on their own —
          *     an inbound message, an inquiry or a meeting can come from records the product already
@@ -17799,6 +17799,58 @@ export interface paths {
          *     user's statement about what a contact said.
          */
         post: operations["retractQualifyingEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/leads/{id}/consent/qualifying-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record an exchange with a lead.
+         * @description Records the same scoped exchange as the contact route, against the existing lead.
+         *     Requires permission to update that lead. It does not convert the lead, send a message
+         *     or grant marketing consent. A request names its sending company and, when supplied,
+         *     its deal. An agent asks its user first because the exchange is the user's statement.
+         */
+        post: operations["recordLeadQualifyingEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/leads/{id}/consent/qualifying-events/{event_id}/retract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                event_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take back a recorded lead exchange.
+         * @description Withdraws a hand-recorded exchange using the same rules as the contact route.
+         *     The row remains as a record, and no send relies on it after withdrawal.
+         *     Requires permission to update the lead. An agent asks its user first.
+         */
+        post: operations["retractLeadQualifyingEvent"];
         delete?: never;
         options?: never;
         head?: never;
@@ -34793,13 +34845,10 @@ export interface components {
             sentences: components["schemas"]["CompanyBriefSentence"][];
         };
         /**
-         * @description Whether an outbound message to this contact is allowed right now, per purpose and
-         *     channel, WITH the reason (ADR-0098 D6).
-         *
-         *     Computed by the same gate the dispatcher runs at transmit time, so the preview a
-         *     composer shows and the check that fires at send cannot drift. The transmit-time
-         *     recheck stays authoritative and refuses with the newer answer when state changed
-         *     after the drawer opened.
+         * @description Facts recorded for this contact, per purpose and channel, with their reason.
+         *     This summary does not authorize a message. Each message is checked for its
+         *     recipient, sending company, context and current evidence when it is staged
+         *     and before a provider receives it.
          */
         ContactConsentGuard: {
             /** Format: uuid */
@@ -34810,11 +34859,9 @@ export interface components {
             purpose_key: string;
             purpose_label?: string | null;
             /**
-             * @description Which gate this purpose answers to (ADR-0098 D1). `business_correspondence` and
-             *     `transactional` are never consent-gated — their lawful basis is Art 6(1)(b)/(f), and
-             *     treating a reply to someone who wrote to us as a consent violation is a frame that is
-             *     legally wrong. `marketing` needs express consent with double-opt-in proof; the §7(3)
-             *     existing-customer exception is not offered. `phone_outreach` is specced and dormant.
+             * @description The class this purpose belongs to. The row reports facts for that class;
+             *     it does not permit every message. The send check applies the market's
+             *     rules, the sending company and current evidence to the exact message.
              * @enum {string}
              */
             purpose_class: "business_correspondence" | "transactional" | "marketing" | "phone_outreach";
@@ -34843,10 +34890,9 @@ export interface components {
             qualifying_event?: components["schemas"]["ConsentQualifyingEvent"];
         };
         /**
-         * @description The deterministic event that makes business correspondence lawful (ADR-0098 D2): an
-         *     inbound message, an inquiry they initiated, an active deal with their company, or
-         *     a recorded in-person exchange. Recording WHICH event and when is what makes the Art
-         *     6(1)(f) balancing accountable rather than merely asserted.
+         * @description A recorded exchange that may support a scoped message. The send check also
+         *     uses its sending company, request or deal context, current stops and source
+         *     visibility. An open deal alone does not show that the subject asked for mail.
          */
         ConsentQualifyingEvent: {
             /**
@@ -41748,10 +41794,23 @@ export interface components {
             allowed: boolean;
             recipients: components["schemas"]["SendAuthorizationPreviewRecipient"][];
         };
+        /** @description An existing recipient record the caller can read. */
+        CommunicationEvidenceSubject: {
+            /** @enum {string} */
+            entity_type: "contact" | "lead";
+            /** Format: uuid */
+            entity_id: string;
+        };
         /** @description One recipient's answer. It describes the MESSAGE, never the contact's file. */
         SendAuthorizationPreviewRecipient: {
             /** Format: email */
             address: string;
+            /**
+             * @description The existing contact or lead this recipient resolves to, only when the caller
+             *     can read it. Absent for newly filed addresses and records unavailable to the
+             *     caller. Recording an exchange still requires permission to update that record.
+             */
+            evidence_subject?: components["schemas"]["CommunicationEvidenceSubject"];
             /**
              * @description `allow` would send. `deny` would refuse. `review` is not a soft allow — it means
              *     the record does not carry this message on its own and names what is missing.
@@ -43363,18 +43422,18 @@ export interface components {
             /** @description The engagement named in the cited words, when present. Never inferred from the company name. */
             workstream?: string;
         };
-        /** @description One rep's statement about one contact, answering one refusal. */
+        /** @description One rep's statement about one recipient, answering one refusal. */
         RecordCommunicationContextRequest: {
             /**
              * Format: uuid
-             * @description The contact this statement is about. It must be somebody this review was refused for,
-             *     and the refusal must be one a statement can answer — a review naming three contacts
+             * @description The lead or contact this statement is about. It must be somebody this review was refused for,
+             *     and the refusal must be one a statement can answer — a review naming three recipients
              *     takes three statements, not one copied across them.
              */
             subject_id: string;
             /**
              * @description How it happened. `in_person` is an exchange in a room, a card handed over at a stand
-             *     included; `requested_by_subject` is the contact asking us to write to them by phone or
+             *     included; `requested_by_subject` is the recipient asking us to write to them by phone or
              *     across a counter. `in_person` supports personal one-to-one follow-up mail, never
              *     marketing or a newsletter. A meeting owes no notice. A caller who may change notice cases
              *     settles the contact's open source reviews as information given at the meeting, as a
@@ -86190,7 +86249,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Recorded. The contact's business-correspondence verdict now reads it. */
+            /** @description Recorded. This sends no message and grants no marketing consent. */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -86239,6 +86298,63 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    recordLeadQualifyingEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordQualifyingEventRequest"];
+            };
+        };
+        responses: {
+            /** @description Recorded. This sends no message and grants no marketing consent. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QualifyingEventRecord"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    retractLeadQualifyingEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                event_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Withdrawn. Sends no longer rely on this exchange. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

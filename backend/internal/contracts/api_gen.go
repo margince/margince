@@ -5140,6 +5140,24 @@ func (e CommunicationContext) Valid() bool {
 	}
 }
 
+// Defines values for CommunicationEvidenceSubjectEntityType.
+const (
+	CommunicationEvidenceSubjectEntityTypeContact CommunicationEvidenceSubjectEntityType = "contact"
+	CommunicationEvidenceSubjectEntityTypeLead    CommunicationEvidenceSubjectEntityType = "lead"
+)
+
+// Valid indicates whether the value is a known member of the CommunicationEvidenceSubjectEntityType enum.
+func (e CommunicationEvidenceSubjectEntityType) Valid() bool {
+	switch e {
+	case CommunicationEvidenceSubjectEntityTypeContact:
+		return true
+	case CommunicationEvidenceSubjectEntityTypeLead:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CommunicationReviewKind.
 const (
 	CommunicationReviewKindSingle CommunicationReviewKind = "single"
@@ -38152,6 +38170,15 @@ type CommunicationEvidence struct {
 	InvoiceId *openapi_types.UUID `json:"invoice_id,omitempty"`
 }
 
+// CommunicationEvidenceSubject An existing recipient record the caller can read.
+type CommunicationEvidenceSubject struct {
+	EntityId   openapi_types.UUID                     `json:"entity_id"`
+	EntityType CommunicationEvidenceSubjectEntityType `json:"entity_type"`
+}
+
+// CommunicationEvidenceSubjectEntityType defines model for CommunicationEvidenceSubject.EntityType.
+type CommunicationEvidenceSubjectEntityType string
+
 // CommunicationReview What a refused send left behind. A SNAPSHOT of the engine's answer at the moment it was
 // given — a reader asking why a message was refused on Tuesday needs Tuesday's answer, not
 // what the consent rows say today.
@@ -41360,10 +41387,9 @@ type ConsentPurpose struct {
 // ConsentPurposeClass What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
 type ConsentPurposeClass string
 
-// ConsentQualifyingEvent The deterministic event that makes business correspondence lawful (ADR-0098 D2): an
-// inbound message, an inquiry they initiated, an active deal with their company, or
-// a recorded in-person exchange. Recording WHICH event and when is what makes the Art
-// 6(1)(f) balancing accountable rather than merely asserted.
+// ConsentQualifyingEvent A recorded exchange that may support a scoped message. The send check also
+// uses its sending company, request or deal context, current stops and source
+// visibility. An open deal alone does not show that the subject asked for mail.
 type ConsentQualifyingEvent struct {
 	// Id Set on an exchange a colleague recorded by hand (`in_person` or `requested_by_subject`),
 	// the one kind POST /contacts/{id}/consent/qualifying-events/{event_id}/retract takes back.
@@ -42093,13 +42119,10 @@ type ContactCaseSkippedOwner struct {
 // ContactCaseSkippedOwnerReason defines model for ContactCaseSkippedOwner.Reason.
 type ContactCaseSkippedOwnerReason string
 
-// ContactConsentGuard Whether an outbound message to this contact is allowed right now, per purpose and
-// channel, WITH the reason (ADR-0098 D6).
-//
-// Computed by the same gate the dispatcher runs at transmit time, so the preview a
-// composer shows and the check that fires at send cannot drift. The transmit-time
-// recheck stays authoritative and refuses with the newer answer when state changed
-// after the drawer opened.
+// ContactConsentGuard Facts recorded for this contact, per purpose and channel, with their reason.
+// This summary does not authorize a message. Each message is checked for its
+// recipient, sending company, context and current evidence when it is staged
+// and before a provider receives it.
 type ContactConsentGuard struct {
 	ContactId openapi_types.UUID         `json:"contact_id"`
 	Entries   []ContactConsentGuardEntry `json:"entries"`
@@ -42109,11 +42132,9 @@ type ContactConsentGuard struct {
 type ContactConsentGuardEntry struct {
 	Channel ContactConsentGuardEntryChannel `json:"channel"`
 
-	// PurposeClass Which gate this purpose answers to (ADR-0098 D1). `business_correspondence` and
-	// `transactional` are never consent-gated — their lawful basis is Art 6(1)(b)/(f), and
-	// treating a reply to someone who wrote to us as a consent violation is a frame that is
-	// legally wrong. `marketing` needs express consent with double-opt-in proof; the §7(3)
-	// existing-customer exception is not offered. `phone_outreach` is specced and dormant.
+	// PurposeClass The class this purpose belongs to. The row reports facts for that class;
+	// it does not permit every message. The send check applies the market's
+	// rules, the sending company and current evidence to the exact message.
 	PurposeClass ContactConsentGuardEntryPurposeClass `json:"purpose_class"`
 	PurposeKey   string                               `json:"purpose_key"`
 	PurposeLabel *string                              `json:"purpose_label,omitempty"`
@@ -42139,11 +42160,9 @@ type ContactConsentGuardEntry struct {
 // ContactConsentGuardEntryChannel defines model for ContactConsentGuardEntry.Channel.
 type ContactConsentGuardEntryChannel string
 
-// ContactConsentGuardEntryPurposeClass Which gate this purpose answers to (ADR-0098 D1). `business_correspondence` and
-// `transactional` are never consent-gated — their lawful basis is Art 6(1)(b)/(f), and
-// treating a reply to someone who wrote to us as a consent violation is a frame that is
-// legally wrong. `marketing` needs express consent with double-opt-in proof; the §7(3)
-// existing-customer exception is not offered. `phone_outreach` is specced and dormant.
+// ContactConsentGuardEntryPurposeClass The class this purpose belongs to. The row reports facts for that class;
+// it does not permit every message. The send check applies the market's
+// rules, the sending company and current evidence to the exact message.
 type ContactConsentGuardEntryPurposeClass string
 
 // ContactConsentGuardEntryReasonCode `reason` as a code, so a screen says it in its reader's language. A
@@ -57588,10 +57607,10 @@ type RecordClaim struct {
 // RecordClaimRecordType defines model for RecordClaim.RecordType.
 type RecordClaimRecordType string
 
-// RecordCommunicationContextRequest One rep's statement about one contact, answering one refusal.
+// RecordCommunicationContextRequest One rep's statement about one recipient, answering one refusal.
 type RecordCommunicationContextRequest struct {
 	// Kind How it happened. `in_person` is an exchange in a room, a card handed over at a stand
-	// included; `requested_by_subject` is the contact asking us to write to them by phone or
+	// included; `requested_by_subject` is the recipient asking us to write to them by phone or
 	// across a counter. `in_person` supports personal one-to-one follow-up mail, never
 	// marketing or a newsletter. A meeting owes no notice. A caller who may change notice cases
 	// settles the contact's open source reviews as information given at the meeting, as a
@@ -57604,14 +57623,14 @@ type RecordCommunicationContextRequest struct {
 	// OccurredAt When it happened, not when it was typed in. A future moment is refused.
 	OccurredAt time.Time `json:"occurred_at"`
 
-	// SubjectId The contact this statement is about. It must be somebody this review was refused for,
-	// and the refusal must be one a statement can answer — a review naming three contacts
+	// SubjectId The lead or contact this statement is about. It must be somebody this review was refused for,
+	// and the refusal must be one a statement can answer — a review naming three recipients
 	// takes three statements, not one copied across them.
 	SubjectId openapi_types.UUID `json:"subject_id"`
 }
 
 // RecordCommunicationContextRequestKind How it happened. `in_person` is an exchange in a room, a card handed over at a stand
-// included; `requested_by_subject` is the contact asking us to write to them by phone or
+// included; `requested_by_subject` is the recipient asking us to write to them by phone or
 // across a counter. `in_person` supports personal one-to-one follow-up mail, never
 // marketing or a newsletter. A meeting owes no notice. A caller who may change notice cases
 // settles the contact's open source reviews as information given at the meeting, as a
@@ -61130,6 +61149,11 @@ type SendAuthorizationPreviewRecipient struct {
 	// liftability itself would be a second copy of that rule. The copy that stopped
 	// matching would offer a rep a button that cannot lawfully be pressed.
 	DecidedBy *SendAuthorizationPreviewRecipientDecidedBy `json:"decided_by,omitempty"`
+
+	// EvidenceSubject The existing contact or lead this recipient resolves to, only when the caller
+	// can read it. Absent for newly filed addresses and records unavailable to the
+	// caller. Recording an exchange still requires permission to update that record.
+	EvidenceSubject *CommunicationEvidenceSubject `json:"evidence_subject,omitempty"`
 
 	// Mode How much authority the engine's answer carries for this category on this
 	// installation. Under `observe` a `deny` here still sends, and a composer that
@@ -77652,6 +77676,9 @@ type DisqualifyLeadJSONRequestBody = DisqualifyLeadRequest
 // UpdateLeadJSONRequestBody defines body for UpdateLead for application/json ContentType.
 type UpdateLeadJSONRequestBody = UpdateLeadRequest
 
+// RecordLeadQualifyingEventJSONRequestBody defines body for RecordLeadQualifyingEvent for application/json ContentType.
+type RecordLeadQualifyingEventJSONRequestBody = RecordQualifyingEventRequest
+
 // LiftLeadSuppressionJSONRequestBody defines body for LiftLeadSuppression for application/json ContentType.
 type LiftLeadSuppressionJSONRequestBody LiftLeadSuppressionJSONBody
 
@@ -92105,7 +92132,7 @@ type ServerInterface interface {
 	// Mail this contact the Art. 14 disclosure, which asks them for nothing.
 	// (POST /contacts/{id}/consent/privacy-notice)
 	SendPrivacyNotice(w http.ResponseWriter, r *http.Request, id Id)
-	// Record the exchange that makes business correspondence lawful.
+	// Record an exchange for scoped correspondence.
 	// (POST /contacts/{id}/consent/qualifying-events)
 	RecordQualifyingEvent(w http.ResponseWriter, r *http.Request, id Id)
 	// Take back an exchange a colleague recorded by hand.
@@ -92867,6 +92894,12 @@ type ServerInterface interface {
 	// Update a lead (partial).
 	// (PATCH /leads/{id})
 	UpdateLead(w http.ResponseWriter, r *http.Request, id Id, params UpdateLeadParams)
+	// Record an exchange with a lead.
+	// (POST /leads/{id}/consent/qualifying-events)
+	RecordLeadQualifyingEvent(w http.ResponseWriter, r *http.Request, id Id)
+	// Take back a recorded lead exchange.
+	// (POST /leads/{id}/consent/qualifying-events/{event_id}/retract)
+	RetractLeadQualifyingEvent(w http.ResponseWriter, r *http.Request, id Id, eventId openapi_types.UUID)
 	// List the stops that stand on this lead, and which ones you may take back.
 	// (GET /leads/{id}/consent/stops)
 	ListLeadStops(w http.ResponseWriter, r *http.Request, id Id)
@@ -96401,7 +96434,7 @@ func (_ Unimplemented) SendPrivacyNotice(w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Record the exchange that makes business correspondence lawful.
+// Record an exchange for scoped correspondence.
 // (POST /contacts/{id}/consent/qualifying-events)
 func (_ Unimplemented) RecordQualifyingEvent(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -97922,6 +97955,18 @@ func (_ Unimplemented) GetLead(w http.ResponseWriter, r *http.Request, id Id) {
 // Update a lead (partial).
 // (PATCH /leads/{id})
 func (_ Unimplemented) UpdateLead(w http.ResponseWriter, r *http.Request, id Id, params UpdateLeadParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record an exchange with a lead.
+// (POST /leads/{id}/consent/qualifying-events)
+func (_ Unimplemented) RecordLeadQualifyingEvent(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take back a recorded lead exchange.
+// (POST /leads/{id}/consent/qualifying-events/{event_id}/retract)
+func (_ Unimplemented) RetractLeadQualifyingEvent(w http.ResponseWriter, r *http.Request, id Id, eventId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -128679,6 +128724,83 @@ func (siw *ServerInterfaceWrapper) UpdateLead(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// RecordLeadQualifyingEvent operation middleware
+func (siw *ServerInterfaceWrapper) RecordLeadQualifyingEvent(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RecordLeadQualifyingEvent(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RetractLeadQualifyingEvent operation middleware
+func (siw *ServerInterfaceWrapper) RetractLeadQualifyingEvent(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "event_id" -------------
+	var eventId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "event_id", chi.URLParam(r, "event_id"), &eventId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "event_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RetractLeadQualifyingEvent(w, r, id, eventId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListLeadStops operation middleware
 func (siw *ServerInterfaceWrapper) ListLeadStops(w http.ResponseWriter, r *http.Request) {
 
@@ -148391,6 +148513,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/leads/{id}", wrapper.UpdateLead)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/leads/{id}/consent/qualifying-events", wrapper.RecordLeadQualifyingEvent)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/leads/{id}/consent/qualifying-events/{event_id}/retract", wrapper.RetractLeadQualifyingEvent)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/leads/{id}/consent/stops", wrapper.ListLeadStops)

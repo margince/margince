@@ -38,6 +38,15 @@ var complianceFixtures = map[string]func(p *recordPool) map[string]any{
 			"kind": "in_person", "note": "Met at the fair.", "occurred_at": pastInstant(p),
 		}}
 	},
+	"record_lead_qualifying_event": func(p *recordPool) map[string]any {
+		return map[string]any{"id": p.take("lead"), "request_body": map[string]any{
+			"kind": "requested_by_subject", "note": "Asked by phone for the document.", "occurred_at": pastInstant(p),
+		}}
+	},
+	"retract_lead_qualifying_event": func(p *recordPool) map[string]any {
+		event := p.take("lead_qualifying_event")
+		return map[string]any{"id": p.fact(event, "lead"), "event_id": event}
+	},
 	"retract_qualifying_event": func(p *recordPool) map[string]any {
 		event := p.take("qualifying_event")
 		return map[string]any{"id": p.fact(event, "contact"), "event_id": event}
@@ -141,20 +150,24 @@ func complianceSeeders(s sweepSeed) map[string]func() string {
 		apptest.DriveNoticeCase(s.t, s.e, contact)
 		return s.ownerScalar(`SELECT id::text FROM privacy_notice_case WHERE contact_id = $1`, contact)
 	}
-	qualifying := func() string {
-		contact := s.create["contact"]()
-		event := s.post("/v1/contacts/"+contact+"/consent/qualifying-events", integration.AnyMap{
-			"kind": "in_person", "note": "Met at the fair.",
-			"occurred_at": s.pool.sweepStart.Add(-48 * time.Hour).Format(time.RFC3339),
-		})
-		s.pool.note(event, "contact", contact)
-		return event
+	qualifying := func(kind string) func() string {
+		return func() string {
+			subject := s.create[kind]()
+			event := s.post("/v1/"+kind+"s/"+subject+"/consent/qualifying-events", integration.AnyMap{
+				"kind": "in_person", "note": "Met at the fair.",
+				"occurred_at": s.pool.sweepStart.Add(-48 * time.Hour).Format(time.RFC3339),
+			})
+			s.pool.note(event, kind, subject)
+			return event
+		}
 	}
+
 	return map[string]func() string{
 		"mail_contact":          mailContact,
 		"consent_purpose":       purpose(false),
 		"double_opt_in_purpose": purpose(true),
-		"qualifying_event":      qualifying,
+		"qualifying_event":      qualifying("contact"),
+		"lead_qualifying_event": qualifying("lead"),
 		// A contact a web form or lead conversion created as one who asked for
 		// a quote. No route of the sweep's creates one with that acquisition.
 		"acquisition_contact": func() string {

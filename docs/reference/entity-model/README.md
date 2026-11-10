@@ -31,8 +31,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 360 |
-| Columns | 4369 |
-| Foreign keys | 602 |
+| Columns | 4370 |
+| Foreign keys | 603 |
 | Owning areas | 38 |
 
 ## The 12 records everything else hangs off
@@ -46,7 +46,7 @@ Ranked by how many foreign keys point at them.
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 38 | 49 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 77 | 45 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 49 | 30 |
-| [`lead`](contacts.md#lead) | [contacts](contacts.md) | 48 | 18 |
+| [`lead`](contacts.md#lead) | [contacts](contacts.md) | 48 | 19 |
 | [`project`](projects.md#project) | [projects](projects.md) | 24 | 12 |
 | [`legal_entity`](contacts.md#legal_entity) | [contacts](contacts.md) | 29 | 9 |
 | [`passport`](identity.md#passport) | [identity](identity.md) | 12 | 9 |
@@ -256,7 +256,7 @@ erDiagram
 | [`consent_doi_token`](consent.md#consent_doi_token) | consent | 7 | 0 |
 | [`consent_event`](consent.md#consent_event) | consent | 16 | 0 |
 | [`consent_purpose`](consent.md#consent_purpose) | consent | 7 | 8 |
-| [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 16 | 0 |
+| [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 17 | 0 |
 | [`consent_text_version`](consent.md#consent_text_version) | consent | 14 | 1 |
 | [`contact`](contacts.md#contact) | contacts | 38 | 49 |
 | [`contact_acquisition_evidence`](contacts.md#contact_acquisition_evidence) | contacts | 14 | 1 |
@@ -345,7 +345,7 @@ erDiagram
 | [`knowledge_chunk`](knowledge.md#knowledge_chunk) | knowledge | 11 | 0 |
 | [`knowledge_corpus`](knowledge.md#knowledge_corpus) | knowledge | 12 | 1 |
 | [`knowledge_document`](knowledge.md#knowledge_document) | knowledge | 16 | 1 |
-| [`lead`](contacts.md#lead) | contacts | 48 | 18 |
+| [`lead`](contacts.md#lead) | contacts | 48 | 19 |
 | [`lead_disqualify_reason`](contacts.md#lead_disqualify_reason) | contacts | 11 | 1 |
 | [`lead_manual_signal`](contacts.md#lead_manual_signal) | contacts | 12 | 0 |
 | [`lead_origin`](contacts.md#lead_origin) | contacts | 13 | 2 |

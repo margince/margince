@@ -26,7 +26,7 @@ const meta: Meta<typeof RecordConversationFact> = {
   ],
   args: {
     target: {
-      contactId: "c-1",
+      subject: { entity_type: "contact", entity_id: "c-1" },
       address: "anna@example.test",
       category: "requested_followup",
     },
@@ -59,12 +59,25 @@ export const Open: Story = {
 export const RequestedQuote: Story = {
   args: {
     target: {
-      contactId: "c-1",
+      subject: { entity_type: "contact", entity_id: "c-1" },
       address: "anna@example.test",
       category: "precontract_quote",
     },
     chosen: "precontract_quote",
   },
+  play: Open.play,
+};
+
+export const Lead: Story = {
+  beforeEach: () => stubWithSession({}, { lead: ["read", "update"] }),
+  args: {
+    target: {
+      subject: { entity_type: "lead", entity_id: "lead-one" },
+      address: "anna@example.test",
+      category: "requested_followup",
+    },
+  },
+  tags: ["uat-phone"],
   play: Open.play,
 };
 

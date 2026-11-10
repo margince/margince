@@ -10,7 +10,7 @@ import "./compose.css";
 type CommunicationContext = components["schemas"]["CommunicationContext"];
 
 export type ReasonTarget = Readonly<{
-  contactId: string;
+  subject: components["schemas"]["CommunicationEvidenceSubject"];
   address: string;
   category: CommunicationContext;
 }>;

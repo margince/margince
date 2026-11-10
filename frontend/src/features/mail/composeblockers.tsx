@@ -25,7 +25,6 @@ type Preview = components["schemas"]["SendAuthorizationPreview"];
 // changing the purpose or copying the statement to another recipient.
 export function reasonTargetOf(
   permission: ComposeSend["permission"],
-  contactOf: (address: string) => string | undefined,
 ): ReasonTarget | undefined {
   if (permission.asking || permission.unanswered) {
     return undefined;
@@ -51,12 +50,15 @@ export function reasonTargetOf(
     recipient.reason_code !== "deal_not_requested"
   )
     return undefined;
-  const contactId = contactOf(recipient.address);
-  if (!contactId) {
+  const subject = recipient.evidence_subject;
+  if (
+    !subject?.entity_id ||
+    (subject.entity_type !== "contact" && subject.entity_type !== "lead")
+  ) {
     return undefined;
   }
   return {
-    contactId,
+    subject,
     address: recipient.address,
     category,
   };
@@ -87,7 +89,6 @@ export function ComposeBlockers({
   send,
   anchorActivity,
   dealChoice,
-  contactOf,
   bodyKey,
   permission: drawPermission,
 }: Readonly<{
@@ -97,16 +98,12 @@ export function ComposeBlockers({
   anchorActivity: Activity | undefined;
   /** Which deal a new message to a contact is about, where that is asked. */
   dealChoice: DealChoiceState;
-  /** The contact an address belongs to, where the records behind the draft say. */
-  contactOf: (address: string) => string | undefined;
   bodyKey: MessageKey;
   /** The engine's answer, drawn by the surface that asks for it, with the
    *  reason pick this band offers where a reason may be recorded. */
   permission: (override: ReactNode, picksReason: boolean) => ReactNode;
 }>) {
-  const target = isChannelReply
-    ? undefined
-    : reasonTargetOf(send.permission, contactOf);
+  const target = isChannelReply ? undefined : reasonTargetOf(send.permission);
   // A reason the record already carries comes before recording a new one.
   const alternative = isChannelReply
     ? undefined

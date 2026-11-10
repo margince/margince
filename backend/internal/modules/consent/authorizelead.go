@@ -191,6 +191,7 @@ func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector
 	if err != nil {
 		return commsauthz.Decision{}, nil, err
 	}
+	d = withCheckedEvidence(d, req, res)
 	if res.Supported {
 		var denied bool
 		d, denied = putClaimToEvidence(d, req.Context, res.Category)
