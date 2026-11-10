@@ -46,10 +46,10 @@ var clearableFields = map[string][]string{
 	},
 	"lead": {
 		"email", "phone", "title", "company_name", "industry", "candidate_company_key", "project_id", "owner_id",
-		"origin", "origin_detail", "partner_company_id",
+		"origin", "origin_detail", "partner_company_id", "product_id",
 	},
 	"deal": {
-		"expected_close_date", "forecast_category", "wait_until", "owner_id",
+		"expected_close_date", "win_probability", "wait_until", "owner_id",
 		"company_id", "project_id", "partner_company_id", "partner_attribution",
 		"description", "commercial_motion", "priority", "acquisition_source",
 		"expected_arr_minor",
@@ -57,7 +57,8 @@ var clearableFields = map[string][]string{
 	"project": {
 		"description", "owner_id", "started_at", "target_end_date", "ended_at",
 	},
-	"activity": {},
+	// How a call ended: a wrong pick goes back to "no outcome".
+	"activity": {"call_outcome"},
 }
 
 // canClear reports whether this record type's update path can set the field to

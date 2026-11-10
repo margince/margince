@@ -122,8 +122,7 @@ func TestEvaluateDropsAParaphrasedQuoteBeforeScoring(t *testing.T) {
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
 	}
-	req := prepared.(*corpusAskCase)
-	cited := req.passages[0].ChunkID.String()
+	cited := firstPassageRef
 
 	good := prepared.Evaluate(aitasks.Trace{Output: corpusReply(askedClaim{
 		Text: "Messages are kept for 400 days.", ID: cited, Quote: "kept for 400 days",
@@ -150,7 +149,7 @@ func TestAnEmptyExpectationGradesAbstentionAsCorrectAndAnyClaimAsWrong(t *testin
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
 	}
-	cited := prepared.(*corpusAskCase).passages[0].ChunkID.String()
+	cited := firstPassageRef
 
 	abstained := prepared.Evaluate(aitasks.Trace{Output: corpusRefusal()})
 	if abstained.Result != aitasks.OutcomeAccepted {
@@ -207,8 +206,7 @@ func TestCitingAPassageTheScenarioMarksWrongFailsTheCase(t *testing.T) {
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
 	}
-	c := prepared.(*corpusAskCase)
-	right, trap := c.passages[0].ChunkID.String(), c.passages[1].ChunkID.String()
+	right, trap := firstPassageRef, "p2"
 
 	got := prepared.Evaluate(aitasks.Trace{Output: corpusReply(
 		askedClaim{Text: "Kept 400 days.", ID: right, Quote: "kept for 400 days"},

@@ -1,0 +1,36 @@
+name: the_founders_tax_adviser_on_their_own_return_is_an_advisor
+task: capture_counterparty_verdict
+site: verdict
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# A named professional writing about the mailbox owner's own income tax
+# return, not the company's books. The definitions name a tax adviser on the
+# owner's own taxes as advisor; a named sender and a business tone pull
+# towards contact.
+fixture:
+  display_name: Thomas Reinhardt
+  email: t.reinhardt@stb-reinhardt.example
+  subject: Ihre Einkommensteuererklärung 2025 - fehlende Unterlagen
+  direction: inbound
+  body: |
+    Sehr geehrte Frau Hollmann,
+
+    für Ihre private Einkommensteuererklärung 2025 fehlen mir noch die
+    Bescheinigung über Ihre Kapitalerträge sowie die Nebenkostenabrechnung
+    Ihrer vermieteten Wohnung. Sobald beides vorliegt, reiche ich die
+    Erklärung ein; die Frist endet am 31. Juli.
+
+    Ihre Gesellschafterbezüge aus der GmbH habe ich bereits erfasst.
+
+    Mit freundlichen Grüßen
+    Thomas Reinhardt
+    Steuerberater
+expect:
+  outcome: accepted
+  privacy: true
+  answer: advisor
+  judge: none
+  judge_none_reason: >
+    The answer is one closed kind, and the check requires it exactly.
+    The rubric only ranked the other kinds by the harm each does, and
+    "contact", the answer this scenario exists to catch, fails the check outright.

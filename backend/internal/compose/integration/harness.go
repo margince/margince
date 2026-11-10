@@ -246,6 +246,17 @@ func (e *Env) As(user ids.UUID, teams []ids.UUID, perms principal.Permissions) c
 	})
 }
 
+// OnSeat puts ctx's actor on the seat named. As binds no seat, which reads as a
+// read seat: it may write through a store and is offered no write.
+func OnSeat(ctx context.Context, seat principal.SeatType) context.Context {
+	p, ok := principal.Actor(ctx)
+	if !ok {
+		panic("OnSeat: the context carries no actor")
+	}
+	p.SeatType = seat
+	return principal.WithActor(ctx, p)
+}
+
 // Admin binds an unbounded admin context under the harness's admin seat. It
 // is one real user, not a fresh synthetic one per call: a row the admin
 // creates without naming an owner is stamped with this id, and the owner
@@ -346,21 +357,6 @@ func (e *Env) AgentOnPassport(t *testing.T, human ids.UUID, teams []ids.UUID, pe
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, agent.Principal())
-}
-
-// SeedPassport inserts a live passport for Rep1 and returns its id. Rows
-// that reference a passport carry a real foreign key, so a synthetic id
-// would be rejected by the database rather than by the code under test.
-func (e *Env) SeedPassport(t *testing.T, owner *pgx.Conn, label string) ids.UUID {
-	t.Helper()
-	id := ids.NewV7()
-	if _, err := owner.Exec(context.Background(), `
-		INSERT INTO passport (id, on_behalf_of, granted_by, label, scopes, token_hash, expires_at)
-		VALUES ($1, $2, $2, $3, ARRAY['read','write'], $4, now() + interval '1 day')`,
-		id, e.Rep1, label, "hash-"+id.String()); err != nil {
-		t.Fatalf("seeding passport %s: %v", label, err)
-	}
-	return id
 }
 
 // AgentCtxWithPassport is AgentCtx carrying a passport id, which is what a

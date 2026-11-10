@@ -27,7 +27,7 @@ func TestADraftIsHeldToTheContractsSubjectAndAddressCaps(t *testing.T) {
 		"more than 100 addresses":        {MailDraftContent{To: make([]string, 101)}, "to"},
 		"an empty composer":              {MailDraftContent{}, ""},
 	} {
-		err := validateDraft(anchor, tc.content)
+		err := validateDraft(anchor, tc.content, draftSavedAt)
 		var refused *InvalidMailDraftError
 		switch {
 		case tc.field == "" && err != nil:
@@ -79,5 +79,26 @@ func TestAnUngroundedDraftServesAnEmptyList(t *testing.T) {
 	}
 	if len(*out.Grounding) != 0 {
 		t.Errorf("an ungrounded draft served %d grounds", len(*out.Grounding))
+	}
+}
+
+func TestDraftFilingKeepsOnlyOneDealAndProjectAndCanBeCleared(t *testing.T) {
+	deal, project := crmcontracts.Id(ids.NewV7()), crmcontracts.Id(ids.NewV7())
+	selection := []crmcontracts.MailDraftGround{
+		{AnchorType: crmcontracts.MailDraftAnchorTypeContact, AnchorId: deal},
+		{AnchorType: crmcontracts.MailDraftAnchorTypeDeal},
+		{AnchorType: crmcontracts.MailDraftAnchorTypeDeal, AnchorId: deal},
+		{AnchorType: crmcontracts.MailDraftAnchorTypeDeal, AnchorId: project},
+		{AnchorType: crmcontracts.MailDraftAnchorTypeProject, AnchorId: project},
+	}
+	bounded := boundedDraftEditorState(crmcontracts.MailDraftEditorState{Filing: &selection})
+	if bounded.Filing == nil || len(*bounded.Filing) != 2 ||
+		(*bounded.Filing)[0].AnchorId != deal || (*bounded.Filing)[1].AnchorId != project {
+		t.Fatalf("draft filing = %+v, want one deal and one project", bounded.Filing)
+	}
+	empty := []crmcontracts.MailDraftGround{}
+	cleared := boundedDraftEditorState(crmcontracts.MailDraftEditorState{Filing: &empty})
+	if cleared.Filing == nil || len(*cleared.Filing) != 0 {
+		t.Fatal("clearing the filing became an absent selection")
 	}
 }

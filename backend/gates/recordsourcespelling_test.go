@@ -37,7 +37,6 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -253,7 +252,7 @@ func retiredSourceLiteral(e ast.Expr) (string, bool) {
 func sweepGoRecordSourcesUnder(t *testing.T, root string) []gatekit.ParsedFile {
 	t.Helper()
 	var swept []gatekit.ParsedFile
-	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+	err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 		switch {
 		case walkErr != nil:
 			return walkErr
@@ -311,7 +310,7 @@ func underAnyRoot(path string) bool {
 func recordSourceSubjectsOutsideRoots(t *testing.T) []string {
 	t.Helper()
 	var outside []string
-	err := filepath.WalkDir(".", func(path string, entry fs.DirEntry, walkErr error) error {
+	err := gatekit.WalkDir(".", func(path string, entry fs.DirEntry, walkErr error) error {
 		switch {
 		case walkErr != nil:
 			return walkErr
@@ -498,7 +497,7 @@ func TestNoScreenSpellsARetiredRecordSource(t *testing.T) {
 	t.Parallel()
 	retired := provenance.RetiredRecordSourceSpellings()
 	walked := 0
-	err := filepath.WalkDir(frontendSourceTree, func(path string, entry fs.DirEntry, walkErr error) error {
+	err := gatekit.WalkDir(frontendSourceTree, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
@@ -506,7 +505,7 @@ func TestNoScreenSpellsARetiredRecordSource(t *testing.T) {
 			return nil
 		}
 		walked++
-		text, readErr := os.ReadFile(path)
+		text, readErr := gatekit.ReadFile(path)
 		if readErr != nil {
 			return readErr
 		}

@@ -41,7 +41,7 @@ func (r approvalPreviewReader) appendMailSignature(ctx context.Context, approval
 	store := r.activities.WithSignature(signatureReader{store: contacts.NewStore(r.db)}).
 		WithSenderName(identity.NewServiceFor(r.db)).
 		WithBaseLanguage(activities.BaseLanguageFunc(func(context.Context) string { return language }))
-	sign, err := store.PreviewMailSignOff(ctx, in.Body, in.Subject)
+	sign, err := store.PreviewMailSignOff(ctx, in.Body, in.Subject, in.SendingEntity)
 	if err != nil {
 		return err
 	}
@@ -54,11 +54,11 @@ func (r approvalPreviewReader) appendMailSignature(ctx context.Context, approval
 	return nil
 }
 
-func (r approvalPreviewReader) appendMailPresentation(ctx context.Context, approval crmcontracts.Approval, in activities.SendEmailInput, out *crmcontracts.ApprovalPreview) error {
+func (r approvalPreviewReader) appendMailPresentation(ctx context.Context, approval crmcontracts.Approval, origin activities.SendOrigin, links []activities.ActivityLinkInput, in activities.SendEmailInput, out *crmcontracts.ApprovalPreview) error {
 	if err := r.appendMailSignature(ctx, approval, in, out); err != nil {
 		return err
 	}
-	return r.appendMailFooter(ctx, in, out)
+	return r.appendMailFooter(ctx, origin, links, in, out)
 }
 
 func (r approvalPreviewReader) privateSignatureConflict(ctx context.Context, out *crmcontracts.ApprovalPreview) error {

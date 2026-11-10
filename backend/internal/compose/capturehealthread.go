@@ -38,7 +38,7 @@ func readCaptureHealth(ctx context.Context, tx pgx.Tx, now time.Time) (crmcontra
 		out.ConnectionConcerns = append(out.ConnectionConcerns, crmcontracts.CaptureConnectionConcern{
 			UserId: openapi_types.UUID(concern.UserID), DisplayName: concern.DisplayName, ConnectionId: openapi_types.UUID(v.ID),
 			Provider: v.Provider, AccountLabel: v.AccountLabel, Concern: crmcontracts.CaptureConcernKind(v.Concern),
-			Since: v.ConcernSince, LastSuccessAt: v.LastSuccessAt,
+			Since: v.ConcernSince, LastSuccessAt: v.LastSuccessAt, ErrorClass: v.LastErrorClass,
 		})
 	}
 	mailboxes, err := captureMailboxHealth(ctx, tx, now)
@@ -172,7 +172,7 @@ func captureMailboxHealth(
 		waiting_threads AS (
 		  SELECT v.user_id, count(*) AS n, min(v.created_at) AS oldest
 		    FROM capture_thread_verdict v
-		   WHERE v.status IN ('pending', 'unsure')
+		   WHERE v.status = 'pending' AND v.attempts >= `+fmt.Sprint(capture.PendingMaxAttempts)+` AND EXISTS (SELECT 1 FROM activity m WHERE `+capture.HeldMessageSQL("v", "m")+`)
 		   GROUP BY v.user_id)
 		SELECT coalesce(c.user_id, t.user_id, g.user_id),
 		       u.display_name,

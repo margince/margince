@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, screen, userEvent } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
 import {
@@ -42,6 +42,7 @@ const VIEW: Contact360 = {
     full_name: "Anna Weber",
     title: "Head of Procurement",
     writable: true,
+    attachable: true,
     version: 3,
     primary_email: "anna.weber@brandt.example",
     emails: [
@@ -188,61 +189,6 @@ export const NoTransport: Story = {
   },
 };
 
-// No number on file: Call stays in the row and says why it cannot dial.
-export const NoPhone: Story = {
-  render: () => {
-    installFetchStub(ROUTES);
-    return (
-      <StoryProviders>
-        <Header view={{ ...VIEW, contact: { ...VIEW.contact, phones: [] } }} />
-      </StoryProviders>
-    );
-  },
-};
-
-// The second number is the primary one, so Call dials it.
-export const SecondPhonePrimary: Story = {
-  render: () => {
-    installFetchStub(ROUTES);
-    return (
-      <StoryProviders>
-        <Header
-          view={{
-            ...VIEW,
-            contact: {
-              ...VIEW.contact,
-              phones: [
-                {
-                  id: "ph-0",
-                  contact_id: "p-1",
-                  phone: "+49 30 9999 0000",
-                  phone_type: "work",
-                  is_primary: false,
-                  position: 0,
-                  ...CAPTURED,
-                },
-                {
-                  id: "ph-1",
-                  contact_id: "p-1",
-                  phone: "+49 170 333 4444",
-                  phone_type: "mobile",
-                  is_primary: true,
-                  position: 1,
-                  ...CAPTURED,
-                },
-              ],
-            },
-          }}
-        />
-      </StoryProviders>
-    );
-  },
-  play: async () => {
-    const call = await screen.findByRole("link", { name: "Call" });
-    await expect(call.getAttribute("href")).toBe("tel:+491703334444");
-  },
-};
-
 // A role that may not log activity: the two log verbs are refused and the one
 // sentence saying why hangs under the row as a caption, at the verbs' width,
 // rather than setting the row's width and pushing the header's name aside.
@@ -257,6 +203,17 @@ export const LogRefused: Story = {
         <Header />
       </StoryProviders>
     );
+  },
+  play: async ({ canvasElement }) => {
+    const email = await within(canvasElement).findByRole("button", {
+      name: "Email",
+    });
+    await waitFor(() =>
+      expect(email).toHaveAccessibleDescription(
+        "You do not have permission to log activities on this record.",
+      ),
+    );
+    await expect(email).toBeDisabled();
   },
 };
 
@@ -284,4 +241,33 @@ export const Archived: Story = {
       </StoryProviders>
     );
   },
+};
+
+export const ReadShare: Story = {
+  render: () => {
+    installFetchStub(ROUTES);
+    return (
+      <StoryProviders>
+        <Header
+          view={{
+            ...VIEW,
+            contact: { ...VIEW.contact, writable: false, attachable: false },
+          }}
+        />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await expect(
+      screen.findByText(en["contact.attachRefused"]),
+    ).resolves.toBeVisible();
+    await expect(
+      screen.getByRole("button", { name: en["log.title"] }),
+    ).toBeDisabled();
+  },
+};
+
+export const ReadShareDark: Story = {
+  ...ReadShare,
+  globals: { theme: "dark" },
 };

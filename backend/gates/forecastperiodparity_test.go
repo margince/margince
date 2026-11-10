@@ -18,13 +18,13 @@ package gates
 // mapping is a period a client may ask for and the server silently reinterprets.
 
 import (
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/forecasting"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/reportperiod"
 )
 
@@ -167,7 +167,7 @@ func periodSitePath(at []string) []string {
 func TestTheAgentToolOffersEveryWindowTheWireDoes(t *testing.T) {
 	t.Parallel()
 	doc := loadContractDocument(t)
-	raw, err := os.ReadFile(filepath.Join("internal", "modules", "agents", "tools_forecast.go"))
+	raw, err := gatekit.ReadFile(filepath.Join("internal", "modules", "agents", "tools_forecast.go"))
 	if err != nil {
 		t.Fatalf("reading the forecast tool: %v", err)
 	}

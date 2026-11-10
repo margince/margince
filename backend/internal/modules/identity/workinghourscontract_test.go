@@ -18,10 +18,9 @@ const workingHoursContract = "../../../api/crm.yaml"
 
 // clockPattern reads the named field's `pattern:` out of the contract, and
 // insists the whole file declares exactly one of them. Nothing in the match
-// ties it to the WorkingHours schema, so a second property spelled the same
-// way would leave this reading somebody else's pattern and still reporting
-// PASS — the one way a parity check must not fail. Two matches is that day
-// arriving, and it is a failure here rather than a silent pass.
+// ties it to the SaveWorkingHoursRequest schema. A second property spelled the
+// same way would leave this reading somebody else's pattern and still passing.
+// Two matches fail here instead of passing silently.
 func clockPattern(t *testing.T, field string) *regexp.Regexp {
 	t.Helper()
 	source, err := os.ReadFile(workingHoursContract)
@@ -34,7 +33,7 @@ func clockPattern(t *testing.T, field string) *regexp.Regexp {
 	if len(matches) != 1 {
 		t.Fatalf("%s declares %d `type: string` properties with a pattern in %s, want "+
 			"exactly one: with more than one, this gate cannot tell which belongs to "+
-			"WorkingHours, and with none the contract moved the field and this gate "+
+			"SaveWorkingHoursRequest, and with none the contract moved the field and this gate "+
 			"moves with it",
 			field, len(matches), workingHoursContract)
 	}

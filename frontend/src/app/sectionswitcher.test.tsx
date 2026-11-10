@@ -22,7 +22,7 @@ afterEach(() => {
   window.location.hash = "";
 });
 
-const ROUTE: Route = { screen: SETTINGS_SCREEN, id: "tags" };
+const ROUTE: Route = { screen: SETTINGS_SCREEN, id: "records" };
 
 function Switcher() {
   const head = sectionHead(useSettingsSection(ROUTE), ROUTE);
@@ -49,7 +49,7 @@ function mount() {
 const trigger = () =>
   screen.getByRole("button", {
     name: translate("en", "shell.sectionSwitch", {
-      name: translate("en", "settings.tab.tags"),
+      name: translate("en", "settings.tab.records"),
     }),
   });
 const searchBox = () => screen.getByRole("combobox");
@@ -71,7 +71,7 @@ describe("the phone section switcher", () => {
     await openSheet(user);
     expect(
       screen.getByRole("link", {
-        name: translate("en", "settings.tab.tags"),
+        name: translate("en", "settings.tab.records"),
         current: "page",
       }),
     ).toHaveFocus();

@@ -646,7 +646,6 @@ gone
 good
 got
 govern
-graded
 grader
 gradient
 grammar
@@ -1381,7 +1380,6 @@ setting's
 settle
 setup
 seven
-seventh
 several
 shacl
 shadow

@@ -14,8 +14,9 @@ import { formatDateTime, formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { isEntityKind } from "../../lib/entity";
+import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 
 type Receipt = components["schemas"]["ClaimEvidence"];
 type SourceKind = Receipt["source_kind"];
@@ -119,7 +120,7 @@ export function EvidenceModal({
             {shown.value}
           </p>
           <p className="co-evidence-origin">
-            <Badge>{t(KIND_LABELS[shown.source_kind])}</Badge>{" "}
+            <Badge>{t(labelFor(KIND_LABELS, shown.source_kind))}</Badge>{" "}
             <ExtractedMark receipt={shown} />{" "}
             {t("co.evidence.producedBy", { who: shown.produced_by })}
           </p>
@@ -266,20 +267,20 @@ function EvidenceTimes({
   locale: Locale;
 }>) {
   const t = useT();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   return (
     <>
       {retrievedAt && (
         <p className="co-evidence-line">
           {t("co.evidence.retrievedAt", {
-            when: formatDateTime(retrievedAt, locale, recordZone),
+            when: formatDateTime(retrievedAt, locale, readerZone),
           })}
         </p>
       )}
       {lastVerifiedAt && (
         <p className="co-evidence-line">
           {t("co.evidence.verifiedAt", {
-            when: formatDateTime(lastVerifiedAt, locale, recordZone),
+            when: formatDateTime(lastVerifiedAt, locale, readerZone),
           })}
         </p>
       )}

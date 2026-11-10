@@ -12,20 +12,20 @@ package gates
 // assurance.RiskSignalNames().
 
 import (
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const riskSignalsCheck = "public.forecast_contribution.forecast_contribution_risk_signals_known CHECK"
 
 func TestTheFrozenRiskSignalCheckAcceptsTheAssessmentsSignals(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile(filepath.Join(repoRoot, "backend", "migrations", "testdata", "head_catalog.txt"))
+	raw, err := gatekit.ReadFile(filepath.Join(repoRoot, "backend", "migrations", "testdata", "head_catalog.txt"))
 	if err != nil {
 		t.Fatalf("reading the head catalog: %v", err)
 	}

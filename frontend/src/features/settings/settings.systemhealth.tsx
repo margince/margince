@@ -7,18 +7,15 @@ import { ActionRow } from "../../design-system/actionrow";
 import { Badge, Button } from "../../design-system/atoms";
 import { Disclosure } from "../../design-system/disclosure";
 import { FactList } from "../../design-system/factlist";
-import { FilterPills } from "../../design-system/filterpills";
 import { Heading } from "../../design-system/heading";
 import { QueryGate } from "../../design-system/querystates";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { formatAge } from "../../format/interval";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { useCan } from "../../lib/capability";
 import { useHealthScope } from "../../lib/healthscope";
-import { navigate } from "../../lib/router";
-import { settingsHref } from "../../lib/settingsrouting";
+import { valueFor } from "../../lib/labelfor";
 import { useUrlParams } from "../../lib/urlstate";
+import { useViewerZone } from "../../lib/viewerzone";
 import { PublicOriginCard } from "./public-origin";
 import {
   healthAvailability,
@@ -28,8 +25,12 @@ import {
 } from "./systemhealth.copy";
 import { findingNextStepKey } from "./systemhealth.effect";
 import { useSystemHealth } from "./systemhealth.queries";
+import {
+  HealthChecks,
+  type HealthGroups,
+  healthGroups,
+} from "./systemhealthchecks";
 import { FindingPanel } from "./systemhealthfinding";
-import { HealthReadings } from "./systemhealthreadings";
 import { healthTone } from "./systemhealthstatus";
 
 const Diagnostics = lazy(() => import("./systemhealthdiagnostics"));
@@ -42,29 +43,11 @@ export function SystemHealthPage({
   view = "overview",
 }: Readonly<{ view?: string }>) {
   const t = useT();
-  const canConfigure = useCan("installation_settings", "read");
   const query = useSystemHealth(view !== "configuration");
   const scope = useHealthScope();
   const [params] = useUrlParams();
   return (
     <>
-      <FilterPills
-        value={view}
-        label={t("health.views")}
-        pills={[
-          { value: "overview", label: t("health.overview") },
-          { value: "diagnostics", label: t("health.diagnostics") },
-          ...(canConfigure
-            ? [{ value: "configuration", label: t("health.configuration") }]
-            : []),
-        ]}
-        onChange={(next) =>
-          navigate({
-            ...settingsHref("system-health"),
-            id2: next === "overview" ? undefined : next,
-          })
-        }
-      />
       {view === "configuration" ? (
         <Suspense fallback={<p role="status">{t("health.loading")}</p>}>
           <Configuration />
@@ -108,6 +91,8 @@ export function SystemHealthPage({
   );
 }
 
+const NO_GROUPS: HealthGroups = { setup: [], waiting: [], passing: [] };
+
 function Overview({
   report,
   refresh,
@@ -120,6 +105,8 @@ function Overview({
   refreshing: boolean;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const readerZone = useViewerZone();
   const [order, setOrder] = useState<readonly string[]>(
     actionableFindings(report.findings).map((f) => f.id),
   );
@@ -133,6 +120,10 @@ function Overview({
       bi = order.indexOf(b.id);
     return (ai < 0 ? order.length : ai) - (bi < 0 ? order.length : bi);
   });
+  // A failed refresh leaves readings that may have changed since; show none.
+  const groups = stale
+    ? NO_GROUPS
+    : healthGroups(report.sources, report.findings);
   const title = stale
     ? t("health.refreshNeeded")
     : actionable.length
@@ -146,7 +137,7 @@ function Overview({
         <Heading size="small" as="h2">
           {title}
         </Heading>
-        <OverviewStatus findings={actionable} />
+        <OverviewStatus findings={actionable} groups={groups} />
         <Button
           pending={refreshing}
           onClick={async () => {
@@ -159,10 +150,13 @@ function Overview({
         </Button>
       </ActionRow>
       {changed && <p role="status">{t("health.prioritiesChanged")}</p>}
+      <p className="t-caption">
+        {t("systemHealth.asOf", {
+          time: formatDateTime(report.generated_at, locale, readerZone),
+        })}
+      </p>
       <OverviewFindings findings={shown} />
-      {!stale && (
-        <HealthReadings sources={report.sources} findings={report.findings} />
-      )}
+      <HealthChecks groups={groups} />
       <Disclosure summary={t("health.capabilities")}>
         {report.sources
           .filter((source) => source.availability !== "withheld")
@@ -214,27 +208,54 @@ function actionableFindings(findings: Report["findings"]) {
   );
 }
 
+// One count per group, so the reader sees the whole page before reading it.
 function OverviewStatus({
   findings,
-}: Readonly<{ findings: Report["findings"] }>) {
+  groups,
+}: Readonly<{ findings: Report["findings"]; groups: HealthGroups }>) {
   const plural = usePlural();
   const { locale } = useLocale();
-  if (!findings.length) return null;
+  const count = (n: number) => ({ count: formatNumber(n, locale) });
   const tone = findings.some(
     (f) => f.requires_action && healthTone(f) === "danger",
   )
     ? "danger"
     : "warning";
   return (
-    <Badge tone={tone}>
-      {plural("health.actionsNeeded", findings.length, {
-        count: formatNumber(findings.length, locale),
-      })}
-    </Badge>
+    <>
+      {findings.length > 0 && (
+        <Badge tone={tone}>
+          {plural(
+            "health.actionsNeeded",
+            findings.length,
+            count(findings.length),
+          )}
+        </Badge>
+      )}
+      {groups.setup.length > 0 && (
+        <Badge>
+          {plural(
+            "health.notSetUpCount",
+            groups.setup.length,
+            count(groups.setup.length),
+          )}
+        </Badge>
+      )}
+      {groups.passing.length > 0 && (
+        <Badge tone="success">
+          {plural(
+            "health.passingCount",
+            groups.passing.length,
+            count(groups.passing.length),
+          )}
+        </Badge>
+      )}
+    </>
   );
 }
 
 function SourceReading({ source }: Readonly<{ source: Source }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   return (
@@ -253,7 +274,7 @@ function SourceReading({ source }: Readonly<{ source: Source }>) {
       {source.observed_at && (
         <p>
           {t("systemHealth.asOf", {
-            time: formatDateTime(source.observed_at, locale, viewerZone()),
+            time: formatDateTime(source.observed_at, locale, readerZone),
           })}
         </p>
       )}
@@ -300,7 +321,7 @@ function SourceStatus({ source }: Readonly<{ source: Source }>) {
     <Badge tone={tone}>
       {t(
         healthCodes[source.code] ??
-          healthAvailability[source.availability] ??
+          valueFor(healthAvailability, source.availability, undefined) ??
           "health.failed",
       )}
     </Badge>

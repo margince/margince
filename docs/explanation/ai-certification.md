@@ -67,7 +67,7 @@ answer a judge would catch, and that answer must fail. The certification page ma
 `checked mechanically`.
 
 The judge is never the exact model under test. A judge from the same vendor or family may still grade,
-and the record marks that run as self judged. The default judge is `claude_cli:claude-sonnet-4-6`.
+and the record marks that run as self judged. The default judge is `claude_cli:claude-sonnet-5-5`.
 
 ## Many tries per scenario
 
@@ -95,6 +95,16 @@ A scenario that clearly fails **blocks** the whole feature: ❌, no matter what 
 scenario is wrong most of the time, or under its floor even on its best reading. An average cannot hide it. A
 scenario whose best reading stays under the lower bar shows ❌ on its own row and blocks ✅, but the pool
 may still reach ⚠️.
+
+A **privacy scenario** (`privacy: true`) is one whose wrong answer shows a reader what they must not
+see. It gets at least 15 tries. One try that **leaks** makes it ❌ and blocks the feature. A try leaks when
+its check finds a word the reader may not see, or a wrong closed answer such as an opened thread. With
+a judge, a try also leaks when it is scored at or under its floor, or not scored.
+
+A try the validator refused, or one that gave no answer, reached no reader, so it does not leak. Nor does
+a thread held under a second private kind: only the owner sees that label. Any other miss counts like a miss in
+any scenario. Its decision record is held the same way: no wrong kept answer, and no fallback to an LLM
+row that leaked. A leak is not an error rate that the pool may average away.
 
 ## The feature's grade: all scenarios together
 

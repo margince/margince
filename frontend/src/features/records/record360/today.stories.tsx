@@ -186,11 +186,8 @@ export const FoundMoveRefused: Story = {
 // its own row.
 //
 // The second verb is REFUSED, which is what the story above could not show.
-// `Button`'s `reason` wraps the control in `.btn-with-reason`, and that box is
-// `contain: inline-size` so a long sentence cannot widen the verb column — but
-// a contained box also measures as nothing in a flex line, so the line never
-// wrapped and the refused verb and its sentence walked off the panel. A verb
-// per line is what holds it.
+// Its sentence is `contain: inline-size`, so it wraps at the verb's width and
+// never widens the column; a verb per line keeps both on the panel.
 export const FoundMoveNarrowRefusedAndLongBasis: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],

@@ -16,8 +16,9 @@ import { provenanceLabel } from "../../design-system/trust";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { factFieldLabelKey } from "../../lib/factview";
+import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { settleFacts } from "./companyfactspanel";
 import { derivedSource } from "./evidencesource";
 import { EvidenceVerdict, factClaim } from "./evidenceverdict";
@@ -64,9 +65,9 @@ export function FactRow({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const [removing, setRemoving] = useState(false);
-  const source = derivedSource(fact, locale, recordZone);
+  const source = derivedSource(fact, locale, readerZone);
   return (
     <PanelRow className="meta-row">
       <span className="meta-row-line t-caption">
@@ -98,7 +99,7 @@ export function FactRow({
         {fact.suspect_reason && (
           <span className="co-fact-suspect">
             <Badge tone="warning">
-              {t(FACT_SUSPECT_LABELS[fact.suspect_reason])}
+              {t(labelFor(FACT_SUSPECT_LABELS, fact.suspect_reason))}
             </Badge>
           </span>
         )}

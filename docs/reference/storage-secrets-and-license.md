@@ -58,6 +58,36 @@ command line, where any user on the machine can read argv.
   an installation that already holds sealed ciphertext. A new deployment that dropped the variable
   is refused, not run in a weaker mode (see below).
 
+### Keys derived from the root key
+
+Two more keys are derived from the root key with `HKDF-SHA256`, each under its own label. Neither is
+stored anywhere, and neither needs a setting of its own.
+
+- **The erasure list key.** The erasure list, the address hashes the `anonymize` action keeps, and
+  the address hash of a failed login are each an HMAC under it. Each row records the key's id
+  (`key_id`, `address_key_id`, `anonymized_address_key_id`, `email_key_id`).
+- **The preference link key.** A preference link names its row and carries an HMAC under it, so
+  the database holds no link that works.
+
+The data task `core/1794125373_keyed_privacy_identifiers` moves rows written before the key to the
+keyed form, and hashes the preference links stored before it. Until it reaches a row, the row's
+older form still matches, so no erased address is let back in and no mailed link stops working.
+
+What this means for the root key:
+
+- **Without a root key**, the hashes have no key and preference links are stored as they are sent.
+  Set the root key, and they get one. The data task then re-keys the rows it has not finished, and
+  the rows a finished task left are still matched in their older form.
+- **A different or missing root key** on an installation that holds keyed rows **refuses to boot**,
+  in the api, the worker and `margince-migrate data-tasks`. Under another key every keyed row would
+  match nothing, and an erased address would be stored again. Signed preference links stop opening
+  too.
+- **A new root key** also changes the derived keys. No run re-hashes the rows yet; the recorded key
+  ids are there so one can re-hash each row under the new key. Do not change the root key on an
+  installation that holds keyed rows.
+- **A lost root key** cannot be restored from the data, and the erasure list cannot be rebuilt without it. Back
+  it up as the [backup page](../how-to/back-up-an-installation.md) says.
+
 
 ### The vault may hold copies of the two deployment credentials
 

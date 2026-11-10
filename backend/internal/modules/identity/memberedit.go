@@ -25,10 +25,12 @@ import (
 
 // MemberEdit binds editable account settings to the revision the administrator saw.
 type MemberEdit struct {
-	Name              string
-	Email             string
-	Role              *string
-	Teams             *[]ids.UUID
+	Name  string
+	Email string
+	Role  *string
+	Teams *[]ids.UUID
+	// LegalEntity moves the member to that entity; nil keeps their entity.
+	LegalEntity       *ids.LegalEntityID
 	ExpectedUpdatedAt time.Time
 }
 
@@ -41,7 +43,7 @@ func validateDisplayName(name string) error {
 
 // UpdateMember keeps profile and access edits in one transaction.
 func (s *Service) UpdateMember(ctx context.Context, actor Identity, member ids.UserID, in MemberEdit) error {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	ctx, err := admit(ctx, actor, objectUserAdmin, principal.ActionUpdate)
@@ -67,6 +69,9 @@ func (s *Service) UpdateMember(ctx context.Context, actor Identity, member ids.U
 		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, member, reachTakeover); err != nil {
 			return err
 		}
+		if err := refuseAgentEmailChange(ctx, tx, member, in.Email); err != nil {
+			return err
+		}
 		if err := s.editMemberIdentityTx(ctx, tx, actor, member, in); err != nil {
 			return err
 		}
@@ -76,9 +81,11 @@ func (s *Service) UpdateMember(ctx context.Context, actor Identity, member ids.U
 			}
 		}
 		if in.Teams != nil {
-			return s.replaceMemberTeamsTx(ctx, tx, actor, member.UUID, uniqueTeams(*in.Teams))
+			if err := s.replaceMemberTeamsTx(ctx, tx, actor, member.UUID, uniqueTeams(*in.Teams)); err != nil {
+				return err
+			}
 		}
-		return nil
+		return s.placeMember(ctx, tx, in.LegalEntity, member)
 	})
 }
 

@@ -25,7 +25,6 @@ package gates
 
 import (
 	"go/ast"
-	"os"
 	"slices"
 	"sort"
 	"strings"
@@ -254,7 +253,7 @@ func TestNeitherFilterCompilerDropsAnUnsetRowFromNeq(t *testing.T) {
 	nullSafe := 0
 	var findings []string
 	for _, path := range filterCompilers {
-		source, err := os.ReadFile(path) // #nosec G304 -- a fixed path in the tracked source tree
+		source, err := gatekit.ReadFile(path) // #nosec G304 -- a fixed path in the tracked source tree
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}

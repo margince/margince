@@ -42,6 +42,7 @@ type PanelTag = {
 
 function mount(tags: PanelTag[], withheld = false, canEdit = true) {
   installFetchStub({
+    "GET /me": meRoute({ tag: ["read"] }),
     [`GET /records/company/${COMPANY}/tags`]: () =>
       jsonResponse({ data: tags, withheld }),
   });
@@ -73,6 +74,7 @@ describe("the tags panel", () => {
   // until the default landed.
   it("survives an answer that carries no list at all", async () => {
     installFetchStub({
+      "GET /me": meRoute({ tag: ["read"] }),
       [`GET /records/company/${COMPANY}/tags`]: () => jsonResponse({}),
     });
     render(
@@ -195,6 +197,7 @@ describe("taking a tag off a record", () => {
       restore: [],
     };
     installFetchStub({
+      "GET /me": meRoute({ tag: ["read"] }),
       [`GET /records/company/${COMPANY}/tags`]: () =>
         jsonResponse({ data: carried, withheld: false }),
       [REMOVE]: (body) => {

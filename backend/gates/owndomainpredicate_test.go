@@ -14,7 +14,6 @@ package gates
 
 import (
 	"go/ast"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -112,7 +111,7 @@ func foldedColumns(t *testing.T) []foldedColumn {
 	}
 	var columns []foldedColumn
 	for _, path := range paths {
-		body, err := os.ReadFile(path)
+		body, err := gatekit.ReadFile(path)
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}
@@ -130,7 +129,7 @@ func foldedColumns(t *testing.T) []foldedColumn {
 // foldedAfterTheStatement ratifies a writer whose address SQL derives, so Go
 // folds it in the same transaction right after the statement returns the rows.
 var foldedAfterTheStatement = gatekit.Waive(map[string]string{
-	"internal/modules/activities/participantbackfill.go: WITH candidate AS ( …": "derives the address from activity.counterparty_email in SQL; foldInsertedParticipants folds the RETURNING rows in the same transaction",
+	"internal/modules/activities/participantbackfill.go: INSERT INTO activity_participant (activity_id, user_id, contact_id, address, role) …": "derives the address from activity.counterparty_email in SQL; foldInsertedParticipants folds the RETURNING rows in the same transaction",
 })
 
 // TestEveryWriterOfAFoldedSourceWritesTheFold fails when a production statement

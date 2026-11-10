@@ -7,13 +7,12 @@ package main
 // `make composition` runs.
 //
 // scan_test.go already covers both RULES over temp-dir strings. What these add
-// is a unit a HUMAN can point the generator at — `cp -R
-// fixtures/extensions/bad-unprefixed-table extensions/ && make composition`
-// reproduces the refusal by hand, which is what makes the wall demonstrable in
-// a review rather than merely asserted in a suite. They also pin the POSITION,
-// which is the part an author acts on: the identifier a budget refusal names is
-// derived and appears nowhere in the file as written, so a refusal without a
-// line number sends them looking for a string that is not there.
+// is a unit a HUMAN can point the generator at. Requiring it in
+// instance/go.mod and running `make composition` reproduces the refusal by
+// hand, so a review can see the wall rather than trust a suite. They also pin
+// the POSITION, which is the part an author acts on. The identifier a budget
+// refusal names is derived and appears nowhere in the file as written. A
+// refusal without a line number sends them looking for a string not there.
 
 import (
 	"errors"

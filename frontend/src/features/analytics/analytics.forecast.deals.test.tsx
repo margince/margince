@@ -25,7 +25,7 @@ function contribution(over: Record<string, unknown> = {}) {
     in_won: false,
     in_open: true,
     in_evidence: false,
-    in_best_case: false,
+    probability_source: "stage",
     typed_probability: 20,
     chance_in_use: 60,
     evidence_n: 20,
@@ -45,7 +45,12 @@ function serve(body: Record<string, unknown>) {
           scope_kind: "workspace",
           won_minor: 0,
           evidence_minor: 0,
-          best_case_minor: 0,
+          likely_threshold: 90,
+          by_source: {
+            stage: { open_minor: 1_000_000, weighted_minor: 600_000 },
+            human: { open_minor: 0, weighted_minor: 0 },
+            margince: { open_minor: 0, weighted_minor: 0 },
+          },
           open_minor: 1_000_000,
           weighted_minor: 600_000,
           eligible_count: 1,
@@ -85,6 +90,15 @@ async function openDeals() {
 }
 
 describe("ForecastDeals", () => {
+  // On a phone the rows fold into cards and the headings leave sight, so each
+  // figure carries its own name.
+  it("names the amount and the weighted figure for a folded row", async () => {
+    serve({ self_correcting: true, contributions: [contribution()] });
+    await openDeals();
+    expect(await screen.findByText("Amount €10,000")).toBeTruthy();
+    expect(screen.getByText("€6,000 weighted")).toBeTruthy();
+  });
+
   it("says how each open deal's weight was made", async () => {
     const fetchMock = serve({
       self_correcting: true,
@@ -149,7 +163,7 @@ describe("ForecastDeals", () => {
     });
     await openDeals();
     expect(
-      await screen.findByText("Weighted €210,000.00 from 2 open deals"),
+      await screen.findByText("Weighted €210,000 from 2 open deals"),
     ).toBeTruthy();
   });
 
@@ -162,9 +176,7 @@ describe("ForecastDeals", () => {
     });
     await openDeals();
     expect(
-      await screen.findByText(
-        "Weighted €210,000.00, colleagues’ deals included",
-      ),
+      await screen.findByText("Weighted €210,000, colleagues’ deals included"),
     ).toBeTruthy();
   });
 

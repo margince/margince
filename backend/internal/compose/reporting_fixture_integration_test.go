@@ -24,14 +24,15 @@ import (
 )
 
 type reportingBusinessFixture struct {
-	env     *forecastEnv
-	at      time.Time
-	service *reporting.Service
-	store   *deals.Store
-	human   context.Context
-	writer  context.Context
-	open    []crmcontracts.Deal
-	target  crmcontracts.ReportingTarget
+	env          *forecastEnv
+	at           time.Time
+	service      *reporting.Service
+	store        *deals.Store
+	human        context.Context
+	writer       context.Context
+	open         []crmcontracts.Deal
+	inboundLeads []ids.LeadID
+	target       crmcontracts.ReportingTarget
 }
 
 func reportingBusiness(t *testing.T) *reportingBusinessFixture {
@@ -43,7 +44,7 @@ func reportingBusiness(t *testing.T) *reportingBusinessFixture {
 	f.human = principal.WithActor(f.human, actor)
 	f.writer = principal.SystemActing(f.human, "system:reporting-fixture")
 	f.service = newReportingService(e.Pool, func() time.Time { return f.at })
-	f.store = deals.NewStore(InstallationDB(e.Pool), DealsInstallation()).WithClock(func() time.Time { return f.at })
+	f.store = deals.NewStore(InstallationDB(e.Pool), DealsInstallation()).SetClock(func() time.Time { return f.at })
 	_, err := f.service.PublishFramework(f.human, 0, crmcontracts.ReportingFrameworkInput{Template: "sales", Reason: "Qualification begins at proposal", Qualification: []crmcontracts.ReportingQualification{{PipelineId: openapi_types.UUID(e.pipeline), StageIds: []openapi_types.UUID{openapi_types.UUID(e.stages[60])}}}, CaptureContexts: []crmcontracts.ReportingCaptureContext{{Scope: crmcontracts.ReportingScope{Kind: "workspace"}, PipelineId: ptrUUID(e.pipeline)}}})
 	if err != nil {
 		t.Fatal(err)
@@ -118,7 +119,7 @@ func (f *reportingBusinessFixture) openDeals(t *testing.T) {
 
 func (f *reportingBusinessFixture) outcomes(t *testing.T) {
 	t.Helper()
-	store := contacts.NewStore(InstallationDB(f.env.Pool)).WithClock(func() time.Time { return f.at })
+	store := contacts.NewStore(InstallationDB(f.env.Pool)).SetClock(func() time.Time { return f.at })
 	contact, err := store.CreateContact(f.human, contacts.CreateContactInput{FullName: "Customer fixture", Source: "manual"})
 	if err != nil {
 		t.Fatal(err)
@@ -161,6 +162,7 @@ func (f *reportingBusinessFixture) leads(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		f.inboundLeads = append(f.inboundLeads, ids.From[ids.LeadKind](ids.UUID(lead.Id)))
 		// The lead writer stamps the database's clock, so the arrival is
 		// moved into the fixture's month before anything answers it.
 		if _, err := f.env.owner.Exec(context.Background(), `UPDATE lead SET created_at=$2 WHERE id=$1`, lead.Id, arrived); err != nil {
@@ -244,6 +246,16 @@ func TestReportingBusinessFixtureReconcilesEveryChartWithItsEvidence(t *testing.
 
 func TestReportingPresetsAnswerEveryMetricTheyAskOnAPopulatedFixture(t *testing.T) {
 	f := reportingBusiness(t)
+	actor, ok := principal.Actor(f.human)
+	if !ok {
+		t.Fatal("fixture has no human reader")
+	}
+	actor.Permissions.Objects["relationship"] = principal.ObjectGrant{Read: true, Create: true, Update: true, Delete: true}
+	qualifierContext := principal.WithActor(f.human, actor)
+	qualifier := contacts.NewStore(InstallationDB(f.env.Pool)).SetClock(func() time.Time { return f.at.Add(-time.Hour) }).WithDealOpener(leadDealOpener{deals: f.store})
+	if _, err := qualifier.QualifyLead(qualifierContext, f.inboundLeads[0], contacts.PromoteLeadInput{Trigger: "human_qualify", Deal: &contacts.QualifyDealInput{PipelineID: &f.env.pipeline, StageID: new(f.env.stages[20])}}); err != nil {
+		t.Fatal(err)
+	}
 	catalog, err := f.service.Catalog(f.human)
 	if err != nil {
 		t.Fatal(err)

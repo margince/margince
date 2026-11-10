@@ -224,34 +224,50 @@ func fileRefusedAtSend(err error) bool {
 		errors.As(err, &withheld) || errors.As(err, &empty)
 }
 
-// scheduledFiles is what a waiting message's frozen files are to its sender now.
-type scheduledFiles struct {
+// resolvedFiles is a set of chosen files as its reader sees them now. It holds
+// the ones a send would carry, in the order chosen, and a count of the rest.
+type resolvedFiles struct {
 	attachable  []OutboundFile
 	unavailable int
 }
 
 // scheduledFilesOf sorts a waiting message's frozen files by what its send would
 // do with each today. A message past waiting resolves nothing: no edit reaches it.
-func (s *Store) scheduledFilesOf(ctx context.Context, row ScheduledSend) (scheduledFiles, error) {
+func (s *Store) scheduledFilesOf(ctx context.Context, row ScheduledSend) (resolvedFiles, error) {
 	if row.Status != ScheduledStatusScheduled && row.Status != ScheduledStatusHeld {
-		return scheduledFiles{}, nil
+		return resolvedFiles{}, nil
 	}
-	return sortFrozenFiles(ctx, row.frozen.AttachmentIDs, s.sendableFile)
+	chosen, malformed := frozenAttachmentIDs(row.frozen.AttachmentIDs)
+	files, err := sortChosenFiles(ctx, chosen, s.sendableFile)
+	if err != nil {
+		return resolvedFiles{}, err
+	}
+	files.unavailable += malformed
+	return files, nil
 }
 
-// sortFrozenFiles counts an id the send could not carry instead of refusing it.
-// A read that answered with the send's own 4xx would hide the message it reads.
-func sortFrozenFiles(
-	ctx context.Context, frozen []string, sendable func(context.Context, ids.UUID) (OutboundFile, error),
-) (scheduledFiles, error) {
-	var files scheduledFiles
-	seen := make(map[ids.UUID]bool, len(frozen))
+// frozenAttachmentIDs reads the ids a waiting message froze as text, and counts
+// one that does not parse.
+func frozenAttachmentIDs(frozen []string) (chosen []ids.UUID, malformed int) {
 	for _, raw := range frozen {
 		id, err := ids.Parse(raw)
 		if err != nil {
-			files.unavailable++
+			malformed++
 			continue
 		}
+		chosen = append(chosen, id)
+	}
+	return chosen, malformed
+}
+
+// sortChosenFiles counts an id the send could not carry instead of refusing it.
+// A read that answered with the send's own 4xx would hide the message it reads.
+func sortChosenFiles(
+	ctx context.Context, chosen []ids.UUID, sendable func(context.Context, ids.UUID) (OutboundFile, error),
+) (resolvedFiles, error) {
+	var files resolvedFiles
+	seen := make(map[ids.UUID]bool, len(chosen))
+	for _, id := range chosen {
 		if seen[id] {
 			continue
 		}
@@ -267,7 +283,7 @@ func sortFrozenFiles(
 		case fileRefusedAtSend(err):
 			files.unavailable++
 		default:
-			return scheduledFiles{}, err
+			return resolvedFiles{}, err
 		}
 	}
 	return files, nil

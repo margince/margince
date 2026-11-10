@@ -49,6 +49,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -217,27 +218,6 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 			return `{"record_type":"offer","fields":{"deal_id":"` + primary.String() + `","currency":"EUR"}}`
 		},
 	},
-	"openDealRoomThread": {
-		rest: func(primary, _ ids.UUID) (*http.Request, []byte) {
-			return doorRequest(http.MethodPost, "/v1/deal-rooms/"+primary.String()+"/threads", primary, `{"body":"Questions?"}`)
-		},
-		args: func(primary, _ ids.UUID) string {
-			return `{"record_type":"deal_room_thread","fields":{"deal_room_id":"` + primary.String() + `","body":"Questions?"}}`
-		},
-	},
-	"replyDealRoomThread": {
-		rest: func(primary, secondary ids.UUID) (*http.Request, []byte) {
-			req, body := doorRequest(http.MethodPost,
-				"/v1/deal-rooms/"+primary.String()+"/threads/"+secondary.String()+"/comments", primary, `{"body":"Yes"}`)
-			chi.RouteContext(req.Context()).URLParams.Add("threadId", secondary.String())
-			return req, body
-		},
-		args: func(primary, secondary ids.UUID) string {
-			return `{"record_type":"deal_room_comment","fields":{"deal_room_id":"` + primary.String() +
-				`","thread_id":"` + secondary.String() + `","body":"Yes"}}`
-		},
-	},
-
 	"createContact": createDoors("contacts", "contact", `{"full_name":"Ada Lovelace"}`),
 	"createCompany": createDoors("companies", "company", `{"display_name":"Acme"}`),
 	"createDeal": createDoors("deals", "deal", `{"name":"Acme renewal",`+
@@ -253,7 +233,7 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 
 	"updateContact":      updateDoors("contacts", "contact", `{"title":"CTO"}`),
 	"updateCompany":      updateDoors("companies", "company", `{"industry":"payments"}`),
-	"updateDeal":         updateDoors("deals", "deal", `{"forecast_category":"commit"}`),
+	"updateDeal":         updateDoors("deals", "deal", `{"win_probability":95}`),
 	"updateLead":         updateDoors("leads", "lead", `{"status":"contacted"}`),
 	"updateActivity":     updateDoors("activities", "activity", `{"subject":"Renewal call"}`),
 	"updateProject":      updateDoors("projects", "project", `{"description":"Rollout"}`),
@@ -379,18 +359,6 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 			return doorRequest(http.MethodPost, "/v1/scheduling/invitations", ids.UUID{}, invitationDoorBody(primary))
 		},
 		args: func(primary, _ ids.UUID) string { return invitationDoorBody(primary) },
-	},
-	"bookMeeting": {
-		rest: func(primary, _ ids.UUID) (*http.Request, []byte) {
-			return doorRequest(http.MethodPost, "/v1/bookings", ids.UUID{},
-				`{"start":"2026-08-10T09:00:00Z","end":"2026-08-10T09:30:00Z","subject":"Renewal review",`+
-					`"links":[{"entity_type":"deal","entity_id":"`+primary.String()+`"}]}`)
-		},
-		args: func(primary, _ ids.UUID) string {
-			return `{"start":"2026-08-10T09:00:00Z","end":"2026-08-10T09:30:00Z",` +
-				`"subject":"Renewal review","links":[{"entity_type":"deal","entity_id":"` +
-				primary.String() + `"}]}`
-		},
 	},
 }
 
@@ -645,10 +613,6 @@ func (bothDoorsComms) Availability(context.Context, *ids.UUID, time.Time, time.T
 	return agents.AvailabilityResult{}, errBothDoorsExecuted
 }
 
-func (bothDoorsComms) BookMeeting(context.Context, agents.BookMeetingArgs) (json.RawMessage, error) {
-	return nil, errBothDoorsExecuted
-}
-
 // agentDoorCtx is a passport principal holding every cap, so admission turns on
 // the call's tier alone — which is the only thing this gate wants it to turn on.
 func agentDoorCtx() context.Context {
@@ -815,6 +779,11 @@ func stageToolSubject(ctx context.Context, r *agents.Registry, tool string, args
 
 func invitationDoorBody(contact ids.UUID) string {
 	return `{"contact_id":"` + contact.String() + `","attendee_email":"buyer@example.test","start":"2026-10-05T09:00:00Z","end":"2026-10-05T09:30:00Z","subject":"Discovery","description":"Project scope","location":"Video call"}`
+}
+
+// InvitationRoster resolves nothing: the summary lists the plain addresses.
+func (bothDoorsComms) InvitationRoster(context.Context, crmcontracts.MeetingInvitationRequest) ([]connector.CalendarAttendee, error) {
+	return nil, nil
 }
 
 func (bothDoorsComms) InviteMeeting(context.Context, crmcontracts.MeetingInvitationRequest) (crmcontracts.MeetingInvitation, error) {

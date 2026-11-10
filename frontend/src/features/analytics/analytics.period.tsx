@@ -30,7 +30,7 @@ export function PeriodCaption({
 }
 
 // A window's end is exclusive, so the last day it holds is the one before.
-function lastInstant(window: Window): string {
+export function lastInstant(window: Window): string {
   return new Date(Date.parse(window.end_at) - 1).toISOString();
 }
 

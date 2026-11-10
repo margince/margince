@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import { useRoster, useRosterPartial } from "../../components/roster";
@@ -14,15 +14,21 @@ import { Select } from "../../design-system/select";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { useHoldsAdminRole } from "../../lib/capability";
+import { LEGAL_ENTITIES_KEY } from "../../lib/legalentities.queries";
 import { problemCode, unwrap } from "../../lib/problem";
 import { roleOptions, useAssignableRoles } from "../../lib/roles.queries";
+import { MemberEntityField, useMemberEntityDraft } from "./users-entitycell";
 import {
   memberMutationKey,
   offers,
   type User,
   useMemberRefresh,
 } from "./users-members";
+import { useCaptureStopWarning } from "./users-rolecell";
 import { MemberTeamsField } from "./users-teams";
+
+// Ids are compared as ids, in code-point order, so the set check does not depend on a locale.
+const byId = (a: string, b: string) => Number(a > b) - Number(a < b);
 
 export function EditMember({
   member,
@@ -39,9 +45,12 @@ export function EditMember({
   const [role, setRole] = useState(memberRole(member));
   const [teamIds, setTeamIds] = useState(memberTeams(member));
   const roles = useAssignableRoles(true);
+  const stopsCapture = useCaptureStopWarning(baseline, roles.data ?? []);
   const managesTeams = useHoldsAdminRole();
   const teams = useRoster("team", true);
   const partial = useRosterPartial("team", true);
+  const entity = useMemberEntityDraft(member);
+  const queryClient = useQueryClient();
   const save = useMutation({
     mutationKey: memberMutationKey(member.id, "edit"),
     mutationFn: async (
@@ -52,6 +61,7 @@ export function EditMember({
         teams: string[] | undefined;
         updatedAt: string;
         memberId: string;
+        entity: string | null;
       }>,
     ) => {
       unwrap(
@@ -62,12 +72,17 @@ export function EditMember({
             email: choice.email.trim(),
             ...(choice.role ? { role: choice.role } : {}),
             ...(choice.teams ? { team_ids: choice.teams } : {}),
+            ...(choice.entity === null
+              ? {}
+              : { legal_entity_id: choice.entity }),
             expected_updated_at: choice.updatedAt,
           },
         }),
       );
     },
     onSuccess: async () => {
+      // A move changes which entity lists the member.
+      await queryClient.invalidateQueries({ queryKey: LEGAL_ENTITIES_KEY });
       await refresh();
       toast.show(t("users.saved"));
       onClose();
@@ -88,8 +103,8 @@ export function EditMember({
     },
   });
   const teamsChanged =
-    [...teamIds].sort().join(";") !==
-    [...(baseline.team_ids ?? [])].sort().join(";");
+    [...teamIds].sort(byId).join(";") !==
+    [...(baseline.team_ids ?? [])].sort(byId).join(";");
   const initialRole = memberRole(baseline);
   const roleChanged = role !== initialRole;
   const ready =
@@ -100,7 +115,8 @@ export function EditMember({
     name !== baseline.display_name ||
       email !== baseline.email ||
       roleChanged ||
-      teamsChanged,
+      teamsChanged ||
+      entity.change !== null,
   );
   return (
     <Modal open onClose={onClose} intent="form" labelledBy={id}>
@@ -120,6 +136,7 @@ export function EditMember({
               teams: teamsChanged ? teamIds : undefined,
               updatedAt: baseline.updated_at ?? "",
               memberId: member.id,
+              entity: entity.change,
             });
         }}
       >
@@ -155,7 +172,11 @@ export function EditMember({
         <QueryStates query={roles} pendingLabel={t("users.roleLabel")}>
           {null}
         </QueryStates>
-        <Field label={t("users.roleLabel")}>
+        <Field
+          label={t("users.roleLabel")}
+          hint={stopsCapture(role, memberRole(baseline))}
+          hintLive
+        >
           {(control) => (
             <Select
               {...control}
@@ -174,6 +195,7 @@ export function EditMember({
           joinable={inactiveJoinable(baseline)}
         />
         {!managesTeams && <p>{t("users.teamAdminOnly")}</p>}
+        <MemberEntityField draft={entity} />
         <MergedAccounts member={baseline} />
         {save.error && <ErrorLine error={save.error} />}
         {problemCode(save.error) === "version_skew" && (

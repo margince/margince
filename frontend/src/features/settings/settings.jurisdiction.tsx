@@ -19,19 +19,20 @@ import {
   ruleText,
 } from "../../format/jurisdiction";
 import { lockFor } from "../../format/settinglocks";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
-import { DSR_KIND_LABEL } from "../../lib/privacy.logic";
-import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
-import { useInstallationSettings } from "../../lib/uploadlimit";
 import {
   AUDIENCE_LABEL,
   DOCUMENT_KIND_LABEL,
   deadlineText,
   documentFilename,
   floorText,
-} from "./settings.jurisdiction.text";
+} from "../../lib/jurisdictiontext";
+import { labelFor } from "../../lib/labelfor";
+import { DSR_KIND_LABEL } from "../../lib/privacy.logic";
+import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
+import { useInstallationSettings } from "../../lib/uploadlimit";
+import { useViewerZone } from "../../lib/viewerzone";
 
 // Settings → Governance → Jurisdiction: which country's pack this installation
 // runs under, what that selection puts in force, and the documents the pack
@@ -291,6 +292,7 @@ function periodMonths(iso: string): number {
 function EffectsPanel({
   jurisdiction,
 }: Readonly<{ jurisdiction: Jurisdiction }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const selected = jurisdiction.selected ?? null;
@@ -346,12 +348,12 @@ function EffectsPanel({
                       before: formatDate(
                         floor.carried.before,
                         locale,
-                        viewerZone(),
+                        readerZone,
                       ),
                       until: formatDate(
                         floor.carried.binds_until,
                         locale,
-                        viewerZone(),
+                        readerZone,
                       ),
                     }),
                   },
@@ -360,7 +362,7 @@ function EffectsPanel({
             ...jurisdiction.deadlines.map((deadline) => ({
               key: `deadline-${deadline.kind}`,
               term: t("jurisdiction.effects.deadline", {
-                kind: t(DSR_KIND_LABEL[deadline.kind]),
+                kind: t(labelFor(DSR_KIND_LABEL, deadline.kind)),
               }),
               value: deadlineText(deadline, locale, t),
               note: ruleText(deadline.rule, t),
@@ -433,8 +435,8 @@ function DocumentsPanel({
               </span>
             ),
             note: t("jurisdiction.documents.note", {
-              audience: t(AUDIENCE_LABEL[document.audience]),
-              kind: t(DOCUMENT_KIND_LABEL[document.kind]),
+              audience: t(labelFor(AUDIENCE_LABEL, document.audience)),
+              kind: t(labelFor(DOCUMENT_KIND_LABEL, document.kind)),
               language: document.language.toUpperCase(),
             }),
           }))}

@@ -10,7 +10,7 @@ import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { Badge, Modal } from "./atoms";
 import { DrawerBody, DrawerHead } from "./drawerbands";
-import { moveLabel } from "./emailentry";
+import { InvitationStarts, moveLabel } from "./emailentry";
 import { emailDetailKey, readEmailPresentation } from "./emailmessage";
 import { EmailThread, threadOrder } from "./emailthread";
 import { Heading } from "./heading";
@@ -141,8 +141,8 @@ export function EmailDetail({
   );
 }
 
-// The drawer's body: the thread once it is read, or the state of the read.
-function ThreadState({
+// A thread's body, in the drawer or a panel: the thread once read, or the read's state.
+export function ThreadState({
   read,
   formatWhen,
   viewerUserId,
@@ -237,6 +237,7 @@ function ThreadFacts({
   const shown = threadOrder(presentation).length;
   const count = formatNumber(shown, locale);
   const move = moveLabel(presentation.summary, false);
+  const invitation = presentation.summary.calendar_invitation;
   // A thread with more pages than the read carried is counted as what is shown.
   const counted = plural(
     presentation.thread?.next_cursor
@@ -247,6 +248,12 @@ function ThreadFacts({
   );
   return (
     <p className="emaildetail__facts t-caption">
+      {invitation && (
+        <>
+          <Badge tone="info">{t("email.invitation.badge")}</Badge>
+          <InvitationStarts invitation={invitation} />
+        </>
+      )}
       {move && (
         <Badge
           tone={

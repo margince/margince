@@ -66,6 +66,33 @@ func (e PublicEventActivityChangedFieldsCalendarMethod) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventActivityChangedFieldsCallOutcome.
+const (
+	CallEndedCallBackLater PublicEventActivityChangedFieldsCallOutcome = "call_back_later"
+	CallEndedNotReached    PublicEventActivityChangedFieldsCallOutcome = "not_reached"
+	CallEndedPutThrough    PublicEventActivityChangedFieldsCallOutcome = "put_through"
+	CallEndedReached       PublicEventActivityChangedFieldsCallOutcome = "reached"
+	CallEndedVoicemail     PublicEventActivityChangedFieldsCallOutcome = "voicemail"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventActivityChangedFieldsCallOutcome enum.
+func (e PublicEventActivityChangedFieldsCallOutcome) Valid() bool {
+	switch e {
+	case CallEndedCallBackLater:
+		return true
+	case CallEndedNotReached:
+		return true
+	case CallEndedPutThrough:
+		return true
+	case CallEndedReached:
+		return true
+	case CallEndedVoicemail:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventActivityChangedFieldsDirection.
 const (
 	DirectionBecameInbound  PublicEventActivityChangedFieldsDirection = "inbound"
@@ -147,6 +174,27 @@ func (e PublicEventActivityDispositionRecordedDisposition) Valid() bool {
 	case SalesAgain:
 		return true
 	case Snoozed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicEventActivityInvitationAnsweredResponse.
+const (
+	Accepted  PublicEventActivityInvitationAnsweredResponse = "accepted"
+	Declined  PublicEventActivityInvitationAnsweredResponse = "declined"
+	Tentative PublicEventActivityInvitationAnsweredResponse = "tentative"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventActivityInvitationAnsweredResponse enum.
+func (e PublicEventActivityInvitationAnsweredResponse) Valid() bool {
+	switch e {
+	case Accepted:
+		return true
+	case Declined:
+		return true
+	case Tentative:
 		return true
 	default:
 		return false
@@ -563,6 +611,7 @@ const (
 	ActivityArchived                      SubscribableEventType = "activity.archived"
 	ActivityCaptured                      SubscribableEventType = "activity.captured"
 	ActivityDispositionRecorded           SubscribableEventType = "activity.disposition_recorded"
+	ActivityInvitationAnswered            SubscribableEventType = "activity.invitation_answered"
 	ActivityMarkedHandled                 SubscribableEventType = "activity.marked_handled"
 	ActivityReadinessRecorded             SubscribableEventType = "activity.readiness_recorded"
 	ActivityUpdated                       SubscribableEventType = "activity.updated"
@@ -663,6 +712,7 @@ const (
 	OfferRejected                         SubscribableEventType = "offer.rejected"
 	OfferSent                             SubscribableEventType = "offer.sent"
 	OfferSuperseded                       SubscribableEventType = "offer.superseded"
+	OfferUpdated                          SubscribableEventType = "offer.updated"
 	OnboardingStateChanged                SubscribableEventType = "onboarding.state_changed"
 	PassportRevoked                       SubscribableEventType = "passport.revoked"
 	PipelineArchived                      SubscribableEventType = "pipeline.archived"
@@ -670,6 +720,7 @@ const (
 	PipelineUpdated                       SubscribableEventType = "pipeline.updated"
 	ProjectArchived                       SubscribableEventType = "project.archived"
 	ProjectCreated                        SubscribableEventType = "project.created"
+	ProjectHealthAssessed                 SubscribableEventType = "project.health_assessed"
 	ProjectPhaseChanged                   SubscribableEventType = "project.phase_changed"
 	ProjectUpdated                        SubscribableEventType = "project.updated"
 	RelationshipNudgeDecided              SubscribableEventType = "relationship_nudge.decided"
@@ -694,6 +745,7 @@ const (
 	UserMfaRemoved                        SubscribableEventType = "user.mfa_removed"
 	UserPasswordLinkIssued                SubscribableEventType = "user.password_link_issued"
 	UserReactivated                       SubscribableEventType = "user.reactivated"
+	UserTimezoneChanged                   SubscribableEventType = "user_timezone.changed"
 	UserUpdated                           SubscribableEventType = "user.updated"
 	VoiceBuildChanged                     SubscribableEventType = "voice.build_changed"
 	VoiceCorpusChanged                    SubscribableEventType = "voice.corpus_changed"
@@ -714,6 +766,8 @@ func (e SubscribableEventType) Valid() bool {
 	case ActivityCaptured:
 		return true
 	case ActivityDispositionRecorded:
+		return true
+	case ActivityInvitationAnswered:
 		return true
 	case ActivityMarkedHandled:
 		return true
@@ -915,6 +969,8 @@ func (e SubscribableEventType) Valid() bool {
 		return true
 	case OfferSuperseded:
 		return true
+	case OfferUpdated:
+		return true
 	case OnboardingStateChanged:
 		return true
 	case PassportRevoked:
@@ -928,6 +984,8 @@ func (e SubscribableEventType) Valid() bool {
 	case ProjectArchived:
 		return true
 	case ProjectCreated:
+		return true
+	case ProjectHealthAssessed:
 		return true
 	case ProjectPhaseChanged:
 		return true
@@ -976,6 +1034,8 @@ func (e SubscribableEventType) Valid() bool {
 	case UserPasswordLinkIssued:
 		return true
 	case UserReactivated:
+		return true
+	case UserTimezoneChanged:
 		return true
 	case UserUpdated:
 		return true
@@ -1067,6 +1127,12 @@ type PublicEventActivityChangedFields struct {
 	// CalendarMethod The RFC 5546 method of the message's calendar part. Set when it was read back from the message's stored original (absent otherwise).
 	CalendarMethod *PublicEventActivityChangedFieldsCalendarMethod `json:"calendar_method,omitempty"`
 
+	// CallOutcome How the call ended, once somebody recorded it (absent when this update did not touch it). Call rows only.
+	CallOutcome *PublicEventActivityChangedFieldsCallOutcome `json:"call_outcome,omitempty"`
+
+	// CallOutcomeCleared True when this update removed the call's outcome, so the call has none again and counts as contact as before.
+	CallOutcomeCleared *bool `json:"call_outcome_cleared,omitempty"`
+
 	// CommitmentAdmissionsChanged The source's recorded commitment decisions changed; fetch the source through its normal content access gate.
 	CommitmentAdmissionsChanged *bool `json:"commitment_admissions_changed,omitempty"`
 
@@ -1076,11 +1142,20 @@ type PublicEventActivityChangedFields struct {
 	// DueAt The activity's new due_at (absent when this update did not touch it).
 	DueAt *time.Time `json:"due_at,omitempty"`
 
+	// DueHasTime Whether the new due_at names a time of day (true) or only a day (false). Carried whenever this update names due_at.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
+
+	// HostUserId The meeting's new host seat, when a calendar meeting was handed to the colleague who organized it (absent otherwise).
+	HostUserId *openapi_types.UUID `json:"host_user_id,omitempty"`
+
 	// IsDone The activity's new completion state (absent when this update did not touch it).
 	IsDone *bool `json:"is_done,omitempty"`
 
 	// MeetingStatus How the meeting went, once somebody recorded it (absent when this update did not touch it). Meeting rows only; the update refuses the field on any other kind.
 	MeetingStatus *PublicEventActivityChangedFieldsMeetingStatus `json:"meeting_status,omitempty"`
+
+	// MeetingStatusCleared True when this update removed the meeting's status, so the meeting is unanswered again, as a calendar first captured it.
+	MeetingStatusCleared *bool `json:"meeting_status_cleared,omitempty"`
 
 	// OccurredAt The activity's new occurred_at (absent when this update did not touch it).
 	OccurredAt *time.Time `json:"occurred_at,omitempty"`
@@ -1097,8 +1172,11 @@ type PublicEventActivityChangedFields struct {
 	// Relinked The entity an activity was relinked onto (activities/lifecycle.go's RelinkActivity) — an association change, not a re-capture, so it travels as one changed_fields key rather than its own event verb.
 	Relinked *PublicEventActivityRelinkedRef `json:"relinked,omitempty"`
 
-	// RemindAt The activity's new remind_at (absent when this update did not touch it).
+	// RemindAt The activity's new remind_at (absent when this update did not set it).
 	RemindAt *time.Time `json:"remind_at,omitempty"`
+
+	// RemindAtCleared True when this update cleared the reminder: named as null by the caller, or ended because the due date moved. A reminder a consumer mirrors stops firing then.
+	RemindAtCleared *bool `json:"remind_at_cleared,omitempty"`
 
 	// RequestSettlementChanged The request's settlement verdict, or the ask to judge it again, changed; fetch the request through its normal access gate.
 	RequestSettlementChanged *bool `json:"request_settlement_changed,omitempty"`
@@ -1119,6 +1197,9 @@ type PublicEventActivityChangedFieldsAudience string
 // PublicEventActivityChangedFieldsCalendarMethod The RFC 5546 method of the message's calendar part. Set when it was read back from the message's stored original (absent otherwise).
 type PublicEventActivityChangedFieldsCalendarMethod string
 
+// PublicEventActivityChangedFieldsCallOutcome How the call ended, once somebody recorded it (absent when this update did not touch it). Call rows only.
+type PublicEventActivityChangedFieldsCallOutcome string
+
 // PublicEventActivityChangedFieldsDirection `outbound` when capture learned that a message stored as received was the seat's own sent mail. `inbound` when a copy read as a colleague's sent mail is received mail again, because that colleague's address is not at an own domain. Absent otherwise. The counterparty changes with it; a subscriber that must know re-reads the row.
 type PublicEventActivityChangedFieldsDirection string
 
@@ -1138,6 +1219,15 @@ type PublicEventActivityDispositionRecorded struct {
 
 // PublicEventActivityDispositionRecordedDisposition What was decided. `sales_again` and `picked_up` are the undos of `not_sales` and of the reader states, Done included. A decision withdrawn is itself a decision. A consumer counting dispositions has to see it happen rather than infer it from a row going quiet.
 type PublicEventActivityDispositionRecordedDisposition string
+
+// PublicEventActivityInvitationAnswered Payload for activity.invitation_answered. One reader answered a calendar invitation that came by email, and their own calendar sent the answer to the organizer (activities/calendarinvitation.go). It is that reader's own answer, and the reader is not on the wire. The same press marks the message done for them, announced as activity.marked_handled.
+type PublicEventActivityInvitationAnswered struct {
+	ActivityId openapi_types.UUID                            `json:"activity_id"`
+	Response   PublicEventActivityInvitationAnsweredResponse `json:"response"`
+}
+
+// PublicEventActivityInvitationAnsweredResponse defines model for PublicEventActivityInvitationAnswered.Response.
+type PublicEventActivityInvitationAnsweredResponse string
 
 // PublicEventActivityMarkedHandled Payload for activity.marked_handled. One reader marked an activity on their Worklist done. It is a waiting message, a message of their own still unanswered, or a meeting still owed a follow-up. They dealt with it another way, by phone, in a meeting, or with nothing owed (activities/disposition.go). It is that reader's own state, like a snooze, and the reader is not on the wire. No reply was sent. The undo is activity.disposition_recorded with `picked_up`.
 type PublicEventActivityMarkedHandled struct {
@@ -1476,7 +1566,7 @@ type PublicEventConsentSuppressionLifted struct {
 	RecordedAtLevel string `json:"recorded_at_level"`
 
 	// RemainingSuppressions How many stops are still live for this contact after the lift, counted inside the same transaction that did the lifting.
-	RemainingSuppressions *int `json:"remaining_suppressions,omitempty"`
+	RemainingSuppressions *int `json:"remaining_suppressions,omitempty" minimum:"0"`
 
 	// StillSuppressed Whether this contact is still not writable. Equivalent to remaining_suppressions > 0, stated as its own field so a consumer cannot get the comparison wrong in the direction that resumes mail.
 	StillSuppressed *bool `json:"still_suppressed,omitempty"`
@@ -1877,6 +1967,9 @@ type PublicEventEntityRef struct {
 
 	// Name The record's name when the event was delivered, for a deal, company or project. Absent for a contact or lead; open the link to see who it is.
 	Name *string `json:"name,omitempty"`
+
+	// OwnerName The display name of the record's owner when the event was delivered, for a deal, company or project. Absent when the record has no owner.
+	OwnerName *string `json:"owner_name,omitempty"`
 
 	// Type Entity kind (e.g. deal, contact, company).
 	Type string `json:"type"`
@@ -2328,6 +2421,18 @@ type PublicEventOfferSuperseded struct {
 	ToRevision int `json:"to_revision"`
 }
 
+// PublicEventOfferUpdated Payload for offer.updated: a draft offer was edited, its header or its line items. Names what changed and carries no values, so a subscriber reads the offer for them.
+type PublicEventOfferUpdated struct {
+	// ChangedFields The offer fields the edit moved, by their column names. A line edit names line_items, beside any total it moved.
+	ChangedFields []string `json:"changed_fields"`
+
+	// DealId The deal this offer belongs to.
+	DealId openapi_types.UUID `json:"deal_id"`
+
+	// OfferId The edited draft offer.
+	OfferId openapi_types.UUID `json:"offer_id"`
+}
+
 // PublicEventOnboardingStateChanged Payload for onboarding.state_changed — the admitted human's wizard checkpoint was created or advanced (identity/onboarding.go's auditOnboardingState).
 type PublicEventOnboardingStateChanged struct {
 	// Completed Whether the wizard was completed as of this checkpoint.
@@ -2411,6 +2516,18 @@ type PublicEventProjectCreated struct {
 
 	// Phase Always `initiative` — a project is born at the head of the ladder.
 	Phase string `json:"phase"`
+}
+
+// PublicEventProjectHealthAssessed Payload for project.health_assessed: a reading of how the project is going was appended to its history. Every row counts: a new reading, a correction or the undo of an AI reading, by a user, their agent or the health job. The project row itself is not written, so no project.updated goes with it.
+type PublicEventProjectHealthAssessed struct {
+	// AssessmentId The appended reading.
+	AssessmentId openapi_types.UUID `json:"assessment_id"`
+
+	// Source human for a user, agent for their agent, ai for the health job, undo for a user undoing an AI reading.
+	Source string `json:"source"`
+
+	// State on_track, at_risk or off_track. On an undo row it is the reading the undo restored, or on_track when the project reads as not judged again.
+	State string `json:"state"`
 }
 
 // PublicEventProjectPhaseChanged Payload for project.phase_changed — a project moved along the phase ladder. Emitted INSTEAD of project.updated, and written from the same transaction as its phase-history row, so "where does this stand" and "how did it get there" can never disagree.
@@ -2676,7 +2793,7 @@ type PublicEventUserMfaRemoved struct {
 	By openapi_types.UUID `json:"by"`
 
 	// SessionsEnded How many live sessions of the member the removal ended.
-	SessionsEnded int `json:"sessions_ended"`
+	SessionsEnded int `json:"sessions_ended" minimum:"0"`
 
 	// UserId The member whose second factor was removed.
 	UserId openapi_types.UUID `json:"user_id"`
@@ -2705,6 +2822,15 @@ type PublicEventUserReactivated struct {
 
 	// UserId The reactivated member.
 	UserId openapi_types.UUID `json:"user_id"`
+}
+
+// PublicEventUserTimezoneChanged Payload for user_timezone.changed. A member's own time zone was stored by identity/usertimezone.go's writeTimezoneTx. It is the app's guess from the browser on first sign-in, or the member's own pick. Booking reads the member's working hours on it, and mail sent to them is timed by it.
+type PublicEventUserTimezoneChanged struct {
+	// Chosen True when the member picked the zone themselves. A later browser guess never replaces a chosen zone.
+	Chosen bool `json:"chosen"`
+
+	// Timezone The IANA name now stored, such as Europe/Berlin.
+	Timezone string `json:"timezone"`
 }
 
 // PublicEventUserUpdated defines model for PublicEventUserUpdated.
@@ -2892,6 +3018,12 @@ func (PublicEventActivityDispositionRecorded) EventType() string {
 }
 
 func (PublicEventActivityDispositionRecorded) EntityType() string { return "activity" }
+
+func (PublicEventActivityInvitationAnswered) EventType() string {
+	return "activity.invitation_answered"
+}
+
+func (PublicEventActivityInvitationAnswered) EntityType() string { return "activity" }
 
 func (PublicEventActivityMarkedHandled) EventType() string { return "activity.marked_handled" }
 
@@ -3305,6 +3437,10 @@ func (PublicEventOfferSuperseded) EventType() string { return "offer.superseded"
 
 func (PublicEventOfferSuperseded) EntityType() string { return "offer" }
 
+func (PublicEventOfferUpdated) EventType() string { return "offer.updated" }
+
+func (PublicEventOfferUpdated) EntityType() string { return "offer" }
+
 func (PublicEventOnboardingStateChanged) EventType() string { return "onboarding.state_changed" }
 
 func (PublicEventOnboardingStateChanged) EntityType() string { return "onboarding_wizard_state" }
@@ -3332,6 +3468,10 @@ func (PublicEventProjectArchived) EntityType() string { return "project" }
 func (PublicEventProjectCreated) EventType() string { return "project.created" }
 
 func (PublicEventProjectCreated) EntityType() string { return "project" }
+
+func (PublicEventProjectHealthAssessed) EventType() string { return "project.health_assessed" }
+
+func (PublicEventProjectHealthAssessed) EntityType() string { return "project" }
 
 func (PublicEventProjectPhaseChanged) EventType() string { return "project.phase_changed" }
 
@@ -3429,6 +3569,10 @@ func (PublicEventUserReactivated) EventType() string { return "user.reactivated"
 
 func (PublicEventUserReactivated) EntityType() string { return "user" }
 
+func (PublicEventUserTimezoneChanged) EventType() string { return "user_timezone.changed" }
+
+func (PublicEventUserTimezoneChanged) EntityType() string { return "user" }
+
 func (PublicEventUserUpdated) EventType() string { return "user.updated" }
 
 func (PublicEventUserUpdated) EntityType() string { return "user" }
@@ -3478,6 +3622,7 @@ var PublicEventVersions = map[string]int{
 	"activity.archived":                         1,
 	"activity.captured":                         1,
 	"activity.disposition_recorded":             1,
+	"activity.invitation_answered":              1,
 	"activity.marked_handled":                   1,
 	"activity.readiness_recorded":               1,
 	"activity.updated":                          1,
@@ -3578,6 +3723,7 @@ var PublicEventVersions = map[string]int{
 	"offer.rejected":                            1,
 	"offer.sent":                                1,
 	"offer.superseded":                          1,
+	"offer.updated":                             1,
 	"onboarding.state_changed":                  1,
 	"passport.revoked":                          1,
 	"pipeline.archived":                         1,
@@ -3585,6 +3731,7 @@ var PublicEventVersions = map[string]int{
 	"pipeline.updated":                          1,
 	"project.archived":                          1,
 	"project.created":                           1,
+	"project.health_assessed":                   1,
 	"project.phase_changed":                     1,
 	"project.updated":                           1,
 	"relationship_nudge.decided":                1,
@@ -3610,6 +3757,7 @@ var PublicEventVersions = map[string]int{
 	"user_display_name.changed":                 1,
 	"user_greeting_name.changed":                1,
 	"user_locale.changed":                       1,
+	"user_timezone.changed":                     1,
 	"voice.build_changed":                       1,
 	"voice.corpus_changed":                      1,
 	"voice.draft_outcome_recorded":              1,
@@ -3627,9 +3775,10 @@ var PublicEventSamples = map[string]string{
 	"activity.archived":                         "{\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
 	"activity.captured":                         "{\"channel_provider\":\"Sample channel provider\",\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true,\"kind\":\"Sample kind\",\"source_system\":\"Sample source system\"}",
 	"activity.disposition_recorded":             "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"disposition\":\"not_sales\"}",
+	"activity.invitation_answered":              "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"response\":\"accepted\"}",
 	"activity.marked_handled":                   "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"activity.readiness_recorded":               "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"preparation_revision\":\"Sample preparation revision\",\"state\":\"ready\"}",
-	"activity.updated":                          "{\"changed_fields\":{\"agenda_changed\":true,\"assignee_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"audience\":\"workspace\",\"automatic_task_repaired\":true,\"body\":true,\"calendar_method\":\"PUBLISH\",\"commitment_admissions_changed\":true,\"direction\":\"outbound\",\"due_at\":\"2026-10-14T09:12:00Z\",\"is_done\":true,\"meeting_status\":\"booked\",\"occurred_at\":\"2026-10-14T09:12:00Z\",\"occurred_precision\":\"instant\",\"outbound_attested\":true,\"project_filing_undone\":true,\"relinked\":{\"entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"entity_type\":\"Sample entity type\"},\"remind_at\":\"2026-10-14T09:12:00Z\",\"request_settlement_changed\":true,\"restored\":true,\"subject\":\"Sample subject\",\"thread_key\":\"Sample thread key\"},\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
+	"activity.updated":                          "{\"changed_fields\":{\"agenda_changed\":true,\"assignee_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"audience\":\"workspace\",\"automatic_task_repaired\":true,\"body\":true,\"calendar_method\":\"PUBLISH\",\"call_outcome\":\"reached\",\"call_outcome_cleared\":true,\"commitment_admissions_changed\":true,\"direction\":\"outbound\",\"due_at\":\"2026-10-14T09:12:00Z\",\"due_has_time\":true,\"host_user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"is_done\":true,\"meeting_status\":\"booked\",\"meeting_status_cleared\":true,\"occurred_at\":\"2026-10-14T09:12:00Z\",\"occurred_precision\":\"instant\",\"outbound_attested\":true,\"project_filing_undone\":true,\"relinked\":{\"entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"entity_type\":\"Sample entity type\"},\"remind_at\":\"2026-10-14T09:12:00Z\",\"remind_at_cleared\":true,\"request_settlement_changed\":true,\"restored\":true,\"subject\":\"Sample subject\",\"thread_key\":\"Sample thread key\"},\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
 	"approval.decided":                          "{\"decided_by\":\"0190a7f2-0000-7000-8000-000000000010\",\"decided_by_system\":true,\"diff_hash\":\"Sample diff hash\",\"edited\":true,\"edited_change\":{},\"kind\":\"Sample kind\",\"verdict\":\"approved\"}",
 	"approval.failure_acknowledged":             "{\"failed_at\":\"2026-10-14T09:12:00Z\",\"kind\":\"Sample kind\"}",
 	"approval.preference_changed":               "{\"kind\":\"Sample kind\"}",
@@ -3641,7 +3790,7 @@ var PublicEventSamples = map[string]string{
 	"coldstart.accepted":                        "{\"approval_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"decided_by\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"coldstart.read_back_proposed":              "{\"field_count\":1,\"source_kind\":\"Sample source kind\",\"source_url\":\"Sample source url\"}",
 	"coldstart.rejected":                        "{\"approval_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"decided_by\":\"0190a7f2-0000-7000-8000-000000000010\"}",
-	"commission.accrued":                        "{\"amount_minor\":1,\"currency\":\"Sample currency\",\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"partner_company_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"rate_bps\":1}",
+	"commission.accrued":                        "{\"amount_minor\":1,\"currency\":\"EUR\",\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"partner_company_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"rate_bps\":1}",
 	"commission.decided":                        "{\"decision\":\"Sample decision\",\"from_status\":\"Sample from status\",\"reason\":\"Sample reason\",\"to_status\":\"Sample to status\"}",
 	"comms.delivery_bounced":                    "{\"kind\":\"hard\",\"message_id\":\"Sample message id\",\"reason\":\"Sample reason\"}",
 	"company.archived":                          "{}",
@@ -3672,7 +3821,7 @@ var PublicEventSamples = map[string]string{
 	"deal.merged":                               "{\"merged_from_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"merged_into_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"deal.owner_changed":                        "{\"from_owner_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true,\"to_owner_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"deal.restored":                             "{\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
-	"deal.stage_changed":                        "{\"amount_minor_at_change\":1,\"currency_at_change\":\"Sample currency at change\",\"deal_name\":\"Sample deal name\",\"from_stage_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"from_stage_name\":\"Sample from stage name\",\"from_status\":\"Sample from status\",\"fx_rate_to_base\":\"Sample fx rate to base\",\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true,\"lost_reason_code\":\"Sample lost reason code\",\"partner_attribution\":\"Sample partner attribution\",\"partner_company_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"to_stage_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"to_stage_name\":\"Sample to stage name\",\"to_status\":\"Sample to status\",\"win_probability\":1}",
+	"deal.stage_changed":                        "{\"amount_minor_at_change\":1,\"currency_at_change\":\"EUR\",\"deal_name\":\"Sample deal name\",\"from_stage_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"from_stage_name\":\"Sample from stage name\",\"from_status\":\"Sample from status\",\"fx_rate_to_base\":\"Sample fx rate to base\",\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true,\"lost_reason_code\":\"Sample lost reason code\",\"partner_attribution\":\"Sample partner attribution\",\"partner_company_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"to_stage_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"to_stage_name\":\"Sample to stage name\",\"to_status\":\"Sample to status\",\"win_probability\":1}",
 	"deal.updated":                              "{\"changed_fields\":{},\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
 	"deal_room.archived":                        "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"deal_room.closed":                          "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
@@ -3689,7 +3838,7 @@ var PublicEventSamples = map[string]string{
 	"email_signature.changed":                   "{\"has_signature\":true}",
 	"engagement.reply":                          "{\"channel\":\"Sample channel\",\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"idempotency_key\":\"Sample idempotency key\",\"matched_outbound_activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"occurred_at\":\"2026-10-14T09:12:00Z\",\"occurred_precision\":\"instant\"}",
 	"forecast.assurance_created":                "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"eligible_deals\":1,\"eligible_signals\":1,\"readiness\":\"ready\",\"run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"status\":\"complete\"}",
-	"forecast.created":                          "{\"amount_minor\":1,\"author_user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"call_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"currency\":\"Sample currency\",\"period_end\":\"2026-10-14\",\"period_start\":\"2026-10-14\",\"supersedes_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
+	"forecast.created":                          "{\"amount_minor\":1,\"author_user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"call_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"currency\":\"EUR\",\"period_end\":\"2026-10-14\",\"period_start\":\"2026-10-14\",\"supersedes_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"forecast.exception_resolved":               "{\"actor_user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"exception_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"expires_at\":\"2026-10-14T09:12:00Z\",\"outcome\":\"fixed_record\"}",
 	"forecast.share_issued":                     "{\"expires_at\":\"2026-10-14T09:12:00Z\",\"kind\":\"live\",\"share_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"target\":\"Sample target\"}",
 	"forecast.share_revoked":                    "{\"revoked_at\":\"2026-10-14T09:12:00Z\",\"share_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
@@ -3722,11 +3871,12 @@ var PublicEventSamples = map[string]string{
 	"notice.created":                            "{\"kind\":\"Sample kind\",\"notice_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"recipient_user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"notice.read":                               "{\"notice_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"notification.preference_changed":           "{\"class\":\"Sample class\"}",
-	"offer.accepted":                            "{\"currency\":\"Sample currency\",\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"gross_minor\":1,\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"revision\":1}",
-	"offer.created":                             "{\"captured_by\":\"Sample captured by\",\"currency\":\"Sample currency\",\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"revision\":1,\"source\":\"Sample source\"}",
+	"offer.accepted":                            "{\"currency\":\"EUR\",\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"gross_minor\":1,\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"revision\":1}",
+	"offer.created":                             "{\"captured_by\":\"Sample captured by\",\"currency\":\"EUR\",\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"revision\":1,\"source\":\"Sample source\"}",
 	"offer.rejected":                            "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"reason\":\"Sample reason\",\"revision\":1}",
-	"offer.sent":                                "{\"currency\":\"Sample currency\",\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"fx_rate_to_base\":\"Sample fx rate to base\",\"gross_minor\":1,\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"revision\":1,\"valid_until\":\"2026-10-14\"}",
+	"offer.sent":                                "{\"currency\":\"EUR\",\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"fx_rate_to_base\":\"Sample fx rate to base\",\"gross_minor\":1,\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"revision\":1,\"valid_until\":\"2026-10-14\"}",
 	"offer.superseded":                          "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"from_revision\":1,\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"to_revision\":1}",
+	"offer.updated":                             "{\"changed_fields\":[\"Sample changed fields\"],\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"offer_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"onboarding.state_changed":                  "{\"completed\":true,\"connect_skipped\":true,\"path\":\"Sample path\",\"step\":\"Sample step\",\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"version\":1,\"voice_skipped\":true}",
 	"passport.revoked":                          "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"passport_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"pipeline.archived":                         "{}",
@@ -3734,6 +3884,7 @@ var PublicEventSamples = map[string]string{
 	"pipeline.updated":                          "{\"changed_fields\":{}}",
 	"project.archived":                          "{}",
 	"project.created":                           "{\"company_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"key\":\"Sample key\",\"name\":\"Sample name\",\"owner_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"phase\":\"Sample phase\"}",
+	"project.health_assessed":                   "{\"assessment_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"source\":\"Sample source\",\"state\":\"Sample state\"}",
 	"project.phase_changed":                     "{\"from_phase\":\"Sample from phase\",\"reason\":\"Sample reason\",\"to_phase\":\"Sample to phase\"}",
 	"project.updated":                           "{\"changed_fields\":{}}",
 	"relationship_nudge.decided":                "{\"action\":\"dismissed\",\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"dismissed_until\":\"2026-10-14T09:12:00Z\",\"permanent\":true}",
@@ -3759,6 +3910,7 @@ var PublicEventSamples = map[string]string{
 	"user_display_name.changed":                 "{\"display_name\":\"Sample display name\"}",
 	"user_greeting_name.changed":                "{\"greeting_name\":\"Sample greeting name\"}",
 	"user_locale.changed":                       "{\"locale\":\"Sample locale\"}",
+	"user_timezone.changed":                     "{\"chosen\":true,\"timezone\":\"Sample timezone\"}",
 	"voice.build_changed":                       "{\"build_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"candidate_action\":\"Sample candidate action\",\"next_attempt_at\":\"2026-10-14T09:12:00Z\",\"profile_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"reason\":\"Sample reason\",\"result_version\":1,\"source_count\":1,\"source_hash\":\"Sample source hash\",\"stage\":\"Sample stage\",\"status\":\"Sample status\",\"status_code\":\"Sample status code\"}",
 	"voice.corpus_changed":                      "{\"action\":\"Sample action\",\"origin\":\"Sample origin\",\"profile_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"register\":\"Sample register\",\"source_count\":1,\"source_hash\":\"Sample source hash\",\"source_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"word_delta\":1}",
 	"voice.draft_outcome_recorded":              "{\"outcome\":\"Sample outcome\",\"profile_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"qualifies_as_source\":true,\"transformation_count\":1}",

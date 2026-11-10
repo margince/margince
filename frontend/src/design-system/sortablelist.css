@@ -55,10 +55,14 @@
 .sortable-handle {
   flex: none;
   color: var(--textSecondary);
-  cursor: grab;
   touch-action: none;
 }
-.sortable-list.is-sorting .sortable-handle {
+/* The hand, open and then closed. The `:not()` outranks `.iconbtn`'s pointer. */
+.sortable-handle:not([aria-disabled="true"]) {
+  cursor: grab;
+}
+/* While any row is carried, every grip of that list reads the closed hand. */
+.is-sorting .sortable-handle:not([aria-disabled="true"]) {
   cursor: grabbing;
 }
 .sortable-handle[aria-disabled="true"] {

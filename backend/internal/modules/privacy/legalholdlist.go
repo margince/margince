@@ -64,8 +64,8 @@ const heldRecordsSQL = `
 // ListLegalHolds answers which records a hold is preserving, oldest first.
 func ListLegalHolds(ctx context.Context, db *database.DB, cursor *string, limit *int) (HeldPage, error) {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
-		return HeldPage{}, fmt.Errorf("human-only compliance read: %w", apperrors.ErrPermissionDenied)
+	if !ok || !actor.HumanOrItsAgent() {
+		return HeldPage{}, fmt.Errorf("this compliance read is for a user or their agent: %w", apperrors.ErrPermissionDenied)
 	}
 	if err := auth.Require(ctx, retentionPolicyObject, principal.ActionRead); err != nil {
 		return HeldPage{}, err

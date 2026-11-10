@@ -83,6 +83,7 @@ const noMore = { next_cursor: null, has_more: false };
 
 const dana = {
   contact_id: "p-1",
+  attachable: true,
   full_name: "Dana Buyer",
   title: "VP Procurement",
   strength: { score: 40, bucket: "moderate", factors: {}, inbound_90d: 1 },

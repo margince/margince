@@ -59,6 +59,12 @@ func (s *Service) StageAgentCall(ctx context.Context, in StageInput) (ids.Approv
 	if !ok {
 		return ids.ApprovalID{}, false, errors.New("crmapprovals: no actor bound to context")
 	}
+	if humanAcceptedKinds[in.Kind] {
+		return ids.ApprovalID{}, false, apperrors.ErrPermissionDenied
+	}
+	if err := s.checkStageContext(ctx, in); err != nil {
+		return ids.ApprovalID{}, false, err
+	}
 	var (
 		id       ids.ApprovalID
 		approved bool
@@ -72,6 +78,9 @@ func (s *Service) StageAgentCall(ctx context.Context, in StageInput) (ids.Approv
 		// its own: an empty result is not "no offer can appear". Two attempts
 		// reading concurrently would both find nothing released and both stage.
 		if err := lockProposalIdentity(ctx, tx, wsID, in); err != nil {
+			return err
+		}
+		if err := requireCallAuthority(ctx, tx, p, stageAuthorityRow(in)); err != nil {
 			return err
 		}
 		live, found, err := s.liveApprovalForCallInTx(ctx, tx, in, p)

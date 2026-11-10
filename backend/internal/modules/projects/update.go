@@ -11,15 +11,18 @@ package projects
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // UpdateProjectInput is one project partial update: every field optional.
@@ -53,69 +56,95 @@ func (s *Store) UpdateProject(ctx context.Context, id ids.ProjectID, in UpdatePr
 	}
 	var out crmcontracts.Project
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureWritable(ctx, tx, projectObject, id.UUID); err != nil {
-			return err
-		}
-		// current reads WITH active columns so the patch's audit
-		// before-image carries the honest pre-update cf values.
-		current, err := readProject(ctx, tx, id, storekit.LiveOnly, active)
-		if err != nil {
-			return fmt.Errorf("read project before update: %w", err)
-		}
-		// Handing the project on is an assignment, and the destination is
-		// asked the same question the bulk handover asks. The two used to
-		// disagree — the handover refused an inactive receiver and this path
-		// took any row app_user held — so a project could be handed one at a
-		// time to a seat the handover would have refused in bulk.
-		if err := auth.EnsureOwnerHandOn(ctx, tx, (*ids.UUID)(current.OwnerId), in.OwnerID); err != nil {
-			return err
-		}
-
-		in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
-		p, err := projectUpdatePatch(current, in)
-		if err != nil {
-			return err
-		}
-		// A stale version answers 409 before a refused custom field answers 422.
-		if err := storekit.EnsureIfMatch(ctx, tx, projectObject, id.UUID, in.IfVersion); err != nil {
-			return err
-		}
-		if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
-			return err
-		}
-		if p.Empty() {
-			if err := storekit.EnsureIfMatch(ctx, tx, projectObject, id.UUID, in.IfVersion); err != nil {
-				return err
-			}
-			out, err = s.maskProjectForCaller(ctx, tx, current)
-			return err
-		}
-		if err := p.ApplyGuarded(ctx, tx, projectObject, id.UUID, in.IfVersion); err != nil {
-			if constraint, ok := storekit.CheckViolation(err); ok {
-				if refusal := projectCheckError(constraint, submittedDateField(in.StartedAt, in.TargetEndDate, in.EndedAt)); refusal != nil {
-					return refusal
-				}
-			}
-			return fmt.Errorf("apply project patch: %w", err)
-		}
-
-		auditID, err := storekit.AuditWithTrail(ctx, tx, in.Trail, projectObject, id.UUID, p.Before(), p.After())
-		if err != nil {
-			return fmt.Errorf("audit project update: %w", err)
-		}
-		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventProjectUpdated{
-			ChangedFields: p.After(),
-		}); err != nil {
-			return fmt.Errorf("emit project.updated: %w", err)
-		}
-		updated, err := readProject(ctx, tx, id, storekit.LiveOnly, active)
-		if err != nil {
-			return fmt.Errorf("read updated project: %w", err)
-		}
-		out, err = s.maskProjectForCaller(ctx, tx, updated)
+		var err error
+		out, err = s.updateProjectInTx(ctx, tx, id, in, active)
 		return err
 	})
 	return out, err
+}
+
+// UpdateProjectTx is UpdateProject on the caller's transaction, for a write
+// that must commit or roll back with the caller's own.
+func (s *Store) UpdateProjectTx(
+	ctx context.Context, tx pgx.Tx, id ids.ProjectID, in UpdateProjectInput, cols CustomColumns,
+) (crmcontracts.Project, error) {
+	if err := auth.Require(ctx, projectObject, principal.ActionUpdate); err != nil {
+		return crmcontracts.Project{}, err
+	}
+	return s.updateProjectInTx(ctx, tx, id, in, cols.cols)
+}
+
+// updateProjectInTx is the edit both entry points run: the write check, the
+// patch, the write, its audit row and its event.
+func (s *Store) updateProjectInTx(
+	ctx context.Context, tx pgx.Tx, id ids.ProjectID, in UpdateProjectInput, active []fieldcatalog.Column,
+) (crmcontracts.Project, error) {
+	if err := auth.EnsureWritable(ctx, tx, projectObject, id.UUID); err != nil {
+		return crmcontracts.Project{}, err
+	}
+	// current is read with the active columns, so the audit before-image
+	// carries the custom-field values as they were.
+	current, err := readProject(ctx, tx, id, storekit.LiveOnly, active)
+	if err != nil {
+		return crmcontracts.Project{}, fmt.Errorf("read project before update: %w", err)
+	}
+	// Handing the project on is an assignment, so the receiver is asked
+	// what the bulk handover asks.
+	if err := auth.EnsureOwnerHandOn(ctx, tx, (*ids.UUID)(current.OwnerId), in.OwnerID); err != nil {
+		return crmcontracts.Project{}, err
+	}
+
+	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
+	p, err := projectUpdatePatch(current, in)
+	if err != nil {
+		return crmcontracts.Project{}, err
+	}
+	// A stale version answers 409 before a refused custom field answers 422.
+	if err := storekit.EnsureIfMatch(ctx, tx, projectObject, id.UUID, in.IfVersion); err != nil {
+		return crmcontracts.Project{}, err
+	}
+	if err := refuseMovedTargetEnd(current, in); err != nil {
+		return crmcontracts.Project{}, err
+	}
+	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
+		return crmcontracts.Project{}, err
+	}
+	if p.Empty() {
+		if err := storekit.EnsureIfMatch(ctx, tx, projectObject, id.UUID, in.IfVersion); err != nil {
+			return crmcontracts.Project{}, err
+		}
+		return s.maskProjectForCaller(ctx, tx, current)
+	}
+	if err := p.ApplyGuarded(ctx, tx, projectObject, id.UUID, in.IfVersion); err != nil {
+		if constraint, ok := storekit.CheckViolation(err); ok {
+			if refusal := projectCheckError(constraint, submittedDateField(in.StartedAt, in.TargetEndDate, in.EndedAt)); refusal != nil {
+				return crmcontracts.Project{}, refusal
+			}
+		}
+		return crmcontracts.Project{}, fmt.Errorf("apply project patch: %w", err)
+	}
+	return s.recordProjectUpdate(ctx, tx, id, in.Trail, p, active)
+}
+
+// recordProjectUpdate writes the audit row and event of an applied patch, and
+// answers the row as the caller may see it.
+func (s *Store) recordProjectUpdate(
+	ctx context.Context, tx pgx.Tx, id ids.ProjectID, trail storekit.AuditTrail, p *storekit.Patch, active []fieldcatalog.Column,
+) (crmcontracts.Project, error) {
+	auditID, err := storekit.AuditWithTrail(ctx, tx, trail, projectObject, id.UUID, p.Before(), p.After())
+	if err != nil {
+		return crmcontracts.Project{}, fmt.Errorf("audit project update: %w", err)
+	}
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventProjectUpdated{
+		ChangedFields: p.After(),
+	}); err != nil {
+		return crmcontracts.Project{}, fmt.Errorf("emit project.updated: %w", err)
+	}
+	updated, err := readProject(ctx, tx, id, storekit.LiveOnly, active)
+	if err != nil {
+		return crmcontracts.Project{}, fmt.Errorf("read updated project: %w", err)
+	}
+	return s.maskProjectForCaller(ctx, tx, updated)
 }
 
 // projectUpdatePatch builds the column patch. The owner it can set is gated by
@@ -176,4 +205,44 @@ func clearableProjectColumns(current crmcontracts.Project) map[string]storekit.C
 		"target_end_date": {Column: targetEndDateColumn, Current: current.TargetEndDate},
 		"ended_at":        {Column: endedAtColumn, Current: current.EndedAt},
 	}
+}
+
+// refuseMovedTargetEnd holds the pair a patch leaves on the row when it moves
+// either date: the sent one against the stored other. A patch that moves
+// neither is let through, so an old project with the pair reversed can still
+// be renamed.
+func refuseMovedTargetEnd(current crmcontracts.Project, in UpdateProjectInput) error {
+	if in.StartedAt == nil && in.TargetEndDate == nil {
+		return nil
+	}
+	started := patchedDate(current.StartedAt, in.StartedAt, in.Clear, startedAtColumn)
+	targetEnd := patchedDate(current.TargetEndDate, in.TargetEndDate, in.Clear, targetEndDateColumn)
+	moved := startedAtColumn
+	if in.TargetEndDate != nil {
+		moved = targetEndDateColumn
+	}
+	return refuseTargetEndBeforeStart(started, targetEnd, moved)
+}
+
+// patchedDate is the date a patch leaves in one column.
+func patchedDate(stored *openapi_types.Date, sent *time.Time, cleared []string, column string) *time.Time {
+	switch {
+	case sent != nil:
+		return sent
+	case slices.Contains(cleared, column) || stored == nil:
+		return nil
+	}
+	return &stored.Time
+}
+
+// refuseTargetEndBeforeStart refuses a target end date before the start date,
+// naming the date the caller sent. A missing date has no order to break.
+func refuseTargetEndBeforeStart(startedAt, targetEnd *time.Time, field string) error {
+	if startedAt == nil || targetEnd == nil {
+		return nil
+	}
+	if targetEnd.Format(time.DateOnly) < startedAt.Format(time.DateOnly) {
+		return &ProjectDateRangeError{Field: field}
+	}
+	return nil
 }

@@ -127,15 +127,17 @@ func TestEnsureContactByEmailRefusesASendingSystemsAddressEvenWhenAContactHoldsI
 	}
 }
 
-// Capture's counterparty path reaches the child-row writer without the parse
-// step, so the writer asks the rule itself.
+// Capture's counterparty path asks the rule before anything else. It answers
+// with the same skip capture already takes for an erased address.
 func TestTheCounterpartyPathRefusesASendingSystemsAddress(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	before := writeShapeRows(ctx, t, e)
 
 	_, err := e.store.EnsureCounterparty(ctx, e.ensureInput(ctx, t, "mailer-daemon@counterparty.test", "Mail Delivery", "counterparty.test"))
-	requireMachineAddressFault(t, err)
+	if !errors.Is(err, ErrCounterpartySuppressed) {
+		t.Fatalf("err = %v, want ErrCounterpartySuppressed", err)
+	}
 	if after := writeShapeRows(ctx, t, e); after[0] != before[0] {
 		t.Errorf("contacts went from %d to %d on a refused counterparty", before[0], after[0])
 	}
@@ -275,5 +277,27 @@ func TestMachineAddressContactsPagesEveryContactAndNamesTheMachineOnes(t *testin
 		return err
 	}); err == nil {
 		t.Error("a human caller read every contact's addresses")
+	}
+}
+
+// A CRM's BCC logging address is a sending system too. A manual create with
+// it is refused. A human at the provider's own domain is created.
+func TestManualCreateRefusesHubSpotBCC(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	before := writeShapeRows(ctx, t, e)
+	_, err := e.store.CreateContact(ctx, CreateContactInput{
+		FullName: "HubSpot Logger", Source: "manual",
+		Emails: []ContactEmailInput{{Email: "4711@bcc.eu1.hubspot.com", EmailType: emailTypeWork, IsPrimary: true}},
+	})
+	requireMachineAddressFault(t, err)
+	if after := writeShapeRows(ctx, t, e); after != before {
+		t.Errorf("a refused create wrote rows: %v -> %v", before, after)
+	}
+	if _, err := e.store.CreateContact(ctx, CreateContactInput{
+		FullName: "Anna at HubSpot", Source: "manual",
+		Emails: []ContactEmailInput{{Email: "anna@hubspot.com", EmailType: emailTypeWork, IsPrimary: true}},
+	}); err != nil {
+		t.Fatalf("a human at the provider's domain was refused: %v", err)
 	}
 }

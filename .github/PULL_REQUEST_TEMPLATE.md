@@ -17,6 +17,7 @@
 - [ ] `make check` is green
 - [ ] `make test-integration` is green (or: this change does not touch tenant data, workspace isolation or the write shape)
 - [ ] `make craft-static` reports no new `BLOCKER` findings
+- [ ] `make test-roles` is green (or: this change adds or changes no MCP tool, gate or role)
 - [ ] This diff and the PR body hold no secrets, no customer data and no local machine paths. They hold nothing copied from a private document or pointing at one. A decision is named only by its number (this repository is public)
 
 ## Docs that describe this change

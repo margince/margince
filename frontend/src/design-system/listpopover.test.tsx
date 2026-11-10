@@ -250,6 +250,37 @@ describe("ListPopover on a desktop", () => {
     expect(live?.textContent).toBe("No match");
   });
 
+  // The way forward needs the word the reader typed, and has nothing to say
+  // before they type one or while the list still matches.
+  it("offers the empty action with the typed term, only once nothing matches", async () => {
+    const user = userEvent.setup();
+    render(
+      <ListPopover
+        label="Assign owner"
+        title="Colleagues"
+        searchLabel="Search colleagues"
+        options={OWNERS}
+        onPick={() => {}}
+        emptyAction={(term, done) => (
+          <button type="button" onClick={done}>
+            Invite {term}
+          </button>
+        )}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Assign owner" }));
+    expect(screen.queryByRole("button", { name: /^Invite/ })).toBeNull();
+
+    await user.type(screen.getByRole("combobox"), "Anna");
+    expect(screen.queryByRole("button", { name: /^Invite/ })).toBeNull();
+
+    await user.type(screen.getByRole("combobox"), " Kowalski ");
+    await user.click(
+      screen.getByRole("button", { name: "Invite Anna Kowalski" }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
   it("lists a disabled row without letting it be picked, and marks the selected one", async () => {
     const user = userEvent.setup();
     const onPick = vi.fn();

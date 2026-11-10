@@ -1106,6 +1106,28 @@ ensure_infra() {
   done
 }
 
+# flush_slug_redis DB — empty a slug's own Redis database when --fresh rebuilds
+# its Postgres one. What the old database left there is stale, and the auth
+# limiters' counts are the part that bites: they key on the client IP, every
+# boot's seed redeems two set-password links from ::1, and the limit is 30 an
+# hour, so a lane that boots once per scenario was refused on the sixteenth.
+# Only a claimed database: db 0 is the primary stack's, and nothing outside the
+# claimed block belongs to a slug.
+flush_slug_redis() { # redis_db
+  local redis_db="$1" container
+  if (( redis_db < DEV_REDIS_DB_MIN || redis_db > DEV_REDIS_DB_MAX )); then
+    echo "FAIL: --fresh will not flush Redis database ${redis_db}: it is outside the dev block ${DEV_REDIS_DB_MIN}..${DEV_REDIS_DB_MAX}" >&2
+    return 1
+  fi
+  container="$(docker ps --filter "publish=${REDIS_PORT}" \
+    --filter "label=com.docker.compose.service=redis" --format '{{.ID}}')"
+  if [[ -z "$container" || "$container" == *$'\n'* ]]; then
+    echo "FAIL: --fresh needs exactly one dev Redis container publishing :${REDIS_PORT}; found: ${container:-none}" >&2
+    return 1
+  fi
+  docker exec "$container" redis-cli -n "$redis_db" FLUSHDB >/dev/null
+}
+
 drop_stray_dev_dbs() { # every margince_dev_<slug> database an isolated env left behind
   local strays
   strays=$(psql_owner postgres -tAc \
@@ -1155,6 +1177,7 @@ up)
   mkdir -p "$rundir"
   : > "$log"
   echo "$label → db=$db api=:$api_port fe=:$fe_port (logs: $log)"
+  echo "Development extensions enabled; checks and generation keep the same selection."
   # On the console, not in the log: a failure here leaves nothing to tail.
   ensure_infra
   {
@@ -1177,6 +1200,7 @@ up)
       psql_owner postgres -c "DROP DATABASE IF EXISTS \"${db}\" WITH (FORCE)" </dev/null
       psql_owner postgres -c "CREATE DATABASE \"${db}\"" </dev/null
       psql_owner "$db" -v ON_ERROR_STOP=1 <scripts/db-init.sql
+      [[ -z "$slug" ]] || flush_slug_redis "$redis_db"
     fi
     # The base `margince` db already exists (db-up + db-init); only a slugged
     # env needs its own database created.
@@ -1194,7 +1218,7 @@ up)
     # `go run` does) resolves the vanilla stub and applies zero extension
     # migrations, leaving a composed api booting over a database with none
     # of its extensions' tables.
-    ( cd backend && GOWORK="$PWD/../go.work" go run ./tools/gen-composition )
+    ( cd backend && GOWORK="$PWD/../go.work" go run ./tools/gen-composition -include-development )
     ( cd backend && MARGINCE_OWNER_DSN="$dev_owner_url" \
       GOWORK="$PWD/../build/composition/go.work" go run ./cmd/migrate up )
     echo "=== build api (once, before the readiness poll) ==="

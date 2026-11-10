@@ -247,6 +247,7 @@ func (s *Service) ListReportRevisions(ctx context.Context, id ids.UUID) (crmcont
 		out.Data, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (crmcontracts.ReportingReportRevision, error) {
 			var r crmcontracts.ReportingReportRevision
 			err := row.Scan(&r.Revision, &r.CreatedAt, &r.CreatedBy, &r.Selection)
+			withChartList(&r.Selection)
 			r.State = revisionState(report, r.Revision)
 			return r, err
 		})

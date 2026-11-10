@@ -15,6 +15,7 @@ import { StatStrip } from "../../../design-system/statstrip";
 import { formatNumber } from "../../../format/format";
 import { type Locale, useLocale, useT } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
+import { labelFor } from "../../../lib/labelfor";
 import { useMe } from "../../../lib/session";
 import { useOwnRoute } from "../contactroutes";
 import type { IntroRequest } from "../introrequests";
@@ -78,7 +79,7 @@ export function DecisionStrip({
   // (statstrip.css), and the fold is the plate's — a strip where only some
   // cards carry it draws a bordered box among a column of borderless rows.
   return (
-    <StatStrip>
+    <StatStrip density="plate" label={t("contact.intro.stripLabel")}>
       <StatCard
         narrow="row"
         label={t("contact.intro.stripWho")}
@@ -114,7 +115,7 @@ export function DecisionStrip({
         label={t("contact.intro.stripHandoff")}
         value={
           open
-            ? t(HANDOFF_VALUE[open.status])
+            ? t(labelFor(HANDOFF_VALUE, open.status))
             : t(noAskValue(openPending, openUnread))
         }
         detail={open ? handoffDetail(open, reader, t) : undefined}
@@ -149,7 +150,7 @@ function ChangeCard({
         withheld
           ? "reading.restricted"
           : change
-            ? CHANGE_VALUE[change.kind]
+            ? labelFor(CHANGE_VALUE, change.kind)
             : "contact.intro.stripNoMoment",
       )}
       detail={change && !withheld ? changeDetail(change, locale, t) : undefined}

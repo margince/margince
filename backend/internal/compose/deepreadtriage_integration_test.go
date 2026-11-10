@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -85,9 +86,9 @@ func captureMailFrom(t *testing.T, e *integration.Env, owner ids.UUID, domain, e
 	activityID := ids.New[ids.ActivityKind]()
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
-			INSERT INTO activity (id, kind, subject, direction, source_system, source_id, source, captured_by)
-			VALUES ($1, 'email', 'hi', 'inbound', 'gmail', $2, 'gmail:seed', 'connector:gmail')`,
-			activityID, activityID.String())
+			INSERT INTO activity (id, kind, subject, direction, source_system, source_id, source, captured_by, occurred_at)
+			VALUES (@activity, 'email', 'hi', 'inbound', 'gmail', @source, 'gmail:seed', 'connector:gmail', @at)`,
+			pgx.StrictNamedArgs{"activity": activityID, "source": activityID.String(), "at": clocktest.Now(t)})
 		if err != nil {
 			return err
 		}

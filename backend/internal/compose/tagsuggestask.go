@@ -44,6 +44,8 @@ type tagSuggestAnswer struct {
 
 func (a tagSuggestAnswer) answeredID() string { return a.ID }
 
+func (a tagSuggestAnswer) answering(id string) tagSuggestAnswer { a.ID = id; return a }
+
 type tagSuggestPayload struct {
 	Items []tagSuggestAnswer `json:"items"` // tagSuggestItemsKey
 }
@@ -99,7 +101,24 @@ func parseTagSuggestReply(text string, tags []collections.SuggestibleTag, items 
 	if msg := validateTagSuggestPayload(payload, tags, items); msg != "" {
 		return nil, errors.New(msg)
 	}
-	return payload.Items, nil
+	return resolveTagSuggestRefs(payload.Items, tags, items), nil
+}
+
+// resolveTagSuggestRefs rewrites each validated answer's item ref and tag refs
+// to the ids they name. The validator has refused a ref the call never showed.
+func resolveTagSuggestRefs(answers []tagSuggestAnswer, tags []collections.SuggestibleTag, items []tagsuggest.Item) []tagSuggestAnswer {
+	tagRefs := tagsuggest.TagRefs(tags)
+	resolved := resolveBatchRefs(answers, tagsuggest.ItemRefs(items))
+	for i := range resolved {
+		tagIDs := make([]string, 0, len(resolved[i].Tags))
+		for _, ref := range resolved[i].Tags {
+			if id := shownID(tagRefs, ref); id != "" {
+				tagIDs = append(tagIDs, id)
+			}
+		}
+		resolved[i].Tags = tagIDs
+	}
+	return resolved
 }
 
 // validateTagSuggestPayload names the first violation, or "" when the payload
@@ -122,18 +141,14 @@ func validateTagSuggestPayload(payload tagSuggestPayload, tags []collections.Sug
 	return ""
 }
 
+// tagSuggestItemIDs is the item refs one batch asks about, in the order it
+// sends them. The schema lets the model name them and the validator requires
+// them.
 func tagSuggestItemIDs(items []tagsuggest.Item) []string {
-	out := make([]string, len(items))
-	for i, item := range items {
-		out[i] = item.ID.String()
-	}
-	return out
+	return tagsuggest.ItemRefs(items).All()
 }
 
+// tagSuggestTagIDs is the tag refs one call lists.
 func tagSuggestTagIDs(tags []collections.SuggestibleTag) []string {
-	out := make([]string, len(tags))
-	for i, t := range tags {
-		out[i] = t.ID.String()
-	}
-	return out
+	return tagsuggest.TagRefs(tags).All()
 }

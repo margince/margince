@@ -47,11 +47,16 @@ func setupFreshness(t *testing.T) *freshnessEnv {
 	e.faulted = e.dealNamed(t, "Assurance Faulted")
 	e.healthy = e.dealNamed(t, "Assurance Fixture")
 	e.mailboxReadOnTime(t)
-	if err := e.run(t); err != nil {
+	if err := e.scan(t); err != nil {
 		t.Fatalf("the first pass: %v", err)
 	}
 	if f := e.freshness(t); !f.Known {
-		t.Fatal("the first pass read every source and still left freshness unknown")
+		var pending string
+		if err := e.Pool.QueryRow(e.Admin(), `SELECT coalesce(string_agg(envelope->>'type', ', '), '')
+ FROM event_outbox WHERE NOT assurance_inputs_read`).Scan(&pending); err != nil {
+			t.Fatal(err)
+		}
+		t.Fatalf("the first pass left freshness unknown; unread events: %s", pending)
 	}
 	return e
 }
@@ -179,7 +184,7 @@ func TestEditingADealMarksItsFindingsOutOfDateUntilTheNextPass(t *testing.T) {
 		t.Fatalf("the edited deal's findings still read as current: %v", marked)
 	}
 
-	if err := e.run(t); err != nil {
+	if err := e.scan(t); err != nil {
 		t.Fatalf("the next pass: %v", err)
 	}
 	if f := e.freshness(t); f.OutOfDate() {
@@ -228,7 +233,7 @@ func TestADuplicateOrLateDeliveryNeverMakesAReadingCurrent(t *testing.T) {
 		t.Fatalf("a late delivery left the generation at %d, not above %d", got, afterSecond)
 	}
 
-	if err := e.run(t); err != nil {
+	if err := e.scan(t); err != nil {
 		t.Fatalf("the next pass: %v", err)
 	}
 	e.deliver(t, first)
@@ -322,6 +327,12 @@ func TestReadingFreshnessRunsNoPass(t *testing.T) {
 	}
 }
 
+func (e *freshnessEnv) scan(t *testing.T) error {
+	t.Helper()
+	_, err := assuranceScanner(e.Pool, e.store).Scan(e.passCtx(), e.at, nil)
+	return err
+}
+
 func (e *freshnessEnv) scanner(subjects assurance.SubjectsFunc) *assurance.Scanner {
 	return assurance.NewScanner(e.store, subjects, AssuranceCoverage, AssuranceConfig())
 }
@@ -349,7 +360,7 @@ func TestAReadingFromBeforeTheTrackingIsUnknownUntilTheNextPass(t *testing.T) {
 		}
 	}
 
-	if err := e.run(t); err != nil {
+	if err := e.scan(t); err != nil {
 		t.Fatalf("the next pass: %v", err)
 	}
 	if got := assurance.FreshnessToWire(e.freshness(t)).State; got != crmcontracts.AssuranceFreshnessStateCurrent {
@@ -401,7 +412,7 @@ func TestAnActivityOnADealMarksItWhenTheCheckReadsIt(t *testing.T) {
 		t.Fatalf("after a note on one deal the marked deals are %v, want that deal alone", marked)
 	}
 
-	if err := e.run(t); err != nil {
+	if err := e.scan(t); err != nil {
 		t.Fatalf("the next pass: %v", err)
 	}
 	e.deliver(t, captured)
