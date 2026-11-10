@@ -144,23 +144,26 @@ export function CommandPalette({
     }
   }, [open]);
 
+  const creates = mode === "create";
   const commands = useMemo(
-    () => (mode === "create" ? offered.filter(isCreateCommand) : offered),
-    [mode, offered],
+    () => (creates ? offered.filter(isCreateCommand) : offered),
+    [creates, offered],
   );
+  // Create mode answers "make a record", so a typed word narrows those and asks nothing else.
+  const searched = creates ? "" : query;
   const matched = useMemo(
     () => matchingCommands(commands, query),
     [commands, query],
   );
-  const setting = useConfigurationCommand(query, commands, matched);
+  const setting = useConfigurationCommand(searched, commands, matched);
   const filtered = setting ? [...matched, setting] : matched;
 
   // RS-1: live record hits from /search, plus a "see all" row that lands
   // on the full results screen. Row order: builtin matches, then see-all,
   // then records, so the row Enter takes on a half-typed name is one arrow
   // above the hits it summarises.
-  const search = useSearchCommands(query);
-  const listsRecents = mode === "all" && !query.trim();
+  const search = useSearchCommands(searched);
+  const listsRecents = !creates && !query.trim();
   const recents = usePaletteRecents(open, listsRecents);
   const recentCommands: Command[] = recents.entries.map((entry) => ({
     id: `recent:${recentIdentity(entry)}`,
@@ -182,17 +185,17 @@ export function CommandPalette({
         ? { identity: entry.id, name: entry.label, logo: entry.logo }
         : undefined,
   }));
-  const seeAll: Command | null = query.trim()
+  const seeAll: Command | null = searched.trim()
     ? {
         id: "search:all",
-        executedQuery: query.trim(),
-        label: t("palette.seeAll", { query: query.trim() }),
+        executedQuery: searched.trim(),
+        label: t("palette.seeAll", { query: searched.trim() }),
         type: "action",
-        route: { screen: "search", id: encodeURIComponent(query.trim()) },
+        route: { screen: "search", id: encodeURIComponent(searched.trim()) },
       }
     : null;
 
-  const handbook = usePaletteAsk(query, open, filtered.length);
+  const handbook = usePaletteAsk(searched, open, filtered.length);
   const rows = [
     ...recentCommands,
     ...(handbook.row ? [handbook.row] : []),
@@ -342,18 +345,20 @@ export function CommandPalette({
               rows so Enter on a screen name never opens it. It carries what is
               typed into the box rather than asking it. A question the box can
               read as one gets its own "Ask Margince" row below instead. */}
-          <button
-            type="button"
-            className="palette-ask t-body"
-            onClick={() => {
-              onClose();
-              openAsk(query.trim());
-            }}
-          >
-            <Sparkles aria-hidden />
-            <span className="label">{t("corpusAsk.title")}</span>
-            <Badge tone="ai">{t("palette.typeAction")}</Badge>
-          </button>
+          {!creates && (
+            <button
+              type="button"
+              className="palette-ask t-body"
+              onClick={() => {
+                onClose();
+                openAsk(query.trim());
+              }}
+            >
+              <Sparkles aria-hidden />
+              <span className="label">{t("corpusAsk.title")}</span>
+              <Badge tone="ai">{t("palette.typeAction")}</Badge>
+            </button>
+          )}
           {search.pending && (
             <PendingBody
               label={t("palette.searching")}

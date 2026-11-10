@@ -12,7 +12,7 @@ import {
   StoryProviders,
 } from "../testing/story-utils";
 import { CREATE_ID } from "./nav";
-import { type Command, CommandPalette } from "./palette";
+import { type Command, CommandPalette, useBuiltinCommands } from "./palette";
 import { writeRecents } from "./paletterecents.storage";
 
 // The palette had no story at all. It was mounted CLOSED behind the top bar in
@@ -86,22 +86,43 @@ export const Default: Story = {
   render: () => palette(noHits),
 };
 
-// What C opens where the screen has no create form of its own: the commands
-// that make a record, and no recent searches above them.
+// What C opens off a list screen: the product's own create commands and
+// nothing else, drawn from the real command list rather than the fixture.
+function CreatePalette() {
+  return (
+    <CommandPalette
+      open
+      mode="create"
+      onClose={() => undefined}
+      commands={useBuiltinCommands()}
+    />
+  );
+}
+
 export const CreateOnly: Story = {
   render: () => {
     removeStored(STORAGE_KEYS.paletteRecents);
     installFetchStub({ "GET /search": noHits, "GET /me": meRoute({}) });
     return (
       <StoryProviders>
-        <CommandPalette
-          open
-          mode="create"
-          onClose={() => undefined}
-          commands={COMMANDS}
-        />
+        <CreatePalette />
       </StoryProviders>
     );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement.ownerDocument.body);
+    for (const label of [
+      "New contact",
+      "New company",
+      "New lead",
+      "New deal",
+      "New project",
+    ]) {
+      await expect(
+        await canvas.findByRole("button", { name: new RegExp(label) }),
+      ).toBeInTheDocument();
+    }
+    await expect(canvas.queryByText("Ask your documents")).toBeNull();
   },
 };
 

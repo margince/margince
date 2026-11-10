@@ -19,7 +19,12 @@ import { LocaleProvider } from "../i18n";
 import type { Screen } from "../lib/router";
 import { useShortcutDispatcher } from "../lib/shortcuts";
 import { CREATE_ID, CREATE_SCREENS } from "./nav";
-import { type Command, CommandPalette, isCreateCommand } from "./palette";
+import {
+  type Command,
+  CommandPalette,
+  isCreateCommand,
+  useBuiltinCommands,
+} from "./palette";
 import { type PaletteMode, usePaletteShortcuts } from "./palettehotkey";
 
 // The palette's keys as the shell wires them: the one dispatcher, and the
@@ -28,6 +33,7 @@ import { type PaletteMode, usePaletteShortcuts } from "./palettehotkey";
 afterEach(() => {
   cleanup();
   window.location.hash = "";
+  vi.unstubAllGlobals();
 });
 
 const render = (ui: ReactNode) => {
@@ -224,5 +230,49 @@ describe("isCreateCommand", () => {
     expect(
       commands.filter(isCreateCommand).map((command) => command.id),
     ).toEqual(["action:new-deal"]);
+  });
+});
+
+describe("the palette C opens", () => {
+  it("lists only what creates, and nothing beside it, even with a word typed", async () => {
+    render(
+      <CommandPalette
+        open
+        mode="create"
+        onClose={() => {}}
+        commands={commands}
+      />,
+    );
+    const user = userEvent.setup();
+    expect(screen.queryByText("Ask your documents")).toBeNull();
+
+    await user.type(screen.getByRole("searchbox"), "deal");
+    expect(destinationRows().map((row) => row.textContent)).toEqual([
+      expect.stringContaining("New deal"),
+    ]);
+    expect(screen.queryByText("Ask your documents")).toBeNull();
+  });
+
+  it("lists every create command the product has", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json(meFixture({}))),
+    );
+    function Builtin() {
+      return (
+        <CommandPalette
+          open
+          mode="create"
+          onClose={() => {}}
+          commands={useBuiltinCommands()}
+        />
+      );
+    }
+    render(<Builtin />);
+    expect(destinationRows().map((row) => row.textContent)).toEqual(
+      ["New contact", "New company", "New lead", "New deal", "New project"].map(
+        (label) => expect.stringContaining(label),
+      ),
+    );
   });
 });
