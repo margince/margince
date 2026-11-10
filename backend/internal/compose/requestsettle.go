@@ -221,19 +221,19 @@ func requestConversation(ctx context.Context, tx pgx.Tx, requestID ids.UUID,
 // conversationRows is requestConversation's read: the request and then the
 // NEWEST limit-1 messages after it, or only the one message only names when it
 // is set. Rows come back request first and newest next; callers put them in
-// time order.
+// time order. After it means activities.SettlementThreadSQL, the rows the completeness check covers.
 func conversationRows(ctx context.Context, tx pgx.Tx, requestID ids.UUID,
 	counterparty string, asOf time.Time, only *ids.UUID, limit int,
 ) ([]threadMessage, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT id, coalesce(direction, ''), coalesce(subject, ''),
-		       coalesce(left(body, $1), ''), occurred_at, NOT `+provenance.MailBodyCompleteSQL("activity")+`
+		SELECT activity.id, coalesce(activity.direction, ''), coalesce(activity.subject, ''),
+		       coalesce(left(activity.body, $1), ''), activity.occurred_at, NOT `+provenance.MailBodyCompleteSQL("activity")+`
 		  FROM activity
-		 WHERE thread_key = (SELECT thread_key FROM activity WHERE id = $2)
-		   AND thread_key IS NOT NULL
-		   AND kind = (SELECT kind FROM activity WHERE id = $2)
-		   AND channel_provider IS NOT DISTINCT FROM
-		       (SELECT channel_provider FROM activity WHERE id = $2)
+		  JOIN activity request ON request.id = $2
+		 WHERE activity.thread_key = request.thread_key
+		   AND activity.thread_key IS NOT NULL
+		   AND activity.kind = request.kind
+		   AND activity.channel_provider IS NOT DISTINCT FROM request.channel_provider
 		   -- One correspondent, because the thread triple names no one. A
 		   -- sender types their own References root, so a stranger who has seen
 		   -- one of our Message-IDs can hang a message off another customer's
@@ -242,18 +242,19 @@ func conversationRows(ctx context.Context, tx pgx.Tx, requestID ids.UUID,
 		   -- Outbound also has to be attested — the provider's own record of
 		   -- having sent it to this address — or a colleague's mail held as a
 		   -- copy, the one exception activities.ourOutboundInThisThread makes.
-		   AND counterparty_email = $5
-		   AND (id = $2 OR `+activities.CapturedInboundSQL("activity")+` OR counterparty_outbound_attested OR sent_by_colleague IS NOT NULL)
-		   AND archived_at IS NULL
+		   AND activity.counterparty_email = $5
+		   AND (activity.id = $2 OR `+activities.CapturedInboundSQL("activity")+`
+		        OR activity.counterparty_outbound_attested OR activity.sent_by_colleague IS NOT NULL)
+		   AND activity.archived_at IS NULL
 		   -- The audience, tested HERE and not only in the read that offered
 		   -- this request: the candidate query runs in its own statement and a
 		   -- thread can be narrowed between the two, which under read-committed
 		   -- this statement is the first to see.
-		   AND `+auth.WorkspaceAudienceSQL("activity")+` AND restricted_at IS NULL
+		   AND `+auth.WorkspaceAudienceSQL("activity")+` AND activity.restricted_at IS NULL
 		   AND `+occurredday.BegunSQL("activity", "$3")+`
-		   AND (occurred_at, id) >= ((SELECT occurred_at FROM activity WHERE id = $2), $2)
-		   AND ($6::uuid IS NULL OR id = $6)
-		 ORDER BY id = $2 DESC, occurred_at DESC, id DESC
+		   AND (activity.id = $2 OR `+activities.SettlementThreadSQL("activity", "request")+`)
+		   AND ($6::uuid IS NULL OR activity.id = $6)
+		 ORDER BY activity.id = $2 DESC, activity.occurred_at DESC, activity.id DESC
 		 LIMIT $4`, extractBodyLimit, requestID, asOf, limit, counterparty, only)
 	if err != nil {
 		return nil, fmt.Errorf("request settle: reading the conversation: %w", err)

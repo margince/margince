@@ -14,6 +14,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // WhoseMove is who answers an exchange next. A mail's History badge move
@@ -49,15 +50,13 @@ func WhoseMove(move *crmcontracts.EmailSummaryMove, direction string, earlierOwe
 func (s *Store) lastExchange(
 	ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID, now time.Time, columns CustomColumns,
 ) (*crmcontracts.LastExchange, error) {
-	one := 1
-	rows, _, err := s.ListActivitiesIn(ctx, tx, ListActivitiesInput{
-		EntityType: &entityType, EntityID: &entityID, InteractionsAsOf: &now,
-		Limit: &one, AsOf: &now, Columns: columns,
+	tied, err := s.newestTied(ctx, tx, ListActivitiesInput{
+		EntityType: &entityType, EntityID: &entityID, InteractionsAsOf: &now, AsOf: &now, Columns: columns,
 	})
-	if err != nil || len(rows) == 0 {
+	if err != nil || len(tied) == 0 {
 		return nil, err
 	}
-	row := rows[0]
+	row := LastWord(tied, exchangeMoment)
 	moves, err := MailMovesFor(ctx, tx, []ids.UUID{ids.UUID(row.Id)}, now)
 	if err != nil {
 		return nil, err
@@ -77,11 +76,12 @@ func (s *Store) lastExchange(
 	return &crmcontracts.LastExchange{Activity: row, WhoseMove: WhoseMove(move, direction, owed)}, nil
 }
 
-// earlierInboundMailSQL keeps the live inbound mail the row aliased their
-// received before the row aliased ours.
-const earlierInboundMailSQL = `their.kind = 'email' AND their.direction = 'inbound'
+// earlierInboundMailSQL keeps the live inbound mail the row aliased their that
+// the row aliased ours comes after. It asks the answer rule, so a reply logged
+// on the mail's date follows it.
+var earlierInboundMailSQL = `their.kind = 'email' AND their.direction = 'inbound'
 		     AND their.archived_at IS NULL
-		     AND their.occurred_at < ours.occurred_at -- occurred_at raw: an ordering of two rows, not whether either happened
+		     AND ` + occurredday.AnswersSQL("ours", "their") + `
 		     `
 
 // EarlierMailOwed reports whether our outbound mail left its correspondent's
@@ -139,4 +139,38 @@ func EarlierMailOwed(ctx context.Context, tx pgx.Tx, activityID ids.UUID, now ti
 	}
 	move, ok := moves[earlier]
 	return ok && move == crmcontracts.EmailSummaryMoveNeedsReply, nil
+}
+
+// newestTied reads the rows at the newest stored instant in the timeline's order, at most NewestTiedCap.
+func (s *Store) newestTied(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([]crmcontracts.Activity, error) {
+	size := newestTiedFirstPage
+	var tied []crmcontracts.Activity
+	for {
+		in.Limit = &size
+		rows, page, err := s.ListActivitiesIn(ctx, tx, in)
+		if err != nil {
+			return nil, err
+		}
+		for _, row := range rows {
+			if len(tied) > 0 && !row.OccurredAt.Equal(tied[0].OccurredAt) {
+				return tied, nil
+			}
+			tied = append(tied, row)
+		}
+		if !page.HasMore || len(tied) >= NewestTiedCap {
+			return tied, nil
+		}
+		in.Cursor, size = &page.NextCursor, NewestTiedCap-len(tied)
+	}
+}
+
+// NewestTiedCap bounds one stored instant's read: a day-only import can file hundreds of rows on one date.
+const NewestTiedCap = 200
+
+// newestTiedFirstPage covers the usual tie, an inbound and its reply, in one read.
+const newestTiedFirstPage = 4
+
+func exchangeMoment(row crmcontracts.Activity) (occurredday.Moment, bool) {
+	inbound := row.Direction != nil && *row.Direction == crmcontracts.ActivityDirectionInbound
+	return momentOf(row), inbound
 }
