@@ -1380,7 +1380,6 @@ setting's
 settle
 setup
 seven
-seventh
 several
 shacl
 shadow
