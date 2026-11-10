@@ -82,9 +82,6 @@ func recipientSubjectAddress(r connector.Recipient) (address, channelProvider, c
 // Being copied on a message somebody else wrote is not the subject initiating
 // correspondence, and treating it as such would let anyone create a lawful
 // basis for writing to a third party by putting them in Cc.
-//
-// A thread a hand-logged mail started is no thread here. A seat typed every
-// mail on it, so it shows only what that seat wrote down (LoggedThread).
 func repliesToTheSubject(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subject subjectRef) (bool, error) {
 	entity, err := evidenceEntity(ctx, tx, subject.SendingEntity)
 	if err != nil {
@@ -100,12 +97,12 @@ func repliesToTheSubject(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subjec
 	err = tx.QueryRow(ctx, `
 		WITH anchor AS (
 			SELECT thread_key FROM activity WHERE id = $6 AND archived_at IS NULL
+			   AND NOT starts_with(thread_key, '`+correspondence.HandLoggedThreadPrefix+`')
 		)
 		SELECT EXISTS (
 			SELECT 1
 			  FROM activity a
 			  JOIN anchor ON anchor.thread_key IS NOT NULL
-			                 AND `+correspondence.NotLoggedThreadSQL("anchor.thread_key")+`
 			                 AND a.thread_key = anchor.thread_key
 			  JOIN activity_participant p ON p.activity_id = a.id
 			 WHERE a.direction = 'inbound'
@@ -146,7 +143,7 @@ func repliesToTheSubject(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subjec
 // staging still transmits after its anchor is archived, which is the intended
 // reading — the thread's evidence is what the basis rests on, not the anchor.
 func wroteIntoThread(ctx context.Context, tx pgx.Tx, threadKey string, subject subjectRef) (bool, error) {
-	if threadKey == "" || correspondence.LoggedThread(threadKey) {
+	if threadKey == "" || correspondence.IsHandLoggedThread(threadKey) {
 		return false, nil
 	}
 	entity, err := evidenceEntity(ctx, tx, subject.SendingEntity)
@@ -216,7 +213,7 @@ func copiedOnThisMatter(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 	if req.AnchorActivityID != (ids.UUID{}) {
 		threadKey = threadKeyOf(ctx, tx, req.AnchorActivityID)
 	}
-	if threadKey == "" || correspondence.LoggedThread(threadKey) {
+	if threadKey == "" || correspondence.IsHandLoggedThread(threadKey) {
 		return false, nil
 	}
 	entity, err := evidenceEntity(ctx, tx, subject.SendingEntity)

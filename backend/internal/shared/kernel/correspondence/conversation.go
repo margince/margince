@@ -14,21 +14,6 @@ import (
 // these questions, and they live here so every module asks them the same way.
 // Aliases are compile-time SQL aliases, never request input.
 
-// LoggedThreadPrefix starts the thread a hand-logged mail starts. Provider keys
-// are Message-IDs, which hold an "@", and channel keys name their provider
-// first, so no captured key takes this form.
-const LoggedThreadPrefix = "logged:"
-
-// LoggedThread reports whether key names a thread a hand-logged mail started.
-// It lets a logged reply answer its mail. It holds no captured mail, so it
-// proves no one wrote to us, and no reply from outside arrives on it.
-func LoggedThread(key string) bool { return strings.HasPrefix(key, LoggedThreadPrefix) }
-
-// NotLoggedThreadSQL is the test that a thread_key column is not LoggedThread.
-func NotLoggedThreadSQL(column string) string {
-	return fmt.Sprintf(`NOT starts_with(%s, '%s')`, column, LoggedThreadPrefix)
-}
-
 // ConversationSQL is the test that row is in anchor's conversation: the same
 // thread, medium and correspondent, and row is live. A null or empty thread
 // key joins nothing, so two unthreaded mails are never one conversation.
@@ -36,6 +21,14 @@ func ConversationSQL(row, anchor string) string {
 	return ThreadSQL(row, anchor) + fmt.Sprintf(`
      AND %[1]s.counterparty_email = %[2]s.counterparty_email`, row, anchor)
 }
+
+// HandLoggedThreadPrefix starts the thread key a hand-logged email gets when
+// it names no conversation of its own. Such a thread proves nothing the
+// logger did not type, so consent never reads it as the subject replying.
+const HandLoggedThreadPrefix = "logged:"
+
+// IsHandLoggedThread reports whether key is a hand-logged email's own thread.
+func IsHandLoggedThread(key string) bool { return strings.HasPrefix(key, HandLoggedThreadPrefix) }
 
 // ThreadSQL is the thread, medium and liveness half of ConversationSQL. It
 // names no correspondent, so a caller must add one.

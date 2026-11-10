@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose_test
+package integration_test
 
 // Who a hand-logged conversation says was in it.
 //

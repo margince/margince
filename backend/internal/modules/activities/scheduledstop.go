@@ -135,7 +135,7 @@ func pursuitPausedByReply(ctx context.Context, tx pgx.Tx, in SendEmailInput, anc
 			return false, fmt.Errorf("scheduled send: reading the thread a reply listens on: %w", err)
 		}
 	}
-	if thread != nil && correspondence.LoggedThread(*thread) {
+	if thread != nil && correspondence.IsHandLoggedThread(*thread) {
 		thread = nil
 	}
 	var replied bool

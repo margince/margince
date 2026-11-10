@@ -140,10 +140,8 @@ func TestCompany360CostDoesNotGrowWithTheAccount(t *testing.T) {
 	// read counts all pending proposals beyond the displayed page. One more
 	// names who created the company, which its rail shows. The commitment
 	// evidence read switches to its generic plan first, which is one more
-	// statement and spares a plan of the gate on every page. One read asks
-	// whether the newest message left an earlier mail of theirs owed
-	// (activities.EarlierMailOwed), which the rail's whose-move reads.
-	const budget = 61
+	// statement and spares a plan of the gate on every page.
+	const budget = 60
 	if tracer.languageReads != 2 {
 		t.Errorf("two assemblies read base language %d times, want once each", tracer.languageReads)
 	}

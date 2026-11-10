@@ -142,8 +142,12 @@ func newestMessage(
 	last := activities.LastWord(found, func(m lastMessage) (occurredday.Moment, bool) {
 		return occurredday.Moment{At: m.At, DateOnly: m.DateOnly}, m.Direction == string(crmcontracts.ActivityDirectionInbound)
 	})
-	if last.EarlierOwed, err = activities.EarlierMailOwed(ctx, tx, last.ID, now); err != nil {
-		return lastMessage{}, false, err
+	// Only our own mail can leave an earlier one owed, so an inbound newest
+	// message costs no second read.
+	if last.Direction == string(crmcontracts.ActivityDirectionOutbound) {
+		if last.EarlierOwed, err = activities.EarlierMailOwed(ctx, tx, last.ID, now); err != nil {
+			return lastMessage{}, false, err
+		}
 	}
 	return last, true, nil
 }

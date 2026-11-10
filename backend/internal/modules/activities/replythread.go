@@ -23,8 +23,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// ownThreadPrefix names the threads a hand-logged mail starts. Provider thread
+// keys are RFC 5322 Message-IDs, which always hold an "@", and channel keys
+// name their provider first, so no captured key can take this form.
+const ownThreadPrefix = correspondence.HandLoggedThreadPrefix
+
 // ownThreadKey is the thread a hand-logged mail with no identity starts.
-func ownThreadKey(id ids.UUID) string { return correspondence.LoggedThreadPrefix + id.String() }
+func ownThreadKey(id ids.UUID) string { return ownThreadPrefix + id.String() }
 
 // ThreadFieldError refuses a field that names the conversation a mail joins:
 // thread_key, rfc_message_id or in_reply_to_activity_id.
@@ -44,9 +49,9 @@ func refuseOwnThreadKeys(in LogActivityInput) error {
 	for _, stated := range []struct{ field, value string }{
 		{fieldThreadKey, in.ThreadKey}, {fieldRFCMessageID, in.RFCMessageID},
 	} {
-		if strings.HasPrefix(strings.ToLower(strings.TrimSpace(stated.value)), correspondence.LoggedThreadPrefix) {
+		if strings.HasPrefix(strings.ToLower(strings.TrimSpace(stated.value)), ownThreadPrefix) {
 			return &ThreadFieldError{Field: stated.field, Message: "A conversation that starts with " +
-				correspondence.LoggedThreadPrefix + " is one only a hand-logged mail starts. Name the mail this replies to instead."}
+				ownThreadPrefix + " is one only a hand-logged mail starts. Name the mail this replies to instead."}
 		}
 	}
 	return nil

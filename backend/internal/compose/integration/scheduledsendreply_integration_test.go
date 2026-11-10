@@ -209,3 +209,24 @@ func checkScheduledReplyThread(t *testing.T, sameThread bool) {
 		t.Fatalf("same thread %v: status %q, reason %q", sameThread, status, reason)
 	}
 }
+
+// A follow-up that answers a hand-logged mail listens as a new message does:
+// captured mail never joins the thread a hand-logged mail starts.
+//
+// Mutation: drop the IsHandLoggedThread test from pursuitPausedByReply, and the
+// follow-up is sent over the reply.
+func TestAFollowUpAnsweringAHandLoggedMailIsPausedByAReply(t *testing.T) {
+	p := setupPreflight(t)
+	p.activityID = logConsentInbound(t, p.AppEnv, p.contactID)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
+	id := p.scheduleClaiming(t, AnyMap{"communication_context": "active_deal_followup"})
+
+	after := clocktest.Now(t).UTC().Add(time.Second)
+	p.theyWrite(t, inbound{dated: after, arrived: after, authenticated: true})
+	p.makeDue(t, id)
+	p.fire(t, id)
+
+	if status, reason := p.scheduledStatus(t, id); status != activities.ScheduledStatusHeld || reason != activities.HeldRecipientReplied {
+		t.Fatalf("status %q reason %q, want held because the recipient replied", status, reason)
+	}
+}

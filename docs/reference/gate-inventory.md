@@ -687,6 +687,7 @@ The eight shapes, what each is for, and how each one silently passes:
 
 | Gate | Hardness | What it holds |
 |---|---|---|
+| `composeroot_test.go` | H3 | The root compose package may not grow. |
 | `docspagelength_test.go` | H3 | A docs page an agent cannot navigate is a page it does not read, and the failure is silent: it greps, lands in the middle of six hundred lines, and answers from the part it happened to see. |
 | `entitymodelcoupling_test.go` | H3 | _(no doc comment)_ |
 | `laneconnbudget_test.go` | H3 | The integration lane's connection demand is concurrent packages times what one package may hold, and that product has to fit inside the compose Postgres's max\_connections. |

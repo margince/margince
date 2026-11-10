@@ -172,7 +172,7 @@ func basisAlreadyLive(ctx context.Context, tx pgx.Tx, subject subjectRef, basis 
 }
 
 // threadKeyOf names the conversation an anchor belongs to, or "" when there is
-// none. A thread a hand-logged mail started is none (LoggedThread).
+// none.
 //
 // A read failure yields "" rather than an error, and the direction is worth
 // stating because it is not obvious. The key SCOPES the row: a threadless basis
@@ -195,7 +195,7 @@ func threadKeyOf(ctx context.Context, tx pgx.Tx, anchor ids.UUID) string {
 		anchor).Scan(&key); err != nil {
 		return ""
 	}
-	if key == nil || correspondence.LoggedThread(*key) {
+	if key == nil || correspondence.IsHandLoggedThread(*key) {
 		return ""
 	}
 	return *key

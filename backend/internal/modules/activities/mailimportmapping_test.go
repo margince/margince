@@ -10,7 +10,6 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -350,7 +349,7 @@ func TestOnlyAHandLoggedMailStartsAThreadOfItsOwn(t *testing.T) {
 			t.Errorf("a mail %s starts a thread of its own", name)
 		}
 	}
-	if !correspondence.LoggedThread(ownThreadKey(ids.NewV7())) || strings.Contains(ownThreadKey(ids.NewV7()), "@") {
+	if !strings.HasPrefix(ownThreadKey(ids.NewV7()), ownThreadPrefix) || strings.Contains(ownThreadKey(ids.NewV7()), "@") {
 		t.Fatal("an own thread key can be mistaken for a Message-ID")
 	}
 }
