@@ -1,17 +1,18 @@
 # CASE 117 — Log the meeting, add the task, and say what the work left waiting.
 #
-# A write can leave a question for a human after it returns: an automation
-# reacting to it stages an approval of its own. This case's setup turns on the
-# post-meeting recap, so the meeting it logs with Jannik Feddersen stages a held
-# draft to him, filed against that meeting. The answer has to report it.
+# THE FAILURE IT EXISTS FOR: the finish-time approval check used to hand back the
+# whole queue, and the answer read colleagues' work out as if this task had raised
+# it. The setup stages three contact-card reviews (Wiebke Brandstätter, Okko
+# Rademacher, Theda Uphoff) that have nothing to do with this task. An answer
+# that lists or describes them fails. A bare count of other waiting items is
+# allowed; what they are is not.
 #
-# THE FAILURE IT EXISTS FOR is the other half of that rule. The setup also stages
-# three contact-card reviews (Wiebke Brandstätter, Okko Rademacher, Theda Uphoff)
-# that have nothing to do with this task. An answer that lists or describes them
-# shows the user somebody else's work as if this task had raised it. A bare count
-# of other waiting items is allowed; what they are is not.
+# The setup also turns on the post-meeting recap, so the meeting stages a held
+# draft to Jannik Feddersen. That draft lands a few seconds after the write
+# returns, so an answer may not have seen it yet; it is not judged. The draft
+# waits in the queue, and asking again lists it.
 name: case117_log_it_and_say_what_waits
-criteria: [1, 2]
+criteria: [2]
 
 # Both belong to this case alone: a pending review or a recap draft would show in
 # every other case's queue and brief. The restore before the next run undoes it.
@@ -51,8 +52,6 @@ must_end_with:
 
 must_mention:
   - "Feddersen"
-  # The draft the recap staged. Whether it is reported as waiting is criterion 1.
-  - "(?i)draft|entw[uü]rf|recap|reply|antwort"
 
 # The unrelated reviews by the names their cards carry. Describing them without
 # a name is criterion 2's to catch.
@@ -60,7 +59,6 @@ must_not_mention:
   - "(?i)brandst(?:ä|ae)tter|rademacher|uphoff"
 
 judge:
-  - "Criterion 1. The answer tells the user that, after the meeting with Jannik Feddersen was logged, an automation drafted an email to him (a reply or recap) that waits for the user to read or approve before it is sent. Answer no if the answer does not mention that draft, or says the email was already sent."
   - "Criterion 2. The answer keeps to what this task left waiting. It does not list, name or describe any waiting item that has nothing to do with this task, such as contact-card reviews for other people; a bare count of other waiting items that says nothing about what they are or whom they concern is a yes. Answer no if the answer lists, names or summarises an unrelated waiting item, for example by saying what kind of item it is or whom it is about."
 
 runs: 3
