@@ -45,6 +45,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`activity.archived`](#activityarchived) | activity | 1 |
 | [`activity.captured`](#activitycaptured) | activity | 1 |
 | [`activity.disposition_recorded`](#activitydisposition_recorded) | activity | 1 |
+| [`activity.invitation_answered`](#activityinvitation_answered) | activity | 1 |
 | [`activity.link_suggestion_changed`](#activitylink_suggestion_changed) | activity | 1 |
 | [`activity.marked_handled`](#activitymarked_handled) | activity | 1 |
 | [`activity.readiness_recorded`](#activityreadiness_recorded) | activity | 1 |
@@ -226,6 +227,17 @@ Payload for activity.disposition_recorded. Somebody decided what to do about a w
 |---|---|---|---|
 | `data.activity_id` | string (uuid) | yes |  |
 | `data.disposition` | string: `not_sales`, `sales_again`, `snoozed`, `not_mine`, `picked_up` | yes | What was decided. `sales_again` and `picked_up` are the undos of `not_sales` and of the reader states, Done included. A decision withdrawn is itself a decision. A consumer counting dispositions has to see it happen rather than infer it from a row going quiet. |
+
+### `activity.invitation_answered`
+
+Record: `activity` · version 1
+
+Payload for activity.invitation_answered. One reader answered a calendar invitation that came by email, and their own calendar sent the answer to the organizer (activities/calendarinvitation.go). It is that reader's own answer, and the reader is not on the wire. The same press marks the message done for them, announced as activity.marked_handled.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.activity_id` | string (uuid) | yes |  |
+| `data.response` | string: `accepted`, `tentative`, `declined` | yes |  |
 
 ### `activity.link_suggestion_changed`
 
