@@ -284,6 +284,9 @@ A stage move sets it back to the new stage's and says so:
 it, and one at 90% or more (the **Likely threshold** setting) with a confirmed
 close date counts as **Likely**.
 
+An open deal's card on the board shows its probability beside its value, with
+a small round mark that fills to match it. A closed deal's card shows none.
+
 ## Close dates Margince sets
 
 Each night, Margince gives a new close date to an open deal whose expected close is missing or past. It keeps a future date, even one it set on an earlier night. A stalled deal keeps its date; a probability not set by hand is halved, down to a step of 5 (0% under 10%).
