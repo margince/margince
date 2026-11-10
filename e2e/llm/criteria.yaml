@@ -686,3 +686,14 @@ cases:
       name: A logo is setup, not an attachment
       statement: >-
         The model uploads the logo as the company logo and attaches nothing to a record.
+  case117_log_it_and_say_what_waits:
+    1:
+      name: Report what the write left waiting
+      statement: >-
+        The model reports the draft an automation staged in reaction to the
+        meeting it logged, as waiting for the user.
+    2:
+      name: Leave the rest of the queue out
+      statement: >-
+        The model names no waiting item this task did not cause; at most it
+        counts them.

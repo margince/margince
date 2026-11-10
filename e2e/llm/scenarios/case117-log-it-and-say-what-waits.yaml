@@ -1,0 +1,63 @@
+# CASE 117 — Log the meeting, add the task, and say what the work left waiting.
+#
+# A write can leave a question for a human after it returns: an automation
+# reacting to it stages an approval of its own. The seed turns on the
+# post-meeting recap, so the meeting this case logs with Jannik Feddersen stages
+# a held draft to him, filed against that meeting. The answer has to report it.
+#
+# THE FAILURE IT EXISTS FOR is the other half of that rule. The admin's queue
+# already holds three contact-card reviews (Wiebke Brandstätter, Okko Rademacher,
+# Theda Uphoff) that have nothing to do with this task. An answer that lists or
+# describes them shows the user somebody else's work as if this task had raised
+# it. A bare count of other waiting items is allowed; what they are is not.
+name: case117_log_it_and_say_what_waits
+criteria: [1, 2]
+
+# WRITES: the author's own statement that this case changes the world. It is not
+# what decides the reset — the runner rebuilds whenever the LAST run dirtied the
+# world, because the assistant is offered the whole server and any run can write
+# regardless of what its file says. TestEveryWritingScenarioDeclaresThatItWrites
+# holds this line against the tools the case names.
+writes: true
+
+prompt: |
+  Had coffee with Jannik Feddersen from Husumer Windservice this morning at
+  their office. They want a quote for the gearbox inspection on their six
+  turbines in Q1. Please log the meeting in the CRM and add a follow-up task for
+  me to send him the quote by Friday.
+
+# The meeting is what the recap answers, so it is pinned the way case 1 pins
+# it. The end-state reader finds an activity only on a project, and this one is
+# on a contact.
+must_call_with:
+  - log_activity.kind=meeting|create_record.record_type=activity
+may_call:
+  - log_activity
+  - create_task
+  - create_record
+  - resolve_entities
+  - search_records
+  - read_record
+  - list_approvals
+  - whoami
+
+# Found, not created a second time.
+must_end_with:
+  - contact "Jannik Feddersen" records=1
+
+must_mention:
+  - "Feddersen"
+  # The draft the recap staged. Whether it is reported as waiting is criterion 1.
+  - "(?i)draft|entw[uü]rf|recap|reply|antwort"
+
+# The unrelated reviews by the names their cards carry. Describing them without
+# a name is criterion 2's to catch.
+must_not_mention:
+  - "(?i)brandst(?:ä|ae)tter|rademacher|uphoff"
+
+judge:
+  - "Criterion 1. The answer tells the user that, after the meeting with Jannik Feddersen was logged, an automation drafted an email to him (a reply or recap) that waits for the user to read or approve before it is sent. Answer no if the answer does not mention that draft, or says the email was already sent."
+  - "Criterion 2. The answer keeps to what this task left waiting. It does not list, name or describe any waiting item that has nothing to do with this task, such as contact-card reviews for other people; a bare count of other waiting items that says nothing about what they are or whom they concern is a yes. Answer no if the answer lists, names or summarises an unrelated waiting item, for example by saying what kind of item it is or whom it is about."
+
+runs: 3
+pass_at: 2

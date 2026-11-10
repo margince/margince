@@ -1032,6 +1032,15 @@ c67="case67-where-do-i-open-it.yaml"
 judges "$c67" case67 links-the-named-deal 0 "!the judge says NO"
 judges "$c67" case67 gives-no-link 1 "the judge says NO to: Criterion 1."
 
+# CASE 117 — what the write left waiting, and nothing else. A bare count of the
+# rest is allowed; the queue listed by name fails the regex and the judge, and
+# the same queue described without a name fails the judge alone.
+c117="case117-log-it-and-say-what-waits.yaml"
+judges "$c117" case117 reports-only-the-draft 0 "!the judge says NO"
+judges "$c117" case117 reports-the-draft-and-counts-the-rest 0 "!the judge says NO"
+judges "$c117" case117 lists-the-whole-queue 1 "the judge says NO to: Criterion 2." "Brandst"
+judges "$c117" case117 describes-the-other-reviews 1 "the judge says NO to: Criterion 2." "!the judge says NO to: Criterion 1."
+
 # --- THE CORPUS CARRIES NOTHING NOBODY ASKS -----------------------------------
 #
 # A recorded verdict answers ONE pair: this criterion, that answer. Reword the

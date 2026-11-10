@@ -1499,6 +1499,76 @@ if [[ "$(status_of GET "/mail-drafts?anchor_type=contact&anchor_id=$greta")" = "
   [[ "$code" = "200" ]] || { echo "saving the user's own draft to Greta Lindqvist answered HTTP $code" >&2; exit 1; }
 fi
 
+# --- CASE 117: a queue of other work, and a rule that answers a meeting ---------
+#
+# THE QUEUE THE ANSWER MUST LEAVE OUT. Three address cards, each resembling a
+# contact already here, so the upload writes nothing and stages a vcard_create
+# review for the admin instead. A review carries no target record, and the three
+# names are read by no other case.
+#
+# THE ITEM THE ANSWER MUST REPORT. The post-meeting recap is seeded paused and
+# ownerless; the admin enabling it becomes its owner. A meeting then logged with
+# Jannik Feddersen stages a held draft to him, filed against that meeting, after
+# the write has returned. Any meeting logged with a contact who has an email does
+# the same, which includes case 46's meeting with Greta Lindqvist.
+husum="$(company_id_by_name "Husumer Windservice GmbH")"
+if [[ -z "$husum" ]]; then
+  body="$(printf '{"display_name":"Husumer Windservice GmbH","owner_id":"%s","industry":"Windenergie"}' "$me")"
+  husum="$(create_or_die "/companies" "$body" "Husumer Windservice GmbH")"
+fi
+feddersen="$(seed_contact "Jannik Feddersen" "jannik.feddersen@husumer-windservice.test" "$me")"
+link_employment "$feddersen" "$husum" "Jannik Feddersen at Husumer Windservice"
+
+pending_summaries() {
+  api GET '/approvals?status=pending&limit=100' | python3 -c 'import json,sys
+for row in json.load(sys.stdin).get("data", []):
+    print(row.get("kind", ""), row.get("summary", ""))'
+}
+card="$(mktemp)"
+for entry in "Wiebke Brandstätter|wiebke.brandstaetter@ostfriesen-kaelte.test|w.brandstaetter@kaelte-nord.test" \
+  "Okko Rademacher|okko.rademacher@emder-werftbedarf.test|okko.r@werft-post.test" \
+  "Theda Uphoff|theda.uphoff@leeraner-moorbau.test|theda@uphoff-privat.test"; do
+  IFS='|' read -r name on_file on_card <<<"$entry"
+  seed_contact "$name" "$on_file" "$me" >/dev/null
+  pending_summaries | grep -q "^vcard_create .*$name" && continue
+  printf 'BEGIN:VCARD\r\nVERSION:3.0\r\nFN:%s\r\nEMAIL;TYPE=WORK:%s\r\nEND:VCARD\r\n' "$name" "$on_card" >"$card"
+  reply="$(curl -sS -b "$COOKIES" -c "$COOKIES" -F "file=@$card;type=text/vcard" "$API_BASE/v1/contacts/vcard-import")"
+  [[ "$reply" == *'"outcome":"needs_review"'* ]] || {
+    echo "the card for $name was meant to wait for review; the import answered: $reply" >&2; rm -f "$card"; exit 1; }
+done
+rm -f "$card"
+
+# The recap must not answer a meeting seeded above, so every event they raised
+# is out of the outbox before it is enabled.
+waited=0
+until [[ "$(lane_psql "SELECT count(*) FROM event_outbox WHERE published_at IS NULL")" = "0" ]]; do
+  sleep 1
+  waited=$((waited + 1))
+  [[ "$waited" -lt 60 ]] || { echo "the outbox still held unpublished events after 60s" >&2; exit 1; }
+done
+recap="$(api GET '/automations?limit=100' | python3 -c 'import json,sys
+for row in json.load(sys.stdin).get("data", []):
+    if row.get("key") == "post_meeting_recap":
+        print(row["id"], row.get("status", "")); break')"
+[[ -n "$recap" ]] || { echo "the workspace has no post-meeting recap rule" >&2; exit 1; }
+if [[ "${recap#* }" != "enabled" ]]; then
+  reply="$(api PATCH "/automations/${recap%% *}" '{"status":"enabled"}')"
+  [[ "$reply" == *'"status":"enabled"'* && "$reply" == *"\"owner_id\":\"$me\""* ]] || {
+    echo "enabling the post-meeting recap as the admin answered: $reply" >&2; exit 1; }
+fi
+
+queue="$(pending_summaries)"
+for name in "Wiebke Brandstätter" "Okko Rademacher" "Theda Uphoff"; do
+  printf '%s\n' "$queue" | grep -q "^vcard_create .*$name" || {
+    echo "no pending card review names $name; the queue holds:" >&2; printf '  %s\n' "$queue" >&2; exit 1; }
+done
+if printf '%s\n' "$queue" | grep -q "^held_draft "; then
+  echo "the seed's own meetings left a held draft, so case 117's queue is not the one it names:" >&2
+  printf '  %s\n' "$queue" >&2
+  exit 1
+fi
+echo "  three card reviews wait, and the post-meeting recap is on"
+
 # --- THE ROSTER IS VERIFIED, not assumed ---------------------------------
 #
 # The seats above are the fixture's most silent failure mode. A seat that stays
