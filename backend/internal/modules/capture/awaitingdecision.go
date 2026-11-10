@@ -47,6 +47,59 @@ type AwaitingContact struct {
 	DisplayName string
 	Emails      []string
 	CapturedAt  time.Time
+	// Addresses says, for each of Emails in the same order, what it waits on.
+	Addresses []AwaitingAddress
+}
+
+// AwaitingAddress is one address of a waiting contact and what it waits on.
+type AwaitingAddress struct {
+	Email string
+	State AwaitingState
+}
+
+// AwaitingState names what one address of a waiting contact waits on.
+type AwaitingState string
+
+// The states, most specific first: awaitingStateSQL asks in this order.
+const (
+	// AwaitingYourAnswerApplying: the owner decided, and the verdict pass has
+	// not applied it yet.
+	AwaitingYourAnswerApplying AwaitingState = "decided"
+	// AwaitingClassifier: a question about the sender is open and due.
+	AwaitingClassifier AwaitingState = "classifying"
+	// AwaitingUnsure: the classifier could not tell, so the owner decides.
+	AwaitingUnsure AwaitingState = "unsure"
+	// AwaitingQueued: nothing was asked yet, and the stranded sweep will ask
+	// over a captured message from the address.
+	AwaitingQueued AwaitingState = "queued"
+	// AwaitingNothingToJudge: nothing was asked and nothing will be: no
+	// captured message from the address remains, or a user already worked
+	// on the contact. Only its owner can settle it.
+	AwaitingNothingToJudge AwaitingState = "unjudgeable"
+)
+
+// Processing reports whether the product, not the owner, takes the next step.
+func (s AwaitingState) Processing() bool {
+	return s == AwaitingYourAnswerApplying || s == AwaitingClassifier || s == AwaitingQueued
+}
+
+// awaitingStateSQL answers the AwaitingState of the address email on the
+// contact aliased contact. The queued arm is StrandedContacts' own filter.
+func awaitingStateSQL(contact, email string) string {
+	return `CASE
+	  WHEN EXISTS (SELECT 1 FROM capture_sender_override o
+	                WHERE o.user_id = ` + contact + `.owner_id AND o.address = ` + email + `)
+	    THEN '` + string(AwaitingYourAnswerApplying) + `'
+	  WHEN EXISTS (SELECT 1 FROM capture_pending_counterparty q
+	                WHERE q.email = ` + email + ` AND q.status = 'pending')
+	    THEN '` + string(AwaitingClassifier) + `'
+	  WHEN EXISTS (SELECT 1 FROM capture_pending_counterparty q
+	                WHERE q.email = ` + email + ` AND q.status = 'unsure')
+	    THEN '` + string(AwaitingUnsure) + `'
+	  WHEN NOT ` + contactTouchedByAUser(contact) + `
+	   AND EXISTS (SELECT 1 ` + judgeableMessageFrom(contact, email) + `)
+	    THEN '` + string(AwaitingQueued) + `'
+	  ELSE '` + string(AwaitingNothingToJudge) + `' END`
 }
 
 // ContactsAwaitingDecisionFor lists the caller's own contacts that are waiting
@@ -70,6 +123,9 @@ func ContactsAwaitingDecisionFor(ctx context.Context, db *database.DB) ([]Awaiti
 			       coalesce(array(SELECT e.email FROM contact_email e
 			                       WHERE e.contact_id = p.id AND e.archived_at IS NULL
 			                       ORDER BY e.email), '{}'),
+			       coalesce(array(SELECT `+awaitingStateSQL("p", "e.email")+` FROM contact_email e
+			                       WHERE e.contact_id = p.id AND e.archived_at IS NULL
+			                       ORDER BY e.email), '{}'),
 			       p.created_at
 			  FROM contact p
 			 WHERE `+AwaitingSenderDecisionClause("p")+`
@@ -81,8 +137,12 @@ func ContactsAwaitingDecisionFor(ctx context.Context, db *database.DB) ([]Awaiti
 		defer rows.Close()
 		for rows.Next() {
 			var c AwaitingContact
-			if err := rows.Scan(&c.ContactID, &c.DisplayName, &c.Emails, &c.CapturedAt); err != nil {
+			var states []string
+			if err := rows.Scan(&c.ContactID, &c.DisplayName, &c.Emails, &states, &c.CapturedAt); err != nil {
 				return err
+			}
+			for i, email := range c.Emails {
+				c.Addresses = append(c.Addresses, AwaitingAddress{Email: email, State: AwaitingState(states[i])})
 			}
 			out = append(out, c)
 		}

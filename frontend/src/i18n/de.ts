@@ -11589,6 +11589,29 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "senders.waiting.moreAddresses_other": "+{count} weitere",
   "senders.waiting.openNamed": "{name} öffnen",
   "senders.waiting.openUnnamed": "Kontakt öffnen",
+  "senders.waiting.onMargince": "Wartet auf Margince:",
+  "senders.waiting.onYou": "Wartet auf Sie:",
+  "senders.waiting.why.decided":
+    "Ihre Antwort wird bei der nächsten Absenderprüfung übernommen.",
+  "senders.waiting.why.classifying":
+    "Die Absenderprüfung hat diesen Absender noch nicht bewertet.",
+  "senders.waiting.why.unsure":
+    "Die Absenderprüfung konnte es nicht erkennen, daher entscheidet Ihre Antwort.",
+  "senders.waiting.why.queued":
+    "Die Absenderprüfung sieht sich die E-Mails noch an.",
+  "senders.waiting.why.unjudgeable":
+    "Es gibt keine E-Mail dieses Absenders mehr zu prüfen, daher entscheiden nur Sie.",
+  "senders.waiting.businessFor": "{address} als geschäftlich markieren",
+  "senders.waiting.keepOutFor": "{address} ausschließen",
+  "senders.waiting.businessTitle":
+    "Diesen Absender als geschäftlich markieren?",
+  "senders.waiting.businessBody":
+    "Die E-Mails bleiben als geschäftliche E-Mails erhalten, und der Kontakt wird mit seinen E-Mails und Terminen für Ihr Unternehmen freigegeben.",
+  "senders.waiting.remove": "Aus Kontakten entfernen",
+  "senders.waiting.removeTitle": "Diesen Kontakt entfernen?",
+  "senders.waiting.removeBody":
+    "Der Kontakt wird archiviert und verschwindet aus dieser Liste. Die E-Mails bleiben, und der Absender bleibt unentschieden. Sie können ihn aus den archivierten Kontakten wiederherstellen.",
+  "senders.waiting.removeConfirm": "Kontakt entfernen",
   "connectionOutcomes.title": "Was deine Verbindungen ergeben haben",
   "connectionOutcomes.view": "Ansehen",
   "connectionOutcomes.viewNamed": "{name} ansehen",

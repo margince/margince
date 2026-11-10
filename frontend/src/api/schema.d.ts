@@ -27817,11 +27817,29 @@ export interface components {
             display_name?: string;
             /** @description The contact's live addresses. The decision is made about these senders. */
             emails: string[];
+            /** @description Each of `emails`, in the same order, with what it waits on. */
+            addresses: components["schemas"]["CaptureAwaitingAddress"][];
             /**
              * Format: date-time
              * @description When the contact was created, which is how long it has been waiting.
              */
             captured_at: string;
+        };
+        /** @description One address of a waiting contact, and what it waits on. */
+        CaptureAwaitingAddress: {
+            email: string;
+            /**
+             * @description `decided`: you answered about this sender and the next verdict pass applies it.
+             *     `classifying`: the sender classifier has an open question about this sender.
+             *     `unsure`: the classifier could not tell, so your answer decides.
+             *     `queued`: nothing was asked yet; a sweep will ask over a message from this address.
+             *     `unjudgeable`: nothing was asked and nothing will be, because no captured message from
+             *     this address remains or someone already worked on the contact. Only you can settle it.
+             *     `decided`, `classifying` and `queued` wait on the product; `unsure` and `unjudgeable`
+             *     wait on you.
+             * @enum {string}
+             */
+            state: "decided" | "classifying" | "unsure" | "queued" | "unjudgeable";
         };
         CaptureSenderListResponse: {
             next_cursor?: string;

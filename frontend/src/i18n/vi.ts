@@ -11289,6 +11289,27 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "senders.waiting.moreAddresses_other": "+{count} địa chỉ khác",
   "senders.waiting.openNamed": "Mở {name}",
   "senders.waiting.openUnnamed": "Mở liên hệ",
+  "senders.waiting.onMargince": "Đang chờ Margince:",
+  "senders.waiting.onYou": "Đang chờ bạn:",
+  "senders.waiting.why.decided":
+    "câu trả lời của bạn sẽ được áp dụng ở lần kiểm tra người gửi tiếp theo.",
+  "senders.waiting.why.classifying":
+    "bước kiểm tra người gửi chưa đánh giá người gửi này.",
+  "senders.waiting.why.unsure":
+    "bước kiểm tra người gửi không xác định được, nên câu trả lời của bạn quyết định.",
+  "senders.waiting.why.queued": "bước kiểm tra người gửi sẽ xem thư của họ.",
+  "senders.waiting.why.unjudgeable":
+    "không còn thư nào của người gửi này để kiểm tra, nên chỉ bạn có thể quyết định.",
+  "senders.waiting.businessFor": "Đánh dấu {address} là công việc",
+  "senders.waiting.keepOutFor": "Loại trừ {address}",
+  "senders.waiting.businessTitle": "Đánh dấu người gửi này là công việc?",
+  "senders.waiting.businessBody":
+    "Thư của họ được giữ như thư công việc, và liên hệ này được chia sẻ với công ty của bạn, cùng thư và cuộc họp của họ.",
+  "senders.waiting.remove": "Xóa khỏi danh bạ",
+  "senders.waiting.removeTitle": "Xóa liên hệ này?",
+  "senders.waiting.removeBody":
+    "Liên hệ được lưu trữ và rời khỏi danh sách này. Thư vẫn được giữ, và người gửi vẫn chưa được quyết định. Bạn có thể khôi phục từ các liên hệ đã lưu trữ.",
+  "senders.waiting.removeConfirm": "Xóa liên hệ",
   "connectionOutcomes.title": "Kết quả từ các kết nối của bạn",
   "connectionOutcomes.view": "Xem",
   "connectionOutcomes.viewNamed": "Xem {name}",
