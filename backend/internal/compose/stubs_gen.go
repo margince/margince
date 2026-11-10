@@ -1091,6 +1091,10 @@ func (stubs) RecordCommunicationContext(w nethttp.ResponseWriter, r *nethttp.Req
 	httperr.NotImplemented(w, r, "RecordCommunicationContext")
 }
 
+func (stubs) CorrectCommunicationWording(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "CorrectCommunicationWording")
+}
+
 func (stubs) DirectCommunicationSend(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "DirectCommunicationSend")
 }

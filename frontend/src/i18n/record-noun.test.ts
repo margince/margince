@@ -304,6 +304,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "health.setup.recovery.todo",
   ],
   vi: [
+    "directSend.correctionScope",
     // These messages name actual readers and participants, not contact records.
     "internalMail.historyImportNote",
     "internalMail.scope",

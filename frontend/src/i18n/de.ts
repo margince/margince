@@ -7856,6 +7856,24 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.sendMessageConfirmTitle": "Nachricht senden",
   "compose.sendMessageBody":
     "Die Nachricht wird sofort gesendet. Das lässt sich nicht rückgängig machen.",
+  "directSend.existingApproval":
+    "Deine Freigabe für diese Nachricht gilt weiterhin. Der ursprüngliche Grund bleibt dokumentiert.",
+  "directSend.correctWording":
+    "Rechtschreibung oder Zeichensetzung korrigieren",
+  "directSend.correctionTitle": "Text korrigieren und Freigabe behalten",
+  "directSend.correctionSave": "Korrektur speichern",
+  "directSend.correctionScope":
+    "Korrigiere nur Rechtschreibung oder Zeichensetzung. Empfangende, Absendeadresse, Zweck und Anhänge bleiben gleich. Inhaltliche Änderungen brauchen eine neue Freigabe.",
+  "directSend.correctionAcknowledge":
+    "Ich bestätige, dass nur Rechtschreibung oder Zeichensetzung geändert wurden. Bedeutung und Fakten sind unverändert.",
+  "directSend.correctionNeedsEdit":
+    "Korrigiere zuerst Rechtschreibung oder Zeichensetzung.",
+  "directSend.correctionNeedsConfirmation":
+    "Bestätige, dass Bedeutung und Fakten unverändert sind.",
+  "directSend.correctionNeedsText":
+    "Betreff und Nachrichtentext dürfen nicht leer sein.",
+  "directSend.correctionFailed":
+    "Die Korrektur wurde nicht gespeichert. Öffne die Prüfung erneut, um die aktuelle Nachricht und Freigabe zu prüfen.",
   "directSend.open": "Mit erfasster Ausnahme senden",
   "directSend.queued": "Zum Senden als festgehaltene Ausnahme vorgemerkt.",
   "directSend.opening": "Wird geöffnet…",

@@ -6932,8 +6932,8 @@ export interface paths {
         head?: never;
         /**
          * Move a scheduled message to a different moment.
-         * @description Time only. The content is what the approval bound to, so changing it is
-         *     cancel-and-recompose, which re-enters every gate from the top (ADR-0104 §5).
+         * @description Time only. An attested spelling or punctuation correction uses the communication review's
+         *     wording-correction route. Other content changes need cancel-and-recompose and fresh checks.
          */
         patch: operations["rescheduleScheduledSend"];
         trace?: never;
@@ -16447,6 +16447,31 @@ export interface paths {
          *     goes. The next message to the same contact needs its own.
          */
         post: operations["directCommunicationSend"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/communication-reviews/{id}/correct-wording": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Keep the original approval for a spelling or punctuation correction.
+         * @description The original human approver confirms that meaning is unchanged. The same instruction
+         *     remains attached to the held message. Recipients, sender, purpose, attachments and other
+         *     scope fields cannot be edited here. A change in meaning needs a new message approval.
+         *     The message remains held; its normal send path checks current permission and stops again.
+         */
+        post: operations["correctCommunicationWording"];
         delete?: never;
         options?: never;
         head?: never;
@@ -51326,6 +51351,7 @@ export interface components {
             reason_code: string;
             /** @description What was refused, per recipient. Empty once an erasure has cleared the subject from it. */
             refusals: components["schemas"]["RefusedRecipient"][];
+            wording_correction?: components["schemas"]["WordingCorrectionContext"];
             /**
              * @description What somebody must be shown before they direct this send, and the version their
              *     acknowledgement will name. Served rather than composed by the client: an instruction's
@@ -51351,6 +51377,37 @@ export interface components {
              *     server's words while showing them its own.
              */
             text: string;
+        };
+        /**
+         * @description The current approved wording, visible only to its original human approver while the
+         *     decision is unspent. The original reason remains on the instruction.
+         */
+        WordingCorrectionContext: {
+            /** Format: uuid */
+            instruction_id: string;
+            /** Format: int64 */
+            version: number;
+            subject: string;
+            body: string;
+            html_body: string;
+            wording_digest: string;
+            reason_code: string;
+            explanation: string;
+            warning_version: string;
+        };
+        CorrectCommunicationWordingRequest: {
+            /** Format: int64 */
+            version: number;
+            expected_wording: string;
+            subject: string;
+            body: string;
+            html_body: string;
+            /** @description The original approver attests that only spelling or punctuation changed and meaning is unchanged. */
+            meaning_unchanged: boolean;
+        };
+        WordingCorrectionResult: {
+            /** Format: int64 */
+            version: number;
         };
         /**
          * @description A designated human's decision that one refused message goes out anyway. Every field is frozen
@@ -84459,6 +84516,45 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Activity"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    correctCommunicationWording: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CorrectCommunicationWordingRequest"];
+            };
+        };
+        responses: {
+            /** @description Wording saved under the same approval. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WordingCorrectionResult"];
+                };
+            };
+            /** @description The correction confirmation or input is invalid. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: components["responses"]["Forbidden"];

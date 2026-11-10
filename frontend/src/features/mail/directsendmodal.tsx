@@ -20,7 +20,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Checkbox, Field, Textarea } from "../../design-system/atoms";
+import { Button, Checkbox, Field, Textarea } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
 import { Select } from "../../design-system/select";
@@ -29,6 +29,7 @@ import { sendPermissionReasonKey } from "../../format/sendpermissionreason";
 import { useT } from "../../i18n";
 import { communicationContextLabel } from "../../lib/compose-context";
 import { throwProblem } from "../../lib/problem";
+import { WordingCorrectionModal } from "./wordingcorrectionmodal";
 
 // The review as this modal needs it: which message, and the caution the server
 // serves for it. Taken from the generated contract rather than restated, so a
@@ -97,18 +98,29 @@ export function DirectSendModal({
   onSent?: (activityId: string) => void;
 }>) {
   const t = useT();
+  const correction = review.wording_correction;
+  const prior = correction ?? {
+    reason_code: "other",
+    explanation: "",
+    version: "new",
+  };
+  const recordedReason =
+    REASON_CODES.find((code) => code === prior.reason_code) ?? "other";
+  const [editingWording, setEditingWording] =
+    useState<CommunicationReview["wording_correction"]>();
   const [acknowledged, setAcknowledged] = useState(false);
-  const [reasonCode, setReasonCode] = useState<ReasonCode>("other");
-  const [explanation, setExplanation] = useState("");
+  const [reasonCode, setReasonCode] = useState<ReasonCode>(recordedReason);
+  const [explanation, setExplanation] = useState(prior.explanation);
 
   // A different review or warning needs a fresh acknowledgement.
-  const acknowledgementKey = `${review.id}:${review.warning?.version ?? ""}`;
+  const acknowledgementKey = `${review.id}:${review.warning?.version ?? ""}:${prior.version}`;
   const [seen, setSeen] = useState(acknowledgementKey);
   if (seen !== acknowledgementKey) {
     setSeen(acknowledgementKey);
     setAcknowledged(false);
-    setReasonCode("other");
-    setExplanation("");
+    setEditingWording(undefined);
+    setReasonCode(recordedReason);
+    setExplanation(prior.explanation);
   }
 
   const send = useMutation({
@@ -135,6 +147,17 @@ export function DirectSendModal({
         ? t("directSend.needsReason")
         : undefined;
 
+  if (editingWording) {
+    return (
+      <WordingCorrectionModal
+        reviewId={review.id}
+        context={editingWording}
+        onClose={() => setEditingWording(undefined)}
+        onSaved={onClose}
+      />
+    );
+  }
+
   return (
     <ConfirmModal
       open={open}
@@ -160,6 +183,14 @@ export function DirectSendModal({
           director as having read the server's caution while showing them
           ours. */}
       {review.warning && <ErrorLine>{review.warning.text}</ErrorLine>}
+      {correction && (
+        <>
+          <p className="t-body">{t("directSend.existingApproval")}</p>
+          <Button variant="ghost" onClick={() => setEditingWording(correction)}>
+            {t("directSend.correctWording")}
+          </Button>
+        </>
+      )}
       {review.refusals.map((refusal) => (
         <div
           key={`${refusal.address}-${refusal.subject_id ?? ""}-${refusal.category ?? ""}`}
@@ -194,6 +225,7 @@ export function DirectSendModal({
           <Select
             {...control}
             value={reasonCode}
+            disabled={Boolean(correction)}
             onChange={(picked) => setReasonCode(picked as ReasonCode)}
             options={REASON_CODES.map((code) => ({
               value: code,
@@ -214,6 +246,7 @@ export function DirectSendModal({
             rows={3}
             maxLength={1000}
             value={explanation}
+            disabled={Boolean(correction)}
             onChange={(e) => setExplanation(e.target.value)}
           />
         )}

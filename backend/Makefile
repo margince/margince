@@ -837,12 +837,11 @@ drift: ## Fail when a committed generated file drifted from what its generator p
 	# page went on publishing an older machine's numbers under a date no record
 	# held. A page that is merely stale says so; one that disagrees with its own
 	# source reads as current and is believed.
-	git diff --exit-code -- '*_gen.go' internal/compose/agentbundle/agentcontract_gen.yaml internal/compose/agentbundle/agentindex_gen.txt internal/contracts/ ../config/margince.schema.json ../config/margince.example.yaml ../config/margince.defaults.yaml ../.env.example ../docs/reference/configuration.md '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json internal/modules/agents/apps/actions.json 'internal/modules/knowledge/handbook/*.md' ../docs/reference/performance-budgets.md ../docs/reference/benchmark.md ../docs/reference/ai-provider-outages.md
-	# git diff ignores UNTRACKED files, so a new (or gen-recreated after a
-	# committed deletion) manifest that was never `git add`ed would slip past
-	# the diff above — fail explicitly when a generated manifest is uncommitted.
-	@u="$$(git ls-files --others --exclude-standard -- '../extensions/*/manifest.generated.json')"; \
-		[ -z "$$u" ] || { echo "drift: uncommitted generated manifest(s):" >&2; echo "$$u" >&2; exit 1; }
+	git diff --exit-code -- '*_gen.go' '*_gen.json' internal/compose/agentbundle/agentcontract_gen.yaml internal/compose/agentbundle/agentindex_gen.txt internal/contracts/ ../config/margince.schema.json ../config/margince.example.yaml ../config/margince.defaults.yaml ../.env.example ../docs/reference/configuration.md '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json internal/modules/agents/apps/actions.json 'internal/modules/knowledge/handbook/*.md' ../docs/reference/performance-budgets.md ../docs/reference/benchmark.md ../docs/reference/ai-provider-outages.md
+	# Untracked generated outputs are absent from git diff, including files a
+	# generator recreates after a committed deletion.
+	@u="$$(git ls-files --others --exclude-standard -- '../extensions/*/manifest.generated.json' '*_gen.json')"; \
+		[ -z "$$u" ] || { echo "drift: uncommitted generated artifact(s):" >&2; echo "$$u" >&2; exit 1; }
 	# Same blind spot, same guard: a handbook page copied in by handbook-embed
 	# and never `git add`ed is untracked, so the diff above sees nothing while
 	# the binary would ship a page no reviewer read.

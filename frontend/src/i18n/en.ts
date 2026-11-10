@@ -7864,6 +7864,22 @@ export const en = {
   "compose.sendMessageConfirmTitle": "Send message",
   "compose.sendMessageBody":
     "The message is sent immediately. This cannot be undone.",
+  "directSend.existingApproval":
+    "Your one-message approval still stands. Its original reason stays on record.",
+  "directSend.correctWording": "Correct spelling or punctuation",
+  "directSend.correctionTitle": "Correct wording and keep your approval",
+  "directSend.correctionSave": "Save correction",
+  "directSend.correctionScope":
+    "Correct spelling or punctuation only. Recipients, sender, purpose and attachments stay the same. Changes in meaning need a new message approval.",
+  "directSend.correctionAcknowledge":
+    "I confirm that only spelling or punctuation changed. The meaning and facts are unchanged.",
+  "directSend.correctionNeedsEdit":
+    "Make a spelling or punctuation correction first.",
+  "directSend.correctionNeedsConfirmation":
+    "Confirm that the meaning and facts are unchanged.",
+  "directSend.correctionNeedsText": "Keep a subject and a message body.",
+  "directSend.correctionFailed":
+    "The correction was not saved. Reopen the review to check the current message and approval.",
   "directSend.open": "Send with a recorded exception",
   "directSend.queued": "Queued as a recorded exception.",
   "directSend.opening": "Opening…",

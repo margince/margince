@@ -7422,8 +7422,8 @@ paths:
       security: [{bearerAuth: []}]
       summary: Move a scheduled message to a different moment.
       description: |-
-        Time only. The content is what the approval bound to, so changing it is
-        cancel-and-recompose, which re-enters every gate from the top.
+        Time only. An attested spelling or punctuation correction uses the communication review's
+        wording-correction route. Other content changes need cancel-and-recompose and fresh checks.
 
         Needs the passport permission Change records.
 
@@ -49801,6 +49801,8 @@ components:
           type: array
           description: What was refused, per recipient. Empty once an erasure has cleared the subject from it.
           items: {$ref: '#/components/schemas/RefusedRecipient'}
+        wording_correction:
+          $ref: '#/components/schemas/WordingCorrectionContext'
         warning:
           $ref: '#/components/schemas/OverrideWarning'
           description: |-
@@ -49827,6 +49829,23 @@ components:
           description: |-
             Shown verbatim. A surface that paraphrased it would record somebody as having read the
             server's words while showing them its own.
+    WordingCorrectionContext:
+      type: object
+      description: |-
+        The current approved wording, visible only to its original human approver while the
+        decision is unspent. The original reason remains on the instruction.
+      required: [instruction_id, version, subject, body, html_body, wording_digest, reason_code, explanation, warning_version]
+      properties:
+        instruction_id: {type: string, format: uuid}
+        version: {type: integer, format: int64}
+        subject: {type: string}
+        body: {type: string}
+        html_body: {type: string}
+        wording_digest: {type: string, pattern: '^[a-f0-9]{64}$'}
+        reason_code: {type: string}
+        explanation: {type: string}
+        warning_version: {type: string}
+      additionalProperties: false
     DirectCommunicationSendRequest:
       type: object
       description: |-
