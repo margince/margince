@@ -52,7 +52,7 @@ function goToRow<S extends Screen>(
   screen: S,
   letter: string,
   labelKey: MessageKey,
-  goesTo: Route = { screen },
+  goesTo?: Route,
 ) {
   return {
     id: `goto.${screen}`,
@@ -60,7 +60,7 @@ function goToRow<S extends Screen>(
     group: "goto",
     labelKey,
     answeredBy: "dispatcher",
-    goesTo,
+    goesTo: goesTo ?? { screen },
   } as const;
 }
 
