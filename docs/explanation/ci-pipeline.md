@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: .github/workflows/ci.yml .github/workflows/_lane-frontend.yml .github/workflows/_lane-integration.yml .github/workflows/cache-warm.yml .github/workflows/lint-cache.yml .github/workflows/pace.yml .github/workflows/scheduled.yml .github/actions/go-build-cache .github/actions/gate-binaries .github/actions/golangci-cache-key scripts/ci-verdict.sh scripts/ci-stable-mtimes.sh scripts/pace-workflow.sh -->
+<!-- describes: .github/workflows/ci.yml .github/workflows/_lane-frontend.yml .github/workflows/_lane-integration.yml .github/workflows/cache-warm.yml .github/workflows/lint-cache.yml .github/workflows/pace.yml .github/workflows/scheduled.yml .github/actions/go-build-cache .github/actions/gate-binaries .github/actions/golangci-cache-key .github/actions/ci-image scripts/ci-verdict.sh scripts/ci-stable-mtimes.sh scripts/pace-workflow.sh -->
 # CI pipeline
 
 The merge gate as GitHub Actions. The workflow is
@@ -146,7 +146,7 @@ to run the Go unit gates. The other is to boot the sharded Postgres databases.
 | `backend_db` | `backend/**`, `docker-compose.dev.yml`, `go.mod`, `go.work`, `go.work.sum`, `Makefile`, `scripts/**`, `instance/**`, `extensions/**`, `fixtures/**`, `composition/**`, `.github/workflows/ci.yml`, `.github/workflows/_lane-*.yml` (the caller plus every lane it calls, matched by a glob so a new lane is covered the day it lands), `.github/actions/**`, `sonar-project.properties`, `frontend/src/mcp-apps/forbidden.json` | the integration shards and the `integration` fan-in: every lane that opens a database |
 | `backend` | `backend_db` (by YAML anchor, so the two cannot drift) plus every file a Go gate reads without running (listed below) | Go build and gate, the staged `crm-hello` walk, craftsmanship, unit coverage, vuln |
 | `backend_lint` | `backend_db` plus `tools/**`, a module `lint-modules` lints. golangci reads no frontend or docs file | `backend-lint` |
-| `frontend` | `third-party-files.txt`, `frontend/**`, `backend/api/**` (the contract drives FE types), the composition inputs the lane type checks against (`instance/**`, `extensions/**`, `fixtures/**`, `composition/**`, `backend/tools/gen-composition/**`, `Makefile`, `scripts/**`), and the install inputs `pnpm-lock.yaml`, `pnpm-workspace.yaml` and the root `package.json`, plus `.github/actions/install-playwright-chromium/**` (it decides whether the UAT part can run at all, so a change to it cannot be reviewed without the lane it governs) | frontend lane, UAT |
+| `frontend` | `third-party-files.txt`, `frontend/**`, `backend/api/**` (the contract drives FE types), the composition inputs the lane type checks against (`instance/**`, `extensions/**`, `fixtures/**`, `composition/**`, `backend/tools/gen-composition/**`, `Makefile`, `scripts/**`), and the install inputs `pnpm-lock.yaml`, `pnpm-workspace.yaml` and the root `package.json`, plus `.github/actions/install-playwright-chromium/**` (it decides whether the UAT part can run at all, so a change to it cannot be reviewed without the lane it governs), and for the same reason the CI image `.github/ci-image/**` and `.github/actions/ci-image/**` | frontend lane, UAT |
 | `e2e` | `backend/**`, `frontend/**`, `docker-compose.dev.yml`, `instance/**`, `extensions/**`, `fixtures/**`, `composition/**`, `scripts/**`, `Makefile` | full stack live-boot |
 | `images` | `Dockerfile`, `.dockerignore`, `docker-bake.hcl` | `images (build only)` |
 | `deps` | `go.work`, `go.work.sum`, `**/go.mod`, `**/go.sum`, `**/package.json`, `**/pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.syft.yaml`, `.grant.yaml`, `sbom-schemas/**`, `Makefile`, `scripts/sbom-census.sh`, `scripts/test-sbom-census.sh`, `scripts/install-sbom-python.sh`, `scripts/test-install-sbom-python.sh`, `scripts/sbom-license-parity.sh`, `scripts/test-sbom-license-parity.sh`, `third-party-files.txt`, `scripts/third_party_files.py`, `scripts/third-party-files.sh`, `scripts/test-third-party-files.sh`, `embedded-binaries.txt`, `scripts/embedded-binary-licenses.sh`, `scripts/test-embedded-binary-licenses.sh`, `.github/workflows/**`, `.github/actions/**` | the license gate |
@@ -224,8 +224,9 @@ What follows from this:
 ## Job graph
 
 ```
-changes ──┬─> deterministic-gates
-          ├─> backend-lint
+ci-image  (every non-draft change, beside `changes`; the jobs marked * need it)
+changes ──┬─> deterministic-gates *
+          ├─> backend-lint *
           ├─> craftsmanship
           ├─> integration  →  _lane-integration.yml ────────────────┐
           │                     integration-build                   │
@@ -234,20 +235,20 @@ changes ──┬─> deterministic-gates
           ├─> vuln                                              │   │
           ├─> license gate  (`deps` scope)                      │   │
           ├─> frontend  →  _lane-frontend.yml                  │   │
-          │                  fe-quality   ┐                     │   │
-          │                  fe-unit (×4) ├─> fan-in (+ merge)   │   │
-          │                  fe-bundle    ┘                     │   │
-          ├─> uat  (`frontend` scope, beside the lane)          │   │
+          │                  fe-quality * ┐                     │   │
+          │                  fe-unit (×4)*├─> fan-in * (+ merge) │   │
+          │                  fe-bundle *  ┘                     │   │
+          ├─> uat *  (`frontend` scope, beside the lane)        │   │
           ├─> live-boot, home-budget                            │   │
           v                                                     v   v
  deterministic-gates + integration + frontend ──> sonarcloud
   craft-residue  (every non-draft change, independent)
   secret-scan    (every non-draft change, independent — + the image-pin gate)
 
-  ci  ── the ONE required context. needs: deterministic-gates,
+  ci  ── the ONE required context. needs: ci-image, deterministic-gates,
          test-budget, backend-lint, craftsmanship, craft-residue,
          secret-scan, integration, frontend, uat, license-gate, images
-         (eleven — vuln, live-boot and home-budget stay advisory and are
+         (twelve — vuln, live-boot and home-budget stay advisory and are
          NOT in the fan-in)
 ```
 
@@ -303,7 +304,17 @@ time of a PR. And `deterministic-gates` itself still catches a broken build.
 The lane **compiles once**: a part picked per test reaches nearly every package. The `integration build`
 job links each package's test binary with the shards' flags, and each shard runs its part from them in
 the package directory. A compile error fails the build job, so no shard starts. Each shard still pays
-start-up, the fetch and its own template, so size the matrix from `scripts/integration-test-timing.txt`.
+start-up, the fetch and its own template, so size the matrix from the measured test times.
+
+The shards **split by measured test time**, so they end close together. The fan-in uploads the time
+of every test (`test-timing-integration`). On `main`, the `integration-timing` job of `cache-warm.yml`
+takes each test's mean time over the five newest uploads. It saves the result as the cache entry
+`integration-test-timing-<run>`.
+
+The build job restores the newest entry, or takes the committed `scripts/integration-test-timing.txt`
+when none is there, and packs it with the binaries. So every shard of a run splits by one file, and the
+fan-in fails a run whose shards name another digest of it. A test the file does not name counts as its
+package's mean, so old times cost balance and never a test. Each shard starts its slowest part first.
 
 ### The `ci` aggregate is the only required build context
 
@@ -329,7 +340,8 @@ The job runs with `if: always()`. An aggregate that is skipped, together with a 
 report a **green** required check.
 
 A lane joins `needs` as its own change, so a red aggregate has one candidate cause. `license-gate`,
-`images` and `uat` each joined that way.
+`images` and `uat` each joined that way. `ci-image` is there because a failed image build skips every
+job that needs it, and a skip passes on a pull request.
 
 These jobs are not in `needs`:
 
@@ -363,12 +375,14 @@ loads that first snapshot forever.
   coverage pass, `live-boot` and `govulncheck`.
 - setup-go still owns the module cache; this action owns the build cache beside it.
 
-Three kinds exist. A build tag and coverage code change the package builds, and only the dependency builds under them are shared:
+Three kinds exist. A build tag and coverage code change the package builds, and only the
+dependency builds under them are shared:
 
 | Kind | Written by | Read by |
 |---|---|---|
-| `plain` | `cache-warm.yml` job `plain` | `deterministic-gates`, `integration unit coverage`, `live-boot`, `vuln` |
-| `lint` | `lint-cache.yml`, after each push to `main`: it compiles, and runs no test | `backend-lint` |
+| `plain` | `cache-warm.yml` job `plain`, its `runner` part | `integration unit coverage`, `live-boot`, `vuln`, and the [CI image](ci-image.md) jobs when they run on the runner |
+| `plain-in-image` | `cache-warm.yml` job `plain`, its `image` part | `deterministic-gates` |
+| `lint`, `lint-in-image` | `lint-cache.yml`, after each push to `main`: it compiles, and runs no test | `backend-lint` |
 | `integration` | `cache-warm.yml` job `integration` | `integration build`, and every shard for the tools it runs with `go run` |
 
 ### The writer lives in `cache-warm.yml`, on a schedule
@@ -397,15 +411,11 @@ Three limits shaped that, and each rules out a choice that looks less hard:
 
 There is one writer per kind. Each run of a kind compiles much the same set. So a second writer would add
 nothing but two writers on the same key. And every runner sending up about 550 MB would push out the entry
-they meant to seed. `cache-warm.yml` runs one job per kind it writes, and both it and `lint-cache.yml` take
+they meant to seed. `cache-warm.yml` runs one job per kind it writes, and it and `lint-cache.yml` take
 `concurrency: cancel-in-progress: false`, because a cancelled run saves nothing.
 
 The refresh steps use `!cancelled()`, not `success()`. A red gate still compiled the tree, and that build
 output can be used again as well as a green run's.
-
-`scripts/check-image-pins.sh` scans `.github/actions/` beside the workflows. The `./path` allowance lets a
-local action through, because the repo versions its own code. That holds for the action's own ref, but
-not for the outside actions it calls. Those would come in with nobody reading them.
 
 ### The lint caches are saved on `main`, and the golangci one on `develop` too
 
@@ -429,7 +439,8 @@ and there it pushes out the `main` entries that every PR loads.
   from the entry of the push before. On `main` it also saves the `lint` build cache, compiled from empty. Lint
   compiles each package it loads before it reads its own cache. So a build cache hours behind cost minutes,
   even when every analysis was cached. The job then deletes the older entries.
-- **A new dependency or lint config lints cold** until `cache-warm` runs after the merge.
+- **A new dependency or lint config lints cold.** The key prefix of such a PR matches no `main`
+  entry until `cache-warm` runs after the merge.
 - **An old frontend entry is never wrong.** tsc checks the hash of each input against what it stored.
   The compiler lint checks the hash of each file and its own version, so the lockfile is in the key.
 
@@ -470,7 +481,8 @@ good one. The second kind is held by a gate: a cached test file that runs `git` 
 
 ## The jobs
 
-What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md).
+What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md). `deterministic-gates`,
+`backend-lint`, the frontend lane and `uat` run in one container image: [ci-image.md](ci-image.md).
 
 ### Why some jobs are shaped as they are
 
@@ -576,29 +588,16 @@ Wiring details:
     nothing is not a measure of zero.
   - On a pull request the rule does not apply. New code there is the diff, and a diff that skipped a
     part of the tree has no lines of that part to cover.
-  - On `merge_group` the classifier is overridden and every coverage job runs, so the clause holds
-    each time the lane is green. It stays because it would catch a later event, or a later skip, that
-    brings back a partial scan.
-- **A `merge_group` scan publishes as `main`** (`-Dsonar.branch.name=main`). The queue builds `main` +
-  the queued entries, which is byte for byte the tree `main` becomes when the batch merges. So this is
-  the same measure a scan on a push to `main` would take, one step earlier and once per batch.
-
-  Without the override, the scanner reads `GITHUB_REF`, and files the analysis under
-  `gh-readonly-queue/main/pr-N-<sha>`. That is a branch deleted minutes later, and nothing would ever
-  update `main` again. A stored analysis does not go away when it stops being refreshed; it is **frozen** in place.
-  The `quality-gate` job that runs daily in `scheduled.yml` reads `?branch=main`. It would keep
-  reporting that stale verdict with no end. Its own comment says a *missing* analysis
-  `reads identically to green on every dashboard`; a frozen one reads the same way.
-
-  **Publishing waits for the `ci` aggregate verdict.** This job's other conditions cover only the jobs
-  that make its *coverage*.
-  - Without that clause, a `merge_group` build whose `secret-scan`, `license-gate` or `craft-residue`
-    failed would still publish a tree that does not merge. It would replace the stored analysis that
-    every scheduled check reads for `main`.
-  - Requiring `needs.ci.result == 'success'` on `merge_group` makes "published as `main`" mean "is now
-    `main`".
-  - Nothing waits on this job in turn. The aggregate leaves `sonarcloud` out of its own `needs`, so the
-    queue merges on `ci` alone, and the scan may end after the merge.
+- It waits for its coverage jobs and nothing else, so it starts as the last of them ends. On a full run
+  that is the `integration` fan-in.
+  SonarCloud reads coverage only from the report files there when the scanner runs. It takes no coverage
+  after an analysis, and a second analysis of a pull request replaces the first. So no part of the scan
+  can start earlier, and the `ci` aggregate, which makes no coverage, is not in its `needs`.
+- **A `merge_group` build is not scanned.** To file it as `main`, the scan had to wait for `ci`. Else a
+  build that does not merge would replace the stored analysis of `main`. That wait held every pull
+  request's scan behind `ci` too. `main-health.yml` publishes the analysis of `main` from `main`. The
+  daily `quality-gate` job in `scheduled.yml` reads `?branch=main`; an analysis nothing refreshes is
+  **frozen** in place, and reads like a green one.
 - **Report paths resolve from the repo root**, not from the directory that wrote the report. The scanner
   resolves every `SF:` entry in an lcov against its own base directory. It drops a record it cannot
   resolve, with no warning.
@@ -610,7 +609,7 @@ Wiring details:
 
 ## Security posture
 
-- `permissions: contents: read` at the workflow root (the least rights; no job pushes).
+- `permissions: contents: read` at the workflow root (the least rights). Only `ci-image` may push, and only the [CI image](ci-image.md).
 - `persist-credentials: false` on the checkout of each job that runs code a PR wrote (the `integration`
   shards, the unit coverage pass and fan-in, `live-boot`, `frontend`, `uat`). So a PR with bad code running
   `make test-integration` / `make frontend-e2e` cannot read the stored `GITHUB_TOKEN`.

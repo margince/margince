@@ -24,9 +24,9 @@ func TestTheBriefWriterReAsksThroughItsOwnParse(t *testing.T) {
 		// Valid JSON, refused by ParseBriefSections alone: sections is an object
 		// where the site reads a list.
 		First: `{"sections":{"kind":"goal"}}`,
-		Second: `{"sections":[{"kind":"goal","sentences":[
+		Second: shownRefs(in).Show(`{"sections":[{"kind":"goal","sentences":[
 			{"text":"Get them to name a date.","nature":"recommendation",
-			 "evidence":[{"entity_type":"activity","entity_id":"` + in.ActivityID + `"}]}]}]}`,
+			 "evidence":[{"entity_type":"activity","entity_id":"` + in.ActivityID + `"}]}]}]}`),
 	}
 	sections, err := writeWithModel(t.Context(), lane, in, string(textlang.English))
 	if err != nil {
@@ -49,8 +49,8 @@ func TestThePlanWriterReAsksThroughItsOwnParse(t *testing.T) {
 		// Valid JSON, refused by ParsePlan alone: opening is a string where the
 		// site reads an evidenced sentence.
 		First: `{"opening":"Open on the security pack."}`,
-		Second: `{"opening":{"text":"Open on the security pack.","nature":"recommendation",
-			"evidence":[{"entity_type":"activity","entity_id":"` + activityID + `"}]}}`,
+		Second: planRefs(in, floorFor(in)).Show(`{"opening":{"text":"Open on the security pack.","nature":"recommendation",
+			"evidence":[{"entity_type":"activity","entity_id":"` + activityID + `"}]}}`),
 	}
 	plan, err := writePlanWithModel(t.Context(), lane, in, floorFor(in), string(textlang.English))
 	if err != nil {

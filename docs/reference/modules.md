@@ -97,6 +97,10 @@ A module never reaches another module; the `compose` root injects the link (how 
 - **deals ← projects**: whether a project may be attached to a deal. Also moving the project of a `won`
   deal into delivery. Both happen in the same transaction as the deal write
   (`deals/projectseam.go`, wired in `compose/installseam`).
+- **deals ← contracts**: whether the contracts filed against a deal name the company it is moving to.
+  A contract on a deal is visible through that deal alone. A deal that changed company would show the
+  old company's contracts to the new company's readers. The check runs in the transaction of the
+  deal write, after the deal row is locked (`deals/contractseam.go`, wired in `compose/installseam`).
 - **the workspace seed in identity** ← deals (default pipeline) + consent (default purposes and
   retention) + automation (starter automations) + activities (booking page), in one bootstrap
   transaction.

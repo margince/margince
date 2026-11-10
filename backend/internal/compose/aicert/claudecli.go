@@ -199,13 +199,15 @@ func cliPrerequisites(env config.Lookup) (binary, credential string, err error) 
 		"`make e2e-ai` reads it from .env.local)", strings.Join(claudeCLICredentials, ", "))
 }
 
-// cliPassthrough is what the CLI inherits beyond HOME, PATH and its credential:
-// where to write temporary files, and how this host reaches the network. Not
-// ANTHROPIC_BASE_URL: an operator's gateway would receive the subscription
-// token, and grade on a model this lane did not name.
+// cliPassthrough is what the CLI inherits beyond HOME, PATH and its credential.
+// That is where to write temporary files, how this host reaches the network,
+// and a thinking budget an operator may cap. Not ANTHROPIC_BASE_URL: a gateway
+// would receive the subscription token, and grade on a model this lane did not
+// name.
 var cliPassthrough = []string{
 	"TMPDIR",
 	"HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy", "NO_PROXY", "no_proxy",
+	"MAX_THINKING_TOKENS",
 }
 
 // cliEnv is the whole environment the CLI runs in. Built rather than inherited:

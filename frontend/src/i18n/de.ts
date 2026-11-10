@@ -1007,6 +1007,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.deals.colSignals": "Risikosignale",
   "forecast.deals.colAmount": "Betrag",
   "forecast.deals.colWeighted": "Gewichtet",
+  "forecast.deals.foldedAmount": "Betrag {amount}",
+  "forecast.deals.foldedWeighted": "{amount} gewichtet",
   "forecast.signal.close_pushed": "Abschlussdatum verschiebt sich",
   "forecast.signal.no_next_step": "Kein nächster Schritt geplant",
   "forecast.signal.quiet": "Kunde schweigt",
@@ -7406,6 +7408,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieser Kontakt ist jetzt privat für das verantwortliche Teammitglied. Nutzende und Teams, mit denen der Kontakt geteilt wurde, behalten den Zugriff.",
   "recordAccess.contact.leftYourAccess":
     "Dieser Kontakt ist jetzt privat für das verantwortliche Teammitglied. Du hast keinen Zugriff mehr auf diesen Kontakt.",
+  "recordAccess.contact.handedOver":
+    "{owner} ist jetzt für diesen Kontakt verantwortlich. Er ist privat, deshalb hast du keinen Zugriff mehr darauf.",
   "recordAccess.company.title": "Wer dieses Unternehmen sehen kann",
   "recordAccess.company.shared":
     "Alle Nutzenden im Unternehmen können diesen Datensatz sehen.",
@@ -7421,6 +7425,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieses Unternehmen ist jetzt privat für das verantwortliche Teammitglied. Deals, Kontakte und E-Mails, die diesem Unternehmen zugeordnet sind, behalten ihre eigene Sichtbarkeit.",
   "recordAccess.company.leftYourAccess":
     "Dieses Unternehmen ist jetzt privat für das verantwortliche Teammitglied. Du hast keinen Zugriff mehr auf dieses Unternehmen.",
+  "recordAccess.company.handedOver":
+    "{owner} ist jetzt für dieses Unternehmen verantwortlich. Es ist privat, deshalb hast du keinen Zugriff mehr darauf.",
   "recordAccess.option.owner": "Nur das verantwortliche Teammitglied",
   "recordAccess.option.ownerHint":
     "Nutzende und Teams, mit denen der Datensatz geteilt ist, behalten den Zugriff.",
@@ -7506,6 +7512,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.draftSaving": "Wird gespeichert…",
   "compose.earlierThreads_one": "{count} früherer Thread",
   "compose.earlierThreads_other": "{count} frühere Threads",
+  "compose.earlierThreadsAtLeast_one": "{count}+ frühere Threads",
+  "compose.earlierThreadsAtLeast_other": "{count}+ frühere Threads",
+  "compose.earlierThreadsMayExist": "Möglicherweise gibt es frühere Threads",
   "compose.threadChange": "Ändern",
   "compose.threadContinue": "Thread fortsetzen",
   "compose.threadsRecent": "Letzte Threads",
@@ -8610,6 +8619,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "review.colDeal": "Deal",
   "review.colAtStake": "Gefährdeter Betrag",
   "review.colSeenSince": "Offen seit",
+  "review.foldedAtStake": "{amount} gefährdet",
+  "review.foldedSeenSince": "Offen seit {date}",
   "review.severityHigh": "Hoch",
   "review.severityMedium": "Mittel",
   "review.severityLow": "Niedrig",
@@ -9968,6 +9979,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ein verlorener Deal braucht den Grund, warum er verloren ging.",
   "import.reason.deal_pipeline_fixed":
     "Dieser Deal liegt in einer anderen Pipeline als in der Datei angegeben. Ein Import verschiebt keinen Deal zwischen Pipelines, daher wird die Zeile übersprungen.",
+  "import.reason.deal_company_has_contracts":
+    "Für diesen Deal sind Verträge hinterlegt, die ein anderes Unternehmen als das in dieser Zeile nennen, daher wird die Zeile übersprungen. Löse die Verträge vom Deal oder ordne jeden einem Deal seines eigenen Unternehmens zu und importiere erneut.",
   "import.reason.deal_already_closed":
     "Dieser Deal ist bereits abgeschlossen, daher wird die Zeile übersprungen. Ein Import öffnet keinen abgeschlossenen Deal wieder.",
   "import.reason.fx_rate_missing":
@@ -11484,6 +11497,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiHealth.callCounts_one": "Aufrufe: {count}, fehlgeschlagen: {failures}",
   "aiHealth.callCounts_other": "Aufrufe: {count}, fehlgeschlagen: {failures}",
   "heldThreads.search": "Betreff oder Beteiligte suchen",
+  "heldThreads.forContact": "Zurückgehaltene E-Mails mit diesem Kontakt zeigen",
+  "heldThreads.withContact": "Threads mit",
+  "heldThreads.allThreads": "Alle Threads zeigen",
+  "heldThreads.contactUnavailable":
+    "Der Kontakt ist archiviert oder für dich nicht sichtbar, daher werden seine Threads nicht angezeigt.",
   "heldThreads.statusFilter": "Status",
   "heldThreads.statusAll": "Jeder Status",
   "heldThreads.noMatch": "Kein zurückgehaltener Thread passt.",
@@ -16566,7 +16584,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.setup.copyAddress": "Adresse kopieren",
   "webForms.steps.browser.address": "Kopiere die Formularadresse.",
   "webForms.steps.browser.builder":
-    "Öffne in Webflow, WordPress oder einem anderen Baukasten die Einstellungen deines Formulars. Trag diese Adresse als Ziel ein (in Webflow heißt das Action) und als Methode POST.",
+    "Öffne in Webflow, WordPress oder einem anderen Baukasten die Einstellungen deines Formulars. Trage diese Adresse als Ziel ein (in Webflow heißt das Action) und als Methode POST.",
   "webForms.steps.browser.fields":
     "Nenne das E-Mail-Feld email. Margince liest auch full_name, phone, company und message und legt jedes andere Feld in der Notiz am Lead ab.",
   "webForms.steps.browser.code":
@@ -18922,6 +18940,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.aside.partner": "Partner",
   "deal.aside.partnerNone": "Keiner",
   "deal.editDetails": "Details bearbeiten",
+  "deal.meetNeedsCompany":
+    "Dieser Deal hat noch kein Unternehmen. Trage es unter „Details bearbeiten“ ein, um einen Termin zu buchen.",
   "deal.committee.card": "Gremium",
   "deal.committee.change": "Stakeholder ändern oder entfernen",
 
@@ -19576,7 +19596,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingAddNotes": "Notizen hinzufügen",
   "worklist.verb.meetingUpdateTitle": "Termin",
   "worklist.verb.meetingReading": "Termin wird geladen…",
-  "worklist.verb.meetingWhatHappened": "Terminnotizen",
+  "worklist.verb.meetingWhatHappened": "Was passiert ist",
   "worklist.verb.meetingBodyHint":
     "Besprochenes und nächste Schritte. Kalendernotizen lassen sich hier bearbeiten.",
   "worklist.verb.meetingHeld": "Hat stattgefunden",
@@ -20964,6 +20984,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "standing.mark.group_one": "{count} Eintrag, {range}",
   "standing.mark.group_other": "{count} Einträge, {range}",
   "standing.mark.range": "{from} bis {to}",
+  "standing.mark.label": "{what}, {when}",
   "standing.mark.more_one": "{count} weiterer im Verlauf",
   "standing.mark.more_other": "{count} weitere im Verlauf",
   "standing.peek.partial_one": "{shown} von {count} werden gezeigt.",

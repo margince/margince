@@ -1,0 +1,46 @@
+name: our_own_hunch_does_not_lower_the_chances
+task: deal_verdict
+site: deal_verdict
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# Our own rep logs a feeling that the deal is slipping. The buyer has said
+# nothing new: their last mail only asks for a reference customer. A drop in
+# the chances needs the buyer's own words, so the right answer is no change.
+fixture:
+  today: "2026-11-04"
+  deal:
+    name: "Cold storage monitoring"
+    stage: "Proposal sent"
+    amount: 42000
+    currency: EUR
+    close_date: "2026-12-18"
+    probability: 50
+  activities:
+    - kind: email
+      direction: inbound
+      at: "2026-10-22"
+      subject: "Re: Offer for cold storage monitoring"
+      body: |
+        Thanks for the offer. Could you name a reference customer in food
+        logistics we could call?
+    - kind: email
+      direction: outbound
+      at: "2026-10-23"
+      subject: "Re: Offer for cold storage monitoring"
+      body: |
+        Hi Lena, happy to. Fresko Foods agreed to take a call; I will send you
+        the contact details today.
+    - kind: note
+      direction: outbound
+      at: "2026-11-03"
+      subject: "Gut feeling"
+      body: |
+        No answer since the reference. I feel this one is slipping, they
+        probably went with someone cheaper.
+expect:
+  outcome: accepted
+  answer: []
+  judge: none
+  judge_none_reason: >
+    The right answer is no change, and the check fails any proposed action
+    whatever its value, so a judge has nothing left to weigh.

@@ -11,7 +11,8 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"strings"
+	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -21,42 +22,62 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-type bodyReceiver struct{ posts int }
+// countingReceiver counts the requests that reach it, behind the real
+// delivery client.
+func countingReceiver(t *testing.T) (*httptest.Server, *atomic.Int64) {
+	t.Helper()
+	var posts atomic.Int64
+	receiver := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, err := io.Copy(io.Discard, r.Body); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		posts.Add(1)
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(receiver.Close)
+	return receiver, &posts
+}
 
-func (r *bodyReceiver) Do(*http.Request) (*http.Response, error) {
-	r.posts++
-	return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}, nil
+// sendableTarget loads one seeded delivery about a company, pointed at the
+// receiver and signed with a fresh secret.
+func sendableTarget(ctx context.Context, t *testing.T, e *contractVisEnv, status string, receiver *httptest.Server) attemptTarget {
+	t.Helper()
+	_, deliveries := e.seedDeliveries(t, 1)
+	cipher, err := NewCipher(make([]byte, WebhookKeyBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.store.cipher = cipher
+	secret, err := generateSecret()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sealed, err := cipher.seal(secret)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(ctx, `UPDATE webhook_delivery SET status=@status, entity_type='company', entity_id=@subject WHERE id=@id`,
+		pgx.NamedArgs{"id": deliveries[0], "subject": e.company, "status": status}); err != nil {
+		t.Fatal(err)
+	}
+	target, err := e.store.loadTarget(ctx, deliveries[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	target.sealedSecret, target.targetURL = sealed, receiver.URL
+	return target
 }
 
 func TestErasureAfterLoadingADeliveryPreventsItsPost(t *testing.T) {
 	for _, status := range []string{"pending", "retrying"} {
 		t.Run(status, func(t *testing.T) {
 			e := setupContractVis(t)
-			_, deliveries := e.seedDeliveries(t, 1)
 			ctx := e.asHolding(map[string]principal.ObjectGrant{rbacObject: {Read: true, Update: true}})
-			cipher, err := NewCipher(make([]byte, WebhookKeyBytes))
-			if err != nil {
-				t.Fatal(err)
-			}
-			e.store.cipher = cipher
-			secret, err := generateSecret()
-			if err != nil {
-				t.Fatal(err)
-			}
-			sealed, err := cipher.seal(secret)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if _, err := e.owner.Exec(ctx, `UPDATE webhook_delivery SET status=@status, entity_type='company', entity_id=@subject WHERE id=@id`, pgx.NamedArgs{"id": deliveries[0], "subject": e.company, "status": status}); err != nil {
-				t.Fatal(err)
-			}
-			target, err := e.store.loadTarget(ctx, deliveries[0])
-			if err != nil {
-				t.Fatal(err)
-			}
-			target.sealedSecret = sealed
-			receiver := &bodyReceiver{}
-			d := NewDeliverer(e.store, receiver, func() time.Time { return time.Unix(1700000000, 0) }, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+			receiver, posts := countingReceiver(t)
+			target := sendableTarget(ctx, t, e, status, receiver)
+			d := NewDeliverer(e.store, loopbackClient(transportTLS(t, receiver)),
+				func() time.Time { return time.Unix(1700000000, 0) }, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 			hookRan := false
 			d.beforeSend = func(ctx context.Context) error {
 				hookRan = true
@@ -66,13 +87,13 @@ func TestErasureAfterLoadingADeliveryPreventsItsPost(t *testing.T) {
 			}
 			d.deliverOnce(ctx, target)
 			if !hookRan {
-				t.Fatal("the attempt never reached its send gate")
+				t.Fatal("the attempt never reached its send check")
 			}
-			if receiver.posts != 0 {
+			if posts.Load() != 0 {
 				t.Fatal("the receiver got the loaded body after its erasure committed")
 			}
 			var state, body string
-			if err := e.owner.QueryRow(ctx, `SELECT status,payload FROM webhook_delivery WHERE id=@id`, pgx.NamedArgs{"id": deliveries[0]}).Scan(&state, &body); err != nil {
+			if err := e.owner.QueryRow(ctx, `SELECT status,payload FROM webhook_delivery WHERE id=@id`, pgx.NamedArgs{"id": target.deliveryID}).Scan(&state, &body); err != nil {
 				t.Fatal(err)
 			}
 			if state != "visibility_revoked" || body != "" {
@@ -84,17 +105,16 @@ func TestErasureAfterLoadingADeliveryPreventsItsPost(t *testing.T) {
 
 func TestAFailedSendCheckBacksOffWithoutPosting(t *testing.T) {
 	e := setupContractVis(t)
-	_, deliveries := e.seedDeliveries(t, 1)
 	ctx := e.asHolding(map[string]principal.ObjectGrant{rbacObject: {Read: true, Update: true}})
-	target, err := e.store.loadTarget(ctx, deliveries[0])
-	if err != nil {
-		t.Fatal(err)
-	}
+	receiver, posts := countingReceiver(t)
+	target := sendableTarget(ctx, t, e, "pending", receiver)
 	now := time.Unix(1700000000, 0)
-	d := NewDeliverer(e.store, nil, func() time.Time { return now }, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	d := NewDeliverer(e.store, loopbackClient(transportTLS(t, receiver)), func() time.Time { return now }, nil,
+		slog.New(slog.NewTextHandler(io.Discard, nil)))
 	d.beforeSend = func(context.Context) error { return errors.New("send check unavailable") }
-	if d.sendAuthorized(ctx, target) {
-		t.Fatal("a failed send check authorized the request")
+	d.deliverOnce(ctx, target)
+	if posts.Load() != 0 {
+		t.Fatal("a failed send check let the request through")
 	}
 	var status, reason string
 	var attempts int
@@ -102,7 +122,7 @@ func TestAFailedSendCheckBacksOffWithoutPosting(t *testing.T) {
 	if err := e.owner.QueryRow(ctx, `SELECT status, attempts, last_error, next_retry_at FROM webhook_delivery WHERE id=@id`, pgx.NamedArgs{"id": target.deliveryID}).Scan(&status, &attempts, &reason, &next); err != nil {
 		t.Fatal(err)
 	}
-	if status != "retrying" || attempts != target.priorAttempts+1 || reason != visibilityUncheckedReason || !next.After(now) {
+	if status != "retrying" || attempts != target.priorAttempts+1 || reason != sendUncheckedReason || !next.After(now) {
 		t.Fatalf("failed check did not back off: status=%s attempts=%d reason=%q next=%v", status, attempts, reason, next)
 	}
 }

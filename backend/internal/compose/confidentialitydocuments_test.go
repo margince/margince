@@ -184,3 +184,15 @@ func TestAFileTheVerdictDidNotReadIsJudgedByItsName(t *testing.T) {
 		t.Error("an invoice the verdict read and found ordinary was held by its name")
 	}
 }
+
+func TestUnreadIdentityAndMedicalFilesDoNotChooseThePrivacyKind(t *testing.T) {
+	for _, name := range []string{"passport.pdf", "Befund.jpg", "test_result.pdf"} {
+		row := capture.PendingThread{Attachments: []string{name}}
+		if isPersonnelWithoutAModel(row) {
+			t.Errorf("%s forced the personnel kind", name)
+		}
+		if !hasUnreadNamedFile(row, capture.NamedAsPrivate) {
+			t.Errorf("%s could be opened unread", name)
+		}
+	}
+}

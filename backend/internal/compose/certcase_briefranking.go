@@ -222,7 +222,7 @@ func (c *briefRankingCase) Run(ctx context.Context, completer aitasks.Completer)
 // model that named nothing pass any scenario whose expected leader already leads
 // the deterministic order.
 func (c *briefRankingCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
-	order, err := briefs.ParseRankOrder(trace.Output)
+	order, err := briefs.ParseRankOrder(trace.Output, c.candidates)
 	if err != nil {
 		return aitasks.Outcome{
 			Result: aitasks.OutcomeInvalid,

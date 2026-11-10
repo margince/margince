@@ -267,6 +267,13 @@ func (g *Gate) decideOneIn(ctx context.Context, tx pgx.Tx, r connector.Recipient
 	if !agree {
 		return denyContradiction(d, commsauthz.CategoryMarketing), nil
 	}
+	if !req.Evidence.LeadID.IsZero() {
+		d, err := g.decidePinnedLead(ctx, tx, r, req, d, phase, country)
+		if err != nil {
+			return commsauthz.Decision{}, err
+		}
+		return requireConsentWhereNothingStandsIn(d, country), nil
+	}
 	contactID, found, err := resolveContact(ctx, tx, r)
 	if err != nil {
 		// Ambiguity refuses rather than picking, and that is an ANSWER about

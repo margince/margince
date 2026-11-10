@@ -218,20 +218,17 @@ func decideBirthTx(
 		return birthDecision{}, err
 	}
 	if posture == PostureClassified {
-		// `classified` holds a message until something judges its sender, and for
-		// this sender something already has. Holding it anyway would record a
-		// question that is answered — and nothing later re-asks it, so the message
-		// would stay limited for good.
-		//
-		// Only this rung is affected. Steps 1 to 4 have already run and any hold
-		// they placed survives, because they set decision.posture and this does
-		// not clear it.
-		cleared, err := senderClearedContactTx(ctx, tx, rec.Counterparty.Email)
-		if err != nil {
-			return birthDecision{}, err
-		}
-		if cleared {
-			posture = PostureShared
+		// A cleared sender does not clear documents that arrived later.
+		if recordCarriesDocument(rec) {
+			decision.verdictStatus = VerdictPending
+		} else {
+			cleared, err := senderClearedContactTx(ctx, tx, rec.Counterparty.Email)
+			if err != nil {
+				return birthDecision{}, err
+			}
+			if cleared {
+				posture = PostureShared
+			}
 		}
 	}
 	if posture != PostureShared {
@@ -285,10 +282,7 @@ func standingHoldsTx(
 	return decision, nil
 }
 
-// holdingVerdict answers whether an inherited thread verdict keeps a message
-// back. The opening ones (cleared, shared_by_owner) and pending are not holds:
-// pending means the classifier has not answered yet, and what holds the message
-// meanwhile is the mailbox posture, which records its own reason below.
+// Settled holds apply to every sibling; pending has not judged the conversation.
 func holdingVerdict(status string) bool {
 	switch status {
 	case VerdictHeld, VerdictUnsure, VerdictHeldByOwner:

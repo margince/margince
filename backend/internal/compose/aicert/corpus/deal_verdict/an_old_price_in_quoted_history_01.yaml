@@ -1,0 +1,50 @@
+name: an_old_price_in_quoted_history_sets_no_amount
+task: deal_verdict
+site: deal_verdict
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# The deal holds the revised price of 27,500 EUR. The buyer then answers the
+# first offer's thread with a short "will review", and the quoted history
+# under it still carries the old 30,000 EUR. Quoted text is what we wrote
+# before, not a price the buyer states now, so the amount stays.
+fixture:
+  today: "2026-11-04"
+  deal:
+    name: "Shift planning for the clinics"
+    stage: "Proposal sent"
+    amount: 27500
+    currency: EUR
+    close_date: "2026-12-12"
+    probability: 50
+  activities:
+    - kind: email
+      direction: outbound
+      at: "2026-10-09"
+      subject: "Offer for shift planning"
+      body: |
+        Hi Tomas, attached is our offer for shift planning at all four
+        clinics: 30,000 EUR a year.
+    - kind: email
+      direction: outbound
+      at: "2026-10-24"
+      subject: "Revised offer for shift planning"
+      body: |
+        Hi Tomas, as agreed on the phone, without the on-call module the
+        price comes to 27,500 EUR a year. The revised offer is attached.
+    - kind: email
+      direction: inbound
+      at: "2026-11-02"
+      subject: "Re: Offer for shift planning"
+      body: |
+        Thanks, will review with the team and come back to you.
+
+        > On 9 Oct 2026, Nora Feld wrote:
+        > Hi Tomas, attached is our offer for shift planning at all four
+        > clinics: 30,000 EUR a year.
+expect:
+  outcome: accepted
+  answer: []
+  judge: none
+  judge_none_reason: >
+    The right answer is no change, and the check fails any proposed action
+    whatever its value, so a judge has nothing left to weigh.

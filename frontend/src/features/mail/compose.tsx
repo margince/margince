@@ -156,7 +156,7 @@ export function ComposeWindow({
   const newMessage = !answering && !isChannelReply;
   const groundable = newMessage && entityType === "company";
   const accountCompanyId = groundable ? entityId : undefined;
-  const account = useAccountRecipient(accountCompanyId, fields.to, {
+  const account = useAccountRecipient(accountCompanyId, fields, {
     contactId,
     recordAddress,
   });
@@ -215,7 +215,7 @@ export function ComposeWindow({
   const grounding = groundingOf({
     entityType,
     replying: !newMessage,
-    recipientId: account.recipientId,
+    contactIds: account.contactIds,
     dealId: dealChoice.dealId,
     projectId,
   });
@@ -231,7 +231,7 @@ export function ComposeWindow({
       ...groundingOf({
         entityType,
         replying: !newMessage,
-        recipientId: account.recipientId,
+        contactIds: account.contactIds,
         dealId: fields.account.dealId,
         projectId,
       }),

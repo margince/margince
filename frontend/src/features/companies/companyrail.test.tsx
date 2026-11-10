@@ -28,6 +28,7 @@ function contact(
 ) {
   return {
     contact_id: id,
+    attachable: true,
     full_name: name,
     title: "Head of Fleet",
     primary_email: `${id}@brandt.example`,

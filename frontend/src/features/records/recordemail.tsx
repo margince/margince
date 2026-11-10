@@ -150,6 +150,7 @@ export function RecordEmailVerb({
   contactId,
   recordAddress,
   disabledReasonId,
+  disabled,
   open,
   onOpenChange,
 }: Readonly<{
@@ -159,6 +160,7 @@ export function RecordEmailVerb({
   /** The record's own address, for a first message to it. See ComposeModal. */
   recordAddress?: string;
   disabledReasonId?: string;
+  disabled?: boolean;
 }> &
   Lifted) {
   const [ownComposing, setOwnComposing] = useState(false);
@@ -174,6 +176,7 @@ export function RecordEmailVerb({
   return (
     <>
       <EmailVerb
+        disabled={disabled}
         reasonId={disabledReasonId}
         onClick={() => setComposing(true)}
       />
