@@ -97,8 +97,8 @@ For EACH supplied address emit exactly one kind:
     "on behalf of". A supplier
     or customer writing with nobody named is one of the two kinds below, never this one.
     ONLY this kind becomes a contact record.
-  "role_mailbox" — an address a company answers rather than a contact (support@, info@,
-    sales@, a shared team mailbox). The correspondence is real; there is no human to name.
+  "role_mailbox" — an address NAMED FOR A FUNCTION that a company answers rather than a contact
+    (support@, info@, sales@, a shared team mailbox), even beside a place (emea.billing@). The correspondence is real; there is no human to name.
     This includes any SERVICE DESK answering for its company about THIS BUSINESS's dealings:
     customer service, tenant or
     property management, a utility, bank, insurer or airline, a clinic reception, a booking or
@@ -106,7 +106,8 @@ For EACH supplied address emit exactly one kind:
     whose agent signs with a first name, because the next mail is answered by somebody else.
     The same desk handling the mailbox owner's own home, health or account is "personal".
   "company_sender" — the company itself writing under its own name rather than a
-    named employee, including mail signed only with a company or product name.
+    named employee, including mail signed only with a company, office or product name from an
+    address named for the company or a place rather than a function.
   "newsletter" — bulk editorial or marketing mail, however welcome. Subscribing is not a
     business relationship.
   "transactional" — automated mail from a service: receipts, invoices, notifications, delivery

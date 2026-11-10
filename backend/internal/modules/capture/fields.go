@@ -49,6 +49,9 @@ type ActivityFields struct {
 	// CalendarMethod is that part's RFC 5546 METHOD, or "" when none is known.
 	// REPLY, COUNTER and DECLINECOUNTER answer an invitation rather than ask.
 	CalendarMethod string
+	// CalendarUID names the event that part is about, so an answer to an
+	// invitation reaches the same event the calendar connector captured.
+	CalendarUID string
 	// BodyCompleteness says how much of a mail's text the parser decoded. Zero
 	// for anything not parsed from a mail, which is stored as complete.
 	BodyCompleteness BodyCompleteness
