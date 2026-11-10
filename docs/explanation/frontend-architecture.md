@@ -198,7 +198,7 @@ and a new line is never added. The steps for a move are in
 ## The shell
 
 `src/app/nav.ts` holds the list of places that decides, and `rail.test.tsx`
-pins its order. It has 8 entries: Home on its own, then three groups with
+pins its order. It has 10 entries: Home on its own, then three groups with
 labels.
 
 | Group | Route ids |
@@ -206,7 +206,7 @@ labels.
 | *(no group)* | `home` |
 | Records | `contacts`, `companies`, `leads`, `deals` |
 | Work | `projects`, `filters` |
-| Insights | `analytics` |
+| Insights | `analytics`, `progress`, `goals` |
 
 The groups belong to the **open sidebar** alone. When the sidebar is small,
 each group title keeps its place and shows a line there. So the
