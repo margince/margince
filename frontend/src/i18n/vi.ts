@@ -12835,6 +12835,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "auto.ownerNone": "Chưa có chủ sở hữu",
   "auto.ownerHint":
     "Quy tắc bị chặn khi chủ sở hữu không còn quyền truy cập. Chọn một thành viên để chạy lại.",
+  "auto.deadlineTimezone": "Múi giờ của hạn chót",
   "auto.colStatus": "Trạng thái",
   "auto.colActions": "Thao tác",
   "auto.lastRunNever": "Chưa chạy",

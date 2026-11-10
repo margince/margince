@@ -13159,6 +13159,7 @@ export const en = {
   "auto.ownerNone": "No owner",
   "auto.ownerHint":
     "A rule is blocked while its owner has no access. Pick a member to run it again.",
+  "auto.deadlineTimezone": "Deadline timezone",
   "auto.colStatus": "Status",
   "auto.colActions": "Actions",
   "auto.lastRunNever": "Never",

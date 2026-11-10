@@ -163,3 +163,25 @@ const sequence: CatalogEntry = {
 export const LongDefinitionInADrawer: Story = {
   render: () => form({ entry: sequence, initialName: sequence.name }),
 };
+
+export const CalendarDayDeadline: Story = {
+  render: () =>
+    form({
+      entry: {
+        ...nudge,
+        params_schema: {
+          type: "object",
+          properties: {
+            due_in_days: {
+              type: "integer",
+              default: 1,
+              minimum: 1,
+              maximum: 30,
+            },
+            timezone: { type: "string", format: "timezone" },
+          },
+        },
+      },
+      initialParams: { due_in_days: 1, timezone: "Europe/Berlin" },
+    }),
+};

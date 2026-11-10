@@ -135,11 +135,29 @@ func validateSingleIntParam(key string, maxValue int) func(params map[string]any
 // key their one knob "due_in_days": how many days out the created task
 // is due.
 func dueInDaysSchema(defaultDays int, description string) map[string]any {
-	return singleIntParamSchema("due_in_days", defaultDays, 30, description)
+	return map[string]any{
+		schemaKeyType:            schemaTypeObject,
+		schemaKeyAdditionalProps: false,
+		schemaKeyProperties: map[string]any{
+			paramDueInDays:    intParamProperty(defaultDays, 30, description),
+			paramTaskTimezone: taskTimezoneSchema(),
+		},
+	}
 }
 
 // validateDueInDays is dueInDaysSchema's validator.
-var validateDueInDays = validateSingleIntParam("due_in_days", 30)
+func validateDueInDays(params map[string]any) error {
+	if err := validateTaskTimezone(params); err != nil {
+		return err
+	}
+	days := make(map[string]any, len(params))
+	for key, value := range params {
+		if key != paramTaskTimezone {
+			days[key] = value
+		}
+	}
+	return validateSingleIntParam(paramDueInDays, 30)(days)
+}
 
 // noActivityReminderSchema is no_activity_reminder's one-knob shape,
 // keyed "no_activity_days" — the exact property name

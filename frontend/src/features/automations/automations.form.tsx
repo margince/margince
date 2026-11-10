@@ -4,6 +4,7 @@ import { useUnsavedGuard } from "../../components/unsaved";
 import { Button, Checkbox, Field, TextInput } from "../../design-system/atoms";
 import { RecordFormDialog } from "../../design-system/recordformdialog";
 import { Select } from "../../design-system/select";
+import { TimezoneSelect } from "../../design-system/timezoneselect";
 import { useT } from "../../i18n";
 import { DateFieldSelect } from "./automations.datefield";
 import { ListParamSelect } from "./automations.lists";
@@ -36,6 +37,16 @@ function ParamFieldControl({
   watchedList: string;
   onChange: (value: string) => void;
 }>) {
+  const t = useT();
+  if (field.kind === "timezone") {
+    return (
+      <Field label={t("auto.deadlineTimezone")}>
+        {(control) => (
+          <TimezoneSelect {...control} value={value} onChange={onChange} />
+        )}
+      </Field>
+    );
+  }
   if (field.kind === "boolean") {
     return (
       <div className="field">

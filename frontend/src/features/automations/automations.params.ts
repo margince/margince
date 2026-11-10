@@ -14,7 +14,8 @@ export type ParamField = {
     | "date_field"
     | "enum"
     | "live_list"
-    | "shortlist";
+    | "shortlist"
+    | "timezone";
   min?: number;
   max?: number;
   initial: string;
@@ -47,10 +48,15 @@ function paramKind(type: unknown): ParamField["kind"] | null {
   return null;
 }
 
-// listKind reads a string property the schema marks as naming a list, by
-// the kind of list it must be.
-function listKind(format: unknown): "live_list" | "shortlist" | null {
-  return format === "live_list" || format === "shortlist" ? format : null;
+// The format selects a shared picker without tying it to a parameter name.
+function formattedKind(
+  format: unknown,
+): "live_list" | "shortlist" | "timezone" | null {
+  return format === "live_list" ||
+    format === "shortlist" ||
+    format === "timezone"
+    ? format
+    : null;
 }
 
 // enumOptions reads a schema property's own closed value list, when it
@@ -85,7 +91,8 @@ export function paramFields(schema: Record<string, unknown>): ParamField[] {
     const kind: ParamField["kind"] | null =
       key === "date_field" && isDateFieldPicker
         ? "date_field"
-        : (listKind(raw.format) ?? (options ? "enum" : paramKind(raw.type)));
+        : (formattedKind(raw.format) ??
+          (options ? "enum" : paramKind(raw.type)));
     if (kind === null) {
       return [];
     }
@@ -107,16 +114,22 @@ export function paramsFromValues(
   values: Record<string, string>,
 ): Record<string, unknown> {
   return Object.fromEntries(
-    fields.map((field) => {
-      const value = values[field.key] ?? field.initial;
-      if (field.kind === "integer") {
-        return [field.key, Number(value)];
-      }
-      if (field.kind === "boolean") {
-        return [field.key, value === "true"];
-      }
-      return [field.key, value];
-    }),
+    fields
+      .filter(
+        (field) =>
+          field.kind !== "timezone" ||
+          (values[field.key] ?? field.initial) !== "",
+      )
+      .map((field) => {
+        const value = values[field.key] ?? field.initial;
+        if (field.kind === "integer") {
+          return [field.key, Number(value)];
+        }
+        if (field.kind === "boolean") {
+          return [field.key, value === "true"];
+        }
+        return [field.key, value];
+      }),
   );
 }
 

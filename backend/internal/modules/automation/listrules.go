@@ -74,7 +74,8 @@ func listRuleEntries() []CatalogEntry {
 		entry(listTaskName, "Follow up when a record joins or leaves a Live List",
 			"Mints a follow-up task on each record that joins or leaves the list, for the record's owner.",
 			ActionTypeCreateTask, map[string]any{
-				paramDueInDays: intParamProperty(defaultListTaskDueInDays, 30, "How many days out the follow-up task is due."),
+				paramDueInDays:    intParamProperty(defaultListTaskDueInDays, 30, "How many days out the follow-up task is due."),
+				paramTaskTimezone: taskTimezoneSchema(),
 			}),
 		entry(listNotifyName, "Tell me when a record joins or leaves a Live List",
 			"Sends the rule's owner a notice for each record that joins or leaves the list.",
@@ -151,6 +152,11 @@ func validateListRuleParam(params map[string]any, key string, extra map[string]a
 			return &ParamError{Field: field, Reason: "must be entered, left or either"}
 		}
 		return nil
+	case paramTaskTimezone:
+		if extra[paramTaskTimezone] == nil {
+			return &ParamError{Field: field, Reason: errNotAParameter}
+		}
+		return validateTaskTimezone(params)
 	case paramDueInDays:
 		if extra[paramDueInDays] == nil {
 			return &ParamError{Field: field, Reason: errNotAParameter}
@@ -322,15 +328,15 @@ func (r listRule) Plan(ctx context.Context, ev workflow.Event) (workflow.Effect,
 	}
 	switch r.action {
 	case ActionTypeCreateTask:
-		days := defaultListTaskDueInDays
-		if rule.DueInDays != nil {
-			days = *rule.DueInDays
+		dueAt, err := taskDueAt(ev.Params, ev.OccurredAt, defaultListTaskDueInDays)
+		if err != nil {
+			return workflow.Effect{}, err
 		}
 		// The task is read by whoever may read the record, so it names no
 		// list: a list's name and membership stay with the list's own sharing.
 		ctx = systemtext.WithMessage(ctx, &systemtext.Message{Subject: systemtext.Sentence(firing.taskCode())})
 		return ownedTaskEffectNoKey(ctx, r.ex, ev, firing.taskSubject(),
-			ev.OccurredAt.AddDate(0, 0, days))
+			dueAt)
 	case ActionTypeNotify:
 		return r.planNotice(ev, firing)
 	case ActionTypeAddToShortlist:

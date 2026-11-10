@@ -103,7 +103,7 @@ func (stageChangeCreateTask) Match(_ context.Context, ev workflow.Event) (bool, 
 const fieldKind = "kind"
 
 func (w stageChangeCreateTask) Plan(ctx context.Context, ev workflow.Event) (workflow.Effect, error) {
-	dueInDays, err := DueInDays(ev.Params, 2)
+	dueAt, err := taskDueAt(ev.Params, ev.OccurredAt, 2)
 	if err != nil {
 		return workflow.Effect{}, err
 	}
@@ -114,7 +114,7 @@ func (w stageChangeCreateTask) Plan(ctx context.Context, ev workflow.Event) (wor
 	// to; without them the task reaches nobody's own queue.
 	ctx = systemtext.WithMessage(ctx, &systemtext.Message{Version: 1, Subject: systemtext.Sentence("automation.stage_change")})
 	return ownedTaskEffectNoKey(ctx, w.ex, ev, systemtext.Literal("automation.stage_change"),
-		ev.OccurredAt.AddDate(0, 0, dueInDays))
+		dueAt)
 }
 
 func (w stageChangeCreateTask) Apply(ctx context.Context, _ workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {
@@ -196,13 +196,13 @@ func (routeLeadCreateTask) Match(_ context.Context, ev workflow.Event) (bool, er
 // so the two orders differ in WHERE the task first appears and never in whether
 // it appears at all.
 func (w routeLeadCreateTask) Plan(ctx context.Context, ev workflow.Event) (workflow.Effect, error) {
-	dueInDays, err := DueInDays(ev.Params, defaultRouteLeadDueInDays)
+	dueAt, err := taskDueAt(ev.Params, ev.OccurredAt, defaultRouteLeadDueInDays)
 	if err != nil {
 		return workflow.Effect{}, err
 	}
 	ctx = systemtext.WithMessage(ctx, &systemtext.Message{Version: 1, Subject: systemtext.Sentence("automation.new_lead")})
 	return ownedTaskEffectNoKey(ctx, w.ex, ev, systemtext.Literal("automation.new_lead"),
-		ev.OccurredAt.AddDate(0, 0, dueInDays))
+		dueAt)
 }
 
 func (w routeLeadCreateTask) Apply(ctx context.Context, _ workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {
