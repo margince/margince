@@ -7,8 +7,9 @@ import type { CSSProperties } from "react";
 /**
  * The corner ladder, and the squircle that rides on it.
  *
- * Six rungs, in fours: `--r-xs` 4, `--r-sm` 8, `--r-control` 12, `--r-md` 16,
- * `--r-lg` 20, `--r-full` the pill. Every `border-radius` under `src/` names one
+ * Six names on a ladder in fours: `--r-xs` 4, `--r-sm` 8, `--r-full` the pill,
+ * and `--r-control`, `--r-md` and `--r-lg`, which read `--r-sm` so a control, a
+ * card and a pane round alike. Every `border-radius` under `src/` names one
  * of them. The tree ran 3, 5, 6, 9, 10, 11 and 28px beside the tokens before
  * this was one ladder. `census/rules/corners.census.ts` now fails a seventh
  * value rather than leaving it to review.
@@ -59,20 +60,20 @@ const RUNGS = [
   },
   {
     token: "--r-control",
-    plain: "12px",
-    smooth: "24px",
+    plain: "8px",
+    smooth: "16px",
     role: "a button, an input, the select trigger",
   },
   {
     token: "--r-md",
-    plain: "16px",
-    smooth: "32px",
+    plain: "8px",
+    smooth: "16px",
     role: "a board card, the agent's row",
   },
   {
     token: "--r-lg",
-    plain: "20px",
-    smooth: "40px",
+    plain: "8px",
+    smooth: "16px",
     role: "a pane, the details panel, a reading card",
   },
   {
@@ -146,14 +147,14 @@ export const TheLadder: Story = {
 export const RoundAgainstSquircle: Story = {
   render: () => (
     <div style={column}>
-      <span>--r-lg · round 20px, squircle 40px</span>
+      <span>--r-lg · round 8px, squircle 16px</span>
       <div style={row}>
         <div
           style={{
             // The rung's PLAIN value, written out: `var(--r-lg)` resolves to the
-            // doubled 40px wherever corner-shape exists, so reading the token
-            // here would draw a 40px circular corner and compare nothing.
-            ...swatch("20px", "round"),
+            // doubled 16px wherever corner-shape exists, so reading the token
+            // here would draw a 16px circular corner and compare nothing.
+            ...swatch("8px", "round"),
             width: "180px",
             height: "110px",
           }}

@@ -125,7 +125,7 @@ export { StatCard } from "./statcard";
 type CardElement = "section" | "div" | "article" | "form" | "li";
 
 /**
- * The one card in the product: elevated ground, subtle border, 12px radius, one
+ * The one card in the product: elevated ground, subtle border, the card radius, one
  * padding. Every surface that reads as a card comes from here — a hand-rolled
  * `<div className="card">` drifts the moment one of those five values changes.
  *
