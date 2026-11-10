@@ -83,10 +83,10 @@ in a `describes:` line. A PR that changes that code says whether the page still 
 at merge time.
 
 Claim it yourself only when you must: it blocks your merge, and 30 minutes after it appeared
-`gh pr list --state open --label "claim: main-red"` still shows no claim naming its tests. Then,
-before you start, open a draft PR labelled `claim: main-red` that names the tests you take. If two
-claims take one test, the smaller PR number keeps it. The rest:
-[docs/how-to/claim-a-red-main.md](docs/how-to/claim-a-red-main.md).
+`gh pr list --state open --label "claim: main-red" --json number,title,body` shows no body naming
+its tests. Then, before you start, open a draft PR labelled `claim: main-red` naming the tests you
+take. If two claims take one test, the smaller PR number keeps it and the other closes its draft.
+The rest: [docs/how-to/claim-a-red-main.md](docs/how-to/claim-a-red-main.md).
 
 **Claim an issue before you work on it.** An assignee and a label show in the issue list; a comment
 does not. The rest: [docs/how-to/work-on-an-issue.md](docs/how-to/work-on-an-issue.md).
