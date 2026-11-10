@@ -61,6 +61,21 @@ const (
 	// VOLUME rather than about the contact: nothing they did refuses this
 	// message, and the same message is lawful again once the window rolls.
 	ReasonFrequencyCapReached = "frequency_cap_reached"
+	// ReasonOptedOutAfterRequest is a quote that rests on a recorded request
+	// alone, to somebody who objected to marketing after they asked. The rep
+	// confirms with them, and a request recorded after the objection carries
+	// the quote again.
+	ReasonOptedOutAfterRequest = "opted_out_after_request"
+	// ReasonDealNotRequested is a follow-up on an open deal the recipient is a
+	// stakeholder on, where nothing on record shows they asked for the
+	// negotiation. A deal we created is not their request.
+	ReasonDealNotRequested = "deal_not_requested"
+	// ReasonMarketingConsentRequired is marketing without consent to a
+	// recipient whose country's rules allow no exception in its place.
+	ReasonMarketingConsentRequired = "marketing_consent_required"
+	// ReasonMarketingPermissionRequired is marketing without consent or a
+	// supported statutory route under the applicable rules or limited baseline.
+	ReasonMarketingPermissionRequired = "marketing_permission_required"
 	// ReasonAllowed is the allow path's own code, so every row has one.
 	ReasonAllowed = "allowed"
 	// ReasonAllowedByOverride marks a send allowed because a seat outranked the
@@ -115,6 +130,11 @@ var absoluteDenials = map[string]bool{
 	// exactly the message this refusal exists to stop, past an objection that
 	// binds the category the caller themselves claimed.
 	ReasonClaimContradictsResolution: true,
+	// The objection binds as an objection does, and a jurisdiction that
+	// requires prior consent is not softened by a rollout mode.
+	ReasonOptedOutAfterRequest:        true,
+	ReasonMarketingConsentRequired:    true,
+	ReasonMarketingPermissionRequired: true,
 }
 
 // Absolute reports whether this reason denies regardless of Mode.

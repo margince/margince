@@ -34,7 +34,6 @@ package gates
 import (
 	"go/ast"
 	"go/build"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -62,10 +61,14 @@ var parallelExempt = gatekit.Waive(map[string]string{
 	// process-wide, so Go refuses the combination rather than letting one
 	// test's variable leak into another's.
 	"TestTheSchemaAndTheParserAgreeOnEveryInputDeclaration": "calls t.Setenv, which Go forbids in a parallel test",
+	"TestAnExportedGitDirDoesNotSteerTheCensus":             "calls t.Setenv, which Go forbids in a parallel test",
 	// Rewrites ../docs/reference/gate-inventory.md under -update-gate-inventory.
 	// The gates that walk ../docs — link targets, rulebook direction, page
 	// length — read that file.
 	"TestTheGateInventoryPageIsCurrent": "rewrites the inventory page under -update-gate-inventory, which the docs gates read",
+	// Rewrites ../docs/reference/mcp-parity.md under -update-mcp-parity, and the docs
+	// gates read that page too.
+	"TestTheMCPParityCatalogIsPublished": "rewrites the parity page under -update-mcp-parity, which the docs gates read",
 	// Rewrites danglingcitations.txt under -update-citations, which
 	// TestTheCitationRegisterIsSortedAndUnique reads.
 	"TestEveryCitedMigrationExists": "rewrites the citation register under -update-citations, which the register gate reads",
@@ -81,11 +84,10 @@ func TestEveryGateRunsInParallelWithTheOthers(t *testing.T) {
 	// accumulates across the package, so a second caller would report staleness
 	// that is not there.
 	//
-	// Only under the default build, and that is not a skip: two of the three
-	// exempt gates live in `!integration` files, so with the tag set they are
-	// not in the package at all. Their entries would then match no subject —
-	// which means "excluded by a build tag" and not "ratifies code that is
-	// gone". The default build contains every gate, so staleness is judged
+	// Only under the default build, and that is not a skip. With the tag set, an
+	// exempt gate in a `!integration` file is not in the package at all. Its entry
+	// would then match no subject, which means "excluded by a build tag" and not
+	// "ratifies code that is gone". The default build contains every gate, so staleness is judged
 	// there, on the whole set, every run.
 	if !builtWithIntegrationTag {
 		defer parallelExempt.AssertAllMatched(t)
@@ -94,7 +96,7 @@ func TestEveryGateRunsInParallelWithTheOthers(t *testing.T) {
 	var serial, exemptButParallel []string
 	seen := 0
 	for _, path := range activeGateSources(t) {
-		source, err := os.ReadFile(path)
+		source, err := gatekit.ReadFile(path)
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}

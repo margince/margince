@@ -56,6 +56,10 @@ func allowanceHandlers(t *testing.T, e *integration.Env, now func() time.Time) i
 		if code, _ := patchAllowances(installationAdminCtx(e), t, h, defaultAgentAllowances); code != http.StatusOK {
 			t.Errorf("restoring the defaults → %d", code)
 		}
+		// Rows, not values: a stored default would read as an operator's choice.
+		if _, err := e.Pool.Exec(context.Background(), `DELETE FROM setting WHERE key LIKE 'installation.agent\_%'`); err != nil {
+			t.Errorf("clearing the allowance settings: %v", err)
+		}
 	})
 	return h
 }

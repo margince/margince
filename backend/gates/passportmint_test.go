@@ -53,7 +53,7 @@ func TestEveryPassportMintTakesItsUserFromTheSession(t *testing.T) {
 	calls := 0
 	roots := []string{"internal", "cmd"}
 	for _, root := range roots {
-		err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 				strings.HasSuffix(path, "_test.go") {
 				return err
@@ -101,7 +101,7 @@ func TestOnlyIdentityMintsAPassportAndOnlyForTheSessionUser(t *testing.T) {
 	var inserts []string
 	roots := []string{"internal", "cmd"}
 	for _, root := range roots {
-		err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
 				return err
 			}
@@ -112,7 +112,7 @@ func TestOnlyIdentityMintsAPassportAndOnlyForTheSessionUser(t *testing.T) {
 			if strings.HasSuffix(path, "_test.go") || strings.Contains(path, "/integration/") {
 				return nil
 			}
-			body, readErr := os.ReadFile(path)
+			body, readErr := gatekit.ReadFile(path)
 			if readErr != nil {
 				return readErr
 			}

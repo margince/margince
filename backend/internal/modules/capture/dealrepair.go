@@ -70,12 +70,14 @@ var dealProvenanceSQL = `
 // DealRepair files mail captured before the deal rule under the deal the rule
 // finds for it now, and re-checks the links the rule itself wrote. Each mail
 // is decided as the connector of a mailbox that imported it, with that seat's
-// live authority. The repair writes as its own actor, with its reason. It
-// asks nobody and never touches a link a colleague made.
+// live authority. It writes as its own actor, asks nobody and never touches a
+// colleague's link. Check confirms a suggested deal for the refile pass and the
+// recheck. The data task leaves it nil and calls no model.
 type DealRepair struct {
 	Candidates DealCandidates
 	Authority  authz.Resolver
 	Filer      DealFiler
+	Check      DealTopicCheck
 }
 
 // BatchTx repairs one page of mail. A second run changes nothing, because
@@ -178,7 +180,7 @@ func (r DealRepair) repair(ctx context.Context, tx pgx.Tx, mail ids.ActivityID) 
 		return DealHumanKept, nil
 	case links == 0:
 		return r.asMailbox(ctx, tx, mail, dealRepairReason, func(f dealFiling) (DealOutcome, error) {
-			verdict, err := fileOnDeal(f, tx, mail, r.Candidates, nil)
+			verdict, _, err := fileOnDeal(f, tx, mail, r.Candidates, nil)
 			return verdict.Outcome, err
 		})
 	case links == 1 && machine && linked != nil:
@@ -226,7 +228,7 @@ func (r DealRepair) asMailbox(
 		}
 		f := dealFiling{decider: acting, writer: ctx, filer: r.Filer, evidence: map[string]any{"reason": reason, "decided_as": seat}}
 		decided, err := decide(f)
-		if err != nil || decided.Changed() || decided == DealMachineConfirmed {
+		if err != nil || decided.Changed() || decided == DealMachineConfirmed || decided == dealTopicPending {
 			return decided, err
 		}
 		outcome = decided
@@ -236,7 +238,9 @@ func (r DealRepair) asMailbox(
 
 // recheckMachineDeal decides a mail the rule filed on current as if it were
 // unfiled. A link the rule still finds stays. One it no longer finds is taken
-// back, and the deal it finds now, if any, is written instead.
+// back, and the deal it finds now, if any, is written instead. A suggestion of
+// another deal is no evidence against current; only a topic check takes it
+// back (recheckTopic).
 func recheckMachineDeal(f dealFiling, tx pgx.Tx, mail ids.ActivityID, current ids.UUID, candidates DealCandidates) (DealOutcome, error) {
 	if live, err := lockForDeal(f.writer, tx, mail); err != nil || !live {
 		return DealNone, err
@@ -251,6 +255,9 @@ func recheckMachineDeal(f dealFiling, tx pgx.Tx, mail ids.ActivityID, current id
 	}
 	if verdict.Outcome == DealLinked && verdict.Deal == current {
 		return DealMachineConfirmed, nil
+	}
+	if verdict.Basis.NeedsTopicCheck() {
+		return DealNone, nil
 	}
 	return replaceMachineDeal(f, tx, mail, current, verdict, candidates)
 }

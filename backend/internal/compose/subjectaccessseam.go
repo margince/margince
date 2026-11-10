@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -60,6 +61,7 @@ func newSubjectAccessAssembler(db *database.DB) *subjectAccessSeam {
 // those checks here would be a second answer to who may read a subject's whole
 // record.
 func (s *subjectAccessSeam) AssemblePackage(ctx context.Context, contactID ids.UUID) ([]byte, error) {
+	ctx = originalstore.Bind(ctx, s.db, s.blob)
 	pkg, err := privacy.AssembleSAR(ctx, s.db, ids.From[ids.ContactKind](contactID))
 	if err != nil {
 		return nil, err

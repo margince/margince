@@ -24,11 +24,12 @@ package gates
 // evidence type. Two spellings of one rule is one spelling and one omission.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // cachingWriters are the packages that persist a shape carrying evidence.
@@ -92,7 +93,7 @@ func sourcesOf(t *testing.T, pkg string) string {
 		if strings.HasSuffix(file, "_test.go") {
 			continue
 		}
-		source, err := os.ReadFile(file)
+		source, err := gatekit.ReadFile(file)
 		if err != nil {
 			t.Fatalf("reading %s: %v", file, err)
 		}

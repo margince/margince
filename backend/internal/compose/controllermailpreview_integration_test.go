@@ -104,7 +104,7 @@ func TestAConfirmRequestInAPickedLanguageIsWrittenAndAskedInIt(t *testing.T) {
 	if locale != "de" {
 		t.Errorf("question_locale %q, want de: the page would ask in a language the mail was not written in", locale)
 	}
-	_, token, _ := lastCut(l.vault.sealed, "#/confirm/")
+	token, _ := sealedConfirmToken(l.vault.sealed)
 	ref, err := l.store.ResolveConfirmToken(l.ctx, token, consent.FetchByAHuman)
 	if err != nil {
 		t.Fatalf("ResolveConfirmToken: %v", err)
@@ -319,7 +319,7 @@ func TestTheTimelineCopyOfARelaySendSaysWhereTheLinkWentInTheMailsLanguage(t *te
 	if !strings.Contains(logged, mailcopy.For("de").SentLinkMarker) {
 		t.Errorf("the timeline copy carries no German link marker:\n%s", logged)
 	}
-	_, token, _ := lastCut(l.vault.sealed, "#/confirm/")
+	token, _ := sealedConfirmToken(l.vault.sealed)
 	if strings.Contains(logged, "{{confirmation-link}}") || strings.Contains(logged, token) {
 		t.Errorf("the timeline copy shows the template token or the live link:\n%s", logged)
 	}

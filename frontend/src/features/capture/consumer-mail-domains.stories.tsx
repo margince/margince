@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { en } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -11,10 +12,6 @@ import {
 } from "../../testing/story-utils";
 import { ConsumerMailDomainsCard } from "./consumer-mail-domains";
 
-// Mail from a consumer domain still creates the contact; what it never creates is
-// a company. The shipped baseline is ~8 700 domains, so this card is where an
-// operator adds what it missed (`extra`) and takes back what it wrongly claimed
-// (`never`).
 const ADDED = { id: "cm-1", domain: "gmx.at", kind: "extra" };
 const CARVED_OUT = { id: "cm-2", domain: "brandt-partner.de", kind: "never" };
 
@@ -45,7 +42,7 @@ const CONTRIBUTOR = { capture_settings: ["read", "create"] } as const;
 const READER = { capture_settings: ["read"] } as const;
 
 const meta: Meta<typeof ConsumerMailDomainsCard> = {
-  title: "Settings/Data/Capture rules/Consumer mailboxes",
+  title: "Settings/Data/Mail capture/Consumer mailboxes",
   component: ConsumerMailDomainsCard,
 };
 export default meta;
@@ -60,8 +57,8 @@ export const Empty: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const none = await canvas.findByText(/No domains added/);
-    await expect(none.closest(".panel-body")?.textContent).toMatch(
-      /Mail from these domains creates the contact/,
+    await expect(none.closest(".panel-body")?.textContent).toContain(
+      en["consumerMail.sub"],
     );
     await expect(canvas.queryByText("Added here")).toBeNull();
   },

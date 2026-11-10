@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/moneytotal"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -42,7 +43,13 @@ func (s *Store) ProjectDealTotalsTx(ctx context.Context, tx pgx.Tx, id ids.Proje
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return ProjectDealTotals{}, err
 	}
-	base, err := s.installation.BaseCurrency(ctx, tx)
+	// A caller who may not read it is withheld the totals, not the read. The
+	// base currency entry is identity's, so this names the grant it is defined on.
+	readCtx, err := auth.Unrecorded(ctx, installationSettingsObject, principal.ActionRead)
+	if err != nil {
+		return ProjectDealTotals{}, err
+	}
+	base, err := s.installation.BaseCurrency(readCtx, tx)
 	if err != nil {
 		return ProjectDealTotals{}, err
 	}
@@ -74,8 +81,8 @@ func (s *Store) ProjectDealTotalsTx(ctx context.Context, tx pgx.Tx, id ids.Proje
 	totals := ProjectDealTotals{Currency: base}
 	err = tx.QueryRow(ctx, storekit.SQLf(`
 		SELECT %s, %s, %s, %s FROM deal d WHERE %s`,
-		FinalizeBaseTotalSQL(BaseValueSumSQL(asOfSQL, baseSQL, "d", "d.status = 'open'"), UnpricedCountSQL(asOfSQL, baseSQL, "d", "d.status = 'open'")),
-		FinalizeBaseTotalSQL(BaseValueSumSQL(asOfSQL, baseSQL, "d", "d.status = 'won'"), UnpricedCountSQL(asOfSQL, baseSQL, "d", "d.status = 'won'")),
+		moneytotal.FinalizeBaseTotalSQL(BaseValueSumSQL(asOfSQL, baseSQL, "d", "d.status = 'open'"), UnpricedCountSQL(asOfSQL, baseSQL, "d", "d.status = 'open'")),
+		moneytotal.FinalizeBaseTotalSQL(BaseValueSumSQL(asOfSQL, baseSQL, "d", "d.status = 'won'"), UnpricedCountSQL(asOfSQL, baseSQL, "d", "d.status = 'won'")),
 		UnpricedCountSQL(asOfSQL, baseSQL, "d", "d.status = 'open'"),
 		UnpricedCountSQL(asOfSQL, baseSQL, "d", "d.status = 'won'"), strings.Join(where, " AND ")),
 		args...).Scan(&totals.OpenMinor, &totals.WonMinor, &totals.OpenUnpriced, &totals.WonUnpriced)

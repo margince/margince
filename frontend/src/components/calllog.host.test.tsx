@@ -68,7 +68,7 @@ describe("a call started under the shell's host", () => {
 
     expect(link.getAttribute("href")).toBe(telUri(DIALS));
     expect(fireEvent.click(link)).toBe(true);
-    const dialog = screen.getByRole("dialog", { name: "Log activity" });
+    const dialog = await screen.findByRole("dialog", { name: "Log activity" });
     expect(
       within(dialog).getByRole("combobox", { name: "Type" }).textContent,
     ).toContain("Call");
@@ -208,7 +208,7 @@ function mountInline(outer: CallStart | null) {
 }
 
 describe("a call started inside a surface that logs in place", () => {
-  it("logs its own contact here and hands another contact's call on", () => {
+  it("logs its own contact here and hands another contact's call on", async () => {
     const outer = vi.fn();
     mountInline(outer);
 
@@ -221,7 +221,9 @@ describe("a call started inside a surface that logs in place", () => {
 
     fireEvent.click(screen.getByRole("link", { name: "Call own" }));
     expect(outer).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole("region", { name: "Log activity" })).toBeTruthy();
+    expect(
+      await screen.findByRole("region", { name: "Log activity" }),
+    ).toBeTruthy();
   });
 
   it("only dials where nothing above it logs", async () => {
@@ -273,7 +275,9 @@ describe("a call started inside a surface that logs in place", () => {
     });
     await user.click(within(question).getByRole("button", { name: "Cancel" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    expect(screen.getByRole("region", { name: "Log activity" })).toBeTruthy();
+    expect(
+      await screen.findByRole("region", { name: "Log activity" }),
+    ).toBeTruthy();
 
     await user.click(within(log).getByRole("button", { name: "Close" }));
     await user.click(

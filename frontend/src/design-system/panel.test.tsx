@@ -1,20 +1,21 @@
 /** @vitest-environment happy-dom */
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { createPortal } from "react-dom";
 import { afterEach, describe, expect, it } from "vitest";
-import { selectorList, subjectsOf } from "../../scripts/lib/css-rules";
 import {
-  PANEL_TONES,
-  Panel,
-  PanelBody,
-  PanelGroupHead,
-  PanelIntro,
-  PanelRow,
-} from "./panel";
+  BAND_GEOMETRY,
+  bandRules,
+  cssRules,
+  declaredValue,
+  stateArmRoleInsets,
+  stripComments,
+  titleRules,
+  titleTypeRules,
+} from "../../census/rules/panel.census";
+import { EmptyState } from "./atoms";
+import { PANEL_TONES, Panel, PanelBody, PanelIntro } from "./panel";
 
 afterEach(cleanup);
 
@@ -94,138 +95,10 @@ describe("a titled panel is a region named by its title", () => {
   });
 });
 
-// The rule and the hover are two shapes, and PanelRow used to hold them
-// together: every row lit up under the pointer, so a panel of ruled blocks a
-// reader is meant to READ told them all five were pressable. The default is
-// therefore inert, and a caller opts in only when the whole row is one press
-// target.
-describe("PanelGroupHead", () => {
-  it("puts its id on the heading, so a table in the group can be named by it", () => {
-    render(<PanelGroupHead title="Notes" level="h3" id="group-notes" />);
-    expect(screen.getByRole("heading", { name: "Notes", level: 3 }).id).toBe(
-      "group-notes",
-    );
-  });
-});
-
-describe("PanelRow separates the hairline from the press", () => {
-  it("draws an inert row by default", () => {
-    const { container } = render(<PanelRow>Renewal date</PanelRow>);
-    const row = container.querySelector(".panel-row");
-    expect(row).not.toBeNull();
-    expect(row?.classList.contains("panel-row-interactive")).toBe(false);
-  });
-
-  it("marks the row a press target when the caller says it is one", () => {
-    const { container } = render(
-      <PanelRow interactive>
-        <button type="button">Q4 — renewals</button>
-      </PanelRow>,
-    );
-    expect(
-      container
-        .querySelector(".panel-row")
-        ?.classList.contains("panel-row-interactive"),
-    ).toBe(true);
-  });
-
-  // The caller's own class survives the variant: a screen names its row for
-  // layout, and the two spellings have to coexist on one element.
-  it("keeps the caller's class beside the variant", () => {
-    const { container } = render(
-      <PanelRow interactive className="panel-row-on">
-        Q3
-      </PanelRow>,
-    );
-    const row = container.querySelector(".panel-row");
-    expect(row?.classList.contains("panel-row-interactive")).toBe(true);
-    expect(row?.classList.contains("panel-row-on")).toBe(true);
-  });
-
-  it("marks a row of a record list apart from a press target", () => {
-    const { container } = render(<PanelRow record>Deep tier</PanelRow>);
-    const row = container.querySelector(".panel-row");
-    expect(row?.classList.contains("panel-row-record")).toBe(true);
-    expect(row?.classList.contains("panel-row-interactive")).toBe(false);
-  });
-
-  it("leaves a plain row out of the record list", () => {
-    const { container } = render(<PanelRow>Renewal date</PanelRow>);
-    expect(
-      container
-        .querySelector(".panel-row")
-        ?.classList.contains("panel-row-record"),
-    ).toBe(false);
-  });
-});
-
-type OpeningRowProps = { opened: string[]; pressed: string[] };
-
-describe("PanelRow onOpen opens on a press that lands on no control", () => {
-  function OpeningRow({ opened, pressed }: Readonly<OpeningRowProps>) {
-    return (
-      <PanelRow record onOpen={() => opened.push("Pricing playbook")}>
-        <span>Pricing playbook</span>
-        <button type="button" onClick={() => pressed.push("menu")}>
-          Actions for Pricing playbook
-        </button>
-        {createPortal(
-          <div role="menu">
-            <span>Archive set</span>
-          </div>,
-          document.body,
-        )}
-      </PanelRow>
-    );
-  }
-
-  it("opens the row on a press on its text, and marks it with the pointer", async () => {
-    const user = userEvent.setup();
-    const opened: string[] = [];
-    const { container } = render(<OpeningRow opened={opened} pressed={[]} />);
-    await user.click(screen.getByText("Pricing playbook"));
-    expect(opened).toEqual(["Pricing playbook"]);
-    expect(
-      container
-        .querySelector(".panel-row")
-        ?.classList.contains("panel-row-opens"),
-    ).toBe(true);
-  });
-
-  it("leaves a press on a button inside the row to that button", async () => {
-    const user = userEvent.setup();
-    const opened: string[] = [];
-    const pressed: string[] = [];
-    render(<OpeningRow opened={opened} pressed={pressed} />);
-    await user.click(
-      screen.getByRole("button", { name: "Actions for Pricing playbook" }),
-    );
-    expect(pressed).toEqual(["menu"]);
-    expect(opened).toEqual([]);
-  });
-
-  // React bubbles a portal's click through the row, though the menu is not in its DOM.
-  it("ignores a press inside a menu the row portalled out", async () => {
-    const user = userEvent.setup();
-    const opened: string[] = [];
-    render(<OpeningRow opened={opened} pressed={[]} />);
-    await user.click(within(screen.getByRole("menu")).getByText("Archive set"));
-    expect(opened).toEqual([]);
-  });
-
-  it("draws no pointer on a row without onOpen", () => {
-    const { container } = render(<PanelRow record>Deep tier</PanelRow>);
-    expect(
-      container
-        .querySelector(".panel-row")
-        ?.classList.contains("panel-row-opens"),
-    ).toBe(false);
-  });
-});
-
 // A deleted rule body still parses and still paints, so the stylesheet is
-// asserted on directly rather than trusting the class list above: the hover
-// fill has to exist, and it has to hang on the interactive class alone.
+// asserted on directly rather than trusting the class list in
+// panel.rows.test.tsx. The hover fill has to exist, and it has to hang on the
+// interactive class alone.
 describe("panel.css keeps the row's hover on its two variants", () => {
   it("declares the hover fill only for an interactive row and a record row", () => {
     const css = stripComments(panelCss());
@@ -417,116 +290,6 @@ describe("PanelIntro is the line, and panel.css is its interval", () => {
 // exactly how the same card came to stand at three heights.
 // ---------------------------------------------------------------------------
 
-// One rule as the sweeps below read it: what it styles, and what it declares.
-type CssRule = Readonly<{
-  selector: string;
-  block: string;
-  properties: readonly string[];
-}>;
-
-// The band's own geometry — how tall it is, the air inside it, how its content
-// lines up. Whoever sets one of these decides the height of every panel head on
-// the screen, and that decision belongs to panel.css alone.
-const BAND_GEOMETRY =
-  /^(?:height|min-height|max-height|padding(?:-top|-bottom|-block|-block-start|-block-end)?|align-items|flex-wrap)$/;
-// The band's lower edge is the card's own chrome, drawn edge to edge on every
-// panel in the product. A tone recolours that hairline — tint on the same
-// geometry, held below — but no sheet outside panel.css redraws or drops it.
-const BAND_EDGE = /^border-bottom(?:-|$)/;
-// How the title is SET. Every panel title in the product reads at one size, so
-// each of these is a way of answering a question the house has answered — and
-// four sheets answered it differently, from body size up to a section rung.
-// `font` is in the list because the shorthand carries the size along with it.
-const TITLE_TYPE =
-  /^(?:font|font-size|font-weight|font-family|line-height|letter-spacing)$/;
-
-function stripComments(css: string): string {
-  return css.replace(/\/\*[\s\S]*?\*\//g, "");
-}
-
-// An at-rule that opens a block (@media, @container, @supports) WRAPS ordinary
-// rules, so dropping its prelude and brace leaves those rules at the top level
-// where the scan below reads them; the orphaned closing brace matches no
-// selector. A statement at-rule (@import) opens no block and is dropped whole,
-// as far as its semicolon and no further: consuming to the next brace instead
-// would take the selector after it along with it, and a sweep that reads a
-// smaller tree reports PASS with nothing to notice.
-function unwrapAtRules(css: string): string {
-  return css.replace(/@[a-zA-Z-]+[^{};]*[{;]/g, "");
-}
-
-// One declaration's value, read by NAME rather than matched in place, so a
-// property named beside a colon inside a regex literal in this file is never
-// read as a declaration of it.
-function declaredValue(block: string, property: string): string | undefined {
-  for (const declaration of block.split(";")) {
-    const colon = declaration.indexOf(":");
-    if (colon < 0) continue;
-    if (declaration.slice(0, colon).trim().toLowerCase() === property) {
-      return declaration.slice(colon + 1).trim();
-    }
-  }
-  return undefined;
-}
-
-function declaredProperties(block: string): readonly string[] {
-  return block
-    .split(";")
-    .map((declaration) => declaration.split(":")[0].trim().toLowerCase())
-    .filter((property) => /^[a-z-]+$/.test(property));
-}
-
-function cssRules(css: string): readonly CssRule[] {
-  const flat = unwrapAtRules(stripComments(css));
-  return [...flat.matchAll(/([^{}]+)\{([^{}]*)\}/g)].flatMap(
-    ([, selectors, block]) =>
-      selectorList(selectors).map((selector) => ({
-        // One space per combinator, whatever the sheet wrapped across lines:
-        // the compound scan below reads a descendant combinator as a space.
-        selector: selector.replace(/\s+/g, " "),
-        block,
-        properties: declaredProperties(block),
-      })),
-  );
-}
-
-// What a rule STYLES is the last compound of its selector: `.pe-memory
-// .panel-head` re-shapes the band, `.panel-head .panel-title` shapes the title
-// inside it, `.panel-head > .ext-unit-actions` an action beside it. A class
-// whose name merely BEGINS with the band's — `.panel-head-count`, say — is
-// content inside it, not the band.
-function stylesTheBand(selector: string): boolean {
-  return subjectsOf(selector).some((subject) =>
-    /^\.panel-head(?![\w-])/.test(subject),
-  );
-}
-
-function bandRules(css: string): readonly CssRule[] {
-  return cssRules(css).filter((rule) => stylesTheBand(rule.selector));
-}
-
-// The title, wherever it hangs: `.panel-head .panel-title`, a screen's
-// `.co-glance-cols .panel > .panel-head .panel-title`, an `h2.panel-title` and
-// a `.panel-title:hover` are all the same node. The dot is load-bearing —
-// `.rmap-panel-title` is the map's own aside and not this title at all.
-function stylesTheTitle(selector: string): boolean {
-  return subjectsOf(selector).some((subject) =>
-    /(?:^|[^\w-])\.panel-title(?![\w-])/.test(subject),
-  );
-}
-
-function titleRules(css: string): readonly CssRule[] {
-  return cssRules(css).filter((rule) => stylesTheTitle(rule.selector));
-}
-
-// The rules that decide how a title is SET, which is the thing one sheet owns.
-// A rule that only recolours or truncates it is not one of them.
-function titleTypeRules(css: string): readonly CssRule[] {
-  return titleRules(css).filter((rule) =>
-    rule.properties.some((property) => TITLE_TYPE.test(property)),
-  );
-}
-
 // Comments are stripped first here and in the gap below: prose about a
 // property reads exactly like the property to a regex, and a sentence opening
 // "No gap: …" is what the stack's own comment says.
@@ -630,18 +393,6 @@ describe("the panel head stands at the height every panel shares, and grows only
     expect(declaredValue(root?.block ?? "", "hyphenate-limit-chars")).toBe(
       "7 3 3",
     );
-    const elsewhere = [
-      ...stylesheetsUnder(src),
-      ...stylesheetsUnder(extensions),
-    ]
-      .filter((path) => !path.endsWith(join("design-system", "base.css")))
-      .filter((path) =>
-        /hyphenate-limit-chars\s*:/.test(
-          stripComments(readFileSync(path, "utf8")),
-        ),
-      )
-      .map((path) => relative(src, path));
-    expect(elsewhere).toEqual([]);
   });
 
   // The band grows only by wrapping. A `:has()` rule would grow it for one kind
@@ -736,122 +487,6 @@ describe("a panel tone tints the head band and never reshapes it", () => {
   });
 });
 
-// Every sheet the product ships, and the one that owns the panel. Shared by
-// both sweeps below: one walker, so a tree one of them could not reach is a
-// tree neither of them silently passed.
-const src = join(here, "..");
-const extensions = join(here, "..", "..", "..", "extensions");
-const owner = join(here, "panel.css");
-
-function stylesheetsUnder(root: string): readonly string[] {
-  if (!existsSync(root)) return [];
-  return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(root, entry.name);
-    if (entry.isDirectory()) {
-      return entry.name === "node_modules" ? [] : stylesheetsUnder(path);
-    }
-    return entry.isFile() && path.endsWith(".css") ? [path] : [];
-  });
-}
-
-// The sweep. `check-ds-spacing-roles.sh` holds the VOCABULARY a screen re-spaces
-// a primitive in; this holds that the head band is not a screen's to re-space at
-// all, in any vocabulary — a role-spelled `padding-top: var(--padPanel)` passes
-// that gate and still gives one screen a taller panel than every other.
-describe("panel.css is the only sheet that shapes the head band", () => {
-  // The detector, proven against the one rule that legitimately declares the
-  // band: a scan that stopped recognising `.panel-head` would sweep a smaller
-  // tree, report PASS, and leave nothing to notice.
-  it("recognises the band where it is declared", () => {
-    const own = bandRules(panelCss());
-    expect(own.map((rule) => rule.selector)).toContain(".panel-head");
-  });
-
-  // No `.panel-head-*` class exists today — the head carries its title and its
-  // actions and nothing else — so the fixture names one a future head might
-  // add. That is the near miss: a detector reading it as the band would fail a
-  // sheet that never re-spaced anything.
-  it("reads a rule about the head's CONTENT as content", () => {
-    const inside = bandRules(`
-      .ext-unit > .panel-head > .ext-unit-actions { flex: 0 1 auto; }
-      .panel-head-count { margin-inline-start: var(--space-2); }
-    `);
-    expect(inside).toEqual([]);
-  });
-
-  // The title is not the band, and it is not a screen's either. Proven on the
-  // rule the glance carried and on the near-miss beside it: `.rmap-panel-title`
-  // is the relationship map's aside, and a detector that read it as this title
-  // would fail a sheet that never touched a panel.
-  it("reads a title rule as the title, wherever it hangs", () => {
-    const css = `
-      .co-glance-cols .panel > .panel-head .panel-title { font-family: var(--fontFamilyBody); }
-      .rmap-panel-title { font-family: var(--fontFamilyBody); }
-      .pe-memory .panel-head .panel-title:hover { color: var(--accent); }
-    `;
-    expect(bandRules(css)).toEqual([]);
-    expect(titleTypeRules(css).map((rule) => rule.selector)).toEqual([
-      ".co-glance-cols .panel > .panel-head .panel-title",
-    ]);
-  });
-
-  it("reads a band rule wrapped in a query, and one that follows an import", () => {
-    const wrapped = bandRules(`
-      @import "./other.css";
-      @media (max-width: 40rem) {
-        .pe-memory .panel-head { min-height: 0; }
-      }
-      .co-glance .panel > .panel-head:has(.panel-title) { padding-block: 0; }
-    `);
-    expect(wrapped.map((rule) => rule.selector)).toEqual([
-      ".pe-memory .panel-head",
-      ".co-glance .panel > .panel-head:has(.panel-title)",
-    ]);
-  });
-
-  it("finds no other sheet setting the band's geometry, its edge or its title", () => {
-    const swept = [...stylesheetsUnder(src), ...stylesheetsUnder(extensions)]
-      .filter((path) => path !== owner)
-      .sort();
-    // Named members, not just a count: a walker that silently reached a
-    // smaller tree would sweep past the screens that once carried overrides
-    // and still report PASS.
-    expect(swept.length).toBeGreaterThan(0);
-    expect(
-      swept.filter(
-        (path) =>
-          path.endsWith(join("features", "deals", "deal360", "deal360.css")) ||
-          path.endsWith(join("features", "contacts", "contact360.css")),
-      ),
-    ).toHaveLength(2);
-
-    const offences = swept.flatMap((path) => {
-      const css = readFileSync(path, "utf8");
-      const said = (rule: CssRule, property: string) =>
-        `${relative(src, path)}: ${rule.selector} sets ${property}`;
-      return [
-        ...bandRules(css).flatMap((rule) =>
-          rule.properties
-            .filter(
-              (property) =>
-                BAND_GEOMETRY.test(property) || BAND_EDGE.test(property),
-            )
-            .map((property) => said(rule, property)),
-        ),
-        ...titleRules(css).flatMap((rule) =>
-          rule.properties
-            .filter((property) => TITLE_TYPE.test(property))
-            .map((property) => said(rule, property)),
-        ),
-      ];
-    });
-    expect(
-      offences,
-      "the head band's floor is 56px and its title one size on every screen: recolour them if you must, resize them in panel.css or not at all",
-    ).toEqual([]);
-  });
-});
-
 // ---------------------------------------------------------------------------
 // The pane's own inset for a state arm it cannot wrap.
 //
@@ -866,38 +501,6 @@ describe("panel.css is the only sheet that shapes the head band", () => {
 // that screen knew was a panel, which is what a rule the caller has to
 // remember gets you.
 // ---------------------------------------------------------------------------
-
-// A state arm is the whole thing `PendingBody` or `EmptyState` draws.
-// `.pending-line` and `.empty-plate` are parts of one, not one.
-function isStateArm(selector: string): boolean {
-  return subjectsOf(selector).some((subject) =>
-    /^\.(?:pending|empty)$/.test(subject),
-  );
-}
-
-const INSET = /^padding(?:-inline(?:-start|-end)?|-left|-right)?$/;
-
-// A PANE's inset, spelled as the role rather than as a rung. The role is what
-// makes the rule this one: `var(--padPanel)` on a state arm says "the surface
-// holding this is a pane", which is a claim only the pane's own sheet gets to
-// make. A rung there is the spacing-roles gate's finding and not this one's —
-// it reads a screen re-spacing a design-system class as a second opinion
-// already, and the role vocabulary is exactly what it lets through.
-const PANE_INSET = /var\(--pad(?:Panel|Card)\)/;
-
-// An inset a CONTAINER decides for the arm standing in it, which is what a
-// combinator in the selector says. `.empty` on its own is `EmptyState` sizing
-// itself in the sheet that draws it, and the primitive's own declaration is
-// not a second opinion about it.
-function stateArmRoleInsets(css: string): readonly CssRule[] {
-  return cssRules(css).filter(
-    (rule) =>
-      isStateArm(rule.selector) &&
-      /[ >+~]/.test(rule.selector) &&
-      rule.properties.some((property) => INSET.test(property)) &&
-      PANE_INSET.test(rule.block),
-  );
-}
 
 describe("the pane insets the state arm it has no body to wrap", () => {
   it("pays that inset at its own role, on a bare child of the panel", () => {
@@ -939,51 +542,39 @@ describe("the pane insets the state arm it has no body to wrap", () => {
       }
     }
   });
+});
 
-  // The detector, proven on the rule a screen had spelled for itself: a scan
-  // that stopped recognising it would sweep a smaller tree, report PASS, and
-  // leave nothing to notice. The near-misses beside it are the three readings
-  // this sweep must NOT claim — a rung is the spacing-roles gate's question, a
-  // part of an arm is not the arm, and the primitive sizing itself is the
-  // owner rather than a second opinion about it.
-  it("recognises a screen spelling the pane's inset for its own panel", () => {
-    const found = stateArmRoleInsets(`
-      .auto-inspector > .pending,
-      .auto-inspector > .empty { padding: var(--padPanel); }
-      .palette-list .pending { padding: var(--space-2); }
-      .empty-plate { padding: var(--padCard); }
-      .empty { padding: var(--space-5) var(--padCard); }
-    `);
-    expect(found.map((rule) => rule.selector)).toEqual([
-      ".auto-inspector > .pending",
-      ".auto-inspector > .empty",
-    ]);
-  });
-
-  it("finds no other sheet spelling a pane's inset on a state arm", () => {
-    const swept = [...stylesheetsUnder(src), ...stylesheetsUnder(extensions)]
-      .filter((path) => path !== owner)
-      .sort();
-    // Named members, not just a count: a walker that reached a smaller tree
-    // would sweep past the screen that carried the copy and still report PASS.
-    expect(swept.length).toBeGreaterThan(0);
-    expect(
-      swept.filter(
-        (path) =>
-          path.endsWith(
-            join("features", "automations", "automationdetail.css"),
-          ) || path.endsWith(join("design-system", "settingrow.css")),
-      ),
-    ).toHaveLength(2);
-
-    const offences = swept.flatMap((path) =>
-      stateArmRoleInsets(readFileSync(path, "utf8")).map(
-        (rule) => `${relative(src, path)}: ${rule.selector}`,
-      ),
+// An instructional empty state in a panel body is a card of its own, with a
+// title, a sentence and a verb. The one-line empty state's flush rule must not
+// reach it, or its text sits on its border.
+describe("an instructional empty state in a panel body", () => {
+  it("keeps its instructional class", () => {
+    const { container } = render(
+      <PanelBody>
+        <EmptyState title="No data purchased">
+          A lookup buys details.
+        </EmptyState>
+      </PanelBody>,
     );
     expect(
-      offences,
-      "the pane insets its own un-wrappable state arm — panel.css says it once, for every panel in the product",
-    ).toEqual([]);
+      container.querySelector(".panel-body > .empty.empty-instructional"),
+    ).not.toBeNull();
+  });
+
+  it("is left out of the rule that strips the one-line state's padding", () => {
+    const css = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "panel.css"),
+      "utf8",
+    );
+    const rules = cssRules(css);
+    const paddingOf = (selector: string) =>
+      rules
+        .filter((rule) => rule.selector === selector)
+        .map((rule) => declaredValue(rule.block, "padding"))
+        .find((value) => value !== undefined);
+    expect(paddingOf(".panel-body > .empty")).toBeUndefined();
+    expect(paddingOf(".panel-body > .empty:not(.empty-instructional)")).toBe(
+      "0",
+    );
   });
 });

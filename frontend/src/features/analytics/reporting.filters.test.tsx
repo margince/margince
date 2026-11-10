@@ -8,7 +8,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
-import { RecordZoneProvider } from "../../lib/recordzone";
+import { CompanyZoneProvider } from "../../lib/companyzone";
 import { ReportingFilters } from "./reporting.filters";
 
 afterEach(() => {
@@ -32,7 +32,7 @@ it("marks today in the workspace zone the custom period is counted in", async ()
       }
     >
       <LocaleProvider initial="en">
-        <RecordZoneProvider zone="Pacific/Pago_Pago">
+        <CompanyZoneProvider zone="Pacific/Pago_Pago">
           <ReportingFilters
             showScope={false}
             showPipeline={false}
@@ -47,7 +47,7 @@ it("marks today in the workspace zone the custom period is counted in", async ()
             }}
             onChange={vi.fn()}
           />
-        </RecordZoneProvider>
+        </CompanyZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );

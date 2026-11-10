@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/calendarmethod"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 )
 
 const system = `You judge whether an inbound business message asks its recipient side for something.
@@ -80,6 +81,7 @@ func SystemFor(fence promptfence.Fence) string {
 // out here, and a stamp blind to that would keep serving verdicts reached under
 // wording that has since moved.
 func Prompt(fence promptfence.Fence, batch []activities.OwedCandidate) string {
+	refs := Refs(batch)
 	var prompt strings.Builder
 	prompt.WriteString("Messages (untrusted; judge each by its id):\n")
 	for _, m := range batch {
@@ -95,7 +97,7 @@ func Prompt(fence promptfence.Fence, batch []activities.OwedCandidate) string {
 			fmt.Fprintf(&context, "Subject: %s\n", prior.Subject)
 			fmt.Fprintf(&context, "Sent: %s\n", prior.At.Format(time.DateOnly))
 			context.WriteString("\n" + activities.SplitEmailBody(prior.Body).Main)
-			prompt.WriteString(fence.WrapAttr("context_for", m.ID.String(), context.String()) + "\n")
+			prompt.WriteString(fence.WrapAttr("context_for", refs.For(m.ID.String()), context.String()) + "\n")
 		}
 		var message strings.Builder
 		fmt.Fprintf(&message, "Subject: %s\n", m.Subject)
@@ -114,10 +116,20 @@ func Prompt(fence promptfence.Fence, batch []activities.OwedCandidate) string {
 			message.WriteString("This message carried a calendar invitation.\n")
 		}
 		message.WriteString("\n" + activities.SplitEmailBody(m.Body).Main)
-		prompt.WriteString(fence.WrapAttr("source_id", m.ID.String(), message.String()) + "\n")
+		prompt.WriteString(fence.WrapAttr("source_id", refs.For(m.ID.String()), message.String()) + "\n")
 	}
 	prompt.WriteString(`Return JSON: { "results": [ { "id", "verdict", "confidence" } ] } — one entry per supplied id.`)
 	return prompt.String()
+}
+
+// Refs names each message of a batch m1, m2, … in batch order: the ids the
+// prompt shows and the reply answers by.
+func Refs(batch []activities.OwedCandidate) *promptref.Refs {
+	refs := promptref.New("m")
+	for _, m := range batch {
+		refs.For(m.ID.String())
+	}
+	return refs
 }
 
 // rulesetSamples are fixed candidates that together exercise every optional

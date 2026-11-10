@@ -24,8 +24,9 @@ import {
   useT,
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { VOICE_MIN_WORDS } from "../../lib/voice-intake-core";
 
 type VoiceCorpusSource = components["schemas"]["VoiceCorpusSource"];
@@ -89,7 +90,7 @@ export function bandLabel(t: Translator, band: string | undefined): string {
   if (band === undefined) {
     return "";
   }
-  return hasLabel(BAND_LABEL, band) ? t(BAND_LABEL[band]) : band;
+  return hasLabel(BAND_LABEL, band) ? t(labelFor(BAND_LABEL, band)) : band;
 }
 
 const REGISTER_LABEL: Record<VoiceCorpusSource["register"], MessageKey> = {
@@ -102,7 +103,7 @@ const REGISTER_LABEL: Record<VoiceCorpusSource["register"], MessageKey> = {
 
 function registerLabel(t: Translator, register: string): string {
   return hasLabel(REGISTER_LABEL, register)
-    ? t(REGISTER_LABEL[register])
+    ? t(labelFor(REGISTER_LABEL, register))
     : register;
 }
 
@@ -251,7 +252,7 @@ function sampleColumns({
           <span>{source.source_label}</span>
           <span className="t-caption">
             {hasLabel(KIND_LABEL, source.kind)
-              ? t(KIND_LABEL[source.kind])
+              ? t(labelFor(KIND_LABEL, source.kind))
               : source.kind}
           </span>
         </CellStack>
@@ -328,7 +329,7 @@ export function VoiceSamples({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const sources = useVoiceSources(profileId);
   const [removing, setRemoving] = useState<VoiceCorpusSource | null>(null);
   const asked = useLastSubject(removing);

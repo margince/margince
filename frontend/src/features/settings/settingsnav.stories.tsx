@@ -127,7 +127,7 @@ type Story = StoryObj<typeof meta>;
 export const AdminOnPersonalPage: Story = { render: rail(ADMIN) };
 
 export const AdminOnCompanyPage: Story = {
-  args: { route: { screen: SETTINGS_SCREEN, id: "pipelines" } },
+  args: { route: { screen: SETTINGS_SCREEN, id: "deals" } },
   render: rail(ADMIN),
 };
 
@@ -137,7 +137,7 @@ export const AdminOnHome: Story = {
 };
 
 export const AdminDark: Story = {
-  args: { route: { screen: SETTINGS_SCREEN, id: "pipelines" } },
+  args: { route: { screen: SETTINGS_SCREEN, id: "deals" } },
   globals: { theme: "dark" },
   render: rail(ADMIN),
 };
@@ -145,14 +145,14 @@ export const AdminDark: Story = {
 export const Member: Story = { render: rail(MEMBER) };
 
 export const OpenedOffRail: Story = {
-  args: { route: { screen: SETTINGS_SCREEN, id: "fields" } },
+  args: { route: { screen: SETTINGS_SCREEN, id: "records" } },
   render: rail(READS_FIELDS),
 };
 
 // At phone width the level leaves the bar and the page heading becomes its
 // switcher.
 export const Phone: Story = {
-  args: { route: { screen: SETTINGS_SCREEN, id: "pipelines" } },
+  args: { route: { screen: SETTINGS_SCREEN, id: "deals" } },
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: phone(ADMIN),
@@ -162,14 +162,14 @@ export const Phone: Story = {
       await canvas.findByRole("button", {
         name: en["shell.sectionSwitch"].replace(
           "{name}",
-          en["settings.tab.pipelines"],
+          en["settings.tab.deals"],
         ),
       }),
     );
     // The sheet lands on the reader's own page, not on the search field.
     const sheet = within(canvasElement.ownerDocument.body);
     const current = await sheet.findByRole("link", {
-      name: en["settings.tab.pipelines"],
+      name: en["settings.tab.deals"],
       current: "page",
     });
     await expect(current).toHaveFocus();
@@ -178,7 +178,7 @@ export const Phone: Story = {
 
 // A page this reader may only read joins the rail in its own group while open.
 export const PhoneOpenedOffRail: Story = {
-  args: { route: { screen: SETTINGS_SCREEN, id: "fields" } },
+  args: { route: { screen: SETTINGS_SCREEN, id: "records" } },
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: phone(READS_FIELDS),

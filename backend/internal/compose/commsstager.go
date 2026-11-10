@@ -232,7 +232,7 @@ func (s commsStager) RecordPendingReview(ctx context.Context, err error, intentI
 	return &consent.SendRefusedError{
 		ReviewID: review.ID, Cause: pending.cause,
 		// Decided here, because this is where the principal is known.
-		Actions: actions, Overrulable: overrulable,
+		Actions: actions, Overrulable: overrulable, Refusals: consent.BlockingRefusals(pending.set),
 	}
 }
 
@@ -334,15 +334,16 @@ func actionsForRefusal(ctx context.Context, review consent.Review) []string {
 		return nil
 	}
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
+	if !ok || !actor.HumanOrItsAgent() {
 		return nil
 	}
-	// Whoever may direct past every refusal directs the send; anyone else
-	// overrules a refusal the engine lets a rep overrule, with their own reason.
+	// Whoever may direct past every refusal directs the send. A human who may
+	// not can overrule what the engine lets a rep overrule, with their own reason.
+	// An agent has no overrule action.
 	if review.DirectableBy(ctx) {
 		return []string{"direct_send"}
 	}
-	if len(review.Overrulable()) == 0 {
+	if actor.Type != principal.PrincipalHuman || len(review.Overrulable()) == 0 {
 		return nil
 	}
 	return []string{"overrule"}

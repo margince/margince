@@ -80,3 +80,14 @@ func TestTheOversizedBundleRefusalNamesTheWayOut(t *testing.T) {
 		t.Errorf("refusal = %q, want it to name deciding the members individually", err.Error())
 	}
 }
+
+func TestBundleContextRefusalsLeaveTheMemberPending(t *testing.T) {
+	for _, refusal := range []error{apperrors.ErrConsentNotGranted, apperrors.ErrSeatTierInsufficient} {
+		if !decisionContextRefusal(refusal) {
+			t.Errorf("refusal aborts the bundle: %v", refusal)
+		}
+	}
+	if decisionContextRefusal(errors.New("database unavailable")) {
+		t.Fatal("database failure treated as a member refusal")
+	}
+}

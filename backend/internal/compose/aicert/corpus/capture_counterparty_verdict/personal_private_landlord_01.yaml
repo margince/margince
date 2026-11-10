@@ -1,0 +1,34 @@
+name: the_owners_private_landlord_is_not_a_business_contact
+task: capture_counterparty_verdict
+site: verdict
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# A named private landlord writing about the flat the mailbox owner lives in.
+# A named human and a firm tone pull towards contact; the matter is the
+# owner's own home, which the definitions give as personal.
+fixture:
+  display_name: Gerald Ostrowski
+  email: g.ostrowski@mailbox.example
+  subject: Heating repair in your flat on Thursday
+  direction: inbound
+  body: |
+    Hello Ms Varga,
+
+    the plumber will come to your flat on Thursday between 8 and 10 to repair
+    the heating in the living room. Please make sure someone is home to let
+    him in, or leave the key with the neighbours on the ground floor.
+
+    The rent for December stays the same; the new service charge statement
+    follows in January.
+
+    Kind regards,
+    Gerald Ostrowski
+expect:
+  outcome: accepted
+  privacy: true
+  answer: personal
+  judge: none
+  judge_none_reason: >
+    The answer is one closed kind, and the check requires it exactly.
+    The rubric only ranked the other kinds by the harm each does, and
+    "contact", the answer this scenario exists to catch, fails the check outright.

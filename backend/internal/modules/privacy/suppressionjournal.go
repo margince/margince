@@ -35,6 +35,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -48,12 +49,25 @@ import (
 // that must never take it.
 const suppressionJournalPrefix = "erasure-suppression/"
 
-// suppressionJournalKey addresses one suppressed identifier. The hash is the
-// key, so asking "is this address suppressed" is a Get rather than a scan,
-// and the journal needs no enumeration to be useful.
+// suppressionJournalKey addresses one suppressed identifier by its unkeyed
+// hash. The hash is the key, so asking "is this address suppressed" is a Get
+// rather than a scan. The journal needs no enumeration to be useful.
 func suppressionJournalKey(kind, valueHash string) string {
 	return suppressionJournalPrefix + kind + "/" + valueHash
 }
+
+// keyedJournalPrefix holds the entries named by their keyed hash. It is apart
+// from the unkeyed kinds, so those can be removed whole once every entry has
+// landed here.
+const keyedJournalPrefix = suppressionJournalPrefix + "keyed/"
+
+func keyedJournalKey(kind, keyedHash string) string {
+	return keyedJournalPrefix + kind + "/" + keyedHash
+}
+
+// suppressionKinds are the kinds erasure_suppression's CHECK allows, each an
+// unkeyed journal prefix.
+var suppressionKinds = []string{"email", "channel_identity"}
 
 // ExportSuppressions copies the suppression list to the object store, and
 // reports how many entries it wrote.
@@ -76,7 +90,10 @@ func (e *Eraser) ExportSuppressions(ctx context.Context) (int, error) {
 		// the whole value of this is that somebody can rely on it having run.
 		return 0, errors.New("privacy: exporting the suppression list needs an object store")
 	}
-	type entry struct{ kind, hash, when string }
+	type entry struct {
+		kind, hash, when string
+		keyID            *string
+	}
 	var entries []entry
 	var newest *time.Time
 	if err := e.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -87,14 +104,14 @@ func (e *Eraser) ExportSuppressions(ctx context.Context) (int, error) {
 			return err
 		}
 		rows, err := tx.Query(ctx,
-			`SELECT kind, value_hash, created_at::date::text FROM erasure_suppression`)
+			`SELECT kind, value_hash, created_at::date::text, key_id FROM erasure_suppression`)
 		if err != nil {
 			return err
 		}
 		defer rows.Close()
 		for rows.Next() {
 			var row entry
-			if err := rows.Scan(&row.kind, &row.hash, &row.when); err != nil {
+			if err := rows.Scan(&row.kind, &row.hash, &row.when, &row.keyID); err != nil {
 				return err
 			}
 			entries = append(entries, row)
@@ -103,11 +120,21 @@ func (e *Eraser) ExportSuppressions(ctx context.Context) (int, error) {
 	}); err != nil {
 		return 0, fmt.Errorf("privacy: reading the suppression list to export it: %w", err)
 	}
+	keyed := storekit.SuppressionKeyID() != nil
 	for _, row := range entries {
 		body := []byte(row.kind + " " + row.when + "\n")
-		if err := e.blob.Put(ctx, suppressionJournalKey(row.kind, row.hash),
+		if err := e.blob.Put(ctx, journalEntryKey(row.kind, row.hash, row.keyID != nil),
 			bytes.NewReader(body), int64(len(body)), "text/plain"); err != nil {
 			return 0, fmt.Errorf("privacy: exporting suppression %s: %w", row.hash, err)
+		}
+	}
+	// Every entry now has its keyed name, so the unkeyed names go. Each one
+	// lets a reader of the store test an address against the list.
+	if keyed {
+		for _, kind := range suppressionKinds {
+			if _, err := e.blob.DeletePrefix(ctx, suppressionJournalPrefix+kind+"/"); err != nil {
+				return 0, fmt.Errorf("privacy: removing the unkeyed suppression journal: %w", err)
+			}
 		}
 	}
 	// Written last, so a manifest names only an export whose every entry landed.
@@ -121,7 +148,39 @@ func (e *Eraser) ExportSuppressions(ctx context.Context) (int, error) {
 	return len(entries), nil
 }
 
-// journalSuppressed reports whether the exported list names this hash.
+// journalEntryKey names one row's entry by its keyed hash, when the row holds
+// one or a bound key can make one. Otherwise it uses the unkeyed hash.
+func journalEntryKey(kind, hash string, rowKeyed bool) string {
+	if rowKeyed {
+		return keyedJournalKey(kind, hash)
+	}
+	if rekeyed, ok := storekit.RekeySuppressionHash(hash); ok {
+		return keyedJournalKey(kind, rekeyed)
+	}
+	return suppressionJournalKey(kind, hash)
+}
+
+// journalSuppressedInAnyForm asks the journal about each stored form of one
+// identifier (storekit.SuppressionForms). The keyed form is under its prefix.
+// A journal exported before the key may still hold the unkeyed one.
+func (e *Eraser) journalSuppressedInAnyForm(ctx context.Context, kind string, forms []string) (bool, error) {
+	if len(forms) == 0 {
+		return false, nil
+	}
+	keys := []string{suppressionJournalKey(kind, forms[len(forms)-1])}
+	if len(forms) > 1 {
+		keys = append(keys, keyedJournalKey(kind, forms[0]))
+	}
+	for _, key := range keys {
+		journaled, err := e.journalSuppressed(ctx, key)
+		if err != nil || journaled {
+			return journaled, err
+		}
+	}
+	return false, nil
+}
+
+// journalSuppressed reports whether the exported list holds this entry.
 //
 // Consulted only for a candidate the database's own list did not already
 // name, which is the case a restore creates: the rows came back and the list
@@ -130,16 +189,16 @@ func (e *Eraser) ExportSuppressions(ctx context.Context) (int, error) {
 // A store that cannot answer is not a "no". Reporting one would let an outage
 // read as "this subject was never erased", which is the exact failure this
 // whole path exists to prevent, so the error travels.
-func (e *Eraser) journalSuppressed(ctx context.Context, kind, valueHash string) (bool, error) {
+func (e *Eraser) journalSuppressed(ctx context.Context, entryKey string) (bool, error) {
 	if e.blob == nil {
 		return false, nil
 	}
-	reader, _, err := e.blob.Get(ctx, suppressionJournalKey(kind, valueHash))
+	reader, _, err := e.blob.Get(ctx, entryKey)
 	if err != nil {
 		if errors.Is(err, blobstore.ErrNotFound) {
 			return false, nil
 		}
-		return false, fmt.Errorf("privacy: asking the exported suppression list about %s: %w", valueHash, err)
+		return false, fmt.Errorf("privacy: asking the exported suppression list about %s: %w", entryKey, err)
 	}
 	//craft:ignore swallowed-errors the body is not read; the object's existence is the whole answer
 	_ = reader.Close()

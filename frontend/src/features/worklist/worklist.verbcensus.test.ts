@@ -71,7 +71,9 @@ const ANSWERED_BY = {
   // whole act: keeping it creates the company, discarding it writes this
   // reader's own capture exclusion. Routing either would send the reader to a
   // settings screen to retype a domain the row is already holding.
-  reopen: { how: "inline", file: "worklist.domainquestion.tsx" },
+  // Reopen draws the row's answer, whose Choose opens the focused review
+  // that holds Retry site read.
+  reopen: { how: "inline", file: "worklist.row.answer.tsx" },
   keep: { how: "inline", file: "worklist.domainquestion.tsx" },
   keep_as_vendor: { how: "inline", file: "worklist.domainquestion.tsx" },
   discard: { how: "inline", file: "worklist.domainquestion.tsx" },
@@ -162,11 +164,9 @@ describe("a row claims no verb it cannot perform", () => {
       // that draws nothing.
       //
       // The third spelling is the dispatch table's. ANSWER_BY_SOURCE pairs a
-      // source with the verb that unlocks it and `rowAnswer` asks
-      // `includes(keyed.verb)` once for all of them — so the guard is real and
-      // the verb's name is a `verb:` field rather than a literal argument. The
-      // pattern anchors on that field name, not on the bare word, so a verb
-      // mentioned in a comment beside the table still fails.
+      // source with the verbs that unlock it, and `rowAnswer` asks once for all
+      // of them. The pattern anchors on the `verbs:` field, not on the bare
+      // word, so a verb mentioned in a comment beside the table still fails.
       const source = readFileSync(join(SCREENS, where.file), "utf8");
       if ("guardedBy" in where) {
         // A verb the item's `actions` list does not carry. The receipt has no
@@ -179,7 +179,7 @@ describe("a row claims no verb it cannot perform", () => {
       return !(
         source.includes(`offered("${verb}")`) ||
         source.includes(`includes("${verb}")`) ||
-        source.includes(`verb: "${verb}"`)
+        new RegExp(`verbs: \\[[^\\]]*"${verb}"`).test(source)
       );
     });
 

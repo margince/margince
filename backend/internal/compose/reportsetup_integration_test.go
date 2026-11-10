@@ -12,11 +12,13 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // The model reads the live products and the reader's metrics. A product it
-// names by its real id is resolved, and one it invents is named back. The
-// proposal writes nothing: the initiative list stays empty.
+// names by the ref it was shown is resolved. One it names by an id it was
+// never shown is named back. The proposal writes nothing: the initiative list
+// stays empty.
 func TestTheSetupProposalResolvesTheCatalogTheReaderMaySee(t *testing.T) {
 	e := setupForecast(t)
 	start := clocktest.Now(t).UTC().Truncate(time.Second)
@@ -27,7 +29,9 @@ func TestTheSetupProposalResolvesTheCatalogTheReaderMaySee(t *testing.T) {
 		t.Fatalf("seeding the product: %v", err)
 	}
 	service := newReportingService(e.Pool, func() time.Time { return start })
-	lane := &assessmentLane{reply: `{"name":"Linden push","filters":[{"field":"product","value":"` + linden.Id.String() + `","phrase":"Linden press"},{"field":"product","value":"01a19fad-0000-7000-8000-000000000000","phrase":"the other line"},{"field":"country","value":"de","phrase":"Germany"}],"metrics":[],"charts":[],"objective":{"metric":"bookings_won","target_value":250000,"deadline":"2099-12-31","phrase":"250k by year end"},"clarifications":["Which quarter?"],"unsupported":[]}`}
+	lane := &assessmentLane{answer: func(req model.Request) string {
+		return `{"name":"Linden push","filters":[{"field":"product","value":"` + refBeside(t, req, "Linden press line") + `","phrase":"Linden press"},{"field":"product","value":"` + linden.Id.String() + `","phrase":"the other line"},{"field":"country","value":"de","phrase":"Germany"}],"metrics":[],"charts":[],"objective":{"metric":"bookings_won","target_value":250000,"deadline":"2099-12-31","phrase":"250k by year end"},"clarifications":["Which quarter?"],"unsupported":[]}`
+	}}
 	setups := newReportSetups(service, store, e.Pool).withLane(lane)
 	out, err := setups.ProposeSetup(ctx, crmcontracts.ReportSetupRequest{Site: crmcontracts.ReportSetupRequestSiteInitiativeSetup, Description: "Push the Linden press line in Germany"})
 	if err != nil {

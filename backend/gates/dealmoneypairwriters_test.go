@@ -38,7 +38,6 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -73,7 +72,7 @@ func TestOneFunctionDecidesWhetherADealsMoneyPairIsLegal(t *testing.T) {
 	scanned := 0
 
 	for _, root := range []string{"internal", "cmd", "../extensions"} {
-		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
 			if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") {
 				return err
 			}
@@ -107,7 +106,7 @@ func TestOneFunctionDecidesWhetherADealsMoneyPairIsLegal(t *testing.T) {
 	// nothing. So the callers are asserted by name, which is the half a
 	// prohibition structurally cannot cover.
 	for _, caller := range moneyPairCallers {
-		src, err := os.ReadFile(caller)
+		src, err := gatekit.ReadFile(caller)
 		if err != nil {
 			t.Fatalf("reading %s: %v", caller, err)
 		}

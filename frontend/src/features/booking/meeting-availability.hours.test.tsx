@@ -51,7 +51,11 @@ function backendFor(chosen: boolean, hours: WorkingHours = FALLBACK) {
         if (req.method === "PUT") {
           const body = (await req.json()) as WorkingHours;
           writes.push(body);
-          state = { chosen: true, working_hours: body };
+          // The zone is not part of the write; the server keeps its own.
+          state = {
+            chosen: true,
+            working_hours: { ...state.working_hours, ...body },
+          };
         }
         return jsonResponse(state);
       }
@@ -84,15 +88,17 @@ afterEach(() => {
 });
 
 describe("AvailabilityCard, hours only", () => {
-  it("shows the effective server timezone before the first save", async () => {
+  it("names the zone the hours are read in, and offers no picker for it", async () => {
     vi.stubGlobal(
       "fetch",
       backendFor(false, { ...FALLBACK, timezone: "Asia/Bangkok" }).fetchMock,
     );
     render(<AvailabilityCard hoursOnly />);
+    expect(await screen.findByText(/hours are read in Bangkok/)).not.toBeNull();
+    expect(screen.queryByRole("combobox")).toBeNull();
     expect(
-      (await screen.findByRole("combobox", { name: "Timezone" })).textContent,
-    ).toContain("Bangkok");
+      screen.getByRole("button", { name: "Change time zone" }),
+    ).not.toBeNull();
   });
 
   it("offers the fallback as a starting point rather than as somebody's decision", async () => {
@@ -181,24 +187,15 @@ describe("AvailabilityCard, hours only", () => {
     expect(screen.queryByText(/Fewer bookable hours/i)).toBeNull();
   });
 
-  it("chooses a city with spaces by keyboard and saves its timezone identifier", async () => {
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date("2026-01-15T12:00:00Z"));
+  it("sends no time zone with the hours", async () => {
     const user = userEvent.setup();
     const backend = backendFor(true);
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<AvailabilityCard hoursOnly />);
 
-    const picker = await screen.findByRole("combobox", { name: "Timezone" });
-    expect(picker.textContent).toContain("Berlin (Europe)");
-    await user.click(picker);
-    await user.keyboard("New York{Enter}");
-    expect(picker.textContent).toContain("New York (America) · UTC-5");
-    await user.click(picker);
-    await user.keyboard("Bangkok{Enter}");
-    expect(picker.textContent).toContain("Bangkok (Asia) · UTC+7");
+    await user.click(await screen.findByLabelText("Saturday"));
     await user.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(backend.writes()).toHaveLength(1));
-    expect(backend.writes()[0].timezone).toBe("Asia/Bangkok");
+    expect(backend.writes()[0]).not.toHaveProperty("timezone");
   });
 });

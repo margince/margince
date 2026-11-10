@@ -199,7 +199,7 @@ func automaticWork(t *testing.T, e *apptest.AppEnv) context.Context {
 	if err := e.Owner.QueryRow(t.Context(), `SELECT id FROM workspace LIMIT 1`).Scan(&ws); err != nil {
 		t.Fatalf("reading the workspace: %v", err)
 	}
-	colleague, err := ids.Parse(sessionUserID(t, e))
+	colleague, err := ids.Parse(apptest.SessionUserID(t, e))
 	if err != nil {
 		t.Fatalf("reading the signed-in colleague: %v", err)
 	}

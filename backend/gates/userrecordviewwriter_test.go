@@ -30,7 +30,6 @@ package gates
 
 import (
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -86,7 +85,7 @@ func TestUserRecordViewHasOneWriter(t *testing.T) {
 	var findings []string
 	judged := 0
 	for _, root := range []string{".", "../extensions", "../fixtures"} {
-		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+		err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil {
 				return walkErr
 			}
@@ -108,7 +107,7 @@ func TestUserRecordViewHasOneWriter(t *testing.T) {
 			if filepath.Base(path) == "userrecordviewwriter_test.go" {
 				return nil
 			}
-			source, readErr := os.ReadFile(path) // #nosec G304 -- a *.go path from walking the trusted source tree
+			source, readErr := gatekit.ReadFile(path) // #nosec G304 -- a *.go path from walking the trusted source tree
 			if readErr != nil {
 				return readErr
 			}

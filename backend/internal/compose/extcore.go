@@ -133,7 +133,7 @@ func (a extensionActivities) Create(ctx context.Context, in crm.CreateActivityRe
 	// transaction came off: it is a value over a handle, activities.NewStore is
 	// what every other composition site does with it, and deriving it means no
 	// role can wire the port half-way.
-	store := activities.NewStore(InstallationDB(a.core.deps.pool)).WithTaskRecommendation(taskRecommendationReader(a.core.deps.pool))
+	store := activities.NewStore(InstallationDB(a.core.deps.pool)).WithDealFiling(NewActivityDealFiling(InstallationDB(a.core.deps.pool))).WithTaskRecommendation(taskRecommendationReader(a.core.deps.pool))
 	logged, _, err := store.LogActivityTx(ctx, a.core.tx, mapped)
 	if err != nil {
 		return crm.Activity{}, portRefusal(err)

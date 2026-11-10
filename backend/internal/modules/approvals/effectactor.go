@@ -51,15 +51,19 @@ func stagedByActor(p principal.Principal) StagedBy {
 	return StagedBy{ProposedBy: p.ID, OnBehalfOf: p.OnBehalfOf, PassportID: p.PassportID, ConnectionID: p.ConnectionID}
 }
 
-// runsAsAgent is serverProposed's other side: a row with a passport is spent
-// by the agent's own retry, and a server proposal by its decider.
-func (s *Service) runsAsAgent(by StagedBy) bool {
-	return s.effectActor != nil && !by.PassportID.IsZero()
+// runsAsAgent binds calls the agent will retry. Human agreements run under
+// their decider even when an agent filed the request.
+func (s *Service) runsAsAgent(subject row) bool {
+	return s.effectActor != nil && !serverProposed(subject)
 }
 
 // effectContext binds ctx to the principal the proposal's effect runs as.
-func (s *Service) effectContext(ctx context.Context, tx pgx.Tx, by StagedBy) (context.Context, error) {
-	if !s.runsAsAgent(by) {
+func (s *Service) effectContext(ctx context.Context, tx pgx.Tx, kind string, by StagedBy) (context.Context, error) {
+	subject := row{Kind: kind}
+	if !by.PassportID.IsZero() {
+		subject.PassportID = new(ids.From[ids.PassportKind](by.PassportID))
+	}
+	if !s.runsAsAgent(subject) {
 		return ctx, nil
 	}
 	actor, err := s.effectActor(ctx, tx, by)
@@ -74,10 +78,10 @@ type previewEffectKey struct{}
 // withPreviewEffect lets the preview builders ask for the effect principal.
 // It is resolved on first use, since most kinds never ask.
 func (s *Service) withPreviewEffect(ctx context.Context, subject row) context.Context {
-	by := stagedByRow(subject)
-	if !s.runsAsAgent(by) {
+	if !s.runsAsAgent(subject) {
 		return ctx
 	}
+	by := stagedByRow(subject)
 	resolve := sync.OnceValues(func() (principal.Principal, error) {
 		var actor principal.Principal
 		err := s.db.Tx(ctx, func(tx pgx.Tx) error {

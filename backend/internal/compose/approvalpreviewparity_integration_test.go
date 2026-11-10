@@ -98,23 +98,17 @@ func requireSameOutcome(t *testing.T, s previewSurfaces) {
 			t.Errorf("read_approval change %d is %+v, the card's %+v", i, s.tool.Changes[i], change)
 		}
 	}
-	var cardDetails []crmcontracts.ApprovalPreviewDetail
-	if s.card.Details != nil {
-		cardDetails = *s.card.Details
-	}
-	toolDetails := make([]crmcontracts.ApprovalPreviewDetail, 0, len(s.tool.Details))
-	for _, detail := range s.tool.Details {
-		toolDetails = append(toolDetails, crmcontracts.ApprovalPreviewDetail{Field: detail.Field, Value: detail.Value})
-	}
-	if len(toolDetails)+len(cardDetails) > 0 && !reflect.DeepEqual(toolDetails, cardDetails) {
-		t.Errorf("read_approval lists the operands %+v, the card %+v", toolDetails, cardDetails)
+	expected := agents.ReadPreview(textlang.English, &s.card)
+	cardDetails := expected.Details
+	if !reflect.DeepEqual(s.tool.Details, expected.Details) {
+		t.Errorf("read_approval details = %+v, want %+v", s.tool.Details, expected.Details)
 	}
 	shown := 0
 	for _, detail := range cardDetails {
 		if detail.Value.Kind == previewValueUnavailable {
 			continue
 		}
-		if shown++; shown <= mailChangeLimit && !strings.Contains(s.mail, "\n"+agents.FieldLabel(textlang.English, detail.Field)+": ") {
+		if shown++; shown <= mailChangeLimit && !strings.Contains(s.mail, "\n"+agents.PreviewFieldLabel(textlang.English, detail.Field)+": ") {
 			t.Errorf("the email does not list the operand %s:\n%s", detail.Field, s.mail)
 		}
 	}

@@ -15,6 +15,7 @@ package settings
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -45,6 +46,31 @@ func ApplyTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T]) (T, error) {
 		return zero, fmt.Errorf("settings: decoding %s: %w", e.Key(), err)
 	}
 	return out, nil
+}
+
+// ApplyChosenTx is ApplyTx that also reports whether a row holds the value. A
+// row somebody saved at the default value is a choice; no row is not.
+func ApplyChosenTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T]) (T, bool, error) {
+	var zero T
+	if !e.machineryApplied {
+		return zero, false, fmt.Errorf("settings: %s is not declared MachineryApplied — read it through Get/GetTx and its gate", e.Key())
+	}
+	var raw json.RawMessage
+	err := tx.QueryRow(ctx, `SELECT value FROM setting WHERE key = $1`, e.Key()).Scan(&raw)
+	stored := err == nil
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+		if raw, err = e.DefaultJSON(); err != nil {
+			return zero, false, err
+		}
+	case err != nil:
+		return zero, false, fmt.Errorf("settings: reading %s: %w", e.Key(), err)
+	}
+	var out T
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return zero, false, fmt.Errorf("settings: decoding %s: %w", e.Key(), err)
+	}
+	return out, stored, nil
 }
 
 // ApplyManyTx is ApplyTx over several entries in ONE statement, which is the

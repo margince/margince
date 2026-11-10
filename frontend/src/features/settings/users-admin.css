@@ -16,25 +16,33 @@
   gap: var(--space-1);
 }
 
-/* A long role name wraps inside its column instead of widening the table, so
-   the row's verbs stay in view. Inline, so a folded row keeps it on line two. */
 .users-role {
   display: inline-flex;
   vertical-align: middle;
-  max-inline-size: 12rem;
+  overflow-wrap: normal;
 }
 
-/* A capped strip truncates its badges instead of widening the table; a folded
-   row gives line two its whole width. */
-.users-teams {
-  display: inline-block;
-  vertical-align: middle;
-  max-inline-size: 8rem;
+.users-role .editable-value-face,
+.users-entity .editable-value-face {
+  overflow-wrap: normal;
 }
-@container table-fold (width < 36rem) {
-  .users-teams {
-    max-inline-size: calc(100cqi - 2 * var(--padPanel));
+
+.users-teams {
+  white-space: normal;
+}
+
+@container (min-width: 36rem) {
+  .users-members-table td:has(.users-role),
+  .users-members-table td:has(.users-teams),
+  .users-members-table td:has(.users-entity) {
+    min-inline-size: 9rem;
   }
+}
+
+.users-members-table
+  tr:has(.users-member[data-status="deactivated"])
+  > td:not(:last-child) {
+  color: var(--textSecondary);
 }
 
 /* A short date or a relative time reads on one line. */

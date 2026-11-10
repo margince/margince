@@ -138,17 +138,9 @@ func TestE2ECertify(t *testing.T) {
 	// its preferences have no other door.
 	judge.Routing = upstreamFromEnv(t, "MARGINCE_AICERT_JUDGE_UPSTREAM")
 
-	// repeats stays 0 (Run's own default, per RunnerConfig.Repeats' own doc)
-	// when MARGINCE_AICERT_RUNS is unset — this lane restates no default the
-	// runner already owns.
-	var repeats int
-	if raw := os.Getenv("MARGINCE_AICERT_RUNS"); raw != "" {
-		n, err := strconv.Atoi(raw)
-		if err != nil {
-			t.Fatalf("MARGINCE_AICERT_RUNS=%q is not an integer: %v", raw, err)
-		}
-		repeats = n
-	}
+	// Each stays 0, Run's own default, when its variable is unset: this lane
+	// restates no default the runner already owns.
+	repeats, parallel := intFromEnv(t, "MARGINCE_AICERT_RUNS"), intFromEnv(t, "MARGINCE_AICERT_PARALLEL")
 
 	// The census this build ships, not a stand-in: a run drives the
 	// certification case each registered site binds, so the lane certifies the
@@ -173,8 +165,13 @@ func TestE2ECertify(t *testing.T) {
 		Profile:    ai.Profile(os.Getenv("MARGINCE_AICERT_PROFILE")),
 		TaskFilter: os.Getenv("MARGINCE_AICERT_TASK"),
 		Repeats:    repeats,
-		CorpusDir:  "corpus",
-		RecordDir:  "records",
+		Parallel:   parallel,
+		// SITE= and SCENARIO= measure part of each task; the runner merges
+		// those rows into the committed record.
+		SiteFilter:     os.Getenv("MARGINCE_AICERT_SITE"),
+		ScenarioFilter: os.Getenv("MARGINCE_AICERT_SCENARIO"),
+		CorpusDir:      "corpus",
+		RecordDir:      "records",
 		// MARGINCE_AICERT_TRACE names a directory for the payload trace
 		// (every candidate+judge request/response, ai_call_payload shape);
 		// unset = no trace. `make e2e-ai` sets it to the repo-root
@@ -203,6 +200,21 @@ func TestE2ECertify(t *testing.T) {
 }
 
 // upstreamFromEnv reads one binding's broker upstream-selection preferences —
+// intFromEnv reads an integer setting, zero when unset so the runner's own
+// default applies.
+func intFromEnv(t *testing.T, name string) int {
+	t.Helper()
+	raw := os.Getenv(name)
+	if raw == "" {
+		return 0
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil {
+		t.Fatalf("%s=%q is not an integer: %v", name, raw, err)
+	}
+	return n
+}
+
 // MARGINCE_AICERT_UPSTREAM for the candidate, MARGINCE_AICERT_JUDGE_UPSTREAM for
 // the judge — as the JSON of one ai.OpenRouterRouting. Nil when unset, which
 // serves a broker binding under the product default (ai.DefaultOpenRouterRouting)

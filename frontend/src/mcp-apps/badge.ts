@@ -1,5 +1,5 @@
 // The views' Badge: the one builder outside atoms.tsx that may mint the badge
-// class. It is a module of its own so badge-spelling.test.ts can exempt it by
+// class. It is a module of its own so census/rules/badge-spelling.census.ts can exempt it by
 // file without exempting any other builder beside it.
 
 import type { BADGE_TONES } from "../design-system/atoms";

@@ -1,52 +1,53 @@
+<!-- prose:plain -->
 # Build a custom Margince
 
-Margince compiles into three programs, and which extension units it carries is
-decided by what is on disk rather than by a flag. This page is how to produce a
-build that holds the units you want.
+<!-- describes: backend/tools/gen-composition/ -->
 
-## The three programs
+Margince builds three programs with one extension set: the API, worker and migration
+program. `instance/go.mod` names that set. A folder under `extensions/` alone does
+not turn a unit on.
 
-`backend/cmd/api` serves the app and the API, `backend/cmd/worker` runs jobs,
-and `backend/cmd/migrate` applies migrations. An installation runs all three
-from one build, so they are compiled together and share a version.
+## Choose the units
 
-## A unit is on because it is there
+Add each unit to `require` in `instance/go.mod`. Use a local `replace`
+for a folder, or a released module version. See
+[install-extensions-as-go-modules.md](install-extensions-as-go-modules.md) for both forms.
 
-`extensions/<name>/` is the extension tier, and a unit is turned on by being
-under it. There is no register to edit and no switch to set: add the directory
-and the next build carries it, remove the directory and the next build does
-not.
+End each demo or example `require` line with `// margince:development-only`.
+The composer leaves out marked units by default, before fetching
+them or reading their code, contracts, screens or migrations. This applies to local
+folders and downloaded modules. The mark belongs to the `require` line, so a
+`replace` cannot change its meaning.
 
-Each unit is its own Go module and may import only the approved
-`backend/pkg/**` surface, so a unit cannot reach into the product's internals
-and a build that drops one cannot break the rest.
+## Build for use
 
-## Composition comes before compilation
+Run `make build`. It runs `make composition` first and then builds through the Go
+workspace under `build/composition/`. Docker builds use the same default selection.
+Marked examples add no features to the resulting programs or web app.
 
-`make build` runs `make composition` first. That materialises a Go workspace
-under `build/composition/` from whatever is enabled, and every build lane
-compiles through that workspace rather than the repository's own.
+Build each program you ship from that composed workspace. Keep the API, worker,
+migration program and web app from the same build.
 
-So the sequence to produce a custom build is:
+## Build with examples
 
-1. Put the units you want under `extensions/`, and remove the ones you do not.
-2. `make build`, which composes and then compiles every package.
-3. Build each program you ship, from the composed workspace.
+`make dev`, test commands and `make gen` include marked units. Normal build commands
+leave them out. To choose a mode by hand, pass the same flag to each Make command:
 
-The units in this repository are `de`, `finance-demo`, `openchannel` and `vn`.
-Read `extensions/` for the current set rather than this list, which is a
-snapshot of one day.
+```sh
+make composition COMPOSITION_FLAGS=-include-development
+make check-composition COMPOSITION_FLAGS=-include-development
+```
 
-## Check that the composition is reproducible
+The flag belongs to this build. It does not turn features on in a running program.
+A normal build leaves out marked units again. Existing demo connections
+need a supported source in that build; they cannot make generated invoices.
 
-`make check-composition` regenerates the workspace from a clean state and
-requires the result to match `composition.json` byte for byte. Run it after you
-add or remove a unit: a composition that does not reproduce means the build on
-one machine is not the build on another, and nothing else reports that.
+## Check the result
 
-## What this does not cover
+`make check-composition` includes marked units and compares the generated files and recorded input hashes
+with the next run. Its manifest also records whether marked units
+were included. A check with another selection fails.
 
-The settings each program reads are in
-[configuration.md](../reference/configuration.md). Applying migrations is
-[apply-migrations.md](apply-migrations.md). What a unit may import, and how to
-write one, is [add-an-extension.md](add-an-extension.md).
+Settings for the programs are in [configuration.md](../reference/configuration.md).
+Applying migrations is in [apply-migrations.md](apply-migrations.md). To write a unit,
+see [add-an-extension.md](add-an-extension.md).

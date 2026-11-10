@@ -9,6 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import {
   allowedPreview,
   isPreviewDoor,
@@ -228,6 +229,15 @@ it("puts what needs a contact first, and says why it stopped", async () => {
   // "consent_withdrawn".
   expect(screen.getByText(/withdrew their consent/i)).toBeTruthy();
   expect(screen.queryByText("consent_withdrawn")).toBeNull();
+});
+
+// A reason this build has no words for prints nothing: the row's own sentence
+// stands alone rather than beside a reason nobody can act on.
+it("prints no held reason for a reason this build does not know", async () => {
+  mount([{ ...HELD, held_reason: "a_reason_from_a_later_release" }]);
+  await screen.findByText(/ops@acme\.test and 2 more/);
+  expect(document.querySelector(".scheduledsends-held")).toBeNull();
+  expect(screen.queryByText(en["common.unknownValue"])).toBeNull();
 });
 
 it("counts the recipients it is not listing", async () => {

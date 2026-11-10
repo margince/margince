@@ -78,8 +78,9 @@ A message that is not a request is answered by any of:
 - a logged call, or a meeting that did happen, with the contact of the sender. The same with a colleague
   of theirs does not count.
 
-An answer must be later than the mail, not the same moment: a reply in the same second stays owed.
-Mail carries time only to the second, and nothing else says which was first. Evidence off the thread
+An answer must be later than the mail. At one stored moment it answers only when either entry was
+logged by its date alone. Every such entry of one date is stored at one time. Two entries with a time
+of day at one stored moment stay owed, because nothing says which came first. Evidence off the thread
 counts only when the whole workspace may read it. A colleague's private reply or meeting must not clear
 another seat's row, since a row going silent would show that the reply or meeting exists.
 
@@ -94,7 +95,7 @@ sections above say. A message that is not yet classified but is labelled as sche
 Two decisions end what is owed: a human marking the conversation not sales, and the `informs_us`
 verdict of the classifier. `/worklist/hidden` counts and lists what each one takes out of the queue. The
 verdict never takes out a request a human accepted. Mail from an obvious machine address is owed only
-as a confirmed request.
+as a confirmed request. Mail that carried a List-Unsubscribe header is owed only once a human accepted it.
 
 The waiting lane is the owed set, made smaller by queue rules. The rules are the horizon, the sales
 link, mail from colleagues' own company, and the snooze, `not_mine` and `handled` choices of that reader. Each of

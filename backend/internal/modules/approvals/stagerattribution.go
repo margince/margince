@@ -39,14 +39,19 @@ func stagerIsAttributable(ctx context.Context, in StageInput) error {
 }
 
 // payloadNamesItsOwner refuses a payload-owned proposal that is for nobody, or
-// that is staged on behalf of a member other than the one it is for. Either
-// would put one colleague's promise or mail in front of another.
+// that an agent stages for a member other than the one it is for. Either would
+// put one colleague's promise or mail in front of another. A transfer is put to
+// the other party by design, so an agent stages it for the party asking.
 func payloadNamesItsOwner(p principal.Principal, in StageInput) error {
 	if !approvalsubject.PayloadOwned(in.Kind) {
 		return nil
 	}
 	owner := approvalsubject.Owner(in.Kind, in.ProposedChange)
-	if owner.IsZero() || (!p.OnBehalfOf.IsZero() && p.OnBehalfOf != owner) {
+	stagedFor := owner
+	if in.Kind == approvalsubject.KindOwnershipTransfer {
+		stagedFor = approvalsubject.OwnershipTransferRequester(in.ProposedChange)
+	}
+	if owner.IsZero() || (!p.OnBehalfOf.IsZero() && p.OnBehalfOf != stagedFor) {
 		return fmt.Errorf("crmapprovals: a %s proposal is staged only for the colleague it is for: %w", in.Kind, ErrNoDecider)
 	}
 	return nil

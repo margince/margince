@@ -21,12 +21,33 @@ package compose
 import (
 	"fmt"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // batchAnswer is one result as this contract sees it: which message it answers.
 type batchAnswer interface {
 	answeredID() string
+}
+
+// refAnswer is a batch answer that can be re-keyed from the ref the model wrote
+// to the record id it names.
+type refAnswer[T any] interface {
+	batchAnswer
+	answering(id string) T
+}
+
+// resolveBatchRefs rewrites each result's ref to the record id refs gives it.
+// Run it after checkBatchFidelity, which refuses a ref refs never minted; a
+// result naming one is dropped here too, never written under a guessed id.
+func resolveBatchRefs[T refAnswer[T]](results []T, refs *promptref.Refs) []T {
+	resolved := make([]T, 0, len(results))
+	for _, r := range results {
+		if id, ok := refs.ID(r.answeredID()); ok {
+			resolved = append(resolved, r.answering(id))
+		}
+	}
+	return resolved
 }
 
 // checkBatchFidelity names the first id-contract violation, or "" when the

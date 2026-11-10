@@ -12,7 +12,6 @@ export function useRichTextLabels() {
     bulletList: t("richtext.bulletList"),
     numberList: t("richtext.numberList"),
     link: t("richtext.link"),
-    linkPrompt: t("richtext.linkPrompt"),
     heading: t("richtext.heading"),
   };
 }
