@@ -12,18 +12,18 @@
 #     design-fluid, incompatible changes print as ADVISORY and never
 #     block. What you see is what v1.0.0 will freeze.
 #   enforce  — from the first v1+ tag: incompatible changes FAIL. A
-#     ratified change is recorded in the allowlist as its exact apidiff
-#     finding BOUND to the merge-base sha it was ratified against (the
-#     gate prints the ready-to-paste line): once the ratifying PR
-#     merges, every future merge-base differs, so an entry can never
-#     license a recurring same-text finding or pre-authorize a future
-#     break. Superseded/unused entries warn until removed. Package
-#     REMOVALS are never allowlistable (deprecate-then-major cycle).
+#     ratified change is recorded in the allowlist keyed on its SUBJECT,
+#     the package and the symbol, with a reason that names the issue
+#     (the gatekit waiver shape; the gate prints the ready-to-paste line).
+#     The key holds on the pull request and in the merge queue alike,
+#     where the merge base is the moving tip of main. Unused entries warn
+#     until removed. Package REMOVALS are never allowlistable
+#     (deprecate-then-major cycle).
 # PKG_FREEZE_MODE=advisory|enforce overrides (testing the other regime).
 #
-# Baseline: the PR's merge target (origin/$GITHUB_BASE_REF in CI); the
-# local approximation is the extensions integration branch while the
-# arc holds there, else origin/main. PKG_FREEZE_BASE=<ref> overrides.
+# Baseline: the PR's merge target (origin/$GITHUB_BASE_REF in CI), else
+# origin/main (the merge queue and local runs). PKG_FREEZE_BASE=<ref>
+# overrides.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -66,12 +66,10 @@ resolve_base_ref() {
     echo "origin/$GITHUB_BASE_REF"
     return 0
   fi
-  for ref in origin/feat/extensions-adr-0069 origin/main; do
-    if git rev-parse -q --verify "$ref" > /dev/null; then
-      echo "$ref"
-      return 0
-    fi
-  done
+  if git rev-parse -q --verify origin/main > /dev/null; then
+    echo origin/main
+    return 0
+  fi
   return 1
 }
 
@@ -152,42 +150,82 @@ if [[ "$MODE" = "advisory" ]]; then
   exit 0
 fi
 
-# enforce: the allowlist licenses ratified findings, baseline-bound.
+# enforce: the allowlist licenses ratified findings by subject.
+#
+# An entry is `<package> <symbol> <reason>`. The symbol is what apidiff
+# names before the first ": " of its finding (`Handler`, `(*T).M`,
+# `Config.Field`), and it excuses every finding on that symbol in that
+# package. The reason must state the cost in at least 20 characters and
+# cite the ratifying issue as #<number>, so review sees why it was let in.
+# The key never names a commit: the merge base differs between the pull
+# request and the merge queue, and an entry bound to it fails the queue.
 ALLOWLIST="${PKG_FREEZE_ALLOWLIST:-scripts/pkg-freeze-allowlist.txt}"
-allowed="$EXPORT_DIR/allowed"
-expired="$EXPORT_DIR/expired"
-: > "$allowed"
-: > "$expired"
+subjects="$EXPORT_DIR/subjects"
+malformed="$EXPORT_DIR/malformed"
+: > "$subjects"
+: > "$malformed"
 if [[ -f "$ALLOWLIST" ]]; then
-  entries="$(awk '!/^[[:space:]]*(#|$)/' "$ALLOWLIST")"
-  if [[ -n "$entries" ]]; then
-    printf '%s\n' "$entries" | grep -E "^$BASE12 " | sed "s/^$BASE12 //" > "$allowed" || true
-    printf '%s\n' "$entries" | grep -vE "^$BASE12 " > "$expired" || true
-  fi
+  awk -v subjects="$subjects" -v malformed="$malformed" '
+    /^[[:space:]]*(#|$)/ { next }
+    {
+      line = $0
+      sub(/^[[:space:]]+/, "", line)
+      sub(/[[:space:]]+$/, "", line)
+      n = split(line, f, /[[:space:]]+/)
+      reason = line
+      sub(/^[^[:space:]]+[[:space:]]+[^[:space:]]+[[:space:]]*/, "", reason)
+      if (n < 3 || length(reason) < 20 || reason !~ /#[0-9]+/) {
+        print "line " NR ": " line > malformed
+        next
+      }
+      print f[1] " " f[2] > subjects
+    }
+  ' "$ALLOWLIST"
 fi
 
-failed=0
-violations="$(grep -Fxv -f "$allowed" "$findings" || true)"
-unused="$(grep -Fxv -f "$findings" "$allowed" || true)"
+# Split each finding into its subject and keep the ones no entry names.
+violations="$EXPORT_DIR/violations"
+used="$EXPORT_DIR/used"
+awk -v subjects="$subjects" -v violations="$violations" -v used="$used" '
+  BEGIN {
+    while ((getline s < subjects) > 0) ratified[s] = 1
+    printf "" > violations
+    printf "" > used
+  }
+  {
+    pkg = $0
+    sub(/: .*/, "", pkg)
+    rest = substr($0, length(pkg) + 3)
+    sym = rest
+    sub(/: .*/, "", sym)
+    key = pkg " " sym
+    if (key in ratified) print key > used
+    else print $0 > violations
+  }
+' "$findings"
+unused="$(sort -u "$subjects" | grep -Fxv -f "$used" || true)"
 
+failed=0
+if [[ -s "$malformed" ]]; then
+  echo "FAIL: pkg-freeze — malformed $ALLOWLIST entries (want '<package> <symbol> <reason of 20+ characters citing #<issue>>'):" >&2
+  indent < "$malformed" >&2
+  failed=1
+fi
 if [[ -s "$removals" ]]; then
   echo "FAIL: pkg-freeze — published package removed (never allowlistable; deprecate, then remove with its major cycle — ADR-0120 §3):" >&2
   indent < "$removals" >&2
   failed=1
 fi
-if [[ -n "$violations" ]]; then
+if [[ -s "$violations" ]]; then
   echo "FAIL: pkg-freeze — incompatible published-surface change vs $BASE_REF (merge-base $BASE12):" >&2
-  echo "$violations" | indent >&2
-  echo "A ratified change is recorded in $ALLOWLIST as this exact line (visible in the PR):" >&2
-  echo "$violations" | sed "s/^/$BASE12 /" | indent >&2
+  indent < "$violations" >&2
+  echo "A ratified change is recorded in $ALLOWLIST as one line per symbol (visible in the PR):" >&2
+  awk '{ pkg = $0; sub(/: .*/, "", pkg); sym = substr($0, length(pkg) + 3); sub(/: .*/, "", sym); print pkg " " sym " <what it costs, ratified in #issue>" }' "$violations" \
+    | sort -u | indent >&2
   failed=1
 fi
-if [[ -s "$expired" ]]; then
-  echo "WARN: pkg-freeze — allowlist entries bound to a superseded baseline (they can license nothing; remove them with the next allowlist edit):"
-  indent < "$expired"
-fi
 if [[ -n "$unused" ]]; then
-  echo "WARN: pkg-freeze — allowlist entries bound to the current baseline ($BASE12) match no finding (typo, or the change was reverted — remove them):"
+  echo "WARN: pkg-freeze — allowlist entries match no finding (the ratified change has merged, or the entry has a typo — remove them):"
   echo "$unused" | indent
 fi
 
@@ -195,5 +233,5 @@ if [[ "$failed" -ne 0 ]]; then
   echo "pkg-freeze: the published surface changes additively or via versioned successors, never in place (EXT-P3)." >&2
   exit 1
 fi
-active="$(($(grep -c . "$allowed" || true) - $(echo "$unused" | grep -c . || true)))"
+active="$(sort -u "$used" | grep -c . || true)"
 echo "OK: pkg-freeze (enforce) — published surface additive-or-unchanged vs $BASE_REF ($count packages, $active active exceptions)"
