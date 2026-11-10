@@ -229,6 +229,7 @@ A later email to a contact does not show that a task or promise was done.
 Advice to review a lead uses the source event's time and the same horizon.
 An answered inbound stops being a new reply; that does not settle a separate request.
 A booked meeting keeps its state, including a future meeting or one called off.
+A meeting invite still waiting on an answer keeps its band, and the meeting it books does not move it. Its move is none, not a drafted reply.
 Filing old mail keeps the source without making the advice new.
 
 The writer and open-task readers share this admission, so stale tasks cannot block a new reply.

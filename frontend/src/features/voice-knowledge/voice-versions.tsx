@@ -14,7 +14,7 @@ import { formatNumber, identifierNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
-import { VOICE_SECTIONS } from "./voice-hero";
+import { VOICE_SECTIONS } from "./voice-dna.setup";
 import { parseVoiceInsights, VoiceInsights } from "./voice-insights";
 import { reviewReasonText } from "./voice-review-reason";
 import { changeColumns, versionColumns } from "./voice-versions.tables";

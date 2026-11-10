@@ -4,6 +4,7 @@ import {
   cleanup,
   render as rtlRender,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -13,6 +14,16 @@ import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { candidateVersion } from "../../testing/voice-candidate";
+import {
+  emptyPage,
+  fileInput,
+  jsonResponse,
+  PROFILE,
+  SOURCE,
+  STATS,
+  SUMMARY,
+  VOICE_EDITOR,
+} from "../../testing/voice-dna.testkit";
 import { VoiceDnaCard } from "./voice-dna";
 
 // The Settings Voice DNA card is the ONLY surface outside onboarding where a
@@ -22,85 +33,6 @@ import { VoiceDnaCard } from "./voice-dna";
 // onboarding flow's.
 
 type VoiceProfile = components["schemas"]["VoiceProfile"];
-type VoiceCorpusSummary = components["schemas"]["VoiceCorpusSummary"];
-
-const PROFILE: VoiceProfile = {
-  id: "vp-1",
-  owner_id: "u1",
-  status: "collecting",
-  maturity: "collecting",
-  quality_band: "thin",
-  voice_profile_md: "",
-  profile_version: 0,
-  personality_md: "",
-  auto_learning_enabled: false,
-  active_source_hash: null,
-  candidate_version: null,
-  first_build_words_remaining: 380,
-  last_built_at: null,
-  source: "manual",
-  captured_by: "human:u1",
-  version: 1,
-  created_at: "2026-07-01T00:00:00Z",
-  updated_at: "2026-07-01T00:00:00Z",
-  archived_at: null,
-};
-
-const SUMMARY: VoiceCorpusSummary = {
-  total_words: 420,
-  target_words: 30000,
-  maturity: "collecting",
-  quality_band: "thin",
-  source_count: 1,
-  register_words: { general: 420 },
-};
-
-const SOURCE: components["schemas"]["VoiceCorpusSource"] = {
-  id: "vs-1",
-  origin: "manual",
-  kind: "other",
-  register: "general",
-  weight: 1,
-  source_label: "Pasted writing",
-  source_ref: "settings:paste:1",
-  word_count: 420,
-  included: true,
-  exclusion_reason: null,
-  extractor_version: "1",
-  occurred_at: "2026-07-01T00:00:00Z",
-  retention_until: null,
-  content_erased_at: null,
-  source: "manual",
-  captured_by: "human:u1",
-  version: 1,
-  created_at: "2026-07-01T00:00:00Z",
-  updated_at: "2026-07-01T00:00:00Z",
-  archived_at: null,
-};
-
-const STATS: components["schemas"]["VoiceIngestStats"] = {
-  input_words: 420,
-  kept_words: 420,
-  kept_turns: 0,
-  discarded_turns: 0,
-  speakers_seen: [],
-};
-
-const emptyPage = { data: [], page: { next_cursor: null, has_more: false } };
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-// Every write on this surface is one grant server-side (`voice_profile:update`,
-// plus `create` for minting the first profile), so the seat the stub answers
-// with decides whether the card offers any control at all.
-const VOICE_EDITOR = {
-  voice_profile: ["read", "create", "update"],
-} as const;
 
 // A stub that behaves like the server does across the whole mint: the profile
 // list answers empty until POST /voice-profiles creates one, so a card that
@@ -168,17 +100,8 @@ function render(ui: ReactNode) {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  globalThis.location.hash = "";
 });
-
-// The zone's input is the one control the intake has; a file is handed to it
-// the way the browser hands one over.
-function fileInput(): HTMLInputElement {
-  const input = document.querySelector('input[type="file"]');
-  if (!(input instanceof HTMLInputElement)) {
-    throw new Error("the card rendered no file input");
-  }
-  return input;
-}
 
 describe("the Settings Voice DNA card with no profile yet", () => {
   it("offers the first-sample zone and says what it is for", async () => {
@@ -319,15 +242,33 @@ describe("the Settings Voice DNA card with a profile", () => {
     );
   }
 
-  it("gives every subject its own named card", async () => {
+  it.each([
+    ["samples", "Make it sharper"],
+    ["rules", "Your rules"],
+    ["builds", "Builds"],
+  ])("gives the %s tab its own named card", async (tab, heading) => {
     stubProfile();
-    render(<VoiceDnaCard />);
+    render(<VoiceDnaCard tab={tab} />);
+    expect(await screen.findByRole("heading", { name: heading })).toBeTruthy();
+    expect(screen.getByText("Only you can see your Voice DNA.")).toBeTruthy();
+  });
 
-    for (const heading of ["Make it sharper", "Your rules", "Builds"]) {
-      expect(
-        await screen.findByRole("heading", { name: heading }),
-      ).toBeTruthy();
-    }
+  // Settings remounts a tab on every switch; the host above the tabs is what
+  // keeps a speaker question that is still waiting for its answer.
+  it("sends an owner with no build yet from the builds tab to the first build", async () => {
+    const user = userEvent.setup();
+    stubProfile();
+    globalThis.location.hash = "#/settings/voice/builds";
+    render(<VoiceDnaCard tab="builds" />);
+    await user.click(
+      await screen.findByRole("button", { name: "Go to Your voice" }),
+    );
+    expect(globalThis.location.hash).toMatch(/^#\/settings\/voice(?![/\w])/);
+  });
+
+  it("keeps the rules the writer sets as rows of the rules card", async () => {
+    stubProfile();
+    render(<VoiceDnaCard tab="rules" />);
     // The preferences and the derived text are the rules the writer sets, as
     // rows inside that card rather than as two more header bands. "Derived
     // voice" is there only while the profile is not ready: a ready one is
@@ -340,7 +281,6 @@ describe("the Settings Voice DNA card with a profile", () => {
     }
     expect(within(rules).getByText("Preferences")).toBeTruthy();
     expect(within(rules).getByText("Derived voice")).toBeTruthy();
-    expect(screen.getByText("Only you can see your Voice DNA.")).toBeTruthy();
   });
 
   it("keeps the corpus and the way to add to it in one card", async () => {
@@ -369,14 +309,20 @@ describe("the Settings Voice DNA card with a profile", () => {
   // content starts to matter.
   it("names every writing box without relying on its placeholder", async () => {
     stubProfile();
-    render(<VoiceDnaCard />);
+    render(<VoiceDnaCard tab="rules" />);
     // The preferences box takes its name from the row that names the decision,
     // so the words on screen and the name it announces are one string.
     expect(
       await screen.findByRole("textbox", { name: "Preferences" }),
     ).toBeTruthy();
-    // The file control takes its name from the row above the zone.
-    expect(screen.getByLabelText("Add writing samples")).toBe(fileInput());
+  });
+
+  it("names the file control from the row above the zone", async () => {
+    stubProfile();
+    render(<VoiceDnaCard tab="samples" />);
+    expect(await screen.findByLabelText("Add writing samples")).toBe(
+      fileInput(),
+    );
   });
 });
 
@@ -676,15 +622,15 @@ describe("what the build button is called", () => {
       status: "ready",
       profile_version: 2,
     });
-    render(<VoiceDnaCard />);
+    render(<VoiceDnaCard tab="builds" />);
     expect(
       await screen.findByRole("button", { name: /Rebuild Voice DNA/ }),
     ).toBeTruthy();
   });
 
   // A finished first build refetches the profile, so the hero stops offering
-  // the first build and the Builds card takes over the rebuild.
-  it("hands the build to the Builds card once the first build succeeds", async () => {
+  // the first build; the Builds tab offers the rebuild from then on.
+  it("stops offering the first build in the hero once it succeeds", async () => {
     let profile: VoiceProfile = { ...PROFILE, maturity: "provisional" };
     vi.stubGlobal(
       "fetch",
@@ -719,12 +665,11 @@ describe("what the build button is called", () => {
       await within(hero).findByRole("button", { name: /Build Voice DNA/ }),
     );
 
-    expect(
-      await screen.findByRole("button", { name: /Rebuild Voice DNA/ }),
-    ).toBeTruthy();
-    expect(
-      within(hero).queryByRole("button", { name: /Build Voice DNA/ }),
-    ).toBeNull();
+    await waitFor(() =>
+      expect(
+        within(hero).queryByRole("button", { name: /Build Voice DNA/ }),
+      ).toBeNull(),
+    );
   });
 });
 
@@ -775,6 +720,18 @@ describe("a version awaiting review", () => {
     expect(
       within(hero).queryByRole("button", { name: /Build Voice DNA/ }),
     ).toBeNull();
+  });
+
+  it("opens the rules tab from the hero once a voice is learned", async () => {
+    const user = userEvent.setup();
+    stubWith([{ ...candidateVersion([]), id: "v-1", status: "active" }]);
+    globalThis.location.hash = "#/settings/voice";
+    render(<VoiceDnaCard />);
+    const hero = await screen.findByRole("region", { name: "Your Voice DNA" });
+    await user.click(
+      await within(hero).findByRole("button", { name: "Edit your rules" }),
+    );
+    expect(globalThis.location.hash).toMatch(/^#\/settings\/voice\/rules\b/);
   });
 
   it("keeps the active voice on top and reviews a newer one under it", async () => {
