@@ -39,6 +39,7 @@ const CONTRACT: components["schemas"]["Contract"] = {
   title: "MSA 2026",
   status: "active",
   under_contract: true,
+  term_state: "in_force",
   auto_renew: false,
   value_basis: "total",
   version: 1,

@@ -8962,6 +8962,27 @@ func (e ContractStatus) Valid() bool {
 	}
 }
 
+// Defines values for ContractTermState.
+const (
+	ContractTermStateEnded      ContractTermState = "ended"
+	ContractTermStateInForce    ContractTermState = "in_force"
+	ContractTermStateNotStarted ContractTermState = "not_started"
+)
+
+// Valid indicates whether the value is a known member of the ContractTermState enum.
+func (e ContractTermState) Valid() bool {
+	switch e {
+	case ContractTermStateEnded:
+		return true
+	case ContractTermStateInForce:
+		return true
+	case ContractTermStateNotStarted:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ContractValueBasis.
 const (
 	ContractValueBasisAnnualized12m ContractValueBasis = "annualized_12m"
@@ -43185,7 +43206,14 @@ type Contract struct {
 
 	// SupersededById The successor that replaced this agreement, forming the renewal chain.
 	SupersededById *openapi_types.UUID `json:"superseded_by_id,omitempty"`
-	Title          string              `json:"title"`
+
+	// TermState Where today falls in the agreement's dated term, read from the dates alone
+	// (CONTRACT-FORM-1): `not_started` before `starts_on`, `ended` after the earlier
+	// of `ends_on` and `cancellation_effective_on`, `in_force` between. It tells an
+	// agreement that has not begun from one that has run out, which `under_contract`
+	// = false cannot, and it ignores `status` and archival as `under_contract` does not.
+	TermState *ContractTermState `json:"term_state,omitempty"`
+	Title     string             `json:"title"`
 
 	// UnderContract The DERIVED reading (CONTRACT-FORM-1): computed from the dates as of today,
 	// not read from `status`. The two may disagree, and a surface shows both — a
@@ -43208,6 +43236,13 @@ type Contract struct {
 
 // ContractStatus Read-only here: asserted through changeContractStatus so the transition, its event and any proposal are written from one transaction.
 type ContractStatus string
+
+// ContractTermState Where today falls in the agreement's dated term, read from the dates alone
+// (CONTRACT-FORM-1): `not_started` before `starts_on`, `ended` after the earlier
+// of `ends_on` and `cancellation_effective_on`, `in_force` between. It tells an
+// agreement that has not begun from one that has run out, which `under_contract`
+// = false cannot, and it ignores `status` and archival as `under_contract` does not.
+type ContractTermState string
 
 // ContractValueBasis What `value_minor` measures. An open-ended agreement has
 // no finite total, so it records twelve months and says so. Figures on
@@ -80734,6 +80769,14 @@ func (a *Contract) UnmarshalJSON(b []byte) error {
 		delete(object, "superseded_by_id")
 	}
 
+	if raw, found := object["term_state"]; found {
+		err = json.Unmarshal(raw, &a.TermState)
+		if err != nil {
+			return fmt.Errorf("error reading 'term_state': %w", err)
+		}
+		delete(object, "term_state")
+	}
+
 	if raw, found := object["title"]; found {
 		err = json.Unmarshal(raw, &a.Title)
 		if err != nil {
@@ -80964,6 +81007,11 @@ func (a Contract) MarshalJSON() ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'superseded_by_id': %w", err)
 		}
+	}
+
+	object["term_state"], err = json.Marshal(a.TermState)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'term_state': %w", err)
 	}
 
 	object["title"], err = json.Marshal(a.Title)
