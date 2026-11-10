@@ -266,14 +266,18 @@ jobs:
           probe_pid=$!
           trap 'kill "$probe_pid" 2>/dev/null || true' EXIT
           make test-integration
-      # PLANTED for the PR's proof, removed before merge: shard 1 drops one test
-      # from its manifests, as a lost test would look to the fan-in.
-      - name: PLANTED dropped test
+      # PLANTED for the PR's proof, removed before merge: shard 1 also reports a
+      # test another shard ran, as a group claimed twice would look to the fan-in.
+      - name: PLANTED duplicated test
         if: matrix.shard == 1
         run: |
           out="$RUNNER_TEMP/shard-out"
-          echo "dropping: $(head -n1 "$out/assigned.txt")"
-          sed -i 1d "$out/assigned.txt" "$out/ran.txt"
+          extra="$(LC_ALL=C comm -23 "$out/discovery.txt" "$out/assigned.txt" | head -n1)"
+          echo "duplicating: $extra"
+          for f in assigned.txt ran.txt; do
+            printf '%s\n' "$extra" >> "$out/$f"
+            LC_ALL=C sort -o "$out/$f" "$out/$f"
+          done
       # `!cancelled()` and not the default success(): a RED shard is exactly when
       # somebody needs this artifact, and on failure the script writes the
       # failing packages' logs + a failure-summary.txt into the same directory.
