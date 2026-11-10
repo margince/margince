@@ -71,18 +71,12 @@ func inviteOneMore(t *testing.T, e *revocationEnv, who string) error {
 // but valid: no number, and no claim that one applies.
 func refusedLicence() SeatCeiling { return func() (int, bool) { return 0, false } }
 
-// A refused licence lifts the ceiling rather than holding it. This pins what
-// the code does today, which is not what every surface says it does.
+// A refused licence lifts the ceiling rather than holding it, as the licence
+// screen says: "Everything keeps working, uncapped, until it is replaced."
 //
-// The licence screen agrees with it: "Everything keeps working, uncapped,
-// until it is replaced." The comment in compose/license.go does not, and says
-// a licence that lapses lowers the ceiling.
-//
-// Which of the two is right is open on #8598. It sets out three readings:
-// keep the last valid ceiling, stay uncapped, or admit no new seat.
-//
-// This test is here so choosing one is an edit to a test that states the old
-// policy, rather than a change nothing notices.
+// Keeping the last valid ceiling, or admitting no new seat, are the other
+// readings. The policy is an open product decision, so choosing either one
+// is an edit to this test rather than a change nothing notices.
 func TestARefusedLicenceLiftsTheSeatCeiling(t *testing.T) {
 	e := setupRevocationEnv(t, "seat-ceiling-refused")
 	used := seatsInUse(t, e)
@@ -95,8 +89,8 @@ func TestARefusedLicenceLiftsTheSeatCeiling(t *testing.T) {
 
 	licenseFor(t, e, refusedLicence())
 	if err := inviteOneMore(t, e, "afterrefusal"); err != nil {
-		t.Errorf("a refused licence refused the invite: %v. If that is the policy now, #8598 chose it "+
-			"and this test states the reading it replaced", err)
+		t.Errorf("a refused licence refused the invite: %v. If that is the policy now, "+
+			"this test states the reading it replaced", err)
 	}
 }
 

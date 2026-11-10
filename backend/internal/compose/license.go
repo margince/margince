@@ -179,8 +179,7 @@ func WithLicensePosture(posture func() licensecheck.Posture) Option {
 		//
 		// A posture that is not valid answers no number, which this writer reads
 		// as no ceiling: seats stay uncapped until the license is replaced.
-		// TestARefusedLicenceLiftsTheSeatCeiling holds that, and #8598 is where
-		// the three readings of it are set out.
+		// TestARefusedLicenceLiftsTheSeatCeiling holds that reading.
 		s.authHandlers = s.WithSeatCeiling(func() (int, bool) { return posture().Seats() })
 	}
 }
