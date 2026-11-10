@@ -2,11 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type RefObject, useEffect } from "react";
-import { coveredByDialog } from "./dialogfocus";
+import { coveredByDialog, panelsOpenedFrom } from "./dialogfocus";
 
 /**
- * Escape, or a press outside the panel and its anchor, closes the panel,
- * unless a dialog raised over it owns the key or the press.
+ * Escape, or a press outside the panel and its anchor, closes the panel.
+ * A dialog raised over it, or a list opened from inside it, owns the key or
+ * the press instead.
  *
  * Shared by `Popover` and `usePeek`, which close the same way.
  */
@@ -29,14 +30,19 @@ export function usePanelDismiss({
       return;
     }
     const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || coveredByDialog(anchor.current)) {
+      if (
+        event.key !== "Escape" ||
+        coveredByDialog(anchor.current) ||
+        panelsOpenedFrom(panel.current).length > 0
+      ) {
         return;
       }
       event.preventDefault();
       close("escape");
     };
     const onPointer = (event: MouseEvent) => {
-      if (!(event.target instanceof Node)) {
+      const target = event.target;
+      if (!(target instanceof Node)) {
         return;
       }
       // A dialog raised over the panel, such as a date field's calendar,
@@ -44,9 +50,18 @@ export function usePanelDismiss({
       if (coveredByDialog(anchor.current)) {
         return;
       }
+      // A select's list is portalled to the body, so a press on its option
+      // lands outside the panel; closing then would lose the pick.
       if (
-        !anchor.current?.contains(event.target) &&
-        !panel.current?.contains(event.target)
+        panelsOpenedFrom(panel.current).some((opened) =>
+          opened.contains(target),
+        )
+      ) {
+        return;
+      }
+      if (
+        !anchor.current?.contains(target) &&
+        !panel.current?.contains(target)
       ) {
         close("outside");
       }

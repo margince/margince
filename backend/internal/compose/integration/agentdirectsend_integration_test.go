@@ -23,11 +23,12 @@ import (
 func TestAnAgentDirectsARefusedSendAndTheRowNamesItAndItsUser(t *testing.T) {
 	d := newTwoDoorsWith(t, "agent-direct-send", []compose.Option{compose.WithOperatorMail(apptest.DiscardingMailer{})}, "read", "write")
 	c := seedConsentSubject(t, d.e)
+	c.useReviewableMarketingProfile(t)
 	sendBearer, passport := apptest.PassportWithID(t, d.e, "direct-send agent", "read", "write", "send")
 	agent := apptest.NewMCPClient(d.e, strings.TrimPrefix(sendBearer["Authorization"], "Bearer "))
 
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
-		t.Fatalf("a marketing send with no grant → %d, want 409", status)
+		t.Fatalf("correspondence with no supporting context → %d, want 409", status)
 	}
 	review := liveReviewID(t, c)
 	shown := string(agent.CallOK(t, "read_details", map[string]any{"action": "communication_review", "id": review}).Envelope(t).Data)
@@ -90,7 +91,7 @@ func TestAnAgentDirectsARefusedSendAndTheRowNamesItAndItsUser(t *testing.T) {
 	}
 
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
-		t.Fatalf("the next marketing send → %d, want 409: the decision was spent", status)
+		t.Fatalf("the next correspondence → %d, want 409: the decision was spent", status)
 	}
 	own := liveReviewID(t, c)
 	if status := c.Call(t, "POST", "/v1/communication-reviews/"+own+"/direct-send", directed(), nil, nil); status != http.StatusCreated {

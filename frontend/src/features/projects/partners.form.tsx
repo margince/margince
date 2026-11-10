@@ -22,6 +22,7 @@ import {
   useGrantRefused,
   useWriteRefusal,
 } from "../../lib/capability";
+import { labelFor } from "../../lib/labelfor";
 import { isOption } from "../../lib/options";
 import {
   assignableStages,
@@ -184,7 +185,7 @@ function PartnerForm({
             }
             options={PARTNER_KINDS.map((kind) => ({
               value: kind,
-              label: t(KIND_LABELS[kind]),
+              label: t(labelFor(KIND_LABELS, kind)),
             }))}
           />
         )}
@@ -200,7 +201,7 @@ function PartnerForm({
             }
             options={CERT_STATUSES.map((status) => ({
               value: status,
-              label: t(CERT_LABELS[status]),
+              label: t(labelFor(CERT_LABELS, status)),
             }))}
           />
         )}
@@ -230,7 +231,7 @@ function PartnerForm({
               { value: "", label: t("field.unset") },
               ...MARGIN_TIERS.map((tier) => ({
                 value: tier,
-                label: t(MARGIN_TIER_LABELS[tier]),
+                label: t(labelFor(MARGIN_TIER_LABELS, tier)),
               })),
             ]}
           />
@@ -365,7 +366,7 @@ function PartnerDetail({
             </>
           )}
           <dt>{t("partner.certStatus")}</dt>
-          <dd>{t(CERT_LABELS[partner.cert_status])}</dd>
+          <dd>{t(labelFor(CERT_LABELS, partner.cert_status))}</dd>
           <MarginTierRow partner={partner} />
           <dt>{t("partner.stage")}</dt>
           <dd>

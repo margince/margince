@@ -4,6 +4,7 @@
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
   "systemJob.import_identity_links": "Attaching imported mail links",
+  "systemJob.optout_receipt": "Raising missed opt-out receipts",
   "systemJob.task_completion": "Completing tasks after email",
   "homeRepair.reason.taskChanged":
     "The task changed while the preview was being built. Preview it again.",
@@ -955,6 +956,8 @@ export const en = {
   "forecast.deals.colSignals": "Risk signals",
   "forecast.deals.colAmount": "Amount",
   "forecast.deals.colWeighted": "Weighted",
+  "forecast.deals.foldedAmount": "Amount {amount}",
+  "forecast.deals.foldedWeighted": "{amount} weighted",
   "forecast.signal.close_pushed": "Close date keeps moving",
   "forecast.signal.no_next_step": "No next step booked",
   "forecast.signal.quiet": "Customer quiet",
@@ -5888,6 +5891,8 @@ export const en = {
   "deal.aside.partner": "Partner",
   "deal.aside.partnerNone": "None",
   "deal.editDetails": "Edit details",
+  "deal.meetNeedsCompany":
+    "This deal has no company yet. Add one under Edit details to book a meeting.",
   "deal.committee.card": "Committee",
   "deal.committee.change": "Change or remove stakeholders",
   "deal.committee.legendEngaged": "Engaged",
@@ -7431,6 +7436,8 @@ export const en = {
     "This contact is now private to its owner. Users and teams it was shared with keep access.",
   "recordAccess.contact.leftYourAccess":
     "This contact is now private to its owner. You no longer have access to it.",
+  "recordAccess.contact.handedOver":
+    "{owner} now owns this contact. It is private to them, so you no longer have access to it.",
   "recordAccess.company.title": "Who can see this company",
   "recordAccess.company.shared":
     "All users in the company can see this record.",
@@ -7445,6 +7452,8 @@ export const en = {
     "This company is now private to its owner. Deals, contacts and mail filed against it keep their own visibility.",
   "recordAccess.company.leftYourAccess":
     "This company is now private to its owner. You no longer have access to it.",
+  "recordAccess.company.handedOver":
+    "{owner} now owns this company. It is private to them, so you no longer have access to it.",
   // The switch behind the header's access chip. The owner's answer carries
   // what it does not take away, because a share outlives it; to anyone but the
   // owner it says what it takes from them, and without an owner it is refused.
@@ -7525,6 +7534,9 @@ export const en = {
   "compose.draftSaving": "Saving…",
   "compose.earlierThreads_one": "{count} earlier thread",
   "compose.earlierThreads_other": "{count} earlier threads",
+  "compose.earlierThreadsAtLeast_one": "{count}+ earlier threads",
+  "compose.earlierThreadsAtLeast_other": "{count}+ earlier threads",
+  "compose.earlierThreadsMayExist": "Earlier threads may exist",
   "compose.threadChange": "Change",
   "compose.threadContinue": "Continue a thread",
   "compose.threadsRecent": "Recent threads",
@@ -7742,7 +7754,7 @@ export const en = {
   "sendPermission.unprovenRefuses":
     "Sending is refused until a reason is recorded.",
   "sendPermission.missingContext": "This message needs one more detail",
-  "sendPermission.missingPermission": "Consent needed for this message",
+  "sendPermission.missingPermission": "Permission needed for this message",
   "sendPermission.reason.chooseDeal": "Choose the deal for this follow-up.",
   "sendPermission.appliesTo": "This applies to {address}.",
   "sendPermission.appliesToAndMore_one":
@@ -7770,6 +7782,8 @@ export const en = {
     "This address does not accept mail. Correct the address; an override does not apply.",
   "sendPermission.reason.optedOutAfterRequest":
     "The recipient opted out of marketing after asking for this quote. Confirm with them that they still want it, then record their new request.",
+  "sendPermission.reason.permissionRequired":
+    "This marketing message has no recorded permission under the applicable rules. A staff exception cannot replace consent or the required evidence.",
   "sendPermission.reason.consentRequired":
     "Marketing to a recipient in this country needs their prior consent. No exception can replace it.",
   "sendPermission.reason.dealNotRequested":
@@ -8593,6 +8607,8 @@ export const en = {
   "review.colDeal": "Deal",
   "review.colAtStake": "At stake",
   "review.colSeenSince": "Seen since",
+  "review.foldedAtStake": "{amount} at stake",
+  "review.foldedSeenSince": "Seen since {date}",
   "review.severityHigh": "High",
   "review.severityMedium": "Medium",
   "review.severityLow": "Low",
@@ -9228,6 +9244,9 @@ export const en = {
   "agents.disconnectOpen": "Disconnect",
   "agents.disconnectNamed": "Disconnect {client}",
   "agents.disconnected": "Disconnected",
+  "agents.showDisconnected_one": "Show {count} disconnected tool",
+  "agents.showDisconnected_other": "Show {count} disconnected tools",
+  "agents.hideDisconnected": "Hide disconnected",
   "agents.lapsed": "Credential expired",
   "agents.renewing": "Renewing",
   "agents.expiredOn": "Expired {date}",
@@ -9968,6 +9987,8 @@ export const en = {
     "A lost deal needs the reason it was lost.",
   "import.reason.deal_pipeline_fixed":
     "This deal is in another pipeline than the file names. An import does not move a deal between pipelines, so the row is skipped.",
+  "import.reason.deal_company_has_contracts":
+    "This deal has contracts that name a company other than the one in this row, so the row is skipped. Detach the contracts from the deal, or file each against a deal of its own company, then import again.",
   "import.reason.deal_already_closed":
     "This deal is already closed, so the row is skipped. An import does not reopen a closed deal.",
   "import.reason.fx_rate_missing":
@@ -11459,6 +11480,11 @@ export const en = {
   "aiHealth.callCounts_one": "{count} call, {failures} failed",
   "aiHealth.callCounts_other": "{count} calls, {failures} failed",
   "heldThreads.search": "Search subject or party",
+  "heldThreads.forContact": "Show held mail with this contact",
+  "heldThreads.withContact": "Threads with",
+  "heldThreads.allThreads": "Show all threads",
+  "heldThreads.contactUnavailable":
+    "The contact is archived or not visible to you, so its threads are not listed.",
   "heldThreads.statusFilter": "Status",
   "heldThreads.statusAll": "Any status",
   "heldThreads.noMatch": "No held thread matches.",
@@ -19381,7 +19407,7 @@ export const en = {
   "worklist.verb.meetingAddNotes": "Add notes",
   "worklist.verb.meetingUpdateTitle": "Meeting",
   "worklist.verb.meetingReading": "Loading meeting…",
-  "worklist.verb.meetingWhatHappened": "Meeting notes",
+  "worklist.verb.meetingWhatHappened": "What happened",
   "worklist.verb.meetingBodyHint":
     "Discussion and next steps. Calendar notes can be edited here.",
   "worklist.verb.meetingHeld": "It happened",
@@ -20746,6 +20772,7 @@ export const en = {
   "standing.mark.group_one": "{count} entry, {range}",
   "standing.mark.group_other": "{count} entries, {range}",
   "standing.mark.range": "{from} to {to}",
+  "standing.mark.label": "{what}, {when}",
   "standing.mark.more_one": "{count} more in History",
   "standing.mark.more_other": "{count} more in History",
   "standing.peek.partial_one": "Showing {shown} of {count}.",

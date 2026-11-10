@@ -85,10 +85,8 @@ type unitManifest struct {
 	FinanceSources []declaredFinanceSource `json:"finance_sources,omitempty"`
 
 	// Inbound are the session-less HTTP edges the unit asks the core to mount
-	// (see extension.InboundEndpoint). It is the one entry in this document an
-	// operator must read before enabling the unit at all: every other capability
-	// here is reached by somebody the installation already authenticated, and
-	// these are reached by a party holding nothing but a URL and a secret.
+	// (see extension.InboundEndpoint). They and Instrumentation.Edge are what an
+	// operator must read first. A party holding only a URL reaches them.
 	//
 	// The bounds are published with it, because "which unit added an anonymous
 	// route" and "how much can one stranger make this installation read" are the
@@ -107,6 +105,9 @@ type unitManifest struct {
 	reportDecls
 	// Panels are the places on core pages that draw the unit's own component.
 	Panels []declaredPanel `json:"panels,omitempty"`
+
+	// Instrumentation says what the unit observes of the whole process.
+	Instrumentation *unitInstrumentation `json:"instrumentation,omitempty"`
 
 	// OAuthApps are the vendors whose consent flow the core runs for the unit
 	// (see extension.OAuthApp). Each names where an admin is sent, what the

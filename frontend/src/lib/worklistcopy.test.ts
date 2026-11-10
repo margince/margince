@@ -24,7 +24,7 @@ import type { WorklistItem, WorklistReason } from "./worklisttypes";
 const t: Translator = (key, params) => translate("en", key, params);
 // The "still renders a full date" case below only asserts the year, so the
 // viewer's own zone stands in rather than a pinned literal
-// (format/zone-by-purpose.test.ts).
+// (census/rules/zone-by-purpose.census.ts).
 const zone = browserZone();
 
 // The move that became performable.

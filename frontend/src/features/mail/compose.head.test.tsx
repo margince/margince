@@ -460,6 +460,7 @@ const COMPANY_360 = {
     data: [
       {
         contact_id: "per-2",
+        attachable: true,
         full_name: "Milo Fenn",
         primary_email: "milo@nordwand.example",
       },

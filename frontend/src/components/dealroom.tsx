@@ -12,6 +12,7 @@ import type { components } from "../api/schema";
 import { Badge } from "../design-system/atoms";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { labelFor } from "../lib/labelfor";
 import { unwrap } from "../lib/problem";
 
 type DealRoomState = components["schemas"]["DealRoomState"];
@@ -84,7 +85,7 @@ export function RoomStateBadge({ state }: Readonly<{ state: DealRoomState }>) {
   const t = useT();
   return (
     <Badge tone={STATE_TONES[state]} live={CURRENT_STATES.has(state)}>
-      {t(STATE_LABELS[state])}
+      {t(labelFor(STATE_LABELS, state))}
     </Badge>
   );
 }

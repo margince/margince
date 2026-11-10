@@ -196,6 +196,52 @@ func TestLatestInboundKeepsAFormUntilARowThatAnswersIt(t *testing.T) {
 	}
 }
 
+// A form and our answer at one stored instant: a date on either side makes ours its answer. Between
+// two answers of ours at that instant, the day one answers whichever was logged last.
+func TestLatestInboundReadsAFormTieByTheAnswerRule(t *testing.T) {
+	out := string(crmcontracts.ActivityDirectionOutbound)
+	for _, c := range []struct {
+		name    string
+		replies []string
+		open    bool
+	}{
+		{"a day reply on the form's date", []string{PrecisionDay}, false},
+		{"an instant reply at the form's instant", []string{PrecisionInstant}, true},
+		{"our day reply, then our instant reply", []string{PrecisionDay, PrecisionInstant}, false},
+		{"our instant reply, then our day reply", []string{PrecisionInstant, PrecisionDay}, false},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			e := setupLoad(t)
+			contact := e.buyer(t)
+			links := []ActivityLinkInput{{EntityType: "contact", EntityID: contact}}
+			store := storeKnowing(e).WithClock(func() time.Time { return justInLater })
+			subject, system, key := "Website form: Trial", provenance.WebFormSource, ids.NewV7().String()
+			if _, _, err := store.LogActivity(asClassifier(e), LogActivityInput{
+				Kind: "note", Subject: &subject, OccurredAt: &requestInstant, Links: links,
+				SourceSystem: &system, SourceID: &key, Source: provenance.WebFormSource,
+			}); err != nil {
+				t.Fatal(err)
+			}
+			for _, precision := range c.replies {
+				reply := "Re: your trial"
+				if _, _, err := store.LogActivity(e.asSeat(e.rep), LogActivityInput{
+					Kind: "email", Source: "manual", Subject: &reply, Direction: &out,
+					OccurredAt: &requestInstant, OccurredPrecision: precision, Links: links,
+				}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			open := false
+			for _, item := range latestOn(t, e, store, contact) {
+				open = open || item.Kind == crmcontracts.LatestInboundKindWebForm
+			}
+			if open != c.open {
+				t.Fatalf("form open = %v, want %v", open, c.open)
+			}
+		})
+	}
+}
+
 func TestLatestInboundRefusesARecordNobodyHolds(t *testing.T) {
 	e := setupLoad(t)
 	_, err := storeKnowing(e).LatestInbound(e.asSeat(e.rep), "contact", ids.NewV7())

@@ -39,6 +39,9 @@ func mailFileIDs(linkedTo string) string {
 //
 // The arms are a `UNION ALL` of ids, so the plan starts from the holder.
 // An `OR` reads every mail file of the installation. No file is in both arms.
+//
+// A link row has no bytes and is admitted by its category. The deal room's
+// predicate leaves that arm out, so a link never reaches a buyer's download.
 func documentMembership(holder string, pos int) string {
 	var own, linked string
 	switch holder {

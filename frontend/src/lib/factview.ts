@@ -2,6 +2,7 @@ import type { components } from "../api/schema";
 import { forReader } from "../format/collate";
 import type { Locale, Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { labelFor } from "./labelfor";
 
 // How the facts read off a company's website are arranged for display.
 //
@@ -67,7 +68,7 @@ export const FACT_FIELD_LABELS: Record<FactField, MessageKey> = {
 };
 
 export function factFieldLabelKey(field: FactField): MessageKey {
-  return FACT_FIELD_LABELS[field];
+  return labelFor(FACT_FIELD_LABELS, field);
 }
 
 /** FACT_CATEGORY_LABELS names every fact category in the reader's language. */
@@ -79,7 +80,7 @@ export const FACT_CATEGORY_LABELS: Record<FactCategory, MessageKey> = {
 };
 
 export function factCategoryLabelKey(category: FactCategory): MessageKey {
-  return FACT_CATEGORY_LABELS[category];
+  return labelFor(FACT_CATEGORY_LABELS, category);
 }
 
 /**

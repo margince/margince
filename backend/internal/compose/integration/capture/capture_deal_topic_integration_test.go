@@ -10,6 +10,7 @@ package capture
 // model about a mail its project or proven thread already files.
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -142,9 +143,9 @@ func TestAnAmbiguousMailIsCheckedBeforeAnyoneIsAsked(t *testing.T) {
 			env.topic.answer = c.pick
 			switch c.name {
 			case "one deal picked":
-				env.topic.answer = pickDeal(operations, "not_about")
+				env.topic.answer = pickDeal("Acme operations", "not_about")
 			case "a pick beside doubt":
-				env.topic.answer = pickDeal(operations, "unsure")
+				env.topic.answer = pickDeal("Acme operations", "unsure")
 			}
 			env.syncSent(t, map[string]bool{"amb1@myco.example": true},
 				email(captureOwner, "", "alice@acme.example", "amb1@myco.example", ""))
@@ -160,10 +161,11 @@ func TestAnAmbiguousMailIsCheckedBeforeAnyoneIsAsked(t *testing.T) {
 	}
 }
 
-// pickDeal answers "about" for chosen and others for every other deal.
-func pickDeal(chosen ids.UUID, others string) func(string) (string, float64) {
-	return func(deal string) (string, float64) {
-		if deal == chosen.String() {
+// pickDeal answers "about" for the deal named chosen and others for every
+// other deal.
+func pickDeal(chosen string, others string) func(string) (string, float64) {
+	return func(shown string) (string, float64) {
+		if strings.Contains(shown, chosen) {
 			return "about", 0.95
 		}
 		return others, 0.95

@@ -15,6 +15,7 @@ import { SeatAvatar } from "../../../components/seatavatar";
 import { Panel, PanelBody } from "../../../design-system/panel";
 import { formatDate, formatNumber } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
+import { labelFor } from "../../../lib/labelfor";
 import { useMe } from "../../../lib/session";
 import { useViewerZone } from "../../../lib/viewerzone";
 import type { IntroRequest } from "../introrequests";
@@ -207,7 +208,7 @@ function stepsFor(
       key: "contact.intro.stepRequest",
       state: answered || settled ? "done" : "current",
       detail: answered
-        ? t(ANSWER_WORD[ask.status])
+        ? t(labelFor(ANSWER_WORD, ask.status))
         : t("contact.intro.stepAwaitingAnswer"),
     },
     {

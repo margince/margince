@@ -65,6 +65,8 @@ type dealTopicResult struct {
 
 func (r dealTopicResult) answeredID() string { return r.DealID }
 
+func (r dealTopicResult) answering(id string) dealTopicResult { r.DealID = id; return r }
+
 type dealTopicPayload struct {
 	Results []dealTopicResult `json:"results"`
 }
@@ -137,7 +139,7 @@ func (c dealTopicChecker) Check(ctx context.Context, mail ids.ActivityID, deals 
 	if err := json.Unmarshal([]byte(ai.Unfence(resp.Text)), &payload); err != nil {
 		return capture.DealTopic{}, fmt.Errorf("deal topic: unparseable model output: %w", err)
 	}
-	return dealTopicOf(payload.Results)
+	return dealTopicOf(resolveBatchRefs(payload.Results, dealtopicprompt.Refs(in)))
 }
 
 // dealTopicOf decides an answer. A deal judged about at or above the floor is
@@ -180,7 +182,7 @@ func dealTopicRequest(in dealTopicInput) model.Request {
 		System:         dealtopicprompt.SystemFor(fence),
 		Messages:       []model.Message{{Role: chatRoleUser, Content: dealtopicprompt.Prompt(fence, in)}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
-		ResponseSchema: dealTopicSchema(dealTopicIDs(in)),
+		ResponseSchema: dealTopicSchema(dealtopicprompt.Refs(in).All()),
 		SecretStripper: ai.NewSecretStripper(),
 	}
 }
@@ -199,14 +201,15 @@ func dealTopicShapeValid(in dealTopicInput) ai.Validator {
 	}
 }
 
-// validateDealTopicPayload names the first violation: a deal unanswered or
-// answered twice, an id not verbatim, a verdict outside the closed set, or a
-// confidence outside [0,1].
+// validateDealTopicPayload names the first violation. A deal may be
+// unanswered or answered twice, or named by a ref the prompt never showed. A
+// verdict may fall outside the closed set, or a confidence outside [0,1].
 func validateDealTopicPayload(payload dealTopicPayload, in dealTopicInput) string {
-	if msg := checkBatchFidelity(payload.Results, dealTopicIDs(in)); msg != "" {
+	refs := dealtopicprompt.Refs(in)
+	if msg := checkBatchFidelity(payload.Results, refs.All()); msg != "" {
 		return msg
 	}
-	for _, r := range payload.Results {
+	for _, r := range resolveBatchRefs(payload.Results, refs) {
 		if !dealTopicVerdicts[r.Verdict] {
 			return fmt.Sprintf("verdict %q is not about|not_about|unsure", clampToken(r.Verdict))
 		}
@@ -215,15 +218,6 @@ func validateDealTopicPayload(payload dealTopicPayload, in dealTopicInput) strin
 		}
 	}
 	return ""
-}
-
-// dealTopicIDs is the deal ids one call asks about, in the order it sends them.
-func dealTopicIDs(in dealTopicInput) []string {
-	out := make([]string, len(in.Deals))
-	for i, deal := range in.Deals {
-		out[i] = deal.ID.String()
-	}
-	return out
 }
 
 // dealTopicSchema is the generation-time shape guardrail.

@@ -28,6 +28,7 @@ import "./consent.css";
 export { ConfirmDetailsAction };
 
 import { stable } from "../../format/collate";
+import { labelFor } from "../../lib/labelfor";
 import { useViewerZone } from "../../lib/viewerzone";
 
 // The Art. 7 proof log (G-4) + the double-opt-in redeem field (G-5) for the
@@ -116,7 +117,7 @@ function ConsentEventActor({ event }: Readonly<{ event: ConsentEvent }>) {
   if (!event.actor_type) {
     return <span className="t-caption">{t("consent.actorUnknown")}</span>;
   }
-  const label = t(ACTOR_LABEL[event.actor_type]);
+  const label = t(labelFor(ACTOR_LABEL, event.actor_type));
   return (
     <span className="t-caption">
       {label}

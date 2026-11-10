@@ -18,7 +18,7 @@ func floorFor(in Input) Plan {
 
 func writtenPlan(t *testing.T, reply string, in Input) (Plan, crmcontracts.WrittenBy) {
 	t.Helper()
-	lane := &laneReturning{reply: reply}
+	lane := &laneReturning{in: &in, reply: reply}
 	return WritePlan(context.Background(), lane, in, floorFor(in), "en")
 }
 
@@ -266,7 +266,7 @@ func TestAnObjectiveOrOpeningWrittenAsAPromiseIsRefusedAndAnImperativeOneKept(t 
 		promisedGoal    = "We'll get them to name a decision date."
 		imperativeGoal  = "Get them to name a decision date."
 	)
-	got, err := ParsePlan(`{"objective":`+line(imperativeGoal)+`,"opening":`+line(promisedOpening)+`}`, in, floorFor(in))
+	got, err := parseCitedPlan(`{"objective":`+line(imperativeGoal)+`,"opening":`+line(promisedOpening)+`}`, in, floorFor(in))
 	if err != nil {
 		t.Fatalf("ParsePlan: %v", err)
 	}
@@ -277,7 +277,7 @@ func TestAnObjectiveOrOpeningWrittenAsAPromiseIsRefusedAndAnImperativeOneKept(t 
 		t.Errorf("objective = %+v, want the imperative objective kept", got.Objective)
 	}
 
-	got, err = ParsePlan(`{"objective":`+line(promisedGoal)+`,"opening":`+line(imperative)+`}`, in, floorFor(in))
+	got, err = parseCitedPlan(`{"objective":`+line(promisedGoal)+`,"opening":`+line(imperative)+`}`, in, floorFor(in))
 	if err != nil {
 		t.Fatalf("ParsePlan: %v", err)
 	}

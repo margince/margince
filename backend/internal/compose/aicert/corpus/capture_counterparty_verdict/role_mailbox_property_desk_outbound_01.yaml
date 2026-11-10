@@ -20,6 +20,7 @@ fixture:
     Michael
 expect:
   outcome: accepted
+  privacy: true
   answer: personal
   judge: none
   judge_none_reason: >

@@ -46,6 +46,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/events"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/platform/instrument"
 )
 
 // The listener's own time bounds. Every request it serves is a probe or a
@@ -166,7 +167,7 @@ func startObserveListener(ctx context.Context, cfg workerConfig, pool *pgxpool.P
 		// reachable from a browser tab should not depend on nobody opening
 		// one. RecoverPanics stays outermost so a panicking handler answers
 		// rather than killing the connection.
-		Handler:           httpserver.RecoverPanics(log, httpserver.SecureHeaders(mux)),
+		Handler:           httpserver.RecoverPanics(log, instrument.HTTP(httpserver.SecureHeaders(mux))),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       observeReadTimeout,
 		WriteTimeout:      observeWriteTimeout,

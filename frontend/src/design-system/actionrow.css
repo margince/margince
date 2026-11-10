@@ -3,7 +3,7 @@
 
 /* The gap is on the ROW as well as on each group. Both carry buttons as far as
    a reader is concerned — the trail is one verb today and two tomorrow — and
-   `actionrow.test.ts` asks whichever container holds them what gap it gets, so
+   `census/rules/actionrow.census.ts` asks whichever container holds them what gap it gets, so
    a row that declared the role in only one of the three places would be a row
    the gate could not follow. */
 .action-row {

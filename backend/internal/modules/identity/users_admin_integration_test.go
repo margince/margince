@@ -463,7 +463,8 @@ func TestAnExpiredInvitationIsRecoveredByAnAdminIssuedLink(t *testing.T) {
 		t.Fatalf("invite: %v", err)
 	}
 	if _, err := e.owner.Exec(context.Background(),
-		`UPDATE auth_token SET expires_at = now() - interval '1 day' WHERE user_id = $1`, userID); err != nil {
+		`UPDATE auth_token SET created_at = now() - interval '2 days',
+		                      expires_at = now() - interval '1 day' WHERE user_id = $1`, userID); err != nil {
 		t.Fatal(err)
 	}
 

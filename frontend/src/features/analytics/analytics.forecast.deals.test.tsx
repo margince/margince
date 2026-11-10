@@ -90,6 +90,15 @@ async function openDeals() {
 }
 
 describe("ForecastDeals", () => {
+  // On a phone the rows fold into cards and the headings leave sight, so each
+  // figure carries its own name.
+  it("names the amount and the weighted figure for a folded row", async () => {
+    serve({ self_correcting: true, contributions: [contribution()] });
+    await openDeals();
+    expect(await screen.findByText("Amount €10,000")).toBeTruthy();
+    expect(screen.getByText("€6,000 weighted")).toBeTruthy();
+  });
+
   it("says how each open deal's weight was made", async () => {
     const fetchMock = serve({
       self_correcting: true,

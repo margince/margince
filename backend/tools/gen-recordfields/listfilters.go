@@ -123,10 +123,15 @@ func listFiltersFor(op *operation, shared map[string]*parameter) ([]listFilter, 
 		if _, excluded := notAFieldFilter[p.Name]; excluded {
 			continue
 		}
+		operand := p.Schema
+		// A repeatable parameter binds one operand on the seam, so it publishes its item.
+		if firstTypeName(operand) == "array" && operand.Items != nil {
+			operand = operand.Items
+		}
 		filters = append(filters, listFilter{
 			Name: p.Name,
-			Type: firstTypeName(p.Schema),
-			Enum: enumValues(p.Schema),
+			Type: firstTypeName(operand),
+			Enum: enumValues(operand),
 		})
 	}
 	filters = append(filters, parentFilters(op.path)...)

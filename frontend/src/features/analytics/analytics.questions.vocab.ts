@@ -14,6 +14,7 @@ import type { Reference } from "../../components/filterreference";
 import { formatAnalyticsNumber } from "../../format/format";
 import { isMessageKey, type useT, type Words } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { problemDetails } from "../../lib/problembody";
 import type { FilterOp } from "../../lib/segmentpredicate";
 
@@ -218,11 +219,11 @@ export function analyticsFieldLabel(
 }
 
 export function fnLabel(t: Translate, fn: MeasureFn): string {
-  return t(FN_LABEL_KEY[fn]);
+  return t(labelFor(FN_LABEL_KEY, fn));
 }
 
 export function opLabel(t: Translate, op: QuestionOp): string {
-  return t(OP_LABEL_KEY[op]);
+  return t(labelFor(OP_LABEL_KEY, op));
 }
 
 // Summing a stage name means nothing, so these four take a measure; counting

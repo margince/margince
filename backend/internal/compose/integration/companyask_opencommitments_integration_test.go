@@ -65,7 +65,7 @@ func TestWhatIsOpenNamesThePromiseEvenWhenTheModelNamesOnlyTheTask(t *testing.T)
 	e := Setup(t)
 	account := seedOpenWork(t, e, e.Rep1)
 	lane := &countingLane{reply: `{"sentences":[{"text":"You have one open task.","evidence":[{"entity_type":"activity","entity_id":"` +
-		account.taskID.String() + `"}]}]}`}
+		account.taskID.String() + `"}]}]}`, names: map[string]string{account.taskID.String(): "Call the CFO"}}
 	svc := briefService(e, lane, "routing-1")
 
 	answer, err := svc.Ask(e.As(e.Rep1, nil, briefReaderPerms), account.company, crmcontracts.CompanyQuestionWhatsOpen)

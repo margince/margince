@@ -4,6 +4,7 @@ import { formatNumber } from "../../../format/format";
 import type { Locale } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
 import { coldFieldLabelKey } from "../../../lib/coldfieldlabels";
+import { labelFor } from "../../../lib/labelfor";
 import type { BuildStage } from "./conversation-machine";
 
 type CompanySiteRead = components["schemas"]["CompanySiteRead"];
@@ -220,7 +221,7 @@ export function diffCorpus(
       kind: "say",
       id: `band:${next.quality_band}`,
       i18nKey: "ob.conv.corpus.band",
-      paramKeys: { band: bandLabelKeys[next.quality_band] },
+      paramKeys: { band: labelFor(bandLabelKeys, next.quality_band) },
     });
   }
   return events;

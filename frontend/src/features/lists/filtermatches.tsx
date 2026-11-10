@@ -19,6 +19,7 @@ import {
   RESOURCE_OF,
   UNIT_LABEL,
 } from "../../lib/filtersaddress";
+import { labelFor } from "../../lib/labelfor";
 import {
   encode,
   fieldsNamed,
@@ -144,7 +145,7 @@ export function FilterMatches({
   const t = useT();
   const exportRun = useFilterExport();
   const answer = preview.data;
-  const unit = t(UNIT_LABEL[tab]);
+  const unit = t(labelFor(UNIT_LABEL, tab));
   const resource = RESOURCE_OF[tab];
   return (
     <Panel
@@ -232,7 +233,7 @@ export function FilterOutcome({
           shown={shown}
           empty={tree.children.length === 0}
           complete={isComplete(tree)}
-          records={UNIT_LABEL[tab]}
+          records={labelFor(UNIT_LABEL, tab)}
         />
       )}
       {shown && (

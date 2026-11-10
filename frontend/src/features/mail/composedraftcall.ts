@@ -27,7 +27,7 @@ export type DraftUnavailable = "no_model" | "unsupported_origin";
 
 // The three choices a rep made on the account-started path. It travels as the
 // mutation variable of the draft and the send, so a stale closure cannot
-// change it (see mutation-variable-coverage.test.ts).
+// change it (see census/rules/mutation-variable-coverage.census.ts).
 export type Grounding = {
   recipientId: string;
   dealId: string;

@@ -12,11 +12,12 @@ fixture:
     window: "2026-10-01 to 2026-12-31"
     currency: EUR
     today: "2026-11-03"
+  # closed_win_rate is a percent, the unit the metric catalog gives it.
   cells:
     - {label: bookings_won, value: "216000 EUR", unit: EUR, window: "2026-10-01 to 2026-11-03", coverage: ok}
     - {label: forecast_landing, value: "410000 EUR", unit: EUR, window: "2026-10-01 to 2026-12-31", coverage: ok}
     - {label: open_pipeline, value: "370000 EUR", unit: EUR, window: "2026-10-01 to 2026-11-03", coverage: ok}
-    - {label: closed_win_rate, value: "0.33 ratio", unit: ratio, window: "2026-10-01 to 2026-11-03", coverage: ok}
+    - {label: closed_win_rate, value: "33 percent", unit: percent, window: "2026-10-01 to 2026-11-03", coverage: ok}
   candidate_deals:
     - {label: linden, name: "Linden press line", amount: "250000 EUR"}
     - {label: tern, name: "Tern customer portal", amount: "120000 EUR"}

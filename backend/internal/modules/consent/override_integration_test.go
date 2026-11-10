@@ -218,6 +218,7 @@ func TestAllowRejectsASubjectServingCategory(t *testing.T) {
 // same refusal that file seeded directly.
 func TestAllowThenTheSendGoesThrough(t *testing.T) {
 	e := setupResolve(t)
+	e.livesIn(t, reviewableMarketingCountry())
 	e.seedPurpose(t, "newsletter", "marketing")
 	req := commsauthz.Request{LegacyPurposeKey: "newsletter"}
 
@@ -283,6 +284,7 @@ func writerCtxAt(ws, user ids.UUID, role string) context.Context {
 // by the revoke call.
 func TestAdminRevokesAUserOverride(t *testing.T) {
 	e := setupResolve(t)
+	e.livesIn(t, reviewableMarketingCountry())
 	e.seedPurpose(t, "newsletter", "marketing")
 	req := commsauthz.Request{LegacyPurposeKey: "newsletter"}
 

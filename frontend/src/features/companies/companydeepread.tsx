@@ -24,6 +24,7 @@ import { throwProblem, unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { factsKey } from "./companyfactspanel";
 import "./companydeepread.css";
+import { labelFor } from "../../lib/labelfor";
 import {
   type ConfiguredStopReason,
   stopIsConfigured,
@@ -105,7 +106,7 @@ function ScanSteps({ report }: Readonly<{ report: SiteReadReport }>) {
       {SCAN_STAGES.map((stage) => (
         <li key={stage} className={`deepread-step t-sub is-${states[stage]}`}>
           <span className="deepread-step-mark" aria-hidden="true" />
-          {t(SCAN_STAGE_LABELS[stage])}
+          {t(labelFor(SCAN_STAGE_LABELS, stage))}
           {/* The state in words as well as in the mark: three tinted circles
               are three tinted circles to a reader who cannot tell them
               apart. */}
@@ -166,10 +167,10 @@ function statusLabelOf(report: SiteReadReport): MessageKey {
   }
 
   if (report.status !== "partial" || !report.stopped_reason) {
-    return SITE_READ_STATUS_LABELS[report.status];
+    return labelFor(SITE_READ_STATUS_LABELS, report.status);
   }
   return stopIsConfigured(report.stopped_reason)
-    ? SITE_READ_CAPPED_LABELS[report.stopped_reason]
+    ? labelFor(SITE_READ_CAPPED_LABELS, report.stopped_reason)
     : SITE_READ_STATUS_LABELS[report.status];
 }
 

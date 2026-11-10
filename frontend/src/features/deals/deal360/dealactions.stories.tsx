@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, screen, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../../api/schema";
 import {
   installFetchStub,
@@ -106,6 +106,17 @@ export const Open: Story = { render: () => actions() };
  */
 export const LoggingRefused: Story = {
   render: () => actions({}, { deal: ["read"] }),
+  play: async ({ canvasElement }) => {
+    const email = await within(canvasElement).findByRole("button", {
+      name: "Email",
+    });
+    await waitFor(() =>
+      expect(email).toHaveAccessibleDescription(
+        "You do not have permission to log activities on this record.",
+      ),
+    );
+    await expect(email).toBeDisabled();
+  },
 };
 
 /**

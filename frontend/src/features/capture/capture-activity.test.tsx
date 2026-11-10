@@ -90,6 +90,7 @@ function presentationBody() {
       change_mode: "none",
     },
     can_reply: false,
+    can_forward: true,
     can_relink: false,
     version: 1,
   };
