@@ -134,7 +134,7 @@ type CorpusAnswer struct {
 	Renumbered bool
 }
 
-// corpusAskSchema is the reply shape, with this call's own passage ids as the
+// corpusAskSchema is the reply shape, with this call's own passage refs as the
 // citation enum.
 //
 // coverage is listed FIRST and required. Structured output is generated in
@@ -228,14 +228,14 @@ func groundClaims(asked []askedClaim, passages []knowledge.Passage) []crmcontrac
 	for _, p := range passages {
 		byID[p.ChunkID.String()] = p
 	}
+	refs := passageRefs(passages)
 	var kept []crmcontracts.KnowledgeClaim
 	for _, c := range asked {
-		p, ok := byID[c.ID]
-		if !ok {
-			// The schema's enum should make this unreachable; it is checked
-			// anyway because "should be unreachable" is not a guarantee about
-			// a provider's output, and a citation to a passage this call never
-			// saw is the exact failure the enum exists to prevent.
+		p, ok := byID[shownID(refs, c.ID)]
+		if _, named := refs.NamedIn(c.Text); !ok || named {
+			// The enum should make a ref this call never showed unreachable; it
+			// is checked anyway because a provider's output is no guarantee. A
+			// sentence spelling a ref puts a label where the reader reads.
 			continue
 		}
 		if !quotedFromDocument(p.Text, c.Quote) {

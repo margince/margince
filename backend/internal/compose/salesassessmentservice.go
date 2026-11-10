@@ -155,7 +155,7 @@ func (s *salesAssessments) prepareAssessment(ctx context.Context, selection crmc
 		}
 		in.Cells = append(in.Cells, work...)
 	}
-	displayAssessmentCells(&in, evaluation)
+	displayAssessmentFigures(&in, string(reporting.ExplanationCopy(evaluation.Context).Lang()))
 	return evaluation, in, nil
 }
 

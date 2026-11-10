@@ -86,7 +86,8 @@ export function CompanyHeaderActions({
         company={company}
         open={composerOpen}
         onOpen={onComposerOpen}
-        disabledReasonId={archived}
+        disabledReasonId={logRefused}
+        disabled={logPending}
       />
       <CompanyBookMeeting
         companyId={company.id}
@@ -185,11 +186,13 @@ function CompanyWriteEmail({
   open,
   onOpen,
   disabledReasonId,
+  disabled,
 }: Readonly<{
   company: Company;
   open: boolean;
   onOpen: (open: boolean) => void;
   disabledReasonId?: string;
+  disabled?: boolean;
 }>) {
   // Whether the verb has ever been pressed. `open` belongs to the page, so
   // this is the composer's own memory of having been asked for.
@@ -201,7 +204,11 @@ function CompanyWriteEmail({
     <>
       {/* The shared Email verb: icon-only with its name on hover, the same
           control every record header draws, found by its place and its word. */}
-      <EmailVerb reasonId={disabledReasonId} onClick={() => onOpen(true)} />
+      <EmailVerb
+        disabled={disabled}
+        reasonId={disabledReasonId}
+        onClick={() => onOpen(true)}
+      />
       {/* Not drawn until the verb has been pressed once, and mounted from
           then on. A composer mounted with the record would read on every
           render of a page nobody is writing from; one unmounted the moment it

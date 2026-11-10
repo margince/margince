@@ -11,6 +11,7 @@ type Contact = components["schemas"]["Company360Contact"];
 
 const LAN: Contact = {
   contact_id: "01930000-0000-7000-8000-0000000000c2",
+  attachable: true,
   full_name: "Phạm Thị Lan",
   title: "Trưởng phòng mua hàng",
   primary_email: "lan@minhphat.example",

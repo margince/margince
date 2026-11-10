@@ -120,6 +120,7 @@ func ParsePlan(reply string, in Input, floor Plan) (Plan, error) {
 	if err := json.Unmarshal([]byte(ai.Unfence(reply)), &parsed); err != nil {
 		return Plan{}, fmt.Errorf("the meeting plan reply is not the JSON the prompt asked for: %w", err)
 	}
+	parsed = readPlanRefs(parsed, planRefs(in, floor))
 	known := knownRecords(in)
 	// Type and unknowns are the floor's, always. The first is read from
 	// signals the records carry and the second from their absence; neither is

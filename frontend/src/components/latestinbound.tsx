@@ -28,6 +28,7 @@ import { UNKNOWN_VALUE_LABEL } from "../lib/labelfor";
 import { useSourceOpener } from "../lib/opensource";
 import { unwrap } from "../lib/problem";
 import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
+import { useActivityWritable } from "./activitygate";
 import "./latestinbound.css";
 import { itemWords, When } from "./latestinbound.words";
 
@@ -103,6 +104,8 @@ type JustInScopeValue = Readonly<{
   refreshKeys?: readonly QueryKey[];
   // The page's own message drawer, where it has one; else the shell's.
   onOpenEmail?: (activityId: string) => void;
+  // The contact whose page this is: a task from the item files under it.
+  contact?: { readonly attachable?: boolean };
 }>;
 
 const JustInContext = createContext<JustInScopeValue | null>(null);
@@ -354,6 +357,7 @@ function TaskFromItem({
   const t = useT();
   const queryClient = useQueryClient();
   const { activity, kind, accepts_request } = latest;
+  const writable = useActivityWritable(scope.contact);
   const create = useMutation({
     mutationFn: async () => {
       const about = itemWords(activity).subject ?? kindLabel(kind, t);
@@ -383,7 +387,7 @@ function TaskFromItem({
     },
   });
   // The task reads the item's content, which a withheld row refuses.
-  if (activity.content_state === "withheld") {
+  if (!writable || activity.content_state === "withheld") {
     return null;
   }
   return (
@@ -397,11 +401,8 @@ function TaskFromItem({
   );
 }
 
-/**
- * The item as one line. It shows in the record's head on the other tabs, and
- * above a Next bar that has something more urgent. With no
- * `onOpen` it only says what came in.
- */
+/** The item as one line: in the record's head on the other tabs, and above a
+ *  Next bar with more urgent work. Without `onOpen` it says what came in. */
 export function LatestInboundLine({
   latest,
   onOpen,

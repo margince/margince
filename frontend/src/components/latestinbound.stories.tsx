@@ -3,11 +3,16 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ReactNode, useState } from "react";
-import { expect, within } from "storybook/test";
+import { expect, screen, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { OpenSourceProvider } from "../lib/opensource";
-import { StoryProviders, storyQueryClient } from "../testing/story-utils";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+  storyQueryClient,
+} from "../testing/story-utils";
 import {
   type JustIn,
   JustInScope,
@@ -87,10 +92,20 @@ const MAIL: JustIn = {
   notice,
 };
 
+const MAY_WRITE = meRoute({ activity: ["read", "create"] });
+
 function OnRecord({
   latest,
+  me = MAY_WRITE,
+  contact,
   children,
-}: Readonly<{ latest: JustIn; children: ReactNode }>) {
+}: Readonly<{
+  latest: JustIn;
+  me?: () => Response;
+  contact?: { attachable?: boolean };
+  children: ReactNode;
+}>) {
+  installFetchStub({ "GET /me": me });
   return (
     <StoryProviders>
       <div style={{ maxWidth: 720 }}>
@@ -98,6 +113,7 @@ function OnRecord({
           latest={latest}
           entityType="contact"
           entityId="story-contact"
+          contact={contact}
           actions={verbs}
         >
           {children}
@@ -120,6 +136,37 @@ export const Email: Story = {
       <RecordNextBar />
     </OnRecord>
   ),
+};
+
+/** A seat that may not write activities is offered no task. */
+export const EmailTaskRefused: Story = {
+  render: () => {
+    return (
+      <OnRecord latest={MAIL} me={meRoute({ activity: ["read"] })}>
+        <RecordNextBar />
+      </OnRecord>
+    );
+  },
+  play: async () => {
+    // Drawn while the grants are unknown, gone once /me refuses the write.
+    await screen.findByRole("button", { name: "Create task" });
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Create task" })).toBeNull(),
+    );
+  },
+};
+
+/** A contact shared read-only: the task would file under it, so none is offered. */
+export const EmailTaskRefusedOnReadShareContact: Story = {
+  render: () => (
+    <OnRecord latest={MAIL} contact={{ attachable: false }}>
+      <RecordNextBar />
+    </OnRecord>
+  ),
+  play: async () => {
+    await screen.findByRole("button", { name: "Reply" });
+    expect(screen.queryByRole("button", { name: "Create task" })).toBeNull();
+  },
 };
 
 export const UrgentNext: Story = {

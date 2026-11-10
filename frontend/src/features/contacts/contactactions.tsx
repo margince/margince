@@ -98,8 +98,9 @@ export function ContactActions({
       <EmailVerb
         label={write.label}
         icon={<WriteIcon size={15} aria-hidden="true" />}
-        reason={archived || writeRefusalId ? undefined : refusal}
-        reasonId={archived ?? (refusal ? writeRefusalId : undefined)}
+        disabled={logPending}
+        reason={logRefused || writeRefusalId ? undefined : refusal}
+        reasonId={logRefused ?? (refusal ? writeRefusalId : undefined)}
         onClick={onWrite}
         word={t("record.verb.email")}
       />
