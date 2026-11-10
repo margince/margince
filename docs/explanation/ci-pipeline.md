@@ -41,10 +41,9 @@ records the results. It never writes them to `main`. It opens one pull request w
 records and the pages they feed, and a record is published when a maintainer merges that pull request. See
 [the workflows beside the merge gate](../reference/ci-workflows.md#scheduledyml).
 
-**The merge queue is not turned on.** Each active ruleset on `main` requires the `ci` check, and none
-holds a merge queue rule. So no `merge_group` run happens, and a pull request's own run, scoped to its diff, is
-the merge verdict. `ci.yml` still handles `merge_group`. The sections below that describe the queue
-describe how the pipeline acts when the queue is switched on. Where that matters, the text says so.
+**The merge queue is a ruleset setting**, not a file in this tree. Both required checks, `ci` and `cla`,
+run on `merge_group`, and `backend/gates/mergequeuereach_test.go` fails a pull request workflow that does
+not. With no queue rule, no `merge_group` run happens, and a pull request's own run is the merge verdict.
 
 ## Triggers
 
@@ -56,42 +55,40 @@ There is no `push` trigger on `main`. With the queue on, a push to `main` is the
 already reached, because the queue gated that tree before it landed. With the queue off, nothing runs
 `ci.yml` on `main` after a merge; `scheduled.yml` checks `main` again daily.
 
-### The merge queue, when turned on
+### The merge queue
 
 A `merge_group` run builds `main` + everything ahead of it in the queue + the entry under test, on a
 `gh-readonly-queue/main/...` ref that is removed later. It gates that tree. Two things follow:
 
 - **The full tree, always.** The change classifier is overridden on `merge_group` (every scope reports
   `true`), so no job can be skipped there.
-- **Every commit, not just the last one.** The tree that is measured is the tree that merges.
+- **Every merge, not just the tip.** The tree that is measured is the tree that merges: with
+  `HEADGREEN`, the head of each group.
 
-The queue merges in **batches**. Say it merged one PR at a time, with a lane of about 20 minutes. That
-would cap merges at three an hour, against a measured rate of 70–82 a day. A batch makes gating per commit
-cheap enough.
+The queue merges in **batches**. One PR at a time, with a lane of about 25 minutes, caps merges near
+two an hour, against a measured 55 merges a day on average and up to 10 in a busy hour. Batches and parallel
+builds make gating per commit cheap enough. The ruleset holds these queue settings:
 
-The queue was set up with these ruleset settings. Two of the limits are often taken for each other:
-
-| Setting in the ruleset | Set to | What it bounds |
+| Setting in the ruleset | Set to | What it bounds, and why this value |
 |---|---|---|
-| `max_entries_to_merge` | **2** | how many entries may merge together as one group |
-| `max_entries_to_build` | **2** | how many queued entries may ask for checks at once |
-| `min_entries_to_merge` / `…_wait_minutes` | 1 / 2 | a single entry still merges after a 2 minute wait |
+| `max_entries_to_build` | **5** | queued entries that build at once; 10 merges an hour times a 25 minute lane is about 4 in flight |
+| `max_entries_to_merge` | **5** | entries that merge together as one group; no more than build at once |
+| `min_entries_to_merge` / `…_wait_minutes` | 1 / 5 | a single entry merges with no wait, since a minimum of 1 is always met |
 | `grouping_strategy` | `HEADGREEN` | **which commits get checked** (see below) |
-| `check_response_timeout_minutes` | 60 | clears the `p90` of 22 minutes with a margin |
-| `merge_method` | `SQUASH` | keeps `required_linear_history` |
+| `check_response_timeout_minutes` | 75 | clears the `p95` full lane of 45 minutes, plus a CI image rebuild |
+| `merge_method` | `SQUASH` | one commit per pull request on `main` |
 
-`grouping_strategy` is not about partial merging. `HEADGREEN` checks only the merge group's **head**
-commit (the changes of every entry in the group put together). `ALLGREEN` checks the commit of each
-entry on its own. It sets cost against knowing which entry failed.
+`grouping_strategy` is not about partial merging. `HEADGREEN` asks only the group's **head** commit (the
+changes of every entry in the group put together) to pass. `ALLGREEN` asks the commit of each entry to
+pass on its own.
 
-- `ALLGREEN` tells you *which* entry failed the batch. But it runs the lane of 28 jobs once per entry
-  in the group, which a limit of 20 jobs at a time cannot take.
-- `HEADGREEN` pays one lane per group, and leaves GitHub to work out which entry to drop when the
-  group fails.
+- `ALLGREEN` tells you *which* entry failed, and a flake in any entry ejects it.
+- `HEADGREEN` merges the group when its head passes, so an entry whose own run hit a flake still
+  merges once a later run that holds it passes.
 - Neither one merges the passing first part of a failing group.
 
-`max_entries_to_merge` starts at **2**, because in a batched queue a flaky job costs a whole group's run,
-not one. It is a live ruleset setting: raise it once the queue has a measured baseline.
+The queue starts with these values and keeps them for about two weeks. Then its measured runs decide
+the group size, and whether `vuln` and `live-boot` join the aggregate.
 
 `concurrency` is keyed on `github.ref`, with `cancel-in-progress` held to `pull_request` only. A new push
 replaces the review under way, and a merge verdict can never be cancelled. Each queue entry has its own
