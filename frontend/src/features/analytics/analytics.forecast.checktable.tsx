@@ -12,10 +12,11 @@ import type {
   ResolveAnswer,
   ResolveSheetLabels,
 } from "../../design-system/resolvesheet";
-import { formatDate, formatMoneyOrAbsent } from "../../format/format";
+import { formatAnalyticsMoneyOrAbsent, formatDate } from "../../format/format";
 import { type Locale, useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
+import { labelFor, valueFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { OutOfDateBadge } from "./analytics.forecast.freshness";
 import { InputCheckAnswerSheet } from "./inputcheck.answer";
@@ -26,11 +27,6 @@ type Resolution = {
   id: string;
   answer: ResolveAnswer;
   dealId?: string;
-  // A customer review's wait and lost answers also write the deal, through
-  // their own routes.
-  review?: boolean;
-  // The reason a review closed lost is lost for, from the loss reason list.
-  lostReasonCode?: string;
 };
 
 // The findings, and the one sheet that answers whichever was picked.
@@ -43,7 +39,7 @@ export function CheckTable({
   title,
 }: Readonly<{ checks: InputCheck[]; locale: Locale; title: string }>) {
   const t = useT();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const [params] = useUrlParams();
   // A door from a finding names it; a door from a group names its type.
   const focus = params.get("finding");
@@ -118,6 +114,7 @@ export function CheckTable({
         ) : (
           <div ref={table}>
             <DataTable<InputCheck>
+              fold
               label={title}
               rows={rows}
               rowKey={(check) => check.id}
@@ -134,22 +131,30 @@ export function CheckTable({
         error={resolve.error}
         labels={sheetLabels(t)}
         returnFocusTo={focusAfterClose}
-        onSubmit={(given, dealId, lostReasonCode) => {
+        onSubmit={(given, dealId) => {
           if (sheet !== null) {
-            const review =
-              checks.find((check) => check.id === sheet.id)?.type ===
-              "deal_viability";
-            resolve.mutate({
-              id: sheet.id,
-              answer: given,
-              dealId,
-              review,
-              lostReasonCode,
-            });
+            resolve.mutate({ id: sheet.id, answer: given, dealId });
           }
         }}
         onClose={close}
       />
+    </>
+  );
+}
+
+function stakeOf(check: InputCheck, locale: Locale): string {
+  return formatAnalyticsMoneyOrAbsent(
+    check.affected_minor ?? null,
+    check.currency ?? "",
+    locale,
+  );
+}
+
+function FindingCell({ check }: Readonly<{ check: InputCheck }>) {
+  const t = useT();
+  return (
+    <>
+      {t(checkLabel(check.type))} {check.inputs_changed && <OutOfDateBadge />}
     </>
   );
 }
@@ -169,30 +174,28 @@ function checkColumns(
     {
       key: "finding",
       header: t("review.colFinding"),
-      render: (check) => (
-        <>
-          {t(checkLabel(check.type))}{" "}
-          {check.inputs_changed && <OutOfDateBadge />}
-        </>
-      ),
+      render: (check) => <FindingCell check={check} />,
+      // A finding with no deal is the folded row's title, so it is not
+      // repeated below it.
+      folded: (check) => (check.subject ? undefined : null),
     },
     {
       key: "deal",
       header: t("review.colDeal"),
+      fold: "title",
       render: (check) => <SubjectCell check={check} />,
+      folded: (check) =>
+        check.subject ? undefined : <FindingCell check={check} />,
     },
     {
       key: "stake",
       header: t("review.colAtStake"),
+      fold: "end",
       render: (check) => (
-        <span className="t-num">
-          {formatMoneyOrAbsent(
-            check.affected_minor ?? null,
-            check.currency ?? "",
-            locale,
-          )}
-        </span>
+        <span className="t-num">{stakeOf(check, locale)}</span>
       ),
+      folded: (check) =>
+        t("review.foldedAtStake", { amount: stakeOf(check, locale) }),
     },
     {
       key: "since",
@@ -200,11 +203,16 @@ function checkColumns(
       // each other, and two of them must read the same day.
       header: t("review.colSeenSince"),
       render: (check) => formatDate(check.first_seen_at, locale, zone),
+      folded: (check) =>
+        t("review.foldedSeenSince", {
+          date: formatDate(check.first_seen_at, locale, zone),
+        }),
     },
     {
       key: "answer",
       header: t("table.actions"),
       headerHidden: true,
+      fold: "trail",
       render: (check) =>
         // A reader who may not answer is shown the finding to read, never a
         // button the server would refuse.
@@ -234,34 +242,7 @@ function checkColumns(
 function useResolveCheck(onResolved: (id: string) => void) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: async ({
-      id,
-      answer,
-      dealId,
-      review,
-      lostReasonCode,
-    }: Resolution) => {
-      if (review && answer.outcome === "remind_later") {
-        unwrap(
-          await api.POST("/forecast/assurance/exceptions/{id}/wait", {
-            params: { path: { id } },
-            body: { until: answer.remindAt ?? "" },
-          }),
-        );
-        return;
-      }
-      if (review && answer.outcome === "not_relevant") {
-        unwrap(
-          await api.POST("/forecast/assurance/exceptions/{id}/close-lost", {
-            params: { path: { id } },
-            body: {
-              lost_reason: answer.reason ?? "",
-              lost_reason_code: lostReasonCode,
-            },
-          }),
-        );
-        return;
-      }
+    mutationFn: async ({ id, answer, dealId }: Resolution) => {
       unwrap(
         await api.POST("/forecast/assurance/exceptions/{id}/resolve", {
           params: { path: { id } },
@@ -297,7 +278,11 @@ export function SeverityBadge({
     medium: "review.severityMedium",
     low: "review.severityLow",
   } as const;
-  return <Badge tone={tone[severity]}>{t(label[severity])}</Badge>;
+  return (
+    <Badge tone={valueFor(tone, severity, "default")}>
+      {t(labelFor(label, severity))}
+    </Badge>
+  );
 }
 export function sheetLabels(t: ReturnType<typeof useT>): ResolveSheetLabels {
   return {

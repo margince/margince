@@ -42,10 +42,20 @@ func TestEngagementOfReadsTheStatesOffWhoWroteLast(t *testing.T) {
 			EngagementWaiting,
 		},
 		{
-			// Two date-only entries on one day share one stored time.
-			"their mail and ours carry one timestamp",
-			RelationshipStrength{Inbound90d: 1, Outbound90d: 1, LastInbound: at(0), LastOutbound: at(0)},
+			"their mail and ours are dated one day",
+			RelationshipStrength{
+				Inbound90d: 1, Outbound90d: 1, LastInbound: at(0), LastOutbound: at(0),
+				LastInboundPrecision: "day", LastOutboundPrecision: "day",
+			},
 			EngagementAnswered,
+		},
+		{
+			"their mail and ours carry one stored instant",
+			RelationshipStrength{
+				Inbound90d: 1, Outbound90d: 1, LastInbound: at(0), LastOutbound: at(0),
+				LastInboundPrecision: "instant", LastOutboundPrecision: "instant",
+			},
+			EngagementWaiting,
 		},
 		{
 			"we wrote and heard nothing",

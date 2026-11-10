@@ -131,7 +131,8 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 		p.Set(arrField, current.ExpectedArrMinor, *in.ExpectedArrMinor)
 	}
 	if err := applyDealLinkPatches(ctx, tx, current, in, p, clearPartner,
-		s.installation.EnsurePartner, s.ensureProjectAttachable); err != nil {
+		s.installation.EnsurePartner, s.ensureProjectAttachable,
+		s.installation.EnsureContractsShareCompany); err != nil {
 		return nil, err
 	}
 	if in.Description != nil {
@@ -183,8 +184,12 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 			p.Set("close_date_provisional", true, false)
 		}
 	}
-	if in.ForecastCategory != nil {
-		p.Set("forecast_category", current.ForecastCategory, *in.ForecastCategory)
+	if in.WinProbability != nil {
+		if string(current.Status) != string(DealOpen) {
+			return nil, &ProbabilityFixedWhenClosedError{}
+		}
+		stored, storedBy := storedWinProbability(current)
+		setWinProbability(p, stored, storedBy, in.WinProbability, SourceHuman)
 	}
 	if in.WaitUntil != nil {
 		p.SetDate("wait_until", storekit.PlainDate(current.WaitUntil), in.WaitUntil)
@@ -306,6 +311,9 @@ func (s *Store) applyMoneyInvariants(ctx context.Context, tx pgx.Tx,
 	// resulting row derived from `in` alone would still hold every figure the
 	// caller just cleared — and the pairing would then be checked against a row
 	// that is not the one about to be written.
+	if err := refuseTypedMoneyOnLines(ctx, tx, ids.From[ids.DealKind](ids.UUID(current.Id)), p); err != nil {
+		return err
+	}
 	after := p.After()
 	resultingAmount := patchedMoney(after, amountField, current.AmountMinor)
 	resultingArr := patchedMoney(after, arrField, current.ExpectedArrMinor)

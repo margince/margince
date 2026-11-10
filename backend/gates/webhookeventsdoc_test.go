@@ -18,6 +18,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const webhookEventsDoc = "../docs/reference/webhook-events.md"
@@ -52,7 +53,7 @@ type yamlRef struct {
 
 func loadEventSchemas(t *testing.T) map[string]eventSchema {
 	t.Helper()
-	raw, err := os.ReadFile(publicEventsPath)
+	raw, err := gatekit.ReadFile(publicEventsPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +80,7 @@ func TestWebhookEventReferenceMatchesTheContract(t *testing.T) {
 		}
 		return
 	}
-	got, err := os.ReadFile(webhookEventsDoc)
+	got, err := gatekit.ReadFile(webhookEventsDoc)
 	if err != nil {
 		t.Fatalf("%s is missing.\nGenerate it with:\n    %s", webhookEventsDoc, regenerateWebhookEvents)
 	}

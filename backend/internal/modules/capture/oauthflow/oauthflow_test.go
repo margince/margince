@@ -268,6 +268,9 @@ func TestExchangeReportsTheScopesTheProviderGranted(t *testing.T) {
 	if !slices.Equal(grant.Scopes, want) {
 		t.Errorf("granted scopes = %v, want %v", grant.Scopes, want)
 	}
+	if grant.ScopesAssumed {
+		t.Error("a grant whose scopes the provider named is marked assumed")
+	}
 }
 
 func TestExchangeTreatsAnAbsentScopeAsGrantedAsRequested(t *testing.T) {
@@ -281,6 +284,9 @@ func TestExchangeTreatsAnAbsentScopeAsGrantedAsRequested(t *testing.T) {
 	grant, err := c.Exchange(context.Background(), "c", "cb")
 	if err != nil {
 		t.Fatalf("Exchange: %v", err)
+	}
+	if !grant.ScopesAssumed {
+		t.Error("an absent scope is not marked assumed")
 	}
 	if !slices.Equal(grant.Scopes, baseScope) {
 		t.Errorf("granted scopes = %v, want the requested %v", grant.Scopes, baseScope)

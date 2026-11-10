@@ -40,10 +40,9 @@ import (
 // tidy separation. A third surface needing this rule should lift the predicate
 // rather than copy it a third time.
 //
-// It answers the SCOPE axis only, which is what §5.7 promises. The seat
-// ceiling and object RBAC are re-derived per call through the authority seam
-// and are a named follow-up (§10.2); this filter must not pretend to enforce
-// them, and Registry.Invoke remains the authority for every one of them.
+// It answers the scope axis and the seat ceiling, the two Admit refuses a tool
+// on whatever its arguments; Registry.grantedTo answers the object grants. The
+// principal's seat is the one authentication loaded for this request.
 //
 // A ctx with no principal shows nothing rather than everything: the caller of
 // a tools/list that never authenticated has no scopes, and an empty surface is
@@ -73,6 +72,10 @@ func invocableByCaller(ctx context.Context, spec mcp.ToolSpec) bool {
 	// prevent. Ordered first rather than relying on it never co-occurring
 	// with SelfDescribing, so the rule reads plainly.
 	if spec.HumanOnly {
+		return false
+	}
+	// Admit refuses a read seat every tool past the read scope, outright.
+	if spec.RequiredScope != principal.ScopeRead && !p.SeatType.CanMutate() {
 		return false
 	}
 	// A tool answering who the caller is stays offered whatever the passport
@@ -118,12 +121,11 @@ func DescribeForClient(spec mcp.ToolSpec) string {
 	return fmt.Sprintf("%s (Governance: %s%s; %s.)", spec.Description, tier, askUserFirst(spec), scope)
 }
 
-// askUserFirst tells the client to get the user's yes before a call that runs
-// with no human approval and cannot be undone. A call a human approves already
-// gets that yes, so it is never named here.
+// askUserFirst is for an MCP client's model only, never the loop agent, which has no one to ask.
+// The server cannot check the yes, and a call a human approves already has it.
 func askUserFirst(spec mcp.ToolSpec) string {
-	const ask = "; %s cannot be undone, so tell the user what the call will change and " +
-		"get their yes before calling, unless they asked for this call themselves"
+	const ask = "; the user's yes is needed for %s, so tell them what the call will change and " +
+		"get it before calling, unless they asked for this call themselves"
 	if len(spec.Actions) == 0 {
 		if !spec.AskUserFirst || spec.Tier == mcp.TierConfirmationRequired {
 			return ""

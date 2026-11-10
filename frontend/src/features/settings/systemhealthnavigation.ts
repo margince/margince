@@ -3,25 +3,13 @@
 
 import type { Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import type { Route } from "../../lib/router";
+import { routeHash } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
-import type { SettingsHit } from "./settingssearch";
-import { SETTINGS_SECTIONS } from "./settingssections";
-
-export function settingsSearchRoute(hit: SettingsHit, t: Translator): Route {
-  const route = settingsHref(hit.page.id);
-  if (hit.page.id !== "system-health" || !hit.section) return route;
-  const key = SETTINGS_SECTIONS["system-health"].find(
-    (key) => t(key) === hit.section,
-  );
-  return {
-    ...route,
-    id2: key?.startsWith("operations.") ? "configuration" : "diagnostics",
-  };
-}
+import { hashWithParams } from "../../lib/urlstate";
+import { settingsSectionKeys } from "./settingssections";
 
 export function healthSectionKey(section: string | undefined, t: Translator) {
-  return SETTINGS_SECTIONS["system-health"].find(
+  return settingsSectionKeys("system-health").find(
     (key) => key === section || t(key) === section,
   );
 }
@@ -48,4 +36,12 @@ export function healthSourceForSection(
   if (section?.startsWith("embedreindex.")) return "search";
   if (section?.startsWith("recoveryHealth.")) return "recovery";
   return Object.entries(healthSections).find(([, key]) => key === section)?.[0];
+}
+
+/** The address of System health's diagnostics, opened on one section. */
+export function settingsHealthHref(section: MessageKey | undefined): string {
+  return hashWithParams(
+    routeHash({ ...settingsHref("system-health"), id2: "diagnostics" }),
+    new Map([["section", section ?? ""]]),
+  );
 }

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useCompanyContextCapabilities } from "../../lib/companycontextreach";
-import { useOnboardingProgress } from "./onboarding";
+import { useOnboardingProgress } from "./onboarding-progress";
 
 // The second half of the onboarding gate, for a DESCRIBED installation: a
 // human whose own journey — voice, mailbox, preferences — is not recorded as

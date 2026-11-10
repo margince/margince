@@ -36,7 +36,7 @@ const MAX_PAGES_CHASED = 10;
 
 /** The address of the privacy queue with one case named. */
 export function caseHref(id: string): string {
-  return `${routeHash(settingsHref("privacy"))}?${CASE_PARAM}=${encodeURIComponent(id)}`;
+  return `${routeHash(settingsHref("privacy", "requests"))}?${CASE_PARAM}=${encodeURIComponent(id)}`;
 }
 
 /** The case the address names, or nothing. */

@@ -5,8 +5,6 @@ import type {
   FormEventHandler,
   ReactNode,
 } from "react";
-import { formatNumber } from "../format/format";
-import { useLocale } from "../i18n";
 import { Heading, type HeadingElement, type HeadingSize } from "./heading";
 import { useWaited } from "./waited";
 import "./badge.css";
@@ -30,8 +28,12 @@ export {
   Textarea,
   TextInput,
 } from "./field";
+
+import { OptionCount } from "./optioncount";
+
 export { OverflowMenu } from "./overflowmenu";
 export { TableScroll } from "./tablescroll";
+export { OptionCount };
 
 /**
  * The closed tone vocabulary, as a value the type is read from. The story and
@@ -123,7 +125,7 @@ export { StatCard } from "./statcard";
 type CardElement = "section" | "div" | "article" | "form" | "li";
 
 /**
- * The one card in the product: elevated ground, subtle border, 12px radius, one
+ * The one card in the product: elevated ground, subtle border, the card radius, one
  * padding. Every surface that reads as a card comes from here — a hand-rolled
  * `<div className="card">` drifts the moment one of those five values changes.
  *
@@ -403,45 +405,16 @@ export function SectionHeader({
   );
 }
 
-/**
- * The figure beside an option's name, in a strip that counts what is behind
- * each one.
- *
- * One component because the count is four decisions, not a number: tabular
- * figures so a column of them lines up, the reader's own number format, the
- * CHIP it is drawn as, and the SEPARATOR — which is the one that was missing.
- * Both strips rendered `{label}{count}` as adjacent nodes, so the accessible
- * name a screen reader speaks was "Contacts2", "Deals0", "Tasks0". The comma is
- * visually hidden because the gap between them is already drawn in CSS; what it
- * fixes is the spoken name, where there was nothing between the two at all.
- *
- * The chip is the component's own (`.optioncount`, atoms.css) and takes no
- * class from its caller: every host was styling the same figure itself, which
- * is how one count came to be drawn two ways on two strips of one record. It
- * carries no ink of its own either — it inherits the host's, so the figure goes
- * quiet beside a quiet label and dark beside a pressed one.
- *
- * It renders INSIDE the option's button, which is what puts the figure in that
- * option's accessible name rather than leaving it to a sighted reader alone.
- */
-export function OptionCount({ count }: Readonly<{ count: number }>) {
-  const { locale } = useLocale();
-  return (
-    <>
-      <span className="sr-only">, </span>
-      <span className="optioncount t-num">{formatNumber(count, locale)}</span>
-    </>
-  );
-}
-
 export function SegmentedControl<Option extends string>({
   options,
   value,
   onChange,
   labels,
   counts,
+  floors,
   label,
   marks,
+  busy,
 }: Readonly<{
   options: readonly Option[];
   value: Option;
@@ -458,6 +431,8 @@ export function SegmentedControl<Option extends string>({
   // screen reader announces "Contacts 6" rather than leaving the figure to a
   // sighted reader alone.
   counts?: Partial<Record<Option, number>>;
+  // Options whose count is a floor, drawn "25+": the read stopped at a bound.
+  floors?: Partial<Record<Option, boolean>>;
   // Accessible name for the control as a whole (the `fieldset` group); a
   // screen reader announces it alongside each option so the buttons aren't
   // read out of context. Optional so existing callers are unaffected.
@@ -468,9 +443,16 @@ export function SegmentedControl<Option extends string>({
   // thing a screen reader cannot read out and a colour-blind reader may not
   // see. It draws attention; it never carries the meaning alone.
   marks?: Partial<Record<Option, boolean>>;
+  // The option whose choice is being stored. Every option waits until it lands,
+  // so a second press cannot overtake the first.
+  busy?: Option;
 }>) {
   return (
-    <fieldset className="segmented" aria-label={label}>
+    <fieldset
+      className="segmented"
+      aria-label={label}
+      disabled={busy !== undefined}
+    >
       {options.map((option) => {
         const count = counts?.[option];
         return (
@@ -478,10 +460,13 @@ export function SegmentedControl<Option extends string>({
             key={option}
             type="button"
             aria-pressed={option === value}
+            aria-busy={option === busy || undefined}
             onClick={() => onChange(option)}
           >
             {labels[option]}
-            {count !== undefined && <OptionCount count={count} />}
+            {count !== undefined && (
+              <OptionCount count={count} floor={floors?.[option]} />
+            )}
             {marks?.[option] && <span className="segmented-mark" aria-hidden />}
           </button>
         );

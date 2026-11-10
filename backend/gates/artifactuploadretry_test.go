@@ -19,9 +19,10 @@ package gates
 // the day it is committed.
 
 import (
-	"os"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // retryingUploadAction is the one door. Its own definition names
@@ -38,7 +39,7 @@ func TestEveryWorkflowUploadsItsArtifactsThroughTheRetryingWrapper(t *testing.T)
 	t.Parallel()
 	wrapped := 0
 	for _, path := range workflowFiles(t) {
-		raw, err := os.ReadFile(path) // #nosec G304 -- a repo-relative workflow path from the glob
+		raw, err := gatekit.ReadFile(path) // #nosec G304 -- a repo-relative workflow path from the glob
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}

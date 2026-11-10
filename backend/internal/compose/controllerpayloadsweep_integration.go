@@ -30,14 +30,17 @@ import (
 //
 // `now` is the clock the pass reads expiry against, so a test can place material
 // on either side of it without sleeping.
+//
+// opts reach the comms store, so a test can shrink the receipt page.
 func DriveControllerPayloadSweepForTest(
-	ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, now time.Time,
+	ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, now time.Time, opts ...comms.StoreOption,
 ) error {
 	db := InstallationDB(pool)
 	worker := newControllerPayloadSweepWorker(
 		identity.NewService(pool),
-		comms.NewStore(db, time.Now, activities.NewStore(db)),
+		comms.NewStore(db, time.Now, activities.NewStore(db), opts...),
 		controllerPayloads{v: vault},
+		receiptAlarm{db: db},
 		slog.New(slog.DiscardHandler))
 	worker.clock = func() time.Time { return now }
 	return worker.Work(ctx, &river.Job[ControllerPayloadSweepArgs]{

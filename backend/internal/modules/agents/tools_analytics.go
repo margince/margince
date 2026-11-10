@@ -6,6 +6,7 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -71,8 +72,11 @@ type AnalyticsQueryResult struct {
 	// TotalSafe says whether a total over these rows may be shown; false once
 	// anything is withheld, because total-minus-shown is the subtraction the
 	// floor exists to stop.
-	TotalSafe     bool   `json:"total_safe"`
-	SchemaVersion string `json:"schema_version"`
+	TotalSafe            bool       `json:"total_safe"`
+	SchemaVersion        string     `json:"schema_version"`
+	BaseCurrency         *string    `json:"base_currency,omitempty"`
+	RateDate             *time.Time `json:"rate_date,omitempty"`
+	ExcludedByPermission *int       `json:"excluded_by_permission,omitempty"`
 	// RunID names the saved run, present exactly when save was set.
 	RunID *string `json:"run_id,omitempty"`
 	// PopulationNarrowed is present when a breakdown by owner was narrowed to

@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Saved assessments keep their date beside independently checked current actions.
+// A saved assessment is history: it opens behind its date, so it never reads as
+// the row's current reason.
 
 import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
-import { formatDateTime } from "../../format/format";
+import { Disclosure } from "../../design-system/disclosure";
+import { formatDate } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 
 type WorklistDealVerdict = components["schemas"]["WorklistDealVerdict"];
@@ -23,38 +25,36 @@ export function VerdictLine({
     return null;
   }
   return (
-    <p className="t-caption worklist-row-verdict">
-      {verdict.standing && (
-        <Badge>{t(`worklist.verdict.${verdict.standing}` as const)}</Badge>
-      )}
-      <span>{t("worklist.verdict.believes")}</span>{" "}
-      <span className="worklist-row-verdict-line">{verdict.line}</span>{" "}
-      {asOfText(verdict, t, locale, zone)}
-    </p>
+    <Disclosure
+      className="worklist-row-verdict"
+      summary={
+        <span className="t-caption">
+          {earlierLabel(verdict, t, locale, zone)}
+        </span>
+      }
+    >
+      <p className="t-caption worklist-row-verdict-body">
+        {verdict.standing && (
+          <Badge>{t(`worklist.verdict.${verdict.standing}` as const)}</Badge>
+        )}
+        <span className="worklist-row-verdict-line">{verdict.line}</span>
+      </p>
+    </Disclosure>
   );
 }
 
-/**
- * When the reading behind this line was taken.
- *
- * Drawn because a cached card can be days old and the row does not otherwise
- * say so — a rep acting on "they went quiet" wants to know whether that was read
- * this morning or last week. Absent when the server sent no instant.
- */
-function asOfText(
+// The date tells a reading from this morning apart from one last week. A
+// verdict the server sent without an instant names no date.
+function earlierLabel(
   verdict: WorklistDealVerdict,
   t: ReturnType<typeof useT>,
   locale: Locale,
   zone: string,
-) {
+): string {
   if (!verdict.as_of) {
-    return null;
+    return t("worklist.verdict.believes");
   }
-  return (
-    <span>
-      {t("worklist.verdict.asOf", {
-        when: formatDateTime(verdict.as_of, locale, zone),
-      })}
-    </span>
-  );
+  return t("worklist.verdict.earlierOn", {
+    date: formatDate(verdict.as_of, locale, zone),
+  });
 }

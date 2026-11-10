@@ -117,6 +117,10 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		Action:     crmcontracts.WorklistMoveActionDraftReply,
 		ActivityId: &answers,
 	}
+	// An invitation is answered on the calendar, never by a drafted reply.
+	if row.EmailSummary != nil && row.EmailSummary.CalendarInvitation != nil {
+		row.Move.Action = crmcontracts.WorklistMoveActionNone
+	}
 	// Both ages travel: the true one for everything a reader is shown, the
 	// bounded one for the order. A rep reading "waiting 180 days" is being told
 	// something true; the queue placing that row above everything for the rest
@@ -182,8 +186,15 @@ func demotionsOf(waiting WaitingCustomer, days int) waitingDemotions {
 		unproven:      !waiting.Engaged && !waiting.HasOpenDeal && !waiting.ConfirmedRequest,
 		elsewhere:     waiting.AddressedElsewhere,
 		informational: waiting.AsksNothing,
-		booked:        waiting.MeetingBookedAt != nil,
+		booked:        waiting.MeetingBookedAt != nil && !asksForAnswer(waiting),
 	}
+}
+
+// asksForAnswer is an invitation the reader has not answered. The meeting it
+// books is the one it asks about, so that booking schedules nothing yet.
+func asksForAnswer(waiting WaitingCustomer) bool {
+	return waiting.EmailSummary != nil && waiting.EmailSummary.CalendarInvitation != nil &&
+		waiting.EmailSummary.CalendarInvitation.Response == crmcontracts.EmailCalendarInvitationResponseNeedsAction
 }
 
 // waitingLevel is the band one wait claims once every demotion has spoken.

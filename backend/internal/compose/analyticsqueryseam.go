@@ -91,6 +91,7 @@ func analyticsSchemaFrom(ctx context.Context, specs map[string]reportSpec) analy
 			field.Predicate = spec.filterPredicates[name]
 			field.Domain = filterDomain(spec, field.Expr)
 			field.Currency = granted.perRowCurrency(name)
+			field.Unpriced = granted.sumCoverage[name]
 			field.Period = periodFieldOf(name, field.Expr)
 			if custom, ok := spec.customFields[field.Expr]; ok {
 				field = custom.describe(field)

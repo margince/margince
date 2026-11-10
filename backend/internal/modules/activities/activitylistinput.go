@@ -32,12 +32,17 @@ type ListActivitiesInput struct {
 	// timeline, nearest-deadline-first for the task queue.
 	Sort *string
 	Kind *string
+	// Kinds narrows to any of several kinds, as a repeated `kind` asks. It ANDs
+	// with Kind, so the two never widen each other.
+	Kinds []string
 	// ChannelProvider narrows to messages carried by ONE transport. Since the
 	// kind stopped naming the transport (ADR-0107/A158) this is the only way to
 	// ask the question `kind=telegram` used to answer, and it is a separate dial
 	// from Kind rather than a second spelling of it: the two compose, so "every
 	// message on telegram" and "every message" are both askable.
 	ChannelProvider *string
+	// CallOutcome narrows to calls that ended this way.
+	CallOutcome *string
 	// SourceSystem narrows to rows one connector wrote, such as website forms.
 	SourceSystem *string
 	// AnswersThem keeps only rows that answer the other side (answersThemSQL).

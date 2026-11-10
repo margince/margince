@@ -47,10 +47,11 @@ package gates
 // above say whether the behaviour actually moved.
 
 import (
-	"os"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -72,7 +73,7 @@ const (
 // its place.
 func readFiscalSource(t *testing.T, path string) string {
 	t.Helper()
-	body, err := os.ReadFile(path)
+	body, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

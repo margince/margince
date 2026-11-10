@@ -3,13 +3,20 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import { decidingRecipient } from "../../components/sendpermission";
+import { decidingRecipient, sendStatus } from "../../components/sendpermission";
 import type { MessageKey } from "../../i18n/en";
 import { asksWhy } from "../../lib/compose-context";
+import { remedyCategoryOf } from "../../lib/sendstatus";
 import type { Activity } from "./compose";
 import { ComposeOutcome, ComposeWhy, MailSendNotices } from "./compose.parts";
+import { ComposeDeal, type DealChoiceState } from "./composedeal";
 import type { ComposeFields } from "./composefields";
-import { ContactReasonPick, type ReasonTarget } from "./composereason";
+import {
+  alternativeReasonOf,
+  ContactReasonPick,
+  ReasonSwitch,
+  type ReasonTarget,
+} from "./composereason";
 import type { ComposeSend } from "./composesend";
 
 type Preview = components["schemas"]["SendAuthorizationPreview"];
@@ -22,6 +29,12 @@ type Preview = components["schemas"]["SendAuthorizationPreview"];
  * that could only answer 404 is a dead button, which `SendPermission` refuses.
  * An answer still out, or one that failed, names no one either. A vouch
  * resting on the answer before it would be recorded for the wrong message.
+ *
+ * The vouch is for the category the refusal is explained in, so the offered
+ * action and the text agree. A claim the engine did not resolve to, such as an
+ * active-deal follow-up with no deal behind it, offers no vouch at all: its
+ * remedy is the missing fact, and a vouch in the resolved category would let
+ * the next check pass on a reason the rep never gave.
  */
 export function reasonTargetOf(
   permission: ComposeSend["permission"],
@@ -32,7 +45,15 @@ export function reasonTargetOf(
   }
   const preview: Preview | undefined = permission.preview;
   const { state, recipient } = decidingRecipient(preview);
-  if (state !== "unproven" || !recipient?.resolved_category) {
+  const category = recipient?.resolved_category;
+  if (state !== "unproven" || !recipient || !category) {
+    return undefined;
+  }
+  const remedy = remedyCategoryOf({
+    category,
+    requestedCategory: recipient.requested_category,
+  });
+  if (remedy !== category) {
     return undefined;
   }
   const contactId = contactOf(recipient.address);
@@ -42,8 +63,21 @@ export function reasonTargetOf(
   return {
     contactId,
     address: recipient.address,
-    category: recipient.resolved_category,
+    category,
   };
+}
+
+/**
+ * The addresses the send would add as new contacts, by the engine's settled
+ * answer. An answer still out, or one that failed, names none.
+ */
+export function newContactsOf(permission: ComposeSend["permission"]): string[] {
+  if (permission.asking || permission.unanswered) {
+    return [];
+  }
+  return (permission.preview?.recipients ?? [])
+    .filter((recipient) => recipient.new_contact === true)
+    .map((recipient) => recipient.address);
 }
 
 /**
@@ -57,8 +91,8 @@ export function ComposeBlockers({
   fields,
   send,
   anchorActivity,
+  dealChoice,
   contactOf,
-  contactId,
   bodyKey,
   permission: drawPermission,
 }: Readonly<{
@@ -66,9 +100,10 @@ export function ComposeBlockers({
   fields: ComposeFields;
   send: ComposeSend;
   anchorActivity: Activity | undefined;
+  /** Which deal a new message to a contact is about, where that is asked. */
+  dealChoice: DealChoiceState;
   /** The contact an address belongs to, where the records behind the draft say. */
   contactOf: (address: string) => string | undefined;
-  contactId: string | undefined;
   bodyKey: MessageKey;
   /** The engine's answer, drawn by the surface that asks for it, with the
    *  reason pick this band offers where a reason may be recorded. */
@@ -77,11 +112,17 @@ export function ComposeBlockers({
   const target = isChannelReply
     ? undefined
     : reasonTargetOf(send.permission, contactOf);
+  // A reason the record already carries comes before recording a new one.
+  const alternative = isChannelReply
+    ? undefined
+    : alternativeReasonOf(send.permission);
   // Until the message says why it is written, the engine has judged no reason.
   // Its missing-reason refusal would then ask the same question twice.
   const whyMissing = asksWhy(anchorActivity) && fields.context === "";
-  const unproven =
-    decidingRecipient(send.permission.preview).state === "unproven";
+  const asksWhyAgain =
+    whyMissing &&
+    (decidingRecipient(send.permission.preview).state === "unproven" ||
+      sendStatus(send.permission).kind === "missingContext");
   return (
     <div className="compose-blockers">
       <ComposeWhy
@@ -90,32 +131,42 @@ export function ComposeBlockers({
         context={fields.context}
         onContextChange={fields.setContext}
       />
+      <ComposeDeal
+        choice={dealChoice}
+        onDealChange={fields.account.setDealId}
+        flagged={send.flagged}
+      />
       {!isChannelReply && (
-        <>
-          <MailSendNotices
-            to={fields.to}
-            cc={fields.cc}
-            context={send.claimedContext}
-          />
-          {!(whyMissing && unproven) &&
-            drawPermission(
-              target && (
-                <ContactReasonPick
-                  key={`${target.contactId}:${target.category}`}
-                  target={target}
-                  chosen={send.claimedContext}
-                />
-              ),
-              asksWhy(anchorActivity),
-            )}
-        </>
+        <MailSendNotices
+          to={fields.to}
+          cc={fields.cc}
+          context={send.claimedContext}
+          newContacts={newContactsOf(send.permission)}
+        />
       )}
+      {/* A channel reply asks no preview, so its status is only ever a
+          refused Send. */}
+      {(!isChannelReply || send.permission.refusal) &&
+        !asksWhyAgain &&
+        drawPermission(
+          alternative ? (
+            <ReasonSwitch reason={alternative} onSwitch={fields.setContext} />
+          ) : (
+            target && (
+              <ContactReasonPick
+                key={`${target.contactId}:${target.category}`}
+                target={target}
+                chosen={send.claimedContext}
+              />
+            )
+          ),
+          asksWhy(anchorActivity),
+        )}
       <ComposeOutcome
         isChannelReply={isChannelReply}
         bodyKey={bodyKey}
         sendUnavailable={fields.sendUnavailable}
         send={send}
-        contactId={contactId}
       />
     </div>
   );

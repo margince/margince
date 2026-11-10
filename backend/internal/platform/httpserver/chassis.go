@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/instrument"
 	"github.com/margince/margince/backend/internal/shared/kernel/capabilitypath"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -95,6 +96,15 @@ const PermissionsPolicy = "accelerometer=(), autoplay=(), camera=(), clipboard-r
 	"publickey-credentials-get=(), screen-wake-lock=(), serial=(), usb=(), " +
 	"xr-spatial-tracking=()"
 
+// The Cross-Origin-Opener-Policy values. An MCP client may open the OAuth
+// consent flow in a popup and read the code back through window.opener.
+// same-origin on any page of that flow cuts the popup off for good, so those
+// pages send OpenerPolicyPopup over the OpenerPolicyIsolated set here.
+const (
+	OpenerPolicyIsolated = "same-origin"
+	OpenerPolicyPopup    = "unsafe-none"
+)
+
 // SecureHeaders sets the browser-facing response headers on everything —
 // UI and API alike. SameSite=Strict on the session cookie covers CSRF;
 // these close what it does not: framing (clickjacking), MIME sniffing,
@@ -115,13 +125,11 @@ func SecureHeaders(next http.Handler) http.Handler {
 		// ignores it on the plain-HTTP hop, so it is safe to set always.
 		h.Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
 		h.Set("Permissions-Policy", PermissionsPolicy)
-		// same-origin on both: every first-party sign-in and connector
-		// flow is a full-page redirect, never a popup, so no window of this
-		// origin needs a handle on another, and nothing here is meant to be
-		// embedded by another origin. An MCP client that opens /oauth/authorize
-		// in a popup loses its handle on that window; the grant still
-		// completes, since the code reaches the client at its redirect_uri.
-		h.Set("Cross-Origin-Opener-Policy", "same-origin")
+		// Isolated on every route, and on a route that does not exist. Of the
+		// popup pages, /oauth/authorize overrides it (identity.keepOpener) and
+		// nginx serves /consent with its own value.
+		h.Set("Cross-Origin-Opener-Policy", OpenerPolicyIsolated)
+		// Nothing here is meant to be embedded by another origin.
 		h.Set("Cross-Origin-Resource-Policy", "same-origin")
 		next.ServeHTTP(w, r)
 	})
@@ -191,12 +199,15 @@ func RecoverPanics(log *slog.Logger, next http.Handler) http.Handler {
 				if aborted, isErr := rec.(error); isErr && errors.Is(aborted, http.ErrAbortHandler) {
 					panic(rec)
 				}
+				stack := debug.Stack()
 				log.ErrorContext(r.Context(), "handler panic",
 					"panic", rec, "method", r.Method, "path", capabilitypath.Redact(r.URL.Path),
-					"stack", string(debug.Stack()))
+					"stack", string(stack))
 				httperr.Write(w, r, &httperr.DetailedError{
 					Status: http.StatusInternalServerError, Code: "internal",
 				})
+				// After the answer, so a slow unit hook does not hold the client.
+				instrument.Panic(r.Context(), rec, stack)
 			}
 		}()
 		next.ServeHTTP(w, r)

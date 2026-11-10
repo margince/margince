@@ -5,6 +5,7 @@ package database
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,33 +18,44 @@ import (
 // until its result is closed. So it holds the network, the server's planning
 // and execution, and the rows read in Go between Query and Close. PoolWait is
 // the whole of each Acquire call: checkout, any connect and health check.
+// Exchanges counts round trips to the server: a batch is one exchange however
+// many queries it holds. Transactions counts the begins among them.
 type StatementCost struct {
-	Statements int64
-	Failed     int64
-	Acquires   int64
-	DBTime     time.Duration
-	PoolWait   time.Duration
+	Statements   int64
+	Exchanges    int64
+	Transactions int64
+	Prepares     int64
+	Failed       int64
+	Acquires     int64
+	DBTime       time.Duration
+	PoolWait     time.Duration
 }
 
 // Minus answers the cost run since earlier was read off the same meter.
 func (c StatementCost) Minus(earlier StatementCost) StatementCost {
 	return StatementCost{
-		Statements: c.Statements - earlier.Statements,
-		Failed:     c.Failed - earlier.Failed,
-		Acquires:   c.Acquires - earlier.Acquires,
-		DBTime:     c.DBTime - earlier.DBTime,
-		PoolWait:   c.PoolWait - earlier.PoolWait,
+		Statements:   c.Statements - earlier.Statements,
+		Exchanges:    c.Exchanges - earlier.Exchanges,
+		Transactions: c.Transactions - earlier.Transactions,
+		Prepares:     c.Prepares - earlier.Prepares,
+		Failed:       c.Failed - earlier.Failed,
+		Acquires:     c.Acquires - earlier.Acquires,
+		DBTime:       c.DBTime - earlier.DBTime,
+		PoolWait:     c.PoolWait - earlier.PoolWait,
 	}
 }
 
 // Plus answers both costs together.
 func (c StatementCost) Plus(other StatementCost) StatementCost {
 	return StatementCost{
-		Statements: c.Statements + other.Statements,
-		Failed:     c.Failed + other.Failed,
-		Acquires:   c.Acquires + other.Acquires,
-		DBTime:     c.DBTime + other.DBTime,
-		PoolWait:   c.PoolWait + other.PoolWait,
+		Statements:   c.Statements + other.Statements,
+		Exchanges:    c.Exchanges + other.Exchanges,
+		Transactions: c.Transactions + other.Transactions,
+		Prepares:     c.Prepares + other.Prepares,
+		Failed:       c.Failed + other.Failed,
+		Acquires:     c.Acquires + other.Acquires,
+		DBTime:       c.DBTime + other.DBTime,
+		PoolWait:     c.PoolWait + other.PoolWait,
 	}
 }
 
@@ -122,6 +134,7 @@ type statementStart struct {
 	kind    callKind
 	queries int64
 	failed  int64
+	begins  bool
 	ended   bool
 }
 
@@ -153,13 +166,16 @@ func (t statementTracer) ended(ctx context.Context, err error) {
 	case acquireCall:
 		spent = StatementCost{Acquires: 1, PoolWait: elapsed}
 	case batchCall:
-		spent = StatementCost{Statements: start.queries, Failed: start.failed, DBTime: elapsed}
+		spent = StatementCost{Statements: start.queries, Exchanges: 1, Failed: start.failed, DBTime: elapsed}
 		// A batch that failed before any query ran has no statement to blame.
 		if err != nil && start.queries == 0 {
 			spent.Failed = 1
 		}
 	case statementCall:
-		spent = StatementCost{Statements: 1, DBTime: elapsed}
+		spent = StatementCost{Statements: 1, Exchanges: 1, DBTime: elapsed}
+		if start.begins {
+			spent.Transactions = 1
+		}
 		if err != nil {
 			spent.Failed = 1
 		}
@@ -169,7 +185,18 @@ func (t statementTracer) ended(ctx context.Context, err error) {
 
 func (t statementTracer) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
 	t.census.record(data.SQL)
-	return t.started(ctx, statementCall)
+	ctx = t.started(ctx, statementCall)
+	if start, ok := startOf(ctx); ok {
+		start.begins = beginsTransaction(data.SQL)
+	}
+	return ctx
+}
+
+// beginsTransaction is whether sql opens a transaction, as pgx's Begin sends
+// it ("begin", "begin isolation level …"). A savepoint opens none.
+func beginsTransaction(sql string) bool {
+	word := strings.TrimSpace(sql)
+	return len(word) >= 5 && strings.EqualFold(word[:5], "begin") && (len(word) == 5 || word[5] == ' ')
 }
 
 // TraceQueryEnd runs when the rows close, so Query's time holds the scan loop.
@@ -209,6 +236,9 @@ func (t statementTracer) TracePrepareStart(ctx context.Context, _ *pgx.Conn, _ p
 }
 
 func (t statementTracer) TracePrepareEnd(ctx context.Context, _ *pgx.Conn, data pgx.TracePrepareEndData) {
+	if meter, ok := StatementMeterOf(ctx); ok && !data.AlreadyPrepared && data.Err == nil {
+		meter.add(StatementCost{Prepares: 1})
+	}
 	t.ended(ctx, data.Err)
 }
 

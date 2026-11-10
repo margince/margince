@@ -28,7 +28,9 @@ import (
 // token belongs to one mailbox, so a run from before the connection was bound
 // to another account has nothing to continue.
 const resumableRunPredicate = `b.status = 'error' AND b.cursor IS NOT NULL
-	AND (c.account_bound_at IS NULL OR b.created_at >= c.account_bound_at)`
+	AND ` + backfillMatchesAccount
+
+const backfillMatchesAccount = `(c.account_bound_at IS NULL OR b.created_at >= c.account_bound_at)`
 
 // resumeFailedBackfillTx reopens the connection's newest run when it is
 // resumable and its window covers windowMonths, and answers it; nil when there
@@ -48,6 +50,9 @@ const resumableRunPredicate = `b.status = 'error' AND b.cursor IS NOT NULL
 // run, which is also the answer when the caller asked to start over (resume
 // false).
 func resumeOrNil(ctx context.Context, tx pgx.Tx, resume bool, connID ids.UUID, windowMonths int, widest *int, enqueue EnqueueBackfill) (*BackfillRun, error) {
+	if widest != nil && windowMonths < *widest {
+		return nil, ErrWindowNarrowing
+	}
 	if !resume {
 		return nil, nil //nolint:nilnil // starting over resumes nothing
 	}
@@ -72,7 +77,7 @@ func resumeFailedBackfillTx(ctx context.Context, tx pgx.Tx, connID ids.UUID, win
 	err := tx.QueryRow(ctx, `
 		UPDATE capture_backfill
 		   SET status = 'queued', completed_at = NULL, consecutive_failures = 0,
-		       last_error_class = NULL, window_restarts = 0`+resetInflightProgress+`
+		       last_error_class = NULL, window_restarts = 0`+clearBackfillAdmission+resetInflightProgress+`
 		 WHERE id = (
 		         SELECT b.id FROM capture_backfill b
 		           JOIN capture_connection c ON c.id = b.connection_id

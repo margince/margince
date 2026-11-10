@@ -13,7 +13,6 @@ import {
   jsonResponse,
   openPanel,
   panel,
-  ROUTE,
   render,
   settlesOnLine,
   stubAgentRailApi,
@@ -104,7 +103,7 @@ describe("AgentRail", () => {
   // a contact or a meeting, and told a rep nothing for a company.
   it("names the record a summary is about while it is still being written", async () => {
     withRuns(RUN({ kind: "summarize", subject_label: "Acme" }));
-    const { container } = render(ROUTE);
+    const { container } = render();
     await settlesOnLine(container, "Summarizing Acme…");
   });
 
@@ -128,7 +127,7 @@ describe("AgentRail", () => {
         }),
       );
       const user = userEvent.setup();
-      const { container } = render(ROUTE);
+      const { container } = render();
       await settlesOnLine(container, `Summarizing ${name}…`);
       const link = container.querySelector(".arline a");
       expect(link?.textContent).toBe(name);
@@ -158,7 +157,7 @@ describe("AgentRail", () => {
         subject_id: "019f7e65-fbf7-7114-b114-40af4af63a77",
       }),
     );
-    const { container } = render(ROUTE);
+    const { container } = render();
     await settlesOnLine(container, "Summarizing the cutover review…");
     expect(container.querySelector(".arline a")).toBeNull();
   });
@@ -177,7 +176,7 @@ describe("AgentRail", () => {
       }),
     );
     const user = userEvent.setup();
-    const { container } = render(ROUTE);
+    const { container } = render();
     await settlesOnLine(
       container,
       "Analyzing the history of Brandt Automotive…",
@@ -197,13 +196,13 @@ describe("AgentRail", () => {
   // rather than guessing at one.
   it("names no record for a summary that carried no name", async () => {
     withRuns(RUN({ kind: "summarize" }));
-    const { container } = render(ROUTE);
+    const { container } = render();
     await settlesOnLine(container, "Writing summary…");
   });
 
   it("moves the Core to working when a server run is live and this tab is idle", async () => {
     withRuns(RUN());
-    const { container } = render(ROUTE);
+    const { container } = render();
     await waitFor(() =>
       expect(block(container).getAttribute("data-core-state")).toBe("working"),
     );
@@ -211,7 +210,7 @@ describe("AgentRail", () => {
 
   it("names the run in the rail line", async () => {
     withRuns(RUN());
-    const { container } = render(ROUTE);
+    const { container } = render();
     await settlesOnLine(container, BRIEF_RUNNING);
   });
 
@@ -222,7 +221,7 @@ describe("AgentRail", () => {
   // At the idle cadence it was the whole of it.
   it("moves the Core to working while this tab holds a model call open", async () => {
     withRuns();
-    const { container } = render(ROUTE);
+    const { container } = render();
     await waitFor(() =>
       expect(block(container).getAttribute("data-core-state")).toBe("idle"),
     );
@@ -244,7 +243,7 @@ describe("AgentRail", () => {
   // Both are true here at once, and the sentence has to be the run's own.
   it("lets the feed name the work as soon as it carries the run", async () => {
     withRuns(RUN());
-    const { container } = render(ROUTE);
+    const { container } = render();
     act(() => {
       beginModelCall();
     });
@@ -267,7 +266,7 @@ describe("AgentRail", () => {
       agentActivity: () =>
         jsonResponse({ running: [RUN()], recent: [], faults: [] }),
     });
-    const { container } = render(ROUTE);
+    const { container } = render();
     // Inside the ticker's `LINGER_MS`, so the mount-time reads it named are
     // still standing while the agent's own line has answered. Which of them is
     // newest is a race between stubs and no part of the claim. The claim: the
@@ -289,7 +288,7 @@ describe("AgentRail", () => {
   it("never lets a read caption a fault", async () => {
     vi.useFakeTimers();
     withRuns(RUN({ state: "stalled" }));
-    const { container } = render(ROUTE);
+    const { container } = render();
     await act(() => vi.advanceTimersByTimeAsync(300));
     expect(block(container).getAttribute("data-core-state")).toBe("warning");
     const inFlight = container.querySelector(".arline")?.textContent;
@@ -312,7 +311,7 @@ describe("AgentRail", () => {
       agentActivity: () =>
         jsonResponse({ running: [RUN()], recent: [failed], faults: [failed] }),
     });
-    const { container } = render(ROUTE);
+    const { container } = render();
     await waitFor(() =>
       expect(block(container).getAttribute("data-core-state")).toBe("error"),
     );
@@ -329,7 +328,7 @@ describe("AgentRail", () => {
       RUN({ id: "019f7e65-fbf7-7114-b114-40af4af63c02", state: "degraded" }),
     );
     const user = userEvent.setup();
-    const { container } = render(ROUTE);
+    const { container } = render();
     await waitFor(() =>
       expect(block(container).getAttribute("data-core-state")).toBe("error"),
     );
@@ -344,7 +343,7 @@ describe("AgentRail", () => {
   // over evidence already held is `working` (ai-activity-orb.ts).
   it("moves the Core to ingest when the live run is evidence arriving", async () => {
     withRuns(RUN({ kind: "document_extract" }));
-    const { container } = render(ROUTE);
+    const { container } = render();
     await waitFor(() =>
       expect(block(container).getAttribute("data-core-state")).toBe("ingest"),
     );
@@ -356,7 +355,7 @@ describe("AgentRail", () => {
   // names the company, because the source sent its name.
   it("moves the Core to ingest while a company website is being read, and names the company", async () => {
     withRuns(RUN({ kind: "site_read", subject_label: "Acme" }));
-    const { container } = render(ROUTE);
+    const { container } = render();
     await waitFor(() =>
       expect(block(container).getAttribute("data-core-state")).toBe("ingest"),
     );
@@ -369,7 +368,7 @@ describe("AgentRail", () => {
   // the reader to do but know.
   it("moves the Core to warning for a run past its own lease", async () => {
     withRuns(RUN({ state: "stalled" }));
-    const { container } = render(ROUTE);
+    const { container } = render();
     await waitFor(() =>
       expect(block(container).getAttribute("data-core-state")).toBe("warning"),
     );
@@ -388,7 +387,7 @@ describe("AgentRail", () => {
       RUN({ id: "019f7e65-fbf7-7114-b114-40af4af63b02", state: "failed" }),
     );
     const user = userEvent.setup();
-    const { container } = render(ROUTE);
+    const { container } = render();
     await waitFor(() =>
       expect(block(container).getAttribute("data-core-state")).toBe("error"),
     );
@@ -416,7 +415,7 @@ describe("AgentRail", () => {
     );
     withEvictedFault(overnight, later);
     const user = userEvent.setup();
-    const { container } = render(ROUTE);
+    const { container } = render();
 
     await waitFor(() =>
       expect(block(container).getAttribute("data-core-state")).toBe("error"),
@@ -434,7 +433,7 @@ describe("AgentRail", () => {
   it("lists running work in the panel under its own heading", async () => {
     withRuns(RUN());
     const user = userEvent.setup();
-    const { container } = render(ROUTE);
+    const { container } = render();
     await openPanel(user, container);
     await waitFor(() => expect(runLines()).toEqual([BRIEF_RUNNING]));
     const headings = [...panel().querySelectorAll(".arsect h3")].map(
@@ -452,7 +451,7 @@ describe("AgentRail", () => {
     const stopped = "Morning brief stopped partway";
     withSettled(RUN({ state: "degraded", degrade_reason: reason }));
     const user = userEvent.setup();
-    const { container } = render(ROUTE);
+    const { container } = render();
     await settlesOnLine(container, stopped);
     expect(container.querySelector(".arline")?.textContent).not.toContain(
       reason,
@@ -467,7 +466,7 @@ describe("AgentRail", () => {
   it("renders no line for a kind it has no copy for", async () => {
     withRuns(RUN({ kind: "telepathic_prospecting" }));
     const user = userEvent.setup();
-    const { container } = render(ROUTE);
+    const { container } = render();
     await waitFor(() =>
       expect(block(container).getAttribute("data-core-state")).toBe("working"),
     );
@@ -485,7 +484,7 @@ describe("AgentRail", () => {
   it("reads a run that finished today in the resting line and in the recap, never as live work", async () => {
     withSettled(RUN({ state: "done" }));
     const user = userEvent.setup();
-    const { container } = render(ROUTE);
+    const { container } = render();
     await settlesOnLine(container, "Morning brief ready");
     expect(block(container).getAttribute("data-core-state")).toBe("idle");
     await openPanel(user, container);

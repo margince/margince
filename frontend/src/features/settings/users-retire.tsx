@@ -95,6 +95,7 @@ export function RetireMember({
         [t("users.work.deals"), owned.deal],
         [t("users.work.projects"), owned.project],
         [t("users.work.tasks"), owned.task],
+        [t("users.work.lists"), owned.list ?? 0],
         [t("users.work.alerts"), preview.data?.signal_count ?? 0],
       ]
     : [];

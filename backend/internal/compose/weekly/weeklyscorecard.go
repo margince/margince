@@ -18,17 +18,21 @@ package weekly
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // Scorecard is one week's judgement of one rep's work.
@@ -172,6 +176,13 @@ func scoreWeek(
 func scoreLeads(
 	ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.Time,
 ) (*LeadBlock, error) {
+	if err := auth.Require(ctx, leadObject, principal.ActionRead); err != nil {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			//nolint:nilnil // A withheld funnel has no scorecard block.
+			return nil, nil
+		}
+		return nil, err
+	}
 	// Presence is asked FIRST and with its own argument list. The block query
 	// below binds the window as well, and a statement that binds a parameter it
 	// never mentions is rejected outright — so the two cannot share one list.
@@ -187,7 +198,7 @@ func scoreLeads(
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	startPos, endPos, userPos := arg(start), arg(end), arg(userID)
-	scope, err := auth.ScopeClauseFor(ctx, "lead", "l", arg)
+	scope, err := auth.ScopeClauseFor(ctx, leadObject, "l", arg)
 	if err != nil {
 		return nil, err
 	}
@@ -222,6 +233,7 @@ func scoreLeads(
 		     AND `+meetingIsTheirsSQL("$%[3]d")+`
 		     AND m.archived_at IS NULL
 		     AND h.effective_at >= $%[1]d AND h.effective_at < $%[2]d
+		     AND NOT `+activities.ReversedCancellationSQL("h")+`
 		     AND (%[6]s))
 		SELECT
 		  (SELECT count(*) FROM moved WHERE move = '`+LeadMoveAdvanced+`'),
@@ -261,10 +273,13 @@ func scoreLeads(
 // Its own scope clause and its own argument list, because it binds only this
 // bound and a statement may not bind a parameter it does not mention.
 func hasLeads(ctx context.Context, tx pgx.Tx, userID ids.UUID, by time.Time) (bool, error) {
+	if err := auth.Require(ctx, leadObject, principal.ActionRead); err != nil {
+		return false, err
+	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	userPos, byPos := arg(userID), arg(by)
-	scope, err := auth.ScopeClauseFor(ctx, "lead", "l", arg)
+	scope, err := auth.ScopeClauseFor(ctx, leadObject, "l", arg)
 	if err != nil {
 		return false, err
 	}
@@ -280,24 +295,11 @@ func hasLeads(ctx context.Context, tx pgx.Tx, userID ids.UUID, by time.Time) (bo
 	return present, nil
 }
 
-// forecastRankSQL orders the forecast categories so a move between two of them
-// has a direction.
-//
-// The vocabulary is deal_forecast_category_check's, and the order is the
-// confidence ladder the product already speaks: omitted is not in the number at
-// all, pipeline is in it, best_case is likely and commit is promised. A
-// category the CHECK does not allow, and a NULL, rank as -1 and so read as
-// BELOW omitted — a deal that gained a category moved up, and one that lost it
-// moved down, which is what happened.
-//
-// Spelled as SQL rather than compared in Go because the comparison happens
-// inside the aggregate that reduces a deal's many edits to one move; pulling
-// the rows out to rank them here would be a second pass over the same data to
-// answer the same question.
-func forecastRank(column string) string {
-	return `CASE ` + column + `
-		WHEN 'commit' THEN 3 WHEN 'best_case' THEN 2
-		WHEN 'pipeline' THEN 1 WHEN 'omitted' THEN 0 ELSE -1 END`
+// probabilityRank orders the override images so a move between two has a
+// direction. No override ranks -1, below every percent: a deal that took its
+// own probability moved up, and one set back to its stage moved down.
+func probabilityRank(column string) string {
+	return `COALESCE((` + column + `)::int, -1)`
 }
 
 // scoreDeals reads the pipeline block, or reports it absent.
@@ -357,7 +359,7 @@ func scoreDeals(
 	var median *int
 	err = tx.QueryRow(ctx, fmt.Sprintf(dealScoreSQL,
 		startPos, endPos, userPos, occurredday.WithinSQL("act", fmt.Sprintf("$%d", sincePos), fmt.Sprintf("$%d", endPos)), stakeholdersPos,
-		forecastRank("last_cat"), forecastRank("first_cat"), scope, zonePos,
+		probabilityRank("last_cat"), probabilityRank("first_cat"), scope, zonePos,
 		weekEndDealsSQL(fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos)), taskScope, activityScope,
 		taskCompletionAtSQL("task", fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos)), currentTask),
 		args...).

@@ -26,6 +26,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 GATE="$SCRIPT_DIR/check-ds-spacing.sh"
+# shellcheck source=scripts/lib-git-fixture.sh
+source "$SCRIPT_DIR/../../scripts/lib-git-fixture.sh"
 
 # The gate is deliberately fail-open outside a git checkout (a source export, a
 # container that refuses a dubious-ownership repo). Its test has to skip on the

@@ -88,6 +88,13 @@ var poolConstructors = []struct{ pkg, symbol string }{
 // exists to refuse, because a per-test pool on the lane's own app DSN is exactly
 // what the next suite would claim needs its own parameters.
 var ownPools = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/identityholderplans_integration_test.go": "the real cached identity statement " +
+		"is inspected and executed in both plan modes on one backend. The shared pool cannot carry this " +
+		"single-connection cache configuration. OwnPoolFromConfig bounds it to one connection, closed with the test.",
+	"internal/modules/capture/backfillbindingorder_integration_test.go": "the connection-lock ordering test needs " +
+		"a query-start barrier on ConnConfig, while concurrent first grants need a distinct application_name " +
+		"to observe their blocked sessions. Neither belongs on the shared pool. Both pools use " +
+		"testdb.OwnPoolFromConfig and close after their workers stop.",
 	"internal/modules/contacts/ensurechannel_contention_integration_test.go": "the same instrument one module " +
 		"over, built through pgxpool directly because the bound rides ConnConfig rather than the DSN: a " +
 		"lock_timeout of 250ms so that a contended account lock decides the outcome instead of the clock. " +
@@ -105,7 +112,7 @@ var ownPools = gatekit.Waive(map[string]string{
 func TestModuleSuitesTakeTheProcessSharedPool(t *testing.T) {
 	t.Parallel()
 	var offenders, sharing, unguarded []string
-	err := filepath.WalkDir(modulesTree, func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(modulesTree, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, "_integration_test.go") {
 			return err
 		}

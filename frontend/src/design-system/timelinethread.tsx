@@ -14,7 +14,6 @@ import {
   automaticLabel,
   CommitmentReviewFlag,
   entryDay,
-  entryMove,
   entryTimeOfDay,
   groupCountLabel,
   MoveFlag,
@@ -26,7 +25,7 @@ import {
   type TimelineGroup,
   TimelineWhen,
 } from "./timelineentry";
-import { TimelineText } from "./timelinetext";
+import { TimelineBody } from "./timelinetext";
 
 // How many of a thread's messages stand open before the rest fold behind a
 // count. Three is a conversation a reader takes in at a glance: the ask,
@@ -199,7 +198,7 @@ function MessageMark({ entry }: Readonly<{ entry: TimelineEntry }>) {
 // through EmailWords, the canonical spelling of a message's words. That is
 // also where the withheld rule lives, so this row cannot answer that question
 // differently from the row beside it. A message without a summary (a chat, or
-// a server that has not caught up) draws its body through TimelineText. That
+// a server that has not caught up) draws its body through TimelineBody. That
 // is the one the chronicle uses, with the same fold. A withheld row draws the
 // sentence where its words would be, whatever it is handed.
 function MessageWords({
@@ -212,7 +211,7 @@ function MessageWords({
   if (entry.emailSummary) {
     return <EmailWords summary={entry.emailSummary} />;
   }
-  return entry.body ? <TimelineText text={entry.body} entry={entry} /> : null;
+  return entry.body ? <TimelineBody entry={entry} body={entry.body} /> : null;
 }
 
 /**
@@ -301,10 +300,12 @@ function ThreadMessage({
 export function ThreadRow({
   group,
   zone,
+  repeatsDay,
   onOpenThread,
 }: Readonly<{
   group: TimelineGroup;
   zone: string;
+  repeatsDay?: boolean;
   onOpenThread?: (threadKey: string) => void;
 }>) {
   const { locale } = useLocale();
@@ -339,7 +340,7 @@ export function ThreadRow({
       {/* The same three columns a single row sits on (date, rail, what
           happened), because a conversation is a row of the chronology. Its
           mark is the kind's own icon: a dot would say it was one message. */}
-      <TimelineWhen entry={newest} zone={zone} />
+      <TimelineWhen entry={newest} zone={zone} repeatsDay={repeatsDay} />
       <span className="tl-rail" aria-hidden="true">
         <span className="tl-icon">
           <Icon aria-hidden />
@@ -353,7 +354,7 @@ export function ThreadRow({
           {/* Whose move the conversation waits on, read off its newest
                 message. It goes on the row that stands for it, never on the
                 members inside. */}
-          {entryMove(newest) && <MoveFlag entry={newest} />}
+          <MoveFlag entry={newest} />
           <CommitmentReviewFlag
             count={group.entries.reduce(
               (count, entry) =>

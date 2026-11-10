@@ -54,7 +54,7 @@ func TestDraftEmailBuildsTheRequestTheContactComposerBuilds(t *testing.T) {
 	at := time.Date(2026, 3, 2, 9, 0, 0, 0, time.UTC)
 	engine := func(lane *unansweredLane) *contactdraft.Service {
 		return contactdraft.NewService(view, lane).
-			WithEnvelope(draftfloor.NewResolver().WithClock(func() time.Time { return at }))
+			WithEnvelope(draftfloor.NewResolver().SetClock(func() time.Time { return at }))
 	}
 	const intent = "follow up on Tuesday's demo"
 	seat := ids.NewV7()

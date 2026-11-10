@@ -23,7 +23,7 @@ type LegalEntityInput struct {
 	VatID, RegisterCourt, RegisterNumber *string
 	Country, DefaultLanguage             *string
 	BankAccountHolder, IBAN, BIC         *string
-	Imprint                              *string
+	Imprint, SignatureTemplate           *string
 	Offering                             LegalEntityOffering
 }
 
@@ -37,6 +37,9 @@ type entityField struct {
 	// anchored fields are read from the anchor company on the default entity,
 	// so the default entity refuses them.
 	anchored bool
+	// installationOwned fields are the installation's own settings on the
+	// default entity, which refuses them.
+	installationOwned bool
 	// required fields are never empty on an entity that is not the default.
 	required bool
 	clean    func(string) (string, error)
@@ -45,6 +48,7 @@ type entityField struct {
 const (
 	codeTooLong             = "too_long"
 	codeFieldOnCompanyForm  = "legal_entity_field_on_company_form"
+	codeFieldOnInstallation = "legal_entity_field_on_installation"
 	legalEntityNameLimit    = 200
 	legalEntityLegalLimit   = 300
 	legalEntityImprintLimit = 4000
@@ -75,6 +79,7 @@ func (in LegalEntityInput) fields() []entityField {
 		{column: wireIBAN, value: in.IBAN, limit: 34, clean: cleanIBAN},
 		{column: wireBIC, value: in.BIC, limit: 11, clean: cleanBIC},
 		{column: "imprint", value: in.Imprint, limit: legalEntityImprintLimit},
+		{column: "signature_template", value: in.SignatureTemplate, limit: SignatureTemplateMaxRunes, installationOwned: true},
 		{column: fieldOfferSummary, value: in.Offering.OfferSummary, limit: legalEntityImprintLimit, anchored: true},
 		{column: fieldICP, value: in.Offering.ICP, limit: legalEntityImprintLimit, anchored: true},
 		{column: fieldValueProposition, value: in.Offering.ValueProposition, limit: legalEntityImprintLimit, anchored: true},
@@ -97,7 +102,7 @@ func (e LegalEntity) asInput() LegalEntityInput {
 		VatID: e.VatID, RegisterCourt: e.RegisterCourt, RegisterNumber: e.RegisterNumber,
 		Country: e.Country, DefaultLanguage: e.DefaultLanguage,
 		BankAccountHolder: e.BankAccountHolder, IBAN: e.IBAN, BIC: e.BIC, Imprint: e.Imprint,
-		Offering: e.Offering,
+		SignatureTemplate: e.SignatureTemplate, Offering: e.Offering,
 	}
 }
 
@@ -111,6 +116,12 @@ func (f entityField) cleaned(isDefault bool) (value *string, sent bool, err erro
 		return nil, true, &values.ParseError{
 			Field: f.wire, Code: codeFieldOnCompanyForm,
 			Message: f.wire + " of the default legal entity is the company's; change it on the company form",
+		}
+	}
+	if isDefault && f.installationOwned {
+		return nil, true, &values.ParseError{
+			Field: f.wire, Code: codeFieldOnInstallation,
+			Message: f.wire + " of the default legal entity is the installation's; change it in the installation settings",
 		}
 	}
 	text := strings.TrimSpace(*f.value)

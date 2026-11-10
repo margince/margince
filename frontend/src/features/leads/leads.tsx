@@ -12,7 +12,6 @@ import { useRecordTimeline } from "../../design-system/recordtimeline";
 import { RecordView } from "../../design-system/recordview";
 import { useToast } from "../../design-system/toast";
 import { leadIdentityName } from "../../format/leadname";
-import { viewerZone } from "../../format/timezone";
 import { useT } from "../../i18n";
 import { ACTION_PARAM, QUALIFY_ACTION } from "../../lib/leads.address";
 import { useOpenEmail } from "../../lib/openemail";
@@ -46,6 +45,8 @@ export type Lead = components["schemas"]["Lead"];
 export type UpdateLeadRequest = components["schemas"]["UpdateLeadRequest"];
 
 import { leadKey, leadWriteKeys } from "../../lib/leadkeys";
+import type { RecordTabId } from "../../lib/recordtaborder";
+import { useViewerZone } from "../../lib/viewerzone";
 import { useAddressedTab } from "../records/recordtab";
 import { WorklistReturnLink } from "../worklist/worklist.return";
 
@@ -57,7 +58,11 @@ import { WorklistReturnLink } from "../worklist/worklist.return";
  */
 export type LeadWriter = ReturnType<typeof useLeadPatch>;
 
-const LEAD_TABS = ["overview", "deals", "history"] as const;
+const LEAD_TABS = [
+  "overview",
+  "history",
+  "deals",
+] as const satisfies readonly RecordTabId[];
 
 // The lead-360's "overview" pane, split out of LeadScreen so the tab switch
 // doesn't push the render-prop closure over the cognitive-complexity budget.
@@ -103,6 +108,7 @@ function useLadderRefresh(id: string): () => void {
  * record it had not read yet.
  */
 function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const queryClient = useQueryClient();
   const refreshAfterTouch = useLadderRefresh(id);
@@ -198,7 +204,7 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
       // The shell stamps timeline rows in this zone. The viewer's own is the
       // default for a prospect. A lead carries no workspace location of its
       // own to prefer over where the reader is.
-      zone={viewerZone()}
+      zone={readerZone}
       band={leadBand({ lead, writer, reasonId: terminalReasonId, t })}
       // The same strip every record in the product carries. It is a place a reader
       // navigates, drawn as a rule with the open body underlined, rather than
@@ -266,7 +272,7 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
           call's own thread and the History tab's rows both open into it. */}
       <OpenEmailDrawer
         activityId={openEmail}
-        zone={viewerZone()}
+        zone={readerZone}
         onClose={() => setOpenEmail(null)}
       />
     </RecordView>

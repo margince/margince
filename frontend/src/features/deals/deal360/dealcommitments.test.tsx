@@ -138,6 +138,21 @@ describe("the deal's customer commitments", () => {
     expect(screen.getAllByText(/Differs from the deal value/)).toHaveLength(1);
   });
 
+  it("wraps its badges rather than cutting off the amount or the question", async () => {
+    installFetchStub({
+      "GET /me": meRoute({ contact: ["read"] }),
+      [ROUTE]: () => jsonResponse(COMMITMENTS),
+    });
+    show();
+    for (const label of [
+      "Differs from the deal value (€42,000)",
+      "Overdue: did it happen?",
+    ]) {
+      const badge = (await screen.findByText(label)).closest(".badge");
+      expect(badge?.classList.contains("badge-wrap")).toBe(true);
+    }
+  });
+
   it("speaks Vietnamese to a Vietnamese reader", async () => {
     installFetchStub({
       "GET /me": meRoute({ contact: ["read"] }),

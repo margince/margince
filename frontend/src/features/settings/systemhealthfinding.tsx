@@ -14,12 +14,13 @@ import { type Fact, FactList } from "../../design-system/factlist";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { healthScope, useHealthScope } from "../../lib/healthscope";
+import { labelFor } from "../../lib/labelfor";
 import { navigate } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
+import { useViewerZone } from "../../lib/viewerzone";
 import { jobKindNameKey } from "./jobkinds";
 import { MailReviewRequests } from "./mailreviewrequests";
 import {
@@ -86,7 +87,7 @@ export function FindingPanel({
             ) && <p>{t(findingEffectKey(entry))}</p>}
         </PanelBody>
       ))}
-      <PanelBody>
+      <PanelBody className="health-next">
         {![
           "capture_uncertain",
           "capture_owner_review",
@@ -126,7 +127,7 @@ function FindingScope({ finding }: Readonly<{ finding: Finding }>) {
             count: formatNumber(finding.count, locale),
           })
         : t("health.scopeUnknown")}{" "}
-      · {t(healthResponsible[finding.responsible])}
+      · {t(labelFor(healthResponsible, finding.responsible))}
     </p>
   );
 }
@@ -275,10 +276,11 @@ function findingTitle(finding: Finding, t: Translator) {
 }
 
 function FindingFacts({ finding }: Readonly<{ finding: Finding }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const date = (at?: string) =>
-    at ? formatDateTime(at, locale, viewerZone()) : t("health.unknown");
+    at ? formatDateTime(at, locale, readerZone) : t("health.unknown");
   const facts: Fact[] = [];
   if (finding.window_start && finding.window_end)
     facts.push({

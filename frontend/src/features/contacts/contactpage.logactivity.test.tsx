@@ -95,6 +95,18 @@ describe("logging an activity", () => {
     expect(reason?.closest(".record-aside")).not.toBeNull();
   });
 
+  it("refuses Email without the create grant, over the same sentence as Log", async () => {
+    mount("overview", view, [], {}, { contact: ["read", "update"] });
+
+    const header = await recordHeader();
+    const log = within(header).getByRole("button", { name: /Log activity/ });
+    const email = within(header).getByRole("button", { name: /Email|Write/ });
+    expect(email).toHaveProperty("disabled", true);
+    expect(email.getAttribute("aria-describedby")).toBe(
+      log.getAttribute("aria-describedby"),
+    );
+  });
+
   // "Add task" issues the same POST /activities as "Log activity", so the
   // same grant refuses it. The two share the one sentence instead of
   // printing it twice.

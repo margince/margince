@@ -6,6 +6,7 @@ package activities
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sort"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // JustInDays is how far back a record page leads with what arrived. Older
@@ -46,7 +48,7 @@ func (s *Store) LatestInbound(ctx context.Context, entityType string, entityID i
 			rows, _, err := s.ListActivitiesIn(ctx, tx, in)
 			return rows, err
 		}
-		limit, one, note, form := latestInboundLimit, 1, string(crmcontracts.ActivityKindNote), provenance.WebFormSource
+		limit, note, form := latestInboundLimit, string(crmcontracts.ActivityKindNote), provenance.WebFormSource
 		waiting, err := read(ListActivitiesInput{OccurredAfter: &since, WaitingReply: true, Limit: &limit})
 		if err != nil {
 			return err
@@ -55,11 +57,13 @@ func (s *Store) LatestInbound(ctx context.Context, entityType string, entityID i
 		if err != nil {
 			return err
 		}
-		answer, err := read(ListActivitiesInput{AnswersThem: true, Limit: &one})
+		answers, err := s.newestTied(ctx, tx, ListActivitiesInput{
+			EntityType: &entityType, EntityID: &entityID, AsOf: &now, Columns: columns, AnswersThem: true,
+		})
 		if err != nil {
 			return err
 		}
-		if out.Data, err = markLatestInboundTasks(ctx, tx, unansweredInbound(waiting, forms, answer), now); err != nil {
+		if out.Data, err = markLatestInboundTasks(ctx, tx, unansweredInbound(waiting, forms, answers), now); err != nil {
 			return err
 		}
 		out.LastExchange, err = s.lastExchange(ctx, tx, entityType, entityID, now, columns)
@@ -68,10 +72,9 @@ func (s *Store) LatestInbound(ctx context.Context, entityType string, entityID i
 	return out, err
 }
 
-// unansweredInbound merges the waiting mail and messages with the website
-// forms no later answer follows, newest first and at most latestInboundLimit.
-// newestAnswer is the record's newest row that answers them, if any.
-func unansweredInbound(waiting, forms, newestAnswer []crmcontracts.Activity) []crmcontracts.LatestInbound {
+// unansweredInbound merges the waiting mail and messages with the website forms no row of newestAnswers answers,
+// newest first and at most latestInboundLimit. An older answer cannot answer a form the newest ones leave open.
+func unansweredInbound(waiting, forms, newestAnswers []crmcontracts.Activity) []crmcontracts.LatestInbound {
 	items := []crmcontracts.LatestInbound{}
 	for _, row := range waiting {
 		switch row.Kind {
@@ -82,7 +85,10 @@ func unansweredInbound(waiting, forms, newestAnswer []crmcontracts.Activity) []c
 		}
 	}
 	for _, row := range forms {
-		if len(newestAnswer) == 0 || !newestAnswer[0].OccurredAt.After(row.OccurredAt) {
+		answered := slices.ContainsFunc(newestAnswers, func(answer crmcontracts.Activity) bool {
+			return occurredday.Answers(momentOf(answer), momentOf(row))
+		})
+		if !answered {
 			items = append(items, crmcontracts.LatestInbound{Activity: row, Kind: crmcontracts.LatestInboundKindWebForm})
 		}
 	}
@@ -95,10 +101,18 @@ func unansweredInbound(waiting, forms, newestAnswer []crmcontracts.Activity) []c
 	return items
 }
 
-// answersThemSQL keeps a row under alias a that answers them. That is anything
-// we sent, a call, or a meeting that was not canceled or a no-show. A note answers nobody.
-const answersThemSQL = `((a.kind IN ('email', 'message') AND a.direction = 'outbound') OR a.kind = 'call'
- OR (a.kind = 'meeting' AND a.meeting_status IS DISTINCT FROM 'canceled' AND a.meeting_status IS DISTINCT FROM 'no_show'))`
+func momentOf(row crmcontracts.Activity) occurredday.Moment {
+	return occurredday.Moment{At: row.OccurredAt, DateOnly: occurredday.IsDay(row.OccurredPrecision)}
+}
+
+// answersThemSQL keeps a row under alias a that answers them at now. That is
+// anything we sent, or a call or meeting that kept us in touch
+// (relstrength.HadContactSQL), so a meeting still to come answers nobody yet.
+// A note answers nobody.
+func answersThemSQL(now string) string {
+	return `((a.kind IN ('email', 'message') AND a.direction = 'outbound') OR (a.kind IN ('call', 'meeting') AND ` +
+		relstrength.HadContactSQL("a", now) + `))`
+}
 
 // markLatestInboundTasks drops an item a task already stands for, which
 // waiting_reply does for mail and a form needs here, and sets accepts_request.

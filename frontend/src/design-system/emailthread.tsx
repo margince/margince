@@ -8,6 +8,7 @@ import { type ReactNode, useState } from "react";
 import type { components } from "../api/schema";
 import type { ActivityWhenFormatter } from "../format/activitywhen";
 import { useT } from "../i18n";
+import { labelFor } from "../lib/labelfor";
 import { Button } from "./atoms";
 import { Avatar } from "./avatar";
 import { Callout } from "./callout";
@@ -22,6 +23,7 @@ import {
   senderParties,
 } from "./emailmessage";
 import { EmailText } from "./emailtext";
+import { ReaderRendering } from "./readerrendering";
 import { SurfaceState } from "./surfacestate";
 import { ProvenanceTag } from "./trust";
 import "./emailthread.css";
@@ -282,7 +284,12 @@ function OpenMessage({
         </EmailEnvelope>
       )}
       <TextNotice completeness={presentation.body_completeness} />
-      <EmailText body={presentation.body ?? ""} />
+      <ReaderRendering
+        activityId={presentation.id}
+        language={presentation.language}
+      >
+        <EmailText body={presentation.body ?? ""} />
+      </ReaderRendering>
       <EmailAttachments files={presentation.attachments} />
       {related?.()}
       {renderActions && (
@@ -325,8 +332,8 @@ function TextNotice({
     return null;
   }
   return (
-    <Callout kind="standing" title={t(TEXT_NOTICES[completeness])}>
-      {t(TEXT_HINTS[completeness])}
+    <Callout kind="standing" title={t(labelFor(TEXT_NOTICES, completeness))}>
+      {t(labelFor(TEXT_HINTS, completeness))}
     </Callout>
   );
 }

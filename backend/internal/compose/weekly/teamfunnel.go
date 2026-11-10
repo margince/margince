@@ -20,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/stagemove"
 )
 
 const (
@@ -60,9 +61,9 @@ type stageEntries struct {
 // to a won stage, or to a later stage of the same pipeline. Stage order is read
 // as configured now: that is the weekly funnel's published meaning, which the
 // Analytics stage cohort does not share. Moves are read in write order. An
-// imported move shows the source system's history, not the rep's selling. It
-// never converts an entry. An entry whose next move is imported is left out,
-// as the stage cohort leaves it out of its rate.
+// imported or synced move shows another system's history, not the rep's
+// selling. It never converts an entry. An entry whose next move came from
+// another system is left out, as the stage cohort leaves it out of its rate.
 var teamFunnelSQL = `
 	WITH entries AS (` + StageEntriesSQL("$%[1]d", "$%[2]d", "h.owner_id_at_change = ANY($%[3]d) AND (%[4]s)") + `)
 	SELECT e.owner_id, e.pipeline_id, p.name, e.stage_id, s.name,
@@ -75,7 +76,7 @@ var teamFunnelSQL = `
 	           LEFT JOIN stage ls ON ls.id = l.to_stage_id AND ls.pipeline_id = e.pipeline_id
 	          WHERE l.deal_id = e.deal_id
 	            AND ` + StageMoveOrder("l") + ` > ` + StageMoveOrder("eh") + ` AND l.changed_at < $%[2]d
-	            AND l.provenance IS DISTINCT FROM 'imported'
+	            AND ` + stagemove.NotMadeElsewhereSQL("l.provenance") + `
 	            AND l.pipeline_id_at_change = e.pipeline_id
 	            AND (l.semantic_at_change = 'won' OR ls."position" > s."position")))
 	  FROM entries e
@@ -87,7 +88,7 @@ var teamFunnelSQL = `
 	                         WHERE x.deal_id = e.deal_id
 	                           AND ` + StageMoveOrder("x") + ` > ` + StageMoveOrder("eh") + ` AND x.changed_at < $%[2]d
 	                         ORDER BY ` + StageMoveOrder("x") + ` LIMIT 1) nx
-	          WHERE nx.provenance = 'imported')
+	          WHERE ` + stagemove.MadeElsewhereSQL("nx.provenance") + `)
 	 GROUP BY e.owner_id, e.pipeline_id, p.name, e.stage_id, s.name, s.pipeline_id, s."position"`
 
 // measureTeamFunnel attaches each measured rep's top deviations.

@@ -71,6 +71,9 @@ func (s *Service) changeUserRoleTx(ctx context.Context, tx pgx.Tx, actor Identit
 		roleID, userID); err != nil {
 		return err
 	}
+	if err := s.recheckMailboxesTx(ctx, tx, []ids.UUID{userID.UUID}); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `UPDATE app_user SET updated_at = now() WHERE id = @member`, pgx.StrictNamedArgs{memberParameter: userID}); err != nil {
 		return err
 	}

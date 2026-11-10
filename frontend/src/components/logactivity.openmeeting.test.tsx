@@ -22,7 +22,7 @@ import { calendarDay } from "../format/calendarday";
 import { UTC_ZONE } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { RecordZoneProvider } from "../lib/recordzone";
+import { ViewerZoneProvider } from "../lib/viewerzone";
 import { meFixture } from "../testing/mefixture";
 import { LogActivity } from "./logactivity";
 import {
@@ -35,9 +35,13 @@ import {
 // asked about. Yes writes the notes and the outcome on that meeting. No logs a
 // separate one.
 
+// The workspace's activity custom fields the stub answers; none by default.
+let activityFields: unknown[] = [];
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  activityFields = [];
 });
 
 const ZONE = UTC_ZONE;
@@ -92,6 +96,11 @@ function stubApi(
   patch: () => Response = () =>
     jsonResponse(booked({ meeting_status: "held" })),
   post: (body: { kind: string }) => Response | undefined = () => undefined,
+  filing: {
+    choice_required: boolean;
+    company_id?: string;
+    suggested_deal_id?: string;
+  } = { choice_required: false },
 ) {
   vi.stubGlobal(
     "fetch",
@@ -117,6 +126,9 @@ function stubApi(
         idempotencyKey: headers?.get("Idempotency-Key") ?? null,
         form,
       });
+      if (key === "GET /activities/deal-filing") return jsonResponse(filing);
+      if (key === "GET /deals/d1")
+        return jsonResponse({ id: "d1", name: "Renewal" });
       if (key === "GET /me") {
         return jsonResponse(
           meFixture({
@@ -127,12 +139,18 @@ function stubApi(
       if (key === "GET /installation/settings") {
         return jsonResponse({ max_upload_bytes: 10_000_000 });
       }
+      if (key === "GET /custom-fields") {
+        return jsonResponse({
+          data: activityFields,
+          page: { has_more: false },
+        });
+      }
       if (key === "POST /attachments") {
         return jsonResponse({ id: "att-1" }, 201);
       }
       if (
         key === "GET /activities" &&
-        url.searchParams.get("kind") === "meeting"
+        url.searchParams.getAll("kind").includes("meeting")
       ) {
         return jsonResponse({ data: meetings, page: { next_cursor: null } });
       }
@@ -169,9 +187,9 @@ function render(zone = ZONE) {
   rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <RecordZoneProvider zone={zone}>
+        <ViewerZoneProvider zone={zone}>
           <LogActivity entityType="contact" entityId="p1" />
-        </RecordZoneProvider>
+        </ViewerZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -206,6 +224,27 @@ const sent = (captured: Captured[], key: string) =>
   captured.filter((entry) => entry.key === key);
 
 describe("logging a meeting where one owes its outcome", () => {
+  it("files the existing meeting using the deal shown in the logging form", async () => {
+    const captured: Captured[] = [];
+    stubApi([booked()], captured, undefined, undefined, {
+      choice_required: false,
+      company_id: "o1",
+      suggested_deal_id: "d1",
+    });
+    render();
+    const user = await logMeeting();
+    await screen.findByText("Renewal");
+    await user.click(screen.getByRole("button", { name: "Log" }));
+    await waitFor(() =>
+      expect(sent(captured, "PATCH /activities/m-1")).toHaveLength(1),
+    );
+    expect(sent(captured, "PATCH /activities/m-1")[0]?.body).toMatchObject({
+      meeting_status: "held",
+      deal_filing: { record_type: "contact", record_id: "p1", deal_id: "d1" },
+    });
+    expect(sent(captured, "POST /activities")).toHaveLength(0);
+  });
+
   it("Yes records the notes on the open meeting", async () => {
     const captured: Captured[] = [];
     stubApi([booked()], captured);
@@ -220,8 +259,48 @@ describe("logging a meeting where one owes its outcome", () => {
     const [patch] = sent(captured, "PATCH /activities/m-1");
     expect(patch?.ifMatch).toBe("4");
     expect(patch?.body).toEqual({
+      deal_filing: { record_type: "contact", record_id: "p1", skip: false },
       meeting_status: "held",
       body: "Agenda: pricing\n\nThey agreed to the renewal.",
+    });
+    expect(sent(captured, "POST /activities")).toHaveLength(0);
+  });
+
+  it("Yes puts the typed custom-field values on the open meeting", async () => {
+    activityFields = [
+      {
+        id: "cf-visit-report",
+        object: "activity",
+        label: "Visit report",
+        slug: "visit_report",
+        type: "text",
+        status: "active",
+        column_name: "cf_visit_report",
+        show_in_create: true,
+        reportable: false,
+        activity_kinds: ["meeting"],
+        created_by: "human:u-1",
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      },
+    ];
+    const captured: Captured[] = [];
+    stubApi([booked()], captured);
+    render();
+    const user = await logMeeting();
+    fireEvent.change(
+      await screen.findByRole("textbox", { name: "Visit report" }),
+      { target: { value: "Saw the new line" } },
+    );
+    expect(await screen.findByText(QUESTION)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Log" }));
+
+    await waitFor(() =>
+      expect(sent(captured, "PATCH /activities/m-1")).toHaveLength(1),
+    );
+    expect(sent(captured, "PATCH /activities/m-1")[0]?.body).toMatchObject({
+      meeting_status: "held",
+      cf_visit_report: "Saw the new line",
     });
     expect(sent(captured, "POST /activities")).toHaveLength(0);
   });
@@ -250,7 +329,9 @@ describe("logging a meeting where one owes its outcome", () => {
     const user = await logMeeting();
     await waitFor(() =>
       expect(
-        captured.some((entry) => entry.query.get("kind") === "meeting"),
+        captured.some((entry) =>
+          entry.query.getAll("kind").includes("meeting"),
+        ),
       ).toBe(true),
     );
     expect(screen.queryByText(QUESTION)).toBeNull();
@@ -281,6 +362,7 @@ describe("logging a meeting where one owes its outcome", () => {
       "POST /activities",
     ]);
     expect(sent(captured, "PATCH /activities/m-1")[0]?.body).toEqual({
+      deal_filing: { record_type: "contact", record_id: "p1", skip: false },
       meeting_status: "held",
     });
     const [note] = sent(captured, "POST /activities");
@@ -398,7 +480,9 @@ describe("logging a meeting where one owes its outcome", () => {
     await logMeeting();
     await waitFor(() =>
       expect(
-        captured.some((entry) => entry.query.get("kind") === "meeting"),
+        captured.some((entry) =>
+          entry.query.getAll("kind").includes("meeting"),
+        ),
       ).toBe(true),
     );
     await waitFor(() =>
@@ -428,7 +512,9 @@ describe("logging a meeting where one owes its outcome", () => {
     await logMeeting();
     await waitFor(() =>
       expect(
-        captured.some((entry) => entry.query.get("kind") === "meeting"),
+        captured.some((entry) =>
+          entry.query.getAll("kind").includes("meeting"),
+        ),
       ).toBe(true),
     );
     expect(screen.queryByText(QUESTION)).toBeNull();
@@ -441,13 +527,15 @@ describe("logging a meeting where one owes its outcome", () => {
     await logMeeting();
     await waitFor(() =>
       expect(
-        captured.some((entry) => entry.query.get("kind") === "meeting"),
+        captured.some((entry) =>
+          entry.query.getAll("kind").includes("meeting"),
+        ),
       ).toBe(true),
     );
     const day = calendarDay(new Date(), ZONE);
     if (!isISODate(day)) throw new Error(`today is not a day: ${day}`);
-    const lookup = captured.find(
-      (entry) => entry.query.get("kind") === "meeting",
+    const lookup = captured.find((entry) =>
+      entry.query.getAll("kind").includes("meeting"),
     );
     expect(lookup?.query.get("entity_id")).toBe("p1");
     expect(lookup?.query.get("occurred_after")).toBe(
@@ -530,7 +618,9 @@ describe("the open meeting on a company", () => {
     );
     await waitFor(() =>
       expect(
-        captured.some((entry) => entry.query.get("kind") === "meeting"),
+        captured.some((entry) =>
+          entry.query.getAll("kind").includes("meeting"),
+        ),
       ).toBe(true),
     );
     expect(result.current).toBeUndefined();

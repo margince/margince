@@ -141,5 +141,7 @@ export function stepOfRun(
     case "awaiting_approval":
     case undefined:
       return "test";
+    default:
+      return "test";
   }
 }

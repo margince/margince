@@ -114,10 +114,10 @@ const MARK_PATHS = {
 /**
  * Act on, dismiss, snooze or un-snooze one item.
  *
- * The item id travels as a mutation VARIABLE rather than in the closure: the
- * click handler belongs to the committed render, so a variable it passes cannot
+ * The item id travels as a mutation variable rather than in the closure. The
+ * click handler belongs to the committed render. So a variable it passes cannot
  * be older than the control that carried it (frontend/CLAUDE.md, and the gate
- * in `mutation-variable-coverage.test.ts`).
+ * in `census/rules/mutation-variable-coverage.census.ts`).
  */
 export function useBriefItemMark() {
   const queryClient = useQueryClient();
@@ -199,16 +199,33 @@ export function useWeeklyReview(
 }
 
 /** The weeks this rep has a review for — the archive's index. */
-export function useWeeklyReviewIndex(): UseQueryResult<readonly string[]> {
+type WeeklyIndex = components["schemas"]["WeeklyReviewIndex"];
+export type WeekEntry = components["schemas"]["WeeklyReviewIndexEntry"];
+
+// One read of the archive's index; each hook below selects its own slice.
+function useWeeklyIndex<T>(
+  select: (index: WeeklyIndex) => T,
+): UseQueryResult<T> {
   return useQuery({
     queryKey: ["weekly-review-index"],
-    queryFn: async (): Promise<readonly string[]> => {
+    queryFn: async (): Promise<WeeklyIndex> => {
       const data = unwrap(await api.GET("/weekly-reviews"));
       // Never undefined out of this hook. React Query refuses an undefined
       // result, and a payload without the field is a server that answered
       // something else — which must read as "no weeks", not as a crash that
       // takes Brief's whole render with it.
-      return data?.weeks ?? [];
+      return { weeks: data?.weeks ?? [], entries: data?.entries };
     },
+    select,
   });
+}
+
+/** The weeks with a report, newest first. */
+export function useWeeklyReviewIndex(): UseQueryResult<readonly string[]> {
+  return useWeeklyIndex((index) => index.weeks);
+}
+
+/** The same weeks with what each won; empty from a server that sends none. */
+export function useWeeklyWins(): UseQueryResult<readonly WeekEntry[]> {
+  return useWeeklyIndex((index) => index.entries ?? []);
 }

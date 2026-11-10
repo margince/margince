@@ -1,0 +1,34 @@
+# CASE 115 — A user's own hours and own language are theirs alone, so both go to
+# change_my_settings. No workspace setting moves, and no colleague's language.
+name: case115_my_hours_and_my_language
+criteria: [1, 2]
+writes: true
+
+prompt: |
+  Keep me out of bookings on Fridays from now on. I work Monday to Thursday, nine
+  to five. And please switch my Margince to German. Only mine, my colleagues keep
+  theirs.
+
+must_call:
+  - change_my_settings
+
+must_call_with:
+  - change_my_settings.action=save_working_hours
+  - change_my_settings.action=save_locale
+
+must_call_matching:
+  - 'change_my_settings~"days": \[1, 2, 3, 4\]'
+  - 'change_my_settings~"start_time": "09:00"'
+  - 'change_my_settings~"end_time": "17:00"'
+  - 'change_my_settings~"locale": "de"'
+
+must_not_call_with:
+  - change_settings~.
+  - update_record~.
+
+may_call:
+  - read_workspace
+  - whoami
+
+runs: 3
+pass_at: 2

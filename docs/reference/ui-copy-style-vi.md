@@ -9,7 +9,7 @@ a source: where German keeps a loanword, Vietnamese decides.
 The target is Vietnamese business software: a formal written register, the reader's world instead of the
 system's internals, and fewer pronouns than the English.
 
-Part of it is mechanical. `frontend/src/i18n/copy-style-vi.test.ts` holds the mechanics, the voice, the
+Part of it is mechanical. `frontend/census/rules/copy-style-vi.census.ts` holds the mechanics, the voice, the
 address and the retired words over `vi.ts` and every extension `vi.json`; `frontend/src/i18n/record-noun.test.ts`
 holds the record noun; `frontend/src/i18n/i18n.test.ts` holds key and placeholder parity and the tenant word.
 [What the gate holds](#what-the-gate-holds) lists them. Everything else is the author's judgement, and a
@@ -200,7 +200,7 @@ Vietnamese is a layout bug.
 ## Vocabulary
 
 One Vietnamese word per concept, the same word on every screen. In the Never
-column, `copy-style-vi.test.ts` retires a word in code format. Such a word fails
+column, `frontend/census/rules/copy-style-vi.census.ts` retires a word in code format. Such a word fails
 as a whole word in any case, and an English one in its plural too, outside a
 quoted vendor label, a file name, a URL and a compound its row says keeps it. A word goes in code format only
 when no value has a legitimate use for it; one that does stays plain, held by
@@ -353,7 +353,7 @@ trị viên or ai where they read naturally.
 
 ## What the gate holds
 
-`frontend/src/i18n/copy-style-vi.test.ts` checks every value of `vi.ts` and of
+`frontend/census/rules/copy-style-vi.census.ts` checks every value of `vi.ts` and of
 every extension `vi.json`, one test per rule, and lists each offender as its
 source file, key and value. Placeholders are removed before the word rules run.
 The five server-worded consent keys skip the speaker, address and vocabulary

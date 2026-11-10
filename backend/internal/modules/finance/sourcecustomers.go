@@ -141,7 +141,7 @@ func readDirectoryPage(
 func (s *Store) LinkCustomer(
 	ctx context.Context, externalID string, companyID ids.CompanyID,
 ) (crmcontracts.FinanceSourceCustomer, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.FinanceSourceCustomer{}, err
 	}
 	if err := auth.Require(ctx, objectIntegrations, principal.ActionUpdate); err != nil {
@@ -180,7 +180,7 @@ func (s *Store) LinkCustomer(
 // UnlinkCustomer archives a customer's live link. The sync stops reading its
 // ledger; what it already mirrored stays where it is.
 func (s *Store) UnlinkCustomer(ctx context.Context, externalID string) error {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	if err := auth.Require(ctx, objectIntegrations, principal.ActionUpdate); err != nil {

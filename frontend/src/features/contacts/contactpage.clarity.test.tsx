@@ -137,6 +137,7 @@ describe("a contact with little context", () => {
               purpose_label: "Business correspondence",
               channel: "email",
               verdict: recorded ? "allowed" : "unknown",
+              reason_code: recorded ? "said_we_may_write" : "no_consent",
             },
           ],
         });
@@ -160,7 +161,9 @@ describe("a contact with little context", () => {
     expect(within(dialog).queryByTestId("confirm-details-ask")).toBeNull();
     await user.click(within(dialog).getByRole("button", { name: "Close" }));
     // The left column and the Research tab's panel read the one guard.
-    expect((await screen.findAllByText("Allowed")).length).toBe(2);
+    expect(
+      (await screen.findAllByText("Permission to write recorded")).length,
+    ).toBe(2);
   });
 
   it("does not offer a confirmation send on a read-only record", async () => {
@@ -254,4 +257,35 @@ it("does not predict a confirmation destination when multiple addresses have no 
     false,
   );
   expect(screen.queryByText(/Send to /)).toBeNull();
+});
+
+describe("the contact overview states no mail coverage", () => {
+  // No coverage state names a step the reader can take, so the overview stays
+  // silent about it. A broken connection shows on the connection health banner.
+  it.each([
+    "partial",
+    "unknown",
+    "unavailable",
+    "withheld",
+    undefined,
+  ] as const)("draws no notice for coverage %s", async (state) => {
+    mount("overview", {
+      ...sparse,
+      ...(state === undefined
+        ? {}
+        : {
+            mail_coverage: {
+              channel: "email",
+              state,
+              interval_to: view.as_of,
+              evaluated_at: view.as_of,
+            },
+          }),
+    });
+    await screen.findByRole("heading", { name: /^How it stands/ });
+    expect(
+      document.querySelector('a[href="#/settings/connections"]'),
+    ).toBeNull();
+    expect(screen.queryByText(/mail history/i)).toBeNull();
+  });
 });

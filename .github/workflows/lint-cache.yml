@@ -1,0 +1,178 @@
+name: lint-cache
+
+# Refreshes golangci-lint's analysis cache after every push to main or develop,
+# so a pull request's backend-lint starts from the tip it merges into rather than
+# from cache-warm's last green run, often hours and dozens of merges behind.
+# Each run restores the previous entry, so it analyzes only what the push changed.
+# On main it also saves the `lint` Go build cache: golangci compiles every
+# package it loads, and a build cache hours behind made that load most of the
+# lint job even when every analysis was cached.
+# It gates nothing: a red run still analyzed the tree, and its entries are saved.
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "backend/**"
+      - "extensions/**"
+      - "tools/**"
+      - "go.work"
+      - "go.work.sum"
+      - ".github/workflows/lint-cache.yml"
+      - ".github/actions/golangci-cache-key/**"
+      - ".github/actions/go-build-cache/**"
+      - ".github/actions/ci-image/**"
+      - ".github/ci-image/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One run per branch at a time, never cancelled: a cancelled run saves nothing.
+# A push that lands mid-run waits, and only the newest waiting push runs next.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: backend
+
+env:
+  GOPROXY: https://proxy.golang.org|direct
+  CHECK_BASE_REF: origin/${{ github.ref_name }}
+
+jobs:
+  # backend-lint runs in the CI image when it can, and golangci keys its cache
+  # on the checkout path, so this writes the entry where backend-lint will read
+  # it: in the image, or on the runner when the image cannot be pulled.
+  ci-image:
+    name: ci-image
+    timeout-minutes: 60
+    if: github.event_name == 'push' || github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      pinned-image: ${{ steps.image.outputs.pinned-image }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Find or build the CI image
+        id: image
+        uses: ./.github/actions/ci-image
+        with:
+          push: "true"
+          token: ${{ github.token }}
+
+  warm:
+    name: warm golangci
+    timeout-minutes: 45
+    needs: [ci-image]
+    # A dispatch from any other branch would save an entry no pull request reads.
+    if: ${{ !cancelled() && (github.event_name == 'push' || github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.ref == 'refs/heads/develop') }}
+    runs-on: ubuntu-latest
+    container: ${{ needs.ci-image.outputs.pinned-image }}
+    permissions:
+      contents: read
+    outputs:
+      # The keys this run saved, for prune to keep. Empty when a save did not run.
+      saved-keys: >-
+        ${{ steps.save.outcome == 'success' && steps.golangci-key.outputs.key || '' }}
+        ${{ steps.save-build.outcome == 'success' && steps.go-cache.outputs.key || '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: ${{ needs.ci-image.outputs.pinned-image == '' && 'backend/go.mod' || '' }}
+          cache-dependency-path: backend/go.sum
+      # On main this job writes the `lint` entry, so it compiles from empty, as
+      # cache-warm.yml's writers do: an entry built on the one before keeps
+      # every package any earlier tree held. On develop it reads main's entry.
+      - name: Start from an empty build cache
+        if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        run: go clean -cache
+      - name: Restore the Go build cache
+        id: go-cache
+        uses: ./.github/actions/go-build-cache
+        with:
+          flavor: lint
+          restore: ${{ github.ref != format('refs/heads/{0}', github.event.repository.default_branch) }}
+      - name: Gate binaries on PATH
+        if: needs.ci-image.outputs.pinned-image == ''
+        uses: ./.github/actions/gate-binaries
+        with:
+          save: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+      - name: Compute the golangci cache key
+        id: golangci-key
+        uses: ./.github/actions/golangci-cache-key
+      - name: Restore the golangci-lint analysis cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/golangci-lint
+          key: ${{ steps.golangci-key.outputs.key }}
+          restore-keys: ${{ steps.golangci-key.outputs.restore-keys }}
+      # Both passes, one after the other, each into its own cache directory: two
+      # cold passes at once exhaust the runner's memory.
+      - name: Lint the pushed tree (make lint)
+        run: make lint
+      # The rest of what backend-lint compiles: vet builds untagged, and
+      # lint-modules loads the modules outside backend/.
+      - name: Compile the other static legs (make vet lint-modules)
+        if: ${{ !cancelled() }}
+        run: make vet lint-modules
+      - name: Save the golangci-lint analysis cache
+        id: save
+        if: ${{ !cancelled() }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/golangci-lint
+          key: ${{ steps.golangci-key.outputs.key }}
+      # No test runs here, so the entry replays no test result and needs no
+      # census of test inputs.
+      - name: Save the lint Go build cache
+        id: save-build
+        if: ${{ !cancelled() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/go-build
+          key: ${{ steps.go-cache.outputs.key }}
+
+  # A restore takes the newest entry, so the older ones on this branch only
+  # take room under the repository's cache limit. Only entries saved before
+  # the new one go, so a newer entry from cache-warm stays. On the runner,
+  # because it needs `gh`, which the CI image does not hold.
+  prune:
+    name: prune older lint cache entries
+    timeout-minutes: 10
+    needs: [warm]
+    if: ${{ !cancelled() && needs.warm.outputs.saved-keys != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      # To delete this branch's older entries once the new one is saved.
+      actions: write
+    steps:
+      # Each key ends in the commit sha, so the prefix is the key without it.
+      - name: Delete this branch's older entries
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SAVED_KEYS: ${{ needs.warm.outputs.saved-keys }}
+        run: |
+          for keep in $SAVED_KEYS; do
+            entries="$(gh cache list --ref "$GITHUB_REF" --key "${keep%-*}-" --limit 1000 --json key,createdAt)"
+            saved="$(jq -r --arg keep "$keep" '.[] | select(.key == $keep) | .createdAt' <<<"$entries")"
+            if [[ -z "$saved" ]]; then
+              echo "$keep is not listed yet, so nothing older is deleted"
+              continue
+            fi
+            jq -r --arg saved "$saved" '.[] | select(.createdAt < $saved) | .key' <<<"$entries" |
+              while read -r key; do
+                gh cache delete "$key" --ref "$GITHUB_REF"
+              done
+          done

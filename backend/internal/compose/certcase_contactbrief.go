@@ -123,17 +123,17 @@ func (c *contactBriefCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 			Detail: "no sentence cited a record of this relationship",
 		}
 	}
-	if wrong := c.faults(sentences); len(wrong) > 0 {
-		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: strings.Join(wrong, "; ")}
+	wrong, leaks := c.faults(sentences)
+	if len(wrong) > 0 {
+		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: strings.Join(wrong, "; "), Leak: leaks}
 	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}
 }
 
-// faults names everything a right brief would not have done, all of it at once:
-// a run that reports only the first fault costs a second paid run to learn the
-// second.
-func (c *contactBriefCase) faults(sentences []contactbrief.Sentence) []string {
-	var wrong []string
+// faults names everything a right brief would not have done, all of it at once.
+// A run that reports only the first fault costs a second paid run to learn the
+// second. leaks says one of them is a phrase this reader was not shown.
+func (c *contactBriefCase) faults(sentences []contactbrief.Sentence) (wrong []string, leaks bool) {
 	if !cites(sentences, c.mustCite) {
 		wrong = append(wrong, fmt.Sprintf(
 			"the brief never cites %q, the message this relationship turns on", c.citeLabel))
@@ -151,9 +151,10 @@ func (c *contactBriefCase) faults(sentences []contactbrief.Sentence) []string {
 		if strings.Contains(folded, strings.ToLower(avoided)) {
 			wrong = append(wrong, fmt.Sprintf(
 				"the brief says %q, which this reader was not shown", avoided))
+			leaks = true
 		}
 	}
-	return wrong
+	return wrong, leaks
 }
 
 // cites reports whether any surviving sentence points at one record.

@@ -50,12 +50,7 @@ func seedWaitingBacklog(t *testing.T) waitingBacklog {
 	// The plain requests are the newest, so the lane's first scan page is all
 	// cards and its read is cut. The other cases sit below them.
 	plain := func(seat ids.UUID, count int) []ids.UUID {
-		var sent []ids.UUID
-		for i := range count {
-			at := r.now.Add(-time.Duration(i+1) * 20 * time.Minute)
-			sent = append(sent, w.mail(t, seat, "dana@buyer.example", fmt.Sprintf("Question %d", i), "", at, true))
-		}
-		return sent
+		return w.plainRequests(t, seat, count)
 	}
 	rep1 := plain(r.e.Rep1, waitsPastTheCap)
 	plain(r.e.Rep2, 10)
@@ -90,6 +85,31 @@ func seedWaitingBacklog(t *testing.T) waitingBacklog {
 	w.takeRequest(t, taken)
 	w.expectFold(t)
 	return w
+}
+
+// plainRequests logs count confirmed requests to seat, each twenty minutes older
+// than the last, and answers their ids newest first. The first goes through the
+// mail and owed-verdict writers. The rest copy its rows, with their own subject,
+// thread and time.
+func (w *waitingBacklog) plainRequests(t *testing.T, seat ids.UUID, count int) []ids.UUID {
+	t.Helper()
+	r := w.r
+	first := w.mail(t, seat, "dana@buyer.example", "Question 0", "", r.now.Add(-20*time.Minute), true)
+	copies := r.e.CloneActivity(t, ids.From[ids.ActivityKind](first), count-1, map[string]string{
+		"source_id":    "r.source_id || '-' || n.ord",
+		"identity_key": "r.identity_key || '-' || n.ord",
+	})
+	subjects, threads, times := []string{}, []string{}, []time.Time{}
+	for i, id := range copies {
+		subject := fmt.Sprintf("Question %d", i+1)
+		subjects, threads = append(subjects, subject), append(threads, "thread-"+subject+"-"+seat.String())
+		times = append(times, r.now.Add(-time.Duration(i+2)*20*time.Minute))
+		w.cards[seat][id.String()] = true
+	}
+	r.e.WsExec(t, `UPDATE activity a SET subject = v.subject, thread_key = v.thread, occurred_at = v.at
+		FROM unnest($1::uuid[], $2::text[], $3::text[], $4::timestamptz[]) AS v(id, subject, thread, at) WHERE a.id = v.id`,
+		copies, subjects, threads, times)
+	return append([]ids.UUID{first}, copies...)
 }
 
 // older is where the cases below the plain requests start.
@@ -257,67 +277,35 @@ func placedBefore(a, b servedRow) bool {
 	return a.source < b.source
 }
 
-// Each scope's customer_waiting total is the cards the list holds when walked
-// to its end, and the walk reaches each of them once. Below the ranked top the
-// rows of both sources arrive in the tail's shared order.
-func TestTheWaitingTotalMatchesTheMergedWalk(t *testing.T) {
-	w := seedWaitingBacklog(t)
-	r := w.r
-	for i := range plannedCapForTest + 6 {
-		r.task(t, fmt.Sprintf("Rep1 due %d", i), r.now.Add(-time.Duration(i+1)*3*time.Hour), nil, &r.e.Rep1)
-	}
-	generated := generatedDateTask(t, r)
-	team := map[string]bool{}
-	for _, seat := range []ids.UUID{r.e.Rep1, r.e.Rep2} {
-		for id := range w.cards[seat] {
-			team[id] = true
+// assertCardsReached holds that a walk to the end reached each of the scope's
+// waiting cards once, and nothing the queue drops. The lane's scan was cut and
+// no count fits the first page, so the category is a floor.
+func (w *waitingBacklog) assertCardsReached(t *testing.T, scope string, served []servedRow, first crmcontracts.Worklist, cards map[string]bool) {
+	t.Helper()
+	seen := map[string]bool{}
+	waited := 0
+	for _, row := range served {
+		if seen[row.id] {
+			t.Fatalf("%s %s was served twice", row.source, row.id)
+		}
+		seen[row.id] = true
+		if w.never[row.id] {
+			t.Errorf("%s was served, and the queue drops it", row.id)
+		}
+		if row.source == crmcontracts.WorklistItemSourceCustomerWaiting {
+			waited++
 		}
 	}
-	checks := []struct {
-		name, scope string
-		ctx         context.Context
-		owner       ids.UUID
-		cards       map[string]bool
-	}{
-		{"mine", "mine", w.seat(r.e.Rep1), ids.Nil, w.cards[r.e.Rep1]},
-		{"named owner", "mine", r.e.Admin(), r.e.Rep1, w.cards[r.e.Rep1]},
-		{"team", "team", w.seat(r.e.Rep1), ids.Nil, team},
+	for id := range cards {
+		if !seen[id] {
+			t.Errorf("waiting card %s was never reached", id)
+		}
 	}
-	for _, check := range checks {
-		t.Run(check.name, func(t *testing.T) {
-			served, first, frozen := walkWorklist(check.ctx, t, r, check.scope, check.owner)
-			seen := map[string]bool{}
-			waited := 0
-			for _, row := range served {
-				if seen[row.id] {
-					t.Fatalf("%s %s was served twice", row.source, row.id)
-				}
-				seen[row.id] = true
-				if w.never[row.id] {
-					t.Errorf("%s was served, and the queue drops it", row.id)
-				}
-				if row.source == crmcontracts.WorklistItemSourceCustomerWaiting {
-					waited++
-				}
-			}
-			for id := range check.cards {
-				if !seen[id] {
-					t.Errorf("waiting card %s was never reached", id)
-				}
-			}
-			// The lane's scan was cut and no count fits the first page. The
-			// category is a floor, and scrolling reaches every card.
-			if total, stated := totalOf(first, "customer_waiting"); stated || waited != len(check.cards) {
-				t.Errorf("customer_waiting: total %d (stated %v), walked %d, want a floor and %d", total, stated, waited, len(check.cards))
-			}
-			if check.scope == "mine" && !seen[w.held] {
-				t.Error("the task Rep1 took for an old request was never reached")
-			}
-			assertTailOrder(t, served, frozen)
-			if check.scope == "mine" {
-				assertLastTask(t, served, generated)
-			}
-		})
+	if total, stated := totalOf(first, "customer_waiting"); stated || waited != len(cards) {
+		t.Errorf("customer_waiting: total %d (stated %v), walked %d, want a floor and %d", total, stated, waited, len(cards))
+	}
+	if scope == "mine" && !seen[w.held] {
+		t.Error("the task Rep1 took for an old request was never reached")
 	}
 }
 
@@ -347,10 +335,10 @@ func assertTailOrder(t *testing.T, served []servedRow, frozen map[string]bool) {
 	}
 }
 
-// The tail's cards are the lane's own fold over every row the scan reads: one
-// answer to "who is waiting", whichever side draws it.
-func TestTheWaitingTailIsTheFoldOfTheScan(t *testing.T) {
-	w := seedWaitingBacklog(t)
+// assertTailIsTheFold holds that the tail's cards are the lane's own fold over
+// every row the scan reads. "Who is waiting" has one answer, whichever side
+// draws it.
+func (w *waitingBacklog) assertTailIsTheFold(t *testing.T) {
 	r := w.r
 	ctx := w.seat(r.e.Rep1)
 	seam := attentionWaiting{store: activities.NewStore(r.e.DB()), now: func() time.Time { return r.now }}
@@ -499,10 +487,10 @@ func assertLastTask(t *testing.T, served []servedRow, id string) {
 	}
 }
 
-// Done on a waiting card past the lane's scan succeeds, and the card leaves the
-// reader's next walk. The Done check finds it through the tail's own cards.
-func TestDoneOnAWaitingCardBelowTheRankedTopTakesItOff(t *testing.T) {
-	w := seedWaitingBacklog(t)
+// assertDoneTakesACardOff holds that Done on a waiting card past the lane's
+// scan succeeds, and the card leaves the reader's next walk. The Done check
+// finds it through the tail's own cards, on a walk of its own, so it runs alone.
+func (w *waitingBacklog) assertDoneTakesACardOff(t *testing.T) {
 	r := w.r
 	ctx := w.seat(r.e.Rep1)
 	served, _, frozen := walkWorklist(ctx, t, r, "mine", ids.Nil)
