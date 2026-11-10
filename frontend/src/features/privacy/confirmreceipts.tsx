@@ -2,6 +2,7 @@ import type { components } from "../../api/schema";
 import { Heading } from "../../design-system/heading";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { valueFor } from "../../lib/labelfor";
 
 // What the subject is told to quote when they ask after a request they just
 // sent through their confirm link.
@@ -41,7 +42,7 @@ export function RequestReceipts({
       <p className="t-body">{t("confirm.receipt.body")}</p>
       <ul className="confirm-receipts-list">
         {receipts.map((receipt) => {
-          const label = KIND_LABEL[receipt.kind];
+          const label = valueFor(KIND_LABEL, receipt.kind, undefined);
           return (
             <li key={receipt.reference} className="t-body">
               {label ? t(label) : null}

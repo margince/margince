@@ -13,6 +13,7 @@ import {
   ConversationList,
   conversationFilters,
   conversationGroups,
+  conversationRead,
 } from "./recordconversations";
 
 // What this cut is FOR, as assertions: only the exchanges a reader can answer
@@ -387,5 +388,13 @@ describe("the kinds the cut can be narrowed by", () => {
 
   it("leaves an unnarrowed read alone", () => {
     expect(conversationFilters({})).toEqual({});
+  });
+
+  it("asks the server for every conversation kind until the reader picks one", () => {
+    expect(conversationRead({ q: "renewal" })).toEqual({
+      q: "renewal",
+      kinds: CONVERSATION_FILTER_KINDS,
+    });
+    expect(conversationRead({ kind: "message" })).toEqual({ kind: "message" });
   });
 });

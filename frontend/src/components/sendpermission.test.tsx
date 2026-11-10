@@ -299,6 +299,11 @@ describe("every refusal says what is wrong and what to do", () => {
     ],
     ["unknown_purpose", false, "sendPermission.reason.unknownPurpose"],
     [
+      "marketing_permission_required",
+      false,
+      "sendPermission.reason.permissionRequired",
+    ],
+    [
       "claim_contradicts_resolution",
       false,
       "sendPermission.reason.claimContradicts",
@@ -606,7 +611,7 @@ describe("one status for the message", () => {
     ],
     [
       { reason_code: "no_marketing_consent" },
-      "Consent needed for this message",
+      "Permission needed for this message",
       "Marketing needs the recipient’s consent, and none is on record.",
     ],
     [

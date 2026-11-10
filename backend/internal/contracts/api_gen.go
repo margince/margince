@@ -13874,6 +13874,7 @@ const (
 	ImportReasonCodeCurrencyNotACode             ImportReasonCode = "currency_not_a_code"
 	ImportReasonCodeCurrencyUnset                ImportReasonCode = "currency_unset"
 	ImportReasonCodeDealAlreadyClosed            ImportReasonCode = "deal_already_closed"
+	ImportReasonCodeDealCompanyHasContracts      ImportReasonCode = "deal_company_has_contracts"
 	ImportReasonCodeDealLegalGate                ImportReasonCode = "deal_legal_gate"
 	ImportReasonCodeDealNotFound                 ImportReasonCode = "deal_not_found"
 	ImportReasonCodeDealNotFoundDropped          ImportReasonCode = "deal_not_found_dropped"
@@ -14034,6 +14035,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeCurrencyUnset:
 		return true
 	case ImportReasonCodeDealAlreadyClosed:
+		return true
+	case ImportReasonCodeDealCompanyHasContracts:
 		return true
 	case ImportReasonCodeDealLegalGate:
 		return true
@@ -38127,6 +38130,9 @@ type Company360CommitmentKind string
 
 // Company360Contact One current employee of the account, as the company view shows them.
 type Company360Contact struct {
+	// Attachable Whether this caller may file an activity under this contact. Computed with the same row-scope and write-share predicate the attach gate uses, so a mail started from the company links only the recipients this is true for. A read-only share grants no attach right. The server rechecks every write.
+	Attachable bool `json:"attachable"`
+
 	// Consent Consent state keyed by purpose key — per purpose, never one boolean. A purpose
 	// the contact has no row for reads `unknown`, which is default-deny for outbound,
 	// not "not applicable".
@@ -46487,9 +46493,19 @@ type EmailPresentation struct {
 
 	// BodyCompleteness How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased.
 	BodyCompleteness *BodyCompleteness `json:"body_completeness,omitempty"`
-	CanRelink        bool              `json:"can_relink"`
-	CanReply         bool              `json:"can_reply"`
-	Cc               []EmailParty      `json:"cc"`
+
+	// CanForward True when this reader holds `activity.create`. A forward is a new message the reader
+	// writes to whoever they choose, so it asks nothing of the message's audience beyond
+	// this read.
+	CanForward bool `json:"can_forward"`
+	CanRelink  bool `json:"can_relink"`
+
+	// CanReply True when this reader may answer the message: they read it inside its audience and
+	// hold `activity.create`, because a reply is a new message they write. False otherwise:
+	// a read seat's send is refused with `403 seat_tier_insufficient`, and a full seat's
+	// without the grant with `403 permission_denied`.
+	CanReply bool         `json:"can_reply"`
+	Cc       []EmailParty `json:"cc"`
 
 	// ControllerSend Present only on a mail sent through the installation's own relay, as on `Activity`. Its `from_address` is the address the mail left from, whatever `from` names.
 	ControllerSend *ControllerSend    `json:"controller_send,omitempty"`
@@ -52820,11 +52836,14 @@ type MailDraftEditorState struct {
 	AiGenerated  *bool   `json:"ai_generated,omitempty"`
 
 	// ContentFingerprint Server binding to the saved words, used only to retire stale editor state.
-	ContentFingerprint  *string `json:"content_fingerprint,omitempty"`
-	Intent              *string `json:"intent,omitempty"`
-	ServedBody          *string `json:"served_body,omitempty"`
-	VoiceDegraded       *bool   `json:"voice_degraded,omitempty"`
-	VoiceProfileVersion *int    `json:"voice_profile_version,omitempty" minimum:"1"`
+	ContentFingerprint *string `json:"content_fingerprint,omitempty"`
+
+	// Filing The deal and project selected in the composer. An empty list clears the selection. Omission keeps the older draft's grounding as the restore default. These are filing choices, not evidence of a request or permission to send. The send checks each link.
+	Filing              *[]MailDraftGround `json:"filing,omitempty"`
+	Intent              *string            `json:"intent,omitempty"`
+	ServedBody          *string            `json:"served_body,omitempty"`
+	VoiceDegraded       *bool              `json:"voice_degraded,omitempty"`
+	VoiceProfileVersion *int               `json:"voice_profile_version,omitempty" minimum:"1"`
 }
 
 // MailDraftGround One record the draft was written from. A saved agent draft keeps these so the composer files the sent mail where the draft was grounded, rather than rebuilding links from whichever page it was opened on.
@@ -63935,8 +63954,10 @@ type UpdateDealRequest struct {
 
 	// CommercialMotion Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
 	CommercialMotion *UpdateDealRequestCommercialMotion `json:"commercial_motion,omitempty"`
-	CompanyId        *openapi_types.UUID                `json:"company_id,omitempty"`
-	Currency         *string                            `json:"currency,omitempty"`
+
+	// CompanyId The company this deal is for. Changing it is refused 422 (`deal_contracts_cross_company`) while contracts filed against the deal name another company, because a contract on a deal is visible through that deal alone. Detach those contracts (`deal_id: null` on the contract) or file each against a deal of its own company first; an edit never changes a contract's company, only a company merge does. Null clears the company and is not refused.
+	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
+	Currency  *string             `json:"currency,omitempty"`
 
 	// Description The human-authored statement of what the customer needs, what is in scope and what outcome is intended. Distinct from the GENERATED deal briefing: this is what a colleague wrote, and no assembler may overwrite it. It is supplied to the status/advice assembler as evidence, never as an instruction to follow.
 	Description *string `json:"description,omitempty"`
@@ -68412,6 +68433,9 @@ type RetentionHeld = Problem
 // RoleCannotCapture RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type RoleCannotCapture = Problem
 
+// SendValidationError RFC 7807 problem+json with a stable machine `code` and structured `details`.
+type SendValidationError = Problem
+
 // SettingLocked RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type SettingLocked = Problem
 
@@ -68521,8 +68545,10 @@ type ListActivitiesParams struct {
 	Sort *Sort `form:"sort,omitempty" json:"sort,omitempty"`
 
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
-	IncludeArchived *IncludeArchived          `form:"include_archived,omitempty" json:"include_archived,omitempty"`
-	Kind            *ListActivitiesParamsKind `form:"kind,omitempty" json:"kind,omitempty"`
+	IncludeArchived *IncludeArchived `form:"include_archived,omitempty" json:"include_archived,omitempty"`
+
+	// Kind Activities of these kinds. Repeat the parameter for several (`kind=email&kind=message`), so a page of one kind of work is never filled by another kind it does not show.
+	Kind *[]ListActivitiesParamsKind `form:"kind,omitempty" json:"kind,omitempty"`
 
 	// CallOutcome Calls that ended this way. Matches calls only.
 	CallOutcome *ListActivitiesParamsCallOutcome `form:"call_outcome,omitempty" json:"call_outcome,omitempty"`
@@ -100173,7 +100199,7 @@ func (siw *ServerInterfaceWrapper) ListActivities(w http.ResponseWriter, r *http
 
 	// ------------- Optional query parameter "kind" -------------
 
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "kind", r.URL.Query(), &params.Kind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "kind", r.URL.Query(), &params.Kind, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
 	if err != nil {
 		var requiredError *runtime.RequiredParameterError
 		if errors.As(err, &requiredError) {

@@ -4,6 +4,7 @@ import { formatNumber, INTL_LOCALE } from "../format/format";
 import { useNow } from "../format/now";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import { useAgentTierMap } from "../lib/autonomy";
+import { valueFor } from "../lib/labelfor";
 import type { LicensePosture } from "../lib/license-posture";
 import { routeHash } from "../lib/router";
 import { settingsHref } from "../lib/settingsrouting";
@@ -122,7 +123,7 @@ export function Recap({
           <span
             className="armark"
             aria-hidden="true"
-            data-tone={ROW_TONE[item.state]}
+            data-tone={valueFor(ROW_TONE, item.state, "info")}
           />
           <span className="arsaid">
             <RailLine line={line} />

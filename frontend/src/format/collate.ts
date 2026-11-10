@@ -53,9 +53,9 @@ function collator(locale: Locale): Intl.Collator {
  * that is not a defect here: nobody reads this as an alphabet, and being the
  * same everywhere is the only property that matters.
  *
- * Spelled out rather than delegating to `localeCompare(a, b, "en")`, so the
- * gate in one-locale.test.ts can refuse every bare `localeCompare` in the tree
- * without this file having to be its exception.
+ * Spelled out rather than delegating to `localeCompare(a, b, "en")`. So the
+ * gate in census/rules/one-locale.census.ts can refuse every bare
+ * `localeCompare` in the tree without this file having to be its exception.
  */
 export function stable(a: string, b: string): number {
   if (a < b) {

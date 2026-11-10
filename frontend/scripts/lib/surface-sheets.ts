@@ -6,19 +6,17 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   alternativesOf,
-  appStylesheets,
   classesOf,
   compounds,
   functionCall,
   type Rule,
-  rulesOf,
   simpleSelectorsOf,
   splitTopLevel,
 } from "./css-rules";
 import { ladderLists } from "./surface-ladder";
 
-// What the surface gates read: the app's sheets, the ladder and the parsing
-// both surfaces.test.ts and surfaces.layers.test.ts apply to them, kept once.
+// What the surface gates read: the ladder, and the parsing the surface tests
+// and census rules apply to the sheets, kept once.
 // Here rather than in src/, so the app's typecheck never compiles it, and the
 // ladder's scan of src/ never reads `ref` as a spelling.
 
@@ -57,9 +55,6 @@ export function declarations(body: string): Declaration[] {
     ];
   });
 }
-
-export const sheets = appStylesheets(frontendRoot);
-export const allRules = rulesOf(sheets);
 
 export const lists = ladderLists(ladderText);
 

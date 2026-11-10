@@ -21,6 +21,7 @@ import { formatDayMonth, formatDueCompact } from "../../format/format.dates";
 import { PHASE_LABEL } from "../../format/projectphase";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { CompanyTab } from "../../lib/companytab";
+import { labelFor } from "../../lib/labelfor";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { routeHash } from "../../lib/router";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -324,7 +325,7 @@ function ProjectItem({
   const zone = useViewerZone();
   const sub = [
     t("co.overview.project"),
-    t(PHASE_LABEL[project.phase]),
+    t(labelFor(PHASE_LABEL, project.phase)),
     project.target_end_date &&
       t("co.overview.ends", {
         date: formatDayMonth(project.target_end_date, locale, zone),

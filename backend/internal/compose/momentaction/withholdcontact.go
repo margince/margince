@@ -22,7 +22,8 @@ func WithholdContact(ctx context.Context, language string, moment *crmcontracts.
 			return
 		}
 		switch action.Destination.Surface {
-		case crmcontracts.ContactMomentDestinationSurfaceActivityLog, crmcontracts.ContactMomentDestinationSurfaceBooking:
+		case crmcontracts.ContactMomentDestinationSurfaceActivityLog, crmcontracts.ContactMomentDestinationSurfaceBooking,
+			crmcontracts.ContactMomentDestinationSurfaceComposer:
 			blockAction(action, reason)
 		}
 	}

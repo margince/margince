@@ -322,6 +322,7 @@ func (c *offerDraftCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 			Detail: fmt.Sprintf("unparseable model output: %v", err),
 		}
 	}
+	candidates = newOfferDraftRefs(c.dealContext, c.catalog).read(candidates)
 	staged, refusals, err := c.gate(candidates)
 	if err != nil {
 		return aitasks.Outcome{

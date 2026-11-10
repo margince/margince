@@ -12,6 +12,7 @@ import { type ExtensionEntityKind, isExtensionEntityKind } from "./entity";
 import { recordKindLabel, useRecordKindDirectory } from "./recordkinds";
 
 type FilterResource = components["schemas"]["FilterResource"];
+
 import type { ListRecordType } from "./lists.queries";
 
 /**

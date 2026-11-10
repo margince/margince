@@ -528,7 +528,7 @@ time, with an error that does not point at the cause:
 **Import the core only through `@margince/frontend/<subpath>`** (`design-system`, `api`, `app`), as
 `frontend/package.json` publishes them in its `exports` map. That map is this side's
 `//margince:extension-surface`. The Go tier gets its edge from the compiler, and a bundler gives none. So
-`frontend/scripts/ext-imports.test.ts` is the edge. It refuses a relative path that leaves your unit, and a path that `exports` does not publish. It also
+`frontend/census/rules/ext-imports.census.ts` is the edge. It refuses a relative path that leaves your unit, and a path that `exports` does not publish. It also
 refuses any bare package name your own `package.json` does not declare.
 
 `devDependencies` count for test files only, so a screen cannot pull a test runner into the bundle.
@@ -563,11 +563,11 @@ on the object it declares. Settings → Integrations is also gated on the grants
 The design-system gates scan your unit as they scan the core. The script gates run in the `fe-ds-gates` lane
 (`ds-purity`, `font-lock`, `icon-lint`, `ds-spacing`, `ds-spacing-roles`, `space-tokens`). The gates that read
 the AST run inside `fe-unit`: `native-controls`, `ext-imports`, and the action-row gate
-(`design-system/actionrow.test.ts`). That last gate holds a unit's rows of two or more buttons to
+(`frontend/census/rules/actionrow.census.ts`). That last gate holds a unit's rows of two or more buttons to
 `gap: var(--gapActions)`, like any other.
 
 **Copy text with `useClipboardCopy`** from `@margince/frontend/design-system`. A gate
-(`frontend/src/design-system/clipboard-spelling.test.ts`) refuses `navigator.clipboard` in a unit as in the core.
+(`frontend/census/rules/clipboard-spelling.census.ts`) refuses `navigator.clipboard` in a unit as in the core.
 
 **Test your screen next to it.** `make fe-test-ext` runs a `*.test.tsx` under your `frontend/`, and
 `make check-fe` calls it. It is a second `vitest` lane (`frontend/vitest.ext.config.ts`), separate from the core
@@ -909,6 +909,107 @@ page looks as it does without the tier.
 
 The panel calls your own routes like a screen does. A route asks core about its own caller before it serves
 or acts. See [Ask what a colleague may do](#ask-what-a-colleague-may-do-canread-and-canwrite).
+
+## Watch the process: `Instrumentation`
+
+A unit can watch the process it runs in. It may count errors, time requests or send logs to a service.
+The core names no vendor. It gives the unit places to hook in, and what the unit does there is its own
+business. Declare one `extension.Instrumentation`:
+
+```go
+Instrumentation: &extension.Instrumentation{
+	Start:   start,
+	Browser: "instrument",
+	Edge:    edge(),
+},
+```
+
+Each part is optional, but a declaration with none of them is refused.
+
+- **`Start`** runs once per process, for the api and for the worker, before it serves or runs work. It is
+  handed an `extension.Process` and returns `extension.Instruments`.
+- **`Browser`** is the name of an export of your frontend (see below).
+- **`Edge`** is an `http.Handler` that the browser part can reach with no sign-in.
+
+`Process` tells `Start` where it runs. `Role` is `"api"` or `"worker"`. `Version` is the release, or `"dev"`
+when unknown. `Logger` is the base logger, which no unit has wrapped yet. `Process` also carries `RedactPath`.
+
+**Redact every path.** A capability URL holds a credential in its path. Anything you take from a request
+path, such as a name, a tag or a log field, must go through `Process.RedactPath` first. A gate refuses a
+full request path in a log call. It cannot see what you send to other places.
+
+`Start` returns the hooks. Every one is optional:
+
+| Hook | The core calls it |
+|---|---|
+| `LogHandler` | Once, to wrap the root log handler. Every record from every package goes through it |
+| `HTTP` | Once, to wrap every request. It wraps the whole router, inside the panic catch. No request id or `principal` is on the context yet, `r.RemoteAddr` is still the proxy (the real client address is settled later), and the body is not yet capped |
+| `Work` | Around every job (core, extension and scheduler) and every extension delivery. It gets a `Work` (`Kind` is `"job"` or `"subscription"`, then `Name`, the River kind or the subscription's name, and `Unit`) and the `run` to call. `Unit` is set only for a subscription delivery. It is empty for every job, even one your unit owns, whose `Name` is its River kind |
+| `Panic` | When the core catches a panic, at four places: a request or the worker's event handler, any job that panics out of its work, an extension job tick and an extension delivery |
+| `Shutdown` | When the process exits, so the unit can send what it still holds |
+
+Each of the four places also logs its panic at `Error` with a `panic` field. Other code logs the panics it
+recovers by itself the same way, and those never reach `Panic`. So a `panic` field alone does not mean
+`Panic` was told. So that you do not report one panic twice, skip a record only when its value matches a
+`Panic` call.
+
+A `Work` hook must call `run` in the call itself, not from another thread, and return what it returns. The work runs once even if the hook never calls
+`run`, or panics before it does. If the work panics, the panic reaches its caller as it was, so a job fails
+as it would without the unit.
+
+**What the core guards.** A `Start` that fails or panics is logged, and the process boots without that
+unit's hooks. A hook that panics is logged and skipped, and the work it wrapped goes on. A `LogHandler`
+that panics on a record hands that record to the handler it wrapped.
+
+The core cannot guard two things: a `Start` that never returns holds up boot, and an `HTTP` wrapper that
+panics fails the request it serves. `Shutdown` gets 2 seconds, and then the process exits without waiting.
+With several units, the first in the composed registry comes first.
+
+### Serve an edge
+
+The page's content security policy lets it reach only its own origin, so a browser cannot send to a vendor
+directly. A unit that needs to carry something out of the browser serves an `Edge`. The core mounts it at
+`/v1/public/instrument/<unit>/` and strips that prefix, so your handler sees paths that start at `/`.
+
+- No session is needed. Any caller can reach it, so do not trust the sender.
+- It takes `GET` and `POST`. Any other method gets 405.
+- A body is at most 1 MiB.
+- Each client address may send 600 requests a minute. Past that, the request is refused.
+- A unit with no `Edge` gets a 404 at its path.
+
+### Hook into the browser
+
+Set `Browser` to a named export of your frontend package's `main` module, as a panel's `Export` is. It may
+not be `default`. A unit that sets `Browser` must ship `frontend/package.json`, or it is refused. A unit
+with only `Start` or `Edge` needs no frontend package.
+
+```ts
+import type { BrowserInstrument } from "@margince/frontend/app";
+
+export const instrument: BrowserInstrument = ({ version, edge }) => ({
+  onError(error, info) {
+    // info is { componentStack?, caught }. Send it to `edge`.
+  },
+  onNavigate(route) {
+    // route is a pattern such as "deals/:id", never the real address
+  },
+});
+```
+
+The page calls it once, before the first screen shows. `version` is the page's release. `edge` is the
+path above. It may return nothing, or either hook.
+
+- **`onError`** gets React errors from drawing a screen: one that nothing handled, and one that a screen's error card shows.
+  `info.caught` tells them apart. A window `error` or an `unhandledrejection` is not wired. A unit that
+  wants them adds its own handlers. Reporting an error changes nothing on screen.
+- **`onNavigate`** gets each change of screen once. It gets the route with ids replaced, such as
+  `deals/:id`. It never gets the address or the query.
+
+The browser side is guarded too. An export that fails is logged in the browser's log, and the page goes on.
+
+`make gen` checks the declaration. Write `Start`, `Browser` and `Edge` out in full in the declaration, as in
+every other declaration. The manifest then shows them as `instrumentation`. For a small example that uses all
+three, see `fixtures/extensions/crm-hello/instrumentation.go` and its `frontend/screen.tsx`.
 
 ## Own scheduled jobs
 

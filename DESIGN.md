@@ -275,7 +275,7 @@ for most text inside a component. Weight 700 is for a heading, or for emphasis t
 Everything is rem on the 1rem = 16px of the browser, so when a reader makes that larger, the product
 grows with them. The three weights are named tokens (`--fontWeightRegular` / `Medium` / `Bold`) that
 the size tokens read. All of the type (size, line height, weight, letter space) is declared in
-`tokens.css` and in no other file. `design-system/type-source.test.ts` fails a sheet or a `style`
+`tokens.css` and in no other file. `frontend/census/rules/type-source.census.ts` fails a sheet or a `style`
 value in code that spells any of the four by value.
 
 **Almost none of it is in use yet**. `body` in `app.css` reads `--fontBody`, and that is all of it.

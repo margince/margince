@@ -64,7 +64,7 @@ function useDealOpenTasks(dealId: string | null) {
               query: {
                 entity_type: "deal",
                 entity_id: dealId ?? "",
-                kind: "task",
+                kind: ["task"],
                 limit: TASK_PAGE,
                 cursor,
               },

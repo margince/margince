@@ -56,13 +56,46 @@ func TestParticipantPromptDoesNotAddUnquotedAddresses(t *testing.T) {
 		{Ref: "seat:one", Role: "attendee", Name: "Mira Chen", Address: "mira@example.test"},
 		{Ref: "contact:two", Role: "attendee", Name: "Mira Chen", Address: "buyer@example.test"},
 	}
-	prompt := commitmentPartyPrompt(parties, "Mira Chen: I will send pricing.")
+	prompt := commitmentPartyPrompt(parties, "Mira Chen: I will send pricing.", commitmentPartyRefs(parties))
 	if strings.Contains(prompt, "@") || !strings.Contains(prompt, "Mira Chen") {
 		t.Fatalf("unquoted address exported or name omitted: %s", prompt)
 	}
-	prompt = commitmentPartyPrompt(parties, "MIRA@example.test: I will send pricing.")
+	prompt = commitmentPartyPrompt(parties, "MIRA@example.test: I will send pricing.", commitmentPartyRefs(parties))
 	if !strings.Contains(prompt, "mira@example.test") || strings.Contains(prompt, "buyer@example.test") {
 		t.Fatalf("quoted identity was not minimized: %s", prompt)
+	}
+}
+
+// The model cites a participant by the short ref the prompt lists. A reply
+// reads it back to the participant's record key, which never reaches the prompt.
+func TestAParticipantIsListedAndReadBackByItsShortRef(t *testing.T) {
+	t.Parallel()
+	seat, contact := ids.MustParse("0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e07"), ids.MustParse("0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e08")
+	parties := []commitmentParty{
+		{Ref: "seat:" + seat.String(), Role: "from", Name: "Mira Chen", Seat: &seat},
+		{Role: "to", Name: "Unverified Sender"},
+		{Ref: "contact:" + contact.String(), Role: "to", Name: "Pat Buyer", Contact: &contact},
+	}
+	refs := commitmentPartyRefs(parties)
+	prompt := commitmentPartyPrompt(parties, "", refs)
+	if strings.Contains(prompt, "seat:") || strings.Contains(prompt, "contact:") {
+		t.Fatalf("a record key reached the participant list:\n%s", prompt)
+	}
+	if !strings.Contains(prompt, `"p1" "colleague" "from"`) || !strings.Contains(prompt, `"p2" "contact" "to" "Pat Buyer"`) {
+		t.Fatalf("participants are not listed as p1 and p2:\n%s", prompt)
+	}
+	// The kind is the only sign of who may receive a promise.
+	if !strings.Contains(prompt, `"" "" "to" "Unverified Sender"`) {
+		t.Errorf("an unverified sender was listed with a ref or a kind:\n%s", prompt)
+	}
+	if got := partyKey(refs, "p2"); got != parties[2].Ref {
+		t.Errorf("p2 reads back to %q, want %q", got, parties[2].Ref)
+	}
+	if got := partyKey(refs, "p3"); got != "p3" {
+		t.Errorf("an unminted ref reads back to %q; it must stay as written for the validator to refuse", got)
+	}
+	if got := partyKeys(refs, nil); got != nil {
+		t.Errorf("an omitted recipient list became %v; omitted and empty mean different things", got)
 	}
 }
 

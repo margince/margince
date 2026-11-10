@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, screen } from "storybook/test";
 import type { components } from "../../api/schema";
 import { Row } from "../../design-system/stack";
 import { StoryProviders } from "../../testing/story-utils";
@@ -40,6 +41,7 @@ const message: components["schemas"]["EmailPresentation"] = {
     change_mode: "none",
   },
   can_reply: true,
+  can_forward: true,
   can_relink: true,
   version: 1,
 };
@@ -69,6 +71,17 @@ type Story = StoryObj<typeof EmailDrawerActions>;
 export const Available: Story = {};
 export const CannotReply: Story = {
   args: { presentation: { ...message, can_reply: false } },
+};
+/** A seat that may not write: neither Reply nor Forward is offered. */
+export const ReadOnlySeat: Story = {
+  args: {
+    presentation: { ...message, can_reply: false, can_forward: false },
+  },
+  play: async () => {
+    await screen.findByRole("button", { name: "More actions" });
+    await expect(screen.queryByRole("button", { name: "Reply" })).toBeNull();
+    await expect(screen.queryByRole("button", { name: "Forward" })).toBeNull();
+  },
 };
 
 export const BookFromIncoming: Story = {

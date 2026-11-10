@@ -151,6 +151,8 @@ func (c *counterpartyVerdictCase) Evaluate(trace aitasks.Trace) aitasks.Outcome 
 		return aitasks.Outcome{
 			Result: aitasks.OutcomeWrongAnswer,
 			Detail: fmt.Sprintf("the model answered %q where the scenario expects %q", answered, c.expected),
+			// The kind decides who sees the sender, so a wrong one is a leak.
+			Leak: true,
 		}
 	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}
@@ -193,6 +195,7 @@ func (c *counterpartyVerdictCase) EvaluateDecision(a decision.Answer) aitasks.Ou
 			Result: aitasks.OutcomeWrongAnswer,
 			Detail: fmt.Sprintf("the decision model answered %q at confidence %.2f where the scenario expects %q",
 				a.Choice, a.Confidence, c.expected),
+			Leak: true,
 		}
 	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}

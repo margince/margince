@@ -5,6 +5,7 @@ import type { components } from "../../api/schema";
 import { formatPercent } from "../../format/format";
 import type { Locale, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 
 type Deal = components["schemas"]["Deal"];
 type Source = NonNullable<Deal["win_probability_source"]>;
@@ -70,7 +71,7 @@ function sourceWords(
 ): string {
   const setter = deal.win_probability_set_by_user_id;
   if (source !== "human" || !setter) {
-    return t(SOURCE_LABEL[source]);
+    return t(labelFor(SOURCE_LABEL, source));
   }
   if (viewerId && setter === viewerId) {
     return t("deal.winProbability.source.you");
@@ -78,7 +79,7 @@ function sourceWords(
   const name = deal.win_probability_set_by_name;
   return name
     ? t("deal.winProbability.source.colleague", { name })
-    : t(SOURCE_LABEL[source]);
+    : t(labelFor(SOURCE_LABEL, source));
 }
 
 type Advanced = Pick<components["schemas"]["DealAdvanced"], "probability_set">;

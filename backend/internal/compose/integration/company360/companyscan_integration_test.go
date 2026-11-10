@@ -55,17 +55,45 @@ type quotingLane struct {
 	calls     int
 }
 
-func (l *quotingLane) Complete(_ context.Context, _ model.Request) (model.Response, error) {
+func (l *quotingLane) Complete(_ context.Context, req model.Request) (model.Response, error) {
 	l.calls++
 	reply, err := json.Marshal(map[string]any{"findings": []map[string]any{{
 		"kind": "question_unanswered", "title": "Send the sample reports",
 		"reason":     "Jonas asked for sample driver reports and nothing has gone out.",
-		"message_id": l.messageID, "quote": l.quote, "action": "draft_reply",
+		"message_id": quotedMessageRef(req, l.quote, l.messageID), "quote": l.quote, "action": "draft_reply",
 	}}})
 	if err != nil {
 		return model.Response{}, err
 	}
 	return model.Response{Text: string(reply)}, nil
+}
+
+// quotedMessageRef is the ref the request shows for the message whose text
+// holds quote, which a model quoting it would cite. It is fallback when the
+// request shows no such message.
+func quotedMessageRef(req model.Request, quote, fallback string) string {
+	for _, message := range req.Messages {
+		start := strings.Index(message.Content, "{")
+		end := strings.LastIndex(message.Content, "}")
+		if start < 0 || end < start {
+			continue
+		}
+		var payload struct {
+			Messages []struct {
+				ID   string `json:"id"`
+				Text string `json:"text"`
+			} `json:"messages"`
+		}
+		if json.Unmarshal([]byte(message.Content[start:end+1]), &payload) != nil {
+			continue
+		}
+		for _, shown := range payload.Messages {
+			if strings.Contains(shown.Text, quote) {
+				return shown.ID
+			}
+		}
+	}
+	return fallback
 }
 
 // scanFor builds the scan over the composite read, recording what it

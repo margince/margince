@@ -44,7 +44,11 @@ function meAs(id: string) {
 
 const COMPANY_VIEW = {
   company: { id: "company-1", name: "Acme" },
-  contacts: { data: [{ contact_id: "per-1", full_name: "Dieter Klein" }] },
+  contacts: {
+    data: [
+      { contact_id: "per-1", attachable: true, full_name: "Dieter Klein" },
+    ],
+  },
   deals: { data: [] },
   projects: [],
 };

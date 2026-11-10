@@ -280,14 +280,23 @@ export function reachedModules(
       readFileSync(path, "utf8"),
     ]),
   );
+  return reachedModulesIn(tree, extra);
+}
+
+/** The modules the shipped bundle loads out of a tree the caller already read. */
+export function reachedModulesIn(
+  tree: SourceTree,
+  extra: { readonly catalogs?: ReadonlySet<string> } = {},
+  entries: readonly string[] = [
+    ...documentEntries(),
+    ...surfaceEntries(),
+    ...buildScriptEntries(),
+  ],
+): ReadonlyMap<string, Module> {
   const graph = moduleGraph({
     tree,
     aliases: aliases(),
     catalogs: extra.catalogs ?? new Set<string>(),
   });
-  return graph.reach([
-    ...documentEntries(),
-    ...surfaceEntries(),
-    ...buildScriptEntries(),
-  ]);
+  return graph.reach(entries);
 }

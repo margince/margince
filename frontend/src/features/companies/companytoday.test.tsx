@@ -193,6 +193,7 @@ describe("the moves on the list, and the foot under them", () => {
   const FACTORS = { recency: 0, frequency: 0, reciprocity: 0, direction: 0 };
   const CONTACT = {
     contact_id: "p-1",
+    attachable: true,
     full_name: "Sarah Cole",
     strength: { score: 40, bucket: "moderate" as const, factors: FACTORS },
     deal_roles: [],
@@ -516,6 +517,7 @@ describe("the account scan on the needs list", () => {
 describe("the generic draft row", () => {
   const RECIPIENT = {
     contact_id: "p-strongest",
+    attachable: true,
     full_name: "Sarah Cole",
     strength: {
       score: 40,

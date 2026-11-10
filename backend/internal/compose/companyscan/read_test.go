@@ -68,7 +68,7 @@ func TestWithNoLaneOrNothingToReadTheFloorAnswers(t *testing.T) {
 
 func TestReadKeepsWhatTheLaneGrounded(t *testing.T) {
 	in, nudge := scanInput()
-	lane := &checkedLane{reply: reply(finding(nudge, "did the sample reports get held up somewhere?"))}
+	lane := &checkedLane{reply: inRefs(in, reply(finding(nudge, "did the sample reports get held up somewhere?")))}
 	got, by, err := Read(t.Context(), lane, ids.New[ids.CompanyKind](), in, "en")
 	if err != nil {
 		t.Fatalf("read: %v", err)
@@ -125,7 +125,7 @@ func TestAFindingMissingItsWordsOrItsVerbIsRefused(t *testing.T) {
 	wordless["title"] = ""
 	oddVerb := finding(nudge, "did the sample reports get held up")
 	oddVerb["action"] = "phone_them"
-	kept, refused, err := ParseFindings(reply(wordless, oddVerb), company, in, "en")
+	kept, refused, err := parseIDs(reply(wordless, oddVerb), company, in)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -141,7 +141,7 @@ func TestARefusalEchoesAModelTokenOnlyAsFarAsItIsBounded(t *testing.T) {
 	in, nudge := scanInput()
 	inflated := finding(nudge, "did the sample reports get held up")
 	inflated["kind"] = strings.Repeat("x", 500)
-	_, refused, err := ParseFindings(reply(inflated), ids.New[ids.CompanyKind](), in, "en")
+	_, refused, err := parseIDs(reply(inflated), ids.New[ids.CompanyKind](), in)
 	if err != nil || len(refused) != 1 {
 		t.Fatalf("refused %v, err %v; want the one refusal", refused, err)
 	}
@@ -162,7 +162,7 @@ func TestTheReadKeepsAtMostItsCapAndSaysNothingOfTheRest(t *testing.T) {
 		in.Messages = append(in.Messages, message)
 		findings = append(findings, finding(message, "Can you confirm the delivery window"))
 	}
-	kept, refused, err := ParseFindings(reply(findings...), ids.New[ids.CompanyKind](), in, "en")
+	kept, refused, err := parseIDs(reply(findings...), ids.New[ids.CompanyKind](), in)
 	if err != nil || len(refused) != 0 {
 		t.Fatalf("refused %v, err %v; want every finding grounded", refused, err)
 	}
@@ -176,7 +176,7 @@ func TestAScanFindingNeverBuildsATaskForItsReader(t *testing.T) {
 	company := ids.New[ids.CompanyKind]()
 	step := finding(nudge, "did the sample reports get held up")
 	step["action"] = "add_task"
-	kept, refused, err := ParseFindings(reply(step), company, in, "en")
+	kept, refused, err := parseIDs(reply(step), company, in)
 	if err != nil || len(refused) != 0 || len(kept) != 1 {
 		t.Fatalf("kept %d, refused %v, err %v; want the one finding", len(kept), refused, err)
 	}
@@ -206,7 +206,7 @@ func TestAQuoteIsNeitherAWordNorTheWholeMessage(t *testing.T) {
 		"a bounded excerpt":      {finding(nudge, "did the sample reports get held up somewhere"), true},
 	} {
 		t.Run(name, func(t *testing.T) {
-			kept, refused, err := ParseFindings(reply(tc.finding), company, in, "en")
+			kept, refused, err := parseIDs(reply(tc.finding), company, in)
 			if err != nil {
 				t.Fatalf("parse: %v", err)
 			}
@@ -220,7 +220,7 @@ func TestAQuoteIsNeitherAWordNorTheWholeMessage(t *testing.T) {
 func TestReadLocalizesReceiptWithoutChangingSourceOrDismissal(t *testing.T) {
 	in, nudge := scanInput()
 	company := ids.New[ids.CompanyKind]()
-	lane := &checkedLane{reply: reply(finding(nudge, "did the sample reports get held up somewhere?"))}
+	lane := &checkedLane{reply: inRefs(in, reply(finding(nudge, "did the sample reports get held up somewhere?")))}
 	var original crmcontracts.Company360Suggestion
 	for _, lang := range []string{"en", "de", "vi"} {
 		got, by, err := Read(t.Context(), lane, company, in, lang)

@@ -28,7 +28,7 @@ const MailCopyCandidatesSQL = `FROM activity copy
  LEFT JOIN raw_capture original ON original.id=copy.raw_capture_id
  LEFT JOIN LATERAL (SELECT evidence->>'` + fieldRFCMessageID + `' AS message_id FROM audit_log WHERE entity_type='activity' AND entity_id=copy.id AND action='create' AND evidence ? '` + fieldRFCMessageID + `' ORDER BY occurred_at,id LIMIT 1) claimed ON true
  JOIN activity_identity identity ON identity.identity_kind='mail' AND identity.identity_key=
- coalesce(nullif(claimed.message_id,''),nullif(copy.raw->>'rfc_message_id',''),nullif(original.payload->>'rfc_message_id',''),
+ coalesce(nullif(claimed.message_id,''),nullif(copy.raw->>'rfc_message_id',''),nullif(coalesce(original.payload_object->>'rfc_message_id',original.payload->>'rfc_message_id'),''),
   CASE WHEN copy.source_system='email' THEN split_part(copy.source_id,'` + connector.MailSeatMarker + `',1) END)
  JOIN activity kept ON kept.id=identity.activity_id
  WHERE copy.kind='email' AND copy.archived_at IS NULL AND kept.archived_at IS NULL
