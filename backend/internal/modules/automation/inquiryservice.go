@@ -116,6 +116,7 @@ func (s *InquiryService) choose(ctx context.Context, ex Executors, ev workflow.E
 	if err != nil {
 		return plan, err
 	}
+	plan.RequestTypeField = policy.RequestTypeField
 	plan.PolicyID, plan.SourceActivityID, plan.Target = ev.AutomationID, ev.Entity.ID, receipt.Target
 	plan.DueAt, err = InquiryDueAt(policy, receipt.Activity.CreatedAt)
 	if err != nil {

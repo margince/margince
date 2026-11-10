@@ -133,7 +133,12 @@ const ANSWER_BY_SOURCE: Partial<
     verbs: ["complete"],
     draw: (item, quiet) => ({
       primary: (
-        <TaskComplete id={item.id} version={item.version} quiet={quiet} />
+        <TaskComplete
+          id={item.id}
+          version={item.version}
+          quiet={quiet}
+          inquiry={item.kind === "website_inquiry"}
+        />
       ),
     }),
   },
@@ -326,7 +331,13 @@ function TaskComplete({
   id,
   version,
   quiet,
-}: Readonly<{ id: string; version: number | undefined; quiet: boolean }>) {
+  inquiry,
+}: Readonly<{
+  id: string;
+  version: number | undefined;
+  quiet: boolean;
+  inquiry: boolean;
+}>) {
   const t = useT();
   const done = useTaskDone(id, version);
   return (
@@ -335,7 +346,7 @@ function TaskComplete({
       pending={done.pending}
       onClick={done.complete}
     >
-      {t("tasks.complete")}
+      {t(inquiry ? "inquiry.markHandled" : "tasks.complete")}
     </Button>
   );
 }

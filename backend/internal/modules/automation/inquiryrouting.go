@@ -14,6 +14,7 @@ import (
 
 // InquiryRouting keeps lead writes and recipient access checks with their owners.
 type InquiryRouting interface {
+	TaskSubmissions(context.Context, []ids.ActivityID) (map[ids.UUID]string, error)
 	ExistingTask(context.Context, context.Context, string) (crmcontracts.Activity, bool, error)
 	Within(context.Context, ids.UUID, func(context.Context) error) error
 	Validate(context.Context, crmcontracts.WebsiteInquiryPolicy) error

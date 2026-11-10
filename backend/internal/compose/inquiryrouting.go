@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -262,4 +263,26 @@ func (r inquiryRouting) ExistingTask(ctx, admit context.Context, key string) (cr
 		return crmcontracts.Activity{}, true, err
 	}
 	return task, true, nil
+}
+
+func (r inquiryRouting) TaskSubmissions(ctx context.Context, idsToRead []ids.ActivityID) (map[ids.UUID]string, error) {
+	out := map[ids.UUID]string{}
+	if len(idsToRead) == 0 {
+		return out, nil
+	}
+	kind := "task"
+	limit := len(idsToRead)
+	rows, _, err := activities.NewStore(r.db).ListActivities(ctx, activities.ListActivitiesInput{IDs: idsToRead, Kind: &kind, ReadableOnly: true, IncludeArchived: true, Limit: &limit})
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		if row.SourceSystem == nil || row.SourceId == nil {
+			continue
+		}
+		if key, known := provenance.WebsiteInquirySubmission(*row.SourceSystem, *row.SourceId); known {
+			out[ids.UUID(row.Id)] = key
+		}
+	}
+	return out, nil
 }

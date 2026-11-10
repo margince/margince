@@ -7988,6 +7988,7 @@ export const en = {
     "Created because this lead had no answer within its response time. Answer the lead, then mark the task done.",
   "tasks.origin.lead_qualify":
     "Created because this lead stayed open without a decision. Qualify the lead or close it.",
+  "tasks.origin.website_inquiry": "This task follows a website inquiry.",
   "tasks.origin.lead_for_contact":
     "Created because a new lead arrived for this contact. No lead was made; the task says what arrived and where from.",
   "tasks.origin.lead_replied":
@@ -16628,6 +16629,14 @@ export const en = {
   "inquiry.selectSource": "Select {subject}",
   "inquiry.untitled": "Website inquiry",
   "inquiry.submission": "Submission",
+  "inquiry.receivedValue": "Received: {received}",
+  "inquiry.receivedUnavailable": "Receipt details unavailable",
+  "inquiry.requestTypeValue": "Request type: {type}",
+  "inquiry.initialHandlingValue": "Initial handling: {reason}",
+  "inquiry.sourceValue": "Source: {source}",
+  "inquiry.markHandled": "Mark handled",
+  "inquiry.openSubmission": "Open submission",
+  "inquiry.reason.notRecorded": "Reason not recorded",
   "inquiry.received": "Received",
   "inquiry.result": "Result",
   "inquiry.deadline": "Due",
@@ -19412,6 +19421,7 @@ export const en = {
   "worklist.filter.leads": "Prospecting",
   "worklist.filter.deals_at_risk": "Deals at risk",
   "worklist.filter.meetings": "Meetings",
+  "worklist.filter.website_inquiries": "Website inquiries",
   "worklist.filter.tasks": "Tasks",
   "worklist.filter.decisions": "Approvals",
   "worklist.filter.relationships": "Quiet relationships",

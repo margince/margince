@@ -25701,6 +25701,16 @@ export interface components {
             form: components["schemas"]["WebForm"];
             automation: components["schemas"]["Automation"];
         };
+        /** @description Inquiry facts under the current task and source content permissions. Missing source facts remain unknown. */
+        WebsiteInquiryWork: {
+            /** Format: date-time */
+            readonly received_at?: string;
+            /** Format: uuid */
+            readonly source_activity_id?: string;
+            readonly source_label?: string;
+            readonly request_type?: string;
+            readonly assignment_reason?: string;
+        };
         WebsiteInquiryPolicy: {
             /** Format: uuid */
             form_id: string;
@@ -28320,10 +28330,12 @@ export interface components {
         };
         /**
          * @description One website form submission as the visitor sent it. Every value is the visitor's own
-         *     text and nothing Margince checked, except `consent`, which is the form's own record of
-         *     its consent box.
+         *     text. `validated_picklists` records which custom picklist values passed validation;
+         *     `consent` records the form's own consent box.
          */
         WebFormSubmission: {
+            /** @description Custom picklist field names whose submitted values passed validation at receipt. Values remain in extra. */
+            readonly validated_picklists?: string[];
             /**
              * Format: uuid
              * @description The policy owning this accepted occurrence; later policy changes do not transfer it to a legacy handler.
@@ -56152,6 +56164,7 @@ export interface components {
          *     adds none.
          */
         AttentionItem: {
+            website_inquiry?: components["schemas"]["WebsiteInquiryWork"];
             system_display?: components["schemas"]["SystemDisplay"];
             /** @description Sent as true on a task whose reminder is due for the reader, who is its assignee and reads their own work. Absent otherwise. */
             reminder_due?: boolean;
@@ -56696,7 +56709,7 @@ export interface components {
              * @description The narrowing this read applied. The same vocabulary the query parameter takes.
              * @enum {string}
              */
-            filter?: "all" | "urgent" | "customer_waiting" | "leads" | "prospecting" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "except_decisions" | "changed_since_brief" | "upcoming";
+            filter?: "all" | "urgent" | "customer_waiting" | "leads" | "prospecting" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "except_decisions" | "changed_since_brief" | "upcoming" | "website_inquiries";
             /**
              * @description The view this read answered, after a `filter` alias was read as its view. Absent when the read named no view.
              * @enum {string}
@@ -57797,6 +57810,7 @@ export interface components {
          *     browser does not.
          */
         WorklistItem: {
+            website_inquiry?: components["schemas"]["WebsiteInquiryWork"];
             system_display?: components["schemas"]["SystemDisplay"];
             /** @description On an approval, its title taken apart, so the row shows the sentence as its title and the proposed values as its supporting line. Absent when the title is a sentence alone. */
             summary_parts?: components["schemas"]["ApprovalSummaryParts"];
@@ -81367,7 +81381,7 @@ export interface operations {
                  *     A filter sent with a view it does not belong to returns
                  *     `422 code: filter_outside_view`, whose message names the filter's view.
                  */
-                filter?: "all" | "urgent" | "customer_waiting" | "leads" | "prospecting" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "except_decisions" | "changed_since_brief" | "upcoming";
+                filter?: "all" | "urgent" | "customer_waiting" | "leads" | "prospecting" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "except_decisions" | "changed_since_brief" | "upcoming" | "website_inquiries";
                 /**
                  * @description Which work view to answer. `today` is work a seller executes: every category
                  *     except `decisions` and `system`. `decisions` is judgements somebody owes, and

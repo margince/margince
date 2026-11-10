@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // One item's shape, per producer.
@@ -330,12 +331,16 @@ func stagedFacts(
 func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts.AttentionItem {
 	subject := task.Subject
 	item := crmcontracts.AttentionItem{
-		Id:            task.ID.String(),
-		Source:        crmcontracts.AttentionItemSource("task"),
-		Title:         &subject,
-		SystemDisplay: task.SystemDisplay,
-		Subject:       subjectOf(task.LinkType, task.LinkID), MayBeDone: task.MayBeDone,
+		Id:             task.ID.String(),
+		Source:         crmcontracts.AttentionItemSource("task"),
+		Title:          &subject,
+		SystemDisplay:  task.SystemDisplay,
+		WebsiteInquiry: task.Inquiry,
+		Subject:        subjectOf(task.LinkType, task.LinkID), MayBeDone: task.MayBeDone,
 		Actions: taskActions(task),
+	}
+	if task.WebsiteInquiry {
+		item.Kind = new(provenance.WebsiteInquirySource)
 	}
 	if task.SourceActivityID != nil {
 		item.SourceRecord = subjectOf("activity", *task.SourceActivityID)

@@ -10,7 +10,10 @@
 
 package activities
 
-import "github.com/margince/margince/backend/internal/platform/database/storekit"
+import (
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+)
 
 // openTaskWindowClauses narrows a task read to the window the caller asked for:
 // an upper bound, a lower one, or both.
@@ -34,6 +37,9 @@ func openTaskWindowClauses(in ListActivitiesInput, reminders string, arg func(an
 			deadline = "(" + deadline + sprintf(" OR ("+storekit.TaskDueSQL("a")+" IS NULL AND a.source_system = ANY($%d)))",
 				arg(storekit.UndatedTaskSources()))
 		}
+		if in.IncludeWebsiteInquiries && in.OpenAndDueAfter == nil {
+			deadline = "(" + deadline + " OR " + provenance.WebsiteInquiryTaskSQL("a") + ")"
+		}
 		if in.OrRemindersDue && reminders != "" {
 			deadline = "(" + deadline + " OR " + reminders + ")"
 		}
@@ -46,6 +52,9 @@ func openTaskWindowClauses(in ListActivitiesInput, reminders string, arg func(an
 		// can fall between the two or be counted by both.
 		// The due date is either the stored one or NULL, so the plain column
 		// bound holds whenever the window's does. Spelled for the task index.
+		if in.IncludeWebsiteInquiries {
+			clauses = append(clauses, "NOT "+provenance.WebsiteInquiryTaskSQL("a"))
+		}
 		from := arg(*in.OpenAndDueAfter)
 		clauses = append(clauses,
 			sprintf(openTask+" AND a.due_at >= $%[1]d AND "+storekit.TaskDueSQL("a")+" >= $%[1]d", from))

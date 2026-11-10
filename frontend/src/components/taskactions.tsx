@@ -33,6 +33,7 @@ import { CallStartProvider } from "../lib/callstart";
 import type { SourceOpenerFor } from "../lib/opensource";
 import { useTaskContact } from "../lib/taskcontact";
 import { useViewerZone } from "../lib/viewerzone";
+import { isWebsiteInquiryTask } from "../lib/websiteinquiries";
 import { CallLogInline, useCallLogFor } from "./calllog.host";
 import { useCompleteTask } from "./taskcomplete";
 import { TaskNextSteps } from "./tasknextsteps";
@@ -120,6 +121,7 @@ export function TaskQuickActions({
   dueHasTime,
   update,
   showComplete = true,
+  completeLabel,
   showDuePicker = false,
 }: Readonly<{
   activityId: string;
@@ -129,6 +131,7 @@ export function TaskQuickActions({
   dueHasTime?: boolean;
   update: ReturnType<typeof useTaskUpdate>;
   showComplete?: boolean;
+  completeLabel?: string;
   // Whether the reader may name a day, rather than only step the due date on.
   // Off by default, since a date box in every next-steps row is too heavy.
   // The detail modal opts in: a reader came there to work on one task.
@@ -146,7 +149,7 @@ export function TaskQuickActions({
           disabled={pending}
           onClick={() => complete(activityId, version)}
         >
-          {t("tasks.complete")}
+          {completeLabel ?? t("tasks.complete")}
         </Button>
       )}
       {dueAt && (
@@ -410,6 +413,9 @@ function TaskDetailActions({
         <div ref={verbs} className="form-actions task-detail-actions">
           <TaskQuickActions
             activityId={task.id}
+            completeLabel={
+              isWebsiteInquiryTask(task) ? t("inquiry.markHandled") : undefined
+            }
             version={task.version}
             dueAt={task.due_at}
             dueHasTime={task.due_has_time}

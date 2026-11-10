@@ -14903,7 +14903,7 @@ paths:
             to colleagues and call it their day.
         - name: filter
           in: query
-          schema: {type: string, enum: [all, urgent, customer_waiting, leads, prospecting, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming]}
+          schema: {type: string, enum: [all, urgent, customer_waiting, leads, prospecting, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming, website_inquiries]}
           description: |-
             Narrow the queue. Omitted means everything, which is the default view.
         - name: view
@@ -26446,6 +26446,15 @@ components:
         reason: {type: string}
         target_type: {type: string, enum: [lead, contact]}
         target_id: {type: string, format: uuid}
+    WebsiteInquiryWork:
+      type: object
+      description: Inquiry facts under the current task and source content permissions. Missing source facts remain unknown.
+      properties:
+        received_at: {type: string, format: date-time, readOnly: true}
+        source_activity_id: {type: string, format: uuid, readOnly: true}
+        source_label: {type: string, readOnly: true}
+        request_type: {type: string, readOnly: true}
+        assignment_reason: {type: string, readOnly: true}
     WebsiteInquiryPolicy:
       type: object
       additionalProperties: false
@@ -27714,10 +27723,15 @@ components:
       type: object
       description: |-
         One website form submission as the visitor sent it. Every value is the visitor's own
-        text and nothing Margince checked, except `consent`, which is the form's own record of
-        its consent box.
+        text. `validated_picklists` records which custom picklist values passed validation;
+        `consent` records the form's own consent box.
       required: [email, extra, campaign]
       properties:
+        validated_picklists:
+          type: array
+          readOnly: true
+          description: Custom picklist field names whose submitted values passed validation at receipt. Values remain in extra.
+          items: {type: string}
         handling_automation_id: {type: [string, 'null'], format: uuid, description: 'The policy owning this accepted occurrence; later policy changes do not transfer it to a legacy handler.'}
         message: {type: string, description: 'The free text the visitor wrote.'}
         full_name: {type: string}
@@ -53309,7 +53323,7 @@ components:
             row scope. A client draws a control only when there is more than one, so a
             rep who can only see their own work is never offered a switch that would 403.
         team_week: {$ref: '#/components/schemas/TeamWeekReach'}
-        filter: {type: string, enum: [all, urgent, customer_waiting, leads, prospecting, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming], description: 'The narrowing this read applied. The same vocabulary the query parameter takes.'}
+        filter: {type: string, enum: [all, urgent, customer_waiting, leads, prospecting, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming, website_inquiries], description: 'The narrowing this read applied. The same vocabulary the query parameter takes.'}
         view: {type: string, enum: [today, decisions, system], description: 'The view this read answered, after a `filter` alias was read as its view. Absent when the read named no view.'}
         summary: {$ref: '#/components/schemas/WorklistSummary'}
         queue:
@@ -54105,6 +54119,7 @@ components:
         One thing to do, with the reason it sits where it sits.
       required: [id, source, category, level, actions, because, consequence, occurred_precision]
       properties:
+        website_inquiry: {$ref: '#/components/schemas/WebsiteInquiryWork'}
         system_display:
           $ref: '#/components/schemas/SystemDisplay'
         summary_parts:

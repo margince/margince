@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -320,6 +321,9 @@ func taskFromActivity(row crmcontracts.Activity, reader ids.UUID, asOf time.Time
 		LinkType:      linkType,
 		LinkID:        linkID,
 		ReminderDue:   contentReadable(row) && activities.ReminderDueFor(row, reader, asOf),
+	}
+	if row.SourceSystem != nil && row.SourceId != nil {
+		task.WebsiteInquiry = provenance.IsWebsiteInquiryTask(*row.SourceSystem, *row.SourceId)
 	}
 	if row.SourceActivityId != nil {
 		task.SourceActivityID = new(ids.UUID(*row.SourceActivityId))

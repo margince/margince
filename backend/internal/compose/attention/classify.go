@@ -20,6 +20,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // classifyDay turns the assembled lanes into ranked candidates.
@@ -97,6 +98,7 @@ func base(
 		Kind:              item.Kind,
 		Title:             item.Title,
 		SystemDisplay:     item.SystemDisplay,
+		WebsiteInquiry:    item.WebsiteInquiry,
 		SummaryParts:      item.SummaryParts,
 		Detail:            item.Detail,
 		NoticeOrigin:      item.NoticeOrigin,
@@ -281,6 +283,7 @@ func nearTaskCutoff(asOf time.Time) time.Time { return asOf.AddDate(0, 0, nearTa
 // without a date stays actionable without claiming an invented deadline.
 func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	level := levelAgreed
+	websiteInquiry := item.Kind != nil && *item.Kind == provenance.WebsiteInquirySource
 	// A due customer obligation needs attention even if its deal is small.
 	// Prospecting follow-ups retain their dates without claiming an external
 	// response deadline; that clock belongs to the lead-response lane.
@@ -288,7 +291,11 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		(item.Subject == nil || item.Subject.Type != subjectLead) {
 		level = levelPromise
 	}
-	row := base(item, level, "tasks", "task_slips")
+	consequence := crmcontracts.WorklistItemConsequence("task_slips")
+	if websiteInquiry {
+		level, consequence = levelWaiting, "buyer_waits"
+	}
+	row := base(item, level, "tasks", consequence)
 	stampDeadline(&row, item.DueAt, asOf)
 	if overdueAt(item.DueAt, asOf) {
 		row.Because = append(row.Because, reason("overdue", nil))
@@ -326,7 +333,7 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	}
 	// Work due after today waits in Today's Upcoming section, unless its
 	// reminder already asks for it now.
-	if isUpcoming(item.DueGroup) && !out.reminded && !out.overdue {
+	if isUpcoming(item.DueGroup) && !out.reminded && !out.overdue && !websiteInquiry {
 		out.item.Category = categoryUpcoming
 	}
 	return out

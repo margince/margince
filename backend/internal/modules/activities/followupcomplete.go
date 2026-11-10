@@ -43,6 +43,8 @@ func (s *Store) CompleteFollowUpsTouchingLead(ctx context.Context, leadID ids.Le
 			WHERE l.activity_id = a.id AND l.%s = $%d)
 			AND a.source_system IS DISTINCT FROM $%d`,
 		leadLinkColumn, arg(leadID.UUID), arg(provenance.LeadRepliedSource))
+	// A new touch does not prove that a specific accepted inquiry was handled.
+	where += " AND NOT " + provenance.WebsiteInquiryTaskSQL("a")
 	return s.completeOpenSystemTasks(ctx, where, arg, &args)
 }
 

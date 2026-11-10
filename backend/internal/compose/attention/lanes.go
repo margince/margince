@@ -170,6 +170,8 @@ type Tasks interface {
 
 // Task is one piece of agreed work.
 type Task struct {
+	Inquiry          *crmcontracts.WebsiteInquiryWork
+	WebsiteInquiry   bool
 	SystemDisplay    *crmcontracts.SystemDisplay
 	SourceActivityID *ids.UUID
 	Recipients       []crmcontracts.WorklistPromiseRecipient

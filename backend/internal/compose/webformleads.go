@@ -45,7 +45,13 @@ type webFormLeads struct {
 }
 
 func (l webFormLeads) Land(ctx context.Context, landing webforms.Landing) error {
-	target, err := l.lead(ctx, landing)
+	active, err := l.catalog.ActiveColumns(ctx, "lead")
+	if err != nil {
+		return fmt.Errorf("compose: reading the lead custom fields: %w", err)
+	}
+	in := webFormLeadInput(landing)
+	in.CustomFields = webFormCustomFields(active, landing.Enquiry)
+	target, err := l.lead(ctx, in)
 	if err != nil || target == nil {
 		return err
 	}
@@ -61,7 +67,7 @@ func (l webFormLeads) Land(ctx context.Context, landing webforms.Landing) error 
 	system, key := provenance.WebFormSource, landing.SourceKey
 	subject := fmt.Sprintf(systemtext.Copy("form.subject", textlang.English), landing.FormName)
 	body := webFormNote(landing)
-	raw, err := webFormRaw(landing)
+	raw, err := webFormRaw(landing, webFormValidatedPicklists(active, in))
 	if err != nil {
 		return err
 	}
@@ -79,13 +85,7 @@ func (l webFormLeads) Land(ctx context.Context, landing webforms.Landing) error 
 // lead answers the record the note belongs on. Nil with no error means nothing
 // more is written. That is a contact this principal may not read, whose owner
 // has a task about it, or an address on the erasure list.
-func (l webFormLeads) lead(ctx context.Context, landing webforms.Landing) (*activities.ActivityLinkInput, error) {
-	active, err := l.catalog.ActiveColumns(ctx, "lead")
-	if err != nil {
-		return nil, fmt.Errorf("compose: reading the lead custom fields: %w", err)
-	}
-	in := webFormLeadInput(landing)
-	in.CustomFields = webFormCustomFields(active, landing.Enquiry)
+func (l webFormLeads) lead(ctx context.Context, in contacts.CreateLeadInput) (*activities.ActivityLinkInput, error) {
 	lead, err := l.createLead(ctx, in)
 	if duplicate, ok := errors.AsType[*contacts.DuplicateLeadError](err); ok {
 		return &activities.ActivityLinkInput{EntityType: string(recordTypeLead), EntityID: duplicate.ExistingID.UUID}, nil
@@ -179,6 +179,18 @@ func webFormCustomFields(active []fieldcatalog.Column, e webforms.Enquiry) map[s
 	return out
 }
 
+func webFormValidatedPicklists(active []fieldcatalog.Column, in contacts.CreateLeadInput) []string {
+	var names []string
+	for _, column := range active {
+		if column.Type == fieldcatalog.TypePicklist {
+			if _, valid := in.CustomFields[column.Name]; valid {
+				names = append(names, column.Name)
+			}
+		}
+	}
+	return names
+}
+
 // originDetail is the page and campaign a lead arrived from, in one line.
 func originDetail(e webforms.Enquiry) string {
 	parts := make([]string, 0, len(e.UTM)+1)
@@ -233,13 +245,16 @@ func webFormNote(landing webforms.Landing) string {
 // activity read answers it as `web_form`. The body says the same as text.
 //
 //craft:ignore naked-any raw is the activity's free-form source payload column
-func webFormRaw(landing webforms.Landing) (map[string]any, error) {
+func webFormRaw(landing webforms.Landing, validated []string) (map[string]any, error) {
 	e := landing.Enquiry
 	sent := crmcontracts.WebFormSubmission{
 		Message: optional(e.Message), FullName: optional(e.FullName), Email: e.Email,
 		Phone: optional(e.Phone), Company: optional(e.Company), Title: optional(e.Title),
 		Extra: webFormValues(e.Extra), PageUrl: optional(e.PageURL), Referrer: optional(e.Referrer),
 		Campaign: webFormValues(e.UTM),
+	}
+	if len(validated) != 0 {
+		sent.ValidatedPicklists = &validated
 	}
 	if landing.HandlingAutomationID != nil {
 		sent.HandlingAutomationId = new(openapi_types.UUID(*landing.HandlingAutomationID))

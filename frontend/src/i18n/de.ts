@@ -7987,6 +7987,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Erstellt, weil dieser Lead innerhalb seiner Antwortfrist keine Antwort bekam. Antworte dem Lead und markiere die Aufgabe dann als erledigt.",
   "tasks.origin.lead_qualify":
     "Erstellt, weil dieser Lead ohne Entscheidung offen geblieben ist. Qualifiziere den Lead oder schließe ihn.",
+  "tasks.origin.website_inquiry":
+    "Diese Aufgabe gehört zu einer Website-Anfrage.",
   "tasks.origin.lead_for_contact":
     "Erstellt, weil für diesen Kontakt ein neuer Lead eingegangen ist. Es wurde kein Lead angelegt; die Aufgabe nennt, was eingegangen ist und woher.",
   "tasks.origin.lead_replied":
@@ -16752,6 +16754,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "inquiry.selectSource": "{subject} auswählen",
   "inquiry.untitled": "Website-Anfrage",
   "inquiry.submission": "Anfrage",
+  "inquiry.receivedValue": "Eingegangen: {received}",
+  "inquiry.receivedUnavailable": "Eingangsdetails nicht verfügbar",
+  "inquiry.requestTypeValue": "Art der Anfrage: {type}",
+  "inquiry.initialHandlingValue": "Erste Bearbeitung: {reason}",
+  "inquiry.sourceValue": "Quelle: {source}",
+  "inquiry.markHandled": "Als bearbeitet markieren",
+  "inquiry.openSubmission": "Anfrage öffnen",
+  "inquiry.reason.notRecorded": "Grund nicht erfasst",
   "inquiry.received": "Eingegangen",
   "inquiry.result": "Ergebnis",
   "inquiry.deadline": "Fällig",
@@ -19624,6 +19634,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.filter.leads": "Akquise",
   "worklist.filter.deals_at_risk": "Gefährdete Deals",
   "worklist.filter.meetings": "Termine",
+  "worklist.filter.website_inquiries": "Website-Anfragen",
   "worklist.filter.tasks": "Aufgaben",
   "worklist.filter.decisions": "Freigaben",
   "worklist.filter.relationships": "Ruhende Beziehungen",

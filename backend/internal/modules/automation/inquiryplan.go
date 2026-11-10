@@ -29,6 +29,7 @@ type InquiryPlan struct {
 	Target           datasource.EntityRef `json:"target"`
 	Recipient        ids.UUID             `json:"recipient"`
 	DueAt            time.Time            `json:"due_at"`
+	RequestTypeField *string              `json:"request_type_field,omitempty"`
 	Reason           string               `json:"reason"`
 }
 
@@ -93,19 +94,35 @@ func (s *EffectClaimStore) InquiryPlan(ctx context.Context, key string) (Inquiry
 	if err := auth.Require(ctx, "automation", principal.ActionRead); err != nil {
 		return InquiryPlan{}, false, err
 	}
-	var raw json.RawMessage
+	plans, err := s.inquiryPlans(ctx, []string{key})
+	plan, found := plans[key]
+	return plan, found, err
+}
+
+func (s *EffectClaimStore) inquiryPlans(ctx context.Context, keys []string) (map[string]InquiryPlan, error) {
+	out := map[string]InquiryPlan{}
+	if len(keys) == 0 {
+		return out, nil
+	}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `SELECT planned FROM automation_effect_claim WHERE handler=@handler AND occurrence_key=@key AND effect_fingerprint=@fingerprint AND planned IS NOT NULL`, pgx.NamedArgs{"handler": inquiryRecipeName, "key": key, "fingerprint": inquiryPlanFingerprint}).Scan(&raw)
+		rows, err := tx.Query(ctx, `SELECT occurrence_key,planned FROM automation_effect_claim WHERE handler=@handler AND occurrence_key=ANY(@keys) AND effect_fingerprint=@fingerprint AND planned IS NOT NULL`, pgx.NamedArgs{"handler": inquiryRecipeName, "keys": keys, "fingerprint": inquiryPlanFingerprint})
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var key string
+			var raw json.RawMessage
+			if err := rows.Scan(&key, &raw); err != nil {
+				return err
+			}
+			var plan InquiryPlan
+			if err := json.Unmarshal(raw, &plan); err != nil {
+				return err
+			}
+			out[key] = plan
+		}
+		return rows.Err()
 	})
-	if errors.Is(err, pgx.ErrNoRows) {
-		return InquiryPlan{}, false, nil
-	}
-	if err != nil {
-		return InquiryPlan{}, false, err
-	}
-	var out InquiryPlan
-	if err := json.Unmarshal(raw, &out); err != nil {
-		return out, false, err
-	}
-	return out, true, nil
+	return out, err
 }

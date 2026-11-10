@@ -25,6 +25,7 @@ type ListActivitiesInput struct {
 	// onlyID narrows a read to one row, so a caller can ask whether this list
 	// returns it without a second spelling of the list's clauses.
 	onlyID *ids.ActivityID
+	IDs    []ids.ActivityID
 	Cursor *string
 	Limit  *int
 	// Sort is the caller's order, validated against activitySortFields. Nil
@@ -44,6 +45,7 @@ type ListActivitiesInput struct {
 	// CallOutcome narrows to calls that ended this way.
 	CallOutcome *string
 	// SourceSystem narrows to rows one connector wrote, such as website forms.
+	SourceIDs     []string
 	SourceSystem  *string
 	WebsiteFormID *ids.UUID
 	// AnswersThem keeps only rows that answer the other side (answersThemSQL).
@@ -234,7 +236,8 @@ type ListActivitiesInput struct {
 	OpenAndDueBy *time.Time
 	// IncludeEmailRequests adds undated captured requests and undated commitments
 	// to the execution queue, not overdue counts.
-	IncludeEmailRequests bool
+	IncludeEmailRequests    bool
+	IncludeWebsiteInquiries bool
 	// OpenAndDueAfter narrows the same read to work due LATER than an instant,
 	// and is paired with OpenAndDueBy to ask for one window.
 	//

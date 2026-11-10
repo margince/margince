@@ -102,6 +102,27 @@ func WebsiteInquiryTaskSource(submission string, contact bool) (string, string) 
 	return WebsiteInquirySource, submission
 }
 
+func IsWebsiteInquiryTask(system, source string) bool {
+	contact, prefix := WebsiteInquiryTaskSource("", true)
+	return source != "" && (system == WebsiteInquirySource || (system == contact && strings.HasPrefix(source, prefix)))
+}
+
+func WebsiteInquirySubmission(system, source string) (string, bool) {
+	if !IsWebsiteInquiryTask(system, source) {
+		return "", false
+	}
+	contact, prefix := WebsiteInquiryTaskSource("", true)
+	if system == contact {
+		return strings.TrimPrefix(source, prefix), true
+	}
+	return source, true
+}
+
+func WebsiteInquiryTaskSQL(alias string) string {
+	contact, prefix := WebsiteInquiryTaskSource("", true)
+	return fmt.Sprintf("(%[1]s.source_id <> '' AND (%[1]s.source_system = '%[2]s' OR (%[1]s.source_system = '%[3]s' AND %[1]s.source_id LIKE '%[4]s%%')))", alias, WebsiteInquirySource, contact, prefix)
+}
+
 // WebFormSourceID is a website form submission's source_id: the form, then the
 // submission's own part. WebFormIDSQL reads the form back out of it.
 func WebFormSourceID(form, submission string) string { return form + ":" + submission }

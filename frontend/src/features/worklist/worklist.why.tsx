@@ -6,6 +6,7 @@
 // A row says one current reason. Its details list every concrete fact behind
 // it, and leave out how the row ranks against the rest of the queue.
 
+import { WebsiteInquiryFacts } from "../../components/websiteinquiryfacts";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -61,6 +62,9 @@ export function WorklistWhy({
             ) : (
               <p>{detail}</p>
             ))}
+          {item.website_inquiry && (
+            <WebsiteInquiryFacts facts={item.website_inquiry} />
+          )}
           {answer && <RowVerbs item={item} />}
         </div>
       </PanelBody>

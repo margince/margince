@@ -26210,6 +26210,7 @@ const (
 	WorklistFilterTasks             WorklistFilter = "tasks"
 	WorklistFilterUpcoming          WorklistFilter = "upcoming"
 	WorklistFilterUrgent            WorklistFilter = "urgent"
+	WorklistFilterWebsiteInquiries  WorklistFilter = "website_inquiries"
 )
 
 // Valid indicates whether the value is a known member of the WorklistFilter enum.
@@ -26242,6 +26243,8 @@ func (e WorklistFilter) Valid() bool {
 	case WorklistFilterUpcoming:
 		return true
 	case WorklistFilterUrgent:
+		return true
+	case WorklistFilterWebsiteInquiries:
 		return true
 	default:
 		return false
@@ -30842,6 +30845,7 @@ const (
 	GetWorklistParamsFilterTasks             GetWorklistParamsFilter = "tasks"
 	GetWorklistParamsFilterUpcoming          GetWorklistParamsFilter = "upcoming"
 	GetWorklistParamsFilterUrgent            GetWorklistParamsFilter = "urgent"
+	GetWorklistParamsFilterWebsiteInquiries  GetWorklistParamsFilter = "website_inquiries"
 )
 
 // Valid indicates whether the value is a known member of the GetWorklistParamsFilter enum.
@@ -30874,6 +30878,8 @@ func (e GetWorklistParamsFilter) Valid() bool {
 	case GetWorklistParamsFilterUpcoming:
 		return true
 	case GetWorklistParamsFilterUrgent:
+		return true
+	case GetWorklistParamsFilterWebsiteInquiries:
 		return true
 	default:
 		return false
@@ -35720,6 +35726,9 @@ type AttentionItem struct {
 	// `complete` and `snooze` has to name the row those presses condition on, or two contacts
 	// acting on one task each overwrite the other and neither is told.
 	Version *RowVersion `json:"version,omitempty"`
+
+	// WebsiteInquiry Inquiry facts under the current task and source content permissions. Missing source facts remain unknown.
+	WebsiteInquiry *WebsiteInquiryWork `json:"website_inquiry,omitempty"`
 
 	// WithContact Who a meeting is with: the first attendee by name who holds no seat here, is not
 	// employed by the installation's own company, and is a contact this caller may
@@ -66649,8 +66658,8 @@ type WebFormReceiptStatus string
 type WebFormSender string
 
 // WebFormSubmission One website form submission as the visitor sent it. Every value is the visitor's own
-// text and nothing Margince checked, except `consent`, which is the form's own record of
-// its consent box.
+// text. `validated_picklists` records which custom picklist values passed validation;
+// `consent` records the form's own consent box.
 type WebFormSubmission struct {
 	// Campaign The `utm_` parameters the page carried.
 	Campaign []WebFormValue `json:"campaign"`
@@ -66679,6 +66688,9 @@ type WebFormSubmission struct {
 	Phone    *string `json:"phone,omitempty"`
 	Referrer *string `json:"referrer,omitempty"`
 	Title    *string `json:"title,omitempty"`
+
+	// ValidatedPicklists Custom picklist field names whose submitted values passed validation at receipt. Values remain in extra.
+	ValidatedPicklists *[]string `json:"validated_picklists,omitempty"`
 }
 
 // WebFormValue defines model for WebFormValue.
@@ -66937,6 +66949,15 @@ type WebsiteInquirySelection struct {
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty" minimum:"1"`
+}
+
+// WebsiteInquiryWork Inquiry facts under the current task and source content permissions. Missing source facts remain unknown.
+type WebsiteInquiryWork struct {
+	AssignmentReason *string             `json:"assignment_reason,omitempty"`
+	ReceivedAt       *time.Time          `json:"received_at,omitempty"`
+	RequestType      *string             `json:"request_type,omitempty"`
+	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
+	SourceLabel      *string             `json:"source_label,omitempty"`
 }
 
 // WeeklyDayActivity One local day of a rep's own activity, in the installation reporting timezone.
@@ -68782,6 +68803,9 @@ type WorklistItem struct {
 	// `complete` and `snooze` has to name the row those presses condition on, or two contacts
 	// acting on one task each overwrite the other and neither is told.
 	Version *RowVersion `json:"version,omitempty"`
+
+	// WebsiteInquiry Inquiry facts under the current task and source content permissions. Missing source facts remain unknown.
+	WebsiteInquiry *WebsiteInquiryWork `json:"website_inquiry,omitempty"`
 
 	// WithContact Whose record a `meeting` row's brief is read on, carried out from
 	// `AttentionItem.with_contact`.

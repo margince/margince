@@ -29,6 +29,7 @@ import (
 // attentionTasks reads open tasks through the activities store. A task is an
 // activity of kind `task`, so this is the same read the task queue makes.
 type attentionTasks struct {
+	work   *inquiryWork
 	store  *activities.Store
 	claims *contacts.Store
 }
@@ -50,7 +51,7 @@ func openTasksDueBy(
 	ctx context.Context, asOf, until time.Time, scope attention.TaskScope, owner ids.UUID, team []ids.UUID,
 ) (activities.ListActivitiesInput, bool) {
 	in := activities.ListActivitiesInput{
-		OpenAndDueBy: &until, IncludeEmailRequests: true, WorklistAsOf: &asOf, ReadableOnly: true, TeamQueueOf: team,
+		OpenAndDueBy: &until, IncludeEmailRequests: true, IncludeWebsiteInquiries: true, WorklistAsOf: &asOf, ReadableOnly: true, TeamQueueOf: team,
 	}
 	switch scope {
 	case attention.TasksMine:
@@ -107,10 +108,20 @@ func (t attentionTasks) OpenForViewer(
 func (t attentionTasks) asTasks(
 	ctx context.Context, rows []crmcontracts.Activity, scope attention.TaskScope, asOf time.Time,
 ) ([]attention.Task, error) {
+	var inquiryFacts map[ids.UUID]*crmcontracts.WebsiteInquiryWork
+	if t.work != nil {
+		var err error
+		inquiryFacts, err = t.work.forTasks(ctx, rows)
+		if err != nil {
+			return nil, err
+		}
+	}
 	tasks := make([]attention.Task, 0, len(rows))
 	reader := reminderReaderFor(ctx, scope)
 	for _, row := range rows {
-		tasks = append(tasks, taskFromActivity(row, reader, asOf))
+		task := taskFromActivity(row, reader, asOf)
+		task.Inquiry = inquiryFacts[ids.UUID(row.Id)]
+		tasks = append(tasks, task)
 	}
 	return t.markReadOnly(ctx, tasks, asOf)
 }

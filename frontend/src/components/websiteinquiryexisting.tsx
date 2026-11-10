@@ -22,6 +22,7 @@ import { useLocale, useT } from "../i18n";
 import { useOpenSource } from "../lib/opensource";
 import { unwrap } from "../lib/problem";
 import { useViewerZone } from "../lib/viewerzone";
+import { inquiryReasonKey } from "../lib/websiteinquiries";
 import { invalidateHandledChange } from "../lib/workkeys";
 import { EntityRef } from "./entityref";
 
@@ -342,7 +343,7 @@ function InquirySelectionResults({
         {
           key: "reason",
           header: t("inquiry.assignmentReason"),
-          cell: (row) => (row.reason ? inquiryReasonText(row.reason, t) : null),
+          cell: (row) => (row.reason ? t(inquiryReasonKey(row.reason)) : null),
         },
         {
           key: "due",
@@ -388,24 +389,5 @@ function inquiryResultText(status: string, t: ReturnType<typeof useT>): string {
       return t("inquiry.result.skipped");
     default:
       return t("inquiry.result.failed");
-  }
-}
-
-function inquiryReasonText(reason: string, t: ReturnType<typeof useT>): string {
-  switch (reason) {
-    case "existing_owner":
-      return t("inquiry.reason.owner");
-    case "owner_needs_review":
-      return t("inquiry.reason.ownerReview");
-    case "recipient_no_longer_eligible":
-      return t("inquiry.reason.recipientChanged");
-    case "coordinator_review":
-      return t("inquiry.reason.coordinator");
-    case "round_robin":
-      return t("inquiry.reason.rotation");
-    case "inquiry_task_exists":
-      return t("inquiry.result.alreadyHandled");
-    default:
-      return t("inquiry.reason.selected");
   }
 }

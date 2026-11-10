@@ -211,7 +211,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 	return attention.NewService(
 		attentionApprovals{svc: svc},
 		attentionDuplicates{store: newContactsStore(db)},
-		attentionTasks{store: activities.NewStore(db), claims: newContactsStore(db)},
+		attentionTasks{store: activities.NewStore(db), claims: newContactsStore(db), work: newInquiryWork(db)},
 		attentionReceipts{tasks: activities.NewStore(db).WithRecordZone(installationZoneTx), svc: svc, deals: deals.NewStore(db, DealsInstallation())},
 		attentionBriefing{
 			engine: briefs.NewBriefEngine(pool, newContactsStore(db)),
@@ -290,7 +290,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// not at all.
 		WithWalks(worklistsnap.New(pool, now)).
 		// The task lane's whole count past its cap, so its categories state a total.
-		WithTaskBacklog(attentionTasks{store: activities.NewStore(db)}).
+		WithTaskBacklog(attentionTasks{store: activities.NewStore(db), work: newInquiryWork(db)}).
 		// The done lane's own window, so the worklist's receipts and Home's
 		// lane start at the same instant.
 		WithHandledWindow(func(ctx context.Context, asOf time.Time) (time.Time, error) {

@@ -208,6 +208,9 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 	if in.WebsiteFormID != nil {
 		where = append(where, sprintf("a.kind = 'note' AND a.source_system = $%d AND a.source_id LIKE $%d", arg(provenance.WebFormSource), arg(in.WebsiteFormID.String()+":%")))
 	}
+	if len(in.SourceIDs) != 0 {
+		where = append(where, sprintf("a.source_id = ANY($%d::text[])", arg(in.SourceIDs)))
+	}
 	if in.SourceSystem != nil {
 		where = append(where, sprintf("a.source_system = $%d", arg(*in.SourceSystem)))
 	}
@@ -217,6 +220,9 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 			answeredAt = fmt.Sprintf("$%d", arg(*in.AsOf))
 		}
 		where = append(where, answersThemSQL(answeredAt))
+	}
+	if len(in.IDs) != 0 {
+		where = append(where, sprintf("a.id = ANY($%d::uuid[])", arg(in.IDs)))
 	}
 	if in.onlyID != nil {
 		where = append(where, sprintf("a.id = $%d", arg(*in.onlyID)))
@@ -358,7 +364,7 @@ func occurredWindowClauses(in ListActivitiesInput, arg func(any) int) []string {
 func filtersOnContent(in ListActivitiesInput) bool {
 	return (in.ThreadKey != nil && *in.ThreadKey != "") || (in.Query != nil && *in.Query != "") ||
 		in.WaitingReplyAsOf != nil || in.RequestReviewAsOf != nil || in.RequestCurrentAsOf != nil || in.ReadableOnly || in.ConversationAsOf != nil || in.SourceActivityID != nil || in.WebsiteFormID != nil ||
-		in.SentBy != nil || in.ConversationOf != nil || in.RemindersDue || len(in.CustomFilters) > 0
+		in.SentBy != nil || in.ConversationOf != nil || in.RemindersDue || len(in.SourceIDs) > 0 || len(in.CustomFilters) > 0
 }
 
 // kindPredicate spells known kinds as literals, so a generic plan keeps the

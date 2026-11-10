@@ -47,11 +47,12 @@ func inquiryPlannerFixture(t *testing.T) (workflow.Event, map[string]any, dataso
 		t.Fatal(err)
 	}
 	key := policy.FormId.String() + ":accepted-key"
-	payload, err := json.Marshal(map[string]any{"kind": "note", "source_system": provenance.WebFormSource, "website_submission_key": key})
+	automationID := ids.NewV7()
+	payload, err := json.Marshal(map[string]any{"kind": "note", "source_system": provenance.WebFormSource, "website_submission_key": key, "handling_automation_id": automationID})
 	if err != nil {
 		t.Fatal(err)
 	}
-	event := workflow.Event{ID: ids.NewV7(), WorkspaceID: ids.NewV7(), AutomationID: ids.NewV7(), OwnerID: ids.NewV7(), Params: params, Payload: payload, Entity: datasource.EntityRef{Type: datasource.EntityActivity, ID: ids.NewV7()}}
+	event := workflow.Event{ID: ids.NewV7(), WorkspaceID: ids.NewV7(), AutomationID: automationID, OwnerID: ids.NewV7(), Params: params, Payload: payload, Entity: datasource.EntityRef{Type: datasource.EntityActivity, ID: ids.NewV7()}}
 	target := datasource.EntityRef{Type: datasource.EntityLead, ID: ids.NewV7()}
 	note := map[string]any{"id": event.Entity.ID, "kind": "note", "source_system": provenance.WebFormSource, "source_id": key, "created_at": time.Date(2026, 3, 28, 15, 0, 0, 0, time.UTC), "raw": map[string]any{"handling_automation_id": event.AutomationID}, "links": []map[string]any{{"entity_type": "lead", "entity_id": target.ID}}}
 	return event, note, target

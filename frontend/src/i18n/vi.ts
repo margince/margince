@@ -7786,6 +7786,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Việc này được tạo vì lead này chưa được trả lời trong thời hạn phản hồi. Trả lời lead, rồi đánh dấu việc này là xong.",
   "tasks.origin.lead_qualify":
     "Việc này được tạo vì lead này vẫn mở mà chưa có quyết định. Xác nhận lead đủ điều kiện hoặc đóng lead.",
+  "tasks.origin.website_inquiry":
+    "Nhiệm vụ này theo dõi một yêu cầu từ website.",
   "tasks.origin.lead_for_contact":
     "Việc này được tạo vì có một lead mới cho liên hệ này. Không lead nào được tạo; việc này ghi những gì đã đến và từ đâu.",
   "tasks.origin.lead_replied":
@@ -16320,6 +16322,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "inquiry.selectSource": "Chọn {subject}",
   "inquiry.untitled": "Yêu cầu từ trang web",
   "inquiry.submission": "Yêu cầu",
+  "inquiry.receivedValue": "Đã nhận: {received}",
+  "inquiry.receivedUnavailable": "Không có thông tin lúc nhận",
+  "inquiry.requestTypeValue": "Loại yêu cầu: {type}",
+  "inquiry.initialHandlingValue": "Xử lý ban đầu: {reason}",
+  "inquiry.sourceValue": "Nguồn: {source}",
+  "inquiry.markHandled": "Đánh dấu đã xử lý",
+  "inquiry.openSubmission": "Mở yêu cầu",
+  "inquiry.reason.notRecorded": "Chưa ghi lý do",
   "inquiry.received": "Đã nhận",
   "inquiry.result": "Kết quả",
   "inquiry.deadline": "Đến hạn",
@@ -19130,6 +19140,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.filter.leads": "Tìm khách hàng mới",
   "worklist.filter.deals_at_risk": "Deal có rủi ro",
   "worklist.filter.meetings": "Cuộc họp",
+  "worklist.filter.website_inquiries": "Yêu cầu từ trang web",
   "worklist.filter.tasks": "Việc cần làm",
   "worklist.filter.decisions": "Phê duyệt",
   "worklist.filter.relationships": "Liên hệ đã im lặng",
