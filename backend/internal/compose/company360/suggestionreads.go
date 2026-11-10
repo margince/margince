@@ -61,6 +61,9 @@ type lastMessage struct {
 	Excerpt string
 	// Move is the History badge's move when the message is a mail.
 	Move *crmcontracts.EmailSummaryMove
+	// EarlierOwed says our message left the correspondent's newest earlier mail
+	// still owed (activities.EarlierMailOwed).
+	EarlierOwed bool
 }
 
 // excerptRunes bounds what a citation quotes of a message body. A quote is
@@ -141,6 +144,9 @@ func newestMessage(
 	}
 	if excerpt != nil {
 		found.Excerpt = oneLine(*excerpt)
+	}
+	if found.EarlierOwed, err = activities.EarlierMailOwed(ctx, tx, found.ID, now); err != nil {
+		return lastMessage{}, false, err
 	}
 	return found, true, nil
 }

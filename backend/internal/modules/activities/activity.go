@@ -121,6 +121,12 @@ type LogActivityInput struct {
 	// source_id) upsert both capture and this path key on does nothing when
 	// the row already exists, so neither leg can revise the other's value.
 	ThreadKey string
+	// InReplyTo is the email this one replies to: the reply takes that mail's
+	// thread (threadOnReplyTx). Nil on every other activity.
+	InReplyTo *ids.UUID
+	// ownThread files a hand-logged email with no thread of its own under
+	// ownThreadKey of its id. Only the create mapping sets it.
+	ownThread bool
 	// CounterpartyEmail is the address this message was with, normalized —
 	// the column capture's correspondence-positive gate (ADR-0072 §1) reads.
 	// CounterpartyOutboundAttested says the workspace itself sent to that
@@ -249,6 +255,12 @@ func (s *Store) logActivityAndReadTranscript(
 		return replay, false, err
 	}
 	if err := s.checkTaskRecommendation(ctx, tx, &in); err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
+	if err := refuseOwnThreadKeys(in); err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
+	if err := threadOnReplyTx(ctx, tx, &in); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
 	at := s.now()

@@ -25,6 +25,9 @@ func insertLoggedActivityRow(ctx context.Context, tx pgx.Tx, in LogActivityInput
 	if err != nil {
 		return ids.ActivityID{}, time.Time{}, err
 	}
+	if in.ThreadKey == "" && in.ownThread {
+		in.ThreadKey = ownThreadKey(id.UUID)
+	}
 	authorCols, authorHolders, args := storekit.AuthorInsertFragments(in.Author, []any{
 		// NULLIF on channel_provider: the column FKs into channel_provider, and
 		// '' names no provider, so anything without a transport stores NULL.

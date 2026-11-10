@@ -56067,7 +56067,18 @@ components:
           description: >-
             The conversation this message belongs to. Email only. Defaults to
             `rfc_message_id` when absent, which files a message under itself — the
-            same root a captured message takes when it starts a thread.
+            same root a captured message takes when it starts a thread. A mail
+            logged by hand with neither starts a conversation of its own.
+        in_reply_to_activity_id:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            The email this one replies to. Email only. The reply is filed on that
+            mail's conversation, so it answers the mail as a reply on its thread
+            does. The mail must be one the caller can read, and with the same
+            correspondent: the same counterparty address or a contact both are
+            filed under. A mail logged before conversations were kept has none to
+            join, and the reply starts its own. Not combined with `thread_key`.
         ical_uid:
           type: [string, 'null']
           description: >-
