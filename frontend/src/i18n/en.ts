@@ -18927,6 +18927,10 @@ export const en = {
     "Open {name}, see why it stopped and fix the cause.",
   "worklist.todo.capture_health.named":
     "Check the connection of {name} so its mail is captured again.",
+  "worklist.todo.capture_health.backfill":
+    "Open the mailbox in Settings and continue or restart its history import.",
+  "worklist.todo.capture_health.backfill.named":
+    "Open {name} in Settings and continue or restart its history import.",
   "worklist.todo.capture_health.calendar":
     "Check the calendar connection so its meetings are captured again.",
   "worklist.todo.capture_health.calendar.named":

@@ -287,6 +287,7 @@ function captureEventKeys(item: WorklistItem) {
 }
 
 function captureTodoKeys(item: WorklistItem) {
+  if (item.kind === "backfill_failed") return CAPTURE_TODO.backfill;
   return item.connection?.medium === "calendar"
     ? CAPTURE_TODO.calendar
     : CAPTURE_TODO.mailbox;
@@ -316,6 +317,10 @@ const CAPTURE_EVENT = {
 } as const satisfies Record<string, { named: MessageKey; bare: MessageKey }>;
 
 const CAPTURE_TODO = {
+  backfill: {
+    bare: "worklist.todo.capture_health.backfill",
+    named: "worklist.todo.capture_health.backfill.named",
+  },
   mailbox: {
     bare: "worklist.todo.capture_health",
     named: "worklist.todo.capture_health.named",

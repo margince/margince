@@ -226,6 +226,18 @@ describe("what a told row asks", () => {
     );
   });
 
+  it("asks to resume a failed history import, not to check the connection", () => {
+    const backfill = row({
+      source: "capture_health",
+      kind: "backfill_failed",
+      cause_label: "anna@example.com",
+      connection: { provider: "gmail", medium: "mailbox" },
+    });
+    expect(todoLine(backfill, t, true)).toBe(
+      "Open anna@example.com in Settings and continue or restart its history import.",
+    );
+  });
+
   it("names the deal on a deal at risk, never the contact on it", () => {
     expect(
       todoLine(

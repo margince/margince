@@ -18642,6 +18642,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Mở {name}, xem vì sao nó dừng và khắc phục nguyên nhân.",
   "worklist.todo.capture_health.named":
     "Kiểm tra kết nối của {name} để thư được thu thập trở lại.",
+  "worklist.todo.capture_health.backfill":
+    "Mở hộp thư trong Cài đặt rồi tiếp tục hoặc bắt đầu lại việc nhập thư cũ.",
+  "worklist.todo.capture_health.backfill.named":
+    "Mở {name} trong Cài đặt rồi tiếp tục hoặc bắt đầu lại việc nhập thư cũ.",
   "worklist.todo.capture_health.calendar":
     "Kiểm tra kết nối lịch để cuộc họp được thu thập trở lại.",
   "worklist.todo.capture_health.calendar.named":

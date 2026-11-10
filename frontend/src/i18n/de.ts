@@ -19121,6 +19121,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Öffne {name}, sieh nach, warum es angehalten hat, und behebe die Ursache.",
   "worklist.todo.capture_health.named":
     "Prüfe die Verbindung von {name}, damit seine E-Mails wieder erfasst werden.",
+  "worklist.todo.capture_health.backfill":
+    "Öffne das Postfach in den Einstellungen und setze den Import des Postfachverlaufs fort oder starte ihn neu.",
+  "worklist.todo.capture_health.backfill.named":
+    "Öffne {name} in den Einstellungen und setze den Import des Postfachverlaufs fort oder starte ihn neu.",
   "worklist.todo.capture_health.calendar":
     "Prüfe die Verbindung des Kalenders, damit seine Termine wieder erfasst werden.",
   "worklist.todo.capture_health.calendar.named":
