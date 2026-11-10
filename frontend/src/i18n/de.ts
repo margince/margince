@@ -11590,27 +11590,27 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "senders.waiting.openNamed": "{name} öffnen",
   "senders.waiting.openUnnamed": "Kontakt öffnen",
   "senders.waiting.onMargince": "Wartet auf Margince:",
-  "senders.waiting.onYou": "Wartet auf Sie:",
+  "senders.waiting.onYou": "Wartet auf dich:",
   "senders.waiting.why.decided":
-    "Ihre Antwort wird bei der nächsten Absenderprüfung übernommen.",
+    "Deine Antwort wird bei der nächsten Absenderprüfung übernommen.",
   "senders.waiting.why.classifying":
-    "Die Absenderprüfung hat diesen Absender noch nicht bewertet.",
+    "Die Absenderprüfung hat diese Absendeadresse noch nicht bewertet.",
   "senders.waiting.why.unsure":
-    "Die Absenderprüfung konnte es nicht erkennen, daher entscheidet Ihre Antwort.",
+    "Die Absenderprüfung konnte es nicht erkennen, daher entscheidet deine Antwort.",
   "senders.waiting.why.queued":
     "Die Absenderprüfung sieht sich die E-Mails noch an.",
   "senders.waiting.why.unjudgeable":
-    "Es gibt keine E-Mail dieses Absenders mehr zu prüfen, daher entscheiden nur Sie.",
+    "Von dieser Absendeadresse gibt es keine E-Mail mehr zu prüfen, daher entscheidest nur du.",
   "senders.waiting.businessFor": "{address} als geschäftlich markieren",
   "senders.waiting.keepOutFor": "{address} ausschließen",
   "senders.waiting.businessTitle":
-    "Diesen Absender als geschäftlich markieren?",
+    "Diese Absendeadresse als geschäftlich markieren?",
   "senders.waiting.businessBody":
-    "Die E-Mails bleiben als geschäftliche E-Mails erhalten, und der Kontakt wird mit seinen E-Mails und Terminen für Ihr Unternehmen freigegeben.",
+    "Die E-Mails bleiben als geschäftliche E-Mails erhalten, und der Kontakt wird mit seinen E-Mails und Terminen für dein Unternehmen freigegeben.",
   "senders.waiting.remove": "Aus Kontakten entfernen",
   "senders.waiting.removeTitle": "Diesen Kontakt entfernen?",
   "senders.waiting.removeBody":
-    "Der Kontakt wird archiviert und verschwindet aus dieser Liste. Die E-Mails bleiben, und der Absender bleibt unentschieden. Sie können ihn aus den archivierten Kontakten wiederherstellen.",
+    "Der Kontakt wird archiviert und verschwindet aus dieser Liste. Die E-Mails bleiben, und die Absendeadresse bleibt unentschieden. Du kannst den Kontakt aus den archivierten Kontakten wiederherstellen.",
   "senders.waiting.removeConfirm": "Kontakt entfernen",
   "connectionOutcomes.title": "Was deine Verbindungen ergeben haben",
   "connectionOutcomes.view": "Ansehen",
