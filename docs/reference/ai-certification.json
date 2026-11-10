@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 56,
-    "sites_best_current": 54,
+    "sites_best_current": 51,
     "sites_best_partial": 0,
-    "sites_best_stale": 2,
+    "sites_best_stale": 5,
     "sites_absent": 0,
     "scenarios": 311,
     "records": 349,
@@ -1288,7 +1288,7 @@
             "env": "cloud_frontier"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -1299,7 +1299,7 @@
             },
             "same_model": false,
             "band": "not_supported",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 87,
@@ -2364,7 +2364,7 @@
             "env": "eu_hosted"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -2375,7 +2375,7 @@
             },
             "same_model": false,
             "band": "not_supported",
-            "state": "current",
+            "state": "stale",
             "measured_on": {
               "provider": "gemini",
               "model": "gemini-3.6-flash",
@@ -4495,7 +4495,7 @@
             "env": "cloud_frontier"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -7933,7 +7933,7 @@
       "ready": 41,
       "usable_with_care": 14,
       "not_reliable_yet": 1,
-      "recheck_pending": 2,
+      "recheck_pending": 5,
       "models": [
         {
           "binding": {
@@ -7942,9 +7942,9 @@
             "env": "cloud_frontier"
           },
           "sites": 49,
-          "sites_current": 47,
+          "sites_current": 44,
           "sites_partial": 0,
-          "sites_stale": 2,
+          "sites_stale": 5,
           "runs": 1164,
           "passed": 1144,
           "reliability": 0.9828178694158075,
@@ -7963,9 +7963,9 @@
             "thinking_level": "low"
           },
           "sites": 47,
-          "sites_current": 45,
+          "sites_current": 42,
           "sites_partial": 0,
-          "sites_stale": 2,
+          "sites_stale": 5,
           "runs": 843,
           "passed": 838,
           "reliability": 0.9940688018979834,
@@ -8258,7 +8258,7 @@
             "env": "cloud_frontier"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "runs": 18,
           "passed": 18,
           "records": 2
@@ -8272,7 +8272,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 18,
           "passed": 18,
           "records": 2
@@ -8315,7 +8315,7 @@
             "thinking_level": "low"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 30,
           "passed": 30,
           "records": 2
@@ -8790,7 +8790,7 @@
       "ready": 36,
       "usable_with_care": 13,
       "not_reliable_yet": 3,
-      "recheck_pending": 20,
+      "recheck_pending": 22,
       "models": [
         {
           "binding": {
@@ -8839,9 +8839,9 @@
             "env": "cloud_frontier"
           },
           "sites": 49,
-          "sites_current": 47,
+          "sites_current": 44,
           "sites_partial": 0,
-          "sites_stale": 2,
+          "sites_stale": 5,
           "runs": 1305,
           "passed": 1230,
           "reliability": 0.9425287356321839,
@@ -9087,7 +9087,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 21,
           "passed": 21,
           "records": 3
@@ -9101,7 +9101,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 18,
           "passed": 18,
           "records": 3
@@ -11071,9 +11071,9 @@
         "env": "cloud_frontier"
       },
       "sites": 52,
-      "sites_current": 47,
+      "sites_current": 44,
       "sites_partial": 0,
-      "sites_stale": 5,
+      "sites_stale": 8,
       "runs": 1323,
       "passed": 1286,
       "reliability": 0.9720332577475435,
@@ -11153,9 +11153,9 @@
         "thinking_level": "low"
       },
       "sites": 47,
-      "sites_current": 45,
+      "sites_current": 42,
       "sites_partial": 0,
-      "sites_stale": 2,
+      "sites_stale": 5,
       "runs": 843,
       "passed": 838,
       "reliability": 0.9940688018979834,
@@ -11193,9 +11193,9 @@
         "env": "cloud_frontier"
       },
       "sites": 53,
-      "sites_current": 51,
+      "sites_current": 48,
       "sites_partial": 0,
-      "sites_stale": 2,
+      "sites_stale": 5,
       "runs": 1404,
       "passed": 1379,
       "reliability": 0.9821937321937322,
@@ -11353,9 +11353,9 @@
         "env": "cloud_frontier"
       },
       "sites": 53,
-      "sites_current": 51,
+      "sites_current": 48,
       "sites_partial": 0,
-      "sites_stale": 2,
+      "sites_stale": 5,
       "runs": 1665,
       "passed": 1547,
       "reliability": 0.9291291291291291,
@@ -17448,17 +17448,8 @@
         "proof",
         "market"
       ],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "openai_compatible",
-          "model": "openai/gpt-oss-120b",
-          "env": "cloud_frontier"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "account_first_touch_with_a_deal_in_flight",
@@ -17480,9 +17471,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 18,
           "passed": 18,
@@ -17495,7 +17486,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): account_first_touch_with_a_deal_in_flight, another_contacts_mail_stays_out_of_an_account_draft",
+          "stale_cause": {
+            "prompt_changed": [
+              "account_first_touch_with_a_deal_in_flight",
+              "another_contacts_mail_stays_out_of_an_account_draft"
+            ],
+            "grader_changed": [
+              "account_first_touch_with_a_deal_in_flight",
+              "another_contacts_mail_stays_out_of_an_account_draft"
+            ]
+          }
         },
         {
           "binding": {
@@ -17567,9 +17568,9 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 18,
           "passed": 18,
@@ -17582,7 +17583,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): account_first_touch_with_a_deal_in_flight, another_contacts_mail_stays_out_of_an_account_draft",
+          "stale_cause": {
+            "prompt_changed": [
+              "account_first_touch_with_a_deal_in_flight",
+              "another_contacts_mail_stays_out_of_an_account_draft"
+            ],
+            "grader_changed": [
+              "account_first_touch_with_a_deal_in_flight",
+              "another_contacts_mail_stays_out_of_an_account_draft"
+            ]
+          }
         },
         {
           "binding": {
@@ -17590,9 +17601,9 @@
             "model": "google/gemma-4-31b-it",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 18,
           "passed": 18,
@@ -17605,7 +17616,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): account_first_touch_with_a_deal_in_flight, another_contacts_mail_stays_out_of_an_account_draft",
+          "stale_cause": {
+            "prompt_changed": [
+              "account_first_touch_with_a_deal_in_flight",
+              "another_contacts_mail_stays_out_of_an_account_draft"
+            ],
+            "grader_changed": [
+              "account_first_touch_with_a_deal_in_flight",
+              "another_contacts_mail_stays_out_of_an_account_draft"
+            ]
+          }
         },
         {
           "binding": {
@@ -17768,9 +17789,9 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 21,
           "passed": 21,
@@ -17783,7 +17804,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): account_first_touch_with_a_deal_in_flight, another_contacts_mail_stays_out_of_an_account_draft",
+          "stale_cause": {
+            "prompt_changed": [
+              "account_first_touch_with_a_deal_in_flight",
+              "another_contacts_mail_stays_out_of_an_account_draft"
+            ],
+            "grader_changed": [
+              "account_first_touch_with_a_deal_in_flight",
+              "another_contacts_mail_stays_out_of_an_account_draft"
+            ]
+          }
         },
         {
           "binding": {
@@ -17829,17 +17860,8 @@
         "proof",
         "market"
       ],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "openai_compatible",
-          "model": "openai/gpt-oss-120b",
-          "env": "cloud_frontier"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "a_logged_internal_note_stays_out_of_the_draft",
@@ -17861,9 +17883,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 18,
           "passed": 18,
@@ -17876,7 +17898,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_logged_internal_note_stays_out_of_the_draft, contact_first_touch_in_german",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_logged_internal_note_stays_out_of_the_draft",
+              "contact_first_touch_in_german"
+            ],
+            "grader_changed": [
+              "a_logged_internal_note_stays_out_of_the_draft",
+              "contact_first_touch_in_german"
+            ]
+          }
         },
         {
           "binding": {
@@ -17954,9 +17986,9 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 18,
           "passed": 18,
@@ -17969,7 +18001,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_logged_internal_note_stays_out_of_the_draft, contact_first_touch_in_german",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_logged_internal_note_stays_out_of_the_draft",
+              "contact_first_touch_in_german"
+            ],
+            "grader_changed": [
+              "a_logged_internal_note_stays_out_of_the_draft",
+              "contact_first_touch_in_german"
+            ]
+          }
         },
         {
           "binding": {
@@ -17977,9 +18019,9 @@
             "model": "google/gemma-4-31b-it",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 18,
           "passed": 18,
@@ -17992,7 +18034,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_logged_internal_note_stays_out_of_the_draft, contact_first_touch_in_german",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_logged_internal_note_stays_out_of_the_draft",
+              "contact_first_touch_in_german"
+            ],
+            "grader_changed": [
+              "a_logged_internal_note_stays_out_of_the_draft",
+              "contact_first_touch_in_german"
+            ]
+          }
         },
         {
           "binding": {
@@ -18170,9 +18222,9 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 18,
           "passed": 18,
@@ -18185,7 +18237,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_logged_internal_note_stays_out_of_the_draft, contact_first_touch_in_german",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_logged_internal_note_stays_out_of_the_draft",
+              "contact_first_touch_in_german"
+            ],
+            "grader_changed": [
+              "a_logged_internal_note_stays_out_of_the_draft",
+              "contact_first_touch_in_german"
+            ]
+          }
         },
         {
           "binding": {
@@ -19000,18 +19062,8 @@
         "proof",
         "market"
       ],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.6-flash",
-          "env": "cloud_frontier",
-          "thinking_level": "low"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "german_thread_with_an_introduction_in_it",
@@ -19051,9 +19103,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 5,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 30,
           "passed": 30,
@@ -19066,7 +19118,23 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask, selected_old_request_for_materials",
+          "stale_cause": {
+            "prompt_changed": [
+              "german_thread_with_an_introduction_in_it",
+              "reply_to_pricing_question",
+              "replying_to_a_thread_eight_months_old",
+              "rich_german_thread_with_a_long_ask",
+              "selected_old_request_for_materials"
+            ],
+            "grader_changed": [
+              "german_thread_with_an_introduction_in_it",
+              "reply_to_pricing_question",
+              "replying_to_a_thread_eight_months_old",
+              "rich_german_thread_with_a_long_ask",
+              "selected_old_request_for_materials"
+            ]
+          }
         },
         {
           "binding": {
@@ -19160,9 +19228,9 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 5,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 30,
           "passed": 30,
@@ -19175,7 +19243,23 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask, selected_old_request_for_materials",
+          "stale_cause": {
+            "prompt_changed": [
+              "german_thread_with_an_introduction_in_it",
+              "reply_to_pricing_question",
+              "replying_to_a_thread_eight_months_old",
+              "rich_german_thread_with_a_long_ask",
+              "selected_old_request_for_materials"
+            ],
+            "grader_changed": [
+              "german_thread_with_an_introduction_in_it",
+              "reply_to_pricing_question",
+              "replying_to_a_thread_eight_months_old",
+              "rich_german_thread_with_a_long_ask",
+              "selected_old_request_for_materials"
+            ]
+          }
         },
         {
           "binding": {
@@ -19183,9 +19267,9 @@
             "model": "google/gemma-4-31b-it",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 5,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 30,
           "passed": 30,
@@ -19198,7 +19282,23 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask, selected_old_request_for_materials",
+          "stale_cause": {
+            "prompt_changed": [
+              "german_thread_with_an_introduction_in_it",
+              "reply_to_pricing_question",
+              "replying_to_a_thread_eight_months_old",
+              "rich_german_thread_with_a_long_ask",
+              "selected_old_request_for_materials"
+            ],
+            "grader_changed": [
+              "german_thread_with_an_introduction_in_it",
+              "reply_to_pricing_question",
+              "replying_to_a_thread_eight_months_old",
+              "rich_german_thread_with_a_long_ask",
+              "selected_old_request_for_materials"
+            ]
+          }
         },
         {
           "binding": {
@@ -19416,9 +19516,9 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 5,
+          "scenarios_measured": 0,
           "scenarios_total": 5,
           "runs": 39,
           "passed": 39,
@@ -19431,7 +19531,23 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "5 scenarios it scored have changed since (the prompt this build sends and how a run is graded): german_thread_with_an_introduction_in_it, reply_to_pricing_question, replying_to_a_thread_eight_months_old, rich_german_thread_with_a_long_ask, selected_old_request_for_materials",
+          "stale_cause": {
+            "prompt_changed": [
+              "german_thread_with_an_introduction_in_it",
+              "reply_to_pricing_question",
+              "replying_to_a_thread_eight_months_old",
+              "rich_german_thread_with_a_long_ask",
+              "selected_old_request_for_materials"
+            ],
+            "grader_changed": [
+              "german_thread_with_an_introduction_in_it",
+              "reply_to_pricing_question",
+              "replying_to_a_thread_eight_months_old",
+              "rich_german_thread_with_a_long_ask",
+              "selected_old_request_for_materials"
+            ]
+          }
         },
         {
           "binding": {

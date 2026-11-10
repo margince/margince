@@ -78,6 +78,32 @@ func TestTheOverviewWritesCompoundValuesAsAnOperatorWould(t *testing.T) {
 	}
 }
 
+// An optional object declares its absence as a nil pointer, which JSON writes
+// as null. The overview lists that as no value and no default, never as the
+// text "null". The templates still write null, which a source can read back.
+func TestANilObjectIsNoValueNotTheTextNull(t *testing.T) {
+	contact := config.Define(config.Spec[*overviewWindow]{
+		Key: "overview.contact", Env: "X_OVERVIEW_CONTACT", Type: config.Struct[*overviewWindow](),
+		Default: config.Some[*overviewWindow](nil), Doc: "d",
+	})
+	unsetCfg, err := load(t, fixture{}, contact)
+	if err != nil {
+		t.Fatal(err)
+	}
+	setCfg, err := load(t, fixture{env: []string{`X_OVERVIEW_CONTACT={"hours":3}`}}, contact)
+	if err != nil {
+		t.Fatal(err)
+	}
+	unset, set := unsetCfg.Entries()[0], setCfg.Entries()[0]
+	if unset.Value != nil || unset.Default != nil || unset.Origin.Source != config.SourceUnset {
+		t.Errorf("unset object: value %v default %v from %s, want no value, no default, unset",
+			deref(unset.Value), deref(unset.Default), unset.Origin.Source)
+	}
+	if set.Value == nil || *set.Value != `{"hours":3}` || set.Default != nil || set.Origin.Source != config.SourceEnv {
+		t.Errorf("set object: value %v default %v from %s", deref(set.Value), deref(set.Default), set.Origin.Source)
+	}
+}
+
 // A setting this program does not load names its declaration only: no value
 // and no source, since another program's sources are not visible here.
 func TestAnUnreadSettingHasNoValueAndNoSource(t *testing.T) {

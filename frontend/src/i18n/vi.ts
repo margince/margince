@@ -1132,6 +1132,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.draftOpen": "Bản nháp {revision} chưa được công bố",
   "reporting.draftHidden":
     "Ai đọc báo cáo vẫn thấy bản đã công bố. Hãy xem trước bản nháp rồi mới công bố.",
+  "reporting.draftUnpublished":
+    "Báo cáo này chưa công bố nội dung nào, nên bạn đang xem bản nháp. Hãy công bố để các biểu đồ này trở thành báo cáo.",
   "reporting.draftPreviewing":
     "Bạn đang xem bản nháp. Ai đọc báo cáo vẫn thấy bản đã công bố.",
   "reporting.previewDraft": "Xem trước bản nháp",
@@ -2209,7 +2211,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.plan.period": "Kế hoạch hiện tại · tuần từ {date}",
   "brief.coverage.retry": "Làm mới bản tin",
   "brief.reply.owed": "Khách hàng đang chờ bạn trả lời",
-  "brief.changes.superseded": "Đã thay đổi sau lần cập nhật này",
+  "brief.changes.superseded": "Đã được thay bằng một thay đổi sau",
   "brief.changes.undone": "Đã hoàn tác",
   "brief.updates.title": "Cập nhật",
   "brief.task.undated": "Chưa có hạn",
@@ -7538,6 +7540,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.scheduleGoesOut": "Gửi lúc {when}",
   "compose.willGoOut": "Gửi lúc {when}",
   "compose.scheduleAfternoon": "Chiều mai",
+  "compose.draftLanguage": "Ngôn ngữ của bản nháp",
   "compose.rewrite": "Viết lại",
   "compose.rewriteShorter": "Ngắn hơn",
   "compose.rewriteShorterAsk": "Giữ nguyên ý, dùng ít chữ hơn.",
@@ -21104,6 +21107,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "{count} lần đủ điều kiện đầu tiên chưa ghi nhận người phụ trách. Số của thành viên chỉ tính sự kiện đã phân bổ.",
   "analytics.team.qualificationUnattributed_other":
     "{count} lần đủ điều kiện đầu tiên chưa ghi nhận người phụ trách. Số của thành viên chỉ tính sự kiện đã phân bổ.",
+  "brief.done.changeCount_one": "{count} thay đổi",
+  "brief.done.changeCount_other": "{count} thay đổi",
+  "brief.done.steps": "Các thay đổi trên giao dịch này, mới nhất trước",
   "brief.done.title": "Margince đã làm giúp bạn",
   "brief.done.waiting_one": "{count} giao dịch chờ bạn xem xét",
   "brief.done.waiting_other": "{count} giao dịch chờ bạn xem xét",
@@ -21118,7 +21124,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.done.viewChanges_one": "Xem {count} thay đổi",
   "brief.done.viewChanges_other": "Xem {count} thay đổi",
   "brief.done.showNew": "Hiện các thay đổi mới",
-  "brief.done.history": "Xem lịch sử thay đổi",
+  "brief.done.history": "Lịch sử thay đổi",
   "brief.done.dealsLabel": "Các giao dịch Margince đã thay đổi",
   "brief.done.noReason": "Không có lý do",
   "brief.done.markedLost": "Đã đánh dấu là mất",

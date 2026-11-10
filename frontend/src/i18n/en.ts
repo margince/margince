@@ -1103,6 +1103,8 @@ export const en = {
   "reporting.draftOpen": "Draft {revision} is not published yet",
   "reporting.draftHidden":
     "Readers still see the published report. Preview the draft before you publish it.",
+  "reporting.draftUnpublished":
+    "Nothing on this report is published yet, so you see its draft. Publish it to make these charts the report.",
   "reporting.draftPreviewing":
     "You are looking at the draft. Readers still see the published report.",
   "reporting.previewDraft": "Preview draft",
@@ -2178,7 +2180,7 @@ export const en = {
   "brief.plan.period": "Current plan · week of {date}",
   "brief.coverage.retry": "Refresh brief",
   "brief.reply.owed": "Customer awaiting your reply",
-  "brief.changes.superseded": "Changed since this update",
+  "brief.changes.superseded": "Replaced by a later change",
   "brief.changes.undone": "Undone",
   "brief.updates.title": "Updates",
   "brief.task.undated": "No due date",
@@ -7739,6 +7741,7 @@ export const en = {
   "compose.scheduleGoesOut": "Sends {when}",
   "compose.willGoOut": "Sends {when}",
   "compose.scheduleAfternoon": "Tomorrow afternoon",
+  "compose.draftLanguage": "Draft language",
   "compose.rewrite": "Rewrite",
   "compose.rewriteShorter": "Shorter",
   "compose.rewriteShorterAsk": "Keep the meaning and use fewer words.",
@@ -21413,6 +21416,9 @@ export const en = {
     "{count} first qualification has no recorded owner. Member counts cover attributed events only.",
   "analytics.team.qualificationUnattributed_other":
     "{count} first qualifications have no recorded owner. Member counts cover attributed events only.",
+  "brief.done.changeCount_one": "{count} change",
+  "brief.done.changeCount_other": "{count} changes",
+  "brief.done.steps": "Changes on this deal, newest first",
   "brief.done.title": "Done for you",
   "brief.done.waiting_one": "{count} deal waits for your review",
   "brief.done.waiting_other": "{count} deals wait for your review",
@@ -21427,7 +21433,7 @@ export const en = {
   "brief.done.viewChanges_one": "View {count} change",
   "brief.done.viewChanges_other": "View {count} changes",
   "brief.done.showNew": "Show new changes",
-  "brief.done.history": "View change history",
+  "brief.done.history": "Change history",
   "brief.done.dealsLabel": "Deals Margince changed",
   "brief.done.noReason": "Reason unavailable",
   "brief.done.markedLost": "Marked lost",

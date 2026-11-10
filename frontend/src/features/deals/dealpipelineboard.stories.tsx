@@ -33,6 +33,7 @@ function deal(extra: Partial<BoardDeal> & Pick<BoardDeal, "id" | "name">) {
     ).toISOString(),
     measuredAt: Date.parse("2026-09-15T12:00:00Z"),
     owner: { id: "u-1", name: "Dana Albers" },
+    probabilityPct: 40,
     ...extra,
   } satisfies BoardDeal;
 }
@@ -57,6 +58,7 @@ const proposal: BoardMoneyColumn = {
       companyId: "o-2",
       valueMinor: 4_800_000,
       closeDate: "2027-03-14",
+      probabilityPct: 75,
       owner: { id: "u-2", name: "Jonas Ritter" },
       lastEmail: lastEmailAgo(5 * 60 * 60 * 1000, "outbound"),
     }),
