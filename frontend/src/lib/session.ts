@@ -62,7 +62,8 @@ export function useMe(enabled = true) {
       client.removeQueries({
         predicate: (entry) =>
           entry.queryKey.includes(previous) ||
-          entry.queryKey[0] === "reader-rendering",
+          entry.queryKey[0] === "reader-rendering" ||
+          entry.queryKey[0] === "scheduling-profile",
       });
     previousScope.current = scope;
   }, [client, scope]);

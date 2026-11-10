@@ -20,6 +20,7 @@ import {
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
@@ -34,6 +35,7 @@ const legacy: Profile = bookingProfile;
 function mount(profile: Profile, overrides: RouteMap = {}) {
   const writes: unknown[] = [];
   installFetchStub({
+    "GET /me": meRoute({ activity: ["read", "create"] }),
     "GET /connectors": () => jsonResponse({ data: [bookingConnection] }),
     "GET /me/working-hours": () => jsonResponse(bookingHours),
     "GET /scheduling/profile": () => jsonResponse(profile),

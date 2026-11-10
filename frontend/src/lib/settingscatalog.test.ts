@@ -195,7 +195,8 @@ describe("what each page lets a reader change", () => {
   const DECLARED_CHANGES: Record<SettingsPageId, string> = {
     // The reader's own rows, with no grant between them and the control.
     account: "always",
-    meetings: "always",
+    // A booking profile belongs to a seat that may book.
+    meetings: "all(full-seat, any(any(activity:create)))",
     agents: "always",
     notifications: "always",
     connections: "always",
@@ -376,11 +377,17 @@ describe("who may open what", () => {
     expect(visibleIds(nobody)).toEqual([
       "account",
       "notifications",
-      "meetings",
       "voice",
       "agents",
       "connections",
     ]);
+  });
+
+  // The server answers GET /scheduling/profile only with activity:create, so
+  // Meetings is the one personal page a grant opens.
+  it("opens meetings only to a seat that may book", () => {
+    expect(visibleIds(readsOnly("activity"))).not.toContain("meetings");
+    expect(visibleIds(grantOf("activity", ["create"]))).toContain("meetings");
   });
 
   // Members and Teams used to be on that list. `GET /users` still answers any
