@@ -85,7 +85,7 @@ func (in DeclareNoticeInput) validate() error {
 	}
 	switch {
 	case in.LegalEntityID.IsZero():
-		return &ValidationError{Field: fieldLegalEntityID, Reason: "name the legal entity that collected the addresses"}
+		return &ValidationError{Field: exchangeEntityField, Reason: "name the legal entity that collected the addresses"}
 	case in.EffectiveFrom.IsZero() || in.EffectiveFrom.After(in.Now):
 		return &ValidationError{Field: "effective_from", Reason: "give the day the notice was first given, no later than today"}
 	case in.EffectiveUntil != nil && !in.EffectiveUntil.After(in.EffectiveFrom):
@@ -154,7 +154,7 @@ func (s *Store) DeclareCustomerNotice(ctx context.Context, in DeclareNoticeInput
 			return err
 		}
 		auditID, err := storekit.AuditEvent(ctx, tx, "create", customerNoticeEntity, id, map[string]any{
-			fieldLegalEntityID: in.LegalEntityID.String(), "effective_from": in.EffectiveFrom,
+			exchangeEntityField: in.LegalEntityID.String(), "effective_from": in.EffectiveFrom,
 			"effective_until": in.EffectiveUntil, "evidence_dated_at": in.EvidenceDatedAt,
 			"purposes": len(notice.PurposeIDs),
 		})
@@ -179,7 +179,7 @@ func checkNoticeReferences(ctx context.Context, tx pgx.Tx, in DeclareNoticeInput
 		return fmt.Errorf("consent: reading the legal entity: %w", err)
 	}
 	if !live {
-		return &ValidationError{Field: fieldLegalEntityID, Reason: "name a legal entity that is not archived"}
+		return &ValidationError{Field: exchangeEntityField, Reason: "name a legal entity that is not archived"}
 	}
 	var marketing int
 	if err := tx.QueryRow(ctx, `

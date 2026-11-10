@@ -2672,7 +2672,8 @@ export const en = {
   "history.field.product_id": "Product",
   "history.field.legal_entity_id": "Sending company",
   "history.field.about_deal": "Deal it was about",
-  "history.field.qualifying_event": "Qualifying event",
+  "history.field.qualifying_event": "Recorded exchange",
+  "history.value.exchange.requested": "Asked to be contacted",
   "history.field.qualifying_event_retracted": "Recorded exchange withdrawn",
   "history.field.acquisition_request_retracted":
     "Acquisition request withdrawn",
@@ -7860,7 +7861,7 @@ export const en = {
   "compose.sendMessageBody":
     "The message is sent immediately. This cannot be undone.",
   "directSend.open": "Send with a recorded exception",
-  "directSend.sent": "Sent as a recorded exception.",
+  "directSend.queued": "Queued as a recorded exception.",
   "directSend.opening": "Opening…",
   "directSend.alreadySettled":
     "This has already been decided. Open the review for the outcome.",
@@ -17653,9 +17654,7 @@ export const en = {
     "No marketing permission recorded",
   "contact.consent.fact.notAllowed": "Not allowed for this purpose",
   "contact.consent.fact.nothingRecorded": "Nothing recorded yet",
-  "contact.consent.allowedWord": "Allowed",
-  "contact.consent.blockedWord": "Blocked",
-  "contact.consent.unknownWord": "Unknown",
+  "contact.consent.fact.purposeSupported": "Supported for this purpose",
 
   "contact.moment.rule.privacy_notice_due": "Privacy notice owed",
   "contact.moment.rule.meeting_prep": "Meeting soon",

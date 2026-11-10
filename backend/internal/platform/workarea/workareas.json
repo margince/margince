@@ -693,6 +693,7 @@
     "recordConversationClaim": "business",
     "recordForecastCall": "business",
     "recordIntroduction": "business",
+    "recordLeadQualifyingEvent": "compliance",
     "recordQualifyingEvent": "compliance",
     "recordSalesDecision": "business",
     "recordSalesDecisionOutcome": "business",
@@ -760,6 +761,7 @@
     "resumeDealRoom": "business",
     "retireCustomField": "admin_settings",
     "retractAcquisitionRequest": "compliance",
+    "retractLeadQualifyingEvent": "compliance",
     "retractQualifyingEvent": "compliance",
     "retryAutomationRun": "admin_settings",
     "retryReportingExecution": "business",
@@ -2364,6 +2366,9 @@
     "record_introduction": [
       "business"
     ],
+    "record_lead_qualifying_event": [
+      "compliance"
+    ],
     "record_qualifying_event": [
       "compliance"
     ],
@@ -2539,6 +2544,9 @@
       "admin_settings"
     ],
     "retract_acquisition_request": [
+      "compliance"
+    ],
+    "retract_lead_qualifying_event": [
       "compliance"
     ],
     "retract_qualifying_event": [

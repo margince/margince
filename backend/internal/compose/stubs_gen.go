@@ -771,7 +771,7 @@ func (stubs) OidcSignInCallback(w nethttp.ResponseWriter, r *nethttp.Request, pr
 	httperr.NotImplemented(w, r, "OidcSignInCallback")
 }
 
-func (stubs) StartOidcSignIn(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.StartOidcSignInParamsProvider) {
+func (stubs) StartOidcSignIn(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.StartOidcSignInParamsProvider, params crmcontracts.StartOidcSignInParams) {
 	httperr.NotImplemented(w, r, "StartOidcSignIn")
 }
 
@@ -2577,6 +2577,14 @@ func (stubs) GetLead(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontrac
 
 func (stubs) UpdateLead(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateLeadParams) {
 	httperr.NotImplemented(w, r, "UpdateLead")
+}
+
+func (stubs) RecordLeadQualifyingEvent(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RecordLeadQualifyingEvent")
+}
+
+func (stubs) RetractLeadQualifyingEvent(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, eventId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "RetractLeadQualifyingEvent")
 }
 
 func (stubs) ListLeadStops(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

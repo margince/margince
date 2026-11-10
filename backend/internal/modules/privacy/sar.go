@@ -436,12 +436,9 @@ func subjectReach(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) ([]st
 	// promotions loses the lead-keyed proof A6 leaves on the lead.
 	// A lead never promoted but holding one of the subject's addresses is
 	// theirs too. The Leads section exports it, so its history comes with it.
-	rows, err := tx.Query(ctx, `
-		SELECT id FROM lead
-		 WHERE promoted_contact_id = $1
-		    OR promoted_contact_id IN (SELECT id FROM contact WHERE merged_into_id = $1)
-		    OR email = ANY($2::text[])`,
-		contactID.UUID, loweredAddresses(emails))
+	args := []any{contactID.UUID, loweredAddresses(emails)}
+	bind := strings.Split(storekit.Placeholders(args), ",")
+	rows, err := tx.Query(ctx, `SELECT id FROM lead WHERE `+leadTwinOf(bind[0], bind[1]), args...)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("reading the subject's lead twins for the export: %w", err)
 	}

@@ -13,7 +13,6 @@ To send an email to a contact in Margince, open the contact's page and choose **
 "No address and no thread to reply to." means the contact has no address to write to. Also called: write an email, email a customer, message a client.
 
 ### Where can I start writing an email?
-To start an email in Margince, use any of these:
 - the contact header's **Email** button, or an email address on a record, a card or the contacts list. The address is the recipient, and the email is filed under the record you are on. Without a connected mailbox, the address opens your own mail app.
 - **Write email** or **Draft reply** in a record's **Email** panel
 - **Send email** on a deal
@@ -21,7 +20,6 @@ To start an email in Margince, use any of these:
 - **Reply** on any message in a timeline
 - **Write email** on a call, note, meeting or task in a timeline, when it names one contact with an email address. A task Margince filed itself offers none.
 
-Every one of these opens the same composer, so the fields, checks and send times are the same from each.
 From a call, note, meeting or task, it opens a new email that names the entry as "About: {subject}", not a reply.
 A company page opens the composer with the company's contacts to choose from. With none on file it says "No contacts at this company yet. Write the message manually, or add a contact first." Also called: compose, new message, reply to an email.
 
@@ -200,10 +198,11 @@ When Margince will not send an email to a contact, the warning bar above **Send*
 - **This message needs one more detail**: for "Choose the deal for this follow-up.", pick it in **Deal this follow-up is about**. You can also write from the deal's page. When the record already shows another reason, the bar offers **Use "…" instead**. It switches the reason and checks again; it does not send.
 - **Permission needed for this message**: the required permission is not on record. Record the recipient's consent or the facts that support an allowed customer route. A staff exception cannot replace them.
 - **No recorded reason to contact this recipient**: Margince first uses a request or meeting it already holds. Where a fact is missing, press **Record what happened**. Say what was agreed and when. This records the exchange for that recipient and sending company, and for a deal when one is picked. It does not send the email, record marketing consent or make a standing exception. Margince checks again; any stop that remains still blocks the message.
-- **Send with a recorded exception**: where the check allows it and you hold the exception right, this queues only this message. Your name, reason and the message are kept in a record that cannot be edited. It grants no consent or permission for later mail. The composer closes once the email is queued.
+- **Send with a recorded exception**: where the check allows it and you hold the exception right, this queues only this message. Your name, reason and the message are kept in a record that cannot be edited. It grants no consent or permission for later mail. The composer closes once the email is queued. A retry checks current support and stops, without asking again for facts that still hold.
 - **Message cannot be sent**: a reason nobody can lift, such as "The recipient objected to marketing", or an address that does not take mail.
 - A mailbox connected only to read mail: press **Reconnect your mailbox** and allow sending.
-Also called: email blocked, cannot email customer, send refused.
+
+The lead stays a lead when you record an exchange. When you make it a contact later, that exchange keeps its original addresses and sending company. A standing exception covers its named sending company and purpose until it is taken back. It records a staff decision and grants no consent. A recorded request is a fact that Margince checks for the message you are writing. A one-message exception covers only the message you read and approved.
 
 ## What a send refuses, and what it only warns about
 

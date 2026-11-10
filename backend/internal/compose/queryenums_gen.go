@@ -103,6 +103,9 @@ var queryEnumTable = map[string][]queryEnum{
 	"GET /v1/attachments/{id}/extraction": {
 		{Name: "question", Values: []string{"deal_facts", "chat_capture"}, Array: false, Explode: true},
 	},
+	"GET /v1/auth/oidc/{provider}/start": {
+		{Name: "return", Values: []string{"consent"}, Array: false, Explode: true},
+	},
 	"GET /v1/automations/{id}/runs": {
 		{Name: "outcome", Values: []string{"fired", "failed", "blocked", "skipped", "queued_for_approval"}, Array: false, Explode: true},
 	},

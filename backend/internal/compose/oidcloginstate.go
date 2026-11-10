@@ -34,6 +34,8 @@ type loginState struct {
 	ClientID     string
 	Nonce        string
 	CodeVerifier string
+	// ReturnToConsent lands the sign-in on the consent screen.
+	ReturnToConsent bool
 }
 
 // loginStateTyp domain-separates this signer's tokens from
@@ -56,6 +58,7 @@ type wireLoginState struct {
 	CID string `json:"cid"`
 	N   string `json:"n"`
 	CV  string `json:"cv"`
+	RC  bool   `json:"rc,omitempty"`
 	Exp int64  `json:"exp"`
 }
 
@@ -71,7 +74,7 @@ func newLoginStateSigner(key []byte) loginStateSigner {
 func (s loginStateSigner) sign(st loginState, exp time.Time) string {
 	payload, _ := json.Marshal(wireLoginState{ //nolint:errchkjson // string/int-only struct never errors
 		Typ: loginStateTyp, P: st.Provider, CID: st.ClientID,
-		N: st.Nonce, CV: st.CodeVerifier, Exp: exp.Unix(),
+		N: st.Nonce, CV: st.CodeVerifier, RC: st.ReturnToConsent, Exp: exp.Unix(),
 	})
 	enc := base64.RawURLEncoding.EncodeToString(payload)
 	return enc + "." + base64.RawURLEncoding.EncodeToString(s.mac(enc))
@@ -103,7 +106,7 @@ func (s loginStateSigner) verify(token string, now time.Time) (loginState, error
 	if now.Unix() > w.Exp {
 		return loginState{}, errors.New("oidc login state: expired")
 	}
-	return loginState{Provider: w.P, ClientID: w.CID, Nonce: w.N, CodeVerifier: w.CV}, nil
+	return loginState{Provider: w.P, ClientID: w.CID, Nonce: w.N, CodeVerifier: w.CV, ReturnToConsent: w.RC}, nil
 }
 
 func (s loginStateSigner) mac(enc string) []byte {
