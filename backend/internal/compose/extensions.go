@@ -36,17 +36,12 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	if err := validateVerbSet(verbs); err != nil {
 		return err
 	}
-	if err := preflightCompanyTypes(exts); err != nil {
-		return err
-	}
-	if err := preflightRecordKinds(exts); err != nil {
-		return err
-	}
-	if err := preflightReports(exts); err != nil {
-		return err
-	}
-	if err := preflightSignalTypes(exts); err != nil {
-		return err
+	for _, preflight := range []func([]extension.Extension) error{
+		preflightCompanyTypes, preflightRecordKinds, preflightReports, preflightSignalTypes,
+	} {
+		if err := preflight(exts); err != nil {
+			return err
+		}
 	}
 	if err := preflightEntryObjects(exts, verbs); err != nil {
 		return err
