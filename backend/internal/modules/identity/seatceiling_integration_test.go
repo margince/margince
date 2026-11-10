@@ -73,7 +73,6 @@ func refusedLicence() SeatCeiling { return func() (int, bool) { return 0, false 
 
 // A refused licence lifts the ceiling rather than holding it, as the licence
 // screen says: "Everything keeps working, uncapped, until it is replaced."
-//
 // Keeping the last valid ceiling, or admitting no new seat, are the other
 // readings. The policy is an open product decision, so choosing either one
 // is an edit to this test rather than a change nothing notices.
