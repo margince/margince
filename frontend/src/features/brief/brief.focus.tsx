@@ -4,6 +4,7 @@
 // The focus panel's body: the day's rows as cards, the one in hand opened.
 // The panel's head, states and foot are in brief.feed.tsx.
 
+import { ArrowRight } from "lucide-react";
 import { useRef } from "react";
 import {
   TaskNextSteps,
@@ -72,8 +73,10 @@ export function Triage({
   // refused draft still draws its AI button, with the reason under it.
   const target = task?.email_target;
   const drafts = Boolean(target && (writeTo || target.refusal));
+  // Next steps past a task without answering it; past the last it wraps.
+  const next = rows.length > 1 ? rows[(at + 1) % rows.length] : undefined;
   const cardVerbs =
-    onContext || task || taskPending ? (
+    onContext || task || taskPending || next ? (
       <>
         {/* The drafted mail stands beside Done, ahead of the way to read
             more: it is the task's next step, the details are about it. */}
@@ -87,6 +90,18 @@ export function Triage({
             onClick={() => onContext(lead)}
           >
             {t("brief.focus.context")}
+          </Button>
+        )}
+        {next && (
+          <Button
+            variant="ghost"
+            className="brief-triage-next"
+            onClick={() => {
+              pressed.current = true;
+              onChoose(next);
+            }}
+          >
+            {t("brief.focus.next")} <ArrowRight aria-hidden />
           </Button>
         )}
       </>
