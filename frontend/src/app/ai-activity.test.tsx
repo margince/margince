@@ -592,3 +592,57 @@ describe("the live total", () => {
     expect(result.current.working).toBe(true);
   });
 });
+
+// The exact answer an intermediary sends in place of the feed: a bodiless 202.
+function challenge(): Response {
+  return new Response(null, {
+    status: 202,
+    headers: {
+      "content-type": "text/html; charset=UTF-8",
+      "x-amzn-waf-action": "challenge",
+    },
+  });
+}
+
+// A poll's answer reaches the hook a few timer turns after the request leaves.
+async function settle(): Promise<void> {
+  await advance(1_000);
+}
+
+describe("a feed an intermediary challenged", () => {
+  it("reports an absent read, then the feed once it answers", async () => {
+    const answers = [challenge, () => jsonResponse(activity([A_RUN]))];
+    const { result, reads } = mount(() => (answers.shift() ?? challenge)());
+
+    await settle();
+    expect(result.current.answered).toBe(false);
+    expect(result.current.working).toBe(false);
+    // Not retried behind the reader's back, so a standing challenge is asked once.
+    expect(reads).toHaveLength(1);
+
+    await advance(30_000);
+
+    expect(reads).toHaveLength(2);
+    expect(result.current.answered).toBe(true);
+    expect(result.current.working).toBe(true);
+  });
+
+  it("keeps the last answer through a challenged poll", async () => {
+    const answers = [
+      () => jsonResponse(activity([A_RUN])),
+      challenge,
+      () => jsonResponse(activity([])),
+    ];
+    const { result, reads } = mount(() => (answers.shift() ?? challenge)());
+
+    await settle();
+    await advance(POLL_LIVE_MS);
+    expect(reads).toHaveLength(2);
+    expect(result.current.running).toEqual([A_RUN]);
+
+    await advance(POLL_LIVE_MS);
+
+    expect(reads).toHaveLength(3);
+    expect(result.current.working).toBe(false);
+  });
+});
