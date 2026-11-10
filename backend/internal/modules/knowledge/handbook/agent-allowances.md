@@ -72,8 +72,10 @@ total and stop.
 
 When an agent is stopped, it is told which limit stopped it, the limit and when
 the window resets. Over the API the answer is a `429` with a `Retry-After`
-header. The per-minute limits of an MCP connection are separate, short pauses,
-the same for every role. If Margince cannot read the count for a moment, the
+header. The per-minute limits of an MCP connection are separate, short pauses.
+An agent of a user who holds the Admin role has no per-minute limit on tool
+calls; every other role has one, and the settings show it per role. If Margince
+cannot read the count for a moment, the
 agent is refused with a `503` and asked to try again in a few seconds. That is
 no limit, and the agent has used nothing more.
 
