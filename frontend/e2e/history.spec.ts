@@ -34,7 +34,7 @@ const companies = (url: string) =>
 
 test("a filtered list is what Back returns to", async ({ page }) => {
   await page.goto("/#/companies");
-  await page.getByRole("searchbox", { name: "Suchen" }).fill("brandt");
+  await page.getByRole("combobox", { name: "Suchen" }).fill("brandt");
 
   // The request is the proof the dial reached the server; the address is the
   // proof it can be returned to.
@@ -60,7 +60,7 @@ test("a filtered list is what Back returns to", async ({ page }) => {
   // a filter over a list that never asked for one, or a filtered list at an
   // address nobody can share.
   await expect(page).toHaveURL(/[?&]q=brandt/);
-  await expect(page.getByRole("searchbox", { name: "Suchen" })).toHaveValue(
+  await expect(page.getByRole("combobox", { name: "Suchen" })).toHaveValue(
     "brandt",
   );
 });
@@ -74,7 +74,7 @@ test("a link opens the list it was copied from", async ({ page }) => {
   await page.goto("/#/companies?q=brandt&sort=name");
 
   expect(new URL((await asked).url()).searchParams.get("sort")).toBe("name");
-  await expect(page.getByRole("searchbox", { name: "Suchen" })).toHaveValue(
+  await expect(page.getByRole("combobox", { name: "Suchen" })).toHaveValue(
     "brandt",
   );
 });
@@ -86,12 +86,12 @@ test("turning several dials does not bury the way out", async ({ page }) => {
   await page.goto("/#/home");
   await page.goto("/#/companies");
 
-  await page.getByRole("searchbox", { name: "Suchen" }).fill("brandt");
+  await page.getByRole("combobox", { name: "Suchen" }).fill("brandt");
   await page.waitForRequest(
     (request) =>
       companies(request.url()) && searchOf(request.url()) === "brandt",
   );
-  await page.getByRole("searchbox", { name: "Suchen" }).fill("brandt gmbh");
+  await page.getByRole("combobox", { name: "Suchen" }).fill("brandt gmbh");
   await page.waitForRequest(
     (request) =>
       companies(request.url()) && searchOf(request.url()) === "brandt gmbh",
@@ -103,7 +103,7 @@ test("turning several dials does not bury the way out", async ({ page }) => {
 
 test("Forward returns to the list Back left", async ({ page }) => {
   await page.goto("/#/companies");
-  await page.getByRole("searchbox", { name: "Suchen" }).fill("brandt");
+  await page.getByRole("combobox", { name: "Suchen" }).fill("brandt");
   await page.waitForRequest(
     (request) =>
       companies(request.url()) && searchOf(request.url()) === "brandt",
@@ -128,14 +128,14 @@ test("the address survives a reload, so a filtered list can be refreshed", async
   page,
 }) => {
   await page.goto("/#/companies?q=brandt");
-  await expect(page.getByRole("searchbox", { name: "Suchen" })).toHaveValue(
+  await expect(page.getByRole("combobox", { name: "Suchen" })).toHaveValue(
     "brandt",
   );
 
   await page.reload();
 
   await expect(page).toHaveURL(/[?&]q=brandt/);
-  await expect(page.getByRole("searchbox", { name: "Suchen" })).toHaveValue(
+  await expect(page.getByRole("combobox", { name: "Suchen" })).toHaveValue(
     "brandt",
   );
 });

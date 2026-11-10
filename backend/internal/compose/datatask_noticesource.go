@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 const (
@@ -25,7 +26,7 @@ const (
 func noticeSourceDataTask(now func() time.Time) datatask.Task {
 	return datatask.Task{
 		ID: "core/1793514621_notice_source_assessment", Version: 1,
-		Title: "Reviewing unverified notice sources", Requires: []string{"core/1793514621"},
+		Title: systemtext.Literal("datatask.title.core.1793514621_notice_source_assessment"), Requires: []string{"core/1793514621"},
 		Steps: []datatask.Step{{
 			Name: "review_unverified_sources", Limit: 200, MinLimit: 10, EmptyWhenDone: true,
 			Audit: datatask.AuditPolicy{PerRecord: true}, Estimate: estimateNoticeSources,

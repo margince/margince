@@ -578,20 +578,26 @@ func TestTraceSurvivesRequestCancellation(t *testing.T) {
 	defer cancel()
 	fcs := &ctxCheckingCallStore{}
 	r := assembleRouter(
-		map[Tier]model.Client{TierCheapCloud: cancelingClient{cancel: cancel}},
+		map[Tier]model.Client{
+			TierCheapCloud: cancelingClient{cancel: cancel},
+			TierPremium:    stubClient{resp: model.Response{Text: "must not be served"}},
+		},
 		nil, ProfileCloudFrontier, stubMeter{}, unlimitedBudget{}, fcs,
 		map[Tier]routeMeta{TierCheapCloud: {provider: "openai", model: "gpt-x"}},
 		false, nil,
 	)
 	r.now = func() time.Time { return time.Unix(0, 0) }
-	if _, _, err := r.serveCompletion(ctx, TaskColdStart, []Tier{TierCheapCloud}, model.Request{}); err == nil {
-		t.Fatal("expected the canceled call to fail")
+	if _, _, err := r.serveCompletion(ctx, TaskColdStart, []Tier{TierCheapCloud, TierPremium}, model.Request{}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("canceled call = %v, want cancellation without fallback", err)
 	}
 	if len(fcs.recorded) != 1 {
 		t.Fatalf("canceled call not traced: recorded %d rows", len(fcs.recorded))
 	}
 	if fcs.ctxErr != nil {
 		t.Fatalf("trace write arrived on a dead context: %v", fcs.ctxErr)
+	}
+	if fcs.recorded[0].ErrorSentinel != sentinelCanceled || fcs.recorded[0].Tier != TierCheapCloud {
+		t.Fatalf("cancellation blamed the provider or attempted another tier: %+v", fcs.recorded)
 	}
 }
 

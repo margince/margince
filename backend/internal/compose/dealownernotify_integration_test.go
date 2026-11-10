@@ -6,12 +6,20 @@
 package compose
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/riverqueue/river"
+	"github.com/riverqueue/river/riverdriver/riverpgxv5"
+	"github.com/riverqueue/river/rivertest"
+	"github.com/riverqueue/river/rivertype"
 
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/notices"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -70,6 +78,7 @@ func TestARequestHandedToANewOwnerTellsThem(t *testing.T) {
 	events := e.requestedEvents(t)
 
 	e.reassignAsTheProduct(t, deal, &e.Rep2)
+	e.workOwnerNotices(t)
 
 	if n := e.liveLines(t, e.Rep2, id); n != 1 {
 		t.Errorf("the new owner has %d line(s) about the request, want 1", n)
@@ -94,6 +103,7 @@ func TestANewOwnerWhoChoseInAppGetsNoEmail(t *testing.T) {
 		e.Rep2, notices.ClassApprovalPending, notices.DeliveryInApp)
 
 	e.reassignAsTheProduct(t, deal, &e.Rep2)
+	e.workOwnerNotices(t)
 
 	if n := e.liveLines(t, e.Rep2, id); n != 1 {
 		t.Errorf("the new owner has %d line(s) about the request, want 1", n)
@@ -111,6 +121,7 @@ func TestARequestOnADealLeftWithNoOwnerTellsNobody(t *testing.T) {
 	e.tellPreviousOwner(t, e.Rep1, id)
 
 	e.reassignAsTheProduct(t, deal, nil)
+	e.workOwnerNotices(t)
 
 	if status := e.statusOf(t, id); status != "expired" {
 		t.Errorf("the request on an unowned deal is %s, want withdrawn", status)
@@ -130,6 +141,7 @@ func TestANewOwnerWhoMayNotDecideIsNotTold(t *testing.T) {
 	e.tellPreviousOwner(t, e.Rep1, id)
 
 	e.reassignAsTheProduct(t, deal, &e.Rep2)
+	e.workOwnerNotices(t)
 
 	if n := e.liveLines(t, e.Rep2, id); n != 0 {
 		t.Errorf("a member who may not decide the request has %d line(s) about it, want none", n)
@@ -156,7 +168,9 @@ func TestARequestHandedBackToAFormerOwnerTellsThemAgain(t *testing.T) {
 		WHERE recipient_user_id = $1 AND dedupe_key = $2`, e.Rep1, key)
 
 	e.reassignAsTheProduct(t, deal, &e.Rep2)
+	e.workOwnerNotices(t)
 	e.reassignAsTheProduct(t, deal, &e.Rep1)
+	e.workOwnerNotices(t)
 
 	if n := e.WsCount(t, `SELECT count(*) FROM notice WHERE recipient_user_id = $1 AND dedupe_key = $2
 		AND retracted_at IS NULL AND read_at IS NULL`, e.Rep1, key); n != 1 {
@@ -168,5 +182,97 @@ func TestARequestHandedBackToAFormerOwnerTellsThemAgain(t *testing.T) {
 	}
 	if n := e.liveLines(t, e.Rep2, id); n != 0 {
 		t.Errorf("the owner in between still has %d line(s) about it", n)
+	}
+}
+
+func (e *reconcileEnv) workOwnerNotices(t *testing.T) {
+	t.Helper()
+	client, err := river.NewClient(riverpgxv5.New(e.Pool), &river.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	page, err := client.JobList(t.Context(), river.NewJobListParams().Kinds(ApprovalOwnerNoticeArgs{}.Kind()).States(rivertype.JobStateAvailable))
+	if err != nil {
+		t.Fatal(err)
+	}
+	spec, ok := jobs.SpecFor(ApprovalOwnerNoticeArgs{}.Kind())
+	if !ok {
+		t.Fatal("owner notice job is not declared")
+	}
+	production := &approvalOwnerNoticeWorker{pool: e.Pool, now: func() time.Time { return clocktest.Now(t) }}
+	worker := rivertest.NewWorker(t, riverpgxv5.New(e.Pool), &river.Config{}, jobs.Govern(production, spec))
+	for _, row := range page.Jobs {
+		tx, err := e.Pool.Begin(t.Context())
+		if err != nil {
+			t.Fatal(err)
+		}
+		result, err := worker.WorkJob(t.Context(), t, tx, row)
+		if err != nil {
+			if rollback := tx.Rollback(context.Background()); rollback != nil {
+				t.Error(rollback)
+			}
+			t.Fatal(err)
+		}
+		if err := tx.Commit(t.Context()); err != nil {
+			t.Fatal(err)
+		}
+		if result.EventKind != river.EventKindJobCompleted {
+			t.Fatalf("owner notice job ended as %s", result.EventKind)
+		}
+	}
+}
+
+func TestAnObsoleteOwnerAnnouncementCannotReplaceTheCurrentOwnersNotice(t *testing.T) {
+	e := setupReconcile(t)
+	e.GrantRole(t, e.Rep1, "rep")
+	e.GrantRole(t, e.Rep2, "rep")
+	deal, id := e.stagedFollowUp(t, "Queued handovers")
+	e.tellPreviousOwner(t, e.Rep1, id)
+	e.reassignAsTheProduct(t, deal, &e.Rep2)
+	if n := e.liveLines(t, e.Rep1, id); n != 0 {
+		t.Fatalf("former owner's notice stayed live: %d", n)
+	}
+	if n := e.liveLines(t, e.Rep2, id); n != 0 {
+		t.Fatalf("notification escaped its queued authority check: %d", n)
+	}
+	e.reassignAsTheProduct(t, deal, &e.Rep1)
+	e.workOwnerNotices(t)
+	if n := e.liveLines(t, e.Rep2, id); n != 0 {
+		t.Fatalf("obsolete owner received %d notices", n)
+	}
+	if n := e.liveLines(t, e.Rep1, id); n != 1 {
+		t.Fatalf("current owner received %d notices", n)
+	}
+	production := &approvalOwnerNoticeWorker{pool: e.Pool, now: func() time.Time { return clocktest.Now(t) }}
+	if err := production.Work(t.Context(), &river.Job[ApprovalOwnerNoticeArgs]{Args: ApprovalOwnerNoticeArgs{Workspace: e.WS, ApprovalID: id.UUID, DeciderID: e.Rep2}}); err != nil {
+		t.Fatal(err)
+	}
+	if n := e.liveLines(t, e.Rep1, id); n != 1 {
+		t.Fatalf("obsolete retry removed the current owner's notice: %d", n)
+	}
+	var noticeID ids.UUID
+	if err := e.DB().Tx(e.Admin(), func(tx pgx.Tx) error {
+		return tx.QueryRow(e.Admin(), `SELECT id FROM notice WHERE recipient_user_id=$1 AND dedupe_key=$2`, e.Rep1, approvalNoticeDedupeKey(id.UUID)).Scan(&noticeID)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	store := notices.NewStore(e.DB())
+	if _, claimed, err := store.ClaimEmailAttempt(systemMailCtx(e.WS), noticeID); err != nil || !claimed {
+		t.Fatalf("first mail claim: claimed=%v, err=%v", claimed, err)
+	}
+	if err := store.MarkRead(e.As(e.Rep1, nil, reconcilePerms), noticeID); err != nil {
+		t.Fatal(err)
+	}
+	if err := production.Work(t.Context(), &river.Job[ApprovalOwnerNoticeArgs]{Args: ApprovalOwnerNoticeArgs{Workspace: e.WS, ApprovalID: id.UUID, DeciderID: e.Rep1}}); err != nil {
+		t.Fatal(err)
+	}
+	if n := e.liveLines(t, e.Rep1, id); n != 1 {
+		t.Fatalf("retry duplicated the notice: %d", n)
+	}
+	if _, claimed, err := store.ClaimEmailAttempt(systemMailCtx(e.WS), noticeID); err != nil || claimed {
+		t.Fatalf("redelivery reopened the spent mail claim: claimed=%v, err=%v", claimed, err)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM notice WHERE id=$1 AND read_at IS NOT NULL`, noticeID); n != 1 {
+		t.Fatal("redelivery marked the read notice unread")
 	}
 }

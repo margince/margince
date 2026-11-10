@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
@@ -77,6 +78,7 @@ var assuranceSubjectsSQL = `
 		       (SELECT c.value_minor
 		          FROM contract c
 		         WHERE c.deal_id = d.id
+                   AND ` + auth.ContractDealMatchesSQL("c", "d") + `
 		           AND c.archived_at IS NULL
 		           AND c.status = 'active'
 		           AND c.currency = d.currency

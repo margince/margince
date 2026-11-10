@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // membersOnlyMailDataTask holds the stored mail between members that capture
@@ -32,7 +33,7 @@ import (
 func membersOnlyMailDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792838024_members_only_mail", Version: 1,
-		Title: "Holding mail between colleagues", Requires: []string{"core/1788316744"},
+		Title: systemtext.Literal("datatask.title.core.1792838024_members_only_mail"), Requires: []string{"core/1788316744"},
 		Steps: []datatask.Step{
 			{
 				Name: "hold_members_only_mail", Limit: 200, MinLimit: 10,

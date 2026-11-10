@@ -99,7 +99,7 @@ func (s *CallReadStore) CallStats(ctx context.Context, q CallStatsQuery) ([]Call
 		return nil, invalidAt("group", "must be one of provider, model, served_model, served_provider, tier, task")
 	}
 	from, to := rateFallbacks()
-	args := []any{s.now().Add(-q.Window), answeredSentinels}
+	args := []any{s.now().Add(-q.Window), nonFailureSentinels}
 	failed := failedAttemptSQL("ac", len(args))
 	args = append(args, from, to)
 	rate := pricedRate("ac", len(args)-1, len(args))

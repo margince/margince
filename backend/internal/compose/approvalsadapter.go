@@ -50,6 +50,7 @@ func (a approvalsAdapter) StageCall(ctx context.Context, in agents.StageRequest)
 		CoTargetType:   in.CoTargetType,
 		CoTargetID:     in.CoTargetID,
 		Summary:        in.Summary,
+		SystemText:     in.SystemText,
 		SummaryParts:   in.SummaryParts,
 	})
 }
@@ -94,6 +95,7 @@ func (a approvalsAdapter) StageVolumeRelease(ctx context.Context, in agents.Volu
 		ProposedChange: payload,
 		DiffHash:       diffHash,
 		Summary:        in.Summary,
+		SystemText:     in.SystemText,
 		JoinPending:    true,
 		Identity:       identity,
 	})

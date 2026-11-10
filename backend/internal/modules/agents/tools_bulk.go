@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -256,7 +257,10 @@ type bulkChangeResolver struct {
 // to. It is reached only after Guards, which refuses every staging.
 func (r bulkChangeResolver) Subject(ctx context.Context, cmd BulkChangeCommand) (StageInfo, error) {
 	said := summaryIn(ctx, r.language)
-	return StageInfo{Summary: fmt.Sprintf(said.bulkChange, len(cmd.Items))}, nil
+	return StageInfo{
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.bulkChange", systemtext.Count(int64(len(cmd.Items))))},
+		Summary:    fmt.Sprintf(said.bulkChange, len(cmd.Items)),
+	}, nil
 }
 
 // Guards refuses to stage at all. A bulk change is confirmed in the

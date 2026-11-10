@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, expect, it } from "vitest";
+import { stable } from "../../src/format/collate";
 import { initialEntries } from "../vite-entry-chunks";
 import { essentialKeys } from "./essential-copy";
 
@@ -28,7 +29,7 @@ afterEach(() => {
 
 it("selects static entry copy without vouching for unopened modules", () => {
   const keys = essentialKeys(fixture('void import("./deferred");'));
-  expect([...keys].sort()).toEqual(["common.close", "common.loading"]);
+  expect([...keys].sort(stable)).toEqual(["common.close", "common.loading"]);
 });
 
 it("refuses a missing entry instead of generating an incomplete catalog", () => {

@@ -29,6 +29,9 @@ func (r approvalPreviewReader) bookingPreview(ctx context.Context, approval crmc
 		return out, nil
 	}
 	command := bookingPreviewCommand(in, host)
+	if in.Subject == nil || *in.Subject == "" {
+		command.Subject = r.activities.DefaultMeetingSubject(ctx)
+	}
 	if err := r.requireBookingPreviewTarget(ctx, approval, command); err != nil {
 		if previewUnavailable(err) {
 			return out, nil

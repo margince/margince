@@ -24,6 +24,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { beforeAll, describe, expect, it } from "vitest";
+import { stable } from "../src/format/collate";
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -44,7 +45,7 @@ function repoFiles(): string[] {
   );
   return [...new Set(listed.split("\0"))]
     .filter((path) => path !== "" && existsSync(join(repo, path)))
-    .sort();
+    .sort(stable);
 }
 
 const messageOf = (diagnostic: ts.Diagnostic) =>

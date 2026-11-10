@@ -225,3 +225,11 @@ func TestCensusAndNoCountPassOnWellFormedTables(t *testing.T) {
 		t.Fatalf("a well-formed singular reported %v", s.errors)
 	}
 }
+
+func TestIndexedPlaceholdersCannotDisappearFromTheCensus(t *testing.T) {
+	got := Placeholders("Give %[2]s to %[1]s; progress %02d%%")
+	want := []string{"%[2]s", "%[1]s", "%d", "%%"}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("indexed or padded placeholders disappeared: %v", got)
+	}
+}

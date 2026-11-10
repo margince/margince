@@ -208,6 +208,10 @@ var retired = gatekit.Waive(map[string]string{
 	"backend/migrations/custom": "the same, one namespace over",
 	"backend/migrationrewrites.txt": "each line opens with a shipped migration's file name, verbatim, " +
 		"and a shipped migration is never renamed",
+	"backend/migrations/renumbered.txt": "each line names a shipped migration, verbatim, at the " +
+		"versions it has had",
+	"backend/migrations/testdata/oldhead-e549efee.txt": "the migration file names one past commit " +
+		"shipped, verbatim, which an upgrade test rebuilds",
 	"backend/migrations/testdata/rbac_baseline_era_defaults.json": "pinned byte for byte to the " +
 		"baseline commit by rbacbaselineerafixture_test.go; it IS the matrix the server seeded then",
 	"backend/migrations/enginebackfill_integration_test.go": "it REPLAYS a shipped migration, " +

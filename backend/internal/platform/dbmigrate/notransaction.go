@@ -70,6 +70,9 @@ type Namespace struct {
 	// Name keys the tracking table: schema_migrations_<name>.
 	Name       string
 	Migrations []Migration
+	// Renumbered declares the versions a migration of this namespace shipped
+	// under before it moved to the version it carries now.
+	Renumbered []Renumber
 }
 
 // apply runs one migration's SQL and records it, wrapped or not as the file asked.

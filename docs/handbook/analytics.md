@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/analytics backend/internal/modules/reporting backend/internal/modules/forecasting backend/internal/modules/assurance backend/internal/compose/accountcoverage.go -->
+<!-- describes: frontend/src/features/analytics backend/internal/modules/reporting backend/internal/modules/forecasting backend/internal/modules/assurance backend/internal/compose/accountcoverage.go backend/internal/compose/individualperformance.go backend/internal/compose/individualperformancefloor.go -->
 # Analytics and forecasting
 
 **Analytics** in Margince is the reporting screen. It shows forecast, pipeline reports, sales performance, time in stage, your own outcomes, delivery and data coverage. It is in the sidebar under **Insights**. It answers two different kinds of question and keeps them apart: what the records say, and what somebody expects will happen.
@@ -9,10 +9,11 @@
 ### Where can I see my forecast?
 1. Click **Analytics**, then **Forecast** under **Analytics sections**.
 2. Choose the **Period**: **Quarter**, **Month** or **Week**.
-3. Read the **Period forecast** and what it is made of: **Already won**, **Likely** and **Weighted**.
-   The forecast gap sets the manager’s total against won sales plus Likely deals. Review **Checks before the call**; source details are under **Data and evidence checked**.
+3. Read the **Period forecast** and what it is made of: **Already won**, **Likely** and **Weighted**. The forecast gap sets the manager’s total against won sales plus Likely deals. Review **Checks before the call**; source details are under **Data and evidence checked**.
 
 If Margince cannot confirm that a check still matches the records, it says so. Wait for an update or choose **Check again**. A manager records a call with **Update forecast**. Also called: sales forecast, projected revenue, quarter forecast, landing.
+
+With **Show individual performance** off, the whole-company forecast is hidden if any part would show one colleague’s figures. This applies to admins too, even when several colleagues make up the total. Hiding only that part would let someone work it out from the total and the other parts. You can still read your own forecast.
 
 ### How do I see my team's pipeline?
 To see your team's pipeline in Margince, open **Analytics** and pick the team in the **Record scope** picker above the numbers.
@@ -146,8 +147,7 @@ number is built** and gives you three things:
 
 1. **The definition** of the filter, the grouping and the total, in words.
 2. **Source rows**: the records behind the number, limited to what the report
-   covered. Amounts are shown as money. Column names are put into your words
-   where Margince knows them; others keep their original name.
+   covered. Amounts are shown as money. Column names are put into your words where Margince knows them; others keep their original name.
 3. **A warning where the figures may be old.** If the link did
    not say when the number was worked out, the figures were worked out again
    right now. The panel says so: "If an exchange rate changed since, they may

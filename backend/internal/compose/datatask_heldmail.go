@@ -13,13 +13,14 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // Capture treats an unknown provider date as no evidence during partial progress.
 func heldMailDataTask(now func() time.Time) datatask.Task {
 	return datatask.Task{
 		ID: "core/1790871111_mail_already_held_owes_no_notice", Version: 1,
-		Title: "Correcting privacy notices for older mail", Requires: []string{"core/1790871110"},
+		Title: systemtext.Literal("datatask.title.core.1790871111_mail_already_held_owes_no_notice"), Requires: []string{"core/1790871110"},
 		Steps: []datatask.Step{
 			{
 				Name: "stamp_provider_received_at", Limit: 200, MinLimit: 10,

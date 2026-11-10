@@ -44,6 +44,14 @@ const mcpCallDeadline = 150 * time.Second
 // the classification (see compose/mcpedge.go).
 var ErrAuthUnavailable = errors.New("agents: the credential could not be verified")
 
+// EdgeRefusal is an authenticate failure that writes its own answer: the
+// credential is good, and the edge still refuses this request, as pacing does.
+// The answer belongs to compose, which owns the edge's limits.
+type EdgeRefusal interface {
+	error
+	WriteRefusal(w http.ResponseWriter, r *http.Request)
+}
+
 // ResourceMetadataChallenge builds the RFC 9728 WWW-Authenticate challenge a
 // 401 on this transport carries: the "Bearer" scheme name plus a pointer at
 // the protected-resource document. The pointer is ABSOLUTE because a client
@@ -233,6 +241,10 @@ func (h *httpMCPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx, err := h.authenticate(r)
+	if refusal, refused := errors.AsType[EdgeRefusal](err); refused {
+		refusal.WriteRefusal(w, r)
+		return
+	}
 	if errors.Is(err, ErrAuthUnavailable) {
 		// The server could not REACH a verdict on the credential, so it must
 		// not imply one. A 401 here tells a client its token is bad: a

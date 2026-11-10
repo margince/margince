@@ -12,6 +12,7 @@ import { type EntityKind, isEntityKind, recordRoute } from "../lib/entity";
 import { labelFor } from "../lib/labelfor";
 import { routeHash } from "../lib/router";
 import { settingsHref } from "../lib/settingsrouting";
+import { signatureReviewHref } from "../lib/signaturereviewlink";
 
 type NoticeTarget = NonNullable<
   components["schemas"]["NotificationItem"]["target"]
@@ -65,6 +66,12 @@ export function noticeAction(
         ),
       ),
       label: "signatureTemplate.title",
+    };
+  }
+  if (target.type === "retained_email_signature") {
+    return {
+      href: signatureReviewHref(target.id),
+      label: "notifications.action.review",
     };
   }
   if (target.type === "email_signature") {

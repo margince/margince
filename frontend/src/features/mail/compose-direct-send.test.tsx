@@ -122,7 +122,7 @@ describe("sending with a recorded exception", () => {
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect(screen.getByText("Sent as a recorded exception.")).toBeTruthy();
+    expect(screen.getByText("Queued as a recorded exception.")).toBeTruthy();
     expect(
       queryClient.getQueryData(draftKey({ type: "contact", id: "c-1" })),
     ).toBeNull();

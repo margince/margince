@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -45,6 +46,7 @@ func (e *Eraser) ReapplySuppressions(ctx context.Context) (int, error) {
 	// scan below reads every contact in the installation to decide which ones
 	// the list already ended, and a caller who may not delete a contact has no
 	// business being handed that reading either.
+	ctx = corefeatures.RetainedDataContext(ctx)
 	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
 		return 0, err
 	}

@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // heldRetryDelay is how far ahead Accept re-arms a held message.
@@ -104,6 +105,7 @@ func (n scheduledSendHeldNotifier) NotifyHeldInTx(ctx context.Context, tx pgx.Tx
 		DiffHash:       hex.EncodeToString(digest[:]),
 		TargetType:     heldScheduledSendTarget,
 		Summary:        heldSummary(approvalSummaryCopyIn(ctx, tx), in),
+		SystemText:     &systemtext.Message{Version: 1, Subject: systemtext.Sentence("approval.heldNotSent", systemtext.Text(in.Subject), heldReasonArgument(in.Reason))},
 		JoinPending:    true,
 		Identity:       identity,
 	})
@@ -162,32 +164,31 @@ func heldSummary(said approvalSummaryCopy, in activities.HeldNotice) string {
 
 // heldReasonText renders a hold reason as the sentence a rep needs. The codes are
 // the durable record; this is the half a human reads.
+var heldReasonCodes = map[string]string{
+	activities.HeldConsentWithdrawn: "approval.heldConsentWithdrawn",
+	activities.HeldSenderInactive:   "approval.heldSenderInactive",
+	activities.HeldPassportRevoked:  "approval.heldPassportRevoked",
+	activities.HeldMissedWindow:     "approval.heldMissedWindow",
+	activities.HeldTimerExhausted:   "approval.heldTimerExhausted",
+	activities.HeldSendRefused:      "approval.heldSendRefused",
+	activities.HeldFollowupSettled:  "approval.heldFollowupSettled",
+	activities.HeldMeetingCanceled:  "approval.heldMeetingCanceled",
+	activities.HeldRecipientStopped: "approval.heldRecipientStopped",
+	activities.HeldRecipientReplied: "approval.heldRecipientReplied",
+}
+
 func heldReasonText(said approvalSummaryCopy, reason string) string {
-	switch reason {
-	case activities.HeldConsentWithdrawn:
-		return said.heldConsentWithdrawn
-	case activities.HeldSenderInactive:
-		return said.heldSenderInactive
-	case activities.HeldPassportRevoked:
-		return said.heldPassportRevoked
-	case activities.HeldMissedWindow:
-		return said.heldMissedWindow
-	case activities.HeldTimerExhausted:
-		return said.heldTimerExhausted
-	case activities.HeldSendRefused:
-		return said.heldSendRefused
-	case activities.HeldFollowupSettled:
-		return said.heldFollowupSettled
-	case activities.HeldMeetingCanceled:
-		return said.heldMeetingCanceled
-	case activities.HeldRecipientStopped:
-		return said.heldRecipientStopped
-	case activities.HeldRecipientReplied:
-		return said.heldRecipientReplied
+	if code, ok := heldReasonCodes[reason]; ok {
+		return systemtext.Copy(code, said.lang)
 	}
-	// An unknown code still reaches the rep: a held message with no explanation
-	// is worse than an unpolished one.
 	return reason
+}
+
+func heldReasonArgument(reason string) systemtext.Argument {
+	if code, ok := heldReasonCodes[reason]; ok {
+		return systemtext.MessageArgument(code)
+	}
+	return systemtext.Text(reason)
 }
 
 var _ activities.HeldNotifier = scheduledSendHeldNotifier{}

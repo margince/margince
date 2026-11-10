@@ -216,26 +216,6 @@ func SchemaPool(t *testing.T) *pgxpool.Pool {
 	return pool
 }
 
-// OwnerConn opens the schema-owner connection tests use to shift
-// timestamps the app role's workspace-bound path could never touch.
-func OwnerConn(t *testing.T) *pgx.Conn {
-	t.Helper()
-	dsn := os.Getenv("MARGINCE_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
-	conn, err := pgx.Connect(context.Background(), dsn)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() {
-		if err := conn.Close(context.Background()); err != nil {
-			t.Errorf("closing owner connection: %v", err)
-		}
-	})
-	return conn
-}
-
 // As binds a full operation context for one human principal.
 func (e *Env) As(user ids.UUID, teams []ids.UUID, perms principal.Permissions) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)

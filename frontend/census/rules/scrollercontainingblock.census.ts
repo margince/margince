@@ -13,8 +13,6 @@ import { rulesIn } from "../../src/testing/css";
 import type { CensusFile, CensusRule } from "../tree";
 import { isAppSheet } from "../tree";
 
-const SCROLLS =
-  /(?:^|[;\s])overflow(?:-x|-inline)?\s*:[^;]*\b(?:auto|scroll)\b/;
 const POSITIONED =
   /(?:^|[;\s])position\s*:\s*(?:relative|absolute|fixed|sticky)\b/;
 
@@ -56,8 +54,41 @@ function positionedBy(scroller: Styled, rule: Styled): boolean {
   return holds && names && POSITIONED.test(rule.body);
 }
 
+function scrollsHorizontally(body: string): boolean {
+  const axes = {
+    inline: { value: "visible", important: false },
+    block: { value: "visible", important: false },
+  };
+  const set = (axis: keyof typeof axes, value: string, important: boolean) => {
+    if (important || !axes[axis].important) axes[axis] = { value, important };
+  };
+  for (const [, axis, raw] of body.matchAll(
+    /(?:^|[;\s])overflow(-x|-y|-inline|-block)?\s*:\s*([^;]+)/g,
+  )) {
+    const important = /!important\s*$/.test(raw);
+    const values = raw
+      .replace(/\s*!important\s*$/, "")
+      .trim()
+      .split(/\s+/);
+    const first = values[0] ?? "visible";
+    if (!axis) {
+      set("inline", first, important);
+      set("block", values[1] ?? first, important);
+    } else if (axis === "-x" || axis === "-inline") {
+      set("inline", first, important);
+    } else {
+      set("block", first, important);
+    }
+  }
+  const scrolls = (value: string) => value === "auto" || value === "scroll";
+  return (
+    scrolls(axes.inline.value) ||
+    (axes.inline.value === "visible" && scrolls(axes.block.value))
+  );
+}
+
 const scrollersIn = (all: readonly Styled[]) =>
-  all.filter((rule) => SCROLLS.test(rule.body));
+  all.filter((rule) => scrollsHorizontally(rule.body));
 
 export const rule: CensusRule = {
   name: "scrollercontainingblock",

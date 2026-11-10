@@ -5,3 +5,4 @@ frontend/src/design-system/material-symbols/info-fill.svg | @material-symbols/sv
 frontend/src/design-system/material-symbols/lightbulb_2-fill.svg | @material-symbols/svg-500 0.48.1 | Apache-2.0 | frontend/src/design-system/material-symbols/LICENSE
 frontend/src/design-system/material-symbols/warning-fill.svg | @material-symbols/svg-500 0.48.1 | Apache-2.0 | frontend/src/design-system/material-symbols/LICENSE
 backend/internal/platform/freemail/data/providers.txt | goware/emailproviders 2025-02-08 (remove xwaretech domains) | MIT | backend/internal/platform/freemail/data/LICENSE-emailproviders.txt
+sbom-schemas/spdx-3.0.1/spdx-3.0.1.schema.json | SPDX 3.0.1 JSON schema, https://spdx.org/schema/3.0.1/spdx-json-schema.json (shacl2code output of spdx/spdx-3-model 3.0.1) | Community-Spec-1.0 | sbom-schemas/spdx-3.0.1/LICENSE

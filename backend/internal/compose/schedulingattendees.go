@@ -37,7 +37,7 @@ type attendeeCandidates struct {
 	held          bool
 }
 
-// ResolveAttendees resolves each address contact first, then live colleague,
+// ResolveAttendees resolves each address contact first, then a live or invited colleague,
 // then lead, under the host's row scope. Contact first keeps a contact who
 // withdrew consent from passing as a colleague. An address any contact or lead
 // holds asks the consent gate even when the host cannot see that record.
@@ -117,7 +117,7 @@ func (c schedulingCalendar) attendeeCandidates(ctx, hostCtx context.Context, add
 		rows, err := tx.Query(ctx, `
 			SELECT 'contact', e.contact_id, '' FROM contact_email e JOIN contact c ON c.id = e.contact_id
 			 WHERE e.email = $1 AND e.archived_at IS NULL AND c.archived_at IS NULL AND (`+scope+`)
-			UNION SELECT 'user', u.id, u.display_name FROM app_user u WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$2")+` AND `+workforce.LiveHumanSQL("u")+`
+			UNION SELECT 'user', u.id, u.display_name FROM app_user u WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$2")+` AND `+workforce.AskableMemberSQL("u")+`
 			UNION SELECT 'lead', l.id, '' FROM lead l WHERE l.email = $1 AND l.archived_at IS NULL AND l.promoted_contact_id IS NULL
 			ORDER BY 1, 2`, args...)
 		if err != nil {
