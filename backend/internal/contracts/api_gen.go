@@ -20509,6 +20509,7 @@ func (e ReportingScopeKind) Valid() bool {
 // Defines values for ReportingSelectionCloseWindow.
 const (
 	ReportingSelectionCloseWindowAllOpen       ReportingSelectionCloseWindow = "all_open"
+	ReportingSelectionCloseWindowCustom        ReportingSelectionCloseWindow = "custom"
 	ReportingSelectionCloseWindowFiscalQuarter ReportingSelectionCloseWindow = "fiscal_quarter"
 )
 
@@ -20516,6 +20517,8 @@ const (
 func (e ReportingSelectionCloseWindow) Valid() bool {
 	switch e {
 	case ReportingSelectionCloseWindowAllOpen:
+		return true
+	case ReportingSelectionCloseWindowCustom:
 		return true
 	case ReportingSelectionCloseWindowFiscalQuarter:
 		return true
@@ -21091,6 +21094,117 @@ func (e SalesDecisionStatus) Valid() bool {
 	}
 }
 
+// Defines values for SalesGoalDraftInputOrigin.
+const (
+	SalesGoalDraftInputOriginAdopted SalesGoalDraftInputOrigin = "adopted"
+	SalesGoalDraftInputOriginAi      SalesGoalDraftInputOrigin = "ai"
+	SalesGoalDraftInputOriginManual  SalesGoalDraftInputOrigin = "manual"
+)
+
+// Valid indicates whether the value is a known member of the SalesGoalDraftInputOrigin enum.
+func (e SalesGoalDraftInputOrigin) Valid() bool {
+	switch e {
+	case SalesGoalDraftInputOriginAdopted:
+		return true
+	case SalesGoalDraftInputOriginAi:
+		return true
+	case SalesGoalDraftInputOriginManual:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SalesGoalEventKind.
+const (
+	SalesGoalEventKindDiscarded SalesGoalEventKind = "discarded"
+	SalesGoalEventKindDraft     SalesGoalEventKind = "draft"
+	SalesGoalEventKindPublished SalesGoalEventKind = "published"
+	SalesGoalEventKindWithdrawn SalesGoalEventKind = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the SalesGoalEventKind enum.
+func (e SalesGoalEventKind) Valid() bool {
+	switch e {
+	case SalesGoalEventKindDiscarded:
+		return true
+	case SalesGoalEventKindDraft:
+		return true
+	case SalesGoalEventKindPublished:
+		return true
+	case SalesGoalEventKindWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SalesGoalPlanState.
+const (
+	SalesGoalPlanStateChangedOutsidePlan SalesGoalPlanState = "changed_outside_plan"
+	SalesGoalPlanStateDraft              SalesGoalPlanState = "draft"
+	SalesGoalPlanStateNoGoal             SalesGoalPlanState = "no_goal"
+	SalesGoalPlanStatePublished          SalesGoalPlanState = "published"
+	SalesGoalPlanStatePublishedWithDraft SalesGoalPlanState = "published_with_draft"
+	SalesGoalPlanStateWithdrawn          SalesGoalPlanState = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the SalesGoalPlanState enum.
+func (e SalesGoalPlanState) Valid() bool {
+	switch e {
+	case SalesGoalPlanStateChangedOutsidePlan:
+		return true
+	case SalesGoalPlanStateDraft:
+		return true
+	case SalesGoalPlanStateNoGoal:
+		return true
+	case SalesGoalPlanStatePublished:
+		return true
+	case SalesGoalPlanStatePublishedWithDraft:
+		return true
+	case SalesGoalPlanStateWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SalesGoalPublishInputConfirmAgreed.
+const (
+	SalesGoalPublishInputConfirmAgreedTrue SalesGoalPublishInputConfirmAgreed = true
+)
+
+// Valid indicates whether the value is a known member of the SalesGoalPublishInputConfirmAgreed enum.
+func (e SalesGoalPublishInputConfirmAgreed) Valid() bool {
+	switch e {
+	case SalesGoalPublishInputConfirmAgreedTrue:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SalesGoalRevisionOrigin.
+const (
+	SalesGoalRevisionOriginAdopted SalesGoalRevisionOrigin = "adopted"
+	SalesGoalRevisionOriginAi      SalesGoalRevisionOrigin = "ai"
+	SalesGoalRevisionOriginManual  SalesGoalRevisionOrigin = "manual"
+)
+
+// Valid indicates whether the value is a known member of the SalesGoalRevisionOrigin enum.
+func (e SalesGoalRevisionOrigin) Valid() bool {
+	switch e {
+	case SalesGoalRevisionOriginAdopted:
+		return true
+	case SalesGoalRevisionOriginAi:
+		return true
+	case SalesGoalRevisionOriginManual:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SalesInitiativeMemberReason.
 const (
 	SalesInitiativeMemberReasonCarried  SalesInitiativeMemberReason = "carried"
@@ -21166,6 +21280,147 @@ func (e SalesInitiativeStatus) Valid() bool {
 	case SalesInitiativeStatusEnded:
 		return true
 	case SalesInitiativeStatusLive:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SalesProgressPeriodKind.
+const (
+	SalesProgressPeriodKindMonth SalesProgressPeriodKind = "month"
+	SalesProgressPeriodKindYear  SalesProgressPeriodKind = "year"
+)
+
+// Valid indicates whether the value is a known member of the SalesProgressPeriodKind enum.
+func (e SalesProgressPeriodKind) Valid() bool {
+	switch e {
+	case SalesProgressPeriodKindMonth:
+		return true
+	case SalesProgressPeriodKindYear:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SalesProgressState.
+const (
+	SalesProgressStateCurrent    SalesProgressState = "current"
+	SalesProgressStateEnded      SalesProgressState = "ended"
+	SalesProgressStateNotStarted SalesProgressState = "not_started"
+)
+
+// Valid indicates whether the value is a known member of the SalesProgressState enum.
+func (e SalesProgressState) Valid() bool {
+	switch e {
+	case SalesProgressStateCurrent:
+		return true
+	case SalesProgressStateEnded:
+		return true
+	case SalesProgressStateNotStarted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SalesProgressAmountStatus.
+const (
+	SalesProgressAmountStatusNotStarted SalesProgressAmountStatus = "not_started"
+	SalesProgressAmountStatusOk         SalesProgressAmountStatus = "ok"
+	SalesProgressAmountStatusPartial    SalesProgressAmountStatus = "partial"
+	SalesProgressAmountStatusWithheld   SalesProgressAmountStatus = "withheld"
+)
+
+// Valid indicates whether the value is a known member of the SalesProgressAmountStatus enum.
+func (e SalesProgressAmountStatus) Valid() bool {
+	switch e {
+	case SalesProgressAmountStatusNotStarted:
+		return true
+	case SalesProgressAmountStatusOk:
+		return true
+	case SalesProgressAmountStatusPartial:
+		return true
+	case SalesProgressAmountStatusWithheld:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SalesProgressCategoriesStatus.
+const (
+	SalesProgressCategoriesStatusNotStarted SalesProgressCategoriesStatus = "not_started"
+	SalesProgressCategoriesStatusOk         SalesProgressCategoriesStatus = "ok"
+	SalesProgressCategoriesStatusPartial    SalesProgressCategoriesStatus = "partial"
+	SalesProgressCategoriesStatusWithheld   SalesProgressCategoriesStatus = "withheld"
+)
+
+// Valid indicates whether the value is a known member of the SalesProgressCategoriesStatus enum.
+func (e SalesProgressCategoriesStatus) Valid() bool {
+	switch e {
+	case SalesProgressCategoriesStatusNotStarted:
+		return true
+	case SalesProgressCategoriesStatusOk:
+		return true
+	case SalesProgressCategoriesStatusPartial:
+		return true
+	case SalesProgressCategoriesStatusWithheld:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SalesProgressGoalStatus.
+const (
+	SalesProgressGoalStatusChangedOutsidePlan SalesProgressGoalStatus = "changed_outside_plan"
+	SalesProgressGoalStatusIncomplete         SalesProgressGoalStatus = "incomplete"
+	SalesProgressGoalStatusMissing            SalesProgressGoalStatus = "missing"
+	SalesProgressGoalStatusOtherCurrency      SalesProgressGoalStatus = "other_currency"
+	SalesProgressGoalStatusSet                SalesProgressGoalStatus = "set"
+	SalesProgressGoalStatusWithheld           SalesProgressGoalStatus = "withheld"
+	SalesProgressGoalStatusZero               SalesProgressGoalStatus = "zero"
+)
+
+// Valid indicates whether the value is a known member of the SalesProgressGoalStatus enum.
+func (e SalesProgressGoalStatus) Valid() bool {
+	switch e {
+	case SalesProgressGoalStatusChangedOutsidePlan:
+		return true
+	case SalesProgressGoalStatusIncomplete:
+		return true
+	case SalesProgressGoalStatusMissing:
+		return true
+	case SalesProgressGoalStatusOtherCurrency:
+		return true
+	case SalesProgressGoalStatusSet:
+		return true
+	case SalesProgressGoalStatusWithheld:
+		return true
+	case SalesProgressGoalStatusZero:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SalesProgressMonthState.
+const (
+	SalesProgressMonthStateCurrent    SalesProgressMonthState = "current"
+	SalesProgressMonthStateEnded      SalesProgressMonthState = "ended"
+	SalesProgressMonthStateNotStarted SalesProgressMonthState = "not_started"
+)
+
+// Valid indicates whether the value is a known member of the SalesProgressMonthState enum.
+func (e SalesProgressMonthState) Valid() bool {
+	switch e {
+	case SalesProgressMonthStateCurrent:
+		return true
+	case SalesProgressMonthStateEnded:
+		return true
+	case SalesProgressMonthStateNotStarted:
 		return true
 	default:
 		return false
@@ -27649,6 +27904,7 @@ func (e EvaluateReportingParamsTargetBasis) Valid() bool {
 // Defines values for EvaluateReportingParamsCloseWindow.
 const (
 	EvaluateReportingParamsCloseWindowAllOpen       EvaluateReportingParamsCloseWindow = "all_open"
+	EvaluateReportingParamsCloseWindowCustom        EvaluateReportingParamsCloseWindow = "custom"
 	EvaluateReportingParamsCloseWindowFiscalQuarter EvaluateReportingParamsCloseWindow = "fiscal_quarter"
 )
 
@@ -27656,6 +27912,8 @@ const (
 func (e EvaluateReportingParamsCloseWindow) Valid() bool {
 	switch e {
 	case EvaluateReportingParamsCloseWindowAllOpen:
+		return true
+	case EvaluateReportingParamsCloseWindowCustom:
 		return true
 	case EvaluateReportingParamsCloseWindowFiscalQuarter:
 		return true
@@ -27736,6 +27994,7 @@ func (e ExportReportingEvaluationParamsTargetBasis) Valid() bool {
 // Defines values for ExportReportingEvaluationParamsCloseWindow.
 const (
 	ExportReportingEvaluationParamsCloseWindowAllOpen       ExportReportingEvaluationParamsCloseWindow = "all_open"
+	ExportReportingEvaluationParamsCloseWindowCustom        ExportReportingEvaluationParamsCloseWindow = "custom"
 	ExportReportingEvaluationParamsCloseWindowFiscalQuarter ExportReportingEvaluationParamsCloseWindow = "fiscal_quarter"
 )
 
@@ -27743,6 +28002,8 @@ const (
 func (e ExportReportingEvaluationParamsCloseWindow) Valid() bool {
 	switch e {
 	case ExportReportingEvaluationParamsCloseWindowAllOpen:
+		return true
+	case ExportReportingEvaluationParamsCloseWindowCustom:
 		return true
 	case ExportReportingEvaluationParamsCloseWindowFiscalQuarter:
 		return true
@@ -27823,6 +28084,7 @@ func (e GetReportingEvidenceParamsTargetBasis) Valid() bool {
 // Defines values for GetReportingEvidenceParamsCloseWindow.
 const (
 	GetReportingEvidenceParamsCloseWindowAllOpen       GetReportingEvidenceParamsCloseWindow = "all_open"
+	GetReportingEvidenceParamsCloseWindowCustom        GetReportingEvidenceParamsCloseWindow = "custom"
 	GetReportingEvidenceParamsCloseWindowFiscalQuarter GetReportingEvidenceParamsCloseWindow = "fiscal_quarter"
 )
 
@@ -27830,6 +28092,8 @@ const (
 func (e GetReportingEvidenceParamsCloseWindow) Valid() bool {
 	switch e {
 	case GetReportingEvidenceParamsCloseWindowAllOpen:
+		return true
+	case GetReportingEvidenceParamsCloseWindowCustom:
 		return true
 	case GetReportingEvidenceParamsCloseWindowFiscalQuarter:
 		return true
@@ -27871,6 +28135,42 @@ func (e ListSalesInitiativeMembersParamsRecordType) Valid() bool {
 	case ListSalesInitiativeMembersParamsRecordTypeDeal:
 		return true
 	case ListSalesInitiativeMembersParamsRecordTypeLead:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetSalesProgressParamsPeriod.
+const (
+	GetSalesProgressParamsPeriodMonth GetSalesProgressParamsPeriod = "month"
+	GetSalesProgressParamsPeriodYear  GetSalesProgressParamsPeriod = "year"
+)
+
+// Valid indicates whether the value is a known member of the GetSalesProgressParamsPeriod enum.
+func (e GetSalesProgressParamsPeriod) Valid() bool {
+	switch e {
+	case GetSalesProgressParamsPeriodMonth:
+		return true
+	case GetSalesProgressParamsPeriodYear:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetSalesProgressParamsScopeKind.
+const (
+	GetSalesProgressParamsScopeKindOwner GetSalesProgressParamsScopeKind = "owner"
+	GetSalesProgressParamsScopeKindTeam  GetSalesProgressParamsScopeKind = "team"
+)
+
+// Valid indicates whether the value is a known member of the GetSalesProgressParamsScopeKind enum.
+func (e GetSalesProgressParamsScopeKind) Valid() bool {
+	switch e {
+	case GetSalesProgressParamsScopeKindOwner:
+		return true
+	case GetSalesProgressParamsScopeKindTeam:
 		return true
 	default:
 		return false
@@ -59446,7 +59746,14 @@ type ReportingSelection struct {
 	// Blocks The chart kinds the report draws, in order. When `layout` is present the service
 	// derives this list from it (each kind once, in the order the layout first names it)
 	// and ignores what was sent, so a client that reads only `blocks` keeps working.
-	Blocks       []ReportingBlockKind          `json:"blocks"`
+	Blocks []ReportingBlockKind `json:"blocks"`
+
+	// CloseInterval The expected-close window `close_window=custom` names, at most twelve months long.
+	CloseInterval *ReportingWindow `json:"close_interval,omitempty"`
+
+	// CloseWindow Which open deals the open-pipeline figures count, by expected close. `fiscal_quarter`
+	// is the current fiscal quarter, `all_open` is every open deal, and `custom` is
+	// `close_interval`, which it requires.
 	CloseWindow  ReportingSelectionCloseWindow `json:"close_window"`
 	Country      *ReportingCountry             `json:"country,omitempty"`
 	Industry     *ReportingIndustry            `json:"industry,omitempty"`
@@ -59471,7 +59778,9 @@ type ReportingSelection struct {
 	ValueBasis  *ReportingValueBasis          `json:"value_basis,omitempty"`
 }
 
-// ReportingSelectionCloseWindow defines model for ReportingSelection.CloseWindow.
+// ReportingSelectionCloseWindow Which open deals the open-pipeline figures count, by expected close. `fiscal_quarter`
+// is the current fiscal quarter, `all_open` is every open deal, and `custom` is
+// `close_interval`, which it requires.
 type ReportingSelectionCloseWindow string
 
 // ReportingSelectionPeriod `this_week` runs from Monday 00:00 in the installation zone to the
@@ -60216,6 +60525,111 @@ type SalesDecisionOutcomeInput struct {
 	Result string `json:"result"`
 }
 
+// SalesGoalDraftInput defines model for SalesGoalDraftInput.
+type SalesGoalDraftInput struct {
+	DeclaredTotalMinor *int64 `json:"declared_total_minor,omitempty" minimum:"0"`
+
+	// Months January to December, each an amount in minor units or null for Not set.
+	Months SalesGoalMonths            `json:"months"`
+	Origin *SalesGoalDraftInputOrigin `json:"origin,omitempty"`
+	Reason string                     `json:"reason"`
+}
+
+// SalesGoalDraftInputOrigin defines model for SalesGoalDraftInput.Origin.
+type SalesGoalDraftInputOrigin string
+
+// SalesGoalEvent defines model for SalesGoalEvent.
+type SalesGoalEvent struct {
+	AuthorName string             `json:"author_name"`
+	CreatedAt  time.Time          `json:"created_at"`
+	Kind       SalesGoalEventKind `json:"kind"`
+	Reason     string             `json:"reason"`
+	Revision   int64              `json:"revision"`
+	TotalMinor *int64             `json:"total_minor,omitempty"`
+}
+
+// SalesGoalEventKind defines model for SalesGoalEvent.Kind.
+type SalesGoalEventKind string
+
+// SalesGoalMonths January to December, each an amount in minor units or null for Not set.
+type SalesGoalMonths = []*int64
+
+// SalesGoalPlan defines model for SalesGoalPlan.
+type SalesGoalPlan struct {
+	Capabilities struct {
+		// Edit Whether the caller may draft, publish, discard and withdraw this plan.
+		Edit bool `json:"edit"`
+	} `json:"capabilities"`
+
+	// Currency The reporting currency the goals are kept in.
+	Currency string             `json:"currency"`
+	Draft    *SalesGoalRevision `json:"draft,omitempty"`
+	History  []SalesGoalEvent   `json:"history"`
+
+	// LiveMonths The monthly goals Progress reads today, whether a plan published them or not.
+	LiveMonths SalesGoalMonths    `json:"live_months"`
+	OwnerId    openapi_types.UUID `json:"owner_id"`
+	OwnerName  string             `json:"owner_name"`
+	Published  *SalesGoalRevision `json:"published,omitempty"`
+	State      SalesGoalPlanState `json:"state"`
+
+	// Version The plan version a write sends in If-Match; 0 before the first draft.
+	Version int64 `json:"version"`
+	Year    int   `json:"year"`
+}
+
+// SalesGoalPlanState defines model for SalesGoalPlanState.
+type SalesGoalPlanState string
+
+// SalesGoalPublishInput defines model for SalesGoalPublishInput.
+type SalesGoalPublishInput struct {
+	// ConfirmAgreed The manager confirms these are the goals agreed with the seller.
+	ConfirmAgreed SalesGoalPublishInputConfirmAgreed `json:"confirm_agreed"`
+	Reason        string                             `json:"reason"`
+}
+
+// SalesGoalPublishInputConfirmAgreed The manager confirms these are the goals agreed with the seller.
+type SalesGoalPublishInputConfirmAgreed bool
+
+// SalesGoalReasonInput defines model for SalesGoalReasonInput.
+type SalesGoalReasonInput struct {
+	Reason string `json:"reason"`
+}
+
+// SalesGoalRevision defines model for SalesGoalRevision.
+type SalesGoalRevision struct {
+	AuthorName         string    `json:"author_name"`
+	CreatedAt          time.Time `json:"created_at"`
+	DeclaredTotalMinor *int64    `json:"declared_total_minor,omitempty"`
+
+	// Months January to December, each an amount in minor units or null for Not set.
+	Months   SalesGoalMonths         `json:"months"`
+	Origin   SalesGoalRevisionOrigin `json:"origin"`
+	Reason   string                  `json:"reason"`
+	Revision int64                   `json:"revision"`
+}
+
+// SalesGoalRevisionOrigin defines model for SalesGoalRevision.Origin.
+type SalesGoalRevisionOrigin string
+
+// SalesGoalRoster defines model for SalesGoalRoster.
+type SalesGoalRoster struct {
+	Currency string            `json:"currency"`
+	Data     []SalesGoalSeller `json:"data"`
+	Year     int               `json:"year"`
+}
+
+// SalesGoalSeller defines model for SalesGoalSeller.
+type SalesGoalSeller struct {
+	CanEdit bool               `json:"can_edit"`
+	Name    string             `json:"name"`
+	OwnerId openapi_types.UUID `json:"owner_id"`
+	State   SalesGoalPlanState `json:"state"`
+
+	// TotalMinor The published yearly goal.
+	TotalMinor *int64 `json:"total_minor,omitempty"`
+}
+
 // SalesInitiative defines model for SalesInitiative.
 type SalesInitiative struct {
 	CreatedAt time.Time          `json:"created_at"`
@@ -60328,6 +60742,180 @@ type SalesInitiativeRule map[string]interface{}
 
 // SalesInitiativeStatus defines model for SalesInitiativeStatus.
 type SalesInitiativeStatus string
+
+// SalesProgress defines model for SalesProgress.
+type SalesProgress struct {
+	// ActualWindow From the period start to the cutoff. Absent before the period starts.
+	ActualWindow *ReportingWindow `json:"actual_window,omitempty"`
+	Capabilities struct {
+		// WriteGoals Whether the caller may set this scope's goals.
+		WriteGoals bool `json:"write_goals"`
+	} `json:"capabilities"`
+
+	// Categories Closed revenue split by what each deal sold, from the category captured on its priced lines:
+	// software is a product sale and implementation a service. Other kinds, products nobody
+	// classified and the part no line carries are unresolved. The three parts add up to the
+	// closed amount exactly. A deal whose lines add up to more than its value counts as
+	// unresolved in full, in `invalid_deals`.
+	Categories SalesProgressCategories `json:"categories"`
+
+	// Closed `ok` is a complete amount. `partial` is a known amount that leaves out records whose value
+	// the caller may not see or that has none. `withheld` gives no amount. `not_started` is a
+	// period that has not begun.
+	Closed SalesProgressAmount `json:"closed"`
+
+	// Completion Closed revenue divided by the goal, given only for a complete positive goal over complete revenue. It is not capped at 1.
+	Completion *float64  `json:"completion,omitempty" minimum:"0"`
+	Currency   string    `json:"currency"`
+	Cutoff     time.Time `json:"cutoff"`
+
+	// DeltaMinor Closed revenue minus the goal, given only with a complete goal over complete revenue.
+	DeltaMinor *int64 `json:"delta_minor,omitempty"`
+
+	// Evaluation The Analytics reading behind closed and planned revenue, the receipt `/analytics/evidence` takes.
+	Evaluation *ReportingEvaluation `json:"evaluation,omitempty"`
+
+	// Goal `set` is a complete, positive goal. `zero` is a complete goal of zero: a delta but no
+	// completion. `incomplete` gives the known subtotal of the months that have a goal and no
+	// completion or delta. `missing` means no month has one. `withheld` means the caller may not
+	// read these goals. `other_currency` is a goal kept in a currency other than the reporting
+	// currency, which is never converted. `changed_outside_plan` is a published plan whose
+	// targets were changed by another route: monthly figures still compare, yearly ones wait
+	// for a manager to review the plan.
+	Goal    SalesProgressGoal `json:"goal"`
+	Horizon ReportingWindow   `json:"horizon"`
+
+	// Members A team reading's members in name order, each the caller may measure one by one.
+	Members []SalesProgressMember `json:"members"`
+
+	// MembersWithheld True when a team's members are not shown one by one.
+	MembersWithheld bool `json:"members_withheld"`
+
+	// Months The twelve months of the selected year.
+	Months []SalesProgressMonth `json:"months"`
+	Period struct {
+		Kind  SalesProgressPeriodKind `json:"kind"`
+		Month *int                    `json:"month,omitempty" maximum:"12" minimum:"1"`
+		Year  int                     `json:"year"`
+	} `json:"period"`
+
+	// Planned The face value of open deals expected to close in the whole period. It never counts toward the goal and is not weighted by probability.
+	Planned SalesProgressAmount `json:"planned"`
+
+	// PlannedValuedAt When the open deals were valued and converted.
+	PlannedValuedAt time.Time          `json:"planned_valued_at"`
+	Scope           ReportingScope     `json:"scope"`
+	State           SalesProgressState `json:"state"`
+	Timezone        string             `json:"timezone"`
+}
+
+// SalesProgressPeriodKind defines model for SalesProgress.Period.Kind.
+type SalesProgressPeriodKind string
+
+// SalesProgressState defines model for SalesProgress.State.
+type SalesProgressState string
+
+// SalesProgressAmount `ok` is a complete amount. `partial` is a known amount that leaves out records whose value
+// the caller may not see or that has none. `withheld` gives no amount. `not_started` is a
+// period that has not begun.
+type SalesProgressAmount struct {
+	AmountMinor *int64                    `json:"amount_minor,omitempty"`
+	Status      SalesProgressAmountStatus `json:"status"`
+}
+
+// SalesProgressAmountStatus defines model for SalesProgressAmount.Status.
+type SalesProgressAmountStatus string
+
+// SalesProgressCategories Closed revenue split by what each deal sold, from the category captured on its priced lines:
+// software is a product sale and implementation a service. Other kinds, products nobody
+// classified and the part no line carries are unresolved. The three parts add up to the
+// closed amount exactly. A deal whose lines add up to more than its value counts as
+// unresolved in full, in `invalid_deals`.
+type SalesProgressCategories struct {
+	InvalidDeals int `json:"invalid_deals" minimum:"0"`
+
+	// ProductItems Names of the products sold, most revenue first.
+	ProductItems []string `json:"product_items"`
+	ProductMinor int64    `json:"product_minor"`
+
+	// ServiceItems Names of the services sold, most revenue first.
+	ServiceItems    []string                      `json:"service_items"`
+	ServiceMinor    int64                         `json:"service_minor"`
+	Status          SalesProgressCategoriesStatus `json:"status"`
+	UnresolvedMinor int64                         `json:"unresolved_minor"`
+}
+
+// SalesProgressCategoriesStatus defines model for SalesProgressCategories.Status.
+type SalesProgressCategoriesStatus string
+
+// SalesProgressGoal `set` is a complete, positive goal. `zero` is a complete goal of zero: a delta but no
+// completion. `incomplete` gives the known subtotal of the months that have a goal and no
+// completion or delta. `missing` means no month has one. `withheld` means the caller may not
+// read these goals. `other_currency` is a goal kept in a currency other than the reporting
+// currency, which is never converted. `changed_outside_plan` is a published plan whose
+// targets were changed by another route: monthly figures still compare, yearly ones wait
+// for a manager to review the plan.
+type SalesProgressGoal struct {
+	// AmountMinor The goal, or the known subtotal when incomplete.
+	AmountMinor  *int64                  `json:"amount_minor,omitempty"`
+	MonthsNeeded int                     `json:"months_needed" maximum:"12" minimum:"0"`
+	MonthsSet    int                     `json:"months_set" maximum:"12" minimum:"0"`
+	Status       SalesProgressGoalStatus `json:"status"`
+}
+
+// SalesProgressGoalStatus defines model for SalesProgressGoal.Status.
+type SalesProgressGoalStatus string
+
+// SalesProgressMember defines model for SalesProgressMember.
+type SalesProgressMember struct {
+	// Closed `ok` is a complete amount. `partial` is a known amount that leaves out records whose value
+	// the caller may not see or that has none. `withheld` gives no amount. `not_started` is a
+	// period that has not begun.
+	Closed     SalesProgressAmount `json:"closed"`
+	DeltaMinor *int64              `json:"delta_minor,omitempty"`
+
+	// Goal `set` is a complete, positive goal. `zero` is a complete goal of zero: a delta but no
+	// completion. `incomplete` gives the known subtotal of the months that have a goal and no
+	// completion or delta. `missing` means no month has one. `withheld` means the caller may not
+	// read these goals. `other_currency` is a goal kept in a currency other than the reporting
+	// currency, which is never converted. `changed_outside_plan` is a published plan whose
+	// targets were changed by another route: monthly figures still compare, yearly ones wait
+	// for a manager to review the plan.
+	Goal    SalesProgressGoal  `json:"goal"`
+	Name    string             `json:"name"`
+	OwnerId openapi_types.UUID `json:"owner_id"`
+
+	// Planned `ok` is a complete amount. `partial` is a known amount that leaves out records whose value
+	// the caller may not see or that has none. `withheld` gives no amount. `not_started` is a
+	// period that has not begun.
+	Planned SalesProgressAmount `json:"planned"`
+}
+
+// SalesProgressMonth defines model for SalesProgressMonth.
+type SalesProgressMonth struct {
+	// Closed `ok` is a complete amount. `partial` is a known amount that leaves out records whose value
+	// the caller may not see or that has none. `withheld` gives no amount. `not_started` is a
+	// period that has not begun.
+	Closed SalesProgressAmount `json:"closed"`
+
+	// DeltaMinor Closed revenue minus the goal; absent before the month starts and without a complete goal.
+	DeltaMinor *int64 `json:"delta_minor,omitempty"`
+
+	// Goal `set` is a complete, positive goal. `zero` is a complete goal of zero: a delta but no
+	// completion. `incomplete` gives the known subtotal of the months that have a goal and no
+	// completion or delta. `missing` means no month has one. `withheld` means the caller may not
+	// read these goals. `other_currency` is a goal kept in a currency other than the reporting
+	// currency, which is never converted. `changed_outside_plan` is a published plan whose
+	// targets were changed by another route: monthly figures still compare, yearly ones wait
+	// for a manager to review the plan.
+	Goal   SalesProgressGoal       `json:"goal"`
+	Month  int                     `json:"month" maximum:"12" minimum:"1"`
+	State  SalesProgressMonthState `json:"state"`
+	Window ReportingWindow         `json:"window"`
+}
+
+// SalesProgressMonthState defines model for SalesProgressMonth.State.
+type SalesProgressMonthState string
 
 // SaveContactResearchClaim One claim a human accepted, with the evidence that makes it checkable.
 type SaveContactResearchClaim struct {
@@ -69557,18 +70145,24 @@ type GetReportingEvidenceParams struct {
 	EndAt             *time.Time                             `form:"end_at,omitempty" json:"end_at,omitempty"`
 	TargetBasis       *GetReportingEvidenceParamsTargetBasis `form:"target_basis,omitempty" json:"target_basis,omitempty"`
 	CloseWindow       *GetReportingEvidenceParamsCloseWindow `form:"close_window,omitempty" json:"close_window,omitempty"`
-	Metrics           *[]ReportingMetricID                   `form:"metrics,omitempty" json:"metrics,omitempty"`
-	Blocks            *[]ReportingBlockKind                  `form:"blocks,omitempty" json:"blocks,omitempty"`
-	ProductId         *openapi_types.UUID                    `form:"product_id,omitempty" json:"product_id,omitempty"`
-	Country           *ReportingCountry                      `form:"country,omitempty" json:"country,omitempty"`
-	Industry          *ReportingIndustry                     `form:"industry,omitempty" json:"industry,omitempty"`
-	ValueBasis        *ReportingValueBasis                   `form:"value_basis,omitempty" json:"value_basis,omitempty"`
-	InitiativeId      *openapi_types.UUID                    `form:"initiative_id,omitempty" json:"initiative_id,omitempty"`
-	Metric            ReportingMetricID                      `form:"metric" json:"metric"`
-	GroupKey          *string                                `form:"group_key,omitempty" json:"group_key,omitempty"`
-	Through           *time.Time                             `form:"through,omitempty" json:"through,omitempty"`
-	Cursor            *string                                `form:"cursor,omitempty" json:"cursor,omitempty"`
-	Limit             *int                                   `form:"limit,omitempty" json:"limit,omitempty" maximum:"100" minimum:"1"`
+
+	// CloseStartAt Start of a custom close window.
+	CloseStartAt *time.Time `form:"close_start_at,omitempty" json:"close_start_at,omitempty"`
+
+	// CloseEndAt End of a custom close window, exclusive.
+	CloseEndAt   *time.Time            `form:"close_end_at,omitempty" json:"close_end_at,omitempty"`
+	Metrics      *[]ReportingMetricID  `form:"metrics,omitempty" json:"metrics,omitempty"`
+	Blocks       *[]ReportingBlockKind `form:"blocks,omitempty" json:"blocks,omitempty"`
+	ProductId    *openapi_types.UUID   `form:"product_id,omitempty" json:"product_id,omitempty"`
+	Country      *ReportingCountry     `form:"country,omitempty" json:"country,omitempty"`
+	Industry     *ReportingIndustry    `form:"industry,omitempty" json:"industry,omitempty"`
+	ValueBasis   *ReportingValueBasis  `form:"value_basis,omitempty" json:"value_basis,omitempty"`
+	InitiativeId *openapi_types.UUID   `form:"initiative_id,omitempty" json:"initiative_id,omitempty"`
+	Metric       ReportingMetricID     `form:"metric" json:"metric"`
+	GroupKey     *string               `form:"group_key,omitempty" json:"group_key,omitempty"`
+	Through      *time.Time            `form:"through,omitempty" json:"through,omitempty"`
+	Cursor       *string               `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit        *int                  `form:"limit,omitempty" json:"limit,omitempty" maximum:"100" minimum:"1"`
 }
 
 // GetReportingEvidenceParamsScopeKind defines parameters for GetReportingEvidence.
@@ -69623,6 +70217,25 @@ type ListSalesInitiativeMembersParams struct {
 
 // ListSalesInitiativeMembersParamsRecordType defines parameters for ListSalesInitiativeMembers.
 type ListSalesInitiativeMembersParamsRecordType string
+
+// GetSalesProgressParams defines parameters for GetSalesProgress.
+type GetSalesProgressParams struct {
+	Period GetSalesProgressParamsPeriod `form:"period" json:"period"`
+	Year   int                          `form:"year" json:"year" maximum:"2200" minimum:"2000"`
+
+	// Month Required with `period=month`.
+	Month *int `form:"month,omitempty" json:"month,omitempty" maximum:"12" minimum:"1"`
+
+	// ScopeKind Absent reads the caller's own figures.
+	ScopeKind *GetSalesProgressParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+	ScopeId   *openapi_types.UUID              `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+}
+
+// GetSalesProgressParamsPeriod defines parameters for GetSalesProgress.
+type GetSalesProgressParamsPeriod string
+
+// GetSalesProgressParamsScopeKind defines parameters for GetSalesProgress.
+type GetSalesProgressParamsScopeKind string
 
 // ListReportingReportsParams defines parameters for ListReportingReports.
 type ListReportingReportsParams struct {
@@ -69713,6 +70326,73 @@ type ListReportRunsParams struct {
 
 	// Entity Only the questions about this population.
 	Entity *string `form:"entity,omitempty" json:"entity,omitempty"`
+}
+
+// ListSalesGoalSellersParams defines parameters for ListSalesGoalSellers.
+type ListSalesGoalSellersParams struct {
+	Year int `form:"year" json:"year" maximum:"2200" minimum:"2000"`
+}
+
+// DiscardSalesGoalDraftParams defines parameters for DiscardSalesGoalDraft.
+type DiscardSalesGoalDraftParams struct {
+	IfMatch string `json:"If-Match"`
+}
+
+// SaveSalesGoalDraftParams defines parameters for SaveSalesGoalDraft.
+type SaveSalesGoalDraftParams struct {
+	IfMatch string `json:"If-Match"`
+
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// PublishSalesGoalPlanParams defines parameters for PublishSalesGoalPlan.
+type PublishSalesGoalPlanParams struct {
+	IfMatch string `json:"If-Match"`
+
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// WithdrawSalesGoalPlanParams defines parameters for WithdrawSalesGoalPlan.
+type WithdrawSalesGoalPlanParams struct {
+	IfMatch string `json:"If-Match"`
 }
 
 // UpdateReportingScheduleParams defines parameters for UpdateReportingSchedule.
@@ -77047,6 +77727,15 @@ type ExplainReportRunCellJSONRequestBody = ReportRunCell
 
 // SearchReportEvidenceJSONRequestBody defines body for SearchReportEvidence for application/json ContentType.
 type SearchReportEvidenceJSONRequestBody = ReportEvidenceSearchRequest
+
+// SaveSalesGoalDraftJSONRequestBody defines body for SaveSalesGoalDraft for application/json ContentType.
+type SaveSalesGoalDraftJSONRequestBody = SalesGoalDraftInput
+
+// PublishSalesGoalPlanJSONRequestBody defines body for PublishSalesGoalPlan for application/json ContentType.
+type PublishSalesGoalPlanJSONRequestBody = SalesGoalPublishInput
+
+// WithdrawSalesGoalPlanJSONRequestBody defines body for WithdrawSalesGoalPlan for application/json ContentType.
+type WithdrawSalesGoalPlanJSONRequestBody = SalesGoalReasonInput
 
 // UpdateReportingScheduleJSONRequestBody defines body for UpdateReportingSchedule for application/json ContentType.
 type UpdateReportingScheduleJSONRequestBody = ReportingScheduleInput
@@ -91231,6 +91920,9 @@ type ServerInterface interface {
 	// Get reporting metrics
 	// (GET /analytics/metrics)
 	GetReportingMetrics(w http.ResponseWriter, r *http.Request)
+	// Closed revenue against the sales goal for one seller or team, by month or calendar year.
+	// (GET /analytics/progress)
+	GetSalesProgress(w http.ResponseWriter, r *http.Request, params GetSalesProgressParams)
 	// Answer a question nobody wrote a report for.
 	// (POST /analytics/query)
 	RunAnalyticsQuery(w http.ResponseWriter, r *http.Request)
@@ -91312,6 +92004,24 @@ type ServerInterface interface {
 	// Which records behind a saved run carry the words, and which do not.
 	// (POST /analytics/runs/{run_id}/evidence-search)
 	SearchReportEvidence(w http.ResponseWriter, r *http.Request, runId openapi_types.UUID)
+	// The sellers whose sales goals the caller may read for one calendar year.
+	// (GET /analytics/sales-goals)
+	ListSalesGoalSellers(w http.ResponseWriter, r *http.Request, params ListSalesGoalSellersParams)
+	// One seller's sales goal plan for a calendar year.
+	// (GET /analytics/sales-goals/{owner_id}/{year})
+	GetSalesGoalPlan(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID, year int)
+	// Discard the shared draft and keep the published goals.
+	// (DELETE /analytics/sales-goals/{owner_id}/{year}/draft)
+	DiscardSalesGoalDraft(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID, year int, params DiscardSalesGoalDraftParams)
+	// Save the shared draft of a sales goal plan.
+	// (PUT /analytics/sales-goals/{owner_id}/{year}/draft)
+	SaveSalesGoalDraft(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID, year int, params SaveSalesGoalDraftParams)
+	// Publish the draft as the agreed goals for the year.
+	// (POST /analytics/sales-goals/{owner_id}/{year}/publish)
+	PublishSalesGoalPlan(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID, year int, params PublishSalesGoalPlanParams)
+	// Withdraw a mistaken publication.
+	// (POST /analytics/sales-goals/{owner_id}/{year}/withdraw)
+	WithdrawSalesGoalPlan(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID, year int, params WithdrawSalesGoalPlanParams)
 	// Update reporting schedule
 	// (PATCH /analytics/schedules/{id})
 	UpdateReportingSchedule(w http.ResponseWriter, r *http.Request, id Id, params UpdateReportingScheduleParams)
@@ -94720,6 +95430,12 @@ func (_ Unimplemented) GetReportingMetrics(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Closed revenue against the sales goal for one seller or team, by month or calendar year.
+// (GET /analytics/progress)
+func (_ Unimplemented) GetSalesProgress(w http.ResponseWriter, r *http.Request, params GetSalesProgressParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Answer a question nobody wrote a report for.
 // (POST /analytics/query)
 func (_ Unimplemented) RunAnalyticsQuery(w http.ResponseWriter, r *http.Request) {
@@ -94879,6 +95595,42 @@ func (_ Unimplemented) ExplainReportRunCell(w http.ResponseWriter, r *http.Reque
 // Which records behind a saved run carry the words, and which do not.
 // (POST /analytics/runs/{run_id}/evidence-search)
 func (_ Unimplemented) SearchReportEvidence(w http.ResponseWriter, r *http.Request, runId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The sellers whose sales goals the caller may read for one calendar year.
+// (GET /analytics/sales-goals)
+func (_ Unimplemented) ListSalesGoalSellers(w http.ResponseWriter, r *http.Request, params ListSalesGoalSellersParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// One seller's sales goal plan for a calendar year.
+// (GET /analytics/sales-goals/{owner_id}/{year})
+func (_ Unimplemented) GetSalesGoalPlan(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID, year int) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Discard the shared draft and keep the published goals.
+// (DELETE /analytics/sales-goals/{owner_id}/{year}/draft)
+func (_ Unimplemented) DiscardSalesGoalDraft(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID, year int, params DiscardSalesGoalDraftParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Save the shared draft of a sales goal plan.
+// (PUT /analytics/sales-goals/{owner_id}/{year}/draft)
+func (_ Unimplemented) SaveSalesGoalDraft(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID, year int, params SaveSalesGoalDraftParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Publish the draft as the agreed goals for the year.
+// (POST /analytics/sales-goals/{owner_id}/{year}/publish)
+func (_ Unimplemented) PublishSalesGoalPlan(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID, year int, params PublishSalesGoalPlanParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Withdraw a mistaken publication.
+// (POST /analytics/sales-goals/{owner_id}/{year}/withdraw)
+func (_ Unimplemented) WithdrawSalesGoalPlan(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID, year int, params WithdrawSalesGoalPlanParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -105182,6 +105934,32 @@ func (siw *ServerInterfaceWrapper) GetReportingEvidence(w http.ResponseWriter, r
 		return
 	}
 
+	// ------------- Optional query parameter "close_start_at" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "close_start_at", r.URL.Query(), &params.CloseStartAt, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "close_start_at"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "close_start_at", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "close_end_at" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "close_end_at", r.URL.Query(), &params.CloseEndAt, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "close_end_at"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "close_end_at", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "metrics" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "metrics", r.URL.Query(), &params.Metrics, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
@@ -105824,6 +106602,99 @@ func (siw *ServerInterfaceWrapper) GetReportingMetrics(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetReportingMetrics(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSalesProgress operation middleware
+func (siw *ServerInterfaceWrapper) GetSalesProgress(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetSalesProgressParams
+
+	// ------------- Required query parameter "period" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "period", r.URL.Query(), &params.Period, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "period"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "period", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "year" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "year", r.URL.Query(), &params.Year, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "year"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "year", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "month" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "month", r.URL.Query(), &params.Month, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "month"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "month", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSalesProgress(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -107076,6 +107947,404 @@ func (siw *ServerInterfaceWrapper) SearchReportEvidence(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SearchReportEvidence(w, r, runId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListSalesGoalSellers operation middleware
+func (siw *ServerInterfaceWrapper) ListSalesGoalSellers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListSalesGoalSellersParams
+
+	// ------------- Required query parameter "year" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "year", r.URL.Query(), &params.Year, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "year"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "year", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSalesGoalSellers(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSalesGoalPlan operation middleware
+func (siw *ServerInterfaceWrapper) GetSalesGoalPlan(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "owner_id" -------------
+	var ownerId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "owner_id", chi.URLParam(r, "owner_id"), &ownerId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "year" -------------
+	var year int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "year", chi.URLParam(r, "year"), &year, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "year", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSalesGoalPlan(w, r, ownerId, year)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DiscardSalesGoalDraft operation middleware
+func (siw *ServerInterfaceWrapper) DiscardSalesGoalDraft(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "owner_id" -------------
+	var ownerId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "owner_id", chi.URLParam(r, "owner_id"), &ownerId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "year" -------------
+	var year int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "year", chi.URLParam(r, "year"), &year, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "year", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DiscardSalesGoalDraftParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter If-Match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "If-Match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DiscardSalesGoalDraft(w, r, ownerId, year, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SaveSalesGoalDraft operation middleware
+func (siw *ServerInterfaceWrapper) SaveSalesGoalDraft(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "owner_id" -------------
+	var ownerId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "owner_id", chi.URLParam(r, "owner_id"), &ownerId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "year" -------------
+	var year int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "year", chi.URLParam(r, "year"), &year, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "year", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SaveSalesGoalDraftParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter If-Match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "If-Match", Err: err})
+		return
+	}
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveSalesGoalDraft(w, r, ownerId, year, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PublishSalesGoalPlan operation middleware
+func (siw *ServerInterfaceWrapper) PublishSalesGoalPlan(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "owner_id" -------------
+	var ownerId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "owner_id", chi.URLParam(r, "owner_id"), &ownerId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "year" -------------
+	var year int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "year", chi.URLParam(r, "year"), &year, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "year", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PublishSalesGoalPlanParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter If-Match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "If-Match", Err: err})
+		return
+	}
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PublishSalesGoalPlan(w, r, ownerId, year, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// WithdrawSalesGoalPlan operation middleware
+func (siw *ServerInterfaceWrapper) WithdrawSalesGoalPlan(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "owner_id" -------------
+	var ownerId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "owner_id", chi.URLParam(r, "owner_id"), &ownerId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "year" -------------
+	var year int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "year", chi.URLParam(r, "year"), &year, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "year", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params WithdrawSalesGoalPlanParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter If-Match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "If-Match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.WithdrawSalesGoalPlan(w, r, ownerId, year, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -146630,6 +147899,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/analytics/metrics", wrapper.GetReportingMetrics)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/progress", wrapper.GetSalesProgress)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/analytics/query", wrapper.RunAnalyticsQuery)
 	})
 	r.Group(func(r chi.Router) {
@@ -146709,6 +147981,24 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/analytics/runs/{run_id}/evidence-search", wrapper.SearchReportEvidence)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/sales-goals", wrapper.ListSalesGoalSellers)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/sales-goals/{owner_id}/{year}", wrapper.GetSalesGoalPlan)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/analytics/sales-goals/{owner_id}/{year}/draft", wrapper.DiscardSalesGoalDraft)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/analytics/sales-goals/{owner_id}/{year}/draft", wrapper.SaveSalesGoalDraft)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/sales-goals/{owner_id}/{year}/publish", wrapper.PublishSalesGoalPlan)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/sales-goals/{owner_id}/{year}/withdraw", wrapper.WithdrawSalesGoalPlan)
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/analytics/schedules/{id}", wrapper.UpdateReportingSchedule)

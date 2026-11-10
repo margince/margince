@@ -14,6 +14,10 @@ export const SCREENS = [
   "projects",
   "worklist",
   "analytics",
+  // Closed revenue against the sales goal, one seller or one team at a time.
+  "progress",
+  // The yearly sales goal plans: read by a rep, set by a manager.
+  "goals",
   "settings",
   "filters",
   "scheduled",

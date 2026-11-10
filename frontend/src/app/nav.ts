@@ -2,10 +2,12 @@ import {
   Briefcase,
   Building2,
   ChartNoAxesCombined,
+  Flag,
   Handshake,
   Home,
   Layers2,
   type LucideIcon,
+  Target,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -151,6 +153,15 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         labelKey: "nav.analytics",
         icon: ChartNoAxesCombined,
       },
+      // One reader's own number: closed revenue against the goal. A manager
+      // reads a team here, so the row keeps one name for both.
+      {
+        screen: "progress",
+        labelKey: "nav.progress",
+        icon: Target,
+        aliases: ["my progress", "team progress"],
+      },
+      { screen: "goals", labelKey: "nav.salesGoals", icon: Flag },
     ],
   },
 ];
@@ -270,6 +281,8 @@ export const GRIDDED_SCREENS: ReadonlySet<Screen> = new Set([
   "filters",
   "lists",
   "analytics",
+  "progress",
+  "goals",
   "share",
   "offers",
 ]);

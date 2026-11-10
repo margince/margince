@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 592,
-    "tokens": 39741,
+    "tokens": 40038,
     "median_tool_tokens": 620,
-    "mean_tool_tokens": 827
+    "mean_tool_tokens": 833
   },
   "agents": [
     {
@@ -84,12 +84,12 @@
   ],
   "tool_cost": [
     {
-      "name": "read_workspace",
-      "tokens": 2765
+      "name": "read_reports",
+      "tokens": 2784
     },
     {
-      "name": "read_reports",
-      "tokens": 2692
+      "name": "read_workspace",
+      "tokens": 2765
     },
     {
       "name": "read_details",
@@ -117,11 +117,15 @@
     },
     {
       "name": "change_reports",
-      "tokens": 1264
+      "tokens": 1357
     },
     {
       "name": "change_capture",
       "tokens": 1080
+    },
+    {
+      "name": "read_analytics",
+      "tokens": 1020
     },
     {
       "name": "preview_import",
@@ -130,10 +134,6 @@
     {
       "name": "read_forecast",
       "tokens": 978
-    },
-    {
-      "name": "read_analytics",
-      "tokens": 927
     },
     {
       "name": "change_attention",
@@ -169,7 +169,7 @@
     },
     {
       "name": "read_view",
-      "tokens": 638
+      "tokens": 658
     },
     {
       "name": "update_record",

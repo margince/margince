@@ -28,9 +28,11 @@ import {
   OnboardingScreen,
   PartnersScreen,
   PreferenceCenterScreen,
+  ProgressScreen,
   ProjectScreen,
   ProjectsScreen,
   ResetRoute,
+  SalesGoalsScreen,
   ScheduledSendsScreen,
   ScreenNotice,
   ScreenPending,
@@ -84,6 +86,9 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // make it describe a fraction of what the reader is looking at.
     worklist: ({ id }) => <WorklistRedirect opensOn={id} />,
     analytics: () => <AnalyticsScreen />,
+    // The period and the person or team ride the query, as Analytics dials do.
+    progress: () => <ProgressScreen />,
+    goals: () => <SalesGoalsScreen />,
     // The screen resolves its own address. Which entry an address names is the
     // settings IA's question. The admin half lives a segment deeper, and a
     // legacy link to it is answered and rewritten there rather than here.

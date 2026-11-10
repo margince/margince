@@ -239,6 +239,7 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	s.analyticsContextHandlers = newAnalyticsContextHandlers(
 		InstallationDB(pool), func() time.Time { return time.Now().UTC() },
 	)
+	s.salesProgressHandlers = salesProgressHandlers{db: InstallationDB(pool), reports: reportingService}
 	s.sdrSummaryHandlers = newSdrSummaryHandlers(
 		InstallationDB(pool), func() time.Time { return time.Now().UTC() },
 	).withTargets(reportingService)

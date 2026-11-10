@@ -1,0 +1,78 @@
+.progress-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gapCards);
+}
+
+.progress-result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.progress-result-figure {
+  margin: 0;
+  font: var(--fontDisplayFigure);
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-result-goal {
+  margin: 0;
+  color: var(--textSecondary);
+}
+
+.progress-definition {
+  margin: 0;
+  max-inline-size: 72ch;
+}
+
+.goal-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.goal-editor-yearly {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--gapActions);
+}
+
+.goal-editor-months {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: var(--space-3) var(--space-4);
+}
+
+.goal-editor-sum {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-work {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: var(--space-3);
+}
+
+.progress-work > * {
+  align-self: stretch;
+}
+
+.progress-work > :first-child {
+  align-self: start;
+}
+
+.progress-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gapCards);
+}
+
+.goal-plan {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}

@@ -6053,6 +6053,23 @@
                   "type": "string"
                 }
               },
+              "close_interval": {
+                "type": "object",
+                "properties": {
+                  "end_at": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "start_at": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "end_at",
+                  "start_at"
+                ]
+              },
               "close_window": {
                 "type": "string"
               },

@@ -91,6 +91,8 @@ const CANONICAL_ORDER = [
   "Projects",
   "Filters and views",
   "Analytics",
+  "Progress",
+  "Sales goals",
 ];
 
 // The rows of whatever level the panel is showing — the destinations, or a
@@ -115,6 +117,8 @@ const OFF_BAR = [
   "Projects",
   "Filters and views",
   "Analytics",
+  "Progress",
+  "Sales goals",
 ];
 
 const linksIn = (selector: string) => {

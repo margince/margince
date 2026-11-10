@@ -58,4 +58,5 @@ var reportingComponentKindLabels = map[string]langcopy.Phrase{
 	"other":          {En: "Other", De: "Sonstiges", Vi: "Khác"},
 	"unclassified":   {En: "Unclassified product", De: "Nicht eingeordnetes Produkt", Vi: "Sản phẩm chưa phân loại"},
 	"unallocated":    {En: "Unallocated", De: "Nicht zugeordnet", Vi: "Chưa phân bổ"},
+	mixInvalidKind:   {En: "Lines exceed the deal value", De: "Positionen übersteigen den Dealwert", Vi: "Các dòng vượt quá giá trị deal"},
 }

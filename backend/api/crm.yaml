@@ -14603,6 +14603,7 @@ paths:
           enum:
           - fiscal_quarter
           - all_open
+          - custom
       - &id011
         name: metrics
         in: query
@@ -14742,6 +14743,7 @@ paths:
           enum:
           - fiscal_quarter
           - all_open
+          - custom
       - &id011
         name: metrics
         in: query
@@ -14836,6 +14838,16 @@ paths:
       - *id008
       - *id009
       - *id010
+      - name: close_start_at
+        in: query
+        required: false
+        description: Start of a custom close window.
+        schema: *id002
+      - name: close_end_at
+        in: query
+        required: false
+        description: End of a custom close window, exclusive.
+        schema: *id002
       - *id011
       - *id012
       - *dimProduct
@@ -15456,6 +15468,234 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ReportingTargetInput'
+  /analytics/progress:
+    get:
+      tags: [Reports]
+      operationId: getSalesProgress
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: Closed revenue against the sales goal for one seller or team, by month or calendar year.
+      description: |
+        Closed revenue is the `bookings_won` figure Analytics shows for the same scope and window:
+        won deals by actual close date and current owner, in the reporting currency. The goal is
+        the sum of each owner's active monthly `bookings_won` target with no pipeline. A yearly
+        reading runs January to December whatever the fiscal year, and needs all twelve months'
+        goals; with any missing, `goal.status` is `incomplete` and no completion or delta is given.
+
+        Actuals stop at `cutoff`, while the goal and planned revenue use the whole period. A period
+        that has not started has no `actual_window`. `evaluation` is the reading the figures came
+        from, so evidence is read with `/analytics/evidence` under its own receipt.
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      parameters:
+      - name: period
+        in: query
+        required: true
+        schema: { type: string, enum: [month, year] }
+      - name: year
+        in: query
+        required: true
+        schema: { type: integer, minimum: 2000, maximum: 2200 }
+      - name: month
+        in: query
+        required: false
+        description: Required with `period=month`.
+        schema: { type: integer, minimum: 1, maximum: 12 }
+      - name: scope_kind
+        in: query
+        required: false
+        description: Absent reads the caller's own figures.
+        schema: { type: string, enum: [owner, team] }
+      - name: scope_id
+        in: query
+        required: false
+        schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The progress reading.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesProgress' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/sales-goals:
+    get:
+      tags: [Reports]
+      operationId: listSalesGoalSellers
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: The sellers whose sales goals the caller may read for one calendar year.
+      description: |
+        The caller comes first. A colleague is listed only when the caller may measure them one by
+        one, so with individual performance turned off the list holds the caller alone.
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      parameters:
+      - name: year
+        in: query
+        required: true
+        schema: { type: integer, minimum: 2000, maximum: 2200 }
+      responses:
+        '200':
+          description: The sellers and the state of each one's plan.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesGoalRoster' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/sales-goals/{owner_id}/{year}:
+    parameters: &salesGoalPath
+    - name: owner_id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    - name: year
+      in: path
+      required: true
+      schema: { type: integer, minimum: 2000, maximum: 2200 }
+    get:
+      tags: [Reports]
+      operationId: getSalesGoalPlan
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: One seller's sales goal plan for a calendar year.
+      description: |
+        The published goals, the shared draft and the plan's history. A draft is shared with the
+        seller and with readers who may set their goals, never with peers. Outside the caller's
+        reach the answer is 404 whether or not a plan exists.
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      responses:
+        '200':
+          description: The plan.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesGoalPlan' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/sales-goals/{owner_id}/{year}/draft:
+    parameters: *salesGoalPath
+    put:
+      tags: [Reports]
+      operationId: saveSalesGoalDraft
+      security: [ { cookieAuth: [] } ]
+      summary: Save the shared draft of a sales goal plan.
+      description: |
+        Twelve month entries, each an amount in minor units of the plan currency or null for Not
+        set. A draft may be incomplete and its declared yearly total may differ from the months;
+        it changes no reported figure. `If-Match` is the plan version, `0` when no plan exists.
+      x-agent-access: human-only
+      x-human-only-reason: security
+      parameters:
+      - name: If-Match
+        in: header
+        required: true
+        schema: { type: string }
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SalesGoalDraftInput' }
+      responses:
+        '200':
+          description: The plan with its saved draft.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesGoalPlan' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/VersionConflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Reports]
+      operationId: discardSalesGoalDraft
+      security: [ { cookieAuth: [] } ]
+      summary: Discard the shared draft and keep the published goals.
+      x-agent-access: human-only
+      x-human-only-reason: security
+      parameters:
+      - name: If-Match
+        in: header
+        required: true
+        schema: { type: string }
+      responses:
+        '200':
+          description: The plan without a draft.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesGoalPlan' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/VersionConflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/sales-goals/{owner_id}/{year}/publish:
+    parameters: *salesGoalPath
+    post:
+      tags: [Reports]
+      operationId: publishSalesGoalPlan
+      security: [ { cookieAuth: [] } ]
+      summary: Publish the draft as the agreed goals for the year.
+      description: |
+        Writes the twelve monthly targets, the publication and its audit in one transaction. Every
+        month must be set, the months must add up to the declared yearly total, and the total must
+        be above zero. The previous publication stays in force when anything fails.
+      x-agent-access: human-only
+      x-human-only-reason: security
+      parameters:
+      - name: If-Match
+        in: header
+        required: true
+        schema: { type: string }
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SalesGoalPublishInput' }
+      responses:
+        '200':
+          description: The published plan.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesGoalPlan' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/VersionConflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/sales-goals/{owner_id}/{year}/withdraw:
+    parameters: *salesGoalPath
+    post:
+      tags: [Reports]
+      operationId: withdrawSalesGoalPlan
+      security: [ { cookieAuth: [] } ]
+      summary: Withdraw a mistaken publication.
+      description: Retires the twelve published targets together, so Progress shows no goal until a new publication.
+      x-agent-access: human-only
+      x-human-only-reason: security
+      parameters:
+      - name: If-Match
+        in: header
+        required: true
+        schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SalesGoalReasonInput' }
+      responses:
+        '200':
+          description: The withdrawn plan.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesGoalPlan' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/VersionConflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /analytics/framework:
     get:
       tags:
@@ -60987,7 +61227,15 @@ components:
           enum:
           - fiscal_quarter
           - all_open
+          - custom
           x-extensible-enum: true
+          description: |
+            Which open deals the open-pipeline figures count, by expected close. `fiscal_quarter`
+            is the current fiscal quarter, `all_open` is every open deal, and `custom` is
+            `close_interval`, which it requires.
+        close_interval:
+          allOf: [{ $ref: '#/components/schemas/ReportingWindow' }]
+          description: The expected-close window `close_window=custom` names, at most twelve months long.
         product_id:
           allOf: [{ $ref: '#/components/schemas/ReportingProductId' }]
         initiative_id:
@@ -61929,6 +62177,225 @@ components:
           type: integer
           format: int64
         created_at: *id001
+    SalesProgressGoal:
+      type: object
+      additionalProperties: false
+      required: [status, months_set, months_needed]
+      description: |
+        `set` is a complete, positive goal. `zero` is a complete goal of zero: a delta but no
+        completion. `incomplete` gives the known subtotal of the months that have a goal and no
+        completion or delta. `missing` means no month has one. `withheld` means the caller may not
+        read these goals. `other_currency` is a goal kept in a currency other than the reporting
+        currency, which is never converted. `changed_outside_plan` is a published plan whose
+        targets were changed by another route: monthly figures still compare, yearly ones wait
+        for a manager to review the plan.
+      properties:
+        status: { type: string, enum: [set, zero, incomplete, missing, withheld, other_currency, changed_outside_plan], x-extensible-enum: true }
+        amount_minor: { type: integer, format: int64, description: 'The goal, or the known subtotal when incomplete.' }
+        months_set: { type: integer, minimum: 0, maximum: 12 }
+        months_needed: { type: integer, minimum: 0, maximum: 12 }
+    SalesProgressAmount:
+      type: object
+      additionalProperties: false
+      required: [status]
+      description: |
+        `ok` is a complete amount. `partial` is a known amount that leaves out records whose value
+        the caller may not see or that has none. `withheld` gives no amount. `not_started` is a
+        period that has not begun.
+      properties:
+        status: { type: string, enum: [ok, partial, withheld, not_started], x-extensible-enum: true }
+        amount_minor: { type: integer, format: int64 }
+    SalesProgressCategories:
+      type: object
+      additionalProperties: false
+      required: [status, product_minor, service_minor, unresolved_minor, product_items, service_items, invalid_deals]
+      description: |
+        Closed revenue split by what each deal sold, from the category captured on its priced lines:
+        software is a product sale and implementation a service. Other kinds, products nobody
+        classified and the part no line carries are unresolved. The three parts add up to the
+        closed amount exactly. A deal whose lines add up to more than its value counts as
+        unresolved in full, in `invalid_deals`.
+      properties:
+        status: { type: string, enum: [ok, partial, withheld, not_started], x-extensible-enum: true }
+        product_minor: { type: integer, format: int64 }
+        service_minor: { type: integer, format: int64 }
+        unresolved_minor: { type: integer, format: int64 }
+        product_items: { type: array, maxItems: 50, items: { type: string }, description: 'Names of the products sold, most revenue first.' }
+        service_items: { type: array, maxItems: 50, items: { type: string }, description: 'Names of the services sold, most revenue first.' }
+        invalid_deals: { type: integer, minimum: 0 }
+    SalesProgressMonth:
+      type: object
+      additionalProperties: false
+      required: [month, window, state, goal, closed]
+      properties:
+        month: { type: integer, minimum: 1, maximum: 12 }
+        window: { $ref: '#/components/schemas/ReportingWindow' }
+        state: { type: string, enum: [not_started, current, ended], x-extensible-enum: true }
+        goal: { $ref: '#/components/schemas/SalesProgressGoal' }
+        closed: { $ref: '#/components/schemas/SalesProgressAmount' }
+        delta_minor: { type: integer, format: int64, description: 'Closed revenue minus the goal; absent before the month starts and without a complete goal.' }
+    SalesProgressMember:
+      type: object
+      additionalProperties: false
+      required: [owner_id, name, goal, closed, planned]
+      properties:
+        owner_id: { type: string, format: uuid }
+        name: { type: string }
+        goal: { $ref: '#/components/schemas/SalesProgressGoal' }
+        closed: { $ref: '#/components/schemas/SalesProgressAmount' }
+        planned: { $ref: '#/components/schemas/SalesProgressAmount' }
+        delta_minor: { type: integer, format: int64 }
+    SalesProgress:
+      type: object
+      additionalProperties: false
+      required: [scope, period, horizon, cutoff, timezone, currency, state, closed, goal, categories, planned, planned_valued_at, months, members, members_withheld, capabilities]
+      properties:
+        scope: { $ref: '#/components/schemas/ReportingScope' }
+        period:
+          type: object
+          additionalProperties: false
+          required: [kind, year]
+          properties:
+            kind: { type: string, enum: [month, year], x-extensible-enum: true }
+            year: { type: integer }
+            month: { type: integer, minimum: 1, maximum: 12 }
+        horizon: { $ref: '#/components/schemas/ReportingWindow' }
+        actual_window:
+          allOf: [{ $ref: '#/components/schemas/ReportingWindow' }]
+          description: From the period start to the cutoff. Absent before the period starts.
+        cutoff: { type: string, format: date-time }
+        timezone: { type: string }
+        currency: { type: string }
+        state: { type: string, enum: [not_started, current, ended], x-extensible-enum: true }
+        closed: { $ref: '#/components/schemas/SalesProgressAmount' }
+        goal: { $ref: '#/components/schemas/SalesProgressGoal' }
+        completion:
+          type: number
+          format: double
+          minimum: 0
+          description: Closed revenue divided by the goal, given only for a complete positive goal over complete revenue. It is not capped at 1.
+        delta_minor: { type: integer, format: int64, description: 'Closed revenue minus the goal, given only with a complete goal over complete revenue.' }
+        categories: { $ref: '#/components/schemas/SalesProgressCategories' }
+        planned:
+          allOf: [{ $ref: '#/components/schemas/SalesProgressAmount' }]
+          description: The face value of open deals expected to close in the whole period. It never counts toward the goal and is not weighted by probability.
+        planned_valued_at: { type: string, format: date-time, description: 'When the open deals were valued and converted.' }
+        months:
+          type: array
+          maxItems: 12
+          description: The twelve months of the selected year.
+          items: { $ref: '#/components/schemas/SalesProgressMonth' }
+        members:
+          type: array
+          maxItems: 500
+          description: A team reading's members in name order, each the caller may measure one by one.
+          items: { $ref: '#/components/schemas/SalesProgressMember' }
+        members_withheld: { type: boolean, description: 'True when a team''s members are not shown one by one.' }
+        evaluation:
+          allOf: [{ $ref: '#/components/schemas/ReportingEvaluation' }]
+          description: The Analytics reading behind closed and planned revenue, the receipt `/analytics/evidence` takes.
+        capabilities:
+          type: object
+          additionalProperties: false
+          required: [write_goals]
+          properties:
+            write_goals: { type: boolean, description: 'Whether the caller may set this scope''s goals.' }
+    SalesGoalSeller:
+      type: object
+      additionalProperties: false
+      required: [owner_id, name, state, can_edit]
+      properties:
+        owner_id: { type: string, format: uuid }
+        name: { type: string }
+        state: { $ref: '#/components/schemas/SalesGoalPlanState' }
+        total_minor: { type: integer, format: int64, description: 'The published yearly goal.' }
+        can_edit: { type: boolean }
+    SalesGoalRoster:
+      type: object
+      additionalProperties: false
+      required: [year, currency, data]
+      properties:
+        year: { type: integer }
+        currency: { type: string }
+        data: { type: array, maxItems: 500, items: { $ref: '#/components/schemas/SalesGoalSeller' } }
+    SalesGoalPlanState:
+      type: string
+      enum: [no_goal, draft, published, published_with_draft, withdrawn, changed_outside_plan]
+      x-extensible-enum: true
+    SalesGoalMonths:
+      type: array
+      minItems: 12
+      maxItems: 12
+      description: January to December, each an amount in minor units or null for Not set.
+      items: { type: [integer, 'null'], format: int64, minimum: 0 }
+    SalesGoalRevision:
+      type: object
+      additionalProperties: false
+      required: [revision, months, reason, author_name, created_at, origin]
+      properties:
+        revision: { type: integer, format: int64 }
+        months: { $ref: '#/components/schemas/SalesGoalMonths' }
+        declared_total_minor: { type: [integer, 'null'], format: int64 }
+        reason: { type: string }
+        author_name: { type: string }
+        created_at: { type: string, format: date-time }
+        origin: { type: string, enum: [manual, ai, adopted], x-extensible-enum: true }
+    SalesGoalEvent:
+      type: object
+      additionalProperties: false
+      required: [revision, kind, reason, author_name, created_at]
+      properties:
+        revision: { type: integer, format: int64 }
+        kind: { type: string, enum: [draft, published, discarded, withdrawn], x-extensible-enum: true }
+        reason: { type: string }
+        author_name: { type: string }
+        created_at: { type: string, format: date-time }
+        total_minor: { type: integer, format: int64 }
+    SalesGoalPlan:
+      type: object
+      additionalProperties: false
+      required: [owner_id, owner_name, year, currency, state, version, live_months, history, capabilities]
+      properties:
+        owner_id: { type: string, format: uuid }
+        owner_name: { type: string }
+        year: { type: integer }
+        currency: { type: string, description: 'The reporting currency the goals are kept in.' }
+        state: { $ref: '#/components/schemas/SalesGoalPlanState' }
+        version: { type: integer, format: int64, description: 'The plan version a write sends in If-Match; 0 before the first draft.' }
+        live_months:
+          allOf: [{ $ref: '#/components/schemas/SalesGoalMonths' }]
+          description: The monthly goals Progress reads today, whether a plan published them or not.
+        published: { $ref: '#/components/schemas/SalesGoalRevision' }
+        draft: { $ref: '#/components/schemas/SalesGoalRevision' }
+        history: { type: array, maxItems: 200, items: { $ref: '#/components/schemas/SalesGoalEvent' } }
+        capabilities:
+          type: object
+          additionalProperties: false
+          required: [edit]
+          properties:
+            edit: { type: boolean, description: 'Whether the caller may draft, publish, discard and withdraw this plan.' }
+    SalesGoalDraftInput:
+      type: object
+      additionalProperties: false
+      required: [months, reason]
+      properties:
+        months: { $ref: '#/components/schemas/SalesGoalMonths' }
+        declared_total_minor: { type: integer, format: int64, minimum: 0 }
+        reason: { type: string, minLength: 1, maxLength: 1000 }
+        origin: { type: string, enum: [manual, ai, adopted], default: manual }
+    SalesGoalPublishInput:
+      type: object
+      additionalProperties: false
+      required: [reason, confirm_agreed]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 1000 }
+        confirm_agreed: { type: boolean, enum: [true], description: 'The manager confirms these are the goals agreed with the seller.' }
+    SalesGoalReasonInput:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 1000 }
     ReportingQualification:
       type: object
       additionalProperties: false

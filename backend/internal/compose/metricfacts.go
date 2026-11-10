@@ -241,7 +241,7 @@ func readReportingBookingsMix(ctx context.Context, tx pgx.Tx, frame crmcontracts
 	query := closingMetricQuery(true)
 	query.allocatable = false
 	query.binds = binds
-	query.from += " JOIN LATERAL (" + parts + ") part ON part.amount>0"
+	query.from += " JOIN LATERAL (" + parts + ") part ON part.amount<>0"
 	query.key = "COALESCE(closing.id,t.id)::text||':'||part.part"
 	query.value = allocationConvertedSQL("part.amount", "part.currency IS DISTINCT FROM t.currency", "t", "@currency")
 	query.group = func(_ context.Context, b *reportingBindings) (string, string, error) {
@@ -253,5 +253,10 @@ func readReportingBookingsMix(ctx context.Context, tx pgx.Tx, frame crmcontracts
 		label.WriteString(" END")
 		return "'kind:'||part.kind", label.String(), nil
 	}
-	return readDealMetricFacts(ctx, tx, frame, reportingBookingsMix, query)
+	facts, coverage, err := readDealMetricFacts(ctx, tx, frame, reportingBookingsMix, query)
+	if err != nil || frame.ProductId != nil || reportingValueBasis(frame) != reportingValueBasisAll {
+		return dropOverAllocation(facts), coverage, err
+	}
+	facts, err = settleMix(ctx, tx, frame, facts)
+	return facts, coverage, err
 }
