@@ -30971,9 +30971,15 @@ paths:
     get:
       tags: [Brief]
       operationId: getTeamWeeklyReview
+      # No screen reads the team week any more (#10976). The operation stays for
+      # clients built against it until its notice window ends.
+      deprecated: true
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: A team's week, frozen — what each member's week came to, and the one thing to raise.
       description: |
+        Deprecated: no screen reads the team week. The operation stays callable through
+        the notice window in the API compatibility policy.
+
         The team half of the weekly. `/worklist/team` answers what the team is carrying NOW,
         live and recomputed on every open; this answers what last week WAS, written once when
         the week closed, so two weeks can be compared and neither moves under the comparison.
@@ -76195,7 +76201,12 @@ components:
             The scopes this reader may ask for, narrowest first — derived from their own
             row scope. A client draws a control only when there is more than one, so a
             rep who can only see their own work is never offered a switch that would 403.
-        team_week: { $ref: '#/components/schemas/TeamWeekReach' }
+        team_week:
+          $ref: '#/components/schemas/TeamWeekReach'
+          deprecated: true
+          description: |
+            Deprecated: no screen opens the team week, and the operation it describes,
+            `GET /weekly-reviews/team`, is deprecated too. `GET /me` carries the same answer.
         filter: { type: string, enum: [all, urgent, customer_waiting, leads, prospecting, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming], x-extensible-enum: true, description: 'The narrowing this read applied. The same vocabulary the query parameter takes.' }
         view: { type: string, enum: [today, decisions, system], x-extensible-enum: true, description: 'The view this read answered, after a `filter` alias was read as its view. Absent when the read named no view.' }
         summary: { $ref: '#/components/schemas/WorklistSummary' }
