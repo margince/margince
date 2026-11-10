@@ -13,3 +13,19 @@ export function opensElsewhere(
 ): boolean {
   return event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
 }
+
+// React bubbles a portal's click into the row that rendered it, so a target
+// outside the row is a popover's. A drag that selects text is not a press.
+export function opensRow(event: MouseEvent<HTMLElement>): boolean {
+  const target = event.target;
+  if (!(target instanceof Element) || !event.currentTarget.contains(target)) {
+    return false;
+  }
+  const control = target.closest(
+    "a, button, input, select, textarea, label, summary, [role='button'], [role='switch'], [role='menuitem'], [role='checkbox'], [role='tab']",
+  );
+  if (control !== null && event.currentTarget.contains(control)) {
+    return false;
+  }
+  return globalThis.getSelection?.()?.isCollapsed !== false;
+}

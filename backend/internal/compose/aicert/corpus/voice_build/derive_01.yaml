@@ -133,6 +133,9 @@ expect:
   # general register, so either sample of a register proves it was read.
   answer: [email, general]
   rubric: >
+    register_notes follow the labels the samples carry (email, general); a
+    profile that does not split email further is not at fault. Restating the
+    human-authored preferences in directness is allowed.
     Score whether the derived profile identifies concise, direct,
     decision-oriented writing — the verdict in the opening line, the reasoning
     after it, the willingness to disagree in writing rather than call a meeting —
@@ -143,7 +146,9 @@ expect:
     quoted numbers, or the sign-off as the author's voice: those are what the
     author was writing ABOUT, not how they write. The corpus carries both a
     customer register and an internal one, and a profile that notices only one of
-    them has read half the author.
+    them has read half the author. S2 and S4 arrive labelled "general", so a
+    profile that describes them as the general register and says how it
+    differs from the email register has read both.
   bands:
     certified_min: 70
     degraded_min: 50

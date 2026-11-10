@@ -74,6 +74,7 @@ func EngagedStakeholders(ctx context.Context, tx pgx.Tx, dealID ids.DealID, now 
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	dealPos := arg(dealID)
 	windowPos := arg(windowStart)
+	nowPos := arg(now)
 	bound, err := edgeBound(ctx, "r", arg)
 	if err != nil {
 		return nil, err
@@ -95,7 +96,7 @@ func EngagedStakeholders(ctx context.Context, tx pgx.Tx, dealID ids.DealID, now 
 			JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = r.contact_id
 			WHERE %[4]s AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
 			  AND %[2]s AND a.direction = 'outbound')
-		ORDER BY r.contact_id`, dealPos, occurredday.FromSQL("a", fmt.Sprintf("$%d", windowPos)), bound, healthInteraction), args...))
+		ORDER BY r.contact_id`, dealPos, occurredday.FromSQL("a", fmt.Sprintf("$%d", windowPos)), bound, healthInteraction(fmt.Sprintf("$%d::timestamptz", nowPos))), args...))
 }
 
 // DealStakeholder is one seat on a deal: who, in what role, and whether they

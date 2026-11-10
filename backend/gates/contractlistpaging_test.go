@@ -25,7 +25,6 @@ package gates
 // existing rather than by somebody remembering it.
 
 import (
-	"os"
 	"strings"
 	"testing"
 
@@ -259,7 +258,7 @@ func (o pagedListOperation) answersAContinuation(schemas map[string]map[string]a
 
 func pagedListContract(t *testing.T) pagedListSpec {
 	t.Helper()
-	raw, err := os.ReadFile("api/crm.yaml")
+	raw, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}

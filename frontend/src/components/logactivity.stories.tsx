@@ -60,6 +60,27 @@ export const OpenedOnACall: Story = {
   },
 };
 
+export const CallTranscript: Story = {
+  ...OpenedOnACall,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const checkbox = await canvas.findByRole("checkbox", {
+      name: en["log.asTranscript"],
+    });
+    await expect(checkbox).not.toBeChecked();
+    await userEvent.click(checkbox);
+    await userEvent.type(
+      canvas.getByRole("textbox", { name: en["log.transcriptLabel"] }),
+      "Anna: I will send the offer by Friday.",
+    );
+    await expect(checkbox).toBeChecked();
+  },
+};
+export const CallTranscriptDark: Story = {
+  ...CallTranscript,
+  globals: { theme: "dark" },
+};
+
 // A task is the one kind held by a colleague, so it is the only one that draws
 // the assignee picker — beside the due date, defaulting to Unassigned. The
 // roster it offers is the workspace's contacts less agent seats: the walk stubbed

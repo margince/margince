@@ -6,10 +6,11 @@ The 2 tables owned by `privacy`, as the migrations build them. [Back to the enti
 
 ## erasure_suppression
 
-3 columns · primary key `(kind, value_hash)` · referenced by 0 foreign keys
+4 columns · primary key `(kind, value_hash)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
+| `key_id` | `text` |  |  |
 | `kind` | `text` | yes | One of `email`, `channel_identity`. |
 | `value_hash` | `text` | yes |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |

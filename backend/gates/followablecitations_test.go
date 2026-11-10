@@ -227,10 +227,10 @@ func TestEveryTouchedFileExplainsWhatItCites(t *testing.T) {
 		// silently. The lane that must never skip says so, the way the
 		// contract-breaking and migration-version gates beside it do.
 		if os.Getenv("CITATION_SCOPE_REQUIRE_BASE") == "1" {
-			t.Fatal("no origin/main to diff against, and CITATION_SCOPE_REQUIRE_BASE=1 — " +
-				"fetch the base ref (checkout fetch-depth) rather than letting this gate skip")
+			t.Fatalf("no %s to diff against, and CITATION_SCOPE_REQUIRE_BASE=1 — "+
+				"fetch the base ref (checkout fetch-depth) rather than letting this gate skip", citationBaseRef())
 		}
-		t.Skip("no origin/main to diff against — this gate is diff-scoped by design")
+		t.Skipf("no %s to diff against — this gate is diff-scoped by design", citationBaseRef())
 	}
 	docs := treeDocuments(t)
 	for rel, lines := range changed {
@@ -274,6 +274,15 @@ type touchedLine struct {
 	text string
 }
 
+// citationBaseRef is the branch a pull request merges into, which CI passes as
+// CHECK_BASE_REF; origin/main when it is unset.
+func citationBaseRef() string {
+	if ref := os.Getenv("CHECK_BASE_REF"); ref != "" {
+		return ref
+	}
+	return "origin/main"
+}
+
 // changedFilesAgainstMain lists the lines this branch adds, by path, from the
 // merge base rather than the tip.
 //
@@ -289,7 +298,7 @@ type touchedLine struct {
 // rather than met.
 func changedFilesAgainstMain(t *testing.T) (map[string][]touchedLine, bool) {
 	t.Helper()
-	base, err := exec.Command("git", "-C", "..", "merge-base", "HEAD", "origin/main").Output()
+	base, err := exec.Command("git", "-C", "..", "merge-base", "HEAD", citationBaseRef()).Output()
 	if err != nil {
 		return nil, false
 	}

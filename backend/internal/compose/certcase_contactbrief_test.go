@@ -138,8 +138,14 @@ func TestTheContactBriefCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Run: %v", err)
 			}
-			if got := prepared.Evaluate(trace); got.Result != tc.want {
+			got := prepared.Evaluate(trace)
+			if got.Result != tc.want {
 				t.Errorf("outcome = %q (%s), want %q", got.Result, got.Detail, tc.want)
+			}
+			// None of these writes a phrase the reader was not shown, so a miss
+			// here is never a leak.
+			if got.Leak {
+				t.Errorf("outcome %q (%s) is marked a leak", got.Result, got.Detail)
 			}
 		})
 	}
@@ -170,6 +176,9 @@ func TestTheContactBriefCaseCatchesAPhraseTheReaderWasNotShown(t *testing.T) {
 	// is still the phrase the reader was not shown.
 	if !strings.Contains(got.Detail, "pipeline") {
 		t.Errorf("detail = %q, want it to name the phrase the brief was not allowed to write", got.Detail)
+	}
+	if !got.Leak {
+		t.Error("a phrase the reader was not shown is not marked a leak")
 	}
 }
 

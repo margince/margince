@@ -37,7 +37,8 @@ func Skew() (clockskew.Skew, error) {
 // Now is the instant a fixture dates itself from: wall time on an ordinary
 // run, and wall time plus the offset under the fixture applier. It is cut to
 // the microsecond Postgres stores, so a fixture date reads back equal to the
-// value it wrote.
+// value it wrote. It is in UTC, where the database counts days. In a zone with
+// summer time, AddDate across the switch is an hour off.
 func Now(t testing.TB) time.Time {
 	t.Helper()
 
@@ -45,5 +46,5 @@ func Now(t testing.TB) time.Time {
 	if err != nil {
 		t.Fatalf("clocktest: %v", err)
 	}
-	return time.Now().Add(skew.FixtureOffset()).Truncate(time.Microsecond)
+	return time.Now().UTC().Add(skew.FixtureOffset()).Truncate(time.Microsecond)
 }

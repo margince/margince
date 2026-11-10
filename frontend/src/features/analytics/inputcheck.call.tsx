@@ -2,7 +2,7 @@ import { createContext, type ReactNode, useContext, useId } from "react";
 import type { components } from "../../api/schema";
 import { Button, Modal } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
-import { formatNumber } from "../../format/format";
+import { formatAnalyticsNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useMe } from "../../lib/session";
 
@@ -72,7 +72,7 @@ export function CallCheckSheet({
           ? t("review.callLimitedHelp")
           : typeof moved === "number"
             ? plural("review.callMovedHelp", moved, {
-                count: formatNumber(moved, locale),
+                count: formatAnalyticsNumber(moved, locale),
               })
             : t("review.callMovedWithheldHelp")}
       </p>

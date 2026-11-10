@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/ai/aitest"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -24,14 +25,14 @@ func TestTheStatusWriterReAsksThroughItsOwnParse(t *testing.T) {
 		// Valid JSON, refused by ParseStatus alone: story is a string where the
 		// site reads a list of evidenced lines.
 		First: `{"story":"The offer was never sent."}`,
-		Second: reply(draft{
+		Second: promptref.Rewrite(reply(draft{
 			story:      []map[string]any{line("The offer was promised on the call and never sent.", "act-1")},
 			blocker:    []map[string]any{line("Nothing has moved in twelve days.", "act-2")},
 			buyer:      []map[string]any{line("They asked for the price before anything else.", "act-2")},
 			standing:   "drifting",
 			because:    []map[string]any{line("The last contact was the call, and nobody followed it.", "act-1")},
 			moveReason: []map[string]any{line("Sending it is what the call promised.", "act-1")},
-		}),
+		}), refsOf(in).tables()...),
 	}
 	service := &Service{lane: lane}
 

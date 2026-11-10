@@ -12,9 +12,9 @@ import { Button } from "./atoms";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-// What the row DRAWS, as opposed to what `actionrow.test.ts` reads out of the
-// tree's stylesheets: that gate asks whether a row of buttons gets its gap, and
-// a group holding nothing is a group it has no reason to look at.
+// What the row draws, as opposed to what `census/rules/actionrow.census.ts`
+// reads out of the tree's stylesheets. That gate asks whether a row of buttons
+// gets its gap. A group holding nothing is a group it has no reason to look at.
 
 afterEach(cleanup);
 

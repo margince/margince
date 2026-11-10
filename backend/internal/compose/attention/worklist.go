@@ -139,7 +139,7 @@ func (s *Service) worklistIn(
 	// must not sit on the shared service, for the reason feed.go's assembleDay
 	// gives about the findings.
 	withPins = withPins.readingScores(beside.night.scores, beside.night.cutoff)
-	withPins = withPins.readingBacklog(ctx, day, beside.until, beside.zone, token == "")
+	withPins = withPins.readingBacklog(ctx, day, beside, token == "")
 	withPins, planErr := withPins.readingPlan(ctx, resolved, day.AsOf)
 	withPins, awaitingErrs := withPins.readingAwaiting(ctx, day.AsOf, beside.zone)
 	horizon := reader.meetingHorizon(ctx, day, beside.until)
@@ -280,8 +280,9 @@ func (s *Service) worklistFrom(
 	// and the group they became untested: an incident group whose members were all
 	// stale reached a page asking only for what changed, because the three rows the
 	// filter had approved were replaced afterwards by one it never saw.
+	drawn := dropDone(s.foldAndRepin(rows, bounded), s.marked, day.AsOf)
 	if !opensTheDeck(filter) && !opensTheDeck(s.view) {
-		rows = dropDone(s.foldAndRepin(rows, bounded), s.marked, day.AsOf)
+		rows = drawn
 	}
 	rows = keepInView(rows, s.view, filter)
 	narrowed := filter != "" && filter != string(crmcontracts.WorklistFilterAll)
@@ -359,7 +360,7 @@ func (s *Service) worklistFrom(
 		// the sentence's own `total` has always been that scope. Counting the
 		// bands over `shown` printed one page's four figures beside the day's
 		// fifth, in a sentence shaped like a breakdown of the total.
-		Summary:            walk.statedOver(summarize(outstanding(considered, s.view), materialBarOf(day, s.money))),
+		Summary:            walk.statedOver(summarize(summaryPopulation(considered, rows, s.view, filter), materialBarOf(day, s.money))),
 		SourcesUnavailable: missing,
 		// Said on the page rather than per source: the cap is a bound on the
 		// ROSTER the scope resolves against, so what it cut is a colleague's
@@ -383,7 +384,7 @@ func (s *Service) worklistFrom(
 		// merely convenient: DSR rows classify as `system` and feed none of the
 		// four readings, so a suppressed DSR lane hides no work these figures
 		// count. A lane whose rows DID feed one would have to be named.
-		Readings: readingsOf(considered, bounded, missing),
+		Readings: readingsOf(considered, drawn, bounded, missing),
 	}
 	s.echoAsked(&out, filter)
 	// The token for the row this page stopped on, minted ONLY when there is more

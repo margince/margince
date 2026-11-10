@@ -218,6 +218,7 @@ func TestAllowRejectsASubjectServingCategory(t *testing.T) {
 // same refusal that file seeded directly.
 func TestAllowThenTheSendGoesThrough(t *testing.T) {
 	e := setupResolve(t)
+	e.livesIn(t, reviewableMarketingCountry())
 	e.seedPurpose(t, "newsletter", "marketing")
 	req := commsauthz.Request{LegacyPurposeKey: "newsletter"}
 
@@ -283,6 +284,7 @@ func writerCtxAt(ws, user ids.UUID, role string) context.Context {
 // by the revoke call.
 func TestAdminRevokesAUserOverride(t *testing.T) {
 	e := setupResolve(t)
+	e.livesIn(t, reviewableMarketingCountry())
 	e.seedPurpose(t, "newsletter", "marketing")
 	req := commsauthz.Request{LegacyPurposeKey: "newsletter"}
 
@@ -380,8 +382,8 @@ func plantOverride(t *testing.T, e *channelConsentEnv, contact ids.ContactID, le
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO communication_override
-		    (id, contact_id, category, reason, decided_by_level, captured_by)
-		VALUES ($1, $2, 'marketing', 'the lead confirmed by phone', $3, 'human:x')`,
+		    (id, contact_id, category, reason, decided_by_level, captured_by, legal_entity_id)
+		VALUES ($1, $2, 'marketing', 'the lead confirmed by phone', $3, 'human:x', (SELECT id FROM legal_entity WHERE is_default))`,
 		id, contact, level); err != nil {
 		t.Fatalf("planting a %s-level override: %v", level, err)
 	}

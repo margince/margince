@@ -8,6 +8,7 @@ import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { currencyBeside } from "../../lib/dealcurrency";
 import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
+import { defaultPipelineOf } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
 import { useProjectCreateForm } from "../projects/projects.create";
 
@@ -39,8 +40,7 @@ function useDealTarget() {
           params: { query: {} },
         }),
       );
-      const pipeline: Pipeline | undefined =
-        data.data.find((candidate) => candidate.is_default) ?? data.data[0];
+      const pipeline: Pipeline | undefined = defaultPipelineOf(data.data);
       const stages: Stage[] = pipeline?.stages ?? [];
       const open = stages.filter((stage) => stage.semantic === "open");
       return { pipeline, open };

@@ -159,7 +159,8 @@ func (backfillAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (aut
 	return authz.RBAC{Permissions: principal.Permissions{
 		Objects: map[string]principal.ObjectGrant{
 			"activity": {Create: true, Read: true},
-			"contact":  {Read: true},
+			"contact":  {Create: true, Read: true},
+			"lead":     {Create: true, Read: true},
 		},
 		RowScope: principal.RowScopeTeam,
 	}}, nil
@@ -199,7 +200,11 @@ func setupBackfillWire(t *testing.T) *backfillWireEnv {
 		TeamIDs: []ids.UUID{e.Team1}, SeatType: principal.SeatFull,
 		Scopes: principal.NewScopeSet(principal.ScopeRead),
 		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{"activity": {Create: true, Read: true}},
+			Objects: map[string]principal.ObjectGrant{
+				"activity": {Create: true, Read: true},
+				"contact":  {Create: true, Read: true},
+				"lead":     {Create: true, Read: true},
+			},
 			RowScope: principal.RowScopeTeam,
 		},
 	})
@@ -369,21 +374,34 @@ func (b *backfillWireEnv) do(ctx context.Context, t *testing.T, invoke func(http
 // driveBackfillToTerminal re-invokes the one-page-per-tick pager the way River
 // would — each snooze means "run me again" — until the run reaches a terminal
 // state (Work returns nil, not a snooze). A non-snooze error fails the test.
-func driveBackfillToTerminal(t *testing.T, w *captureBackfillWorker, args CaptureBackfillArgs) {
+func backfillWorkContext(ctx context.Context, t *testing.T, b *backfillWireEnv) context.Context {
 	t.Helper()
+	client, err := river.NewClient(riverpgxv5.New(b.env.Pool), &river.Config{Logger: b.handlers.log})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return rivertest.WorkContext(ctx, client)
+}
+
+func driveBackfillToTerminal(t *testing.T, b *backfillWireEnv, w *captureBackfillWorker, args CaptureBackfillArgs) {
+	t.Helper()
+	ctx := backfillWorkContext(context.Background(), t, b)
 	for range 100 {
-		err := w.Work(context.Background(), &river.Job[CaptureBackfillArgs]{
-			JobRow: &rivertype.JobRow{}, Args: args,
-		})
-		if _, ok := errors.AsType[*river.JobSnoozeError](err); ok {
-			continue
-		}
-		if err != nil {
+		err := w.Work(ctx, &river.Job[CaptureBackfillArgs]{JobRow: &rivertype.JobRow{}, Args: args})
+		if _, snoozed := errors.AsType[*river.JobSnoozeError](err); err != nil && !snoozed {
 			t.Fatalf("Work: %v", err)
 		}
-		return
+		parameters := []any{args.BackfillID}
+		var status string
+		query := fmt.Sprintf("SELECT status,execution_generation FROM capture_backfill WHERE id=$%d", len(parameters))
+		if err := b.env.Pool.QueryRow(ctx, query, parameters...).Scan(&status, &args.ExecutionGeneration); err != nil {
+			t.Fatal(err)
+		}
+		if status != "queued" && status != "running" {
+			return
+		}
 	}
-	t.Fatal("backfill did not terminate within 100 ticks")
+	t.Fatal("backfill did not terminate within 100 executions")
 }
 
 // previewBackfill, startBackfill, backfillStatus and cancelBackfill each bind
@@ -654,7 +672,7 @@ func assertThePagerWalksTheRunToDone(t *testing.T, b *backfillWireEnv, worker *c
 	t.Run("the pager worker walks the run to done", func(t *testing.T) {
 		// One page per tick: the worker snoozes between pages, so drive it as
 		// River would — re-invoke until it stops snoozing (the run terminated).
-		driveBackfillToTerminal(t, worker, CaptureBackfillArgs{Workspace: b.env.WS, BackfillID: runID})
+		driveBackfillToTerminal(t, b, worker, CaptureBackfillArgs{Workspace: b.env.WS, BackfillID: runID})
 		var out crmcontracts.BackfillStatus
 		if code, _ := b.do(b.human, t, b.backfillStatus(crmcontracts.CaptureProviderGmail), "", &out); code != http.StatusOK {
 			t.Fatalf("status = %d, want 200", code)
@@ -690,11 +708,7 @@ func assertAFailedPageFinishesTheRunInError(t *testing.T, b *backfillWireEnv, wo
 			t.Fatalf("widened start = %d, want 202", code)
 		}
 		// A page fault is recorded on the row, not retried by River.
-		if err := worker.Work(context.Background(), &river.Job[CaptureBackfillArgs]{
-			JobRow: &rivertype.JobRow{}, Args: CaptureBackfillArgs{Workspace: b.env.WS, BackfillID: out.BackfillId.String()},
-		}); err != nil {
-			t.Fatalf("Work must absorb a page fault (the row owns retry), got %v", err)
-		}
+		driveBackfillToTerminal(t, b, worker, CaptureBackfillArgs{Workspace: b.env.WS, BackfillID: out.BackfillId.String()})
 		var after crmcontracts.BackfillStatus
 		if code, _ := b.do(b.human, t, b.backfillStatus(crmcontracts.CaptureProviderGmail), "", &after); code != http.StatusOK {
 			t.Fatalf("status = %d, want 200", code)
@@ -821,16 +835,7 @@ func (r backfillAuthority) AdmittedAuthority(ctx context.Context, ws, human, _ i
 func TestTheNightlyReconcileRestoresAPagerAndDoesNotDoubleOne(t *testing.T) {
 	b := setupBackfillWire(t)
 	ctx := principal.WithWorkspaceID(context.Background(), b.env.WS)
-	// The client is built here rather than taken from platform/jobs, which holds
-	// its own unexported — an insert-only client, exactly the shape
-	// jobs.NewInserter builds, so what this drives is the real insert path.
-	client, err := river.NewClient(riverpgxv5.New(b.env.Pool), &river.Config{
-		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
-	})
-	if err != nil {
-		t.Fatalf("river.NewClient: %v", err)
-	}
-	jobCtx := rivertest.WorkContext(ctx, client)
+	jobCtx := backfillWorkContext(ctx, t, b)
 
 	runID := strandedBackfill(t, b)
 	worker := &captureBackfillReconcileWorker{
@@ -884,4 +889,38 @@ func pagersFor(t *testing.T, pool *pgxpool.Pool, runID ids.UUID) int {
 		t.Fatalf("counting pagers: %v", err)
 	}
 	return n
+}
+
+// An agent starts and cancels its own user's backfill. A colleague's agent finds
+// no run of theirs to cancel.
+func TestAnAgentStartsAndCancelsItsOwnUsersBackfill(t *testing.T) {
+	b := setupBackfillWire(t)
+	perms := principal.Permissions{
+		Objects:  map[string]principal.ObjectGrant{"activity": {Create: true, Read: true}},
+		RowScope: principal.RowScopeTeam,
+	}
+	passport := b.env.SeedPassport(t, integration.OwnerConn(t), "backfill agent")
+	agent := b.env.AgentOnPassport(t, b.env.Rep1, []ids.UUID{b.env.Team1}, perms, ids.From[ids.PassportKind](passport))
+	colleaguePassport := b.env.SeedPassportFor(t, integration.OwnerConn(t), "colleague's agent", b.env.Rep2)
+	colleague := b.env.AgentOnPassport(t, b.env.Rep2, []ids.UUID{b.env.Team1}, perms, ids.From[ids.PassportKind](colleaguePassport))
+	start := func(w http.ResponseWriter, r *http.Request) {
+		b.handlers.StartConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail)
+	}
+	cancel := func(w http.ResponseWriter, r *http.Request) {
+		b.handlers.CancelConnectorBackfill(w, r, crmcontracts.CaptureProviderGmail)
+	}
+
+	if code, problem := b.do(colleague, t, start, `{"window":"6m"}`, nil); code == http.StatusAccepted || code == http.StatusOK {
+		t.Errorf("a colleague's agent started a backfill on a mailbox its user does not hold: %d %s", code, problem)
+	}
+	var started crmcontracts.BackfillStatus
+	if code, problem := b.do(agent, t, start, `{"window":"6m"}`, &started); code != http.StatusAccepted && code != http.StatusOK {
+		t.Fatalf("the agent's start answered %d %s", code, problem)
+	}
+	if code, problem := b.do(colleague, t, cancel, ``, nil); code == http.StatusAccepted {
+		t.Errorf("a colleague's agent cancelled another user's backfill: %d %s", code, problem)
+	}
+	if code, problem := b.do(agent, t, cancel, ``, nil); code != http.StatusAccepted {
+		t.Errorf("the agent's cancel answered %d %s", code, problem)
+	}
 }

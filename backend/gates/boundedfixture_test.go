@@ -39,7 +39,7 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
+	"io/fs"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -68,12 +68,16 @@ var permsValuesThisCannotRead = gatekit.Waive(map[string]string{
 // all. Registered rather than fixed: an unbounded fixture is not a defect, and
 // what to do about each of these is a question for whoever owns the suite.
 //
-// It only SHRINKS. A package that gains a bounded case leaves the register —
-// the gate says so — and a new suite package may not join it.
+// It only SHRINKS. A package that gains a bounded case leaves the register,
+// and the gate says so. A new suite package may not join it. A role
+// measurement in a test binary of its own is the one exception. Its actors are
+// the database's seeded roles, so it has no fixture principal to bound.
 var suitesWithNoBoundedActor = gatekit.Waive(map[string]string{
 	"agentaccess": "the MCP transport and its authorization server: every case is about a " +
 		"passport's own authority, and the row scope behind it is exercised by the tool suites " +
 		"in the parent package rather than here",
+	"extensionrole": "one extension read measured per seeded role through a passport; the roles " +
+		"come from the database, so their row scopes are the seeded ones, not a fixture's",
 	"humanonlyext": "the human-only door, which refuses an agent before any row is reached — " +
 		"the refusal is the subject and a bounded seat would not change it",
 	"jobfanout": "fan-out from the scheduler, whose actor is a system principal by construction; " +
@@ -81,6 +85,10 @@ var suitesWithNoBoundedActor = gatekit.Waive(map[string]string{
 	"schemaready": "the readiness probe over migration state, which runs before any principal is " +
 		"resolved and reads the migration ledger rather than a tenant row — /readyz is unauthenticated " +
 		"and a row scope would decide nothing about whether the schema is there",
+	"toolrole": "the MCP role sweep, in a binary of its own for its run time: a passport on each seeded " +
+		"role calls every tool, and the roles come from the database, so their row scopes (own and team " +
+		"among them) are the seeded ones, not a fixture's; the cross-owner pass calls each record tool on a " +
+		"colleague's record as every role narrower than all, which is the row-scope proof this gate asks for",
 	"webhooks": "connector ingress, where the caller is the provider and the principal is the " +
 		"installation's own",
 })
@@ -274,7 +282,7 @@ func readIntegrationFixtures(
 	suiteSet := map[string]bool{}
 	fset := gatekit.SourceFileSet()
 
-	err := filepath.Walk(integrationSuiteRoot, func(path string, info os.FileInfo, err error) error {
+	err := gatekit.WalkDir(integrationSuiteRoot, func(path string, info fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

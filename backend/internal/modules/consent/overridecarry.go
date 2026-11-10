@@ -53,9 +53,9 @@ import (
 
 // CarryOverridesTx implements contacts.StopCarrier.
 //
-// GATED ON AUTHORITY, exactly as CarryStopsTx is: the NOT EXISTS below carries a
-// retiring row only when the survivor holds nothing of that category at least as
-// strong, so a weaker survivor never keeps a stronger vouch out.
+// Gated on authority, as CarryStopsTx is. The NOT EXISTS below carries a
+// retiring row only when the survivor holds nothing as strong of that category
+// and sending entity. So a weaker survivor never keeps a stronger vouch out. Each row keeps its entity, so a merge moves no vouch between entities.
 //
 // TWO LIVE ROWS OF ONE CATEGORY ARE ALLOWED HERE, and this is where it differs
 // from a stop. When the survivor already holds a WEAKER vouch and a STRONGER one
@@ -137,10 +137,10 @@ type carriedOverride struct {
 }
 
 // insertCarriedOverrides runs the copy itself. DISTINCT ON collapses several
-// live source rows of one category to the strongest, for the reason
-// CarryStopsTx's identical comment gives: a subquery in an INSERT ... SELECT
-// does not see the rows that statement is inserting, so without this a
-// subject holding two live overrides of one category would carry two copies.
+// live source rows of one category and entity to the strongest. The reason is
+// the one CarryStopsTx gives. A subquery in an INSERT ... SELECT does not see
+// the rows that statement is inserting. Without this, a subject holding two live
+// overrides of one category would carry two copies.
 // The NOT EXISTS compares authority, not merely category, so a survivor's own
 // weaker row of the same category cannot keep a stronger one out.
 func insertCarriedOverrides(
@@ -148,8 +148,8 @@ func insertCarriedOverrides(
 ) ([]carriedOverride, error) {
 	rows, err := tx.Query(ctx, `
  INSERT INTO communication_override
- (contact_id, lead_id, category, reason, decided_by_level, captured_by, carried_from)
- SELECT @to_contact, @to_lead, category, reason, decided_by_level, @by, id
+ (contact_id, lead_id, category, reason, decided_by_level, captured_by, carried_from, legal_entity_id)
+ SELECT @to_contact, @to_lead, category, reason, decided_by_level, @by, id, legal_entity_id
  FROM (`+overrideCarryCandidates+`) candidates
  RETURNING id, category, decided_by_level`, carryAuthorityArgs(from, to, by))
 	if err != nil {

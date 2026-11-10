@@ -47,7 +47,7 @@ function render({ route }: Readonly<{ route: Route }>) {
 const meta = {
   title: "Shell/Section switcher",
   component: Switcher,
-  args: { route: { screen: SETTINGS_SCREEN, id: "tags" } },
+  args: { route: { screen: SETTINGS_SCREEN, id: "records" } },
   render,
 } satisfies Meta<typeof Switcher>;
 export default meta;
@@ -69,13 +69,13 @@ export const Open: Story = {
       await canvas.findByRole("button", {
         name: en["shell.sectionSwitch"].replace(
           "{name}",
-          en["settings.tab.tags"],
+          en["settings.tab.records"],
         ),
       }),
     );
     const sheet = within(canvasElement.ownerDocument.body);
     const current = await sheet.findByRole("link", {
-      name: en["settings.tab.tags"],
+      name: en["settings.tab.records"],
       current: "page",
     });
     await expect(current).toHaveFocus();

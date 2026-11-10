@@ -132,8 +132,12 @@
   gap: var(--space-3);
 }
 
-.filters-more {
-  margin: 0;
+/* The results head: the count, then the export of what it counts. */
+.filters-result-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .filters-count {
@@ -172,12 +176,6 @@
 
 .filters-head:has(> .filters-head-actions) > .filters-head-name {
   flex: 1 1 0;
-}
-
-/* How the last export from the head's More stands; nothing at all until one
- * has been asked for, so the stack's gap does not open around an empty line. */
-.filters-head-status:empty {
-  display: none;
 }
 
 /* The filter read as one sentence, held to a line length an eye can follow. */

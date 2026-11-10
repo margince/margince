@@ -106,25 +106,31 @@ func (w *weeklyGenerateWorker) liveTeams(ctx context.Context) ([]liveTeam, error
 func (w *weeklyGenerateWorker) snapshotTeam(
 	ctx context.Context, wsID ids.UUID, team liveTeam, now time.Time,
 ) error {
-	for _, candidate := range team.candidates {
-		err := w.snapshotTeamAs(ctx, wsID, team, candidate, now)
-		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			continue
+	for _, requireLeads := range []bool{true, false} {
+		for _, candidate := range team.candidates {
+			err := w.snapshotTeamAs(ctx, wsID, team, candidate, now, requireLeads)
+			if errors.Is(err, apperrors.ErrPermissionDenied) {
+				continue
+			}
+			if errors.Is(err, apperrors.ErrNotFound) {
+				w.log.WarnContext(ctx, "team review unavailable to candidate", "team", team.id, "user", candidate, "cause", err)
+				continue
+			}
+			return err
 		}
-		if errors.Is(err, apperrors.ErrNotFound) {
-			w.log.WarnContext(ctx, "team review unavailable to candidate", "team", team.id, "user", candidate, "cause", err)
-			continue
-		}
-		return err
 	}
 	w.log.InfoContext(ctx, "no authorized member can measure the team's week", "team", team.id)
 	return nil
 }
 
-func (w *weeklyGenerateWorker) snapshotTeamAs(ctx context.Context, wsID ids.UUID, team liveTeam, candidate ids.UUID, now time.Time) error {
+func (w *weeklyGenerateWorker) snapshotTeamAs(ctx context.Context, wsID ids.UUID, team liveTeam, candidate ids.UUID, now time.Time, requireLeads bool) error {
 	memberCtx, err := accountableHuman(ctx, w.users, wsID, candidate)
 	if err != nil {
 		return err
+	}
+
+	if requireLeads && !weekly.MayReadLeads(memberCtx) {
+		return apperrors.ErrPermissionDenied
 	}
 
 	members, err := w.teamMembers(memberCtx, team.id)

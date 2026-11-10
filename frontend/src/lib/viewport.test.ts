@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { PHONE_MAX_WIDTH, usePhoneViewport } from "./viewport";
+import { PHONE_MAX_WIDTH, usePhoneViewport, widthMedia } from "./viewport";
 
 // The width the chrome has to KNOW rather than merely be laid out by: at phone
 // width the sidebar keeps its four destinations and a section moves into the page
@@ -17,7 +17,7 @@ function stubMatchMedia(matches: boolean) {
   const listeners = new Set<() => void>();
   const query = {
     matches,
-    media: `(max-width: ${PHONE_MAX_WIDTH}px)`,
+    media: widthMedia(PHONE_MAX_WIDTH),
     addEventListener: (_: string, listener: () => void) =>
       listeners.add(listener),
     removeEventListener: (_: string, listener: () => void) =>

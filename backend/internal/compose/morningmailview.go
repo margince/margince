@@ -12,6 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/emailview"
@@ -72,6 +73,14 @@ func (w *briefGenerateWorker) morningMessageItems(ctx context.Context, now time.
 			items = day.Focus.Items
 		}
 		chosen.append(items, 3, settings, w.mail.PublicBaseURL, words)
+		previous, err := w.engine.LastMailedBefore(ctx, now)
+		if err != nil {
+			return emailview.Message{}, false, nil, err
+		}
+		changes := deals.NewStore(InstallationDB(w.pool), DealsInstallation())
+		if err := chosen.appendMorningChanges(ctx, changes, morningChangesSince(previous, now), w.mail.PublicBaseURL, words); err != nil {
+			return emailview.Message{}, false, nil, err
+		}
 	}
 	if scope != identity.RoutinePersonal {
 		if err := w.teamMorning(ctx, service, &chosen, settings, words); err != nil {
@@ -186,11 +195,11 @@ func (s *morningSelection) append(items []crmcontracts.WorklistItem, limit int, 
 		if settings.CombineRoutine != nil && *settings.CombineRoutine && string(item.Source) == "notice" {
 			continue
 		}
-		line := mailWorkItem(item, words, s.zone)
-		if line == "" {
+		row, ok := mailWorkItem(item, words, s.zone)
+		if !ok {
 			continue
 		}
-		s.body.Paragraph(line)
+		s.body.Item(row)
 		writeMailItemLink(&s.body, item, base, words)
 		s.seen[item.Id] = true
 		s.included = append(s.included, morningItem{source: string(item.Source), id: item.Id, team: s.team})

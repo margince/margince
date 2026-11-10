@@ -16,36 +16,16 @@ package integration
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"net/http"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
-	"github.com/margince/margince/backend/internal/shared/kernel/events"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
-
-// driveNoticeCase runs the consumer for one contact, as the worker would.
-func driveNoticeCase(t *testing.T, e *apptest.AppEnv, contactID string) {
-	t.Helper()
-	id, err := ids.Parse(contactID)
-	if err != nil {
-		t.Fatalf("parsing the contact id: %v", err)
-	}
-	consumer := compose.NewNoticeCaseOpen(e.Pool, func() time.Time { return clocktest.Now(t) }, slog.New(slog.DiscardHandler))
-	if err := consumer.HandleEvent(context.Background(), events.Envelope{
-		Type:   "contact.created",
-		Entity: events.EntityRef{Type: "contact", ID: id},
-	}); err != nil {
-		t.Fatalf("recording the duty: %v", err)
-	}
-}
 
 func noticeCaseFor(t *testing.T, e *apptest.AppEnv, contactID string) (rule, state string, due time.Time, found bool) {
 	t.Helper()
@@ -74,7 +54,7 @@ func TestABoughtContactIsOwedANotice(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	contact := contactAcquiredAs(t, e, "Bought Contact", "purchased_or_imported")
 
-	driveNoticeCase(t, e, contact)
+	apptest.DriveNoticeCase(t, e, contact)
 
 	rule, state, due, found := noticeCaseFor(t, e, contact)
 	if !found {
@@ -106,7 +86,7 @@ func TestAContactWhoWroteToUsOwesNothing(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	contact := contactAcquiredAs(t, e, "Wrote To Us", "subject_initiated")
 
-	driveNoticeCase(t, e, contact)
+	apptest.DriveNoticeCase(t, e, contact)
 
 	if _, _, _, found := noticeCaseFor(t, e, contact); found {
 		t.Error("a contact who wrote to us first was recorded as owed a notice: they handed us " +
@@ -138,7 +118,7 @@ func TestAContactCarriedOverFromAnotherCRMOwesNothing(t *testing.T) {
 		t.Fatalf("acquisition kind %q, want crm_migration for a create in the import namespace", kind)
 	}
 
-	driveNoticeCase(t, e, contact.ID)
+	apptest.DriveNoticeCase(t, e, contact.ID)
 
 	if _, _, _, found := noticeCaseFor(t, e, contact.ID); found {
 		t.Error("a contact carried over from the previous CRM was recorded as owed a notice")
@@ -154,8 +134,8 @@ func TestARedeliveredCreationRecordsOneDuty(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	contact := contactAcquiredAs(t, e, "Twice Delivered", "referral")
 
-	driveNoticeCase(t, e, contact)
-	driveNoticeCase(t, e, contact)
+	apptest.DriveNoticeCase(t, e, contact)
+	apptest.DriveNoticeCase(t, e, contact)
 
 	var cases int
 	if err := e.Owner.QueryRow(context.Background(),
@@ -223,7 +203,7 @@ func TestAMergeCarriesTheDutyToTheSurvivor(t *testing.T) {
 	survivor := contactAcquiredAs(t, e, "Survivor", "subject_initiated")
 	retired := contactAcquiredAs(t, e, "Retired Duplicate", "purchased_or_imported")
 
-	driveNoticeCase(t, e, retired)
+	apptest.DriveNoticeCase(t, e, retired)
 	if _, _, _, found := noticeCaseFor(t, e, retired); !found {
 		t.Fatal("the bought contact was owed a notice and none was recorded")
 	}
@@ -267,7 +247,7 @@ func TestEveryUncasedAcquisitionGetsItsDuty(t *testing.T) {
 		t.Fatalf("seeding the carried acquisition: %v", err)
 	}
 
-	driveNoticeCase(t, e, contact)
+	apptest.DriveNoticeCase(t, e, contact)
 
 	var cases int
 	if err := e.Owner.QueryRow(context.Background(),
@@ -309,7 +289,7 @@ func TestADutyAcquiredLastYearIsAlreadyLate(t *testing.T) {
 		t.Fatalf("dated %d acquisition rows, want 1", tag.RowsAffected())
 	}
 
-	driveNoticeCase(t, e, contact)
+	apptest.DriveNoticeCase(t, e, contact)
 
 	_, _, due, found := noticeCaseFor(t, e, contact)
 	if !found {

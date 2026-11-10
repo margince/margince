@@ -23,7 +23,7 @@ import {
   useT,
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { useRecordZone } from "../lib/recordzone";
+import { useViewerZone } from "../lib/viewerzone";
 import { useFinanceSummary } from "./financesummary";
 
 // A leaf for the small lookup tables the company page and its rail both need
@@ -158,7 +158,7 @@ export function useHealthReason(): (
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   return (dimension) => {
     const message =
       dimension.reason_code && HEALTH_REASON[dimension.reason_code];

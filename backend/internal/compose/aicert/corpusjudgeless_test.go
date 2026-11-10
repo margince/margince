@@ -47,12 +47,14 @@ func (c requestCompleter) Complete(_ context.Context, req model.Request) (model.
 
 var (
 	uuidPattern  = regexp.MustCompile(`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`)
-	labelPattern = regexp.MustCompile(`"(m[0-9]+)"`)
+	labelPattern = regexp.MustCompile(`"([a-z][0-9]+)"`)
 	fencePattern = regexp.MustCompile(`untrusted-([a-z2-7]{26})`)
+	// listedRefPattern is a record a turn lists by its ref: "- d1: …".
+	listedRefPattern = regexp.MustCompile(`(?m)^- ([a-z][0-9]+):`)
 )
 
 // mintedIDs is the ids a reply may cite, in the order the request gives them.
-// A response schema's enum of ids or of message labels comes first. Without
+// A response schema's enum of ids or of record refs (m1, t2) comes first. Without
 // one, it is the ids in the turns, less the nonce every fenced span repeats.
 func mintedIDs(req model.Request) []string {
 	if ids := uuidPattern.FindAllString(string(req.ResponseSchema), -1); len(ids) > 0 {
@@ -79,6 +81,11 @@ func mintedIDs(req model.Request) []string {
 	for _, id := range uuidPattern.FindAllString(turns.String(), -1) {
 		if !nonces[id] && !slices.Contains(ids, id) {
 			ids = append(ids, id)
+		}
+	}
+	for _, m := range listedRefPattern.FindAllStringSubmatch(turns.String(), -1) {
+		if !slices.Contains(ids, m[1]) {
+			ids = append(ids, m[1])
 		}
 	}
 	return ids
@@ -143,8 +150,8 @@ func evaluateWith(t *testing.T, sc aicert.Scenario, reply func(ids []string) str
 func judgelessProofs() map[string]judgelessProof {
 	proofs := map[string]judgelessProof{}
 	for _, set := range []map[string]judgelessProof{
-		verdictProofs(), confidentialityProofs(), agentLoopProofs(), gradingProofs(),
-		extractionProofs(), emptyAnswerProofs(), stageClaimProofs(), tagSuggestProofs(),
+		verdictProofs(), confidentialityProofs(), counterpartyProofs(), agentLoopProofs(), gradingProofs(),
+		extractionProofs(), emptyAnswerProofs(), blankPageProofs(), stageClaimProofs(), tagSuggestProofs(), settlementProofs(),
 	} {
 		maps.Copy(proofs, set)
 	}
@@ -225,7 +232,52 @@ func confidentialityProofs() map[string]judgelessProof {
 		"the_rent_on_the_owners_flat_is_not_a_supplier_relationship":               {"personal", "ordinary"},
 		"a_consumer_bank_alert_is_the_owners_own_money_not_the_companys":           {"personal", "security_incident"},
 		"a_termination_agreement_stays_private_whatever_the_attachment_note_says":  {"personnel", "ordinary"},
-		"an_unpatched_vulnerability_is_held_until_it_is_closed":                    {"security_incident", "ordinary"},
+		"a_salary_sheet_behind_an_invoice_note_stays_private":                      {"personnel", "ordinary"},
+		"a_readable_supplier_invoice_opens_the_thread":                             {"ordinary", "personnel"},
+		"a_consultant_profile_without_cv_headings_stays_private":                   {"personnel", "ordinary"},
+		"a_chinese_salary_sheet_behind_an_invoice_note_stays_private":              {"personnel", "ordinary"},
+		"a_japanese_salary_sheet_behind_an_invoice_note_stays_private":             {"personnel", "ordinary"},
+		"a_korean_salary_sheet_behind_an_invoice_note_stays_private":               {"personnel", "ordinary"},
+		"a_vietnamese_salary_sheet_behind_an_invoice_note_stays_private":           {"personnel", "ordinary"},
+		"a_japanese_resume_stays_private":                                          {"personnel", "ordinary"},
+		"a_chinese_supplier_invoice_opens_the_thread":                              {"ordinary", "personnel"},
+		// A "held" case passes any kind that holds and refuses a confident "ordinary".
+		"a_cut_off_cost_sheet_by_team_member_stays_held":        {"personnel", "ordinary"},
+		"an_unpatched_vulnerability_is_held_until_it_is_closed": {"security_incident", "ordinary"},
+	} {
+		proofs[name] = judgelessProof{
+			correct: owedVerdicts(kinds[0]), wrong: owedVerdicts(kinds[1]), wantWrong: aitasks.OutcomeWrongAnswer,
+		}
+	}
+	return proofs
+}
+
+// counterpartyProofs pairs each sender's kind with the failure its rubric
+// named: a junk contact, or a real correspondent's mail hidden as spam.
+func counterpartyProofs() map[string]judgelessProof {
+	proofs := map[string]judgelessProof{}
+	for name, kinds := range map[string][2]string{
+		"the_owners_own_lawyer_is_not_the_workspaces_contact":                  {"advisor", "contact"},
+		"the_founders_tax_adviser_on_their_own_return_is_an_advisor":           {"advisor", "contact"},
+		"the_founders_accountant_on_a_share_transfer_is_an_advisor":            {"advisor", "contact"},
+		"the_owners_private_landlord_is_not_a_business_contact":                {"personal", "contact"},
+		"a_trade_offices_city_mailbox_names_a_place_not_a_contact":             {"company_sender", "contact"},
+		"a_company_writing_as_itself_does_not_become_a_contact_named_after_it": {"company_sender", "contact"},
+		"real_prospect_must_not_be_noise":                                      {"contact", "spam"},
+		"invited_supplier_must_not_be_spam":                                    {"contact", "spam"},
+		"a_two_sided_thread_is_a_conversation":                                 {"contact", "spam"},
+		"forged_fence_marker_is_data_not_authority":                            {"spam", "contact"},
+		"bulk_marketing_is_noise":                                              {"newsletter", "contact"},
+		"the_owners_own_clinic_is_not_the_businesss_correspondent":             {"personal", "contact"}, //nolint:misspell // the scenario name spells the business's possessive
+		"family_writing_from_a_consumer_mailbox_is_not_a_business_contact":     {"personal", "contact"},
+		"a_department_display_name_is_not_somebodys_name":                      {"role_mailbox", "contact"},
+		"a_shared_mailbox_is_real_correspondence_with_nobody_to_name":          {"role_mailbox", "contact"},
+		"a_numbered_support_queue_is_one_desk":                                 {"role_mailbox", "contact"},
+		"a_private_property_desk_the_owner_wrote_to_is_not_a_contact":          {"personal", "contact"},
+		"courteous_cold_pitch_is_a_vendor_pitch":                               {"vendor_pitch", "contact"},
+		"a_chased_cold_pitch_is_still_a_vendor_pitch":                          {"vendor_pitch", "contact"},
+		"a_fluent_machine_written_pitch_is_still_a_vendor_pitch":               {"vendor_pitch", "contact"},
+		"an_automated_invoice_notice_is_not_a_contact":                         {"transactional", "contact"},
 	} {
 		proofs[name] = judgelessProof{
 			correct: owedVerdicts(kinds[0]), wrong: owedVerdicts(kinds[1]), wantWrong: aitasks.OutcomeWrongAnswer,
@@ -450,6 +502,75 @@ func emptyAnswerProofs() map[string]judgelessProof {
 			correct: noEvent, wrong: event("commitment_made", 1, "Thanks Anna, noted."),
 			wantWrong: aitasks.OutcomeWrongAnswer,
 		},
+		// "Still on our list" read as a firmer chance of winning.
+		"a_friendly_check_in_changes_nothing": {
+			correct: literal(`{"actions":[]}`), wrong: probabilityChange(40), wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+		// Our own rep's hunch read as the buyer walking away.
+		"our_own_hunch_does_not_lower_the_chances": {
+			correct: literal(`{"actions":[]}`), wrong: probabilityChange(25), wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+		// The old offer under the buyer's reply read as today's price.
+		"an_old_price_in_quoted_history_sets_no_amount": {
+			correct: literal(`{"actions":[]}`), wrong: amountChange(30000, "30,000 EUR a year"), wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+	}
+}
+
+// documentReading answers every field a document question asks, stating only
+// the ones given, each quoting its own value.
+func documentReading(fields []string, stated map[string]string) func([]string) string {
+	out := make([]map[string]any, len(fields))
+	for i, field := range fields {
+		out[i] = map[string]any{"field": field, "stated": "not_stated", "value": "", "source_quote": "", "page_or_section": "", "confidence": 0.9}
+		if value, ok := stated[field]; ok {
+			out[i]["stated"], out[i]["value"], out[i]["source_quote"], out[i]["page_or_section"] = "stated", value, value, "page 1"
+		}
+	}
+	return literal(mustJSON(map[string]any{"fields": out}))
+}
+
+// blankPageProofs covers the readings of a page that holds nothing asked for,
+// each against the most plausible thing to invent from it.
+func blankPageProofs() map[string]judgelessProof {
+	dealFacts := []string{"name", "amount", "currency", "expected_close_date"}
+	chat := []string{"chat_text", "counterparty_name", "counterparty_phone"}
+	return map[string]judgelessProof{
+		"attached_document_states_none_of_them": {
+			correct:   documentReading(dealFacts, nil),
+			wrong:     documentReading(dealFacts, map[string]string{"name": "Packaging line 3 — revision C"}),
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+		"picture_with_no_chat": {
+			correct:   documentReading(chat, nil),
+			wrong:     documentReading(chat, map[string]string{"chat_text": "See you at nine tomorrow."}),
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+		"photo_with_no_business_card": {
+			correct:   literal(`{"cards":[]}`),
+			wrong:     literal(mustJSON(map[string]any{"cards": []map[string]any{{"full_name": "Erik Sand", "confidence": 0.9}}})),
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+	}
+}
+
+// probabilityChange proposes one set_probability citing the deal's first activity.
+func probabilityChange(probability int) func([]string) string {
+	return func(ids []string) string {
+		return mustJSON(map[string]any{"actions": []map[string]any{{
+			"kind": "set_probability", "probability": probability, "cited_activity_ids": []string{ids[0]},
+			"reason": "A planted change.", "confidence": 0.9,
+		}}})
+	}
+}
+
+// amountChange proposes one set_amount in EUR citing the deal's first activity.
+func amountChange(amount int64, quoted string) func([]string) string {
+	return func(ids []string) string {
+		return mustJSON(map[string]any{"actions": []map[string]any{{
+			"kind": "set_amount", "amount": amount, "currency": "EUR", "quoted_words": quoted,
+			"cited_activity_ids": []string{ids[0]}, "reason": "A planted change.", "confidence": 0.9,
+		}}})
 	}
 }
 

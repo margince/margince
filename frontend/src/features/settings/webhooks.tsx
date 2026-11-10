@@ -14,7 +14,6 @@ import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { problemCode, throwProblem, unwrap } from "../../lib/problem";
@@ -22,6 +21,7 @@ import { useMe } from "../../lib/session";
 import { WebhookSubscriptionDrawer } from "./webhookdrawer";
 import "./webhooks.css";
 
+import { useViewerZone } from "../../lib/viewerzone";
 import { DeliveriesPanel } from "./webhooks.deliveries";
 import { RotateSecretAction, SecretRevealModal } from "./webhooks.secret";
 
@@ -123,6 +123,7 @@ function SubscriptionRow({
   canArchive: boolean;
   onRotated: (secret: string) => void;
 }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const plural = usePlural();
@@ -151,7 +152,7 @@ function SubscriptionRow({
                   date: formatDateTime(
                     subscription.updated_at,
                     locale,
-                    viewerZone(),
+                    readerZone,
                   ),
                 })
               : undefined}
@@ -220,9 +221,15 @@ function SubscriptionRow({
         // and the deliveries toggle opens a log.
         value={
           <span className="webhook-answer">
-            <Badge tone={subscriptionStateTone(subscription.state)}>
-              {t(`webhooks.state.${subscription.state}`)}
-            </Badge>
+            {/* An owner who left sees nothing, so nothing is delivered
+                whatever the state says. */}
+            {subscription.owner_active === false ? (
+              <Badge tone="warning">{t("webhooks.row.ownerInactive")}</Badge>
+            ) : (
+              <Badge tone={subscriptionStateTone(subscription.state)}>
+                {t(`webhooks.state.${subscription.state}`)}
+              </Badge>
+            )}
             {subscription.body_template && (
               <Badge tone="default">{t("webhooks.row.customBody")}</Badge>
             )}

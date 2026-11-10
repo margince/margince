@@ -143,7 +143,8 @@ func (w *assuranceRunWorker) Work(ctx context.Context, job *river.Job[AssuranceR
 	// means the args were built somewhere that does not.
 	if strings.TrimSpace(job.Args.RequestedBy) == "" {
 		return jobs.FaultContext(ctx, fmt.Errorf(
-			"%s: a pass somebody asked for carries no asker", job.Args.Kind()))
+			"%s: a pass somebody asked for carries no asker", job.Args.Kind(),
+		))
 	}
 	return jobs.FaultContext(ctx, w.sweep.check(wsCtx, job.Args.Workspace, &job.Args.RequestedBy))
 }
@@ -177,7 +178,6 @@ func (w *assuranceSweepWorker) check(ctx context.Context, ws ids.UUID, requested
 		bundles:    store,
 		activities: w.activities,
 		exceptions: bundleableFindings,
-		now:        w.now,
 	}, result.RunID)
 	if bundleErr != nil {
 		w.log.ErrorContext(ctx, "the findings were recorded but not bundled into tasks",

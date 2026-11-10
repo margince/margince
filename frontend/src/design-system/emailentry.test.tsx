@@ -87,6 +87,7 @@ const PRESENTATION = {
     change_mode: "none",
   },
   can_reply: true,
+  can_forward: true,
   can_relink: false,
   version: 3,
 };

@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -25,6 +26,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
+
+const reconciliationDeliveryArgument = "delivery"
 
 // errNoReconciler names a store built with no message-identity seam at all.
 // nil stays constructible because a role that only READS deliveries has no
@@ -121,8 +124,8 @@ func (s *Store) reKeyGuarded(ctx context.Context, deliveryID ids.UUID, activityI
 			err = fmt.Errorf("comms: the message-identity reconcile panicked: %v", r)
 		}
 	}()
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return s.reKey(ctx, tx, deliveryID, activityID, staged, stamped)
+	return storekit.RetryLockCycles(ctx, func() error {
+		return s.db.Tx(ctx, func(tx pgx.Tx) error { return s.reKey(ctx, tx, deliveryID, activityID, staged, stamped) })
 	})
 }
 
@@ -135,6 +138,32 @@ func (s *Store) reKeyGuarded(ctx context.Context, deliveryID ids.UUID, activityI
 // thread key is the root of the conversation it joined and belongs to that
 // conversation, not to this message.
 func (s *Store) reKey(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID, activityID ids.ActivityID, staged, stamped string) error {
+	keys, err := reconciliationThreadKeys(ctx, tx, deliveryID, activityID, staged, stamped)
+	if err != nil {
+		return err
+	}
+	if err := storekit.WaitThreadKeysTx(ctx, tx, keys); err != nil {
+		return err
+	}
+	current, err := reconciliationThreadKeys(ctx, tx, deliveryID, activityID, staged, stamped)
+	if err != nil {
+		return err
+	}
+	if !slices.Equal(keys, current) {
+		return storekit.RetryThreadTransaction(ctx, tx)
+	}
+
+	if _, err := storekit.LockActivityThreadTx(ctx, tx, activityID.UUID); err != nil {
+		return err
+	}
+	var deliveryThread string
+	if err := tx.QueryRow(ctx, `SELECT coalesce(thread_key, '') FROM comms_outbound WHERE id=@delivery FOR UPDATE`, pgx.NamedArgs{reconciliationDeliveryArgument: deliveryID}).Scan(&deliveryThread); err != nil {
+		return err
+	}
+	if err := storekit.LockThreadKeysTx(ctx, tx, staged, stamped, deliveryThread); err != nil {
+		return err
+	}
+
 	if _, err := tx.Exec(ctx, `
 		UPDATE comms_outbound
 		   SET message_id  = $2,
@@ -143,6 +172,22 @@ func (s *Store) reKey(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID, activ
 		return fmt.Errorf("comms: re-keying the delivery: %w", err)
 	}
 	return s.identity.ReconcileMessageIdentityTx(ctx, tx, activityID, staged, stamped)
+}
+
+func reconciliationThreadKeys(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID, activityID ids.ActivityID, staged, stamped string) ([]string, error) {
+	rows, err := tx.Query(ctx, `SELECT coalesce(thread_key, '') FROM activity WHERE id=@activity
+ UNION SELECT coalesce(thread_key, '') FROM comms_outbound WHERE id=@delivery
+ UNION SELECT coalesce(thread_key, '') FROM activity WHERE source_system='email' AND source_id=@stamped`, pgx.NamedArgs{"activity": activityID, reconciliationDeliveryArgument: deliveryID, "stamped": stamped})
+	if err != nil {
+		return nil, err
+	}
+	keys, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return nil, err
+	}
+	keys = append(keys, staged, stamped)
+	slices.Sort(keys)
+	return slices.Compact(keys), nil
 }
 
 // breadcrumb records a re-key this installation could not complete, in a

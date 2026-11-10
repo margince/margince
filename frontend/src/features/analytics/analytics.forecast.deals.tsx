@@ -11,7 +11,10 @@ import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { Disclosure } from "../../design-system/disclosure";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
-import { formatMoneyOrAbsent, formatNumber } from "../../format/format";
+import {
+  formatAnalyticsMoneyOrAbsent,
+  formatAnalyticsNumber,
+} from "../../format/format";
 import {
   type Locale,
   type PluralTranslator,
@@ -32,7 +35,7 @@ import { signalSentence } from "./forecast.signals";
 type T = ReturnType<typeof useT>;
 
 const percent = (value: number, locale: Locale) =>
-  `${formatNumber(value, locale)}%`;
+  `${formatAnalyticsNumber(value, locale)}%`;
 
 /** One line that says how a deal's weight was made. */
 export function chanceExplanation(
@@ -52,7 +55,7 @@ export function chanceExplanation(
   } else if (row.evidence_n !== undefined) {
     parts.push(
       plural("forecast.deals.recorded", row.evidence_n, {
-        count: formatNumber(row.evidence_n, locale),
+        count: formatAnalyticsNumber(row.evidence_n, locale),
       }),
     );
   }
@@ -86,6 +89,7 @@ function dealColumns(
       key: "deal",
       header: t("forecast.deals.colDeal"),
       grow: true,
+      fold: "title",
       render: (row) => (
         <CellStack>
           <span>{row.deal_name}</span>
@@ -102,7 +106,7 @@ function dealColumns(
         row.signals.map((signal) => (
           <Badge key={signal.code} tone="warning">
             {signalSentence(signal, t, plural, stageName, (value) =>
-              formatNumber(value, locale),
+              formatAnalyticsNumber(value, locale),
             )}
           </Badge>
         )),
@@ -112,14 +116,31 @@ function dealColumns(
       header: t("forecast.deals.colAmount"),
       align: "end",
       render: (row) =>
-        formatMoneyOrAbsent(row.base_minor ?? null, currency, locale),
+        formatAnalyticsMoneyOrAbsent(row.base_minor ?? null, currency, locale),
+      folded: (row) =>
+        t("forecast.deals.foldedAmount", {
+          amount: formatAnalyticsMoneyOrAbsent(
+            row.base_minor ?? null,
+            currency,
+            locale,
+          ),
+        }),
     },
     {
       key: "weighted",
       header: t("forecast.deals.colWeighted"),
       align: "end",
+      fold: "end",
       render: (row) =>
-        formatMoneyOrAbsent(row.weighted_minor, currency, locale),
+        formatAnalyticsMoneyOrAbsent(row.weighted_minor, currency, locale),
+      folded: (row) =>
+        t("forecast.deals.foldedWeighted", {
+          amount: formatAnalyticsMoneyOrAbsent(
+            row.weighted_minor,
+            currency,
+            locale,
+          ),
+        }),
     },
   ];
 }
@@ -192,6 +213,7 @@ export function ForecastDeals({
                       <EmptyState>{t("forecast.deals.none")}</EmptyState>
                     ) : (
                       <DataTable<ForecastContribution>
+                        fold
                         label={label}
                         rows={open}
                         rowKey={(row) => row.deal_id}
@@ -216,7 +238,7 @@ function weightedTotal(
   openCount: number,
   { t, plural, locale }: Words,
 ): string {
-  const amount = formatMoneyOrAbsent(
+  const amount = formatAnalyticsMoneyOrAbsent(
     data.weighted_minor,
     data.base_currency,
     locale,
@@ -226,6 +248,6 @@ function weightedTotal(
   }
   return plural("forecast.deals.total", openCount, {
     amount,
-    count: formatNumber(openCount, locale),
+    count: formatAnalyticsNumber(openCount, locale),
   });
 }

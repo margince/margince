@@ -36,11 +36,16 @@ func WithDegradableRead(ctx context.Context, budget time.Duration, fn func(conte
 	if !joined {
 		return fn(ctx)
 	}
+	return WithDegradableSavepoint(ctx, tx, budget, func(pgx.Tx) error { return fn(ctx) })
+}
+
+// WithDegradableSavepoint isolates one bounded attempt without aborting its enclosing transaction.
+func WithDegradableSavepoint(ctx context.Context, tx pgx.Tx, budget time.Duration, fn func(pgx.Tx) error) error {
 	page, err := openLane(ctx, tx, budget)
 	if err != nil {
 		return err
 	}
-	if err := fn(ctx); err != nil {
+	if err := fn(tx); err != nil {
 		return errors.Join(err, abandonLane(ctx, tx))
 	}
 	// A released savepoint keeps its SET LOCAL until the transaction ends, so

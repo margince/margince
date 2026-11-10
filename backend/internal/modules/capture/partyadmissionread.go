@@ -78,7 +78,7 @@ func eligibleAdmissionPartiesTx(ctx context.Context, tx pgx.Tx, activity ids.Act
  WHERE a.id=` + activityArg + ` AND p.user_id IS NULL` + unresolved + `
  AND nullif(p.address,'') IS NOT NULL AND NOT p.past_party_cap
  AND ` + auth.ParticipantStandsSQL("p", "a") + `
- AND ` + auth.ActivityAvailableClause("a") + `
+ AND ` + auth.ActivityExternalEvidenceClause("a") + `
  AND ((a.kind='email' AND p.role IN ('to','cc') AND (
  EXISTS (SELECT 1 FROM capture_party_source ps WHERE ps.activity_id=a.id AND ps.user_id=` + userArg + `
  AND ps.provider=` + providerArg + ` AND ps.sent_by_owner AND lower(p.address)=ANY(ps.recipients))

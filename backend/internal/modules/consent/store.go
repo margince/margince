@@ -29,9 +29,9 @@ type Store struct {
 	// module never imports a sibling; nil on any installation that has not
 	// wired it, which the page renders as an omission rather than a blank.
 	installationName InstallationNameReader
-	// country selects which jurisdiction's messaging rules a decision is taken
-	// under. Injected by compose because the setting lives in identity
-	// (installationcountry.go).
+	// country is the default legal entity's country, the data-protection
+	// selector's fallback. Injected by compose because the setting lives in
+	// identity (installationcountry.go).
 	country InstallationCountryReader
 	// zone and retireCase serve a privacy request's proof
 	// (requestproofseams.go).
@@ -55,6 +55,12 @@ type Store struct {
 	// on the Store rather than on Handlers because the Store is what builds the
 	// link now: issueLink seals it into the vault inside its own transaction.
 	publicBaseURL string
+	// held reads what is held about a notice link's subject, for the privacy
+	// page. Nil discloses none of it (privacyinfoparts.go).
+	held NoticeHeldReader
+	// missedReceipts tells the controller about a required opt-out receipt
+	// that will not go out on its own. Nil leaves only the log line.
+	missedReceipts MissedReceipts
 }
 
 // NewStore binds the store to the pool every read and write runs through.
@@ -67,6 +73,7 @@ type Purpose struct {
 	Key                 string
 	Label               string
 	RequiresDoubleOptIn bool
+	Class               Class
 	CreatedAt           time.Time
 }
 
@@ -117,7 +124,7 @@ func (s *Store) ListPurposes(ctx context.Context) ([]Purpose, error) {
 	var out []Purpose
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT id, key, label, requires_double_opt_in, created_at
+			SELECT id, key, label, requires_double_opt_in, class, created_at
 			FROM consent_purpose WHERE archived_at IS NULL ORDER BY key`)
 		if err != nil {
 			return err
@@ -125,7 +132,7 @@ func (s *Store) ListPurposes(ctx context.Context) ([]Purpose, error) {
 		defer rows.Close()
 		for rows.Next() {
 			var p Purpose
-			if err := rows.Scan(&p.ID, &p.Key, &p.Label, &p.RequiresDoubleOptIn, &p.CreatedAt); err != nil {
+			if err := rows.Scan(&p.ID, &p.Key, &p.Label, &p.RequiresDoubleOptIn, &p.Class, &p.CreatedAt); err != nil {
 				return err
 			}
 			out = append(out, p)
@@ -152,9 +159,9 @@ func (s *Store) CreatePurpose(ctx context.Context, key, label string, requiresDO
 		err := tx.QueryRow(ctx, `
 			INSERT INTO consent_purpose (key, label, requires_double_opt_in)
 			VALUES ($1, $2, $3)
-			RETURNING id, key, label, requires_double_opt_in, created_at`,
+			RETURNING id, key, label, requires_double_opt_in, class, created_at`,
 			key, label, requiresDOI).
-			Scan(&p.ID, &p.Key, &p.Label, &p.RequiresDoubleOptIn, &p.CreatedAt)
+			Scan(&p.ID, &p.Key, &p.Label, &p.RequiresDoubleOptIn, &p.Class, &p.CreatedAt)
 		if constraint, ok := storekit.UniqueViolation(err); ok && constraint == "consent_purpose_key_unique" {
 			return fmt.Errorf("purpose %q: %w", key, apperrors.ErrConflict)
 		}

@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/roombrief"
+	"github.com/margince/margince/backend/internal/modules/ai/aitest"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -55,7 +57,10 @@ func TestTheRoomBriefCaseGradesEachKindOfReply(t *testing.T) {
 	cite := func(id, text string) string {
 		return `{"sentences":[{"text":"` + text + `","nature":"fact","evidence":[{"entity_type":"thread","entity_id":"` + id + `"}]}]}`
 	}
-	capID := c.mustCite
+	capID, shown := aitest.RefBefore(roombrief.BriefRequest(c.in, "en"), "Clause 11.2")
+	if !shown {
+		t.Fatal("the request shows no ref for the cap thread")
+	}
 	for name, tc := range map[string]struct {
 		reply string
 		want  string
@@ -81,5 +86,44 @@ func TestTheRoomBriefCaseRefusesScenariosThatMeasureNothing(t *testing.T) {
 		if err == nil || !strings.Contains(err.Error(), "deal_room_brief") {
 			t.Errorf("%s: Prepare = %v, want a refusal naming the site", name, err)
 		}
+	}
+}
+
+// The opening check reads the first sentence, which is where a reader looks.
+//
+// Asked of the whole brief, both halves pass on a brief that opens with the
+// newest message and mentions the condition later. They also pass on one
+// crediting the other buyer in the same thread.
+func TestTheRoomBriefOpeningIsReadForBothTheConditionAndItsAuthor(t *testing.T) {
+	c := &roomBriefCase{mustLead: "penetration", mustAttribute: "Rasmus"}
+	for _, tc := range []struct {
+		name    string
+		opening string
+		faults  int
+	}{
+		{"the condition and the buyer who set it", "rasmus dahl set a penetration test condition", 0},
+		{"the other buyer in that thread", "aino lehtinen set a penetration test condition", 1},
+		{"the newest ask instead", "rasmus dahl asked for the migration schedule", 1},
+		{"neither", "the room is quiet", 2},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if faults := c.openingFaults(tc.opening); len(faults) != tc.faults {
+				t.Errorf("%q reported %d faults (%v), want %d", tc.opening, len(faults), faults, tc.faults)
+			}
+		})
+	}
+}
+
+// An expectation the fixture cannot answer is refused, so a case that can
+// never pass is rejected rather than scored as a model failure.
+func TestARoomBriefOpeningExpectationMustBeAnswerable(t *testing.T) {
+	err := refuseUnmeasurableOpening(`{"threads":[{"body":"a penetration test"}]}`,
+		roombrief.Input{}, roomBriefExpectation{LeadsWith: "indemnity"})
+	if err == nil {
+		t.Error("an expectation leading with a word the summary lacks was accepted")
+	}
+	if err := refuseUnmeasurableOpening(`{"threads":[{"body":"a penetration test"}]}`,
+		roombrief.Input{}, roomBriefExpectation{LeadsWith: "penetration"}); err != nil {
+		t.Errorf("an answerable expectation was refused: %v", err)
 	}
 }

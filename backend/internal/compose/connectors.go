@@ -105,6 +105,7 @@ type connectorHandlers struct {
 	// extOAuthGrants opens one unit's OAuth grants; nil reads them through the
 	// process's extension runtime binding, as the unit's Runtime does.
 	extOAuthGrants func(unit string) extOAuthGrants
+	picture        connectPicture
 }
 
 // wired reports whether the Gmail OAuth app is composed for this role.
@@ -158,10 +159,17 @@ func (h connectorHandlers) ListConnectors(w http.ResponseWriter, r *http.Request
 		}
 	}
 	resp.Providers = h.providerAvailability(r.Context())
+	resp.SeatCapture = seatCapture(r.Context())
 	httperr.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider) {
+	// Before every branch, IMAP and the test mailbox included: a role that
+	// cannot capture is refused with its reason, and nothing is stored.
+	if err := callerCaptureRefusal(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	// The standing IMAP connect needs only the registry (credentials are
 	// per-connection, vault-sealed) — never the Gmail OAuth app.
 	if string(provider) == providerIMAP {
@@ -217,10 +225,19 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 	if !ok {
 		return
 	}
-	authURL := h.mintConsent(w, app, connectState{
+	st := connectState{
 		Workspace: ws, User: actor.UserID, Provider: string(provider),
 		ReturnTo: ask.returnTo, Then: ask.then, WindowMonths: ask.windowMonths,
-	})
+		SharedConsent: sharesConsent(string(provider), ask.then),
+	}
+	authURL := h.mintConsent(w, app, st)
+	if st.SharedConsent {
+		var err error
+		if authURL, err = withCalendarScopes(authURL, st.Then); err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ConnectConnectorResponse{AuthorizeUrl: &authURL})
 }
 
@@ -281,10 +298,10 @@ func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http
 	// minted for a human who may no longer hold it has to be revoked at the
 	// provider rather than simply discarded. Registry.Connect enforces the same
 	// invariant; this is the cheaper, earlier half of it.
-	if err := h.requireLiveGrantor(runCtx, st); err != nil {
-		slog.WarnContext(ctx, "connector callback: the granting human no longer holds live authority",
+	if err := h.requireCapturingGrantor(runCtx, st); err != nil {
+		slog.WarnContext(ctx, "connector callback: the granting human may no longer grant",
 			"err", err, "provider", string(provider))
-		land(outcomeError)
+		land(grantorRefusalOutcome(err))
 		return
 	}
 
@@ -309,7 +326,11 @@ func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http
 		return
 	}
 
-	auth, err := app.authenticate(runCtx, *params.Code, h.callbackURL(string(provider)))
+	consent := newConsentCode(*params.Code, h.callbackURL(string(provider)))
+	if st.SharedConsent {
+		consent.alsoAsked = sharedConsentCalendars[st.Then].scopes()
+	}
+	auth, err := app.authenticate(runCtx, consent)
 	if err != nil {
 		logConnectFailure(ctx, string(provider), err)
 		land(connectFailureOutcome(string(provider), err))
@@ -321,7 +342,8 @@ func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http
 		land(outcomeError)
 		return
 	}
-	h.chainAfterConnect(runCtx, w, r, st)
+	h.offerConnectPicture(runCtx, st.User, consent, auth)
+	h.chainAfterConnect(runCtx, w, r, st, consent)
 }
 
 // signedInHuman answers the human starting a consent and their workspace, or
@@ -356,19 +378,20 @@ func grantorContext(ctx context.Context, st connectState) context.Context {
 	})
 }
 
-// requireLiveGrantor resolves the human named by the signed state against
-// identity's live authority. A missing resolver is a wiring fault and fails
-// closed: an unchecked grant is the hole this exists to close, and silently
-// skipping the check would look exactly like passing it.
-func (h connectorHandlers) requireLiveGrantor(ctx context.Context, st connectState) error {
+// liveGrantorAuthority resolves the human named by the signed state against
+// identity's live authority: their grants and seat. A missing resolver is a
+// wiring fault and fails closed. An unchecked grant is the hole this closes,
+// and a skipped check would look the same as a passed one.
+func (h connectorHandlers) liveGrantorAuthority(ctx context.Context, st connectState) (authz.RBAC, principal.SeatType, error) {
 	if h.authority == nil {
-		return errors.New("connector callback: no authority resolver wired — a grant cannot be checked against live authority")
+		return authz.RBAC{}, "", errors.New("connector callback: no authority resolver wired — a grant cannot be checked against live authority")
 	}
-	if _, err := h.authority.EffectiveRBAC(ctx, st.Workspace, st.User); err != nil {
-		return err
+	rbac, err := h.authority.EffectiveRBAC(ctx, st.Workspace, st.User)
+	if err != nil {
+		return authz.RBAC{}, "", err
 	}
-	_, err := h.authority.SeatType(ctx, st.Workspace, st.User)
-	return err
+	seat, err := h.authority.SeatType(ctx, st.Workspace, st.User)
+	return rbac, seat, err
 }
 
 func (h connectorHandlers) DisconnectConnector(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider) {

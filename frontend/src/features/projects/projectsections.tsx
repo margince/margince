@@ -3,6 +3,10 @@
 
 import { type ReactNode, useRef } from "react";
 import type { components } from "../../api/schema";
+import {
+  ContractTerms,
+  hasContractTerms,
+} from "../../components/contractterms";
 import { EntityRef } from "../../components/entityref";
 import { Badge, Button } from "../../design-system/atoms";
 import {
@@ -21,9 +25,10 @@ import { formatDateAbbrev, formatDayMonth } from "../../format/format.dates";
 import { daysPast } from "../../format/lateness";
 import { formatMoneyOrWord } from "../../format/moneyword";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { labelFor } from "../../lib/labelfor";
 import { usePipelines } from "../../lib/pipelines.queries";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import { projectRoleLabel } from "../records/record360";
 import { CONTRACT_STATUS_LABEL } from "./contractlifecycle";
 import {
@@ -144,12 +149,12 @@ function useStageName(stageId: string | null): string | undefined {
 function ProjectDealRow({ deal }: Readonly<{ deal: Deal }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const stage = useStageName(deal.stage_id);
   const closed = deal.closed_at
-    ? formatDayMonth(deal.closed_at, locale, recordZone)
+    ? formatDayMonth(deal.closed_at, locale, readerZone)
     : undefined;
-  let sub = t(DEAL_STATUS_LABEL[deal.status]);
+  let sub = t(labelFor(DEAL_STATUS_LABEL, deal.status));
   if (deal.status === "open" && stage) {
     sub = t("project.deals.openAt", { stage });
   } else if (deal.status !== "open" && closed) {
@@ -320,28 +325,36 @@ export function ProjectContractsCard({
 function ContractRow({ contract }: Readonly<{ contract: Contract }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const signed = contract.signed_on
     ? formatDayMonth(contract.signed_on, locale, zone)
     : undefined;
   const ends = contract.ends_on
     ? formatDateAbbrev(contract.ends_on, locale, zone)
     : undefined;
-  let sub: string | undefined;
+  let dates: string | undefined;
   if (signed && ends) {
-    sub = t("project.contracts.signedRuns", { signed, ends });
+    dates = t("project.contracts.signedRuns", { signed, ends });
   } else if (signed) {
-    sub = t("project.contracts.signed", { date: signed });
+    dates = t("project.contracts.signed", { date: signed });
   } else if (ends) {
-    sub = t("project.contracts.runsTo", { date: ends });
+    dates = t("project.contracts.runsTo", { date: ends });
   }
+  const terms = hasContractTerms(contract);
   return (
     <OverviewRow
       title={contract.title || contract.contract_number}
-      sub={sub}
+      sub={
+        dates || terms ? (
+          <span className="project-contract-sub">
+            {dates && <span>{dates}</span>}
+            {terms && <ContractTerms contract={contract} />}
+          </span>
+        ) : undefined
+      }
       right={
         <Badge tone={contract.status === "active" ? "success" : undefined}>
-          {t(CONTRACT_STATUS_LABEL[contract.status])}
+          {t(labelFor(CONTRACT_STATUS_LABEL, contract.status))}
         </Badge>
       }
     />
@@ -424,7 +437,7 @@ function CommitmentRow({
   // The record's clock, exactly as the tasks screen reads it. A commitment is a
   // deadline the team agreed, so the day it names cannot depend on where the
   // reader is sitting.
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   // The server's `overdue` is the verdict; the days only word it.
   const late = commitment.due_at
     ? daysPast(Date.parse(commitment.due_at), Date.parse(asOf)).days
@@ -434,7 +447,7 @@ function CommitmentRow({
     who,
     commitment.due_at &&
       t("project.standing.event.due", {
-        date: formatDayMonth(commitment.due_at, locale, recordZone),
+        date: formatDayMonth(commitment.due_at, locale, readerZone),
       }),
   ].filter(Boolean);
   return (

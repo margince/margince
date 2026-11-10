@@ -177,6 +177,16 @@ func (s dailySeeder) moveLastActivity() {
 // what the flows open. Seats come first: reps own every record and capture every email.
 func seedDailyCorpus(t *testing.T, e *apptest.AppEnv, seats Seats, scale float64) DailyCorpus {
 	t.Helper()
+	s := loadDailyCorpus(t, e, seats, scale)
+	corpus := s.pickCorpus(seats)
+	s.dropOrdinals()
+	return corpus
+}
+
+// loadDailyCorpus loads the corpus at a scale and asserts its census. Its
+// ordinal tables stay until dropOrdinals, for a caller that picks from them.
+func loadDailyCorpus(t *testing.T, e *apptest.AppEnv, seats Seats, scale float64) dailySeeder {
+	t.Helper()
 	if len(seats.Reps) == 0 {
 		t.Fatal("the daily corpus needs the rep seats: run the seats subtest first")
 	}
@@ -218,10 +228,12 @@ func seedDailyCorpus(t *testing.T, e *apptest.AppEnv, seats Seats, scale float64
 	t.Logf("seed total %s at scale %g", time.Since(start).Round(time.Millisecond), scale)
 
 	assertDailyCensus(t, e, before.plus(s.n))
-	corpus := s.pickCorpus(seats)
+	return s
+}
+
+func (s dailySeeder) dropOrdinals() {
 	s.exec("drop", `DROP TABLE daily_seed_rep, daily_seed_company, daily_seed_contact, daily_seed_deal,
 	      daily_seed_thread, daily_seed_activity`)
-	return corpus
 }
 
 func (s dailySeeder) companies() {
@@ -316,7 +328,7 @@ func (s dailySeeder) deals(stages apptest.SeededStages) {
 	s.analyze("daily_seed_deal")
 	s.exec("deal", `INSERT INTO deal (id, name, amount_minor, amount_minor_base, currency, fx_rate_to_base, fx_rate_date,
 	                                 pipeline_id, stage_id, company_id, owner_id, status, lost_reason,
-	                                 expected_close_date, closed_at, forecast_category, priority, commercial_motion,
+	                                 expected_close_date, closed_at, win_probability_override, win_probability_set_by, priority, commercial_motion,
 	                                 source, captured_by, created_at)
 	      SELECT d.id, d.stem || ' ' || ($1::text[])[1 + d.word_n % cardinality($1::text[])], d.amount, d.amount, $2,
 	             CASE WHEN d.status <> 'open' THEN 1 END, CASE WHEN d.status <> 'open' THEN (now() - d.days * interval '1 day')::date END,
@@ -325,7 +337,8 @@ func (s dailySeeder) deals(stages apptest.SeededStages) {
 	             CASE WHEN d.status = 'lost' THEN (ARRAY['price','timing','competitor','no decision'])[1 + d.word_n % 4] END,
 	             CASE WHEN d.status = 'open' THEN current_date + (d.days / 2 + 1) ELSE (now() - d.days * interval '1 day')::date END,
 	             CASE WHEN d.status <> 'open' THEN now() - d.days * interval '1 day' END,
-	             CASE WHEN d.status = 'open' THEN (ARRAY['pipeline','best_case','commit'])[1 + d.word_n % 3] END,
+	             CASE WHEN d.status = 'open' AND d.word_n % 3 = 2 THEN 95 END,
+             CASE WHEN d.status = 'open' AND d.word_n % 3 = 2 THEN 'human' END,
 	             (ARRAY['low','medium','high'])[1 + d.days % 3],
 	             (ARRAY['new_business','renewal','upsell','expansion'])[1 + d.word_n % 4],
 	             'manual', 'human:' || d.owner_id, now() - (d.days + 45) * interval '1 day'

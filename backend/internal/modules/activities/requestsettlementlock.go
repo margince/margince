@@ -62,7 +62,7 @@ func holdSettlementEvidenceTx(ctx context.Context, tx pgx.Tx, request RepliedReq
 		// activity and find the answers again for each one.
 		_, err = tx.Exec(ctx, `SELECT seen.id FROM activity seen
 		  WHERE seen.id IN (SELECT answered.id FROM activity a
-		    CROSS JOIN LATERAL (`+settlementAnswersSQL()+`) answered WHERE a.id = $2)
+		    CROSS JOIN LATERAL (`+settlementAnswersSQL()+` UNION `+settlementContextSQL()+`) answered WHERE a.id = $2)
 		  FOR SHARE OF seen`, request.AsOf, request.RequestID)
 	}
 	if err == nil && live {

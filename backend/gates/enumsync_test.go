@@ -19,7 +19,6 @@ import (
 	"go/ast"
 	"go/token"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -45,17 +44,19 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	// schema did not must fail the insert rather than land a value nothing can
 	// name. The published surface is where the type lives, because a unit reads
 	// the same class off its Result.
-	"extension_ingest_refusal.refusal": {"pkg/extension", "RecordRefusal"},
-	"lead.status":                      {"internal/modules/contacts", "LeadStatus"},
-	"deal.status":                      {"internal/modules/deals", "DealStatus"},
-	"ai_model_rate.source":             {"internal/modules/ai", "RateSource"},
-	"stage.semantic":                   {"internal/modules/deals", "StageSemantic"},
-	"partner_stage.meaning":            {"internal/contracts", "PartnerStageMeaning"},
-	"contact_consent.state":            {"internal/modules/consent", "ConsentState"},
-	"consent_purpose.class":            {"internal/modules/consent", "Class"},
-	"offer_line_item.proposal_state":   {"internal/modules/deals", "ProposalState"},
-	"stage_exit_criterion.kind":        {"internal/modules/deals", "CriterionKind"},
-	"knowledge_document.ingest_status": {"internal/contracts", "KnowledgeDocumentIngestStatus"},
+	"extension_ingest_refusal.refusal":           {"pkg/extension", "RecordRefusal"},
+	"lead.status":                                {"internal/modules/contacts", "LeadStatus"},
+	"deal.status":                                {"internal/modules/deals", "DealStatus"},
+	"app_user.avatar_origin":                     {"internal/modules/identity", "AvatarOrigin"},
+	"ai_model_rate.source":                       {"internal/modules/ai", "RateSource"},
+	"stage.semantic":                             {"internal/modules/deals", "StageSemantic"},
+	"partner_stage.meaning":                      {"internal/contracts", "PartnerStageMeaning"},
+	"contact_consent.state":                      {"internal/modules/consent", "ConsentState"},
+	"communication_suppression.recorded_through": {"internal/shared/ports/commsauthz", "RecordedThrough"},
+	"consent_purpose.class":                      {"internal/modules/consent", "Class"},
+	"offer_line_item.proposal_state":             {"internal/modules/deals", "ProposalState"},
+	"stage_exit_criterion.kind":                  {"internal/modules/deals", "CriterionKind"},
+	"knowledge_document.ingest_status":           {"internal/contracts", "KnowledgeDocumentIngestStatus"},
 	// The tag palette is spelled in five places: this CHECK, the contract enum,
 	// the MCP tool schemas, the frontend's TAG_TONES and its dot stylesheet.
 	// Widening four of the five is SILENT — the pill drops a tone it does not
@@ -66,6 +67,9 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	// so a value the contract admits and the CHECK refuses would be a save that
 	// fails with a constraint error instead of a validation answer.
 	"mail_draft.anchor_type": {"internal/contracts", "MailDraftAnchorType"},
+	// The reason a draft keeps. A reason the contract admits and the CHECK
+	// refuses would lose an autosave to a constraint error.
+	"mail_draft.communication_context": {"internal/contracts", "CommunicationContext"},
 	// How to read an activity's time. A precision the contract admits and the
 	// CHECK refuses would be a 500 on a valid create.
 	"activity.occurred_precision": {"internal/contracts", "OccurredPrecision"},
@@ -104,6 +108,7 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	// of them legitimately moved. The pairs below are the ones where the schema
 	// NAMES the column's concept, which is a judgement a scan cannot make.
 	"activity.audience":                       {"internal/contracts", "ActivityAudience"},
+	"capture_counterparty_hold.kind":          {"internal/contracts", "CaptureCounterpartyHoldKind"},
 	"capture_exclusion.kind":                  {"internal/contracts", "CaptureExclusionKind"},
 	"capture_exclusion.scope":                 {"internal/contracts", "CaptureExclusionScope"},
 	"capture_owner_identity.kind":             {"internal/contracts", "CaptureOwnerIdentityKind"},
@@ -146,6 +151,13 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"company_scan.generated_by":       {"internal/contracts", "WrittenBy"},
 	"contact_brief.generated_by":      {"internal/contracts", "WrittenBy"},
 	"deal_status_card.generated_by":   {"internal/contracts", "WrittenBy"},
+}
+
+// requestEnumBindings maps a create request's inline enum to the column it
+// writes. The map above holds one type per column, and a route that decodes its
+// own enum would otherwise widen apart from the row it stores.
+var requestEnumBindings = []struct{ typeName, col string }{
+	{"CreateCaptureCounterpartyHoldRequestKind", "capture_counterparty_hold.kind"},
 }
 
 // checkInList captures CHECK (col IN ('a','b',…)) allowing an optional
@@ -191,7 +203,7 @@ func tableCheckSets(t *testing.T) map[string][]string {
 	t.Helper()
 	sets := map[string][]string{}
 	for _, root := range []string{"migrations/core", "migrations/custom"} {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".up.sql") {
 				return err
 			}
@@ -200,7 +212,7 @@ func tableCheckSets(t *testing.T) map[string][]string {
 			if !migrationPrefix.MatchString(d.Name()) {
 				return fmt.Errorf("%s: migration name lacks the numeric version prefix the lexical-order derivation relies on", path)
 			}
-			raw, err := os.ReadFile(path) // #nosec G304 G122 -- path is a *.up.sql file from walking the trusted migrations tree
+			raw, err := gatekit.ReadFile(path) // #nosec G304 G122 -- path is a *.up.sql file from walking the trusted migrations tree
 			if err != nil {
 				return err
 			}
@@ -253,7 +265,7 @@ func tableCheckSets(t *testing.T) map[string][]string {
 func goConstSet(t *testing.T, pkgDir, typeName string) []string {
 	t.Helper()
 	var vals []string
-	entries, err := os.ReadDir(pkgDir)
+	entries, err := gatekit.ReadDir(pkgDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -300,7 +312,16 @@ func goConstSet(t *testing.T, pkgDir, typeName string) []string {
 func TestEveryDomainEnumMatchesItsSchemaCheck(t *testing.T) {
 	t.Parallel()
 	checks := tableCheckSets(t)
-	for col, binding := range enumBindings {
+	type binding struct{ col, pkgDir, typeName string }
+	var bindings []binding
+	for col, bound := range enumBindings {
+		bindings = append(bindings, binding{col, bound.pkgDir, bound.typeName})
+	}
+	for _, request := range requestEnumBindings {
+		bindings = append(bindings, binding{request.col, "internal/contracts", request.typeName})
+	}
+	for _, binding := range bindings {
+		col := binding.col
 		want, ok := checks[col]
 		if !ok {
 			t.Errorf("enumBindings[%s]: no CHECK (… IN (…)) found in the migrations — stale binding or broken derivation", col)

@@ -14,7 +14,7 @@ package integration
 //     company's row version;
 //   - two readers of the same account get their own brief, because a brief
 //     written from one reader's row scope is not true for another's;
-//   - an agent is refused, and an account the caller cannot read has no
+//   - passportless work is refused, and an account the caller cannot read has no
 //     brief rather than a refusal that confirms it exists.
 
 import (
@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companybrief"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/ai/aitest"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -58,11 +59,14 @@ var briefClock = time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
 type countingLane struct {
 	calls int
 	reply string
+	// names is each record id the reply cites, by the name the request shows
+	// it beside, so the reply cites the ref the request showed.
+	names map[string]string
 }
 
-func (l *countingLane) Complete(context.Context, model.Request) (model.Response, error) {
+func (l *countingLane) Complete(_ context.Context, req model.Request) (model.Response, error) {
 	l.calls++
-	return model.Response{Text: l.reply}, nil
+	return model.Response{Text: aitest.Cite(req, l.reply, l.names)}, nil
 }
 
 func briefService(e *Env, lane companybrief.Completer, routingVersion string) *companybrief.Service {
@@ -106,7 +110,7 @@ func TestCompanyBriefCachesUntilTheAccountChanges(t *testing.T) {
 	e.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, deal, company.UUID)
 
 	reader := e.As(e.Rep1, nil, briefReaderPerms)
-	lane := &countingLane{reply: `{"sections":[{"kind":"snapshot","sentences":[{"text":"One open deal.","nature":"fact","evidence":[{"entity_type":"company","entity_id":"` + company.String() + `"}]}]}]}`}
+	lane := &countingLane{reply: `{"sections":[{"kind":"snapshot","sentences":[{"text":"One open deal.","nature":"fact","evidence":[{"entity_type":"company","entity_id":"` + company.String() + `"}]}]}]}`, names: map[string]string{company.String(): "Acme"}}
 	svc := briefService(e, lane, "routing-1")
 
 	first, err := svc.Get(reader, company, false)
@@ -154,7 +158,7 @@ func TestCompanyBriefRefreshIgnoresAMatchingCache(t *testing.T) {
 	e := Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
 	reader := e.As(e.Rep1, nil, briefReaderPerms)
-	lane := &countingLane{reply: `{"sections":[{"kind":"snapshot","sentences":[{"text":"Nothing open.","nature":"fact","evidence":[{"entity_type":"company","entity_id":"` + company.String() + `"}]}]}]}`}
+	lane := &countingLane{reply: `{"sections":[{"kind":"snapshot","sentences":[{"text":"Nothing open.","nature":"fact","evidence":[{"entity_type":"company","entity_id":"` + company.String() + `"}]}]}]}`, names: map[string]string{company.String(): "Acme"}}
 	svc := briefService(e, lane, "routing-1")
 
 	if _, err := svc.Get(reader, company, false); err != nil {
@@ -174,7 +178,7 @@ func TestCompanyBriefRefreshIgnoresAMatchingCache(t *testing.T) {
 func TestCompanyBriefIsCachedPerReader(t *testing.T) {
 	e := Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
-	lane := &countingLane{reply: `{"sections":[{"kind":"snapshot","sentences":[{"text":"An account.","nature":"fact","evidence":[{"entity_type":"company","entity_id":"` + company.String() + `"}]}]}]}`}
+	lane := &countingLane{reply: `{"sections":[{"kind":"snapshot","sentences":[{"text":"An account.","nature":"fact","evidence":[{"entity_type":"company","entity_id":"` + company.String() + `"}]}]}]}`, names: map[string]string{company.String(): "Acme"}}
 	svc := briefService(e, lane, "routing-1")
 
 	if _, err := svc.Get(e.As(e.Rep1, nil, briefReaderPerms), company, false); err != nil {
@@ -291,11 +295,11 @@ func TestCompanyBriefRewritesWhenTheLaneIsRepointed(t *testing.T) {
 	reader := e.As(e.Rep1, nil, briefReaderPerms)
 	reply := `{"sections":[{"kind":"snapshot","sentences":[{"text":"An account.","nature":"fact","evidence":[{"entity_type":"company","entity_id":"` + company.String() + `"}]}]}]}`
 
-	before := &countingLane{reply: reply}
+	before := &countingLane{reply: reply, names: map[string]string{company.String(): "Acme"}}
 	if _, err := briefService(e, before, "routing-1").Get(reader, company, false); err != nil {
 		t.Fatalf("brief on the first routing: %v", err)
 	}
-	after := &countingLane{reply: reply}
+	after := &countingLane{reply: reply, names: map[string]string{company.String(): "Acme"}}
 	if _, err := briefService(e, after, "routing-2").Get(reader, company, false); err != nil {
 		t.Fatalf("brief on the second routing: %v", err)
 	}
@@ -355,8 +359,7 @@ func TestCompanyBriefHidesAnAccountOutOfRowScope(t *testing.T) {
 	}
 }
 
-// A brief is a reading aid for a contact. An agent reading records through a
-// passport has the records themselves.
+// Passportless work acts for nobody, so it has no reader to write a brief for.
 func TestCompanyBriefRefusesAnAgent(t *testing.T) {
 	e := Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
@@ -365,8 +368,7 @@ func TestCompanyBriefRefusesAnAgent(t *testing.T) {
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	agent := principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test", SeatType: principal.SeatFull,
-		// The shape a passport really mints: the granting human's id rides
-		// along, so refusing on "no user" would prove nothing.
+		// A user id rides along, so refusing on "no user" would prove nothing.
 		UserID: e.Rep1, OnBehalfOf: e.Rep1, Permissions: briefReaderPerms,
 	})
 
@@ -382,7 +384,7 @@ func TestCompanyBriefTransportServesAndForces(t *testing.T) {
 	e := Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
 	reader := e.As(e.Rep1, nil, briefReaderPerms)
-	lane := &countingLane{reply: `{"sections":[{"kind":"snapshot","sentences":[{"text":"An account.","nature":"fact","evidence":[{"entity_type":"company","entity_id":"` + company.String() + `"}]}]}]}`}
+	lane := &countingLane{reply: `{"sections":[{"kind":"snapshot","sentences":[{"text":"An account.","nature":"fact","evidence":[{"entity_type":"company","entity_id":"` + company.String() + `"}]}]}]}`, names: map[string]string{company.String(): "Acme"}}
 	handlers := companybrief.NewHandlers(briefService(e, lane, "routing-1"))
 	path := "/v1/companies/" + company.String() + "/brief"
 

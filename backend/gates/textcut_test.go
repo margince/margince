@@ -43,7 +43,7 @@ var handCutWaivers = gatekit.Waive(map[string]string{
 func TestEveryStringCutGoesThroughTextcut(t *testing.T) {
 	read := 0
 	var offenders []string
-	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

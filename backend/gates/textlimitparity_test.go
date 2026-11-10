@@ -18,7 +18,6 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
-	"os"
 	"strconv"
 	"testing"
 
@@ -85,7 +84,7 @@ func corpusBody(method, route, property string) []string {
 func TestEachMirroredTextCapIsTheContractsMaxLength(t *testing.T) {
 	t.Parallel()
 
-	raw, err := os.ReadFile("api/crm.yaml")
+	raw, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}

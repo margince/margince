@@ -25,6 +25,9 @@ import (
 // a log line or an error message.
 const EnvRootKey = "MARGINCE_KEYVAULT_ROOT_KEY"
 
+// rootKeyBytes is the root key's length: an AES-256 key.
+const rootKeyBytes = 32
+
 // Config is the local provider's wiring, populated from operator config in
 // cmd. RootKey is the workspace-agnostic master key that seals every secret;
 // Pool is the shared pgxpool the vault_secret ciphertext table lives in.
@@ -111,9 +114,8 @@ func fromRootKey(ctx context.Context, pool *pgxpool.Pool, encoded string) (vault
 // newAEAD builds the AES-256-GCM AEAD from the root key. The error names the
 // length requirement, never the key bytes.
 func newAEAD(rootKey []byte) (cipher.AEAD, error) {
-	const keyLen = 32 // AES-256
-	if len(rootKey) != keyLen {
-		return nil, fmt.Errorf("keyvault: root key must be %d bytes for AES-256, got %d", keyLen, len(rootKey))
+	if len(rootKey) != rootKeyBytes {
+		return nil, fmt.Errorf("keyvault: root key must be %d bytes for AES-256, got %d", rootKeyBytes, len(rootKey))
 	}
 	block, err := aes.NewCipher(rootKey)
 	if err != nil {
@@ -257,9 +259,26 @@ func refLogSafe(ref Ref) string {
 // malformed is a hard error.
 var rootKeySetting = config.Define(config.Spec[string]{
 	Key: "keyvault_root_key", Env: EnvRootKey, Type: config.String, Secret: true,
-	Roles: []config.Role{config.RoleAPI, config.RoleWorker},
-	Doc:   "Standard Base64 of the 32-byte root key that seals connector credentials; unset disables the vault.",
+	Roles:    []config.Role{config.RoleAPI, config.RoleWorker, config.RoleMigrate},
+	Validate: validRootKey,
+	Doc:      "Standard Base64 of the 32-byte root key that seals connector credentials and keys the erasure list and preference links; unset disables the vault.",
 })
+
+// validRootKey refuses a key that is not 32 bytes of standard base64 when the
+// configuration loads, so nothing derived from it can see a malformed one.
+func validRootKey(encoded string) error {
+	if encoded == "" {
+		return nil
+	}
+	key, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return fmt.Errorf("%s is not valid base64", EnvRootKey)
+	}
+	if len(key) != rootKeyBytes {
+		return fmt.Errorf("%s must be %d bytes, got %d", EnvRootKey, rootKeyBytes, len(key))
+	}
+	return nil
+}
 
 // Settings are this package's boot settings.
 func Settings() []config.Any { return []config.Any{rootKeySetting} }

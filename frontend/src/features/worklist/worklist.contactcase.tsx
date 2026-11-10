@@ -69,6 +69,7 @@ export function ContactCaseDecision({
       </div>
       <ContactCaseReview
         contactId={contactCase.anchor_id}
+        chosen={false}
         open={open}
         onClose={() => setOpen(false)}
       />

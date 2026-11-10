@@ -49,6 +49,30 @@ type CorrectionReceipt struct {
 	ActorType  string
 	ActorID    string
 	OnBehalfOf *ids.UUID
+	// Correction is which correction this was: a close-date tier, a close as
+	// lost, or a change from the nightly verdict.
+	Correction string
+	// Before and after values of an amount or probability change. Currency
+	// is the one the change was written in, not the deal's currency today.
+	BeforeAmount, AfterAmount           *int64
+	BeforeProbability, AfterProbability *int
+	Currency                            *string
+	// Evidence is the change's audit evidence, withheld like Basis after the
+	// deal changed hands.
+	Evidence []byte
+	OwnerID  *ids.UUID
+	// FromStage and ToStage name the stages a stage move or a close went
+	// between, as they are called today.
+	FromStage, ToStage *string
+	// StageProbability is the probability the deal took with the stage it
+	// was moved to.
+	StageProbability *int
+}
+
+// heldCorrections stay on Home until their owner accepts or undoes them.
+var heldCorrections = []string{
+	CloseLostCorrection, VerdictCloseDateCorrection, VerdictAmountCorrection, VerdictProbabilityCorrection,
+	VerdictStageMoveCorrection, DealOpenCorrection, DealReviveCorrection,
 }
 
 // RecentCorrectionsOwnedBy reads what the sweep changed on THIS reader's deals
@@ -76,6 +100,7 @@ func (s *Store) RecentCorrectionsOwnedBy(
 		args := []any{}
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		sincePos := arg(since)
+		heldPos := arg(heldCorrections)
 		ownerPos := arg(actor.UserID)
 		limitPos := arg(limit)
 		// The reader's own row scope, ON TOP of the owner narrowing above.
@@ -90,7 +115,71 @@ func (s *Store) RecentCorrectionsOwnedBy(
 		if err != nil {
 			return err
 		}
-		query := storekit.SQLf(`
+		selected, err := correctionReceiptSelect(ctx, arg)
+		if err != nil {
+			return err
+		}
+		query := selected + storekit.SQLf(`
+			 -- A close as lost and a verdict change stay until the owner accepts or undoes them.
+			 WHERE (c.applied_at >= $%d
+			        OR (c.correction = ANY($%d) AND c.accepted_at IS NULL AND c.reversed_at IS NULL))
+			   AND d.owner_id = $%d
+			   AND d.archived_at IS NULL`, sincePos, heldPos, ownerPos)
+		if scope != "" {
+			query += storekit.SQLf(" AND %s", scope)
+		}
+		query += storekit.SQLf(" ORDER BY c.applied_at DESC LIMIT $%d", limitPos)
+		rows, err := tx.Query(ctx, query, args...)
+		if err != nil {
+			return fmt.Errorf("deals: reading last night's corrections: %w", err)
+		}
+		out, err = pgx.CollectRows(rows, scanCorrectionReceipt)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func scanCorrectionReceipt(rows pgx.CollectableRow) (CorrectionReceipt, error) {
+	var row CorrectionReceipt
+	if err := rows.Scan(&row.DealID, &row.DealName, &row.AuditLogID,
+		&row.Fields, &row.Basis, &row.AppliedAt, &row.Reversed,
+		&row.Version, &row.BeforeClose, &row.AfterClose, &row.Evidence,
+		&row.ActorType, &row.ActorID, &row.OnBehalfOf, &row.Correction,
+		&row.BeforeAmount, &row.AfterAmount, &row.BeforeProbability, &row.AfterProbability,
+		&row.Currency, &row.OwnerID, &row.FromStage, &row.ToStage,
+		&row.StageProbability); err != nil {
+		return row, err
+	}
+	row.EstimateBasis = correctionEstimateBasis(row.Evidence)
+	return row, nil
+}
+
+// correctionReceiptSelect reads one correction the way every reader shows it.
+// It binds the reader through arg. The reason and evidence reach only the
+// deal's owner whose grants composed them. The amounts follow the reader's
+// field mask. Each reader adds its own `WHERE` and `ORDER BY`.
+func correctionReceiptSelect(ctx context.Context, arg func(any) int) (string, error) {
+	readable := BasisReadableSQL("a.evidence->>'basis_owner'", "d", arg(ReaderOf(ctx)))
+	amountShown, masked, err := auth.MaskExcludedClause(ctx, maskObject, "amount_minor", "d", arg)
+	if err != nil {
+		return "", err
+	}
+	if !masked {
+		amountShown = sqlTrue
+	}
+	before, err := auth.MaskedExpressionSQL(ctx, maskObject, "amount_minor", "d", "(a.before->>'amount_minor')::bigint", arg)
+	if err != nil {
+		return "", err
+	}
+	after, err := auth.MaskedExpressionSQL(ctx, maskObject, "amount_minor", "d", "(a.after->>'amount_minor')::bigint", arg)
+	if err != nil {
+		return "", err
+	}
+	stageBefore, stageAfter := correctionStageNamesSQL(ctx)
+	return storekit.SQLf(`
 			SELECT c.deal_id, d.name, c.audit_log_id, c.fields,
 			       -- The reason, only for the seat whose grants composed it.
 			       --
@@ -107,45 +196,50 @@ func (s *Store) RecentCorrectionsOwnedBy(
 			       -- against NULL is NULL — so that test would withhold the reason on
 			       -- every unowned deal, whose sentence names nobody and was
 			       -- composed under no seat's grants at all.
-			       CASE WHEN nullif(a.evidence->>'basis_owner', '') IS NOT DISTINCT FROM d.owner_id::text
+			       CASE WHEN %[1]s AND (%[4]s OR c.correction <> $%[5]d)
 			            THEN coalesce(a.evidence->>'basis', '')
 			            ELSE '' END,
 			       c.applied_at,
 			       c.reversed_at IS NOT NULL, d.version, a.before->>'expected_close_date', a.after->>'expected_close_date',
- CASE WHEN nullif(a.evidence->>'basis_owner', '') IS NOT DISTINCT FROM d.owner_id::text
- THEN a.evidence ELSE '{}'::jsonb END,
-			       a.actor_type, a.actor_id, a.on_behalf_of
+			       -- A masked amount takes every key that states it out of the
+			       -- evidence: the customer's words, the figure and the rate.
+			       CASE WHEN NOT %[1]s THEN '{}'::jsonb
+			            WHEN %[4]s THEN a.evidence
+			            ELSE a.evidence - ARRAY['quoted_words', 'quoted_amount', 'quoted_currency',
+			                                    'amount_currency', 'rate_from', 'rate_to', 'rate_date',
+			                                    '%[6]s', '%[7]s'] END,
+			       a.actor_type, a.actor_id, a.on_behalf_of, c.correction,
+			       %[2]s, %[3]s,
+			       (a.before->>'win_probability_override')::int, (a.after->>'win_probability_override')::int,
+			       coalesce(a.evidence->>'amount_currency', d.currency::text),
+			       d.owner_id,
+			       %[8]s,
+			       %[9]s,
+			       (SELECT h.win_probability_at_change::int FROM deal_stage_history h WHERE h.id = c.stage_history_id)
 			  FROM deal_correction c
 			  JOIN deal d ON d.id = c.deal_id
 			  JOIN audit_log a ON a.id = c.audit_log_id
-			 WHERE c.applied_at >= $%d
-			   AND d.owner_id = $%d
-			   AND d.archived_at IS NULL`, sincePos, ownerPos)
-		if scope != "" {
-			query += storekit.SQLf(" AND %s", scope)
-		}
-		query += storekit.SQLf(" ORDER BY c.applied_at DESC LIMIT $%d", limitPos)
-		rows, err := tx.Query(ctx, query, args...)
-		if err != nil {
-			return fmt.Errorf("deals: reading last night's corrections: %w", err)
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var row CorrectionReceipt
-			var evidence []byte
-			if err := rows.Scan(&row.DealID, &row.DealName, &row.AuditLogID,
-				&row.Fields, &row.Basis, &row.AppliedAt, &row.Reversed,
-				&row.Version, &row.BeforeClose, &row.AfterClose, &evidence,
-				&row.ActorType, &row.ActorID, &row.OnBehalfOf); err != nil {
-				return err
-			}
-			row.EstimateBasis = correctionEstimateBasis(evidence)
-			out = append(out, row)
-		}
-		return rows.Err()
-	})
-	if err != nil {
-		return nil, err
+`, readable, before, after, amountShown, arg(VerdictAmountCorrection), valuedAmountKey, valuedCurrencyKey,
+		stageBefore, stageAfter), nil
+}
+
+// correctionStageNamesSQL names the stages a correction moved between, only
+// for a reader who may read pipelines: StageLabels holds stage names to the
+// same grant.
+func correctionStageNamesSQL(ctx context.Context) (before, after string) {
+	if !auth.Allows(ctx, "pipeline", principal.ActionRead) {
+		const hidden = "NULL::text"
+		return hidden, hidden
 	}
-	return out, nil
+	return "(SELECT st.name FROM stage st WHERE st.id::text = a.before->>'stage_id')",
+		"(SELECT st.name FROM stage st WHERE st.id::text = a.after->>'stage_id')"
+}
+
+// BasisReadableSQL is when the reader at readerPos may read why Margince did
+// something to the deal under alias. The deal is unowned, or the reader owns
+// it and basisOwner names them as the one the reason was composed for. A
+// colleague with row scope still sees what Margince did, never why.
+func BasisReadableSQL(basisOwner, deal string, readerPos int) string {
+	return storekit.SQLf(`(nullif(%[1]s, '') IS NOT DISTINCT FROM %[2]s.owner_id::text
+			                 AND (%[2]s.owner_id IS NULL OR %[2]s.owner_id = $%[3]d))`, basisOwner, deal, readerPos)
 }

@@ -19,10 +19,11 @@ package gates
 
 import (
 	"encoding/json"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // certificationReference is what a preset must point at: the committed page
@@ -44,7 +45,7 @@ func TestAPresetBindingAnUncertifiedTaskPointsAtTheRecords(t *testing.T) {
 	}
 	for _, preset := range presets {
 		path := filepath.Join("..", "config", "presets", preset)
-		body, err := os.ReadFile(path) //#nosec G304 -- a path this gate derived from the committed payload
+		body, err := gatekit.ReadFile(path) //#nosec G304 -- a path this gate derived from the committed payload
 		if err != nil {
 			t.Errorf("reading %s: %v", preset, err)
 			continue
@@ -77,7 +78,7 @@ func TestTheDisclosureCensusCountsAnUnmeasuredTask(t *testing.T) {
 // preset files carrying at least one task whose bound model is not certified.
 func presetsWithAnUncertifiedTask(t *testing.T) []string {
 	t.Helper()
-	raw, err := os.ReadFile(aiCertificationPayload)
+	raw, err := gatekit.ReadFile(aiCertificationPayload)
 	if err != nil {
 		t.Fatalf("reading the certification payload: %v", err)
 	}

@@ -88,6 +88,7 @@ function preview(rows: FilterPreview["rows"]): FilterPreview {
 type Story = StoryObj<typeof FilterResults>;
 
 const shared = {
+  resource: "contact" as const,
   fields: FIELDS,
   // The filter asked about tier, so tier is a column — the derivation this
   // component exists to make, rather than a fixed product column list.
@@ -125,14 +126,14 @@ const PAGE = Array.from({ length: 25 }, (_, index) => ({
 })) satisfies FilterPreview["rows"];
 
 export const FirstPageOfMany: Story = {
-  // 214 match and 25 came: the count line says 214, the page holds the 25,
-  // and the size dial asks the server again rather than paging past them.
+  // 214 match and 25 came: the count line says 214, and stepping past the
+  // rows in hand asks the server for the next page.
   args: {
     ...shared,
     preview: { ...preview(PAGE), match_count: 214, truncated: true },
     total: 214,
-    perPage: 25,
-    onPerPage: () => {},
+    hasMore: true,
+    onLoadMore: () => {},
   },
 };
 
@@ -201,6 +202,7 @@ export const ReferencesByName: Story = {
           rows: DEAL_ROWS,
           truncated: false,
         }}
+        resource="deal"
         fields={DEAL_FIELDS}
         named={["owner_id", "stage_id", "company_id"]}
         unit="deals"

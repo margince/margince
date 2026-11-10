@@ -20,7 +20,9 @@ import "sort"
 
 // Field is one thing that can be grouped by or measured.
 type Field struct {
-	Name string
+	// Unpriced is the trusted row expression counting amounts without conversion.
+	Unpriced string
+	Name     string
 	// Expr is the SQL the compiler renders. It comes from the spec catalog and
 	// never from a request; nothing a caller sends reaches this string.
 	Expr string

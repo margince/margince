@@ -90,7 +90,7 @@ export const Editable: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      await canvas.findByRole("link", { name: /linkedin\.com/ }),
+      await canvas.findByRole("link", { name: /on LinkedIn$/ }),
     ).toHaveAttribute("href", LINKEDIN);
     await expect(
       canvas.getByRole("button", { name: /^Change LinkedIn URL/ }),
@@ -117,7 +117,7 @@ export const ReadOnly: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      await canvas.findByRole("link", { name: /linkedin\.com/ }),
+      await canvas.findByRole("link", { name: /on LinkedIn$/ }),
     ).toBeVisible();
     await expect(
       canvas.queryAllByRole("button", { name: /^Change / }),

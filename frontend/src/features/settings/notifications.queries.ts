@@ -10,7 +10,7 @@ import {
 import { api, FIRST_PAGE } from "../../api/client";
 import type { components } from "../../api/schema";
 import { unwrap } from "../../lib/problem";
-import { worklistKey } from "../worklist/worklist.queries";
+import { worklistKey } from "../../lib/workkeys";
 
 // The notification query-hook family: the centre's own reads and writes, in one
 // file because the settings page and the topbar panel are two views of one

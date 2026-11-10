@@ -40,6 +40,8 @@ expect:
   outcome: accepted
   answer: plain
   rubric: >
+    No surname is supplied and no register is given, so the rules ask for
+    "Hallo Marek" with Sie: that pairing is right and is not a register fault.
     Two things decide this case, and either one alone floors it.
 
     First, language. The correspondence is German and the draft must be German
@@ -47,8 +49,8 @@ expect:
     English subject, scores at the floor however good the content is: the rep
     cannot send it.
 
-    Second, the introduction. The inbound message says Marek made the
-    introduction to Anna. Nothing in the supplied data states any directed
+    Second, the introduction. The inbound message says Marek put Romina
+    in contact with Anna. Nothing in the supplied data states any directed
     referral fact, so the draft must not state one in either direction. A draft
     that says Anna introduced Marek, or that Romina introduced anyone, has
     inverted or invented a relationship fact and scores at the floor. A draft

@@ -19,7 +19,6 @@ import { OffsiteLink } from "../../design-system/offsitelink";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { formatDayFull, formatTimeRange } from "../../format/meetingtime";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { backStaysInApp } from "../../lib/historydepth";
 import {
@@ -28,6 +27,7 @@ import {
 } from "../../lib/meeting-invitation-query";
 import { problemCodeOf, throwProblem } from "../../lib/problem";
 import { navigate } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import { ContactMeetingBrief } from "../brief/meetingbrief/drawer";
 import { useBookingTitle } from "./booking-common";
 import { BookingReschedule } from "./booking-reschedule";
@@ -203,7 +203,7 @@ export function BookingMeetingScreen({
 function MeetingHead({ meeting }: Readonly<{ meeting: Invitation }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   return (
     <div className="bookmeet-head">
       <div role="status">
@@ -238,6 +238,25 @@ function AttentionNotice({
   if (meeting.status !== "needs_attention") return null;
   if (!host)
     return <Callout tone="warning" title={t("scheduling.guestRecovery")} />;
+  // A refused calendar parked every queued invitation of the host. Retrying
+  // one would fail the same way; reconnecting sends them all on.
+  if (meeting.attention_reason === "calendar_disconnected")
+    return (
+      <Callout
+        tone="warning"
+        title={t("scheduling.calendarDisconnectedTitle")}
+        actions={
+          <Button
+            variant="primary"
+            onClick={() => navigate({ screen: "settings", id: "connections" })}
+          >
+            {t("scheduling.reconnectCalendar")}
+          </Button>
+        }
+      >
+        <p>{t("scheduling.calendarDisconnectedHelp")}</p>
+      </Callout>
+    );
   return (
     <Callout
       tone="warning"

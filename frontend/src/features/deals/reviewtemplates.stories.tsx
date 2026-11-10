@@ -90,7 +90,7 @@ function served(
 }
 
 const meta = {
-  title: "Settings/Sales/Outcome reviews/Review questions",
+  title: "Settings/Sales/Deals/Review questions",
   component: ReviewTemplatesCard,
   parameters: { layout: "padded" },
 } satisfies Meta<typeof ReviewTemplatesCard>;

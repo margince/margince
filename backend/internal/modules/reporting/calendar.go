@@ -74,9 +74,11 @@ func Interval(selection crmcontracts.ReportingSelection, calendar Calendar, at t
 	return crmcontracts.ReportingWindow{StartAt: start, EndAt: end}, nil
 }
 
+// quarterStart is the first instant of day's fiscal quarter. Its callers
+// validate fiscalStart through location, which is all Containing refuses.
 func quarterStart(day time.Time, fiscalStart int) time.Time {
-	offset := (int(day.Month()) - fiscalStart + 12) % 12
-	return time.Date(day.Year(), day.Month()-time.Month(offset%3), 1, 0, 0, 0, 0, day.Location())
+	start, _, _ := reportperiod.Containing(reportperiod.GrainQuarter, day, day.Location(), fiscalStart)
+	return start
 }
 
 // Horizon is the whole period a selection names. Interval stops at the

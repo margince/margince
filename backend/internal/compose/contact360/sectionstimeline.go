@@ -262,13 +262,17 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	}
 	// The SELECT list and its scan are the activities module's, so there is no
 	// list here to fall behind that one.
+	columns, err := activities.ActivityProjection(ctx, contentArm, arg)
+	if err != nil {
+		return nil, false, err
+	}
 	query := fmt.Sprintf(`
 		SELECT %s
 		FROM activity a
 		WHERE a.archived_at IS NULL AND %s AND (%s)%s %s
 		ORDER BY %s
 		LIMIT %d`,
-		activities.ActivityProjection(contentArm), fmt.Sprintf(contactReachesActivity, bind(contactPos)),
+		columns, fmt.Sprintf(contactReachesActivity, bind(contactPos)),
 		scope, projectScope(opts, arg), extra, order, sectionCap+1)
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
@@ -290,30 +294,15 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	if hasMore {
 		out = out[:sectionCap]
 	}
-	// After the cap, so the statement counts the rows this page returns rather
-	// than the extra one read to detect hasMore. Every step below is the one
+	// After the cap, so the statements count the rows this page returns rather
+	// than the extra one read to detect hasMore. The finish is the one
 	// /activities runs, so a row means the same on either page.
-	if err := activities.WithEmailRowFacts(ctx, tx, out); err != nil {
+	if err := activities.FinishActivityRows(ctx, tx, opts.activityColumns, out, s.now()); err != nil {
 		return nil, false, err
 	}
 	// A row reaches this page through a Cc or an attendance too, so each row
 	// says which part this contact had in it.
 	if err := activities.WithContactRole(ctx, tx, out, contactID.UUID); err != nil {
-		return nil, false, err
-	}
-	if err := activities.AttachLinks(ctx, tx, out); err != nil {
-		return nil, false, err
-	}
-	if err := activities.WithCreators(ctx, tx, out); err != nil {
-		return nil, false, err
-	}
-	if err := activities.WithOffersEmail(ctx, tx, out); err != nil {
-		return nil, false, err
-	}
-	if err := activities.WithCommitmentAdmissions(ctx, tx, out); err != nil {
-		return nil, false, err
-	}
-	if err := activities.StampActivityAffordances(ctx, tx, out, s.now()); err != nil {
 		return nil, false, err
 	}
 	return out, hasMore, nil
