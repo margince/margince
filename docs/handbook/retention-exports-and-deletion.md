@@ -72,7 +72,8 @@ Other note text stays. Reviewers need a full seat, rights to read and delete all
 and read access to the retained content. If no active Admin or Ops member qualifies, erasure stops
 and says how to restore review access and retry. The same review access is needed to receive
 alerts about an opt-out receipt that could not be sent. If no one has it when a receipt is
-missed, the alert arrives within 15 minutes of access being restored, for up to 30 days.
+missed, the alert arrives within 15 minutes of access being restored. This works only when
+access is restored within 30 days of the missed receipt.
 
 ### How do I answer a data access request?
 To log a GDPR access request, an admin opens **Settings → Privacy and retention → Requests → Privacy** and chooses **New request**. Set **Kind** to **Access**, fill **Subject reference** and **Due**, and choose **Open request**. The app says: "An access request is fulfilled manually: record what you sent in the resolution. This system does not assemble or export the data for you." Bring the data together (or have the package made, see below) and send it. Then write the **Resolution**, fill **How the identity was checked** and choose **Fulfill**.
