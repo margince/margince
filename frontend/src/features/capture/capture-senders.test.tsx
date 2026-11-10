@@ -72,6 +72,7 @@ const WAITING = {
   contact_id: CONTACT_ID,
   display_name: "Marta Ortiz",
   emails: ["m.ortiz@steireif.de"],
+  addresses: [{ email: "m.ortiz@steireif.de", state: "unsure" }],
   captured_at: "2026-09-10T14:40:00Z",
 };
 
@@ -118,6 +119,11 @@ it("lists a waiting contact whose sender never reached the senders list", async 
     {
       ...WAITING,
       emails: ["m.ortiz@steireif.de", "marta@steireif.de", "mo@steireif.de"],
+      addresses: [
+        { email: "m.ortiz@steireif.de", state: "unsure" },
+        { email: "marta@steireif.de", state: "unsure" },
+        { email: "mo@steireif.de", state: "unsure" },
+      ],
     },
   ]);
 
@@ -151,7 +157,9 @@ it("opens the waiting contact from its row", async () => {
 // A contact with no name and no address still needs a verb that says something.
 it("names the open verb generically when the contact has no name", async () => {
   const user = userEvent.setup();
-  stubRoutes([{ ...WAITING, display_name: undefined, emails: [] }]);
+  stubRoutes([
+    { ...WAITING, display_name: undefined, emails: [], addresses: [] },
+  ]);
 
   const drawer = await openList(user, "Waiting on a decision");
 

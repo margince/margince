@@ -27,11 +27,8 @@ import {
   reachCaveat,
   useLinkedInReach,
 } from "../import/linkedin-reach";
-import {
-  AwaitingContacts,
-  useAwaitingDecision,
-  useSenders,
-} from "./capture-senders";
+import { AwaitingContacts, useAwaitingDecision } from "./capture-awaiting";
+import { useSenders } from "./capture-senders";
 import { HeldThreads, useHeldThreads } from "./held-threads";
 import { heldTotal } from "./held-threads.counts";
 
