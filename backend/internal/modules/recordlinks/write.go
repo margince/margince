@@ -36,21 +36,29 @@ const (
 // before any row is read, so a bad request learns nothing about the records.
 func validate(in NewLink) error {
 	if !recordkinds.IsLinkEnd(in.FromType) || !recordkinds.IsLinkEnd(in.ToType) {
-		return &values.ParseError{Field: "from_type", Code: "unknown_link_end",
-			Message: "a link joins a deal, a company or a contact"}
+		return &values.ParseError{
+			Field: "from_type", Code: "unknown_link_end",
+			Message: "a link joins a deal, a company or a contact",
+		}
 	}
 	declared, ok := recordkinds.LookupLinkType(in.LinkType)
 	if !ok {
-		return &values.ParseError{Field: fieldLinkType, Code: "unknown_link_type",
-			Message: "no core or extension declared this link type; GET /v1/link-types lists them"}
+		return &values.ParseError{
+			Field: fieldLinkType, Code: "unknown_link_type",
+			Message: "no core or extension declared this link type; GET /v1/link-types lists them",
+		}
 	}
 	if !declared.Allows(in.FromType, in.ToType) {
-		return &values.ParseError{Field: fieldLinkType, Code: "link_ends_not_allowed",
-			Message: fmt.Sprintf("the type %s does not join a %s to a %s", in.LinkType, in.FromType, in.ToType)}
+		return &values.ParseError{
+			Field: fieldLinkType, Code: "link_ends_not_allowed",
+			Message: fmt.Sprintf("the type %s does not join a %s to a %s", in.LinkType, in.FromType, in.ToType),
+		}
 	}
 	if in.FromType == in.ToType && in.FromID == in.ToID {
-		return &values.ParseError{Field: "to_id", Code: "link_to_itself",
-			Message: "a record cannot be linked to itself"}
+		return &values.ParseError{
+			Field: "to_id", Code: "link_to_itself",
+			Message: "a record cannot be linked to itself",
+		}
 	}
 	return nil
 }

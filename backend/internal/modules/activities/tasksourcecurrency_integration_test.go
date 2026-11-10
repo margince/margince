@@ -17,9 +17,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// A task is current by its source only when that source is named: no source,
-// an importer's namespace, an extension unit's, or a declared automatic family. An unregistered
-// source_system is not current work until a human writes or adopts the task.
+// A task is current by its source only when that source is named. That is no source,
+// an importer's namespace, an extension unit's, or a declared automatic family.
+// An unregistered source_system is not current work until a human writes or
+// adopts the task.
 func TestOnlyANamedTaskSourceIsCurrentWork(t *testing.T) {
 	e := setupLoad(t)
 	asOf := time.Date(2026, time.March, 10, 9, 0, 0, 0, time.UTC)

@@ -322,8 +322,8 @@ func TestThePublishedActivityTypesMatchTheCores(t *testing.T) {
 			continue // reported by the mirror test above
 		}
 		// A user id is the one pair whose published type is a named string and
-		// whose core type is a UUID: extingress.go's namedAssignee carries it over
-		// and the sink refuses an id that is not a UUID or not a colleague.
+		// whose core type is a UUID. The extingress.go's namedAssignee carries it over.
+		// The sink refuses an id that is not a UUID or not a colleague.
 		if mirrored.Type == reflect.TypeFor[extension.UserID]() && field.Type == reflect.TypeFor[ids.UUID]() {
 			continue
 		}
