@@ -118,7 +118,7 @@ func (meaning *commitmentMeaning) withheldOutcome() CommitmentOutcome {
 }
 
 const commitmentMeaningInstruction = `"commitment" describes whether work is still owed: ` +
-	`state is "open" only for a definite, unfulfilled promise; "completed" for an act already done; ` +
+	`state is "open" only for a definite, unfulfilled promise; "completed" only when the words say the act was done, never for a promise worded in the future; ` +
 	`"conditional" for a promise whose condition has not happened; "optional" for willingness or a tentative offer; ` +
 	`"request" for an ask that has not been accepted as a promise; "unclear" when the evidence cannot decide. ` +
 	`condition quotes the unmet condition exactly for conditional promises, and is empty otherwise. ` +

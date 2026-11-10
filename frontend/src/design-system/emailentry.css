@@ -56,7 +56,10 @@
  * splitter the drawer folds with. Clamped rather than wrapped: a row that
  * grows with its body is a row whose height depends on the mail, which is what
  * made a timeline of them unreadable. */
-.emailentry__preview {
+/* An invitation's start takes the preview's line, and is kept where a host
+   drops the preview: it is the event, not a hint of the words. */
+.emailentry__preview,
+.emailentry__starts {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

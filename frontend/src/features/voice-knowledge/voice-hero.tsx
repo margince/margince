@@ -1,33 +1,21 @@
-import { ArrowDown, Check, Lock, Plus } from "lucide-react";
+import { ArrowRight, Check, Lock, Plus } from "lucide-react";
 import { type ReactNode, useId } from "react";
 import type { components } from "../../api/schema";
 import { Voiceprint } from "../../components/voiceprint";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
-import { useJumpTo } from "../../design-system/jumpbar";
 import { Meter } from "../../design-system/readings";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { BuildButton, useVoiceBuild, type VoiceBuild } from "./voice-dna.build";
+import { useVoiceGo, VOICE_SECTIONS } from "./voice-dna.setup";
 import { type VoiceInsightsData, VoicePortrait } from "./voice-insights";
 import { bandLabel } from "./voice-samples";
 import "./voice-dna.css";
 
 type VoiceProfile = components["schemas"]["VoiceProfile"];
 type VoiceCorpusSummary = components["schemas"]["VoiceCorpusSummary"];
-
-/** The ids the page's sections carry, so the jump bar and the hero's verbs
- * land on the same places. */
-export const VOICE_SECTIONS = {
-  voice: "vdna-voice",
-  review: "vdna-review",
-  moves: "vdna-moves",
-  drafts: "vdna-drafts",
-  sharpen: "vdna-sharpen",
-  rules: "vdna-rules",
-  builds: "vdna-builds",
-} as const;
 
 const BANDS = ["thin", "good", "rich", "sharp"] as const;
 
@@ -129,15 +117,15 @@ export function VoiceHero({
 // After a build, the hero's verbs reach what it learned.
 function LearnedActs({ hasDrafts }: Readonly<{ hasDrafts: boolean }>) {
   const t = useT();
-  const jump = useJumpTo();
+  const go = useVoiceGo();
   return (
     <div className="vdna-hero-acts">
       {hasDrafts && (
-        <Button onClick={() => jump(VOICE_SECTIONS.drafts)}>
+        <Button onClick={() => go("drafts")}>
           {t("settings.voice.jump.drafts")}
         </Button>
       )}
-      <Button onClick={() => jump(VOICE_SECTIONS.rules)}>
+      <Button onClick={() => go("rules")}>
         {t("settings.voice.editRules")}
       </Button>
     </div>
@@ -209,7 +197,7 @@ function FirstBuildActs({
   reasonId: string;
 }>) {
   const t = useT();
-  const jump = useJumpTo();
+  const go = useVoiceGo();
   const ready = !run.tooThin;
   const build = (
     <BuildButton
@@ -225,7 +213,7 @@ function FirstBuildActs({
     <Button
       key="add"
       variant={ready ? "ghost" : "primary"}
-      onClick={() => jump(VOICE_SECTIONS.sharpen)}
+      onClick={() => go("samples")}
     >
       <Plus aria-hidden />{" "}
       {t(ready ? "settings.voice.addMore" : "settings.voice.addWriting")}
@@ -234,7 +222,7 @@ function FirstBuildActs({
   return (
     <div className="vdna-hero-acts">
       {ready ? [build, add] : [add, build]}
-      <Button onClick={() => jump(VOICE_SECTIONS.rules)}>
+      <Button onClick={() => go("rules")}>
         {t("settings.voice.editRules")}
       </Button>
     </div>
@@ -339,7 +327,7 @@ export function SharpenStrip({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const jump = useJumpTo();
+  const go = useVoiceGo();
   const left = Math.max(0, summary.target_words - summary.total_words);
   const headline =
     left > 0
@@ -365,15 +353,12 @@ export function SharpenStrip({
       </div>
       <div className="vdna-sharpen-acts">
         {canEdit && (
-          <Button
-            variant="primary"
-            onClick={() => jump(VOICE_SECTIONS.sharpen)}
-          >
+          <Button variant="primary" onClick={() => go("samples")}>
             <Plus aria-hidden /> {t("settings.voice.addWriting")}
           </Button>
         )}
-        <Button onClick={() => jump(VOICE_SECTIONS.sharpen)}>
-          <ArrowDown aria-hidden /> {t("settings.voice.seeSamples")}
+        <Button onClick={() => go("samples")}>
+          <ArrowRight aria-hidden /> {t("settings.voice.seeSamples")}
         </Button>
       </div>
     </div>

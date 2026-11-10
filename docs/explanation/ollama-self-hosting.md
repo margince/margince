@@ -100,9 +100,9 @@ This page has two different measures, and you cannot compare them:
   validator half of this number does not depend on the judge, so it still
   describes the model. The labels from that older rule, which required every
   run to pass, are not shown.
-- **Verdict** (section 4, last table): the labels the current rule gives, from
-  the 28 records committed for the `sovereign` preset. We ran them again on
-  2026-09-28/29 and judged by the default cloud judge (Claude Sonnet 4.6).
+- **Verdict** (section 4, last table): the labels the current rule gave the 28
+  `sovereign` records of 2026-09-28/29, judged by the default cloud judge
+  (Claude Sonnet 4.6). Those records are no longer committed; a new run makes new ones.
 
 The two are different runs with different judges, so one task can score
 differently in each. `request_settlement` is 0.25 in the first table and 0.96 in the second.
@@ -156,8 +156,8 @@ seconds. Extract tasks are 12 to 26. A task that writes hundreds of tokens
 (`summarize`, `deal_health`, `growth_fit`) is 45 to 86 seconds. Generation is 12
 tokens a second, and nothing gets past that on this chip.
 
-The table below has the verdicts the current grade rule gives, from the committed
-`sovereign` records (2026-09-28/29, cloud judge). A scenario close to the bar is run
+The table below has the verdicts that grade rule gave the `sovereign` records of
+2026-09-28/29 (cloud judge), which are no longer committed. A scenario close to the bar is run
 again before it is decided, so the run counts are not all the same. Latency here includes the turn
 of the judge off the GPU, but not a second model on it; read it next to the table
 above.
@@ -320,12 +320,12 @@ the model, and `gpt-oss:20b` only for a local judge, and run:
 ```bash
 ollama pull gemma4:12b
 ollama pull gpt-oss:20b
-# The committed records used the default cloud judge; a local judge works too:
+# The default cloud judge grades it; a local judge works too:
 make e2e-ai ROUTING=config/presets/gemma4_local_ollama.yaml \
   JUDGE=ollama:gpt-oss:20b TASK=capture_classify
 ```
 
-`make e2e-ai-report` prints what is already committed. With the default cloud
+`make e2e-ai-report` prints what is committed, which for this preset is nothing until you run it. With the default cloud
 judge (leave out `JUDGE=`), the run is faster, and its recorded latency is only that
 of the candidate. But it pays for judge tokens, where a local judge costs
 nothing.
