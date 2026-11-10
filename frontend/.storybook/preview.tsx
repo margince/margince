@@ -32,6 +32,8 @@ import "../src/design-system/atoms.css";
 // no interval above it, so every settings-card story understated exactly the
 // spacing those stories exist to check.
 import "../src/features/settings/settings.css";
+import { setEdgeLightShown } from "../src/app/agent-edge-preference";
+import { setSingleKeyShortcutsOn } from "../src/lib/shortcuts";
 
 // Theme decorator — sets data-theme on <html>, the same mechanism the shell
 // uses (src/app/shell.tsx), so a story previews in light and dark.
@@ -66,6 +68,11 @@ const withSurface: Decorator = (Story, context) => {
 };
 
 const preview: Preview = {
+  // Storage outlives a story's page. A story that turns a switch off would leak it.
+  beforeEach: () => {
+    setSingleKeyShortcutsOn(true);
+    setEdgeLightShown(true);
+  },
   loaders: [
     async () => {
       await Promise.all(LOCALES.map(loadLocale));

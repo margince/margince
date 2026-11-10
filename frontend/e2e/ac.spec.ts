@@ -530,6 +530,98 @@ test("help and feedback and the keyboard shortcuts meet AA", async ({
   await expect(accountTrigger(page)).toBeFocused();
 });
 
+// A page whose heading has drawn, with focus out of every field, so a key
+// press reaches the app's shortcuts.
+async function openForKeys(page: Page, hash: string) {
+  await page.goto(`/#/${hash}`);
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await page.evaluate(() => {
+    const focused = document.activeElement;
+    if (focused instanceof HTMLElement) {
+      focused.blur();
+    }
+  });
+}
+
+test("keyboard shortcuts: ? opens the list of shortcuts, and Esc closes it", async ({
+  page,
+}) => {
+  await openForKeys(page, "home");
+  await page.keyboard.press("?");
+  const dialog = page.getByRole("dialog", { name: de["shell.help.shortcuts"] });
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+});
+
+test("keyboard shortcuts: / opens search", async ({ page }) => {
+  await openForKeys(page, "home");
+  await page.keyboard.press("/");
+  await expect(
+    page.getByRole("searchbox", { name: "Befehlspalette" }),
+  ).toBeFocused();
+});
+
+test("keyboard shortcuts: G then C goes to Contacts, G then D to Deals", async ({
+  page,
+}) => {
+  await openForKeys(page, "home");
+  await page.keyboard.press("g");
+  await page.keyboard.press("c");
+  await expect(page).toHaveURL(/#\/contacts$/);
+
+  await openForKeys(page, "home");
+  await page.keyboard.press("g");
+  await page.keyboard.press("d");
+  await expect(page).toHaveURL(/#\/deals$/);
+});
+
+test("keyboard shortcuts: keys typed into a field stay in the field", async ({
+  page,
+}) => {
+  await openForKeys(page, "settings/audit");
+  const field = page.getByRole("textbox", { name: de["settings.auditActor"] });
+  await field.click();
+  await field.pressSequentially("gc?");
+  await expect(field).toHaveValue("gc?");
+  await expect(page).toHaveURL(/#\/settings\/audit/);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+});
+
+test("keyboard shortcuts: with single keys off, ? does nothing and ⌘K still opens search", async ({
+  page,
+}) => {
+  await openForKeys(page, "settings/account");
+  const singleKeys = page.getByRole("switch", {
+    name: de["account.singleKeyShortcuts"],
+  });
+  await expect(singleKeys).toBeChecked();
+  await singleKeys.click();
+  await expect(singleKeys).not.toBeChecked();
+
+  await openForKeys(page, "home");
+  await page.keyboard.press("?");
+  // ⌘K lands after ?, so the palette on screen proves ? was already heard.
+  await page.keyboard.press("ControlOrMeta+k");
+  await expect(
+    page.getByRole("searchbox", { name: "Befehlspalette" }),
+  ).toBeFocused();
+  await expect(
+    page.getByRole("dialog", { name: de["shell.help.shortcuts"] }),
+  ).toHaveCount(0);
+});
+
+test("keyboard shortcuts: N on a contact opens Log activity", async ({
+  page,
+}) => {
+  await openForKeys(page, "contacts/p-anna");
+  await expect(page.locator('button[aria-keyshortcuts="n"]')).toBeEnabled();
+  await page.keyboard.press("n");
+  await expect(
+    page.getByRole("dialog", { name: de["log.title"] }),
+  ).toBeVisible();
+});
+
 test("features/10 §7: the locale switch flips the chrome DE↔EN", async ({
   page,
 }) => {

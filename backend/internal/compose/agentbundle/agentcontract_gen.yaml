@@ -16450,6 +16450,19 @@ paths:
           in: query
           schema: {type: string, format: uuid}
           description: The record the staged actions act on. Requires `target_entity_type`.
+        - name: target
+          in: query
+          schema:
+            type: array
+            maxItems: 25
+            items: {type: string}
+          style: form
+          explode: true
+          description: |-
+            Filter to the approvals staged against ANY of these records, each written
+            `<entity_type>:<uuid>` (`contact:…`, `activity:…`). Repeat the parameter for several,
+            up to 25. It answers "what is waiting on the records I touched" without the rest of
+            the queue.
         - name: bundle_id
           in: query
           schema: {type: string, format: uuid}

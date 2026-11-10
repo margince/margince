@@ -6,6 +6,7 @@ import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { en } from "../../i18n/en";
+import { setSingleKeyShortcutsOn } from "../../lib/shortcuts";
 import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -59,6 +60,14 @@ export const Rep: Story = { render: accountStory(["rep"]) };
 export const AdminDark: Story = {
   globals: { theme: "dark" },
   render: accountStory(["admin"]),
+};
+
+// The reader turned single-key shortcuts off for this browser.
+export const SingleKeysOff: Story = {
+  render: () => {
+    setSingleKeyShortcutsOn(false);
+    return accountStory(["rep"])();
+  },
 };
 
 export const RepPhone: Story = {

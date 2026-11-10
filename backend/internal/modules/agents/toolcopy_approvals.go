@@ -18,7 +18,7 @@ package agents
 var listApprovalsCopy = toolCopy{
 	Purpose: "The staged actions waiting for a human's decision: what was proposed and what each " +
 		"would do. It is where a proposal that is already waiting turns up — a message staged and " +
-		"unsent is not one that needs writing again.",
+		"unsent is not one that needs writing again. targets answers what waits on the records you touched.",
 	Limits: "It lists what the colleague you act for could decide themselves; anything else is absent " +
 		"rather than refused. A proposal past its expiry reads as expired and can no longer be " +
 		"answered. Personal mutes hide eligible pending rows, so a bundle may be partial. " +

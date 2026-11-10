@@ -31,6 +31,7 @@ import {
   railTrail,
   walkUpTarget,
 } from "./nav";
+import { type TipState, useRowTip } from "./navrowtip";
 
 // ONE navigation level, whatever its depth. The rail's ten destinations and the
 // entries of a section drilled into from them render through this, so the two
@@ -211,12 +212,6 @@ function drawsRow(level: NavTrailLevel, rows: NavRows, id: string): boolean {
   return (level.barIds?.has(id) ?? false) === (rows === "bar");
 }
 
-type TipState = Readonly<{
-  collapsed: boolean;
-  tip: string | null;
-  onTip: (key: string | null, by?: "pointer" | "focus") => void;
-}>;
-
 function NavLevelRow({
   level,
   entry,
@@ -238,11 +233,12 @@ function NavLevelRow({
   const label = entryLabel(entry, locale, t);
   const active = level.activeId === entry.id;
   const key = navTipKey(level, entry.id);
+  const tip = useRowTip(state, { key, level, id: entry.id, label });
   // The rail's tips wait for the pointer to settle like every other popover.
   // A rail crossed on the way to the work column fired one tip per row it
   // passed, which read as the rail flickering rather than as a page answering.
   const hover = useHoverIntent(
-    () => state.onTip(key, "pointer"),
+    () => tip.raise("pointer"),
     () => state.onTip(null),
   );
   return (
@@ -253,7 +249,7 @@ function NavLevelRow({
       aria-current={active ? currentClaim(level) : undefined}
       onPointerEnter={hover.onPointerEnter}
       onPointerLeave={hover.onPointerLeave}
-      onFocus={() => state.onTip(key, "focus")}
+      onFocus={() => tip.raise("focus")}
       onBlur={() => state.onTip(null)}
       onClick={() => onSelect(entry)}
     >
@@ -275,9 +271,9 @@ function NavLevelRow({
           row and never tears it away mid-read (WCAG 1.4.13, hoverable). A
           sibling could not manage that without making the wrapper itself
           interactive. */}
-      {state.collapsed && state.tip === key && (
+      {tip.text !== null && state.tip === key && (
         <span className="navtip" role="tooltip">
-          {label}
+          {tip.text}
         </span>
       )}
     </AppLink>

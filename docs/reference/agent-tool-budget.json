@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 592,
-    "tokens": 40136,
+    "tokens": 40209,
     "median_tool_tokens": 620,
-    "mean_tool_tokens": 835
+    "mean_tool_tokens": 837
   },
   "agents": [
     {
@@ -200,6 +200,10 @@
       "tokens": 517
     },
     {
+      "name": "list_approvals",
+      "tokens": 474
+    },
+    {
       "name": "change_relationships",
       "tokens": 472
     },
@@ -218,10 +222,6 @@
     {
       "name": "read_context",
       "tokens": 413
-    },
-    {
-      "name": "list_approvals",
-      "tokens": 401
     },
     {
       "name": "enrich",

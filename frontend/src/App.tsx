@@ -29,7 +29,7 @@ import { DateFormatsProvider } from "./app/dateformats";
 import { useFeatureLanding } from "./app/featurelanding";
 import { prefetchHome } from "./app/homeprefetch";
 import { passesOnboardingGate } from "./app/onboarding-gate";
-import { usePaletteHotkey } from "./app/palettehotkey";
+import { useCommandPalette } from "./app/palettehotkey";
 import { Shell, useRoute } from "./app/shell";
 import { SourceHost } from "./app/sourcehost";
 import { CallLogHost } from "./components/calllog.host";
@@ -335,7 +335,7 @@ function AuthedApp({
     sessionSeenNow,
     sessionSeenNow,
   );
-  const [paletteOpen, setPaletteOpen] = useState<boolean | null>(null);
+  const palette = useCommandPalette(route);
   const gatesPending =
     companyPending || companyZone.pending || progress.pending;
   const shellReady = authed && !gatesPending;
@@ -361,7 +361,6 @@ function AuthedApp({
     }
     return prefetchHome(queryClient, currentParams());
   }, [opensHome, queryClient]);
-  usePaletteHotkey(paletteOpen === true, setPaletteOpen);
   useTaskReminderNotifications(authed);
   useFeatureLanding(shellReady, confinement !== null, disabled);
 
@@ -444,7 +443,7 @@ function AuthedApp({
             <CallLogHost>
               <SourceHost>
                 <ApprovalHost>
-                  <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
+                  <AuthedShell onOpenSearch={() => palette.show("all")}>
                     <ScreenView
                       screen={route.screen}
                       id={route.id}
@@ -455,11 +454,12 @@ function AuthedApp({
               </SourceHost>
             </CallLogHost>
           </WriteToHost>
-          {paletteOpen !== null && (
+          {palette.open !== null && (
             <Suspense fallback={null}>
               <CommandPalette
-                open={paletteOpen}
-                onClose={() => setPaletteOpen(false)}
+                open={palette.open}
+                mode={palette.mode}
+                onClose={palette.hide}
               />
             </Suspense>
           )}

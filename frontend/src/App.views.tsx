@@ -45,7 +45,7 @@ import {
   WorklistRedirect,
 } from "./App.screens";
 import { CUSTOM_SCREEN } from "./app/custom";
-import { opensReservedPage } from "./app/nav";
+import { CREATE_ID, IMPORT_ID, opensReservedPage } from "./app/nav";
 import { UnsavedGuard } from "./components/unsaved";
 import { RESET_ROUTE } from "./features/sign-in/auth.route";
 import { CompleteLocale } from "./i18n";
@@ -72,16 +72,33 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // empty page: a mistyped link should land somewhere, not nowhere.
     contacts: ({ id, id2 }) =>
       !id || opensReservedPage({ screen: "contacts", id }) ? (
-        <ContactsScreen importing={id !== undefined} />
+        <ContactsScreen
+          importing={id === IMPORT_ID}
+          startCreating={id === CREATE_ID}
+        />
       ) : (
         <ContactPageV2 id={id} tab={isContactTab(id2) ? id2 : "overview"} />
       ),
     companies: ({ id }) =>
-      id ? <CompanyScreen id={id} /> : <CompaniesScreen />,
+      !id || opensReservedPage({ screen: "companies", id }) ? (
+        <CompaniesScreen startCreating={id !== undefined} />
+      ) : (
+        <CompanyScreen id={id} />
+      ),
     partners: () => <PartnersScreen />,
-    leads: ({ id }) => (id ? <LeadScreen id={id} /> : <LeadsScreen />),
+    leads: ({ id }) =>
+      !id || opensReservedPage({ screen: "leads", id }) ? (
+        <LeadsScreen startCreating={id !== undefined} />
+      ) : (
+        <LeadScreen id={id} />
+      ),
     deals: ({ id, id2 }) => <DealsRoute id={id} id2={id2} />,
-    projects: ({ id }) => (id ? <ProjectScreen id={id} /> : <ProjectsScreen />),
+    projects: ({ id }) =>
+      !id || opensReservedPage({ screen: "projects", id }) ? (
+        <ProjectsScreen startCreating={id !== undefined} />
+      ) : (
+        <ProjectScreen id={id} />
+      ),
     // One segment, and it names whose day it is. A team board row needs that
     // door. The other three dials stay state: one of four in the address would
     // make it describe a fraction of what the reader is looking at.

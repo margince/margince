@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 235243,
+    "tool_catalog_bytes": 235565,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 60216,
+    "approx_wire_tokens_total": 60296,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
-      "description_bytes": 55260,
-      "input_schema_bytes": 116037,
+      "description_bytes": 55315,
+      "input_schema_bytes": 116304,
       "output_schema_bytes": 51838,
-      "description_plus_input_schema_bytes": 171297
+      "description_plus_input_schema_bytes": 171619
     }
   },
   "tools": {
@@ -4378,7 +4378,7 @@
           "readOnlyHint": true,
           "title": "List what is waiting for a decision"
         },
-        "description": "The staged actions waiting for a human's decision: what was proposed and what each would do. It is where a proposal that is already waiting turns up — a message staged and unsent is not one that needs writing again. It lists what the colleague you act for could decide themselves; anything else is absent rather than refused. A proposal past its expiry reads as expired and can no longer be answered. Personal mutes hide eligible pending rows, so a bundle may be partial. Use include_muted for a complete authorized bundle review. Each item carries its one-line summary, not the change itself. read_approval opens one and shows what it holds; decide_approvals answers it. Keep the staged_action_id you mean to act on, the bundle_id when one act staged several, and next_cursor.",
+        "description": "The staged actions waiting for a human's decision: what was proposed and what each would do. It is where a proposal that is already waiting turns up — a message staged and unsent is not one that needs writing again. targets answers what waits on the records you touched. It lists what the colleague you act for could decide themselves; anything else is absent rather than refused. A proposal past its expiry reads as expired and can no longer be answered. Personal mutes hide eligible pending rows, so a bundle may be partial. Use include_muted for a complete authorized bundle review. Each item carries its one-line summary, not the change itself. read_approval opens one and shows what it holds; decide_approvals answers it. Keep the staged_action_id you mean to act on, the bundle_id when one act staged several, and next_cursor.",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -4420,6 +4420,28 @@
             "target_entity_type": {
               "description": "With target_entity_id, the approvals staged against one record.",
               "type": "string"
+            },
+            "targets": {
+              "description": "The approvals staged against any of these records.",
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type",
+                  "id"
+                ],
+                "type": "object"
+              },
+              "maxItems": 25,
+              "type": "array"
             }
           },
           "type": "object"
