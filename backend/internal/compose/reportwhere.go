@@ -82,7 +82,7 @@ func buildReportWhere(
 		if err != nil {
 			return nil, "", err
 		}
-		where = append(where, fmt.Sprintf("%s = $%d", expr, arg(value)))
+		where = append(where, filterClause(spec, key, expr, arg(value)))
 	}
 	scoped, err := specScopeClauses(ctx, spec, arg)
 	if err != nil {
@@ -392,4 +392,15 @@ func referenceScopeClauses(
 			column, table, column, scope))
 	}
 	return clauses, nil
+}
+
+// filterClause matches a filter's bound value: through the field's set
+// predicate where the spec declares one, by equality otherwise. The headline
+// and its drill-through both render a filter here, so the two count one set.
+func filterClause(spec reportSpec, key, expr string, pos int) string {
+	ref := fmt.Sprintf("$%d", pos)
+	if template, set := spec.filterPredicates[key]; set {
+		return fmt.Sprintf(template, ref)
+	}
+	return expr + " = " + ref
 }
