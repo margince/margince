@@ -450,7 +450,7 @@
 
      A surface ANCHORED to its trigger takes neither — its width is the box it
      drops from and its ceiling is the room measured to the viewport — and says
-     so in menu-anatomy.test.ts, which holds this anatomy over every one of
+     so in census/rules/menu-anatomy.census.ts, which holds this anatomy over every one of
      them. */
   --menuMinInlineSize: 250px;
   --menuMaxBlockSize: 400px;
@@ -571,7 +571,7 @@
      level is chosen by the context it is used in. */
 
   /* Three WEIGHTS, and every one of them a file the browser actually loads
-     (weights.test.ts). Named by role, so a rule asks for what its text IS
+     (census/rules/weights.census.ts). Named by role, so a rule asks for what its text IS
      rather than for a number, and a retune moves every call site at once.
      Read by the shorthands below: `var()` substitution happens before the
      `font` shorthand's own grammar is checked, so a var() weight in a `font`
@@ -1077,7 +1077,7 @@
  * shape and draw a corner at twice the radius its author asked for: a dot, a
  * notch or a drawn separator visibly rounder than the box it belongs to. The
  * pseudo-elements a stylesheet in this tree gives a corner to are held against
- * this list by `corners.test.ts`, so a new one cannot arrive unlisted. */
+ * this list by `census/rules/corners.census.ts`, so a new one cannot arrive unlisted. */
 @supports (corner-shape: squircle) {
   :root {
     --r-xs: 8px;

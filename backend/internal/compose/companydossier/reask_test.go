@@ -48,7 +48,7 @@ func TestTheDossierWriterReAsksThroughItsOwnParse(t *testing.T) {
 		// Valid JSON, refused by ParseDossier alone: sections is an object where
 		// the site reads a list.
 		First:  `{"sections":{"kind":"summary"}}`,
-		Second: describing("summary", "They build load-shifting software for industrial sites.", in),
+		Second: cited(in, describing("summary", "They build load-shifting software for industrial sites.", in)),
 	}
 	sections, err := writeWithModel(t.Context(), lane, in, string(textlang.English))
 	if err != nil {

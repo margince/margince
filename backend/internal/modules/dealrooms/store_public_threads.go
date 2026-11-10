@@ -75,9 +75,10 @@ func (s *Store) BuyerThreads(ctx context.Context, sess Session, documentID *ids.
 	return out, err
 }
 
-// liveRoomForBuyerWrite settles what every buyer write needs: the room is
-// live (paused refuses reversibly, the finished states as a record) and the
-// capability admits writing. Returns the room as the transaction bodies want it.
+// liveRoomForBuyerWrite settles what every buyer write needs: the seat is held
+// live, and the room is live and admits writing. A paused room refuses
+// reversibly; a finished one refuses as a record. Returns the room as the
+// transaction bodies want it.
 func liveRoomForBuyerWrite(ctx context.Context, tx pgx.Tx, sess Session) (crmcontracts.DealRoom, error) {
 	if sess.Preview {
 		return crmcontracts.DealRoom{}, errPreviewSession
@@ -114,6 +115,11 @@ func liveRoomForBuyerWrite(ctx context.Context, tx pgx.Tx, sess Session) (crmcon
 	}
 	if err != nil {
 		return crmcontracts.DealRoom{}, fmt.Errorf("read deal room for a buyer write: %w", err)
+	}
+	// The seat last. A contact erasure locks neither the room nor the deal,
+	// so holding them while this waits on the seat cannot deadlock it.
+	if err := holdLiveSeat(ctx, tx, sess.RoomID, sess.ParticipantID); err != nil {
+		return crmcontracts.DealRoom{}, err
 	}
 	return room, nil
 }

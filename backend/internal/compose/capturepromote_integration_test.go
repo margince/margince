@@ -565,11 +565,13 @@ func TestAContactTheCeilingRefusedIsAskedAboutByTheSweep(t *testing.T) {
 	// room to ask.
 	for i := range capture.PendingDeferralDomainCap {
 		other := fmt.Sprintf("filler%d@partner.example", i)
-		seedAttestedOutbound(t, e, fmt.Sprintf("quiet-fill-out-%d", i), other, fmt.Sprintf("quiet-fill-t%d", i))
+		outbound := seedAttestedOutbound(t, e, fmt.Sprintf("quiet-fill-out-%d", i), other, fmt.Sprintf("quiet-fill-t%d", i))
+		seatHoldsSeeded(t, e, e.Rep1, outbound)
 		captureInboundThroughRealSink(t, e, e.Rep1, fmt.Sprintf("quiet-fill-in-%d", i), other, fmt.Sprintf("quiet-fill-t%d", i))
 	}
 
-	seedAttestedOutbound(t, e, "quiet-out-1", sender, "quiet-t1")
+	outbound := seedAttestedOutbound(t, e, "quiet-out-1", sender, "quiet-t1")
+	seatHoldsSeeded(t, e, e.Rep1, outbound)
 	captureInboundThroughRealSink(t, e, e.Rep1, "quiet-in-1", sender, "quiet-t1")
 
 	visibility, found := contactVisibility(t, e, sender)

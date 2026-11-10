@@ -29,7 +29,7 @@ fixture:
         - speaker: buyer
           author: Priya Raman
           "on": "2026-10-23"
-          body: Can you add a line for ten more support seats before we sign?
+          body: Can you add a line for ten more support seats to the order form?
     - label: invoice
       comments:
         - speaker: buyer

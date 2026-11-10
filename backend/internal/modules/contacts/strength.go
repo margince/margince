@@ -120,10 +120,11 @@ var afterEngaged = relstrength.AfterEngagedSQL("a", "engaged_at")
 var foldColumns = relstrength.FoldColumnsSQL("a")
 
 // strengthDirectionPrecisions reads the precision behind each direction's last
-// date for the contact, empty where that date is null.
+// date for the contact, empty where that date is null. Ours reads as a day at a
+// tie, so EngagementOf sees the day entry that answers theirs.
 func strengthDirectionPrecisions(contact string) string {
 	return `coalesce(` + occurredday.LatestPrecisionSQL("a", relstrength.TheyWroteSQL(contact, "a")) + `, ''),
-		coalesce(` + occurredday.LatestPrecisionSQL("a", relstrength.WeWroteSQL("a")) + `, '')`
+		coalesce(` + occurredday.LatestAnswerPrecisionSQL("a", relstrength.WeWroteSQL("a")) + `, '')`
 }
 
 // ContactStrength computes the §4 baseline for one contact. The contact

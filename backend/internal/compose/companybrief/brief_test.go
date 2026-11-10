@@ -33,7 +33,7 @@ const briefCompanyID = "33333333-3333-4333-8333-333333333333"
 
 func inputFixture() Input {
 	return Input{
-		Name: "Brandt Automotive GmbH", Industry: "Automotive",
+		ID: briefCompanyID, Name: "Brandt Automotive GmbH", Industry: "Automotive",
 		Strength: 41, ContactCount: 2,
 		OpenDeals: []DealIn{{
 			ID: "11111111-1111-4111-8111-111111111111", Name: "Fleet retrofit",
@@ -138,7 +138,7 @@ func TestParseBriefDropsSentencesCitingRecordsTheInputNeverCarried(t *testing.T)
 	  {"text":"The retrofit deal has stalled.","evidence":[{"entity_type":"deal","entity_id":"11111111-1111-4111-8111-111111111111"}]},
 	  {"text":"They are close to signing.","evidence":[{"entity_type":"deal","entity_id":"99999999-9999-4999-8999-999999999999"}]}
 	]}`
-	kept, err := ParseBrief(reply, briefCompanyID, in)
+	kept, err := parseCitedBrief(reply, in)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -160,7 +160,7 @@ func TestParseBriefReadsAFencedReply(t *testing.T) {
 		`{"sentences":[{"text":"The retrofit deal has stalled.","evidence":[{"entity_type":"deal","entity_id":"11111111-1111-4111-8111-111111111111"}]}]}` +
 		"\n```"
 
-	kept, err := ParseBrief(fenced, briefCompanyID, in)
+	kept, err := parseCitedBrief(fenced, in)
 	if err != nil {
 		t.Fatalf("a fenced reply must parse: %v", err)
 	}
@@ -174,9 +174,8 @@ func TestParseBriefReadsAFencedReply(t *testing.T) {
 
 // The account itself is always citable: it is the record the brief is about.
 func TestParseBriefKeepsASentenceCitingTheAccount(t *testing.T) {
-	kept, err := ParseBrief(
-		`{"sentences":[{"text":"An automotive supplier.","evidence":[{"entity_type":"company","entity_id":"`+briefCompanyID+`"}]}]}`,
-		briefCompanyID, inputFixture())
+	kept, err := parseCitedBrief(
+		`{"sentences":[{"text":"An automotive supplier.","evidence":[{"entity_type":"company","entity_id":"`+briefCompanyID+`"}]}]}`, inputFixture())
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -192,10 +191,10 @@ func TestParseBriefKeepsASentenceCitingTheAccount(t *testing.T) {
 func TestParseBriefDropsASentenceThatSpellsAnIDAtTheReader(t *testing.T) {
 	in := inputFixture()
 	dealID := in.OpenDeals[0].ID
-	kept, err := ParseBrief(`{"sentences":[
+	kept, err := parseCitedBrief(`{"sentences":[
 	  {"text":"The retrofit deal (ID: `+dealID+`) has stalled.","evidence":[{"entity_type":"deal","entity_id":"`+dealID+`"}]},
 	  {"text":"The retrofit deal has stalled.","evidence":[{"entity_type":"deal","entity_id":"`+dealID+`"}]}
-	]}`, briefCompanyID, in)
+	]}`, in)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -213,10 +212,10 @@ func TestParseBriefDropsASentenceThatSpellsAnIDAtTheReader(t *testing.T) {
 func TestParseBriefCollapsesRepeatedCitations(t *testing.T) {
 	in := inputFixture()
 	dealID, actID := in.OpenDeals[0].ID, in.Recent[0].ID
-	kept, err := ParseBrief(`{"sentences":[{"text":"The retrofit stalled after the last mail.","evidence":[
+	kept, err := parseCitedBrief(`{"sentences":[{"text":"The retrofit stalled after the last mail.","evidence":[
 	  {"entity_type":"deal","entity_id":"`+dealID+`"},
 	  {"entity_type":"activity","entity_id":"`+actID+`"},
-	  {"entity_type":"deal","entity_id":"`+dealID+`"}]}]}`, briefCompanyID, in)
+	  {"entity_type":"deal","entity_id":"`+dealID+`"}]}]}`, in)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -303,9 +302,8 @@ func TestDeterministicNamesTheStalledDealAndTheLastTouch(t *testing.T) {
 // A reply citing SOME company is not a reply citing THIS one: an id the
 // reader never saw would render as a link into a record their scope may hide.
 func TestParseBriefRefusesACitationToAnotherAccount(t *testing.T) {
-	kept, err := ParseBrief(
-		`{"sentences":[{"text":"A promising account.","evidence":[{"entity_type":"company","entity_id":"44444444-4444-4444-8444-444444444444"}]}]}`,
-		briefCompanyID, inputFixture())
+	kept, err := parseCitedBrief(
+		`{"sentences":[{"text":"A promising account.","evidence":[{"entity_type":"company","entity_id":"44444444-4444-4444-8444-444444444444"}]}]}`, inputFixture())
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -320,9 +318,8 @@ func TestParseBriefRefusesACitationToAnotherAccount(t *testing.T) {
 func TestParseBriefRefusesARealIDUnderTheWrongType(t *testing.T) {
 	in := inputFixture()
 	dealID := in.OpenDeals[0].ID
-	kept, err := ParseBrief(
-		`{"sentences":[{"text":"Dana is the champion.","evidence":[{"entity_type":"contact","entity_id":"`+dealID+`"}]}]}`,
-		briefCompanyID, in)
+	kept, err := parseCitedBrief(
+		`{"sentences":[{"text":"Dana is the champion.","evidence":[{"entity_type":"contact","entity_id":"`+dealID+`"}]}]}`, in)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -337,11 +334,10 @@ func TestParseBriefRefusesARealIDUnderTheWrongType(t *testing.T) {
 // checked when it is not.
 func TestParseBriefDropsASentenceWithAnyUngroundedCitation(t *testing.T) {
 	in := inputFixture()
-	kept, err := ParseBrief(
+	kept, err := parseCitedBrief(
 		`{"sentences":[{"text":"The retrofit stalled after the buyer left.","evidence":[
 		  {"entity_type":"deal","entity_id":"`+in.OpenDeals[0].ID+`"},
-		  {"entity_type":"contact","entity_id":"55555555-5555-4555-8555-555555555555"}]}]}`,
-		briefCompanyID, in)
+		  {"entity_type":"contact","entity_id":"55555555-5555-4555-8555-555555555555"}]}]}`, in)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -358,11 +354,10 @@ func TestParseBriefGroundsContactsAndTasks(t *testing.T) {
 	in.Contacts = []NamedIn{{ID: "66666666-6666-4666-8666-666666666666", Name: "Dana Buyer"}}
 	in.OpenTasks = []TaskIn{{ID: "77777777-7777-4777-8777-777777777777", Name: "Send the paperwork"}}
 
-	kept, err := ParseBrief(
+	kept, err := parseCitedBrief(
 		`{"sentences":[
 		  {"text":"Dana Buyer is your contact.","evidence":[{"entity_type":"contact","entity_id":"`+in.Contacts[0].ID+`"}]},
-		  {"text":"One task is open.","evidence":[{"entity_type":"activity","entity_id":"`+in.OpenTasks[0].ID+`"}]}]}`,
-		briefCompanyID, in)
+		  {"text":"One task is open.","evidence":[{"entity_type":"activity","entity_id":"`+in.OpenTasks[0].ID+`"}]}]}`, in)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -477,14 +472,14 @@ func TestFoldProfileBoundsOneStatement(t *testing.T) {
 func TestModelBriefKeepsWhatItGroundsAndDropsWhatItDoesNot(t *testing.T) {
 	in := inputFixture()
 	in.Profile = []ProfileIn{{Field: "offer_summary", Value: "Managed hosting"}}
-	lane := &scriptedLane{reply: `{"sections":[
+	lane := &scriptedLane{reply: cited(in, `{"sections":[
 		{"kind":"snapshot","sentences":[
-			{"text":"They sell managed hosting.","evidence":[{"entity_type":"company","entity_id":"` + briefCompanyID + `"}]}]},
+			{"text":"They sell managed hosting.","evidence":[{"entity_type":"company","entity_id":"`+briefCompanyID+`"}]}]},
 		{"kind":"fit","sentences":[
-			{"text":"Their hosting base is who we sell to.","nature":"assessment","evidence":[{"entity_type":"company","entity_id":"` + briefCompanyID + `"}]}]},
+			{"text":"Their hosting base is who we sell to.","nature":"assessment","evidence":[{"entity_type":"company","entity_id":"`+briefCompanyID+`"}]}]},
 		{"kind":"snapshot","sentences":[
-			{"text":"This account is a poor fit.","nature":"assessment","evidence":[{"entity_type":"company","entity_id":"` + briefCompanyID + `"}]}]}
-	]}`}
+			{"text":"This account is a poor fit.","nature":"assessment","evidence":[{"entity_type":"company","entity_id":"`+briefCompanyID+`"}]}]}
+	]}`)}
 
 	written, by, err := Write(context.Background(), lane, briefCompanyID, in, string(textlang.English))
 	if err != nil {
@@ -628,7 +623,7 @@ func TestParseBriefDropsASentenceWhoseFactsTheCitedRecordDoesNotCarry(t *testing
 	  {"text":"They asked for the proposal again on 3 September.","evidence":` + activity + `},
 	  {"text":"They are holding out for 40% off.","evidence":` + activity + `}
 	]}`
-	kept, err := ParseBrief(reply, briefCompanyID, in)
+	kept, err := parseCitedBrief(reply, in)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -655,7 +650,7 @@ func TestAMoveWrittenAsAPromiseIsRefusedWithoutSpendingTheAdviceBudget(t *testin
 		moves = append(moves, move(promises[i%len(promises)]))
 	}
 	moves = append(moves, move("Send them the retrofit proposal for signature once legal finishes its review."))
-	sections, err := ParseBriefSections(`{"sections":[{"kind":"next_step","sentences":[`+strings.Join(moves, ",")+`]}]}`,
+	sections, err := parseCitedSections(`{"sections":[{"kind":"next_step","sentences":[`+strings.Join(moves, ",")+`]}]}`,
 		briefCompanyID, inputFixture())
 	if err != nil {
 		t.Fatalf("ParseBriefSections: %v", err)

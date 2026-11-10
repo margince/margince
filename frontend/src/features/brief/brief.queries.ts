@@ -114,10 +114,10 @@ const MARK_PATHS = {
 /**
  * Act on, dismiss, snooze or un-snooze one item.
  *
- * The item id travels as a mutation VARIABLE rather than in the closure: the
- * click handler belongs to the committed render, so a variable it passes cannot
+ * The item id travels as a mutation variable rather than in the closure. The
+ * click handler belongs to the committed render. So a variable it passes cannot
  * be older than the control that carried it (frontend/CLAUDE.md, and the gate
- * in `mutation-variable-coverage.test.ts`).
+ * in `census/rules/mutation-variable-coverage.census.ts`).
  */
 export function useBriefItemMark() {
   const queryClient = useQueryClient();

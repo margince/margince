@@ -5,6 +5,7 @@ import { ConfirmModal } from "../../../design-system/confirmmodal";
 import { Select } from "../../../design-system/select";
 import { useT } from "../../../i18n";
 import { useAgentTierMap, verbTier } from "../../../lib/autonomy";
+import { labelFor } from "../../../lib/labelfor";
 import {
   choosableLossReasons,
   useLossReasons,
@@ -346,7 +347,7 @@ function WonReasonFields({
             onChange={(value) => onReason(asWonReason(value))}
             options={WON_REASONS.map((option) => ({
               value: option,
-              label: t(WON_REASON_LABELS[option]),
+              label: t(labelFor(WON_REASON_LABELS, option)),
             }))}
           />
         )}

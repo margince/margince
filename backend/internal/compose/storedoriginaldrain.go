@@ -24,7 +24,10 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -153,9 +156,8 @@ func settleStoredOriginal[C storedOriginalCandidate](
 // gating them on that answer would leave a limited activity permanently
 // unreadable by the very contacts and colleagues who were on it.
 func readStoredOriginal(ctx context.Context, tx pgx.Tx, id ids.UUID) ([]byte, bool, error) {
-	var payload []byte
-	err := tx.QueryRow(ctx, `SELECT payload FROM raw_capture WHERE id = $1`, id).Scan(&payload)
-	if errors.Is(err, pgx.ErrNoRows) {
+	payload, err := capture.GetRawCapturePayloadTx(ctx, tx, id)
+	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, originalstore.ErrEvidenceUnavailable) {
 		return nil, false, nil
 	}
 	if err != nil {

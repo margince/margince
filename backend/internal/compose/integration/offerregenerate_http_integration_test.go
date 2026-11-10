@@ -135,11 +135,12 @@ func TestOfferRegenerateHTTP_GroundedAIDraftStagesAndDisclosesWithoutMovingTotal
 	apptest.BootstrapWorkspaceSession(t, e, "Offer Regen AI", "offerai@fable.test", "Admin")
 	wsID := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
 	dealID := offerFixture(t, e)
-	source := seedDealContextActivity(t, e, wsID, dealID,
+	seedDealContextActivity(t, e, wsID, dealID,
 		`Client said: "we'd want a kickoff workshop" and agreed to 20000 cents for it.`)
+	// The deal context lists the seeded note second, as s2.
 	fake.Script(`{"lines":[
 		{"description":"Kickoff workshop","quantity":"1","tax_rate":"19.00",
-		 "evidence_snippet":"agreed to 20000 cents for it","source_id":"` + source + `",
+		 "evidence_snippet":"agreed to 20000 cents for it","source_id":"s2",
 		 "conversation_price_minor":20000}
 	]}`)
 

@@ -82,6 +82,7 @@ function presentation(over: Record<string, unknown> = {}) {
       held_by_others: false,
     },
     can_reply: true,
+    can_forward: true,
     can_relink: false,
     version: 3,
     ...over,

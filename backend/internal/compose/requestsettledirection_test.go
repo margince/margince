@@ -19,12 +19,12 @@ func TestASettlementCannotTurnOurQuestionIntoWorkWeOwe(t *testing.T) {
 		{ID: ids.NewV7(), Direction: "outbound", Body: "The product setup was clear; the export needs a date filter. Which prospects did you speak to?"},
 	}}}
 	for _, remaining := range []string{"Which prospects did you speak to?", "Answer the customer's prospects feedback request"} {
-		result := settleResult{ID: id.String(), Verdict: activities.RequestStillOwed, Remaining: remaining, Confidence: 1}
+		result := settleResult{ID: "r1", Verdict: activities.RequestStillOwed, Remaining: remaining, Confidence: 1}
 		if validateSettlePayload(settlePayload{Results: []settleResult{result}}, batch) == "" {
 			t.Errorf("accepted a remaining text that is not in their request: %q", remaining)
 		}
 	}
-	result := settleResult{ID: id.String(), Verdict: activities.RequestStillOwed, Remaining: "share your feedback on the product", Confidence: 1}
+	result := settleResult{ID: "r1", Verdict: activities.RequestStillOwed, Remaining: "share your feedback on the product", Confidence: 1}
 	if msg := validateSettlePayload(settlePayload{Results: []settleResult{result}}, batch); msg != "" {
 		t.Fatalf("refused a quote of their own ask: %s", msg)
 	}
@@ -54,18 +54,41 @@ func TestAnUngroundedQuoteInABatchKeepsTheOtherVerdicts(t *testing.T) {
 			{ID: settled, Direction: "inbound", Body: "Can you confirm Friday?"},
 		}},
 	}
-	ungrounded := settleResult{ID: owed.String(), Verdict: activities.RequestStillOwed, Remaining: "Send them the contract", Confidence: 1}
 	payload := settlePayload{Results: []settleResult{
-		ungrounded,
-		{ID: settled.String(), Verdict: activities.RequestSettled, Confidence: 1},
+		{ID: "r1", Verdict: activities.RequestStillOwed, Remaining: "Send them the contract", Confidence: 1},
+		{ID: "r2", Verdict: activities.RequestSettled, Confidence: 1},
 	}}
 	if msg := validateSettlePayload(payload, batch); msg != "" {
 		t.Fatalf("one ungrounded quote refused the whole batch: %s", msg)
 	}
-	if settleRemainderStands(ungrounded, batch) {
+	read := resolveBatchRefs(payload.Results, settleRefs(batch))
+	if read[0].ID != owed.String() || read[1].ID != settled.String() {
+		t.Fatalf("the refs read back as %s and %s, want the two request ids", read[0].ID, read[1].ID)
+	}
+	if settleRemainderStands(read[0], batch) {
 		t.Fatal("an ungrounded still_owed would be committed instead of asked again alone")
 	}
-	if !settleRemainderStands(payload.Results[1], batch) {
+	if !settleRemainderStands(read[1], batch) {
 		t.Fatal("a settled verdict was held back for a quote it does not need")
+	}
+}
+
+// The model is shown each request as r1, r2, and so on. A reply naming a
+// request by its own id, or by a ref never shown, answers nothing it asked.
+func TestASettlementAnswersByTheRefsTheCallShowed(t *testing.T) {
+	t.Parallel()
+	id := ids.NewV7()
+	batch := []settleCandidate{{Request: activities.RepliedRequest{RequestID: id}, Messages: []threadMessage{
+		{ID: id, Direction: "inbound", Body: "Can you confirm Friday?"},
+	}}}
+	req := settleRequest(batch)
+	if strings.Contains(req.Messages[0].Content, id.String()) || strings.Contains(string(req.ResponseSchema), id.String()) {
+		t.Fatalf("the request shows the model the request id:\n%s", req.Messages[0].Content)
+	}
+	for _, named := range []string{id.String(), "r2"} {
+		payload := settlePayload{Results: []settleResult{{ID: named, Verdict: activities.RequestSettled, Confidence: 1}}}
+		if msg := validateSettlePayload(payload, batch); !strings.Contains(msg, "was not requested") {
+			t.Errorf("an answer about %q was not refused: %q", named, msg)
+		}
 	}
 }

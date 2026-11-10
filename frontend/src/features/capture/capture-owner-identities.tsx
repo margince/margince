@@ -20,6 +20,7 @@ import { useToast } from "../../design-system/toast";
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import {
   problemCodeOf,
   problemMessageOf,
@@ -258,7 +259,7 @@ function IdentityRow({
       label={identity.value}
       description={
         <span className="owner-identity-caption">
-          <span>{t(kindLabel[identity.kind])}</span>
+          <span>{t(labelFor(kindLabel, identity.kind))}</span>
           <span>{formatDate(identity.created_at, locale, readerZone)}</span>
           {learned !== null && <span>{t(learned)}</span>}
         </span>

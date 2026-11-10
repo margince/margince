@@ -74,8 +74,8 @@ const LONG: components["schemas"]["Activity"][] = Array.from(
   },
 );
 
-/** A long record: the list scrolls inside the menu, and the menu itself
- *  scrolls no further than its last control. */
+/** A long record: the bar's count is a floor, and the list, not the menu,
+ *  scrolls. */
 export const LongRecord: StoryObj = {
   render: () => {
     installFetchStub({
@@ -99,9 +99,11 @@ export const LongRecord: StoryObj = {
   },
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));
-    await userEvent.click(
-      await dialog.findByRole("button", { name: /Continue a thread$/ }),
-    );
+    const bar = await dialog.findByRole("button", {
+      name: /Continue a thread$/,
+    });
+    await expect(bar).toHaveTextContent("12+ earlier threads");
+    await userEvent.click(bar);
     await screen.findByRole("button", { name: "Show more" });
     const menu = document.querySelector<HTMLElement>(".compose-threadmenu");
     const list = document.querySelector<HTMLElement>(".compose-threadlist");
@@ -110,5 +112,55 @@ export const LongRecord: StoryObj = {
       menu && menu.scrollHeight - menu.clientHeight,
     ).toBeLessThanOrEqual(1);
     await expect(list && list.scrollHeight > list.clientHeight).toBe(true);
+  },
+};
+
+// The first page with `readable` of its threads open to the reader, more behind.
+function withReadable(readable: number) {
+  return () => {
+    installFetchStub({
+      "GET /me": meRoute({}),
+      "GET /activities": () =>
+        jsonResponse({
+          data: LONG.map((row, index) =>
+            index < readable ? row : { ...row, content_state: "withheld" },
+          ),
+          page: { has_more: true, next_cursor: "older" },
+        }),
+    });
+    return (
+      <StoryProviders>
+        <ComposeModal
+          entityType="contact"
+          entityId="ada"
+          open
+          onClose={() => undefined}
+        />
+      </StoryProviders>
+    );
+  };
+}
+
+async function threadBar() {
+  const dialog = within(await screen.findByRole("dialog"));
+  return dialog.findByRole("button", { name: /Continue a thread$/ });
+}
+
+/** One thread read so far and older mail unread: the floor reads plural. */
+export const OneThreadReadSoFar: StoryObj = {
+  render: withReadable(1),
+  play: async () => {
+    await expect(await threadBar()).toHaveTextContent("1+ earlier threads");
+  },
+};
+
+/** The mail read so far is all withheld, and older mail is unread: the bar
+ *  says earlier threads may exist rather than falling silent. */
+export const OnlyWithheldReadSoFar: StoryObj = {
+  render: withReadable(0),
+  play: async () => {
+    await expect(await threadBar()).toHaveTextContent(
+      "Earlier threads may exist",
+    );
   },
 };

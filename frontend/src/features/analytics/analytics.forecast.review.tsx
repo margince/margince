@@ -5,6 +5,7 @@ import { Badge, Disclosure } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { type Locale, useLocale, useT } from "../../i18n";
+import { labelFor } from "../../lib/labelfor";
 import { throwProblem } from "../../lib/problem";
 import type { AnalyticsScope } from "./analytics.context";
 import { CheckTable } from "./analytics.forecast.checktable";
@@ -158,7 +159,7 @@ function ReadinessBadge({ run }: Readonly<{ run: Assurance }>) {
   } as const;
   return (
     <Badge tone={verdictStands(run) ? tone[run.readiness] : "default"}>
-      {t(label[run.readiness])}
+      {t(labelFor(label, run.readiness))}
     </Badge>
   );
 }

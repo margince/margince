@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
+import { refusedPreview } from "../../testing/sendpermission.testkit";
 import {
   installFetchStub,
   jsonResponse,
@@ -157,4 +158,57 @@ export const AIDraftRestored: Story = {
 export const AIDraftRestoredDark: Story = {
   ...AIDraftRestored,
   globals: { theme: "dark" },
+};
+
+export const RestoredDealContext: Story = {
+  render: savedDraftStory({
+    "GET /mail-drafts": () =>
+      jsonResponse({
+        ...SAVED,
+        communication_context: "active_deal_followup",
+        editor_state: {
+          filing: [{ anchor_type: "deal", anchor_id: "deal-scope" }],
+        },
+      }),
+    "GET /contacts/p-1/360": () =>
+      jsonResponse({
+        as_of: "2026-09-20T09:05:00Z",
+        sections_omitted: [],
+        contact: { id: "p-1", full_name: "Buyer" },
+        deal_roles: {
+          data: [
+            {
+              relationship_id: "seat-scope",
+              deal_id: "deal-scope",
+              deal_title: "Seat expansion",
+              deal_status: "open",
+              seat_current: true,
+              role: "champion",
+            },
+          ],
+          page: { has_more: false },
+        },
+      }),
+    "POST /emails:preview": () =>
+      jsonResponse(
+        refusedPreview("buyer@acme.test", {
+          reason_code: "deal_not_requested",
+          decided_by: "user",
+          resolved_category: "active_deal_followup",
+        }),
+      ),
+  }),
+  play: async () => {
+    await restoredOnScreen();
+    const deal = await screen.findByRole("combobox", {
+      name: "Deal this follow-up is about",
+    });
+    await expect(deal).toHaveTextContent("Seat expansion");
+    await screen.findByText(/A deal alone does not show/);
+  },
+};
+
+export const RestoredDealContextPhone: Story = {
+  ...RestoredDealContext,
+  tags: ["uat-phone"],
 };

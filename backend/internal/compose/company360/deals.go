@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/moneytotal"
 )
 
 // openDealsWhere is the ONE spelling of "an open deal of this account that this
@@ -151,7 +152,7 @@ func closedTotals(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, asOf 
 	if err != nil {
 		return crmcontracts.Money{}, 0, err
 	}
-	wonValue := deals.FinalizeBaseTotalSQL("sum("+amount+") FILTER (WHERE d.status = 'won')", deals.UnpricedValueCountSQL(amount, nativeAmount, "d.status = 'won'"))
+	wonValue := moneytotal.FinalizeBaseTotalSQL("sum("+amount+") FILTER (WHERE d.status = 'won')", deals.UnpricedValueCountSQL(amount, nativeAmount, "d.status = 'won'"))
 	var wonMinor *int64
 	var lost int
 	err = tx.QueryRow(ctx, fmt.Sprintf(`

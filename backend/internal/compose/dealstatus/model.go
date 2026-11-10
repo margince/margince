@@ -30,6 +30,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -51,7 +52,7 @@ const statusSystem = `You brief a colleague on one sales deal, from a JSON summa
 
 Return ONLY a JSON object with these keys:
 {"story":[...],"blocker":[...],"buyer":[...],"verdict":{"standing":"...","because":[...]},"move_reason":[...]}
-Each of "story", "blocker", "buyer", "verdict.because" and "move_reason" is a list of {"text":"...","evidence":["<id>", ...]}.
+Each of "story", "blocker", "buyer", "verdict.because" and "move_reason" is a list of {"text":"...","evidence":["a1", ...]}.
 
 "story" — what happened and where it leaves things, in the order it happened. Two to four sentences. Start with the thing a reader who has forgotten this deal most needs to know. Name contacts, dates and what was actually said.
 "blocker" — what is HOLDING THE DEAL UP, named as something somebody can act on: an unsent mail, a question with no recorded answer, a contact with no recorded reply, a decision nobody has asked for. One or two sentences. Return an empty list when nothing is holding it up. "Time has passed" is not a blocker; "she asked for times on 2 June and no later answer is recorded" is.
@@ -59,7 +60,7 @@ Each of "story", "blocker", "buyer", "verdict.because" and "move_reason" is a li
 "verdict" — your honest call. A non-empty "blocker" means "standing" is blocked, unless the deal is cold: the card cannot name what holds the deal up and then call it merely drifting. "standing" is exactly one of: live (moving, with a next step both sides expect), drifting (nothing wrong, nothing happening, it dies of neglect if nobody acts — and "blocker" is empty), blocked (something specific is in the way, and you named it in "blocker"), cold (recorded evidence that engagement has ended; missing capture or age alone does not establish this). "because" is a LIST of one or two {"text","evidence"} objects saying what the call rests on — the blocker, when there is one, rather than the time that has passed — the same shape as "story", never a bare string. Be willing to say a deal is cold. A briefing that never delivers bad news is not read twice.
 "move_reason" — a LIST of exactly one {"text","evidence"} object saying why the recommended move is the right one now, the same shape as "story". The move itself is decided elsewhere and given to you in "recommended_move": explain it, never replace it. It rests on records like every other sentence, so it cites them.
 
-Every sentence lists the ids it rests on in its own "evidence", from the summary's "id" fields. Ids belong in "evidence" only — never in any "text" or in "opening".
+Every sentence lists the references it rests on in its own "evidence", from the summary's "id" fields (a1, t1, …). References belong in "evidence" only — never in any "text" or in "opening".
 A named stakeholder is not automatically the author of a timeline entry. Attribute a statement to a contact only when that entry names them; otherwise say the customer or the team.
 The room's posts carry "opener_side". A "seller" post is OUR OWN work: it is never customer engagement, never their agreement, and never their confirmation, however warmly it reads. Only a "buyer" post says what the customer thinks, and "buyer_posts": 0 means they have not written in the room at all — say that plainly rather than describing our own activity as theirs.
 KEEP EVERY QUALIFICATION. "The plan looks good, phase 1 is realistic, phase 3 still needs internal clarification" is a conditional yes with an open question in it; writing it as agreement to the plan drops the only part anybody still has to act on. If a message accepts one thing and reserves another, write both or write neither.
@@ -238,7 +239,7 @@ func StatusRequest(in StatusInput, lang string) model.Request {
 	fence := promptfence.New()
 	return model.Request{
 		System:         statusSystemFor(fence, lang),
-		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(encodeInput(in))}},
+		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(promptref.Rewrite(encodeInput(in), refsOf(in).tables()...))}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
 	}
@@ -296,6 +297,10 @@ func ParseStatus(reply string, in StatusInput) (WrittenStatus, error) {
 	var parsed replyShape
 	if err := json.Unmarshal([]byte(ai.Unfence(reply)), &parsed); err != nil {
 		return WrittenStatus{}, fmt.Errorf("parse deal status: %w", err)
+	}
+	parsed, err := refsOf(in).read(parsed)
+	if err != nil {
+		return WrittenStatus{}, err
 	}
 	parsed.Buyer = currentClaimLines(parsed.Buyer, in.RequestStates)
 	parsed.Blocker = currentClaimLines(parsed.Blocker, in.RequestStates)

@@ -1,5 +1,6 @@
 {
   "systemJob.import_identity_links": "Attaching imported mail links",
+  "systemJob.optout_receipt": "Raising missed opt-out receipts",
   "systemJob.task_completion": "Completing tasks after email",
   "dealSuggestion.changed": "This suggestion is no longer available. Refresh the findings to see its current state.",
   "roles.object.data_task": "Data updates",
@@ -874,6 +875,7 @@
   "ext.notFound": "No extension named “{name}” is enabled on this installation.",
   "search.kind.deal": "Deal",
   "common.close": "Close",
+  "common.unknownValue": "Other",
   "common.expand": "Expand",
   "common.collapse": "Collapse",
   "format.notForecast": "Not forecast",

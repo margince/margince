@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The typed half of src/format/jsx-magnitude.test.ts, which states the rule.
-// The test calls it through inWorker, so it takes and returns plain data.
+// The typed half of census/rules/jsx-magnitude.census.ts, which states the
+// rule. The rule hands it the shared type-checked program of the tree.
 
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -82,7 +82,7 @@ function isRenderedContent(type: ts.Type): boolean {
 // `values` and draw it as words, so the name alone is not enough.
 function isDrawnGeometry(
   node: ts.JsxAttribute,
-  geometry: Set<string>,
+  geometry: ReadonlySet<string>,
 ): boolean {
   const tag = node.parent.parent.tagName;
   const intrinsic = ts.isIdentifier(tag) && /^[a-z]/.test(tag.text);
@@ -95,7 +95,7 @@ function isDrawnGeometry(
 function renderedPositions(
   parsed: ts.SourceFile,
   checker: ts.TypeChecker,
-  geometry: Set<string>,
+  geometry: ReadonlySet<string>,
 ): ts.Expression[] {
   const found: ts.Expression[] = [];
   const walk = (node: ts.Node): void => {
@@ -143,7 +143,7 @@ function renderedPositions(
 function carriesMagnitude(
   node: ts.Expression,
   checker: ts.TypeChecker,
-  blind: Set<string>,
+  blind: ReadonlySet<string>,
 ): boolean {
   if (isMagnitude(checker.getTypeAtLocation(node))) {
     return true;
@@ -193,8 +193,8 @@ function carriesMagnitude(
 function findingsIn(
   parsed: ts.SourceFile,
   checker: ts.TypeChecker,
-  blind: Set<string>,
-  geometry: Set<string>,
+  blind: ReadonlySet<string>,
+  geometry: ReadonlySet<string>,
   label: string,
 ): Verdict {
   const at = (node: ts.Expression): Finding => ({
@@ -214,13 +214,13 @@ function findingsIn(
   return { findings, unjudged };
 }
 
-/** The verdict over `files`, typed in one program, with the files it missed. */
-export function sweep(
-  files: string[],
-  blind: Set<string>,
-  geometry: Set<string>,
+/** The verdict over `files`, read through `program`, with the files it missed. */
+export function census(
+  program: ts.Program,
+  files: readonly string[],
+  blind: ReadonlySet<string>,
+  geometry: ReadonlySet<string>,
 ): Readonly<{ unloaded: string[]; findings: Finding[]; unjudged: Finding[] }> {
-  const program = programOver(files, frontendRoot);
   const checker = program.getTypeChecker();
   const verdicts = files.flatMap((path) => {
     const parsed = program.getSourceFile(path);
@@ -243,13 +243,23 @@ export function sweep(
   };
 }
 
+/** The verdict over `files`, typed in a program of their own. A worker thread
+ * calls it, so the check runs beside the census runner's other rules. */
+export function sweepFiles(
+  files: readonly string[],
+  blind: ReadonlySet<string>,
+  geometry: ReadonlySet<string>,
+): ReturnType<typeof census> {
+  return census(programOver([...files], frontendRoot), files, blind, geometry);
+}
+
 // Judges planted lines, compiled against the real declarations, since every
 // arm turns on a type. The preamble is one line, so a finding's line is its
 // case's own index.
 export function plant(
   lines: string[],
-  blind: Set<string>,
-  geometry: Set<string>,
+  blind: ReadonlySet<string>,
+  geometry: ReadonlySet<string>,
 ): Finding[] {
   const fixtureName = join(srcRoot, "jsx-magnitude-fixture.tsx");
   const preamble = [

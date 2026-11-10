@@ -54,7 +54,7 @@ func sampleInput() Input {
 func TestTheReasonsNeverAppearInTheBody(t *testing.T) {
 	answer := `{"subject":"Next steps","body":"Hi Sarah,\n\nShall we pick this up?",
 	  "reasoning":[{"kind":"deal","label":"expansion offer","entity_type":"deal",
-	  "entity_id":"019fe7ae-0000-7000-8000-000000000002"}]}`
+	  "entity_id":"d1"}]}`
 	lane := &scriptedLane{answer: answer}
 
 	draft, by, err := Write(context.Background(), lane, sampleInput(), draftvoice.Context{})
@@ -72,13 +72,34 @@ func TestTheReasonsNeverAppearInTheBody(t *testing.T) {
 	}
 }
 
+// The model reads each record by its ref and cites it by that ref; the served
+// reason names the record's id. The id itself is no citation: the request
+// never showed it.
+func TestTheModelCitesARecordByTheRefItWasShown(t *testing.T) {
+	in := sampleInput()
+	lane := &scriptedLane{answer: `{"subject":"S","body":"Hi Sarah,\n\nB","reasoning":[
+	  {"kind":"deal","label":"expansion offer","entity_type":"deal","entity_id":"d1"},
+	  {"kind":"recipient","label":"Sarah","entity_type":"contact","entity_id":"` + in.Recipient.ID + `"}]}`}
+	draft, _, err := Write(context.Background(), lane, in, draftvoice.Context{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	prompt := lane.seen[0].Messages[0].Content
+	if strings.Contains(prompt, in.Deal.ID) || !strings.Contains(prompt, `"id":"d1"`) {
+		t.Fatalf("the prompt must show the deal as d1 and never its id:\n%s", prompt)
+	}
+	if len(draft.Reasoning) != 1 || draft.Reasoning[0].EntityID != in.Deal.ID {
+		t.Fatalf("reasoning = %+v, want only the deal, read back to its id", draft.Reasoning)
+	}
+}
+
 // A citation the caller's own 360 did not carry is either invented or outside
 // their row scope. Either way the chip would open nothing, so the reason is
 // dropped rather than shown.
 func TestAReasonCitingARecordTheReaderCannotSeeIsDropped(t *testing.T) {
 	answer := `{"subject":"S","body":"B","reasoning":[
 	  {"kind":"deal","label":"a deal you cannot see","entity_type":"deal",
-	   "entity_id":"019fe7ae-0000-7000-8000-0000000000ff"},
+	   "entity_id":"d2"},
 	  {"kind":"intent","label":"shorter"}]}`
 	draft, _, err := Write(context.Background(), &scriptedLane{answer: answer}, sampleInput(), draftvoice.Context{})
 	if err != nil {
@@ -99,7 +120,7 @@ func TestAReasonCitingARecordTheReaderCannotSeeIsDropped(t *testing.T) {
 func TestAReasonCitingTheRightIdAsTheWrongKindIsDropped(t *testing.T) {
 	answer := `{"subject":"S","body":"B","reasoning":[
 	  {"kind":"deal","label":"mislabelled","entity_type":"contact",
-	   "entity_id":"019fe7ae-0000-7000-8000-000000000002"}]}`
+	   "entity_id":"d1"}]}`
 	draft, _, err := Write(context.Background(), &scriptedLane{answer: answer}, sampleInput(), draftvoice.Context{})
 	if err != nil {
 		t.Fatal(err)

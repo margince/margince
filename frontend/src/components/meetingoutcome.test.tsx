@@ -102,6 +102,19 @@ function renderCard() {
 }
 
 describe("MeetingOutcome", () => {
+  // The choice records what happened; "Details" below it is the notes.
+  it("names the Held or No-show choice for what it records", async () => {
+    stubServer([]);
+    renderCard();
+
+    await userEvent.click(screen.getByRole("button", { name: /Add notes/ }));
+    const dialog = await screen.findByRole("dialog");
+
+    expect(
+      await within(dialog).findByRole("combobox", { name: "What happened" }),
+    ).toBeTruthy();
+  });
+
   it("records It happened in one press, at the meeting's version, with no dialog", async () => {
     const sent: Sent[] = [];
     stubServer(sent);

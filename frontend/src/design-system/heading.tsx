@@ -36,7 +36,7 @@ export type HeadingElement =
 //
 // THIS TABLE IS THE TWIN OF `HEADING_ELEMENT` in src/mcp-apps/bridge.ts, which
 // builds the same headings for the standalone views without React to import
-// this component. heading-spelling.test.ts parses both literals and fails in
+// this component. census/rules/heading-spelling.census.ts parses both literals and fails in
 // either direction on a key one side carries and the other does not.
 const DEFAULT_ELEMENT: Readonly<Record<HeadingSize, HeadingElement>> = {
   xxlarge: "h1",

@@ -1,0 +1,36 @@
+name: a_readable_supplier_invoice_opens_the_thread
+task: capture_confidentiality_verdict
+site: thread
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# The opening side of personnel_02: an invoice whose document the verdict can
+# read, and which bills a service rather than anyone's pay. A model that holds
+# every mail with a document fails here.
+fixture:
+  subject: "Invoice 2026-0318 - managed hosting, March"
+  attachments:
+    - Brightline Hosting INV 2026-0318.pdf
+  body: |
+    Hello accounts team,
+
+    attached is our invoice 2026-0318 for managed hosting in March. Payment
+    terms are unchanged, 30 days net.
+
+    Kind regards
+    Brightline Hosting billing
+  documents:
+    - name: Brightline Hosting INV 2026-0318.pdf
+      excerpt: |
+        INVOICE 2026-0318
+        Brightline Hosting GmbH to Northwind Analytics GmbH
+        Managed hosting, production cluster, March 2026 | 1,200.00 EUR
+        Backup storage, 2 TB | 140.00 EUR
+        Net 1,340.00 EUR, VAT 19% 254.60 EUR, total 1,594.60 EUR
+expect:
+  outcome: accepted
+  answer: ordinary
+  judge: none
+  judge_none_reason: >
+    The answer is one closed kind, and the check requires it exactly. The
+    document bills a hosting service to the company and names no one's pay,
+    so only "ordinary" fits it.

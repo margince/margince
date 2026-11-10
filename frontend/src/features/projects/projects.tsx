@@ -21,6 +21,7 @@ import { Heading } from "../../design-system/heading";
 import { Chip } from "../../design-system/readings";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor, valueFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { useSavedViews } from "../../lib/savedviews.queries";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -86,7 +87,11 @@ const PHASE_TONE = {
 /** The phase as a status pill: closed is the one terminal reading. */
 export function PhaseBadge({ phase }: Readonly<{ phase: ProjectPhase }>) {
   const t = useT();
-  return <Badge tone={PHASE_TONE[phase]}>{t(PHASE_LABEL[phase])}</Badge>;
+  return (
+    <Badge tone={valueFor(PHASE_TONE, phase, "default")}>
+      {t(labelFor(PHASE_LABEL, phase))}
+    </Badge>
+  );
 }
 
 /**
@@ -137,7 +142,10 @@ function NewProjectAction() {
 }
 
 const PHASE_CHIP_OPTIONS: { value: ProjectPhase; label: MessageKey }[] =
-  PROJECT_PHASES.map((phase) => ({ value: phase, label: PHASE_LABEL[phase] }));
+  PROJECT_PHASES.map((phase) => ({
+    value: phase,
+    label: labelFor(PHASE_LABEL, phase),
+  }));
 
 export function ProjectsScreen() {
   const t = useT();

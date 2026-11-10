@@ -28,6 +28,7 @@ import { activityFollowUpsKey, TASK_QUEUE_KEY } from "../../lib/activitykeys";
 import { useActivity } from "../../lib/activityread";
 import { callOutcomeLabel } from "../../lib/calloutcome";
 import { useCanWrite } from "../../lib/capability";
+import { labelFor } from "../../lib/labelfor";
 import { problemCodeOf } from "../../lib/problem";
 import { ActivityFiles } from "../records/activityfiles";
 import { ActivityFollowUps } from "../records/activityfollowups";
@@ -121,7 +122,9 @@ function ActivityDetail({
     >
       <DrawerHead>
         {activity?.archived_at && <Badge>{t("record.archived")}</Badge>}
-        {activity && <Eyebrow>{t(TIMELINE_KIND_LABEL[activity.kind])}</Eyebrow>}
+        {activity && (
+          <Eyebrow>{t(labelFor(TIMELINE_KIND_LABEL, activity.kind))}</Eyebrow>
+        )}
         <Heading size="large" id={titleId} className="t-h2 modal-title">
           {activityTitle(activity, t)}
         </Heading>
@@ -454,7 +457,9 @@ function activityTitle(
 ): string {
   if (!activity) return t("activity.detail.none");
   if (activity.content_state === "withheld") return t("timeline.withheld");
-  return activity.subject?.trim() || t(TIMELINE_KIND_LABEL[activity.kind]);
+  return (
+    activity.subject?.trim() || t(labelFor(TIMELINE_KIND_LABEL, activity.kind))
+  );
 }
 
 /** How a call ended, after its time. Nothing on a call without an outcome. */

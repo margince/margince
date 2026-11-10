@@ -6,6 +6,7 @@ import { RelationshipMap } from "../../../design-system/relationshipmap";
 import { ProvenanceTag } from "../../../design-system/trust";
 import { formatNumber } from "../../../format/format";
 import { type Locale, useLocale, useT } from "../../../i18n";
+import { labelFor } from "../../../lib/labelfor";
 import { useViewerId } from "../../../lib/session";
 import { useUrlParams } from "../../../lib/urlstate";
 import { ENGAGEMENT_LABELS, ENGAGEMENT_TONES } from "./contacts";
@@ -275,7 +276,7 @@ function SeatCard({
       <EntityRef kind="contact" id={seat.contact_id} name={seat.full_name} />
       {seat.engagement && (
         <Badge tone={ENGAGEMENT_TONES[seat.engagement]}>
-          {t(ENGAGEMENT_LABELS[seat.engagement])}
+          {t(labelFor(ENGAGEMENT_LABELS, seat.engagement))}
         </Badge>
       )}
       {/* Only an unconfirmed seat with an addressable row offers the two

@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -41,6 +42,10 @@ func splitFoldedOccurrencesBatch(
 	split := 0
 	for _, o := range occurrences {
 		scanned = append(scanned, o.original)
+		o.payload, err = originalstore.RepairPayload(ctx, o.payload)
+		if err != nil {
+			return datatask.BatchOut{}, err
+		}
 		fold, found, err := meetingCopyFoldOf(ctx, tx, o)
 		if err != nil {
 			return datatask.BatchOut{}, err
@@ -201,7 +206,7 @@ func lockFoldPairForSplit(ctx context.Context, tx pgx.Tx, fold occurrenceFold) (
 // joined two slots of one series. Both rows are unrestricted by now.
 func withSlots(ctx context.Context, tx pgx.Tx, fold occurrenceFold) (occurrenceFold, bool, error) {
 	err := tx.QueryRow(ctx, `
-		SELECT rc.id, s.source_system, s.captured_by, rc.payload
+		SELECT rc.id, s.source_system, s.captured_by, `+originalstore.SQL("rc")+`
 		  FROM activity s
 		  JOIN raw_capture rc ON rc.source_system = s.source_system AND rc.source_id = s.source_id
 		 WHERE s.id = $1 AND s.kind = 'meeting' AND s.restricted_at IS NULL AND s.source_system = ANY($2)`,
@@ -212,6 +217,10 @@ func withSlots(ctx context.Context, tx pgx.Tx, fold occurrenceFold) (occurrenceF
 	}
 	if err != nil {
 		return occurrenceFold{}, false, fmt.Errorf("compose: reading the meeting a copy folded into: %w", err)
+	}
+	fold.survivor.payload, err = originalstore.RepairPayload(ctx, fold.survivor.payload)
+	if err != nil {
+		return occurrenceFold{}, false, err
 	}
 	foldedSlot, foldedInSeries := slotOf(fold.folded.source, fold.folded.payload)
 	survivorSlot, survivorInSeries := slotOf(fold.survivor.source, fold.survivor.payload)

@@ -3,6 +3,7 @@ import type { ReadingTone } from "../../design-system/readingtone";
 import { calendarDaysUntil } from "../../format/daysuntil";
 import { displayDay } from "../../format/format.dates";
 import { daysPast } from "../../format/lateness";
+import { valueFor } from "../../lib/labelfor";
 import type { ProjectHealthState } from "./projecthealth.queries";
 
 // What "How it stands" reads off one Project360, as data rather than words:
@@ -49,7 +50,7 @@ export function projectReading(view: Project360): ProjectReading {
     assessedAt: current.assessed_at,
     author: current.source_author,
     byAI: current.source === "ai",
-    tone: HEALTH_TONE[current.state],
+    tone: valueFor(HEALTH_TONE, current.state, "neutral"),
   };
 }
 

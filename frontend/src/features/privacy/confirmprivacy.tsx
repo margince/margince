@@ -12,6 +12,7 @@ import {
   type AcquisitionKind,
   isAcquisitionKind,
 } from "../../lib/acquisitionkinds";
+import { labelFor } from "../../lib/labelfor";
 import { labelOf } from "../../lib/preferences.logic";
 import {
   BASIS_LABEL,
@@ -116,7 +117,7 @@ export function PrivacyNotice({
                 {purpose.name}
                 {purpose.basis ? (
                   <span className="t-caption confirm-basis">
-                    {t(BASIS_LABEL[purpose.basis])}
+                    {t(labelFor(BASIS_LABEL, purpose.basis))}
                   </span>
                 ) : null}
               </li>

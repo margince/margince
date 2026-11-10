@@ -82,7 +82,7 @@ func TestAStillOwedVerdictMustNameWhatIsOwed(t *testing.T) {
 		Request:  activities.RepliedRequest{RequestID: requestID},
 		Messages: []threadMessage{{ID: requestID, Direction: "inbound", Body: "Please send the quote."}},
 	}}
-	id := requestID.String()
+	id := "r1"
 
 	for name, tc := range map[string]struct {
 		result  settleResult
