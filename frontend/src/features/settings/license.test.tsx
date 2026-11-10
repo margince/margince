@@ -280,6 +280,31 @@ describe("LicenseCard", () => {
     expect(screen.getAllByText(/refused/i)).toHaveLength(1);
     expect(screen.queryByText("This installation has no license")).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
+    // No ceiling came with the refusal, so nothing caps the seats.
+    expect(screen.getByText(/Everything keeps working, uncapped/)).toBeTruthy();
+  });
+
+  it("says a refused license still holds the last valid ceiling it carries", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor({
+        state: "rejected",
+        seats_granted: 12,
+        seats_used: 12,
+        over_limit: false,
+        checked_at: checkedAt,
+      }),
+    );
+    render(<LicenseCard />);
+
+    expect(
+      await waitFor(() =>
+        screen.getByText(
+          /no full seat is added beyond what the last valid license granted/,
+        ),
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/uncapped/)).toBeNull();
   });
 
   it("interrupts with the numbers and the way back when the installation is over its entitlement", async () => {
