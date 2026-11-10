@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/webhooks"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -396,24 +397,22 @@ func TestASendCheckWaitsForAnUncommittedErasureAndRefuses(t *testing.T) {
 }
 
 // waitForAWaiterOn returns once some session waits on a lock the backend
-// holder holds, so a waiter on any other lock cannot release the erasure. Its
-// bound makes a check that never blocks fail the test instead of hanging it.
+// holder holds, so a waiter on any other lock cannot release the erasure. It
+// runs off the test goroutine, so it reports through t.Errorf, never t.Fatal.
 func waitForAWaiterOn(t *testing.T, owner *pgx.Conn, holder int32) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), testdb.ProbeBudget)
 	defer cancel()
+	pace := time.NewTicker(testdb.ProbeInterval)
+	defer pace.Stop()
 	for {
-		var waiting int
-		if _, err := owner.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
-			t.Errorf("clearing the activity snapshot: %v", err)
-			return
-		}
-		if err := owner.QueryRow(ctx, `SELECT count(*) FROM pg_stat_activity
-			WHERE $1 = ANY(pg_blocking_pids(pid))`, holder).Scan(&waiting); err != nil {
+		queued, err := testdb.QueuedBehind(ctx, owner, holder)
+		if err != nil {
 			t.Errorf("no session came to wait on the erasure's row lock: %v", err)
 			return
 		}
-		if waiting > 0 {
+		if queued > 0 {
 			return
 		}
+		<-pace.C
 	}
 }

@@ -83,7 +83,7 @@ func TestAnAdmissionTakesTheSeatBeforeItSharesTheActivity(t *testing.T) {
 			t.Error(err)
 		}
 	}()
-	var ensurePID int
+	var ensurePID int32
 	if err := ensure.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&ensurePID); err != nil {
 		t.Fatal(err)
 	}
@@ -97,15 +97,7 @@ func TestAnAdmissionTakesTheSeatBeforeItSharesTheActivity(t *testing.T) {
 		admitted <- sink.AdmitActivityParties(ctx, ids.From[ids.ActivityKind](ref.ID))
 	}()
 	observer := integration.OwnerConn(t)
-	testdb.WaitForContention(t, returned, "the admission finished without reaching the seat", "the admission never waited on the seat",
-		func(ctx context.Context) (bool, error) {
-			if _, err := observer.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
-				return false, err
-			}
-			var waiting bool
-			err := observer.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid)))`, ensurePID).Scan(&waiting)
-			return waiting, err
-		})
+	testdb.AwaitQueuedBehind(t, observer, ensurePID, 1, returned, "the admission on the held seat")
 
 	// The next lock an ensure asks for. Waiting for it would let a retry hide the
 	// cycle. NOWAIT asks whether the admission holds this row while it waits.
