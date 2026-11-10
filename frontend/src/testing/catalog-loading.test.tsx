@@ -1,4 +1,6 @@
 /** @vitest-environment happy-dom */
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
   cleanup,
@@ -110,13 +112,15 @@ it("retries a dictionary failure without remounting a cached lazy module", async
   try {
     await act(async () => {
       render(
-        <LocaleProvider initial="en" initialEssential>
-          <AppErrorBoundary>
-            <Suspense fallback={null}>
-              <View />
-            </Suspense>
-          </AppErrorBoundary>
-        </LocaleProvider>,
+        <QueryClientProvider client={new QueryClient()}>
+          <LocaleProvider initial="en" initialEssential>
+            <AppErrorBoundary>
+              <Suspense fallback={null}>
+                <View />
+              </Suspense>
+            </AppErrorBoundary>
+          </LocaleProvider>
+        </QueryClientProvider>,
       );
     });
     const retry = await screen.findByRole("button", { name: "Retry" });
