@@ -1156,6 +1156,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.draftOpen": "Entwurf {revision} ist noch nicht veröffentlicht",
   "reporting.draftHidden":
     "Wer den Bericht liest, sieht weiter die veröffentlichte Fassung. Den Entwurf vor dem Veröffentlichen ansehen.",
+  "reporting.draftUnpublished":
+    "In diesem Bericht ist noch nichts veröffentlicht, darum steht hier der Entwurf. Nach dem Veröffentlichen sind diese Diagramme der Bericht.",
   "reporting.draftPreviewing":
     "Hier steht der Entwurf. Wer den Bericht liest, sieht weiter die veröffentlichte Fassung.",
   "reporting.previewDraft": "Entwurf ansehen",
@@ -2159,6 +2161,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.bandCount_one": "{count} Eintrag",
   "worklist.bandCount_other": "{count} Einträge",
   "brief.focus.context": "Details anzeigen",
+  "brief.focus.next": "Nächste Aufgabe",
   "brief.queue.back": "Zurück zur Worklist",
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Worklist einblenden",
@@ -6642,11 +6645,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.briefedAt": "Von Margince zusammengefasst um {time}",
   "brief.task.done": "Als erledigt markieren: {title}",
   "brief.task.reply": "{name} antworten: {subject}",
-  "brief.pager.label": "Aufgaben",
-  "brief.pager.previous": "Vorherige Aufgabe",
-  "brief.pager.next": "Nächste Aufgabe",
-  "brief.pager.hint":
-    "Nach links oder rechts wischen, um Aufgaben anzusehen. Auf den Navigationsschaltflächen funktionieren auch die Pfeiltasten.",
   "brief.first.title": "Braucht dich",
   "brief.intro.waiting": "Wartet auf dich",
   "brief.intro.meetings": "Termine heute",
@@ -7707,6 +7705,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.scheduleGoesOut": "Versand: {when}",
   "compose.willGoOut": "Versand: {when}",
   "compose.scheduleAfternoon": "Morgen Nachmittag",
+  "compose.draftLanguage": "Sprache des Entwurfs",
   "compose.rewrite": "Umschreiben",
   "compose.rewriteShorter": "Kürzer",
   "compose.rewriteShorterAsk":
@@ -13447,6 +13446,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.page.records.sub":
     "Eigene Felder, gemeinsame Tags und die Zuständigkeiten, die Datensätze tragen.",
   "settings.partsLabel": "Bereiche dieser Seite",
+  "settings.part.voice.overview": "Dein Schreibstil",
+  "settings.part.voice.samples": "Schreibproben",
+  "settings.part.voice.rules": "Deine Regeln",
+  "settings.part.voice.builds": "Versionen",
   "settings.part.meetings.links": "Buchungslinks",
   "settings.part.meetings.availability": "Verfügbarkeit",
   "settings.part.meetings.guests": "Gastseite",
@@ -14071,13 +14074,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "voice.insights.provenance": "Aus deinen Schreibproben erstellt · v{n}",
   "voice.insights.statWords": "W\u00f6rter: {count}",
   "voice.insights.statSources": "Quellen: {count}",
-  "settings.voice.jumpLabel": "Auf dieser Seite",
-  "settings.voice.jump.voice": "Dein Schreibstil",
-  "settings.voice.jump.moves": "Typische Züge",
   "settings.voice.jump.drafts": "Probeentwürfe",
-  "settings.voice.jump.sharpen": "Schärfen",
-  "settings.voice.jump.rules": "Deine Regeln",
-  "settings.voice.jump.builds": "Versionen",
   "settings.voice.editRules": "Regeln bearbeiten",
   "settings.voice.addMore": "Weitere Texte hinzufügen",
   "settings.voice.start.title": "Dein Schreibstil",
@@ -14305,6 +14302,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das Stilprofil wird aufgebaut. Das dauert etwa eine Minute und läuft weiter, wenn du die Seite verlässt.",
   "settings.voice.rebuild": "Voice DNA neu aufbauen",
   "settings.voice.buildFirst": "Voice DNA aufbauen",
+  "settings.voice.firstBuildHint":
+    "Den ersten Aufbau startest du im Tab „Dein Schreibstil“.",
+  "settings.voice.firstBuildGo": "„Dein Schreibstil“ öffnen",
   "settings.voice.buildNeedsWords":
     "Ein erster Aufbau braucht noch etwa {n} Wörter. Darunter gibt es nicht genug Text, um daraus zu lernen.",
   "settings.voice.buildProvisional":

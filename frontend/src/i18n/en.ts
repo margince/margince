@@ -1103,6 +1103,8 @@ export const en = {
   "reporting.draftOpen": "Draft {revision} is not published yet",
   "reporting.draftHidden":
     "Readers still see the published report. Preview the draft before you publish it.",
+  "reporting.draftUnpublished":
+    "Nothing on this report is published yet, so you see its draft. Publish it to make these charts the report.",
   "reporting.draftPreviewing":
     "You are looking at the draft. Readers still see the published report.",
   "reporting.previewDraft": "Preview draft",
@@ -2072,6 +2074,7 @@ export const en = {
   "worklist.bandCount_one": "{count} item",
   "worklist.bandCount_other": "{count} items",
   "brief.focus.context": "View details",
+  "brief.focus.next": "Next task",
   "brief.queue.back": "Back to Worklist",
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Show Worklist",
@@ -6630,11 +6633,6 @@ export const en = {
   "brief.briefedAt": "Briefed by Margince at {time}",
   "brief.task.done": "Mark done: {title}",
   "brief.task.reply": "Reply to {name}: {subject}",
-  "brief.pager.label": "Tasks",
-  "brief.pager.previous": "Previous task",
-  "brief.pager.next": "Next task",
-  "brief.pager.hint":
-    "Swipe left or right to browse tasks. You can also use the arrow keys on the navigation buttons.",
   "brief.first.title": "Needs you",
   "brief.intro.waiting": "Waiting on you",
   "brief.intro.meetings": "Meetings today",
@@ -7717,6 +7715,7 @@ export const en = {
   "compose.scheduleGoesOut": "Sends {when}",
   "compose.willGoOut": "Sends {when}",
   "compose.scheduleAfternoon": "Tomorrow afternoon",
+  "compose.draftLanguage": "Draft language",
   "compose.rewrite": "Rewrite",
   "compose.rewriteShorter": "Shorter",
   "compose.rewriteShorterAsk": "Keep the meaning and use fewer words.",
@@ -13420,6 +13419,10 @@ export const en = {
   "settings.page.records.sub":
     "Custom fields, shared tags and the responsibility roles records carry.",
   "settings.partsLabel": "Parts of this page",
+  "settings.part.voice.overview": "Your voice",
+  "settings.part.voice.samples": "Writing samples",
+  "settings.part.voice.rules": "Your rules",
+  "settings.part.voice.builds": "Builds",
   "settings.part.meetings.links": "Booking links",
   "settings.part.meetings.availability": "Availability",
   "settings.part.meetings.guests": "Guest page",
@@ -14022,13 +14025,7 @@ export const en = {
   "voice.insights.provenance": "Built from your writing samples · v{n}",
   "voice.insights.statWords": "Words: {count}",
   "voice.insights.statSources": "Sources: {count}",
-  "settings.voice.jumpLabel": "On this page",
-  "settings.voice.jump.voice": "Your voice",
-  "settings.voice.jump.moves": "Signature moves",
   "settings.voice.jump.drafts": "See it write",
-  "settings.voice.jump.sharpen": "Make it sharper",
-  "settings.voice.jump.rules": "Your rules",
-  "settings.voice.jump.builds": "Builds",
   "settings.voice.editRules": "Edit your rules",
   "settings.voice.addMore": "Add more writing",
   "settings.voice.start.title": "Your writing voice",
@@ -14248,6 +14245,9 @@ export const en = {
     "Building voice. This takes about a minute and continues if you leave this page.",
   "settings.voice.rebuild": "Rebuild Voice DNA",
   "settings.voice.buildFirst": "Build Voice DNA",
+  "settings.voice.firstBuildHint":
+    "Your first build starts on the Your voice tab.",
+  "settings.voice.firstBuildGo": "Go to Your voice",
   "settings.voice.buildNeedsWords":
     "A first build needs about {n} more words. Below that there is not enough writing to learn from.",
   "settings.voice.buildProvisional":

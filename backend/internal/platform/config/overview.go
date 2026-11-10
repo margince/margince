@@ -33,15 +33,22 @@ func entryOf(s Any, r resolved) Entry {
 		Key: s.Key(), Env: s.Env(), Flag: s.Flag(), Type: s.TypeName(), Doc: s.Doc(),
 		Roles: s.Roles(), Secret: s.Secret(), Stored: s.Stored(), Origin: r.origin,
 	}
-	if d, ok := s.DefaultText(); ok {
-		e.Default = &d
+	if v, ok := s.defaultValue(); ok {
+		if d, shown := s.format(v); shown {
+			e.Default = &d
+		}
 	}
 	if r.origin.Source == "" {
 		e.Origin = Origin{Source: SourceUnset}
 	}
-	if !s.Secret() && r.value != nil {
-		text := s.format(r.value)
+	if s.Secret() || r.value == nil {
+		return e
+	}
+	text, ok := s.format(r.value)
+	if ok {
 		e.Value = &text
+	} else if e.Origin.Source == SourceDefault {
+		e.Origin = Origin{Source: SourceUnset}
 	}
 	return e
 }
