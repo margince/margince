@@ -34,7 +34,6 @@ export function QueryStates({
     isPending: boolean;
     isError: boolean;
     error: unknown;
-    data?: unknown;
     refetch: () => unknown;
   }>;
   // What this particular read is fetching, and how much room it will need.
@@ -55,9 +54,7 @@ export function QueryStates({
       />
     );
   }
-  // A failed refresh is not a failed read. The answer on screen is still the
-  // best one there is, and the next refresh replaces it.
-  if (query.isError && query.data === undefined) {
+  if (query.isError) {
     return (
       <EmptyState>
         {/* role="alert" (the assertive live region), because this subtree
