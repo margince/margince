@@ -230,8 +230,7 @@ func TestATargetListNamingNoRecordIsRefused(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			inbox := &fakeInbox{}
 			_, err := listApprovalsTool{inbox: inbox}.Handle(context.Background(), json.RawMessage(args))
-			var bad *BadArgsError
-			if !errors.As(err, &bad) {
+			if _, ok := errors.AsType[*BadArgsError](err); !ok {
 				t.Fatalf("answered %v, want a refused argument", err)
 			}
 			if inbox.query.Targets != nil {

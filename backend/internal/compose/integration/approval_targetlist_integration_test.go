@@ -30,12 +30,10 @@ func TestApprovalListFilteredToSeveralTargetsAnswersExactlyThose(t *testing.T) {
 	onUntouched := stageFor(t, svc, e, "deepread", "company", untouched)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, siteReadPerms)
 
-	got := listIDs(rep, t, svc, approvals.ListInput{Targets: []ids.Ref{
-		{Type: "company", ID: first}, {Type: "company", ID: second},
-		// The type is half of the reference: the untouched account's id under
-		// another type names a different record.
-		{Type: "contact", ID: untouched},
-	}})
+	// The type is half of the reference: the untouched account's id under
+	// another type names a different record.
+	targets := []ids.Ref{{Type: "company", ID: first}, {Type: "company", ID: second}, {Type: "contact", ID: untouched}}
+	got := listIDs(rep, t, svc, approvals.ListInput{Targets: targets})
 	if !got[onFirst] || !got[onSecond] {
 		t.Errorf("the read is missing a staging on a named record: got %v", got)
 	}
@@ -113,8 +111,10 @@ func stageEnrichOn(t *testing.T, q *queueEnv, invoke func(tool, args string) (st
 	var company struct {
 		ID string `json:"id"`
 	}
-	if status := q.Call(t, "POST", "/v1/companies", AnyMap{"source": "manual", "display_name": domain,
-		"domains": []AnyMap{{"domain": domain, "is_primary": true}}}, nil, &company); status != http.StatusCreated {
+	if status := q.Call(t, "POST", "/v1/companies", AnyMap{
+		"source": "manual", "display_name": domain,
+		"domains": []AnyMap{{"domain": domain, "is_primary": true}},
+	}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
 	_, err := invoke("enrich", `{"company_id":"`+company.ID+`"}`)
