@@ -20827,7 +20827,11 @@ export interface paths {
         };
         /**
          * A team's week, frozen — what each member's week came to, and the one thing to raise.
-         * @description The team half of the weekly. `/worklist/team` answers what the team is carrying NOW,
+         * @deprecated
+         * @description Deprecated: no screen reads the team week. The operation stays callable through
+         *     the notice window in the API compatibility policy.
+         *
+         *     The team half of the weekly. `/worklist/team` answers what the team is carrying NOW,
          *     live and recomputed on every open; this answers what last week WAS, written once when
          *     the week closed, so two weeks can be compared and neither moves under the comparison.
          *
@@ -56471,6 +56475,11 @@ export interface components {
              *     rep who can only see their own work is never offered a switch that would 403.
              */
             scope_options: ("mine" | "unassigned" | "team" | "all")[];
+            /**
+             * @deprecated
+             * @description Deprecated: no screen opens the team week, and the operation it describes,
+             *     `GET /weekly-reviews/team`, is deprecated too. `GET /me` carries the same answer.
+             */
             team_week?: components["schemas"]["TeamWeekReach"];
             /**
              * @description The narrowing this read applied. The same vocabulary the query parameter takes.

@@ -68,6 +68,9 @@ func readViewQueries(paths map[string]map[string]yaml.Node, shared map[string]qu
 	return out, err
 }
 
+// deprecatedSummaryPrefix opens the summary of a route-backed verb whose operation is deprecated.
+const deprecatedSummaryPrefix = "Deprecated: "
+
 // routeShapes reads the shape of every route a selected policy names.
 func routeShapes(paths map[string]map[string]yaml.Node, shared map[string]queryParameter,
 	schemas map[string]schemaNode, rawSchemas map[string]any, policies []policy, selected func(policy) bool,
@@ -81,6 +84,7 @@ func routeShapes(paths map[string]map[string]yaml.Node, shared map[string]queryP
 		path := strings.TrimPrefix(route, "/v1")
 		var op struct {
 			Summary     string           `yaml:"summary"`
+			Deprecated  bool             `yaml:"deprecated"`
 			Parameters  []queryParameter `yaml:"parameters"`
 			RequestBody yaml.Node        `yaml:"requestBody"`
 			Responses   yaml.Node        `yaml:"responses"`
@@ -98,6 +102,10 @@ func routeShapes(paths map[string]map[string]yaml.Node, shared map[string]queryP
 		}
 		op.Parameters = append(onPath, op.Parameters...)
 		shape := routeShape{queries: []viewQuery{}, body: op.RequestBody.Kind != 0, summary: strings.TrimSpace(op.Summary)}
+		// An in-process tool call never sees the route's deprecation header, so the summary carries it.
+		if op.Deprecated {
+			shape.summary = deprecatedSummaryPrefix + shape.summary
+		}
 		if rawSchemas != nil {
 			body, err := bodySchema(&op.RequestBody, rawSchemas)
 			if err != nil {
