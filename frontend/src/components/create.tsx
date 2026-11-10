@@ -9,12 +9,15 @@ import { type ReactNode, useState } from "react";
 import { useIdempotencyKey } from "../api/idempotencykey";
 import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
+import { binding, shortcutTip } from "../lib/keymap";
+import { leaveCreateForm } from "../lib/listreturn";
 import {
   ProblemError,
   problemExistingId,
   problemMessageOf,
 } from "../lib/problem";
 import { navigate, type Route, type Screen } from "../lib/router";
+import { useShortcutAria } from "../lib/shortcuts";
 import { catalogOfScreen, useSettledOpen } from "./create.dialog";
 import "./create.css";
 import "../design-system/querystates.css";
@@ -125,7 +128,7 @@ export function CreateAction<Created extends { id: string }>({
   create,
   invalidate,
   screen,
-  startOpen = false,
+  listCreate,
   resolveExisting,
   stay = false,
   aboutId,
@@ -161,7 +164,8 @@ export function CreateAction<Created extends { id: string }>({
   ) => ReactNode | null;
   invalidate: string;
   screen: Screen;
-  startOpen?: boolean;
+  // A list's form is its address `#/<screen>/new`, so closing it leaves that address.
+  listCreate?: Readonly<{ open: boolean }>;
   // `keepOpen` makes one save "saved, next" for capture in a run: the modal
   // empties, not closes. It implies `stay`: opening the record would end a run.
   keepOpen?: boolean;
@@ -182,7 +186,7 @@ export function CreateAction<Created extends { id: string }>({
   resolveExisting?: (code: string, id: string) => Route;
 }>) {
   const t = useT();
-  const [creating, setCreating] = useState(startOpen);
+  const [creating, setCreating] = useState(listCreate?.open ?? false);
   const shown = useSettledOpen(creating, catalogOfScreen(screen));
   // Counts this session's saves, which empties the form between them. Not a
   // boolean: two saves in a row must read as two distinct clears.
@@ -200,10 +204,16 @@ export function CreateAction<Created extends { id: string }>({
         setSaved((n) => n + 1);
         return;
       }
-      setCreating(false);
+      close();
     },
     onCreated,
   });
+  function close() {
+    setCreating(false);
+    if (listCreate) {
+      leaveCreateForm(screen);
+    }
+  }
   const existing =
     mutation.error instanceof ProblemError
       ? problemExistingId(mutation.error.problem)
@@ -231,12 +241,13 @@ export function CreateAction<Created extends { id: string }>({
         pending={creating && !shown}
         reason={reason}
         link={link}
+        opensOnCreateKey={listCreate !== undefined}
       />
       <CreateRecordModal
         // A refusal that lands while the dialog is open closes it. A verb the
         // reader may no longer take must not stay one press from the server.
         open={shown && reason === undefined}
-        onClose={() => setCreating(false)}
+        onClose={close}
         title={label}
         fields={fields}
         pending={mutation.isPending}
@@ -266,6 +277,7 @@ export function NewRecordButton({
   pending,
   reason,
   link,
+  opensOnCreateKey = false,
 }: Readonly<{
   label: string;
   onClick: () => void;
@@ -276,7 +288,11 @@ export function NewRecordButton({
   testId?: string;
   pending?: boolean;
   reason?: string;
+  opensOnCreateKey?: boolean;
 }>) {
+  const createKey = useShortcutAria("create");
+  const t = useT();
+  const keyShortcut = opensOnCreateKey ? createKey : undefined;
   return (
     <Button
       onClick={onClick}
@@ -284,6 +300,16 @@ export function NewRecordButton({
       pending={pending}
       reason={reason}
       variant={link ? "link" : undefined}
+      aria-keyshortcuts={keyShortcut}
+      title={
+        keyShortcut === undefined
+          ? undefined
+          : shortcutTip(
+              label,
+              binding("create").keys,
+              t("shell.shortcuts.then"),
+            )
+      }
     >
       {link ? (
         label

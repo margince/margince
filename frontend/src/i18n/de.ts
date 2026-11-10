@@ -2875,6 +2875,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.shortcuts.paragraphSave": "Mehrzeiliges Feld speichern",
   "shell.shortcuts.deckHint":
     "Auf Home merken die Pfeiltasten eine Entscheidung vor. Enter sendet, was vorgemerkt ist.",
+  "shell.shortcuts.create": "Datensatz erstellen",
+  "shell.shortcuts.list": "Tastenkürzel anzeigen",
+  "shell.shortcuts.goto": "Wechseln zu",
+  "shell.shortcuts.gotoHint": "Drücke G, dann den Buchstaben.",
+  "shell.shortcuts.record": "In einem Datensatz",
+  "shell.shortcuts.logActivity": "Aktivität erfassen",
+  "shell.shortcuts.addTask": "Aufgabe hinzufügen",
+  "shell.shortcuts.writeEmail": "Nachricht schreiben",
+  "shell.shortcuts.sendEmail": "E-Mail senden",
+  "shell.shortcuts.submitDialog": "Dialog absenden",
+  "shell.shortcuts.then": "dann",
+  "shell.shortcuts.or": "oder",
+  "shell.shortcuts.singleKeyOff": "Einzeltasten-Kürzel sind deaktiviert",
+  "shell.shortcuts.singleKeyOffHint":
+    "Aktiviere sie unter Einstellungen → Nutzerkonto.",
   "shell.more": "Mehr",
   "shell.unknownPage": "Nicht gefunden",
   "shell.closeMenu": "Schließen",
@@ -15816,6 +15831,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Sprache von Menüs, Seiten und Nachrichten aus Margince. In deinem Konto gespeichert, sie gilt also auf jedem Gerät, auf dem du dich anmeldest.",
   "account.appearanceHelp":
     "Hell, dunkel oder wie dieser Computer eingestellt ist. Gilt nur in diesem Browser. Das Kontomenü ändert dieselbe Einstellung.",
+  "account.singleKeyShortcuts": "Einzeltasten-Kürzel",
+  "account.singleKeyShortcutsHelp":
+    "Buchstaben- und Symboltasten wirken allein als Kürzel. Gilt nur in diesem Browser.",
   "reviewTemplates.questionCount_one": "{count} Frage",
   "reviewTemplates.questionCount_other": "{count} Fragen",
   "reviewTemplates.summary": "{questions}, {required} Pflicht",

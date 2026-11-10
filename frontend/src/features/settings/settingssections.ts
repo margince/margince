@@ -23,6 +23,7 @@ export const SETTINGS_SECTIONS = {
     "account.languageCard",
     "account.timezoneLabel",
     "settings.appearance",
+    "account.singleKeyShortcuts",
     "overnightGrant.title",
     "overnightGrant.label",
   ],

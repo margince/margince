@@ -31,13 +31,32 @@ function viewOf(address: string): ReactElement<Record<string, unknown>> {
 // component and the props the address must hand it.
 describe("the address dispatch", () => {
   it.each([
-    ["#/companies", screens.CompaniesScreen, {}],
+    ["#/companies", screens.CompaniesScreen, { startCreating: false }],
+    ["#/companies/new", screens.CompaniesScreen, { startCreating: true }],
     ["#/companies/c1", screens.CompanyScreen, { id: "c1" }],
+    [
+      "#/contacts",
+      screens.ContactsScreen,
+      { importing: false, startCreating: false },
+    ],
+    [
+      "#/contacts/new",
+      screens.ContactsScreen,
+      { importing: false, startCreating: true },
+    ],
+    [
+      "#/contacts/import",
+      screens.ContactsScreen,
+      { importing: true, startCreating: false },
+    ],
+    ["#/contacts/c1", screens.ContactPageV2, { id: "c1", tab: "overview" }],
     ["#/partners", screens.PartnersScreen, {}],
-    ["#/leads", screens.LeadsScreen, {}],
+    ["#/leads", screens.LeadsScreen, { startCreating: false }],
+    ["#/leads/new", screens.LeadsScreen, { startCreating: true }],
     ["#/leads/l1", screens.LeadScreen, { id: "l1" }],
     ["#/deals/d1/room", screens.DealsRoute, { id: "d1", id2: "room" }],
-    ["#/projects", screens.ProjectsScreen, {}],
+    ["#/projects", screens.ProjectsScreen, { startCreating: false }],
+    ["#/projects/new", screens.ProjectsScreen, { startCreating: true }],
     ["#/projects/p1", screens.ProjectScreen, { id: "p1" }],
     ["#/worklist/me", screens.WorklistRedirect, { opensOn: "me" }],
     ["#/analytics", screens.AnalyticsScreen, {}],

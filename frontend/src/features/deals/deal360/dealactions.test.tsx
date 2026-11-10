@@ -5,11 +5,20 @@
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
 import { LocaleProvider } from "../../../i18n";
 import { en } from "../../../i18n/en";
+import { useShortcutDispatcher } from "../../../lib/shortcuts";
 import { deal } from "../../../testing/brief.fixtures";
 import { RecordShell } from "../../../testing/recordshell.testkit";
 import { stubWithSession } from "../../../testing/story-utils";
@@ -92,5 +101,59 @@ describe("the deal header's Meet verb", () => {
 
     await waitFor(() => expect(meet()).toBeEnabled());
     expect(meet()).not.toHaveAccessibleDescription(en["deal.meetNeedsCompany"]);
+  });
+});
+
+describe("the deal's record keys", () => {
+  const grants: Parameters<typeof stubWithSession>[1] = {
+    deal: ["read", "update"],
+    activity: ["create"],
+  };
+
+  async function mountLive() {
+    renderHook(() => useShortcutDispatcher());
+    mount(grants);
+    const log = await screen.findByRole("button", { name: en["log.title"] });
+    await waitFor(() => expect(log).toBeEnabled());
+    return log;
+  }
+
+  it.each([
+    ["n", en["log.title"]],
+    ["t", en["log.addTask"]],
+  ])("open on %s the drawer its verb opens: %s", async (key, verb) => {
+    const user = userEvent.setup();
+    await mountLive();
+
+    await user.keyboard(key);
+    const drawer = await screen.findByRole("dialog");
+    expect(within(drawer).getByRole("heading", { name: verb })).toBeTruthy();
+  });
+
+  it("opens on M the composer the Email verb opens", async () => {
+    const user = userEvent.setup();
+    const log = await mountLive();
+    expect(log).toHaveAttribute("aria-keyshortcuts", "n");
+    expect(screen.getByRole("button", { name: "Email" })).toHaveAttribute(
+      "aria-keyshortcuts",
+      "m",
+    );
+
+    await user.keyboard("m");
+    expect(
+      await screen.findByRole("dialog", { name: en["compose.newEmail"] }),
+    ).toBeTruthy();
+  });
+
+  it("does nothing without the activity grant", async () => {
+    const user = userEvent.setup();
+    renderHook(() => useShortcutDispatcher());
+    mount({ deal: ["read"] });
+    await screen.findByText(
+      "You do not have permission to log activities on this record.",
+    );
+
+    await user.keyboard("ntm");
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

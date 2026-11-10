@@ -85,6 +85,15 @@ export const Refused: Story = {
   },
 };
 
+// A verb a key also presses: the key is named to a screen reader and draws nothing.
+export const WithKeyShortcut: Story = {
+  args: {
+    label: "Email",
+    icon: <Mail size={15} aria-hidden="true" />,
+    keyShortcuts: "m",
+  },
+};
+
 // Mid-write: full ink and a turning mark, never the dimmed treatment that means
 // "not yours to do".
 export const Pending: Story = {

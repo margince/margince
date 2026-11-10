@@ -100,6 +100,7 @@ export function EmailVerb({
   reason,
   reasonId,
   word,
+  keyShortcuts,
 }: Readonly<{
   /** The verb, translated — spoken as the name and shown as the tip. */
   label?: string;
@@ -110,6 +111,7 @@ export function EmailVerb({
   disabled?: boolean;
   reason?: string;
   reasonId?: string;
+  keyShortcuts?: string;
 }>) {
   const t = useT();
   return (
@@ -120,6 +122,7 @@ export function EmailVerb({
       disabled={disabled}
       reason={reason}
       reasonId={reasonId}
+      keyShortcuts={keyShortcuts}
       onClick={onClick}
     />
   );
@@ -151,6 +154,7 @@ export function RecordEmailVerb({
   recordAddress,
   disabledReasonId,
   disabled,
+  keyShortcuts,
   open,
   onOpenChange,
 }: Readonly<{
@@ -161,6 +165,7 @@ export function RecordEmailVerb({
   recordAddress?: string;
   disabledReasonId?: string;
   disabled?: boolean;
+  keyShortcuts?: string;
 }> &
   Lifted) {
   const [ownComposing, setOwnComposing] = useState(false);
@@ -178,6 +183,7 @@ export function RecordEmailVerb({
       <EmailVerb
         disabled={disabled}
         reasonId={disabledReasonId}
+        keyShortcuts={keyShortcuts}
         onClick={() => setComposing(true)}
       />
       {/* Not drawn until the verb has been pressed once, and mounted from

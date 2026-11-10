@@ -83714,6 +83714,17 @@ export interface operations {
                 /** @description The record the staged actions act on. Requires `target_entity_type`. */
                 target_entity_id?: string;
                 /**
+                 * @description Filter to the approvals staged against ANY of these records, each written
+                 *     `<entity_type>:<uuid>` (`contact:…`, `activity:…`). Repeat the parameter for several,
+                 *     up to 25. It answers "what is waiting on the records I touched" without the rest of
+                 *     the queue.
+                 *
+                 *     A record outside the caller's row scope adds nothing to the page, never a 403. A
+                 *     malformed item, more than 25, or `target` together with `target_entity_type` or
+                 *     `target_entity_id` is a 422.
+                 */
+                target?: string[];
+                /**
                  * @description Filter to the proposals ONE act staged together (see `Approval.bundle_id`) — today, a
                  *     website read's company facts plus the leads it published. Members the caller could not
                  *     decide are absent from this page exactly as they are absent from the unfiltered inbox,
