@@ -42,7 +42,10 @@ jobs:
   integration-build:
     name: integration build
     timeout-minutes: 30
-    runs-on: ubuntu-latest
+    # The compile scales with cores (`go test` and `zstd -T0` take them all), so
+    # a larger runner is one repository variable away. A label no runner has
+    # queues the job for up to 24 hours, which timeout-minutes does not bound.
+    runs-on: ${{ vars.INTEGRATION_BUILD_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: read
     steps:
