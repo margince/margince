@@ -53702,6 +53702,7 @@ components:
         term_state:
           type: string
           enum: [not_started, in_force, ended]
+          x-extensible-enum: true
           readOnly: true
           description: |
             Where today falls in the agreement's dated term, read from the dates alone
