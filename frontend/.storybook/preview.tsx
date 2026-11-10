@@ -68,8 +68,7 @@ const withSurface: Decorator = (Story, context) => {
 };
 
 const preview: Preview = {
-  // Each story loads a fresh page, but the browser keeps storage between them, so
-  // a story that turned a per-browser switch off would turn it off for the next.
+  // Storage outlives a story's page. A story that turns a switch off would leak it.
   beforeEach: () => {
     setSingleKeyShortcutsOn(true);
     setEdgeLightShown(true);
