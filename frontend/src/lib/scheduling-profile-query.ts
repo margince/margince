@@ -2,33 +2,48 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "./capability";
-import { unwrap } from "./problem";
+import { ProblemError, unwrap } from "./problem";
+import { useMe } from "./session";
 
 type Profile = components["schemas"]["SchedulingProfile"];
 
 /**
- * The signed-in seat's booking profile. A seat that may not book has none: the
- * server answers only a seat holding activity:create, so without the grant
- * this asks nothing.
+ * The signed-in seat's booking profile. The server answers only a seat holding
+ * activity:create, so a refused seat gets that refusal here without a request.
  */
 export function useSchedulingProfile({
   refreshOnReturn = false,
   enabled = true,
 }: Readonly<{ refreshOnReturn?: boolean; enabled?: boolean }> = {}) {
-  const canBook = useCanBook();
+  const answered = useMe().data?.authorization !== undefined;
+  const refused = useBookingRefused();
   return useQuery({
     queryKey: ["scheduling-profile"],
-    enabled: enabled && canBook,
+    enabled: enabled && answered,
     refetchOnWindowFocus: refreshOnReturn ? "always" : false,
     queryFn: async () => {
+      if (refused) throw new ProblemError(BOOKING_REFUSED);
       return unwrap(await api.GET("/scheduling/profile"));
     },
   });
 }
 
+// The server's own answer to this seat, so the page reads as it did when asked.
+const BOOKING_REFUSED = { status: 403, code: "permission_denied" };
+
 /** Whether this seat may book meetings, which is what owning a booking profile takes. */
 export function useCanBook(): boolean {
   return useCan("activity", "create");
+}
+
+/**
+ * Whether /me has answered that this seat may not book. False until it
+ * answers, so no refusal is claimed before the server has decided.
+ */
+export function useBookingRefused(): boolean {
+  const canBook = useCanBook();
+  const answered = useMe().data?.authorization !== undefined;
+  return answered && !canBook;
 }
 
 /**
