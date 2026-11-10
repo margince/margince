@@ -2159,6 +2159,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.bandCount_one": "{count} Eintrag",
   "worklist.bandCount_other": "{count} Einträge",
   "brief.focus.context": "Details anzeigen",
+  "brief.focus.next": "Nächste Aufgabe",
   "brief.queue.back": "Zurück zur Worklist",
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Worklist einblenden",

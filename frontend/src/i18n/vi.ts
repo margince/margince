@@ -2103,6 +2103,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.bandCount_one": "{count} việc",
   "worklist.bandCount_other": "{count} việc",
   "brief.focus.context": "Xem chi tiết",
+  "brief.focus.next": "Công việc tiếp theo",
   "brief.queue.back": "Quay lại Danh sách công việc",
   "brief.queue.title": "Danh sách công việc",
   "brief.queue.show": "Xem Danh sách công việc",

@@ -385,6 +385,11 @@
   .brief-triage-lead {
     padding-inline-end: var(--space-4);
   }
+  /* Too narrow for three verbs on a line: Next task takes its own, last. */
+  .brief-triage-lead .brief-triage-next {
+    order: 9;
+    flex-basis: 100%;
+  }
 }
 
 /* The tick is round, as a to-do's is; the verb under it is the house glyph. */
