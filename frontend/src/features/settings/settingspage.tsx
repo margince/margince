@@ -22,13 +22,11 @@ import { SettingsSavePage } from "./settingssavepage";
 import { SettingsTabStrip } from "./settingstabs";
 
 /**
- * The settings screen: one page of the catalog, chosen by the address.
+ * The frame of one settings page, chosen by the address.
  *
- * Flat addresses now — `#/settings/audit`, not `#/settings/admin/audit`. The
- * group segment said which HALF of settings a reader was in, which was a fact
- * about who the page was for rather than about the page, so moving one between
- * groups moved its bookmark too. `settingsRouteTarget` still answers every
- * address the product minted, rewriting it once on arrival.
+ * Addresses are flat: `#/settings/audit`, not `#/settings/admin/audit`. A group
+ * segment would tie a bookmark to the group, so moving a page would break it.
+ * `settingsRouteTarget` rewrites every older address once on arrival.
  */
 export function SettingsPage({
   route,
@@ -65,18 +63,9 @@ export function SettingsPage({
       </div>
     );
   }
-  // No nav column and no heading of its own: the entries are the sidebar's second
-  // level now, and the shell's page head names the entry, so the page is that
-  // entry's own content across the whole reading column.
-  //
-  // Every page sets its rhythm HERE rather than relying on the shell's
-  // `.wrap > .card + .card` default, because that rule matches a card following a
-  // card and settings pages are no longer stacks of cards: the merge left several
-  // holding a `<form>`, a `<section>`, a flex wrapper or a bare heading-plus-table.
-  // Where the rule missed, the gap was ZERO and two surfaces read as one. Owning
-  // it once is the difference between every page spacing correctly and every
-  // page having to remember to. Width is owned the same way and is the same for
-  // all of them, so there is nothing here to branch on.
+  // The sidebar lists the pages and the shell names the page, so this frame has
+  // no nav column or heading. It sets the spacing itself, because pages hold
+  // forms and tables, not only cards, and `.wrap > .card + .card` misses those.
   if (address.kind === "home") {
     return (
       <div className="wrap">
@@ -95,22 +84,18 @@ export function SettingsPage({
 
   return (
     <div className="wrap">
-      {/* Unsaved drafts in here are held by the guard above the routed screen
-          (App.tsx), not by this screen. A guard installed HERE could only see
-          moves between settings entries: it unmounts with the screen, so a draft
-          was safe from one tab to the next and still discarded without a word the
-          moment the reader clicked Contacts. The cards below hand their drafts
-          to the page's one save bar, which claims for them. */}
+      {/* The unsaved-draft guard sits above the routed screen (App.tsx). One
+          here would unmount with the screen and lose a draft when the reader
+          leaves settings. The cards hand their drafts to the page's save bar. */}
       {tabs.length > 1 && (
         <SettingsTabStrip page={page} tabs={tabs} current={tab} />
       )}
       <SettingsSavePage>
         <Frame id={page.id}>
           <div key={tab} className="settings-stack arrive-stack">
-            {/* Said once, at the top, and only for a page with no open control: the
-              `looksUp` half of the partition. A reader who can change nothing would
-              otherwise infer it from a screenful of disabled cards, and a banner over
-              a control that works is worse than silence. */}
+            {/* Shown once, and only on a page where the reader can change
+              nothing. Without it they would have to infer that from disabled
+              cards. */}
             {address.readOnly && (
               <Callout kind="standing" title={t("settings.readOnlyPageTitle")}>
                 {t("settings.readOnlyPage")}
