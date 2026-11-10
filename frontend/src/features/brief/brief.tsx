@@ -46,7 +46,8 @@ import {
 } from "../worklist/worklist.queries";
 import { changedSinceBrief } from "./brief.changed";
 import { BriefDials } from "./brief.dials";
-import { DoneForYou, shownReceiptIds } from "./brief.doneforyou";
+import { DoneForYou } from "./brief.doneforyou";
+import { shownReceiptIds } from "./brief.doneforyou.groups";
 import { briefDay } from "./brief.facts";
 import { BriefFeed } from "./brief.feed";
 import {
