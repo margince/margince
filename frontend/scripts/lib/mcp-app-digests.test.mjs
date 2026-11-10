@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { DIGESTS_FILE, writeDigests } from "./mcp-app-digests.mjs";
+import { stable } from "./stable.mjs";
 
 /** @type {string[]} */
 const made = [];
@@ -41,7 +42,7 @@ describe("writeDigests", () => {
     const dir = builtViews();
     await writeDigests(dir, ["update.html", "approval.html"]);
     const manifest = JSON.parse(readFileSync(join(dir, DIGESTS_FILE), "utf8"));
-    expect(Object.keys(manifest).sort()).toEqual([
+    expect(Object.keys(manifest).sort(stable)).toEqual([
       "approval.html",
       "update.html",
     ]);

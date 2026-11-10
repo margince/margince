@@ -35,12 +35,14 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 )
 
@@ -71,7 +73,9 @@ const (
 // triggering activity id) — a proposal never floats free of the record
 // it came from (P5/P12).
 type FollowUpProposal struct {
-	DealID ids.DealID `json:"deal_id"`
+	SystemText  *systemtext.Message   `json:"-"`
+	SummaryText *systemtext.Component `json:"-"`
+	DealID      ids.DealID            `json:"deal_id"`
 	// DueDate is the proposed follow-up due date, date-only wire form.
 	DueDate string `json:"due_date"`
 	Subject string `json:"subject"`
@@ -210,7 +214,7 @@ func reconcileCandidatesSQL(ctx context.Context, tx pgx.Tx, now time.Time) (stri
 			  -- because this statement is a plain string with no format
 			  -- verbs; the predicate is the helper's, and a change to one
 			  -- is a change to both.
-			  AND a.audience = 'workspace'
+			  AND `+auth.WorkspaceAudienceSQL("a")+`
 			  AND %[5]s
 			  AND %[4]s
 			  AND (a.kind <> 'meeting' OR (%[1]s AND %[3]s))
@@ -294,6 +298,8 @@ func (r *FollowUpReconciler) stage(ctx context.Context, cand followUpCandidate, 
 		EvidenceDirection:  cand.activityDirection,
 		EvidenceOccurredAt: cand.occurredAt,
 	}
+	proposal.SystemText = &systemtext.Message{Subject: systemtext.Sentence("deals.followUpSubject", systemtext.Label(cand.dealName)), Body: followUpBodyComponent(cand)}
+	proposal.SummaryText = systemtext.Sentence("deals.draftFollowUp", systemtext.Label(cand.dealName), systemtext.ActivityKindArgument(cand.activityKind), systemtext.Text(cand.occurredAt.Format(time.DateOnly)))
 	summary := fmt.Sprintf(said.draftFollowUp,
 		cand.dealName, cand.activityKind, cand.occurredAt.Format(time.DateOnly))
 	return r.stager.StageFollowUp(ctx, cand.dealID.UUID, summary, proposal)
@@ -307,4 +313,12 @@ func followUpBody(cand followUpCandidate, said summaryCopy) string {
 		return fmt.Sprintf(said.followUpBodyQuoted, cand.activityKind, *cand.subject, when)
 	}
 	return fmt.Sprintf(said.followUpBody, cand.activityKind, when)
+}
+
+func followUpBodyComponent(cand followUpCandidate) *systemtext.Component {
+	kind, when := systemtext.ActivityKindArgument(cand.activityKind), systemtext.Text(cand.occurredAt.Format(time.DateOnly))
+	if cand.subject != nil && *cand.subject != "" {
+		return systemtext.Sentence("deals.followUpBodyQuoted", kind, systemtext.Label(*cand.subject), when)
+	}
+	return systemtext.Sentence("deals.followUpBody", kind, when)
 }

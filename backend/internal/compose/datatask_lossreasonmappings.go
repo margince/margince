@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 const (
@@ -46,7 +47,7 @@ type lossMappingScope struct {
 // an earlier one left different.
 func lossMappingDataTask(pool *pgxpool.Pool) datatask.Task {
 	return datatask.Task{
-		ID: lossMappingTaskID, Version: 1, Title: "Applying reviewed loss reasons",
+		ID: lossMappingTaskID, Version: 1, Title: systemtext.Literal("datatask.title.core.1793365074_loss_reason_mappings"),
 		Manual: true, ReviewVersion: lossMappingReviewVersion, Review: validateLossMappingReviewTx,
 		Requires: []string{"core/1793365074"},
 		Steps: []datatask.Step{{

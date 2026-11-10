@@ -46,6 +46,7 @@
 }
 
 .ask-modal-body {
+  position: relative;
   display: flex;
   gap: var(--space-4);
   min-height: 0;
@@ -53,6 +54,7 @@
 }
 
 .ask-modal-answer {
+  position: relative;
   flex-grow: 1;
   min-width: 0;
   overflow-y: auto;
@@ -61,6 +63,7 @@
 /* Only drawn with something in it, so it takes a share rather than a half: the
  * answer keeps the room it needs to stay readable beside the page it cites. */
 .ask-modal-doc {
+  position: relative;
   flex-basis: 52%;
   flex-shrink: 0;
   min-width: 0;
@@ -157,6 +160,7 @@
 }
 
 .ask-doc-body {
+  position: relative;
   min-height: 0;
   overflow-y: auto;
 }

@@ -131,3 +131,43 @@ describe("DirectSendModal", () => {
     expect((reason as HTMLTextAreaElement).value).toContain("\n");
   });
 });
+
+it("shows the specific recipient, refusal, purpose and sending company", () => {
+  open({
+    review: {
+      ...review,
+      refusals: [
+        {
+          address: "alex@example.test",
+          reason_code: "no_compatible_evidence",
+          category: "requested_followup",
+          sending_entity_name: "Example Company",
+        },
+      ],
+    },
+  });
+  expect(screen.getByText("alex@example.test")).toBeTruthy();
+  expect(screen.getByText("Sending company: Example Company")).toBeTruthy();
+  expect(screen.getByText("Follow-up they requested")).toBeTruthy();
+});
+
+it("requires a new acknowledgement when the served warning version changes", async () => {
+  const user = userEvent.setup();
+  const { rerender } = open();
+  await user.click(screen.getByRole("checkbox"));
+  rerender(
+    <QueryClientProvider client={new QueryClient()}>
+      <DirectSendModal
+        open
+        onClose={vi.fn()}
+        review={{
+          ...review,
+          warning: { version: "override-new", text: "Read the new warning." },
+        }}
+      />
+    </QueryClientProvider>,
+  );
+  expect((screen.getByRole("checkbox") as HTMLInputElement).checked).toBe(
+    false,
+  );
+});

@@ -27,4 +27,6 @@ func ActivityProjection(ctx context.Context, contentArm string, arg func(any) in
 }
 
 // ScanActivityRow reads one row of the projection and answers the finished record.
-func ScanActivityRow(rows pgx.Rows) (crmcontracts.Activity, error) { return scanActivity(rows) }
+func ScanActivityRow(ctx context.Context, rows pgx.Rows) (crmcontracts.Activity, error) {
+	return scanActivity(ctx, rows)
+}

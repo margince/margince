@@ -6,7 +6,7 @@ The 3 tables owned by `notices`, as the migrations build them. [Back to the enti
 
 ## notice
 
-16 columns · primary key `(id)` · referenced by 0 foreign keys
+17 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -22,6 +22,7 @@ The 3 tables owned by `notices`, as the migrations build them. [Back to the enti
 | `retracted_at` | `timestamp with time zone` |  |  |
 | `subject` | `text` | yes | The headline the recipient reads, derived from the kind rather than supplied. |
 | `subject_parts` | `jsonb` |  |  |
+| `system_text` | `jsonb` |  |  |
 | `target_id` | `uuid` |  |  |
 | `target_type` | `text` |  |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
@@ -39,6 +40,7 @@ The 3 tables owned by `notices`, as the migrations build them. [Back to the enti
 - `notice_email_error_after_attempt`: `CHECK (((email_error IS NULL) OR (email_attempted_at IS NOT NULL)))`
 - `notice_email_error_bounded`: `CHECK ((length(email_error) <= 500))`
 - `notice_subject_present`: `CHECK ((subject <> ''))`
+- `notice_system_text_shape`: `CHECK (((system_text IS NULL) OR ((jsonb_typeof(system_text) = 'object') AND (((system_text ->> 'schema_version') = '1') IS TRUE) AND (octet_length((system_text)) <= 8192))))`
 - `notice_target_paired`: `CHECK (((target_type IS NULL) = (target_id IS NULL)))`
 
 **Indexes**
@@ -49,6 +51,10 @@ The 3 tables owned by `notices`, as the migrations build them. [Back to the enti
 - `notice_pkey`: `unique, btree (id)`
 - `notice_unread`: `btree (recipient_user_id, created_at DESC) WHERE (read_at IS NULL)`
 - `uq_notice_dedupe`: `unique, btree (recipient_user_id, dedupe_key) WHERE (dedupe_key IS NOT NULL)`
+
+**Triggers**
+
+- `notice_system_text_retire`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION retire_changed_system_text()`
 
 ## notification_digest_run
 

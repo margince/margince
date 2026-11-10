@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -191,6 +192,9 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 		return datasource.EntityRef{}, err
 	}
 	mapped.Origin = originOfCaller(ctx, mapped.Origin)
+	if message := systemtext.MessageIn(ctx); message != nil {
+		mapped.SystemText = message
+	}
 	v, _, err := p.store.LogActivity(ctx, mapped)
 	return ref(datasource.EntityActivity, v.Id), err
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -182,7 +183,7 @@ func settleRosterRows(
 // audience, and open is false for a restricted meeting, which takes no guests.
 func audienceNarrowedByAMember(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) (narrowed, open bool, err error) {
 	err = tx.QueryRow(ctx, `
-		SELECT audience <> 'workspace' AND audience_reason IS NOT DISTINCT FROM $2
+		SELECT `+"NOT ("+auth.WorkspaceAudienceSQL("activity")+")"+` AND audience_reason IS NOT DISTINCT FROM $2
 		  FROM activity WHERE id = $1 AND restricted_at IS NULL`, activityID, manualAudienceReason).Scan(&narrowed)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, false, nil

@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -22,6 +23,10 @@ const (
 )
 
 func (s Server) recordPreview(ctx context.Context, kind string, id ids.UUID) (recordPreview, error) {
+	ctx = s.coreFeatures.Context(ctx)
+	if !s.coreFeatures.AreaEnabled(kind) {
+		return recordPreview{}, apperrors.ErrNotFound
+	}
 	switch kind {
 	case previewDeals:
 		return s.dealRecordPreview(ctx, id)
@@ -40,7 +45,7 @@ func (s Server) dealRecordPreview(ctx context.Context, id ids.UUID) (recordPrevi
 		return recordPreview{}, err
 	}
 	var details []string
-	if deal.CompanyId != nil {
+	if deal.CompanyId != nil && auth.ReadGranted(ctx, "company") {
 		company, err := s.contactsStore.GetCompany(ctx, ids.From[ids.CompanyKind](ids.UUID(*deal.CompanyId)), storekit.LiveOnly)
 		if err != nil && !errors.Is(err, apperrors.ErrNotFound) {
 			return recordPreview{}, err
@@ -91,19 +96,16 @@ func (s Server) contactRecordPreview(ctx context.Context, id ids.UUID) (recordPr
 	if contact.Title != nil {
 		details = append(details, *contact.Title)
 	}
-	if contact.Employer != nil {
+	if contact.Employer != nil && auth.ReadGranted(ctx, "company") {
 		details = append(details, contact.Employer.CompanyName)
 	}
 	return recordCard(previewContacts, id, contact.FullName, "Contact", details...), nil
 }
 
 func recordCard(kind string, id ids.UUID, name, label string, details ...string) recordPreview {
-	if strings.TrimSpace(name) == "" {
-		name = label
-	}
 	summary := strings.Join(slices.DeleteFunc(details, func(value string) bool { return strings.TrimSpace(value) == "" }), " · ")
-	if summary == "" {
-		summary = label + " in Margince"
-	}
-	return recordPreview{Title: "Margince · " + label + ": " + name, Summary: summary, Href: "/#/" + kind + "/" + id.String()}
+	preview := recordPreview{kind: kind, name: strings.TrimSpace(name), genericSummary: summary == "", Summary: summary, Href: "/#/" + kind + "/" + id.String()}
+	card := recordPreviewCard(preview)
+	preview.Title, preview.Summary = card.Title, card.Summary
+	return preview
 }

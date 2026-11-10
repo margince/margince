@@ -108,7 +108,7 @@ func (d *CommitmentDispatcher) reconcileTaskRecipients(ctx context.Context, tx p
 		return CommitmentRemembered, ids.Nil, err
 	}
 	if mutable.IsZero() {
-		proposal := CommitmentTaskProposal{SourceActivityID: c.SourceActivityID, Summary: c.Summary, Party: c.Party, Quote: c.Quote, Locator: c.Locator, SeatID: target.Assignee, PromiserSeatID: c.Seat, ClaimIDs: claims, Body: c.Body, PrivateTo: c.PrivateTo, ExistingTaskID: &target.ID}
+		proposal := CommitmentTaskProposal{SourceActivityID: c.SourceActivityID, Summary: c.Summary, Party: c.Party, Quote: c.Quote, SystemText: c.SystemText, Locator: c.Locator, SeatID: target.Assignee, PromiserSeatID: c.Seat, ClaimIDs: claims, Body: c.Body, PrivateTo: c.PrivateTo, ExistingTaskID: &target.ID}
 		asked, _, err := d.pendingProposalAskedOf(ctx, tx, c, &proposal)
 		if err != nil {
 			return CommitmentRemembered, ids.Nil, err

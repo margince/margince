@@ -94,10 +94,7 @@ func (s *InstallationSettingsStore) SSOEnforced(ctx context.Context) (bool, erro
 	return enforced, nil
 }
 
-// MFARequired reports whether the installation makes a second factor mandatory,
-// the sibling of SSOEnforced and read on the same terms — anonymous of any
-// caller, so admission can decide whether a member with no factor is confined to
-// the enrolment routes.
+// MFARequired reports the password-session enrolment policy at admission.
 func (s *InstallationSettingsStore) MFARequired(ctx context.Context) (bool, error) {
 	required, err := config.StoredVal(s.asInstallation(ctx), s.config, RequireMFA)
 	if err != nil {

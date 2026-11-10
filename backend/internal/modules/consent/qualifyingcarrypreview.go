@@ -15,13 +15,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
-const qualifyingCarryDuplicate = `a.source_entity_id IS NOT NULL AND EXISTS (
- SELECT 1 FROM consent_qualifying_event b WHERE b.contact_id=@target
+func qualifyingCarryDuplicate(column string) string {
+	return `a.source_entity_id IS NOT NULL AND EXISTS (
+ SELECT 1 FROM consent_qualifying_event b WHERE b.` + pgx.Identifier{column}.Sanitize() + `=@target
  AND b.source_entity_type=a.source_entity_type AND b.source_entity_id=a.source_entity_id)`
+}
 
 func previewCarriedQualifyingEvents(ctx context.Context, tx pgx.Tx, source, target ids.ContactID) ([]commsauthz.CarriedQualifyingEvent, error) {
 	rows, err := tx.Query(ctx, `SELECT a.id,a.kind,a.source_entity_type,a.source_entity_id,a.note,a.occurred_at,
- `+qualifyingCarryDuplicate+` FROM consent_qualifying_event a WHERE a.contact_id=@source ORDER BY a.id LIMIT 501`, pgx.NamedArgs{carrySourceArg: source, carryTargetArg: target})
+ `+qualifyingCarryDuplicate("contact_id")+` FROM consent_qualifying_event a WHERE a.contact_id=@source ORDER BY a.id LIMIT 501`, pgx.NamedArgs{carrySourceArg: source, carryTargetArg: target})
 	if err != nil {
 		return nil, err
 	}

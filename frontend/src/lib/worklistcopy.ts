@@ -1,3 +1,4 @@
+import { displayedTitle } from "./systemdisplay";
 import { taskHref } from "./taskreminders";
 import { sourceName } from "./worklistsources";
 
@@ -353,7 +354,7 @@ export function itemTitle(
     return translatePlural(locale, base, item.batch.count, { count, cause });
   }
   const named = subjectNamed ? undefined : item.subject?.label;
-  const own = item.title;
+  const own = displayedTitle(item);
   if (own) {
     // A title that names no record, on a row that HAS one, gets the record's
     // name beside it. Eight rows reading "Follow up with the new lead" cannot
@@ -452,6 +453,7 @@ export function sentenceTitled(item: WorklistItem): WorklistItem {
   const sentence = summarySentence({
     summary: item.title,
     summary_parts: item.summary_parts,
+    system_display: item.system_display,
   });
   return item.summary_parts && sentence ? { ...item, title: sentence } : item;
 }

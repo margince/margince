@@ -37,7 +37,7 @@ func (s *Service) WithPlanSight(sight PlanSight) *Service {
 // planFootprint builds the footprint of a's plan, with edited in place of the
 // staged call when the decision carries an edit.
 func (s *Service) planFootprint(ctx context.Context, a row, edited json.RawMessage) (*approvalplan.Footprint, error) {
-	proposal, err := editedProposal(a, edited, s.now())
+	proposal, err := editedProposal(ctx, a, edited, s.now())
 	if err != nil {
 		return nil, err
 	}

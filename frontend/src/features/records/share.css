@@ -51,6 +51,7 @@
 }
 
 .share-subject-list {
+  position: relative;
   list-style: none;
   margin: var(--space-2) 0 0;
   padding: 0;

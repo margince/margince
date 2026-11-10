@@ -128,7 +128,7 @@ func TestAnEditDuringTheBatchDoesNotAbortTheTaskCompletion(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	f := seedRetiredReviews(t, e)
-	editor, err := integration.OwnerConn(t).Begin(ctx)
+	editor, err := integration.FreshOwnerConn(t).Begin(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

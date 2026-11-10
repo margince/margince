@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -149,16 +150,16 @@ func TestAStagedCreateRefusesWhatItsHandlerWouldRefuse(t *testing.T) {
 // The summary is the whole of what a triaging human reads on the inbox row.
 func TestAGenericWriteSaysWhatItWouldSet(t *testing.T) {
 	english := summaryByLang[textlang.English]
-	line := describeGenericWrite(english, "Create a project", json.RawMessage(`{"name":"N","company_id":"o"}`))
+	line := describeGenericWrite(english, systemtext.Sentence("agent.createHead", systemtext.NounArgument("project")), json.RawMessage(`{"name":"N","company_id":"o"}`))
 	if !strings.Contains(line, "project") || !strings.Contains(line, "name") ||
 		!strings.Contains(line, "company_id") {
 		t.Errorf("summary %q names neither the record type nor the fields the call sets", line)
 	}
 
-	if got := describeGenericWrite(english, "Update a deal", json.RawMessage(`{}`)); got != "Update a deal" {
+	if got := describeGenericWrite(english, systemtext.Sentence("agent.updateHead", systemtext.NounArgument("deal")), json.RawMessage(`{}`)); got != "Update a deal" {
 		t.Errorf("an empty patch rendered %q, want the act alone rather than a dangling list", got)
 	}
-	if got := describeGenericWrite(english, "Update a deal", json.RawMessage(`not json`)); got != "Update a deal" {
+	if got := describeGenericWrite(english, systemtext.Sentence("agent.updateHead", systemtext.NounArgument("deal")), json.RawMessage(`not json`)); got != "Update a deal" {
 		t.Errorf("an unreadable patch rendered %q; the summary may not invent fields", got)
 	}
 
@@ -170,7 +171,7 @@ func TestAGenericWriteSaysWhatItWouldSet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("building the wide patch: %v", err)
 	}
-	if line := describeGenericWrite(english, "Update a contact", raw); !strings.Contains(line, "more") {
+	if line := describeGenericWrite(english, systemtext.Sentence("agent.updateHead", systemtext.NounArgument("contact")), raw); !strings.Contains(line, "more") {
 		t.Errorf("a %d-field patch rendered %q with no overflow marker, so the inbox line silently "+
 			"drops fields the call would set", len(wide), line)
 	}

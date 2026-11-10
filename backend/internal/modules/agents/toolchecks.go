@@ -8,7 +8,6 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"maps"
 	"slices"
 
@@ -82,32 +81,7 @@ func (r *Registry) grantedTo(ctx context.Context, spec mcp.ToolSpec) (mcp.ToolSp
 	kept := slices.DeleteFunc(slices.Clone(spec.Actions), func(a mcp.ToolAction) bool {
 		return !r.holdsChecks(p, a.Verb) || !r.inAreas(p, a.Verb)
 	})
-	if len(kept) == len(spec.Actions) {
-		return spec, true
-	}
-	if len(kept) == 0 {
-		return spec, false
-	}
-	// A router that picks its action by the arguments named has no enum to
-	// narrow. It is offered whole while any action is the caller's.
-	if spec.ActionField == "" {
-		return spec, true
-	}
-	hidden := hiddenActions(spec.Actions, kept)
-	spec.Actions = kept
-	schema, err := r.narrowedRouterSchema(spec.Name, spec.InputSchema, kept, hidden)
-	if err != nil {
-		// Offering the whole schema would advertise actions the caller cannot run.
-		slog.Warn("router schema could not be narrowed, so it is not offered", "tool", spec.Name, "err", err)
-		return spec, false
-	}
-	spec.InputSchema = schema
-	spec.Description = withoutSentencesNaming(spec.Description, hidden)
-	spec.Instead = withoutSentencesNaming(spec.Instead, hidden)
-	if spec.OutputSchema != nil {
-		spec.OutputSchema = targetsOutput(spec.Name, r.actionTargets(kept))
-	}
-	return spec, true
+	return r.withAvailableActions(spec, kept)
 }
 
 func (r *Registry) holdsChecks(p principal.Principal, verb string) bool {

@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // meetingSeriesSlotsDataTask keys each stored occurrence of a recurring
@@ -30,7 +31,7 @@ func meetingSeriesSlotsDataTask(pool *pgxpool.Pool) datatask.Task {
 	meetings := activities.NewStore(InstallationDB(pool))
 	return datatask.Task{
 		ID: "core/1793916347_meeting_series_slot_identities", Version: 1,
-		Title: "Keying recurring meetings by their slot in the series",
+		Title: systemtext.Literal("datatask.title.core.1793916347_meeting_series_slot_identities"),
 		Steps: []datatask.Step{{
 			Name: "rekey_series_slots", Limit: 200, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{Reason: "every calendar sync claims and retires the same meeting identities without an audit (activities.ClaimIdentity)"},

@@ -142,6 +142,9 @@ func pinStop(ctx context.Context, tx pgx.Tx, column stopSubjectColumn, stop ids.
 		return nil
 	}
 	hashes := addressHashes(addresses)
+	if err := storekit.LockStopAddresses(ctx, tx, addresses, hashes); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO communication_suppression
 		    (address, address_hash, address_key_id, kind, source, captured_by, decided_by_level, purpose_id,
@@ -168,6 +171,9 @@ func pinStop(ctx context.Context, tx pgx.Tx, column stopSubjectColumn, stop ids.
 // clearKeptStopAddresses empties the addresses of the stops that stay on the
 // anonymized record as evidence: a lifted one, and one with nothing to pin to.
 func clearKeptStopAddresses(ctx context.Context, tx pgx.Tx, column stopSubjectColumn, id ids.UUID) error {
+	if err := storekit.LockSubjectsStopAddresses(ctx, tx, id); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, fmt.Sprintf(`
 		UPDATE communication_suppression SET address = NULL, recorded_for_addresses = NULL
 		 WHERE %s = $1 AND (address IS NOT NULL OR recorded_for_addresses IS NOT NULL)`, column), id); err != nil {
@@ -227,6 +233,10 @@ func keepWithdrawalOn(ctx context.Context, tx pgx.Tx, addresses []string, withdr
 	if len(addresses) == 0 {
 		return nil
 	}
+	hashes := addressHashes(addresses)
+	if err := storekit.LockStopAddresses(ctx, tx, addresses, hashes); err != nil {
+		return err
+	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return err
@@ -235,7 +245,7 @@ func keepWithdrawalOn(ctx context.Context, tx pgx.Tx, addresses []string, withdr
 		INSERT INTO communication_suppression
 		    (address_hash, address_key_id, kind, source, captured_by, decided_by_level, recorded_at, recorded_through)
 		SELECT u.hash, $8, $2, $3, $4, $5, $6, $7 FROM unnest($1::text[]) AS u(hash)`,
-		addressHashes(addresses), commsauthz.ReasonObjection, sourceKeptFromWithdrawal, by,
+		hashes, commsauthz.ReasonObjection, sourceKeptFromWithdrawal, by,
 		string(commsauthz.LevelSubject), withdrawnAt, string(commsauthz.RecordedByMachine),
 		storekit.SuppressionKeyID()); err != nil {
 		return fmt.Errorf("keep the subject's marketing withdrawal on their addresses: %w", err)

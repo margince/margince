@@ -55,8 +55,9 @@ func TestADeadlineIsATimeoutAndACancelIsNot(t *testing.T) {
 	if got := classifyError(&timeoutError{}); got != sentinelTimeout {
 		t.Fatalf("an HTTP client timeout = %q", got)
 	}
-	if got := classifyError(fmt.Errorf("call: %w", context.Canceled)); got != "provider_error" {
-		t.Fatalf("cancel = %q", got)
+	if got := classifyError(fmt.Errorf("call: %w", context.Canceled)); got != sentinelCanceled {
+		t.Fatalf("cancel = %q, want %q: a caller that stopped waiting is neither a timeout nor a provider failure",
+			got, sentinelCanceled)
 	}
 }
 

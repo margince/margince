@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -421,21 +422,12 @@ func waitForBlockedOn(ctx context.Context, t *testing.T, probe pgx.Tx, holderPID
 // holder. pg_blocking_pids answers the question directly, so nothing here has
 // to reason about which lock shape Postgres reports mid-queue.
 //
-// The snapshot is cleared first because pg_stat_activity is materialized once
-// per transaction and cached until it ends: a probe running inside the holder's
-// long transaction would otherwise keep answering from the view it had before
-// the win's connection existed, and never see the waiter at all.
+// The probe runs inside the holder's own long transaction, where
+// pg_stat_activity would answer from the view it had before the win's
+// connection existed. QueuedBehind clears that snapshot per look.
 func blockedBy(ctx context.Context, probe pgx.Tx, holderPID int) (bool, error) {
-	if _, err := probe.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
-		return false, err
-	}
-	var blocked bool
-	err := probe.QueryRow(ctx, `
-		SELECT EXISTS (
-		  SELECT 1 FROM pg_stat_activity a
-		   WHERE a.datname = current_database() AND $1 = ANY (pg_blocking_pids(a.pid)))`,
-		holderPID).Scan(&blocked)
-	return blocked, err
+	queued, err := testdb.QueuedBehind(ctx, probe, int32(holderPID))
+	return queued > 0, err
 }
 
 // The race the row lock exists to close, forced rather than hoped for.

@@ -199,16 +199,12 @@ func isSystemRoleKey(key string) bool {
 	return false
 }
 
-// RequireMFA makes a second factor mandatory: a member without a confirmed
-// authenticator is admitted only to the MFA enrolment routes until they set one
-// up, the same confinement must_change_password uses for an operator-set
-// password. Defined and read on the same terms as RequireSSO, and it survives a
-// data reset for the same reason — a wipe clears customers, never a decision
-// about how members must sign in.
+// RequireMFA confines password sessions without a confirmed factor.
+// Provider sessions rely on the provider’s authentication policy.
 var RequireMFA = config.DefineStored(config.Spec[bool]{
 	Key:     "identity.require_mfa",
 	Env:     "MARGINCE_IDENTITY_REQUIRE_MFA",
 	Type:    config.Bool,
 	Default: config.Some(false),
-	Doc:     "Every member must use two-step sign-in.",
+	Doc:     "Password sign-in needs two-step sign-in; Google and Microsoft check their own sign-ins.",
 }, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})

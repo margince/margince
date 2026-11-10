@@ -111,8 +111,19 @@ type OIDCExchanger interface {
 // loginStateSignerAdapter satisfies this; identity never sees compose's HMAC
 // details.
 type OIDCStateSigner interface {
-	Sign(provider, clientID, nonce, codeVerifier string, ttl time.Duration) (token string)
-	Verify(token string) (provider, clientID, nonce, codeVerifier string, err error)
+	Sign(state OIDCLoginState, ttl time.Duration) (token string)
+	Verify(token string) (OIDCLoginState, error)
+}
+
+// OIDCLoginState is what the signed state cookie carries from /start to
+// /callback. ReturnToConsent is a flag and not an address, so a sign-in can
+// only land on the fixed consent path or the configured post-login page.
+type OIDCLoginState struct {
+	Provider        string
+	ClientID        string
+	Nonce           string
+	CodeVerifier    string
+	ReturnToConsent bool
 }
 
 const (
@@ -155,7 +166,7 @@ func clearLoginStateCookie(w http.ResponseWriter) {
 // StartOidcSignIn redirects to the provider's consent screen. Unconfigured
 // or unknown provider is a 404 — an authentically absent flow. The provider
 // parameter type is generated from crm.yaml's enumerated path parameter.
-func (h Handlers) StartOidcSignIn(w http.ResponseWriter, r *http.Request, providerParam crmcontracts.StartOidcSignInParamsProvider) {
+func (h Handlers) StartOidcSignIn(w http.ResponseWriter, r *http.Request, providerParam crmcontracts.StartOidcSignInParamsProvider, params crmcontracts.StartOidcSignInParams) {
 	provider := string(providerParam)
 	source, ok := h.oidcProviders[provider]
 	if !ok {
@@ -222,7 +233,10 @@ func (h Handlers) StartOidcSignIn(w http.ResponseWriter, r *http.Request, provid
 		return
 	}
 	challenge := sha256.Sum256([]byte(verifier))
-	token := h.stateSigner.Sign(provider, cfg.ClientID, nonce, verifier, oidcStateTTL)
+	token := h.stateSigner.Sign(OIDCLoginState{
+		Provider: provider, ClientID: cfg.ClientID, Nonce: nonce, CodeVerifier: verifier,
+		ReturnToConsent: params.Return != nil && *params.Return == crmcontracts.StartOidcSignInParamsReturnConsent,
+	}, oidcStateTTL)
 	setLoginStateCookie(w, token, oidcStateTTL)
 
 	q := url.Values{
@@ -256,9 +270,10 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 	// over r: the detached write inside logOidcFailure derives its own
 	// timeout from whichever ctx is handed to it, so this must be the same
 	// one every other step below already uses.
+	failTo := h.oidcRoutes.FailureURL
 	fail := func(ctx context.Context, reason string, cause error) {
 		h.logOidcFailure(ctx, provider, reason, cause)
-		http.Redirect(w, r, h.oidcRoutes.FailureURL, http.StatusFound)
+		http.Redirect(w, r, failTo, http.StatusFound)
 	}
 
 	source, ok := h.oidcProviders[provider]
@@ -269,6 +284,19 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 	if !h.oidcPerIP.Allow(httpserver.ClientIP(r)) {
 		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
 		return
+	}
+	var code, state string
+	if params.Code != nil {
+		code = *params.Code
+	}
+	if params.State != nil {
+		state = *params.State
+	}
+	// Read first so every later refusal of a consent-screen sign-in lands back on
+	// that screen. A state that does not verify cannot vouch for its own flag.
+	st, stateRefusal, stateErr := h.verifiedLoginState(r, provider, state)
+	if stateRefusal == "" && st.ReturnToConsent {
+		failTo = h.oidcRoutes.consentFailureURL()
 	}
 	// Checked on the CALLBACK too, not only at the start, and after the budget
 	// for the same reason it is there. A provider disabled while a browser was
@@ -306,14 +334,6 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 		return
 	}
 
-	var code, state string
-	if params.Code != nil {
-		code = *params.Code
-	}
-	if params.State != nil {
-		state = *params.State
-	}
-
 	// The cookie is read and VERIFIED before it is cleared, and before the
 	// `error` check below — both on purpose. This callback is a public GET,
 	// the cookie is SameSite=Lax (so it rides a cross-site top-level
@@ -325,14 +345,8 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 	// from Google would then fail "no state cookie" for a flow they never
 	// abandoned. Only a request whose cookie decrypts to a genuinely
 	// matching provider+nonce ever reaches the clear.
-	cookie, err := r.Cookie(oidcLoginCookie)
-	if err != nil {
-		fail(ctx, "no state cookie", nil)
-		return
-	}
-	stProvider, stClientID, stNonce, codeVerifier, err := h.stateSigner.Verify(cookie.Value)
-	if err != nil || stProvider != provider || stNonce != state {
-		fail(ctx, "state verification", err)
+	if stateRefusal != "" {
+		fail(ctx, stateRefusal, stateErr)
 		return
 	}
 	// The client the flow STARTED on. A stored app resolves per request, so an
@@ -342,7 +356,7 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 	// Its own failure marker, because "the app changed under an open sign-in"
 	// and "the state did not verify" call for different answers from whoever
 	// is reading the log.
-	if stClientID != p.Config.ClientID {
+	if st.ClientID != p.Config.ClientID {
 		fail(ctx, "the sign-in app changed while this flow was open", nil)
 		return
 	}
@@ -358,7 +372,7 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 		return
 	}
 
-	claims, reason, err := h.exchangeAndVerify(ctx, provider, p, code, codeVerifier)
+	claims, reason, err := h.exchangeAndVerify(ctx, provider, p, code, st.CodeVerifier)
 	if reason != "" {
 		fail(ctx, reason, err)
 		return
@@ -370,7 +384,21 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 		return
 	}
 	setSessionCookie(w, token)
-	http.Redirect(w, r, h.oidcRoutes.PostLoginURL, http.StatusFound)
+	http.Redirect(w, r, h.oidcRoutes.landingURL(st.ReturnToConsent), http.StatusFound)
+}
+
+// verifiedLoginState reads the login-state cookie and checks it belongs to this
+// provider's round trip. A non-empty refusal names why it does not.
+func (h Handlers) verifiedLoginState(r *http.Request, provider, state string) (st OIDCLoginState, refusal string, err error) {
+	cookie, err := r.Cookie(oidcLoginCookie)
+	if err != nil {
+		return OIDCLoginState{}, "no state cookie", err
+	}
+	st, err = h.stateSigner.Verify(cookie.Value)
+	if err != nil || st.Provider != provider || st.Nonce != state {
+		return OIDCLoginState{}, "state verification", err
+	}
+	return st, "", nil
 }
 
 // exchangeAndVerify redeems the authorization code and validates the ID

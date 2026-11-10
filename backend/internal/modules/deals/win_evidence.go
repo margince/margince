@@ -190,9 +190,10 @@ func ensureDetailWithinBound(detail *string) error {
 // signedAgreementFrom is the gate's one question, named so a test can read it.
 // The advance asks it under a lock (evidenceQuery) and the client's read asks
 // it without one (readEvidenceQuery). Both embed this text.
-const signedAgreementFrom = `
+var signedAgreementFrom = `
 			FROM contract c
 			JOIN attachment a ON a.contract_id = c.id
+            JOIN deal d ON d.id = c.deal_id AND ` + auth.ContractDealMatchesSQL("c", "d") + `
 			WHERE c.deal_id = $1
 			  AND c.archived_at IS NULL
 			  AND c.status <> 'draft'
@@ -203,7 +204,7 @@ const signedAgreementFrom = `
 
 // evidenceQuery is the advance's question: it locks what it finds, because the
 // check and the write share a transaction.
-const evidenceQuery = `
+var evidenceQuery = `
 		SELECT EXISTS (
 			SELECT 1` + signedAgreementFrom + `
 			FOR SHARE OF c, a
@@ -211,7 +212,7 @@ const evidenceQuery = `
 
 // readEvidenceQuery is the same question for a reader that writes nothing.
 // It takes no lock, because showing a form must not hold up an archive.
-const readEvidenceQuery = `
+var readEvidenceQuery = `
 		SELECT EXISTS (
 			SELECT 1` + signedAgreementFrom + `
 		)`

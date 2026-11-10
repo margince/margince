@@ -285,6 +285,9 @@ func (s *Store) suppressAdmittedTx(
 	if err != nil {
 		return err
 	}
+	if err := storekit.LockStopAddresses(ctx, tx, nil, kept); err != nil {
+		return err
+	}
 	// One row, or one per kept hash for an anonymized subject. Its addresses
 	// are gone, so the stop is pinned to their hashes, and a returning
 	// subject's new record is matched through them. The first row answers the id.

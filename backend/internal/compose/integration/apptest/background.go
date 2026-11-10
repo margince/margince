@@ -37,6 +37,8 @@ func AdminContext(t *testing.T, e *AppEnv, perms principal.Permissions) context.
 
 // FinishInputCheck records one completed nightly input check by a seat holding
 // perms, through the store's three writers in the order the checker uses them.
+// It reads both sources readiness needs, so "ready" is a verdict the scanner
+// itself could reach.
 func FinishInputCheck(t *testing.T, e *AppEnv, perms principal.Permissions) {
 	t.Helper()
 	admin := AdminContext(t, e, perms)
@@ -47,17 +49,17 @@ func FinishInputCheck(t *testing.T, e *AppEnv, perms principal.Permissions) {
 		if err != nil {
 			return err
 		}
-		if err := store.RecordCoverage(ctx, tx, run, assurance.SourceCoverage{
-			Source: "mail", State: assurance.CoverageChecked, CheckedThrough: &asOf,
-		}); err != nil {
-			return err
+		coverage := []assurance.SourceCoverage{
+			{Source: "mail", State: assurance.CoverageChecked, CheckedThrough: &asOf},
+			{Source: "offers", State: assurance.CoverageChecked, CheckedThrough: &asOf},
 		}
-		if err := store.RecordCoverage(ctx, tx, run, assurance.SourceCoverage{
-			Source: "offers", State: assurance.CoverageUnavailable,
-		}); err != nil {
-			return err
+		for _, read := range coverage {
+			if err := store.RecordCoverage(ctx, tx, run, read); err != nil {
+				return err
+			}
 		}
-		return store.FinishRun(ctx, tx, run, 1, 0, 0, assurance.StatusComplete, "ready")
+		ready := assurance.Readiness(coverage, nil, assurance.Config{})
+		return store.FinishRun(ctx, tx, run, 1, 0, 0, assurance.StatusComplete, ready)
 	}); err != nil {
 		t.Fatalf("recording a finished input check: %v", err)
 	}

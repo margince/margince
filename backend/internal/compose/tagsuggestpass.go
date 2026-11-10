@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/tagsuggest"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/collections"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -54,7 +55,7 @@ func NewTagSuggester(pool *pgxpool.Pool, brain completer, log *slog.Logger) *Tag
 // it: its links and the seats its attendance arm admits. A task's arm also reads
 // its source, but no task is citable. A limited audience is NULL.
 func tagSuggestReadersSQL(a string) string {
-	return `CASE WHEN ` + a + `.audience = 'workspace' THEN
+	return `CASE WHEN ` + auth.WorkspaceAudienceSQL(a) + ` THEN
 	  coalesce((SELECT string_agg(DISTINCT link, ',' ORDER BY link) FROM (
 	    SELECT l.entity_type || ':' || coalesce(l.contact_id, l.company_id, l.deal_id, l.lead_id, l.project_id)::text
 	      FROM activity_link l WHERE l.activity_id = ` + a + `.id) AS links(link)), '')

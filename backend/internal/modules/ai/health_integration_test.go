@@ -31,6 +31,17 @@ func rungHealthAfter(t *testing.T, logicalCalls ...[]Call) map[string]RungHealth
 	return rungHealthBoundTo(t, nil, logicalCalls...)
 }
 
+func TestCallerCancellationDoesNotReplaceTheProvidersLastOutcome(t *testing.T) {
+	rungs := rungHealthAfter(t,
+		[]Call{ladderRow(ids.NewV7(), 1, true, TierCheapCloud, "", "provider_error")},
+		[]Call{ladderRow(ids.NewV7(), 1, true, TierCheapCloud, "", sentinelCanceled)},
+	)
+	rung := rungs[string(TierCheapCloud)]
+	if rung.Calls != 1 || rung.Failures != 1 || rung.LastSentinel != "provider_error" || rung.Healthy() {
+		t.Fatalf("a caller cancellation changed provider health: %+v", rung)
+	}
+}
+
 // rungHealthBoundTo is rungHealthAfter with each tier in bound serving the
 // model bound names.
 func rungHealthBoundTo(t *testing.T, bound map[Tier]ModelRef, logicalCalls ...[]Call) map[string]RungHealth {

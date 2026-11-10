@@ -40,6 +40,7 @@ import { ContactRail } from "./contactrail";
 import { ContactSubtitle } from "./contactsubtitle";
 import { ContactLatestInbound } from "./contacttabs";
 import "./contact360.css";
+import { useDisabledCoreFeatures } from "../../lib/corefeatures";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
   navigateKeepingReturn,
@@ -56,7 +57,11 @@ import {
   useComposer,
 } from "./contactpage.drawers";
 import { ContactMarks } from "./contactpage.marks";
-import { ContactRecordTabs, ContactTabPanel } from "./contactpage.tabs";
+import {
+  ContactRecordTabs,
+  ContactTabPanel,
+  contactTabForFeatures,
+} from "./contactpage.tabs";
 
 export { runContactMomentAction } from "./contactpage.drawers";
 
@@ -92,8 +97,10 @@ function refusalsOf(
 
 export function ContactPageV2({
   id,
-  tab,
+  tab: addressedTab,
 }: Readonly<{ id: string; tab: ContactTab }>) {
+  const tab = contactTabForFeatures(addressedTab, useDisabledCoreFeatures());
+
   // Which message the drawer is showing. One drawer over the record, owned by
   // the page: the timeline and the rail both open into it, so a citation in
   // the aside and a row in the body lead to the same place.

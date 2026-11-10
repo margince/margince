@@ -12,13 +12,15 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 func mailCopiesDataTask(pool *pgxpool.Pool) datatask.Task {
 	store := activities.NewStore(InstallationDB(pool))
-	return datatask.Task{ID: "core/1794132000_fold_proven_mail_copies", Version: 1, Title: "Combining proven copies of imported mail", Steps: []datatask.Step{{
+	return datatask.Task{ID: "core/1794132000_fold_proven_mail_copies", Version: 1, Title: systemtext.Literal("datatask.title.core.1794132000_fold_proven_mail_copies"), Steps: []datatask.Step{{
 		Name: "fold_mail_copies", Limit: 50, MinLimit: 1, Audit: datatask.AuditPolicy{PerRecord: true}, Estimate: activities.CountMailCopies,
 		Batch: func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
 			after, err := datatask.UUIDCursor(in.Cursor)
@@ -51,7 +53,7 @@ func carryMailImportsTx(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.
 	arg := func(value any) string { args = append(args, value); return fmt.Sprintf("$%d", len(args)) }
 	duplicateArg, survivorArg := arg(duplicate), arg(survivor)
 	var conflict bool
-	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity a WHERE a.archived_at IS NULL AND a.restricted_at IS NULL AND a.id=`+duplicateArg+` AND (a.audience='selected' OR a.audience_reason='manual' OR (a.audience<>'workspace' AND NOT EXISTS (SELECT 1 FROM capture_import i WHERE i.activity_id=a.id)))) OR EXISTS (SELECT 1 FROM capture_import other JOIN capture_import kept ON kept.activity_id=`+survivorArg+` AND kept.user_id=other.user_id WHERE other.activity_id=`+duplicateArg+` AND NOT `+sameImportAccess+`)`, args...).Scan(&conflict)
+	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity a WHERE a.archived_at IS NULL AND a.restricted_at IS NULL AND a.id=`+duplicateArg+` AND (a.audience='selected' OR a.audience_reason='manual' OR (`+"NOT ("+auth.WorkspaceAudienceSQL("a")+")"+` AND NOT EXISTS (SELECT 1 FROM capture_import i WHERE i.activity_id=a.id)))) OR EXISTS (SELECT 1 FROM capture_import other JOIN capture_import kept ON kept.activity_id=`+survivorArg+` AND kept.user_id=other.user_id WHERE other.activity_id=`+duplicateArg+` AND NOT `+sameImportAccess+`)`, args...).Scan(&conflict)
 	if err != nil || conflict {
 		return false, err
 	}

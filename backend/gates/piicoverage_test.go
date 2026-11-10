@@ -180,8 +180,10 @@ var piiTables = map[string]piiHandling{
 	"activity": {
 		erasureWrite: true,
 		sarRead:      true,
+		sarWithholds: []string{"system_text"},
 		retentionErasures: []string{
 			"body = NULL",
+			"system_text = @system_text",
 			"raw = NULL",
 			// The tombstone is part of the erasure, not decoration beside it:
 			// the row keeps saying a meeting happened while saying nothing

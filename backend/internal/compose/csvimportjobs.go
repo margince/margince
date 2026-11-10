@@ -21,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -166,10 +167,11 @@ type importSliceWork func(ctx context.Context, slice importSlice) (bool, error)
 // importSlicer is what a commit slice and an undo slice share. That is the
 // actor, the run's write lock, the claim, and the record of a stopped slice.
 type importSlicer struct {
-	pool   *pgxpool.Pool
-	actors storedActor
-	log    *slog.Logger
-	now    func() time.Time
+	features corefeatures.Availability
+	pool     *pgxpool.Pool
+	actors   storedActor
+	log      *slog.Logger
+	now      func() time.Time
 }
 
 func newImportSlicer(pool *pgxpool.Pool, log *slog.Logger) importSlicer {
@@ -179,6 +181,7 @@ func newImportSlicer(pool *pgxpool.Pool, log *slog.Logger) importSlicer {
 // slice runs one slice of the attempt args names. A panic fails the attempt
 // with its cause, because the engine records only the failures it returns.
 func (s importSlicer) slice(ctx context.Context, args importJobArgs, work importSliceWork) (result importSliceResult, err error) {
+	ctx = s.features.Context(ctx)
 	db, err := workspaceJobDB(s.pool, args)
 	if err != nil {
 		return importSliceResult{}, err
@@ -302,6 +305,7 @@ func (s importSlicer) stop(
 // rather than leaving it queued.
 func addImportJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) {
 	slicer := newImportSlicer(pool, log)
+	slicer.features = corefeatures.New(cfg.DisabledCoreFeatures)
 	addDeclaredWorker[ImportValidateArgs](reg, &importValidateWorker{slicer: slicer, blobs: cfg.Blobstore, uploadCap: cfg.ImportUploadCap, readBudget: cfg.ImportTestReadBudget})
 	addDeclaredWorker[ImportCommitArgs](reg, &importCommitWorker{slicer: slicer, blobs: cfg.Blobstore, uploadCap: cfg.ImportUploadCap})
 	addDeclaredWorker[ImportUndoArgs](reg, &importUndoWorker{slicer: slicer})

@@ -88,6 +88,27 @@ export function WaitingReply({
   if (item.source === "meeting_follow_up") {
     return <MeetingFollowUp item={item} />;
   }
+  const prepared = replyIsTheMove(item)
+    ? {
+        // Not `moveLabel`: its "Read and reply" names a link to the record.
+        // This control opens the composer itself, so it says it drafts.
+        label: t(
+          item.source === "awaiting_reply"
+            ? "worklist.verb.draft_follow_up_now"
+            : "worklist.verb.draft_reply_now",
+        ),
+        intent: replyIntent(item, t, locale, readerZone),
+      }
+    : undefined;
+  // The server refused this reader the reply; it is drawn with its reason.
+  const refused = prepared && item.move?.blocked_reason;
+  if (refused) {
+    return (
+      <Button variant="ai" reason={refused}>
+        {prepared.label}
+      </Button>
+    );
+  }
   return (
     <ChannelReplyAction
       activityId={item.id}
@@ -95,23 +116,7 @@ export function WaitingReply({
       entityType={to.type}
       entityId={to.id}
       invitation={item.email_summary?.calendar_invitation}
-      prepared={
-        replyIsTheMove(item)
-          ? {
-              // THE WORD IS THE ACT, always. `moveLabel` says "Read and reply"
-              // where the move is only a LINK that may land on the record
-              // rather than the composer; this control mounts the composer
-              // itself, on every row it is drawn on, so the weaker word would
-              // under-promise what pressing it does.
-              label: t(
-                item.source === "awaiting_reply"
-                  ? "worklist.verb.draft_follow_up_now"
-                  : "worklist.verb.draft_reply_now",
-              ),
-              intent: replyIntent(item, t, locale, readerZone),
-            }
-          : undefined
-      }
+      prepared={prepared}
       // `worklistKey`, not `[worklistKey]`. The key IS the segment array, so
       // wrapping it once more asks for a query whose first segment is itself
       // an array — which nothing in the cache is, so the invalidation matched

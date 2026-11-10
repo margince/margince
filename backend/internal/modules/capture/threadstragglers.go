@@ -33,10 +33,12 @@ type SettledThread struct {
 // ThreadsWithUndecidedMessages lists the settled questions whose messages never
 // took the answer.
 //
-// The undecided predicate is the one stampSiblingsTx applies, restated here
-// deliberately rather than approximated: a selector that offered rows its
-// writer refuses would return the same page every tick and starve everything
-// behind it. Archived and restricted messages are excluded on both sides.
+// The undecided predicate is the part of stampSiblingsTx's predicate that every
+// verdict takes, restated here rather than approximated. A selector that
+// offered rows its writer refuses would return the same page every tick and
+// starve everything behind it. Archived and restricted messages are excluded
+// on both sides. Opened messages under a closing verdict are the thread-hold
+// data task's to find.
 func (s *ThreadVerdictStore) ThreadsWithUndecidedMessages(
 	ctx context.Context, limit int,
 ) ([]SettledThread, error) {
