@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { AppErrorBoundary } from "./errorboundary";
+import { createQueryClient } from "./queryclient";
 
 // Without a boundary the first throw in any screen takes the entire document
 // with it, and the reader gets a white page. These cases are the difference
@@ -29,11 +30,13 @@ function Fragile() {
   return <p>{SHELL}</p>;
 }
 
-function renderBoundary(child: ReactNode) {
+function renderBoundary(child: ReactNode, client = createQueryClient()) {
   return render(
-    <LocaleProvider initial="en">
-      <AppErrorBoundary>{child}</AppErrorBoundary>
-    </LocaleProvider>,
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <AppErrorBoundary>{child}</AppErrorBoundary>
+      </LocaleProvider>
+    </QueryClientProvider>,
   );
 }
 
@@ -101,11 +104,7 @@ describe("the app-level error boundary", () => {
       return <p>{data}</p>;
     }
 
-    renderBoundary(
-      <QueryClientProvider client={client}>
-        <FragileQuery />
-      </QueryClientProvider>,
-    );
+    renderBoundary(<FragileQuery />, client);
 
     expect(await screen.findByRole("button", { name: RETRY })).toBeTruthy();
 
@@ -113,6 +112,30 @@ describe("the app-level error boundary", () => {
     await user.click(screen.getByRole("button", { name: RETRY }));
 
     expect(await screen.findByText(SHELL)).toBeTruthy();
+  });
+
+  // A success the view cannot draw is held fresh by the cache, so a remount
+  // alone would serve it again and throw again.
+  it("reads again an answer the cache holds as a success", async () => {
+    const user = userEvent.setup();
+    const answers = [{}, {}, { rows: [SHELL] }];
+    const queryFn = vi.fn(() => Promise.resolve(answers.shift()));
+
+    function Rows() {
+      const { data } = useQuery({ queryKey: ["boundary-rows"], queryFn });
+      if (!data) return null;
+      // The property access a malformed answer fails, as a screen's would.
+      const rows = (data as { rows: string[] }).rows;
+      return <p>{rows.join(", ")}</p>;
+    }
+
+    renderBoundary(<Rows />);
+    await user.click(await screen.findByRole("button", { name: RETRY }));
+    await user.click(await screen.findByRole("button", { name: RETRY }));
+
+    expect(await screen.findByText(SHELL)).toBeTruthy();
+    // One read per Retry, and none on its own between them.
+    expect(queryFn).toHaveBeenCalledTimes(3);
   });
   // A deploy replaced the screen's code under a tab opened before it. Retrying
   // inside the page re-runs the failed import, so the boundary reloads instead.
