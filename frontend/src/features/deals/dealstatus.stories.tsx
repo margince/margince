@@ -1,15 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
-import {
-  expectNextBarHoldsItsText,
-  UNBROKEN_SUBJECT,
-} from "../../testing/nextbarchecks";
+import { expectNextBarHoldsItsText } from "../../testing/nextbarchecks";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
+import { UNBROKEN_SUBJECT } from "../../testing/unbrokentext";
 import { DealStatusCardPanel } from "./dealstatus";
 
 type WrittenBy = components["schemas"]["WrittenBy"];

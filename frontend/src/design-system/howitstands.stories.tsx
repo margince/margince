@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import { UTC_ZONE } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
+import { expectTextFits, UNBROKEN_SUBJECT } from "../testing/unbrokentext";
 import { StatCard } from "./atoms";
 import { HowItStands } from "./howitstands";
 import { StageLadder } from "./stageladder";
@@ -345,4 +346,29 @@ export const NarrowGerman: Story = {
       }
     />
   ),
+};
+
+/** The verdict's sentence quotes a subject with no space in it, and wraps
+ *  inside the sheet on a phone. */
+export const UnbrokenSentencePhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => (
+    <HowItStands
+      date="13 Aug"
+      verdict={{
+        word: "Watch",
+        sentence: `You owe Greta Schilling: ${UNBROKEN_SUBJECT}`,
+        tone: "warning",
+      }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const sentence = await within(canvasElement).findByText(
+      `You owe Greta Schilling: ${UNBROKEN_SUBJECT}`,
+    );
+    const sheet = sentence.closest(".standing-sheet-verdict");
+    if (!sheet) throw new Error("the sheet drew no verdict");
+    await expectTextFits(sentence, sheet.getBoundingClientRect());
+  },
 };

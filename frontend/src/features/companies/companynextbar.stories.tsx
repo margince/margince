@@ -2,16 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import type { components } from "../../api/schema";
-import {
-  expectNextBarHoldsItsText,
-  UNBROKEN_SUBJECT,
-} from "../../testing/nextbarchecks";
+import { expectNextBarHoldsItsText } from "../../testing/nextbarchecks";
 import {
   installFetchStub,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
+import { expectTextFits, UNBROKEN_SUBJECT } from "../../testing/unbrokentext";
 import { CompanyNextBar } from "./companynextbar";
 
 // The account's next bar when its moment is a promise we made. A later mail
@@ -74,7 +73,11 @@ function Bar({ data }: Readonly<{ data: Company360 }>) {
   });
   return (
     <StoryProviders>
-      <CompanyNextBar view={data} onOpenTasks={() => {}} />
+      <CompanyNextBar
+        view={data}
+        onOpenTasks={() => {}}
+        onOpenRecord={() => {}}
+      />
     </StoryProviders>
   );
 }
@@ -128,3 +131,36 @@ export const UnbrokenSubjectPhone: Story = {
   tags: ["uat-phone"],
 };
 export const UnbrokenSubjectWide: Story = { ...unbroken, tags: ["uat-wide"] };
+
+// The server names the verb, and a label with no space in it wraps inside the
+// button and the bar.
+export const UnbrokenVerbLabelPhone: Story = {
+  render: () => (
+    <Bar
+      data={view({
+        ...promise,
+        may_be_done: undefined,
+        recommended_action: {
+          kind: "open_record",
+          label: UNBROKEN_SUBJECT,
+          state: "available",
+          destination: {
+            surface: "record",
+            entity_type: "contact",
+            entity_id: "p-1",
+          },
+        },
+      })}
+    />
+  ),
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  play: async ({ canvasElement }) => {
+    const verb = await within(canvasElement).findByRole("button", {
+      name: UNBROKEN_SUBJECT,
+    });
+    const bar = verb.closest(".next-bar-row");
+    await expect(bar).not.toBeNull();
+    if (bar) await expectTextFits(verb, bar.getBoundingClientRect());
+  },
+};

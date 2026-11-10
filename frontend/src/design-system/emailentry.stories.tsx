@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { within } from "storybook/test";
 
 import type { components } from "../api/schema";
 import {
@@ -9,6 +10,7 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../testing/story-utils";
+import { expectTextFits, UNBROKEN_SUBJECT } from "../testing/unbrokentext";
 import { Button, Card } from "./atoms";
 import { EmailDetail } from "./emaildetail";
 import { EmailEntry, EmailFiles } from "./emailentry";
@@ -181,8 +183,8 @@ export const Reference: StoryObj = {
  * The drawer a row opens: the thread newest first. The newest message is
  * whole, the earlier one folded to its row, and actions sit under each message.
  */
-export const Detail: StoryObj = {
-  render: () => {
+function detail(summary: EmailSummary = BASE) {
+  return () => {
     installFetchStub({
       "GET /activities/11111111-1111-4111-8111-111111111111/email-presentation":
         () =>
@@ -190,7 +192,7 @@ export const Detail: StoryObj = {
             id: BASE.activity_id,
             lifecycle: "delivered",
             occurred_at: BASE.occurred_at,
-            summary: BASE,
+            summary,
             body: "Können wir Dienstag kurz sprechen? Die Laufzeit passt uns.\n\nViele Grüße\nAna Sommer\nBrandt Automotive",
             from: [
               { address: "ana@brandt.example", display_name: "Ana Sommer" },
@@ -242,6 +244,22 @@ export const Detail: StoryObj = {
         />
       </StoryProviders>
     );
+  };
+}
+
+export const Detail: StoryObj = { render: detail() };
+
+/** A subject with no space in it wraps inside the drawer's head on a phone. */
+export const DetailUnbrokenSubjectPhone: StoryObj = {
+  render: detail({ ...BASE, subject: UNBROKEN_SUBJECT }),
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  play: async ({ canvasElement }) => {
+    const page = within(canvasElement.ownerDocument.body);
+    const title = await page.findByRole("heading", { name: UNBROKEN_SUBJECT });
+    const head = title.closest(".emaildetail__head");
+    if (!head) throw new Error("the drawer drew no head");
+    await expectTextFits(title, head.getBoundingClientRect());
   },
 };
 

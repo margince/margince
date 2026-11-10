@@ -384,6 +384,8 @@ function ActionVerb({
     <span className="today-verb">
       <Button
         variant={variant}
+        // The server wrote the label, so it may be one long word that has to wrap.
+        className="btn-valuelabel"
         onClick={() => onAction(action)}
         disabled={files && gate.pending}
         reason={
