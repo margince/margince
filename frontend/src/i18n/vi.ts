@@ -21065,7 +21065,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.done.changeCount_other": "{count} thay đổi",
   "brief.done.steps": "Các thay đổi trên giao dịch này, mới nhất trước",
   "brief.done.title": "Margince đã làm giúp bạn",
-  "brief.done.seeAll_one": "Xem {count} giao dịch",
+  "brief.done.seeAll_one": "Xem tất cả {count} giao dịch",
   "brief.done.seeAll_other": "Xem tất cả {count} giao dịch",
   "brief.done.drawerTitle_one": "{count} giao dịch Margince đã thay đổi",
   "brief.done.drawerTitle_other": "{count} giao dịch Margince đã thay đổi",
