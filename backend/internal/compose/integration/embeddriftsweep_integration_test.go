@@ -167,3 +167,66 @@ func TestSweepWorkspaceEmbeddingDriftWaitsOutARunningReindex(t *testing.T) {
 		t.Fatalf("a mid-reindex sweep must not call the embedder, got %d calls", calls)
 	}
 }
+
+// TestSweepWorkspaceEmbeddingDriftNeverEnumeratesHeldMail proves the sweep's id
+// scan admits only what the backlog count admits (#10966). A `participants`
+// message with a body is not embeddable: the sweep must neither embed it nor
+// count it, and a second pass must make no model call at all — the old scan
+// enumerated such a message on every pass because it carried no embeddable
+// predicate, and only the per-row re-read kept it out of the index.
+func TestSweepWorkspaceEmbeddingDriftNeverEnumeratesHeldMail(t *testing.T) {
+	e := SetupSearch(t)
+	ctx := context.Background()
+	fake := ai.NewFakeClient()
+	embedder := fakeEmbedderNamed(t, fake, "model-current")
+	identity, _ := embedder.EmbedIdentity()
+	if err := e.Store.SeedBinding(ctx, identity); err != nil {
+		t.Fatalf("SeedBinding: %v", err)
+	}
+
+	open := e.SeedID(t, `
+		INSERT INTO activity (id, kind, subject, body, direction, source, captured_by, audience, audience_reason)
+		VALUES ($1, 'note', 'Open note', 'a phrase anyone may find', NULL, 'manual', 'human:x',
+		        'workspace', 'not_captured')`)
+	held := e.SeedID(t, `
+		INSERT INTO activity (id, kind, subject, body, direction, source_system, source_id,
+		                      source, captured_by, audience, audience_reason)
+		VALUES ($1, 'email', 'Held thread', 'a phrase nobody else may find', 'inbound',
+		        'gmail', 'held-sweep-1', 'gmail:held-sweep-1', 'connector:gmail', 'participants', 'pending_verdict')`)
+
+	pending, err := e.Store.EntitiesPending(ctx, identity)
+	if err != nil {
+		t.Fatalf("EntitiesPending: %v", err)
+	}
+	if pending != 1 {
+		t.Fatalf("test setup: EntitiesPending = %d, want 1 (the open note only)", pending)
+	}
+
+	before := len(fake.Calls())
+	healed, err := e.Store.SweepWorkspaceEmbeddingDrift(ctx, ids.From[ids.WorkspaceKind](e.WS), embedder)
+	if err != nil {
+		t.Fatalf("SweepWorkspaceEmbeddingDrift: %v", err)
+	}
+	if healed != 1 || len(fake.Calls())-before != 1 {
+		t.Fatalf("healed = %d with %d embed calls, want 1 and 1 (the open note only)", healed, len(fake.Calls())-before)
+	}
+	if got := e.activityEmbeddingModel(t, open); got != identity {
+		t.Fatalf("open note's embedding model = %q, want %q", got, identity)
+	}
+	if got := e.activityEmbeddingModel(t, held); got != "" {
+		t.Fatalf("held mail was embedded under %q; it must never enter semantic search", got)
+	}
+
+	// The backlog the status endpoint reports reaches zero with held mail
+	// still unembedded, and a second pass is free: nothing is owed forever.
+	if pending, err = e.Store.EntitiesPending(ctx, identity); err != nil || pending != 0 {
+		t.Fatalf("EntitiesPending after the sweep = %d (err %v), want 0", pending, err)
+	}
+	before = len(fake.Calls())
+	if healed, err = e.Store.SweepWorkspaceEmbeddingDrift(ctx, ids.From[ids.WorkspaceKind](e.WS), embedder); err != nil || healed != 0 {
+		t.Fatalf("second sweep healed = %d (err %v), want 0", healed, err)
+	}
+	if calls := len(fake.Calls()) - before; calls != 0 {
+		t.Fatalf("second sweep made %d embed calls, want 0", calls)
+	}
+}
