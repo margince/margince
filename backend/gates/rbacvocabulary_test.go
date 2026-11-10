@@ -158,7 +158,7 @@ func (e *extensibleEnum) UnmarshalYAML(node *yaml.Node) error {
 // malformed contract a parse failure instead of a silently empty enum.
 type contractSchemaFields struct {
 	Enum       []string             `yaml:"enum"`
-	Extensible extensibleEnum       `yaml:"x-extensible-enum"`
+	Extensible extensibleEnum       `yaml:"x-extensible-enum"` //nolint:tagliatelle // the contract spells this key with hyphens
 	Pattern    string               `yaml:"pattern"`
 	Required   []string             `yaml:"required"`
 	Properties map[string]yaml.Node `yaml:"properties"`
