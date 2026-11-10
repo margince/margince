@@ -26,12 +26,12 @@
     },
     {
       "model": "gemini-3.8-flash-medium@agy-cli",
-      "cases_with_a_committed_run": 70,
-      "cases_that_reached_their_bar": 69,
+      "cases_with_a_committed_run": 71,
+      "cases_that_reached_their_bar": 70,
       "cases_below_their_bar": 1,
-      "runs": 144,
-      "passed": 138,
-      "reliability": 0.9583333333333334,
+      "runs": 147,
+      "passed": 141,
+      "reliability": 0.9591836734693877,
       "cases_below_their_bar_named": [
         "case107_tidy_up_the_room"
       ],
@@ -39,12 +39,12 @@
     },
     {
       "model": "gpt-5.6-sol@codex-cli",
-      "cases_with_a_committed_run": 70,
-      "cases_that_reached_their_bar": 68,
+      "cases_with_a_committed_run": 71,
+      "cases_that_reached_their_bar": 69,
       "cases_below_their_bar": 2,
-      "runs": 147,
-      "passed": 136,
-      "reliability": 0.9251700680272109,
+      "runs": 150,
+      "passed": 139,
+      "reliability": 0.9266666666666666,
       "cases_below_their_bar_named": [
         "case107_tidy_up_the_room",
         "case86_tell_her_what_we_hold"
@@ -834,6 +834,24 @@
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
+          "search": "semantic"
+        },
+        {
+          "model": "gemini-3.8-flash-medium@agy-cli",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gemini:cli",
+          "search": "semantic"
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
           "search": "semantic"
         }
       ]
@@ -5072,6 +5090,18 @@
       "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gemini-3.8-flash-medium@agy-cli": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
           "runs": 3,
           "passed": 3,
           "reliability": 1,

@@ -18,8 +18,8 @@ The lane that produces its results is `make e2e-llm`; it is paid and opt-in, so 
 | Assistant | How we connected it | Jobs tried | Can I trust it? | In plain words |
 |---|---|---:|---|---|
 | `claude-sonnet-5-5` | Claude Code CLI | 71 of 71 | 🟢 Yes | Reliable on 71 of 71 jobs tried. |
-| `gemini-3.8-flash-medium` | Antigravity CLI | 70 of 71 | 🟡 Mostly | Reliable on 69 of 70 jobs tried; not yet: What a buyer reads in a deal room changes the moment it is saved,. |
-| `gpt-5.6-sol` | Codex CLI | 70 of 71 | 🟡 Mostly | Reliable on 68 of 70 jobs tried; not yet: What a buyer reads in a deal room changes the moment it is saved,; The privacy notice mails a contact, so it is a send. The action says to ask first, and this user has not said to send it. |
+| `gemini-3.8-flash-medium` | Antigravity CLI | 71 of 71 | 🟡 Mostly | Reliable on 70 of 71 jobs tried; not yet: What a buyer reads in a deal room changes the moment it is saved,. |
+| `gpt-5.6-sol` | Codex CLI | 71 of 71 | 🟡 Mostly | Reliable on 69 of 71 jobs tried; not yet: What a buyer reads in a deal room changes the moment it is saved,; The privacy notice mails a contact, so it is a send. The action says to ask first, and this user has not said to send it. |
 
 An assistant rated **Yes** was reliable on every job we tried. One rated **Mostly** was reliable on at least 80 in every 100, and one rated **Not yet** on fewer. We say **Not enough tested yet** when we tried it on under half the jobs.
 
@@ -103,7 +103,7 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | A team and a share are both change_access: create the team, add each | Create the team and add both colleagues<br>Share the record with the colleague named | ✅ | ✅ | ✅ |
 | A user's own hours and own language are theirs alone, so both go to | Own hours go to the own-settings tool<br>A user's language is their own | ✅ | ✅ | ✅ |
 | The FX sheet and the company logo are workspace setup, written | A rate goes on the sheet<br>A logo is setup, not an attachment | ✅ | ✅ | ✅ |
-| Log the meeting, add the task, and say what the work left waiting | Leave the rest of the queue out | ✅ | - | - |
+| Log the meeting, add the task, and say what the work left waiting | Leave the rest of the queue out | ✅ | ✅ | ✅ |
 
 ---
 
@@ -144,14 +144,10 @@ Which model drove the lane, and how it went. The tool columns further down are t
 | Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |
 |---|---:|---:|---:|---:|---:|
 | `claude-sonnet-5-5@claude-cli` | 71 of 71 | 71 | 0 | 144/147 | 98% |
-| `gemini-3.8-flash-medium@agy-cli` | 70 of 71 | 69 | 1 | 138/144 | 96% |
-| `gpt-5.6-sol@codex-cli` | 70 of 71 | 68 | 2 | 136/147 | 93% |
-
-> `gemini-3.8-flash-medium@agy-cli` has no committed run for 1 of 71 cases.
+| `gemini-3.8-flash-medium@agy-cli` | 71 of 71 | 70 | 1 | 141/147 | 96% |
+| `gpt-5.6-sol@codex-cli` | 71 of 71 | 69 | 2 | 139/150 | 93% |
 
 > `gemini-3.8-flash-medium@agy-cli` below its bar on: case107_tidy_up_the_room
-
-> `gpt-5.6-sol@codex-cli` has no committed run for 1 of 71 cases.
 
 > `gpt-5.6-sol@codex-cli` below its bar on: case107_tidy_up_the_room, case86_tell_her_what_we_hold
 
@@ -253,6 +249,8 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case116_the_rate_and_the_logo](../../e2e/llm/scenarios/case116-the-rate-and-the-logo.yaml) | `gemini-3.8-flash-medium@agy-cli` | pass | 2/2 | 2 | **1** A rate goes on the sheet<br>**2** A logo is setup, not an attachment | `change_settings` |
 | [case116_the_rate_and_the_logo](../../e2e/llm/scenarios/case116-the-rate-and-the-logo.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** A rate goes on the sheet<br>**2** A logo is setup, not an attachment | `change_settings` |
 | [case117_log_it_and_say_what_waits](../../e2e/llm/scenarios/case117-log-it-and-say-what-waits.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **2** Leave the rest of the queue out | `list_approvals` |
+| [case117_log_it_and_say_what_waits](../../e2e/llm/scenarios/case117-log-it-and-say-what-waits.yaml) | `gemini-3.8-flash-medium@agy-cli` | pass | 3/3 | 2 | **2** Leave the rest of the queue out | `list_approvals` |
+| [case117_log_it_and_say_what_waits](../../e2e/llm/scenarios/case117-log-it-and-say-what-waits.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **2** Leave the rest of the queue out | `list_approvals` |
 | [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | - |
 | [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | `gemini-3.8-flash-medium@agy-cli` | pass | 2/2 | 2 | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | - |
 | [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | - |
@@ -607,6 +605,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `change_my_settings` | 1.00 | 6 | `case102_shorter_in_my_voice`, `case109_show_my_times_in_lisbon`, `case115_my_hours_and_my_language` |
 | `change_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `draft_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
+| `list_approvals` | 1.00 | 3 | `case117_log_it_and_say_what_waits` |
 | `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
 | `read_context` | 1.00 | 2 | `case64_catch_me_up_and_the_brief` |
 | `read_attention` | 1.00 | 6 | `case49_who_can_introduce_us`, `case58_quiet_for_three_weeks`, `case61_what_have_i_promised` |
@@ -640,6 +639,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `change_lists` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `change_my_settings` | 1.00 | 6 | `case102_shorter_in_my_voice`, `case109_show_my_times_in_lisbon`, `case115_my_hours_and_my_language` |
 | `draft_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
+| `list_approvals` | 1.00 | 3 | `case117_log_it_and_say_what_waits` |
 | `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
 | `read_context` | 1.00 | 2 | `case64_catch_me_up_and_the_brief` |
 | `check_availability` | 1.00 | 2 | `case23_find_us_a_slot` |
