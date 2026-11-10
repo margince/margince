@@ -257,6 +257,9 @@ func (s *Store) logActivityAndReadTranscript(
 	if err := s.checkTaskRecommendation(ctx, tx, &in); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
+	if err := refuseOwnThreadKeys(in); err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
 	if err := threadOnReplyTx(ctx, tx, &in); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}

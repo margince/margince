@@ -196,9 +196,12 @@ func mailIdentityFrom(req crmcontracts.CreateActivityRequest, in *LogActivityInp
 	}
 	if req.InReplyToActivityId != nil {
 		if in.ThreadKey != "" {
-			return &ReplyFieldError{Field: fieldInReplyTo, Message: "Name the mail this replies to or its thread_key, not both."}
+			return &ThreadFieldError{Field: fieldInReplyTo, Message: "Name the mail this replies to or its thread_key, not both."}
 		}
 		in.InReplyTo = new(ids.UUID(*req.InReplyToActivityId))
+	}
+	if err := refuseOwnThreadKeys(*in); err != nil {
+		return err
 	}
 	// A message with no stated conversation starts one under its own id, which
 	// is what capture does for a mail that begins a thread.

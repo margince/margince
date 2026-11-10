@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -89,31 +90,43 @@ const earlierInboundMailSQL = `their.kind = 'email' AND their.direction = 'inbou
 // rule, so that mail is still owed after it. A call or a meeting is not asked:
 // a voicemail we left puts the move with them, whatever the badge says.
 //
-// The correspondent is the row's counterparty address or a contact it is
-// linked to; a hand-logged mail often carries only the link. The badge itself
-// decides (MailMovesFor), so a mail the reader may not read counts as not owed.
+// The correspondent is the row's counterparty address when it has one. A mail
+// with an address may be filed under contacts it was only copied to. So only a
+// row with no address, as a hand-logged mail often is, is matched by a contact
+// it is filed under. The newest earlier mail is chosen among those the reader may
+// open, so a mail kept from them can neither decide nor hide the move.
 func EarlierMailOwed(ctx context.Context, tx pgx.Tx, activityID ids.UUID, now time.Time) (bool, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	ours := arg(activityID)
+	readable, err := auth.ActivityContentClause(ctx, "their", arg)
+	if err != nil {
+		return false, err
+	}
 	var earlier ids.UUID
 	// One indexed probe per way of naming the correspondent. A single join on
 	// the address or a linked contact reads every inbound mail in the workspace.
-	err := tx.QueryRow(ctx, `
-		SELECT found.id FROM (
-		  SELECT their.id, their.occurred_at
+	// The content gate is applied once, over the candidates both probes found.
+	err = tx.QueryRow(ctx, fmt.Sprintf(`
+		WITH found AS (
+		  SELECT their.id
 		    FROM activity ours
 		    JOIN activity their ON their.counterparty_email = ours.counterparty_email
-		   WHERE ours.id = $1 AND ours.kind = 'email' AND ours.direction = 'outbound'
+		   WHERE ours.id = $%[1]d AND ours.kind = 'email' AND ours.direction = 'outbound'
 		     AND `+earlierInboundMailSQL+`
-		  UNION ALL
-		  SELECT their.id, their.occurred_at
+		  UNION
+		  SELECT their.id
 		    FROM activity ours
 		    JOIN activity_link ourl ON ourl.activity_id = ours.id AND ourl.contact_id IS NOT NULL
 		    JOIN activity_link theirs ON theirs.contact_id = ourl.contact_id
 		    JOIN activity their ON their.id = theirs.activity_id
-		   WHERE ours.id = $1 AND ours.kind = 'email' AND ours.direction = 'outbound'
-		     AND `+earlierInboundMailSQL+`
-		) found
-		ORDER BY found.occurred_at DESC, found.id DESC
-		LIMIT 1`, activityID).Scan(&earlier)
+		   WHERE ours.id = $%[1]d AND ours.kind = 'email' AND ours.direction = 'outbound'
+		     AND ours.counterparty_email IS NULL
+		     AND `+earlierInboundMailSQL+`)
+		SELECT their.id FROM found JOIN activity their ON their.id = found.id
+		 WHERE %[2]s
+		 ORDER BY their.occurred_at DESC, their.id DESC
+		 LIMIT 1`, ours, readable), args...).Scan(&earlier)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}

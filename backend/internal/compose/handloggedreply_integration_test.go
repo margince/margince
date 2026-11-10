@@ -14,12 +14,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"maps"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -92,8 +94,8 @@ func TestAHandLoggedReplyLeavesTheMoveWithUsWhereItLeavesTheMailOwed(t *testing.
 
 // logThroughCreate files one email through the create request mapping, the
 // door POST /v1/activities and the log_activity verb share. The request is
-// decoded from the JSON a caller sends.
-func (o *owedEnv) logThroughCreate(ctx context.Context, t *testing.T, contact ids.UUID, direction, subject string, at time.Time, replyTo *ids.UUID) (ids.UUID, error) {
+// decoded from the JSON a caller sends; extra adds or replaces its fields.
+func (o *owedEnv) logThroughCreate(ctx context.Context, t *testing.T, contact ids.UUID, direction, subject string, at time.Time, replyTo *ids.UUID, extra ...map[string]any) (ids.UUID, error) {
 	t.Helper()
 	body := map[string]any{
 		"kind": "email", "direction": direction, "subject": subject, "source": "manual",
@@ -102,6 +104,9 @@ func (o *owedEnv) logThroughCreate(ctx context.Context, t *testing.T, contact id
 	}
 	if replyTo != nil {
 		body["in_reply_to_activity_id"] = replyTo.String()
+	}
+	for _, fields := range extra {
+		maps.Copy(body, fields)
 	}
 	raw, err := json.Marshal(body)
 	if err != nil {
@@ -227,22 +232,144 @@ func TestAReplyIsRefusedForAMailItCannotJoin(t *testing.T) {
 		RowScope: principal.RowScopeAll,
 		Objects:  map[string]principal.ObjectGrant{"activity": {Read: true, Create: true}, "contact": {Read: true}},
 	})
+	// A mail from Pat's address, filed under Pat.
+	addressed, err := o.logThroughCreate(o.reader(), t, pat, "inbound", "Our order", at, nil,
+		map[string]any{"participants": map[string]any{"from": "pat@refused.example", "to": []string{o.seat}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	toSam := map[string]any{"participants": map[string]any{"from": o.seat, "to": []string{"sam@other.example"}}}
+	toPat := map[string]any{"participants": map[string]any{"from": o.seat, "to": []string{"pat@refused.example"}}}
 	for _, c := range []struct {
 		name    string
 		ctx     context.Context
 		contact ids.UUID
 		replyTo ids.UUID
+		extra   map[string]any
 	}{
-		{"a mail the caller cannot read", colleague, pat, private},
-		{"a note", o.reader(), pat, ids.UUID(noted.Id)},
-		{"another correspondent's mail", o.reader(), sam, theirs},
+		{"a mail the caller cannot read", colleague, pat, private, nil},
+		{"a note", o.reader(), pat, ids.UUID(noted.Id), nil},
+		{"another correspondent's mail", o.reader(), sam, theirs, nil},
+		{"an address-less mail answered to another address", o.reader(), pat, theirs, toSam},
+		{"the same address filed under another contact", o.reader(), sam, addressed, toPat},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			_, err := o.logThroughCreate(c.ctx, t, c.contact, "outbound", "Re: pricing", at.Add(time.Hour), &c.replyTo)
-			var refused *activities.ReplyFieldError
+			extra := []map[string]any{}
+			if c.extra != nil {
+				extra = append(extra, c.extra)
+			}
+			_, err := o.logThroughCreate(c.ctx, t, c.contact, "outbound", "Re: pricing", at.Add(time.Hour), &c.replyTo, extra...)
+			var refused *activities.ThreadFieldError
 			if !errors.As(err, &refused) || refused.Field != "in_reply_to_activity_id" {
 				t.Fatalf("logging a reply to %s = %v, want a refusal naming in_reply_to_activity_id", c.name, err)
 			}
 		})
+	}
+}
+
+// A caller may not state a thread key in the form only a hand-logged mail
+// starts. Both the create mapping and the store every writer calls refuse it.
+func TestAStatedHandLoggedThreadKeyIsRefused(t *testing.T) {
+	o := setupOwed(t)
+	pat := o.contact(t, "Pat Stated", "pat@stated.example")
+	at := o.now.Add(-time.Hour)
+	stolen := "logged:" + ids.NewV7().String()
+	for field, value := range map[string]string{"thread_key": stolen, "rfc_message_id": stolen} {
+		t.Run(field+" on the create request", func(t *testing.T) {
+			_, err := o.logThroughCreate(o.reader(), t, pat, "outbound", "Re: pricing", at, nil, map[string]any{field: value})
+			var refused *activities.ThreadFieldError
+			if !errors.As(err, &refused) || refused.Field != field {
+				t.Fatalf("stating %s %q = %v, want a refusal naming %s", field, value, err, field)
+			}
+		})
+	}
+	for field, in := range map[string]activities.LogActivityInput{
+		"thread_key":     {ThreadKey: stolen},
+		"rfc_message_id": {RFCMessageID: stolen},
+	} {
+		t.Run(field+" on the store", func(t *testing.T) {
+			subject, out := "Re: pricing", "outbound"
+			in.Kind, in.Subject, in.Direction, in.OccurredAt = "email", &subject, &out, &at
+			in.Links = []activities.ActivityLinkInput{{EntityType: "contact", EntityID: pat}}
+			_, _, err := o.e.Activities.LogActivity(o.reader(), in)
+			var refused *activities.ThreadFieldError
+			if !errors.As(err, &refused) || refused.Field != field {
+				t.Fatalf("a writer stating %s = %v, want a refusal naming %s", field, err, field)
+			}
+		})
+	}
+}
+
+// Our mail to Alice, copying Bob, is matched with Alice's mail by its address.
+// Bob's newer mail is filed under the same reply and must not decide it.
+func TestACopiedContactsMailDoesNotDecideTheMove(t *testing.T) {
+	o := setupOwed(t)
+	alice := o.contact(t, "Alice Asked", "alice@cc.example")
+	bob := o.contact(t, "Bob Copied", "bob@cc.example")
+	start := o.now.Add(-3 * time.Hour)
+	from := func(address string) map[string]any {
+		return map[string]any{"participants": map[string]any{"from": address, "to": []string{o.seat}}}
+	}
+	alicesMail, err := o.logThroughCreate(o.reader(), t, alice, "inbound", "Our order", start, nil, from("alice@cc.example"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	judge := principal.WithActor(o.e.Admin(), o.classifier())
+	if _, err := o.e.Activities.SetOwedVerdict(judge, alicesMail, activities.OwedVerdictInformsUs, "prompts-test", o.now); err != nil {
+		t.Fatalf("judging Alice's mail: %v", err)
+	}
+	if _, err := o.logThroughCreate(o.reader(), t, bob, "inbound", "Separately", start.Add(time.Hour), nil, from("bob@cc.example")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := o.logThroughCreate(o.reader(), t, alice, "outbound", "Re: Our order", start.Add(2*time.Hour), nil, map[string]any{
+		"participants": map[string]any{"from": o.seat, "to": []string{"alice@cc.example"}, "cc": []string{"bob@cc.example"}},
+		"links": []map[string]any{
+			{"entity_type": "contact", "entity_id": alice.String()},
+			{"entity_type": "contact", "entity_id": bob.String()},
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	latest, err := o.e.Activities.LatestInbound(o.reader(), "contact", alice)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if latest.LastExchange == nil || latest.LastExchange.WhoseMove == crmcontracts.LastExchangeWhoseMoveUs {
+		t.Fatal("Alice's last exchange says the move is ours because of Bob's mail, which was only copied on the reply")
+	}
+}
+
+// A newer mail the reader may not open neither decides the move nor hides an
+// older mail they can read that is still owed.
+func TestAMailTheReaderCannotOpenDoesNotHideAnOwedOne(t *testing.T) {
+	o := setupOwed(t)
+	pat := o.contact(t, "Pat Private", "pat@private.example")
+	start := o.now.Add(-3 * time.Hour)
+	from := map[string]any{"participants": map[string]any{"from": "pat@private.example", "to": []string{o.seat}}}
+	if _, err := o.logThroughCreate(o.reader(), t, pat, "inbound", "Can we talk pricing?", start, nil, from); err != nil {
+		t.Fatal(err)
+	}
+	colleague := o.e.As(o.e.Rep2, nil, integration.AdminPerms)
+	private, err := o.logThroughCreate(colleague, t, pat, "inbound", "Between us", start.Add(time.Hour), nil, from)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `UPDATE activity SET audience = 'participants' WHERE id = $1`, private)
+		return err
+	}); err != nil {
+		t.Fatalf("keeping the colleague's mail to its participants: %v", err)
+	}
+	if _, err := o.logThroughCreate(o.reader(), t, pat, "outbound", "Re: pricing", start.Add(2*time.Hour), nil, map[string]any{
+		"participants": map[string]any{"from": o.seat, "to": []string{"pat@private.example"}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	latest, err := o.e.Activities.LatestInbound(o.reader(), "contact", pat)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if latest.LastExchange == nil || latest.LastExchange.WhoseMove != crmcontracts.LastExchangeWhoseMoveUs {
+		t.Fatal("a mail the reader cannot open hid the older mail they can read, which is still owed")
 	}
 }
