@@ -150,10 +150,7 @@ func TestConcurrentFirstGrantsStillRecordAnAccountChange(t *testing.T) {
 	if _, err := gate.Exec(ctx, `LOCK TABLE capture_connection IN SHARE MODE`); err != nil {
 		t.Fatal(err)
 	}
-	application := "capture-first-grants-" + ids.NewV7().String()
-	config := pool.Config()
-	config.ConnConfig.RuntimeParams["application_name"] = application
-	grantPool, err := testdb.OwnPoolFromConfig(ctx, config)
+	grantPool, err := testdb.OwnPoolFromConfig(ctx, pool.Config())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,16 +170,13 @@ func TestConcurrentFirstGrantsStillRecordAnAccountChange(t *testing.T) {
 		})
 	}
 	t.Cleanup(func() { cancel(); unblock(); finished.Wait() })
+	gatePID := int32(owner.PgConn().PID())
 	for {
-		if _, err := gate.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
+		blocked, err := testdb.QueuedBehind(ctx, owner, gatePID)
+		if err != nil {
 			t.Fatal(err)
 		}
-		var blocked int
-		if err := gate.QueryRow(ctx, `SELECT count(*) FROM pg_stat_activity
- WHERE application_name=@application AND cardinality(pg_blocking_pids(pid))>0`, pgx.NamedArgs{"application": application}).Scan(&blocked); err != nil {
-			t.Fatal(err)
-		}
-		if blocked == 2 {
+		if blocked >= 2 {
 			break
 		}
 		select {

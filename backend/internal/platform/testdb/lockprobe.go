@@ -163,18 +163,50 @@ func AwaitReturnWithoutWaiting(t *testing.T, conn *pgx.Conn, pid int32, racerRet
 				return true, nil
 			default:
 			}
-			if _, err := conn.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
-				return false, fmt.Errorf("clearing the stats snapshot before probing backend %d: %w", pid, err)
-			}
-			var waiting bool
-			err := conn.QueryRow(ctx, `SELECT cardinality(pg_blocking_pids($1)) > 0`, pid).Scan(&waiting)
-			return waiting, err
+			return Waiting(ctx, conn, pid)
 		})
 	select {
 	case <-racerReturned:
 	default:
 		t.Fatalf("%s waited on a lock instead of returning", racer)
 	}
+}
+
+// QueuedOnAdvisoryKeys reports whether a session waits on an advisory lock
+// taken for one of keys, behind a session that holds that lock in heldMode.
+// Keys are hashed with hashtextextended(key, 0), as the stores take them.
+func QueuedOnAdvisoryKeys(ctx context.Context, conn Prober, keys []string, heldMode string) (bool, error) {
+	if _, err := conn.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
+		return false, fmt.Errorf("clearing the stats snapshot before probing the advisory locks: %w", err)
+	}
+	var queued bool
+	if err := conn.QueryRow(ctx, `
+		SELECT EXISTS (
+		  SELECT 1 FROM pg_locks waiting JOIN pg_locks held
+		    ON (held.locktype, held.database, held.classid, held.objid, held.objsubid)
+		     = (waiting.locktype, waiting.database, waiting.classid, waiting.objid, waiting.objsubid)
+		 WHERE waiting.locktype = 'advisory' AND NOT waiting.granted
+		   AND held.granted AND held.mode = $2
+		   AND held.pid = ANY(pg_blocking_pids(waiting.pid))
+		   AND waiting.database = (SELECT oid FROM pg_database WHERE datname = current_database())
+		   AND ((waiting.classid::bigint << 32) | (waiting.objid::bigint & 4294967295))
+		       = ANY(ARRAY(SELECT hashtextextended(k, 0) FROM unnest($1::text[]) AS k)))`,
+		keys, heldMode).Scan(&queued); err != nil {
+		return false, fmt.Errorf("probing the advisory locks for %d key(s): %w", len(keys), err)
+	}
+	return queued, nil
+}
+
+// Waiting reports whether backend pid waits on a lock another session holds.
+func Waiting(ctx context.Context, conn Prober, pid int32) (bool, error) {
+	if _, err := conn.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
+		return false, fmt.Errorf("clearing the stats snapshot before probing backend %d: %w", pid, err)
+	}
+	var waiting bool
+	if err := conn.QueryRow(ctx, `SELECT cardinality(pg_blocking_pids($1)) > 0`, pid).Scan(&waiting); err != nil {
+		return false, fmt.Errorf("probing whether backend %d waits on a lock: %w", pid, err)
+	}
+	return waiting, nil
 }
 
 // AwaitQueuedBehind returns once n sessions wait behind holder. Scoped to that

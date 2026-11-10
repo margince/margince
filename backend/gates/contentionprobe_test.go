@@ -51,7 +51,6 @@ import (
 	"go/printer"
 	"go/token"
 	"io/fs"
-	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -365,25 +364,6 @@ func TestAPauseThePlannerMaySkipIsRefused(t *testing.T) {
 	}
 }
 
-// privateProbeFiles are the files outside testdb that still write their own
-// pg_blocking_pids query, each a second answer to testdb.QueuedBehind's
-// question. Some read the waiting pid rather than a count, which that
-// function does not answer, so they need a reader beside it.
-//
-// The list only shrinks. Convert a file and remove it here; a file not on the
-// list cannot add a copy without this gate asking why.
-var privateProbeFiles = []string{
-	"internal/compose/filterpreviewpages_integration_test.go",
-	"internal/compose/graphhistoryinsertedrow_integration_test.go",
-	"internal/compose/mergecarryraces_integration_test.go",
-	"internal/compose/partyadmissionrace_integration_test.go",
-	"internal/compose/webhookerasurerace_integration_test.go",
-	"internal/modules/activities/domainevidence_integration_test.go",
-	"internal/modules/capture/backfillbindingorder_integration_test.go",
-	"internal/modules/introductions/store_integration_test.go",
-	"internal/modules/webhooks/deliverysendhold_integration_test.go",
-}
-
 // sharedProbeHome is where asking pg_blocking_pids belongs: the one probe, and
 // the gates that hold it.
 func sharedProbeHome(path string) bool {
@@ -392,44 +372,63 @@ func sharedProbeHome(path string) bool {
 		filepath.Dir(path) == "gates"
 }
 
-// TestNoNewPrivateContentionProbe counts the files that ask pg_blocking_pids
-// outside the one probe, so a new copy cannot arrive unremarked.
+// TestNoNewPrivateContentionProbe fails on a file that asks pg_blocking_pids
+// outside the one probe, and on a probe home that no longer asks it.
 //
-// It counts files, not queries, because a file is what a reader converts. The
-// files come from the tree rather than a list, so a copy under a name nobody
-// thought of is counted too.
+// The files come from the tree rather than a list, so a copy under a name
+// nobody thought of is found too.
 func TestNoNewPrivateContentionProbe(t *testing.T) {
 	t.Parallel()
+	var home []string
 	owners := scanTrees(t, func(path string, file *ast.File) []string {
-		if sharedProbeHome(path) {
+		if !slices.ContainsFunc(file.Decls, asksBlockingPids) {
 			return nil
 		}
-		if slices.ContainsFunc(file.Decls, asksBlockingPids) {
-			return []string{path}
+		if sharedProbeHome(path) {
+			home = append(home, path)
+			return nil
 		}
-		return nil
+		return []string{path}
 	})
-	pinned := map[string]bool{}
-	for _, path := range privateProbeFiles {
-		pinned[filepath.FromSlash(path)] = true
+	if !slices.ContainsFunc(home, func(path string) bool { return strings.Contains(path, filepath.Join("platform", "testdb")) }) {
+		t.Fatalf("no file under platform/testdb asks %s. The probe moved, so move sharedProbeHome with it.", blockingPidsProbe)
 	}
-	var unpinned []string
-	for _, path := range owners {
-		if !pinned[path] {
-			unpinned = append(unpinned, path)
-		}
-		delete(pinned, path)
-	}
-	sort.Strings(unpinned)
-	if len(unpinned) > 0 {
-		t.Fatalf(`%d files write their own %s query and are not in privateProbeFiles:
+	if len(owners) > 0 {
+		t.Fatalf(`%d files write their own %s query:
   %s
-testdb.QueuedBehind counts the whole queue behind a holder, after clearing the
-stats snapshot, and testdb.AwaitQueuedBehind waits on it. Wait through those
-instead.`, len(unpinned), blockingPidsProbe, strings.Join(unpinned, "\n  "))
+Wait through testdb.AwaitQueuedBehind, or ask once through testdb.QueuedBehind,
+WaiterBehind, Waiting or QueuedOnAdvisoryKeys. A second copy of the query
+drifts from the first. If none of them asks your question, add one there.`,
+			len(owners), blockingPidsProbe, strings.Join(owners, "\n  "))
 	}
-	for _, path := range slices.Sorted(maps.Keys(pinned)) {
-		t.Errorf("%s no longer writes its own probe. Remove it from privateProbeFiles", filepath.ToSlash(path))
+}
+
+// TestAPrivateContentionProbeIsFound seeds the shapes a copy of the probe
+// takes. BLOCKERS keeps this file's own literals out of the census.
+func TestAPrivateContentionProbeIsFound(t *testing.T) {
+	t.Parallel()
+	cases := map[string]struct {
+		query string
+		found bool
+	}{
+		"a queue read":           {"`SELECT count(*) FROM pg_stat_activity WHERE $1 = ANY(BLOCKERS(pid))`", true},
+		"a backend's own wait":   {"`SELECT cardinality(BLOCKERS($1)) > 0`", true},
+		"split over a +":         {`"SELECT 1 FROM pg_stat_activity WHERE " + "$1 = ANY(BLOCKERS(pid))"`, true},
+		"in upper case":          {"`SELECT PG_BLOCKING_PIDS($1)`", true},
+		"an unrelated statement": {"`SELECT pg_backend_pid()`", false},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			source := "package probe\nfunc poll() { query(" + strings.ReplaceAll(c.query, "BLOCKERS", blockingPidsProbe) + ") }\n"
+			file, err := parser.ParseFile(token.NewFileSet(), "probe.go", source, parser.SkipObjectResolution)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := slices.ContainsFunc(file.Decls, asksBlockingPids); got != c.found {
+				t.Fatalf("found = %v, want %v for %s", got, c.found, c.query)
+			}
+		})
 	}
 }
 
