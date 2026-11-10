@@ -32369,6 +32369,13 @@ components:
               description: |-
                 The step an `add_task` writes, prepared here as the exact body `POST /tasks` takes
                 — subject, and the record it hangs on. Present on every `add_task`, null otherwise.
+            blocked_reason:
+              type: string
+              description: |-
+                Present when this reader may not take the action, and says why in the reader's
+                language. A client draws the button disabled with this sentence. `draft_reply`
+                and `add_task` write an activity, so a seat without `activity.create`, or a
+                seat that may not write at all, gets one.
     Company360SinceLastVisit:
       type: object
       description: |-
@@ -34437,6 +34444,14 @@ components:
             rules chose it. Send it to `POST /deals/{id}/move/dismiss` to set this move aside;
             the set-aside lifts when the card names a different move. Absent on a move with
             nothing to do (`none`).
+        blocked_reason:
+          type: string
+          description: |-
+            Present when this reader may not take the move, and says why in the reader's
+            language. A client draws the verb disabled with this sentence. `draft_email`
+            and `create_task` write an activity, so a seat without `activity.create`, or a
+            seat that may not write at all, gets one. The stored card never carries it; it
+            is set for each reader.
       additionalProperties: false
     RecommendationReceipt:
       type: object
@@ -54366,6 +54381,13 @@ components:
           description: |-
             What the verb's own endpoint needs, in that endpoint's spelling — the subject
             and links for `create_task`, the provider for `reconnect`.
+        blocked_reason:
+          type: string
+          description: |-
+            Present when this reader may not take the verb, and says why in the reader's
+            language. A client draws the verb disabled with this sentence. `draft_reply`,
+            `draft_email` and `create_task` write an activity, so a seat without
+            `activity.create`, or a seat that may not write at all, gets one.
     WorklistBatch:
       type: object
       description: |-

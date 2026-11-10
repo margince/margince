@@ -47865,6 +47865,13 @@ components:
                 Writing it is still the rep's move: this is a prepared body, not a staged row, and
                 nothing exists until they press the button. The write goes through the same
                 governed endpoint the task form uses, so it is theirs, audited and undoable.
+            blocked_reason:
+              type: string
+              description: |
+                Present when this reader may not take the action, and says why in the reader's
+                language. A client draws the button disabled with this sentence. `draft_reply`
+                and `add_task` write an activity, so a seat without `activity.create`, or a
+                seat that may not write at all, gets one.
 
     Company360SinceLastVisit:
       type: object
@@ -50564,6 +50571,14 @@ components:
             rules chose it. Send it to `POST /deals/{id}/move/dismiss` to set this move aside;
             the set-aside lifts when the card names a different move. Absent on a move with
             nothing to do (`none`).
+        blocked_reason:
+          type: string
+          description: |
+            Present when this reader may not take the move, and says why in the reader's
+            language. A client draws the verb disabled with this sentence. `draft_email`
+            and `create_task` write an activity, so a seat without `activity.create`, or a
+            seat that may not write at all, gets one. The stored card never carries it; it
+            is set for each reader.
       additionalProperties: false
 
     RecommendationReceipt:
@@ -78228,6 +78243,13 @@ components:
             place to restate five request bodies. The producer fills what the verb it
             chose requires; a client that does not recognize a verb draws nothing and so
             never reads these.
+        blocked_reason:
+          type: string
+          description: |
+            Present when this reader may not take the verb, and says why in the reader's
+            language. A client draws the verb disabled with this sentence. `draft_reply`,
+            `draft_email` and `create_task` write an activity, so a seat without
+            `activity.create`, or a seat that may not write at all, gets one.
 
     WorklistBatch:
       type: object
