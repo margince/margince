@@ -1047,6 +1047,30 @@ func (e EmailAccessStatus) Valid() bool {
 	}
 }
 
+// Defines values for EmailCalendarInvitationResponse.
+const (
+	EmailCalendarInvitationResponseAccepted    EmailCalendarInvitationResponse = "accepted"
+	EmailCalendarInvitationResponseDeclined    EmailCalendarInvitationResponse = "declined"
+	EmailCalendarInvitationResponseNeedsAction EmailCalendarInvitationResponse = "needs_action"
+	EmailCalendarInvitationResponseTentative   EmailCalendarInvitationResponse = "tentative"
+)
+
+// Valid indicates whether the value is a known member of the EmailCalendarInvitationResponse enum.
+func (e EmailCalendarInvitationResponse) Valid() bool {
+	switch e {
+	case EmailCalendarInvitationResponseAccepted:
+		return true
+	case EmailCalendarInvitationResponseDeclined:
+		return true
+	case EmailCalendarInvitationResponseNeedsAction:
+		return true
+	case EmailCalendarInvitationResponseTentative:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EmailDeliveryState.
 const (
 	Bounced EmailDeliveryState = "bounced"
@@ -1112,22 +1136,22 @@ func (e EmailSummaryMove) Valid() bool {
 
 // Defines values for MeetingResponse.
 const (
-	Accepted    MeetingResponse = "accepted"
-	Declined    MeetingResponse = "declined"
-	NeedsAction MeetingResponse = "needs_action"
-	Tentative   MeetingResponse = "tentative"
+	MeetingResponseAccepted    MeetingResponse = "accepted"
+	MeetingResponseDeclined    MeetingResponse = "declined"
+	MeetingResponseNeedsAction MeetingResponse = "needs_action"
+	MeetingResponseTentative   MeetingResponse = "tentative"
 )
 
 // Valid indicates whether the value is a known member of the MeetingResponse enum.
 func (e MeetingResponse) Valid() bool {
 	switch e {
-	case Accepted:
+	case MeetingResponseAccepted:
 		return true
-	case Declined:
+	case MeetingResponseDeclined:
 		return true
-	case NeedsAction:
+	case MeetingResponseNeedsAction:
 		return true
-	case Tentative:
+	case MeetingResponseTentative:
 		return true
 	default:
 		return false
@@ -2506,6 +2530,23 @@ type DealLastEmailDirection string
 // would branch on and never reach.
 type EmailAccessStatus string
 
+// EmailCalendarInvitation The reader's own answer to the event an invitation names.
+type EmailCalendarInvitation struct {
+	// Response What the reader's calendar holds. `needs_action` until they answer, and while their
+	// calendar has not synced the event.
+	Response EmailCalendarInvitationResponse `json:"response"`
+
+	// StartsAt When the event starts. Absent while the reader's calendar has not synced it.
+	StartsAt *time.Time `json:"starts_at,omitempty"`
+
+	// StartsPrecision How to read `starts_at`, present beside it. `day` is an all-day event, so a client draws no time.
+	StartsPrecision *OccurredPrecision `json:"starts_precision,omitempty"`
+}
+
+// EmailCalendarInvitationResponse What the reader's calendar holds. `needs_action` until they answer, and while their
+// calendar has not synced the event.
+type EmailCalendarInvitationResponse string
+
 // EmailDelivery Whether an outbound message actually left, and why not when it did not.
 //
 // The timeline carried DIRECTION alone, which reads as a delivery state and is not one:
@@ -2569,6 +2610,12 @@ type EmailSummary struct {
 	// AttachmentCount How many files came with it. Zero when withheld, like every other count.
 	AttachmentCount int `json:"attachment_count"`
 
+	// CalendarInvitation Present when this message is a calendar invitation the reader can still answer: it came
+	// into the reader's own mailbox, names an event, and that event has not started. A client
+	// offers the answers here instead of a written reply, because an invitation asks for an
+	// RSVP. Absent on every other message, and on a withheld one.
+	CalendarInvitation *EmailCalendarInvitation `json:"calendar_invitation,omitempty"`
+
 	// Counterparty Who the message was with, named for the row: "Ana Sommer", or "Ana Sommer +2" when
 	// the exchange had more. Null when no participant resolves to a name this caller may
 	// see — the row then says the direction alone rather than inventing a stranger.
@@ -2611,7 +2658,8 @@ type EmailSummary struct {
 	// Move Whose move it is, derived from what this reader can see of the thread.
 	// `needs_reply` on a message still owed our answer, `waiting_for_them` on one we sent
 	// that is still the last word with them. A calendar invitation, update, cancellation
-	// or answer is `none` unless someone confirmed it asks us something. `none` also when
+	// or answer is `none` unless someone confirmed it asks us something, and an invitation
+	// the reader may still answer is `none` too: `calendar_invitation` carries what it asks. `none` also when
 	// the question cannot be answered honestly — an unanswerable move is not a claim.
 	// A message older than the waiting horizon that nobody kept is `none` too: it is
 	// no longer current work, the same bound the waiting queue and `waiting_reply` apply.
@@ -2643,7 +2691,8 @@ type EmailSummaryDirection string
 // EmailSummaryMove Whose move it is, derived from what this reader can see of the thread.
 // `needs_reply` on a message still owed our answer, `waiting_for_them` on one we sent
 // that is still the last word with them. A calendar invitation, update, cancellation
-// or answer is `none` unless someone confirmed it asks us something. `none` also when
+// or answer is `none` unless someone confirmed it asks us something, and an invitation
+// the reader may still answer is `none` too: `calendar_invitation` carries what it asks. `none` also when
 // the question cannot be answered honestly — an unanswerable move is not a claim.
 // A message older than the waiting horizon that nobody kept is `none` too: it is
 // no longer current work, the same bound the waiting queue and `waiting_reply` apply.

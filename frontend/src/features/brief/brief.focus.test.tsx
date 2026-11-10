@@ -3,6 +3,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
@@ -186,4 +187,39 @@ it("a task lead holds its verbs' room until the task and its contact are read", 
     await card.findByRole("link", { name: en["record.verb.email"] }),
   ).toBeTruthy();
   expect(article.querySelector(".task-next-pending")).toBeNull();
+});
+
+it("Next task opens the following card, wraps past the last, and is absent alone", async () => {
+  const second = taskRow("task-2", "Send the sheet");
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["read"] }, { roles: ["rep"] }),
+  });
+  const chosen = vi.fn();
+  const triage = (rows: WorklistItem[], at: number) => (
+    <StoryProviders>
+      <Triage
+        rows={rows}
+        at={at}
+        lead={rows[at]}
+        onChoose={chosen}
+        onOpenEmail={() => {}}
+      />
+    </StoryProviders>
+  );
+  const user = userEvent.setup();
+  const view = render(triage([LEAD, second], 0));
+  const next = () =>
+    screen.getByRole("button", { name: en["brief.focus.next"] });
+
+  await user.click(next());
+  expect(chosen).toHaveBeenLastCalledWith(second);
+
+  view.rerender(triage([LEAD, second], 1));
+  await user.click(next());
+  expect(chosen).toHaveBeenLastCalledWith(LEAD);
+
+  view.rerender(triage([LEAD], 0));
+  expect(
+    screen.queryByRole("button", { name: en["brief.focus.next"] }),
+  ).toBeNull();
 });

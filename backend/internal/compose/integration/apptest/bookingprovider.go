@@ -25,12 +25,15 @@ type BookingProvider struct {
 	calendar string
 	mu       sync.Mutex
 	events   map[string]json.RawMessage
+	// invitations are events an organizer elsewhere sent, apart from events
+	// so a free/busy read never meets one.
+	invitations map[string]json.RawMessage
 }
 
 // NewBookingProvider answers for the calendar ada@example.com, and passes
 // every other host to fallback.
 func NewBookingProvider(fallback http.RoundTripper) *BookingProvider {
-	return &BookingProvider{fallback: fallback, calendar: "ada@example.com", events: make(map[string]json.RawMessage)}
+	return &BookingProvider{fallback: fallback, calendar: "ada@example.com", events: make(map[string]json.RawMessage), invitations: make(map[string]json.RawMessage)}
 }
 
 // SetCalendar changes the account's primary calendar, as a user who
@@ -109,6 +112,16 @@ func EnableGoogleBookingPage(t *testing.T, e *AppEnv) {
 	}
 }
 
+// Invite puts on the calendar an event that invites its owner, as an organizer
+// elsewhere would; uid is the event's iCalendar UID.
+func (b *BookingProvider) Invite(uid string) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	id := fmt.Sprintf("invitation%d", len(b.invitations)+1)
+	b.invitations[id] = json.RawMessage(fmt.Sprintf(
+		`{"id":%q,"iCalUID":%q,"attendees":[{"email":%q,"self":true,"responseStatus":"needsAction"}]}`, id, uid, b.calendar))
+}
+
 // DeliveredEvent is the event body the gcal adapter last sent for one invitation.
 // A new event takes its invitation's id as its own.
 func (b *BookingProvider) DeliveredEvent(t *testing.T, invitationID string) json.RawMessage {
@@ -126,8 +139,11 @@ func (b *BookingProvider) event(r *http.Request) (*http.Response, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	_, id, _ := strings.Cut(r.URL.Path, "/events/")
+	if _, invited := b.invitations[id]; invited && r.Method == http.MethodPatch {
+		return b.saveInto(b.invitations, r, id)
+	}
 	if r.Method == http.MethodPost || r.Method == http.MethodPatch {
-		return b.saveEvent(r, id)
+		return b.saveInto(b.events, r, id)
 	}
 	if id != "" {
 		event, found := b.events[id]
@@ -141,9 +157,9 @@ func (b *BookingProvider) event(r *http.Request) (*http.Response, error) {
 		}
 		return response, nil
 	}
-	events := make([]json.RawMessage, 0, len(b.events))
-	for _, event := range b.events {
-		events = append(events, event)
+	events, err := b.listed(r.URL.Query().Get("iCalUID"))
+	if err != nil {
+		return nil, err
 	}
 	encoded, err := json.Marshal(struct {
 		Zone   string            `json:"timeZone"`
@@ -155,7 +171,33 @@ func (b *BookingProvider) event(r *http.Request) (*http.Response, error) {
 	return BookingProviderResponse(r, string(encoded)), nil
 }
 
-func (b *BookingProvider) saveEvent(r *http.Request, id string) (*http.Response, error) {
+// listed answers an events list: what the calendar holds, or with a UID only
+// the events and invitations that carry it.
+func (b *BookingProvider) listed(uid string) ([]json.RawMessage, error) {
+	events := make([]json.RawMessage, 0, len(b.events))
+	if uid == "" {
+		for _, event := range b.events {
+			events = append(events, event)
+		}
+		return events, nil
+	}
+	for _, held := range []map[string]json.RawMessage{b.events, b.invitations} {
+		for _, event := range held {
+			var named struct {
+				UID string `json:"iCalUID"`
+			}
+			if err := json.Unmarshal(event, &named); err != nil {
+				return nil, err
+			}
+			if named.UID == uid {
+				events = append(events, event)
+			}
+		}
+	}
+	return events, nil
+}
+
+func (b *BookingProvider) saveInto(held map[string]json.RawMessage, r *http.Request, id string) (*http.Response, error) {
 	if r.URL.Query().Get("sendUpdates") != "all" {
 		return nil, errors.New("calendar write omitted attendee notification")
 	}
@@ -178,6 +220,6 @@ func (b *BookingProvider) saveEvent(r *http.Request, id string) (*http.Response,
 	if err != nil {
 		return nil, err
 	}
-	b.events[id] = encoded
+	held[id] = encoded
 	return BookingProviderResponse(r, string(encoded)), nil
 }

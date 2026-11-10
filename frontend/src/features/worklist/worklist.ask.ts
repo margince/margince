@@ -45,5 +45,7 @@ const ASK_BY_SOURCE: Readonly<Record<WorklistItem["source"], MessageKey>> = {
 
 /** The sentence saying what this row asks of its reader. */
 export function askKey(item: WorklistItem): MessageKey {
+  // An invitation waits on an RSVP, not on a written answer.
+  if (item.email_summary?.calendar_invitation) return "worklist.ask.invitation";
   return labelFor(ASK_BY_SOURCE, item.source);
 }

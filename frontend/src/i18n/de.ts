@@ -2159,6 +2159,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.bandCount_one": "{count} Eintrag",
   "worklist.bandCount_other": "{count} Einträge",
   "brief.focus.context": "Details anzeigen",
+  "brief.focus.next": "Nächste Aufgabe",
   "brief.queue.back": "Zurück zur Worklist",
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Worklist einblenden",
@@ -4889,6 +4890,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "visibility.private": "Privat",
   "visibility.withheld": "Zurückgehalten",
   "email.access.unnamedMember": "Ehemaliges Nutzerkonto",
+  "email.invitation.badge": "Einladung",
+  "email.invitation.startsAt": "Beginnt {when}",
   "email.move.needsReply": "Antwort nötig",
   "email.move.waitingForThem": "Wartet auf Antwort der Gegenseite",
   "email.detail.loading": "Nachricht wird geladen…",
@@ -6643,11 +6646,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.briefedAt": "Von Margince zusammengefasst um {time}",
   "brief.task.done": "Als erledigt markieren: {title}",
   "brief.task.reply": "{name} antworten: {subject}",
-  "brief.pager.label": "Aufgaben",
-  "brief.pager.previous": "Vorherige Aufgabe",
-  "brief.pager.next": "Nächste Aufgabe",
-  "brief.pager.hint":
-    "Nach links oder rechts wischen, um Aufgaben anzusehen. Auf den Navigationsschaltflächen funktionieren auch die Pfeiltasten.",
   "brief.first.title": "Braucht dich",
   "brief.intro.waiting": "Wartet auf dich",
   "brief.intro.meetings": "Termine heute",
@@ -7507,6 +7505,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "whoCanSee.emails.company":
     "E-Mails zu diesem Unternehmen haben ihre eigene Zielgruppe. Öffne eine E-Mail im Verlauf, um zu sehen, wer sie lesen kann.",
   "compose.reply": "Antworten",
+  "invitation.answer.label": "Auf die Einladung antworten",
+  "invitation.answer.accepted": "Zusagen",
+  "invitation.answer.tentative": "Vielleicht",
+  "invitation.answer.declined": "Absagen",
   "compose.writeEmail": "E-Mail schreiben",
   "compose.relink": "Neu verknüpfen",
   "compose.previewEmail": "Vorschau",
@@ -13456,6 +13458,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.page.records.sub":
     "Eigene Felder, gemeinsame Tags und die Zuständigkeiten, die Datensätze tragen.",
   "settings.partsLabel": "Bereiche dieser Seite",
+  "settings.part.voice.overview": "Dein Schreibstil",
+  "settings.part.voice.samples": "Schreibproben",
+  "settings.part.voice.rules": "Deine Regeln",
+  "settings.part.voice.builds": "Versionen",
   "settings.part.meetings.links": "Buchungslinks",
   "settings.part.meetings.availability": "Verfügbarkeit",
   "settings.part.meetings.guests": "Gastseite",
@@ -14080,13 +14086,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "voice.insights.provenance": "Aus deinen Schreibproben erstellt · v{n}",
   "voice.insights.statWords": "W\u00f6rter: {count}",
   "voice.insights.statSources": "Quellen: {count}",
-  "settings.voice.jumpLabel": "Auf dieser Seite",
-  "settings.voice.jump.voice": "Dein Schreibstil",
-  "settings.voice.jump.moves": "Typische Züge",
   "settings.voice.jump.drafts": "Probeentwürfe",
-  "settings.voice.jump.sharpen": "Schärfen",
-  "settings.voice.jump.rules": "Deine Regeln",
-  "settings.voice.jump.builds": "Versionen",
   "settings.voice.editRules": "Regeln bearbeiten",
   "settings.voice.addMore": "Weitere Texte hinzufügen",
   "settings.voice.start.title": "Dein Schreibstil",
@@ -14314,6 +14314,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das Stilprofil wird aufgebaut. Das dauert etwa eine Minute und läuft weiter, wenn du die Seite verlässt.",
   "settings.voice.rebuild": "Voice DNA neu aufbauen",
   "settings.voice.buildFirst": "Voice DNA aufbauen",
+  "settings.voice.firstBuildHint":
+    "Den ersten Aufbau startest du im Tab „Dein Schreibstil“.",
+  "settings.voice.firstBuildGo": "„Dein Schreibstil“ öffnen",
   "settings.voice.buildNeedsWords":
     "Ein erster Aufbau braucht noch etwa {n} Wörter. Darunter gibt es nicht genug Text, um daraus zu lernen.",
   "settings.voice.buildProvisional":
@@ -16915,6 +16918,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.activity.updated.label": "Aktivität geändert",
   "webhooks.event.activity.updated.when":
     "Eine Aktivität wird bearbeitet oder mit anderen Datensätzen verknüpft.",
+  "webhooks.event.activity.invitation_answered.label": "Einladung beantwortet",
+  "webhooks.event.activity.invitation_answered.when":
+    "Jemand sagt in Margince zu einer Kalendereinladung zu, ab oder mit Vorbehalt zu.",
   "webhooks.event.activity.archived.label": "Aktivität archiviert",
   "webhooks.event.activity.archived.when": "Eine Aktivität wird archiviert.",
   "webhooks.event.activity.disposition_recorded.label":
@@ -19052,6 +19058,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die nächtliche Prüfung hat diesen Deal markiert. Reagiere darauf, stelle ihn zurück oder verwirf ihn.",
   "worklist.ask.conversation_claim":
     "Du hast das in einem Gespräch zugesagt. Erledige es und markiere es dann als erledigt.",
+  "worklist.ask.invitation":
+    "Das ist eine Kalendereinladung. Sag zu, mit Vorbehalt zu oder ab, und der Organisator erhält deine Antwort.",
   "worklist.ask.customer_waiting":
     "Ein Kunde hat geschrieben, und noch niemand hat geantwortet. Beantworte die Nachricht.",
   "worklist.ask.lead_response":
