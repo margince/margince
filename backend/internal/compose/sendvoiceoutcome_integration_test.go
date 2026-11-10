@@ -352,7 +352,9 @@ func TestConcurrentSendsSharingADraftReferenceLeaveOneOutcomeAndBothTransmit(t *
 	// One held connection for the whole poll. pg_stat_activity materializes its
 	// row set per transaction, so a clear issued through the pool can land on a
 	// connection the next probe never gets.
-	probe, err := e.Pool.Acquire(e.ctx)
+	acquireCtx, cancel := context.WithTimeout(e.ctx, 30*time.Second)
+	defer cancel()
+	probe, err := e.Pool.Acquire(acquireCtx)
 	if err != nil {
 		t.Fatalf("acquiring the probe's connection: %v", err)
 	}

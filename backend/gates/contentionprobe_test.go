@@ -51,9 +51,11 @@ import (
 	"go/printer"
 	"go/token"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -363,14 +365,24 @@ func TestAPauseThePlannerMaySkipIsRefused(t *testing.T) {
 	}
 }
 
-// privateProbeFiles is how many files outside testdb still write their own
+// privateProbeFiles are the files outside testdb that still write their own
 // pg_blocking_pids query, each a second answer to testdb.QueuedBehind's
-// question. Two read the waiting pid rather than a count, which that function
-// does not answer, so they need a reader beside it.
-
-// The number only goes down. Convert a file, lower it, and the next private
-// copy cannot be written without this gate asking why.
-const privateProbeFiles = 2
+// question. Some read the waiting pid rather than a count, which that
+// function does not answer, so they need a reader beside it.
+//
+// The list only shrinks. Convert a file and remove it here; a file not on the
+// list cannot add a copy without this gate asking why.
+var privateProbeFiles = []string{
+	"internal/compose/filterpreviewpages_integration_test.go",
+	"internal/compose/graphhistoryinsertedrow_integration_test.go",
+	"internal/compose/mergecarryraces_integration_test.go",
+	"internal/compose/partyadmissionrace_integration_test.go",
+	"internal/compose/webhookerasurerace_integration_test.go",
+	"internal/modules/activities/domainevidence_integration_test.go",
+	"internal/modules/capture/backfillbindingorder_integration_test.go",
+	"internal/modules/introductions/store_integration_test.go",
+	"internal/modules/webhooks/deliverysendhold_integration_test.go",
+}
 
 // sharedProbeHome is where asking pg_blocking_pids belongs: the one probe, and
 // the gates that hold it.
@@ -399,18 +411,27 @@ func TestNoNewPrivateContentionProbe(t *testing.T) {
 		}
 		return nil
 	})
-	sort.Strings(owners)
-	switch {
-	case len(owners) > privateProbeFiles:
-		t.Fatalf(`%d files write their own %s query, and %d is the pinned number:
+	pinned := map[string]bool{}
+	for _, path := range privateProbeFiles {
+		pinned[filepath.FromSlash(path)] = true
+	}
+	var unpinned []string
+	for _, path := range owners {
+		if !pinned[path] {
+			unpinned = append(unpinned, path)
+		}
+		delete(pinned, path)
+	}
+	sort.Strings(unpinned)
+	if len(unpinned) > 0 {
+		t.Fatalf(`%d files write their own %s query and are not in privateProbeFiles:
   %s
 testdb.QueuedBehind counts the whole queue behind a holder, after clearing the
 stats snapshot, and testdb.AwaitQueuedBehind waits on it. Wait through those
-instead, or lower the pin in the same change that removes a copy.`,
-			len(owners), blockingPidsProbe, privateProbeFiles, strings.Join(owners, "\n  "))
-	case len(owners) < privateProbeFiles:
-		t.Errorf("%d files write their own probe, below the pinned %d. Lower privateProbeFiles to %d",
-			len(owners), privateProbeFiles, len(owners))
+instead.`, len(unpinned), blockingPidsProbe, strings.Join(unpinned, "\n  "))
+	}
+	for _, path := range slices.Sorted(maps.Keys(pinned)) {
+		t.Errorf("%s no longer writes its own probe. Remove it from privateProbeFiles", filepath.ToSlash(path))
 	}
 }
 
@@ -426,7 +447,8 @@ func asksBlockingPids(decl ast.Decl) bool {
 		}
 		// gatekit.LiteralText decodes the string, because a query in double
 		// quotes reaches the source text with its escapes and would be missed.
-		if text, ok := gatekit.LiteralText(expr); ok && strings.Contains(text, blockingPidsProbe) {
+		// Lowered, because Postgres folds an unquoted function name.
+		if text, ok := gatekit.LiteralText(expr); ok && strings.Contains(strings.ToLower(text), blockingPidsProbe) {
 			found = true
 		}
 		return !found
