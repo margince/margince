@@ -11,16 +11,16 @@
       "covered": 29,
       "sign_in": 1,
       "no_signed_in_user": 0,
-      "web_app_calls": 860,
-      "web_app_calls_open": 732,
+      "web_app_calls": 859,
+      "web_app_calls_open": 731,
       "web_app_calls_ask_first": 100,
       "web_app_calls_pending": 0,
       "web_app_calls_security": 112,
       "web_app_calls_covered": 15,
       "parity_signed_in_percent": 84,
-      "parity_web_app_percent": 85.1
+      "parity_web_app_percent": 85
     },
-    "open_with_no_web_app_call_found": 112,
+    "open_with_no_web_app_call_found": 113,
     "parity_web_app_counting_covered_percent": 86.8,
     "parity_web_app_once_pending_is_open_percent": 86.8
   },
@@ -41,8 +41,8 @@
       "covered": 22,
       "sign_in": 0,
       "no_signed_in_user": 0,
-      "web_app_calls": 477,
-      "web_app_calls_open": 450,
+      "web_app_calls": 476,
+      "web_app_calls_open": 449,
       "web_app_calls_ask_first": 36,
       "web_app_calls_pending": 0,
       "web_app_calls_security": 14,
@@ -141,14 +141,14 @@
           "covered": 2,
           "sign_in": 0,
           "no_signed_in_user": 0,
-          "web_app_calls": 30,
-          "web_app_calls_open": 29,
+          "web_app_calls": 29,
+          "web_app_calls_open": 28,
           "web_app_calls_ask_first": 0,
           "web_app_calls_pending": 0,
           "web_app_calls_security": 1,
           "web_app_calls_covered": 0,
           "parity_signed_in_percent": 92.3,
-          "parity_web_app_percent": 96.6
+          "parity_web_app_percent": 96.5
         },
         {
           "key": "deal_rooms",
@@ -9573,8 +9573,7 @@
       "scope": "write",
       "verb": "accept_applied_deal_change",
       "router": "change_attention",
-      "action": "accept_applied_change",
-      "web_app": "direct"
+      "action": "accept_applied_change"
     },
     {
       "method": "POST",
