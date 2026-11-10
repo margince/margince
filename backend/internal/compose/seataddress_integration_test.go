@@ -459,7 +459,7 @@ func raceAliasClaimAndCheck(t *testing.T, claimed, checked string) {
 func claimInFlight(t *testing.T, e *integration.Env, address string) (release func(), claimed <-chan error) {
 	t.Helper()
 	ctx := context.Background()
-	gate, err := integration.OwnerConn(t).Begin(ctx)
+	gate, err := integration.FreshOwnerConn(t).Begin(ctx)
 	if err != nil {
 		t.Fatalf("opening the holding transaction: %v", err)
 	}
@@ -550,7 +550,7 @@ func TestAnAliasClaimSettlesARowRetiringToUnsure(t *testing.T) {
 	lease := ids.NewV7()
 	e.WsExec(t, `UPDATE capture_pending_counterparty SET claimed_by = $2, claimed_until = now() + interval '1 hour' WHERE id = $1`, row, lease)
 
-	gate, err := integration.OwnerConn(t).Begin(ctx)
+	gate, err := integration.FreshOwnerConn(t).Begin(ctx)
 	if err != nil {
 		t.Fatalf("opening the holding transaction: %v", err)
 	}
