@@ -17,17 +17,11 @@ import {
   DrawerHead,
 } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
+import { LanguageSelect } from "../../design-system/languageselect";
 import { Select } from "../../design-system/select";
 import { formatNumber, identifierNumber, monthName } from "../../format/format";
 import { lockFor } from "../../format/settinglocks";
-import {
-  LOCALES,
-  type Locale,
-  localeNameKey,
-  useLocale,
-  usePlural,
-  useT,
-} from "../../i18n";
+import { LOCALES, type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { useCurrencyNote } from "../../lib/installation-settings.currency";
 import { unwrap } from "../../lib/problem";
 import { fiscalYearLabel } from "./fiscalyear";
@@ -219,32 +213,19 @@ export function InstallationProfileDialog({
               error={refused.get("base_language")}
             >
               {(control) => (
-                <Select
+                <LanguageSelect
                   {...control}
                   // `control.id` is spread through UNCHANGED: `Field` renders its
                   // label with `htmlFor` pointing at it, so replacing it would
                   // leave the combobox with no accessible name. The focus effect
                   // reads that same id back out of the DOM.
                   aria-describedby={describe(control)}
+                  languages={LOCALES}
                   value={draft.base_language}
                   disabled={!canManage || baseLanguage.disabled}
-                  // Language names are proper nouns and stay untranslated, so each
-                  // option is in a language other than the page's. WCAG 2.2 AA
-                  // 3.1.2 asks for `lang`, and our locale codes are its BCP 47 subtags.
-                  options={LOCALES.map((locale) => ({
-                    value: locale,
-                    label: t(localeNameKey(locale)),
-                    lang: locale,
-                  }))}
-                  // `Select` reports a string. Narrowing it back through LOCALES
-                  // makes it a locale without an assertion. It also drops an
-                  // answer the control was never offering.
-                  onChange={(next) => {
-                    const picked = LOCALES.find((locale) => locale === next);
-                    if (picked) {
-                      onChange({ ...draft, base_language: picked });
-                    }
-                  }}
+                  onChange={(picked) =>
+                    onChange({ ...draft, base_language: picked })
+                  }
                 />
               )}
             </Field>

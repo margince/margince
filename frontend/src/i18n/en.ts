@@ -7713,6 +7713,7 @@ export const en = {
   "compose.scheduleGoesOut": "Sends {when}",
   "compose.willGoOut": "Sends {when}",
   "compose.scheduleAfternoon": "Tomorrow afternoon",
+  "compose.draftLanguage": "Draft language",
   "compose.rewrite": "Rewrite",
   "compose.rewriteShorter": "Shorter",
   "compose.rewriteShorterAsk": "Keep the meaning and use fewer words.",
