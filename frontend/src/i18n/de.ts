@@ -4555,6 +4555,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.field.because": "Grund",
   "approval.field.lost_reason": "Warum er verloren ging",
   "approval.field.note": "Notiz",
+  "approval.field.task": "Aufgabe",
   "approval.kind.transcript_proposal":
     "Nächsten Schritt aus Transkript erstellen",
   "approval.kind.stage_progression": "Deal-Phase voranbringen",
