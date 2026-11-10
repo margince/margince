@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose_test
+package integration_test
 
 // An import and a mailbox describing one message land ONE activity.
 //

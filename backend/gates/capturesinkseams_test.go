@@ -12,7 +12,7 @@ package gates
 // simply absent in production.
 //
 // The integration tests cannot see it. Each builds its own sink with the seams
-// it cares about (compose/importthencapture_integration_test.go and four
+// it cares about (compose/integration/importthencapture_integration_test.go and four
 // others), so the deduplication, the take-over and the meeting cancellation all
 // pass their tests while newCaptureSink injects none of them. Verified by
 // mutation: deleting WithMessageIdentity from newCaptureSink leaves every test

@@ -66,7 +66,6 @@ internal/compose/dealsuggestiontotals_integration_test.go 1
 internal/compose/deferral_test.go 3
 internal/compose/edgeerasureboundary_integration_test.go 4
 internal/compose/edgelastmet_integration_test.go 1
-internal/compose/emailrequestcapture_integration_test.go 1
 internal/compose/erasurebriefcache_integration_test.go 3
 internal/compose/erasurecollateral_integration_test.go 2
 internal/compose/erasuregraph_integration_test.go 1
@@ -145,6 +144,7 @@ internal/compose/integration/dsr_integration_test.go 1
 internal/compose/integration/e2e/usecases/case5_before_the_meeting_test.go 1
 internal/compose/integration/edgehistory_integration_test.go 4
 internal/compose/integration/emaildeliverystate_integration_test.go 1
+internal/compose/integration/emailrequestcapture_integration_test.go 1
 internal/compose/integration/erasure_killswitch_integration_test.go 2
 internal/compose/integration/extingesthealth_http_e2e_integration_test.go 1
 internal/compose/integration/fieldhistory_http_integration_test.go 2
@@ -193,6 +193,7 @@ internal/compose/integration/projecthealth_integration_test.go 1
 internal/compose/integration/providerclaims_integration_test.go 1
 internal/compose/integration/providerprivatecapture_integration_test.go 2
 internal/compose/integration/providerprofile_integration_test.go 5
+internal/compose/integration/providerreceived_integration_test.go 2
 internal/compose/integration/providerrevert_integration_test.go 2
 internal/compose/integration/public_booking_integration_test.go 1
 internal/compose/integration/rates_http_integration_test.go 5
@@ -262,7 +263,6 @@ internal/compose/network/intronote_test.go 1
 internal/compose/openpromisesection_integration_test.go 5
 internal/compose/owedanswer_integration_test.go 10
 internal/compose/privacyqueuenames_integration_test.go 5
-internal/compose/providerreceived_integration_test.go 2
 internal/compose/providerselect_test.go 5
 internal/compose/publicoriginprobe_test.go 7
 internal/compose/qualifiedinteraction_integration_test.go 1

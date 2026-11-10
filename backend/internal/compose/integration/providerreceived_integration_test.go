@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose_test
+package integration_test
 
 import (
 	"strings"

@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose_test
+package integration_test
 
 // CROSS-SEAT binding: an import filed by one seat and a mailbox belonging to
 // ANOTHER are one message, when the import states an address that mailbox's
