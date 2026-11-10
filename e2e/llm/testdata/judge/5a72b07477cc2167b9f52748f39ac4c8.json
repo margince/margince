@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer mentions that an automation drafted a reply to Jannik Feddersen's email and that it waits for the user to read it before it is sent (indicated by 'read it before it goes').",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer tells the user that, after the meeting with Jannik Feddersen was logged, an automation drafted an email to him (a reply or recap) that waits for the user to read or approve before it is sent. Answer no if the answer does not mention that draft, or says the email was already sent.",
+  "answer": "Logged the coffee meeting with Jannik Feddersen (Husumer Windservice) on his record: they want a quote for the gearbox inspection on their six turbines in Q1. A follow-up task for you to send him the quote is due Friday.\n\nYour approval queue has four items waiting:\n1. An automation drafted a reply to jannik.feddersen@husumer-windservice.test — read it before it goes.\n2. A contact card resembles an existing contact: create Wiebke Brandstätter anyway?\n3. A contact card resembles an existing contact: create Okko Rademacher anyway?\n4. A contact card resembles an existing contact: create Theda Uphoff anyway?"
+}
