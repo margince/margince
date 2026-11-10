@@ -227,6 +227,7 @@ func Parse(reply string, in Input) (Proposal, error) {
 	for _, chart := range parsed.Charts {
 		g.chart(chart.ID, chart.Phrase)
 	}
+	g.drawUndrawnMetrics()
 	if parsed.Next != nil {
 		g.objective(parsed.Next.Metric, parsed.Next.TargetValue, parsed.Next.Deadline, parsed.Next.Phrase)
 	}
@@ -425,6 +426,24 @@ func (g *gate) chart(id, phrase string) {
 	if len(g.out.Blocks) < maxCharts && !slices.Contains(g.out.Blocks, chart.ID) {
 		g.out.Blocks = append(g.out.Blocks, chart.ID)
 		g.keep("chart", chart.ID, chart.Label, phrase)
+	}
+}
+
+// drawUndrawnMetrics gives a kept metric the reply drew no chart for the first
+// chart the catalog offers it, so the builder opens with a preview. It names no
+// source, because no words of the description asked for that chart.
+func (g *gate) drawUndrawnMetrics() {
+	for _, id := range g.out.Metrics {
+		metric, ok := g.metricOption(id)
+		if !ok || slices.ContainsFunc(metric.Charts, func(chart string) bool { return slices.Contains(g.out.Blocks, chart) }) {
+			continue
+		}
+		for _, chart := range metric.Charts {
+			if _, err := resolve("chart", chart, g.in.Catalog.Charts); err == nil && len(g.out.Blocks) < maxCharts {
+				g.out.Blocks = append(g.out.Blocks, chart)
+				break
+			}
+		}
 	}
 }
 
