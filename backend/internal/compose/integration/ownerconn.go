@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//go:build integration
+
 package integration
 
 import (
@@ -20,16 +22,35 @@ import (
 // FreshOwnerConn.
 func OwnerConn(t *testing.T) *pgx.Conn {
 	t.Helper()
-	if held, ok := ownerConns.Load(t); ok {
-		if conn, ok := held.(*pgx.Conn); ok && ownerConnIdle(conn) {
+	conn := sharedOwnerConn(t)
+	if conn != nil && ownerConnIdle(conn) {
+		return conn
+	}
+	return FreshOwnerConn(t)
+}
+
+// sharedOwnerConn is the test's shared connection, filled once however many
+// goroutines arrive together. A goroutine that loses the race closes its own
+// connection and takes the one that won.
+func sharedOwnerConn(t *testing.T) *pgx.Conn {
+	t.Helper()
+	held, ok := ownerConns.Load(t)
+	if !ok {
+		conn := FreshOwnerConn(t)
+		var lost bool
+		if held, lost = ownerConns.LoadOrStore(t, conn); !lost {
+			t.Cleanup(func() { ownerConns.Delete(t) })
 			return conn
 		}
-		return FreshOwnerConn(t)
+		if err := conn.Close(context.Background()); err != nil {
+			t.Errorf("closing an owner connection that lost the race to be shared: %v", err)
+		}
 	}
-	conn := FreshOwnerConn(t)
-	ownerConns.Store(t, conn)
-	t.Cleanup(func() { ownerConns.Delete(t) })
-	return conn
+	shared, ok := held.(*pgx.Conn)
+	if !ok {
+		return nil
+	}
+	return shared
 }
 
 // ownerConns holds each running test's shared owner connection, keyed by its *testing.T.

@@ -8,6 +8,7 @@ package integration
 import (
 	"context"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -96,6 +97,58 @@ func TestTwoGoroutinesOnTheSharedOwnerConnectionFailLoudly(t *testing.T) {
 	defer cancel()
 	if _, err := shared.Exec(ctx, `SELECT 1`); err == nil || !strings.Contains(err.Error(), "conn busy") {
 		t.Errorf("a second goroutine on the connection answered %v, want conn busy", err)
+	}
+	if err := <-sleeping; err != nil {
+		t.Errorf("the first query: %v", err)
+	}
+}
+
+// Goroutines asking at once still share the one connection.
+func TestGoroutinesAskingAtOnceShareOneOwnerConnection(t *testing.T) {
+	const askers = 8
+	got := make([]*pgx.Conn, askers)
+	var wg sync.WaitGroup
+	start := make(chan struct{})
+	for i := range askers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			got[i] = OwnerConn(t)
+		}()
+	}
+	close(start)
+	wg.Wait()
+	for i, conn := range got {
+		if conn != got[0] {
+			t.Fatalf("asker %d got its own connection while the others shared one", i)
+		}
+	}
+}
+
+// A connection running a query is not handed out on: the caller gets its own.
+func TestTheSharedOwnerConnectionIsNotHandedOutWhileItRunsAQuery(t *testing.T) {
+	shared := OwnerConn(t)
+	pid := backendPID(t, shared)
+	sleeping := make(chan error, 1)
+	go func() {
+		_, err := shared.Exec(context.Background(), `SELECT pg_sleep(1)`)
+		sleeping <- err
+	}()
+	watcher := FreshOwnerConn(t)
+	waiting, stop := context.WithTimeout(context.Background(), 5*time.Second)
+	defer stop()
+	for running := false; !running; {
+		if err := watcher.QueryRow(waiting, `SELECT EXISTS (SELECT 1 FROM pg_stat_activity
+			WHERE pid = $1 AND state = 'active' AND query LIKE '%pg_sleep%')`, pid).Scan(&running); err != nil {
+			t.Fatalf("the sleeping query never started: %v", err)
+		}
+	}
+	other := OwnerConn(t)
+	if other == shared {
+		t.Error("the connection running a query was handed out again")
+	} else {
+		backendPID(t, other)
 	}
 	if err := <-sleeping; err != nil {
 		t.Errorf("the first query: %v", err)
