@@ -48,9 +48,9 @@ In **Appointments**, edit the booking link to offer more choices for meeting min
 
 ## Account
 
-The Account page in Settings has three panels. **Profile** holds who you are: your picture, your display and greeting names, and your email signature. **Security** holds your password and two-step sign-in, and **Sign out**. **Language and appearance** holds which language the product uses with you (English, Deutsch or Tiếng Việt), and how it looks. **Appearance** is here as well as in the account menu, where it is called **Theme**. Both change the same setting.
+The Account page in Settings has four panels. **Profile** holds who you are: your picture, your display and greeting names, and your email signature. **Sign-in** holds your password, two-step sign-in and **Sign out**. **Language and time zone** holds which language the product uses with you (English, Deutsch or Tiếng Việt), and your time zone. **This browser** holds what applies in this browser only: **Appearance** and **Single-key shortcuts**. **Appearance** is also in the account menu, where it is called **Theme**, and both change the same setting.
 
-Where your browser can add Margince to this device as an app, a fourth panel shows: **This device**. It offers **Install**, says how to add the app, or says **Installed**.
+Where your browser can add Margince to this device as an app, **This browser** also has a **Margince app** row. It offers **Install**, says how to add the app, or says **Installed**.
 
 ### How do I change my password?
 <!-- opens: settings/account -->

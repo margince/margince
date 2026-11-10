@@ -15339,7 +15339,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Sáng, tối hoặc theo cài đặt của máy tính này. Chỉ áp dụng trên trình duyệt này. Menu tài khoản đổi cùng cài đặt này.",
   "account.singleKeyShortcuts": "Phím tắt một phím",
   "account.singleKeyShortcutsHelp":
-    "Các phím chữ và ký hiệu tự dùng làm phím tắt. Chỉ áp dụng trên trình duyệt này.",
+    "Các phím chữ và ký hiệu dùng riêng làm phím tắt, không cần phím bổ trợ. Chỉ áp dụng trên trình duyệt này.",
   "reviewTemplates.questionCount_one": "{count} câu hỏi",
   "reviewTemplates.questionCount_other": "{count} câu hỏi",
   "reviewTemplates.summary": "{questions}, {required} bắt buộc",

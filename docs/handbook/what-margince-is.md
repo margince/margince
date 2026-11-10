@@ -168,7 +168,7 @@ On Windows and Linux, press Ctrl where this list says ⌘.
 | `⌘K` or `/` | **Open search** |
 | `?` | **Show keyboard shortcuts** |
 | `C` | **Create record**. On a list such as Contacts, it opens the form for a new record of that kind. On any other page, it opens search with the **New …** actions. |
-| `G`, then a key | **Go to** a page in the sidebar: `G` then `C` for Contacts, `G` then `D` for Deals. Point at a page in the sidebar to see its key. |
+| `G`, then a key | **Go to** a page: `G` then `C` for Contacts, `G` then `D` for Deals, `G` then `S` for Settings. Point at a page in the sidebar to see its key. |
 | `N` | **Log activity**, on a record |
 | `T` | **Add task**, on a record |
 | `M` | **Write message**, on a record |
