@@ -133,7 +133,7 @@ export function useSdrSummary(self: string, enabled: boolean, asOf?: string) {
         }),
       ),
   });
-  useRepinWhenAsOfExpires(summary.error);
+  useRepinWhenAsOfExpires(summary.error, asOf);
   return summary;
 }
 
