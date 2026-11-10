@@ -25,7 +25,11 @@ import { type Locale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { REPORTING_EVALUATION_KEY } from "../../lib/reportingfigures";
-import { MoreRows, useHandoffPages } from "./analytics.outcomes.handoffpages";
+import {
+  MoreRows,
+  useHandoffPages,
+  useRepinWhenAsOfExpires,
+} from "./analytics.outcomes.handoffpages";
 import { DoNext } from "./analytics.overview.donext";
 import {
   type ReportingEvaluation,
@@ -115,7 +119,7 @@ export function MySdrWork({
  * asOf counts them at an evaluation's instant; omitted, they are counted now.
  */
 export function useSdrSummary(self: string, enabled: boolean, asOf?: string) {
-  return useQuery({
+  const summary = useQuery({
     queryKey: ["sdr-summary", self, asOf ?? null],
     enabled,
     placeholderData: keepPreviousData,
@@ -129,6 +133,8 @@ export function useSdrSummary(self: string, enabled: boolean, asOf?: string) {
         }),
       ),
   });
+  useRepinWhenAsOfExpires(summary.error);
+  return summary;
 }
 
 /** Turns true once `waiting` has held for the evaluation wait. */

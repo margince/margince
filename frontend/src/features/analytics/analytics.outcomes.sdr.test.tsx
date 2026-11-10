@@ -112,6 +112,8 @@ function show(
     worklist?: () => Response;
     evaluation?: unknown;
     evaluationHeld?: Promise<unknown>;
+    // Answers a request before the routes do, for a test that reads its URL.
+    intercept?: (url: URL) => Response | undefined;
   }> = {},
 ) {
   const asked: URL[] = [];
@@ -145,6 +147,10 @@ function show(
       "https://storybook.local",
     );
     asked.push(url);
+    const intercepted = over.intercept?.(url);
+    if (intercepted) {
+      return intercepted;
+    }
     if (url.searchParams.get("state") === "returned") {
       return jsonResponse(returnedPage);
     }
@@ -171,6 +177,87 @@ describe("MySdrWork", () => {
     expect(summary?.searchParams.get("as_of")).toBe(
       reportingStoryEvaluation.context.evaluated_at,
     );
+  });
+
+  it("reads the summary and its readings again when the server finds their instant too old", async () => {
+    const stale = "2026-09-21T11:30:00Z";
+    const fresh = reportingStoryEvaluation.context.evaluated_at;
+    let evaluations = 0;
+    const asked = show({
+      intercept: (url) => {
+        if (url.pathname.endsWith("/analytics/evaluate")) {
+          evaluations += 1;
+          const evaluated_at = evaluations === 1 ? stale : fresh;
+          return jsonResponse({
+            ...reportingStoryEvaluation,
+            context: { ...reportingStoryEvaluation.context, evaluated_at },
+          });
+        }
+        if (
+          url.pathname.endsWith("/analytics/sdr-summary") &&
+          url.searchParams.get("as_of") === stale
+        ) {
+          return asOfRefused("too_old");
+        }
+        return undefined;
+      },
+    });
+    await waitFor(() =>
+      expect(
+        asked.some(
+          (url) =>
+            url.pathname.endsWith("/analytics/sdr-summary") &&
+            url.searchParams.get("as_of") === fresh,
+        ),
+      ).toBe(true),
+    );
+    expect(evaluations).toBe(2);
+    expect(
+      await screen.findByText(/Alex Seller can no longer act/),
+    ).toBeVisible();
+  });
+
+  it("reads its handoff rows again when the server finds their instant too old", async () => {
+    let pages = 0;
+    const asked = show({
+      intercept: (url) => {
+        if (url.pathname.endsWith("/analytics/sdr-summary/handoffs")) {
+          pages += 1;
+          return pages === 1 ? asOfRefused("too_old") : undefined;
+        }
+        return undefined;
+      },
+    });
+    expect(
+      await screen.findByText(/Alex Seller can no longer act/),
+    ).toBeVisible();
+    const summaries = asked.filter((url) =>
+      url.pathname.endsWith("/analytics/sdr-summary"),
+    );
+    expect(summaries.length).toBeGreaterThan(1);
+  });
+
+  it("does not read again on any other refusal of its instant", async () => {
+    let evaluations = 0;
+    show({
+      intercept: (url) => {
+        if (url.pathname.endsWith("/analytics/evaluate")) {
+          evaluations += 1;
+          return jsonResponse(reportingStoryEvaluation);
+        }
+        if (url.pathname.endsWith("/analytics/sdr-summary")) {
+          return asOfRefused("future");
+        }
+        return undefined;
+      },
+    });
+    const panel = (await screen.findByText(en["analytics.sdrWaiting"])).closest(
+      "section",
+    );
+    expect(
+      await within(panel as HTMLElement).findByText(en["state.failed"]),
+    ).toBeVisible();
+    expect(evaluations).toBe(1);
   });
 
   it("still reads the summary, at now, when the lead readings failed", async () => {
@@ -374,3 +461,18 @@ describe("MySdrWork", () => {
     ).toBeTruthy();
   });
 });
+
+// The 422 the server answers when it refuses an SDR read's instant.
+function asOfRefused(code: "too_old" | "future"): Response {
+  return jsonResponse(
+    {
+      status: 422,
+      code: "validation_error",
+      detail: "choose another instant",
+      details: {
+        errors: [{ field: "as_of", code, message: "choose another instant" }],
+      },
+    },
+    422,
+  );
+}
