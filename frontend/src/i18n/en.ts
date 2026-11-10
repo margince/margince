@@ -4856,6 +4856,8 @@ export const en = {
   "visibility.private": "Private",
   "visibility.withheld": "Withheld",
   "email.access.unnamedMember": "Former user",
+  "email.invitation.badge": "Invitation",
+  "email.invitation.startsAt": "Starts {when}",
   "email.move.needsReply": "Needs reply",
   "email.move.waitingForThem": "Awaiting their reply",
   "email.detail.loading": "Loading message…",
@@ -7508,6 +7510,10 @@ export const en = {
   "whoCanSee.emails.company":
     "Emails filed to this company have their own audience. Open an email in the timeline to see who can read it.",
   "compose.reply": "Reply",
+  "invitation.answer.label": "Answer the invitation",
+  "invitation.answer.accepted": "Accept",
+  "invitation.answer.tentative": "Maybe",
+  "invitation.answer.declined": "Decline",
   "compose.writeEmail": "Write email",
   "compose.relink": "Relink",
   "compose.previewEmail": "Preview",
@@ -16771,6 +16777,9 @@ export const en = {
   "webhooks.event.activity.updated.label": "Activity changed",
   "webhooks.event.activity.updated.when":
     "An activity is edited or linked to other records.",
+  "webhooks.event.activity.invitation_answered.label": "Invitation answered",
+  "webhooks.event.activity.invitation_answered.when":
+    "Someone accepts, declines or says maybe to a calendar invitation in Margince.",
   "webhooks.event.activity.archived.label": "Activity archived",
   "webhooks.event.activity.archived.when": "An activity is archived.",
   "webhooks.event.activity.disposition_recorded.label":
@@ -18845,6 +18854,8 @@ export const en = {
     "The overnight review flagged this deal. Act on it, set it aside, or dismiss it.",
   "worklist.ask.conversation_claim":
     "You committed to this in a conversation. Do it, then mark it done.",
+  "worklist.ask.invitation":
+    "This is a calendar invitation. Accept, say maybe or decline, and the organizer gets your answer.",
   "worklist.ask.customer_waiting":
     "A customer wrote and nobody has answered yet. Reply to them.",
   "worklist.ask.lead_response":

@@ -151,6 +151,10 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// One attendee's readiness for a meeting; "recorded" alone would not say
 		// what was recorded on a stream that also carries edits.
 		"readiness_recorded": true,
+		// One reader answered a calendar invitation that came by email.
+		// "answered" alone would not say what was answered on a stream that
+		// also carries the reader's replies.
+		"invitation_answered": true,
 		// Same shape and the same reason: "requested" alone would not say what
 		// was asked for, and a weekly plan's stream also carries its ordinary
 		// updates — the distinction is the point of the type, because this is

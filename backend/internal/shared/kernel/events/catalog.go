@@ -236,6 +236,9 @@ var catalog = map[string]struct {
 	// disposition_recorded's enum is closed at v1, and a new value would break
 	// subscribers that validate it.
 	"activity.marked_handled": {activityStreamEntity, 1},
+	// One reader answered a calendar invitation that came by email. Its own
+	// type because the answer went to the organizer, not into the message.
+	"activity.invitation_answered": {activityStreamEntity, 1},
 	// One attendee said they are ready for a meeting, or took it back. Its
 	// own type because it is one attendee's state, not a change to the meeting.
 	"activity.readiness_recorded": {activityStreamEntity, 1},
