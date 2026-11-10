@@ -93,6 +93,7 @@ type CompanyContact = NonNullable<Company360["contacts"]>["data"][number];
 function contactEntry(contactId: string, fullName: string): CompanyContact {
   return {
     contact_id: contactId,
+    attachable: true,
     full_name: fullName,
     deal_roles: [],
     consent: {},

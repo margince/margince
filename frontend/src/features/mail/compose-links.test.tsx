@@ -49,22 +49,30 @@ const PURPOSES = {
   ],
 };
 
-// The account view the grounding is read from: two contacts, two open deals
-// and two live projects. Every pick is a real choice, not the only option,
-// and the sole-project default stays out of the way.
+// The account view the grounding is read from. It holds two contacts a mail may
+// be attached to and one it may not, two open deals and two live projects.
+// Every pick is a real choice, and the sole-project default stays aside.
 const COMPANY_VIEW = {
   company: { id: "company-1", name: "Acme" },
   contacts: {
     data: [
       {
         contact_id: "per-1",
+        attachable: true,
         full_name: "Dieter Klein",
         primary_email: "dieter@acme.test",
       },
       {
         contact_id: "per-2",
+        attachable: true,
         full_name: "Sara Vogel",
         primary_email: "sara@acme.test",
+      },
+      {
+        contact_id: "per-3",
+        attachable: false,
+        full_name: "Noah Brandt",
+        primary_email: "noah@acme.test",
       },
     ],
   },
@@ -415,6 +423,131 @@ describe("what a sent message files under", () => {
     ]);
   });
 
+  it("files under every account contact the message is addressed to, on the preview and the send", async () => {
+    const sent = stubRoutes({
+      "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
+    });
+    render(
+      <ComposeModal
+        entityType="company"
+        entityId="company-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByLabelText("Related to");
+    await userEvent.type(screen.getByLabelText("To"), "sara@acme.test");
+    await userEvent.tab();
+    await fillBody();
+    await pickBy("Reason for contact", "Active deal");
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => expect(linksOf(sent)).toBeDefined());
+    const both = [
+      { entity_type: "company", entity_id: "company-1" },
+      { entity_type: "contact", entity_id: "per-2" },
+      { entity_type: "contact", entity_id: "per-1" },
+    ];
+    expect(linksOf(sent)).toEqual(both);
+    const previews = sent.filter((r) => isPreviewDoor(r.key));
+    expect(
+      (previews.at(-1)?.body as { links?: unknown[] } | undefined)?.links,
+    ).toEqual(both);
+  });
+
+  it("files under an account contact who is only copied, once", async () => {
+    const sent = stubRoutes({
+      "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
+    });
+    render(
+      <ComposeModal
+        entityType="company"
+        entityId="company-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByLabelText("Related to");
+    await fillBody();
+    await userEvent.click(screen.getByRole("button", { name: "Cc and Bcc" }));
+    await userEvent.type(screen.getByLabelText("Cc"), "sara@acme.test");
+    await userEvent.tab();
+    await userEvent.type(screen.getByLabelText("Bcc"), "SARA@acme.test");
+    await userEvent.tab();
+    await pickBy("Reason for contact", "Active deal");
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => expect(linksOf(sent)).toBeDefined());
+    expect(linksOf(sent)).toEqual([
+      { entity_type: "company", entity_id: "company-1" },
+      { entity_type: "contact", entity_id: "per-1" },
+      { entity_type: "contact", entity_id: "per-2" },
+    ]);
+  });
+
+  it("never files under a contact who is only blind-copied", async () => {
+    const sent = stubRoutes({
+      "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
+    });
+    render(
+      <ComposeModal
+        entityType="company"
+        entityId="company-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByLabelText("Related to");
+    await fillBody();
+    await userEvent.click(screen.getByRole("button", { name: "Cc and Bcc" }));
+    await userEvent.type(screen.getByLabelText("Bcc"), "sara@acme.test");
+    await userEvent.tab();
+    await pickBy("Reason for contact", "Active deal");
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => expect(linksOf(sent)).toBeDefined());
+    expect(linksOf(sent)).toEqual([
+      { entity_type: "company", entity_id: "company-1" },
+      { entity_type: "contact", entity_id: "per-1" },
+    ]);
+  });
+
+  it("sends without the copied contact the sender may not attach it to, on the preview and the send", async () => {
+    const sent = stubRoutes({
+      "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
+    });
+    render(
+      <ComposeModal
+        entityType="company"
+        entityId="company-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByLabelText("Related to");
+    await fillBody();
+    await userEvent.click(screen.getByRole("button", { name: "Cc and Bcc" }));
+    await userEvent.type(screen.getByLabelText("Cc"), "noah@acme.test");
+    await userEvent.tab();
+    await pickBy("Reason for contact", "Active deal");
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => expect(linksOf(sent)).toBeDefined());
+    const filed = [
+      { entity_type: "company", entity_id: "company-1" },
+      { entity_type: "contact", entity_id: "per-1" },
+    ];
+    expect(linksOf(sent)).toEqual(filed);
+    const previews = sent.filter((r) => isPreviewDoor(r.key));
+    expect(
+      (previews.at(-1)?.body as { links?: unknown[] } | undefined)?.links,
+    ).toEqual(filed);
+  });
+
   it("keeps a deal whose id happens to match the company's", async () => {
     // A link is identified by its TYPE and its id together, which is how the
     // server identifies one. Two records of different kinds live in different
@@ -430,6 +563,7 @@ describe("what a sent message files under", () => {
             data: [
               {
                 contact_id: "per-1",
+                attachable: true,
                 full_name: "Dieter Klein",
                 primary_email: "dieter@acme.test",
               },

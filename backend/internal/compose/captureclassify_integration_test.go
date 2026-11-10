@@ -34,10 +34,10 @@ import (
 // per-id verdicts, with confidence taken from the per-id map; calls after
 // the script runs dry answer budget-exhausted.
 type scriptedClassifyBrain struct {
-	confidence   map[string]float64 // by activity id; default 0.9
-	labels       map[string]string  // by activity id; default "noise"
-	replies      map[string]string  // by activity id; omitted when absent
-	sawInbound   map[string]string  // what the prompt SAID each id's direction was
+	confidence   map[string]float64 // by subject; default 0.9
+	labels       map[string]string  // by subject; default "noise"
+	replies      map[string]string  // by subject; omitted when absent
+	sawInbound   map[string]string  // by subject: what the prompt SAID its direction was
 	calls        int
 	budgetOut    bool
 	budgetOnSolo bool // the budget runs dry exactly on a solo re-ask
@@ -56,13 +56,15 @@ func (s *scriptedClassifyBrain) Complete(_ context.Context, req model.Request) (
 	if s.budgetOnSolo && len(idPattern) == 1 {
 		return model.Response{}, ai.ErrBudgetDeferred
 	}
+	subjects := fencedSubjects(req.System, req.Messages[0].Content, "source_id")
 	results := make([]map[string]any, 0, len(idPattern))
 	for _, id := range idPattern {
-		label := s.labels[id]
+		subject := subjects[id]
+		label := s.labels[subject]
 		if label == "" {
 			label = "noise"
 		}
-		conf, ok := s.confidence[id]
+		conf, ok := s.confidence[subject]
 		if !ok {
 			conf = 0.9
 		}
@@ -72,12 +74,12 @@ func (s *scriptedClassifyBrain) Complete(_ context.Context, req model.Request) (
 			conf = 0.95
 		}
 		entry := map[string]any{"id": id, "label": label, "confidence": conf}
-		if reply, ok := s.replies[id]; ok {
+		if reply, ok := s.replies[subject]; ok {
 			entry["reply"] = reply
 		}
 		results = append(results, entry)
 		if s.sawInbound != nil {
-			s.sawInbound[id] = directionLineFor(req.Messages[0].Content, id)
+			s.sawInbound[subject] = directionLineFor(req.Messages[0].Content, id)
 		}
 	}
 	payload, err := json.Marshal(map[string]any{"results": results})
@@ -92,8 +94,8 @@ func (s *scriptedClassifyBrain) Complete(_ context.Context, req model.Request) (
 // this walks the prompt rather than the message text — which is the point: a
 // sender who could put "inbound: no" in their own body must not be able to move
 // this answer.
-func directionLineFor(prompt, id string) string {
-	before, _, ok := strings.Cut(prompt, id)
+func directionLineFor(prompt, ref string) string {
+	before, _, ok := strings.Cut(prompt, `source_id="`+ref+`"`)
 	if !ok {
 		return ""
 	}
@@ -142,6 +144,26 @@ func fencedIDs(system, prompt, attr string) []string {
 		out = append(out, rest[:j-1])
 		rest = rest[j:]
 	}
+}
+
+// fencedSubjects maps each ref a span opens with to the subject line its
+// message starts with. The scripts key on the subject, because the model is
+// shown refs and never the activity id.
+func fencedSubjects(system, prompt, attr string) map[string]string {
+	marker, ok := promptfence.MarkerIn(system)
+	if !ok {
+		return nil
+	}
+	out := map[string]string{}
+	for _, span := range strings.Split(prompt, "<"+marker+" "+attr+`="`)[1:] {
+		ref, body, found := strings.Cut(span, `">`)
+		if !found {
+			continue
+		}
+		subject, _, _ := strings.Cut(strings.TrimPrefix(body, "Subject: "), "\n")
+		out[ref] = subject
+	}
+	return out
 }
 
 func indexAfter(s, sub string) int {
@@ -280,8 +302,8 @@ func TestCaptureClassifyPass(t *testing.T) {
 	confident := seedUnlabeledEmail(t, e, "please send the offer")
 	doubtful := seedUnlabeledEmail(t, e, "hmm")
 	brain := &scriptedClassifyBrain{
-		labels:     map[string]string{confident.String(): "commitment"},
-		confidence: map[string]float64{doubtful.String(): 0.4},
+		labels:     map[string]string{"please send the offer": "commitment"},
+		confidence: map[string]float64{"hmm": 0.4},
 	}
 	classifier := NewCaptureClassifier(e.Pool, brain, slog.New(slog.DiscardHandler))
 
@@ -330,7 +352,7 @@ func TestCaptureClassifyPass(t *testing.T) {
 		brain.budgetOut = false
 		brain.soloStaysLow = true
 		stuck := seedUnlabeledEmail(t, e, "???")
-		brain.confidence[stuck.String()] = 0.3
+		brain.confidence["???"] = 0.3
 		before := brain.calls
 		if err := classifier.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 			t.Fatalf("a no-progress pass must not be an error: %v", err)
@@ -355,8 +377,8 @@ func TestCaptureClassifyPass(t *testing.T) {
 		brain.budgetOnSolo = true
 		sure := seedUnlabeledEmail(t, e, "confirming our agreement")
 		shaky := seedUnlabeledEmail(t, e, "??")
-		brain.labels[sure.String()] = "commitment"
-		brain.confidence[shaky.String()] = 0.4
+		brain.labels["confirming our agreement"] = "commitment"
+		brain.confidence["??"] = 0.4
 		if err := classifier.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 			t.Fatalf("a mid-run budget stop must not be an error: %v", err)
 		}
@@ -380,8 +402,8 @@ func TestTheClassifyPassCarriesTheReplyVerdictToTheRow(t *testing.T) {
 	answered := seedInboundEmail(t, e, "yes please, send it over")
 	ourOwn := seedOutboundEmail(t, e, "following up on my last note")
 	brain := &scriptedClassifyBrain{
-		labels:     map[string]string{answered.String(): "commitment"},
-		replies:    map[string]string{answered.String(): "positive"},
+		labels:     map[string]string{"yes please, send it over": "commitment"},
+		replies:    map[string]string{"yes please, send it over": "positive"},
 		sawInbound: map[string]string{},
 	}
 	classifier := NewCaptureClassifier(e.Pool, brain, slog.New(slog.DiscardHandler))
@@ -405,10 +427,10 @@ func TestTheClassifyPassCarriesTheReplyVerdictToTheRow(t *testing.T) {
 
 	// The prompt told the model the truth about each direction, from the record
 	// rather than from the message body.
-	if got := brain.sawInbound[answered.String()]; got != "yes" {
+	if got := brain.sawInbound["yes please, send it over"]; got != "yes" {
 		t.Errorf("the prompt said inbound: %q for a message sent to us, want yes", got)
 	}
-	if got := brain.sawInbound[ourOwn.String()]; got != "no" {
+	if got := brain.sawInbound["following up on my last note"]; got != "no" {
 		t.Errorf("the prompt said inbound: %q for a message we sent, want no", got)
 	}
 
@@ -429,7 +451,7 @@ func TestAVerdictOnOurOwnMailIsRefused(t *testing.T) {
 	e := integration.Setup(t)
 	ourOwn := seedOutboundEmail(t, e, "checking in")
 	brain := &scriptedClassifyBrain{
-		replies: map[string]string{ourOwn.String(): "positive"},
+		replies: map[string]string{"checking in": "positive"},
 	}
 	classifier := NewCaptureClassifier(e.Pool, brain, slog.New(slog.DiscardHandler))
 
@@ -536,7 +558,7 @@ func TestAMessageWithNoDirectionStillGetsLabelled(t *testing.T) {
 		t.Fatal(err)
 	}
 	brain := &scriptedClassifyBrain{
-		labels:     map[string]string{id.String(): "commitment"},
+		labels:     map[string]string{"no direction on this one": "commitment"},
 		sawInbound: map[string]string{},
 	}
 	classifier := NewCaptureClassifier(e.Pool, brain, slog.New(slog.DiscardHandler))
@@ -548,7 +570,7 @@ func TestAMessageWithNoDirectionStillGetsLabelled(t *testing.T) {
 	if l := labelOf(t, e, id); l == nil || *l != "commitment" {
 		t.Errorf("label = %v, want commitment — the row was skipped or the batch died", l)
 	}
-	if got := brain.sawInbound[id.String()]; got != "no" {
+	if got := brain.sawInbound["no direction on this one"]; got != "no" {
 		t.Errorf("the prompt said inbound: %q for a directionless row, want no", got)
 	}
 	if v := replyVerdictOf(t, e, id); v != nil {
@@ -575,8 +597,8 @@ func TestAVerdictAboutAnEditedMessageStoresNeitherLabelNorReply(t *testing.T) {
 	edited := seedInboundEmail(t, e, "yes please, send it over")
 	brain := editingBrain{
 		scriptedClassifyBrain: &scriptedClassifyBrain{
-			labels:     map[string]string{edited.String(): "commitment"},
-			replies:    map[string]string{edited.String(): "positive"},
+			labels:     map[string]string{"yes please, send it over": "commitment"},
+			replies:    map[string]string{"yes please, send it over": "positive"},
 			sawInbound: map[string]string{},
 		},
 		edit: func() {

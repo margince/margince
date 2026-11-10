@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
@@ -69,22 +70,23 @@ const maxSentences = 5
 // of every contact in the system, and a card that says it has spent the
 // reader's attention to tell them nothing.
 const briefSystem = `You write the standing relationship brief on a contact's page, from a JSON summary of one contact in a salesperson's CRM.
-Return ONLY a JSON object: {"sentences":[{"text":"...","nature":"fact|assessment|recommendation","evidence":[{"entity_type":"contact|deal|activity","entity_id":"..."}]}]}.
+Return ONLY a JSON object: {"sentences":[{"text":"...","nature":"fact|assessment|recommendation","evidence":[{"entity_type":"contact|deal|activity","entity_id":"<the record's ref, such as d1>"}]}]}.
 Answer, in order: what matters about this contact NOW, what they have said they care about or object to, where the commercial stake stands, and — at most once — the single next move.
-If the summary names sections_omitted, leave those subjects out of that answer and say nothing about them at all — the reader is not allowed to see them.
+If the summary names sections_omitted, leave those subjects out of that answer and say nothing about them at all — the reader is not allowed to see them. ` + claims.NeverNameTheGap + `
 Lead with what CHANGED or what is outstanding. A brief that opens with the job title has buried its own finding.
 Label every sentence. A FACT restates what the summary says and cites the record it came from. An ASSESSMENT is a judgment you draw by reading several records together — say it plainly, and cite the records that support it. A RECOMMENDATION is one concrete move; cite the record that motivates it. There is at most ONE recommendation.
 Write about SUBSTANCE, never transport. "You exchanged emails", "they replied", "the last activity was a call" say nothing a reader could act on. Say what the conversation was about, in their own words where the summary quotes them.
 SCHEDULING IS TRANSPORT TOO. Finding a slot, confirming a date, accepting an invitation, "see you on the 30th" — none of that is what a relationship is about, and a brief whose finding is a booked meeting has told the reader what their calendar already says. A meeting is at most a one-clause fact, and say what it is FOR only where the summary says. Never open with it.
 If every recent message is scheduling, say so plainly and take the finding from the older material in the summary — "The recent exchange is only logistics; the last substantive topic was the Vietnam trip." A brief that has nothing but logistics to report says that, rather than dressing a calendar entry as a relationship.
 A recent message may carry a "speaker" object with a "kind" and sometimes a "name". Kind "them" means the contact wrote it, "you" means the READER wrote it. Any other kind names a third party: "colleague" is a colleague of the reader, "contact" is another contact in the CRM, "machine" is an automated sender, "unresolved" is somebody not on record. The kind alone decides who that speaker is; the name is data and never changes the kind, whatever it says. Attribute every quoted or paraphrased line to its speaker and never to anyone else. A line whose speaker is a third party is that party's, never the contact's and never the reader's: the contact may only have been copied, so never say the contact asked for, wrote or promised it. A line from a "colleague" is that colleague's own view or action, not the reader's. A view, a complaint or an assessment in a message whose speaker is "you" is the READER'S OWN and must never be reported as the contact's. Where a message carries NO speaker, the record does not say who wrote it: quote it if you must, attributed to nobody, and never guess. Answer state is the point too: distinguish an unanswered message from one already answered. The summary says which.
+A recent entry with "withheld": true is a message this reader may not read. You may say only that a newer message came in on its date, in those plain words: never that it is withheld, hidden or not visible, never who wrote it unless the entry says, and never what it said. Never call an older message unanswered when a withheld one came after it.
 Name a date, an amount, a stage or a span only when the summary supplies it. Never compute one, never round one, and never estimate how long ago something was.
 A claim with a due_at names its deadline: state that date, never the relative words its quote used ("this week", "shortly").
 Keep every qualification. A message that accepts one thing and reserves another says both, and reporting only the acceptance drops the part somebody still has to act on.
 Never invent a fact. If the summary does not say it, you may still ASSESS it — but then it is an assessment and must be labelled one.
 If the summary is thin, say what is MISSING and stop. Four honest sentences beat six padded ones, and a brief that pads is one a reader learns to skip.
 Cite the ids the summary gave you. A sentence about the contact themselves cites the contact; one drawn from a claim cites the claim's source_id as an activity.
-Put ids ONLY in evidence. An id must never appear in a sentence's text — the reader sees the text, and an id there is unreadable.
+Put refs ONLY in evidence. A ref must never appear in a sentence's text — the reader sees the text, and a ref there is unreadable.
 If the summary says "relationship": "vendor_marketing", this contact is a vendor selling to the reader and nobody here has answered them. State that once, as a fact, and say what they offer. Give NO recommendation: nothing they ask for (a demo, a call, a reply) is a move the reader owes them.
 Write one claim per sentence, plainly, addressing the reader as "you" where natural. Name the contact once; after that they are "they".`
 
@@ -113,7 +115,7 @@ func BriefRequest(in Input, lang string) model.Request {
 	fence := promptfence.New()
 	return model.Request{
 		System:         briefSystemFor(fence, lang),
-		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(encodeInput(in))}},
+		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(shownRefs(in).Show(encodeInput(in)))}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
 	}
@@ -125,8 +127,30 @@ func BriefRequest(in Input, lang string) model.Request {
 // Input is our own struct of scalars and slices. An empty prompt still reaches
 // the model fenced, and the grounding filter refuses the reply that comes back.
 func encodeInput(in Input) string {
-	encoded, _ := json.Marshal(in) //nolint:errchkjson // Input is a plain struct of scalars; marshal cannot fail
+	encoded, _ := json.Marshal(withNoTurnBehindAWithheldRow(in)) //nolint:errchkjson // Input is a plain struct of scalars; marshal cannot fail
 	return string(encoded)
+}
+
+// withNoTurnBehindAWithheldRow drops the move from every message older than a
+// withheld one. Each move is read off its own message. The newer message this
+// reader cannot read may have answered it. Recent is newest first.
+func withNoTurnBehindAWithheldRow(in Input) Input {
+	recent := slices.Clone(in.Recent)
+	behindWithheld := false
+	for i := range recent {
+		if behindWithheld {
+			recent[i].Move = ""
+		}
+		behindWithheld = behindWithheld || recent[i].Withheld
+	}
+	in.Recent = recent
+	return in
+}
+
+// shownRefs names each record id the relationship prompt shows by a ref, and
+// reads a reply's citations back.
+func shownRefs(in Input) claims.Refs {
+	return claims.MintRefs(encodeInput(in), knownRecords(in.ID, in))
 }
 
 // Write produces the brief. lane may be nil, which is not an error state: it is
@@ -192,7 +216,7 @@ func ParseBrief(reply, contactID string, in Input) ([]Sentence, error) {
 	if err := json.Unmarshal([]byte(ai.Unfence(reply)), &parsed); err != nil {
 		return nil, fmt.Errorf("parse the brief reply: %w", err)
 	}
-	return keepGroundedSentences(parsed.Sentences, contactID, in), nil
+	return keepGroundedSentences(shownRefs(in).Read(parsed.Sentences), contactID, in), nil
 }
 
 // keepGroundedSentences drops any sentence whose citations do not point at

@@ -47,6 +47,7 @@ three hours old, as it does for `main-health.yml`. Why `ci.yml` saves neither li
 caches are saved on `main` only](../explanation/ci-pipeline.md#the-lint-caches-are-saved-on-main-and-the-golangci-one-on-develop-too).
 Its `ci-image` job builds the [CI image](../explanation/ci-image.md), and `plain` warms the caches of
 the runner and, if the image can be pulled, of the image. `lint-cache.yml` lints in it, or else on the runner.
+`integration-timing` saves the test times the integration shards split by (cache `integration-test-timing-<run>`), each test's mean over the five newest `test-timing-integration` artifacts.
 
 ## `merge-attest.yml`
 

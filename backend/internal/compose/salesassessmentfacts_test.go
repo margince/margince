@@ -7,7 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/salesassessment"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 func TestAssessmentMoneyUsesTheCurrencyScale(t *testing.T) {
@@ -39,5 +41,16 @@ func TestAssessmentForecastCellsKeepTheForecastPeriod(t *testing.T) {
 	}
 	if got := figureText(1.7, "hours"); got != "1.7 hours" {
 		t.Fatalf("response time: %q", got)
+	}
+}
+
+func TestACandidateAmountIsDisplayedAsACellOfTheSameFigure(t *testing.T) {
+	in := salesassessment.Input{
+		Cells:      []salesassessment.CellIn{{ID: "metric:open_pipeline", Value: "25000 EUR", Unit: "EUR"}},
+		Candidates: []salesassessment.CandidateIn{{ID: "deal-1", Amount: "25000 EUR"}},
+	}
+	displayAssessmentFigures(&in, string(textlang.English))
+	if in.Candidates[0].Display == "" || in.Candidates[0].Display != in.Cells[0].Display {
+		t.Fatalf("candidate display %q, want the cell's %q", in.Candidates[0].Display, in.Cells[0].Display)
 	}
 }

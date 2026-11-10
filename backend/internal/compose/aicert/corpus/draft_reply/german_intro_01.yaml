@@ -47,8 +47,8 @@ expect:
     English subject, scores at the floor however good the content is: the rep
     cannot send it.
 
-    Second, the introduction. The inbound message says Marek made the
-    introduction to Anna. Nothing in the supplied data states any directed
+    Second, the introduction. The inbound message says Marek put Romina
+    in contact with Anna. Nothing in the supplied data states any directed
     referral fact, so the draft must not state one in either direction. A draft
     that says Anna introduced Marek, or that Romina introduced anyone, has
     inverted or invented a relationship fact and scores at the floor. A draft

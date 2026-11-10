@@ -50,7 +50,8 @@ type Stage = components["schemas"]["Stage"];
 function DealEmailVerb({
   deal,
   disabledReasonId,
-}: Readonly<{ deal: Deal; disabledReasonId?: string }>) {
+  disabled,
+}: Readonly<{ deal: Deal; disabledReasonId?: string; disabled?: boolean }>) {
   // The same coverage read the readings band and the coverage card already
   // make, served from one cache entry — so asking here costs no request.
   const coverage = useDealCoverage(deal.id, !deal.archived_at);
@@ -65,6 +66,7 @@ function DealEmailVerb({
       // over what the reader typed.
       recordAddress={recordAddress}
       disabledReasonId={disabledReasonId}
+      disabled={disabled}
     />
   );
 }
@@ -203,7 +205,11 @@ export function DealActions({
           this deal: the same two groups, in the same order, that the contact,
           company and lead headers draw. A rep moving between records must not
           have to re-find the verb they just used on the last one. */}
-      <DealEmailVerb deal={deal} disabledReasonId={refusedByArchive} />
+      <DealEmailVerb
+        deal={deal}
+        disabledReasonId={logRefused}
+        disabled={logPending}
+      />
       <Button
         disabled={logPending}
         reasonId={logRefused}

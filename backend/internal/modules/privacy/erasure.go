@@ -150,7 +150,7 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		// hold the subject's address and the body before any activity exists, so
 		// nothing above this line can reach them — and a scheduled one would
 		// otherwise fire the morning after this erasure certified the data destroyed.
-		if err := redactUnsentMessages(ctx, tx, reason, subject, leadsWiped, emails); err != nil {
+		if err := redactUnsentMessages(ctx, tx, reason, subject, leadsWiped, emails, e.payloads); err != nil {
 			return err
 		}
 		// And the ones nobody has DECIDED yet, one step earlier in the same life

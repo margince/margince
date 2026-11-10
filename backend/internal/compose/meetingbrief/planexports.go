@@ -22,11 +22,6 @@ func DeterministicPlanFor(in Input) Plan {
 	return DeterministicPlan(in, rankClaims(in))
 }
 
-// PlanPromptFor is what the model is shown for one meeting and its floor.
-func PlanPromptFor(in Input, floor Plan) PlanPrompt {
-	return planPromptOf(in, floor)
-}
-
 // PlanCites reports whether any claim in the plan rests on one record.
 //
 // This is the question a deterministic filter cannot answer. Grounding checks
