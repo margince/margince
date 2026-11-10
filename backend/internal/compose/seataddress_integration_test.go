@@ -300,7 +300,10 @@ func writerWaitsForCheck(t *testing.T, e *integration.Env, address string, write
 	if err := storekit.LockSeatAddressChecks(ctx, check, address); err != nil {
 		t.Fatal(err)
 	}
-	holder := conn.Conn().PgConn().PID()
+	var holder int32
+	if err := check.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&holder); err != nil {
+		t.Fatal(err)
+	}
 	probe, err := e.Pool.Acquire(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -308,16 +311,7 @@ func writerWaitsForCheck(t *testing.T, e *integration.Env, address string, write
 	t.Cleanup(probe.Release)
 	done, returned := make(chan error, 1), make(chan struct{})
 	go func() { defer close(returned); done <- write() }()
-	testdb.WaitForContention(t, returned, "the writer finished while the seat check held its address",
-		"the writer never queued behind the seat check", func(ctx context.Context) (bool, error) {
-			// pg_stat_activity is cached per transaction until cleared.
-			if _, err := probe.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
-				return false, err
-			}
-			var queued bool
-			err := probe.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM pg_stat_activity a WHERE $1 = ANY (pg_blocking_pids(a.pid)))`, holder).Scan(&queued)
-			return queued, err
-		})
+	testdb.AwaitQueuedBehind(t, probe, holder, 1, returned, "the writer of a seat address")
 	if err := check.Rollback(ctx); err != nil {
 		t.Fatal(err)
 	}

@@ -161,20 +161,9 @@ func assertPermissionWriteWaitsForHandoff(t *testing.T, scenario permissionWrite
 			stopped <- p.Call(t, "POST", path, write, nil, nil)
 		}
 	}()
-	testdb.WaitForContention(t, returned, "the stop returned before the provider handoff completed", "the stop did not wait on the transmitting recipient", func(ctx context.Context) (bool, error) {
-		if _, err := p.Owner.Exec(ctx, "SELECT pg_stat_clear_snapshot()"); err != nil {
-			return false, err
-		}
-		var waiting bool
-		err := p.Owner.QueryRow(ctx, `SELECT EXISTS (
- SELECT 1 FROM pg_locks waiting JOIN pg_locks held
- ON (held.locktype,held.database,held.classid,held.objid,held.objsubid) = (waiting.locktype,waiting.database,waiting.classid,waiting.objid,waiting.objsubid)
- WHERE waiting.locktype = 'advisory' AND NOT waiting.granted AND held.granted AND held.mode='ShareLock'
- AND held.pid = ANY(pg_blocking_pids(waiting.pid))
- AND waiting.database = (SELECT oid FROM pg_database WHERE datname = current_database())
- AND ((waiting.classid::bigint << 32) | (waiting.objid::bigint & 4294967295)) = ANY(ARRAY(SELECT hashtextextended(k,0) FROM unnest(@keys::text[]) AS k)))`, pgx.NamedArgs{"keys": keys}).Scan(&waiting)
-		return waiting, err
-	})
+	holder := stopKeyHolder(t, p, keys)
+	testdb.AwaitQueuedBehind(t, p.Owner, holder, 1, returned, "the stop")
+	waitsOnStopKey(t, p, holder, keys)
 	if scenario == confirmationDuringSend {
 		probe, err := p.Owner.Begin(t.Context())
 		if err != nil {
@@ -375,4 +364,43 @@ func stageAddressStopMail(t *testing.T, p *preflightEnv, scenario permissionWrit
 		t.Fatalf("stage address-stop message: %d %s %s %s", status, activity.Code, activity.Detail, activity.Details)
 	}
 	return uuidOf(t, activity.ID), path, storekit.StopAddressLockKeys([]string{address}, nil)
+}
+
+// stopKeySQL matches the advisory lock row l when its key is one of @keys.
+const stopKeySQL = `l.locktype = 'advisory'
+ AND l.database = (SELECT oid FROM pg_database WHERE datname = current_database())
+ AND ((l.classid::bigint << 32) | (l.objid::bigint & 4294967295)) = ANY(ARRAY(
+   SELECT hashtextextended(k, 0) FROM unnest(@keys::text[]) AS k))`
+
+// stopKeyHolder names the backend that holds a stop key in share mode: the
+// transmit, paused inside its provider handoff.
+func stopKeyHolder(t *testing.T, p *preflightEnv, keys []string) int32 {
+	t.Helper()
+	var holders []int32
+	if err := p.Owner.QueryRow(t.Context(), `SELECT coalesce(array_agg(DISTINCT l.pid), '{}') FROM pg_locks l
+ WHERE l.granted AND l.mode = 'ShareLock' AND `+stopKeySQL, pgx.NamedArgs{"keys": keys}).Scan(&holders); err != nil {
+		t.Fatalf("reading who holds the stop keys: %v", err)
+	}
+	if len(holders) != 1 {
+		t.Fatalf("%d backends hold the stop keys in share mode, want the one transmit", len(holders))
+	}
+	return holders[0]
+}
+
+// waitsOnStopKey fails unless the session queued behind holder waits for a
+// stop key, rather than for some other lock the transmit holds.
+func waitsOnStopKey(t *testing.T, p *preflightEnv, holder int32, keys []string) {
+	t.Helper()
+	waiter, err := testdb.WaiterBehind(t.Context(), p.Owner, holder)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var onKey bool
+	if err := p.Owner.QueryRow(t.Context(), `SELECT EXISTS (SELECT 1 FROM pg_locks l
+ WHERE l.pid = @waiter AND NOT l.granted AND `+stopKeySQL+`)`, pgx.NamedArgs{"waiter": waiter, "keys": keys}).Scan(&onKey); err != nil {
+		t.Fatalf("reading what the stop waits for: %v", err)
+	}
+	if !onKey {
+		t.Fatal("the stop waits on the transmit, but not for a stop key")
+	}
 }
