@@ -6,7 +6,8 @@ import { useT } from "../../i18n";
 import { useUrlParams } from "../../lib/urlstate";
 import { ApprovalBundleReview } from "../worklist/worklist.bundle";
 import { useApproval, worklistKey } from "../worklist/worklist.queries";
-import { ApprovalProposal, ApprovalRow } from "./approvalrow";
+import { ApprovalProposal } from "./approvalproposal";
+import { ApprovalRow } from "./approvalrow";
 
 export { APPROVAL_PARAM, approvalHref } from "../../lib/approvalhref";
 

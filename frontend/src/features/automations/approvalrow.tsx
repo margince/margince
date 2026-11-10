@@ -9,8 +9,6 @@ import { SendPermission } from "../../components/sendpermission";
 import { Button, Card } from "../../design-system/atoms";
 import {
   DecisionCard,
-  type DecisionCardLabels,
-  DecisionProposal,
   DecisionStatusChip,
   type DecisionStatusLabels,
 } from "../../design-system/decisioncard";
@@ -22,7 +20,6 @@ import { formatCountdown, useNow } from "../../format/now";
 import type { Locale, Translator } from "../../i18n";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { editedCommercialPreview } from "../../lib/approvalpreview";
-import { summaryWords } from "../../lib/approvalpreviewfields";
 import {
   type Approval,
   invalidateApprovalViews,
@@ -38,8 +35,6 @@ import {
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { useSendPermission } from "../../lib/usesendpermission";
-import { useViewerZone } from "../../lib/viewerzone";
-import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
 import {
   ApprovalDetailModal,
   DecideOutcome,
@@ -54,7 +49,8 @@ import {
   approvalLabel,
   decisionSkewKey,
 } from "./approvalkind";
-import { approvalAcceptable, useApprovalNames } from "./approvalresponsibility";
+import { rowLabels, useApprovalDisplay } from "./approvalproposal";
+import { approvalAcceptable } from "./approvalresponsibility";
 import { stagedSendOf } from "./approvalsend";
 import { ApprovalDecider, ApprovalTarget } from "./approvaltarget";
 import {
@@ -114,34 +110,6 @@ export function useDecisionSink(): {
   return { onAlreadyDecided, decidedNote };
 }
 
-// The words the decision card needs, in this surface's own vocabulary.
-//
-// Assembled once per render rather than inline, because the card takes them as
-// one object and a caller that builds it in the JSX rebuilds it on every keystroke
-// in the editor beside it.
-//
-// `skip` is deliberately absent: the queue is something somebody works to the end,
-// and "later" on a surface whose whole purpose is to be emptied is a verb that
-// only moves work sideways. The deck on Brief is where later belongs.
-//
-// `showMore` / `showLess` are absent for a different reason and it is worth
-// stating: the row clamps a long draft, and the way through to the whole of it on
-// THIS surface is the detail dialog already on the row's own meta line. A second
-// affordance for the same text, one line apart, is two answers to one question.
-function rowLabels(t: Translator): DecisionCardLabels {
-  return {
-    accept: t("trust.accept"),
-    edit: t("trust.edit"),
-    reject: t("decision.reject"),
-    expired: t("decision.expired"),
-    draftSubject: t("decision.draftSubject"),
-    draftBody: t("decision.draftBody"),
-    noContent: t("common.empty"),
-    loading: t("decision.detailLoading"),
-    summaryWords: summaryWords(t),
-  };
-}
-
 // The status chip's words. Spelled per surface like every other label bag here:
 // what a countdown or a verdict is CALLED belongs to the screen showing it.
 function statusLabels(
@@ -156,49 +124,6 @@ function statusLabels(
     rejected: t("decision.status.rejected"),
     expired: t("decision.status.expired"),
   };
-}
-
-// What a kind shows of its proposal, in the reader's words. The card and the
-// proposal shown without it read alike.
-function useApprovalDisplay(approval: Approval, preview: Approval["preview"]) {
-  const t = useT();
-  const { locale } = useLocale();
-  const names = useApprovalNames([approval]);
-  const zone = useViewerZone();
-  return resolveDisplay(
-    approval.kind,
-    approval.proposed_change ?? {},
-    t,
-    stagedDayFormatter(locale, zone),
-    names,
-    approval.requested_decider_id,
-    approval.assignee_inactive,
-    preview,
-    locale,
-    zone,
-  );
-}
-
-/**
- * What a staged proposal would do, read the way its card reads it. Who is asked
- * to decide is the card's question, not part of what the proposal does.
- */
-export function ApprovalProposal({
-  approval,
-  className,
-}: Readonly<{ approval: Approval; className?: string }>) {
-  const t = useT();
-  const display = useApprovalDisplay(approval, approval.preview).filter(
-    (entry) => entry.field !== "requested_decider",
-  );
-  return (
-    <DecisionProposal
-      approval={approval}
-      labels={rowLabels(t)}
-      display={display}
-      className={className}
-    />
-  );
 }
 
 export function ApprovalRow({

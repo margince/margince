@@ -44,8 +44,8 @@ const followUp: Approval = {
 const decision = row({
   id: ID,
   source: "approval",
-  category: "approvals",
-  title: followUp.summary,
+  category: "decisions",
+  title: followUp.summary ?? undefined,
   actions: ["decide"],
 });
 
@@ -85,7 +85,7 @@ function draw(node: ReactNode) {
 
 it("shows the proposed task on the card it is read on", async () => {
   serve();
-  draw(<WorklistRow item={decision} owner="" framed />);
+  draw(<WorklistRow item={decision} position={1} owner="" framed />);
 
   expect(await screen.findByText("Follow up on Acme Rollout")).toBeTruthy();
   expect(screen.getByText("Task")).toBeTruthy();
@@ -106,7 +106,14 @@ it("answers the decision in its details instead of opening a second drawer", asy
 
 it("reads nothing for a row that asks no decision", () => {
   const read = serve();
-  draw(<WorklistRow item={row({ title: "Call Acme" })} owner="" framed />);
+  draw(
+    <WorklistRow
+      item={row({ title: "Call Acme" })}
+      position={1}
+      owner=""
+      framed
+    />,
+  );
 
   const approvalReads = read.mock.calls.filter(([input]) =>
     String(input instanceof Request ? input.url : input).includes(
