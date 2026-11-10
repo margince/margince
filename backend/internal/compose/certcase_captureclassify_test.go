@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -269,43 +270,28 @@ func TestClassifyFixtureCarriesOnlyWhatProductionIsGiven(t *testing.T) {
 	}
 }
 
-// The fixture supplies no id, and Prepare mints a fresh one per message per
-// preparation. Were the ids to come from the corpus, their author could write
-// them into the expected reply, and a model that merely echoed back ids it was
-// handed would be indistinguishable from one that labeled the right messages.
-func TestClassifyCaseMintsAnIDPerMessageRatherThanReadingIt(t *testing.T) {
-	fixture := classifyFixtureJSON(t)
-
-	ask := func() []string {
-		t.Helper()
-		prepared, err := captureClassifyCases{}.Prepare(fixture, classifyExpectation(t, "commitment", "meeting"))
-		if err != nil {
-			t.Fatalf("preparing the case: %v", err)
-		}
-		stub := &classifyCompleterStub{answer: classifyAnswer("commitment", "meeting")}
-		if _, err := prepared.Run(context.Background(), stub); err != nil {
-			t.Fatalf("running the case: %v", err)
-		}
-		requested, err := requestedIDsIn(stub.seen[0])
-		if err != nil {
-			t.Fatalf("reading the requested ids: %v", err)
-		}
-		return requested
+// The model is asked about each message by its ref in fixture order, and no
+// activity id reaches the request.
+func TestClassifyCaseAsksByRefNeverByActivityID(t *testing.T) {
+	prepared, err := captureClassifyCases{}.Prepare(classifyFixtureJSON(t), classifyExpectation(t, "commitment", "meeting"))
+	if err != nil {
+		t.Fatalf("preparing the case: %v", err)
 	}
-
-	first, second := ask(), ask()
-	if len(first) != 2 {
-		t.Fatalf("the request asks about %d messages, want one id per fixture entry", len(first))
+	stub := &classifyCompleterStub{answer: classifyAnswer("commitment", "meeting")}
+	if _, err := prepared.Run(context.Background(), stub); err != nil {
+		t.Fatalf("running the case: %v", err)
 	}
-	seen := map[string]bool{}
-	for _, id := range append(append([]string{}, first...), second...) {
-		if _, err := ids.Parse(id); err != nil {
-			t.Errorf("the requested id %q is not one this system mints: %v", id, err)
+	requested, err := requestedIDsIn(stub.seen[0])
+	if err != nil {
+		t.Fatalf("reading the requested ids: %v", err)
+	}
+	if !slices.Equal(requested, []string{"m1", "m2"}) {
+		t.Errorf("the request asks about %v, want [m1 m2]", requested)
+	}
+	for _, m := range prepared.(*captureClassifyCase).batch {
+		if strings.Contains(stub.seen[0].Messages[0].Content, m.ID.String()) {
+			t.Errorf("activity id %s reached the model", m.ID)
 		}
-		if seen[id] {
-			t.Errorf("the id %q was asked about twice", id)
-		}
-		seen[id] = true
 	}
 }
 

@@ -1,0 +1,49 @@
+name: the_customer_names_a_new_signing_date
+task: deal_verdict
+site: deal_verdict
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# The customer's own mail names the month they will sign. The deal still
+# carries a close date two months earlier, so the date should move. The mail
+# names no price, and the deal already sits at its raise ceiling, so neither
+# the amount nor the chances move.
+fixture:
+  today: "2026-11-04"
+  deal:
+    name: "Rollout for the support team"
+    stage: "Proposal sent"
+    amount: 24000
+    currency: EUR
+    close_date: "2026-11-30"
+    probability: 50
+  activities:
+    - kind: email
+      direction: outbound
+      at: "2026-10-20"
+      subject: "Our offer for the support rollout"
+      body: |
+        Hi Anna, attached is our offer for the rollout, 24,000 EUR for the
+        first year. Happy to walk you through it.
+    - kind: email
+      direction: inbound
+      at: "2026-11-02"
+      subject: "Re: Our offer for the support rollout"
+      body: |
+        Thanks, the offer works for us. Our board only meets again in late
+        January, so we will sign on 29 January 2027 and start in February.
+expect:
+  outcome: accepted
+  answer:
+    - kind: set_close_date
+      date: "2027-01-29"
+  rubric: >
+    The customer names the signing date: 29 January 2027. The deal's close
+    date should move to it. The price in the offer is the deal's amount
+    already, so no amount change is due.
+    Score high for one set_close_date to 2027-01-29 citing the customer's
+    mail. Score at the floor for no date change, or a date the mail does not
+    name.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

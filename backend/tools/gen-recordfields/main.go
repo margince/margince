@@ -49,8 +49,6 @@ var recordBodies = []struct{ recordType, create, update string }{
 	{"offer_template", "CreateOfferTemplateRequest", "UpdateOfferTemplateRequest"},
 	{"offer", "CreateOfferRequest", "UpdateOfferRequest"},
 	{"deal_room", "CreateDealRoomRequest", ""},
-	{"deal_room_thread", "OpenDealRoomThreadRequest", ""},
-	{"deal_room_comment", "PostDealRoomCommentRequest", ""},
 }
 
 // createParents names the parent a record is created under, which its REST
@@ -211,6 +209,7 @@ func render(all schemas, shared map[string]*parameter, paths map[string]map[stri
 var contractEnums = []struct{ name, schema, path string }{
 	{"activityKindEnum", "CreateActivityRequest", "kind"},
 	{"activityLinkEntityTypeEnum", "CreateActivityRequest", "links.items.entity_type"},
+	{"activityMeetingStatusEnum", "CreateActivityRequest", "meeting_status"},
 }
 
 func renderEnums(b *strings.Builder, all schemas) error {

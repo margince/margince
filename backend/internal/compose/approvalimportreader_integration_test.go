@@ -64,6 +64,7 @@ func TestImportReviewShowsTheActorsTagEffectsToAReaderWithoutUpdateGrant(t *test
 	grant := perms.Objects["lead"]
 	grant.Update = false
 	perms.Objects["lead"] = grant
+	perms.FieldMasks = []principal.FieldMask{{Object: "lead", Field: "full_name", Condition: principal.MaskOutsideWriteAuthority}}
 	reviewer := e.As(e.Rep1, nil, perms)
 	proposal, err := service.GetWire(reviewer, id)
 	if err != nil {
@@ -80,5 +81,19 @@ func TestImportReviewShowsTheActorsTagEffectsToAReaderWithoutUpdateGrant(t *test
 	}
 	if !found {
 		t.Fatalf("execution actor's tag effect was hidden by the reader's update grant: %+v", proposal.Preview.ImportRows)
+	}
+	if _, err := service.Decide(ctx, id, false, nil); err != nil {
+		t.Fatal(err)
+	}
+	perms.RowScope = principal.RowScopeOwn
+	reviewer = e.As(e.Rep1, nil, perms)
+	decided, err := service.GetWire(reviewer, id)
+	if err != nil || decided.ProposedChange == nil {
+		t.Fatalf("deciding hid a plan its reader could see: %+v, %v", decided, err)
+	}
+	perms.FieldMasks[0].Condition = principal.MaskAlways
+	masked, err := service.GetWire(e.As(e.Rep1, nil, perms), id)
+	if err != nil || masked.ProposedChange != nil || (masked.Summary != nil && *masked.Summary != "") {
+		t.Fatalf("a permanently masked field remained readable: %+v, %v", masked, err)
 	}
 }

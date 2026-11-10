@@ -6,9 +6,8 @@
 // Whether the drawer offers to answer the message it is showing, and what such
 // a reply would be filed under.
 //
-// The verb is offered from the server's own `can_reply` and from nothing else,
-// which is what keeps a drawer that is refusing to show a message from
-// offering to answer it in the same header.
+// Reply follows the server's `can_reply` and nothing else.
+// Forward follows the server's `can_forward` and nothing else.
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -72,6 +71,7 @@ function presentation(over: Partial<EmailPresentation>): EmailPresentation {
       change_mode: "none",
     },
     can_reply: true,
+    can_forward: true,
     can_relink: false,
     version: 3,
     ...over,
@@ -137,6 +137,7 @@ describe("answering the message the drawer is showing", () => {
     draw(
       actions({
         can_reply: false,
+        can_forward: false,
         access: {
           content_state: "withheld",
           display_status: "withheld",
@@ -160,13 +161,15 @@ describe("answering the message the drawer is showing", () => {
     expect(screen.queryByRole("button", { name: "Forward" })).toBeNull();
   });
 
-  // Forward is a new message, so it needs no `can_reply`: a reader who may
-  // read a mail may pass it on.
-  it("offers Forward where Reply is not, and files elsewhere only on can_relink", () => {
+  it("offers Forward on can_forward where Reply is not, and files elsewhere only on can_relink", () => {
     const onRelink = vi.fn();
     draw(
       <EmailDrawerActions
-        presentation={presentation({ can_reply: false, can_relink: true })}
+        presentation={presentation({
+          can_reply: false,
+          can_forward: true,
+          can_relink: true,
+        })}
         onReply={vi.fn()}
         onForward={vi.fn()}
         onRelink={onRelink}
@@ -180,6 +183,36 @@ describe("answering the message the drawer is showing", () => {
       screen.getByRole("button", { name: "File under another record…" }),
     );
     expect(onRelink).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers Reply on can_reply where Forward is not", () => {
+    draw(actions({ can_reply: true, can_forward: false }));
+
+    expect(reply()).not.toBeNull();
+    expect(screen.queryByRole("button", { name: "Forward" })).toBeNull();
+  });
+
+  it("offers neither verb to a seat that may not write", () => {
+    draw(actions({ can_reply: false, can_forward: false }));
+
+    expect(reply()).toBeNull();
+    expect(screen.queryByRole("button", { name: "Forward" })).toBeNull();
+  });
+
+  it("leads an invitation with its answers and keeps Reply quiet beside them", () => {
+    const base = presentation({});
+    draw(
+      actions({
+        summary: {
+          ...base.summary,
+          calendar_invitation: { response: "needs_action" },
+        },
+      }),
+    );
+
+    expect(reply()?.className).not.toContain("btn-primary");
+    expect(screen.getByRole("button", { name: "Accept" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Forward" })).toBeTruthy();
   });
 
   it("hides More when the message may not be moved", () => {

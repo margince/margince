@@ -89,6 +89,13 @@ func TestOfferDraftCaseRefusesAnUnreachableExpectation(t *testing.T) {
 			}),
 			wantMsg: "pins both a unit price and a line net",
 		},
+		{
+			name: "an item expected to ground no line and priced",
+			expected: offerDraftExpectation(t, map[string]offerDraftExpectedLine{
+				offerDraftKickoffSource: {NoLine: true, UnitPriceMinor: 20000, PriceGrounded: true},
+			}),
+			wantMsg: "expects no line citing",
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

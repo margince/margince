@@ -7,25 +7,14 @@
 // no screen names yet keeps its wire spelling rather than gaining a new word
 // here.
 
-import { dealStatusLabel } from "../../components/dealdials";
+import { dealStatusLabel } from "../../format/dealstatus";
+import { LEAD_STATUS_LABEL } from "../../format/leadstatus";
+import { isProjectPhase, PHASE_LABEL } from "../../format/projectphase";
 import { isMessageKey, type useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { writtenByLabel } from "../../lib/leadorigins";
-import { LEAD_STATUS_FILTER_OPTIONS } from "../leads/leadpresentation";
-import { isProjectPhase, PHASE_LABEL } from "../projects/projects.form";
-
-// forecast_category dimension values (report.go's forecastCategoryExpr):
-// the four the deal itself can carry, plus the server-derived "slipped" —
-// a claimed commit/best_case deal whose close date is past, missing, or
-// still provisional. Omitting it here doesn't shrink the
-// total; it moves the deal's amount into no tile at all.
-export const FORECAST_CATEGORIES = [
-  { key: "commit", labelKey: "deal.fcCommit" },
-  { key: "best_case", labelKey: "deal.fcBestCase" },
-  { key: "pipeline", labelKey: "deal.fcPipeline" },
-  { key: "omitted", labelKey: "deal.fcOmitted" },
-  { key: "slipped", labelKey: "deal.fcSlipped" },
-] as const;
+import { bandOfKey } from "../../lib/winprobabilitybands";
 
 // The current standing a meeting can hold, in the order a week reads: what is
 // ahead, what happened, what did not, what was called off. A hand-kept mirror
@@ -39,6 +28,9 @@ export const MEETING_STATUSES = [
 ] as const;
 
 const LEAD_ENTITIES: ReadonlySet<string> = new Set(["leads-by-status"]);
+const leadStatusLabels = new Map<string, MessageKey>(
+  Object.entries(LEAD_STATUS_LABEL),
+);
 
 function keyed(
   pairs: readonly Readonly<{ key: string; labelKey: MessageKey }>[],
@@ -55,15 +47,14 @@ function valueKey(
   switch (field) {
     case "status":
       return LEAD_ENTITIES.has(entity)
-        ? LEAD_STATUS_FILTER_OPTIONS.find((option) => option.value === value)
-            ?.label
+        ? leadStatusLabels.get(value)
         : dealStatusLabel(value);
-    case "forecast_category":
-      return keyed(FORECAST_CATEGORIES, value);
+    case "win_probability_band":
+      return bandOfKey(value)?.label;
     case "meeting_status":
       return keyed(MEETING_STATUSES, value);
     case "phase":
-      return isProjectPhase(value) ? PHASE_LABEL[value] : undefined;
+      return isProjectPhase(value) ? labelFor(PHASE_LABEL, value) : undefined;
     case "kind": {
       const key = `timeline.kind.${value}`;
       return isMessageKey(key) ? key : undefined;

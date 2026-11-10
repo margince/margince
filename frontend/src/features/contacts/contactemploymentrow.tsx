@@ -11,10 +11,10 @@ import { ErrorLine } from "../../design-system/errorline";
 import { InlineText } from "../../design-system/inlinetext";
 import { formatDateAbbrev } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
+import { stillHeld } from "../../lib/employmentcurrency";
 import { navigate } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import type { Employment, EmploymentActions } from "./contactemployers";
-import { stillHeld } from "./employmentcurrency";
 
 // One employment edge: its company, the role there, the dates and a verb menu.
 // The only place a per-company title is corrected; `contact.title` is another.
@@ -42,7 +42,7 @@ export function EmploymentRow({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const detail = employmentDetail(employment, t, locale, zone);
   const summary = useEmployerSummary(employment.company_id);
   const company = summary.data;

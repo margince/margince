@@ -54,6 +54,7 @@ var inputChanges = map[string]InputChange{
 	"deal.erased":        {ScopeDeal, "an erased deal leaves the checked set"},
 
 	"offer.created":    {ScopeDeal, "the offer total is compared with the deal amount"},
+	"offer.updated":    {ScopeDeal, "the offer total is compared with the deal amount"},
 	"offer.sent":       {ScopeDeal, "the offer total is compared with the deal amount"},
 	"offer.accepted":   {ScopeDeal, "the offer total is compared with the deal amount"},
 	"offer.rejected":   {ScopeDeal, "the offer total is compared with the deal amount"},
@@ -90,12 +91,13 @@ var inputChanges = map[string]InputChange{
 	"pipeline.created":  {ScopeNone, "a new pipeline holds no deal yet"},
 	"pipeline.updated":  {ScopeNone, "a pipeline's own fields are not a rule input; its stages announce theirs"},
 
-	"project.created":       {ScopeNone, "projects are not a rule input"},
-	"project.updated":       {ScopeNone, "projects are not a rule input"},
-	"project.phase_changed": {ScopeNone, "projects are not a rule input"},
-	"project.archived":      {ScopeNone, "projects are not a rule input"},
-	"commission.accrued":    {ScopeNone, "commission follows a won deal, which the check no longer reads"},
-	"commission.decided":    {ScopeNone, "commission follows a won deal, which the check no longer reads"},
+	"project.created":         {ScopeNone, "projects are not a rule input"},
+	"project.updated":         {ScopeNone, "projects are not a rule input"},
+	"project.phase_changed":   {ScopeNone, "projects are not a rule input"},
+	"project.health_assessed": {ScopeNone, "projects are not a rule input"},
+	"project.archived":        {ScopeNone, "projects are not a rule input"},
+	"commission.accrued":      {ScopeNone, "commission follows a won deal, which the check no longer reads"},
+	"commission.decided":      {ScopeNone, "commission follows a won deal, which the check no longer reads"},
 
 	"deal_suggestion.created":    {ScopeSignal, "an open suggestion citing a signal covers it"},
 	"deal_suggestion.accepted":   {ScopeSignal, "a suggestion that is no longer open stops covering its signals"},
@@ -111,8 +113,9 @@ var inputChanges = map[string]InputChange{
 	"activity.disposition_recorded": {
 		ScopeDealActivity, "a reply's verdict decides whether the customer refused",
 	},
-	"activity.marked_handled":     {ScopeDealActivity, "the fingerprint decides whether the deal's reading moved"},
-	"activity.readiness_recorded": {ScopeDealActivity, "the fingerprint decides whether the deal's reading moved"},
+	"activity.marked_handled":      {ScopeDealActivity, "the fingerprint decides whether the deal's reading moved"},
+	"activity.readiness_recorded":  {ScopeDealActivity, "the fingerprint decides whether the deal's reading moved"},
+	"activity.invitation_answered": {ScopeNone, "an attendee's answer is not a rule input; the meeting it changes arrives on its own"},
 
 	"signal.detected": {ScopeSignal, "a new buying signal was never judged"},
 	"signal.updated":  {ScopeSignal, "the signal's evidence, company and status are rule inputs"},

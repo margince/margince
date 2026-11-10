@@ -11,13 +11,13 @@ package gates
 // neither the cause nor the fix. A code the server dropped leaves a case nothing can reach.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
@@ -106,7 +106,7 @@ func checkReasonSentences(t *testing.T, cases []tsReasonCase, generic string) {
 
 func tsCatalogKeys(t *testing.T, catalog string) map[string]bool {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join(frontendI18nDir, catalog))
+	raw, err := gatekit.ReadFile(filepath.Join(frontendI18nDir, catalog))
 	if err != nil {
 		t.Fatalf("reading the %s catalog: %v", catalog, err)
 	}
@@ -151,7 +151,7 @@ func tsSendPermissionCases(t *testing.T) (cases []tsReasonCase, generic string) 
 
 func tsMapperBody(t *testing.T) string {
 	t.Helper()
-	raw, err := os.ReadFile(frontendSendPermissionReasons)
+	raw, err := gatekit.ReadFile(frontendSendPermissionReasons)
 	if err != nil {
 		t.Fatalf("reading the frontend refusal mapper: %v", err)
 	}

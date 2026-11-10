@@ -18,10 +18,11 @@ package gates
 // Read from source rather than imported: gates may not depend on a module.
 
 import (
-	"os"
 	"regexp"
 	"strconv"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 var responseWindowMaxRE = regexp.MustCompile(`(?m)^const responseWindowMaxDays = (\d+)$`)
@@ -29,7 +30,7 @@ var responseWindowMaxRE = regexp.MustCompile(`(?m)^const responseWindowMaxDays =
 // widestResponseWindow reads the figure's own ceiling off the projection.
 func widestResponseWindow(t *testing.T) int {
 	t.Helper()
-	src, err := os.ReadFile("internal/compose/attention/waitinglane.go")
+	src, err := gatekit.ReadFile("internal/compose/attention/waitinglane.go")
 	if err != nil {
 		t.Fatalf("reading the response projection: %v", err)
 	}
@@ -48,7 +49,7 @@ func widestResponseWindow(t *testing.T) int {
 // the verdict table.
 func seededVerdictWindow(t *testing.T) int {
 	t.Helper()
-	src, err := os.ReadFile("internal/modules/consent/retention.go")
+	src, err := gatekit.ReadFile("internal/modules/consent/retention.go")
 	if err != nil {
 		t.Fatalf("reading the seed: %v", err)
 	}

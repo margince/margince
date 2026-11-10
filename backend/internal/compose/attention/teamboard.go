@@ -44,7 +44,7 @@ import (
 // members' counts be read at different instants, so a message answered mid-read
 // could be absent from both columns.
 func (s *Service) TeamBoard(ctx context.Context) (crmcontracts.TeamBoard, error) {
-	if err := requireLeadTier(ctx); err != nil {
+	if err := RequireLeadTier(ctx); err != nil {
 		return crmcontracts.TeamBoard{}, err
 	}
 	if s.teammates == nil {
@@ -175,9 +175,11 @@ func (s *Service) UnboundBoardSources() []string {
 // time either changed — a manager reads eleven, the rep opens their day and
 // sees nine, and nothing says which is right.
 func (s *Service) addWaiting(
-	ctx context.Context, load *teamCounts, _ []TeamMember, asOf time.Time,
+	ctx context.Context, load *teamCounts, roster []TeamMember, asOf time.Time,
 ) error {
-	waiting, cut, err := s.waiting.Unanswered(ctx, asOf, WaitingFor{})
+	// Narrowed to the team, as the team worklist narrows it. The scan bound is
+	// then spent on the board's own rows, not on other seats' newer waits.
+	waiting, cut, err := s.waiting.Unanswered(ctx, asOf, WaitingFor{Team: true, Seats: teamSeats(roster, nil)})
 	if err != nil {
 		return err
 	}

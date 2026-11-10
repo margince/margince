@@ -21,6 +21,7 @@ import { StatStrip } from "../../design-system/statstrip";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
+import { valueFor } from "../../lib/labelfor";
 import { problemMessageOf } from "../../lib/problem";
 import { ImportContextTagSummary } from "./import.contexttag";
 import { ImportRefusal } from "./import.notices";
@@ -467,7 +468,7 @@ function ProblemRows({
           render: (issue) => (
             <>
               {issue.kind ? (
-                <Badge tone={PROBLEM_TONE[issue.kind]}>
+                <Badge tone={valueFor(PROBLEM_TONE, issue.kind, "default")}>
                   {t(`import.problem.${issue.kind}`)}
                 </Badge>
               ) : null}

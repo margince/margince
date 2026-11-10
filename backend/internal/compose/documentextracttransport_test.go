@@ -11,10 +11,12 @@ package compose
 import (
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
+	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -35,24 +37,12 @@ func TestReadingADocumentIs501WithoutAJobRunner(t *testing.T) {
 	}
 }
 
-// The reading rides the readings' own bounded queue and dedupes on the ACTIVE
-// states. Including completed — River's default — is what silently skips the
-// re-enqueue the abandoned-reading recovery depends on.
-func TestTheReadingDedupesOnlyWhileItIsStillInFlight(t *testing.T) {
+func TestReadingInsertionDoesNotWaitForAnAbandonedRiverRow(t *testing.T) {
 	opts := documentExtractInsertOpts()
 	if opts.Queue != transcriptReadQueue {
-		t.Errorf("queue = %q, want the readings' own pool", opts.Queue)
+		t.Errorf("queue = %q, want %q", opts.Queue, transcriptReadQueue)
 	}
-	if !opts.UniqueOpts.ByArgs {
-		t.Error("a re-submitted enqueue of the same reading does not collapse")
-	}
-	if len(opts.UniqueOpts.ByState) == 0 {
-		t.Fatal("the uniqueness window is River's default, which includes completed — " +
-			"a finished job then blocks its own replacement and the document is unreadable for good")
-	}
-	for _, state := range opts.UniqueOpts.ByState {
-		if string(state) == "completed" {
-			t.Error("completed is in the uniqueness window")
-		}
+	if !reflect.DeepEqual(opts.UniqueOpts, river.UniqueOpts{}) {
+		t.Errorf("a dead River row can suppress replacement work: %+v", opts.UniqueOpts)
 	}
 }

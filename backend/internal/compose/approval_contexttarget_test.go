@@ -80,7 +80,7 @@ func TestNoKindIsBothContextOnlyAndUnpinned(t *testing.T) {
 // comparing them is the whole check.
 func TestNoKindIsRegisteredTwice(t *testing.T) {
 	early := map[string]bool{}
-	for _, kind := range approvalsServiceWithEffects(nil).EffectKinds() {
+	for _, kind := range NewApprovalsServiceWithEffects(nil).EffectKinds() {
 		early[kind] = true
 	}
 	for kind := range lateApprovalEffects {
@@ -108,7 +108,7 @@ func TestEveryLateEffectHasAPrecheck(t *testing.T) {
 
 func registeredEffectKinds() map[string]bool {
 	registered := map[string]bool{}
-	for _, kind := range approvalsServiceWithEffects(nil).EffectKinds() {
+	for _, kind := range NewApprovalsServiceWithEffects(nil).EffectKinds() {
 		registered[kind] = true
 	}
 	// The late-bound executors too. They are registered in applySendPath rather

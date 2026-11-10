@@ -167,6 +167,10 @@ type verdictResult struct {
 	Confidence schema.Confidence `json:"confidence"`
 }
 
+func (r verdictResult) answeredID() string { return r.ID }
+
+func (r verdictResult) answering(id string) verdictResult { r.ID = id; return r }
+
 type verdictPayload struct {
 	Results []verdictResult `json:"results"`
 }

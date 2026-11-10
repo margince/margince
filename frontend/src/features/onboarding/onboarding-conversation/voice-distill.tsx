@@ -7,6 +7,7 @@ import { Eyebrow } from "../../../design-system/eyebrow";
 import { usePrefersReducedMotion } from "../../../design-system/motion";
 import { formatNumber } from "../../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../../i18n";
+import { labelFor } from "../../../lib/labelfor";
 import { bandLabelKeys } from "./narration";
 import type { CorpusManifestEntry } from "./use-voice-corpus";
 import { emphasisIndices } from "./voice-excerpts";
@@ -64,7 +65,7 @@ function hearsLines(
       sources: formatNumber(summary.source_count, locale),
     }),
     t("ob.conv.voice.hearsBand", {
-      band: t(bandLabelKeys[summary.quality_band]),
+      band: t(labelFor(bandLabelKeys, summary.quality_band)),
     }),
   ];
   for (const [register, words] of Object.entries(summary.register_words)) {

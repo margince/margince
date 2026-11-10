@@ -76,7 +76,7 @@ func newLinkedInFieldsCase(t *testing.T, title, employer string) *linkedInFields
 	e := integration.Setup(t)
 	c := &linkedInFieldsCase{e: e, ctx: e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)}
 	c.store = contacts.NewStore(e.DB())
-	c.svc = approvalsServiceWithEffects(e.Pool)
+	c.svc = NewApprovalsServiceWithEffects(e.Pool)
 	c.acme = c.company(t, "Acme GmbH")
 	in := contacts.CreateContactInput{
 		FullName: "Andreas Muller", Source: "manual",

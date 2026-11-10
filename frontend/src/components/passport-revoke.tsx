@@ -14,15 +14,18 @@ import { problemMessageOf, unwrap } from "../lib/problem";
  * Ending a passport or a connection: DELETE /passports/{id} behind a confirm.
  * The list refetches before the dialog closes, so focus returns to a row that
  * already reads as ended; `focusAfter` names that row by the id confirmed.
+ * `onRevoked` runs before that refetch, so a caller can keep the row in view.
  */
 export function usePassportRevoke({
   verb,
   question,
   focusAfter,
+  onRevoked,
 }: Readonly<{
   verb: MessageKey;
   question: MessageKey;
   focusAfter: (id: string) => HTMLElement | null;
+  onRevoked?: (id: string) => void;
 }>): Readonly<{ ask: (id: string) => void; confirm: ReactNode }> {
   const t = useT();
   const list = usePassports();
@@ -33,7 +36,8 @@ export function usePassportRevoke({
     mutationFn: async (id: string) => {
       unwrap(await api.DELETE("/passports/{id}", { params: { path: { id } } }));
     },
-    onSuccess: async () => {
+    onSuccess: async (_, id) => {
+      onRevoked?.(id);
       await list.refetch();
       setPendingId(null);
     },

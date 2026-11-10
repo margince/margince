@@ -24,6 +24,24 @@
     "minimumReleaseAge": "0",
     "schedule": ["after 2am and before 6am"]
   },
+  "customDatasources": {
+    "ubuntu-snapshot": {
+      "description": "The newest moment the Ubuntu 24.04 archive changed, as a snapshot.ubuntu.com timestamp. snapshot.ubuntu.com publishes no list of its snapshots and resolves any time to the archive as it stood then, so the newest publication Launchpad records for noble, in any pocket, is a time every package version below was already in. It carries no release date on purpose: the age floor applies to the package versions, each older than this time.",
+      "defaultRegistryUrlTemplate": "https://api.launchpad.net/1.0/ubuntu/+archive/primary?ws.op=getPublishedSources&distro_series=https://api.launchpad.net/1.0/ubuntu/noble&status=Published&order_by_date=true&ws.size=1",
+      "format": "json",
+      "transformTemplates": [
+        "{ \"releases\": [entries.{ \"version\": $fromMillis($toMillis(date_published), \"[Y0001][M01][D01]T[H01][m01][s01]Z\") }] }"
+      ]
+    },
+    "ubuntu-package": {
+      "description": "The versions of one binary package published for Ubuntu 24.04 on amd64, with their publication dates. The query is held to noble, so no other release's version is offered, and -proposed and -backports are left out because the image does not read them.",
+      "defaultRegistryUrlTemplate": "https://api.launchpad.net/1.0/ubuntu/+archive/primary?ws.op=getPublishedBinaries&binary_name={{packageName}}&exact_match=true&distro_arch_series=https://api.launchpad.net/1.0/ubuntu/noble/amd64&status=Published",
+      "format": "json",
+      "transformTemplates": [
+        "{ \"releases\": [entries[pocket != \"Proposed\" and pocket != \"Backports\"].{ \"version\": binary_package_version, \"releaseTimestamp\": date_published }] }"
+      ]
+    }
+  },
   "customManagers": [
     {
       "description": "The Makefile pins six SBOM tools by digest, each with its tag in a trailing comment. Renovate has no manager for a Makefile, so without this one none of the six is ever offered an update: syft sat on v1.50.0 after v1.51.1 fixed the two-document pnpm-lock read. The digest is what runs and the comment is what a reader checks, so both move together or the comment starts lying.",
@@ -41,6 +59,36 @@
       "matchStrings": ["\\n\\s*go (?<currentValue>\\d+\\.\\d+\\.\\d+)\\n"],
       "depNameTemplate": "go",
       "datasourceTemplate": "golang-version"
+    },
+    {
+      "description": "The CI image's snapshot timestamp. Every package pin below resolves inside it, so the Ubuntu group moves it in the same branch as they move.",
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.github\\/ci-image\\/Dockerfile$/"],
+      "matchStrings": ["ARG UBUNTU_SNAPSHOT=(?<currentValue>\\d{8}T\\d{6}Z)"],
+      "depNameTemplate": "ubuntu-snapshot",
+      "datasourceTemplate": "custom.ubuntu-snapshot",
+      "versioningTemplate": "regex:^(?<major>\\d{8})T(?<minor>\\d{6})Z$"
+    },
+    {
+      "description": "Each apt package the CI image installs, pinned `name=version` on a line of its own. The pattern is held to that one file, so the product Dockerfile is never read for Ubuntu pins. backend/gates/ciimagepins_test.go runs this pattern over the Dockerfile and fails on a pin it does not reach.",
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.github\\/ci-image\\/Dockerfile$/"],
+      "matchStrings": [
+        "\\n\\s+(?<depName>[a-z0-9][a-z0-9+.-]+)=(?<currentValue>[0-9][^\\s\\\\]*)"
+      ],
+      "datasourceTemplate": "custom.ubuntu-package",
+      "versioningTemplate": "deb"
+    },
+    {
+      "description": "The BuildKit image the CI image is built in, for its registry layer cache. It is pinned by tag and digest in a shell line of the action, which no built-in manager reads.",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^\\.github\\/actions\\/ci-image\\/action\\.yml$/"
+      ],
+      "matchStrings": [
+        "image=(?<depName>moby/buildkit):(?<currentValue>v[\\d.]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
+      ],
+      "datasourceTemplate": "docker"
     }
   ],
   "packageRules": [
@@ -61,14 +109,14 @@
       "groupName": "go dependencies (non-major)"
     },
     {
-      "description": "The go directive and `.tool-versions` move in ONE pull request, because the gate that holds them (backend/gates/goversionpins_test.go) compares fifteen pins against each other and a half-moved tree fails it. This group used to be impossible: gomod's `golang` depType was disabled, so the asdf manager bumped `.tool-versions` alone, every other pin stayed behind, and the gate took `deterministic-gates` and through it `ci` red on every open pull request the moment it was rebased. It happened twice. Grouping is what makes the half-moved state unreachable rather than merely visible; the custom manager below carries the two files no manager owns.",
-      "matchManagers": ["gomod", "asdf", "custom.regex"],
+      "description": "The go directive and `.tool-versions` move in ONE pull request, because the gate that holds them (backend/gates/goversionpins_test.go) compares fifteen pins against each other and a half-moved tree fails it. This group used to be impossible: gomod's `golang` depType was disabled, so the asdf manager bumped `.tool-versions` alone, every other pin stayed behind, and the gate took `deterministic-gates` and through it `ci` red on every open pull request the moment it was rebased. It happened twice. Grouping is what makes the half-moved state unreachable rather than merely visible; the custom manager below carries the two files no manager owns. The dockerfile manager is in it because the release image and the CI image each copy Go from a golang image, and the same gate reads both tags.",
+      "matchManagers": ["gomod", "asdf", "custom.regex", "dockerfile"],
       "matchPackageNames": ["go", "golang"],
       "groupName": "go toolchain"
     },
     {
       "description": "A go MINOR raises the language floor every module compiles against, which is a decision somebody makes rather than a version that moved — the tree's own floor changes have been deliberate commits. So it never satisfies automerge, and `never` keeps its branch from paying the rebase cost forever while having no path to merge, exactly as the lockfile-major rule above does. A PATCH still automerges on green, which is the case this group exists for.",
-      "matchManagers": ["gomod", "asdf", "custom.regex"],
+      "matchManagers": ["gomod", "asdf", "custom.regex", "dockerfile"],
       "matchPackageNames": ["go", "golang"],
       "matchUpdateTypes": ["minor", "major"],
       "automerge": false,
@@ -94,6 +142,28 @@
       "description": "A GitHub runner image carries no release date either, for the reason the digest rule above gives.",
       "matchDatasources": ["github-runners"],
       "minimumReleaseAgeBehaviour": "timestamp-optional"
+    },
+    {
+      "description": "The snapshot timestamp and every package pin move in ONE branch, because a version newer than the snapshot is one apt cannot find, and the build fails on it. separateMajorMinor is off because the timestamp's versioning reads a new day as a major, which would otherwise split the time from the packages; automerge and rebaseWhen are restated for the same reason, since the rule for majors above would hold a time bump for a human. Weekly, because the archive changes many times a day and the nightly window would open an Ubuntu branch, and an image rebuild, on every run. The package versions carry Launchpad's publication date, so the repository's age floor holds each one; the timestamp carries none, so timestamp-optional lets it through, and it is never older than the versions it is paired with.",
+      "matchDatasources": ["custom.ubuntu-snapshot", "custom.ubuntu-package"],
+      "groupName": "Ubuntu",
+      "schedule": ["after 2am and before 6am on monday"],
+      "separateMajorMinor": false,
+      "automerge": true,
+      "rebaseWhen": "conflicted",
+      "minimumReleaseAgeBehaviour": "timestamp-optional"
+    },
+    {
+      "description": "The CI image's Ubuntu base joins the same group, so a new base digest is tested with the snapshot and the pins it is upgraded to. It stays on 24.04: a new release moves every package pin at once, which is a human's change.",
+      "matchFileNames": [".github/ci-image/Dockerfile"],
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["ubuntu"],
+      "allowedVersions": "/^24\\.04$/",
+      "groupName": "Ubuntu",
+      "schedule": ["after 2am and before 6am on monday"],
+      "separateMajorMinor": false,
+      "automerge": true,
+      "rebaseWhen": "conflicted"
     }
   ],
   "vulnerabilityAlerts": {

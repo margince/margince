@@ -69,10 +69,35 @@ func askHandbook(t *testing.T, shipped bool, lane corpusAskLane, passage knowled
 func timeZoneLane(t *testing.T, passage knowledge.Passage) *fixedLane {
 	t.Helper()
 	return &fixedLane{text: corpusReply(askedClaim{
-		Text:  "Pick your time zone on the Meetings page.",
-		ID:    passage.ChunkID.String(),
-		Quote: "choose a place in the **Timezone** list",
+		Text:  "Pick your time zone in your own settings.",
+		ID:    firstPassageRef,
+		Quote: firstLineUnderHeading(t, passage.Text),
 	})}
+}
+
+func firstLineUnderHeading(t *testing.T, section string) string {
+	t.Helper()
+	lines := strings.Split(section, "\n")
+	for _, under := range lines[1:] {
+		if strings.HasPrefix(under, "#") {
+			break
+		}
+		if under != "" && !strings.HasPrefix(under, "<!--") {
+			return under
+		}
+	}
+	t.Fatalf("no text under the heading %q", lines[0])
+	return ""
+}
+
+func timeZoneSettingsPage(t *testing.T) string {
+	t.Helper()
+	heading := handbookLineOf(t, timeZoneHeading)
+	section, ok := handbook.SectionFor(settingsPage, heading, heading)
+	if !ok || section.Opens == "" {
+		t.Fatalf("the shipped time zone section names no settings page: %+v", section)
+	}
+	return section.Opens
 }
 
 func TestAWrittenClaimFromTheShippedHandbookNamesItsSectionAndSettingsPage(t *testing.T) {
@@ -81,8 +106,8 @@ func TestAWrittenClaimFromTheShippedHandbookNamesItsSectionAndSettingsPage(t *te
 	if claim.Section == nil || claim.Section.Title != "How do I change my time zone?" || claim.Section.Line != passage.StartLine {
 		t.Fatalf("section = %+v, want the time zone heading at line %d", claim.Section, passage.StartLine)
 	}
-	if claim.Opens == nil || claim.Opens.SettingsPage != "meetings" {
-		t.Fatalf("opens = %+v, want settings page meetings", claim.Opens)
+	if want := timeZoneSettingsPage(t); claim.Opens == nil || claim.Opens.SettingsPage != want {
+		t.Fatalf("opens = %+v, want settings page %s", claim.Opens, want)
 	}
 }
 
@@ -99,8 +124,8 @@ func TestAnUnreviewedPassageNamesTheSectionItRunsInto(t *testing.T) {
 	if claim.Section == nil || claim.Section.Line != heading {
 		t.Fatalf("section = %+v, want the time zone heading at line %d", claim.Section, heading)
 	}
-	if claim.Opens == nil || claim.Opens.SettingsPage != "meetings" {
-		t.Fatalf("opens = %+v, want settings page meetings on the bare passage", claim.Opens)
+	if want := timeZoneSettingsPage(t); claim.Opens == nil || claim.Opens.SettingsPage != want {
+		t.Fatalf("opens = %+v, want settings page %s on the bare passage", claim.Opens, want)
 	}
 }
 
@@ -111,6 +136,20 @@ func TestAClaimFromAnUploadedSetNamesNoSection(t *testing.T) {
 	claim := onlyClaim(t, askHandbook(t, false, timeZoneLane(t, passage), passage))
 	if claim.Section != nil || claim.Opens != nil {
 		t.Fatalf("an uploaded set's claim carries section %+v and opens %+v", claim.Section, claim.Opens)
+	}
+}
+
+func TestNeighbouringSectionsOpenTheirOwnSettingsPages(t *testing.T) {
+	personal := handbookLineOf(t, timeZoneHeading)
+	company := handbookLineOf(t, "### How do I change the company's time zone?")
+	claims := []crmcontracts.KnowledgeClaim{
+		{DocumentName: settingsPage, Line: &personal},
+		{DocumentName: settingsPage, Line: &company},
+	}
+	stampHandbookSections(claims)
+	if claims[0].Opens == nil || claims[1].Opens == nil ||
+		claims[0].Opens.SettingsPage != "account" || claims[1].Opens.SettingsPage != "company" {
+		t.Fatalf("personal opens %+v, company opens %+v; want account and company", claims[0].Opens, claims[1].Opens)
 	}
 }
 

@@ -190,9 +190,9 @@ func TestEndToEnd_agentWritesGovernedOnREST(t *testing.T) {
 		t.Fatalf("agent self-approval → %d %q, want 403 permission_denied", status, denyBody.Code)
 	}
 
-	// Human-only config surface rejects the agent whatever its scopes.
-	if status := e.Call(t, "POST", "/v1/pipelines", AnyMap{"name": "Shadow"}, bearer, &denyBody); status != 403 || denyBody.Code != "permission_denied" {
-		t.Fatalf("agent on human-only pipeline config → %d %q, want 403 permission_denied", status, denyBody.Code)
+	// A human-only surface rejects the agent whatever its scopes.
+	if status := e.Call(t, "POST", "/v1/consent-purposes", AnyMap{"name": "Shadow"}, bearer, &denyBody); status != 403 || denyBody.Code != "permission_denied" {
+		t.Fatalf("agent on human-only consent purposes → %d %q, want 403 permission_denied", status, denyBody.Code)
 	}
 
 	// A human approves; the agent repeats the IDENTICAL request with the

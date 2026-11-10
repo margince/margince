@@ -11,7 +11,7 @@ import {
 import { ApprovalPreferencesCard } from "./approval-preferences";
 
 const meta: Meta<typeof ApprovalPreferencesCard> = {
-  title: "Settings/You/AI access/Personal approval mutes",
+  title: "Settings/You/AI assistants/Personal approval mutes",
   component: ApprovalPreferencesCard,
 };
 export default meta;

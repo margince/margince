@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 )
 
 const authoredContactsCSV = "Email,Full Name,Author\n" +
@@ -45,13 +46,13 @@ func seatOf(t *testing.T, e *apptest.AppEnv, email string) string {
 	return id
 }
 
-func importAndApprove(t *testing.T, e *apptest.AppEnv, object, csv string, mapping map[string]string) importRunDTO {
+func importAndApprove(t *testing.T, e *apptest.AppEnv, object, csv string, mapping map[string]string) importjobtest.Run {
 	t.Helper()
-	profile, status := uploadCSV(t, e, object, csv)
+	profile, status := importjobtest.UploadCSV(t, e, object, csv)
 	if status != http.StatusOK {
 		t.Fatalf("upload → %d, want 200", status)
 	}
-	run, runStatus := createRunWithMapping(t, e, object, profile.SourceRef, mapping)
+	run, runStatus := importjobtest.CreateRunWithMapping(t, e, object, profile.SourceRef, mapping)
 	if runStatus != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", runStatus)
 	}

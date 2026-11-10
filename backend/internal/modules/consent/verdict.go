@@ -44,8 +44,8 @@ const (
 	// business relationship exists.
 	ClassTransactional Class = "transactional"
 	// ClassMarketing is »Werbung« read broadly: newsletters, campaigns, and
-	// feedback requests. Express consent with double-opt-in proof; the §7(3)
-	// existing-customer exception is not offered.
+	// feedback requests. Express consent with double-opt-in proof, or the
+	// existing-customer route where the pack grants it.
 	ClassMarketing Class = "marketing"
 	// ClassPhoneOutreach is specced and dormant — no call provider is wired.
 	// The purpose exists so the model is complete, not because a path uses it.
@@ -94,6 +94,9 @@ type Verdict struct {
 	// and writing a record because somebody opened a drawer would put a legal
 	// fact on the record for a message nobody sent.
 	QualifyingDerived bool
+	// ExistingCustomer is the sale and declaration a marketing verdict allowed
+	// on, when it allowed on the existing-customer route.
+	ExistingCustomer *ExistingCustomerGround
 }
 
 const (
@@ -108,7 +111,13 @@ const (
 // QualifyingEvent is the deterministic thing on the record that makes business
 // correspondence lawful.
 type QualifyingEvent struct {
-	Kind             string
+	// ID is set on an exchange recorded by hand, which is the one kind a
+	// caller may later retract.
+	ID   string
+	Kind string
+	// AsksForQuote and Retracted are read on a hand-recorded exchange only.
+	AsksForQuote     bool
+	Retracted        bool
 	OccurredAt       time.Time
 	SourceEntityType string
 	SourceEntityID   string
@@ -127,14 +136,17 @@ type PurposeRow struct {
 // MarketingContext is what a marketing verdict needs beyond the contact and the
 // purpose: the exception this installation's jurisdiction grants.
 //
-// Passed in for the reason `since` is passed in — resolving it needs a settings
-// read, and VerdictForContact is deliberately free of those.
+// Passed in for the reason `since` is passed in: resolving it needs a settings
+// read, and the verdict reads no settings.
 type MarketingContext struct {
 	Exception *messaging.MarketingException
+	// SendingEntity is the legal entity the message goes out for. The
+	// existing-customer route counts only a sale that entity made.
+	SendingEntity ids.UUID
 }
 
-// VerdictForContact is THE decision. Both the guard endpoint and the transmit
-// gate call it, so a preview and a send answer with the same code.
+// VerdictForRecipient is the decision. The guard endpoint and the transmit gate
+// share its body (verdictFor), so a preview and a send answer with one code.
 //
 // The order of the checks is the ruling, and it is not rearrangeable: an
 // objection is evaluated FIRST and overrides every basis below it, including
@@ -150,7 +162,24 @@ type MarketingContext struct {
 // is deliberately free of settings reads: a rep holds no settings-read grant
 // and a gated read inside the verdict would fail a send with a 500 rather than
 // an answer about consent.
-func VerdictForContact(ctx context.Context, tx pgx.Tx, contactID string, purpose PurposeRow, since time.Time, marketing MarketingContext) (Verdict, error) {
+//
+// VerdictForRecipient is the form that authorizes. It names the address the
+// message goes to, so a request a merge carried over counts only for its own
+// addresses (requestCoversSQL). GuardVerdictForContact answers about the
+// contact as a whole and only feeds the advisory guard read.
+func VerdictForRecipient(ctx context.Context, tx pgx.Tx, contactID, address string, purpose PurposeRow, since, asOf time.Time, marketing MarketingContext) (Verdict, error) {
+	return verdictFor(ctx, tx, contactID, &address, purpose, since, asOf, marketing)
+}
+
+// GuardVerdictForContact is the contact-wide answer the guard endpoint shows.
+// It never authorizes a send: every send path asks VerdictForRecipient.
+func GuardVerdictForContact(ctx context.Context, tx pgx.Tx, contactID string, purpose PurposeRow, since, asOf time.Time, marketing MarketingContext) (Verdict, error) {
+	return verdictFor(ctx, tx, contactID, nil, purpose, since, asOf, marketing)
+}
+
+// verdictFor is the decision. address nil asks about the contact as a whole.
+// since opens the reply window and asOf is the clock it was measured from.
+func verdictFor(ctx context.Context, tx pgx.Tx, contactID string, address *string, purpose PurposeRow, since, asOf time.Time, marketing MarketingContext) (Verdict, error) {
 	suppressed, at, err := objectionStands(ctx, tx, contactID, purpose.ID)
 	if err != nil {
 		return Verdict{}, err
@@ -175,19 +204,12 @@ func VerdictForContact(ctx context.Context, tx pgx.Tx, contactID string, purpose
 	if err != nil {
 		return Verdict{}, err
 	}
-	category := categoryForClass(purpose.Class)
-	// This verdict is FOR one named purpose (the argument above), never for
-	// "marketing in general" — the same purpose a narrow suppression row
-	// compares itself against, so it is always known here, unlike the evidence
-	// arms on the transmit path that ask about no purpose at all.
-	askedPurpose, err := ids.Parse(purpose.ID)
+	stop, binds, err := stopBindingPurpose(stops, purpose)
 	if err != nil {
-		return Verdict{}, fmt.Errorf("consent: the asked purpose is not an id: %w", err)
+		return Verdict{}, err
 	}
-	for _, s := range stops {
-		if suppressionBinds(s.Kind, category, s.PurposeID, &askedPurpose) {
-			return said(Verdict{State: VerdictBlocked, ReasonCode: suppressionReasonCode(s.Kind), Code: BlockSuppressed, Suppression: s.Kind}), nil
-		}
+	if binds {
+		return said(Verdict{State: VerdictBlocked, ReasonCode: suppressionReasonCode(stop.Kind), Code: BlockSuppressed, Suppression: stop.Kind}), nil
 	}
 
 	switch purpose.Class {
@@ -196,7 +218,7 @@ func VerdictForContact(ctx context.Context, tx pgx.Tx, contactID string, purpose
 		return said(Verdict{State: VerdictAllowed, ReasonCode: ReasonContractNotice}), nil
 
 	case ClassBusinessCorrespondence:
-		return correspondenceVerdict(ctx, tx, contactID, purpose, since)
+		return correspondenceVerdict(ctx, tx, contactID, address, purpose, since, asOf)
 
 	case ClassPhoneOutreach:
 		// Dormant by decision: the purpose exists so the model is complete. A
@@ -225,7 +247,7 @@ func VerdictForContact(ctx context.Context, tx pgx.Tx, contactID string, purpose
 // The implied arm below is unchanged and stays second: it is the Art 6(1)(f)
 // reading of a relationship the subject started, and it is what answers for the
 // overwhelming majority of contacts, who never record an answer either way.
-func correspondenceVerdict(ctx context.Context, tx pgx.Tx, contactID string, purpose PurposeRow, since time.Time) (Verdict, error) {
+func correspondenceVerdict(ctx context.Context, tx pgx.Tx, contactID string, address *string, purpose PurposeRow, since, asOf time.Time) (Verdict, error) {
 	// requiresDOI is passed as the purpose declares it rather than as a
 	// constant false. Correspondence does not demand the round trip today, and
 	// hard-coding that here would silently ignore an installation that turned
@@ -243,7 +265,7 @@ func correspondenceVerdict(ctx context.Context, tx pgx.Tx, contactID string, pur
 		// would let the timeline supply what the confirmation did not.
 		return said(Verdict{State: VerdictBlocked, ReasonCode: ReasonUnconfirmedDOI, Code: BlockUnconfirmedDOI}), nil
 	}
-	event, source, err := latestQualifyingEvent(ctx, tx, contactID, since)
+	event, source, err := latestQualifyingEvent(ctx, tx, contactID, since, asOf, address)
 	if err != nil {
 		return Verdict{}, err
 	}
@@ -261,11 +283,11 @@ func correspondenceVerdict(ctx context.Context, tx pgx.Tx, contactID string, pur
 	}), nil
 }
 
-// marketingVerdict is the strict arm, unchanged in strictness by ADR-0098:
-// express consent with the DOI round-trip. The §7(3) existing-customer exception
-// a pack may grant is refused below, with its own reason. There is no legitimate-interest
-// escape for marketing email, B2C or B2B, and the product does not offer the
-// toggle.
+// marketingVerdict is the strict arm, unchanged in strictness by ADR-0098. It
+// needs express consent with the DOI round-trip, or the existing-customer route
+// where the pack grants it (existingcustomerroute.go). There is no
+// legitimate-interest escape for marketing email, B2C or B2B, and the product
+// does not offer the toggle.
 func marketingVerdict(ctx context.Context, tx pgx.Tx, contactID string, purpose PurposeRow, marketing MarketingContext) (Verdict, error) {
 	state, granted, err := recordedState(ctx, tx, contactID, purpose.ID, purpose.RequiresDOI)
 	if err != nil {
@@ -283,11 +305,16 @@ func marketingVerdict(ctx context.Context, tx pgx.Tx, contactID string, purpose 
 		// not send.
 		return said(Verdict{State: VerdictBlocked, ReasonCode: ReasonUnconfirmedDOI, Code: BlockUnconfirmedDOI}), nil
 	}
-	// The existing-customer exception a jurisdiction may grant (UWG §7(3)) is
-	// not offered: nothing here can answer its similarity condition, since no
-	// send names the goods it advertises. It refuses whatever the pack declares,
-	// and says so rather than reading as a plain absence of consent.
+	// A withdrawal returned above, so a customer who once consented and then
+	// withdrew never reaches the route that needs no consent.
 	if marketing.Exception != nil {
+		ground, err := existingCustomerGround(ctx, tx, contactID, purpose.ID, marketing.SendingEntity)
+		if err != nil {
+			return Verdict{}, err
+		}
+		if ground != nil {
+			return said(Verdict{State: VerdictAllowed, ReasonCode: ReasonExistingCustomer, ExistingCustomer: ground}), nil
+		}
 		return said(Verdict{State: VerdictUnknown, ReasonCode: ReasonNoConsentExceptionNotOffered}), nil
 	}
 	return said(Verdict{State: VerdictUnknown, ReasonCode: ReasonNoConsent}), nil

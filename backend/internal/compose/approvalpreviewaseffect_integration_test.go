@@ -14,6 +14,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
@@ -335,22 +337,42 @@ func TestAPromotionStagedOnARevokedPassportIsNotReady(t *testing.T) {
 // A refresh retires the passport and mints its successor on the same
 // connection. The successor spends the call, so the preview still holds.
 func TestAPromotionOutlivesARefreshOfItsAgentsPassport(t *testing.T) {
-	s := newPromotionSight(t, "admin", approverIsAdmin, "admin")
-	passport, grant := seedConnectionPassport(t, s.e)
-	s.agentOn(passport)
-	rep1 := ids.From[ids.UserKind](s.e.Rep1)
-	lead := s.lead(contacts.CreateLeadInput{FullName: new("Ren Refresh"), Email: new("ren@gmail.com"), Source: "manual", OwnerID: &rep1})
-	id := s.stage(lead, fmt.Sprintf(`{"lead_id":%q,"trigger":"human_qualify"}`, lead.UUID))
-	successor := ids.NewV7()
-	s.e.WsExec(t, `INSERT INTO passport (id, on_behalf_of, granted_by, label, scopes, token_hash, expires_at, oauth_grant_id)
-	               VALUES ($1, $2, $2, 'oauth:claude', ARRAY['read']::text[], $3, now() + interval '1 day', $4)`,
-		successor, s.e.Rep1, "hash-"+successor.String(), grant)
-	s.e.WsExec(t, `UPDATE passport SET revoked_at = now() WHERE id = $1`, passport)
-	if state := s.preview(id).State; state != "ready" {
-		t.Fatalf("preview after a refresh = %s, want ready", state)
-	}
-	if _, err := s.svc.Decide(s.approver, id, true, nil); err != nil {
-		t.Fatalf("approving after a refresh: %v", err)
+	for _, next := range []struct {
+		name    string
+		scopes  []string
+		refused bool
+	}{
+		{"write retained", []string{"read", "write"}, false},
+		{"write removed", []string{"read"}, true},
+	} {
+		t.Run(next.name, func(t *testing.T) {
+			s := newPromotionSight(t, "admin", approverIsAdmin, "admin")
+			passport, grant := seedConnectionPassport(t, s.e)
+			s.e.WsExec(t, `UPDATE oauth_grant SET scopes=ARRAY['read','write'] WHERE id=$1`, grant)
+			s.e.WsExec(t, `UPDATE passport SET scopes=ARRAY['read','write'] WHERE id=$1`, passport)
+			s.agentOn(passport)
+			rep1 := ids.From[ids.UserKind](s.e.Rep1)
+			lead := s.lead(contacts.CreateLeadInput{FullName: new("Ren Refresh"), Email: new("ren@gmail.com"), Source: "manual", OwnerID: &rep1})
+			id := s.stage(lead, fmt.Sprintf(`{"lead_id":%q,"trigger":"human_qualify"}`, lead.UUID))
+			successor := ids.NewV7()
+			s.e.WsExec(t, `INSERT INTO passport (id,on_behalf_of,granted_by,label,scopes,token_hash,expires_at,oauth_grant_id)
+ VALUES (@successor,@user,@user,'oauth:claude',@scopes,@token,now()+interval '1 day',@grant)`,
+				pgx.NamedArgs{"successor": successor, "user": s.e.Rep1, "scopes": next.scopes, "token": "hash-" + successor.String(), "grant": grant})
+			s.e.WsExec(t, `UPDATE passport SET revoked_at=now() WHERE id=$1`, passport)
+			_, err := s.svc.Decide(s.approver, id, true, nil)
+			if next.refused {
+				if !errors.Is(err, apperrors.ErrScopeExceeded) {
+					t.Fatalf("successor without write approved the call: %v", err)
+				}
+				if count := s.e.WsCount(t, `SELECT count(*) FROM approval WHERE id=$1 AND status='pending' AND consumed_at IS NULL`, id); count != 1 {
+					t.Fatal("refused successor spent the approval")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("approving after a refresh: %v", err)
+			}
+		})
 	}
 }
 

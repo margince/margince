@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
@@ -70,7 +71,7 @@ func addMatchedMeetingGuestsBatch(ctx context.Context, tx pgx.Tx, authority auth
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
-	rows, err := tx.Query(ctx, `SELECT rc.id, rc.payload `+matchedOriginalsSQL+`
+	rows, err := tx.Query(ctx, `SELECT rc.id, `+originalstore.SQL("rc")+` `+matchedOriginalsSQL+`
 		  AND rc.id > $2 ORDER BY rc.id LIMIT $3`, sourceGCal, after, in.Limit)
 	if err != nil {
 		return datatask.BatchOut{}, fmt.Errorf("compose: listing stored calendar originals: %w", err)
@@ -90,6 +91,10 @@ func addMatchedMeetingGuestsBatch(ctx context.Context, tx pgx.Tx, authority auth
 	changed := 0
 	for _, o := range originals {
 		scanned = append(scanned, o.id)
+		o.payload, err = originalstore.RepairPayload(ctx, o.payload)
+		if err != nil {
+			return datatask.BatchOut{}, err
+		}
 		added, err := addGuestsFromOriginal(ctx, tx, authority, o.payload, in.RunID)
 		if err != nil {
 			return datatask.BatchOut{}, err

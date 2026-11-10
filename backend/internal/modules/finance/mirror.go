@@ -456,7 +456,9 @@ func deriveStatus(inv SourceInvoice, open int64, now time.Time) string {
 		return statusCredited
 	case inv.Disputed:
 		return statusDisputed
-	case open == 0 && inv.FullyPaidAt != nil:
+	case open == 0:
+		// Nothing is owed, whether money, credits or a zero total settled it, so
+		// a passed due date makes nothing late.
 		return statusPaid
 	case overdue(inv, now):
 		return statusOverdue

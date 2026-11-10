@@ -28,6 +28,7 @@ import {
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { FieldBuilder, type NewFieldDraft } from "./customfields.builder";
+import { activityKindsOf, useSetActivityKinds } from "./customfields.kinds";
 import { objectLabels } from "./customfields.labels";
 import { RetireFieldConfirm } from "./customfields.retire";
 import {
@@ -56,6 +57,9 @@ function createBody(
     type: draft.type,
     source: "manual",
     show_in_create: draft.showInCreate,
+    ...(draft.activityKinds.length > 0
+      ? { activity_kinds: activityKindsOf(draft.activityKinds) }
+      : {}),
     ...(draft.type === "currency" ? { currency: draft.currency } : {}),
     ...(draft.type === "picklist" || draft.type === "multiselect"
       ? { options: cleanOptions(draft.options) }
@@ -100,10 +104,21 @@ function stagedField(draft: NewFieldDraft, createdBy: string): CustomField {
         : null,
     show_in_create: draft.showInCreate,
     reportable: false,
+    activity_kinds:
+      draft.activityKinds.length > 0
+        ? activityKindsOf(draft.activityKinds)
+        : null,
     created_by: createdBy,
     created_at: now,
     updated_at: now,
   };
+}
+
+// The field whose row is being written, so its controls wait for the write.
+function savingFieldOf(
+  ...writes: { isPending: boolean; variables?: { field: CustomField } }[]
+): string | undefined {
+  return writes.find((write) => write.isPending)?.variables?.field.id;
 }
 
 // Content inside a settings page, which owns the reading column and the h1. One
@@ -274,6 +289,8 @@ export function CustomFieldsAdmin() {
     },
   });
 
+  const kinds = useSetActivityKinds();
+
   const startRename = (field: CustomField) => {
     rename.reset();
     setRenaming(field);
@@ -353,9 +370,8 @@ export function CustomFieldsAdmin() {
           onSetting={(field, name, on) =>
             setting.mutate({ field, setting: name, on })
           }
-          savingField={
-            setting.isPending ? setting.variables?.field.id : undefined
-          }
+          onKinds={(field, next) => kinds.mutate({ field, kinds: next })}
+          savingField={savingFieldOf(setting, kinds)}
         />
       )}
       <PanelBody>

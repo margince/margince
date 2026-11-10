@@ -10,9 +10,8 @@ package company360
 // while the situation holds and re-arms by itself when the evidence changes.
 //
 // A row is written ONLY for a fingerprint the rules currently produce for this
-// account and this caller. That is what bounds the table: one row per suggestion
-// a human actually clicked, so it grows with use rather than with whatever a
-// client chooses to send. No retention cap is needed, and no judgment is ever
+// account and this caller. That bounds the table to one row per suggestion a
+// colleague actually set aside. It grows with use, not with what a client sends. No retention cap is needed, and no judgment is ever
 // deleted to make room for another.
 //
 // The two obvious alternatives are both wrong. Accepting any
@@ -43,13 +42,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// DismissSuggestion records that this human does not want this advice.
+// DismissSuggestion records that this colleague, or their agent for them, does
+// not want this advice.
 func (s *Service) DismissSuggestion(
 	ctx context.Context, companyID ids.CompanyID, fingerprint string, within *ids.ProjectID,
 ) error {
-	// An agent has no opinion to record, and consuming a human's dismissal on
-	// their behalf would silence advice they never saw.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// An agent records the dismissal for the user it acts for; one with no
+	// passport acts for nobody, so has no opinion to record.
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
@@ -108,11 +108,11 @@ func (s *Service) DismissSuggestion(
 	})
 }
 
-// RestoreSuggestion clears this human's dismissal of one fingerprint on this
+// RestoreSuggestion clears this colleague's dismissal of one fingerprint on this
 // account: the undo behind "Not now". It asks the same gates the dismissal
 // asks, so the readers who may set an item aside are the ones who may undo it.
 func (s *Service) RestoreSuggestion(ctx context.Context, companyID ids.CompanyID, fingerprint string) error {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {

@@ -29,7 +29,7 @@ func TestEveryGovernedKindHasReviewContextOrIsNotCurrentlyStageable(t *testing.T
 	for _, kind := range automation.StageableKinds() {
 		active[kind] = true
 	}
-	for _, kind := range approvalsServiceWithEffects(nil).EffectKinds() {
+	for _, kind := range NewApprovalsServiceWithEffects(nil).EffectKinds() {
 		active[kind] = true
 	}
 	for _, policy := range agentPolicies {
@@ -59,9 +59,9 @@ func TestEveryGovernedKindHasReviewContextOrIsNotCurrentlyStageable(t *testing.T
 }
 
 func inactiveApprovalKind(kind string) bool {
-	// The first two execute without staging; the two retired kinds remain readable in history.
+	// The first two execute without staging; the retired kinds remain readable in history.
 	switch kind {
-	case "archive_tag", "change_record_parts", "transcript_proposal", "communication_review":
+	case "archive_tag", "change_record_parts", "transcript_proposal", "communication_review", "stage_progression":
 		return true
 	}
 	return false
@@ -149,7 +149,7 @@ func TestEveryApprovalKindIsPreviewedAsThePrincipalThatRunsIt(t *testing.T) {
 			asked = true
 			return ctx, true, apperrors.ErrPermissionDenied
 		}
-		preview, err := (approvalPreviewReader{}).readAs(context.Background(), crmcontracts.Approval{Kind: kind, Status: crmcontracts.ApprovalStatusPending}, revoked)
+		preview, _, err := (approvalPreviewReader{}).readAs(context.Background(), crmcontracts.Approval{Kind: kind, Status: crmcontracts.ApprovalStatusPending}, revoked)
 		if err != nil {
 			t.Fatalf("%s: %v", kind, err)
 		}
@@ -164,8 +164,8 @@ func TestEveryApprovalKindIsPreviewedAsThePrincipalThatRunsIt(t *testing.T) {
 
 // A kind cannot be exercised through the service without a database, so this
 // census reads the dispatch source. Only readAs builds a preview, and nothing
-// returns before it asks who runs the effect. Only read hands it the approvals
-// module's answer, and the service is wired to read.
+// returns before it asks who runs the effect. Only read and footprint hand it
+// the approvals module's answer, and the service is wired to read.
 func TestOnlyTheDispatchBuildsAnApprovalPreview(t *testing.T) {
 	fset := token.NewFileSet()
 	files, err := filepath.Glob("*.go")
@@ -201,7 +201,7 @@ func TestOnlyTheDispatchBuildsAnApprovalPreview(t *testing.T) {
 						t.Errorf("%s: %s builds a preview outside the dispatch", fset.Position(selector.Pos()), fn.Name.Name)
 					}
 				case "EffectContext":
-					if fn.Name.Name != "read" {
+					if fn.Name.Name != "read" && fn.Name.Name != "footprint" {
 						t.Errorf("%s: %s asks who runs the effect outside the dispatch", fset.Position(selector.Pos()), fn.Name.Name)
 					}
 				}
@@ -231,7 +231,7 @@ func wiresTheDispatch(call *ast.CallExpr) bool {
 }
 
 // assertNothingReturnsBeforeTheEffect holds that readAs answers no kind before
-// it asks who runs the effect, except a terminal approval, which has no preview.
+// it asks who runs the effect.
 func assertNothingReturnsBeforeTheEffect(t *testing.T, fset *token.FileSet, fn *ast.FuncDecl) {
 	t.Helper()
 	asked := token.NoPos
@@ -253,7 +253,7 @@ func assertNothingReturnsBeforeTheEffect(t *testing.T, fset *token.FileSet, fn *
 		}
 		return true
 	})
-	if early > 1 {
-		t.Errorf("%s: readAs answers %d times before asking who runs the effect, want only the terminal approval", fset.Position(fn.Pos()), early)
+	if early > 0 {
+		t.Errorf("%s: readAs answers %d times before asking who runs the effect, want none", fset.Position(fn.Pos()), early)
 	}
 }

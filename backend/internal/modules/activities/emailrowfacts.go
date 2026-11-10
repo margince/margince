@@ -6,6 +6,7 @@ package activities
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -21,11 +22,11 @@ import (
 // ONE entry point rather than a pass per fact, because they are one
 // obligation. Each is read once per page and refused on a withheld row. Who
 // wrote each row rides it too (WithMessageVoices).
-func WithEmailRowFacts(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity) error {
+func WithEmailRowFacts(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity, asOf time.Time) error {
 	if err := WithMessageVoices(ctx, tx, page); err != nil {
 		return err
 	}
-	if err := withMessageMoves(ctx, tx, page); err != nil {
+	if err := withMessageMoves(ctx, tx, page, asOf); err != nil {
 		return err
 	}
 	emailIDs := emailIDsOf(page)
@@ -38,7 +39,7 @@ func WithEmailRowFacts(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activ
 	}
 	applyAttachmentCounts(page, counts)
 
-	states, err := EmailStatesFor(ctx, tx, emailIDs)
+	states, err := EmailStatesFor(ctx, tx, emailIDs, asOf)
 	if err != nil {
 		return err
 	}
@@ -55,7 +56,7 @@ func WithEmailRowFacts(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activ
 		return err
 	}
 	applyEverySeatReach(page, reach)
-	return nil
+	return withCalendarInvitations(ctx, tx, page, asOf)
 }
 
 // applyEverySeatReach widens `team` to `workspace` on the rows a stranger can
@@ -89,7 +90,7 @@ func messageIDsOf(page []crmcontracts.Activity) []ids.UUID {
 
 // withMessageMoves sets each readable chat message's move, by the rules the
 // mail badge follows.
-func withMessageMoves(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity) error {
+func withMessageMoves(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity, asOf time.Time) error {
 	messages := messageIDsOf(page)
 	if len(messages) == 0 {
 		return nil
@@ -97,11 +98,11 @@ func withMessageMoves(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activi
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	wanted := arg(messages)
-	sentByReader, laterContent, err := moveInputs(ctx, arg)
+	in, err := moveInputs(ctx, arg, asOf)
 	if err != nil {
 		return err
 	}
-	rows, err := tx.Query(ctx, `SELECT a.id, `+moveSQL(sentByReader, laterContent, conversationKinds)+`
+	rows, err := tx.Query(ctx, `SELECT a.id, `+moveSQL(in, conversationKinds)+`
  FROM activity a WHERE a.id = ANY(`+fmt.Sprintf("$%d", wanted)+`) AND a.restricted_at IS NULL`, args...)
 	if err != nil {
 		return fmt.Errorf("activities: reading whose move each chat message is: %w", err)

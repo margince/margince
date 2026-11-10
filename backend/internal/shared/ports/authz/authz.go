@@ -24,6 +24,9 @@ import (
 type RBAC struct {
 	Permissions principal.Permissions
 	TeamIDs     []ids.UUID
+	// PassportAreas are the presented passport's work areas as AdmittedAuthority
+	// read them. Zero, all areas, from every other read and for no passport.
+	PassportAreas principal.WorkAreas
 }
 
 // Resolver returns a principal's CURRENT effective authority, read live

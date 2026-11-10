@@ -4,6 +4,7 @@ import type { ReadingTone } from "../../design-system/readingtone";
 import { StageLadder } from "../../design-system/stageladder";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 
 type Lead = components["schemas"]["Lead"];
 
@@ -35,6 +36,8 @@ function rungOf(status: Lead["status"]): number {
     case "promoted":
     case "disqualified":
       return 3;
+    default:
+      return 0;
   }
 }
 
@@ -100,7 +103,7 @@ export function LeadStepper({
       tone={tone}
       steps={steps.map((step) => ({
         key: step.key,
-        label: t(STEP_LABEL[step.key]),
+        label: t(labelFor(STEP_LABEL, step.key)),
         done: step.filled && !step.current,
         current: step.current,
         // Qualified and disqualified are the two ways out of the ladder, not

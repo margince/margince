@@ -8,7 +8,7 @@ package agents
 // the mapping tool→scope is a security surface. Two invariants, derived from
 // the registered surface so a new tool cannot quietly break them:
 //   - every tool requires a scope from the closed passport vocabulary; and
-//   - outbound egress (send_email, book_meeting) is gated on the dedicated
+//   - outbound egress (send_email, invite_meeting) is gated on the dedicated
 //     `send` scope, never plain `write` — so a passport can edit records yet
 //     be barred from sending mail.
 

@@ -57,13 +57,39 @@ function held(
   };
 }
 
+// One stakeholder edge on the deal, as GET /relationships?deal_id answers it.
+const EDGE = {
+  id: "rel-1",
+  kind: "deal_stakeholder",
+  deal_id: DEAL,
+  contact_id: "c-1",
+  role: "champion",
+  is_current_primary: false,
+  source: "manual",
+  captured_by: "human:u-1",
+  version: 1,
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
+};
+
 function stubFetch(
-  grants: readonly ("read" | "create")[] = ["read", "create"],
+  grants: readonly ("read" | "create" | "update" | "delete")[] = [
+    "read",
+    "create",
+  ],
   team: readonly RecordAssignment[] = [],
+  deleted: string[] = [],
 ) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (request: Request) => {
+      if (request.method === "DELETE") {
+        deleted.push(new URL(request.url).pathname);
+        return new Response(null, { status: 204 });
+      }
+      if (request.url.includes("/relationships")) {
+        return json({ data: [EDGE], page: { next_cursor: null } });
+      }
       if (request.url.endsWith("/v1/me")) {
         return json(meFixture({ allow: { relationship: grants } }));
       }
@@ -296,5 +322,42 @@ describe("the deal's committee card", () => {
     draw(coverage());
     await screen.findByText("Mai Trần");
     expect(screen.queryByTestId("add-relationship")).toBeNull();
+  });
+
+  // The committee is where a stakeholder is added, so it is where one is
+  // changed or taken off: each edge sits under a fold with Edit and Remove.
+  it("takes a stakeholder off the deal from the committee card", async () => {
+    const deleted: string[] = [];
+    stubFetch(["read", "create", "update", "delete"], [], deleted);
+    const user = userEvent.setup();
+    draw(coverage());
+    await user.click(
+      await screen.findByText(translate("en", "deal.committee.change")),
+    );
+    expect(
+      await screen.findByRole("button", {
+        name: translate("en", "record.edit"),
+      }),
+    ).toBeInTheDocument();
+    await user.click(await screen.findByTestId("remove-relationship"));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: translate("en", "rel.remove"),
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(deleted).toEqual(["/v1/relationships/rel-1"]),
+    );
+  });
+
+  // A reader who may neither change nor remove an edge is offered no fold.
+  it("offers no change for a reader without the grants", async () => {
+    stubFetch(["read", "create"]);
+    draw(coverage());
+    await screen.findByText("Mai Trần");
+    expect(
+      screen.queryByText(translate("en", "deal.committee.change")),
+    ).toBeNull();
   });
 });

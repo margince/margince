@@ -90,6 +90,8 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
         contextColumn?.contains(button) ||
         button.closest(".recordtabs-strip") ||
         button.classList.contains("r360-rests-toggle") ||
+        // The timeline's zoom picks how far back the line looks.
+        button.closest(".standing-timeline-head") ||
         // A reading's door, skipped structurally: every stat card says the same
         // word, so a set keyed on "Open" would exempt any control sharing it.
         // The class names a door out of the reading (another screen, a read,

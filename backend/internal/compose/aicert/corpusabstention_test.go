@@ -108,7 +108,7 @@ func TestEachAbstentionScenarioCatchesTheFabricationItTargets(t *testing.T) {
 			scenario: "the_rep_says_the_buyer_confirmed_it",
 			correct:  `{"claims":[]}`,
 			fabricated: stageEvidenceClaimJSON("budget_confirmed",
-				"01a07100-0000-7000-8000-000000000002", 1,
+				"s1", 1,
 				"Ines confirmed the budget is approved"),
 			wantFabricated: aitasks.OutcomeWrongAnswer,
 			wantDetail:     "budget_confirmed",
@@ -121,7 +121,7 @@ func TestEachAbstentionScenarioCatchesTheFabricationItTargets(t *testing.T) {
 			scenario: "warmth_with_no_facts_in_it",
 			correct:  `{"claims":[]}`,
 			fabricated: stageEvidenceClaimJSON("problem_confirmed",
-				"01a07100-0000-7000-8000-000000000008", 1,
+				"s1", 1,
 				"the re-keying is costing us two days a week"),
 			wantFabricated: aitasks.OutcomeInvalid,
 			wantDetail:     "not in the lines it cites",
@@ -132,7 +132,7 @@ func TestEachAbstentionScenarioCatchesTheFabricationItTargets(t *testing.T) {
 			scenario: "a_settled_fact_no_criterion_asks_about",
 			correct:  `{"claims":[]}`,
 			fabricated: stageEvidenceClaimJSON("security_review_cleared",
-				"01a07100-0000-7000-8000-000000000009", 1,
+				"s1", 1,
 				"our security team have signed off"),
 			wantFabricated: aitasks.OutcomeInvalid,
 			wantDetail:     "security_review_cleared",
@@ -143,7 +143,7 @@ func TestEachAbstentionScenarioCatchesTheFabricationItTargets(t *testing.T) {
 			scenario: "a_settled_fact_no_criterion_asks_about",
 			correct:  `{"claims":[]}`,
 			fabricated: stageEvidenceClaimJSON("problem_confirmed",
-				"01a07100-0000-7000-8000-000000000009", 1,
+				"s1", 1,
 				"our security team have signed off"),
 			wantFabricated: aitasks.OutcomeWrongAnswer,
 			wantDetail:     "problem_confirmed",
@@ -259,7 +259,8 @@ func offerDraftLineJSON(description, evidence, sourceID string) string {
 }
 
 // stageEvidenceClaimJSON renders one claim as the stage_evidence_extract site's
-// reply shape, so a proof above states the fabrication rather than a blob.
+// reply shape, so a proof above states the fabrication rather than a blob. A
+// scenario's one span is shown to the model as s1.
 func stageEvidenceClaimJSON(criterionKey, sourceID string, line int, quote string) string {
 	claim := map[string]any{
 		"criterion_key": criterionKey,

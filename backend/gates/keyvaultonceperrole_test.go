@@ -58,7 +58,7 @@ func TestTheKeyVaultIsResolvedOncePerRole(t *testing.T) {
 	t.Parallel()
 	var resolvers, roleCalls []string
 	callsPerRole := map[string]int{}
-	err := filepath.WalkDir(".", func(p string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(".", func(p string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(p, ".go") || strings.HasSuffix(p, "_test.go") {
 			return err
 		}

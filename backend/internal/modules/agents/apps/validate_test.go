@@ -251,6 +251,8 @@ func TestAdmitAcceptsAnOrdinaryFunctionDeclaration(t *testing.T) {
 // stopped being held, in a deployment, with the reason in a log line. This
 // turns that into a build failure, which is the shape review-loop rule 2 asks
 // for: derive the obligation from the tree rather than maintain a list.
+// The web build digests every view it builds, so this also gives each
+// catalogued view an entry in the digest manifest.
 func TestEveryCatalogViewHasASourceTheFrontendBuilds(t *testing.T) {
 	for _, v := range catalog {
 		name := strings.TrimSuffix(filepath.Base(v.uri), ".html")

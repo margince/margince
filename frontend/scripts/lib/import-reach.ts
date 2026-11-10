@@ -19,8 +19,8 @@ import {
   parseSource,
   resolveRelative,
   sourceFileAt,
-} from "./source-tree";
-import { isDocsPage } from "./story-files";
+} from "./source-tree.ts";
+import { isDocsPage } from "./story-files.ts";
 
 // Tests, stories and the kits only they import ask for both halves.
 // They ship in no chunk, so a walk from one proves nothing about the bundle.
@@ -35,7 +35,8 @@ export function productionModulesUnder(dir: string): string[] {
 
 // "scanned" is a text scan for a string after `from` or `import`: a superset
 // of "all" at a hundredth of a parse, so it can clear a graph but not convict.
-type Edges = "all" | "values" | "scanned";
+// "static" drops `import()`: what loads before a module runs, not what it may load later.
+type Edges = "all" | "values" | "static" | "scanned";
 
 const GAP = String.raw`(?:\s|/\*[\s\S]*?\*/|//[^\n]*\n)*`;
 const SPECIFIER_SCAN = new RegExp(
@@ -49,6 +50,7 @@ const SPECIFIER_SCAN = new RegExp(
 const resolvedImports: Record<Edges, Map<string, string[]>> = {
   all: new Map(),
   values: new Map(),
+  static: new Map(),
   scanned: new Map(),
 };
 

@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -28,12 +29,22 @@ var writtenAboutKinds = []crmcontracts.ActivityKind{
 }
 
 // eligibleRowsSQL keeps the live written-about rows. A task the product filed
-// has nobody to write to.
+// has nobody to write to. The kinds are literals, so a generic plan keeps the
+// partial indexes keyed on kind.
 var eligibleRowsSQL = `
 	SELECT a.id, a.kind
 	  FROM activity a
-	 WHERE a.id = ANY($1) AND a.kind = ANY($2) AND a.archived_at IS NULL
+	 WHERE a.id = ANY($1) AND a.kind IN (` + writtenAboutKindsSQL() + `) AND a.archived_at IS NULL
 	   AND (a.kind <> '` + string(crmcontracts.ActivityKindTask) + `' OR ` + relstrength.OriginIsEngagementSQL("a") + `)`
+
+// writtenAboutKindsSQL spells writtenAboutKinds as a list of SQL literals.
+func writtenAboutKindsSQL() string {
+	quoted := make([]string, 0, len(writtenAboutKinds))
+	for _, kind := range writtenAboutKinds {
+		quoted = append(quoted, "'"+string(kind)+"'")
+	}
+	return strings.Join(quoted, ", ")
+}
 
 // contactCandidatesSQL reads the contacts a row is filed under, with the
 // address Write email would use, under the contact scope.
@@ -112,11 +123,7 @@ func eligibleRows(ctx context.Context, tx pgx.Tx, rows []ids.UUID) (map[ids.UUID
 	if len(rows) == 0 {
 		return out, nil
 	}
-	kinds := make([]string, 0, len(writtenAboutKinds))
-	for _, kind := range writtenAboutKinds {
-		kinds = append(kinds, string(kind))
-	}
-	found, err := tx.Query(ctx, eligibleRowsSQL, rows, kinds)
+	found, err := tx.Query(ctx, eligibleRowsSQL, rows)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading the rows an email is written about: %w", err)
 	}

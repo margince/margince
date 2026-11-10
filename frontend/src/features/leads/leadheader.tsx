@@ -28,6 +28,7 @@ import { IdentityLine } from "../../design-system/identityline";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { useCanWrite, useWriteRefusal } from "../../lib/capability";
+import { labelFor } from "../../lib/labelfor";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { LeadCompany } from "./leadcompany";
@@ -350,6 +351,6 @@ export function statusSetBy(lead: Lead, t: ReturnType<typeof useT>): string {
   }
   const trigger = lead.qualification_evidence?.trigger;
   return trigger && lead.status === "engaged"
-    ? t(SET_BY_TRIGGER[trigger], { label })
+    ? t(labelFor(SET_BY_TRIGGER, trigger), { label })
     : t("lead.ladder.automatic", { label });
 }

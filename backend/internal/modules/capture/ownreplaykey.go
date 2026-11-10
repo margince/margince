@@ -95,6 +95,10 @@ func (s *Sink) fileUnderOwnReplayKey(
 	// its own — a connector that stored its own original, or a record with no raw
 	// at all — and then what it already names IS this message's own.
 	scoped.StoredOriginal = ids.Nil
+	scoped, err := releaseHeldOriginalForScopedKeyTx(ctx, tx, scoped)
+	if err != nil {
+		return datasource.EntityRef{}, false, counterpartyDecision{}, err
+	}
 	own, err := storeRawCapture(ctx, tx, scoped)
 	if err != nil {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err
@@ -142,6 +146,12 @@ func (s *Sink) upsertRefused(
 ) (datasource.EntityRef, bool, counterpartyDecision, error) {
 	if !errors.Is(refusal, errInvisibleIncumbent) {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, refusal
+	}
+	if internalMailAdmitted(ctx) {
+		ref, admitted, err := s.admitInternalMailCopyTx(ctx, tx, id, rec, fields, birth, memberBound)
+		if err != nil || admitted {
+			return ref, false, counterpartyDecision{}, err
+		}
 	}
 	mine, err := replayClaimIsProvenTx(ctx, tx, id, fields, rec.Parts)
 	if err != nil {

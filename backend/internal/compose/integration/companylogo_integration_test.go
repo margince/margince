@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -33,22 +34,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/imagenorm"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
-
-// logoPNG is a small square PNG standing in for a normalized mark.
-func logoPNG(t *testing.T) []byte {
-	t.Helper()
-	img := image.NewNRGBA(image.Rect(0, 0, 8, 8))
-	for y := range 8 {
-		for x := range 8 {
-			img.SetNRGBA(x, y, color.NRGBA{R: 200, G: 40, B: 40, A: 255})
-		}
-	}
-	var out bytes.Buffer
-	if err := png.Encode(&out, img); err != nil {
-		t.Fatalf("encoding the fixture: %v", err)
-	}
-	return out.Bytes()
-}
 
 // waitForPutCount polls rather than asserting immediately, for a caller
 // whose write runs on its own goroutine (company logo write-back,
@@ -98,7 +83,7 @@ func TestCompanyLogoLogsRatherThanFailsWhenTheFlushErrors(t *testing.T) {
 	blob := blobstore.NewMemory()
 	handlers := contacts.NewHandlers(e.DB()).WithBlobstore(blob)
 	ctx := e.Admin()
-	companyID := seedLoggedCompany(ctx, t, e, blob, logoPNG(t))
+	companyID := seedLoggedCompany(ctx, t, e, blob, apptest.LogoPNG(t))
 
 	rec := &failingFlushWriter{ResponseRecorder: httptest.NewRecorder()}
 	req := httptest.NewRequest(http.MethodGet, "/v1/companies/"+companyID.String()+"/logo", nil).WithContext(ctx)
@@ -107,7 +92,7 @@ func TestCompanyLogoLogsRatherThanFailsWhenTheFlushErrors(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("GET logo = %d, want 200: %s", rec.Code, rec.Body.String())
 	}
-	if !bytes.Equal(rec.Body.Bytes(), logoPNG(t)) {
+	if !bytes.Equal(rec.Body.Bytes(), apptest.LogoPNG(t)) {
 		t.Fatal("a failed flush must not change the bytes the reader receives")
 	}
 }
@@ -143,7 +128,7 @@ func TestCompanyLogoStreamsTheStoredMarkUnderNonExecutableHeaders(t *testing.T) 
 	blob := blobstore.NewMemory()
 	handlers := contacts.NewHandlers(e.DB()).WithBlobstore(blob)
 	ctx := e.Admin()
-	want := logoPNG(t)
+	want := apptest.LogoPNG(t)
 	companyID := seedLoggedCompany(ctx, t, e, blob, want)
 
 	rec := httptest.NewRecorder()
@@ -193,7 +178,7 @@ func TestTheLogoIconEndpointStreamsTheIconSlotAndNotTheWideOne(t *testing.T) {
 	blob := blobstore.NewMemory()
 	handlers := contacts.NewHandlers(e.DB()).WithBlobstore(blob)
 	ctx := e.Admin()
-	wide := logoPNG(t)
+	wide := apptest.LogoPNG(t)
 	companyID := seedLoggedCompany(ctx, t, e, blob, wide)
 
 	// A company wearing only the wide mark answers 404 here, which is the
@@ -322,7 +307,7 @@ func TestCompanyLogoAnswers304WithoutTouchingBlobStorageWhenTheClientAlreadyHasI
 	blob := newCountingBlobstore()
 	handlers := contacts.NewHandlers(e.DB()).WithBlobstore(blob)
 	ctx := e.Admin()
-	companyID := seedLoggedCompany(ctx, t, e, blob, logoPNG(t))
+	companyID := seedLoggedCompany(ctx, t, e, blob, apptest.LogoPNG(t))
 	url := "/v1/companies/" + companyID.String() + "/logo"
 
 	first := httptest.NewRecorder()
@@ -587,9 +572,9 @@ func TestCompanyLogoWriteBackCoalescesConcurrentReadersOfTheSameUntrimmedKey(t *
 }
 
 // writeBackTrimmedLogo re-checks the slot's current key AFTER blob.Put, not
-// only before: a replace landing WHILE the write is in flight can otherwise
-// let a write-back resurrect the exact orphan deleteUnreferencedLogo exists to
-// prevent (handlers_companylogo.go). This proves the after-check: a
+// only before. A replace landing WHILE the write is in flight could otherwise
+// let a write-back resurrect the orphan deleteUnreferencedObject removes
+// (handlers_companylogo.go). This proves the after-check: a
 // replace that lands mid-Put gets its own resurrected object collected, not
 // left for nothing to ever reference again.
 func TestCompanyLogoWriteBackCollectsItsOwnObjectWhenAReplaceRacesTheWrite(t *testing.T) {
@@ -650,7 +635,7 @@ func TestCompanyLogoWriteBackCollectsItsOwnObjectWhenAReplaceRacesTheWrite(t *te
 	// mark this test's own seed already set — the human write is the one
 	// case production actually lets race the write-back this way.
 	replacement := "company_logo/" + companyID.String() + "/" + ids.NewV7().String()
-	if err := blob.Put(ctx, replacement, bytes.NewReader(logoPNG(t)), int64(len(logoPNG(t))), imagenorm.ContentType); err != nil {
+	if err := blob.Put(ctx, replacement, bytes.NewReader(apptest.LogoPNG(t)), int64(len(apptest.LogoPNG(t))), imagenorm.ContentType); err != nil {
 		t.Fatalf("store the replacement logo bytes: %v", err)
 	}
 	if _, err := e.Contacts.SetAnchorCompanyLogo(ctx, contacts.LogoWide, replacement, "replacement.png"); err != nil {
@@ -794,7 +779,7 @@ func TestCompanyLogoWriteBackLogsRatherThanFailsWhenTheCollectingDeleteErrors(t 
 	}
 
 	replacement := "company_logo/" + companyID.String() + "/" + ids.NewV7().String()
-	if err := blob.Put(ctx, replacement, bytes.NewReader(logoPNG(t)), int64(len(logoPNG(t))), imagenorm.ContentType); err != nil {
+	if err := blob.Put(ctx, replacement, bytes.NewReader(apptest.LogoPNG(t)), int64(len(apptest.LogoPNG(t))), imagenorm.ContentType); err != nil {
 		t.Fatalf("store the replacement logo bytes: %v", err)
 	}
 	if _, err := e.Contacts.SetAnchorCompanyLogo(ctx, contacts.LogoWide, replacement, "replacement.png"); err != nil {
@@ -853,7 +838,7 @@ func TestCompanyLogoIs404WithoutOneAnd501WithoutAnObjectStore(t *testing.T) {
 
 	// A role with no object store wired: the company HAS a logo, and the
 	// endpoint says the deployment cannot serve it rather than nil-derefing.
-	companyID := seedLoggedCompany(ctx, t, e, blob, logoPNG(t))
+	companyID := seedLoggedCompany(ctx, t, e, blob, apptest.LogoPNG(t))
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodGet, "/v1/companies/"+companyID.String()+"/logo", nil).WithContext(ctx)
 	contacts.NewHandlers(e.DB()).GetCompanyLogo(rec, req, crmcontracts.Id(companyID.UUID))
@@ -875,7 +860,7 @@ func TestTheCompaniesListCarriesEachRowsLogoURL(t *testing.T) {
 	e := Setup(t)
 	blob := blobstore.NewMemory()
 	ctx := e.Admin()
-	companyID := seedLoggedCompany(ctx, t, e, blob, logoPNG(t))
+	companyID := seedLoggedCompany(ctx, t, e, blob, apptest.LogoPNG(t))
 
 	page, _, err := e.Contacts.ListCompanies(ctx, contacts.ListCompaniesInput{})
 	if err != nil {
@@ -922,7 +907,7 @@ func TestALogoResponseSaysItsBytesWillNeverChange(t *testing.T) {
 	blob := blobstore.NewMemory()
 	handlers := contacts.NewHandlers(e.DB()).WithBlobstore(blob)
 	ctx := e.Admin()
-	companyID := seedLoggedCompany(ctx, t, e, blob, logoPNG(t))
+	companyID := seedLoggedCompany(ctx, t, e, blob, apptest.LogoPNG(t))
 	url := "/v1/companies/" + companyID.String() + "/logo"
 
 	fresh := httptest.NewRecorder()

@@ -16,10 +16,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// approvalEffectActor is the agent that will spend a staged call, authenticated
+// NewApprovalEffectActor is the agent that will spend a staged call, authenticated
 // by the query its own calls go through. A revoked passport or a retired
 // connection resolves to nobody, as the agent's retry would.
-func approvalEffectActor(db *database.DB) approvals.EffectActor {
+func NewApprovalEffectActor(db *database.DB) approvals.EffectActor {
 	directory := identity.NewService(db.Pool())
 	return func(ctx context.Context, tx pgx.Tx, by approvals.StagedBy) (principal.Principal, error) {
 		if by.OnBehalfOf.IsZero() {

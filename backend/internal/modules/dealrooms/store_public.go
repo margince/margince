@@ -116,6 +116,9 @@ func (s *Store) ExchangeCredential(ctx context.Context, raw string) (IssuedSessi
 
 // openSession inserts the session row and records that somebody signed in.
 func openSession(ctx context.Context, tx pgx.Tx, participantID ids.DealRoomParticipantID, roomID ids.DealRoomID, digest []byte, expiresAt time.Time, preview bool) error {
+	if err := holdLiveSeat(ctx, tx, roomID, participantID); err != nil {
+		return err
+	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return err
@@ -157,6 +160,25 @@ func mintSessionToken() (raw string, digest []byte, err error) {
 // to resolve — unknown, revoked, lapsed, or its participant revoked. The public
 // edge turns it into a 401 with no further detail.
 var ErrSessionRefused = errors.New("dealrooms: the room session admits nobody")
+
+// holdLiveSeat share-locks the buyer's seat and refuses one no longer live. An
+// erasure revokes the seat with an UPDATE before it deletes what the seat wrote.
+// So a seat-authored write that holds the seat first is deleted by the erasure.
+// One that comes second finds the seat revoked and writes nothing.
+func holdLiveSeat(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, seat ids.DealRoomParticipantID) error {
+	var held ids.UUID
+	err := tx.QueryRow(ctx,
+		`SELECT id FROM deal_room_participant
+		  WHERE id = $1 AND room_id = $2 AND revoked_at IS NULL
+		    FOR SHARE`, seat, roomID).Scan(&held)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrSessionRefused
+	}
+	if err != nil {
+		return fmt.Errorf("hold the buyer's deal room seat: %w", err)
+	}
+	return nil
+}
 
 // ResolveSession turns a presented token into a Session, or refuses.
 //

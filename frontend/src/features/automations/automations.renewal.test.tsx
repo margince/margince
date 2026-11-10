@@ -213,7 +213,7 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
 
   it("the boolean param renders as a checkbox, and object/date_field render as selects rather than free text", async () => {
     vi.stubGlobal("fetch", renewalBackend([]));
-    render(<AutomationsAdmin />);
+    render(<AutomationsAdmin view="library" />);
     await waitFor(() =>
       expect(screen.getByText("Renewal reminder")).toBeTruthy(),
     );
@@ -236,7 +236,7 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
 
   it("the date_field picker is disabled with a hint until an object is chosen, then queries /custom-fields for it", async () => {
     vi.stubGlobal("fetch", renewalBackend([]));
-    render(<AutomationsAdmin />);
+    render(<AutomationsAdmin view="library" />);
     await waitFor(() =>
       expect(screen.getByText("Renewal reminder")).toBeTruthy(),
     );
@@ -294,7 +294,7 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
         return jsonResponse({ data: [], page: { next_cursor: null } });
       }),
     );
-    render(<AutomationsAdmin />);
+    render(<AutomationsAdmin view="library" />);
     await waitFor(() =>
       expect(screen.getByText("Renewal reminder")).toBeTruthy(),
     );
@@ -314,7 +314,7 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
   it("round-trips the boolean and the picked date field through paramsFromValues into the create request", async () => {
     const calls: Recorded[] = [];
     vi.stubGlobal("fetch", renewalBackend(calls));
-    render(<AutomationsAdmin />);
+    render(<AutomationsAdmin view="library" />);
     await waitFor(() =>
       expect(screen.getByText("Renewal reminder")).toBeTruthy(),
     );

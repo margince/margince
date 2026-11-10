@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 type followUpFieldError struct{ Field, Message string }
@@ -35,7 +36,7 @@ func followUpFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityI
 	}
 	task := req.FollowUpTask
 	followUp, err := TaskInputFrom(crmcontracts.CreateTaskRequest{
-		Subject: task.Subject, Body: task.Body, DueAt: task.DueAt,
+		Subject: task.Subject, Body: task.Body, DueAt: task.DueAt, DueHasTime: task.DueHasTime,
 		AssigneeId: task.AssigneeId, Source: req.Source,
 	})
 	if err != nil {
@@ -57,8 +58,8 @@ func validateFollowUpShape(in LogActivityInput) error {
 	if in.SourceActivityID == nil {
 		return nil
 	}
-	if in.Kind != string(crmcontracts.ActivityKindTask) || in.RequestActivityID != nil {
-		return &followUpFieldError{Field: "source_activity_id", Message: "Only a standalone task can name its source. Accept a request through request_activity_id instead."}
+	if (in.Kind != string(crmcontracts.ActivityKindTask) && in.Kind != string(crmcontracts.ActivityKindNote) && in.Kind != string(crmcontracts.ActivityKindCall) && in.Kind != string(crmcontracts.ActivityKindMeeting)) || in.RequestActivityID != nil {
+		return &followUpFieldError{Field: filterSourceActivityID, Message: "Only a task or a logged outcome can name its source. Accept an email request through request_activity_id instead."}
 	}
 	return nil
 }
@@ -77,8 +78,19 @@ func prepareFollowUpSource(ctx context.Context, tx pgx.Tx, in *LogActivityInput)
 	if err != nil {
 		return err
 	}
-	if source.Kind == crmcontracts.ActivityKindTask {
-		return &followUpFieldError{Field: "source_activity_id", Message: "Choose a conversation or note as the source, rather than another task."}
+	if source.Kind == crmcontracts.ActivityKindTask && in.Kind == string(crmcontracts.ActivityKindTask) {
+		return &followUpFieldError{Field: filterSourceActivityID, Message: "Choose a conversation or note as the source, rather than another task."}
+	}
+	if in.Kind != string(crmcontracts.ActivityKindTask) {
+		if source.Kind != crmcontracts.ActivityKindTask {
+			return &followUpFieldError{Field: filterSourceActivityID, Message: "Choose the task this outcome answers."}
+		}
+		if len(in.Links) == 0 && source.Links != nil {
+			for _, link := range *source.Links {
+				in.Links = append(in.Links, ActivityLinkInput{EntityType: string(link.EntityType), EntityID: ids.UUID(link.EntityId)})
+			}
+		}
+		return nil
 	}
 	assignee := taskAssignee(ctx, *in)
 	if assignee != nil {
@@ -120,5 +132,15 @@ func prepareLoggedActivity(ctx context.Context, tx pgx.Tx, in *LogActivityInput)
 	if err := prepareFollowUpSource(ctx, tx, in); err != nil {
 		return err
 	}
-	return validateActivityDuration(in.DurationSeconds)
+	if err := admitTaskTime(in); err != nil {
+		return err
+	}
+	if err := validateActivityDuration(in.DurationSeconds); err != nil {
+		return err
+	}
+	keys := []string{in.ThreadKey}
+	if in.SourceSystem != nil && *in.SourceSystem == connector.EmailSourceSystem && in.SourceID != nil {
+		keys = append(keys, *in.SourceID)
+	}
+	return storekit.LockThreadKeysTx(ctx, tx, keys...)
 }
