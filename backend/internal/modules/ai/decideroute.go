@@ -79,6 +79,10 @@ func (r *Router) Decide(ctx context.Context, task Task, site string, dreq decisi
 	if try.decided {
 		return DecideOutcome{Decided: true, Answer: try.answer, ServedModel: try.servedModel}, try.info, nil
 	}
+	// A caller that stopped waiting is not handed on to the ladder.
+	if err := ctx.Err(); err != nil {
+		return DecideOutcome{}, try.info, err
+	}
 	resp, info, err := r.completeStructuredOn(ctx, lc, task, req, validate, try.reason)
 	return DecideOutcome{Response: resp, ServedModel: resp.ServedModel}, info, err
 }

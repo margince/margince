@@ -32,6 +32,13 @@ A call that its deadline stops is recorded with the **`timeout`** sentinel. The 
 everywhere `provider_error` is (the health dot, served task totals, the figures). It has its own name so
 an admin can tell a slow host from a broken one. A caller's own cancel is never a timeout.
 
+## The `canceled` sentinel
+
+A call whose caller stopped waiting is recorded with the **`canceled`** sentinel: a page closed or
+reloaded, or a job stopped. The router then makes no further attempt, so no other tier and no retry
+is asked. The sentinel is not a failure. The health dot and the figures leave it out, and the calls list
+shows it as its own outcome. The task flow counts it with the calls that were not answered, because nothing reached the caller.
+
 ## What each attempt was sent
 
 Each attempt's `config_hash` points at an `ai_call_config` row. That

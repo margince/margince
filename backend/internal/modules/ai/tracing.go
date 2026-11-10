@@ -109,7 +109,7 @@ func withAmbientIdentity(ctx context.Context, trace *Call) {
 // this branching lands on its own function, not serveAttempt's.
 func (r *Router) finalizeAttempt(ctx context.Context, b *binding, lc *logicalCall, trace *Call, req model.Request, resp model.Response, callErr error, start time.Time) {
 	trace.LatencyMS = r.now().Sub(start).Milliseconds()
-	trace.ErrorSentinel = classifyError(callErr)
+	trace.ErrorSentinel = sentinelFor(ctx, callErr)
 	if m := b.routeMeta[trace.Tier]; trace.Tier != "" {
 		trace.Provider, trace.ModelID = m.provider, m.model
 	}
@@ -192,6 +192,10 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 	var lastErr, skipped error
 	var lastTier Tier
 	for i, t := range boundRungs {
+		// A caller that stopped waiting gets no further rung; nobody reads it.
+		if err := ctx.Err(); err != nil {
+			return model.Response{}, lastTier, false, err
+		}
 		// The rail's lease covers one model call, and this is the next one.
 		lc.renewRailLease(ctx)
 		// Each rung gets its own deadline, so one slow host spends at most its
@@ -231,7 +235,7 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 			// provider and model: only then is the identical request re-sent to
 			// the API that refused it. Any other rung may accept it.
 			if errors.Is(callErr, ErrProviderQuota) || rejectedAgainAbove(b, callErr, boundRungs[i:]) {
-				lc.append(r.traceForFailedRung(b, *trace, t, callErr, start))
+				lc.append(r.traceForFailedRung(ctx, b, *trace, t, callErr, start))
 				// Not an exhausted ladder — the rungs above were never tried.
 				// Reported as the refusal alone so a caller cannot read "every
 				// tier failed" off a walk that stopped at the first one.
@@ -243,8 +247,11 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 			if meterErr := r.meterWithheld(ctx, task, t, callErr); meterErr != nil {
 				return model.Response{}, t, false, meterErr
 			}
+			if err := ctx.Err(); err != nil {
+				return model.Response{}, t, false, fmt.Errorf("%w (the rung: %w)", err, callErr)
+			}
 			if i < len(boundRungs)-1 {
-				lc.append(r.traceForFailedRung(b, *trace, t, callErr, start))
+				lc.append(r.traceForFailedRung(ctx, b, *trace, t, callErr, start))
 				trace.AttemptReason = attemptReasonProviderError
 				if isDeadline(callErr) {
 					trace.AttemptReason = attemptReasonTimeout
@@ -365,13 +372,13 @@ func (r *Router) meterWithheld(ctx context.Context, task Task, tier Tier, callEr
 // correlation, fingerprint, cache-off, and the reason this rung ran) and
 // filling in this rung's own tier, provider/model, latency-so-far, and error
 // sentinel.
-func (r *Router) traceForFailedRung(b *binding, base Call, t Tier, callErr error, start time.Time) Call {
+func (r *Router) traceForFailedRung(ctx context.Context, b *binding, base Call, t Tier, callErr error, start time.Time) Call {
 	c := base
 	c.Tier = t
 	if m, ok := b.routeMeta[t]; ok {
 		c.Provider, c.ModelID = m.provider, m.model
 	}
-	c.ErrorSentinel = classifyError(callErr)
+	c.ErrorSentinel = sentinelFor(ctx, callErr)
 	c.ServedModel, c.ServedIdentitySource = servedIdentity(c.Provider, c.ModelID, "")
 	c.LatencyMS = r.now().Sub(start).Milliseconds()
 	// A rung that fell back is stored too, so it needs the terminal for the

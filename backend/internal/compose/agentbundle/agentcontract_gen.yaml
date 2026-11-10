@@ -29007,9 +29007,9 @@ components:
             Price-sheet estimate for every attempt of this logical call, in millionths of one US dollar, priced on read exactly as the usage report prices it, so the list sums to the usage total. Omitted, never 0, when any attempt had usage but no effective rate. A cache hit costs 0.
     AiCallOutcome:
       type: string
-      enum: [answered, fallback, declined, failed]
+      enum: [answered, fallback, declined, canceled, failed]
       description: >-
-        How one call ended, as a reader scans for it. `declined`: the model was reached and withheld or rejected the answer. `failed`: any other error code. `fallback`: it answered, but degraded, after a decision model fell back, or after a retry. `answered`: first try.
+        How one call ended, as a reader scans for it. `declined`: the model was reached and withheld or rejected the answer. `canceled`: the caller stopped waiting, and no further attempt ran. `failed`: any other error code. `fallback`: it answered, but degraded, after a decision model fell back, or after a retry. `answered`: first try.
     AiCallConfig:
       type: object
       description: |-

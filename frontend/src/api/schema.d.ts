@@ -29977,6 +29977,7 @@ export interface components {
              *     The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause.
              *     Three codes are not failures. Two are outcomes, where a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `output_rejected` — the task's own check refused the answer on every attempt, so the caller was served nothing. The third, `request_rejected`, is the provider's refusal rather than a model outcome: its own error code named the request malformed, which is a defect on the calling side.
              *     `timeout` — the attempt's deadline stopped it: the task's model call timeout on a ladder attempt, its decision model timeout on a decision attempt. A failure like `provider_error`, named apart so a slow host can be told from a broken one. A caller's own cancellation is never a timeout.
+             *     `canceled` — the caller stopped waiting: a page closed or reloaded, a job shut down. No further attempt runs. The call stays in the trace under this sentinel, so how often users abandon a slow request can still be read, but it is not a provider failure: exclude it from an error rate as `output_withheld` is excluded.
              *     `provider_error` is the FALLBACK: a provider failure naming none of those. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
              */
             error_sentinel?: string | null;
@@ -29992,10 +29993,10 @@ export interface components {
             estimated_cost_microusd?: number;
         };
         /**
-         * @description How one call ended, as a reader scans for it. `declined`: the model was reached and withheld or rejected the answer. `failed`: any other error code. `fallback`: it answered, but degraded, after a decision model fell back, or after a retry. `answered`: first try.
+         * @description How one call ended, as a reader scans for it. `declined`: the model was reached and withheld or rejected the answer. `canceled`: the caller stopped waiting, and no further attempt ran. `failed`: any other error code. `fallback`: it answered, but degraded, after a decision model fell back, or after a retry. `answered`: first try.
          * @enum {string}
          */
-        AiCallOutcome: "answered" | "fallback" | "declined" | "failed";
+        AiCallOutcome: "answered" | "fallback" | "declined" | "canceled" | "failed";
         /**
          * @description The configuration an AI call ran under, resolved from its `config_hash`.
          *

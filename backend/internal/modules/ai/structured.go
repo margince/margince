@@ -106,6 +106,10 @@ func (r *Router) completeStructuredOn(ctx context.Context, lc *logicalCall, task
 		return resp, info, nil
 	}
 	r.refused(ctx, lc, task, info, firstErr)
+	// No retry and no escalation for a caller that stopped waiting.
+	if err := ctx.Err(); err != nil {
+		return model.Response{}, info, err
+	}
 
 	retry := feedbackFor(req, resp, firstErr)
 	resp, info, err = r.serveAttempt(ctx, lc, task, ladder, retry, attemptReasonSchemaInvalid)
@@ -117,6 +121,9 @@ func (r *Router) completeStructuredOn(ctx context.Context, lc *logicalCall, task
 		return resp, info, nil
 	}
 	r.refused(ctx, lc, task, info, secondErr)
+	if err := ctx.Err(); err != nil {
+		return model.Response{}, info, err
+	}
 
 	escalated := feedbackFor(req, resp, secondErr)
 	resp, info, err = r.completeEscalated(ctx, lc, task, escalated)
