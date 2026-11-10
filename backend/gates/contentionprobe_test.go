@@ -375,8 +375,10 @@ func TestAPauseThePlannerMaySkipIsRefused(t *testing.T) {
 var privateProbeFiles = []string{
 	"internal/compose/filterpreviewpages_integration_test.go",
 	"internal/compose/graphhistoryinsertedrow_integration_test.go",
+	"internal/compose/integration/transmitstoprace_integration_test.go",
 	"internal/compose/mergecarryraces_integration_test.go",
 	"internal/compose/partyadmissionrace_integration_test.go",
+	"internal/compose/seataddress_integration_test.go",
 	"internal/compose/webhookerasurerace_integration_test.go",
 	"internal/modules/activities/domainevidence_integration_test.go",
 	"internal/modules/capture/backfillbindingorder_integration_test.go",
