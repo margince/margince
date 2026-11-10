@@ -101,9 +101,9 @@ func TestOneDealChangedThreeWaysCountsOnceAndItsUndoReportsWhatWasKept(t *testin
 	}
 }
 
-// A change edited since stays on the list, never in the bundle Undo sends,
-// and leaves the list once the reporting window has passed.
-func TestAChangeEditedSinceIsListedButNotUndoneAndLeavesAfterTheWindow(t *testing.T) {
+// A change edited since stays on the list, never in the bundle Undo sends.
+// Every change leaves the list once the window has passed, undoable or not.
+func TestAChangeEditedSinceIsListedButNotUndoneAndEveryChangeLeavesAfterTheWindow(t *testing.T) {
 	v := setupDealVerdict(t)
 	v.run(t)
 	h := newMarginceChangeHandlers(v.Pool)
@@ -132,13 +132,22 @@ func TestAChangeEditedSinceIsListedButNotUndoneAndLeavesAfterTheWindow(t *testin
 		}
 	}
 
-	h.deals.SetClock(func() time.Time { return clocktest.Now(t).Add(15 * 24 * time.Hour) })
+	h.deals.SetClock(func() time.Time { return clocktest.Now(t).Add(6 * 24 * time.Hour) })
+	inside, err := h.deals.PendingChangesOwnedBy(v.owner(t), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if inside.Deals != 1 || len(inside.Bundles) != 1 || len(inside.Bundles[0].AuditLogIDs) != 3 {
+		t.Fatalf("inside the window = %+v, want all three changes still listed", inside)
+	}
+
+	h.deals.SetClock(func() time.Time { return clocktest.Now(t).Add(8 * 24 * time.Hour) })
 	later, err := h.deals.PendingChangesOwnedBy(v.owner(t), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if later.Deals != 1 || len(later.Bundles) != 1 || len(later.Bundles[0].AuditLogIDs) != 2 {
-		t.Fatalf("after the window = %+v, want only the two undoable changes listed", later)
+	if later.Deals != 0 || len(later.Bundles) != 0 {
+		t.Fatalf("after the window = %+v, want no change listed", later)
 	}
 }
 

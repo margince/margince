@@ -293,7 +293,7 @@ Each night, Margince gives a new close date to an open deal whose expected close
 
 The new date is today plus the usual days per stage on won deals, times the stages still open. It is rounded up to whole weeks and is at least 7 days away. It is never further away than the setting `deals.silent_close_days`, which is 120 days unless an admin changed it. Stage moves that an import brought in or another CRM synced in are left out. With fewer than 20 won deals, Margince leaves the date as it is.
 
-A date Margince set is a guess, marked "provisional close date, not confirmed by a human", and reports count it as not confirmed. It asks you to confirm or change the forecast; it is not a customer promise. Each change shows under **Done for you** on **Home**, to mark reviewed or undo; see [Your day](your-day.md#done-for-you). To stop these changes on your deals, see [Approvals](approvals.md).
+A date Margince set is a guess, marked "provisional close date, not confirmed by a human", and reports count it as not confirmed. It asks you to confirm or change the forecast; it is not a customer promise. Each change shows under **Done for you** on **Home** with its **Undo**; see [Your day](your-day.md#done-for-you). To stop these changes on your deals, see [Approvals](approvals.md).
 
 ## Reading the numbers
 

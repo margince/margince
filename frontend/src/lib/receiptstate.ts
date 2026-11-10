@@ -3,11 +3,11 @@
 
 import type { Receipt } from "./handled";
 
-export function isReviewableReceipt(receipt: Receipt): boolean {
+// isOpenReceipt says the change still stands and the server offers its Undo.
+// One a later change replaced, or one already undone, is settled.
+export function isOpenReceipt(receipt: Receipt): boolean {
   return receipt.review
-    ? !receipt.review.accepted &&
-        !receipt.review.reversed &&
-        (receipt.review.can_accept || receipt.review.can_undo)
+    ? !receipt.review.reversed && receipt.review.can_undo
     : Boolean(receipt.undo && !receipt.undo.reversed);
 }
 
