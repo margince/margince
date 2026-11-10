@@ -95,6 +95,16 @@ LANEORDER_WEIGHT='
     if ((dir "|" pkg "|" test) in secs) return secs[dir "|" pkg "|" test]
     rest = dir "|" pkg "|*"
     return (rest in secs) ? secs[rest] : 1
+  }
+  # The weight of the current `moduledir|package|^(A|B)$` line: its tests summed.
+  function part_weight(    i, test, total) {
+    for (i = 3; i <= NF; i++) {
+      test = $i
+      sub(/^\^\(/, "", test)
+      sub(/\)\$$/, "", test)
+      total += weight($1, $2, test)
+    }
+    return total
   }'
 
 # weigh_tests DISCOVERY TIMING — print `moduledir|package|weight|<line>` for each
@@ -117,17 +127,28 @@ order_by_weight() {
   local grouped="$1" timing="$2"
   awk -F'|' -v timing="$timing" "$LANEORDER_WEIGHT"'
     BEGIN { load_weights(timing) }
-    {
-      total = 0
-      for (i = 3; i <= NF; i++) {
-        test = $i
-        sub(/^\^\(/, "", test)
-        sub(/\)\$$/, "", test)
-        total += weight($1, $2, test)
-      }
-      printf "%012.3f|%s\n", total, $0
-    }
+    { printf "%012.3f|%s\n", part_weight(), $0 }
   ' "$grouped" | LC_ALL=C sort -s -t'|' -k1,1 -rn | cut -d'|' -f2-
+}
+
+# queue_groups PARTS TIMING SECONDS — print the groups a shard claims from the
+# shared queue, one line of part numbers each. PARTS is order_by_weight output,
+# and part n is its line n.
+#
+# A group is consecutive parts until it weighs SECONDS, so a heavy part is a
+# group by itself and the light tail packs several. One claim takes one group,
+# so SECONDS bounds how often the shards ask the queue.
+queue_groups() {
+  local parts="$1" timing="$2" seconds="$3"
+  awk -F'|' -v timing="$timing" -v target="$seconds" "$LANEORDER_WEIGHT"'
+    BEGIN { load_weights(timing) }
+    {
+      load += part_weight()
+      group = (group == "") ? NR : group " " NR
+      if (load >= target) { print group; group = ""; load = 0 }
+    }
+    END { if (group != "") print group }
+  ' "$parts"
 }
 
 # The one dealing rule, for shards and for parts alike: a test goes to the bin

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
+import { recordEnabled } from "./corefeaturepolicy";
 
 /**
  * Reading a grant out of the access snapshot, with no React in the way.
@@ -62,6 +63,14 @@ export function grants(
   object: RbacObject,
   action: RbacAction,
 ): boolean {
+  if (
+    !recordEnabled(
+      object,
+      snapshot?.settings_availability?.disabled_features ?? [],
+    )
+  ) {
+    return false;
+  }
   // Two optional steps, both load-bearing. `objects` is an index signature, so
   // TypeScript types a miss as PRESENT — only the chain makes an absent grant
   // deny at runtime; and the chain must cover `objects` itself, or a snapshot

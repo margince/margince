@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // CommitmentTaskProposal is the staged payload of a commitment_task.
@@ -36,9 +37,10 @@ import (
 // The links are frozen at staging time: a rep confirms the proposal they were
 // shown, and a relink between the two moments must not move the task.
 type CommitmentTaskProposal struct {
-	ExistingTaskID   *ids.UUID `json:"existing_task_id,omitempty"`
-	SourceActivityID ids.UUID  `json:"source_activity_id"`
-	Summary          string    `json:"summary"`
+	SystemText       *systemtext.Message `json:"-"`
+	ExistingTaskID   *ids.UUID           `json:"existing_task_id,omitempty"`
+	SourceActivityID ids.UUID            `json:"source_activity_id"`
+	Summary          string              `json:"summary"`
 	// Party is who made the promise, as the source names them.
 	Party string `json:"party"`
 	// SeatID is the colleague the task is for: the promiser for a new task,
@@ -67,6 +69,7 @@ type CommitmentTaskProposal struct {
 
 // commitmentTask is what the writer needs to know about one promise.
 type commitmentTask struct {
+	SystemText       *systemtext.Message
 	Extractor        string
 	Locator          string
 	Summary          string
@@ -105,6 +108,7 @@ func writeCommitmentTask(
 	in := activities.LogActivityInput{
 		Kind:             string(crmcontracts.ActivityKindTask),
 		Subject:          &t.Summary,
+		SystemText:       t.SystemText,
 		Body:             &t.Body,
 		SourceSystem:     &sourceSystem,
 		SourceID:         &sourceID,
@@ -187,10 +191,17 @@ func commitmentTaskEffect(
 		if err := json.Unmarshal(proposedChange, &proposal); err != nil {
 			return fmt.Errorf("compose: unmarshal commitment proposal: %w", err)
 		}
+
 		assignee, err := commitmentDecider(ctx, proposedChange)
 		if err != nil {
 			return err
 		}
+		staged, err := svc.Get(ctx, approvalID)
+		if err != nil {
+			return err
+		}
+		proposal.SystemText = approvals.EffectSystemText(staged.SummaryParts)
+
 		// The write runs as the deciding human, so each staged link meets the
 		// visibility check a link they typed would. One they cannot see refuses
 		// the whole acceptance, and the approval stays unspent.
@@ -211,7 +222,7 @@ func commitmentTaskEffect(
 			}
 			task := commitmentTask{
 				Locator: proposal.Locator,
-				Summary: proposal.Summary, Body: proposal.Body,
+				Summary: proposal.Summary, Body: proposal.Body, SystemText: proposal.SystemText,
 				SourceActivityID: proposal.SourceActivityID, Links: proposal.Links,
 				DueDate: proposal.DueDate, DueZone: proposal.DueZone, Assignee: assignee, ClaimID: proposal.ClaimID, ClaimIDs: proposal.ClaimIDs,
 				PrivateTo: privateTo, Origin: activities.OriginAgent,

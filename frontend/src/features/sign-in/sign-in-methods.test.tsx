@@ -305,7 +305,7 @@ describe("the second-factor requirement", () => {
   const requireSwitch = () =>
     screen.findByRole("switch", { name: /require second factor/i });
   const confirmButton = (dialog: HTMLElement) =>
-    within(dialog).getByRole("button", { name: /require second factor/i });
+    within(dialog).getByRole("button", { name: "Require" });
   // Settled means the confirm is live: it is held while the admin's own factor
   // is still being asked for.
   const settledDialog = async () => {
@@ -323,7 +323,9 @@ describe("the second-factor requirement", () => {
 
     const dialog = await settledDialog();
     expect(
-      within(dialog).getByText(/asked to set it up before they can continue/i),
+      within(dialog).getByText(
+        /members signing in with a password must set up two-step sign-in/i,
+      ),
     ).toBeTruthy();
     expect(calls).toEqual([]);
     await user.click(confirmButton(dialog));
@@ -347,7 +349,9 @@ describe("the second-factor requirement", () => {
     await user.click(await requireSwitch());
     const dialog = await screen.findByRole("dialog");
     expect(
-      await within(dialog).findByText(/you have not set up two-step sign-in/i),
+      await within(dialog).findByText(
+        /signing in with a password will require setting up two-step sign-in/i,
+      ),
     ).toBeTruthy();
   });
 
@@ -357,7 +361,9 @@ describe("the second-factor requirement", () => {
     await user.click(await requireSwitch());
     const dialog = await settledDialog();
     expect(
-      within(dialog).queryByText(/you have not set up two-step sign-in/i),
+      within(dialog).queryByText(
+        /signing in with a password will require setting up two-step sign-in/i,
+      ),
     ).toBeNull();
   });
 
@@ -396,7 +402,9 @@ describe("the second-factor requirement", () => {
     await user.click(await requireSwitch());
     const dialog = await settledDialog();
     expect(
-      within(dialog).getByText(/you have not set up two-step sign-in/i),
+      within(dialog).getByText(
+        /signing in with a password will require setting up two-step sign-in/i,
+      ),
     ).toBeTruthy();
   });
 

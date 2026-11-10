@@ -21,7 +21,7 @@ import { lifecyclePreviewFields } from "./approvallifecycle";
 import { previewFieldLabel } from "./approvalpreviewfields";
 import { importPreviewFields } from "./approvalpreviewimport";
 import { mergeValueLabel } from "./approvalpreviewmergevalues";
-import { contextOptions } from "./compose-context";
+import { communicationContextLabel } from "./compose-context";
 import {
   MEMBER_RETIREMENT_EFFECT_LABELS,
   memberRetirementBlocker,
@@ -213,10 +213,8 @@ export function previewLabel(
   if (field === "promotion_set_origin") return t("field.yes");
 
   if (field === "communication_context") {
-    const option = contextOptions(t).find(
-      (option) => option.value === value.text,
-    );
-    if (option) return option.label;
+    const label = communicationContextLabel(value.text, t);
+    if (label) return label;
   }
   const catalogs: Record<string, Readonly<Record<string, MessageKey>>> = {
     relationship_kind: KIND_LABELS,
@@ -256,14 +254,7 @@ export function previewLabel(
     status: DEAL_STATUS_LABEL,
     phase: PHASE_LABEL,
     enrichment_depth: ENRICHMENT_DEPTH_LABELS,
-    communication_context: {
-      reply_to_inbound: "approval.preview.contextReply",
-      security_notice: "approval.preview.contextSecurity",
-      privacy_notice: "approval.preview.contextPrivacy",
-      record_confirmation: "approval.preview.contextRecord",
-      consent_confirmation: "approval.preview.contextConsent",
-      optout_confirmation: "approval.preview.contextOptout",
-    },
+
     consent_result: {
       granted: "approval.preview.consentGranted",
       withdrawn: "approval.preview.consentWithdrawn",

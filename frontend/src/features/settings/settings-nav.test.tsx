@@ -86,6 +86,8 @@ const pagesIn = (group: SettingsGroupId) =>
 // changes it, because the read is one every seat holds. Granting the read here
 // would leave this "every page" fixture four pages short.
 const EVERY_PAGE_GRANTED: GrantSpec = {
+  // Meetings, which opens for a seat that may book.
+  activity: ["read", "create"],
   // Writing voice, whose card asks the WRITE. It needed no entry while the page
   // was ungated; now that the rail carries what a reader can act on, an admin
   // without this grant would consult their own voice profile rather than own it.
@@ -174,6 +176,9 @@ const SALES_READS: readonly {
 // plus a `contact` AND `consent_config` pair for the management role, which is
 // seeded the consent vocabulary and nothing else on that page.
 const SEEDED_READS: GrantSpec = {
+  // Every seeded role but read_only creates activities, which is what opens
+  // Meetings.
+  activity: ["read", "create"],
   automation: ["read"],
   contact: ["read"],
   capture_settings: ["read"],

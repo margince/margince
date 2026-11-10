@@ -6,6 +6,7 @@ package compose
 import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 func participantEvidenceDataTask() datatask.Task {
@@ -14,7 +15,7 @@ func participantEvidenceDataTask() datatask.Task {
 	step.EmptyWhenDone = true
 	return datatask.Task{
 		ID: "core/1793984655_participant_domain_evidence", Version: 1,
-		Title: "Index participant domain evidence", Requires: []string{"core/1793984654"},
+		Title: systemtext.Literal("datatask.title.core.1793984655_participant_domain_evidence"), Requires: []string{"core/1793984654"},
 		Steps: []datatask.Step{step},
 	}
 }

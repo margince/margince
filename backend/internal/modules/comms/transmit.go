@@ -51,16 +51,10 @@ func (d *Dispatcher) transmit(ctx context.Context, del Delivery, seam sendSeam, 
 	if err != nil {
 		return d.retry(ctx, del.ID, fmt.Errorf("comms: reading this message's files before transmitting: %w", err))
 	}
-	outcome, wait, err := d.recheckBeforeTheWire(ctx, del, ticket)
-	if outcome != outcomeUndecided || err != nil {
+	receipt, outcome, wait, err := d.handToProvider(ctx, del, seam, ticket, files)
+	if outcome != outcomeUndecided {
 		return outcome, wait, err
 	}
-	// At-most-once, for the seams that need it: a transmission whose outcome was
-	// never learned is never attempted a second time.
-	if outcome, wait, err := d.guardAtMostOnce(ctx, del, seam); outcome != outcomeUndecided {
-		return outcome, wait, err
-	}
-	receipt, err := seam.transmit(ctx, files)
 	if err != nil {
 		return d.classifySendFailure(ctx, del, err)
 	}

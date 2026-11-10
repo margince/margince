@@ -59,7 +59,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 		key      *string
 	}
 	paged, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (pagedRow, error) {
-		activity, key, err := scanActivityPage(row, sorted)
+		activity, key, err := scanActivityPage(ctx, row, sorted)
 		return pagedRow{activity, key}, err
 	})
 	if err != nil {

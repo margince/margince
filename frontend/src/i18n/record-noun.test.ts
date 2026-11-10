@@ -168,6 +168,10 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contact.card.committee_other",
   ],
   de: [
+    // The room names a colleague who answers buyers, not a contact record.
+    "room.stewardNeeded.body",
+    // The signature belongs to a human member, not a contact record.
+    "settings.signatureReviewIntro",
     "analytics.team.eventCredit",
     "analytics.team.qualificationBasis",
     "analytics.team.targetBasis",
@@ -312,6 +316,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "analytics.team.qualificationUnattributed_one",
     "analytics.team.qualificationUnattributed_other",
     // Operators and mailbox owners are human roles, not contact record types.
+    "settings.signatureReviewChanged",
     "health.stoppedNext",
     "health.readFailedNext",
     "health.effect.jobs",
@@ -575,6 +580,9 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "roompage.pauseHint",
     "roompage.previewNotYours",
     "roompage.viewAsBuyer",
+    "room.stewardNeeded.title",
+    "room.stewardNeeded.body",
+    "roomtab.manage.contactMissing",
     "roomtab.manage.contactHint",
     "roomtab.manage.contactLabel",
     "roomtab.manage.contactOwner",
@@ -700,6 +708,14 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "senders.keepOutBody",
     "senders.keepOutTitle",
     "senders.title",
+    // "người gửi" in the waiting drawer is the SENDER of the mail, as above.
+    "senders.waiting.businessTitle",
+    "senders.waiting.removeBody",
+    "senders.waiting.why.classifying",
+    "senders.waiting.why.decided",
+    "senders.waiting.why.queued",
+    "senders.waiting.why.unjudgeable",
+    "senders.waiting.why.unsure",
     "signal.kind.champion_left",
     "timeline.withheld",
     "visibility.participants",

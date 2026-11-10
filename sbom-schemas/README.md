@@ -8,7 +8,7 @@ this folder:
 | --- | --- | --- |
 | CycloneDX | first-party `cyclonedx-cli` (bundles its spec schema) | none |
 | SPDX 2.2.1 | `pyspdxtools` (spdx/tools-python), structural **and** semantic | `spdx-tools-requirements.txt` |
-| SPDX 3.0.1 | generic JSON-schema validation | `spdx-3.0.1.schema.json` |
+| SPDX 3.0.1 | generic JSON-schema validation | `spdx-3.0.1/spdx-3.0.1.schema.json` |
 
 `license-supplement.json` is the curated map from purl to SPDX license that `make sbom-supplement`
 applies. It covers packages syft cannot find a license for by itself: GitHub Actions, and PyPI
@@ -44,14 +44,22 @@ again when both the SPDX 3.0 writer of syft and the SHACL tools are mature.
 
 ## The copied schema
 
-`spdx-3.0.1.schema.json` is copied into the tree, not fetched at build time, for the same reason the
-validator images are pinned by digest. A host for the schema that moves, or a payload someone changed,
-must not change what the gate accepts. To update it, replace the file from its source and note the
-change in the commit.
+`spdx-3.0.1/spdx-3.0.1.schema.json` is copied into the tree, not fetched at build time, for the same
+reason the validator images are pinned by digest. A host for the schema that moves, or a payload
+someone changed, must not change what the gate accepts. To update it, replace the file from its
+source, check its license again, and note the change in the commit.
 
 | File | Source |
 | --- | --- |
-| `spdx-3.0.1.schema.json` | https://spdx.org/schema/3.0.1/spdx-json-schema.json |
+| `spdx-3.0.1/spdx-3.0.1.schema.json` | https://spdx.org/schema/3.0.1/spdx-json-schema.json |
+| `spdx-3.0.1/LICENSE` | `License.md` of [spdx/spdx-3-model](https://github.com/spdx/spdx-3-model) at tag `3.0.1` |
+
+The SPDX project builds the schema with `shacl2code` from the `spdx/spdx-3-model` model, in the
+`publish_v3.yml` workflow of `spdx/spdx-spec`. Both repositories put the SPDX 3 work under the
+`Community-Spec-1.0` license, so that is the license of the schema.
+`LICENSE` is that license, copied from the model at the same version. The line for the schema in
+[`third-party-files.txt`](../third-party-files.txt) names its source, version, license and license
+text, and `make third-party-files` checks it.
 
 These are inputs for the checks, not shipped product. Still, `.syft.yaml` includes this committed
 folder, so the SBOM covers the whole committed tree.

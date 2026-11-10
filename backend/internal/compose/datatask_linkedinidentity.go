@@ -16,12 +16,13 @@ import (
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 func linkedInIdentityDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1793062663_linkedin_identity_normalized", Version: 1,
-		Title: "Normalize stored LinkedIn identities", Requires: []string{"core/0001"},
+		Title: systemtext.Literal("datatask.title.core.1793062663_linkedin_identity_normalized"), Requires: []string{"core/0001"},
 		Steps: []datatask.Step{
 			normalizeLinkedInStep("normalize_leads", "lead", contacts.NormalizeLeadLinkedInTx),
 			normalizeLinkedInStep("normalize_contacts", "contact", contacts.NormalizeContactLinkedInTx),
@@ -65,7 +66,7 @@ func leadContactPairsDataTask(pool *pgxpool.Pool) datatask.Task {
 	store := newContactsStore(db).WithStopCarrier(consents).WithSatelliteCarriers(consents, nil)
 	return datatask.Task{
 		ID: "core/1793062664_lead_contact_pairs_merged", Version: 1,
-		Title: "Merge existing lead and contact pairs", Requires: []string{"core/0001"},
+		Title: systemtext.Literal("datatask.title.core.1793062664_lead_contact_pairs_merged"), Requires: []string{"core/0001"},
 		Steps: []datatask.Step{{
 			Name: "merge_pairs", Limit: 25, MinLimit: 1, EmptyWhenDone: true, Audit: datatask.AuditPolicy{PerRecord: true},
 			Estimate: func(ctx context.Context, q datatask.Querier, maximum int64) (int64, bool, error) {

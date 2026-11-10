@@ -1017,6 +1017,26 @@
         }
       }
     },
+    "features": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "disabled": {
+          "description": "Main-menu features to turn off; their pages and API and agent calls are not available, and their data is kept.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        }
+      }
+    },
     "geocode_base_url": {
       "description": "Nominatim base URL; unset or public uses the public service, off stops the lookup of map points; give the api and the worker the same value, or a lookup is never queued.",
       "type": [
@@ -1185,7 +1205,7 @@
           }
         },
         "require_mfa": {
-          "description": "Every member must use two-step sign-in.",
+          "description": "Password sign-in needs two-step sign-in; Google and Microsoft check their own sign-ins.",
           "type": [
             "boolean",
             "null"

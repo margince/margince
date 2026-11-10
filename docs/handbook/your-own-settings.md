@@ -75,11 +75,13 @@ Margince shows the backup codes once, and never again. The row then reads "On ·
 A setup you started and did not finish shows **Not finished**. **Discard setup** removes it, with no code needed.
 
 ### What if Margince asks me to set up two-step sign-in before I can continue?
-Your installation requires two-step sign-in, and you have not set it up yet. After your password, Margince shows **Set up two-step sign-in**.
+Your installation requires two-step sign-in for password sessions, and you have not set it up yet. After your password, Margince shows **Set up two-step sign-in**. Google and Microsoft manage their own MFA; provider sessions do not require Margince setup.
 Choose **Set up**. The steps are the same as on the **Account** page, from the picture to **Turn on**.
 Keep your **Recovery codes**, choose **Done**, and Margince opens.
 
-If you are already signed in when the switch goes on, you see this page the next time Margince checks. **Sign out** leaves without setting it up. Also called: required two-step sign-in, must set up, cannot continue.
+If you already have a password session when the switch goes on, you see this page the next time Margince checks. **Sign out** leaves without setting it up. Also called: required two-step sign-in, must set up, cannot continue.
+
+Older sessions keep the password rule until the next sign-in. Changing a password opens a password session, so the rule applies to it too.
 
 ### How do I sign in with two-step sign-in?
 To sign in to Margince with two-step sign-in, enter your email and password as usual. Margince then shows **Verification code**.
@@ -94,7 +96,7 @@ To turn off two-step sign-in in Margince, open Settings → **Account**, choose 
 The code is one your phone app shows now, or one of your backup codes. Your backup codes stop working with it.
 For new backup codes, or to move to a new phone, remove it and set it up again.
 
-If your installation requires two-step sign-in, Margince asks you to set it up again straight away. That is also how you get new backup codes there. Also called: new phone, new backup codes, lost phone.
+If your installation requires two-step sign-in for password sessions, Margince asks you to set it up again in those sessions. That is also how you get new backup codes there. Also called: new phone, new backup codes, lost phone.
 
 Keep your backup codes where you can find them without your phone. If you lose both, an administrator can remove two-step sign-in for you from **Settings → Members**. You then sign in with your password and set it up again.
 
@@ -316,7 +318,7 @@ All the detail (IMAP settings, importing past mail, reconnecting, and what captu
 The **Activity** tab of Connections says what your connected mail turned into,
 and holds the decisions you make about it. The cards, in order:
 
-**Held threads.** Threads your mailbox is holding back from the team right now, with the reason. **Share with the team** releases one; only you can release yours.
+**Held threads.** Threads your mailbox is holding back from the team right now, with the reason. **Share with the team** releases one; only you can release yours. When a thread is held, its earlier messages that the team could already read are held too. Sharing the thread again opens them.
 
 **Capture exclusions** are addresses and domains whose messages never come into the CRM. Your rules apply only to mailboxes you connected. The company's rules apply to everyone, and only an administrator may add or remove one of those. A rule applies from the next message; what is already captured stays.
 

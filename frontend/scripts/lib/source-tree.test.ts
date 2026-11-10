@@ -21,6 +21,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { stable } from "../../src/format/collate";
 import {
   extensionFilesMatching,
   extensionLayers,
@@ -36,7 +37,7 @@ import {
 describe("the walk the source-wide gates share", () => {
   let dir = "";
   const rel = (paths: string[]) =>
-    paths.map((p) => p.slice(dir.length + 1)).sort();
+    paths.map((p) => p.slice(dir.length + 1)).sort(stable);
 
   beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), "source-tree-"));
@@ -62,7 +63,7 @@ describe("the walk the source-wide gates share", () => {
     for (const n of [...modules, "skip.md", "skip.css", "skip.json"]) {
       writeFileSync(join(dir, n), "");
     }
-    expect(rel(filesUnder(dir))).toEqual(modules.sort());
+    expect(rel(filesUnder(dir))).toEqual(modules.sort(stable));
   });
 
   it("reaches a file at any depth", () => {

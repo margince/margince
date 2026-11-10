@@ -16,6 +16,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { useShortcutDispatcher } from "../lib/shortcuts";
 import { meFixture } from "../testing/mefixture";
+
+// A seat that may book, so the menu carries its booking link.
+const BOOKER = { allow: { activity: ["read", "create"] } } as const;
+
 import { AccountMenu } from "./account";
 
 // The bundle's releases are compiled in, and every local build leaves them
@@ -53,7 +57,7 @@ function renderMenu() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  client.setQueryData(["me"], meFixture());
+  client.setQueryData(["me"], meFixture(BOOKER));
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">

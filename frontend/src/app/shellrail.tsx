@@ -16,13 +16,20 @@ import { useTruncationTooltip } from "../design-system/tooltip";
 import { useSettingsSection } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
 import { lazy } from "../i18n/lazy";
+import { useDisabledCoreFeatures } from "../lib/corefeatures";
 import { entryDepth } from "../lib/historydepth";
 import { type Route, routeHash, useHash } from "../lib/router";
 import { useMe } from "../lib/session";
 import { useGoToShortcuts } from "../lib/shortcuts";
 import { usePhoneViewport } from "../lib/viewport";
 import "./agentrail.css";
-import { currentClaim, MOBILE_PRIMARY, NAV, type NavSection } from "./nav";
+import {
+  currentClaim,
+  firstAvailableRoute,
+  MOBILE_PRIMARY,
+  NAV,
+  type NavSection,
+} from "./nav";
 import { DESTINATION_ROW, NavLevelView, useNavLevel } from "./navlevel";
 import { useNavTip } from "./navtip";
 import { usePopoverDismiss } from "./popover";
@@ -111,6 +118,7 @@ export function WorkspaceChip({ id }: Readonly<{ id?: string }>) {
 // from assistive tech. The link covers the whole card (shell.css).
 function BrandBlock() {
   const t = useT();
+  const start = routeHash(firstAvailableRoute(useDisabledCoreFeatures()));
   const installation = useInstallationBrand();
   const homeLabel = useHomeLinkLabel();
   // On the link, not the heading: the link already holds the tab stop, and the
@@ -128,7 +136,7 @@ function BrandBlock() {
     return (
       <div className="railhead">
         <WorkspaceChip />
-        <AppLink className="ws" href="#/home" aria-label={homeLabel}>
+        <AppLink className="ws" href={start} aria-label={homeLabel}>
           <Heading size="small" as="div" className="ws-name">
             {t("shell.logoAria")}
           </Heading>
@@ -141,7 +149,7 @@ function BrandBlock() {
       <WorkspaceChip />
       <AppLink
         className="ws"
-        href="#/home"
+        href={start}
         aria-label={homeLabel}
         ref={nameRef}
         {...nameTrigger}

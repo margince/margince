@@ -5,19 +5,12 @@
 
 package gates
 
-// Every moment-card verb is classified by whether pressing it writes.
+// Every offered verb is classified by whether pressing it writes.
 //
-// compose/momentaction decides which verbs a caller without `activity.create`
-// is offered, by looking the action's kind up in one map. A kind MISSING from
-// that map reads as "writes nothing" — Go cannot tell an absent key from a
-// false one — so an unclassified verb is handed to a reader as live and its
-// save is then refused with nothing said. That is the defect the card exists
-// to prevent, and it arrives by addition: the vocabulary grew a second writing
-// kind once already, and the second one was added with the identical shape.
-//
-// So the contract's own enum is the corpus and the map must answer all of it.
-// Both sides are read here — the enum from api/crm.yaml, the keys from the
-// source — so neither can be the one this gate believes.
+// compose/momentaction looks each verb up in its surface's map to decide what
+// a seat without `activity.create` is offered. A verb missing from a map is
+// offered wrongly, so each map must answer the contract's whole enum. The enum
+// is read from api/crm.yaml and the keys from the source.
 
 import (
 	"go/ast"
@@ -30,84 +23,140 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-const (
-	momentActionSchema = "ContactMomentAction"
-	momentActionSource = "internal/compose/momentaction/withhold.go"
-	momentActionMap    = "writesAnActivity"
-	// The constant prefix oapi-codegen mints for this enum, stripped to get
-	// back to the contract's own spelling.
-	momentActionConstPrefix = "ContactMomentActionKind"
-)
+type offeredVerbs struct {
+	schema string
+	// Where the enum sits in the schema: each anchor is found in turn, then the
+	// first flow-list enum after the last one.
+	anchors     []string
+	source      string
+	mapName     string
+	constPrefix string
+	// The enum's size today. A floor, so an extraction that goes short fails.
+	floor int
+	// How an entry says "this verb writes".
+	writes func(t *testing.T, mapName, kind string, value ast.Expr) bool
+}
 
-func TestEveryMomentActionKindIsClassifiedAsWritingOrNot(t *testing.T) {
+var offeredVerbVocabularies = []offeredVerbs{
+	{
+		schema: "ContactMomentAction", source: "internal/compose/momentaction/withhold.go",
+		mapName: "writesAnActivity", constPrefix: "ContactMomentActionKind", floor: 8,
+		writes: boolLiteral,
+	},
+	{
+		schema: "WorklistMove", anchors: []string{"\n        action:"},
+		source:  "internal/compose/momentaction/writeverbs.go",
+		mapName: "worklistVerbWrites", constPrefix: "WorklistMoveAction", floor: 7,
+		writes: refusalPhrase,
+	},
+	{
+		schema: "Company360Suggestion", anchors: []string{"\n        action:", "\n            kind:"},
+		source:  "internal/compose/momentaction/writeverbs.go",
+		mapName: "suggestionVerbWrites", constPrefix: "Company360SuggestionActionKind", floor: 3,
+		writes: refusalPhrase,
+	},
+}
+
+func TestEveryOfferedVerbIsClassifiedAsWritingOrNot(t *testing.T) {
 	t.Parallel()
-	declared := momentActionKindEnum(t)
-	// The enum is eight members today. A floor rather than an equality: the
-	// vocabulary is meant to grow, and what must not happen is this gate
-	// reading a SHORTER one than the contract carries — an extraction that
-	// silently matched nothing would otherwise agree with an empty map.
-	if len(declared) < 8 {
-		t.Fatalf("read %d kinds from %s.kind in api/crm.yaml (%v) — the enum has at least eight, "+
+	for _, vocabulary := range offeredVerbVocabularies {
+		t.Run(vocabulary.mapName, func(t *testing.T) {
+			t.Parallel()
+			vocabulary.check(t)
+		})
+	}
+}
+
+// A verb named in two maps is one verb, so it must write in both or in neither.
+// Otherwise one surface offers live what another refuses.
+func TestAVerbSharedByTwoMapsIsClassifiedTheSameInEach(t *testing.T) {
+	t.Parallel()
+	first := map[string]string{}
+	answers := map[string]bool{}
+	shared := 0
+	for _, vocabulary := range offeredVerbVocabularies {
+		classified, _ := vocabulary.classification(t)
+		for verb, writes := range classified {
+			owner, seen := first[verb]
+			if !seen {
+				first[verb], answers[verb] = vocabulary.mapName, writes
+				continue
+			}
+			shared++
+			if writes != answers[verb] {
+				t.Errorf("%q writes=%v in %s and writes=%v in %s: one verb needs one answer",
+					verb, answers[verb], owner, writes, vocabulary.mapName)
+			}
+		}
+	}
+	// draft_reply sits in all three maps and open_meeting_brief in two, so a
+	// read that found no overlap has stopped reading the maps.
+	if shared < 3 {
+		t.Fatalf("found %d shared verbs across the maps, want at least 3", shared)
+	}
+}
+
+func (v offeredVerbs) check(t *testing.T) {
+	declared := v.enum(t)
+	if len(declared) < v.floor {
+		t.Fatalf("read %d verbs from %s in api/crm.yaml (%v), and the enum has at least %d, "+
 			"so the extraction has gone short and this gate would pass vacuously",
-			len(declared), momentActionSchema, declared)
+			len(declared), v.schema, declared, v.floor)
 	}
-
-	classified, writing := momentActionClassification(t)
-	// Both dispositions must be populated. A map read as all-false would still
-	// satisfy set equality while withholding nothing at all.
+	classified, writing := v.classification(t)
+	// A map read as all-false would still satisfy set equality while
+	// withholding nothing at all.
 	if writing < 2 {
-		t.Errorf("%s classifies %d kinds as writing an activity, want at least the log form and the "+
-			"task form — a vocabulary where nothing writes withholds nothing", momentActionMap, writing)
+		t.Errorf("%s classifies %d verbs as writing an activity, want at least two: "+
+			"a vocabulary where nothing writes withholds nothing", v.mapName, writing)
 	}
-
 	for _, kind := range declared {
 		if _, ok := classified[kind]; !ok {
-			t.Errorf("%s.kind admits %q and %s does not answer for it, so it reads as writing nothing: "+
-				"a reader without activity.create would be handed it live and refused on save. Add it to "+
-				"the map with the answer for that verb", momentActionSchema, kind, momentActionMap)
+			t.Errorf("%s admits %q and %s does not answer for it. Add it to the map with the "+
+				"answer for that verb", v.schema, kind, v.mapName)
 		}
 	}
 	for kind := range classified {
 		if !sortedHas(declared, kind) {
-			t.Errorf("%s answers for %q, which %s.kind does not admit — a classification of a verb the "+
-				"contract cannot produce is a stale entry", momentActionMap, kind, momentActionSchema)
+			t.Errorf("%s answers for %q, which %s does not admit: a classification of a verb the "+
+				"contract cannot produce is a stale entry", v.mapName, kind, v.schema)
 		}
 	}
 }
 
-// momentActionKindEnum reads the sorted `kind` enum off the contract's own
-// ContactMomentAction schema.
-func momentActionKindEnum(t *testing.T) []string {
+// enum reads the sorted verb enum off the contract's own schema.
+func (v offeredVerbs) enum(t *testing.T) []string {
 	t.Helper()
 	raw, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("read contract: %v", err)
 	}
-	block := schemaBlock(t, string(raw), momentActionSchema)
-	// The first flow-list enum inside the block is `kind`'s: it is the schema's
-	// first enum property, and `state`'s follows it.
+	block := schemaBlock(t, string(raw), v.schema)
+	for _, anchor := range v.anchors {
+		at := strings.Index(block, anchor)
+		if at < 0 {
+			t.Fatalf("contract: %s has no %q", v.schema, anchor)
+		}
+		block = block[at+len(anchor):]
+	}
 	start := strings.Index(block, "enum: [")
 	if start < 0 {
-		t.Fatalf("contract: %s declares no enum", momentActionSchema)
+		t.Fatalf("contract: %s declares no enum after %v", v.schema, v.anchors)
 	}
 	end := strings.Index(block[start:], "]")
 	if end < 0 {
-		t.Fatalf("contract: %s.kind enum is unterminated", momentActionSchema)
+		t.Fatalf("contract: the %s enum is unterminated", v.schema)
 	}
 	return splitEnumList(block[start+len("enum: [") : start+end])
 }
 
-// momentActionClassification reads the classification map's keys and counts
-// how many of them answer "this verb writes".
-//
-// It parses rather than greps because the map's VALUES are the half a text
-// scan cannot see, and a gate that checked only the keys would pass a map that
-// had quietly answered false for the log form.
-func momentActionClassification(t *testing.T) (kinds map[string]bool, writing int) {
+// classification reads the map's keys and counts how many answer "this verb
+// writes". It parses the source, because a text scan cannot see the values.
+func (v offeredVerbs) classification(t *testing.T) (kinds map[string]bool, writing int) {
 	t.Helper()
-	file, err := gatekit.ParseFile(momentActionSource, 0)
+	file, err := gatekit.ParseFile(v.source, 0)
 	if err != nil {
-		t.Fatalf("parse %s: %v", momentActionSource, err)
+		t.Fatalf("parse %s: %v", v.source, err)
 	}
 	kinds = map[string]bool{}
 	for _, decl := range file.Decls {
@@ -116,7 +165,7 @@ func momentActionClassification(t *testing.T) (kinds map[string]bool, writing in
 			continue
 		}
 		for _, spec := range gen.Specs {
-			value, named := momentActionMapLiteral(spec)
+			value, named := mapLiteral(spec, v.mapName)
 			if !named {
 				continue
 			}
@@ -125,8 +174,8 @@ func momentActionClassification(t *testing.T) (kinds map[string]bool, writing in
 				if !ok {
 					continue
 				}
-				kind := momentActionKindOf(t, pair.Key)
-				writes := momentActionWritesOf(t, kind, pair.Value)
+				kind := v.kindOf(t, pair.Key)
+				writes := v.writes(t, v.mapName, kind, pair.Value)
 				kinds[kind] = writes
 				if writes {
 					writing++
@@ -135,43 +184,58 @@ func momentActionClassification(t *testing.T) (kinds map[string]bool, writing in
 		}
 	}
 	if len(kinds) == 0 {
-		t.Fatalf("no %s map literal found in %s — this gate reads the classification from there, "+
-			"and an empty read agrees with every contract", momentActionMap, momentActionSource)
+		t.Fatalf("no %s map literal found in %s: this gate reads the classification from there, "+
+			"and an empty read agrees with every contract", v.mapName, v.source)
 	}
 	return kinds, writing
 }
 
-// momentActionMapLiteral picks the classification map out of a var spec.
-func momentActionMapLiteral(spec ast.Spec) (*ast.CompositeLit, bool) {
+// mapLiteral picks the named classification map out of a var spec.
+func mapLiteral(spec ast.Spec, name string) (*ast.CompositeLit, bool) {
 	value, ok := spec.(*ast.ValueSpec)
-	if !ok || len(value.Names) != 1 || value.Names[0].Name != momentActionMap || len(value.Values) != 1 {
+	if !ok || len(value.Names) != 1 || value.Names[0].Name != name || len(value.Values) != 1 {
 		return nil, false
 	}
 	literal, ok := value.Values[0].(*ast.CompositeLit)
 	return literal, ok
 }
 
-// momentActionKindOf turns a `crmcontracts.ContactMomentActionKindLogActivity`
-// key back into the contract's own `log_activity`.
-func momentActionKindOf(t *testing.T, key ast.Expr) string {
+// kindOf turns a `crmcontracts.ContactMomentActionKindLogActivity` key back
+// into the contract's own `log_activity`.
+func (v offeredVerbs) kindOf(t *testing.T, key ast.Expr) string {
 	t.Helper()
 	selector, ok := key.(*ast.SelectorExpr)
-	if !ok || !strings.HasPrefix(selector.Sel.Name, momentActionConstPrefix) {
+	if !ok || !strings.HasPrefix(selector.Sel.Name, v.constPrefix) {
 		t.Fatalf("%s is keyed by %T rather than a %s* constant; this gate reads the contract's "+
-			"spelling out of the constant name", momentActionMap, key, momentActionConstPrefix)
+			"spelling out of the constant name", v.mapName, key, v.constPrefix)
 	}
-	return snakeOf(strings.TrimPrefix(selector.Sel.Name, momentActionConstPrefix))
+	return snakeOf(strings.TrimPrefix(selector.Sel.Name, v.constPrefix))
 }
 
-// momentActionWritesOf reads the map entry's own answer.
-func momentActionWritesOf(t *testing.T, kind string, value ast.Expr) bool {
+// boolLiteral reads an entry whose answer is `true` or `false`.
+func boolLiteral(t *testing.T, mapName, kind string, value ast.Expr) bool {
 	t.Helper()
 	answer, ok := value.(*ast.Ident)
 	if !ok || (answer.Name != "true" && answer.Name != "false") {
 		t.Fatalf("%s[%s] is %T rather than a bool literal; the classification has to be readable "+
-			"without running it", momentActionMap, kind, value)
+			"without running it", mapName, kind, value)
 	}
 	return answer.Name == "true"
+}
+
+// refusalPhrase reads an entry whose answer is `nil` for a read, or the
+// address of the refusal a writing verb gets.
+func refusalPhrase(t *testing.T, mapName, kind string, value ast.Expr) bool {
+	t.Helper()
+	if ident, ok := value.(*ast.Ident); ok && ident.Name == "nil" {
+		return false
+	}
+	if unary, ok := value.(*ast.UnaryExpr); ok && unary.Op == token.AND {
+		return true
+	}
+	t.Fatalf("%s[%s] is %T rather than nil or &phrase; the classification has to be readable "+
+		"without running it", mapName, kind, value)
+	return false
 }
 
 // snakeOf turns `OpenMeetingBrief` into `open_meeting_brief`.

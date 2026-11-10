@@ -30,7 +30,10 @@ import { TopBar } from "./topbar";
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 
-const VOICE_WRITER: GrantSpec = { voice_profile: ["read", "create", "update"] };
+const VOICE_WRITER: GrantSpec = {
+  voice_profile: ["read", "create", "update"],
+  activity: ["read", "create"],
+};
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {

@@ -95,6 +95,7 @@ function SuggestionActionButton({
   return (
     <Button
       variant={valueFor(SUGGESTION_ACTION_VARIANT, action.kind, "ghost")}
+      reason={action.blocked_reason}
       pending={pending}
       onClick={() => onPerform(action)}
     >

@@ -16,6 +16,11 @@ import { Modal } from "../design-system/modal";
 import { DECK_KEY_WORDS } from "../features/brief/brief.deckwords";
 import { type Translator, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import {
+  type CoreFeature,
+  screenEnabled,
+  useDisabledCoreFeatures,
+} from "../lib/corefeatures";
 import { type BindingGroup, bindingCaps, capOf, KEYMAP } from "../lib/keymap";
 import { useSingleKeyShortcuts } from "../lib/shortcuts";
 
@@ -59,10 +64,17 @@ const pressedAlone = (key: string): readonly ShortcutWay[] => [
 ];
 
 /** A keymap group as rows; bindings that share a label are one row with each way. */
-function keymapGroup(group: BindingGroup, t: Translator): ShortcutGroup {
+function keymapGroup(
+  group: BindingGroup,
+  t: Translator,
+  disabled: readonly CoreFeature[],
+): ShortcutGroup {
   const rows = new Map<MessageKey, Shortcut>();
   for (const entry of KEYMAP) {
-    if (entry.group !== group) {
+    const offScreen =
+      entry.goesTo !== undefined &&
+      !screenEnabled(entry.goesTo.screen, disabled);
+    if (entry.group !== group || offScreen) {
       continue;
     }
     const way: ShortcutWay = {
@@ -90,9 +102,12 @@ function keymapGroup(group: BindingGroup, t: Translator): ShortcutGroup {
  * The shortcuts the dialog lists: the keymap the dispatcher reads, then the
  * deck's keys from the definitions its own handler reads.
  */
-function shortcutGroups(t: Translator): readonly ShortcutGroup[] {
+function shortcutGroups(
+  t: Translator,
+  disabled: readonly CoreFeature[],
+): readonly ShortcutGroup[] {
   return [
-    ...GROUP_ORDER.map((group) => keymapGroup(group, t)),
+    ...GROUP_ORDER.map((group) => keymapGroup(group, t, disabled)),
     {
       id: "deck",
       title: t("brief.panel.decisions"),
@@ -159,6 +174,7 @@ export function ShortcutsDialog({
   const t = useT();
   const titleId = useId();
   const singleKeys = useSingleKeyShortcuts();
+  const disabled = useDisabledCoreFeatures();
   return (
     <Modal
       open={open}
@@ -180,7 +196,7 @@ export function ShortcutsDialog({
             {t("shell.shortcuts.singleKeyOffHint")}
           </Callout>
         )}
-        {shortcutGroups(t).map((group) => (
+        {shortcutGroups(t, disabled).map((group) => (
           <section key={group.id} className="acctshortcutsgroup">
             <Eyebrow as="h3" size="xxsmall">
               {group.title}

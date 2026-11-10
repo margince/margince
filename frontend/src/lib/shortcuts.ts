@@ -3,6 +3,7 @@
 
 import { useEffect, useRef } from "react";
 import { isChordOf, isLetterKey, pressedLetter } from "./chord";
+import { screenEnabled, useDisabledCoreFeatures } from "./corefeatures";
 import { deviceSwitch, useDeviceSwitch } from "./devicepreference";
 import { isImeCommit } from "./imecommit";
 import { characterKeyRefused, isTextEntry } from "./keyguard";
@@ -84,11 +85,13 @@ export function useShortcut(
   return enabled ? keys : undefined;
 }
 
+/** Answer each go-to binding whose screen this installation has turned on. */
 export function useGoToShortcuts(): void {
+  const disabled = useDisabledCoreFeatures();
   useEffect(() => {
     const unmount = KEYMAP.flatMap((entry) => {
       const target = entry.goesTo;
-      return target
+      return target && screenEnabled(target.screen, disabled)
         ? [mountShortcutHandler(entry.id, () => navigate(target))]
         : [];
     });
@@ -97,7 +100,7 @@ export function useGoToShortcuts(): void {
         release();
       }
     };
-  }, []);
+  }, [disabled]);
 }
 
 const DISPATCHED = KEYMAP.filter((entry) => entry.answeredBy === "dispatcher");

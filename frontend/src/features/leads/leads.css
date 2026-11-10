@@ -70,8 +70,8 @@
   color: var(--textPrimary);
 }
 
-/* The email row: the address and its copy glyph on one line, the address
-   cut with an ellipsis so the glyph keeps its place. */
+/* The email row: the address and its copy glyph side by side, the address
+   wrapping or cut in the room the glyph leaves it. */
 .lead-row-email {
   display: flex;
   align-items: center;

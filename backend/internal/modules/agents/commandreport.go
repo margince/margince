@@ -14,6 +14,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 )
 
@@ -43,7 +44,10 @@ type runReportResolver struct {
 // released — where the route walk it replaces could only offer an empty target
 // with no name attached.
 func (r runReportResolver) Subject(ctx context.Context, cmd RunReportCommand) (StageInfo, error) {
-	return StageInfo{Summary: fmt.Sprintf(summaryIn(ctx, r.language).runReport, cmd.Report)}, nil
+	return StageInfo{
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.runReport", systemtext.Text(fmt.Sprint(cmd.Report)))},
+		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).runReport, cmd.Report),
+	}, nil
 }
 
 // Guards stands down: the report key's vocabulary is the engine's catalog,
@@ -84,7 +88,10 @@ type composeReportResolver struct {
 // What it supplies instead is the SIZE — the one thing that says how much is
 // being released — where a route walk could offer only an empty target.
 func (r composeReportResolver) Subject(ctx context.Context, cmd ComposeReportCommand) (StageInfo, error) {
-	return StageInfo{Summary: fmt.Sprintf(summaryIn(ctx, r.language).composeReport, cmd.Blocks)}, nil
+	return StageInfo{
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.composeReport", systemtext.Count(int64(cmd.Blocks)))},
+		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).composeReport, cmd.Blocks),
+	}, nil
 }
 
 // Guards stands down: what a document may contain is the block grammar's, which
@@ -119,7 +126,10 @@ type analyticsQueryResolver struct {
 // The population name is the one fact that says what is being released.
 func (r analyticsQueryResolver) Subject(ctx context.Context, cmd AnalyticsQueryCommand) (StageInfo, error) {
 	said := summaryIn(ctx, r.language)
-	return StageInfo{Summary: fmt.Sprintf(said.analyticsQuery, said.noun(cmd.Entity))}, nil
+	return StageInfo{
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.analyticsQuery", systemtext.NounArgument(fmt.Sprint(cmd.Entity)))},
+		Summary:    fmt.Sprintf(said.analyticsQuery, said.noun(cmd.Entity)),
+	}, nil
 }
 
 // Guards stands down, for runReportResolver's reason: the vocabulary is the

@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 const publicBookingPrefix = "/v1/public/booking/"
@@ -131,6 +132,7 @@ func publicBooking(store *activities.Store, svc *identity.Service, limits public
 				return
 			}
 			ctx := principal.WithWorkspaceID(r.Context(), wsID.UUID)
+			ctx = systemtext.WithLocale(ctx, publicPreviewLocale(r))
 			ctx = principal.WithActor(ctx, principal.Principal{
 				Type: principal.PrincipalSystem,
 				ID:   "system:public_booking",

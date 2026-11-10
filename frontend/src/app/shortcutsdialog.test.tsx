@@ -3,6 +3,7 @@
 
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
@@ -13,9 +14,11 @@ import {
 import { isParagraphCommit } from "../design-system/fieldeditdialog";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import type { CoreFeature } from "../lib/corefeatures";
 import { bindingCaps, capOf, KEYMAP, shortcutCaps } from "../lib/keymap";
 import { setSingleKeyShortcutsOn } from "../lib/shortcuts";
 import { PRINTABLE_KEYS } from "../testing/keys";
+import { meFixture } from "../testing/mefixture";
 import { ShortcutsDialog } from "./shortcutsdialog";
 
 afterEach(() => {
@@ -23,11 +26,18 @@ afterEach(() => {
   act(() => setSingleKeyShortcutsOn(true));
 });
 
-function renderDialog() {
+function renderDialog(disabled: readonly CoreFeature[] = []) {
+  const client = new QueryClient();
+  client.setQueryData(
+    ["me"],
+    meFixture({ settingsAvailability: { disabled_features: [...disabled] } }),
+  );
   render(
-    <LocaleProvider initial="en">
-      <ShortcutsDialog open onClose={vi.fn()} returnFocusTo={() => null} />
-    </LocaleProvider>,
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <ShortcutsDialog open onClose={vi.fn()} returnFocusTo={() => null} />
+      </LocaleProvider>
+    </QueryClientProvider>,
   );
   return screen.getByRole("dialog", { name: "Keyboard shortcuts" });
 }
@@ -84,6 +94,12 @@ describe("the keyboard shortcuts dialog", () => {
     expect(within(goTo).getByText("Press G, then the letter.")).toBeVisible();
     const contacts = within(goTo).getByText("Contacts", { selector: "dt" });
     expect(contacts.nextElementSibling).toHaveTextContent("GthenC");
+  });
+
+  it("lists no way to a destination the installation turned off", () => {
+    const goTo = groupNamed(renderDialog(["contacts"]), "Go to");
+    expect(within(goTo).queryByText("Contacts", { selector: "dt" })).toBeNull();
+    expect(within(goTo).getByText("Deals", { selector: "dt" })).toBeVisible();
   });
 
   it("says so when single-key shortcuts are off", () => {

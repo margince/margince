@@ -31,13 +31,19 @@ import { ErrorLine } from "../../../design-system/errorline";
 import { Panel, PanelBody } from "../../../design-system/panel";
 import { QueryStates } from "../../../design-system/querystates";
 import { useT } from "../../../i18n";
-import { useCanWrite } from "../../../lib/capability";
+import { useCanWrite, useCanWriteRecord } from "../../../lib/capability";
 import { problemMessageOf, unwrap } from "../../../lib/problem";
 import { buyerLink, DealRoomAccess } from "../dealroomaccess";
 import { InviteDialog } from "../dealroomaccess.dialogs";
 import { DealRoomConversation } from "../dealroomconversation";
 import { RoomBrief } from "./dealroombrief";
-import { RoomBand, RoomSetup, StateAction, StateBanner } from "./dealroomdeck";
+import {
+  RoomBand,
+  RoomSetup,
+  StateAction,
+  StateBanner,
+  StewardNotice,
+} from "./dealroomdeck";
 import { ManageRoomDialog } from "./dealroommanage";
 import "./dealroomtab.css";
 
@@ -55,7 +61,7 @@ export function DealRoomTab({
   const t = useT();
   const roomQuery = useDealRoom(dealId);
   const room = roomQuery.data?.data?.[0];
-  const mayWrite = useCanWrite("deal_room", "update");
+  const mayWrite = useCanWriteRecord("deal_room", room);
   const [inviting, setInviting] = useState(false);
   // The invite dialog sits outside the reading. The setup list can go away and
   // a reload of the room can fail, and the issued link stays either way.
@@ -125,6 +131,12 @@ function RoomReading({
         }
       />
       {mayWrite && !finished ? (
+        <StewardNotice
+          room={room}
+          action={<Button onClick={manage}>{t("roompage.manage")}</Button>}
+        />
+      ) : null}
+      {mayWrite && !finished ? (
         <RoomSetup room={room} onEditText={manage} onInvite={onInvite} />
       ) : null}
       <RoomBrief roomId={room.id} />
@@ -144,8 +156,6 @@ function RoomReading({
   );
 }
 
-// Title and welcome text, edited in place. Editorial: reaches the buyer at
-// the next publish, and the changes list below says so.
 export function RoomText({
   room,
   refusal,

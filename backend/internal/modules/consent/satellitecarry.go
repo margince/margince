@@ -69,6 +69,9 @@ func (s *Store) CarrySatellitesTx(ctx context.Context, tx pgx.Tx, from, to comms
 	if err := carrySubjectArmRows(ctx, tx, from, to, carry); err != nil {
 		return err
 	}
+	if err := carryQualifyingEvents(ctx, tx, from, to, carry); err != nil {
+		return err
+	}
 	// The remaining tables name contacts only, so a lead has none to carry.
 	// admitACarry refuses contact to lead, so a contact source has a contact survivor.
 	if !from.ContactID.IsZero() {
@@ -91,11 +94,20 @@ func (s *Store) BindRequestsToAddressesTx(ctx context.Context, tx pgx.Tx, from, 
 		return err
 	}
 	pair := []ids.UUID{from.UUID, to.UUID}
-	if _, err := tx.Exec(ctx, `
-		UPDATE consent_qualifying_event q SET recorded_for_addresses = `+storekit.RequestAddressesSQL("q.contact_id")+`
-		 WHERE q.contact_id = ANY($1) AND q.recorded_for_addresses IS NULL`, pair); err != nil {
-		return fmt.Errorf("consent: binding the recorded requests to their addresses: %w", err)
+	if err := lockSubjectsInOrder(ctx, tx, pair...); err != nil {
+		return err
 	}
+	if err := storekit.LockSubjectsStopAddresses(ctx, tx, pair...); err != nil {
+		return err
+	}
+	sub, err := consentSubject(RecordInput{ContactID: from})
+	if err != nil {
+		return err
+	}
+	if err := bindQualifyingAddresses(ctx, tx, sub, to.UUID); err != nil {
+		return err
+	}
+
 	if _, err := tx.Exec(ctx, `
 		UPDATE communication_suppression s SET recorded_for_addresses = `+storekit.RequestAddressesSQL("s.contact_id")+`
 		 WHERE s.contact_id = ANY($1) AND s.address IS NULL AND s.revoked_at IS NULL
@@ -154,7 +166,7 @@ func carryContactOnlyRows(ctx context.Context, tx pgx.Tx, from, to ids.ContactID
 	}
 	noteRows(carry.moved, "confirm_token", confirm)
 	noteRows(carry.moved, "consent_doi_token", doi)
-	return carryQualifyingEvents(ctx, tx, from, to, carry)
+	return nil
 }
 
 // carryPreferenceTokens keeps uq_preference_token_contact_address — one live
@@ -191,25 +203,52 @@ func carryPreferenceTokens(ctx context.Context, tx pgx.Tx, from, to ids.ContactI
 // The dropped copy's addresses join the kept row first: both records saw the
 // same message, so the request covers the addresses of each. NULL on either
 // side covers every address and stays NULL.
-func carryQualifyingEvents(ctx context.Context, tx pgx.Tx, from, to ids.ContactID, carry satelliteCarry) error {
+func carryQualifyingEvents(ctx context.Context, tx pgx.Tx, from, to commsauthz.StopSubject, carry satelliteCarry) error {
+	source, err := consentSubject(RecordInput{ContactID: from.ContactID, LeadID: from.LeadID})
+	if err != nil {
+		return err
+	}
+	target, err := consentSubject(RecordInput{ContactID: to.ContactID, LeadID: to.LeadID})
+	if err != nil {
+		return err
+	}
+	return carryQualifyingSubjectEvents(ctx, tx, source, target, carry)
+}
+
+func carryQualifyingSubjectEvents(ctx context.Context, tx pgx.Tx, source, target subject, carry satelliteCarry) error {
+	if err := bindQualifyingAddresses(ctx, tx, source); err != nil {
+		return err
+	}
+	if err := bindQualifyingAddresses(ctx, tx, target); err != nil {
+		return err
+	}
+	fromColumn := pgx.Identifier{source.column}.Sanitize()
+	toColumn := pgx.Identifier{target.column}.Sanitize()
+	args := pgx.NamedArgs{carrySourceArg: source.id, carryTargetArg: target.id}
 	if _, err := tx.Exec(ctx, `
  UPDATE consent_qualifying_event b SET recorded_for_addresses = CASE
    WHEN b.recorded_for_addresses IS NULL OR a.recorded_for_addresses IS NULL THEN NULL
-   ELSE ARRAY(SELECT DISTINCT x FROM unnest(b.recorded_for_addresses || a.recorded_for_addresses) AS x ORDER BY x) END
+   ELSE ARRAY(SELECT DISTINCT x FROM unnest(b.recorded_for_addresses || a.recorded_for_addresses) AS x ORDER BY x) END,
+ recorded_for_entities = CASE
+   WHEN b.recorded_for_entities IS NULL AND a.recorded_for_entities IS NULL THEN NULL
+   ELSE ARRAY(SELECT DISTINCT x FROM unnest(coalesce(b.recorded_for_entities,'{}'::uuid[]) ||
+     coalesce(a.recorded_for_entities,'{}'::uuid[])) AS x ORDER BY x) END
    FROM consent_qualifying_event a
-  WHERE b.contact_id = @target AND a.contact_id = @source AND a.source_entity_id IS NOT NULL
+  WHERE b.`+toColumn+` = @target AND a.`+fromColumn+` = @source AND a.source_entity_id IS NOT NULL
     AND b.source_entity_type = a.source_entity_type AND b.source_entity_id = a.source_entity_id`,
-		pgx.NamedArgs{carrySourceArg: from, carryTargetArg: to}); err != nil {
+		args); err != nil {
 		return fmt.Errorf("consent: joining the addresses of a qualifying event both records hold: %w", err)
 	}
 	dropped, err := collectIDs(ctx, tx, `
- DELETE FROM consent_qualifying_event a WHERE a.contact_id=@source AND `+qualifyingCarryDuplicate+` RETURNING id`,
-		pgx.NamedArgs{carrySourceArg: from, carryTargetArg: to})
+ DELETE FROM consent_qualifying_event a WHERE a.`+fromColumn+`=@source AND `+qualifyingCarryDuplicate(target.column)+` RETURNING id`, args)
 	if err != nil {
 		return fmt.Errorf("consent: dropping qualifying events the survivor already records: %w", err)
 	}
 	moved, err := collectIDs(ctx, tx,
-		`UPDATE consent_qualifying_event SET contact_id = $2 WHERE contact_id = $1 RETURNING id`, from, to)
+		`UPDATE consent_qualifying_event SET contact_id = @contact, lead_id = @lead
+ WHERE `+fromColumn+` = @source RETURNING id`, pgx.StrictNamedArgs{
+			entityContact: zeroAsNull(subjectKindID(target, entityContact)), entityLead: zeroAsNull(subjectKindID(target, entityLead)), carrySourceArg: source.id,
+		})
 	if err != nil {
 		return fmt.Errorf("consent: carrying the qualifying events: %w", err)
 	}

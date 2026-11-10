@@ -256,14 +256,14 @@ func activityAudienceArm(p principal.Principal, alias string, arg func(any) int)
 	// The two membership arms are activityMembershipArm's, composed rather than
 	// repeated: discovery asks the same question of the same two tables, and a
 	// second copy is how one of them gains an arm the other lacks.
-	ordinary := fmt.Sprintf(`(%[1]s.audience = 'workspace'
+	ordinary := fmt.Sprintf(`(%[6]s
 	   OR %[5]s
 	   OR %[4]s
 	   OR (%[1]s.audience = 'selected' AND EXISTS (
 	      SELECT 1 FROM activity_audience_member am WHERE am.activity_id = %[1]s.id
 	        AND ((am.subject_type = 'user' AND am.subject_id IN (%[2]s))
 	          OR (am.subject_type = 'team' AND am.subject_id = ANY($%[3]d))))))`,
-		alias, memberIdentitySQL(me), teams, activityMembershipArm(p, alias, arg), memberAuthorshipSQL(alias, me, arg))
+		alias, memberIdentitySQL(me), teams, activityMembershipArm(p, alias, arg), memberAuthorshipSQL(alias, me, arg), WorkspaceAudienceSQL(alias))
 	return "(" + ordinary + " AND " + internalMailAccessClause(p, alias, arg) + ")"
 }
 

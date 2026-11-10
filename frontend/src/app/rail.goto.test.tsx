@@ -13,7 +13,8 @@ import {
   setSingleKeyShortcutsOn,
   useShortcutDispatcher,
 } from "../lib/shortcuts";
-import { render } from "../testing/shellharness";
+import { meFixture } from "../testing/mefixture";
+import { newClient, render, renderWith } from "../testing/shellharness";
 import { NAV } from "./nav";
 import { WorkspaceRail } from "./shell";
 
@@ -70,5 +71,25 @@ describe("the destinations' go-to keys", () => {
     render(<WorkspaceRail route={{ screen: "home" }} />);
     act(() => screen.getByRole("link", { name: "Deals" }).focus());
     expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+});
+
+describe("a destination the installation turned off", () => {
+  it("takes nobody there on G, then its letter, and its row is gone", async () => {
+    const user = userEvent.setup();
+    const client = newClient();
+    client.setQueryData(
+      ["me"],
+      meFixture({ settingsAvailability: { disabled_features: ["contacts"] } }),
+    );
+    window.location.hash = "#/home";
+    renderHook(() => useShortcutDispatcher());
+    renderWith(client, <WorkspaceRail route={{ screen: "home" }} />);
+    expect(screen.queryByRole("link", { name: "Contacts" })).toBeNull();
+
+    await user.keyboard("gc");
+    expect(window.location.hash).toBe("#/home");
+    await user.keyboard("gd");
+    expect(window.location.hash).toBe(routeHash({ screen: "deals" }));
   });
 });

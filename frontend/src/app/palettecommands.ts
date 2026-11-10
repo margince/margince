@@ -8,6 +8,7 @@ import { settingsPageKeywords } from "../features/settings/settingssearch";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useCompanyContextShown } from "../lib/companycontextreach";
+import { screenEnabled, useDisabledCoreFeatures } from "../lib/corefeatures";
 import { type EntityKind, SCREEN_ENTITY } from "../lib/entity";
 import { settingsHref } from "../lib/settingsrouting";
 import {
@@ -34,6 +35,7 @@ export function useBuiltinCommands(): Command[] {
   const visible = useVisibleSettingsPages();
   const seesCompanyContext = useCompanyContextShown();
   const opensTab = useOpensSettingsTab();
+  const disabled = useDisabledCoreFeatures();
   return useMemo(() => {
     const screens: Command[] = NAV.map((item) => ({
       id: `screen:${item.screen}`,
@@ -98,6 +100,9 @@ export function useBuiltinCommands(): Command[] {
       ...actions,
       ...offRailScreens,
       ...settingsScreens,
-    ];
-  }, [t, visible, locale, seesCompanyContext, opensTab]);
+    ].filter(
+      (command) =>
+        !command.route || screenEnabled(command.route.screen, disabled),
+    );
+  }, [t, visible, locale, seesCompanyContext, opensTab, disabled]);
 }

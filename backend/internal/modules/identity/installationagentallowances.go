@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -72,8 +73,9 @@ func (v allowanceValues) policy(c *config.Config) agentvolume.Policy {
 		plan.NextFrom = time.Unix(int64(v[5]), 0).UTC()
 	}
 	return agentvolume.Policy{
-		Limits: agentvolume.Limits{Writes: v[0], Egress: v[1], Calls: v[2]},
-		Window: plan,
+		Limits:  agentvolume.Limits{Writes: v[0], Egress: v[1], Calls: v[2]},
+		Window:  plan,
+		Unpaced: slices.Clone(UnpacedRoles),
 	}
 }
 

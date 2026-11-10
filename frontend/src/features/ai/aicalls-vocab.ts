@@ -18,6 +18,7 @@ export const CALL_OUTCOMES = [
   "answered",
   "fallback",
   "declined",
+  "canceled",
   "failed",
 ] as const satisfies readonly CallOutcome[];
 
@@ -36,6 +37,7 @@ export const OUTCOME_KIND: Readonly<Record<CallOutcome, StatusKind>> = {
   answered: "done",
   fallback: "attention",
   declined: "neutral",
+  canceled: "neutral",
   failed: "failure",
 };
 
@@ -57,6 +59,8 @@ export function outcomeLabel(outcome: CallOutcome, t: T): string {
       return t("aicalls.outcome.fallback");
     case "declined":
       return t("aicalls.outcome.declined");
+    case "canceled":
+      return t("aicalls.outcome.canceled");
     case "failed":
       return t("aicalls.outcome.error");
     default:

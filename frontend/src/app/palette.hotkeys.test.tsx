@@ -10,7 +10,7 @@ import {
   screen,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
@@ -26,7 +26,7 @@ import {
   isCreateCommand,
   useBuiltinCommands,
 } from "./palette";
-import { type PaletteMode, usePaletteShortcuts } from "./palettehotkey";
+import { useCommandPalette } from "./palettehotkey";
 
 // The palette's keys as the shell wires them: the one dispatcher, and the
 // handlers App mounts for search, `/` and `C`.
@@ -37,10 +37,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const render = (ui: ReactNode) => {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+const render = (
+  ui: ReactNode,
+  client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+) => {
   const view = rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{ui}</LocaleProvider>
@@ -87,25 +87,14 @@ function ShellWithDialog({
   dialogOpen: boolean;
   onDialogClose?: () => void;
 }>) {
-  const route = useRoute();
-  const [paletteOpen, setPaletteOpen] = useState(false);
-  const [mode, setMode] = useState<PaletteMode>("all");
-  usePaletteShortcuts(
-    paletteOpen,
-    (next) => {
-      setMode(next);
-      setPaletteOpen(true);
-    },
-    () => setPaletteOpen(false),
-    route,
-  );
+  const palette = useCommandPalette(useRoute());
   useShortcutDispatcher();
   return (
     <>
       <CommandPalette
-        open={paletteOpen}
-        mode={mode}
-        onClose={() => setPaletteOpen(false)}
+        open={palette.open === true}
+        mode={palette.mode}
+        onClose={palette.hide}
         commands={commands}
       />
       <Modal
@@ -234,6 +223,21 @@ describe("the palette's single keys", () => {
       ]);
     },
   );
+
+  it("opens no form on C on a list the installation turned off", async () => {
+    const client = new QueryClient();
+    client.setQueryData(
+      ["me"],
+      meFixture({ settingsAvailability: { disabled_features: ["contacts"] } }),
+    );
+    window.location.hash = "#/contacts";
+    render(<ShellWithDialog dialogOpen={false} />, client);
+    const user = userEvent.setup();
+
+    await user.keyboard("c");
+    expect(window.location.hash).toBe("#/contacts");
+    expect(screen.getByRole("searchbox")).toBeTruthy();
+  });
 
   it("lists only what creates on C where the screen has no form", async () => {
     window.location.hash = "#/analytics";

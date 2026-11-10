@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
 )
@@ -82,9 +83,47 @@ func TestWithGoogleSignInCompleteMountsAndReportsCapability(t *testing.T) {
 
 	startReq := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil)
 	startRec := httptest.NewRecorder()
-	s.StartOidcSignIn(startRec, startReq, "google")
+	s.StartOidcSignIn(startRec, startReq, "google", crmcontracts.StartOidcSignInParams{})
 	if startRec.Code != http.StatusFound {
 		t.Fatalf("StartOidcSignIn status = %d, want 302 (the route the capability just advertised must actually be mounted)", startRec.Code)
+	}
+}
+
+// Only a start that asks for the consent screen signs the marker into the
+// state cookie the callback reads.
+func TestStartSignsTheConsentMarkerOnlyWhenAsked(t *testing.T) {
+	const key = "0123456789012345678901234567890123"
+	var s Server
+	WithGoogleSignIn(GoogleSignInConfig{
+		ClientID: "cid", ClientSecret: "secret", StateKey: key,
+		RedirectBase: "https://app.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed",
+	})(&s, nil)
+	consent := crmcontracts.StartOidcSignInParamsReturnConsent
+	for _, tc := range []struct {
+		name   string
+		params crmcontracts.StartOidcSignInParams
+		want   bool
+	}{
+		{"consent screen", crmcontracts.StartOidcSignInParams{Return: &consent}, true},
+		{"sign-in page", crmcontracts.StartOidcSignInParams{}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			s.StartOidcSignIn(rec, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil), "google", tc.params)
+			var token string
+			for _, c := range rec.Result().Cookies() {
+				if c.Name == "oidc_login_state" {
+					token = c.Value
+				}
+			}
+			st, err := loginStateSignerAdapter{s: newLoginStateSigner([]byte(key))}.Verify(token)
+			if err != nil {
+				t.Fatalf("status %d, state cookie %q: %v", rec.Code, token, err)
+			}
+			if st.ReturnToConsent != tc.want {
+				t.Fatalf("ReturnToConsent = %v, want %v", st.ReturnToConsent, tc.want)
+			}
+		})
 	}
 }
 
@@ -187,19 +226,18 @@ func TestGoogleTokenExchangerAdapterDelegates(t *testing.T) {
 
 func TestLoginStateSignerAdapterRoundTrips(t *testing.T) {
 	adapter := loginStateSignerAdapter{s: newLoginStateSigner([]byte("0123456789012345678901234567890123"))}
-	token := adapter.Sign("google", "client-1", "nonce-1", "verifier-1", 10*time.Minute)
-
-	provider, clientID, nonce, codeVerifier, err := adapter.Verify(token)
+	want := identity.OIDCLoginState{
+		Provider: "google", ClientID: "client-1", Nonce: "nonce-1", CodeVerifier: "verifier-1", ReturnToConsent: true,
+	}
+	got, err := adapter.Verify(adapter.Sign(want, 10*time.Minute))
 	if err != nil {
 		t.Fatalf("Verify: %v", err)
 	}
-	if provider != "google" || clientID != "client-1" ||
-		nonce != "nonce-1" || codeVerifier != "verifier-1" {
-		t.Fatalf("provider=%q clientID=%q nonce=%q codeVerifier=%q",
-			provider, clientID, nonce, codeVerifier)
+	if got != want {
+		t.Fatalf("Verify = %+v, want %+v", got, want)
 	}
 
-	if _, _, _, _, err := adapter.Verify("not-a-real-token"); err == nil {
+	if _, err := adapter.Verify("not-a-real-token"); err == nil {
 		t.Fatal("expected an error to pass through for a malformed token")
 	}
 }
@@ -314,7 +352,7 @@ func TestGoogleSignInMountedWithoutAClientIsNotOffered(t *testing.T) {
 		t.Fatalf("oidc_providers = %v, want none while no client exists", got)
 	}
 	rec := httptest.NewRecorder()
-	s.StartOidcSignIn(rec, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil), "google")
+	s.StartOidcSignIn(rec, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil), "google", crmcontracts.StartOidcSignInParams{})
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("StartOidcSignIn = %d, want 404 for a mounted provider with no client", rec.Code)
 	}

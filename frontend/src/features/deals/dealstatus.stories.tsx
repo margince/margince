@@ -1,17 +1,23 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
+import { expectNextBarHoldsItsText } from "../../testing/nextbarchecks";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
+import { UNBROKEN_SUBJECT } from "../../testing/unbrokentext";
 import { DealStatusCardPanel } from "./dealstatus";
 
 type WrittenBy = components["schemas"]["WrittenBy"];
 type Situation = "task" | "request" | "covered";
 
-function panel(writer: WrittenBy, situation: Situation = "task") {
+function panel(
+  writer: WrittenBy,
+  situation: Situation = "task",
+  subject = "Meeting slots",
+) {
   const request = situation !== "task";
   const next = request
     ? {
@@ -19,12 +25,12 @@ function panel(writer: WrittenBy, situation: Situation = "task") {
         reason:
           situation === "covered"
             ? "This request already has a reminder. The reply still needs to be handled."
-            : "Review whether this conversation needs a follow-up: Meeting slots",
+            : `Review whether this conversation needs a follow-up: ${subject}`,
         arguments:
           situation === "covered"
             ? {}
             : {
-                subject: "Meeting slots",
+                subject,
                 source: "manual",
                 request_activity_id: "demo-mail",
               },
@@ -117,3 +123,16 @@ export const RequestAlreadyCoveredDark: Story = {
   ...RequestAlreadyCovered,
   globals: { theme: "dark" },
 };
+
+// A buyer's subject with no space in it wraps inside the bar, clear of its verbs.
+const unbroken: Story = {
+  render: panel("deterministic", "request", UNBROKEN_SUBJECT),
+  play: ({ canvasElement }) =>
+    expectNextBarHoldsItsText(canvasElement, UNBROKEN_SUBJECT),
+};
+export const UnbrokenSubjectPhone: Story = {
+  ...unbroken,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+export const UnbrokenSubjectWide: Story = { ...unbroken, tags: ["uat-wide"] };

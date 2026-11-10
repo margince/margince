@@ -130,7 +130,10 @@ function declarationAt(
  * descendant of it.
  */
 export function selectorsOf(rule: CssRule): string[] {
-  return [...rule.parents, rule.selector].reduce<string[]>(resolveNesting, []);
+  return [...rule.parents, rule.selector].reduce<string[]>(
+    (parents, selector) => resolveNesting(parents, selector),
+    [],
+  );
 }
 
 /**

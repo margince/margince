@@ -29,7 +29,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
-	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // sendRefs names what a payload shows: the seat's own tasks, tasks shown as
@@ -106,6 +105,27 @@ var errSendBasisChanged = errors.New("send: the work the message names changed b
 // be open and the source live and readable by the seat. An item that fails is
 // excluded, and its rows are not part of the basis.
 func readSendBasis(ctx context.Context, tx pgx.Tx, seat ids.UUID, team *ids.UUID, refs sendRefs, now time.Time) (sendBasis, error) {
+	ctx, live, err := seatAuthorityTx(ctx, tx, seat)
+	if err != nil {
+		return sendBasis{}, err
+	}
+	if !live {
+		refs.canonical()
+		basis := sendBasis{seat: seat, team: team, refs: refs, excluded: map[ids.UUID]bool{}}
+		for _, set := range [][]ids.UUID{refs.ownTasks, refs.teamTasks, refs.approvals} {
+			for _, id := range set {
+				basis.excluded[id] = true
+			}
+		}
+		for _, record := range refs.records {
+			basis.excluded[record.ID] = true
+		}
+		return basis, nil
+	}
+	return readSendBasisWithAuthority(ctx, tx, seat, team, refs, now)
+}
+
+func readSendBasisWithAuthority(ctx context.Context, tx pgx.Tx, seat ids.UUID, team *ids.UUID, refs sendRefs, now time.Time) (sendBasis, error) {
 	refs.canonical()
 	basis := sendBasis{seat: seat, team: team, refs: refs, excluded: map[ids.UUID]bool{}}
 	shown := map[ids.UUID]bool{}
@@ -114,8 +134,7 @@ func readSendBasis(ctx context.Context, tx pgx.Tx, seat ids.UUID, team *ids.UUID
 			shown[id] = true
 		}
 	}
-	ctx, live, err := basisAuthorityAndRecords(ctx, tx, seat, refs, shown, &basis)
-	if err != nil || !live {
+	if err := includeReportedRecords(ctx, tx, refs, &basis); err != nil {
 		return basis, err
 	}
 	if refs.changesSince != nil {
@@ -208,26 +227,11 @@ func shownItemDependencies(ctx context.Context, tx pgx.Tx, it shownItem) ([]basi
 	return append(deps, target...), ok, nil
 }
 
-// basisAuthorityAndRecords binds the recipient's authority as this
-// transaction reads it, and puts the reported records into the basis. A
-// recipient who is no longer live excludes everything shown.
-func basisAuthorityAndRecords(ctx context.Context, tx pgx.Tx, seat ids.UUID, refs sendRefs, shown map[ids.UUID]bool, basis *sendBasis) (context.Context, bool, error) {
-	// The context a send started with carries the grants of that moment. Every
-	// check below runs as the recipient's authority read in this transaction.
-	ctx, live, err := seatAuthorityTx(ctx, tx, seat)
-	if err != nil || !live {
-		for id := range shown {
-			basis.excluded[id] = true
-		}
-		for _, record := range refs.records {
-			basis.excluded[record.ID] = true
-		}
-		return ctx, false, err
-	}
+func includeReportedRecords(ctx context.Context, tx pgx.Tx, refs sendRefs, basis *sendBasis) error {
 	for _, record := range refs.records {
 		rows, ok, err := recordDependency(ctx, tx, record)
 		if err != nil {
-			return ctx, false, err
+			return err
 		}
 		if !ok {
 			basis.excluded[record.ID] = true
@@ -235,7 +239,7 @@ func basisAuthorityAndRecords(ctx context.Context, tx pgx.Tx, seat ids.UUID, ref
 		}
 		basis.rows = append(basis.rows, rows...)
 	}
-	return ctx, true, nil
+	return nil
 }
 
 // sendTaskEligibleSQL is an open task the seat holds, or one a colleague on
@@ -387,102 +391,4 @@ func currentRow(ctx context.Context, tx pgx.Tx, table string, id ids.UUID, live 
 		return row, false, fmt.Errorf("send: reading what a message rests on: %w", err)
 	}
 	return row, current, nil
-}
-
-// holdSendBasisTx locks every basis row and refuses the reservation when one
-// changed, stopped qualifying, or the recipient left. It also locks the
-// authority the basis was read under: the seat, the team memberships it reads
-// and the audience rows of every source. A change to any of them waits for the
-// reservation. The clock is read after the locks, so a decision that expired
-// during a wait is refused.
-func holdSendBasisTx(ctx context.Context, tx pgx.Tx, basis sendBasis, clock func() time.Time) error {
-	if err := holdBasisRows(ctx, tx, basis.rows); err != nil {
-		return err
-	}
-	var sources []ids.UUID
-	for _, row := range basis.rows {
-		if row.table == string(recordTypeActivity) {
-			sources = append(sources, row.id)
-		}
-	}
-	var live int
-	if err := tx.QueryRow(ctx, `SELECT count(*) FROM (SELECT 1 FROM app_user WHERE id = $1 AND `+workforce.LiveMemberSQL("")+` FOR SHARE) seat`,
-		basis.seat).Scan(&live); err != nil {
-		return fmt.Errorf("send: holding the recipient: %w", err)
-	}
-	if _, err := tx.Exec(ctx, `SELECT 1 FROM team_membership m WHERE m.user_id = $1
-		    OR (m.team_id = $2 AND m.user_id IN (SELECT assignee_id FROM activity WHERE id = ANY($3) AND archived_at IS NULL))
-		   FOR SHARE OF m`, basis.seat, basis.team, basis.refs.teamTasks); err != nil {
-		return fmt.Errorf("send: holding the recipient's teams: %w", err)
-	}
-	if _, err := tx.Exec(ctx, `SELECT 1 FROM activity_audience_member am WHERE am.activity_id = ANY($1) FOR SHARE OF am`, sources); err != nil {
-		return fmt.Errorf("send: holding who may read the sources: %w", err)
-	}
-	if live == 0 {
-		return errSendBasisChanged
-	}
-	// The versions held, so the basis is read again under the authority this
-	// transaction reads, with the clock read after the locks.
-	again, err := readSendBasis(ctx, tx, basis.seat, basis.team, basis.refs, clock())
-	if err != nil {
-		return err
-	}
-	if !slices.Equal(again.rows, basis.rows) || len(again.excluded) != len(basis.excluded) {
-		return errSendBasisChanged
-	}
-	return nil
-}
-
-// holdBasisRows takes a share lock on each basis row at the version read, and
-// refuses when one is gone or changed.
-func holdBasisRows(ctx context.Context, tx pgx.Tx, basis []basisRow) error {
-	for _, table := range slices.Concat([]string{string(recordTypeActivity), "approval", "conversation_claim"}, decisionTargets) {
-		var rows []ids.UUID
-		var versions []int64
-		for _, row := range basis {
-			if row.table == table {
-				rows, versions = append(rows, row.id), append(versions, row.version)
-			}
-		}
-		if len(rows) == 0 {
-			continue
-		}
-		var held int
-		if err := tx.QueryRow(ctx, `WITH locked AS (SELECT held.id FROM `+table+` held
-		       JOIN unnest($1::uuid[], $2::bigint[]) AS basis(id, version) ON basis.id = held.id AND basis.version = held.version
-		       FOR SHARE OF held)
-		     SELECT count(*) FROM locked`, rows, versions).Scan(&held); err != nil {
-			return fmt.Errorf("send: holding what a message rests on: %w", err)
-		}
-		if held != len(rows) {
-			return errSendBasisChanged
-		}
-	}
-	for _, row := range basis {
-		if row.table == marginceChangesBasis {
-			since, err := time.Parse(time.RFC3339Nano, row.key)
-			if err != nil {
-				return err
-			}
-			fingerprint, err := deals.PendingChangesFingerprintTx(ctx, tx, row.id, since, true)
-			if err != nil {
-				return err
-			}
-			if fingerprint != row.version {
-				return errSendBasisChanged
-			}
-			continue
-		}
-		if row.table != commitmentAdmissionTable {
-			continue
-		}
-		fingerprint, open, err := activities.HoldCommitmentAdmissionTx(ctx, tx, row.id, row.key)
-		if err != nil {
-			return err
-		}
-		if !open || fingerprint != row.version {
-			return errSendBasisChanged
-		}
-	}
-	return nil
 }
