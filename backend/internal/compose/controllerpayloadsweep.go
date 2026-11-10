@@ -112,7 +112,7 @@ func (w *controllerPayloadSweepWorker) alarmMissedReceipts(ctx context.Context) 
 // raiseOwedReceipts raises again each missed receipt whose alarm failed, and
 // reports the ones that left the window unraised.
 func (w *controllerPayloadSweepWorker) raiseOwedReceipts(ctx context.Context, now time.Time) error {
-	failed, err := w.alarm.raiseOwed(ctx, now, controllerPayloadSweepBatch)
+	failed, err := w.alarm.raiseOwed(ctx, now, controllerPayloadSweepBatch, controllerPayloadSweepCap)
 	if err != nil {
 		return fmt.Errorf("reading the missed receipts still owed: %w", err)
 	}

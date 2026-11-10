@@ -112,39 +112,52 @@ func keepMissedReceiptOwedTx(ctx context.Context, tx pgx.Tx, missed MissedReceip
 	}
 }
 
+// OwedMissedReceipt is a missed receipt kept as owed, and the row that keeps it.
+type OwedMissedReceipt struct {
+	ID ids.UUID
+	MissedReceipt
+}
+
+// NamedSubject builds a predicate over a subject's type and id that holds while
+// that subject still names somebody. compose supplies privacy's.
+type NamedSubject func(typeExpr, idExpr string) string
+
 // OwedMissedReceiptsTx answers the missed receipts kept as owed after since
-// that no notice has raised yet, oldest first, at most limit of them. A notice
-// in any state settles one, a retracted one included.
-func OwedMissedReceiptsTx(ctx context.Context, tx pgx.Tx, since time.Time, limit int) ([]MissedReceipt, error) {
+// that no notice has raised yet. It reads past the row after, in row order, at
+// most limit of them. A notice in any state settles one. A subject that names nobody any
+// more is left out, so it can never hold a page.
+func OwedMissedReceiptsTx(
+	ctx context.Context, tx pgx.Tx, since time.Time, after ids.UUID, limit int, named NamedSubject,
+) ([]OwedMissedReceipt, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT subject_type, subject_id, message_id, reason FROM (
-		  SELECT DISTINCT ON (l.detail->>'message_id')
-		         l.detail->>'subject_type' AS subject_type, (l.detail->>'subject_id')::uuid AS subject_id,
-		         l.detail->>'message_id' AS message_id, l.detail->>'reason' AS reason, l.occurred_at
-		    FROM system_log l
-		   WHERE l.action = $1 AND l.occurred_at > $2
-		     AND NOT EXISTS (SELECT 1 FROM notice n WHERE n.dedupe_key = $3 || (l.detail->>'message_id'))
-		   ORDER BY l.detail->>'message_id', l.occurred_at) owed
-		 ORDER BY occurred_at LIMIT $4`,
-		missedReceiptOwedAction, since, noticekeys.OptOutReceiptPrefix, limit)
+		SELECT l.id, l.detail->>'subject_type', (l.detail->>'subject_id')::uuid,
+		       l.detail->>'message_id', l.detail->>'reason'
+		  FROM system_log l
+		 WHERE l.action = $1 AND l.occurred_at > $2 AND l.id > $3
+		   AND NOT EXISTS (SELECT 1 FROM notice n WHERE n.dedupe_key = $4 || (l.detail->>'message_id'))
+		   AND `+named("l.detail->>'subject_type'", "(l.detail->>'subject_id')::uuid")+`
+		 ORDER BY l.id LIMIT $5`,
+		missedReceiptOwedAction, since, after, noticekeys.OptOutReceiptPrefix, limit)
 	if err != nil {
 		return nil, fmt.Errorf("consent: reading the missed receipts still owed: %w", err)
 	}
-	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (MissedReceipt, error) {
-		var missed MissedReceipt
-		err := row.Scan(&missed.SubjectType, &missed.SubjectID, &missed.MessageID, &missed.Reason)
-		return missed, err
+	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (OwedMissedReceipt, error) {
+		var owed OwedMissedReceipt
+		err := row.Scan(&owed.ID, &owed.SubjectType, &owed.SubjectID, &owed.MessageID, &owed.Reason)
+		return owed, err
 	})
 }
 
-// AgedOutMissedReceiptsTx counts the receipts kept as owed in [from, to) that no
-// notice ever raised. The sweep stops raising them once they leave its window.
-func AgedOutMissedReceiptsTx(ctx context.Context, tx pgx.Tx, from, to time.Time) (int, error) {
+// AgedOutMissedReceiptsTx counts the receipts kept as owed in [from, to) about a
+// subject still named, that no notice ever raised. The sweep stops raising them
+// once they leave its window.
+func AgedOutMissedReceiptsTx(ctx context.Context, tx pgx.Tx, from, to time.Time, named NamedSubject) (int, error) {
 	var n int
 	err := tx.QueryRow(ctx, `
 		SELECT count(DISTINCT l.detail->>'message_id') FROM system_log l
 		 WHERE l.action = $1 AND l.occurred_at >= $2 AND l.occurred_at < $3
-		   AND NOT EXISTS (SELECT 1 FROM notice n WHERE n.dedupe_key = $4 || (l.detail->>'message_id'))`,
+		   AND NOT EXISTS (SELECT 1 FROM notice n WHERE n.dedupe_key = $4 || (l.detail->>'message_id'))
+		   AND `+named("l.detail->>'subject_type'", "(l.detail->>'subject_id')::uuid"),
 		missedReceiptOwedAction, from, to, noticekeys.OptOutReceiptPrefix).Scan(&n)
 	if err != nil {
 		return 0, fmt.Errorf("consent: counting the missed receipts no sweep raised: %w", err)

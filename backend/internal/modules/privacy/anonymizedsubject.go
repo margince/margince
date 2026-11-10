@@ -5,7 +5,6 @@ package privacy
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -26,23 +25,29 @@ const anonymizedLeadName = "Anonymized Lead"
 // SubjectAnonymizedTx answers whether a contact or lead no longer names anyone:
 // erased, anonymized by a retention policy, or deleted. Nothing may be raised
 // about such a subject again.
+//
+// It reads the row FOR SHARE. An erasure changes the row before it takes back
+// the notices naming it. So either the erasure waits and takes this
+// transaction's notice back, or this read waits and sees the erasure.
 func SubjectAnonymizedTx(ctx context.Context, tx pgx.Tx, subjectType string, id ids.UUID) (bool, error) {
-	var query, tombstone string
-	switch subjectType {
-	case subjectContact:
-		query, tombstone = `SELECT full_name IS DISTINCT FROM $2 FROM contact WHERE id = $1`, erasedName
-	case subjectLead:
-		query, tombstone = `SELECT full_name IS DISTINCT FROM $2 FROM lead WHERE id = $1`, anonymizedLeadName
-	default:
-		return false, fmt.Errorf("privacy: %q is not a subject that can be erased", subjectType)
-	}
 	var named bool
-	err := tx.QueryRow(ctx, query, id, tombstone).Scan(&named)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return true, nil
-	}
-	if err != nil {
+	if err := tx.QueryRow(ctx, `SELECT `+subjectStillNamedSQL("$1::text", "$2::uuid", " FOR SHARE"),
+		subjectType, id).Scan(&named); err != nil {
 		return false, fmt.Errorf("privacy: reading whether the %s still names anyone: %w", subjectType, err)
 	}
 	return !named, nil
+}
+
+// NamedSubjectSQL holds while the contact or lead that typeExpr and idExpr name
+// still names somebody. It is SubjectAnonymizedTx's answer, without the lock,
+// for a query that must leave such subjects out.
+func NamedSubjectSQL(typeExpr, idExpr string) string {
+	return subjectStillNamedSQL(typeExpr, idExpr, "")
+}
+
+func subjectStillNamedSQL(typeExpr, idExpr, lock string) string {
+	return fmt.Sprintf(`CASE %[1]s
+		WHEN '%[3]s' THEN EXISTS (SELECT 1 FROM contact c WHERE c.id = %[2]s AND c.full_name IS DISTINCT FROM '%[5]s'%[7]s)
+		WHEN '%[4]s' THEN EXISTS (SELECT 1 FROM lead ld WHERE ld.id = %[2]s AND ld.full_name IS DISTINCT FROM '%[6]s'%[7]s)
+		ELSE false END`, typeExpr, idExpr, subjectContact, subjectLead, erasedName, anonymizedLeadName, lock)
 }

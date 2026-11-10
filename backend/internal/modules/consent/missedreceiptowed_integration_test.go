@@ -51,14 +51,15 @@ func owedReceipts(t *testing.T, e *channelConsentEnv) []MissedReceipt {
 			t.Errorf("closing the read: %v", err)
 		}
 	}()
-	all, err := OwedMissedReceiptsTx(context.Background(), tx, time.Time{}, 100)
+	everyone := func(string, string) string { return "true" }
+	all, err := OwedMissedReceiptsTx(context.Background(), tx, time.Time{}, ids.UUID{}, 100, everyone)
 	if err != nil {
 		t.Fatalf("reading the owed receipts: %v", err)
 	}
 	var owed []MissedReceipt
 	for _, missed := range all {
 		if missed.SubjectID == e.contact.UUID {
-			owed = append(owed, missed)
+			owed = append(owed, missed.MissedReceipt)
 		}
 	}
 	return owed

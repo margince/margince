@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/noticekeys"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
@@ -121,30 +122,44 @@ func (a receiptAlarm) raiseOverdue(ctx context.Context, store *comms.Store, now 
 const owedReceiptWindow = 30 * 24 * time.Hour
 
 // raiseOwed raises each missed receipt whose alarm failed when it was missed.
-// Each gets a transaction of its own, a subject erased since is skipped, and
-// it answers how many it could not raise.
-func (a receiptAlarm) raiseOwed(ctx context.Context, now time.Time, limit int) (failed int, err error) {
-	var owed []consent.MissedReceipt
-	err = a.db.Tx(ctx, func(tx pgx.Tx) error {
-		owed, err = consent.OwedMissedReceiptsTx(ctx, tx, now.Add(-owedReceiptWindow), limit)
-		return err
-	})
-	if err != nil {
-		return 0, err
-	}
-	for _, missed := range owed {
-		err := a.db.Tx(ctx, func(tx pgx.Tx) error {
-			gone, err := privacy.SubjectAnonymizedTx(ctx, tx, missed.SubjectType, missed.SubjectID)
-			if err != nil || gone {
-				return err
-			}
-			return a.RaiseMissedReceiptTx(ctx, tx, missed)
+// It pages past every row it read, so a receipt that will not raise never holds
+// back the ones after it, and stops after maxRows. Each raise is a transaction of
+// its own. It answers how many it could not raise.
+func (a receiptAlarm) raiseOwed(ctx context.Context, now time.Time, page, maxRows int) (failed int, err error) {
+	var after ids.UUID
+	for read := 0; read < maxRows; {
+		var owed []consent.OwedMissedReceipt
+		err = a.db.Tx(ctx, func(tx pgx.Tx) error {
+			owed, err = consent.OwedMissedReceiptsTx(ctx, tx, now.Add(-owedReceiptWindow), after, page, privacy.NamedSubjectSQL)
+			return err
 		})
 		if err != nil {
-			failed++
+			return failed, err
 		}
+		for _, missed := range owed {
+			if a.raiseOwedOne(ctx, missed.MissedReceipt) != nil {
+				failed++
+			}
+		}
+		if len(owed) < page {
+			break
+		}
+		read += len(owed)
+		after = owed[len(owed)-1].ID
 	}
 	return failed, nil
+}
+
+// raiseOwedOne holds the subject's row while it raises, so an erasure either
+// takes the new notice back or is seen before the notice is written.
+func (a receiptAlarm) raiseOwedOne(ctx context.Context, missed consent.MissedReceipt) error {
+	return a.db.Tx(ctx, func(tx pgx.Tx) error {
+		gone, err := privacy.SubjectAnonymizedTx(ctx, tx, missed.SubjectType, missed.SubjectID)
+		if err != nil || gone {
+			return err
+		}
+		return a.RaiseMissedReceiptTx(ctx, tx, missed)
+	})
 }
 
 // agedOut counts the owed receipts that left the window in the day before now
@@ -152,7 +167,7 @@ func (a receiptAlarm) raiseOwed(ctx context.Context, now time.Time, limit int) (
 func (a receiptAlarm) agedOut(ctx context.Context, now time.Time) (n int, err error) {
 	edge := now.Add(-owedReceiptWindow)
 	err = a.db.Tx(ctx, func(tx pgx.Tx) error {
-		n, err = consent.AgedOutMissedReceiptsTx(ctx, tx, edge.Add(-24*time.Hour), edge)
+		n, err = consent.AgedOutMissedReceiptsTx(ctx, tx, edge.Add(-24*time.Hour), edge, privacy.NamedSubjectSQL)
 		return err
 	})
 	return n, err
