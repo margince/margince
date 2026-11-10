@@ -20,6 +20,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // uqActivitySource is the natural-key index a captured echo trips the re-key
@@ -34,16 +35,6 @@ import (
 // two permanent timeline rows. Every OTHER predicate below is unchanged and
 // still does the proving — sharing an identity namespace is not evidence that
 // two rows are the same transmission.
-//
-// One case the absorb still declines, stated because it is now reachable by a
-// second route: a colleague CC'd on our send, whose own mailbox captures the
-// message as INBOUND, can land the stamped identity first when the provider
-// rewrites it. The `direction = 'outbound'` predicate refuses that row, and it
-// must — `stamped` is parsed out of a remote provider's response, so widening
-// this to inbound would let a hostile answer nominate somebody's received mail
-// to be archived. The send degrades to "receipt recorded, one duplicate row"
-// with a comms_identity_reconcile_failed breadcrumb, which is the same outcome
-// this path already had whenever the collision was not provably our echo.
 const uqActivitySource = "uq_activity_source"
 
 // sourceIDImage names the audit image field both writes below move. Spelled
@@ -236,69 +227,28 @@ func reKeyActivity(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, pr
 // but not sufficient: the row must also be shaped like this message's echo.
 func absorbEcho(ctx context.Context, tx pgx.Tx, survivorID ids.ActivityID, stamped string) error {
 	var echoID ids.ActivityID
-	// The violated index keys on (source_system, source_id) and the re-key
-	// changes only the second of the two — that is what makes a row a
-	// CANDIDATE. Each further predicate is what makes it this message's echo:
-	//
-	//   kind/direction — a message this mailbox SENT. An inbound mail, a call
-	//     or a meeting sharing the key is a fault, not an echo.
-	//   captured_by — the connector's own provenance, which the sink validates
-	//     against the acting connector principal before it writes. The
-	//     survivor's is 'human:<id>', so this alone rules the send path's own
-	//     rows out.
-	//   created_at — an echo cannot predate the send it echoes: capture learns
-	//     of the message only from the provider's copy of a transmission this
-	//     row staged. Both timestamps are stamped by THIS installation, which
-	//     occurred_at is not — that one is the provider's Date header, the same
-	//     remote input this predicate exists to distrust.
-	//   counterparty_email — the two rows must name the same recipient. A row
-	//     addressed to somebody else is a message somebody else was sent,
-	//     whatever key it holds. NULL on either side matches nothing, which is
-	//     the safe direction: it degrades to a duplicate row rather than
-	//     widening what may be archived. The two writers do not choose the
-	//     address by the same rule, and the difference is real rather than
-	//     theoretical: the send takes its FIRST To (primaryCounterparty), while
-	//     capture takes the first NON-OWNER address (mailmap). A human who
-	//     addresses themselves ahead of the recipient therefore produces two
-	//     rows naming different contacts, and this absorb declines — one duplicate
-	//     row, which is the defect this whole path removes, in the one shape it
-	//     does not. One spelling of "who was this message with" would close it,
-	//     and that is an ADR-0072 correspondence-semantics decision rather than
-	//     something this reconcile may settle on its own.
-	//
-	// WHAT THIS STILL CANNOT PROVE, stated because a heuristic read as a proof
-	// is how the next reader gets it wrong: none of these predicates ties the
-	// row to THIS transmission. They describe the shape of an outbound message
-	// this mailbox sent to this recipient after this send was staged, and a
-	// second such message that genuinely carries the collided key would satisfy
-	// every one of them. The invariant that is missing is a provider-stable
-	// one: capture does not persist the provider's own internal message id
-	// (Gmail's messages.id, which the receipt already carries as
-	// ProviderMessageID), so there is nothing on the captured row that names
-	// the transmission it came from. Persisting it is the real fix and it
-	// belongs on the capture side; until then the absorb is a strong heuristic
-	// held narrow, not a match.
-	//
-	// A collision that matches none of it is reported rather than absorbed. The
-	// caller degrades that to "receipt recorded, one duplicate row" plus a
-	// breadcrumb, which is the right price for never archiving a row nobody
-	// showed was this message.
+	echo, attested := connector.SentEchoFrom(ctx)
+	attested = attested && echo.Identity == stamped && echo.Body != ""
+	// The receipt binds the provider-filed copy to this send. Its complete capture
+	// body includes the envelope, which a staged send does not store in its text.
 	err := tx.QueryRow(ctx, `
 		SELECT echo.id
 		  FROM activity survivor
 		  JOIN activity echo
 		    ON echo.id                <> survivor.id
 		   AND echo.source_system      = survivor.source_system
-		   AND echo.source_id          = $2
+		   AND echo.source_id          = @provider_identity
 		   AND echo.kind               = 'email'
-		   AND echo.direction          = 'outbound'
 		   AND echo.captured_by LIKE 'connector:%'
 		   AND echo.created_at        >= survivor.created_at
-		   AND echo.counterparty_email = survivor.counterparty_email
+		   AND ((@provider_attested AND echo.body_completeness = 'complete' AND echo.subject = @provider_subject AND echo.body = @provider_body)
+ OR EXISTS (SELECT 1 FROM capture_import ci JOIN comms_outbound sent ON sent.activity_id = survivor.id
+ WHERE ci.activity_id = echo.id AND ci.user_id = sent.user_id
+ AND ci.provider_message_ids && `+storekit.ProviderMessageKeysSQL("sent.user_id", "sent.provider", "sent.provider_message_id")+`))
 		   -- A held row is nobody's echo: the guard would refuse the fold, and a
 		   -- restricted record must not be folded into a live one anyway.
 		   AND echo.restricted_at IS NULL
-		 WHERE survivor.id = $1 AND survivor.restricted_at IS NULL`, survivorID, stamped).Scan(&echoID)
+		 WHERE survivor.id = @survivor_id AND survivor.restricted_at IS NULL`, pgx.StrictNamedArgs{"survivor_id": survivorID, "provider_identity": stamped, "provider_attested": attested, "provider_subject": echo.Subject, "provider_body": echo.Body}).Scan(&echoID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("activities: the re-key collided on %s, but no row under that identity is a captured outbound echo of this send",
 			uqActivitySource)

@@ -56,6 +56,8 @@ make_clone "$db"
 census="$(mktemp -d)"
 trap 'st=$?; rm -rf "$census"; if ! drop_clone "$db"; then echo "FAIL: clone db $db was not dropped — leaked on the test cluster" >&2; if [[ "$st" -eq 0 ]]; then st=1; fi; fi; exit "$st"' EXIT
 
+prepare_test_extension_manifest "$census"
+
 run_flag=()
 [[ -n "$RUN" ]] && run_flag=(-run "$RUN")
 echo "test-integration-one: backend $rel ${RUN:+(-run $RUN) }(db=$db)"

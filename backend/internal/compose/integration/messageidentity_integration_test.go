@@ -40,13 +40,13 @@ const gmailStamped = "CAFAR1txEuKW7Qh@mail.gmail.com"
 // replyFrom the counterparty, threaded the only way a mail client can thread —
 // by quoting the identity that arrived on the wire. It carries its own
 // Message-ID because every message does; what matters is the ancestry.
-func replyFrom(quoting string) []byte {
+func replyFrom(quoting, root string) []byte {
 	return []byte("From: buyer@preflight.test\r\n" +
 		"To: " + sendingMailbox + "\r\n" +
 		"Subject: Re: Inbound question\r\n" +
 		"Message-ID: <reply-1@buyer.preflight.test>\r\n" +
 		"In-Reply-To: <" + quoting + ">\r\n" +
-		"References: <" + quoting + ">\r\n" +
+		"References: <" + root + "> <" + quoting + ">\r\n" +
 		"\r\n" +
 		"That works for us.\r\n")
 }
@@ -144,7 +144,9 @@ func TestAnEchoCapturedBeforeTransmitIsAbsorbedByTheReceiptItself(t *testing.T) 
 	deliveryID, mintedIdentity := p.deliveryFor(t, sentActivity)
 	// Captured BEFORE the transmission is recorded, which is the whole race:
 	// the row the re-key is about to claim the identity of already exists.
-	p.captureEcho(t, echoAlreadyCaptured(subject, gmailStamped))
+	p.inWorkspace(t, `UPDATE capture_connection SET account_label=@mailbox WHERE user_id=@user`, pgx.StrictNamedArgs{"user": p.user, "mailbox": sendingMailbox})
+	recovery := recoveryEnv{preflightEnv: p, activity: sentActivity, delivery: deliveryID, minted: mintedIdentity}
+	recovery.captureOwnEcho(recovery.ownMailbox(t), t, echoAlreadyCaptured(subject, gmailStamped))
 	echo := p.activityOnTheStampedIdentity(t)
 	if echo == sentActivity {
 		t.Fatal("the seeded echo IS the send's row — nothing would collide and this case would prove nothing")
@@ -235,10 +237,12 @@ func TestAGmailRewrittenIdentityStillYieldsOneActivityAndOneReplyTarget(t *testi
 		t.Errorf("%d activities still carry the minted identity %q, which exists in no mailbox", stale, mintedIdentity)
 	}
 
-	// THE ATTRIBUTION. A reply can only quote what it received, so it roots at
-	// the stamped identity; the matcher joins outbound activities on thread_key
-	// and must land on the send.
-	p.captureEcho(t, replyFrom(gmailStamped))
+	// The reply keeps the received conversation root and answers the stamped identity.
+	message, err := mailmap.Parse(transmitted, sendingMailbox)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p.captureEcho(t, replyFrom(gmailStamped, message.ThreadKey()))
 	var matched ids.UUID
 	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `

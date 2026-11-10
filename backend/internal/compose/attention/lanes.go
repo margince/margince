@@ -326,9 +326,10 @@ type Briefing interface {
 // entries. The brief owns what its states mean and what each spells; a copy of
 // that vocabulary here would be a second place to keep it right.
 type BriefEntry struct {
-	ID     ids.UUID
-	DealID ids.UUID
-	Rank   int
+	Snoozed bool
+	ID      ids.UUID
+	DealID  ids.UUID
+	Rank    int
 	// Composite is the night's own score for this deal, between 0 and 1, and
 	// what ranksteps.go's `opportunity` step breaks a tie by.
 	Composite float64

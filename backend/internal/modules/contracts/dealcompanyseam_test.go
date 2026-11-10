@@ -26,7 +26,7 @@ func TestTheDealCompanyRefusalNamesTheContractsAndWhatToDo(t *testing.T) {
 	if field != "company_id" || code != "deal_contracts_cross_company" {
 		t.Errorf("fault = (%q, %q), want the deal's company_id and the typed code", field, code)
 	}
-	for _, want := range []string{"2 contracts", "MSA-2026", "Pilot addendum", "another company", "Detach them", "file each against a deal of its own company"} {
+	for _, want := range []string{"2 contracts", "MSA-2026", "Pilot addendum", "another company", "Archived contracts", "Ask an administrator"} {
 		if !strings.Contains(message, want) {
 			t.Errorf("the message lacks %q: %q", want, message)
 		}
@@ -67,7 +67,7 @@ func TestALongListOfBlockingContractsIsCutAndFitsTheFaultText(t *testing.T) {
 func TestTheRefusalWithoutNamesStillCountsAndInstructs(t *testing.T) {
 	message := (&DealContractsCrossCompanyError{Count: 1}).Error()
 	if message != "1 contract on this deal belongs to another company. "+
-		"Detach it, or file it against a deal of its own company, before changing the company." {
+		"Archived contracts also count. Ask an administrator to correct the contract links before changing the company." {
 		t.Errorf("message = %q", message)
 	}
 }

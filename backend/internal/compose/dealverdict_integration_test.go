@@ -74,9 +74,9 @@ func (l *dealVerdictLane) Complete(_ context.Context, _ model.Request) (model.Re
 		 "cited_activity_ids":[%q],"reason":"They will sign then","confidence":0.9},
 		{"kind":"set_amount","date":"","amount":%d,"currency":%q,"quoted_words":%q,
 		 "probability":0,"cited_activity_ids":[%q],"reason":"They named the price","confidence":0.9},
-		{"kind":"set_probability","date":"","amount":0,"currency":"","quoted_words":"","probability":%d,
+		{"kind":"set_probability","date":"","amount":0,"currency":"","quoted_words":%q,"probability":%d,
 		 "cited_activity_ids":[%q],"reason":"They said yes","confidence":0.9}]}`,
-		l.date, *l.cite, amount, currency, quote, *l.cite, l.probability, *l.cite)}, nil
+		l.date, *l.cite, amount, currency, quote, *l.cite, quote, l.probability, *l.cite)}, nil
 }
 
 type dealVerdictEnv struct {
@@ -108,8 +108,8 @@ func setupDealVerdict(t *testing.T) *dealVerdictEnv {
 	// newer than the evidence until a test makes one.
 	v.now = v.dbNow(t)
 	signing := v.now.AddDate(0, 2, 0).Format(time.DateOnly)
-	v.note = v.logNote(t, "The board agreed: we sign on "+signing+" for 45,000 EUR a year.")
-	// A lower probability than the stage's: Margince may lower freely.
+	v.note = v.logBuyerMessage(t, "The board agreed: we sign on "+signing+" for 45,000 EUR a year.")
+	// The buyer's cited confirmation supports a lower probability than the stage's.
 	stagePct, err := strconv.Atoi(v.WsScalar(t, `SELECT `+deals.StageWinProbabilitySQL("d")+` FROM deal d WHERE d.id = $1`, v.deal))
 	if err != nil {
 		t.Fatal(err)
@@ -129,11 +129,11 @@ func (v *dealVerdictEnv) dbNow(t *testing.T) time.Time {
 	return at
 }
 
-func (v *dealVerdictEnv) logNote(t *testing.T, body string) string {
+func (v *dealVerdictEnv) logBuyerMessage(t *testing.T, body string) string {
 	t.Helper()
-	subject, at := "Call notes", v.now
+	subject, at, direction := "Buyer confirmation", v.now, "inbound"
 	note, _, err := v.Activities.LogActivity(v.Admin(), activities.LogActivityInput{
-		Kind: "note", Subject: &subject, Body: &body, OccurredAt: &at, Source: "manual",
+		Kind: "email", Direction: &direction, Subject: &subject, Body: &body, OccurredAt: &at, Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: v.deal}},
 	})
 	if err != nil {
@@ -229,7 +229,7 @@ func TestMarginceSetsWhatTheCustomerSaidAndAnUndoHoldsItBack(t *testing.T) {
 	}
 
 	v.now = v.now.Add(time.Hour)
-	v.note = v.logNote(t, "They confirmed again: yes.")
+	v.note = v.logBuyerMessage(t, "They confirmed again: yes, 45,000 EUR a year.")
 	v.run(t)
 	if got := v.field(t, "win_probability_override"); got != strconv.Itoa(v.lane.probability) {
 		t.Fatalf("after a new note the probability = %q, want Margince to set it again", got)
@@ -413,7 +413,7 @@ func TestAReceiptKeepsTheCurrencyTheAmountWasSetIn(t *testing.T) {
 // A price in a currency with no stored rate is read again once a rate is.
 func TestANewRateMakesANoRateDropDueAgain(t *testing.T) {
 	v := setupDealVerdict(t)
-	v.note = v.logNote(t, "Our budget is 40,000 GBP a year.")
+	v.note = v.logBuyerMessage(t, "Our budget is 40,000 GBP a year.")
 	v.lane.quote = "40,000 GBP"
 	v.run(t)
 	if !strings.Contains(v.outcomes(t), "set_amount="+dealverdict.DroppedNoRate) {
@@ -458,4 +458,56 @@ func TestVerdictNotesTranslateTheInstructionsAndKeepTheirEvidence(t *testing.T) 
 			t.Fatal("deterministic instructions were classified as generated prose")
 		}
 	}
+}
+
+func TestAnAgentsNoteIsNotDealVerdictEvidence(t *testing.T) {
+	v := setupDealVerdict(t)
+	subject, body := "Agent assessment", "Budget is 1,000 EUR."
+	note, _, err := v.Activities.LogActivity(v.Admin(), activities.LogActivityInput{
+		Kind: "note", Origin: activities.OriginAgent, Subject: &subject, Body: &body,
+		Source: "manual", Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: v.deal}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var read dealVerdictRead
+	if err := database.WithWorkspaceTx(v.Admin(), v.Pool, func(tx pgx.Tx) error {
+		return readVerdictActivities(v.Admin(), tx, v.deal, &read)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(read.in.Activities) == 0 {
+		t.Fatal("the buyer evidence disappeared too")
+	}
+	for _, activity := range read.in.Activities {
+		if activity.ID == note.Id.String() {
+			t.Fatal("agent note feeds the verdict")
+		}
+	}
+}
+
+func TestAnInboundCopyFromASeatIsMarkedAsOurWords(t *testing.T) {
+	v := setupDealVerdict(t)
+	direction, subject, body := "inbound", "Copy", "The budget is 1,000 EUR."
+	email := v.WsScalar(t, `SELECT email FROM app_user WHERE id=@user`, pgx.StrictNamedArgs{"user": v.Rep1})
+	mail, _, err := v.Activities.LogActivity(v.Admin(), activities.LogActivityInput{
+		Kind: "email", Direction: &direction, Subject: &subject, Body: &body, EmailFrom: email,
+		Source: "manual", Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: v.deal}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var read dealVerdictRead
+	if err := database.WithWorkspaceTx(v.Admin(), v.Pool, func(tx pgx.Tx) error { return readVerdictActivities(v.Admin(), tx, v.deal, &read) }); err != nil {
+		t.Fatal(err)
+	}
+	for _, activity := range read.in.Activities {
+		if activity.ID == mail.Id.String() {
+			if !activity.FromOurSide {
+				t.Fatal("seat copy was treated as buyer words")
+			}
+			return
+		}
+	}
+	t.Fatal("the inbound copy was not read")
 }

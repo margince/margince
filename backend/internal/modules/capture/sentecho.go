@@ -64,6 +64,9 @@ func (s *Sink) adoptSentEchoTx(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	if err := storekit.LockSentEchoKey(ctx, tx, seat, provider, rec.ProviderMessageID); err != nil {
 		return err
 	}
+	if providerFiledTransport(rec.CapturedBy) && fields.BodyCompleteness == BodyComplete && !fields.CredentialsMasked {
+		ctx = connector.WithSentEcho(ctx, connector.SentEcho{Identity: rec.NaturalKey.SourceID, Subject: fields.Subject, Body: fields.Body})
+	}
 	return s.adoptInSavepointTx(ctx, tx, seat, provider, rec, since)
 }
 
@@ -113,7 +116,7 @@ func EchoIdentityTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, provider, pro
 	var stamped string
 	err := tx.QueryRow(ctx, `
 		SELECT a.source_id FROM capture_import ci JOIN activity a ON a.id = ci.activity_id
-		 WHERE ci.user_id = $1 AND ci.provider_message_ids && `+providerMessageKeysSQL("$1", "$2", "$3")+`
+		 WHERE ci.user_id = $1 AND ci.provider_message_ids && `+storekit.ProviderMessageKeysSQL("$1", "$2", "$3")+`
 		   AND a.source_system = $4 AND a.direction = 'outbound' AND a.archived_at IS NULL
 		   AND EXISTS (SELECT 1 FROM capture_connection c WHERE c.user_id = $1 AND c.provider = $2
 		               AND c.archived_at IS NULL AND (c.account_bound_at IS NULL OR c.account_bound_at <= $5))

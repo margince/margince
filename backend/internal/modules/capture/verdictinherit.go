@@ -85,9 +85,10 @@ func inheritedVerdictTx(ctx context.Context, tx pgx.Tx, rec connector.Normalized
 	if err != nil {
 		return "", err
 	}
-	switch status {
-	case VerdictPending, VerdictHeld, VerdictUnsure, VerdictHeldByOwner:
+	if threadverdict.HoldsMessages(status) {
 		return status, nil
+	}
+	switch status {
 	case VerdictCleared, VerdictSharedByOwner:
 		if senderWasSeen(rec, seen) && !recordCarriesDocument(rec) {
 			return status, nil

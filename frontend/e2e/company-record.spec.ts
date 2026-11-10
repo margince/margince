@@ -99,7 +99,10 @@ test.describe("company record — the glance's page shape", () => {
     expect(await topOf(page.locator("[data-testid='co-tabs']"))).toBeLessThan(
       await topOf(page.locator(STRIP)),
     );
-    await page.getByRole("button", { name: "Kontakte" }).click();
+    await page
+      .locator("[data-testid='co-tabs']")
+      .getByRole("button", { name: "Kontakte" })
+      .click();
     await expect(page.locator(STRIP)).toHaveCount(0);
   });
 
@@ -146,25 +149,17 @@ test.describe("company record — the glance's page shape", () => {
     ).toHaveCount(isPartnerAccount ? 9 : 8);
   });
 
-  test("the overview stacks the account brief, needs and questions, with commercial detail on Deals", async ({
+  test("the overview leads with the account standing before its evidence cards", async ({
     page,
   }) => {
     await openCompany(page, POPULATED_COMPANY as string);
-    const call = page.getByRole("heading", { name: "Unternehmensbericht" });
-    const needs = page.getByRole("heading", { name: "Handlungsbedarf" });
-    const ask = page.getByRole("heading", {
-      name: "Fragen zu diesem Unternehmen",
-    });
-    await expect(call).toBeVisible();
-    await expect(needs).toBeVisible();
-    await expect(ask).toBeVisible();
+    const standing = page.getByRole("heading", { name: /^Wie es steht/ });
+    const recent = page.getByRole("heading", { name: "Zuletzt", exact: true });
+    await expect(standing).toBeVisible();
+    await expect(recent).toBeVisible();
+    expect(await topOf(standing)).toBeLessThan(await topOf(recent));
     await expect(
-      page.getByRole("heading", { name: "Nächste Schritte", exact: true }),
-    ).toHaveCount(0);
-    expect(await topOf(call)).toBeLessThan(await topOf(needs));
-    expect(await topOf(needs)).toBeLessThan(await topOf(ask));
-    await expect(
-      page.getByRole("heading", { name: "Geschäftliches" }),
+      page.getByRole("heading", { name: "Unternehmensbericht" }),
     ).toHaveCount(0);
     await page
       .locator("[data-testid='co-tabs']")
@@ -175,18 +170,17 @@ test.describe("company record — the glance's page shape", () => {
     ).toBeVisible();
   });
 
-  // The needs list asks for a move on the account, so it belongs to the tab a
-  // reader opens to be told what to do — not to every tab. Someone who has
-  // gone to Contacts or Documents has already chosen what to read.
-  test("the needs list leads the overview, and is not drawn on the other tabs", async ({
+  test("the account standing belongs to the overview alone", async ({
     page,
   }) => {
     await openCompany(page, POPULATED_COMPANY as string);
-    const needs = page.getByRole("heading", { name: "Handlungsbedarf" });
-    await expect(needs).toBeVisible();
-
-    await page.getByRole("button", { name: "Kontakte" }).click();
-    await expect(needs).toHaveCount(0);
+    const standing = page.getByRole("heading", { name: /^Wie es steht/ });
+    await expect(standing).toBeVisible();
+    await page
+      .locator("[data-testid='co-tabs']")
+      .getByRole("button", { name: "Kontakte" })
+      .click();
+    await expect(standing).toHaveCount(0);
   });
 
   // The details stand in the left card under the account's head, always open:
@@ -226,7 +220,7 @@ test.describe("company record — the glance's page shape", () => {
     // them: each slot says which reading it has none of.
     await expect(page.locator(`${STRIP} > *`).nth(2)).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "Unternehmensbericht" }),
+      page.getByRole("heading", { name: /^Wie es steht/ }),
     ).toHaveCount(1);
   });
 
@@ -258,17 +252,21 @@ test.describe("company record — visual weight", () => {
     await openCompany(page, POPULATED_COMPANY as string);
   });
 
-  test("the company's mark is a logo, not a favicon", async ({ page }) => {
-    // ~110px square in the mockups, beside a name at ~40px. At 44 it reads as
-    // a list-row avatar that wandered onto a record page.
-    const box = await page
-      .locator(".record-split-head .avatar")
-      .first()
-      .boundingBox();
-    if (!box) {
-      throw new Error("the header avatar has no box");
-    }
-    expect(box.width).toBeGreaterThanOrEqual(72);
+  test("the company's mark uses the shared record header size", async ({
+    page,
+  }) => {
+    const avatar = page.locator(".record-split-head .avatar-md").first();
+    await expect(avatar).toBeVisible();
+    const size = await avatar.evaluate((element) => {
+      const reference = document.createElement("span");
+      reference.className = "avatar avatar-md";
+      element.parentElement?.append(reference);
+      const expected = reference.getBoundingClientRect().width;
+      reference.remove();
+      return { actual: element.getBoundingClientRect().width, expected };
+    });
+    expect(size.expected).toBeGreaterThan(0);
+    expect(size.actual).toBe(size.expected);
   });
 
   test("the lifecycle control is a control, not a tag", async ({ page }) => {

@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -34,7 +35,7 @@ func SelectRemovedPurgeTx(
 	var args []any
 	arg := func(value any) string { args = append(args, value); return fmt.Sprintf("$%d", len(args)) }
 	seatParam, providerParam, messageParam := arg(user), arg(provider), arg(providerMessageID)
-	keys := providerMessageKeysSQL(seatParam, providerParam, messageParam)
+	keys := storekit.ProviderMessageKeysSQL(seatParam, providerParam, messageParam)
 	// Another provider copy keeps the activity. Consume only the removed alias.
 	_, err := tx.Exec(ctx, `UPDATE capture_import i SET provider_message_ids = array_remove(i.provider_message_ids, (`+keys+`)[1])
         WHERE i.user_id = `+seatParam+` AND i.provider_message_ids @> `+keys+`

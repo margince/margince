@@ -1469,6 +1469,8 @@
   "setup.step.aiDoneUnnamed": "An AI tool is connected.",
   "import.sourceBusy": "Another import of this source name is still writing. Wait for it to finish, then try again.",
   "import.reason.run_in_flight": "This import is already running. It finishes on its own and this page updates.",
+  "companies.contractMergeBlocked": "A deal has contracts belonging to another company. Archived contracts also count. Ask an administrator to correct the contract links before merging.",
+  "deals.contractCompanyBlocked": "This deal has contracts belonging to another company. Archived contracts also count. Ask an administrator to correct the contract links before changing the company.",
   "systemJob.datatask": "Data update",
   "notice.latestBy": "By {date} at the latest",
   "notifications.bell": "Notifications",

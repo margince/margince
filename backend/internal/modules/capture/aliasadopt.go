@@ -31,6 +31,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/threadverdict"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -257,9 +258,10 @@ func settledVerdictForTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, msg adop
 		}
 		return "", fmt.Errorf("capture: reading a thread's settled verdict: %w", err)
 	}
-	switch status {
-	case VerdictHeld, VerdictUnsure, VerdictHeldByOwner:
+	if threadverdict.Holds(status) {
 		return status, nil
+	}
+	switch status {
 	case VerdictCleared, VerdictSharedByOwner:
 		if !addressWasSeen(msg.counterparty, seen) {
 			return "", nil

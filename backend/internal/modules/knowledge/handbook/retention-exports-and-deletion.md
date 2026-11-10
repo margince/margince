@@ -170,7 +170,10 @@ messages the requester may share. It excludes other recipients' addresses and
 private folder names.
 
 ### What anonymize and erase do
-**Anonymizing a lead** puts "Anonymized Lead" in place of the name, clears the email, title and company, and deletes the lead's score history.
+**Anonymizing a lead** puts "Anonymized Lead" in place of the name, clears the email, title and company, and deletes the lead's score history. Queued opt-out receipts are stopped and lose the name and address.
+Already-sent receipts keep their recipient, subject and message as correspondence under the separate
+correspondence-retention rules and any legal hold. This does not erase sent correspondence.
+An erase request follows the erasure rules described above.
 
 **Anonymizing a contact** clears the names, title and address, sets the name to "Erased Subject", and clears every custom field. It deletes their email addresses, phone numbers, and their names on other sites and services. No block entry is written: the law allows the contact to come back.
 
