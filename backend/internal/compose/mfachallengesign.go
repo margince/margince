@@ -26,9 +26,14 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
-const mfaChallengeTyp = "mfa-challenge"
+const (
+	mfaChallengeTyp = "mfa-challenge"
+	mfaEpochTyp     = "mfa-epoch"
+)
 
 // mfaChallengeNonceLen sizes the jti: 16 random bytes, the same order of
 // entropy as a session token's, so spent-nonce collisions are never how two
@@ -40,6 +45,7 @@ type wireMFAChallenge struct {
 	Sub string `json:"sub"`
 	Jti string `json:"jti"`
 	Exp int64  `json:"exp"`
+	Ep  string `json:"ep,omitempty"`
 }
 
 type mfaChallengeSigner struct {
@@ -60,13 +66,13 @@ func newMFAChallengeSigner(key []byte) mfaChallengeSigner {
 // Sign mints a challenge binding the member for ttl, with a fresh nonce. The
 // error path exists for the nonce alone: a process whose crypto/rand fails must
 // refuse to mint a challenge rather than issue one that is not single-use.
-func (s mfaChallengeSigner) Sign(userID string, ttl time.Duration) (string, error) {
+func (s mfaChallengeSigner) Sign(c identity.MFAChallenge, ttl time.Duration) (string, error) {
 	nonce := make([]byte, mfaChallengeNonceLen)
 	if _, err := rand.Read(nonce); err != nil {
 		return "", fmt.Errorf("mfa challenge: minting nonce: %w", err)
 	}
 	payload, _ := json.Marshal(wireMFAChallenge{ //nolint:errchkjson // string/int-only struct never errors
-		Typ: mfaChallengeTyp, Sub: userID,
+		Typ: mfaChallengeTyp, Sub: c.UserID, Ep: c.Epoch,
 		Jti: base64.RawURLEncoding.EncodeToString(nonce),
 		Exp: s.now().Add(ttl).Unix(),
 	})
@@ -74,40 +80,45 @@ func (s mfaChallengeSigner) Sign(userID string, ttl time.Duration) (string, erro
 	return enc + "." + base64.RawURLEncoding.EncodeToString(s.mac(enc)), nil
 }
 
-// Verify checks the signature, type and expiry, and returns the member the
-// challenge binds together with its nonce. A token minted without a nonce is
-// refused outright — it predates the single-use ledger and could be replayed
-// for its whole TTL.
-func (s mfaChallengeSigner) Verify(token string) (string, string, error) {
+// Verify checks the signature, type and expiry, and returns what the challenge
+// binds, nonce included. A token minted without a nonce is refused outright: it
+// predates the single-use ledger and could be replayed for its whole TTL.
+func (s mfaChallengeSigner) Verify(token string) (identity.MFAChallenge, error) {
 	enc, macPart, ok := strings.Cut(token, ".")
 	if !ok {
-		return "", "", errors.New("mfa challenge: malformed token")
+		return identity.MFAChallenge{}, errors.New("mfa challenge: malformed token")
 	}
 	gotMAC, err := base64.RawURLEncoding.DecodeString(macPart)
 	if err != nil {
-		return "", "", fmt.Errorf("mfa challenge: bad signature encoding: %w", err)
+		return identity.MFAChallenge{}, fmt.Errorf("mfa challenge: bad signature encoding: %w", err)
 	}
 	if subtle.ConstantTimeCompare(gotMAC, s.mac(enc)) != 1 {
-		return "", "", errors.New("mfa challenge: signature mismatch")
+		return identity.MFAChallenge{}, errors.New("mfa challenge: signature mismatch")
 	}
 	payload, err := base64.RawURLEncoding.DecodeString(enc)
 	if err != nil {
-		return "", "", fmt.Errorf("mfa challenge: bad payload encoding: %w", err)
+		return identity.MFAChallenge{}, fmt.Errorf("mfa challenge: bad payload encoding: %w", err)
 	}
 	var w wireMFAChallenge
 	if err := json.Unmarshal(payload, &w); err != nil {
-		return "", "", fmt.Errorf("mfa challenge: bad payload: %w", err)
+		return identity.MFAChallenge{}, fmt.Errorf("mfa challenge: bad payload: %w", err)
 	}
 	if w.Typ != mfaChallengeTyp {
-		return "", "", errors.New("mfa challenge: wrong token type")
+		return identity.MFAChallenge{}, errors.New("mfa challenge: wrong token type")
 	}
 	if w.Jti == "" {
-		return "", "", errors.New("mfa challenge: missing nonce")
+		return identity.MFAChallenge{}, errors.New("mfa challenge: missing nonce")
 	}
 	if s.now().Unix() > w.Exp {
-		return "", "", errors.New("mfa challenge: expired")
+		return identity.MFAChallenge{}, errors.New("mfa challenge: expired")
 	}
-	return w.Sub, w.Jti, nil
+	return identity.MFAChallenge{UserID: w.Sub, Jti: w.Jti, Epoch: w.Ep}, nil
+}
+
+// KeyEpoch keys a credential epoch. The type tag keeps it from ever equalling
+// a challenge signature made with the same key.
+func (s mfaChallengeSigner) KeyEpoch(material string) string {
+	return base64.RawURLEncoding.EncodeToString(s.mac(mfaEpochTyp + "." + material))
 }
 
 func (s mfaChallengeSigner) mac(enc string) []byte {

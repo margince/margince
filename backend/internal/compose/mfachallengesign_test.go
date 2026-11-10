@@ -9,63 +9,66 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
 func TestMFAChallengeRoundTripCarriesSubjectAndFreshNonce(t *testing.T) {
 	signer := newMFAChallengeSigner([]byte(testStateKey))
 
-	token, err := signer.Sign("user-123", 5*time.Minute)
+	token, err := signer.Sign(identity.MFAChallenge{UserID: "user-123"}, 5*time.Minute)
 	if err != nil {
 		t.Fatalf("Sign: %v", err)
 	}
-	sub, jti, err := signer.Verify(token)
+	verified, err := signer.Verify(token)
 	if err != nil {
 		t.Fatalf("Verify: %v", err)
 	}
-	if sub != "user-123" {
-		t.Errorf("subject = %q, want the member the challenge was minted for", sub)
+	if verified.UserID != "user-123" {
+		t.Errorf("subject = %q, want the member the challenge was minted for", verified.UserID)
 	}
+	jti := verified.Jti
 	if jti == "" {
 		t.Fatal("the challenge carries no nonce; it could never be made single-use")
 	}
 
 	// A second challenge for the same member gets its own nonce — the nonce is
 	// what makes each challenge one login, so two must never share one.
-	again, err := signer.Sign("user-123", 5*time.Minute)
+	again, err := signer.Sign(identity.MFAChallenge{UserID: "user-123"}, 5*time.Minute)
 	if err != nil {
 		t.Fatalf("second Sign: %v", err)
 	}
-	_, jti2, err := signer.Verify(again)
+	second, err := signer.Verify(again)
 	if err != nil {
 		t.Fatalf("second Verify: %v", err)
 	}
-	if jti2 == jti {
+	if second.Jti == jti {
 		t.Error("two challenges share one nonce; spending either spends both")
 	}
 }
 
 func TestMFAChallengeRefusesTamperAndExpiry(t *testing.T) {
 	signer := newMFAChallengeSigner([]byte(testStateKey))
-	token, err := signer.Sign("user-123", 5*time.Minute)
+	token, err := signer.Sign(identity.MFAChallenge{UserID: "user-123"}, 5*time.Minute)
 	if err != nil {
 		t.Fatalf("Sign: %v", err)
 	}
 
-	if _, _, err := signer.Verify(token + "x"); err == nil {
+	if _, err := signer.Verify(token + "x"); err == nil {
 		t.Error("a tampered signature verified")
 	}
 	payload, _, ok := strings.Cut(token, ".")
 	if !ok {
 		t.Fatal("the token has no signature part")
 	}
-	if _, _, err := signer.Verify(payload + "x." + "forged"); err == nil {
+	if _, err := signer.Verify(payload + "x." + "forged"); err == nil {
 		t.Error("a forged token verified")
 	}
 
 	// The clock is a field precisely so expiry is asserted, not slept for.
 	stale := signer
 	stale.now = func() time.Time { return time.Now().Add(6 * time.Minute) }
-	if _, _, err := stale.Verify(token); err == nil {
+	if _, err := stale.Verify(token); err == nil {
 		t.Error("an expired challenge verified")
 	}
 }
@@ -115,5 +118,33 @@ func TestAShortKeyBesideAVaultDisarmsMFAAndSaysSoAtError(t *testing.T) {
 	}
 	if !strings.Contains(logged.String(), "level=ERROR") {
 		t.Errorf("the reversed order lost the ERROR report; log: %s", logged.String())
+	}
+}
+
+// The challenge travels readable to its holder, so its epoch is keyed. It
+// round-trips under the signature. Without the key it says nothing about the
+// credentials it was made from.
+func TestMFAChallengeCarriesAKeyedCredentialEpoch(t *testing.T) {
+	signer := newMFAChallengeSigner([]byte(testStateKey))
+	const material = "$argon2id$v=19$m=19456,t=2,p=1$salt$hash\x002026-11-10T00:00:00Z"
+	epoch := signer.KeyEpoch(material)
+	if epoch == "" || strings.Contains(epoch, "argon2") {
+		t.Fatalf("epoch = %q, want a keyed value that does not repeat its material", epoch)
+	}
+	other := newMFAChallengeSigner([]byte(strings.Repeat("k", 32)))
+	if other.KeyEpoch(material) == epoch {
+		t.Error("two keys give one epoch for the same credentials; the value is not keyed")
+	}
+	if signer.KeyEpoch(material+"x") == epoch {
+		t.Error("changed credentials keep the epoch")
+	}
+
+	token, err := signer.Sign(identity.MFAChallenge{UserID: "user-123", Epoch: epoch}, 5*time.Minute)
+	if err != nil {
+		t.Fatalf("Sign: %v", err)
+	}
+	verified, err := signer.Verify(token)
+	if err != nil || verified.Epoch != epoch {
+		t.Fatalf("verified epoch = %q (err %v), want the signed one", verified.Epoch, err)
 	}
 }

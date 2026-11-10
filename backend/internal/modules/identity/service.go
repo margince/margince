@@ -80,6 +80,9 @@ type Service struct {
 	// mandatory. Nil when unwired — no enforcement, and Authenticate then reads
 	// nothing extra per request. See mfachallenge.go.
 	requireMFA func(ctx context.Context) (bool, error)
+	// challengeEpochKey keys a member's credential epoch with the challenge
+	// signing key. Unset, no challenge can be completed.
+	challengeEpochKey func(material string) string
 	// groupRoleMap answers the admin's group→role grant map for federated
 	// sign-in, read inside the login's own transaction so the grant commits
 	// against the map as it stands then. Nil when unwired — no grants, the same

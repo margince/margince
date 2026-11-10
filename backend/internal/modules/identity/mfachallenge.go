@@ -12,6 +12,7 @@ package identity
 
 import (
 	"context"
+	"crypto/subtle"
 	"errors"
 	"time"
 
@@ -43,8 +44,81 @@ const spentChallengeReapLimit = 100
 // arrangement OIDCStateSigner uses. Every minted token carries a fresh random
 // nonce (jti); Verify returns it so the service can spend it exactly once.
 type MFAChallengeSigner interface {
-	Sign(userID string, ttl time.Duration) (token string, err error)
-	Verify(token string) (userID, jti string, err error)
+	Sign(challenge MFAChallenge, ttl time.Duration) (token string, err error)
+	Verify(token string) (MFAChallenge, error)
+	// KeyEpoch keys a credential epoch with the signing key. The challenge is
+	// readable by its holder, so it carries only this keyed value.
+	KeyEpoch(material string) string
+}
+
+// MFAChallenge is what a signed challenge binds. Sign mints the Jti; Verify
+// returns it. Epoch is the keyed credential epoch the challenge was issued under.
+type MFAChallenge struct {
+	UserID string
+	Jti    string
+	Epoch  string
+}
+
+// challengeOwed is the password step's answer when the member owes a second
+// factor. It matches errMFARequired and carries the challenge to sign.
+type challengeOwed struct{ challenge MFAChallenge }
+
+func (c *challengeOwed) Error() string        { return errMFARequired.Error() }
+func (c *challengeOwed) Is(target error) bool { return target == errMFARequired }
+
+// challengeFor builds the challenge a sign-in stops at, under the member's
+// current credential epoch.
+func (s *Service) challengeFor(ctx context.Context, tx pgx.Tx, userID ids.UserID) (*challengeOwed, error) {
+	epoch, err := s.credentialEpoch(ctx, tx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return &challengeOwed{challenge: MFAChallenge{UserID: userID.String(), Epoch: epoch}}, nil
+}
+
+// credentialEpoch is a keyed value that changes with the member's password or
+// second factor. A change, a reset, or a factor enrolled again all move it. A
+// challenge issued under an older epoch cannot be completed.
+func (s *Service) credentialEpoch(ctx context.Context, tx pgx.Tx, userID ids.UserID) (string, error) {
+	if s.challengeEpochKey == nil {
+		return "", nil
+	}
+	var passwordHash string
+	var enrolledAt *time.Time
+	err := tx.QueryRow(ctx,
+		`SELECT coalesce(u.password_hash, ''), m.created_at FROM app_user u
+		   LEFT JOIN user_mfa m ON m.user_id = u.id
+		  WHERE u.id = $1`, userID).Scan(&passwordHash, &enrolledAt)
+	if err != nil {
+		return "", err
+	}
+	material := passwordHash + "\x00"
+	if enrolledAt != nil {
+		material += enrolledAt.UTC().Format(time.RFC3339Nano)
+	}
+	return s.challengeEpochKey(material), nil
+}
+
+// lockChallengedMember takes the member row lock every second-factor attempt
+// serializes on. Before any code is checked, it refuses a locked account. It
+// also refuses a challenge whose credentials have since changed, as neutrally
+// as a wrong code.
+func (s *Service) lockChallengedMember(ctx context.Context, tx pgx.Tx, userID ids.UserID, challenge MFAChallenge) (lockoutState, error) {
+	lock, err := lockSecondFactorStreak(ctx, tx, userID)
+	if err != nil {
+		return lockoutState{}, err
+	}
+	if lock.locked(s.now()) {
+		return lockoutState{}, errAccountLocked
+	}
+	epoch, err := s.credentialEpoch(ctx, tx, userID)
+	if err != nil {
+		return lockoutState{}, err
+	}
+	if epoch == "" || subtle.ConstantTimeCompare([]byte(epoch), []byte(challenge.Epoch)) != 1 {
+		return lockoutState{}, errBadMFACode
+	}
+	return lock, nil
 }
 
 // WithRequireMFA injects the require-MFA policy reader, read at admission so an
@@ -90,7 +164,8 @@ func (s *Service) mfaMandatory(ctx context.Context) (bool, error) {
 // before it. So neither parallel requests nor a pile of fresh challenges buys
 // more than the lockout threshold. A wrong code leaves the nonce unspent, so the
 // member can retype a mistyped code on the same challenge.
-func (s *Service) CompleteMFAChallenge(ctx context.Context, userID ids.UserID, jti, code string) (Identity, string, error) {
+func (s *Service) CompleteMFAChallenge(ctx context.Context, userID ids.UserID, challenge MFAChallenge, code string) (Identity, string, error) {
+	jti := challenge.Jti
 	rawWsID, ok := principal.WorkspaceID(ctx)
 	if !ok {
 		return Identity{}, "", ErrBadCredentials
@@ -110,12 +185,9 @@ func (s *Service) CompleteMFAChallenge(ctx context.Context, userID ids.UserID, j
 	// failure it counts has to land. It travels out beside the nil return.
 	var wrongCode error
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		lock, err := lockSecondFactorStreak(ctx, tx, userID)
+		lock, err := s.lockChallengedMember(ctx, tx, userID, challenge)
 		if err != nil {
 			return err
-		}
-		if lock.locked(s.now()) {
-			return errAccountLocked
 		}
 		verified, err := s.verifyMFA(ctx, tx, wsID, userID, code)
 		if err != nil {
