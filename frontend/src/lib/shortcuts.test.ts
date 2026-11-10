@@ -8,19 +8,18 @@ import { PRINTABLE_KEYS } from "../testing/keys";
 import { KEYMAP, SEQUENCE_WINDOW_MS, type ShortcutId } from "./keymap";
 import {
   createShortcutDispatcher,
-  type ShortcutDispatcher,
   setSingleKeyShortcutsOn,
-  shortcutHandler,
   singleKeyShortcutsOn,
   useShortcut,
   useShortcutAria,
+  useShortcutDispatcher,
   useShortcutHandler,
 } from "./shortcuts";
 import { readStored, STORAGE_KEYS } from "./storage";
 
 let ran: ShortcutId[] = [];
 let singleKeys = true;
-let dispatcher: ShortcutDispatcher;
+let dispatcher: ReturnType<typeof createShortcutDispatcher>;
 
 /** Every binding has a handler that records its id. */
 const everyHandler = (id: ShortcutId) => () => {
@@ -81,6 +80,19 @@ describe("a single key", () => {
     document.body.append(input);
     press({ key: "c", code: "KeyC" }, input);
     expect(ran).toEqual([]);
+  });
+
+  it("does not run M on AZERTY's comma, which sits at M's place", () => {
+    press({ key: ",", code: "KeyM" });
+    expect(ran).toEqual([]);
+  });
+
+  it("still runs once a row's checkbox holds focus", () => {
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    document.body.append(checkbox);
+    press({ key: "c", code: "KeyC" }, checkbox);
+    expect(ran).toEqual(["create"]);
   });
 
   it("reaches a binding from a Cyrillic layout by the key's place", () => {
@@ -217,6 +229,16 @@ describe("every binding the dispatcher answers", () => {
 });
 
 describe("the handler a binding runs", () => {
+  const mounted = createShortcutDispatcher({ singleKeysOn: () => true });
+  const pressed = (key: string) =>
+    mounted.onKeyDown(
+      new KeyboardEvent("keydown", {
+        key,
+        code: `Key${key.toUpperCase()}`,
+        cancelable: true,
+      }),
+    );
+
   it("is the one mounted last, and the earlier one again once it leaves", () => {
     const first = vi.fn();
     const second = vi.fn();
@@ -224,16 +246,18 @@ describe("the handler a binding runs", () => {
     const later = renderHook(() =>
       useShortcutHandler("record.addTask", second),
     );
-    shortcutHandler("record.addTask")?.();
+    pressed("t");
     later.unmount();
-    shortcutHandler("record.addTask")?.();
+    pressed("t");
     expect(second).toHaveBeenCalledOnce();
     expect(first).toHaveBeenCalledOnce();
   });
 
   it("is none while its component says it is not enabled", () => {
-    renderHook(() => useShortcutHandler("record.writeEmail", vi.fn(), false));
-    expect(shortcutHandler("record.writeEmail")).toBeUndefined();
+    const written = vi.fn();
+    renderHook(() => useShortcutHandler("record.writeEmail", written, false));
+    pressed("m");
+    expect(written).not.toHaveBeenCalled();
   });
 
   it("calls the latest render's handler", () => {
@@ -244,7 +268,7 @@ describe("the handler a binding runs", () => {
       { initialProps: { word: "first" } },
     );
     view.rerender({ word: "second" });
-    shortcutHandler("record.logActivity")?.();
+    pressed("n");
     expect(calls).toEqual(["second"]);
   });
 });
@@ -294,5 +318,23 @@ describe("the single-key preference", () => {
     search.rerender();
     expect(create.result.current).toBeUndefined();
     expect(search.result.current).toBe("Meta+K Control+K");
+  });
+});
+
+describe("the app's dispatcher", () => {
+  // A G pressed before the shell unmounts must not finish a sequence after it mounts again.
+  it("forgets a pending G once nothing listens", () => {
+    globalThis.removeEventListener("keydown", dispatcher.onKeyDown);
+    const handled: string[] = [];
+    renderHook(() => {
+      useShortcutHandler("goto.contacts", () => handled.push("goto"));
+      useShortcutHandler("create", () => handled.push("create"));
+    });
+    const shell = renderHook(() => useShortcutDispatcher());
+    letter("g");
+    shell.unmount();
+    renderHook(() => useShortcutDispatcher());
+    letter("c");
+    expect(handled).toEqual(["create"]);
   });
 });

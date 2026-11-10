@@ -2,12 +2,17 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useSyncExternalStore } from "react";
-import { readStored, type StorageKey, writeStored } from "./storage";
+import {
+  readStored,
+  type StorageKey,
+  watchStored,
+  writeStored,
+} from "./storage";
 
 const OFF = "off";
 const ON = "on";
 
-export type DeviceSwitch = Readonly<{
+type DeviceSwitch = Readonly<{
   read: () => boolean;
   write: (next: boolean) => void;
   subscribe: (listener: () => void) => () => void;
@@ -18,6 +23,11 @@ export type DeviceSwitch = Readonly<{
 export function deviceSwitch(key: StorageKey): DeviceSwitch {
   let shown: boolean | null = null;
   const listeners = new Set<() => void>();
+  const notify = () => {
+    for (const listener of listeners) {
+      listener();
+    }
+  };
   const read = () => {
     shown ??= readStored(key) !== OFF;
     return shown;
@@ -25,10 +35,13 @@ export function deviceSwitch(key: StorageKey): DeviceSwitch {
   const write = (next: boolean) => {
     shown = next;
     writeStored(key, next ? ON : OFF);
-    for (const listener of listeners) {
-      listener();
-    }
+    notify();
   };
+  // Another tab's flip reaches this one through storage.
+  watchStored(key, () => {
+    shown = readStored(key) !== OFF;
+    notify();
+  });
   const subscribe = (listener: () => void) => {
     listeners.add(listener);
     return () => {

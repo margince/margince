@@ -63,20 +63,18 @@ describe("the keyboard shortcuts dialog", () => {
   // drawn here fails, whichever group it joins.
   it("lists every binding of the keymap under its group, with its caps", () => {
     const dialog = renderDialog();
-    const platform = navigator.platform;
     for (const entry of KEYMAP) {
       const group = groupNamed(dialog, GROUP_TITLES[entry.group]);
       const caps = capsBeside(group, en[entry.labelKey]).join(" ");
-      expect(caps).toContain(bindingCaps(entry.keys, platform).join(" "));
+      expect(caps).toContain(bindingCaps(entry.keys).join(" "));
     }
   });
 
   it("draws search as one row with both ways to open it", () => {
     const dialog = renderDialog();
-    const platform = navigator.platform;
     const row = within(dialog).getByText("Open search", { selector: "dt" });
     expect(row.nextElementSibling).toHaveTextContent(
-      `${shortcutCaps("search", platform).join("")}or/`,
+      `${shortcutCaps("search").join("")}or/`,
     );
   });
 
@@ -132,7 +130,14 @@ describe("the paragraph save the field binds", () => {
     }
     const keys = [...PRINTABLE_KEYS, paragraph.keys.key, "Tab", "Escape"];
     const chord = (key: string, metaKey: boolean, ctrlKey: boolean) =>
-      isParagraphCommit({ key, metaKey, ctrlKey });
+      isParagraphCommit({
+        key,
+        code: "",
+        metaKey,
+        ctrlKey,
+        altKey: false,
+        shiftKey: false,
+      });
     expect(keys.filter((key) => chord(key, true, false))).toEqual([
       paragraph.keys.key,
     ]);

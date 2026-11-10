@@ -349,7 +349,7 @@ function AuthedApp({
     paletteOpen === true,
     showPalette,
     () => setPaletteOpen(false),
-    route.screen,
+    route,
   );
   useTaskReminderNotifications(authed);
 

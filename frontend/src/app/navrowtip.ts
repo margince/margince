@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useT } from "../i18n";
-import { bindingCaps, goToBindingFor } from "../lib/keymap";
+import { type BindingKeys, goToBindingFor, shortcutTip } from "../lib/keymap";
 import { useSingleKeyShortcuts } from "../lib/shortcuts";
 import type { NavTrailLevel } from "./nav";
 
@@ -12,17 +12,15 @@ export type TipState = Readonly<{
   onTip: (key: string | null, by?: "pointer" | "focus") => void;
 }>;
 
-/** A destination's go-to keys as its tip reads them ("G then C"), while the
- *  reader keeps single-key shortcuts on. Only the destinations level has them. */
-function useGoToKeys(level: NavTrailLevel, id: string): string | undefined {
-  const t = useT();
+/** A destination's go-to keys while the reader keeps single-key shortcuts on.
+ *  Only the destinations level has them. */
+function useGoToKeys(
+  level: NavTrailLevel,
+  id: string,
+): BindingKeys | undefined {
   const on = useSingleKeyShortcuts();
   const bound = level.path.length === 0 ? goToBindingFor(id) : undefined;
-  return on && bound !== undefined
-    ? bindingCaps(bound.keys, navigator.platform).join(
-        ` ${t("shell.shortcuts.then")} `,
-      )
-    : undefined;
+  return on ? bound?.keys : undefined;
 }
 
 /**
@@ -38,14 +36,17 @@ export function useRowTip(
     label: string;
   }>,
 ) {
-  const { key, label } = row;
+  const t = useT();
   const keys = useGoToKeys(row.level, row.id);
-  const text = [state.collapsed && label, keys].filter(Boolean).join(" · ");
+  const label = state.collapsed ? row.label : undefined;
+  const text = keys
+    ? shortcutTip(label, keys, t("shell.shortcuts.then"))
+    : (label ?? null);
   return {
-    text: text === "" ? null : text,
+    text,
     raise: (by: "pointer" | "focus") => {
-      if (text !== "") {
-        state.onTip(key, by);
+      if (text !== null) {
+        state.onTip(row.key, by);
       }
     },
   };

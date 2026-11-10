@@ -148,7 +148,8 @@ export function navigate(route: Route, dials?: UrlParams): void {
 
 /**
  * Use it for a redirect, or for a state of the page such as a create form.
- * Back must not land on an address that is not a page.
+ * Back must not land on an address that is not a page. Not `location.replace`:
+ * it drops the entry's state, where lib/scrollmemory.ts names the entry.
  */
 export function navigateReplacing(route: Route, dials?: UrlParams): void {
   globalThis.history.replaceState(

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useEffect, useRef } from "react";
+import { isChordOf, isLetterKey, pressedLetter } from "./chord";
 import { deviceSwitch, useDeviceSwitch } from "./devicepreference";
 import { isImeCommit } from "./imecommit";
 import { characterKeyRefused, isTextEntry } from "./keyguard";
@@ -10,9 +11,7 @@ import {
   type Binding,
   binding,
   isCharacterKey,
-  isLetterKey,
   KEYMAP,
-  pressedLetter,
   SEQUENCE_WINDOW_MS,
   type ShortcutId,
 } from "./keymap";
@@ -40,10 +39,7 @@ type Slot = Readonly<{ run: () => void }>;
 
 const slots = new Map<ShortcutId, Slot[]>();
 
-export function mountShortcutHandler(
-  id: ShortcutId,
-  run: () => void,
-): () => void {
+function mountShortcutHandler(id: ShortcutId, run: () => void): () => void {
   const slot: Slot = { run };
   slots.set(id, [...(slots.get(id) ?? []), slot]);
   return () => {
@@ -55,14 +51,11 @@ export function mountShortcutHandler(
 }
 
 /** What a press of `id` runs: the handler mounted last, or nothing. */
-export function shortcutHandler(id: ShortcutId): (() => void) | undefined {
+function shortcutHandler(id: ShortcutId): (() => void) | undefined {
   return slots.get(id)?.at(-1)?.run;
 }
 
-/**
- * Answer a binding while this component is mounted and `enabled`. The handler
- * mounted last wins, and a binding with none mounted does nothing.
- */
+/** Answer a binding while this component is mounted and `enabled`. */
 export function useShortcutHandler(
   id: ShortcutId,
   handler: () => void,
@@ -110,16 +103,8 @@ export function useGoToShortcuts(): void {
 const DISPATCHED = KEYMAP.filter((entry) => entry.answeredBy === "dispatcher");
 
 function chordPressed(event: KeyboardEvent): Binding | undefined {
-  if (event.metaKey === event.ctrlKey || event.altKey || event.shiftKey) {
-    return undefined;
-  }
-  const letter = pressedLetter(event);
   return DISPATCHED.find(
-    (entry) =>
-      entry.keys.kind === "chord" &&
-      (isLetterKey(entry.keys.key)
-        ? entry.keys.key === letter
-        : entry.keys.key === event.key),
+    (entry) => entry.keys.kind === "chord" && isChordOf(event, entry.keys.key),
   );
 }
 
@@ -136,8 +121,10 @@ function characterPressed(event: KeyboardEvent): string | null {
   return event.shiftKey ? null : pressedLetter(event);
 }
 
-export type ShortcutDispatcher = Readonly<{
+type ShortcutDispatcher = Readonly<{
   onKeyDown: (event: KeyboardEvent) => void;
+  /** Forget a sequence's first key, as when nothing listens any more. */
+  reset: () => void;
 }>;
 
 /** The one place a key press becomes a binding. A sequence's window runs on
@@ -227,7 +214,7 @@ export function createShortcutDispatcher(
     onCharacter(event);
   };
 
-  return { onKeyDown };
+  return { onKeyDown, reset: dropLead };
 }
 
 const appDispatcher = createShortcutDispatcher({
@@ -249,6 +236,7 @@ export function useShortcutDispatcher(): void {
       listening -= 1;
       if (listening === 0) {
         globalThis.removeEventListener("keydown", appDispatcher.onKeyDown);
+        appDispatcher.reset();
       }
     };
   }, []);

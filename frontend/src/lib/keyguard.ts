@@ -4,7 +4,19 @@
 import { liveDialogs } from "../design-system/dialogfocus";
 import { isImeCommit } from "./imecommit";
 
-const TEXT_ENTRY = "input, textarea, select";
+// An input is text entry unless it is one of the types a key only presses.
+const PRESSED_INPUTS = [
+  "checkbox",
+  "radio",
+  "button",
+  "submit",
+  "reset",
+  "range",
+  "color",
+  "file",
+  "image",
+];
+const TEXT_ENTRY = `input${PRESSED_INPUTS.map((type) => `:not([type="${type}"])`).join("")}, textarea, select`;
 
 export function isTextEntry(target: EventTarget | null): boolean {
   // An SVG element can hold focus and has no `isContentEditable`.
@@ -33,7 +45,7 @@ function opensLayer(trigger: Element): boolean {
   );
 }
 
-export function layerIsOpen(target: EventTarget | null): boolean {
+function layerIsOpen(target: EventTarget | null): boolean {
   return (
     liveDialogs().length > 0 ||
     (target instanceof Element && target.closest(LISTING_LAYER) !== null) ||

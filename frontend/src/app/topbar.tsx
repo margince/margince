@@ -9,7 +9,7 @@ import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
 import { useLocale, useT } from "../i18n";
 import { lazy } from "../i18n/lazy";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
-import { shortcutCaps } from "../lib/keymap";
+import { binding, shortcutCaps, shortcutTip } from "../lib/keymap";
 import {
   leaveRecord,
   listAddress,
@@ -154,7 +154,7 @@ export function TopBarSearch({
             above already says what this control does, so nobody is made to
             listen to the shortcut spelled out. */}
         <span className="topbar-keys" aria-hidden>
-          {shortcutCaps("search", navigator.platform).map((cap) => (
+          {shortcutCaps("search").map((cap) => (
             <Kbd key={cap}>{cap}</Kbd>
           ))}
         </span>
@@ -217,7 +217,11 @@ export function TopBar({
             // The shortcut belongs in the tooltip, not in the accessible name:
             // a speech-input user says the words they can read, and "Collapse
             // sidebar ⌘B" is not one of them.
-            title={`${toggleLabel} · ${shortcutCaps("sidebar", navigator.platform).join(" ")}`}
+            title={shortcutTip(
+              toggleLabel,
+              binding("sidebar").keys,
+              t("shell.shortcuts.then"),
+            )}
             aria-expanded={!collapsed}
             onClick={onToggle}
           >

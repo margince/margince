@@ -2791,7 +2791,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.shortcuts.record": "Trong hồ sơ",
   "shell.shortcuts.logActivity": "Ghi nhận hoạt động",
   "shell.shortcuts.addTask": "Thêm việc cần làm",
-  "shell.shortcuts.writeEmail": "Viết email",
+  "shell.shortcuts.writeEmail": "Viết tin nhắn",
   "shell.shortcuts.sendEmail": "Gửi email",
   "shell.shortcuts.submitDialog": "Gửi biểu mẫu hộp thoại",
   "shell.shortcuts.then": "rồi",

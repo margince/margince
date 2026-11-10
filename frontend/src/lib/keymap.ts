@@ -229,8 +229,13 @@ export function goToBindingFor(screen: string): Binding | undefined {
 
 const APPLE_PLATFORM = /mac|iphone|ipad|ipod/i;
 
+/** The one read of the reader's platform, which picks ⌘ or Ctrl. */
+function readerPlatform(): string {
+  return globalThis.navigator?.platform ?? "";
+}
+
 /** The platform modifier as the cap its keyboard prints. */
-export function modifierCap(platform: string): string {
+function modifierCap(platform: string): string {
   return APPLE_PLATFORM.test(platform) ? "⌘" : "Ctrl";
 }
 
@@ -249,7 +254,7 @@ export function capOf(key: string): string {
 
 export function bindingCaps(
   keys: BindingKeys,
-  platform: string,
+  platform = readerPlatform(),
 ): readonly string[] {
   switch (keys.kind) {
     case "chord":
@@ -263,9 +268,22 @@ export function bindingCaps(
 
 export function shortcutCaps(
   id: ShortcutId,
-  platform: string,
+  platform = readerPlatform(),
 ): readonly string[] {
   return bindingCaps(binding(id).keys, platform);
+}
+
+/** A label and its keys as one tip, "Contacts · G then C"; `then` is the
+ *  reader's word between a sequence's keys. */
+export function shortcutTip(
+  label: string | undefined,
+  keys: BindingKeys,
+  then: string,
+): string {
+  const caps = bindingCaps(keys).join(
+    keys.kind === "sequence" ? ` ${then} ` : " ",
+  );
+  return label === undefined ? caps : `${label} · ${caps}`;
 }
 
 /** None for a sequence: ARIA separates alternatives with a space, so "g c"
@@ -279,22 +297,4 @@ export function ariaKeyShortcuts(keys: BindingKeys): string | undefined {
     default:
       return keys.key;
   }
-}
-
-const ASCII_LETTER = /^[a-z]$/i;
-const LETTER_CODE = /^Key([A-Z])$/;
-
-/** The key's own letter on a Latin layout, else the letter at its place (`KeyG`
- *  is g), so a Cyrillic or Greek layout still reaches a letter binding. */
-export function pressedLetter(
-  event: Pick<KeyboardEvent, "key" | "code">,
-): string | null {
-  if (ASCII_LETTER.test(event.key)) {
-    return event.key.toLowerCase();
-  }
-  return LETTER_CODE.exec(event.code)?.[1]?.toLowerCase() ?? null;
-}
-
-export function isLetterKey(key: string): boolean {
-  return ASCII_LETTER.test(key);
 }

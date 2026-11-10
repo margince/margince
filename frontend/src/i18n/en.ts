@@ -2773,7 +2773,7 @@ export const en = {
   "shell.shortcuts.record": "On a record",
   "shell.shortcuts.logActivity": "Log activity",
   "shell.shortcuts.addTask": "Add task",
-  "shell.shortcuts.writeEmail": "Write email",
+  "shell.shortcuts.writeEmail": "Write message",
   "shell.shortcuts.sendEmail": "Send email",
   "shell.shortcuts.submitDialog": "Submit dialog",
   "shell.shortcuts.then": "then",

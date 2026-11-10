@@ -3,7 +3,7 @@
 
 /** @vitest-environment happy-dom */
 import { afterEach, describe, expect, it } from "vitest";
-import { characterKeyRefused, isTextEntry, layerIsOpen } from "./keyguard";
+import { characterKeyRefused, isTextEntry } from "./keyguard";
 
 afterEach(() => {
   document.body.replaceChildren();
@@ -59,6 +59,24 @@ describe("a text field", () => {
     expect(isTextEntry(editor)).toBe(true);
   });
 
+  it.each(["checkbox", "radio", "button", "submit", "range", "file"])(
+    "leaves it to the page on a %s input, which a key only presses",
+    (type) => {
+      const input = document.createElement("input");
+      input.type = type;
+      expect(isTextEntry(place(input))).toBe(false);
+    },
+  );
+
+  it.each(["text", "search", "email", "number", "date"])(
+    "takes the key in a %s input",
+    (type) => {
+      const input = document.createElement("input");
+      input.type = type;
+      expect(isTextEntry(place(input))).toBe(true);
+    },
+  );
+
   it("leaves it to the page on a button or a link", () => {
     expect(isTextEntry(place(document.createElement("button")))).toBe(false);
     expect(isTextEntry(place(document.createElement("a")))).toBe(false);
@@ -106,7 +124,7 @@ describe("a layer over the page", () => {
     const dialog = place(document.createElement("div"));
     dialog.setAttribute("role", "dialog");
     dialog.setAttribute("aria-modal", "true");
-    expect(layerIsOpen(document.body)).toBe(true);
+    expect(characterKeyRefused(press(document.body))).toBe(true);
     expect(characterKeyRefused(press(document.body))).toBe(true);
   });
 
@@ -116,23 +134,23 @@ describe("a layer over the page", () => {
     const dialog = place(document.createElement("div"), leaving);
     dialog.setAttribute("role", "dialog");
     dialog.setAttribute("aria-modal", "true");
-    expect(layerIsOpen(document.body)).toBe(false);
+    expect(characterKeyRefused(press(document.body))).toBe(false);
   });
 
   it("is a menu the key is pressed in", () => {
     const menu = place(document.createElement("div"));
     menu.setAttribute("role", "menu");
     const item = place(document.createElement("button"), menu);
-    expect(layerIsOpen(item)).toBe(true);
+    expect(characterKeyRefused(press(item))).toBe(true);
   });
 
   it("is a popup its trigger says is open", () => {
     const trigger = place(document.createElement("button"));
     trigger.setAttribute("aria-haspopup", "menu");
     trigger.setAttribute("aria-expanded", "true");
-    expect(layerIsOpen(document.body)).toBe(true);
+    expect(characterKeyRefused(press(document.body))).toBe(true);
     trigger.setAttribute("aria-expanded", "false");
-    expect(layerIsOpen(document.body)).toBe(false);
+    expect(characterKeyRefused(press(document.body))).toBe(false);
   });
 
   it("is a panel portalled out of its trigger", () => {
@@ -140,7 +158,7 @@ describe("a layer over the page", () => {
     trigger.setAttribute("aria-expanded", "true");
     trigger.setAttribute("aria-controls", "panel");
     place(document.createElement("section")).id = "panel";
-    expect(layerIsOpen(document.body)).toBe(true);
+    expect(characterKeyRefused(press(document.body))).toBe(true);
   });
 
   // A disclosure's region stays in the page; an open one must not silence the app.
@@ -150,6 +168,6 @@ describe("a layer over the page", () => {
     toggle.setAttribute("aria-expanded", "true");
     toggle.setAttribute("aria-controls", "region");
     place(document.createElement("div"), details).id = "region";
-    expect(layerIsOpen(document.body)).toBe(false);
+    expect(characterKeyRefused(press(document.body))).toBe(false);
   });
 });

@@ -2879,7 +2879,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.shortcuts.record": "In einem Datensatz",
   "shell.shortcuts.logActivity": "Aktivität erfassen",
   "shell.shortcuts.addTask": "Aufgabe hinzufügen",
-  "shell.shortcuts.writeEmail": "E-Mail schreiben",
+  "shell.shortcuts.writeEmail": "Nachricht schreiben",
   "shell.shortcuts.sendEmail": "E-Mail senden",
   "shell.shortcuts.submitDialog": "Dialog absenden",
   "shell.shortcuts.then": "dann",

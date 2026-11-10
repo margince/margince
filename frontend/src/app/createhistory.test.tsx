@@ -16,13 +16,14 @@ import { afterEach, describe, expect, it } from "vitest";
 import { CreateAction, type CreateField } from "../components/create";
 import { LocaleProvider } from "../i18n";
 import { forgetListAddresses } from "../lib/listreturn";
-import { routeHash, useRoute } from "../lib/router";
+import { routeIdentity } from "../lib/routeidentity";
+import { useRoute } from "../lib/router";
 import { useShortcutDispatcher } from "../lib/shortcuts";
 import { CREATE_ID } from "./nav";
 import { usePaletteShortcuts } from "./palettehotkey";
 
-// The list as the app mounts it: keyed on its address, so `#/contacts/new`
-// remounts it with the form open, and with the palette's keys live.
+// The list as the app mounts it: keyed on its identity, as ScreenView keys it,
+// so `#/contacts/new` remounts it with the form open.
 function ContactsList() {
   const route = useRoute();
   useShortcutDispatcher();
@@ -30,12 +31,12 @@ function ContactsList() {
     false,
     () => {},
     () => {},
-    route.screen,
+    route,
   );
   const fields: CreateField[] = [{ key: "name", labelText: "Name" }];
   return (
     <CreateAction
-      key={routeHash(route)}
+      key={routeIdentity(route)}
       label="New contact"
       fields={fields}
       create={async () => ({ id: "c1" })}

@@ -86,8 +86,7 @@ export const Default: Story = {
   render: () => palette(noHits),
 };
 
-// What C opens off a list screen: the product's own create commands and
-// nothing else, drawn from the real command list rather than the fixture.
+// What C opens off a list screen: the product's create commands and nothing else.
 function CreatePalette() {
   return (
     <CommandPalette

@@ -16,8 +16,9 @@ import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { holdExits } from "../design-system/presence-testing";
 import { LocaleProvider } from "../i18n";
-import type { Screen } from "../lib/router";
+import { useRoute } from "../lib/router";
 import { useShortcutDispatcher } from "../lib/shortcuts";
+import { meFixture } from "../testing/mefixture";
 import { CREATE_ID, CREATE_SCREENS } from "./nav";
 import {
   type Command,
@@ -82,12 +83,11 @@ function destinationRows(): HTMLElement[] {
 function ShellWithDialog({
   dialogOpen,
   onDialogClose = () => {},
-  screen = "home",
 }: Readonly<{
   dialogOpen: boolean;
   onDialogClose?: () => void;
-  screen?: Screen;
 }>) {
+  const route = useRoute();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [mode, setMode] = useState<PaletteMode>("all");
   usePaletteShortcuts(
@@ -97,7 +97,7 @@ function ShellWithDialog({
       setPaletteOpen(true);
     },
     () => setPaletteOpen(false),
-    screen,
+    route,
   );
   useShortcutDispatcher();
   return (
@@ -197,7 +197,7 @@ describe("the palette's single keys", () => {
     "opens the %s list's own create form on C",
     async (listScreen) => {
       window.location.hash = `#/${listScreen}`;
-      render(<ShellWithDialog dialogOpen={false} screen={listScreen} />);
+      render(<ShellWithDialog dialogOpen={false} />);
       const user = userEvent.setup();
 
       await user.keyboard("c");
@@ -206,8 +206,38 @@ describe("the palette's single keys", () => {
     },
   );
 
+  it("keeps the list's filter behind the form C opens", async () => {
+    window.location.hash = "#/contacts?view=mine";
+    render(<ShellWithDialog dialogOpen={false} />);
+    const user = userEvent.setup();
+
+    await user.keyboard("c");
+    expect(window.location.hash).toBe(`#/contacts/${CREATE_ID}?view=mine`);
+  });
+
+  it.each([
+    ["a record", "#/contacts/p-anna"],
+    ["the import page", "#/contacts/import"],
+  ])(
+    "opens the create list on C from %s, and leaves the address",
+    async (_, hash) => {
+      window.location.hash = hash;
+      const entries = globalThis.history.length;
+      render(<ShellWithDialog dialogOpen={false} />);
+      const user = userEvent.setup();
+
+      await user.keyboard("c");
+      expect(window.location.hash).toBe(hash);
+      expect(globalThis.history.length).toBe(entries);
+      expect(destinationRows().map((row) => row.textContent)).toEqual([
+        expect.stringContaining("New deal"),
+      ]);
+    },
+  );
+
   it("lists only what creates on C where the screen has no form", async () => {
-    render(<ShellWithDialog dialogOpen={false} screen="analytics" />);
+    window.location.hash = "#/analytics";
+    render(<ShellWithDialog dialogOpen={false} />);
     const user = userEvent.setup();
 
     await user.keyboard("c");
@@ -217,7 +247,8 @@ describe("the palette's single keys", () => {
   });
 
   it("keeps every command once ⌘K opens it again", async () => {
-    render(<ShellWithDialog dialogOpen={false} screen="analytics" />);
+    window.location.hash = "#/analytics";
+    render(<ShellWithDialog dialogOpen={false} />);
     const user = userEvent.setup();
 
     await user.keyboard("c{Escape}{Meta>}k{/Meta}");

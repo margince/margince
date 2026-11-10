@@ -9,22 +9,15 @@ import { type ReactNode, useState } from "react";
 import { useIdempotencyKey } from "../api/idempotencykey";
 import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
-import { shortcutCaps } from "../lib/keymap";
-import { listAddress } from "../lib/listreturn";
+import { binding, shortcutTip } from "../lib/keymap";
+import { leaveCreateForm } from "../lib/listreturn";
 import {
   ProblemError,
   problemExistingId,
   problemMessageOf,
 } from "../lib/problem";
-import {
-  navigate,
-  navigateReplacing,
-  parseHash,
-  type Route,
-  type Screen,
-} from "../lib/router";
+import { navigate, type Route, type Screen } from "../lib/router";
 import { useShortcutAria } from "../lib/shortcuts";
-import { parseParams } from "../lib/urlstate";
 import { catalogOfScreen, useSettledOpen } from "./create.dialog";
 import "./create.css";
 import "../design-system/querystates.css";
@@ -126,16 +119,6 @@ export function useCreateRecord<Created extends { id: string }>({
   });
 }
 
-// Replaced, not pushed: Back from the list must not reopen the form.
-function leaveCreateAddress(screen: Screen): void {
-  const here = parseHash(globalThis.location.hash);
-  if (here.screen !== screen || here.id === undefined) {
-    return;
-  }
-  const list = listAddress(screen);
-  navigateReplacing(parseHash(list), parseParams(list));
-}
-
 // The whole per-screen create affordance in one piece: the button, the modal,
 // its open state, and the post-create choreography. A list screen supplies
 // its label, fields, and transport — nothing else.
@@ -181,8 +164,7 @@ export function CreateAction<Created extends { id: string }>({
   ) => ReactNode | null;
   invalidate: string;
   screen: Screen;
-  // The list's own create, which `C` opens at `#/<screen>/new`; `open` when
-  // that address opened it.
+  // A list's form is its address `#/<screen>/new`, so closing it leaves that address.
   listCreate?: Readonly<{ open: boolean }>;
   // `keepOpen` makes one save "saved, next" for capture in a run: the modal
   // empties, not closes. It implies `stay`: opening the record would end a run.
@@ -229,7 +211,7 @@ export function CreateAction<Created extends { id: string }>({
   function close() {
     setCreating(false);
     if (listCreate) {
-      leaveCreateAddress(screen);
+      leaveCreateForm(screen);
     }
   }
   const existing =
@@ -309,6 +291,7 @@ export function NewRecordButton({
   opensOnCreateKey?: boolean;
 }>) {
   const createKey = useShortcutAria("create");
+  const t = useT();
   const keyShortcut = opensOnCreateKey ? createKey : undefined;
   return (
     <Button
@@ -321,7 +304,11 @@ export function NewRecordButton({
       title={
         keyShortcut === undefined
           ? undefined
-          : `${label} · ${shortcutCaps("create", navigator.platform).join(" ")}`
+          : shortcutTip(
+              label,
+              binding("create").keys,
+              t("shell.shortcuts.then"),
+            )
       }
     >
       {link ? (

@@ -8,9 +8,8 @@ import {
   capOf,
   isCharacterKey,
   KEYMAP,
-  modifierCap,
-  pressedLetter,
   shortcutCaps,
+  shortcutTip,
 } from "./keymap";
 
 const dispatched = KEYMAP.filter((entry) => entry.answeredBy === "dispatcher");
@@ -22,14 +21,12 @@ const pressed = (keys: BindingKeys) =>
 
 describe("the platform's modifier", () => {
   it.each(["MacIntel", "iPhone"])("is ⌘ on %s", (platform) => {
-    expect(modifierCap(platform)).toBe("⌘");
     expect(shortcutCaps("sidebar", platform)).toEqual(["⌘", "B"]);
     expect(shortcutCaps("search", platform)).toEqual(["⌘", "K"]);
   });
 
   // An unreported platform is more likely Windows or Linux than a Mac.
   it.each(["Win32", "Linux x86_64", ""])("is Ctrl on %j", (platform) => {
-    expect(modifierCap(platform)).toBe("Ctrl");
     expect(shortcutCaps("search", platform)).toEqual(["Ctrl", "K"]);
   });
 });
@@ -87,20 +84,13 @@ describe("aria-keyshortcuts", () => {
   });
 });
 
-describe("the letter a press names", () => {
-  it("is the key's own letter on a Latin layout, wherever it sits", () => {
-    expect(pressedLetter({ key: "z", code: "KeyY" })).toBe("z");
-    expect(pressedLetter({ key: "G", code: "KeyG" })).toBe("g");
-  });
-
-  it("is the letter at the key's place on a Cyrillic or Greek layout", () => {
-    expect(pressedLetter({ key: "п", code: "KeyG" })).toBe("g");
-    expect(pressedLetter({ key: "γ", code: "KeyG" })).toBe("g");
-  });
-
-  it("is nothing for a key that is no letter", () => {
-    expect(pressedLetter({ key: "/", code: "Slash" })).toBeNull();
-    expect(pressedLetter({ key: "ж", code: "Semicolon" })).toBeNull();
-    expect(pressedLetter({ key: "Enter", code: "Enter" })).toBeNull();
+describe("a label with its shortcut", () => {
+  it("joins a chord's caps, and a sequence's with the reader's word", () => {
+    expect(shortcutTip("Search", { kind: "single", key: "/" }, "then")).toBe(
+      "Search · /",
+    );
+    expect(
+      shortcutTip(undefined, { kind: "sequence", keys: ["g", "c"] }, "dann"),
+    ).toBe("G dann C");
   });
 });
