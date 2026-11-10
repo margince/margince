@@ -63,7 +63,7 @@ func TestAnErasureThatStartsAfterTheCheckWaitsUntilTheRequestIsWritten(t *testin
 	}))
 	defer receiver.Close()
 
-	var checked, reading atomic.Bool
+	var checked, released, reading atomic.Bool
 	var erasurePID int
 	var violations atomic.Int64
 	dial := func(ctx context.Context, network, addr string) (net.Conn, error) {
@@ -71,14 +71,14 @@ func TestAnErasureThatStartsAfterTheCheckWaitsUntilTheRequestIsWritten(t *testin
 		if err != nil {
 			return nil, err
 		}
-		// Every write after the check and before the response is read is the
-		// request; the erasure must still be blocked for each of them.
+		// Every write after the check and before a read that follows the
+		// release is the request; the erasure must still be blocked for each.
 		return writeWatchedConn{Conn: conn, onWrite: func() {
 			if checked.Load() && !reading.Load() && !erasureBlocked(t, e.owner, erasurePID) {
 				violations.Add(1)
 			}
 		}, onRead: func() {
-			if checked.Load() {
+			if released.Load() {
 				reading.Store(true)
 			}
 		}}, nil
@@ -123,7 +123,7 @@ func TestAnErasureThatStartsAfterTheCheckWaitsUntilTheRequestIsWritten(t *testin
 		erasurePID = <-pid
 		waitUntilBlocked(t, e.owner, erasurePID, committed)
 		checked.Store(true)
-		return release, nil
+		return func() { released.Store(true); release() }, nil
 	}
 
 	if got := d.attempt(ctx, target, hold); got != (outcome{statusCode: http.StatusOK}) {

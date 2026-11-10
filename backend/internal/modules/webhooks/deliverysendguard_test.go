@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -244,6 +245,15 @@ func TestAReceiverThatNeverReadsHoldsTheRowOnlyUntilTheWriteLimit(t *testing.T) 
 	}
 }
 
+// The pool ends a transaction left idle past IdleTransactionCeiling, which
+// would free the row while the request is still written. The write limit ends
+// the write first, so the database's own ceiling never ends a hold.
+func TestTheWriteLimitEndsAHoldBeforeTheDatabaseWould(t *testing.T) {
+	if writeHoldLimit >= database.IdleTransactionCeiling {
+		t.Errorf("writeHoldLimit %s is not below the idle-transaction ceiling %s", writeHoldLimit, database.IdleTransactionCeiling)
+	}
+}
+
 // The hold ends once the request is written, before the response is awaited:
 // this receiver answers only after it sees the hold end.
 func TestTheHoldEndsBeforeTheResponseIsAwaited(t *testing.T) {
@@ -268,9 +278,27 @@ func TestTheHoldEndsBeforeTheResponseIsAwaited(t *testing.T) {
 	}
 }
 
+// An informational answer before the final one is not the receiver's verdict.
+func TestAnEarlyHintBeforeTheFinal2xxCountsAsDelivered(t *testing.T) {
+	receiver := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, err := io.Copy(io.Discard, r.Body); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusEarlyHints)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer receiver.Close()
+	d, sealed := testDeliverer(t, loopbackClient(transportTLS(t, receiver)))
+	target := attemptTarget{deliveryID: ids.NewV7(), subID: ids.NewV7(), targetURL: receiver.URL, sealedSecret: sealed, payload: []byte(`{}`)}
+	if got := d.attempt(context.Background(), target, allowSend); got != (outcome{statusCode: http.StatusOK}) {
+		t.Fatalf("attempt = %+v, want the final 200", got)
+	}
+}
+
 // wroteAfterRelease records a request write that reached the wire after the
-// hold ended. Writes once the response is being read are the TLS close, not
-// the request.
+// hold ended. Writes once a read started after the release are the TLS close,
+// not the request; a read under the hold excuses no later write.
 type wroteAfterRelease struct {
 	net.Conn
 	held, released, reading *atomic.Bool
@@ -285,7 +313,7 @@ func (c wroteAfterRelease) Write(p []byte) (int, error) {
 }
 
 func (c wroteAfterRelease) Read(p []byte) (int, error) {
-	if c.held.Load() {
+	if c.released.Load() {
 		c.reading.Store(true)
 	}
 	return c.Conn.Read(p)

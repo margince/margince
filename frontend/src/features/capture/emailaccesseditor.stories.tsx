@@ -79,6 +79,7 @@ function presentation(access: Partial<EmailAccess>): EmailPresentation {
     links: [],
     thread: { members: [], next_cursor: null },
     can_reply: true,
+    can_forward: true,
     can_relink: false,
     version: 3,
     access: {

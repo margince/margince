@@ -16,13 +16,19 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
-// namedInRefusal and nameRunes bound the names the refusal carries, so the
+// namedInRefusal and nameBytes bound the names the refusal carries, so the
 // whole sentence fits the transport's fault-text ceiling (httperr.MaxFaultText)
-// and is never cut mid-name.
+// and is never cut mid-name. The ceiling counts bytes, so a name is cut by
+// bytes: three names of 4-byte runes still leave the instructions whole.
 const (
 	namedInRefusal = 3
-	nameRunes      = 32
+	nameBytes      = 28
 )
+
+// refusalName is a contract's name as the refusal carries it.
+func refusalName(name string) string {
+	return textcut.BytesMarked(name, nameBytes, "…")
+}
 
 // EnsureDealContractsShareCompany refuses to point a deal at a company that
 // the contracts filed against it do not name. ensureLinksShareCompany refuses
@@ -52,7 +58,7 @@ func EnsureDealContractsShareCompany(ctx context.Context, tx pgx.Tx, dealID ids.
 	// row scope. A role without contract read still gets only the count.
 	if auth.ReadGranted(ctx, contractObject) {
 		for _, name := range blocking[:min(len(blocking), namedInRefusal)] {
-			refusal.Named = append(refusal.Named, textcut.RunesMarked(name, nameRunes, "…"))
+			refusal.Named = append(refusal.Named, refusalName(name))
 		}
 	}
 	return refusal
@@ -70,9 +76,9 @@ type DealContractsCrossCompanyError struct {
 }
 
 func (e *DealContractsCrossCompanyError) Error() string {
-	subject, verb, them := "1 contract on this deal", "belongs", "it"
+	subject, verb, them, each := "1 contract on this deal", "belongs", "it", "it"
 	if e.Count != 1 {
-		subject, verb, them = strconv.Itoa(e.Count)+" contracts on this deal", "belong", "them"
+		subject, verb, them, each = strconv.Itoa(e.Count)+" contracts on this deal", "belong", "them", "each"
 	}
 	if len(e.Named) > 0 {
 		names := strings.Join(e.Named, ", ")
@@ -81,8 +87,10 @@ func (e *DealContractsCrossCompanyError) Error() string {
 		}
 		subject += " (" + names + ")"
 	}
-	return subject + " " + verb + " to another company. Detach " + them + ", or move " + them +
-		" to a deal of the new company, before changing the company."
+	// No edit changes a contract's company, so only a deal of that company
+	// or a deal with no company can take it.
+	return subject + " " + verb + " to another company. Detach " + them + ", or file " + each +
+		" against a deal of its own company, before changing the company."
 }
 
 // FieldFault names company_id, the field the caller sent, so the transport

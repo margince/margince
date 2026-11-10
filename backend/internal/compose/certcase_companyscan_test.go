@@ -11,6 +11,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -54,12 +55,25 @@ func scanReply(t *testing.T, scan *companyScanCase, label, quote string) string 
 	encoded, err := json.Marshal(map[string]any{"findings": []map[string]any{{
 		"kind": "question_unanswered", "title": "Send the sample reports",
 		"reason":     "Jonas asked for sample reports and nothing has gone out.",
-		"message_id": scan.label[label], "quote": quote, "action": "draft_reply",
+		"message_id": scanMessageRef(t, scan, label), "quote": quote, "action": "draft_reply",
 	}}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	return string(encoded)
+}
+
+// scanMessageRef is the ref the prompt shows for the labelled message: m1 for
+// the first message the input lists, m2 for the next.
+func scanMessageRef(t *testing.T, scan *companyScanCase, label string) string {
+	t.Helper()
+	for i, message := range scan.in.Messages {
+		if message.ID.String() == scan.label[label] {
+			return "m" + strconv.Itoa(i+1)
+		}
+	}
+	t.Fatalf("the scan lists no message labelled %q", label)
+	return ""
 }
 
 type failingScanLane struct{ err error }
@@ -89,8 +103,9 @@ func TestCompanyScanCaseMintsTheIdsTheModelSeesAndSendsTheProductionRequest(t *t
 		t.Fatalf("the case issued %d requests, want one", len(trace.Requests))
 	}
 	sent := trace.Requests[0].Messages[len(trace.Requests[0].Messages)-1].Content
-	if !strings.Contains(sent, first.label["ask"]) || strings.Contains(sent, `"ask"`) {
-		t.Error("the prompt must carry the minted id and never the corpus label")
+	if !strings.Contains(sent, `"id":"`+scanMessageRef(t, first, "ask")+`"`) || strings.Contains(sent, first.label["ask"]) ||
+		strings.Contains(sent, `"ask"`) {
+		t.Error("the prompt must name the message by its ref, never by the minted id or the corpus label")
 	}
 	if trace.Output != `{"findings":[]}` {
 		t.Errorf("trace output = %q, want the lane's reply", trace.Output)

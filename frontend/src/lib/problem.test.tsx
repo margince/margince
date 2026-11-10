@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { translate } from "../i18n";
 import { ConnectivityError } from "./connectivity";
 import {
+  EmptySuccessError,
   isConsentNotGranted,
   logUnexpectedError,
   ProblemError,
@@ -186,22 +187,22 @@ describe("problemFieldErrors", () => {
     expect(
       problemFieldErrors({
         code: "validation_error",
-        detail: "reconnect your mailbox",
+        detail: "one addressee at a time",
         details: {
           errors: [
             {
-              field: "from",
-              code: "mailbox_not_send_capable",
-              message: "reconnect your mailbox",
+              field: "recipients",
+              code: "shared_unsubscribe_token",
+              message: "one addressee at a time",
             },
           ],
         },
       }),
     ).toEqual([
       {
-        field: "from",
-        code: "mailbox_not_send_capable",
-        message: "reconnect your mailbox",
+        field: "recipients",
+        code: "shared_unsubscribe_token",
+        message: "one addressee at a time",
       },
     ]);
   });
@@ -229,9 +230,9 @@ describe("problemFieldErrors", () => {
         details: {
           errors: [
             {
-              field: "from",
-              code: "mailbox_not_send_capable",
-              message: "reconnect your mailbox",
+              field: "recipients",
+              code: "shared_unsubscribe_token",
+              message: "one addressee at a time",
             },
           ],
         },
@@ -247,7 +248,7 @@ describe("problemFieldErrors", () => {
         code: "validation_error",
         details: {
           errors: [
-            { field: "from", code: "mailbox_not_send_capable" },
+            { field: "recipients", code: "shared_unsubscribe_token" },
             { code: "shared_unsubscribe_token", message: "one at a time" },
             null,
           ],
@@ -260,7 +261,7 @@ describe("problemFieldErrors", () => {
     const problem = {
       code: "validation_error",
       details: {
-        errors: [{ field: "from", code: "not_send_capable", message: "fix" }],
+        errors: [{ field: "to", code: "invalid_address", message: "fix" }],
       },
     };
     let thrown: unknown;
@@ -270,7 +271,7 @@ describe("problemFieldErrors", () => {
       thrown = error;
     }
     expect(problemFieldErrorsOf(thrown)).toEqual([
-      { field: "from", code: "not_send_capable", message: "fix" },
+      { field: "to", code: "invalid_address", message: "fix" },
     ]);
     expect(problemFieldErrorsOf(new Error("network down"))).toEqual([]);
     expect(problemFieldErrorsOf(problem)).toEqual([]);
@@ -493,6 +494,44 @@ describe("logUnexpectedError", () => {
     logUnexpectedError(new ProblemError({ detail: "no seat" }));
 
     expect(logged).not.toHaveBeenCalled();
+  });
+});
+
+describe("a success that carried no body", () => {
+  it("throws rather than answering undefined, so the reader fails at the call", () => {
+    expect(() => unwrap({ response: { status: 200 } })).toThrow(
+      EmptySuccessError,
+    );
+  });
+
+  it("keeps the statuses whose body is absent by the contract", () => {
+    for (const status of [202, 204, 205, 304]) {
+      expect(unwrap({ response: { status } })).toBeUndefined();
+    }
+  });
+
+  it("leaves a result assembled by hand alone", () => {
+    // No response means nothing was received, so there is no server answer to
+    // judge. Fixtures and composed results read as they always did.
+    expect(unwrap({})).toBeUndefined();
+    expect(unwrap({ data: { id: "a" } })).toEqual({ id: "a" });
+  });
+
+  it("reports the problem first when a body carries one", () => {
+    expect(() =>
+      unwrap({ error: { title: "nope" }, response: { status: 500 } }),
+    ).toThrow(/nope/);
+  });
+
+  it("does not call a failure with no body a success", () => {
+    // A 404 or a 500 that carried nothing is a refusal, not a truncated
+    // answer. Called an empty success it would read to the reader as a
+    // broken server rather than the verdict it is.
+    for (const status of [400, 404, 409, 500, 503]) {
+      expect(() => unwrap({ response: { status } })).not.toThrow(
+        EmptySuccessError,
+      );
+    }
   });
 });
 

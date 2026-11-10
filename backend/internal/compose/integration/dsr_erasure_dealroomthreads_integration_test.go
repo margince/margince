@@ -9,7 +9,10 @@ package integration
 
 import (
 	"context"
+	"errors"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
@@ -65,6 +68,56 @@ func TestErasingABuyerDeletesTheThreadsTheirSeatOpened(t *testing.T) {
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'deal_room_comment' AND entity_id = $1
 		AND action = 'erase'`, sellerReply); n != 1 {
 		t.Errorf("the seller's reply deleted with the thread has %d erase tombstone(s), want 1", n)
+	}
+}
+
+// A seller reply still in flight when the erasure starts is tombstoned with the
+// thread it lands in. The reply holds the thread's lock, as replyTx does, and
+// commits only once the erasure waits on it.
+func TestASellerReplyInFlightDuringTheErasureIsTombstoned(t *testing.T) {
+	e := Setup(t)
+	buyer := seedBuyerInARoom(t, e, "racing.thread@acme.test")
+	sess := signedInBuyer(t, e, buyer)
+	seller := e.As(e.AdminUser, nil, roomErasureAdmin)
+	theirs, err := dealrooms.NewStore(e.DB()).OpenBuyerThread(seller, sess, dealrooms.OpenThreadInput{
+		Body: "Can we talk about the price?", Source: "manual",
+	})
+	if err != nil {
+		t.Fatalf("the buyer opening a thread: %v", err)
+	}
+	ctx := context.Background()
+	reply, err := OwnerConn(t).Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := reply.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("rolling back the held reply: %v", err)
+		}
+	})
+	late := ids.NewV7()
+	if _, err := reply.Exec(ctx, `SELECT id FROM deal_room_thread WHERE id = $1 FOR UPDATE`, theirs.Id); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := reply.Exec(ctx, `INSERT INTO deal_room_comment (id, room_id, thread_id, body, author_user_id, source, captured_by)
+		VALUES ($1, $2, $3, 'We can move on price', $4, 'manual', 'seed')`, late, buyer.room, theirs.Id, e.AdminUser); err != nil {
+		t.Fatal(err)
+	}
+
+	erased := make(chan error, 1)
+	go func() {
+		erased <- compose.ComposedEraser(e.Pool, nil, nil).EraseContact(seller, buyer.contact.UUID, "subject request")
+	}()
+	waitUntilBlockedBy(t, reply)
+	if err := reply.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-erased; err != nil {
+		t.Fatalf("erasing the subject: %v", err)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'deal_room_comment' AND entity_id = $1
+		AND action = 'erase'`, late); n != 1 {
+		t.Errorf("the reply that landed during the erasure has %d erase tombstone(s), want 1", n)
 	}
 }
 

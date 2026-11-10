@@ -366,9 +366,13 @@ func TestASendCheckWaitsForAnUncommittedErasureAndRefuses(t *testing.T) {
 	committed := make(chan error, 1)
 	r.arm(func() {
 		locked, release := make(chan struct{}), make(chan struct{})
+		var erasure int32
 		go func() {
 			ctx := principal.WithWorkspaceID(context.Background(), r.e.WS)
 			committed <- database.WithWorkspaceTx(ctx, r.e.Pool, func(tx pgx.Tx) error {
+				if err := tx.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&erasure); err != nil {
+					return err
+				}
 				if err := webhooks.ScrubSubjectDeliveriesTx(ctx, tx, "contact", []ids.UUID{r.subject}); err != nil {
 					return err
 				}
@@ -380,7 +384,7 @@ func TestASendCheckWaitsForAnUncommittedErasureAndRefuses(t *testing.T) {
 		<-locked
 		go func() {
 			defer close(release)
-			waitForALockWaiter(t, owner)
+			waitForAWaiterOn(t, owner, erasure)
 		}()
 	})
 	r.receiver.set(true, http.StatusOK)
@@ -391,16 +395,20 @@ func TestASendCheckWaitsForAnUncommittedErasureAndRefuses(t *testing.T) {
 	r.assertNothingSentSince(t, 0)
 }
 
-// waitForALockWaiter returns once some session in this database waits on a
-// row lock. Its bound makes a check that never blocks fail the test instead
-// of hanging it.
-func waitForALockWaiter(t *testing.T, owner *pgx.Conn) {
+// waitForAWaiterOn returns once some session waits on a lock the backend
+// holder holds, so a waiter on any other lock cannot release the erasure. Its
+// bound makes a check that never blocks fail the test instead of hanging it.
+func waitForAWaiterOn(t *testing.T, owner *pgx.Conn, holder int32) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	for {
 		var waiting int
+		if _, err := owner.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
+			t.Errorf("clearing the activity snapshot: %v", err)
+			return
+		}
 		if err := owner.QueryRow(ctx, `SELECT count(*) FROM pg_stat_activity
-			WHERE wait_event_type = 'Lock' AND datname = current_database()`).Scan(&waiting); err != nil {
+			WHERE $1 = ANY(pg_blocking_pids(pid))`, holder).Scan(&waiting); err != nil {
 			t.Errorf("no session came to wait on the erasure's row lock: %v", err)
 			return
 		}

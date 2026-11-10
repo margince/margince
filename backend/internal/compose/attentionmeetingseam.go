@@ -24,6 +24,10 @@ import (
 // that is already the lane. The day meetings and the timed ones are read with
 // a limit each. A calendar's all-day rows lead the lane, and they can never
 // take the places of the meetings about to start.
+//
+// Every meeting read here and the next customer meeting reuse their generic
+// plans (listMeetings). The kind and the meeting state are literals, and a
+// limit caps every read. One plan serves every reader and window.
 type attentionMeetings struct{ store *activities.Store }
 
 // soonestFirst is the store's ascending order on the meeting's start.
@@ -62,13 +66,12 @@ func (m attentionMeetings) openIn(
 	if !applyMeetingScope(ctx, &in, scope, owner) {
 		return nil, nil
 	}
-	return listReusingPlans(ctx, m.store, in)
+	return listMeetings(ctx, m.store, in)
 }
 
-// listReusingPlans reads a meeting window with each statement's generic plan
-// reused (database.ReuseGenericPlans). The window spells its kind and its cap
-// as literals, so one plan serves every reader.
-func listReusingPlans(ctx context.Context, store *activities.Store, in activities.ListActivitiesInput) ([]crmcontracts.Activity, error) {
+// listMeetings reads one lane's meetings with each statement's generic plan
+// reused.
+func listMeetings(ctx context.Context, store *activities.Store, in activities.ListActivitiesInput) ([]crmcontracts.Activity, error) {
 	var rows []crmcontracts.Activity
 	err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
 		var err error
@@ -228,7 +231,7 @@ func (m attentionMeetingsAwaitingOutcome) Since(
 	if !applyMeetingScope(ctx, &in, scope, owner) {
 		return nil, nil
 	}
-	rows, err := listReusingPlans(ctx, m.store, in)
+	rows, err := listMeetings(ctx, m.store, in)
 	if err != nil {
 		return nil, err
 	}

@@ -17,6 +17,7 @@ import {
 import {
   isConsentNotGranted,
   ProblemError,
+  problemCodeOf,
   problemFieldErrorsOf,
   problemMessageOf,
   throwProblem,
@@ -24,9 +25,8 @@ import {
 import { navigate } from "../../lib/router";
 import { useSendPermission } from "../../lib/usesendpermission";
 import type { ChosenFile } from "./composeattachments";
-import type { Grounding } from "./composedraftcall";
 import type { ComposeFields } from "./composefields";
-import { composedLinks, type Link } from "./composelinks";
+import { composedLinks, type Link, type SendGrounding } from "./composelinks";
 import type { RelinkKind } from "./composerelink";
 import type { useSavedDraft } from "./composesaveddraft";
 import { scheduleFields } from "./composeschedule";
@@ -40,21 +40,20 @@ type Preview = components["schemas"]["SendAuthorizationPreview"];
 // the server's own message, so this surface invents no copy for it.
 export type Refusal = "consent" | "mailbox" | "sharedUnsubscribe" | null;
 
-// Consent is a sentinel-mapped 409 that names itself. The two pre-flight
-// refusals are 422s, told apart by the field and code the server asserted.
+// Consent is a 409 naming itself, a mailbox that cannot send a 422 naming no
+// field, and a shared unsubscribe link a 422 field fault on the recipients.
 export function refusalOf(error: unknown): Refusal {
   if (error instanceof ProblemError && isConsentNotGranted(error.problem)) {
     return "consent";
   }
-  for (const { field, code } of problemFieldErrorsOf(error)) {
-    if (field === "from" && code === "mailbox_not_send_capable") {
-      return "mailbox";
-    }
-    if (field === "recipients" && code === "shared_unsubscribe_token") {
-      return "sharedUnsubscribe";
-    }
+  if (problemCodeOf(error) === "mailbox_not_send_capable") {
+    return "mailbox";
   }
-  return null;
+  const shared = problemFieldErrorsOf(error).some(
+    ({ field, code }) =>
+      field === "recipients" && code === "shared_unsubscribe_token",
+  );
+  return shared ? "sharedUnsubscribe" : null;
 }
 
 type SendRequest = {
@@ -263,7 +262,7 @@ export function useComposeSend({
   sourceBlocked?: boolean;
   anchorActivity: Activity | undefined;
   /** What a new message is about; null on an anchored send. */
-  grounding: Grounding | null;
+  grounding: SendGrounding | null;
   projectId: string;
   needsDeal: boolean;
   savedDraft: ReturnType<typeof useSavedDraft>;

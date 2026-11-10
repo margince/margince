@@ -37,6 +37,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
+// dealVerdictRefs lets a lane script its reply by record id. The reply reaches
+// the pass in the refs the request showed each activity, stage and criterion by.
+func dealVerdictRefs(lane completer) completer {
+	return inRefs{inner: lane, shown: []shownBy{
+		{key: "activity_id", query: `SELECT left(body, 40) FROM activity WHERE id = $1`},
+		{key: "stage_id", query: `SELECT 'Later stage: ' || name || ' (' FROM stage WHERE id = $1`},
+		{key: "criterion_id", query: `SELECT ': ' || label || ' (criterion_id' FROM stage_exit_criterion WHERE id = $1`},
+	}}
+}
+
 // dealVerdictLane answers every deal with the same three changes, citing the
 // note the test logged. It counts its calls, and runs during while the pass
 // waits for it: between the read and the write.
@@ -105,7 +115,7 @@ func setupDealVerdict(t *testing.T) *dealVerdictEnv {
 		t.Fatal(err)
 	}
 	v.lane = &dealVerdictLane{cite: &v.note, date: signing, probability: stagePct - 10}
-	v.pass = newDealVerdictPass(e.Pool, v.lane, slog.New(slog.DiscardHandler))
+	v.pass = newDealVerdictPass(e.Pool, dealVerdictRefs(v.lane), slog.New(slog.DiscardHandler))
 	v.pass.now = func() time.Time { return v.now.Add(time.Minute) }
 	return v
 }

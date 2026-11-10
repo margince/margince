@@ -28323,7 +28323,19 @@ export interface components {
             links: components["schemas"]["ActivityLink"][];
             thread?: components["schemas"]["EmailThreadPage"];
             access: components["schemas"]["EmailAccess"];
+            /**
+             * @description True when this reader may answer the message: they read it inside its audience and
+             *     hold `activity.create`, because a reply is a new message they write. False otherwise:
+             *     a read seat's send is refused with `403 seat_tier_insufficient`, and a full seat's
+             *     without the grant with `403 permission_denied`.
+             */
             can_reply: boolean;
+            /**
+             * @description True when this reader holds `activity.create`. A forward is a new message the reader
+             *     writes to whoever they choose, so it asks nothing of the message's audience beyond
+             *     this read.
+             */
+            can_forward: boolean;
             can_relink: boolean;
             /** @description The activity's version, for the If-Match its own actions send. */
             version: components["schemas"]["RowVersion"];
@@ -33285,6 +33297,8 @@ export interface components {
             /** Format: uuid */
             contact_id: string;
             full_name: string;
+            /** @description Whether this caller may file an activity under this contact. Computed with the same row-scope and write-share predicate the attach gate uses, so a mail started from the company links only the recipients this is true for. A read-only share grants no attach right. The server rechecks every write. */
+            attachable: boolean;
             title?: string | null;
             /** @description A provider-sourced job title, populated ONLY where the canonical title is empty (PO-EXT-9): a bought title fills a blank, never overwrites or seconds one a human typed. */
             provider_title?: string | null;
@@ -38098,7 +38112,7 @@ export interface components {
             expected_arr_minor?: number | null;
             /**
              * Format: uuid
-             * @description The company this deal is for. Changing it is refused 422 (`deal_contracts_cross_company`) while contracts filed against the deal name another company, because a contract on a deal is visible through that deal alone. Detach those contracts (`deal_id: null` on the contract) or file them against a deal of the new company first. Null clears the company and is not refused.
+             * @description The company this deal is for. Changing it is refused 422 (`deal_contracts_cross_company`) while contracts filed against the deal name another company, because a contract on a deal is visible through that deal alone. Detach those contracts (`deal_id: null` on the contract) or file each against a deal of its own company first; an edit never changes a contract's company, only a company merge does. Null clears the company and is not refused.
              */
             company_id?: string | null;
             /**
@@ -58779,6 +58793,20 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
+        /**
+         * @description The send failed validation, or no mailbox can carry it. The second answers with the top-level
+         *     `code: mailbox_not_send_capable` and no `details.errors`, because no field of the request can
+         *     fix it: the sender must connect a mailbox that can send, or an administrator must set up
+         *     sending for the installation. A scheduled send is checked the same way when it is created.
+         */
+        SendValidationError: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
     };
     parameters: {
         /** @description The type of the record to build around. */
@@ -68370,7 +68398,8 @@ export interface operations {
                 sort?: components["parameters"]["Sort"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
                 include_archived?: components["parameters"]["IncludeArchived"];
-                kind?: "email" | "call" | "meeting" | "note" | "task" | "message";
+                /** @description Activities of these kinds. Repeat the parameter for several (`kind=email&kind=message`), so a page of one kind of work is never filled by another kind it does not show. */
+                kind?: ("email" | "call" | "meeting" | "note" | "task" | "message")[];
                 /** @description Calls that ended this way. Matches calls only. */
                 call_outcome?: "reached" | "not_reached" | "voicemail" | "call_back_later" | "put_through";
                 /**
@@ -69476,6 +69505,18 @@ export interface operations {
             };
         };
         responses: {
+            /**
+             * @description Scheduled, not sent (ADR-0104). No activity and no delivery row exist yet;
+             *     the timeline stays silent until it fires.
+             */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledSend"];
+                };
+            };
             /** @description Accepted for send (queued); the resulting activity is logged. */
             202: {
                 headers: {
@@ -69509,7 +69550,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            422: components["responses"]["ValidationError"];
+            422: components["responses"]["SendValidationError"];
         };
     };
     sendCompanyEmail: {
@@ -69611,7 +69652,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            422: components["responses"]["ValidationError"];
+            422: components["responses"]["SendValidationError"];
         };
     };
     listScheduledSends: {

@@ -46,8 +46,10 @@ import {
   useConfiguredCompanyZone,
 } from "./lib/companyzone";
 import { useInstallationDescribed } from "./lib/installationcompany";
+import { notifyNavigate } from "./lib/instruments";
 import { markJourney } from "./lib/journeymarks";
 import { SPA_RELEASE } from "./lib/release";
+import { routePattern } from "./lib/routepattern";
 import { navigateReplacing, type Screen } from "./lib/router";
 import { AuthProbeError, consumeAuthExitNotice, useMe } from "./lib/session";
 import {
@@ -84,6 +86,8 @@ export function App() {
   // credential out of it (lib/router.tsx). A credential must leave the bar
   // whatever this function renders instead.
   const route = useRoute();
+  const pattern = routePattern(route);
+  useEffect(() => notifyNavigate(pattern), [pattern]);
   const queryClient = useQueryClient();
   const { locale } = useLocale();
   const previousLocale = useRef(locale);

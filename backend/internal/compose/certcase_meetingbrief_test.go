@@ -17,6 +17,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -44,13 +45,13 @@ func (s *briefStub) Complete(_ context.Context, req model.Request) (model.Respon
 // would read the same about any account.
 const briefToken = "quote tracking"
 
-// briefCaseFor builds the case over a meeting whose own activity id is the
-// record a correct brief cites. The meeting is always citable (knownRecords
-// seeds it), so the test needs no id smuggled out of the prompt.
+// briefCaseFor builds the case over a meeting whose own activity is the record
+// a correct brief cites. It returns the ref the request shows it by. The
+// meeting is always citable, since knownRecords seeds it.
 func briefCaseFor() (*meetingBriefCase, string) {
 	meeting := ids.NewV7().String()
 	now := time.Date(2026, time.August, 4, 12, 0, 0, 0, time.UTC)
-	return &meetingBriefCase{
+	c := &meetingBriefCase{
 		in: meetingbrief.Input{
 			ActivityID: meeting,
 			Subject:    "Coffee with Rainer",
@@ -62,7 +63,13 @@ func briefCaseFor() (*meetingBriefCase, string) {
 		mustCite:  meeting,
 		mustName:  briefToken,
 		citeLabel: "wish_list",
-	}, meeting
+	}
+	shown := regexp.MustCompile(`"ActivityID":"([a-z]+[0-9]+)"`).
+		FindStringSubmatch(meetingbrief.BriefRequest(c.in, "en").Messages[0].Content)
+	if shown == nil {
+		return c, ""
+	}
+	return c, shown[1]
 }
 
 // sectionsReply renders one grounded sentence in the shape the site parses.

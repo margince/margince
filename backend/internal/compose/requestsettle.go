@@ -392,5 +392,5 @@ func (s *RequestSettler) ask(ctx context.Context, batch []settleCandidate) (sett
 	if msg := validateSettlePayload(payload, batch); msg != "" {
 		return settleAnswer{}, fmt.Errorf("request settle: %s", msg)
 	}
-	return settleAnswer{results: payload.Results, judge: judgeOf(resp)}, nil
+	return settleAnswer{results: resolveBatchRefs(payload.Results, settleRefs(batch)), judge: judgeOf(resp)}, nil
 }

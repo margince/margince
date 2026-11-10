@@ -67,8 +67,13 @@ func applyCompanyLinkPatch(ctx context.Context, tx pgx.Tx, current crmcontracts.
 	if err := auth.EnsureReferenceTarget(ctx, tx, "company_id", "company", companyID.UUID); err != nil {
 		return err
 	}
-	if err := ensureContractsShareCompany(ctx, tx, ids.From[ids.DealKind](ids.UUID(current.Id)), companyID); err != nil {
-		return err
+	// Resending the company a deal already names moves nothing, so an older
+	// mismatch does not refuse an edit of some other field.
+	unchanged := current.CompanyId != nil && ids.UUID(*current.CompanyId) == companyID.UUID
+	if !unchanged {
+		if err := ensureContractsShareCompany(ctx, tx, ids.From[ids.DealKind](ids.UUID(current.Id)), companyID); err != nil {
+			return err
+		}
 	}
 	p.Set("company_id", current.CompanyId, companyID)
 	return nil

@@ -139,7 +139,7 @@ it("names masked money as withheld while leaving unrelated fields editable", asy
 it("shows why a company change is refused while the deal's contracts name another company", async () => {
   const user = userEvent.setup();
   const refusal =
-    "1 contract on this deal (MSA-2026) belongs to another company. Detach it, or move it to a deal of the new company, before changing the company.";
+    "1 contract on this deal (MSA-2026) belongs to another company. Detach it, or file it against a deal of its own company, before changing the company.";
   installFetchStub({
     "GET /me": meRoute({ deal: ["read", "update"] }, { seat: "full" }),
     "GET /companies": () =>

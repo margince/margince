@@ -365,6 +365,7 @@ it("opens a follow-up on the conversation it waits on", async () => {
           held_by_others: false,
         },
         can_reply: true,
+        can_forward: true,
         can_relink: false,
         version: 1,
       }),

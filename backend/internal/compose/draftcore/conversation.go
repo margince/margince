@@ -7,6 +7,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -52,6 +53,14 @@ func TurnText(body string) string {
 // reaches a different verdict from its neighbour.
 func (t Turn) TheirWord() bool {
 	return !t.ByColleague && t.Direction == string(crmcontracts.ActivityDirectionInbound)
+}
+
+// FromThem says the other side wrote this activity: the row's voice where it
+// names a side, and the transport where it does not. A row neither answers is
+// not theirs, so a draft that cannot tell treats it as context.
+func FromThem(activity crmcontracts.Activity) bool {
+	ours, known := activities.WroteItOurSide(activity)
+	return known && !ours
 }
 
 // Conversation folds newest-first activities into at most limit turns. It

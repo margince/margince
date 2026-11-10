@@ -102,16 +102,56 @@ export function throwProblem(
 // The data arm of an API call's result: the arm whose error is absent.
 type ApiAnswer<R> = R extends { data: infer D; error?: undefined } ? D : never;
 
+// EmptySuccessError is a success that carried no body where the contract says
+// one belongs: a proxy's interstitial with a 200 on it, or a truncated answer.
+//
+// It is an Error rather than `undefined` data so a reader fails where the call
+// is, not later where a field is read.
+//
+// Not retried. An intermediary can answer a read with a challenge carrying a
+// success status.
+//
+// A retry would ask it again for every attempt the policy allows, and the
+// challenge still stands.
+//
+// queryclient.test.ts holds that, under "never retries a challenge an
+// intermediary answered with".
+export class EmptySuccessError extends Error {
+  readonly status: number;
+  constructor(status: number, t?: (key: MessageKey) => string) {
+    super(problemMessage(null, t));
+    this.name = "EmptySuccessError";
+    this.status = status;
+  }
+}
+
+// bodilessStatuses are the answers whose data is absent BY the contract, so an
+// absent body is the documented one rather than a broken one.
+const bodilessStatuses = new Set([202, 204, 205, 304]);
+
 // unwrap answers an API call's data, or throws its problem as throwProblem does.
-export function unwrap<R extends { data?: unknown; error?: unknown }>(
-  result: R,
-  t?: (key: MessageKey) => string,
-): ApiAnswer<R>;
+//
+// A success with no data throws too, but only when a real response says a body
+// was due. A result assembled by hand carries no response, and those keep the
+// old reading: the invariant is about what a server sent.
+export function unwrap<
+  R extends { data?: unknown; error?: unknown; response?: { status: number } },
+>(result: R, t?: (key: MessageKey) => string): ApiAnswer<R>;
 export function unwrap(
-  result: { data?: unknown; error?: unknown },
+  result: { data?: unknown; error?: unknown; response?: { status: number } },
   t?: (key: MessageKey) => string,
 ): unknown {
   if (result.error) throwProblem(result.error, t);
+  const status = result.response?.status;
+  if (
+    result.data === undefined &&
+    status !== undefined &&
+    status >= 200 &&
+    status < 300 &&
+    !bodilessStatuses.has(status)
+  ) {
+    throw new EmptySuccessError(status, t);
+  }
   return result.data;
 }
 

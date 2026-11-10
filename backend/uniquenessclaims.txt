@@ -101,7 +101,7 @@ internal/compose/company360/suggestions.go#func candidateSuggestions
 internal/compose/companybrief/ask.go#const askSystem
 internal/compose/companybrief/ask.go#var askInstruction
 internal/compose/companybrief/ask_test.go#func declaredQuestions
-internal/compose/companybrief/write.go#func recordNames
+internal/compose/companybrief/evidencenames.go#func recordNames
 internal/compose/companybrief/write.go#var knownNature
 internal/compose/companydossier/doc.go#package companydossier
 internal/compose/companydossier/input.go#func KnownRecords

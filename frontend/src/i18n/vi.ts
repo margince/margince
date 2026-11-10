@@ -7348,6 +7348,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.draftSaving": "Đang lưu…",
   "compose.earlierThreads_one": "{count} chuỗi thư trước",
   "compose.earlierThreads_other": "{count} chuỗi thư trước",
+  "compose.earlierThreadsAtLeast_one": "{count}+ chuỗi thư trước",
+  "compose.earlierThreadsAtLeast_other": "{count}+ chuỗi thư trước",
+  "compose.earlierThreadsMayExist": "Có thể còn chuỗi thư trước đó",
   "compose.threadChange": "Đổi",
   "compose.threadContinue": "Tiếp tục chuỗi thư",
   "compose.threadsRecent": "Chuỗi thư gần đây",
@@ -9730,7 +9733,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.reason.deal_pipeline_fixed":
     "Deal này nằm trong quy trình khác với quy trình trong tệp. Nhập không chuyển deal giữa các quy trình nên hàng bị bỏ qua.",
   "import.reason.deal_company_has_contracts":
-    "Deal này có hợp đồng thuộc công ty hiện tại của nó nên hàng bị bỏ qua. Hãy tách các hợp đồng khỏi deal hoặc chuyển chúng sang một deal của công ty mới rồi nhập lại.",
+    "Deal này có hợp đồng thuộc một công ty khác với công ty trong hàng này nên hàng bị bỏ qua. Hãy tách các hợp đồng khỏi deal hoặc chuyển từng hợp đồng sang một deal của chính công ty mà hợp đồng đó thuộc về rồi nhập lại.",
   "import.reason.deal_already_closed":
     "Deal này đã đóng nên hàng bị bỏ qua. Nhập không mở lại deal đã đóng.",
   "import.reason.fx_rate_missing":
@@ -20469,6 +20472,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "standing.mark.group_one": "{count} mục, {range}",
   "standing.mark.group_other": "{count} mục, {range}",
   "standing.mark.range": "{from} đến {to}",
+  "standing.mark.label": "{what}, {when}",
   "standing.mark.more_one": "{count} mục nữa trong Lịch sử",
   "standing.mark.more_other": "{count} mục nữa trong Lịch sử",
   "standing.peek.partial_one": "Hiển thị {shown}/{count}.",

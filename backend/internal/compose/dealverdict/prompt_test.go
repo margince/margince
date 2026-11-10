@@ -18,7 +18,7 @@ func TestThePromptStatesTheLimitsTheGuardsHold(t *testing.T) {
 		t.Errorf("system prompt does not name the %d-month close-date limit:\n%s", maxMonthsAhead, system)
 	}
 	in := guardInput()
-	limit := fmt.Sprintf("Raise limit: %d%%", in.StageProbability)
+	limit := fmt.Sprintf("Highest probability a raise may set: %d%%", in.StageProbability)
 	if prompt := Prompt(fence, in); !strings.Contains(prompt, limit) {
 		t.Fatalf("prompt does not state %q:\n%s", limit, prompt)
 	}

@@ -305,6 +305,7 @@ describe("ComposeModal dead recipients", () => {
             data: [
               {
                 contact_id: "p-1",
+                attachable: true,
                 full_name: "Anna Weiss",
                 primary_email: "anna@dead.example",
               },

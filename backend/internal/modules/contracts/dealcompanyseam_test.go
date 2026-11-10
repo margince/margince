@@ -11,7 +11,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // The refusal tells the user which contracts block, the rule, and what clears
@@ -27,7 +26,7 @@ func TestTheDealCompanyRefusalNamesTheContractsAndWhatToDo(t *testing.T) {
 	if field != "company_id" || code != "deal_contracts_cross_company" {
 		t.Errorf("fault = (%q, %q), want the deal's company_id and the typed code", field, code)
 	}
-	for _, want := range []string{"2 contracts", "MSA-2026", "Pilot addendum", "another company", "Detach them", "deal of the new company"} {
+	for _, want := range []string{"2 contracts", "MSA-2026", "Pilot addendum", "another company", "Detach them", "file each against a deal of its own company"} {
 		if !strings.Contains(message, want) {
 			t.Errorf("the message lacks %q: %q", want, message)
 		}
@@ -37,17 +36,30 @@ func TestTheDealCompanyRefusalNamesTheContractsAndWhatToDo(t *testing.T) {
 // A long list is cut and says so, and the whole sentence fits the transport's
 // ceiling, so no name is cut off by it.
 func TestALongListOfBlockingContractsIsCutAndFitsTheFaultText(t *testing.T) {
-	long := strings.Repeat("Master services agreement ", 4)
-	refusal := &DealContractsCrossCompanyError{Count: 9}
-	for range namedInRefusal {
-		refusal.Named = append(refusal.Named, textcut.RunesMarked(long, nameRunes, "…"))
-	}
-	message := refusal.Error()
-	if !strings.Contains(message, "and 6 more") {
-		t.Errorf("a cut list reads as complete: %q", message)
-	}
-	if utf8.RuneCountInString(message) > httperr.MaxFaultText {
-		t.Errorf("the message is %d runes, over the %d the transport keeps", utf8.RuneCountInString(message), httperr.MaxFaultText)
+	for name, long := range map[string]string{
+		"ascii":     strings.Repeat("Master services agreement ", 4),
+		"multibyte": strings.Repeat("契約書", 40),
+		"four-byte": strings.Repeat("𝔘", 60),
+	} {
+		t.Run(name, func(t *testing.T) {
+			refusal := &DealContractsCrossCompanyError{Count: 999}
+			for range namedInRefusal {
+				refusal.Named = append(refusal.Named, refusalName(long))
+			}
+			message := refusal.Error()
+			if !strings.Contains(message, "and 996 more") {
+				t.Errorf("a cut list reads as complete: %q", message)
+			}
+			if len(message) > httperr.MaxFaultText {
+				t.Errorf("the message is %d bytes, over the %d the transport keeps", len(message), httperr.MaxFaultText)
+			}
+			if !strings.HasSuffix(message, "before changing the company.") {
+				t.Errorf("the instructions were cut off: %q", message)
+			}
+			if !utf8.ValidString(message) {
+				t.Errorf("a name was cut inside a character: %q", message)
+			}
+		})
 	}
 }
 
@@ -55,7 +67,7 @@ func TestALongListOfBlockingContractsIsCutAndFitsTheFaultText(t *testing.T) {
 func TestTheRefusalWithoutNamesStillCountsAndInstructs(t *testing.T) {
 	message := (&DealContractsCrossCompanyError{Count: 1}).Error()
 	if message != "1 contract on this deal belongs to another company. "+
-		"Detach it, or move it to a deal of the new company, before changing the company." {
+		"Detach it, or file it against a deal of its own company, before changing the company." {
 		t.Errorf("message = %q", message)
 	}
 }

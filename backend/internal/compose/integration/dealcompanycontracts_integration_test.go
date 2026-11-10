@@ -210,6 +210,17 @@ func TestTheCompanyMovesThatShowNoContractToAnotherCompanyStayAllowed(t *testing
 			t.Errorf("giving a company-less deal its contract's company was refused: %v", err)
 		}
 	})
+	t.Run("resending the company a mismatched deal already names", func(t *testing.T) {
+		// Seeded past the writers: a deal moved before the refusal existed.
+		deal := f.dealFor(t, &f.contoso, nil)
+		f.e.WsExec(t, `INSERT INTO contract (id, company_id, deal_id, title, value_minor, currency,
+		                                   value_basis, source, captured_by)
+		             VALUES ($1, $2, $3, 'Acme MSA', 250000, 'EUR', 'total', 'manual', 'seed')`,
+			ids.NewV7(), f.acme, deal)
+		if err := f.moveTo(admin, deal, f.contoso); err != nil {
+			t.Errorf("an edit that keeps the deal's company was refused: %v", err)
+		}
+	})
 	t.Run("clearing the company", func(t *testing.T) {
 		deal := f.dealFor(t, &f.acme, nil)
 		f.acmeContractOn(t, deal, "MSA-4")

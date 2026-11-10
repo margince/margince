@@ -7,6 +7,7 @@ package capture
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -20,18 +21,29 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
+// medicalDocumentBrain answers the one thread it is shown with a fixed kind,
+// by the ref the request fenced it under.
 type medicalDocumentBrain struct {
-	question ids.UUID
-	kind     string
-	calls    int
+	kind  string
+	calls int
 }
 
-func (b *medicalDocumentBrain) Complete(context.Context, model.Request) (model.Response, error) {
+func (b *medicalDocumentBrain) Complete(_ context.Context, req model.Request) (model.Response, error) {
 	b.calls++
-	return model.Response{Text: fmt.Sprintf(`{"results":[{"id":%q,"verdict":%q,"confidence":0.95}]}`, b.question.String(), b.kind)}, nil
+	marker, ok := promptfence.MarkerIn(req.System)
+	if !ok {
+		return model.Response{}, errors.New("confidentiality prompt declared no data boundary")
+	}
+	parts := strings.Split(req.Messages[0].Content, "<"+marker+` id="`)[1:]
+	if len(parts) != 1 {
+		return model.Response{}, fmt.Errorf("the prompt fenced %d threads, want one", len(parts))
+	}
+	ref, _, _ := strings.Cut(parts[0], `"`)
+	return model.Response{Text: fmt.Sprintf(`{"results":[{"id":%q,"verdict":%q,"confidence":0.95}]}`, ref, b.kind)}, nil
 }
 
 func TestAnUnreadMedicalDocumentKeepsItsPersonalClassification(t *testing.T) {
@@ -54,7 +66,7 @@ func TestAnUnreadMedicalDocumentKeepsItsPersonalClassification(t *testing.T) {
 			}); err != nil {
 				t.Fatal(err)
 			}
-			brain := &medicalDocumentBrain{question: question, kind: kind}
+			brain := &medicalDocumentBrain{kind: kind}
 			engine := compose.NewConfidentialityVerdictEngine(e.Pool, brain, slog.Default()).WithObjectStore(blob)
 			if err := engine.RunWorkspace(principal.WithWorkspaceID(t.Context(), e.WS), 0); err != nil {
 				t.Fatal(err)
