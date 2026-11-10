@@ -55,8 +55,8 @@ const runStatusFailed = "failed"
 // aliased alias as its trigger. RetryRun rebuilds the firing from that row's
 // envelope, so a sweep that removed it would end the retry.
 func RetryableTriggerSQL(alias string) string {
-	return `EXISTS (SELECT 1 FROM workflow_run retryable WHERE retryable.trigger_event = ` + alias +
-		`.id AND retryable.status = '` + runStatusFailed + `')`
+	return `EXISTS (SELECT 1 FROM workflow_run retryable WHERE retryable.trigger_event::text = (` + kevents.OutboxEventIDSQL(alias) +
+		`) AND retryable.status = '` + runStatusFailed + `')`
 }
 
 // RetryRefusal names why a failed run may not be re-driven, in the vocabulary
@@ -96,7 +96,7 @@ type RetryOutcome struct {
 // card left over from before they turned it off. The join to event_outbox is
 // LEFT, because a missing envelope is an ANSWER here (refusal 3) rather than a
 // reason to report the run as absent.
-const retryCandidateSQL = `
+var retryCandidateSQL = `
 WITH target AS (
   SELECT id, status, handler, trigger_event, idempotency_key,
          -- The BASE key: this run's own attempt marker stripped. Retrying a
@@ -116,7 +116,7 @@ SELECT t.status, t.handler, a.id, a.params, a.owner_id, o.envelope,
   FROM target t
   JOIN automation a ON a.archived_at IS NULL AND a.enabled
    AND ` + runOfAutomationSQL + `
-  LEFT JOIN event_outbox o ON o.id = t.trigger_event`
+  LEFT JOIN event_outbox o ON (` + kevents.OutboxEventIDSQL("o") + `) = t.trigger_event::text`
 
 // retryCandidate is one recovered firing, ready to re-dispatch.
 type retryCandidate struct {

@@ -171,6 +171,7 @@ var ErrNoEffectClaims = errors.New("automation: no effect claim store configured
 // through. One struct rather than a five-parameter signature: adding a
 // seam is one field here, not a break at every existing call site.
 type Executors struct {
+	Inquiries *InquiryService
 	Provider  datasource.SystemOfRecordProvider
 	Approvals Approvals
 	Comms     Comms

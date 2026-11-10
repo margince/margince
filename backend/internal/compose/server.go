@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
 	"github.com/margince/margince/backend/internal/modules/assignments"
 	"github.com/margince/margince/backend/internal/modules/assurance"
-	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/commissions"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -266,9 +265,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// the API server holds no engine otherwise. It carries no background
 		// loop — nothing here starts dispatching; the handler drives one run
 		// through it on demand, exactly as the time scan drives one on a tick.
-		automationHandlers: automation.NewHandlers(InstallationDB(pool)).
-			WithFieldCatalog(customfields.NewService(pool, nil)).
-			WithRetryEngine(NewWorkflowEngine(InstallationDB(pool))),
+		automationHandlers: newAutomationHandlers(pool),
 		voiceHandlers: ai.NewHandlers(InstallationDB(pool), NewSeatBudget(pool)).WithLocks(loadedLocks).
 			WithVoiceKnownSpeakers(voiceKnownSpeakers(pool)).WithVoiceSentMail(voiceSentMail(pool)),
 		// The names seam is the WEB surface's: a reader reading "explain this

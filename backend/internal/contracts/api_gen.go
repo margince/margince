@@ -15847,6 +15847,27 @@ func (e LeadQualificationEvidenceTrigger) Valid() bool {
 	}
 }
 
+// Defines values for LeadRoutingRuleField.
+const (
+	LeadRoutingRuleFieldCandidateCompanyKey LeadRoutingRuleField = "candidate_company_key"
+	LeadRoutingRuleFieldCompanyName         LeadRoutingRuleField = "company_name"
+	LeadRoutingRuleFieldOrigin              LeadRoutingRuleField = "origin"
+)
+
+// Valid indicates whether the value is a known member of the LeadRoutingRuleField enum.
+func (e LeadRoutingRuleField) Valid() bool {
+	switch e {
+	case LeadRoutingRuleFieldCandidateCompanyKey:
+		return true
+	case LeadRoutingRuleFieldCompanyName:
+		return true
+	case LeadRoutingRuleFieldOrigin:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LeadSourceIntent.
 const (
 	LeadSourceIntentLeadSourceIntentHigh    LeadSourceIntent = "high"
@@ -25786,6 +25807,27 @@ func (e WebhookSubscriptionState) Valid() bool {
 	case WebhookSubscriptionStateActive:
 		return true
 	case WebhookSubscriptionStatePaused:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebsiteInquiryMode.
+const (
+	WebsiteInquiryModeCoordinator  WebsiteInquiryMode = "coordinator"
+	WebsiteInquiryModeOneColleague WebsiteInquiryMode = "one_colleague"
+	WebsiteInquiryModeRotate       WebsiteInquiryMode = "rotate"
+)
+
+// Valid indicates whether the value is a known member of the WebsiteInquiryMode enum.
+func (e WebsiteInquiryMode) Valid() bool {
+	switch e {
+	case WebsiteInquiryModeCoordinator:
+		return true
+	case WebsiteInquiryModeOneColleague:
+		return true
+	case WebsiteInquiryModeRotate:
 		return true
 	default:
 		return false
@@ -36165,8 +36207,9 @@ type AutomaticWorkTally struct {
 
 // Automation A configured automation instance (feedback/14).
 type Automation struct {
-	CreatedAt time.Time          `json:"created_at"`
-	Id        openapi_types.UUID `json:"id"`
+	CreatedAt     time.Time             `json:"created_at"`
+	Id            openapi_types.UUID    `json:"id"`
+	InquiryPolicy *WebsiteInquiryPolicy `json:"inquiry_policy,omitempty"`
 
 	// Key The catalog type this instance is built from.
 	Key string `json:"key"`
@@ -52116,6 +52159,25 @@ type LeadQualifiedField struct {
 	Value    string         `json:"value"`
 }
 
+// LeadRoutingConfig defines model for LeadRoutingConfig.
+type LeadRoutingConfig struct {
+	CapPerOwner *int `json:"cap_per_owner,omitempty" minimum:"1"`
+
+	// Owners Selected colleagues in routing order.
+	Owners *[]openapi_types.UUID `json:"owners,omitempty" unique:"items"`
+	Rules  *[]LeadRoutingRule    `json:"rules,omitempty"`
+}
+
+// LeadRoutingRule defines model for LeadRoutingRule.
+type LeadRoutingRule struct {
+	Equals  string               `json:"equals"`
+	Field   LeadRoutingRuleField `json:"field"`
+	OwnerId openapi_types.UUID   `json:"owner_id"`
+}
+
+// LeadRoutingRuleField defines model for LeadRoutingRule.Field.
+type LeadRoutingRuleField string
+
 // LeadScoreEntry One point in the retained series — what the score was, and why.
 type LeadScoreEntry struct {
 	ComputedAt time.Time          `json:"computed_at"`
@@ -65721,11 +65783,14 @@ type UpdateVoiceProfileRequest struct {
 
 // UpdateWebFormRequest defines model for UpdateWebFormRequest.
 type UpdateWebFormRequest struct {
-	AllowedOrigins       *[]string           `json:"allowed_origins,omitempty"`
-	ConsentPolicyVersion *string             `json:"consent_policy_version,omitempty"`
-	ConsentRequired      *bool               `json:"consent_required,omitempty"`
-	ConsentWording       *string             `json:"consent_wording,omitempty"`
-	FieldMap             *map[string]string  `json:"field_map,omitempty"`
+	AllowedOrigins       *[]string          `json:"allowed_origins,omitempty"`
+	ConsentPolicyVersion *string            `json:"consent_policy_version,omitempty"`
+	ConsentRequired      *bool              `json:"consent_required,omitempty"`
+	ConsentWording       *string            `json:"consent_wording,omitempty"`
+	FieldMap             *map[string]string `json:"field_map,omitempty"`
+
+	// HandlingAutomationId Explicit conversion to a reviewed inquiry policy for this form. Clear only through a reviewed return to legacy handling.
+	HandlingAutomationId *openapi_types.UUID `json:"handling_automation_id,omitempty"`
 	LeadOrigin           *string             `json:"lead_origin,omitempty"`
 	Name                 *string             `json:"name,omitempty"`
 	OwnerId              *openapi_types.UUID `json:"owner_id,omitempty"`
@@ -66334,8 +66399,14 @@ type WebForm struct {
 	FieldMap map[string]string `json:"field_map"`
 
 	// FormKey The last segment of the intake address. Public; it is an address, not a credential.
-	FormKey string             `json:"form_key"`
-	Id      openapi_types.UUID `json:"id"`
+	FormKey string `json:"form_key"`
+
+	// HandlingAutomationId Reviewed inquiry policy. Null retains legacy handling; a paused policy never reactivates legacy handling.
+	HandlingAutomationId *openapi_types.UUID `json:"handling_automation_id,omitempty"`
+
+	// HandlingCutoverAt When the handling reference last changed; completed submissions retain their original handling.
+	HandlingCutoverAt *time.Time         `json:"handling_cutover_at,omitempty"`
+	Id                openapi_types.UUID `json:"id"`
 
 	// LastPostAt When the form last landed a post, stamped at most once a minute. Null until the first one since the time was tracked. A post the spam checks drop is not counted.
 	LastPostAt *time.Time `json:"last_post_at"`
@@ -66414,8 +66485,14 @@ type WebFormCreated struct {
 	FieldMap map[string]string `json:"field_map"`
 
 	// FormKey The last segment of the intake address. Public; it is an address, not a credential.
-	FormKey string             `json:"form_key"`
-	Id      openapi_types.UUID `json:"id"`
+	FormKey string `json:"form_key"`
+
+	// HandlingAutomationId Reviewed inquiry policy. Null retains legacy handling; a paused policy never reactivates legacy handling.
+	HandlingAutomationId *openapi_types.UUID `json:"handling_automation_id,omitempty"`
+
+	// HandlingCutoverAt When the handling reference last changed; completed submissions retain their original handling.
+	HandlingCutoverAt *time.Time         `json:"handling_cutover_at,omitempty"`
+	Id                openapi_types.UUID `json:"id"`
 
 	// LastPostAt When the form last landed a post, stamped at most once a minute. Null until the first one since the time was tracked. A post the spam checks drop is not counted.
 	LastPostAt *time.Time `json:"last_post_at"`
@@ -66510,6 +66587,9 @@ type WebFormSubmission struct {
 	// Extra The form's other fields, in the order they were sent, under the names the form gave them.
 	Extra    []WebFormValue `json:"extra"`
 	FullName *string        `json:"full_name,omitempty"`
+
+	// HandlingAutomationId The policy owning this accepted occurrence; later policy changes do not transfer it to a legacy handler.
+	HandlingAutomationId *openapi_types.UUID `json:"handling_automation_id,omitempty"`
 
 	// Message The free text the visitor wrote.
 	Message *string `json:"message,omitempty"`
@@ -66640,6 +66720,30 @@ type WebhookSubscriptionListResponse struct {
 	// DeliveryEnabled Whether this deployment has a signing key configured. When false, subscriptions can be listed and inspected but create/rotate/replay are unavailable (they answer 503 webhooks_not_configured), so the UI renders a not-enabled state instead of controls that would only fail on click.
 	DeliveryEnabled bool     `json:"delivery_enabled"`
 	Page            PageInfo `json:"page"`
+}
+
+// WebsiteInquiryMode Keep an eligible existing owner; otherwise route through selected colleagues or coordinator review.
+type WebsiteInquiryMode string
+
+// WebsiteInquiryPolicy defines model for WebsiteInquiryPolicy.
+type WebsiteInquiryPolicy struct {
+	// CoordinatorId Eligible colleague who can read unowned leads and receives inquiries needing review.
+	CoordinatorId openapi_types.UUID `json:"coordinator_id"`
+
+	// DueInDays Calendar days after receipt; due at the end of that day in timezone.
+	DueInDays int                `json:"due_in_days" maximum:"30" minimum:"1"`
+	FormId    openapi_types.UUID `json:"form_id"`
+
+	// Mode Keep an eligible existing owner; otherwise route through selected colleagues or coordinator review.
+	Mode WebsiteInquiryMode `json:"mode"`
+
+	// RequestTypeField Optional mapped picklist field identifying the request type.
+	RequestTypeField *string           `json:"request_type_field,omitempty"`
+	Routing          LeadRoutingConfig `json:"routing"`
+	TaskTitle        string            `json:"task_title"`
+
+	// Timezone Saved IANA timezone for calendar-day deadlines.
+	Timezone string `json:"timezone"`
 }
 
 // WeeklyDayActivity One local day of a rep's own activity, in the installation reporting timezone.
@@ -69324,6 +69428,9 @@ type ValidationError = Problem
 
 // VersionConflict RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type VersionConflict = Problem
+
+// WebsiteFormBusy RFC 7807 problem+json with a stable machine `code` and structured `details`.
+type WebsiteFormBusy = Problem
 
 // bearerAuthContextKey is the context key for bearerAuth security scheme
 type bearerAuthContextKey string

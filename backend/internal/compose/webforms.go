@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/webforms"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -35,7 +36,7 @@ const publicFormsPrefix = "/v1/public/forms/"
 // writers. The secret store arrives later, through WithKeyvault.
 func newWebFormHandlers(pool *pgxpool.Pool, log *slog.Logger) webforms.Handlers {
 	db := InstallationDB(pool)
-	store := webforms.NewStore(db, log)
+	store := webforms.NewStore(db, log).WithHandlingFence(newWebFormFence(db))
 	return webforms.NewHandlers(store, webforms.NewIntake(store, newWebFormLander(db, pool, log)), time.Now)
 }
 
@@ -46,6 +47,7 @@ func newWebFormLander(db *database.DB, pool *pgxpool.Pool, log *slog.Logger) web
 		leads:      newContactsStore(db).WithFieldCatalog(catalog).WithLeadArrivals(newLeadWorkTasks(db, log)),
 		activities: activities.NewStore(db),
 		catalog:    catalog,
+		legacy:     automation.NewAutomationStore(db),
 	}
 }
 

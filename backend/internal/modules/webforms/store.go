@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -28,11 +29,13 @@ type Store struct {
 	db    *database.DB
 	vault keyvault.Vault
 	log   *slog.Logger
+	now   func() time.Time
+	fence HandlingFence
 }
 
 // NewStore wires the forms table over the workspace database.
 func NewStore(db *database.DB, log *slog.Logger) *Store {
-	return &Store{db: db, log: log}
+	return &Store{db: db, log: log, now: time.Now}
 }
 
 // WithVault binds the secret store signed senders keep their secret in.
@@ -199,6 +202,7 @@ func auditImage(f Form) map[string]any {
 	return map[string]any{
 		"name": f.Name, "sender": f.Sender, "allowed_origins": f.AllowedOrigins,
 		colLeadOrigin: f.LeadOrigin, colOwnerID: f.OwnerID, colProductID: f.ProductID, "field_map": f.FieldMap,
+		colHandlingAutomationID: f.HandlingAutomationID, colHandlingCutoverAt: f.HandlingCutoverAt,
 		"consent_required": f.ConsentRequired, colConsentPolicyVersion: f.ConsentPolicyVersion,
 		colConsentWording: f.ConsentWording,
 		colPrivacyNotice:  f.PrivacyNotice, colPrivacyNoticeURL: f.PrivacyNoticeURL,

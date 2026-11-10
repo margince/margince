@@ -57,6 +57,19 @@ func isClockTrigger(h workflow.Handler) bool {
 // terminal reason on the `detail` column (rundetail.go) — a run history
 // that only shows successes hides exactly the runs a human needs to see.
 func (e *WorkflowEngine) runOne(ctx context.Context, h workflow.Handler, ev workflow.Event) error {
+	if e.fence == nil {
+		return e.runUnfenced(ctx, h, ev)
+	}
+	err := e.fence.Within(ctx, h.Spec(), ev, func(bound context.Context) error {
+		return e.runUnfenced(bound, h, ev)
+	})
+	if declined, ok := errors.AsType[*workflow.DeclinedError](err); ok {
+		return e.recordSkipReason(ctx, h, ev, declined.Reason)
+	}
+	return err
+}
+
+func (e *WorkflowEngine) runUnfenced(ctx context.Context, h workflow.Handler, ev workflow.Event) error {
 	if stop, err := e.stopIfSetterLapsed(ctx, ev); stop || err != nil {
 		if err != nil {
 			return err

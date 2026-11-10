@@ -13187,7 +13187,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.colOwner": "Autorisiert durch",
   "auto.ownerFor": "Autorisierung für {name}",
   "auto.ownerNone": "Niemand zugeordnet",
-  "auto.ownerHint": "Aktionen nutzen die aktuellen Zugriffsrechte dieser Person.",
+  "auto.ownerHint":
+    "Aktionen nutzen die aktuellen Zugriffsrechte dieser Person.",
   "auto.deadlineTimezone": "Zeitzone für die Frist",
   "auto.colStatus": "Status",
   "auto.colActions": "Aktionen",
@@ -13264,8 +13265,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.preview.window30": "30 Tage",
   "auto.preview.window90": "90 Tage",
   "auto.preview.fromNowOn": "Ab jetzt",
-  "auto.preview.historyUnavailable": "Keine Vorschau vergangener Ereignisse verfügbar",
-  "auto.preview.futureEventsOnly": "Beim Einschalten verarbeitet diese Regel neue Ereignisse. Bestehende Datensätze werden nicht nachträglich verarbeitet.",
+  "auto.preview.historyUnavailable":
+    "Keine Vorschau vergangener Ereignisse verfügbar",
+  "auto.preview.futureEventsOnly":
+    "Beim Einschalten verarbeitet diese Regel neue Ereignisse. Bestehende Datensätze werden nicht nachträglich verarbeitet.",
   "auto.preview.matchesNow": "Aktuelle Treffer: {n}",
   "auto.preview.wouldFire": "Würde auslösen: etwa {n} in {days} Tagen",
   "auto.preview.notComputable": "Rückblickende Schätzung nicht verfügbar",
@@ -16690,6 +16693,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.field.productClear": "Leads ohne Produkt erfassen",
   "webForms.field.productLoading": "Produkt wird geladen…",
   "webForms.field.owner": "Verantwortlich für neue Leads",
+  "webForms.handlingBusy":
+    "Dieses Formular wird gerade bearbeitet. Versuche es erneut.",
   "webForms.field.ownerHint":
     "Jeder neue Lead aus diesem Formular geht an dieses Teammitglied. Ohne Zuweisung kann ihn jedes Teammitglied übernehmen.",
   "webForms.field.ownerNone": "Nicht zugewiesen",

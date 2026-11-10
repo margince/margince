@@ -42,7 +42,8 @@ type AutomationStore struct {
 	// when the seam is unwired (tests, or a role that never mounted it).
 	catalog fieldcatalog.Reader
 	// lists answers whether the lists a list rule names exist for its author.
-	lists Lists
+	lists     Lists
+	inquiries InquiryRouting
 }
 
 // NewAutomationStore binds the automation tables to the pool it is given.
@@ -273,7 +274,7 @@ func (s *AutomationStore) Create(ctx context.Context, in CreateAutomationInput) 
 
 // Update re-parameterizes, renames, or flips enabled/paused, honoring
 // If-Match version skew.
-func (s *AutomationStore) Update(ctx context.Context, id ids.AutomationID, in UpdateAutomationInput) (Automation, error) {
+func (s *AutomationStore) update(ctx context.Context, id ids.AutomationID, in UpdateAutomationInput) (Automation, error) {
 	if err := auth.Require(ctx, "automation", principal.ActionUpdate); err != nil {
 		return Automation{}, err
 	}
@@ -352,50 +353,10 @@ func (s *AutomationStore) Update(ctx context.Context, id ids.AutomationID, in Up
 	return a, nil
 }
 
-// revalidate re-authors a re-parameterized automation: the ceiling and the
-// params schema run again, not just once at creation. Resuming a list rule
-// asks again whether its lists are still there for the author, so a rule
-// paused for an archived list cannot be resumed onto it.
-func (s *AutomationStore) revalidate(ctx context.Context, before Automation, in UpdateAutomationInput) error {
-	resuming := in.Enabled != nil && *in.Enabled
-	if in.Params == nil && !resuming {
-		return nil
-	}
-	entry, ok := CatalogEntryByKey(before.Key)
-	if !ok {
-		return fmt.Errorf("automation %s names catalog key %q the registry no longer carries", before.ID, before.Key)
-	}
-	params := in.Params
-	if params == nil {
-		if err := json.Unmarshal(before.Params, &params); err != nil {
-			return fmt.Errorf("automation %s: reading its stored params: %w", before.ID, err)
-		}
-	} else {
-		if err := requireAuthorCeiling(ctx, entry); err != nil {
-			return err
-		}
-		if err := entry.Validate(params); err != nil {
-			return err
-		}
-	}
-	return s.validateRefs(ctx, entry, params)
-}
-
-// validateRefs asks the entry's reference check, when it has one.
-func (s *AutomationStore) validateRefs(ctx context.Context, entry CatalogEntry, params map[string]any) error {
-	if entry.ValidateRefs == nil {
-		return nil
-	}
-	if s.lists == nil {
-		return &ParamError{Field: "key", Reason: "needs lists, which are not switched on in this installation"}
-	}
-	return entry.ValidateRefs(ctx, s.lists, params)
-}
-
 // Archive soft-deletes: the instance stops firing on the next event and
 // vanishes from the surface, while its run records keep their referent.
 // Audited as `archive` — the vocabulary has no `delete` verb.
-func (s *AutomationStore) Archive(ctx context.Context, id ids.AutomationID) error {
+func (s *AutomationStore) archive(ctx context.Context, id ids.AutomationID) error {
 	if err := auth.Require(ctx, "automation", principal.ActionDelete); err != nil {
 		return err
 	}

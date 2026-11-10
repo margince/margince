@@ -316,6 +316,7 @@ func seededCatalogEntries() []CatalogEntry {
 // through the API, never through the bootstrap floor.
 func authorableOnlyCatalogEntries() []CatalogEntry {
 	return []CatalogEntry{
+		inquiryCatalogEntry(),
 		{
 			// AUTHORABLE, not seeded: the honest name for the owner-
 			// assignment behaviour the OLD route_lead key carried before

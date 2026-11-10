@@ -8166,6 +8166,7 @@ paths:
               schema: {$ref: '#/components/schemas/Automation'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
+        '503': {$ref: '#/components/responses/WebsiteFormBusy'}
     delete:
       tags: [Automations]
       operationId: deleteAutomation
@@ -8175,6 +8176,7 @@ paths:
         '204': {description: Deleted.}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
+        '503': {$ref: '#/components/responses/WebsiteFormBusy'}
       description: |-
         Delete an automation instance.
 
@@ -12121,6 +12123,7 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
+        '503': {$ref: '#/components/responses/WebsiteFormBusy'}
     delete:
       tags: [WebForms]
       operationId: archiveWebForm
@@ -12136,6 +12139,7 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
+        '503': {$ref: '#/components/responses/WebsiteFormBusy'}
       description: |-
         Archive a website form; its address stops taking submissions.
 
@@ -25915,6 +25919,11 @@ components:
           examples:
             denied:
               value: {type: 'https://errors.gradion.com/permission_denied', title: Permission denied, status: 403, code: permission_denied, detail: Your role does not grant permission for this action on this object.}
+    WebsiteFormBusy:
+      description: The form is being changed. Retry the same request with the same ID.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
     NotFound:
       description: No such resource in this workspace (or out of RBAC scope).
       content:
@@ -26273,6 +26282,44 @@ components:
         `webflow`, `typeform`, `tally`: that builder's webhook, checked against the signature the
         builder computes with the form's stored secret: the `sender_secret` pasted, or for `typeform`
         and `tally` one this installation minted when none was.
+    LeadRoutingRule:
+      type: object
+      additionalProperties: false
+      required: [field, equals, owner_id]
+      properties:
+        field: {type: string, enum: [origin, company_name, candidate_company_key]}
+        equals: {type: string}
+        owner_id: {type: string, format: uuid}
+    LeadRoutingConfig:
+      type: object
+      additionalProperties: false
+      properties:
+        owners:
+          type: array
+          uniqueItems: true
+          items: {type: string, format: uuid}
+          description: Selected colleagues in routing order.
+        cap_per_owner: {type: integer, minimum: 1}
+        rules:
+          type: array
+          items: {$ref: '#/components/schemas/LeadRoutingRule'}
+    WebsiteInquiryMode:
+      type: string
+      enum: [one_colleague, rotate, coordinator]
+      description: Keep an eligible existing owner; otherwise route through selected colleagues or coordinator review.
+    WebsiteInquiryPolicy:
+      type: object
+      additionalProperties: false
+      required: [form_id, mode, routing, coordinator_id, task_title, due_in_days, timezone]
+      properties:
+        form_id: {type: string, format: uuid}
+        mode: {$ref: '#/components/schemas/WebsiteInquiryMode'}
+        routing: {$ref: '#/components/schemas/LeadRoutingConfig'}
+        coordinator_id: {type: string, format: uuid, description: 'Eligible colleague who can read unowned leads and receives inquiries needing review.'}
+        task_title: {type: string, minLength: 1, maxLength: 200}
+        due_in_days: {type: integer, minimum: 1, maximum: 30, default: 1, description: 'Calendar days after receipt; due at the end of that day in timezone.'}
+        timezone: {type: string, description: 'Saved IANA timezone for calendar-day deadlines.'}
+        request_type_field: {type: string, minLength: 1, maxLength: 100, description: 'Optional mapped picklist field identifying the request type.'}
     WebForm:
       type: object
       description: >-
@@ -26289,6 +26336,8 @@ components:
           description: The websites a `browser` form takes posts from, as origins (`https://example.com`).
         lead_origin: {type: [string, 'null'], description: 'The `/lead-origins` key every lead from this form carries.'}
         owner_id: {type: [string, 'null'], format: uuid, description: 'Who owns the leads this form creates; null leaves them in the unassigned queue.'}
+        handling_automation_id: {type: [string, 'null'], format: uuid, description: 'Reviewed inquiry policy. Null retains legacy handling; a paused policy never reactivates legacy handling.'}
+        handling_cutover_at: {type: [string, 'null'], format: date-time, description: 'When the handling reference last changed; completed submissions retain their original handling.'}
         product_id: {type: [string, 'null'], format: uuid, description: 'The product every lead this form creates is interested in; null captures leads with no product.'}
         field_map:
           type: object
@@ -26323,6 +26372,10 @@ components:
     UpdateWebFormRequest:
       type: object
       properties:
+        handling_automation_id:
+          type: [string, 'null']
+          format: uuid
+          description: 'Explicit conversion to a reviewed inquiry policy for this form. Clear only through a reviewed return to legacy handling.'
         name: {type: string, minLength: 1, maxLength: 200}
         sender_secret: {type: string, minLength: 16, maxLength: 512}
         allowed_origins:
@@ -27526,6 +27579,7 @@ components:
         its consent box.
       required: [email, extra, campaign]
       properties:
+        handling_automation_id: {type: [string, 'null'], format: uuid, description: 'The policy owning this accepted occurrence; later policy changes do not transfer it to a legacy handler.'}
         message: {type: string, description: 'The free text the visitor wrote.'}
         full_name: {type: string}
         email: {type: string, description: 'The address the lead was matched or created by.'}
@@ -50537,6 +50591,7 @@ components:
       description: A configured automation instance (feedback/14).
       required: [id, key, name, status, params, created_at]
       properties:
+        inquiry_policy: {$ref: '#/components/schemas/WebsiteInquiryPolicy', readOnly: true, description: 'Typed view of params for the combined website inquiry recipe.'}
         id: {type: string, format: uuid}
         key: {type: string, description: The catalog type this instance is built from.}
         name: {type: string}

@@ -47,9 +47,9 @@ func (fx *autoFixture) stagedEvent(t *testing.T, entity ids.UUID) kevents.Envelo
 		t.Fatalf("marshalling the envelope: %v", err)
 	}
 	fx.exec(t, `
-		INSERT INTO event_outbox (id, stream, envelope, published_at)
-		VALUES ($1, $2, $3::jsonb, now())`,
-		env.EventID, "crm.lead", raw)
+		INSERT INTO event_outbox (stream, envelope, published_at)
+		VALUES ($1, $2::jsonb, now())`,
+		"crm.lead", raw)
 	return env
 }
 
@@ -294,5 +294,29 @@ func TestRetryingARetryIsItsOwnAttempt(t *testing.T) {
 	runs := fx.count(t, `SELECT count(*) FROM workflow_run WHERE handler = $1`, handler)
 	if runs != 3 {
 		t.Fatalf("recorded %d runs, want 3 — each attempt claims its own row", runs)
+	}
+}
+
+func TestAFailedRunKeepsTheEnvelopeIdentityNeededForRetry(t *testing.T) {
+	fx := setupAutomationDB(t)
+	const handler = "retained_retry"
+	fx.seedAutomation(t, handler)
+	script := &failingOnce{}
+	engine := engineOverScripted(fx, scriptedWorkflow{name: handler, apply: script.apply(), redrivable: true})
+	envelope := fx.stagedEvent(t, ids.NewV7())
+	if err := engine.HandleEvent(t.Context(), envelope); err == nil {
+		t.Fatal("the first attempt did not fail")
+	}
+	var retained int
+	if err := fx.owner.QueryRow(t.Context(), `SELECT count(*) FROM event_outbox emitted WHERE `+RetryableTriggerSQL("emitted")).Scan(&retained); err != nil {
+		t.Fatal(err)
+	}
+	if retained != 1 {
+		t.Fatalf("failed run retained %d trigger envelopes, want one", retained)
+	}
+	run, _ := fx.failedRunID(t, handler)
+	outcome, err := engine.RetryRun(t.Context(), run)
+	if err != nil || !outcome.Retried || script.calls != 2 {
+		t.Fatalf("retry found no recoverable event: outcome=%+v calls=%d error=%v", outcome, script.calls, err)
 	}
 }

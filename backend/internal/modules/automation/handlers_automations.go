@@ -412,6 +412,13 @@ func wireAutomation(a Automation) (crmcontracts.Automation, error) {
 		CreatedAt:        a.CreatedAt,
 		UpdatedAt:        a.UpdatedAt,
 	}
+	if a.Key == inquiryRecipeName {
+		policy, err := ParseInquiryPolicy(a.Params)
+		if err != nil {
+			return crmcontracts.Automation{}, err
+		}
+		wire.InquiryPolicy = &policy
+	}
 	if a.Runs != nil {
 		wire.LastRunAt = a.Runs.LastRunAt
 		if outcome := a.Runs.LastOutcome(); outcome != nil {

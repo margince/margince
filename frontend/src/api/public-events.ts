@@ -920,14 +920,16 @@ export interface components {
                 [key: string]: unknown;
             };
         };
-        /** @description Payload for activity.captured — the first-class capture verb, emitted instead of (never alongside) a generic activity.created (events.md §1). Two emit sites: the direct-log path (activities/activity.go) that sets kind only, and the capture ingestion path (capture/sink.go) that also names its originating source system. */
+        /** @description Payload for activity.captured — the first-class capture verb, emitted instead of (never alongside) a generic activity.created (events.md §1). Two emit sites: the direct-log path (activities/activity.go) that sets kind and trusted website receipt details when present, and the capture ingestion path (capture/sink.go) that names its originating source system. */
         PublicEventActivityCaptured: {
             /** @description The activity kind (email | call | meeting | note | task | message). Decoded by automation/handlers_event.go's post_meeting_recap trigger — this field's JSON key is a binding contract, not just documentation. Since ADR-0107/A158 the kind no longer names a messaging transport: every channel message is `message`, and channel_provider says what carried it. */
             kind: string;
             /** @description Which transport carried the message. Present when kind is `message`, and absent otherwise. Without this field a consumer could not tell a Telegram message from any other. Before ADR-0107 the `kind` field told them that. The envelope is additionalProperties:false, so the field must be named here to be sent at all. */
             channel_provider?: string;
-            /** @description The originating source system (capture ingestion only; absent on a direct log). */
+            /** @description The originating source system for capture ingestion or a trusted website note; absent on other direct logs. */
             source_system?: string;
+            /** @description Canonical accepted website submission key, carried only by a website note. Consumers verify its stored provenance before routing. Contains no submission content. */
+            website_submission_key?: string;
             /** @description True when a data import wrote the event. Absent otherwise. */
             imported?: boolean;
             /**
@@ -1020,6 +1022,11 @@ export interface components {
         };
         /** @description The bounded delta of activity.updated. Each field is carried only when this update touched it. The key set is fixed, so it is typed rather than an open map. */
         PublicEventActivityChangedFields: {
+            /**
+             * Format: uuid
+             * @description The accepted source attached to an existing task by its internal handler.
+             */
+            source_activity_id?: string;
             /** @description The activity's new conversation key, when its thread grouping changed. */
             thread_key?: string;
             /** @description A reviewed correction changed the task's source link or cleared a generated deadline; fetch the task through its normal access gate. */

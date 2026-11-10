@@ -13232,7 +13232,8 @@ export const en = {
   "auto.preview.window90": "90 days",
   "auto.preview.fromNowOn": "From now on",
   "auto.preview.historyUnavailable": "Historical preview unavailable",
-  "auto.preview.futureEventsOnly": "Turning this rule on handles new events. It does not process existing records.",
+  "auto.preview.futureEventsOnly":
+    "Turning this rule on handles new events. It does not process existing records.",
   "auto.preview.matchesNow": "Matches now: {n}",
   "auto.preview.wouldFire": "Would fire: about {n} in {days} days",
   "auto.preview.notComputable": "Trailing estimate unavailable",
@@ -16569,6 +16570,7 @@ export const en = {
   "webForms.field.productClear": "Capture leads with no product",
   "webForms.field.productLoading": "Reading the product…",
   "webForms.field.owner": "Owner of new leads",
+  "webForms.handlingBusy": "This form is busy. Try again.",
   "webForms.field.ownerHint":
     "Each new lead from this form goes to this colleague. Leave it unassigned for anyone on the team to pick up.",
   "webForms.field.ownerNone": "Unassigned",

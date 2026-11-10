@@ -12909,8 +12909,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "auto.preview.window30": "30 ngày",
   "auto.preview.window90": "90 ngày",
   "auto.preview.fromNowOn": "Từ bây giờ",
-  "auto.preview.historyUnavailable": "Không có bản xem trước sự kiện trong quá khứ",
-  "auto.preview.futureEventsOnly": "Khi bật, quy tắc xử lý các sự kiện mới. Các bản ghi hiện có không được xử lý lại.",
+  "auto.preview.historyUnavailable":
+    "Không có bản xem trước sự kiện trong quá khứ",
+  "auto.preview.futureEventsOnly":
+    "Khi bật, quy tắc xử lý các sự kiện mới. Các bản ghi hiện có không được xử lý lại.",
   "auto.preview.matchesNow": "Khớp lúc này: {n}",
   "auto.preview.wouldFire": "Sẽ kích hoạt: khoảng {n} lần trong {days} ngày",
   "auto.preview.notComputable": "Không thể ước tính từ dữ liệu quá khứ",
@@ -16261,6 +16263,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.field.productClear": "Ghi nhận lead không có sản phẩm",
   "webForms.field.productLoading": "Đang đọc sản phẩm…",
   "webForms.field.owner": "Người chịu trách nhiệm cho lead mới",
+  "webForms.handlingBusy": "Biểu mẫu đang được xử lý. Vui lòng thử lại.",
   "webForms.field.ownerHint":
     "Mỗi lead mới từ biểu mẫu này được giao cho thành viên này. Để trống thì bất kỳ ai trong nhóm cũng có thể nhận.",
   "webForms.field.ownerNone": "Chưa giao",

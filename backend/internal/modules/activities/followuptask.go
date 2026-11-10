@@ -144,3 +144,10 @@ func prepareLoggedActivity(ctx context.Context, tx pgx.Tx, in *LogActivityInput)
 	}
 	return storekit.LockThreadKeysTx(ctx, tx, keys...)
 }
+
+func preparePatchedTaskSource(ctx context.Context, tx pgx.Tx, current crmcontracts.Activity, in UpdateActivityInput) error {
+	if in.sourceActivityID == nil {
+		return nil
+	}
+	return prepareFollowUpSource(ctx, tx, &LogActivityInput{Kind: string(current.Kind), SourceActivityID: in.sourceActivityID, AssigneeID: in.AssigneeID})
+}

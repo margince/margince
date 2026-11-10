@@ -8108,9 +8108,9 @@ export interface paths {
          *
          *     This re-dispatches the ORIGINAL event down the ordinary engine path, so every gate
          *     the first firing passed it passes again — the owner's live permissions, the audience
-         *     check, the run claim, the effect claim. It never replays the stored plan: that plan
-         *     was computed against a database which has since moved, and re-applying it would
-         *     write yesterday's answer over today's records.
+         *     check, the run claim, the effect claim. It checks current records and authority again.
+         *     A website inquiry whose routing already committed keeps its saved assignment and task
+         *     wording, so retrying a failed task does not rotate the inquiry again.
          *
          *     Three states refuse, and each says which in `refusal` rather than failing:
          *
@@ -25532,6 +25532,45 @@ export interface components {
          * @enum {string}
          */
         WebFormSender: "browser" | "server" | "webflow" | "typeform" | "tally";
+        LeadRoutingRule: {
+            /** @enum {string} */
+            field: "origin" | "company_name" | "candidate_company_key";
+            equals: string;
+            /** Format: uuid */
+            owner_id: string;
+        };
+        LeadRoutingConfig: {
+            /** @description Selected colleagues in routing order. */
+            owners?: string[];
+            cap_per_owner?: number;
+            rules?: components["schemas"]["LeadRoutingRule"][];
+        };
+        /**
+         * @description Keep an eligible existing owner; otherwise route through selected colleagues or coordinator review.
+         * @enum {string}
+         */
+        WebsiteInquiryMode: "one_colleague" | "rotate" | "coordinator";
+        WebsiteInquiryPolicy: {
+            /** Format: uuid */
+            form_id: string;
+            mode: components["schemas"]["WebsiteInquiryMode"];
+            routing: components["schemas"]["LeadRoutingConfig"];
+            /**
+             * Format: uuid
+             * @description Eligible colleague who can read unowned leads and receives inquiries needing review.
+             */
+            coordinator_id: string;
+            task_title: string;
+            /**
+             * @description Calendar days after receipt; due at the end of that day in timezone.
+             * @default 1
+             */
+            due_in_days: number;
+            /** @description Saved IANA timezone for calendar-day deadlines. */
+            timezone: string;
+            /** @description Optional mapped picklist field identifying the request type. */
+            request_type_field?: string;
+        };
         /** @description A website form (`web_form`): a public intake address that turns a submission into a lead. No secret is ever returned here; `secret_configured` says one is stored. */
         WebForm: {
             /** Format: uuid */
@@ -25549,6 +25588,16 @@ export interface components {
              * @description Who owns the leads this form creates; null leaves them in the unassigned queue.
              */
             owner_id?: string | null;
+            /**
+             * Format: uuid
+             * @description Reviewed inquiry policy. Null retains legacy handling; a paused policy never reactivates legacy handling.
+             */
+            handling_automation_id?: string | null;
+            /**
+             * Format: date-time
+             * @description When the handling reference last changed; completed submissions retain their original handling.
+             */
+            handling_cutover_at?: string | null;
             /**
              * Format: uuid
              * @description The product every lead this form creates is interested in; null captures leads with no product.
@@ -25631,6 +25680,11 @@ export interface components {
             success_message?: string | null;
         };
         UpdateWebFormRequest: {
+            /**
+             * Format: uuid
+             * @description Explicit conversion to a reviewed inquiry policy for this form. Clear only through a reviewed return to legacy handling.
+             */
+            handling_automation_id?: string | null;
             name?: string;
             sender_secret?: string;
             allowed_origins?: string[];
@@ -28119,6 +28173,11 @@ export interface components {
          *     its consent box.
          */
         WebFormSubmission: {
+            /**
+             * Format: uuid
+             * @description The policy owning this accepted occurrence; later policy changes do not transfer it to a legacy handler.
+             */
+            handling_automation_id?: string | null;
             /** @description The free text the visitor wrote. */
             message?: string;
             full_name?: string;
@@ -52442,6 +52501,8 @@ export interface components {
         };
         /** @description A configured automation instance (feedback/14). */
         Automation: {
+            /** @description Typed view of params for the combined website inquiry recipe. */
+            readonly inquiry_policy?: components["schemas"]["WebsiteInquiryPolicy"];
             /** Format: uuid */
             id: string;
             /** @description The catalog type this instance is built from. */
@@ -59046,6 +59107,15 @@ export interface components {
         };
         /** @description A list member's entity type does not match the list's declared `entity_type` (`code: entity_type_mismatch`; data-model §10.1). */
         EntityTypeMismatch: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description The form is being changed. Retry the same request with the same ID. */
+        WebsiteFormBusy: {
             headers: {
                 [name: string]: unknown;
             };
@@ -71689,6 +71759,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            503: components["responses"]["WebsiteFormBusy"];
         };
     };
     peekDealRoomCredential: {
@@ -72395,6 +72466,7 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+            503: components["responses"]["WebsiteFormBusy"];
         };
     };
     updateAutomation: {
@@ -72433,6 +72505,7 @@ export interface operations {
             };
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+            503: components["responses"]["WebsiteFormBusy"];
         };
     };
     previewAutomation: {
@@ -77142,6 +77215,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+            503: components["responses"]["WebsiteFormBusy"];
         };
     };
     updateWebForm: {
@@ -77183,6 +77257,7 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
+            503: components["responses"]["WebsiteFormBusy"];
         };
     };
     rotateWebFormSecret: {

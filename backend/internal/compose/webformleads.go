@@ -15,6 +15,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/webforms"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -40,12 +41,22 @@ type webFormLeads struct {
 	leads      *contacts.Store
 	activities *activities.Store
 	catalog    fieldcatalog.Reader
+	legacy     *automation.AutomationStore
 }
 
 func (l webFormLeads) Land(ctx context.Context, landing webforms.Landing) error {
 	target, err := l.lead(ctx, landing)
 	if err != nil || target == nil {
 		return err
+	}
+	if landing.HandlingAutomationID != nil && target.EntityType == string(recordTypeLead) {
+		owned, err := l.legacyOwnsInquiry(ctx, target.EntityID, landing.SourceKey)
+		if err != nil {
+			return err
+		}
+		if owned {
+			landing.HandlingAutomationID = nil
+		}
 	}
 	system, key := provenance.WebFormSource, landing.SourceKey
 	subject := fmt.Sprintf(systemtext.Copy("form.subject", textlang.English), landing.FormName)
@@ -127,7 +138,7 @@ func webFormLeadInput(landing webforms.Landing) contacts.CreateLeadInput {
 		CompanyName: optional(e.Company), SourceSystem: &system, SourceID: &key,
 		Source: webFormLeadSource, Origin: landing.LeadOrigin, OriginDetail: optional(originDetail(e)),
 	}
-	if landing.OwnerID != nil {
+	if landing.OwnerID != nil && landing.HandlingAutomationID == nil {
 		owner := ids.From[ids.UserKind](*landing.OwnerID)
 		in.OwnerID = &owner
 	}
@@ -230,6 +241,9 @@ func webFormRaw(landing webforms.Landing) (map[string]any, error) {
 		Extra: webFormValues(e.Extra), PageUrl: optional(e.PageURL), Referrer: optional(e.Referrer),
 		Campaign: webFormValues(e.UTM),
 	}
+	if landing.HandlingAutomationID != nil {
+		sent.HandlingAutomationId = new(openapi_types.UUID(*landing.HandlingAutomationID))
+	}
 	if landing.ConsentWording != nil {
 		formID := openapi_types.UUID(landing.FormID)
 		sent.Consent = &crmcontracts.WebFormConsent{
@@ -317,4 +331,18 @@ func quoted(text string) string {
 		lines[i] = strings.TrimRight("> "+l, " ")
 	}
 	return strings.Join(lines, "\n")
+}
+
+func (l webFormLeads) legacyOwnsInquiry(ctx context.Context, id ids.UUID, key string) (bool, error) {
+	lead, err := l.leads.GetLead(ctx, ids.From[ids.LeadKind](id), storekit.LiveOnly)
+	if err != nil {
+		return false, err
+	}
+	if lead.SourceSystem == nil || *lead.SourceSystem != provenance.WebFormSource || lead.SourceId == nil || *lead.SourceId != key {
+		return false, nil
+	}
+	if l.legacy == nil {
+		return false, errors.New("compose: legacy inquiry ownership reader is not configured")
+	}
+	return l.legacy.LegacyLeadOccurrenceOwned(ctx, id)
 }

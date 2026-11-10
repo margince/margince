@@ -174,7 +174,12 @@ func chooseOwner(cfg RoutingConfig, lead leadRoutingFacts, openLoad map[ids.User
 // decision is still audit-logged — AC-S5 wants the decision on record,
 // and no event fires because nothing on the lead changed.
 func (s *Store) RouteLead(ctx context.Context, leadID ids.LeadID, cfg RoutingConfig) (RoutingDecision, error) {
-	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
+	return s.RouteLeadAs(ctx, ctx, leadID, cfg)
+}
+
+// RouteLeadAs keeps the authorizer's write scope while the audit records the executor.
+func (s *Store) RouteLeadAs(ctx, admit context.Context, leadID ids.LeadID, cfg RoutingConfig) (RoutingDecision, error) {
+	if err := auth.Require(admit, "lead", principal.ActionUpdate); err != nil {
 		return RoutingDecision{}, err
 	}
 	var decision RoutingDecision
@@ -183,9 +188,7 @@ func (s *Store) RouteLead(ctx context.Context, leadID ids.LeadID, cfg RoutingCon
 		// serializes rotation (fairness stays ±1 under concurrent workers)
 		// and makes the cap count race-free — the count and the assignment
 		// commit as one unit.
-		if _, err := tx.Exec(ctx,
-			`SELECT pg_advisory_xact_lock(hashtextextended('lead_routing:' || $1::text, 0))`,
-			storekit.MustWorkspace(ctx)); err != nil {
+		if err := lockLeadRouting(ctx, tx); err != nil {
 			return err
 		}
 
@@ -198,6 +201,9 @@ func (s *Store) RouteLead(ctx context.Context, leadID ids.LeadID, cfg RoutingCon
 			return err
 		}
 
+		if err := auth.EnsureWritableLive(admit, tx, "lead", leadID.UUID); err != nil {
+			return err
+		}
 		var currentOwner *ids.UserID
 		var status string
 		var facts leadRoutingFacts
@@ -452,4 +458,9 @@ func routingDeclineReason(reason string) string {
 	default:
 		return "routing placed no owner on this lead"
 	}
+}
+
+func lockLeadRouting(ctx context.Context, tx pgx.Tx) error {
+	_, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended('lead_routing:' || $1::text, 0))`, storekit.MustWorkspace(ctx))
+	return err
 }

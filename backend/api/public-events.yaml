@@ -2092,9 +2092,9 @@ components:
         Payload for activity.captured — the first-class capture verb,
         emitted instead of (never alongside) a generic activity.created
         (events.md §1). Two emit sites: the direct-log path
-        (activities/activity.go) that sets kind only, and the capture
-        ingestion path (capture/sink.go) that also names its originating
-        source system.
+        (activities/activity.go) that sets kind and trusted website receipt
+        details when present, and the capture ingestion path (capture/sink.go)
+        that names its originating source system.
       required:
         - kind
       properties:
@@ -2119,8 +2119,12 @@ components:
         source_system:
           type: string
           description: >-
-            The originating source system (capture ingestion only;
-            absent on a direct log).
+            The originating source system for capture ingestion or a trusted website note; absent on other direct logs.
+        website_submission_key:
+          type: string
+          description: >-
+            Canonical accepted website submission key, carried only by a website note.
+            Consumers verify its stored provenance before routing. Contains no submission content.
         imported:
           type: boolean
           description: True when a data import wrote the event. Absent otherwise.
@@ -2281,6 +2285,11 @@ components:
         The bounded delta of activity.updated. Each field is carried only when this update touched
         it. The key set is fixed, so it is typed rather than an open map.
       properties:
+        source_activity_id:
+          type: string
+          format: uuid
+          description: The accepted source attached to an existing task by its internal handler.
+
         thread_key:
           type: string
           description: The activity's new conversation key, when its thread grouping changed.

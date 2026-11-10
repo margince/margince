@@ -53,6 +53,7 @@ type WorkflowEngine struct {
 	// clock fixes the instant a setter's expiry is judged at; nil reads the
 	// database's own clock, the one authentication judges a passport by.
 	clock func() time.Time
+	fence FiringFence
 }
 
 // NewWorkflowEngine builds the engine over the pool and the authz resolver

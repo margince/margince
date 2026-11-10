@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -28,18 +29,20 @@ const (
 	fieldSubject = "subject"
 )
 
-// activityCapturedPayload builds the activity.captured event for the
-// direct-log path. It never names a source_system, which belongs to the
-// capture auto-create path.
-func activityCapturedPayload(ctx context.Context, kind, channelProvider string) crmcontracts.PublicEventActivityCaptured {
-	p := crmcontracts.PublicEventActivityCaptured{Kind: kind}
+// Website consumers need the accepted identity, never a copy of the submitted text.
+func activityCapturedPayload(ctx context.Context, in LogActivityInput) crmcontracts.PublicEventActivityCaptured {
+	p := crmcontracts.PublicEventActivityCaptured{Kind: in.Kind}
+	if in.Kind == string(crmcontracts.ActivityKindNote) && in.SourceSystem != nil && *in.SourceSystem == provenance.WebFormSource && in.SourceID != nil {
+		p.SourceSystem = in.SourceSystem
+		p.WebsiteSubmissionKey = in.SourceID
+	}
 	// An import's activities are history, so consumers that react to new work
 	// read the mark and skip them.
 	p.Imported, p.ImportRunId = storekit.ImportMark(ctx)
 	// Carried only when there is one, so omitempty leaves it absent. The kind
 	// alone no longer says what carried a message.
-	if channelProvider != "" {
-		p.ChannelProvider = &channelProvider
+	if in.ChannelProvider != "" {
+		p.ChannelProvider = &in.ChannelProvider
 	}
 	return p
 }

@@ -91,6 +91,9 @@ const WebsiteLeadSource = "siteread"
 // holds only while no client can spell it.
 const WebFormSource = "web_form"
 
+// WebsiteInquirySource binds a task and its handling run to one accepted submission.
+const WebsiteInquirySource = "website_inquiry"
+
 // WebFormSourceID is a website form submission's source_id: the form, then the
 // submission's own part. WebFormIDSQL reads the form back out of it.
 func WebFormSourceID(form, submission string) string { return form + ":" + submission }
@@ -118,6 +121,7 @@ var internalSourceSystems = map[string]bool{
 	LeadRepliedSource:            true,
 	LeadForContactSource:         true,
 	WebFormSource:                true,
+	WebsiteInquirySource:         true,
 }
 
 // ReservedSourceSystem reports whether a client-supplied source system
@@ -153,6 +157,14 @@ const ReminderAnchorSeparator = ":anchor:"
 func EngineReminderSources() []string {
 	return []string{NoActivityReminderSource, CheckInCadenceSource}
 }
+
+// EngineTaskSources are the task identities admitted only for the system writer.
+// Inquiry work keeps its own lifecycle and is not a quiet-account reminder.
+func EngineTaskSources() []string {
+	return append(EngineReminderSources(), WebsiteInquirySource, LeadForContactSource)
+}
+
+func EngineTaskSource(source string) bool { return slices.Contains(EngineTaskSources(), source) }
 
 // RetiredTaskSources are automatic task families whose writers were removed.
 // Their rows remain current until a user completes them.

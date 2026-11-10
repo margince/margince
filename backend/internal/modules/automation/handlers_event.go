@@ -44,6 +44,7 @@ func StarterWorkflows(ex Executors) []workflow.Handler {
 		checkInCadence{ex: ex},
 		renewalReminder{ex: ex},
 		routeLeadCreateTask{ex: ex},
+		websiteInquiry{ex: ex},
 	}, listRuleWorkflows(ex)...)
 }
 

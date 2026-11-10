@@ -31,7 +31,7 @@ func reminderCreate(system string) crmcontracts.CreateActivityRequest {
 // the identity outright would refuse every reminder the engine ever writes.
 func TestTheEngineMayStampItsOwnReminderIdentity(t *testing.T) {
 	ctx := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalSystem, ID: "system"})
-	for _, source := range []string{provenance.NoActivityReminderSource, provenance.CheckInCadenceSource} {
+	for _, source := range provenance.EngineTaskSources() {
 		in, err := logInputForPrincipal(ctx, reminderCreate(source))
 		if err != nil {
 			t.Fatalf("[%s] the engine could not stamp its own reminder identity: %v", source, err)
@@ -50,7 +50,7 @@ func TestTheEngineMayStampItsOwnReminderIdentity(t *testing.T) {
 func TestTheProviderRefusesAReminderIdentityFromAnOrdinaryCaller(t *testing.T) {
 	provider := &Provider{}
 	ctx := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalAgent, ID: "a-1"})
-	for _, source := range []string{provenance.NoActivityReminderSource, provenance.CheckInCadenceSource} {
+	for _, source := range provenance.EngineTaskSources() {
 		_, err := provider.Create(ctx, datasource.CreateInput{
 			Source:     "manual",
 			EntityType: datasource.EntityActivity,
@@ -93,7 +93,7 @@ func TestAnOrdinaryCallerMayNotStampAReminderIdentity(t *testing.T) {
 		principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalAgent, ID: "a-1"}),
 		principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalConnector, ID: "c-1"}),
 	} {
-		for _, source := range []string{provenance.NoActivityReminderSource, provenance.CheckInCadenceSource} {
+		for _, source := range provenance.EngineTaskSources() {
 			_, err := logInputForPrincipal(ctx, reminderCreate(source))
 			if _, ok := errors.AsType[*provenance.ReservedError](err); !ok {
 				t.Fatalf("[%s] err = %v, want ReservedError — a caller able to write this identity can suppress the reminder", source, err)

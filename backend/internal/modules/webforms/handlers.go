@@ -105,7 +105,8 @@ func (h Handlers) UpdateWebForm(w http.ResponseWriter, r *http.Request, id crmco
 		ConsentRequired: req.ConsentRequired, ConsentPolicyVersion: req.ConsentPolicyVersion,
 		ConsentWording: req.ConsentWording, PrivacyNotice: req.PrivacyNotice, PrivacyNoticeURL: req.PrivacyNoticeUrl,
 		RedirectURL: req.RedirectUrl, SuccessMessage: req.SuccessMessage,
-		Clear: httperr.ClearedFields(r), IfVersion: ifVersion,
+		HandlingAutomationID: uuidOf(req.HandlingAutomationId),
+		Clear:                httperr.ClearedFields(r), IfVersion: ifVersion,
 	}
 	if req.State != nil {
 		state := string(*req.State)

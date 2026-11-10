@@ -55,6 +55,7 @@ func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter)
 	// Executors ride the same record provider as every other datasource
 	// consumer.
 	ex := automation.Executors{
+		Inquiries: automation.NewInquiryService(db, newInquiryRouting(db)),
 		Provider:  NewProvider(db.Pool()),
 		Approvals: automationApprovalsAdapter{svc: NewApprovalsService(db)},
 		// The zero SendPath is the honest one here: automation.Comms declares
@@ -72,6 +73,7 @@ func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter)
 		Lists:     NewListRules(db.Pool()),
 		Authority: identity.NewService(db.Pool()),
 	}
+	engine.WithFiringFence(newInquiryFiringFence(db))
 	engine.WithRulePauses(noticesNotifier{store: notices.NewStore(db)}, ex.Lists)
 	for _, handler := range automation.StarterWorkflows(ex) {
 		engine.RegisterWorkflow(handler)
