@@ -59270,6 +59270,7 @@ export interface operations {
                 content?: never;
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
             /** @description Rate-limited per client IP. */
             429: {
                 headers: {

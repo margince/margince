@@ -116,7 +116,7 @@ func TestStartSignsTheConsentMarkerOnlyWhenAsked(t *testing.T) {
 					token = c.Value
 				}
 			}
-			st, err := newLoginStateSigner([]byte(key)).verify(token, time.Now())
+			st, err := loginStateSignerAdapter{s: newLoginStateSigner([]byte(key))}.Verify(token)
 			if err != nil {
 				t.Fatalf("status %d, state cookie %q: %v", rec.Code, token, err)
 			}

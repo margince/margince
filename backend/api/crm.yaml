@@ -467,6 +467,7 @@ paths:
           headers:
             Set-Cookie: { schema: { type: string } }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '429':
           description: Rate-limited per client IP.
           content:
