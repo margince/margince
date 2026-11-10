@@ -42,6 +42,9 @@ const (
 	tokenCount
 )
 
+// boxCorner is --r-sm, which the product's control, card and pane corners read.
+const boxCorner = "8px"
+
 var tokens = [tokenCount]Token{
 	bgPage:              {"bgPage", "#eff6f3", "#0c1311"},
 	bgElevated:          {"bgElevated", "#fbfcfb", "#161d1a"},
@@ -57,9 +60,9 @@ var tokens = [tokenCount]Token{
 	infoText:            {"infoText", "#005eb5", "#3d99ff"},
 	successText:         {"successText", "#007132", "#17c964"},
 	dangerText:          {"dangerText", "#c2001a", "#ff615e"},
-	rControl:            {"r-control", "8px", "8px"},
-	rMd:                 {"r-md", "8px", "8px"},
-	rLg:                 {"r-lg", "8px", "8px"},
+	rControl:            {"r-control", boxCorner, boxCorner},
+	rMd:                 {"r-md", boxCorner, boxCorner},
+	rLg:                 {"r-lg", boxCorner, boxCorner},
 	shadowRest:          {"shadow-rest", "0 1px 2px 0 rgb(0 0 0 / 0.05)", "0 1px 2px 0 rgb(0 0 0 / 0.4)"},
 	fontWeightMedium:    {"fontWeightMedium", "500", "500"},
 }
