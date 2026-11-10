@@ -49,7 +49,8 @@ func TestWebsiteInquiryWorklistShowsAcceptedWorkBeforeItsDeadline(t *testing.T) 
 			if task.DueAt == nil || task.Version == nil {
 				t.Fatal("inquiry task has no deadline or version")
 			}
-			if status := e.Call(t, "POST", "/v1/activities", integration.AnyMap{"kind": "task", "subject": "Unrelated future work", "occurred_at": task.CreatedAt, "due_at": task.DueAt, "assignee_id": task.AssigneeId, "source": "manual"}, nil, nil); status != http.StatusCreated {
+			var future crmcontracts.Activity
+			if status := e.Call(t, "POST", "/v1/activities", integration.AnyMap{"kind": "task", "subject": "Unrelated future work", "occurred_at": task.CreatedAt, "due_at": task.DueAt, "assignee_id": task.AssigneeId, "source": "manual"}, nil, &future); status != http.StatusCreated {
 				t.Fatalf("unrelated task: %d", status)
 			}
 			path := "/v1/worklist?scope=all&view=today"
@@ -77,6 +78,15 @@ func TestWebsiteInquiryWorklistShowsAcceptedWorkBeforeItsDeadline(t *testing.T) 
 			var upcoming crmcontracts.Worklist
 			if status := e.Call(t, "GET", path+"&filter=upcoming", nil, nil, &upcoming); status != http.StatusOK {
 				t.Fatalf("upcoming: %d", status)
+			}
+			if days == 1 {
+				visible := false
+				for _, item := range upcoming.Queue {
+					visible = visible || item.Id == future.Id.String()
+				}
+				if !visible {
+					t.Fatalf("upcoming hid an ordinary task without inquiry provenance: %+v", upcoming.Queue)
+				}
 			}
 			for _, item := range upcoming.Queue {
 				if item.Id == taskID.String() {

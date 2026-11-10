@@ -6174,6 +6174,52 @@ export interface paths {
         patch: operations["setActivityAudience"];
         trace?: never;
     };
+    "/activities/{id}/inquiry-assignment/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Show the inquiry task and record ownership before taking or assigning it.
+         * @description Show the inquiry task and record ownership before taking or assigning it. This read changes no records.
+         */
+        post: operations["previewWebsiteInquiryAssignment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/activities/{id}/inquiry-assignment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take an inquiry or hand its lead and this task to a colleague in one transaction.
+         * @description Take an inquiry or hand its lead and this task to a colleague in one transaction. Unrelated tasks stay unchanged. Taking a contact inquiry changes only its task; contact ownership requires a separate authorized handover.
+         */
+        post: operations["assignWebsiteInquiry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/activities/{id}/disposition": {
         parameters: {
             query?: never;
@@ -25701,6 +25747,37 @@ export interface components {
             form: components["schemas"]["WebForm"];
             automation: components["schemas"]["Automation"];
         };
+        WebsiteInquiryAssignmentRequest: {
+            /** @enum {string} */
+            mode: "take" | "assign_and_follow_up";
+            /** Format: uuid */
+            recipient_id: string;
+            /**
+             * @description Required when applying; use the record type from the preview.
+             * @enum {string}
+             */
+            record_type?: "lead" | "contact";
+            /**
+             * Format: uuid
+             * @description Required when applying; use the record ID from the preview.
+             */
+            record_id?: string;
+            /** @description Required when applying the assignment. Use the version returned by its preview. */
+            record_version?: components["schemas"]["RowVersion"];
+        };
+        WebsiteInquiryAssignment: {
+            task: components["schemas"]["Activity"];
+            /** @enum {string} */
+            record_type: "lead" | "contact";
+            /** Format: uuid */
+            record_id: string;
+            record_version: components["schemas"]["RowVersion"];
+            /** Format: uuid */
+            record_owner_id?: string | null;
+            /** Format: uuid */
+            recipient_id: string;
+            changes_record_owner: boolean;
+        };
         /** @description Inquiry facts under the current task and source content permissions. Missing source facts remain unknown. */
         WebsiteInquiryWork: {
             /** Format: date-time */
@@ -25710,6 +25787,11 @@ export interface components {
             readonly source_label?: string;
             readonly request_type?: string;
             readonly assignment_reason?: string;
+            readonly record_owner_known?: boolean;
+            /** Format: uuid */
+            readonly record_owner_id?: string | null;
+            /** @description The reader may review taking this inquiry; the assignment operation rechecks current authority and versions. */
+            readonly can_take?: boolean;
         };
         WebsiteInquiryPolicy: {
             /** Format: uuid */
@@ -69477,6 +69559,79 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Activity"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
+            423: components["responses"]["RetentionHeld"];
+        };
+    };
+    previewWebsiteInquiryAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebsiteInquiryAssignmentRequest"];
+            };
+        };
+        responses: {
+            /** @description The visible task, its linked record and the selected colleague. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebsiteInquiryAssignment"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
+            423: components["responses"]["RetentionHeld"];
+        };
+    };
+    assignWebsiteInquiry: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebsiteInquiryAssignmentRequest"];
+            };
+        };
+        responses: {
+            /** @description The visible task, its linked record and the selected colleague. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebsiteInquiryAssignment"];
                 };
             };
             403: components["responses"]["Forbidden"];

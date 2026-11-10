@@ -120,7 +120,7 @@ func WebsiteInquirySubmission(system, source string) (string, bool) {
 
 func WebsiteInquiryTaskSQL(alias string) string {
 	contact, prefix := WebsiteInquiryTaskSource("", true)
-	return fmt.Sprintf("(%[1]s.source_id <> '' AND (%[1]s.source_system = '%[2]s' OR (%[1]s.source_system = '%[3]s' AND %[1]s.source_id LIKE '%[4]s%%')))", alias, WebsiteInquirySource, contact, prefix)
+	return fmt.Sprintf("COALESCE((%[1]s.source_id <> '' AND (%[1]s.source_system = '%[2]s' OR (%[1]s.source_system = '%[3]s' AND starts_with(%[1]s.source_id, '%[4]s')))), FALSE)", alias, WebsiteInquirySource, contact, prefix)
 }
 
 // WebFormSourceID is a website form submission's source_id: the form, then the

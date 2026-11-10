@@ -332,6 +332,8 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `DELETE /activities/{id}` | archiveActivity | Archive (soft-delete) an activity. | Change records | at once |
 | `GET /activities/{id}/email-presentation` | getEmailPresentation | Everything one email needs to be read and acted on, in one read. | Read records | at once |
 | `PATCH /activities/{id}/audience` | setActivityAudience | Limit (or re-open) who may see this activity's content. | Change records | at once |
+| `POST /activities/{id}/inquiry-assignment/preview` | previewWebsiteInquiryAssignment | Show the inquiry task and record ownership before taking or assigning it. | Change records | at once |
+| `POST /activities/{id}/inquiry-assignment` | assignWebsiteInquiry | Take an inquiry or hand its lead and this task to a colleague in one transaction. | Change records | at once |
 | `PUT /activities/{id}/disposition` | setActivityDisposition | Put a waiting message down, so the Worklist stops offering it. | Change records | at once |
 | `DELETE /activities/{id}/disposition` | clearActivityDisposition | Pick the message back up — the undo behind every set-aside verb. | Change records | at once |
 | `PUT /activities/{id}/calendar-response` | answerCalendarInvitation | Accept, tentatively accept or decline a calendar invitation that came by email. | Send messages | at once |

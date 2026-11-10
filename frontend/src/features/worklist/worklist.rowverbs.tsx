@@ -157,7 +157,11 @@ export function RowActs({
           {pins && <PinLine item={item} />}
           {handsOff && (
             <Button variant="ghost" onClick={() => setHandingOff(true)}>
-              {t("worklist.manager.reassign")}
+              {t(
+                item.kind === "website_inquiry"
+                  ? "inquiry.assignment.assign"
+                  : "worklist.manager.reassign",
+              )}
             </Button>
           )}
           <HandBackLines write={write} />

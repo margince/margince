@@ -6825,6 +6825,68 @@ paths:
         '409': {$ref: '#/components/responses/VersionConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '423': {$ref: '#/components/responses/RetentionHeld'}
+  /activities/{id}/inquiry-assignment/preview:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Activities]
+      operationId: previewWebsiteInquiryAssignment
+      security: [{bearerAuth: []}]
+      summary: Show the inquiry task and record ownership before taking or assigning it.
+      description: |-
+        Show the inquiry task and record ownership before taking or assigning it. This read changes no records.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/WebsiteInquiryAssignmentRequest'}
+      responses:
+        '200':
+          description: The visible task, its linked record and the selected colleague.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/WebsiteInquiryAssignment'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/VersionConflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '423': {$ref: '#/components/responses/RetentionHeld'}
+  /activities/{id}/inquiry-assignment:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Activities]
+      operationId: assignWebsiteInquiry
+      security: [{bearerAuth: []}]
+      summary: Take an inquiry or hand its lead and this task to a colleague in one transaction.
+      description: |-
+        Take an inquiry or hand its lead and this task to a colleague in one transaction. Unrelated tasks stay unchanged. Taking a contact inquiry changes only its task; contact ownership requires a separate authorized handover.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/WebsiteInquiryAssignmentRequest'}
+      responses:
+        '200':
+          description: The visible task, its linked record and the selected colleague.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/WebsiteInquiryAssignment'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/VersionConflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '423': {$ref: '#/components/responses/RetentionHeld'}
   /activities/{id}/disposition:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -26446,6 +26508,29 @@ components:
         reason: {type: string}
         target_type: {type: string, enum: [lead, contact]}
         target_id: {type: string, format: uuid}
+    WebsiteInquiryAssignmentRequest:
+      type: object
+      additionalProperties: false
+      required: [mode, recipient_id]
+      properties:
+        mode: {type: string, enum: [take, assign_and_follow_up]}
+        recipient_id: {type: string, format: uuid}
+        record_type: {type: string, enum: [lead, contact], description: Required when applying; use the record type from the preview.}
+        record_id: {type: string, format: uuid, description: Required when applying; use the record ID from the preview.}
+        record_version:
+          allOf: [{$ref: '#/components/schemas/RowVersion'}]
+          description: Required when applying the assignment. Use the version returned by its preview.
+    WebsiteInquiryAssignment:
+      type: object
+      required: [task, record_type, record_id, record_version, recipient_id, changes_record_owner]
+      properties:
+        task: {$ref: '#/components/schemas/Activity'}
+        record_type: {type: string, enum: [lead, contact]}
+        record_id: {type: string, format: uuid}
+        record_version: {$ref: '#/components/schemas/RowVersion'}
+        record_owner_id: {type: [string, 'null'], format: uuid}
+        recipient_id: {type: string, format: uuid}
+        changes_record_owner: {type: boolean}
     WebsiteInquiryWork:
       type: object
       description: Inquiry facts under the current task and source content permissions. Missing source facts remain unknown.
@@ -26455,6 +26540,9 @@ components:
         source_label: {type: string, readOnly: true}
         request_type: {type: string, readOnly: true}
         assignment_reason: {type: string, readOnly: true}
+        record_owner_known: {type: boolean, readOnly: true}
+        record_owner_id: {type: [string, 'null'], format: uuid, readOnly: true}
+        can_take: {type: boolean, readOnly: true, description: The reader may review taking this inquiry; the assignment operation rechecks current authority and versions.}
     WebsiteInquiryPolicy:
       type: object
       additionalProperties: false

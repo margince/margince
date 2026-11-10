@@ -40,7 +40,7 @@ Margince adds a lead with the prospect's name, email, phone and company, and the
 
 Open the note to see each field under its own label. The page it came from is a link, and the consent is a badge with its policy version. Margince stores that page, and the page before it, only as a web address. It drops the text after `?` except the `utm_` names, the text after `#`, and any name and password in the address. Text that is not a web address is not stored.
 
-If a lead or contact already has that email address, Margince adds the note to it and makes no new lead. A double click on the send button adds one note. If the address was erased on request, Margince keeps nothing, and the prospect sees the same message as any other.
+If a lead or contact already has that email address, Margince adds the note to it and makes no new lead. With the form code we give you, a double click adds one note. If the address was erased on request, Margince keeps nothing, and the prospect sees the same message as any other.
 
 A line outside the quote was written by Margince, so a prospect cannot type one.
 
@@ -52,7 +52,7 @@ Choose **Inquiry handling** beside the form. Choose one colleague, share work be
 
 Choose **Review handling** to check the plan. **Authorized by** names the person whose rights let the rule act. The person who checks questions and the selected colleagues get the work. Choose **Save paused** to keep the plan off, or **Turn on this handling** to handle future accepted posts. Turning it on leaves past questions as they are.
 
-An existing owner keeps the lead or contact. A new or unowned lead follows the plan. The person who checks questions gets a task when the plan leaves the lead unassigned. A repeated post does not make a second task. The deadline ends on the chosen local day, in the chosen time zone.
+An existing owner keeps the lead or contact. A new or unowned lead follows the plan. The person who checks questions gets a task when the plan leaves the lead unassigned. A new post gets its own task. A retry with the same key keeps the old task. The deadline ends on the chosen local day, in the chosen time zone.
 
 **Request type field (optional)** can name a lead picklist sent by your website form. A value outside that list stays in the note. Leave this choice as **Not specified** if the form has no request type.
 

@@ -105,7 +105,15 @@ func (t attentionTasks) OpenForViewer(
 
 // asTasks carries a window's rows across as tasks. Each carries the reminder
 // its scope may show, and a flag where the reader may not change it.
-func (t attentionTasks) asTasks(
+func (t attentionTasks) asTasks(ctx context.Context, rows []crmcontracts.Activity, scope attention.TaskScope, asOf time.Time) ([]attention.Task, error) {
+	tasks, err := t.taskRows(ctx, rows, scope, asOf)
+	if err != nil {
+		return nil, err
+	}
+	return t.markReadOnly(ctx, tasks, asOf)
+}
+
+func (t attentionTasks) taskRows(
 	ctx context.Context, rows []crmcontracts.Activity, scope attention.TaskScope, asOf time.Time,
 ) ([]attention.Task, error) {
 	var inquiryFacts map[ids.UUID]*crmcontracts.WebsiteInquiryWork
@@ -123,7 +131,7 @@ func (t attentionTasks) asTasks(
 		task.Inquiry = inquiryFacts[ids.UUID(row.Id)]
 		tasks = append(tasks, task)
 	}
-	return t.markReadOnly(ctx, tasks, asOf)
+	return tasks, nil
 }
 
 // listOpenTasks reads one window of open tasks with each statement's generic
@@ -225,16 +233,17 @@ func (t attentionTasks) TasksOnDeals(
 	}
 	page := reminderPage
 	in.LinkedToDeals, in.Limit = deals, &page
-	reader := reminderReaderFor(ctx, window.Scope)
 	var tasks []attention.Task
 	for {
 		rows, next, err := t.listTaskPage(ctx, in)
 		if err != nil {
 			return nil, err
 		}
-		for _, row := range rows {
-			tasks = append(tasks, taskFromActivity(row, reader, window.AsOf))
+		pageTasks, err := t.taskRows(ctx, rows, window.Scope, window.AsOf)
+		if err != nil {
+			return nil, err
 		}
+		tasks = append(tasks, pageTasks...)
 		if !next.HasMore {
 			return tasks, nil
 		}
@@ -258,9 +267,11 @@ func (t attentionTasks) RemindersForViewer(ctx context.Context, asOf time.Time) 
 		if err != nil {
 			return nil, err
 		}
-		for _, row := range rows {
-			due = append(due, taskFromActivity(row, reader, asOf))
+		pageTasks, err := t.taskRows(ctx, rows, attention.TasksMine, asOf)
+		if err != nil {
+			return nil, err
 		}
+		due = append(due, pageTasks...)
 		if !next.HasMore {
 			return t.markReadOnly(ctx, due, asOf)
 		}
@@ -311,6 +322,10 @@ func (t attentionTasks) markReadOnly(ctx context.Context, tasks []attention.Task
 		}
 		for i := range tasks {
 			tasks[i].ReadOnly = !writable[tasks[i].ID]
+			inquiry := tasks[i].Inquiry
+			if inquiry != nil && inquiry.CanTake != nil && *inquiry.CanTake && tasks[i].ReadOnly && (tasks[i].LinkType != "lead" || inquiry.RecordOwnerId != nil) {
+				inquiry.CanTake = new(false)
+			}
 		}
 		tasks, err = t.withRecipients(ctx, tasks, named)
 		return err

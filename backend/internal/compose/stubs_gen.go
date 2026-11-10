@@ -111,6 +111,14 @@ func (stubs) GetEmailPresentation(w nethttp.ResponseWriter, r *nethttp.Request, 
 	httperr.NotImplemented(w, r, "GetEmailPresentation")
 }
 
+func (stubs) AssignWebsiteInquiry(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.AssignWebsiteInquiryParams) {
+	httperr.NotImplemented(w, r, "AssignWebsiteInquiry")
+}
+
+func (stubs) PreviewWebsiteInquiryAssignment(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "PreviewWebsiteInquiryAssignment")
+}
+
 func (stubs) GetMeetingBrief(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.GetMeetingBriefParams) {
 	httperr.NotImplemented(w, r, "GetMeetingBrief")
 }

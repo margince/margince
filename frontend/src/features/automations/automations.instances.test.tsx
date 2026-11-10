@@ -70,6 +70,39 @@ const templateText = (key: string) =>
   AUTOMATION_CATALOG.find((entry) => entry.key === key)?.description ?? "";
 
 describe("the configured automations table", () => {
+  it("names the authorizer for a reader without editing rights", async () => {
+    const rules = configuredAutomations(RECORDED_AT).map((rule, index) =>
+      index === 0 ? { ...rule, owner_id: "u-2" } : rule,
+    );
+    const people = () =>
+      jsonResponse({
+        data: [
+          {
+            id: "u-2",
+            display_name: "Morgan",
+            status: "active",
+            is_agent: false,
+          },
+        ],
+        page: { next_cursor: null, has_more: false },
+      });
+    mount(
+      { automation: ["read"] },
+      {
+        "GET /automations": () =>
+          jsonResponse({ data: rules, page: { next_cursor: null } }),
+        "GET /users": people,
+        "GET /users/names": people,
+      },
+    );
+    const configured = within(await row("au-1"));
+    expect(await configured.findByText("Morgan")).toBeVisible();
+    expect(configured.queryByText(en["auto.ownerNone"])).toBeNull();
+    expect(
+      configured.queryByRole("combobox", { name: /authorized by/i }),
+    ).toBeNull();
+  });
+
   it("reads each rule's last run as an outcome word, and Never when it has none", async () => {
     mount();
     expect(await row("au-1")).toHaveTextContent(en["auto.runs.outcomeFired"]);

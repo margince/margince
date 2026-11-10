@@ -16327,6 +16327,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "inquiry.requestTypeValue": "Loại yêu cầu: {type}",
   "inquiry.initialHandlingValue": "Xử lý ban đầu: {reason}",
   "inquiry.sourceValue": "Nguồn: {source}",
+  "inquiry.assignment.reviewAgain": "Xem lại phân công hiện tại",
+  "inquiry.assignment.unsupported":
+    "Phiên bản này chưa hỗ trợ phân công yêu cầu này. Hãy tải lại trang.",
+  "inquiry.assignment.take": "Nhận yêu cầu",
+  "inquiry.assignment.assign": "Phân công và theo dõi",
+  "inquiry.assignment.chooseColleague": "Chọn đồng nghiệp",
+  "inquiry.assignment.done": "Đã phân công yêu cầu",
+  "inquiry.assignment.record": "Bản ghi",
+  "inquiry.assignment.taskHolder": "Người đang phụ trách nhiệm vụ",
+  "inquiry.assignment.newHolder": "Người phụ trách nhiệm vụ mới",
+  "inquiry.assignment.movesLead":
+    "Khách hàng tiềm năng và nhiệm vụ xử lý yêu cầu này được giao cho đồng nghiệp này.",
+  "inquiry.assignment.taskOnly":
+    "Thao tác này đổi người phụ trách nhiệm vụ yêu cầu. Bản ghi giữ nguyên người phụ trách.",
+  "inquiry.currentRecordOwner": "Người phụ trách bản ghi hiện tại",
   "inquiry.markHandled": "Đánh dấu đã xử lý",
   "inquiry.openSubmission": "Mở yêu cầu",
   "inquiry.reason.notRecorded": "Chưa ghi lý do",

@@ -34,6 +34,7 @@ import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
 import { problemCodeOf } from "../../lib/problem";
 import { useMe } from "../../lib/session";
+import { InquiryAssignmentDialog } from "./worklist.inquiryassignment";
 import {
   subjectAcceptsAnOwner,
   type TeamException,
@@ -129,7 +130,21 @@ function useAssigneeOptions(exclude: string | undefined) {
 // summary above it counting work that is no longer here, and the rank numbers
 // beside every remaining row wrong. So the press reports itself through the
 // toast, and the list reconciles.
-export function ReassignForm({
+export function ReassignForm(
+  props: Readonly<{ item: WorklistItem; owner: string; onClose: () => void }>,
+) {
+  return props.item.kind === "website_inquiry" ? (
+    <InquiryAssignmentDialog
+      item={props.item}
+      mode="assign_and_follow_up"
+      onClose={props.onClose}
+    />
+  ) : (
+    <TaskReassignForm {...props} />
+  );
+}
+
+function TaskReassignForm({
   item,
   owner,
   onClose,

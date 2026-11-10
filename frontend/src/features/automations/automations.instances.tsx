@@ -7,7 +7,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
 import { useRunAsOwnerOptions } from "../../components/assigneepicker";
-import { RosterFailedLine } from "../../components/entityref";
+import { EntityRef, RosterFailedLine } from "../../components/entityref";
 import { WebsiteInquiryDialog } from "../../components/websiteinquirydialog";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
 import { CellStack } from "../../design-system/cellstack";
@@ -371,9 +371,12 @@ function AutomationOwner({
     onSettled: () =>
       queryClient.invalidateQueries({ queryKey: ["automations"] }),
   });
-  const current = owners.find((option) => option.value === automation.owner_id);
   if (!canEdit) {
-    return <span>{current?.label ?? t("auto.ownerNone")}</span>;
+    return automation.owner_id ? (
+      <EntityRef kind="user" id={automation.owner_id} />
+    ) : (
+      <span>{t("auto.ownerNone")}</span>
+    );
   }
   return (
     <CellStack>

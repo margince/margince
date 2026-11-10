@@ -8,7 +8,7 @@ The Worklist is the ranked to-do list in Margince: one list of everything waitin
 
 Under **Needs you**, every task is its own card, and the first one is open. Press another card to open it in its place. **Next task** on the open card opens the one after it, and after the last card it goes back to the first. Opening a card changes only which task you see.
 
-When you email a task's contact after the task was created, Margince marks the task done and shows a receipt in **Done for you**. Bulk mail and a contact named only in Bcc do not count. **Undo** reopens the task; the same email will not close it again. This includes tasks from website requests.
+When you email a task's contact after the task was created, Margince marks the task done and shows a receipt in **Done for you**. Bulk mail and a contact named only in Bcc do not count. **Undo** reopens the task; the same email will not close it again. For a request from your site, choose **Mark handled** to finish the task.
 
 Open a task's details and choose **Log what happened** to record the outcome and attach files. **Mark task done** starts selected. Clear it to keep the task open after logging the outcome.
 
@@ -30,6 +30,11 @@ To make your Worklist fill the window in Margince, press **Expand** at the top o
    always fills the screen.
 
 On a big screen the panel stops before its rows get too long to read. Also called: full screen, big worklist, wide view.
+
+### How do I work on requests from my website?
+Open **Home** → **Show Worklist** and choose **Website inquiries**. Open a task to see when the form came in, its request type, and who owns the record. **Open submission** shows the original post if you can read it.
+
+Choose **Take inquiry** to review the lead and task. If the lead has no owner, both go to you. On a contact, only the task moves. Choose **More actions** → **Assign and follow up** to review who gets the lead and this task. Choose **Mark handled** when the work is done.
 
 ### How do I snooze something on my worklist?
 To snooze a Worklist item in Margince, press **More actions** at the end of its row and choose

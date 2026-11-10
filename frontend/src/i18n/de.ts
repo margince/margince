@@ -16759,6 +16759,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "inquiry.requestTypeValue": "Art der Anfrage: {type}",
   "inquiry.initialHandlingValue": "Erste Bearbeitung: {reason}",
   "inquiry.sourceValue": "Quelle: {source}",
+  "inquiry.assignment.reviewAgain": "Aktuelle Zuweisung prüfen",
+  "inquiry.assignment.unsupported":
+    "Diese Version kann die Anfrage nicht zuweisen. Lade die Seite neu.",
+  "inquiry.assignment.take": "Anfrage übernehmen",
+  "inquiry.assignment.assign": "Zuweisen und nachfassen",
+  "inquiry.assignment.chooseColleague": "Person wählen",
+  "inquiry.assignment.done": "Anfrage zugewiesen",
+  "inquiry.assignment.record": "Datensatz",
+  "inquiry.assignment.taskHolder": "Aktuell zuständig für die Aufgabe",
+  "inquiry.assignment.newHolder": "Neu zuständig für die Aufgabe",
+  "inquiry.assignment.movesLead":
+    "Der Lead und diese Anfrageaufgabe gehen an diese Person.",
+  "inquiry.assignment.taskOnly":
+    "Dies ändert die Zuständigkeit für die Anfrageaufgabe. Der Datensatz behält seine verantwortliche Person.",
+  "inquiry.currentRecordOwner": "Aktuell verantwortlich für den Datensatz",
   "inquiry.markHandled": "Als bearbeitet markieren",
   "inquiry.openSubmission": "Anfrage öffnen",
   "inquiry.reason.notRecorded": "Grund nicht erfasst",

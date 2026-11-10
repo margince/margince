@@ -10,18 +10,21 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/automation"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 type inquiryWork struct {
+	db          *database.DB
+	contacts    *contacts.Store
 	store       *activities.Store
 	assignments *automation.InquiryService
 }
 
 func newInquiryWork(db *database.DB) *inquiryWork {
-	return &inquiryWork{store: activities.NewStore(db), assignments: automation.NewInquiryService(db, newInquiryRouting(db))}
+	return &inquiryWork{db: db, contacts: contacts.NewStore(db), store: activities.NewStore(db), assignments: automation.NewInquiryService(db, newInquiryRouting(db))}
 }
 
 func (w *inquiryWork) forTasks(ctx context.Context, tasks []crmcontracts.Activity) (map[ids.UUID]*crmcontracts.WebsiteInquiryWork, error) {
@@ -73,6 +76,9 @@ func (w *inquiryWork) forTasks(ctx context.Context, tasks []crmcontracts.Activit
 			facts.RequestType = inquiryRequestType(note.WebForm, assignment.RequestTypeField)
 		}
 		out[id] = facts
+	}
+	if err := w.owners(ctx, tasks, byKey, out); err != nil {
+		return nil, err
 	}
 	return out, nil
 }

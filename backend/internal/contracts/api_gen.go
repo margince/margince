@@ -25813,6 +25813,60 @@ func (e WebhookSubscriptionState) Valid() bool {
 	}
 }
 
+// Defines values for WebsiteInquiryAssignmentRecordType.
+const (
+	WebsiteInquiryAssignmentRecordTypeContact WebsiteInquiryAssignmentRecordType = "contact"
+	WebsiteInquiryAssignmentRecordTypeLead    WebsiteInquiryAssignmentRecordType = "lead"
+)
+
+// Valid indicates whether the value is a known member of the WebsiteInquiryAssignmentRecordType enum.
+func (e WebsiteInquiryAssignmentRecordType) Valid() bool {
+	switch e {
+	case WebsiteInquiryAssignmentRecordTypeContact:
+		return true
+	case WebsiteInquiryAssignmentRecordTypeLead:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebsiteInquiryAssignmentRequestMode.
+const (
+	WebsiteInquiryAssignmentRequestModeAssignAndFollowUp WebsiteInquiryAssignmentRequestMode = "assign_and_follow_up"
+	WebsiteInquiryAssignmentRequestModeTake              WebsiteInquiryAssignmentRequestMode = "take"
+)
+
+// Valid indicates whether the value is a known member of the WebsiteInquiryAssignmentRequestMode enum.
+func (e WebsiteInquiryAssignmentRequestMode) Valid() bool {
+	switch e {
+	case WebsiteInquiryAssignmentRequestModeAssignAndFollowUp:
+		return true
+	case WebsiteInquiryAssignmentRequestModeTake:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebsiteInquiryAssignmentRequestRecordType.
+const (
+	WebsiteInquiryAssignmentRequestRecordTypeContact WebsiteInquiryAssignmentRequestRecordType = "contact"
+	WebsiteInquiryAssignmentRequestRecordTypeLead    WebsiteInquiryAssignmentRequestRecordType = "lead"
+)
+
+// Valid indicates whether the value is a known member of the WebsiteInquiryAssignmentRequestRecordType enum.
+func (e WebsiteInquiryAssignmentRequestRecordType) Valid() bool {
+	switch e {
+	case WebsiteInquiryAssignmentRequestRecordTypeContact:
+		return true
+	case WebsiteInquiryAssignmentRequestRecordTypeLead:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WebsiteInquiryHandlingItemStatus.
 const (
 	WebsiteInquiryHandlingItemStatusAlreadyHandled     WebsiteInquiryHandlingItemStatus = "already_handled"
@@ -66812,6 +66866,59 @@ type WebhookSubscriptionListResponse struct {
 	Page            PageInfo `json:"page"`
 }
 
+// WebsiteInquiryAssignment defines model for WebsiteInquiryAssignment.
+type WebsiteInquiryAssignment struct {
+	ChangesRecordOwner bool                               `json:"changes_record_owner"`
+	RecipientId        openapi_types.UUID                 `json:"recipient_id"`
+	RecordId           openapi_types.UUID                 `json:"record_id"`
+	RecordOwnerId      *openapi_types.UUID                `json:"record_owner_id,omitempty"`
+	RecordType         WebsiteInquiryAssignmentRecordType `json:"record_type"`
+
+	// RecordVersion Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	RecordVersion *RowVersion `json:"record_version,omitempty" minimum:"1"`
+
+	// Task A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
+	// **Per-kind field constraints** (enforced server-side to match the DB `activity_task_fields`
+	// CHECK; the OpenAPI cannot express these conditionally): `due_at`/`assignee_id`/`is_done`/
+	// `done_at` are valid ONLY when `kind=task`; `meeting_status` ONLY when `kind=meeting`;
+	// `duration_seconds` only for meeting/call; `direction` is null for note/task. Setting a
+	// disallowed field for the kind returns `422 code: field_not_valid_for_kind` (the API rejects
+	// what the DB CHECK would reject, rather than 500-ing at write time).
+	// `channel_provider` is the same kind of constraint in both directions: non-null exactly
+	// when `kind=message` (ADR-0107).
+	// **Custom fields**: the values of the workspace's activity custom fields arrive as extra
+	// top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
+	// `withheld`.
+	Task Activity `json:"task"`
+}
+
+// WebsiteInquiryAssignmentRecordType defines model for WebsiteInquiryAssignment.RecordType.
+type WebsiteInquiryAssignmentRecordType string
+
+// WebsiteInquiryAssignmentRequest defines model for WebsiteInquiryAssignmentRequest.
+type WebsiteInquiryAssignmentRequest struct {
+	Mode        WebsiteInquiryAssignmentRequestMode `json:"mode"`
+	RecipientId openapi_types.UUID                  `json:"recipient_id"`
+
+	// RecordId Required when applying; use the record ID from the preview.
+	RecordId *openapi_types.UUID `json:"record_id,omitempty"`
+
+	// RecordType Required when applying; use the record type from the preview.
+	RecordType *WebsiteInquiryAssignmentRequestRecordType `json:"record_type,omitempty"`
+
+	// RecordVersion Required when applying the assignment. Use the version returned by its preview.
+	RecordVersion *RowVersion `json:"record_version,omitempty"`
+}
+
+// WebsiteInquiryAssignmentRequestMode defines model for WebsiteInquiryAssignmentRequest.Mode.
+type WebsiteInquiryAssignmentRequestMode string
+
+// WebsiteInquiryAssignmentRequestRecordType Required when applying; use the record type from the preview.
+type WebsiteInquiryAssignmentRequestRecordType string
+
 // WebsiteInquiryExistingRequest defines model for WebsiteInquiryExistingRequest.
 type WebsiteInquiryExistingRequest struct {
 	AutomationId openapi_types.UUID `json:"automation_id"`
@@ -66953,8 +67060,13 @@ type WebsiteInquirySelection struct {
 
 // WebsiteInquiryWork Inquiry facts under the current task and source content permissions. Missing source facts remain unknown.
 type WebsiteInquiryWork struct {
-	AssignmentReason *string             `json:"assignment_reason,omitempty"`
+	AssignmentReason *string `json:"assignment_reason,omitempty"`
+
+	// CanTake The reader may review taking this inquiry; the assignment operation rechecks current authority and versions.
+	CanTake          *bool               `json:"can_take,omitempty"`
 	ReceivedAt       *time.Time          `json:"received_at,omitempty"`
+	RecordOwnerId    *openapi_types.UUID `json:"record_owner_id,omitempty"`
+	RecordOwnerKnown *bool               `json:"record_owner_known,omitempty"`
 	RequestType      *string             `json:"request_type,omitempty"`
 	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
 	SourceLabel      *string             `json:"source_label,omitempty"`
@@ -69957,6 +70069,16 @@ type ClearActivityDispositionParamsScope string
 type GetEmailPresentationParams struct {
 	// ThreadCursor Continue the thread's member page from a previous response's `thread.next_cursor`.
 	ThreadCursor *string `form:"thread_cursor,omitempty" json:"thread_cursor,omitempty"`
+}
+
+// AssignWebsiteInquiryParams defines parameters for AssignWebsiteInquiry.
+type AssignWebsiteInquiryParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
 // GetMeetingBriefParams defines parameters for GetMeetingBrief.
@@ -77811,6 +77933,12 @@ type SetActivityDispositionJSONRequestBody = SetActivityDispositionRequest
 
 // DraftEmailJSONRequestBody defines body for DraftEmail for application/json ContentType.
 type DraftEmailJSONRequestBody = DraftSteering
+
+// AssignWebsiteInquiryJSONRequestBody defines body for AssignWebsiteInquiry for application/json ContentType.
+type AssignWebsiteInquiryJSONRequestBody = WebsiteInquiryAssignmentRequest
+
+// PreviewWebsiteInquiryAssignmentJSONRequestBody defines body for PreviewWebsiteInquiryAssignment for application/json ContentType.
+type PreviewWebsiteInquiryAssignmentJSONRequestBody = WebsiteInquiryAssignmentRequest
 
 // UndoActivityProjectFilingJSONRequestBody defines body for UndoActivityProjectFiling for application/json ContentType.
 type UndoActivityProjectFilingJSONRequestBody = RetentionOverrideRequest
@@ -91930,6 +92058,12 @@ type ServerInterface interface {
 	// Everything one email needs to be read and acted on, in one read.
 	// (GET /activities/{id}/email-presentation)
 	GetEmailPresentation(w http.ResponseWriter, r *http.Request, id Id, params GetEmailPresentationParams)
+	// Take an inquiry or hand its lead and this task to a colleague in one transaction.
+	// (POST /activities/{id}/inquiry-assignment)
+	AssignWebsiteInquiry(w http.ResponseWriter, r *http.Request, id Id, params AssignWebsiteInquiryParams)
+	// Show the inquiry task and record ownership before taking or assigning it.
+	// (POST /activities/{id}/inquiry-assignment/preview)
+	PreviewWebsiteInquiryAssignment(w http.ResponseWriter, r *http.Request, id Id)
 	// The pre-meeting brief for one booked meeting — goal, commitments, where the deal stands.
 	// (GET /activities/{id}/meeting-brief)
 	GetMeetingBrief(w http.ResponseWriter, r *http.Request, id Id, params GetMeetingBriefParams)
@@ -95167,6 +95301,18 @@ func (_ Unimplemented) DraftEmail(w http.ResponseWriter, r *http.Request, id Id)
 // Everything one email needs to be read and acted on, in one read.
 // (GET /activities/{id}/email-presentation)
 func (_ Unimplemented) GetEmailPresentation(w http.ResponseWriter, r *http.Request, id Id, params GetEmailPresentationParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take an inquiry or hand its lead and this task to a colleague in one transaction.
+// (POST /activities/{id}/inquiry-assignment)
+func (_ Unimplemented) AssignWebsiteInquiry(w http.ResponseWriter, r *http.Request, id Id, params AssignWebsiteInquiryParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Show the inquiry task and record ownership before taking or assigning it.
+// (POST /activities/{id}/inquiry-assignment/preview)
+func (_ Unimplemented) PreviewWebsiteInquiryAssignment(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -102593,6 +102739,98 @@ func (siw *ServerInterfaceWrapper) GetEmailPresentation(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetEmailPresentation(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AssignWebsiteInquiry operation middleware
+func (siw *ServerInterfaceWrapper) AssignWebsiteInquiry(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params AssignWebsiteInquiryParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AssignWebsiteInquiry(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewWebsiteInquiryAssignment operation middleware
+func (siw *ServerInterfaceWrapper) PreviewWebsiteInquiryAssignment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewWebsiteInquiryAssignment(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -147941,6 +148179,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/activities/{id}/email-presentation", wrapper.GetEmailPresentation)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/activities/{id}/inquiry-assignment", wrapper.AssignWebsiteInquiry)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/activities/{id}/inquiry-assignment/preview", wrapper.PreviewWebsiteInquiryAssignment)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/activities/{id}/meeting-brief", wrapper.GetMeetingBrief)

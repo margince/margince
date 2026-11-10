@@ -16634,6 +16634,21 @@ export const en = {
   "inquiry.requestTypeValue": "Request type: {type}",
   "inquiry.initialHandlingValue": "Initial handling: {reason}",
   "inquiry.sourceValue": "Source: {source}",
+  "inquiry.assignment.reviewAgain": "Review current assignment",
+  "inquiry.assignment.unsupported":
+    "This version cannot assign this inquiry. Reload the page.",
+  "inquiry.assignment.take": "Take inquiry",
+  "inquiry.assignment.assign": "Assign and follow up",
+  "inquiry.assignment.chooseColleague": "Choose a colleague",
+  "inquiry.assignment.done": "Inquiry assigned",
+  "inquiry.assignment.record": "Record",
+  "inquiry.assignment.taskHolder": "Current task holder",
+  "inquiry.assignment.newHolder": "New task holder",
+  "inquiry.assignment.movesLead":
+    "The lead and this inquiry task go to this colleague.",
+  "inquiry.assignment.taskOnly":
+    "This changes the inquiry task holder. The record keeps its owner.",
+  "inquiry.currentRecordOwner": "Current record owner",
   "inquiry.markHandled": "Mark handled",
   "inquiry.openSubmission": "Open submission",
   "inquiry.reason.notRecorded": "Reason not recorded",

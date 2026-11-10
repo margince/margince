@@ -65,8 +65,10 @@ func (s *Store) ReuseWebsiteArrivalTask(ctx, admit context.Context, key string, 
 				if _, err := readActivityContent(admit, tx, ids.From[ids.ActivityKind](source), storekit.LiveOnly); err != nil {
 					return err
 				}
-				at := s.now()
-				in := UpdateActivityInput{sourceActivityID: &source, AssigneeID: new(ids.From[ids.UserKind](recipient)), DueAt: &due, DueHasTime: new(true), recordedAt: &at}
+				in, err := s.inquiryArrivalPatch(bound, tx, id, source, recipient, due)
+				if err != nil {
+					return err
+				}
 				_, err = updateActivityInTx(bound, tx, id, in)
 				return err
 			})
@@ -74,4 +76,25 @@ func (s *Store) ReuseWebsiteArrivalTask(ctx, admit context.Context, key string, 
 	}
 	err := storekit.RetryLockCycles(ctx, run)
 	return found, err
+}
+
+func (s *Store) inquiryArrivalPatch(ctx context.Context, tx pgx.Tx, id ids.ActivityID, source, recipient ids.UUID, due time.Time) (UpdateActivityInput, error) {
+	var holderEdited, deadlineEdited bool
+	// A delayed rule fills in handling details without undoing a person's choices.
+	err := tx.QueryRow(ctx, `SELECT COALESCE(bool_or("after" ? 'assignee_id'),FALSE),COALESCE(bool_or("after" ?| @deadline_fields),FALSE)
+ FROM audit_log WHERE entity_type='activity' AND entity_id=@id AND actor_type=ANY(@actors)`, pgx.NamedArgs{
+		"id": id.UUID, "deadline_fields": []string{"due_at", fieldDueHasTime}, "actors": []string{string(principal.PrincipalHuman), string(principal.PrincipalAgent)},
+	}).Scan(&holderEdited, &deadlineEdited)
+	if err != nil {
+		return UpdateActivityInput{}, err
+	}
+	at := s.now()
+	patch := UpdateActivityInput{sourceActivityID: &source, recordedAt: &at}
+	if !holderEdited {
+		patch.AssigneeID = new(ids.From[ids.UserKind](recipient))
+	}
+	if !deadlineEdited {
+		patch.DueAt, patch.DueHasTime = &due, new(true)
+	}
+	return patch, nil
 }

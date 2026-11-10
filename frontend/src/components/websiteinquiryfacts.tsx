@@ -8,6 +8,7 @@ import { useLocale, useT } from "../i18n";
 import { useOpenSource } from "../lib/opensource";
 import { useViewerZone } from "../lib/viewerzone";
 import { inquiryReasonKey } from "../lib/websiteinquiries";
+import { EntityRef } from "./entityref";
 
 export function WebsiteInquiryFacts({
   facts,
@@ -34,6 +35,16 @@ export function WebsiteInquiryFacts({
           type: facts.request_type ?? t("inquiry.notSpecified"),
         })}
       </p>
+      {facts.record_owner_known && (
+        <p>
+          {t("inquiry.currentRecordOwner")}:{" "}
+          {facts.record_owner_id ? (
+            <EntityRef kind="user" id={facts.record_owner_id} />
+          ) : (
+            t("log.unassigned")
+          )}
+        </p>
+      )}
       <p>
         {t("inquiry.initialHandlingValue", {
           reason: t(inquiryReasonKey(facts.assignment_reason)),
