@@ -21545,7 +21545,7 @@ export const en = {
   "goals.readOnly":
     "Read-only. Goals are agreed together. Only your manager can create, edit or publish sales goals.",
   "goals.months": "Monthly goals",
-  "goals.yearTotal": "Year",
+  "goals.yearTotal": "Year total",
   "goals.notSet": "Not set",
   "goals.history": "History",
   "goals.history.what": "Change",

@@ -21803,7 +21803,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "goals.readOnly":
     "Nur lesen. Ziele werden gemeinsam vereinbart. Nur deine Führungskraft kann Umsatzziele anlegen, ändern oder veröffentlichen.",
   "goals.months": "Monatsziele",
-  "goals.yearTotal": "Jahr",
+  "goals.yearTotal": "Jahressumme",
   "goals.notSet": "Nicht gesetzt",
   "goals.history": "Verlauf",
   "goals.history.what": "Änderung",

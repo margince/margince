@@ -76,3 +76,9 @@
   flex-direction: column;
   gap: var(--space-4);
 }
+
+/* A refused button carries its reason below it; the others keep their height. */
+.goal-editor .card-actions {
+  align-items: flex-start;
+  margin-top: 0;
+}
