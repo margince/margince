@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -86,11 +87,24 @@ func validateCommitmentMeaning(meaning *commitmentMeaning, dueDate, source strin
 		if utf8.RuneCountInString(quote) > maxExtractQuote {
 			return "a commitment condition or deadline quote is too long"
 		}
-		if _, found := evidenceSpan(source, quote); !found {
+		if !quotedFrom(source, quote) {
 			return "a commitment condition or deadline quotes words outside its evidence"
 		}
 	}
 	return ""
+}
+
+// quotedFrom reports whether quote is the source's own words. Its first letter
+// may differ in case: a clause lifted from a sentence's start or middle is
+// still those words.
+func quotedFrom(source, quote string) bool {
+	first, size := utf8.DecodeRuneInString(quote)
+	for _, opening := range []rune{first, unicode.ToLower(first), unicode.ToUpper(first)} {
+		if _, found := evidenceSpan(source, string(opening)+quote[size:]); found {
+			return true
+		}
+	}
+	return false
 }
 
 func (meaning *commitmentMeaning) withheldOutcome() CommitmentOutcome {
@@ -108,11 +122,15 @@ const commitmentMeaningInstruction = `"commitment" describes whether work is sti
 	`"conditional" for a promise whose condition has not happened; "optional" for willingness or a tentative offer; ` +
 	`"request" for an ask that has not been accepted as a promise; "unclear" when the evidence cannot decide. ` +
 	`condition quotes the unmet condition exactly for conditional promises, and is empty otherwise. ` +
-	`deadline_precision is "day" only when a single day is stated, "range" for wording such as next week, ` +
+	`condition and deadline_quote are copied character for character from the cited text in its own language; ` +
+	`never translate them, even when the summary is written in another language. ` +
+	`deadline_precision is "day" only when a single day is stated, "range" for wording such as next week ` +
+	`in whatever language the text uses, ` +
 	`and "none" when no deadline is stated. deadline_quote copies the supporting deadline words exactly, ` +
 	`or is empty for none. due_date must be empty for range and none; never invent a day from a range. ` +
 	`A high confidence does not turn a completed act, request or conditional offer into an open promise. `
 
-const commitmentOfferInstruction = `Classify willingness ("I could", "if helpful", "I will try") as optional, with an empty condition.
+const commitmentOfferInstruction = `Classify willingness or an offer the reader may take up ("I could", "happy to", "if helpful", "I will try", or the same meaning in any language) as optional, with an empty condition.
 A conditional promise is definite work dependent on an external event, rather than an offer of help.
+The promiser's own work becoming ready ("once it is ready", "when it is done") is timing, not a condition: state "open", condition "".
 Keep a stated day even for optional work: its state prevents a task, not a missing due_date.`

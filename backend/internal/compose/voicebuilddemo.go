@@ -23,12 +23,12 @@ import (
 )
 
 // voiceDemoDraftSystemFor is the evaluation's instruction for a call that
-// carries no sample to reply to — only the profile is inside the boundary, so
-// only the profile is named by it. Its length is a status reply's: three facts
-// fill two short paragraphs, and the evaluation's band would ask for padding.
+// carries no sample to reply to. Only the profile is inside the boundary, so it
+// names only the profile. A ceiling and no floor: three facts fill about thirty
+// words, and a word floor is met with invented ones.
 func voiceDemoDraftSystemFor(fence promptfence.Fence) string {
 	return voiceDraftOpening + "\n" +
-		"Length: one or two short paragraphs, roughly 40 to 80 words — a status reply, never padding.\n" +
+		"Length: one or two short paragraphs, at most 80 words — as long as the facts need, never padded to a length.\n" +
 		voiceDraftFactsAndShape + "\n" + fence.Rule("profile")
 }
 
