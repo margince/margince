@@ -177,26 +177,27 @@ export function ReassignForm({
         variant="primary"
         disabled={assignee === "" || reassign.isPending}
         onClick={() => {
-          reassign.mutate(
-            {
+          // mutateAsync, as Take it does: the refetch can drop the row, and
+          // its form with it, before per-call callbacks would run.
+          reassign
+            .mutateAsync({
               activityId: item.id,
               version: item.version,
               assigneeId: assignee,
-            },
-            {
-              onSuccess: () => {
+            })
+            .then(
+              () => {
                 onClose();
                 toast.show(t("worklist.manager.reassigned"));
               },
               // No completion mark on a refusal: the green dot is the region's
               // way of saying "that worked", and a failure wearing it tells the
               // reader the opposite of what the sentence beside it says.
-              onError: () =>
+              () =>
                 toast.show(t("worklist.manager.reassignFailed"), {
                   tone: "danger",
                 }),
-            },
-          );
+            );
         }}
       >
         {t("worklist.manager.reassignConfirm")}

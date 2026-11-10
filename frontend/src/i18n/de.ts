@@ -1007,6 +1007,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.deals.colSignals": "Risikosignale",
   "forecast.deals.colAmount": "Betrag",
   "forecast.deals.colWeighted": "Gewichtet",
+  "forecast.deals.foldedAmount": "Betrag {amount}",
+  "forecast.deals.foldedWeighted": "{amount} gewichtet",
   "forecast.signal.close_pushed": "Abschlussdatum verschiebt sich",
   "forecast.signal.no_next_step": "Kein nächster Schritt geplant",
   "forecast.signal.quiet": "Kunde schweigt",
@@ -7408,6 +7410,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieser Kontakt ist jetzt privat für das verantwortliche Teammitglied. Nutzende und Teams, mit denen der Kontakt geteilt wurde, behalten den Zugriff.",
   "recordAccess.contact.leftYourAccess":
     "Dieser Kontakt ist jetzt privat für das verantwortliche Teammitglied. Du hast keinen Zugriff mehr auf diesen Kontakt.",
+  "recordAccess.contact.handedOver":
+    "{owner} ist jetzt für diesen Kontakt verantwortlich. Er ist privat, deshalb hast du keinen Zugriff mehr darauf.",
   "recordAccess.company.title": "Wer dieses Unternehmen sehen kann",
   "recordAccess.company.shared":
     "Alle Nutzenden im Unternehmen können diesen Datensatz sehen.",
@@ -7423,6 +7427,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieses Unternehmen ist jetzt privat für das verantwortliche Teammitglied. Deals, Kontakte und E-Mails, die diesem Unternehmen zugeordnet sind, behalten ihre eigene Sichtbarkeit.",
   "recordAccess.company.leftYourAccess":
     "Dieses Unternehmen ist jetzt privat für das verantwortliche Teammitglied. Du hast keinen Zugriff mehr auf dieses Unternehmen.",
+  "recordAccess.company.handedOver":
+    "{owner} ist jetzt für dieses Unternehmen verantwortlich. Es ist privat, deshalb hast du keinen Zugriff mehr darauf.",
   "recordAccess.option.owner": "Nur das verantwortliche Teammitglied",
   "recordAccess.option.ownerHint":
     "Nutzende und Teams, mit denen der Datensatz geteilt ist, behalten den Zugriff.",
@@ -8619,6 +8625,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "review.colDeal": "Deal",
   "review.colAtStake": "Gefährdeter Betrag",
   "review.colSeenSince": "Offen seit",
+  "review.foldedAtStake": "{amount} gefährdet",
+  "review.foldedSeenSince": "Offen seit {date}",
   "review.severityHigh": "Hoch",
   "review.severityMedium": "Mittel",
   "review.severityLow": "Niedrig",
@@ -16582,7 +16590,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.setup.copyAddress": "Adresse kopieren",
   "webForms.steps.browser.address": "Kopiere die Formularadresse.",
   "webForms.steps.browser.builder":
-    "Öffne in Webflow, WordPress oder einem anderen Baukasten die Einstellungen deines Formulars. Trag diese Adresse als Ziel ein (in Webflow heißt das Action) und als Methode POST.",
+    "Öffne in Webflow, WordPress oder einem anderen Baukasten die Einstellungen deines Formulars. Trage diese Adresse als Ziel ein (in Webflow heißt das Action) und als Methode POST.",
   "webForms.steps.browser.fields":
     "Nenne das E-Mail-Feld email. Margince liest auch full_name, phone, company und message und legt jedes andere Feld in der Notiz am Lead ab.",
   "webForms.steps.browser.code":
@@ -18941,6 +18949,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.aside.partner": "Partner",
   "deal.aside.partnerNone": "Keiner",
   "deal.editDetails": "Details bearbeiten",
+  "deal.meetNeedsCompany":
+    "Dieser Deal hat noch kein Unternehmen. Trage es unter „Details bearbeiten“ ein, um einen Termin zu buchen.",
   "deal.committee.card": "Gremium",
   "deal.committee.change": "Stakeholder ändern oder entfernen",
 
@@ -19597,7 +19607,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingAddNotes": "Notizen hinzufügen",
   "worklist.verb.meetingUpdateTitle": "Termin",
   "worklist.verb.meetingReading": "Termin wird geladen…",
-  "worklist.verb.meetingWhatHappened": "Terminnotizen",
+  "worklist.verb.meetingWhatHappened": "Was passiert ist",
   "worklist.verb.meetingBodyHint":
     "Besprochenes und nächste Schritte. Kalendernotizen lassen sich hier bearbeiten.",
   "worklist.verb.meetingHeld": "Hat stattgefunden",

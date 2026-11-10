@@ -114,6 +114,7 @@ export function CheckTable({
         ) : (
           <div ref={table}>
             <DataTable<InputCheck>
+              fold
               label={title}
               rows={rows}
               rowKey={(check) => check.id}
@@ -141,6 +142,23 @@ export function CheckTable({
   );
 }
 
+function stakeOf(check: InputCheck, locale: Locale): string {
+  return formatAnalyticsMoneyOrAbsent(
+    check.affected_minor ?? null,
+    check.currency ?? "",
+    locale,
+  );
+}
+
+function FindingCell({ check }: Readonly<{ check: InputCheck }>) {
+  const t = useT();
+  return (
+    <>
+      {t(checkLabel(check.type))} {check.inputs_changed && <OutOfDateBadge />}
+    </>
+  );
+}
+
 function checkColumns(
   t: ReturnType<typeof useT>,
   locale: Locale,
@@ -156,30 +174,28 @@ function checkColumns(
     {
       key: "finding",
       header: t("review.colFinding"),
-      render: (check) => (
-        <>
-          {t(checkLabel(check.type))}{" "}
-          {check.inputs_changed && <OutOfDateBadge />}
-        </>
-      ),
+      render: (check) => <FindingCell check={check} />,
+      // A finding with no deal is the folded row's title, so it is not
+      // repeated below it.
+      folded: (check) => (check.subject ? undefined : null),
     },
     {
       key: "deal",
       header: t("review.colDeal"),
+      fold: "title",
       render: (check) => <SubjectCell check={check} />,
+      folded: (check) =>
+        check.subject ? undefined : <FindingCell check={check} />,
     },
     {
       key: "stake",
       header: t("review.colAtStake"),
+      fold: "end",
       render: (check) => (
-        <span className="t-num">
-          {formatAnalyticsMoneyOrAbsent(
-            check.affected_minor ?? null,
-            check.currency ?? "",
-            locale,
-          )}
-        </span>
+        <span className="t-num">{stakeOf(check, locale)}</span>
       ),
+      folded: (check) =>
+        t("review.foldedAtStake", { amount: stakeOf(check, locale) }),
     },
     {
       key: "since",
@@ -187,11 +203,16 @@ function checkColumns(
       // each other, and two of them must read the same day.
       header: t("review.colSeenSince"),
       render: (check) => formatDate(check.first_seen_at, locale, zone),
+      folded: (check) =>
+        t("review.foldedSeenSince", {
+          date: formatDate(check.first_seen_at, locale, zone),
+        }),
     },
     {
       key: "answer",
       header: t("table.actions"),
       headerHidden: true,
+      fold: "trail",
       render: (check) =>
         // A reader who may not answer is shown the finding to read, never a
         // button the server would refuse.
