@@ -43156,6 +43156,11 @@ components:
             `provider_error`, named apart so a slow host can be told from a broken one. A
             caller's own cancellation is never a timeout.
 
+            `canceled` — the caller stopped waiting: a page closed or reloaded, a job shut down. No
+            further attempt runs. The call stays in the trace under this sentinel, so how often
+            users abandon a slow request can still be read, but it is not a provider failure:
+            exclude it from an error rate as `output_withheld` is excluded.
+
             `provider_error` is the FALLBACK: a provider failure naming none of those. It
             covers a connection or TLS fault and a non-429 server error as well as a call the
             model answered badly, so it says the provider failed and nothing about how far the
@@ -43174,11 +43179,12 @@ components:
             cache hit costs 0.
     AiCallOutcome:
       type: string
-      enum: [answered, fallback, declined, failed]
+      enum: [answered, fallback, declined, canceled, failed]
       x-extensible-enum: true
       description: >-
         How one call ended, as a reader scans for it. `declined`: the model was reached and
-        withheld or rejected the answer. `failed`: any other error code. `fallback`: it answered,
+        withheld or rejected the answer. `canceled`: the caller stopped waiting, and no
+        further attempt ran. `failed`: any other error code. `fallback`: it answered,
         but degraded, after a decision model fell back, or after a retry. `answered`: first try.
     AiCallConfig:
       type: object

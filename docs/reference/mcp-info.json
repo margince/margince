@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 233602,
+    "tool_catalog_bytes": 233613,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 59806,
+    "approx_wire_tokens_total": 59808,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 55130,
-      "input_schema_bytes": 114526,
+      "input_schema_bytes": 114537,
       "output_schema_bytes": 51838,
-      "description_plus_input_schema_bytes": 169656
+      "description_plus_input_schema_bytes": 169667
     }
   },
   "tools": {
@@ -10751,6 +10751,7 @@
               "enum": [
                 "answered",
                 "blocked",
+                "canceled",
                 "declined",
                 "failed",
                 "fallback",
