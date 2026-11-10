@@ -20,7 +20,7 @@ import { Callout } from "./callout";
 import { ErrorLine } from "./errorline";
 import { AutonomyDot } from "./trust";
 import "./transcriptread.css";
-import { approvalQueryKey } from "../lib/approvalread";
+import { approvalQuery } from "../lib/approvalread";
 
 type Activity = components["schemas"]["Activity"];
 type TranscriptReadReport = components["schemas"]["TranscriptReadReport"];
@@ -104,7 +104,7 @@ function ownProposals(report: TranscriptReadReport): string[] {
 // Nothing was wrong with the number; the sentence was about a different fact.
 //
 // The decisions are read where they actually live: one authorised read per
-// staged approval, keyed by `approvalQueryKey`.
+// staged approval, through `approvalQuery`.
 //
 // That is the key approvalrow invalidates when a decision lands, so accepting
 // from the worklist refreshes this card without a reload.
@@ -117,14 +117,7 @@ function TranscriptReadProposals({ ids }: Readonly<{ ids: string[] }>) {
   const { locale } = useLocale();
   const decisions = useQueries({
     queries: ids.map((id) => ({
-      queryKey: approvalQueryKey(id),
-      queryFn: async () => {
-        return unwrap(
-          await api.GET("/approvals/{id}", {
-            params: { path: { id } },
-          }),
-        );
-      },
+      ...approvalQuery(id),
       // A decided approval does not un-decide, and this card is often on
       // screen while the rep works elsewhere in the record.
       staleTime: 10_000,

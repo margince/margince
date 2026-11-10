@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -15,7 +15,7 @@ import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useActivity } from "../../lib/activityread";
-import { approvalQueryKey } from "../../lib/approvalread";
+import { useApproval } from "../../lib/approvalread";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useReviewActions } from "../../lib/reviewactions";
@@ -151,13 +151,7 @@ function RepairApproval({ task }: Readonly<{ task: Task }>) {
   const t = useT();
   const actions = useReviewActions();
   const [open, setOpen] = useState(false);
-  const detail = useQuery({
-    queryKey: approvalQueryKey(task.id),
-    queryFn: async () =>
-      unwrap(
-        await api.GET("/approvals/{id}", { params: { path: { id: task.id } } }),
-      ),
-  });
+  const detail = useApproval(task.id);
   return (
     <>
       <RepairItemRow
