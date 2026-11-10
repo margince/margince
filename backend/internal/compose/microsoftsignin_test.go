@@ -90,7 +90,7 @@ func TestWithMicrosoftSignInCompleteMountsAndReportsCapability(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	s.StartOidcSignIn(rec, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/microsoft/start", nil), "microsoft")
+	s.StartOidcSignIn(rec, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/microsoft/start", nil), "microsoft", crmcontracts.StartOidcSignInParams{})
 	if rec.Code != http.StatusFound {
 		t.Fatalf("StartOidcSignIn status = %d, want 302 — the route the capability advertised must be mounted", rec.Code)
 	}
@@ -123,7 +123,7 @@ func TestBothSignInProvidersSurviveEachOther(t *testing.T) {
 			// answer, or the login screen offers a dead button.
 			for _, key := range []crmcontracts.StartOidcSignInParamsProvider{"google", "microsoft"} {
 				rec := httptest.NewRecorder()
-				s.StartOidcSignIn(rec, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/"+string(key)+"/start", nil), key)
+				s.StartOidcSignIn(rec, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/"+string(key)+"/start", nil), key, crmcontracts.StartOidcSignInParams{})
 				if rec.Code != http.StatusFound {
 					t.Errorf("StartOidcSignIn(%s) = %d, want 302", key, rec.Code)
 				}
