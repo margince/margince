@@ -7,10 +7,13 @@ package compose
 // and how they overrule it.
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"unicode/utf8"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/activitywhen"
@@ -32,6 +35,16 @@ type captureSenderHandlers struct {
 	// composed no queue to ask, which answers with no time rather than a
 	// wrong one.
 	threadPass capture.VerdictPass
+}
+
+// newSenderOverrideStore builds the decision store with the inbox it withdraws
+// an answered review offer from, on the decision's own transaction.
+func newSenderOverrideStore(pool *pgxpool.Pool) *capture.SenderOverrideStore {
+	reviews := NewApprovalsService(InstallationDB(pool))
+	return capture.NewSenderOverrideStore(InstallationDB(pool)).WithReviewWithdrawer(
+		func(ctx context.Context, tx pgx.Tx, proposal ids.UUID, reason string) (bool, error) {
+			return reviews.WithdrawInTx(ctx, tx, ids.From[ids.ApprovalKind](proposal), reason)
+		})
 }
 
 // ListCaptureSenders answers every decision made about the caller's senders.
@@ -73,7 +86,13 @@ func (h captureSenderHandlers) ListCaptureContactsAwaitingDecision(w http.Respon
 		row := crmcontracts.CaptureAwaitingContact{
 			ContactId:  openapi_types.UUID(c.ContactID),
 			Emails:     c.Emails,
+			Addresses:  make([]crmcontracts.CaptureAwaitingAddress, 0, len(c.Addresses)),
 			CapturedAt: c.CapturedAt.UTC(),
+		}
+		for _, a := range c.Addresses {
+			row.Addresses = append(row.Addresses, crmcontracts.CaptureAwaitingAddress{
+				Email: a.Email, State: crmcontracts.CaptureAwaitingAddressState(a.State),
+			})
 		}
 		if c.DisplayName != "" {
 			row.DisplayName = &c.DisplayName

@@ -58,6 +58,9 @@ function story(
           data: ids(lists.waiting, (i) => ({
             contact_id: `0190b7a2-0000-7000-8000-00000000003${i}`,
             emails: [`waiting${i}@example.com`],
+            addresses: [
+              { email: `waiting${i}@example.com`, state: "classifying" },
+            ],
             captured_at: "2026-09-10T14:40:00Z",
           })),
         }),

@@ -50,6 +50,11 @@
 # Env:
 #   INTEGRATION_JOBS        max concurrent packages (default: min(nproc, 8))
 #   INTEGRATION_SHARD       "k/N" → run the k-th of N test slices (CI matrix)
+#   INTEGRATION_QUEUE       shard mode only: take parts from one queue the
+#                           shards share instead of a fixed slice
+#                           (scripts/lib-shardqueue.sh names the stores)
+#   INTEGRATION_QUEUE_DONE  queue mode only: the shard artifacts of an earlier
+#                           attempt of this run; their parts do not run again
 #   INTEGRATION_SHARD_OUT   shard mode only: directory receiving the manifests
 #                           (discovery/assigned/ran/meta) and per-package binary
 #                           covdata pods for the CI fan-in to reconcile + merge;
@@ -83,6 +88,7 @@ cd "$ROOT"
 source "$ROOT/scripts/lib-testdb.sh"
 source "$ROOT/scripts/lib-laneorder.sh"
 source "$ROOT/scripts/lib-lanebinaries.sh"
+source "$ROOT/scripts/lib-shardqueue.sh"
 source "$ROOT/scripts/lib-integration-artifacts.sh"
 parse_test_dsn
 
@@ -111,10 +117,21 @@ if [[ -n "$SHARD_OUT" ]]; then
   # reads. Kept binary here because `go tool covdata` merges dirs, not text.
   COVERDIR="$SHARD_OUT/covdata"
   rm -rf "$COVERDIR"
-  rm -f "$SHARD_OUT/discovery.txt" "$SHARD_OUT/assigned.txt" "$SHARD_OUT/ran.txt" "$SHARD_OUT/meta.txt" "$SHARD_OUT/rerun.txt"
+  rm -f "$SHARD_OUT/discovery.txt" "$SHARD_OUT/assigned.txt" "$SHARD_OUT/ran.txt" "$SHARD_OUT/meta.txt" "$SHARD_OUT/rerun.txt" "$SHARD_OUT/claimed.txt"
   rm -rf "$SHARD_OUT/parts" "$SHARD_OUT/failed-logs"
   mkdir -p "$COVERDIR"
   export COVERDIR
+fi
+
+QUEUE="${INTEGRATION_QUEUE:-}"
+EARLIER_DIR="${INTEGRATION_QUEUE_DONE:-}"
+if [[ -n "$QUEUE" && -z "$SHARD_OUT" ]]; then
+  echo "FAIL: INTEGRATION_QUEUE needs INTEGRATION_SHARD and INTEGRATION_SHARD_OUT — only the shard's manifest says which parts it took"
+  exit 1
+fi
+if [[ -n "$EARLIER_DIR" && -z "$QUEUE" ]]; then
+  echo "FAIL: INTEGRATION_QUEUE_DONE is set but INTEGRATION_QUEUE is not — a fixed slice never skips parts"
+  exit 1
 fi
 
 BUILD_OUT="${INTEGRATION_BUILD_OUT:-}"
@@ -279,7 +296,7 @@ export MARGINCE_SQL_CENSUS_DIR="$OUTDIR/sql-census"
 # needs the evidence, because the re-run that would reproduce it usually passes.
 # A green run still cleans up: nobody wants a temp dir per passing run.
 KEEP_LOGS=""
-trap 'rm -f "$LANE_PKGS" "$WORK" "$DISCOVERY" "$ASSIGNED" "$RAN" "$UNTAGGED" "$TIMING" "$TEST_TIMING" "$WALLCLOCK" "$FAILED_PKGS" ${GROUPED:+"$GROUPED"}; [[ -n "$KEEP_LOGS" ]] || rm -rf "$OUTDIR"; rm -rf ${REGEX_DIR:+"$REGEX_DIR"}' EXIT
+trap 'rm -f "$LANE_PKGS" "$WORK" "$DISCOVERY" "$ASSIGNED" "$RAN" "$UNTAGGED" "$TIMING" "$TEST_TIMING" "$WALLCLOCK" "$FAILED_PKGS" ${GROUPED:+"$GROUPED"} ${PART_GROUPS:+"$PART_GROUPS" "$CLAIMED" "$DONE_GROUPS"}; [[ -n "$KEEP_LOGS" ]] || rm -rf "$OUTDIR"; rm -rf ${REGEX_DIR:+"$REGEX_DIR"}' EXIT
 
 # Static discovery of every top-level Test function of every integration-TAGGED
 # file, as "module_dir|rel|TestName"; the rules are in scripts/lib-laneorder.sh.
@@ -358,7 +375,8 @@ if (( SHARD_TOTAL > 0 )); then
   # rules live in scripts/lib-laneorder.sh, which is unit-tested. Every shard
   # computes the same split from the same tree and weights, and the fan-in
   # verifies that the slices are complete and disjoint instead of trusting it.
-  assign_shard "$DISCOVERY" "$SHARD_TIMING" "$SHARD_IDX" "$SHARD_TOTAL" > "$ASSIGNED"
+  # A queue shard knows its slice only once it has run.
+  [[ -n "$QUEUE" ]] || assign_shard "$DISCOVERY" "$SHARD_TIMING" "$SHARD_IDX" "$SHARD_TOTAL" > "$ASSIGNED"
 else
   # Unsharded: the whole lane is this run's slice. Naming it explicitly is what
   # lets the -run union and the ran==assigned teeth below serve both modes.
@@ -376,8 +394,23 @@ fi
 # as long on one runner as on another, so a part near the whole timeout would be
 # killed with every test passing.
 PART_SECONDS=$(( ${IT_TIMEOUT%s} / 4 ))
-GROUPED="$(mktemp)"
-split_parts "$ASSIGNED" "$SHARD_TIMING" "$PART_SECONDS" > "$GROUPED"
+GROUPED="$(mktemp)" PART_GROUPS="$(mktemp)" CLAIMED="$(mktemp)" DONE_GROUPS="$(mktemp)"
+if [[ -n "$QUEUE" ]]; then
+  # Every shard cuts the whole lane into the same parts and groups. In a
+  # simulation over the measured weights, with four runners 1.7 times slower
+  # than the other four, 60 s parts ended no sooner than 120 s ones and 225 s
+  # parts ended 80 s later. Groups of 240 s keep a run near 90 claims.
+  PART_SECONDS=120
+  split_parts "$DISCOVERY" "$SHARD_TIMING" "$PART_SECONDS" > "$GROUPED"
+  order_by_weight "$GROUPED" "$SHARD_TIMING" > "${GROUPED}.ordered"
+  mv "${GROUPED}.ordered" "$GROUPED"
+  queue_groups "$GROUPED" "$SHARD_TIMING" 240 > "$PART_GROUPS"
+  PARTS_DIGEST="$(cat "$GROUPED" "$PART_GROUPS" | git hash-object --stdin)"
+  [[ -z "$EARLIER_DIR" ]] || queue_done_groups "$EARLIER_DIR" "$SHARD_IDX" "$PARTS_DIGEST" > "$DONE_GROUPS"
+  queue_open "$QUEUE" "$SHARD_IDX" "$SHARD_TOTAL" "$PART_GROUPS" "$DONE_GROUPS"
+else
+  split_parts "$ASSIGNED" "$SHARD_TIMING" "$PART_SECONDS" > "$GROUPED"
+fi
 REGEX_DIR="$(mktemp -d)"
 export REGEX_DIR
 : > "$WORK"
@@ -392,10 +425,10 @@ export REGEX_DIR
 MEASURED_HINT="$ROOT/.tmp/integration-lane-timing.txt"
 BASELINE_HINT="$ROOT/scripts/integration-lane-timing.txt"
 ORDER_HINT="$(resolve_order_hint "$MEASURED_HINT" "$BASELINE_HINT")"
-if (( SHARD_TOTAL > 0 )); then
+if (( SHARD_TOTAL > 0 )) && [[ -z "$QUEUE" ]]; then
   order_by_weight "$GROUPED" "$SHARD_TIMING" > "${GROUPED}.ordered"
   mv "${GROUPED}.ordered" "$GROUPED"
-elif [[ -n "$ORDER_HINT" ]]; then
+elif [[ -n "$ORDER_HINT" && -z "$QUEUE" ]]; then
   order_by_hint "$GROUPED" "$ORDER_HINT" > "${GROUPED}.ordered"
   mv "${GROUPED}.ordered" "$GROUPED"
 fi
@@ -415,7 +448,9 @@ NPKGS=$(LC_ALL=C sort -u "$WORK" | wc -l | tr -d ' ')
 # selector produce the same silence, and this lane's whole contract is that a
 # thinner run must never read as a passing one.
 echo "test-integration-parallel: $NTESTS tagged tests in $NPKGS_DISCOVERED packages; skipped $NUNTAGGED untagged (they run in \`make check\`)"
-if (( SHARD_TOTAL > 0 )); then
+if [[ -n "$QUEUE" ]]; then
+  echo "test-integration-parallel: shard ${SHARD_IDX}/${SHARD_TOTAL} — takes from a queue of $NTESTS tests in $NPARTS processes and $(wc -l < "$PART_GROUPS" | tr -d ' ') groups ($(wc -l < "$DONE_GROUPS" | tr -d ' ') done in an earlier attempt), up to $JOBS concurrent (template db=$TEMPLATE_NAME)"
+elif (( SHARD_TOTAL > 0 )); then
   echo "test-integration-parallel: shard ${SHARD_IDX}/${SHARD_TOTAL} — $(wc -l < "$ASSIGNED" | tr -d ' ') of $NTESTS tests across $NPKGS packages in $NPARTS processes, up to $JOBS concurrent (template db=$TEMPLATE_NAME)"
 else
   echo "test-integration-parallel: $NPKGS packages in $NPARTS processes, up to $JOBS concurrent (template db=$TEMPLATE_NAME)"
@@ -425,7 +460,7 @@ fi
 # against them, drop the clone. In shard mode REGEX_DIR/<idx> holds the
 # package's -run slice filter.
 run_one() {
-  local line="$1" idx="$2" outdir="$3"
+  local line="$1" idx="$2" outdir="$3" slot="${4:-}"
   # Offsets from lane start, so the report can say when this package OCCUPIED a
   # slot as against how long its tests ran. The difference is the provisioning
   # around it, which the cost report prices at nothing.
@@ -435,9 +470,10 @@ run_one() {
   local db="margince_it_p${idx}_$$"
   local log="$outdir/$idx.log"
   local bucket; bucket="$(bucket_for "$idx")"
-  # The batch barrier lets this wrap only after the previous holder exits.
+  # The batch barrier lets this wrap only after the previous holder exits; a
+  # queue shard names the slot instead, which no running part shares.
   # Database 0 and the higher worktree dev block stay outside this mapping.
-  local redis_db=$(( 1 + (idx - 1) % REDIS_DBS ))
+  local redis_db=$(( 1 + (${slot:-$idx} - 1) % REDIS_DBS ))
   # Coverage args (empty unless COVERDIR is set — shard mode with a manifest
   # dir). -coverpkg=./... attributes cross-package exercise; binary output goes
   # to a per-package pod the CI fan-in merges.
@@ -546,7 +582,27 @@ fi
 # is this script's to reduce.
 FANOUT_T0=$(( $(date +%s) - LANE_T0 ))
 
-run_integration_packages "$WORK" "$JOBS" "$REDIS_DBS" "$OUTDIR"
+CLAIMS_FAILED=""
+if [[ -z "$QUEUE" ]]; then
+  run_integration_packages "$WORK" "$JOBS" "$REDIS_DBS" "$OUTDIR"
+else
+  if (( JOBS > REDIS_DBS )); then
+    echo "FAIL: a queue shard gives each of its $JOBS slots a Redis database of its own, and the lane has $REDIS_DBS"
+    exit 1
+  fi
+  run_queue_packages "$WORK" "$PART_GROUPS" "$JOBS" "$OUTDIR" "$CLAIMED" || CLAIMS_FAILED=1
+  # The slice is what this shard claimed. The checks below hold it to that,
+  # and the fan-in holds the slices of every shard to discovery.
+  NPARTS=$(awk '{ n += NF - 1 } END { print n + 0 }' "$CLAIMED")
+  awk 'NR == FNR { for (i = 2; i <= NF; i++) take[$i] = 1; next } FNR in take' "$CLAIMED" "$WORK" > "${WORK}.claimed"
+  NPKGS=$(LC_ALL=C sort -u "${WORK}.claimed" | wc -l | tr -d ' ')
+  rm -f "${WORK}.claimed"
+  for part in $(awk '{ for (i = 2; i <= NF; i++) print $i }' "$CLAIMED"); do
+    line="$(sed -n "${part}p" "$WORK")"
+    tr '|' '\n' < "$REGEX_DIR/$part" | sed 's/^^(//; s/)\$$//' | awk -v p="$line|" '{ print p $0 }'
+  done | LC_ALL=C sort > "$ASSIGNED"
+  echo "test-integration-parallel: shard ${SHARD_IDX}/${SHARD_TOTAL} claimed $(wc -l < "$CLAIMED" | tr -d ' ') groups: $(wc -l < "$ASSIGNED" | tr -d ' ') tests across $NPKGS packages in $NPARTS processes"
+fi
 
 # Aggregate: print every log in package (idx) order, then enforce the teeth.
 fail=0
@@ -694,6 +750,10 @@ fi
 # found. NPKGS=0 (a constraint-scan regression that admits no file) or a missing
 # log (a worker that never wrote its EXIT line) must read as red — otherwise the
 # "0 skips" sentinel below is a false green.
+if [[ -n "$CLAIMS_FAILED" ]]; then
+  echo "FAIL: shard ${SHARD_IDX}/${SHARD_TOTAL} stopped claiming because the queue store failed (the error is above); groups no shard claimed ran nowhere"
+  fail=1
+fi
 if [[ "$NPKGS_DISCOVERED" -eq 0 ]]; then
   echo "FAIL: no integration packages discovered — the build-constraint scan admitted no tagged file (regression?)"
   fail=1
@@ -763,10 +823,19 @@ if [[ -n "$SHARD_OUT" ]]; then
   # instead of reporting it as a slicing bug.
   timing_digest="$(git hash-object --no-filters "$SHARD_TIMING")"
   printf 'shard=%s\ntotal=%s\ntiming=%s\n' "$SHARD_IDX" "$SHARD_TOTAL" "$timing_digest" > "$SHARD_OUT/meta.txt"
+  # The groups a queue shard claimed, and the digest of the parts they number,
+  # so the fan-in can name them and a later attempt can skip them.
+  claimed_parts=()
+  if [[ -n "$QUEUE" ]]; then
+    cp "$CLAIMED" "$SHARD_OUT/claimed.txt"
+    printf 'queue=%s\n' "$PARTS_DIGEST" >> "$SHARD_OUT/meta.txt"
+    read -r -a claimed_parts <<< "$(awk '{ for (i = 2; i <= NF; i++) printf "%s ", $i }' "$CLAIMED")"
+  fi
   # Each part's lists and its failed log, under the part's own name, and the
-  # tests a continuation owes (scripts/lib-integration-artifacts.sh).
+  # tests a continuation owes (scripts/lib-integration-artifacts.sh). A queue
+  # shard keeps only the parts it claimed.
   # Guarded, so the verdict below still prints: the shard is red and says why.
-  if ! keep_shard_evidence "$SHARD_OUT" "$WORK" "$REGEX_DIR" "$OUTDIR" "$FAILED_PKGS"; then
+  if ! keep_shard_evidence "$SHARD_OUT" "$WORK" "$REGEX_DIR" "$OUTDIR" "$FAILED_PKGS" "${claimed_parts[@]}"; then
     echo "FAIL: the shard could not keep its part evidence in $SHARD_OUT"
     fail=1
   fi

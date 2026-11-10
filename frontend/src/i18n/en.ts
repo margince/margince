@@ -11622,6 +11622,27 @@ export const en = {
   "senders.waiting.moreAddresses_other": "+{count} more",
   "senders.waiting.openNamed": "Open {name}",
   "senders.waiting.openUnnamed": "Open contact",
+  "senders.waiting.onMargince": "Waiting on Margince:",
+  "senders.waiting.onYou": "Waiting on you:",
+  "senders.waiting.why.decided":
+    "the decision is applied at the next sender check.",
+  "senders.waiting.why.classifying":
+    "the sender check has not judged this sender yet.",
+  "senders.waiting.why.unsure":
+    "the sender check could not tell, so your answer decides.",
+  "senders.waiting.why.queued": "the sender check will look at their mail.",
+  "senders.waiting.why.unjudgeable":
+    "Margince cannot check this sender on its own, so only you can decide.",
+  "senders.waiting.businessFor": "Mark {address} as business",
+  "senders.waiting.keepOutFor": "Exclude {address}",
+  "senders.waiting.businessTitle": "Mark this sender as business?",
+  "senders.waiting.businessBody":
+    "Their mail is kept as business mail, and this contact is shared with your company. Each email and meeting keeps its own sharing.",
+  "senders.waiting.remove": "Remove from contacts",
+  "senders.waiting.removeTitle": "Remove this contact?",
+  "senders.waiting.removeBody":
+    "The contact is archived and leaves this list. Its mail stays, and no sender decision changes. You can restore it from archived contacts.",
+  "senders.waiting.removeConfirm": "Remove contact",
   "connectionOutcomes.title": "What your connections found",
   "connectionOutcomes.view": "View",
   "connectionOutcomes.viewNamed": "View {name}",
