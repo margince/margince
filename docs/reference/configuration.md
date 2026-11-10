@@ -547,37 +547,41 @@ A boot-set `deals.legal_review_enabled` wins over `seeds.legal_review`, and a bo
 
 ## Time-zone data
 
-Which day an instant falls on is answered twice: in Go, for the runs that sweep
-by date, and in SQL, for the reports that bucket by date. Each answer comes
-from its own copy of the IANA time-zone database, and the two copies update
-separately.
+Which day a moment falls on is answered twice. Go answers it for the runs that
+sweep by date, and SQL answers it for the reports that bucket by date. Each
+answer comes from its own copy of the IANA time-zone database, and the two
+copies update separately.
 
 The `api` and `worker` binaries embed a copy, because both import
-`time/tzdata`. Postgres carries its own, which arrives with its image.
+`time/tzdata`. Postgres carries its own, which comes with its image.
 `cmd/migrate` embeds none.
 
 Go reads `ZONEINFO` first, then the zone files of the host, then its embedded
-copy. So the embedded copy is what answers where the host has no zone files,
-and it is fixed at the vintage the binary was built with. Two ways to serve a
-newer vintage without building again:
+copy. So the embedded copy answers only where the host has no zone files. It is
+fixed at the version the binary was built with. Two ways to serve a newer
+version without building again:
 
 - set `ZONEINFO` to a zone file archive, or
-- give the host current zone files, which the binaries then prefer.
+- give the host current zone files, which the binaries then read first.
 
-An image built from scratch holds no zone files of its own, so it reads the
-embedded copy and stays at its build vintage until it is built again.
+An image built `FROM scratch` holds no zone files of its own. It reads the
+embedded copy, and stays at its build version until it is built again.
 
-The pair that matters is Go against Postgres. A government moves a daylight
-saving change and one copy learns of it before the other. From then on one
-instant falls on two different days. The sweep and the report disagree about
+The pair that matters is Go against Postgres. A country changes when its clocks
+move, and one copy learns of it before the other. From then on one
+moment falls on two different days. The sweep and the report disagree about
 which day it is, and neither reports a fault.
-`TestGoAndPostgresBucketAnInstantAlike` in
-`backend/internal/compose/tzdataskew_integration_test.go` asks both engines for
-every hour of the next fourteen months, in zones whose rules have moved, and
-fails naming the first instant they place differently.
 
-What a browser holds is its own third copy. It decides only what a reader is
-shown, never what is stored or counted.
+`TestGoAndPostgresBucketAnInstantAlike` in
+`backend/internal/compose/tzdataskew_integration_test.go` holds the pair. It
+asks both engines for every 15 minutes of the next 14 months, in zones
+whose rules have moved. It fails naming the first moment they place
+differently.
+
+What a browser holds is its own third copy. It decides what a reader is shown,
+and it reaches what is stored in two ways. Setting up an account and the zone setting
+store the zone name the browser reports. A scheduled send stores the moment the
+browser works out from the time a rep picked, by the browser's own rules.
 
 ## The files of a dev stack
 

@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
 // Zones whose rules have moved, so the sentinel has teeth on an installation
@@ -26,10 +27,11 @@ var skewProneZones = []string{
 	"America/Santiago",
 }
 
-// hourlyOffsetsRead is how many hourly steps fourteen months is, within a day
-// either way. That span covers a transition in either hemisphere, and a
-// reading far below it covered none, whatever it found.
-const hourlyOffsetsRead = 10000
+// offsetsRead is how many quarter-hour steps the shortest fourteen months
+// holds, 424 days. That span covers a transition in either hemisphere. The
+// quarter hour is the finest step a zone moves by, as Lord Howe's change at
+// half past the hour does.
+const offsetsRead = 424 * 24 * 4
 
 // TestGoAndPostgresBucketAnInstantAlike is the cross-engine tzdata sentinel.
 //
@@ -41,7 +43,7 @@ const hourlyOffsetsRead = 10000
 // on two days, and neither reader reports a fault.
 func TestGoAndPostgresBucketAnInstantAlike(t *testing.T) {
 	e := integration.Setup(t)
-	from := time.Now().UTC().Truncate(time.Hour)
+	from := clocktest.Now(t).UTC().Truncate(15 * time.Minute)
 	transitioned := 0
 
 	for _, zone := range skewProneZones {
@@ -77,7 +79,7 @@ func compareZoneOffsets(
 		rows, err := tx.Query(ctx, `
 			SELECT ts, EXTRACT(EPOCH FROM (ts AT TIME ZONE $1) - (ts AT TIME ZONE 'UTC'))::bigint
 			  FROM generate_series($2::timestamptz, $2::timestamptz + interval '14 months',
-			                       interval '1 hour') ts`, zone, from)
+			                       interval '15 minutes') ts`, zone, from)
 		if err != nil {
 			return err
 		}
@@ -100,9 +102,9 @@ func compareZoneOffsets(
 	if err != nil {
 		t.Fatalf("asking Postgres for %s offsets: %v", zone, err)
 	}
-	// A census that reads nothing reports a pass, so the hours are counted.
-	if seen < hourlyOffsetsRead {
-		t.Errorf("%s: read %d hourly offsets, too few to cover a transition", zone, seen)
+	// A census that reads nothing reports a pass, so the steps are counted.
+	if seen < offsetsRead {
+		t.Errorf("%s: read %d offsets, too few to cover a transition", zone, seen)
 	}
 	return len(offsets)
 }
