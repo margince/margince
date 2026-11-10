@@ -22,7 +22,7 @@ source "$root_dir/scripts/lib-laneorder.sh"
 source "$root_dir/scripts/lib-shardqueue.sh"
 
 work="$(mktemp -d)"
-trap 'chmod -R u+w "$work" 2>/dev/null; rm -rf "$work"' EXIT
+trap 'rm -rf "$work"' EXIT
 fails=0
 
 fail() {
@@ -138,11 +138,12 @@ got="$(LC_ALL=C sort -n "$work/out/ran" | tr '\n' ';')"
   || fail "each part must run once with its own line: got $got"
 [[ "$(cut -d' ' -f1 "$work/claimed" | tr '\n' ' ')" == "1 2 3 4 " ]] || fail "the claim record must list each group: $(tr '\n' ';' < "$work/claimed")"
 
-# 6. A failing store: the directory cannot take a claim.
-mkdir -p "$work/ro"
-chmod a-w "$work/ro"
+# 6. A failing store: once open, the store is a file, so no claim can be made
+# in it, by root either.
 : > "$work/out/ran"
 queue_open "dir:$work/ro" 1 1 "$work/dgroups" ""
+rmdir "$work/ro"
+: > "$work/ro"
 if run_queue_packages "$work/work" "$work/dgroups" 3 "$work/out" "$work/claimed" > /dev/null 2>&1; then
   fail "a store that refuses every claim must fail the dispatcher"
 fi
