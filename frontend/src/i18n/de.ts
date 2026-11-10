@@ -6642,11 +6642,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.briefedAt": "Von Margince zusammengefasst um {time}",
   "brief.task.done": "Als erledigt markieren: {title}",
   "brief.task.reply": "{name} antworten: {subject}",
-  "brief.pager.label": "Aufgaben",
-  "brief.pager.previous": "Vorherige Aufgabe",
-  "brief.pager.next": "Nächste Aufgabe",
-  "brief.pager.hint":
-    "Nach links oder rechts wischen, um Aufgaben anzusehen. Auf den Navigationsschaltflächen funktionieren auch die Pfeiltasten.",
   "brief.first.title": "Braucht dich",
   "brief.intro.waiting": "Wartet auf dich",
   "brief.intro.meetings": "Termine heute",
