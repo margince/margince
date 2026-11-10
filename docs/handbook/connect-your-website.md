@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/components/websiteinquirydialog.tsx frontend/src/components/websiteinquiryfields.tsx frontend/src/features/settings/webforms.tsx frontend/src/features/settings/webformdrawer.tsx frontend/src/features/settings/webformsetup.tsx frontend/src/features/settings/webformsnippet.ts backend/internal/modules/webforms backend/internal/compose/webformleads.go backend/internal/compose/webforms.go -->
+<!-- describes: frontend/src/components/websiteinquiryexisting.tsx frontend/src/components/websiteinquirydialog.tsx frontend/src/components/websiteinquiryfields.tsx frontend/src/features/settings/webforms.tsx frontend/src/features/settings/webformdrawer.tsx frontend/src/features/settings/webformsetup.tsx frontend/src/features/settings/webformsnippet.ts backend/internal/modules/webforms backend/internal/compose/webformleads.go backend/internal/compose/webforms.go -->
 # Connecting your website
 
 A website form sends each question from your website to Margince as a new lead. Each form
@@ -57,6 +57,11 @@ An existing owner keeps the lead or contact. A new or unowned lead follows the p
 **Request type field (optional)** can name a lead picklist sent by your website form. A value outside that list stays in the note. Leave this choice as **Not specified** if the form has no request type.
 
 For a form with no handling plan, **Owner of new leads** still sets who gets new leads. Its value stops deciding who gets new work once you save a handling plan.
+
+To work on past questions, save the plan first. Open **Inquiry handling**, then **Handle existing inquiries**. Choose up to 50 posts and **Review selected inquiries**. Check who gets the task and when it is due. **Create the reviewed tasks** acts only on posts shown as ready.
+
+A post that changed, or that you can no longer read, needs a new review. The result names each task made. This leaves a paused plan off and does not change future work.
+
 Also called: assign website leads, lead owner, route form leads, handle questions.
 
 ### How do I connect WordPress?

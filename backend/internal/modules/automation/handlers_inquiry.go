@@ -54,6 +54,22 @@ func (w websiteInquiry) Plan(ctx context.Context, ev workflow.Event) (workflow.E
 	if err != nil {
 		return workflow.Effect{}, err
 	}
+	if w.ex.Inquiries != nil {
+		task, found, err := w.ex.Inquiries.existingTask(ctx, w.ex, ev, receipt)
+		if err != nil {
+			return workflow.Effect{}, err
+		}
+		if found && inquiryTaskHandled(task) {
+			return workflow.Effect{}, workflow.Declined("this accepted inquiry already has its task")
+		}
+		frozen, found, err := w.ex.Inquiries.frozenPreview(ctx, ev, receipt)
+		if err != nil {
+			return workflow.Effect{}, err
+		}
+		if found {
+			return frozen.Effect, nil
+		}
+	}
 	return planInquiryTask(ctx, ev, policy, receipt)
 }
 
@@ -64,10 +80,8 @@ func planInquiryTask(ctx context.Context, ev workflow.Event, policy crmcontracts
 	}
 	targetEvent := ev
 	targetEvent.Entity = receipt.Target
-	key := taskNaturalKey{System: provenance.WebsiteInquirySource, ID: receipt.Key}
-	if receipt.Target.Type == datasource.EntityContact {
-		key.System, key.ID = provenance.LeadForContactSource, provenance.WebFormSource+":"+receipt.Key
-	}
+	system, source := provenance.WebsiteInquiryTaskSource(receipt.Key, receipt.Target.Type == datasource.EntityContact)
+	key := taskNaturalKey{System: system, ID: source}
 	effect, err := taskCreateEffectFor(ctx, targetEvent, policy.TaskTitle, due, nil, &key)
 	if err != nil {
 		return workflow.Effect{}, err

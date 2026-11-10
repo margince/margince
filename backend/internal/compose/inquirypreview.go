@@ -17,7 +17,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -30,8 +29,8 @@ func (s inquirySettings) Preview(ctx context.Context, id ids.UUID, in crmcontrac
 	if err := auth.Require(ctx, "automation", principal.ActionRead); err != nil {
 		return crmcontracts.WebsiteInquiryHandlingPreview{}, err
 	}
-	if len(in.Selected) > 50 {
-		return crmcontracts.WebsiteInquiryHandlingPreview{}, httperr.Validation("selected", "too_many", "choose up to 50 submissions")
+	if err := validateInquirySelections(in.Selected, false); err != nil {
+		return crmcontracts.WebsiteInquiryHandlingPreview{}, err
 	}
 	raw, err := json.Marshal(in.Policy)
 	if err != nil {
@@ -40,16 +39,6 @@ func (s inquirySettings) Preview(ctx context.Context, id ids.UUID, in crmcontrac
 	policy, err := automation.ParseInquiryPolicy(raw)
 	if err != nil {
 		return crmcontracts.WebsiteInquiryHandlingPreview{}, err
-	}
-	seen := map[crmcontracts.Id]bool{}
-	for _, selected := range in.Selected {
-		if selected.Version == nil || *selected.Version < 1 {
-			return crmcontracts.WebsiteInquiryHandlingPreview{}, httperr.Validation("selected.version", "required", "each reviewed submission needs its current version")
-		}
-		if selected.Id == crmcontracts.Id(ids.Nil) || seen[selected.Id] {
-			return crmcontracts.WebsiteInquiryHandlingPreview{}, httperr.Validation("selected.id", "invalid", "choose distinct accepted submissions")
-		}
-		seen[selected.Id] = true
 	}
 	var out crmcontracts.WebsiteInquiryHandlingPreview
 	err = database.WithWorkspaceSnapshot(ctx, s.db.Pool(), func(bound context.Context) error {
@@ -90,7 +79,7 @@ func (s inquirySettings) Preview(ctx context.Context, id ids.UUID, in crmcontrac
 		if err != nil {
 			return err
 		}
-		if err := newInquiryRouting(s.db).Validate(admit, policy); err != nil {
+		if err := newInquiryRouting(s.db).validate(admit, policy, false); err != nil {
 			return err
 		}
 		due, err := automation.InquiryDueAt(policy, now)
@@ -108,53 +97,24 @@ func (s inquirySettings) Preview(ctx context.Context, id ids.UUID, in crmcontrac
 
 func (s inquirySettings) previewSelected(ctx context.Context, policyID, owner ids.UUID, raw json.RawMessage, selected crmcontracts.WebsiteInquirySelection) crmcontracts.WebsiteInquiryPreviewItem {
 	item := crmcontracts.WebsiteInquiryPreviewItem{Id: selected.Id, Version: selected.Version, Status: crmcontracts.WebsiteInquiryPreviewItemStatusUnavailable}
-	if selected.Version == nil {
-		item.Status = crmcontracts.WebsiteInquiryPreviewItemStatusChanged
+	plan, err := s.planSelectedInquiry(ctx, policyID, owner, raw, selected)
+	if err != nil {
+		return previewItemError(item, err)
+	}
+	if plan.ExistingTask != nil {
+		item.Status = crmcontracts.WebsiteInquiryPreviewItemStatusAlreadyHandled
+		reason := "inquiry_task_exists"
+		item.Reason = &reason
 		return item
-	}
-	note, err := activities.NewStore(s.db).GetActivityContent(ctx, ids.From[ids.ActivityKind](ids.UUID(selected.Id)), storekit.LiveOnly)
-	if err != nil {
-		return previewItemError(item, err)
-	}
-	if note.Version == nil || *note.Version != *selected.Version {
-		item.Status = crmcontracts.WebsiteInquiryPreviewItemStatusChanged
-		return item
-	}
-	if note.Kind != crmcontracts.ActivityKindNote || note.SourceSystem == nil || *note.SourceSystem != provenance.WebFormSource || note.SourceId == nil {
-		return item
-	}
-	ex := automation.Executors{Provider: NewProviderFor(s.db), Authority: identity.NewService(s.db.Pool())}
-	target, err := automation.InquiryTarget(note)
-	if err != nil {
-		return previewItemError(item, err)
-	}
-	if _, err := ex.Provider.Read(ctx, target); err != nil {
-		return previewItemError(item, err)
-	}
-	payload, err := json.Marshal(crmcontracts.PublicEventActivityCaptured{Kind: "note", SourceSystem: note.SourceSystem, WebsiteSubmissionKey: note.SourceId})
-	if err != nil {
-		return previewItemError(item, err)
-	}
-	workspace, err := s.db.Workspace(ctx)
-	if err != nil {
-		return previewItemError(item, err)
-	}
-	ev := workflow.Event{WorkspaceID: workspace.UUID, OwnerID: owner, AutomationID: policyID, Params: raw, Payload: payload, Entity: datasource.EntityRef{Type: datasource.EntityActivity, ID: ids.UUID(selected.Id)}}
-	plan, err := automation.NewInquiryService(s.db, newInquiryRouting(s.db)).Preview(ctx, ex, ev)
-	if err != nil {
-		return previewItemError(item, err)
 	}
 	recipient, wireTarget := crmcontracts.Id(plan.Recipient), crmcontracts.Id(plan.Target.ID)
 	kind := crmcontracts.WebsiteInquiryPreviewItemTargetType(plan.Target.Type)
 	item.Status, item.RecipientId, item.DueAt, item.Reason, item.TargetType, item.TargetId = crmcontracts.WebsiteInquiryPreviewItemStatusEligible, &recipient, &plan.DueAt, &plan.Reason, &kind, &wireTarget
-	var task struct {
-		System string `json:"source_system"`
-		ID     string `json:"source_id"`
-	}
-	if err := json.Unmarshal(plan.Effect.Actions[0].Args, &task); err != nil {
+	system, key, err := inquiryTaskSource(plan)
+	if err != nil {
 		return previewItemError(item, err)
 	}
-	_, err = activities.NewStore(s.db).ActivityBySource(ctx, task.System, task.ID, storekit.IncludeArchived)
+	_, err = activities.NewStore(s.db).ActivityBySource(ctx, system, key, storekit.IncludeArchived)
 	if err == nil {
 		item.Status = crmcontracts.WebsiteInquiryPreviewItemStatusAlreadyHandled
 		reason := "inquiry_task_exists"
@@ -166,6 +126,12 @@ func (s inquirySettings) previewSelected(ctx context.Context, policyID, owner id
 }
 
 func previewItemError(item crmcontracts.WebsiteInquiryPreviewItem, err error) crmcontracts.WebsiteInquiryPreviewItem {
+	item.RecipientId, item.DueAt, item.TargetId, item.TargetType, item.Reason = nil, nil, nil, nil, nil
+	item.Status = crmcontracts.WebsiteInquiryPreviewItemStatusUnavailable
+	if errors.Is(err, apperrors.ErrVersionSkew) {
+		item.Status = crmcontracts.WebsiteInquiryPreviewItemStatusChanged
+		return item
+	}
 	var declined *workflow.DeclinedError
 	if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) || errors.As(err, &declined) {
 		return item
@@ -173,4 +139,60 @@ func previewItemError(item crmcontracts.WebsiteInquiryPreviewItem, err error) cr
 	slog.Error("website inquiry preview failed", "source_activity_id", item.Id, "error", err)
 	item.Status = crmcontracts.WebsiteInquiryPreviewItemStatusFailed
 	return item
+}
+
+func (s inquirySettings) planSelectedInquiry(ctx context.Context, policyID, owner ids.UUID, raw json.RawMessage, selected crmcontracts.WebsiteInquirySelection) (automation.InquiryPreview, error) {
+	if selected.Version == nil {
+		return automation.InquiryPreview{}, apperrors.ErrVersionSkew
+	}
+	note, err := activities.NewStore(s.db).GetActivityContent(ctx, ids.From[ids.ActivityKind](ids.UUID(selected.Id)), storekit.LiveOnly)
+	if err != nil {
+		return automation.InquiryPreview{}, err
+	}
+	if note.Version == nil || *note.Version != *selected.Version {
+		return automation.InquiryPreview{}, apperrors.ErrVersionSkew
+	}
+
+	if note.Kind != crmcontracts.ActivityKindNote || note.SourceSystem == nil || *note.SourceSystem != provenance.WebFormSource || note.SourceId == nil {
+		return automation.InquiryPreview{}, apperrors.ErrNotFound
+	}
+	ex := automation.Executors{Provider: NewProviderFor(s.db), Authority: identity.NewService(s.db.Pool())}
+	target, err := automation.InquiryTarget(note)
+	if err != nil {
+		return automation.InquiryPreview{}, err
+	}
+	if _, err := ex.Provider.Read(ctx, target); err != nil {
+		return automation.InquiryPreview{}, err
+	}
+	payload, err := json.Marshal(crmcontracts.PublicEventActivityCaptured{Kind: "note", SourceSystem: note.SourceSystem, WebsiteSubmissionKey: note.SourceId})
+	if err != nil {
+		return automation.InquiryPreview{}, err
+	}
+	workspace, err := s.db.Workspace(ctx)
+	if err != nil {
+		return automation.InquiryPreview{}, err
+	}
+	ev := workflow.Event{WorkspaceID: workspace.UUID, OwnerID: owner, AutomationID: policyID, Params: raw, Payload: payload, Entity: datasource.EntityRef{Type: datasource.EntityActivity, ID: ids.UUID(selected.Id)}}
+	plan, err := automation.NewInquiryService(s.db, newInquiryRouting(s.db)).Preview(ctx, ex, ev)
+	if err != nil {
+		return automation.InquiryPreview{}, err
+	}
+	return plan, nil
+}
+
+func inquiryTaskSource(plan automation.InquiryPreview) (string, string, error) {
+	if len(plan.Effect.Actions) != 1 {
+		return "", "", apperrors.ErrConflict
+	}
+	var task struct {
+		System string `json:"source_system"`
+		ID     string `json:"source_id"`
+	}
+	if err := json.Unmarshal(plan.Effect.Actions[0].Args, &task); err != nil {
+		return "", "", err
+	}
+	if task.System == "" || task.ID == "" {
+		return "", "", apperrors.ErrConflict
+	}
+	return task.System, task.ID, nil
 }

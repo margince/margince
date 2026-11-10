@@ -36,6 +36,12 @@ func TestInquiryPoliciesRequireACompleteTypedConfiguration(t *testing.T) {
 		{"missing form", "params.form_id", func(p map[string]any) { delete(p, "form_id") }},
 		{"missing coordinator", "params.coordinator_id", func(p map[string]any) { delete(p, "coordinator_id") }},
 		{"unknown mode", "params.mode", func(p map[string]any) { p["mode"] = "team_queue" }},
+		{"capacity needs a separate reviewed feature", "params.routing", func(p map[string]any) {
+			p["routing"] = map[string]any{"owners": []any{"00000000-0000-7000-8000-000000000003"}, "cap_per_owner": 1}
+		}},
+		{"territory needs a separate reviewed feature", "params.routing", func(p map[string]any) {
+			p["routing"] = map[string]any{"owners": []any{"00000000-0000-7000-8000-000000000003"}, "rules": []any{map[string]any{"field": "origin", "equals": "website", "owner_id": "00000000-0000-7000-8000-000000000003"}}}
+		}},
 		{"unknown knob", "params", func(p map[string]any) { p["send_email"] = true }},
 		{"host timezone", "params.timezone", func(p map[string]any) { p["timezone"] = "Local" }},
 		{"padded timezone", "params.timezone", func(p map[string]any) { p["timezone"] = " Europe/Berlin " }},

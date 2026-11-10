@@ -76,6 +76,11 @@ var setupFixtures = map[string]func(p *recordPool) map[string]any{
 		return versioned(p, "automation", map[string]any{"name": "Sweep rule"})
 	},
 	"preview_automation": func(p *recordPool) map[string]any { return map[string]any{"id": p.take("automation")} },
+	"handle_website_inquiries": func(p *recordPool) map[string]any {
+		form := p.take("existing_website_inquiry")
+		source := p.fact(form, "source")
+		return map[string]any{"id": form, "request_body": map[string]any{"automation_id": p.fact(form, "policy"), "automation_version": versionOf(p, form), "selected": []map[string]any{{"id": source, "version": versionOf(p, source)}}}}
+	},
 	"preview_website_inquiries": func(p *recordPool) map[string]any {
 		form := p.take("versioned_web_form")
 		return map[string]any{"id": form, "request_body": map[string]any{"policy": map[string]any{"form_id": form, "mode": "coordinator", "routing": map[string]any{}, "coordinator_id": p.take("user"), "task_title": "Review the website inquiry", "due_in_days": 1, "timezone": "Etc/UTC"}, "selected": []any{}}}
@@ -338,6 +343,7 @@ func setupSeeders(s sweepSeed) map[string]func() string {
 		"automation": func() string {
 			return versioned("/v1/automations", integration.AnyMap{"key": "assign_lead_owner", "name": uniqueName(), "params": integration.AnyMap{}})
 		},
+		"existing_website_inquiry": func() string { return seedExistingWebsiteInquiry(s) },
 		"versioned_web_form": func() string {
 			return versioned("/v1/web-forms", integration.AnyMap{"name": uniqueName(), "sender": "browser", "allowed_origins": []string{"https://example.test"}})
 		},

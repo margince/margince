@@ -45,6 +45,11 @@ func (s *InquiryService) Apply(ctx context.Context, ex Executors, ev workflow.Ev
 	if _, err := s.currentPolicy(ctx, ev); err != nil {
 		return workflow.RunResult{}, err
 	}
+	if task, found, err := s.existingTask(ctx, ex, ev, receipt); err != nil {
+		return workflow.RunResult{}, err
+	} else if found && inquiryTaskHandled(task) {
+		return workflow.RunResult{}, workflow.Declined("this accepted inquiry already has its task")
+	}
 	plan, err := s.claims.FreezeInquiry(ctx, receipt.Key, func(bound context.Context) (InquiryPlan, error) {
 		return s.choose(bound, ex, ev, policy, receipt)
 	})
@@ -61,7 +66,7 @@ func (s *InquiryService) Apply(ctx context.Context, ex Executors, ev workflow.Ev
 	if err := auth.Require(admit, "activity", principal.ActionCreate); err != nil {
 		return workflow.RunResult{}, err
 	}
-	if err := s.routing.CheckRecipient(ctx, plan.Recipient, plan.Target, plan.SourceActivityID); err != nil {
+	if err := s.routing.CheckRecipient(admit, plan.Recipient, plan.Target, plan.SourceActivityID); err != nil {
 		return workflow.RunResult{}, err
 	}
 	action, err := s.originalTask(ctx, plan)
@@ -116,11 +121,11 @@ func (s *InquiryService) choose(ctx context.Context, ex Executors, ev workflow.E
 	if err != nil {
 		return plan, err
 	}
-	plan.Recipient, plan.Reason, err = s.routing.Choose(ctx, admit, policy, receipt.Target)
+	plan.Recipient, plan.Reason, err = s.routing.Choose(ctx, admit, policy, receipt.Target, ev.Entity.ID)
 	if err != nil {
 		return plan, err
 	}
-	return plan, s.routing.CheckRecipient(ctx, plan.Recipient, plan.Target, plan.SourceActivityID)
+	return plan, s.routing.CheckRecipient(admit, plan.Recipient, plan.Target, plan.SourceActivityID)
 }
 
 func (s *InquiryService) originalTask(ctx context.Context, plan InquiryPlan) (workflow.Action, error) {
@@ -165,8 +170,8 @@ func (s *InquiryService) currentPolicy(ctx context.Context, ev workflow.Event) (
 	var version int64
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT version FROM automation
- WHERE id=@id AND key=@key AND enabled AND archived_at IS NULL AND params=@params::jsonb AND owner_id=@owner
- FOR SHARE`, pgx.NamedArgs{"id": ev.AutomationID, "key": inquiryRecipeName, "params": ev.Params, "owner": ev.OwnerID}).Scan(&version)
+ WHERE id=@id AND key=@key AND (enabled OR @selected) AND archived_at IS NULL AND params=@params::jsonb AND owner_id=@owner
+ FOR SHARE`, pgx.NamedArgs{"id": ev.AutomationID, "key": inquiryRecipeName, "params": ev.Params, "owner": ev.OwnerID, "selected": selectedInquiryAllowed(ctx, ev)}).Scan(&version)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return 0, apperrors.ErrConflict

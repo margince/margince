@@ -10472,6 +10472,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/web-forms/{id}/handling/existing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Handle explicitly selected accepted inquiries using the reviewed saved policy.
+         * @description Rechecks the saved policy version and every selected source version. Each source
+         *     has its own durable outcome; one failure does not undo completed items. Uses the
+         *     live workflow, source keys and task writer. A paused policy may handle this explicit
+         *     selection without enabling future handling. No mail is sent.
+         */
+        post: operations["handleExistingWebFormInquiries"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/web-forms/{id}/rotate-secret": {
         parameters: {
             query?: never;
@@ -25601,6 +25627,27 @@ export interface components {
          * @enum {string}
          */
         WebsiteInquiryMode: "one_colleague" | "rotate" | "coordinator";
+        WebsiteInquiryExistingRequest: {
+            /** Format: uuid */
+            automation_id: string;
+            automation_version: components["schemas"]["RowVersion"];
+            selected: components["schemas"]["WebsiteInquirySelection"][];
+        };
+        WebsiteInquiryHandlingResults: {
+            items: components["schemas"]["WebsiteInquiryHandlingItem"][];
+        };
+        WebsiteInquiryHandlingItem: {
+            /** Format: uuid */
+            id: string;
+            version: components["schemas"]["RowVersion"];
+            /** @enum {string} */
+            status: "task_created" | "already_handled" | "waiting_for_approval" | "skipped" | "changed" | "unavailable" | "failed";
+            /** Format: uuid */
+            task_id?: string;
+            /** Format: uuid */
+            run_id?: string;
+            reason?: string;
+        };
         WebsiteInquirySelection: {
             /**
              * Format: uuid
@@ -69046,6 +69093,8 @@ export interface operations {
                 q?: string;
                 /** @description Narrow the timeline sections to one body of work: what is filed under this project or under no project; correspondence filed under another project is left out. */
                 project_id?: string;
+                /** @description Accepted website submission notes for this form, with readable content only. */
+                website_form_id?: string;
                 /** @description Tasks derived from this readable source activity, under current task visibility. */
                 source_activity_id?: string;
                 /** @description One provider conversation. The company view's timeline groups by thread client-side over the page it holds, so a group cut off by that page completes itself through this rather than by widening the page for every account that has no long thread. */
@@ -77436,6 +77485,39 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    handleExistingWebFormInquiries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebsiteInquiryExistingRequest"];
+            };
+        };
+        responses: {
+            /** @description One durable result per selected source. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebsiteInquiryHandlingResults"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            503: components["responses"]["WebsiteFormBusy"];
         };
     };
     rotateWebFormSecret: {

@@ -30,7 +30,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/leadsource"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -281,8 +280,7 @@ func ownerCapacity(ctx context.Context, tx pgx.Tx, candidates []ids.UserID) (act
 		  FROM app_user u
 		  LEFT JOIN lead l ON l.owner_id = u.id
 		       AND l.status IN ('new','contacted','engaged') AND l.archived_at IS NULL
-		 WHERE u.id = ANY($1) AND `+workforce.LiveMemberSQL("u")+`
-		       AND NOT u.is_agent AND u.seat_type <> 'read'
+		 WHERE u.id = ANY($1) AND `+auth.AssigneeEligibleSQL("u")+`
 		 GROUP BY u.id`, candidates)
 	if err != nil {
 		return nil, nil, err

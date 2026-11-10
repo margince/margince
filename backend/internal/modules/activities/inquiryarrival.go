@@ -36,8 +36,9 @@ func (s *Store) ReuseWebsiteArrivalTask(ctx, admit context.Context, key string, 
 		found = false
 		return database.WithWorkspaceSnapshot(ctx, s.db.Pool(), func(bound context.Context) error {
 			return s.tx(bound, func(tx pgx.Tx) error {
+				system, sourceKey := provenance.WebsiteInquiryTaskSource(key, true)
 				var id ids.ActivityID
-				err := tx.QueryRow(bound, `SELECT id FROM activity WHERE source_system=@system AND source_id=@key FOR UPDATE`, pgx.NamedArgs{"system": provenance.LeadForContactSource, "key": provenance.WebFormSource + ":" + key}).Scan(&id)
+				err := tx.QueryRow(bound, `SELECT id FROM activity WHERE source_system=@system AND source_id=@key FOR UPDATE`, pgx.NamedArgs{"system": system, "key": sourceKey}).Scan(&id)
 				if errors.Is(err, pgx.ErrNoRows) {
 					return nil
 				}

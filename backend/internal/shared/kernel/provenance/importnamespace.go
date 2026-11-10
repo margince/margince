@@ -94,6 +94,14 @@ const WebFormSource = "web_form"
 // WebsiteInquirySource binds a task and its handling run to one accepted submission.
 const WebsiteInquirySource = "website_inquiry"
 
+// WebsiteInquiryTaskSource preserves the immediate contact task's existing identity.
+func WebsiteInquiryTaskSource(submission string, contact bool) (string, string) {
+	if contact {
+		return LeadForContactSource, WebFormSource + ":" + submission
+	}
+	return WebsiteInquirySource, submission
+}
+
 // WebFormSourceID is a website form submission's source_id: the form, then the
 // submission's own part. WebFormIDSQL reads the form back out of it.
 func WebFormSourceID(form, submission string) string { return form + ":" + submission }

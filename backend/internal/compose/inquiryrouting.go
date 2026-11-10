@@ -49,6 +49,10 @@ func (r inquiryRouting) Within(ctx context.Context, form ids.UUID, run func(cont
 }
 
 func (r inquiryRouting) Validate(ctx context.Context, policy crmcontracts.WebsiteInquiryPolicy) error {
+	return r.validate(ctx, policy, true)
+}
+
+func (r inquiryRouting) validate(ctx context.Context, policy crmcontracts.WebsiteInquiryPolicy, requirePool bool) error {
 	if _, err := webforms.NewStore(r.db, slog.Default()).GetForm(ctx, ids.UUID(policy.FormId)); err != nil {
 		return err
 	}
@@ -66,7 +70,7 @@ func (r inquiryRouting) Validate(ctx context.Context, policy crmcontracts.Websit
 		}
 	}
 	candidates := []ids.UUID{ids.UUID(policy.CoordinatorId)}
-	if policy.Routing.Owners != nil {
+	if requirePool && policy.Routing.Owners != nil {
 		for _, id := range *policy.Routing.Owners {
 			candidates = append(candidates, ids.UUID(id))
 		}
@@ -97,29 +101,34 @@ func (r inquiryRouting) Validate(ctx context.Context, policy crmcontracts.Websit
 	return r.checkRequestType(ctx, policy)
 }
 
-func (r inquiryRouting) Choose(ctx, admit context.Context, policy crmcontracts.WebsiteInquiryPolicy, target datasource.EntityRef) (ids.UUID, string, error) {
-	return r.choose(ctx, admit, policy, target, true)
+func (r inquiryRouting) Choose(ctx, admit context.Context, policy crmcontracts.WebsiteInquiryPolicy, target datasource.EntityRef, source ids.UUID) (ids.UUID, string, error) {
+	return r.choose(ctx, admit, policy, target, source, true)
 }
 
-func (r inquiryRouting) Preview(ctx, admit context.Context, policy crmcontracts.WebsiteInquiryPolicy, target datasource.EntityRef) (ids.UUID, string, error) {
-	return r.choose(ctx, admit, policy, target, false)
+func (r inquiryRouting) Preview(ctx, admit context.Context, policy crmcontracts.WebsiteInquiryPolicy, target datasource.EntityRef, source ids.UUID) (ids.UUID, string, error) {
+	return r.choose(ctx, admit, policy, target, source, false)
 }
 
-func (r inquiryRouting) choose(ctx, admit context.Context, policy crmcontracts.WebsiteInquiryPolicy, target datasource.EntityRef, apply bool) (ids.UUID, string, error) {
+func (r inquiryRouting) choose(ctx, admit context.Context, policy crmcontracts.WebsiteInquiryPolicy, target datasource.EntityRef, source ids.UUID, apply bool) (ids.UUID, string, error) {
 	owner, err := r.owner(admit, target)
 	if err != nil {
 		return ids.Nil, "", err
 	}
 	if owner != nil {
-		if _, err := r.recipient(ctx, *owner, target); err == nil {
-			return *owner, "existing_owner", nil
-		} else if !inquiryRecipientDenied(err) {
-			return ids.Nil, "", err
-		}
-		return ids.UUID(policy.CoordinatorId), "owner_needs_review", nil
+		return r.existingOwner(admit, *owner, ids.UUID(policy.CoordinatorId), target, source)
 	}
 	if target.Type != datasource.EntityLead || policy.Mode == crmcontracts.WebsiteInquiryModeCoordinator {
 		return ids.UUID(policy.CoordinatorId), "coordinator_review", nil
+	}
+	if policy.Routing.Owners != nil {
+		for _, candidate := range *policy.Routing.Owners {
+			if err := r.CheckRecipient(admit, ids.UUID(candidate), target, source); err != nil {
+				if inquiryRecipientDenied(err) {
+					return ids.UUID(policy.CoordinatorId), "recipient_no_longer_eligible", nil
+				}
+				return ids.Nil, "", err
+			}
+		}
 	}
 	raw, err := json.Marshal(policy.Routing)
 	if err != nil {
@@ -148,11 +157,21 @@ func (r inquiryRouting) choose(ctx, admit context.Context, policy crmcontracts.W
 			return ids.Nil, "", err
 		}
 		if owner != nil {
-			return *owner, "existing_owner", nil
+			return r.existingOwner(admit, *owner, ids.UUID(policy.CoordinatorId), target, source)
 		}
 		return ids.Nil, "", apperrors.ErrConflict
 	}
 	return ids.UUID(policy.CoordinatorId), "coordinator_review", nil
+}
+
+func (r inquiryRouting) existingOwner(ctx context.Context, owner, coordinator ids.UUID, target datasource.EntityRef, source ids.UUID) (ids.UUID, string, error) {
+	if err := r.CheckRecipient(ctx, owner, target, source); err == nil {
+		return owner, "existing_owner", nil
+	} else if inquiryRecipientDenied(err) {
+		return coordinator, "owner_needs_review", nil
+	} else {
+		return ids.Nil, "", err
+	}
 }
 
 func (r inquiryRouting) CheckRecipient(ctx context.Context, id ids.UUID, target datasource.EntityRef, source ids.UUID) error {
@@ -231,4 +250,16 @@ func (r inquiryRouting) checkRequestType(ctx context.Context, policy crmcontract
 		}
 	}
 	return &automation.ParamError{Field: "params.request_type_field", Reason: "choose an active lead picklist field mapped on the form"}
+}
+
+func (r inquiryRouting) ExistingTask(ctx, admit context.Context, key string) (crmcontracts.Activity, bool, error) {
+	store := activities.NewStore(r.db)
+	task, found, err := store.WebsiteInquiryTask(admit, key)
+	if err != nil || !found {
+		return task, found, err
+	}
+	if _, err := store.GetActivityContent(ctx, ids.From[ids.ActivityKind](ids.UUID(task.Id)), storekit.IncludeArchived); err != nil {
+		return crmcontracts.Activity{}, true, err
+	}
+	return task, true, nil
 }

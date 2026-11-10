@@ -6532,6 +6532,10 @@ paths:
           schema: {type: string, format: uuid}
           description: >-
             Narrow the timeline sections to one body of work: what is filed under this project or under no project; correspondence filed under another project is left out.
+        - name: website_form_id
+          in: query
+          schema: {type: string, format: uuid}
+          description: Accepted website submission notes for this form, with readable content only.
         - name: source_activity_id
           in: query
           schema: {type: string, format: uuid}
@@ -12178,6 +12182,40 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /web-forms/{id}/handling/existing:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [WebForms]
+      operationId: handleExistingWebFormInquiries
+      security: [{bearerAuth: []}]
+      summary: Handle explicitly selected accepted inquiries using the reviewed saved policy.
+      description: |-
+        Rechecks the saved policy version and every selected source version. Each source
+        has its own durable outcome; one failure does not undo completed items. Uses the
+        live workflow, source keys and task writer. A paused policy may handle this explicit
+        selection without enabling future handling. No mail is sent.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/WebsiteInquiryExistingRequest'}
+      responses:
+        '200':
+          description: One durable result per selected source.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/WebsiteInquiryHandlingResults'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '503': {$ref: '#/components/responses/WebsiteFormBusy'}
   /tag-suggestions/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -26339,6 +26377,35 @@ components:
       type: string
       enum: [one_colleague, rotate, coordinator]
       description: Keep an eligible existing owner; otherwise route through selected colleagues or coordinator review.
+    WebsiteInquiryExistingRequest:
+      type: object
+      required: [automation_id, automation_version, selected]
+      additionalProperties: false
+      properties:
+        automation_id: {type: string, format: uuid}
+        automation_version: {$ref: '#/components/schemas/RowVersion'}
+        selected:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items: {$ref: '#/components/schemas/WebsiteInquirySelection'}
+    WebsiteInquiryHandlingResults:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/WebsiteInquiryHandlingItem'}
+    WebsiteInquiryHandlingItem:
+      type: object
+      required: [id, version, status]
+      properties:
+        id: {type: string, format: uuid}
+        version: {$ref: '#/components/schemas/RowVersion'}
+        status: {type: string, enum: [task_created, already_handled, waiting_for_approval, skipped, changed, unavailable, failed]}
+        task_id: {type: string, format: uuid}
+        run_id: {type: string, format: uuid}
+        reason: {type: string}
     WebsiteInquirySelection:
       type: object
       required: [id, version]

@@ -19,6 +19,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/database"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -294,6 +296,39 @@ func TestRetryingARetryIsItsOwnAttempt(t *testing.T) {
 	runs := fx.count(t, `SELECT count(*) FROM workflow_run WHERE handler = $1`, handler)
 	if runs != 3 {
 		t.Fatalf("recorded %d runs, want 3 — each attempt claims its own row", runs)
+	}
+}
+
+func TestRetryNumbersSurviveRemovalOfEarlierAttempts(t *testing.T) {
+	fx := setupAutomationDB(t)
+	const handler = "retry_after_history_cleanup"
+	fx.seedAutomation(t, handler)
+	applies := 0
+	engine := engineOverScripted(fx, scriptedWorkflow{
+		name: handler, redrivable: true,
+		apply: func(workflow.Event) (workflow.RunResult, error) {
+			applies++
+			return workflow.RunResult{}, errors.New("temporary task failure")
+		},
+	})
+	if err := engine.HandleEvent(context.Background(), fx.stagedEvent(t, ids.NewV7())); err == nil {
+		t.Fatal("the first attempt must fail")
+	}
+	original, _ := fx.failedRunID(t, handler)
+	for range 2 {
+		if _, err := engine.RetryRun(context.Background(), original); err == nil {
+			t.Fatal("the retry must report the task failure")
+		}
+	}
+	fx.exec(t, `DELETE FROM workflow_run WHERE handler=@handler AND idempotency_key LIKE 'retry1:%'`, pgx.NamedArgs{"handler": handler})
+	if _, err := engine.RetryRun(context.Background(), original); err == nil {
+		t.Fatal("the next retry must execute and report its task failure")
+	}
+	if applies != 4 {
+		t.Fatalf("Apply ran %d times; removal of retry1 must not reuse retry2's key", applies)
+	}
+	if count := fx.count(t, `SELECT count(*) FROM workflow_run WHERE handler=@handler AND idempotency_key LIKE 'retry3:%'`, pgx.NamedArgs{"handler": handler}); count != 1 {
+		t.Fatalf("recorded %d third retries, want one", count)
 	}
 }
 

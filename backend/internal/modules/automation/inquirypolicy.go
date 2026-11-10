@@ -59,6 +59,9 @@ func checkInquiryPolicy(p crmcontracts.WebsiteInquiryPolicy) error {
 }
 
 func checkInquiryRouting(p crmcontracts.WebsiteInquiryPolicy) error {
+	if p.Routing.CapPerOwner != nil || (p.Routing.Rules != nil && len(*p.Routing.Rules) != 0) {
+		return inquiryParamError("routing", "website inquiries support selected colleagues without capacity or territory rules")
+	}
 	owners := map[ids.UUID]bool{}
 	if p.Routing.Owners != nil {
 		for _, owner := range *p.Routing.Owners {
@@ -83,13 +86,7 @@ func checkInquiryRouting(p crmcontracts.WebsiteInquiryPolicy) error {
 			return inquiryParamError("routing", "coordinator review leaves the lead unowned")
 		}
 	}
-	if p.Routing.Rules != nil {
-		for _, rule := range *p.Routing.Rules {
-			if !owners[ids.UUID(rule.OwnerId)] {
-				return inquiryParamError("routing.rules", "rule owners must belong to the selected colleagues")
-			}
-		}
-	}
+
 	raw, err := json.Marshal(p.Routing)
 	if err != nil {
 		return err

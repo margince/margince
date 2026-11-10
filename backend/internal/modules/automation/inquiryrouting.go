@@ -14,10 +14,11 @@ import (
 
 // InquiryRouting keeps lead writes and recipient access checks with their owners.
 type InquiryRouting interface {
+	ExistingTask(context.Context, context.Context, string) (crmcontracts.Activity, bool, error)
 	Within(context.Context, ids.UUID, func(context.Context) error) error
 	Validate(context.Context, crmcontracts.WebsiteInquiryPolicy) error
-	Choose(context.Context, context.Context, crmcontracts.WebsiteInquiryPolicy, datasource.EntityRef) (ids.UUID, string, error)
-	Preview(context.Context, context.Context, crmcontracts.WebsiteInquiryPolicy, datasource.EntityRef) (ids.UUID, string, error)
+	Choose(context.Context, context.Context, crmcontracts.WebsiteInquiryPolicy, datasource.EntityRef, ids.UUID) (ids.UUID, string, error)
+	Preview(context.Context, context.Context, crmcontracts.WebsiteInquiryPolicy, datasource.EntityRef, ids.UUID) (ids.UUID, string, error)
 	CheckRecipient(context.Context, ids.UUID, datasource.EntityRef, ids.UUID) error
 	ReuseArrivalTask(context.Context, context.Context, string, ids.UUID, ids.UUID, time.Time) (bool, error)
 }

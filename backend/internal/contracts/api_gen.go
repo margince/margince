@@ -25813,6 +25813,39 @@ func (e WebhookSubscriptionState) Valid() bool {
 	}
 }
 
+// Defines values for WebsiteInquiryHandlingItemStatus.
+const (
+	WebsiteInquiryHandlingItemStatusAlreadyHandled     WebsiteInquiryHandlingItemStatus = "already_handled"
+	WebsiteInquiryHandlingItemStatusChanged            WebsiteInquiryHandlingItemStatus = "changed"
+	WebsiteInquiryHandlingItemStatusFailed             WebsiteInquiryHandlingItemStatus = "failed"
+	WebsiteInquiryHandlingItemStatusSkipped            WebsiteInquiryHandlingItemStatus = "skipped"
+	WebsiteInquiryHandlingItemStatusTaskCreated        WebsiteInquiryHandlingItemStatus = "task_created"
+	WebsiteInquiryHandlingItemStatusUnavailable        WebsiteInquiryHandlingItemStatus = "unavailable"
+	WebsiteInquiryHandlingItemStatusWaitingForApproval WebsiteInquiryHandlingItemStatus = "waiting_for_approval"
+)
+
+// Valid indicates whether the value is a known member of the WebsiteInquiryHandlingItemStatus enum.
+func (e WebsiteInquiryHandlingItemStatus) Valid() bool {
+	switch e {
+	case WebsiteInquiryHandlingItemStatusAlreadyHandled:
+		return true
+	case WebsiteInquiryHandlingItemStatusChanged:
+		return true
+	case WebsiteInquiryHandlingItemStatusFailed:
+		return true
+	case WebsiteInquiryHandlingItemStatusSkipped:
+		return true
+	case WebsiteInquiryHandlingItemStatusTaskCreated:
+		return true
+	case WebsiteInquiryHandlingItemStatusUnavailable:
+		return true
+	case WebsiteInquiryHandlingItemStatusWaitingForApproval:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WebsiteInquiryMode.
 const (
 	WebsiteInquiryModeCoordinator  WebsiteInquiryMode = "coordinator"
@@ -66767,6 +66800,18 @@ type WebhookSubscriptionListResponse struct {
 	Page            PageInfo `json:"page"`
 }
 
+// WebsiteInquiryExistingRequest defines model for WebsiteInquiryExistingRequest.
+type WebsiteInquiryExistingRequest struct {
+	AutomationId openapi_types.UUID `json:"automation_id"`
+
+	// AutomationVersion Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	AutomationVersion *RowVersion               `json:"automation_version,omitempty" minimum:"1"`
+	Selected          []WebsiteInquirySelection `json:"selected"`
+}
+
 // WebsiteInquiryHandling defines model for WebsiteInquiryHandling.
 type WebsiteInquiryHandling struct {
 	// Automation A configured automation instance (feedback/14).
@@ -66775,6 +66820,24 @@ type WebsiteInquiryHandling struct {
 	// Form A website form (`web_form`): a public intake address that turns a submission into a lead. No secret is ever returned here; `secret_configured` says one is stored.
 	Form WebForm `json:"form"`
 }
+
+// WebsiteInquiryHandlingItem defines model for WebsiteInquiryHandlingItem.
+type WebsiteInquiryHandlingItem struct {
+	Id     openapi_types.UUID               `json:"id"`
+	Reason *string                          `json:"reason,omitempty"`
+	RunId  *openapi_types.UUID              `json:"run_id,omitempty"`
+	Status WebsiteInquiryHandlingItemStatus `json:"status"`
+	TaskId *openapi_types.UUID              `json:"task_id,omitempty"`
+
+	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
+}
+
+// WebsiteInquiryHandlingItemStatus defines model for WebsiteInquiryHandlingItem.Status.
+type WebsiteInquiryHandlingItemStatus string
 
 // WebsiteInquiryHandlingPreview defines model for WebsiteInquiryHandlingPreview.
 type WebsiteInquiryHandlingPreview struct {
@@ -66797,6 +66860,11 @@ type WebsiteInquiryHandlingRequest struct {
 	Enabled           bool                 `json:"enabled"`
 	Name              string               `json:"name"`
 	Policy            WebsiteInquiryPolicy `json:"policy"`
+}
+
+// WebsiteInquiryHandlingResults defines model for WebsiteInquiryHandlingResults.
+type WebsiteInquiryHandlingResults struct {
+	Items []WebsiteInquiryHandlingItem `json:"items"`
 }
 
 // WebsiteInquiryMode Keep an eligible existing owner; otherwise route through selected colleagues or coordinator review.
@@ -69674,6 +69742,9 @@ type ListActivitiesParams struct {
 
 	// ProjectId Narrow the timeline sections to one body of work: what is filed under this project or under no project; correspondence filed under another project is left out.
 	ProjectId *openapi_types.UUID `form:"project_id,omitempty" json:"project_id,omitempty"`
+
+	// WebsiteFormId Accepted website submission notes for this form, with readable content only.
+	WebsiteFormId *openapi_types.UUID `form:"website_form_id,omitempty" json:"website_form_id,omitempty"`
 
 	// SourceActivityId Tasks derived from this readable source activity, under current task visibility.
 	SourceActivityId *openapi_types.UUID `form:"source_activity_id,omitempty" json:"source_activity_id,omitempty"`
@@ -78910,6 +78981,9 @@ type UpdateWebFormJSONRequestBody = UpdateWebFormRequest
 
 // SaveWebFormHandlingJSONRequestBody defines body for SaveWebFormHandling for application/json ContentType.
 type SaveWebFormHandlingJSONRequestBody = WebsiteInquiryHandlingRequest
+
+// HandleExistingWebFormInquiriesJSONRequestBody defines body for HandleExistingWebFormInquiries for application/json ContentType.
+type HandleExistingWebFormInquiriesJSONRequestBody = WebsiteInquiryExistingRequest
 
 // PreviewWebFormHandlingJSONRequestBody defines body for PreviewWebFormHandling for application/json ContentType.
 type PreviewWebFormHandlingJSONRequestBody = WebsiteInquiryPreviewRequest
@@ -94814,6 +94888,9 @@ type ServerInterface interface {
 	// Save the reviewed inquiry policy and form link together.
 	// (PUT /web-forms/{id}/handling)
 	SaveWebFormHandling(w http.ResponseWriter, r *http.Request, id Id, params SaveWebFormHandlingParams)
+	// Handle explicitly selected accepted inquiries using the reviewed saved policy.
+	// (POST /web-forms/{id}/handling/existing)
+	HandleExistingWebFormInquiries(w http.ResponseWriter, r *http.Request, id Id)
 	// Preview inquiry deadlines and explicitly selected accepted submissions without writing.
 	// (POST /web-forms/{id}/handling/preview)
 	PreviewWebFormHandling(w http.ResponseWriter, r *http.Request, id Id)
@@ -101033,6 +101110,12 @@ func (_ Unimplemented) SaveWebFormHandling(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Handle explicitly selected accepted inquiries using the reviewed saved policy.
+// (POST /web-forms/{id}/handling/existing)
+func (_ Unimplemented) HandleExistingWebFormInquiries(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Preview inquiry deadlines and explicitly selected accepted submissions without writing.
 // (POST /web-forms/{id}/handling/preview)
 func (_ Unimplemented) PreviewWebFormHandling(w http.ResponseWriter, r *http.Request, id Id) {
@@ -101593,6 +101676,19 @@ func (siw *ServerInterfaceWrapper) ListActivities(w http.ResponseWriter, r *http
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "project_id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "website_form_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "website_form_id", r.URL.Query(), &params.WebsiteFormId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "website_form_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "website_form_id", Err: err})
 		}
 		return
 	}
@@ -146174,6 +146270,40 @@ func (siw *ServerInterfaceWrapper) SaveWebFormHandling(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// HandleExistingWebFormInquiries operation middleware
+func (siw *ServerInterfaceWrapper) HandleExistingWebFormInquiries(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.HandleExistingWebFormInquiries(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // PreviewWebFormHandling operation middleware
 func (siw *ServerInterfaceWrapper) PreviewWebFormHandling(w http.ResponseWriter, r *http.Request) {
 
@@ -150769,6 +150899,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/web-forms/{id}/handling", wrapper.SaveWebFormHandling)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/web-forms/{id}/handling/existing", wrapper.HandleExistingWebFormInquiries)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/web-forms/{id}/handling/preview", wrapper.PreviewWebFormHandling)

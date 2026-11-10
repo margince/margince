@@ -4087,6 +4087,10 @@ func (stubs) SaveWebFormHandling(w nethttp.ResponseWriter, r *nethttp.Request, i
 	httperr.NotImplemented(w, r, "SaveWebFormHandling")
 }
 
+func (stubs) HandleExistingWebFormInquiries(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "HandleExistingWebFormInquiries")
+}
+
 func (stubs) PreviewWebFormHandling(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "PreviewWebFormHandling")
 }

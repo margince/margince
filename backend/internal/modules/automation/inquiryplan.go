@@ -88,3 +88,24 @@ func (s *EffectClaimStore) FreezeInquiry(ctx context.Context, key string, choose
 	}
 	return out, nil
 }
+
+func (s *EffectClaimStore) InquiryPlan(ctx context.Context, key string) (InquiryPlan, bool, error) {
+	if err := auth.Require(ctx, "automation", principal.ActionRead); err != nil {
+		return InquiryPlan{}, false, err
+	}
+	var raw json.RawMessage
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT planned FROM automation_effect_claim WHERE handler=@handler AND occurrence_key=@key AND effect_fingerprint=@fingerprint AND planned IS NOT NULL`, pgx.NamedArgs{"handler": inquiryRecipeName, "key": key, "fingerprint": inquiryPlanFingerprint}).Scan(&raw)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return InquiryPlan{}, false, nil
+	}
+	if err != nil {
+		return InquiryPlan{}, false, err
+	}
+	var out InquiryPlan
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return out, false, err
+	}
+	return out, true, nil
+}

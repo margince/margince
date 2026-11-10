@@ -44,7 +44,8 @@ type ListActivitiesInput struct {
 	// CallOutcome narrows to calls that ended this way.
 	CallOutcome *string
 	// SourceSystem narrows to rows one connector wrote, such as website forms.
-	SourceSystem *string
+	SourceSystem  *string
+	WebsiteFormID *ids.UUID
 	// AnswersThem keeps only rows that answer the other side (answersThemSQL).
 	AnswersThem bool
 	EntityType  *string

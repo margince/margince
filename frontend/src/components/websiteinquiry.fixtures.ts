@@ -94,3 +94,25 @@ export const INQUIRY_DEADLINE_PREVIEW: components["schemas"]["WebsiteInquiryHand
     example_due_at: "2026-03-29T21:59:59.999999Z",
     items: [],
   };
+
+export const INQUIRY_FIRST_SOURCE: components["schemas"]["Activity"] = {
+  id: "00000000-0000-4000-8000-000000000021",
+  kind: "note",
+  subject: "A website question",
+  body: "Please call",
+  is_done: false,
+  offers_email: false,
+  occurred_at: "2026-09-01T09:00:00Z",
+  occurred_precision: "instant",
+  source: "capture",
+  captured_by: "system:webforms",
+  created_at: "2026-09-01T09:00:00Z",
+  updated_at: "2026-09-01T09:00:00Z",
+  version: 3,
+};
+export const INQUIRY_SECOND_SOURCE = {
+  ...INQUIRY_FIRST_SOURCE,
+  id: "00000000-0000-4000-8000-000000000022",
+  subject: "An older question",
+  version: 5,
+};

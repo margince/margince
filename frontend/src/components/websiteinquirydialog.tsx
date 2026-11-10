@@ -23,6 +23,7 @@ import {
 } from "../lib/websiteinquiries";
 import { EntityRef } from "./entityref";
 import { useUnsavedGuard } from "./unsaved";
+import { WebsiteInquiryExistingDialog } from "./websiteinquiryexisting";
 import { inquiryModeLabel, WebsiteInquiryFields } from "./websiteinquiryfields";
 
 type WebForm = components["schemas"]["WebForm"];
@@ -42,6 +43,7 @@ export function WebsiteInquiryDialog({
   const t = useT();
   const canRead = useCan("integrations", "read");
   const [chosen, setChosen] = useState(form);
+  const [existing, setExisting] = useState(false);
   const forms = useQuery({
     queryKey: [WEB_FORMS_KEY],
     enabled: canRead && !chosen && !formId,
@@ -71,12 +73,22 @@ export function WebsiteInquiryDialog({
         }),
       ),
   });
+  if (existing && selected && policy.data?.inquiry_policy) {
+    return (
+      <WebsiteInquiryExistingDialog
+        form={selected}
+        automation={policy.data}
+        onClose={onClose}
+      />
+    );
+  }
   if (selected && (!policyId || policy.data)) {
     return (
       <InquiryPolicyEditor
         key={selected.id}
         form={selected}
         automation={policy.data}
+        onHandleExisting={() => setExisting(true)}
         onClose={onClose}
       />
     );
@@ -128,8 +140,14 @@ type HandlingSave = Readonly<{
 function InquiryPolicyEditor({
   form,
   automation,
+  onHandleExisting,
   onClose,
-}: Readonly<{ form: WebForm; automation?: Automation; onClose: () => void }>) {
+}: Readonly<{
+  form: WebForm;
+  automation?: Automation;
+  onHandleExisting: () => void;
+  onClose: () => void;
+}>) {
   const t = useT();
   const id = useId();
   const client = useQueryClient();
@@ -227,6 +245,12 @@ function InquiryPolicyEditor({
           }}
         >
           <InquiryConfigurationBadge automation={opening.automation} />
+          {opening.automation && !reviewing && (
+            <ExistingInquiryAction
+              disabled={dirty || save.isPending}
+              onClick={onHandleExisting}
+            />
+          )}
           {reviewing ? (
             <>
               <InquiryPolicyReview
@@ -303,6 +327,23 @@ function InquiryPolicyEditor({
         </>
       }
     />
+  );
+}
+
+function ExistingInquiryAction({
+  disabled,
+  onClick,
+}: Readonly<{ disabled: boolean; onClick: () => void }>) {
+  const t = useT();
+  const read = useCan("activity", "read");
+  const update = useCan("activity", "update");
+  const create = useCan("activity", "create");
+  const can = read && update && create;
+  if (!can) return null;
+  return (
+    <Button disabled={disabled} onClick={onClick}>
+      {t("inquiry.existing")}
+    </Button>
   );
 }
 
