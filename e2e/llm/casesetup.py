@@ -114,7 +114,9 @@ def card_reviews_and_recap(admin):
     if recap is None:
         raise SetupFault("the workspace has no post-meeting recap rule")
     users = admin.call("GET", f"/users?q={ADMIN_EMAIL}").get("data", [])
-    me = users[0]["id"] if users else ""
+    if not users:
+        raise SetupFault(f"no user answers to {ADMIN_EMAIL}, so the recap has no owner to check")
+    me = users[0]["id"]
     enabled = admin.call("PATCH", f"/automations/{recap['id']}", {"status": "enabled"})
     if enabled.get("status") != "enabled" or enabled.get("owner_id") != me:
         raise SetupFault(f"enabling the post-meeting recap as {ADMIN_EMAIL} answered {enabled}")
