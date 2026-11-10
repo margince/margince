@@ -60,6 +60,74 @@ func TestTheWaitingListSaysWhatEachAddressWaitsOn(t *testing.T) {
 	}
 }
 
+// The states pair with the addresses by position, so a contact with two
+// addresses must carry each address's own state.
+func TestEachAddressOfAWaitingContactCarriesItsOwnState(t *testing.T) {
+	e := integration.Setup(t)
+	contact := seedOwnerPrivateContact(t, e, e.Rep1, "Two Addresses", "a@pair.test")
+	e.WsExec(t, `INSERT INTO contact_email (contact_id, email, source, captured_by)
+		VALUES ($1, 'b@pair.test', 'capture', 'connector:gmail')`, contact)
+	mail := seedCapturedMail(t, e, "b@pair.test", "a message about the second address")
+	seedPendingDisposition(t, e, "b@pair.test", "pair.test", mail)
+
+	listed, err := capture.ContactsAwaitingDecisionFor(ownerReader(e, e.Rep1), InstallationDB(e.Pool))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(listed) != 1 || len(listed[0].Addresses) != 2 {
+		t.Fatalf("want one contact with two address states, got %+v", listed)
+	}
+	want := map[string]capture.AwaitingState{
+		"a@pair.test": capture.AwaitingNothingToJudge,
+		"b@pair.test": capture.AwaitingClassifier,
+	}
+	for _, got := range listed[0].Addresses {
+		if got.State != want[got.Email] {
+			t.Errorf("%s waits on %q, want %q", got.Email, got.State, want[got.Email])
+		}
+	}
+}
+
+// A decision counts as applying only where a pass will apply it. A contact a
+// user worked on is out of both sweeps, so without an open question its
+// owner's decision is left to the owner.
+func TestADecisionNoPassAppliesIsLeftToTheOwner(t *testing.T) {
+	e := integration.Setup(t)
+	want := map[string]capture.AwaitingState{
+		"untouched@kept.test":  capture.AwaitingYourAnswerApplying,
+		"touched@kept.test":    capture.AwaitingNothingToJudge,
+		"nomail@business.test": capture.AwaitingNothingToJudge,
+	}
+	decisions := map[string]string{
+		"untouched@kept.test":  "keep_out",
+		"touched@kept.test":    "keep_out",
+		"nomail@business.test": "business",
+	}
+	for email, decision := range decisions {
+		contact := seedOwnerPrivateContact(t, e, e.Rep1, email, email)
+		e.WsExec(t, `INSERT INTO capture_sender_override (user_id, address, decision, captured_by)
+			VALUES ($1, $2, $3, 'human:test')`, e.Rep1, email, decision)
+		if email == "touched@kept.test" {
+			e.WsExec(t, `INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id)
+				VALUES ('human', 'user:'||$1::text, 'update', 'contact', $2)`, e.Rep1, contact)
+		}
+	}
+
+	listed, err := capture.ContactsAwaitingDecisionFor(ownerReader(e, e.Rep1), InstallationDB(e.Pool))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(listed) != len(want) {
+		t.Fatalf("listed %d contacts, want the %d seeded", len(listed), len(want))
+	}
+	for _, c := range listed {
+		got := c.Addresses[0]
+		if got.State != want[got.Email] {
+			t.Errorf("%s waits on %q, want %q", got.Email, got.State, want[got.Email])
+		}
+	}
+}
+
 // An `unsure` sender has a review offer, and no pass claims it. So the owner's
 // answer must put it back in the queue, or it changes nothing they can see.
 func TestAnOwnersAnswerAboutAnUnsureSenderIsAppliedByTheNextPass(t *testing.T) {

@@ -62,8 +62,8 @@ type AwaitingState string
 
 // The states, most specific first: awaitingStateSQL asks in this order.
 const (
-	// AwaitingYourAnswerApplying: the owner decided, and the verdict pass has
-	// not applied it yet.
+	// AwaitingYourAnswerApplying: the owner decided, and a pass that will
+	// apply it has not run yet.
 	AwaitingYourAnswerApplying AwaitingState = "decided"
 	// AwaitingClassifier: a question about the sender is open and due.
 	AwaitingClassifier AwaitingState = "classifying"
@@ -85,10 +85,24 @@ func (s AwaitingState) Processing() bool {
 
 // awaitingStateSQL answers the AwaitingState of the address email on the
 // contact aliased contact. The queued arm is StrandedContacts' own filter.
+//
+// A decision counts as applying only where a pass will reach it. That is the
+// owner's open question, the stranded sweep for a business answer, or the
+// noise sweep for a keep_out. Elsewhere it falls through, so the drawer keeps
+// the owner's own ways to settle the contact.
 func awaitingStateSQL(contact, email string) string {
+	untouched := `NOT ` + contactTouchedByAUser(contact)
 	return `CASE
 	  WHEN EXISTS (SELECT 1 FROM capture_sender_override o
-	                WHERE o.user_id = ` + contact + `.owner_id AND o.address = ` + email + `)
+	                WHERE o.user_id = ` + contact + `.owner_id AND o.address = ` + email + `
+	                  AND (EXISTS (SELECT 1 FROM capture_pending_counterparty q
+	                                WHERE q.email = ` + email + ` AND q.owner_id = o.user_id
+	                                  AND q.status IN ('pending', 'unsure'))
+	                       OR (` + untouched + `
+	                           AND (o.decision = 'keep_out'
+	                                OR (NOT EXISTS (SELECT 1 FROM capture_pending_counterparty q
+	                                                 WHERE q.email = ` + email + `)
+	                                    AND EXISTS (SELECT 1 ` + judgeableMessageFrom(contact, email) + `))))))
 	    THEN '` + string(AwaitingYourAnswerApplying) + `'
 	  WHEN EXISTS (SELECT 1 FROM capture_pending_counterparty q
 	                WHERE q.email = ` + email + ` AND q.status = 'pending')
@@ -96,7 +110,7 @@ func awaitingStateSQL(contact, email string) string {
 	  WHEN EXISTS (SELECT 1 FROM capture_pending_counterparty q
 	                WHERE q.email = ` + email + ` AND q.status = 'unsure')
 	    THEN '` + string(AwaitingUnsure) + `'
-	  WHEN NOT ` + contactTouchedByAUser(contact) + `
+	  WHEN ` + untouched + `
 	   AND EXISTS (SELECT 1 ` + judgeableMessageFrom(contact, email) + `)
 	    THEN '` + string(AwaitingQueued) + `'
 	  ELSE '` + string(AwaitingNothingToJudge) + `' END`
