@@ -59,7 +59,7 @@ type sendSeam struct {
 	// the dispatcher resolves them BEFORE it commits the in-flight marker, so a
 	// blobstore fault or an over-size refusal cannot leave a message that never
 	// reached the provider parked as one whose outcome nobody learned.
-	transmit func(ctx context.Context, files []connector.OutboundFile) (connector.SendReceipt, error)
+	transmit func(ctx context.Context, files []connector.OutboundFile, handoff connector.SendHandoff) (connector.SendReceipt, error)
 
 	// detectsPriorSend reports whether a RETRY of this seam could discover that
 	// an earlier attempt already put the message on the wire.
@@ -91,27 +91,23 @@ func (d *Dispatcher) resolveSeam(ctx context.Context, del Delivery) (sendSeam, e
 		if err != nil {
 			return sendSeam{}, err
 		}
-		return sendSeam{carriage: connector.CarriageOf(sender), transmit: func(ctx context.Context, files []connector.OutboundFile) (connector.SendReceipt, error) {
-			return sender.SendMessage(ctx, auth, connector.ChannelMessage{
-				// The provider plus the account id ARE the recipient key. The
-				// username is deliberately absent: a handle can be released and
-				// re-claimed, so nothing may route on it.
-				Recipient: connector.ChannelIdentity{
-					Provider:      del.Provider,
-					ChannelUserID: del.ChannelRecipient(),
-				},
-				Body:    del.Body,
-				ReplyTo: del.InReplyTo,
-				// The delivery's own id is the idempotency anchor: minted per
-				// send, never reused, and durable — which is what the seam asks
-				// for. Telegram cannot honour it, hence the in-flight marker
-				// below, but a provider that grows an idempotency key gets one
-				// that was already stable.
-				IdempotencyKey: del.ID.String(),
-				Attempt:        transmissionsBefore(del),
-				// The set the carriage gate already cleared, under the same
-				// all-or-nothing obligation the mail seam carries.
-				Files: files,
+		return sendSeam{carriage: connector.CarriageOf(sender), transmit: func(ctx context.Context, files []connector.OutboundFile, handoff connector.SendHandoff) (connector.SendReceipt, error) {
+			return handoff(ctx, func(wire context.Context) (connector.SendReceipt, error) {
+				return sender.SendMessage(wire, auth, connector.ChannelMessage{
+					// Account IDs remain stable when a username changes owners.
+					Recipient: connector.ChannelIdentity{
+						Provider:      del.Provider,
+						ChannelUserID: del.ChannelRecipient(),
+					},
+					Body:    del.Body,
+					ReplyTo: del.InReplyTo,
+					// A delivery keeps its idempotency key across retries.
+					IdempotencyKey: del.ID.String(),
+					Attempt:        transmissionsBefore(del),
+					// The set the carriage gate already cleared, under the same
+					// all-or-nothing obligation the mail seam carries.
+					Files: files,
+				})
 			})
 		}}, nil
 	}
@@ -127,11 +123,11 @@ func (d *Dispatcher) resolveSeam(ctx context.Context, del Delivery) (sendSeam, e
 		granted:          granted,
 		detectsPriorSend: true,
 		carriage:         connector.CarriageOf(sender),
-		transmit: func(ctx context.Context, files []connector.OutboundFile) (connector.SendReceipt, error) {
+		transmit: func(ctx context.Context, files []connector.OutboundFile, handoff connector.SendHandoff) (connector.SendReceipt, error) {
 			// Every staged field travels: a retry must rebuild an identical
 			// message, and a field dropped here is a header silently missing
 			// from real mail.
-			return sender.SendEmail(ctx, auth, connector.EmailMessage{
+			message := connector.EmailMessage{
 				To: del.Recipients, Cc: del.Cc, Bcc: del.Bcc,
 				Subject: del.Subject, Body: del.Body, HTMLBody: markupFor(del, inline), Inline: inline,
 				FromName:            del.FromName,
@@ -146,6 +142,12 @@ func (d *Dispatcher) resolveSeam(ctx context.Context, del Delivery) (sendSeam, e
 				// adapter's obligation is to transmit ALL of them or fail —
 				// never a subset, never as links (ADR-0086/A131).
 				Files: files,
+			}
+			if guarded, ok := sender.(connector.EmailHandoffSender); ok {
+				return guarded.SendEmailWithHandoff(ctx, auth, message, handoff)
+			}
+			return handoff(ctx, func(wire context.Context) (connector.SendReceipt, error) {
+				return sender.SendEmail(wire, auth, message)
 			})
 		},
 	}, nil

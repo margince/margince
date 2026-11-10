@@ -12,6 +12,7 @@ import { useT } from "../i18n";
 import { routeHash } from "../lib/router";
 import {
   bookingPagePaused,
+  useCanBook,
   useSchedulingProfile,
 } from "../lib/scheduling-profile-query";
 import { SETTINGS_SCREEN } from "../lib/settingsrouting";
@@ -125,6 +126,7 @@ export function AccountPanel({
   // A paused booking link is dark to every guest who holds it, so the menu
   // that opens it says so.
   const booking = useSchedulingProfile().data;
+  const canBook = useCanBook();
 
   // Opening the menu must place the keyboard reader on its first row.
   const hasHead = Boolean(identity.label);
@@ -221,16 +223,21 @@ export function AccountPanel({
       {/* The groups: where you go, then the way out. An <hr> rather than a border
           on the last row — it separates a group, and a screen reader is told so. */}
       <hr />
-      <LinkRow
-        href={routeHash({ screen: "settings", id: "meetings" })}
-        seat={seat(BOOKING_SEAT)}
-        onActivate={onDismiss}
-      >
-        {t("scheduling.myLink")}
-        {booking && bookingPagePaused(booking) && (
-          <StatusBadge kind="attention" label={t("scheduling.status.paused")} />
-        )}
-      </LinkRow>
+      {canBook && (
+        <LinkRow
+          href={routeHash({ screen: "settings", id: "meetings" })}
+          seat={seat(BOOKING_SEAT)}
+          onActivate={onDismiss}
+        >
+          {t("scheduling.myLink")}
+          {booking && bookingPagePaused(booking) && (
+            <StatusBadge
+              kind="attention"
+              label={t("scheduling.status.paused")}
+            />
+          )}
+        </LinkRow>
+      )}
       <FlyoutRow
         label={t("shell.helpMenu")}
         seat={seat(HELP_SEAT)}

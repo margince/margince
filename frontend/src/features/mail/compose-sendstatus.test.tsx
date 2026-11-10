@@ -414,3 +414,29 @@ describe("whether a refusal is about the message on screen", () => {
     );
   });
 });
+
+it("carries the selected deal in both the permission check and the queued message", async () => {
+  const sent = stubRoutes({ "POST /emails": () => jsonResponse({}, 201) });
+  render(
+    <ComposeModal
+      entityType="contact"
+      entityId="p-1"
+      initialDealId="deal-one"
+      open
+      onClose={vi.fn()}
+    />,
+  );
+  await screen.findByRole("combobox", { name: WHY_ASK });
+  await fillSendableForm();
+  await waitFor(() =>
+    expect(
+      sent.filter((call) => call.key === "POST /emails:preview").at(-1)?.body,
+    ).toMatchObject({ evidence: { deal_id: "deal-one" } }),
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Send" }));
+  await waitFor(() =>
+    expect(
+      sent.find((call) => call.key === "POST /emails")?.body,
+    ).toMatchObject({ evidence: { deal_id: "deal-one" } }),
+  );
+});

@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -102,7 +103,7 @@ func (s *PendingStore) AwaitingReview(ctx context.Context, limit int) ([]Pending
 			   -- still answer for them on their own Senders page.
 			   AND EXISTS (
 			     SELECT 1 FROM activity a
-			      WHERE a.id = p.activity_id AND a.audience = 'workspace'
+			      WHERE a.id = p.activity_id AND `+auth.WorkspaceAudienceSQL("a")+`
 			        AND a.restricted_at IS NULL)
 			   -- Only a mailbox owner who can be asked: the offer is theirs
 			   -- alone, and staging refuses it for anybody else.

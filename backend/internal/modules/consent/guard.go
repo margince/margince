@@ -3,19 +3,8 @@
 
 package consent
 
-// The readable half of the send gate (ADR-0098 D6).
-//
-// It answers per purpose and channel, with the reason in the reader's words, so
-// a composer can show the verdict before a word is typed. Two things about it
-// are load-bearing:
-//
-// It is computed by GuardVerdictForContact, which shares verdictFor with the
-// check the dispatcher runs at transmit. So a preview and a send cannot drift.
-//
-// It never grants anything. The transmit-time recheck stays authoritative and
-// refuses with the newer answer when state changed after the drawer opened; a
-// guard read that had authority would be a way to freeze a verdict and outrun a
-// withdrawal.
+// The contact summary reports facts per purpose. It shares the underlying
+// evidence readers with sending; each message still needs its own send check.
 
 import (
 	"context"
@@ -42,13 +31,7 @@ func (h Handlers) GetContactConsentGuard(w http.ResponseWriter, r *http.Request,
 	httperr.WriteJSON(w, http.StatusOK, guard)
 }
 
-// ContactConsentGuard answers, for every configured purpose, whether an outbound
-// message to this contact is allowed right now.
-//
-// Channel is derived from the class rather than multiplied across it: asking
-// "may I phone them for the newsletter purpose" is not a question anybody has,
-// and a matrix full of combinations nobody sends would bury the two rows a rep
-// actually reads.
+// ContactConsentGuard reports current evidence for each configured purpose.
 func (s *Store) ContactConsentGuard(ctx context.Context, contactID ids.ContactID) (crmcontracts.ContactConsentGuard, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return crmcontracts.ContactConsentGuard{}, err

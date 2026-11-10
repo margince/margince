@@ -22,6 +22,7 @@ import {
   SRC,
 } from "../../scripts/feature-boundaries";
 import { MODULE_FILE } from "../../scripts/lib/source-tree";
+import { stable } from "../../src/format/collate";
 import type { CensusFile, CensusRule, CensusTree } from "../tree";
 import { reachedInTree } from "./bundle-reach.census";
 
@@ -42,7 +43,7 @@ export function featureFolders(corpus: readonly CensusFile[]): string[] {
     .map((file) => /^features\/([^/]+)\//.exec(fromSrc(file))?.[1])
     .filter((name) => name !== undefined)
     .map((name) => `features/${name}`);
-  return [...new Set(folders)].sort();
+  return [...new Set(folders)].sort(stable);
 }
 
 /** Each way the walked graph differs from the tree's own files. */

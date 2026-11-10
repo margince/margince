@@ -5,6 +5,7 @@ package compose
 
 import (
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
@@ -127,7 +128,7 @@ var conversationHead = `
 			       NOT EXISTS (SELECT 1 FROM activity t
 			                    WHERE t.thread_key = a.thread_key AND t.kind = 'email'
 			                      AND t.archived_at IS NULL
-			                      AND t.audience <> 'workspace') AS every_message_open,
+			                      AND ` + "NOT (" + auth.WorkspaceAudienceSQL("t") + ")" + `) AS every_message_open,
 			       -- Every message read in full. A message not read in full may be
 			       -- the withdrawal of an older one, so a window without it is not
 			       -- the current conversation. Tested before the cap, so blocked

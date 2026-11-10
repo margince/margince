@@ -202,6 +202,7 @@ func WireReceipt(receipt Receipt) crmcontracts.Receipt {
 		Kind:            receipt.Kind,
 		Summary:         receipt.Summary,
 		SummaryParts:    receipt.SummaryParts,
+		SystemDisplay:   receipt.SystemDisplay,
 		OccurredAt:      receipt.OccurredAt,
 		Headline:        optionalText(receipt.Headline),
 		Reason:          optionalText(receipt.Reason),

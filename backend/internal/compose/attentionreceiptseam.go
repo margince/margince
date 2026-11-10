@@ -29,7 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // approvalStatusApproved is the decided status a receipt is read from. Spelled
@@ -106,8 +106,7 @@ func (r attentionReceipts) RecentWithMore(ctx context.Context, since time.Time, 
 			if completed.Writable {
 				undo = &attention.ReceiptUndo{AuditLogID: completed.AuditID, Version: completed.Version}
 			}
-			actor, _ := principal.Actor(ctx)
-			said := approvalSummaryCopyFor(textlang.Lang(actor.Locale))
+			said := approvalSummaryCopyFor(systemtext.Locale(ctx))
 			contact := completed.Contact
 			if contact == "" {
 				contact = said.taskContact
@@ -274,6 +273,7 @@ func receiptsWithin(rows []crmcontracts.Approval, since time.Time) []attention.R
 			Kind:             row.Kind,
 			Summary:          summary,
 			SummaryParts:     row.SummaryParts,
+			SystemDisplay:    row.SystemDisplay,
 			OccurredAt:       *row.DecidedAt,
 			Actor:            proposerOf(row),
 			SourceActivityID: citedActivity(row.Evidence),

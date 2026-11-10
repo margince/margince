@@ -12,6 +12,7 @@ import { type GrantSpec, meFixture } from "./testing/mefixture";
 // The screens these cases open, loaded while the file is collected. A screen's
 // first import costs seconds; inside a case it races the case's own waiters.
 import "./features/brief/brief";
+import "./features/onboarding/onboarding";
 import "./features/automations/oauthconsent";
 import "./features/contacts/contacts";
 import "./App.settings";

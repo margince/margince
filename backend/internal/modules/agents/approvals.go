@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -62,6 +63,7 @@ type Approvals interface {
 // StageRequest carries what the inbox shows the human and what redemption
 // later re-checks.
 type StageRequest struct {
+	SystemText     *systemtext.Message
 	Tool           string
 	ProposedChange json.RawMessage
 	DiffHash       string
@@ -90,6 +92,7 @@ type StageRequest struct {
 // against — a difference worth stating, since a field named TargetVersion on
 // the staging seam reads like the thing that binds the redemption.
 type StageInfo struct {
+	SystemText    *systemtext.Message
 	TargetType    string
 	TargetID      ids.UUID
 	TargetVersion *int64

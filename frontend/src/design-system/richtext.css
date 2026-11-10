@@ -120,6 +120,7 @@
 /* Type and ink are the reader's own, exactly as in the plain `.textarea` this
  * replaces on the same forms, and the inset is the field's. */
 .richtext-input {
+  position: relative;
   font: inherit;
   color: inherit;
   padding: var(--inputPaddingY) var(--inputPaddingX);

@@ -35,7 +35,7 @@ func (s *Service) ListWire(ctx context.Context, in ListInput) ([]crmcontracts.Ap
 	now := s.now()
 	out := make([]crmcontracts.Approval, 0, len(rows))
 	for _, a := range rows {
-		out = append(out, wire(a, now))
+		out = append(out, wire(ctx, a, now))
 	}
 	if err := s.readDecisionContext(ctx, out, rows); err != nil {
 		return nil, storekit.Page{}, err
@@ -72,7 +72,7 @@ func (s *Service) DecideEditedWire(ctx context.Context, id ids.ApprovalID, edite
 }
 
 func (s *Service) contextWire(ctx context.Context, a row) (crmcontracts.Approval, error) {
-	out := []crmcontracts.Approval{wire(a, s.now())}
+	out := []crmcontracts.Approval{wire(ctx, a, s.now())}
 	if err := s.readDecisionContext(ctx, out, []row{a}); err != nil {
 		return crmcontracts.Approval{}, err
 	}
@@ -91,7 +91,7 @@ func (s *Service) DecideBundleWire(ctx context.Context, bundleID ids.UUID, appro
 	rows := make([]crmcontracts.Approval, 0, len(members))
 	subjects := make([]row, 0, len(members))
 	for _, member := range members {
-		rows = append(rows, wire(member.Approval, now))
+		rows = append(rows, wire(ctx, member.Approval, now))
 		subjects = append(subjects, member.Approval)
 	}
 	s.readCommittedContext(ctx, rows, subjects)
@@ -111,7 +111,7 @@ func (s *Service) readCommittedContext(ctx context.Context, rows []crmcontracts.
 	if err := s.readDecisionContext(ctx, rows, subjects); err != nil {
 		s.logger().ErrorContext(ctx, "approval decisions committed but context could not be read", "err", err)
 		for i, subject := range subjects {
-			rows[i] = wire(subject, s.now())
+			rows[i] = wire(ctx, subject, s.now())
 			rows[i].Preview = &crmcontracts.ApprovalPreview{Version: 1, State: "unavailable", Changes: []crmcontracts.ApprovalPreviewChange{}}
 			// No preview was read, so nothing says the plan may show.
 			withholdPayload(&rows[i])
@@ -120,7 +120,7 @@ func (s *Service) readCommittedContext(ctx context.Context, rows []crmcontracts.
 }
 
 func (s *Service) committedWire(ctx context.Context, a row) crmcontracts.Approval {
-	out := []crmcontracts.Approval{wire(a, s.now())}
+	out := []crmcontracts.Approval{wire(ctx, a, s.now())}
 	s.readCommittedContext(ctx, out, []row{a})
 	withoutOwnersRecords(ctx, out)
 	return out[0]

@@ -45,7 +45,7 @@ func TestALeadCreatedDuringAnErasureNeverKeepsTheErasedAddress(t *testing.T) {
 		t.Fatalf("logging the subject's note: %v", err)
 	}
 
-	owner := integration.OwnerConn(t)
+	owner := integration.FreshOwnerConn(t)
 	gate, err := owner.Begin(ctx)
 	if err != nil {
 		t.Fatalf("opening the holding transaction: %v", err)
@@ -98,7 +98,7 @@ func TestALeadCreatedDuringAnErasureNeverKeepsTheErasedAddress(t *testing.T) {
 // of the given kinds.
 func waitForLockWaiter(t *testing.T, done <-chan struct{}, kinds, finishedEarly string) {
 	t.Helper()
-	owner := integration.OwnerConn(t)
+	owner := integration.FreshOwnerConn(t)
 	testdb.WaitForContention(t, done, finishedEarly, "no backend waited on the lock in time",
 		func(ctx context.Context) (bool, error) {
 			var waiting bool

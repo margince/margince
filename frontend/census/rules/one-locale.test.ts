@@ -3,6 +3,7 @@
 
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { stable } from "../../src/format/collate";
 import { INTL_LOCALE } from "../../src/format/intllocale";
 import { plantedFindings, srcDir } from "../tree";
 import {
@@ -33,7 +34,7 @@ describe("one locale for every rendered value", () => {
   it("derives the locale-sensitive methods and where each takes its locale", () => {
     // Nothing derived is filtered back out, and localeCompare takes its locale
     // second, which is why the position is derived.
-    expect([...methods.entries()].sort()).toEqual([
+    expect([...methods.entries()].sort(([a], [b]) => stable(a, b))).toEqual([
       ["localeCompare", 1],
       ["toLocaleDateString", 0],
       ["toLocaleLowerCase", 0],

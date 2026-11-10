@@ -102,7 +102,7 @@ func offThreadAnswerArms(inbound, until string) []answerArm {
 }
 
 // Explicit columns keep custom activity fields out of the lateral row shape.
-const answerMailColumns = `answer_mail.id, answer_mail.kind, answer_mail.channel_provider,
+const answerMailColumns = `answer_mail.internal_mail_authorization, answer_mail.thread_key, answer_mail.id, answer_mail.kind, answer_mail.channel_provider,
 	answer_mail.direction, answer_mail.counterparty_outbound_attested, answer_mail.restricted_at,
 	answer_mail.audience, answer_mail.source_activity_id, answer_mail.source_system, answer_mail.source_id, answer_mail.archived_at,
 	answer_mail.occurred_at, answer_mail.occurred_precision, answer_mail.subject`

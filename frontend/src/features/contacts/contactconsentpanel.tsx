@@ -20,6 +20,7 @@ import {
   RetractAcquisitionRequest,
   RetractRecordedRequest,
 } from "./retractrequest";
+import { StandingExceptions } from "./standingexceptions";
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactConsentGuard = components["schemas"]["ContactConsentGuard"];
@@ -243,6 +244,7 @@ export function ContactConsentPanel({ view }: Readonly<{ view: Contact360 }>) {
           mayWrite={mayWrite}
         />
         <ContactStops contactId={view.contact.id} />
+        <StandingExceptions key={view.contact.id} contactId={view.contact.id} />
         <p>{t("consent.permissionScope")}</p>
         <Button
           variant="ghost"

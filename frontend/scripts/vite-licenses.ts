@@ -16,6 +16,7 @@ import {
   type ResolvedConfig,
   type Rolldown,
 } from "vite";
+import { stable } from "../src/format/collate";
 
 const REPOSITORY = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export const THIRD_PARTY_NOTICES = "licenses/THIRD-PARTY-NOTICES.txt";
@@ -121,7 +122,7 @@ function packageNotice(
         /^(?:licen[cs]e|notice|copying)(?:[._-].*)?$/i.test(name) &&
         statSync(resolve(pkg.root, name)).isFile(),
     )
-    .sort();
+    .sort(stable);
   const texts = files.map((name) => noticeText(resolve(pkg.root, name)));
   if (texts.length === 0) {
     const recorded = copied.find(

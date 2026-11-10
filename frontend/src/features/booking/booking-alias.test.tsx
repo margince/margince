@@ -10,6 +10,7 @@ import { bookingProfile } from "../../testing/book.testkit";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
@@ -145,6 +146,7 @@ it("shows the server's refusal on the field in the reader's words", async () => 
 
 it("says before Replace address that the short address stops working too", async () => {
   installFetchStub({
+    "GET /me": meRoute({ activity: ["read", "create"] }),
     "GET /scheduling/profile": () => jsonResponse(withAlias),
   });
   render(

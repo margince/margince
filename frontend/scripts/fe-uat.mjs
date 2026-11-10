@@ -14,6 +14,7 @@ import { availableParallelism } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { importSpecifiers } from "./lib/import-specifiers.mjs";
+import { stable } from "./lib/stable.mjs";
 import { isDocsPage, storyCensus } from "./lib/story-files.ts";
 import { outcomeErrors, SETTLED_EVENTS } from "./lib/story-outcome.mjs";
 import {
@@ -226,7 +227,7 @@ for (const f of changed) {
       missing.push({ component: f });
     } else {
       for (const story of covering) storyFiles.add(story);
-      fanOut.set(f, [...covering].sort());
+      fanOut.set(f, [...covering].sort(stable));
     }
   }
 }

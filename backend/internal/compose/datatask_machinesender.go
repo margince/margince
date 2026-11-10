@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // machineSenderDataTask marks the received mail captured before capture
@@ -24,7 +25,7 @@ import (
 func machineSenderDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792795558_sending_system_mail_marked", Version: 3,
-		Title: "Marking mail a sending system sent", Requires: []string{"core/1792795558"},
+		Title: systemtext.Literal("datatask.title.core.1792795558_sending_system_mail_marked"), Requires: []string{"core/1792795558"},
 		Steps: []datatask.Step{{
 			Name: "received_mail", Limit: 200, MinLimit: 10,
 			Audit:    datatask.AuditPolicy{Reason: "capture stamps the same sender judgement on every new mail without an audit"},

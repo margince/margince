@@ -11,6 +11,7 @@ import { QueryGate } from "../../design-system/querystates";
 import { RecordTabs } from "../../design-system/recordtabs";
 import { useT } from "../../i18n";
 import { COMPANY_TABS, type CompanyTab } from "../../lib/companytab";
+import { useDisabledCoreFeatures } from "../../lib/corefeatures";
 import { unwrap } from "../../lib/problem";
 import { scrollPageToTop } from "../../lib/reveal";
 import { useAddressedTab } from "../records/recordtab";
@@ -199,9 +200,16 @@ function CompanyRecord({
   t: ReturnType<typeof useT>;
 }>) {
   const archived = Boolean(company.archived_at);
-  const tab = useShownCompanyTab(company.id, archived, addressed);
+  const disabled = useDisabledCoreFeatures();
+  const enabledTab = (tab: CompanyTab) =>
+    (tab !== "contacts" || !disabled.includes("contacts")) &&
+    (tab !== "deals" ||
+      !disabled.includes("deals") ||
+      !disabled.includes("projects"));
+  const shown = useShownCompanyTab(company.id, archived, addressed);
+  const tab = enabledTab(shown) ? shown : "overview";
   const assembled = archived ? undefined : view.data;
-  const visibleTabs = companyTabsFor(company, tab);
+  const visibleTabs = companyTabsFor(company, tab).filter(enabledTab);
   const tabs = (
     // A test id rather than a class: journeys walk the page's own tab strip,
     // and nothing draws this wrapper.

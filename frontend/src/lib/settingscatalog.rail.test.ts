@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { stable } from "../format/collate";
 import { meFixture } from "../testing/mefixture";
 import { settingsReach, visibleSettingsPages } from "./settingscatalog";
 
@@ -108,11 +109,11 @@ describe("what the rail carries and what it leaves behind", () => {
       const reach = settingsReach(snapshot);
       const partitioned = [...reach.acts, ...reach.looksUp]
         .map((page) => page.id)
-        .sort();
+        .sort(stable);
       expect(partitioned).toEqual(
         visibleSettingsPages(snapshot)
           .map((page) => page.id)
-          .sort(),
+          .sort(stable),
       );
       expect(new Set(partitioned).size).toBe(partitioned.length);
     }

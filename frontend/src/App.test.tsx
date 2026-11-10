@@ -263,6 +263,12 @@ describe("locale switch", () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
+    client.setQueryData(["reader-rendering", "previous-language"], {
+      subject: "Earlier wording",
+    });
+    client.setQueryData(["activities", "localized-presentation"], {
+      subject: "Earlier wording",
+    });
     render(
       <QueryClientProvider client={client}>
         <LocaleProvider>
@@ -293,6 +299,13 @@ describe("locale switch", () => {
       expect(screen.getByRole("link", { name: "Kontakte" })).toBeTruthy(),
     );
     expect(screen.queryByRole("link", { name: "Contacts" })).toBeNull();
+    expect(
+      client.getQueryData(["reader-rendering", "previous-language"]),
+    ).toBeUndefined();
+    expect(
+      client.getQueryState(["activities", "localized-presentation"])
+        ?.isInvalidated,
+    ).toBe(true);
   });
 });
 

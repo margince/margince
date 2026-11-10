@@ -8,6 +8,7 @@ import {
 } from "../design-system/approvalsummary";
 import type { Translator } from "../i18n";
 import { summaryWords } from "../lib/approvalpreviewfields";
+import { displayedSubject } from "../lib/systemdisplay";
 
 type NotificationItem = components["schemas"]["NotificationItem"];
 
@@ -20,17 +21,22 @@ type NotificationItem = components["schemas"]["NotificationItem"];
  * written before the parts were kept is headed by its whole subject.
  */
 export function noticeHeadline(
-  notice: Pick<NotificationItem, "kind" | "subject" | "summary_parts">,
+  notice: Pick<
+    NotificationItem,
+    "kind" | "subject" | "summary_parts" | "system_display"
+  >,
   t: Translator,
 ): { headline: string; detail?: string } {
   if (notice.kind !== "approval_pending") {
-    return { headline: notice.subject };
+    return { headline: displayedSubject(notice) ?? notice.subject };
   }
   const headline =
+    notice.system_display?.subject ??
     summarySentence({
       summary: notice.subject,
       summary_parts: notice.summary_parts,
-    }) ?? t("notifications.class.approval_pending.label");
+    }) ??
+    t("notifications.class.approval_pending.label");
   const detail = summaryFieldsLine(notice.summary_parts, summaryWords(t));
   return detail ? { headline, detail } : { headline };
 }

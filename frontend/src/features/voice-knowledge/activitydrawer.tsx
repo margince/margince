@@ -1,3 +1,5 @@
+import { GeneratedText } from "../../design-system/generatedtext";
+import { displayedBody, displayedSubject } from "../../lib/systemdisplay";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -126,7 +128,17 @@ function ActivityDetail({
           <Eyebrow>{t(labelFor(TIMELINE_KIND_LABEL, activity.kind))}</Eyebrow>
         )}
         <Heading size="large" id={titleId} className="t-h2 modal-title">
-          {activityTitle(activity, t)}
+          {activity ? (
+            <GeneratedText
+              activityId={activity.id}
+              display={activity.system_display}
+              inline
+            >
+              {activityTitle(activity, t)}
+            </GeneratedText>
+          ) : (
+            activityTitle(activity, t)
+          )}
         </Heading>
       </DrawerHead>
       <DrawerBody>
@@ -418,7 +430,7 @@ function withheldOrBody(
   if (activity.web_form) {
     return <WebFormSubmission sent={activity.web_form} filed={filed} />;
   }
-  const body = activity.body?.trim();
+  const body = displayedBody(activity)?.trim();
   if (!body) {
     return null;
   }
@@ -430,11 +442,24 @@ function withheldOrBody(
   });
   return markdown ? (
     <div className="t-body">
-      <NoteMarkdown source={body} />
+      <GeneratedText
+        activityId={activity.id}
+        display={activity.system_display}
+        part="body"
+        renderText={(text) => <NoteMarkdown source={text} />}
+      >
+        <NoteMarkdown source={body} />
+      </GeneratedText>
     </div>
   ) : (
     <p className="t-body" style={{ whiteSpace: "pre-wrap" }}>
-      {body}
+      <GeneratedText
+        activityId={activity.id}
+        display={activity.system_display}
+        part="body"
+      >
+        {body}
+      </GeneratedText>
     </p>
   );
 }
@@ -458,7 +483,8 @@ function activityTitle(
   if (!activity) return t("activity.detail.none");
   if (activity.content_state === "withheld") return t("timeline.withheld");
   return (
-    activity.subject?.trim() || t(labelFor(TIMELINE_KIND_LABEL, activity.kind))
+    displayedSubject(activity)?.trim() ||
+    t(labelFor(TIMELINE_KIND_LABEL, activity.kind))
   );
 }
 

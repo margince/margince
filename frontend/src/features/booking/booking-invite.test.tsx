@@ -205,7 +205,7 @@ it("prefills the contact and saved details, then offers two picked times in one 
     screen.getByRole("heading", { name: "Book a meeting with Nina Weber" }),
   ).toBeTruthy();
   expect(
-    screen.getByRole("button", { name: "Pick at least 2 times" }),
+    await screen.findByRole("button", { name: "Pick at least 2 times" }),
   ).toHaveProperty("disabled", true);
   for (const slot of bookingSlots)
     await user.click(

@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // The rate-refresh proposal kinds and their apply-on-approval effects. A
@@ -61,7 +62,11 @@ func sameRate(a, b string) bool {
 // approval restores the older value).
 //
 //craft:ignore naked-any payload is any JSON-marshalable proposal struct (fx or model); the concrete type rides through json.Marshal
-func stageRateProposal(ctx context.Context, svc *approvals.Service, kind, targetType string, ws ids.UUID, payload any, identity json.RawMessage, summary string) error {
+func stageRateProposal(ctx context.Context, svc *approvals.Service, kind, targetType string, ws ids.UUID, payload any, identity json.RawMessage, summary string, messages ...*systemtext.Message) error {
+	var metadata *systemtext.Message
+	if len(messages) > 0 {
+		metadata = messages[0]
+	}
 	raw, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("compose: marshal %s: %w", kind, err)
@@ -81,7 +86,7 @@ func stageRateProposal(ctx context.Context, svc *approvals.Service, kind, target
 	// still offered.
 	_, _, err = svc.StageUnlessDeclined(ctx, approvals.StageInput{
 		Kind: kind, ProposedChange: raw, DiffHash: hash,
-		TargetType: targetType, TargetID: ws, Summary: summary,
+		TargetType: targetType, TargetID: ws, Summary: summary, SystemText: metadata,
 		JoinPending: true, Identity: identity,
 	})
 	if errors.Is(err, approvals.ErrNoDecider) {

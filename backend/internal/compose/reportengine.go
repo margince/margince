@@ -12,6 +12,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 )
 
 type reportEngine struct {
@@ -33,4 +35,18 @@ func newReportEngine(pool *pgxpool.Pool) *reportEngine {
 func (e *reportEngine) WithNames(names attention.Names) *reportEngine {
 	e.names = names
 	return e
+}
+
+func reportAvailable(availability corefeatures.Availability, spec reportSpec) bool {
+	if !availability.Enabled(crmcontracts.CoreFeatureAnalytics) || !availability.RecordEnabled(string(spec.entity)) {
+		return false
+	}
+	for _, dependencies := range []map[string]string{spec.referenceScopes, spec.filterScopes, spec.grants} {
+		for _, recordType := range dependencies {
+			if !availability.RecordEnabled(recordType) {
+				return false
+			}
+		}
+	}
+	return true
 }

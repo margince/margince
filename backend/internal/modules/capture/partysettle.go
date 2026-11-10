@@ -22,7 +22,7 @@ func (s *Sink) settlePartyAdmission(ctx context.Context, activity ids.ActivityID
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `UPDATE capture_party_source SET admission_pending=false
  WHERE activity_id=@activity AND user_id=@user AND provider=@provider AND admission_generation=@generation`,
-			pgx.NamedArgs{partyActivityArg: activity, partyUserArg: source.User, partyProviderArg: source.Provider, "generation": source.Generation})
+			pgx.NamedArgs{partyActivityArg: activity, partyUserArg: source.User, sqlArgProvider: source.Provider, "generation": source.Generation})
 		return err
 	})
 }

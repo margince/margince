@@ -64,7 +64,7 @@ func (h jobHealthHandlers) GetJobHealthHistory(w http.ResponseWriter, r *http.Re
 		httperr.Write(w, r, err)
 		return
 	}
-	out := crmcontracts.JobHealthHistory{ObservedAt: now, Cutoff: cursor.Cutoff, WindowStart: from, Coverage: "retained_only", HasMore: result.More, PopulationMayHaveChanged: p.Cursor != nil, Groups: []crmcontracts.JobHealthGroup{}, Runs: jobFailuresResponse(result.Runs)}
+	out := crmcontracts.JobHealthHistory{ObservedAt: now, Cutoff: cursor.Cutoff, WindowStart: from, Coverage: "retained_only", HasMore: result.More, PopulationMayHaveChanged: p.Cursor != nil, Groups: []crmcontracts.JobHealthGroup{}, Runs: jobFailuresResponse(ctx, result.Runs)}
 	for _, g := range result.Groups {
 		out.Groups = append(out.Groups, crmcontracts.JobHealthGroup{Kind: g.Kind, State: crmcontracts.JobHealthGroupState(g.State), FleetWide: g.FleetWide, Count: g.Count, FirstAt: g.FirstAt, LatestAt: g.LatestAt})
 	}

@@ -96,7 +96,7 @@ Emails have the types **work, personal or other**; phones **work, mobile, home o
 
 A contact's job title shows in two places. The title on the contact record is a copy, there to save you time. The one that counts is on the job link with the company. A contact can have one current main employer, or none. Margince reads a contact's job title from the signature in their newest mail, and from up to two older mails when that one states none. An older mail only fills an empty title, and mail Margince could not read in full or newsletter mail is never used.
 
-A contact also holds an owner, a consent record for each purpose, a relationship strength and when they were last active. If they started as a lead, it holds a link back to that lead. **Communication permissions** names the fact on record for each purpose, such as **Recent business contact recorded** or **Marketing opt-out recorded**. It is not permission for every message: each one is checked when it is sent.
+A contact also holds an owner, a consent record for each purpose, a relationship strength and when they were last active. If they started as a lead, it holds a link back to that lead. **Communication permissions** names the fact on record for each purpose, such as **Recent business contact recorded** or **Marketing opt-out recorded**. It is not permission for every message: each one is checked when it is sent. Open **Manage consent and proof history** to read the recorded proof, its source and date.
 
 ### How do I merge duplicate contacts?
 To merge two duplicate contacts in Margince, open the contact you want to remove, choose **More actions**, then **Merge contact**.

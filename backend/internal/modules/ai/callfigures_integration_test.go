@@ -217,3 +217,29 @@ func TestARefusedLadderIsUnansweredInTheFlowButNoProviderFailure(t *testing.T) {
 		t.Errorf("call figures = %+v, want 3 attempts and no provider failure", rows)
 	}
 }
+
+// A caller that stopped waiting is a call, and not a failure of its provider.
+func TestCallStatsLeaveACanceledCallOutOfTheFailures(t *testing.T) {
+	env := setupRateStore(t)
+	ctx := context.Background()
+	ws, ctx := env.seedWorkspace(ctx, t)
+	db := env.dbFor(ws)
+	task := Task("canceled_" + ids.NewV7().String()[:8])
+	for _, sentinel := range []string{sentinelCanceled, sentinelProviderError} {
+		if err := NewCallMeter(db).Record(ctx, []Call{{
+			Kind: callKindCompletion, Task: task, Tier: TierCheapCloud, Provider: providerOpenAICompatible,
+			ModelID: "openai/gpt-oss-120b", RequestFingerprint: "fp-" + ids.NewV7().String(),
+			ErrorSentinel: sentinel, IsTerminal: true, LogicalCallID: ids.NewV7(),
+		}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	rows, err := NewCallReadStore(db).CallStats(diagnosticsReader(ws),
+		CallStatsQuery{Window: 24 * time.Hour, GroupBy: GroupByProvider, Filter: CallStatsFilter{Task: task}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0].Calls != 2 || rows[0].Failed != 1 {
+		t.Fatalf("figures = %+v, want 2 calls and the provider error alone as a failure", rows)
+	}
+}

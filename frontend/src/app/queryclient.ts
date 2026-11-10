@@ -14,6 +14,7 @@ import {
 } from "../lib/connectivity";
 import { logUnexpectedError, ProblemError } from "../lib/problem";
 import { INSTALLATION_SETTINGS_KEY } from "../lib/uploadlimit";
+import { SEND_PERMISSION_KEY } from "../lib/usesendpermission";
 import {
   HOME_DAY_FRESH_MS,
   isHomeDayRead,
@@ -301,6 +302,13 @@ export function createQueryClient(): QueryClient {
         refreshNamedReferences(client);
         refreshRecordHistory(client);
         refreshRecordAccess(client);
+        // A write can revoke the facts a mounted message relies on.
+        client
+          .cancelQueries({ queryKey: SEND_PERMISSION_KEY })
+          .then(() =>
+            client.invalidateQueries({ queryKey: SEND_PERMISSION_KEY }),
+          )
+          .catch(logUnexpectedError);
       },
     }),
   });

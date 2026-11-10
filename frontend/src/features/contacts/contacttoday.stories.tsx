@@ -7,6 +7,7 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
+import { expectTextFits, UNBROKEN_SUBJECT } from "../../testing/unbrokentext";
 import { ContactToday } from "./contacttoday";
 
 const view: components["schemas"]["Contact360"] = {
@@ -68,6 +69,38 @@ export const PrivacyDuty: Story = {
   },
 };
 export const Quiet: Story = { args: { moment: undefined } };
+
+// The server names the verb, and a label with no space in it wraps inside the
+// button and the bar.
+export const UnbrokenVerbLabelPhone: Story = {
+  args: {
+    moment: {
+      rule: "privacy_notice_due",
+      claim_key: "moment:privacy_notice:case-1",
+      evidence_fingerprint: "case-1",
+      headline: "Privacy notice owed",
+      why_now: "A disclosure duty is due by 2026-08-12.",
+      confidence: "observed_fact",
+      evidence: [],
+      recommended_action: {
+        kind: "open_record",
+        label: UNBROKEN_SUBJECT,
+        state: "available",
+        destination: { surface: "privacy_notice", entity_id: "case-1" },
+      },
+    },
+  },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  play: async ({ canvasElement }) => {
+    const verb = await within(canvasElement).findByRole("button", {
+      name: UNBROKEN_SUBJECT,
+    });
+    const bar = verb.closest(".next-bar-row");
+    await expect(bar).not.toBeNull();
+    if (bar) await expectTextFits(verb, bar.getBoundingClientRect());
+  },
+};
 
 // A seat without activity.create: the Next bar keeps its words and draws no
 // verb that would draft a mail the server refuses.

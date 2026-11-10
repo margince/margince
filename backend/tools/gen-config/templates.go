@@ -144,7 +144,9 @@ type envInputs struct {
 func envExample(settings []setting, in envInputs) string {
 	defaults := map[string]string{}
 	for _, s := range settings {
-		defaults[s.Env()] = envDefault(s)
+		if s.Env() != "" {
+			defaults[s.Env()] = envDefault(s)
+		}
 	}
 	var b strings.Builder
 	b.WriteString(envHeader)

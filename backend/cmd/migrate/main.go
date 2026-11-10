@@ -210,9 +210,14 @@ func up(ctx context.Context, conn *pgx.Conn, dsn string, core, custom dbmigrate.
 	if err := reportExtensionNamespaces(exts, stdout); err != nil {
 		return err
 	}
-	applied, err := dbmigrate.Up(ctx, conn, append([]dbmigrate.Namespace{core, custom}, exts...)...)
+	report, err := dbmigrate.UpWithReport(ctx, conn, append([]dbmigrate.Namespace{core, custom}, exts...)...)
 	if err != nil {
 		return err
+	}
+	if report.Reconciled > 0 {
+		if _, err := fmt.Fprintf(stdout, "moved %d renumbered migration(s) to their current version in the ledger\n", report.Reconciled); err != nil {
+			return fmt.Errorf("migrate up: writing the reconcile count: %w", err)
+		}
 	}
 	// No REQUEST ceiling — River's own migrator and the index below are DDL, and
 	// this is the role that runs it — but the MIGRATION ceiling still applies.
@@ -233,7 +238,7 @@ func up(ctx context.Context, conn *pgx.Conn, dsn string, core, custom dbmigrate.
 	if _, err := riverPool.Exec(ctx, riverWorkspaceArgIndex); err != nil {
 		return fmt.Errorf("migrate: creating the river workspace-arg index: %w", err)
 	}
-	if _, err := fmt.Fprintf(stdout, upSummaryFormat, applied, riverApplied); err != nil {
+	if _, err := fmt.Fprintf(stdout, upSummaryFormat, report.Applied, riverApplied); err != nil {
 		return fmt.Errorf("migrate up: writing the confirmation: %w", err)
 	}
 	return nil

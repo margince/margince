@@ -52,13 +52,16 @@ func (a attentionAtRisk) championCover(
 	for _, deal := range candidates {
 		dealIDs = append(dealIDs, deal.DealID)
 	}
+	// Both reads key on the candidates' ids, so their generic plans are reused.
 	err := database.WithWorkspaceTx(ctx, a.pool, func(tx pgx.Tx) error {
-		var readErr error
-		if answer.cover, readErr = deals.ChampionCoverFor(ctx, tx, dealIDs, now); readErr != nil {
+		return database.ReuseGenericPlansTx(ctx, tx, func() error {
+			var readErr error
+			if answer.cover, readErr = deals.ChampionCoverFor(ctx, tx, dealIDs, now); readErr != nil {
+				return readErr
+			}
+			answer.imported, readErr = deals.ImportedAmongTx(ctx, tx, dealIDs)
 			return readErr
-		}
-		answer.imported, readErr = deals.ImportedAmongTx(ctx, tx, dealIDs)
-		return readErr
+		})
 	})
 	if err != nil {
 		return championAnswer{}, err

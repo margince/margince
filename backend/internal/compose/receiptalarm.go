@@ -22,6 +22,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/noticekeys"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 const (
@@ -60,7 +62,8 @@ func (a receiptAlarm) RaiseMissedReceiptTx(ctx context.Context, tx pgx.Tx, misse
 	for _, recipient := range recipients {
 		if _, err := store.CreateTx(system, tx, notices.NewNotice{
 			Recipient: recipient, Kind: notices.KindOptOutReceiptMissed,
-			Subject: "A required opt-out receipt was not sent", Body: missedReceiptText(missed),
+			SystemText: &systemtext.Message{Subject: systemtext.Sentence("receipt.missed.subject"), Body: missedReceiptComponent(missed)},
+			Subject:    systemtext.Literal("receipt.missed.subject"), Body: missedReceiptText(missed),
 			Target: target, DedupeKey: noticekeys.OptOutReceipt(missed.MessageID),
 		}); err != nil {
 			return fmt.Errorf("compose: raising a missed opt-out receipt: %w", err)
@@ -71,17 +74,22 @@ func (a receiptAlarm) RaiseMissedReceiptTx(ctx context.Context, tx pgx.Tx, misse
 
 // missedReceiptText says why the receipt is missing and that the refusal stands.
 func missedReceiptText(missed consent.MissedReceipt) string {
-	const stands = " The refusal itself is recorded and stays in force."
+	if missed.Reason == consent.MissedReceiptOverdue {
+		return fmt.Sprintf(systemtext.Copy("receipt.overdue", textlang.English), missed.DueAt.UTC().Format(time.RFC3339), missed.DeliveryStatus)
+	}
+	return systemtext.Literal(missedReceiptComponent(missed).Code)
+}
+
+func missedReceiptComponent(missed consent.MissedReceipt) *systemtext.Component {
 	switch missed.Reason {
 	case consent.MissedReceiptNoAddress:
-		return "This refusal requires a receipt, and the subject has no email address on record, so none was sent." + stands
+		return systemtext.Sentence("receipt.no_address")
 	case consent.MissedReceiptNoMailLane:
-		return "This refusal requires a receipt, and this installation has no mail lane to send it on, so none was sent." + stands
+		return systemtext.Sentence("receipt.no_mail_lane")
 	case consent.MissedReceiptOverdue:
-		return fmt.Sprintf("This refusal's receipt was due by %s and has not been delivered. Delivery status: %s.",
-			missed.DueAt.UTC().Format(time.RFC3339), missed.DeliveryStatus) + stands
+		return systemtext.Sentence("receipt.overdue", systemtext.Date(missed.DueAt.UTC().Format(time.RFC3339)), systemtext.Text(missed.DeliveryStatus))
 	default:
-		return "This refusal requires a receipt, and preparing it failed, so none was sent. The cause is in the log." + stands
+		return systemtext.Sentence("receipt.failed")
 	}
 }
 

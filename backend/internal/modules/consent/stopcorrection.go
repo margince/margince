@@ -107,11 +107,5 @@ const carriedSourceMark = "carried: "
 // ends at the suppression aliased `alias`. A carried row always points at an
 // older row, so the walk ends.
 func originColumnSQL(alias, column string) string {
-	return `(WITH RECURSIVE chain AS (
-		    SELECT c.carried_from, c.` + column + ` AS value, 0 AS depth
-		      FROM communication_suppression c WHERE c.id = ` + alias + `.id
-		    UNION ALL
-		    SELECT p.carried_from, p.` + column + `, chain.depth + 1
-		      FROM communication_suppression p JOIN chain ON p.id = chain.carried_from)
-		  SELECT value FROM chain ORDER BY depth DESC LIMIT 1)`
+	return carriedRootSQL("communication_suppression", alias, column)
 }

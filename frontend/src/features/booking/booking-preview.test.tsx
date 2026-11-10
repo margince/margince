@@ -57,6 +57,7 @@ it.each([false, true])(
       jsonResponse({ slots: bookingSlots, truncated: false }),
     );
     installFetchStub({
+      "GET /me": meRoute({ activity: ["read", "create"] }),
       "GET /scheduling/profile": () =>
         jsonResponse({ ...bookingProfile, enabled }),
       "GET /public/booking/ada-lovelace/profile": publicRead,
@@ -157,6 +158,7 @@ function availabilityReads(calls: readonly Parameters<typeof fetch>[]) {
 it("reads the whole month on show, following a truncated answer from its last time", async () => {
   inBookingMonth();
   installFetchStub({
+    "GET /me": meRoute({ activity: ["read", "create"] }),
     "GET /scheduling/profile": () =>
       jsonResponse({ ...bookingProfile, enabled: false }),
     "GET /availability": () =>
@@ -203,6 +205,7 @@ it("reads the day a truncated month stopped in, and the days after it, on their 
     });
   };
   installFetchStub({
+    "GET /me": meRoute({ activity: ["read", "create"] }),
     "GET /scheduling/profile": () =>
       jsonResponse({ ...bookingProfile, enabled: false }),
     "GET /availability": () => {
@@ -240,6 +243,7 @@ it("refuses days with nothing free and clears the time when another day is chose
   inBookingMonth();
   const user = userEvent.setup();
   installFetchStub({
+    "GET /me": meRoute({ activity: ["read", "create"] }),
     "GET /scheduling/profile": () =>
       jsonResponse({ ...bookingProfile, enabled: false }),
     "GET /availability": () =>
@@ -285,6 +289,7 @@ it("refuses days with nothing free and clears the time when another day is chose
 it("says when a month has no free time rather than hiding availability", async () => {
   inBookingMonth();
   installFetchStub({
+    "GET /me": meRoute({ activity: ["read", "create"] }),
     "GET /scheduling/profile": () =>
       jsonResponse({ ...bookingProfile, enabled: false }),
     "GET /availability": () => jsonResponse({ slots: [], truncated: false }),
@@ -324,6 +329,7 @@ it("shows calendar errors and retries the authenticated availability read", asyn
       jsonResponse({ slots: bookingSlots, truncated: false }),
     );
   installFetchStub({
+    "GET /me": meRoute({ activity: ["read", "create"] }),
     "GET /scheduling/profile": () =>
       jsonResponse({ ...bookingProfile, enabled: false }),
     "GET /availability": availability,
@@ -470,6 +476,7 @@ it("explains calendar setup without requesting availability when no provider is 
     jsonResponse({ slots: bookingSlots, truncated: false }),
   );
   installFetchStub({
+    "GET /me": meRoute({ activity: ["read", "create"] }),
     "GET /scheduling/profile": () =>
       jsonResponse({ ...bookingProfile, enabled: false, provider: "" }),
     "GET /availability": availability,

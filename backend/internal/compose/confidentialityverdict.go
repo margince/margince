@@ -289,7 +289,7 @@ func (e *ConfidentialityVerdictEngine) apply(
 		// import posture for good, because the thread's question is answered
 		// and the unique ledger row stops a second one being opened. Import
 		// order is the accident; the admission rule is unchanged.
-		outcome, err := e.threads.RecordOutcomeOnThreadTx(ctx, tx, row.ThreadKey, row.UserID, status, kind, seen)
+		outcome, err := e.threads.RecordOutcomeOnWholeThreadTx(ctx, tx, row.ThreadKey, row.UserID, status, kind, seen)
 		if err != nil {
 			return err
 		}
@@ -473,7 +473,7 @@ func (e *ConfidentialityVerdictEngine) finishOneSettledThread(
 		if err != nil || !ok {
 			return err
 		}
-		outcome, err := e.threads.RecordOutcomeOnThreadTx(
+		outcome, err := e.threads.RecordOutcomeOnWholeThreadTx(
 			wsCtx, tx, locked.ThreadKey, locked.UserID, locked.Status, locked.Kind, locked.Seen)
 		if err != nil {
 			return err

@@ -67,7 +67,7 @@ func provisionalKeys(t *testing.T, e *integration.Env) []string {
 	t.Helper()
 	var keys []string
 	if err := database.WithWorkspaceTx(e.As(e.Rep1, nil, integration.AdminPerms), e.Pool, func(tx pgx.Tx) error {
-		rows, err := tx.Query(context.Background(), `SELECT storage_key FROM stored_object_intent ORDER BY storage_key`)
+		rows, err := tx.Query(context.Background(), `SELECT storage_key FROM stored_object_intent WHERE reaped_at IS NULL ORDER BY storage_key`)
 		if err != nil {
 			return err
 		}
@@ -130,6 +130,7 @@ type reapBlobstore struct {
 	blobstore.Store
 	refuseDelete error
 	deleted      map[string]bool
+	onDelete     func(string) error
 }
 
 func newReapBlobstore() *reapBlobstore {
@@ -137,6 +138,11 @@ func newReapBlobstore() *reapBlobstore {
 }
 
 func (b *reapBlobstore) Delete(ctx context.Context, key string) error {
+	if b.onDelete != nil {
+		if err := b.onDelete(key); err != nil {
+			return err
+		}
+	}
 	if b.refuseDelete != nil {
 		return b.refuseDelete
 	}
