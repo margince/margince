@@ -193,6 +193,7 @@ func schemaVersion(entities map[string]analyticsquery.Entity) string {
 			sum.Write([]byte(field))
 			sum.Write([]byte(entity.Fields[field].Expr))
 			sum.Write([]byte(entity.Fields[field].Kind))
+			sum.Write([]byte(entity.Fields[field].Predicate))
 			writeCustomMeaning(sum, entity.Fields[field])
 			if money := entity.Fields[field].Currency; money != nil {
 				sum.Write([]byte("currency:" + money.By + ":" + money.Base))
