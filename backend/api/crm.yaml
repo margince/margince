@@ -29589,8 +29589,10 @@ paths:
       summary: Set or clear when buyer access lapses.
       description: |
         Null clears the bound, leaving access open until the room is closed or
-        archived. A past instant is accepted and takes effect immediately — that is
-        how access is cut short without ending the room. It decides how long a buyer can
+        archived. A past instant is accepted and takes effect at once — that is
+        how access is cut short without ending the room. One at or before the room's
+        creation is stored as the time of the call, unless a standing expiry has
+        already passed, which is kept. It decides how long a buyer can
         read the room, so an agent spends `send` on it.
       x-mcp-tool: { verb: set_deal_room_expiry, router: send_outbound, action: set_room_expiry, tier: auto_execute, scope: send, served_by: route, ask_user_first: true }
       parameters:
@@ -53930,7 +53932,7 @@ components:
         An agreement between the installation and one company. Mirrors the
         `contract` table. Carries no owner: visibility is inherited from the linked
         deal, falling back to the company (ADR-0109 §8).
-      required: [id, title, status, value_basis, under_contract, source, captured_by, version, created_at, updated_at]
+      required: [id, title, status, value_basis, under_contract, term_state, source, captured_by, version, created_at, updated_at]
       properties:
         id: { type: string, format: uuid }
         masked_fields:
@@ -54032,6 +54034,17 @@ components:
             not read from `status`. The two may disagree, and a surface shows both — a
             contract whose dates have passed while its status change awaits approval is
             no longer under contract and still reports the status it was left in.
+        term_state:
+          type: string
+          enum: [not_started, in_force, ended]
+          x-extensible-enum: true
+          readOnly: true
+          description: |
+            Where today falls in the agreement's dated term, read from the dates alone
+            (CONTRACT-FORM-1): `not_started` before `starts_on`, `ended` after the earlier
+            of `ends_on` and `cancellation_effective_on`, `in_force` between. It tells an
+            agreement that has not begun from one that has run out, which `under_contract`
+            = false cannot, and it ignores `status` and archival as `under_contract` does not.
         source: { type: string }
         captured_by:
           type: string
@@ -72676,7 +72689,12 @@ components:
           type: [string, 'null']
           format: uuid
           description: Defaults to the deal's owner when omitted.
-        expires_at: { type: [string, 'null'], format: date-time }
+        expires_at:
+          type: [string, 'null']
+          format: date-time
+          description: |
+            When buyer access lapses. A past instant is accepted and stored as the
+            time of the call, so the room opens with buyer access already ended.
         source: { type: string }
       additionalProperties: false
 

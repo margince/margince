@@ -19,7 +19,7 @@ import (
 // the provider gives it.
 const KindCompany RecordKind = "company"
 
-// KindContact is a person the unit's provider knows, matched by the id
+// KindContact is a contact the unit's provider knows, matched by the id
 // the provider gives it.
 const KindContact RecordKind = "contact"
 

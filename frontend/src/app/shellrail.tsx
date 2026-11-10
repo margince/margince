@@ -76,7 +76,7 @@ export function useHomeLinkLabel(): string {
  * The company's square mark, or the product's own before onboarding named a
  * company. Decorative: the link around it carries the name.
  */
-export function WorkspaceChip() {
+export function WorkspaceChip({ id }: Readonly<{ id?: string }>) {
   const installation = useInstallationBrand();
   const mark = useSquareMark(
     installation?.logo_icon_url,
@@ -84,7 +84,7 @@ export function WorkspaceChip() {
   );
   if (!installation) {
     return (
-      <span className="ws-chip" aria-hidden="true">
+      <span className="ws-chip" id={id} aria-hidden="true">
         <Logomark />
       </span>
     );
@@ -92,7 +92,7 @@ export function WorkspaceChip() {
   // Avatar draws the deterministic monogram underneath, so a company with no
   // square mark has a face, not a gap.
   return (
-    <span className="ws-chip ws-chip-company" aria-hidden="true">
+    <span className="ws-chip ws-chip-company" id={id} aria-hidden="true">
       {/* The brand read carries no company id, so the name keys the chip. */}
       <Avatar
         identity={installation.display_name}
