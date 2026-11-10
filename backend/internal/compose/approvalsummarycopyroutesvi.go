@@ -149,6 +149,7 @@ var routeVerbsVietnamese = map[string]string{
 	"send_offer":                         "Gửi báo giá",
 	"set_activity_audience":              "Đặt người được xem hoạt động",
 	"set_activity_disposition":           "Để tin nhắn sang một bên",
+	"answer_calendar_invitation":         "Trả lời lời mời lịch",
 	"set_deal_room_expiry":               "Đặt hạn cho phòng giao dịch",
 	"set_lead_manual_signal":             "Đặt yếu tố chấm điểm thủ công",
 	"set_thread_audience":                "Đặt người được xem chuỗi thư",

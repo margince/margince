@@ -31,6 +31,12 @@ type linkTarget struct {
 	nameColumn string
 }
 
+// The columns that name a linked record on its own table.
+const (
+	columnFullName = "full_name"
+	columnName     = "name"
+)
+
 // linkTargets is the module's whole vocabulary for the timeline link, in
 // the column order uq_activity_link's coalesce was created with. The
 // entity_type CHECK is pinned to datasource.RecordType by
@@ -38,11 +44,11 @@ type linkTarget struct {
 // schema and forgotten here fails that gate rather than surfacing as a 422
 // on the one code path nobody exercised.
 var linkTargets = []linkTarget{
-	{datasource.RecordContact, "contact_id", "full_name"},
+	{datasource.RecordContact, "contact_id", columnFullName},
 	{datasource.RecordCompany, "company_id", "display_name"},
-	{datasource.RecordDeal, "deal_id", "name"},
-	{datasource.RecordLead, "lead_id", "full_name"},
-	{datasource.RecordProject, "project_id", "name"},
+	{datasource.RecordDeal, "deal_id", columnName},
+	{datasource.RecordLead, "lead_id", columnFullName},
+	{datasource.RecordProject, "project_id", columnName},
 }
 
 // linkColumn resolves a wire entity_type to its id column. The empty

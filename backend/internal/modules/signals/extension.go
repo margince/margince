@@ -122,7 +122,7 @@ func RecordExtensionTx(ctx context.Context, tx pgx.Tx, in ExtensionSignal) (sig 
 		return crmcontracts.Signal{}, false, fmt.Errorf("insert extension signal: %w", err)
 	}
 	auditID, err := storekit.Audit(ctx, tx, "create", "signal", id, nil,
-		map[string]any{signalKindArg: in.Kind, "source_channel": channelDerived, "resolution_state": "resolved"})
+		map[string]any{signalKindArg: in.Kind, "source_channel": channelDerived, resolutionStateField: "resolved"})
 	if err != nil {
 		return crmcontracts.Signal{}, false, fmt.Errorf("audit extension signal: %w", err)
 	}

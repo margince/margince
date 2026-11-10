@@ -68,6 +68,7 @@ public.activity.body_completeness text NOT NULL gen=- def='complete'::text
 public.activity.booking_interval_exact boolean NOT NULL gen=- def=false
 public.activity.bulk_mail_attested boolean NOT NULL gen=- def=false
 public.activity.calendar_method text gen=- def=-
+public.activity.calendar_uid text gen=- def=-
 public.activity.call_outcome text gen=- def=-
 public.activity.capture_label text gen=- def=-
 public.activity.capture_label_declined_at timestamp with time zone gen=- def=-
@@ -221,6 +222,7 @@ public.activity_identity.created_at timestamp with time zone NOT NULL gen=- def=
 public.activity_identity.identity_key text NOT NULL gen=- def=-
 public.activity_identity.identity_kind text NOT NULL gen=- def=-
 public.activity_identity_activity_idx CREATE INDEX activity_identity_activity_idx ON public.activity_identity USING btree (activity_id, identity_kind, identity_key)
+public.activity_identity_meeting_uid CREATE INDEX activity_identity_meeting_uid ON public.activity_identity USING btree ("left"(identity_key, (length(identity_key) - strpos(reverse(identity_key), '/'::text)))) WHERE (identity_kind = 'meeting'::text)
 public.activity_identity_pkey CREATE UNIQUE INDEX activity_identity_pkey ON public.activity_identity USING btree (identity_kind, identity_key)
 public.activity_kind acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_kind.activity_kind_pkey PRIMARY KEY (kind)
