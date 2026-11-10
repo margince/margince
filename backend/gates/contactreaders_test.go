@@ -226,6 +226,7 @@ var lifecycleContactReads = gatekit.Waive(map[string]string{
 // where a reviewer checks it â this census resolves gates FORWARD and cannot
 // resolve them caller-ward, because the call graph is by NAME.
 var calleeGatedContactReads = gatekit.Waive(map[string]string{
+	"internal/modules/activities/meetingfollowup.go:meetingAttendeesSQL":            "meetingFollowUpsPage supplies addressableContactClause from the reader's contact grant and row scope. The recipient aggregate filters by that predicate before returning any contact id; names and other contact fields are never selected",
 	"internal/modules/consent/suppress.go:anonymizedAddressHashes":                  "the hashes an anonymize kept on a contact, read only by suppressAdmittedTx after auth.EnsureWritable admitted the caller to that contact. They never leave the transaction; the stop rows written from them do, under the same gate",
 	"internal/modules/contacts/technicaladdressrepair.go:technicalCandidatePage":    "one page of contact ids, versions and live addresses for the technical-address correction, never returned to a reader. Its one caller is RetireTechnicalAddressContactsTx, which asks auth.RequireSystem and auth.Require(ctx, \"contact\", delete) first",
 	"internal/modules/activities/meetingresource.go:calendarResourceParticipantSQL": "a resource-address predicate that returns no contact fields. Its callers pass contact scope: MeetingCounterparties gates its joined contact, outsidePartyClause supplies readableContactScope, and HeldMeetingCounterparties is the system's company walk",

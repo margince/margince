@@ -1,11 +1,9 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/comms/dispatcher.go backend/internal/modules/comms/store.go backend/internal/modules/comms/storechannel.go backend/internal/modules/comms/gates.go backend/internal/modules/comms/sendseam.go backend/internal/modules/comms/policy.go backend/internal/modules/activities/email.go backend/internal/modules/activities/channelsend.go -->
+<!-- describes: backend/internal/modules/comms/dispatcher.go backend/internal/modules/comms/store.go backend/internal/modules/comms/storechannel.go backend/internal/modules/comms/gates.go backend/internal/modules/comms/transmit.go backend/internal/modules/comms/handoff.go backend/internal/modules/consent/transmitpermit.go backend/internal/platform/database/sessionlease.go backend/internal/modules/comms/sendseam.go backend/internal/modules/comms/policy.go backend/internal/modules/activities/email.go backend/internal/modules/activities/channelsend.go -->
 # Outbound messaging: the delivery work behind a sent message
 
-`internal/modules/comms` is how Margince sends a message out. It holds the durable record of what was
-staged to go. It holds the rules that decide whether it may go now, and the dispatcher that hands it to
-a provider. Read it beside [capture-connectors.md](capture-connectors.md): capture is the governed way
-in, and comms is what happens when a rep, or a governed agent, answers.
+`internal/modules/comms` holds each staged delivery, checks whether it may go, and hands it to a provider.
+[capture-connectors.md](capture-connectors.md) describes how messages come in.
 
 For the short version see [reference/modules.md](../reference/modules.md). To connect a transport and
 send something, see [how-to/connect-a-mailbox.md](../how-to/connect-a-mailbox.md) or
@@ -567,6 +565,14 @@ sending.
 - **It is decided twice and recorded both times.** Staging refuses what may never go. The send step
   catches what changed while the message waited: revoked consent, a block, a bounce for good, an edit
   to the text.
+- **Stops share the send fence.** The final permission read holds shared subject and address locks.
+  A stop that commits first blocks the send; a stop during the provider call waits for release.
+  The handoff and release deadlines leave time for the stop to commit. Credential refresh, lookup
+  of an earlier send and receipt reads stay outside this fence.
+
+  A timed-out send has an unknown outcome and is never retried. A lost lease is logged: the database and provider cannot commit
+  together, and accepted mail may reach its reader later. Receipt writes follow release, so their
+  time differs from the time the provider accepted the message.
 - **Receipt before ledger.** A message the provider accepted may never end up recorded as not sent.
 - **Park only on an answer**, never on a failure to get one.
 - **A seam that cannot find a past send** marks the row as sending first, and never tries an unknown

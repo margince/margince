@@ -27,6 +27,9 @@ func (s *RetentionService) anonymizeLead(ctx context.Context, tx pgx.Tx, id ids.
 	if err := storekit.LockStopKey(ctx, tx, id.String()); err != nil {
 		return err
 	}
+	if err := storekit.LockSubjectsStopAddresses(ctx, tx, id); err != nil {
+		return err
+	}
 	// BEFORE the UPDATE below nulls it: a suppression is detached onto the
 	// address it applies to, and the lead row is the only place that address
 	// still lives. Read after the scrub and the objection is orphaned.

@@ -506,6 +506,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `relaywiring_test.go` | H2 | Every option that wires the mail relay is wired by a role binary. |
 | `replayscope_test.go` | H2 | A replay is a read, so every operation the idempotency middleware can replay must either re-probe the row scope of the record its recorded body carries, or say in writing that the body carries no such record. |
 | `resetflushscope_test.go` | H2 | The reset's cache flush has two entry points by design, and the split is a security boundary rather than a style choice. |
+| `stopwriters_test.go` | H2 | Every mutation coordinates: restoring a stop or widening its purpose can revoke permission without changing either address column. |
 | `threadcomponentwriters_test.go` | H2 | The ownership census supplies packages; its SQL parser supplies columns. |
 | `versionguard_test.go` | H2 | A version pin is only real if the pinned table's version actually moves. |
 | `writeauthorityreach_test.go` | H2 | Every write of a shareable record reaches a write-authority probe. |

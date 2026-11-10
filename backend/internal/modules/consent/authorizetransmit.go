@@ -39,7 +39,7 @@ func (g *Gate) AuthorizeTransmit(ctx context.Context, req commsauthz.TransmitReq
 	if err := transmittable(req); err != nil {
 		return commsauthz.TransmitTicket{}, err
 	}
-	legacy := g.legacyTransmitAnswer(ctx, req)
+	legacy := g.legacyTransmitAnswer(ctx, req, true)
 	setID := ids.NewV7()
 	// Counted after the commit, not beside the insert. Two arms return an error
 	// after the rows are written (an unanswerable legacy gate, the wording
@@ -90,7 +90,7 @@ type legacyTransmitAnswer struct {
 	err                   error
 }
 
-func (g *Gate) legacyTransmitAnswer(ctx context.Context, req commsauthz.TransmitRequest) legacyTransmitAnswer {
+func (g *Gate) legacyTransmitAnswer(ctx context.Context, req commsauthz.TransmitRequest, record bool) legacyTransmitAnswer {
 	// The legacy gate's answer, recorded beside the engine's on every row so a
 	// disagreement is readable in the record rather than only in a counter that
 	// dies with the process.
@@ -100,7 +100,7 @@ func (g *Gate) legacyTransmitAnswer(ctx context.Context, req commsauthz.Transmit
 	// which the shipped posture never produces but an operator moving a
 	// category back to observe deliberately does. The dispatcher used to ask it
 	// a second time after the ticket already said yes; that call is gone.
-	legacyErr := g.RequireGrantedForRecipients(ctx, req.Recipients, req.PurposeKey)
+	legacyErr := g.checkGrantedRecipients(ctx, req.Recipients, req.PurposeKey, record)
 	// Three outcomes, and only two of them are answers: granted, not granted,
 	// and anything else. That third one is NOT a no — whether it matters
 	// depends on the posture, and the posture is not known until the modes are

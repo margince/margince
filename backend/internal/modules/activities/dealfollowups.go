@@ -54,7 +54,7 @@ func meetingFollowUpsByDealStatement(ctx context.Context, asOf time.Time, days i
 	query, args, err := unpagedMeetingFollowUpsStatement(ctx, asOf, days, func(arg func(any) int) (string, error) {
 		var err error
 		dealScope, err = readableDealBatchSQL(ctx, dealIDs, arg)
-		return `cardinality(attendees.recipients) > 0 AND EXISTS (SELECT 1 FROM activity_link on_deal
+		return `cardinality(recipient_set.recipients) > 0 AND EXISTS (SELECT 1 FROM activity_link on_deal
    JOIN deal d ON d.id = on_deal.deal_id WHERE on_deal.activity_id = a.id AND ` + dealScope + `)`, err
 	})
 	if err != nil {

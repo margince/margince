@@ -167,6 +167,20 @@ func (p *preflightEnv) dispatchOnceWith(t *testing.T, deliveryID ids.UUID, stamp
 // built, so a case can make the read-back after the send fail.
 func (p *preflightEnv) dispatchThrough(t *testing.T, deliveryID ids.UUID, stub *httptest.Server, policies []comms.SendPolicy) (comms.Outcome, *gmail.Connector) {
 	t.Helper()
+	outcome, sender, err := p.dispatchThroughResult(t, deliveryID, stub, policies)
+	if err != nil {
+		t.Fatalf("dispatch: %v", err)
+	}
+	return outcome, sender
+}
+
+func (p *preflightEnv) dispatchThroughResult(t *testing.T, deliveryID ids.UUID, stub *httptest.Server, policies []comms.SendPolicy) (comms.Outcome, *gmail.Connector, error) {
+	t.Helper()
+	return p.dispatchThroughContext(compose.SendWorkerContext(context.Background(), p.workspaceID(t)), t, deliveryID, stub, policies)
+}
+
+func (p *preflightEnv) dispatchThroughContext(ctx context.Context, t *testing.T, deliveryID ids.UUID, stub *httptest.Server, policies []comms.SendPolicy) (comms.Outcome, *gmail.Connector, error) {
+	t.Helper()
 	// The credential is built the way the OAuth callback builds it, so the
 	// grant the dispatcher's authority gate reads is a real exchange result
 	// rather than a hand-written bundle.
@@ -208,13 +222,8 @@ func (p *preflightEnv) dispatchThrough(t *testing.T, deliveryID ids.UUID, stub *
 	// the identity reconcile's audit row and outbox event both require, and a
 	// hand-rolled workspace-only context would drive a dispatch that silently
 	// cannot record what it did.
-	outcome, _, err := dispatcher.DispatchWithWait(
-		compose.SendWorkerContext(context.Background(), p.workspaceID(t)), deliveryID,
-	)
-	if err != nil {
-		t.Fatalf("dispatch: %v", err)
-	}
-	return outcome, gmailConnector
+	outcome, _, err := dispatcher.DispatchWithWait(ctx, deliveryID)
+	return outcome, gmailConnector, err
 }
 
 // drivenProvider is the connector this suite actually drives, read from its own

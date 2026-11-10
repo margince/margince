@@ -60,11 +60,16 @@ func TestTheDealFollowUpBatchReadsEachMeetingOnceWhateverTheStatisticsSay(t *tes
 				t.Fatal(err)
 			}
 		}
-		var raw string
-		if err := tx.QueryRow(ctx, "EXPLAIN (ANALYZE, FORMAT JSON) "+statement, args...).Scan(&raw); err != nil {
-			t.Fatalf("running the deal follow-up batch: %v", err)
+		for _, reuse := range []string{"on", "off"} {
+			if _, err := tx.Exec(ctx, "SELECT set_config('enable_material', @reuse, true), set_config('enable_memoize', @reuse, true)", pgx.NamedArgs{"reuse": reuse}); err != nil {
+				t.Fatal(err)
+			}
+			var raw string
+			if err := tx.QueryRow(ctx, "EXPLAIN (ANALYZE, FORMAT JSON) "+statement, args...).Scan(&raw); err != nil {
+				t.Fatalf("running the deal follow-up batch: %v", err)
+			}
+			assertBoundedDealFollowUpPlan(t, stats+" reuse "+reuse, decodePlan(t, raw))
 		}
-		assertBoundedDealFollowUpPlan(t, stats, decodePlan(t, raw))
 	}
 	var answered int
 	if err := tx.QueryRow(ctx, "SELECT count(*) FROM ("+statement+") batch", args...).Scan(&answered); err != nil {
@@ -80,11 +85,21 @@ func TestTheDealFollowUpBatchReadsEachMeetingOnceWhateverTheStatisticsSay(t *tes
 func assertBoundedDealFollowUpPlan(t *testing.T, stats string, plan planNode) {
 	t.Helper()
 	var attendeeReads, keyedReads float64
+	sets := 0
 	plan.walk(func(n planNode) {
+		if n.SubplanName == "CTE "+meetingAttendeeSet {
+			sets++
+			if n.ActualLoops != 1 || n.ActualRows != planMeetings {
+				t.Errorf("%s: recipient set ran %.0f times for %.0f meetings", stats, n.ActualLoops, n.ActualRows)
+			}
+			n.walk(func(recipient planNode) {
+				if recipient.NodeType == "Aggregate" && recipient.Strategy == "Plain" {
+					attendeeReads += recipient.ActualLoops
+				}
+			})
+		}
 		read := (n.ActualRows + n.RemovedByFilter) * n.ActualLoops
 		switch n.Alias {
-		case "attendees":
-			attendeeReads += n.ActualLoops
 		case "keyed":
 			keyedReads += n.ActualLoops
 			// Any unique index that leads on id is the key; the planner may
@@ -106,7 +121,7 @@ func assertBoundedDealFollowUpPlan(t *testing.T, stats string, plan planNode) {
 				stats, read, n.NodeType, n.RelationName, n.Alias)
 		}
 	})
-	if attendeeReads == 0 || keyedReads == 0 {
+	if sets != 1 || attendeeReads == 0 || keyedReads == 0 {
 		t.Fatalf("%s statistics: the plan read no attendees (%.0f) or no later activity (%.0f), so this test checks nothing",
 			stats, attendeeReads, keyedReads)
 	}

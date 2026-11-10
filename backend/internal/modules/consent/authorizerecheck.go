@@ -34,12 +34,23 @@ var errRecheckComplete = errors.New("consent: the recheck reads and writes nothi
 // again through AuthorizeTransmit. The new ticket and its set are what the
 // dispatcher and the requirement check use.
 func (g *Gate) RecheckTransmit(ctx context.Context, req commsauthz.TransmitRequest, issued commsauthz.TransmitTicket) (commsauthz.TransmitTicket, error) {
+	fresh, err := g.readTransmitTicket(ctx, req, issued)
+	if err != nil {
+		return commsauthz.TransmitTicket{}, err
+	}
+	if fresh.Fingerprint != "" && fresh.Fingerprint == issued.Fingerprint {
+		return issued, nil
+	}
+	return g.AuthorizeTransmit(ctx, req)
+}
+
+func (g *Gate) readTransmitTicket(ctx context.Context, req commsauthz.TransmitRequest, issued commsauthz.TransmitTicket) (commsauthz.TransmitTicket, error) {
 	if err := transmittable(req); err != nil {
 		return commsauthz.TransmitTicket{}, err
 	}
-	legacy := g.legacyTransmitAnswer(ctx, req)
+	legacy := g.legacyTransmitAnswer(ctx, req, false)
 	var fresh commsauthz.TransmitTicket
-	err := g.store.db.Tx(ctx, func(tx pgx.Tx) error {
+	err := g.readTransmitTx(ctx, func(tx pgx.Tx) error {
 		var err error
 		if fresh, _, err = g.transmitVerdictTx(ctx, tx, req, issued.DecisionSetID, legacy, false); err != nil {
 			return err
@@ -49,10 +60,7 @@ func (g *Gate) RecheckTransmit(ctx context.Context, req commsauthz.TransmitReque
 	if err != nil && !errors.Is(err, errRecheckComplete) {
 		return commsauthz.TransmitTicket{}, err
 	}
-	if fresh.Fingerprint != "" && fresh.Fingerprint == issued.Fingerprint {
-		return issued, nil
-	}
-	return g.AuthorizeTransmit(ctx, req)
+	return fresh, nil
 }
 
 // decisionFingerprint digests what a transmit ticket was decided on. The

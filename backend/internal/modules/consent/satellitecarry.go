@@ -94,6 +94,12 @@ func (s *Store) BindRequestsToAddressesTx(ctx context.Context, tx pgx.Tx, from, 
 		return err
 	}
 	pair := []ids.UUID{from.UUID, to.UUID}
+	if err := lockSubjectsInOrder(ctx, tx, pair...); err != nil {
+		return err
+	}
+	if err := storekit.LockSubjectsStopAddresses(ctx, tx, pair...); err != nil {
+		return err
+	}
 	sub, err := consentSubject(RecordInput{ContactID: from})
 	if err != nil {
 		return err
