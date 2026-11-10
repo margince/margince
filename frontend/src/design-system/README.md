@@ -144,8 +144,9 @@ size or a lighter weight; there is no third neutral.
 
 ## Corners come from the ladder, and they are smooth
 
-Every radius in the tree reads one of six tokens: `--r-xs` 4, `--r-sm` 8, `--r-control` 12,
-`--r-md` 16, `--r-lg` 20, `--r-full` the pill. A raw px corner is a seventh value that nobody chose.
+Every radius in the tree reads a token: `--r-xs` 4, `--r-sm` 8 or `--r-full` the pill. A control,
+a card and a pane name their role (`--r-control`, `--r-md`, `--r-lg`), and all three read `--r-sm`.
+So every box rounds alike at every width. A raw px corner is a value that nobody chose.
 
 `tokens.css` also declares `corner-shape: squircle` on `:where(*)` inside an `@supports` query, and
 doubles the ladder inside it. A superellipse of radius R looks about as round as a plain round
