@@ -784,6 +784,12 @@
      flex or grid parent can shrink instead of being pushed off the page. */
   overflow-wrap: anywhere;
 }
+/* In a table a name keeps its words whole: an auto-sized column takes the
+   cell's min-content, and `anywhere` drops it to one letter. A table too wide
+   for its box scrolls; a folded row caps the name at the row's width. */
+.table td .entity-link {
+  overflow-wrap: break-word;
+}
 .entity-link:hover {
   text-decoration: underline;
 }

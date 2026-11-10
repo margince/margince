@@ -7,6 +7,7 @@ import type {
   CreateField,
   CreateFieldOption,
 } from "../../components/create.fields";
+import { EntityRef } from "../../components/entityref";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { InlineChoice } from "../../design-system/inlinechoice";
@@ -36,12 +37,25 @@ export function useLeadPartnerOptions(): CreateFieldOption[] | undefined {
   return granted ? options : undefined;
 }
 
-/** A referring partner's name, or its id when the options do not hold it. */
-export function leadPartnerName(
-  partners: readonly CreateFieldOption[] | undefined,
-  id: string,
-): string {
-  return partners?.find((option) => option.value === id)?.label ?? id;
+/**
+ * A referring partner's name. The options hold only live partners, so one
+ * that is archived, or past the options' page, is named by its own read.
+ */
+export function LeadPartnerName({
+  partners,
+  id,
+}: Readonly<{
+  partners: readonly CreateFieldOption[] | undefined;
+  id: string;
+}>) {
+  return (
+    <EntityRef
+      kind="company"
+      id={id}
+      name={partners?.find((option) => option.value === id)?.label}
+      asText
+    />
+  );
 }
 
 /**
@@ -128,7 +142,11 @@ export function useLeadPartnerRow(
             ...(options ?? []),
           ]}
           render={(value) =>
-            value === "" ? t("field.unset") : leadPartnerName(options, value)
+            value === "" ? (
+              t("field.unset")
+            ) : (
+              <LeadPartnerName partners={options} id={value} />
+            )
           }
           canEdit={!writer.readOnly && !accepted}
           readOnlyReason={

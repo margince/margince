@@ -84,7 +84,7 @@ describe("a forecast finding", () => {
     // said what was wrong before any of this and still does.
     show(CHECK);
 
-    expect(await screen.findByText(/close date/i)).toBeTruthy();
+    expect(await screen.findAllByText(/close date/i)).not.toHaveLength(0);
     expect(screen.queryByRole("link", { name: "Fleet retrofit" })).toBeNull();
   });
 });
