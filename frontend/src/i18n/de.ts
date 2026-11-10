@@ -19167,6 +19167,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das Postfach {name} wurde seit dem {when} nicht synchronisiert.",
   "worklist.happened.capture_health.bare":
     "Ein Postfach wurde seit dem {when} nicht synchronisiert.",
+  "worklist.happened.capture_health.backfill":
+    "Der Import des E-Mail-Verlaufs für {name} ist am {when} fehlgeschlagen.",
+  "worklist.happened.capture_health.backfill.bare":
+    "Ein Import des E-Mail-Verlaufs ist am {when} fehlgeschlagen.",
   "worklist.happened.capture_health.silent":
     "Das Postfach {name} hat seit dem {when} keine E-Mails erfasst.",
   "worklist.happened.capture_health.silent.bare":
@@ -19313,6 +19317,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diesem Kontakt steht ein Datenschutzhinweis zu. Sende ihn, fordere eine Bestätigung der Daten an oder beende die Pflicht.",
   "worklist.ask.booking_health":
     "Deine Buchungsseite ist pausiert, Gäste können nicht buchen. Öffne die Buchungseinstellungen und verbinde einen Kalender, in den Margince Termine eintragen darf.",
+  "worklist.ask.capture_health.calendar":
+    "Ein Kalender erfasst keine Termine mehr. Verbinde ihn neu, damit seine Termine wieder erfasst werden.",
   "worklist.ask.capture_health":
     "Ein Postfach erfasst keine E-Mails mehr. Verbinde es neu, damit seine E-Mails wieder erfasst werden.",
   "worklist.ask.domain_question":

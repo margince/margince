@@ -18685,6 +18685,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.happened.capture_health": "Hộp thư {name} chưa đồng bộ từ {when}.",
   "worklist.happened.capture_health.bare":
     "Một hộp thư chưa đồng bộ từ {when}.",
+  "worklist.happened.capture_health.backfill":
+    "Việc nhập thư cũ cho {name} bị lỗi vào {when}.",
+  "worklist.happened.capture_health.backfill.bare":
+    "Một lần nhập thư cũ bị lỗi vào {when}.",
   "worklist.happened.capture_health.silent":
     "Hộp thư {name} chưa thu thập được email nào từ {when}.",
   "worklist.happened.capture_health.silent.bare":
@@ -18817,6 +18821,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Liên hệ này cần nhận thông báo về quyền riêng tư. Gửi thông báo, đề nghị xác nhận thông tin, hoặc kết thúc nghĩa vụ.",
   "worklist.ask.booking_health":
     "Trang đặt lịch của bạn đang tạm dừng nên khách không đặt được. Mở cài đặt đặt lịch và kết nối một lịch mà Margince được thêm cuộc họp vào.",
+  "worklist.ask.capture_health.calendar":
+    "Một lịch đã ngừng thu thập cuộc họp. Kết nối lại để cuộc họp được thu thập trở lại.",
   "worklist.ask.capture_health":
     "Một hộp thư đã ngừng thu thập thư. Kết nối lại để thư được thu thập trở lại.",
   "worklist.ask.domain_question":

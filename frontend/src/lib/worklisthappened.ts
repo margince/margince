@@ -278,6 +278,8 @@ export function eventLine(
 // A capture row's sentence follows what the connection carries, and a silent
 // one still syncs: it only brings nothing in, so it is not called broken.
 function captureEventKeys(item: WorklistItem) {
+  // A failed history import is dated by the import, not by the last sync.
+  if (item.kind === "backfill_failed") return CAPTURE_EVENT.backfill;
   const silent = item.kind === "capture_silent";
   if (item.connection?.medium === "calendar")
     return silent ? CAPTURE_EVENT.calendarSilent : CAPTURE_EVENT.calendar;
@@ -291,6 +293,10 @@ function captureTodoKeys(item: WorklistItem) {
 }
 
 const CAPTURE_EVENT = {
+  backfill: {
+    named: "worklist.happened.capture_health.backfill",
+    bare: "worklist.happened.capture_health.backfill.bare",
+  },
   mailbox: {
     named: "worklist.happened.capture_health",
     bare: "worklist.happened.capture_health.bare",

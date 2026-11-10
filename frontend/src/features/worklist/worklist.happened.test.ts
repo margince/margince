@@ -111,6 +111,9 @@ describe("what happened behind a row", () => {
     expect(capture("sync_failing", "calendar")).toEqual([
       "The calendar anna@example.com has not synced since 9 Nov.",
     ]);
+    expect(capture("backfill_failed", "mailbox")).toEqual([
+      "The mail history import for anna@example.com failed on 9 Nov.",
+    ]);
     expect(capture("capture_silent", "calendar")).toEqual([
       "The calendar anna@example.com has captured no meetings since 9 Nov.",
     ]);
@@ -209,6 +212,17 @@ describe("what a told row asks", () => {
     });
     expect(todoLine(calendar, t, true)).toBe(
       "Check the connection of anna@example.com so its meetings are captured again.",
+    );
+  });
+
+  it("asks for a calendar's meetings even when its event is untold", () => {
+    const calendar = row({
+      source: "capture_health",
+      kind: "reauth_required",
+      connection: { provider: "gcal", medium: "calendar" },
+    });
+    expect(todoLine(calendar, t, false)).toBe(
+      "A calendar stopped capturing meetings. Reconnect it so its meetings are captured again.",
     );
   });
 

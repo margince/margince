@@ -18970,6 +18970,10 @@ export const en = {
     "The mailbox {name} has not synced since {when}.",
   "worklist.happened.capture_health.bare":
     "A mailbox has not synced since {when}.",
+  "worklist.happened.capture_health.backfill":
+    "The mail history import for {name} failed on {when}.",
+  "worklist.happened.capture_health.backfill.bare":
+    "A mail history import failed on {when}.",
   "worklist.happened.capture_health.silent":
     "The mailbox {name} has captured no mail since {when}.",
   "worklist.happened.capture_health.silent.bare":
@@ -19101,6 +19105,8 @@ export const en = {
     "A privacy notice is owed to this contact. Send it, ask them to confirm their details, or end the duty.",
   "worklist.ask.booking_health":
     "Your booking page is paused, so guests cannot book. Open booking settings and connect a calendar Margince can add meetings to.",
+  "worklist.ask.capture_health.calendar":
+    "A calendar stopped capturing meetings. Reconnect it so its meetings are captured again.",
   "worklist.ask.capture_health":
     "A mailbox stopped capturing mail. Reconnect it so its mail is captured again.",
   "worklist.ask.domain_question":

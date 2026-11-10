@@ -47,5 +47,10 @@ const ASK_BY_SOURCE: Readonly<Record<WorklistItem["source"], MessageKey>> = {
 export function askKey(item: WorklistItem): MessageKey {
   // An invitation waits on an RSVP, not on a written answer.
   if (item.email_summary?.calendar_invitation) return "worklist.ask.invitation";
+  if (
+    item.source === "capture_health" &&
+    item.connection?.medium === "calendar"
+  )
+    return "worklist.ask.capture_health.calendar";
   return labelFor(ASK_BY_SOURCE, item.source);
 }
