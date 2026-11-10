@@ -97,6 +97,7 @@ func repliesToTheSubject(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subjec
 	err = tx.QueryRow(ctx, `
 		WITH anchor AS (
 			SELECT thread_key FROM activity WHERE id = $6 AND archived_at IS NULL
+			   AND NOT starts_with(thread_key, '`+correspondence.HandLoggedThreadPrefix+`')
 		)
 		SELECT EXISTS (
 			SELECT 1
@@ -142,7 +143,7 @@ func repliesToTheSubject(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subjec
 // staging still transmits after its anchor is archived, which is the intended
 // reading — the thread's evidence is what the basis rests on, not the anchor.
 func wroteIntoThread(ctx context.Context, tx pgx.Tx, threadKey string, subject subjectRef) (bool, error) {
-	if threadKey == "" {
+	if threadKey == "" || correspondence.IsHandLoggedThread(threadKey) {
 		return false, nil
 	}
 	entity, err := evidenceEntity(ctx, tx, subject.SendingEntity)
@@ -212,7 +213,7 @@ func copiedOnThisMatter(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 	if req.AnchorActivityID != (ids.UUID{}) {
 		threadKey = threadKeyOf(ctx, tx, req.AnchorActivityID)
 	}
-	if threadKey == "" {
+	if threadKey == "" || correspondence.IsHandLoggedThread(threadKey) {
 		return false, nil
 	}
 	entity, err := evidenceEntity(ctx, tx, subject.SendingEntity)
