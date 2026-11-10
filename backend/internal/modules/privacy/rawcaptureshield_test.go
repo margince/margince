@@ -22,9 +22,7 @@ func TestSelectionAndDeletionAskOneShieldOfARawCapture(t *testing.T) {
 	if !ok {
 		t.Fatal("no raw_capture selector, so this test guards nothing")
 	}
-	// The two clauses read differently, because selection also asks whether the
-	// activity is archived. What they owe each other is the shield: both the
-	// floor and the hold, of every activity the original was read into.
+	// Both paths must ask the floor and the hold of every linked activity.
 	shield := rawCaptureUnshielded(3, 4)
 	for _, term := range []string{
 		handelsbriefShielded(3, 4),

@@ -20,6 +20,8 @@ package gates
 
 import (
 	"io/fs"
+	"path"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -71,17 +73,26 @@ func TestEveryGoVersionPinMatchesTheProductModule(t *testing.T) {
 		}
 	})
 
-	// The release image builds under GOTOOLCHAIN=local, so a base image behind
-	// go.mod refuses the workspace and the shipped binaries never get the bump.
-	t.Run("the release image's Go base", func(t *testing.T) {
-		bases := golangBase.FindAllStringSubmatch(readFile(t, "../Dockerfile"), -1)
-		if len(bases) == 0 {
-			t.Fatal("the Dockerfile names no golang: base image, so this check is reading nothing")
+	// The release image and the CI image both build under GOTOOLCHAIN=local.
+	// A golang image behind go.mod refuses the workspace, so the shipped
+	// binaries miss the bump and the gate jobs cannot build the tree.
+	t.Run("every image's Go base", func(t *testing.T) {
+		bases := map[string]int{}
+		for _, file := range trackedFiles(t) {
+			if path.Base(file.path) != "Dockerfile" || file.symlink {
+				continue
+			}
+			for _, base := range golangBase.FindAllStringSubmatch(readFile(t, filepath.Join(repoRoot, file.path)), -1) {
+				bases[file.path]++
+				if base[1] != want {
+					t.Errorf("%s builds on golang:%s, backend/go.mod pins %s; "+
+						"pin the patch tag and its digest", file.path, base[1], want)
+				}
+			}
 		}
-		for _, base := range bases {
-			if base[1] != want {
-				t.Errorf("the Dockerfile builds on golang:%s, backend/go.mod pins %s; "+
-					"pin the patch tag and its digest", base[1], want)
+		for _, image := range []string{"Dockerfile", ".github/ci-image/Dockerfile"} {
+			if bases[image] == 0 {
+				t.Errorf("%s names no golang image, so this check is not reading the Go it builds with", image)
 			}
 		}
 	})

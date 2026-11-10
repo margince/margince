@@ -218,6 +218,30 @@ describe("the timeline tab", () => {
   // is where a conversation actually happens.
   it("offers the conversations cut and draws only what somebody can answer", async () => {
     const user = userEvent.setup();
+    // The cut reads its own list, which the server answers with the mail alone.
+    stubWithSession(
+      {
+        "GET /deals/d-1": () => jsonResponse(DEAL_D1),
+        "GET /activities": () =>
+          jsonResponse({
+            data: [
+              {
+                ...CAPTURED,
+                id: "a-1",
+                kind: "email",
+                subject: "Fleet renewal",
+                direction: "inbound",
+                occurred_at: "2026-08-11T12:00:00Z",
+                occurred_precision: "instant",
+                offers_email: false,
+                is_done: false,
+              },
+            ],
+            page: { has_more: false, next_cursor: null },
+          }),
+      },
+      {},
+    );
     withProviders(<ContactTimelineTab contactId="p-1" view={view} />);
 
     await user.click(screen.getByRole("button", { name: "Threads" }));
@@ -230,7 +254,7 @@ describe("the timeline tab", () => {
       // about the record's whole chronology.
       expect(screen.queryByText("Depot walkthrough")).toBeNull(),
     );
-    expect(screen.getByText("Fleet renewal")).toBeTruthy();
+    expect(await screen.findByText("Fleet renewal")).toBeTruthy();
   });
 
   // The dial narrows the cut it stands under. Offering Meetings inside a cut
@@ -810,7 +834,7 @@ describe("the meetings tab", () => {
       )
       .map((request) => new URL(request.url))
       .find((url) => url.pathname.endsWith("/activities"));
-    expect(asked?.searchParams.get("kind")).toBe("meeting");
+    expect(asked?.searchParams.getAll("kind")).toEqual(["meeting"]);
     expect(asked?.searchParams.get("entity_type")).toBe("contact");
     expect(asked?.searchParams.get("entity_id")).toBe("p-1");
     expect(screen.queryByText("Fleet renewal")).toBeNull();

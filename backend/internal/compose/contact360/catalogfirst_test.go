@@ -55,7 +55,7 @@ func as(objects map[string]principal.ObjectGrant) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
+		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user, SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"rep"}, Objects: objects, RowScope: principal.RowScopeAll,
 		},

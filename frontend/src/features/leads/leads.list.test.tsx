@@ -441,6 +441,52 @@ describe("LeadsScreen — rich create (P-15)", () => {
     expect(posted).toMatchObject({ partner_company_id: "c-9" });
   });
 
+  // The partner options hold live programmes only; a lead keeps its history
+  // after its partner is archived, and the column still names the partner.
+  it("names an archived referring partner rather than printing its id", async () => {
+    stubFetch(async (url) => {
+      if (url.endsWith("/v1/me")) {
+        return jsonResponse({
+          user: { id: "u-9", display_name: "Me" },
+          roles: ["rep"],
+          teams: [],
+          authorization: meFixture({
+            allow: { ...LEAD_GRANTS, company: ["read"], partner: ["read"] },
+          }).authorization,
+        });
+      }
+      if (url.includes("relationship_type=partner")) {
+        return jsonResponse({
+          data: [{ id: "c-9", display_name: "Referrer GmbH" }],
+          page: { has_more: false },
+        });
+      }
+      if (url.includes("/v1/companies") && url.includes("id=c-old")) {
+        return jsonResponse({
+          data: [
+            {
+              id: "c-old",
+              display_name: "Former Partner AG",
+              archived_at: "2026-10-01T00:00:00Z",
+            },
+          ],
+          page: { has_more: false },
+        });
+      }
+      if (url.includes("/v1/leads")) {
+        return jsonResponse({
+          data: [{ ...lead, partner_company_id: "c-old" }],
+          page: { next_cursor: null, has_more: false },
+        });
+      }
+      return emptyPage();
+    });
+    render(<LeadsScreen />);
+
+    expect(await screen.findByText("Former Partner AG")).toBeTruthy();
+    expect(screen.queryByText("c-old")).toBeNull();
+  });
+
   it("finds an exact email duplicate before POST and links to it", async () => {
     const user = userEvent.setup();
     let postCount = 0;

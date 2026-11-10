@@ -120,6 +120,11 @@ func (g *Gate) decideLead(ctx context.Context, tx pgx.Tx, r connector.Recipient,
 		d.ReasonCode = commsauthz.ReasonNoSubject
 		return d, nil
 	}
+	return g.decideLeadAt(ctx, tx, r, req, d, phase, country, leadID)
+}
+
+// decideLeadAt answers about a lead the caller already knows the recipient is.
+func (g *Gate) decideLeadAt(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, d commsauthz.Decision, phase commsauthz.Phase, country RecipientCountry, leadID string) (commsauthz.Decision, error) {
 	parsed, err := ids.Parse(leadID)
 	if err != nil {
 		return commsauthz.Decision{}, fmt.Errorf("consent: the resolved lead is not an id: %w", err)
@@ -314,4 +319,43 @@ func resolveLead(ctx context.Context, tx pgx.Tx, r connector.Recipient) (string,
 		return "", false, nil
 	}
 	return matches[0], true, nil
+}
+
+// decidePinnedLead answers about the lead a controller message is filed under,
+// rather than about whoever the recipient address resolves to. An address a
+// contact and a lead share would otherwise resolve to the contact, and the
+// lead's receipt would be judged on the contact's record.
+//
+// The recipient must still be the lead's: its own address, or the address one
+// of its stops was made from. Anything else is refused, so the pin can only
+// narrow who a message is about, never reach somebody new.
+func (g *Gate) decidePinnedLead(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, d commsauthz.Decision, phase commsauthz.Phase, country RecipientCountry) (commsauthz.Decision, error) {
+	lead := req.Evidence.LeadID
+	var holds bool
+	if r.Channel == nil {
+		if err := tx.QueryRow(ctx, `
+			SELECT EXISTS (
+			    SELECT 1 FROM lead l
+			     WHERE l.id = $1 AND l.archived_at IS NULL AND lower(l.email) = lower($2)
+			) OR EXISTS (
+			    SELECT 1 FROM communication_suppression s
+			      JOIN lead l ON l.id = s.lead_id AND l.archived_at IS NULL
+			     WHERE s.lead_id = $1 AND lower(s.address) = lower($2)
+			)`, lead, r.Email).Scan(&holds); err != nil {
+			return commsauthz.Decision{}, fmt.Errorf("consent: reading whether the lead holds this address: %w", err)
+		}
+	}
+	if !holds {
+		d.Verdict = commsauthz.VerdictDeny
+		d.ReasonCode = commsauthz.ReasonNoSubject
+		return d, nil
+	}
+	decided, err := g.decideLeadAt(ctx, tx, r, req, d, phase, country, lead.String())
+	if err != nil {
+		return commsauthz.Decision{}, err
+	}
+	// The pin travels to transmit on the staged evidence, so both phases decide
+	// about the same lead.
+	decided.Evidence.LeadID = lead
+	return decided, nil
 }

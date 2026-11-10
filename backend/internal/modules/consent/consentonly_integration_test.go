@@ -46,7 +46,7 @@ func TestNoExceptionStandsInForMarketingConsentWhereTheCountryRequiresIt(t *test
 		{"legacy marketing, consent only", "zq", commsauthz.Request{LegacyPurposeKey: "newsletter"}, commsauthz.ReasonMarketingConsentRequired},
 		{"claimed marketing, consent only", "zq", commsauthz.Request{Context: commsauthz.CategoryMarketing}, commsauthz.ReasonMarketingConsentRequired},
 		{"legacy marketing, exception kept", "zr", commsauthz.Request{LegacyPurposeKey: "newsletter"}, commsauthz.ReasonNoMarketingConsent},
-		{"legacy marketing, no country", "", commsauthz.Request{LegacyPurposeKey: "newsletter"}, commsauthz.ReasonNoMarketingConsent},
+		{"legacy marketing, no country", "", commsauthz.Request{LegacyPurposeKey: "newsletter"}, commsauthz.ReasonMarketingPermissionRequired},
 		{"claimed marketing, exception kept", "zr", commsauthz.Request{Context: commsauthz.CategoryMarketing}, commsauthz.ReasonNoEvidence},
 		// An unproven follow-up is a missing fact, not missing consent: the rep
 		// records it, so it keeps its own reason in every country.
@@ -63,7 +63,7 @@ func TestNoExceptionStandsInForMarketingConsentWhereTheCountryRequiresIt(t *test
 				t.Fatalf("decision = %s %q, want a refusal for %q", d.Verdict, d.ReasonCode, tc.want)
 			}
 			byAdmin := (commsauthz.DecisionSet{Decisions: []commsauthz.Decision{d}}).ExceptionMayAnswer(true)
-			if wantException := tc.want != commsauthz.ReasonMarketingConsentRequired; byAdmin != wantException {
+			if wantException := tc.want != commsauthz.ReasonMarketingConsentRequired && tc.want != commsauthz.ReasonMarketingPermissionRequired; byAdmin != wantException {
 				t.Errorf("an admin's exception answers it = %v, want %v", byAdmin, wantException)
 			}
 		})

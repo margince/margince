@@ -11,6 +11,7 @@ import {
   useT,
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { useViewerZone } from "../../lib/viewerzone";
 
 type FinanceSummary = components["schemas"]["CompanyFinanceSummary"];
@@ -124,7 +125,7 @@ function InvoiceStatus({
         ? plural(daysLateBase(invoice.status), invoice.days_late, {
             days: formatNumber(invoice.days_late, locale),
           })
-        : t(STATUS_LABEL[invoice.status])}
+        : t(labelFor(STATUS_LABEL, invoice.status))}
     </Badge>
   );
 }

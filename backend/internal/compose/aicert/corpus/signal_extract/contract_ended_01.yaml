@@ -33,14 +33,17 @@ expect:
     - kind: contract_ended
       message: 2
   rubric: >
-    This site answers with {kind, message_id, summary, confidence} per event
-    and nothing else, the kind drawn from the closed set contract_ended |
-    new_opportunity | commitment_made, and the message_id one of the ids in the
-    prompt. Score the reading first: the second message states plainly that
+    The kind is drawn from the closed set contract_ended | new_opportunity |
+    commitment_made, and the message_id is one of the ids in the prompt. Score
+    the reading first: the second message states plainly that
     they will not renew and names the end date, so contract_ended cited on that
     message is right. Citing the first message is wrong — it is our own mail
     and states no such thing. Reporting new_opportunity anywhere in this
-    conversation is wrong; the warmth of the sign-off is not a new need.
+    conversation is wrong; the warmth of the sign-off is not a new need. An
+    offer in the first message reported as commitment_made with state
+    "optional" is allowed, since it creates no task; state "open" is wrong.
+    lifecycle_scope "workstream" naming the platform work is right; "company"
+    is wrong.
     Reporting nothing is the worst answer here, because it is the exact failure
     this site was built for: the record goes on reading as a live customer
     while its own mail says otherwise. Then score the summary — one plain

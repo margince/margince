@@ -1,4 +1,5 @@
 import type { MessageKey } from "../../../i18n/en";
+import { labelFor } from "../../../lib/labelfor";
 import { isLegal } from "./conversation-legality";
 import type {
   BuildStage,
@@ -178,7 +179,7 @@ function applyReadTerminal(
       {
         kind: "outcome",
         id: `read:${event.status}`,
-        i18nKey: readTerminalKeys[event.status],
+        i18nKey: labelFor(readTerminalKeys, event.status),
         tone: event.status === "deferred" ? "deferred" : "failure",
       },
     ],

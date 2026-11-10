@@ -8956,7 +8956,14 @@ paths:
         - $ref: '#/components/parameters/IncludeArchived'
         - name: kind
           in: query
-          schema: { type: string, enum: [email, call, meeting, note, task, message] }
+          description: >-
+            Activities of these kinds. Repeat the parameter for several (`kind=email&kind=message`),
+            so a page of one kind of work is never filled by another kind it does not show.
+          schema:
+            type: array
+            items: { type: string, enum: [email, call, meeting, note, task, message] }
+          style: form
+          explode: true
         - name: call_outcome
           in: query
           description: Calls that ended this way. Matches calls only.
@@ -10355,6 +10362,13 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Activity' }
+        '201':
+          description: |
+            Scheduled, not sent (ADR-0104). No activity and no delivery row exist yet;
+            the timeline stays silent until it fires.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ScheduledSend' }
         '403':
           description: Approval token missing for a 🟡 send, or RBAC denied.
           content:
@@ -10370,7 +10384,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
-        '422': { $ref: '#/components/responses/ValidationError' }
+        '422': { $ref: '#/components/responses/SendValidationError' }
 
   /emails:
     post:
@@ -10454,7 +10468,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
-        '422': { $ref: '#/components/responses/ValidationError' }
+        '422': { $ref: '#/components/responses/SendValidationError' }
 
   /scheduled-sends:
     get:
@@ -24551,6 +24565,10 @@ paths:
         read it, was shown the compliance warning, acknowledged it, and decided in writing that the
         message goes — and then sends the exact message the review was holding.
 
+        Current permission is checked again before an exception is recorded. If new evidence or a
+        consent grant now permits the held message, it is queued under that permission with no
+        exception instruction. The caller's authority and request validation still apply.
+
         NOTHING ABOUT THE REFUSAL CHANGES. No consent is written and no stop is lifted. The decision
         rows still read `deny`; what changes is one column saying the message left under a human's
         instruction rather than under the engine's permission. A subject asking later why they
@@ -37291,6 +37309,28 @@ components:
                 details:
                   errors:
                     - { field: 'emails[0].email', code: invalid_email }
+    SendValidationError:
+      description: |
+        The send failed validation, or no mailbox can carry it. The second answers with the top-level
+        `code: mailbox_not_send_capable` and no `details.errors`, because no field of the request can
+        fix it: the sender must connect a mailbox that can send, or an administrator must set up
+        sending for the installation. A scheduled send is checked the same way when it is created.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          examples:
+            invalid:
+              value:
+                type: 'https://errors.gradion.com/validation_error'
+                title: Validation failed
+                status: 422
+                code: validation_error
+                detail: One or more fields are invalid.
+                details:
+                  errors:
+                    - { field: to, code: required }
+            mailboxNotSendCapable:
+              value: { type: 'https://errors.gradion.com/mailbox_not_send_capable', title: Unprocessable Entity, status: 422, code: mailbox_not_send_capable, detail: reconnect your mailbox to enable sending }
 
   # ------------------------------- schemas ----------------------------------
   schemas:
@@ -41613,7 +41653,7 @@ components:
 
         A withheld presentation carries the markers and refuses the rest: no subject, no body,
         no parties, no attachments, no thread, no reason, no member names.
-      required: [id, lifecycle, occurred_at, occurred_precision, summary, access, version, from, to, cc, bcc, attachments, links, bcc_withheld, can_reply, can_relink]
+      required: [id, lifecycle, occurred_at, occurred_precision, summary, access, version, from, to, cc, bcc, attachments, links, bcc_withheld, can_reply, can_forward, can_relink]
       properties:
         id: { type: string, format: uuid }
         lifecycle:
@@ -41687,7 +41727,19 @@ components:
           $ref: '#/components/schemas/EmailThreadPage'
         access:
           $ref: '#/components/schemas/EmailAccess'
-        can_reply: { type: boolean }
+        can_reply:
+          type: boolean
+          description: |
+            True when this reader may answer the message: they read it inside its audience and
+            hold `activity.create`, because a reply is a new message they write. False otherwise:
+            a read seat's send is refused with `403 seat_tier_insufficient`, and a full seat's
+            without the grant with `403 permission_denied`.
+        can_forward:
+          type: boolean
+          description: |
+            True when this reader holds `activity.create`. A forward is a new message the reader
+            writes to whoever they choose, so it asks nothing of the message's audience beyond
+            this read.
         can_relink: { type: boolean }
         version:
           allOf: [{ $ref: '#/components/schemas/RowVersion' }]
@@ -43689,7 +43741,7 @@ components:
 
     ImportReasonCode:
       type: string
-      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_holds_lead, contact_not_found, contact_not_found_dropped, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, employer_refused, employer_will_create, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_not_taken_place, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, note_repeated, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_unreadable]
+      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_holds_lead, contact_not_found, contact_not_found_dropped, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_company_has_contracts, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, employer_refused, employer_will_create, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_not_taken_place, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, note_repeated, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_unreadable]
       x-extensible-enum: true
       description: 'Why a row was skipped or warned about, so a screen can say it in the reader''s language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.'
 
@@ -47584,10 +47636,17 @@ components:
     Company360Contact:
       type: object
       description: One current employee of the account, as the company view shows them.
-      required: [contact_id, full_name, strength, deal_roles, consent]
+      required: [contact_id, full_name, strength, deal_roles, consent, attachable]
       properties:
         contact_id: { type: string, format: uuid }
         full_name: { type: string }
+        attachable:
+          type: boolean
+          description: >-
+            Whether this caller may file an activity under this contact. Computed with the
+            same row-scope and write-share predicate the attach gate uses, so a mail started
+            from the company links only the recipients this is true for. A read-only share
+            grants no attach right. The server rechecks every write.
         title: { type: [string, 'null'] }
         provider_title:
           type: [string, 'null']
@@ -53551,7 +53610,7 @@ components:
         amount_minor: { type: [integer, 'null'], format: int64, minimum: 0, description: 'The deal''s one-off price in minor units of `currency`. Below zero is refused with 422 `amount_negative`.' }
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
         expected_arr_minor: { type: [integer, 'null'], format: int64, description: 'Expected annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.' }
-        company_id: { type: [string, 'null'], format: uuid }
+        company_id: { type: [string, 'null'], format: uuid, description: 'The company this deal is for. Changing it is refused 422 (`deal_contracts_cross_company`) while contracts filed against the deal name another company, because a contract on a deal is visible through that deal alone. Detach those contracts (`deal_id: null` on the contract) or file each against a deal of its own company first; an edit never changes a contract''s company, only a company merge does. Null clears the company and is not refused.' }
         partner_company_id: { type: [string, 'null'], format: uuid, description: 'The partner who brought this deal. The company must have a live `partner` row (else 422 `not_a_partner`), and the caller must be able to read it. Null clears the attribution.' }
         partner_attribution:
           type: [string, 'null']
@@ -57893,6 +57952,14 @@ components:
         The author's drafting purpose and presentation state, restored with the words.
         These client-supplied values grant no send permission and do not attest model execution.
       properties:
+        filing:
+          type: array
+          maxItems: 2
+          items: { $ref: '#/components/schemas/MailDraftGround' }
+          description: >-
+            The deal and project selected in the composer. An empty list clears the selection.
+            Omission keeps the older draft's grounding as the restore default. These are filing
+            choices, not evidence of a request or permission to send. The send checks each link.
         content_fingerprint: { type: string, readOnly: true, description: "Server binding to the saved words, used only to retire stale editor state." }
         intent: { type: string }
         ai_generated: { type: boolean }

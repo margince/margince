@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/shared/kernel/promptfence/promptfence.go backend/internal/compose/companycontextprompt.go backend/internal/compose/confidentialityverdictask.go backend/internal/compose/batchfidelity.go backend/internal/compose/captureclassify.go backend/internal/compose/captureverdict.go -->
+<!-- describes: backend/internal/shared/kernel/promptfence/promptfence.go backend/internal/compose/companycontextprompt.go backend/internal/compose/confidentialityverdictask.go backend/internal/compose/batchfidelity.go backend/internal/shared/kernel/promptref/promptref.go backend/internal/compose/captureclassify.go backend/internal/compose/captureverdict.go -->
 # How we write prompts: the password, the cost, and one item at a time
 
 Most prompts this product sends have the same three parts. One carries no
@@ -101,6 +101,68 @@ harm; see *One item per call, or several?*
   one boundary only    a prompt never gets two passwords. Two "this is the
                        only boundary" sentences would let the model pick.
 ```
+
+### Short refs, not record IDs
+
+A prompt never shows the model a record's UUID. It names each record by a short
+ref such as `m1` or `p2`, and the reply cites that ref.
+
+```
+  a UUID in the prompt                       a short ref in the prompt
+  01a1bb71-4030-72d8-800d-415f66656529       m1
+
+  copied with one digit wrong                copied whole
+  put in the field next to it                hard to put in the wrong place
+  written into a sentence for a reader       nothing worth writing out
+```
+
+A small model makes all three of these errors most often. A ref names one
+record of one call only. The code that reads the reply turns each ref back into
+the record's ID, and it refuses a ref the call did not show. So the per-call ID
+list above still holds.
+
+A ref hides what the ID's record showed. The model may need a fact about the
+record, such as whether a participant is a colleague or a contact. Then the
+input states it next to the ref.
+
+### Wording a small model reads wrong
+
+Each rule below comes from a failed certification run, read in its trace. A
+rule the prompt already stated was not enough when the wording pulled the
+other way.
+
+```
+  write this                                   not this
+
+  "2026-03-04 (Wednesday)"                     a bare date: "by Friday" then
+                                               lands on the wrong day
+  "the one or two sentences that carry it,     "between 30 and 200 characters":
+   never the whole message"                    a model cannot count characters
+  "Highest probability a raise may set: 70%"   "Raise limit: 70%", which reads as
+                                               a step of 70 points
+  "copied character for character, in the      "copied exactly": the model
+   source's language, never translated"        translates a quote into the
+                                               output language
+  "still report the event, but the sender      "never make the sender the buyer":
+   is never its buyer"                         the model drops the event
+  an example on another subject                an example that is a case's own
+                                               question, or that shows the wrong
+                                               answer as the right one
+  one meaning per word: "the subject kind      "about", "ordinary business" used
+   wins"                                       twice in two senses
+```
+
+- **Say what still holds.** A rule that says only "never" is read as "report
+  nothing".
+- **Put a field's definition in the reply format.** The model follows the
+  line that names the field more closely than a rule in the system text.
+- **Say which value wins.** Name each closed value by what decides it, and
+  when two kinds both fit, add a line that says which wins.
+- **Measure the whole task.** A new line can break a case that passed. A model
+  applies a general line to every input it fits. So a new line that fixes one
+  case is measured on the whole task before it ships.
+- **Never write a case's fixture into a prompt.** Names, subjects and figures
+  from a case make the case measure copying. Use an example on another subject.
 
 ---
 
@@ -461,6 +523,8 @@ each item alone.
 | One boundary per prompt | `backend/internal/compose/companycontextprompt.go`, `contextFence` |
 | Closed answer list | such as `confidentialitySchema` in `backend/internal/compose/confidentialityverdictask.go` |
 | Matching answers to items | `backend/internal/compose/batchfidelity.go`, `checkBatchFidelity` |
+| Short refs for records | `backend/internal/shared/kernel/promptref`: `New`, `For`, `ID`, `NamedIn`, `Mint`, `Rewrite` |
+| No site shows a UUID | `backend/internal/compose/aishortrefs_test.go`, `TestNoSiteShowsTheModelARecordUUID` |
 | A task that batches | `backend/internal/compose/captureclassify.go`, `classifyBatchSize` |
 | A task that refuses, and why | `backend/internal/compose/captureverdict.go`, `judgeClaimed` doc comment |
 | The other task that refuses | `backend/internal/compose/confidentialityverdictask.go`, `confidentialityRequest` doc comment |

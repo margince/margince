@@ -11,6 +11,7 @@ import {
 } from "../../format/format.dates";
 import type { Translator, Words } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import type { ProjectHealthState } from "./projecthealth.queries";
 import { phaseMoverSentence } from "./projectphasemover";
 import { isProjectPhase, PHASE_LABEL } from "./projects.form";
@@ -51,7 +52,7 @@ function dayNearYear(iso: string, view: Project360, ctx: Ctx): string {
 }
 
 export function phaseName(phase: string, t: Translator): string {
-  return isProjectPhase(phase) ? t(PHASE_LABEL[phase]) : phase;
+  return isProjectPhase(phase) ? t(labelFor(PHASE_LABEL, phase)) : phase;
 }
 
 function assessedSentence(
@@ -73,7 +74,7 @@ export function projectVerdict(view: Project360, ctx: Ctx): StandingVerdict {
   switch (reading.kind) {
     case "assessed":
       return {
-        word: ctx.t(STATE_WORD[reading.state]),
+        word: ctx.t(labelFor(STATE_WORD, reading.state)),
         sentence: assessedSentence(reading, ctx),
         tone: reading.tone,
       };

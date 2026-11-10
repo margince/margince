@@ -8,6 +8,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
+import { meFixture } from "../../testing/mefixture";
 import { MoveButton } from "./movebutton";
 
 const DEAL = "01a05500-0000-7000-8000-0000000000b1";
@@ -175,5 +177,57 @@ it.each([undefined, { ...receipt, basis_fingerprint: "b".repeat(64) }])(
     expect(client.getQueryState(["deal-status", DEAL])?.isInvalidated).toBe(
       true,
     );
+  },
+);
+
+it.each([
+  ["full", true],
+  ["read", false],
+] as const)(
+  "a %s seat holding activity:update is offered Done: %s",
+  async (seat, offered) => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = new URL(
+          input instanceof Request ? input.url : String(input),
+        );
+        if (url.pathname.endsWith("/me")) {
+          return Response.json(
+            meFixture({ seat, allow: { activity: ["read", "update"] } }),
+          );
+        }
+        if (url.pathname.endsWith("/status")) {
+          return Response.json({ next: { recommendation: receipt } });
+        }
+        if (url.pathname.endsWith(`/activities/${FIRST}`)) {
+          return Response.json({
+            id: FIRST,
+            kind: "task",
+            subject: "Chosen task",
+            writable: true,
+            is_done: false,
+            version: 1,
+            occurred_at: receipt.checked_at,
+            source: "manual",
+            links: [],
+          });
+        }
+        return Response.json({ data: [] });
+      }),
+    );
+    const client = clientForCheck();
+    client.setQueryData(
+      ["me"],
+      meFixture({ seat, allow: { activity: ["read", "update"] } }),
+    );
+    render(currentButton(client, FIRST));
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    await user.click(screen.getByRole("button", { name: "Open task" }));
+    await screen.findByRole("dialog");
+    await screen.findByText("Chosen task");
+    expect(
+      screen.queryByRole("button", { name: en["tasks.complete"] }) !== null,
+    ).toBe(offered);
   },
 );

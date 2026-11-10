@@ -19,9 +19,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/moneytotal"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -277,7 +277,7 @@ func compileDerivation(spec reportSpec, q derivationQuery) (derivationPlan, erro
 		plan.columns = append(plan.columns, name)
 		expression := spec.measures[name]
 		if coverage, ok := spec.sumCoverage[name]; ok {
-			expression = deals.FinalizeBaseTotalSQL(expression, coverage)
+			expression = moneytotal.CompleteAggregateSQL(expression, coverage, false)
 		}
 		plan.selects = append(plan.selects, expression+" AS "+name)
 	}

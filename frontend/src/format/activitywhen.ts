@@ -168,6 +168,31 @@ export function activityIsAhead(
   return Date.parse(at) > now;
 }
 
+/**
+ * Whether `answer` is late enough to answer `message`, the mirror of
+ * occurredday.Answers. At one stored instant it answers when either entry is a
+ * `day` entry.
+ */
+export function activityAnswers(
+  answer: ActivityMoment,
+  message: ActivityMoment,
+): boolean {
+  const gap =
+    Date.parse(answer.at) - Date.parse(message.at) ||
+    belowMillisecond(answer.at) - belowMillisecond(message.at);
+  if (gap !== 0) return gap > 0;
+  return answer.precision === "day" || message.precision === "day";
+}
+
+/**
+ * The fraction of a millisecond an ISO time carries past what `Date.parse`
+ * reads, in nanoseconds. The server stores microseconds.
+ */
+function belowMillisecond(at: string): number {
+  const digits = /\.(\d+)/.exec(at)?.[1] ?? "";
+  return Number(digits.padEnd(9, "0").slice(3, 9));
+}
+
 /** Whether an activity has begun by `now`. */
 export function activityHasBegun(
   at: string,

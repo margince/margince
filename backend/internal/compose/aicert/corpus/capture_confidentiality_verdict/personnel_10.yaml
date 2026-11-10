@@ -1,0 +1,34 @@
+name: a_japanese_resume_stays_private
+task: capture_confidentiality_verdict
+site: thread
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# A recruiter sends a candidate's 履歴書 for an open job. The CV rule knows
+# English and German titles and headings only, so the model decides.
+fixture:
+  subject: "シニアデータエンジニア職 候補者のご紹介"
+  attachments:
+    - 履歴書_山本 拓也.pdf
+  body: |
+    ご担当者様
+
+    先日ご相談いただいたシニアデータエンジニア職について、
+    候補者の履歴書をお送りします。ご検討ください。
+  documents:
+    - name: 履歴書_山本 拓也.pdf
+      excerpt: |
+        履歴書
+        氏名：山本 拓也　生年月日：1990年5月14日
+        学歴：2013年 東都大学 情報工学科 卒業
+        職歴：2013年〜2019年 株式会社サンライズシステム データエンジニア
+              2019年〜現在 株式会社ブルーウェーブ シニアデータエンジニア
+        希望年収：900万円
+expect:
+  outcome: accepted
+  privacy: true
+  answer: personnel
+  judge: none
+  judge_none_reason: >
+    The answer is one closed kind, and the check requires it exactly. A
+    candidate's resume with birth date and pay wish is personnel; no rule
+    reads Japanese headings, so only the model can hold it.

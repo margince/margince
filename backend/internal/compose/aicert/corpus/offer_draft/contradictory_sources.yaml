@@ -14,6 +14,10 @@ fixture:
 expect:
   outcome: accepted
   answer:
+    # The superseded figure grounds no line: a second line at it double-prices
+    # the package however right the corrected line is.
+    act_610:
+      no_line: true
     act_611:
       unit_price_minor: 550000
       price_grounded: true

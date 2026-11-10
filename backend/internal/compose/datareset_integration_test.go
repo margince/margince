@@ -11,6 +11,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"strings"
 	"testing"
 	"time"
 
@@ -22,11 +23,13 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -39,6 +42,17 @@ import (
 func TestSweepWorkspaceDataClearsDomainKeepsIdentity(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
+
+	ctx = originalstore.Bind(ctx, e.DB(), blobstore.NewMemory())
+	if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
+		_, err := capture.InsertRawCaptureTx(ctx, tx, capture.RawRecord{
+			SourceSystem: "telegram", SourceID: "reset-original",
+			Payload: []byte(`{"text":"` + strings.Repeat("a", originalstore.InlineLimit) + `"}`),
+		})
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
 
 	contact := e.SeedContact(t, "Alice", nil)
 	direction, subject := "inbound", "Signature source"
@@ -74,6 +88,13 @@ func TestSweepWorkspaceDataClearsDomainKeepsIdentity(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("sweep: %v", err)
+	}
+
+	if got := e.WsCount(t, "SELECT count(*) FROM stored_object_intent WHERE kind = 'raw_original'"); got != 1 {
+		t.Fatalf("reset lost the original object's cleanup authority: %d", got)
+	}
+	if got := e.WsCount(t, "SELECT count(*) FROM raw_capture"); got != 0 {
+		t.Fatalf("reset kept original rows: %d", got)
 	}
 
 	expectedSteps := 0
@@ -305,6 +326,7 @@ func TestDropResetCustomFieldColumns(t *testing.T) {
 const settlementEvidenceShare = "the settlement evidence generation, not a guard: it takes a shared advisory lock on the deleted row's conversation keys and refuses no delete. A reset waits only while a settlement verdict holds the same conversation, for that verdict's short transaction"
 
 var deleteGuardedSweepTargets = gatekit.Waive(map[string]string{
+	"raw_capture raw_original_object_retired":  "records retired object keys and refuses no delete; reset preserves stored_object_intent so the cleanup worker can remove their bytes",
 	"activity reopen_deleted_signature_source": "Maintains signature read requests and refuses no delete. Reset removes the contacts and their requests by cascade; TestSweepWorkspaceDataClearsDomainKeepsIdentity proves it with an actual mail source and read watermark.",
 	// Not a guard: the trigger counts fact writes and refuses no delete. Its
 	// counter rows go with their company by FK cascade, so a reset that clears

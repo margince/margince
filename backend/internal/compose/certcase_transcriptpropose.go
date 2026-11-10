@@ -215,6 +215,7 @@ func (c *transcriptProposeCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 			Detail: fmt.Sprintf("unparseable model output: %v", err),
 		}
 	}
+	payload = payload.asRead(c.parties)
 	if msg := validateTranscriptPayload(payload, c.lines, c.parties); msg != "" {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: msg}
 	}

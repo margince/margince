@@ -1,25 +1,13 @@
 /** @vitest-environment happy-dom */
 
-import { basename, dirname, join, relative } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ts from "typescript";
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  alternativesOf,
-  appStylesheets,
-  classesOf,
-  colorValues,
-  type Rule,
-  rulesOf,
-  subjectOf,
-} from "../../scripts/lib/css-rules";
-import {
-  extensionFrontendFiles,
-  filesMatching,
-  sourceFileAt,
-} from "../../scripts/lib/source-tree";
+import { colorValues, rulesOf } from "../../scripts/lib/css-rules";
+import { sourceFileAt } from "../../scripts/lib/source-tree";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { STAT_CARD_ACTIONS, STAT_CARD_TONES, StatCard } from "./statcard";
@@ -28,10 +16,8 @@ import { STAT_CARD_ACTIONS, STAT_CARD_TONES, StatCard } from "./statcard";
 // rather than inventing another label for the same control.
 
 const here = dirname(fileURLToPath(import.meta.url));
-const sourceRoot = join(here, "..");
-// A unit's screen is shipped UI in the same bundle, so a gate stopping at
-// frontend/src would hold the core to a rule the extension tier escapes.
-const extensionsRoot = join(here, "..", "..", "..", "extensions");
+// The figure's own rules. census/rules/statcard.census.ts reads every sheet.
+const atoms = rulesOf([join(here, "atoms.css")]);
 
 afterEach(cleanup);
 
@@ -196,86 +182,10 @@ describe("the door says Open, or View records for records in place", () => {
   });
 });
 
-// The corpus is every screen and primitive that could carry the prop back.
-// Stories and tests are excluded because they are allowed to talk ABOUT it —
-// this file does, above — and a sweep that read them would fail on its own
-// prose. Floored, because a walk that silently reads a smaller tree reports the
-// same word this one does when it is clean.
-function appTsx(): string[] {
-  return filesMatching(sourceRoot, /\.tsx$/)
-    .concat(extensionFrontendFiles(extensionsRoot))
-    .filter((path) => !/\.(stories|test)\.tsx$/.test(path));
-}
-
-describe("no reading names its own door", () => {
-  // Parses every application .tsx, core and extension, for one attribute name.
-  it("finds no openLabel attribute anywhere the app is written", {
-    timeout: 60_000,
-  }, () => {
-    const files = appTsx();
-    // The tree carried six hundred of these when this was written; a corpus
-    // that has fallen to a fraction of that is a miswired walk reporting the
-    // same word a clean tree does.
-    expect(files.length).toBeGreaterThan(400);
-    // And the extension tier specifically: the floor above is one the core
-    // satisfies alone, so it cannot notice a walk that stops at src/.
-    expect(
-      files.some((file) => file.includes("/extensions/")),
-      "the census reached no extension frontend layer",
-    ).toBe(true);
-
-    const offenders = files.flatMap((path) => {
-      const source = sourceFileAt(path);
-      const hits: string[] = [];
-      const visit = (node: ts.Node): void => {
-        if (
-          ts.isJsxAttribute(node) &&
-          ts.isIdentifier(node.name) &&
-          node.name.text === "openLabel"
-        ) {
-          const { line } = source.getLineAndCharacterOfPosition(
-            node.getStart(),
-          );
-          hits.push(`${relative(sourceRoot, path)}:${line + 1}`);
-        }
-        ts.forEachChild(node, visit);
-      };
-      visit(source);
-      return hits;
-    });
-
-    expect(offenders).toEqual([]);
-  });
-});
-
-// The figure's ink is spelled once, in atoms.css, so a sheet that colours the
-// figure anywhere else is a second author of it whatever token it picks.
-function figureInks(all: readonly Rule[]) {
-  return all.flatMap((rule) =>
-    alternativesOf(rule.selector).flatMap((selector) => {
-      const classes = classesOf(subjectOf(selector));
-      const tone = STAT_CARD_TONES.find((one) =>
-        classes.has(`stat-card-${one}`),
-      );
-      if (tone === undefined && !classes.has("stat-card-value")) return [];
-      const home = basename(rule.file) === "atoms.css";
-      return colorValues(rule.body)
-        .filter((value) => !home || (tone && value !== `var(--${tone}Text)`))
-        .map(
-          (value) => `${basename(rule.file)} ${selector} { color: ${value} }`,
-        );
-    }),
-  );
-}
-
 describe("a toned figure is read, so it takes the ink that clears contrast", () => {
-  const all = rulesOf(appStylesheets(join(here, "..", "..")));
   const declared = (selector: string) =>
-    all
-      .filter(
-        (rule) =>
-          basename(rule.file) === "atoms.css" && rule.selector === selector,
-      )
+    atoms
+      .filter((rule) => rule.selector === selector)
       .map((rule) => rule.body)
       .join("\n");
 
@@ -290,112 +200,9 @@ describe("a toned figure is read, so it takes the ink that clears contrast", () 
       ).toMatch(new RegExp(`background:\\s*var\\(--${tone}\\);`));
     },
   );
-
-  it("colours the figure nowhere but atoms.css, in any sheet the app ships", () => {
-    expect(figureInks(all)).toEqual([]);
-  });
-
-  const at = (file: string, selector: string, body: string): Rule[] => [
-    { file: join(here, file), selector, body },
-  ];
-  it.each([
-    [
-      "atoms.css",
-      ".stat-card-warning.stat-card-value",
-      "color: var(--warning);",
-    ],
-    ["atoms.css", ".stat-card-danger:hover", "color: var(--danger);"],
-    ["atoms.css", ":where(.stat-card-info)", "color: var(--successText);"],
-    [
-      "atoms.css",
-      ".stat-card-success",
-      "color: var(--successText); color: var(--success);",
-    ],
-    ["brief.css", ".brief .stat-card-value", "color: var(--textPrimary);"],
-    ["brief.css", ".brief .stat-card-warning", "color: var(--warningText);"],
-  ])("refuses %s %s { %s }", (file, selector, body) => {
-    expect(figureInks(at(file, selector, body))).toHaveLength(1);
-  });
-
-  it("lets atoms.css spell the untoned figure and each toned one once", () => {
-    expect(
-      figureInks([
-        ...at("atoms.css", ".stat-card-value", "color: var(--textPrimary);"),
-        ...at("atoms.css", ".stat-card-warning", "color: var(--warningText);"),
-        ...at(
-          "brief.css",
-          ".stat-card-warning ~ .stat-card-meter",
-          "color: red;",
-        ),
-      ]),
-    ).toEqual([]);
-  });
 });
 
-// A long correct reading is fixed in the layout, never shortened. The name and
-// the figure wrap inside the tile in every sheet the app ships.
-const WRAP_CUT = /(?:-webkit-)?line-clamp\s*:|white-space\s*:\s*nowrap/;
-const END_CUT =
-  /text-overflow\s*:\s*ellipsis|overflow(?:-x|-y)?\s*:\s*(?:hidden|clip)/;
-const WHOLE = [
-  "stat-card",
-  "stat-card-label",
-  "stat-card-label-text",
-  "stat-card-value",
-];
-// A figure breaks only at its spaces: a split number reads as two figures.
-const NUMBER_SPLIT =
-  /overflow-wrap\s*:\s*(?:anywhere|break-word)|word-break\s*:\s*break-all/;
-// A number cannot break, so this one rule may end an over-wide one in "…".
-const FIGURE_LAST_RESORT = "design-system/atoms.css .stat-card-value";
-
-function cutsOfWholeText(all: readonly Rule[]) {
-  return all.flatMap((rule) =>
-    alternativesOf(rule.selector).flatMap((selector) => {
-      const where = `${relative(sourceRoot, rule.file)} ${selector}`;
-      const subject = classesOf(subjectOf(selector));
-      if (!WHOLE.some((one) => subject.has(one))) return [];
-      const cut =
-        WRAP_CUT.test(rule.body) ||
-        (subject.has("stat-card-value") && NUMBER_SPLIT.test(rule.body)) ||
-        (END_CUT.test(rule.body) && where !== FIGURE_LAST_RESORT);
-      return cut ? [where] : [];
-    }),
-  );
-}
-
 describe("a reading's name and figure are never cut", () => {
-  const all = rulesOf(appStylesheets(join(here, "..", "..")));
-  const at = (file: string, selector: string, body: string): Rule[] => [
-    { file: join(here, file), selector, body },
-  ];
-
-  it("finds no clamp, nowrap, ellipsis or hidden overflow on them anywhere", () => {
-    expect(all.length).toBeGreaterThan(0);
-    expect(cutsOfWholeText(all)).toEqual([]);
-  });
-
-  it.each([
-    ["atoms.css", ".stat-card-value", "white-space: nowrap;"],
-    ["atoms.css", ".stat-card-label-text", "-webkit-line-clamp: 1;"],
-    ["atoms.css", ".stat-card-label-text", "text-overflow: ellipsis;"],
-    ["atoms.css", ".stat-card-value", "overflow-wrap: anywhere;"],
-    [
-      "../../../extensions/demo/frontend/atoms.css",
-      ".stat-card-value",
-      "text-overflow: ellipsis;",
-    ],
-    [
-      "atoms.css",
-      '[data-density="compact"] .stat-card-value',
-      "overflow: hidden;",
-    ],
-    ["brief.css", ".brief .stat-card-value", "text-overflow: ellipsis;"],
-    ["statstrip.css", ".stat-strip > * > .stat-card", "overflow: clip;"],
-  ])("refuses %s %s { %s }", (file, selector, body) => {
-    expect(cutsOfWholeText(at(file, selector, body))).toHaveLength(1);
-  });
-
   it("keeps the whole figure on the card's tooltip", () => {
     render(
       <LocaleProvider initial="en">
@@ -408,11 +215,9 @@ describe("a reading's name and figure are never cut", () => {
   });
 
   it("breaks a long compound at a syllable before anywhere", () => {
-    const rule = all.find(
+    const rule = atoms.find(
       (one) =>
-        basename(one.file) === "atoms.css" &&
-        one.selector === ".stat-card-label-text" &&
-        /hyphens/.test(one.body),
+        one.selector === ".stat-card-label-text" && /hyphens/.test(one.body),
     );
     expect(rule?.body).toMatch(/hyphens:\s*auto;/);
   });

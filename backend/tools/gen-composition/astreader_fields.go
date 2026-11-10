@@ -31,6 +31,8 @@ func (r *unitReader) readDeclaredField(name string, kv *ast.KeyValueExpr, file *
 		m.SignalTypes, err = r.readSignalTypes(kv.Value, file)
 	case "Panels":
 		m.Panels, err = r.readPanels(kv.Value, file)
+	case "Instrumentation":
+		m.Instrumentation, err = r.readInstrumentation(kv.Value, file)
 	case "Inbound":
 		m.Inbound, err = r.readInbound(kv.Value, file)
 	case "SystemReads":

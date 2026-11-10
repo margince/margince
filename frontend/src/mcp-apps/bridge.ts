@@ -436,12 +436,13 @@ export type HeadingElement =
   | "div"
   | "span";
 
-// The element a size means when nobody says otherwise. THIS TABLE IS THE TWIN OF
-// the one in src/design-system/heading.tsx and has to say the same thing: the
-// same heading rendered in the app and in a view is the same heading, and a view
-// whose h2 was the app's h3 would read as a different document outline for the
-// same content. src/design-system/heading-spelling.test.ts parses both literals
-// and fails in either direction on a key one side carries and the other does not.
+// The element a size means when nobody says otherwise. This table is the twin
+// of the one in src/design-system/heading.tsx and has to say the same thing.
+// The same heading rendered in the app and in a view is the same heading. A
+// view whose h2 was the app's h3 would read as a different document outline
+// for the same content. census/rules/heading-spelling.census.ts parses both
+// literals and fails in either direction on a key one side carries and the
+// other does not.
 //
 // It is a copy rather than an import because these documents have NO REACT. A
 // view is built standalone and inlined whole into a third-party host, so
