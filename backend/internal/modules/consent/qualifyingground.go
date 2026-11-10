@@ -206,12 +206,21 @@ func stampQualifyingEvent(
 // Human statements and booking inquiries are recorded facts. Inferred events
 // are re-read from their source so a cached decision cannot outlive a correction.
 func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since, asOf time.Time, address *string, entity ids.UUID) (QualifyingEvent, bool, error) {
+	sub, known, err := qualifyingSubjectRef(subjectRef{Kind: entityContact, ID: contactID})
+	if err != nil || !known {
+		return QualifyingEvent{}, false, err
+	}
+	return recordedSubjectQualifyingEvent(ctx, tx, sub, since, asOf, address, entity)
+}
+
+func recordedSubjectQualifyingEvent(ctx context.Context, tx pgx.Tx, sub subject, since, asOf time.Time, address *string, entity ids.UUID) (QualifyingEvent, bool, error) {
+	column := pgx.Identifier{sub.column}.Sanitize()
 	var event QualifyingEvent
 	var id string
 	var sourceType, sourceID, note *string
 	var args []any
 	arg := func(value any) string { args = append(args, value); return storekit.SQLf("$%d", len(args)) }
-	contact, from, until, addr := arg(contactID), arg(since), arg(asOf), arg(address)
+	contact, from, until, addr := arg(sub.id), arg(since), arg(asOf), arg(address)
 	entityArg := arg(entity)
 	qualification, err := recordedQualificationSQL(ctx, "q", &args)
 	if err != nil {
@@ -220,7 +229,7 @@ func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, s
 	err = tx.QueryRow(ctx, `
 		SELECT id, kind, occurred_at, source_entity_type, source_entity_id, note
 		FROM consent_qualifying_event q
-		WHERE contact_id = `+contact+` AND occurred_at >= `+from+` AND occurred_at <= `+until+` AND retracted_at IS NULL
+		WHERE `+column+` = `+contact+` AND occurred_at >= `+from+` AND occurred_at <= `+until+` AND retracted_at IS NULL
 		  AND (`+addr+`::text IS NULL OR `+requestCoversSQL("recorded_for_addresses", addr)+`)
 		  AND `+recordedEntitiesSQL("recorded_for_entities", entityArg)+`
           AND `+qualification+`

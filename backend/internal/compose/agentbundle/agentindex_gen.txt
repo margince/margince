@@ -916,8 +916,10 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /contacts/{id}/consent/mail-preview` | previewControllerMail | Show the exact mail `confirm-request` or `privacy-notice` would send, without sending it. | Read records | at once |
 | `POST /contacts/{id}/consent/privacy-notice` | sendPrivacyNotice | Mail this contact the Art. 14 disclosure, which asks them for nothing. | Send messages | at once |
 | `POST /contacts/{id}/consent/confirm-request` | requestDetailsConfirmation | Mail this contact a single-use link to see what is held about them, correct it, and answer on marketing. | Send messages | at once |
-| `POST /contacts/{id}/consent/qualifying-events` | recordQualifyingEvent | Record the exchange that makes business correspondence lawful. | Change records | at once |
+| `POST /contacts/{id}/consent/qualifying-events` | recordQualifyingEvent | Record an exchange for scoped correspondence. | Change records | at once |
 | `POST /contacts/{id}/consent/qualifying-events/{event_id}/retract` | retractQualifyingEvent | Take back an exchange a colleague recorded by hand. | Change records | at once |
+| `POST /leads/{id}/consent/qualifying-events` | recordLeadQualifyingEvent | Record an exchange with a lead. | Change records | at once |
+| `POST /leads/{id}/consent/qualifying-events/{event_id}/retract` | retractLeadQualifyingEvent | Take back a recorded lead exchange. | Change records | at once |
 | `POST /contacts/{id}/acquisition-request/retract` | retractAcquisitionRequest | Take back the request the contact's acquisition records. | Change records | at once |
 
 ## Extensions

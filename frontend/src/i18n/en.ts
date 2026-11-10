@@ -7851,7 +7851,7 @@ export const en = {
   "compose.sendMessageBody":
     "The message is sent immediately. This cannot be undone.",
   "directSend.open": "Send with a recorded exception",
-  "directSend.sent": "Sent as a recorded exception.",
+  "directSend.queued": "Queued as a recorded exception.",
   "directSend.opening": "Opening…",
   "directSend.alreadySettled":
     "This has already been decided. Open the review for the outcome.",
@@ -17638,7 +17638,7 @@ export const en = {
     "No marketing permission recorded",
   "contact.consent.fact.notAllowed": "Not allowed for this purpose",
   "contact.consent.fact.nothingRecorded": "Nothing recorded yet",
-  "contact.consent.allowedWord": "Allowed",
+  "contact.consent.fact.purposeSupported": "Supported for this purpose",
   "contact.consent.blockedWord": "Blocked",
   "contact.consent.unknownWord": "Unknown",
 

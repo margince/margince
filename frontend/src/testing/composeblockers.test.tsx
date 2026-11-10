@@ -31,6 +31,7 @@ afterEach(() => {
 });
 
 const NOTHING_ON_RECORD = {
+  evidence_subject: { entity_type: "contact", entity_id: "c-1" },
   reason_code: "no_compatible_evidence",
   decided_by: "machine",
   can_be_overruled: true,
@@ -51,18 +52,21 @@ const settled = (preview: ReturnType<typeof refusedPreview>) => ({
   unanswered: false,
 });
 
-const contactOf = (address: string) =>
-  address === "anna@example.test" ? "c-1" : undefined;
-
 describe("who a reason to write is recorded on", () => {
+  it("uses the resolved lead without converting it to a contact", () => {
+    const subject = { entity_type: "lead", entity_id: "lead-one" } as const;
+    expect(reasonTargetOf(settled(refusedPreview("anna@example.test", {
+      ...NOTHING_ON_RECORD, evidence_subject: subject,
+    })))).toEqual({ subject, address: "anna@example.test", category: "requested_followup" });
+  });
+
   it("is the contact behind the deciding address, for its category", () => {
     expect(
       reasonTargetOf(
         settled(refusedPreview("anna@example.test", NOTHING_ON_RECORD)),
-        contactOf,
       ),
     ).toEqual({
-      contactId: "c-1",
+      subject: { entity_type: "contact", entity_id: "c-1" },
       address: "anna@example.test",
       category: "requested_followup",
     });
@@ -70,11 +74,10 @@ describe("who a reason to write is recorded on", () => {
 
   // A form that could only answer 404, or one for a refusal nobody may lift,
   // is the dead control the permission surface refuses to draw.
-  it("is nobody where the composer knows no contact or nobody may lift it", () => {
+  it("is nobody without a readable recipient record or where nobody may lift it", () => {
     expect(
       reasonTargetOf(
-        settled(refusedPreview("stranger@example.test", NOTHING_ON_RECORD)),
-        contactOf,
+        settled(refusedPreview("stranger@example.test", { ...NOTHING_ON_RECORD, evidence_subject: undefined })),
       ),
     ).toBeUndefined();
     expect(
@@ -85,7 +88,6 @@ describe("who a reason to write is recorded on", () => {
             decided_by: "subject",
           }),
         ),
-        contactOf,
       ),
     ).toBeUndefined();
   });
@@ -94,10 +96,9 @@ describe("who a reason to write is recorded on", () => {
     expect(
       reasonTargetOf(
         settled(refusedPreview("anna@example.test", DEAL_CLAIM_UNBACKED)),
-        contactOf,
       ),
     ).toEqual({
-      contactId: "c-1",
+      subject: { entity_type: "contact", entity_id: "c-1" },
       address: "anna@example.test",
       category: "active_deal_followup",
     });
@@ -109,10 +110,9 @@ describe("who a reason to write is recorded on", () => {
             requested_category: "requested_followup",
           }),
         ),
-        contactOf,
       ),
     ).toEqual({
-      contactId: "c-1",
+      subject: { entity_type: "contact", entity_id: "c-1" },
       address: "anna@example.test",
       category: "requested_followup",
     });
@@ -121,10 +121,10 @@ describe("who a reason to write is recorded on", () => {
   it("is nobody while the answer is still out or failed", () => {
     const refused = refusedPreview("anna@example.test", NOTHING_ON_RECORD);
     expect(
-      reasonTargetOf({ ...settled(refused), asking: true }, contactOf),
+      reasonTargetOf({ ...settled(refused), asking: true }),
     ).toBeUndefined();
     expect(
-      reasonTargetOf({ ...settled(refused), unanswered: true }, contactOf),
+      reasonTargetOf({ ...settled(refused), unanswered: true }),
     ).toBeUndefined();
   });
 });

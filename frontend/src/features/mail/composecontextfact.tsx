@@ -40,11 +40,14 @@ export function RecordConversationFact({
   renderOpener?: (opener: ReactNode) => ReactNode;
 }>) {
   const t = useT();
-  const mayWrite = useCan("contact", "update");
+  const mayWriteContact = useCan("contact", "update");
+  const mayWriteLead = useCan("lead", "update");
+  const mayWrite = (subject: ReasonTarget["subject"] | undefined) =>
+    subject?.entity_type === "contact" ? mayWriteContact : subject?.entity_type === "lead" && mayWriteLead;
   const mayMutate = useCanMutate();
   const [opened, setOpened] = useState<Target>();
   const available =
-    mayWrite &&
+    mayWrite(target?.subject) &&
     mayMutate &&
     target &&
     (target.category !== "active_deal_followup" || dealId);
@@ -56,7 +59,7 @@ export function RecordConversationFact({
   return (
     <>
       {renderOpener ? renderOpener(opener) : opener}
-      {opened && mayWrite && mayMutate && (
+      {opened && mayWrite(opened.target.subject) && mayMutate && (
         <ConversationFactDialog
           {...opened}
           onClose={() => setOpened(undefined)}
@@ -82,20 +85,21 @@ function ConversationFactDialog({
   const quote =
     chosen === "precontract_quote" || target.category === "precontract_quote";
   const record = useMutation({
-    mutationFn: async (ask: { contactId: string; fact: Fact }) => {
-      unwrap(
-        await api.POST("/contacts/{id}/consent/qualifying-events", {
-          params: { path: { id: ask.contactId } },
-          body: ask.fact,
-        }),
-      );
+    mutationFn: async (ask: { subject: ReasonTarget["subject"]; fact: Fact }) => {
+      const endpoint = ask.subject.entity_type === "lead"
+        ? "/leads/{id}/consent/qualifying-events"
+        : "/contacts/{id}/consent/qualifying-events";
+      unwrap(await api.POST(endpoint, {
+        params: { path: { id: ask.subject.entity_id } },
+        body: ask.fact,
+      }));
     },
     onSuccess: async (_, ask) => {
-      await Promise.all(
+      if (ask.subject.entity_type === "contact") await Promise.all(
         [
-          ["contactConsentGuard", ask.contactId],
-          ["contact-consent", ask.contactId],
-          contact360Query(ask.contactId).queryKey,
+          ["contactConsentGuard", ask.subject.entity_id],
+          ["contact-consent", ask.subject.entity_id],
+          contact360Query(ask.subject.entity_id).queryKey,
         ].map((queryKey) => queries.invalidateQueries({ queryKey })),
       );
       onClose();
@@ -188,7 +192,7 @@ function ConversationFactDialog({
               )
                 return;
               record.mutate({
-                contactId: target.contactId,
+                subject: target.subject,
                 fact: {
                   kind,
                   note: note.trim(),

@@ -19,7 +19,7 @@ afterEach(() => {
 });
 
 const target = {
-  contactId: "contact-one",
+  subject: { entity_type: "contact", entity_id: "contact-one" },
   address: "anna@example.test",
   category: "precontract_quote",
 } as const;
@@ -43,13 +43,15 @@ it.each([
   },
 );
 
-it("keeps the recorded request, recipient and deal after a failed save, then retries without sending", async () => {
+it.each(["contact", "lead"] as const)("keeps a %s request, recipient and deal after a failed save, then retries without sending", async (kind) => {
+  const subject = { entity_type: kind, entity_id: "subject-one" };
+  const endpoint = `POST /${kind === "lead" ? "leads" : "contacts"}/subject-one/consent/qualifying-events`;
   const user = userEvent.setup();
   let attempts = 0;
   const sent = stubRoutes({
     "GET /me": () =>
-      jsonResponse(meFixture({ allow: { contact: ["read", "update"] } })),
-    "POST /contacts/contact-one/consent/qualifying-events": () => {
+      jsonResponse(meFixture({ allow: { [kind]: ["read", "update"] } })),
+    [endpoint]: () => {
       attempts += 1;
       return attempts === 1
         ? problemResponse(
@@ -59,7 +61,7 @@ it("keeps the recorded request, recipient and deal after a failed save, then ret
         : jsonResponse({ id: "request-one" }, 201);
     },
   });
-  render(<RecordConversationFact target={target} dealId="deal-one" />);
+  render(<RecordConversationFact target={{ ...target, subject }} dealId="deal-one" />);
   await user.click(
     await screen.findByRole("button", { name: "Record what happened" }),
   );
@@ -95,7 +97,7 @@ it("keeps the recorded request, recipient and deal after a failed save, then ret
   expect(writes).toHaveLength(2);
   for (const write of writes) {
     expect(write.key).toBe(
-      "POST /contacts/contact-one/consent/qualifying-events",
+      endpoint,
     );
     expect(write.body).toMatchObject({
       kind: "requested_by_subject",
@@ -104,4 +106,13 @@ it("keeps the recorded request, recipient and deal after a failed save, then ret
       about_deal: "deal-one",
     });
   }
+});
+
+it("does not offer a lead repair under a contact-only update grant", async () => {
+  const me = meFixture({ allow: { contact: ["read", "update"], lead: ["read"] } });
+  const sent = stubRoutes({ "GET /me": () => jsonResponse(me) });
+  const { queryClient } = render(<RecordConversationFact target={{ ...target, subject: { entity_type: "lead", entity_id: "lead-one" } }} />);
+  await waitFor(() => expect(queryClient.getQueryData(sessionOptions.queryKey)).toEqual(me));
+  expect(screen.queryByRole("button", { name: "Record what happened" })).toBeNull();
+  expect(sent.some((call) => call.key.startsWith("POST "))).toBe(false);
 });

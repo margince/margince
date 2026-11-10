@@ -224,7 +224,7 @@ function messageOf(request: SendRequest): string {
   });
 }
 
-// 201 is a message that goes later; 202 is one that has gone.
+// Both responses accept delivery; only 201 names a scheduled release.
 type SendOutcome =
   | { sent: false }
   | { sent: true; scheduled: boolean; activity: unknown };
@@ -326,12 +326,11 @@ export function useComposeSend({
       finishSent();
     },
   });
-  // A message sent past its refusal as a recorded exception. The refusal it
-  // answered is cleared with the rest, so nothing on screen invites a second
-  // send of a message that has gone.
+  // Clearing the refusal and draft after staging keeps this composer from
+  // offering the same held message again.
   const directSent = () => {
     send.reset();
-    toast.show(t("directSend.sent"));
+    toast.show(t("directSend.queued"));
     finishSent();
   };
 

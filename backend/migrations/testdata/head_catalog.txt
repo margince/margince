@@ -3498,12 +3498,15 @@ public.consent_qualifying_event.captured_by text NOT NULL gen=- def=-
 public.consent_qualifying_event.consent_qualifying_event_contact_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.consent_qualifying_event.consent_qualifying_event_evidence CHECK ((((kind = ANY (ARRAY['in_person'::text, 'requested_by_subject'::text])) AND (note IS NOT NULL)) OR ((kind <> ALL (ARRAY['in_person'::text, 'requested_by_subject'::text])) AND (source_entity_type IS NOT NULL) AND (source_entity_id IS NOT NULL))))
 public.consent_qualifying_event.consent_qualifying_event_kind_check CHECK ((kind = ANY (ARRAY['inbound_message'::text, 'inquiry'::text, 'active_deal'::text, 'in_person'::text, 'meeting'::text, 'requested_by_subject'::text])))
+public.consent_qualifying_event.consent_qualifying_event_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
+public.consent_qualifying_event.consent_qualifying_event_one_subject CHECK ((num_nonnulls(contact_id, lead_id) = 1))
 public.consent_qualifying_event.consent_qualifying_event_pkey PRIMARY KEY (id)
 public.consent_qualifying_event.consent_qualifying_event_source_entity_type_check CHECK ((source_entity_type = ANY (ARRAY['activity'::text, 'deal'::text])))
-public.consent_qualifying_event.contact_id uuid NOT NULL gen=- def=-
+public.consent_qualifying_event.contact_id uuid gen=- def=-
 public.consent_qualifying_event.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.consent_qualifying_event.id uuid NOT NULL gen=- def=uuidv7()
 public.consent_qualifying_event.kind text NOT NULL gen=- def=-
+public.consent_qualifying_event.lead_id uuid gen=- def=-
 public.consent_qualifying_event.note text gen=- def=-
 public.consent_qualifying_event.occurred_at timestamp with time zone NOT NULL gen=- def=-
 public.consent_qualifying_event.recorded_for_addresses text[] gen=- def=-
@@ -3514,6 +3517,7 @@ public.consent_qualifying_event.source text NOT NULL gen=- def=-
 public.consent_qualifying_event.source_entity_id uuid gen=- def=-
 public.consent_qualifying_event.source_entity_type text gen=- def=-
 public.consent_qualifying_event_contact_ix CREATE INDEX consent_qualifying_event_contact_ix ON public.consent_qualifying_event USING btree (contact_id, occurred_at DESC)
+public.consent_qualifying_event_lead_idx CREATE INDEX consent_qualifying_event_lead_idx ON public.consent_qualifying_event USING btree (lead_id, occurred_at DESC) WHERE (lead_id IS NOT NULL)
 public.consent_qualifying_event_pkey CREATE UNIQUE INDEX consent_qualifying_event_pkey ON public.consent_qualifying_event USING btree (id)
 public.consent_qualifying_event_source_unique CREATE UNIQUE INDEX consent_qualifying_event_source_unique ON public.consent_qualifying_event USING btree (contact_id, source_entity_type, source_entity_id) WHERE (source_entity_id IS NOT NULL)
 public.consent_text_version acl=margince_owner=arwdDxt/margince_owner,margince_app=ar/margince_owner rls=false force=false

@@ -18242,7 +18242,7 @@ paths:
       tags: [Compliance]
       operationId: recordQualifyingEvent
       security: [{bearerAuth: []}]
-      summary: Record the exchange that makes business correspondence lawful.
+      summary: Record an exchange for scoped correspondence.
       description: |-
         A qualifying event is what a `business_correspondence` verdict reads to answer whether
         we may write to somebody at all (`getContactConsentGuard`). Most arrive on their own —
@@ -18268,7 +18268,7 @@ paths:
                   occurred_at: '2026-08-20T14:30:00Z'
       responses:
         '201':
-          description: Recorded. The contact's business-correspondence verdict now reads it.
+          description: Recorded. This sends no message and grants no marketing consent.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/QualifyingEventRecord'}
@@ -18311,6 +18311,64 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /leads/{id}/consent/qualifying-events:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Compliance]
+      operationId: recordLeadQualifyingEvent
+      security: [{bearerAuth: []}]
+      summary: Record an exchange with a lead.
+      description: |-
+        Records the same scoped exchange as the contact route, against the existing lead.
+        Requires permission to update that lead. It does not convert the lead, send a message
+        or grant marketing consent. A request names its sending company and, when supplied,
+        its deal. An agent asks its user first because the exchange is the user's statement.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/RecordQualifyingEventRequest'}
+      responses:
+        '201':
+          description: Recorded. This sends no message and grants no marketing consent.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/QualifyingEventRecord'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /leads/{id}/consent/qualifying-events/{event_id}/retract:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: event_id
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    post:
+      tags: [Compliance]
+      operationId: retractLeadQualifyingEvent
+      security: [{bearerAuth: []}]
+      summary: Take back a recorded lead exchange.
+      description: |-
+        Withdraws a hand-recorded exchange using the same rules as the contact route.
+        The row remains as a record, and no send relies on it after withdrawal.
+        Requires permission to update the lead. An agent asks its user first.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      responses:
+        '204': {description: Withdrawn. Sends no longer rely on this exchange.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /contacts/{id}/acquisition-request/retract:
     parameters:
@@ -33575,8 +33633,10 @@ components:
     ContactConsentGuard:
       type: object
       description: |-
-        Whether an outbound message to this contact is allowed right now, per purpose and
-        channel, WITH the reason.
+        Facts recorded for this contact, per purpose and channel, with their reason.
+        This summary does not authorize a message. Each message is checked for its
+        recipient, sending company, context and current evidence when it is staged
+        and before a provider receives it.
       required: [contact_id, entries]
       properties:
         contact_id: {type: string, format: uuid}
@@ -33592,10 +33652,9 @@ components:
         purpose_class:
           type: string
           description: |-
-            Which gate this purpose answers to. `business_correspondence` and
-            `transactional` are never consent-gated — their lawful basis is Art 6(1)(b)/(f), and
-            treating a reply to someone who wrote to us as a consent violation is a frame that is
-            legally wrong. `phone_outreach` is specced and dormant.
+            The class this purpose belongs to. The row reports facts for that class;
+            it does not permit every message. The send check applies the market's
+            rules, the sending company and current evidence to the exact message.
           enum: [business_correspondence, transactional, marketing, phone_outreach]
         channel:
           type: string
@@ -33642,10 +33701,9 @@ components:
     ConsentQualifyingEvent:
       type: object
       description: |-
-        The deterministic event that makes business correspondence lawful: an
-        inbound message, an inquiry they initiated, an active deal with their company, or
-        a recorded in-person exchange. Recording WHICH event and when is what makes the Art
-        6(1)(f) balancing accountable rather than merely asserted.
+        A recorded exchange that may support a scoped message. The send check also
+        uses its sending company, request or deal context, current stops and source
+        visibility. An open deal alone does not show that the subject asked for mail.
       required: [kind, occurred_at]
       properties:
         id:
@@ -40204,12 +40262,27 @@ components:
         recipients:
           type: array
           items: {$ref: '#/components/schemas/SendAuthorizationPreviewRecipient'}
+    CommunicationEvidenceSubject:
+      type: object
+      description: An existing recipient record the caller can read.
+      required: [entity_type, entity_id]
+      properties:
+        entity_type:
+          type: string
+          enum: [contact, lead]
+        entity_id: {type: string, format: uuid}
     SendAuthorizationPreviewRecipient:
       type: object
       required: [address, verdict, reason_code]
       description: One recipient's answer. It describes the MESSAGE, never the contact's file.
       properties:
         address: {type: string, format: email}
+        evidence_subject:
+          allOf: [{$ref: '#/components/schemas/CommunicationEvidenceSubject'}]
+          description: |-
+            The existing contact or lead this recipient resolves to, only when the caller
+            can read it. Absent for newly filed addresses and records unavailable to the
+            caller. Recording an exchange still requires permission to update that record.
         verdict:
           type: string
           enum: [allow, deny, review]

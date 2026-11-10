@@ -67,7 +67,9 @@ func anonymizeLeadTwins(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 		), manual AS (
 		  DELETE FROM lead_manual_signal
 		  WHERE lead_id IN (SELECT id FROM wiped)
-		), leadbases AS (
+		) , leadexchanges AS (
+ DELETE FROM consent_qualifying_event WHERE lead_id IN (SELECT id FROM wiped)
+ ), leadbases AS (
 		  DELETE FROM communication_basis
 		  WHERE lead_id IN (SELECT id FROM wiped)
 		), leadsuppressions AS (

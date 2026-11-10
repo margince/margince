@@ -7845,7 +7845,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.sendMessageBody":
     "Die Nachricht wird sofort gesendet. Das lässt sich nicht rückgängig machen.",
   "directSend.open": "Mit erfasster Ausnahme senden",
-  "directSend.sent": "Als festgehaltene Ausnahme gesendet.",
+  "directSend.queued": "Zum Senden als festgehaltene Ausnahme vorgemerkt.",
   "directSend.opening": "Wird geöffnet…",
   "directSend.alreadySettled":
     "Darüber wurde bereits entschieden. Öffne die Prüfung, um das Ergebnis zu sehen.",
@@ -17800,7 +17800,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.consent.fact.noMarketingPermission": "Keine Werbeerlaubnis erfasst",
   "contact.consent.fact.notAllowed": "Für diesen Zweck nicht erlaubt",
   "contact.consent.fact.nothingRecorded": "Noch nichts erfasst",
-  "contact.consent.allowedWord": "Erlaubt",
+  "contact.consent.fact.purposeSupported":
+    "Grundlage für diesen Zweck vorhanden",
   "contact.consent.blockedWord": "Blockiert",
   "contact.consent.unknownWord": "Unbekannt",
 

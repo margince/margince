@@ -7655,7 +7655,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.sendMessageConfirmTitle": "Gửi tin nhắn",
   "compose.sendMessageBody": "Tin nhắn được gửi ngay. Không thể hoàn tác.",
   "directSend.open": "Gửi và ghi nhận ngoại lệ",
-  "directSend.sent": "Đã gửi như một ngoại lệ có ghi nhận.",
+  "directSend.queued": "Đã xếp hàng gửi theo ngoại lệ đã ghi nhận.",
   "directSend.opening": "Đang mở…",
   "directSend.alreadySettled":
     "Đã có quyết định cho mục này. Mở phần xem lại để xem kết quả.",
@@ -17332,7 +17332,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chưa ghi nhận cho phép tiếp thị",
   "contact.consent.fact.notAllowed": "Không được phép cho mục đích này",
   "contact.consent.fact.nothingRecorded": "Chưa có gì được ghi nhận",
-  "contact.consent.allowedWord": "Được phép",
+  "contact.consent.fact.purposeSupported": "Có căn cứ cho mục đích này",
   "contact.consent.blockedWord": "Bị chặn",
   "contact.consent.unknownWord": "Chưa rõ",
 

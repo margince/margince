@@ -230,25 +230,38 @@ func (in RecordQualifyingEventInput) validated(now time.Time) (string, error) {
 // Gated on the subject rather than on a consent object. What this asserts is a
 // fact about a contact, and it changes what may be sent to them. The authority
 // to make that assertion is the authority to write their record.
-func (s *Store) RecordQualifyingEvent(
-	ctx context.Context,
-	contactID ids.ContactID,
-	in RecordQualifyingEventInput,
-) (QualifyingEvent, error) {
+func (s *Store) RecordQualifyingEvent(ctx context.Context, contactID ids.ContactID, in RecordQualifyingEventInput) (QualifyingEvent, error) {
+	return s.recordQualifyingSubject(ctx, RecordInput{ContactID: contactID}, in)
+}
+
+// RecordLeadQualifyingEvent keeps the exchange on its lead until a merge or promotion carries it.
+func (s *Store) RecordLeadQualifyingEvent(ctx context.Context, leadID ids.LeadID, in RecordQualifyingEventInput) (QualifyingEvent, error) {
+	return s.recordQualifyingSubject(ctx, RecordInput{LeadID: leadID}, in)
+}
+
+func (s *Store) recordQualifyingSubject(ctx context.Context, target RecordInput, in RecordQualifyingEventInput) (QualifyingEvent, error) {
 	var out QualifyingEvent
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = s.recordQualifyingEventTx(ctx, tx, contactID, in)
+		out, err = s.recordQualifyingSubjectTx(ctx, tx, target, in)
 		return err
 	})
 	return out, err
 }
 
 // recordQualifyingEventTx is RecordQualifyingEvent on the caller's transaction.
-func (s *Store) recordQualifyingEventTx(
-	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, in RecordQualifyingEventInput,
+func (s *Store) recordQualifyingEventTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, in RecordQualifyingEventInput) (QualifyingEvent, error) {
+	return s.recordQualifyingSubjectTx(ctx, tx, RecordInput{ContactID: contactID}, in)
+}
+
+func (s *Store) recordQualifyingSubjectTx(
+	ctx context.Context, tx pgx.Tx, target RecordInput, in RecordQualifyingEventInput,
 ) (QualifyingEvent, error) {
 	note, err := in.validated(s.now())
+	if err != nil {
+		return QualifyingEvent{}, err
+	}
+	sub, err := consentSubject(target)
 	if err != nil {
 		return QualifyingEvent{}, err
 	}
@@ -257,7 +270,7 @@ func (s *Store) recordQualifyingEventTx(
 	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return QualifyingEvent{}, err
 	}
-	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
+	if err := requireUpdateOnSubject(ctx, sub.entityType); err != nil {
 		return QualifyingEvent{}, err
 	}
 	by, err := storekit.CapturedBy(ctx)
@@ -266,7 +279,7 @@ func (s *Store) recordQualifyingEventTx(
 	}
 
 	out := QualifyingEvent{Kind: in.Kind, Note: note, OccurredAt: in.OccurredAt, AsksForQuote: in.AsksForQuote}
-	if err := writeExchangeTx(ctx, tx, contactID, in, note, by, &out); err != nil {
+	if err := writeExchangeTx(ctx, tx, sub, in, note, by, &out); err != nil {
 		return QualifyingEvent{}, err
 	}
 	return out, nil
@@ -275,13 +288,13 @@ func (s *Store) recordQualifyingEventTx(
 // writeExchangeTx writes one validated exchange and its audit row, or fills out
 // with the row a retry matched.
 func writeExchangeTx(
-	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, in RecordQualifyingEventInput,
+	ctx context.Context, tx pgx.Tx, sub subject, in RecordQualifyingEventInput,
 	note, by string, out *QualifyingEvent,
 ) error {
 	// The row-scope probe first: this changes what may be sent to a contact,
 	// which changes their record. Held to commit, so a merge of this contact
 	// carries the row instead of committing before it lands on the retired one.
-	if err := auth.HoldWritableLive(ctx, tx, "contact", contactID.UUID); err != nil {
+	if err := auth.HoldWritableLive(ctx, tx, sub.entityType, sub.id); err != nil {
 		return err
 	}
 	if !in.AboutDeal.IsZero() {
@@ -300,32 +313,35 @@ func writeExchangeTx(
 	if err != nil {
 		return err
 	}
+	column := pgx.Identifier{sub.column}.Sanitize()
 	if err := tx.QueryRow(ctx, `
  INSERT INTO consent_qualifying_event
- (contact_id,kind,note,occurred_at,source,captured_by,asks_for_quote,about_deal_id,recorded_for_entities)
- SELECT @contact,@kind,@note,@occurred,@source,@actor,@quote,@deal,ARRAY[@entity]::uuid[]
+ (`+column+`,kind,note,occurred_at,source,captured_by,asks_for_quote,about_deal_id,recorded_for_entities)
+ SELECT @subject,@kind,@note,@occurred,@source,@actor,@quote,@deal,ARRAY[@entity]::uuid[]
  WHERE NOT EXISTS (SELECT 1 FROM consent_qualifying_event
- WHERE contact_id=@contact AND kind=@kind AND note=@note AND occurred_at=@occurred
+ WHERE `+column+`=@subject AND kind=@kind AND note=@note AND occurred_at=@occurred
  AND about_deal_id IS NOT DISTINCT FROM @deal AND @entity=ANY(recorded_for_entities))
  RETURNING id::text`, pgx.StrictNamedArgs{
-		"contact": contactID, "kind": in.Kind, "note": note, "occurred": in.OccurredAt,
+		"subject": sub.id, "kind": in.Kind, "note": note, "occurred": in.OccurredAt,
 		"source": handRecordedSource(ctx), "actor": by, "quote": in.AsksForQuote,
 		"deal": zeroUUIDAsNull(in.AboutDeal), "entity": entity,
 	}).Scan(&out.ID); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return standingExchange(ctx, tx, contactID, in.AboutDeal, entity, out)
+			return standingExchange(ctx, tx, sub, in.AboutDeal, entity, out)
 		}
 		return fmt.Errorf("consent: recording the exchange: %w", err)
+	}
+	if sub.entityType == entityLead {
+		if err := bindQualifyingAddresses(ctx, tx, sub); err != nil {
+			return err
+		}
 	}
 	// Audit-only, like every other consent-basis write beside it. The closed
 	// public-event catalog carries no type for a lawful basis. An auditor asks
 	// who said this happened and what they said, which the row answers.
 	//
-	// The entity is `contact`, which is the row the caller was authorized
-	// against and the row this changes the sendability of. Naming
-	// `contact_consent` would have put a rule in the trail
-	// (`contact_consent.create`) that authorized nothing here.
-	_, err = storekit.AuditEvent(ctx, tx, "update", "contact", contactID.UUID, map[string]any{
+	// The audit names the subject whose update right admitted this assertion.
+	_, err = storekit.AuditEvent(ctx, tx, "update", sub.entityType, sub.id, map[string]any{
 		"qualifying_event": in.Kind,
 		"legal_entity_id":  entity,
 		fieldNote:          note,
@@ -337,13 +353,14 @@ func writeExchangeTx(
 
 // standingExchange fills out with the row a retried record matched, retracted
 // or not.
-func standingExchange(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, deal, entity ids.UUID, out *QualifyingEvent) error {
+func standingExchange(ctx context.Context, tx pgx.Tx, sub subject, deal, entity ids.UUID, out *QualifyingEvent) error {
+	column := pgx.Identifier{sub.column}.Sanitize()
 	if err := tx.QueryRow(ctx, `
  SELECT id::text,asks_for_quote,retracted_at IS NOT NULL FROM consent_qualifying_event
- WHERE contact_id=@contact AND kind=@kind AND note=@note AND occurred_at=@occurred
+ WHERE `+column+`=@subject AND kind=@kind AND note=@note AND occurred_at=@occurred
  AND about_deal_id IS NOT DISTINCT FROM @deal AND @entity=ANY(recorded_for_entities)
  ORDER BY created_at LIMIT 1`, pgx.StrictNamedArgs{
-		"contact": contactID, "kind": out.Kind, "note": out.Note, "occurred": out.OccurredAt,
+		"subject": sub.id, "kind": out.Kind, "note": out.Note, "occurred": out.OccurredAt,
 		"deal": zeroUUIDAsNull(deal), "entity": entity,
 	}).Scan(&out.ID, &out.AsksForQuote, &out.Retracted); err != nil {
 		return fmt.Errorf("consent: reading the exchange already on file: %w", err)
@@ -358,10 +375,23 @@ func standingExchange(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, d
 // Gated like recording, because it is the same statement taken back. A derived exchange is not retracted here: it stands on a record the
 // product holds, and archiving that record is what ends it.
 func (s *Store) RetractQualifyingEvent(ctx context.Context, contactID ids.ContactID, eventID ids.UUID) error {
+	return s.retractQualifyingSubject(ctx, RecordInput{ContactID: contactID}, eventID)
+}
+
+// RetractLeadQualifyingEvent withdraws the lead's statement without converting its record.
+func (s *Store) RetractLeadQualifyingEvent(ctx context.Context, leadID ids.LeadID, eventID ids.UUID) error {
+	return s.retractQualifyingSubject(ctx, RecordInput{LeadID: leadID}, eventID)
+}
+
+func (s *Store) retractQualifyingSubject(ctx context.Context, target RecordInput, eventID ids.UUID) error {
+	sub, err := consentSubject(target)
+	if err != nil {
+		return err
+	}
 	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
-	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
+	if err := requireUpdateOnSubject(ctx, sub.entityType); err != nil {
 		return err
 	}
 	by, err := storekit.CapturedBy(ctx)
@@ -369,16 +399,17 @@ func (s *Store) RetractQualifyingEvent(ctx context.Context, contactID ids.Contac
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.HoldWritableLive(ctx, tx, "contact", contactID.UUID); err != nil {
+		if err := auth.HoldWritableLive(ctx, tx, sub.entityType, sub.id); err != nil {
 			return err
 		}
 		var kind string
 		var occurred time.Time
+		column := pgx.Identifier{sub.column}.Sanitize()
 		err := tx.QueryRow(ctx, `
 			UPDATE consent_qualifying_event
-			   SET retracted_at = now(), retracted_by = $3
-			 WHERE id = $1 AND contact_id = $2 AND kind = ANY($4::text[]) AND retracted_at IS NULL
-			RETURNING kind, occurred_at`, eventID, contactID, by, handRecordedKindList()).Scan(&kind, &occurred)
+			   SET retracted_at = now(), retracted_by = @actor
+			 WHERE id = @event AND `+column+` = @subject AND kind = ANY(@kinds::text[]) AND retracted_at IS NULL
+			RETURNING kind, occurred_at`, pgx.StrictNamedArgs{"event": eventID, "subject": sub.id, "actor": by, "kinds": handRecordedKindList()}).Scan(&kind, &occurred)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
@@ -387,7 +418,7 @@ func (s *Store) RetractQualifyingEvent(ctx context.Context, contactID ids.Contac
 		}
 		// Audit-only, as recording is: the public-event catalog has no type for
 		// a lawful basis, and the trail answers who withdrew what.
-		_, err = storekit.AuditEvent(ctx, tx, "update", "contact", contactID.UUID, map[string]any{
+		_, err = storekit.AuditEvent(ctx, tx, "update", sub.entityType, sub.id, map[string]any{
 			"qualifying_event_retracted": kind,
 			fieldOccurredAt:              occurred.UTC().Format(time.RFC3339),
 		})

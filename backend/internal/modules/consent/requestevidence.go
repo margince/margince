@@ -152,10 +152,11 @@ func requestOnRecord(ctx context.Context, tx pgx.Tx, subject subjectRef, scope r
 // the ones naming none. So a newer request for one quote does not lift an
 // objection for another quote's deal.
 func latestRequest(ctx context.Context, tx pgx.Tx, subject subjectRef, scope requestScope, deal ids.UUID) (time.Time, bool, error) {
-	if subject.Kind != entityContact {
-		// Both tables are keyed on contact_id; a lead holds neither.
-		return time.Time{}, false, nil
+	sub, known, err := qualifyingSubjectRef(subject)
+	if err != nil || !known {
+		return time.Time{}, false, err
 	}
+	column := pgx.Identifier{sub.column}.Sanitize()
 	entity, err := evidenceEntity(ctx, tx, subject.SendingEntity)
 	if err != nil {
 		return time.Time{}, false, err
@@ -168,12 +169,14 @@ func latestRequest(ctx context.Context, tx pgx.Tx, subject subjectRef, scope req
 	if err != nil {
 		return time.Time{}, false, err
 	}
+	args = append(args, subject.Kind == entityContact)
+	acquisition := storekit.SQLf("$%d", len(args))
 	var newest *time.Time
 	err = tx.QueryRow(ctx, `
 		SELECT max(asked_at) FROM (
 			SELECT coalesce(e.occurred_at, e.captured_at) AS asked_at
 			  FROM contact_acquisition_evidence e
-			 WHERE e.contact_id = $1::uuid
+			 WHERE `+acquisition+` AND e.contact_id = $1::uuid
 			   AND e.kind = ANY($4::text[])
 			   AND coalesce(e.occurred_at, e.captured_at) <= $2
 			   AND e.request_retracted_at IS NULL
@@ -184,7 +187,7 @@ func latestRequest(ctx context.Context, tx pgx.Tx, subject subjectRef, scope req
 			UNION ALL
 			SELECT q.occurred_at
 			  FROM consent_qualifying_event q
-			 WHERE q.contact_id = $1::uuid
+			 WHERE q.`+column+` = $1::uuid
 			   AND q.kind = ANY($3::text[])
 			   AND q.occurred_at <= $2
 			   AND q.retracted_at IS NULL
@@ -194,7 +197,7 @@ func latestRequest(ctx context.Context, tx pgx.Tx, subject subjectRef, scope req
 			   AND `+recordedEntitiesSQL("q.recorded_for_entities", entityArg)+` AND `+qualification+`
 		) requests`, args...).Scan(&newest)
 	if err != nil {
-		return time.Time{}, false, fmt.Errorf("consent: read what this contact asked for: %w", err)
+		return time.Time{}, false, fmt.Errorf("consent: read what this recipient asked for: %w", err)
 	}
 	if newest == nil {
 		return time.Time{}, false, nil

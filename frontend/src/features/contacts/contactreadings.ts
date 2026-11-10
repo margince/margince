@@ -3,40 +3,10 @@ import type { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { valueFor } from "../../lib/labelfor";
 
-type ConsentVerdict =
-  components["schemas"]["ContactConsentGuardEntry"]["verdict"];
-
-// The word the rail's consent rows put on a channel's verdict, read from the
-// SERVER's key rather than the rendered word: a translated label must not
-// change how the slot is coloured.
-//
-// A table rather than a switch, so a verdict the contract gains and this does
-// not fails the BUILD. The `??` below is the same question asked of the WIRE,
-// where the type is only a claim: a cached page talking to a newer API is
-// handed a verdict this build has no word for, and an unmatched key would put
-// an empty cell where a permission belongs.
-const VERDICT_WORD: Record<ConsentVerdict, MessageKey> = {
-  allowed: "contact.consent.allowedWord",
-  blocked: "contact.consent.blockedWord",
-  unknown: "contact.consent.unknownWord",
-};
-
-export function consentWord(
-  verdict: ConsentVerdict | undefined,
-  t: ReturnType<typeof useT>,
-): string {
-  // No entry, and a verdict off a newer server, land on the same word: in both
-  // this build has no recorded answer to show.
-  return t(
-    (verdict && valueFor(VERDICT_WORD, verdict, undefined)) ??
-      "contact.consent.unknownWord",
-  );
-}
-
 type GuardEntry = components["schemas"]["ContactConsentGuardEntry"];
 
 // The reasons that record the contact saying stop, as opposed to a gap.
-const STOP_REASONS: ReadonlySet<GuardEntry["reason_code"]> = new Set([
+const STOP_REASONS: ReadonlySet<string> = new Set([
   "objection",
   "suppressed_objection",
   "consent_withdrawn",
@@ -62,18 +32,21 @@ const ALLOWED_FACT: Partial<Record<GuardEntry["reason_code"], MessageKey>> = {
  * as permission for every message: "Recent business contact recorded", not
  * "Allowed". Each message is still checked on its own when it is sent.
  *
- * A reason off a newer server falls to the plain answer for its verdict. A gap
- * then never reads as a recorded stop or a recorded grant.
+ * An unfamiliar reason keeps the purpose scope. A gap never reads as a
+ * recorded stop or a recorded grant.
  */
 export function scopedConsentWord(
-  entry: Pick<GuardEntry, "verdict" | "purpose_class" | "reason_code">,
+  entry: Pick<GuardEntry, "verdict" | "purpose_class"> & {
+    reason_code: string;
+  },
   t: ReturnType<typeof useT>,
 ): string {
   const marketing = entry.purpose_class === "marketing";
   switch (entry.verdict) {
     case "allowed":
       return t(
-        ALLOWED_FACT[entry.reason_code] ?? "contact.consent.allowedWord",
+        valueFor(ALLOWED_FACT, entry.reason_code, undefined) ??
+          "contact.consent.fact.purposeSupported",
       );
     case "blocked":
       if (entry.reason_code === "suppressed_hard_bounce") {

@@ -33,7 +33,7 @@ func sarSections(ctx context.Context, pkg *SARPackage, contactID ids.ContactID, 
 	sections = append(sections, sarReportingSections(pkg), sarQuestionSection(pkg, contactID, emails), sarBindingSection(pkg, contactID, emails))
 	sections = append(sections, sarRecordSections(pkg, contactID, leads)...)
 	sections = append(sections, sarMessagingSections(pkg, contactID, emails, leads)...)
-	sections = append(sections, sarConsentSections(pkg)...)
+	sections = append(sections, sarConsentSections(pkg, contactID, leads)...)
 	sections = append(sections, sarRequestSections(pkg, contactID)...)
 	sections = append(sections, sarConsentLinkSections(pkg)...)
 	sections = append(sections, sarCommunicationSections(pkg, emails, leads, identities)...)
@@ -213,7 +213,7 @@ var sarRawCaptureLink = storekit.StoredOriginalSQL("a", "rc")
 
 // sarConsentSections gather the per-purpose consent state and the proof log
 // behind it — what the subject agreed to, and every change of mind on record.
-func sarConsentSections(pkg *SARPackage) []sarSection {
+func sarConsentSections(pkg *SARPackage, contactID ids.ContactID, leads []ids.UUID) []sarSection {
 	return []sarSection{
 		{&pkg.Consent, `SELECT cp.key AS purpose, pc.state, pc.lawful_basis, pc.captured_at
 		   FROM contact_consent pc JOIN consent_purpose cp ON cp.id = pc.purpose_id
@@ -264,7 +264,7 @@ func sarConsentSections(pkg *SARPackage) []sarSection {
 		// the export is read by the subject, not by us.
 		{&pkg.ConsentQualifyingEvents, `SELECT kind, occurred_at, source_entity_type, created_at AS captured_at
 		   FROM consent_qualifying_event
-		   WHERE contact_id = $1`, nil},
+		   WHERE contact_id = $1 OR lead_id = ANY($2)`, []any{contactID.UUID, leads}},
 		{&pkg.ConfirmSubmissions, `SELECT kind, field, proposed_value, submitted_at, resolution, resolved_at
 		   FROM contact_confirm_submission
 		   WHERE contact_id = $1`, nil},
