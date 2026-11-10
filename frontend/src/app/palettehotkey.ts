@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { liveDialogs } from "../design-system/dialogfocus";
-import { modifierCap } from "./hotkeys";
+import { modifierCap, modifierKeyName } from "./hotkeys";
 
 const PALETTE_KEY = "k";
 
@@ -11,6 +11,11 @@ const PALETTE_KEY = "k";
  */
 export function paletteHotkeyCaps(platform: string): readonly string[] {
   return [modifierCap(platform), PALETTE_KEY.toUpperCase()];
+}
+
+/** The chord the caps print, as `aria-keyshortcuts` takes it. */
+export function paletteKeyShortcuts(platform: string): string {
+  return `${modifierKeyName(platform)}+${PALETTE_KEY.toUpperCase()}`;
 }
 
 export function usePaletteHotkey(

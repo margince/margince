@@ -19699,8 +19699,10 @@ export interface paths {
         /**
          * Set or clear when buyer access lapses.
          * @description Null clears the bound, leaving access open until the room is closed or
-         *     archived. A past instant is accepted and takes effect immediately — that is
-         *     how access is cut short without ending the room. It decides how long a buyer can
+         *     archived. A past instant is accepted and takes effect at once — that is
+         *     how access is cut short without ending the room. One at or before the room's
+         *     creation is stored as the time of the call, unless a standing expiry has
+         *     already passed, which is kept. It decides how long a buyer can
          *     read the room, so an agent spends `send` on it.
          */
         put: operations["setDealRoomExpiry"];
@@ -38432,6 +38434,15 @@ export interface components {
              *     no longer under contract and still reports the status it was left in.
              */
             readonly under_contract: boolean;
+            /**
+             * @description Where today falls in the agreement's dated term, read from the dates alone
+             *     (CONTRACT-FORM-1): `not_started` before `starts_on`, `ended` after the earlier
+             *     of `ends_on` and `cancellation_effective_on`, `in_force` between. It tells an
+             *     agreement that has not begun from one that has run out, which `under_contract`
+             *     = false cannot, and it ignores `status` and archival as `under_contract` does not.
+             * @enum {string}
+             */
+            readonly term_state: "not_started" | "in_force" | "ended";
             source: string;
             /** @description The principal that recorded this agreement, prefixed by kind ("human:<id>" / "agent:<id>"). Server-stamped from the authenticated caller, never client-supplied — an agent acting under a passport is not a row in app_user, so this is not a user id. */
             readonly captured_by: string;
@@ -52820,7 +52831,11 @@ export interface components {
              * @description Defaults to the deal's owner when omitted.
              */
             steward_user_id?: string | null;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description When buyer access lapses. A past instant is accepted and stored as the
+             *     time of the call, so the room opens with buyer access already ended.
+             */
             expires_at?: string | null;
             source: string;
         };
