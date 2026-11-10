@@ -19121,6 +19121,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Öffne {name}, sieh nach, warum es angehalten hat, und behebe die Ursache.",
   "worklist.todo.capture_health.named":
     "Prüfe die Verbindung von {name}, damit seine E-Mails wieder erfasst werden.",
+  "worklist.todo.capture_health.calendar":
+    "Prüfe die Verbindung des Kalenders, damit seine Termine wieder erfasst werden.",
+  "worklist.todo.capture_health.calendar.named":
+    "Prüfe die Verbindung von {name}, damit seine Termine wieder erfasst werden.",
   "worklist.consequence.task_slips.named":
     "Die Aufgabe mit {name} rutscht weiter über ihr Datum.",
   "worklist.happened.customer_waiting":
@@ -19160,9 +19164,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.happened.automation_run.bare":
     "Eine Automation wurde am {when} nicht abgeschlossen.",
   "worklist.happened.capture_health":
-    "Das Postfach {name} hat seit dem {when} keine E-Mails erfasst.",
+    "Das Postfach {name} wurde seit dem {when} nicht synchronisiert.",
   "worklist.happened.capture_health.bare":
+    "Ein Postfach wurde seit dem {when} nicht synchronisiert.",
+  "worklist.happened.capture_health.silent":
+    "Das Postfach {name} hat seit dem {when} keine E-Mails erfasst.",
+  "worklist.happened.capture_health.silent.bare":
     "Ein Postfach hat seit dem {when} keine E-Mails erfasst.",
+  "worklist.happened.capture_health.calendar":
+    "Der Kalender {name} wurde seit dem {when} nicht synchronisiert.",
+  "worklist.happened.capture_health.calendar.bare":
+    "Ein Kalender wurde seit dem {when} nicht synchronisiert.",
+  "worklist.happened.capture_health.calendar_silent":
+    "Der Kalender {name} hat seit dem {when} keine Termine erfasst.",
+  "worklist.happened.capture_health.calendar_silent.bare":
+    "Ein Kalender hat seit dem {when} keine Termine erfasst.",
   "worklist.happened.ai_work_health":
     "Die KI-Aufgabe {name} ist am {when} fehlgeschlagen.",
   "worklist.happened.ai_work_health.bare":
@@ -19236,7 +19252,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Erledige sie und markiere sie als erledigt, oder verschiebe sie auf einen anderen Tag.",
   "worklist.todo.customer_waiting": "Beantworte die Nachricht.",
   "worklist.todo.awaiting_reply": "Sende eine Nachfrage.",
-  "worklist.todo.lead_response": "Melde dich jetzt, ein neuer Lead kühlt schnell ab.",
+  "worklist.todo.lead_response":
+    "Melde dich jetzt, ein neuer Lead kühlt schnell ab.",
   "worklist.todo.meeting": "Öffne den Termin, um dich vorzubereiten.",
   "worklist.todo.meeting_outcome":
     "Halte fest, was dabei herauskam, oder markiere ihn als abgesagt, wenn er nicht stattfand.",
@@ -19281,7 +19298,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.ask.customer_waiting":
     "Ein Kunde hat geschrieben, und noch niemand hat geantwortet. Beantworte die Nachricht.",
   "worklist.ask.lead_response":
-    "Dieser Lead wartet auf eine erste Antwort. Melde dich, bevor seine Antwortfrist abläuft.",
+    "Dieser Lead wartet auf eine erste Antwort. Melde dich jetzt, ein neuer Lead kühlt schnell ab.",
   "worklist.ask.deal_at_risk":
     "Dieser Deal zeigt Anzeichen, dass er abrutscht. Öffne ihn und plane den nächsten Schritt.",
   "worklist.ask.meeting":

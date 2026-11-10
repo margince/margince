@@ -89,6 +89,33 @@ describe("what happened behind a row", () => {
     ).toEqual(["The automation Welcome sequence stopped on 9 Nov."]);
   });
 
+  it("tells a silent connection from one that stopped syncing, mail from calendar", () => {
+    const capture = (kind: string, medium: "mailbox" | "calendar") =>
+      happenedLines(
+        row({
+          source: "capture_health",
+          kind,
+          occurred_at: "2026-11-09T12:00:00Z",
+          cause_label: "anna@example.com",
+          connection: { provider: "gmail", medium },
+        }),
+        t,
+        clock,
+      ).lines;
+    expect(capture("capture_silent", "mailbox")).toEqual([
+      "The mailbox anna@example.com has captured no mail since 9 Nov.",
+    ]);
+    expect(capture("sync_failing", "mailbox")).toEqual([
+      "The mailbox anna@example.com has not synced since 9 Nov.",
+    ]);
+    expect(capture("sync_failing", "calendar")).toEqual([
+      "The calendar anna@example.com has not synced since 9 Nov.",
+    ]);
+    expect(capture("capture_silent", "calendar")).toEqual([
+      "The calendar anna@example.com has captured no meetings since 9 Nov.",
+    ]);
+  });
+
   it("adds the last contact each way, and none a reader cannot open", () => {
     const lines = happenedLines(
       row({
@@ -170,6 +197,18 @@ describe("what a told row asks", () => {
     ).toBe("Reply to Sonya Beck.");
     expect(todoLine(row({ source: "customer_waiting" }), t, true)).toBe(
       "Reply to the message.",
+    );
+  });
+
+  it("asks to check a calendar's connection for its meetings, not its mail", () => {
+    const calendar = row({
+      source: "capture_health",
+      kind: "sync_failing",
+      cause_label: "anna@example.com",
+      connection: { provider: "gcal", medium: "calendar" },
+    });
+    expect(todoLine(calendar, t, true)).toBe(
+      "Check the connection of anna@example.com so its meetings are captured again.",
     );
   });
 

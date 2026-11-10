@@ -86,10 +86,6 @@ const EVENT: Readonly<
     named: "worklist.happened.automation_run",
     bare: "worklist.happened.automation_run.bare",
   },
-  capture_health: {
-    named: "worklist.happened.capture_health",
-    bare: "worklist.happened.capture_health.bare",
-  },
   ai_work_health: {
     named: "worklist.happened.ai_work_health",
     bare: "worklist.happened.ai_work_health.bare",
@@ -222,10 +218,6 @@ const TODO: Readonly<
     bare: "worklist.todo.automation_run",
     named: "worklist.todo.automation_run.named",
   },
-  capture_health: {
-    bare: "worklist.todo.capture_health",
-    named: "worklist.todo.capture_health.named",
-  },
   ai_work_health: { bare: "worklist.todo.ai_work_health" },
   failed_approval: { bare: "worklist.todo.failed_approval" },
   deal_suggestion: { bare: "worklist.todo.deal_suggestion" },
@@ -239,7 +231,12 @@ const TODO: Readonly<
  */
 export function todoLine(item: WorklistItem, t: T, told: boolean): string {
   const ask = askKey(item);
-  const keys = Object.hasOwn(TODO, item.source) ? TODO[item.source] : undefined;
+  const keys =
+    item.source === "capture_health"
+      ? captureTodoKeys(item)
+      : Object.hasOwn(TODO, item.source)
+        ? TODO[item.source]
+        : undefined;
   if (!told || !keys || ask === "worklist.ask.invitation") return t(ask);
   const name = todoName(item);
   return keys.named && name ? t(keys.named, { name }) : t(keys.bare);
@@ -259,9 +256,12 @@ export function eventLine(
   t: T,
   clock: Clock,
 ): string | null {
-  const keys = Object.hasOwn(EVENT, item.source)
-    ? EVENT[item.source]
-    : undefined;
+  const keys =
+    item.source === "capture_health"
+      ? captureEventKeys(item)
+      : Object.hasOwn(EVENT, item.source)
+        ? EVENT[item.source]
+        : undefined;
   if (!keys || !item.occurred_at) return null;
   const when = activityDay(
     item.occurred_at,
@@ -274,6 +274,51 @@ export function eventLine(
   if (name) return t(keys.named, { name, when });
   return keys.bare ? t(keys.bare, { when }) : null;
 }
+
+// A capture row's sentence follows what the connection carries, and a silent
+// one still syncs: it only brings nothing in, so it is not called broken.
+function captureEventKeys(item: WorklistItem) {
+  const silent = item.kind === "capture_silent";
+  if (item.connection?.medium === "calendar")
+    return silent ? CAPTURE_EVENT.calendarSilent : CAPTURE_EVENT.calendar;
+  return silent ? CAPTURE_EVENT.mailboxSilent : CAPTURE_EVENT.mailbox;
+}
+
+function captureTodoKeys(item: WorklistItem) {
+  return item.connection?.medium === "calendar"
+    ? CAPTURE_TODO.calendar
+    : CAPTURE_TODO.mailbox;
+}
+
+const CAPTURE_EVENT = {
+  mailbox: {
+    named: "worklist.happened.capture_health",
+    bare: "worklist.happened.capture_health.bare",
+  },
+  mailboxSilent: {
+    named: "worklist.happened.capture_health.silent",
+    bare: "worklist.happened.capture_health.silent.bare",
+  },
+  calendar: {
+    named: "worklist.happened.capture_health.calendar",
+    bare: "worklist.happened.capture_health.calendar.bare",
+  },
+  calendarSilent: {
+    named: "worklist.happened.capture_health.calendar_silent",
+    bare: "worklist.happened.capture_health.calendar_silent.bare",
+  },
+} as const satisfies Record<string, { named: MessageKey; bare: MessageKey }>;
+
+const CAPTURE_TODO = {
+  mailbox: {
+    bare: "worklist.todo.capture_health",
+    named: "worklist.todo.capture_health.named",
+  },
+  calendar: {
+    bare: "worklist.todo.capture_health.calendar",
+    named: "worklist.todo.capture_health.calendar.named",
+  },
+} as const satisfies Record<string, { bare: MessageKey; named: MessageKey }>;
 
 function eventName(item: WorklistItem): string | undefined {
   if (NAMES_THE_CAUSE.has(item.source)) return item.cause_label || undefined;

@@ -18642,6 +18642,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Mở {name}, xem vì sao nó dừng và khắc phục nguyên nhân.",
   "worklist.todo.capture_health.named":
     "Kiểm tra kết nối của {name} để thư được thu thập trở lại.",
+  "worklist.todo.capture_health.calendar":
+    "Kiểm tra kết nối lịch để cuộc họp được thu thập trở lại.",
+  "worklist.todo.capture_health.calendar.named":
+    "Kiểm tra kết nối của {name} để cuộc họp được thu thập trở lại.",
   "worklist.consequence.task_slips.named": "Việc với {name} tiếp tục trễ hạn.",
   "worklist.happened.customer_waiting":
     "{name} đã viết vào {when} và chưa có ai trả lời.",
@@ -18678,10 +18682,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.happened.automation_run": "Tự động hóa {name} đã dừng vào {when}.",
   "worklist.happened.automation_run.bare":
     "Một tự động hóa đã dừng vào {when}.",
-  "worklist.happened.capture_health":
-    "Hộp thư {name} chưa thu thập được email nào từ {when}.",
+  "worklist.happened.capture_health": "Hộp thư {name} chưa đồng bộ từ {when}.",
   "worklist.happened.capture_health.bare":
+    "Một hộp thư chưa đồng bộ từ {when}.",
+  "worklist.happened.capture_health.silent":
+    "Hộp thư {name} chưa thu thập được email nào từ {when}.",
+  "worklist.happened.capture_health.silent.bare":
     "Một hộp thư chưa thu thập được email nào từ {when}.",
+  "worklist.happened.capture_health.calendar":
+    "Lịch {name} chưa đồng bộ từ {when}.",
+  "worklist.happened.capture_health.calendar.bare":
+    "Một lịch chưa đồng bộ từ {when}.",
+  "worklist.happened.capture_health.calendar_silent":
+    "Lịch {name} chưa thu thập được cuộc họp nào từ {when}.",
+  "worklist.happened.capture_health.calendar_silent.bare":
+    "Một lịch chưa thu thập được cuộc họp nào từ {when}.",
   "worklist.happened.ai_work_health": "Tác vụ AI {name} bị lỗi vào {when}.",
   "worklist.happened.ai_work_health.bare": "Một tác vụ AI bị lỗi vào {when}.",
   "worklist.happened.failed_approval":
@@ -18758,7 +18773,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.todo.conversation_claim": "Làm việc đó, rồi đánh dấu là xong.",
   "worklist.todo.bounce": "Kiểm tra địa chỉ, rồi gửi lại.",
   "worklist.todo.undelivered": "Mở email để xem lý do, rồi gửi lại.",
-  "worklist.todo.automation_run": "Mở lượt chạy, xem vì sao nó dừng và khắc phục nguyên nhân.",
+  "worklist.todo.automation_run":
+    "Mở lượt chạy, xem vì sao nó dừng và khắc phục nguyên nhân.",
   "worklist.todo.capture_health":
     "Kiểm tra kết nối hộp thư để thu thập email trở lại.",
   "worklist.todo.ai_work_health": "Kiểm tra nhà cung cấp AI trong Cài đặt.",
@@ -18787,7 +18803,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.ask.customer_waiting":
     "Khách hàng đã viết và chưa có ai trả lời. Trả lời khách hàng.",
   "worklist.ask.lead_response":
-    "Lead này đang chờ phản hồi đầu tiên. Liên hệ trước khi hết thời hạn phản hồi.",
+    "Lead này đang chờ phản hồi đầu tiên. Liên hệ ngay; lead mới nguội đi rất nhanh.",
   "worklist.ask.deal_at_risk":
     "Deal này có dấu hiệu chững lại. Mở deal và lên bước tiếp theo.",
   "worklist.ask.meeting": "Cuộc họp này sắp diễn ra. Mở để chuẩn bị.",

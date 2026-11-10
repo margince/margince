@@ -18927,6 +18927,10 @@ export const en = {
     "Open {name}, see why it stopped and fix the cause.",
   "worklist.todo.capture_health.named":
     "Check the connection of {name} so its mail is captured again.",
+  "worklist.todo.capture_health.calendar":
+    "Check the calendar connection so its meetings are captured again.",
+  "worklist.todo.capture_health.calendar.named":
+    "Check the connection of {name} so its meetings are captured again.",
   "worklist.consequence.task_slips.named":
     "The task with {name} slips further past its date.",
   "worklist.happened.customer_waiting":
@@ -18963,9 +18967,21 @@ export const en = {
     "The automation {name} stopped on {when}.",
   "worklist.happened.automation_run.bare": "An automation stopped on {when}.",
   "worklist.happened.capture_health":
-    "The mailbox {name} has captured no mail since {when}.",
+    "The mailbox {name} has not synced since {when}.",
   "worklist.happened.capture_health.bare":
+    "A mailbox has not synced since {when}.",
+  "worklist.happened.capture_health.silent":
+    "The mailbox {name} has captured no mail since {when}.",
+  "worklist.happened.capture_health.silent.bare":
     "A mailbox has captured no mail since {when}.",
+  "worklist.happened.capture_health.calendar":
+    "The calendar {name} has not synced since {when}.",
+  "worklist.happened.capture_health.calendar.bare":
+    "A calendar has not synced since {when}.",
+  "worklist.happened.capture_health.calendar_silent":
+    "The calendar {name} has captured no meetings since {when}.",
+  "worklist.happened.capture_health.calendar_silent.bare":
+    "A calendar has captured no meetings since {when}.",
   "worklist.happened.ai_work_health": "The AI task {name} failed on {when}.",
   "worklist.happened.ai_work_health.bare": "An AI task failed on {when}.",
   "worklist.happened.failed_approval":
@@ -19031,8 +19047,7 @@ export const en = {
     "Do the work and mark it done, or move it to another day.",
   "worklist.todo.customer_waiting": "Reply to the message.",
   "worklist.todo.awaiting_reply": "Send a follow-up.",
-  "worklist.todo.lead_response":
-    "Get in touch now; a new lead cools fast.",
+  "worklist.todo.lead_response": "Get in touch now; a new lead cools fast.",
   "worklist.todo.meeting": "Open the meeting to prepare.",
   "worklist.todo.meeting_outcome":
     "Record what came of it, or mark it canceled if it did not take place.",
@@ -19042,7 +19057,8 @@ export const en = {
   "worklist.todo.conversation_claim": "Do it, then mark it done.",
   "worklist.todo.bounce": "Check the address, then send it again.",
   "worklist.todo.undelivered": "Open the email to see why, then send it again.",
-  "worklist.todo.automation_run": "Open the run, see why it stopped and fix the cause.",
+  "worklist.todo.automation_run":
+    "Open the run, see why it stopped and fix the cause.",
   "worklist.todo.capture_health":
     "Check the mailbox connection so its mail is captured again.",
   "worklist.todo.ai_work_health": "Check its AI provider in Settings.",
@@ -19071,7 +19087,7 @@ export const en = {
   "worklist.ask.customer_waiting":
     "A customer wrote and nobody has answered yet. Reply to them.",
   "worklist.ask.lead_response":
-    "This lead is waiting for a first answer. Get in touch before its response time runs out.",
+    "This lead is waiting for a first answer. Get in touch now; a new lead cools fast.",
   "worklist.ask.deal_at_risk":
     "This deal shows signs of slipping. Open it and plan the next step.",
   "worklist.ask.meeting": "This meeting is coming up. Open it to prepare.",
