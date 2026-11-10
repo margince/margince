@@ -59,7 +59,7 @@ Declining settles it too. So does handing it to a colleague by name: the ask has
 If they wrote again after our reply repeating or re-asking, it is still_owed.
 Where a request asked two things and we answered one, it is still_owed.
 
-For still_owed, "remaining" is a short verbatim excerpt of at least two words from the FIRST message, their request, naming the ask still unanswered. Keep its spelling and language. Never quote their signature or the history quoted below their words. Never quote our own messages: a question WE asked them is work for THEM, never work we owe. If we delivered what they asked and then asked them something new, the request is settled.
+For still_owed, "remaining" is a short verbatim excerpt of at least two words from the FIRST message, their request, naming the ask still unanswered and the document or identifier it names, if any. Keep its spelling and language. Never quote their signature or the history quoted below their words. Never quote our own messages: a question WE asked them is work for THEM, never work we owe. If we delivered what they asked and then asked them something new, the request is settled.
 A still_owed verdict MUST name what is owed. An empty "remaining" tells the reader they owe something and not what, which is a worklist row nobody can act on.
 "due_at" is an ISO date, and ONLY when our own words named one. Never compute a date, never infer one from a phrase like "next week".`
 
