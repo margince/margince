@@ -127,8 +127,15 @@ const (
 // sendCheck is one attempt's hold and how far the request got under it. A
 // refusal sticks: no answer from the receiver overrides it.
 type sendCheck struct {
-	hold  sendHold
-	state atomic.Int32
+	hold sendHold
+	// recheck re-asks whether the owner may still see the record, run UNDER the
+	// hold and right before the body is written. attemptStillAuthorized answers
+	// that question once, but the connection — DNS, TCP and the TLS handshake — is
+	// built between that answer and the write, and a revocation that commits in
+	// that window would otherwise still send. Nil leaves the hold as its only
+	// gate (a replay with no subject to re-check, and the unit tests).
+	recheck func() (bool, error)
+	state   atomic.Int32
 }
 
 type sendCheckKey struct{}
@@ -150,6 +157,20 @@ func (c *sendCheck) writeHeld(write func() error) error {
 		return err
 	}
 	defer release()
+	// Under the hold, at the last moment before the body leaves: a revocation that
+	// commits while the connection is being built must still stop the send. An
+	// owner who can no longer see the record withdraws the attempt; an outage that
+	// cannot answer counts as unchecked, exactly as the pre-send check treats each.
+	if c.recheck != nil {
+		switch ok, err := c.recheck(); {
+		case err != nil:
+			c.state.Store(checkUnchecked)
+			return errors.Join(errSendUnchecked, err)
+		case !ok:
+			c.state.Store(checkRefused)
+			return errSendWithdrawn
+		}
+	}
 	c.state.Store(checkHeld)
 	if err := write(); err != nil {
 		return err
