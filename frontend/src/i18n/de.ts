@@ -19168,9 +19168,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.happened.capture_health.bare":
     "Ein Postfach wurde seit dem {when} nicht synchronisiert.",
   "worklist.happened.capture_health.backfill":
-    "Der Import des E-Mail-Verlaufs für {name} ist am {when} fehlgeschlagen.",
+    "Der Import des Postfachverlaufs für {name} ist am {when} fehlgeschlagen.",
   "worklist.happened.capture_health.backfill.bare":
-    "Ein Import des E-Mail-Verlaufs ist am {when} fehlgeschlagen.",
+    "Ein Import des Postfachverlaufs ist am {when} fehlgeschlagen.",
   "worklist.happened.capture_health.silent":
     "Das Postfach {name} hat seit dem {when} keine E-Mails erfasst.",
   "worklist.happened.capture_health.silent.bare":
