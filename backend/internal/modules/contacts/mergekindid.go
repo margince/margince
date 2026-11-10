@@ -58,6 +58,11 @@ func moveKindIDOwned(ctx context.Context, tx pgx.Tx, entityType string, sourceID
 		     WHERE b.subject_type = $3 AND b.subject_id = $2
 		       AND b.claim_kind = a.claim_kind AND b.claim_key = a.claim_key)`,
 		`UPDATE ai_feedback SET subject_id = $2 WHERE subject_type = $3 AND subject_id = $1`,
+		`DELETE FROM activity_link_suggestion a
+		  WHERE a.entity_type = $3 AND a.entity_id = $1 AND EXISTS (
+		    SELECT 1 FROM activity_link_suggestion b
+		     WHERE b.entity_type = $3 AND b.entity_id = $2 AND b.activity_id = a.activity_id)`,
+		`UPDATE activity_link_suggestion SET entity_id = $2 WHERE entity_type = $3 AND entity_id = $1`,
 	} {
 		if _, err := tx.Exec(ctx, stmt, sourceID, targetID, entityType); err != nil {
 			return fmt.Errorf("move the %s's drafts and verdicts: %w", entityType, err)
