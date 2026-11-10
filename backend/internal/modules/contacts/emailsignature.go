@@ -3,13 +3,8 @@
 
 package contacts
 
-// The sender's own sign-off (core 0235).
-//
-// Always the CALLER's, never anybody else's, and there is no seat that widens
-// that — not admin, not ops. A signature is the words a contact signs their name
-// with, and no role in this product has a reason to read or rewrite another
-// member's. The gate is therefore the actor themselves rather than an RBAC
-// object: `owner_id = the caller` is the whole rule, applied in every statement.
+// Personal signatures stay owner-only while their member is active.
+// A departed member's retained signature has a separate controller review surface.
 
 import (
 	"context"
@@ -161,25 +156,11 @@ func (s *Store) SaveMyEmailSignature(ctx context.Context, in SaveSignatureInput)
 	if !ok || actor.UserID == ids.Nil {
 		return EmailSignature{}, apperrors.ErrPermissionDenied
 	}
-	trimmed := strings.TrimSpace(in.Body)
-	if len([]rune(trimmed)) > SignatureMaxRunes {
-		return EmailSignature{}, &SignatureTooLongError{Field: "body", Max: SignatureMaxRunes, Runes: len([]rune(trimmed))}
+	in, err := validatedSignature(in)
+	if err != nil {
+		return EmailSignature{}, err
 	}
-	title, phone, markup := trimmedField(in.Title), trimmedField(in.Phone), trimmedField(in.HTML)
-	if markup != nil {
-		if err := signature.ValidateHTML(*markup); err != nil {
-			return EmailSignature{}, err
-		}
-	}
-	for _, field := range []struct {
-		name  string
-		value *string
-	}{{fieldTitle, title}, {fieldPhone, phone}} {
-		if runes := fieldRunes(field.value); runes > SignatureFieldMaxRunes {
-			return EmailSignature{}, &SignatureTooLongError{Field: field.name, Max: SignatureFieldMaxRunes, Runes: runes}
-		}
-	}
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if err := lockSignatureWriterTx(ctx, tx, actor.UserID); err != nil {
 			return err
 		}
@@ -187,25 +168,7 @@ func (s *Store) SaveMyEmailSignature(ctx context.Context, in SaveSignatureInput)
 		if err != nil {
 			return err
 		}
-		if err := upsertSignatureTx(ctx, tx, actor.UserID, trimmed, title, phone, markup); err != nil {
-			return err
-		}
-		// A signature goes out under the sender's name on every message they
-		// send, so a change to it is a change to how they are represented —
-		// exactly the kind of fact that has to be answerable later.
-		//
-		// The TEXT stays out of the audit payload and out of the event: it is
-		// the member's own words about themselves, a reader needs to know the
-		// sign-off changed rather than what somebody's home address is, and the
-		// audit log is read by more contacts than the signature is.
-		auditID, err := storekit.Audit(ctx, tx, "update", "user", actor.UserID,
-			map[string]any{"has_signature": before.Body != "", "has_html_signature": before.HTML != ""},
-			map[string]any{"has_signature": trimmed != "", "has_html_signature": savedHTML(before.HTML, markup) != ""})
-		if err != nil {
-			return err
-		}
-		return storekit.EmitEvent(ctx, tx, auditID, actor.UserID,
-			crmcontracts.PublicEventEmailSignatureChanged{HasSignature: trimmed != "" || savedHTML(before.HTML, markup) != ""})
+		return saveSignatureTx(ctx, tx, actor.UserID, before, in, true)
 	})
 	if err != nil {
 		return EmailSignature{}, fmt.Errorf("contacts: saving the caller's email signature: %w", err)
@@ -213,13 +176,14 @@ func (s *Store) SaveMyEmailSignature(ctx context.Context, in SaveSignatureInput)
 	return s.GetMyEmailSignature(ctx)
 }
 
-func upsertSignatureTx(ctx context.Context, tx pgx.Tx, userID ids.UUID, body string, title, phone, markup *string) error {
+func upsertSignatureTx(ctx context.Context, tx pgx.Tx, userID ids.UUID, body string, title, phone, markup *string, restore bool) error {
 	_, err := tx.Exec(ctx, `INSERT INTO email_signature (owner_id, body, title, phone, html)
  VALUES (@owner,@body,coalesce(@title::text,''),coalesce(@phone::text,''),coalesce(@html::text,''))
  ON CONFLICT (owner_id) DO UPDATE SET body=EXCLUDED.body,
  title=coalesce(@title::text,email_signature.title), phone=coalesce(@phone::text,email_signature.phone),
- html=coalesce(@html::text,email_signature.html), archived_at=NULL`,
-		pgx.NamedArgs{signatureOwnerArg: userID, "body": body, fieldTitle: title, fieldPhone: phone, "html": markup})
+ html=coalesce(@html::text,email_signature.html),
+ archived_at=CASE WHEN @restore THEN NULL ELSE email_signature.archived_at END`,
+		pgx.NamedArgs{signatureOwnerArg: userID, "body": body, fieldTitle: title, fieldPhone: phone, "html": markup, "restore": restore})
 	return err
 }
 
@@ -325,4 +289,42 @@ func lockSignatureWriterTx(ctx context.Context, tx pgx.Tx, user ids.UUID) error 
 		return apperrors.ErrNotFound
 	}
 	return nil
+}
+
+func validatedSignature(in SaveSignatureInput) (SaveSignatureInput, error) {
+	trimmed := strings.TrimSpace(in.Body)
+	if len([]rune(trimmed)) > SignatureMaxRunes {
+		return SaveSignatureInput{}, &SignatureTooLongError{Field: "body", Max: SignatureMaxRunes, Runes: len([]rune(trimmed))}
+	}
+	title, phone, markup := trimmedField(in.Title), trimmedField(in.Phone), trimmedField(in.HTML)
+	if markup != nil {
+		if err := signature.ValidateHTML(*markup); err != nil {
+			return SaveSignatureInput{}, err
+		}
+	}
+	for _, field := range []struct {
+		name  string
+		value *string
+	}{{fieldTitle, title}, {fieldPhone, phone}} {
+		if runes := fieldRunes(field.value); runes > SignatureFieldMaxRunes {
+			return SaveSignatureInput{}, &SignatureTooLongError{Field: field.name, Max: SignatureFieldMaxRunes, Runes: runes}
+		}
+	}
+
+	return SaveSignatureInput{Body: trimmed, Title: title, Phone: phone, HTML: markup}, nil
+}
+
+func saveSignatureTx(ctx context.Context, tx pgx.Tx, owner ids.UUID, before EmailSignature, in SaveSignatureInput, restore bool) error {
+	if err := upsertSignatureTx(ctx, tx, owner, in.Body, in.Title, in.Phone, in.HTML, restore); err != nil {
+		return err
+	}
+	// Audit and events record the change without copying personal signature text.
+	auditID, err := storekit.Audit(ctx, tx, "update", "user", owner,
+		map[string]any{"has_signature": before.Body != "", "has_html_signature": before.HTML != ""},
+		map[string]any{"has_signature": in.Body != "", "has_html_signature": savedHTML(before.HTML, in.HTML) != ""})
+	if err != nil {
+		return err
+	}
+	return storekit.EmitEvent(ctx, tx, auditID, owner,
+		crmcontracts.PublicEventEmailSignatureChanged{HasSignature: in.Body != "" || savedHTML(before.HTML, in.HTML) != ""})
 }

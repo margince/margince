@@ -14,6 +14,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // Initial audience and members commit before the creation audit and event.
@@ -21,6 +22,10 @@ import (
 // not describe this new task's audience. Its source link records the derivation.
 func recordInitialActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in LogActivityInput) error {
 	after := map[string]any{fieldKind: in.Kind, fieldSubject: in.Subject}
+	if in.SystemText != nil {
+		metadata := systemtext.ForWrite(ctx, in.SystemText, deref(in.Subject), deref(in.Body))
+		after["system_text"] = metadata
+	}
 	maps.Copy(after, in.CustomFields)
 	if len(in.audienceMembers) > 0 {
 		args := []any{id}

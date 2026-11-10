@@ -255,12 +255,13 @@ func evidenceRows(rows []FieldComparison) []crmcontracts.AttentionPairEvidence {
 func approvalItem(approval crmcontracts.Approval, machine MachineSender) crmcontracts.AttentionItem {
 	kind := approval.Kind
 	item := crmcontracts.AttentionItem{
-		Id:           approval.Id.String(),
-		Source:       crmcontracts.AttentionItemSource("approval"),
-		Kind:         &kind,
-		Title:        approval.Summary,
-		SummaryParts: approval.SummaryParts,
-		Actions:      []crmcontracts.AttentionItemActions{"decide"},
+		Id:            approval.Id.String(),
+		Source:        crmcontracts.AttentionItemSource("approval"),
+		Kind:          &kind,
+		Title:         approval.Summary,
+		SummaryParts:  approval.SummaryParts,
+		SystemDisplay: approval.SystemDisplay,
+		Actions:       []crmcontracts.AttentionItemActions{"decide"},
 	}
 	if approvals.PreviewRefusal(approval.Preview) != nil {
 		item.Actions = []crmcontracts.AttentionItemActions{}
@@ -329,10 +330,11 @@ func stagedFacts(
 func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts.AttentionItem {
 	subject := task.Subject
 	item := crmcontracts.AttentionItem{
-		Id:      task.ID.String(),
-		Source:  crmcontracts.AttentionItemSource("task"),
-		Title:   &subject,
-		Subject: subjectOf(task.LinkType, task.LinkID), MayBeDone: task.MayBeDone,
+		Id:            task.ID.String(),
+		Source:        crmcontracts.AttentionItemSource("task"),
+		Title:         &subject,
+		SystemDisplay: task.SystemDisplay,
+		Subject:       subjectOf(task.LinkType, task.LinkID), MayBeDone: task.MayBeDone,
 		Actions: taskActions(task),
 	}
 	if task.SourceActivityID != nil {

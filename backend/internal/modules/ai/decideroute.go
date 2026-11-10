@@ -79,6 +79,12 @@ func (r *Router) Decide(ctx context.Context, task Task, site string, dreq decisi
 	if try.decided {
 		return DecideOutcome{Decided: true, Answer: try.answer, ServedModel: try.servedModel}, try.info, nil
 	}
+	// A caller that stopped waiting is not handed on to the ladder. A decision
+	// that answered below its floor stays the terminal, so it says why.
+	if err := ctx.Err(); err != nil {
+		lc.markTerminal(sentinelFor(ctx, err))
+		return DecideOutcome{}, try.info, err
+	}
 	resp, info, err := r.completeStructuredOn(ctx, lc, task, req, validate, try.reason)
 	return DecideOutcome{Response: resp, ServedModel: resp.ServedModel}, info, err
 }
@@ -259,7 +265,7 @@ func (r *Router) callDecider(ctx context.Context, lc *logicalCall, b *binding, t
 // as the ladder does: unmetered spend would hollow out the budget guardrail.
 // Only an answered call is metered; a failed one reports no spend.
 func (r *Router) meterDecision(ctx context.Context, task Task, resp decision.Response) error {
-	if err := r.meter.Record(ctx, Usage{Task: task, Tier: TierDecideLane, TokensIn: resp.InputTokens}); err != nil {
+	if err := r.recordUsage(ctx, Usage{Task: task, Tier: TierDecideLane, TokensIn: resp.InputTokens}); err != nil {
 		return fmt.Errorf("ai: decision served but metering failed: %w", errors.Join(errMeteringFailed, err))
 	}
 	r.spendAgentTokens(ctx, resp.InputTokens)

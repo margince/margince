@@ -31,6 +31,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -239,4 +241,11 @@ func VettedFailure(kind, stored string) (FailureDetail, bool) {
 		return FailureDetail{}, false
 	}
 	return FailureDetail{Class: c.Class, Sentence: c.Sentence, Remedy: c.Remedy}, true
+}
+
+// InLanguage retains the vetted failure classification across reader languages.
+func (detail FailureDetail) InLanguage(language textlang.Lang) FailureDetail {
+	detail.Sentence = systemtext.LocalizedLiteral("jobs."+detail.Class+".sentence", detail.Sentence, language)
+	detail.Remedy = systemtext.LocalizedLiteral("jobs."+detail.Class+".remedy", detail.Remedy, language)
+	return detail
 }

@@ -12,6 +12,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
+import { stable } from "../../format/collate";
 import { formatMoneyCompact } from "../../format/format";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
@@ -72,7 +73,7 @@ describe("DealsScreen", () => {
       expect(
         listReads()
           .map((url) => url.searchParams.get("stage_id"))
-          .sort(),
+          .sort((a, b) => stable(String(a), String(b))),
       ).toEqual(["s1", "s2", "s3"]),
     );
     expect(await screen.findByText("Fleet retrofit")).toBeTruthy();

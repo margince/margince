@@ -306,8 +306,8 @@ func ensureSubjectAssignable(
 		}
 		return fmt.Errorf("read app_user: %w", err)
 	}
-	// Existing invited holders remain editable, and compatibility clients may still name them.
-	// The product picker offers only active colleagues.
+	// API clients may name agent seats and invited members for compatibility.
+	// The picker offers active human colleagues.
 	if status == "suspended" || status == "deactivated" || archivedAt != nil {
 		return &values.ParseError{
 			Field: fieldSubjectID, Code: "inactive_user",

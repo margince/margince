@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -123,6 +124,9 @@ func (s *Store) assembleGraph(ctx context.Context, anchorType string, anchorID i
 // caller owns — so an activity anchor can dereference to a record and walk it
 // without opening a second transaction against the same read.
 func (s *Store) assembleRecordWithin(ctx context.Context, tx pgx.Tx, anchorType string, anchorID ids.UUID, maxItems int, within projectScope) ([]graphSection, error) {
+	if !corefeatures.FromContext(ctx).RecordEnabled(anchorType) {
+		return nil, apperrors.ErrNotFound
+	}
 	// A record graph anchor is any searchable record type except activity
 	// itself (an activity is a link, not a thing links hang off).
 	var branch *searchBranch

@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 type dataTaskHandlers struct {
@@ -50,7 +51,7 @@ func (h dataTaskHandlers) ListDataTasks(w http.ResponseWriter, r *http.Request) 
 	}
 	httperr.WriteJSON(w, http.StatusOK, struct {
 		Data []crmcontracts.DataTaskProgress `json:"data"`
-	}{Data: DataTaskProgressReport(progress)})
+	}{Data: dataTaskProgressForReader(ctx, progress)})
 }
 
 func (h dataTaskHandlers) ControlDataTask(w http.ResponseWriter, r *http.Request) {
@@ -129,4 +130,18 @@ func dataTaskFailure(p datatask.Progress) (jobs.FailureDetail, bool) {
 		return jobs.FailureDetail{}, false
 	}
 	return jobs.VettedFailure("data_task_run", jobs.SentenceForClass(*p.LastErrorClass))
+}
+
+func dataTaskProgressForReader(ctx context.Context, progress []datatask.Progress) []crmcontracts.DataTaskProgress {
+	out := DataTaskProgressReport(progress)
+	language := systemtext.Locale(ctx)
+	for i, p := range progress {
+		out[i].Title = systemtext.LocalizedLiteral(dataTaskTitleCode(p.TaskID), p.Title, language)
+		if detail, ok := dataTaskFailure(p); ok {
+			detail = detail.InLanguage(language)
+			out[i].ErrorSentence = &detail.Sentence
+			out[i].ErrorRemedy = &detail.Remedy
+		}
+	}
+	return out
 }

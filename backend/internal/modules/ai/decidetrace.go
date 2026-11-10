@@ -50,7 +50,7 @@ func (r *Router) finalizeDecisionAttempt(ctx context.Context, lc *logicalCall, t
 	dreq decision.Request, resp decision.Response, callErr error, start time.Time,
 ) {
 	trace.LatencyMS = r.now().Sub(start).Milliseconds()
-	trace.ErrorSentinel = classifyError(callErr)
+	trace.ErrorSentinel = sentinelFor(ctx, callErr)
 	trace.TokensIn = resp.InputTokens
 	trace.ServedModel, trace.ServedIdentitySource = servedIdentity(trace.Provider, trace.ModelID, resp.ServedModel)
 	// A report or nothing, as on a completion row: an absent provider means

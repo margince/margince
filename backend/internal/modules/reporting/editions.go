@@ -45,6 +45,9 @@ func (s *Service) edition(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontr
 	if _, err := s.report(ctx, tx, ids.UUID(out.ReportId), false); err != nil {
 		return out, nil, err
 	}
+	if !s.evaluator.FeaturesAvailable(ctx, out.Evaluation.Selection) {
+		return crmcontracts.ReportingEdition{}, nil, errFeatureUnavailable
+	}
 	b = bindings{}
 	statement := "SELECT fact FROM report_edition_contribution WHERE edition_id=" + b.add(id) + " ORDER BY metric,context_id,contribution_key"
 	rows, err := tx.Query(ctx, statement, b.values...)
@@ -139,6 +142,9 @@ func (s *Service) ListEditions(ctx context.Context, reportID ids.UUID, after *id
 		}
 		for _, id := range editionIDs {
 			edition, _, err := s.edition(ctx, tx, id)
+			if errors.Is(err, errFeatureUnavailable) {
+				continue
+			}
 			if err != nil {
 				return err
 			}

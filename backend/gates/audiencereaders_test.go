@@ -59,7 +59,7 @@ import (
 // directly, and the Ensure* probes reach it through
 // EnsureActivityContentVisible.
 var audienceScopeMarkers = []string{
-	"ActivityContentClause", "ActivityAudienceArm", "AudienceWorkspaceOnly", "AutomaticMailContent",
+	"ActivityContentClause", "ActivityAudienceArm", "AudienceWorkspaceOnly", "WorkspaceAudienceSQL", "AutomaticMailContent",
 	// Gates a statement's activities once; TestEveryContentGateRendersItsMarkOnce
 	// in platform/auth holds that it renders the content gate.
 	"ContentReadableActivitiesSQL",
@@ -108,7 +108,6 @@ var audienceReadersAdmitted = gatekit.Waive(map[string]string{
 	"internal/modules/activities/mailcopies.go:MailCopiesTx":         "System-only repair compares proven message identities across audiences. It preserves holds and attachment authority, skips unsafe references and discloses no content to users.",
 	"internal/modules/activities/mailcopies.go:Store.FoldMailCopyTx": "System-only repair compares proven message identities across audiences. It preserves holds and attachment authority, skips unsafe references and discloses no content to users.",
 	"internal/modules/privacy/retentionselectors.go:floorShields":    "reads no row: it asks whether the retention selector STRING for a scope composes the correspondence floor predicate, so the privacy page can say the floor keeps that mail. The SQL in the map is the evaluator's, matched as text and never run here",
-	"internal/compose/dealverdictinput.go:readVerdictActivities":     "the nightly deal verdict reads only activities every member may read: visibleToAllSQL composes relstrength.WorkspaceAudienceSQL and restricted_at IS NULL, because the reason and its citations reach Home and the deal page. The static string census cannot expand the function call",
 	"internal/modules/search/embedgen.go:EmbedGen.HandleEvent":       "the activity entry in embedText appends activityIndexable, the same workspace-audience, restriction and erased-evidence predicate used by rebuild and the locked embedding writer. The static string census cannot expand this function call in the map value",
 	"internal/modules/search/embedgen.go:Store.healEntity":           "the repair reader uses the same embedText activity query and activityIndexable predicate as event indexing. It admits only workspace-audience, unrestricted content with retained evidence; the static string census cannot expand the query's function call",
 

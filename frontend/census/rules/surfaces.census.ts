@@ -44,6 +44,7 @@ import {
   written,
 } from "../../scripts/lib/surface-sheets";
 import { blocks, resolve } from "../../src/design-system/tokens-testing";
+import { stable } from "../../src/format/collate";
 import type { CensusFile, CensusRule } from "../tree";
 import { sheetRules } from "../tree";
 
@@ -294,7 +295,7 @@ export function memberPaints(
       )
       .map((paint) => paint.line);
   });
-  return [...new Set(found)].sort();
+  return [...new Set(found)].sort(stable);
 }
 
 /** Every ladder class no sheet but surfaces.css styles. */
@@ -375,7 +376,7 @@ export const rule: CensusRule = {
       ...corpus
         .filter(isScript)
         .flatMap((file) => scriptSpellings(file.path, file.text)),
-    ].sort();
+    ].sort(stable);
     return [
       ...all
         .filter(

@@ -1,3 +1,4 @@
+import { displayedBody, displayedSubject } from "../lib/systemdisplay";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -66,7 +67,7 @@ const TIMELINE_TITLE_MAX = 140;
 // connector fills it for a wordless message ("photo", "voice"): capture's
 // messageBody names the kind precisely so this row has something to show.
 function timelineTitle(activity: Activity): string {
-  const subject = activity.subject?.trim();
+  const subject = displayedSubject(activity)?.trim();
   if (subject) {
     return subject;
   }
@@ -142,14 +143,11 @@ export function activityTimeline(
     const contacts = who ? contactsOn(activity.links, who.nameOf) : undefined;
     return {
       id: activity.id,
+      systemDisplay: activity.system_display,
+      sourceVersion: activity.version ?? undefined,
       kind: timelineKind(activity.kind),
       isDone: activity.is_done,
-      commitmentReviewCount:
-        activity.content_state === "withheld"
-          ? 0
-          : activity.commitment_admissions?.filter(
-              (decision) => !decision.current_work,
-            ).length,
+      commitmentReviewCount: commitmentReviewCount(activity),
       title: timelineTitle(activity),
       // How a call ended sits where a direction sits: what the call did.
       qualifier: callOutcomeLabel(activity, who?.t),
@@ -160,7 +158,7 @@ export function activityTimeline(
       // The body is already in the composite read this row came from, so a
       // timeline of unreadable subject lines was a rendering choice, not a
       // limit of what the page knew.
-      body: activity.body,
+      body: displayedBody(activity),
       language: activity.language,
       transcript: isTranscriptActivity(activity),
       direction: activity.direction,
@@ -212,4 +210,12 @@ export function activityTimeline(
       actions: renderActions?.(activity),
     };
   });
+}
+
+function commitmentReviewCount(activity: Activity): number {
+  return activity.content_state === "withheld"
+    ? 0
+    : (activity.commitment_admissions?.filter(
+        (decision) => !decision.current_work,
+      ).length ?? 0);
 }

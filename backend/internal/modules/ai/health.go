@@ -97,6 +97,10 @@ func (m *Meter) RungHealthReport(ctx context.Context, bound map[Tier]ModelRef) (
 	}
 	args := []any{m.now().Add(-HealthWindow), answeredSentinels}
 	failed := failedAttemptSQL("ac", len(args))
+	// A canceled attempt says nothing of the tier: its caller left. It is no
+	// failure, and it must not stand as the tier's latest outcome either.
+	args = append(args, sentinelCanceled)
+	notCanceled := fmt.Sprintf("ac.error_sentinel IS DISTINCT FROM $%d", len(args))
 	tiers, providers, models := boundColumns(bound)
 	args = append(args, tiers, providers, models)
 	madeByBound := madeByBoundModelSQL("ac", len(args)-2)
@@ -143,6 +147,7 @@ func (m *Meter) RungHealthReport(ctx context.Context, bound map[Tier]ModelRef) (
 			         coalesce(error_sentinel, '') AS sentinel
 			    FROM ai_call ac
 			   WHERE occurred_at >= $1
+			     AND `+notCanceled+`
 			     AND NOT cache_hit
 			     AND tier <> ''
 			     AND `+madeByBound+`

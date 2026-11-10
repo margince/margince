@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 const (
@@ -91,7 +92,7 @@ func (q contactShareQueue) FileTx(ctx context.Context, tx pgx.Tx, req contacts.S
 	if err != nil {
 		return false, fmt.Errorf("compose: encoding the share request's identity: %w", err)
 	}
-	summary, err := contactShareSummary(ctx, tx, req.RequesterID)
+	summary, metadata, err := contactShareSummary(ctx, tx, req.RequesterID)
 	if err != nil {
 		return false, err
 	}
@@ -103,6 +104,7 @@ func (q contactShareQueue) FileTx(ctx context.Context, tx pgx.Tx, req contacts.S
 		TargetType:     string(recordTypeContact),
 		TargetID:       req.ContactID.UUID,
 		Summary:        summary,
+		SystemText:     metadata,
 		JoinPending:    true,
 		Identity:       identityKey,
 	})
@@ -114,12 +116,12 @@ func (q contactShareQueue) FileTx(ctx context.Context, tx pgx.Tx, req contacts.S
 }
 
 // contactShareSummary is the card's sentence, naming the colleague who asked.
-func contactShareSummary(ctx context.Context, tx pgx.Tx, requester ids.UUID) (string, error) {
+func contactShareSummary(ctx context.Context, tx pgx.Tx, requester ids.UUID) (string, *systemtext.Message, error) {
 	var name string
 	if err := tx.QueryRow(ctx, `SELECT display_name FROM app_user WHERE id = $1`, requester).Scan(&name); err != nil {
-		return "", fmt.Errorf("compose: naming the colleague who asked to share a contact: %w", err)
+		return "", nil, fmt.Errorf("compose: naming the colleague who asked to share a contact: %w", err)
 	}
-	return fmt.Sprintf(approvalSummaryCopyIn(ctx, tx).contactShareAsked, name), nil
+	return fmt.Sprintf(approvalSummaryCopyIn(ctx, tx).contactShareAsked, name), &systemtext.Message{Version: 1, Subject: systemtext.Sentence("approval.contactShareAsked", systemtext.Label(name))}, nil
 }
 
 // contactShareAcceptEffect shares the contact with the colleague who asked:

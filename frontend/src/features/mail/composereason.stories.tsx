@@ -2,35 +2,37 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, screen } from "storybook/test";
-import { StoryProviders } from "../../testing/story-utils";
-import { ContactReasonPick } from "./composereason";
+import { expect, fn, userEvent, within } from "storybook/test";
+import { installFetchStub, StoryProviders } from "../../testing/story-utils";
+import { ReasonSwitch } from "./composereason";
 
-const meta: Meta<typeof ContactReasonPick> = {
-  title: "Patterns/Compose mail/Contact reason",
-  component: ContactReasonPick,
+const meta: Meta<typeof ReasonSwitch> = {
+  title: "Patterns/Compose mail/Recorded alternative",
+  component: ReasonSwitch,
+  args: { reason: "requested_followup", onSwitch: fn() },
+  render: (args) => {
+    installFetchStub({});
+    return (
+      <StoryProviders>
+        <ReasonSwitch {...args} />
+      </StoryProviders>
+    );
+  },
 };
 export default meta;
+type Story = StoryObj<typeof meta>;
 
-/** A reason to write, picked where a send is refused for lack of one. The
- *  pick records it under the rep's name. Nothing picked yet. */
-export const Empty: StoryObj = {
-  render: () => (
-    <StoryProviders>
-      <ContactReasonPick
-        target={{
-          contactId: "c-1",
-          address: "anna@example.test",
-          category: "requested_followup",
-        }}
-      />
-    </StoryProviders>
-  ),
-  play: async () => {
-    await expect(
-      await screen.findByRole("combobox", {
-        name: "Why you may write to anna@example.test",
-      }),
-    ).toBeInTheDocument();
+export const SupportedFollowUp: Story = {
+  play: async ({ canvasElement, args }) => {
+    const button = within(canvasElement).getByRole("button", {
+      name: /^Use .*instead$/,
+    });
+    await userEvent.click(button);
+    await expect(args.onSwitch).toHaveBeenCalledWith("requested_followup");
   },
+};
+
+export const SupportedFollowUpPhone: Story = {
+  ...SupportedFollowUp,
+  tags: ["uat-phone"],
 };

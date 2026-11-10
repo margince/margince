@@ -3,22 +3,8 @@
 
 package consent
 
-// Recording the one qualifying event nothing can derive.
-//
-// A `business_correspondence` verdict reads the most recent thing on the record
-// that makes writing to somebody lawful, and three of the four kinds arrive on
-// their own: an inbound message, an inquiry and an open deal are all facts the
-// product already holds and the verdict derives them itself.
-//
-// The fourth happened away from every system. Somebody handed over a card at a
-// trade fair, and the only record of it is the memory of the contact who was
-// there. This is where they write it down — and the note is required, because
-// there is no message to cite and no deal to point at, so the note IS the
-// evidence. A basis nobody can check is not accountability.
-//
-// It grants no marketing consent and could not: §7 UWG asks for express
-// consent, and a card is not one. What it settles is the narrower question of
-// whether an ordinary business email may be sent at all.
+// A remembered exchange has no captured source record. Its author, note,
+// date and recipient scope let later send checks judge the assertion.
 
 import (
 	"context"
@@ -91,6 +77,13 @@ const noteMaxRunes = 500
 // the surface highlights.
 const fieldNote = "note"
 
+const (
+	exchangeOccurredArg = "occurred"
+	exchangeActorArg    = "actor"
+	exchangeDealArg     = "deal"
+	exchangeEntityField = "legal_entity_id"
+)
+
 // fieldOccurredAt is the same, for the date.
 const fieldOccurredAt = "occurred_at"
 
@@ -98,12 +91,12 @@ const fieldOccurredAt = "occurred_at"
 // before a date reads as a claim about the future rather than a fast watch.
 const clockSkewAllowance = 5 * time.Minute
 
-// RecordQualifyingEventInput is one exchange, as the contact who was there
-// states it.
+// RecordQualifyingEventInput is one exchange, stated by the colleague who was there.
 type RecordQualifyingEventInput struct {
-	Kind       string
-	Note       string
-	OccurredAt time.Time
+	sendingEntity *ids.UUID
+	Kind          string
+	Note          string
+	OccurredAt    time.Time
 	// AsksForQuote says the contact asked for a quote or an offer. Only a
 	// request the subject made may say so. Only such a request bears out a
 	// quote; a request to be called back does not.
@@ -184,14 +177,14 @@ func holdSurvivingContact(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 func (in RecordQualifyingEventInput) validated(now time.Time) (string, error) {
 	if !handRecordedKinds[in.Kind] {
 		return "", &InvalidQualifyingEventError{
-			Field: "kind",
+			Field: fieldKind,
 			Reason: "only an exchange in person or a request the subject made themselves is " +
 				"recorded by hand; the rest are derived",
 		}
 	}
 	if in.AsksForQuote && in.Kind != KindRequestedBySubject {
 		return "", &InvalidQualifyingEventError{
-			Field: "asks_for_quote", Reason: "only a request the contact made can ask for a quote",
+			Field: "asks_for_quote", Reason: "only a request the recipient made can ask for a quote",
 		}
 	}
 	note := strings.TrimSpace(in.Note)
@@ -224,30 +217,39 @@ func (in RecordQualifyingEventInput) validated(now time.Time) (string, error) {
 	return note, nil
 }
 
-// RecordQualifyingEvent writes the exchange and returns it as it now stands.
-//
-// Gated on the subject rather than on a consent object. What this asserts is a
-// fact about a contact, and it changes what may be sent to them. The authority
-// to make that assertion is the authority to write their record.
-func (s *Store) RecordQualifyingEvent(
-	ctx context.Context,
-	contactID ids.ContactID,
-	in RecordQualifyingEventInput,
-) (QualifyingEvent, error) {
+// RecordQualifyingEvent records a fact under the contact's update authority.
+func (s *Store) RecordQualifyingEvent(ctx context.Context, contactID ids.ContactID, in RecordQualifyingEventInput) (QualifyingEvent, error) {
+	return s.recordQualifyingSubject(ctx, RecordInput{ContactID: contactID}, in)
+}
+
+// RecordLeadQualifyingEvent keeps the exchange on its lead until a merge or promotion carries it.
+func (s *Store) RecordLeadQualifyingEvent(ctx context.Context, leadID ids.LeadID, in RecordQualifyingEventInput) (QualifyingEvent, error) {
+	return s.recordQualifyingSubject(ctx, RecordInput{LeadID: leadID}, in)
+}
+
+func (s *Store) recordQualifyingSubject(ctx context.Context, target RecordInput, in RecordQualifyingEventInput) (QualifyingEvent, error) {
 	var out QualifyingEvent
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = s.recordQualifyingEventTx(ctx, tx, contactID, in)
+		out, err = s.recordQualifyingSubjectTx(ctx, tx, target, in)
 		return err
 	})
 	return out, err
 }
 
 // recordQualifyingEventTx is RecordQualifyingEvent on the caller's transaction.
-func (s *Store) recordQualifyingEventTx(
-	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, in RecordQualifyingEventInput,
+func (s *Store) recordQualifyingEventTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, in RecordQualifyingEventInput) (QualifyingEvent, error) {
+	return s.recordQualifyingSubjectTx(ctx, tx, RecordInput{ContactID: contactID}, in)
+}
+
+func (s *Store) recordQualifyingSubjectTx(
+	ctx context.Context, tx pgx.Tx, target RecordInput, in RecordQualifyingEventInput,
 ) (QualifyingEvent, error) {
 	note, err := in.validated(s.now())
+	if err != nil {
+		return QualifyingEvent{}, err
+	}
+	sub, err := consentSubject(target)
 	if err != nil {
 		return QualifyingEvent{}, err
 	}
@@ -256,7 +258,7 @@ func (s *Store) recordQualifyingEventTx(
 	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return QualifyingEvent{}, err
 	}
-	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
+	if err := requireUpdateOnSubject(ctx, sub.entityType); err != nil {
 		return QualifyingEvent{}, err
 	}
 	by, err := storekit.CapturedBy(ctx)
@@ -265,7 +267,7 @@ func (s *Store) recordQualifyingEventTx(
 	}
 
 	out := QualifyingEvent{Kind: in.Kind, Note: note, OccurredAt: in.OccurredAt, AsksForQuote: in.AsksForQuote}
-	if err := writeExchangeTx(ctx, tx, contactID, in, note, by, &out); err != nil {
+	if err := writeExchangeTx(ctx, tx, sub, in, note, by, &out); err != nil {
 		return QualifyingEvent{}, err
 	}
 	return out, nil
@@ -274,13 +276,13 @@ func (s *Store) recordQualifyingEventTx(
 // writeExchangeTx writes one validated exchange and its audit row, or fills out
 // with the row a retry matched.
 func writeExchangeTx(
-	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, in RecordQualifyingEventInput,
+	ctx context.Context, tx pgx.Tx, sub subject, in RecordQualifyingEventInput,
 	note, by string, out *QualifyingEvent,
 ) error {
 	// The row-scope probe first: this changes what may be sent to a contact,
 	// which changes their record. Held to commit, so a merge of this contact
 	// carries the row instead of committing before it lands on the retired one.
-	if err := auth.HoldWritableLive(ctx, tx, "contact", contactID.UUID); err != nil {
+	if err := auth.HoldWritableLive(ctx, tx, sub.entityType, sub.id); err != nil {
 		return err
 	}
 	if !in.AboutDeal.IsZero() {
@@ -295,49 +297,60 @@ func writeExchangeTx(
 	// Matched on the contact, the moment and the words, which two different
 	// exchanges with one contact never all share. A retracted row matches too,
 	// so a replay answers the row as it stands and does not bring it back.
+	entity, err := qualifyingWriterEntity(ctx, tx, in.sendingEntity)
+	if err != nil {
+		return err
+	}
+	column := pgx.Identifier{sub.column}.Sanitize()
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO consent_qualifying_event
-			(contact_id, kind, note, occurred_at, source, captured_by, asks_for_quote, about_deal_id)
-		SELECT $1, $2, $3, $4, $7, $5, $6, $8
-		 WHERE NOT EXISTS (
-			SELECT 1 FROM consent_qualifying_event
-			 WHERE contact_id = $1 AND kind = $2 AND note = $3 AND occurred_at = $4
-			   AND about_deal_id IS NOT DISTINCT FROM $8)
-		RETURNING id::text`,
-		contactID, in.Kind, note, in.OccurredAt, by, in.AsksForQuote, handRecordedSource(ctx), zeroUUIDAsNull(in.AboutDeal)).Scan(&out.ID); err != nil {
+ INSERT INTO consent_qualifying_event
+ (`+column+`,kind,note,occurred_at,source,captured_by,asks_for_quote,about_deal_id,recorded_for_entities)
+ SELECT @subject,@kind,@note,@occurred,@source,@actor,@quote,@deal,ARRAY[@entity]::uuid[]
+ WHERE NOT EXISTS (SELECT 1 FROM consent_qualifying_event
+ WHERE `+column+`=@subject AND kind=@kind AND note=@note AND occurred_at=@occurred
+ AND about_deal_id IS NOT DISTINCT FROM @deal AND @entity=ANY(recorded_for_entities))
+ RETURNING id::text`, pgx.StrictNamedArgs{
+		fieldSubject: sub.id, fieldKind: in.Kind, fieldNote: note, exchangeOccurredArg: in.OccurredAt,
+		carrySourceArg: handRecordedSource(ctx), exchangeActorArg: by, "quote": in.AsksForQuote,
+		exchangeDealArg: zeroUUIDAsNull(in.AboutDeal), "entity": entity,
+	}).Scan(&out.ID); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			// Already on file. Nothing was written twice, so there is
-			// nothing to audit, and the answer is the standing row.
-			return standingExchange(ctx, tx, contactID, in.AboutDeal, out)
+			return standingExchange(ctx, tx, sub, in.AboutDeal, entity, out)
 		}
 		return fmt.Errorf("consent: recording the exchange: %w", err)
+	}
+	if sub.entityType == entityLead {
+		if err := bindQualifyingAddresses(ctx, tx, sub); err != nil {
+			return err
+		}
 	}
 	// Audit-only, like every other consent-basis write beside it. The closed
 	// public-event catalog carries no type for a lawful basis. An auditor asks
 	// who said this happened and what they said, which the row answers.
 	//
-	// The entity is `contact`, which is the row the caller was authorized
-	// against and the row this changes the sendability of. Naming
-	// `contact_consent` would have put a rule in the trail
-	// (`contact_consent.create`) that authorized nothing here.
-	_, err := storekit.AuditEvent(ctx, tx, "update", "contact", contactID.UUID, map[string]any{
-		"qualifying_event": in.Kind,
-		fieldNote:          note,
-		fieldOccurredAt:    in.OccurredAt.UTC().Format(time.RFC3339),
-		"about_deal":       zeroUUIDAsNull(in.AboutDeal),
+	// The audit names the subject whose update right admitted this assertion.
+	_, err = storekit.AuditEvent(ctx, tx, "update", sub.entityType, sub.id, map[string]any{
+		"qualifying_event":  in.Kind,
+		exchangeEntityField: entity,
+		fieldNote:           note,
+		fieldOccurredAt:     in.OccurredAt.UTC().Format(time.RFC3339),
+		"about_deal":        zeroUUIDAsNull(in.AboutDeal),
 	})
 	return err
 }
 
 // standingExchange fills out with the row a retried record matched, retracted
 // or not.
-func standingExchange(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, deal ids.UUID, out *QualifyingEvent) error {
+func standingExchange(ctx context.Context, tx pgx.Tx, sub subject, deal, entity ids.UUID, out *QualifyingEvent) error {
+	column := pgx.Identifier{sub.column}.Sanitize()
 	if err := tx.QueryRow(ctx, `
-		SELECT id::text, asks_for_quote, retracted_at IS NOT NULL FROM consent_qualifying_event
-		 WHERE contact_id = $1 AND kind = $2 AND note = $3 AND occurred_at = $4
-		   AND about_deal_id IS NOT DISTINCT FROM $5
-		 ORDER BY created_at LIMIT 1`, contactID, out.Kind, out.Note, out.OccurredAt, zeroUUIDAsNull(deal)).
-		Scan(&out.ID, &out.AsksForQuote, &out.Retracted); err != nil {
+ SELECT id::text,asks_for_quote,retracted_at IS NOT NULL FROM consent_qualifying_event
+ WHERE `+column+`=@subject AND kind=@kind AND note=@note AND occurred_at=@occurred
+ AND about_deal_id IS NOT DISTINCT FROM @deal AND @entity=ANY(recorded_for_entities)
+ ORDER BY created_at LIMIT 1`, pgx.StrictNamedArgs{
+		fieldSubject: sub.id, fieldKind: out.Kind, fieldNote: out.Note, exchangeOccurredArg: out.OccurredAt,
+		exchangeDealArg: zeroUUIDAsNull(deal), "entity": entity,
+	}).Scan(&out.ID, &out.AsksForQuote, &out.Retracted); err != nil {
 		return fmt.Errorf("consent: reading the exchange already on file: %w", err)
 	}
 	return nil
@@ -347,13 +360,26 @@ func standingExchange(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, d
 // as the record of what was said and when it was taken back; no send and no
 // verdict reads it any more.
 //
-// Gated like recording, because it is the same statement taken back. A derived exchange is not retracted here: it stands on a record the
-// product holds, and archiving that record is what ends it.
+// A derived exchange stands on a captured record; archiving that record
+// ends it. A hand-recorded statement uses the same gate for write and retraction.
 func (s *Store) RetractQualifyingEvent(ctx context.Context, contactID ids.ContactID, eventID ids.UUID) error {
+	return s.retractQualifyingSubject(ctx, RecordInput{ContactID: contactID}, eventID)
+}
+
+// RetractLeadQualifyingEvent withdraws the lead's statement without converting its record.
+func (s *Store) RetractLeadQualifyingEvent(ctx context.Context, leadID ids.LeadID, eventID ids.UUID) error {
+	return s.retractQualifyingSubject(ctx, RecordInput{LeadID: leadID}, eventID)
+}
+
+func (s *Store) retractQualifyingSubject(ctx context.Context, target RecordInput, eventID ids.UUID) error {
+	sub, err := consentSubject(target)
+	if err != nil {
+		return err
+	}
 	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
-	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
+	if err := requireUpdateOnSubject(ctx, sub.entityType); err != nil {
 		return err
 	}
 	by, err := storekit.CapturedBy(ctx)
@@ -361,16 +387,17 @@ func (s *Store) RetractQualifyingEvent(ctx context.Context, contactID ids.Contac
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.HoldWritableLive(ctx, tx, "contact", contactID.UUID); err != nil {
+		if err := auth.HoldWritableLive(ctx, tx, sub.entityType, sub.id); err != nil {
 			return err
 		}
 		var kind string
 		var occurred time.Time
+		column := pgx.Identifier{sub.column}.Sanitize()
 		err := tx.QueryRow(ctx, `
 			UPDATE consent_qualifying_event
-			   SET retracted_at = now(), retracted_by = $3
-			 WHERE id = $1 AND contact_id = $2 AND kind = ANY($4::text[]) AND retracted_at IS NULL
-			RETURNING kind, occurred_at`, eventID, contactID, by, handRecordedKindList()).Scan(&kind, &occurred)
+			   SET retracted_at = now(), retracted_by = @actor
+			 WHERE id = @event AND `+column+` = @subject AND kind = ANY(@kinds::text[]) AND retracted_at IS NULL
+			RETURNING kind, occurred_at`, pgx.StrictNamedArgs{"event": eventID, fieldSubject: sub.id, exchangeActorArg: by, "kinds": handRecordedKindList()}).Scan(&kind, &occurred)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
@@ -379,7 +406,7 @@ func (s *Store) RetractQualifyingEvent(ctx context.Context, contactID ids.Contac
 		}
 		// Audit-only, as recording is: the public-event catalog has no type for
 		// a lawful basis, and the trail answers who withdrew what.
-		_, err = storekit.AuditEvent(ctx, tx, "update", "contact", contactID.UUID, map[string]any{
+		_, err = storekit.AuditEvent(ctx, tx, "update", sub.entityType, sub.id, map[string]any{
 			"qualifying_event_retracted": kind,
 			fieldOccurredAt:              occurred.UTC().Format(time.RFC3339),
 		})

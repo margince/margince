@@ -64,6 +64,21 @@ func (w attendeeWorld) queued(t *testing.T, invitee ids.UUID, attendees ...strin
 	return connector.CalendarAppointment{ContactID: invitee, Attendees: attendees, Roster: roster}
 }
 
+// An invited colleague is a colleague to schedule with before they redeem the
+// invitation.
+func TestAnInvitedColleagueResolvesAsAColleague(t *testing.T) {
+	w := newAttendeeWorld(t)
+	const address = "invited@colleague.example"
+	_, seat, _ := invitedColleague(t, w.e, address)
+	got, err := w.calendar.ResolveAttendees(w.e.Admin(), w.host, []string{address})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0].Basis != connector.AttendeeColleague || got[0].ID != seat.UUID {
+		t.Errorf("the invited colleague resolved as %+v, want a colleague", got)
+	}
+}
+
 // A visible lead resolves as a lead and carries no name: its participant row is
 // an address row, read without the lead's scope.
 func TestALeadAttendeeCarriesNoName(t *testing.T) {

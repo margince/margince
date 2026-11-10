@@ -278,7 +278,7 @@ func (s *Store) CreateDSR(ctx context.Context, in CreateDSRInput) (dsrRow, error
 			return err
 		}
 		_, err = storekit.Audit(ctx, tx, "create", "data_subject_request", out.ID, nil, map[string]any{
-			"kind": in.Kind, fieldSubjectRef: in.SubjectRef, fieldReceivedAt: received, fieldDueAt: due,
+			fieldKind: in.Kind, fieldSubjectRef: in.SubjectRef, fieldReceivedAt: received, fieldDueAt: due,
 			"due_rule": rule, "due_overridden": overridden,
 		})
 		return err

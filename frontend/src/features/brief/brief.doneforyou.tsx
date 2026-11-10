@@ -22,6 +22,7 @@ import {
 import { Eyebrow } from "../../design-system/eyebrow";
 import { Heading } from "../../design-system/heading";
 import { SurfaceState } from "../../design-system/surfacestate";
+import { stable } from "../../format/collate";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useHandledForYou } from "../../lib/handled";
@@ -267,7 +268,7 @@ function changedSince(
   const ids = (groups: readonly DealChanges[]) =>
     groups
       .flatMap((group) => group.receipts.map((receipt) => receipt.id))
-      .sort()
+      .sort(stable)
       .join(",");
   return ids(shown) !== ids(live);
 }

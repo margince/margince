@@ -33,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -322,7 +323,7 @@ func (w *vcardIngestWorker) liveCardKeys(ctx context.Context, activity ids.UUID)
 	err := InstallationDB(w.pool).Tx(ctx, func(tx pgx.Tx) error {
 		var limited bool
 		if err := tx.QueryRow(ctx, `
-			SELECT audience <> 'workspace'
+			SELECT `+"NOT ("+auth.WorkspaceAudienceSQL("activity")+")"+`
 			       OR restricted_at IS NOT NULL
 			       OR archived_at IS NOT NULL
 			  FROM activity WHERE id = $1 FOR SHARE`, activity).Scan(&limited); err != nil {

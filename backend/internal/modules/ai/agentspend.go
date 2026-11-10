@@ -48,7 +48,9 @@ func (r *Router) spendAgentTokens(ctx context.Context, tokens int) {
 	if r.agentSpend == nil || tokens <= 0 {
 		return
 	}
-	if err := r.agentSpend.SpendAgentTokens(ctx, tokens); err != nil {
+	billing, done := billingContext(ctx)
+	defer done()
+	if err := r.agentSpend.SpendAgentTokens(billing, tokens); err != nil {
 		r.log.WarnContext(ctx, "ai: recording an agent's token spend against its own share failed",
 			"tokens", tokens, "err", err)
 	}

@@ -40,6 +40,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
@@ -177,6 +178,7 @@ func stageFollowUpDraft(
 		TargetType:     approvalTargetDeal,
 		TargetID:       dealID,
 		Summary:        summary,
+		SystemText:     &systemtext.Message{Version: 1, Subject: systemtext.Sentence("approval.draftedReplyWaiting", systemtext.Text(draft.Subject))},
 		Identity:       identity,
 		JoinPending:    true,
 	})

@@ -228,7 +228,10 @@ func TestTheDealReadNamesOnlyThatDealsMeetings(t *testing.T) {
 	s := storeAddressing(e, readerAddress)
 	deal := e.openDeal(t)
 	onDeal, elsewhere := e.metOnDeal(t, deal), e.metOnDeal(t, e.openDeal(t))
-	rows, err := s.MeetingsAwaitingFollowUpOnDeal(e.followUpReader(), clocktest.Now(t), deal)
+	// The deal read reports a meeting only when somebody can be written to.
+	e.attended(t, onDeal, e.buyer(t), "attendee")
+	e.attended(t, elsewhere, e.buyer(t), "attendee")
+	rows, err := s.NextMeetingFollowUpOnDeal(e.followUpReader(), clocktest.Now(t), deal)
 	if err != nil {
 		t.Fatalf("reading the deal's meeting follow-ups: %v", err)
 	}

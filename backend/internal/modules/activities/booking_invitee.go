@@ -27,7 +27,7 @@ var errBookingInviteeRequired = &SchedulingArgumentError{
 func (s *Store) bookingInvitation(ctx context.Context, in BookMeetingInput) (crmcontracts.MeetingInvitationRequest, invitationIntent, error) {
 	subject := in.Subject
 	if subject == "" {
-		subject = DefaultMeetingSubject
+		subject = s.DefaultMeetingSubject(ctx)
 	}
 	addresses, err := normalizedAttendees(in.AttendeeEmails)
 	if err != nil {

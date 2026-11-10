@@ -57,6 +57,20 @@ func NewMeter(db *database.DB) *Meter {
 	return &Meter{db: db, now: time.Now}
 }
 
+// billingContext is ctx for writing what a provider already billed. A caller
+// that stopped waiting does not unspend the tokens. So the write keeps the
+// context's values, drops its cancellation, and is bounded as the trace write is.
+func billingContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.WithoutCancel(ctx), traceWriteTimeout)
+}
+
+// recordUsage meters u on the billing context.
+func (r *Router) recordUsage(ctx context.Context, u Usage) error {
+	billing, done := billingContext(ctx)
+	defer done()
+	return r.meter.Record(billing, u)
+}
+
 func (m *Meter) Record(ctx context.Context, u Usage) error {
 	// A provider response has already spent these tokens, even if its job lost ownership.
 	ctx = database.WithoutTransactionGuard(ctx)

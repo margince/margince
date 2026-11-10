@@ -62,6 +62,7 @@ export function RowText({
     <>
       {emailOpener ? null : (
         <RowName
+          item={item}
           title={title}
           href={href}
           open={readings.open}

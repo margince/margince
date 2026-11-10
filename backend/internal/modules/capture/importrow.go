@@ -63,10 +63,11 @@ func recordImportTx(
 	}
 	query := `
         INSERT INTO capture_import (activity_id, user_id, posture_at_import, verdict_status, verdict_reason, verdict_reasons,
-                                    provider_received_at, source_occurred_at, delivered_by, bcc_only, provider_message_ids)
+                                    provider_received_at, source_occurred_at, delivered_by, bcc_only, provider_message_ids, legal_entity_id)
         VALUES (@activity, @seat, NULLIF(@import_posture, ''), NULLIF(@verdict_status, ''), NULLIF(@verdict_reason, ''), @verdict_reasons, @received, @occurred,
                 ARRAY(SELECT c.provider || ':' || c.generation FROM capture_connection c WHERE c.user_id = @seat AND c.provider = @delivering_provider),
-                @bcc, ` + providerMessageKeysSQL("@seat", "@delivering_provider", "@message") + `)
+                @bcc, ` + providerMessageKeysSQL("@seat", "@delivering_provider", "@message") + `,
+                (SELECT c.legal_entity_id FROM capture_connection c WHERE c.user_id=@seat AND c.provider=@delivering_provider))
         ON CONFLICT (activity_id, user_id) DO UPDATE SET
          provider_received_at = coalesce(capture_import.provider_received_at, EXCLUDED.provider_received_at),
          source_occurred_at = coalesce(capture_import.source_occurred_at, EXCLUDED.source_occurred_at),

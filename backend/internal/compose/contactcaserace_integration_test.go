@@ -21,7 +21,7 @@ import (
 // it is parked, then starts second, and releases the rows once both wait.
 func (c *caseEnv) raceBehindABarrier(t *testing.T, members []ids.UUID, first, second func() error) [2]error {
 	t.Helper()
-	owner := integration.OwnerConn(t)
+	owner := integration.FreshOwnerConn(t)
 	barrier, err := owner.Begin(context.Background())
 	if err != nil {
 		t.Fatal(err)

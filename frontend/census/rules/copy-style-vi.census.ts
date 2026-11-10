@@ -17,6 +17,7 @@ import {
   type LocaleEntry,
   listedUnitCopy,
 } from "../../scripts/lib/locale-catalogs";
+import { stable } from "../../src/format/collate";
 import { en } from "../../src/i18n/en";
 import {
   type CensusRule,
@@ -186,7 +187,7 @@ const REFLEXIVE = word("(?:chính|tự|một) mình", "giu");
 const SENTENCE_OPENS = /(?:[.?:]\s|\n|[“(]|\}\s)$/;
 
 function placeholderSet(value: string): string {
-  return (value.match(/\{\w+\}/g) ?? []).sort().join();
+  return (value.match(/\{\w+\}/g) ?? []).sort(stable).join();
 }
 
 function lettersOf(value: string): string {

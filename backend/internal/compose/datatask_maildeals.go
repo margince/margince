@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // mailDealsDataTask files mail captured before the deal rule under the one
@@ -25,7 +26,7 @@ func mailDealsDataTask(pool *pgxpool.Pool) datatask.Task {
 	repair := mailDealRepair(pool)
 	return datatask.Task{
 		ID: "core/1792680000_captured_mail_filed_on_its_deal", Version: 1,
-		Title: "Filing captured mail on the one deal it is about", Requires: []string{"core/1792679518"},
+		Title: systemtext.Literal("datatask.title.core.1792680000_captured_mail_filed_on_its_deal"), Requires: []string{"core/1792679518"},
 		Steps: []datatask.Step{{
 			Name: "file_captured_mail_on_its_deal", Limit: 200, MinLimit: 10,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

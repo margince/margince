@@ -363,6 +363,27 @@ describe("OIDC failure notice", () => {
     expect(window.location.hash).toBe("#/home?approval=ap-7");
   });
 
+  // A provider sign-in begun on the consent screen fails back to that screen,
+  // so an MCP client's window keeps its opener and the request survives.
+  it("shows the notice on the consent screen and puts its request back", async () => {
+    const request = "#/oauth-consent?client_id=cl-1&state=s";
+    globalThis.history.replaceState(null, "", `/consent${request}`);
+    keepReturnRoute();
+    globalThis.history.replaceState(
+      null,
+      "",
+      "/consent#/oauth-consent?oidc=failed",
+    );
+    restoreReturnRoute();
+    stubApi({ password: true, password_reset: true }, () => ok(200));
+    render(<AuthScreen onAuthed={vi.fn()} />);
+
+    expect(await screen.findByText(t("auth.noticeOidcFailed"))).toBeTruthy();
+    expect(window.location.pathname).toBe("/consent");
+    expect(window.location.hash).toBe(request);
+    globalThis.history.replaceState(null, "", "/");
+  });
+
   it("stays silent for an ordinary address", async () => {
     stubApi({ password: true, password_reset: true }, () => ok(200));
     render(<AuthScreen onAuthed={vi.fn()} />);

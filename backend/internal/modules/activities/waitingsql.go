@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -277,7 +278,7 @@ var waitingEligibleFromSQL = `FROM activity a
          AND (request_task.assignee_id = $%[9]d OR $%[9]d = '00000000-0000-0000-0000-000000000000'::uuid
           -- A reminder with the mail's whole reach that this reader can find
           -- stands in for the mail: they see who holds it instead.
-          OR (request_task.audience = 'workspace' AND request_task.restricted_at IS NULL AND (%[22]s))
+          OR (` + auth.WorkspaceAudienceSQL("request_task") + ` AND request_task.restricted_at IS NULL AND (%[22]s))
           OR ` + storekit.HumanWroteActivityClause("request_task") + `))))
 	   AND ` + withinWaitingHorizonSQL("$%[1]d", "%[5]d") + `
 	   -- A SALES link, or it is not this queue's business.

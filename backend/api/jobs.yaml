@@ -1076,6 +1076,21 @@ kinds:
       loosening the cadence without amending the migration makes it a lie.
 
 
+  approval_owner_notice:
+    role: worker
+    go_type: ApprovalOwnerNoticeArgs
+    queue: default
+    timeout: 1m
+    opts_owner: args
+    args:
+      Workspace: id
+      ApprovalID: id
+      DeciderID: id
+    reason: >-
+      Recheck a handed-over request under its current owner's held authority
+      before creating its notice and optional email. Runs after the deal write
+      commits so authorization is locked before any record.
+
   approval_notice_reconcile:
     role: worker
     go_type: ApprovalNoticeReconcileArgs

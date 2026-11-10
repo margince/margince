@@ -201,7 +201,7 @@ func stewardIsEligible(ctx context.Context, tx pgx.Tx, user ids.UserID) (bool, e
 	var eligible bool
 	err := tx.QueryRow(ctx,
 		`SELECT true FROM app_user
-		  WHERE id = $1 AND is_agent = false AND `+workforce.LiveMemberSQL("")+`
+		  WHERE id = $1 AND `+workforce.LiveHumanSQL("")+`
 		  FOR SHARE`,
 		user).Scan(&eligible)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -227,6 +227,9 @@ func (s *Store) UpdateRoom(ctx context.Context, id ids.DealRoomID, in UpdateRoom
 	}
 	var out crmcontracts.DealRoom
 	err := s.tx(ctx, func(tx pgx.Tx) error {
+		if _, err := storekit.LockRow(ctx, tx, roomObject, id.UUID, storekit.LiveOnly); err != nil {
+			return err
+		}
 		current, err := readRoom(ctx, tx, id)
 		if err != nil {
 			return err
@@ -234,10 +237,6 @@ func (s *Store) UpdateRoom(ctx context.Context, id ids.DealRoomID, in UpdateRoom
 		if err := ensureDealWritable(ctx, tx, current); err != nil {
 			return err
 		}
-		// A finished room takes no further edits. The text could never reach a
-		// buyer anyway — publishable() refuses these three states — so allowing
-		// the write would only leave a draft that silently goes nowhere, which
-		// reads to the rep as though it had been saved for later publication.
 		if !acceptsContent(string(current.State)) {
 			return notEditable(string(current.State))
 		}

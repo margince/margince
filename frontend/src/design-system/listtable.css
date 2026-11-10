@@ -1343,9 +1343,11 @@
    * holds the grid together, but in a card it would read as a missing answer to
    * a question nobody asked. A cell renderer may wrap nothing in an element, so
    * a cell counts as empty when nothing in it holds text or draws itself. Bare
-   * text (the empty list's own line) counts as content. */
+   * text (the empty list's own line) counts as content. A loading row's bone
+   * is a placeholder, not a missing answer, so it keeps its cells. */
   .lt-table
-  td:is(:empty, :not(:has(:not(:empty), img, svg, input)):has(> :empty)) {
+    tr:not(.lt-loading)
+    > td:is(:empty, :not(:has(:not(:empty), img, svg, input)):has(> :empty)) {
     display: none;
   }
 

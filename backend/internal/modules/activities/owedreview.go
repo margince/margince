@@ -79,11 +79,11 @@ func owedReviewReadTx(ctx context.Context, tx pgx.Tx, after ids.UUID, exact *ids
  AND human.actor_type='human' AND human.occurred_at>=a.owed_verdict_at),
  NOT EXISTS(SELECT 1 FROM activity prior WHERE `+ourOutboundInThisThread("prior", "a")+`
  AND (prior.occurred_at,prior.id)<(a.occurred_at,a.id)
- AND (prior.audience<>'workspace' OR prior.restricted_at IS NOT NULL OR NOT (%s))),
+ AND (`+"NOT ("+auth.WorkspaceAudienceSQL("prior")+")"+` OR prior.restricted_at IS NOT NULL OR NOT (%s))),
  `+provenance.MailBodyCompleteSQL("a")+` AND `+priorContextComplete+`
  FROM activity a LEFT JOIN activity_participant p ON p.activity_id=a.id %s
  WHERE a.direction='inbound' AND a.kind IN ('email','message') AND a.owed_verdict IS NOT NULL
- AND a.owed_verdict_at IS NOT NULL AND a.archived_at IS NULL AND a.audience='workspace' AND a.restricted_at IS NULL
+ AND a.owed_verdict_at IS NOT NULL AND a.archived_at IS NULL AND `+auth.WorkspaceAudienceSQL("a")+` AND a.restricted_at IS NULL
  AND (%s) AND a.id>$%d AND ($%d::uuid IS NULL OR a.id=$%d)
  AND NOT EXISTS(SELECT 1 FROM activity_sales_state dismissed WHERE dismissed.thread_key=a.thread_key
  AND dismissed.kind=a.kind AND dismissed.channel_provider=coalesce(a.channel_provider,''))

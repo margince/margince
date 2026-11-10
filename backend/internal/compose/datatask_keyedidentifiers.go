@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // The migrations that add the key columns and the indexes the re-key scans.
@@ -36,7 +37,7 @@ const keyedIdentifierAudit = "re-encodes a stored hash or link into the keyed fo
 func keyedIdentifiersDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1794125373_keyed_privacy_identifiers", Version: 1,
-		Title:    "Protecting stored erasure hashes and preference links with the installation key",
+		Title:    systemtext.Literal("datatask.title.core.1794125373_keyed_privacy_identifiers"),
 		Requires: []string{keyedIdentifiersMigration, keyedIdentifiersIndexMigration},
 		Steps: []datatask.Step{
 			suppressionListStep(),

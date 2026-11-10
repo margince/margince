@@ -51,6 +51,7 @@ func triageFailedOverWalk(logical ids.UUID, reason string) []Call {
 func recordDecisionOutcomes(ctx context.Context, t *testing.T, meter *CallMeter) {
 	t.Helper()
 	decided, belowFloor, errored, refused, plain := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
+	canceled := ids.NewV7()
 	logicalCalls := [][]Call{
 		{triageDecisionRow(decided, true, "")},
 		append([]Call{triageDecisionRow(belowFloor, false, "")}, triageFailedOverWalk(belowFloor, attemptReasonDecisionBelowFloor)...),
@@ -60,6 +61,8 @@ func recordDecisionOutcomes(ctx context.Context, t *testing.T, meter *CallMeter)
 		// Refused before any call: the ladder's row is all there is.
 		{triageLadderRow(refused, 1, attemptReasonDecisionUncertified)},
 		{triageLadderRow(plain, 1, "")},
+		// The caller left during the decision: a consultation, not a decision.
+		{triageDecisionRow(canceled, true, sentinelCanceled)},
 	}
 	for _, calls := range logicalCalls {
 		if err := meter.Record(ctx, calls); err != nil {
@@ -82,8 +85,8 @@ func TestDecisionSummaryCountsEachConsultationOnce(t *testing.T) {
 		t.Fatalf("summaries = %+v, want site triage alone", got)
 	}
 	triage := got[0]
-	if triage.Task != string(TaskSiteTriage) || triage.Asked != 4 || triage.Decided != 1 {
-		t.Errorf("triage = %+v, want asked 4, decided 1", triage)
+	if triage.Task != string(TaskSiteTriage) || triage.Asked != 5 || triage.Decided != 1 {
+		t.Errorf("triage = %+v, want asked 5, decided 1", triage)
 	}
 	want := map[string]int{
 		attemptReasonDecisionBelowFloor: 1, attemptReasonDecisionError: 1, attemptReasonDecisionUncertified: 1,

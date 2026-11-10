@@ -7,6 +7,7 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useEffect, useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
+import { stable } from "../format/collate";
 import { verticalPlacement } from "./anchored";
 import {
   Checkbox,
@@ -468,7 +469,7 @@ it("keeps Radios sharing a name mutually exclusive", async () => {
 it("merges a caller's className with the atom's own", () => {
   render(<Textarea aria-label="Body" className="compose-body" />);
 
-  expect([...screen.getByLabelText("Body").classList].sort()).toEqual([
+  expect([...screen.getByLabelText("Body").classList].sort(stable)).toEqual([
     "compose-body",
     "textarea",
   ]);

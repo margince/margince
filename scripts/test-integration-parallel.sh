@@ -83,6 +83,7 @@ cd "$ROOT"
 source "$ROOT/scripts/lib-testdb.sh"
 source "$ROOT/scripts/lib-laneorder.sh"
 source "$ROOT/scripts/lib-lanebinaries.sh"
+source "$ROOT/scripts/lib-integration-artifacts.sh"
 parse_test_dsn
 
 SHARD_IDX=0 SHARD_TOTAL=0
@@ -110,7 +111,8 @@ if [[ -n "$SHARD_OUT" ]]; then
   # reads. Kept binary here because `go tool covdata` merges dirs, not text.
   COVERDIR="$SHARD_OUT/covdata"
   rm -rf "$COVERDIR"
-  rm -f "$SHARD_OUT/discovery.txt" "$SHARD_OUT/assigned.txt" "$SHARD_OUT/ran.txt" "$SHARD_OUT/meta.txt"
+  rm -f "$SHARD_OUT/discovery.txt" "$SHARD_OUT/assigned.txt" "$SHARD_OUT/ran.txt" "$SHARD_OUT/meta.txt" "$SHARD_OUT/rerun.txt"
+  rm -rf "$SHARD_OUT/parts" "$SHARD_OUT/failed-logs"
   mkdir -p "$COVERDIR"
   export COVERDIR
 fi
@@ -745,6 +747,31 @@ if grep -rq -- '--- SKIP' "$OUTDIR"; then
   fail=1
 fi
 
+# The manifests the fan-in reconciles: full discovery (identical across
+# shards), this shard's slice, and what actually ran. Written before the
+# verdict, so a red shard keeps them too: it is the one somebody reads.
+if [[ -n "$SHARD_OUT" ]]; then
+  cp "$DISCOVERY" "$SHARD_OUT/discovery.txt"
+  cp "$ASSIGNED" "$SHARD_OUT/assigned.txt"
+  cp "$RAN" "$SHARD_OUT/ran.txt"
+  # "rel|seconds|tests|slot" per process (a split package has one row per
+  # part), so cost can be tracked across runs rather than re-derived by eye
+  # from a scrolled log.
+  cp "$TIMING" "$SHARD_OUT/timing.txt"
+  cp "$TEST_TIMING" "$SHARD_OUT/test-timing.txt"
+  # The digest of the weights, so the fan-in names a split from other weights
+  # instead of reporting it as a slicing bug.
+  timing_digest="$(git hash-object --no-filters "$SHARD_TIMING")"
+  printf 'shard=%s\ntotal=%s\ntiming=%s\n' "$SHARD_IDX" "$SHARD_TOTAL" "$timing_digest" > "$SHARD_OUT/meta.txt"
+  # Each part's lists and its failed log, under the part's own name, and the
+  # tests a continuation owes (scripts/lib-integration-artifacts.sh).
+  # Guarded, so the verdict below still prints: the shard is red and says why.
+  if ! keep_shard_evidence "$SHARD_OUT" "$WORK" "$REGEX_DIR" "$OUTDIR" "$FAILED_PKGS"; then
+    echo "FAIL: the shard could not keep its part evidence in $SHARD_OUT"
+    fail=1
+  fi
+fi
+
 if [[ "$fail" -ne 0 ]]; then
   # Name the packages, and keep their logs. "see package logs above" pointed at
   # the interleaved stdout of every package in the lane — thousands of lines —
@@ -796,11 +823,8 @@ if [[ "$fail" -ne 0 ]]; then
         printf 'no package reported a failing exit; the reconciliation in the job log names the reason\n'
       fi
     } > "$SHARD_OUT/failure-summary.txt" 2>/dev/null || :
-    while IFS='|' read -r d rel base; do
-      # Flatten the package path into the filename: the logs are named 3.log and
-      # 11.log by SLOT, which says nothing once they leave this run.
-      cp "$OUTDIR/$base" "$SHARD_OUT/failed-logs/$(printf '%s' "$rel" | tr '/.' '_')".log 2>/dev/null || :
-    done < "$FAILED_PKGS"
+    # The failing parts' logs are already in failed-logs, one per part, and
+    # rerun.txt beside them lists every test still owed.
     echo "    copied to the shard artifact: $SHARD_OUT/"
   fi
   exit 1
@@ -813,23 +837,6 @@ if [[ -n "$SHARD_OUT" ]]; then
   cp "$OUTDIR/repeated-gates.txt" "$SHARD_OUT/repeated-gates.txt"
 else
   stale_repeated_gates "$OUTDIR/repeated-gates.txt"
-fi
-
-# The manifests the fan-in reconciles: full discovery (identical across
-# shards), this shard's slice, and what actually ran.
-if [[ -n "$SHARD_OUT" ]]; then
-  cp "$DISCOVERY" "$SHARD_OUT/discovery.txt"
-  cp "$ASSIGNED" "$SHARD_OUT/assigned.txt"
-  cp "$RAN" "$SHARD_OUT/ran.txt"
-  # "rel|seconds|tests|slot" per process (a split package has one row per
-  # part), so cost can be tracked across runs rather than re-derived by eye
-  # from a scrolled log.
-  cp "$TIMING" "$SHARD_OUT/timing.txt"
-  cp "$TEST_TIMING" "$SHARD_OUT/test-timing.txt"
-  # The digest of the weights, so the fan-in names a split from other weights
-  # instead of reporting it as a slicing bug.
-  timing_digest="$(git hash-object --no-filters "$SHARD_TIMING")"
-  printf 'shard=%s\ntotal=%s\ntiming=%s\n' "$SHARD_IDX" "$SHARD_TOTAL" "$timing_digest" > "$SHARD_OUT/meta.txt"
 fi
 
 # Keep the exact success sentinel the gates grep for; the count is informational.

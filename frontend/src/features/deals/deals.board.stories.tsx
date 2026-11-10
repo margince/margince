@@ -147,7 +147,7 @@ async function searchOffScreen(canvasElement: HTMLElement) {
     await canvas.findByRole("link", { name: /Harbour lighting/ }),
   ).toBeTruthy();
   await userEvent.type(
-    canvas.getByRole("searchbox", { name: "Search" }),
+    canvas.getByRole("combobox", { name: "Search" }),
     "fraunhofer",
   );
   await expect(

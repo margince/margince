@@ -39,6 +39,10 @@ func (s *Store) recordAdmittedTx(
 		in.Source = &named
 	}
 
+	// Grants and withdrawals share the send fence with subject stops.
+	if err := lockSubjectSuppressions(ctx, tx, sub.id); err != nil {
+		return State{}, err
+	}
 	var out State
 	probe, err := rowProbeFor(state)
 	if err != nil {

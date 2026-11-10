@@ -328,46 +328,16 @@ func (s *Store) offerVisibleTo(ctx context.Context, offerID ids.UUID) (bool, err
 	return s.offerDealVisible(ctx, offerID)
 }
 
-// contractVisibleTo gates a contract subject on contract.read and then on the
-// ROW SCOPE of its anchor — the deal it came from, or its company when it
-// has no deal. An absent contract reads as not-visible.
-//
-// The anchor's own OBJECT grant is deliberately not required, and that is the
-// whole difference from the readers around it. A contract's visibility is
-// inherited rather than owned (contracts/visibility.go): GET /contracts/{id}
-// asks for contract.read and then borrows the anchor's row-scope predicate
-// WITHOUT demanding the anchor's grant. A custom role holding contract.read
-// and not deal.read could therefore read a contract over HTTP and receive none
-// of its four subscribed events — fails closed, so a delivery gap rather than a
-// leak, but two paths answering one question differently.
-//
-// The anchor must also be LIVE, for the reason VisibleClause states: an
-// archived deal keeps its foreign key and its grants, so a probe that ignored
-// archival would deliver events about a contract whose own read answers 404 —
-// which is the same divergence in the direction that does leak.
+// Contract delivery borrows the same anchor scope as the contract reader.
+// An archived contract remains available for its retained history.
 func (s *Store) contractVisibleTo(ctx context.Context, contractID ids.UUID) (bool, error) {
 	readable, err := objectReadable(ctx, "contract")
 	if err != nil || !readable {
 		return false, err
 	}
-	var dealID *ids.UUID
-	var companyID ids.UUID
-	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
-			`SELECT deal_id, company_id FROM contract WHERE id = $1`, contractID).Scan(&dealID, &companyID)
-	})
-	if errors.Is(err, pgx.ErrNoRows) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	anchor, anchorID := "company", companyID
-	if dealID != nil {
-		anchor, anchorID = "deal", *dealID
-	}
 	return s.probeVisible(ctx, func(c context.Context, tx pgx.Tx) error {
-		return auth.EnsureVisibleLive(c, tx, anchor, anchorID)
+		_, _, err := auth.ContractAnchorTx(c, tx, contractID, true)
+		return err
 	})
 }
 
