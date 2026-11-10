@@ -8,12 +8,16 @@ import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
 import { Checkbox, Textarea } from "../../design-system/field";
 import { MoneyInput } from "../../design-system/moneyinput";
-import { formatAnalyticsMoney } from "../../format/format";
+import {
+  formatAnalyticsMoney,
+  formatNumber,
+  identifierNumber,
+  monthName,
+} from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { problemMessageOf } from "../../lib/problem";
 import {
   equalMonths,
-  monthName,
   monthsTotal,
   type SalesGoalPlan,
   useSalesGoalWrites,
@@ -125,7 +129,10 @@ export function GoalEditor({ plan }: Readonly<{ plan: SalesGoalPlan }>) {
               "goals.monthsMissing",
               months.filter((month) => month === null).length,
               {
-                count: String(months.filter((month) => month === null).length),
+                count: formatNumber(
+                  months.filter((month) => month === null).length,
+                  locale,
+                ),
               },
             )
           : t("goals.monthsSum", { total: money(total) })}
@@ -237,7 +244,7 @@ function PublishConfirm({
       onClose={onClose}
       title={t("goals.publishTitle", {
         name: plan.owner_name,
-        year: String(plan.year),
+        year: identifierNumber(plan.year),
       })}
       confirmLabel={t("goals.publish")}
       confirmReason={
@@ -296,7 +303,7 @@ function WithdrawConfirm({
       onClose={onClose}
       title={t("goals.withdrawTitle", {
         name: plan.owner_name,
-        year: String(plan.year),
+        year: identifierNumber(plan.year),
       })}
       confirmLabel={t("goals.withdraw")}
       confirmVariant="danger"

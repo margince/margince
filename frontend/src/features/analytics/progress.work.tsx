@@ -23,6 +23,7 @@ import { QueryGate } from "../../design-system/querystates";
 import { formatAnalyticsMoney, formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
@@ -143,7 +144,9 @@ function OpenLeads({ progress }: Readonly<{ progress: SalesProgress }>) {
     {
       key: "status",
       header: t("progress.work.status"),
-      render: (lead) => <Badge>{t(LEAD_STATUS_LABEL[lead.status])}</Badge>,
+      render: (lead) => (
+        <Badge>{t(labelFor(LEAD_STATUS_LABEL, lead.status))}</Badge>
+      ),
     },
     {
       key: "next",
@@ -251,7 +254,7 @@ function OpenDeals({ progress }: Readonly<{ progress: SalesProgress }>) {
       header: t("progress.work.expectedClose"),
       render: (deal) =>
         deal.expected_close_date
-          ? formatDate(`${deal.expected_close_date}T12:00:00Z`, locale, "UTC")
+          ? formatDate(deal.expected_close_date, locale, progress.timezone)
           : t("progress.work.noClose"),
     },
   ];

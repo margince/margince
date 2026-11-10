@@ -10,14 +10,20 @@ import { FilterBar } from "../../design-system/filterbar";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
-import { formatAnalyticsMoney, formatDateTime } from "../../format/format";
+import {
+  formatAnalyticsMoney,
+  formatDateTime,
+  identifierNumber,
+  monthName,
+} from "../../format/format";
 import { type Translator, useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
+import { labelFor, valueFor } from "../../lib/labelfor";
 import { navigate } from "../../lib/router";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { useViewerZone } from "../../lib/viewerzone";
 import { GoalEditor } from "./goals.editor";
 import {
-  monthName,
   type SalesGoalPlan,
   type SalesGoalRoster,
   useSalesGoalPlan,
@@ -26,9 +32,8 @@ import {
 
 type PlanState = SalesGoalPlan["state"];
 
-const STATE_TONE: Record<
-  PlanState,
-  "default" | "success" | "warning" | "info"
+const STATE_TONE: Readonly<
+  Record<PlanState, "default" | "success" | "warning" | "info">
 > = {
   no_goal: "default",
   draft: "info",
@@ -38,9 +43,22 @@ const STATE_TONE: Record<
   changed_outside_plan: "warning",
 };
 
+const STATE_LABEL: Readonly<Record<PlanState, MessageKey>> = {
+  no_goal: "goals.state.no_goal",
+  draft: "goals.state.draft",
+  published: "goals.state.published",
+  published_with_draft: "goals.state.published_with_draft",
+  withdrawn: "goals.state.withdrawn",
+  changed_outside_plan: "goals.state.changed_outside_plan",
+};
+
 export function PlanStateBadge({ state }: Readonly<{ state: PlanState }>) {
   const t = useT();
-  return <Badge tone={STATE_TONE[state]}>{t(`goals.state.${state}`)}</Badge>;
+  return (
+    <Badge tone={valueFor(STATE_TONE, state, "default")}>
+      {t(labelFor(STATE_LABEL, state))}
+    </Badge>
+  );
 }
 
 /**
@@ -73,7 +91,7 @@ export function SalesGoalsScreen() {
                 { screen: "progress" },
                 new Map([
                   ["period", "year"],
-                  ["year", String(year)],
+                  ["year", identifierNumber(year)],
                 ]),
               )
             }
@@ -88,9 +106,9 @@ export function SalesGoalsScreen() {
               {...field}
               options={years.map((each) => ({
                 value: String(each),
-                label: String(each),
+                label: identifierNumber(each),
               }))}
-              value={String(year)}
+              value={identifierNumber(year)}
               onChange={(next) => replaceDial("year", next)}
             />
           )}
@@ -136,7 +154,7 @@ function SellerPlan({
           <Panel
             title={t("goals.planTitle", {
               name: answer.owner_name,
-              year: String(answer.year),
+              year: identifierNumber(answer.year),
             })}
             titleAction={<PlanStateBadge state={answer.state} />}
           >

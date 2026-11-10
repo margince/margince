@@ -7,7 +7,11 @@ import { Button, Field, SegmentedControl } from "../../design-system/atoms";
 import { FilterBar } from "../../design-system/filterbar";
 import { QueryGate } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
-import { formatDateTime } from "../../format/format";
+import {
+  formatDateTime,
+  identifierNumber,
+  monthName,
+} from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { navigate } from "../../lib/router";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
@@ -17,7 +21,6 @@ import {
   useAnalyticsContext,
 } from "./analytics.context";
 import {
-  monthName,
   type ProgressAsk,
   periodLabel,
   type SalesProgress,
@@ -107,7 +110,7 @@ export function ProgressScreen() {
                   value: String(index + 1),
                   label: monthName(index + 1, locale),
                 }))}
-                value={String(dials.month)}
+                value={identifierNumber(dials.month)}
                 onChange={(next) => replaceDial("month", next)}
               />
             )}
@@ -119,9 +122,9 @@ export function ProgressScreen() {
               {...field}
               options={years.map((year) => ({
                 value: String(year),
-                label: String(year),
+                label: identifierNumber(year),
               }))}
-              value={String(dials.year)}
+              value={identifierNumber(dials.year)}
               onChange={(next) => replaceDial("year", next)}
             />
           )}

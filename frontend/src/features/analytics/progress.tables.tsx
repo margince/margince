@@ -4,13 +4,13 @@
 import { Callout } from "../../design-system/callout";
 import { DataTable } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { identifierNumber, monthName } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { replaceDial } from "../../lib/urlstate";
-import {
-  monthName,
-  type SalesProgress,
-  type SalesProgressMember,
-  type SalesProgressMonth,
+import type {
+  SalesProgress,
+  SalesProgressMember,
+  SalesProgressMonth,
 } from "./progress.queries";
 import { amountText, DeltaBadge, goalText } from "./progress.result";
 
@@ -89,10 +89,16 @@ export function ProgressMonths({
   const { locale } = useLocale();
   const { currency } = progress;
   return (
-    <Panel title={t("progress.months", { year: String(progress.period.year) })}>
+    <Panel
+      title={t("progress.months", {
+        year: identifierNumber(progress.period.year),
+      })}
+    >
       <PanelBody>
         <DataTable<SalesProgressMonth>
-          label={t("progress.months", { year: String(progress.period.year) })}
+          label={t("progress.months", {
+            year: identifierNumber(progress.period.year),
+          })}
           rows={progress.months}
           rowKey={(row) => String(row.month)}
           columns={[

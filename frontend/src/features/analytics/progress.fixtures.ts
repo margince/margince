@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
 import type {
   SalesGoalPlan,
   SalesProgress,
@@ -38,7 +39,7 @@ export const sellerMarch: SalesProgress = {
   horizon: window2026(3),
   actual_window: window2026(3),
   cutoff: "2026-03-31T22:59:59Z",
-  timezone: "Europe/Berlin",
+  timezone: REPORTING_FIXTURE_ZONE,
   currency: "EUR",
   state: "ended",
   closed: { status: "ok", amount_minor: 6000000 },

@@ -16,7 +16,7 @@ import { ProgressReadings, ProgressResult } from "./progress.result";
 import { ProgressMembers, ProgressMonths } from "./progress.tables";
 import { ProgressWork } from "./progress.work";
 
-const meta: Meta = { title: "Insights/Progress" };
+const meta: Meta = { title: "Records/Reports/Progress" };
 export default meta;
 
 type Story = StoryObj;

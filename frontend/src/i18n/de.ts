@@ -21720,7 +21720,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "progress.yearly": "Jährlich",
   "progress.month": "Monat",
   "progress.year": "Jahr",
-  "progress.scope": "Verkäufer oder Team",
+  "progress.scope": "Person oder Team",
   "progress.reading": "Fortschritt wird gelesen",
   "progress.myTitle": "Mein Fortschritt",
   "progress.teamTitle": "Team-Fortschritt",
@@ -21729,7 +21729,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "progress.goal": "Ziel",
   "progress.goalLine": "Ziel für den Zeitraum: {goal}",
   "progress.goalIncompleteTeamLine":
-    "Ziele unvollständig: Nicht alle Verkäufer haben ein Ziel, bisher {subtotal}",
+    "Ziele unvollständig: Nicht alle im Team haben ein Ziel, bisher {subtotal}",
   "progress.goalIncompleteLine":
     "Ziele unvollständig: {set} von {needed} Monaten gesetzt, bisher {subtotal}",
   "progress.goal.set": "Gesetzt",
@@ -21741,7 +21741,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "progress.goal.changed_outside_plan": "Außerhalb des Plans geändert",
   "progress.goalChanged":
     "Ein Monat dieses Ziels wurde außerhalb der Umsatzziele geändert. Eine Führungskraft sollte den Plan prüfen.",
-  "progress.completion": "{percent} % des Ziels",
+  "progress.completion": "{percent} % des Ziels",
   "progress.partial":
     "Einige Deals in dieser Zahl haben keinen umgerechneten Wert, darum wird keine Erreichung angegeben.",
   "progress.notStarted": "Nicht begonnen",
@@ -21789,9 +21789,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "progress.work.unnamed": "Lead ohne Namen",
   "progress.work.empty": "Gerade ist hier nichts offen.",
   "progress.work.more": "Mehr anzeigen",
-  "goals.controls": "Jahr und Verkäufer",
+  "goals.controls": "Jahr und Person",
   "goals.viewProgress": "Fortschritt ansehen",
-  "goals.seller": "Verkäufer",
+  "goals.seller": "Person",
   "goals.reading": "Umsatzziele werden gelesen",
   "goals.planTitle": "Umsatzziele von {name} für {year}",
   "goals.state.no_goal": "Kein Ziel",
@@ -21813,7 +21813,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "goals.event.published": "{name} hat die Ziele veröffentlicht",
   "goals.event.discarded": "{name} hat den Entwurf verworfen",
   "goals.event.withdrawn": "{name} hat die Ziele zurückgezogen",
-  "goals.roster": "Verkäufer",
+  "goals.roster": "Vertriebsteam",
   "goals.status": "Status",
   "goals.yearly": "Jahresziel in {currency}",
   "goals.spread": "Gleich verteilen",

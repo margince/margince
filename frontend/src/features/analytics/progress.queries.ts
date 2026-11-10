@@ -10,6 +10,8 @@ import {
 } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { ifMatch } from "../../api/version";
+import { identifierNumber, monthName } from "../../format/format";
 import type { Locale } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 
@@ -94,14 +96,8 @@ function refreshGoals(client: QueryClient, plan: SalesGoalPlan) {
   void client.invalidateQueries({ queryKey: PROGRESS_KEY });
 }
 
-function planParams(path: PlanPath, idempotencyKey?: string) {
-  return {
-    path: { owner_id: path.owner, year: path.year },
-    header: {
-      "If-Match": String(path.version),
-      ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
-    },
-  };
+function planPath(path: PlanPath) {
+  return { owner_id: path.owner, year: path.year };
 }
 
 /** Saves, discards, publishes and withdraws one plan, each under the version the reader saw. */
@@ -114,7 +110,10 @@ export function useSalesGoalWrites() {
     ) =>
       unwrap(
         await api.PUT("/analytics/sales-goals/{owner_id}/{year}/draft", {
-          params: planParams(input, input.key),
+          params: {
+            path: planPath(input),
+            ...ifMatch(input.version, { "Idempotency-Key": input.key }),
+          },
           body: input.body,
         }),
       ),
@@ -124,7 +123,7 @@ export function useSalesGoalWrites() {
     mutationFn: async (input: PlanPath) =>
       unwrap(
         await api.DELETE("/analytics/sales-goals/{owner_id}/{year}/draft", {
-          params: planParams(input),
+          params: { path: planPath(input), ...ifMatch(input.version) },
         }),
       ),
     onSuccess,
@@ -133,7 +132,10 @@ export function useSalesGoalWrites() {
     mutationFn: async (input: PlanPath & { reason: string; key: string }) =>
       unwrap(
         await api.POST("/analytics/sales-goals/{owner_id}/{year}/publish", {
-          params: planParams(input, input.key),
+          params: {
+            path: planPath(input),
+            ...ifMatch(input.version, { "Idempotency-Key": input.key }),
+          },
           body: { reason: input.reason, confirm_agreed: true },
         }),
       ),
@@ -143,7 +145,7 @@ export function useSalesGoalWrites() {
     mutationFn: async (input: PlanPath & { reason: string }) =>
       unwrap(
         await api.POST("/analytics/sales-goals/{owner_id}/{year}/withdraw", {
-          params: planParams(input),
+          params: { path: planPath(input), ...ifMatch(input.version) },
           body: { reason: input.reason },
         }),
       ),
@@ -171,20 +173,12 @@ export function monthsTotal(months: readonly (number | null)[]): number | null {
   return months.reduce<number>((sum, month) => sum + (month ?? 0), 0);
 }
 
-/** A month's name in the reader's language, January as 1. */
-export function monthName(month: number, locale: Locale): string {
-  return new Intl.DateTimeFormat(locale, {
-    month: "long",
-    timeZone: "UTC",
-  }).format(new Date(Date.UTC(2000, month - 1, 1)));
-}
-
 /** The period a reading covers, as its heading names it. */
 export function periodLabel(
   period: Pick<SalesProgress["period"], "kind" | "year" | "month">,
   locale: Locale,
 ): string {
   return period.kind === "month" && period.month
-    ? `${monthName(period.month, locale)} ${period.year}`
-    : String(period.year);
+    ? `${monthName(period.month, locale)} ${identifierNumber(period.year)}`
+    : identifierNumber(period.year);
 }

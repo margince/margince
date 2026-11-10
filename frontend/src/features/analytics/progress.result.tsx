@@ -5,7 +5,11 @@ import { Badge, Button, StatCard } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { Meter } from "../../design-system/readings";
 import { StatStrip } from "../../design-system/statstrip";
-import { formatAnalyticsMoney, formatDateTime } from "../../format/format";
+import {
+  formatAnalyticsMoney,
+  formatDateTime,
+  formatNumber,
+} from "../../format/format";
 import {
   type Locale,
   type PluralTranslator,
@@ -86,8 +90,8 @@ function goalLine(
     if (progress.scope.kind !== "owner")
       return t("progress.goalIncompleteTeamLine", { subtotal });
     return t("progress.goalIncompleteLine", {
-      set: String(goal.months_set),
-      needed: String(goal.months_needed),
+      set: formatNumber(goal.months_set, locale),
+      needed: formatNumber(goal.months_needed, locale),
       subtotal,
     });
   }
@@ -125,12 +129,12 @@ export function ProgressResult({
                 max={1}
                 flat
                 label={t("progress.completion", {
-                  percent: String(Math.round(completion * 100)),
+                  percent: formatNumber(Math.round(completion * 100), locale),
                 })}
               />
               <p className="t-caption">
                 {t("progress.completion", {
-                  percent: String(Math.round(completion * 100)),
+                  percent: formatNumber(Math.round(completion * 100), locale),
                 })}
               </p>
             </>
@@ -194,14 +198,14 @@ export function ProgressReadings({
       <StatCard
         label={t("progress.productSales")}
         value={money(categories.product_minor)}
-        detail={itemsLine(categories.product_items, plural)}
+        detail={itemsLine(categories.product_items, plural, locale)}
         onOpen={mix(CATEGORY_GROUP.product)}
         opens="records"
       />
       <StatCard
         label={t("progress.serviceSales")}
         value={money(categories.service_minor)}
-        detail={itemsLine(categories.service_items, plural)}
+        detail={itemsLine(categories.service_items, plural, locale)}
         onOpen={mix(CATEGORY_GROUP.service)}
         opens="records"
       />
@@ -229,7 +233,7 @@ export function ProgressReadings({
           detail={
             categories.invalid_deals > 0
               ? plural("progress.invalidDeals", categories.invalid_deals, {
-                  count: String(categories.invalid_deals),
+                  count: formatNumber(categories.invalid_deals, locale),
                 })
               : t("progress.unclassifiedDetail")
           }
@@ -246,11 +250,15 @@ export function ProgressReadings({
 function itemsLine(
   items: readonly string[],
   plural: PluralTranslator,
+  locale: Locale,
 ): string | undefined {
   if (items.length === 0) return undefined;
   const shown = items.slice(0, 3).join(", ");
   const rest = items.length - 3;
   return rest > 0
-    ? plural("progress.itemsMore", rest, { items: shown, count: String(rest) })
+    ? plural("progress.itemsMore", rest, {
+        items: shown,
+        count: formatNumber(rest, locale),
+      })
     : shown;
 }
