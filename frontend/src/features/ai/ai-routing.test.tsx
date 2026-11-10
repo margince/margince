@@ -159,7 +159,7 @@ describe("AiRoutingCard", () => {
   it.each([
     [
       "eu_hosted",
-      "EU-hosted (partner inference; each tier’s connection decides where it runs)",
+      "EU-hosted (partner inference; it does not limit where a tier runs, which each tier’s connection decides)",
     ],
     [
       "sovereign",

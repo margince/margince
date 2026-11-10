@@ -15554,7 +15554,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiRouting.profileLine":
     "Hồ sơ bản cài đặt: {profile}. Hồ sơ này giới hạn nhà cung cấp mà một cấp được dùng, do bên vận hành thiết lập.",
   "aiRouting.profile.eu_hosted":
-    "Lưu trữ tại EU (suy luận của đối tác; kết nối của từng bậc quyết định nơi chạy)",
+    "“EU-hosted” (suy luận của đối tác; hồ sơ này không giới hạn nơi một bậc chạy, nơi đó do kết nối của từng bậc quyết định)",
   "aiRouting.profile.sovereign":
     "Chủ quyền (AI chỉ chạy trên máy chủ của chính bản cài đặt, không dùng nhà cung cấp đám mây)",
   "aiRouting.profile.cloud_frontier":
