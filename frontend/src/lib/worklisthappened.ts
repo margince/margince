@@ -146,8 +146,9 @@ export function happenedLines(
 }
 
 /**
- * A card's line: its own event, then what to do about it by name. Null for a
- * row with no event, which keeps its whole ask.
+ * A card's line: its own event. The card's title and buttons already say
+ * what to do, so a task adds the last contact each way instead. Null with
+ * no event, so the row keeps its whole ask.
  */
 export function cardLine(
   item: WorklistItem,
@@ -155,7 +156,9 @@ export function cardLine(
   clock: Clock,
 ): string | null {
   const event = ownEvent(item, t, clock);
-  return event ? `${event} ${todoLine(item, t, true)}` : null;
+  if (!event) return null;
+  const touch = item.source === "task" ? touchLines(item, t, clock) : [];
+  return [event, ...touch].join(" ");
 }
 
 function ownEvent(item: WorklistItem, t: T, clock: Clock): string | null {

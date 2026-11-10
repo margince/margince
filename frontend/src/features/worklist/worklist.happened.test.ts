@@ -210,7 +210,7 @@ describe("what a told row asks", () => {
 });
 
 describe("a card's line", () => {
-  it("says the event, then what to do about it by name", () => {
+  it("says the event, which the title and buttons act on", () => {
     expect(
       cardLine(
         row({
@@ -221,8 +221,28 @@ describe("a card's line", () => {
         t,
         clock,
       ),
+    ).toBe("Sonya Beck wrote on 7 Nov, and nobody has answered yet.");
+  });
+
+  it("adds the last contact each way on a task", () => {
+    expect(
+      cardLine(
+        row({
+          due_at: "2026-11-09T12:00:00Z",
+          overdue: true,
+          contact: {
+            ...SONYA,
+            touch: {
+              last_inbound_at: "2026-11-08T12:00:00Z",
+              last_outbound_at: null,
+            },
+          },
+        }),
+        t,
+        clock,
+      ),
     ).toBe(
-      "Sonya Beck wrote on 7 Nov, and nobody has answered yet. Reply to Sonya Beck.",
+      "It was due on 9 Nov and is still open. Last contact from Sonya Beck: 8 Nov. Last contact to Sonya Beck: none you can open.",
     );
   });
 
