@@ -1008,6 +1008,7 @@
     "connectProvider": "connectors",
     "connectorOAuthCallback": "oauth_callbacks",
     "controlDataTask": "system_health",
+    "correctCommunicationWording": "consent",
     "correctDealCloseDay": "deals",
     "correctProjectHealthAssessment": "projects",
     "countPendingApprovals": "agent_limits",

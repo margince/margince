@@ -78,3 +78,8 @@ func briefSnoozeLiftedSQL(deal, condition, ref, setDown, asOf string) string {
 		ELSE false
 	END)`, condition, deal, setDown, occurredday.HappenedSQL("a", asOf), ref, activities.KindMeeting, storekit.MeetingIsOverSQL("m", asOf))
 }
+
+func briefSnoozeHoldsSQL(item, asOf string) string {
+	return fmt.Sprintf("(CASE WHEN %s.reopen_on = 'time' THEN %s.snoozed_until > %s ELSE NOT %s END)",
+		item, item, asOf, briefSnoozeLiftedSQL(item+".deal_id", item+".reopen_on", item+".reopen_ref", item+".state_at", asOf))
+}

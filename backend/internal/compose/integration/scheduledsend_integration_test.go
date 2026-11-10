@@ -226,8 +226,7 @@ func (p *preflightEnv) setDueAt(t *testing.T, id ids.UUID, at time.Time) {
 	}
 }
 
-// withdrawConsent revokes the recipient's grant for the purpose the scheduled
-// message was written under, through the real consent surface.
+// The scheduled message resolves to correspondence on its inbound anchor.
 //
 // The fixture's own deal is closed first. An open deal is a legitimate-interest
 // basis independent of the purpose consent below (resolveCategory's live-deal
@@ -237,7 +236,7 @@ func (p *preflightEnv) setDueAt(t *testing.T, id ids.UUID, at time.Time) {
 func (p *preflightEnv) withdrawConsent(t *testing.T) {
 	t.Helper()
 	p.closeDealAsLost(t)
-	p.setTransactionalConsent(t, "withdrawn")
+	p.setCorrespondenceConsent(t, "withdrawn")
 }
 
 // closeDealAsLost closes the fixture's deal, when the caller staked one via
@@ -257,9 +256,9 @@ func (p *preflightEnv) closeDealAsLost(t *testing.T) {
 	}
 }
 
-// setTransactionalConsent moves the recipient's transactional grant either way,
+// setCorrespondenceConsent moves the recipient's correspondence grant either way,
 // through the real consent surface.
-func (p *preflightEnv) setTransactionalConsent(t *testing.T, state string) {
+func (p *preflightEnv) setCorrespondenceConsent(t *testing.T, state string) {
 	t.Helper()
 	var purposes struct {
 		Data []struct {
@@ -270,16 +269,16 @@ func (p *preflightEnv) setTransactionalConsent(t *testing.T, state string) {
 	if status := p.Call(t, "GET", "/v1/consent-purposes", nil, nil, &purposes); status != http.StatusOK {
 		t.Fatalf("list purposes → %d", status)
 	}
-	var transactional string
+	var correspondence string
 	for _, purpose := range purposes.Data {
-		if purpose.Key == "transactional" {
-			transactional = purpose.ID
+		if purpose.Key == "business_correspondence" {
+			correspondence = purpose.ID
 		}
 	}
-	if transactional == "" {
-		t.Fatalf("bootstrap seeded no transactional purpose: %+v", purposes.Data)
+	if correspondence == "" {
+		t.Fatalf("bootstrap seeded no correspondence purpose: %+v", purposes.Data)
 	}
-	body := AnyMap{"purpose_id": transactional, "new_state": state, "lawful_basis": "consent"}
+	body := AnyMap{"purpose_id": correspondence, "new_state": state, "lawful_basis": "consent"}
 	// Only a grant carries it: a grant that cannot say what the subject agreed
 	// to is refused, and a withdrawal demonstrates nothing, so sending it for
 	// one would describe a request this helper never makes.
@@ -449,11 +448,11 @@ func (p *preflightEnv) forceStatus(t *testing.T, id ids.UUID, status string) {
 	}
 }
 
-// grantTransactionalConsent restores the grant the withdrawal removed, so a rep
+// grantCorrespondenceConsent restores the grant the withdrawal removed, so a rep
 // accepting a held card has actually fixed what stopped it.
-func (p *preflightEnv) grantTransactionalConsent(t *testing.T) {
+func (p *preflightEnv) grantCorrespondenceConsent(t *testing.T) {
 	t.Helper()
-	p.setTransactionalConsent(t, "granted")
+	p.setCorrespondenceConsent(t, "granted")
 }
 
 // rescheduleTo moves a message through the endpoint a rep uses, version header
@@ -623,7 +622,7 @@ func TestARepCanRetryAHeldMessageFromTheirInbox(t *testing.T) {
 	}
 
 	// The rep fixes the problem and clicks Accept.
-	p.grantTransactionalConsent(t)
+	p.grantCorrespondenceConsent(t)
 	if status := p.Call(t, "POST", "/v1/approvals/"+card.ID+"/approve", AnyMap{}, nil, nil); status != http.StatusOK {
 		t.Fatalf("accepting the card → %d, want 200", status)
 	}

@@ -26,6 +26,9 @@ package events
 // link (audit_log OR system_log) so the outcome stays attributable — Validate
 // enforces the trace, only the entity is relaxed.
 var pipelineEventTypes = map[string]struct{}{
+	// Held correspondence and its exception remain private to their authorized readers.
+	"communication_instruction.updated": {},
+	"scheduled_send.updated":            {},
 	// Source policy and owner consent are private configuration, not webhook subjects.
 	"capture_settings.updated":      {},
 	"internal_mail_history.created": {},

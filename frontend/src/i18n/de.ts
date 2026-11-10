@@ -7871,6 +7871,24 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.sendMessageConfirmTitle": "Nachricht senden",
   "compose.sendMessageBody":
     "Die Nachricht wird sofort gesendet. Das lässt sich nicht rückgängig machen.",
+  "directSend.existingApproval":
+    "Deine Freigabe für diese Nachricht gilt weiterhin. Der ursprüngliche Grund bleibt dokumentiert.",
+  "directSend.correctWording":
+    "Rechtschreibung oder Zeichensetzung korrigieren",
+  "directSend.correctionTitle": "Text korrigieren und Freigabe behalten",
+  "directSend.correctionSave": "Korrektur speichern",
+  "directSend.correctionScope":
+    "Korrigiere nur Rechtschreibung oder Zeichensetzung. Empfangende, Absendeadresse, Zweck und Anhänge bleiben gleich. Inhaltliche Änderungen brauchen eine neue Freigabe.",
+  "directSend.correctionAcknowledge":
+    "Ich bestätige, dass nur Rechtschreibung oder Zeichensetzung geändert wurden. Bedeutung und Fakten sind unverändert.",
+  "directSend.correctionNeedsEdit":
+    "Korrigiere zuerst Rechtschreibung oder Zeichensetzung.",
+  "directSend.correctionNeedsConfirmation":
+    "Bestätige, dass Bedeutung und Fakten unverändert sind.",
+  "directSend.correctionNeedsText":
+    "Betreff und Nachrichtentext dürfen nicht leer sein.",
+  "directSend.correctionFailed":
+    "Die Korrektur wurde nicht gespeichert. Öffne die Prüfung erneut, um die aktuelle Nachricht und Freigabe zu prüfen.",
   "directSend.open": "Mit erfasster Ausnahme senden",
   "directSend.queued": "Zum Senden als festgehaltene Ausnahme vorgemerkt.",
   "directSend.opening": "Wird geöffnet…",
@@ -10041,8 +10059,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ein verlorener Deal braucht den Grund, warum er verloren ging.",
   "import.reason.deal_pipeline_fixed":
     "Dieser Deal liegt in einer anderen Pipeline als in der Datei angegeben. Ein Import verschiebt keinen Deal zwischen Pipelines, daher wird die Zeile übersprungen.",
+  "companies.contractMergeBlocked":
+    "Ein Deal hat Verträge, die zu einem anderen Unternehmen gehören. Archivierte Verträge zählen ebenfalls. Bitte wende dich vor dem Zusammenführen an einen Admin, um die Vertragsverknüpfungen zu korrigieren.",
+  "deals.contractCompanyBlocked":
+    "Dieser Deal hat Verträge, die zu einem anderen Unternehmen gehören. Auch archivierte Verträge zählen. Bitte wende dich vor dem Unternehmenswechsel an einen Admin, um die Vertragsverknüpfungen zu korrigieren.",
   "import.reason.deal_company_has_contracts":
-    "Für diesen Deal sind Verträge hinterlegt, die ein anderes Unternehmen als das in dieser Zeile nennen, daher wird die Zeile übersprungen. Löse die Verträge vom Deal oder ordne jeden einem Deal seines eigenen Unternehmens zu und importiere erneut.",
+    "Für diesen Deal sind Verträge hinterlegt, die ein anderes Unternehmen als das in dieser Zeile nennen, daher wird die Zeile übersprungen. Auch archivierte Verträge zählen. Bitte wende dich an einen Admin, um die Vertragsverknüpfungen zu korrigieren. Importiere danach erneut.",
   "import.reason.deal_already_closed":
     "Dieser Deal ist bereits abgeschlossen, daher wird die Zeile übersprungen. Ein Import öffnet keinen abgeschlossenen Deal wieder.",
   "import.reason.fx_rate_missing":

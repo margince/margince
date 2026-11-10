@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/scheduledstop.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/compose/draftcore backend/internal/compose/replydraft.go backend/internal/compose/replyconversation.go frontend/src/lib/activityfiling.ts frontend/src/lib/messagevoice.ts backend/internal/modules/activities/signaturetemplate.go -->
+<!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/scheduledstop.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/modules/consent/instructioncorrection.go backend/internal/modules/consent/instructionconsume.go backend/internal/modules/activities/wordingcorrection.go backend/internal/compose/draftcore backend/internal/compose/replydraft.go backend/internal/compose/replyconversation.go frontend/src/lib/activityfiling.ts frontend/src/lib/messagevoice.ts backend/internal/modules/activities/signaturetemplate.go -->
 # Writing and sending mail
 
 ### How do I send an email to a contact?
@@ -193,7 +193,9 @@ When Margince will not send an email to a contact, the warning bar above **Send*
 - **This message needs one more detail**: for "Choose the deal for this follow-up.", pick it in **Deal this follow-up is about**. You can also write from the deal's page. When the record already shows another reason, the bar offers **Use "…" instead**. It switches the reason and checks again; it does not send.
 - **Permission needed for this message**: the required permission is not on record. Record the recipient's consent or the facts that support an allowed customer route. A staff exception cannot replace them.
 - **No recorded reason to contact this recipient**: Margince first uses a request or meeting it already holds. Where a fact is missing, press **Record what happened**. Say what was agreed and when. This records the exchange for that recipient and sending company, and for a deal when one is picked. It does not send the email, record marketing consent or make a standing exception. Margince checks again; any stop that remains still blocks the message.
-- **Send with a recorded exception**: where the check allows it and you hold the exception right, this queues only this message. Your name, reason and the message are kept in a record that cannot be edited. It grants no consent or permission for later mail. The composer closes once the email is queued. A retry checks current support and stops, without asking again for facts that still hold.
+- **Send with a recorded exception**: where the check allows it and you hold the exception right, this queues only this message. Your name and original reason stay on record. It grants no consent or permission for later mail. The composer closes once the email is queued. A retry checks current support and stops, without asking again for facts that still hold.
+
+  If that approved send fails, open its review and choose **Correct spelling or punctuation**. You must own the message, have approved it yourself and still hold permission to edit and approve mail. Confirm that its meaning and facts stay the same, then choose **Save correction**. The original approval stays on record; the message stays held until you retry. A change in meaning, recipients, sender, purpose or attachments needs a new message and approval. Later stops still block it.
 - **Message cannot be sent**: a reason nobody can lift, such as "The recipient objected to marketing", or an address that does not take mail.
 - A mailbox connected only to read mail: press **Reconnect your mailbox** and allow sending.
 
@@ -232,8 +234,7 @@ to one recipient at a time, because that link is the recipient's own consent
 record. Send it once per recipient, with no Cc.
 
 **Chat channel limits.** A channel such as Telegram may carry no files at all.
-Or it may limit how many files, how large each one is, and how large they
-are in total. It may also limit how long the text under them is. When a message goes past one of these, the
+Or it may limit how many files, how large each one is, and how large they are in total. It may also limit how long the text under them is. When a message goes past one of these, the
 composer names the limit and the number before you send.
 
 ### How do I set my email signature?

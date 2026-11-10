@@ -122,17 +122,7 @@ func readCompanyRow(ctx context.Context, tx pgx.Tx, id ids.CompanyID, archived s
 		return crmcontracts.Company{}, err
 	}
 	companies := []crmcontracts.Company{o}
-	// Stamped HERE rather than only in attachCompanyCounts, because every mutation
-	// echo — create, update, archive, restore, the merge survivor — hands the
-	// row back through this function and not through the counts page. Absent
-	// reads as NOT writable, so a missing stamp takes the edit buttons away from
-	// the owner who just saved.
-	if _, err := auth.StampWritable(ctx, tx, "company", companies,
-		func(o crmcontracts.Company) ids.UUID { return ids.UUID(o.Id) },
-		func(o *crmcontracts.Company, may bool) { o.Writable = &may }); err != nil {
-		return crmcontracts.Company{}, err
-	}
-	if err := stampCompaniesArchivable(ctx, tx, companies); err != nil {
+	if err := stampCompanyCapabilities(ctx, tx, companies); err != nil {
 		return crmcontracts.Company{}, err
 	}
 	if err := attachCompanyDomains(ctx, tx, companies); err != nil {

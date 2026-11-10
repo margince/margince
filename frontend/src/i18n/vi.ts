@@ -7680,6 +7680,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Email được gửi vào thời điểm đã chọn, và các bước kiểm tra sự đồng ý và hộp thư sẽ chạy lại lúc đó. Trước đó, có thể dời hoặc hủy email trong Tin nhắn đã lên lịch.",
   "compose.sendMessageConfirmTitle": "Gửi tin nhắn",
   "compose.sendMessageBody": "Tin nhắn được gửi ngay. Không thể hoàn tác.",
+  "directSend.existingApproval":
+    "Phê duyệt của bạn cho tin nhắn này vẫn có hiệu lực. Lý do ban đầu vẫn được lưu lại.",
+  "directSend.correctWording": "Sửa chính tả hoặc dấu câu",
+  "directSend.correctionTitle": "Sửa nội dung và giữ nguyên phê duyệt",
+  "directSend.correctionSave": "Lưu bản sửa",
+  "directSend.correctionScope":
+    "Chỉ sửa chính tả hoặc dấu câu. Người nhận, người gửi, mục đích và tệp đính kèm giữ nguyên. Thay đổi ý nghĩa cần phê duyệt lại tin nhắn.",
+  "directSend.correctionAcknowledge":
+    "Tôi xác nhận chỉ sửa chính tả hoặc dấu câu. Ý nghĩa và các thông tin thực tế không thay đổi.",
+  "directSend.correctionNeedsEdit": "Hãy sửa chính tả hoặc dấu câu trước.",
+  "directSend.correctionNeedsConfirmation":
+    "Xác nhận ý nghĩa và thông tin thực tế không thay đổi.",
+  "directSend.correctionNeedsText": "Giữ lại tiêu đề và nội dung tin nhắn.",
+  "directSend.correctionFailed":
+    "Chưa lưu được bản sửa. Mở lại phần kiểm tra để xem tin nhắn và phê duyệt hiện tại.",
   "directSend.open": "Gửi và ghi nhận ngoại lệ",
   "directSend.queued": "Đã xếp hàng gửi theo ngoại lệ đã ghi nhận.",
   "directSend.opening": "Đang mở…",
@@ -9763,8 +9778,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.reason.lost_reason_missing": "Deal đã thua cần có lý do thua.",
   "import.reason.deal_pipeline_fixed":
     "Deal này nằm trong quy trình khác với quy trình trong tệp. Nhập không chuyển deal giữa các quy trình nên hàng bị bỏ qua.",
+  "companies.contractMergeBlocked":
+    "Một deal có hợp đồng thuộc công ty khác. Hợp đồng trong kho lưu trữ cũng được tính. Liên hệ quản trị viên để sửa liên kết hợp đồng trước khi hợp nhất.",
+  "deals.contractCompanyBlocked":
+    "Deal này có hợp đồng thuộc công ty khác. Hợp đồng trong kho lưu trữ cũng được tính. Liên hệ quản trị viên để sửa liên kết hợp đồng trước khi đổi công ty.",
   "import.reason.deal_company_has_contracts":
-    "Deal này có hợp đồng thuộc một công ty khác với công ty trong hàng này nên hàng bị bỏ qua. Hãy tách các hợp đồng khỏi deal hoặc chuyển từng hợp đồng sang một deal của chính công ty mà hợp đồng đó thuộc về rồi nhập lại.",
+    "Deal này có hợp đồng thuộc một công ty khác với công ty trong hàng này nên hàng bị bỏ qua. Hợp đồng trong kho lưu trữ cũng được tính. Liên hệ quản trị viên để sửa liên kết hợp đồng rồi nhập lại.",
   "import.reason.deal_already_closed":
     "Deal này đã đóng nên hàng bị bỏ qua. Nhập không mở lại deal đã đóng.",
   "import.reason.fx_rate_missing":

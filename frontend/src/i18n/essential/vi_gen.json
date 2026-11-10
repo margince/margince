@@ -1481,6 +1481,8 @@
   "setup.step.aiDoneUnnamed": "Một công cụ AI đã được kết nối.",
   "import.sourceBusy": "Một lần nhập khác cùng tên nguồn vẫn đang ghi. Hãy đợi nó xong, rồi thử lại.",
   "import.reason.run_in_flight": "Lần nhập này đang chạy. Nó tự hoàn tất và trang này tự cập nhật.",
+  "companies.contractMergeBlocked": "Một deal có hợp đồng thuộc công ty khác. Hợp đồng trong kho lưu trữ cũng được tính. Liên hệ quản trị viên để sửa liên kết hợp đồng trước khi hợp nhất.",
+  "deals.contractCompanyBlocked": "Deal này có hợp đồng thuộc công ty khác. Hợp đồng trong kho lưu trữ cũng được tính. Liên hệ quản trị viên để sửa liên kết hợp đồng trước khi đổi công ty.",
   "systemJob.datatask": "Cập nhật dữ liệu",
   "notice.latestBy": "Chậm nhất vào {date}",
   "notifications.bell": "Thông báo",

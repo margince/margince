@@ -7422,8 +7422,8 @@ paths:
       security: [{bearerAuth: []}]
       summary: Move a scheduled message to a different moment.
       description: |-
-        Time only. The content is what the approval bound to, so changing it is
-        cancel-and-recompose, which re-enters every gate from the top.
+        Time only. An attested spelling or punctuation correction uses the communication review's
+        wording-correction route. Other content changes need cancel-and-recompose and fresh checks.
 
         Needs the passport permission Change records.
 
@@ -37024,7 +37024,7 @@ components:
         amount_minor: {type: [integer, 'null'], format: int64, minimum: 0, description: 'The deal''s one-off price in minor units of `currency`. Below zero is refused with 422 `amount_negative`.'}
         currency: {type: [string, 'null'], pattern: '^[A-Z]{3}$'}
         expected_arr_minor: {type: [integer, 'null'], format: int64, description: 'Expected annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.'}
-        company_id: {type: [string, 'null'], format: uuid, description: 'The company this deal is for. Changing it is refused 422 (`deal_contracts_cross_company`) while contracts filed against the deal name another company, because a contract on a deal is visible through that deal alone. Detach those contracts (`deal_id: null` on the contract) or file each against a deal of its own company first; an edit never changes a contract''s company, only a company merge does. Null clears the company and is not refused.'}
+        company_id: {type: [string, 'null'], format: uuid, description: 'The company this deal is for. Changing it is refused 422 (`deal_contracts_cross_company`) while contracts filed against the deal name another company, because a contract on a deal is visible through that deal alone. Archived contracts also count. Ask an administrator to correct the contract links before changing the company. An edit never changes a contract''s company; only a company merge does. Null clears the company and is not refused.'}
         partner_company_id: {type: [string, 'null'], format: uuid, description: 'The partner who brought this deal. The company must have a live `partner` row (else 422 `not_a_partner`), and the caller must be able to read it. Null clears the attribution.'}
         partner_attribution:
           type: [string, 'null']
@@ -49837,6 +49837,8 @@ components:
           type: array
           description: What was refused, per recipient. Empty once an erasure has cleared the subject from it.
           items: {$ref: '#/components/schemas/RefusedRecipient'}
+        wording_correction:
+          $ref: '#/components/schemas/WordingCorrectionContext'
         warning:
           $ref: '#/components/schemas/OverrideWarning'
           description: |-
@@ -49863,6 +49865,23 @@ components:
           description: |-
             Shown verbatim. A surface that paraphrased it would record somebody as having read the
             server's words while showing them its own.
+    WordingCorrectionContext:
+      type: object
+      description: |-
+        The current approved wording, visible only to its original human approver while the
+        decision is unspent. The original reason remains on the instruction.
+      required: [instruction_id, version, subject, body, html_body, wording_digest, reason_code, explanation, warning_version]
+      properties:
+        instruction_id: {type: string, format: uuid}
+        version: {type: integer, format: int64}
+        subject: {type: string}
+        body: {type: string}
+        html_body: {type: string}
+        wording_digest: {type: string, pattern: '^[a-f0-9]{64}$'}
+        reason_code: {type: string}
+        explanation: {type: string}
+        warning_version: {type: string}
+      additionalProperties: false
     DirectCommunicationSendRequest:
       type: object
       description: |-

@@ -95,6 +95,14 @@ func wireReview(review Review) crmcontracts.CommunicationReview {
 	out.Warning = &crmcontracts.OverrideWarning{
 		Version: warning.Version, Text: warning.Text,
 	}
+	if correction := review.Correction; correction != nil {
+		out.WordingCorrection = &crmcontracts.WordingCorrectionContext{
+			InstructionId: openapi_types.UUID(correction.InstructionID), Version: correction.Version,
+			Subject: correction.Subject, Body: correction.Body, HtmlBody: correction.HTMLBody,
+			WordingDigest: correction.WordingDigest, ReasonCode: correction.ReasonCode,
+			Explanation: correction.Explanation, WarningVersion: correction.WarningVersion,
+		}
+	}
 	return out
 }
 

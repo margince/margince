@@ -118,6 +118,25 @@ type cursorState struct {
 	// recent sent mail rather than its whole history.
 	SentDeltaLink string `json:"sent_delta_link,omitempty"`
 	Email         string `json:"email"`
+	// Rounds holds a folder's round still in progress, keyed by folder: where a
+	// checkpoint left it. Absent once the folder's round has closed.
+	Rounds map[string]*DeltaResume `json:"rounds,omitempty"`
+}
+
+// link is the stored watermark of one folder.
+func (s *cursorState) link(folder string) string {
+	if folder == folderSent {
+		return s.SentDeltaLink
+	}
+	return s.DeltaLink
+}
+
+func (s *cursorState) setLink(folder, link string) {
+	if folder == folderSent {
+		s.SentDeltaLink = link
+		return
+	}
+	s.DeltaLink = link
 }
 
 // AuthRequestFrom packages an OAuth callback's code into the opaque connector
@@ -249,90 +268,19 @@ func (c *Connector) SyncFrom(
 	// pass reaches it first is the one whose attestation sticks and the second is
 	// a no-op. Inbox-first left exactly those messages permanently unattested,
 	// which is the T1 evidence this change exists to collect.
-	links := map[string]*string{folderSent: &start.SentDeltaLink, folderInbox: &start.DeltaLink}
+	start.Email = owner
 	for _, folder := range syncedFolders {
-		next, err := c.pullFolder(ctx, access, folder, *links[folder], from, sink, owner, folder == folderSent)
+		next, err := c.pullFolder(ctx, access, folder, &start, from, sink, owner)
 		if err != nil {
 			return nil, err
 		}
-		*links[folder] = next
+		start.setLink(folder, next)
+		delete(start.Rounds, folder)
 	}
-	// Neither watermark is stored until BOTH folders are through: one cursor is
-	// returned at the end, so a round that lost either half advances nothing and
-	// the next cycle re-reads the same window.
+	// The sync's own cursor carries no round in progress: both folders closed.
+	// A checkpoint may already have stored Sent Items' closed link while the
+	// inbox walked, which is safe because that folder's round was complete.
 	return marshalCursor(start.DeltaLink, start.SentDeltaLink, owner), nil
-}
-
-// pullFolder walks one folder's delta and captures what it names, returning the
-// watermark to store for that folder.
-//
-// sentByOwner is a property of the FOLDER, not of the message: Microsoft files
-// a copy into Sent Items because the authenticated account sent it, which no
-// amount of header forgery can imitate (ADR-0072 §1's T1 evidence). It is the
-// same attestation the backfill makes from ParentFolderID.
-func (c *Connector) pullFolder(
-	ctx context.Context, access, folder, cursor string, anchorFrom time.Time,
-	sink connector.Sink, owner string, sentByOwner bool,
-) (string, error) {
-	ids, removed, next, err := c.selectMessages(ctx, access, folder, cursor, anchorFrom)
-	if err != nil {
-		return "", err
-	}
-	// The owner's own deletions, reported before the round's new mail is
-	// captured. Order matters only in the degenerate case — a message deleted
-	// and re-delivered in one round — and reporting first is the safe half: the
-	// re-delivery re-captures it, where the other order would destroy the copy
-	// that just arrived.
-	if err := reportRemovals(ctx, sink, removed); err != nil {
-		return "", err
-	}
-	for _, message := range ids {
-		raw, err := c.api.GetMIME(ctx, access, "", message.ID)
-		if errors.Is(err, connector.ErrSkip) {
-			// A message the provider refuses to hand over: deleted since the
-			// delta named it, or oversized (truncated MIME is not honest
-			// evidence). Either is a per-message drop, never a pull-stopping
-			// fault — the cursor still advances past it.
-			continue
-		}
-		if err != nil {
-			// A fetch fault is transient — stop the pull without advancing the
-			// cursor so the next cycle retries from the same watermark.
-			return "", err
-		}
-		if _, err := captureOne(ctx, raw, sink, c.bounces, owner, folder, message.ID, sentByOwner, message.ReceivedAt); err != nil {
-			return "", err
-		}
-	}
-	if next == "" {
-		next = cursor // provider closed the round without a new link; keep the prior watermark
-	}
-	return next, nil
-}
-
-// selectMessages resolves which message ids to pull, which the provider
-// tombstoned, and the deltaLink to advance to — choosing the initial-anchor or
-// the incremental path and folding the stale-cursor fallback into one place.
-//
-// An ANCHOR round reports no removals, and that is right rather than a gap: it
-// establishes a cursor rather than replaying history, so it has no prior state
-// to say anything was deleted from.
-func (c *Connector) selectMessages(
-	ctx context.Context, access, folder, start string, anchorFrom time.Time,
-) (ids []MessageRef, removed []string, next string, err error) {
-	if start == "" {
-		anchored, link, anchorErr := c.api.DeltaInit(ctx, access, folder, anchorFrom)
-		return anchored, nil, link, anchorErr
-	}
-	ids, removed, next, err = c.api.Delta(ctx, access, start)
-	if errors.Is(err, ErrDeltaGone) {
-		anchored, link, anchorErr := c.api.DeltaInit(ctx, access, folder, anchorFrom)
-		return anchored, nil, link, anchorErr
-	}
-	if err != nil {
-		return nil, nil, "", err
-	}
-	return ids, removed, next, nil
 }
 
 // captureOne parses, drops, or upserts one raw message — the same discipline
@@ -426,8 +374,8 @@ func parseCursor(cur connector.Cursor) (cursorState, error) {
 }
 
 func marshalCursor(deltaLink, sentDeltaLink, email string) connector.Cursor {
-	// cursorState has only string fields, so Marshal cannot fail here.
-	b, _ := json.Marshal(cursorState{ //nolint:errchkjson // string-only struct never errors
+	// No round is set, so only string fields are encoded and Marshal cannot fail.
+	b, _ := json.Marshal(cursorState{ //nolint:errchkjson // string fields only; a round is never set here
 		DeltaLink: deltaLink, SentDeltaLink: sentDeltaLink, Email: email,
 	})
 	return b

@@ -79,6 +79,9 @@ func (s *Store) ResumeHeldSend(
 		} else if !found {
 			return apperrors.ErrNotFound
 		}
+		if claimed.RowVersion != held.RowVersion {
+			return apperrors.ErrVersionSkew
+		}
 		sent, err = s.SendPreparedTx(ctx, tx, origin, prepared, stager)
 		if err != nil {
 			return err

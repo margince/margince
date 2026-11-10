@@ -2992,7 +2992,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ### `deal_verdict` / `deal_verdict`
 
-`system 2,936 B (~734 tok)`: rules 2,663 B · boundary 273 B · after boundary 0 B · **cacheable 90%**
+`system 3,018 B (~754 tok)`: rules 2,745 B · boundary 273 B · after boundary 0 B · **cacheable 90%**
 
 <details><summary>system prompt</summary>
 
@@ -3002,8 +3002,8 @@ Say whether the evidence shows that the deal's expected close date, its amount, 
 
 You may propose at most one of each:
 "set_close_date": the customer named or agreed a decision, signing or start date, or the evidence makes the current date impossible. "date" is that date as YYYY-MM-DD: after today, at most 18 months after today, and named in a cited activity.
-"set_amount": the customer or our offer states a price for this deal in words, and that price differs from the deal's Amount. "amount" is that price in whole units of "currency", and "quoted_words" copies the words that state it verbatim from one cited activity.
-"set_probability": the evidence clearly moves the chance of winning, such as a verbal yes, a budget freeze or a competitor chosen, in the customer's own words. Our side's feeling or guess, in a note or anywhere else, moves nothing. "probability" is a whole number from 0 to 100. Lowering it is free; a raise sets it to at most the "Highest probability a raise may set" listed, a ceiling and not the size of a step. When that equals the deal's win probability, propose no raise.
+"set_amount": the customer states a price for this deal in their own current inbound email, outside quoted history. "amount" is that price in whole units of "currency", and "quoted_words" copies the words that state it verbatim from one cited activity.
+"set_probability": the evidence clearly moves the chance of winning, such as a verbal yes, a budget freeze or a competitor chosen, in the customer's own words. Our side's feeling or guess, in a note or anywhere else, moves nothing. "probability" is a whole number from 0 to 100. A decrease requires "quoted_words" copied from the customer's own current inbound email, outside quoted history. A raise sets it to at most the "Highest probability a raise may set" listed, a ceiling and not the size of a step. When that equals the deal's win probability, propose no raise.
 "move_stage": the evidence shows the deal has reached a later stage, judged by the stage's name and what a sale at that point looks like. "stage_id" is one of the later stages listed; it may skip stages, up to the furthest stage whose every criterion below is met and no further. The deal leaves its own stage and every stage it skips, so each exit criterion listed for those stages needs an entry in "criteria": its "criterion_id", the cited "activity_id" that meets it, and "quoted_words" copied verbatim from that activity. If one is not met, do not move. Never move a deal back, and never to won or lost.
 
 Propose nothing when the evidence does not say it. An empty "actions" list is the usual answer.
@@ -5414,7 +5414,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ### `request_settlement` / `request_settle`
 
-`system 4,901 B (~1,225 tok)`: rules 4,624 B · boundary 277 B · after boundary 0 B · **cacheable 94%**
+`system 5,153 B (~1,288 tok)`: rules 4,876 B · boundary 277 B · after boundary 0 B · **cacheable 94%**
 
 <details><summary>system prompt</summary>
 
@@ -5433,6 +5433,7 @@ still_owed and unsure are not the same answer. still_owed is for a reply whose w
 
 Our reply may settle the request. Our messages keep the quoted history, so an answer written inline beneath a quoted line counts as our answer; quoted earlier words alone answer nothing. A later message from the same correspondent may also explicitly confirm that the requested action is complete.
 For a signature request, completion must refer to the same document or envelope identifier stated in the request and confirm completion of our required signing step. Another document, another signer's progress, or a merely sent/viewed document does not settle our request. Matching subjects alone prove nothing, and a request that names no identifier can match no completion. If the identity or completion is unclear, answer unsure. Judge each request independently even when several requests share one conversation.
+Our messages list the files actually attached. Saying "attached" with no attached file does not deliver a requested file; it remains still_owed unless other evidence shows it was delivered. A filename alone does not prove the file answers the request.
 A reply that DEFERS — "thanks, I will check", "let me come back to you", "I will clarify with the team and get back" — is still_owed: it names a next move of ours and does not make it.
 A reply too bare to defer OR deliver is unsure, not still_owed. "Ok." to "please send the documents" might mean they went in the same breath and might mean the ask was merely seen; a deferral says which, and a bare token does not. The line is whether OUR words name a next move of ours: if they do, still_owed; if they are too thin to say, unsure.
 A calendar acceptance settles a scheduling request: agreeing a time IS the answer to "when can we talk".
