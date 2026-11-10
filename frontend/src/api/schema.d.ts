@@ -52801,7 +52801,11 @@ export interface components {
              * @description Defaults to the deal's owner when omitted.
              */
             steward_user_id?: string | null;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description When buyer access lapses. A past instant is accepted and stored as the
+             *     time of the call, so the room opens with buyer access already ended.
+             */
             expires_at?: string | null;
             source: string;
         };

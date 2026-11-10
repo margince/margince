@@ -30,7 +30,10 @@ func buyerSession(t *testing.T, e *apptest.AppEnv, room buyerRoom) string {
 	if status := publicCall(t, e, "POST", "/v1/public/rooms/exchange", AnyMap{"credential": room.credential}, nil, &session); status != http.StatusOK {
 		t.Fatalf("exchange = %d %v", status, session)
 	}
-	token, _ := session["session_token"].(string)
+	token, ok := session["session_token"].(string)
+	if !ok || token == "" {
+		t.Fatalf("exchange answered no session token: %v", session)
+	}
 	assertBuyerAccess(t, e, token, "live")
 	return token
 }
@@ -114,5 +117,26 @@ func TestARoomOpenedWithAPastExpiryIsStoredAfterItsCreation(t *testing.T) {
 	}
 	if room.ExpiresAt == nil || !room.ExpiresAt.After(room.CreatedAt) {
 		t.Fatalf("stored expiry %v is not after the room's creation at %v", room.ExpiresAt, room.CreatedAt)
+	}
+}
+
+// Sending the same past day again finds access already ended and changes
+// nothing. A cut short takes access away, so an archived deal still accepts it.
+func TestTheSamePastDaySentTwiceChangesNothingEvenOnAnArchivedDeal(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	room := openRoomWithABuyer(t, e)
+	opened := readRoomTimes(t, e, room.roomID)
+	yesterday := opened.CreatedAt.Add(-24 * time.Hour)
+
+	first := setRoomExpiry(t, e, room.roomID, opened.Version, yesterday)
+	if status := e.Call(t, "DELETE", "/v1/deals/"+room.dealID, nil, nil, nil); status != http.StatusOK {
+		t.Fatalf("archive the deal = %d, want 200", status)
+	}
+	again := setRoomExpiry(t, e, room.roomID, first.Version, yesterday)
+
+	if again.Version != first.Version || !again.ExpiresAt.Equal(*first.ExpiresAt) {
+		t.Errorf("the repeat answered version %d expiring %v, want version %d expiring %v unchanged",
+			again.Version, *again.ExpiresAt, first.Version, *first.ExpiresAt)
 	}
 }

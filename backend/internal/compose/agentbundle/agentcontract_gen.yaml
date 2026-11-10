@@ -50836,7 +50836,12 @@ components:
           type: [string, 'null']
           format: uuid
           description: Defaults to the deal's owner when omitted.
-        expires_at: {type: [string, 'null'], format: date-time}
+        expires_at:
+          type: [string, 'null']
+          format: date-time
+          description: |-
+            When buyer access lapses. A past instant is accepted and stored as the
+            time of the call, so the room opens with buyer access already ended.
         source: {type: string}
       additionalProperties: false
     UpdateDealRoomRequest:

@@ -83,7 +83,7 @@ func createRoomTx(ctx context.Context, tx pgx.Tx, in CreateRoomInput, by string)
 	if err != nil {
 		return crmcontracts.DealRoom{}, err
 	}
-	expiresAt := storedExpiry(in.ExpiresAt, now, now)
+	expiresAt := storedExpiry(in.ExpiresAt, nil, now, now)
 
 	id := ids.New[ids.DealRoomKind]()
 	_, err = tx.Exec(ctx,
@@ -332,12 +332,12 @@ func (s *Store) SetExpiry(ctx context.Context, id ids.DealRoomID, expiresAt *tim
 		if err != nil {
 			return err
 		}
-		stored := storedExpiry(expiresAt, current.CreatedAt, now)
+		stored := storedExpiry(expiresAt, current.ExpiresAt, current.CreatedAt, now)
 		// The probe follows the DIRECTION of the change, not the method. Pulling
 		// an expiry in is the retraction this method's own doc describes, and an
 		// archived deal must not freeze it; pushing one out or removing it hands
 		// more buyer access out, which an archived deal must refuse.
-		if cutsAccessShort(current.ExpiresAt, stored) {
+		if grantsNoMoreAccess(current.ExpiresAt, stored) {
 			err = ensureDealRetractable(ctx, tx, current)
 		} else {
 			err = ensureDealWritable(ctx, tx, current)
@@ -376,10 +376,14 @@ func (s *Store) SetExpiry(ctx context.Context, id ids.DealRoomID, expiresAt *tim
 
 // storedExpiry writes an expiry at or before the room's creation, which
 // deal_room_expires_after_creation refuses, as the time of the call: access still
-// ends at once. The microsecond keeps it after a creation on the same clock tick.
-func storedExpiry(want *time.Time, createdAt, now time.Time) *time.Time {
+// ends at once. A standing expiry already passed is kept, so a repeat changes
+// nothing. The microsecond keeps the stored instant after a same-tick creation.
+func storedExpiry(want, standing *time.Time, createdAt, now time.Time) *time.Time {
 	if want == nil || want.After(createdAt) {
 		return want
+	}
+	if standing != nil && !standing.After(now) {
+		return standing
 	}
 	at := now
 	if !at.After(createdAt) {
@@ -398,14 +402,14 @@ func transactionNow(ctx context.Context, tx pgx.Tx) (time.Time, error) {
 	return now, nil
 }
 
-// cutsAccessShort reports whether the new expiry ends buyer access sooner than
-// the standing one. Removing the bound never does; setting one where there was
-// none always does.
-func cutsAccessShort(standing, next *time.Time) bool {
+// grantsNoMoreAccess reports whether the new expiry ends buyer access no later
+// than the standing one. An unchanged expiry grants nothing, removing a bound
+// always grants more, and setting one where there was none never does.
+func grantsNoMoreAccess(standing, next *time.Time) bool {
 	if next == nil {
-		return false
+		return standing == nil
 	}
-	return standing == nil || next.Before(*standing)
+	return standing == nil || !next.After(*standing)
 }
 
 // changedFields names the editorial columns this patch moved, sorted so a
