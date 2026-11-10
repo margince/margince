@@ -69858,6 +69858,16 @@ type ListApprovalsParams struct {
 	// TargetEntityId The record the staged actions act on. Requires `target_entity_type`.
 	TargetEntityId *openapi_types.UUID `form:"target_entity_id,omitempty" json:"target_entity_id,omitempty"`
 
+	// Target Filter to the approvals staged against ANY of these records, each written
+	// `<entity_type>:<uuid>` (`contact:…`, `activity:…`). Repeat the parameter for several,
+	// up to 25. It answers "what is waiting on the records I touched" without the rest of
+	// the queue.
+	//
+	// A record outside the caller's row scope adds nothing to the page, never a 403. A
+	// malformed item, more than 25, or `target` together with `target_entity_type` or
+	// `target_entity_id` is a 422.
+	Target *[]string `form:"target,omitempty" json:"target,omitempty"`
+
 	// BundleId Filter to the proposals ONE act staged together (see `Approval.bundle_id`) — today, a
 	// website read's company facts plus the leads it published. Members the caller could not
 	// decide are absent from this page exactly as they are absent from the unfiltered inbox,
@@ -107929,6 +107939,19 @@ func (siw *ServerInterfaceWrapper) ListApprovals(w http.ResponseWriter, r *http.
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "target_entity_id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "target_entity_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "target" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "target", r.URL.Query(), &params.Target, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "target"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "target", Err: err})
 		}
 		return
 	}

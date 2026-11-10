@@ -13,6 +13,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -190,5 +191,52 @@ func TestExplicitMutedReviewReachesTheSharedInbox(t *testing.T) {
 	}
 	if !inbox.query.IncludeMuted {
 		t.Fatal("explicit muted review was dropped")
+	}
+}
+
+// The records a task touched reach the seam as one list, so the finish-time
+// check reads what those records left waiting and nothing else.
+func TestEveryTargetANamedRecordReachesTheSharedInbox(t *testing.T) {
+	inbox := &fakeInbox{}
+	contact, activity := ids.NewV7(), ids.NewV7()
+	_, err := listApprovalsTool{inbox: inbox}.Handle(context.Background(), json.RawMessage(
+		`{"targets":[{"type":"contact","id":"`+contact.String()+`"},{"type":"activity","id":"`+activity.String()+`"}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []ApprovalTarget{{Type: "contact", ID: contact}, {Type: "activity", ID: activity}}
+	if !slices.Equal(inbox.query.Targets, want) {
+		t.Fatalf("the seam was asked about %v, want %v", inbox.query.Targets, want)
+	}
+}
+
+// A target list the REST door would answer 422 is refused here too, before the
+// seam is asked anything.
+func TestATargetListNamingNoRecordIsRefused(t *testing.T) {
+	recordID := ids.NewV7().String()
+	tooMany := make([]string, maxApprovalTargets+1)
+	for i := range tooMany {
+		tooMany[i] = `{"type":"contact","id":"` + recordID + `"}`
+	}
+	for name, args := range map[string]string{
+		"beside the target pair": `{"target_entity_type":"deal","target_entity_id":"` + recordID +
+			`","targets":[{"type":"contact","id":"` + recordID + `"}]}`,
+		"beside a half pair": `{"target_entity_type":"deal","targets":[{"type":"contact","id":"` + recordID + `"}]}`,
+		"no type":            `{"targets":[{"id":"` + recordID + `"}]}`,
+		"no id":              `{"targets":[{"type":"contact"}]}`,
+		"not a uuid":         `{"targets":[{"type":"contact","id":"42"}]}`,
+		"over the cap":       `{"targets":[` + strings.Join(tooMany, ",") + `]}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			inbox := &fakeInbox{}
+			_, err := listApprovalsTool{inbox: inbox}.Handle(context.Background(), json.RawMessage(args))
+			var bad *BadArgsError
+			if !errors.As(err, &bad) {
+				t.Fatalf("answered %v, want a refused argument", err)
+			}
+			if inbox.query.Targets != nil {
+				t.Error("the seam was asked anyway")
+			}
+		})
 	}
 }

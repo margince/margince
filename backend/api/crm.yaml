@@ -23453,6 +23453,23 @@ paths:
           in: query
           schema: { type: string, format: uuid }
           description: The record the staged actions act on. Requires `target_entity_type`.
+        - name: target
+          in: query
+          schema:
+            type: array
+            maxItems: 25
+            items: { type: string }
+          style: form
+          explode: true
+          description: |
+            Filter to the approvals staged against ANY of these records, each written
+            `<entity_type>:<uuid>` (`contact:…`, `activity:…`). Repeat the parameter for several,
+            up to 25. It answers "what is waiting on the records I touched" without the rest of
+            the queue.
+
+            A record outside the caller's row scope adds nothing to the page, never a 403. A
+            malformed item, more than 25, or `target` together with `target_entity_type` or
+            `target_entity_id` is a 422.
         - name: bundle_id
           in: query
           schema: { type: string, format: uuid }
