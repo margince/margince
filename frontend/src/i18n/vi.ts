@@ -21202,7 +21202,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "progress.goal": "Mục tiêu",
   "progress.goalLine": "Mục tiêu của kỳ: {goal}",
   "progress.goalIncompleteTeamLine":
-    "Mục tiêu chưa đủ: một số tháng chưa có mục tiêu cho mọi nhân viên kinh doanh, hiện là {subtotal}",
+    "Mục tiêu chưa đủ: ít nhất một nhân viên kinh doanh chưa có mục tiêu tháng, hiện là {subtotal}",
   "progress.goalIncompleteLine":
     "Mục tiêu chưa đủ: đã đặt {set}/{needed} tháng, hiện là {subtotal}",
   "progress.goal.set": "Đã đặt",

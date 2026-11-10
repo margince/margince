@@ -53,7 +53,7 @@ describe("ProgressResult", () => {
     expect(screen.queryByText(/below goal/)).toBeNull();
     expect(
       screen.getByText(
-        "Goals incomplete: some months have no goal for every seller, €100,000 so far",
+        "Goals incomplete: at least one seller has no monthly goal yet, €100,000 so far",
       ),
     ).toBeTruthy();
   });
@@ -136,7 +136,11 @@ describe("ProgressScreen", () => {
     window.location.hash = `#/progress?scope=owner:${seller}`;
     installFetchStub({
       "GET /analytics/context": () => jsonResponse(CONTEXTS.leader),
-      "GET /analytics/progress": () => jsonResponse(sellerMarch),
+      "GET /analytics/progress": () =>
+        jsonResponse({
+          ...sellerMarch,
+          scope: { kind: "owner", id: seller, label: "Alex Brandt" },
+        }),
     });
     const stubbed = globalThis.fetch;
     const asked: string[] = [];
@@ -149,6 +153,9 @@ describe("ProgressScreen", () => {
       expect(
         asked.find((url) => url.includes("/analytics/progress")),
       ).toContain(`scope_id=${seller}`),
+    );
+    expect((await screen.findAllByText("Alex Brandt")).length).toBeGreaterThan(
+      0,
     );
   });
 });

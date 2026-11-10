@@ -173,7 +173,7 @@ On Windows and Linux, press Ctrl where this list says ⌘.
 | `N` | **Log activity**, on a record |
 | `T` | **Add task**, on a record |
 | `M` | **Write message**, on a record |
-| `⌘↵` | **Save multi-line field** in a field with many lines that you edit, **Send email** in the email editor, or **Submit dialog** in a dialog that holds a form |
+| `⌘↵` | **Save multi-line field** in a record field with many lines that you edit, **Send email** in the email editor, or **Submit dialog** in a dialog that holds a form |
 | `⌘B` | **Show or hide sidebar** |
 | `Esc` | **Close dialog or menu** |
 

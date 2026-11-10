@@ -21510,7 +21510,7 @@ export const en = {
   "progress.goal": "Goal",
   "progress.goalLine": "Goal for the period: {goal}",
   "progress.goalIncompleteTeamLine":
-    "Goals incomplete: some months have no goal for every seller, {subtotal} so far",
+    "Goals incomplete: at least one seller has no monthly goal yet, {subtotal} so far",
   "progress.goalIncompleteLine":
     "Goals incomplete: {set} of {needed} months set, {subtotal} so far",
   "progress.goal.set": "Set",

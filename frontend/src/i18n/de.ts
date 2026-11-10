@@ -21770,7 +21770,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "progress.goal": "Ziel",
   "progress.goalLine": "Ziel für den Zeitraum: {goal}",
   "progress.goalIncompleteTeamLine":
-    "Ziele unvollständig: Für manche Monate fehlt im Team ein Ziel, bisher {subtotal}",
+    "Ziele unvollständig: Mindestens einem Teammitglied fehlt ein Monatsziel, bisher {subtotal}",
   "progress.goalIncompleteLine":
     "Ziele unvollständig: {set} von {needed} Monaten gesetzt, bisher {subtotal}",
   "progress.goal.set": "Gesetzt",
