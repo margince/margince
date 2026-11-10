@@ -2939,6 +2939,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "palette.recent": "Zuletzt verwendet",
   "palette.clearRecent": "Leeren",
   "palette.typeScreen": "Ansicht",
+  "palette.typeSetting": "Einstellung",
   "palette.typeAction": "Aktion",
   "palette.typeRecord": "Datensatz",
   "palette.seeAll": "Alle Ergebnisse für „{query}“ anzeigen",
@@ -15953,6 +15954,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Jede Stufe ordnet eine Art von Arbeit einem Anbieter und einem Modell zu. Gespeicherte Änderungen gelten innerhalb einer Minute.",
   "aiRouting.profileLine":
     "Installationsprofil: {profile}. Das Profil begrenzt, welche Anbieter eine Stufe nutzen kann, und wird von der Systemadministration festgelegt.",
+  "aiRouting.profile.eu_hosted":
+    "In der EU gehostet (Modelle von Partnern, die in der EU laufen)",
+  "aiRouting.profile.sovereign":
+    "Souverän (keine Daten verlassen die Installation, Cloud-Anbieter werden abgelehnt)",
+  "aiRouting.profile.cloud_frontier":
+    "Cloud (Cloud-Anbieter mit den eigenen API-Schlüsseln der Installation)",
+  "aiRouting.profile.unset": "Nicht festgelegt",
   "aiRouting.notBound": "Nicht zugeordnet",
   "aiRouting.lastResponse": "Letzte Antwort {when}",
   "aiTerms.provider": "Anbieter",

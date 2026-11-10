@@ -149,11 +149,36 @@ describe("AiRoutingCard", () => {
     render(<AiRoutingCard />);
 
     const line = await screen.findByTestId("ai-routing-profile");
-    expect(line.textContent).toContain("eu_hosted");
+    expect(line.textContent).toContain("EU-hosted");
     expect(within(line).queryByRole("combobox")).toBeNull();
     expect(screen.queryByRole("combobox", { name: /profile/i })).toBeNull();
     // And no Preview step stands between an edit and its save.
     expect(screen.queryByRole("button", { name: /preview/i })).toBeNull();
+  });
+
+  it.each([
+    ["eu_hosted", "EU-hosted (partner models that run inside the EU)"],
+    [
+      "sovereign",
+      "Sovereign (no data leaves the installation, and cloud providers are refused)",
+    ],
+    [
+      "cloud_frontier",
+      "Cloud (cloud providers with the installation’s own API keys)",
+    ],
+    ["regional_partner", "regional_partner"],
+    ["", "Not set"],
+  ])("names the %j profile by what it allows", async (profile, name) => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(ROUTING_EDITOR, { ...BOUND, profile }).fetchMock,
+    );
+    render(<AiRoutingCard />);
+
+    const line = await screen.findByTestId("ai-routing-profile");
+    expect(line.textContent).toBe(
+      `Installation profile: ${name}. It limits which providers a tier can use and is set by the operator.`,
+    );
   });
 
   it("sends the WHOLE binding, so an untouched tier is not dropped", async () => {

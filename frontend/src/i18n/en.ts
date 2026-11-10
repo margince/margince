@@ -2852,6 +2852,7 @@ export const en = {
   "palette.recent": "Recent",
   "palette.clearRecent": "Clear",
   "palette.typeScreen": "Screen",
+  "palette.typeSetting": "Setting",
   "palette.typeAction": "Action",
   "palette.typeRecord": "Record",
   "palette.seeAll": "See all results for “{query}”",
@@ -15853,6 +15854,13 @@ export const en = {
     "Each tier binds a class of work to one provider and model; saved changes apply within a minute.",
   "aiRouting.profileLine":
     "Installation profile: {profile}. It limits which providers a tier can use and is set by the operator.",
+  "aiRouting.profile.eu_hosted":
+    "EU-hosted (partner models that run inside the EU)",
+  "aiRouting.profile.sovereign":
+    "Sovereign (no data leaves the installation, and cloud providers are refused)",
+  "aiRouting.profile.cloud_frontier":
+    "Cloud (cloud providers with the installation’s own API keys)",
+  "aiRouting.profile.unset": "Not set",
   "aiRouting.notBound": "Not bound",
   "aiRouting.lastResponse": "Last response {when}",
   "aiTerms.provider": "Provider",

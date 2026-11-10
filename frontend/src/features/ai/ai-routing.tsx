@@ -7,11 +7,11 @@ import { Callout } from "../../design-system/callout";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate, QueryStates } from "../../design-system/querystates";
 import { stable } from "../../format/collate";
-import { formatDate, formatNumber } from "../../format/format";
+import { formatNumber } from "../../format/format";
 import { lockReasonOr } from "../../format/settinglocks";
-import { useLocale, useT } from "../../i18n";
+import { type Translator, useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import {
-  type ModelCatalogue,
   unkeyedProviders,
   useAiModelCatalogue,
   withBorrowedRows,
@@ -27,7 +27,6 @@ import { useCan, useCanWrite } from "../../lib/capability";
 import { problemMessageOf, throwProblem } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { SETUP_PROVIDERS } from "../../lib/setup-providers";
-import { useViewerZone } from "../../lib/viewerzone";
 import { useAiStatus } from "./ai-admin";
 import { BindingEditor } from "./ai-binding-editor";
 import { TIER_ORDER, tierLabel, tierRank } from "./ai-decision-labels";
@@ -36,6 +35,7 @@ import { useProviderKeys } from "./ai-provider-key-hooks";
 import { reachableProviders } from "./ai-provider-reach";
 import { DECISION_PROVIDERS } from "./ai-routing-fields";
 import { type Lane, TiersTable } from "./ai-routing-lane";
+import { SheetFooter } from "./ai-routing-sheet";
 import { type SliceValue, sliceOf } from "./ai-routing-slice";
 import { useAnswersFromStandIn } from "./ai-settings";
 import { PanelTitle } from "./ai-terms";
@@ -55,7 +55,7 @@ import "./ai-settings.css";
 //
 // The installation profile is shown and never edited here. It decides which
 // vendors a lane may name, and a Save it refuses says so; the line tells the
-// reader which profile did the refusing.
+// reader which profile did the refusing, by name and by what it allows.
 
 type Routing = components["schemas"]["AiRouting"];
 
@@ -257,7 +257,10 @@ function ModelTiers({
     <Panel
       title={<PanelTitle term="tier">{t("aiRouting.title")}</PanelTitle>}
       footer={
-        <SheetFooter catalogue={catalogue.data} profile={routing.profile} />
+        <SheetFooter
+          catalogue={catalogue.data}
+          profile={profileName(routing.profile, t)}
+        />
       }
     >
       <PanelBody className="form-stack">
@@ -284,36 +287,6 @@ function ModelTiers({
         />
       )}
     </Panel>
-  );
-}
-
-// What the model lists in the editor are, and how to move them on. The sheet is
-// a SNAPSHOT somebody took on a day; undated it reads as "these are the models",
-// and the refresh is the way past it.
-//
-// The profile is a reading, never a control here: it decides which vendors a
-// lane may name, and a Save it refuses says so.
-function SheetFooter({
-  catalogue,
-  profile,
-}: Readonly<{ catalogue: ModelCatalogue; profile: string }>) {
-  const readerZone = useViewerZone();
-  const t = useT();
-  const { locale } = useLocale();
-  const asOf = sheetAsOf(catalogue);
-  return (
-    <div className="ai-sheet-age">
-      <span className="t-caption">
-        {asOf
-          ? t("aiRouting.sheetAsOf", {
-              date: formatDate(asOf, locale, readerZone),
-            })
-          : t("aiRouting.sheetUnknown")}
-      </span>
-      <span className="t-caption" data-testid="ai-routing-profile">
-        {t("aiRouting.profileLine", { profile })}
-      </span>
-    </div>
   );
 }
 
@@ -458,25 +431,24 @@ export function firstBinding(
   };
 }
 
-// The day the price sheet was last written, which is the day its model list was
-// last true. A sheet is re-priced row by row, so that day is its newest
-// effective date.
-function sheetAsOf(catalogue: ModelCatalogue): string | null {
-  return (catalogue ?? []).reduce<string | null>(
-    (latest, rate) =>
-      latest === null || rate.effective_date > latest
-        ? rate.effective_date
-        : latest,
-    null,
-  );
-}
-
 // A declared mirror of the server's profiles, held both ways by
 // backend/gates/frontendproviders_test.go, which reads this `[…] as const` form.
 const PROFILES = ["eu_hosted", "sovereign", "cloud_frontier"] as const;
 
 function isProfile(value: string): value is Routing["profile"] {
   return PROFILES.some((p) => p === value);
+}
+
+const PROFILE_LABEL: Record<(typeof PROFILES)[number], MessageKey> = {
+  eu_hosted: "aiRouting.profile.eu_hosted",
+  sovereign: "aiRouting.profile.sovereign",
+  cloud_frontier: "aiRouting.profile.cloud_frontier",
+};
+
+// A profile newer than this bundle prints its id rather than nothing.
+function profileName(profile: string, t: Translator): string {
+  if (isProfile(profile)) return t(PROFILE_LABEL[profile]);
+  return profile === "" ? t("aiRouting.profile.unset") : profile;
 }
 
 // Where a new decision binding starts: the first decision adapter this

@@ -11,6 +11,7 @@ import type { Command } from "./palette";
 
 const TYPE_KEY: Record<Command["type"], MessageKey> = {
   screen: "palette.typeScreen",
+  setting: "palette.typeSetting",
   action: "palette.typeAction",
   record: "palette.typeRecord",
 };

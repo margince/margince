@@ -2851,6 +2851,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "palette.recent": "Gần đây",
   "palette.clearRecent": "Xóa",
   "palette.typeScreen": "Màn hình",
+  "palette.typeSetting": "Cài đặt",
   "palette.typeAction": "Hành động",
   "palette.typeRecord": "Hồ sơ",
   "palette.seeAll": "Xem tất cả kết quả cho “{query}”",
@@ -15547,6 +15548,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Mỗi cấp gán một loại công việc cho một nhà cung cấp và một mô hình; thay đổi đã lưu có hiệu lực trong vòng một phút.",
   "aiRouting.profileLine":
     "Hồ sơ bản cài đặt: {profile}. Hồ sơ này giới hạn nhà cung cấp mà một cấp được dùng, do bên vận hành thiết lập.",
+  "aiRouting.profile.eu_hosted":
+    "Lưu trữ tại EU (mô hình của đối tác, chạy trong EU)",
+  "aiRouting.profile.sovereign":
+    "Chủ quyền (dữ liệu không rời khỏi bản cài đặt, không dùng nhà cung cấp đám mây)",
+  "aiRouting.profile.cloud_frontier":
+    "Đám mây (nhà cung cấp đám mây, dùng khóa API riêng của bản cài đặt)",
+  "aiRouting.profile.unset": "Chưa thiết lập",
   "aiRouting.notBound": "Chưa gán",
   "aiRouting.lastResponse": "Phản hồi gần nhất {when}",
   "aiTerms.provider": "Nhà cung cấp",
