@@ -24,6 +24,11 @@ var catalog = map[string]struct {
 	stream  string
 	version int
 }{
+	"sdr_handoff.created":               {leadStreamEntity, 1},
+	"sdr_handoff.updated":               {leadStreamEntity, 1},
+	"record_assignment.created":         {identityStreamEntity, 1},
+	"record_assignment.updated":         {identityStreamEntity, 1},
+	"record_assignment.archived":        {identityStreamEntity, 1},
 	"communication_instruction.updated": {activityStreamEntity, 1},
 	"scheduled_send.updated":            {activityStreamEntity, 1},
 	"internal_mail_history.created":     {captureStreamEntity, 1},

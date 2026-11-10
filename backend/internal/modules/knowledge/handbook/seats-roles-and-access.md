@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/users-rolecell.tsx backend/internal/modules/capture/captureauthority.go frontend/src/features/settings/users-admin.tsx frontend/src/features/settings/users-memberverbs.tsx backend/internal/modules/identity/invitemail.go frontend/src/features/settings/roles-settings.tsx frontend/src/features/records/share.body.tsx backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/identity/memberedit.go backend/internal/modules/identity/memberretirement.go backend/internal/modules/identity/seatceiling.go backend/internal/modules/identity/invite.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/fieldmask.go backend/internal/modules/identity/roster.go frontend/src/components/recordteamassign.tsx backend/internal/modules/assignments/assignments_read.go backend/internal/modules/identity/ownercarry.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/contactcasedecide.go frontend/src/features/settings/sharedmergereviews.tsx backend/internal/modules/contacts/duplicatepairmerge.go -->
+<!-- describes: frontend/src/features/analytics/handoffassignee.tsx backend/internal/compose/memberhandoff/handlers.go frontend/src/features/settings/users-handover.tsx backend/internal/compose/handover.go frontend/src/features/settings/users-rolecell.tsx backend/internal/modules/capture/captureauthority.go frontend/src/features/settings/users-admin.tsx frontend/src/features/settings/users-memberverbs.tsx backend/internal/modules/identity/invitemail.go frontend/src/features/settings/roles-settings.tsx frontend/src/features/records/share.body.tsx backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/identity/memberedit.go backend/internal/modules/identity/memberretirement.go backend/internal/modules/identity/seatceiling.go backend/internal/modules/identity/invite.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/fieldmask.go backend/internal/modules/identity/roster.go frontend/src/components/recordteamassign.tsx backend/internal/modules/assignments/assignments_read.go backend/internal/modules/identity/ownercarry.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/contactcasedecide.go frontend/src/features/settings/sharedmergereviews.tsx backend/internal/modules/contacts/duplicatepairmerge.go -->
 # Seats, roles and who can see what
 
 What you can do in Margince is decided by three things, and one cannot stand in for another:
@@ -27,8 +27,7 @@ You can send a new invitation to any colleague who has not set a password yet. T
 1. Check the email address on their row. If it is wrong, deactivate the seat and invite the right address.
 2. Open the **Actions for {name}** menu on their row and choose **Resend invitation**.
 3. The note "Invitation sent again to {name}" confirms it. The new email carries a new link, and any older link stops working.
-**Resend invitation** shows only when Margince can send email. Margince does not try again by itself. If the email still does not arrive, choose **Get set-password link** and pass the link on yourself.
-Also called: invite failed, invitation not received, invitation expired, resend invite.
+**Resend invitation** shows only when Margince can send email. Margince does not try again by itself. If the email still does not arrive, choose **Get set-password link** and pass the link on yourself. Also called: invite failed, invitation not received, invitation expired, resend invite.
 
 ### How do I change someone's role or make someone an admin?
 To change a colleague's role in Margince, open **Settings → Members** and press the role on their row.
@@ -36,14 +35,12 @@ To change a colleague's role in Margince, open **Settings → Members** and pres
 2. Find the colleague in the **Members** list.
 3. Press the role on their row, or the edit mark beside it. It reads **Not set** when they hold no role. In the dialog pick **Admin**, **Management**, **Team lead**, **User**, **Read-only** or **Ops**, and press **Save**. Nothing is stored until **Save**; **Cancel** or Esc closes without saving.
 4. The note "Role changed for {name}" confirms it.
-Saving a role takes the place of every role they held. Only an Admin can give or take away the Admin role.
-Also called: promote, demote, change permissions, make admin.
+Saving a role takes the place of every role they held. Only an Admin can give or take away the Admin role. Also called: promote, demote, change permissions, make admin.
 
 ### Why can a colleague not connect their mailbox?
 A role that cannot record activities cannot connect a mailbox or calendar. Read-only is the shipped role that cannot. A custom role needs create rights on activities, contacts and leads. The colleague sees no connect button, and one sentence says to ask an admin.
 
-When you pick such a role for a member, the dialog says how many of their mailboxes will stop. A stopped mailbox shows as a role problem in System health. It starts again by itself once their role can record activities.
-Also called: cannot connect Gmail, cannot connect Outlook, mailbox stopped, capture paused.
+When you pick such a role for a member, the dialog says how many of their mailboxes will stop. A stopped mailbox shows as a role problem in System health. It starts again by itself once their role can record activities. Also called: cannot connect Gmail, cannot connect Outlook, mailbox stopped, capture paused.
 
 ### How do I find and edit a colleague?
 
@@ -83,7 +80,11 @@ When a colleague leaves and you deactivate them in Margince, they stay the owner
 2. Open the **Actions for {name}** menu on their row and choose **Hand over work**.
 3. The box says what they still own. Pick the colleague under **Give it to** and press **Hand over**.
 
-Every lead, contact, company, deal, project and open task you may change moves to that colleague, and so does every live webhook they own. Automations and Deal Rooms stay where they are. The **Deactivate {name}?** box also says what they still own and offers **Hand over work**.
+Every lead, contact, company, deal, project and open task you may change moves to that colleague, and so does every live webhook they own. Pending sales handoffs and record responsibilities move when both you and the receiver can work the record. Anything that cannot move is reported as work left behind. Accepted handoffs keep their original credit.
+
+On a waiting handoff in your prospecting panel, choose **Reassign handoff** to change its receiver. You need write access to the prospect; the receiver needs it too. This also works for a private prospect without giving an administrator access to it.
+
+Automations and Deal Rooms stay where they are. Privacy cases need an officer to reassign them in their own queue. Introduction requests need their requester to choose another route; handing over records does not hand over a personal relationship. The **Deactivate {name}?** box also says what they still own and offers **Hand over work**.
 
 Some contacts and companies only the colleague who left could see. They move too once the colleague is deactivated, and stay visible to the new owner alone. Before that, they stay with the colleague.
 
@@ -97,8 +98,7 @@ To reset a colleague's password in Margince, open **Settings → Members**. Open
 1. Choose **Get set-password link**.
 2. Choose **Copy link** in the **Set-password link for {name}** box.
 3. Send it to them yourself. The box says: "Send this link to the member through a trusted channel. It works once and is shown only now."
-The box shows when the link ends. To change your own password, use **Settings → Account → Change password** instead.
-Also called: forgot password, password reset, locked out.
+The box shows when the link ends. To change your own password, use **Settings → Account → Change password** instead. Also called: forgot password, password reset, locked out.
 
 ### How do I let in a colleague who lost their two-step sign-in?
 To let a colleague in who lost both their phone app and their backup codes, open **Settings → Members**. Open the **Actions for {name}** menu on their row and choose **Remove two-step sign-in**.

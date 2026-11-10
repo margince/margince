@@ -6,7 +6,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
-import { Badge, StatCard } from "../../design-system/atoms";
+import { Badge, Button, StatCard } from "../../design-system/atoms";
 import {
   Panel,
   PanelBody,
@@ -31,6 +31,7 @@ import {
   useRepinWhenAsOfExpires,
 } from "./analytics.outcomes.handoffpages";
 import { DoNext } from "./analytics.overview.donext";
+import { HandoffAssigneeModal } from "./handoffassignee";
 import {
   type ReportingEvaluation,
   type ReportingSelection,
@@ -361,6 +362,8 @@ export function WaitingRow({
   locale,
 }: Readonly<{ row: WaitingHandoff; asOf: number; locale: Locale }>) {
   const t = useT();
+  const canUpdate = useCan("lead", "update");
+  const [reassigning, setReassigning] = useState(false);
   const age = formatDuration(asOf - Date.parse(row.waiting_since), locale);
   const waitingOn = row.recipient
     ? row.recipient.active
@@ -379,12 +382,25 @@ export function WaitingRow({
     waitingOn,
   ];
   return (
-    <HandoffRow row={row} facts={facts}>
-      {row.recipient && !row.recipient.active && (
-        <Badge tone="warning">{t("analytics.prospect.blocked")}</Badge>
+    <>
+      <HandoffRow row={row} facts={facts}>
+        {row.recipient && !row.recipient.active && (
+          <Badge tone="warning">{t("analytics.prospect.blocked")}</Badge>
+        )}
+        {!row.recipient && <Badge>{t("analytics.prospect.unassigned")}</Badge>}
+        {canUpdate && row.subject && (
+          <Button onClick={() => setReassigning(true)}>
+            {t("analytics.handoffReassign")}
+          </Button>
+        )}
+      </HandoffRow>
+      {reassigning && (
+        <HandoffAssigneeModal
+          id={row.id}
+          onClose={() => setReassigning(false)}
+        />
       )}
-      {!row.recipient && <Badge>{t("analytics.prospect.unassigned")}</Badge>}
-    </HandoffRow>
+    </>
   );
 }
 

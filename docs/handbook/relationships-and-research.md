@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/contacts/contactnetwork frontend/src/features/contacts/contactstanding.ts frontend/src/features/contacts/contactstrengthsentence.ts frontend/src/features/import/linkedin-import.tsx backend/internal/shared/kernel/relstrength backend/internal/compose/contact360/lasttouch.go backend/internal/modules/introductions backend/internal/modules/contacts/linkedinmatch.go backend/internal/compose/deepread.go backend/internal/platform/webread backend/internal/platform/techprofile -->
+<!-- describes: frontend/src/features/contacts/introreplace.tsx frontend/src/features/contacts/introdrawer.tsx frontend/src/features/contacts/contactnetwork frontend/src/features/contacts/contactstanding.ts frontend/src/features/contacts/contactstrengthsentence.ts frontend/src/features/import/linkedin-import.tsx backend/internal/shared/kernel/relstrength backend/internal/compose/contact360/lasttouch.go backend/internal/modules/introductions backend/internal/modules/contacts/linkedinmatch.go backend/internal/compose/deepread.go backend/internal/platform/webread backend/internal/platform/techprofile -->
 # Relationships, introductions and research
 
 Four questions go together here. Who here already knows a contact, from mail or from your LinkedIn network? How do you get a warm introduction to someone you do not know? What can Margince read about a company from its own website? And what does the company publicly run?
@@ -260,6 +260,8 @@ You mark the introduction made (**Mark introduced**), or the name used (**Mark n
 An ask waits **7 days** and then ends on its own (**Expired**), which frees the route.
 
 You can **Withdraw** your own ask; your colleague turns it down with Decline and does not withdraw it. Either way the ask stays on record.
+
+If the colleague cannot help, choose **Choose another colleague** on your ask. Pick another route, say why you need to change it, and review the new ask. The old ask stays open until the new one is saved. Earlier approval does not carry over: the new colleague must decide. The old ask and your reason stay visible to its two original colleagues. A colleague who has left cannot get a new ask.
 
 ### Who can see an ask
 An introduction request is open to the two colleagues in it, and nobody else. Any other colleague sees an empty list, so they cannot tell if anyone was asked about a contact.

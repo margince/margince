@@ -1589,6 +1589,87 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /sdr-handoffs/{id}/assignee:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Leads]
+      operationId: getHandoffAssignee
+      security: [{bearerAuth: []}]
+      summary: Read the current receiver and reassignment version of a prospect handoff.
+      responses:
+        '200':
+          description: Current assignment, scoped through the prospect.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/HandoffAssignee'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+      description: Read the current receiver and reassignment version of a prospect handoff.
+    patch:
+      tags: [Leads]
+      operationId: reassignHandoff
+      security: [{bearerAuth: []}]
+      summary: Choose a colleague who can work a waiting prospect handoff.
+      description: |-
+        Requires write access to the prospect and an active colleague with the same
+        access. Accepted handoffs retain their original decision and attribution.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/HandoffAssigneeInput'}
+      responses:
+        '200':
+          description: Current assignment after reassignment.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/HandoffAssignee'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /intro-requests/{id}/replace:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Contacts]
+      operationId: replaceIntroRequest
+      security: [{bearerAuth: []}]
+      summary: Withdraw your ask and make a fresh ask through another route.
+      description: |-
+        Only the original requester may replace an open ask. The replacement concerns the
+        same contact and starts with no decision or approval. Both changes commit together;
+        an invalid replacement leaves the original ask open. The old ask remains private
+        to its original parties. Choosing another introducer does not transfer a personal
+        relationship or permission to name-drop.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/IntroRequestReplaceInput'}
+      responses:
+        '201':
+          description: The fresh ask; the original ask is withdrawn.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/IntroRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /contacts/{id}/profile-fields:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -34224,6 +34305,30 @@ components:
           description: >-
             The message this claim rests on. Must be linked to the contact being introduced, so a completion cannot cite a conversation that is not about them.
         version: {type: integer}
+    HandoffAssignee:
+      type: object
+      additionalProperties: false
+      required: [id, version, status, can_reassign]
+      properties:
+        id: {type: string, format: uuid}
+        version: {type: integer, format: int64}
+        status: {type: string, enum: [submitted, accepted, rejected, recycled]}
+        assigned_to: {type: string, format: uuid}
+        can_reassign: {type: boolean}
+    HandoffAssigneeInput:
+      type: object
+      additionalProperties: false
+      required: [assigned_to, version]
+      properties:
+        assigned_to: {type: string, format: uuid}
+        version: {type: integer, format: int64, minimum: 1}
+    IntroRequestReplaceInput:
+      type: object
+      required: [version, reason, request]
+      properties:
+        version: {type: integer}
+        reason: {type: string, minLength: 1, maxLength: 2000}
+        request: {$ref: '#/components/schemas/IntroRequestInput'}
     IntroRequestCancelInput:
       type: object
       required: [version]
@@ -37827,7 +37932,7 @@ components:
     HandoverCounts:
       type: object
       description: Live records per kind.
-      required: [lead, contact, company, deal, project, task, webhook, list]
+      required: [lead, contact, company, deal, project, task, webhook, list, sdr_handoff, record_assignment]
       properties:
         lead: {type: integer, minimum: 0}
         contact: {type: integer, minimum: 0}
@@ -37837,6 +37942,8 @@ components:
         task: {type: integer, minimum: 0, description: Open tasks assigned to the member.}
         webhook: {type: integer, minimum: 0, description: 'Live webhook subscriptions the member owns. Each delivers only while its owner is active.'}
         list: {type: integer, minimum: 0, description: Live lists owned by the member.}
+        sdr_handoff: {type: integer, minimum: 0, description: Waiting prospect handoffs assigned to the member.}
+        record_assignment: {type: integer, minimum: 0, description: Current user responsibilities on records.}
     UserHandover:
       type: object
       required: [owned]

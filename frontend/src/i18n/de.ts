@@ -8529,6 +8529,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.sdrReading.leads_awaiting_response":
     "Leads, die noch auf eine erste Antwort warten",
   "analytics.sdrQualifiedOf": "{qualified} von {arrived}",
+  "analytics.handoffReassign": "Übergabe neu zuweisen",
+  "analytics.handoffReassignHint":
+    "Wähle ein aktives Teammitglied, das diesen Interessenten bearbeiten darf. Angenommene Übergaben behalten ihre ursprüngliche Zuordnung.",
+  "analytics.handoffReassignUnavailable":
+    "Wähle ein Teammitglied, sobald die aktuelle Zuweisung geladen ist. Die Übergabe muss noch auf eine Antwort warten und du brauchst Schreibzugriff.",
   "analytics.sdrWaiting": "Übergaben, die auf andere warten",
   "analytics.sdrWaitingIntro":
     "Übergaben, die du eingereicht hast und über die noch niemand entschieden hat. Eine zurückgegebene und neu eingereichte Übergabe wartet ab der neuen Einreichung.",
@@ -14749,6 +14754,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.handover.tasks_other": "{count} offene Aufgaben",
   "users.handover.webhooks_one": "{count} Webhook",
   "users.handover.webhooks_other": "{count} Webhooks",
+  "users.handover.handoffs_one": "{count} offene Übergabe",
+  "users.handover.handoffs_other": "{count} offene Übergaben",
+  "users.handover.responsibilities_one": "{count} Datensatzverantwortung",
+  "users.handover.responsibilities_other": "{count} Datensatzverantwortungen",
   "users.handover.lists_one": "{count} Liste",
   "users.handover.lists_other": "{count} Listen",
   "users.removeMfa": "Zweistufige Anmeldung entfernen",
@@ -17623,6 +17632,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.whenYesterday": "letzter Kontakt gestern",
   "contact.intro.whenDays": "letzter Kontakt vor {days} Tagen",
   "contact.intro.whenNever": "kein Kontakt in letzter Zeit",
+  "contact.intro.replaceAction": "Anderes Teammitglied auswählen",
+  "contact.intro.replaceHint":
+    "Prüfe einen neuen Weg und eine neue Anfrage. Die bisherige Anfrage bleibt offen, bis die neue gespeichert ist. Das neue Teammitglied entscheidet selbst; eine frühere Zustimmung wird nicht übernommen.",
+  "contact.intro.replaceReasonHint":
+    "Das Teammitglied aus der bisherigen Anfrage kann diese Begründung lesen.",
+  "contact.intro.replaceReason": "Warum ersetzt du diese Anfrage?",
   "contact.intro.askTitle": "Vorstellung bei {name} anfragen",
   "contact.intro.recordAction": "Eine Vorstellung erfassen",
   "contact.intro.recordTitle": "Vorstellung bei {name} erfassen",
@@ -17651,8 +17666,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.recordedIntroduced": "hat vorgestellt",
   "contact.intro.cancel": "Abbrechen",
   "contact.intro.askAction": "Vorstellung anfragen",
-  "contact.intro.askFailed":
-    "Die Anfrage konnte nicht gespeichert werden. Bitte versuche es erneut.",
   "contact.intro.reasonLabel": "Grund der Anfrage",
   "contact.intro.reasonHint":
     "Das liest dein Teammitglied, nicht der Kontakt. Beschreibe, warum sich die Vorstellung lohnt.",

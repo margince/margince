@@ -2040,7 +2040,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
-- `sdr_handoff_assigned_to_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.assigned_to IS NOT NULL) AND (new.status = ANY (ARRAY['submitted', 'accepted'])))) EXECUTE FUNCTION refuse_retired_member_work('assigned_to')`
+- `sdr_handoff_assigned_to_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.assigned_to IS NOT NULL) AND (new.status = 'submitted'))) EXECUTE FUNCTION refuse_retired_member_work('assigned_to')`
 
 ## sdr_handoff_event
 

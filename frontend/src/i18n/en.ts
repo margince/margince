@@ -8505,6 +8505,11 @@ export const en = {
   "analytics.sdrReading.leads_awaiting_response":
     "Leads still waiting for a first reply",
   "analytics.sdrQualifiedOf": "{qualified} of {arrived}",
+  "analytics.handoffReassign": "Reassign handoff",
+  "analytics.handoffReassignHint":
+    "Choose an active colleague who can work this prospect. Accepted handoffs keep their original attribution.",
+  "analytics.handoffReassignUnavailable":
+    "Choose a colleague after the current assignment loads. Reassignment requires write access and a handoff still waiting for an answer.",
   "analytics.sdrWaiting": "Handoffs waiting on others",
   "analytics.sdrWaitingIntro":
     "Handoffs you submitted that nobody has decided yet. A handoff that was sent back and submitted again waits from the new submission.",
@@ -14678,6 +14683,10 @@ export const en = {
   "users.handover.tasks_other": "{count} open tasks",
   "users.handover.webhooks_one": "{count} webhook",
   "users.handover.webhooks_other": "{count} webhooks",
+  "users.handover.handoffs_one": "{count} pending handoff",
+  "users.handover.handoffs_other": "{count} pending handoffs",
+  "users.handover.responsibilities_one": "{count} record responsibility",
+  "users.handover.responsibilities_other": "{count} record responsibilities",
   "users.handover.lists_one": "{count} list",
   "users.handover.lists_other": "{count} lists",
   "users.removeMfa": "Remove two-step sign-in",
@@ -17450,6 +17459,12 @@ export const en = {
   "contact.intro.whenYesterday": "last contact yesterday",
   "contact.intro.whenDays": "last contact {days} days ago",
   "contact.intro.whenNever": "no recent contact",
+  "contact.intro.replaceAction": "Choose another colleague",
+  "contact.intro.replaceHint":
+    "Review a fresh route and ask. The old ask stays open until the replacement succeeds. The new colleague must decide for themselves; earlier approval does not carry over.",
+  "contact.intro.replaceReasonHint":
+    "The colleague on the original ask can read this reason.",
+  "contact.intro.replaceReason": "Why are you replacing this ask?",
   "contact.intro.askTitle": "Ask for an introduction to {name}",
   "contact.intro.recordAction": "Record an introduction",
   "contact.intro.recordTitle": "Record an introduction to {name}",
@@ -17478,7 +17493,6 @@ export const en = {
   "contact.intro.recordedIntroduced": "introduced",
   "contact.intro.cancel": "Cancel",
   "contact.intro.askAction": "Request introduction",
-  "contact.intro.askFailed": "The request was not recorded. Retry.",
   "contact.intro.reasonLabel": "Reason for request",
   "contact.intro.reasonHint":
     "Your colleague reads this, not the contact. State why the introduction is worth making.",

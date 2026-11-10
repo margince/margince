@@ -66,6 +66,9 @@ func (s *Store) FulfilErasure(ctx context.Context, id ids.UUID, in UpdateDSRInpu
 	}
 	var out dsrRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := requireDSRAssignee(ctx, tx, in); err != nil {
+			return err
+		}
 		current, err := lockDSR(ctx, tx, id)
 		if err != nil {
 			return err
