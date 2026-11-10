@@ -145,3 +145,51 @@ it("says why nothing is reached when every connection is off file", async () => 
     screen.queryByRole("button", { name: "View LinkedIn network" }),
   ).toBeNull();
 });
+
+// A network past one page continues from the drawer, from the cursor the
+// first page handed back, until the server says it has no more.
+it("reaches the accounts past the first page", async () => {
+  const user = userEvent.setup();
+  const [first, second] = REACHED.accounts;
+  const reads: (string | null)[] = [];
+  await renderReach(
+    {
+      ...REACHED,
+      accounts: [first],
+      accounts_total: 2,
+      next_cursor: "reach-2",
+    },
+    user,
+  );
+  const routed = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request =
+      input instanceof Request ? input : new Request(String(input), init);
+    const url = new URL(request.url);
+    if (!url.pathname.endsWith("/me/linkedin-reach")) {
+      return routed(input, init);
+    }
+    reads.push(url.searchParams.get("cursor"));
+    return jsonResponse({
+      ...REACHED,
+      accounts: [second],
+      accounts_total: 2,
+    });
+  }) as typeof fetch;
+
+  await user.click(await screen.findByRole("button", { name: "Load more" }));
+
+  expect(
+    await screen.findByRole("button", { name: "Havelmann & Söhne" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "Nordwind Logistik GmbH" }),
+  ).toBeInTheDocument();
+  expect(reads).toEqual(["reach-2"]);
+  expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
+  expect(
+    screen.getByText(
+      "Showing 2 of 2 companies. 1,420 connections work at companies not on file yet.",
+    ),
+  ).toBeInTheDocument();
+});
