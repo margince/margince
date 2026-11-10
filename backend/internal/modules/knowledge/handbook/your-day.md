@@ -6,7 +6,7 @@
 
 The Worklist is the ranked to-do list in Margince: one list of everything waiting on you, in the order Margince ranks them. That is buyers to answer, tasks due, promises made, deals at risk and items to check. It lives on **Home**. Press **Show Worklist** to open it as a panel over the page; **Hide Worklist** closes it. It has no sidebar row of its own.
 
-Move through the task card by dragging it or using the **Previous task** and **Next task** buttons. The arrow keys work on those buttons. Moving between tasks changes only which task you see.
+Under **Needs you**, every task is its own card, and the first one is open. Press another card to open it in its place. **Next task** on the open card opens the one after it, and after the last card it goes back to the first. Opening a card changes only which task you see.
 
 When you email a task's contact after the task was created, Margince marks the task done and shows a receipt in **Done for you**. Bulk mail and a contact named only in Bcc do not count. **Undo** reopens the task; the same email will not close it again. This includes tasks from website requests.
 
@@ -232,6 +232,14 @@ It is due on a day the email names, such as "Deadline: 27 October", and has **No
   stays until someone handles it.
 - Private mail is left out. When it is not clear whose task it is, Margince leaves the email for review.
 Also called: customer request, email nobody answered, email to-do.
+
+### How do I answer a calendar invitation?
+An email that invites you to a meeting shows **Accept**, **Maybe** and **Decline** in place of **Reply**. That is on Home, in the Worklist, in a record's **History** and in the email reader.
+- Your answer goes out through your own connected calendar, which lets the sender know. Without a connected calendar, Margince says so under the answers.
+- The card is tagged **Invitation** and shows when the meeting starts. It stays under **Needs you** until you answer, and Margince files no reminder task for it.
+- You can change your answer later: your current answer shows pressed.
+- **Reply** stays in the email reader, for proposing another time.
+Also called: meeting invite, accept an invite, decline a meeting.
 
 ## The Worklist
 

@@ -46,6 +46,9 @@ type SchedulingCalendar interface {
 	Lookup(context.Context, ids.UserID, string, connector.CalendarAppointment) (*connector.CalendarReceipt, error)
 	Save(context.Context, ids.UserID, string, connector.CalendarAppointment) (connector.CalendarReceipt, error)
 	Cancel(context.Context, ids.UserID, string, string, string) error
+	// Respond answers the event with this iCalendar UID on the host's own
+	// connected calendar, which tells its organizer.
+	Respond(ctx context.Context, host ids.UserID, uid, response string) error
 }
 
 // WithSchedulingCalendar binds provider operations without coupling domain modules.

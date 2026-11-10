@@ -4,6 +4,7 @@
 package calendarmethod_test
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/calendarmethod"
@@ -54,5 +55,17 @@ func TestEveryKnownMethodIsAResponseOrAnInvitation(t *testing.T) {
 	}
 	if calendarmethod.IsInvitation("") || calendarmethod.IsResponse("") {
 		t.Error("an absent method is neither a response nor an invitation")
+	}
+}
+
+func TestOnlyANewEventOrNewOccurrencesAskForAnAnswer(t *testing.T) {
+	t.Parallel()
+	for _, method := range calendarmethod.Answerable() {
+		if !calendarmethod.IsInvitation(method) {
+			t.Errorf("%q asks for an answer but is not an invitation", method)
+		}
+	}
+	if slices.Contains(calendarmethod.Answerable(), "CANCEL") {
+		t.Error("a cancelled event still asks the attendee to answer")
 	}
 }

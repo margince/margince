@@ -18,12 +18,12 @@
   "context_scopes": null,
   "judge_score_p50": 0,
   "judge_score_min": 0,
-  "latency_p50": 2506,
-  "latency_p95": 2963,
-  "mean_tokens": 576,
-  "mean_tokens_in": 509,
+  "latency_p50": 1289,
+  "latency_p95": 2483,
+  "mean_tokens": 502,
+  "mean_tokens_in": 435,
   "mean_tokens_out": 67,
-  "mean_cached_tokens": 64,
+  "mean_cached_tokens": 65,
   "mean_cache_write_tokens": 0,
   "est_cost_microusd": 0,
   "judge_served_model": "",
@@ -31,18 +31,20 @@
   "self_judged": false,
   "served_identity_source": "echo",
   "candidate_upstream": {
-    "only": null,
+    "only": [
+      "crusoe"
+    ],
     "ignore": null,
     "quantizations": [
-      "fp8"
+      "bf16"
     ],
-    "sort": "throughput",
-    "require_parameters": true,
+    "sort": "",
+    "require_parameters": null,
     "allow_fallbacks": null,
     "preferred_max_latency_p90": 0,
     "reasoning_effort": ""
   },
-  "ran_at": "2026-09-30T11:21:57Z",
+  "ran_at": "2026-11-09T22:30:50Z",
   "scenarios": [
     {
       "scenario": "fx_rates_two_pairs_grounded",

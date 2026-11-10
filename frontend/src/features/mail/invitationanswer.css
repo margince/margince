@@ -1,0 +1,12 @@
+/* The answers sit in the row of verbs they replace. A refusal takes a line of
+   its own at the row's end, so the verbs beside the answers stay level. It
+   adds no width of its own, so the row's words keep theirs. */
+.invitation-answer {
+  display: contents;
+}
+.invitation-answer__error {
+  flex-basis: 100%;
+  order: 1;
+  text-align: end;
+  contain: inline-size;
+}
