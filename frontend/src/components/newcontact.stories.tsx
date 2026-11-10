@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import {
   emptyPage,
   installFetchStub,
@@ -127,9 +127,9 @@ export const OpenedByItsAddress: Story = {
   render: form(undefined, undefined, { open: true }),
   play: async () => {
     const body = within(document.body);
-    await expect(
-      await body.findByRole("dialog", { name: "New contact" }),
-    ).toBeVisible();
+    const dialog = await body.findByRole("dialog", { name: "New contact" });
+    // The overlay fades in from transparent, so visible is a state it reaches.
+    await waitFor(() => expect(dialog).toBeVisible());
     await expect(
       body.getByRole("button", { name: "New contact", hidden: true }),
     ).toHaveAttribute("aria-keyshortcuts", "c");

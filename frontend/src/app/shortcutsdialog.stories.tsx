@@ -6,7 +6,6 @@ import { setSingleKeyShortcutsOn } from "../lib/shortcuts";
 import { StoryProviders } from "../testing/story-utils";
 import { ShortcutsDialog } from "./shortcutsdialog";
 import "./account.css";
-import { RestoreSingleKeys } from "../testing/singlekeys-story";
 
 /** Opened from Help and feedback or with `?`: the keymap's groups, then the
  *  deck's keys in the deck's own words. Caps follow the reader's platform. */
@@ -38,13 +37,11 @@ export const SingleKeysOff: Story = {
     setSingleKeyShortcutsOn(false);
     return (
       <StoryProviders>
-        <RestoreSingleKeys>
-          <ShortcutsDialog
-            open
-            onClose={() => undefined}
-            returnFocusTo={() => null}
-          />
-        </RestoreSingleKeys>
+        <ShortcutsDialog
+          open
+          onClose={() => undefined}
+          returnFocusTo={() => null}
+        />
       </StoryProviders>
     );
   },
