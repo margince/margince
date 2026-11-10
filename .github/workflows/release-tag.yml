@@ -23,7 +23,9 @@
 # dist service at test.margince.com, versioned YYYY.edition.bugfix, and its
 # version grammar (pkg/version in margince-constellation) rejects a v-prefixed
 # string by construction. The two release kinds therefore carry two version
-# schemes, and one lane cannot name a build both ways. This lane owns the
+# schemes, and one lane cannot name a build both ways. The same tag starts
+# release.yml, which derives the dist version from it
+# (scripts/release-dist-version.sh), so one tag names both. This lane owns the
 # GitHub release; release.yml keeps the dist release and
 # has surrendered its github-release job, so exactly one lane here can create a
 # release.

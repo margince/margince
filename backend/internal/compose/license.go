@@ -172,9 +172,9 @@ func WithLicensePosture(posture func() licensecheck.Posture) Option {
 		// The same posture reaches identity's seat writer as a ceiling, so an admin
 		// is held to the number they are shown. It is read at CALL time, so a
 		// license renewed in place raises the ceiling on the next re-check. A seat
-		// already in use is never touched. An invalid posture answers no number,
-		// which reads as no ceiling: seats stay uncapped until it is replaced.
-		s.authHandlers = s.WithSeatCeiling(func() (int, bool) { return posture().Seats() })
+		// already in use is never touched. A refused or removed license keeps the
+		// last valid one's ceiling (Posture.SeatCeiling) until it is replaced.
+		s.authHandlers = s.WithSeatCeiling(func() (int, bool) { return posture().SeatCeiling() })
 	}
 }
 

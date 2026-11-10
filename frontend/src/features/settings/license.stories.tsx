@@ -109,6 +109,19 @@ export const LicenseRefused: Story = {
   }),
 };
 
+// Refused while the last valid ceiling still holds. The server sends that
+// ceiling, so the seat row reads used against it. The callout says no full
+// seat is added beyond it.
+export const LicenseRefusedWithAHeldCeiling: Story = {
+  render: story({
+    state: "rejected",
+    seats_granted: 12,
+    seats_used: 12,
+    over_limit: false,
+    checked_at: CHECKED_AT,
+  }),
+};
+
 // The refusal in dark, where the warning callout's tint is a color-mix that follows
 // the dark accent lift and has to stay apart from the card under it.
 export const LicenseRefusedDark: Story = {

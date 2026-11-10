@@ -174,11 +174,15 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 	if err != nil {
 		return err
 	}
+	//
+	// The task deals are one uncorrelated set. A correlated `EXISTS` under the
+	// `OR` cannot become a join. It ran the whole task predicate once per open
+	// deal, and at the bench's scale that outlasted the statement timeout.
 	q += fmt.Sprintf(`
 		  AND (d.owner_id = $%d
-		       OR EXISTS (
-			SELECT 1 FROM activity a
-			JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = d.id
+		       OR d.id IN (
+			SELECT l.deal_id FROM activity a
+			JOIN activity_link l ON l.activity_id = a.id AND l.deal_id IS NOT NULL
 			WHERE a.kind = 'task' AND NOT a.is_done
 			  AND a.archived_at IS NULL AND a.assignee_id = $%d AND %s))`, userPos, userPos, activities.CurrentTaskClause("a", now, identities, arg))
 	q += " ORDER BY d.id"

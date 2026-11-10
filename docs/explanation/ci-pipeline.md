@@ -93,8 +93,8 @@ pass on its own.
 replaces the review under way, and a merge verdict can never be cancelled. Each queue entry has its own
 ref, so entries never get in each other's way in that group.
 
-`release.yml` and `sbom.yml` do not take from the runner budget. Both are **started by hand only**, so a
-merge triggers neither. They keep their job groups for the case of two dispatch runs at once. There, a
+`release.yml` and `sbom.yml` do not take from the runner budget. A merge triggers neither: `sbom.yml`
+starts by hand, and `release.yml` starts on a `v*` tag or by hand. They keep their job groups for the case of two dispatch runs at once. There, a
 cancel must reach the costly steps that generate output. It must never reach the step that publishes or
 signs; see [the workflows beside the merge gate](../reference/ci-workflows.md).
 
@@ -186,11 +186,11 @@ What follows from this:
   matches the `images` scope. It runs the **`images (build only)`** job: a `docker buildx bake` of the
   default group (the three roles) that pushes nothing.
   - There are no registry credentials, no digest, and no release side effect. It answers "does it still
-    build", which nothing else asks now that `release.yml` only runs by hand.
+    build", which nothing else asks now that `release.yml` runs only on a tag or by hand.
   - The scope is those three paths, not `backend/**` or `frontend/**`. The images copy build output, so
     a source change *can* break one without touching any of the three.
-  - But a bake of three roles on every backend PR would cost most of what making `release.yml` run by
-    hand saved. And the compile that catches nearly all of that class already runs in
+  - But a bake of three roles on every backend PR would cost most of what taking `release.yml` off
+    every merge saved. And the compile that catches nearly all of that class already runs in
     `deterministic-gates`. What is left with no cover is a source change that builds and then fails to
     package, which the release still finds.
 - A **PR that only changes the backend** skips the frontend + UAT lanes; a **PR that only changes the
