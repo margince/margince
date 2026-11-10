@@ -41,21 +41,11 @@ import { useAnswersFromStandIn } from "./ai-settings";
 import { PanelTitle } from "./ai-terms";
 import "./ai-settings.css";
 
-// Which provider and model each tier uses.
+// Which provider and model each tier uses. The bindings need `ai_routing`; the
+// health column needs `ai_diagnostics`, and that grant alone shows the lanes unbound.
 //
-// The bindings are read on `ai_routing`, narrow on both verbs because this is
-// the editable document and it decides where an installation's correspondence
-// goes; the health column is read on `ai_diagnostics`, and a reader holding
-// that alone still gets the lanes as rungs, unbound.
-//
-// Each row is a reading; Edit opens a dialog that owns that one binding and
-// saves it alone. The tier vocabulary comes from the task contract rather than
-// from a contact, so rows re-point a lane and never add or remove one — except
-// the decision model, which a document may leave out.
-//
-// The installation profile is shown and never edited here. It decides which
-// vendors a lane may name, and a Save it refuses says so; the line tells the
-// reader which profile did the refusing, by name and by what it allows.
+// Edit saves one binding. The tiers come from the task contract, so a row
+// re-points a lane and never adds one; only the decision model may be absent.
 
 type Routing = components["schemas"]["AiRouting"];
 

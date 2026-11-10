@@ -121,27 +121,34 @@ describe("a lead's company facts", () => {
 });
 
 describe("the About company row", () => {
-  it("shows the linked company's current name and edits the typed one", async () => {
-    const patches = serve({ ...linked, company_name: "Nordwind Logistik" });
+  // The name shown is the company's own, so an editor here would change a name
+  // the row does not show.
+  it("shows a linked lead's company name read-only, saying where it changes", async () => {
+    serve({ ...linked, company_name: "Nordwind Logistik" });
+    render(<LeadScreen id="l-1" />);
+    const name = await screen.findByText("Nordwind Holding SE", {
+      selector: ".inlinetext",
+    });
+    expect(name).toHaveAttribute(
+      "title",
+      "The name comes from the linked company. Rename it on the company’s page.",
+    );
+    expect(screen.queryByText("Nordwind Logistik")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^Change Company/ }),
+    ).toBeNull();
+  });
+
+  it("edits the typed name while the lead is not linked", async () => {
+    const patches = serve({ ...lead, company_name: "Nordwind Logistik" });
     const user = userEvent.setup();
     render(<LeadScreen id="l-1" />);
     const change = await screen.findByRole("button", {
       name: /^Change Company/,
     });
-    await waitFor(() =>
-      expect(change.closest("dd")).toHaveTextContent("Nordwind Holding SE"),
-    );
+    expect(change).toHaveTextContent("Nordwind Logistik");
     await user.click(change);
     expect(await screen.findByDisplayValue("Nordwind Logistik")).toBeVisible();
     expect(patches).toEqual([]);
-  });
-
-  it("shows the typed name while the lead is not linked", async () => {
-    serve({ ...lead, company_name: "Nordwind Logistik" });
-    render(<LeadScreen id="l-1" />);
-    const change = await screen.findByRole("button", {
-      name: /^Change Company/,
-    });
-    expect(change).toHaveTextContent("Nordwind Logistik");
   });
 });

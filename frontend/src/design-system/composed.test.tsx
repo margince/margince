@@ -183,7 +183,7 @@ describe("DealCard + PipelineBoard", () => {
   it("names a company it was given, with the monogram beside it", () => {
     render(<DealCard deal={deal} href="#/deals/d1" zone="Europe/Berlin" />);
     expect(screen.getByText("Brandt Automotive")).toBeTruthy();
-    expect(document.querySelector('[data-initials="BA"]')).toBeTruthy();
+    expect(screen.getByText("BA")).toBeTruthy();
     expect(screen.queryByLabelText(MASK)).toBeNull();
   });
 

@@ -2731,6 +2731,8 @@ export const en = {
   "shell.skipToContent": "Skip to content",
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "{company} home, powered by Margince",
+  "shell.companyLogoAriaInitials":
+    "{initials}, {company} home, powered by Margince",
   "shell.poweredBy": "Powered by Margince",
   "shell.searchEverything": "Search or ask Margince",
   "shell.breadcrumbAria": "Breadcrumb",
@@ -2745,6 +2747,7 @@ export const en = {
   "shell.collapse": "Collapse sidebar",
   "shell.expand": "Expand sidebar",
   "shell.accountAria": "Account",
+  "shell.accountAriaInitials": "{initials}, account",
   "shell.accountSettingsAria": "{who}: account settings",
   "shell.theme": "Theme",
   "shell.helpMenu": "Help and feedback",
@@ -4890,7 +4893,6 @@ export const en = {
   "email.thread.count_other": "{count} messages",
   "email.thread.countLatest_one": "Latest message",
   "email.thread.countLatest_other": "Latest {count} messages",
-  "email.thread.fold": "Fold the message from {name}",
   "email.thread.toLine": "to {names}",
   "email.thread.details": "Details",
   "email.thread.textForwarded":
@@ -19885,6 +19887,8 @@ export const en = {
   "lead.company.matchedByName": "Same company name",
   "lead.company.linkWhyDomain": "{name} uses the website domain on this lead.",
   "lead.company.linkWhyName": "{name} has the company name on this lead.",
+  "lead.company.nameFollowsLink":
+    "The name comes from the linked company. Rename it on the company’s page.",
   "lead.details.fromCompany": "From {name}",
   "lead.details.fromCompanyRecord": "From the company record",
   "lead.details.companyDecides":

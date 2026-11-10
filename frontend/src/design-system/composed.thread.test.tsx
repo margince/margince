@@ -170,7 +170,7 @@ describe("a thread's card", () => {
     ]);
     // Their word carries their face; ours carries a send mark, not a
     // monogram of "Your team".
-    expect(document.querySelectorAll('[data-initials="IK"]')).toHaveLength(1);
+    expect(screen.getByText("IK")).toBeTruthy();
     expect(document.querySelectorAll(".tl-msg-mark")).toHaveLength(2);
   });
 
@@ -207,7 +207,7 @@ describe("a thread's card", () => {
     expect(screen.queryByText(/Ida Keller, Ida Keller/)).toBeNull();
     // The face on the two-contact message is the first contact's, never a
     // monogram of the phrase.
-    expect(document.querySelectorAll('[data-initials="IK"]')).toHaveLength(2);
+    expect(screen.getAllByText("IK")).toHaveLength(2);
   });
 
   it("prefers the server's own counterparty to the resolved links", () => {

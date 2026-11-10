@@ -9,6 +9,7 @@ import {
 } from "react";
 import { AppLink } from "../design-system/applink";
 import { Avatar, BusyMark } from "../design-system/atoms";
+import { monogramOf } from "../design-system/avatarmesh";
 import { SilentCardBoundary } from "../design-system/cardboundary";
 import { Heading } from "../design-system/heading";
 import { Logomark } from "../design-system/logomark";
@@ -63,13 +64,21 @@ function useInstallationBrand() {
   return useMe(false).data?.installation_brand;
 }
 
-/** The accessible name of a link home that shows the company's mark. */
-export function useHomeLinkLabel(): string {
+/**
+ * The accessible name of a link home. One that holds the `WorkspaceChip` starts
+ * with the initials the chip prints (WCAG 2.5.3).
+ */
+export function useHomeLinkLabel(holdsChip = false): string {
   const t = useT();
   const installation = useInstallationBrand();
-  return installation
-    ? t("shell.companyLogoAria", { company: installation.display_name })
-    : t("shell.logoAria");
+  if (!installation) return t("shell.logoAria");
+  const company = installation.display_name;
+  return holdsChip
+    ? t("shell.companyLogoAriaInitials", {
+        initials: monogramOf(company),
+        company,
+      })
+    : t("shell.companyLogoAria", { company });
 }
 
 /**

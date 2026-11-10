@@ -41,7 +41,7 @@ import { useViewerZone } from "../../lib/viewerzone";
 import {
   LeadCompany,
   useLeadCompanyFactsSection,
-  useLeadCompanyName,
+  useLeadCompanyNameReading,
 } from "./leadcompany";
 import { LeadOwnerControl, statusSetBy } from "./leadheader";
 import { leadIndustry } from "./leadindustry";
@@ -131,6 +131,33 @@ function EmailValue({
   );
 }
 
+// A linked lead's name is the company's own, so it is changed there, not here.
+function useLinkedCompanyRow(lead: Lead): DetailRow | null {
+  const t = useT();
+  const linked = useLeadCompanyNameReading(lead);
+  if (!lead.company_id) return null;
+  return {
+    key: "company_name",
+    term: t("create.companyName"),
+    empty: !linked.settling && !linked.name,
+    value: linked.settling ? (
+      <span aria-busy="true" />
+    ) : (
+      <InlineText
+        label={t("create.companyName")}
+        value={linked.name ?? ""}
+        placeholder={t("field.unset")}
+        canEdit={false}
+        readOnlyReason={t("lead.company.nameFollowsLink")}
+        onSave={refusedSave}
+      />
+    ),
+  };
+}
+
+// The read-only row never opens its editor, so nothing reaches this.
+async function refusedSave(): Promise<void> {}
+
 /** The About rows in the order the design reads them, blanks folded. */
 function useAboutRows(
   lead: Lead,
@@ -154,22 +181,15 @@ function useAboutRows(
   const text = (
     key: TextKey,
     label: MessageKey,
-    options: {
-      required?: boolean;
-      type?: "email";
-      display?: string;
-      suggested?: string;
-    } = {},
+    options: { required?: boolean; type?: "email" } = {},
   ): DetailRow => ({
     key,
     term: t(label),
-    empty: isBlank(lead[key]) && !options.suggested,
+    empty: isBlank(lead[key]),
     value: (
       <InlineText
         label={t(label)}
         value={lead[key] ?? ""}
-        display={options.display}
-        suggested={options.suggested}
         type={options.type}
         placeholder={t("field.unset")}
         canEdit={canEdit}
@@ -183,13 +203,8 @@ function useAboutRows(
     { value: "", label: t("lead.originNone") },
     ...originPickOptions(origins.data, lead.origin),
   ];
-  const linkedName = useLeadCompanyName(lead);
-  const shownName = lead.company_id ? (linkedName ?? undefined) : undefined;
-  const typedBlank = isBlank(lead.company_name);
-  const companyName = text("company_name", "create.companyName", {
-    display: typedBlank ? undefined : shownName,
-    suggested: typedBlank ? shownName : undefined,
-  });
+  const companyName =
+    useLinkedCompanyRow(lead) ?? text("company_name", "create.companyName");
   const rows: DetailRow[] = [
     {
       ...companyName,

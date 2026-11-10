@@ -1,6 +1,7 @@
 import { UserRound } from "lucide-react";
 import { Suspense, useCallback, useId, useRef, useState } from "react";
 import { Avatar, Button } from "../design-system/atoms";
+import { monogramOf } from "../design-system/avatarmesh";
 import { CardBoundary } from "../design-system/cardboundary";
 import { useT } from "../i18n";
 import { lazy } from "../i18n/lazy";
@@ -84,9 +85,15 @@ export function AccountMenu() {
         iconOnly
         className="account-trigger"
         ref={trigger}
-        // WCAG 2.5.3 (Label in Name) binds printed text, and Avatar draws the
-        // initials as a picture rather than printing them: named by what it does.
-        aria-label={t("shell.accountAria")}
+        // WCAG 2.5.3 (Label in Name): the chip prints the initials, so the name
+        // starts with them.
+        aria-label={
+          identity.label
+            ? t("shell.accountAriaInitials", {
+                initials: monogramOf(identity.label),
+              })
+            : t("shell.accountAria")
+        }
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}

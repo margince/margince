@@ -2837,6 +2837,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.skipToContent": "Zum Inhalt springen",
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "Home von {company}, läuft mit Margince",
+  "shell.companyLogoAriaInitials":
+    "{initials}, Home von {company}, läuft mit Margince",
   "shell.poweredBy": "Läuft mit Margince",
   "shell.searchEverything": "Suchen oder Margince fragen",
   "shell.breadcrumbAria": "Navigationspfad",
@@ -2851,6 +2853,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.collapse": "Seitenleiste einklappen",
   "shell.expand": "Seitenleiste ausklappen",
   "shell.accountAria": "Nutzerkonto",
+  "shell.accountAriaInitials": "{initials}, Nutzerkonto",
   "shell.accountSettingsAria": "{who}: Kontoeinstellungen",
   "shell.theme": "Design",
   "shell.helpMenu": "Hilfe und Feedback",
@@ -4921,7 +4924,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "email.thread.count_other": "{count} Nachrichten",
   "email.thread.countLatest_one": "Die letzte Nachricht",
   "email.thread.countLatest_other": "Die letzten {count} Nachrichten",
-  "email.thread.fold": "Nachricht von {name} einklappen",
   "email.thread.toLine": "an {names}",
   "email.thread.details": "Details",
   "email.thread.textForwarded":
@@ -20080,6 +20082,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.company.linkWhyDomain": "{name} nutzt die Website-Domain dieses Leads.",
   "lead.company.linkWhyName":
     "{name} trägt den Unternehmensnamen dieses Leads.",
+  "lead.company.nameFollowsLink":
+    "Der Name kommt vom verknüpften Unternehmen. Benenne es auf der Seite des Unternehmens um.",
   "lead.details.fromCompany": "Von {name}",
   "lead.details.fromCompanyRecord": "Aus dem Unternehmenseintrag",
   "lead.details.companyDecides":

@@ -2749,6 +2749,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.skipToContent": "Chuyển đến nội dung",
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "Trang chủ {company}, chạy trên Margince",
+  "shell.companyLogoAriaInitials":
+    "{initials}, Trang chủ {company}, chạy trên Margince",
   "shell.poweredBy": "Chạy trên Margince",
   "shell.searchEverything": "Tìm kiếm hoặc hỏi Margince",
   "shell.breadcrumbAria": "Đường dẫn điều hướng",
@@ -2763,6 +2765,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.collapse": "Thu gọn thanh bên",
   "shell.expand": "Mở rộng thanh bên",
   "shell.accountAria": "Tài khoản",
+  "shell.accountAriaInitials": "{initials}, tài khoản",
   "shell.accountSettingsAria": "{who}: cài đặt tài khoản",
   "shell.theme": "Giao diện",
   "shell.helpMenu": "Trợ giúp và phản hồi",
@@ -4799,7 +4802,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "email.thread.count_other": "{count} thư",
   "email.thread.countLatest_one": "Thư gần nhất",
   "email.thread.countLatest_other": "{count} thư gần nhất",
-  "email.thread.fold": "Thu gọn thư của {name}",
   "email.thread.toLine": "gửi {names}",
   "email.thread.details": "Chi tiết",
   "email.thread.textForwarded":
@@ -19572,6 +19574,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.company.matchedByName": "Cùng tên công ty",
   "lead.company.linkWhyDomain": "{name} dùng tên miền trang web của lead này.",
   "lead.company.linkWhyName": "{name} có cùng tên công ty với lead này.",
+  "lead.company.nameFollowsLink":
+    "Tên này lấy từ công ty được liên kết. Đổi tên trên trang của công ty.",
   "lead.details.fromCompany": "Từ {name}",
   "lead.details.fromCompanyRecord": "Từ hồ sơ công ty",
   "lead.details.companyDecides":

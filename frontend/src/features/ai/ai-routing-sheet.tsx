@@ -6,12 +6,8 @@ import { useLocale, useT } from "../../i18n";
 import type { ModelCatalogue } from "../../lib/ai-models";
 import { useViewerZone } from "../../lib/viewerzone";
 
-// What the model lists in the editor are, and how to move them on. The sheet is
-// a SNAPSHOT somebody took on a day; undated it reads as "these are the models",
-// and the refresh is the way past it.
-//
-// The profile is a reading, never a control here: it decides which vendors a
-// lane may name, and a Save it refuses says so.
+// The day the price sheet was taken, so its model list is not read as complete.
+// The installation profile is shown here and never edited.
 export function SheetFooter({
   catalogue,
   profile,

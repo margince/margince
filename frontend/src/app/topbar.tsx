@@ -152,8 +152,8 @@ export function TopBarSearch({
         <span className="topbar-searchlabel">{label}</span>
         {/* One cap per KEY, which is how a keyboard shortcut is read: "⌘ then K",
             not the four-character string "⌘K" in one box. The caps come from the
-            palette's own helper, which is also what the label is joined from, so
-            the two spellings ("⌘ K" and "Ctrl K") stay one source. */}
+            palette's own helper, so the two spellings ("⌘ K" and "Ctrl K") stay
+            one source. */}
         <span className="topbar-keys" aria-hidden>
           {paletteHotkeyCaps(navigator.platform).map((cap) => (
             <Kbd key={cap}>{cap}</Kbd>
@@ -176,7 +176,7 @@ function TopBarTrail({
 
 /** The company's mark leading home, where a phone has no room for the trail. */
 function TopBarHome() {
-  const label = useHomeLinkLabel();
+  const label = useHomeLinkLabel(true);
   return (
     <AppLink className="topbar-home" href="#/home" aria-label={label}>
       <WorkspaceChip />

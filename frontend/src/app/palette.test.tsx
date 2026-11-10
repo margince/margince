@@ -511,9 +511,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     // carries no initials.
     const mark = row.querySelector(".palette-mark");
     expect(mark?.getAttribute("aria-hidden")).toBe("true");
-    expect(mark?.querySelector<HTMLElement>(".avatar")?.dataset.initials).toBe(
-      "JW",
-    );
+    expect(mark?.querySelector(".avatar")?.textContent).toBe("JW");
     const asked = fetchMock.mock.calls.map(([input]) =>
       input instanceof Request ? input.url : String(input),
     );

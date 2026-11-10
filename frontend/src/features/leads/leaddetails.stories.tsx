@@ -86,8 +86,10 @@ function page(lead: Lead, locale: Locale = "en", companyName?: string) {
 /** A linked company that holds all three facts. */
 export const CompanyFacts: Story = { render: page(linked) };
 
-/** The lead typed "Nordwind Logistik"; the About company row reads the linked company's current name. */
-export const RenamedCompany: Story = { render: page(linked) };
+/** The lead typed "Nordwind Logistik"; the company was renamed since, and the row reads its current name. */
+export const RenamedCompany: Story = {
+  render: page(linked, "en", "Nordwind Group AG"),
+};
 
 /** The company holds only its size, so the lead's own industry stays editable. */
 export const SomeFactsMissing: Story = {

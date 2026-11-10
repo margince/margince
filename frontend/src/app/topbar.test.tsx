@@ -208,8 +208,9 @@ describe("Top bar at phone width", () => {
       />,
     );
     expect(screen.queryByRole("navigation", { name: "Breadcrumb" })).toBeNull();
+    // The chip prints the initials, so the name starts with them (WCAG 2.5.3).
     const home = screen.getByRole("link", {
-      name: "Demo GmbH home, powered by Margince",
+      name: "DG, Demo GmbH home, powered by Margince",
     });
     expect(home.getAttribute("href")).toBe("/#/home");
     expect(

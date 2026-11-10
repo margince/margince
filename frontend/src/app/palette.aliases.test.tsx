@@ -178,6 +178,7 @@ describe("a settings page in the palette", () => {
     const pages = (await adminCommands()).filter((command) =>
       command.id.startsWith("screen:settings-"),
     );
+    expect(pages.length).toBeGreaterThan(0);
     expect(pages.map((command) => command.type)).toEqual(
       pages.map(() => "setting"),
     );

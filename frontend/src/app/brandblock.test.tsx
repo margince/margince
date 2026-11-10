@@ -147,10 +147,7 @@ describe("The rail's brand block", () => {
       <WorkspaceRail route={{ screen: "home" }} />,
     );
     expect(container.querySelector(".ws-chip img")).toBeNull();
-    expect(
-      container.querySelector<HTMLElement>(".ws-chip .avatar")?.dataset
-        .initials,
-    ).toBe("DG");
+    expect(container.querySelector(".ws-chip .avatar")?.textContent).toBe("DG");
   });
 
   // One shape at both widths: the head never swaps marks when the panel
@@ -196,10 +193,9 @@ describe("The rail's brand block", () => {
         ).toBe(drawn),
       );
       if (!drawn) {
-        expect(
-          container.querySelector<HTMLElement>(".ws-chip .avatar")?.dataset
-            .initials,
-        ).toBe("DG");
+        expect(container.querySelector(".ws-chip .avatar")?.textContent).toBe(
+          "DG",
+        );
       }
     },
   );
