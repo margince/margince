@@ -61,6 +61,9 @@ What each directory owns, and the rule that goes with it:
   - Every edge between modules is put in here (identity's workspace seed ← deals; agents' staging ←
     approvals). Groups that work across modules each sit in a subpackage under the same rule
     (`compose/briefs`). A compose subpackage never owns a business record for good.
+  - The root package may not grow: every lint and test run reads all of it. New feature code goes in a
+    subpackage. `backend/gates/composeroot_test.go` holds its file and line counts under limits that only
+    come down.
   - How it boots, and where every edge is wired: [composition-layer.md](composition-layer.md).
 - `cmd/{api,worker,migrate}`: small process roles (see below).
 - `internal/contracts/`: generated from `backend/api/crm.yaml`. Never edit.
