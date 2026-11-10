@@ -19140,7 +19140,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.happened.meeting_outcome.bare":
     "Der Termin war am {when}, und nichts hält fest, wie er lief.",
   "worklist.happened.meeting_follow_up":
-    "Du hast {name} am {when} getroffen, und danach ging keine Nachricht raus.",
+    "Du hast {name} am {when} getroffen. Danach ging nichts an den Kontakt raus.",
   "worklist.happened.meeting_follow_up.bare":
     "Der Termin war am {when}, und danach ging nichts an die Teilnehmenden raus.",
   "worklist.happened.relationship_decay":
