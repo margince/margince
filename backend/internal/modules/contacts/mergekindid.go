@@ -31,7 +31,7 @@ func moveKindIDRows(ctx context.Context, tx pgx.Tx, entityType string, sourceID,
 // survivor. The table is insert and delete only, and a pair may hold one link
 // per type, so each end is copied with ON CONFLICT DO NOTHING (the survivor's
 // own link stands) and the retired record's rows are then deleted. A link
-// between the two records is not copied: it would join the survivor to itself.
+// between the two records is skipped: it would join the survivor to itself.
 func moveRecordLinks(ctx context.Context, tx pgx.Tx, entityType string, sourceID, targetID ids.UUID) error {
 	for _, stmt := range []string{
 		`INSERT INTO record_link (from_type, from_id, to_type, to_id, link_type, captured_by, created_at)
