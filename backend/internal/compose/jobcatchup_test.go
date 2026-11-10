@@ -58,8 +58,9 @@ func TestTheStartupDelayIsBoundedAndSpreadsKinds(t *testing.T) {
 	if d := startupDelay("fast_pass", 30*time.Second, startupSpread); d < 0 || d >= 30*time.Second {
 		t.Fatalf("delay %s for a 30s pass, want within its interval", d)
 	}
-	if startupDelay("a_pass", time.Hour, startupSpread) != startupDelay("a_pass", time.Hour, startupSpread) {
-		t.Fatal("the delay for one kind changed between calls")
+	first := startupDelay("a_pass", time.Hour, startupSpread)
+	if again := startupDelay("a_pass", time.Hour, startupSpread); again != first {
+		t.Fatalf("the delay for one kind changed between calls: %s then %s", first, again)
 	}
 	if startupDelay("any_pass", time.Hour, 0) != 0 {
 		t.Fatal("a zero spread must mean no delay")
