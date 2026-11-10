@@ -145,3 +145,19 @@ func TestAProductIsNamedByTheRefThePromptShowed(t *testing.T) {
 		}
 	}
 }
+
+func TestParseDrawsAKeptMetricTheReplyLeftWithoutAChart(t *testing.T) {
+	reply := `{"name":"Pipeline","filters":[],"metrics":[{"id":"open_pipeline","phrase":"open pipeline"},{"id":"bookings_won","phrase":"sales"}],"charts":[{"id":"metric_reading","phrase":"sales figure"}],"objective":null,"clarifications":[],"unsupported":[]}`
+	out, err := Parse(reply, setupInput(SiteCustomReport))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(out.Blocks, ",") != "metric_reading,stage_distribution" {
+		t.Fatalf("drew %v, want the chart the reply named and the first chart of the metric it left undrawn", out.Blocks)
+	}
+	for _, source := range out.Sources {
+		if source.Field == "chart" && source.Value == "stage_distribution" {
+			t.Fatalf("named %+v as read from the description, but no words asked for that chart", source)
+		}
+	}
+}

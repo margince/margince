@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // epoch anchors the timestamp sentinels. Each column gets epoch plus its own
@@ -78,6 +79,8 @@ func (r *sentinelRow) Scan(dest ...any) error {
 func (r *sentinelRow) fill(dest any, name string, index int) {
 	r.t.Helper()
 	switch d := dest.(type) {
+	case **systemtext.Message:
+		*d = nil
 	case *string:
 		*d = name
 	case **string:
@@ -161,7 +164,7 @@ func TestEveryProjectedColumnLandsInItsOwnField(t *testing.T) {
 	for _, flip := range []bool{false, true} {
 		t.Run(map[bool]string{false: "as declared", true: "with the booleans reversed"}[flip], func(t *testing.T) {
 			row := &sentinelRow{t: t, names: names, flip: flip, last: index["content_available"]}
-			got, err := scanActivity(row)
+			got, err := scanActivity(context.Background(), row)
 			if err != nil {
 				t.Fatalf("scanActivity: %v", err)
 			}
@@ -284,13 +287,15 @@ func boolFor(at int) bool {
 	return seen%2 == 0
 }
 
-// isBoolColumn names the projection's boolean columns. A list, because the
-// destination's type is only knowable at scan time and this has to answer
-// before one exists.
+// The projection itself supplies the destination types, including derived state columns.
 func isBoolColumn(sql string) bool {
-	switch sql {
-	case "a.is_done", "a.bulk_mail_attested", "a.due_has_time", "":
-		return true
+	for _, column := range activityProjection {
+		if column.sql == sql {
+			switch column.into(&activityScan{}).(type) {
+			case *bool, **bool:
+				return true
+			}
+		}
 	}
 	return false
 }
@@ -438,7 +443,7 @@ func TestAWithheldRowCarriesNoAudienceReason(t *testing.T) {
 	for i, c := range activityProjection {
 		names[i] = c.sql
 	}
-	got, err := scanActivity(&withheldRow{t: t, names: names})
+	got, err := scanActivity(context.Background(), &withheldRow{t: t, names: names})
 	if err != nil {
 		t.Fatalf("scanActivity: %v", err)
 	}
@@ -500,7 +505,7 @@ func TestImportedFromFollowsTheContentAudience(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			scan := activityScan{contentAvailable: tc.available}
 			scan.a.SourceSystem = &system
-			got := scan.record()
+			got := scan.record(context.Background())
 			if (got.ImportedFrom != nil) != tc.wantName {
 				t.Fatalf("imported_from = %v, present want %v", got.ImportedFrom, tc.wantName)
 			}
@@ -526,7 +531,7 @@ func TestBodyCompletenessIsServedOnlyWithAMailBody(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			scan := activityScan{contentAvailable: tc.available, kind: tc.kind, bodyCompleteness: "partial"}
 			scan.a.Body = tc.body
-			got := scan.record()
+			got := scan.record(context.Background())
 			if served := got.BodyCompleteness != nil; served != tc.want {
 				t.Fatalf("body_completeness served = %v, want %v", served, tc.want)
 			}
@@ -559,7 +564,7 @@ func TestAutomaticKindFollowsTheContentAudience(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.scan.contentAvailable = tc.available
-			got := tc.scan.record().AutomaticKind
+			got := tc.scan.record(context.Background()).AutomaticKind
 			if tc.want == "" {
 				if got != nil {
 					t.Fatalf("automatic_kind = %s on a row the reader may not open", *got)
@@ -588,7 +593,7 @@ func TestEveryAutomaticKindIsAContractValue(t *testing.T) {
 func TestATaskSaysWhetherItsDueDateHasATime(t *testing.T) {
 	for _, want := range []bool{true, false} {
 		scan := activityScan{contentAvailable: true, kind: "task", dueHasTime: want}
-		got := scan.record()
+		got := scan.record(context.Background())
 		if got.DueHasTime == nil || *got.DueHasTime != want {
 			t.Errorf("a task scanned with due_has_time %t reads %v", want, got.DueHasTime)
 		}

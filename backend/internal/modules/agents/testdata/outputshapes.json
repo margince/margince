@@ -15750,6 +15750,9 @@
                     "status": {
                       "type": "string"
                     },
+                    "term_state": {
+                      "type": "string"
+                    },
                     "title": {
                       "type": "string"
                     },
@@ -15765,6 +15768,7 @@
                     "contract_number",
                     "currency",
                     "status",
+                    "term_state",
                     "title",
                     "under_contract"
                   ]

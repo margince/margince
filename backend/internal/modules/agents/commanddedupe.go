@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 )
 
@@ -48,14 +49,17 @@ type dedupeResolver struct {
 // Subject names the PAIR the approval binds to.
 func (r dedupeResolver) Subject(ctx context.Context, cmd DedupeCommand) (StageInfo, error) {
 	words := summaryIn(ctx, r.language)
+	code := "agent.dismissDuplicate"
 	sentence := words.dismissDuplicate
 	if r.reopen {
 		sentence = words.reopenDuplicate
+		code = "agent.reopenDuplicate"
 	}
 	return StageInfo{
 		TargetType: importObjectContact,
 		TargetID:   cmd.ID,
 		Summary:    fmt.Sprintf(sentence, cmd.ID),
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence(code, systemtext.Text(cmd.ID.String()))},
 	}, nil
 }
 

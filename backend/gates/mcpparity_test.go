@@ -32,7 +32,7 @@ import (
 )
 
 var updateMCPParity = flag.Bool("update-mcp-parity", false,
-	"rewrite docs/reference/mcp-parity.{json,md} and the work-area table from the contract, the web app and the seeded grants")
+	"rewrite docs/reference/mcp-parity.{json,md} and the work-area and browser feature tables from the contract, the web app and the seeded grants")
 
 const (
 	mcpParityCommand = "go test ./gates -run TestTheMCPParityCatalogIsPublished -update-mcp-parity"
@@ -542,6 +542,7 @@ func TestTheMCPParityCatalogIsPublished(t *testing.T) {
 	syncMCPParity(t, mcpParityJSON, append(payload, '\n'))
 	syncMCPParity(t, mcpParityPage, renderMCPParityPage(report))
 	syncMCPParity(t, workAreaTable, workAreaFile(t, contract, report))
+	syncMCPParity(t, browserCoreFeatureRecords, browserCoreFeaturePolicy(t))
 	syncToolRolesPage(t, report)
 }
 

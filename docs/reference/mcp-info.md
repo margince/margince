@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 229.3 KB |
+| Tool catalog | 229.7 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 60103 |
+| Approx. wire tokens | 60199 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 50.6 KB | 22% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 53.9 KB | 23% | Yes, every step |
-| Input schemas | 113.0 KB | 49% | Yes, every step |
+| Descriptions (incl. governance clause) | 54.0 KB | 23% | Yes, every step |
+| Input schemas | 113.3 KB | 49% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **166.8 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **167.2 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -71,7 +71,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1968 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 899 |
 | [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1080 |
-| [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 834 |
+| [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 893 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_my_settings`](#change_my_settings) | Change the user's own preferences and voice |  |  | 601 |
 | [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 678 |
@@ -95,7 +95,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 365 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
-| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 2167 |
+| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 2186 |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 978 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 235 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 788 |
@@ -105,7 +105,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2784 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
 | [`read_view`](#read_view) | Read a view | yes |  | 658 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2765 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2767 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 776 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 420 |
@@ -1870,25 +1870,27 @@ themselves; requires passport scope "write".)
 
 ```text
 Do the user's privacy work on a contact or record: record consent, record that a contact asked to
-stop, allow a refused category, record the exchange that makes correspondence lawful, answer a
-refused send, open or update a data subject request, assign a disclosure duty, confirm a source,
-accept or decline what a subject proposed, place a legal hold and pin an activity to the retention
-floor. record_consent, allow_contact, revoke_override, lift_suppression, record_qualifying_event,
-retract_qualifying_event, retract_acquisition_request and record_communication_context have legal
-weight: tell the user what you will record and call only after they say yes. The proof names you as
-its author. Record only what the user or the contact said, never your reading of their tone.
-Fulfilling an erasure request, lifting a legal hold, releasing a restricted record, restoring a
-change and retention policy are done in the app. Use send_outbound double_opt_in, privacy_notice or
-details_confirmation to mail the contact, read_details contact_consent, contact_consent_guard or
-contact_stops to check a contact before you record, read_workspace topics data_subject_requests,
-notice_cases, audit_log, legal_holds and restricted_records to read the queues, and read_workspace
-topic record_history for one record's trail. (Runs immediately; the user's yes is needed for the
-actions allow_contact, confirm_notice_source, lift_lead_suppression, lift_suppression,
-open_data_subject_request, pin_activity_to_floor, place_legal_hold, record_communication_context,
-record_consent, record_qualifying_event, resolve_confirm_submission, retract_acquisition_request,
-retract_qualifying_event, revoke_override, suppress_contact, update_data_subject_request, so tell
-them what the call will change and get it before calling, unless they asked for this call
-themselves; requires passport scope "write".)
+stop, allow a refused category, record an exchange with a lead or contact, answer a refused send,
+open or update a data subject request, assign a disclosure duty, confirm a source, accept or decline
+what a subject proposed, place a legal hold and pin an activity to the retention floor.
+record_consent, allow_contact, revoke_override, lift_suppression, record_qualifying_event,
+retract_qualifying_event, record_lead_qualifying_event, retract_lead_qualifying_event,
+retract_acquisition_request and record_communication_context have legal weight: tell the user what
+you will record and call only after they say yes. The proof names you as its author. Record only
+what the user or the contact said, never your reading of their tone. Fulfilling an erasure request,
+lifting a legal hold, releasing a restricted record, restoring a change and retention policy are
+done in the app. Use send_outbound double_opt_in, privacy_notice or details_confirmation to mail the
+contact, read_details contact_consent, contact_consent_guard or contact_stops to check a contact
+before you record, read_workspace topics data_subject_requests, notice_cases, audit_log, legal_holds
+and restricted_records to read the queues, and read_workspace topic record_history for one record's
+trail. (Runs immediately; the user's yes is needed for the actions allow_contact,
+confirm_notice_source, lift_lead_suppression, lift_suppression, open_data_subject_request,
+pin_activity_to_floor, place_legal_hold, record_communication_context, record_consent,
+record_lead_qualifying_event, record_qualifying_event, resolve_confirm_submission,
+retract_acquisition_request, retract_lead_qualifying_event, retract_qualifying_event,
+revoke_override, suppress_contact, update_data_subject_request, so tell them what the call will
+change and get it before calling, unless they asked for this call themselves; requires passport
+scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -1910,9 +1912,11 @@ themselves; requires passport scope "write".)
         "place_legal_hold",
         "record_communication_context",
         "record_consent",
+        "record_lead_qualifying_event",
         "record_qualifying_event",
         "resolve_confirm_submission",
         "retract_acquisition_request",
+        "retract_lead_qualifying_event",
         "retract_qualifying_event",
         "revoke_override",
         "suppress_contact",
@@ -1929,11 +1933,11 @@ themselves; requires passport scope "write".)
       "type": "string"
     },
     "event_id": {
-      "description": "retract_qualifying_event only",
+      "description": "retract_lead_qualifying_event, retract_qualifying_event only",
       "type": "string"
     },
     "id": {
-      "description": "allow_contact, assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_lead_suppression, lift_suppression, record_communication_context, record_consent, record_qualifying_event, resolve_confirm_submission, retract_acquisition_request, retract_qualifying_event, revoke_override, suppress_contact, update_data_subject_request only",
+      "description": "allow_contact, assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_lead_suppression, lift_suppression, record_communication_context, record_consent, record_lead_qualifying_event, record_qualifying_event, resolve_confirm_submission, retract_acquisition_request, retract_lead_qualifying_event, retract_qualifying_event, revoke_override, suppress_contact, update_data_subject_request only",
       "type": "string"
     },
     "idempotency_key": {
@@ -1950,7 +1954,7 @@ themselves; requires passport scope "write".)
       "type": "string"
     },
     "request_body": {
-      "description": "allow_contact, assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_lead_suppression, lift_suppression, open_data_subject_request, pin_activity_to_floor, place_legal_hold, record_communication_context, record_consent, record_qualifying_event, resolve_confirm_submission, revoke_override, suppress_contact, update_data_subject_request only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "allow_contact, assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_lead_suppression, lift_suppression, open_data_subject_request, pin_activity_to_floor, place_legal_hold, record_communication_context, record_consent, record_lead_qualifying_event, record_qualifying_event, resolve_confirm_submission, revoke_override, suppress_contact, update_data_subject_request only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
     },
     "suppressionId": {
@@ -8914,6 +8918,7 @@ needs the user now, and read_record for a record's own fields.
         "contact_brief",
         "contact_consent",
         "contact_consent_guard",
+        "contact_overrides",
         "contact_profile_fields",
         "contact_stops",
         "contract",
@@ -9036,7 +9041,7 @@ needs the user now, and read_record for a record's own fields.
       "type": "boolean"
     },
     "cursor": {
-      "description": "company_contracts, deal_margince_changes, deal_suggestions, field_history, handled_for_you, job_health_history, lead_score, legal_reviews, magic_line_records, notice_source_evidence, notices only",
+      "description": "company_contracts, contact_overrides, deal_margince_changes, deal_suggestions, field_history, handled_for_you, job_health_history, lead_score, legal_reviews, magic_line_records, notice_source_evidence, notices only",
       "type": "string"
     },
     "days": {
@@ -9094,7 +9099,7 @@ needs the user now, and read_record for a record's own fields.
       "type": "boolean"
     },
     "id": {
-      "description": "activity_pipeline, automation_preview, capture_triage, communication_review, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_consent, contact_consent_guard, contact_profile_fields, contact_stops, contract, controller_mail_preview, deal_legal_reviews, deal_lines, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, growth_fit, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, lead_stops, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, notice_case, notice_case_review, notice_source_evidence, notice_source_preview, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, product_translations, project_filing, relationship_nudge, scheduled_send, tag_suggestion, voice_source_preview, win_evidence only",
+      "description": "activity_pipeline, automation_preview, capture_triage, communication_review, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_consent, contact_consent_guard, contact_overrides, contact_profile_fields, contact_stops, contract, controller_mail_preview, deal_legal_reviews, deal_lines, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, growth_fit, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, lead_stops, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, notice_case, notice_case_review, notice_source_evidence, notice_source_preview, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, product_translations, project_filing, relationship_nudge, scheduled_send, tag_suggestion, voice_source_preview, win_evidence only",
       "type": "string"
     },
     "kind": {
@@ -9120,7 +9125,7 @@ needs the user now, and read_record for a record's own fields.
       "type": "string"
     },
     "limit": {
-      "description": "company_contracts, deal_suggestions, field_history, lead_score, legal_reviews, magic, magic_line_records, my_linkedin_reach, notices only",
+      "description": "company_contracts, contact_overrides, deal_suggestions, field_history, lead_score, legal_reviews, magic, magic_line_records, my_linkedin_reach, notices only",
       "type": "integer"
     },
     "owner_id": {
@@ -11715,6 +11720,7 @@ deal. Take every name verbatim; a custom field is spelled cf_<slug>.
       "enum": [
         "answered",
         "blocked",
+        "canceled",
         "declined",
         "failed",
         "fallback",

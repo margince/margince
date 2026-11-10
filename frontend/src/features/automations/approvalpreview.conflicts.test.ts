@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { stable } from "../../format/collate";
 import { LOCALES, translate } from "../../i18n";
 import {
   commercialPreviewDisplay,
@@ -45,7 +46,9 @@ describe("lifecycle conflict translations", () => {
           .filter(Boolean),
       ),
     ];
-    expect(Object.keys(LIFECYCLE_CONFLICT_LABELS).sort()).toEqual(kinds.sort());
+    expect(Object.keys(LIFECYCLE_CONFLICT_LABELS).sort(stable)).toEqual(
+      kinds.sort(stable),
+    );
     for (const locale of LOCALES) {
       for (const kind of kinds) {
         const key = LIFECYCLE_CONFLICT_LABELS[kind];

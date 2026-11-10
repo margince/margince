@@ -492,8 +492,7 @@ type Server struct {
 
 	// views is the router read_view runs through, shared by every Server copy.
 	views *viewDoor
-	// listsEnabled is the deployment's lists.enabled (WithListsEnabled).
-	listsEnabled bool
+	coreFeatureSettings
 
 	// securityTxt is the rendered web.security_txt (WithSecurityTxt); empty
 	// leaves /.well-known/security.txt unmounted.

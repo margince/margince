@@ -33,6 +33,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -153,18 +154,12 @@ func waitUntilBlockedByPID(t *testing.T, prober *pgx.Conn, holderPID, want int) 
 	ctx := context.Background()
 	deadline := time.Now().Add(30 * time.Second)
 	for {
-		// pg_stat_activity is materialized once per transaction and cached
-		// until it ends, so a probe that did not clear it cannot see a backend
-		// that dialled after the snapshot was taken — the wait then runs to its
-		// deadline over contention that is really there.
-		if _, err := prober.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
-			t.Fatalf("clearing the stats snapshot before probing: %v", err)
+		waiting, err := testdb.QueuedBehind(ctx, prober, int32(holderPID))
+		if err != nil {
+			t.Fatalf("probing the lock queue: %v", err)
 		}
-		var waiting int
-		if err := prober.QueryRow(ctx,
-			`SELECT count(*) FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid))`,
-			holderPID).Scan(&waiting); err != nil {
-			t.Fatalf("reading who this connection is blocking: %v", err)
+		if waiting >= want {
+			return
 		}
 		if waiting >= want {
 			return

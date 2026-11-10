@@ -121,27 +121,25 @@ func previewAllowedForCaller(ctx context.Context) error {
 	return nil
 }
 
-// StampPreviewAvailable answers, for a page of rooms, whether THIS caller could
-// open each one's buyer preview — for a read that wants to say so before the
-// press rather than after it.
-//
-// Every condition PreviewRoom applies: the caller's authority, the deal being
-// writable and live, and the room not being archived. It mints nothing and
-// writes nothing.
-//
-// SET-BASED, over all the rooms' deals at once, because the alternative is two
-// queries a row on a page of up to two hundred. auth.StampWritable is the same
-// answer every other capability boolean in the tree is stamped with
-// (Deal.Writable, Lead.Writable), including its archived exclusion — a deal
-// that is writable but archived is nobody's to present.
-//
-// An error PROPAGATES. Answering false on a failed probe would be worse than
-// wrong: the probe runs on the caller's transaction, a failed statement leaves
-// it aborted, and a swallowed error would let the read commit having verified
-// nothing and tell a rep a database stall was a decision about their access.
-func StampPreviewAvailable(ctx context.Context, tx pgx.Tx, rooms []crmcontracts.DealRoom) error {
+// stampCapabilities shares the deal's row authority between editing and preview.
+// Preview also requires the room grant and a human who may hold a buyer seat.
+func stampCapabilities(ctx context.Context, tx pgx.Tx, rooms []crmcontracts.DealRoom) error {
 	if len(rooms) == 0 {
 		return nil
+	}
+	deals := make([]dealOfRoom, len(rooms))
+	for i, room := range rooms {
+		deals[i] = dealOfRoom{DealID: ids.UUID(room.DealId)}
+	}
+	// The stamped flag also excludes archived deals; the authority map does not.
+	if _, err := auth.StampWritable(ctx, tx, dealTable, deals,
+		func(d dealOfRoom) ids.UUID { return d.DealID },
+		func(d *dealOfRoom, may bool) { d.Writable = may }); err != nil {
+		return err
+	}
+	for i := range rooms {
+		writable := deals[i].Writable && rooms[i].State != stateArchived
+		rooms[i].Writable = &writable
 	}
 	// The caller's own authority is asked once: it is the same answer for every
 	// room on the page, and a denial here is an ordinary false rather than an
@@ -157,31 +155,13 @@ func StampPreviewAvailable(ctx context.Context, tx pgx.Tx, rooms []crmcontracts.
 		}
 		return err
 	}
-	deals := make([]dealOfRoom, len(rooms))
-	for i, room := range rooms {
-		deals[i] = dealOfRoom{DealID: ids.UUID(room.DealId)}
-	}
-	// The STAMPED flag, not the returned authority map: only the flag carries
-	// the archived exclusion this answer needs, and an archived deal is
-	// nobody's to present.
-	if _, err := auth.StampWritable(ctx, tx, dealTable, deals,
-		func(d dealOfRoom) ids.UUID { return d.DealID },
-		func(d *dealOfRoom, may bool) { d.Writable = may }); err != nil {
-		return err
-	}
 	for i := range rooms {
-		// Archived is the room's OWN state, which StampWritable answers for the
-		// deal rather than for the room.
-		available := deals[i].Writable && rooms[i].State != stateArchived
+		available := *rooms[i].Writable
 		rooms[i].PreviewAvailable = &available
 	}
 	return nil
 }
 
-// dealOfRoom carries one room's deal id through auth.StampWritable, which
-// stamps a flag onto rows it is given rather than answering a bare set. The
-// rooms themselves cannot be passed: the flag it would stamp is the DEAL's
-// writability, and a room carries no such field to put it in.
 type dealOfRoom struct {
 	DealID   ids.UUID
 	Writable bool

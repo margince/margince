@@ -166,6 +166,16 @@ other way.
    first name"                                 greeting pulls the draft to du
   "in the customer's own words; our side's     a list of what counts, which our
    feeling or guess moves nothing"             own note then matches
+  "unsure is for a mail that names no          "unsure when you cannot tell": a
+   subject; one naming other work is           mail about other work comes back
+   not_about"                                  as unsure
+  "a lawyer on the company's own shareholder   "advisor: about the owner's own
+   agreement is advisor"                       affairs": the company's matter
+                                               reads as ordinary business
+  "a date is a literal number: name a time     "literal numbers must match a
+   in words"                                   cited value": a date slips past
+  "name a chart for each chosen metric: a      "a chart must be one a metric
+   report with no chart shows nothing"         draws": read as optional
 ```
 
 - **Say what still holds.** A rule that says only "never" is read as "report

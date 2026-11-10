@@ -17,6 +17,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -56,6 +57,7 @@ type Approvals interface {
 // automation wants to do and for the action to be identified again once
 // decided.
 type StageRequest struct {
+	SystemText     *systemtext.Message
 	Kind           string          // the action kind being staged, e.g. "send_email"
 	ProposedChange json.RawMessage // the action's args, as the approver will see them
 	DiffHash       string

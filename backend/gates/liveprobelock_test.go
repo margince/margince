@@ -185,8 +185,11 @@ func tablesArticle17Deletes(t *testing.T) map[string]bool {
 	tables := map[string]bool{}
 	for _, entry := range packageCallGraph(t, "internal/modules/privacy") {
 		for _, statement := range entry.statements {
-			for _, m := range deleteRe.FindAllStringSubmatch(statement, -1) {
-				tables[m[1]] = true
+			for _, write := range sqlWrites(statement) {
+				if write.verb != "delete" {
+					continue
+				}
+				tables[write.table] = true
 			}
 		}
 	}
@@ -240,9 +243,12 @@ func firstErasureClearedInsert(graph map[string]*graphFunc, name string, erasure
 			return ""
 		}
 		for _, statement := range entry.statements {
-			for _, m := range insertRe.FindAllStringSubmatch(statement, -1) {
-				if erasureClears[m[1]] {
-					return m[1]
+			for _, write := range sqlWrites(statement) {
+				if write.verb != "insert" {
+					continue
+				}
+				if erasureClears[write.table] {
+					return write.table
 				}
 			}
 		}

@@ -131,6 +131,9 @@ func workspaceRefusalDrivers() map[string]func(context.Context) error {
 // Work method reaches, so a zero-value job is enough to drive it.
 func zeroPayloadRefusalDrivers() map[string]func(context.Context) error {
 	return map[string]func(context.Context) error{
+		ApprovalOwnerNoticeArgs{}.Kind(): func(ctx context.Context) error {
+			return (&approvalOwnerNoticeWorker{}).Work(ctx, &river.Job[ApprovalOwnerNoticeArgs]{})
+		},
 		CapturedDealRefileArgs{}.Kind(): func(ctx context.Context) error {
 			return (&capturedDealRefileWorker{}).Work(ctx, &river.Job[CapturedDealRefileArgs]{})
 		},

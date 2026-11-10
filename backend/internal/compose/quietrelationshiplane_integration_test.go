@@ -35,11 +35,6 @@ var quietLaneNow = time.Date(2026, time.March, 10, 9, 0, 0, 0, time.UTC)
 func seedQuietExchange(t *testing.T, e *integration.Env, sender, copied, contact ids.UUID, daysAgo int) {
 	t.Helper()
 	owner := integration.OwnerConn(t)
-	defer func() {
-		if err := owner.Close(context.Background()); err != nil {
-			t.Errorf("closing fixture connection: %v", err)
-		}
-	}()
 	seedQuietExchangeAt(t, e, owner, sender, copied, contact, quietLaneNow.AddDate(0, 0, -daysAgo))
 }
 
@@ -349,11 +344,6 @@ func TestAFutureMeetingIsNotATouch(t *testing.T) {
 	contact := e.SeedContact(t, "Booked But Silent", &e.Rep1)
 	seedQuietExchange(t, e, e.Rep1, ids.UUID{}, contact, 60)
 	owner := integration.OwnerConn(t)
-	defer func() {
-		if err := owner.Close(context.Background()); err != nil {
-			t.Errorf("closing fixture connection: %v", err)
-		}
-	}()
 	meeting := ids.NewV7()
 	if _, err := owner.Exec(context.Background(), `
 		INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
@@ -392,11 +382,6 @@ func TestTheQuietCeilingCountsCalendarDaysNotHours(t *testing.T) {
 	contact := e.SeedContact(t, "Silent 181 Calendar Days", &e.Rep1)
 	seedQuietExchange(t, e, e.Rep1, ids.UUID{}, contact, 181)
 	owner := integration.OwnerConn(t)
-	defer func() {
-		if err := owner.Close(context.Background()); err != nil {
-			t.Errorf("closing fixture connection: %v", err)
-		}
-	}()
 	// Move the contact's latest touch one hour later in the day.
 	if _, err := owner.Exec(context.Background(), `
 		UPDATE activity SET occurred_at = occurred_at + interval '1 hour'
@@ -423,11 +408,6 @@ func TestDayOneHundredEightyHoldsAcrossADaylightSavingChange(t *testing.T) {
 	}
 	contact := e.SeedContact(t, "Quiet Since July", &e.Rep1)
 	owner := integration.OwnerConn(t)
-	defer func() {
-		if err := owner.Close(context.Background()); err != nil {
-			t.Errorf("closing fixture connection: %v", err)
-		}
-	}()
 	seedQuietExchangeAt(t, e, owner, e.Rep1, ids.UUID{}, contact, time.Date(2025, time.July, 19, 0, 0, 0, 0, zone))
 	// In UTC, as the server clock hands it to the lane.
 	read := time.Date(2026, time.January, 15, 23, 30, 0, 0, zone).UTC()

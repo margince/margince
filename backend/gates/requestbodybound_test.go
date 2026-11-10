@@ -288,23 +288,6 @@ func forbiddenBodyRead(file *ast.File, call *ast.CallExpr, requests []string) st
 	return ""
 }
 
-// callsPackageFunc reports a call to importPath.name under whatever name this
-// file gave that import, dot-imports included.
-func callsPackageFunc(file *ast.File, fun ast.Expr, importPath, name string) bool {
-	qualifier, dotImported := gatekit.ImportedAs(file, importPath)
-	switch f := fun.(type) {
-	case *ast.Ident:
-		return dotImported && f.Name == name
-	case *ast.SelectorExpr:
-		if f.Sel.Name != name {
-			return false
-		}
-		pkg, ok := f.X.(*ast.Ident)
-		return ok && qualifier != "" && pkg.Name == qualifier
-	}
-	return false
-}
-
 func dedupeSites(items []string) []string {
 	var kept []string
 	seen := map[string]bool{}

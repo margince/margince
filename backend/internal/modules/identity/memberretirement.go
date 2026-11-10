@@ -190,7 +190,9 @@ func (s *Service) RetireMember(ctx context.Context, actor Identity, source ids.U
 	if err != nil {
 		return err
 	}
-	err = s.db.Tx(ctx, func(tx pgx.Tx) error { return s.retireMemberTx(ctx, tx, actor, source, target, token, merge) })
+	err = storekit.RetryLockCycles(ctx, func() error {
+		return s.db.Tx(ctx, func(tx pgx.Tx) error { return s.retireMemberTx(ctx, tx, actor, source, target, token, merge) })
+	})
 	if err == nil && s.captureReaper != nil {
 		s.captureReaper(ctx, source)
 	}
@@ -278,6 +280,9 @@ func readRetirementTarget(ctx context.Context, tx pgx.Tx, source ids.UserID, tar
 
 func (s *Service) retireMemberTx(ctx context.Context, tx pgx.Tx, actor Identity, source ids.UserID, target *ids.UUID, token string, merge bool) error {
 	if err := lockAuthorization(ctx, tx); err != nil {
+		return err
+	}
+	if err := lockMemberAddressClaims(ctx, tx, source); err != nil {
 		return err
 	}
 	if err := confirmMemberAdministrator(ctx, tx, actor.UserID); err != nil {

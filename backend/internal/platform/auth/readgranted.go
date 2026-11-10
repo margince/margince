@@ -40,15 +40,5 @@ import (
 // at authentication. The system principal is trusted by construction, mirroring
 // Require's own carve-out, and a request with no actor bound fails closed.
 func ReadGranted(ctx context.Context, object string) bool {
-	actor, ok := principal.Actor(ctx)
-	if !ok {
-		return false
-	}
-	if actor.Type == principal.PrincipalBuyer {
-		return false
-	}
-	if actor.Type == principal.PrincipalSystem {
-		return true
-	}
-	return actor.Permissions.Allows(object, principal.ActionRead)
+	return Allows(ctx, object, principal.ActionRead)
 }

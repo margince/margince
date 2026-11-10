@@ -9,6 +9,10 @@ import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { meFixture } from "../testing/mefixture";
+
+// A seat that may book, so the menu carries its booking link.
+const BOOKER = { allow: { activity: ["read", "create"] } } as const;
+
 import { AccountMenu } from "./account";
 
 // The bundle's releases are compiled in, and every local build leaves them
@@ -46,7 +50,7 @@ function renderMenu() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  client.setQueryData(["me"], meFixture());
+  client.setQueryData(["me"], meFixture(BOOKER));
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
@@ -56,7 +60,7 @@ function renderMenu() {
   );
 }
 
-const trigger = () => screen.getByRole("button", { name: "Account" });
+const trigger = () => screen.getByRole("button", { name: "TU Account" });
 const row = (name: string | RegExp) => screen.getByRole("menuitem", { name });
 const helpMenu = () => screen.getByRole("menu", { name: "Help and feedback" });
 const helpItem = (name: string | RegExp) =>

@@ -17,7 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func insertSession(ctx context.Context, tx pgx.Tx, userID ids.UserID, tokenHash string) error {
+func insertSession(ctx context.Context, tx pgx.Tx, userID ids.UserID, tokenHash string, providerAuthenticated bool) error {
 	// The device rides the context, not this signature: it is a transport
 	// detail the login handler captured, absent (NULL) for any session opened
 	// without a request behind it. See withUserAgent.
@@ -25,9 +25,12 @@ func insertSession(ctx context.Context, tx pgx.Tx, userID ids.UserID, tokenHash 
 		return err
 	}
 	_, err := tx.Exec(ctx,
-		`INSERT INTO session (user_id, token_hash, user_agent, idle_expires_at, expires_at)
-		 VALUES ($1, $2, $3, now() + $4::interval, now() + $5::interval)`,
-		userID, tokenHash, userAgentFromContext(ctx), idleTTL.String(), absoluteTTL.String())
+		`INSERT INTO session (user_id, token_hash, user_agent, idle_expires_at, expires_at, provider_authenticated)
+   VALUES (@user_id, @token, @agent, now() + @idle::interval, now() + @absolute::interval, @provider)`,
+		pgx.StrictNamedArgs{
+			"user_id": userID, "token": tokenHash, "agent": userAgentFromContext(ctx),
+			"idle": idleTTL.String(), "absolute": absoluteTTL.String(), "provider": providerAuthenticated,
+		})
 	return err
 }
 

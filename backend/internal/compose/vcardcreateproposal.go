@@ -37,6 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
@@ -166,6 +167,7 @@ func vcardCreateStager(pool *pgxpool.Pool) func(ctx context.Context, entry conta
 			DiffHash:       hex.EncodeToString(digest[:]),
 			Identity:       identity,
 			Summary:        vcardCreateSummary(approvalSummaryCopyOver(ctx, pool), entry, candidate != nil),
+			SystemText:     vcardSummaryMetadata(entry, candidate != nil),
 			JoinPending:    true,
 		})
 		return err
@@ -263,4 +265,12 @@ func vcardCreateAcceptEffect(svc *approvals.Service, store *contacts.Store) appr
 			return err
 		}))
 	}
+}
+
+func vcardSummaryMetadata(entry contacts.VCardEntry, resembles bool) *systemtext.Message {
+	code := "approval.vcardResemblesContact"
+	if entry.ModelRead && !resembles {
+		code = "approval.vcardReadFromPhoto"
+	}
+	return &systemtext.Message{Version: 1, Subject: systemtext.Sentence(code, systemtext.Text(textcut.RunesMarked(strings.TrimSpace(entry.FullName), 80, "…")))}
 }

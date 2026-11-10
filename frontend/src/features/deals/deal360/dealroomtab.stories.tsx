@@ -26,6 +26,7 @@ const ROOM: DealRoom = {
   welcome_message:
     "Everything we agreed is in here. Add a comment on anything you want changed.",
   state: "live",
+  writable: true,
   source: "manual",
   captured_by: "u-me",
   version: 1,
@@ -91,7 +92,11 @@ const THREAD_ID = "thread-1";
 
 // The room as a rep finds it: one buyer in, one document shared, and that
 // buyer waiting on an answer about it.
-function fullStub(state: DealRoom["state"], filled: boolean) {
+function fullStub(
+  state: DealRoom["state"],
+  filled: boolean,
+  needsSteward = false,
+) {
   stub();
   const at = "2026-08-24T14:02:00Z";
   installFetchStub({
@@ -102,6 +107,7 @@ function fullStub(state: DealRoom["state"], filled: boolean) {
         data: [
           room({
             state,
+            needs_steward: needsSteward,
             welcome_message: filled ? ROOM.welcome_message : null,
           }),
         ],
@@ -189,8 +195,12 @@ function fullStub(state: DealRoom["state"], filled: boolean) {
   });
 }
 
-function wholeTab(state: DealRoom["state"], filled: boolean) {
-  fullStub(state, filled);
+function wholeTab(
+  state: DealRoom["state"],
+  filled: boolean,
+  needsSteward = false,
+) {
+  fullStub(state, filled, needsSteward);
   return (
     <StoryProviders>
       <DealRoomTab dealId="deal-1" dealName="Fleet telematics" />
@@ -302,4 +312,9 @@ export const OpeningARoom: Story = {
     );
     await screen.findByRole("dialog");
   },
+};
+
+export const StewardUnavailable: Story = {
+  tags: ["uat-phone"],
+  render: () => wholeTab("live", true, true),
 };

@@ -22,7 +22,9 @@ import (
 const CommitmentAdmissionVersion = "2"
 
 // AutomaticMailContent is the content boundary shared by extraction and its admission check.
-const AutomaticMailContent = `audience = 'workspace' AND restricted_at IS NULL`
+func AutomaticMailContent(alias string) string {
+	return auth.WorkspaceAudienceSQL(alias) + " AND " + alias + ".restricted_at IS NULL"
+}
 
 // CommitmentAdmissionReason explains whether evidence supports current automatic work.
 type CommitmentAdmissionReason string
@@ -145,7 +147,7 @@ func CommitmentAdmissionEvidenceTx(ctx context.Context, tx pgx.Tx, in Commitment
   (SELECT min(ci.provider_received_at) FROM capture_import ci WHERE ci.activity_id = a.id),
   a.kind = 'email' AND EXISTS (SELECT 1 FROM activity later
    WHERE later.kind = a.kind AND later.thread_key = a.thread_key
-    AND later.archived_at IS NULL AND `+AutomaticMailContent+`
+    AND later.archived_at IS NULL AND `+AutomaticMailContent("later")+`
     AND (later.occurred_at, later.id) > (a.occurred_at, a.id)
     -- A later message read only in part is later context not read.
     AND (NOT coalesce(later.id = ANY($%[1]d::uuid[]), false) OR NOT `+provenance.MailBodyCompleteSQL("later")+`)),
@@ -153,7 +155,7 @@ func CommitmentAdmissionEvidenceTx(ctx context.Context, tx pgx.Tx, in Commitment
   a.kind = 'email' AND a.body_completeness = 'unassessed',
   a.kind = 'email' AND EXISTS (SELECT 1 FROM activity later
    WHERE later.kind = a.kind AND later.thread_key = a.thread_key AND later.archived_at IS NULL
-    AND `+AutomaticMailContent+` AND later.body_completeness = 'unassessed'
+    AND `+AutomaticMailContent("later")+` AND later.body_completeness = 'unassessed'
     AND (later.occurred_at, later.id) > (a.occurred_at, a.id))
  FROM activity a WHERE a.id = $%[2]d`, arg(in.ReadMessages), arg(in.SourceID))
 	if !in.Preview {

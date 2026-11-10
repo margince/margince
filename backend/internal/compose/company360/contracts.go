@@ -20,7 +20,6 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/modules/contracts"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -71,7 +70,7 @@ func (s *contractStrip) noteDates(renewalOn, cancelOn *time.Time) {
 }
 
 func readContractStrip(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
-	asOf time.Time, baseCcy string,
+	asOf time.Time, baseCcy string, loc *time.Location,
 ) (contractStrip, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -82,10 +81,6 @@ func readContractStrip(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 	// contract ending today the moment UTC midnight passes while the contract's
 	// own read still calls it active all local day — two surfaces disagreeing
 	// about the same row.
-	loc, err := identity.ZoneAppliedTx(ctx, tx)
-	if err != nil {
-		return contractStrip{}, err
-	}
 	asOfPos := arg(storekit.WorkspaceDay(asOf, loc))
 
 	// The SAME predicate the contracts module applies to a single read. An

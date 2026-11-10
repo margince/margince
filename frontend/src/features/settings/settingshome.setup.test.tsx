@@ -14,7 +14,10 @@ import { SettingsHome } from "./settingshome";
 // top bar reminds a reader of. It stays when that reminder is hidden, and goes
 // once every step is done.
 
-const VOICE_WRITER: GrantSpec = { voice_profile: ["read", "create", "update"] };
+const VOICE_WRITER: GrantSpec = {
+  voice_profile: ["read", "create", "update"],
+  activity: ["read", "create"],
+};
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {

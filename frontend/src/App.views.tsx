@@ -50,6 +50,7 @@ import { UnsavedGuard } from "./components/unsaved";
 import { RESET_ROUTE } from "./features/sign-in/auth.route";
 import { CompleteLocale } from "./i18n";
 import { isContactTab } from "./lib/contacttab";
+import { screenEnabled, useDisabledCoreFeatures } from "./lib/corefeatures";
 import { EXTENSION_SCREEN } from "./lib/extensions";
 import { routeIdentity } from "./lib/routeidentity";
 import { navigate, parseHash, routeHash, type Screen } from "./lib/router";
@@ -193,6 +194,7 @@ export function ScreenView({
 }: Readonly<{ screen: Screen; id?: string; id2?: string }>) {
   // Deferring the first route keeps the ordinary loading body on screen while
   // its code resolves, without committing Suspense's delayed fallback.
+  const disabled = useDisabledCoreFeatures();
   const asked = useMemo(() => ({ screen, id, id2 }), [screen, id, id2]);
   const shown = useDeferredValue<typeof asked | null>(asked, null);
   const shownAddress = shown ? routeHash(shown) : null;
@@ -205,7 +207,11 @@ export function ScreenView({
         <UnsavedGuard address={shownAddress} onKeep={navigateToAddress}>
           {(held) => (
             <Fragment key={identityOfAddress(held)}>
-              {screenWithLocale(held)}
+              {screenEnabled(parseHash(held).screen, disabled) ? (
+                screenWithLocale(held)
+              ) : (
+                <ScreenNotice messageKey="shell.unknownPage" />
+              )}
             </Fragment>
           )}
         </UnsavedGuard>

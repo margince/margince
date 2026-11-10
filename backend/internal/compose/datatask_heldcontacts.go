@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // heldContactsDataTask releases contacts whose held thread cleared before the
@@ -21,7 +22,7 @@ import (
 func heldContactsDataTask(pool *pgxpool.Pool) datatask.Task {
 	return datatask.Task{
 		ID: "core/1793773916_release_ended_contact_holds", Version: 1,
-		Title: "Releasing contacts whose confidentiality hold ended", Requires: []string{"core/1793773915"},
+		Title: systemtext.Literal("datatask.title.core.1793773916_release_ended_contact_holds"), Requires: []string{"core/1793773915"},
 		Steps: []datatask.Step{{
 			Name: "release_ended_contact_holds", Limit: 50, MinLimit: 5,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

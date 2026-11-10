@@ -235,5 +235,5 @@ func (p pendingSource) pendingIDsSQL(entityType string) string {
 }
 
 func activityIndexable(alias string) string {
-	return alias + ".audience = 'workspace' AND " + alias + ".restricted_at IS NULL AND " + auth.CommitmentContentRetainedClause(alias)
+	return auth.WorkspaceAudienceSQL(alias) + " AND " + alias + ".restricted_at IS NULL AND " + auth.CommitmentContentRetainedClause(alias)
 }

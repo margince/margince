@@ -22,14 +22,9 @@ import (
 
 // periodicFor is the periodic entry a kind's declaration asks for, and no
 // entry at all when it asks for none. The answer depends on the contract and
-// on this boot's configuration and on nothing about the caller, so moving a
-// wiring site cannot quietly move a schedule with it.
-//
-// RunOnStart is not a per-kind choice. Every pass scheduled here is a catch-up
-// over a backlog that accrued while nobody was working it, and deferring the
-// first pass by a whole interval after a restart is wrong for all of them: a
-// retention pass would sit out a window it was already too late for, and a
-// webhook backoff that elapsed during the outage would wait out a second one.
+// this boot's configuration, never on the caller. Moving a wiring site cannot
+// move a schedule with it. The first run after a start catches up from the
+// kind's last run (jobcatchup.go).
 func periodicFor[A declaredJobArgs[A]](cfg JobRunnerConfig, args A) []*river.PeriodicJob {
 	spec, declared := jobs.SpecFor(args.Kind())
 	if !declared {
@@ -51,11 +46,9 @@ func periodicFor[A declaredJobArgs[A]](cfg JobRunnerConfig, args A) []*river.Per
 	if spec.Cadence.Fixed <= 0 {
 		panic("compose: " + spec.Kind + " declares no cadence, so it has no schedule to place — only a dispatcher is scheduled here")
 	}
-	return []*river.PeriodicJob{river.NewPeriodicJob(
-		river.PeriodicInterval(spec.Cadence.Fixed),
-		func() (river.JobArgs, *river.InsertOpts) { return args, opts },
-		&river.PeriodicJobOpts{RunOnStart: true},
-	)}
+	job, _ := schedulesOf(cfg).periodicJob(spec.Kind, "", river.PeriodicInterval(spec.Cadence.Fixed),
+		func() (river.JobArgs, *river.InsertOpts) { return args, opts })
+	return []*river.PeriodicJob{job}
 }
 
 // schedulesOf is the book this wiring schedules from: the one the worker read

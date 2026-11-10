@@ -18,6 +18,7 @@
 import type { components } from "../api/schema";
 import type { SelectOption } from "../design-system/select";
 import type { Translator } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 
 export type CommunicationContext =
   components["schemas"]["CommunicationContext"];
@@ -101,4 +102,22 @@ export function contextOptions(t: Translator): SelectOption[] {
     { value: "account_notice", label: t("compose.why.account") },
     { value: "marketing", label: t("compose.why.marketing") },
   ];
+}
+
+export function communicationContextLabel(
+  category: string | undefined,
+  t: Translator,
+): string | undefined {
+  const option = contextOptions(t).find((entry) => entry.value === category);
+  if (option) return option.label;
+  const derived: Readonly<Record<string, MessageKey>> = {
+    reply_to_inbound: "approval.preview.contextReply",
+    security_notice: "approval.preview.contextSecurity",
+    privacy_notice: "approval.preview.contextPrivacy",
+    record_confirmation: "approval.preview.contextRecord",
+    consent_confirmation: "approval.preview.contextConsent",
+    optout_confirmation: "approval.preview.contextOptout",
+  };
+  const key = category ? derived[category] : undefined;
+  return key ? t(key) : undefined;
 }

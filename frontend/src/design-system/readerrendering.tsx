@@ -1,17 +1,20 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// One note, mail or meeting shown in the reader's own language on a press.
-//
-// The rendering is for this reader alone and the server stores none of it. So
-// it lives in this component's state, not a query cache, and is gone when the
-// row unmounts. That is also why a timeline row needs no query client for it.
-
-import { type ReactNode, useState } from "react";
+import { QueryClientContext } from "@tanstack/react-query";
+import {
+  type ReactNode,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { healthScope } from "../lib/healthscopekey";
 import { problemCodeOf, unwrap } from "../lib/problem";
 import { Button } from "./button";
 import { ErrorLine } from "./errorline";
@@ -25,31 +28,88 @@ export type MessageLanguage = "de" | "en" | "vi";
 
 type Press =
   | { state: "idle" }
-  | { state: "pending" }
-  | { state: "answered"; rendering: ActivityReaderRendering }
-  | { state: "failed"; error: unknown };
+  | { state: "pending"; scope?: string }
+  | {
+      state: "answered";
+      rendering: ActivityReaderRendering;
+      scope?: string;
+      version?: number;
+    }
+  | { state: "failed"; error: unknown; scope?: string };
 
 /**
  * The press and where it stands. `press` takes what it asks for as arguments,
  * so a click can never send the language of a render before it.
  */
 export function useReaderRendering() {
+  const client = useContext(QueryClientContext);
+  const scope = useSyncExternalStore(
+    (notify) =>
+      client
+        ? client.getQueryCache().subscribe((event) => {
+            if (event.query.queryKey[0] === "me") notify();
+          })
+        : () => {},
+    () =>
+      healthScope(
+        client?.getQueryData<components["schemas"]["MeResponse"]>(["me"]),
+      ),
+    () => undefined,
+  );
   const [press, setPress] = useState<Press>({ state: "idle" });
-  const ask = async (activityId: string, locale: Locale) => {
-    setPress({ state: "pending" });
+  const generation = useRef(0);
+  const pending = useRef<
+    { controller: AbortController; scope?: string } | undefined
+  >(undefined);
+  useEffect(() => {
+    if (pending.current && pending.current.scope !== scope) {
+      generation.current++;
+      pending.current.controller.abort();
+      pending.current = undefined;
+    }
+  }, [scope]);
+  useEffect(
+    () => () => {
+      generation.current++;
+      pending.current?.controller.abort();
+    },
+    [],
+  );
+  const ask = async (activityId: string, locale: Locale, version?: number) => {
+    const request = ++generation.current;
+    pending.current?.controller.abort();
+    const controller = new AbortController();
+    pending.current = { controller, scope };
+    setPress({ state: "pending", scope });
     try {
       const rendering = unwrap(
         await api.POST("/activities/{id}/reader-rendering", {
           params: { path: { id: activityId } },
-          body: { locale },
+          signal: controller.signal,
+          body: {
+            locale,
+            ...(version === undefined ||
+            client?.getQueryData<components["schemas"]["MeResponse"]>(["me"])
+              ?.reader_rendering_available === undefined
+              ? {}
+              : { expected_source_version: version }),
+          },
         }),
       );
-      setPress({ state: "answered", rendering });
+      if (request === generation.current)
+        setPress({ state: "answered", rendering, scope, version });
     } catch (error) {
-      setPress({ state: "failed", error });
+      if (request === generation.current)
+        setPress({ state: "failed", error, scope });
     }
   };
-  return { press, ask };
+  return {
+    press:
+      press.state !== "idle" && press.scope !== scope
+        ? ({ state: "idle" } satisfies Press)
+        : press,
+    ask,
+  };
 }
 
 /**
@@ -83,11 +143,13 @@ export function readerRenderingRefusal(error: unknown): MessageKey | null {
 export function ReaderRendering({
   activityId,
   language,
+  sourceVersion,
   note = false,
   children,
 }: Readonly<{
   activityId: string;
   language: MessageLanguage | null | undefined;
+  sourceVersion?: number;
   /** The original is a note's markdown, so the rendering reads as one too:
    *  through NoteMarkdown, the way the original is drawn. A mail stays text. */
   note?: boolean;
@@ -102,7 +164,16 @@ export function ReaderRendering({
   }
   const answer = press.state === "answered" ? press.rendering : undefined;
   const showing =
-    shown && answer && !answer.unchanged && answer.target_language === locale;
+    shown &&
+    answer &&
+    answer.activity_id === activityId &&
+    (sourceVersion === undefined ||
+      (press.state === "answered" &&
+        press.version === sourceVersion &&
+        (answer.source_version === undefined ||
+          answer.source_version === sourceVersion))) &&
+    !answer.unchanged &&
+    answer.target_language === locale;
   return (
     <div className="readerrendering">
       {showing ? (
@@ -122,7 +193,7 @@ export function ReaderRendering({
             busyLabel={t("readerRendering.pending")}
             onClick={() => {
               setShown(true);
-              void ask(activityId, locale);
+              void ask(activityId, locale, sourceVersion);
             }}
           >
             {t("readerRendering.show")}

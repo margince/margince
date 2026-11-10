@@ -37,6 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -429,6 +430,7 @@ type outboundChannelMessage struct {
 func (m outboundChannelMessage) activity() LogActivityInput {
 	direction := "outbound"
 	return SentRecord(LogActivityInput{
+		SystemText: &systemtext.Message{Body: systemtext.Prose(systemtext.Quote, "")},
 		// The two axes, stated separately (ADR-0107/A158). The reply IS a
 		// message; what carries it is the anchor's own transport. Capture's
 		// reply-match reads the PAIR — kind to separate mail from channel,

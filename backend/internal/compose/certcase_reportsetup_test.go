@@ -139,7 +139,7 @@ func TestAnObjectiveWithNoTargetOrDeadlineIsAskedForNotInvented(t *testing.T) {
 }
 
 func TestTheCustomReportSetupCaseJudgesMetricsAndWhatIsNamedBack(t *testing.T) {
-	expected := `{"product":"linden","period":"this_quarter","metrics":["bookings_won","open_pipeline"],"charts":["bookings_trend"],"unsupported":1}`
+	expected := `{"product":"linden","period":"this_quarter","metrics":["bookings_won","open_pipeline"],"charts":["bookings_trend","stage_distribution"],"unsupported":1}`
 	accepted := runReportSetup(t, reportsetup.SiteCustomReport, expected, func(product func(string) string) string {
 		return `{"name":"Linden this quarter","filters":[{"field":"product","value":"` + product("linden") + `","phrase":"Linden"},{"field":"period","value":"this_quarter","phrase":"this quarter"}],"metrics":[{"id":"bookings_won","phrase":"sales won"},{"id":"open_pipeline","phrase":"open pipeline"}],"charts":[{"id":"bookings_trend","phrase":"over time"}],"objective":null,"clarifications":[],"unsupported":[{"phrase":"discount per rep","reason":"No metric holds a discount."}]}`
 	})

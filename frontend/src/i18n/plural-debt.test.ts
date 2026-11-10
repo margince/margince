@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
+import { stable } from "../format/collate";
 import { en } from "./en";
 import { PLURAL_SINGLE_KEY_DEBT } from "./plural-debt";
 
@@ -43,7 +44,7 @@ describe("one count, one key", () => {
           !pluralSibling(catalog, key),
       )
       .map(([key]) => key)
-      .sort();
+      .sort(stable);
 
   it("registers every single-key count that was already here", () => {
     const found = singleKeyCounts();
@@ -96,7 +97,7 @@ describe("one count, one key", () => {
           .filter((key) => /_(one|other)$/.test(key))
           .map((key) => key.replace(/_(one|other)$/, "")),
       ),
-    ].sort();
+    ].sort(stable);
     const broken = bases.filter(
       (base) =>
         !Object.hasOwn(catalog, `${base}_one`) ||

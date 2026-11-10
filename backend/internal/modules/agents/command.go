@@ -24,6 +24,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -215,6 +216,7 @@ func (a *archiveResolver) Subject(ctx context.Context, cmd ArchiveCommand) (Stag
 	return StageInfo{
 		TargetType: cmd.RecordType,
 		TargetID:   cmd.ID,
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.archive", systemtext.NounArgument(fmt.Sprint(cmd.RecordType)), systemtext.Label(fmt.Sprint(label)))},
 		Summary:    fmt.Sprintf(said.archive, said.noun(cmd.RecordType), label),
 	}, nil
 }
@@ -276,7 +278,8 @@ func (r createResolver) Subject(ctx context.Context, cmd CreateCommand) (StageIn
 	said := summaryIn(ctx, r.language)
 	return StageInfo{
 		TargetType: cmd.RecordType,
-		Summary:    describeGenericWrite(said, fmt.Sprintf(said.createHead, said.noun(cmd.RecordType)), cmd.Fields),
+		Summary:    describeGenericWrite(said, systemtext.Sentence("agent.createHead", systemtext.NounArgument(cmd.RecordType)), cmd.Fields),
+		SystemText: genericWriteMetadata(systemtext.Sentence("agent.createHead", systemtext.NounArgument(cmd.RecordType)), cmd.Fields),
 	}, nil
 }
 
@@ -350,7 +353,8 @@ func (r patchResolver) Subject(ctx context.Context, cmd PatchCommand) (StageInfo
 	return StageInfo{
 		TargetType: cmd.RecordType,
 		TargetID:   cmd.ID,
-		Summary:    describeGenericWrite(said, fmt.Sprintf(said.updateHead, said.noun(cmd.RecordType)), cmd.Fields),
+		Summary:    describeGenericWrite(said, systemtext.Sentence("agent.updateHead", systemtext.NounArgument(cmd.RecordType)), cmd.Fields),
+		SystemText: genericWriteMetadata(systemtext.Sentence("agent.updateHead", systemtext.NounArgument(cmd.RecordType)), cmd.Fields),
 	}, nil
 }
 

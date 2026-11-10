@@ -122,7 +122,7 @@ type RepliedRequest struct {
 // older verdict without it is skipped while its answer is still the newest. A
 // still_owed verdict from an older rule is never skipped.
 var repliedRequestsSQL = `((` + outstandingRequestSQL + `) OR (` + reArmedSettlementSQL + `))
- AND a.audience = 'workspace'
+ AND ` + auth.WorkspaceAudienceSQL("a") + `
  AND a.counterparty_email IS NOT NULL
  AND EXISTS (` + settlementAnswersSQL() + `)
  AND ` + settlementEvidenceCompleteSQL + `
@@ -158,7 +158,7 @@ func settlementAnswersSQL() string {
 	return `SELECT reply.id, reply.occurred_at FROM activity reply
    WHERE (` + ourOutboundInThisThread("reply", "a") + `
      OR (` + correspondentInThisThread("reply", "a") + ` AND ` + CapturedInboundSQL("reply") + `))
-     AND reply.audience = 'workspace' AND reply.restricted_at IS NULL
+     AND ` + auth.WorkspaceAudienceSQL("reply") + ` AND reply.restricted_at IS NULL
      AND ` + occurredday.BegunSQL("reply", "$1") + `
      AND ` + occurredday.AnswersSQL("reply", "a") + ` AND reply.id <> a.id
  UNION ` + offThreadAnswersSQL("a", "$1")

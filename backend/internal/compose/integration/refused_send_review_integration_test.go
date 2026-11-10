@@ -893,6 +893,7 @@ func TestARepWhoMayNotEditTheContactIsOfferedNoOverrule(t *testing.T) {
 // legacy one.
 func TestNamingTheKindIsEnoughWithoutTheLegacyKey(t *testing.T) {
 	c := setupConsent(t)
+	c.activityID = logConsentInbound(t, c.AppEnv, c.contactID)
 
 	status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-email", AnyMap{
 		"subject": "Re: Inbound question", "body": "answer",

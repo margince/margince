@@ -11,6 +11,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { stable } from "../../format/collate";
 import { LocaleProvider } from "../../i18n";
 import { locationDouble } from "../../testing/locationdouble";
 import { OAuthConsent } from "./oauthconsent";
@@ -502,7 +503,9 @@ describe("OAuthConsent — re-entering after sign-in", () => {
     // A fresh nonce is only ever minted server-side, so replaying an absent
     // one is not on offer.
     expect(reentered.has("consent")).toBe(false);
-    expect([...reentered.keys()].sort()).toEqual([...AUTHORIZE_KEYS].sort());
+    expect([...reentered.keys()].sort(stable)).toEqual(
+      [...AUTHORIZE_KEYS].sort(stable),
+    );
     expect(reentered.get("resource")).toBe(RESOURCE);
   });
 

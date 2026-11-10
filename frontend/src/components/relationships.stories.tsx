@@ -289,3 +289,58 @@ export const DealStakeholdersEmpty: Story = {
     );
   },
 };
+
+export const ClosedDealSearch: Story = {
+  render: () => {
+    stubWithSession(
+      {
+        "GET /contacts/p-1/360": () =>
+          jsonResponse({
+            contact: { id: "p-1" },
+            employments: { data: [], page: { has_more: false } },
+          }),
+      },
+      { relationship: ["create"], deal: ["read"], contact: ["read"] },
+    );
+    const routed = globalThis.fetch;
+    globalThis.fetch = async (input, init) => {
+      const url = new URL(
+        input instanceof Request ? input.url : String(input),
+        "https://storybook.local",
+      );
+      if (url.pathname.endsWith("/deals")) {
+        return jsonResponse({
+          data:
+            url.searchParams.get("q") &&
+            url.searchParams.get("status") === "won"
+              ? [{ id: "closed", name: "Renewal paperwork", status: "won" }]
+              : [],
+          page: { has_more: false },
+        });
+      }
+      return routed(input, init);
+    };
+    return (
+      <StoryProviders>
+        <AddRelationshipAction
+          scope={{ contact_id: "p-1" }}
+          only={{ kind: "deal_stakeholder", label: "rel.seatOnDeal" }}
+        />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "Add to a deal",
+      }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.type(within(dialog).getByRole("searchbox"), "Renewal");
+    await expect(
+      await within(dialog).findByRole("button", {
+        name: "Renewal paperwork Won",
+      }),
+    ).toBeVisible();
+  },
+};

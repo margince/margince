@@ -94,11 +94,6 @@ func TestAnExchangeOnlyADeactivatedColleagueHadLeavesTheContactQuiet(t *testing.
 		t.Fatalf("a contact a live colleague wrote to last week is a quiet candidate: %v", got)
 	}
 	owner := integration.OwnerConn(t)
-	defer func() {
-		if err := owner.Close(context.Background()); err != nil {
-			t.Errorf("closing fixture connection: %v", err)
-		}
-	}()
 	if _, err := owner.Exec(context.Background(), `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, e.Rep2); err != nil {
 		t.Fatal(err)
 	}

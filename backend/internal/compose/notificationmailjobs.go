@@ -39,6 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // NotificationMailConfig is the immediate notice's outbound channel.
@@ -325,6 +326,7 @@ func (w *notificationMailWorker) recordMailFailure(ctx context.Context, notice i
 // notificationMailSubject is what a colleague sees in their list: the prefix
 // that says somebody is waiting, then the notice's own line.
 func notificationMailSubject(notice notices.Notice, words mailcopy.Copy) string {
+	notice = notice.InLanguage(textlang.Lang(words.Language))
 	return words.NotificationSubject + mailcopy.OneLine(notice.Subject)
 }
 
@@ -339,6 +341,7 @@ func notificationMailSubject(notice notices.Notice, words mailcopy.Copy) string 
 // An approval's facts replace the repeated subject: the record as the heading,
 // when there is one, then one line per fact and the deadline.
 func notificationMessage(notice notices.Notice, facts approvalMailFacts, base string, words mailcopy.Copy) emailview.Message {
+	notice = notice.InLanguage(textlang.Lang(words.Language))
 	var body emailview.Content
 	body.Paragraph(words.NotificationIntro)
 	writeNoticeSection(&body, notice, facts)

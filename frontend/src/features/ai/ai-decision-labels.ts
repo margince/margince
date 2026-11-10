@@ -83,6 +83,11 @@ const CALL_CODES: Readonly<Record<string, CodeWords>> = {
     name: "aicalls.sentinel.timeout",
     phrase: "aiOutcome.gaveUp.timeout",
   },
+  canceled: {
+    name: "aicalls.sentinel.canceled",
+    phrase: "aiOutcome.gaveUp.canceled",
+    warns: true,
+  },
   output_withheld: {
     name: "aicalls.sentinel.output_withheld",
     phrase: "aiOutcome.gaveUp.withheld",

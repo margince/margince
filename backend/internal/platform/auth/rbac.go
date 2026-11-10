@@ -97,19 +97,9 @@ func seatAdmitsWrites(p principal.Principal) bool {
 // connection. It is the upfront half of a pair, never a substitute for
 // requiring the specific action once the write knows it (see UpsertAction).
 func RequireAny(ctx context.Context, object string, actions ...principal.Action) error {
-	p, err := rbacActor(ctx)
-	if err != nil {
-		return err
-	}
 	c := Check{Object: object, Actions: actions}
 	noteCheck(ctx, c)
-	if err := refuseBuyer(p, object); err != nil {
-		return refusedOn(ctx, c, err)
-	}
-	if c.HeldBy(p) {
-		return nil
-	}
-	return refusedOn(ctx, c, fmt.Errorf("%s: %w", c, apperrors.ErrPermissionDenied))
+	return refusedOn(ctx, c, probeCheck(ctx, c))
 }
 
 // RequireAnyObject admits when the actor holds the action on AT LEAST ONE

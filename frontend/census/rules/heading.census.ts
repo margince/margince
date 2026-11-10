@@ -13,7 +13,10 @@ import { type CensusRule, isAppSheet, srcDir } from "../tree";
 const HEADING_SHEET = join(srcDir, "design-system", "heading.css");
 
 function resolvedSelectors(rule: CssRule): string[] {
-  return [...rule.parents, rule.selector].reduce<string[]>(resolveNesting, []);
+  return [...rule.parents, rule.selector].reduce<string[]>(
+    (parents, selector) => resolveNesting(parents, selector),
+    [],
+  );
 }
 
 type MarginDeclaration = { selector: string; value: string; line: number };

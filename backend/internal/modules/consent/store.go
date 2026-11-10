@@ -21,6 +21,7 @@ import (
 )
 
 type Store struct {
+	entityNames EntityNameReader
 	// db binds the installation's workspace itself (ADR-0091 §9 step 3).
 	db  *database.DB
 	now func() time.Time

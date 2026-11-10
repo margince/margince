@@ -20,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
@@ -37,7 +38,7 @@ import (
 // whoever the workflow happened to run as, which would file the work under a
 // system principal and hide it from everybody.
 func taskCreateEffectFor(
-	ev workflow.Event, subject string, dueAt time.Time, owner *ids.UUID, key *taskNaturalKey,
+	ctx context.Context, ev workflow.Event, subject string, dueAt time.Time, owner *ids.UUID, key *taskNaturalKey,
 ) (workflow.Effect, error) {
 	fields := map[string]any{
 		fieldKind: "task",
@@ -58,8 +59,9 @@ func taskCreateEffectFor(
 	if err != nil {
 		return workflow.Effect{}, fmt.Errorf("automation: encoding the task: %w", err)
 	}
+	metadata := systemtext.ForWrite(ctx, systemtext.MessageIn(ctx), subject, "")
 	return workflow.Effect{Actions: []workflow.Action{{
-		Kind: workflow.ActionCreateTask, Target: ev.Entity, Args: args,
+		Kind: workflow.ActionCreateTask, Target: ev.Entity, Args: args, SystemText: metadata,
 	}}}, nil
 }
 
@@ -125,13 +127,13 @@ func ownedTaskEffect(
 	ctx context.Context, ex Executors, ev workflow.Event, subject string, dueAt time.Time, key *taskNaturalKey,
 ) (workflow.Effect, error) {
 	if ex.Provider == nil {
-		return taskCreateEffectFor(ev, subject, dueAt, nil, key)
+		return taskCreateEffectFor(ctx, ev, subject, dueAt, nil, key)
 	}
 	owner, err := recordOwner(ctx, ex, ev)
 	if err != nil {
 		return workflow.Effect{}, err
 	}
-	return taskCreateEffectFor(ev, subject, dueAt, owner, key)
+	return taskCreateEffectFor(ctx, ev, subject, dueAt, owner, key)
 }
 
 // recordOwner reads who answers for the record that fired, or nil.
