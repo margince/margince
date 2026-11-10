@@ -389,7 +389,9 @@ func assertAICertPresetsAreAttributed(t *testing.T, presets []aiCertPreset, doc 
 // aiCertUnmeasuredWaivers names the presets allowed to reach no measured band,
 // each with why. An entry is stale once its preset is measured or gone
 // (AssertAllMatched), or once any record measures one of its models.
-var aiCertUnmeasuredWaivers = gatekit.Waive(map[string]string{})
+var aiCertUnmeasuredWaivers = gatekit.Waive(map[string]string{
+	"gemma4_local_ollama.yaml": "kept as the worked example of a local preset; no record is committed for it, so the page says untested",
+})
 
 // unmeasuredPresetProblems asks, PER PRESET and not summed across them,
 // whether each reaches a measured band. A total hides the failure this asks

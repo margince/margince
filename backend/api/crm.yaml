@@ -9336,6 +9336,41 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /activities/{id}/calendar-response:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags: [Activities]
+      operationId: answerCalendarInvitation
+      x-mcp-tool: { verb: answer_calendar_invitation, router: send_outbound, action: answer_invitation, tier: auto_execute, scope: send, served_by: route, ask_user_first: true }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: Accept, tentatively accept or decline a calendar invitation that came by email.
+      description: |
+        Answers the event the invitation names, on the caller's own connected calendar, and the
+        calendar tells the organizer. Only the email's `calendar_invitation` offers this, and only
+        to a seat whose own mailbox received the invitation.
+
+        The caller has then dealt with the message, so it leaves their Worklist the way Done does.
+        Answering again changes the answer.
+
+        Reading the message is the licence to answer it: an id the caller cannot read answers 404,
+        the same as one that does not exist. A message that is not an open invitation to the caller,
+        or a caller with no calendar Margince may write to, answers 422 naming why.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnswerCalendarInvitationRequest' }
+      responses:
+        '200':
+          description: The answer the calendar now holds.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmailCalendarInvitation' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /activities/{id}/meeting-brief:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -41106,7 +41141,8 @@ components:
             Whose move it is, derived from what this reader can see of the thread.
             `needs_reply` on a message still owed our answer, `waiting_for_them` on one we sent
             that is still the last word with them. A calendar invitation, update, cancellation
-            or answer is `none` unless someone confirmed it asks us something. `none` also when
+            or answer is `none` unless someone confirmed it asks us something, and an invitation
+            the reader may still answer is `none` too: `calendar_invitation` carries what it asks. `none` also when
             the question cannot be answered honestly — an unanswerable move is not a claim.
             A message older than the waiting horizon that nobody kept is `none` too: it is
             no longer current work, the same bound the waiting queue and `waiting_reply` apply.
@@ -41120,11 +41156,50 @@ components:
             staged for it. Absent on an inbound message, and on an outbound one logged
             rather than sent — neither has a delivery to report, which is a different
             thing from one that has not left yet.
+        calendar_invitation:
+          allOf: [{ $ref: '#/components/schemas/EmailCalendarInvitation' }]
+          description: |
+            Present when this message is a calendar invitation the reader can still answer: it came
+            into the reader's own mailbox, names an event, and that event has not started. A client
+            offers the answers here instead of a written reply, because an invitation asks for an
+            RSVP. Absent on every other message, and on a withheld one.
         version:
           allOf: [{ $ref: '#/components/schemas/RowVersion' }]
           description: |
             The activity's version, carried so a row can open an editor that writes with
             If-Match. A row without it can only read.
+
+    EmailCalendarInvitation:
+      type: object
+      x-email-presentation: exempt
+      x-email-presentation-reason: The reader's own answer to an event, not message content.
+      required: [response]
+      description: The reader's own answer to the event an invitation names.
+      properties:
+        response:
+          type: string
+          enum: [needs_action, accepted, tentative, declined]
+          x-extensible-enum: true
+          description: |
+            What the reader's calendar holds. `needs_action` until they answer, and while their
+            calendar has not synced the event.
+        starts_at:
+          type: string
+          format: date-time
+          description: When the event starts. Absent while the reader's calendar has not synced it.
+        starts_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `starts_at`, present beside it. `day` is an all-day event, so a client draws no time.
+
+    AnswerCalendarInvitationRequest:
+      type: object
+      additionalProperties: false
+      required: [response]
+      properties:
+        response:
+          type: string
+          enum: [accepted, tentative, declined]
+          description: The answer the organizer receives. `tentative` is Maybe.
 
     EmailDelivery:
       type: object
